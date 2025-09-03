@@ -334,7 +334,7 @@ define internal void @__omp_offloading_fd02_2044372e_sequential_loop_l5__debug()
 ; NVPTX-DISABLED1-LABEL: define {{[^@]+}}@__omp_offloading_fd02_2044372e_sequential_loop_l5__debug
 ; NVPTX-DISABLED1-SAME: () #[[ATTR1:[0-9]+]] {
 ; NVPTX-DISABLED1-NEXT:  entry:
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NVPTX-DISABLED1-NEXT:    [[DOTZERO_ADDR_CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
 ; NVPTX-DISABLED1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -350,9 +350,8 @@ define internal void @__omp_offloading_fd02_2044372e_sequential_loop_l5__debug()
 ; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; NVPTX-DISABLED1:       worker_state_machine.begin:
 ; NVPTX-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[WORKER_WORK_FN_ADDR]] to ptr
-; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR_GENERIC]])
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR_GENERIC]], align 8
+; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR]])
+; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR]], align 8
 ; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
 ; NVPTX-DISABLED1-NEXT:    br i1 [[WORKER_IS_DONE]], label [[WORKER_STATE_MACHINE_FINISHED]], label [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:%.*]]
 ; NVPTX-DISABLED1:       worker_state_machine.finished:
@@ -817,7 +816,7 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_sequential_loop_to_s
 ; NVPTX-DISABLED1-LABEL: define {{[^@]+}}@__omp_offloading_fd02_2044372e_sequential_loop_to_stack_var_l20
 ; NVPTX-DISABLED1-SAME: () #[[ATTR0]] {
 ; NVPTX-DISABLED1-NEXT:  entry:
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NVPTX-DISABLED1-NEXT:    [[DOTZERO_ADDR_CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
 ; NVPTX-DISABLED1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -833,9 +832,8 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_sequential_loop_to_s
 ; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; NVPTX-DISABLED1:       worker_state_machine.begin:
 ; NVPTX-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[WORKER_WORK_FN_ADDR]] to ptr
-; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR_GENERIC]])
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR_GENERIC]], align 8
+; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR]])
+; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR]], align 8
 ; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
 ; NVPTX-DISABLED1-NEXT:    br i1 [[WORKER_IS_DONE]], label [[WORKER_STATE_MACHINE_FINISHED]], label [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:%.*]]
 ; NVPTX-DISABLED1:       worker_state_machine.finished:
@@ -934,11 +932,10 @@ define internal void @__omp_outlined__2(ptr noalias %.global_tid., ptr noalias %
 ; NVPTX-LABEL: define {{[^@]+}}@__omp_outlined__2
 ; NVPTX-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 ; NVPTX-NEXT:  entry:
-; NVPTX-NEXT:    [[X_H2S:%.*]] = alloca i8, i64 4, align 4, addrspace(5)
+; NVPTX-NEXT:    [[X_H2S:%.*]] = alloca i8, i64 4, align 4
 ; NVPTX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NVPTX-NEXT:    [[CAPTURED_VARS_ADDRS_CAST:%.*]] = addrspacecast ptr addrspace(5) [[CAPTURED_VARS_ADDRS]] to ptr
-; NVPTX-NEXT:    [[MALLOC_CAST:%.*]] = addrspacecast ptr addrspace(5) [[X_H2S]] to ptr
-; NVPTX-NEXT:    call void @use(ptr captures(none) [[MALLOC_CAST]]) #[[ATTR7]]
+; NVPTX-NEXT:    call void @use(ptr captures(none) [[X_H2S]]) #[[ATTR7]]
 ; NVPTX-NEXT:    br label [[FOR_COND:%.*]]
 ; NVPTX:       for.cond:
 ; NVPTX-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
@@ -1003,11 +1000,10 @@ define internal void @__omp_outlined__2(ptr noalias %.global_tid., ptr noalias %
 ; NVPTX-DISABLED1-LABEL: define {{[^@]+}}@__omp_outlined__2
 ; NVPTX-DISABLED1-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 ; NVPTX-DISABLED1-NEXT:  entry:
-; NVPTX-DISABLED1-NEXT:    [[X_H2S:%.*]] = alloca i8, i64 4, align 4, addrspace(5)
+; NVPTX-DISABLED1-NEXT:    [[X_H2S:%.*]] = alloca i8, i64 4, align 4
 ; NVPTX-DISABLED1-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NVPTX-DISABLED1-NEXT:    [[CAPTURED_VARS_ADDRS_CAST:%.*]] = addrspacecast ptr addrspace(5) [[CAPTURED_VARS_ADDRS]] to ptr
-; NVPTX-DISABLED1-NEXT:    [[MALLOC_CAST:%.*]] = addrspacecast ptr addrspace(5) [[X_H2S]] to ptr
-; NVPTX-DISABLED1-NEXT:    call void @use(ptr captures(none) [[MALLOC_CAST]]) #[[ATTR7]]
+; NVPTX-DISABLED1-NEXT:    call void @use(ptr captures(none) [[X_H2S]]) #[[ATTR7]]
 ; NVPTX-DISABLED1-NEXT:    br label [[FOR_COND:%.*]]
 ; NVPTX-DISABLED1:       for.cond:
 ; NVPTX-DISABLED1-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
@@ -1026,11 +1022,10 @@ define internal void @__omp_outlined__2(ptr noalias %.global_tid., ptr noalias %
 ; NVPTX-DISABLED2-LABEL: define {{[^@]+}}@__omp_outlined__2
 ; NVPTX-DISABLED2-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 ; NVPTX-DISABLED2-NEXT:  entry:
-; NVPTX-DISABLED2-NEXT:    [[X_H2S:%.*]] = alloca i8, i64 4, align 4, addrspace(5)
+; NVPTX-DISABLED2-NEXT:    [[X_H2S:%.*]] = alloca i8, i64 4, align 4
 ; NVPTX-DISABLED2-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NVPTX-DISABLED2-NEXT:    [[CAPTURED_VARS_ADDRS_CAST:%.*]] = addrspacecast ptr addrspace(5) [[CAPTURED_VARS_ADDRS]] to ptr
-; NVPTX-DISABLED2-NEXT:    [[MALLOC_CAST:%.*]] = addrspacecast ptr addrspace(5) [[X_H2S]] to ptr
-; NVPTX-DISABLED2-NEXT:    call void @use(ptr captures(none) [[MALLOC_CAST]]) #[[ATTR7]]
+; NVPTX-DISABLED2-NEXT:    call void @use(ptr captures(none) [[X_H2S]]) #[[ATTR7]]
 ; NVPTX-DISABLED2-NEXT:    br label [[FOR_COND:%.*]]
 ; NVPTX-DISABLED2:       for.cond:
 ; NVPTX-DISABLED2-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
@@ -1321,7 +1316,7 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_sequential_loop_to_s
 ; NVPTX-DISABLED1-LABEL: define {{[^@]+}}@__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_l35
 ; NVPTX-DISABLED1-SAME: () #[[ATTR0]] {
 ; NVPTX-DISABLED1-NEXT:  entry:
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NVPTX-DISABLED1-NEXT:    [[DOTZERO_ADDR_CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
 ; NVPTX-DISABLED1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -1337,9 +1332,8 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_sequential_loop_to_s
 ; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; NVPTX-DISABLED1:       worker_state_machine.begin:
 ; NVPTX-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[WORKER_WORK_FN_ADDR]] to ptr
-; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR_GENERIC]])
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR_GENERIC]], align 8
+; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR]])
+; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR]], align 8
 ; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
 ; NVPTX-DISABLED1-NEXT:    br i1 [[WORKER_IS_DONE]], label [[WORKER_STATE_MACHINE_FINISHED]], label [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:%.*]]
 ; NVPTX-DISABLED1:       worker_state_machine.finished:
@@ -1848,7 +1842,7 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_sequential_loop_to_s
 ; NVPTX-DISABLED1-LABEL: define {{[^@]+}}@__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_guarded_l50
 ; NVPTX-DISABLED1-SAME: () #[[ATTR0]] {
 ; NVPTX-DISABLED1-NEXT:  entry:
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NVPTX-DISABLED1-NEXT:    [[DOTZERO_ADDR_CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
 ; NVPTX-DISABLED1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -1864,9 +1858,8 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_sequential_loop_to_s
 ; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; NVPTX-DISABLED1:       worker_state_machine.begin:
 ; NVPTX-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[WORKER_WORK_FN_ADDR]] to ptr
-; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR_GENERIC]])
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR_GENERIC]], align 8
+; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR]])
+; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR]], align 8
 ; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
 ; NVPTX-DISABLED1-NEXT:    br i1 [[WORKER_IS_DONE]], label [[WORKER_STATE_MACHINE_FINISHED]], label [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:%.*]]
 ; NVPTX-DISABLED1:       worker_state_machine.finished:
@@ -2346,7 +2339,7 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_targe
 ; NVPTX-LABEL: define {{[^@]+}}@__omp_offloading_fd02_2044372e_do_not_spmdize_target_l65
 ; NVPTX-SAME: () #[[ATTR0]] {
 ; NVPTX-NEXT:  entry:
-; NVPTX-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+; NVPTX-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NVPTX-NEXT:    [[DOTZERO_ADDR_CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
 ; NVPTX-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -2362,9 +2355,8 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_targe
 ; NVPTX-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; NVPTX:       worker_state_machine.begin:
 ; NVPTX-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; NVPTX-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[WORKER_WORK_FN_ADDR]] to ptr
-; NVPTX-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR_GENERIC]])
-; NVPTX-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR_GENERIC]], align 8
+; NVPTX-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR]])
+; NVPTX-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR]], align 8
 ; NVPTX-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
 ; NVPTX-NEXT:    br i1 [[WORKER_IS_DONE]], label [[WORKER_STATE_MACHINE_FINISHED]], label [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:%.*]]
 ; NVPTX:       worker_state_machine.finished:
@@ -2460,7 +2452,7 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_targe
 ; NVPTX-DISABLED1-LABEL: define {{[^@]+}}@__omp_offloading_fd02_2044372e_do_not_spmdize_target_l65
 ; NVPTX-DISABLED1-SAME: () #[[ATTR0]] {
 ; NVPTX-DISABLED1-NEXT:  entry:
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NVPTX-DISABLED1-NEXT:    [[DOTZERO_ADDR_CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
 ; NVPTX-DISABLED1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -2476,9 +2468,8 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_targe
 ; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; NVPTX-DISABLED1:       worker_state_machine.begin:
 ; NVPTX-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[WORKER_WORK_FN_ADDR]] to ptr
-; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR_GENERIC]])
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR_GENERIC]], align 8
+; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR]])
+; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR]], align 8
 ; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
 ; NVPTX-DISABLED1-NEXT:    br i1 [[WORKER_IS_DONE]], label [[WORKER_STATE_MACHINE_FINISHED]], label [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:%.*]]
 ; NVPTX-DISABLED1:       worker_state_machine.finished:
@@ -2645,7 +2636,7 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_task_
 ; NVPTX-LABEL: define {{[^@]+}}@__omp_offloading_fd02_2044372e_do_not_spmdize_task_l74
 ; NVPTX-SAME: () #[[ATTR0]] {
 ; NVPTX-NEXT:  entry:
-; NVPTX-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+; NVPTX-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NVPTX-NEXT:    [[CAPTURED_VARS_ADDRS_CAST:%.*]] = addrspacecast ptr addrspace(5) [[CAPTURED_VARS_ADDRS]] to ptr
 ; NVPTX-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_fd02_2044372e_do_not_spmdize_task_l74_kernel_environment, ptr null)
@@ -2659,9 +2650,8 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_task_
 ; NVPTX-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; NVPTX:       worker_state_machine.begin:
 ; NVPTX-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; NVPTX-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[WORKER_WORK_FN_ADDR]] to ptr
-; NVPTX-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR_GENERIC]])
-; NVPTX-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR_GENERIC]], align 8
+; NVPTX-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR]])
+; NVPTX-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR]], align 8
 ; NVPTX-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
 ; NVPTX-NEXT:    br i1 [[WORKER_IS_DONE]], label [[WORKER_STATE_MACHINE_FINISHED]], label [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:%.*]]
 ; NVPTX:       worker_state_machine.finished:
@@ -2771,7 +2761,7 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_task_
 ; NVPTX-DISABLED1-LABEL: define {{[^@]+}}@__omp_offloading_fd02_2044372e_do_not_spmdize_task_l74
 ; NVPTX-DISABLED1-SAME: () #[[ATTR0]] {
 ; NVPTX-DISABLED1-NEXT:  entry:
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED1-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NVPTX-DISABLED1-NEXT:    [[CAPTURED_VARS_ADDRS_CAST:%.*]] = addrspacecast ptr addrspace(5) [[CAPTURED_VARS_ADDRS]] to ptr
 ; NVPTX-DISABLED1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_fd02_2044372e_do_not_spmdize_task_l74_kernel_environment, ptr null)
@@ -2785,9 +2775,8 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_task_
 ; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; NVPTX-DISABLED1:       worker_state_machine.begin:
 ; NVPTX-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[WORKER_WORK_FN_ADDR]] to ptr
-; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR_GENERIC]])
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR_GENERIC]], align 8
+; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR]])
+; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR]], align 8
 ; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
 ; NVPTX-DISABLED1-NEXT:    br i1 [[WORKER_IS_DONE]], label [[WORKER_STATE_MACHINE_FINISHED]], label [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:%.*]]
 ; NVPTX-DISABLED1:       worker_state_machine.finished:

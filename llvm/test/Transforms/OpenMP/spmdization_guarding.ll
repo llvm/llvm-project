@@ -61,7 +61,7 @@ define weak ptx_kernel void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_2a_fbfa7a_sequential_loop_l6
 ; CHECK-SAME: (ptr [[DYN:%.*]], ptr [[X:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[HEAP2STACK_H2S:%.*]] = alloca i8, i64 8, align 8, addrspace(5)
+; CHECK-NEXT:    [[HEAP2STACK_H2S:%.*]] = alloca i8, i64 8, align 8
 ; CHECK-NEXT:    [[LOC:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    [[AL32:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[N_ADDR_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[N]] to i32
@@ -96,8 +96,7 @@ define weak ptx_kernel void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %
 ; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(ptr @[[GLOB2]], i32 [[TMP3]])
 ; CHECK-NEXT:    br label [[REGION_EXIT:%.*]]
 ; CHECK:       region.exit:
-; CHECK-NEXT:    [[MALLOC_CAST:%.*]] = addrspacecast ptr addrspace(5) [[HEAP2STACK_H2S]] to ptr
-; CHECK-NEXT:    call void @usei8ptr(ptr captures(none) [[MALLOC_CAST]]) #[[ATTR9:[0-9]+]]
+; CHECK-NEXT:    call void @usei8ptr(ptr captures(none) [[HEAP2STACK_H2S]]) #[[ATTR9:[0-9]+]]
 ; CHECK-NEXT:    br label [[FOR_COND_I:%.*]]
 ; CHECK:       for.cond.i:
 ; CHECK-NEXT:    [[I_0_I:%.*]] = phi i32 [ 2, [[REGION_EXIT]] ], [ [[INC_I:%.*]], [[REGION_EXIT3:%.*]] ]
@@ -193,8 +192,8 @@ define weak ptx_kernel void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %
 ; CHECK-DISABLED-LABEL: define {{[^@]+}}@__omp_offloading_2a_fbfa7a_sequential_loop_l6
 ; CHECK-DISABLED-SAME: (ptr [[DYN:%.*]], ptr [[X:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-DISABLED-NEXT:  entry:
-; CHECK-DISABLED-NEXT:    [[HEAP2STACK_H2S:%.*]] = alloca i8, i64 8, align 8, addrspace(5)
-; CHECK-DISABLED-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+; CHECK-DISABLED-NEXT:    [[HEAP2STACK_H2S:%.*]] = alloca i8, i64 8, align 8
+; CHECK-DISABLED-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8
 ; CHECK-DISABLED-NEXT:    [[LOC:%.*]] = alloca ptr, align 8
 ; CHECK-DISABLED-NEXT:    [[AL32:%.*]] = alloca i32, align 4
 ; CHECK-DISABLED-NEXT:    [[N_ADDR_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[N]] to i32
@@ -209,9 +208,8 @@ define weak ptx_kernel void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %
 ; CHECK-DISABLED-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; CHECK-DISABLED:       worker_state_machine.begin:
 ; CHECK-DISABLED-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; CHECK-DISABLED-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[WORKER_WORK_FN_ADDR]] to ptr
-; CHECK-DISABLED-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR_GENERIC]])
-; CHECK-DISABLED-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR_GENERIC]], align 8
+; CHECK-DISABLED-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR]])
+; CHECK-DISABLED-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR]], align 8
 ; CHECK-DISABLED-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
 ; CHECK-DISABLED-NEXT:    br i1 [[WORKER_IS_DONE]], label [[WORKER_STATE_MACHINE_FINISHED]], label [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:%.*]]
 ; CHECK-DISABLED:       worker_state_machine.finished:
@@ -249,8 +247,7 @@ define weak ptx_kernel void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %
 ; CHECK-DISABLED-NEXT:    [[ARRAYIDX2_I:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 [[IDXPROM_I]]
 ; CHECK-DISABLED-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[ARRAYIDX2_I]] to ptr addrspace(1)
 ; CHECK-DISABLED-NEXT:    store i32 [[N_ADDR_SROA_0_0_EXTRACT_TRUNC]], ptr addrspace(1) [[TMP4]], align 4, !noalias [[META7]]
-; CHECK-DISABLED-NEXT:    [[MALLOC_CAST:%.*]] = addrspacecast ptr addrspace(5) [[HEAP2STACK_H2S]] to ptr
-; CHECK-DISABLED-NEXT:    call void @usei8ptr(ptr captures(none) [[MALLOC_CAST]]) #[[ATTR9:[0-9]+]]
+; CHECK-DISABLED-NEXT:    call void @usei8ptr(ptr captures(none) [[HEAP2STACK_H2S]]) #[[ATTR9:[0-9]+]]
 ; CHECK-DISABLED-NEXT:    br label [[FOR_COND_I:%.*]]
 ; CHECK-DISABLED:       for.cond.i:
 ; CHECK-DISABLED-NEXT:    [[I_0_I:%.*]] = phi i32 [ 2, [[USER_CODE_ENTRY]] ], [ [[INC_I:%.*]], [[FOR_BODY_I:%.*]] ]

@@ -77,6 +77,7 @@ public:
   std::pair<const Value *, unsigned>
   getPredicatedAddrSpace(const Value *V) const override;
 
+  bool isCompatibleDataLayout(const DataLayout &Candidate) const override;
   unsigned getAddressSpaceForPseudoSourceKind(unsigned Kind) const override;
 }; // NVPTXTargetMachine.
 

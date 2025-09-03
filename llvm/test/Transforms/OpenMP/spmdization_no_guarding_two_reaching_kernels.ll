@@ -73,7 +73,7 @@ define weak ptx_kernel void @__omp_offloading_2b_10393b5_spmd_l12(ptr %dyn) #0 {
 ; CHECK-DISABLE-SPMDIZATION-LABEL: define {{[^@]+}}@__omp_offloading_2b_10393b5_spmd_l12
 ; CHECK-DISABLE-SPMDIZATION-SAME: (ptr [[DYN:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-DISABLE-SPMDIZATION-NEXT:  entry:
-; CHECK-DISABLE-SPMDIZATION-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+; CHECK-DISABLE-SPMDIZATION-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_2b_10393b5_spmd_l12_kernel_environment, ptr [[DYN]])
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
@@ -85,9 +85,8 @@ define weak ptx_kernel void @__omp_offloading_2b_10393b5_spmd_l12(ptr %dyn) #0 {
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; CHECK-DISABLE-SPMDIZATION:       worker_state_machine.begin:
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; CHECK-DISABLE-SPMDIZATION-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[WORKER_WORK_FN_ADDR]] to ptr
-; CHECK-DISABLE-SPMDIZATION-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR_GENERIC]])
-; CHECK-DISABLE-SPMDIZATION-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR_GENERIC]], align 8
+; CHECK-DISABLE-SPMDIZATION-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR]])
+; CHECK-DISABLE-SPMDIZATION-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR]], align 8
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    br i1 [[WORKER_IS_DONE]], label [[WORKER_STATE_MACHINE_FINISHED]], label [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:%.*]]
 ; CHECK-DISABLE-SPMDIZATION:       worker_state_machine.finished:
@@ -151,7 +150,7 @@ define weak ptx_kernel void @__omp_offloading_2b_10393b5_generic_l20(ptr %dyn) #
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_2b_10393b5_generic_l20
 ; CHECK-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_2b_10393b5_generic_l20_kernel_environment, ptr [[DYN]])
 ; CHECK-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
@@ -163,9 +162,8 @@ define weak ptx_kernel void @__omp_offloading_2b_10393b5_generic_l20(ptr %dyn) #
 ; CHECK-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; CHECK:       worker_state_machine.begin:
 ; CHECK-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[WORKER_WORK_FN_ADDR]] to ptr
-; CHECK-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR_GENERIC]])
-; CHECK-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR_GENERIC]], align 8
+; CHECK-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR]])
+; CHECK-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR]], align 8
 ; CHECK-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
 ; CHECK-NEXT:    br i1 [[WORKER_IS_DONE]], label [[WORKER_STATE_MACHINE_FINISHED]], label [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:%.*]]
 ; CHECK:       worker_state_machine.finished:
@@ -194,7 +192,7 @@ define weak ptx_kernel void @__omp_offloading_2b_10393b5_generic_l20(ptr %dyn) #
 ; CHECK-DISABLE-SPMDIZATION-LABEL: define {{[^@]+}}@__omp_offloading_2b_10393b5_generic_l20
 ; CHECK-DISABLE-SPMDIZATION-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; CHECK-DISABLE-SPMDIZATION-NEXT:  entry:
-; CHECK-DISABLE-SPMDIZATION-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+; CHECK-DISABLE-SPMDIZATION-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_2b_10393b5_generic_l20_kernel_environment, ptr [[DYN]])
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
@@ -206,9 +204,8 @@ define weak ptx_kernel void @__omp_offloading_2b_10393b5_generic_l20(ptr %dyn) #
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; CHECK-DISABLE-SPMDIZATION:       worker_state_machine.begin:
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; CHECK-DISABLE-SPMDIZATION-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[WORKER_WORK_FN_ADDR]] to ptr
-; CHECK-DISABLE-SPMDIZATION-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR_GENERIC]])
-; CHECK-DISABLE-SPMDIZATION-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR_GENERIC]], align 8
+; CHECK-DISABLE-SPMDIZATION-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR]])
+; CHECK-DISABLE-SPMDIZATION-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR]], align 8
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    br i1 [[WORKER_IS_DONE]], label [[WORKER_STATE_MACHINE_FINISHED]], label [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:%.*]]
 ; CHECK-DISABLE-SPMDIZATION:       worker_state_machine.finished:
