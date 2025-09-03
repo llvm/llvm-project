@@ -7926,7 +7926,7 @@ SDValue AArch64TargetLowering::lowerEHPadEntry(SDValue Chain, SDLoc const &DL,
   // Therefore, if the function that contains this exception handler is a
   // streaming[-compatible] function, we must re-enable streaming mode.
   //
-  // These mode changes are usually optimized away in catch blocks (as they)
+  // These mode changes are usually optimized away in catch blocks as they
   // occur before the __cxa_begin_catch (which is a non-streaming function),
   // but are necessary in some cases (such as for cleanups).
 

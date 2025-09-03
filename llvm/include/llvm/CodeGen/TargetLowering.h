@@ -4686,7 +4686,7 @@ public:
     llvm_unreachable("Not Implemented");
   }
 
-  /// Optional target hook at add target-specific actions when entering EH pad
+  /// Optional target hook to add target-specific actions when entering EH pad
   /// blocks. The implementation should return the resulting token chain value.
   virtual SDValue lowerEHPadEntry(SDValue Chain, const SDLoc &DL,
                                   SelectionDAG &DAG) const {

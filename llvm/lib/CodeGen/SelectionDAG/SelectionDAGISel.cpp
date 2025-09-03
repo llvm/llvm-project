@@ -1734,11 +1734,10 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
         continue;
 
       if (!FastIS) {
-        if (SDValue NewRoot = TLI->lowerEHPadEntry(CurDAG->getRoot(),
-                                                   SDB->getCurSDLoc(), *CurDAG);
-            NewRoot && NewRoot != CurDAG->getRoot()) {
+        SDValue NewRoot = TLI->lowerEHPadEntry(CurDAG->getRoot(),
+                                               SDB->getCurSDLoc(), *CurDAG);
+        if (NewRoot && NewRoot != CurDAG->getRoot())
           CurDAG->setRoot(NewRoot);
-        }
       }
     }
 
