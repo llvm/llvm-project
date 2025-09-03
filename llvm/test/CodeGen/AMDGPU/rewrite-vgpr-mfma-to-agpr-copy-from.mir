@@ -187,8 +187,8 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:av_64_align2 = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:av_64_align2 = COPY $vgpr2_vgpr3
     ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:areg_128_align2 = GLOBAL_LOAD_DWORDX4 [[COPY]], 0, 0, implicit $exec :: (load (s128), addrspace 1)
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vreg_128_align2 = COPY [[GLOBAL_LOAD_DWORDX4_]]
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]].sub0_sub1:vreg_128_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 [[COPY1]], [[COPY2]], 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:areg_128_align2 = COPY [[GLOBAL_LOAD_DWORDX4_]]
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]].sub0_sub1:areg_128_align2 = V_MFMA_F64_4X4X4F64_e64 [[COPY1]], [[COPY2]], 0, 0, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX4 [[COPY]], [[COPY3]], 0, 0, implicit $exec :: (store (s128), addrspace 1)
     ; CHECK-NEXT: SI_RETURN
     %0:vreg_64_align2 = COPY $vgpr4_vgpr5
