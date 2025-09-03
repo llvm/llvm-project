@@ -21490,6 +21490,15 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known = Known.sext(BitWidth);
     break;
   }
+  case RISCVISD::SRLW: {
+    KnownBits Known2;
+    Known = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known2 = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known = KnownBits::lshr(Known.trunc(32), Known2.trunc(5).zext(32));
+    // Restore the original width by sign extending.
+    Known = Known.sext(BitWidth);
+    break;
+  }
   case RISCVISD::SRAW: {
     KnownBits Known2;
     Known = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);

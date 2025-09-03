@@ -2589,26 +2589,67 @@ SemaOpenACC::ActOnOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc) {
   return BuildOpenACCAsteriskSizeExpr(AsteriskLoc);
 }
 
-/// Loops through a type and generates an appropriate InitListExpr to generate
-/// type initialization.
-static Expr *GenerateReductionInitRecipeExpr(ASTContext &Context,
-                                             SourceRange ExprRange,
-                                             QualType Ty) {
+namespace {
+enum class InitKind { Zero, One, AllOnes, Least, Largest };
+llvm::APFloat getInitFloatValue(ASTContext &Context, InitKind IK, QualType Ty) {
+  switch (IK) {
+  case InitKind::Zero:
+    return llvm::APFloat::getZero(Context.getFloatTypeSemantics(Ty));
+  case InitKind::One:
+    return llvm::APFloat::getOne(Context.getFloatTypeSemantics(Ty));
+  case InitKind::AllOnes:
+    return llvm::APFloat::getAllOnesValue(Context.getFloatTypeSemantics(Ty));
+  case InitKind::Least:
+    return llvm::APFloat::getLargest(Context.getFloatTypeSemantics(Ty),
+                                     /*Negative=*/true);
+  case InitKind::Largest:
+    return llvm::APFloat::getLargest(Context.getFloatTypeSemantics(Ty));
+    break;
+  }
+  llvm_unreachable("unknown init kind");
+}
+
+llvm::APInt getInitIntValue(ASTContext &Context, InitKind IK, QualType Ty) {
+  switch (IK) {
+  case InitKind::Zero:
+    return llvm::APInt(Context.getIntWidth(Ty), 0);
+  case InitKind::One:
+    return llvm::APInt(Context.getIntWidth(Ty), 1);
+  case InitKind::AllOnes:
+    return llvm::APInt::getAllOnes(Context.getIntWidth(Ty));
+  case InitKind::Least:
+    if (Ty->isSignedIntegerOrEnumerationType())
+      return llvm::APInt::getSignedMinValue(Context.getIntWidth(Ty));
+    return llvm::APInt::getMinValue(Context.getIntWidth(Ty));
+  case InitKind::Largest:
+    if (Ty->isSignedIntegerOrEnumerationType())
+      return llvm::APInt::getSignedMaxValue(Context.getIntWidth(Ty));
+    return llvm::APInt::getMaxValue(Context.getIntWidth(Ty));
+    break;
+  }
+  llvm_unreachable("unknown init kind");
+}
+
+/// Loops through a type and generates an appropriate InitListExpr to
+/// generate type initialization.
+Expr *GenerateReductionInitRecipeExpr(ASTContext &Context,
+                                      SourceRange ExprRange, QualType Ty,
+                                      InitKind IK) {
   Ty = Ty.getCanonicalType();
   llvm::SmallVector<Expr *> Exprs;
 
   if (const RecordDecl *RD = Ty->getAsRecordDecl()) {
     for (auto *F : RD->fields()) {
-      if (Expr *NewExpr =
-              GenerateReductionInitRecipeExpr(Context, ExprRange, F->getType()))
+      if (Expr *NewExpr = GenerateReductionInitRecipeExpr(Context, ExprRange,
+                                                          F->getType(), IK))
         Exprs.push_back(NewExpr);
       else
         return nullptr;
     }
   } else if (const ConstantArrayType *AT = Context.getAsConstantArrayType(Ty)) {
     for (uint64_t Idx = 0; Idx < AT->getZExtSize(); ++Idx) {
-      if (Expr *NewExpr = GenerateReductionInitRecipeExpr(Context, ExprRange,
-                                                          AT->getElementType()))
+      if (Expr *NewExpr = GenerateReductionInitRecipeExpr(
+              Context, ExprRange, AT->getElementType(), IK))
         Exprs.push_back(NewExpr);
       else
         return nullptr;
@@ -2627,16 +2668,41 @@ static Expr *GenerateReductionInitRecipeExpr(ASTContext &Context,
   } else {
     assert(Ty->isScalarType());
 
-    // TODO:  OpenACC: This currently only works for '1', but we need to figure
-    // out a way to do least/largest/all-1s.
-    if (Ty->isFloatingType()) {
-      Exprs.push_back(FloatingLiteral::Create(
-          Context, llvm::APFloat::getOne(Context.getFloatTypeSemantics(Ty)),
-          /*isExact=*/true, Ty, ExprRange.getBegin()));
+    if (const auto *Cplx = Ty->getAs<ComplexType>()) {
+      // we can get here in error cases, so make sure we generate something that
+      // will work if we find ourselves wanting to enable this, so emit '0,0'
+      // for both ints and floats.
+
+      QualType EltTy = Cplx->getElementType();
+      if (EltTy->isFloatingType()) {
+        Exprs.push_back(FloatingLiteral::Create(
+            Context, getInitFloatValue(Context, InitKind::Zero, EltTy),
+            /*isExact=*/true, EltTy, ExprRange.getBegin()));
+        Exprs.push_back(FloatingLiteral::Create(
+            Context, getInitFloatValue(Context, InitKind::Zero, EltTy),
+            /*isExact=*/true, EltTy, ExprRange.getBegin()));
+      } else {
+        Exprs.push_back(IntegerLiteral::Create(
+            Context, getInitIntValue(Context, InitKind::Zero, EltTy), EltTy,
+            ExprRange.getBegin()));
+        Exprs.push_back(IntegerLiteral::Create(
+            Context, getInitIntValue(Context, InitKind::Zero, EltTy), EltTy,
+            ExprRange.getBegin()));
+      }
+
+    } else if (Ty->isFloatingType()) {
+      Exprs.push_back(
+          FloatingLiteral::Create(Context, getInitFloatValue(Context, IK, Ty),
+                                  /*isExact=*/true, Ty, ExprRange.getBegin()));
+    } else if (Ty->isBooleanType()) {
+      Exprs.push_back(CXXBoolLiteralExpr::Create(Context,
+                                                 (IK == InitKind::One ||
+                                                  IK == InitKind::AllOnes ||
+                                                  IK == InitKind::Largest),
+                                                 Ty, ExprRange.getBegin()));
     } else {
       Exprs.push_back(IntegerLiteral::Create(
-          Context, llvm::APInt(Context.getTypeSize(Ty), 1), Ty,
-          ExprRange.getBegin()));
+          Context, getInitIntValue(Context, IK, Ty), Ty, ExprRange.getBegin()));
     }
   }
 
@@ -2645,6 +2711,8 @@ static Expr *GenerateReductionInitRecipeExpr(ASTContext &Context,
   InitExpr->setType(Ty);
   return InitExpr;
 }
+
+} // namespace
 
 std::pair<VarDecl *, VarDecl *>
 SemaOpenACC::CreateInitRecipe(OpenACCClauseKind CK,
@@ -2796,12 +2864,29 @@ SemaOpenACC::CreateInitRecipe(OpenACCClauseKind CK,
         // are used for code generation, we can just ignore/not bother doing any
         // initialization here.
         break;
-      case OpenACCReductionOperator::Max:
-      case OpenACCReductionOperator::Min:
-      case OpenACCReductionOperator::BitwiseAnd:
-        // TODO: OpenACC: figure out init for these.
-        break;
+      case OpenACCReductionOperator::Max: {
+        Expr *InitExpr = GenerateReductionInitRecipeExpr(
+            getASTContext(), VarExpr->getSourceRange(), VarTy, InitKind::Least);
 
+        Init = FinishValueInit(InitExpr);
+        break;
+      }
+      case OpenACCReductionOperator::Min: {
+        Expr *InitExpr = GenerateReductionInitRecipeExpr(
+            getASTContext(), VarExpr->getSourceRange(), VarTy,
+            InitKind::Largest);
+
+        Init = FinishValueInit(InitExpr);
+        break;
+      }
+      case OpenACCReductionOperator::BitwiseAnd: {
+        Expr *InitExpr = GenerateReductionInitRecipeExpr(
+            getASTContext(), VarExpr->getSourceRange(), VarTy,
+            InitKind::AllOnes);
+
+        Init = FinishValueInit(InitExpr);
+        break;
+      }
       case OpenACCReductionOperator::Multiplication:
       case OpenACCReductionOperator::And: {
         // '&&' initializes every field to 1.  However, we need to loop through
@@ -2809,7 +2894,7 @@ SemaOpenACC::CreateInitRecipe(OpenACCClauseKind CK,
         // elements.
 
         Expr *InitExpr = GenerateReductionInitRecipeExpr(
-            getASTContext(), VarExpr->getSourceRange(), VarTy);
+            getASTContext(), VarExpr->getSourceRange(), VarTy, InitKind::One);
 
         Init = FinishValueInit(InitExpr);
         break;
