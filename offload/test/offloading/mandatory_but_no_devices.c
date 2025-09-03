@@ -83,7 +83,6 @@
 // RUN:   %libomptarget-run-fail-nvptx64-nvidia-cuda 2>&1 | \
 // RUN:   %fcheck-nvptx64-nvidia-cuda
 
-
 #include <omp.h>
 #include <stdio.h>
 
