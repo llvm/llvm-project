@@ -203,5 +203,6 @@ loop.end:
   ASSERT_TRUE(IsReadOnlyLoop(F1, NonDerefLoads));
   ASSERT_TRUE(NonDerefLoads.empty());
   ASSERT_TRUE(IsReadOnlyLoop(F2, NonDerefLoads));
-  ASSERT_TRUE(NonDerefLoads[0]->getName() == "ld1");
+  ASSERT_TRUE((NonDerefLoads.size() == 1) &&
+              (NonDerefLoads[0]->getName() == "ld1"));
 }
