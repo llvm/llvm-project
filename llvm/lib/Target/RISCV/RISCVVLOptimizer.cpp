@@ -1470,7 +1470,7 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) const {
     const MachineInstr *VLMI = MRI->getVRegDef(CommonVL->getReg());
     if (RISCVInstrInfo::isFaultOnlyFirstLoad(*VLMI) &&
         !MDT->dominates(VLMI, &MI))
-      CommonVL = VLMI->getOperand(4);
+      CommonVL = VLMI->getOperand(RISCVII::getVLOpNum(VLMI->getDesc()));
   }
 
   if (!RISCV::isVLKnownLE(*CommonVL, VLOp)) {
