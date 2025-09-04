@@ -760,8 +760,9 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
   OS << "  };\n"
      << "  static constexpr " << getMinimalTypeForRange(FeatureBitsets.size())
      << " RequiredFeaturesRefs[] = {\n";
-  unsigned InstIdx = 0;
-  for (const CodeGenInstruction *Inst : Target.getInstructions()) {
+  ArrayRef<const CodeGenInstruction *> NumberedInstructions =
+      Target.getInstructions();
+  for (const CodeGenInstruction *Inst : NumberedInstructions) {
     OS << "    CEFBS";
     unsigned NumPredicates = 0;
     for (const Record *Predicate :
@@ -774,11 +775,10 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
     }
     if (!NumPredicates)
       OS << "_None";
-    OS << ", // " << Inst->TheDef->getName() << " = " << InstIdx << '\n';
-    InstIdx++;
+    OS << ", // " << Inst->TheDef->getName() << '\n';
   }
   OS << "  };\n\n"
-     << "  assert(Opcode < " << InstIdx << ");\n"
+     << "  assert(Opcode < " << NumberedInstructions.size() << ");\n"
      << "  return FeatureBitsets[RequiredFeaturesRefs[Opcode]];\n"
      << "}\n\n";
 
@@ -1284,7 +1284,7 @@ void InstrInfoEmitter::emitRecord(
   OS.write_hex(Value);
   OS << "ULL";
 
-  OS << " },  // Inst #" << Num << " = " << Inst.TheDef->getName() << '\n';
+  OS << " },  // " << Inst.TheDef->getName() << '\n';
 }
 
 // emitEnums - Print out enum values for all of the instructions.
