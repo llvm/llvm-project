@@ -8,9 +8,9 @@ define void @foo_st2_nxv16i8(<vscale x 16 x i1> %mask, <vscale x 16 x i8> %val1,
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    st2b { z0.b, z1.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %interleaved.mask = tail call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask)
-  %interleaved.value = tail call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2)
-  tail call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> %interleaved.value, ptr %p, i32 1, <vscale x 32 x i1> %interleaved.mask)
+  %interleaved.mask = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask)
+  %interleaved.value = call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2)
+  call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> %interleaved.value, ptr %p, i32 1, <vscale x 32 x i1> %interleaved.mask)
   ret void
 }
 
@@ -21,9 +21,9 @@ define void @foo_st2_nxv8i16(<vscale x 8 x i1> %mask, <vscale x 8 x i16> %val1, 
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    st2h { z0.h, z1.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %interleaved.mask = tail call <vscale x 16 x i1> @llvm.vector.interleave2.nxv16i1(<vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask)
-  %interleaved.value = tail call <vscale x 16 x i16> @llvm.vector.interleave2.nxv16i16(<vscale x 8 x i16> %val1, <vscale x 8 x i16> %val2)
-  tail call void @llvm.masked.store.nxv16i16.p0(<vscale x 16 x i16> %interleaved.value, ptr %p, i32 1, <vscale x 16 x i1> %interleaved.mask)
+  %interleaved.mask = call <vscale x 16 x i1> @llvm.vector.interleave2.nxv16i1(<vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask)
+  %interleaved.value = call <vscale x 16 x i16> @llvm.vector.interleave2.nxv16i16(<vscale x 8 x i16> %val1, <vscale x 8 x i16> %val2)
+  call void @llvm.masked.store.nxv16i16.p0(<vscale x 16 x i16> %interleaved.value, ptr %p, i32 1, <vscale x 16 x i1> %interleaved.mask)
   ret void
 }
 
@@ -34,9 +34,9 @@ define void @foo_st2_nxv4i32(<vscale x 4 x i1> %mask, <vscale x 4 x i32> %val1, 
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    st2w { z0.s, z1.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %interleaved.mask = tail call <vscale x 8 x i1> @llvm.vector.interleave2.nxv8i1(<vscale x 4 x i1> %mask, <vscale x 4 x i1> %mask)
-  %interleaved.value = tail call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> %val1, <vscale x 4 x i32> %val2)
-  tail call void @llvm.masked.store.nxv8i32.p0(<vscale x 8 x i32> %interleaved.value, ptr %p, i32 1, <vscale x 8 x i1> %interleaved.mask)
+  %interleaved.mask = call <vscale x 8 x i1> @llvm.vector.interleave2.nxv8i1(<vscale x 4 x i1> %mask, <vscale x 4 x i1> %mask)
+  %interleaved.value = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> %val1, <vscale x 4 x i32> %val2)
+  call void @llvm.masked.store.nxv8i32.p0(<vscale x 8 x i32> %interleaved.value, ptr %p, i32 1, <vscale x 8 x i1> %interleaved.mask)
   ret void
 }
 
@@ -47,9 +47,9 @@ define void @foo_st2_nxv2i64(<vscale x 2 x i1> %mask, <vscale x 2 x i64> %val1, 
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    st2d { z0.d, z1.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %interleaved.mask = tail call <vscale x 4 x i1> @llvm.vector.interleave2.nxv4i1(<vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask)
-  %interleaved.value = tail call <vscale x 4 x i64> @llvm.vector.interleave2.nxv4i64(<vscale x 2 x i64> %val1, <vscale x 2 x i64> %val2)
-  tail call void @llvm.masked.store.nxv4i64.p0(<vscale x 4 x i64> %interleaved.value, ptr %p, i32 1, <vscale x 4 x i1> %interleaved.mask)
+  %interleaved.mask = call <vscale x 4 x i1> @llvm.vector.interleave2.nxv4i1(<vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask)
+  %interleaved.value = call <vscale x 4 x i64> @llvm.vector.interleave2.nxv4i64(<vscale x 2 x i64> %val1, <vscale x 2 x i64> %val2)
+  call void @llvm.masked.store.nxv4i64.p0(<vscale x 4 x i64> %interleaved.value, ptr %p, i32 1, <vscale x 4 x i1> %interleaved.mask)
   ret void
 }
 
@@ -62,9 +62,9 @@ define void @foo_st4_nxv16i8(<vscale x 16 x i1> %mask, <vscale x 16 x i8> %val1,
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4b { z0.b - z3.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %interleaved.mask = tail call <vscale x 64 x i1> @llvm.vector.interleave4.nxv64i1(<vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask)
-  %interleaved.value = tail call <vscale x 64 x i8> @llvm.vector.interleave4.nxv64i8(<vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2, <vscale x 16 x i8> %val3, <vscale x 16 x i8> %val4)
-  tail call void @llvm.masked.store.nxv64i8.p0(<vscale x 64 x i8> %interleaved.value, ptr %p, i32 1, <vscale x 64 x i1> %interleaved.mask)
+  %interleaved.mask = call <vscale x 64 x i1> @llvm.vector.interleave4.nxv64i1(<vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask)
+  %interleaved.value = call <vscale x 64 x i8> @llvm.vector.interleave4.nxv64i8(<vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2, <vscale x 16 x i8> %val3, <vscale x 16 x i8> %val4)
+  call void @llvm.masked.store.nxv64i8.p0(<vscale x 64 x i8> %interleaved.value, ptr %p, i32 1, <vscale x 64 x i1> %interleaved.mask)
   ret void
 }
 
@@ -77,9 +77,9 @@ define void @foo_st4_nxv8i16(<vscale x 8 x i1> %mask, <vscale x 8 x i16> %val1, 
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4h { z0.h - z3.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %interleaved.mask = tail call <vscale x 32 x i1> @llvm.vector.interleave4.nxv32i1(<vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask)
-  %interleaved.value = tail call <vscale x 32 x i16> @llvm.vector.interleave4.nxv32i16(<vscale x 8 x i16> %val1, <vscale x 8 x i16> %val2, <vscale x 8 x i16> %val3, <vscale x 8 x i16> %val4)
-  tail call void @llvm.masked.store.nxv32i16.p0(<vscale x 32 x i16> %interleaved.value, ptr %p, i32 1, <vscale x 32 x i1> %interleaved.mask)
+  %interleaved.mask = call <vscale x 32 x i1> @llvm.vector.interleave4.nxv32i1(<vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask)
+  %interleaved.value = call <vscale x 32 x i16> @llvm.vector.interleave4.nxv32i16(<vscale x 8 x i16> %val1, <vscale x 8 x i16> %val2, <vscale x 8 x i16> %val3, <vscale x 8 x i16> %val4)
+  call void @llvm.masked.store.nxv32i16.p0(<vscale x 32 x i16> %interleaved.value, ptr %p, i32 1, <vscale x 32 x i1> %interleaved.mask)
   ret void
 }
 
@@ -92,9 +92,9 @@ define void @foo_st4_nxv4i32(<vscale x 4 x i1> %mask, <vscale x 4 x i32> %val1, 
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4w { z0.s - z3.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %interleaved.mask = tail call <vscale x 16 x i1> @llvm.vector.interleave4.nxv16i1(<vscale x 4 x i1> %mask, <vscale x 4 x i1> %mask, <vscale x 4 x i1> %mask, <vscale x 4 x i1> %mask)
-  %interleaved.value = tail call <vscale x 16 x i32> @llvm.vector.interleave4.nxv16i32(<vscale x 4 x i32> %val1, <vscale x 4 x i32> %val2, <vscale x 4 x i32> %val3, <vscale x 4 x i32> %val4)
-  tail call void @llvm.masked.store.nxv16i32.p0(<vscale x 16 x i32> %interleaved.value, ptr %p, i32 1, <vscale x 16 x i1> %interleaved.mask)
+  %interleaved.mask = call <vscale x 16 x i1> @llvm.vector.interleave4.nxv16i1(<vscale x 4 x i1> %mask, <vscale x 4 x i1> %mask, <vscale x 4 x i1> %mask, <vscale x 4 x i1> %mask)
+  %interleaved.value = call <vscale x 16 x i32> @llvm.vector.interleave4.nxv16i32(<vscale x 4 x i32> %val1, <vscale x 4 x i32> %val2, <vscale x 4 x i32> %val3, <vscale x 4 x i32> %val4)
+  call void @llvm.masked.store.nxv16i32.p0(<vscale x 16 x i32> %interleaved.value, ptr %p, i32 1, <vscale x 16 x i1> %interleaved.mask)
   ret void
 }
 
@@ -107,9 +107,9 @@ define void @foo_st4_nxv2i64(<vscale x 2 x i1> %mask, <vscale x 2 x i64> %val1, 
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4d { z0.d - z3.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %interleaved.mask = tail call <vscale x 8 x i1> @llvm.vector.interleave4.nxv4i1(<vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask)
-  %interleaved.value = tail call <vscale x 8 x i64> @llvm.vector.interleave4.nxv8i64(<vscale x 2 x i64> %val1, <vscale x 2 x i64> %val2, <vscale x 2 x i64> %val3, <vscale x 2 x i64> %val4)
-  tail call void @llvm.masked.store.nxv8i64.p0(<vscale x 8 x i64> %interleaved.value, ptr %p, i32 1, <vscale x 8 x i1> %interleaved.mask)
+  %interleaved.mask = call <vscale x 8 x i1> @llvm.vector.interleave4.nxv4i1(<vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask)
+  %interleaved.value = call <vscale x 8 x i64> @llvm.vector.interleave4.nxv8i64(<vscale x 2 x i64> %val1, <vscale x 2 x i64> %val2, <vscale x 2 x i64> %val3, <vscale x 2 x i64> %val4)
+  call void @llvm.masked.store.nxv8i64.p0(<vscale x 8 x i64> %interleaved.value, ptr %p, i32 1, <vscale x 8 x i1> %interleaved.mask)
   ret void
 }
 
@@ -120,13 +120,13 @@ define void @foo_st2_nxv16i8_mul_use_mask(<vscale x 16 x i1> %mask, <vscale x 16
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    zip2 p2.b, p0.b, p0.b
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    st2b { z0.b, z1.b }, p0, [x0]
 ; CHECK-NEXT:    // fake_use: $p1
 ; CHECK-NEXT:    // fake_use: $p2
-; CHECK-NEXT:    st2b { z0.b, z1.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %interleaved.mask = tail call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask)
-  %interleaved.value = tail call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2)
-  tail call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> %interleaved.value, ptr %p, i32 1, <vscale x 32 x i1> %interleaved.mask)
+  %interleaved.mask = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask)
+  %interleaved.value = call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2)
+  call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> %interleaved.value, ptr %p, i32 1, <vscale x 32 x i1> %interleaved.mask)
   call void (...) @llvm.fake.use(<vscale x 32 x i1> %interleaved.mask)
   ret void
 }
@@ -139,9 +139,9 @@ define void @foo_st2_nxv16i8_mask_of_interleaved_ones(<vscale x 16 x i8> %val1, 
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    st2b { z0.b, z1.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %interleaved.mask = tail call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> splat(i1 1), <vscale x 16 x i1> splat(i1 1))
-  %interleaved.value = tail call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2)
-  tail call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> %interleaved.value, ptr %p, i32 1, <vscale x 32 x i1> %interleaved.mask)
+  %interleaved.mask = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> splat(i1 1), <vscale x 16 x i1> splat(i1 1))
+  %interleaved.value = call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2)
+  call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> %interleaved.value, ptr %p, i32 1, <vscale x 32 x i1> %interleaved.mask)
   ret void
 }
 
@@ -149,8 +149,8 @@ define void @foo_st2_nxv16i8_all_false_mask(<vscale x 16 x i8> %val1, <vscale x 
 ; CHECK-LABEL: foo_st2_nxv16i8_all_false_mask:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ret
-  %interleaved.value = tail call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2)
-  tail call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> %interleaved.value, ptr %p, i32 1, <vscale x 32 x i1> splat(i1 0))
+  %interleaved.value = call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2)
+  call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> %interleaved.value, ptr %p, i32 1, <vscale x 32 x i1> splat(i1 0))
   ret void
 }
 
@@ -164,8 +164,8 @@ define void @foo_st2_nxv16i8_all_true_mask(<vscale x 16 x i8> %val1, <vscale x 1
 ; CHECK-NEXT:    str z2, [x0, #1, mul vl]
 ; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
-  %interleaved.value = tail call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2)
-  tail call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> %interleaved.value, ptr %p, i32 1, <vscale x 32 x i1> splat(i1 1))
+  %interleaved.value = call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2)
+  call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> %interleaved.value, ptr %p, i32 1, <vscale x 32 x i1> splat(i1 1))
   ret void
 }
 
@@ -175,18 +175,18 @@ define void @foo_st2_nxv16i8_all_true_mask(<vscale x 16 x i8> %val1, <vscale x 1
 define void @foo_st2_nxv16i8_mul_use_value(<vscale x 16 x i1> %mask, <vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2, ptr %p) {
 ; CHECK-LABEL: foo_st2_nxv16i8_mul_use_value:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip1 z2.b, z0.b, z1.b
-; CHECK-NEXT:    zip1 p1.b, p0.b, p0.b
-; CHECK-NEXT:    zip2 z0.b, z0.b, z1.b
-; CHECK-NEXT:    zip2 p0.b, p0.b, p0.b
-; CHECK-NEXT:    // fake_use: $z2
+; CHECK-NEXT:    zip2 z2.b, z0.b, z1.b
+; CHECK-NEXT:    zip1 z0.b, z0.b, z1.b
+; CHECK-NEXT:    zip2 p1.b, p0.b, p0.b
+; CHECK-NEXT:    zip1 p0.b, p0.b, p0.b
+; CHECK-NEXT:    st1b { z2.b }, p1, [x0, #1, mul vl]
+; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    // fake_use: $z0
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0, #1, mul vl]
-; CHECK-NEXT:    st1b { z2.b }, p1, [x0]
+; CHECK-NEXT:    // fake_use: $z2
 ; CHECK-NEXT:    ret
-  %interleaved.mask = tail call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask)
-  %interleaved.value = tail call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2)
-  tail call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> %interleaved.value, ptr %p, i32 1, <vscale x 32 x i1> %interleaved.mask)
+  %interleaved.mask = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask)
+  %interleaved.value = call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2)
+  call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> %interleaved.value, ptr %p, i32 1, <vscale x 32 x i1> %interleaved.mask)
   call void (...) @llvm.fake.use(<vscale x 32 x i8> %interleaved.value)
   ret void
 }
@@ -202,13 +202,13 @@ define void @foo_st2_nxv16i8_bad_mask(<vscale x 16 x i1> %mask, <vscale x 16 x i
 ; CHECK-NEXT:    st1b { z2.b }, p2, [x0, #1, mul vl]
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %interleaved.mask = tail call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask2)
-  %interleaved.value = tail call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2)
-  tail call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> %interleaved.value, ptr %p, i32 1, <vscale x 32 x i1> %interleaved.mask)
+  %interleaved.mask = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask2)
+  %interleaved.value = call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2)
+  call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> %interleaved.value, ptr %p, i32 1, <vscale x 32 x i1> %interleaved.mask)
   ret void
 }
 
-; Number of parts in mask interleave must match deinterleave.
+; Number of parts in mask interleave must match interleave.
 define void @foo_st4_nxv4i32_bad_mask2(<vscale x 8 x i1> %mask, <vscale x 4 x i32> %val1, <vscale x 4 x i32> %val2, <vscale x 4 x i32> %val3, <vscale x 4 x i32> %val4, ptr %p) {
 ; CHECK-LABEL: foo_st4_nxv4i32_bad_mask2:
 ; CHECK:       // %bb.0:
@@ -231,9 +231,9 @@ define void @foo_st4_nxv4i32_bad_mask2(<vscale x 8 x i1> %mask, <vscale x 4 x i3
 ; CHECK-NEXT:    st1w { z4.s }, p2, [x0, #1, mul vl]
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %interleaved.mask = tail call <vscale x 16 x i1> @llvm.vector.interleave2.nxv16i1(<vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask)
-  %interleaved.value = tail call <vscale x 16 x i32> @llvm.vector.interleave4.nxv16i32(<vscale x 4 x i32> %val1, <vscale x 4 x i32> %val2, <vscale x 4 x i32> %val3, <vscale x 4 x i32> %val4)
-  tail call void @llvm.masked.store.nxv16i32.p0(<vscale x 16 x i32> %interleaved.value, ptr %p, i32 1, <vscale x 16 x i1> %interleaved.mask)
+  %interleaved.mask = call <vscale x 16 x i1> @llvm.vector.interleave2.nxv16i1(<vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask)
+  %interleaved.value = call <vscale x 16 x i32> @llvm.vector.interleave4.nxv16i32(<vscale x 4 x i32> %val1, <vscale x 4 x i32> %val2, <vscale x 4 x i32> %val3, <vscale x 4 x i32> %val4)
+  call void @llvm.masked.store.nxv16i32.p0(<vscale x 16 x i32> %interleaved.value, ptr %p, i32 1, <vscale x 16 x i1> %interleaved.mask)
   ret void
 }
 
@@ -246,8 +246,8 @@ define void @foo_st2_nxv16i8_bad_mask3(<vscale x 32 x i1> %mask, <vscale x 16 x 
 ; CHECK-NEXT:    st1b { z2.b }, p1, [x0, #1, mul vl]
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %interleaved.value = tail call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2)
-  tail call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> %interleaved.value, ptr %p, i32 1, <vscale x 32 x i1> %mask)
+  %interleaved.value = call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2)
+  call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> %interleaved.value, ptr %p, i32 1, <vscale x 32 x i1> %mask)
   ret void
 }
 
@@ -263,9 +263,9 @@ define void @foo_st2_nxv8i8(<vscale x 8 x i1> %mask, <vscale x 8 x i8> %val1, <v
 ; CHECK-NEXT:    uzp1 p0.b, p0.b, p1.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %interleaved.mask = tail call <vscale x 16 x i1> @llvm.vector.interleave2.nxv16i1(<vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask)
-  %interleaved.value = tail call <vscale x 16 x i8> @llvm.vector.interleave2.nxv16i8(<vscale x 8 x i8> %val1, <vscale x 8 x i8> %val2)
-  tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> %interleaved.value, ptr %p, i32 1, <vscale x 16 x i1> %interleaved.mask)
+  %interleaved.mask = call <vscale x 16 x i1> @llvm.vector.interleave2.nxv16i1(<vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask)
+  %interleaved.value = call <vscale x 16 x i8> @llvm.vector.interleave2.nxv16i8(<vscale x 8 x i8> %val1, <vscale x 8 x i8> %val2)
+  call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> %interleaved.value, ptr %p, i32 1, <vscale x 16 x i1> %interleaved.mask)
   ret void
 }
 
@@ -280,9 +280,9 @@ define void @foo_st2_nxv8i8_trunc(<vscale x 4 x i1> %mask, <vscale x 4 x i16> %v
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
 ; CHECK-NEXT:    st1b { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %interleaved.mask = tail call <vscale x 8 x i1> @llvm.vector.interleave2.nxv8i1(<vscale x 4 x i1> %mask, <vscale x 4 x i1> %mask)
-  %interleaved.value = tail call <vscale x 8 x i16> @llvm.vector.interleave2.nxv8i16(<vscale x 4 x i16> %val1, <vscale x 4 x i16> %val2)
+  %interleaved.mask = call <vscale x 8 x i1> @llvm.vector.interleave2.nxv8i1(<vscale x 4 x i1> %mask, <vscale x 4 x i1> %mask)
+  %interleaved.value = call <vscale x 8 x i16> @llvm.vector.interleave2.nxv8i16(<vscale x 4 x i16> %val1, <vscale x 4 x i16> %val2)
   %trunc.value = trunc <vscale x 8 x i16> %interleaved.value to <vscale x 8 x i8>
-  tail call void @llvm.masked.store.nxv8i8.p0(<vscale x 8 x i8> %trunc.value, ptr %p, i32 1, <vscale x 8 x i1> %interleaved.mask)
+  call void @llvm.masked.store.nxv8i8.p0(<vscale x 8 x i8> %trunc.value, ptr %p, i32 1, <vscale x 8 x i1> %interleaved.mask)
   ret void
 }

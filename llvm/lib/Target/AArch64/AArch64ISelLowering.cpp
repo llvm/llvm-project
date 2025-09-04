@@ -24683,9 +24683,8 @@ static SDValue getNarrowMaskForInterleavedOps(SelectionDAG &DAG, SDLoc &DL,
   return SDValue();
 }
 
-static SDValue
-performStoreInterleaveCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
-                              SelectionDAG &DAG) {
+static SDValue performInterleavedMaskedStoreCombine(
+    SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
   if (!DCI.isBeforeLegalize())
     return SDValue();
 
@@ -24708,7 +24707,7 @@ performStoreInterleaveCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   if (NumParts != 2 && NumParts != 4)
     return SDValue();
 
-  // At the moment we're unlikely to see a fixed-width vector deinterleave as
+  // At the moment we're unlikely to see a fixed-width vector interleave as
   // we usually generate shuffles instead.
   EVT SubVecTy = ValueInterleaveOps[0].getValueType();
   if (!SubVecTy.isScalableVT() ||
@@ -24724,7 +24723,6 @@ performStoreInterleaveCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   const Intrinsic::ID IID =
       NumParts == 2 ? Intrinsic::aarch64_sve_st2 : Intrinsic::aarch64_sve_st4;
-  SDValue Res;
   SmallVector<SDValue, 8> NewStOps;
   NewStOps.append({MST->getChain(), DAG.getConstant(IID, DL, MVT::i32)});
   NewStOps.append(ValueInterleaveOps);
@@ -24741,7 +24739,7 @@ static SDValue performMSTORECombine(SDNode *N,
   SDValue Mask = MST->getMask();
   SDLoc DL(N);
 
-  if (SDValue Res = performStoreInterleaveCombine(N, DCI, DAG))
+  if (SDValue Res = performInterleavedMaskedStoreCombine(N, DCI, DAG))
     return Res;
 
   // If this is a UZP1 followed by a masked store, fold this into a masked

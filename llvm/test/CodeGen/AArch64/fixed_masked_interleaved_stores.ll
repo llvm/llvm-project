@@ -218,9 +218,9 @@ define void @foo_st2_v16i8(<16 x i1> %mask, <16 x i8> %val1, <16 x i8> %val2, pt
 ; CHECK-NEXT:    mov b0, v0.b[15]
 ; CHECK-NEXT:    stur b0, [x0, #31]
 ; CHECK-NEXT:    ret
-  %interleaved.mask = tail call <32 x i1> @llvm.vector.interleave2.v32i1(<16 x i1> %mask, <16 x i1> %mask)
-  %strided.vec = tail call <32 x i8> @llvm.vector.interleave2.v32i8(<16 x i8> %val1, <16 x i8> %val2)
-  tail call void @llvm.masked.store.v32i8.p0(<32 x i8> %strided.vec, ptr %p, i32 1, <32 x i1> %interleaved.mask)
+  %interleaved.mask = call <32 x i1> @llvm.vector.interleave2.v32i1(<16 x i1> %mask, <16 x i1> %mask)
+  %strided.vec = call <32 x i8> @llvm.vector.interleave2.v32i8(<16 x i8> %val1, <16 x i8> %val2)
+  call void @llvm.masked.store.v32i8.p0(<32 x i8> %strided.vec, ptr %p, i32 1, <32 x i1> %interleaved.mask)
   ret void
 }
 
@@ -336,9 +336,9 @@ define void @foo_st2_v8i16(<8 x i1> %mask, <8 x i16> %val1, <8 x i16> %val2, ptr
 ; CHECK-NEXT:    mov h0, v0.h[7]
 ; CHECK-NEXT:    str h0, [x0, #30]
 ; CHECK-NEXT:    ret
-  %interleaved.mask = tail call <16 x i1> @llvm.vector.interleave2.v16i1(<8 x i1> %mask, <8 x i1> %mask)
-  %strided.vec = tail call <16 x i16> @llvm.vector.interleave2.v16i16(<8 x i16> %val1, <8 x i16> %val2)
-  tail call void @llvm.masked.store.v16i16.p0(<16 x i16> %strided.vec, ptr %p, i32 1, <16 x i1> %interleaved.mask)
+  %interleaved.mask = call <16 x i1> @llvm.vector.interleave2.v16i1(<8 x i1> %mask, <8 x i1> %mask)
+  %strided.vec = call <16 x i16> @llvm.vector.interleave2.v16i16(<8 x i16> %val1, <8 x i16> %val2)
+  call void @llvm.masked.store.v16i16.p0(<16 x i16> %strided.vec, ptr %p, i32 1, <16 x i1> %interleaved.mask)
   ret void
 }
 
@@ -404,9 +404,9 @@ define void @foo_st2_v4i32(<4 x i1> %mask, <4 x i32> %val1, <4 x i32> %val2, ptr
 ; CHECK-NEXT:    mov s0, v0.s[3]
 ; CHECK-NEXT:    str s0, [x0, #28]
 ; CHECK-NEXT:    ret
-  %interleaved.mask = tail call <8 x i1> @llvm.vector.interleave2.v8i1(<4 x i1> %mask, <4 x i1> %mask)
-  %strided.vec = tail call <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32> %val1, <4 x i32> %val2)
-  tail call void @llvm.masked.store.v8i32.p0(<8 x i32> %strided.vec, ptr %p, i32 1, <8 x i1> %interleaved.mask)
+  %interleaved.mask = call <8 x i1> @llvm.vector.interleave2.v8i1(<4 x i1> %mask, <4 x i1> %mask)
+  %strided.vec = call <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32> %val1, <4 x i32> %val2)
+  call void @llvm.masked.store.v8i32.p0(<8 x i32> %strided.vec, ptr %p, i32 1, <8 x i1> %interleaved.mask)
   ret void
 }
 
@@ -448,8 +448,8 @@ define void @foo_st2_v2i64(<2 x i1> %mask, <2 x i64> %val1, <2 x i64> %val2, ptr
 ; CHECK-NEXT:    mov d0, v0.d[1]
 ; CHECK-NEXT:    str d0, [x0, #24]
 ; CHECK-NEXT:    ret
-  %interleaved.mask = tail call <4 x i1> @llvm.vector.interleave2.v4i1(<2 x i1> %mask, <2 x i1> %mask)
-  %strided.vec = tail call <4 x i64> @llvm.vector.interleave2.v4i64(<2 x i64> %val1, <2 x i64> %val2)
-  tail call void @llvm.masked.store.v4i64.p0(<4 x i64> %strided.vec, ptr %p, i32 1, <4 x i1> %interleaved.mask)
+  %interleaved.mask = call <4 x i1> @llvm.vector.interleave2.v4i1(<2 x i1> %mask, <2 x i1> %mask)
+  %strided.vec = call <4 x i64> @llvm.vector.interleave2.v4i64(<2 x i64> %val1, <2 x i64> %val2)
+  call void @llvm.masked.store.v4i64.p0(<4 x i64> %strided.vec, ptr %p, i32 1, <4 x i1> %interleaved.mask)
   ret void
 }
