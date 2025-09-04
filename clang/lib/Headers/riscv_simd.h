@@ -70,6 +70,26 @@ __riscv_usati(uint32_t __x, int __y) {
   return __builtin_riscv_usati_32(__x, __y);
 }
 
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_psrai_b(uint32_t __x, int __y) {
+  return __builtin_riscv_psrai_b_32(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_psrai_h(uint32_t __x, int __y) {
+  return __builtin_riscv_psrai_h_32(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_psrari_h(uint32_t __x, int __y) {
+  return __builtin_riscv_psrari_h_32(__x, __y);
+}
+
+static __inline__ int32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_srari(int32_t __x, int __y) {
+  return __builtin_riscv_srari_32(__x, __y);
+}
+
 static __inline__ int32_t __attribute__((__always_inline__, __nodebug__))
 __riscv_sadd(int32_t __x, int32_t __y) {
   return __builtin_riscv_sadd(__x, __y);
@@ -146,6 +166,36 @@ __riscv_pusati_w(uint64_t __x, int __y) {
 static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
 __riscv_usati(uint64_t __x, int __y) {
   return __builtin_riscv_usati_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_psrai_b(uint64_t __x, int __y) {
+  return __builtin_riscv_psrai_b_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_psrai_h(uint64_t __x, int __y) {
+  return __builtin_riscv_psrai_h_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_psrai_w(uint64_t __x, int __y) {
+  return __builtin_riscv_psrai_w(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_psrari_h(uint64_t __x, int __y) {
+  return __builtin_riscv_psrari_h_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_psrari_w(uint64_t __x, int __y) {
+  return __builtin_riscv_psrari_w(__x, __y);
+}
+
+static __inline__ int64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_srari(int64_t __x, int __y) {
+  return __builtin_riscv_srari_64(__x, __y);
 }
 #endif
 

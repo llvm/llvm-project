@@ -138,3 +138,63 @@ uint64_t pusati_w(uint64_t rs1, int64_t rs2) {
 uint64_t usati(uint64_t rs1, int64_t rs2) {
   return __riscv_usati(rs1, 1);
 }
+
+// RV64P-LABEL: @psrai_b(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[CONV_I:%.*]] = sext i32 1 to i64
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.psrai.b.i64.i64(i64 [[RS1:%.*]], i64 [[CONV_I]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t psrai_b(uint64_t rs1, int64_t rs2) {
+  return __riscv_psrai_b(rs1, 1);
+}
+
+// RV64P-LABEL: @psrai_h(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[CONV_I:%.*]] = sext i32 1 to i64
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.psrai.h.i64.i64(i64 [[RS1:%.*]], i64 [[CONV_I]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t psrai_h(uint64_t rs1, int64_t rs2) {
+  return __riscv_psrai_h(rs1, 1);
+}
+
+// RV64P-LABEL: @psrai_w(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[CONV_I:%.*]] = sext i32 1 to i64
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.psrai.w.i64.i64(i64 [[RS1:%.*]], i64 [[CONV_I]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t psrai_w(uint64_t rs1, int64_t rs2) {
+  return __riscv_psrai_w(rs1, 1);
+}
+
+// RV64P-LABEL: @psrari_h(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[CONV_I:%.*]] = sext i32 1 to i64
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.psrari.h.i64.i64(i64 [[RS1:%.*]], i64 [[CONV_I]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t psrari_h(uint64_t rs1, int64_t rs2) {
+  return __riscv_psrari_h(rs1, 1);
+}
+
+// RV64P-LABEL: @psrari_w(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[CONV_I:%.*]] = sext i32 1 to i64
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.psrari.w.i64.i64(i64 [[RS1:%.*]], i64 [[CONV_I]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t psrari_w(uint64_t rs1, int64_t rs2) {
+  return __riscv_psrari_w(rs1, 1);
+}
+
+// RV64P-LABEL: @srari(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[CONV_I:%.*]] = sext i32 1 to i64
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.srari.i64.i64(i64 [[RS1:%.*]], i64 [[CONV_I]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+int64_t srari(int64_t rs1, int64_t rs2) {
+  return __riscv_srari(rs1, 1);
+}

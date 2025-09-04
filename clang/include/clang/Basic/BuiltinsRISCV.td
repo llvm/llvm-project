@@ -152,6 +152,10 @@ def padd_hs_32  : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 def sadd        : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
 def pusati_h_32 : RISCVBuiltin<"uint32_t(uint32_t, int32_t)">;
 def usati_32    : RISCVBuiltin<"uint32_t(uint32_t, int32_t)">;
+def psrai_b_32  : RISCVBuiltin<"uint32_t(uint32_t, int32_t)">;
+def psrai_h_32  : RISCVBuiltin<"uint32_t(uint32_t, int32_t)">;
+def psrari_h_32 : RISCVBuiltin<"uint32_t(uint32_t, int32_t)">;
+def srari_32    : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
 } // Features = "experimental-p,32bit"
 
 let Features = "experimental-p,64bit" in {
@@ -169,6 +173,12 @@ def padd_ws     : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 def pusati_h_64 : RISCVBuiltin<"uint64_t(uint64_t, int64_t)">;
 def pusati_w    : RISCVBuiltin<"uint64_t(uint64_t, int64_t)">;
 def usati_64    : RISCVBuiltin<"uint64_t(uint64_t, int64_t)">;
+def psrai_b_64  : RISCVBuiltin<"uint64_t(uint64_t, int64_t)">;
+def psrai_h_64  : RISCVBuiltin<"uint64_t(uint64_t, int64_t)">;
+def psrai_w     : RISCVBuiltin<"uint64_t(uint64_t, int64_t)">;
+def psrari_h_64 : RISCVBuiltin<"uint64_t(uint64_t, int64_t)">;
+def psrari_w    : RISCVBuiltin<"uint64_t(uint64_t, int64_t)">;
+def srari_64    : RISCVBuiltin<"int64_t(int64_t, int64_t)">;
 } // Features = "experimental-p,64bit"
 } // Attributes = [Const, NoThrow]
 

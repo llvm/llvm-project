@@ -95,6 +95,42 @@ uint32_t usati(uint32_t rs1, int32_t rs2) {
   return __riscv_usati(rs1, 1);
 }
 
+// RV32P-LABEL: @psrai_b(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.psrai.b.i32.i32(i32 [[RS1:%.*]], i32 1)
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t psrai_b(uint32_t rs1, int32_t rs2) {
+  return __riscv_psrai_b(rs1, 1);
+}
+
+// RV32P-LABEL: @psrai_h(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.psrai.h.i32.i32(i32 [[RS1:%.*]], i32 1)
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t psrai_h(uint32_t rs1, int32_t rs2) {
+  return __riscv_psrai_h(rs1, 1);
+}
+
+// RV32P-LABEL: @psrari_h(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.psrari.h.i32.i32(i32 [[RS1:%.*]], i32 1)
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t psrari_h(uint32_t rs1, int32_t rs2) {
+  return __riscv_psrari_h(rs1, 1);
+}
+
+// RV32P-LABEL: @srari(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.srari.i32.i32(i32 [[RS1:%.*]], i32 1)
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+int32_t srari(int32_t rs1, int32_t rs2) {
+  return __riscv_srari(rs1, 1);
+}
+
 // RV32P-LABEL: @sadd(
 // RV32P-NEXT:  entry:
 // RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.sadd.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
