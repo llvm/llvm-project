@@ -139,7 +139,7 @@ void InlinerPass::runOnOperation() {
   }
 
   // By default, assume that any inlining is profitable.
-  auto profitabilityCb = [=](const Inliner::ResolvedCall &call) {
+  auto profitabilityCb = [this](const Inliner::ResolvedCall &call) {
     return isProfitableToInline(call, inliningThreshold);
   };
 

@@ -692,146 +692,6 @@ static DecodeStatus DecodeLazyLoadStoreMul(MCInst &Inst, unsigned Insn,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder);
 
-#include "ARMGenDisassemblerTables.inc"
-
-static MCDisassembler *createARMDisassembler(const Target &T,
-                                             const MCSubtargetInfo &STI,
-                                             MCContext &Ctx) {
-  return new ARMDisassembler(STI, Ctx, T.createMCInstrInfo());
-}
-
-// Post-decoding checks
-static DecodeStatus checkDecodedInstruction(MCInst &MI, uint64_t &Size,
-                                            uint64_t Address, raw_ostream &CS,
-                                            uint32_t Insn,
-                                            DecodeStatus Result) {
-  switch (MI.getOpcode()) {
-    case ARM::HVC: {
-      // HVC is undefined if condition = 0xf otherwise upredictable
-      // if condition != 0xe
-      uint32_t Cond = (Insn >> 28) & 0xF;
-      if (Cond == 0xF)
-        return MCDisassembler::Fail;
-      if (Cond != 0xE)
-        return MCDisassembler::SoftFail;
-      return Result;
-    }
-    case ARM::t2ADDri:
-    case ARM::t2ADDri12:
-    case ARM::t2ADDrr:
-    case ARM::t2ADDrs:
-    case ARM::t2SUBri:
-    case ARM::t2SUBri12:
-    case ARM::t2SUBrr:
-    case ARM::t2SUBrs:
-      if (MI.getOperand(0).getReg() == ARM::SP &&
-          MI.getOperand(1).getReg() != ARM::SP)
-        return MCDisassembler::SoftFail;
-      return Result;
-    default: return Result;
-  }
-}
-
-uint64_t ARMDisassembler::suggestBytesToSkip(ArrayRef<uint8_t> Bytes,
-                                             uint64_t Address) const {
-  // In Arm state, instructions are always 4 bytes wide, so there's no
-  // point in skipping any smaller number of bytes if an instruction
-  // can't be decoded.
-  if (!STI.hasFeature(ARM::ModeThumb))
-    return 4;
-
-  // In a Thumb instruction stream, a halfword is a standalone 2-byte
-  // instruction if and only if its value is less than 0xE800.
-  // Otherwise, it's the first halfword of a 4-byte instruction.
-  //
-  // So, if we can see the upcoming halfword, we can judge on that
-  // basis, and maybe skip a whole 4-byte instruction that we don't
-  // know how to decode, without accidentally trying to interpret its
-  // second half as something else.
-  //
-  // If we don't have the instruction data available, we just have to
-  // recommend skipping the minimum sensible distance, which is 2
-  // bytes.
-  if (Bytes.size() < 2)
-    return 2;
-
-  uint16_t Insn16 = llvm::support::endian::read<uint16_t>(
-      Bytes.data(), InstructionEndianness);
-  return Insn16 < 0xE800 ? 2 : 4;
-}
-
-DecodeStatus ARMDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
-                                             ArrayRef<uint8_t> Bytes,
-                                             uint64_t Address,
-                                             raw_ostream &CS) const {
-  if (STI.hasFeature(ARM::ModeThumb))
-    return getThumbInstruction(MI, Size, Bytes, Address, CS);
-  return getARMInstruction(MI, Size, Bytes, Address, CS);
-}
-
-DecodeStatus ARMDisassembler::getARMInstruction(MCInst &MI, uint64_t &Size,
-                                                ArrayRef<uint8_t> Bytes,
-                                                uint64_t Address,
-                                                raw_ostream &CS) const {
-  CommentStream = &CS;
-
-  assert(!STI.hasFeature(ARM::ModeThumb) &&
-         "Asked to disassemble an ARM instruction but Subtarget is in Thumb "
-         "mode!");
-
-  // We want to read exactly 4 bytes of data.
-  if (Bytes.size() < 4) {
-    Size = 0;
-    return MCDisassembler::Fail;
-  }
-
-  // Encoded as a 32-bit word in the stream.
-  uint32_t Insn = llvm::support::endian::read<uint32_t>(Bytes.data(),
-                                                        InstructionEndianness);
-
-  // Calling the auto-generated decoder function.
-  DecodeStatus Result =
-      decodeInstruction(DecoderTableARM32, MI, Insn, Address, this, STI);
-  if (Result != MCDisassembler::Fail) {
-    Size = 4;
-    return checkDecodedInstruction(MI, Size, Address, CS, Insn, Result);
-  }
-
-  struct DecodeTable {
-    const uint8_t *P;
-    bool DecodePred;
-  };
-
-  const DecodeTable Tables[] = {
-      {DecoderTableVFP32, false},      {DecoderTableVFPV832, false},
-      {DecoderTableNEONData32, true},  {DecoderTableNEONLoadStore32, true},
-      {DecoderTableNEONDup32, true},   {DecoderTablev8NEON32, false},
-      {DecoderTablev8Crypto32, false},
-  };
-
-  for (auto Table : Tables) {
-    Result = decodeInstruction(Table.P, MI, Insn, Address, this, STI);
-    if (Result != MCDisassembler::Fail) {
-      Size = 4;
-      // Add a fake predicate operand, because we share these instruction
-      // definitions with Thumb2 where these instructions are predicable.
-      if (Table.DecodePred && !DecodePredicateOperand(MI, 0xE, Address, this))
-        return MCDisassembler::Fail;
-      return Result;
-    }
-  }
-
-  Result =
-      decodeInstruction(DecoderTableCoProc32, MI, Insn, Address, this, STI);
-  if (Result != MCDisassembler::Fail) {
-    Size = 4;
-    return checkDecodedInstruction(MI, Size, Address, CS, Insn, Result);
-  }
-
-  Size = 4;
-  return MCDisassembler::Fail;
-}
-
 /// tryAddingSymbolicOperand - trys to add a symbolic operand in place of the
 /// immediate Value in the MCInst.  The immediate Value has had any PC
 /// adjustment made by the caller.  If the instruction is a branch instruction
@@ -868,408 +728,38 @@ static void tryAddingPcLoadReferenceComment(uint64_t Address, int Value,
   Decoder->tryAddingPcLoadReferenceComment(Value, Address);
 }
 
-// Thumb1 instructions don't have explicit S bits.  Rather, they
-// implicitly set CPSR.  Since it's not represented in the encoding, the
-// auto-generated decoder won't inject the CPSR operand.  We need to fix
-// that as a post-pass.
-void ARMDisassembler::AddThumb1SBit(MCInst &MI, bool InITBlock) const {
-  const MCInstrDesc &MCID = MCII->get(MI.getOpcode());
-  MCInst::iterator I = MI.begin();
-  for (unsigned i = 0; i < MCID.NumOperands; ++i, ++I) {
-    if (I == MI.end()) break;
-    if (MCID.operands()[i].isOptionalDef() &&
-        MCID.operands()[i].RegClass == ARM::CCRRegClassID) {
-      if (i > 0 && MCID.operands()[i - 1].isPredicate())
-        continue;
-      MI.insert(I,
-                MCOperand::createReg(InITBlock ? ARM::NoRegister : ARM::CPSR));
-      return;
-    }
-  }
+#include "ARMGenDisassemblerTables.inc"
 
-  MI.insert(I, MCOperand::createReg(InITBlock ? ARM::NoRegister : ARM::CPSR));
-}
-
-bool ARMDisassembler::isVectorPredicable(const MCInst &MI) const {
-  const MCInstrDesc &MCID = MCII->get(MI.getOpcode());
-  for (unsigned i = 0; i < MCID.NumOperands; ++i) {
-    if (ARM::isVpred(MCID.operands()[i].OperandType))
-      return true;
-  }
-  return false;
-}
-
-// Most Thumb instructions don't have explicit predicates in the
-// encoding, but rather get their predicates from IT context.  We need
-// to fix up the predicate operands using this context information as a
-// post-pass.
-MCDisassembler::DecodeStatus
-ARMDisassembler::AddThumbPredicate(MCInst &MI) const {
-  MCDisassembler::DecodeStatus S = Success;
-
-  const FeatureBitset &FeatureBits = getSubtargetInfo().getFeatureBits();
-
-  // A few instructions actually have predicates encoded in them.  Don't
-  // try to overwrite it if we're seeing one of those.
+// Post-decoding checks
+static DecodeStatus checkDecodedInstruction(MCInst &MI, uint64_t &Size,
+                                            uint64_t Address, raw_ostream &CS,
+                                            uint32_t Insn,
+                                            DecodeStatus Result) {
   switch (MI.getOpcode()) {
-    case ARM::tBcc:
-    case ARM::t2Bcc:
-    case ARM::tCBZ:
-    case ARM::tCBNZ:
-    case ARM::tCPS:
-    case ARM::t2CPS3p:
-    case ARM::t2CPS2p:
-    case ARM::t2CPS1p:
-    case ARM::t2CSEL:
-    case ARM::t2CSINC:
-    case ARM::t2CSINV:
-    case ARM::t2CSNEG:
-    case ARM::tMOVSr:
-    case ARM::tSETEND:
-      // Some instructions (mostly conditional branches) are not
-      // allowed in IT blocks.
-      if (ITBlock.instrInITBlock())
-        S = SoftFail;
-      else
-        return Success;
-      break;
-    case ARM::t2HINT:
-      if (MI.getOperand(0).getImm() == 0x10 && (FeatureBits[ARM::FeatureRAS]) != 0)
-        S = SoftFail;
-      break;
-    case ARM::tB:
-    case ARM::t2B:
-    case ARM::t2TBB:
-    case ARM::t2TBH:
-      // Some instructions (mostly unconditional branches) can
-      // only appears at the end of, or outside of, an IT.
-      if (ITBlock.instrInITBlock() && !ITBlock.instrLastInITBlock())
-        S = SoftFail;
-      break;
-    default:
-      break;
-  }
-
-  // Warn on non-VPT predicable instruction in a VPT block and a VPT
-  // predicable instruction in an IT block
-  if ((!isVectorPredicable(MI) && VPTBlock.instrInVPTBlock()) ||
-      (isVectorPredicable(MI) && ITBlock.instrInITBlock()))
-    S = SoftFail;
-
-  // If we're in an IT/VPT block, base the predicate on that.  Otherwise,
-  // assume a predicate of AL.
-  unsigned CC = ARMCC::AL;
-  unsigned VCC = ARMVCC::None;
-  if (ITBlock.instrInITBlock()) {
-    CC = ITBlock.getITCC();
-    ITBlock.advanceITState();
-  } else if (VPTBlock.instrInVPTBlock()) {
-    VCC = VPTBlock.getVPTPred();
-    VPTBlock.advanceVPTState();
-  }
-
-  const MCInstrDesc &MCID = MCII->get(MI.getOpcode());
-
-  MCInst::iterator CCI = MI.begin();
-  for (unsigned i = 0; i < MCID.NumOperands; ++i, ++CCI) {
-    if (MCID.operands()[i].isPredicate() || CCI == MI.end())
-      break;
-  }
-
-  if (MCID.isPredicable()) {
-    CCI = MI.insert(CCI, MCOperand::createImm(CC));
-    ++CCI;
-    if (CC == ARMCC::AL)
-      MI.insert(CCI, MCOperand::createReg(ARM::NoRegister));
-    else
-      MI.insert(CCI, MCOperand::createReg(ARM::CPSR));
-  } else if (CC != ARMCC::AL) {
-    Check(S, SoftFail);
-  }
-
-  MCInst::iterator VCCI = MI.begin();
-  unsigned VCCPos;
-  for (VCCPos = 0; VCCPos < MCID.NumOperands; ++VCCPos, ++VCCI) {
-    if (ARM::isVpred(MCID.operands()[VCCPos].OperandType) || VCCI == MI.end())
-      break;
-  }
-
-  if (isVectorPredicable(MI)) {
-    VCCI = MI.insert(VCCI, MCOperand::createImm(VCC));
-    ++VCCI;
-    if (VCC == ARMVCC::None)
-      VCCI = MI.insert(VCCI, MCOperand::createReg(0));
-    else
-      VCCI = MI.insert(VCCI, MCOperand::createReg(ARM::P0));
-    ++VCCI;
-    VCCI = MI.insert(VCCI, MCOperand::createReg(0));
-    ++VCCI;
-    if (MCID.operands()[VCCPos].OperandType == ARM::OPERAND_VPRED_R) {
-      int TiedOp = MCID.getOperandConstraint(VCCPos + 3, MCOI::TIED_TO);
-      assert(TiedOp >= 0 &&
-             "Inactive register in vpred_r is not tied to an output!");
-      // Copy the operand to ensure it's not invalidated when MI grows.
-      MI.insert(VCCI, MCOperand(MI.getOperand(TiedOp)));
-    }
-  } else if (VCC != ARMVCC::None) {
-    Check(S, SoftFail);
-  }
-
-  return S;
-}
-
-// Thumb VFP instructions are a special case.  Because we share their
-// encodings between ARM and Thumb modes, and they are predicable in ARM
-// mode, the auto-generated decoder will give them an (incorrect)
-// predicate operand.  We need to rewrite these operands based on the IT
-// context as a post-pass.
-void ARMDisassembler::UpdateThumbVFPPredicate(
-  DecodeStatus &S, MCInst &MI) const {
-  unsigned CC;
-  CC = ITBlock.getITCC();
-  if (CC == 0xF)
-    CC = ARMCC::AL;
-  if (ITBlock.instrInITBlock())
-    ITBlock.advanceITState();
-  else if (VPTBlock.instrInVPTBlock()) {
-    CC = VPTBlock.getVPTPred();
-    VPTBlock.advanceVPTState();
-  }
-
-  const MCInstrDesc &MCID = MCII->get(MI.getOpcode());
-  ArrayRef<MCOperandInfo> OpInfo = MCID.operands();
-  MCInst::iterator I = MI.begin();
-  unsigned short NumOps = MCID.NumOperands;
-  for (unsigned i = 0; i < NumOps; ++i, ++I) {
-    if (OpInfo[i].isPredicate() ) {
-      if (CC != ARMCC::AL && !MCID.isPredicable())
-        Check(S, SoftFail);
-      I->setImm(CC);
-      ++I;
-      if (CC == ARMCC::AL)
-        I->setReg(ARM::NoRegister);
-      else
-        I->setReg(ARM::CPSR);
-      return;
-    }
-  }
-}
-
-DecodeStatus ARMDisassembler::getThumbInstruction(MCInst &MI, uint64_t &Size,
-                                                  ArrayRef<uint8_t> Bytes,
-                                                  uint64_t Address,
-                                                  raw_ostream &CS) const {
-  CommentStream = &CS;
-
-  assert(STI.hasFeature(ARM::ModeThumb) &&
-         "Asked to disassemble in Thumb mode but Subtarget is in ARM mode!");
-
-  // We want to read exactly 2 bytes of data.
-  if (Bytes.size() < 2) {
-    Size = 0;
-    return MCDisassembler::Fail;
-  }
-
-  uint16_t Insn16 = llvm::support::endian::read<uint16_t>(
-      Bytes.data(), InstructionEndianness);
-  DecodeStatus Result =
-      decodeInstruction(DecoderTableThumb16, MI, Insn16, Address, this, STI);
-  if (Result != MCDisassembler::Fail) {
-    Size = 2;
-    Check(Result, AddThumbPredicate(MI));
-    return Result;
-  }
-
-  Result = decodeInstruction(DecoderTableThumbSBit16, MI, Insn16, Address, this,
-                             STI);
-  if (Result) {
-    Size = 2;
-    bool InITBlock = ITBlock.instrInITBlock();
-    Check(Result, AddThumbPredicate(MI));
-    AddThumb1SBit(MI, InITBlock);
-    return Result;
-  }
-
-  Result =
-      decodeInstruction(DecoderTableThumb216, MI, Insn16, Address, this, STI);
-  if (Result != MCDisassembler::Fail) {
-    Size = 2;
-
-    // Nested IT blocks are UNPREDICTABLE.  Must be checked before we add
-    // the Thumb predicate.
-    if (MI.getOpcode() == ARM::t2IT && ITBlock.instrInITBlock())
-      Result = MCDisassembler::SoftFail;
-
-    Check(Result, AddThumbPredicate(MI));
-
-    // If we find an IT instruction, we need to parse its condition
-    // code and mask operands so that we can apply them correctly
-    // to the subsequent instructions.
-    if (MI.getOpcode() == ARM::t2IT) {
-      unsigned Firstcond = MI.getOperand(0).getImm();
-      unsigned Mask = MI.getOperand(1).getImm();
-      ITBlock.setITState(Firstcond, Mask);
-
-      // An IT instruction that would give a 'NV' predicate is unpredictable.
-      if (Firstcond == ARMCC::AL && !isPowerOf2_32(Mask))
-        CS << "unpredictable IT predicate sequence";
-    }
-
-    return Result;
-  }
-
-  // We want to read exactly 4 bytes of data.
-  if (Bytes.size() < 4) {
-    Size = 0;
-    return MCDisassembler::Fail;
-  }
-
-  uint32_t Insn32 =
-      (uint32_t(Insn16) << 16) | llvm::support::endian::read<uint16_t>(
-                                     Bytes.data() + 2, InstructionEndianness);
-
-  Result =
-      decodeInstruction(DecoderTableMVE32, MI, Insn32, Address, this, STI);
-  if (Result != MCDisassembler::Fail) {
-    Size = 4;
-
-    // Nested VPT blocks are UNPREDICTABLE. Must be checked before we add
-    // the VPT predicate.
-    if (isVPTOpcode(MI.getOpcode()) && VPTBlock.instrInVPTBlock())
-      Result = MCDisassembler::SoftFail;
-
-    Check(Result, AddThumbPredicate(MI));
-
-    if (isVPTOpcode(MI.getOpcode())) {
-      unsigned Mask = MI.getOperand(0).getImm();
-      VPTBlock.setVPTState(Mask);
-    }
-
-    return Result;
-  }
-
-  Result =
-      decodeInstruction(DecoderTableThumb32, MI, Insn32, Address, this, STI);
-  if (Result != MCDisassembler::Fail) {
-    Size = 4;
-    bool InITBlock = ITBlock.instrInITBlock();
-    Check(Result, AddThumbPredicate(MI));
-    AddThumb1SBit(MI, InITBlock);
-    return Result;
-  }
-
-  Result =
-      decodeInstruction(DecoderTableThumb232, MI, Insn32, Address, this, STI);
-  if (Result != MCDisassembler::Fail) {
-    Size = 4;
-    Check(Result, AddThumbPredicate(MI));
-    return checkDecodedInstruction(MI, Size, Address, CS, Insn32, Result);
-  }
-
-  if (fieldFromInstruction(Insn32, 28, 4) == 0xE) {
-    Result =
-        decodeInstruction(DecoderTableVFP32, MI, Insn32, Address, this, STI);
-    if (Result != MCDisassembler::Fail) {
-      Size = 4;
-      UpdateThumbVFPPredicate(Result, MI);
+    case ARM::HVC: {
+      // HVC is undefined if condition = 0xf otherwise upredictable
+      // if condition != 0xe
+      uint32_t Cond = (Insn >> 28) & 0xF;
+      if (Cond == 0xF)
+        return MCDisassembler::Fail;
+      if (Cond != 0xE)
+        return MCDisassembler::SoftFail;
       return Result;
     }
-  }
-
-  Result =
-      decodeInstruction(DecoderTableVFPV832, MI, Insn32, Address, this, STI);
-  if (Result != MCDisassembler::Fail) {
-    Size = 4;
-    return Result;
-  }
-
-  if (fieldFromInstruction(Insn32, 28, 4) == 0xE) {
-    Result = decodeInstruction(DecoderTableNEONDup32, MI, Insn32, Address, this,
-                               STI);
-    if (Result != MCDisassembler::Fail) {
-      Size = 4;
-      Check(Result, AddThumbPredicate(MI));
+    case ARM::t2ADDri:
+    case ARM::t2ADDri12:
+    case ARM::t2ADDrr:
+    case ARM::t2ADDrs:
+    case ARM::t2SUBri:
+    case ARM::t2SUBri12:
+    case ARM::t2SUBrr:
+    case ARM::t2SUBrs:
+      if (MI.getOperand(0).getReg() == ARM::SP &&
+          MI.getOperand(1).getReg() != ARM::SP)
+        return MCDisassembler::SoftFail;
       return Result;
-    }
+    default: return Result;
   }
-
-  if (fieldFromInstruction(Insn32, 24, 8) == 0xF9) {
-    uint32_t NEONLdStInsn = Insn32;
-    NEONLdStInsn &= 0xF0FFFFFF;
-    NEONLdStInsn |= 0x04000000;
-    Result = decodeInstruction(DecoderTableNEONLoadStore32, MI, NEONLdStInsn,
-                               Address, this, STI);
-    if (Result != MCDisassembler::Fail) {
-      Size = 4;
-      Check(Result, AddThumbPredicate(MI));
-      return Result;
-    }
-  }
-
-  if (fieldFromInstruction(Insn32, 24, 4) == 0xF) {
-    uint32_t NEONDataInsn = Insn32;
-    NEONDataInsn &= 0xF0FFFFFF; // Clear bits 27-24
-    NEONDataInsn |= (NEONDataInsn & 0x10000000) >> 4; // Move bit 28 to bit 24
-    NEONDataInsn |= 0x12000000; // Set bits 28 and 25
-    Result = decodeInstruction(DecoderTableNEONData32, MI, NEONDataInsn,
-                               Address, this, STI);
-    if (Result != MCDisassembler::Fail) {
-      Size = 4;
-      Check(Result, AddThumbPredicate(MI));
-      return Result;
-    }
-
-    uint32_t NEONCryptoInsn = Insn32;
-    NEONCryptoInsn &= 0xF0FFFFFF; // Clear bits 27-24
-    NEONCryptoInsn |= (NEONCryptoInsn & 0x10000000) >> 4; // Move bit 28 to bit 24
-    NEONCryptoInsn |= 0x12000000; // Set bits 28 and 25
-    Result = decodeInstruction(DecoderTablev8Crypto32, MI, NEONCryptoInsn,
-                               Address, this, STI);
-    if (Result != MCDisassembler::Fail) {
-      Size = 4;
-      return Result;
-    }
-
-    uint32_t NEONv8Insn = Insn32;
-    NEONv8Insn &= 0xF3FFFFFF; // Clear bits 27-26
-    Result = decodeInstruction(DecoderTablev8NEON32, MI, NEONv8Insn, Address,
-                               this, STI);
-    if (Result != MCDisassembler::Fail) {
-      Size = 4;
-      return Result;
-    }
-  }
-
-  uint32_t Coproc = fieldFromInstruction(Insn32, 8, 4);
-  const uint8_t *DecoderTable = ARM::isCDECoproc(Coproc, STI)
-                                    ? DecoderTableThumb2CDE32
-                                    : DecoderTableThumb2CoProc32;
-  Result =
-      decodeInstruction(DecoderTable, MI, Insn32, Address, this, STI);
-  if (Result != MCDisassembler::Fail) {
-    Size = 4;
-    Check(Result, AddThumbPredicate(MI));
-    return Result;
-  }
-
-  // Advance IT state to prevent next instruction inheriting
-  // the wrong IT state.
-  if (ITBlock.instrInITBlock())
-    ITBlock.advanceITState();
-  Size = 0;
-  return MCDisassembler::Fail;
-}
-
-extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
-LLVMInitializeARMDisassembler() {
-  TargetRegistry::RegisterMCDisassembler(getTheARMLETarget(),
-                                         createARMDisassembler);
-  TargetRegistry::RegisterMCDisassembler(getTheARMBETarget(),
-                                         createARMDisassembler);
-  TargetRegistry::RegisterMCDisassembler(getTheThumbLETarget(),
-                                         createARMDisassembler);
-  TargetRegistry::RegisterMCDisassembler(getTheThumbBETarget(),
-                                         createARMDisassembler);
 }
 
 static const uint16_t GPRDecoderTable[] = {
@@ -7068,4 +6558,514 @@ static DecodeStatus DecodeLazyLoadStoreMul(MCInst &Inst, unsigned Insn,
   Inst.addOperand(MCOperand::createImm(0)); // Arbitrary value, has no effect.
 
   return S;
+}
+
+uint64_t ARMDisassembler::suggestBytesToSkip(ArrayRef<uint8_t> Bytes,
+                                             uint64_t Address) const {
+  // In Arm state, instructions are always 4 bytes wide, so there's no
+  // point in skipping any smaller number of bytes if an instruction
+  // can't be decoded.
+  if (!STI.hasFeature(ARM::ModeThumb))
+    return 4;
+
+  // In a Thumb instruction stream, a halfword is a standalone 2-byte
+  // instruction if and only if its value is less than 0xE800.
+  // Otherwise, it's the first halfword of a 4-byte instruction.
+  //
+  // So, if we can see the upcoming halfword, we can judge on that
+  // basis, and maybe skip a whole 4-byte instruction that we don't
+  // know how to decode, without accidentally trying to interpret its
+  // second half as something else.
+  //
+  // If we don't have the instruction data available, we just have to
+  // recommend skipping the minimum sensible distance, which is 2
+  // bytes.
+  if (Bytes.size() < 2)
+    return 2;
+
+  uint16_t Insn16 = llvm::support::endian::read<uint16_t>(
+      Bytes.data(), InstructionEndianness);
+  return Insn16 < 0xE800 ? 2 : 4;
+}
+
+DecodeStatus ARMDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
+                                             ArrayRef<uint8_t> Bytes,
+                                             uint64_t Address,
+                                             raw_ostream &CS) const {
+  if (STI.hasFeature(ARM::ModeThumb))
+    return getThumbInstruction(MI, Size, Bytes, Address, CS);
+  return getARMInstruction(MI, Size, Bytes, Address, CS);
+}
+
+DecodeStatus ARMDisassembler::getARMInstruction(MCInst &MI, uint64_t &Size,
+                                                ArrayRef<uint8_t> Bytes,
+                                                uint64_t Address,
+                                                raw_ostream &CS) const {
+  CommentStream = &CS;
+
+  assert(!STI.hasFeature(ARM::ModeThumb) &&
+         "Asked to disassemble an ARM instruction but Subtarget is in Thumb "
+         "mode!");
+
+  // We want to read exactly 4 bytes of data.
+  if (Bytes.size() < 4) {
+    Size = 0;
+    return MCDisassembler::Fail;
+  }
+
+  // Encoded as a 32-bit word in the stream.
+  uint32_t Insn = llvm::support::endian::read<uint32_t>(Bytes.data(),
+                                                        InstructionEndianness);
+
+  // Calling the auto-generated decoder function.
+  DecodeStatus Result =
+      decodeInstruction(DecoderTableARM32, MI, Insn, Address, this, STI);
+  if (Result != MCDisassembler::Fail) {
+    Size = 4;
+    return checkDecodedInstruction(MI, Size, Address, CS, Insn, Result);
+  }
+
+  struct DecodeTable {
+    const uint8_t *P;
+    bool DecodePred;
+  };
+
+  const DecodeTable Tables[] = {
+      {DecoderTableVFP32, false},      {DecoderTableVFPV832, false},
+      {DecoderTableNEONData32, true},  {DecoderTableNEONLoadStore32, true},
+      {DecoderTableNEONDup32, true},   {DecoderTablev8NEON32, false},
+      {DecoderTablev8Crypto32, false},
+  };
+
+  for (auto Table : Tables) {
+    Result = decodeInstruction(Table.P, MI, Insn, Address, this, STI);
+    if (Result != MCDisassembler::Fail) {
+      Size = 4;
+      // Add a fake predicate operand, because we share these instruction
+      // definitions with Thumb2 where these instructions are predicable.
+      if (Table.DecodePred && !DecodePredicateOperand(MI, 0xE, Address, this))
+        return MCDisassembler::Fail;
+      return Result;
+    }
+  }
+
+  Result =
+      decodeInstruction(DecoderTableCoProc32, MI, Insn, Address, this, STI);
+  if (Result != MCDisassembler::Fail) {
+    Size = 4;
+    return checkDecodedInstruction(MI, Size, Address, CS, Insn, Result);
+  }
+
+  Size = 4;
+  return MCDisassembler::Fail;
+}
+
+// Thumb1 instructions don't have explicit S bits.  Rather, they
+// implicitly set CPSR.  Since it's not represented in the encoding, the
+// auto-generated decoder won't inject the CPSR operand.  We need to fix
+// that as a post-pass.
+void ARMDisassembler::AddThumb1SBit(MCInst &MI, bool InITBlock) const {
+  const MCInstrDesc &MCID = MCII->get(MI.getOpcode());
+  MCInst::iterator I = MI.begin();
+  for (unsigned i = 0; i < MCID.NumOperands; ++i, ++I) {
+    if (I == MI.end()) break;
+    if (MCID.operands()[i].isOptionalDef() &&
+        MCID.operands()[i].RegClass == ARM::CCRRegClassID) {
+      if (i > 0 && MCID.operands()[i - 1].isPredicate())
+        continue;
+      MI.insert(I,
+                MCOperand::createReg(InITBlock ? ARM::NoRegister : ARM::CPSR));
+      return;
+    }
+  }
+
+  MI.insert(I, MCOperand::createReg(InITBlock ? ARM::NoRegister : ARM::CPSR));
+}
+
+bool ARMDisassembler::isVectorPredicable(const MCInst &MI) const {
+  const MCInstrDesc &MCID = MCII->get(MI.getOpcode());
+  for (unsigned i = 0; i < MCID.NumOperands; ++i) {
+    if (ARM::isVpred(MCID.operands()[i].OperandType))
+      return true;
+  }
+  return false;
+}
+
+// Most Thumb instructions don't have explicit predicates in the
+// encoding, but rather get their predicates from IT context.  We need
+// to fix up the predicate operands using this context information as a
+// post-pass.
+MCDisassembler::DecodeStatus
+ARMDisassembler::AddThumbPredicate(MCInst &MI) const {
+  MCDisassembler::DecodeStatus S = Success;
+
+  const FeatureBitset &FeatureBits = getSubtargetInfo().getFeatureBits();
+
+  // A few instructions actually have predicates encoded in them.  Don't
+  // try to overwrite it if we're seeing one of those.
+  switch (MI.getOpcode()) {
+    case ARM::tBcc:
+    case ARM::t2Bcc:
+    case ARM::tCBZ:
+    case ARM::tCBNZ:
+    case ARM::tCPS:
+    case ARM::t2CPS3p:
+    case ARM::t2CPS2p:
+    case ARM::t2CPS1p:
+    case ARM::t2CSEL:
+    case ARM::t2CSINC:
+    case ARM::t2CSINV:
+    case ARM::t2CSNEG:
+    case ARM::tMOVSr:
+    case ARM::tSETEND:
+      // Some instructions (mostly conditional branches) are not
+      // allowed in IT blocks.
+      if (ITBlock.instrInITBlock())
+        S = SoftFail;
+      else
+        return Success;
+      break;
+    case ARM::t2HINT:
+      if (MI.getOperand(0).getImm() == 0x10 && (FeatureBits[ARM::FeatureRAS]) != 0)
+        S = SoftFail;
+      break;
+    case ARM::tB:
+    case ARM::t2B:
+    case ARM::t2TBB:
+    case ARM::t2TBH:
+      // Some instructions (mostly unconditional branches) can
+      // only appears at the end of, or outside of, an IT.
+      if (ITBlock.instrInITBlock() && !ITBlock.instrLastInITBlock())
+        S = SoftFail;
+      break;
+    default:
+      break;
+  }
+
+  // Warn on non-VPT predicable instruction in a VPT block and a VPT
+  // predicable instruction in an IT block
+  if ((!isVectorPredicable(MI) && VPTBlock.instrInVPTBlock()) ||
+      (isVectorPredicable(MI) && ITBlock.instrInITBlock()))
+    S = SoftFail;
+
+  // If we're in an IT/VPT block, base the predicate on that.  Otherwise,
+  // assume a predicate of AL.
+  unsigned CC = ARMCC::AL;
+  unsigned VCC = ARMVCC::None;
+  if (ITBlock.instrInITBlock()) {
+    CC = ITBlock.getITCC();
+    ITBlock.advanceITState();
+  } else if (VPTBlock.instrInVPTBlock()) {
+    VCC = VPTBlock.getVPTPred();
+    VPTBlock.advanceVPTState();
+  }
+
+  const MCInstrDesc &MCID = MCII->get(MI.getOpcode());
+
+  MCInst::iterator CCI = MI.begin();
+  for (unsigned i = 0; i < MCID.NumOperands; ++i, ++CCI) {
+    if (MCID.operands()[i].isPredicate() || CCI == MI.end())
+      break;
+  }
+
+  if (MCID.isPredicable()) {
+    CCI = MI.insert(CCI, MCOperand::createImm(CC));
+    ++CCI;
+    if (CC == ARMCC::AL)
+      MI.insert(CCI, MCOperand::createReg(ARM::NoRegister));
+    else
+      MI.insert(CCI, MCOperand::createReg(ARM::CPSR));
+  } else if (CC != ARMCC::AL) {
+    Check(S, SoftFail);
+  }
+
+  MCInst::iterator VCCI = MI.begin();
+  unsigned VCCPos;
+  for (VCCPos = 0; VCCPos < MCID.NumOperands; ++VCCPos, ++VCCI) {
+    if (ARM::isVpred(MCID.operands()[VCCPos].OperandType) || VCCI == MI.end())
+      break;
+  }
+
+  if (isVectorPredicable(MI)) {
+    VCCI = MI.insert(VCCI, MCOperand::createImm(VCC));
+    ++VCCI;
+    if (VCC == ARMVCC::None)
+      VCCI = MI.insert(VCCI, MCOperand::createReg(0));
+    else
+      VCCI = MI.insert(VCCI, MCOperand::createReg(ARM::P0));
+    ++VCCI;
+    VCCI = MI.insert(VCCI, MCOperand::createReg(0));
+    ++VCCI;
+    if (MCID.operands()[VCCPos].OperandType == ARM::OPERAND_VPRED_R) {
+      int TiedOp = MCID.getOperandConstraint(VCCPos + 3, MCOI::TIED_TO);
+      assert(TiedOp >= 0 &&
+             "Inactive register in vpred_r is not tied to an output!");
+      // Copy the operand to ensure it's not invalidated when MI grows.
+      MI.insert(VCCI, MCOperand(MI.getOperand(TiedOp)));
+    }
+  } else if (VCC != ARMVCC::None) {
+    Check(S, SoftFail);
+  }
+
+  return S;
+}
+
+// Thumb VFP instructions are a special case.  Because we share their
+// encodings between ARM and Thumb modes, and they are predicable in ARM
+// mode, the auto-generated decoder will give them an (incorrect)
+// predicate operand.  We need to rewrite these operands based on the IT
+// context as a post-pass.
+void ARMDisassembler::UpdateThumbVFPPredicate(
+  DecodeStatus &S, MCInst &MI) const {
+  unsigned CC;
+  CC = ITBlock.getITCC();
+  if (CC == 0xF)
+    CC = ARMCC::AL;
+  if (ITBlock.instrInITBlock())
+    ITBlock.advanceITState();
+  else if (VPTBlock.instrInVPTBlock()) {
+    CC = VPTBlock.getVPTPred();
+    VPTBlock.advanceVPTState();
+  }
+
+  const MCInstrDesc &MCID = MCII->get(MI.getOpcode());
+  ArrayRef<MCOperandInfo> OpInfo = MCID.operands();
+  MCInst::iterator I = MI.begin();
+  unsigned short NumOps = MCID.NumOperands;
+  for (unsigned i = 0; i < NumOps; ++i, ++I) {
+    if (OpInfo[i].isPredicate() ) {
+      if (CC != ARMCC::AL && !MCID.isPredicable())
+        Check(S, SoftFail);
+      I->setImm(CC);
+      ++I;
+      if (CC == ARMCC::AL)
+        I->setReg(ARM::NoRegister);
+      else
+        I->setReg(ARM::CPSR);
+      return;
+    }
+  }
+}
+
+DecodeStatus ARMDisassembler::getThumbInstruction(MCInst &MI, uint64_t &Size,
+                                                  ArrayRef<uint8_t> Bytes,
+                                                  uint64_t Address,
+                                                  raw_ostream &CS) const {
+  CommentStream = &CS;
+
+  assert(STI.hasFeature(ARM::ModeThumb) &&
+         "Asked to disassemble in Thumb mode but Subtarget is in ARM mode!");
+
+  // We want to read exactly 2 bytes of data.
+  if (Bytes.size() < 2) {
+    Size = 0;
+    return MCDisassembler::Fail;
+  }
+
+  uint16_t Insn16 = llvm::support::endian::read<uint16_t>(
+      Bytes.data(), InstructionEndianness);
+  DecodeStatus Result =
+      decodeInstruction(DecoderTableThumb16, MI, Insn16, Address, this, STI);
+  if (Result != MCDisassembler::Fail) {
+    Size = 2;
+    Check(Result, AddThumbPredicate(MI));
+    return Result;
+  }
+
+  Result = decodeInstruction(DecoderTableThumbSBit16, MI, Insn16, Address, this,
+                             STI);
+  if (Result) {
+    Size = 2;
+    bool InITBlock = ITBlock.instrInITBlock();
+    Check(Result, AddThumbPredicate(MI));
+    AddThumb1SBit(MI, InITBlock);
+    return Result;
+  }
+
+  Result =
+      decodeInstruction(DecoderTableThumb216, MI, Insn16, Address, this, STI);
+  if (Result != MCDisassembler::Fail) {
+    Size = 2;
+
+    // Nested IT blocks are UNPREDICTABLE.  Must be checked before we add
+    // the Thumb predicate.
+    if (MI.getOpcode() == ARM::t2IT && ITBlock.instrInITBlock())
+      Result = MCDisassembler::SoftFail;
+
+    Check(Result, AddThumbPredicate(MI));
+
+    // If we find an IT instruction, we need to parse its condition
+    // code and mask operands so that we can apply them correctly
+    // to the subsequent instructions.
+    if (MI.getOpcode() == ARM::t2IT) {
+      unsigned Firstcond = MI.getOperand(0).getImm();
+      unsigned Mask = MI.getOperand(1).getImm();
+      ITBlock.setITState(Firstcond, Mask);
+
+      // An IT instruction that would give a 'NV' predicate is unpredictable.
+      if (Firstcond == ARMCC::AL && !isPowerOf2_32(Mask))
+        CS << "unpredictable IT predicate sequence";
+    }
+
+    return Result;
+  }
+
+  // We want to read exactly 4 bytes of data.
+  if (Bytes.size() < 4) {
+    Size = 0;
+    return MCDisassembler::Fail;
+  }
+
+  uint32_t Insn32 =
+      (uint32_t(Insn16) << 16) | llvm::support::endian::read<uint16_t>(
+                                     Bytes.data() + 2, InstructionEndianness);
+
+  Result =
+      decodeInstruction(DecoderTableMVE32, MI, Insn32, Address, this, STI);
+  if (Result != MCDisassembler::Fail) {
+    Size = 4;
+
+    // Nested VPT blocks are UNPREDICTABLE. Must be checked before we add
+    // the VPT predicate.
+    if (isVPTOpcode(MI.getOpcode()) && VPTBlock.instrInVPTBlock())
+      Result = MCDisassembler::SoftFail;
+
+    Check(Result, AddThumbPredicate(MI));
+
+    if (isVPTOpcode(MI.getOpcode())) {
+      unsigned Mask = MI.getOperand(0).getImm();
+      VPTBlock.setVPTState(Mask);
+    }
+
+    return Result;
+  }
+
+  Result =
+      decodeInstruction(DecoderTableThumb32, MI, Insn32, Address, this, STI);
+  if (Result != MCDisassembler::Fail) {
+    Size = 4;
+    bool InITBlock = ITBlock.instrInITBlock();
+    Check(Result, AddThumbPredicate(MI));
+    AddThumb1SBit(MI, InITBlock);
+    return Result;
+  }
+
+  Result =
+      decodeInstruction(DecoderTableThumb232, MI, Insn32, Address, this, STI);
+  if (Result != MCDisassembler::Fail) {
+    Size = 4;
+    Check(Result, AddThumbPredicate(MI));
+    return checkDecodedInstruction(MI, Size, Address, CS, Insn32, Result);
+  }
+
+  if (fieldFromInstruction(Insn32, 28, 4) == 0xE) {
+    Result =
+        decodeInstruction(DecoderTableVFP32, MI, Insn32, Address, this, STI);
+    if (Result != MCDisassembler::Fail) {
+      Size = 4;
+      UpdateThumbVFPPredicate(Result, MI);
+      return Result;
+    }
+  }
+
+  Result =
+      decodeInstruction(DecoderTableVFPV832, MI, Insn32, Address, this, STI);
+  if (Result != MCDisassembler::Fail) {
+    Size = 4;
+    return Result;
+  }
+
+  if (fieldFromInstruction(Insn32, 28, 4) == 0xE) {
+    Result = decodeInstruction(DecoderTableNEONDup32, MI, Insn32, Address, this,
+                               STI);
+    if (Result != MCDisassembler::Fail) {
+      Size = 4;
+      Check(Result, AddThumbPredicate(MI));
+      return Result;
+    }
+  }
+
+  if (fieldFromInstruction(Insn32, 24, 8) == 0xF9) {
+    uint32_t NEONLdStInsn = Insn32;
+    NEONLdStInsn &= 0xF0FFFFFF;
+    NEONLdStInsn |= 0x04000000;
+    Result = decodeInstruction(DecoderTableNEONLoadStore32, MI, NEONLdStInsn,
+                               Address, this, STI);
+    if (Result != MCDisassembler::Fail) {
+      Size = 4;
+      Check(Result, AddThumbPredicate(MI));
+      return Result;
+    }
+  }
+
+  if (fieldFromInstruction(Insn32, 24, 4) == 0xF) {
+    uint32_t NEONDataInsn = Insn32;
+    NEONDataInsn &= 0xF0FFFFFF; // Clear bits 27-24
+    NEONDataInsn |= (NEONDataInsn & 0x10000000) >> 4; // Move bit 28 to bit 24
+    NEONDataInsn |= 0x12000000; // Set bits 28 and 25
+    Result = decodeInstruction(DecoderTableNEONData32, MI, NEONDataInsn,
+                               Address, this, STI);
+    if (Result != MCDisassembler::Fail) {
+      Size = 4;
+      Check(Result, AddThumbPredicate(MI));
+      return Result;
+    }
+
+    uint32_t NEONCryptoInsn = Insn32;
+    NEONCryptoInsn &= 0xF0FFFFFF; // Clear bits 27-24
+    NEONCryptoInsn |= (NEONCryptoInsn & 0x10000000) >> 4; // Move bit 28 to bit 24
+    NEONCryptoInsn |= 0x12000000; // Set bits 28 and 25
+    Result = decodeInstruction(DecoderTablev8Crypto32, MI, NEONCryptoInsn,
+                               Address, this, STI);
+    if (Result != MCDisassembler::Fail) {
+      Size = 4;
+      return Result;
+    }
+
+    uint32_t NEONv8Insn = Insn32;
+    NEONv8Insn &= 0xF3FFFFFF; // Clear bits 27-26
+    Result = decodeInstruction(DecoderTablev8NEON32, MI, NEONv8Insn, Address,
+                               this, STI);
+    if (Result != MCDisassembler::Fail) {
+      Size = 4;
+      return Result;
+    }
+  }
+
+  uint32_t Coproc = fieldFromInstruction(Insn32, 8, 4);
+  const uint8_t *DecoderTable = ARM::isCDECoproc(Coproc, STI)
+                                    ? DecoderTableThumb2CDE32
+                                    : DecoderTableThumb2CoProc32;
+  Result =
+      decodeInstruction(DecoderTable, MI, Insn32, Address, this, STI);
+  if (Result != MCDisassembler::Fail) {
+    Size = 4;
+    Check(Result, AddThumbPredicate(MI));
+    return Result;
+  }
+
+  // Advance IT state to prevent next instruction inheriting
+  // the wrong IT state.
+  if (ITBlock.instrInITBlock())
+    ITBlock.advanceITState();
+  Size = 0;
+  return MCDisassembler::Fail;
+}
+
+static MCDisassembler *createARMDisassembler(const Target &T,
+                                             const MCSubtargetInfo &STI,
+                                             MCContext &Ctx) {
+  return new ARMDisassembler(STI, Ctx, T.createMCInstrInfo());
+}
+
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeARMDisassembler() {
+  TargetRegistry::RegisterMCDisassembler(getTheARMLETarget(),
+                                         createARMDisassembler);
+  TargetRegistry::RegisterMCDisassembler(getTheARMBETarget(),
+                                         createARMDisassembler);
+  TargetRegistry::RegisterMCDisassembler(getTheThumbLETarget(),
+                                         createARMDisassembler);
+  TargetRegistry::RegisterMCDisassembler(getTheThumbBETarget(),
+                                         createARMDisassembler);
 }

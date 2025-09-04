@@ -1668,8 +1668,8 @@ namespace llvm {
     /// Lower interleaved store(s) into target specific
     /// instructions/intrinsics.
     bool lowerInterleavedStore(Instruction *Store, Value *Mask,
-                               ShuffleVectorInst *SVI,
-                               unsigned Factor) const override;
+                               ShuffleVectorInst *SVI, unsigned Factor,
+                               const APInt &GapMask) const override;
 
     SDValue expandIndirectJTBranch(const SDLoc &dl, SDValue Value, SDValue Addr,
                                    int JTI, SelectionDAG &DAG) const override;

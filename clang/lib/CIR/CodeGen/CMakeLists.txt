@@ -20,6 +20,7 @@ add_clang_library(clangCIR
   CIRGenBuiltin.cpp
   CIRGenDecl.cpp
   CIRGenDeclOpenACC.cpp
+  CIRGenException.cpp
   CIRGenExpr.cpp
   CIRGenExprAggregate.cpp
   CIRGenExprComplex.cpp

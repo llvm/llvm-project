@@ -110,7 +110,7 @@ struct alignas(STACK_ALIGNMENT) ThreadAttributes {
   ThreadAtExitCallbackMgr *atexit_callback_mgr;
   void *platform_data;
 
-  constexpr ThreadAttributes()
+  LIBC_INLINE constexpr ThreadAttributes()
       : detach_state(uint32_t(DetachState::DETACHED)), stack(nullptr),
         stacksize(0), guardsize(0), tls(0), tls_size(0), owned_stack(false),
         tid(-1), style(ThreadStyle::POSIX), retval(),

@@ -528,8 +528,6 @@ public:
     assert(isBlockPointer());
     return BS.Pointee->isWeak();
   }
-  /// Checks if an object was initialized.
-  bool isInitialized() const;
   /// Checks if the object is active.
   bool isActive() const {
     if (!isBlockPointer())
@@ -707,6 +705,11 @@ public:
   /// used in situations where we *know* we have initialized *all* elements
   /// of a primtive array.
   void initializeAllElements() const;
+  /// Checks if an object was initialized.
+  bool isInitialized() const;
+  /// Like isInitialized(), but for primitive arrays.
+  bool isElementInitialized(unsigned Index) const;
+  bool allElementsInitialized() const;
   /// Activats a field.
   void activate() const;
   /// Deactivates an entire strurcutre.
