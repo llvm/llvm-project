@@ -74,6 +74,7 @@
 ! Check that -ffast-math causes us to link to crtfastmath.o
 ! UNSUPPORTED: system-windows
 ! UNSUPPORTED: target=powerpc{{.*}}
+! UNSUPPORTED: target=riscv{{.*}}
 ! RUN: %flang -ffast-math -### %s -o %t 2>&1 \
 ! RUN:           --target=x86_64-unknown-linux -no-pie \
 ! RUN:           --sysroot=%S/../../../clang/test/Driver/Inputs/basic_linux_tree \
