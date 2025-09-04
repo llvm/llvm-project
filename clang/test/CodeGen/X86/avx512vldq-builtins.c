@@ -668,6 +668,8 @@ __m128d test_mm_cvtepu64_pd(__m128i __A) {
   return _mm_cvtepu64_pd(__A); 
 }
 
+TEST_CONSTEXPR(match_m128d(_mm_cvtepu64_pd((__m128i)(__v2du){1, 1}), 1.0, 1.0));
+
 __m128d test_mm_mask_cvtepu64_pd(__m128d __W, __mmask8 __U, __m128i __A) {
   // CHECK-LABEL: test_mm_mask_cvtepu64_pd
   // CHECK: uitofp <2 x i64> %{{.*}} to <2 x double>

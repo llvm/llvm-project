@@ -708,8 +708,8 @@ _mm256_maskz_cvttps_epu64 (__mmask8 __U, __m128 __A) {
                 (__mmask8) __U);
 }
 
-static __inline__ __m128d __DEFAULT_FN_ATTRS128
-_mm_cvtepu64_pd (__m128i __A) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_cvtepu64_pd(__m128i __A) {
   return (__m128d)__builtin_convertvector((__v2du)__A, __v2df);
 }
 
