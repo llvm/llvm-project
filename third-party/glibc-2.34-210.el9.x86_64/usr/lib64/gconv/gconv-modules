@@ -1,0 +1,115 @@
+# GNU libc iconv configuration.
+# Copyright (C) 1997-2021 Free Software Foundation, Inc.
+# This file is part of the GNU C Library.
+
+# The GNU C Library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+
+# The GNU C Library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+
+# You should have received a copy of the GNU Lesser General Public
+# License along with the GNU C Library; if not, see
+# <https://www.gnu.org/licenses/>.
+
+# All lines contain the following information:
+
+# If the lines start with `module'
+#  fromset:	either a name triple or a regular expression triple.
+#  toset:	a name triple or an expression with \N to get regular
+#		expression matching results.
+#  filename:	filename of the module implementing the transformation.
+#		If it is not absolute the path is made absolute by prepending
+#		the directory the configuration file is found in.
+#  cost:	optional cost of the transformation.  Default is 1.
+
+# If the lines start with `alias'
+#  alias:	alias name which is not really recognized.
+#  name:	the real name of the character set
+
+#	from			to			module		cost
+alias	ISO-IR-100//		ISO-8859-1//
+alias	ISO_8859-1:1987//	ISO-8859-1//
+alias	ISO_8859-1//		ISO-8859-1//
+alias	ISO8859-1//		ISO-8859-1//
+alias	ISO88591//		ISO-8859-1//
+alias	LATIN1//		ISO-8859-1//
+alias	L1//			ISO-8859-1//
+alias	IBM819//		ISO-8859-1//
+alias	CP819//			ISO-8859-1//
+alias	CSISOLATIN1//		ISO-8859-1//
+alias	8859_1//		ISO-8859-1//
+alias	OSF00010001//		ISO-8859-1//
+module	ISO-8859-1//		INTERNAL		ISO8859-1	1
+module	INTERNAL		ISO-8859-1//		ISO8859-1	1
+
+#	from			to			module		cost
+alias	ISO8859-15//		ISO-8859-15//
+alias	ISO885915//		ISO-8859-15//
+alias	ISO-IR-203//		ISO-8859-15//
+alias	ISO_8859-15//		ISO-8859-15//
+alias	LATIN-9//		ISO-8859-15//
+alias	LATIN9//		ISO-8859-15//
+alias	ISO_8859-15:1998//	ISO-8859-15//
+module	ISO-8859-15//		INTERNAL		ISO8859-15	1
+module	INTERNAL		ISO-8859-15//		ISO8859-15	1
+
+#	from			to			module		cost
+alias	MS-ANSI//		CP1252//
+alias	WINDOWS-1252//		CP1252//
+module	CP1252//		INTERNAL		CP1252		1
+module	INTERNAL		CP1252//		CP1252		1
+
+#	from			to			module		cost
+alias	ANSI_X3.110-1983//	ANSI_X3.110//
+alias	ISO-IR-99//		ANSI_X3.110//
+alias	CSA_T500-1983//		ANSI_X3.110//
+alias	CSA_T500//		ANSI_X3.110//
+alias	NAPLPS//		ANSI_X3.110//
+alias	CSISO99NAPLPS//		ANSI_X3.110//
+module	ANSI_X3.110//		INTERNAL		ANSI_X3.110	1
+module	INTERNAL		ANSI_X3.110//		ANSI_X3.110	1
+
+#	from			to			module		cost
+alias	UTF16//			UTF-16//
+module	UTF-16//		INTERNAL		UTF-16		1
+module	INTERNAL		UTF-16//		UTF-16		1
+
+#	from			to			module		cost
+alias	UTF16LE//		UTF-16LE//
+module	UTF-16LE//		INTERNAL		UTF-16		1
+module	INTERNAL		UTF-16LE//		UTF-16		1
+
+#	from			to			module		cost
+alias	UTF16BE//		UTF-16BE//
+module	UTF-16BE//		INTERNAL		UTF-16		1
+module	INTERNAL		UTF-16BE//		UTF-16		1
+
+#	from			to			module		cost
+alias	CSUNICODE//		UNICODE//
+module	UNICODE//		INTERNAL		UNICODE		1
+module	INTERNAL		UNICODE//		UNICODE		1
+
+#	from			to			module		cost
+alias	UTF32//			UTF-32//
+module	UTF-32//		INTERNAL		UTF-32		1
+module	INTERNAL		UTF-32//		UTF-32		1
+
+#	from			to			module		cost
+alias	UTF32LE//		UTF-32LE//
+module	UTF-32LE//		INTERNAL		UTF-32		1
+module	INTERNAL		UTF-32LE//		UTF-32		1
+
+#	from			to			module		cost
+alias	UTF32BE//		UTF-32BE//
+module	UTF-32BE//		INTERNAL		UTF-32		1
+module	INTERNAL		UTF-32BE//		UTF-32		1
+
+#	from			to			module		cost
+alias	UTF7//			UTF-7//
+module	UTF-7//			INTERNAL		UTF-7		1
+module	INTERNAL		UTF-7//			UTF-7		1

@@ -311,6 +311,31 @@ ifeq "$(MAKE_GMODULES)" "YES"
 	CXXFLAGS += $(MANDATORY_MODULE_BUILD_CFLAGS)
 endif
 
+# T235879403 - workaround bug in dynamic glibc ld.so
+#
+# The current CentOS version has a bug where it does not call the dynamic
+# loader rendezvous function, which causes lldb to miss loads of shared libraries.
+# Workaround this by using a known-good version of glibc while we wait for the
+# official package to roll out.
+ifeq "$(OS)" "Linux"
+	# Parse out the package version from the glibc rpm version string.
+	# The glibc package name is something like glibc-2.34-228.el9.x86_64
+	# We want to extract out the "228" part of the string to use as the
+	# version number for the workaround. We need to enable the workaround
+	# if the package version is between versions 215 and 225 inclusive.
+	FIRST_BAD_VERSION := 215
+	LAST_BAD_VERSION := 225
+	GLIBC_VERSION := $(shell rpm -q glibc | sed  "s/^glibc-[0-9]\+\.[0-9]\+-\([0-9]\+\).*/\1/")
+	HAS_GLIBC_BAD_VERSION := $(shell if [ "$(GLIBC_VERSION)" -ge $(FIRST_BAD_VERSION) ] && [ "$(GLIBC_VERSION)" -le $(LAST_BAD_VERSION) ]; then echo "1"; else echo "0"; fi)
+
+	# Enable workaround if glibc package has a bad version.
+	ifeq "$(HAS_GLIBC_BAD_VERSION)" "1"
+		GLIBC_PACKAGE_DIR=$(LLDB_BASE_DIR)/../third-party/glibc-2.34-210.el9.x86_64
+		LDFLAGS += -Wl,--dynamic-linker=$(GLIBC_PACKAGE_DIR)/usr/lib64/ld-linux-x86-64.so.2
+		LDFLAGS += -Wl,--enable-new-dtags -Wl,-rpath=$(GLIBC_PACKAGE_DIR)/usr/lib64
+	endif
+endif
+
 CFLAGS += $(CFLAGS_EXTRAS)
 CXXFLAGS += -std=c++11 $(CFLAGS) $(ARCH_CXXFLAGS)
 # Copy common options to the linker flags (dwarf, arch. & etc).

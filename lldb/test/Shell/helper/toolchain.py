@@ -13,6 +13,7 @@ from lit.llvm.subst import ToolSubst
 
 import posixpath
 
+
 def _get_lldb_init_path(config):
     return os.path.join(config.test_exec_root, "lit-lldb-init-quiet")
 
@@ -250,6 +251,54 @@ def use_support_substitutions(config):
             "-L{}".format(config.libcxx_libs_dir),
             "-lc++",
         ]
+
+    # T235879403 - workaround bug in dynamic glibc ld.so
+    #
+    # The current CentOS version has a bug where it does not call the dynamic
+    # loader rendezvous function, which causes lldb to miss loads of shared libraries.
+    # Workaround this by using a known-good version of glibc while we wait for the
+    # official package to roll out.
+    if sys.platform == "linux":
+
+        def has_glibc_bad_version():
+            FIRST_BAD_VERSION = 215
+            LAST_BAD_VERSION = 225
+
+            try:
+                # Get glibc version using rpm command
+                result = subprocess.run(
+                    ["rpm", "-q", "glibc"], capture_output=True, text=True, check=True
+                )
+                glibc_output = result.stdout.strip()
+
+                # Parse out the package version from the glibc rpm version string.
+                # The glibc package name is something like glibc-2.34-228.el9.x86_64
+                # We want to extract out the "228" part of the string to use as the
+                # version number for the workaround. We need to enable the workaround
+                # if the package version is between versions 215 and 225 inclusive.
+                match = re.search(r"^glibc-[0-9]+\.[0-9]+-([0-9]+).*", glibc_output)
+                if not match:
+                    return False
+
+                glibc_version = int(match.group(1))
+
+                # Check if version is in bad range
+                return (
+                    glibc_version >= FIRST_BAD_VERSION
+                    and glibc_version <= LAST_BAD_VERSION
+                )
+            except subprocess.CalledProcessError:
+                return False
+
+        if has_glibc_bad_version():
+            glibc_package_dir = os.path.join(
+                config.lldb_src_root, "..", "third-party", "glibc-2.34-210.el9.x86_64"
+            )
+            host_flags += [
+                f"-Wl,--dynamic-linker={glibc_package_dir}/usr/lib64/ld-linux-x86-64.so.2",
+                "-Wl,--enable-new-dtags",
+                f"-Wl,-rpath={glibc_package_dir}/usr/lib64",
+            ]
 
     host_flags = " ".join(host_flags)
     config.substitutions.append(("%clang_host", "%clang " + host_flags))
