@@ -26,7 +26,7 @@
 "`P0013R1 <https://wg21.link/P0013R1>`__","Logical type traits rev 2","2015-10 (Kona)","|Complete|","3.8",""
 "","","","","",""
 "`P0024R2 <https://wg21.link/P0024R2>`__","The Parallelism TS Should be Standardized","2016-02 (Jacksonville)","|Partial|","",""
-"`P0226R1 <https://wg21.link/P0226R1>`__","Mathematical Special Functions for C++17","2016-02 (Jacksonville)","|In Progress|","","Progress is tracked `here <https://github.com/llvm/llvm-project/issues/99939>`__"
+"`P0226R1 <https://wg21.link/P0226R1>`__","Mathematical Special Functions for C++17","2016-02 (Jacksonville)","|In Progress|","","Progress is tracked `here <https://llvm.org/PR99939>`__"
 "`P0220R1 <https://wg21.link/P0220R1>`__","Adopt Library Fundamentals V1 TS Components for C++17","2016-02 (Jacksonville)","|Complete|","16",""
 "`P0218R1 <https://wg21.link/P0218R1>`__","Adopt the File System TS for C++17","2016-02 (Jacksonville)","|Complete|","7",""
 "`P0033R1 <https://wg21.link/P0033R1>`__","Re-enabling shared_from_this","2016-02 (Jacksonville)","|Complete|","3.9",""

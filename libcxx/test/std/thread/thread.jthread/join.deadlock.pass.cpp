@@ -10,7 +10,7 @@
 // it would dead lock the test
 // UNSUPPORTED: windows
 
-// TSAN bug: https://github.com/llvm/llvm-project/issues/66537
+// TSAN bug: https://llvm.org/PR66537
 // UNSUPPORTED: tsan
 
 // UNSUPPORTED: no-threads

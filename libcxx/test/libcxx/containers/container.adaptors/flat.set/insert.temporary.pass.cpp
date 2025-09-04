@@ -10,7 +10,7 @@
 
 // <flat_set>
 
-// https://github.com/llvm/llvm-project/issues/119016
+// https://llvm.org/PR119016
 
 #include <flat_set>
 

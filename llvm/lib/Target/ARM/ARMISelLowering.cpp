@@ -20192,37 +20192,6 @@ bool ARMTargetLowering::SimplifyDemandedBitsForTargetNode(
 //                           ARM Inline Assembly Support
 //===----------------------------------------------------------------------===//
 
-bool ARMTargetLowering::ExpandInlineAsm(CallInst *CI) const {
-  // Looking for "rev" which is V6+.
-  if (!Subtarget->hasV6Ops())
-    return false;
-
-  InlineAsm *IA = cast<InlineAsm>(CI->getCalledOperand());
-  StringRef AsmStr = IA->getAsmString();
-  SmallVector<StringRef, 4> AsmPieces;
-  SplitString(AsmStr, AsmPieces, ";\n");
-
-  switch (AsmPieces.size()) {
-  default: return false;
-  case 1:
-    AsmStr = AsmPieces[0];
-    AsmPieces.clear();
-    SplitString(AsmStr, AsmPieces, " \t,");
-
-    // rev $0, $1
-    if (AsmPieces.size() == 3 && AsmPieces[0] == "rev" &&
-        AsmPieces[1] == "$0" && AsmPieces[2] == "$1" &&
-        IA->getConstraintString().starts_with("=l,l")) {
-      IntegerType *Ty = dyn_cast<IntegerType>(CI->getType());
-      if (Ty && Ty->getBitWidth() == 32)
-        return IntrinsicLowering::LowerToByteSwap(CI);
-    }
-    break;
-  }
-
-  return false;
-}
-
 const char *ARMTargetLowering::LowerXConstraint(EVT ConstraintVT) const {
   // At this point, we have to lower this constraint to something else, so we
   // lower it to an "r" or "w". However, by doing this we will force the result

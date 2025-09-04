@@ -8,8 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// Make sure that std::bit_cast works with std::complex. Test case extracted from
-// https://github.com/llvm/llvm-project/issues/94620.
+// Make sure that std::bit_cast works with std::complex. Test case extracted from https://llvm.org/PR94620.
 
 #include <bit>
 #include <complex>

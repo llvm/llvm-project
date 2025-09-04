@@ -5125,14 +5125,6 @@ public:
   // Inline Asm Support hooks
   //
 
-  /// This hook allows the target to expand an inline asm call to be explicit
-  /// llvm code if it wants to.  This is useful for turning simple inline asms
-  /// into LLVM intrinsics, which gives the compiler more information about the
-  /// behavior of the code.
-  virtual bool ExpandInlineAsm(CallInst *) const {
-    return false;
-  }
-
   enum ConstraintType {
     C_Register,            // Constraint represents specific register(s).
     C_RegisterClass,       // Constraint represents any of register(s) in class.
