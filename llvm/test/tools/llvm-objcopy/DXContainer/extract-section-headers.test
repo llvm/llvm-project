@@ -13,12 +13,12 @@
 # CHECK-NEXT: Parts:
 
 # CHECK-NOT: FKE0
-# FKE1: Name:            FKE1
-# FKE4-NOT: FKE1
+# FKE1:      Name: FKE1
+# FKE4-NOT:  FKE1
 # CHECK-NOT: FKE2
 # CHECK-NOT: FKE3
-# FKE1-NOT: FKE4
-# FKE4: Name:            FKE4
+# FKE1-NOT:  FKE4
+# FKE4:      Name: FKE4
 # CHECK-NOT: FKE5
 # CHECK-NOT: DXIL
 
