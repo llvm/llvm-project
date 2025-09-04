@@ -2305,6 +2305,15 @@ findPrologueEndLoc(const MachineFunction *MF) {
         return *FoundInst;
     }
 
+    // We choose to ignore line-zero locations when setting the prologue as they
+    // can't be stepped on anyway; however in very rare scenarios function calls
+    // can have line zero, and we shouldn't step over those. In these
+    // extraordinary conditions, just bail out and refuse to set a prologue_end.
+    if (CurInst->isCall())
+      if (const DILocation *Loc = CurInst->getDebugLoc().get())
+        if (Loc->getLine() == 0)
+          return std::make_pair(nullptr, true);
+
     // Try to continue searching, but use a backup-location if substantive
     // computation is happening.
     auto NextInst = std::next(CurInst);
