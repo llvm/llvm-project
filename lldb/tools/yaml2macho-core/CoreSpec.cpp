@@ -16,7 +16,7 @@ using llvm::yaml::Input;
 using llvm::yaml::IO;
 using llvm::yaml::MappingTraits;
 
-template <> struct MappingTraits<RegisterNameAndValue> {
+template <> struct llvm::yaml::MappingTraits<RegisterNameAndValue> {
   static void mapping(IO &io, RegisterNameAndValue &name_value) {
     io.mapRequired("name", name_value.name);
     io.mapRequired("value", name_value.value);
@@ -32,7 +32,7 @@ template <> struct llvm::yaml::ScalarEnumerationTraits<RegisterFlavor> {
   }
 };
 
-template <> struct MappingTraits<RegisterSet> {
+template <> struct llvm::yaml::MappingTraits<RegisterSet> {
   static void mapping(IO &io, RegisterSet &regset) {
     io.mapRequired("flavor", regset.flavor);
     io.mapRequired("registers", regset.registers);
@@ -40,14 +40,14 @@ template <> struct MappingTraits<RegisterSet> {
 };
 LLVM_YAML_IS_SEQUENCE_VECTOR(RegisterSet)
 
-template <> struct MappingTraits<Thread> {
+template <> struct llvm::yaml::MappingTraits<Thread> {
   static void mapping(IO &io, Thread &thread) {
     io.mapRequired("regsets", thread.regsets);
   }
 };
 LLVM_YAML_IS_SEQUENCE_VECTOR(Thread)
 
-template <> struct MappingTraits<MemoryRegion> {
+template <> struct llvm::yaml::MappingTraits<MemoryRegion> {
   static void mapping(IO &io, MemoryRegion &memory) {
     io.mapRequired("addr", memory.addr);
     io.mapOptional("UInt8", memory.bytes);
@@ -68,7 +68,7 @@ template <> struct MappingTraits<MemoryRegion> {
 };
 LLVM_YAML_IS_SEQUENCE_VECTOR(MemoryRegion)
 
-template <> struct MappingTraits<Binary> {
+template <> struct llvm::yaml::MappingTraits<Binary> {
   static void mapping(IO &io, Binary &binary) {
     io.mapOptional("name", binary.name);
     io.mapRequired("uuid", binary.uuid);
@@ -105,7 +105,7 @@ template <> struct llvm::yaml::MappingTraits<AddressableBits> {
   }
 };
 
-template <> struct MappingTraits<CoreSpec> {
+template <> struct llvm::yaml::MappingTraits<CoreSpec> {
   static void mapping(IO &io, CoreSpec &corespec) {
     std::string cpuname;
     io.mapRequired("cpu", cpuname);
