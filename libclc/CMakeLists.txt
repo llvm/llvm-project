@@ -394,6 +394,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 
     message( STATUS "  device: ${d} ( ${${d}_aliases} )" )
 
+    set( MACRO_ARCH ${ARCH} )
     if ( ARCH STREQUAL spirv OR ARCH STREQUAL spirv64 )
       set( build_flags -O0 -finline-hint-functions -DCLC_SPIRV )
       set( opt_flags )
@@ -412,7 +413,6 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     else()
       set( build_flags )
       set( opt_flags -O3 )
-      set( MACRO_ARCH ${ARCH} )
     endif()
 
     set( LIBCLC_ARCH_OBJFILE_DIR "${LIBCLC_OBJFILE_DIR}/${arch_suffix}" )
