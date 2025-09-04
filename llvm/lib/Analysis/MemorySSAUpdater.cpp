@@ -412,10 +412,13 @@ void MemorySSAUpdater::insertDef(MemoryDef *MD, bool RenameUses) {
   }
 
   // Update defining access of following defs.
+  unsigned NewPhiIndexEnd = InsertedPHIs.size();
   fixupDefs(FixupList);
+  assert(NewPhiIndexEnd == InsertedPHIs.size() &&
+         "Should not insert new phis during fixupDefs()");
 
   // Optimize potentially non-minimal phis added in this method.
-  unsigned NewPhiSize = InsertedPHIs.size() - NewPhiIndex;
+  unsigned NewPhiSize = NewPhiIndexEnd - NewPhiIndex;
   if (NewPhiSize)
     tryRemoveTrivialPhis(ArrayRef<WeakVH>(&InsertedPHIs[NewPhiIndex], NewPhiSize));
 
