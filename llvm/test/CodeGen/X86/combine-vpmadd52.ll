@@ -292,27 +292,11 @@ define <2 x i64> @test_vpmadd52h_mul_hi52_negative(<2 x i64> %x0, <2 x i64> %x1,
 }
 
 define <2 x i64> @test1_knownbits_vpmadd52l(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2) {
-; AVX512-LABEL: test1_knownbits_vpmadd52l:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [4,4]
-; AVX512-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX512-NEXT:    vpand %xmm2, %xmm1, %xmm1
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [1,1]
-; AVX512-NEXT:    vmovdqa %xmm2, %xmm3
-; AVX512-NEXT:    vpmadd52luq %xmm1, %xmm0, %xmm3
-; AVX512-NEXT:    vpand %xmm2, %xmm3, %xmm0
-; AVX512-NEXT:    retq
-;
-; AVX-LABEL: test1_knownbits_vpmadd52l:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [4,4]
-; AVX-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpand %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [1,1]
-; AVX-NEXT:    vmovdqa %xmm2, %xmm3
-; AVX-NEXT:    {vex} vpmadd52luq %xmm1, %xmm0, %xmm3
-; AVX-NEXT:    vpand %xmm2, %xmm3, %xmm0
-; AVX-NEXT:    retq
+; CHECK-LABEL: test1_knownbits_vpmadd52l:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = [1,1]
+; CHECK-NEXT:    # xmm0 = mem[0,0]
+; CHECK-NEXT:    retq
   %and1 = and <2 x i64> %x0, splat (i64 4)
   %and2 = and <2 x i64> %x1, splat (i64 4)
   %madd = call <2 x i64> @llvm.x86.avx512.vpmadd52l.uq.128(<2 x i64> splat(i64 1), <2 x i64> %and1, <2 x i64> %and2)
@@ -321,27 +305,11 @@ define <2 x i64> @test1_knownbits_vpmadd52l(<2 x i64> %x0, <2 x i64> %x1, <2 x i
 }
 
 define <2 x i64> @test1_knownbits_vpmadd52h(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2) {
-; AVX512-LABEL: test1_knownbits_vpmadd52h:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [1073741824,1073741824]
-; AVX512-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX512-NEXT:    vpand %xmm2, %xmm1, %xmm1
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [3,3]
-; AVX512-NEXT:    vmovdqa %xmm2, %xmm3
-; AVX512-NEXT:    vpmadd52huq %xmm1, %xmm0, %xmm3
-; AVX512-NEXT:    vpand %xmm2, %xmm3, %xmm0
-; AVX512-NEXT:    retq
-;
-; AVX-LABEL: test1_knownbits_vpmadd52h:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [1073741824,1073741824]
-; AVX-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpand %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [3,3]
-; AVX-NEXT:    vmovdqa %xmm2, %xmm3
-; AVX-NEXT:    {vex} vpmadd52huq %xmm1, %xmm0, %xmm3
-; AVX-NEXT:    vpand %xmm2, %xmm3, %xmm0
-; AVX-NEXT:    retq
+; CHECK-LABEL: test1_knownbits_vpmadd52h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = [3,3]
+; CHECK-NEXT:    # xmm0 = mem[0,0]
+; CHECK-NEXT:    retq
   %and1 = and <2 x i64> %x0, splat (i64 1073741824) ; 1LL << 30
   %and2 = and <2 x i64> %x1, splat (i64 1073741824) ; 1LL << 30
   %madd = call <2 x i64> @llvm.x86.avx512.vpmadd52h.uq.128(<2 x i64> splat(i64 3), <2 x i64> %and1, <2 x i64> %and2)
@@ -350,25 +318,11 @@ define <2 x i64> @test1_knownbits_vpmadd52h(<2 x i64> %x0, <2 x i64> %x1, <2 x i
 }
 
 define <2 x i64> @test2_knownbits_vpmadd52l(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2) {
-; AVX512-LABEL: test2_knownbits_vpmadd52l:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
-; AVX512-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm1, %xmm1
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [1234,1234]
-; AVX512-NEXT:    vmovdqa %xmm2, %xmm3
-; AVX512-NEXT:    vpmadd52luq %xmm1, %xmm0, %xmm3
-; AVX512-NEXT:    vpand %xmm2, %xmm3, %xmm0
-; AVX512-NEXT:    retq
-;
-; AVX-LABEL: test2_knownbits_vpmadd52l:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX-NEXT:    vpmovsxwq {{.*#+}} xmm2 = [1234,1234]
-; AVX-NEXT:    vmovdqa %xmm2, %xmm3
-; AVX-NEXT:    {vex} vpmadd52luq %xmm1, %xmm0, %xmm3
-; AVX-NEXT:    vpand %xmm2, %xmm3, %xmm0
-; AVX-NEXT:    retq
+; CHECK-LABEL: test2_knownbits_vpmadd52l:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = [1234,1234]
+; CHECK-NEXT:    # xmm0 = mem[0,0]
+; CHECK-NEXT:    retq
   %and1 = and <2 x i64> %x0, splat (i64 67108864) ; 1LL << 26
   %and2 = and <2 x i64> %x1, splat (i64 33554432) ; 1LL << 25
   %madd = call <2 x i64> @llvm.x86.avx512.vpmadd52l.uq.128(<2 x i64> splat(i64 1234), <2 x i64> %and1, <2 x i64> %and2)
@@ -377,25 +331,11 @@ define <2 x i64> @test2_knownbits_vpmadd52l(<2 x i64> %x0, <2 x i64> %x1, <2 x i
 }
 
 define <2 x i64> @test2_knownbits_vpmadd52h(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2) {
-; AVX512-LABEL: test2_knownbits_vpmadd52h:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [1073741824,1073741824]
-; AVX512-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX512-NEXT:    vpand %xmm2, %xmm1, %xmm1
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [1025,1025]
-; AVX512-NEXT:    vpmadd52huq %xmm1, %xmm0, %xmm2
-; AVX512-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm2, %xmm0
-; AVX512-NEXT:    retq
-;
-; AVX-LABEL: test2_knownbits_vpmadd52h:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [1073741824,1073741824]
-; AVX-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpand %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpmovsxwq {{.*#+}} xmm2 = [1025,1025]
-; AVX-NEXT:    {vex} vpmadd52huq %xmm1, %xmm0, %xmm2
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm0
-; AVX-NEXT:    retq
+; CHECK-LABEL: test2_knownbits_vpmadd52h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = [1,1]
+; CHECK-NEXT:    # xmm0 = mem[0,0]
+; CHECK-NEXT:    retq
   %and1 = and <2 x i64> %x0, splat (i64 1073741824) ; 1LL << 30
   %and2 = and <2 x i64> %x1, splat (i64 1073741824) ; 1LL << 30
   ; add (1LL << 20) + 1
