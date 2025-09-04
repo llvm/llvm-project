@@ -143,7 +143,7 @@ public:
         // tight.
         // Require SDWA for both i8 and i16, and keep vectors within 32 bits.
         std::optional<unsigned> Bits = VTy->getPrimitiveSizeInBits();
-        if (ST.hasSDWA() && Bits && Bits->get() <= 32 &&
+        if (ST.hasSDWA() && Bits && *Bits <= 32 &&
             (Elt->isIntegerTy(8) || Elt->isIntegerTy(16))) {
           switch (BO->getOpcode()) {
           case Instruction::Add:
