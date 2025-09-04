@@ -290,22 +290,6 @@ private:
 #ifdef __linux__
 static constexpr const uintptr_t VAddressSpaceCeiling = 0x0000800000000000;
 
-static void generateRoundToNearestPage(unsigned int TargetRegister,
-                                       std::vector<MCInst> &GeneratedCode) {
-  int PageSizeShift = static_cast<int>(round(log2(getpagesize())));
-  // Round down to the nearest page by getting rid of the least significant bits
-  // representing location in the page.
-
-  // Single instruction using AND with inverted mask (effectively BIC)
-  uint64_t BitsToClearMask = (1ULL << PageSizeShift) - 1; // 0xFFF
-  uint64_t AndMask = ~BitsToClearMask;                    // ...FFFFFFFFFFFF000
-  GeneratedCode.push_back(MCInstBuilder(AArch64::ANDXri)
-                              .addReg(TargetRegister) // Xd
-                              .addReg(TargetRegister) // Xn
-                              .addImm(AndMask)        // imm bitmask
-  );
-}
-
 std::vector<MCInst>
 ExegesisAArch64Target::generateExitSyscall(unsigned ExitCode) const {
   std::vector<MCInst> ExitCallCode;
