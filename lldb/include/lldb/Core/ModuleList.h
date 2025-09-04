@@ -489,7 +489,7 @@ public:
 
   static size_t RemoveOrphanSharedModules(bool mandatory);
 
-  static bool RemoveSharedModuleIfOrphaned(const Module *module_ptr);
+  static bool RemoveSharedModuleIfOrphaned(const lldb::ModuleWP module_ptr);
 
   /// Applies 'callback' to each module in this ModuleList.
   /// If 'callback' returns false, iteration terminates.

@@ -2564,12 +2564,9 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
           m_images.Append(module_sp, notify);
 
         for (ModuleSP &old_module_sp : replaced_modules) {
-          auto use_count = old_module_sp.use_count();
-          Module *old_module_ptr = old_module_sp.get();
+          auto old_module_wp =  old_module_sp->weak_from_this();
           old_module_sp.reset();
-          // If the use count was one, this was not in the shared module list.
-          if (use_count > 1)
-            ModuleList::RemoveSharedModuleIfOrphaned(old_module_ptr);
+          ModuleList::RemoveSharedModuleIfOrphaned(old_module_wp);
         }
       } else
         module_sp.reset();
