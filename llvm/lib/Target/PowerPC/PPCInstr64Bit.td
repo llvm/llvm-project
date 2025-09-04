@@ -1984,7 +1984,7 @@ def : Pat<(int_ppc_darnraw), (DARN 2)>;
 
 class X_RA5_RB5<bits<6> opcode, bits<10> xo, string opc, RegisterOperand ty,
                    InstrItinClass itin, list<dag> pattern>
-  : X_L1_RS5_RS5<opcode, xo, (outs), (ins ty:$RA, ty:$RB, u1imm:$L),
+  : X_L1_RS5_RS5<opcode, xo, (outs), (ins ty:$RA, ty:$RB),
                  !strconcat(opc, " $RA, $RB"), itin, pattern>{
    let L = 1;
 }
