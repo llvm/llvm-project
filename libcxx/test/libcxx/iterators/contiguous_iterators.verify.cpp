@@ -12,7 +12,7 @@
 // __bounded_iter<_Iter>
 
 // Verify that __bounded_iter does not accept non-contiguous iterators as determined by __libcpp_is_contiguous_iterator.
-// static_assert should be used, see https://github.com/llvm/llvm-project/issues/115002.
+// static_assert should be used, see https://llvm.org/PR115002.
 // __wrap_iter cannot be so handled because it may directly wrap user-defined fancy pointers in libc++'s vector.
 
 #include <deque>

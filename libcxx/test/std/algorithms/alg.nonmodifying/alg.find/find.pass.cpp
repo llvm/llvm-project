@@ -244,7 +244,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     }
 
     // Verify that the std::vector<bool>::iterator optimization works properly for allocators with custom size types
-    // Fix https://github.com/llvm/llvm-project/issues/122528
+    // Fix https://llvm.org/PR122528
     {
       using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
       std::vector<bool, Alloc> in(100, false, Alloc(1));

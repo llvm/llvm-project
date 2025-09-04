@@ -2258,7 +2258,7 @@ private:
     (void)__new_mid;
 #  if _LIBCPP_INSTRUMENTED_WITH_ASAN
 #    if defined(__APPLE__)
-    // TODO: remove after addressing issue #96099 (https://github.com/llvm/llvm-project/issues/96099)
+    // TODO: remove after addressing issue #96099 (https://llvm.org/PR96099)
     if (!__is_long())
       return;
 #    endif
