@@ -330,8 +330,10 @@ public:
 
   public:
     explicit SymbolQuery(const std::vector<std::string> &Symbols) {
-      for (const auto &s : Symbols)
-        Results.insert({s, Result{s, ""}});
+      for (const auto &s : Symbols) {
+        if (!Results.contains(s))
+          Results.insert({s, Result{s, ""}});
+      }
     }
 
     SmallVector<StringRef> getUnresolvedSymbols() const {

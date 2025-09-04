@@ -346,6 +346,13 @@ public:
   bool isTrackedBasePath(StringRef path) const;
   std::vector<std::shared_ptr<LibraryUnit>> getAllUnits() const;
 
+  SmallVector<StringRef> getSearchPaths() const {
+    SmallVector<StringRef> searchPaths;
+    for (const auto &unit : m_units)
+      searchPaths.push_back(unit.second->basePath);
+    return searchPaths;
+  }
+
   PathResolver &getPathResolver() const { return *m_resolver; }
 
   LibraryPathCache &getCache() const { return *m_cache; }

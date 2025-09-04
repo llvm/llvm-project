@@ -1070,9 +1070,10 @@ void LibraryScanner::handleLibrary(StringRef filePath, PathType K, int level) {
 
   DylibPathValidator validator(m_helper.getPathResolver());
   DylibResolver m_libResolver(validator);
-  m_libResolver.configure(CanonicalPath,
-                          {{Deps.rpath, SearchPathType::RPath},
-                           {Deps.runPath, SearchPathType::RunPath}});
+  m_libResolver.configure(
+      CanonicalPath, {{Deps.rpath, SearchPathType::RPath},
+                      {m_helper.getSearchPaths(), SearchPathType::UsrOrSys},
+                      {Deps.runPath, SearchPathType::RunPath}});
   for (StringRef dep : Deps.deps) {
     LLVM_DEBUG(dbgs() << "  Resolving dep: " << dep << "\n";);
     auto dep_fullopt = m_libResolver.resolve(dep);
