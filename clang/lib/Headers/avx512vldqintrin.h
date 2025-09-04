@@ -521,8 +521,8 @@ _mm_maskz_cvtepi64_ps (__mmask8 __U, __m128i __A) {
                 (__mmask8) __U);
 }
 
-static __inline__ __m128 __DEFAULT_FN_ATTRS256
-_mm256_cvtepi64_ps (__m256i __A) {
+static __inline__ __m128 __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_cvtepi64_ps(__m256i __A) {
   return (__m128)__builtin_convertvector((__v4di)__A, __v4sf);
 }
 

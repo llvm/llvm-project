@@ -510,6 +510,8 @@ __m128 test_mm256_cvtepi64_ps(__m256i __A) {
   return _mm256_cvtepi64_ps(__A); 
 }
 
+TEST_CONSTEXPR(match_m128(_mm256_cvtepi64_ps((__m256i)(__v4di){-1, -1, 2, 2}), -1.0f, -1.0f, 2.0f, 2.0f));
+
 __m128 test_mm256_mask_cvtepi64_ps(__m128 __W, __mmask8 __U, __m256i __A) {
   // CHECK-LABEL: test_mm256_mask_cvtepi64_ps
   // CHECK: sitofp <4 x i64> %{{.*}} to <4 x float>
