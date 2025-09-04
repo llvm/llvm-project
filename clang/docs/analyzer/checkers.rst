@@ -1876,14 +1876,14 @@ the operators ``*`` and ``->``.
  int test_use_after_release(int x, ...) {
    va_list va;
    va_start(va, x);
-   va_end(va, x);
+   va_end(va);
    return va_arg(va, int); // warn: va is uninitialized
  }
 
  int test_leak(int x, ...) {
    va_list va;
    va_start(va, x);
- } // warn: va is never released
+ } // warn: va is leaked
 
 .. _unix-checkers:
 
