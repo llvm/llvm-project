@@ -488,6 +488,19 @@ static bool isTrivialFiller(Expr *E) {
   return false;
 }
 
+static CharUnits getArrayElementAlign(CharUnits arrayAlign, llvm::Value *idx,
+                                      CharUnits eltSize) {
+  // If we have a constant index, we can use the exact offset of the
+  // element we're accessing.
+  if (auto *constantIdx = dyn_cast<llvm::ConstantInt>(idx)) {
+    CharUnits offset = constantIdx->getZExtValue() * eltSize;
+    return arrayAlign.alignmentAtOffset(offset);
+  }
+
+  // Otherwise, use the worst-case alignment for any element.
+  return arrayAlign.alignmentOfArrayElement(eltSize);
+}
+
 static void EmitHLSLAggregateSplatCast(CodeGenFunction &CGF, Address DestVal,
                                        QualType DestTy, llvm::Value *SrcVal,
                                        QualType SrcTy, SourceLocation Loc) {
@@ -2313,6 +2326,41 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
                                                                   Src))
         return;
     }
+  }
+
+  if (getLangOpts().HLSL && Ty.getAddressSpace() == LangAS::hlsl_constant &&
+      Ty->isArrayType()) {
+    // TODO: What about incomplete array types?
+    auto *ArrTy = cast<ConstantArrayType>(Ty);
+
+    QualType ElemTy = ArrTy->getElementType();
+    CharUnits RowAlignedSize = getContext().getTypeSizeInChars(ElemTy).alignTo(
+        CharUnits::fromQuantity(32));
+
+    for (uint64_t I = 0, E = ArrTy->getZExtSize(); I != E; ++I) {
+      llvm::ConstantInt *Idx = llvm::ConstantInt::get(SizeTy, I);
+
+      llvm::Value *RowAlignedSizeVal =
+          llvm::ConstantInt::get(SizeTy, RowAlignedSize.getQuantity());
+      llvm::Value *ScaledIdx = Builder.CreateMul(Idx, RowAlignedSizeVal);
+      CharUnits SrcAlign =
+          getArrayElementAlign(SrcPtr.getAlignment(), Idx, RowAlignedSize);
+      // Address SrcGEP =
+      //     Builder.CreateInBoundsGEP(SrcPtr, ScaledIdx, Int8Ty, SrcAlign);
+      Address SrcGEP = RawAddress(
+          Builder.CreateInBoundsGEP(Int8Ty, SrcPtr.getBasePointer(), ScaledIdx),
+          ConvertTypeForMem(ElemTy), SrcAlign, SrcPtr.isKnownNonNull());
+
+      CharUnits DestAlign = getContext().getTypeAlignInChars(Ty);
+      Address DestGEP = Builder.CreateInBoundsGEP(
+          DestPtr, Idx, ConvertTypeForMem(ElemTy), DestAlign);
+
+      llvm::Value *Load = Builder.CreateLoad(SrcGEP, "load");
+      // TODO: Do we need a cast here to do the right thing recursively?
+      Builder.CreateStore(Load, DestGEP);
+    }
+
+    return;
   }
 
   // Aggregate assignment turns into llvm.memcpy.  This is almost valid per

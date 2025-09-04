@@ -161,10 +161,9 @@ public:
 
   llvm::Instruction *getConvergenceToken(llvm::BasicBlock &BB);
 
-  llvm::TargetExtType *
-  getHLSLBufferLayoutType(const RecordType *LayoutStructTy);
+  llvm::StructType *getHLSLBufferLayoutType(const RecordType *LayoutStructTy);
   void addHLSLBufferLayoutType(const RecordType *LayoutStructTy,
-                               llvm::TargetExtType *LayoutTy);
+                               llvm::StructType *LayoutTy);
   void emitInitListOpaqueValues(CodeGenFunction &CGF, InitListExpr *E);
 
   std::optional<LValue>
@@ -182,7 +181,7 @@ private:
                                    HLSLResourceBindingAttr *RBA);
   llvm::Triple::ArchType getArch();
 
-  llvm::DenseMap<const clang::RecordType *, llvm::TargetExtType *> LayoutTypes;
+  llvm::DenseMap<const clang::RecordType *, llvm::StructType *> LayoutTypes;
 };
 
 } // namespace CodeGen

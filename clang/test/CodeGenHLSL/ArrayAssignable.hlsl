@@ -5,12 +5,12 @@ struct S {
   float f;
 };
 
-// CHECK: [[CBLayout:%.*]] = type <{ [2 x float], [2 x <4 x i32>], [2 x [2 x i32]], [1 x target("dx.Layout", %S, 8, 0, 4)] }>
-// CHECK: @CBArrays.cb = global target("dx.CBuffer", target("dx.Layout", [[CBLayout]], 136, 0, 32, 64, 128))
-// CHECK: @c1 = external hidden addrspace(2) global [2 x float], align 4
+// CHECK: [[CBLayout:%.*]] = type <{ <{ [1 x <{ float, [12 x i8] }>], float }>, [12 x i8], [2 x <4 x i32>], <{ [3 x <{ i32, [12 x i8] }>], i32 }>, [12 x i8], [1 x %S] }>
+// CHECK: @CBArrays.cb = global target("dx.CBuffer", [[CBLayout]])
+// CHECK: @c1 = external hidden addrspace(2) global <{ [1 x <{ float, [12 x i8] }>], float }>, align 4
 // CHECK: @c2 = external hidden addrspace(2) global [2 x <4 x i32>], align 16
-// CHECK: @c3 = external hidden addrspace(2) global [2 x [2 x i32]], align 4
-// CHECK: @c4 = external hidden addrspace(2) global [1 x target("dx.Layout", %S, 8, 0, 4)], align 1
+// CHECK: @c3 = external hidden addrspace(2) global <{ [3 x <{ i32, [12 x i8] }>], i32 }>, align 4
+// CHECK: @c4 = external hidden addrspace(2) global [1 x %S], align 1
 
 cbuffer CBArrays : register(b0) {
   float c1[2];
