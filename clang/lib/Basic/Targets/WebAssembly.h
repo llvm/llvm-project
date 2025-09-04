@@ -90,7 +90,10 @@ public:
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
     HasUnalignedAccess = true;
     if (T.isWALI()) {
-      // WALI ABI requires 64-bit longs on both wasm32 and wasm64
+      // The WALI ABI is documented here:
+      // https://doc.rust-lang.org/rustc/platform-support/wasm32-wali-linux.html
+      // Currently, this ABI only applies to wasm32 targets and notably requires
+      // 64-bit longs
       LongAlign = LongWidth = 64;
       SizeType = UnsignedInt;
       PtrDiffType = SignedInt;

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !defined(__USING_SJLJ_EXCEPTIONS__) && !defined(__wasm__)
+#if !defined(__wasm__)
 
 #include "assembly.h"
 
@@ -21,6 +21,8 @@
 #else
   .text
 #endif
+
+#if !defined(__USING_SJLJ_EXCEPTIONS__)
 
 #if defined(__i386__)
 DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_jumpto)
@@ -1250,6 +1252,8 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind19Registers_loongarch6jumptoEv)
 
 #endif
 
+#endif /* !defined(__USING_SJLJ_EXCEPTIONS__) */
+
 NO_EXEC_STACK_DIRECTIVE
 
-#endif /* !defined(__USING_SJLJ_EXCEPTIONS__) && !defined(__wasm__) */
+#endif /* !defined(__wasm__) */
