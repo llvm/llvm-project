@@ -6,22 +6,12 @@
 # RUN: obj2yaml %t.fke1.out | FileCheck %s --check-prefixes=CHECK,FKE1
 # RUN: obj2yaml %t.fke4.out | FileCheck %s --check-prefixes=CHECK,FKE4
 
---- !dxcontainer
-Header:
-  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
-  Version:
-    Major:           1
-    Minor:           0
-## FKE1: FileSize:       52
-## FKE4: FileSize:       1732
-  FileSize:        1996
-# CHECK: PartCount:     1
+# FKE1:       FileSize:       52
+# FKE4:       FileSize:       1732
+# CHECK-NEXT: PartCount:     1
 # CHECK-NEXT: PartOffsets:   [ 36 ]
-  PartCount:       7
-  PartOffsets:     [ 60, 76, 92, 108, 236, 1932, 1960 ]
 # CHECK-NEXT: Parts:
-Parts:
+
 # CHECK-NOT: FKE0
 # FKE1: Name:            FKE1
 # FKE4-NOT: FKE1
@@ -30,6 +20,19 @@ Parts:
 # FKE1-NOT: FKE4
 # FKE4: Name:            FKE4
 # CHECK-NOT: FKE5
+# CHECK-NOT: DXIL
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  FileSize:        1996
+  PartCount:       7
+  PartOffsets:     [ 60, 76, 92, 108, 236, 1932, 1960 ]
+Parts:
   - Name:            FKE0
     Size:            8
   - Name:            FKE1
