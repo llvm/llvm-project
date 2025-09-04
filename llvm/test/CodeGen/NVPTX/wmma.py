@@ -583,7 +583,7 @@ def is_mma_variant_supported(op, layout_a, layout_b, kind, satf):
     ):
         return False
 
-    if kind != "" and (ptx_version < 87 or gpu_arch < 120 or not aa):
+    if kind != "" and not (ptx_version >= 87 and gpu_arch >= 120 and aa):
         return False
 
     if kind != "" and (
