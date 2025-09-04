@@ -263,6 +263,11 @@ static cl::opt<bool> MaximizeBandwidth(
     cl::desc("Maximize bandwidth when selecting vectorization factor which "
              "will be determined by the smallest type in loop."));
 
+static cl::opt<bool> MaximizeBandwidthConservatively(
+    "vectorizer-maximize-bandwidth-conservatively", cl::init(false), cl::Hidden,
+    cl::desc("When MaximizeBandwidth is enabled, a larger vector factor is "
+             "chosen conservatively."));
+
 static cl::opt<bool> EnableInterleavedMemAccesses(
     "enable-interleaved-mem-accesses", cl::init(false), cl::Hidden,
     cl::desc("Enable vectorization on interleaved memory accesses in a loop"));
@@ -937,8 +942,15 @@ public:
   /// user options, for the given register kind.
   bool useMaxBandwidth(TargetTransformInfo::RegisterKind RegKind);
 
+  /// \return True if maximizing vector bandwidth should be applied
+  /// conservatively by the target or user options, for the given register kind.
+  /// This only makes sense when useMaxBandwidth returns true.
+  bool useMaxBandwidthConservatively(TargetTransformInfo::RegisterKind RegKind);
+
   /// \return True if register pressure should be calculated for the given VF.
   bool shouldCalculateRegPressureForVF(ElementCount VF);
+
+  bool isVFForMaxBandwidth(ElementCount VF);
 
   /// \return The size (in bits) of the smallest and widest types in the code
   /// that needs to be vectorized. We ignore values that remain scalar such as
@@ -3729,11 +3741,15 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
 
 bool LoopVectorizationCostModel::shouldCalculateRegPressureForVF(
     ElementCount VF) {
+  // Only calculate register pressure for VFs enabled by MaxBandwidth.
+  return isVFForMaxBandwidth(VF);
+}
+
+bool LoopVectorizationCostModel::isVFForMaxBandwidth(ElementCount VF) {
   if (!useMaxBandwidth(VF.isScalable()
                            ? TargetTransformInfo::RGK_ScalableVector
                            : TargetTransformInfo::RGK_FixedWidthVector))
     return false;
-  // Only calculate register pressure for VFs enabled by MaxBandwidth.
   return ElementCount::isKnownGT(
       VF, VF.isScalable() ? MaxPermissibleVFWithoutMaxBW.ScalableVF
                           : MaxPermissibleVFWithoutMaxBW.FixedVF);
@@ -3745,6 +3761,13 @@ bool LoopVectorizationCostModel::useMaxBandwidth(
                                (TTI.shouldMaximizeVectorBandwidth(RegKind) ||
                                 (UseWiderVFIfCallVariantsPresent &&
                                  Legal->hasVectorCallVariants())));
+}
+
+bool LoopVectorizationCostModel::useMaxBandwidthConservatively(
+    TargetTransformInfo::RegisterKind RegKind) {
+  return MaximizeBandwidthConservatively ||
+         (MaximizeBandwidthConservatively.getNumOccurrences() == 0 &&
+          TTI.shouldMaximizeVectorBandwidthConservatively(RegKind));
 }
 
 ElementCount LoopVectorizationCostModel::clampVFByMaxTripCount(
@@ -6872,13 +6895,16 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   return Cost;
 }
 
-InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
-                                               ElementCount VF) const {
+InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan, ElementCount VF,
+                                               bool CountsVecCalcOnly) const {
   VPCostContext CostCtx(CM.TTI, *CM.TLI, Plan, CM, CM.CostKind);
-  InstructionCost Cost = precomputeCosts(Plan, VF, CostCtx);
+  InstructionCost Cost;
+
+  if (!CountsVecCalcOnly)
+    Cost += precomputeCosts(Plan, VF, CostCtx);
 
   // Now compute and add the VPlan-based cost.
-  Cost += Plan.cost(VF, CostCtx);
+  Cost += Plan.cost(VF, CostCtx, CountsVecCalcOnly);
 #ifndef NDEBUG
   unsigned EstimatedWidth = estimateElementCount(VF, CM.getVScaleForTuning());
   LLVM_DEBUG(dbgs() << "Cost for VF " << VF << ": " << Cost
@@ -7054,8 +7080,25 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
         continue;
       }
 
-      if (isMoreProfitable(CurrentFactor, BestFactor, P->hasScalarTail()))
-        BestFactor = CurrentFactor;
+      if (isMoreProfitable(CurrentFactor, BestFactor, P->hasScalarTail())) {
+        if (CM.isVFForMaxBandwidth(VF) &&
+            CM.useMaxBandwidthConservatively(
+                VF.isScalable() ? TargetTransformInfo::RGK_ScalableVector
+                                : TargetTransformInfo::RGK_FixedWidthVector)) {
+          if (ElementCount::isKnownLT(BestFactor.Width, VF) &&
+              llvm::find(VFs, BestFactor.Width)) {
+            VectorizationFactor BestFactorVecCalc(
+                BestFactor.Width, cost(*P, BestFactor.Width, true), ScalarCost);
+            VectorizationFactor CurrentFactorVecCalc(VF, cost(*P, VF, true),
+                                                     ScalarCost);
+            if (isMoreProfitable(CurrentFactorVecCalc, BestFactorVecCalc,
+                                 P->hasScalarTail()))
+              BestFactor = CurrentFactor;
+          }
+        } else {
+          BestFactor = CurrentFactor;
+        }
+      }
 
       // If profitable add it to ProfitableVF list.
       if (isMoreProfitable(CurrentFactor, ScalarFactor, P->hasScalarTail()))
@@ -7080,13 +7123,19 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   // Verify that the VPlan-based and legacy cost models agree, except for VPlans
   // with early exits and plans with additional VPlan simplifications. The
   // legacy cost model doesn't properly model costs for such loops.
-  assert((BestFactor.Width == LegacyVF.Width || BestPlan.hasEarlyExit() ||
-          planContainsAdditionalSimplifications(getPlanFor(BestFactor.Width),
-                                                CostCtx, OrigLoop,
-                                                BestFactor.Width) ||
-          planContainsAdditionalSimplifications(
-              getPlanFor(LegacyVF.Width), CostCtx, OrigLoop, LegacyVF.Width)) &&
-         " VPlan cost model and legacy cost model disagreed");
+  if (!CM.isVFForMaxBandwidth(LegacyVF.Width) ||
+      !CM.useMaxBandwidthConservatively(
+          LegacyVF.Width.isScalable()
+              ? TargetTransformInfo::RGK_ScalableVector
+              : TargetTransformInfo::RGK_FixedWidthVector))
+    assert((BestFactor.Width == LegacyVF.Width || BestPlan.hasEarlyExit() ||
+            planContainsAdditionalSimplifications(getPlanFor(BestFactor.Width),
+                                                  CostCtx, OrigLoop,
+                                                  BestFactor.Width) ||
+            planContainsAdditionalSimplifications(getPlanFor(LegacyVF.Width),
+                                                  CostCtx, OrigLoop,
+                                                  LegacyVF.Width)) &&
+           " VPlan cost model and legacy cost model disagreed");
   assert((BestFactor.Width.isScalar() || BestFactor.ScalarCost > 0) &&
          "when vectorizing, the scalar cost must be computed.");
 #endif

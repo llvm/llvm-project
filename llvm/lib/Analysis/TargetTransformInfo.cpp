@@ -803,6 +803,11 @@ bool TargetTransformInfo::shouldMaximizeVectorBandwidth(
   return TTIImpl->shouldMaximizeVectorBandwidth(K);
 }
 
+bool TargetTransformInfo::shouldMaximizeVectorBandwidthConservatively(
+    TargetTransformInfo::RegisterKind K) const {
+  return TTIImpl->shouldMaximizeVectorBandwidthConservatively(K);
+}
+
 ElementCount TargetTransformInfo::getMinimumVF(unsigned ElemWidth,
                                                bool IsScalable) const {
   return TTIImpl->getMinimumVF(ElemWidth, IsScalable);

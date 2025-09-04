@@ -803,10 +803,34 @@ void VPRegionBlock::execute(VPTransformState *State) {
   State->Lane.reset();
 }
 
-InstructionCost VPBasicBlock::cost(ElementCount VF, VPCostContext &Ctx) {
+InstructionCost VPBasicBlock::cost(ElementCount VF, VPCostContext &Ctx,
+                                   bool CountsVecCalcOnly) {
   InstructionCost Cost = 0;
-  for (VPRecipeBase &R : Recipes)
-    Cost += R.cost(VF, Ctx);
+  for (VPRecipeBase &R : Recipes) {
+    if (!CountsVecCalcOnly)
+      Cost += R.cost(VF, Ctx);
+    else {
+      switch (R.getVPDefID()) {
+      case VPDef::VPActiveLaneMaskPHISC:
+      case VPDef::VPBlendSC:
+      case VPDef::VPFirstOrderRecurrencePHISC:
+      case VPDef::VPPartialReductionSC:
+      case VPDef::VPReductionPHISC:
+      case VPDef::VPReductionSC:
+      case VPDef::VPWidenCallSC:
+      case VPDef::VPWidenCanonicalIVSC:
+      case VPDef::VPWidenCastSC:
+      case VPDef::VPWidenGEPSC:
+      case VPDef::VPWidenIntOrFpInductionSC:
+      case VPDef::VPWidenIntrinsicSC:
+      case VPDef::VPWidenPHISC:
+      case VPDef::VPWidenPointerInductionSC:
+      case VPDef::VPWidenSC:
+      case VPDef::VPWidenSelectSC:
+        Cost += R.cost(VF, Ctx);
+      }
+    }
+  }
   return Cost;
 }
 
@@ -829,11 +853,12 @@ const VPBasicBlock *VPBasicBlock::getCFGPredecessor(unsigned Idx) const {
   return Pred->getExitingBasicBlock();
 }
 
-InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
+InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx,
+                                    bool CountsVecCalcOnly) {
   if (!isReplicator()) {
     InstructionCost Cost = 0;
     for (VPBlockBase *Block : vp_depth_first_shallow(getEntry()))
-      Cost += Block->cost(VF, Ctx);
+      Cost += Block->cost(VF, Ctx, CountsVecCalcOnly);
     InstructionCost BackedgeCost =
         ForceTargetInstructionCost.getNumOccurrences()
             ? InstructionCost(ForceTargetInstructionCost.getNumOccurrences())
@@ -856,7 +881,7 @@ InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   // uniform condition.
   using namespace llvm::VPlanPatternMatch;
   VPBasicBlock *Then = cast<VPBasicBlock>(getEntry()->getSuccessors()[0]);
-  InstructionCost ThenCost = Then->cost(VF, Ctx);
+  InstructionCost ThenCost = Then->cost(VF, Ctx, CountsVecCalcOnly);
 
   // For the scalar case, we may not always execute the original predicated
   // block, Thus, scale the block's cost by the probability of executing it.
@@ -1019,19 +1044,22 @@ void VPlan::execute(VPTransformState *State) {
   }
 }
 
-InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
+InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx,
+                            bool CountsVecCalcOnly) {
   // For now only return the cost of the vector loop region, ignoring any other
   // blocks, like the preheader or middle blocks, expect for checking them for
   // recipes with invalid costs.
-  InstructionCost Cost = getVectorLoopRegion()->cost(VF, Ctx);
+  InstructionCost Cost =
+      getVectorLoopRegion()->cost(VF, Ctx, CountsVecCalcOnly);
 
   // If the cost of the loop region is invalid or any recipe in the skeleton
   // outside loop regions are invalid return an invalid cost.
-  if (!Cost.isValid() || any_of(VPBlockUtils::blocksOnly<VPBasicBlock>(
-                                    vp_depth_first_shallow(getEntry())),
-                                [&VF, &Ctx](VPBasicBlock *VPBB) {
-                                  return !VPBB->cost(VF, Ctx).isValid();
-                                }))
+  if (!Cost.isValid() ||
+      any_of(VPBlockUtils::blocksOnly<VPBasicBlock>(
+                 vp_depth_first_shallow(getEntry())),
+             [&VF, &Ctx, &CountsVecCalcOnly](VPBasicBlock *VPBB) {
+               return !VPBB->cost(VF, Ctx, CountsVecCalcOnly).isValid();
+             }))
     return InstructionCost::getInvalid();
 
   return Cost;

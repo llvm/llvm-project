@@ -1231,6 +1231,13 @@ public:
   LLVM_ABI bool
   shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K) const;
 
+  /// \return True if vectorization factors wider than those matching the
+  /// largest element type should be chosen conservatively. This only makes
+  /// sense when shouldMaximizeVectorBandwidth returns true.
+  /// \p K Register Kind for vectorization.
+  LLVM_ABI bool shouldMaximizeVectorBandwidthConservatively(
+      TargetTransformInfo::RegisterKind K) const;
+
   /// \return The minimum vectorization factor for types of given element
   /// bit width, or 0 if there is no minimum VF. The returned value only
   /// applies when shouldMaximizeVectorBandwidth returns true.
