@@ -1650,8 +1650,12 @@ static void addRuntimeUnrollDisableMetaData(Loop *L) {
       auto *MD = dyn_cast<MDNode>(LoopID->getOperand(I));
       if (MD) {
         const auto *S = dyn_cast<MDString>(MD->getOperand(0));
+        if (!S)
+          continue;
+        if (S->getString().starts_with("llvm.loop.unroll.runtime.disable"))
+          return;
         IsUnrollMetadata =
-            S && S->getString().starts_with("llvm.loop.unroll.disable");
+            S->getString().starts_with("llvm.loop.unroll.disable");
       }
       MDs.push_back(LoopID->getOperand(I));
     }
@@ -1695,7 +1699,7 @@ void LoopVectorizationPlanner::updateLoopMetadata(Loop *VectorLoop, Loop *OrigLo
   // For scalable vectorization we can't know at compile time how many
   // iterations of the loop are handled in one vector iteration, so instead
   // use the value of vscale used for tuning.
-  if (OrigAverageTripCount&& !VectorizingEpilogue) {
+  if (OrigAverageTripCount) {
     // Calculate number of iterations in unrolled loop.
     unsigned AverageVectorTripCount = *OrigAverageTripCount / EstimatedVFxUF;
     // Calculate number of iterations for remainder loop.
@@ -1738,8 +1742,10 @@ void LoopVectorizationPlanner::updateLoopMetadata(Loop *VectorLoop, Loop *OrigLo
     if (LID)
       VectorLoop->setLoopID(LID);
 
+    if (!VectorizingEpilogue) {
     LoopVectorizeHints Hints(VectorLoop, true, *ORE);
     Hints.setAlreadyVectorized();
+    }
 
     // Check if it's EVL-vectorized and mark the corresponding metadata.
     bool IsEVLVectorized =

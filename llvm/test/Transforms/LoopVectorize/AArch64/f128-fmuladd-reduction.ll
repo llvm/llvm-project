@@ -108,7 +108,7 @@ define double @fp128_fmuladd_reduction(ptr %start0, ptr %start1, ptr %end0, ptr 
 ; CHECK-NEXT:    [[RED_NEXT]] = tail call double @llvm.fmuladd.f64(double [[TRUNC]], double [[LOAD1]], double [[RED]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[CMP1_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP1_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP1_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP4]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[LCSSA:%.*]] = phi double [ [[RED_NEXT]], %[[LOOP]] ], [ [[TMP21]], %[[MIDDLE_BLOCK]] ], [ [[TMP33]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret double [[LCSSA]]
@@ -140,6 +140,5 @@ exit:
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[PROF3]] = !{!"branch_weights", i32 2, i32 6}
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META2]], [[META1]]}
 ;.
