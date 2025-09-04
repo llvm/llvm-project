@@ -639,6 +639,9 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
       {"workspaceSymbolProvider", true},
       {"referencesProvider", true},
       {"astProvider", true}, // clangd extension
+      {"astSearchProvider",
+       llvm::json::Object{{"search", true},
+                          {"replace", false}}}, // clangd extension
       {"typeHierarchyProvider", true},
       // Unfortunately our extension made use of the same capability name as the
       // standard. Advertise this capability to tell clients that implement our
