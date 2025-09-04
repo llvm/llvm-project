@@ -18,13 +18,13 @@ if(LIBC_TARGET_OS_IS_GPU)
   endif()
 endif()
 
-add_subdirectory(src)
-add_subdirectory(utils)
-add_subdirectory(shared)
+# add_subdirectory(src)
+# add_subdirectory(utils)
+# add_subdirectory(shared)
 
-if(NOT LLVM_LIBC_FULL_BUILD)
-  return()
-endif()
+# if(NOT LLVM_LIBC_FULL_BUILD)
+#   return()
+# endif()
 
 add_subdirectory(include)
 

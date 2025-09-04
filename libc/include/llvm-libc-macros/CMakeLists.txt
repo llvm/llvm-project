@@ -62,6 +62,27 @@ add_macro_header(
 )
 
 add_macro_header(
+  cfloat128_macros
+  HDR
+    cfloat128-macros.h
+)
+
+add_macro_header(
+  cfloat16_macros
+  HDR
+    cfloat16-macros.h
+)
+
+add_macro_header(
+  complex_macros
+  HDR
+    complex-macros.h
+  DEPENDS
+    .cfloat128_macros
+    .cfloat16_macros
+)
+
+add_macro_header(
   features_macros
   HDR
     features-macros.h
@@ -95,14 +116,6 @@ add_macro_header(
   float16_macros
   HDR
     float16-macros.h
-)
-
-add_macro_header(
-  complex_macros
-  HDR
-    complex-macros.h
-  DEPENDS
-    .float16_macros
 )
 
 add_macro_header(
