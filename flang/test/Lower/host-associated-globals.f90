@@ -39,13 +39,11 @@ contains
 end subroutine
 ! CHECK-LABEL: func.func private @_QFtest_commonPbar() attributes {fir.host_symbol = {{.*}}, llvm.linkage = #llvm.linkage<internal>} {
 ! CHECK:  %[[VAL_0:.*]] = fir.address_of(@x_) : !fir.ref<!fir.array<12xi8>>
-! CHECK:  %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.array<12xi8>>) -> !fir.ref<!fir.array<?xi8>>
 ! CHECK:  %[[VAL_2:.*]] = arith.constant 4 : index
-! CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_2]] : (!fir.ref<!fir.array<12xi8>>, index) -> !fir.ref<i8>
 ! CHECK:  %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<i8>) -> !fir.ptr<i32>
-! CHECK:  %[[VAL_5:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.array<12xi8>>) -> !fir.ref<!fir.array<?xi8>>
 ! CHECK:  %[[VAL_6:.*]] = arith.constant 8 : index
-! CHECK:  %[[VAL_7:.*]] = fir.coordinate_of %[[VAL_5]], %[[VAL_6]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! CHECK:  %[[VAL_7:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_6]] : (!fir.ref<!fir.array<12xi8>>, index) -> !fir.ref<i8>
 ! CHECK:  %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<i8>) -> !fir.ref<i32>
 
 subroutine saved_equiv()
