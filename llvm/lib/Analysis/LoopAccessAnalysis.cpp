@@ -238,8 +238,8 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
         StartPtrV, {Attribute::Dereferenceable}, *AC,
         L->getLoopPredecessor()->getTerminator(), DT);
     if (DerefRK) {
-      DerefBytesSCEV = SE.getUMaxExpr(
-          DerefBytesSCEV, SE.getConstant(WiderTy, DerefRK.ArgValue));
+      DerefBytesSCEV =
+          SE.getUMaxExpr(DerefBytesSCEV, SE.getSCEV(DerefRK.IRArgValue));
     }
   }
 
@@ -258,6 +258,10 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     return false;
   const SCEV *StartOffset = SE.getNoopOrZeroExtend(
       SE.getMinusSCEV(AR->getStart(), StartPtr), WiderTy);
+
+  if (!LoopGuards)
+    LoopGuards.emplace(ScalarEvolution::LoopGuards::collect(AR->getLoop(), SE));
+  MaxBTC = SE.applyLoopGuards(MaxBTC, *LoopGuards);
 
   const SCEV *OffsetAtLastIter =
       mulSCEVOverflow(MaxBTC, SE.getAbsExpr(Step, /*IsNSW=*/false), SE);
@@ -288,11 +292,7 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     if (!EndBytes)
       return false;
 
-    if (!LoopGuards)
-      LoopGuards.emplace(
-          ScalarEvolution::LoopGuards::collect(AR->getLoop(), SE));
-
-    EndBytes = SE.applyLoopGuards(EndBytes, *LoopGuards);
+    DerefBytesSCEV = SE.applyLoopGuards(DerefBytesSCEV, *LoopGuards);
     return SE.isKnownPredicate(CmpInst::ICMP_ULE, EndBytes, DerefBytesSCEV);
   }
 
