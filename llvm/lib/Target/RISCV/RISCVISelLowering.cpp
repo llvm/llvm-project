@@ -16750,7 +16750,7 @@ static SDValue performSETCCCombine(SDNode *N,
       isa<ConstantSDNode>(N0.getOperand(1))) {
     const APInt &AndRHSC =
         cast<ConstantSDNode>(N0.getOperand(1))->getAPIntValue();
-    // (X & -4096) == 0 -> (X >> 12) == 0 if the AND constant can't use ANDI.
+    // (X & -(1 << C)) == 0 -> (X >> C) == 0 if the AND constant can't use ANDI.
     if (!isInt<12>(AndRHSC.getSExtValue()) && AndRHSC.isNegatedPowerOf2()) {
       unsigned ShiftBits = AndRHSC.countr_zero();
       SDValue Shift = DAG.getNode(ISD::SRL, dl, OpVT, N0.getOperand(0),
