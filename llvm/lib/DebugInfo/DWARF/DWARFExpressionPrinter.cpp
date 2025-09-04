@@ -56,19 +56,10 @@ static bool printOp(const DWARFExpression::Operation *Op, raw_ostream &OS,
   assert(!Name.empty() && "DW_OP has no name!");
   OS << Name;
 
-  std::optional<unsigned> SubOpcode = Op->getSubCode();
-  if (SubOpcode) {
-    StringRef SubName = SubOperationEncodingString(Op->getCode(), *SubOpcode);
-    assert(!SubName.empty() && "DW_OP SubOp has no name!");
-    OS << ' ' << SubName;
-  }
-
   if ((Op->getCode() >= DW_OP_breg0 && Op->getCode() <= DW_OP_breg31) ||
       (Op->getCode() >= DW_OP_reg0 && Op->getCode() <= DW_OP_reg31) ||
       Op->getCode() == DW_OP_bregx || Op->getCode() == DW_OP_regx ||
-      Op->getCode() == DW_OP_regval_type ||
-      (SubOpcode && (*SubOpcode == DW_OP_LLVM_call_frame_entry_reg ||
-                     *SubOpcode == DW_OP_LLVM_aspace_bregx)))
+      Op->getCode() == DW_OP_regval_type)
     if (prettyPrintRegisterOp(U, OS, DumpOpts, Op->getCode(),
                               Op->getRawOperands()))
       return true;
@@ -79,8 +70,16 @@ static bool printOp(const DWARFExpression::Operation *Op, raw_ostream &OS,
     unsigned Signed = Size & DWARFExpression::Operation::SignBit;
 
     if (Size == DWARFExpression::Operation::SizeSubOpLEB) {
-      assert(Operand == 0);
-      assert(SubOpcode);
+      assert(Operand == 0 && "DW_OP SubOp must be the first operand");
+      unsigned SubOpcode = Op->getRawOperand(Operand);
+      StringRef SubName = SubOperationEncodingString(Op->getCode(), SubOpcode);
+      assert(!SubName.empty() && "DW_OP SubOp has no name!");
+      OS << ' ' << SubName;
+      if (SubOpcode == DW_OP_LLVM_call_frame_entry_reg ||
+          SubOpcode == DW_OP_LLVM_aspace_bregx)
+        if (prettyPrintRegisterOp(U, OS, DumpOpts, Op->getCode(),
+                                  Op->getRawOperands()))
+          return true;
     } else if (Size == DWARFExpression::Operation::BaseTypeRef && U) {
       // For DW_OP_convert the operand may be 0 to indicate that conversion to
       // the generic type should be done. The same holds for DW_OP_reinterpret,
