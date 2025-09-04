@@ -1483,6 +1483,19 @@ static bool addSanitizerDynamicList(const ToolChain &TC, const ArgList &Args,
   // the option, so don't try to pass it.
   if (TC.getTriple().isOSSolaris() && !LinkerIsGnuLd)
     return true;
+
+  if (TC.getTriple().isOSAIX()) {
+    SmallString<128> SanRTSymbolList;
+    (Twine(TC.getRuntimePath().value_or(".")) + "/" + Sanitizer +
+     ".link_with_main_exec.txt")
+        .toVector(SanRTSymbolList);
+    if (llvm::sys::fs::exists(SanRTSymbolList)) {
+      CmdArgs.push_back(Args.MakeArgString(Twine("-bE:") + SanRTSymbolList));
+      return true;
+    }
+    return false;
+  }
+
   SmallString<128> SanRT(TC.getCompilerRT(Args, Sanitizer));
   if (llvm::sys::fs::exists(SanRT + ".syms")) {
     CmdArgs.push_back(Args.MakeArgString("--dynamic-list=" + SanRT + ".syms"));
@@ -1517,7 +1530,9 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
                                      ArgStringList &CmdArgs) {
   // Force linking against the system libraries sanitizers depends on
   // (see PR15823 why this is necessary).
-  addAsNeededOption(TC, Args, CmdArgs, false);
+  // AIX does not support any --as-needed options.
+  if (!TC.getTriple().isOSAIX())
+    addAsNeededOption(TC, Args, CmdArgs, false);
   // There's no libpthread or librt on RTEMS & Android.
   if (TC.getTriple().getOS() != llvm::Triple::RTEMS &&
       !TC.getTriple().isAndroid() && !TC.getTriple().isOHOSFamily()) {
@@ -1544,6 +1559,9 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
   if (TC.getTriple().isOSLinux() && !TC.getTriple().isAndroid() &&
       !TC.getTriple().isMusl())
     CmdArgs.push_back("-lresolv");
+
+  if (TC.getTriple().isOSAIX())
+    CmdArgs.push_back("-latomic");
 }
 
 static void
@@ -1599,7 +1617,8 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     StaticRuntimes.push_back("stats_client");
 
   // Always link the static runtime regardless of DSO or executable.
-  if (SanArgs.needsAsanRt())
+  // Don't see a reason that AIX needs asan_static library though.
+  if (SanArgs.needsAsanRt() && !TC.getTriple().isOSAIX())
     HelperStaticRuntimes.push_back("asan_static");
 
   // Collect static runtimes.
@@ -1732,18 +1751,32 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   for (auto RT : HelperStaticRuntimes)
     addSanitizerRuntime(TC, Args, CmdArgs, RT, false, true);
   bool AddExportDynamic = false;
+  StringRef RTNeedsExport;
   for (auto RT : StaticRuntimes) {
-    addSanitizerRuntime(TC, Args, CmdArgs, RT, false, true);
-    AddExportDynamic |= !addSanitizerDynamicList(TC, Args, CmdArgs, RT);
+    // AIX does not support --whole-archive.
+    addSanitizerRuntime(TC, Args, CmdArgs, RT, false,
+                        !TC.getTriple().isOSAIX());
+    if (!addSanitizerDynamicList(TC, Args, CmdArgs, RT)) {
+      AddExportDynamic = true;
+      RTNeedsExport = RT;
+    }
   }
   for (auto RT : NonWholeStaticRuntimes) {
     addSanitizerRuntime(TC, Args, CmdArgs, RT, false, false);
-    AddExportDynamic |= !addSanitizerDynamicList(TC, Args, CmdArgs, RT);
+    if (!addSanitizerDynamicList(TC, Args, CmdArgs, RT)) {
+      AddExportDynamic = true;
+      RTNeedsExport = RT;
+    }
   }
   // If there is a static runtime with no dynamic list, force all the symbols
   // to be dynamic to be sure we export sanitizer interface functions.
-  if (AddExportDynamic)
-    CmdArgs.push_back("--export-dynamic");
+  if (AddExportDynamic) {
+    if (!TC.getTriple().isOSAIX())
+      CmdArgs.push_back("--export-dynamic");
+    else
+      TC.getDriver().Diag(diag::err_drv_missing_sanitizer_file)
+          << RTNeedsExport << "export";
+  }
 
   if (SanArgs.hasCrossDsoCfi() && !AddExportDynamic)
     CmdArgs.push_back("--export-dynamic-symbol=__cfi_check");
