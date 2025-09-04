@@ -340,7 +340,6 @@ Address CGNVCUDARuntime::prepareKernelArgsLLVMOffload(CodeGenFunction &CGF,
 
   auto *Int64Ty = CGF.Builder.getInt64Ty();
   KernelLaunchParamsTypes.push_back(Int64Ty);
-  KernelLaunchParamsTypes.push_back(Int64Ty);
   KernelLaunchParamsTypes.push_back(PtrTy);
   KernelLaunchParamsTypes.push_back(PtrTy);
 
@@ -352,25 +351,21 @@ Address CGNVCUDARuntime::prepareKernelArgsLLVMOffload(CodeGenFunction &CGF,
       KernelLaunchParamsTy, CharUnits::fromQuantity(16),
       "kernel_launch_params");
 
-  auto KernelArgsSize = CGM.getDataLayout().getTypeAllocSize(KernelArgsTy);
-
-  // Avoid accounting the tail padding for CUDA.
-  auto KernelArgsSizeNoTailPadding = llvm::TypeSize::getZero();
+  // Avoid accounting the tail padding for the kernel arguments.
+  auto KernelArgsSize = llvm::TypeSize::getZero();
   if (auto N = KernelArgsTy->getNumElements()) {
     auto *SL = CGM.getDataLayout().getStructLayout(KernelArgsTy);
-    KernelArgsSizeNoTailPadding = SL->getElementOffset(N - 1);
-    KernelArgsSizeNoTailPadding += CGM.getDataLayout().getTypeAllocSize(
+    KernelArgsSize += SL->getElementOffset(N - 1);
+    KernelArgsSize += CGM.getDataLayout().getTypeAllocSize(
         KernelArgsTy->getElementType(N - 1));
   }
 
   CGF.Builder.CreateStore(llvm::ConstantInt::get(Int64Ty, KernelArgsSize),
                           CGF.Builder.CreateStructGEP(KernelLaunchParams, 0));
-  CGF.Builder.CreateStore(llvm::ConstantInt::get(Int64Ty, KernelArgsSizeNoTailPadding),
-                          CGF.Builder.CreateStructGEP(KernelLaunchParams, 1));
   CGF.Builder.CreateStore(KernelArgs.emitRawPointer(CGF),
-                          CGF.Builder.CreateStructGEP(KernelLaunchParams, 2));
+                          CGF.Builder.CreateStructGEP(KernelLaunchParams, 1));
   CGF.Builder.CreateStore(llvm::Constant::getNullValue(PtrTy),
-                          CGF.Builder.CreateStructGEP(KernelLaunchParams, 3));
+                          CGF.Builder.CreateStructGEP(KernelLaunchParams, 2));
 
   for (unsigned i = 0; i < Args.size(); ++i) {
     auto *ArgVal = CGF.Builder.CreateLoad(CGF.GetAddrOfLocalVar(Args[i]));
