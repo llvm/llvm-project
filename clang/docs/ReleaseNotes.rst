@@ -435,6 +435,8 @@ AST Matchers
 - ``hasConditionVariableStatement`` now supports ``for`` loop, ``while`` loop
   and ``switch`` statements.
 
+Add `matchesString` for `StringLiteral` which matches literals on given `RegExp`.
+
 clang-format
 ------------
 - Add ``SpaceInEmptyBraces`` option and set it to ``Always`` for WebKit style.
