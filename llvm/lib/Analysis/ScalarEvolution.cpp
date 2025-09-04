@@ -5107,9 +5107,29 @@ ScalarEvolution::proveNoWrapViaConstantRanges(const SCEVAddRecExpr *AR) {
   }
 
   if (!AR->hasNoUnsignedWrap()) {
-    ConstantRange AddRecRange = getUnsignedRange(AR);
-    ConstantRange IncRange = getUnsignedRange(AR->getStepRecurrence(*this));
-
+    const SCEVAddRecExpr *NewAR = AR;
+    unsigned BitWidth = getTypeSizeInBits(AR->getType());
+    // For integer AddRecs, try to evaluate the AddRec in a type one bit wider
+    // than the original type, to be able to differentiate between the AddRec
+    // hitting the full range or wrapping.
+    const SCEV *Step = AR->getStepRecurrence(*this);
+    if (AR->getType()->isIntegerTy() && isKnownNonNegative(Step)) {
+      Type *WiderTy = IntegerType::get(getContext(), BitWidth + 1);
+      NewAR = cast<SCEVAddRecExpr>(
+          getAddRecExpr(getSignExtendExpr(AR->getStart(), WiderTy),
+                        getZeroExtendExpr(Step, WiderTy), AR->getLoop(),
+                        AR->getNoWrapFlags()));
+      ConstantRange AddRecRange = getUnsignedRange(NewAR);
+      // If the wider AddRec range matches the original range after stripping
+      // the top bit, the original AddRec does not self-wrap.
+      if (AddRecRange !=
+          AddRecRange.truncate(BitWidth).zeroExtend(BitWidth + 1))
+        NewAR = AR;
+    }
+    ConstantRange AddRecRange = getUnsignedRange(NewAR);
+    ConstantRange IncRange = getUnsignedRange(Step);
+    if (NewAR != AR)
+      IncRange = IncRange.zeroExtend(getTypeSizeInBits(NewAR->getType()));
     auto NUWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
         Instruction::Add, IncRange, OBO::NoUnsignedWrap);
     if (NUWRegion.contains(AddRecRange))
@@ -8359,7 +8379,13 @@ const SCEV *ScalarEvolution::getPredicatedExitCount(
 
 const SCEV *ScalarEvolution::getPredicatedBackedgeTakenCount(
     const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Preds) {
-  return getPredicatedBackedgeTakenInfo(L).getExact(L, this, &Preds);
+  auto *Res = getPredicatedBackedgeTakenInfo(L).getExact(L, this, &Preds);
+  if (!isa<SCEVCouldNotCompute>(Res) && Preds.empty()) {
+    auto I = BackedgeTakenCounts.find(L);
+    if (I != BackedgeTakenCounts.end() && !I->second.isComplete())
+      BackedgeTakenCounts.erase(I);
+  }
+  return Res;
 }
 
 const SCEV *ScalarEvolution::getBackedgeTakenCount(const Loop *L,
@@ -13881,7 +13907,8 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
   SmallVector<const SCEVPredicate *, 4> Preds;
   auto *PBT = SE->getPredicatedBackedgeTakenCount(L, Preds);
   if (PBT != BTC) {
-    assert(!Preds.empty() && "Different predicated BTC, but no predicates");
+    assert((!Preds.empty() || PBT == SE->getBackedgeTakenCount(L)) &&
+           "Different predicated BTC, but no predicates");
     OS << "Loop ";
     L->getHeader()->printAsOperand(OS, /*PrintType=*/false);
     OS << ": ";
@@ -13900,7 +13927,8 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
   auto *PredConstantMax =
       SE->getPredicatedConstantMaxBackedgeTakenCount(L, Preds);
   if (PredConstantMax != ConstantBTC) {
-    assert(!Preds.empty() &&
+    assert((!Preds.empty() ||
+            PredConstantMax == SE->getConstantMaxBackedgeTakenCount(L)) &&
            "different predicated constant max BTC but no predicates");
     OS << "Loop ";
     L->getHeader()->printAsOperand(OS, /*PrintType=*/false);
@@ -13920,7 +13948,8 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
   auto *PredSymbolicMax =
       SE->getPredicatedSymbolicMaxBackedgeTakenCount(L, Preds);
   if (SymbolicBTC != PredSymbolicMax) {
-    assert(!Preds.empty() &&
+    assert((!Preds.empty() ||
+            PredSymbolicMax == SE->getSymbolicMaxBackedgeTakenCount(L)) &&
            "Different predicated symbolic max BTC, but no predicates");
     OS << "Loop ";
     L->getHeader()->printAsOperand(OS, /*PrintType=*/false);
