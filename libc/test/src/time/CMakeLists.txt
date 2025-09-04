@@ -72,6 +72,29 @@ add_libc_unittest(
     libc.hdr.types.struct_tm
 )
 
+add_libc_unittest(
+  localtime_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    localtime_test.cpp
+  DEPENDS
+    libc.hdr.types.time_t
+    libc.src.time.localtime
+)
+
+add_libc_unittest(
+  localtime_r_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    localtime_r_test.cpp
+  DEPENDS
+    libc.hdr.types.struct_tm
+    libc.hdr.types.time_t
+    libc.src.time.localtime_r
+)
+
 add_libc_test(
   clock_gettime_test
   SUITE

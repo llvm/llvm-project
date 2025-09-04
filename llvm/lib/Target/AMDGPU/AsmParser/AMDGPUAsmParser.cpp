@@ -564,6 +564,14 @@ public:
     return isRegOrInlineNoMods(AMDGPU::VS_32RegClassID, MVT::i32);
   }
 
+  bool isVCSrc_b32_Lo256() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_32_Lo256RegClassID, MVT::i32);
+  }
+
+  bool isVCSrc_b64_Lo256() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_64_Lo256RegClassID, MVT::i64);
+  }
+
   bool isVCSrc_b64() const {
     return isRegOrInlineNoMods(AMDGPU::VS_64RegClassID, MVT::i64);
   }
@@ -2986,7 +2994,12 @@ MCRegister AMDGPUAsmParser::getRegularReg(RegisterKind RegKind, unsigned RegNum,
 
   const MCRegisterInfo *TRI = getContext().getRegisterInfo();
   const MCRegisterClass RC = TRI->getRegClass(RCID);
-  if (RegIdx >= RC.getNumRegs()) {
+  if (RegIdx >= RC.getNumRegs() || (RegKind == IS_VGPR && RegIdx > 255)) {
+    Error(Loc, "register index is out of range");
+    return AMDGPU::NoRegister;
+  }
+
+  if (RegKind == IS_VGPR && !isGFX1250() && RegIdx + RegWidth / 32 > 256) {
     Error(Loc, "register index is out of range");
     return MCRegister();
   }

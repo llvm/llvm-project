@@ -88,11 +88,10 @@ DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {
       context, node->getTag(), getStringAttrOrNull(node->getRawName()),
       translate(node->getFile()), node->getLine(), translate(node->getScope()),
       baseType, flags.value_or(DIFlags::Zero), node->getSizeInBits(),
-      node->getAlignInBits(), elements,
-      translateExpression(node->getDataLocationExp()),
+      node->getAlignInBits(), translateExpression(node->getDataLocationExp()),
       translateExpression(node->getRankExp()),
       translateExpression(node->getAllocatedExp()),
-      translateExpression(node->getAssociatedExp()));
+      translateExpression(node->getAssociatedExp()), elements);
 }
 
 DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {

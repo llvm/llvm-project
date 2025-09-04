@@ -51856,6 +51856,8 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
     SDValue X, Y;
     EVT CondVT = VT.changeVectorElementType(MVT::i1);
     if (TLI.isTypeLegal(VT) && TLI.isTypeLegal(CondVT) &&
+        (VT.is512BitVector() || Subtarget.hasVLX()) &&
+        (VT.getScalarSizeInBits() >= 32 || Subtarget.hasBWI()) &&
         sd_match(N, m_And(m_Value(X),
                           m_OneUse(m_SExt(m_AllOf(
                               m_Value(Y), m_SpecificVT(CondVT),
@@ -55420,6 +55422,8 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
     SDValue Src = N0.getOperand(0);
     EVT SrcVT = Src.getValueType();
     if (Src.getOpcode() == ISD::SETCC && SrcVT.getScalarType() == MVT::i1 &&
+        (VT.is512BitVector() || Subtarget.hasVLX()) &&
+        (VT.getScalarSizeInBits() >= 32 || Subtarget.hasBWI()) &&
         TLI.isTypeLegal(SrcVT) && N0.hasOneUse() && Src.hasOneUse())
       return DAG.getSelect(DL, VT, DAG.getNOT(DL, Src, SrcVT), N1,
                            getZeroVector(VT, Subtarget, DAG, DL));

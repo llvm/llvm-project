@@ -929,6 +929,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.fminimum_magbf16
   libc.src.math.fminimum_mag_numbf16
   libc.src.math.fminimum_numbf16
+  libc.src.math.fmodbf16
   libc.src.math.frexpbf16
   libc.src.math.fromfpbf16
   libc.src.math.fromfpxbf16
@@ -1306,6 +1307,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.gettimeofday
     libc.src.time.gmtime
     libc.src.time.gmtime_r
+    libc.src.time.localtime
+    libc.src.time.localtime_r
     libc.src.time.mktime
     libc.src.time.nanosleep
     libc.src.time.strftime

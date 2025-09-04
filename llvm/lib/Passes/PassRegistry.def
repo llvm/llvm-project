@@ -426,7 +426,6 @@ FUNCTION_PASS("dot-post-dom-only", PostDomOnlyPrinter())
 FUNCTION_PASS("dse", DSEPass())
 FUNCTION_PASS("dwarf-eh-prepare", DwarfEHPreparePass(TM))
 FUNCTION_PASS("expand-large-div-rem", ExpandLargeDivRemPass(TM))
-FUNCTION_PASS("expand-fp", ExpandFpPass(TM))
 FUNCTION_PASS("expand-memcmp", ExpandMemCmpPass(TM))
 FUNCTION_PASS("expand-reductions", ExpandReductionsPass())
 FUNCTION_PASS("extra-vector-passes",
@@ -720,6 +719,13 @@ FUNCTION_PASS_WITH_PARAMS(
     },
     parseBoundsCheckingOptions,
     "trap;rt;rt-abort;min-rt;min-rt-abort;merge;guard=N")
+    FUNCTION_PASS_WITH_PARAMS(
+    "expand-fp", "ExpandFpPass",
+    [TM = TM](CodeGenOptLevel OL) {
+      return ExpandFpPass(TM, OL);
+    },
+    parseExpandFpOptions, "opt-level")
+    
 #undef FUNCTION_PASS_WITH_PARAMS
 
 #ifndef LOOPNEST_PASS

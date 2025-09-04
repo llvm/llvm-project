@@ -909,3 +909,21 @@ void foo33(__builtin_va_list a) {
 // OGCG:  %[[B_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[B_ADDR]], i32 0, i32 1
 // OGCG:  store float %[[RESULT_REAL]], ptr %[[B_REAL_PTR]], align 4
 // OGCG:  store float %[[RESULT_IMAG]], ptr %[[B_IMAG_PTR]], align 4
+
+void foo34() {
+  _Atomic(float _Complex) a;
+  __c11_atomic_init(&a, {1.0f, 2.0f});
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
+// CIR: %[[CONST_COMPLEX:.*]] = cir.const #cir.const_complex<#cir.fp<1.000000e+00> : !cir.float, #cir.fp<2.000000e+00> : !cir.float> : !cir.complex<!cir.float>
+// CIR: cir.store{{.*}} %[[CONST_COMPLEX]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 8
+// LLVM: store { float, float } { float 1.000000e+00, float 2.000000e+00 }, ptr %[[A_ADDR]], align 8
+
+// OGCG: %[[A_ADDR:.*]] = alloca { float, float }, align 8
+// OGCG: %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 0
+// OGCG: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 1
+// OGCG: store float 1.000000e+00, ptr %[[A_REAL_PTR]], align 8
+// OGCG: store float 2.000000e+00, ptr %[[A_IMAG_PTR]], align 4

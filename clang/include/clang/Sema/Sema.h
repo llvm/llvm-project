@@ -5363,7 +5363,7 @@ public:
                                   SourceLocation UsingLoc,
                                   SourceLocation EnumLoc, SourceRange TyLoc,
                                   const IdentifierInfo &II, ParsedType Ty,
-                                  CXXScopeSpec *SS = nullptr);
+                                  const CXXScopeSpec &SS);
   Decl *ActOnAliasDeclaration(Scope *CurScope, AccessSpecifier AS,
                               MultiTemplateParamsArg TemplateParams,
                               SourceLocation UsingLoc, UnqualifiedId &Name,

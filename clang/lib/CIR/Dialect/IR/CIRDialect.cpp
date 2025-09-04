@@ -1920,6 +1920,21 @@ OpFoldResult cir::UnaryOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// CopyOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::CopyOp::verify() {
+  // A data layout is required for us to know the number of bytes to be copied.
+  if (!getType().getPointee().hasTrait<DataLayoutTypeInterface::Trait>())
+    return emitError() << "missing data layout for pointee type";
+
+  if (getSrc() == getDst())
+    return emitError() << "source and destination are the same";
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // GetMemberOp Definitions
 //===----------------------------------------------------------------------===//
 

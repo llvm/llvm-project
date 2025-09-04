@@ -53,9 +53,10 @@ Improvements and New Features
 - The performance of ``find(key)`` in ``map``, ``set``, ``multimap`` and ``multiset`` has been improved by up to 2.3x
 - Some reallocations are now avoided in `std::filesystem::path::lexically_relative`, resulting in a performance
   improvement of up to 1.7x.
-- The performance of the ``(iterator, iterator)`` constructors of ``multimap`` and ``multiset``
+- The performance of the ``(iterator, iterator)`` constructors of ``map``, ``set``, ``multimap`` and ``multiset``
   has been improved by up to 3x
-- The performance of ``insert(iterator, iterator)`` of ``multimap`` and ``multiset`` has been improved by up to 2.5x
+- The performance of ``insert(iterator, iterator)`` of ``map``, ``set``, ``multimap`` and ``multiset`` has been improved
+  by up to 2.5x
 - The performance of ``erase(iterator, iterator)`` in the unordered containers has been improved by up to 1.9x
 - The performance of ``map::insert_or_assign`` has been improved by up to 2x
 

@@ -445,7 +445,6 @@ public:
   void VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
     if (!hasOrigin(ICE->getType()))
       return;
-    Visit(ICE->getSubExpr());
     // An ImplicitCastExpr node itself gets an origin, which flows from the
     // origin of its sub-expression (after stripping its own parens/casts).
     // TODO: Consider if this is actually useful in practice. Alternatively, we

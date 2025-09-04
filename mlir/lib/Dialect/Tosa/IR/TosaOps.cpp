@@ -2189,11 +2189,13 @@ LogicalResult tosa::TableOp::inferReturnTypeComponents(
 }
 
 LogicalResult tosa::TableOp::verify() {
-  TensorType inputType = getInput1().getType();
-  TensorType outputType = getOutput().getType();
+  const TensorType inputType = getInput1().getType();
+  const TensorType outputType = getOutput().getType();
 
-  if (inputType.hasRank() && outputType.hasRank() &&
-      inputType.getRank() != outputType.getRank())
+  if (!inputType.hasRank() || !outputType.hasRank())
+    return success();
+
+  if (inputType.getRank() != outputType.getRank())
     return emitOpError()
            << "expected input tensor rank to equal result tensor rank";
 

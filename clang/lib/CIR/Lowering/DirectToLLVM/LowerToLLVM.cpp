@@ -173,6 +173,18 @@ mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage) {
   llvm_unreachable("Unknown CIR linkage type");
 }
 
+mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
+    cir::CopyOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
+  const mlir::Value length = mlir::LLVM::ConstantOp::create(
+      rewriter, op.getLoc(), rewriter.getI32Type(), op.getLength(layout));
+  assert(!cir::MissingFeatures::aggValueSlotVolatile());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::MemcpyOp>(
+      op, adaptor.getDst(), adaptor.getSrc(), length, /*isVolatile=*/false);
+  return mlir::success();
+}
+
 static mlir::Value getLLVMIntCast(mlir::ConversionPatternRewriter &rewriter,
                                   mlir::Value llvmSrc, mlir::Type llvmDstIntTy,
                                   bool isUnsigned, uint64_t cirSrcWidth,
@@ -576,6 +588,15 @@ struct ConvertCIRToLLVMPass
 
   StringRef getArgument() const override { return "cir-flat-to-llvm"; }
 };
+
+mlir::LogicalResult CIRToLLVMACosOpLowering::matchAndRewrite(
+    cir::ACosOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::ACosOp>(op, resTy,
+                                                  adaptor.getOperands()[0]);
+  return mlir::success();
+}
 
 mlir::LogicalResult CIRToLLVMAssumeOpLowering::matchAndRewrite(
     cir::AssumeOp op, OpAdaptor adaptor,
@@ -2396,6 +2417,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                                              dl);
   patterns.add<
       // clang-format off
+               CIRToLLVMACosOpLowering,
                CIRToLLVMAssumeOpLowering,
                CIRToLLVMAssumeAlignedOpLowering,
                CIRToLLVMAssumeSepStorageOpLowering,
@@ -2420,6 +2442,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMComplexRealOpLowering,
                CIRToLLVMComplexRealPtrOpLowering,
                CIRToLLVMComplexSubOpLowering,
+               CIRToLLVMCopyOpLowering,
                CIRToLLVMConstantOpLowering,
                CIRToLLVMExpectOpLowering,
                CIRToLLVMFAbsOpLowering,
@@ -2654,8 +2677,7 @@ mlir::LogicalResult CIRToLLVMVTTAddrPointOpLowering::matchAndRewrite(
     }
 
     offsets.push_back(adaptor.getOffset());
-    eltType = mlir::IntegerType::get(resultType.getContext(), 8,
-                                     mlir::IntegerType::Signless);
+    eltType = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
   } else {
     llvmAddr = getValueForVTableSymbol(op, rewriter, getTypeConverter(),
                                        op.getNameAttr(), eltType);

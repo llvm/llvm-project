@@ -312,6 +312,11 @@ marukawa@nec.com (email), [kaz7](https://github.com/kaz7) (GitHub)
 
 #### WebAssembly backend
 
+Derek Schuff \
+dschuff@chromium.org (email), [dschuff](https://github.com/dschuff) (GitHub) \
+Heejin Ahn \
+aheejin@gmail.com (email), [aheejin](https://github.com/aheejin) (GitHub)
+
 #### X86 backend
 
 Simon Pilgrim \

@@ -32,7 +32,7 @@ module {
   }
 
 // CHECK: define{{.*}} void @_ZN1CC2Ev
-// CHECK:   %[[VTT:.*]] = getelementptr inbounds i8, ptr %{{.*}}, i32 1
+// CHECK:   %[[VTT:.*]] = getelementptr inbounds ptr, ptr %{{.*}}, i32 1
 // CHECK:   call void @_ZN1BC2Ev(ptr %{{.*}}, ptr %[[VTT]])
 
   cir.global linkonce_odr dso_local @_ZTV1C = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 3>}> : !rec_anon_struct {alignment = 8 : i64}

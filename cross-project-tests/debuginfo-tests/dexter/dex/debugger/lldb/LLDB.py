@@ -232,7 +232,7 @@ class LLDB(DebuggerBase):
                     ):
                         stepped_to_breakpoint = True
             if stepped_to_breakpoint:
-                self._thread.StepInto()
+                self._process.Continue()
 
     def go(self) -> ReturnCode:
         self._process.Continue()
@@ -441,7 +441,7 @@ class LLDBDAP(DAP):
                 # Step again now to get to the breakpoint.
                 step_req_id = self.send_message(
                     self.make_request(
-                        "stepIn", {"threadId": self._debugger_state.thread}
+                        "continue", {"threadId": self._debugger_state.thread}
                     )
                 )
                 response = self._await_response(step_req_id)

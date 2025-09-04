@@ -29,7 +29,7 @@ struct IntegerLiteralCheck {
   // integer (wb), and can be a complex number ('i', 'j'). In MS compatibility
   // mode, suffixes like i32 are supported.
   static constexpr llvm::StringLiteral Suffixes =
-      llvm::StringLiteral("uUlLzZwWbBiIjJ");
+      llvm::StringLiteral("uUlLzZwWiIjJ");
 };
 
 struct FloatingLiteralCheck {

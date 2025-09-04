@@ -2674,6 +2674,62 @@ static Instruction *canonicalizeGEPOfConstGEPI8(GetElementPtrInst &GEP,
   return nullptr;
 }
 
+/// Combine constant offsets separated by variable offsets.
+/// ptradd (ptradd (ptradd p, C1), x), C2 -> ptradd (ptradd p, x), C1+C2
+static Instruction *combineConstantOffsets(GetElementPtrInst &GEP,
+                                           InstCombinerImpl &IC) {
+  if (!GEP.hasAllConstantIndices())
+    return nullptr;
+
+  GEPNoWrapFlags NW = GEPNoWrapFlags::all();
+  SmallVector<GetElementPtrInst *> Skipped;
+  auto *InnerGEP = dyn_cast<GetElementPtrInst>(GEP.getPointerOperand());
+  while (true) {
+    if (!InnerGEP)
+      return nullptr;
+
+    NW = NW.intersectForReassociate(InnerGEP->getNoWrapFlags());
+    if (InnerGEP->hasAllConstantIndices())
+      break;
+
+    if (!InnerGEP->hasOneUse())
+      return nullptr;
+
+    Skipped.push_back(InnerGEP);
+    InnerGEP = dyn_cast<GetElementPtrInst>(InnerGEP->getPointerOperand());
+  }
+
+  // The two constant offset GEPs are directly adjacent: Let normal offset
+  // merging handle it.
+  if (Skipped.empty())
+    return nullptr;
+
+  // FIXME: This one-use check is not strictly necessary. Consider relaxing it
+  // if profitable.
+  if (!InnerGEP->hasOneUse())
+    return nullptr;
+
+  // Don't bother with vector splats.
+  Type *Ty = GEP.getType();
+  if (InnerGEP->getType() != Ty)
+    return nullptr;
+
+  const DataLayout &DL = IC.getDataLayout();
+  APInt Offset(DL.getIndexTypeSizeInBits(Ty), 0);
+  if (!GEP.accumulateConstantOffset(DL, Offset) ||
+      !InnerGEP->accumulateConstantOffset(DL, Offset))
+    return nullptr;
+
+  IC.replaceOperand(*Skipped.back(), 0, InnerGEP->getPointerOperand());
+  for (GetElementPtrInst *SkippedGEP : Skipped)
+    SkippedGEP->setNoWrapFlags(NW);
+
+  return IC.replaceInstUsesWith(
+      GEP,
+      IC.Builder.CreatePtrAdd(Skipped.front(), IC.Builder.getInt(Offset), "",
+                              NW.intersectForOffsetAdd(GEP.getNoWrapFlags())));
+}
+
 Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
                                              GEPOperator *Src) {
   // Combine Indices - If the source pointer to this getelementptr instruction
@@ -2683,6 +2739,9 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
     return nullptr;
 
   if (auto *I = canonicalizeGEPOfConstGEPI8(GEP, Src, *this))
+    return I;
+
+  if (auto *I = combineConstantOffsets(GEP, *this))
     return I;
 
   // For constant GEPs, use a more general offset-based folding approach.

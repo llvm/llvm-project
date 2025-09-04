@@ -257,11 +257,6 @@ def BoolAssignmentChecker : Checker<"BoolAssignment">,
   HelpText<"Warn about assigning non-{0,1} values to Boolean variables">,
   Documentation<HasDocumentation>;
 
-def CastSizeChecker : Checker<"CastSize">,
-  HelpText<"Check when casting a malloc'ed type T, whether the size is a "
-           "multiple of the size of T">,
-  Documentation<HasDocumentation>;
-
 def CastToStructChecker : Checker<"CastToStruct">,
   HelpText<"Check for cast from non-struct pointer to struct pointer">,
   Documentation<HasDocumentation>;

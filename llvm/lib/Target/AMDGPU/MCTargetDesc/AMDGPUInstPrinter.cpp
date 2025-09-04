@@ -792,22 +792,6 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
       // custom printer.
       llvm_unreachable("unexpected immediate operand type");
     }
-  } else if (Op.isDFPImm()) {
-    double Value = bit_cast<double>(Op.getDFPImm());
-    // We special case 0.0 because otherwise it will be printed as an integer.
-    if (Value == 0.0)
-      O << "0.0";
-    else {
-      const MCInstrDesc &Desc = MII.get(MI->getOpcode());
-      int RCID = Desc.operands()[OpNo].RegClass;
-      unsigned RCBits = AMDGPU::getRegBitWidth(MRI.getRegClass(RCID));
-      if (RCBits == 32)
-        printImmediate32(llvm::bit_cast<uint32_t>((float)Value), STI, O);
-      else if (RCBits == 64)
-        printImmediate64(llvm::bit_cast<uint64_t>(Value), STI, O, true);
-      else
-        llvm_unreachable("Invalid register class size");
-    }
   } else if (Op.isExpr()) {
     const MCExpr *Exp = Op.getExpr();
     MAI.printExpr(O, *Exp);
@@ -890,7 +874,7 @@ void AMDGPUInstPrinter::printOperandAndFPInputMods(const MCInst *MI,
     if (OpNo + 1 < MI->getNumOperands() &&
         (InputModifiers & SISrcMods::ABS) == 0) {
       const MCOperand &Op = MI->getOperand(OpNo + 1);
-      NegMnemo = Op.isImm() || Op.isDFPImm();
+      NegMnemo = Op.isImm();
     }
     if (NegMnemo) {
       O << "neg(";
