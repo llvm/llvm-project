@@ -557,10 +557,10 @@ static bool CanResolveConstant(llvm::Constant *constant) {
     return false;
   case Value::ConstantIntVal:
   case Value::ConstantFPVal:
-  case Value::ConstantDataVectorVal:
-    return constant->getType()->getTypeID() == Type::FixedVectorTyID;
+    return true;
   case Value::FunctionVal:
     return true;
+  case Value::ConstantDataVectorVal:
   case Value::ConstantAggregateZeroVal:
     return constant->getType()->getTypeID() == Type::FixedVectorTyID;
   case Value::ConstantExprVal:
