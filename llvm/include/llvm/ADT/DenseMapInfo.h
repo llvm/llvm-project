@@ -180,9 +180,9 @@ template <typename... Ts> struct DenseMapInfo<std::tuple<Ts...>> {
   }
 
   template <unsigned I> static unsigned getHashValueImpl(const Tuple &values) {
-    if constexpr (I == sizeof...(Ts))
+    if constexpr (I == sizeof...(Ts)) {
       return 0;
-    else {
+    } else {
       using EltType = std::tuple_element_t<I, Tuple>;
       return detail::combineHashValue(
           DenseMapInfo<EltType>::getHashValue(std::get<I>(values)),
@@ -196,9 +196,9 @@ template <typename... Ts> struct DenseMapInfo<std::tuple<Ts...>> {
 
   template <unsigned I>
   static bool isEqualImpl(const Tuple &lhs, const Tuple &rhs) {
-    if constexpr (I == sizeof...(Ts))
+    if constexpr (I == sizeof...(Ts)) {
       return true;
-    else {
+    } else {
       using EltType = std::tuple_element_t<I, Tuple>;
       return DenseMapInfo<EltType>::isEqual(std::get<I>(lhs),
                                             std::get<I>(rhs)) &&
