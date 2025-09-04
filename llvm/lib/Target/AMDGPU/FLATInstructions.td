@@ -137,7 +137,18 @@ class FLAT_Real <bits<7> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
   // unsigned for flat accesses.
   bits<13> offset;
   // GFX90A+ only: instruction uses AccVGPR for data
-  bits<1> acc = !if(ps.has_vdst, vdst{9}, !if(ps.has_data, vdata{9}, 0));
+  defvar DstOpIsAV = !if(ps.has_vdst,
+                         VDstOperandIsAV<ps.OutOperandList>.ret, 0);
+  defvar DstOpIsAGPR = !if(ps.has_vdst,
+                           VDstOperandIsAGPR<ps.OutOperandList>.ret, 0);
+  defvar DataOpIsAV = !if(ps.has_data,
+                          VDataOperandIsAV<ps.InOperandList>.ret, 0);
+  defvar DataOpIsAGPR = !if(ps.has_data,
+                            VDataOperandIsAGPR<ps.InOperandList>.ret, 0);
+
+  bits<1> acc = !if(ps.has_vdst,
+                    !if(DstOpIsAV, vdst{9}, DstOpIsAGPR),
+                    !if(DataOpIsAV, vdata{9}, DataOpIsAGPR));
 
   // We don't use tfe right now, and it was removed in gfx9.
   bits<1> tfe = 0;
@@ -859,6 +870,30 @@ multiclass FLAT_Global_Atomic_Pseudo_RTN<
        let has_saddr = 1;
        let enabled_saddr = 1;
        let FPAtomic = data_vt.isFP;
+    }
+
+    defvar vdst_op_agpr = getEquivalentAGPROperand<vdst_op>.ret;
+    defvar data_op_agpr = getEquivalentAGPROperand<data_op>.ret;
+
+    let SubtargetPredicate = isGFX90APlus in {
+      def _RTN_agpr : FLAT_AtomicRet_Pseudo <opName,
+        (outs vdst_op_agpr:$vdst),
+        (ins VReg_64:$vaddr, data_op_agpr:$vdata, flat_offset:$offset, CPol_GLC1:$cpol),
+        " $vdst, $vaddr, $vdata, off$offset$cpol">,
+        GlobalSaddrTable<0, opName#"_rtn_agpr"> {
+        let has_saddr = 1;
+        let FPAtomic = data_vt.isFP;
+      }
+
+      def _SADDR_RTN_agpr : FLAT_AtomicRet_Pseudo <opName,
+        (outs vdst_op_agpr:$vdst),
+        (ins VGPR_32:$vaddr, data_op_agpr:$vdata, SReg_64_XEXEC_XNULL:$saddr, flat_offset:$offset, CPol_GLC1:$cpol),
+        " $vdst, $vaddr, $vdata, $saddr$offset$cpol">,
+        GlobalSaddrTable<1, opName#"_rtn_agpr"> {
+         let has_saddr = 1;
+         let enabled_saddr = 1;
+         let FPAtomic = data_vt.isFP;
+      }
     }
   }
 }
@@ -2637,8 +2672,10 @@ multiclass FLAT_Global_Real_Atomics_vi<bits<7> op,
   FLAT_Real_AllAddr_vi<op, has_sccb> {
   def _RTN_vi  : FLAT_Real_vi <op, !cast<FLAT_Pseudo>(NAME#"_RTN"), has_sccb>;
   def _SADDR_RTN_vi : FLAT_Real_vi <op, !cast<FLAT_Pseudo>(NAME#"_SADDR_RTN"), has_sccb>;
-}
 
+  def _RTN_agpr_vi  : FLAT_Real_vi <op, !cast<FLAT_Pseudo>(NAME#"_RTN_agpr"), has_sccb>;
+  def _SADDR_RTN_agpr_vi : FLAT_Real_vi <op, !cast<FLAT_Pseudo>(NAME#"_SADDR_RTN_agpr"), has_sccb>;
+}
 
 defm FLAT_ATOMIC_SWAP       : FLAT_Real_Atomics_vi <0x40>;
 defm FLAT_ATOMIC_CMPSWAP    : FLAT_Real_Atomics_vi <0x41>;
