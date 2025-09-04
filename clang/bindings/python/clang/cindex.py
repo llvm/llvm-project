@@ -336,9 +336,9 @@ class SourceLocation(Structure):
         return conf.lib.clang_Location_isInSystemHeader(self)  # type: ignore [no-any-return]
 
     def __eq__(self, other):
-        if not isinstance(other, SourceLocation):
-            return False
-        return conf.lib.clang_equalLocations(self, other)  # type: ignore [no-any-return]
+        return isinstance(other, SourceLocation) and conf.lib.clang_equalLocations(
+            self, other
+        )
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -396,9 +396,9 @@ class SourceRange(Structure):
         return conf.lib.clang_getRangeEnd(self)  # type: ignore [no-any-return]
 
     def __eq__(self, other):
-        if not isinstance(other, SourceRange):
-            return False
-        return conf.lib.clang_equalRanges(self, other)  # type: ignore [no-any-return]
+        return isinstance(other, SourceRange) and conf.lib.clang_equalRanges(
+            self, other
+        )
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -1586,6 +1586,8 @@ class Cursor(Structure):
     """
     The Cursor class represents a reference to an element within the AST. It
     acts as a kind of iterator.
+
+    Null cursors are mapped to None.
     """
 
     _fields_ = [("_kind_id", c_int), ("xdata", c_int), ("data", c_void_p * 3)]
@@ -1598,9 +1600,7 @@ class Cursor(Structure):
 
     # This function is not null-guarded because it is used in cursor_null_guard itself
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Cursor):
-            return False
-        return conf.lib.clang_equalCursors(self, other)  # type: ignore [no-any-return]
+        return isinstance(other, Cursor) and conf.lib.clang_equalCursors(self, other)
 
     # Not null-guarded for consistency with __eq__
     def __ne__(self, other: object) -> bool:
@@ -1907,6 +1907,15 @@ class Cursor(Structure):
             self._linkage = conf.lib.clang_getCursorLinkage(self)
 
         return LinkageKind.from_id(self._linkage)
+
+    @property
+    @cursor_null_guard
+    def language(self) -> LanguageKind:
+        """Determine the "language" of the entity referred to by a given cursor."""
+        if not hasattr(self, "_language"):
+            self._language = conf.lib.clang_getCursorLanguage(self)
+
+        return LanguageKind.from_id(self._language)
 
     @property
     @cursor_null_guard
@@ -2482,6 +2491,7 @@ class TypeKind(BaseEnumeration):
     OBJCSEL = 29
     FLOAT128 = 30
     HALF = 31
+    FLOAT16 = 32
     IBM128 = 40
     COMPLEX = 100
     POINTER = 101
@@ -2582,6 +2592,17 @@ class LinkageKind(BaseEnumeration):
     INTERNAL = 2
     UNIQUE_EXTERNAL = 3
     EXTERNAL = 4
+
+
+class LanguageKind(BaseEnumeration):
+    """
+    Describe the "language" of the entity referred to by a cursor.
+    """
+
+    INVALID = 0
+    C = 1
+    OBJ_C = 2
+    C_PLUS_PLUS = 3
 
 
 class TLSKind(BaseEnumeration):
@@ -4087,6 +4108,7 @@ FUNCTION_LIST: list[LibFunc] = [
     ("clang_getCursorDisplayName", [Cursor], _CXString),
     ("clang_getCursorExceptionSpecificationType", [Cursor], c_int),
     ("clang_getCursorExtent", [Cursor], SourceRange),
+    ("clang_getCursorLanguage", [Cursor], c_int),
     ("clang_getCursorLexicalParent", [Cursor], Cursor),
     ("clang_getCursorLinkage", [Cursor], c_int),
     ("clang_getCursorLocation", [Cursor], SourceLocation),

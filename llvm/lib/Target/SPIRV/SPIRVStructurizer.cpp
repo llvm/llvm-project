@@ -12,7 +12,6 @@
 #include "SPIRV.h"
 #include "SPIRVStructurizerWrapper.h"
 #include "SPIRVSubtarget.h"
-#include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -26,12 +25,10 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/PassRegistry.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
-#include <queue>
 #include <stack>
 #include <unordered_set>
 
@@ -660,14 +657,14 @@ class SPIRVStructurizer : public FunctionPass {
     Instruction *InsertionPoint = *MergeInstructions.begin();
 
     PartialOrderingVisitor Visitor(F);
-    llvm::sort(MergeInstructions,
-               [&Visitor](Instruction *Left, Instruction *Right) {
-                 if (Left == Right)
-                   return false;
-                 BasicBlock *RightMerge = getDesignatedMergeBlock(Right);
-                 BasicBlock *LeftMerge = getDesignatedMergeBlock(Left);
-                 return !Visitor.compare(RightMerge, LeftMerge);
-               });
+    std::sort(MergeInstructions.begin(), MergeInstructions.end(),
+              [&Visitor](Instruction *Left, Instruction *Right) {
+                if (Left == Right)
+                  return false;
+                BasicBlock *RightMerge = getDesignatedMergeBlock(Right);
+                BasicBlock *LeftMerge = getDesignatedMergeBlock(Left);
+                return !Visitor.compare(RightMerge, LeftMerge);
+              });
 
     for (Instruction *I : MergeInstructions) {
       I->moveBefore(InsertionPoint->getIterator());

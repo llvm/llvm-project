@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/fenv_macros.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/math/acos.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -21,7 +21,7 @@ TEST_F(LlvmLibcAcosTest, SpecialNumbers) {
   EXPECT_FP_EQ(0x1.921fb54442d18p0, LIBC_NAMESPACE::acos(zero));
   EXPECT_FP_EQ(0x1.921fb54442d18p0, LIBC_NAMESPACE::acos(neg_zero));
 
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::acos(inf),
                                            FE_INVALID);
   EXPECT_MATH_ERRNO(EDOM);

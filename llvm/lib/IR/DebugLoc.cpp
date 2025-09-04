@@ -9,13 +9,37 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DebugInfo.h"
+
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+#include "llvm/Support/Signals.h"
+
+namespace llvm {
+DbgLocOrigin::DbgLocOrigin(bool ShouldCollectTrace) {
+  if (!ShouldCollectTrace)
+    return;
+  auto &[Depth, StackTrace] = StackTraces.emplace_back();
+  Depth = sys::getStackTrace(StackTrace);
+}
+void DbgLocOrigin::addTrace() {
+  // We only want to add new stacktraces if we already have one: addTrace exists
+  // to provide more context to how missing DebugLocs have propagated through
+  // the program, but by design if there is no existing stacktrace then we have
+  // decided not to track this DebugLoc as being "missing".
+  if (StackTraces.empty())
+    return;
+  auto &[Depth, StackTrace] = StackTraces.emplace_back();
+  Depth = sys::getStackTrace(StackTrace);
+}
+} // namespace llvm
+#endif
+
 using namespace llvm;
 
-#if LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
 DILocAndCoverageTracking::DILocAndCoverageTracking(const DILocation *L)
-    : TrackingMDNodeRef(const_cast<DILocation *>(L)),
+    : TrackingMDNodeRef(const_cast<DILocation *>(L)), DbgLocOrigin(!L),
       Kind(DebugLocKind::Normal) {}
-#endif // LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
+#endif // LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
 
 //===----------------------------------------------------------------------===//
 // DebugLoc Implementation
@@ -141,6 +165,27 @@ DebugLoc DebugLoc::appendInlinedAt(const DebugLoc &DL, DILocation *InlinedAt,
         Ctx, MD->getLine(), MD->getColumn(), MD->getScope(), Last);
 
   return Last;
+}
+
+DebugLoc DebugLoc::getMergedLocations(ArrayRef<DebugLoc> Locs) {
+  if (Locs.empty())
+    return DebugLoc();
+  if (Locs.size() == 1)
+    return Locs[0];
+  DebugLoc Merged = Locs[0];
+  for (const DebugLoc &DL : llvm::drop_begin(Locs)) {
+    Merged = getMergedLocation(Merged, DL);
+    if (!Merged)
+      break;
+  }
+  return Merged;
+}
+DebugLoc DebugLoc::getMergedLocation(DebugLoc LocA, DebugLoc LocB) {
+  if (!LocA)
+    return LocA;
+  if (!LocB)
+    return LocB;
+  return DILocation::getMergedLocation(LocA, LocB);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

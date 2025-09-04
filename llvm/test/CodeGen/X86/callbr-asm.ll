@@ -17,7 +17,7 @@ define i32 @test1(i32 %a) {
 ; CHECK-NEXT:  # %bb.1: # %normal
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB0_2: # Block address taken
+; CHECK-NEXT:  .LBB0_2: # Inline asm indirect target
 ; CHECK-NEXT:    # %fail
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    movl $1, %eax
@@ -48,7 +48,7 @@ define i32 @test1b(i32 %a) {
 ; CHECK-NEXT:  # %bb.1: # %normal
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB1_2: # Block address taken
+; CHECK-NEXT:  .LBB1_2: # Inline asm indirect target
 ; CHECK-NEXT:    # %fail
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    movl $1, %eax
@@ -91,14 +91,14 @@ fail:
 define i32 @test3(i32 %a) {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:  .LBB3_1: # Block address taken
+; CHECK-NEXT:  .LBB3_1: # Inline asm indirect target
 ; CHECK-NEXT:    # %label01
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB3_2 Depth 2
 ; CHECK-NEXT:    # Child Loop BB3_3 Depth 3
 ; CHECK-NEXT:    # Child Loop BB3_4 Depth 4
 ; CHECK-NEXT:    # Label of block must be emitted
-; CHECK-NEXT:  .LBB3_2: # Block address taken
+; CHECK-NEXT:  .LBB3_2: # Inline asm indirect target
 ; CHECK-NEXT:    # %label02
 ; CHECK-NEXT:    # Parent Loop BB3_1 Depth=1
 ; CHECK-NEXT:    # => This Loop Header: Depth=2
@@ -106,14 +106,14 @@ define i32 @test3(i32 %a) {
 ; CHECK-NEXT:    # Child Loop BB3_4 Depth 4
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    addl $4, {{[0-9]+}}(%esp)
-; CHECK-NEXT:  .LBB3_3: # Block address taken
+; CHECK-NEXT:  .LBB3_3: # Inline asm indirect target
 ; CHECK-NEXT:    # %label03
 ; CHECK-NEXT:    # Parent Loop BB3_1 Depth=1
 ; CHECK-NEXT:    # Parent Loop BB3_2 Depth=2
 ; CHECK-NEXT:    # => This Loop Header: Depth=3
 ; CHECK-NEXT:    # Child Loop BB3_4 Depth 4
 ; CHECK-NEXT:    # Label of block must be emitted
-; CHECK-NEXT:  .LBB3_4: # Block address taken
+; CHECK-NEXT:  .LBB3_4: # Inline asm indirect target
 ; CHECK-NEXT:    # %label04
 ; CHECK-NEXT:    # Parent Loop BB3_1 Depth=1
 ; CHECK-NEXT:    # Parent Loop BB3_2 Depth=2
@@ -177,7 +177,7 @@ define void @test4() {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    ja .LBB4_3
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  .LBB4_3: # Block address taken
+; CHECK-NEXT:  .LBB4_3: # Inline asm indirect target
 ; CHECK-NEXT:    # %quux
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    retl

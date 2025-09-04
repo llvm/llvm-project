@@ -238,9 +238,12 @@ static Error parseCommand(StringRef BinaryName, bool IsAddr2Line,
   bool StartsWithDigit = std::isdigit(AddrSpec.front());
 
   // GNU addr2line assumes the address is hexadecimal and allows a redundant
-  // "0x" or "0X" prefix; do the same for compatibility.
-  if (IsAddr2Line)
-    AddrSpec.consume_front("0x") || AddrSpec.consume_front("0X");
+  // "0x", "0X" prefix or an optional `+` sign; do the same for
+  // compatibility.
+  if (IsAddr2Line) {
+    AddrSpec.consume_front_insensitive("0x") ||
+        AddrSpec.consume_front_insensitive("+0x");
+  }
 
   // If address specification is a number, treat it as a module offset.
   if (!AddrSpec.getAsInteger(IsAddr2Line ? 16 : 0, Offset)) {

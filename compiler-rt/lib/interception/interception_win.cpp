@@ -754,6 +754,12 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x7B81:  // 81 7B YY XX XX XX XX  cmp DWORD PTR [rbx+YY], XX XX XX XX
     case 0x7981:  // 81 79 YY XX XX XX XX  cmp dword ptr [rcx+YY], XX XX XX XX
       return 7;
+
+    case 0xb848:  // 48 b8 XX XX XX XX XX XX XX XX :
+                  //   movabsq XX XX XX XX XX XX XX XX, rax
+    case 0xba48:  // 48 ba XX XX XX XX XX XX XX XX :
+                  //   movabsq XX XX XX XX XX XX XX XX, rdx
+      return 10;
   }
 
   switch (0x00FFFFFF & *(u32 *)address) {

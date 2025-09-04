@@ -39,23 +39,17 @@ void atomic_types_test(void) {
 // expected-error@-11 {{use of undeclared identifier 'atomic_ulong'}}
 // expected-error@-11 {{use of undeclared identifier 'atomic_double'}}
 #if defined(LANG_VER_OK)
-// expected-error@-15 {{expected ';' after expression}}
-// expected-error@-16 {{use of undeclared identifier 'l'}}
-// expected-error@-16 {{expected ';' after expression}}
-// expected-error@-17 {{use of undeclared identifier 'ul'}}
 #endif
 #if !defined(LANG_VER_OK) || defined(__SPIR64__)
-// expected-error@-18 {{use of undeclared identifier 'atomic_size_t'}}
-// expected-error@-16 {{use of undeclared identifier 'atomic_ptrdiff_t'}}
+// expected-error@-14 {{use of undeclared identifier 'atomic_size_t'}}
+// expected-error@-12 {{use of undeclared identifier 'atomic_ptrdiff_t'}}
 #if !defined(LANG_VER_OK)
-// expected-error@-20 {{use of undeclared identifier 'atomic_intptr_t'}}
-// expected-error@-20 {{use of undeclared identifier 'atomic_uintptr_t'}}
+// expected-error@-16 {{use of undeclared identifier 'atomic_intptr_t'}}
+// expected-error@-16 {{use of undeclared identifier 'atomic_uintptr_t'}}
 #else
-// expected-error@-24 {{expected ';' after expression}}
-// expected-error@-25 {{use of undeclared identifier 's'}}
-// expected-error@-25 {{unknown type name 'atomic_intptr_t'; did you mean 'atomic_int'?}}
+// expected-error@-19 {{unknown type name 'atomic_intptr_t'; did you mean 'atomic_int'?}}
 // expected-note@* {{'atomic_int' declared here}}
-// expected-error@-26 {{unknown type name 'atomic_uintptr_t'; did you mean 'atomic_uint'?}}
+// expected-error@-20 {{unknown type name 'atomic_uintptr_t'; did you mean 'atomic_uint'?}}
 // expected-note@* {{'atomic_uint' declared here}}
 #endif
 #endif

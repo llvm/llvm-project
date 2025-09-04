@@ -83,6 +83,7 @@ namespace format {
   TYPE(FunctionDeclarationName)                                                \
   TYPE(FunctionDeclarationLParen)                                              \
   TYPE(FunctionLBrace)                                                         \
+  TYPE(FunctionLikeMacro)                                                      \
   TYPE(FunctionLikeOrFreestandingMacro)                                        \
   TYPE(FunctionTypeLParen)                                                     \
   /* The colons as part of a C11 _Generic selection */                         \
@@ -712,8 +713,10 @@ public:
   }
 
   bool isObjCLifetimeQualifier(const FormatStyle &Style) const {
-    if (Style.Language != FormatStyle::LK_ObjC || !TokenText.starts_with("__"))
+    if (Style.Language != FormatStyle::LK_ObjC || isNot(tok::identifier) ||
+        !TokenText.starts_with("__")) {
       return false;
+    }
     const auto Qualifier = TokenText.substr(2);
     return Qualifier == "autoreleasing" || Qualifier == "strong" ||
            Qualifier == "weak" || Qualifier == "unsafe_unretained";

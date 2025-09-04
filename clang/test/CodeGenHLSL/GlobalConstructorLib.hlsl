@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.3-library -emit-llvm -disable-llvm-passes %s -o - | FileCheck %s --check-prefixes=CHECK,NOINLINE
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.3-library -emit-llvm -O0 %s -o - | FileCheck %s --check-prefixes=CHECK,INLINE
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -emit-llvm -disable-llvm-passes %s -o - | FileCheck %s --check-prefixes=CHECK,NOINLINE
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -emit-llvm -O0 %s -o - | FileCheck %s --check-prefixes=CHECK,INLINE
 
 // Make sure global variable for ctors exist for lib profile.
 // CHECK:@llvm.global_ctors
@@ -33,7 +33,7 @@ void SecondEntry() {}
 
 // Verify the constructor is alwaysinline
 // NOINLINE: ; Function Attrs: {{.*}}alwaysinline
-// NOINLINE-NEXT: define linkonce_odr void @_ZN4hlsl8RWBufferIfEC2Ejijj({{.*}} [[CtorAttr:\#[0-9]+]]
+// NOINLINE-NEXT: define linkonce_odr hidden void @_ZN4hlsl8RWBufferIfEC2EjijjPKc({{.*}} [[CtorAttr:\#[0-9]+]]
 
 // NOINLINE: ; Function Attrs: {{.*}}alwaysinline
 // NOINLINE-NEXT: define internal void @_GLOBAL__sub_I_GlobalConstructorLib.hlsl() [[InitAttr:\#[0-9]+]]

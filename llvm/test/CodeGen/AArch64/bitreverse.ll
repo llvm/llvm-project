@@ -72,6 +72,19 @@ define i64 @g_64(i64 %a) {
   ret i64 %b
 }
 
+declare i128 @llvm.bitreverse.i128(i128) readnone
+
+define i128 @g_128(i128 %a) {
+; CHECK-LABEL: g_128:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rbit x8, x1
+; CHECK-NEXT:    rbit x1, x0
+; CHECK-NEXT:    mov x0, x8
+; CHECK-NEXT:    ret
+  %b = call i128 @llvm.bitreverse.i128(i128 %a)
+  ret i128 %b
+}
+
 declare <16 x i3> @llvm.bitreverse.v16i3(<16 x i3>) readnone
 
 define <16 x i3> @g_vec_16x3(<16 x i3> %a) {
@@ -281,4 +294,20 @@ define <4 x i64> @g_vec_4x64(<4 x i64> %a) {
 ; CHECK-NEXT:    ret
   %b = call <4 x i64> @llvm.bitreverse.v4i64(<4 x i64> %a)
   ret <4 x i64> %b
+}
+
+declare <2 x i128> @llvm.bitreverse.v2i128(<2 x i128>) readnone
+
+define <2 x i128> @g_vec_2x128(<2 x i128> %a) {
+; CHECK-LABEL: g_vec_2x128:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rbit x8, x1
+; CHECK-NEXT:    rbit x9, x3
+; CHECK-NEXT:    rbit x1, x0
+; CHECK-NEXT:    rbit x3, x2
+; CHECK-NEXT:    mov x0, x8
+; CHECK-NEXT:    mov x2, x9
+; CHECK-NEXT:    ret
+  %b = call <2 x i128> @llvm.bitreverse.v2i128(<2 x i128> %a)
+  ret <2 x i128> %b
 }

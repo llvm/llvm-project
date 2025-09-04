@@ -26,7 +26,17 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 using namespace llvm;
+
+// FIXME: Flag used for an ablation performance test, Issue #147390. Placing it
+// here because referencing IR should be feasible from anywhere. Will be
+// removed after the ablation test.
+cl::opt<bool> ProfcheckDisableMetadataFixes(
+    "profcheck-disable-metadata-fixes", cl::Hidden, cl::init(false),
+    cl::desc(
+        "Disable metadata propagation fixes discovered through Issue #147390"));
 
 InsertPosition::InsertPosition(Instruction *InsertBefore)
     : InsertAt(InsertBefore ? InsertBefore->getIterator()
@@ -85,7 +95,7 @@ void Instruction::removeFromParent() {
 }
 
 void Instruction::handleMarkerRemoval() {
-  if (!getParent()->IsNewDbgInfoFormat || !DebugMarker)
+  if (!DebugMarker)
     return;
 
   DebugMarker->removeMarker();
@@ -129,16 +139,11 @@ BasicBlock::iterator Instruction::insertInto(BasicBlock *ParentBB,
   return getIterator();
 }
 
-extern cl::opt<bool> UseNewDbgInfoFormat;
-
 void Instruction::insertBefore(BasicBlock &BB,
                                InstListType::iterator InsertPos) {
   assert(!DebugMarker);
 
   BB.getInstList().insert(InsertPos, this);
-
-  if (!BB.IsNewDbgInfoFormat)
-    return;
 
   // We've inserted "this": if InsertAtHead is set then it comes before any
   // DbgVariableRecords attached to InsertPos. But if it's not set, then any
@@ -190,15 +195,22 @@ void Instruction::moveBeforePreserving(BasicBlock::iterator MovePos) {
 
 void Instruction::moveAfter(Instruction *MovePos) {
   auto NextIt = std::next(MovePos->getIterator());
-  // We want this instruction to be moved to before NextIt in the instruction
+  // We want this instruction to be moved to after NextIt in the instruction
   // list, but before NextIt's debug value range.
   NextIt.setHeadBit(true);
   moveBeforeImpl(*MovePos->getParent(), NextIt, false);
 }
 
+void Instruction::moveAfter(InstListType::iterator MovePos) {
+  // We want this instruction to be moved to after NextIt in the instruction
+  // list, but before NextIt's debug value range.
+  MovePos.setHeadBit(true);
+  moveBeforeImpl(*MovePos->getParent(), MovePos, false);
+}
+
 void Instruction::moveAfterPreserving(Instruction *MovePos) {
   auto NextIt = std::next(MovePos->getIterator());
-  // We want this instruction and its debug range to be moved to before NextIt
+  // We want this instruction and its debug range to be moved to after NextIt
   // in the instruction list, but before NextIt's debug value range.
   NextIt.setHeadBit(true);
   moveBeforeImpl(*MovePos->getParent(), NextIt, true);
@@ -220,7 +232,7 @@ void Instruction::moveBeforeImpl(BasicBlock &BB, InstListType::iterator I,
 
   // If we've been given the "Preserve" flag, then just move the DbgRecords with
   // the instruction, no more special handling needed.
-  if (BB.IsNewDbgInfoFormat && DebugMarker && !Preserve) {
+  if (DebugMarker && !Preserve) {
     if (I != this->getIterator() || InsertAtHead) {
       // "this" is definitely moving in the list, or it's moving ahead of its
       // attached DbgVariableRecords. Detach any existing DbgRecords.
@@ -232,7 +244,7 @@ void Instruction::moveBeforeImpl(BasicBlock &BB, InstListType::iterator I,
   // the block splicer, which will do more debug-info things.
   BB.getInstList().splice(I, getParent()->getInstList(), getIterator());
 
-  if (BB.IsNewDbgInfoFormat && !Preserve) {
+  if (!Preserve) {
     DbgMarker *NextMarker = getParent()->getNextMarker(this);
 
     // If we're inserting at point I, and not in front of the DbgRecords
@@ -251,10 +263,6 @@ iterator_range<DbgRecord::self_iterator> Instruction::cloneDebugInfoFrom(
     bool InsertAtHead) {
   if (!From->DebugMarker)
     return DbgMarker::getEmptyDbgRecordRange();
-
-  assert(getParent()->IsNewDbgInfoFormat);
-  assert(getParent()->IsNewDbgInfoFormat ==
-         From->getParent()->IsNewDbgInfoFormat);
 
   if (!DebugMarker)
     getParent()->createMarker(this);
@@ -544,14 +552,19 @@ void Instruction::dropUBImplyingAttrsAndUnknownMetadata(
   CB->removeRetAttrs(UBImplyingAttributes);
 }
 
-void Instruction::dropUBImplyingAttrsAndMetadata() {
+void Instruction::dropUBImplyingAttrsAndMetadata(ArrayRef<unsigned> Keep) {
   // !annotation metadata does not impact semantics.
   // !range, !nonnull and !align produce poison, so they are safe to speculate.
   // !noundef and various AA metadata must be dropped, as it generally produces
   // immediate undefined behavior.
-  unsigned KnownIDs[] = {LLVMContext::MD_annotation, LLVMContext::MD_range,
-                         LLVMContext::MD_nonnull, LLVMContext::MD_align};
-  dropUBImplyingAttrsAndUnknownMetadata(KnownIDs);
+  static const unsigned KnownIDs[] = {
+      LLVMContext::MD_annotation, LLVMContext::MD_range,
+      LLVMContext::MD_nonnull, LLVMContext::MD_align};
+  SmallVector<unsigned> KeepIDs;
+  KeepIDs.reserve(Keep.size() + std::size(KnownIDs));
+  append_range(KeepIDs, KnownIDs);
+  append_range(KeepIDs, Keep);
+  dropUBImplyingAttrsAndUnknownMetadata(KeepIDs);
 }
 
 bool Instruction::hasUBImplyingAttrs() const {
@@ -818,6 +831,7 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
   case UIToFP:        return "uitofp";
   case SIToFP:        return "sitofp";
   case IntToPtr:      return "inttoptr";
+  case PtrToAddr:     return "ptrtoaddr";
   case PtrToInt:      return "ptrtoint";
   case BitCast:       return "bitcast";
   case AddrSpaceCast: return "addrspacecast";
@@ -943,14 +957,13 @@ bool Instruction::isIdenticalToWhenDefined(const Instruction *I,
 
   // We have two instructions of identical opcode and #operands.  Check to see
   // if all operands are the same.
-  if (!std::equal(op_begin(), op_end(), I->op_begin()))
+  if (!equal(operands(), I->operands()))
     return false;
 
   // WARNING: this logic must be kept in sync with EliminateDuplicatePHINodes()!
-  if (const PHINode *thisPHI = dyn_cast<PHINode>(this)) {
-    const PHINode *otherPHI = cast<PHINode>(I);
-    return std::equal(thisPHI->block_begin(), thisPHI->block_end(),
-                      otherPHI->block_begin());
+  if (const PHINode *Phi = dyn_cast<PHINode>(this)) {
+    const PHINode *OtherPhi = cast<PHINode>(I);
+    return equal(Phi->blocks(), OtherPhi->blocks());
   }
 
   return this->hasSameSpecialState(I, /*IgnoreAlignment=*/false,
@@ -1236,26 +1249,7 @@ bool Instruction::isDebugOrPseudoInst() const {
   return isa<DbgInfoIntrinsic>(this) || isa<PseudoProbeInst>(this);
 }
 
-const Instruction *
-Instruction::getNextNonDebugInstruction(bool SkipPseudoOp) const {
-  for (const Instruction *I = getNextNode(); I; I = I->getNextNode())
-    if (!isa<DbgInfoIntrinsic>(I) && !(SkipPseudoOp && isa<PseudoProbeInst>(I)))
-      return I;
-  return nullptr;
-}
-
-const Instruction *
-Instruction::getPrevNonDebugInstruction(bool SkipPseudoOp) const {
-  for (const Instruction *I = getPrevNode(); I; I = I->getPrevNode())
-    if (!isa<DbgInfoIntrinsic>(I) && !(SkipPseudoOp && isa<PseudoProbeInst>(I)))
-      return I;
-  return nullptr;
-}
-
 const DebugLoc &Instruction::getStableDebugLoc() const {
-  if (isa<DbgInfoIntrinsic>(this))
-    if (const Instruction *Next = getNextNonDebugInstruction())
-      return Next->getDebugLoc();
   return getDebugLoc();
 }
 
@@ -1355,6 +1349,9 @@ void Instruction::swapProfMetadata() {
 
 void Instruction::copyMetadata(const Instruction &SrcInst,
                                ArrayRef<unsigned> WL) {
+  if (WL.empty() || is_contained(WL, LLVMContext::MD_dbg))
+    setDebugLoc(SrcInst.getDebugLoc().orElse(getDebugLoc()));
+
   if (!SrcInst.hasMetadata())
     return;
 
@@ -1368,8 +1365,6 @@ void Instruction::copyMetadata(const Instruction &SrcInst,
     if (WL.empty() || WLS.count(MD.first))
       setMetadata(MD.first, MD.second);
   }
-  if (WL.empty() || WLS.count(LLVMContext::MD_dbg))
-    setDebugLoc(SrcInst.getDebugLoc());
 }
 
 Instruction *Instruction::clone() const {

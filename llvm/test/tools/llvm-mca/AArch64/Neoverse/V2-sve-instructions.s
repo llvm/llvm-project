@@ -5071,19 +5071,19 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  2      2     1.00                        movs	p0.b, p0/z, p0.b
 # CHECK-NEXT:  2      2     1.00                        movs	p15.b, p15.b
 # CHECK-NEXT:  2      2     1.00                        movs	p15.b, p15/z, p15.b
-# CHECK-NEXT:  1      1     0.06                  U     mrs	x3, ID_AA64ZFR0_EL1
-# CHECK-NEXT:  1      1     0.06                  U     mrs	x3, ZCR_EL1
-# CHECK-NEXT:  1      1     0.06                  U     mrs	x3, ZCR_EL12
-# CHECK-NEXT:  1      1     0.06                  U     mrs	x3, ZCR_EL2
-# CHECK-NEXT:  1      1     0.06                  U     mrs	x3, ZCR_EL3
+# CHECK-NEXT:  1      1     0.17                  U     mrs	x3, ID_AA64ZFR0_EL1
+# CHECK-NEXT:  1      1     0.17                  U     mrs	x3, ZCR_EL1
+# CHECK-NEXT:  1      1     0.17                  U     mrs	x3, ZCR_EL12
+# CHECK-NEXT:  1      1     0.17                  U     mrs	x3, ZCR_EL2
+# CHECK-NEXT:  1      1     0.17                  U     mrs	x3, ZCR_EL3
 # CHECK-NEXT:  1      4     1.00                        msb	z0.b, p7/m, z1.b, z31.b
 # CHECK-NEXT:  1      5     1.00                        msb	z0.d, p7/m, z1.d, z31.d
 # CHECK-NEXT:  1      4     1.00                        msb	z0.h, p7/m, z1.h, z31.h
 # CHECK-NEXT:  1      4     1.00                        msb	z0.s, p7/m, z1.s, z31.s
-# CHECK-NEXT:  1      1     0.06                  U     msr	ZCR_EL1, x3
-# CHECK-NEXT:  1      1     0.06                  U     msr	ZCR_EL12, x3
-# CHECK-NEXT:  1      1     0.06                  U     msr	ZCR_EL2, x3
-# CHECK-NEXT:  1      1     0.06                  U     msr	ZCR_EL3, x3
+# CHECK-NEXT:  1      1     0.17                  U     msr	ZCR_EL1, x3
+# CHECK-NEXT:  1      1     0.17                  U     msr	ZCR_EL12, x3
+# CHECK-NEXT:  1      1     0.17                  U     msr	ZCR_EL2, x3
+# CHECK-NEXT:  1      1     0.17                  U     msr	ZCR_EL3, x3
 # CHECK-NEXT:  1      4     0.50                        mul	z0.b, p7/m, z0.b, z31.b
 # CHECK-NEXT:  1      4     0.50                        mul	z0.b, z1.b, z2.b
 # CHECK-NEXT:  2      5     1.00                        mul	z0.d, p7/m, z0.d, z31.d

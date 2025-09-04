@@ -29,12 +29,9 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaCodeCompletion.h"
-#include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <optional>
 
@@ -154,7 +151,7 @@ bool Parser::ParseSingleGNUAttribute(ParsedAttributes &Attrs,
   SourceLocation AttrNameLoc = ConsumeToken();
 
   if (Tok.isNot(tok::l_paren)) {
-    Attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
+    Attrs.addNew(AttrName, AttrNameLoc, AttributeScopeInfo(), nullptr, 0,
                  ParsedAttr::Form::GNU());
     return false;
   }
@@ -399,12 +396,12 @@ void Parser::ParseAttributeWithTypeArg(IdentifierInfo &AttrName,
     return;
 
   if (T.isUsable())
-    Attrs.addNewTypeAttr(&AttrName,
-                         SourceRange(AttrNameLoc, Parens.getCloseLocation()),
-                         ScopeName, ScopeLoc, T.get(), Form);
+    Attrs.addNewTypeAttr(
+        &AttrName, SourceRange(AttrNameLoc, Parens.getCloseLocation()),
+        AttributeScopeInfo(ScopeName, ScopeLoc), T.get(), Form);
   else
     Attrs.addNew(&AttrName, SourceRange(AttrNameLoc, Parens.getCloseLocation()),
-                 ScopeName, ScopeLoc, nullptr, 0, Form);
+                 AttributeScopeInfo(ScopeName, ScopeLoc), nullptr, 0, Form);
 }
 
 ExprResult
@@ -439,7 +436,6 @@ bool Parser::ParseAttributeArgumentList(
     } else {
       Expr = ParseAssignmentExpression();
     }
-    Expr = Actions.CorrectDelayedTyposInExpr(Expr);
 
     if (Tok.is(tok::ellipsis))
       Expr = Actions.ActOnPackExpansion(Expr.get(), ConsumeToken());
@@ -475,15 +471,6 @@ bool Parser::ParseAttributeArgumentList(
     Arg++;
   }
 
-  if (SawError) {
-    // Ensure typos get diagnosed when errors were encountered while parsing the
-    // expression list.
-    for (auto &E : Exprs) {
-      ExprResult Expr = Actions.CorrectDelayedTyposInExpr(E);
-      if (Expr.isUsable())
-        E = Expr.get();
-    }
-  }
   return SawError;
 }
 
@@ -568,9 +555,7 @@ unsigned Parser::ParseAttributeArgsCommon(
               nullptr,
               Sema::ExpressionEvaluationContextRecord::EK_AttrArgument);
 
-          ExprResult ArgExpr(
-              Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression()));
-
+          ExprResult ArgExpr = ParseAssignmentExpression();
           if (ArgExpr.isInvalid()) {
             SkipUntil(tok::r_paren, StopAtSemi);
             return 0;
@@ -624,10 +609,12 @@ unsigned Parser::ParseAttributeArgsCommon(
 
     if (AttributeIsTypeArgAttr && !TheParsedType.get().isNull()) {
       Attrs.addNewTypeAttr(AttrName, SourceRange(AttrNameLoc, RParen),
-                           ScopeName, ScopeLoc, TheParsedType, Form);
+                           AttributeScopeInfo(ScopeName, ScopeLoc),
+                           TheParsedType, Form);
     } else {
-      Attrs.addNew(AttrName, SourceRange(AttrLoc, RParen), ScopeName, ScopeLoc,
-                   ArgExprs.data(), ArgExprs.size(), Form);
+      Attrs.addNew(AttrName, SourceRange(AttrLoc, RParen),
+                   AttributeScopeInfo(ScopeName, ScopeLoc), ArgExprs.data(),
+                   ArgExprs.size(), Form);
     }
   }
 
@@ -679,7 +666,8 @@ void Parser::ParseGNUAttributeArgs(
                          Form);
     return;
   } else if (AttrKind == ParsedAttr::AT_CXXAssume) {
-    ParseCXXAssumeAttributeArg(Attrs, AttrName, AttrNameLoc, EndLoc, Form);
+    ParseCXXAssumeAttributeArg(Attrs, AttrName, AttrNameLoc, ScopeName,
+                               ScopeLoc, EndLoc, Form);
     return;
   }
 
@@ -688,7 +676,7 @@ void Parser::ParseGNUAttributeArgs(
   std::optional<ParseScope> PrototypeScope;
   if (normalizeAttrName(AttrName->getName()) == "enable_if" &&
       D && D->isFunctionDeclarator()) {
-    DeclaratorChunk::FunctionTypeInfo FTI = D->getFunctionTypeInfo();
+    const DeclaratorChunk::FunctionTypeInfo& FTI = D->getFunctionTypeInfo();
     PrototypeScope.emplace(this, Scope::FunctionPrototypeScope |
                                      Scope::FunctionDeclarationScope |
                                      Scope::DeclScope);
@@ -737,7 +725,8 @@ unsigned Parser::ParseClangAttributeArgs(
     break;
 
   case ParsedAttr::AT_CXXAssume:
-    ParseCXXAssumeAttributeArg(Attrs, AttrName, AttrNameLoc, EndLoc, Form);
+    ParseCXXAssumeAttributeArg(Attrs, AttrName, AttrNameLoc, ScopeName,
+                               ScopeLoc, EndLoc, Form);
     break;
   }
   return !Attrs.empty() ? Attrs.begin()->getNumArgs() : 0;
@@ -867,7 +856,7 @@ bool Parser::ParseMicrosoftDeclSpecArgs(IdentifierInfo *AttrName,
 
     // Only add the property attribute if it was well-formed.
     if (!HasInvalidAccessor)
-      Attrs.addNewPropertyAttr(AttrName, AttrNameLoc, nullptr, SourceLocation(),
+      Attrs.addNewPropertyAttr(AttrName, AttrNameLoc, AttributeScopeInfo(),
                                AccessorNames[AK_Get], AccessorNames[AK_Put],
                                ParsedAttr::Form::Declspec());
     T.skipToEnd();
@@ -953,7 +942,7 @@ void Parser::ParseMicrosoftDeclSpecs(ParsedAttributes &Attrs) {
             << AttrName->getName();
 
       if (!AttrHandled)
-        Attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
+        Attrs.addNew(AttrName, AttrNameLoc, AttributeScopeInfo(), nullptr, 0,
                      ParsedAttr::Form::Declspec());
     }
     T.consumeClose();
@@ -981,7 +970,7 @@ void Parser::ParseMicrosoftTypeAttributes(ParsedAttributes &attrs) {
     case tok::kw___uptr: {
       IdentifierInfo *AttrName = Tok.getIdentifierInfo();
       SourceLocation AttrNameLoc = ConsumeToken();
-      attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
+      attrs.addNew(AttrName, AttrNameLoc, AttributeScopeInfo(), nullptr, 0,
                    Kind);
       break;
     }
@@ -1002,9 +991,8 @@ void Parser::ParseWebAssemblyFuncrefTypeAttribute(ParsedAttributes &attrs) {
 
   IdentifierInfo *AttrName = Tok.getIdentifierInfo();
   SourceLocation AttrNameLoc = ConsumeToken();
-  attrs.addNew(AttrName, AttrNameLoc, /*ScopeName=*/nullptr,
-               /*ScopeLoc=*/SourceLocation{}, /*Args=*/nullptr, /*numArgs=*/0,
-               tok::kw___funcref);
+  attrs.addNew(AttrName, AttrNameLoc, AttributeScopeInfo(), /*Args=*/nullptr,
+               /*numArgs=*/0, tok::kw___funcref);
 }
 
 void Parser::DiagnoseAndSkipExtendedMicrosoftTypeAttributes() {
@@ -1048,7 +1036,7 @@ void Parser::ParseBorlandTypeAttributes(ParsedAttributes &attrs) {
   while (Tok.is(tok::kw___pascal)) {
     IdentifierInfo *AttrName = Tok.getIdentifierInfo();
     SourceLocation AttrNameLoc = ConsumeToken();
-    attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
+    attrs.addNew(AttrName, AttrNameLoc, AttributeScopeInfo(), nullptr, 0,
                  tok::kw___pascal);
   }
 }
@@ -1058,7 +1046,7 @@ void Parser::ParseOpenCLKernelAttributes(ParsedAttributes &attrs) {
   while (Tok.is(tok::kw___kernel)) {
     IdentifierInfo *AttrName = Tok.getIdentifierInfo();
     SourceLocation AttrNameLoc = ConsumeToken();
-    attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
+    attrs.addNew(AttrName, AttrNameLoc, AttributeScopeInfo(), nullptr, 0,
                  tok::kw___kernel);
   }
 }
@@ -1067,7 +1055,7 @@ void Parser::ParseCUDAFunctionAttributes(ParsedAttributes &attrs) {
   while (Tok.is(tok::kw___noinline__)) {
     IdentifierInfo *AttrName = Tok.getIdentifierInfo();
     SourceLocation AttrNameLoc = ConsumeToken();
-    attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
+    attrs.addNew(AttrName, AttrNameLoc, AttributeScopeInfo(), nullptr, 0,
                  tok::kw___noinline__);
   }
 }
@@ -1075,7 +1063,7 @@ void Parser::ParseCUDAFunctionAttributes(ParsedAttributes &attrs) {
 void Parser::ParseOpenCLQualifiers(ParsedAttributes &Attrs) {
   IdentifierInfo *AttrName = Tok.getIdentifierInfo();
   SourceLocation AttrNameLoc = Tok.getLocation();
-  Attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
+  Attrs.addNew(AttrName, AttrNameLoc, AttributeScopeInfo(), nullptr, 0,
                Tok.getKind());
 }
 
@@ -1087,7 +1075,7 @@ void Parser::ParseHLSLQualifiers(ParsedAttributes &Attrs) {
   IdentifierInfo *AttrName = Tok.getIdentifierInfo();
   auto Kind = Tok.getKind();
   SourceLocation AttrNameLoc = ConsumeToken();
-  Attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0, Kind);
+  Attrs.addNew(AttrName, AttrNameLoc, AttributeScopeInfo(), nullptr, 0, Kind);
 }
 
 void Parser::ParseNullabilityTypeSpecifiers(ParsedAttributes &attrs) {
@@ -1104,7 +1092,7 @@ void Parser::ParseNullabilityTypeSpecifiers(ParsedAttributes &attrs) {
       if (!getLangOpts().ObjC)
         Diag(AttrNameLoc, diag::ext_nullability)
           << AttrName;
-      attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
+      attrs.addNew(AttrName, AttrNameLoc, AttributeScopeInfo(), nullptr, 0,
                    Kind);
       break;
     }
@@ -1448,10 +1436,11 @@ void Parser::ParseAvailabilityAttribute(
 
   // Record this attribute
   attrs.addNew(&Availability,
-               SourceRange(AvailabilityLoc, T.getCloseLocation()), ScopeName,
-               ScopeLoc, Platform, Changes[Introduced], Changes[Deprecated],
-               Changes[Obsoleted], UnavailableLoc, MessageExpr.get(), Form,
-               StrictLoc, ReplacementExpr.get(), EnvironmentLoc);
+               SourceRange(AvailabilityLoc, T.getCloseLocation()),
+               AttributeScopeInfo(ScopeName, ScopeLoc), Platform,
+               Changes[Introduced], Changes[Deprecated], Changes[Obsoleted],
+               UnavailableLoc, MessageExpr.get(), Form, StrictLoc,
+               ReplacementExpr.get(), EnvironmentLoc);
 }
 
 void Parser::ParseExternalSourceSymbolAttribute(
@@ -1569,7 +1558,8 @@ void Parser::ParseExternalSourceSymbolAttribute(
   ArgsUnion Args[] = {Language.get(), DefinedInExpr.get(), GeneratedDeclaration,
                       USR.get()};
   Attrs.addNew(&ExternalSourceSymbol, SourceRange(Loc, T.getCloseLocation()),
-               ScopeName, ScopeLoc, Args, std::size(Args), Form);
+               AttributeScopeInfo(ScopeName, ScopeLoc), Args, std::size(Args),
+               Form);
 }
 
 void Parser::ParseObjCBridgeRelatedAttribute(
@@ -1637,8 +1627,8 @@ void Parser::ParseObjCBridgeRelatedAttribute(
   // Record this attribute
   Attrs.addNew(&ObjCBridgeRelated,
                SourceRange(ObjCBridgeRelatedLoc, T.getCloseLocation()),
-               ScopeName, ScopeLoc, RelatedClass, ClassMethod, InstanceMethod,
-               Form);
+               AttributeScopeInfo(ScopeName, ScopeLoc), RelatedClass,
+               ClassMethod, InstanceMethod, Form);
 }
 
 void Parser::ParseSwiftNewTypeAttribute(
@@ -1679,7 +1669,8 @@ void Parser::ParseSwiftNewTypeAttribute(
 
   ArgsUnion Args[] = {SwiftType};
   Attrs.addNew(&AttrName, SourceRange(AttrNameLoc, T.getCloseLocation()),
-               ScopeName, ScopeLoc, Args, std::size(Args), Form);
+               AttributeScopeInfo(ScopeName, ScopeLoc), Args, std::size(Args),
+               Form);
 }
 
 void Parser::ParseTypeTagForDatatypeAttribute(
@@ -1732,9 +1723,9 @@ void Parser::ParseTypeTagForDatatypeAttribute(
   }
 
   if (!T.consumeClose()) {
-    Attrs.addNewTypeTagForDatatype(&AttrName, AttrNameLoc, ScopeName, ScopeLoc,
-                                   ArgumentKind, MatchingCType.get(),
-                                   LayoutCompatible, MustBeNull, Form);
+    Attrs.addNewTypeTagForDatatype(
+        &AttrName, AttrNameLoc, AttributeScopeInfo(ScopeName, ScopeLoc),
+        ArgumentKind, MatchingCType.get(), LayoutCompatible, MustBeNull, Form);
   }
 
   if (EndLoc)
@@ -1841,9 +1832,10 @@ void Parser::ProhibitCXX11Attributes(ParsedAttributes &Attrs,
     if (!AL.isStandardAttributeSyntax())
       continue;
     if (AL.getKind() == ParsedAttr::UnknownAttribute) {
-      if (WarnOnUnknownAttrs)
-        Diag(AL.getLoc(), diag::warn_unknown_attribute_ignored)
-            << AL << AL.getRange();
+      if (WarnOnUnknownAttrs) {
+        Actions.DiagnoseUnknownAttribute(AL);
+        AL.setInvalid();
+      }
     } else {
       Diag(AL.getLoc(), AttrDiagID) << AL;
       AL.setInvalid();
@@ -1909,7 +1901,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(DeclaratorContext Context,
 
   case tok::kw_cbuffer:
   case tok::kw_tbuffer:
-    SingleDecl = ParseHLSLBuffer(DeclEnd);
+    SingleDecl = ParseHLSLBuffer(DeclEnd, DeclAttrs);
     break;
   case tok::kw_namespace:
     ProhibitAttributes(DeclAttrs);
@@ -2718,6 +2710,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
     break;
   }
   case InitKind::Uninitialized: {
+    InitializerScopeRAII InitScope(*this, D, ThisDecl);
     Actions.ActOnUninitializedDecl(ThisDecl);
     break;
   }
@@ -3130,12 +3123,12 @@ void Parser::ParseAlignmentSpecifier(ParsedAttributes &Attrs,
     *EndLoc = T.getCloseLocation();
 
   if (IsType) {
-    Attrs.addNewTypeAttr(KWName, KWLoc, nullptr, KWLoc, TypeResult, Kind,
+    Attrs.addNewTypeAttr(KWName, KWLoc, AttributeScopeInfo(), TypeResult, Kind,
                          EllipsisLoc);
   } else {
     ArgsVector ArgExprs;
     ArgExprs.push_back(ArgExpr.get());
-    Attrs.addNew(KWName, KWLoc, nullptr, KWLoc, ArgExprs.data(), 1, Kind,
+    Attrs.addNew(KWName, KWLoc, AttributeScopeInfo(), ArgExprs.data(), 1, Kind,
                  EllipsisLoc);
   }
 }
@@ -3181,9 +3174,8 @@ void Parser::ParsePtrauthQualifier(ParsedAttributes &Attrs) {
     return;
   }
 
-  Attrs.addNew(KwName, SourceRange(KwLoc, EndLoc),
-               /*scope*/ nullptr, SourceLocation(), ArgExprs.data(),
-               ArgExprs.size(),
+  Attrs.addNew(KwName, SourceRange(KwLoc, EndLoc), AttributeScopeInfo(),
+               ArgExprs.data(), ArgExprs.size(),
                ParsedAttr::Form::Keyword(/*IsAlignAs=*/false,
                                          /*IsRegularKeywordAttribute=*/false));
 }
@@ -3213,9 +3205,7 @@ void Parser::ParseBoundsAttribute(IdentifierInfo &AttrName,
       Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, nullptr,
       ExpressionKind::EK_AttrArgument);
 
-  ExprResult ArgExpr(
-      Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression()));
-
+  ExprResult ArgExpr = ParseAssignmentExpression();
   if (ArgExpr.isInvalid()) {
     Parens.skipToEnd();
     return;
@@ -3231,7 +3221,7 @@ void Parser::ParseBoundsAttribute(IdentifierInfo &AttrName,
       Ctx.getSizeType(), SourceLocation()));
 
   Attrs.addNew(&AttrName, SourceRange(AttrNameLoc, Parens.getCloseLocation()),
-               ScopeName, ScopeLoc, ArgExprs.data(), ArgExprs.size(), Form);
+               AttributeScopeInfo(), ArgExprs.data(), ArgExprs.size(), Form);
 }
 
 ExprResult Parser::ParseExtIntegerArgument() {
@@ -3320,6 +3310,7 @@ Parser::DiagnoseMissingSemiAfterTagDefinition(DeclSpec &DS, AccessSpecifier AS,
       case NameClassificationKind::TypeTemplate:
       case NameClassificationKind::UndeclaredNonType:
       case NameClassificationKind::UndeclaredTemplate:
+      case NameClassificationKind::Concept:
         // Not a previously-declared non-type entity.
         MightBeDeclarator = false;
         break;
@@ -3330,7 +3321,6 @@ Parser::DiagnoseMissingSemiAfterTagDefinition(DeclSpec &DS, AccessSpecifier AS,
       case NameClassificationKind::OverloadSet:
       case NameClassificationKind::VarTemplate:
       case NameClassificationKind::FunctionTemplate:
-      case NameClassificationKind::Concept:
         // Might be a redeclaration of a prior entity.
         break;
       }
@@ -4010,7 +4000,7 @@ void Parser::ParseDeclarationSpecifiers(
       isInvalid = DS.setFunctionSpecForceInline(Loc, PrevSpec, DiagID);
       IdentifierInfo *AttrName = Tok.getIdentifierInfo();
       SourceLocation AttrNameLoc = Tok.getLocation();
-      DS.getAttributes().addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc,
+      DS.getAttributes().addNew(AttrName, AttrNameLoc, AttributeScopeInfo(),
                                 nullptr, 0, tok::kw___forceinline);
       break;
     }
@@ -4068,8 +4058,9 @@ void Parser::ParseDeclarationSpecifiers(
 
     // Objective-C 'kindof' types.
     case tok::kw___kindof:
-      DS.getAttributes().addNew(Tok.getIdentifierInfo(), Loc, nullptr, Loc,
-                                nullptr, 0, tok::kw___kindof);
+      DS.getAttributes().addNew(Tok.getIdentifierInfo(), Loc,
+                                AttributeScopeInfo(), nullptr, 0,
+                                tok::kw___kindof);
       (void)ConsumeToken();
       continue;
 
@@ -5704,10 +5695,9 @@ Parser::DeclGroupPtrTy Parser::ParseTopLevelStmtDecl() {
                                Scope::CompoundStmtScope);
   TopLevelStmtDecl *TLSD = Actions.ActOnStartTopLevelStmtDecl(getCurScope());
   StmtResult R = ParseStatementOrDeclaration(Stmts, SubStmtCtx);
+  Actions.ActOnFinishTopLevelStmtDecl(TLSD, R.get());
   if (!R.isUsable())
     R = Actions.ActOnNullStmt(Tok.getLocation());
-
-  Actions.ActOnFinishTopLevelStmtDecl(TLSD, R.get());
 
   if (Tok.is(tok::annot_repl_input_end) &&
       Tok.getAnnotationValue() != nullptr) {
@@ -6125,8 +6115,7 @@ bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide,
 
 void Parser::ParseTypeQualifierListOpt(
     DeclSpec &DS, unsigned AttrReqs, bool AtomicOrPtrauthAllowed,
-    bool IdentifierRequired,
-    std::optional<llvm::function_ref<void()>> CodeCompletionHandler) {
+    bool IdentifierRequired, llvm::function_ref<void()> CodeCompletionHandler) {
   if ((AttrReqs & AR_CXX11AttributesParsed) &&
       isAllowedCXX11AttributeSpecifier()) {
     ParsedAttributes Attrs(AttrFactory);
@@ -6146,7 +6135,7 @@ void Parser::ParseTypeQualifierListOpt(
     case tok::code_completion:
       cutOffParsing();
       if (CodeCompletionHandler)
-        (*CodeCompletionHandler)();
+        CodeCompletionHandler();
       else
         Actions.CodeCompletion().CodeCompleteTypeQualifiers(DS);
       return;
@@ -6235,7 +6224,6 @@ void Parser::ParseTypeQualifierListOpt(
     case tok::kw___funcref:
       ParseWebAssemblyFuncrefTypeAttribute(DS.getAttributes());
       continue;
-      goto DoneWithTypeQuals;
 
     case tok::kw___pascal:
       if (AttrReqs & AR_VendorAttributesParsed) {
@@ -6254,8 +6242,9 @@ void Parser::ParseTypeQualifierListOpt(
 
     // Objective-C 'kindof' types.
     case tok::kw___kindof:
-      DS.getAttributes().addNew(Tok.getIdentifierInfo(), Loc, nullptr, Loc,
-                                nullptr, 0, tok::kw___kindof);
+      DS.getAttributes().addNew(Tok.getIdentifierInfo(), Loc,
+                                AttributeScopeInfo(), nullptr, 0,
+                                tok::kw___kindof);
       (void)ConsumeToken();
       continue;
 
@@ -6892,8 +6881,8 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       //   void (f()) requires true;
       Diag(Tok, diag::err_requires_clause_inside_parens);
       ConsumeToken();
-      ExprResult TrailingRequiresClause = Actions.CorrectDelayedTyposInExpr(
-         ParseConstraintLogicalOrExpression(/*IsTrailingRequiresClause=*/true));
+      ExprResult TrailingRequiresClause =
+          ParseConstraintLogicalOrExpression(/*IsTrailingRequiresClause=*/true);
       if (TrailingRequiresClause.isUsable() && D.isFunctionDeclarator() &&
           !D.hasTrailingRequiresClause())
         // We're already ill-formed if we got here but we'll accept it anyway.
@@ -7058,7 +7047,8 @@ void Parser::ParseParenDeclarator(Declarator &D) {
     // paren, because we haven't seen the identifier yet.
     isGrouping = true;
   } else if (Tok.is(tok::r_paren) || // 'int()' is a function.
-             (getLangOpts().CPlusPlus && Tok.is(tok::ellipsis) &&
+             ((getLangOpts().CPlusPlus || getLangOpts().C23) &&
+              Tok.is(tok::ellipsis) &&
               NextToken().is(tok::r_paren)) || // C++ int(...)
              isDeclarationSpecifier(
                  ImplicitTypenameContext::No) || // 'int(int)' is a function.
@@ -7237,9 +7227,9 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
       ParseTypeQualifierListOpt(
           DS, AR_NoAttributesParsed,
           /*AtomicOrPtrauthAllowed=*/false,
-          /*IdentifierRequired=*/false, llvm::function_ref<void()>([&]() {
+          /*IdentifierRequired=*/false, [&]() {
             Actions.CodeCompletion().CodeCompleteFunctionQualifiers(DS, D);
-          }));
+          });
       if (!DS.getSourceRange().getEnd().isInvalid()) {
         EndLoc = DS.getSourceRange().getEnd();
       }
@@ -7404,7 +7394,7 @@ void Parser::ParseFunctionDeclaratorIdentifierList(
     Diag(Tok, diag::ext_ident_list_in_param);
 
   // Maintain an efficient lookup of params we have seen so far.
-  llvm::SmallSet<const IdentifierInfo*, 16> ParamsSoFar;
+  llvm::SmallPtrSet<const IdentifierInfo *, 16> ParamsSoFar;
 
   do {
     // If this isn't an identifier, report the error and skip until ')'.
@@ -7540,8 +7530,7 @@ void Parser::ParseParameterDeclarationClause(
       Diag(Tok,
            diag::err_requires_clause_on_declarator_not_declaring_a_function);
       ConsumeToken();
-      Actions.CorrectDelayedTyposInExpr(
-         ParseConstraintLogicalOrExpression(/*IsTrailingRequiresClause=*/true));
+      ParseConstraintLogicalOrExpression(/*IsTrailingRequiresClause=*/true);
     }
 
     // Remember this parsed parameter in ParamInfo.
@@ -7655,7 +7644,6 @@ void Parser::ParseParameterDeclarationClause(
             }
             DefArgResult = ParseAssignmentExpression();
           }
-          DefArgResult = Actions.CorrectDelayedTyposInExpr(DefArgResult);
           if (DefArgResult.isInvalid()) {
             Actions.ActOnParamDefaultArgumentError(Param, EqualLoc,
                                                    /*DefaultArg=*/nullptr);
@@ -7801,8 +7789,7 @@ void Parser::ParseBracketDeclarator(Declarator &D) {
     } else {
       EnterExpressionEvaluationContext Unevaluated(
           Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
-      NumElements =
-          Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression());
+      NumElements = ParseAssignmentExpression();
     }
   } else {
     if (StaticLoc.isValid()) {
@@ -7891,9 +7878,9 @@ void Parser::ParseMisplacedBracketDeclarator(Declarator &D) {
     D.AddTypeInfo(Chunk, TempDeclarator.getAttributePool(), SourceLocation());
   }
 
-  // The missing identifier would have been diagnosed in ParseDirectDeclarator.
+  // The missing name would have been diagnosed in ParseDirectDeclarator.
   // If parentheses are required, always suggest them.
-  if (!D.getIdentifier() && !NeedParens)
+  if (!D.hasName() && !NeedParens)
     return;
 
   SourceLocation EndBracketLoc = TempDeclarator.getEndLoc();
@@ -7939,8 +7926,8 @@ void Parser::ParseTypeofSpecifier(DeclSpec &DS) {
   bool isCastExpr;
   ParsedType CastTy;
   SourceRange CastRange;
-  ExprResult Operand = Actions.CorrectDelayedTyposInExpr(
-      ParseExprAfterUnaryExprOrTypeTrait(OpTok, isCastExpr, CastTy, CastRange));
+  ExprResult Operand =
+      ParseExprAfterUnaryExprOrTypeTrait(OpTok, isCastExpr, CastTy, CastRange);
   if (HasParens)
     DS.setTypeArgumentRange(CastRange);
 

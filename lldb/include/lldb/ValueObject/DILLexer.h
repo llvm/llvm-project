@@ -25,11 +25,19 @@ class Token {
 public:
   enum Kind {
     amp,
+    arrow,
     coloncolon,
     eof,
+    float_constant,
     identifier,
+    integer_constant,
     l_paren,
+    l_square,
+    minus,
+    period,
+    plus,
     r_paren,
+    r_square,
     star,
   };
 

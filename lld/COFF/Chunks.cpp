@@ -422,12 +422,6 @@ void SectionChunk::writeTo(uint8_t *buf) const {
 
     applyRelocation(buf + rel.VirtualAddress, rel);
   }
-
-  // Write the offset to EC entry thunk preceding section contents. The low bit
-  // is always set, so it's effectively an offset from the last byte of the
-  // offset.
-  if (Defined *entryThunk = getEntryThunk())
-    write32le(buf - sizeof(uint32_t), entryThunk->getRVA() - rva + 1);
 }
 
 void SectionChunk::applyRelocation(uint8_t *off,
@@ -881,6 +875,19 @@ void RangeExtensionThunkARM64::writeTo(uint8_t *buf) const {
   applyArm64Imm(buf + 4, target->getRVA() & 0xfff, 0);
 }
 
+void SameAddressThunkARM64EC::setDynamicRelocs(COFFLinkerContext &ctx) const {
+  // Add ARM64X relocations replacing adrp/add instructions with a version using
+  // the hybrid target.
+  RangeExtensionThunkARM64 hybridView(ARM64EC, hybridTarget);
+  uint8_t buf[sizeof(arm64Thunk)];
+  hybridView.setRVA(rva);
+  hybridView.writeTo(buf);
+  uint32_t addrp = *reinterpret_cast<ulittle32_t *>(buf);
+  uint32_t add = *reinterpret_cast<ulittle32_t *>(buf + sizeof(uint32_t));
+  ctx.dynamicRelocs->set(this, addrp);
+  ctx.dynamicRelocs->set(Arm64XRelocVal(this, sizeof(uint32_t)), add);
+}
+
 LocalImportChunk::LocalImportChunk(COFFLinkerContext &c, Defined *s)
     : sym(s), ctx(c) {
   setAlignment(ctx.config.wordsize);
@@ -1264,7 +1271,8 @@ void DynamicRelocsChunk::finalize() {
 }
 
 // Set the reloc value. The reloc entry must be allocated beforehand.
-void DynamicRelocsChunk::set(uint32_t rva, Arm64XRelocVal value) {
+void DynamicRelocsChunk::set(Arm64XRelocVal offset, Arm64XRelocVal value) {
+  uint32_t rva = offset.get();
   auto entry =
       llvm::find_if(arm64xRelocs, [rva](const Arm64XDynamicRelocEntry &e) {
         return e.offset.get() == rva;

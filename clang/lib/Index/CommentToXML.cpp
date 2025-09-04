@@ -11,7 +11,6 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Comment.h"
 #include "clang/AST/CommentVisitor.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
@@ -899,7 +898,7 @@ void CommentASTToXMLConverter::visitFullComment(const FullComment *C) {
     {
       // Print line and column number.
       SourceLocation Loc = DI->CurrentDecl->getLocation();
-      std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
+      FileIDAndOffset LocInfo = SM.getDecomposedLoc(Loc);
       FileID FID = LocInfo.first;
       unsigned FileOffset = LocInfo.second;
 

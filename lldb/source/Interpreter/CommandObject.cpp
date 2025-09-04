@@ -32,7 +32,6 @@
 #include "lldb/Target/Language.h"
 
 #include "lldb/Interpreter/CommandInterpreter.h"
-#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 
 using namespace lldb;
@@ -360,7 +359,8 @@ bool CommandObject::HelpTextContainsWord(llvm::StringRef search_word,
     StreamString usage_help;
     GetOptions()->GenerateOptionUsage(
         usage_help, *this,
-        GetCommandInterpreter().GetDebugger().GetTerminalWidth());
+        GetCommandInterpreter().GetDebugger().GetTerminalWidth(),
+        GetCommandInterpreter().GetDebugger().GetUseColor());
     if (!usage_help.Empty()) {
       llvm::StringRef usage_text = usage_help.GetString();
       if (usage_text.contains_insensitive(search_word))
@@ -673,7 +673,8 @@ void CommandObject::GenerateHelpText(Stream &output_strm) {
   if (options != nullptr) {
     options->GenerateOptionUsage(
         output_strm, *this,
-        GetCommandInterpreter().GetDebugger().GetTerminalWidth());
+        GetCommandInterpreter().GetDebugger().GetTerminalWidth(),
+        GetCommandInterpreter().GetDebugger().GetUseColor());
   }
   llvm::StringRef long_help = GetHelpLong();
   if (!long_help.empty()) {

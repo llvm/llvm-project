@@ -16,7 +16,8 @@ define i32 @test() {
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i32> [[TMP5]], <8 x i32> poison, <2 x i32> <i32 0, i32 poison>
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> <i32 poison, i32 0>, <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt <2 x i32> [[TMP7]], <i32 33554431, i32 0>
-; CHECK-NEXT:    [[TMP9:%.*]] = call <8 x i1> @llvm.vector.insert.v8i1.v2i1(<8 x i1> <i1 poison, i1 poison, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <2 x i1> [[TMP8]], i64 0)
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <2 x i1> [[TMP8]], <2 x i1> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <8 x i1> <i1 poison, i1 poison, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <8 x i1> [[TMP14]], <8 x i32> <i32 8, i32 9, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP10:%.*]] = select <8 x i1> [[TMP9]], <8 x i32> zeroinitializer, <8 x i32> <i32 6, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
 ; CHECK-NEXT:    [[TMP13:%.*]] = shl <8 x i32> [[TMP5]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = trunc <8 x i32> [[TMP13]] to <8 x i8>

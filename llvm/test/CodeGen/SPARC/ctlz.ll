@@ -207,20 +207,15 @@ define i64 @i64_nopoison(i64 %x) nounwind {
 ;
 ; SPARC-VIS3-LABEL: i64_nopoison:
 ; SPARC-VIS3:       ! %bb.0:
+; SPARC-VIS3-NEXT:    srl %o0, 0, %o2
+; SPARC-VIS3-NEXT:    lzcnt %o2, %o2
+; SPARC-VIS3-NEXT:    add %o2, -32, %o2
+; SPARC-VIS3-NEXT:    srl %o1, 0, %o1
+; SPARC-VIS3-NEXT:    lzcnt %o1, %o1
+; SPARC-VIS3-NEXT:    add %o1, -32, %o1
+; SPARC-VIS3-NEXT:    add %o1, 32, %o1
 ; SPARC-VIS3-NEXT:    cmp %o0, 0
-; SPARC-VIS3-NEXT:    bne .LBB2_2
-; SPARC-VIS3-NEXT:    nop
-; SPARC-VIS3-NEXT:  ! %bb.1:
-; SPARC-VIS3-NEXT:    srl %o1, 0, %o0
-; SPARC-VIS3-NEXT:    lzcnt %o0, %o0
-; SPARC-VIS3-NEXT:    add %o0, -32, %o0
-; SPARC-VIS3-NEXT:    add %o0, 32, %o1
-; SPARC-VIS3-NEXT:    retl
-; SPARC-VIS3-NEXT:    mov %g0, %o0
-; SPARC-VIS3-NEXT:  .LBB2_2:
-; SPARC-VIS3-NEXT:    srl %o0, 0, %o0
-; SPARC-VIS3-NEXT:    lzcnt %o0, %o0
-; SPARC-VIS3-NEXT:    add %o0, -32, %o1
+; SPARC-VIS3-NEXT:    movne %icc, %o2, %o1
 ; SPARC-VIS3-NEXT:    retl
 ; SPARC-VIS3-NEXT:    mov %g0, %o0
 ;
@@ -311,20 +306,15 @@ define i64 @i64_poison(i64 %x) nounwind {
 ;
 ; SPARC-VIS3-LABEL: i64_poison:
 ; SPARC-VIS3:       ! %bb.0:
+; SPARC-VIS3-NEXT:    srl %o0, 0, %o2
+; SPARC-VIS3-NEXT:    lzcnt %o2, %o2
+; SPARC-VIS3-NEXT:    add %o2, -32, %o2
+; SPARC-VIS3-NEXT:    srl %o1, 0, %o1
+; SPARC-VIS3-NEXT:    lzcnt %o1, %o1
+; SPARC-VIS3-NEXT:    add %o1, -32, %o1
+; SPARC-VIS3-NEXT:    add %o1, 32, %o1
 ; SPARC-VIS3-NEXT:    cmp %o0, 0
-; SPARC-VIS3-NEXT:    bne .LBB3_2
-; SPARC-VIS3-NEXT:    nop
-; SPARC-VIS3-NEXT:  ! %bb.1:
-; SPARC-VIS3-NEXT:    srl %o1, 0, %o0
-; SPARC-VIS3-NEXT:    lzcnt %o0, %o0
-; SPARC-VIS3-NEXT:    add %o0, -32, %o0
-; SPARC-VIS3-NEXT:    add %o0, 32, %o1
-; SPARC-VIS3-NEXT:    retl
-; SPARC-VIS3-NEXT:    mov %g0, %o0
-; SPARC-VIS3-NEXT:  .LBB3_2:
-; SPARC-VIS3-NEXT:    srl %o0, 0, %o0
-; SPARC-VIS3-NEXT:    lzcnt %o0, %o0
-; SPARC-VIS3-NEXT:    add %o0, -32, %o1
+; SPARC-VIS3-NEXT:    movne %icc, %o2, %o1
 ; SPARC-VIS3-NEXT:    retl
 ; SPARC-VIS3-NEXT:    mov %g0, %o0
 ;

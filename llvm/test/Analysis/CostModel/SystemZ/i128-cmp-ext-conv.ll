@@ -52,7 +52,7 @@ define i128 @fun3_cmp64(i64 %val1, i64 %val2,
 ; CHECK-LABEL: 'fun3_cmp64'
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %cmp = icmp slt i64 %val1, %val2
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %add = add i128 %val3, %val4
-; CHECk: Cost Model: Found an estimated cost of 4 for instruction:   %sel = select i1 %cmp, i128 %val3, i128 %add
+; CHECK: Cost Model: Found an estimated cost of 4 for instruction:   %sel = select i1 %cmp, i128 %val3, i128 %add
   %cmp = icmp slt i64 %val1, %val2
   %add = add i128 %val3, %val4
   %sel = select i1 %cmp, i128 %val3, i128 %add

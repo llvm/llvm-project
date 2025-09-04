@@ -56,6 +56,7 @@ enum {
   InstFormatQC_EB = 24,
   InstFormatQC_EJ = 25,
   InstFormatQC_ES = 26,
+  InstFormatNDS_BRANCH_10 = 27,
   InstFormatOther = 31,
 
   InstFormatMask = 31,
@@ -138,6 +139,9 @@ enum {
   // 3 -> SEW * 4
   DestEEWShift = ElementsDependOnMaskShift + 1,
   DestEEWMask = 3ULL << DestEEWShift,
+
+  ReadsPastVLShift = DestEEWShift + 2,
+  ReadsPastVLMask = 1ULL << ReadsPastVLShift,
 };
 
 // Helper functions to read TSFlags.
@@ -192,6 +196,12 @@ static inline bool elementsDependOnVL(uint64_t TSFlags) {
 /// e.g. vredsum.vs/viota.m
 static inline bool elementsDependOnMask(uint64_t TSFlags) {
   return TSFlags & ElementsDependOnMaskMask;
+}
+
+/// \returns true if the instruction may read elements past VL, e.g.
+/// vslidedown/vrgather
+static inline bool readsPastVL(uint64_t TSFlags) {
+  return TSFlags & ReadsPastVLMask;
 }
 
 static inline unsigned getVLOpNum(const MCInstrDesc &Desc) {
@@ -315,6 +325,7 @@ enum OperandType : unsigned {
   OPERAND_UIMM8_LSB000,
   OPERAND_UIMM8_GE32,
   OPERAND_UIMM9_LSB000,
+  OPERAND_UIMM9,
   OPERAND_UIMM10,
   OPERAND_UIMM10_LSB00_NONZERO,
   OPERAND_UIMM11,
@@ -328,7 +339,6 @@ enum OperandType : unsigned {
   OPERAND_UIMM32,
   OPERAND_UIMM48,
   OPERAND_UIMM64,
-  OPERAND_ZERO,
   OPERAND_THREE,
   OPERAND_FOUR,
   OPERAND_SIMM5,
@@ -336,7 +346,11 @@ enum OperandType : unsigned {
   OPERAND_SIMM5_PLUS1,
   OPERAND_SIMM6,
   OPERAND_SIMM6_NONZERO,
+  OPERAND_SIMM8,
+  OPERAND_SIMM8_UNSIGNED,
+  OPERAND_SIMM10,
   OPERAND_SIMM10_LSB0000_NONZERO,
+  OPERAND_SIMM10_UNSIGNED,
   OPERAND_SIMM11,
   OPERAND_SIMM12,
   OPERAND_SIMM12_LSB00000,
@@ -490,6 +504,17 @@ inline static bool isValidRoundingMode(unsigned Mode) {
   }
 }
 } // namespace RISCVVXRndMode
+
+namespace RISCVExceptFlags {
+enum ExceptionFlag {
+  NX = 0x01, // Inexact
+  UF = 0x02, // Underflow
+  OF = 0x04, // Overflow
+  DZ = 0x08, // Divide by zero
+  NV = 0x10, // Invalid operation
+  ALL = 0x1F // Mask for all accrued exception flags
+};
+}
 
 //===----------------------------------------------------------------------===//
 // Floating-point Immediates
@@ -745,6 +770,14 @@ struct VLX_VSXPseudo {
   uint16_t Pseudo;
 };
 
+struct NDSVLNPseudo {
+  uint16_t Masked : 1;
+  uint16_t Unsigned : 1;
+  uint16_t Log2SEW : 3;
+  uint16_t LMUL : 3;
+  uint16_t Pseudo;
+};
+
 #define GET_RISCVVSSEGTable_DECL
 #define GET_RISCVVLSEGTable_DECL
 #define GET_RISCVVLXSEGTable_DECL
@@ -753,6 +786,7 @@ struct VLX_VSXPseudo {
 #define GET_RISCVVSETable_DECL
 #define GET_RISCVVLXTable_DECL
 #define GET_RISCVVSXTable_DECL
+#define GET_RISCVNDSVLNTable_DECL
 #include "RISCVGenSearchableTables.inc"
 } // namespace RISCV
 

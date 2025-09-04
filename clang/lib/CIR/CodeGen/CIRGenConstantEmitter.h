@@ -80,7 +80,7 @@ public:
   //     initializer or to propagate to another context; for example,
   //     side effects, or emitting an initialization that requires a
   //     reference to its current location.
-  mlir::Attribute emitForMemory(mlir::Attribute c, QualType t);
+  mlir::Attribute emitForMemory(mlir::Attribute c, QualType destType);
 
   /// Try to emit the initializer of the given declaration as an abstract
   /// constant.
@@ -90,8 +90,9 @@ public:
   /// asserting that it succeeded.  This is only safe to do when the
   /// expression is known to be a constant expression with either a fairly
   /// simple type or a known simple form.
+  mlir::Attribute emitAbstract(const Expr *e, QualType destType);
   mlir::Attribute emitAbstract(SourceLocation loc, const APValue &value,
-                               QualType t);
+                               QualType destType);
 
   mlir::Attribute tryEmitConstantExpr(const ConstantExpr *ce);
 
@@ -101,6 +102,7 @@ public:
 
   mlir::Attribute tryEmitPrivateForVarInit(const VarDecl &d);
 
+  mlir::TypedAttr tryEmitPrivate(const Expr *e, QualType destType);
   mlir::Attribute tryEmitPrivate(const APValue &value, QualType destType);
   mlir::Attribute tryEmitPrivateForMemory(const APValue &value, QualType t);
 

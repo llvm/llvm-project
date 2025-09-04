@@ -185,11 +185,19 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
 #define OPENMP_ALLOCATE_MODIFIER(Name) .Case(#Name, OMPC_ALLOCATE_##Name)
 #include "clang/Basic/OpenMPKinds.def"
         .Default(OMPC_ALLOCATE_unknown);
+  case OMPC_num_threads: {
+    unsigned Type = llvm::StringSwitch<unsigned>(Str)
+#define OPENMP_NUMTHREADS_MODIFIER(Name) .Case(#Name, OMPC_NUMTHREADS_##Name)
+#include "clang/Basic/OpenMPKinds.def"
+                        .Default(OMPC_NUMTHREADS_unknown);
+    if (LangOpts.OpenMP < 60)
+      return OMPC_NUMTHREADS_unknown;
+    return Type;
+  }
   case OMPC_unknown:
   case OMPC_threadprivate:
   case OMPC_if:
   case OMPC_final:
-  case OMPC_num_threads:
   case OMPC_safelen:
   case OMPC_simdlen:
   case OMPC_sizes:
@@ -370,7 +378,7 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
       return #Name;
 #include "clang/Basic/OpenMPKinds.def"
     }
-    llvm_unreachable("Invalid OpenMP 'schedule' clause type");
+    llvm_unreachable("Invalid OpenMP 'defaultmap' clause type");
   case OMPC_atomic_default_mem_order:
     switch (Type) {
     case OMPC_ATOMIC_DEFAULT_MEM_ORDER_unknown:
@@ -520,11 +528,20 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 #include "clang/Basic/OpenMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'allocate' clause modifier");
+  case OMPC_num_threads:
+    switch (Type) {
+    case OMPC_NUMTHREADS_unknown:
+      return "unknown";
+#define OPENMP_NUMTHREADS_MODIFIER(Name)                                       \
+  case OMPC_NUMTHREADS_##Name:                                                 \
+    return #Name;
+#include "clang/Basic/OpenMPKinds.def"
+    }
+    llvm_unreachable("Invalid OpenMP 'num_threads' clause modifier");
   case OMPC_unknown:
   case OMPC_threadprivate:
   case OMPC_if:
   case OMPC_final:
-  case OMPC_num_threads:
   case OMPC_safelen:
   case OMPC_simdlen:
   case OMPC_sizes:

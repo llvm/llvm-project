@@ -37,7 +37,7 @@ class DiagnosticInfoKCFI : public DiagnosticInfo {
   const Twine &Msg;
 
 public:
-  DiagnosticInfoKCFI(const Twine &DiagMsg,
+  DiagnosticInfoKCFI(const Twine &DiagMsg LLVM_LIFETIME_BOUND,
                      DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_Linker, Severity), Msg(DiagMsg) {}
   void print(DiagnosticPrinter &DP) const override { DP << Msg; }

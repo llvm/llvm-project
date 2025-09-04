@@ -276,6 +276,11 @@ public:
   /// TypeSystem::TypeSystemSPWrapper can be compared for equality.
   TypeSystemSPWrapper GetTypeSystem() const;
 
+  template <typename TypeSystemType>
+  std::shared_ptr<TypeSystemType> GetTypeSystem() const {
+    return GetTypeSystem().dyn_cast_or_null<TypeSystemType>();
+  }
+
   ConstString GetTypeName(bool BaseOnly = false) const;
 
   ConstString GetDisplayTypeName() const;

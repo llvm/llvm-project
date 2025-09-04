@@ -75,6 +75,10 @@ void mlirPassManagerEnableVerifier(MlirPassManager passManager, bool enable) {
   unwrap(passManager)->enableVerifier(enable);
 }
 
+void mlirPassManagerEnableTiming(MlirPassManager passManager) {
+  unwrap(passManager)->enableTiming();
+}
+
 MlirOpPassManager mlirPassManagerGetNestedUnder(MlirPassManager passManager,
                                                 MlirStringRef operationName) {
   return wrap(&unwrap(passManager)->nest(unwrap(operationName)));

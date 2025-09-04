@@ -26,16 +26,16 @@ define void @use_frame_base_reg() {
 ; RV64I-LABEL: use_frame_base_reg:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a0, 24
-; RV64I-NEXT:    addiw a0, a0, 1712
+; RV64I-NEXT:    addi a0, a0, 1712
 ; RV64I-NEXT:    sub sp, sp, a0
 ; RV64I-NEXT:    .cfi_def_cfa_offset 100016
 ; RV64I-NEXT:    lui a0, 24
-; RV64I-NEXT:    addiw a0, a0, 1704
+; RV64I-NEXT:    addi a0, a0, 1704
 ; RV64I-NEXT:    add a0, sp, a0
 ; RV64I-NEXT:    lbu zero, 4(a0)
 ; RV64I-NEXT:    lbu zero, 0(a0)
 ; RV64I-NEXT:    lui a0, 24
-; RV64I-NEXT:    addiw a0, a0, 1712
+; RV64I-NEXT:    addi a0, a0, 1712
 ; RV64I-NEXT:    add sp, sp, a0
 ; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret

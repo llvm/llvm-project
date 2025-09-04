@@ -30,6 +30,8 @@ class raw_ostream;
 }
 namespace Fortran::parser {
 struct Expr;
+struct OpenMPDeclareReductionConstruct;
+struct OmpMetadirectiveDirective;
 }
 
 namespace Fortran::semantics {
@@ -728,6 +730,40 @@ private:
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const GenericDetails &);
 
+// Used for OpenMP DECLARE REDUCTION, it holds the information
+// needed to resolve which declaration (there could be multiple
+// with the same name) to use for a given type.
+class UserReductionDetails {
+public:
+  using TypeVector = std::vector<const DeclTypeSpec *>;
+  using DeclInfo = std::variant<const parser::OpenMPDeclareReductionConstruct *,
+      const parser::OmpMetadirectiveDirective *>;
+  using DeclVector = std::vector<DeclInfo>;
+
+  UserReductionDetails() = default;
+
+  void AddType(const DeclTypeSpec &type) { typeList_.push_back(&type); }
+  const TypeVector &GetTypeList() const { return typeList_; }
+
+  bool SupportsType(const DeclTypeSpec &type) const {
+    // We have to compare the actual type, not the pointer, as some
+    // types are not guaranteed to be the same object.
+    for (auto t : typeList_) {
+      if (*t == type) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void AddDecl(const DeclInfo &decl) { declList_.emplace_back(decl); }
+  const DeclVector &GetDeclList() const { return declList_; }
+
+private:
+  TypeVector typeList_;
+  DeclVector declList_;
+};
+
 class UnknownDetails {};
 
 using Details = std::variant<UnknownDetails, MainProgramDetails, ModuleDetails,
@@ -735,7 +771,7 @@ using Details = std::variant<UnknownDetails, MainProgramDetails, ModuleDetails,
     ObjectEntityDetails, ProcEntityDetails, AssocEntityDetails,
     DerivedTypeDetails, UseDetails, UseErrorDetails, HostAssocDetails,
     GenericDetails, ProcBindingDetails, NamelistDetails, CommonBlockDetails,
-    TypeParamDetails, MiscDetails>;
+    TypeParamDetails, MiscDetails, UserReductionDetails>;
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Details &);
 std::string DetailsToString(const Details &);
 
@@ -756,6 +792,7 @@ public:
       LocalityShared, // named in SHARED locality-spec
       InDataStmt, // initialized in a DATA statement, =>object, or /init/
       InNamelist, // in a Namelist group
+      InCommonBlock, // referenced in a common block
       EntryDummyArgument,
       CompilerCreated, // A compiler created symbol
       // For compiler created symbols that are constant but cannot legally have
@@ -774,10 +811,10 @@ public:
       AccCommonBlock, AccThreadPrivate, AccReduction, AccNone, AccPreDetermined,
       // OpenMP data-sharing attribute
       OmpShared, OmpPrivate, OmpLinear, OmpFirstPrivate, OmpLastPrivate,
+      OmpGroupPrivate,
       // OpenMP data-mapping attribute
-      OmpMapTo, OmpMapFrom, OmpMapToFrom, OmpMapAlloc, OmpMapRelease,
-      OmpMapDelete, OmpUseDevicePtr, OmpUseDeviceAddr, OmpIsDevicePtr,
-      OmpHasDeviceAddr,
+      OmpMapTo, OmpMapFrom, OmpMapToFrom, OmpMapStorage, OmpMapDelete,
+      OmpUseDevicePtr, OmpUseDeviceAddr, OmpIsDevicePtr, OmpHasDeviceAddr,
       // OpenMP data-copying attribute
       OmpCopyIn, OmpCopyPrivate,
       // OpenMP miscellaneous flags
@@ -785,8 +822,9 @@ public:
       OmpAllocate, OmpDeclarativeAllocateDirective,
       OmpExecutableAllocateDirective, OmpDeclareSimd, OmpDeclareTarget,
       OmpThreadprivate, OmpDeclareReduction, OmpFlushed, OmpCriticalLock,
-      OmpIfSpecified, OmpNone, OmpPreDetermined, OmpImplicit, OmpDependObject,
-      OmpInclusiveScan, OmpExclusiveScan, OmpInScanReduction);
+      OmpIfSpecified, OmpNone, OmpPreDetermined, OmpExplicit, OmpImplicit,
+      OmpDependObject, OmpInclusiveScan, OmpExclusiveScan, OmpInScanReduction,
+      OmpUniform);
   using Flags = common::EnumSet<Flag, Flag_enumSize>;
 
   const Scope &owner() const { return *owner_; }

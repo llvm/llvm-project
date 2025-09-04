@@ -64,7 +64,7 @@ public:
 
   BuiltinTypeDeclBuilder &addSimpleTemplateParams(ArrayRef<StringRef> Names,
                                                   ConceptDecl *CD);
-  CXXRecordDecl *finalizeForwardDeclaration();
+  CXXRecordDecl *finalizeForwardDeclaration() { return Record; }
   BuiltinTypeDeclBuilder &completeDefinition();
 
   BuiltinTypeDeclBuilder &
@@ -91,10 +91,11 @@ public:
   BuiltinTypeDeclBuilder &addConsumeMethod();
 
 private:
-  FieldDecl *getResourceHandleField();
+  FieldDecl *getResourceHandleField() const;
   QualType getFirstTemplateTypeParam();
   QualType getHandleElementType();
   Expr *getConstantIntExpr(int value);
+  HLSLAttributedResourceType::Attributes getResourceAttrs() const;
 };
 
 } // namespace hlsl

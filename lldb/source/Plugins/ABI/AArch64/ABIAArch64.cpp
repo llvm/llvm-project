@@ -12,6 +12,7 @@
 #include "ABIMacOSX_arm64.h"
 #include "ABISysV_arm64.h"
 #include "Utility/ARM64_DWARF_Registers.h"
+#include "Utility/ARM64_ehframe_Registers.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/Process.h"
 
@@ -69,9 +70,9 @@ lldb::addr_t ABIAArch64::FixDataAddress(lldb::addr_t pc) {
 std::pair<uint32_t, uint32_t>
 ABIAArch64::GetEHAndDWARFNums(llvm::StringRef name) {
   if (name == "pc")
-    return {LLDB_INVALID_REGNUM, arm64_dwarf::pc};
+    return {arm64_ehframe::pc, arm64_dwarf::pc};
   if (name == "cpsr")
-    return {LLDB_INVALID_REGNUM, arm64_dwarf::cpsr};
+    return {arm64_ehframe::cpsr, arm64_dwarf::cpsr};
   return MCBasedABI::GetEHAndDWARFNums(name);
 }
 
@@ -177,8 +178,8 @@ void ABIAArch64::AugmentRegisterInfo(
                       lldb::eFormatHex);
 
   auto bool_predicate = [](const auto &reg_num) { return bool(reg_num); };
-  bool saw_v_regs = std::any_of(v_regs.begin(), v_regs.end(), bool_predicate);
-  bool saw_z_regs = std::any_of(z_regs.begin(), z_regs.end(), bool_predicate);
+  bool saw_v_regs = llvm::any_of(v_regs, bool_predicate);
+  bool saw_z_regs = llvm::any_of(z_regs, bool_predicate);
 
   // Sn/Dn for Vn.
   if (saw_v_regs) {

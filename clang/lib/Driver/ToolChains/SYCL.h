@@ -9,21 +9,12 @@
 #ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_SYCL_H
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_SYCL_H
 
+#include "clang/Driver/SyclInstallationDetector.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 
 namespace clang {
 namespace driver {
-
-class SYCLInstallationDetector {
-public:
-  SYCLInstallationDetector(const Driver &D, const llvm::Triple &HostTriple,
-                           const llvm::opt::ArgList &Args);
-
-  void addSYCLIncludeArgs(const llvm::opt::ArgList &DriverArgs,
-                          llvm::opt::ArgStringList &CC1Args) const;
-};
-
 namespace toolchains {
 
 class LLVM_LIBRARY_VISIBILITY SYCLToolChain : public ToolChain {

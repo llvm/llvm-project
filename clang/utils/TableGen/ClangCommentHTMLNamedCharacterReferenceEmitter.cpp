@@ -37,9 +37,9 @@ static bool translateCodePointToUTF8(unsigned CodePoint,
 
   raw_svector_ostream OS(CLiteral);
   OS << "\"";
-  for (size_t i = 0, e = UTF8.size(); i != e; ++i) {
+  for (char C : UTF8) {
     OS << "\\x";
-    OS.write_hex(static_cast<unsigned char>(UTF8[i]));
+    OS.write_hex(static_cast<unsigned char>(C));
   }
   OS << "\"";
 

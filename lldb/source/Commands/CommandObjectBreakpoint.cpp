@@ -28,6 +28,7 @@
 #include "lldb/Target/ThreadSpec.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/Support/FormatAdapters.h"
 
 #include <memory>
 #include <optional>
@@ -71,7 +72,7 @@ public:
     case 'c':
       // Normally an empty breakpoint condition marks is as unset. But we need
       // to say it was passed in.
-      m_bp_opts.SetCondition(option_arg.str().c_str());
+      m_bp_opts.GetCondition().SetText(option_arg.str());
       m_bp_opts.m_set_flags.Set(BreakpointOptions::eCondition);
       break;
     case 'C':
@@ -152,6 +153,21 @@ public:
       } else {
         m_bp_opts.GetThreadSpec()->SetIndex(thread_index);
       }
+    } break;
+    case 'Y': {
+      LanguageType language = Language::GetLanguageTypeFromString(option_arg);
+
+      LanguageSet languages_for_expressions =
+          Language::GetLanguagesSupportingTypeSystemsForExpressions();
+      if (language == eLanguageTypeUnknown)
+        error = Status::FromError(CreateOptionParsingError(
+            option_arg, short_option, long_option, "invalid language"));
+      else if (!languages_for_expressions[language])
+        error = Status::FromError(
+            CreateOptionParsingError(option_arg, short_option, long_option,
+                                     "no expression support for language"));
+      else
+        m_bp_opts.GetCondition().SetLanguage(language);
     } break;
     default:
       llvm_unreachable("Unimplemented option");
@@ -956,7 +972,10 @@ protected:
               BreakpointLocation *location =
                   breakpoint->FindLocationByID(cur_bp_id.GetLocationID()).get();
               if (location) {
-                location->SetEnabled(true);
+                if (llvm::Error error = location->SetEnabled(true))
+                  result.AppendErrorWithFormatv(
+                      "failed to enable breakpoint location: {0}",
+                      llvm::fmt_consume(std::move(error)));
                 ++loc_count;
               }
             } else {
@@ -1062,7 +1081,10 @@ protected:
               BreakpointLocation *location =
                   breakpoint->FindLocationByID(cur_bp_id.GetLocationID()).get();
               if (location) {
-                location->SetEnabled(false);
+                if (llvm::Error error = location->SetEnabled(false))
+                  result.AppendErrorWithFormatv(
+                      "failed to disable breakpoint location: {0}",
+                      llvm::fmt_consume(std::move(error)));
                 ++loc_count;
               }
             } else {
@@ -1094,7 +1116,6 @@ public:
             interpreter, "breakpoint list",
             "List some or all breakpoints at configurable levels of detail.",
             nullptr) {
-    CommandArgumentEntry arg;
     CommandArgumentData bp_id_arg;
 
     // Define the first (and only) variant of this arg.
@@ -1509,7 +1530,10 @@ protected:
           // It makes no sense to try to delete individual locations, so we
           // disable them instead.
           if (location) {
-            location->SetEnabled(false);
+            if (llvm::Error error = location->SetEnabled(false))
+              result.AppendErrorWithFormatv(
+                  "failed to disable breakpoint location: {0}",
+                  llvm::fmt_consume(std::move(error)));
             ++disable_count;
           }
         } else {
@@ -2486,8 +2510,9 @@ void CommandObjectMultiwordBreakpoint::VerifyIDs(
     Breakpoint *breakpoint =
         target.GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
     if (breakpoint != nullptr) {
-      const size_t num_locations = breakpoint->GetNumLocations();
-      if (static_cast<size_t>(cur_bp_id.GetLocationID()) > num_locations) {
+      lldb::break_id_t cur_loc_id = cur_bp_id.GetLocationID();
+      // GetLocationID returns 0 when the location isn't specified.
+      if (cur_loc_id != 0 && !breakpoint->FindLocationByID(cur_loc_id)) {
         StreamString id_str;
         BreakpointID::GetCanonicalReference(
             &id_str, cur_bp_id.GetBreakpointID(), cur_bp_id.GetLocationID());

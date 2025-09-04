@@ -169,8 +169,8 @@ protected:
     }
 
     if (resultEntity->isVariable()) {
-      hlfir::AsExprOp asExpr = builder.create<hlfir::AsExprOp>(
-          loc, *resultEntity, builder.createBool(loc, mustBeFreed));
+      hlfir::AsExprOp asExpr = hlfir::AsExprOp::create(
+          builder, loc, *resultEntity, builder.createBool(loc, mustBeFreed));
       resultEntity = hlfir::EntityWithAttributes{asExpr.getResult()};
     }
 
@@ -469,33 +469,49 @@ struct MatmulTransposeOpConversion
   }
 };
 
-class CShiftOpConversion : public HlfirIntrinsicConversion<hlfir::CShiftOp> {
-  using HlfirIntrinsicConversion<hlfir::CShiftOp>::HlfirIntrinsicConversion;
+// A converter for hlfir.cshift and hlfir.eoshift.
+template <typename T>
+class ArrayShiftOpConversion : public HlfirIntrinsicConversion<T> {
+  using HlfirIntrinsicConversion<T>::HlfirIntrinsicConversion;
+  using HlfirIntrinsicConversion<T>::lowerArguments;
+  using HlfirIntrinsicConversion<T>::processReturnValue;
+  using typename HlfirIntrinsicConversion<T>::IntrinsicArgument;
 
   llvm::LogicalResult
-  matchAndRewrite(hlfir::CShiftOp cshift,
-                  mlir::PatternRewriter &rewriter) const override {
-    fir::FirOpBuilder builder{rewriter, cshift.getOperation()};
-    const mlir::Location &loc = cshift->getLoc();
+  matchAndRewrite(T op, mlir::PatternRewriter &rewriter) const override {
+    fir::FirOpBuilder builder{rewriter, op.getOperation()};
+    const mlir::Location &loc = op->getLoc();
 
-    llvm::SmallVector<IntrinsicArgument, 3> inArgs;
-    mlir::Value array = cshift.getArray();
+    llvm::SmallVector<IntrinsicArgument, 4> inArgs;
+    llvm::StringRef intrinsicName{[]() {
+      if constexpr (std::is_same_v<T, hlfir::EOShiftOp>)
+        return "eoshift";
+      else if constexpr (std::is_same_v<T, hlfir::CShiftOp>)
+        return "cshift";
+      else
+        llvm_unreachable("unsupported array shift");
+    }()};
+
+    mlir::Value array = op.getArray();
     inArgs.push_back({array, array.getType()});
-    mlir::Value shift = cshift.getShift();
+    mlir::Value shift = op.getShift();
     inArgs.push_back({shift, shift.getType()});
-    inArgs.push_back({cshift.getDim(), builder.getI32Type()});
+    if constexpr (std::is_same_v<T, hlfir::EOShiftOp>) {
+      mlir::Value boundary = op.getBoundary();
+      inArgs.push_back({boundary, boundary ? boundary.getType() : nullptr});
+    }
+    inArgs.push_back({op.getDim(), builder.getI32Type()});
 
-    auto *argLowering = fir::getIntrinsicArgumentLowering("cshift");
+    auto *argLowering = fir::getIntrinsicArgumentLowering(intrinsicName);
     llvm::SmallVector<fir::ExtendedValue, 3> args =
-        lowerArguments(cshift, inArgs, rewriter, argLowering);
+        lowerArguments(op, inArgs, rewriter, argLowering);
 
-    mlir::Type scalarResultType =
-        hlfir::getFortranElementType(cshift.getType());
+    mlir::Type scalarResultType = hlfir::getFortranElementType(op.getType());
 
-    auto [resultExv, mustBeFreed] =
-        fir::genIntrinsicCall(builder, loc, "cshift", scalarResultType, args);
+    auto [resultExv, mustBeFreed] = fir::genIntrinsicCall(
+        builder, loc, intrinsicName, scalarResultType, args);
 
-    processReturnValue(cshift, resultExv, mustBeFreed, builder, rewriter);
+    processReturnValue(op, resultExv, mustBeFreed, builder, rewriter);
     return mlir::success();
   }
 };
@@ -535,6 +551,40 @@ class ReshapeOpConversion : public HlfirIntrinsicConversion<hlfir::ReshapeOp> {
   }
 };
 
+class CmpCharOpConversion : public HlfirIntrinsicConversion<hlfir::CmpCharOp> {
+  using HlfirIntrinsicConversion<hlfir::CmpCharOp>::HlfirIntrinsicConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::CmpCharOp cmp,
+                  mlir::PatternRewriter &rewriter) const override {
+    fir::FirOpBuilder builder{rewriter, cmp.getOperation()};
+    const mlir::Location &loc = cmp->getLoc();
+    hlfir::Entity lhs{cmp.getLchr()};
+    hlfir::Entity rhs{cmp.getRchr()};
+
+    auto [lhsExv, lhsCleanUp] =
+        hlfir::translateToExtendedValue(loc, builder, lhs);
+    auto [rhsExv, rhsCleanUp] =
+        hlfir::translateToExtendedValue(loc, builder, rhs);
+
+    auto resultVal = fir::runtime::genCharCompare(
+        builder, loc, cmp.getPredicate(), lhsExv, rhsExv);
+    if (lhsCleanUp || rhsCleanUp) {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPointAfter(cmp);
+      if (lhsCleanUp)
+        (*lhsCleanUp)();
+      if (rhsCleanUp)
+        (*rhsCleanUp)();
+    }
+    auto resultEntity = hlfir::EntityWithAttributes{resultVal};
+
+    processReturnValue(cmp, resultEntity, /*mustBeFreed=*/false, builder,
+                       rewriter);
+    return mlir::success();
+  }
+};
+
 class LowerHLFIRIntrinsics
     : public hlfir::impl::LowerHLFIRIntrinsicsBase<LowerHLFIRIntrinsics> {
 public:
@@ -542,12 +592,14 @@ public:
     mlir::ModuleOp module = this->getOperation();
     mlir::MLIRContext *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns.insert<
-        MatmulOpConversion, MatmulTransposeOpConversion, AllOpConversion,
-        AnyOpConversion, SumOpConversion, ProductOpConversion,
-        TransposeOpConversion, CountOpConversion, DotProductOpConversion,
-        MaxvalOpConversion, MinvalOpConversion, MinlocOpConversion,
-        MaxlocOpConversion, CShiftOpConversion, ReshapeOpConversion>(context);
+    patterns.insert<MatmulOpConversion, MatmulTransposeOpConversion,
+                    AllOpConversion, AnyOpConversion, SumOpConversion,
+                    ProductOpConversion, TransposeOpConversion,
+                    CountOpConversion, DotProductOpConversion,
+                    MaxvalOpConversion, MinvalOpConversion, MinlocOpConversion,
+                    MaxlocOpConversion, ArrayShiftOpConversion<hlfir::CShiftOp>,
+                    ArrayShiftOpConversion<hlfir::EOShiftOp>,
+                    ReshapeOpConversion, CmpCharOpConversion>(context);
 
     // While conceptually this pass is performing dialect conversion, we use
     // pattern rewrites here instead of dialect conversion because this pass

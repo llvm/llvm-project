@@ -16,11 +16,13 @@
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/MemoryMapper.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace orc {
 
-class MapperJITLinkMemoryManager : public jitlink::JITLinkMemoryManager {
+class LLVM_ABI MapperJITLinkMemoryManager
+    : public jitlink::JITLinkMemoryManager {
 public:
   MapperJITLinkMemoryManager(size_t ReservationGranularity,
                              std::unique_ptr<MemoryMapper> Mapper);

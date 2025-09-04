@@ -119,8 +119,7 @@ struct HasInt {
 
 template <typename T>
 void TestInst() {
-  // expected-error@+2{{no member named 'Invalid' in 'HasInt'}}
-  // expected-error@+1{{OpenACC 'num_gangs' clause is not valid on 'serial' directive}}
+  // expected-error@+1{{no member named 'Invalid' in 'HasInt'}}
 #pragma acc serial num_gangs(HasInt::Invalid)
   while(1);
 
@@ -137,8 +136,7 @@ void TestInst() {
 #pragma acc parallel num_gangs(T::Invalid, 1)
   while(1);
 
-  // expected-error@+2{{no member named 'Invalid' in 'HasInt'}}
-  // expected-error@+1{{OpenACC 'num_gangs' clause is not valid on 'serial' directive}}
+  // expected-error@+1{{no member named 'Invalid' in 'HasInt'}}
 #pragma acc serial num_gangs(1, HasInt::Invalid)
   while(1);
 

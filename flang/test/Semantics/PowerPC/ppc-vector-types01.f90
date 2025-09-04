@@ -1,7 +1,7 @@
 ! RUN: %flang_fc1 -fdebug-unparse %s | FileCheck %s
 ! REQUIRES: target=powerpc{{.*}}
 
-    ! CHECK-LABEL: PROGRAM ppc_vec_unit
+    ! CHECK-LABEL: PROGRAM PPC_VEC_UNIT
       program ppc_vec_unit
       implicit none
       ! CHECK: VECTOR(INTEGER(KIND=4_4)) :: vi1, vi2

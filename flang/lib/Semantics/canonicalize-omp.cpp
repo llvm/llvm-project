@@ -8,6 +8,8 @@
 
 #include "canonicalize-omp.h"
 #include "flang/Parser/parse-tree-visitor.h"
+#include "flang/Parser/parse-tree.h"
+#include "flang/Semantics/semantics.h"
 
 // After Loop Canonicalization, rewrite OpenMP parse tree to make OpenMP
 // Constructs more structured which provide explicit scopes for later
@@ -26,7 +28,8 @@ class CanonicalizationOfOmp {
 public:
   template <typename T> bool Pre(T &) { return true; }
   template <typename T> void Post(T &) {}
-  CanonicalizationOfOmp(parser::Messages &messages) : messages_{messages} {}
+  CanonicalizationOfOmp(SemanticsContext &context)
+      : context_{context}, messages_{context.messages()} {}
 
   void Post(parser::Block &block) {
     for (auto it{block.begin()}; it != block.end(); ++it) {
@@ -87,6 +90,8 @@ public:
     CanonicalizeUtilityConstructs(spec);
   }
 
+  void Post(parser::OmpMapClause &map) { CanonicalizeMapModifiers(map); }
+
 private:
   template <typename T> T *GetConstructIf(parser::ExecutionPartConstruct &x) {
     if (auto *y{std::get_if<parser::ExecutableConstruct>(&x.u)}) {
@@ -125,6 +130,16 @@ private:
     parser::Block::iterator nextIt;
     auto &beginDir{std::get<parser::OmpBeginLoopDirective>(x.t)};
     auto &dir{std::get<parser::OmpLoopDirective>(beginDir.t)};
+    auto missingDoConstruct = [](auto &dir, auto &messages) {
+      messages.Say(dir.source,
+          "A DO loop must follow the %s directive"_err_en_US,
+          parser::ToUpperCaseLetters(dir.source.ToString()));
+    };
+    auto tileUnrollError = [](auto &dir, auto &messages) {
+      messages.Say(dir.source,
+          "If a loop construct has been fully unrolled, it cannot then be tiled"_err_en_US,
+          parser::ToUpperCaseLetters(dir.source.ToString()));
+    };
 
     nextIt = it;
     while (++nextIt != block.end()) {
@@ -135,7 +150,8 @@ private:
       if (auto *doCons{GetConstructIf<parser::DoConstruct>(*nextIt)}) {
         if (doCons->GetLoopControl()) {
           // move DoConstruct
-          std::get<std::optional<parser::DoConstruct>>(x.t) =
+          std::get<std::optional<std::variant<parser::DoConstruct,
+              common::Indirection<parser::OpenMPLoopConstruct>>>>(x.t) =
               std::move(*doCons);
           nextIt = block.erase(nextIt);
           // try to match OmpEndLoopDirective
@@ -144,7 +160,7 @@ private:
                     GetConstructIf<parser::OmpEndLoopDirective>(*nextIt)}) {
               std::get<std::optional<parser::OmpEndLoopDirective>>(x.t) =
                   std::move(*endDir);
-              block.erase(nextIt);
+              nextIt = block.erase(nextIt);
             }
           }
         } else {
@@ -152,13 +168,78 @@ private:
               "DO loop after the %s directive must have loop control"_err_en_US,
               parser::ToUpperCaseLetters(dir.source.ToString()));
         }
+      } else if (auto *ompLoopCons{
+                     GetOmpIf<parser::OpenMPLoopConstruct>(*nextIt)}) {
+        // We should allow UNROLL and TILE constructs to be inserted between an
+        // OpenMP Loop Construct and the DO loop itself
+        auto &nestedBeginDirective =
+            std::get<parser::OmpBeginLoopDirective>(ompLoopCons->t);
+        auto &nestedBeginLoopDirective =
+            std::get<parser::OmpLoopDirective>(nestedBeginDirective.t);
+        if ((nestedBeginLoopDirective.v == llvm::omp::Directive::OMPD_unroll ||
+                nestedBeginLoopDirective.v ==
+                    llvm::omp::Directive::OMPD_tile) &&
+            !(nestedBeginLoopDirective.v == llvm::omp::Directive::OMPD_unroll &&
+                dir.v == llvm::omp::Directive::OMPD_tile)) {
+          // iterate through the remaining block items to find the end directive
+          // for the unroll/tile directive.
+          parser::Block::iterator endIt;
+          endIt = nextIt;
+          while (endIt != block.end()) {
+            if (auto *endDir{
+                    GetConstructIf<parser::OmpEndLoopDirective>(*endIt)}) {
+              auto &endLoopDirective =
+                  std::get<parser::OmpLoopDirective>(endDir->t);
+              if (endLoopDirective.v == dir.v) {
+                std::get<std::optional<parser::OmpEndLoopDirective>>(x.t) =
+                    std::move(*endDir);
+                endIt = block.erase(endIt);
+                continue;
+              }
+            }
+            ++endIt;
+          }
+          RewriteOpenMPLoopConstruct(*ompLoopCons, block, nextIt);
+          auto &ompLoop = std::get<std::optional<parser::NestedConstruct>>(x.t);
+          ompLoop =
+              std::optional<parser::NestedConstruct>{parser::NestedConstruct{
+                  common::Indirection{std::move(*ompLoopCons)}}};
+          nextIt = block.erase(nextIt);
+        } else if (nestedBeginLoopDirective.v ==
+                llvm::omp::Directive::OMPD_unroll &&
+            dir.v == llvm::omp::Directive::OMPD_tile) {
+          // if a loop has been unrolled, the user can not then tile that loop
+          // as it has been unrolled
+          parser::OmpClauseList &unrollClauseList{
+              std::get<parser::OmpClauseList>(nestedBeginDirective.t)};
+          if (unrollClauseList.v.empty()) {
+            // if the clause list is empty for an unroll construct, we assume
+            // the loop is being fully unrolled
+            tileUnrollError(dir, messages_);
+          } else {
+            // parse the clauses for the unroll directive to find the full
+            // clause
+            for (auto clause{unrollClauseList.v.begin()};
+                clause != unrollClauseList.v.end(); ++clause) {
+              if (clause->Id() == llvm::omp::OMPC_full) {
+                tileUnrollError(dir, messages_);
+              }
+            }
+          }
+        } else {
+          messages_.Say(nestedBeginLoopDirective.source,
+              "Only Loop Transformation Constructs or Loop Nests can be nested within Loop Constructs"_err_en_US,
+              parser::ToUpperCaseLetters(
+                  nestedBeginLoopDirective.source.ToString()));
+        }
       } else {
-        messages_.Say(dir.source,
-            "A DO loop must follow the %s directive"_err_en_US,
-            parser::ToUpperCaseLetters(dir.source.ToString()));
+        missingDoConstruct(dir, messages_);
       }
       // If we get here, we either found a loop, or issued an error message.
       return;
+    }
+    if (nextIt == block.end()) {
+      missingDoConstruct(dir, messages_);
     }
   }
 
@@ -313,16 +394,58 @@ private:
     omps.erase(rlast.base(), omps.end());
   }
 
+  // Map clause modifiers are parsed as per OpenMP 6.0 spec. That spec has
+  // changed properties of some of the modifiers, for example it has expanded
+  // map-type-modifier into 3 individual modifiers (one for each of the
+  // possible values of the original modifier), and the "map-type" modifier
+  // is no longer ultimate.
+  // To utilize the modifier validation framework for semantic checks,
+  // if the specified OpenMP version is less than 6.0, rewrite the affected
+  // modifiers back into the pre-6.0 forms.
+  void CanonicalizeMapModifiers(parser::OmpMapClause &map) {
+    unsigned version{context_.langOptions().OpenMPVersion};
+    if (version >= 60) {
+      return;
+    }
+
+    // Omp{Always, Close, Present, xHold}Modifier -> OmpMapTypeModifier
+    // OmpDeleteModifier -> OmpMapType
+    using Modifier = parser::OmpMapClause::Modifier;
+    using Modifiers = std::optional<std::list<Modifier>>;
+    auto &modifiers{std::get<Modifiers>(map.t)};
+    if (!modifiers) {
+      return;
+    }
+
+    using MapTypeModifier = parser::OmpMapTypeModifier;
+    using MapType = parser::OmpMapType;
+
+    for (auto &mod : *modifiers) {
+      if (std::holds_alternative<parser::OmpAlwaysModifier>(mod.u)) {
+        mod.u = MapTypeModifier(MapTypeModifier::Value::Always);
+      } else if (std::holds_alternative<parser::OmpCloseModifier>(mod.u)) {
+        mod.u = MapTypeModifier(MapTypeModifier::Value::Close);
+      } else if (std::holds_alternative<parser::OmpPresentModifier>(mod.u)) {
+        mod.u = MapTypeModifier(MapTypeModifier::Value::Present);
+      } else if (std::holds_alternative<parser::OmpxHoldModifier>(mod.u)) {
+        mod.u = MapTypeModifier(MapTypeModifier::Value::Ompx_Hold);
+      } else if (std::holds_alternative<parser::OmpDeleteModifier>(mod.u)) {
+        mod.u = MapType(MapType::Value::Delete);
+      }
+    }
+  }
+
   // Mapping from the specification parts to the blocks that follow in the
   // same construct. This is for converting utility constructs to executable
   // constructs.
   std::map<parser::SpecificationPart *, parser::Block *> blockForSpec_;
+  SemanticsContext &context_;
   parser::Messages &messages_;
 };
 
-bool CanonicalizeOmp(parser::Messages &messages, parser::Program &program) {
-  CanonicalizationOfOmp omp{messages};
+bool CanonicalizeOmp(SemanticsContext &context, parser::Program &program) {
+  CanonicalizationOfOmp omp{context};
   Walk(program, omp);
-  return !messages.AnyFatalError();
+  return !context.messages().AnyFatalError();
 }
 } // namespace Fortran::semantics

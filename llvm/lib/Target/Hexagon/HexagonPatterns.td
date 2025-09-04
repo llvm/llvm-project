@@ -582,6 +582,13 @@ def: Pat<(v8i1 (trunc V8I8:$Rs)),
          (A4_vcmpbeqi (Combinew (A2_andir (HiReg $Rs), (i32 0x01010101)),
                                 (A2_andir (LoReg $Rs), (i32 0x01010101))),
                       (i32 1))>;
+def : Pat<(v4i1 (trunc V4I8:$Rs)),
+          (A4_vcmpheqi (Combinew (A2_andir (HiReg (S2_vzxtbh $Rs)), 0x00010001),
+                                 (A2_andir (LoReg (S2_vzxtbh $Rs)), 0x00010001)),
+                       (i32 1))>;
+def: Pat<(v2i1 (trunc V2I16:$Rs)),
+          (A4_vcmpweqi (A2_andp (S2_vzxthw $Rs), (A2_combineii (i32 1), (i32 1))),
+                      (i32 1))>;
 
 
 // Saturation:
@@ -1516,6 +1523,14 @@ def: Pat<(add I32:$Rs, anyimm:$s16),   (A2_addi   I32:$Rs,  imm:$s16)>;
 def: Pat<(or  I32:$Rs, anyimm:$s10),   (A2_orir   I32:$Rs,  imm:$s10)>;
 def: Pat<(and I32:$Rs, anyimm:$s10),   (A2_andir  I32:$Rs,  imm:$s10)>;
 def: Pat<(sub anyimm:$s10, I32:$Rs),   (A2_subri  imm:$s10, I32:$Rs)>;
+
+class OpR_RR_pat_sat<InstHexagon MI, SDNode Op, ValueType ResType,
+                     PatFrag RxPred>
+  : Pat<(ResType (Op RxPred:$Rs, RxPred:$Rt)),
+        (MI RxPred:$Rs, RxPred:$Rt)>;
+
+def: OpR_RR_pat_sat<A2_addsat,  saddsat, i32, I32>;
+def: OpR_RR_pat_sat<A2_addpsat, saddsat, i64, I64>;
 
 def: OpR_RR_pat<A2_add,       Add,        i32,   I32>;
 def: OpR_RR_pat<A2_sub,       Sub,        i32,   I32>;
@@ -3416,6 +3431,11 @@ def HexagonREADTIMER: SDNode<"HexagonISD::READTIMER", SDTInt64Leaf,
   [SDNPHasChain]>;
 
 def: Pat<(HexagonREADTIMER), (A4_tfrcpp UTIMER)>;
+
+def SDTInt32Leaf : SDTypeProfile<1, 0, [SDTCisVT<0, i32>]>;
+def HexagonTHREADPOINTER : SDNode<"HexagonISD::THREAD_POINTER", SDTPtrLeaf>;
+
+def : Pat<(HexagonTHREADPOINTER), (i32(COPY UGP))>;
 
 // The declared return value of the store-locked intrinsics is i32, but
 // the instructions actually define i1. To avoid register copies from

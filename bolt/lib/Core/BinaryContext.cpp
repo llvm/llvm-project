@@ -201,7 +201,7 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
 
   std::string Error;
   const Target *TheTarget =
-      TargetRegistry::lookupTarget(std::string(ArchName), TheTriple, Error);
+      TargetRegistry::lookupTarget(ArchName, TheTriple, Error);
   if (!TheTarget)
     return createStringError(make_error_code(std::errc::not_supported),
                              Twine("BOLT-ERROR: ", Error));
@@ -1032,10 +1032,8 @@ void BinaryContext::adjustCodePadding() {
 
     if (!hasValidCodePadding(BF)) {
       if (HasRelocations) {
-        if (opts::Verbosity >= 1) {
-          this->outs() << "BOLT-INFO: function " << BF
-                       << " has invalid padding. Ignoring the function.\n";
-        }
+        this->errs() << "BOLT-WARNING: function " << BF
+                     << " has invalid padding. Ignoring the function\n";
         BF.setIgnored();
       } else {
         BF.setMaxSize(BF.getSize());
@@ -1570,23 +1568,19 @@ unsigned BinaryContext::addDebugFilenameToUnit(const uint32_t DestCUID,
   DWARFCompileUnit *SrcUnit = DwCtx->getCompileUnitForOffset(SrcCUID);
   const DWARFDebugLine::LineTable *LineTable =
       DwCtx->getLineTableForUnit(SrcUnit);
-  const std::vector<DWARFDebugLine::FileNameEntry> &FileNames =
-      LineTable->Prologue.FileNames;
-  // Dir indexes start at 1, as DWARF file numbers, and a dir index 0
+  const DWARFDebugLine::FileNameEntry &FileNameEntry =
+      LineTable->Prologue.getFileNameEntry(FileIndex);
+  // Dir indexes start at 1 and a dir index 0
   // means empty dir.
-  assert(FileIndex > 0 && FileIndex <= FileNames.size() &&
-         "FileIndex out of range for the compilation unit.");
   StringRef Dir = "";
-  if (FileNames[FileIndex - 1].DirIdx != 0) {
+  if (FileNameEntry.DirIdx != 0) {
     if (std::optional<const char *> DirName = dwarf::toString(
-            LineTable->Prologue
-                .IncludeDirectories[FileNames[FileIndex - 1].DirIdx - 1])) {
+            LineTable->Prologue.IncludeDirectories[FileNameEntry.DirIdx - 1])) {
       Dir = *DirName;
     }
   }
   StringRef FileName = "";
-  if (std::optional<const char *> FName =
-          dwarf::toString(FileNames[FileIndex - 1].Name))
+  if (std::optional<const char *> FName = dwarf::toString(FileNameEntry.Name))
     FileName = *FName;
   assert(FileName != "");
   DWARFCompileUnit *DstUnit = DwCtx->getCompileUnitForOffset(DestCUID);
@@ -1927,7 +1921,7 @@ static void printDebugInfo(raw_ostream &OS, const MCInst &Instruction,
   const DWARFDebugLine::Row &Row = LineTable->Rows[RowRef.RowIndex - 1];
   StringRef FileName = "";
   if (std::optional<const char *> FName =
-          dwarf::toString(LineTable->Prologue.FileNames[Row.File - 1].Name))
+          dwarf::toString(LineTable->Prologue.getFileNameEntry(Row.File).Name))
     FileName = *FName;
   OS << " # debug line " << FileName << ":" << Row.Line;
   if (Row.Column)
@@ -2425,6 +2419,10 @@ BinaryContext::createInstructionPatch(uint64_t Address,
 
 std::pair<size_t, size_t>
 BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
+  // Use the original size for non-simple functions.
+  if (!BF.isSimple() || BF.isIgnored())
+    return std::make_pair(BF.getSize(), 0);
+
   // Adjust branch instruction to match the current layout.
   if (FixBranches)
     BF.fixBranches();
@@ -2515,7 +2513,7 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
   // Clean-up the effect of the code emission.
   for (const MCSymbol &Symbol : Assembler.symbols()) {
     MCSymbol *MutableSymbol = const_cast<MCSymbol *>(&Symbol);
-    MutableSymbol->setUndefined();
+    MutableSymbol->setFragment(nullptr);
     MutableSymbol->setIsRegistered(false);
   }
 

@@ -522,6 +522,12 @@ enum class TemplateSubstitutionKind : char {
     llvm::PointerUnion<Decl *, DeclArgumentPack *> *
     findInstantiationOf(const Decl *D);
 
+    /// Similar to \p findInstantiationOf(), but it wouldn't assert if the
+    /// instantiation was not found within the current instantiation scope. This
+    /// is helpful for on-demand declaration instantiation.
+    llvm::PointerUnion<Decl *, DeclArgumentPack *> *
+    getInstantiationOfIfExists(const Decl *D);
+
     void InstantiatedLocal(const Decl *D, Decl *Inst);
     void InstantiatedLocalPackArg(const Decl *D, VarDecl *Inst);
     void MakeInstantiatedLocalArgPack(const Decl *D);
@@ -581,16 +587,17 @@ enum class TemplateSubstitutionKind : char {
     /// specializations that will need to be instantiated after the
     /// enclosing class's instantiation is complete.
     SmallVector<std::pair<ClassTemplateDecl *,
-                                ClassTemplatePartialSpecializationDecl *>, 4>
-      OutOfLinePartialSpecs;
+                          ClassTemplatePartialSpecializationDecl *>,
+                1>
+        OutOfLinePartialSpecs;
 
     /// A list of out-of-line variable template partial
     /// specializations that will need to be instantiated after the
     /// enclosing variable's instantiation is complete.
     /// FIXME: Verify that this is needed.
     SmallVector<
-        std::pair<VarTemplateDecl *, VarTemplatePartialSpecializationDecl *>, 4>
-    OutOfLineVarPartialSpecs;
+        std::pair<VarTemplateDecl *, VarTemplatePartialSpecializationDecl *>, 1>
+        OutOfLineVarPartialSpecs;
 
   public:
     TemplateDeclInstantiator(Sema &SemaRef, DeclContext *Owner,

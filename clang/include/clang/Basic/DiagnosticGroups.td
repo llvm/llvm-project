@@ -116,9 +116,11 @@ def DeprecatedOFast : DiagGroup<"deprecated-ofast">;
 def ObjCSignedCharBoolImplicitIntConversion :
   DiagGroup<"objc-signed-char-bool-implicit-int-conversion">;
 def Shorten64To32 : DiagGroup<"shorten-64-to-32">;
+def ImplicitIntConversionOnNegation : DiagGroup<"implicit-int-conversion-on-negation">;
 def ImplicitIntConversion : DiagGroup<"implicit-int-conversion",
                                      [Shorten64To32,
-                                      ObjCSignedCharBoolImplicitIntConversion]>;
+                                      ObjCSignedCharBoolImplicitIntConversion,
+                                      ImplicitIntConversionOnNegation]>;
 def ImplicitConstIntFloatConversion : DiagGroup<"implicit-const-int-float-conversion">;
 def ImplicitIntFloatConversion : DiagGroup<"implicit-int-float-conversion",
  [ImplicitConstIntFloatConversion]>;
@@ -234,7 +236,8 @@ def DeprecatedCopyWithDtor : DiagGroup<"deprecated-copy-with-dtor", [DeprecatedC
 def DeprecatedLiteralOperator : DiagGroup<"deprecated-literal-operator">;
 // For compatibility with GCC.
 def : DiagGroup<"deprecated-copy-dtor", [DeprecatedCopyWithDtor]>;
-def DeprecatedDeclarations : DiagGroup<"deprecated-declarations">;
+def DeprecatedDeclarationsSwitchCase : DiagGroup<"deprecated-declarations-switch-case">;
+def DeprecatedDeclarations : DiagGroup<"deprecated-declarations", [DeprecatedDeclarationsSwitchCase]>;
 def DeprecatedRedundantConstexprStaticDef : DiagGroup<"deprecated-redundant-constexpr-static-def">;
 def UnavailableDeclarations : DiagGroup<"unavailable-declarations">;
 def UnguardedAvailabilityNew : DiagGroup<"unguarded-availability-new">;
@@ -529,6 +532,16 @@ def Dangling : DiagGroup<"dangling", [DanglingAssignment,
                                       DanglingInitializerList,
                                       DanglingGsl,
                                       ReturnStackAddress]>;
+
+def LifetimeSafetyPermissive : DiagGroup<"experimental-lifetime-safety-permissive">;
+def LifetimeSafetyStrict : DiagGroup<"experimental-lifetime-safety-strict">;
+def LifetimeSafety : DiagGroup<"experimental-lifetime-safety",
+                               [LifetimeSafetyPermissive, LifetimeSafetyStrict]> {
+  code Documentation = [{
+    Experimental warnings to detect use-after-free and related temporal safety bugs based on lifetime safety analysis.
+  }];
+}
+
 def DistributedObjectModifiers : DiagGroup<"distributed-object-modifiers">;
 def DllexportExplicitInstantiationDecl : DiagGroup<"dllexport-explicit-instantiation-decl">;
 def ExcessInitializers : DiagGroup<"excess-initializers">;
@@ -622,6 +635,7 @@ def ModuleConflict : DiagGroup<"module-conflict">;
 def ModuleFileExtension : DiagGroup<"module-file-extension">;
 def ModuleIncludeDirectiveTranslation : DiagGroup<"module-include-translation">;
 def ModuleMap : DiagGroup<"module-map">;
+def ModulesDriver : DiagGroup<"modules-driver">;
 def RoundTripCC1Args : DiagGroup<"round-trip-cc1-args">;
 def NewlineEOF : DiagGroup<"newline-eof">;
 def Nullability : DiagGroup<"nullability">;
@@ -638,6 +652,7 @@ def NonNull : DiagGroup<"nonnull">;
 def NonPODVarargs : DiagGroup<"non-pod-varargs">;
 def ClassVarargs : DiagGroup<"class-varargs", [NonPODVarargs]>;
 def : DiagGroup<"nonportable-cfstrings">;
+def NonPortableSYCL : DiagGroup<"nonportable-sycl">;
 def NonVirtualDtor : DiagGroup<"non-virtual-dtor">;
 def GNUNullPointerArithmetic : DiagGroup<"gnu-null-pointer-arithmetic">;
 def NullPointerArithmetic
@@ -803,28 +818,39 @@ def UniqueObjectDuplication : DiagGroup<"unique-object-duplication"> {
 Warns when objects which are supposed to be globally unique might get duplicated
 when built into a shared library.
 
-If an object with hidden visibility is built into a shared library, each instance
+This can occur to objects which are hidden from the dynamic linker, due to
+having hidden visibility (on posix) or lacking a dllimport/dllexport attribute
+(on windows). If such an object is built into a shared library, each instance
 of the library will get its own copy. This can cause very subtle bugs if there was
 only supposed to be one copy of the object in question: singletons aren't single,
 changes to one object won't affect the others, the object's initializer will run
 once per copy, etc.
 
 Specifically, this warning fires when it detects an object which:
-  1. Appears in a header file (so it might get compiled into multiple libaries), and
-  2. Has external linkage (otherwise it's supposed to be duplicated), and
-  3. Has hidden visibility.
+
+#. Is defined as ``inline`` in a header file (so it might get compiled into multiple libaries), and
+#. Has external linkage (otherwise it's supposed to be duplicated), and
+#. Has hidden visibility (posix) or lacks a dllimport/dllexport attribute (windows).
 
 As well as one of the following:
-  1. The object is mutable, or
-  2. The object's initializer definitely has side effects.
 
-The warning is best resolved by making the object ``const`` (if possible), or by explicitly
-giving the object non-hidden visibility, e.g. using ``__attribute((visibility("default")))``.
-Note that all levels of a pointer variable must be constant; ``const int*`` will
-trigger the warning because the pointer itself is mutable.
+#. The object is mutable, or
+#. The object's initializer definitely has side effects.
 
-This warning is currently disabled on Windows since it uses import/export rules
-instead of visibility.
+The warning can be resolved by removing one of the conditions above. In rough
+order of preference, this may be done by:
+
+#. Marking the object ``const`` (if possible)
+#. Moving the object's definition to a source file
+#. Making the object visible using ``__attribute((visibility("default")))``,
+   ``__declspec(dllimport)``, or ``__declspec(dllexport)``.
+
+When annotating an object with ``__declspec(dllimport)`` or ``__declspec(dllexport)``,
+take care to ensure that the object is only exported from one dll, and is imported
+everywhere else.
+
+Note that for (2), all levels of a pointer variable must be constant;
+``const int*`` will trigger the warning because the pointer itself is mutable.
 }];
 }
 
@@ -935,9 +961,11 @@ def UninitializedMaybe : DiagGroup<"conditional-uninitialized">;
 def UninitializedSometimes : DiagGroup<"sometimes-uninitialized">;
 def UninitializedStaticSelfInit : DiagGroup<"static-self-init">;
 def UninitializedConstReference : DiagGroup<"uninitialized-const-reference">;
+def UninitializedConstPointer : DiagGroup<"uninitialized-const-pointer">;
 def Uninitialized  : DiagGroup<"uninitialized", [UninitializedSometimes,
                                                  UninitializedStaticSelfInit,
-                                                 UninitializedConstReference]>;
+                                                 UninitializedConstReference,
+                                                 UninitializedConstPointer]>;
 def IgnoredPragmaIntrinsic : DiagGroup<"ignored-pragma-intrinsic">;
 // #pragma optimize is often used to avoid to work around MSVC codegen bugs or
 // to disable inlining. It's not completely clear what alternative to suggest
@@ -1274,6 +1302,7 @@ def ThreadSafetyBeta : DiagGroup<"thread-safety-beta">;
 // Warnings and notes related to the function effects system which underlies
 // the nonblocking and nonallocating attributes.
 def FunctionEffects : DiagGroup<"function-effects">;
+def FunctionEffectRedeclarations : DiagGroup<"function-effect-redeclarations">;
 def PerfConstraintImpliesNoexcept : DiagGroup<"perf-constraint-implies-noexcept">;
 
 // Uniqueness Analysis warnings
@@ -1436,7 +1465,6 @@ def MicrosoftAnonTag : DiagGroup<"microsoft-anon-tag">;
 def MicrosoftCommentPaste : DiagGroup<"microsoft-comment-paste">;
 def MicrosoftEndOfFile : DiagGroup<"microsoft-end-of-file">;
 def MicrosoftInaccessibleBase : DiagGroup<"microsoft-inaccessible-base">;
-def MicrosoftStaticAssert : DiagGroup<"microsoft-static-assert">;
 def MicrosoftInitFromPredefined : DiagGroup<"microsoft-init-from-predefined">;
 def MicrosoftStringLiteralFromPredefined : DiagGroup<
     "microsoft-string-literal-from-predefined">;
@@ -1458,7 +1486,7 @@ def Microsoft : DiagGroup<"microsoft",
      MicrosoftRedeclareStatic, MicrosoftEnumForwardReference, MicrosoftGoto,
      MicrosoftFlexibleArray, MicrosoftExtraQualification, MicrosoftCast,
      MicrosoftConstInit, MicrosoftVoidPseudoDtor, MicrosoftAnonTag,
-     MicrosoftCommentPaste, MicrosoftEndOfFile, MicrosoftStaticAssert,
+     MicrosoftCommentPaste, MicrosoftEndOfFile,
      MicrosoftInitFromPredefined, MicrosoftStringLiteralFromPredefined,
      MicrosoftInconsistentDllImport, MicrosoftInlineOnNonFunction]>;
 
@@ -1516,9 +1544,11 @@ def OpenMPPre51Compat : DiagGroup<"pre-openmp-51-compat">;
 def OpenMP51Ext : DiagGroup<"openmp-51-extensions">;
 def OpenMPExtensions : DiagGroup<"openmp-extensions">;
 def OpenMPTargetException : DiagGroup<"openmp-target-exception">;
+def OpenMPFuture : DiagGroup<"openmp-future">;
 def OpenMP : DiagGroup<"openmp", [
     SourceUsesOpenMP, OpenMPClauses, OpenMPLoopForm, OpenMPTarget,
-    OpenMPMapping, OpenMP51Ext, OpenMPExtensions, OpenMPTargetException
+    OpenMPMapping, OpenMP51Ext, OpenMPExtensions, OpenMPTargetException,
+    OpenMPFuture
   ]>;
 
 // OpenACC warnings.

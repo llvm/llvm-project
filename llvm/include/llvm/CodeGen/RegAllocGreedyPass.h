@@ -28,13 +28,11 @@ public:
   PreservedAnalyses run(MachineFunction &F, MachineFunctionAnalysisManager &AM);
 
   MachineFunctionProperties getRequiredProperties() const {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoPHIs);
+    return MachineFunctionProperties().setNoPHIs();
   }
 
   MachineFunctionProperties getClearedProperties() const {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 
   void

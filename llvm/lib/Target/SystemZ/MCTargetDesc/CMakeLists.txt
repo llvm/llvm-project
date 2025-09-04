@@ -8,7 +8,6 @@ add_llvm_component_library(LLVMSystemZDesc
   SystemZMCAsmBackend.cpp
   SystemZMCAsmInfo.cpp
   SystemZMCCodeEmitter.cpp
-  SystemZMCExpr.cpp
   SystemZMCTargetDesc.cpp
   SystemZTargetStreamer.cpp
 

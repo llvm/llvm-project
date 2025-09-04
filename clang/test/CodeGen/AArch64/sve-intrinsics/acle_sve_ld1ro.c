@@ -3,6 +3,7 @@
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -target-feature +f64mm -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -target-feature +f64mm -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -target-feature +f64mm -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
+// RUN: %clang_cc1 -triple aarch64 -target-feature +sve -target-feature +f64mm -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 
 // REQUIRES: aarch64-registered-target
 
@@ -14,6 +15,20 @@
 #else
 #define SVE_ACLE_FUNC(A1, A2, A3, A4) A1##A2##A3##A4
 #endif
+
+// CHECK-LABEL: @test_svld1ro_mf8(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.ld1ro.nxv16i8(<vscale x 16 x i1> [[PG:%.*]], ptr [[BASE:%.*]])
+// CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
+//
+// CPP-CHECK-LABEL: @_Z16test_svld1ro_mf8u10__SVBool_tPKu6__mfp8(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.ld1ro.nxv16i8(<vscale x 16 x i1> [[PG:%.*]], ptr [[BASE:%.*]])
+// CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
+//
+svmfloat8_t test_svld1ro_mf8(svbool_t pg, mfloat8_t const *base) {
+  return SVE_ACLE_FUNC(svld1ro, _mf8, , )(pg, base);
+}
 
 // CHECK-LABEL: @test_svld1ro_s8(
 // CHECK-NEXT:  entry:
@@ -185,4 +200,20 @@ svfloat32_t test_svld1ro_f32(svbool_t pg, const float32_t *base) {
 //
 svfloat64_t test_svld1ro_f64(svbool_t pg, const float64_t *base) {
   return SVE_ACLE_FUNC(svld1ro, _f64, , )(pg, base);
+}
+
+// CHECK-LABEL: @test_svld1ro_bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.ld1ro.nxv8bf16(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]])
+// CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
+//
+// CPP-CHECK-LABEL: @_Z17test_svld1ro_bf16u10__SVBool_tPKu6__bf16(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.ld1ro.nxv8bf16(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]])
+// CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
+//
+svbfloat16_t test_svld1ro_bf16(svbool_t pg, const bfloat16_t *base) {
+  return SVE_ACLE_FUNC(svld1ro, _bf16, , )(pg, base);
 }

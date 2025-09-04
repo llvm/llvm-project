@@ -34,7 +34,6 @@
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
@@ -49,7 +48,7 @@ namespace {
 class ClangTidyDiagnosticRenderer : public DiagnosticRenderer {
 public:
   ClangTidyDiagnosticRenderer(const LangOptions &LangOpts,
-                              DiagnosticOptions *DiagOpts,
+                              DiagnosticOptions &DiagOpts,
                               ClangTidyError &Error)
       : DiagnosticRenderer(LangOpts, DiagOpts), Error(Error) {}
 
@@ -359,8 +358,27 @@ getFixIt(const tooling::Diagnostic &Diagnostic, bool AnyFix) {
 
 } // namespace clang::tidy
 
+void ClangTidyDiagnosticConsumer::BeginSourceFile(const LangOptions &LangOpts,
+                                                  const Preprocessor *PP) {
+  DiagnosticConsumer::BeginSourceFile(LangOpts, PP);
+
+  assert(!InSourceFile);
+  InSourceFile = true;
+}
+
+void ClangTidyDiagnosticConsumer::EndSourceFile() {
+  assert(InSourceFile);
+  InSourceFile = false;
+
+  DiagnosticConsumer::EndSourceFile();
+}
+
 void ClangTidyDiagnosticConsumer::HandleDiagnostic(
     DiagnosticsEngine::Level DiagLevel, const Diagnostic &Info) {
+  // A diagnostic should not be reported outside of a
+  // BeginSourceFile()/EndSourceFile() pair if it has a source location.
+  assert(InSourceFile || Info.getLocation().isInvalid());
+
   if (LastErrorWasIgnored && DiagLevel == DiagnosticsEngine::Note)
     return;
 
@@ -429,7 +447,7 @@ void ClangTidyDiagnosticConsumer::HandleDiagnostic(
     forwardDiagnostic(Info);
   } else {
     ClangTidyDiagnosticRenderer Converter(
-        Context.getLangOpts(), &Context.DiagEngine->getDiagnosticOptions(),
+        Context.getLangOpts(), Context.DiagEngine->getDiagnosticOptions(),
         Errors.back());
     SmallString<100> Message;
     Info.FormatDiagnostic(Message);
@@ -515,7 +533,8 @@ void ClangTidyDiagnosticConsumer::forwardDiagnostic(const Diagnostic &Info) {
       Builder << reinterpret_cast<const NamedDecl *>(Info.getRawArg(Index));
       break;
     case clang::DiagnosticsEngine::ak_nestednamespec:
-      Builder << reinterpret_cast<NestedNameSpecifier *>(Info.getRawArg(Index));
+      Builder << NestedNameSpecifier::getFromVoidPointer(
+          reinterpret_cast<void *>(Info.getRawArg(Index)));
       break;
     case clang::DiagnosticsEngine::ak_declcontext:
       Builder << reinterpret_cast<DeclContext *>(Info.getRawArg(Index));
@@ -525,6 +544,9 @@ void ClangTidyDiagnosticConsumer::forwardDiagnostic(const Diagnostic &Info) {
       break;
     case clang::DiagnosticsEngine::ak_attr:
       Builder << reinterpret_cast<Attr *>(Info.getRawArg(Index));
+      break;
+    case clang::DiagnosticsEngine::ak_attr_info:
+      Builder << reinterpret_cast<AttributeCommonInfo *>(Info.getRawArg(Index));
       break;
     case clang::DiagnosticsEngine::ak_addrspace:
       Builder << static_cast<LangAS>(Info.getRawArg(Index));

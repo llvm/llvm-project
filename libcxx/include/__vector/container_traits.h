@@ -32,6 +32,8 @@ struct __container_traits<vector<_Tp, _Allocator> > {
   //  the effects are unspecified.
   static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee =
       is_nothrow_move_constructible<_Tp>::value || __is_cpp17_copy_insertable_v<_Allocator>;
+
+  static _LIBCPP_CONSTEXPR const bool __reservable = true;
 };
 
 _LIBCPP_END_NAMESPACE_STD

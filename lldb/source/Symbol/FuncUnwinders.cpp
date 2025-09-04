@@ -31,30 +31,11 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static AddressRange CollapseRanges(llvm::ArrayRef<AddressRange> ranges) {
-  if (ranges.empty())
-    return AddressRange();
-  if (ranges.size() == 1)
-    return ranges[0];
-
-  Address lowest_addr = ranges[0].GetBaseAddress();
-  addr_t highest_addr = lowest_addr.GetFileAddress() + ranges[0].GetByteSize();
-  for (const AddressRange &range : ranges.drop_front()) {
-    Address range_begin = range.GetBaseAddress();
-    addr_t range_end = range_begin.GetFileAddress() + range.GetByteSize();
-    if (range_begin.GetFileAddress() < lowest_addr.GetFileAddress())
-      lowest_addr = range_begin;
-    if (range_end > highest_addr)
-      highest_addr = range_end;
-  }
-  return AddressRange(lowest_addr, highest_addr - lowest_addr.GetFileAddress());
-}
-
 FuncUnwinders::FuncUnwinders(UnwindTable &unwind_table, Address addr,
                              AddressRanges ranges)
     : m_unwind_table(unwind_table), m_addr(std::move(addr)),
-      m_ranges(std::move(ranges)), m_range(CollapseRanges(m_ranges)),
-      m_tried_unwind_plan_assembly(false), m_tried_unwind_plan_eh_frame(false),
+      m_ranges(std::move(ranges)), m_tried_unwind_plan_assembly(false),
+      m_tried_unwind_plan_eh_frame(false),
       m_tried_unwind_plan_object_file(false),
       m_tried_unwind_plan_debug_frame(false),
       m_tried_unwind_plan_object_file_augmented(false),
@@ -106,8 +87,9 @@ FuncUnwinders::GetCompactUnwindUnwindPlan(Target &target) {
     return nullptr;
 
   m_tried_unwind_plan_compact_unwind = true;
-  if (m_range.GetBaseAddress().IsValid()) {
-    Address current_pc(m_range.GetBaseAddress());
+  // Only continuous functions are supported.
+  if (m_ranges.size() == 1) {
+    Address current_pc(m_ranges[0].GetBaseAddress());
     CompactUnwindInfo *compact_unwind = m_unwind_table.GetCompactUnwindInfo();
     if (compact_unwind) {
       auto unwind_plan_sp =
@@ -131,14 +113,10 @@ FuncUnwinders::GetObjectFileUnwindPlan(Target &target) {
     return m_unwind_plan_object_file_sp;
 
   m_tried_unwind_plan_object_file = true;
-  if (m_range.GetBaseAddress().IsValid()) {
-    CallFrameInfo *object_file_frame = m_unwind_table.GetObjectFileUnwindInfo();
-    if (object_file_frame) {
-      auto plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
-      if (object_file_frame->GetUnwindPlan(m_range, *plan_sp))
-        m_unwind_plan_object_file_sp = std::move(plan_sp);
-    }
-  }
+  if (CallFrameInfo *object_file_frame =
+          m_unwind_table.GetObjectFileUnwindInfo())
+    m_unwind_plan_object_file_sp =
+        object_file_frame->GetUnwindPlan(m_ranges, m_addr);
   return m_unwind_plan_object_file_sp;
 }
 
@@ -178,8 +156,9 @@ FuncUnwinders::GetArmUnwindUnwindPlan(Target &target) {
     return m_unwind_plan_arm_unwind_sp;
 
   m_tried_unwind_plan_arm_unwind = true;
-  if (m_range.GetBaseAddress().IsValid()) {
-    Address current_pc(m_range.GetBaseAddress());
+  // Only continuous functions are supported.
+  if (m_ranges.size() == 1) {
+    Address current_pc = m_ranges[0].GetBaseAddress();
     ArmUnwindInfo *arm_unwind_info = m_unwind_table.GetArmUnwindInfo();
     if (arm_unwind_info) {
       auto plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
@@ -215,9 +194,10 @@ FuncUnwinders::GetSymbolFileUnwindPlan(Thread &thread) {
     return m_unwind_plan_symbol_file_sp;
 
   m_tried_unwind_plan_symbol_file = true;
-  if (SymbolFile *symfile = m_unwind_table.GetSymbolFile()) {
+  if (SymbolFile *symfile = m_unwind_table.GetSymbolFile();
+      symfile && m_ranges.size() == 1) {
     m_unwind_plan_symbol_file_sp = symfile->GetUnwindPlan(
-        m_range.GetBaseAddress(),
+        m_ranges[0].GetBaseAddress(),
         RegisterContextToInfo(*thread.GetRegisterContext()));
   }
   return m_unwind_plan_symbol_file_sp;
@@ -242,10 +222,11 @@ FuncUnwinders::GetObjectFileAugmentedUnwindPlan(Target &target,
   // so the UnwindPlan can be used at any instruction in the function.
 
   UnwindAssemblySP assembly_profiler_sp(GetUnwindAssemblyProfiler(target));
-  if (assembly_profiler_sp) {
+  // Only continuous functions are supported.
+  if (assembly_profiler_sp && m_ranges.size() == 1) {
     auto plan_sp = std::make_shared<UnwindPlan>(*object_file_unwind_plan);
 
-    if (assembly_profiler_sp->AugmentUnwindPlanFromCallSite(m_range, thread,
+    if (assembly_profiler_sp->AugmentUnwindPlanFromCallSite(m_ranges[0], thread,
                                                             *plan_sp))
       m_unwind_plan_object_file_augmented_sp = std::move(plan_sp);
   }
@@ -280,9 +261,10 @@ FuncUnwinders::GetEHFrameAugmentedUnwindPlan(Target &target, Thread &thread) {
   // so the UnwindPlan can be used at any instruction in the function.
 
   UnwindAssemblySP assembly_profiler_sp(GetUnwindAssemblyProfiler(target));
-  if (assembly_profiler_sp) {
+  // Only continuous functions are supported.
+  if (assembly_profiler_sp && m_ranges.size() == 1) {
     auto plan_sp = std::make_shared<UnwindPlan>(*eh_frame_plan);
-    if (assembly_profiler_sp->AugmentUnwindPlanFromCallSite(m_range, thread,
+    if (assembly_profiler_sp->AugmentUnwindPlanFromCallSite(m_ranges[0], thread,
                                                             *plan_sp))
       m_unwind_plan_eh_frame_augmented_sp = std::move(plan_sp);
   }
@@ -319,10 +301,11 @@ FuncUnwinders::GetDebugFrameAugmentedUnwindPlan(Target &target,
   // function.
 
   UnwindAssemblySP assembly_profiler_sp(GetUnwindAssemblyProfiler(target));
-  if (assembly_profiler_sp) {
+  // Only continuous functions are supported.
+  if (assembly_profiler_sp && m_ranges.size() == 1) {
     auto plan_sp = std::make_shared<UnwindPlan>(*debug_frame_plan);
 
-    if (assembly_profiler_sp->AugmentUnwindPlanFromCallSite(m_range, thread,
+    if (assembly_profiler_sp->AugmentUnwindPlanFromCallSite(m_ranges[0], thread,
                                                             *plan_sp))
       m_unwind_plan_debug_frame_augmented_sp = std::move(plan_sp);
   }
@@ -339,18 +322,19 @@ FuncUnwinders::GetAssemblyUnwindPlan(Target &target, Thread &thread) {
 
   m_tried_unwind_plan_assembly = true;
 
-  // Don't analyze more than 10 megabytes of instructions,
-  // if a function is legitimately larger than that, we'll
-  // miss the epilogue instructions, but guard against a
-  // bogusly large function and analyzing large amounts of
-  // non-instruction data.
-  AddressRange range = m_range;
-  const addr_t func_size =
-      std::min(range.GetByteSize(), (addr_t)1024 * 10 * 10);
-  range.SetByteSize(func_size);
-
   UnwindAssemblySP assembly_profiler_sp(GetUnwindAssemblyProfiler(target));
-  if (assembly_profiler_sp) {
+  // Only continuous functions are supported.
+  if (assembly_profiler_sp && m_ranges.size() == 1) {
+    // Don't analyze more than 10 megabytes of instructions,
+    // if a function is legitimately larger than that, we'll
+    // miss the epilogue instructions, but guard against a
+    // bogusly large function and analyzing large amounts of
+    // non-instruction data.
+    AddressRange range = m_ranges[0];
+    const addr_t func_size =
+        std::min(range.GetByteSize(), (addr_t)1024 * 10 * 10);
+    range.SetByteSize(func_size);
+
     auto plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
     if (assembly_profiler_sp->GetNonCallSiteUnwindPlanFromAssembly(
             range, thread, *plan_sp))
@@ -457,9 +441,9 @@ FuncUnwinders::GetUnwindPlanFastUnwind(Target &target, Thread &thread) {
   m_tried_unwind_fast = true;
 
   UnwindAssemblySP assembly_profiler_sp(GetUnwindAssemblyProfiler(target));
-  if (assembly_profiler_sp) {
+  if (assembly_profiler_sp && m_ranges.size() == 1) {
     auto plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
-    if (assembly_profiler_sp->GetFastUnwindPlan(m_range, thread, *plan_sp))
+    if (assembly_profiler_sp->GetFastUnwindPlan(m_ranges[0], thread, *plan_sp))
       m_unwind_plan_fast_sp = std::move(plan_sp);
   }
   return m_unwind_plan_fast_sp;
@@ -501,19 +485,6 @@ FuncUnwinders::GetUnwindPlanArchitectureDefaultAtFunctionEntry(Thread &thread) {
   }
 
   return m_unwind_plan_arch_default_at_func_entry_sp;
-}
-
-Address &FuncUnwinders::GetFirstNonPrologueInsn(Target &target) {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  if (m_first_non_prologue_insn.IsValid())
-    return m_first_non_prologue_insn;
-
-  ExecutionContext exe_ctx(target.shared_from_this(), false);
-  UnwindAssemblySP assembly_profiler_sp(GetUnwindAssemblyProfiler(target));
-  if (assembly_profiler_sp)
-    assembly_profiler_sp->FirstNonPrologueInsn(m_range, exe_ctx,
-                                               m_first_non_prologue_insn);
-  return m_first_non_prologue_insn;
 }
 
 const Address &FuncUnwinders::GetFunctionStartAddress() const { return m_addr; }

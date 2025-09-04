@@ -91,6 +91,20 @@ int main(int, char**) {
     assert(c.size() == 0);
     assert(k == c.end());
   }
+  {   // Make sure we're properly destroying the elements when erasing
+    { // When erasing part of a bucket
+      std::unordered_multimap<int, std::string> map;
+      map.insert(std::make_pair(1, "This is a long string to make sure ASan can detect a memory leak"));
+      map.insert(std::make_pair(1, "This is another long string to make sure ASan can detect a memory leak"));
+      map.erase(++map.begin(), map.end());
+    }
+    { // When erasing the whole bucket
+      std::unordered_multimap<int, std::string> map;
+      map.insert(std::make_pair(1, "This is a long string to make sure ASan can detect a memory leak"));
+      map.insert(std::make_pair(1, "This is another long string to make sure ASan can detect a memory leak"));
+      map.erase(map.begin(), map.end());
+    }
+  }
 #if TEST_STD_VER >= 11
   {
     typedef std::unordered_multimap<int,

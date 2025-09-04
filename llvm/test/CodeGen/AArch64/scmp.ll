@@ -310,10 +310,6 @@ define <16 x i8> @signOf_neon_scmp(<8 x i16> %s0_lo, <8 x i16> %s0_hi, <8 x i16>
 ; CHECK-GI-NEXT:    cmgt v1.8h, v3.8h, v1.8h
 ; CHECK-GI-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    uzp1 v1.16b, v4.16b, v5.16b
-; CHECK-GI-NEXT:    shl v0.16b, v0.16b, #7
-; CHECK-GI-NEXT:    shl v1.16b, v1.16b, #7
-; CHECK-GI-NEXT:    sshr v0.16b, v0.16b, #7
-; CHECK-GI-NEXT:    sshr v1.16b, v1.16b, #7
 ; CHECK-GI-NEXT:    sub v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:

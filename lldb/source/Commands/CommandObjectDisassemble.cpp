@@ -154,6 +154,10 @@ Status CommandObjectDisassemble::CommandOptions::SetOptionValue(
     }
   } break;
 
+  case 'v':
+    enable_variable_annotations = true;
+    break;
+
   case '\x01':
     force = true;
     break;
@@ -180,6 +184,7 @@ void CommandObjectDisassemble::CommandOptions::OptionParsingStarting(
   end_addr = LLDB_INVALID_ADDRESS;
   symbol_containing_addr = LLDB_INVALID_ADDRESS;
   raw = false;
+  enable_variable_annotations = false;
   plugin_name.clear();
 
   Target *target =
@@ -190,7 +195,6 @@ void CommandObjectDisassemble::CommandOptions::OptionParsingStarting(
     // architecture.  For now GetDisassemblyFlavor is really only valid for x86
     // (and for the llvm assembler plugin, but I'm papering over that since that
     // is the only disassembler plugin we have...
-    // This logic is duplicated in `Handler/DisassembleRequestHandler`.
     if (target->GetArchitecture().GetTriple().getArch() == llvm::Triple::x86 ||
         target->GetArchitecture().GetTriple().getArch() ==
             llvm::Triple::x86_64) {
@@ -504,8 +508,9 @@ void CommandObjectDisassemble::DoExecute(Args &command,
         "\"disassemble\" arguments are specified as options.\n");
     const int terminal_width =
         GetCommandInterpreter().GetDebugger().GetTerminalWidth();
+    const bool use_color = GetCommandInterpreter().GetDebugger().GetUseColor();
     GetOptions()->GenerateOptionUsage(result.GetErrorStream(), *this,
-                                      terminal_width);
+                                      terminal_width, use_color);
     return;
   }
 
@@ -528,6 +533,9 @@ void CommandObjectDisassemble::DoExecute(Args &command,
 
   if (m_options.raw)
     options |= Disassembler::eOptionRawOuput;
+
+  if (m_options.enable_variable_annotations)
+    options |= Disassembler::eOptionVariableAnnotations;
 
   llvm::Expected<std::vector<AddressRange>> ranges =
       GetRangesForSelectedMode(result);
