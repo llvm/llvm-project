@@ -5712,8 +5712,8 @@ SDValue ARMTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(ARMISD::BRCOND, dl, MVT::Other, Chain, Dest, ARMcc, Cmp);
   }
 
-  if (SDNodeFlags Flags = Op->getFlags();
-      (getTargetMachine().Options.UnsafeFPMath || Flags.hasNoNaNs()) &&
+  SDNodeFlags Flags = Op->getFlags();
+  if ((getTargetMachine().Options.UnsafeFPMath || Flags.hasNoNaNs()) &&
       (DAG.getDenormalMode(MVT::f32) == DenormalMode::getIEEE() &&
        DAG.getDenormalMode(MVT::f64) == DenormalMode::getIEEE()) &&
       (CC == ISD::SETEQ || CC == ISD::SETOEQ || CC == ISD::SETNE ||
