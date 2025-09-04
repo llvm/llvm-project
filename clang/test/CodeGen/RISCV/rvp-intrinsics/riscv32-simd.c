@@ -77,6 +77,24 @@ uint32_t padd_hs(uint32_t rs1, uint32_t rs2) {
   return __riscv_padd_hs(rs1, rs2);
 }
 
+// RV32P-LABEL: @pusati_h(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.pusati.h.i32.i32(i32 [[RS1:%.*]], i32 1)
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t pusati_h(uint32_t rs1, int32_t rs2) {
+  return __riscv_pusati_h(rs1, 1);
+}
+
+// RV32P-LABEL: @usati(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.usati.i32.i32(i32 [[RS1:%.*]], i32 1)
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t usati(uint32_t rs1, int32_t rs2) {
+  return __riscv_usati(rs1, 1);
+}
+
 // RV32P-LABEL: @sadd(
 // RV32P-NEXT:  entry:
 // RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.sadd.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])

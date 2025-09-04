@@ -108,3 +108,33 @@ uint64_t padd_hs(uint64_t rs1, uint64_t rs2) {
 uint64_t padd_ws(uint64_t rs1, uint64_t rs2) {
   return __riscv_padd_ws(rs1, rs2);
 }
+
+// RV64P-LABEL: @pusati_h(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[CONV_I:%.*]] = sext i32 1 to i64
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.pusati.h.i64.i64(i64 [[RS1:%.*]], i64 [[CONV_I]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t pusati_h(uint64_t rs1, int64_t rs2) {
+  return __riscv_pusati_h(rs1, 1);
+}
+
+// RV64P-LABEL: @pusati_w(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[CONV_I:%.*]] = sext i32 1 to i64
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.pusati.w.i64.i64(i64 [[RS1:%.*]], i64 [[CONV_I]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t pusati_w(uint64_t rs1, int64_t rs2) {
+  return __riscv_pusati_w(rs1, 1);
+}
+
+// RV64P-LABEL: @usati(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[CONV_I:%.*]] = sext i32 1 to i64
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.usati.i64.i64(i64 [[RS1:%.*]], i64 [[CONV_I]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t usati(uint64_t rs1, int64_t rs2) {
+  return __riscv_usati(rs1, 1);
+}
