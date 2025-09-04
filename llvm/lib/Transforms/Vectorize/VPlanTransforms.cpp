@@ -2408,9 +2408,8 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
     Worklist.push_back(OrigMask);
     while (!Worklist.empty()) {
       VPValue *Cur = Worklist.pop_back_val();
-      // Replace header mask with all-true mask.
+      // Skip the header mask, since it will be replaced by an all-true mask.
       if (Cur == HeaderMask) {
-        Operands.push_back(&AllOneMask);
         FoundHeaderMask = true;
         continue;
       }
@@ -2420,7 +2419,7 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
         Worklist.append({Op1, Op2});
         continue;
       }
-      // Stop to query if the value is not in the and-tree.
+      // Stop to query if the value is leaf in the and-tree.
       Operands.push_back(Cur);
     }
 
@@ -2428,18 +2427,16 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
     // FIXME: Should be assertion here?
     if (!FoundHeaderMask)
       return OrigMask;
-    // The new mask is all-true if the header mask is in the and-tree and there
-    // is only one operand we need to do logical-and.
-    if (Operands.size() == 1)
+    // The new mask is all-true if there are no values to logical-and with,
+    // other than the header mask itself.
+    if (Operands.empty())
       return nullptr;
     // Otherwise, create the and-tree for new mask.
+    // TODO: Add a mask cache to avoid generating duplicate masks.
     VPBuilder Builder(cast<VPInstruction>(OrigMask));
     VPValue *NewMask = Operands.pop_back_val();
     while (!Operands.empty()) {
       VPValue *Op = Operands.pop_back_val();
-      // Skip the operand if it is all-true.
-      if (match(Op, m_True()))
-        continue;
       NewMask = Builder.createLogicalAnd(NewMask, Op);
     }
     return NewMask;
