@@ -980,15 +980,15 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
         operands[0].getType(), distOffsetsByWarpOpOrFailure.value(),
         distMaskByWarpOpOrFailure.value()};
 
+    const unsigned operandIdx = producedByLastLoad->getOperandNumber();
+    VectorType loadVecTy =
+        cast<VectorType>(warpOp.getResult(operandIdx).getType());
+
     gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
         rewriter, warpOp, operands, operandTypesToYield, newRetIndices);
 
     SmallVector<Value> newLoadGatherOperands = llvm::map_to_vector(
         newRetIndices, [&](size_t idx) { return newWarpOp.getResult(idx); });
-
-    const unsigned operandIdx = producedByLastLoad->getOperandNumber();
-    VectorType loadVecTy =
-        cast<VectorType>(warpOp.getResult(operandIdx).getType());
 
     rewriter.setInsertionPointAfter(newWarpOp);
     xegpu::LoadGatherOp newOp = rewriter.create<xegpu::LoadGatherOp>(
