@@ -105,9 +105,6 @@ static cl::opt<bool> HexagonVolatileMemcpy(
 static cl::opt<unsigned> SimplifyLimit("hlir-simplify-limit", cl::init(10000),
   cl::Hidden, cl::desc("Maximum number of simplification steps in HLIR"));
 
-static const char *HexagonVolatileMemcpyName
-  = "hexagon_memcpy_forward_vp4cp4n2";
-
 namespace {
 
 class HexagonLoopIdiomRecognize {
