@@ -835,5 +835,15 @@ TARGET_BUILTIN(__builtin_amdgcn_swmmac_i32_16x16x128_iu8, "V8iIbV8iIbV16iV8iiIbI
 TARGET_BUILTIN(__builtin_amdgcn_swmmac_f32_16x16x64_f16, "V8fIbV16hIbV32hV8fiIbIb", "nc", "gfx1250-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_swmmac_f16_16x16x64_f16, "V8hIbV16hIbV32hV8hiIbIb", "nc", "gfx1250-insts,wavefrontsize32")
 
+// GFX12.5 128B cooperative atomics
+TARGET_BUILTIN(__builtin_amdgcn_cooperative_atomic_load_32x4B,  "ii*IicC*",  "nc", "gfx1250-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_cooperative_atomic_store_32x4B, "vi*iIicC*", "nc", "gfx1250-insts,wavefrontsize32")
+
+TARGET_BUILTIN(__builtin_amdgcn_cooperative_atomic_load_16x8B,  "V2iV2i*IicC*",  "nc", "gfx1250-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_cooperative_atomic_store_16x8B, "vV2i*V2iIicC*", "nc", "gfx1250-insts,wavefrontsize32")
+
+TARGET_BUILTIN(__builtin_amdgcn_cooperative_atomic_load_8x16B,  "V4iV4i*IicC*",  "nc", "gfx1250-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_cooperative_atomic_store_8x16B, "vV4i*V4iIicC*", "nc", "gfx1250-insts,wavefrontsize32")
+
 #undef BUILTIN
 #undef TARGET_BUILTIN

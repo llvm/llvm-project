@@ -6787,6 +6787,28 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "invalid vector type for format", &Call, Src1, Call.getArgOperand(2));
     break;
   }
+  case Intrinsic::amdgcn_cooperative_atomic_load_32x4B:
+  case Intrinsic::amdgcn_cooperative_atomic_load_16x8B:
+  case Intrinsic::amdgcn_cooperative_atomic_load_8x16B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_32x4B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_16x8B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_8x16B: {
+    // Check we only use this intrinsic on the FLAT or GLOBAL address spaces.
+    Value *PtrArg = Call.getArgOperand(0);
+    const unsigned AS = PtrArg->getType()->getPointerAddressSpace();
+    Check(AS == AMDGPUAS::FLAT_ADDRESS || AS == AMDGPUAS::GLOBAL_ADDRESS,
+          "cooperative atomic intrinsics require a generic or global pointer",
+          &Call, PtrArg);
+
+    // Last argument must be a MD string
+    auto *Op = cast<MetadataAsValue>(Call.getArgOperand(Call.arg_size() - 1));
+    MDNode *MD = cast<MDNode>(Op->getMetadata());
+    Check((MD->getNumOperands() == 1) && isa<MDString>(MD->getOperand(0)),
+          "cooperative atomic intrinsics require that the last argument is a "
+          "metadata string",
+          &Call, Op);
+    break;
+  }
   case Intrinsic::nvvm_setmaxnreg_inc_sync_aligned_u32:
   case Intrinsic::nvvm_setmaxnreg_dec_sync_aligned_u32: {
     Value *V = Call.getArgOperand(0);
