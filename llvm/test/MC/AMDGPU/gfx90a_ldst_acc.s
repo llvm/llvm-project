@@ -8282,59 +8282,59 @@ ds_swizzle_b32 a5, v1
 ds_swizzle_b32 a5, v1 offset:swizzle(BITMASK_PERM,"00p00")
 
 // GFX90A: ds_permute_b32 a5, v1, a2 offset:65535 ; encoding: [0xff,0xff,0x7c,0xda,0x01,0x02,0x00,0x05]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 ds_permute_b32 a5, v1, a2 offset:65535
 
 // GFX90A: ds_permute_b32 a255, v1, a2 offset:65535 ; encoding: [0xff,0xff,0x7c,0xda,0x01,0x02,0x00,0xff]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 ds_permute_b32 a255, v1, a2 offset:65535
 
 // GFX90A: ds_permute_b32 a5, v255, a2 offset:65535 ; encoding: [0xff,0xff,0x7c,0xda,0xff,0x02,0x00,0x05]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 ds_permute_b32 a5, v255, a2 offset:65535
 
 // GFX90A: ds_permute_b32 a5, v1, a255 offset:65535 ; encoding: [0xff,0xff,0x7c,0xda,0x01,0xff,0x00,0x05]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 ds_permute_b32 a5, v1, a255 offset:65535
 
 // GFX90A: ds_permute_b32 a5, v1, a2       ; encoding: [0x00,0x00,0x7c,0xda,0x01,0x02,0x00,0x05]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 ds_permute_b32 a5, v1, a2
 
 // GFX90A: ds_permute_b32 a5, v1, a2       ; encoding: [0x00,0x00,0x7c,0xda,0x01,0x02,0x00,0x05]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 ds_permute_b32 a5, v1, a2
 
 // GFX90A: ds_permute_b32 a5, v1, a2 offset:4 ; encoding: [0x04,0x00,0x7c,0xda,0x01,0x02,0x00,0x05]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 ds_permute_b32 a5, v1, a2 offset:4
 
 // GFX90A: ds_bpermute_b32 a5, v1, a2 offset:65535 ; encoding: [0xff,0xff,0x7e,0xda,0x01,0x02,0x00,0x05]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 ds_bpermute_b32 a5, v1, a2 offset:65535
 
 // GFX90A: ds_bpermute_b32 a255, v1, a2 offset:65535 ; encoding: [0xff,0xff,0x7e,0xda,0x01,0x02,0x00,0xff]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 ds_bpermute_b32 a255, v1, a2 offset:65535
 
 // GFX90A: ds_bpermute_b32 a5, v255, a2 offset:65535 ; encoding: [0xff,0xff,0x7e,0xda,0xff,0x02,0x00,0x05]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 ds_bpermute_b32 a5, v255, a2 offset:65535
 
 // GFX90A: ds_bpermute_b32 a5, v1, a255 offset:65535 ; encoding: [0xff,0xff,0x7e,0xda,0x01,0xff,0x00,0x05]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 ds_bpermute_b32 a5, v1, a255 offset:65535
 
 // GFX90A: ds_bpermute_b32 a5, v1, a2      ; encoding: [0x00,0x00,0x7e,0xda,0x01,0x02,0x00,0x05]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 ds_bpermute_b32 a5, v1, a2
 
 // GFX90A: ds_bpermute_b32 a5, v1, a2      ; encoding: [0x00,0x00,0x7e,0xda,0x01,0x02,0x00,0x05]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 ds_bpermute_b32 a5, v1, a2
 
 // GFX90A: ds_bpermute_b32 a5, v1, a2 offset:4 ; encoding: [0x04,0x00,0x7e,0xda,0x01,0x02,0x00,0x05]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 ds_bpermute_b32 a5, v1, a2 offset:4
 
 // GFX90A: ds_add_u64 v1, a[2:3] offset:65535 ; encoding: [0xff,0xff,0x80,0xda,0x01,0x02,0x00,0x00]
