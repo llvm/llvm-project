@@ -80,8 +80,9 @@ void AMDGPUInstPrinter::printFP64ImmOperand(const MCInst *MI, unsigned OpNo,
                                             const MCSubtargetInfo &STI,
                                             raw_ostream &O) {
   // KIMM64
+  const MCInstrDesc &Desc = MII.get(MI->getOpcode());
   uint64_t Imm = MI->getOperand(OpNo).getImm();
-  printLiteral64(Imm, STI, O, /*IsFP=*/true);
+  printLiteral64(Desc, Imm, STI, O, /*IsFP=*/true);
 }
 
 void AMDGPUInstPrinter::printNamedBit(const MCInst *MI, unsigned OpNo,
@@ -590,7 +591,7 @@ void AMDGPUInstPrinter::printImmediate32(uint32_t Imm,
   O << formatHex(static_cast<uint64_t>(Imm));
 }
 
-void AMDGPUInstPrinter::printImmediate64(uint64_t Imm,
+void AMDGPUInstPrinter::printImmediate64(const MCInstrDesc &Desc, uint64_t Imm,
                                          const MCSubtargetInfo &STI,
                                          raw_ostream &O, bool IsFP) {
   int64_t SImm = static_cast<int64_t>(Imm);
@@ -621,20 +622,23 @@ void AMDGPUInstPrinter::printImmediate64(uint64_t Imm,
            STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm))
     O << "0.15915494309189532";
   else
-    printLiteral64(Imm, STI, O, IsFP);
+    printLiteral64(Desc, Imm, STI, O, IsFP);
 }
 
-void AMDGPUInstPrinter::printLiteral64(uint64_t Imm, const MCSubtargetInfo &STI,
+void AMDGPUInstPrinter::printLiteral64(const MCInstrDesc &Desc, uint64_t Imm,
+                                       const MCSubtargetInfo &STI,
                                        raw_ostream &O, bool IsFP) {
   // This part needs to align with AMDGPUOperand::addLiteralImmOperand.
+  bool CanUse64BitLiterals =
+      STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
+      !(Desc.TSFlags & (SIInstrFlags::VOP3 | SIInstrFlags::VOP3P));
   if (IsFP) {
-    if (STI.hasFeature(AMDGPU::Feature64BitLiterals) && Lo_32(Imm))
+    if (CanUse64BitLiterals && Lo_32(Imm))
       O << "lit64(" << formatHex(static_cast<uint64_t>(Imm)) << ')';
     else
       O << formatHex(static_cast<uint64_t>(Hi_32(Imm)));
   } else {
-    if (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
-        (!isInt<32>(Imm) || !isUInt<32>(Imm)))
+    if (CanUse64BitLiterals && (!isInt<32>(Imm) || !isUInt<32>(Imm)))
       O << "lit64(" << formatHex(static_cast<uint64_t>(Imm)) << ')';
     else
       O << formatHex(static_cast<uint64_t>(Imm));
@@ -749,12 +753,12 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
       break;
     case AMDGPU::OPERAND_REG_IMM_INT64:
     case AMDGPU::OPERAND_REG_INLINE_C_INT64:
-      printImmediate64(Op.getImm(), STI, O, false);
+      printImmediate64(Desc, Op.getImm(), STI, O, false);
       break;
     case AMDGPU::OPERAND_REG_IMM_FP64:
     case AMDGPU::OPERAND_REG_INLINE_C_FP64:
     case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
-      printImmediate64(Op.getImm(), STI, O, true);
+      printImmediate64(Desc, Op.getImm(), STI, O, true);
       break;
     case AMDGPU::OPERAND_REG_INLINE_C_INT16:
     case AMDGPU::OPERAND_REG_IMM_INT16:
