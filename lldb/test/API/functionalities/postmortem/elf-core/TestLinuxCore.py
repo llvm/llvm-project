@@ -688,27 +688,31 @@ class LinuxCoreTestCase(TestBase):
         values["lr"] = "0x0000000e"
         values["pc"] = "0x0000000f"
         values["cpsr"] = "0x00000010"
-        for i in range(32):
-            values["s" + str(i)] = str(i)
-        values["fpscr"] = "0x12345678"
-        values["d0"] = "0.0078125"
-        values["d1"] = "32.000007629394531"
-        values["d2"] = "2048.0004920959473"
-        values["d3"] = "32768.007904052734"
-        values["d4"] = "262144.0634765625"
-        values["d5"] = "1048576.2543945313"
-        values["d6"] = "4194305.01953125"
-        values["d7"] = "16777220.0859375"
-        values["d8"] = "50331656.1875"
-        values["d9"] = "100663312.390625"
-        values["d10"] = "201326624.8125"
-        values["d11"] = "402653249.6875"
-        values["d12"] = "805306499.5"
-        values["d13"] = "1610612999.25"
-        values["d14"] = "3221225999"
-        values["d15"] = "6442451999"
-        for i in range(16, 32):
-            values["d" + str(i)] = str(i)
+        for regname, value in values.items():
+            self.expect(
+                "register read {}".format(regname),
+                substrs=["{} = {}".format(regname, value)],
+            )
+
+        self.expect("register read --all")
+
+    @skipIfLLVMTargetMissing("ARM")
+    def test_arm_core_vfp(self):
+        # check reading VFP registers
+        target = self.dbg.CreateTarget(None)
+        self.assertTrue(target, VALID_TARGET)
+        process = target.LoadCore("linux-arm-vfp.core")
+
+        values = {}
+        values["d0"] = "0.5"
+        values["d1"] = "1.5"
+        values["d2"] = "2.5"
+        values["d3"] = "3.5"
+        values["s8"] = "4.5"
+        values["s9"] = "5.5"
+        values["s10"] = "6.5"
+        values["s11"] = "7.5"
+        values["fpscr"] = "0x20000000"
         for regname, value in values.items():
             self.expect(
                 "register read {}".format(regname),
