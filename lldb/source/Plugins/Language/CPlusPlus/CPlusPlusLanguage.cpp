@@ -1296,24 +1296,16 @@ static void RegisterStdStringSummaryProvider(
 
   category_sp->AddTypeSummary(makeSpecifier(string_ty), summary_sp);
 
-  // std::basic_string<char>
   category_sp->AddTypeSummary(
       makeSpecifier(llvm::formatv("std::basic_string<{}>", char_ty).str()),
       summary_sp);
-  // std::basic_string<char,std::char_traits<char>,std::allocator<char> >
+
   category_sp->AddTypeSummary(
-      makeSpecifier(llvm::formatv("std::basic_string<{0},std::char_traits<{0}>,"
-                                  "std::allocator<{0}> >",
-                                  char_ty)
-                        .str()),
-      summary_sp);
-  // std::basic_string<char, std::char_traits<char>, std::allocator<char> >
-  category_sp->AddTypeSummary(
-      makeSpecifier(
-          llvm::formatv("std::basic_string<{0}, std::char_traits<{0}>, "
-                        "std::allocator<{0}> >",
+      std::make_shared<lldb_private::TypeNameSpecifierImpl>(
+          llvm::formatv("^std::basic_string<{0}, ?std::char_traits<{0}>,.*>$",
                         char_ty)
-              .str()),
+              .str(),
+          eFormatterMatchRegex),
       summary_sp);
 }
 
@@ -1358,20 +1350,17 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   cpp_category_sp->AddTypeSummary("std::__cxx11::string", eFormatterMatchExact,
                                   string_summary_sp);
   cpp_category_sp->AddTypeSummary(
-      "std::__cxx11::basic_string<char, std::char_traits<char>, "
-      "std::allocator<char> >",
-      eFormatterMatchExact, string_summary_sp);
-  cpp_category_sp->AddTypeSummary("std::__cxx11::basic_string<unsigned char, "
-                                  "std::char_traits<unsigned char>, "
-                                  "std::allocator<unsigned char> >",
-                                  eFormatterMatchExact, string_summary_sp);
+      "^std::__cxx11::basic_string<char, std::char_traits<char>,.*>$",
+      eFormatterMatchRegex, string_summary_sp);
+  cpp_category_sp->AddTypeSummary("^std::__cxx11::basic_string<unsigned char, "
+                                  "std::char_traits<unsigned char>,.*>$",
+                                  eFormatterMatchRegex, string_summary_sp);
 
   cpp_category_sp->AddTypeSummary("std::__cxx11::wstring", eFormatterMatchExact,
                                   string_summary_sp);
   cpp_category_sp->AddTypeSummary(
-      "std::__cxx11::basic_string<wchar_t, std::char_traits<wchar_t>, "
-      "std::allocator<wchar_t> >",
-      eFormatterMatchExact, string_summary_sp);
+      "^std::__cxx11::basic_string<wchar_t, std::char_traits<wchar_t>,.*>$",
+      eFormatterMatchRegex, string_summary_sp);
 
   SyntheticChildren::Flags stl_synth_flags;
   stl_synth_flags.SetCascades(true).SetSkipPointers(false).SetSkipReferences(
