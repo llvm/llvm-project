@@ -4755,16 +4755,14 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerShlSat(MI);
   case G_ABS:
     return lowerAbsToAddXor(MI);
-  case G_ABDS: {
-    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    if (LI.isLegal({G_SMIN, Ty}) && LI.isLegal({G_SMAX, Ty}))
-      return lowerAbsDiffToMinMax(MI);
-  }
-    return lowerAbsDiffToSelect(MI);
+  case G_ABDS:
   case G_ABDU: {
+    bool IsSign = MI.getOpcode() == G_ABS;
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    if (LI.isLegal({G_UMIN, Ty}) && LI.isLegal({G_UMAX, Ty}))
+    if ((IsSign && LI.isLegal({G_SMIN, Ty}) && LI.isLegal({G_SMAX, Ty})) &&
+        (!IsSign && LI.isLegal({G_UMIN, Ty}) && LI.isLegal({G_UMAX, Ty}))) {
       return lowerAbsDiffToMinMax(MI);
+    }
     return lowerAbsDiffToSelect(MI);
   }
   case G_FABS:
