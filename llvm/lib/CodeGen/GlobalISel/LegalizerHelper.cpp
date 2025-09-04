@@ -9305,8 +9305,6 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerSADDE(MachineInstr &MI) {
   const LLT Ty = MRI.getType(Res);
   const LLT BoolTy = MRI.getType(OvOut);
 
-  Register NewRes = MRI.cloneVirtualRegister(Res);
-
   // Step 1: tmp = LHS + RHS
   auto Tmp = MIRBuilder.buildAdd(Ty, LHS, RHS);
 
@@ -9318,17 +9316,14 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerSADDE(MachineInstr &MI) {
 
   // Step 2: sum = tmp + zext(CarryIn)
   auto CarryInZ = MIRBuilder.buildZExt(Ty, CarryIn);
-  MIRBuilder.buildAdd(NewRes, Tmp, CarryInZ);
+  MIRBuilder.buildAdd(Res, Tmp, CarryInZ);
 
   // ov1 = CarryIn & (sum < tmp)
-  auto SumLtTmp = MIRBuilder.buildICmp(CmpInst::ICMP_SLT, BoolTy, NewRes, Tmp);
+  auto SumLtTmp = MIRBuilder.buildICmp(CmpInst::ICMP_SLT, BoolTy, Res, Tmp);
   auto Ov1 = MIRBuilder.buildAnd(BoolTy, SumLtTmp, CarryIn);
 
   // ov = ov0 | ov1
-  auto Ov = MIRBuilder.buildOr(BoolTy, Ov0, Ov1);
-
-  MIRBuilder.buildCopy(OvOut, Ov);
-  MIRBuilder.buildCopy(Res, NewRes);
+  MIRBuilder.buildOr(OvOut, Ov0, Ov1);
 
   MI.eraseFromParent();
   return Legalized;
