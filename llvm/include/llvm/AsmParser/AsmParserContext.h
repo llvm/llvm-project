@@ -36,13 +36,30 @@ public:
   std::optional<FileLocRange> getFunctionLocation(const Function *) const;
   std::optional<FileLocRange> getBlockLocation(const BasicBlock *) const;
   std::optional<FileLocRange> getInstructionLocation(const Instruction *) const;
-  std::optional<Function *> getFunctionAtLocation(const FileLocRange &) const;
-  std::optional<Function *> getFunctionAtLocation(const FileLoc &) const;
-  std::optional<BasicBlock *> getBlockAtLocation(const FileLocRange &) const;
-  std::optional<BasicBlock *> getBlockAtLocation(const FileLoc &) const;
-  std::optional<Instruction *>
-  getInstructionAtLocation(const FileLocRange &) const;
-  std::optional<Instruction *> getInstructionAtLocation(const FileLoc &) const;
+  /// Get the function at the requested location range.
+  /// If no single function occupies the queried range, or the record is
+  /// missing, a nullptr is returned.
+  Function *getFunctionAtLocation(const FileLocRange &) const;
+  /// Get the function at the requested location.
+  /// If no function occupies the queried location, or the record is missing, a
+  /// nullptr is returned.
+  Function *getFunctionAtLocation(const FileLoc &) const;
+  /// Get the block at the requested location range.
+  /// If no single block occupies the queried range, or the record is missing, a
+  /// nullptr is returned.
+  BasicBlock *getBlockAtLocation(const FileLocRange &) const;
+  /// Get the block at the requested location.
+  /// If no block occupies the queried location, or the record is missing, a
+  /// nullptr is returned.
+  BasicBlock *getBlockAtLocation(const FileLoc &) const;
+  /// Get the instruction at the requested location range.
+  /// If no single instruction occupies the queried range, or the record is
+  /// missing, a nullptr is returned.
+  Instruction *getInstructionAtLocation(const FileLocRange &) const;
+  /// Get the instruction at the requested location.
+  /// If no instruction occupies the queried location, or the record is missing,
+  /// a nullptr is returned.
+  Instruction *getInstructionAtLocation(const FileLoc &) const;
   bool addFunctionLocation(Function *, const FileLocRange &);
   bool addBlockLocation(BasicBlock *, const FileLocRange &);
   bool addInstructionLocation(Instruction *, const FileLocRange &);
