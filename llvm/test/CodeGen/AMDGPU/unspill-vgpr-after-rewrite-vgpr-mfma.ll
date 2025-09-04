@@ -311,43 +311,44 @@ define void @eliminate_spill_after_mfma_rewrite_x2(i32 %x, i32 %y, <4 x i32> %ar
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v[12:15]
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_mov_b32_e32 v6, 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def a[0:31]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def a[0:31]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    global_store_dwordx4 v0, v[60:63], s[16:17] offset:112
+; CHECK-NEXT:    global_store_dwordx4 v6, v[60:63], s[16:17] offset:112
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[56:59], s[16:17] offset:96
+; CHECK-NEXT:    global_store_dwordx4 v6, v[56:59], s[16:17] offset:96
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[52:55], s[16:17] offset:80
+; CHECK-NEXT:    global_store_dwordx4 v6, v[52:55], s[16:17] offset:80
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[48:51], s[16:17] offset:64
+; CHECK-NEXT:    global_store_dwordx4 v6, v[48:51], s[16:17] offset:64
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[44:47], s[16:17] offset:48
+; CHECK-NEXT:    global_store_dwordx4 v6, v[44:47], s[16:17] offset:48
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[40:43], s[16:17] offset:32
+; CHECK-NEXT:    global_store_dwordx4 v6, v[40:43], s[16:17] offset:32
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[36:39], s[16:17] offset:16
+; CHECK-NEXT:    global_store_dwordx4 v6, v[36:39], s[16:17] offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[32:35], s[16:17]
+; CHECK-NEXT:    global_store_dwordx4 v6, v[32:35], s[16:17]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, a[56:59], s[16:17] offset:96
+; CHECK-NEXT:    global_store_dwordx4 v6, a[56:59], s[16:17] offset:96
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, a[60:63], s[16:17] offset:112
+; CHECK-NEXT:    global_store_dwordx4 v6, a[60:63], s[16:17] offset:112
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, a[48:51], s[16:17] offset:64
+; CHECK-NEXT:    global_store_dwordx4 v6, a[48:51], s[16:17] offset:64
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, a[52:55], s[16:17] offset:80
+; CHECK-NEXT:    global_store_dwordx4 v6, a[52:55], s[16:17] offset:80
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, a[40:43], s[16:17] offset:32
+; CHECK-NEXT:    global_store_dwordx4 v6, a[40:43], s[16:17] offset:32
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, a[44:47], s[16:17] offset:48
+; CHECK-NEXT:    global_store_dwordx4 v6, a[44:47], s[16:17] offset:48
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, a[32:35], s[16:17]
+; CHECK-NEXT:    global_store_dwordx4 v6, a[32:35], s[16:17]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, a[36:39], s[16:17] offset:16
+; CHECK-NEXT:    global_store_dwordx4 v6, a[36:39], s[16:17] offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    global_store_dwordx4 v0, v[8:11], s[16:17]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)

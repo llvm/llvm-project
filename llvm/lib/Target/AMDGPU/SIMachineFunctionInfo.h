@@ -1220,6 +1220,20 @@ public:
   unsigned getMaxNumWorkGroupsZ() const { return MaxNumWorkGroups[2]; }
 
   AMDGPU::ClusterDimsAttr getClusterDims() const { return ClusterDims; }
+
+  // Map of registers to avoid for a given register
+  DenseMap<Register, SmallVector<Register, 8>> RegisterAvoidanceMap;
+
+  void addRegisterToAvoid(Register VirtReg, Register AvoidReg) {
+    RegisterAvoidanceMap[VirtReg].push_back(AvoidReg);
+  }
+
+  ArrayRef<Register> getRegistersToAvoid(Register VirtReg) const {
+    auto It = RegisterAvoidanceMap.find(VirtReg);
+    if (It != RegisterAvoidanceMap.end())
+      return It->second;
+    return ArrayRef<Register>();
+  }
 };
 
 } // end namespace llvm

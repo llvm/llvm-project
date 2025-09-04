@@ -3831,6 +3831,38 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
     }
     return false;
   }
+  case AMDGPURI::HasRegisterAvoidanceList: {
+    const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+    ArrayRef<Register> AvoidRegs = MFI->getRegistersToAvoid(VirtReg);
+
+    if (AvoidRegs.empty())
+      return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints,
+                                                       MF, VRM);
+    // Collect physical registers to avoid
+    SmallSet<MCPhysReg, 32> AvoidPhysRegs;
+    for (Register AvoidReg : AvoidRegs) {
+      if (VRM && VRM->hasPhys(AvoidReg)) {
+        // Virtual register already mapped - try to avoid its physical register
+        MCPhysReg AvoidPhys = VRM->getPhys(AvoidReg);
+        for (MCRegAliasIterator AI(AvoidPhys, this, true); AI.isValid(); ++AI)
+          AvoidPhysRegs.insert(*AI);
+      }
+    }
+
+    if (AvoidPhysRegs.empty()) {
+      // No physical registers added yet - use default order
+      return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints,
+                                                       MF, VRM);
+    }
+
+    // Prioritize registers that don't conflict with avoided registers
+    for (MCPhysReg PhysReg : Order) {
+      if (!AvoidPhysRegs.count(PhysReg) && !MRI.isReserved(PhysReg))
+        Hints.push_back(PhysReg);
+    }
+
+    return false;
+  }
   default:
     return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
                                                      VRM);
