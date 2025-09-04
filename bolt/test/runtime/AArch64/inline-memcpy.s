@@ -3,7 +3,7 @@
 # REQUIRES: system-linux, aarch64-registered-target
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o
-# RUN: %clang %cflags -no-pie %t.o -o %t.exe -Wl,-q 
+# RUN: %clang %cflags -no-pie %t.o -o %t.exe -Wl,-q
 # RUN: llvm-bolt %t.exe --inline-memcpy -o %t.bolt 2>&1 | FileCheck %s --check-prefix=CHECK-INLINE
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=CHECK-ASM
 
@@ -65,7 +65,7 @@
 # 0-byte copy should be inlined with no load/store instructions (nothing to copy)
 # CHECK-ASM-LABEL: <test_0_byte>:
 # CHECK-ASM-NOT: ldr
-# CHECK-ASM-NOT: str  
+# CHECK-ASM-NOT: str
 # CHECK-ASM-NOT: bl{{.*}}<memcpy
 
 # 128-byte copy should be "inlined" by removing the call entirely (too large for real inlining)
@@ -115,52 +115,52 @@
 # CHECK-ASM-NOT: bl{{.*}}<memcpy
 
 	.text
-	.globl	test_1_byte_direct                
+	.globl	test_1_byte_direct
 	.type	test_1_byte_direct,@function
-test_1_byte_direct:                              
-	stp	x29, x30, [sp, #-32]!           
+test_1_byte_direct:
+	stp	x29, x30, [sp, #-32]!
 	mov	x29, sp
 	add	x1, sp, #16
-	add	x0, sp, #8  
+	add	x0, sp, #8
 	mov	x2, #1
 	bl	memcpy
 	ldp	x29, x30, [sp], #32
 	ret
 	.size	test_1_byte_direct, .-test_1_byte_direct
 
-	.globl	test_2_byte_direct                
+	.globl	test_2_byte_direct
 	.type	test_2_byte_direct,@function
-test_2_byte_direct:                              
-	stp	x29, x30, [sp, #-32]!           
+test_2_byte_direct:
+	stp	x29, x30, [sp, #-32]!
 	mov	x29, sp
 	add	x1, sp, #16
-	add	x0, sp, #8  
+	add	x0, sp, #8
 	mov	x2, #2
 	bl	memcpy
 	ldp	x29, x30, [sp], #32
 	ret
 	.size	test_2_byte_direct, .-test_2_byte_direct
 
-	.globl	test_4_byte_direct                
+	.globl	test_4_byte_direct
 	.type	test_4_byte_direct,@function
-test_4_byte_direct:                              
-	stp	x29, x30, [sp, #-32]!           
+test_4_byte_direct:
+	stp	x29, x30, [sp, #-32]!
 	mov	x29, sp
 	add	x1, sp, #16
-	add	x0, sp, #8  
+	add	x0, sp, #8
 	mov	x2, #4
 	bl	memcpy
 	ldp	x29, x30, [sp], #32
 	ret
 	.size	test_4_byte_direct, .-test_4_byte_direct
 
-	.globl	test_8_byte_direct                
+	.globl	test_8_byte_direct
 	.type	test_8_byte_direct,@function
-test_8_byte_direct:                              
-	stp	x29, x30, [sp, #-32]!           
+test_8_byte_direct:
+	stp	x29, x30, [sp, #-32]!
 	mov	x29, sp
 	add	x1, sp, #16
-	add	x0, sp, #8  
+	add	x0, sp, #8
 	mov	x2, #8
 	bl	memcpy
 	ldp	x29, x30, [sp], #32
@@ -185,7 +185,7 @@ test_16_byte_direct:
 test_32_byte_direct:
 	stp	x29, x30, [sp, #-80]!
 	mov	x29, sp
-	add	x1, sp, #16  
+	add	x1, sp, #16
 	add	x0, sp, #48
 	mov	x2, #32
 	bl	memcpy
@@ -198,7 +198,7 @@ test_32_byte_direct:
 test_37_byte_arbitrary:
 	stp	x29, x30, [sp, #-96]!
 	mov	x29, sp
-	add	x1, sp, #16  
+	add	x1, sp, #16
 	add	x0, sp, #56
 	mov	x2, #37
 	bl	memcpy
@@ -224,7 +224,7 @@ test_0_byte:
 test_128_byte_too_large:
 	stp	x29, x30, [sp, #-288]!
 	mov	x29, sp
-	add	x1, sp, #16  
+	add	x1, sp, #16
 	add	x0, sp, #152
 	mov	x2, #128
 	bl	memcpy
@@ -390,12 +390,12 @@ use_fp:
 main:
 	stp	x29, x30, [sp, #-208]!
 	mov	x29, sp
-	
+
 	bl	test_1_byte_direct
 	bl	test_2_byte_direct
 	bl	test_4_byte_direct
 	bl	test_8_byte_direct
-	bl	test_16_byte_direct  
+	bl	test_16_byte_direct
 	bl	test_32_byte_direct
 	bl	test_37_byte_arbitrary
 	bl	test_0_byte
@@ -405,18 +405,18 @@ main:
 	bl	test_live_in_negative
 	bl	test_register_size_negative
 	bl	test_memcpy8_4_byte
-	
+
 	add     x0, sp, #32
 	add     x1, sp, #96
 	mov     x2, #10
 	mov     x3, #20
 	mov     x4, #0xFF
 	bl      complex_operation
-	
+
 	add     x0, sp, #160
 	add     x1, sp, #96
 	bl      complex_fp_operation
-	
+
 	mov	w0, #0
 	ldp	x29, x30, [sp], #208
 	ret
