@@ -13,7 +13,6 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/TypeID.h"
 
-#include "llvm/ADT/SmallVector.h"
 #include <utility>
 
 namespace mlir {

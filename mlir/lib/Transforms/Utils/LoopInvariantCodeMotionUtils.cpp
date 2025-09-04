@@ -15,6 +15,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/SubsetOpInterface.h"
@@ -64,20 +65,18 @@ static void mergeResource(
   const MemoryEffects::EffectInstance &srcEffect,
   bool srcHasConflict) {
 
-  TypeID srcResourceID = srcEffect.getEffect()->getEffectID();
+  TypeID srcResourceID = srcEffect.getResource()->getResourceID();
 
   bool srcIsAllocOrFree = isa<MemoryEffects::Allocate>(srcEffect.getEffect())
     || isa<MemoryEffects::Free>(srcEffect.getEffect());
 
   bool conflict = srcHasConflict || srcIsAllocOrFree;
 
-  DenseMap<mlir::Value, std::pair<int, bool>> myMap;
-
   auto dstIt = dstMap.find(srcResourceID);
 
-  // if it doesnt already exist, create entry for resource in map
+  // if it doesn't already exist, create entry for resource in map
   if (dstIt == dstMap.end()) {
-    dstMap.try_emplace(srcResourceID, std::make_pair(conflict, srcEffect));
+    dstMap.insert(std::make_pair(srcResourceID, std::make_pair(conflict, srcEffect)));
     return;
   }
 
@@ -94,12 +93,12 @@ static void mergeResource(
   
   conflict = conflict || readBeforeWrite;
 
-  dstMap.try_emplace(srcResourceID, std::make_pair(conflict, srcEffect));
+  dstIt->second =std::make_pair(conflict, srcEffect);
 }
 
 static bool hasLoopVariantInput(LoopLikeOpInterface loopLike, Operation *op) {
-  for (const auto &input : op->getOperands())
-    if (loopLike.isDefinedOutsideOfLoop(input))
+  for (OpOperand &input : op->getOpOperands())
+    if (!loopLike.isDefinedOutsideOfLoop(input.get()))
       return true;
 
   return false;
@@ -187,9 +186,9 @@ size_t mlir::moveLoopInvariantCode(
   size_t numMoved = 0;
 
   // check that the loop isn't dead
-  auto isDead = isZeroTrip(loopLike);
-  if (!isDead.has_value() || isDead.value())
-    return numMoved;
+  // auto isDead = loopLike.isZeroTrip();
+  // if (!isDead.has_value() || isDead.value())
+  //   return numMoved;
 
   // go through loop body and map out resource usages
   // op->regions are essentially merged sequentially
@@ -200,8 +199,8 @@ size_t mlir::moveLoopInvariantCode(
   DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>> resourceConflicts;
   mlir::gatherResourceConflicts(loopLike, loopLike.getOperation(), resourceConflicts);
 
-
-  for (Region *region : loopLike.getLoopRegions()) {
+  auto regions = loopLike.getLoopRegions();
+  for (Region *region : regions) {
     LDBG() << "Original loop:\n" << *region->getParentOp();
 
     std::queue<Operation *> worklist;

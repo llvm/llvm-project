@@ -1446,7 +1446,9 @@ func.func @move_single_resource_basic() attributes {} {
   %c1_i32 = arith.constant 10 : i32
   %c2_i32 = arith.constant 1 : i32
   %c0_i32_0 = arith.constant 0 : i32
+
   // CHECK: "test.test_effects_write_A"() : () -> ()
+
   scf.for %arg0 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
     scf.for %arg1 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
       scf.for %arg2 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
@@ -1465,12 +1467,16 @@ func.func @move_single_resource_write_dominant() attributes {} {
   %c1_i32 = arith.constant 10 : i32
   %c2_i32 = arith.constant 1 : i32
   %c0_i32_0 = arith.constant 0 : i32
+
   // CHECK: "test.test_effects_write_A"() : () -> ()
+
   scf.for %arg0 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
     scf.for %arg1 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
       scf.for %arg2 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
-        "test.test_effects_write_A"() : () -> ()
+        
         // CHECK: "test.test_effects_read_A"() : () -> ()
+
+        "test.test_effects_write_A"() : () -> ()
         "test.test_effects_read_A"() : () -> ()
       }
     }
@@ -1490,9 +1496,11 @@ func.func @move_single_resource_read_dominant() attributes {} {
   scf.for %arg0 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
     scf.for %arg1 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
       scf.for %arg2 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
+        
         // CHECK: "test.test_effects_read_A"() : () -> ()
-        "test.test_effects_read_A"() : () -> ()
         // CHECK: "test.test_effects_write_A"() : () -> ()
+
+        "test.test_effects_read_A"() : () -> ()
         "test.test_effects_write_A"() : () -> ()
       }
     }
@@ -1514,13 +1522,15 @@ func.func @move_single_resource_basic_conflict() attributes {} {
   scf.for %arg0 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
     scf.for %arg1 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
       scf.for %arg2 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
+
         // CHECK: "test.test_effects_write_A"() : () -> ()
-        "test.test_effects_write_A"() : () -> ()
         // CHECK: "test.test_effects_read_A"() : () -> ()
-        "test.test_effects_read_A"() : () -> ()
         // CHECK: "test.test_effects_write_AC"() : () -> ()
-        "test.test_effects_write_AC"() : () -> ()
         // CHECK: "test.test_effects_read_AC"() : () -> ()
+
+        "test.test_effects_write_A"() : () -> ()
+        "test.test_effects_read_A"() : () -> ()
+        "test.test_effects_write_AC"() : () -> ()
         "test.test_effects_read_AC"() : () -> ()
       }
     }
@@ -1543,9 +1553,11 @@ func.func @move_single_resource_if_region() attributes {} {
         %1 = arith.cmpi slt, %arg0, %c3_i32 : i32
 
         scf.if %1 {
+
           // CHECK: "test.test_effects_write_A"() : () -> ()
-          "test.test_effects_write_A"() : () -> ()
           // CHECK: "test.test_effects_read_A"() : () -> ()
+
+          "test.test_effects_write_A"() : () -> ()
           "test.test_effects_read_A"() : () -> ()
         }
       }
@@ -1568,7 +1580,9 @@ func.func @move_single_resource_for_inside_if_region() attributes {} {
 
     scf.if %1 {
       %c0_i32_0 = arith.constant 0 : i32
+
       // CHECK: "test.test_effects_write_A"() : () -> ()
+
       scf.for %arg1 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
         scf.for %arg2 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
           "test.test_effects_write_A"() : () -> ()
@@ -1590,16 +1604,17 @@ func.func @move_multi_resource_comprehensive() attributes {} {
   %c3_i32 = arith.constant 5 : i32
 
   scf.for %arg0 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
+
     // CHECK: "test.test_effects_write_CD"() : () -> ()
+    // CHECK: "test.test_effects_read_CD"() : () -> ()
     // CHECK: "test.test_effects_write_EF"() : () -> ()
+    // CHECK: "test.test_effects_read_EF"() : () -> ()
+
     scf.for %arg1 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
       scf.for %arg2 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
         "test.test_effects_write_CD"() : () -> ()
-        // CHECK: "test.test_effects_read_CD"() : () -> ()
         "test.test_effects_read_CD"() : () -> ()
-
         "test.test_effects_write_EF"() : () -> ()
-        // CHECK: "test.test_effects_read_EF"() : () -> ()
         "test.test_effects_read_EF"() : () -> ()
       }
     }
@@ -1610,32 +1625,37 @@ func.func @move_multi_resource_comprehensive() attributes {} {
       %c0_i32_1 = arith.constant 0 : i32
 
       // CHECK: "test.test_effects_write_B"() : () -> ()
+      // CHECK: "test.test_effects_read_B"() : () -> ()
+
       scf.for %arg3 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
+
         // CHECK: "test.test_effects_write_A"() : () -> ()
+        // CHECK: "test.test_effects_read_A"() : () -> ()
+        
         scf.for %arg4 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
           "test.test_effects_write_A"() : () -> ()
-          // CHECK: "test.test_effects_read_A"() : () -> ()
           "test.test_effects_read_A"() : () -> ()
         }
 
-        scf.for %arg5 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
+        scf.for %arg5 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {          
           "test.test_effects_write_B"() : () -> ()
-          // CHECK: "test.test_effects_read_B"() : () -> ()
           "test.test_effects_read_B"() : () -> ()
         }
 
         // CHECK: "test.test_effects_write_AC"() : () -> ()
+        // CHECK: "test.test_effects_read_AC"() : () -> ()
+
         scf.for %arg6 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
           "test.test_effects_write_AC"() : () -> ()
-          // CHECK: "test.test_effects_read_AC"() : () -> ()
           "test.test_effects_read_AC"() : () -> ()
         }
       }
     }
     else {
       // CHECK: "test.test_effects_write_F"() : () -> ()
-      "test.test_effects_write_F"() : () -> ()
       // CHECK: "test.test_effects_read_F"() : () -> ()
+
+      "test.test_effects_write_F"() : () -> ()
       "test.test_effects_read_F"() : () -> ()
     }
   }
@@ -1644,33 +1664,56 @@ func.func @move_multi_resource_comprehensive() attributes {} {
 
 // -----
 
-// CHECK-LABEL func.func @move_single_resource_dead_loops
-func.func @move_single_resource_dead_loops() attributes {} {
+// CHECK-LABEL func.func @move_multi_resource_write_conflicts
+func.func @move_multi_resource_write_conflicts() attributes {} {
   %c0_i32 = arith.constant 0 : i32
   %c1_i32 = arith.constant 10 : i32
   %c2_i32 = arith.constant 1 : i32
-  %c3_i32 = arith.constant -1 : i32
-  
-  scf.for %arg0 = %c0_i32 to %c1_i32 step %c3_i32  : i32 {
-    // CHECK: "test.test_effects_write_C"() : () -> ()
-    "test.test_effects_write_C"() : () -> ()
 
-    scf.for %arg1 = %c1_i32 to %c0_i32 step %c2_i32  : i32 {
-      // CHECK: "test.test_effects_write_B"() : () -> ()
-      "test.test_effects_write_B"() : () -> ()
+  // CHECK: "test.test_effects_write_B"() : () -> ()
+  // CHECK: "test.test_effects_read_B"() : () -> ()
+  scf.for %arg0 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
+    // CHECK: "test.test_effects_write_A_with_input"(%c7) : (index) -> ()
+    // CHECK: "test.test_effects_read_A"() : () -> ()
 
-      scf.for %arg2 = %c0_i32 to %c0_i32 step %c0_i32  : i32 {
-        // CHECK: "test.test_effects_write_A"() : () -> ()
-        "test.test_effects_write_A"() : () -> ()
+    %input = arith.constant 7 : index
+    "test.test_effects_write_A_with_input"(%input) : (index) -> ()
+    "test.test_effects_read_A"() : () -> ()
 
-        // CHECK: "test.test_effects_write_EF"() : () -> ()
-        scf.for %arg3 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
-          "test.test_effects_write_EF"() : () -> ()
-          // CHECK: "test.test_effects_read_EF"() : () -> ()
-          "test.test_effects_read_EF"() : () -> ()
-        }
-      }
-    }
+    "test.test_effects_write_B"() : () -> ()
+    "test.test_effects_read_B"() : () -> ()
   }
+
+  // CHECK: "test.test_effects_read_A"() : () -> ()
+  scf.for %arg0 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
+    // CHECK: "test.test_effects_read_A_write_B"() : () -> ()
+    // CHECK: "test.test_effects_read_B"() : () -> ()
+
+    "test.test_effects_read_A_write_B"() : () -> ()
+    "test.test_effects_read_B"() : () -> ()
+
+    "test.test_effects_read_A"() : () -> ()
+  }
+
+  // CHECK: "test.test_effects_read_A"() : () -> ()
+  scf.for %arg0 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
+    // CHECK: "test.test_effects_read_A_then_write_B"() : () -> ()
+    // CHECK: "test.test_effects_read_B"() : () -> ()
+    
+    "test.test_effects_read_A_then_write_B"() : () -> ()
+    "test.test_effects_read_B"() : () -> ()
+
+    "test.test_effects_read_A"() : () -> ()
+  }
+
+  // CHECK: "test.test_effects_write_A_then_read_B"() : () -> ()
+  // CHECK: "test.test_effects_read_B"() : () -> ()
+  // CHECK: "test.test_effects_read_A"() : () -> ()
+  scf.for %arg0 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
+    "test.test_effects_write_A_then_read_B"() : () -> ()
+    "test.test_effects_read_B"() : () -> ()
+    "test.test_effects_read_A"() : () -> ()
+  }
+
   return
 }

@@ -2992,43 +2992,71 @@ def TestEffectsWriteA : TEST_Op<"test_effects_write_A",
   [MemoryEffects<[MemWrite<TestResourceA>]>,
   AlwaysSpeculatable]>;
 
+def TestEffectsWriteAWithInput : TEST_Op<"test_effects_write_A_with_input",
+  [MemoryEffects<[MemWrite<TestResourceA>]>,
+  AlwaysSpeculatable]> {
+  
+  let arguments = (ins AnyType:$arg);
+}
+
 def TestEffectsReadA : TEST_Op<"test_effects_read_A",
-  [MemoryEffects<[MemRead<TestResourceA>]>]>;
+  [MemoryEffects<[MemRead<TestResourceA>]>,
+  AlwaysSpeculatable]>;
+
+def TestEffectsReadAWriteB : TEST_Op<"test_effects_read_A_write_B",
+  [MemoryEffects<[MemRead<TestResourceA>,
+    MemWrite<TestResourceB>]>,
+  AlwaysSpeculatable]>;
+
+def TestEffectsReadAThenWriteB : TEST_Op<"test_effects_read_A_then_write_B",
+  [MemoryEffects<[MemRead<TestResourceA, 0>,
+    MemWrite<TestResourceB, 1>]>,
+  AlwaysSpeculatable]>;
+
+def TestEffectsWriteAThenReadB : TEST_Op<"test_effects_write_A_then_read_B",
+  [MemoryEffects<[MemWrite<TestResourceA, 0>,
+    MemRead<TestResourceB, 1>]>,
+  AlwaysSpeculatable]>;
 
 def TestEffectsWriteB : TEST_Op<"test_effects_write_B",
   [MemoryEffects<[MemWrite<TestResourceB>]>,
   AlwaysSpeculatable]>;
 
 def TestEffectsReadB : TEST_Op<"test_effects_read_B",
-  [MemoryEffects<[MemRead<TestResourceB>]>]>;
+  [MemoryEffects<[MemRead<TestResourceB>]>,
+  AlwaysSpeculatable]>;
 
 def TestEffectsWriteF : TEST_Op<"test_effects_write_F",
   [MemoryEffects<[MemWrite<TestResourceF>]>, 
   AlwaysSpeculatable]>;
 
 def TestEffectsReadF : TEST_Op<"test_effects_read_F",
-  [MemoryEffects<[MemRead<TestResourceF>]>]>;
+  [MemoryEffects<[MemRead<TestResourceF>]>,
+  AlwaysSpeculatable]>;
 
 def TestEffectsWriteAC : TEST_Op<"test_effects_write_AC",
   [MemoryEffects<[MemWrite<TestResourceA>, MemWrite<TestResourceC>]>,
   AlwaysSpeculatable]>;
 
 def TestEffectsReadAC : TEST_Op<"test_effects_read_AC",
-  [MemoryEffects<[MemRead<TestResourceA>, MemRead<TestResourceC>]>]>;
+  [MemoryEffects<[MemRead<TestResourceA>, MemRead<TestResourceC>]>,
+  AlwaysSpeculatable]>;
 
 def TestEffectsWriteCD : TEST_Op<"test_effects_write_CD",
   [MemoryEffects<[MemWrite<TestResourceC>, MemWrite<TestResourceD>]>,
   AlwaysSpeculatable]>;
 
 def TestEffectsReadCD : TEST_Op<"test_effects_read_CD",
-  [MemoryEffects<[MemRead<TestResourceC>, MemRead<TestResourceD>]>]>;
+  [MemoryEffects<[MemRead<TestResourceC>, MemRead<TestResourceD>]>,
+  AlwaysSpeculatable]>;
 
 def TestEffectsWriteEF : TEST_Op<"test_effects_write_EF",
   [MemoryEffects<[MemWrite<TestResourceE>, MemWrite<TestResourceF>]>,
   AlwaysSpeculatable]>;
 
 def TestEffectsReadEF : TEST_Op<"test_effects_read_EF",
-  [MemoryEffects<[MemRead<TestResourceE>, MemRead<TestResourceF>]>]>;
+  [MemoryEffects<[MemRead<TestResourceE>, MemRead<TestResourceF>]>,
+  AlwaysSpeculatable]>;
 
 
 //===----------------------------------------------------------------------===//

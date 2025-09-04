@@ -8,7 +8,6 @@
 
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
-#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/SymbolTable.h"
 #include <optional>
@@ -320,38 +319,15 @@ bool mlir::wouldOpBeTriviallyDead(Operation *op) {
   return wouldOpBeTriviallyDeadImpl(op);
 }
 
-std::optional<bool> mlir::isZeroTrip(mlir::LoopLikeOpInterface &loop) {
-  auto lbs = loop.getLoopLowerBounds();
-  auto ubs = loop.getLoopUpperBounds();
-  auto steps = loop.getLoopSteps();
-
-  if (!lbs || !ubs || !steps)
-    return std::nullopt;
-
-  if (lbs->size() != ubs->size() || ubs->size() != steps->size())
-    return std::nullopt;
-
-  for (size_t i = 0; i < steps->size(); ++i) {
-    auto lb = getConstantIntValue((*lbs)[i]);
-    auto ub = getConstantIntValue((*ubs)[i]);
-    auto st = getConstantIntValue((*steps)[i]);
-
-    if (!lb || !ub || !st)
-      return std::nullopt; // non-constant -> unknown
-
-    if (*st >= 0 && *lb >= *ub)
-      return true;
-    if (*st < 0 && *lb <= *ub)
-      return true;
-  }
-  return false;
-}
-
 llvm::SmallVector<MemoryEffects::EffectInstance>
 mlir::MemoryEffects::getMemoryEffectsSorted(Operation *op) {
+  llvm::SmallVector<MemoryEffects::EffectInstance> effectsSorted;
+
   auto memInterface = dyn_cast<MemoryEffectOpInterface>(op);
 
-  llvm::SmallVector<MemoryEffects::EffectInstance> effectsSorted;
+  if (!memInterface)
+    return effectsSorted; // return empty vec
+
   memInterface.getEffects(effectsSorted);
 
   auto sortEffects = 

@@ -16,7 +16,6 @@
 
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/OpDefinition.h"
-#include "mlir/Interfaces/LoopLikeInterface.h"
 
 namespace mlir {
 namespace SideEffects {
@@ -349,7 +348,7 @@ struct AlwaysSpeculatableImplTrait
 
 namespace MemoryEffects {
 enum Priority {
-  kDefault = 0,
+  kDefaultPriority = 0,
   kAllocPriority = 1,
   kFreePriority = 2,
   kReadPriority = 3,
@@ -371,7 +370,7 @@ struct Effect : public SideEffects::Effect {
 
 protected:
   /// Priority value for this effect. Lower numbers indicate higher precedence.
-  Priority priority = kDefault;
+  Priority priority = Priority::kDefaultPriority;
 };
 using EffectInstance = SideEffects::EffectInstance<Effect>;
 
@@ -384,28 +383,28 @@ getMemoryEffectsSorted(Operation *op);
 /// resource. An 'allocate' effect implies only allocation of the resource, and
 /// not any visible mutation or dereference.
 struct Allocate : public Effect::Base<Allocate> {
-  Allocate() : Effect::Base<Allocate>() { this->priority = kAllocPriority; }
+  Allocate() : Effect::Base<Allocate>() { this->priority = Priority::kAllocPriority; }
 };
 
 /// The following effect indicates that the operation frees some resource that
 /// has been allocated. An 'allocate' effect implies only de-allocation of the
 /// resource, and not any visible allocation, mutation or dereference.
 struct Free : public Effect::Base<Free> {
-  Free() : Effect::Base<Free>() { this->priority = kFreePriority; }
+  Free() : Effect::Base<Free>() { this->priority = Priority::kFreePriority; }
 };
 
 /// The following effect indicates that the operation reads from some resource.
 /// A 'read' effect implies only dereferencing of the resource, and not any
 /// visible mutation.
 struct Read : public Effect::Base<Read> {
-  Read() : Effect::Base<Read>() { this->priority = kReadPriority; }
+  Read() : Effect::Base<Read>() { this->priority = Priority::kReadPriority; }
 };
 
 /// The following effect indicates that the operation writes to some resource. A
 /// 'write' effect implies only mutating a resource, and not any visible
 /// dereference or read.
 struct Write : public Effect::Base<Write> {
-  Write() : Effect::Base<Write>() { this->priority = kWritePriority; }
+  Write() : Effect::Base<Write>() { this->priority = Priority::kWritePriority; }
 };
 } // namespace MemoryEffects
 
@@ -488,15 +487,6 @@ bool isOpTriviallyDead(Operation *op);
 ///
 /// Note: Terminators and symbols are never considered to be trivially dead.
 bool wouldOpBeTriviallyDead(Operation *op);
-
-/// Returns TRUE if the loop is dead/zero-trip,
-/// FALSE if loop has constant bounds/steps and has at least 1 iteration
-/// on every dimension, returns nullopt otherwise
-///
-/// Can only infer if loop is dead if it has constant loop bounds/steps.
-/// Otherwise we assume that it's dead to be conservative.
-///
-std::optional<bool> isZeroTrip(mlir::LoopLikeOpInterface &loop);
 
 /// Returns true if the given operation is free of memory effects.
 ///
