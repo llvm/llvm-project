@@ -14397,25 +14397,26 @@ Syntax:
 
 ::
 
-      declare ptr @llvm.stackaddress()
+      declare ptr @llvm.stackaddress.p0()
 
 Overview:
 """""""""
 
-The '``llvm.stackaddress``' instrinsic returns the starting address of the stack region that may be
-used by called functions.
+The '``llvm.stackaddress``' instrinsic returns the starting address of the
+stack region that may be used by called functions.
 
 Semantics:
 """"""""""
 
-This intrinsic returns the *logical* value of the stack pointer register, that is, the address
-separating the stack space of the current function from the stack space that may be modified by
-called functions.
+This intrinsic returns the *logical* value of the stack pointer register, that
+is, the address separating the stack space of the current function from the
+stack space that may be modified by called functions.
 
-On certain targets (e.g. x86), the logical and actual (or physical) values of the stack pointer
-register are the same. However, on other architectures (e.g. SPARCv9), the logical value of the
-stack pointer register may differ from the physical value. '``llvm.stackaddress``' handles this
-discrepancy and returns the correct boundary address.
+On certain targets (e.g. x86), the logical and actual (or physical) values of
+the stack pointer register are the same. However, on other architectures (e.g.
+SPARCv9), the logical value of the stack pointer register may differ from the
+physical value. '``llvm.stackaddress``' handles this discrepancy and returns
+the correct boundary address.
 
 '``llvm.frameaddress``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

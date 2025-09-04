@@ -957,7 +957,7 @@ void TargetLoweringBase::initActions() {
   // wants something different.
   setOperationAction(ISD::CLEAR_CACHE, MVT::Other, LibCall);
 
-  // By default, STACKADDRESS nodes are expanded to STACKSAVE nodes.
+  // By default, STACKADDRESS nodes are expanded like STACKSAVE nodes.
   // On SPARC targets, custom lowering is required.
   setOperationAction(ISD::STACKADDRESS, MVT::Other, Expand);
 }
