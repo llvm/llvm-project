@@ -8,7 +8,7 @@
 
 // Not a portable test
 
-// Precondition:  __root->__is_black_ == true
+// Precondition:  __root->__color_ == std::__tree_color::__black
 // template <class _NodePtr>
 // void
 // __tree_balance_after_insert(_NodePtr __root, _NodePtr __x)
@@ -22,12 +22,15 @@ struct Node {
   Node* __left_;
   Node* __right_;
   Node* __parent_;
-  bool __is_black_;
+  std::__tree_color __color_;
 
   Node* __parent_unsafe() const { return __parent_; }
   void __set_parent(Node* x) { __parent_ = x; }
+  Node* __get_parent() { return __parent_; }
+  void __set_color(std::__tree_color __color) { __color_ = __color; }
+  std::__tree_color __get_color() { return __color_; }
 
-  Node() : __left_(), __right_(), __parent_(), __is_black_() {}
+  Node() : __left_(), __right_(), __parent_(), __color_() {}
 };
 
 void test1() {
@@ -43,22 +46,22 @@ void test1() {
     c.__parent_   = &root;
     c.__left_     = &b;
     c.__right_    = &d;
-    c.__is_black_ = true;
+    c.__color_ = std::__tree_color::__black;
 
     b.__parent_   = &c;
     b.__left_     = &a;
     b.__right_    = 0;
-    b.__is_black_ = false;
+    b.__color_ = std::__tree_color::__red;
 
     d.__parent_   = &c;
     d.__left_     = 0;
     d.__right_    = 0;
-    d.__is_black_ = false;
+    d.__color_ = std::__tree_color::__red;
 
     a.__parent_   = &b;
     a.__left_     = 0;
     a.__right_    = 0;
-    a.__is_black_ = false;
+    a.__color_ = std::__tree_color::__red;
 
     std::__tree_balance_after_insert(root.__left_, &a);
 
@@ -69,22 +72,22 @@ void test1() {
     assert(c.__parent_ == &root);
     assert(c.__left_ == &b);
     assert(c.__right_ == &d);
-    assert(c.__is_black_ == true);
+    assert(c.__color_ == std::__tree_color::__black);
 
     assert(b.__parent_ == &c);
     assert(b.__left_ == &a);
     assert(b.__right_ == 0);
-    assert(b.__is_black_ == true);
+    assert(b.__color_ == std::__tree_color::__black);
 
     assert(d.__parent_ == &c);
     assert(d.__left_ == 0);
     assert(d.__right_ == 0);
-    assert(d.__is_black_ == true);
+    assert(d.__color_ == std::__tree_color::__black);
 
     assert(a.__parent_ == &b);
     assert(a.__left_ == 0);
     assert(a.__right_ == 0);
-    assert(a.__is_black_ == false);
+    assert(a.__color_ == std::__tree_color::__red);
   }
   {
     Node root;
@@ -98,22 +101,22 @@ void test1() {
     c.__parent_   = &root;
     c.__left_     = &b;
     c.__right_    = &d;
-    c.__is_black_ = true;
+    c.__color_ = std::__tree_color::__black;
 
     b.__parent_   = &c;
     b.__left_     = 0;
     b.__right_    = &a;
-    b.__is_black_ = false;
+    b.__color_ = std::__tree_color::__red;
 
     d.__parent_   = &c;
     d.__left_     = 0;
     d.__right_    = 0;
-    d.__is_black_ = false;
+    d.__color_ = std::__tree_color::__red;
 
     a.__parent_   = &b;
     a.__left_     = 0;
     a.__right_    = 0;
-    a.__is_black_ = false;
+    a.__color_ = std::__tree_color::__red;
 
     std::__tree_balance_after_insert(root.__left_, &a);
 
@@ -124,22 +127,22 @@ void test1() {
     assert(c.__parent_ == &root);
     assert(c.__left_ == &b);
     assert(c.__right_ == &d);
-    assert(c.__is_black_ == true);
+    assert(c.__color_ == std::__tree_color::__black);
 
     assert(b.__parent_ == &c);
     assert(b.__left_ == 0);
     assert(b.__right_ == &a);
-    assert(b.__is_black_ == true);
+    assert(b.__color_ == std::__tree_color::__black);
 
     assert(d.__parent_ == &c);
     assert(d.__left_ == 0);
     assert(d.__right_ == 0);
-    assert(d.__is_black_ == true);
+    assert(d.__color_ == std::__tree_color::__black);
 
     assert(a.__parent_ == &b);
     assert(a.__left_ == 0);
     assert(a.__right_ == 0);
-    assert(a.__is_black_ == false);
+    assert(a.__color_ == std::__tree_color::__red);
   }
   {
     Node root;
@@ -153,22 +156,22 @@ void test1() {
     c.__parent_   = &root;
     c.__left_     = &b;
     c.__right_    = &d;
-    c.__is_black_ = true;
+    c.__color_ = std::__tree_color::__black;
 
     b.__parent_   = &c;
     b.__left_     = 0;
     b.__right_    = 0;
-    b.__is_black_ = false;
+    b.__color_ = std::__tree_color::__red;
 
     d.__parent_   = &c;
     d.__left_     = &a;
     d.__right_    = 0;
-    d.__is_black_ = false;
+    d.__color_ = std::__tree_color::__red;
 
     a.__parent_   = &d;
     a.__left_     = 0;
     a.__right_    = 0;
-    a.__is_black_ = false;
+    a.__color_ = std::__tree_color::__red;
 
     std::__tree_balance_after_insert(root.__left_, &a);
 
@@ -179,22 +182,22 @@ void test1() {
     assert(c.__parent_ == &root);
     assert(c.__left_ == &b);
     assert(c.__right_ == &d);
-    assert(c.__is_black_ == true);
+    assert(c.__color_ == std::__tree_color::__black);
 
     assert(b.__parent_ == &c);
     assert(b.__left_ == 0);
     assert(b.__right_ == 0);
-    assert(b.__is_black_ == true);
+    assert(b.__color_ == std::__tree_color::__black);
 
     assert(d.__parent_ == &c);
     assert(d.__left_ == &a);
     assert(d.__right_ == 0);
-    assert(d.__is_black_ == true);
+    assert(d.__color_ == std::__tree_color::__black);
 
     assert(a.__parent_ == &d);
     assert(a.__left_ == 0);
     assert(a.__right_ == 0);
-    assert(a.__is_black_ == false);
+    assert(a.__color_ == std::__tree_color::__red);
   }
   {
     Node root;
@@ -208,22 +211,22 @@ void test1() {
     c.__parent_   = &root;
     c.__left_     = &b;
     c.__right_    = &d;
-    c.__is_black_ = true;
+    c.__color_ = std::__tree_color::__black;
 
     b.__parent_   = &c;
     b.__left_     = 0;
     b.__right_    = 0;
-    b.__is_black_ = false;
+    b.__color_ = std::__tree_color::__red;
 
     d.__parent_   = &c;
     d.__left_     = 0;
     d.__right_    = &a;
-    d.__is_black_ = false;
+    d.__color_ = std::__tree_color::__red;
 
     a.__parent_   = &d;
     a.__left_     = 0;
     a.__right_    = 0;
-    a.__is_black_ = false;
+    a.__color_ = std::__tree_color::__red;
 
     std::__tree_balance_after_insert(root.__left_, &a);
 
@@ -234,22 +237,22 @@ void test1() {
     assert(c.__parent_ == &root);
     assert(c.__left_ == &b);
     assert(c.__right_ == &d);
-    assert(c.__is_black_ == true);
+    assert(c.__color_ == std::__tree_color::__black);
 
     assert(b.__parent_ == &c);
     assert(b.__left_ == 0);
     assert(b.__right_ == 0);
-    assert(b.__is_black_ == true);
+    assert(b.__color_ == std::__tree_color::__black);
 
     assert(d.__parent_ == &c);
     assert(d.__left_ == 0);
     assert(d.__right_ == &a);
-    assert(d.__is_black_ == true);
+    assert(d.__color_ == std::__tree_color::__black);
 
     assert(a.__parent_ == &d);
     assert(a.__left_ == 0);
     assert(a.__right_ == 0);
-    assert(a.__is_black_ == false);
+    assert(a.__color_ == std::__tree_color::__red);
   }
   {
     Node root;
@@ -268,37 +271,37 @@ void test1() {
     c.__parent_   = &root;
     c.__left_     = &b;
     c.__right_    = &d;
-    c.__is_black_ = true;
+    c.__color_ = std::__tree_color::__black;
 
     b.__parent_   = &c;
     b.__left_     = &a;
     b.__right_    = &g;
-    b.__is_black_ = false;
+    b.__color_ = std::__tree_color::__red;
 
     d.__parent_   = &c;
     d.__left_     = &h;
     d.__right_    = &i;
-    d.__is_black_ = false;
+    d.__color_ = std::__tree_color::__red;
 
     a.__parent_   = &b;
     a.__left_     = &e;
     a.__right_    = &f;
-    a.__is_black_ = false;
+    a.__color_ = std::__tree_color::__red;
 
     e.__parent_   = &a;
-    e.__is_black_ = true;
+    e.__color_ = std::__tree_color::__black;
 
     f.__parent_   = &a;
-    f.__is_black_ = true;
+    f.__color_ = std::__tree_color::__black;
 
     g.__parent_   = &b;
-    g.__is_black_ = true;
+    g.__color_ = std::__tree_color::__black;
 
     h.__parent_   = &d;
-    h.__is_black_ = true;
+    h.__color_ = std::__tree_color::__black;
 
     i.__parent_   = &d;
-    i.__is_black_ = true;
+    i.__color_ = std::__tree_color::__black;
 
     std::__tree_balance_after_insert(root.__left_, &a);
 
@@ -309,22 +312,22 @@ void test1() {
     assert(c.__parent_ == &root);
     assert(c.__left_ == &b);
     assert(c.__right_ == &d);
-    assert(c.__is_black_ == true);
+    assert(c.__color_ == std::__tree_color::__black);
 
     assert(b.__parent_ == &c);
     assert(b.__left_ == &a);
     assert(b.__right_ == &g);
-    assert(b.__is_black_ == true);
+    assert(b.__color_ == std::__tree_color::__black);
 
     assert(d.__parent_ == &c);
     assert(d.__left_ == &h);
     assert(d.__right_ == &i);
-    assert(d.__is_black_ == true);
+    assert(d.__color_ == std::__tree_color::__black);
 
     assert(a.__parent_ == &b);
     assert(a.__left_ == &e);
     assert(a.__right_ == &f);
-    assert(a.__is_black_ == false);
+    assert(a.__color_ == std::__tree_color::__red);
   }
   {
     Node root;
@@ -343,37 +346,37 @@ void test1() {
     c.__parent_   = &root;
     c.__left_     = &b;
     c.__right_    = &d;
-    c.__is_black_ = true;
+    c.__color_ = std::__tree_color::__black;
 
     b.__parent_   = &c;
     b.__left_     = &g;
     b.__right_    = &a;
-    b.__is_black_ = false;
+    b.__color_ = std::__tree_color::__red;
 
     d.__parent_   = &c;
     d.__left_     = &h;
     d.__right_    = &i;
-    d.__is_black_ = false;
+    d.__color_ = std::__tree_color::__red;
 
     a.__parent_   = &b;
     a.__left_     = &e;
     a.__right_    = &f;
-    a.__is_black_ = false;
+    a.__color_ = std::__tree_color::__red;
 
     e.__parent_   = &a;
-    e.__is_black_ = true;
+    e.__color_ = std::__tree_color::__black;
 
     f.__parent_   = &a;
-    f.__is_black_ = true;
+    f.__color_ = std::__tree_color::__black;
 
     g.__parent_   = &b;
-    g.__is_black_ = true;
+    g.__color_ = std::__tree_color::__black;
 
     h.__parent_   = &d;
-    h.__is_black_ = true;
+    h.__color_ = std::__tree_color::__black;
 
     i.__parent_   = &d;
-    i.__is_black_ = true;
+    i.__color_ = std::__tree_color::__black;
 
     std::__tree_balance_after_insert(root.__left_, &a);
 
@@ -384,22 +387,22 @@ void test1() {
     assert(c.__parent_ == &root);
     assert(c.__left_ == &b);
     assert(c.__right_ == &d);
-    assert(c.__is_black_ == true);
+    assert(c.__color_ == std::__tree_color::__black);
 
     assert(b.__parent_ == &c);
     assert(b.__left_ == &g);
     assert(b.__right_ == &a);
-    assert(b.__is_black_ == true);
+    assert(b.__color_ == std::__tree_color::__black);
 
     assert(d.__parent_ == &c);
     assert(d.__left_ == &h);
     assert(d.__right_ == &i);
-    assert(d.__is_black_ == true);
+    assert(d.__color_ == std::__tree_color::__black);
 
     assert(a.__parent_ == &b);
     assert(a.__left_ == &e);
     assert(a.__right_ == &f);
-    assert(a.__is_black_ == false);
+    assert(a.__color_ == std::__tree_color::__red);
   }
   {
     Node root;
@@ -418,37 +421,37 @@ void test1() {
     c.__parent_   = &root;
     c.__left_     = &b;
     c.__right_    = &d;
-    c.__is_black_ = true;
+    c.__color_ = std::__tree_color::__black;
 
     b.__parent_   = &c;
     b.__left_     = &g;
     b.__right_    = &h;
-    b.__is_black_ = false;
+    b.__color_ = std::__tree_color::__red;
 
     d.__parent_   = &c;
     d.__left_     = &a;
     d.__right_    = &i;
-    d.__is_black_ = false;
+    d.__color_ = std::__tree_color::__red;
 
     a.__parent_   = &d;
     a.__left_     = &e;
     a.__right_    = &f;
-    a.__is_black_ = false;
+    a.__color_ = std::__tree_color::__red;
 
     e.__parent_   = &a;
-    e.__is_black_ = true;
+    e.__color_ = std::__tree_color::__black;
 
     f.__parent_   = &a;
-    f.__is_black_ = true;
+    f.__color_ = std::__tree_color::__black;
 
     g.__parent_   = &b;
-    g.__is_black_ = true;
+    g.__color_ = std::__tree_color::__black;
 
     h.__parent_   = &b;
-    h.__is_black_ = true;
+    h.__color_ = std::__tree_color::__black;
 
     i.__parent_   = &d;
-    i.__is_black_ = true;
+    i.__color_ = std::__tree_color::__black;
 
     std::__tree_balance_after_insert(root.__left_, &a);
 
@@ -459,22 +462,22 @@ void test1() {
     assert(c.__parent_ == &root);
     assert(c.__left_ == &b);
     assert(c.__right_ == &d);
-    assert(c.__is_black_ == true);
+    assert(c.__color_ == std::__tree_color::__black);
 
     assert(b.__parent_ == &c);
     assert(b.__left_ == &g);
     assert(b.__right_ == &h);
-    assert(b.__is_black_ == true);
+    assert(b.__color_ == std::__tree_color::__black);
 
     assert(d.__parent_ == &c);
     assert(d.__left_ == &a);
     assert(d.__right_ == &i);
-    assert(d.__is_black_ == true);
+    assert(d.__color_ == std::__tree_color::__black);
 
     assert(a.__parent_ == &d);
     assert(a.__left_ == &e);
     assert(a.__right_ == &f);
-    assert(a.__is_black_ == false);
+    assert(a.__color_ == std::__tree_color::__red);
   }
   {
     Node root;
@@ -493,37 +496,37 @@ void test1() {
     c.__parent_   = &root;
     c.__left_     = &b;
     c.__right_    = &d;
-    c.__is_black_ = true;
+    c.__color_ = std::__tree_color::__black;
 
     b.__parent_   = &c;
     b.__left_     = &g;
     b.__right_    = &h;
-    b.__is_black_ = false;
+    b.__color_ = std::__tree_color::__red;
 
     d.__parent_   = &c;
     d.__left_     = &i;
     d.__right_    = &a;
-    d.__is_black_ = false;
+    d.__color_ = std::__tree_color::__red;
 
     a.__parent_   = &d;
     a.__left_     = &e;
     a.__right_    = &f;
-    a.__is_black_ = false;
+    a.__color_ = std::__tree_color::__red;
 
     e.__parent_   = &a;
-    e.__is_black_ = true;
+    e.__color_ = std::__tree_color::__black;
 
     f.__parent_   = &a;
-    f.__is_black_ = true;
+    f.__color_ = std::__tree_color::__black;
 
     g.__parent_   = &b;
-    g.__is_black_ = true;
+    g.__color_ = std::__tree_color::__black;
 
     h.__parent_   = &b;
-    h.__is_black_ = true;
+    h.__color_ = std::__tree_color::__black;
 
     i.__parent_   = &d;
-    i.__is_black_ = true;
+    i.__color_ = std::__tree_color::__black;
 
     std::__tree_balance_after_insert(root.__left_, &a);
 
@@ -534,22 +537,22 @@ void test1() {
     assert(c.__parent_ == &root);
     assert(c.__left_ == &b);
     assert(c.__right_ == &d);
-    assert(c.__is_black_ == true);
+    assert(c.__color_ == std::__tree_color::__black);
 
     assert(b.__parent_ == &c);
     assert(b.__left_ == &g);
     assert(b.__right_ == &h);
-    assert(b.__is_black_ == true);
+    assert(b.__color_ == std::__tree_color::__black);
 
     assert(d.__parent_ == &c);
     assert(d.__left_ == &i);
     assert(d.__right_ == &a);
-    assert(d.__is_black_ == true);
+    assert(d.__color_ == std::__tree_color::__black);
 
     assert(a.__parent_ == &d);
     assert(a.__left_ == &e);
     assert(a.__right_ == &f);
-    assert(a.__is_black_ == false);
+    assert(a.__color_ == std::__tree_color::__red);
   }
 }
 
@@ -565,17 +568,17 @@ void test2() {
     c.__parent_   = &root;
     c.__left_     = &a;
     c.__right_    = 0;
-    c.__is_black_ = true;
+    c.__color_ = std::__tree_color::__black;
 
     a.__parent_   = &c;
     a.__left_     = 0;
     a.__right_    = &b;
-    a.__is_black_ = false;
+    a.__color_ = std::__tree_color::__red;
 
     b.__parent_   = &a;
     b.__left_     = 0;
     b.__right_    = 0;
-    b.__is_black_ = false;
+    b.__color_ = std::__tree_color::__red;
 
     std::__tree_balance_after_insert(root.__left_, &b);
 
@@ -586,17 +589,17 @@ void test2() {
     assert(c.__parent_ == &b);
     assert(c.__left_ == 0);
     assert(c.__right_ == 0);
-    assert(c.__is_black_ == false);
+    assert(c.__color_ == std::__tree_color::__red);
 
     assert(a.__parent_ == &b);
     assert(a.__left_ == 0);
     assert(a.__right_ == 0);
-    assert(a.__is_black_ == false);
+    assert(a.__color_ == std::__tree_color::__red);
 
     assert(b.__parent_ == &root);
     assert(b.__left_ == &a);
     assert(b.__right_ == &c);
-    assert(b.__is_black_ == true);
+    assert(b.__color_ == std::__tree_color::__black);
   }
   {
     Node root;
@@ -609,17 +612,17 @@ void test2() {
     a.__parent_   = &root;
     a.__left_     = 0;
     a.__right_    = &c;
-    a.__is_black_ = true;
+    a.__color_ = std::__tree_color::__black;
 
     c.__parent_   = &a;
     c.__left_     = &b;
     c.__right_    = 0;
-    c.__is_black_ = false;
+    c.__color_ = std::__tree_color::__red;
 
     b.__parent_   = &c;
     b.__left_     = 0;
     b.__right_    = 0;
-    b.__is_black_ = false;
+    b.__color_ = std::__tree_color::__red;
 
     std::__tree_balance_after_insert(root.__left_, &b);
 
@@ -630,17 +633,17 @@ void test2() {
     assert(a.__parent_ == &b);
     assert(a.__left_ == 0);
     assert(a.__right_ == 0);
-    assert(a.__is_black_ == false);
+    assert(a.__color_ == std::__tree_color::__red);
 
     assert(c.__parent_ == &b);
     assert(c.__left_ == 0);
     assert(c.__right_ == 0);
-    assert(c.__is_black_ == false);
+    assert(c.__color_ == std::__tree_color::__red);
 
     assert(b.__parent_ == &root);
     assert(b.__left_ == &a);
     assert(b.__right_ == &c);
-    assert(b.__is_black_ == true);
+    assert(b.__color_ == std::__tree_color::__black);
   }
   {
     Node root;
@@ -657,29 +660,29 @@ void test2() {
     c.__parent_   = &root;
     c.__left_     = &a;
     c.__right_    = &g;
-    c.__is_black_ = true;
+    c.__color_ = std::__tree_color::__black;
 
     a.__parent_   = &c;
     a.__left_     = &d;
     a.__right_    = &b;
-    a.__is_black_ = false;
+    a.__color_ = std::__tree_color::__red;
 
     b.__parent_   = &a;
     b.__left_     = &e;
     b.__right_    = &f;
-    b.__is_black_ = false;
+    b.__color_ = std::__tree_color::__red;
 
     d.__parent_   = &a;
-    d.__is_black_ = true;
+    d.__color_ = std::__tree_color::__black;
 
     e.__parent_   = &b;
-    e.__is_black_ = true;
+    e.__color_ = std::__tree_color::__black;
 
     f.__parent_   = &b;
-    f.__is_black_ = true;
+    f.__color_ = std::__tree_color::__black;
 
     g.__parent_   = &c;
-    g.__is_black_ = true;
+    g.__color_ = std::__tree_color::__black;
 
     std::__tree_balance_after_insert(root.__left_, &b);
 
@@ -690,29 +693,29 @@ void test2() {
     assert(c.__parent_ == &b);
     assert(c.__left_ == &f);
     assert(c.__right_ == &g);
-    assert(c.__is_black_ == false);
+    assert(c.__color_ == std::__tree_color::__red);
 
     assert(a.__parent_ == &b);
     assert(a.__left_ == &d);
     assert(a.__right_ == &e);
-    assert(a.__is_black_ == false);
+    assert(a.__color_ == std::__tree_color::__red);
 
     assert(b.__parent_ == &root);
     assert(b.__left_ == &a);
     assert(b.__right_ == &c);
-    assert(b.__is_black_ == true);
+    assert(b.__color_ == std::__tree_color::__black);
 
     assert(d.__parent_ == &a);
-    assert(d.__is_black_ == true);
+    assert(d.__color_ == std::__tree_color::__black);
 
     assert(e.__parent_ == &a);
-    assert(e.__is_black_ == true);
+    assert(e.__color_ == std::__tree_color::__black);
 
     assert(f.__parent_ == &c);
-    assert(f.__is_black_ == true);
+    assert(f.__color_ == std::__tree_color::__black);
 
     assert(g.__parent_ == &c);
-    assert(g.__is_black_ == true);
+    assert(g.__color_ == std::__tree_color::__black);
   }
   {
     Node root;
@@ -729,29 +732,29 @@ void test2() {
     a.__parent_   = &root;
     a.__left_     = &d;
     a.__right_    = &c;
-    a.__is_black_ = true;
+    a.__color_ = std::__tree_color::__black;
 
     c.__parent_   = &a;
     c.__left_     = &b;
     c.__right_    = &g;
-    c.__is_black_ = false;
+    c.__color_ = std::__tree_color::__red;
 
     b.__parent_   = &c;
     b.__left_     = &e;
     b.__right_    = &f;
-    b.__is_black_ = false;
+    b.__color_ = std::__tree_color::__red;
 
     d.__parent_   = &a;
-    d.__is_black_ = true;
+    d.__color_ = std::__tree_color::__black;
 
     e.__parent_   = &b;
-    e.__is_black_ = true;
+    e.__color_ = std::__tree_color::__black;
 
     f.__parent_   = &b;
-    f.__is_black_ = true;
+    f.__color_ = std::__tree_color::__black;
 
     g.__parent_   = &c;
-    g.__is_black_ = true;
+    g.__color_ = std::__tree_color::__black;
 
     std::__tree_balance_after_insert(root.__left_, &b);
 
@@ -762,29 +765,29 @@ void test2() {
     assert(c.__parent_ == &b);
     assert(c.__left_ == &f);
     assert(c.__right_ == &g);
-    assert(c.__is_black_ == false);
+    assert(c.__color_ == std::__tree_color::__red);
 
     assert(a.__parent_ == &b);
     assert(a.__left_ == &d);
     assert(a.__right_ == &e);
-    assert(a.__is_black_ == false);
+    assert(a.__color_ == std::__tree_color::__red);
 
     assert(b.__parent_ == &root);
     assert(b.__left_ == &a);
     assert(b.__right_ == &c);
-    assert(b.__is_black_ == true);
+    assert(b.__color_ == std::__tree_color::__black);
 
     assert(d.__parent_ == &a);
-    assert(d.__is_black_ == true);
+    assert(d.__color_ == std::__tree_color::__black);
 
     assert(e.__parent_ == &a);
-    assert(e.__is_black_ == true);
+    assert(e.__color_ == std::__tree_color::__black);
 
     assert(f.__parent_ == &c);
-    assert(f.__is_black_ == true);
+    assert(f.__color_ == std::__tree_color::__black);
 
     assert(g.__parent_ == &c);
-    assert(g.__is_black_ == true);
+    assert(g.__color_ == std::__tree_color::__black);
   }
 }
 
@@ -800,17 +803,17 @@ void test3() {
     c.__parent_   = &root;
     c.__left_     = &b;
     c.__right_    = 0;
-    c.__is_black_ = true;
+    c.__color_ = std::__tree_color::__black;
 
     b.__parent_   = &c;
     b.__left_     = &a;
     b.__right_    = 0;
-    b.__is_black_ = false;
+    b.__color_ = std::__tree_color::__red;
 
     a.__parent_   = &b;
     a.__left_     = 0;
     a.__right_    = 0;
-    a.__is_black_ = false;
+    a.__color_ = std::__tree_color::__red;
 
     std::__tree_balance_after_insert(root.__left_, &a);
 
@@ -821,17 +824,17 @@ void test3() {
     assert(c.__parent_ == &b);
     assert(c.__left_ == 0);
     assert(c.__right_ == 0);
-    assert(c.__is_black_ == false);
+    assert(c.__color_ == std::__tree_color::__red);
 
     assert(a.__parent_ == &b);
     assert(a.__left_ == 0);
     assert(a.__right_ == 0);
-    assert(a.__is_black_ == false);
+    assert(a.__color_ == std::__tree_color::__red);
 
     assert(b.__parent_ == &root);
     assert(b.__left_ == &a);
     assert(b.__right_ == &c);
-    assert(b.__is_black_ == true);
+    assert(b.__color_ == std::__tree_color::__black);
   }
   {
     Node root;
@@ -844,17 +847,17 @@ void test3() {
     a.__parent_   = &root;
     a.__left_     = 0;
     a.__right_    = &b;
-    a.__is_black_ = true;
+    a.__color_ = std::__tree_color::__black;
 
     b.__parent_   = &a;
     b.__left_     = 0;
     b.__right_    = &c;
-    b.__is_black_ = false;
+    b.__color_ = std::__tree_color::__red;
 
     c.__parent_   = &b;
     c.__left_     = 0;
     c.__right_    = 0;
-    c.__is_black_ = false;
+    c.__color_ = std::__tree_color::__red;
 
     std::__tree_balance_after_insert(root.__left_, &c);
 
@@ -865,17 +868,17 @@ void test3() {
     assert(a.__parent_ == &b);
     assert(a.__left_ == 0);
     assert(a.__right_ == 0);
-    assert(a.__is_black_ == false);
+    assert(a.__color_ == std::__tree_color::__red);
 
     assert(c.__parent_ == &b);
     assert(c.__left_ == 0);
     assert(c.__right_ == 0);
-    assert(c.__is_black_ == false);
+    assert(c.__color_ == std::__tree_color::__red);
 
     assert(b.__parent_ == &root);
     assert(b.__left_ == &a);
     assert(b.__right_ == &c);
-    assert(b.__is_black_ == true);
+    assert(b.__color_ == std::__tree_color::__black);
   }
   {
     Node root;
@@ -892,29 +895,29 @@ void test3() {
     c.__parent_   = &root;
     c.__left_     = &b;
     c.__right_    = &g;
-    c.__is_black_ = true;
+    c.__color_ = std::__tree_color::__black;
 
     b.__parent_   = &c;
     b.__left_     = &a;
     b.__right_    = &f;
-    b.__is_black_ = false;
+    b.__color_ = std::__tree_color::__red;
 
     a.__parent_   = &b;
     a.__left_     = &d;
     a.__right_    = &e;
-    a.__is_black_ = false;
+    a.__color_ = std::__tree_color::__red;
 
     d.__parent_   = &a;
-    d.__is_black_ = true;
+    d.__color_ = std::__tree_color::__black;
 
     e.__parent_   = &a;
-    e.__is_black_ = true;
+    e.__color_ = std::__tree_color::__black;
 
     f.__parent_   = &b;
-    f.__is_black_ = true;
+    f.__color_ = std::__tree_color::__black;
 
     g.__parent_   = &c;
-    g.__is_black_ = true;
+    g.__color_ = std::__tree_color::__black;
 
     std::__tree_balance_after_insert(root.__left_, &a);
 
@@ -925,29 +928,29 @@ void test3() {
     assert(c.__parent_ == &b);
     assert(c.__left_ == &f);
     assert(c.__right_ == &g);
-    assert(c.__is_black_ == false);
+    assert(c.__color_ == std::__tree_color::__red);
 
     assert(a.__parent_ == &b);
     assert(a.__left_ == &d);
     assert(a.__right_ == &e);
-    assert(a.__is_black_ == false);
+    assert(a.__color_ == std::__tree_color::__red);
 
     assert(b.__parent_ == &root);
     assert(b.__left_ == &a);
     assert(b.__right_ == &c);
-    assert(b.__is_black_ == true);
+    assert(b.__color_ == std::__tree_color::__black);
 
     assert(d.__parent_ == &a);
-    assert(d.__is_black_ == true);
+    assert(d.__color_ == std::__tree_color::__black);
 
     assert(e.__parent_ == &a);
-    assert(e.__is_black_ == true);
+    assert(e.__color_ == std::__tree_color::__black);
 
     assert(f.__parent_ == &c);
-    assert(f.__is_black_ == true);
+    assert(f.__color_ == std::__tree_color::__black);
 
     assert(g.__parent_ == &c);
-    assert(g.__is_black_ == true);
+    assert(g.__color_ == std::__tree_color::__black);
   }
   {
     Node root;
@@ -964,29 +967,29 @@ void test3() {
     a.__parent_   = &root;
     a.__left_     = &d;
     a.__right_    = &b;
-    a.__is_black_ = true;
+    a.__color_ = std::__tree_color::__black;
 
     b.__parent_   = &a;
     b.__left_     = &e;
     b.__right_    = &c;
-    b.__is_black_ = false;
+    b.__color_ = std::__tree_color::__red;
 
     c.__parent_   = &b;
     c.__left_     = &f;
     c.__right_    = &g;
-    c.__is_black_ = false;
+    c.__color_ = std::__tree_color::__red;
 
     d.__parent_   = &a;
-    d.__is_black_ = true;
+    d.__color_ = std::__tree_color::__black;
 
     e.__parent_   = &b;
-    e.__is_black_ = true;
+    e.__color_ = std::__tree_color::__black;
 
     f.__parent_   = &c;
-    f.__is_black_ = true;
+    f.__color_ = std::__tree_color::__black;
 
     g.__parent_   = &c;
-    g.__is_black_ = true;
+    g.__color_ = std::__tree_color::__black;
 
     std::__tree_balance_after_insert(root.__left_, &c);
 
@@ -997,29 +1000,29 @@ void test3() {
     assert(c.__parent_ == &b);
     assert(c.__left_ == &f);
     assert(c.__right_ == &g);
-    assert(c.__is_black_ == false);
+    assert(c.__color_ == std::__tree_color::__red);
 
     assert(a.__parent_ == &b);
     assert(a.__left_ == &d);
     assert(a.__right_ == &e);
-    assert(a.__is_black_ == false);
+    assert(a.__color_ == std::__tree_color::__red);
 
     assert(b.__parent_ == &root);
     assert(b.__left_ == &a);
     assert(b.__right_ == &c);
-    assert(b.__is_black_ == true);
+    assert(b.__color_ == std::__tree_color::__black);
 
     assert(d.__parent_ == &a);
-    assert(d.__is_black_ == true);
+    assert(d.__color_ == std::__tree_color::__black);
 
     assert(e.__parent_ == &a);
-    assert(e.__is_black_ == true);
+    assert(e.__color_ == std::__tree_color::__black);
 
     assert(f.__parent_ == &c);
-    assert(f.__is_black_ == true);
+    assert(f.__color_ == std::__tree_color::__black);
 
     assert(g.__parent_ == &c);
-    assert(g.__is_black_ == true);
+    assert(g.__color_ == std::__tree_color::__black);
   }
 }
 
@@ -1044,12 +1047,12 @@ void test4() {
   assert(root.__parent_ == 0);
   assert(root.__left_ == &a);
   assert(root.__right_ == 0);
-  assert(root.__is_black_ == false);
+  assert(root.__color_ == std::__tree_color::__red);
 
   assert(a.__parent_ == &root);
   assert(a.__left_ == 0);
   assert(a.__right_ == 0);
-  assert(a.__is_black_ == true);
+  assert(a.__color_ == std::__tree_color::__black);
 
   a.__right_  = &b;
   b.__parent_ = &a;
@@ -1061,17 +1064,17 @@ void test4() {
   assert(root.__parent_ == 0);
   assert(root.__left_ == &a);
   assert(root.__right_ == 0);
-  assert(root.__is_black_ == false);
+  assert(root.__color_ == std::__tree_color::__red);
 
   assert(a.__parent_ == &root);
   assert(a.__left_ == 0);
   assert(a.__right_ == &b);
-  assert(a.__is_black_ == true);
+  assert(a.__color_ == std::__tree_color::__black);
 
   assert(b.__parent_ == &a);
   assert(b.__left_ == 0);
   assert(b.__right_ == 0);
-  assert(b.__is_black_ == false);
+  assert(b.__color_ == std::__tree_color::__red);
 
   b.__right_  = &c;
   c.__parent_ = &b;
@@ -1083,22 +1086,22 @@ void test4() {
   assert(root.__parent_ == 0);
   assert(root.__left_ == &b);
   assert(root.__right_ == 0);
-  assert(root.__is_black_ == false);
+  assert(root.__color_ == std::__tree_color::__red);
 
   assert(a.__parent_ == &b);
   assert(a.__left_ == 0);
   assert(a.__right_ == 0);
-  assert(a.__is_black_ == false);
+  assert(a.__color_ == std::__tree_color::__red);
 
   assert(b.__parent_ == &root);
   assert(b.__left_ == &a);
   assert(b.__right_ == &c);
-  assert(b.__is_black_ == true);
+  assert(b.__color_ == std::__tree_color::__black);
 
   assert(c.__parent_ == &b);
   assert(c.__left_ == 0);
   assert(c.__right_ == 0);
-  assert(c.__is_black_ == false);
+  assert(c.__color_ == std::__tree_color::__red);
 
   c.__right_  = &d;
   d.__parent_ = &c;
@@ -1110,27 +1113,27 @@ void test4() {
   assert(root.__parent_ == 0);
   assert(root.__left_ == &b);
   assert(root.__right_ == 0);
-  assert(root.__is_black_ == false);
+  assert(root.__color_ == std::__tree_color::__red);
 
   assert(a.__parent_ == &b);
   assert(a.__left_ == 0);
   assert(a.__right_ == 0);
-  assert(a.__is_black_ == true);
+  assert(a.__color_ == std::__tree_color::__black);
 
   assert(b.__parent_ == &root);
   assert(b.__left_ == &a);
   assert(b.__right_ == &c);
-  assert(b.__is_black_ == true);
+  assert(b.__color_ == std::__tree_color::__black);
 
   assert(c.__parent_ == &b);
   assert(c.__left_ == 0);
   assert(c.__right_ == &d);
-  assert(c.__is_black_ == true);
+  assert(c.__color_ == std::__tree_color::__black);
 
   assert(d.__parent_ == &c);
   assert(d.__left_ == 0);
   assert(d.__right_ == 0);
-  assert(d.__is_black_ == false);
+  assert(d.__color_ == std::__tree_color::__red);
 
   d.__right_  = &e;
   e.__parent_ = &d;
@@ -1142,32 +1145,32 @@ void test4() {
   assert(root.__parent_ == 0);
   assert(root.__left_ == &b);
   assert(root.__right_ == 0);
-  assert(root.__is_black_ == false);
+  assert(root.__color_ == std::__tree_color::__red);
 
   assert(b.__parent_ == &root);
   assert(b.__left_ == &a);
   assert(b.__right_ == &d);
-  assert(b.__is_black_ == true);
+  assert(b.__color_ == std::__tree_color::__black);
 
   assert(a.__parent_ == &b);
   assert(a.__left_ == 0);
   assert(a.__right_ == 0);
-  assert(a.__is_black_ == true);
+  assert(a.__color_ == std::__tree_color::__black);
 
   assert(d.__parent_ == &b);
   assert(d.__left_ == &c);
   assert(d.__right_ == &e);
-  assert(d.__is_black_ == true);
+  assert(d.__color_ == std::__tree_color::__black);
 
   assert(c.__parent_ == &d);
   assert(c.__left_ == 0);
   assert(c.__right_ == 0);
-  assert(c.__is_black_ == false);
+  assert(c.__color_ == std::__tree_color::__red);
 
   assert(e.__parent_ == &d);
   assert(e.__left_ == 0);
   assert(e.__right_ == 0);
-  assert(e.__is_black_ == false);
+  assert(e.__color_ == std::__tree_color::__red);
 
   e.__right_  = &f;
   f.__parent_ = &e;
@@ -1179,37 +1182,37 @@ void test4() {
   assert(root.__parent_ == 0);
   assert(root.__left_ == &b);
   assert(root.__right_ == 0);
-  assert(root.__is_black_ == false);
+  assert(root.__color_ == std::__tree_color::__red);
 
   assert(b.__parent_ == &root);
   assert(b.__left_ == &a);
   assert(b.__right_ == &d);
-  assert(b.__is_black_ == true);
+  assert(b.__color_ == std::__tree_color::__black);
 
   assert(a.__parent_ == &b);
   assert(a.__left_ == 0);
   assert(a.__right_ == 0);
-  assert(a.__is_black_ == true);
+  assert(a.__color_ == std::__tree_color::__black);
 
   assert(d.__parent_ == &b);
   assert(d.__left_ == &c);
   assert(d.__right_ == &e);
-  assert(d.__is_black_ == false);
+  assert(d.__color_ == std::__tree_color::__red);
 
   assert(c.__parent_ == &d);
   assert(c.__left_ == 0);
   assert(c.__right_ == 0);
-  assert(c.__is_black_ == true);
+  assert(c.__color_ == std::__tree_color::__black);
 
   assert(e.__parent_ == &d);
   assert(e.__left_ == 0);
   assert(e.__right_ == &f);
-  assert(e.__is_black_ == true);
+  assert(e.__color_ == std::__tree_color::__black);
 
   assert(f.__parent_ == &e);
   assert(f.__left_ == 0);
   assert(f.__right_ == 0);
-  assert(f.__is_black_ == false);
+  assert(f.__color_ == std::__tree_color::__red);
 
   f.__right_  = &g;
   g.__parent_ = &f;
@@ -1221,42 +1224,42 @@ void test4() {
   assert(root.__parent_ == 0);
   assert(root.__left_ == &b);
   assert(root.__right_ == 0);
-  assert(root.__is_black_ == false);
+  assert(root.__color_ == std::__tree_color::__red);
 
   assert(b.__parent_ == &root);
   assert(b.__left_ == &a);
   assert(b.__right_ == &d);
-  assert(b.__is_black_ == true);
+  assert(b.__color_ == std::__tree_color::__black);
 
   assert(a.__parent_ == &b);
   assert(a.__left_ == 0);
   assert(a.__right_ == 0);
-  assert(a.__is_black_ == true);
+  assert(a.__color_ == std::__tree_color::__black);
 
   assert(d.__parent_ == &b);
   assert(d.__left_ == &c);
   assert(d.__right_ == &f);
-  assert(d.__is_black_ == false);
+  assert(d.__color_ == std::__tree_color::__red);
 
   assert(c.__parent_ == &d);
   assert(c.__left_ == 0);
   assert(c.__right_ == 0);
-  assert(c.__is_black_ == true);
+  assert(c.__color_ == std::__tree_color::__black);
 
   assert(f.__parent_ == &d);
   assert(f.__left_ == &e);
   assert(f.__right_ == &g);
-  assert(f.__is_black_ == true);
+  assert(f.__color_ == std::__tree_color::__black);
 
   assert(e.__parent_ == &f);
   assert(e.__left_ == 0);
   assert(e.__right_ == 0);
-  assert(e.__is_black_ == false);
+  assert(e.__color_ == std::__tree_color::__red);
 
   assert(g.__parent_ == &f);
   assert(g.__left_ == 0);
   assert(g.__right_ == 0);
-  assert(g.__is_black_ == false);
+  assert(g.__color_ == std::__tree_color::__red);
 
   g.__right_  = &h;
   h.__parent_ = &g;
@@ -1268,47 +1271,47 @@ void test4() {
   assert(root.__parent_ == 0);
   assert(root.__left_ == &d);
   assert(root.__right_ == 0);
-  assert(root.__is_black_ == false);
+  assert(root.__color_ == std::__tree_color::__red);
 
   assert(d.__parent_ == &root);
   assert(d.__left_ == &b);
   assert(d.__right_ == &f);
-  assert(d.__is_black_ == true);
+  assert(d.__color_ == std::__tree_color::__black);
 
   assert(b.__parent_ == &d);
   assert(b.__left_ == &a);
   assert(b.__right_ == &c);
-  assert(b.__is_black_ == false);
+  assert(b.__color_ == std::__tree_color::__red);
 
   assert(a.__parent_ == &b);
   assert(a.__left_ == 0);
   assert(a.__right_ == 0);
-  assert(a.__is_black_ == true);
+  assert(a.__color_ == std::__tree_color::__black);
 
   assert(c.__parent_ == &b);
   assert(c.__left_ == 0);
   assert(c.__right_ == 0);
-  assert(c.__is_black_ == true);
+  assert(c.__color_ == std::__tree_color::__black);
 
   assert(f.__parent_ == &d);
   assert(f.__left_ == &e);
   assert(f.__right_ == &g);
-  assert(f.__is_black_ == false);
+  assert(f.__color_ == std::__tree_color::__red);
 
   assert(e.__parent_ == &f);
   assert(e.__left_ == 0);
   assert(e.__right_ == 0);
-  assert(e.__is_black_ == true);
+  assert(e.__color_ == std::__tree_color::__black);
 
   assert(g.__parent_ == &f);
   assert(g.__left_ == 0);
   assert(g.__right_ == &h);
-  assert(g.__is_black_ == true);
+  assert(g.__color_ == std::__tree_color::__black);
 
   assert(h.__parent_ == &g);
   assert(h.__left_ == 0);
   assert(h.__right_ == 0);
-  assert(h.__is_black_ == false);
+  assert(h.__color_ == std::__tree_color::__red);
 }
 
 void test5() {
@@ -1332,12 +1335,12 @@ void test5() {
   assert(root.__parent_ == 0);
   assert(root.__left_ == &h);
   assert(root.__right_ == 0);
-  assert(root.__is_black_ == false);
+  assert(root.__color_ == std::__tree_color::__red);
 
   assert(h.__parent_ == &root);
   assert(h.__left_ == 0);
   assert(h.__right_ == 0);
-  assert(h.__is_black_ == true);
+  assert(h.__color_ == std::__tree_color::__black);
 
   h.__left_   = &g;
   g.__parent_ = &h;
@@ -1349,17 +1352,17 @@ void test5() {
   assert(root.__parent_ == 0);
   assert(root.__left_ == &h);
   assert(root.__right_ == 0);
-  assert(root.__is_black_ == false);
+  assert(root.__color_ == std::__tree_color::__red);
 
   assert(h.__parent_ == &root);
   assert(h.__left_ == &g);
   assert(h.__right_ == 0);
-  assert(h.__is_black_ == true);
+  assert(h.__color_ == std::__tree_color::__black);
 
   assert(g.__parent_ == &h);
   assert(g.__left_ == 0);
   assert(g.__right_ == 0);
-  assert(g.__is_black_ == false);
+  assert(g.__color_ == std::__tree_color::__red);
 
   g.__left_   = &f;
   f.__parent_ = &g;
@@ -1371,22 +1374,22 @@ void test5() {
   assert(root.__parent_ == 0);
   assert(root.__left_ == &g);
   assert(root.__right_ == 0);
-  assert(root.__is_black_ == false);
+  assert(root.__color_ == std::__tree_color::__red);
 
   assert(g.__parent_ == &root);
   assert(g.__left_ == &f);
   assert(g.__right_ == &h);
-  assert(g.__is_black_ == true);
+  assert(g.__color_ == std::__tree_color::__black);
 
   assert(f.__parent_ == &g);
   assert(f.__left_ == 0);
   assert(f.__right_ == 0);
-  assert(f.__is_black_ == false);
+  assert(f.__color_ == std::__tree_color::__red);
 
   assert(h.__parent_ == &g);
   assert(h.__left_ == 0);
   assert(h.__right_ == 0);
-  assert(h.__is_black_ == false);
+  assert(h.__color_ == std::__tree_color::__red);
 
   f.__left_   = &e;
   e.__parent_ = &f;
@@ -1398,27 +1401,27 @@ void test5() {
   assert(root.__parent_ == 0);
   assert(root.__left_ == &g);
   assert(root.__right_ == 0);
-  assert(root.__is_black_ == false);
+  assert(root.__color_ == std::__tree_color::__red);
 
   assert(g.__parent_ == &root);
   assert(g.__left_ == &f);
   assert(g.__right_ == &h);
-  assert(g.__is_black_ == true);
+  assert(g.__color_ == std::__tree_color::__black);
 
   assert(f.__parent_ == &g);
   assert(f.__left_ == &e);
   assert(f.__right_ == 0);
-  assert(f.__is_black_ == true);
+  assert(f.__color_ == std::__tree_color::__black);
 
   assert(e.__parent_ == &f);
   assert(e.__left_ == 0);
   assert(e.__right_ == 0);
-  assert(e.__is_black_ == false);
+  assert(e.__color_ == std::__tree_color::__red);
 
   assert(h.__parent_ == &g);
   assert(h.__left_ == 0);
   assert(h.__right_ == 0);
-  assert(h.__is_black_ == true);
+  assert(h.__color_ == std::__tree_color::__black);
 
   e.__left_   = &d;
   d.__parent_ = &e;
@@ -1430,32 +1433,32 @@ void test5() {
   assert(root.__parent_ == 0);
   assert(root.__left_ == &g);
   assert(root.__right_ == 0);
-  assert(root.__is_black_ == false);
+  assert(root.__color_ == std::__tree_color::__red);
 
   assert(g.__parent_ == &root);
   assert(g.__left_ == &e);
   assert(g.__right_ == &h);
-  assert(g.__is_black_ == true);
+  assert(g.__color_ == std::__tree_color::__black);
 
   assert(e.__parent_ == &g);
   assert(e.__left_ == &d);
   assert(e.__right_ == &f);
-  assert(e.__is_black_ == true);
+  assert(e.__color_ == std::__tree_color::__black);
 
   assert(d.__parent_ == &e);
   assert(d.__left_ == 0);
   assert(d.__right_ == 0);
-  assert(d.__is_black_ == false);
+  assert(d.__color_ == std::__tree_color::__red);
 
   assert(f.__parent_ == &e);
   assert(f.__left_ == 0);
   assert(f.__right_ == 0);
-  assert(f.__is_black_ == false);
+  assert(f.__color_ == std::__tree_color::__red);
 
   assert(h.__parent_ == &g);
   assert(h.__left_ == 0);
   assert(h.__right_ == 0);
-  assert(h.__is_black_ == true);
+  assert(h.__color_ == std::__tree_color::__black);
 
   d.__left_   = &c;
   c.__parent_ = &d;
@@ -1467,37 +1470,37 @@ void test5() {
   assert(root.__parent_ == 0);
   assert(root.__left_ == &g);
   assert(root.__right_ == 0);
-  assert(root.__is_black_ == false);
+  assert(root.__color_ == std::__tree_color::__red);
 
   assert(g.__parent_ == &root);
   assert(g.__left_ == &e);
   assert(g.__right_ == &h);
-  assert(g.__is_black_ == true);
+  assert(g.__color_ == std::__tree_color::__black);
 
   assert(e.__parent_ == &g);
   assert(e.__left_ == &d);
   assert(e.__right_ == &f);
-  assert(e.__is_black_ == false);
+  assert(e.__color_ == std::__tree_color::__red);
 
   assert(d.__parent_ == &e);
   assert(d.__left_ == &c);
   assert(d.__right_ == 0);
-  assert(d.__is_black_ == true);
+  assert(d.__color_ == std::__tree_color::__black);
 
   assert(c.__parent_ == &d);
   assert(c.__left_ == 0);
   assert(c.__right_ == 0);
-  assert(c.__is_black_ == false);
+  assert(c.__color_ == std::__tree_color::__red);
 
   assert(f.__parent_ == &e);
   assert(f.__left_ == 0);
   assert(f.__right_ == 0);
-  assert(f.__is_black_ == true);
+  assert(f.__color_ == std::__tree_color::__black);
 
   assert(h.__parent_ == &g);
   assert(h.__left_ == 0);
   assert(h.__right_ == 0);
-  assert(h.__is_black_ == true);
+  assert(h.__color_ == std::__tree_color::__black);
 
   c.__left_   = &b;
   b.__parent_ = &c;
@@ -1509,42 +1512,42 @@ void test5() {
   assert(root.__parent_ == 0);
   assert(root.__left_ == &g);
   assert(root.__right_ == 0);
-  assert(root.__is_black_ == false);
+  assert(root.__color_ == std::__tree_color::__red);
 
   assert(g.__parent_ == &root);
   assert(g.__left_ == &e);
   assert(g.__right_ == &h);
-  assert(g.__is_black_ == true);
+  assert(g.__color_ == std::__tree_color::__black);
 
   assert(e.__parent_ == &g);
   assert(e.__left_ == &c);
   assert(e.__right_ == &f);
-  assert(e.__is_black_ == false);
+  assert(e.__color_ == std::__tree_color::__red);
 
   assert(c.__parent_ == &e);
   assert(c.__left_ == &b);
   assert(c.__right_ == &d);
-  assert(c.__is_black_ == true);
+  assert(c.__color_ == std::__tree_color::__black);
 
   assert(b.__parent_ == &c);
   assert(b.__left_ == 0);
   assert(b.__right_ == 0);
-  assert(b.__is_black_ == false);
+  assert(b.__color_ == std::__tree_color::__red);
 
   assert(d.__parent_ == &c);
   assert(d.__left_ == 0);
   assert(d.__right_ == 0);
-  assert(d.__is_black_ == false);
+  assert(d.__color_ == std::__tree_color::__red);
 
   assert(f.__parent_ == &e);
   assert(f.__left_ == 0);
   assert(f.__right_ == 0);
-  assert(f.__is_black_ == true);
+  assert(f.__color_ == std::__tree_color::__black);
 
   assert(h.__parent_ == &g);
   assert(h.__left_ == 0);
   assert(h.__right_ == 0);
-  assert(h.__is_black_ == true);
+  assert(h.__color_ == std::__tree_color::__black);
 
   b.__left_   = &a;
   a.__parent_ = &b;
@@ -1556,47 +1559,47 @@ void test5() {
   assert(root.__parent_ == 0);
   assert(root.__left_ == &e);
   assert(root.__right_ == 0);
-  assert(root.__is_black_ == false);
+  assert(root.__color_ == std::__tree_color::__red);
 
   assert(e.__parent_ == &root);
   assert(e.__left_ == &c);
   assert(e.__right_ == &g);
-  assert(e.__is_black_ == true);
+  assert(e.__color_ == std::__tree_color::__black);
 
   assert(c.__parent_ == &e);
   assert(c.__left_ == &b);
   assert(c.__right_ == &d);
-  assert(c.__is_black_ == false);
+  assert(c.__color_ == std::__tree_color::__red);
 
   assert(b.__parent_ == &c);
   assert(b.__left_ == &a);
   assert(b.__right_ == 0);
-  assert(b.__is_black_ == true);
+  assert(b.__color_ == std::__tree_color::__black);
 
   assert(a.__parent_ == &b);
   assert(a.__left_ == 0);
   assert(a.__right_ == 0);
-  assert(a.__is_black_ == false);
+  assert(a.__color_ == std::__tree_color::__red);
 
   assert(d.__parent_ == &c);
   assert(d.__left_ == 0);
   assert(d.__right_ == 0);
-  assert(d.__is_black_ == true);
+  assert(d.__color_ == std::__tree_color::__black);
 
   assert(g.__parent_ == &e);
   assert(g.__left_ == &f);
   assert(g.__right_ == &h);
-  assert(g.__is_black_ == false);
+  assert(g.__color_ == std::__tree_color::__red);
 
   assert(f.__parent_ == &g);
   assert(f.__left_ == 0);
   assert(f.__right_ == 0);
-  assert(f.__is_black_ == true);
+  assert(f.__color_ == std::__tree_color::__black);
 
   assert(h.__parent_ == &g);
   assert(h.__left_ == 0);
   assert(h.__right_ == 0);
-  assert(h.__is_black_ == true);
+  assert(h.__color_ == std::__tree_color::__black);
 }
 
 int main(int, char**) {
