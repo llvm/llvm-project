@@ -27,6 +27,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
@@ -57966,47 +57967,28 @@ static SDValue pushAddIntoCmovOfConsts(SDNode *N, const SDLoc &DL,
                      Cmov.getOperand(3));
 }
 
-static SDValue matchIntegerMultiplyAdd(SDNode *N, SelectionDAG &DAG,
-                                       SDValue Op0, SDValue Op1,
-                                       const SDLoc &DL, EVT VT,
-                                       const X86Subtarget &Subtarget) {
+static SDValue matchVPMADD52(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
+                             EVT VT, const X86Subtarget &Subtarget) {
   using namespace SDPatternMatch;
-  if (!VT.isVector() || VT.getScalarType() != MVT::i64 ||
-      !Subtarget.hasAVX512() ||
-      (!Subtarget.hasAVXIFMA() && !Subtarget.hasIFMA()) ||
-      !DAG.getTargetLoweringInfo().isOperationLegalOrCustom(X86ISD::VPMADD52L,
-                                                            VT) ||
-      Op0.getValueType() != VT || Op1.getValueType() != VT)
+  if (!VT.isVector() || VT.getScalarSizeInBits() != 64 ||
+      (!Subtarget.hasAVXIFMA() && !Subtarget.hasIFMA()))
+    return SDValue();
+
+  // Need AVX-512VL vector length extensions if operating on XMM/YMM registers
+  if (!Subtarget.hasVLX() && VT.getSizeInBits() < 512)
     return SDValue();
 
   SDValue X, Y, Acc;
   if (!sd_match(N, m_Add(m_Mul(m_Value(X), m_Value(Y)), m_Value(Acc))))
     return SDValue();
 
-  auto CheckMulOperand = [&DAG, &VT](const SDValue &M, SDValue &Xval,
-                                     SDValue &Yval) -> bool {
-    if (M.getOpcode() != ISD::MUL)
-      return false;
-    const SDValue A = M.getOperand(0);
-    const SDValue B = M.getOperand(1);
-    const APInt Top12Set = APInt::getHighBitsSet(64, 12);
-    if (A.getValueType() != VT || B.getValueType() != VT ||
-        !DAG.MaskedValueIsZero(A, Top12Set) ||
-        !DAG.MaskedValueIsZero(B, Top12Set) ||
-        !DAG.MaskedValueIsZero(M, Top12Set))
-      return false;
-    Xval = A;
-    Yval = B;
-    return true;
-  };
-
-  if (CheckMulOperand(Op0, X, Y)) {
-    Acc = Op1;
-  } else if (CheckMulOperand(Op1, X, Y)) {
-    Acc = Op0;
-  } else {
+  KnownBits KnownX = DAG.computeKnownBits(X);
+  KnownBits KnownY = DAG.computeKnownBits(Y);
+  KnownBits KnownMul = KnownBits::mul(KnownX, KnownY);
+  if (KnownX.countMinLeadingZeros() < 12 ||
+      KnownY.countMinLeadingZeros() < 12 ||
+      KnownMul.countMinLeadingZeros() < 12)
     return SDValue();
-  }
 
   return DAG.getNode(X86ISD::VPMADD52L, DL, VT, Acc, X, Y);
 }
@@ -58114,10 +58096,8 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
                        Op0.getOperand(0), Op0.getOperand(2));
   }
 
-  if (SDValue node =
-          matchIntegerMultiplyAdd(N, DAG, Op0, Op1, DL, VT, Subtarget)) {
-    return node;
-  }
+  if (SDValue IFMA52 = matchVPMADD52(N, DAG, DL, VT, Subtarget))
+    return IFMA52;
 
   return combineAddOrSubToADCOrSBB(N, DL, DAG);
 }
