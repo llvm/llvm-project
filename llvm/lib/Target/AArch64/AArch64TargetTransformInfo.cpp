@@ -4984,6 +4984,7 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
       SE.getSmallConstantTripMultiple(L, L->getExitingBlock()) % 2 == 0) {
     UP.Partial = true;
     UP.MaxCount = 4;
+    UP.AddAdditionalAccumulators = true;
   }
 
   const SCEV *BTC = SE.getSymbolicMaxBackedgeTakenCount(L);
@@ -5004,6 +5005,7 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   if (HasParellelizableReductions) {
     UP.Runtime = true;
     UP.DefaultUnrollRuntimeCount = 4;
+    UP.AddAdditionalAccumulators = true;
   }
 
   // Try to unroll small loops, of few-blocks with low budget, if they have
