@@ -4030,10 +4030,12 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
     LastField = nullptr;
     if (ObjType->isArrayType()) {
       // Next subobject is an array element.
-      const ConstantArrayType *CAT = Info.Ctx.getAsConstantArrayType(ObjType);
-      assert(CAT && "vla in literal type?");
+      const ArrayType *AT = Info.Ctx.getAsArrayType(ObjType);
+      assert((isa<ConstantArrayType>(AT) || isa<IncompleteArrayType>(AT)) &&
+             "vla in literal type?");
       uint64_t Index = Sub.Entries[I].getAsArrayIndex();
-      if (CAT->getSize().ule(Index)) {
+      if (const auto *CAT = dyn_cast<ConstantArrayType>(AT);
+          CAT && CAT->getSize().ule(Index)) {
         // Note, it should not be possible to form a pointer with a valid
         // designator which points more than one past the end of the array.
         if (Info.getLangOpts().CPlusPlus11)
@@ -4044,12 +4046,13 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
         return handler.failed();
       }
 
-      ObjType = CAT->getElementType();
+      ObjType = AT->getElementType();
 
       if (O->getArrayInitializedElts() > Index)
         O = &O->getArrayInitializedElt(Index);
       else if (!isRead(handler.AccessKind)) {
-        if (!CheckArraySize(Info, CAT, E->getExprLoc()))
+        if (const auto *CAT = dyn_cast<ConstantArrayType>(AT);
+            CAT && !CheckArraySize(Info, CAT, E->getExprLoc()))
           return handler.failed();
 
         expandArray(*O, Index);
