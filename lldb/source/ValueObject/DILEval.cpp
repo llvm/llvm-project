@@ -148,7 +148,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode *node) {
   // Evaluate an AST.
   auto value_or_error = node->Accept(this);
   // Return the computed value-or-error. The caller is responsible for
-  // checking if an error occured during the evaluation.
+  // checking if an error occurred during the evaluation.
   return value_or_error;
 }
 

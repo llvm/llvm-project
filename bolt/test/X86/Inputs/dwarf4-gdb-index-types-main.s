@@ -16,7 +16,7 @@
 	.type	main,@function
 main:                                   # @main
 .Lfunc_begin0:
-	.file	1 "/dwarf4-lenght-test" "main.cpp"
+	.file	1 "/dwarf4-length-test" "main.cpp"
 	.loc	1 7 0                           # main.cpp:7:0
 	.cfi_startproc
 # %bb.0:
@@ -258,7 +258,7 @@ main:                                   # @main
 .Linfo_string1:
 	.asciz	"main.cpp"                      # string offset=146
 .Linfo_string2:
-	.asciz	"/dwarf4-lenght-test" # string offset=155
+	.asciz	"/dwarf4-length-test" # string offset=155
 .Linfo_string3:
 	.asciz	"main"                          # string offset=212
 .Linfo_string4:

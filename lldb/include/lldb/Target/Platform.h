@@ -925,7 +925,7 @@ public:
   ///     A structured data dictionary containing at each entry, the crash
   ///     information type as the entry key and the matching  an array as the
   ///     entry value. \b nullptr if not implemented or  if the process has no
-  ///     crash information entry. \b error if an error occured.
+  ///     crash information entry. \b error if an error occurred.
   virtual llvm::Expected<StructuredData::DictionarySP>
   FetchExtendedCrashInformation(lldb_private::Process &process) {
     return nullptr;

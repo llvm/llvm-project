@@ -1,5 +1,5 @@
 ; RUN: llc < %s -aarch64-order-frame-objects=0 | FileCheck %s
-; Regression test for bug that occured with FP that was not 16-byte aligned.
+; Regression test for bug that occurred with FP that was not 16-byte aligned.
 ; We would miscalculate the offset for the st2g.
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"

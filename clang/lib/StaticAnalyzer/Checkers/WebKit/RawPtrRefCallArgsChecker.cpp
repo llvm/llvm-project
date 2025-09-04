@@ -386,7 +386,7 @@ public:
 
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
-    Os << "Reciever is " << ptrKind() << " and unsafe.";
+    Os << "Receiver is " << ptrKind() << " and unsafe.";
 
     PathDiagnosticLocation BSLoc(SrcLocToReport, BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
