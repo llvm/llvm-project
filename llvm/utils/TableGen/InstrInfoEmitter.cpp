@@ -25,6 +25,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -1289,8 +1291,9 @@ void InstrInfoEmitter::emitRecord(
 
 // emitEnums - Print out enum values for all of the instructions.
 void InstrInfoEmitter::emitEnums(
-    raw_ostream &OS,
+    raw_ostream &RawOS,
     ArrayRef<const CodeGenInstruction *> NumberedInstructions) {
+  formatted_raw_ostream OS(RawOS);
   OS << "#ifdef GET_INSTRINFO_ENUM\n";
   OS << "#undef GET_INSTRINFO_ENUM\n";
 
@@ -1302,18 +1305,29 @@ void InstrInfoEmitter::emitEnums(
 
   OS << "namespace llvm::" << Namespace << " {\n";
 
+  auto II = llvm::max_element(
+      NumberedInstructions,
+      [](const CodeGenInstruction *InstA, const CodeGenInstruction *InstB) {
+        return InstA->getName().size() < InstB->getName().size();
+      });
+  size_t MaxNameSize = (*II)->getName().size();
+
   OS << "  enum {\n";
-  for (const CodeGenInstruction *Inst : NumberedInstructions)
-    OS << "    " << Inst->TheDef->getName()
-       << "\t= " << Target.getInstrIntValue(Inst->TheDef) << ",\n";
+  for (const CodeGenInstruction *Inst : NumberedInstructions) {
+    OS << "    " << Inst->TheDef->getName();
+    OS.PadToColumn(MaxNameSize + 5);
+    OS << " = " << Target.getInstrIntValue(Inst->TheDef) << ", // (";
+    OS << SrcMgr.getFormattedLocationNoOffset(Inst->TheDef->getLoc().front())
+       << ")\n";
+  }
   OS << "    INSTRUCTION_LIST_END = " << NumberedInstructions.size() << '\n';
-  OS << "  };\n\n";
+  OS << "  };\n";
   OS << "} // end namespace llvm::" << Namespace << '\n';
   OS << "#endif // GET_INSTRINFO_ENUM\n\n";
 
   OS << "#ifdef GET_INSTRINFO_SCHED_ENUM\n";
   OS << "#undef GET_INSTRINFO_SCHED_ENUM\n";
-  OS << "namespace llvm::" << Namespace << "::Sched {\n\n";
+  OS << "namespace llvm::" << Namespace << "::Sched {\n";
   OS << "  enum {\n";
   auto ExplictClasses = SchedModels.explicitSchedClasses();
   for (const auto &[Idx, Class] : enumerate(ExplictClasses))
