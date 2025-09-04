@@ -4788,7 +4788,8 @@ bool AMDGPUAsmParser::validateOffset(const MCInst &Inst,
     const unsigned OffsetSize = 24;
     if (!isUIntN(OffsetSize - 1, Op.getImm())) {
       Error(getFlatOffsetLoc(Operands),
-            Twine("expected a ") + Twine(OffsetSize - 1) + "-bit unsigned offset for buffer ops");
+            Twine("expected a ") + Twine(OffsetSize - 1) +
+                "-bit unsigned offset for buffer ops");
       return false;
     }
   } else {
