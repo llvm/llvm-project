@@ -73,9 +73,8 @@ json::Value ModuleStats::ToJSON() const {
                      debug_info_had_incomplete_types);
   module.try_emplace("symbolTableStripped", symtab_stripped);
   module.try_emplace("symbolTableSymbolCount", symtab_symbol_count);
-  module.try_emplace("dwoFileCount", dwo_stats.dwo_file_count);
-  module.try_emplace("loadedDwoFileCount", dwo_stats.loaded_dwo_file_count);
-  module.try_emplace("dwoErrorCount", dwo_stats.dwo_error_count);
+  module.try_emplace("dwoFileCount", dwo_file_count);
+  module.try_emplace("loadedDwoFileCount", loaded_dwo_file_count);
 
   if (!symbol_locator_time.map.empty()) {
     json::Object obj;
@@ -325,7 +324,8 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   uint32_t num_modules_with_incomplete_types = 0;
   uint32_t num_stripped_modules = 0;
   uint32_t symtab_symbol_count = 0;
-  DWOStats total_dwo_stats;
+  uint32_t total_loaded_dwo_file_count = 0;
+  uint32_t total_dwo_file_count = 0;
   for (size_t image_idx = 0; image_idx < num_modules; ++image_idx) {
     Module *module = target != nullptr
                          ? target->GetImages().GetModuleAtIndex(image_idx).get()
@@ -357,9 +357,10 @@ llvm::json::Value DebuggerStats::ReportStatistics(
         for (const auto &symbol_module : symbol_modules.Modules())
           module_stat.symfile_modules.push_back((intptr_t)symbol_module.get());
       }
-      DWOStats current_dwo_stats = sym_file->GetDwoStats();
-      module_stat.dwo_stats = module_stat.dwo_stats + current_dwo_stats;
-      total_dwo_stats = total_dwo_stats + current_dwo_stats;
+      std::tie(module_stat.loaded_dwo_file_count, module_stat.dwo_file_count) =
+          sym_file->GetDwoFileCounts();
+      total_dwo_file_count += module_stat.dwo_file_count;
+      total_loaded_dwo_file_count += module_stat.loaded_dwo_file_count;
       module_stat.debug_info_index_loaded_from_cache =
           sym_file->GetDebugInfoIndexWasLoadedFromCache();
       if (module_stat.debug_info_index_loaded_from_cache)
@@ -434,9 +435,8 @@ llvm::json::Value DebuggerStats::ReportStatistics(
       {"totalDebugInfoEnabled", num_debug_info_enabled_modules},
       {"totalSymbolTableStripped", num_stripped_modules},
       {"totalSymbolTableSymbolCount", symtab_symbol_count},
-      {"totalLoadedDwoFileCount", total_dwo_stats.loaded_dwo_file_count},
-      {"totalDwoFileCount", total_dwo_stats.dwo_file_count},
-      {"totalDwoErrorCount", total_dwo_stats.dwo_error_count},
+      {"totalLoadedDwoFileCount", total_loaded_dwo_file_count},
+      {"totalDwoFileCount", total_dwo_file_count},
   };
 
   if (include_targets) {
