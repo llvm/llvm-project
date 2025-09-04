@@ -9270,6 +9270,9 @@ Register SIInstrInfo::findUsedSGPR(const MachineInstr &MI,
 
 MachineOperand *SIInstrInfo::getNamedOperand(MachineInstr &MI,
                                              AMDGPU::OpName OperandName) const {
+  if (OperandName == AMDGPU::OpName::NUM_OPERAND_NAMES)
+    return nullptr;
+
   int Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), OperandName);
   if (Idx == -1)
     return nullptr;

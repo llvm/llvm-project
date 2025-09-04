@@ -3338,6 +3338,112 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
                           : getGfx9BufferFormatInfo(Format);
 }
 
+const MCRegisterClass *getVGPRPhysRegClass(MCPhysReg Reg,
+                                           const MCRegisterInfo &MRI) {
+  const unsigned VGPRClasses[] = {
+      AMDGPU::VGPR_16RegClassID,  AMDGPU::VGPR_32RegClassID,
+      AMDGPU::VReg_64RegClassID,  AMDGPU::VReg_96RegClassID,
+      AMDGPU::VReg_128RegClassID, AMDGPU::VReg_160RegClassID,
+      AMDGPU::VReg_192RegClassID, AMDGPU::VReg_224RegClassID,
+      AMDGPU::VReg_256RegClassID, AMDGPU::VReg_288RegClassID,
+      AMDGPU::VReg_320RegClassID, AMDGPU::VReg_352RegClassID,
+      AMDGPU::VReg_384RegClassID, AMDGPU::VReg_512RegClassID,
+      AMDGPU::VReg_1024RegClassID};
+
+  for (unsigned RCID : VGPRClasses) {
+    const MCRegisterClass &RC = MRI.getRegClass(RCID);
+    if (RC.contains(Reg))
+      return &RC;
+  }
+
+  return nullptr;
+}
+
+unsigned getVGPREncodingMSBs(MCPhysReg Reg, const MCRegisterInfo &MRI) {
+  unsigned Enc = MRI.getEncodingValue(Reg);
+  unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
+  return Idx >> 8;
+}
+
+MCPhysReg getVGPRWithMSBs(MCPhysReg Reg, unsigned MSBs,
+                          const MCRegisterInfo &MRI) {
+  unsigned Enc = MRI.getEncodingValue(Reg);
+  unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
+  if (Idx >= 0x100)
+    return AMDGPU::NoRegister;
+
+  const MCRegisterClass *RC = getVGPRPhysRegClass(Reg, MRI);
+  if (!RC)
+    return AMDGPU::NoRegister;
+  return RC->getRegister(Idx | (MSBs << 8));
+}
+
+std::pair<const AMDGPU::OpName *, const AMDGPU::OpName *>
+getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
+  static const AMDGPU::OpName VOPOps[4] = {
+      AMDGPU::OpName::src0, AMDGPU::OpName::src1, AMDGPU::OpName::src2,
+      AMDGPU::OpName::vdst};
+  static const AMDGPU::OpName VDSOps[4] = {
+      AMDGPU::OpName::addr, AMDGPU::OpName::data0, AMDGPU::OpName::data1,
+      AMDGPU::OpName::vdst};
+  static const AMDGPU::OpName FLATOps[4] = {
+      AMDGPU::OpName::vaddr, AMDGPU::OpName::vdata,
+      AMDGPU::OpName::NUM_OPERAND_NAMES, AMDGPU::OpName::vdst};
+  static const AMDGPU::OpName BUFOps[4] = {
+      AMDGPU::OpName::vaddr, AMDGPU::OpName::NUM_OPERAND_NAMES,
+      AMDGPU::OpName::NUM_OPERAND_NAMES, AMDGPU::OpName::vdata};
+  static const AMDGPU::OpName VIMGOps[4] = {
+      AMDGPU::OpName::vaddr0, AMDGPU::OpName::vaddr1, AMDGPU::OpName::vaddr2,
+      AMDGPU::OpName::vdata};
+
+  // For VOPD instructions MSB of a corresponding Y component operand VGPR
+  // address is supposed to match X operand, otherwise VOPD shall not be
+  // combined.
+  static const AMDGPU::OpName VOPDOpsX[4] = {
+      AMDGPU::OpName::src0X, AMDGPU::OpName::vsrc1X, AMDGPU::OpName::vsrc2X,
+      AMDGPU::OpName::vdstX};
+  static const AMDGPU::OpName VOPDOpsY[4] = {
+      AMDGPU::OpName::src0Y, AMDGPU::OpName::vsrc1Y, AMDGPU::OpName::vsrc2Y,
+      AMDGPU::OpName::vdstY};
+
+  unsigned TSFlags = Desc.TSFlags;
+
+  if (TSFlags &
+      (SIInstrFlags::VOP1 | SIInstrFlags::VOP2 | SIInstrFlags::VOP3 |
+       SIInstrFlags::VOP3P | SIInstrFlags::VOPC | SIInstrFlags::DPP)) {
+    // LD_SCALE operands ignore MSB.
+    if (Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE_PAIRED_B32 ||
+        Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE_PAIRED_B32_gfx1250 ||
+        Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE16_PAIRED_B64 ||
+        Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE16_PAIRED_B64_gfx1250)
+      return {};
+    return {VOPOps, nullptr};
+  }
+
+  if (TSFlags & SIInstrFlags::DS)
+    return {VDSOps, nullptr};
+
+  if (TSFlags & SIInstrFlags::FLAT)
+    return {FLATOps, nullptr};
+
+  if (TSFlags & (SIInstrFlags::MUBUF | SIInstrFlags::MTBUF))
+    return {BUFOps, nullptr};
+
+  if (TSFlags & SIInstrFlags::VIMAGE)
+    return {VIMGOps, nullptr};
+
+  if (AMDGPU::isVOPD(Desc.getOpcode()))
+    return {VOPDOpsX, VOPDOpsY};
+
+  assert(!(TSFlags & SIInstrFlags::MIMG));
+
+  if (TSFlags & (SIInstrFlags::VSAMPLE | SIInstrFlags::EXP))
+    llvm_unreachable("Sample and export VGPR lowering is not implemented and"
+                     " these instructions are not expected on gfx1250");
+
+  return {};
+}
+
 bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode) {
   uint64_t TSFlags = MII.get(Opcode).TSFlags;
 
