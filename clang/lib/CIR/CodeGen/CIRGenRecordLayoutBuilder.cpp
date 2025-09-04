@@ -961,8 +961,9 @@ void CIRRecordLowering::computeVolatileBitfields() {
 void CIRRecordLowering::accumulateBases() {
   // If we've got a primary virtual base, we need to add it with the bases.
   if (astRecordLayout.isPrimaryBaseVirtual()) {
-    cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
-                                       "accumulateBases: primary virtual base");
+    const CXXRecordDecl *baseDecl = astRecordLayout.getPrimaryBase();
+    members.push_back(MemberInfo(CharUnits::Zero(), MemberInfo::InfoKind::Base,
+                                 getStorageType(baseDecl), baseDecl));
   }
 
   // Accumulate the non-virtual bases.
