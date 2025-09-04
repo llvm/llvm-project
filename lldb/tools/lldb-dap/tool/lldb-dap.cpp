@@ -258,7 +258,7 @@ validateConnection(llvm::StringRef conn) {
 static llvm::Error
 serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
                 Log *log, const ReplMode default_repl_mode,
-                const std::vector<std::string> &pre_init_commands) {
+                const std::vector<std::string> &pre_init_commands, int ttl) {
   Status status;
   static std::unique_ptr<Socket> listener = Socket::Create(protocol, status);
   if (status.Fail()) {
@@ -283,6 +283,21 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
     g_loop.AddPendingCallback(
         [](MainLoopBase &loop) { loop.RequestTermination(); });
   });
+  static MainLoopBase::TimePoint ttl_time_point;
+  static std::mutex ttl_mutex;
+  if (ttl > 0) {
+    std::scoped_lock<std::mutex> lock(ttl_mutex);
+    MainLoopBase::TimePoint future =
+        std::chrono::steady_clock::now() + std::chrono::milliseconds(ttl);
+    ttl_time_point = future;
+    g_loop.AddCallback(
+        [future](MainLoopBase &loop) {
+          if (ttl_time_point == future) {
+            loop.RequestTermination();
+          }
+        },
+        future);
+  }
   std::condition_variable dap_sessions_condition;
   std::mutex dap_sessions_mutex;
   std::map<MainLoop *, DAP *> dap_sessions;
@@ -291,6 +306,12 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
                                           &dap_sessions_mutex, &dap_sessions,
                                           &clientCount](
                                              std::unique_ptr<Socket> sock) {
+    if (ttl > 0) {
+      // Reset the keep alive timer, because we won't be killing the server
+      // while this connection is being served.
+      std::scoped_lock<std::mutex> lock(ttl_mutex);
+      ttl_time_point = MainLoopBase::TimePoint();
+    }
     std::string client_name = llvm::formatv("client_{0}", clientCount++).str();
     DAP_LOG(log, "({0}) client connected", client_name);
 
@@ -327,6 +348,23 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
       std::unique_lock<std::mutex> lock(dap_sessions_mutex);
       dap_sessions.erase(&loop);
       std::notify_all_at_thread_exit(dap_sessions_condition, std::move(lock));
+
+      if (ttl > 0) {
+        // Start the countdown to kill the server at the end of each connection.
+        std::scoped_lock<std::mutex> lock(ttl_mutex);
+        MainLoopBase::TimePoint future =
+            std::chrono::steady_clock::now() + std::chrono::milliseconds(ttl);
+        // We don't need to take the max of `keep_alive_up_to` and `future`,
+        // because `future` must be the latest.
+        ttl_time_point = future;
+        g_loop.AddCallback(
+            [future](MainLoopBase &loop) {
+              if (ttl_time_point == future) {
+                loop.RequestTermination();
+              }
+            },
+            future);
+      }
     });
     client.detach();
   });
@@ -509,6 +547,17 @@ int main(int argc, char *argv[]) {
   }
 
   if (!connection.empty()) {
+    int ttl = 0;
+    llvm::opt::Arg *time_to_live = input_args.getLastArg(OPT_time_to_live);
+    if (time_to_live) {
+      llvm::StringRef time_to_live_value = time_to_live->getValue();
+      if (time_to_live_value.getAsInteger(10, ttl)) {
+        llvm::errs() << "'" << time_to_live_value
+                      << "' is not a valid time-to-live value\n";
+        return EXIT_FAILURE;
+      }
+    }
+
     auto maybeProtoclAndName = validateConnection(connection);
     if (auto Err = maybeProtoclAndName.takeError()) {
       llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
@@ -520,7 +569,7 @@ int main(int argc, char *argv[]) {
     std::string name;
     std::tie(protocol, name) = *maybeProtoclAndName;
     if (auto Err = serveConnection(protocol, name, log.get(), default_repl_mode,
-                                   pre_init_commands)) {
+                                   pre_init_commands, ttl)) {
       llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
                                   "Connection failed: ");
       return EXIT_FAILURE;

@@ -61,3 +61,10 @@ def pre_init_command: S<"pre-init-command">,
 def: Separate<["-"], "c">,
   Alias<pre_init_command>,
   HelpText<"Alias for --pre-init-command">;
+
+def time_to_live: S<"time-to-live">,
+      MetaVarName<"<ttl>">,
+      HelpText<"When using --connection, the number of milliseconds to wait "
+        "for new connections at the beginning and after all clients have "
+        "disconnected. Not specifying this argument or specifying "
+        "non-positive values will wait indefinitely.">;
