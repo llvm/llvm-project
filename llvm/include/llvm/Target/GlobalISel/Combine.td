@@ -396,18 +396,21 @@ def commute_shift : GICombineRule<
          [{ return Helper.matchCommuteShift(*${d}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${d}, ${matchinfo}); }])>;
 
-// Fold (shift (trunc (shift x, C1)), C2) -> trunc (shift x, (C1 + C2))
-def shift_right_op : GICombinePatFrag<
-  (outs root:$dst), (ins),
-  !foreach(op,
-           [G_LSHR, G_ASHR],
-           (pattern (op $dst, $shifted, $amt)))>;
-def shift_of_trunc_of_shift_matchdata : GIDefMatchData<"ShiftOfTruncOfShift">;
-def shift_of_trunc_of_shift : GICombineRule<
-  (defs root:$dst, shift_of_trunc_of_shift_matchdata:$matchinfo),
-  (match (shift_right_op $dst):$root,
-         [{ return Helper.matchShiftOfTruncOfShift(*${root}, ${matchinfo}); }]),
-  (apply [{ Helper.applyShiftOfTruncOfShift(*${root}, ${matchinfo}); }])>;
+// Fold (lshr (trunc (lshr x, C1)), C2) -> trunc (lshr x, (C1 + C2))
+def lshr_of_trunc_of_lshr_matchdata : GIDefMatchData<"LshrOfTruncOfLshr">;
+//def lshr_of_trunc_of_lshr : GICombineRule<
+//  (defs root:$root, lshr_of_trunc_of_lshr_matchdata:$matchinfo),
+//  (match (G_LSHR $dst, $x, $y):$root,
+//         [{ return Helper.matchLshrOfTruncOfLshr(*${root}, ${matchinfo}); }]),
+//  (apply [{ Helper.applyLshrOfTruncOfLshr(*${root}, ${matchinfo}); }])>;
+
+def lshr_of_trunc_of_lshr : GICombineRule<
+  (defs root:$root, lshr_of_trunc_of_lshr_matchdata:$matchinfo),
+  (match (G_LSHR $d1, $x, $y):$Shift,
+         (G_TRUNC $d2, $d1):$Trunc,
+         (G_LSHR $dst, $d2, $z):$root,
+         [{ return Helper.matchLshrOfTruncOfLshr(*${root}, ${matchinfo}, *${Shift}, *${Trunc}); }]),
+  (apply [{ Helper.applyLshrOfTruncOfLshr(*${root}, ${matchinfo}); }])>;
 
 def narrow_binop_feeding_and : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
@@ -2147,7 +2150,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
     combine_use_vector_truncate, merge_combines, overflow_combines, 
-    truncsat_combines, shift_of_trunc_of_shift]>;
+    truncsat_combines, lshr_of_trunc_of_lshr]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

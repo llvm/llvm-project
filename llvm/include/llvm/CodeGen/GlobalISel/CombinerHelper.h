@@ -81,9 +81,11 @@ struct ShiftOfShiftedLogic {
   uint64_t ValSum;
 };
 
-struct ShiftOfTruncOfShift {
+struct LshrOfTruncOfLshr {
+  bool Mask = false;
+  APInt MaskVal;
   Register Src;
-  uint64_t ShiftAmt;
+  APInt ShiftAmt;
   LLT ShiftAmtTy;
   LLT InnerShiftTy;
 };
@@ -345,11 +347,10 @@ public:
 
   bool matchCommuteShift(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
-  /// Fold (shift (trunc (shift x, C1)), C2) -> trunc (shift x, (C1 + C2))
-  bool matchShiftOfTruncOfShift(MachineInstr &MI,
-                                ShiftOfTruncOfShift &MatchInfo) const;
-  void applyShiftOfTruncOfShift(MachineInstr &MI,
-                                ShiftOfTruncOfShift &MatchInfo) const;
+  /// Fold (lshr (trunc (lshr x, C1)), C2) -> trunc (shift x, (C1 + C2))
+  bool matchLshrOfTruncOfLshr(MachineInstr &MI, LshrOfTruncOfLshr &MatchInfo, MachineInstr &ShiftMI, MachineInstr &TruncMI) const;
+  void applyLshrOfTruncOfLshr(MachineInstr &MI,
+                                LshrOfTruncOfLshr &MatchInfo) const;
 
   /// Transform a multiply by a power-of-2 value to a left shift.
   bool matchCombineMulToShl(MachineInstr &MI, unsigned &ShiftVal) const;
