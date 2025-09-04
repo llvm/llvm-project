@@ -890,7 +890,7 @@ def NVVM_Barrier0Op : NVVM_Op<"barrier0"> {
     synchronization and communication within a CTA (Cooperative Thread Array) using 
     barrier ID 0. It is functionally equivalent to `nvvm.barrier` or `nvvm.barrier id=0`. 
 
-    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-barrier)
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar)
   }];
 
   let assemblyFormat = "attr-dict";
@@ -924,10 +924,11 @@ def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
     When a barrier completes, the waiting threads are restarted without delay, and 
     the barrier is reinitialized so that it can be immediately reused.
 
-    This operation generates the `.aligned` version of the PTX barrier instruction, 
-    indicating that all threads in the CTA execute the same barrier instruction.
+    This operation generates an aligned barrier, indicating that all threads in the CTA 
+    will execute the same barrier instruction. Behavior is undefined if not all threads 
+    in the CTA reach this instruction.
 
-    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-barrier)
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar)
   }];
 
   let arguments = (ins     
