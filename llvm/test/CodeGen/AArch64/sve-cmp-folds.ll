@@ -316,6 +316,21 @@ define i1 @whilelt_x2_first(i64 %next, i64 %end) {
   ret i1 %bit
 }
 
+; Do not combine to ptest when the extract is not from the first vector result
+define i1 @whilege_x2_second_result(i64 %next, i64 %end) {
+; CHECK-LABEL: whilege_x2_second_result:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    whilege { p0.s, p1.s }, x0, x1
+; CHECK-NEXT:    mov z0.s, p1/z, #1 // =0x1
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+  %predpair = call { <vscale x 4 x i1>, <vscale x 4 x i1> } @llvm.aarch64.sve.whilege.x2.nxv4i1.i64(i64 %next, i64 %end)
+  %predicate = extractvalue { <vscale x 4 x i1>, <vscale x 4 x i1> } %predpair, 1
+  %bit = extractelement <vscale x 4 x i1> %predicate, i64 0
+  ret i1 %bit
+}
+
 declare i64 @llvm.vscale.i64()
 declare <vscale x 4 x i1> @llvm.aarch64.sve.whilege.nxv4i1.i64(i64, i64)
 declare <vscale x 4 x i1> @llvm.aarch64.sve.whilegt.nxv4i1.i64(i64, i64)
