@@ -249,20 +249,10 @@ define <2 x i64> @smull_zext_v2i32_v2i64(ptr %A, ptr %B) nounwind {
 ; CHECK-GI-NEXT:    movi d0, #0x00ffff0000ffff
 ; CHECK-GI-NEXT:    mov v1.s[1], v2.s[0]
 ; CHECK-GI-NEXT:    and v0.8b, v1.8b, v0.8b
-; CHECK-GI-NEXT:    mov w8, v0.s[0]
-; CHECK-GI-NEXT:    mov w9, v0.s[1]
+; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
 ; CHECK-GI-NEXT:    ldr d0, [x1]
-; CHECK-GI-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-GI-NEXT:    fmov d1, x8
-; CHECK-GI-NEXT:    fmov x11, d0
-; CHECK-GI-NEXT:    mov v1.d[1], x9
-; CHECK-GI-NEXT:    mov x9, v0.d[1]
-; CHECK-GI-NEXT:    fmov x10, d1
-; CHECK-GI-NEXT:    mov x8, v1.d[1]
-; CHECK-GI-NEXT:    mul x10, x10, x11
-; CHECK-GI-NEXT:    mul x8, x8, x9
-; CHECK-GI-NEXT:    fmov d0, x10
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    smull v0.2d, v1.2s, v0.2s
 ; CHECK-GI-NEXT:    ret
   %load.A = load <2 x i16>, ptr %A
   %load.B = load <2 x i32>, ptr %B
