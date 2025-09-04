@@ -450,7 +450,7 @@ void AsmWriterEmitter::EmitGetMnemonic(
       << "[] = {\n";
     for (unsigned i = 0, e = NumberedInstructions.size(); i != e; ++i) {
       O << "    " << ((OpcodeInfo[i] >> Shift) & Mask) << "U,\t// "
-        << NumberedInstructions[i]->getName() << "\n";
+        << NumberedInstructions[i]->getName() << '\n';
     }
     O << "  };\n\n";
     // Emit string to combine the individual table lookups.
