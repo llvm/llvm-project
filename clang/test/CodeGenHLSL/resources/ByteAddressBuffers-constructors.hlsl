@@ -36,12 +36,14 @@ export void foo() {
 
 // Buf1 initialization part 2 - body of ByteAddressBuffer::__createFromBinding
 // CHECK: define {{.*}} void @_ZN4hlsl17ByteAddressBuffer19__createFromBindingEjjijPKc(
-// CHECK-SAME: ptr {{.*}} sret(%"class.hlsl::ByteAddressBuffer") align 4 %[[Tmp1:.*]], i32 noundef %registerNo, 
+// CHECK-SAME: ptr {{.*}} sret(%"class.hlsl::ByteAddressBuffer") align 4 %[[RetValue1:.*]], i32 noundef %registerNo, 
 // CHECK-SAME: i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, ptr noundef %name)
+// CHECK: %[[Tmp1:.*]] = alloca %"class.hlsl::ByteAddressBuffer", align 4
 // CHECK: %[[Handle1:.*]] = call target("dx.RawBuffer", i8, 0, 0) 
 // CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0t(
-// CHECK: call void @_ZN4hlsl17ByteAddressBufferC1EU13_Res_t_Raw_CTDuu17__hlsl_resource_t(
-// CHECK-SAME: ptr {{.*}} %[[Tmp1]], target("dx.RawBuffer", i8, 0, 0) %[[Handle1]])
+// CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::ByteAddressBuffer", ptr %[[Tmp1]], i32 0, i32 0
+// CHECK-DXIL: store target("dx.RawBuffer", i8, 0, 0) %[[Handle1]], ptr %__handle, align 4
+// CHECK-DXIL: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %[[RetValue1]], ptr align 4 %[[Tmp1]], i32 4, i1 false)
 
 // Buf2 initialization part 1 - global init function that calls RWByteAddressBuffer::__createFromImplicitBinding
 // CHECK: define internal void @__cxx_global_var_init.1()
@@ -51,12 +53,14 @@ export void foo() {
 
 // Buf2 initialization part 2 - body of RWByteAddressBuffer::__createFromImplicitBinding
 // CHECK: define hidden void @_ZN4hlsl19RWByteAddressBuffer27__createFromImplicitBindingEjjijPKc(
-// CHECK-SAME: ptr {{.*}} sret(%"class.hlsl::RWByteAddressBuffer") align 4 %[[Tmp2:.*]], i32 noundef %orderId,
+// CHECK-SAME: ptr {{.*}} sret(%"class.hlsl::RWByteAddressBuffer") align 4 %[[RetValue2:.*]], i32 noundef %orderId,
 // CHECK-SAME: i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, ptr noundef %name)
+// CHECK: %[[Tmp2:.*]] = alloca %"class.hlsl::RWByteAddressBuffer", align 4
 // CHECK: %[[Handle2:.*]] = call target("dx.RawBuffer", i8, 1, 0)
 // CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_i8_1_0t(
-// CHECK: call void @_ZN4hlsl19RWByteAddressBufferC1EU13_Res_u_Raw_CTDuu17__hlsl_resource_t(
-// CHECK-SAME: ptr {{.*}} %[[Tmp2]], target("dx.RawBuffer", i8, 1, 0) %[[Handle2]])
+// CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RWByteAddressBuffer", ptr %[[Tmp2]], i32 0, i32 0
+// CHECK-DXIL: store target("dx.RawBuffer", i8, 1, 0) %[[Handle2]], ptr %__handle, align 4
+// CHECK-DXIL: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %[[RetValue2]], ptr align 4 %[[Tmp2]], i32 4, i1 false)
 
 // Buf3 initialization part 1 - local variable declared in function foo() is initialized by 
 // RasterizerOrderedByteAddressBuffer C1 default constructor
@@ -70,18 +74,6 @@ export void foo() {
 // CHECK: define linkonce_odr hidden void @_ZN4hlsl34RasterizerOrderedByteAddressBufferC1Ev(ptr noundef nonnull align 4 dereferenceable(4) %this)
 // CHECK: call void @_ZN4hlsl34RasterizerOrderedByteAddressBufferC2Ev(ptr noundef nonnull align 4 dereferenceable(4) %{{.*}})
 // CHECK-NEXT: ret void
-
-// Buf1 initialization part 3 - ByteAddressBuffer constructor constructor with handle
-// CHECK: define linkonce_odr hidden void @_ZN4hlsl17ByteAddressBufferC2EU13_Res_t_Raw_CTDuu17__hlsl_resource_t(ptr {{.*}} %this,
-// CHECK-SAME: target("dx.RawBuffer", i8, 0, 0) %handle)
-// CHECK: %[[HandlePtr1:.*]] = getelementptr inbounds nuw %"class.hlsl::ByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
-// CHECK-DXIL-NEXT: store target("dx.RawBuffer", i8, 0, 0) %{{.*}}, ptr %[[HandlePtr1]], align 4
-
-// Buf2 initialization part 3 - body of RWByteAddressBuffer constructor with handle
-// CHECK: define linkonce_odr hidden void @_ZN4hlsl19RWByteAddressBufferC1EU13_Res_u_Raw_CTDuu17__hlsl_resource_t(ptr {{.*}} %this,
-// CHECK-SAME: target("dx.RawBuffer", i8, 1, 0) %handle)
-// CHECK: %[[HandlePtr2:.*]] = getelementptr inbounds nuw %"class.hlsl::RWByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
-// CHECK-DXIL-NEXT: store target("dx.RawBuffer", i8, 1, 0) %{{.*}}, ptr %[[HandlePtr2]], align 4
 
 // Buf3 initialization part 3 - body of RasterizerOrderedByteAddressBuffer default C2 constructor that
 // initializes handle to poison

@@ -36,12 +36,14 @@ export void foo() {
 
 // Buf1 initialization part 2 - body of RWBuffer<float>::__createFromBinding
 // CHECK: define {{.*}} void @_ZN4hlsl8RWBufferIfE19__createFromBindingEjjijPKc(
-// CHECK-SAME: ptr {{.*}} sret(%"class.hlsl::RWBuffer") align 4 %[[Tmp1:.*]], i32 noundef %registerNo, 
+// CHECK-SAME: ptr {{.*}} sret(%"class.hlsl::RWBuffer") align 4 %[[RetValue1:.*]], i32 noundef %registerNo, 
 // CHECK-SAME: i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, ptr noundef %name)
+// CHECK: %[[Tmp1:.*]] = alloca %"class.hlsl::RWBuffer", align 4
 // CHECK: %[[Handle1:.*]] = call target("dx.TypedBuffer", float, 1, 0, 0) 
 // CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0_0t(
-// CHECK: call void @_ZN4hlsl8RWBufferIfEC1EU9_Res_u_CTfu17__hlsl_resource_t(
-// CHECK-SAME: ptr {{.*}} %[[Tmp1]], target("dx.TypedBuffer", float, 1, 0, 0) %[[Handle1]])
+// CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RWBuffer", ptr %[[Tmp1]], i32 0, i32 0
+// CHECK-DXIL: store target("dx.TypedBuffer", float, 1, 0, 0) %[[Handle1]], ptr %__handle, align 4
+// CHECK-DXIL: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %[[RetValue1]], ptr align 4 %[[Tmp1]], i32 4, i1 false)
 
 // Buf2 initialization part 1 - global init function that RWBuffer<float>::__createFromImplicitBinding
 // CHECK: define internal void @__cxx_global_var_init.1()
@@ -51,12 +53,14 @@ export void foo() {
 
 // Buf2 initialization part 2 - body of RWBuffer<float>::__createFromImplicitBinding call
 // CHECK: define linkonce_odr hidden void @_ZN4hlsl8RWBufferIdE27__createFromImplicitBindingEjjijPKc(
-// CHECK-SAME: ptr {{.*}} sret(%"class.hlsl::RWBuffer.0") align 4 %[[Tmp2:.*]], i32 noundef %orderId, 
+// CHECK-SAME: ptr {{.*}} sret(%"class.hlsl::RWBuffer.0") align 4 %[[RetValue2:.*]], i32 noundef %orderId, 
 // CHECK-SAME: i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, ptr noundef %name)
+// CHECK: %[[Tmp2:.*]] = alloca %"class.hlsl::RWBuffer.0", align 4
 // CHECK: %[[Handle2:.*]] = call target("dx.TypedBuffer", double, 1, 0, 0)
 // CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.TypedBuffer_f64_1_0_0t(
-// CHECK: call void @_ZN4hlsl8RWBufferIdEC1EU9_Res_u_CTdu17__hlsl_resource_t(
-// CHECK-SAME: ptr {{.*}} %[[Tmp2]], target("dx.TypedBuffer", double, 1, 0, 0) %[[Handle2]])
+// CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RWBuffer.0", ptr %[[Tmp2]], i32 0, i32 0
+// CHECK-DXIL: store target("dx.TypedBuffer", double, 1, 0, 0) %[[Handle2]], ptr %__handle, align 4
+// CHECK-DXIL: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %[[RetValue2]], ptr align 4 %[[Tmp2]], i32 4, i1 false)
 
 // Buf3 initialization part 1 - local variable declared in function foo() is initialized by RWBuffer<int> C1 default constructor
 // CHECK: define void @_Z3foov()
@@ -67,18 +71,6 @@ export void foo() {
 // Buf3 initialization part 2 - body of RWBuffer<int> default C1 constructor that calls the default C2 constructor
 // CHECK: define linkonce_odr hidden void @_ZN4hlsl8RWBufferIiEC1Ev(ptr {{.*}} %this)
 // CHECK: call void @_ZN4hlsl8RWBufferIiEC2Ev(ptr {{.*}} %{{.*}})
-
-// Buf1 initialization part 3 - body of RWBuffer<float> constructor with handle
-// CHECK: define linkonce_odr hidden void @_ZN4hlsl8RWBufferIfEC2EU9_Res_u_CTfu17__hlsl_resource_t(ptr {{.*}} %this,
-// CHECK-SAME: target("dx.TypedBuffer", float, 1, 0, 0) %handle)
-// CHECK: %[[HandlePtr1:.*]] = getelementptr inbounds nuw %"class.hlsl::RWBuffer", ptr %{{.*}}, i32 0, i32 0
-// CHECK-DXIL-NEXT: store target("dx.TypedBuffer", float, 1, 0, 0) %{{.*}}, ptr %[[HandlePtr1]], align 4
-
-// Buf2 initialization part 3 - body of RWBuffer<double> constructor with handle
-// CHECK: define linkonce_odr hidden void @_ZN4hlsl8RWBufferIdEC1EU9_Res_u_CTdu17__hlsl_resource_t(ptr {{.*}} %this,
-// CHECK-SAME: target("dx.TypedBuffer", double, 1, 0, 0) %handle)
-// CHECK: %[[HandlePtr2:.*]] = getelementptr inbounds nuw %"class.hlsl::RWBuffer.0", ptr %{{.*}}, i32 0, i32 0
-// CHECK-DXIL-NEXT: store target("dx.TypedBuffer", double, 1, 0, 0) %{{.*}}, ptr %[[HandlePtr2]], align 4
 
 // Buf3 initialization part 3 - body of RWBuffer<int> default C2 constructor that initializes handle to poison
 // CHECK: define linkonce_odr hidden void @_ZN4hlsl8RWBufferIiEC2Ev(ptr {{.*}} %this)
