@@ -411,20 +411,6 @@ and is used as a lowering target for Linalg, enabling further transformations
 and combination of semantically-loaded and lower-level inputs. As such, Linalg
 is intended to complement Affine rather than replace it.
 
-### Summary of Existing Alternatives a Picture<a name="observationssummary"></a>
-Lastly, we summarize our observations of lessons from [Prior
-Art](#prior-art)---when viewed under the lense of our [Core Guiding
-Principles](#guiding_principles)---with the following picture.
-
-<img width="1200" alt="MLIR Codegen Flow"
-src="https://user-images.githubusercontent.com/10148468/73613904-2f720a00-45c8-11ea-8265-1c856c02525b.png">
-
-This figure is not meant to be perfectly accurate but a rough map of how we view
-the distribution of structural information in existing systems, from a
-codegen-friendly angle. Unsurprisingly, the
-[Linalg Dialect](../Dialects/Linalg/_index.md) and its future evolutions aspire
-to a position in the top-right of this map.
-
 ## Core Guiding Principles<a name="guiding_principles"></a>
 
 ### Transformations and Simplicity First<a name="transformations_first"></a>
@@ -679,3 +665,17 @@ Considering the *potential* described during the discussion on
 transformation would dictate that the potential remains constant.
 In contrast, Linalg advocates for ***monotonicity*** under
 transformations.
+
+### Summary of Existing Alternatives a Picture<a name="observationssummary"></a>
+Lastly, we summarize our observations of lessons from [Prior
+Art](#prior-art)---when viewed under the lense of our [Core Guiding
+Principles](#guiding_principles)---with the following picture.
+
+<img width="1200" alt="MLIR Codegen Flow"
+src="https://user-images.githubusercontent.com/10148468/73613904-2f720a00-45c8-11ea-8265-1c856c02525b.png">
+
+This figure is not meant to be perfectly accurate but a rough map of how we view
+the distribution of structural information in existing systems, from a
+codegen-friendly angle. Unsurprisingly, the
+[Linalg Dialect](../Dialects/Linalg/_index.md) and its future evolutions aspire
+to a position in the top-right of this map.
