@@ -1217,8 +1217,7 @@ bool MachineOutliner::outline(
   return OutlinedSomething;
 }
 
-/// \returns true if outlining is allowed for \p MBB
-static bool pgoAllowOutlining(RunOutliner RunOutlinerMode,
+static bool allowPGOOutlining(RunOutliner RunOutlinerMode,
                               const ProfileSummaryInfo *PSI,
                               const BlockFrequencyInfo *BFI,
                               MachineBasicBlock &MBB) {
@@ -1325,7 +1324,7 @@ void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M) {
         continue;
       }
 
-      if (!pgoAllowOutlining(RunOutlinerMode, PSI, BFI, MBB)) {
+      if (!allowPGOOutlining(RunOutlinerMode, PSI, BFI, MBB)) {
         ++NumPGOBlockedOutlined;
         continue;
       }
