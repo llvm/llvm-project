@@ -199,16 +199,40 @@ define void @fadd_fcmp_select_copy(<vscale x 4 x float> %v, <vscale x 4 x i1> %c
   ret void
 }
 
+define <vscale x 8 x i32> @vcompress_cmp(<vscale x 8 x i32> %a, <vscale x 8 x i32> %b, <vscale x 8 x i32> %c, iXLen %vl) {
+; CHECK-LABEL: vcompress_cmp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
+; CHECK-NEXT:    vmseq.vv v20, v8, v12
+; CHECK-NEXT:    vcompress.vm v8, v16, v20
+; CHECK-NEXT:    ret
+  %cmp = icmp eq <vscale x 8 x i32> %a, %b
+  %compress = call <vscale x 8 x i32> @llvm.riscv.vcompress.nxv8i32(<vscale x 8 x i32> poison, <vscale x 8 x i32> %c, <vscale x 8 x i1> %cmp, iXLen %vl)
+  ret <vscale x 8 x i32> %compress
+}
+
+define <vscale x 8 x i32> @vcompress_add(<vscale x 8 x i32> %a, <vscale x 8 x i32> %b, <vscale x 8 x i1> %c, iXLen %vl) {
+; CHECK-LABEL: vcompress_add:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
+; CHECK-NEXT:    vadd.vv v12, v8, v12
+; CHECK-NEXT:    vcompress.vm v8, v12, v0
+; CHECK-NEXT:    ret
+  %add = add <vscale x 8 x i32> %a, %b
+  %compress = call <vscale x 8 x i32> @llvm.riscv.vcompress.nxv8i32(<vscale x 8 x i32> poison, <vscale x 8 x i32> %add, <vscale x 8 x i1> %c, iXLen %vl)
+  ret <vscale x 8 x i32> %compress
+}
+
 define void @recurrence(<vscale x 4 x i32> %v, ptr %p, iXLen %n, iXLen %vl) {
 ; CHECK-LABEL: recurrence:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:  .LBB13_1: # %loop
+; CHECK-NEXT:  .LBB15_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    vadd.vv v10, v10, v8
-; CHECK-NEXT:    bnez a1, .LBB13_1
+; CHECK-NEXT:    bnez a1, .LBB15_1
 ; CHECK-NEXT:  # %bb.2: # %exit
 ; CHECK-NEXT:    vse32.v v10, (a0)
 ; CHECK-NEXT:    ret
@@ -232,12 +256,12 @@ define <vscale x 4 x i32> @join(<vscale x 4 x i32> %v, i1 %cond, iXLen %vl) {
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m2, ta, ma
 ; CHECK-NEXT:    vadd.vi v8, v8, 1
-; CHECK-NEXT:    beqz a0, .LBB14_2
+; CHECK-NEXT:    beqz a0, .LBB16_2
 ; CHECK-NEXT:  # %bb.1: # %foo
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; CHECK-NEXT:    vadd.vi v8, v8, 1
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB14_2: # %bar
+; CHECK-NEXT:  .LBB16_2: # %bar
 ; CHECK-NEXT:    vadd.vi v8, v8, 2
 ; CHECK-NEXT:    ret
 entry:
