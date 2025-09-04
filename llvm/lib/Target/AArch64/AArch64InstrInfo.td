@@ -6706,20 +6706,24 @@ def : Pat<(v2f64 (AArch64frsqrts (v2f64 FPR128:$Rn), (v2f64 FPR128:$Rm))),
 // Some float -> int -> float conversion patterns for which we want to keep the
 // int values in FP registers using the corresponding NEON instructions to
 // avoid more costly int <-> fp register transfers.
+let HasOneUse = 1 in {
+def any_fp_to_sint_oneuse: PatFrag<(ops node:$src0), (any_fp_to_sint $src0)>;
+def any_fp_to_uint_oneuse: PatFrag<(ops node:$src0), (any_fp_to_uint $src0)>;
+}
 let Predicates = [HasNEONandIsSME2p2StreamingSafe] in {
-def : Pat<(f64 (any_sint_to_fp (i64 (any_fp_to_sint f64:$Rn)))),
+def : Pat<(f64 (any_sint_to_fp (i64 (any_fp_to_sint_oneuse f64:$Rn)))),
           (SCVTFv1i64 (i64 (FCVTZSv1i64 f64:$Rn)))>;
-def : Pat<(f32 (any_sint_to_fp (i32 (any_fp_to_sint f32:$Rn)))),
+def : Pat<(f32 (any_sint_to_fp (i32 (any_fp_to_sint_oneuse f32:$Rn)))),
           (SCVTFv1i32 (i32 (FCVTZSv1i32 f32:$Rn)))>;
-def : Pat<(f64 (any_uint_to_fp (i64 (any_fp_to_uint f64:$Rn)))),
+def : Pat<(f64 (any_uint_to_fp (i64 (any_fp_to_uint_oneuse f64:$Rn)))),
           (UCVTFv1i64 (i64 (FCVTZUv1i64 f64:$Rn)))>;
-def : Pat<(f32 (any_uint_to_fp (i32 (any_fp_to_uint f32:$Rn)))),
+def : Pat<(f32 (any_uint_to_fp (i32 (any_fp_to_uint_oneuse f32:$Rn)))),
           (UCVTFv1i32 (i32 (FCVTZUv1i32 f32:$Rn)))>;
 
 let Predicates = [HasNEONandIsSME2p2StreamingSafe, HasFullFP16] in {
-def : Pat<(f16 (any_sint_to_fp (i32 (any_fp_to_sint f16:$Rn)))),
+def : Pat<(f16 (any_sint_to_fp (i32 (any_fp_to_sint_oneuse f16:$Rn)))),
           (SCVTFv1i16 (f16 (FCVTZSv1f16 f16:$Rn)))>;
-def : Pat<(f16 (any_uint_to_fp (i32 (any_fp_to_uint f16:$Rn)))),
+def : Pat<(f16 (any_uint_to_fp (i32 (any_fp_to_uint_oneuse f16:$Rn)))),
           (UCVTFv1i16 (f16 (FCVTZUv1f16 f16:$Rn)))>;
 }
 
