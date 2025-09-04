@@ -2554,7 +2554,7 @@ bool IsDecompositionDeclRefExpr(const Expr *E) {
   if (!Ref)
     return false;
 
-  return llvm::isa_and_nonnull<DecompositionDecl *>(Ref->getDecl());
+  return llvm::isa_and_nonnull<DecompositionDecl>(Ref->getDecl());
 }
 } // namespace
 
