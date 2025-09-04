@@ -301,6 +301,14 @@ Variable CreateVariable(lldb::SBValue v, int64_t var_ref, bool format_hex,
   if (lldb::addr_t addr = v.GetLoadAddress(); addr != LLDB_INVALID_ADDRESS)
     var.memoryReference = addr;
 
+  bool is_readonly = v.GetType().IsAggregateType() ||
+                     v.GetValueType() == lldb::eValueTypeRegisterSet;
+  if (is_readonly) {
+    if (!var.presentationHint)
+      var.presentationHint = {VariablePresentationHint()};
+    var.presentationHint->attributes.push_back("readOnly");
+  }
+
   return var;
 }
 
