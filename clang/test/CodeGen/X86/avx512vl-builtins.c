@@ -4763,6 +4763,9 @@ __m128i test_mm_max_epi64(__m128i __A, __m128i __B) {
   // CHECK: [[RES:%.*]] = call {{.*}}<2 x i64> @llvm.smax.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_max_epi64(__A,__B); 
 }
+
+TEST_CONSTEXPR(match_v2di(_mm_max_epi64((__m128i)(__v2di){+1, -2}, (__m128i)(__v2di){-1, +2}), +1, +2));
+
 __m256i test_mm256_maskz_max_epi64(__mmask8 __M, __m256i __A, __m256i __B) {
   // CHECK-LABEL: test_mm256_maskz_max_epi64
   // CHECK: [[RES:%.*]] = call {{.*}}<4 x i64> @llvm.smax.v4i64(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
@@ -4780,6 +4783,9 @@ __m256i test_mm256_max_epi64(__m256i __A, __m256i __B) {
   // CHECK: [[RES:%.*]] = call {{.*}}<4 x i64> @llvm.smax.v4i64(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
   return _mm256_max_epi64(__A,__B); 
 }
+
+TEST_CONSTEXPR(match_v4di(_mm256_max_epi64((__m256i)(__v4di){+1, -2, +3, -4}, (__m256i)(__v4di){-1, +2, -3, +4}), +1, +2, +3, +4));
+
 __m128i test_mm_maskz_max_epu32(__mmask8 __M, __m128i __A, __m128i __B) {
   // CHECK-LABEL: test_mm_maskz_max_epu32
   // CHECK: [[RES:%.*]] = call <4 x i32> @llvm.umax.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
@@ -4823,6 +4829,9 @@ __m128i test_mm_max_epu64(__m128i __A, __m128i __B) {
   // CHECK: [[RES:%.*]] = call {{.*}}<2 x i64> @llvm.umax.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_max_epu64(__A,__B); 
 }
+
+TEST_CONSTEXPR(match_m128i(_mm_max_epu64((__m128i)(__v2du){0, 3}, (__m128i)(__v2du){1, 2}), 1, 3));
+
 __m128i test_mm_mask_max_epu64(__m128i __W, __mmask8 __M, __m128i __A, __m128i __B) {
   // CHECK-LABEL: test_mm_mask_max_epu64
   // CHECK: [[RES:%.*]] = call {{.*}}<2 x i64> @llvm.umax.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
@@ -4840,6 +4849,9 @@ __m256i test_mm256_max_epu64(__m256i __A, __m256i __B) {
   // CHECK: [[RES:%.*]] = call {{.*}}<4 x i64> @llvm.umax.v4i64(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
   return _mm256_max_epu64(__A,__B); 
 }
+
+TEST_CONSTEXPR(match_m256i(_mm256_max_epu64((__m256i)(__v4du){0, 1, 4, 3}, (__m256i)(__v4du){1, 2, 3, 4}), 1, 2, 4, 4));
+
 __m256i test_mm256_mask_max_epu64(__m256i __W, __mmask8 __M, __m256i __A, __m256i __B) {
   // CHECK-LABEL: test_mm256_mask_max_epu64
   // CHECK: [[RES:%.*]] = call {{.*}}<4 x i64> @llvm.umax.v4i64(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
@@ -4883,6 +4895,9 @@ __m128i test_mm_min_epi64(__m128i __A, __m128i __B) {
   // CHECK: [[RES:%.*]] = call {{.*}}<2 x i64> @llvm.smin.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_min_epi64(__A,__B); 
 }
+
+TEST_CONSTEXPR(match_v2di(_mm_min_epi64((__m128i)(__v2di){+1, -2}, (__m128i)(__v2di){-1, +2}), -1, -2));
+
 __m128i test_mm_mask_min_epi64(__m128i __W, __mmask8 __M, __m128i __A, __m128i __B) {
   // CHECK-LABEL: test_mm_mask_min_epi64
   // CHECK: [[RES:%.*]] = call {{.*}}<2 x i64> @llvm.smin.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
@@ -4900,6 +4915,9 @@ __m256i test_mm256_min_epi64(__m256i __A, __m256i __B) {
   // CHECK: [[RES:%.*]] = call {{.*}}<4 x i64> @llvm.smin.v4i64(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
   return _mm256_min_epi64(__A,__B); 
 }
+
+TEST_CONSTEXPR(match_v4di(_mm256_min_epi64((__m256i)(__v4di){+1, -2, +3, -4}, (__m256i)(__v4di){-1, +2, -3, +4}), -1, -2, -3, -4));
+
 __m256i test_mm256_mask_min_epi64(__m256i __W, __mmask8 __M, __m256i __A, __m256i __B) {
   // CHECK-LABEL: test_mm256_mask_min_epi64
   // CHECK: [[RES:%.*]] = call {{.*}}<4 x i64> @llvm.smin.v4i64(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
@@ -4949,6 +4967,9 @@ __m128i test_mm_min_epu64(__m128i __A, __m128i __B) {
   // CHECK: [[RES:%.*]] = call {{.*}}<2 x i64> @llvm.umin.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_min_epu64(__A,__B); 
 }
+
+TEST_CONSTEXPR(match_m128i(_mm_min_epu64((__m128i)(__v2du){0, 3}, (__m128i)(__v2du){1, 2}), 0, 2));
+
 __m128i test_mm_mask_min_epu64(__m128i __W, __mmask8 __M, __m128i __A, __m128i __B) {
   // CHECK-LABEL: test_mm_mask_min_epu64
   // CHECK: [[RES:%.*]] = call {{.*}}<2 x i64> @llvm.umin.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
@@ -4966,6 +4987,9 @@ __m256i test_mm256_min_epu64(__m256i __A, __m256i __B) {
   // CHECK: [[RES:%.*]] = call {{.*}}<4 x i64> @llvm.umin.v4i64(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
   return _mm256_min_epu64(__A,__B); 
 }
+
+TEST_CONSTEXPR(match_m256i(_mm256_min_epu64((__m256i)(__v4du){0, 1, 4, 3}, (__m256i)(__v4du){1, 2, 3, 4}), 0, 1, 3, 3));
+
 __m256i test_mm256_mask_min_epu64(__m256i __W, __mmask8 __M, __m256i __A, __m256i __B) {
   // CHECK-LABEL: test_mm256_mask_min_epu64
   // CHECK: [[RES:%.*]] = call {{.*}}<4 x i64> @llvm.umin.v4i64(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
