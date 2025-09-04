@@ -247,8 +247,8 @@ private:
   /// index I' according to UserChain produced by function "find".
   ///
   /// The building conceptually takes two steps:
-  /// 1) iteratively distribute s/zext towards the leaves of the expression tree
-  /// that computes I
+  /// 1) iteratively distribute sext/zext/trunc towards the leaves of the
+  /// expression tree that computes I
   /// 2) reassociate the expression tree to the form I' + C.
   ///
   /// For example, to extract the 5 from sext(a + (b + 5)), we first distribute
@@ -260,29 +260,30 @@ private:
   Value *rebuildWithoutConstOffset();
 
   /// After the first step of rebuilding the GEP index without the constant
-  /// offset, distribute s/zext to the operands of all operators in UserChain.
-  /// e.g., zext(sext(a + (b + 5)) (assuming no overflow) =>
+  /// offset, distribute sext/zext/trunc to the operands of all operators in
+  /// UserChain. e.g., zext(sext(a + (b + 5)) (assuming no overflow) =>
   /// zext(sext(a)) + (zext(sext(b)) + zext(sext(5))).
   ///
   /// The function also updates UserChain to point to new subexpressions after
-  /// distributing s/zext. e.g., the old UserChain of the above example is
-  /// 5 -> b + 5 -> a + (b + 5) -> sext(...) -> zext(sext(...)),
+  /// distributing sext/zext/trunc. e.g., the old UserChain of the above example
+  /// is
+  ///   5 -> b + 5 -> a + (b + 5) -> sext(...) -> zext(sext(...)),
   /// and the new UserChain is
-  /// zext(sext(5)) -> zext(sext(b)) + zext(sext(5)) ->
-  ///   zext(sext(a)) + (zext(sext(b)) + zext(sext(5))
+  ///   zext(sext(5)) -> zext(sext(b)) + zext(sext(5)) ->
+  ///     zext(sext(a)) + (zext(sext(b)) + zext(sext(5))
   ///
   /// \p ChainIndex The index to UserChain. ChainIndex is initially
   ///               UserChain.size() - 1, and is decremented during
   ///               the recursion.
-  Value *distributeExtsAndCloneChain(unsigned ChainIndex);
+  Value *distributeCastsAndCloneChain(unsigned ChainIndex);
 
   /// Reassociates the GEP index to the form I' + C and returns I'.
   Value *removeConstOffset(unsigned ChainIndex);
 
-  /// A helper function to apply ExtInsts, a list of s/zext, to value V.
-  /// e.g., if ExtInsts = [sext i32 to i64, zext i16 to i32], this function
+  /// A helper function to apply CastInsts, a list of sext/zext/trunc, to value
+  /// V.  e.g., if CastInsts = [sext i32 to i64, zext i16 to i32], this function
   /// returns "sext i32 (zext i16 V to i32) to i64".
-  Value *applyExts(Value *V);
+  Value *applyCasts(Value *V);
 
   /// A helper function that returns whether we can trace into the operands
   /// of binary operator BO for a constant offset.
@@ -307,8 +308,8 @@ private:
   SmallVector<User *, 8> UserChain;
 
   /// A data structure used in rebuildWithoutConstOffset. Contains all
-  /// sext/zext instructions along UserChain.
-  SmallVector<CastInst *, 16> ExtInsts;
+  /// sext/zext/trunc instructions along UserChain.
+  SmallVector<CastInst *, 16> CastInsts;
 
   /// Insertion position of cloned instructions.
   BasicBlock::iterator IP;
@@ -491,7 +492,7 @@ bool ConstantOffsetExtractor::CanTraceInto(bool SignExtended,
   }
 
   Value *LHS = BO->getOperand(0), *RHS = BO->getOperand(1);
-  // Do not trace into "or" unless it is equivalent to "add".
+  // Do not trace into "or" unless it is equivalent to "add nuw nsw".
   // This is the case if the or's disjoint flag is set.
   if (BO->getOpcode() == Instruction::Or &&
       !cast<PossiblyDisjointInst>(BO)->isDisjoint())
@@ -503,8 +504,8 @@ bool ConstantOffsetExtractor::CanTraceInto(bool SignExtended,
   if (ZeroExtended && !SignExtended && BO->getOpcode() == Instruction::Sub)
     return false;
 
-  // In addition, tracing into BO requires that its surrounding s/zext (if
-  // any) is distributable to both operands.
+  // In addition, tracing into BO requires that its surrounding sext/zext/trunc
+  // (if any) is distributable to both operands.
   //
   // Suppose BO = A op B.
   //  SignExtended | ZeroExtended | Distributable?
@@ -628,11 +629,11 @@ APInt ConstantOffsetExtractor::find(Value *V, bool SignExtended,
   return ConstantOffset;
 }
 
-Value *ConstantOffsetExtractor::applyExts(Value *V) {
+Value *ConstantOffsetExtractor::applyCasts(Value *V) {
   Value *Current = V;
-  // ExtInsts is built in the use-def order. Therefore, we apply them to V
+  // CastInsts is built in the use-def order. Therefore, we apply them to V
   // in the reversed order.
-  for (CastInst *I : llvm::reverse(ExtInsts)) {
+  for (CastInst *I : llvm::reverse(CastInsts)) {
     if (Constant *C = dyn_cast<Constant>(Current)) {
       // Try to constant fold the cast.
       Current = ConstantFoldCastOperand(I->getOpcode(), C, I->getType(), DL);
@@ -640,24 +641,24 @@ Value *ConstantOffsetExtractor::applyExts(Value *V) {
         continue;
     }
 
-    Instruction *Ext = I->clone();
-    Ext->setOperand(0, Current);
+    Instruction *Cast = I->clone();
+    Cast->setOperand(0, Current);
     // In ConstantOffsetExtractor::find we do not analyze nuw/nsw for trunc, so
     // we assume that it is ok to redistribute trunc over add/sub/or. But for
     // example (add (trunc nuw A), (trunc nuw B)) is more poisonous than (trunc
     // nuw (add A, B))). To make such redistributions legal we drop all the
     // poison generating flags from cloned trunc instructions here.
-    if (isa<TruncInst>(Ext))
-      Ext->dropPoisonGeneratingFlags();
-    Ext->insertBefore(*IP->getParent(), IP);
-    Current = Ext;
+    if (isa<TruncInst>(Cast))
+      Cast->dropPoisonGeneratingFlags();
+    Cast->insertBefore(*IP->getParent(), IP);
+    Current = Cast;
   }
   return Current;
 }
 
 Value *ConstantOffsetExtractor::rebuildWithoutConstOffset() {
-  distributeExtsAndCloneChain(UserChain.size() - 1);
-  // Remove all nullptrs (used to be s/zext) from UserChain.
+  distributeCastsAndCloneChain(UserChain.size() - 1);
+  // Remove all nullptrs (used to be sext/zext/trunc) from UserChain.
   unsigned NewSize = 0;
   for (User *I : UserChain) {
     if (I != nullptr) {
@@ -670,29 +671,29 @@ Value *ConstantOffsetExtractor::rebuildWithoutConstOffset() {
 }
 
 Value *
-ConstantOffsetExtractor::distributeExtsAndCloneChain(unsigned ChainIndex) {
+ConstantOffsetExtractor::distributeCastsAndCloneChain(unsigned ChainIndex) {
   User *U = UserChain[ChainIndex];
   if (ChainIndex == 0) {
     assert(isa<ConstantInt>(U));
-    // If U is a ConstantInt, applyExts will return a ConstantInt as well.
-    return UserChain[ChainIndex] = cast<ConstantInt>(applyExts(U));
+    // If U is a ConstantInt, applyCasts will return a ConstantInt as well.
+    return UserChain[ChainIndex] = cast<ConstantInt>(applyCasts(U));
   }
 
   if (CastInst *Cast = dyn_cast<CastInst>(U)) {
     assert(
         (isa<SExtInst>(Cast) || isa<ZExtInst>(Cast) || isa<TruncInst>(Cast)) &&
         "Only following instructions can be traced: sext, zext & trunc");
-    ExtInsts.push_back(Cast);
+    CastInsts.push_back(Cast);
     UserChain[ChainIndex] = nullptr;
-    return distributeExtsAndCloneChain(ChainIndex - 1);
+    return distributeCastsAndCloneChain(ChainIndex - 1);
   }
 
   // Function find only trace into BinaryOperator and CastInst.
   BinaryOperator *BO = cast<BinaryOperator>(U);
   // OpNo = which operand of BO is UserChain[ChainIndex - 1]
   unsigned OpNo = (BO->getOperand(0) == UserChain[ChainIndex - 1] ? 0 : 1);
-  Value *TheOther = applyExts(BO->getOperand(1 - OpNo));
-  Value *NextInChain = distributeExtsAndCloneChain(ChainIndex - 1);
+  Value *TheOther = applyCasts(BO->getOperand(1 - OpNo));
+  Value *NextInChain = distributeCastsAndCloneChain(ChainIndex - 1);
 
   BinaryOperator *NewBO = nullptr;
   if (OpNo == 0) {
@@ -713,7 +714,7 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
 
   BinaryOperator *BO = cast<BinaryOperator>(UserChain[ChainIndex]);
   assert((BO->use_empty() || BO->hasOneUse()) &&
-         "distributeExtsAndCloneChain clones each BinaryOperator in "
+         "distributeCastsAndCloneChain clones each BinaryOperator in "
          "UserChain, so no one should be used more than "
          "once");
 
@@ -847,7 +848,8 @@ static bool allowsPreservingNUW(const User *U) {
   // "add nuw trunc(a), trunc(b)" is more poisonous than "trunc(add nuw a, b)"
   if (const TruncInst *TI = dyn_cast<TruncInst>(U))
     return TI->hasNoUnsignedWrap();
-  return isa<CastInst>(U) || isa<ConstantInt>(U);
+  assert((isa<CastInst>(U) || isa<ConstantInt>(U)) && "Unexpected User.");
+  return true;
 }
 
 Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
