@@ -409,12 +409,12 @@ static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
   }
 
   bool SelfMultiply = Op0 == Op1;
-  if (SelfMultiply) {
+  if (SelfMultiply)
     SelfMultiply &=
         isGuaranteedNotToBeUndef(Op0, Q.AC, Q.CxtI, Q.DT, Depth + 1);
+  Known = KnownBits::mul(Known, Known2, SelfMultiply);
 
-    Known = KnownBits::mul(Known, Known2, SelfMultiply);
-
+  if (SelfMultiply) {
     unsigned SignBits = ComputeNumSignBits(Op0, DemandedElts, Q, Depth + 1);
     unsigned TyBits = Op0->getType()->getScalarSizeInBits();
     unsigned OutValidBits = 2 * (TyBits - SignBits + 1);
@@ -424,8 +424,6 @@ static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
           APInt::getHighBitsSet(TyBits, TyBits - OutValidBits + 1);
       Known.Zero |= KnownZeroMask;
     }
-  } else {
-    Known = KnownBits::mul(Known, Known2, SelfMultiply);
   }
 
   // Only make use of no-wrap flags if we failed to compute the sign bit

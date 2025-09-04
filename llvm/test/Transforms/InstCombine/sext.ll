@@ -426,7 +426,7 @@ define i64 @smear_set_bit_different_dest_type_wider_dst(i32 %x) {
 
 ; Test known bits for (sext i8 x) * (sext i8 x)
 
-define i1 @sext_square_bit30(i8 %x) {
+define i1 @sext_square_bit30(i8 noundef %x) {
 ; CHECK-LABEL: @sext_square_bit30(
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -437,7 +437,7 @@ define i1 @sext_square_bit30(i8 %x) {
   ret i1 %cmp
 }
 
-define i1 @sext_square_bit15(i8 %x) {
+define i1 @sext_square_bit15(i8 noundef %x) {
 ; CHECK-LABEL: @sext_square_bit15(
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -448,7 +448,7 @@ define i1 @sext_square_bit15(i8 %x) {
   ret i1 %cmp
 }
 
-define i1 @sext_square_bit14(i8 %x) {
+define i1 @sext_square_bit14(i8 noundef %x) {
 ; CHECK-LABEL: @sext_square_bit14(
 ; CHECK-NEXT:    [[SX:%.*]] = sext i8 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[SX]], [[SX]]
