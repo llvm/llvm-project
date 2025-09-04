@@ -164,6 +164,8 @@ def predsum_bs_32  : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 def predsum_hs_32  : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 def predsumu_bs_32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 def predsumu_hs_32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def psra_bs_32     : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def psra_hs_32     : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 } // Features = "experimental-p,32bit"
 
 let Features = "experimental-p,64bit" in {
@@ -199,6 +201,9 @@ def predsum_ws     : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 def predsumu_bs_64 : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 def predsumu_hs_64 : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 def predsumu_ws    : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def psra_bs_64     : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def psra_hs_64     : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def psra_ws        : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 } // Features = "experimental-p,64bit"
 } // Attributes = [Const, NoThrow]
 

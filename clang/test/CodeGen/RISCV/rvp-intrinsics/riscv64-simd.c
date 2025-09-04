@@ -309,3 +309,30 @@ uint64_t predsumu_hs(uint64_t rs1, uint64_t rs2) {
 uint64_t predsumu_ws(uint64_t rs1, uint64_t rs2) {
   return __riscv_predsumu_ws(rs1, rs2);
 }
+
+// RV64P-LABEL: @psra_bs(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.psra.bs.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t psra_bs(uint64_t rs1, uint64_t rs2) {
+  return __riscv_psra_bs(rs1, rs2);
+}
+
+// RV64P-LABEL: @psra_hs(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.psra.hs.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t psra_hs(uint64_t rs1, uint64_t rs2) {
+  return __riscv_psra_hs(rs1, rs2);
+}
+
+// RV64P-LABEL: @psra_ws(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.psra.ws.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t psra_ws(uint64_t rs1, uint64_t rs2) {
+  return __riscv_psra_ws(rs1, rs2);
+}
