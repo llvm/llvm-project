@@ -55,10 +55,14 @@ enum NVVMMemorySpace {
   kSharedClusterMemorySpace = 7,
 };
 
-/// A pair type of LLVM's Intrinsic ID and args (which are llvm values).
-/// This type is returned by the getIntrinsicIDAndArgs() methods.
-using IDArgPair =
-    std::pair<llvm::Intrinsic::ID, llvm::SmallVector<llvm::Value *>>;
+/// A tuple type of LLVM's Intrinsic ID, args (which are llvm values),
+/// and args types (which are llvm types).
+/// Args types are only required for overloaded intrinsics to provide the
+/// correct argument types to the createIntrinsicCall() method.
+/// This type is returned by the getIntrinsicIDAndArgsMaybeWithTypesMaybeWithTypes() methods.
+using IIDArgsMaybeWithTypes =
+    std::tuple<llvm::Intrinsic::ID, llvm::SmallVector<llvm::Value *>,
+               llvm::SmallVector<llvm::Type *>>;
 
 /// Return the element type and number of elements associated with a wmma matrix
 /// of given chracteristics. This matches the logic in IntrinsicsNVVM.td
