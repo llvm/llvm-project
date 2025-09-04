@@ -339,14 +339,16 @@ gpu.module @test {
 // CHECK-PROP      :   %[[REDUCE1:.*]] = vector.reduction <add>, %[[COL1CAST]], %[[ACC1]] : vector<32xf32> into f32
 // CHECK-PROP      :   %[[R:.*]] = vector.from_elements %[[REDUCE0]], %[[REDUCE1]] : vector<2xf32>
 // CHECK-PROP      :   return %[[R]] : vector<2xf32>
-func.func @vector_multi_reduction_col_reduce(%laneid: index) -> vector<2xf32> {
+gpu.module @test {
+gpu.func @vector_multi_reduction_col_reduce(%laneid: index) -> vector<2xf32> {
   %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<2xf32>) {
     %0 = "some_def"() : () -> (vector<32x64xf32>)
     %acc = "some_def"() : () -> (vector<64xf32>)
     %1 = vector.multi_reduction <add>, %0, %acc [0] : vector<32x64xf32> to vector<64xf32>
     gpu.yield %1 : vector<64xf32>
   }
-  return %r : vector<2xf32>
+  gpu.return %r : vector<2xf32>
+}
 }
 
 // -----
@@ -389,12 +391,14 @@ func.func @vector_multi_reduction_col_reduce(%laneid: index) -> vector<2xf32> {
 // CHECK-PROP:        %[[R1:.*]] = arith.addf %[[T13]], %[[CST]] : f32
 // CHECK-PROP:        %[[R:.*]] = vector.from_elements %[[R0]], %[[R1]] : vector<2xf32>
 // CHECK-PROP:        return %[[R]] : vector<2xf32>
-func.func @vector_multi_reduction_row_reduce(%laneid: index) -> vector<2xf32> {
+gpu.module @test {
+gpu.func @vector_multi_reduction_row_reduce(%laneid: index) -> vector<2xf32> {
   %zero = arith.constant dense<0.0> : vector<2xf32>
   %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<2xf32>) {
     %0 = "some_def"() : () -> (vector<2x32xf32>)
     %1 = vector.multi_reduction <add>, %0, %zero [1] : vector<2x32xf32> to vector<2xf32>
     gpu.yield %1 : vector<2xf32>
   }
-  return %r : vector<2xf32>
+  gpu.return %r : vector<2xf32>
+}
 }
