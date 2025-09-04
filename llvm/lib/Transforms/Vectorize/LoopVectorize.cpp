@@ -7047,7 +7047,13 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   // Verify that the VPlan-based and legacy cost models agree, except for VPlans
   // with early exits and plans with additional VPlan simplifications. The
   // legacy cost model doesn't properly model costs for such loops.
+  // NOTE: If the user has forced a target instruction cost this assert is very
+  // likely to trigger because the VPlan recipes don't map 1:1 with the scalar
+  // instructions that the legacy cost model is based on. One example of this is
+  // for interleave groups - VPlan will use the forced cost for the whole group,
+  // whereas the legacy cost model will use it for each load.
   assert((BestFactor.Width == LegacyVF.Width || BestPlan.hasEarlyExit() ||
+          ForceTargetInstructionCost.getNumOccurrences() > 0 ||
           planContainsAdditionalSimplifications(getPlanFor(BestFactor.Width),
                                                 CostCtx, OrigLoop,
                                                 BestFactor.Width) ||
