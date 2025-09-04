@@ -487,7 +487,8 @@ struct WgToSgVectorBroadcastOp
     for (auto operand : adaptor.getOperands().front()) {
       auto newBroadcast = vector::BroadcastOp::create(rewriter, op.getLoc(),
                                                       newResultType, operand);
-      if (!layout.getLaneLayoutAsInt().empty())
+      if (!layout.getLaneLayoutAsInt().empty() ||
+          !layout.getLaneDataAsInt().empty())
         xegpu::setDistributeLayoutAttr(newBroadcast->getResult(0),
                                        layout.dropSgLayoutAndData());
 
@@ -546,7 +547,8 @@ struct WgToSgElementwiseOp : public ConversionPattern {
       for (auto attr : op->getAttrs()) {
         if (auto layout =
                 dyn_cast<xegpu::DistributeLayoutAttr>(attr.getValue())) {
-          if (!layout.getLaneLayoutAsInt().empty())
+          if (!layout.getLaneLayoutAsInt().empty() ||
+              !layout.getLaneDataAsInt().empty())
             state.addAttribute(attr.getName(), layout.dropSgLayoutAndData());
         } else {
           state.addAttribute(attr.getName(), attr.getValue());
@@ -738,7 +740,8 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
     auto sgAttr = DenseElementsAttr::get(newType, singleVal);
     auto cstOp =
         arith::ConstantOp::create(rewriter, op.getLoc(), newType, sgAttr);
-    if (!layout.getLaneLayoutAsInt().empty())
+    if (!layout.getLaneLayoutAsInt().empty() ||
+        !layout.getLaneDataAsInt().empty())
       xegpu::setDistributeLayoutAttr(cstOp->getResult(0),
                                      layout.dropSgLayoutAndData());
     SmallVector<Value> newConsts(count, cstOp);
@@ -923,18 +926,20 @@ struct WgToSgVectorStepOp : public OpConversionPattern<vector::StepOp> {
 
     Value sgId =
         gpu::SubgroupIdOp::create(rewriter, loc, /*upper_bound=*/nullptr);
-    auto maybeOffsets = layout.getOffsets(rewriter, loc, sgId, wgShape);
-    if (failed(maybeOffsets))
+    auto sgOffsets = layout.getOffsets(rewriter, loc, sgId, wgShape);
+    if (failed(sgOffsets))
       return failure();
 
     VectorType newTy = type.cloneWith(*sgShape, type.getElementType());
-    Value base = vector::StepOp::create(rewriter, loc, newTy);
+    Value steps = vector::StepOp::create(rewriter, loc, newTy);
     SmallVector<Value> newOps;
-    for (auto offsets : *maybeOffsets) {
-      Value bcast =
+    for (auto offsets : *sgOffsets) {
+      // Broadcast the offset scalar to a vector & add to the base steps
+      Value bcastOffset =
           vector::BroadcastOp::create(rewriter, loc, newTy, offsets[0]);
-      Value add = arith::AddIOp::create(rewriter, loc, base, bcast);
-      newOps.push_back(add);
+      Value finalSteps =
+          arith::AddIOp::create(rewriter, loc, steps, bcastOffset);
+      newOps.push_back(finalSteps);
     }
 
     rewriter.replaceOpWithMultiple(op, {newOps});
@@ -969,7 +974,8 @@ struct WgToSgVectorShapeCastOp
     for (auto src : adaptor.getSource()) {
       auto newShapeCast =
           rewriter.create<vector::ShapeCastOp>(op.getLoc(), newResultType, src);
-      if (!layout.getLaneLayoutAsInt().empty())
+      if (!layout.getLaneLayoutAsInt().empty() ||
+          !layout.getInstDataAsInt().empty())
         xegpu::setDistributeLayoutAttr(newShapeCast->getResult(0),
                                        layout.dropSgLayoutAndData());
       newShapeCastOps.push_back(newShapeCast.getResult());

@@ -370,15 +370,15 @@ gpu.module @test_distribution {
   // CHECK-LABEL: vector_step_op
   gpu.func @vector_step_op_slice_attr() {
     //CHECK: [[sgId:%.+]] = gpu.subgroup_id : index
-    //CHECK: [[IDY:%.+]] = affine.apply #map2()[[[sgId]]]
-    //CHECK: [[c32:%.+]] = arith.constant 32 : index
-    //CHECK: [[LOCALY:%.+]] = index.mul [[IDY]], [[c32]]
-    //CHECK: [[c0:%.+]] = arith.constant 0 : index
-    //CHECK: [[Y:%.+]] = arith.addi [[LOCALY]], [[c0]] : index
-    //CHECK: [[c128:%.+]] = arith.constant 128 : index
-    //CHECK: [[MODY:%.+]] = index.remu [[Y]], [[c128]]
-    //CHECK: [[BASE:%.+]] = vector.step : vector<32xindex>
-    //CHECK: [[CAST:%.+]] = vector.broadcast [[MODY]] : index to vector<32xindex>
+    //CHECK-DAG: [[IDY:%.+]] = affine.apply #map2()[[[sgId]]]
+    //CHECK-DAG: [[c32:%.+]] = arith.constant 32 : index
+    //CHECK-DAG: [[LOCALY:%.+]] = index.mul [[IDY]], [[c32]]
+    //CHECK-DAG: [[c0:%.+]] = arith.constant 0 : index
+    //CHECK-DAG: [[Y:%.+]] = arith.addi [[LOCALY]], [[c0]] : index
+    //CHECK-DAG: [[c128:%.+]] = arith.constant 128 : index
+    //CHECK-DAG: [[MODY:%.+]] = index.remu [[Y]], [[c128]]
+    //CHECK-DAG: [[BASE:%.+]] = vector.step : vector<32xindex>
+    //CHECK-DAG: [[CAST:%.+]] = vector.broadcast [[MODY]] : index to vector<32xindex>
     //CHECK: [[ADD:%.+]] = arith.addi [[BASE]], [[CAST]] : vector<32xindex>
     %step = vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [4, 8], sg_data = [32, 32]>, dims = [1]>}: vector<128xindex>
     gpu.return
@@ -386,15 +386,15 @@ gpu.module @test_distribution {
 
   gpu.func @vector_step_op_layout_attr() {
     //CHECK: [[sgId:%.+]] = gpu.subgroup_id : index
-    //CHECK: [[c16:%.+]] = arith.constant 16 : index
-    //CHECK: [[c8:%.+]] = arith.constant 8 : index
-    //CHECK: [[LOCALY:%.+]] = index.mul [[sgId]], [[c8]]
-    //CHECK: [[c0:%.+]] = arith.constant 0 : index
-    //CHECK: [[Y:%.+]] = arith.addi [[LOCALY]], [[c0]] : index
-    //CHECK: [[c128:%.+]] = arith.constant 128 : index
-    //CHECK: [[MODY:%.+]] = index.remu [[Y]], [[c128]]
-    //CHECK: [[BASE:%.+]] = vector.step : vector<8xindex>
-    //CHECK: [[CAST:%.+]] = vector.broadcast [[MODY]] : index to vector<8xindex>
+    //CHECK-DAG: [[c16:%.+]] = arith.constant 16 : index
+    //CHECK-DAG: [[c8:%.+]] = arith.constant 8 : index
+    //CHECK-DAG: [[LOCALY:%.+]] = index.mul [[sgId]], [[c8]]
+    //CHECK-DAG: [[c0:%.+]] = arith.constant 0 : index
+    //CHECK-DAG: [[Y:%.+]] = arith.addi [[LOCALY]], [[c0]] : index
+    //CHECK-DAG: [[c128:%.+]] = arith.constant 128 : index
+    //CHECK-DAG: [[MODY:%.+]] = index.remu [[Y]], [[c128]]
+    //CHECK-DAG: [[BASE:%.+]] = vector.step : vector<8xindex>
+    //CHECK-DAG: [[CAST:%.+]] = vector.broadcast [[MODY]] : index to vector<8xindex>
     //CHECK: [[ADD:%.+]] = arith.addi [[BASE]], [[CAST]] : vector<8xindex>
     %step = vector.step {layout_result_0 = #xegpu.layout<sg_layout = [16], sg_data = [8]>}: vector<128xindex>
     gpu.return
@@ -414,8 +414,8 @@ gpu.module @test_distribution {
     %load =  xegpu.load_nd %tdesc[0, 0]
       : !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 1]>>
       -> vector<256x128xf32>
-    //CHECK: vector.shape_cast {{.*}} : vector<32x32xf32> to vector<8x4x8x4xf32>
-    %cast = vector.shape_cast %load {layout_result_0 = #xegpu.layout<sg_layout = [2, 4, 2, 2], sg_data = [8, 4, 8, 4]>} : vector<256x128xf32> to vector<16x16x16x8xf32>
+    //CHECK: vector.shape_cast {{.*}} : vector<32x32xf32> to vector<2x16x4x8xf32>
+    %cast = vector.shape_cast %load {layout_result_0 = #xegpu.layout<sg_layout = [8, 1, 4, 1], sg_data = [2, 16, 4, 8]>} : vector<256x128xf32> to vector<16x16x16x8xf32>
     gpu.return
   }
 }
