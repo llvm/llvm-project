@@ -269,7 +269,7 @@ public:
   /// along with an indication of whether this is a load or store. If it is not
   /// a direct-to-LDS operation, returns std::nullopt.
   std::optional<SIMemOpInfo>
-  getLdsLoadStoreInfo(const MachineBasicBlock::iterator &MI) const;
+  getLDSDMAInfo(const MachineBasicBlock::iterator &MI) const;
 };
 
 class SICacheControl {
@@ -677,10 +677,9 @@ private:
   /// instructions are added/deleted or \p MI is modified, false otherwise.
   bool expandAtomicCmpxchgOrRmw(const SIMemOpInfo &MOI,
                                 MachineBasicBlock::iterator &MI);
-  /// Expands LDS load/store operation \p MI. Returns true if instructions are
+  /// Expands LDS DMA operation \p MI. Returns true if instructions are
   /// added/deleted or \p MI is modified, false otherwise.
-  bool expandLdsLoadStore(const SIMemOpInfo &MOI,
-                          MachineBasicBlock::iterator &MI);
+  bool expandLDSDMA(const SIMemOpInfo &MOI, MachineBasicBlock::iterator &MI);
 
 public:
   SIMemoryLegalizer(const MachineModuleInfo &MMI) : MMI(MMI) {};
@@ -959,8 +958,8 @@ std::optional<SIMemOpInfo> SIMemOpAccess::getAtomicCmpxchgOrRmwInfo(
   return constructFromMIWithMMO(MI);
 }
 
-std::optional<SIMemOpInfo> SIMemOpAccess::getLdsLoadStoreInfo(
-    const MachineBasicBlock::iterator &MI) const {
+std::optional<SIMemOpInfo>
+SIMemOpAccess::getLDSDMAInfo(const MachineBasicBlock::iterator &MI) const {
   assert(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic);
 
   if (!SIInstrInfo::isLDSDMA(*MI))
@@ -2865,8 +2864,8 @@ bool SIMemoryLegalizer::expandAtomicCmpxchgOrRmw(const SIMemOpInfo &MOI,
   return Changed;
 }
 
-bool SIMemoryLegalizer::expandLdsLoadStore(const SIMemOpInfo &MOI,
-                                           MachineBasicBlock::iterator &MI) {
+bool SIMemoryLegalizer::expandLDSDMA(const SIMemOpInfo &MOI,
+                                     MachineBasicBlock::iterator &MI) {
   assert(MI->mayLoad() && MI->mayStore());
 
   // The volatility or nontemporal-ness of the operation is a
@@ -2937,8 +2936,8 @@ bool SIMemoryLegalizer::run(MachineFunction &MF) {
         Changed |= expandLoad(*MOI, MI);
       } else if (const auto &MOI = MOA.getStoreInfo(MI)) {
         Changed |= expandStore(*MOI, MI);
-      } else if (const auto &MOI = MOA.getLdsLoadStoreInfo(MI)) {
-        Changed |= expandLdsLoadStore(*MOI, MI);
+      } else if (const auto &MOI = MOA.getLDSDMAInfo(MI)) {
+        Changed |= expandLDSDMA(*MOI, MI);
       } else if (const auto &MOI = MOA.getAtomicFenceInfo(MI)) {
         Changed |= expandAtomicFence(*MOI, MI);
       } else if (const auto &MOI = MOA.getAtomicCmpxchgOrRmwInfo(MI)) {
