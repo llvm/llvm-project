@@ -1968,6 +1968,12 @@ def atomic_load_nonext_64 :
   let MemoryVT = i64;
 }
 
+def atomic_load_nonext_128 :
+  PatFrag<(ops node:$ptr), (atomic_load_nonext node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let MemoryVT = i128;
+}
+
 def atomic_load_zext_8 :
   PatFrag<(ops node:$ptr), (atomic_load_zext node:$ptr)> {
   let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
@@ -2197,6 +2203,13 @@ def atomic_store_64 :
           (atomic_store node:$val, node:$ptr)> {
   let IsAtomic = true;
   let MemoryVT = i64;
+}
+
+def atomic_store_128 :
+  PatFrag<(ops node:$val, node:$ptr),
+          (atomic_store node:$val, node:$ptr)> {
+  let IsAtomic = true;
+  let MemoryVT = i128;
 }
 
 //===----------------------------------------------------------------------===//

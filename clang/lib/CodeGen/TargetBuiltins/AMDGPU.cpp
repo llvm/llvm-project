@@ -701,6 +701,49 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     return emitBuiltinWithOneOverloadedType<5>(*this, E,
                                                Intrinsic::amdgcn_load_to_lds);
   }
+  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_32x4B:
+  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_32x4B:
+  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_16x8B:
+  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_16x8B:
+  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_8x16B:
+  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_8x16B: {
+    Intrinsic::ID IID;
+    switch (BuiltinID) {
+    case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_32x4B:
+      IID = Intrinsic::amdgcn_cooperative_atomic_load_32x4B;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_32x4B:
+      IID = Intrinsic::amdgcn_cooperative_atomic_store_32x4B;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_16x8B:
+      IID = Intrinsic::amdgcn_cooperative_atomic_load_16x8B;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_16x8B:
+      IID = Intrinsic::amdgcn_cooperative_atomic_store_16x8B;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_8x16B:
+      IID = Intrinsic::amdgcn_cooperative_atomic_load_8x16B;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_8x16B:
+      IID = Intrinsic::amdgcn_cooperative_atomic_store_8x16B;
+      break;
+    }
+
+    LLVMContext &Ctx = CGM.getLLVMContext();
+    SmallVector<Value *, 5> Args;
+    // last argument is a MD string
+    const unsigned ScopeArg = E->getNumArgs() - 1;
+    for (unsigned i = 0; i != ScopeArg; ++i)
+      Args.push_back(EmitScalarExpr(E->getArg(i)));
+    StringRef Arg = cast<StringLiteral>(E->getArg(ScopeArg)->IgnoreParenCasts())
+                        ->getString();
+    llvm::MDNode *MD = llvm::MDNode::get(Ctx, {llvm::MDString::get(Ctx, Arg)});
+    Args.push_back(llvm::MetadataAsValue::get(Ctx, MD));
+    // Intrinsic is typed based on the pointer AS. Pointer is always the first
+    // argument.
+    llvm::Function *F = CGM.getIntrinsic(IID, {Args[0]->getType()});
+    return Builder.CreateCall(F, {Args});
+  }
   case AMDGPU::BI__builtin_amdgcn_get_fpenv: {
     Function *F = CGM.getIntrinsic(Intrinsic::get_fpenv,
                                    {llvm::Type::getInt64Ty(getLLVMContext())});
