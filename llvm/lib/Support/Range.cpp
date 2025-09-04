@@ -34,42 +34,36 @@ Expected<RangeUtils::RangeList> RangeUtils::parseRanges(const StringRef Str,
       continue;
 
     SmallVector<StringRef, 4> Matches;
-    if (!RangeRegex.match(Part, &Matches)) {
+    if (!RangeRegex.match(Part, &Matches))
       return createStringError(std::errc::invalid_argument,
                                "Invalid range format: '%s'",
                                Part.str().c_str());
-    }
 
     int64_t Begin, End;
-    if (Matches[1].getAsInteger(10, Begin)) {
+    if (Matches[1].getAsInteger(10, Begin))
       return createStringError(std::errc::invalid_argument,
                                "Failed to parse number: '%s'",
                                Matches[1].str().c_str());
-    }
 
     if (!Matches[3].empty()) {
       // Range format "begin-end"
-      if (Matches[3].getAsInteger(10, End)) {
+      if (Matches[3].getAsInteger(10, End))
         return createStringError(std::errc::invalid_argument,
                                  "Failed to parse number: '%s'",
                                  Matches[3].str().c_str());
-      }
-      if (Begin >= End) {
+      if (Begin >= End)
         return createStringError(std::errc::invalid_argument,
                                  "Invalid range: %lld >= %lld", Begin, End);
-      }
-    } else {
+    } else
       // Single number
       End = Begin;
-    }
 
     // Check ordering constraint (ranges must be in increasing order)
-    if (!Ranges.empty() && Begin <= Ranges.back().End) {
+    if (!Ranges.empty() && Begin <= Ranges.back().End)
       return createStringError(
           std::errc::invalid_argument,
           "Expected ranges to be in increasing order: %lld <= %lld", Begin,
           Ranges.back().End);
-    }
 
     Ranges.push_back(Range(Begin, End));
   }
@@ -106,19 +100,18 @@ std::string RangeUtils::rangesToString(const ArrayRef<Range> Ranges,
     if (I > 0)
       OS << Separator;
     const Range &R = Ranges[I];
-    if (R.Begin == R.End) {
+    if (R.Begin == R.End)
       OS << R.Begin;
-    } else {
+    else
       OS << R.Begin << "-" << R.End;
-    }
   }
   return OS.str();
 }
 
 void RangeUtils::printRanges(raw_ostream &OS, const ArrayRef<Range> Ranges) {
-  if (Ranges.empty()) {
+  if (Ranges.empty())
     OS << "empty";
-  } else {
+  else {
     bool IsFirst = true;
     for (const Range &R : Ranges) {
       if (!IsFirst)
