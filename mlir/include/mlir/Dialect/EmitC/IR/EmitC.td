@@ -474,8 +474,9 @@ def EmitC_ExpressionOp
     its single-basic-block region. The operation doesn't take any arguments.
 
     As the operation is to be emitted as a C expression, the operations within
-    its body must form a single Def-Use tree of emitc ops whose result is
-    yielded by a terminating `emitc.yield`.
+    its body must form a single Def-Use tree, or a DAG trivially expandable to
+    one, i.e. a DAG where each operation with side effects is only reachable
+    once from the expression root.
 
     Example:
 
