@@ -288,10 +288,6 @@ private:
 } // namespace
 
 #ifdef __linux__
-// true : let use of fixed address to Virtual Address Space Ceiling
-// false: let kernel choose the address of the auxiliary memory
-bool UseFixedAddress = true;
-
 static constexpr const uintptr_t VAddressSpaceCeiling = 0x0000800000000000;
 
 static void generateRoundToNearestPage(unsigned int TargetRegister,
@@ -394,12 +390,8 @@ std::vector<MCInst> ExegesisAArch64Target::setStackRegisterToAuxMem() const {
 }
 
 uintptr_t ExegesisAArch64Target::getAuxiliaryMemoryStartAddress() const {
-  if (!UseFixedAddress)
-    // Allow kernel to select an appropriate memory address
-    return 0;
-  // Return the second to last page in the virtual address space
-  // to try and prevent interference with memory annotations in the snippet
-  // VAddressSpaceCeiling = 0x0000800000000000
+  // Return the second to last page in the virtual address space to try and
+  // prevent interference with memory annotations in the snippet
   // FIXME: Why 2 pages?
   return VAddressSpaceCeiling - (2 * getpagesize());
 }
