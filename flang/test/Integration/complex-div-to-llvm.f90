@@ -1,11 +1,11 @@
 ! Test lowering complex division to llvm ir according to options
 
-! RUN: %flang -fcomplex-arithmetic=improved -mmlir --force-no-alias=false -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,IMPRVD
-! RUN: %flang -fcomplex-arithmetic=basic -mmlir --force-no-alias=false -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,BASIC
+! RUN: %flang -fcomplex-arithmetic=improved -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,IMPRVD
+! RUN: %flang -fcomplex-arithmetic=basic -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,BASIC
 
 
 ! CHECK-LABEL: @div_test_half
-! CHECK-SAME: ptr %[[RET:.*]], ptr %[[LHS:.*]], ptr %[[RHS:.*]])
+! CHECK-SAME: ptr noalias %[[RET:.*]], ptr noalias %[[LHS:.*]], ptr noalias %[[RHS:.*]])
 ! CHECK: %[[LOAD_LHS:.*]] = load { half, half }, ptr %[[LHS]], align 2
 ! CHECK: %[[LOAD_RHS:.*]] = load { half, half }, ptr %[[RHS]], align 2
 ! CHECK: %[[LHS_REAL:.*]] = extractvalue { half, half } %[[LOAD_LHS]], 0
@@ -131,7 +131,7 @@ end subroutine div_test_half
 
 
 ! CHECK-LABEL: @div_test_bfloat
-! CHECK-SAME: ptr %[[RET:.*]], ptr %[[LHS:.*]], ptr %[[RHS:.*]])
+! CHECK-SAME: ptr noalias %[[RET:.*]], ptr noalias %[[LHS:.*]], ptr noalias %[[RHS:.*]])
 ! CHECK: %[[LOAD_LHS:.*]] = load { bfloat, bfloat }, ptr %[[LHS]], align 2
 ! CHECK: %[[LOAD_RHS:.*]] = load { bfloat, bfloat }, ptr %[[RHS]], align 2
 ! CHECK: %[[LHS_REAL:.*]] = extractvalue { bfloat, bfloat } %[[LOAD_LHS]], 0
@@ -257,7 +257,7 @@ end subroutine div_test_bfloat
 
 
 ! CHECK-LABEL: @div_test_single
-! CHECK-SAME: ptr %[[RET:.*]], ptr %[[LHS:.*]], ptr %[[RHS:.*]])
+! CHECK-SAME: ptr noalias %[[RET:.*]], ptr noalias %[[LHS:.*]], ptr noalias %[[RHS:.*]])
 ! CHECK: %[[LOAD_LHS:.*]] = load { float, float }, ptr %[[LHS]], align 4
 ! CHECK: %[[LOAD_RHS:.*]] = load { float, float }, ptr %[[RHS]], align 4
 ! CHECK: %[[LHS_REAL:.*]] = extractvalue { float, float } %[[LOAD_LHS]], 0
@@ -383,7 +383,7 @@ end subroutine div_test_single
 
 
 ! CHECK-LABEL: @div_test_double
-! CHECK-SAME: ptr %[[RET:.*]], ptr %[[LHS:.*]], ptr %[[RHS:.*]])
+! CHECK-SAME: ptr noalias %[[RET:.*]], ptr noalias %[[LHS:.*]], ptr noalias %[[RHS:.*]])
 ! CHECK: %[[LOAD_LHS:.*]] = load { double, double }, ptr %[[LHS]], align 8
 ! CHECK: %[[LOAD_RHS:.*]] = load { double, double }, ptr %[[RHS]], align 8
 ! CHECK: %[[LHS_REAL:.*]] = extractvalue { double, double } %[[LOAD_LHS]], 0

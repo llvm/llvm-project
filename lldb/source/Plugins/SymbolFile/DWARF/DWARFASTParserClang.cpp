@@ -2230,6 +2230,18 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
       for (DelayedAddObjCClassProperty &property : delayed_properties)
         property.Finalize();
     }
+  } else if (Language::LanguageIsObjC(
+                 static_cast<LanguageType>(die.GetAttributeValueAsUnsigned(
+                     DW_AT_APPLE_runtime_class, eLanguageTypeUnknown)))) {
+    /// The forward declaration was C++ but the definition is Objective-C.
+    /// We currently don't handle such situations. In such cases, keep the
+    /// forward declaration without a definition to avoid violating Clang AST
+    /// invariants.
+    LLDB_LOG(GetLog(LLDBLog::Expressions),
+             "WARNING: Type completion aborted because forward declaration for "
+             "'{0}' is C++ while definition is Objective-C.",
+             llvm::StringRef(die.GetName()));
+    return {};
   }
 
   if (!bases.empty()) {
