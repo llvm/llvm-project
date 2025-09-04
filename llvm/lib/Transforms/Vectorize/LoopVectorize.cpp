@@ -3832,7 +3832,8 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
 bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
                                                 const VectorizationFactor &B,
                                                 const unsigned MaxTripCount,
-                                                bool HasTail) const {
+                                                bool HasTail,
+                                                bool IsEpilogue) const {
   InstructionCost CostA = A.Cost;
   InstructionCost CostB = B.Cost;
 
@@ -3856,7 +3857,7 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
   // Assume vscale may be larger than 1 (or the value being tuned for),
   // so that scalable vectorization is slightly favorable over fixed-width
   // vectorization.
-  bool PreferScalable = !TTI.preferFixedOverScalableIfEqualCost() &&
+  bool PreferScalable = !TTI.preferFixedOverScalableIfEqualCost(IsEpilogue) &&
                         A.Width.isScalable() && !B.Width.isScalable();
 
   auto CmpFn = [PreferScalable](const InstructionCost &LHS,
@@ -3894,10 +3895,11 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
 
 bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
                                                 const VectorizationFactor &B,
-                                                bool HasTail) const {
+                                                bool HasTail,
+                                                bool IsEpilogue) const {
   const unsigned MaxTripCount = PSE.getSmallConstantMaxTripCount();
-  return LoopVectorizationPlanner::isMoreProfitable(A, B, MaxTripCount,
-                                                    HasTail);
+  return LoopVectorizationPlanner::isMoreProfitable(A, B, MaxTripCount, HasTail,
+                                                    IsEpilogue);
 }
 
 void LoopVectorizationPlanner::emitInvalidCostRemarks(
@@ -4430,7 +4432,8 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
     }
 
     if (Result.Width.isScalar() ||
-        isMoreProfitable(NextVF, Result, MaxTripCount, !CM.foldTailByMasking()))
+        isMoreProfitable(NextVF, Result, MaxTripCount, !CM.foldTailByMasking(),
+                         /*IsEpilogue*/ true))
       Result = NextVF;
   }
 
@@ -7273,7 +7276,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // Keep all loop hints from the original loop on the vector loop (we'll
   // replace the vectorizer-specific hints below).
   VPBasicBlock *HeaderVPBB = vputils::getFirstLoopHeader(BestVPlan, State.VPDT);
-
   // Add metadata to disable runtime unrolling a scalar loop when there
   // are no runtime checks about strides and memory. A scalar loop that is
   // rarely used is not worth unrolling.
@@ -7284,7 +7286,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       OrigLoop, *PSE.getSE(), ORE, HeaderVPBB, BestVPlan, TTI,
       VectorizingEpilogue, LID, OrigAverageTripCount,
       OrigLoopInvocationWeight, BestVF, estimateElementCount(BestVF * BestUF, CM.getVScaleForTuning()), DisableRuntimeUnroll);
-
   // 3. Fix the vectorized code: take care of header phi's, live-outs,
   //    predication, updating analyses.
   ILV.fixVectorizedLoop(State);

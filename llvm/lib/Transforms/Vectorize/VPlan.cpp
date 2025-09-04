@@ -46,6 +46,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
+#include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 #include <cassert>
 #include <string>
 
@@ -1653,7 +1654,7 @@ static void addRuntimeUnrollDisableMetaData(Loop *L) {
         if (!S)
           continue;
         if (S->getString().starts_with("llvm.loop.unroll.runtime.disable"))
-          return;
+          continue;
         IsUnrollMetadata =
             S->getString().starts_with("llvm.loop.unroll.disable");
       }
@@ -1676,7 +1677,6 @@ static void addRuntimeUnrollDisableMetaData(Loop *L) {
   }
 }
 
-
 void LoopVectorizationPlanner::updateLoopMetadata(Loop *VectorLoop, Loop *OrigLoop, ScalarEvolution &SE,
                                OptimizationRemarkEmitter *ORE,
                                VPBasicBlock *HeaderVPBB, VPlan &Plan,
@@ -1686,55 +1686,29 @@ void LoopVectorizationPlanner::updateLoopMetadata(Loop *VectorLoop, Loop *OrigLo
                                unsigned OrigLoopInvocationWeight,
                                ElementCount BestVF,
                                unsigned EstimatedVFxUF, bool DisableRuntimeUnroll) {
-  // Set/update profile weights for the vector and remainder loops as original
-  // loop iterations are now distributed among them. Note that original loop
-  // becomes the scalar remainder loop after vectorization.
-  //
-  // For cases like foldTailByMasking() and requiresScalarEpiloque() we may
-  // end up getting slightly roughened result but that should be OK since
-  // profile is not inherently precise anyway. Note also possible bypass of
-  // vector code caused by legality checks is ignored, assigning all the weight
-  // to the vector loop, optimistically.
-  //
-  // For scalable vectorization we can't know at compile time how many
-  // iterations of the loop are handled in one vector iteration, so instead
-  // use the value of vscale used for tuning.
-  if (OrigAverageTripCount) {
-    // Calculate number of iterations in unrolled loop.
-    unsigned AverageVectorTripCount = *OrigAverageTripCount / EstimatedVFxUF;
-    // Calculate number of iterations for remainder loop.
-    unsigned RemainderAverageTripCount = *OrigAverageTripCount % EstimatedVFxUF;
-
-    if (HeaderVPBB) {
-      setLoopEstimatedTripCount(VectorLoop, AverageVectorTripCount,
-                                OrigLoopInvocationWeight);
-    }
-    if (Plan.getScalarPreheader()->hasPredecessors()) {
-      setLoopEstimatedTripCount(OrigLoop, RemainderAverageTripCount,
-                                OrigLoopInvocationWeight);
-    }
-  }
-
-    if (Plan.getScalarPreheader()->hasPredecessors() && !VectorizingEpilogue) {
-  std::optional<MDNode *> RemainderLoopID =
-      makeFollowupLoopID(LID, {LLVMLoopVectorizeFollowupAll,
-                                      LLVMLoopVectorizeFollowupEpilogue});
-  if (RemainderLoopID) {
-    OrigLoop->setLoopID(*RemainderLoopID);
+  MDNode *LID = OrigLoop->getLoopID();
+  // Update the metadata of the scalar loop. Skip the update when vectorizing
+  // the epilogue loop, to ensure it is only updated once.
+  if (!VectorizingEpilogue) {
+    std::optional<MDNode *> RemainderLoopID = makeFollowupLoopID(
+        LID, {LLVMLoopVectorizeFollowupAll, LLVMLoopVectorizeFollowupEpilogue});
+    if (RemainderLoopID) {
+      OrigLoop->setLoopID(*RemainderLoopID);
     } else {
-    if (DisableRuntimeUnroll)
-      addRuntimeUnrollDisableMetaData(OrigLoop);
+      if (DisableRuntimeUnroll)
+        addRuntimeUnrollDisableMetaData(OrigLoop);
 
-    LoopVectorizeHints Hints(OrigLoop, true, *ORE);
-    Hints.setAlreadyVectorized();
-  }
+      LoopVectorizeHints Hints(OrigLoop, true, *ORE);
+      Hints.setAlreadyVectorized();
+    }
   }
 
   if (!VectorLoop)
     return;
 
-  if (std::optional<MDNode *> VectorizedLoopID = makeFollowupLoopID(
-      LID, {LLVMLoopVectorizeFollowupAll, LLVMLoopVectorizeFollowupVectorized})) {
+  if (std::optional<MDNode *> VectorizedLoopID =
+          makeFollowupLoopID(LID, {LLVMLoopVectorizeFollowupAll,
+                                   LLVMLoopVectorizeFollowupVectorized})) {
     VectorLoop->setLoopID(*VectorizedLoopID);
   } else {
     // Keep all loop hints from the original loop on the vector loop (we'll
@@ -1743,8 +1717,8 @@ void LoopVectorizationPlanner::updateLoopMetadata(Loop *VectorLoop, Loop *OrigLo
       VectorLoop->setLoopID(LID);
 
     if (!VectorizingEpilogue) {
-    LoopVectorizeHints Hints(VectorLoop, true, *ORE);
-    Hints.setAlreadyVectorized();
+      LoopVectorizeHints Hints(VectorLoop, true, *ORE);
+      Hints.setAlreadyVectorized();
     }
 
     // Check if it's EVL-vectorized and mark the corresponding metadata.
@@ -1768,12 +1742,27 @@ void LoopVectorizationPlanner::updateLoopMetadata(Loop *VectorLoop, Loop *OrigLo
     }
   }
   TargetTransformInfo::UnrollingPreferences UP;
-  TTI.getUnrollingPreferences(VectorLoop, SE, UP, ORE);
+  TTI.getUnrollingPreferences(VectorLoop, *PSE.getSE(), UP, ORE);
   if (!UP.UnrollVectorizedLoop || VectorizingEpilogue)
     addRuntimeUnrollDisableMetaData(VectorLoop);
 
+  // Set/update profile weights for the vector and remainder loops as original
+  // loop iterations are now distributed among them. Note that original loop
+  // becomes the scalar remainder loop after vectorization.
+  //
+  // For cases like foldTailByMasking() and requiresScalarEpiloque() we may
+  // end up getting slightly roughened result but that should be OK since
+  // profile is not inherently precise anyway. Note also possible bypass of
+  // vector code caused by legality checks is ignored, assigning all the weight
+  // to the vector loop, optimistically.
+  //
+  // For scalable vectorization we can't know at compile time how many
+  // iterations of the loop are handled in one vector iteration, so instead
+  // use the value of vscale used for tuning.
+  setProfileInfoAfterUnrolling(OrigLoop, VectorLoop, OrigLoop, EstimatedVFxUF);
 }
 
+>>>>>>> main
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void LoopVectorizationPlanner::printPlans(raw_ostream &O) {
   if (VPlans.empty()) {
