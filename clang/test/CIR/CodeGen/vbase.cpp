@@ -5,6 +5,29 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
 
+// Test the record layout for a class with a primary virtual base.
+class Base {
+public:
+  virtual void f();
+};
+
+class Derived : public virtual Base {};
+
+// This is just here to force the record types to be emitted.
+void f() {
+  Derived d;
+}
+
+// CIR: !rec_Base = !cir.record<class "Base" {!cir.vptr}>
+// CIR: !rec_Derived = !cir.record<class "Derived" {!rec_Base}>
+
+// LLVM: %class.Derived = type { %class.Base }
+// LLVM: %class.Base = type { ptr }
+
+// OGCG: %class.Derived = type { %class.Base }
+// OGCG: %class.Base = type { ptr }
+
+// Test the constructor handling for a class with a virtual base.
 struct A {
   int a;
 };

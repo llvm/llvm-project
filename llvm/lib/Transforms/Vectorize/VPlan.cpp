@@ -1677,8 +1677,8 @@ static void addRuntimeUnrollDisableMetaData(Loop *L) {
   }
 }
 
-void LoopVectorizationPlanner::updateLoopMetadata(
-    Loop *VectorLoop, VPBasicBlock *HeaderVPBB, VPlan &Plan,
+void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
+    Loop *VectorLoop, VPBasicBlock *HeaderVPBB, const VPlan &Plan,
     bool VectorizingEpilogue, MDNode *LID,
     std::optional<unsigned> OrigAverageTripCount,
     unsigned OrigLoopInvocationWeight, unsigned EstimatedVFxUF,

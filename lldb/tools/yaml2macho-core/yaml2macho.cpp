@@ -13,7 +13,6 @@
 #include "Utility.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/CommandLine.h"
-#include <getopt.h>
 #include <stdio.h>
 #include <string>
 #include <sys/stat.h>

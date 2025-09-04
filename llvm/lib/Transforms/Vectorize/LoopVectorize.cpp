@@ -7264,7 +7264,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   //
   //===------------------------------------------------===//
 
-  // Retrieve loop information before executing the plan, which may remove the original loop, if it becomes unreachable.
+  // Retrieve loop information before executing the plan, which may remove the
+  // original loop, if it becomes unreachable.
   MDNode *LID = OrigLoop->getLoopID();
   unsigned OrigLoopInvocationWeight = 0;
   std::optional<unsigned> OrigAverageTripCount =
@@ -7280,7 +7281,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // are no runtime checks about strides and memory. A scalar loop that is
   // rarely used is not worth unrolling.
   bool DisableRuntimeUnroll = !ILV.RTChecks.hasChecks() && !BestVF.isScalar();
-  updateLoopMetadata(
+  updateLoopMetadataAndProfileInfo(
       HeaderVPBB ? LI->getLoopFor(State.CFG.VPBB2IRBB.lookup(HeaderVPBB))
                  : nullptr,
       HeaderVPBB, BestVPlan, VectorizingEpilogue, LID, OrigAverageTripCount,
