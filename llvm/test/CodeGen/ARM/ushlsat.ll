@@ -9,45 +9,36 @@ define i16 @combine_shlsat_to_shl_no_fold(i16 %x) nounwind {
 ; V7M-LABEL: combine_shlsat_to_shl_no_fold:
 ; V7M:       @ %bb.0:
 ; V7M-NEXT:    movs r1, #0
-; V7M-NEXT:    movs r3, #0
 ; V7M-NEXT:    movt r1, #16383
-; V7M-NEXT:    movt r3, #8191
-; V7M-NEXT:    and.w r1, r1, r0, lsl #14
-; V7M-NEXT:    and.w r0, r3, r0, lsl #14
-; V7M-NEXT:    cmp r1, r0
-; V7M-NEXT:    lsl.w r2, r1, #3
+; V7M-NEXT:    and.w r0, r1, r0, lsl #14
+; V7M-NEXT:    lsls r1, r0, #3
+; V7M-NEXT:    cmp.w r0, r1, lsr #3
 ; V7M-NEXT:    it ne
-; V7M-NEXT:    movne.w r2, #-1
-; V7M-NEXT:    lsrs r0, r2, #16
+; V7M-NEXT:    movne.w r1, #-1
+; V7M-NEXT:    lsrs r0, r1, #16
 ; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: combine_shlsat_to_shl_no_fold:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    movw r1, #0
-; V7A-NEXT:    movw r3, #0
 ; V7A-NEXT:    movt r1, #16383
-; V7A-NEXT:    movt r3, #8191
-; V7A-NEXT:    and r1, r1, r0, lsl #14
-; V7A-NEXT:    and r0, r3, r0, lsl #14
-; V7A-NEXT:    cmp r1, r0
-; V7A-NEXT:    lsl r2, r1, #3
-; V7A-NEXT:    mvnne r2, #0
-; V7A-NEXT:    lsr r0, r2, #16
+; V7A-NEXT:    and r0, r1, r0, lsl #14
+; V7A-NEXT:    lsl r1, r0, #3
+; V7A-NEXT:    cmp r0, r1, lsr #3
+; V7A-NEXT:    mvnne r1, #0
+; V7A-NEXT:    lsr r0, r1, #16
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: combine_shlsat_to_shl_no_fold:
 ; V7A-T:       @ %bb.0:
 ; V7A-T-NEXT:    movs r1, #0
-; V7A-T-NEXT:    movs r3, #0
 ; V7A-T-NEXT:    movt r1, #16383
-; V7A-T-NEXT:    movt r3, #8191
-; V7A-T-NEXT:    and.w r1, r1, r0, lsl #14
-; V7A-T-NEXT:    and.w r0, r3, r0, lsl #14
-; V7A-T-NEXT:    cmp r1, r0
-; V7A-T-NEXT:    lsl.w r2, r1, #3
+; V7A-T-NEXT:    and.w r0, r1, r0, lsl #14
+; V7A-T-NEXT:    lsls r1, r0, #3
+; V7A-T-NEXT:    cmp.w r0, r1, lsr #3
 ; V7A-T-NEXT:    it ne
-; V7A-T-NEXT:    movne.w r2, #-1
-; V7A-T-NEXT:    lsrs r0, r2, #16
+; V7A-T-NEXT:    movne.w r1, #-1
+; V7A-T-NEXT:    lsrs r0, r1, #16
 ; V7A-T-NEXT:    bx lr
 ;
 ; V6M-LABEL: combine_shlsat_to_shl_no_fold:

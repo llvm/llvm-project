@@ -13885,6 +13885,10 @@ bool ARMTargetLowering::shouldFoldConstantShiftPairToMask(
            N->getOperand(0).getOpcode() == ISD::SHL)) &&
          "Expected shift-shift mask");
 
+  // Don't allow multiuse shift folding with the same shift amount.
+  if (!N->getOperand(0)->hasOneUse())
+    return false;
+
   if (!Subtarget->isThumb1Only())
     return true;
 
