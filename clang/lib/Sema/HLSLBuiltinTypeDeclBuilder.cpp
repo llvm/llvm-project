@@ -156,7 +156,8 @@ public:
   BuiltinTypeDeclBuilder &finalize();
   Expr *getResourceHandleExpr();
 
-  BuiltinTypeMethodBuilder &getResourceHandle(PlaceHolder ResourceRecord);
+  template <typename T>
+  BuiltinTypeMethodBuilder &getResourceHandle(T ResourceRecord);
   BuiltinTypeMethodBuilder &returnThis();
 
 private:
@@ -434,8 +435,9 @@ Expr *BuiltinTypeMethodBuilder::getResourceHandleExpr() {
                                     OK_Ordinary);
 }
 
+template <typename T>
 BuiltinTypeMethodBuilder &
-BuiltinTypeMethodBuilder::getResourceHandle(PlaceHolder ResourceRecord) {
+BuiltinTypeMethodBuilder::getResourceHandle(T ResourceRecord) {
   ensureCompleteDecl();
 
   Expr *ResourceExpr = convertPlaceholder(ResourceRecord);
