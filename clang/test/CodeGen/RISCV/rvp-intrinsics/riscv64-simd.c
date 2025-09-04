@@ -471,3 +471,138 @@ uint64_t paaddu_h(uint64_t rs1, uint64_t rs2) {
 uint64_t paaddu_w(uint64_t rs1, uint64_t rs2) {
   return __riscv_paaddu_w(rs1, rs2);
 }
+
+// RV64P-LABEL: @psub_b(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.psub.b.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t psub_b(uint64_t rs1, uint64_t rs2) {
+  return __riscv_psub_b(rs1, rs2);
+}
+
+// RV64P-LABEL: @psub_h(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.psub.h.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t psub_h(uint64_t rs1, uint64_t rs2) {
+  return __riscv_psub_h(rs1, rs2);
+}
+
+// RV64P-LABEL: @psub_w(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.psub.w.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t psub_w(uint64_t rs1, uint64_t rs2) {
+  return __riscv_psub_w(rs1, rs2);
+}
+
+// RV64P-LABEL: @pssub_b(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.pssub.b.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t pssub_b(uint64_t rs1, uint64_t rs2) {
+  return __riscv_pssub_b(rs1, rs2);
+}
+
+// RV64P-LABEL: @pssub_h(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.pssub.h.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t pssub_h(uint64_t rs1, uint64_t rs2) {
+  return __riscv_pssub_h(rs1, rs2);
+}
+
+// RV64P-LABEL: @pssub_w(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.pssub.w.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t pssub_w(uint64_t rs1, uint64_t rs2) {
+  return __riscv_pssub_w(rs1, rs2);
+}
+
+// RV64P-LABEL: @pasub_b(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.pasub.b.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t pasub_b(uint64_t rs1, uint64_t rs2) {
+  return __riscv_pasub_b(rs1, rs2);
+}
+
+// RV64P-LABEL: @pasub_h(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.pasub.h.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t pasub_h(uint64_t rs1, uint64_t rs2) {
+  return __riscv_pasub_h(rs1, rs2);
+}
+
+// RV64P-LABEL: @pasub_w(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.pasub.w.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t pasub_w(uint64_t rs1, uint64_t rs2) {
+  return __riscv_pasub_w(rs1, rs2);
+}
+
+// RV64P-LABEL: @pssubu_b(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.pssubu.b.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t pssubu_b(uint64_t rs1, uint64_t rs2) {
+  return __riscv_pssubu_b(rs1, rs2);
+}
+
+// RV64P-LABEL: @pssubu_h(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.pssubu.h.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t pssubu_h(uint64_t rs1, uint64_t rs2) {
+  return __riscv_pssubu_h(rs1, rs2);
+}
+
+// RV64P-LABEL: @pssubu_w(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.pssubu.w.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t pssubu_w(uint64_t rs1, uint64_t rs2) {
+  return __riscv_pssubu_w(rs1, rs2);
+}
+
+// RV64P-LABEL: @pasubu_b(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.pasubu.b.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t pasubu_b(uint64_t rs1, uint64_t rs2) {
+  return __riscv_pasubu_b(rs1, rs2);
+}
+
+// RV64P-LABEL: @pasubu_h(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.pasubu.h.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t pasubu_h(uint64_t rs1, uint64_t rs2) {
+  return __riscv_pasubu_h(rs1, rs2);
+}
+
+// RV64P-LABEL: @pasubu_w(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.pasubu.w.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t pasubu_w(uint64_t rs1, uint64_t rs2) {
+  return __riscv_pasubu_w(rs1, rs2);
+}

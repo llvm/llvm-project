@@ -267,6 +267,35 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_paaddu_h_32:
   case RISCV::BI__builtin_riscv_paaddu_h_64:
   case RISCV::BI__builtin_riscv_paaddu_w:
+  case RISCV::BI__builtin_riscv_psub_b_32:
+  case RISCV::BI__builtin_riscv_psub_b_64:
+  case RISCV::BI__builtin_riscv_psub_h_32:
+  case RISCV::BI__builtin_riscv_psub_h_64:
+  case RISCV::BI__builtin_riscv_psub_w:
+  case RISCV::BI__builtin_riscv_ssub:
+  case RISCV::BI__builtin_riscv_pssub_b_32:
+  case RISCV::BI__builtin_riscv_pssub_b_64:
+  case RISCV::BI__builtin_riscv_pssub_h_32:
+  case RISCV::BI__builtin_riscv_pssub_h_64:
+  case RISCV::BI__builtin_riscv_pssub_w:
+  case RISCV::BI__builtin_riscv_asub:
+  case RISCV::BI__builtin_riscv_pasub_b_32:
+  case RISCV::BI__builtin_riscv_pasub_b_64:
+  case RISCV::BI__builtin_riscv_pasub_h_32:
+  case RISCV::BI__builtin_riscv_pasub_h_64:
+  case RISCV::BI__builtin_riscv_pasub_w:
+  case RISCV::BI__builtin_riscv_ssubu:
+  case RISCV::BI__builtin_riscv_pssubu_b_32:
+  case RISCV::BI__builtin_riscv_pssubu_b_64:
+  case RISCV::BI__builtin_riscv_pssubu_h_32:
+  case RISCV::BI__builtin_riscv_pssubu_h_64:
+  case RISCV::BI__builtin_riscv_pssubu_w:
+  case RISCV::BI__builtin_riscv_asubu:
+  case RISCV::BI__builtin_riscv_pasubu_b_32:
+  case RISCV::BI__builtin_riscv_pasubu_b_64:
+  case RISCV::BI__builtin_riscv_pasubu_h_32:
+  case RISCV::BI__builtin_riscv_pasubu_h_64:
+  case RISCV::BI__builtin_riscv_pasubu_w:
   case RISCV::BI__builtin_riscv_sadd: {
     switch (BuiltinID) {
     default: llvm_unreachable("unexpected builtin ID");
@@ -442,6 +471,73 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
       break;
     case RISCV::BI__builtin_riscv_paaddu_w:
       ID = Intrinsic::riscv_paaddu_w;
+      break;
+    case RISCV::BI__builtin_riscv_psub_b_32:
+    case RISCV::BI__builtin_riscv_psub_b_64:
+      ID = Intrinsic::riscv_psub_b;
+      break;
+    case RISCV::BI__builtin_riscv_psub_h_32:
+    case RISCV::BI__builtin_riscv_psub_h_64:
+      ID = Intrinsic::riscv_psub_h;
+      break;
+    case RISCV::BI__builtin_riscv_psub_w:
+      ID = Intrinsic::riscv_psub_w;
+      break;
+    case RISCV::BI__builtin_riscv_ssub:
+      ID = Intrinsic::riscv_ssub;
+      break;
+    case RISCV::BI__builtin_riscv_pssub_b_32:
+    case RISCV::BI__builtin_riscv_pssub_b_64:
+      ID = Intrinsic::riscv_pssub_b;
+      break;
+    case RISCV::BI__builtin_riscv_pssub_h_32:
+    case RISCV::BI__builtin_riscv_pssub_h_64:
+      ID = Intrinsic::riscv_pssub_h;
+      break;
+    case RISCV::BI__builtin_riscv_pssub_w:
+      ID = Intrinsic::riscv_pssub_w;
+      break;
+    case RISCV::BI__builtin_riscv_asub:
+      ID = Intrinsic::riscv_asub;
+      break;
+    case RISCV::BI__builtin_riscv_pasub_b_32:
+    case RISCV::BI__builtin_riscv_pasub_b_64:
+      ID = Intrinsic::riscv_pasub_b;
+      break;
+    case RISCV::BI__builtin_riscv_pasub_h_32:
+    case RISCV::BI__builtin_riscv_pasub_h_64:
+      ID = Intrinsic::riscv_pasub_h;
+      break;
+    case RISCV::BI__builtin_riscv_pasub_w:
+      ID = Intrinsic::riscv_pasub_w;
+      break;
+    case RISCV::BI__builtin_riscv_ssubu:
+      ID = Intrinsic::riscv_ssubu;
+      break;
+    case RISCV::BI__builtin_riscv_pssubu_b_32:
+    case RISCV::BI__builtin_riscv_pssubu_b_64:
+      ID = Intrinsic::riscv_pssubu_b;
+      break;
+    case RISCV::BI__builtin_riscv_pssubu_h_32:
+    case RISCV::BI__builtin_riscv_pssubu_h_64:
+      ID = Intrinsic::riscv_pssubu_h;
+      break;
+    case RISCV::BI__builtin_riscv_pssubu_w:
+      ID = Intrinsic::riscv_pssubu_w;
+      break;
+    case RISCV::BI__builtin_riscv_asubu:
+      ID = Intrinsic::riscv_asubu;
+      break;
+    case RISCV::BI__builtin_riscv_pasubu_b_32:
+    case RISCV::BI__builtin_riscv_pasubu_b_64:
+      ID = Intrinsic::riscv_pasubu_b;
+      break;
+    case RISCV::BI__builtin_riscv_pasubu_h_32:
+    case RISCV::BI__builtin_riscv_pasubu_h_64:
+      ID = Intrinsic::riscv_pasubu_h;
+      break;
+    case RISCV::BI__builtin_riscv_pasubu_w:
+      ID = Intrinsic::riscv_pasubu_w;
       break;
     case RISCV::BI__builtin_riscv_sadd:
       ID = Intrinsic::riscv_sadd;
