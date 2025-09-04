@@ -422,9 +422,6 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VRGATHER_VI:
   case RISCV::VRGATHER_VV:
   case RISCV::VRGATHER_VX:
-  // Vector Compress Instruction
-  // EEW=SEW.
-  case RISCV::VCOMPRESS_VM:
   // Vector Element Index Instruction
   case RISCV::VID_V:
   // Vector Single-Width Floating-Point Add/Subtract Instructions
@@ -673,6 +670,12 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VMSOF_M: {
     return MILog2SEW;
   }
+
+  // Vector Compress Instruction
+  // EEW=SEW, except the mask operand has EEW=1. Mask operand is not handled
+  // before this switch.
+  case RISCV::VCOMPRESS_VM:
+    return MO.getOperandNo() == 3 ? 0 : MILog2SEW;
 
   // Vector Iota Instruction
   // EEW=SEW, except the mask operand has EEW=1. Mask operand is not handled
@@ -1463,6 +1466,15 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) const {
 
   assert((CommonVL->isImm() || CommonVL->getReg().isVirtual()) &&
          "Expected VL to be an Imm or virtual Reg");
+
+  // If the VL is defined by a vleff that doesn't dominate MI, try using the
+  // vleff's AVL. It will be greater than or equal to the output VL.
+  if (CommonVL->isReg()) {
+    const MachineInstr *VLMI = MRI->getVRegDef(CommonVL->getReg());
+    if (RISCVInstrInfo::isFaultOnlyFirstLoad(*VLMI) &&
+        !MDT->dominates(VLMI, &MI))
+      CommonVL = VLMI->getOperand(RISCVII::getVLOpNum(VLMI->getDesc()));
+  }
 
   if (!RISCV::isVLKnownLE(*CommonVL, VLOp)) {
     LLVM_DEBUG(dbgs() << "  Abort due to CommonVL not <= VLOp.\n");
