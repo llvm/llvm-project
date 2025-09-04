@@ -1000,17 +1000,17 @@ def LLVM_GetActiveLaneMaskOp
 /// Create a call to Masked Load intrinsic.
 def LLVM_MaskedLoadOp : LLVM_OneResultIntrOp<"masked.load"> {
   let arguments = (ins LLVM_AnyPointer:$data, LLVM_VectorOf<I1>:$mask,
-                   Variadic<LLVM_AnyVector>:$pass_thru, I32Attr:$alignment,
+                   Optional<LLVM_AnyVector>:$pass_thru, I32Attr:$alignment,
                    UnitAttr:$nontemporal);
   let results = (outs LLVM_AnyVector:$res);
   let assemblyFormat =
     "operands attr-dict `:` functional-type(operands, results)";
 
   string llvmBuilder = [{
-    auto *inst = $pass_thru.empty() ? builder.CreateMaskedLoad(
-        $_resultType, $data, llvm::Align($alignment), $mask) :
+    auto *inst = $pass_thru ? builder.CreateMaskedLoad(
+        $_resultType, $data, llvm::Align($alignment), $mask, $pass_thru) :
       builder.CreateMaskedLoad(
-        $_resultType, $data, llvm::Align($alignment), $mask, $pass_thru[0]);
+        $_resultType, $data, llvm::Align($alignment), $mask);
     $res = inst;
   }] #setNonTemporalMetadataCode;
   string mlirBuilder = [{
