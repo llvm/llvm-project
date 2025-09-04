@@ -1851,8 +1851,8 @@ void DWARFRewriter::writeDWOFiles(
     CompDir = opts::DwarfOutputPath.c_str();
   else if (!opts::CompDirOverride.empty())
     CompDir = opts::CompDirOverride;
-  else if (!sys::fs::exists(CompDir))
-    CompDir = ".";
+  else if (!sys::fs::exists(CompDir) && sys::fs::exists(DWOName))
+    CompDir = "";
 
   SmallString<16> AbsolutePath;
   sys::path::append(AbsolutePath, CompDir);

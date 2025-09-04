@@ -1638,8 +1638,12 @@ void BinaryContext::preprocessDWODebugInfo() {
         sys::path::append(AbsolutePath, opts::CompDirOverride);
         sys::path::append(AbsolutePath, DWOName);
       } else if (!sys::fs::exists(DwarfUnit->getCompilationDir()) &&
-                 sys::fs::exists(DWOName))
+                 sys::fs::exists(DWOName)) {
+        this->outs()
+            << "BOLT-WARNING: Debug Fission: Debug Compilation Dir wrong for "
+            << DWOName << ". DWO Name will be directly used for retrieving.\n";
         AbsolutePath = DWOName;
+      }
       DWARFUnit *DWOCU =
           DwarfUnit->getNonSkeletonUnitDIE(false, AbsolutePath).getDwarfUnit();
       if (!DWOCU->isDWOUnit()) {
