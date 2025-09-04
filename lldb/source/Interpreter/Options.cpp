@@ -1294,7 +1294,7 @@ llvm::Expected<Args> Options::Parse(const Args &args,
   Status error;
   Option *long_options = GetLongOptions();
   if (long_options == nullptr) {
-    return llvm::createStringError("Invalid long options.");
+    return llvm::createStringError("invalid long options");
   }
 
   std::string short_options = BuildShortOptions(long_options);
