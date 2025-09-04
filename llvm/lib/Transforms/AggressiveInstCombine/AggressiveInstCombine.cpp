@@ -1650,7 +1650,7 @@ static bool foldMul128High(Instruction &I, const DataLayout &DL,
 ///   %u2 = add nuw i64 %u0_hi, %t3
 ///   %hw64 = add nuw i64 %u2, %u1_hi
 static bool foldMul128HighVariant(Instruction &I, const DataLayout &DL,
-                                   DominatorTree &DT) {
+                                  DominatorTree &DT) {
   auto *Ty = I.getType();
   if (!Ty->isIntegerTy(64))
     return false;
