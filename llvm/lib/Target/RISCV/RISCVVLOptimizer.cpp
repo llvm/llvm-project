@@ -672,7 +672,7 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   }
 
   // Vector Compress Instruction
-  // EEW=SEW except the mask operand has EEW=1. Mask operand is not handled
+  // EEW=SEW, except the mask operand has EEW=1. Mask operand is not handled
   // before this switch.
   case RISCV::VCOMPRESS_VM:
     return MO.getOperandNo() == 3 ? 0 : MILog2SEW;
