@@ -2840,10 +2840,8 @@ static bool interp__builtin_elementwise_fsh(InterpState &S, CodePtr OpPC,
 
   // Non-vector integer types.
   if (!Arg0Type->isVectorType()) {
-    assert(!Arg1Type->isVectorType());
-    assert(!Arg2Type->isVectorType());
     const APSInt &Shift =
-      popToAPSInt(S.Stk, *S.getContext().classify(Arg2Type));
+        popToAPSInt(S.Stk, *S.getContext().classify(Arg2Type));
     const APSInt &Lo = popToAPSInt(S.Stk, *S.getContext().classify(Arg1Type));
     const APSInt &Hi = popToAPSInt(S.Stk, *S.getContext().classify(Arg0Type));
     APSInt Result;
@@ -2858,20 +2856,9 @@ static bool interp__builtin_elementwise_fsh(InterpState &S, CodePtr OpPC,
   }
 
   // Vector type.
-  assert(Arg0Type->isVectorType() && Arg1Type->isVectorType() &&
-         Arg2Type->isVectorType());
-
   const auto *VecT = Arg0Type->castAs<VectorType>();
   const PrimType &ElemT = *S.getContext().classify(VecT->getElementType());
   unsigned NumElems = VecT->getNumElements();
-
-  assert(VecT->getElementType() ==
-             Arg1Type->castAs<VectorType>()->getElementType() &&
-         VecT->getElementType() ==
-             Arg2Type->castAs<VectorType>()->getElementType());
-  assert(NumElems == Arg1Type->castAs<VectorType>()->getNumElements() &&
-         NumElems == Arg2Type->castAs<VectorType>()->getNumElements());
-  assert(VecT->getElementType()->isIntegralOrEnumerationType());
 
   const Pointer &VecShift = S.Stk.pop<Pointer>();
   const Pointer &VecLo = S.Stk.pop<Pointer>();
