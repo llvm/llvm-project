@@ -643,6 +643,8 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
     uint64_t getElementOffset(const mlir::DataLayout &dataLayout,
               unsigned idx) const;
 
+    bool isLayoutIdentical(const RecordType &other);
+
   private:
     unsigned computeStructSize(const mlir::DataLayout &dataLayout) const;
     uint64_t computeStructAlignment(const mlir::DataLayout &dataLayout) const;
