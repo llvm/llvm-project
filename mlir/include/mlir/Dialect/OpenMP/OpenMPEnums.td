@@ -223,21 +223,19 @@ def ScheduleModifier : OpenMP_I32EnumAttr<
 def ScheduleModifierAttr : OpenMP_EnumAttr<ScheduleModifier, "sched_mod">;
 
 //===----------------------------------------------------------------------===//
-// target_region_flags enum.
+// target_exec_mode enum.
 //===----------------------------------------------------------------------===//
 
-def TargetRegionFlagsNone : I32BitEnumAttrCaseNone<"none">;
-def TargetRegionFlagsGeneric : I32BitEnumAttrCaseBit<"generic", 0>;
-def TargetRegionFlagsSpmd : I32BitEnumAttrCaseBit<"spmd", 1>;
-def TargetRegionFlagsTripCount : I32BitEnumAttrCaseBit<"trip_count", 2>;
+def TargetExecModeBare : I32EnumAttrCase<"bare", 0>;
+def TargetExecModeGeneric : I32EnumAttrCase<"generic", 1>;
+def TargetExecModeSpmd : I32EnumAttrCase<"spmd", 2>;
 
-def TargetRegionFlags : OpenMP_BitEnumAttr<
-    "TargetRegionFlags",
-    "target region property flags", [
-      TargetRegionFlagsNone,
-      TargetRegionFlagsGeneric,
-      TargetRegionFlagsSpmd,
-      TargetRegionFlagsTripCount
+def TargetExecMode : OpenMP_I32EnumAttr<
+    "TargetExecMode",
+    "target execution mode, mirroring the `OMPTgtExecModeFlags` LLVM enum", [
+      TargetExecModeBare,
+      TargetExecModeGeneric,
+      TargetExecModeSpmd,
     ]>;
 
 //===----------------------------------------------------------------------===//
