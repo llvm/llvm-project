@@ -59,7 +59,7 @@ int test() {
 // CHECK-NEXT: | |   |-ParmVarDecl [[ADDR_5:0x[a-z0-9]*]] <col:5> col:8 'int'
 // CHECK-NEXT: | |   |-ParmVarDecl [[ADDR_6:0x[a-z0-9]*]] <col:10, col:12> col:13 'T *'
 // CHECK-NEXT: | |   `-CompoundStmt [[ADDR_7:0x[a-z0-9]*]] <col:15, col:16>
-// CHECK-NEXT: | |-ClassTemplateSpecializationDecl [[ADDR_8:0x[a-z0-9]*]] <line:5:1, line:7:1> line:5:30 struct S definition
+// CHECK-NEXT: | |-ClassTemplateSpecializationDecl [[ADDR_8:0x[a-z0-9]*]] <line:5:23, line:7:1> line:5:30 struct S definition
 // CHECK-NEXT: | | |-DefinitionData pass_in_registers empty standard_layout trivially_copyable has_user_declared_ctor can_const_default_init
 // CHECK-NEXT: | | | |-DefaultConstructor defaulted_is_constexpr
 // CHECK-NEXT: | | | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
@@ -82,7 +82,7 @@ int test() {
 // CXX17-NEXT: | | |-CXXConstructorDecl [[ADDR_16:0x[a-z0-9]*]] <col:30> col:30 implicit constexpr S 'void (S<int> &&)' inline default trivial noexcept-unevaluated
 // CXX17-NEXT: | | | `-ParmVarDecl [[ADDR_17:0x[a-z0-9]*]] <col:30> col:30 'S<int> &&'
 // CHECK-NEXT: | | `-CXXDestructorDecl [[ADDR_19:0x[a-z0-9]*]] <col:30> col:30 implicit referenced {{(constexpr )?}}~S 'void ({{.*}}) noexcept' inline default trivial
-// CHECK-NEXT: | `-ClassTemplateSpecializationDecl [[ADDR_20:0x[a-z0-9]*]] <col:1, line:7:1> line:5:30 struct S
+// CHECK-NEXT: | `-ClassTemplateSpecializationDecl [[ADDR_20:0x[a-z0-9]*]] <col:23, line:7:1> line:5:30 struct S
 // CHECK-NEXT: |   `-TemplateArgument type 'double'
 // CHECK-NEXT: |     `-BuiltinType [[ADDR_21:0x[a-z0-9]*]] 'double'
 // CHECK-NEXT: |-FunctionTemplateDecl [[ADDR_22:0x[a-z0-9]*]] <line:9:1, line:12:1> line:10:5 also_before
