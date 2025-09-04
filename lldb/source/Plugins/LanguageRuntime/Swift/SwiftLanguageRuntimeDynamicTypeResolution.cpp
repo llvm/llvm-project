@@ -3368,7 +3368,7 @@ SwiftLanguageRuntime::GetTypeRef(CompilerType type,
     type_ref_or_err->dump(ss);
     LLDB_LOG(log,
              "[SwiftLanguageRuntime::GetTypeRef] Found typeref for "
-             "type: {0}:\n{0}",
+             "type: {0}:\n{1}",
              type.GetMangledTypeName(), ss.str());
   }
   return type_ref_or_err;
