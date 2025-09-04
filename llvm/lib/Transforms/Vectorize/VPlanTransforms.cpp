@@ -1109,11 +1109,9 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
         Builder.createLogicalAnd(X, Builder.createOr(Y, Z)));
 
   // x && !x -> 0
-  if (match(&R, m_LogicalAnd(m_VPValue(X), m_Not(m_Deferred(X))))) {
-    Def->replaceAllUsesWith(Plan->getOrAddLiveIn(
+  if (match(&R, m_LogicalAnd(m_VPValue(X), m_Not(m_Deferred(X)))))
+    return Def->replaceAllUsesWith(Plan->getOrAddLiveIn(
         ConstantInt::getFalse(VPTypeAnalysis(*Plan).inferScalarType(Def))));
-    return;
-  }
 
   if (match(Def, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
     return Def->replaceAllUsesWith(X);
