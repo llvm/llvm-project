@@ -2564,7 +2564,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
           m_images.Append(module_sp, notify);
 
         for (ModuleSP &old_module_sp : replaced_modules) {
-          auto old_module_wp =  old_module_sp->weak_from_this();
+          auto old_module_wp = old_module_sp->weak_from_this();
           old_module_sp.reset();
           ModuleList::RemoveSharedModuleIfOrphaned(old_module_wp);
         }
