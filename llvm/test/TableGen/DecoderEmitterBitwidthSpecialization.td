@@ -105,7 +105,8 @@ def Inst3 : Instruction16Bit<3> {
 // When we specialize per bitwidth, we emit 2 decodeToMCInst functions and
 // DecodeIdx is assigned per bit width.
 
-// CHECK-SPECIALIZE-NO-TABLE-LABEL:   DecoderTable8[25]
+// CHECK-SPECIALIZE-NO-TABLE-LABEL:   DecoderTable8[26]
+// CHECK-SPECIALIZE-NO-TABLE:           /* 0 */ 8, // Bitwidth 8
 // CHECK-SPECIALIZE-NO-TABLE:           DecodeIdx: 0
 // CHECK-SPECIALIZE-NO-TABLE:           DecodeIdx: 1
 // CHECK-SPECIALIZE-NO-TABLE:         };
@@ -116,7 +117,8 @@ def Inst3 : Instruction16Bit<3> {
 // CHECK-SPECIALIZE-NO-TABLE:           case 0
 // CHECK-SPECIALIZE-NO-TABLE:           case 1
 
-// CHECK-SPECIALIZE-NO-TABLE-LABEL:   DecoderTable16[25]
+// CHECK-SPECIALIZE-NO-TABLE-LABEL:   DecoderTable16[26]
+// CHECK-SPECIALIZE-NO-TABLE:           /* 0 */ 16, // Bitwidth 16
 // CHECK-SPECIALIZE-NO-TABLE:           DecodeIdx: 0
 // CHECK-SPECIALIZE-NO-TABLE:           DecodeIdx: 1
 // CHECK-SPECIALIZE-NO-TABLE:         };
@@ -127,11 +129,17 @@ def Inst3 : Instruction16Bit<3> {
 // CHECK-SPECIALIZE-NO-TABLE:           case 0
 // CHECK-SPECIALIZE-NO-TABLE:           case 1
 
+// CHECK-SPECIALIZE-NO-TABLE-LABEL:   template <typename InsnType>
+// CHECK-SPECIALIZE-NO-TABLE-NEXT:    decodeInstruction
+// CHECK-SPECIALIZE-NO-TABLE:         uint32_t BitWidth = decodeULEB128AndIncUnsafe(Ptr);
+// CHECK-SPECIALIZE-NO-TABLE-NEXT:    assert(InsnBitWidth<InsnType> == BitWidth &&
+
 // -----------------------------------------------------------------------------
 // Per bitwidth specialization with function table.
 
 // 8 bit deccoder table, functions, and function table.
-// CHECK-SPECIALIZE-TABLE-LABEL:    DecoderTable8[25]
+// CHECK-SPECIALIZE-TABLE-LABEL:    DecoderTable8[26]
+// CHECK-SPECIALIZE-TABLE:           /* 0 */ 8, // Bitwidth 8
 // CHECK-SPECIALIZE-TABLE:            DecodeIdx: 0
 // CHECK-SPECIALIZE-TABLE:            DecodeIdx: 1
 // CHECK-SPECIALIZE-TABLE:          };
@@ -153,7 +161,8 @@ def Inst3 : Instruction16Bit<3> {
 // CHECK-SPECIALIZE-TABLE-NEXT:     };
 
 // 16 bit deccoder table, functions, and function table.
-// CHECK-SPECIALIZE-TABLE-LABEL:    DecoderTable16[25]
+// CHECK-SPECIALIZE-TABLE-LABEL:    DecoderTable16[26]
+// CHECK-SPECIALIZE-TABLE:            /* 0 */ 16, // Bitwidth 16
 // CHECK-SPECIALIZE-TABLE:            DecodeIdx: 0
 // CHECK-SPECIALIZE-TABLE:            DecodeIdx: 1
 // CHECK-SPECIALIZE-TABLE:          };
@@ -173,3 +182,8 @@ def Inst3 : Instruction16Bit<3> {
 // CHECK-SPECIALIZE-TABLE-NEXT:       decodeFn_16bit_0,
 // CHECK-SPECIALIZE-TABLE-NEXT:       decodeFn_16bit_1,
 // CHECK-SPECIALIZE-TABLE-NEXT:     };
+
+// CHECK-SPECIALIZE-TABLE-LABEL:    template <typename InsnType>
+// CHECK-SPECIALIZE-TABLE-NEXT:     decodeInstruction
+// CHECK-SPECIALIZE-TABLE:          uint32_t BitWidth = decodeULEB128AndIncUnsafe(Ptr);
+// CHECK-SPECIALIZE-TABLE-NEXT:     assert(InsnBitWidth<InsnType> == BitWidth &&
