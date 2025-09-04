@@ -854,8 +854,7 @@ let hasSideEffects = 0 in {
   def MOVRdRr : FRdRr<0b0010, 0b11, (outs GPR8:$rd), (ins GPR8:$rr),
                       "mov\t$rd, $rr", []>;
 
-  def MOVWRdRr : FMOVWRdRr<(outs DREGS:$rd), (ins DREGS:$rr), "movw\t$rd, $rr",
-                           []>,
+  def MOVWRdRr : FMOVW<(outs DREGS:$rd), (ins DREGS:$rr), "movw\t$rd, $rr", []>,
                  Requires<[HasMOVW]>;
 }
 

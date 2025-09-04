@@ -61,12 +61,19 @@ LLVMInitializeAVRDisassembler() {
                                          createAVRDisassembler);
 }
 
-static const uint16_t GPRDecoderTable[] = {
+static constexpr MCRegister GPRDecoderTable[] = {
     AVR::R0,  AVR::R1,  AVR::R2,  AVR::R3,  AVR::R4,  AVR::R5,  AVR::R6,
     AVR::R7,  AVR::R8,  AVR::R9,  AVR::R10, AVR::R11, AVR::R12, AVR::R13,
     AVR::R14, AVR::R15, AVR::R16, AVR::R17, AVR::R18, AVR::R19, AVR::R20,
     AVR::R21, AVR::R22, AVR::R23, AVR::R24, AVR::R25, AVR::R26, AVR::R27,
     AVR::R28, AVR::R29, AVR::R30, AVR::R31,
+};
+
+static constexpr MCRegister GPRPairDecoderTable[] = {
+    AVR::R1R0,   AVR::R3R2,   AVR::R5R4,   AVR::R7R6,
+    AVR::R9R8,   AVR::R11R10, AVR::R13R12, AVR::R15R14,
+    AVR::R17R16, AVR::R19R18, AVR::R21R20, AVR::R23R22,
+    AVR::R25R24, AVR::R27R26, AVR::R29R28, AVR::R31R30,
 };
 
 static DecodeStatus DecodeGPR8RegisterClass(MCInst &Inst, unsigned RegNo,
@@ -88,6 +95,22 @@ static DecodeStatus DecodeLD8RegisterClass(MCInst &Inst, unsigned RegNo,
 
   unsigned Register = GPRDecoderTable[RegNo + 16];
   Inst.addOperand(MCOperand::createReg(Register));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeDREGSRegisterClass(MCInst &Inst, unsigned RegNo,
+                                             uint64_t Address,
+                                             const MCDisassembler *Decoder) {
+  assert(isUInt<4>(RegNo));
+  Inst.addOperand(MCOperand::createReg(GPRPairDecoderTable[RegNo]));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeIWREGSRegisterClass(MCInst &Inst, unsigned RegNo,
+                                              uint64_t Address,
+                                              const MCDisassembler *Decoder) {
+  assert(isUInt<2>(RegNo));
+  Inst.addOperand(MCOperand::createReg(GPRPairDecoderTable[12 + RegNo]));
   return MCDisassembler::Success;
 }
 
@@ -133,36 +156,6 @@ static DecodeStatus decodeFFMULRdRr(MCInst &Inst, unsigned Insn,
   if (DecodeGPR8RegisterClass(Inst, r, Address, Decoder) ==
       MCDisassembler::Fail)
     return MCDisassembler::Fail;
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus decodeFMOVWRdRr(MCInst &Inst, unsigned Insn,
-                                    uint64_t Address,
-                                    const MCDisassembler *Decoder) {
-  unsigned r = fieldFromInstruction(Insn, 4, 4) * 2;
-  unsigned d = fieldFromInstruction(Insn, 0, 4) * 2;
-  if (DecodeGPR8RegisterClass(Inst, r, Address, Decoder) ==
-      MCDisassembler::Fail)
-    return MCDisassembler::Fail;
-  if (DecodeGPR8RegisterClass(Inst, d, Address, Decoder) ==
-      MCDisassembler::Fail)
-    return MCDisassembler::Fail;
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus decodeFWRdK(MCInst &Inst, unsigned Insn, uint64_t Address,
-                                const MCDisassembler *Decoder) {
-  unsigned d = fieldFromInstruction(Insn, 4, 2) * 2 + 24; // starts at r24:r25
-  unsigned k = 0;
-  k |= fieldFromInstruction(Insn, 0, 4);
-  k |= fieldFromInstruction(Insn, 6, 2) << 4;
-  if (DecodeGPR8RegisterClass(Inst, d, Address, Decoder) ==
-      MCDisassembler::Fail)
-    return MCDisassembler::Fail;
-  if (DecodeGPR8RegisterClass(Inst, d, Address, Decoder) ==
-      MCDisassembler::Fail)
-    return MCDisassembler::Fail;
-  Inst.addOperand(MCOperand::createImm(k));
   return MCDisassembler::Success;
 }
 
