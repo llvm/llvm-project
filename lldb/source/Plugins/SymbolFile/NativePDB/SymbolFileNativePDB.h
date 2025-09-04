@@ -310,7 +310,7 @@ private:
   /// method basename -> Global ID(s)
   lldb_private::UniqueCStringMap<uint32_t> m_func_method_names;
 
-  /// basename -> Global ID(s)
+  /// global variable basename -> Global ID(s)
   lldb_private::UniqueCStringMap<uint32_t> m_global_variable_base_names;
 };
 
