@@ -3767,7 +3767,7 @@ bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
     SpaceNo = RBA->getSpaceNumber();
   }
 
-  // Find correct initialization method and create its argumentss.
+  // Find correct initialization method and create its arguments.
   QualType ResourceTy = VD->getType();
   CXXRecordDecl *ResourceDecl = ResourceTy->getAsCXXRecordDecl();
   CXXMethodDecl *CreateMethod = nullptr;

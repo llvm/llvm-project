@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -triple dxil--shadermodel6.6-compute -x hlsl -finclude-default-header -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil--shadermodel6.6-compute -x hlsl -finclude-default-header \
+// RUN:   -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
 // CHECK: %"class.hlsl::RWBuffer" = type { target("dx.TypedBuffer", <4 x float>, 1, 0, 0) }
 // CHECK: %"class.hlsl::RWBuffer.0" = type { target("dx.TypedBuffer", float, 1, 0, 0) }
