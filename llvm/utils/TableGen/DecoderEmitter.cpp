@@ -104,6 +104,18 @@ static cl::opt<bool> SpecializeDecodersPerBitwidth(
              "Helps reduce the code size."),
     cl::init(false), cl::cat(DisassemblerEmitterCat));
 
+static cl::opt<bool> IgnoreNonDecodableOperands(
+    "ignore-non-decodable-operands",
+    cl::desc(
+        "Do not issue an error if an operand cannot be decoded automatically."),
+    cl::init(false), cl::cat(DisassemblerEmitterCat));
+
+static cl::opt<bool> IgnoreFullyDefinedOperands(
+    "ignore-fully-defined-operands",
+    cl::desc(
+        "Do not automatically decode operands with no '?' in their encoding."),
+    cl::init(false), cl::cat(DisassemblerEmitterCat));
+
 STATISTIC(NumEncodings, "Number of encodings considered");
 STATISTIC(NumEncodingsLackingDisasm,
           "Number of encodings without disassembler info");
@@ -149,7 +161,7 @@ struct OperandInfo {
   std::vector<EncodingField> Fields;
   std::string Decoder;
   bool HasCompleteDecoder;
-  uint64_t InitValue = 0;
+  std::optional<uint64_t> InitValue;
 
   OperandInfo(std::string D, bool HCD) : Decoder(D), HasCompleteDecoder(HCD) {}
 
@@ -1110,11 +1122,29 @@ FilterChooser::getIslands(const KnownBits &EncodingBits) const {
 
 void DecoderTableBuilder::emitBinaryParser(raw_ostream &OS, indent Indent,
                                            const OperandInfo &OpInfo) const {
-  bool UseInsertBits = OpInfo.numFields() != 1 || OpInfo.InitValue != 0;
+  // Special case for 'bits<0>'.
+  if (OpInfo.Fields.empty() && !OpInfo.InitValue) {
+    if (IgnoreNonDecodableOperands)
+      return;
+    assert(!OpInfo.Decoder.empty());
+    // The operand has no encoding, so the corresponding argument is omitted.
+    // This avoids confusion and allows the function to be overloaded if the
+    // operand does have an encoding in other instructions.
+    OS << Indent << "if (!Check(S, " << OpInfo.Decoder << "(MI, Decoder)))\n"
+       << Indent << "  return MCDisassembler::Fail;\n";
+    return;
+  }
+
+  if (OpInfo.Fields.empty() && OpInfo.InitValue && IgnoreFullyDefinedOperands)
+    return;
+
+  // We need to construct the encoding of the operand from pieces if it is not
+  // encoded sequentially or has a non-zero constant part in the encoding.
+  bool UseInsertBits = OpInfo.numFields() > 1 || OpInfo.InitValue.value_or(0);
 
   if (UseInsertBits) {
     OS << Indent << "tmp = 0x";
-    OS.write_hex(OpInfo.InitValue);
+    OS.write_hex(OpInfo.InitValue.value_or(0));
     OS << ";\n";
   }
 
@@ -1158,8 +1188,7 @@ void DecoderTableBuilder::emitDecoder(raw_ostream &OS, indent Indent,
   }
 
   for (const OperandInfo &Op : Encoding.getOperands())
-    if (Op.numFields())
-      emitBinaryParser(OS, Indent, Op);
+    emitBinaryParser(OS, Indent, Op);
 }
 
 unsigned DecoderTableBuilder::getDecoderIndex(unsigned EncodingID) const {
@@ -1941,15 +1970,48 @@ static void debugDumpRecord(const Record &Rec) {
 static void addOneOperandFields(const Record *EncodingDef,
                                 const BitsInit &InstBits,
                                 std::map<StringRef, StringRef> &TiedNames,
-                                StringRef OpName, OperandInfo &OpInfo) {
-  // Some bits of the operand may be required to be 1 depending on the
-  // instruction's encoding. Collect those bits.
-  if (const RecordVal *EncodedValue = EncodingDef->getValue(OpName))
-    if (const BitsInit *OpBits = dyn_cast<BitsInit>(EncodedValue->getValue()))
-      for (unsigned I = 0; I < OpBits->getNumBits(); ++I)
-        if (const BitInit *OpBit = dyn_cast<BitInit>(OpBits->getBit(I)))
-          if (OpBit->getValue())
-            OpInfo.InitValue |= 1ULL << I;
+                                const Record *OpRec, StringRef OpName,
+                                OperandInfo &OpInfo) {
+  // Find a field with the operand's name.
+  const RecordVal *OpEncodingField = EncodingDef->getValue(OpName);
+
+  // If there is no such field, try tied operand's name.
+  if (!OpEncodingField) {
+    if (auto I = TiedNames.find(OpName); I != TiedNames.end())
+      OpEncodingField = EncodingDef->getValue(I->second);
+
+    // If still no luck, the old behavior is to not decode this operand
+    // automatically and let the target do it. This is error-prone, so
+    // the new behavior is to report an error.
+    if (!OpEncodingField) {
+      if (!IgnoreNonDecodableOperands)
+        PrintError(EncodingDef->getLoc(),
+                   "could not find field for operand '" + OpName + "'");
+      return;
+    }
+  }
+
+  // Some or all bits of the operand may be required to be 0 or 1 depending
+  // on the instruction's encoding. Collect those bits.
+  if (const auto *OpBit = dyn_cast<BitInit>(OpEncodingField->getValue())) {
+    OpInfo.InitValue = OpBit->getValue();
+    return;
+  }
+  if (const auto *OpBits = dyn_cast<BitsInit>(OpEncodingField->getValue())) {
+    if (OpBits->getNumBits() == 0) {
+      if (OpInfo.Decoder.empty()) {
+        PrintError(EncodingDef->getLoc(), "operand '" + OpName + "' of type '" +
+                                              OpRec->getName() +
+                                              "' must have a decoder method");
+      }
+      return;
+    }
+    for (unsigned I = 0; I < OpBits->getNumBits(); ++I) {
+      if (const auto *OpBit = dyn_cast<BitInit>(OpBits->getBit(I)))
+        OpInfo.InitValue = OpInfo.InitValue.value_or(0) |
+                           static_cast<uint64_t>(OpBit->getValue()) << I;
+    }
+  }
 
   // Find out where the variable bits of the operand are encoded. The bits don't
   // have to be consecutive or in ascending order. For example, an operand could
@@ -2034,8 +2096,10 @@ void InstructionEncoding::parseFixedLenOperands(const BitsInit &Bits) {
       // Decode each of the sub-ops separately.
       for (auto [SubOpName, SubOp] :
            zip_equal(Op.SubOpNames, Op.MIOperandInfo->getArgs())) {
-        OperandInfo SubOpInfo = getOpInfo(cast<DefInit>(SubOp)->getDef());
-        addOneOperandFields(EncodingDef, Bits, TiedNames, SubOpName, SubOpInfo);
+        const Record *SubOpRec = cast<DefInit>(SubOp)->getDef();
+        OperandInfo SubOpInfo = getOpInfo(SubOpRec);
+        addOneOperandFields(EncodingDef, Bits, TiedNames, SubOpRec, SubOpName,
+                            SubOpInfo);
         Operands.push_back(std::move(SubOpInfo));
       }
       continue;
@@ -2056,13 +2120,8 @@ void InstructionEncoding::parseFixedLenOperands(const BitsInit &Bits) {
       }
     }
 
-    addOneOperandFields(EncodingDef, Bits, TiedNames, Op.Name, OpInfo);
-    // FIXME: it should be an error not to find a definition for a given
-    // operand, rather than just failing to add it to the resulting
-    // instruction! (This is a longstanding bug, which will be addressed in an
-    // upcoming change.)
-    if (OpInfo.numFields() > 0)
-      Operands.push_back(std::move(OpInfo));
+    addOneOperandFields(EncodingDef, Bits, TiedNames, Op.Rec, Op.Name, OpInfo);
+    Operands.push_back(std::move(OpInfo));
   }
 }
 

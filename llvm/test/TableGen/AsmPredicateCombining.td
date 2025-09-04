@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen -gen-disassembler -I %p/../../include %s | \
+// RUN: llvm-tblgen -gen-disassembler -ignore-non-decodable-operands -I %p/../../include %s | \
 // RUN:     FileCheck --check-prefix=DISASS %s
 // RUN: llvm-tblgen -gen-asm-matcher -I %p/../../include %s | \
 // RUN:     FileCheck --check-prefix=MATCHER %s
