@@ -8,8 +8,7 @@ tablegen(LLVM RISCVGenCompressInstEmitter.inc -gen-compress-inst-emitter)
 tablegen(LLVM RISCVGenMacroFusion.inc -gen-macro-fusion-pred)
 tablegen(LLVM RISCVGenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM RISCVGenDisassemblerTables.inc -gen-disassembler
-              --specialize-decoders-per-bitwidth
-              -ignore-non-decodable-operands)
+              --specialize-decoders-per-bitwidth)
 tablegen(LLVM RISCVGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM RISCVGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM RISCVGenMCPseudoLowering.inc -gen-pseudo-lowering)
