@@ -386,52 +386,6 @@ std::vector<MCInst> ExegesisAArch64Target::setStackRegisterToAuxMem() const {
   // TODO:  Implement this, if required.
   dbgs() << "Warning: setStackRegisterToAuxMem called but not required for "
             "AArch64\n";
-  
-  const uint64_t targetSPVal =
-      getAuxiliaryMemoryStartAddress() + SubprocessMemory::AuxiliaryMemorySize;
-  // sub, stack args and local storage
-  // Use X16 as a temporary register since it's a scratch register
-  const MCRegister TempReg = AArch64::X16;
-
-  // Load the 64-bit immediate into TempReg using MOVZ/MOVK sequence
-  // MOVZ Xd, #imm16, LSL #(shift_val * 16)
-  // MOVK Xd, #imm16, LSL #(shift_val * 16) (* 3 times for 64-bit immediate)
-
-  // 1. MOVZ TmpReg, #(targetSPVal & 0xFFFF), LSL #0
-  instructions.push_back(MCInstBuilder(AArch64::MOVZXi)
-                             .addReg(TempReg)
-                             .addImm(targetSPVal & 0xFFFF) // imm16
-                             .addImm(0));                  // hw(shift/16) = 0
-  // 2. MOVK TmpReg, #((targetSPVal >> 16) & 0xFFFF), LSL #16
-  if (((targetSPVal >> 16) & 0xFFFF) != 0 || (targetSPVal > 0xFFFF)) {
-    instructions.push_back(MCInstBuilder(AArch64::MOVKXi)
-                               .addReg(TempReg)
-                               .addReg(TempReg)
-                               .addImm((targetSPVal >> 16) & 0xFFFF) // imm16
-                               .addImm(1)); // hw(shift/16) = 1
-  }
-  // 3. MOVK TmpReg, #((targetSPVal >> 32) & 0xFFFF), LSL #32
-  if (((targetSPVal >> 32) & 0xFFFF) != 0 || (targetSPVal > 0xFFFFFFFF)) {
-    instructions.push_back(MCInstBuilder(AArch64::MOVKXi)
-                               .addReg(TempReg)
-                               .addReg(TempReg)
-                               .addImm((targetSPVal >> 32) & 0xFFFF) // imm16
-                               .addImm(2)); // hw(shift/16) = 2
-  }
-  // 4. MOVK TmpReg, #((targetSPVal >> 48) & 0xFFFF), LSL #48
-  if (((targetSPVal >> 48) & 0xFFFF) != 0 || (targetSPVal > 0xFFFFFFFFFFFF)) {
-    instructions.push_back(MCInstBuilder(AArch64::MOVKXi)
-                               .addReg(TempReg)
-                               .addReg(TempReg)
-                               .addImm((targetSPVal >> 48) & 0xFFFF) // imm16
-                               .addImm(3)); // hw(shift/16) = 3
-  }
-  // Finally, move the value from TempReg to SP
-  instructions.push_back(MCInstBuilder(AArch64::ADDXri) // ADD SP, TempReg, #0
-                             .addReg(AArch64::SP)
-                             .addReg(TempReg)
-                             .addImm(0)   // imm   = 0
-                             .addImm(0)); // shift = 0
   return instructions;
 }
 
