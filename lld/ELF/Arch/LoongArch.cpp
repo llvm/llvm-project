@@ -184,6 +184,10 @@ static uint32_t setJ5(uint32_t insn, uint32_t imm) {
   return (insn & 0xfffffc1f) | (extractBits(imm, 4, 0) << 5);
 }
 
+static uint32_t setK10(uint32_t insn, uint32_t imm) {
+  return (insn & 0xffc003ff) | (extractBits(imm, 9, 0) << 10);
+}
+
 static uint32_t setK12(uint32_t insn, uint32_t imm) {
   return (insn & 0xffc003ff) | (extractBits(imm, 11, 0) << 10);
 }
@@ -439,6 +443,13 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
     // [1]: https://sourceware.org/git/?p=glibc.git;a=commitdiff;h=9f482b73f41a9a1bbfb173aad0733d1c824c788a
     // [2]: https://github.com/loongson/la-abi-specs/pull/3
     return isJirl(read32le(loc)) ? R_PLT : R_ABS;
+  case R_LARCH_PCADD_LO12:
+  case R_LARCH_GOT_PCADD_LO12:
+  case R_LARCH_TLS_IE_PCADD_LO12:
+  case R_LARCH_TLS_LD_PCADD_LO12:
+  case R_LARCH_TLS_GD_PCADD_LO12:
+  case R_LARCH_TLS_DESC_PCADD_LO12:
+    return RE_LOONGARCH_PC_INDIRECT;
   case R_LARCH_TLS_DTPREL32:
   case R_LARCH_TLS_DTPREL64:
     return R_DTPREL;
@@ -469,10 +480,12 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_32_PCREL:
   case R_LARCH_64_PCREL:
   case R_LARCH_PCREL20_S2:
+  case R_LARCH_PCADD_HI20:
     return R_PC;
   case R_LARCH_B16:
   case R_LARCH_B21:
   case R_LARCH_B26:
+  case R_LARCH_CALL30:
   case R_LARCH_CALL36:
     return R_PLT_PC;
   case R_LARCH_GOT_PC_HI20:
@@ -482,6 +495,9 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_TLS_IE64_PC_LO20:
   case R_LARCH_TLS_IE64_PC_HI12:
     return RE_LOONGARCH_GOT_PAGE_PC;
+  case R_LARCH_GOT_PCADD_HI20:
+  case R_LARCH_TLS_IE_PCADD_HI20:
+    return R_GOT_PC;
   case R_LARCH_GOT_PC_LO12:
   case R_LARCH_TLS_IE_PC_LO12:
     return RE_LOONGARCH_GOT;
@@ -545,12 +561,15 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_TLS_DESC_LO12:
   case R_LARCH_TLS_DESC64_LO20:
   case R_LARCH_TLS_DESC64_HI12:
+  case R_LARCH_TLS_DESC_PCADD_HI20:
     return R_TLSDESC;
   case R_LARCH_TLS_DESC_CALL:
     return R_TLSDESC_CALL;
   case R_LARCH_TLS_LD_PCREL20_S2:
+  case R_LARCH_TLS_LD_PCADD_HI20:
     return R_TLSLD_PC;
   case R_LARCH_TLS_GD_PCREL20_S2:
+  case R_LARCH_TLS_GD_PCADD_HI20:
     return R_TLSGD_PC;
   case R_LARCH_TLS_DESC_PCREL20_S2:
     return R_TLSDESC_PC;
@@ -628,6 +647,22 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     write32le(loc, setD10k16(read32le(loc), val >> 2));
     return;
 
+  case R_LARCH_CALL30: {
+    // This relocation is designed for adjacent pcaddu12i+jirl pairs that
+    // are patched in one time.
+    // The relocation range is [-4G, +4G) (of course must be 4-byte aligned).
+    if ((int64_t)val != llvm::SignExtend64(val, 32))
+      reportRangeError(ctx, loc, rel, Twine(val), llvm::minIntN(32),
+                       llvm::maxIntN(32));
+    checkAlignment(ctx, loc, val, 4, rel);
+    uint32_t hi20 = extractBits(val, 31, 12);
+    // Despite the name, the lower part is actually 12 bits with 4-byte aligned.
+    uint32_t lo10 = extractBits(val, 11, 2);
+    write32le(loc, setJ20(read32le(loc), hi20));
+    write32le(loc + 4, setK10(read32le(loc + 4), lo10));
+    return;
+  }
+
   case R_LARCH_CALL36: {
     // This relocation is designed for adjacent pcaddu18i+jirl pairs that
     // are patched in one time. Because of sign extension of these insns'
@@ -671,6 +706,12 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   case R_LARCH_TLS_LE_LO12_R:
   case R_LARCH_TLS_DESC_PC_LO12:
   case R_LARCH_TLS_DESC_LO12:
+  case R_LARCH_PCADD_LO12:
+  case R_LARCH_GOT_PCADD_LO12:
+  case R_LARCH_TLS_IE_PCADD_LO12:
+  case R_LARCH_TLS_LD_PCADD_LO12:
+  case R_LARCH_TLS_GD_PCADD_LO12:
+  case R_LARCH_TLS_DESC_PCADD_LO12:
     write32le(loc, setK12(read32le(loc), extractBits(val, 11, 0)));
     return;
 
@@ -690,6 +731,17 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   case R_LARCH_TLS_DESC_HI20:
     write32le(loc, setJ20(read32le(loc), extractBits(val, 31, 12)));
     return;
+  case R_LARCH_PCADD_HI20:
+  case R_LARCH_GOT_PCADD_HI20:
+  case R_LARCH_TLS_IE_PCADD_HI20:
+  case R_LARCH_TLS_LD_PCADD_HI20:
+  case R_LARCH_TLS_GD_PCADD_HI20:
+  case R_LARCH_TLS_DESC_PCADD_HI20: {
+    uint64_t hi = val + 0x800;
+    checkInt(ctx, loc, SignExtend64(hi, 32) >> 12, 20, rel);
+    write32le(loc, setJ20(read32le(loc), extractBits(hi, 31, 12)));
+    return;
+  }
   case R_LARCH_TLS_LE_HI20_R:
     write32le(loc, setJ20(read32le(loc), extractBits(val + 0x800, 31, 12)));
     return;
@@ -998,12 +1050,16 @@ static void relaxPCHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
 
 // Relax code sequence.
 // From:
-//   pcaddu18i $ra, %call36(foo)
-//   jirl $ra, $ra, 0
+//   la32r:
+//     pcaddu12i $ra, %call30(foo)
+//     jirl $ra, $ra, 0
+//   la32s/la64:
+//     pcaddu18i $ra, %call36(foo)
+//     jirl $ra, $ra, 0
 // To:
 //   b/bl foo
-static void relaxCall36(Ctx &ctx, const InputSection &sec, size_t i,
-                        uint64_t loc, Relocation &r, uint32_t &remove) {
+static void relaxMediumCall(Ctx &ctx, const InputSection &sec, size_t i,
+                            uint64_t loc, Relocation &r, uint32_t &remove) {
   const uint64_t dest =
       (r.expr == R_PLT_PC ? r.sym->getPltVA(ctx) : r.sym->getVA(ctx)) +
       r.addend;
@@ -1108,9 +1164,10 @@ static bool relax(Ctx &ctx, InputSection &sec) {
       } else if (isPairRelaxable(relocs, i))
         relaxPCHi20Lo12(ctx, sec, i, loc, r, relocs[i + 2], remove);
       break;
+    case R_LARCH_CALL30:
     case R_LARCH_CALL36:
       if (relaxable(relocs, i))
-        relaxCall36(ctx, sec, i, loc, r, remove);
+        relaxMediumCall(ctx, sec, i, loc, r, remove);
       break;
     case R_LARCH_TLS_LE_HI20_R:
     case R_LARCH_TLS_LE_ADD_R:
