@@ -3181,8 +3181,7 @@ AArch64TargetLowering::EmitEntryPStateSM(MachineInstr &MI,
   if (MF->getRegInfo().use_empty(ResultReg)) {
     // Nothing to do. Pseudo erased below.
   } else if (Subtarget->hasSME()) {
-    BuildMI(*BB, MI, DL, TII->get(AArch64::MRS))
-        .addReg(ResultReg, RegState::Define)
+    BuildMI(*BB, MI, DL, TII->get(AArch64::MRS), ResultReg)
         .addImm(AArch64SysReg::SVCR)
         .addReg(AArch64::VG, RegState::Implicit);
   } else {
