@@ -2598,10 +2598,6 @@ public:
     return 4;
   }
 
-  InstructionListType createInlineMemcpy(bool ReturnEnd) const override {
-    return createInlineMemcpy(ReturnEnd, std::nullopt);
-  }
-
   std::optional<uint64_t>
   extractMoveImmediate(const MCInst &Inst, MCPhysReg TargetReg) const override {
     // Match MOVZ instructions (both X and W register variants) with no shift.
@@ -2616,8 +2612,11 @@ public:
   std::optional<uint64_t>
   findMemcpySizeInBytes(const BinaryBasicBlock &BB,
                         BinaryBasicBlock::iterator CallInst) const override {
-    BitVector WrittenRegs(RegInfo->getNumRegs());
     MCPhysReg SizeReg = getIntArgRegister(2);
+    if (SizeReg == getNoRegister())
+      return std::nullopt;
+
+    BitVector WrittenRegs(RegInfo->getNumRegs());
     const BitVector &SizeRegAliases = getAliases(SizeReg);
 
     for (auto InstIt = BB.begin(); InstIt != CallInst; ++InstIt) {
@@ -2625,9 +2624,8 @@ public:
       WrittenRegs.reset();
       getWrittenRegs(Inst, WrittenRegs);
 
-      if (SizeReg != getNoRegister() && WrittenRegs.anyCommon(SizeRegAliases);
-          auto ExtractedSize = extractMoveImmediate(Inst, SizeReg))
-        return *ExtractedSize;
+      if (WrittenRegs.anyCommon(SizeRegAliases))
+        return extractMoveImmediate(Inst, SizeReg);
     }
     return std::nullopt;
   }
@@ -2635,6 +2633,8 @@ public:
   InstructionListType
   createInlineMemcpy(bool ReturnEnd,
                      std::optional<uint64_t> KnownSize) const override {
+    assert(KnownSize.has_value() &&
+           "AArch64 memcpy inlining requires known size");
     InstructionListType Code;
     uint64_t Size = *KnownSize;
 
