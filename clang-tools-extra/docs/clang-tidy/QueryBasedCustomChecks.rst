@@ -35,12 +35,6 @@ Configuration
 Example
 =======
 
-Note: Since this feature is currently in the development stage. The API may
-change in the future. It needs to be explicitly enabled by
-`--experimental-custom-checks`.
-
-We also welcome suggestions in the link https://discourse.llvm.org/t/support-query-based-clang-tidy-external-check/85331.
-
 .. code-block:: yaml
 
   Checks: -*,custom-call-main-function
@@ -67,3 +61,22 @@ We also welcome suggestions in the link https://discourse.llvm.org/t/support-que
   void bar() {
     main(); // warning: call to main function. [custom-call-main-function]
   }
+
+Matters Need Attention
+======================
+
+This feature needs to be explicitly enabled by `--experimental-custom-checks`
+because it is currently in the experimental stage. Welcome to submit any
+suggestions in the `link <https://discourse.llvm.org/t/support-query-based-clang-tidy-external-check/85331>`_.
+
+During the experimental stage, the required configuration structure of this
+feature may be changed in the future. Future changes will be as
+forward-compatible as possible, but this is not a guarantee.
+
+In subsequent versions, including non-experimental stage, the query statements
+will change at any time. The essence of :program:`clang-query` is to parse the
+query string and dynamically generate the corresponding AST matcher.
+Therefore, its functionality is entirely dependent on the functions provided by
+the AST matcher library.
+The ast matcher will change along with the changes in the clang AST.
+Please refer to `ast matcher reference <https://clang.llvm.org/docs/LibASTMatchersReference.html>`_.
