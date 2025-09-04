@@ -17,8 +17,6 @@
 # to avoid breaking users at every release.
 
 # RUN: %{python} %s %{libcxx-dir}/utils
-
-# block Lit from interpreting a RUN/XFAIL/etc inside the generation script
 # END.
 
 import sys
