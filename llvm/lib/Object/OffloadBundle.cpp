@@ -62,7 +62,7 @@ Error extractOffloadBundle(MemoryBufferRef Contents, uint64_t SectionOffset,
         return createFileError(FileName, EC);
 
       Expected<std::unique_ptr<MemoryBuffer>> DecompressedBufferOrErr =
-          CompressedOffloadBundle::decompress(**CodeOrErr, false);
+          CompressedOffloadBundle::decompress(**CodeOrErr, false, errs());
       if (!DecompressedBufferOrErr)
         return createStringError(
             inconvertibleErrorCode(),
@@ -297,7 +297,7 @@ static std::string formatWithCommas(unsigned long long Value) {
 Expected<std::unique_ptr<MemoryBuffer>>
 CompressedOffloadBundle::compress(compression::Params P,
                                   const MemoryBuffer &Input, uint16_t Version,
-                                  bool Verbose) {
+                                  bool Verbose, raw_ostream &OutS) {
   if (!compression::zstd::isAvailable() && !compression::zlib::isAvailable())
     return createStringError("compression not supported.");
   Timer HashTimer("Hash Calculation Timer", "Hash calculation time",
@@ -385,7 +385,7 @@ CompressedOffloadBundle::compress(compression::Params P,
     double CompressionTimeSeconds = CompressTimer.getTotalTime().getWallTime();
     double CompressionSpeedMBs =
         (UncompressedSize64 / (1024.0 * 1024.0)) / CompressionTimeSeconds;
-    errs() << "Compressed bundle format version: " << Version << "\n"
+    OutS << "Compressed bundle format version: " << Version << "\n"
            << "Total file size (including headers): "
            << formatWithCommas(TotalFileSize64) << " bytes\n"
            << "Compression method used: " << MethodUsed << "\n"
@@ -510,7 +510,7 @@ CompressedOffloadBundle::CompressedBundleHeader::tryParse(StringRef Blob) {
 }
 
 Expected<std::unique_ptr<MemoryBuffer>>
-CompressedOffloadBundle::decompress(const MemoryBuffer &Input, bool Verbose) {
+CompressedOffloadBundle::decompress(const MemoryBuffer &Input, bool Verbose, raw_ostream &OS) {
   StringRef Blob = Input.getBuffer();
 
   // Check minimum header size (using V1 as it's the smallest).
@@ -519,7 +519,7 @@ CompressedOffloadBundle::decompress(const MemoryBuffer &Input, bool Verbose) {
 
   if (identify_magic(Blob) != file_magic::offload_bundle_compressed) {
     if (Verbose)
-      errs() << "Uncompressed bundle\n";
+      OS << "Uncompressed bundle\n";
     return MemoryBuffer::getMemBufferCopy(Blob);
   }
 
@@ -577,11 +577,11 @@ CompressedOffloadBundle::decompress(const MemoryBuffer &Input, bool Verbose) {
     double DecompressionSpeedMBs =
         (UncompressedSize / (1024.0 * 1024.0)) / DecompressionTimeSeconds;
 
-    errs() << "Compressed bundle format version: " << ThisVersion << "\n";
+    OS << "Compressed bundle format version: " << ThisVersion << "\n";
     if (ThisVersion >= 2)
-      errs() << "Total file size (from header): "
+      OS << "Total file size (from header): "
              << formatWithCommas(TotalFileSize) << " bytes\n";
-    errs() << "Decompression method: "
+    OS << "Decompression method: "
            << (CompressionFormat == compression::Format::Zlib ? "zlib" : "zstd")
            << "\n"
            << "Size before decompression: "
