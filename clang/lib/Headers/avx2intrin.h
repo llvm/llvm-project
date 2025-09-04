@@ -886,9 +886,8 @@ _mm256_hadd_epi16(__m256i __a, __m256i __b) {
 ///    A 256-bit vector of [8 x i32] containing one of the source operands.
 /// \returns A 256-bit vector of [8 x i32] containing the sums.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_hadd_epi32(__m256i __a, __m256i __b)
-{
-    return (__m256i)__builtin_ia32_phaddd256((__v8si)__a, (__v8si)__b);
+_mm256_hadd_epi32(__m256i __a, __m256i __b) {
+  return (__m256i)__builtin_ia32_phaddd256((__v8si)__a, (__v8si)__b);
 }
 
 /// Horizontally adds the adjacent pairs of 16-bit integers from two 256-bit
@@ -987,9 +986,8 @@ _mm256_hsub_epi16(__m256i __a, __m256i __b) {
 ///    A 256-bit vector of [8 x i32] containing one of the source operands.
 /// \returns A 256-bit vector of [8 x i32] containing the differences.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_hsub_epi32(__m256i __a, __m256i __b)
-{
-    return (__m256i)__builtin_ia32_phsubd256((__v8si)__a, (__v8si)__b);
+_mm256_hsub_epi32(__m256i __a, __m256i __b) {
+  return (__m256i)__builtin_ia32_phsubd256((__v8si)__a, (__v8si)__b);
 }
 
 /// Horizontally subtracts adjacent pairs of 16-bit integers from two 256-bit
@@ -1023,9 +1021,8 @@ _mm256_hsub_epi32(__m256i __a, __m256i __b)
 ///    A 256-bit vector of [16 x i16] containing one of the source operands.
 /// \returns A 256-bit vector of [16 x i16] containing the differences.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_hsubs_epi16(__m256i __a, __m256i __b)
-{
-    return (__m256i)__builtin_ia32_phsubsw256((__v16hi)__a, (__v16hi)__b);
+_mm256_hsubs_epi16(__m256i __a, __m256i __b) {
+  return (__m256i)__builtin_ia32_phsubsw256((__v16hi)__a, (__v16hi)__b);
 }
 
 /// Multiplies each unsigned byte from the 256-bit integer vector in \a __a

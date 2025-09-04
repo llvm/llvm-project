@@ -89,8 +89,8 @@ _mm_addsub_ps(__m128 __a, __m128 __b)
 ///    destination.
 /// \returns A 128-bit vector of [4 x float] containing the horizontal sums of
 ///    both operands.
-static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR 
-_mm_hadd_ps(__m128 __a, __m128 __b) {
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_hadd_ps(__m128 __a,
+                                                                  __m128 __b) {
   return __builtin_ia32_haddps((__v4sf)__a, (__v4sf)__b);
 }
 
