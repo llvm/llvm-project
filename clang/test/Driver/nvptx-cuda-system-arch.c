@@ -1,4 +1,3 @@
-// REQUIRES: shell
 // XFAIL: target={{.*}}-zos{{.*}}
 
 // RUN: mkdir -p %t

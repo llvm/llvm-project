@@ -1,4 +1,3 @@
-// REQUIRES: shell
 // REQUIRES: case-insensitive-filesystem
 
 // RUN: rm -f %t.hmap

@@ -1,5 +1,3 @@
-// REQUIRES: shell
-
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/sources %t/build
 // RUN: echo "// A.h" > %t/sources/A.h

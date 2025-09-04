@@ -1,5 +1,3 @@
-// REQUIRES: shell
-
 // Basic test
 // RUN: rm -rf %t.dir
 // RUN: mkdir %t.dir

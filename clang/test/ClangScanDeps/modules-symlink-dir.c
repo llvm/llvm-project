@@ -1,8 +1,6 @@
 // Check that we canonicalize the module map path without changing the module
 // directory, which would break header lookup.
 
-// REQUIRES: shell
-
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb.json.in > %t/cdb.json

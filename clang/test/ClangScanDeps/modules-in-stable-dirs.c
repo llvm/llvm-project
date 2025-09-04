@@ -5,7 +5,6 @@
 // The second compilation verifies that external paths are resolved when a 
 // vfsoverlay for determining is-in-stable-directories.
 
-// REQUIRES: shell
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: sed -e "s|DIR|%/t|g" %t/compile-commands.json.in > %t/compile-commands.json
