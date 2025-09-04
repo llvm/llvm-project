@@ -41,7 +41,7 @@ static cl::opt<int> OptBisectLimit(
         getOptBisector().clearRanges();
       } else if (Limit > 0) {
         // Convert limit to range 1-Limit
-        std::string RangeStr = Limit == 1? "1" : "1-" + llvm::utostr(Limit);
+        std::string RangeStr = Limit == 1 ? "1" : "1-" + llvm::utostr(Limit);
         auto Ranges = RangeUtils::parseRanges(RangeStr);
         if (!Ranges) {
           handleAllErrors(Ranges.takeError(), [&](const StringError &E) {
