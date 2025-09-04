@@ -590,7 +590,12 @@ def NVVM_MBarrierArriveOp : NVVM_Op<"mbarrier.arrive">,
   let summary = "MBarrier Arrive Operation";
   let description = [{
     The `nvvm.mbarrier.arrive` operation performs an arrive-on operation on the 
-    *mbarrier object* at the specified address. Uses the default `.release.cta` semantics.
+    *mbarrier object* at the specified address. Uses the default `.release.cta` semantics. 
+    This release pattern establishes memory ordering for operations occurring in program 
+    order before this arrive instruction by making operations from the current thread 
+    visible to subsequent operations in other threads within the CTA. When other threads 
+    perform corresponding acquire operations (like 'mbarrier.test.wait'), they synchronize 
+    with this release pattern.
 
     This operation causes the executing thread to signal its arrival at the barrier.
     The operation returns an opaque value that captures the phase of the 
@@ -632,7 +637,12 @@ def NVVM_MBarrierArriveNocompleteOp : NVVM_Op<"mbarrier.arrive.nocomplete">,
   let description = [{
     The `nvvm.mbarrier.arrive.nocomplete` operation performs an arrive-on operation 
     on the *mbarrier object* with the guarantee that it will not cause the barrier to 
-    complete its current phase. Uses the default `.release.cta` semantics.
+    complete its current phase. Uses the default `.release.cta` semantics. This release 
+    pattern establishes memory ordering for operations occurring in program order before 
+    this arrive instruction by making operations from the current thread visible to 
+    subsequent operations in other threads within the CTA. When other threads perform 
+    corresponding acquire operations (like 'mbarrier.test.wait'), they synchronize with 
+    this release pattern.
 
     This operation causes the executing thread to signal its arrival at the barrier 
     with a specified count, but ensures that the barrier phase will not complete as 
@@ -675,11 +685,17 @@ def NVVM_MBarrierArriveExpectTxOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_t
   let description = [{
     The `nvvm.mbarrier.arrive.expect_tx` operation performs an expect-tx operation 
     followed by an arrive-on operation on the *mbarrier object*. Uses the default 
-    `.release.cta` semantics.
+    `.release.cta` semantics. This release pattern establishes memory ordering for 
+    operations occurring in program order before this arrive instruction by making 
+    operations from the current thread visible to subsequent operations in other 
+    threads within the CTA. When other threads perform corresponding acquire operations 
+    (like 'mbarrier.test.wait'), they synchronize with this release pattern.
 
     This operation first performs an expect-tx operation with the specified transaction 
     count, then performs an arrive-on operation with an implicit count of 1. The 
-    expect-tx operation updates the expected transaction count for the barrier.
+    expect-tx operation increases the tx-count of the *mbarrier object* by the specified 
+    expectCount value, setting the current phase to expect and tracks the completion 
+    of additional asynchronous transactions.
 
     The operation takes the following operands:
     - `addr`: A pointer to the memory location of the *mbarrier object*. Uses generic 
@@ -747,7 +763,7 @@ def NVVM_MBarrierTryWaitParityOp : NVVM_PTXBuilder_Op<"mbarrier.try_wait.parity"
        are visible to the executing thread.
     2. All `cp.async` operations requested prior to `cp.async.mbarrier.arrive`
        by participating CTA threads are visible to the executing thread.
-    3. All `cp.async.bulk` operations using the same mbarrier object requested
+    3. All `cp.async.bulk` operations using the same *mbarrier object* requested
        prior to `mbarrier.arrive` having release semantics by participating CTA
        threads are visible to the executing thread.
     4. Memory accesses requested after this wait are not visible to memory
@@ -846,7 +862,7 @@ def NVVM_MBarrierTestWaitOp : NVVM_Op<"mbarrier.test.wait">,
        are visible to the executing thread.
     2. All `cp.async` operations requested prior to `cp.async.mbarrier.arrive`
        by participating CTA threads are visible to the executing thread.
-    3. All `cp.async.bulk` operations using the same mbarrier object requested
+    3. All `cp.async.bulk` operations using the same *mbarrier object* requested
        prior to `mbarrier.arrive` having release semantics by participating CTA
        threads are visible to the executing thread.
     4. Memory accesses requested after this wait are not visible to memory
