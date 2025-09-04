@@ -652,8 +652,7 @@ void RISCVPassConfig::addPostRegAlloc() {
 void RISCVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
   PB.registerLateLoopOptimizationsEPCallback([=](LoopPassManager &LPM,
                                                  OptimizationLevel Level) {
-    if (Level != OptimizationLevel::O0)
-      LPM.addPass(LoopIdiomVectorizePass(LoopIdiomVectorizeStyle::Predicated));
+    LPM.addPass(LoopIdiomVectorizePass(LoopIdiomVectorizeStyle::Predicated));
   });
 }
 
