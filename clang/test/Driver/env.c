@@ -1,8 +1,3 @@
-// These tests try to ensure that the driver operates reasonably when run with
-// a strange environment. Unfortunately, it requires a normal shell and the
-// 'env' command that understands arguments, unlike the LIT built-in env.
-//
-// REQUIRES: shell
 // The PATH variable is heavily used when trying to find a linker.
 // RUN: env -i LC_ALL=C LD_LIBRARY_PATH="$LD_LIBRARY_PATH" CLANG_NO_DEFAULT_CONFIG=1 \
 // RUN:   %clang %s -### -o %t.o --target=i386-unknown-linux \

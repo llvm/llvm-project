@@ -3856,7 +3856,8 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
 bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
                                                 const VectorizationFactor &B,
                                                 const unsigned MaxTripCount,
-                                                bool HasTail) const {
+                                                bool HasTail,
+                                                bool IsEpilogue) const {
   InstructionCost CostA = A.Cost;
   InstructionCost CostB = B.Cost;
 
@@ -3880,7 +3881,7 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
   // Assume vscale may be larger than 1 (or the value being tuned for),
   // so that scalable vectorization is slightly favorable over fixed-width
   // vectorization.
-  bool PreferScalable = !TTI.preferFixedOverScalableIfEqualCost() &&
+  bool PreferScalable = !TTI.preferFixedOverScalableIfEqualCost(IsEpilogue) &&
                         A.Width.isScalable() && !B.Width.isScalable();
 
   auto CmpFn = [PreferScalable](const InstructionCost &LHS,
@@ -3918,10 +3919,11 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
 
 bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
                                                 const VectorizationFactor &B,
-                                                bool HasTail) const {
+                                                bool HasTail,
+                                                bool IsEpilogue) const {
   const unsigned MaxTripCount = PSE.getSmallConstantMaxTripCount();
-  return LoopVectorizationPlanner::isMoreProfitable(A, B, MaxTripCount,
-                                                    HasTail);
+  return LoopVectorizationPlanner::isMoreProfitable(A, B, MaxTripCount, HasTail,
+                                                    IsEpilogue);
 }
 
 void LoopVectorizationPlanner::emitInvalidCostRemarks(
@@ -4454,7 +4456,8 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
     }
 
     if (Result.Width.isScalar() ||
-        isMoreProfitable(NextVF, Result, MaxTripCount, !CM.foldTailByMasking()))
+        isMoreProfitable(NextVF, Result, MaxTripCount, !CM.foldTailByMasking(),
+                         /*IsEpilogue*/ true))
       Result = NextVF;
   }
 
@@ -5269,8 +5272,11 @@ LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
   Type *ValTy = getLoadStoreType(I);
   auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
   const Align Alignment = getLoadStoreAlignment(I);
-  const Value *Ptr = getLoadStorePointerOperand(I);
-  Type *PtrTy = toVectorTy(Ptr->getType(), VF);
+  Value *Ptr = getLoadStorePointerOperand(I);
+  Type *PtrTy = Ptr->getType();
+
+  if (!Legal->isUniform(Ptr, VF))
+    PtrTy = toVectorTy(PtrTy, VF);
 
   return TTI.getAddressComputationCost(PtrTy, nullptr, nullptr, CostKind) +
          TTI.getGatherScatterOpCost(I->getOpcode(), VectorTy, Ptr,
@@ -7234,6 +7240,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::narrowInterleaveGroups(
       BestVPlan, BestVF,
       TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector));
+  VPlanTransforms::cse(BestVPlan);
   VPlanTransforms::removeDeadRecipes(BestVPlan);
 
   VPlanTransforms::convertToConcreteRecipes(BestVPlan);
@@ -7544,21 +7551,21 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
 
   BranchInst &BI =
       *BranchInst::Create(Bypass, LoopVectorPreHeader, CheckMinIters);
-  if (hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())) {
-    auto VScale = Cost->getVScaleForTuning();
-    unsigned MainLoopStep =
-        estimateElementCount(EPI.MainLoopVF * EPI.MainLoopUF, VScale);
-    unsigned EpilogueLoopStep =
-        estimateElementCount(EPI.EpilogueVF * EPI.EpilogueUF, VScale);
-    // We assume the remaining `Count` is equally distributed in
-    // [0, MainLoopStep)
-    // So the probability for `Count < EpilogueLoopStep` should be
-    // min(MainLoopStep, EpilogueLoopStep) / MainLoopStep
-    unsigned EstimatedSkipCount = std::min(MainLoopStep, EpilogueLoopStep);
-    const uint32_t Weights[] = {EstimatedSkipCount,
-                                MainLoopStep - EstimatedSkipCount};
-    setBranchWeights(BI, Weights, /*IsExpected=*/false);
-  }
+  auto VScale = Cost->getVScaleForTuning();
+  unsigned MainLoopStep =
+      estimateElementCount(EPI.MainLoopVF * EPI.MainLoopUF, VScale);
+  unsigned EpilogueLoopStep =
+      estimateElementCount(EPI.EpilogueVF * EPI.EpilogueUF, VScale);
+  // We assume the remaining `Count` is equally distributed in
+  // [0, MainLoopStep)
+  // So the probability for `Count < EpilogueLoopStep` should be
+  // min(MainLoopStep, EpilogueLoopStep) / MainLoopStep
+  // TODO: Improve the estimate by taking the estimated trip count into
+  // consideration.
+  unsigned EstimatedSkipCount = std::min(MainLoopStep, EpilogueLoopStep);
+  const uint32_t Weights[] = {EstimatedSkipCount,
+                              MainLoopStep - EstimatedSkipCount};
+  setBranchWeights(BI, Weights, /*IsExpected=*/false);
   ReplaceInstWithInst(Insert->getTerminator(), &BI);
 
   // A new entry block has been created for the epilogue VPlan. Hook it in, as

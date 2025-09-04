@@ -4275,7 +4275,7 @@ def WRTEEI: I<31, (outs), (ins i1imm:$E), "wrteei $E", IIC_SprMTMSR>,
   bits<1> E;
 
   let Inst{16} = E;
-  let Inst{21-30} = 163;
+  let Inst{21...30} = 163;
 }
 
 def DCCCI : XForm_tlb<454, (outs), (ins gprc:$RA, gprc:$RB),
