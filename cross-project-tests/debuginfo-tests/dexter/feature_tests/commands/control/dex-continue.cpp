@@ -59,6 +59,6 @@ int main() {
 // CHECK-NEXT: .   .   .   [4, "c(int)", "{{.*}}dex-continue.cpp", 19, 3, "StopReason.BREAKPOINT", "StepKind.VERTICAL_FORWARD", []]
 // CHECK-NEXT: .   .   .   [5, "c(int)", "{{.*}}dex-continue.cpp", 20, 3, "StopReason.BREAKPOINT", "StepKind.VERTICAL_FORWARD", []]
 // CHECK-NEXT: .   [6, "a(int)", "{{.*}}dex-continue.cpp", 33, 3, "StopReason.BREAKPOINT", "StepKind.VERTICAL_FORWARD", []]
-// CHECK-NEXT: .   [8, "f()", "{{.*}}dex-continue.cpp", 38, 3, "StopReason.BREAKPOINT", "StepKind.VERTICAL_FORWARD", []]
-// CHECK-NEXT: .   [9, "f()", "{{.*}}dex-continue.cpp", 39, 1, "StopReason.STEP", "StepKind.VERTICAL_FORWARD", []]
+// CHECK-NEXT: .   [7, "f()", "{{.*}}dex-continue.cpp", 38, 3, "StopReason.BREAKPOINT", "StepKind.VERTICAL_FORWARD", []]
+// CHECK-NEXT: .   [8, "f()", "{{.*}}dex-continue.cpp", 39, 1, "StopReason.STEP", "StepKind.VERTICAL_FORWARD", []]
 // CHECK-NEXT: ## END (9 steps) ##
