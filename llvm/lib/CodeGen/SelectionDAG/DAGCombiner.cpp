@@ -10001,25 +10001,15 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
     }
   }
 
-  // fold (not (sub Y, X)) -> (add X, ~Y) if Y is a constant or the subtract has
-  // a single use.
+  // fold (not (sub Y, X)) -> (add X, ~Y) if Y is a constant
   if (N0.getOpcode() == ISD::SUB && isAllOnesConstant(N1)) {
     SDValue Y = N0.getOperand(0);
     SDValue X = N0.getOperand(1);
 
-    // Avoid infinite recursion with
-    // Fold (and X, (add (not Y), Z)) -> (and X, (not (sub Y, Z)))
-    if (none_of(N->users(),
-                [](SDNode *User) { return User->getOpcode() == ISD::AND; })) {
-      if (isa<ConstantSDNode>(Y) || N0.hasOneUse()) {
-        SDValue NotY = DAG.getNOT(DL, Y, VT);
-        return DAG.getNode(ISD::ADD, DL, VT, X, NotY, N->getFlags());
-      }
-    } else {
-      if (isa<ConstantSDNode>(Y) && N0.hasOneUse()) {
-        SDValue NotY = DAG.getNOT(DL, Y, VT);
-        return DAG.getNode(ISD::ADD, DL, VT, X, NotY, N->getFlags());
-      }
+    if (auto *YConst = dyn_cast<ConstantSDNode>(Y)) {
+      APInt NotYValue = ~YConst->getAPIntValue();
+      SDValue NotY = DAG.getConstant(NotYValue, DL, VT);
+      return DAG.getNode(ISD::ADD, DL, VT, X, NotY, N->getFlags());
     }
   }
 

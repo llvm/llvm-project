@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
 
 ; Test for DAG combine: fold (not (sub Y, X)) -> (add X, ~Y)
-; when Y is a constant or the subtract has a single use.
+; when Y is a constant.
 
 ; Test case 1: Y is a constant - should transform to (add X, ~Y)
 define i32 @test_not_sub_constant(i32 %x) {
@@ -15,30 +15,15 @@ define i32 @test_not_sub_constant(i32 %x) {
   ret i32 %not
 }
 
-; Test case 2: Subtract has single use - should optimize
-define i32 @test_not_sub_single_use(i32 %x, i32 %y) {
-; CHECK-LABEL: test_not_sub_single_use:
+; Test case 2: Y is not a constant - should NOT optimize
+define i32 @test_not_sub_non_constant(i32 %x, i32 %y) {
+; CHECK-LABEL: test_not_sub_non_constant:
 ; CHECK:       # %bb.0:
-; CHECK:         notl %esi
-; CHECK-NEXT:    leal (%rsi,%rdi), %eax
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    subl %edi, %eax
+; CHECK-NEXT:    notl %eax
 ; CHECK-NEXT:    retq
   %sub = sub i32 %y, %x
   %not = xor i32 %sub, -1
   ret i32 %not
-}
-
-; Negative test: Y is not constant AND subtract has multiple uses - should NOT optimize
-define i32 @test_not_sub_multiple_uses_non_constant(i32 %x, i32 %y) {
-; CHECK-LABEL: test_not_sub_multiple_uses_non_constant:
-; CHECK:       # %bb.0:
-; CHECK:         subl %edi, %esi
-; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    notl %eax
-; CHECK-NEXT:    leal (%rax,%rsi,2), %eax
-; CHECK-NEXT:    retq
-  %sub = sub i32 %y, %x
-  %not = xor i32 %sub, -1
-  %other_use = mul i32 %sub, 2  ; sub is used twice, and Y is not constant
-  %result = add i32 %not, %other_use
-  ret i32 %result
 }

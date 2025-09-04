@@ -12,8 +12,8 @@
 define dso_local signext i32 @test_ileus(i16 zeroext %a, i16 zeroext %b) {
 ; CHECK-LABEL: test_ileus:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    not r4, r4
-; CHECK-NEXT:    add r3, r3, r4
+; CHECK-NEXT:    sub r3, r4, r3
+; CHECK-NEXT:    not r3, r3
 ; CHECK-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-NEXT:    blr
 entry:
@@ -67,9 +67,9 @@ entry:
 define dso_local void @test_ileus_store(i16 zeroext %a, i16 zeroext %b) {
 ; CHECK-LABEL: test_ileus_store:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    not r4, r4
-; CHECK-NEXT:    add r3, r3, r4
+; CHECK-NEXT:    sub r3, r4, r3
 ; CHECK-NEXT:    addis r4, r2, glob@toc@ha
+; CHECK-NEXT:    not r3, r3
 ; CHECK-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-NEXT:    sth r3, glob@toc@l(r4)
 ; CHECK-NEXT:    blr
