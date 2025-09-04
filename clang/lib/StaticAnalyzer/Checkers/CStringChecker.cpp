@@ -2266,7 +2266,7 @@ void CStringChecker::evalStrxfrm(CheckerContext &C,
   if (!State)
     return;
 
-  // Check overlaps
+  // Buffer must not overlap
   State = CheckOverlap(C, State, Size, Dest, Source, CK_Regular);
   if (!State)
     return;
@@ -2275,8 +2275,6 @@ void CStringChecker::evalStrxfrm(CheckerContext &C,
   // transformation
   SVal RetVal = SVB.conjureSymbolVal(Call, C.blockCount());
 
-  State = State->BindExpr(Call.getOriginExpr(), LCtx, RetVal);
-
   // Check if size is zero
   SVal SizeVal = State->getSVal(Size.Expression, LCtx);
   QualType SizeTy = Size.Expression->getType();
@@ -2284,17 +2282,22 @@ void CStringChecker::evalStrxfrm(CheckerContext &C,
   auto [StateZeroSize, StateSizeNonZero] =
       assumeZero(C, State, SizeVal, SizeTy);
 
+  // We can't assume anything about size, just bind the return value and be done
+  if (!StateZeroSize && !StateSizeNonZero) {
+    State = State->BindExpr(Call.getOriginExpr(), LCtx, RetVal);
+    C.addTransition(State);
+    return;
+  }
+
   // If `n` is 0, we just return the implementation defined length
   if (StateZeroSize && !StateSizeNonZero) {
+    StateZeroSize = StateZeroSize->BindExpr(Call.getOriginExpr(), LCtx, RetVal);
     C.addTransition(StateZeroSize);
     return;
   }
 
-  if (!StateSizeNonZero)
-    return;
-
   // If `n` is not 0, `dest` can not be null.
-  SVal DestVal = State->getSVal(Dest.Expression, LCtx);
+  SVal DestVal = StateSizeNonZero->getSVal(Dest.Expression, LCtx);
   StateSizeNonZero = checkNonNull(C, StateSizeNonZero, Dest, DestVal);
   if (!StateSizeNonZero)
     return;
@@ -2321,6 +2324,7 @@ void CStringChecker::evalStrxfrm(CheckerContext &C,
           C, StateSuccess, Dest.Expression, Call.getCFGElementRef(), DestVal,
           SizeVal, Size.Expression->getType());
 
+      StateSuccess = StateSuccess->BindExpr(Call.getOriginExpr(), LCtx, RetVal);
       C.addTransition(StateSuccess);
     }
 
@@ -2330,6 +2334,7 @@ void CStringChecker::evalStrxfrm(CheckerContext &C,
         StateFailure = StateFailure->bindLoc(*DestLoc, UndefinedVal{}, LCtx);
       }
 
+      StateFailure = StateFailure->BindExpr(Call.getOriginExpr(), LCtx, RetVal);
       C.addTransition(StateFailure);
     }
   } else {
@@ -2338,6 +2343,8 @@ void CStringChecker::evalStrxfrm(CheckerContext &C,
         C, StateSizeNonZero, Dest.Expression, Call.getCFGElementRef(), DestVal,
         SizeVal, Size.Expression->getType());
 
+    StateSizeNonZero =
+        StateSizeNonZero->BindExpr(Call.getOriginExpr(), LCtx, RetVal);
     C.addTransition(StateSizeNonZero);
   }
 }
