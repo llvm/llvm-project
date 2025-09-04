@@ -1,5 +1,5 @@
 ## Tests that a separate DXContainer is created with only the specified section
-## for each --extract-section specified
+## for each --extract-section specified.
 
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy %t --extract-section=FKE1=%t.fke1.out --extract-section=FKE4=%t.fke4.out

@@ -1,5 +1,5 @@
 ## Tests that a separate DXContainer is created for the RTS0 (root signature)
-## part, specified with --extract-section specified
+## part, when--extract-section is specified.
 
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy %t --extract-section=RTS0=%t.rts0.out

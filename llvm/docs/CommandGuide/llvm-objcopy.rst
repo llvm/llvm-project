@@ -88,9 +88,6 @@ multiple file formats.
  operations will still be performed. No operations are performed on the sections
  prior to dumping them.
 
- For MachO objects, ``<section>`` must be formatted as
- ``<segment name>,<section name>``.
-
 .. option:: --globalize-symbol <symbol>
 
  Mark any defined symbols named ``<symbol>`` as global symbols in the output.
