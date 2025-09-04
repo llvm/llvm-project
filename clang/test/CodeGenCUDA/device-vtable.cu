@@ -8,7 +8,7 @@
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -o - %s \
 // RUN:     | FileCheck %s -check-prefix=CHECK-HOST -check-prefix=CHECK-BOTH
-// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -emit-llvm -o - %s \
+// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -fno-rtti -emit-llvm -o - %s \
 // RUN:     | FileCheck %s -check-prefix=CHECK-DEVICE -check-prefix=CHECK-BOTH
 
 #include "Inputs/cuda.h"
