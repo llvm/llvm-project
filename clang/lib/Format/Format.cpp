@@ -956,16 +956,17 @@ template <> struct MappingTraits<FormatStyle> {
       IO.mapOptional("AlignAfterOpenBracket", Style.AlignAfterOpenBracket);
     } else {
       // For backward compatibility.
-      BracketAlignmentStyle local = BAS_Align;
+      BracketAlignmentStyle LocalBAS = BAS_Align;
       if (IsGoogleOrChromium) {
-        if (Style.Language == FormatStyle::LK_JavaScript)
-          local = BAS_AlwaysBreak;
-        else if (Style.Language == FormatStyle::LK_Java)
-          local = BAS_DontAlign;
+        if (Style.Language == FormatStyle::LK_JavaScript) {
+          LocalBAS = BAS_AlwaysBreak;
+        } else if (Style.Language == FormatStyle::LK_Java) {
+          LocalBAS = BAS_DontAlign;
+        }
       } else if (BasedOnStyle.equals_insensitive("webkit")) {
-        local = BAS_DontAlign;
+        LocalBAS = BAS_DontAlign;
       }
-      IO.mapOptional("AlignAfterOpenBracket", local);
+      IO.mapOptional("AlignAfterOpenBracket", LocalBAS);
       Style.BreakAfterOpenBracketBracedList = false;
       Style.BreakAfterOpenBracketFunction = false;
       Style.BreakAfterOpenBracketIf = false;
@@ -977,23 +978,23 @@ template <> struct MappingTraits<FormatStyle> {
       Style.BreakBeforeCloseBracketLoop = false;
       Style.BreakBeforeCloseBracketSwitch = false;
 
-      if (local == BAS_Align) {
-        Style.AlignAfterOpenBracket = true;
-      } else if (local == BAS_DontAlign) {
+      switch (LocalBAS) {
+      case BAS_DontAlign:
         Style.AlignAfterOpenBracket = false;
-      } else if (local == BAS_AlwaysBreak) {
-        Style.BreakAfterOpenBracketBracedList = true;
-        Style.BreakAfterOpenBracketFunction = true;
-        Style.BreakAfterOpenBracketIf = true;
-        Style.AlignAfterOpenBracket = true;
-      } else if (local == BAS_BlockIndent) {
-        Style.BreakAfterOpenBracketBracedList = true;
-        Style.BreakAfterOpenBracketFunction = true;
-        Style.BreakAfterOpenBracketIf = true;
+        break;
+      case BAS_BlockIndent:
         Style.BreakBeforeCloseBracketBracedList = true;
         Style.BreakBeforeCloseBracketFunction = true;
         Style.BreakBeforeCloseBracketIf = true;
+        [[fallthrough]];
+      case BAS_AlwaysBreak:
+        Style.BreakAfterOpenBracketBracedList = true;
+        Style.BreakAfterOpenBracketFunction = true;
+        Style.BreakAfterOpenBracketIf = true;
+        [[fallthrough]];
+      case BAS_Align:
         Style.AlignAfterOpenBracket = true;
+        break;
       }
     }
 
