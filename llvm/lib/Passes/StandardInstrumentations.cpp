@@ -730,6 +730,7 @@ bool IRComparer<T>::generateFunctionData(IRDataT<T> &Data, const FunctionT &F) {
     int I = 0;
     // Basic block with numberic label will be empty here.
     std::string FDEntryBlockName = F.front().getName().str();
+    // We don't need to increment `I` because it's incremented in later loop
     if (FDEntryBlockName.empty())
       FDEntryBlockName = formatv("{0}", I);
 
