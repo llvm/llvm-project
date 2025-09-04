@@ -530,7 +530,7 @@ define i1 @cmp_load_gep_global(i64 %idx) {
 
 define i1 @cmp_load_gep_global_different_load_type(i64 %idx) {
 ; CHECK-LABEL: @cmp_load_gep_global_different_load_type(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i8], ptr @ary, i64 0, i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr @ary, i64 [[IDX:%.*]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 3
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -543,7 +543,7 @@ define i1 @cmp_load_gep_global_different_load_type(i64 %idx) {
 
 define i1 @cmp_load_gep_global_different_gep_type(i64 %idx) {
 ; CHECK-LABEL: @cmp_load_gep_global_different_gep_type(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i16], ptr @ary, i64 0, i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr @ary, i64 [[IDX:%.*]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 3
 ; CHECK-NEXT:    ret i1 [[CMP]]

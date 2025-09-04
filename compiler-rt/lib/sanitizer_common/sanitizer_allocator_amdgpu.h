@@ -20,7 +20,7 @@ class AmdgpuMemFuncs {
   static void *Allocate(uptr size, uptr alignment,
                         DeviceAllocationInfo *da_info);
   static void Deallocate(void *p);
-  static bool GetPointerInfo(uptr ptr, DevivePointerInfo *ptr_info);
+  static bool GetPointerInfo(uptr ptr, DevicePointerInfo* ptr_info);
   static uptr GetPageSize();
 };
 
@@ -32,8 +32,11 @@ struct AmdgpuAllocationInfo : public DeviceAllocationInfo {
   hsa_status_t status;
   void *alloc_func;
   hsa_amd_memory_pool_t memory_pool;
-  size_t size;
-  uint32_t flags;
+  u64 alignment;
+  u64 address;
+  u64 flags64;
+  usize size;
+  u32 flags;
   void *ptr;
 };
 #endif  // SANITIZER_AMDGPU

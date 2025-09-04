@@ -31,7 +31,8 @@ struct DeviceAllocationInfo {
   DeviceAllocationType type_;
 };
 
-struct DevivePointerInfo {
+struct DevicePointerInfo {
+  u64 type;
   uptr map_beg;
   uptr map_size;
 };
@@ -165,7 +166,7 @@ class DeviceAllocatorT {
              : nullptr;
   }
 
-  void *GetBlockBegin(const void *ptr) const {
+  void* GetBlockBegin(const void* ptr) const {
     Header header;
     if (!mem_funcs_inited_) return nullptr;
     uptr p = reinterpret_cast<uptr>(ptr);
@@ -182,7 +183,7 @@ class DeviceAllocatorT {
     if (!nearest_chunk)
       return nullptr;
     if (p != nearest_chunk) {
-      Header *h = GetHeader(nearest_chunk, &header);
+      Header* h = GetHeader(nearest_chunk, &header);
       CHECK_GE(nearest_chunk, h->map_beg);
       CHECK_LT(nearest_chunk, h->map_beg + h->map_size);
       CHECK_LE(nearest_chunk, p);
@@ -297,7 +298,7 @@ class DeviceAllocatorT {
     return mem_funcs_inited_;
   }
 
-  typedef DevivePointerInfo Header;
+  typedef DevicePointerInfo Header;
 
   Header *GetHeaderAnyPointer(uptr p, Header* h) const {
     CHECK(IsAligned(p, page_size_));
