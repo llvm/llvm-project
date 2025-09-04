@@ -6,11 +6,9 @@
 
 #include <typeinfo>
 
-#if __has_feature(ptrauth_calls) || defined(__PTRAUTH__)
-#define __has_ptrauth 1
+#if __has_feature(ptrauth_calls)
 #include <ptrauth.h>
 #else
-#define __has_ptrauth 0
 #endif
 
 struct S {
@@ -31,7 +29,7 @@ int main(int argc, char **argv) {
   S Obj;
   void *Ptr = &Obj;
   void *VtablePtr = *reinterpret_cast<void**>(Ptr);
-#if __has_ptrauth
+#if __has_feature(ptrauth_calls)
   VtablePtr = ptrauth_strip(VtablePtr, 0);
 #endif
   VtablePrefix* Prefix = reinterpret_cast<VtablePrefix*>(VtablePtr) - 1;
@@ -42,7 +40,7 @@ int main(int argc, char **argv) {
 
   // Hack Vtable ptr for Obj.
   void *FakeVtablePtr = static_cast<void*>(&FakePrefix[1]);
-#if __has_ptrauth
+#if __has_feature(ptrauth_calls)
   FakeVtablePtr = ptrauth_sign_unauthenticated(
       FakeVtablePtr, ptrauth_key_cxx_vtable_pointer, 0);
 #endif

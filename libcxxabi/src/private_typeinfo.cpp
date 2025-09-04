@@ -53,13 +53,13 @@
 #include <atomic>
 #endif
 
-#if __ptrauth_cxxabi_has_ptrauth
+#if __has_feature(ptrauth_calls)
 #include <ptrauth.h>
 #endif
 
 template <typename T>
 static inline T* strip_vtable(T* vtable) {
-#if __ptrauth_cxxabi_has_ptrauth
+#if __has_feature(ptrauth_calls)
   vtable = ptrauth_strip(vtable, ptrauth_key_cxx_vtable_pointer);
 #endif
   return vtable;

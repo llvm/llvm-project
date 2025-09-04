@@ -128,7 +128,7 @@ _LIBUNWIND_HIDDEN int __unw_set_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
 
       pint_t sp = (pint_t)co->getReg(UNW_REG_SP);
 
-#if __libunwind_has_ptrauth
+#if __has_feature(ptrauth_calls)
       // It is only valid to set the IP within the current function.
       // This is important for ptrauth, otherwise the IP cannot be correctly
       // signed.

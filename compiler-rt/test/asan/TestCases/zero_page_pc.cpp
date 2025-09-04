@@ -9,14 +9,14 @@
 #  define __has_feature(x) 0
 #endif
 
-#if __has_feature(ptrauth_calls) || defined(__PTRAUTH__)
+#if __has_feature(ptrauth_calls)
 #  include <ptrauth.h>
 #endif
 
 typedef void void_f();
 int main() {
   void_f *func = (void_f *)0x4;
-#if __has_feature(ptrauth_calls) || defined(__PTRAUTH__)
+#if __has_feature(ptrauth_calls)
   func = ptrauth_sign_unauthenticated(
       func, ptrauth_key_function_pointer, 0);
 #endif

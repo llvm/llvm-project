@@ -107,9 +107,7 @@
 #  include <ptrauth.h>
 #endif
 
-#if __has_feature(ptrauth_calls) || defined(__PTRAUTH__)
-
-#  define __ptrauth_cxxabi_has_ptrauth 1
+#if __has_feature(ptrauth_calls)
 
 // ptrauth_string_discriminator("__cxa_exception::actionRecord") == 0xFC91
 #  define __ptrauth_cxxabi_action_record \
@@ -140,8 +138,6 @@
             __ptrauth(ptrauth_key_function_pointer, 1, 0xC088)
 
 #else
-
-#  define __ptrauth_cxxabi_has_ptrauth 0
 
 #  define __ptrauth_cxxabi_action_record
 #  define __ptrauth_cxxabi_lsd

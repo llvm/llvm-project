@@ -1865,7 +1865,7 @@ public:
   void      setSP(uint64_t value) { _registers.__sp = value; }
   uint64_t  getIP() const         {
     uint64_t value = _registers.__pc;
-#if __libunwind_has_ptrauth
+#if __has_feature(ptrauth_calls)
     // Note the value of the PC was signed to its address in the register state
     // but everyone else expects it to be sign by the SP, so convert on return.
     value = (uint64_t)ptrauth_auth_and_resign((void *)_registers.__pc,
@@ -1877,7 +1877,7 @@ public:
     return value;
   }
   void      setIP(uint64_t value) {
-#if __libunwind_has_ptrauth
+#if __has_feature(ptrauth_calls)
     // Note the value which was set should have been signed with the SP.
     // We then resign with the slot we are being stored in to so that both SP
     // and LR can't be spoofed at the same time.
@@ -1892,7 +1892,7 @@ public:
   uint64_t getFP() const { return _registers.__fp; }
   void setFP(uint64_t value) { _registers.__fp = value; }
 
-#if __libunwind_has_ptrauth
+#if __has_feature(ptrauth_calls)
   void
   loadAndAuthenticateLinkRegister(reg_t inplaceAuthedLinkRegister,
                                   link_reg_t *referenceAuthedLinkRegister) {
@@ -1944,7 +1944,7 @@ inline Registers_arm64::Registers_arm64(const void *registers) {
   memcpy(_vectorHalfRegisters,
          static_cast<const uint8_t *>(registers) + sizeof(GPRs),
          sizeof(_vectorHalfRegisters));
-#if __libunwind_has_ptrauth
+#if __has_feature(ptrauth_calls)
   // We have to do some pointer authentication fixups after this copy,
   // and as part of that we need to load the source pc without
   // authenticating so that we maintain the signature for the resigning
@@ -1964,7 +1964,7 @@ inline Registers_arm64& Registers_arm64::operator=(const Registers_arm64& other)
   memcpy(&_registers, &other._registers, sizeof(_registers));
   memcpy(_vectorHalfRegisters, &other._vectorHalfRegisters,
          sizeof(_vectorHalfRegisters));
-#if __libunwind_has_ptrauth
+#if __has_feature(ptrauth_calls)
   // We perform this step to ensure that we correctly authenticate and re-sign
   // the pc after the bitwise copy.
   setIP(other.getIP());

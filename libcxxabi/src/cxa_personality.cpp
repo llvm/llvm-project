@@ -20,9 +20,13 @@
 #include "cxa_exception.h"
 #include "cxa_handlers.h"
 #include "private_typeinfo.h"
-#include "unwind.h"
 
-#if __ptrauth_cxxabi_has_ptrauth
+#if __has_feature(ptrauth_calls)
+
+// CXXABI depends on defintions in libunwind as pointer auth couples the
+// definitions
+#include "libunwind.h"
+
 // The actual value of the discriminators listed below is not important.
 // The derivation of the constants is only being included for the purpose
 // of maintaining a record of how they were originally produced.
@@ -626,17 +630,18 @@ set_registers(_Unwind_Exception* unwind_exception, _Unwind_Context* context,
                 reinterpret_cast<uintptr_t>(unwind_exception));
   _Unwind_SetGR(context, __builtin_eh_return_data_regno(1),
                 static_cast<uintptr_t>(results.ttypeIndex));
-#if __ptrauth_cxxabi_has_ptrauth
+#if __has_feature(ptrauth_calls)
   auto stackPointer = _Unwind_GetGR(context, UNW_REG_SP);
   // We manually re-sign the IP as the __ptrauth qualifiers cannot
   // express the required relationship with the destination address
   const auto existingDiscriminator = ptrauth_blend_discriminator(
       &results.landingPad, __ptrauth_scan_results_landingpad_disc);
   unw_word_t newIP /* opaque __ptrauth(ptrauth_key_return_address, stackPointer, 0) */ =
-      (unw_word_t)ptrauth_auth_and_resign(*(void**)&results.landingPad,
+      (unw_word_t)ptrauth_auth_and_resign(*(void* const*)&results.landingPad,
                                           __ptrauth_scan_results_landingpad_key,
                                           existingDiscriminator,
-                                          ptrauth_key_return_address, stackPointer);
+                                          ptrauth_key_return_address,
+                                          stackPointer);
   _Unwind_SetIP(context, newIP);
 #else
   _Unwind_SetIP(context, results.landingPad);

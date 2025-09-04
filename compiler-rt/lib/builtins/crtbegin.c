@@ -16,12 +16,6 @@
 #include <ptrauth.h>
 #endif
 
-#if __has_feature(ptrauth_calls) || defined(__PTRAUTH__)
-#define __crtbegin_has_ptrauth 1
-#else
-#define __crtbegin_has_ptrauth 0
-#endif
-
 __attribute__((visibility("hidden"))) void *__dso_handle = &__dso_handle;
 
 #ifdef EH_USE_FRAME_REGISTRY
@@ -72,7 +66,7 @@ __attribute__((section(".init_array"), used)) static void *__init =
     ptrauth_sign_constant(&__do_init, ptrauth_key_init_fini_pointer,
                           __ptrauth_init_fini_discriminator);
 #  endif
-# elif __crtbegin_has_ptrauth
+# elif __has_feature(ptrauth_calls)
 #  ifdef __aarch64__
 // If ptrauth_init_fini feature is not present, compiler emits raw unsigned
 // pointers in .init_array. Use inline assembly to avoid implicit signing of
@@ -154,7 +148,7 @@ __attribute__((section(".fini_array"), used)) static void *__fini =
     ptrauth_sign_constant(&__do_fini, ptrauth_key_init_fini_pointer,
                           __ptrauth_init_fini_discriminator);
 #  endif
-# elif __crtbegin_has_ptrauth
+# elif __has_feature(ptrauth_calls)
 #  ifdef __aarch64__
 // If ptrauth_init_fini feature is not present, compiler emits raw unsigned
 // pointers in .fini_array. Use inline assembly to avoid implicit signing of

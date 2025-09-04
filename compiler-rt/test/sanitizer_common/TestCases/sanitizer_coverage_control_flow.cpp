@@ -8,7 +8,7 @@
 
 #include <cstdint>
 #include <cstdio>
-#if __has_feature(ptrauth_calls) || defined(__PTRAUTH__)
+#if __has_feature(ptrauth_calls)
   #include <ptrauth.h>
 #else
   #define ptrauth_strip(__value, __key) (__value)

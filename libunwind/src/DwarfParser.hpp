@@ -398,7 +398,7 @@ const char *CFI_Parser<A>::parseCIE(A &addressSpace, pint_t cie,
         pint_t personality = addressSpace.getEncodedP(
             p, cieContentEnd, cieInfo->personalityEncoding,
             /*datarelBase=*/0, &resultAddr);
-#if __libunwind_has_ptrauth
+#if __has_feature(ptrauth_calls)
         if (personality) {
           // The GOT for the personality function was signed address
           // authenticated. Manually re-sign with the CIE_Info::personality
