@@ -69,6 +69,7 @@ struct FormatStyle {
   ///   someLongFunction(argument1,         someLongFunction(argument1,
   ///                    argument2);            argument2);
   /// \endcode
+  ///
   /// This applies to round brackets (parentheses), angle brackets and square
   /// brackets.
   /// \version 3.8
