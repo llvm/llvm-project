@@ -590,8 +590,8 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
   llvm::stable_sort(CompressPatterns, [EType](const CompressPat &LHS,
                                               const CompressPat &RHS) {
     if (EType == EmitterType::Compress || EType == EmitterType::CheckCompress)
-      return (LHS.Source.getName() < RHS.Source.getName());
-    return (LHS.Dest.getName() < RHS.Dest.getName());
+      return LHS.Source.getName() < RHS.Source.getName();
+    return LHS.Dest.getName() < RHS.Dest.getName();
   });
 
   // A list of MCOperandPredicates for all operands in use, and the reverse map.
