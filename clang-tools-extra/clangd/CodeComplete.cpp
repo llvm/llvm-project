@@ -1886,7 +1886,19 @@ private:
         for (auto &Cand : C.first) {
           if (Cand.SemaResult &&
               Cand.SemaResult->Kind == CodeCompletionResult::RK_Declaration) {
-            auto ID = clangd::getSymbolID(Cand.SemaResult->getDeclaration());
+            const NamedDecl *DeclToLookup = Cand.SemaResult->getDeclaration();
+            // For instantiations of members of class templates, the
+            // documentation will be stored at the member's original
+            // declaration.
+            // FIXME: We'd like to handle fields too but FieldDecl is missing a
+            // method equivalent to getInstantiatedFromMemberFunction().
+            if (const auto *FD = dyn_cast<FunctionDecl>(DeclToLookup)) {
+              if (const auto *InstantiatedFrom =
+                      FD->getTemplateInstantiationPattern()) {
+                DeclToLookup = InstantiatedFrom;
+              }
+            }
+            auto ID = clangd::getSymbolID(DeclToLookup);
             if (!ID)
               continue;
             Req.IDs.insert(ID);
