@@ -517,9 +517,9 @@ define half @fp16_vminmaxnm_e_0(half %a) {
 ; CHECK-NEXT:    .short 0x0000 @ half 0
 entry:
   %cmp1 = fcmp nsz ole half 0., %a
-  %cond1 = select i1 %cmp1, half 0., half %a
+  %cond1 = select nsz i1 %cmp1, half 0., half %a
   %cmp2 = fcmp nsz uge half 0., %cond1
-  %cond2 = select i1 %cmp2, half 0., half %cond1
+  %cond2 = select nsz i1 %cmp2, half 0., half %cond1
   ret half %cond2
 }
 
@@ -540,7 +540,7 @@ define half @fp16_vminmaxnm_e_neg0(half %a) {
 ; CHECK-NEXT:    .short 0x8000 @ half -0
 entry:
   %cmp1 = fcmp nsz ule half -0., %a
-  %cond1 = select i1 %cmp1, half -0., half %a
+  %cond1 = select nsz i1 %cmp1, half -0., half %a
   %cmp2 = fcmp nsz oge half -0., %cond1
   %cond2 = select i1 %cmp2, half -0., half %cond1
   ret half %cond2

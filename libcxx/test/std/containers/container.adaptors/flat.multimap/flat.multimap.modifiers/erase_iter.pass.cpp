@@ -29,7 +29,7 @@
 #include "min_allocator.h"
 
 template <class KeyContainer, class ValueContainer>
-void test() {
+constexpr void test() {
   using Key   = typename KeyContainer::value_type;
   using Value = typename ValueContainer::value_type;
   using M     = std::flat_multimap<Key, Value, std::less<Key>, KeyContainer, ValueContainer>;
@@ -54,52 +54,64 @@ void test() {
   std::same_as<I> decltype(auto) i1 = m.erase(std::next(m.cbegin(), 2));
   assert(m.size() == 10);
   assert(i1 == std::next(m.begin(), 2));
-  assert(std::ranges::equal(
-      m,
-      std::vector<P>{
-          {1, 1.5}, {2, 2.5}, {3, 3.5}, {4, 4.5}, {4, 4.5}, {4, 4.7}, {5, 5.5}, {6, 6.5}, {7, 7.5}, {8, 8.5}}));
+  assert(std::ranges::equal(m.keys(), std::vector<Key>{1, 2, 3, 4, 4, 4, 5, 6, 7, 8}));
+  check_possible_values(m.values(),
+                        std::vector<std::vector<Value>>{
+                            {1.5}, {2.5, 2.6}, {3.5}, {4.5, 4.7}, {4.5, 4.7}, {4.5, 4.7}, {5.5}, {6.5}, {7.5}, {8.5}});
 
   std::same_as<I> decltype(auto) i2 = m.erase(std::next(m.begin(), 0));
   assert(m.size() == 9);
   assert(i2 == m.begin());
-  assert(std::ranges::equal(
-      m, std::vector<P>{{2, 2.5}, {3, 3.5}, {4, 4.5}, {4, 4.5}, {4, 4.7}, {5, 5.5}, {6, 6.5}, {7, 7.5}, {8, 8.5}}));
+  assert(std::ranges::equal(m.keys(), std::vector<Key>{2, 3, 4, 4, 4, 5, 6, 7, 8}));
+  check_possible_values(m.values(),
+                        std::vector<std::vector<Value>>{
+                            {2.5, 2.6}, {3.5}, {4.5, 4.7}, {4.5, 4.7}, {4.5, 4.7}, {5.5}, {6.5}, {7.5}, {8.5}});
 
   std::same_as<I> decltype(auto) i3 = m.erase(std::next(m.cbegin(), 8));
   assert(m.size() == 8);
   assert(i3 == m.end());
-  assert(std::ranges::equal(
-      m, std::vector<P>{{2, 2.5}, {3, 3.5}, {4, 4.5}, {4, 4.5}, {4, 4.7}, {5, 5.5}, {6, 6.5}, {7, 7.5}}));
+  assert(std::ranges::equal(m.keys(), std::vector<Key>{2, 3, 4, 4, 4, 5, 6, 7}));
+  check_possible_values(
+      m.values(),
+      std::vector<std::vector<Value>>{{2.5, 2.6}, {3.5}, {4.5, 4.7}, {4.5, 4.7}, {4.5, 4.7}, {5.5}, {6.5}, {7.5}});
 
   std::same_as<I> decltype(auto) i4 = m.erase(std::next(m.begin(), 1));
   assert(m.size() == 7);
   assert(i4 == std::next(m.begin()));
-  assert(std::ranges::equal(m, std::vector<P>{{2, 2.5}, {4, 4.5}, {4, 4.5}, {4, 4.7}, {5, 5.5}, {6, 6.5}, {7, 7.5}}));
+  assert(std::ranges::equal(m.keys(), std::vector<Key>{2, 4, 4, 4, 5, 6, 7}));
+  check_possible_values(
+      m.values(), std::vector<std::vector<Value>>{{2.5, 2.6}, {4.5, 4.7}, {4.5, 4.7}, {4.5, 4.7}, {5.5}, {6.5}, {7.5}});
 
   std::same_as<I> decltype(auto) i5 = m.erase(std::next(m.cbegin(), 2));
   assert(m.size() == 6);
   assert(i5 == std::next(m.begin(), 2));
-  assert(std::ranges::equal(m, std::vector<P>{{2, 2.5}, {4, 4.5}, {4, 4.7}, {5, 5.5}, {6, 6.5}, {7, 7.5}}));
+  assert(std::ranges::equal(m.keys(), std::vector<Key>{2, 4, 4, 5, 6, 7}));
+  check_possible_values(
+      m.values(), std::vector<std::vector<Value>>{{2.5, 2.6}, {4.5, 4.7}, {4.5, 4.7}, {5.5}, {6.5}, {7.5}});
 
   std::same_as<I> decltype(auto) i6 = m.erase(std::next(m.begin(), 2));
   assert(m.size() == 5);
   assert(i6 == std::next(m.begin(), 2));
-  assert(std::ranges::equal(m, std::vector<P>{{2, 2.5}, {4, 4.5}, {5, 5.5}, {6, 6.5}, {7, 7.5}}));
+  assert(std::ranges::equal(m.keys(), std::vector<Key>{2, 4, 5, 6, 7}));
+  check_possible_values(m.values(), std::vector<std::vector<Value>>{{2.5, 2.6}, {4.5, 4.7}, {5.5}, {6.5}, {7.5}});
 
   std::same_as<I> decltype(auto) i7 = m.erase(std::next(m.cbegin(), 0));
   assert(m.size() == 4);
   assert(i7 == std::next(m.begin(), 0));
-  assert(std::ranges::equal(m, std::vector<P>{{4, 4.5}, {5, 5.5}, {6, 6.5}, {7, 7.5}}));
+  assert(std::ranges::equal(m.keys(), std::vector<Key>{4, 5, 6, 7}));
+  check_possible_values(m.values(), std::vector<std::vector<Value>>{{4.5, 4.7}, {5.5}, {6.5}, {7.5}});
 
   std::same_as<I> decltype(auto) i8 = m.erase(std::next(m.cbegin(), 2));
   assert(m.size() == 3);
   assert(i8 == std::next(m.begin(), 2));
-  assert(std::ranges::equal(m, std::vector<P>{{4, 4.5}, {5, 5.5}, {7, 7.5}}));
+  assert(std::ranges::equal(m.keys(), std::vector<Key>{4, 5, 7}));
+  check_possible_values(m.values(), std::vector<std::vector<Value>>{{4.5, 4.7}, {5.5}, {7.5}});
 
   std::same_as<I> decltype(auto) i9 = m.erase(std::next(m.cbegin(), 2));
   assert(m.size() == 2);
   assert(i9 == std::next(m.begin(), 2));
-  assert(std::ranges::equal(m, std::vector<P>{{4, 4.5}, {5, 5.5}}));
+  assert(std::ranges::equal(m.keys(), std::vector<Key>{4, 5}));
+  check_possible_values(m.values(), std::vector<std::vector<Value>>{{4.5, 4.7}, {5.5}});
 
   std::same_as<I> decltype(auto) i10 = m.erase(m.cbegin());
   assert(m.size() == 1);
@@ -112,16 +124,27 @@ void test() {
   assert(i11 == m.end());
 }
 
-int main(int, char**) {
+constexpr bool test() {
   test<std::vector<int>, std::vector<double>>();
-  test<std::deque<int>, std::vector<double>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test<std::deque<int>, std::vector<double>>();
   test<MinSequenceContainer<int>, MinSequenceContainer<double>>();
   test<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();
 
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     auto erase_function = [](auto& m, auto) { m.erase(m.begin() + 2); };
     test_erase_exception_guarantee(erase_function);
   }
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

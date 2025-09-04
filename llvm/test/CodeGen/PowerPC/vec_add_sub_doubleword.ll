@@ -16,9 +16,8 @@ define <2 x i64> @test_add(<2 x i64> %x, <2 x i64> %y) nounwind {
 define <2 x i64> @increment_by_one(<2 x i64> %x) nounwind {
 ; VSX-LABEL: increment_by_one:
 ; VSX:       # %bb.0:
-; VSX-NEXT:    addis 3, 2, .LCPI1_0@toc@ha
-; VSX-NEXT:    addi 3, 3, .LCPI1_0@toc@l
-; VSX-NEXT:    lxvd2x 35, 0, 3
+; VSX-NEXT:    vspltisw 3, 1
+; VSX-NEXT:    vupklsw 3, 3
 ; VSX-NEXT:    vaddudm 2, 2, 3
 ; VSX-NEXT:    blr
 ;

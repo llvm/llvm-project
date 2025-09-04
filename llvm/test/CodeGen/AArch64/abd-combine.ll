@@ -17,14 +17,9 @@ define <8 x i16> @abdu_base(<8 x i16> %src1, <8 x i16> %src2) {
 define <8 x i16> @abdu_const(<8 x i16> %src1) {
 ; CHECK-LABEL: abdu_const:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    ushll2 v2.4s, v0.8h, #0
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    sub v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    sub v1.4s, v2.4s, v1.4s
-; CHECK-NEXT:    abs v1.4s, v1.4s
-; CHECK-NEXT:    abs v0.4s, v0.4s
-; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    movi v1.4h, #1
+; CHECK-NEXT:    mov v1.d[1], v1.d[0]
+; CHECK-NEXT:    uabd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %zextsrc1 = zext <8 x i16> %src1 to <8 x i32>
   %sub = sub <8 x i32> %zextsrc1, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
@@ -36,12 +31,9 @@ define <8 x i16> @abdu_const(<8 x i16> %src1) {
 define <8 x i16> @abdu_const_lhs(<8 x i16> %src1) {
 ; CHECK-LABEL: abdu_const_lhs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    usubw v2.4s, v1.4s, v0.4h
-; CHECK-NEXT:    usubw2 v0.4s, v1.4s, v0.8h
-; CHECK-NEXT:    abs v0.4s, v0.4s
-; CHECK-NEXT:    abs v1.4s, v2.4s
-; CHECK-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    movi v1.4h, #1
+; CHECK-NEXT:    mov v1.d[1], v1.d[0]
+; CHECK-NEXT:    uabd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %zextsrc1 = zext <8 x i16> %src1 to <8 x i32>
   %sub = sub <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, %zextsrc1
@@ -53,13 +45,6 @@ define <8 x i16> @abdu_const_lhs(<8 x i16> %src1) {
 define <8 x i16> @abdu_const_zero(<8 x i16> %src1) {
 ; CHECK-LABEL: abdu_const_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    ushll v2.4s, v0.4h, #0
-; CHECK-NEXT:    usubw2 v0.4s, v1.4s, v0.8h
-; CHECK-NEXT:    neg v1.4s, v2.4s
-; CHECK-NEXT:    abs v0.4s, v0.4s
-; CHECK-NEXT:    abs v1.4s, v1.4s
-; CHECK-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    ret
   %zextsrc1 = zext <8 x i16> %src1 to <8 x i32>
   %sub = sub <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, %zextsrc1
@@ -327,14 +312,9 @@ define <8 x i16> @abds_base(<8 x i16> %src1, <8 x i16> %src2) {
 define <8 x i16> @abds_const(<8 x i16> %src1) {
 ; CHECK-LABEL: abds_const:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    sshll2 v2.4s, v0.8h, #0
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    sub v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    sub v1.4s, v2.4s, v1.4s
-; CHECK-NEXT:    abs v1.4s, v1.4s
-; CHECK-NEXT:    abs v0.4s, v0.4s
-; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    movi v1.4h, #1
+; CHECK-NEXT:    mov v1.d[1], v1.d[0]
+; CHECK-NEXT:    sabd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %zextsrc1 = sext <8 x i16> %src1 to <8 x i32>
   %sub = sub <8 x i32> %zextsrc1, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
@@ -346,12 +326,9 @@ define <8 x i16> @abds_const(<8 x i16> %src1) {
 define <8 x i16> @abds_const_lhs(<8 x i16> %src1) {
 ; CHECK-LABEL: abds_const_lhs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    ssubw v2.4s, v1.4s, v0.4h
-; CHECK-NEXT:    ssubw2 v0.4s, v1.4s, v0.8h
-; CHECK-NEXT:    abs v0.4s, v0.4s
-; CHECK-NEXT:    abs v1.4s, v2.4s
-; CHECK-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    movi v1.4h, #1
+; CHECK-NEXT:    mov v1.d[1], v1.d[0]
+; CHECK-NEXT:    sabd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %zextsrc1 = sext <8 x i16> %src1 to <8 x i32>
   %sub = sub <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, %zextsrc1
@@ -363,13 +340,10 @@ define <8 x i16> @abds_const_lhs(<8 x i16> %src1) {
 define <8 x i16> @abds_const_zero(<8 x i16> %src1) {
 ; CHECK-LABEL: abds_const_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    sshll v2.4s, v0.4h, #0
-; CHECK-NEXT:    ssubw2 v0.4s, v1.4s, v0.8h
-; CHECK-NEXT:    neg v1.4s, v2.4s
-; CHECK-NEXT:    abs v0.4s, v0.4s
-; CHECK-NEXT:    abs v1.4s, v1.4s
-; CHECK-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    abs v0.4h, v0.4h
+; CHECK-NEXT:    abs v1.4h, v1.4h
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
   %zextsrc1 = sext <8 x i16> %src1 to <8 x i32>
   %sub = sub <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, %zextsrc1

@@ -201,9 +201,9 @@ catch:
 ; CHECK-LABEL: L__ehtable$use_CxxFrameHandler3:
 ; CHECK-NEXT:  .long   429065506
 ; CHECK-NEXT:  .long   2
-; CHECK-NEXT:  .long   ($stateUnwindMap$use_CxxFrameHandler3)
+; CHECK-NEXT:  .long   $stateUnwindMap$use_CxxFrameHandler3
 ; CHECK-NEXT:  .long   1
-; CHECK-NEXT:  .long   ($tryMap$use_CxxFrameHandler3)
+; CHECK-NEXT:  .long   $tryMap$use_CxxFrameHandler3
 ; CHECK-NEXT:  .long   0
 ; CHECK-NEXT:  .long   0
 ; CHECK-NEXT:  .long   0

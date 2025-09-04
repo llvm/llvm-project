@@ -260,6 +260,10 @@ def err_modules_embed_file_not_found :
   DefaultFatal;
 def err_module_header_file_not_found :
   Error<"module header file '%0' not found">, DefaultFatal;
+def err_frontend_action_unsupported_input_format
+    : Error<"%0 does not support input file format of file '%1': "
+            "'%select{Source|ModuleMap|Precompiled|Unknown}2'">,
+      DefaultFatal;
 
 def err_test_module_file_extension_version : Error<
   "test module file extension '%0' has different version (%1.%2) than expected "
@@ -283,6 +287,10 @@ def err_function_needs_feature : Error<
   "always_inline function %1 requires target feature '%2', but would "
   "be inlined into function %0 that is compiled without support for '%2'">;
 
+def err_flatten_function_needs_feature : Error<
+  "flatten function %0 calls %1 which requires target feature '%2', but the "
+  "caller is compiled without support for '%2'">;
+
 let CategoryName = "Codegen ABI Check" in {
 def err_function_always_inline_attribute_mismatch : Error<
   "always_inline function %1 and its caller %0 have mismatching %2 attributes">;
@@ -304,6 +312,9 @@ def err_target_unsupported_type_for_abi
     : Error<"%0 requires %1 type support, but ABI '%2' does not support it">;
 }
 
+def err_omp_host_ir_file_not_found : Error<
+  "provided host compiler IR file '%0' is required to generate code for OpenMP "
+  "target regions but cannot be found">;
 def err_alias_to_undefined : Error<
   "%select{alias|ifunc}0 must point to a defined "
   "%select{variable or |}1function">;
@@ -378,6 +389,8 @@ def warn_missing_symbol_graph_dir : Warning<
 def err_ast_action_on_llvm_ir : Error<
   "cannot apply AST actions to LLVM IR file '%0'">,
   DefaultFatal;
+
+def err_invalid_llvm_ir : Error<"invalid LLVM IR input: %0">;
 
 def err_os_unsupport_riscv_fmv : Error<
   "function multiversioning is currently only supported on Linux">;

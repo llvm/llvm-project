@@ -27,7 +27,7 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   // position of memory order and scope arguments in the builtin
   unsigned OrderIndex, ScopeIndex;
 
-  const auto *FD = SemaRef.getCurFunctionDecl();
+  const auto *FD = SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);
   assert(FD && "AMDGPU builtins should not be used outside of a function");
   llvm::StringMap<bool> CallerFeatureMap;
   getASTContext().getFunctionFeatureMap(CallerFeatureMap, FD);
@@ -35,6 +35,9 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
       Builtin::evaluateRequiredTargetFeatures("gfx950-insts", CallerFeatureMap);
 
   switch (BuiltinID) {
+  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_load_lds:
+  case AMDGPU::BI__builtin_amdgcn_struct_ptr_buffer_load_lds:
+  case AMDGPU::BI__builtin_amdgcn_load_to_lds:
   case AMDGPU::BI__builtin_amdgcn_global_load_lds: {
     constexpr const int SizeIdx = 2;
     llvm::APSInt Size;
@@ -54,11 +57,9 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
       [[fallthrough]];
     }
     default:
-      Diag(ArgExpr->getExprLoc(),
-           diag::err_amdgcn_global_load_lds_size_invalid_value)
+      Diag(ArgExpr->getExprLoc(), diag::err_amdgcn_load_lds_size_invalid_value)
           << ArgExpr->getSourceRange();
-      Diag(ArgExpr->getExprLoc(),
-           diag::note_amdgcn_global_load_lds_size_valid_value)
+      Diag(ArgExpr->getExprLoc(), diag::note_amdgcn_load_lds_size_valid_value)
           << HasGFX950Insts << ArgExpr->getSourceRange();
       return true;
     }
@@ -81,9 +82,24 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     return checkMovDPPFunctionCall(TheCall, 5, 1);
   case AMDGPU::BI__builtin_amdgcn_mov_dpp8:
     return checkMovDPPFunctionCall(TheCall, 2, 1);
-  case AMDGPU::BI__builtin_amdgcn_update_dpp: {
+  case AMDGPU::BI__builtin_amdgcn_update_dpp:
     return checkMovDPPFunctionCall(TheCall, 6, 2);
-  }
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f16_fp8:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_bf16_fp8:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f16_bf8:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_bf16_bf8:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f16_fp4:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_bf16_fp4:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f32_fp8:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f32_bf8:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f32_fp4:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f16_fp6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_bf16_fp6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f16_bf6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_bf16_bf6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f32_fp6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f32_bf6:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 7);
   default:
     return false;
   }

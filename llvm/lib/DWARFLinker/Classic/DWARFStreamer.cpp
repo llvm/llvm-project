@@ -14,10 +14,10 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -100,10 +100,10 @@ Error DwarfStreamer::init(Triple TheTriple,
 
   switch (OutFileType) {
   case DWARFLinker::OutputFileType::Assembly: {
-    MIP = TheTarget->createMCInstPrinter(TheTriple, MAI->getAssemblerDialect(),
-                                         *MAI, *MII, *MRI);
+    std::unique_ptr<MCInstPrinter> MIP(TheTarget->createMCInstPrinter(
+        TheTriple, MAI->getAssemblerDialect(), *MAI, *MII, *MRI));
     MS = TheTarget->createAsmStreamer(
-        *MC, std::make_unique<formatted_raw_ostream>(OutFile), MIP,
+        *MC, std::make_unique<formatted_raw_ostream>(OutFile), std::move(MIP),
         std::unique_ptr<MCCodeEmitter>(MCE),
         std::unique_ptr<MCAsmBackend>(MAB));
     break;

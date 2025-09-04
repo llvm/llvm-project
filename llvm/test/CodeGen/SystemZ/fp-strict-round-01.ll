@@ -43,6 +43,21 @@ define void @f3(ptr %ptr) #0 {
   ret void
 }
 
+; Test nearbyint for f16.
+declare half @llvm.experimental.constrained.nearbyint.f16(half, metadata, metadata)
+define half @f4_half(half %f) #0 {
+; CHECK-LABEL: f4_half:
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: brasl %r14, nearbyintf@PLT
+; CHECK: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %res = call half @llvm.experimental.constrained.nearbyint.f16(
+                        half %f,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
+  ret half %res
+}
+
 ; Test nearbyint for f32.
 declare float @llvm.experimental.constrained.nearbyint.f32(float, metadata, metadata)
 define float @f4(float %f) #0 {
@@ -84,6 +99,20 @@ define void @f6(ptr %ptr) #0 {
   ret void
 }
 
+; Test floor for f16.
+declare half @llvm.experimental.constrained.floor.f16(half, metadata)
+define half @f7_half(half %f) #0 {
+; CHECK-LABEL: f7_half:
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: brasl %r14, floorf@PLT
+; CHECK: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %res = call half @llvm.experimental.constrained.floor.f16(
+                        half %f,
+                        metadata !"fpexcept.strict") #0
+  ret half %res
+}
+
 ; Test floor for f32.
 declare float @llvm.experimental.constrained.floor.f32(float, metadata)
 define float @f7(float %f) #0 {
@@ -120,6 +149,20 @@ define void @f9(ptr %ptr) #0 {
                         metadata !"fpexcept.strict") #0
   store fp128 %res, ptr %ptr
   ret void
+}
+
+; Test ceil for f16.
+declare half @llvm.experimental.constrained.ceil.f16(half, metadata)
+define half @f10_half(half %f) #0 {
+; CHECK-LABEL: f10_half:
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: brasl %r14, ceilf@PLT
+; CHECK: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %res = call half @llvm.experimental.constrained.ceil.f16(
+                        half %f,
+                        metadata !"fpexcept.strict") #0
+  ret half %res
 }
 
 ; Test ceil for f32.
@@ -160,6 +203,20 @@ define void @f12(ptr %ptr) #0 {
   ret void
 }
 
+; Test trunc for f16.
+declare half @llvm.experimental.constrained.trunc.f16(half, metadata)
+define half @f13_half(half %f) #0 {
+; CHECK-LABEL: f13_half:
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: brasl %r14, truncf@PLT
+; CHECK: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %res = call half @llvm.experimental.constrained.trunc.f16(
+                        half %f,
+                        metadata !"fpexcept.strict") #0
+  ret half %res
+}
+
 ; Test trunc for f32.
 declare float @llvm.experimental.constrained.trunc.f32(float, metadata)
 define float @f13(float %f) #0 {
@@ -196,6 +253,20 @@ define void @f15(ptr %ptr) #0 {
                         metadata !"fpexcept.strict") #0
   store fp128 %res, ptr %ptr
   ret void
+}
+
+; Test round for f16.
+declare half @llvm.experimental.constrained.round.f16(half, metadata)
+define half @f16_half(half %f) #0 {
+; CHECK-LABEL: f16_half:
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: brasl %r14, roundf@PLT
+; CHECK: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %res = call half @llvm.experimental.constrained.round.f16(
+                        half %f,
+                        metadata !"fpexcept.strict") #0
+  ret half %res
 }
 
 ; Test round for f32.

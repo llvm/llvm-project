@@ -176,3 +176,85 @@ define i1 @a_false_implies_b_false2_comm(i8 %z, i1 %X, i1 %Y) {
   %res = or i1 %sel, %a
   ret i1 %res
 }
+
+define i1 @trunc_nuw_implies_icmp_eq(i8 %x, i1 %c) {
+; CHECK-LABEL: @trunc_nuw_implies_icmp_eq(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[TRUNC]], i1 true, i1 [[C:%.*]]
+; CHECK-NEXT:    ret i1 [[SEL2]]
+;
+  %trunc = trunc nuw i8 %x to i1
+  %cmp = icmp eq i8 %x, 0
+  %sel1 = select i1 %cmp, i1 %c, i1 false
+  %sel2 = select i1 %trunc, i1 true, i1 %sel1
+  ret i1 %sel2
+}
+
+define i1 @icmp_eq_implies_trunc_nuw(i8 %x, i1 %c) {
+; CHECK-LABEL: @icmp_eq_implies_trunc_nuw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP]], i1 true, i1 [[C:%.*]]
+; CHECK-NEXT:    ret i1 [[SEL2]]
+;
+  %trunc = trunc nuw i8 %x to i1
+  %cmp = icmp eq i8 %x, 0
+  %sel1 = select i1 %trunc, i1 %c, i1 false
+  %sel2 = select i1 %cmp, i1 true, i1 %sel1
+  ret i1 %sel2
+}
+
+define <2 x i1>  @trunc_nuw_implies_icmp_eq_vec(<2 x i8>  %x, <2 x i1> %c) {
+; CHECK-LABEL: @trunc_nuw_implies_icmp_eq_vec(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw <2 x i8> [[X:%.*]] to <2 x i1>
+; CHECK-NEXT:    [[SEL2:%.*]] = select <2 x i1> [[TRUNC]], <2 x i1> splat (i1 true), <2 x i1> [[C:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[SEL2]]
+;
+  %trunc = trunc nuw <2 x i8>  %x to <2 x i1>
+  %cmp = icmp eq <2 x i8>  %x, splat (i8 0)
+  %sel1 = select <2 x i1> %cmp, <2 x i1> %c, <2 x i1> splat (i1 false)
+  %sel2 = select <2 x i1> %trunc, <2 x i1> splat (i1 true), <2 x i1> %sel1
+  ret <2 x i1> %sel2
+}
+
+define <2 x i1>  @icmp_eq_implies_trunc_nuw_vec(<2 x i8>  %x, <2 x i1> %c) {
+; CHECK-LABEL: @icmp_eq_implies_trunc_nuw_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[SEL2:%.*]] = select <2 x i1> [[CMP]], <2 x i1> splat (i1 true), <2 x i1> [[C:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[SEL2]]
+;
+  %trunc = trunc nuw <2 x i8>  %x to <2 x i1>
+  %cmp = icmp eq <2 x i8>  %x, splat (i8 0)
+  %sel1 = select <2 x i1> %trunc, <2 x i1> %c, <2 x i1> splat (i1 false)
+  %sel2 = select <2 x i1> %cmp, <2 x i1> splat (i1 true), <2 x i1> %sel1
+  ret <2 x i1> %sel2
+}
+
+define i1 @neg_trunc_implies_icmp_eq(i8 %x, i1 %c) {
+; CHECK-LABEL: @neg_trunc_implies_icmp_eq(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], 0
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP]], i1 [[C:%.*]], i1 false
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[TRUNC]], i1 true, i1 [[SEL1]]
+; CHECK-NEXT:    ret i1 [[SEL2]]
+;
+  %trunc = trunc i8 %x to i1
+  %cmp = icmp eq i8 %x, 0
+  %sel1 = select i1 %cmp, i1 %c, i1 false
+  %sel2 = select i1 %trunc, i1 true, i1 %sel1
+  ret i1 %sel2
+}
+
+define i1 @neg_icmp_eq_implies_trunc(i8 %x, i1 %c) {
+; CHECK-LABEL: @neg_icmp_eq_implies_trunc(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], 0
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[TRUNC]], i1 [[C:%.*]], i1 false
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP]], i1 true, i1 [[SEL1]]
+; CHECK-NEXT:    ret i1 [[SEL2]]
+;
+  %trunc = trunc i8 %x to i1
+  %cmp = icmp eq i8 %x, 0
+  %sel1 = select i1 %trunc, i1 %c, i1 false
+  %sel2 = select i1 %cmp, i1 true, i1 %sel1
+  ret i1 %sel2
+}

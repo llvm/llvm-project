@@ -263,6 +263,10 @@ public:
     return bp_site_sp->GetSuggestedStackFrameIndex();
   }
 
+  bool ShouldShow() const override { return !m_was_all_internal; }
+
+  bool ShouldSelect() const override { return !m_was_all_internal; }
+
 protected:
   bool ShouldStop(Event *event_ptr) override {
     // This just reports the work done by PerformAction or the synchronous
@@ -461,7 +465,7 @@ protected:
             // should stop, then we'll run the callback for the breakpoint.  If
             // the callback says we shouldn't stop that will win.
 
-            if (bp_loc_sp->GetConditionText() == nullptr)
+            if (!bp_loc_sp->GetCondition())
               actually_hit_any_locations = true;
             else {
               Status condition_error;
@@ -480,7 +484,7 @@ protected:
                 strm << "stopped due to an error evaluating condition of "
                         "breakpoint ";
                 bp_loc_sp->GetDescription(&strm, eDescriptionLevelBrief);
-                strm << ": \"" << bp_loc_sp->GetConditionText() << "\"\n";
+                strm << ": \"" << bp_loc_sp->GetCondition().GetText() << "\"\n";
                 strm << err_str;
 
                 Debugger::ReportError(
@@ -847,8 +851,9 @@ protected:
       // We have to step over the watchpoint before we know what to do:   
       StopInfoWatchpointSP me_as_siwp_sp 
           = std::static_pointer_cast<StopInfoWatchpoint>(shared_from_this());
-      ThreadPlanSP step_over_wp_sp(new ThreadPlanStepOverWatchpoint(
-          *(thread_sp.get()), me_as_siwp_sp, wp_sp));
+      ThreadPlanSP step_over_wp_sp =
+          std::make_shared<ThreadPlanStepOverWatchpoint>(*(thread_sp.get()),
+                                                         me_as_siwp_sp, wp_sp);
       // When this plan is done we want to stop, so set this as a Controlling
       // plan.    
       step_over_wp_sp->SetIsControllingPlan(true);
@@ -1080,12 +1085,7 @@ public:
     return false;
   }
 
-  bool ShouldStop(Event *event_ptr) override {
-    ThreadSP thread_sp(m_thread_wp.lock());
-    if (thread_sp)
-      return thread_sp->GetProcess()->GetUnixSignals()->GetShouldStop(m_value);
-    return false;
-  }
+  bool ShouldStop(Event *event_ptr) override { return IsShouldStopSignal(); }
 
   // If should stop returns false, check if we should notify of this event
   bool DoShouldNotify(Event *event_ptr) override {
@@ -1137,9 +1137,17 @@ public:
     return m_description.c_str();
   }
 
+  bool ShouldSelect() const override { return IsShouldStopSignal(); }
+
 private:
   // In siginfo_t terms, if m_value is si_signo, m_code is si_code.
   std::optional<int> m_code;
+
+  bool IsShouldStopSignal() const {
+    if (ThreadSP thread_sp = m_thread_wp.lock())
+      return thread_sp->GetProcess()->GetUnixSignals()->GetShouldStop(m_value);
+    return false;
+  }
 };
 
 // StopInfoInterrupt
@@ -1468,13 +1476,13 @@ StopInfoSP StopInfo::CreateStopReasonWithBreakpointSiteID(Thread &thread,
                                                           break_id_t break_id) {
   thread.SetThreadHitBreakpointSite();
 
-  return StopInfoSP(new StopInfoBreakpoint(thread, break_id));
+  return std::make_shared<StopInfoBreakpoint>(thread, break_id);
 }
 
 StopInfoSP StopInfo::CreateStopReasonWithBreakpointSiteID(Thread &thread,
                                                           break_id_t break_id,
                                                           bool should_stop) {
-  return StopInfoSP(new StopInfoBreakpoint(thread, break_id, should_stop));
+  return std::make_shared<StopInfoBreakpoint>(thread, break_id, should_stop);
 }
 
 // LWP_TODO: We'll need a CreateStopReasonWithWatchpointResourceID akin
@@ -1482,67 +1490,67 @@ StopInfoSP StopInfo::CreateStopReasonWithBreakpointSiteID(Thread &thread,
 StopInfoSP StopInfo::CreateStopReasonWithWatchpointID(Thread &thread,
                                                       break_id_t watch_id,
                                                       bool silently_continue) {
-  return StopInfoSP(
-      new StopInfoWatchpoint(thread, watch_id, silently_continue));
+  return std::make_shared<StopInfoWatchpoint>(thread, watch_id,
+                                              silently_continue);
 }
 
 StopInfoSP StopInfo::CreateStopReasonWithSignal(Thread &thread, int signo,
                                                 const char *description,
                                                 std::optional<int> code) {
   thread.GetProcess()->GetUnixSignals()->IncrementSignalHitCount(signo);
-  return StopInfoSP(new StopInfoUnixSignal(thread, signo, description, code));
+  return std::make_shared<StopInfoUnixSignal>(thread, signo, description, code);
 }
 
 StopInfoSP StopInfo::CreateStopReasonWithInterrupt(Thread &thread, int signo,
                                                    const char *description) {
-  return StopInfoSP(new StopInfoInterrupt(thread, signo, description));
+  return std::make_shared<StopInfoInterrupt>(thread, signo, description);
 }
 
 StopInfoSP StopInfo::CreateStopReasonToTrace(Thread &thread) {
-  return StopInfoSP(new StopInfoTrace(thread));
+  return std::make_shared<StopInfoTrace>(thread);
 }
 
 StopInfoSP StopInfo::CreateStopReasonWithPlan(
     ThreadPlanSP &plan_sp, ValueObjectSP return_valobj_sp,
     ExpressionVariableSP expression_variable_sp) {
-  return StopInfoSP(new StopInfoThreadPlan(plan_sp, return_valobj_sp,
-                                           expression_variable_sp));
+  return std::make_shared<StopInfoThreadPlan>(plan_sp, return_valobj_sp,
+                                              expression_variable_sp);
 }
 
 StopInfoSP StopInfo::CreateStopReasonWithException(Thread &thread,
                                                    const char *description) {
-  return StopInfoSP(new StopInfoException(thread, description));
+  return std::make_shared<StopInfoException>(thread, description);
 }
 
 StopInfoSP StopInfo::CreateStopReasonProcessorTrace(Thread &thread,
                                                     const char *description) {
-  return StopInfoSP(new StopInfoProcessorTrace(thread, description));
+  return std::make_shared<StopInfoProcessorTrace>(thread, description);
 }
 
 StopInfoSP StopInfo::CreateStopReasonHistoryBoundary(Thread &thread,
                                                      const char *description) {
-  return StopInfoSP(new StopInfoHistoryBoundary(thread, description));
+  return std::make_shared<StopInfoHistoryBoundary>(thread, description);
 }
 
 StopInfoSP StopInfo::CreateStopReasonWithExec(Thread &thread) {
-  return StopInfoSP(new StopInfoExec(thread));
+  return std::make_shared<StopInfoExec>(thread);
 }
 
 StopInfoSP StopInfo::CreateStopReasonFork(Thread &thread,
                                           lldb::pid_t child_pid,
                                           lldb::tid_t child_tid) {
-  return StopInfoSP(new StopInfoFork(thread, child_pid, child_tid));
+  return std::make_shared<StopInfoFork>(thread, child_pid, child_tid);
 }
 
 
 StopInfoSP StopInfo::CreateStopReasonVFork(Thread &thread,
                                            lldb::pid_t child_pid,
                                            lldb::tid_t child_tid) {
-  return StopInfoSP(new StopInfoVFork(thread, child_pid, child_tid));
+  return std::make_shared<StopInfoVFork>(thread, child_pid, child_tid);
 }
 
 StopInfoSP StopInfo::CreateStopReasonVForkDone(Thread &thread) {
-  return StopInfoSP(new StopInfoVForkDone(thread));
+  return std::make_shared<StopInfoVForkDone>(thread);
 }
 
 ValueObjectSP StopInfo::GetReturnValueObject(StopInfoSP &stop_info_sp) {

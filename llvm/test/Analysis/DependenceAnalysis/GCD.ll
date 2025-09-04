@@ -398,7 +398,7 @@ define void @gcd6(i64 %n, ptr %A, ptr %B) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %2 = load i32, ptr %arrayidx9, align 4 --> Dst: store i32 %2, ptr %B.addr.12, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %2, ptr %B.addr.12, align 4 --> Dst: store i32 %2, ptr %B.addr.12, align 4
-; CHECK-NEXT:    da analyze - output [* *]!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   %cmp4 = icmp sgt i64 %n, 0
@@ -475,7 +475,7 @@ define void @gcd7(i32 %n, ptr %A, ptr %B) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %11 = load i32, ptr %arrayidx12, align 4 --> Dst: store i32 %11, ptr %B.addr.12, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %11, ptr %B.addr.12, align 4 --> Dst: store i32 %11, ptr %B.addr.12, align 4
-; CHECK-NEXT:    da analyze - output [* *]!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   %0 = zext i32 %n to i64
@@ -566,7 +566,7 @@ define void @gcd8(i32 %n, ptr %A, ptr %B) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %5 = load i32, ptr %arrayidx12, align 4 --> Dst: store i32 %5, ptr %B.addr.12, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %5, ptr %B.addr.12, align 4 --> Dst: store i32 %5, ptr %B.addr.12, align 4
-; CHECK-NEXT:    da analyze - output [* *]!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   %cmp4 = icmp sgt i32 %n, 0
@@ -650,7 +650,7 @@ define void @gcd9(i32 %n, ptr %A, ptr %B) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %11 = load i32, ptr %arrayidx12, align 4 --> Dst: store i32 %11, ptr %B.addr.12, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %11, ptr %B.addr.12, align 4 --> Dst: store i32 %11, ptr %B.addr.12, align 4
-; CHECK-NEXT:    da analyze - output [* *]!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   %0 = zext i32 %n to i64

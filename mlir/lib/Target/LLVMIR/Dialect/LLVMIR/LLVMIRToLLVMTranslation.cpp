@@ -16,15 +16,11 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVMIR/ModuleImport.h"
 
-#include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/Support/ModRef.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -146,8 +142,15 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
     branchWeights.push_back(branchWeight->getZExtValue());
   }
 
-  if (auto iface = dyn_cast<BranchWeightOpInterface>(op)) {
-    iface.setBranchWeights(builder.getDenseI32ArrayAttr(branchWeights));
+  if (auto iface = dyn_cast<WeightedBranchOpInterface>(op)) {
+    // LLVM allows attaching a single weight to call instructions.
+    // This is used for carrying the execution count information
+    // in PGO modes. MLIR WeightedBranchOpInterface does not allow this,
+    // so we drop the metadata in this case.
+    // LLVM should probably use the VP form of MD_prof metadata
+    // for such cases.
+    if (op->getNumSuccessors() != 0)
+      iface.setWeights(branchWeights);
     return success();
   }
   return failure();

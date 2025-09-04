@@ -26,6 +26,21 @@ public:
   explicit M68kELFMCAsmInfo(const Triple &Triple);
 };
 
+namespace M68k {
+enum Specifier {
+  S_None,
+  S_GOT,
+  S_GOTOFF,
+  S_GOTPCREL,
+  S_GOTTPOFF,
+  S_PLT,
+  S_TLSGD,
+  S_TLSLD,
+  S_TLSLDM,
+  S_TPOFF,
+};
+}
+
 } // namespace llvm
 
 #endif // LLVM_LIB_TARGET_M68K_MCTARGETDESC_M68KMCASMINFO_H

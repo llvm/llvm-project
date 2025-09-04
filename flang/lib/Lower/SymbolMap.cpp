@@ -82,6 +82,10 @@ Fortran::lower::SymMap::lookupImpliedDo(Fortran::lower::SymMap::AcDoVar var) {
   return {};
 }
 
+void Fortran::lower::SymbolBox::dump() const { llvm::errs() << *this << '\n'; }
+
+void Fortran::lower::SymMap::dump() const { llvm::errs() << *this << '\n'; }
+
 llvm::raw_ostream &
 Fortran::lower::operator<<(llvm::raw_ostream &os,
                            const Fortran::lower::SymbolBox &symBox) {

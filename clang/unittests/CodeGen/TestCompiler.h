@@ -45,8 +45,7 @@ struct TestCompiler {
     Tr.setEnvironment(Triple::EnvironmentType::UnknownEnvironment);
     compiler.getTargetOpts().Triple = Tr.getTriple();
     compiler.setTarget(clang::TargetInfo::CreateTargetInfo(
-        compiler.getDiagnostics(),
-        std::make_shared<clang::TargetOptions>(compiler.getTargetOpts())));
+        compiler.getDiagnostics(), compiler.getTargetOpts()));
 
     const clang::TargetInfo &TInfo = compiler.getTarget();
     PtrSize = TInfo.getPointerWidth(clang::LangAS::Default) / 8;
@@ -59,7 +58,7 @@ struct TestCompiler {
 
     CG.reset(CreateLLVMCodeGen(
         compiler.getDiagnostics(), "main-module",
-        &compiler.getVirtualFileSystem(), compiler.getHeaderSearchOpts(),
+        compiler.getVirtualFileSystemPtr(), compiler.getHeaderSearchOpts(),
         compiler.getPreprocessorOpts(), compiler.getCodeGenOpts(), Context));
   }
 

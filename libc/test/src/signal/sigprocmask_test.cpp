@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/signal/raise.h"
 #include "src/signal/sigaddset.h"
 #include "src/signal/sigemptyset.h"
@@ -33,7 +33,7 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
 // This tests for invalid input.
 TEST_F(LlvmLibcSignalTest, SigprocmaskInvalid) {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
 
   sigset_t valid;
   // 17 and -4 are out of the range for sigprocmask's how paramater.

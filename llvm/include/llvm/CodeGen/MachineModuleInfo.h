@@ -36,6 +36,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 #include <utility>
 #include <vector>
@@ -53,7 +54,7 @@ class Module;
 /// accessed/created with MachineModuleInfo::getObjFileInfo and destroyed when
 /// the MachineModuleInfo is destroyed.
 ///
-class MachineModuleInfoImpl {
+class LLVM_ABI MachineModuleInfoImpl {
 public:
   using StubValueTy = PointerIntPair<MCSymbol *, 1, bool>;
   using SymbolListTy = std::vector<std::pair<MCSymbol *, StubValueTy>>;
@@ -109,16 +110,17 @@ class MachineModuleInfo {
   MachineModuleInfo &operator=(MachineModuleInfo &&MMII) = delete;
 
 public:
-  explicit MachineModuleInfo(const TargetMachine *TM = nullptr);
+  LLVM_ABI explicit MachineModuleInfo(const TargetMachine *TM = nullptr);
 
-  explicit MachineModuleInfo(const TargetMachine *TM, MCContext *ExtContext);
+  LLVM_ABI explicit MachineModuleInfo(const TargetMachine *TM,
+                                      MCContext *ExtContext);
 
-  MachineModuleInfo(MachineModuleInfo &&MMII);
+  LLVM_ABI MachineModuleInfo(MachineModuleInfo &&MMII);
 
-  ~MachineModuleInfo();
+  LLVM_ABI ~MachineModuleInfo();
 
-  void initialize();
-  void finalize();
+  LLVM_ABI void initialize();
+  LLVM_ABI void finalize();
 
   const TargetMachine &getTarget() const { return TM; }
 
@@ -135,20 +137,21 @@ public:
   /// Creates a new MachineFunction if none exists yet.
   /// NOTE: New pass manager clients shall not use this method to get
   /// the `MachineFunction`, use `MachineFunctionAnalysis` instead.
-  MachineFunction &getOrCreateMachineFunction(Function &F);
+  LLVM_ABI MachineFunction &getOrCreateMachineFunction(Function &F);
 
   /// \brief Returns the MachineFunction associated to IR function \p F if there
   /// is one, otherwise nullptr.
   /// NOTE: New pass manager clients shall not use this method to get
   /// the `MachineFunction`, use `MachineFunctionAnalysis` instead.
-  MachineFunction *getMachineFunction(const Function &F) const;
+  LLVM_ABI MachineFunction *getMachineFunction(const Function &F) const;
 
   /// Delete the MachineFunction \p MF and reset the link in the IR Function to
   /// Machine Function map.
-  void deleteMachineFunctionFor(Function &F);
+  LLVM_ABI void deleteMachineFunctionFor(Function &F);
 
   /// Add an externally created MachineFunction \p MF for \p F.
-  void insertFunction(const Function &F, std::unique_ptr<MachineFunction> &&MF);
+  LLVM_ABI void insertFunction(const Function &F,
+                               std::unique_ptr<MachineFunction> &&MF);
 
   /// Keep track of various per-module pieces of information for backends
   /// that would like to do so.
@@ -167,7 +170,7 @@ public:
   /// \}
 }; // End class MachineModuleInfo
 
-class MachineModuleInfoWrapperPass : public ImmutablePass {
+class LLVM_ABI MachineModuleInfoWrapperPass : public ImmutablePass {
   MachineModuleInfo MMI;
 
 public:
@@ -192,7 +195,7 @@ public:
 /// infrastructure must own the MachineModuleInfo.
 class MachineModuleAnalysis : public AnalysisInfoMixin<MachineModuleAnalysis> {
   friend AnalysisInfoMixin<MachineModuleAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
   MachineModuleInfo &MMI;
 
@@ -215,7 +218,7 @@ public:
   MachineModuleAnalysis(MachineModuleInfo &MMI) : MMI(MMI) {}
 
   /// Run the analysis pass and produce machine module information.
-  Result run(Module &M, ModuleAnalysisManager &);
+  LLVM_ABI Result run(Module &M, ModuleAnalysisManager &);
 };
 
 } // end namespace llvm

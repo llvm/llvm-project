@@ -134,3 +134,21 @@ namespace PR9401 {
   const D<typename C<S, T>::template B<U>::template E<D<F> > >
   A<S, T>::B<U>::a = typename C<S, T>::template B<U>::template E<D<F> >(g);
 }
+
+namespace templ_spec {
+  template <class U> using A = void; // expected-note 2{{template parameter is declared here}}
+  template <class T> struct B {
+    A<typename T::template X<int>> t1;
+    // expected-error@-1 {{'A<typename T::template X<int>>' (aka 'void')}}
+
+    A<typename T::X<int>> t2; // expected-error {{use 'template' keyword}}
+    // expected-error@-1 {{'A<typename T::X<int>>' (aka 'void')}}
+
+    // FIXME: Why error recovery for the non-typename case is so bad?
+    A<T::template X<int>> t3; // expected-error {{did you forget 'typename'}}
+    // expected-error@-1 {{'A<T::X>' (aka 'void')}}
+
+    A<T::X<int>> t4; // expected-error {{use 'template' keyword}} expected-error {{did you forget 'typename'}}
+    // expected-error@-1 {{'A<T::X>' (aka 'void')}}
+  };
+} // namespace templ_spec

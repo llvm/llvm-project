@@ -17,7 +17,7 @@ const NonTbpDefinedIo *NonTbpDefinedIoTable::Find(
   for (const auto *p{item}; j-- > 0; ++p) {
     if (&p->derivedType == &type && p->definedIo == definedIo) {
       return p;
-    } else if (p->isDtvArgPolymorphic) {
+    } else if (p->flags & IsDtvArgPolymorphic) {
       for (const typeInfo::DerivedType *t{type.GetParentType()}; t;
            t = t->GetParentType()) {
         if (&p->derivedType == t && p->definedIo == definedIo) {

@@ -14,6 +14,7 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -321,4 +322,50 @@ bool llvm::isPotentiallyReachable(
 
   return isPotentiallyReachable(
       A->getParent(), B->getParent(), ExclusionSet, DT, LI);
+}
+
+static bool instructionDoesNotReturn(const Instruction &I) {
+  if (auto *CB = dyn_cast<CallBase>(&I))
+    return CB->hasFnAttr(Attribute::NoReturn);
+  return false;
+}
+
+// A basic block can only return if it terminates with a ReturnInst and does not
+// contain calls to noreturn functions.
+static bool basicBlockCanReturn(const BasicBlock &BB) {
+  if (!isa<ReturnInst>(BB.getTerminator()))
+    return false;
+  return none_of(BB, instructionDoesNotReturn);
+}
+
+// FIXME: this doesn't handle recursion.
+bool llvm::canReturn(const Function &F) {
+  SmallVector<const BasicBlock *, 16> Worklist;
+  SmallPtrSet<const BasicBlock *, 16> Visited;
+
+  Visited.insert(&F.front());
+  Worklist.push_back(&F.front());
+
+  do {
+    const BasicBlock *BB = Worklist.pop_back_val();
+    if (basicBlockCanReturn(*BB))
+      return true;
+    for (const BasicBlock *Succ : successors(BB))
+      if (Visited.insert(Succ).second)
+        Worklist.push_back(Succ);
+  } while (!Worklist.empty());
+
+  return false;
+}
+
+bool llvm::isPresplitCoroSuspendExitEdge(const BasicBlock &Src,
+                                         const BasicBlock &Dest) {
+  assert(Src.getParent() == Dest.getParent());
+  if (!Src.getParent()->isPresplitCoroutine())
+    return false;
+  if (auto *SW = dyn_cast<SwitchInst>(Src.getTerminator()))
+    if (auto *Intr = dyn_cast<IntrinsicInst>(SW->getCondition()))
+      return Intr->getIntrinsicID() == Intrinsic::coro_suspend &&
+             SW->getDefaultDest() == &Dest;
+  return false;
 }

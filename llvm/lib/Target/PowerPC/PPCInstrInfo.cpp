@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterPressure.h"
+#include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/StackMaps.h"
@@ -1108,7 +1109,7 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(
   case PPC::CRSET:
   case PPC::CRUNSET:
   case PPC::XXSETACCZ:
-  case PPC::XXSETACCZW:
+  case PPC::DMXXSETACCZ:
     return true;
   }
   return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
@@ -1758,6 +1759,23 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     BuildMI(MBB, I, DL, get(PPC::EFDCFS), DestReg).addReg(SrcReg);
     getKillRegState(KillSrc);
     return;
+  } else if ((PPC::G8RCRegClass.contains(DestReg) ||
+              PPC::GPRCRegClass.contains(DestReg)) &&
+             SrcReg == PPC::CARRY) {
+    bool Is64Bit = PPC::G8RCRegClass.contains(DestReg);
+    BuildMI(MBB, I, DL, get(Is64Bit ? PPC::MFSPR8 : PPC::MFSPR), DestReg)
+        .addImm(1)
+        .addReg(PPC::CARRY, RegState::Implicit);
+    return;
+  } else if ((PPC::G8RCRegClass.contains(SrcReg) ||
+              PPC::GPRCRegClass.contains(SrcReg)) &&
+             DestReg == PPC::CARRY) {
+    bool Is64Bit = PPC::G8RCRegClass.contains(SrcReg);
+    BuildMI(MBB, I, DL, get(Is64Bit ? PPC::MTSPR8 : PPC::MTSPR))
+        .addImm(1)
+        .addReg(SrcReg)
+        .addReg(PPC::CARRY, RegState::ImplicitDefine);
+    return;
   }
 
   unsigned Opc;
@@ -1846,6 +1864,48 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
         .addReg(SrcRegSub1)
         .addReg(SrcRegSub1, getKillRegState(KillSrc));
     return;
+  } else if ((PPC::WACCRCRegClass.contains(DestReg) ||
+              PPC::WACC_HIRCRegClass.contains(DestReg)) &&
+             (PPC::WACCRCRegClass.contains(SrcReg) ||
+              PPC::WACC_HIRCRegClass.contains(SrcReg))) {
+
+    Opc = PPC::WACCRCRegClass.contains(SrcReg) ? PPC::DMXXEXTFDMR512
+                                               : PPC::DMXXEXTFDMR512_HI;
+
+    RegScavenger RS;
+    RS.enterBasicBlockEnd(MBB);
+    RS.backward(std::next(I));
+
+    Register TmpReg1 = RS.scavengeRegisterBackwards(PPC::VSRpRCRegClass, I,
+                                                    /* RestoreAfter */ false, 0,
+                                                    /* AllowSpill */ false);
+
+    RS.setRegUsed(TmpReg1);
+    Register TmpReg2 = RS.scavengeRegisterBackwards(PPC::VSRpRCRegClass, I,
+                                                    /* RestoreAfter */ false, 0,
+                                                    /* AllowSpill */ false);
+
+    BuildMI(MBB, I, DL, get(Opc))
+        .addReg(TmpReg1, RegState::Define)
+        .addReg(TmpReg2, RegState::Define)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+
+    Opc = PPC::WACCRCRegClass.contains(DestReg) ? PPC::DMXXINSTDMR512
+                                                : PPC::DMXXINSTDMR512_HI;
+
+    BuildMI(MBB, I, DL, get(Opc), DestReg)
+        .addReg(TmpReg1, RegState::Kill)
+        .addReg(TmpReg2, RegState::Kill);
+
+    return;
+  } else if (PPC::DMRRCRegClass.contains(DestReg) &&
+             PPC::DMRRCRegClass.contains(SrcReg)) {
+
+    BuildMI(MBB, I, DL, get(PPC::DMMR), DestReg)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+
+    return;
+
   } else
     llvm_unreachable("Impossible reg-to-reg copy");
 
@@ -1904,6 +1964,14 @@ unsigned PPCInstrInfo::getSpillIndex(const TargetRegisterClass *RC) const {
     OpcodeIndex = SOK_PairedVecSpill;
   } else if (PPC::G8pRCRegClass.hasSubClassEq(RC)) {
     OpcodeIndex = SOK_PairedG8Spill;
+  } else if (PPC::DMRROWRCRegClass.hasSubClassEq(RC)) {
+    llvm_unreachable("TODO: Implement spill DMRROW regclass!");
+  } else if (PPC::DMRROWpRCRegClass.hasSubClassEq(RC)) {
+    llvm_unreachable("TODO: Implement spill DMRROWp regclass!");
+  } else if (PPC::DMRpRCRegClass.hasSubClassEq(RC)) {
+    OpcodeIndex = SOK_DMRpSpill;
+  } else if (PPC::DMRRCRegClass.hasSubClassEq(RC)) {
+    OpcodeIndex = SOK_DMRSpill;
   } else {
     llvm_unreachable("Unknown regclass!");
   }
@@ -2926,7 +2994,8 @@ bool PPCInstrInfo::shouldClusterMemOps(
     return false;
 
   int64_t Offset1 = 0, Offset2 = 0;
-  LocationSize Width1 = 0, Width2 = 0;
+  LocationSize Width1 = LocationSize::precise(0),
+               Width2 = LocationSize::precise(0);
   const MachineOperand *Base1 = nullptr, *Base2 = nullptr;
   if (!getMemOperandWithOffsetWidth(FirstLdSt, Base1, Offset1, Width1, TRI) ||
       !getMemOperandWithOffsetWidth(SecondLdSt, Base2, Offset2, Width2, TRI) ||
@@ -5781,7 +5850,8 @@ bool PPCInstrInfo::areMemAccessesTriviallyDisjoint(
   const TargetRegisterInfo *TRI = &getRegisterInfo();
   const MachineOperand *BaseOpA = nullptr, *BaseOpB = nullptr;
   int64_t OffsetA = 0, OffsetB = 0;
-  LocationSize WidthA = 0, WidthB = 0;
+  LocationSize WidthA = LocationSize::precise(0),
+               WidthB = LocationSize::precise(0);
   if (getMemOperandWithOffsetWidth(MIa, BaseOpA, OffsetA, WidthA, TRI) &&
       getMemOperandWithOffsetWidth(MIb, BaseOpB, OffsetB, WidthB, TRI)) {
     if (BaseOpA->isIdenticalTo(*BaseOpB)) {

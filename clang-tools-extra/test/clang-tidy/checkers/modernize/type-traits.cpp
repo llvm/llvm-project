@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy -std=c++14 %s modernize-type-traits %t -check-suffixes=',MACRO'
 // RUN: %check_clang_tidy -std=c++14 %s modernize-type-traits %t -- \
 // RUN:   -config='{CheckOptions: {modernize-type-traits.IgnoreMacros: true}}'
-// RUN: %check_clang_tidy -std=c++17 %s modernize-type-traits %t -check-suffixes=',CXX17,MACRO,CXX17MACRO'
+// RUN: %check_clang_tidy -std=c++17-or-later %s modernize-type-traits %t -check-suffixes=',CXX17,MACRO,CXX17MACRO'
 
 namespace std {
   template <typename>
@@ -17,6 +17,11 @@ namespace std {
   template<bool, typename T = void>
   struct enable_if {
     using type = T;
+  };
+
+  template <typename...>
+  struct common_type {
+    using type = int;
   };
 
 inline namespace __std_lib_version1 {
@@ -37,7 +42,7 @@ namespace ext {
 
 bool NoTemplate = std::is_const<bool>::value;
 // CHECK-MESSAGES-CXX17: :[[@LINE-1]]:19: warning: use c++17 style variable templates
-// CHECK-FIXES-CXX17: bool NoTemplate = std::is_const_v<bool>
+// CHECK-FIXES-CXX17: bool NoTemplate = std::is_const_v<bool>;
 
 template<typename T>
 constexpr bool InTemplate = std::is_const<T>::value;
@@ -65,6 +70,10 @@ std::enable_if<true>::type noTemplateOrTypename();
 using UsingNoTypename = std::enable_if<true>::type;
 // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: use c++14 style type templates
 // CHECK-FIXES: using UsingNoTypename = std::enable_if_t<true>;
+
+using VariadicTrait = std::common_type<int, long, bool>::type;
+// CHECK-MESSAGES: :[[@LINE-1]]:23: warning: use c++14 style type templates
+// CHECK-FIXES: using VariadicTrait = std::common_type_t<int, long, bool>;
 
 using UsingSpace = std::enable_if <true>::type;
 // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: use c++14 style type templates

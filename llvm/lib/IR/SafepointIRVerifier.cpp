@@ -157,7 +157,6 @@ public:
 protected:
   void addDeadBlock(const BasicBlock *BB) {
     SmallVector<const BasicBlock *, 4> NewDead;
-    SmallSetVector<const BasicBlock *, 4> DF;
 
     NewDead.push_back(BB);
     while (!NewDead.empty()) {
@@ -612,11 +611,10 @@ void GCPtrTracker::verifyFunction(GCPtrTracker &&Tracker,
 }
 
 void GCPtrTracker::recalculateBBsStates() {
-  SetVector<const BasicBlock *> Worklist;
   // TODO: This order is suboptimal, it's better to replace it with priority
   // queue where priority is RPO number of BB.
-  for (auto &BBI : BlockMap)
-    Worklist.insert(BBI.first);
+  SetVector<const BasicBlock *> Worklist(llvm::from_range,
+                                         llvm::make_first_range(BlockMap));
 
   // This loop iterates the AvailableIn/Out sets until it converges.
   // The AvailableIn and AvailableOut sets decrease as we iterate.

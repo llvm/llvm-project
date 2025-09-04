@@ -14,6 +14,7 @@
 
 #include "NewPMDriver.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
@@ -30,6 +31,7 @@
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
@@ -38,6 +40,7 @@
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/Debugify.h"
+#include "llvm/Transforms/Utils/ProfileVerify.h"
 
 using namespace llvm;
 using namespace opt_tool;
@@ -354,7 +357,7 @@ bool llvm::runPassPipeline(
     OutputKind OK, VerifierKind VK, bool ShouldPreserveAssemblyUseListOrder,
     bool ShouldPreserveBitcodeUseListOrder, bool EmitSummaryIndex,
     bool EmitModuleHash, bool EnableDebugify, bool VerifyDIPreserve,
-    bool UnifiedLTO) {
+    bool EnableProfcheck, bool UnifiedLTO) {
   auto FS = vfs::getRealFileSystem();
   std::optional<PGOOptions> P;
   switch (PGOKindFlag) {
@@ -485,7 +488,8 @@ bool llvm::runPassPipeline(
   if (VerifyDIPreserve)
     MPM.addPass(NewPMDebugifyPass(DebugifyMode::OriginalDebugInfo, "",
                                   &DebugInfoBeforePass));
-
+  if (EnableProfcheck)
+    MPM.addPass(createModuleToFunctionPassAdaptor(ProfileInjectorPass()));
   // Add passes according to the -passes options.
   if (!PassPipeline.empty()) {
     if (auto Err = PB.parsePassPipeline(MPM, PassPipeline)) {
@@ -502,6 +506,8 @@ bool llvm::runPassPipeline(
     MPM.addPass(NewPMCheckDebugifyPass(
         false, "", nullptr, DebugifyMode::OriginalDebugInfo,
         &DebugInfoBeforePass, VerifyDIPreserveExport));
+  if (EnableProfcheck)
+    MPM.addPass(createModuleToFunctionPassAdaptor(ProfileVerifierPass()));
 
   // Add any relevant output pass at the end of the pipeline.
   switch (OK) {
@@ -517,7 +523,8 @@ bool llvm::runPassPipeline(
     break;
   case OK_OutputThinLTOBitcode:
     MPM.addPass(ThinLTOBitcodeWriterPass(
-        Out->os(), ThinLTOLinkOut ? &ThinLTOLinkOut->os() : nullptr));
+        Out->os(), ThinLTOLinkOut ? &ThinLTOLinkOut->os() : nullptr,
+        ShouldPreserveBitcodeUseListOrder));
     break;
   }
 
@@ -565,6 +572,9 @@ bool llvm::runPassPipeline(
 
   if (DebugifyEach && !DebugifyExport.empty())
     exportDebugifyStats(DebugifyExport, Debugify.getDebugifyStatsMap());
+
+  TimerGroup::printAll(*CreateInfoOutputFile());
+  TimerGroup::clearAll();
 
   return true;
 }

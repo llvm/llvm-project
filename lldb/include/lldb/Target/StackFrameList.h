@@ -186,6 +186,11 @@ protected:
   /// negotiation for who gets to control this.
   std::optional<uint32_t> m_selected_frame_idx;
 
+  /// Protect access to m_selected_frame_idx. Always acquire after m_list_mutex
+  /// to avoid lock inversion. A recursive mutex because GetSelectedFrameIndex
+  /// may indirectly call SetSelectedFrame.
+  std::recursive_mutex m_selected_frame_mutex;
+
   /// The number of concrete frames fetched while filling the frame list. This
   /// is only used when synthetic frames are enabled.
   uint32_t m_concrete_frames_fetched;

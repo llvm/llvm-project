@@ -128,7 +128,7 @@ struct SymbolBox : public fir::details::matcher<SymbolBox> {
                                        const SymbolBox &symBox);
 
   /// Dump the map. For debugging.
-  LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this << '\n'; }
+  LLVM_DUMP_METHOD void dump() const;
 
 private:
   VT box;
@@ -293,7 +293,7 @@ public:
                                        const SymMap &symMap);
 
   /// Dump the map. For debugging.
-  LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this << '\n'; }
+  LLVM_DUMP_METHOD void dump() const;
 
   void addVariableDefinition(semantics::SymbolRef symRef,
                              fir::FortranVariableOpInterface definingOp,
