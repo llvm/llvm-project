@@ -3,44 +3,46 @@ include "OptionsBase.td"
 let Command = "target modules dump symtab" in {
   def tm_sort : Option<"sort", "s">,
                 Group<1>,
-                Desc<"Supply a sort order when dumping the symbol table.">,
+                Desc<"${S}upply a sort order when dumping the symbol table.">,
                 EnumArg<"SortOrder">;
   def tm_smn : Option<"show-mangled-names", "m">,
                Group<1>,
-               Desc<"Do not demangle symbol names before showing them.">;
+               Desc<"Do not de${m}angle symbol names before showing them.">;
 }
 
 let Command = "target modules dump separate debug info" in {
   def tm_json : Option<"json", "j">,
                 Group<1>,
-                Desc<"Output the details in JSON format.">;
+                Desc<"Output the details in ${J}SON format.">;
   def tm_errors_only
       : Option<"errors-only", "e">,
         Group<1>,
-        Desc<"Filter to show only debug info files with errors.">;
+        Desc<"Filter to show only debug info files with ${e}rrors.">;
   def tm_force_load_all_debug_info : Option<"force-load-all-debug-info", "f">,
                                      Group<1>,
-                                     Desc<"Load all debug info files.">;
+                                     Desc<"Load all debug in${f}o files.">;
 }
 
 let Command = "help" in {
   def help_hide_aliases : Option<"hide-aliases", "a">,
-                          Desc<"Hide aliases in the command list.">;
+                          Desc<"Hide ${a}liases in the command list.">;
   def help_hide_user : Option<"hide-user-commands", "u">,
-                       Desc<"Hide user-defined commands from the list.">;
+                       Desc<"Hide ${u}ser-defined commands from the list.">;
   def help_show_hidden : Option<"show-hidden-commands", "h">,
                          Desc<"Include commands prefixed with an underscore.">;
 }
 
 let Command = "settings set" in {
-  def setset_global : Option<"global", "g">,
-                      Desc<"Apply the new value to the global default value.">;
+  def setset_global
+      : Option<"global", "g">,
+        Desc<"Apply the new value to the ${g}lobal default value.">;
   def setset_force
       : Option<"force", "f">,
-        Desc<"Force an empty value to be accepted as the default.">;
-  def setset_exists : Option<"exists", "e">,
-                      Desc<"Set the setting if it exists, but do not cause the "
-                           "command to raise an error if it does not exist.">;
+        Desc<"${F}orce an empty value to be accepted as the default.">;
+  def setset_exists
+      : Option<"exists", "e">,
+        Desc<"Set the setting if it ${e}xists, but do not cause "
+             "the command to raise an error if it does not exist.">;
 }
 
 let Command = "settings write" in {
@@ -48,9 +50,9 @@ let Command = "settings write" in {
                       Required,
                       Arg<"Filename">,
                       Completion<"DiskFile">,
-                      Desc<"The file into which to write the settings.">;
+                      Desc<"The ${f}ile into which to write the settings.">;
   def setwrite_append : Option<"append", "a">,
-                        Desc<"Append to saved settings file if it exists.">;
+                        Desc<"${A}ppend to saved settings file if it exists.">;
 }
 
 let Command = "settings read" in {
@@ -58,39 +60,41 @@ let Command = "settings read" in {
                      Required,
                      Arg<"Filename">,
                      Completion<"DiskFile">,
-                     Desc<"The file from which to read the settings.">;
+                     Desc<"The ${f}ile from which to read the settings.">;
 }
 
 let Command = "settings clear" in {
-  def setclear_all : Option<"all", "a">, Desc<"Clear all settings.">;
+  def setclear_all : Option<"all", "a">, Desc<"Clear ${a}ll settings.">;
 }
 
 let Command = "settings show" in {
   def setshow_defaults : Option<"defaults", "d">,
-                         Desc<"Include default values if defined.">;
+                         Desc<"Include ${d}efault values if defined.">;
 }
 
 let Command = "breakpoint list" in {
   // FIXME: We need to add an "internal" command, and then add this sort of
   // thing to it. But I need to see it for now, and don't want to wait.
   def blist_internal : Option<"internal", "i">,
-                       Desc<"Show debugger internal breakpoints">;
-  def blist_brief
-      : Option<"brief", "b">,
-        Group<1>,
-        Desc<"Give a brief description of the breakpoint (no location info).">;
+                       Desc<"Show debugger ${i}nternal breakpoints">;
+  def blist_brief : Option<"brief", "b">,
+                    Group<1>,
+                    Desc<"Give a ${b}rief description of the breakpoint (no "
+                         "location info).">;
   def blist_full
       : Option<"full", "f">,
         Group<2>,
-        Desc<"Give a full description of the breakpoint and its locations.">;
-  def blist_verbose : Option<"verbose", "v">,
-                      Group<3>,
-                      Desc<"Explain everything we know about the breakpoint "
-                           "(for debugging debugger bugs).">;
+        Desc<"Give a ${f}ull description of the breakpoint and its locations.">;
+  def blist_verbose
+      : Option<"verbose", "v">,
+        Group<3>,
+        Desc<"Explain everything we know about the breakpoint (for debugging "
+             "debugger bugs).">;
   def blist_dummy_bp
       : Option<"dummy-breakpoints", "D">,
-        Desc<"List Dummy breakpoints - i.e. breakpoints set before a file is "
-             "provided, which prime new targets.">;
+        Desc<
+            "List ${D}ummy breakpoints - i.e. breakpoints set before a file is "
+            "provided, which prime new targets.">;
 }
 
 let Command = "breakpoint modify" in {
@@ -109,33 +113,33 @@ let Command = "breakpoint modify" in {
       : Option<"thread-index", "x">,
         Group<1>,
         Arg<"ThreadIndex">,
-        Desc<"The breakpoint stops only for the thread whose index matches "
-             "this argument.">;
+        Desc<"The breakpoint stops only for the thread whose "
+             "inde${x} matches this argument.">;
   def breakpoint_modify_thread_id
       : Option<"thread-id", "t">,
         Group<1>,
         Arg<"ThreadID">,
-        Desc<"The breakpoint stops only for the thread whose TID matches this "
-             "argument.  The token 'current' resolves to the current thread's "
-             "ID.">;
+        Desc<"The breakpoint stops only for the ${t}hread whose TID "
+             "matches this argument.  The token 'current' resolves to the "
+             "current thread's ID.">;
   def breakpoint_modify_thread_name
       : Option<"thread-name", "T">,
         Group<1>,
         Arg<"ThreadName">,
-        Desc<"The breakpoint stops only for the thread whose thread name "
-             "matches this argument.">;
+        Desc<"The breakpoint stops only for the thread whose "
+             "thread name matches this argument.">;
   def breakpoint_modify_queue_name
       : Option<"queue-name", "q">,
         Group<1>,
         Arg<"QueueName">,
-        Desc<"The breakpoint stops only for threads in the queue whose name is "
-             "given by this argument.">;
+        Desc<"The breakpoint stops only for threads in the queue "
+             "whose name is given by this argument.">;
   def breakpoint_modify_condition
       : Option<"condition", "c">,
         Group<1>,
         Arg<"Expression">,
-        Desc<"The breakpoint stops only if this condition expression evaluates "
-             "to true.">;
+        Desc<"The breakpoint stops only if this condition "
+             "expression evaluates to true.">;
   def breakpoint_modify_condition_language
       : Option<"condition-language", "Y">,
         Group<1>,
@@ -149,25 +153,25 @@ let Command = "breakpoint modify" in {
         Desc<"The breakpoint will auto-continue after running its commands.">;
   def breakpoint_modify_enable : Option<"enable", "e">,
                                  Group<2>,
-                                 Desc<"Enable the breakpoint.">;
+                                 Desc<"${E}nable the breakpoint.">;
   def breakpoint_modify_disable : Option<"disable", "d">,
                                   Group<3>,
-                                  Desc<"Disable the breakpoint.">;
+                                  Desc<"${D}isable the breakpoint.">;
   def breakpoint_modify_command
       : Option<"command", "C">,
         Group<4>,
         Arg<"Command">,
         Desc<
-            "A command to run when the breakpoint is hit, can be provided more "
-            "than once, the commands will be run in left-to-right order.">;
+            "A ${c}ommand to run when the breakpoint is hit, can be provided "
+            "more than once, the commands will be run in left-to-right order.">;
 }
 
 let Command = "breakpoint dummy" in {
   def breakpoint_dummy_options_dummy_breakpoints
       : Option<"dummy-breakpoints", "D">,
         Group<1>,
-        Desc<"Act on Dummy breakpoints - i.e. breakpoints set before a file is "
-             "provided, which prime new targets.">;
+        Desc<"Act on ${D}ummy breakpoints - i.e. breakpoints set before a file "
+             "is provided, which prime new targets.">;
 }
 
 let Command = "breakpoint set" in {
@@ -176,164 +180,183 @@ let Command = "breakpoint set" in {
         Arg<"ShlibName">,
         Completion<"Module">,
         Groups<[1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12]>, // *not* in group 10
-        Desc<"Set the breakpoint only in this shared library.  Can repeat this "
+        Desc<"${S}et the breakpoint only in this shared library.  Can repeat "
+             "this "
              "option multiple times to specify multiple shared libraries.">;
   def breakpoint_set_hardware
       : Option<"hardware", "H">,
-        Desc<"Require the breakpoint to use hardware breakpoints.">;
-  def breakpoint_set_file
-      : Option<"file", "f">,
-        Arg<"Filename">,
-        Completion<"SourceFile">,
-        Groups<[1, 3, 4, 5, 6, 7, 8, 9, 11]>,
-        Desc<"Specifies the source file in which to set this breakpoint.  "
-             "Note, by default lldb only looks for files that are #included if "
-             "they use the standard include file extensions.  To set "
-             "breakpoints on .c/.cpp/.m/.mm files that are #included, set "
-             "target.inline-breakpoint-strategy to \"always\".">;
+        Desc<"Require the breakpoint to use ${h}ardware breakpoints.">;
+  def breakpoint_set_file : Option<"file", "f">,
+                            Arg<"Filename">,
+                            Completion<"SourceFile">,
+                            Groups<[1, 3, 4, 5, 6, 7, 8, 9, 11]>,
+                            Desc<"Specifies the source ${f}ile in which to set "
+                                 "this breakpoint.  Note, by "
+                                 "default lldb only looks for files that are "
+                                 "#included if they use the "
+                                 "standard include file extensions.  To set "
+                                 "breakpoints on .c/.cpp/.m/.mm "
+                                 "files that are #included, set "
+                                 "target.inline-breakpoint-strategy to "
+                                 "\"always\".">;
   def breakpoint_set_line
       : Option<"line", "l">,
         Group<1>,
         Arg<"LineNum">,
         Required,
-        Desc<"Specifies the line number on which to set this breakpoint.">;
+        Desc<"Specifies the ${l}ine number on which to set this breakpoint.">;
   def breakpoint_set_column
       : Option<"column", "u">,
         Group<1>,
         Arg<"ColumnNum">,
-        Desc<"Specifies the column number on which to set this breakpoint.">;
+        Desc<"Specifies the col${u}mn number on which to set this breakpoint.">;
   def breakpoint_set_address
       : Option<"address", "a">,
         Group<2>,
         Arg<"AddressOrExpression">,
         Required,
-        Desc<"Set the breakpoint at the specified address.  If the address "
-             "maps uniquely to a particular binary, then the address will be "
-             "converted to a \"file\"address, so that the breakpoint will "
-             "track that binary+offset no matter where the binary eventually "
-             "loads.  Alternately, if you also specify the module - with the "
-             "-s option - then the address will be treated as a file address "
-             "in that module, and resolved accordingly.  Again, this will "
-             "allow lldb to track that offset on subsequent reloads.  The "
-             "module need not have been loaded at the time you specify this "
-             "breakpoint, and will get resolved when the module is loaded.">;
-  def breakpoint_set_name
-      : Option<"name", "n">,
-        Group<3>,
-        Arg<"FunctionName">,
-        Completion<"Symbol">,
-        Required,
-        Desc<"Set the breakpoint by function name.  Can be repeated multiple "
-             "times to make one breakpoint for multiple names.">;
+        Desc<
+            "Set the breakpoint at the specified ${a}ddress.  If the address "
+            "maps "
+            "uniquely to a particular binary, then the address will be "
+            "converted to "
+            "a \"file\"address, so that the breakpoint will track that "
+            "binary+offset "
+            "no matter where the binary eventually loads.  Alternately, if you "
+            "also "
+            "specify the module - with the -s option - then the address will "
+            "be "
+            "treated as a file address in that module, and resolved "
+            "accordingly.  "
+            "Again, this will allow lldb to track that offset on subsequent "
+            "reloads.  "
+            "The module need not have been loaded at the time you specify this "
+            "breakpoint, and will get resolved when the module is loaded.">;
+  def breakpoint_set_name : Option<"name", "n">,
+                            Group<3>,
+                            Arg<"FunctionName">,
+                            Completion<"Symbol">,
+                            Required,
+                            Desc<"Set the breakpoint by function ${n}ame.  Can "
+                                 "be repeated multiple times to make one "
+                                 "breakpoint for multiple names.">;
   def breakpoint_set_source_regexp_function
       : Option<"source-regexp-function", "X">,
         Group<9>,
         Arg<"FunctionName">,
         Completion<"Symbol">,
         Desc<"When used with '-p' limits the source regex to source contained "
-             "in the named functions.  Can be repeated multiple times.">;
+             "in "
+             "the named functions.  Can be repeated multiple times.">;
   def breakpoint_set_fullname
       : Option<"fullname", "F">,
         Group<4>,
         Arg<"FullName">,
         Required,
         Completion<"Symbol">,
-        Desc<"Set the breakpoint by fully qualified function names. For C++ "
-             "this means namespaces and all arguments, and for Objective-C "
-             "this means a full function prototype with class and selector.  "
-             "Can be repeated multiple times to make one breakpoint for "
-             "multiple names.">;
+        Desc<
+            "Set the breakpoint by ${F}ully qualified function names. For C++ "
+            "this means namespaces and all arguments, and for Objective-C this "
+            "means a full function prototype with class and selector.  Can be "
+            "repeated "
+            "multiple times to make one breakpoint for multiple names.">;
   def breakpoint_set_selector
       : Option<"selector", "S">,
         Group<5>,
         Arg<"Selector">,
         Required,
-        Desc<
-            "Set the breakpoint by Objective-C selector name.  Can be repeated "
-            "multiple times to make one breakpoint for multiple Selectors.">;
+        Desc<"Set the breakpoint by Objective-C ${s}elector name.  Can be "
+             "repeated "
+             "multiple times to make one breakpoint for multiple Selectors.">;
   def breakpoint_set_method
       : Option<"method", "M">,
         Group<6>,
         Arg<"Method">,
         Required,
-        Desc<"Set the breakpoint by C++ method names.  Can be repeated "
+        Desc<"Set the breakpoint by C++ ${m}ethod names.  Can be repeated "
              "multiple times to make one breakpoint for multiple methods.">;
   def breakpoint_set_func_regex
       : Option<"func-regex", "r">,
         Group<7>,
         Arg<"RegularExpression">,
         Required,
-        Desc<"Set the breakpoint by function name, evaluating a "
-             "regular-expression to find the function name(s).">;
-  def breakpoint_set_basename
-      : Option<"basename", "b">,
-        Group<8>,
-        Arg<"FunctionName">,
-        Required,
-        Completion<"Symbol">,
-        Desc<"Set the breakpoint by function basename (C++ namespaces and "
-             "arguments will be ignored).  Can be repeated multiple times to "
-             "make one breakpoint for multiple symbols.">;
+        Desc<"Set the breakpoint by function "
+             "name, evaluating a ${r}egular-expression to find the function "
+             "name(s).">;
+  def breakpoint_set_basename : Option<"basename", "b">,
+                                Group<8>,
+                                Arg<"FunctionName">,
+                                Required,
+                                Completion<"Symbol">,
+                                Desc<"Set the breakpoint by function "
+                                     "${b}asename (C++ namespaces and arguments"
+                                     " will be ignored).  Can be repeated "
+                                     "multiple times to make one breakpoint "
+                                     "for multiple symbols.">;
   def breakpoint_set_source_pattern_regexp
       : Option<"source-pattern-regexp", "p">,
         Group<9>,
         Arg<"RegularExpression">,
         Required,
-        Desc<"Set the breakpoint by specifying a regular expression which is "
-             "matched against the source text in a source file or files "
+        Desc<"Set the breakpoint by specifying a regular expression which"
+             " is matched against the source text in a source file or files "
              "specified with the -f can be specified more than once.  If no "
              "source files are specified, uses the current \"default source "
-             "file\".  If you want to match against all source files, pass the "
-             "\"--all-files\" option.">;
+             "file\".  If you want to match against all source files, ${p}ass "
+             "the \"--all-files\" option.">;
   def breakpoint_set_all_files
       : Option<"all-files", "A">,
         Group<9>,
-        Desc<"All files are searched for source pattern matches.">;
+        Desc<"${A}ll files are searched for source pattern matches.">;
   def breakpoint_set_language_exception
       : Option<"language-exception", "E">,
         Group<10>,
         Arg<"Language">,
         Required,
-        Desc<"Set the breakpoint on exceptions thrown by the specified "
-             "language (without options, on throw but not catch).">;
-  def breakpoint_set_on_throw : Option<"on-throw", "w">,
-                                Group<10>,
-                                Arg<"Boolean">,
-                                Desc<"Set the breakpoint on exception throW.">;
-  def breakpoint_set_on_catch : Option<"on-catch", "h">,
-                                Group<10>,
-                                Arg<"Boolean">,
-                                Desc<"Set the breakpoint on exception catcH.">;
+        Desc<"Set the breakpoint on ${e}xceptions thrown by the specified "
+             "language "
+             "(without options, on throw but not catch.)">;
+  def breakpoint_set_on_throw
+      : Option<"on-throw", "w">,
+        Group<10>,
+        Arg<"Boolean">,
+        Desc<"Set the breakpoint on exception thro${w}.">;
+  def breakpoint_set_on_catch
+      : Option<"on-catch", "h">,
+        Group<10>,
+        Arg<"Boolean">,
+        Desc<"Set the breakpoint on exception catc${h}.">;
   def breakpoint_set_language
       : Option<"language", "L">,
         GroupRange<3, 8>,
         Arg<"Language">,
-        Desc<"Specifies the Language to use when interpreting the breakpoint's "
-             "expression (note: currently only implemented for setting "
-             "breakpoints on identifiers). If not set the target.language "
-             "setting is used.">;
+        Desc<"Specifies the ${L}anguage to use when interpreting the "
+             "breakpoint's expression (note: currently only implemented for "
+             "setting breakpoints on identifiers). If not set the "
+             "target.language setting is used.">;
   def breakpoint_set_skip_prologue
       : Option<"skip-prologue", "K">,
         Arg<"Boolean">,
         Groups<[1, 3, 4, 5, 6, 7, 8, 12]>,
-        Desc<"Skip the prologue if the breakpoint is at the beginning of a "
+        Desc<"S${k}ip the prologue if the breakpoint is at the beginning of a "
              "function. If not set the target.skip-prologue setting is used.">;
   def breakpoint_set_breakpoint_name
       : Option<"breakpoint-name", "N">,
         Arg<"BreakpointName">,
-        Desc<"Adds this to the list of names for this breakpoint.">;
+        Desc<"Adds this to the list of ${n}ames for this breakpoint.">;
   def breakpoint_set_address_slide
       : Option<"address-slide", "R">,
         Arg<"Address">,
         Groups<[1, 3, 4, 5, 6, 7, 8, 12]>,
         Desc<"Add the specified offset to whatever address(es) the breakpoint "
-             "resolves to. At present this applies the offset directly as "
-             "given, and doesn't try to align it to instruction boundaries.">;
+             "${r}esolves to. At present this applies the offset directly as "
+             "given, and "
+             "doesn't try to align it to instruction boundaries.">;
   def breakpoint_set_move_to_nearest_code
       : Option<"move-to-nearest-code", "m">,
         Groups<[1, 9, 12]>,
         Arg<"Boolean">,
-        Desc<"Move breakpoints to nearest code. If not set the "
+        Desc<"${M}ove breakpoints to nearest code. If not set the "
              "target.move-to-nearest-code setting is used.">;
   def breakpoint_set_file_colon_line
       : Option<"joint-specifier", "y">,
@@ -379,9 +402,9 @@ let Command = "breakpoint delete" in {
   def breakpoint_delete_disabled
       : Option<"disabled", "d">,
         Group<1>,
-        Desc<"Delete all breakpoints which are currently disabled. When using "
-             "the disabled option any breakpoints listed on the command line "
-             "are EXCLUDED from deletion.">;
+        Desc<"${D}elete all breakpoints which are currently disabled. When "
+             "using the disabled option any breakpoints listed on the command "
+             "line are EXCLUDED from deletion.">;
 }
 
 let Command = "breakpoint name" in {
@@ -527,12 +550,12 @@ let Command = "disassemble" in {
         Groups<[1, 2]>,
         Arg<"AddressOrExpression">,
         Required,
-        Desc<"Address at which to start disassembling.">;
+        Desc<"Address at which to ${s}tart disassembling.">;
   def disassemble_options_end_address
       : Option<"end-address", "e">,
         Group<1>,
         Arg<"AddressOrExpression">,
-        Desc<"Address at which to end disassembling.">;
+        Desc<"Address at which to ${e}nd disassembling.">;
   def disassemble_options_count : Option<"count", "c">,
                                   Groups<[2, 3, 4, 5, 7]>,
                                   Arg<"NumLines">,
