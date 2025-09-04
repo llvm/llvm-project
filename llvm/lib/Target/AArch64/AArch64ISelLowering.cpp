@@ -7916,7 +7916,7 @@ SDValue AArch64TargetLowering::lowerEHPadEntry(SDValue Chain, SDLoc const &DL,
   MachineFunction &MF = DAG.getMachineFunction();
   SMEAttrs SMEFnAttrs = MF.getInfo<AArch64FunctionInfo>()->getSMEFnAttrs();
 
-  // Exception handlers are entered with:
+  // The following conditions are true on entry to an exception handler:
   // - PSTATE.SM is 0.
   // - PSTATE.ZA is 0.
   // - TPIDR2_EL0 is null.
