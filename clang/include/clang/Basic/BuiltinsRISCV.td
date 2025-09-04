@@ -149,7 +149,6 @@ def psll_bs_32  : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 def psll_hs_32  : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 def padd_bs_32  : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 def padd_hs_32  : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
-def sadd        : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
 def pusati_h_32 : RISCVBuiltin<"uint32_t(uint32_t, int32_t)">;
 def usati_32    : RISCVBuiltin<"uint32_t(uint32_t, int32_t)">;
 def psrai_b_32  : RISCVBuiltin<"uint32_t(uint32_t, int32_t)">;
@@ -166,6 +165,20 @@ def predsumu_bs_32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 def predsumu_hs_32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 def psra_bs_32     : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 def psra_hs_32     : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def padd_b_32      : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def padd_h_32      : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def sadd           : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
+def psadd_b_32     : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def psadd_h_32     : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def aadd           : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
+def paadd_b_32     : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def paadd_h_32     : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def saddu          : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def psaddu_b_32    : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def psaddu_h_32    : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def aaddu          : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def paaddu_b_32    : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def paaddu_h_32    : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 } // Features = "experimental-p,32bit"
 
 let Features = "experimental-p,64bit" in {
@@ -204,6 +217,21 @@ def predsumu_ws    : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 def psra_bs_64     : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 def psra_hs_64     : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 def psra_ws        : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def padd_b_64      : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def padd_h_64      : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def padd_w         : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def psadd_b_64     : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def psadd_h_64     : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def psadd_w        : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def paadd_b_64     : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def paadd_h_64     : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def paadd_w        : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def psaddu_b_64    : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def psaddu_h_64    : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def psaddu_w       : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def paaddu_b_64    : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def paaddu_h_64    : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def paaddu_w       : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 } // Features = "experimental-p,64bit"
 } // Attributes = [Const, NoThrow]
 

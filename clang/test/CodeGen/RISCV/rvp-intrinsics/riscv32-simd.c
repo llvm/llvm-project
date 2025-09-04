@@ -221,6 +221,24 @@ uint32_t psra_hs(uint32_t rs1, uint32_t rs2) {
   return __riscv_psra_hs(rs1, rs2);
 }
 
+// RV32P-LABEL: @padd_b(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.padd.b.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t padd_b(uint32_t rs1, uint32_t rs2) {
+  return __riscv_padd_b(rs1, rs2);
+}
+
+// RV32P-LABEL: @padd_h(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.padd.h.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t padd_h(uint32_t rs1, uint32_t rs2) {
+  return __riscv_padd_h(rs1, rs2);
+}
+
 // RV32P-LABEL: @sadd(
 // RV32P-NEXT:  entry:
 // RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.sadd.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
@@ -228,4 +246,103 @@ uint32_t psra_hs(uint32_t rs1, uint32_t rs2) {
 //
 int32_t sadd(int32_t rs1, int32_t rs2) {
   return __riscv_sadd(rs1, rs2);
+}
+
+// RV32P-LABEL: @psadd_b(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.psadd.b.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t psadd_b(uint32_t rs1, uint32_t rs2) {
+  return __riscv_psadd_b(rs1, rs2);
+}
+
+// RV32P-LABEL: @psadd_h(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.psadd.h.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t psadd_h(uint32_t rs1, uint32_t rs2) {
+  return __riscv_psadd_h(rs1, rs2);
+}
+
+// RV32P-LABEL: @aadd(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.aadd.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+int32_t aadd(int32_t rs1, int32_t rs2) {
+  return __riscv_aadd(rs1, rs2);
+}
+
+// RV32P-LABEL: @paadd_b(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.paadd.b.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t paadd_b(uint32_t rs1, uint32_t rs2) {
+  return __riscv_paadd_b(rs1, rs2);
+}
+
+// RV32P-LABEL: @paadd_h(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.paadd.h.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t paadd_h(uint32_t rs1, uint32_t rs2) {
+  return __riscv_paadd_h(rs1, rs2);
+}
+
+// RV32P-LABEL: @saddu(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.saddu.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t saddu(uint32_t rs1, uint32_t rs2) {
+  return __riscv_saddu(rs1, rs2);
+}
+
+// RV32P-LABEL: @psaddu_b(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.psaddu.b.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t psaddu_b(uint32_t rs1, uint32_t rs2) {
+  return __riscv_psaddu_b(rs1, rs2);
+}
+
+// RV32P-LABEL: @psaddu_h(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.psaddu.h.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t psaddu_h(uint32_t rs1, uint32_t rs2) {
+  return __riscv_psaddu_h(rs1, rs2);
+}
+
+// RV32P-LABEL: @aaddu(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.aaddu.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t aaddu(uint32_t rs1, uint32_t rs2) {
+  return __riscv_aaddu(rs1, rs2);
+}
+
+// RV32P-LABEL: @paaddu_b(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.paaddu.b.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t paaddu_b(uint32_t rs1, uint32_t rs2) {
+  return __riscv_paaddu_b(rs1, rs2);
+}
+
+// RV32P-LABEL: @paaddu_h(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.paaddu.h.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t paaddu_h(uint32_t rs1, uint32_t rs2) {
+  return __riscv_paaddu_h(rs1, rs2);
 }
