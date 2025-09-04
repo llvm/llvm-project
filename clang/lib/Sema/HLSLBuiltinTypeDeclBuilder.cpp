@@ -175,7 +175,7 @@ public:
   template <typename TResource, typename TValue>
   BuiltinTypeMethodBuilder &setHandleFieldOnResource(TResource ResourceRecord, TValue HandleValue);
   template <typename T> BuiltinTypeMethodBuilder &returnValue(T ReturnValue);
-  BuiltinTypeDeclBuilder &finalize(CXXMethodDecl **OutMethod = nullptr);
+  BuiltinTypeDeclBuilder &finalize();
   Expr *getResourceHandleExpr();
 
 private:
@@ -576,7 +576,7 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::returnValue(T ReturnValue) {
 }
 
 BuiltinTypeDeclBuilder &
-BuiltinTypeMethodBuilder::finalize(CXXMethodDecl **OutMethod) {
+BuiltinTypeMethodBuilder::finalize() {
   assert(!DeclBuilder.Record->isCompleteDefinition() &&
          "record is already complete");
 
@@ -608,8 +608,6 @@ BuiltinTypeMethodBuilder::finalize(CXXMethodDecl **OutMethod) {
         AST, SourceRange(), AlwaysInlineAttr::CXX11_clang_always_inline));
     DeclBuilder.Record->addDecl(Method);
   }
-  if (OutMethod)
-    *OutMethod = Method;
   return DeclBuilder;
 }
 
@@ -714,7 +712,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleMember(
 
 // Adds default constructor to the resource class:
 // Resource::Resource()
-BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDefaultConstructor() {
+BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDefaultHandleConstructor() {
   if (Record->isCompleteDefinition())
     return *this;
 

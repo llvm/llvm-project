@@ -25,7 +25,6 @@ namespace clang {
 class ClassTemplateDecl;
 class NamespaceDecl;
 class CXXRecordDecl;
-class CXXConstructorDecl;
 class FieldDecl;
 
 namespace hlsl {
@@ -53,7 +52,6 @@ private:
   ClassTemplateDecl *PrevTemplate = nullptr;
   NamespaceDecl *HLSLNamespace = nullptr;
   llvm::StringMap<FieldDecl *> Fields;
-  CXXConstructorDecl *HandleCtor = nullptr;
 
 public:
   friend struct TemplateParameterListBuilder;
@@ -79,7 +77,7 @@ public:
   BuiltinTypeDeclBuilder &addArraySubscriptOperators();
 
   // Builtin types constructors
-  BuiltinTypeDeclBuilder &addDefaultConstructor();
+  BuiltinTypeDeclBuilder &addDefaultHandleConstructor();
   BuiltinTypeDeclBuilder &addHandleConstructorFromBinding();
   BuiltinTypeDeclBuilder &addHandleConstructorFromImplicitBinding();
 
