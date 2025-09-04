@@ -62,13 +62,13 @@ define void @s172(i32 noundef %xa, i32 noundef %xb, ptr noundef %a, ptr noundef 
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP20]], align 4, !alias.scope [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x i32>, ptr [[TMP21]], align 4, !alias.scope [[META0]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP22]], i64 16
+; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[TMP22]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x i32>, ptr [[TMP22]], align 4, !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
-; CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <4 x i32>, ptr [[TMP23]], align 4, !alias.scope [[META3]], !noalias [[META0]]
+; CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <4 x i32>, ptr [[TMP27]], align 4, !alias.scope [[META3]], !noalias [[META0]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = add nsw <4 x i32> [[WIDE_LOAD11]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = add nsw <4 x i32> [[WIDE_LOAD12]], [[WIDE_LOAD10]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP24]], ptr [[TMP22]], align 4, !alias.scope [[META3]], !noalias [[META0]]
-; CHECK-NEXT:    store <4 x i32> [[TMP25]], ptr [[TMP23]], align 4, !alias.scope [[META3]], !noalias [[META0]]
+; CHECK-NEXT:    store <4 x i32> [[TMP25]], ptr [[TMP27]], align 4, !alias.scope [[META3]], !noalias [[META0]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP26]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
