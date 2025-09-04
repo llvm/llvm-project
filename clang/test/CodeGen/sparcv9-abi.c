@@ -89,8 +89,20 @@ struct medium {
   int *c, *d;
 };
 
+struct medium_aligned {
+  _Alignas(16) int *a;
+  int *b, *c, *d;
+};
+
 // CHECK-LABEL: define{{.*}} %struct.medium @f_medium(ptr dead_on_return noundef %x)
 struct medium f_medium(struct medium x) {
+  x.a += *x.b;
+  x.b = 0;
+  return x;
+}
+
+// CHECK-LABEL: define{{.*}} %struct.medium_aligned @f_medium_aligned(ptr dead_on_return noundef %x)
+struct medium_aligned f_medium_aligned(struct medium_aligned x) {
   x.a += *x.b;
   x.b = 0;
   return x;
