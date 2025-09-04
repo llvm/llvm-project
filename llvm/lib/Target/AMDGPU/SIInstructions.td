@@ -2693,6 +2693,38 @@ def : GCNPat<(fshr i32:$src0, i32:$src1, i32:$src2),
 >;
 } // end True16Predicate = UseFakeTrue16Insts
 
+let True16Predicate = NotHasTrue16BitInsts in {
+let SubtargetPredicate = isNotGFX9Plus in {
+def : GCNPat<(i32 (int_amdgcn_v_alignbit i32:$src0, i32:$src1, i32:$src2)),
+             (V_ALIGNBIT_B32_e64 VSrc_b32:$src0, VSrc_b32:$src1, VSrc_b32:$src2)>;
+} // isNotGFX9Plus
+
+let SubtargetPredicate = isGFX9GFX10 in {
+def : GCNPat<(i32 (int_amdgcn_v_alignbit i32:$src0, i32:$src1, i32:$src2)),
+             (V_ALIGNBIT_B32_opsel_e64 /* src0_modifiers */ 0, $src0,
+                                       /* src1_modifiers */ 0, $src1,
+                                       /* src2_modifiers */ 0,
+                                       $src2, /* clamp */ 0, /* op_sel */ 0)>;
+} // isGFX9GFX10
+} // end True16Predicate = NotHasTrue16BitInsts
+
+let True16Predicate = UseRealTrue16Insts in {
+def : GCNPat<(i32 (int_amdgcn_v_alignbit i32:$src0, i32:$src1, i32:$src2)),
+             (V_ALIGNBIT_B32_t16_e64 /* src0_modifiers */ 0, $src0,
+                                     /* src1_modifiers */ 0, $src1,
+                                     /* src2_modifiers */ 0,
+                                     (EXTRACT_SUBREG $src2, lo16),
+                                     /* clamp */ 0, /* op_sel */ 0)>;
+} // end True16Predicate = UseRealTrue16Insts
+
+let True16Predicate = UseFakeTrue16Insts in {
+def : GCNPat<(i32 (int_amdgcn_v_alignbit i32:$src0, i32:$src1, i32:$src2)),
+             (V_ALIGNBIT_B32_fake16_e64 /* src0_modifiers */ 0, $src0,
+                                        /* src1_modifiers */ 0, $src1,
+                                        /* src2_modifiers */ 0,
+                                        $src2, /* clamp */ 0, /* op_sel */ 0)>;
+} // end True16Predicate = UseFakeTrue16Insts
+
 /********** ====================== **********/
 /**********   Indirect addressing  **********/
 /********** ====================== **********/

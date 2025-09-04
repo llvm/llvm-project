@@ -886,6 +886,11 @@ def int_amdgcn_bitop3 :
                         [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
                         [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<3>>]>;
 
+def int_amdgcn_v_alignbit :
+  DefaultAttrsIntrinsic<[llvm_i32_ty],
+                        [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+                        [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
+
 } // TargetPrefix = "amdgcn"
 
 // New-style image intrinsics

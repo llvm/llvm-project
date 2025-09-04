@@ -6,46 +6,46 @@
 define amdgpu_kernel void @any_extend_vector_inreg_v16i8_to_v4i32(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) %arg1) local_unnamed_addr #0 {
 ; GFX6-LABEL: any_extend_vector_inreg_v16i8_to_v4i32:
 ; GFX6:       ; %bb.0: ; %bb
-; GFX6-NEXT:    s_load_dwordx4 s[12:15], s[4:5], 0x9
-; GFX6-NEXT:    s_mov_b32 s3, 0xf000
-; GFX6-NEXT:    s_mov_b32 s2, -1
+; GFX6-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x9
+; GFX6-NEXT:    s_mov_b32 s15, 0xf000
+; GFX6-NEXT:    s_mov_b32 s14, -1
 ; GFX6-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    s_mov_b32 s0, s14
-; GFX6-NEXT:    s_mov_b32 s1, s15
-; GFX6-NEXT:    s_load_dwordx8 s[4:11], s[12:13], 0x0
+; GFX6-NEXT:    s_mov_b32 s12, s10
+; GFX6-NEXT:    s_mov_b32 s13, s11
+; GFX6-NEXT:    s_load_dwordx8 s[0:7], s[8:9], 0x0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    s_load_dword s4, s[12:13], 0x8
-; GFX6-NEXT:    buffer_store_byte v0, off, s[0:3], 0 offset:13
-; GFX6-NEXT:    buffer_store_byte v0, off, s[0:3], 0 offset:15
-; GFX6-NEXT:    buffer_store_byte v0, off, s[0:3], 0 offset:14
-; GFX6-NEXT:    buffer_store_byte v0, off, s[0:3], 0 offset:8
-; GFX6-NEXT:    buffer_store_byte v0, off, s[0:3], 0 offset:11
-; GFX6-NEXT:    buffer_store_byte v0, off, s[0:3], 0 offset:10
-; GFX6-NEXT:    buffer_store_byte v0, off, s[0:3], 0 offset:4
-; GFX6-NEXT:    buffer_store_byte v0, off, s[0:3], 0 offset:6
-; GFX6-NEXT:    buffer_store_byte v0, off, s[0:3], 0 offset:1
-; GFX6-NEXT:    buffer_store_byte v0, off, s[0:3], 0
-; GFX6-NEXT:    buffer_store_byte v0, off, s[0:3], 0 offset:3
-; GFX6-NEXT:    s_lshr_b32 s8, s9, 16
-; GFX6-NEXT:    s_waitcnt expcnt(0)
-; GFX6-NEXT:    v_mov_b32_e32 v0, s6
+; GFX6-NEXT:    s_load_dword s0, s[8:9], 0x8
+; GFX6-NEXT:    buffer_store_byte v0, off, s[12:15], 0 offset:13
+; GFX6-NEXT:    buffer_store_byte v0, off, s[12:15], 0 offset:15
+; GFX6-NEXT:    buffer_store_byte v0, off, s[12:15], 0 offset:14
+; GFX6-NEXT:    buffer_store_byte v0, off, s[12:15], 0 offset:8
+; GFX6-NEXT:    buffer_store_byte v0, off, s[12:15], 0 offset:11
+; GFX6-NEXT:    buffer_store_byte v0, off, s[12:15], 0 offset:10
+; GFX6-NEXT:    buffer_store_byte v0, off, s[12:15], 0 offset:4
+; GFX6-NEXT:    buffer_store_byte v0, off, s[12:15], 0 offset:6
+; GFX6-NEXT:    buffer_store_byte v0, off, s[12:15], 0 offset:1
+; GFX6-NEXT:    buffer_store_byte v0, off, s[12:15], 0
+; GFX6-NEXT:    buffer_store_byte v0, off, s[12:15], 0 offset:3
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    s_lshl_b64 s[6:7], s[4:5], 8
-; GFX6-NEXT:    v_mov_b32_e32 v1, s11
-; GFX6-NEXT:    buffer_store_byte v1, off, s[0:3], 0 offset:9
+; GFX6-NEXT:    s_lshl_b64 s[8:9], s[0:1], 8
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
-; GFX6-NEXT:    v_mov_b32_e32 v1, s5
-; GFX6-NEXT:    buffer_store_byte v1, off, s[0:3], 0 offset:2
-; GFX6-NEXT:    v_alignbit_b32 v0, s8, v0, 16
+; GFX6-NEXT:    v_mov_b32_e32 v0, s7
+; GFX6-NEXT:    buffer_store_byte v0, off, s[12:15], 0 offset:9
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
-; GFX6-NEXT:    v_mov_b32_e32 v1, s7
-; GFX6-NEXT:    buffer_store_byte v1, off, s[0:3], 0 offset:12
+; GFX6-NEXT:    v_mov_b32_e32 v0, s1
+; GFX6-NEXT:    buffer_store_byte v0, off, s[12:15], 0 offset:2
+; GFX6-NEXT:    s_lshr_b32 s0, s2, 24
+; GFX6-NEXT:    s_lshr_b32 s1, s5, 24
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
-; GFX6-NEXT:    v_lshrrev_b32_e32 v1, 8, v0
-; GFX6-NEXT:    v_lshrrev_b32_e32 v0, 24, v0
-; GFX6-NEXT:    buffer_store_byte v1, off, s[0:3], 0 offset:5
-; GFX6-NEXT:    buffer_store_byte v0, off, s[0:3], 0 offset:7
+; GFX6-NEXT:    v_mov_b32_e32 v0, s0
+; GFX6-NEXT:    buffer_store_byte v0, off, s[12:15], 0 offset:5
+; GFX6-NEXT:    s_waitcnt expcnt(0)
+; GFX6-NEXT:    v_mov_b32_e32 v0, s1
+; GFX6-NEXT:    buffer_store_byte v0, off, s[12:15], 0 offset:7
+; GFX6-NEXT:    s_waitcnt expcnt(0)
+; GFX6-NEXT:    v_mov_b32_e32 v0, s9
+; GFX6-NEXT:    buffer_store_byte v0, off, s[12:15], 0 offset:12
 ; GFX6-NEXT:    s_endpgm
 ;
 ; GFX8-LABEL: any_extend_vector_inreg_v16i8_to_v4i32:
