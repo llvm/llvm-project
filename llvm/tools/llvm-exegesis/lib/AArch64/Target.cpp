@@ -24,7 +24,7 @@
 #include <unistd.h> // for getpagesize()
 #ifdef HAVE_LIBPFM
 #include <perfmon/perf_event.h>
-#endif                   // HAVE_LIBPFM
+#endif                 // HAVE_LIBPFM
 #include <sys/prctl.h> // For PR_PAC_* constants
 #ifndef PR_PAC_APIAKEY
 #define PR_PAC_APIAKEY (1UL << 0)
