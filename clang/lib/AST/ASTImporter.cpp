@@ -1740,9 +1740,20 @@ ExpectedType ASTNodeImporter::VisitDeducedTemplateSpecializationType(
 }
 
 ExpectedType ASTNodeImporter::VisitTagType(const TagType *T) {
-  Expected<TagDecl *> ToDeclOrErr = import(T->getOriginalDecl());
+  TagDecl *DeclForType = T->getOriginalDecl();
+  Expected<TagDecl *> ToDeclOrErr = import(DeclForType);
   if (!ToDeclOrErr)
     return ToDeclOrErr.takeError();
+
+  if (DeclForType->isUsed()) {
+    // If there is a definition of the 'OriginalDecl', it should be imported to
+    // have all information for the type in the "To" AST. (In some cases no
+    // other reference may exist to the definition decl and it would not be
+    // imported otherwise.)
+    Expected<TagDecl *> ToDefDeclOrErr = import(DeclForType->getDefinition());
+    if (!ToDefDeclOrErr)
+      return ToDefDeclOrErr.takeError();
+  }
 
   if (T->isCanonicalUnqualified())
     return Importer.getToContext().getCanonicalTagType(*ToDeclOrErr);
