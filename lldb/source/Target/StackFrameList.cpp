@@ -321,13 +321,14 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
     addr_t pc = calleeInfo.address;
     // If the callee address refers to the call instruction, we do not want to
     // subtract 1 from this value.
+    const bool artificial = true;
     const bool behaves_like_zeroth_frame =
         calleeInfo.address_type == CallEdge::AddrType::Call;
     SymbolContext sc;
     callee->CalculateSymbolContext(&sc);
     auto synth_frame = std::make_shared<StackFrame>(
         m_thread.shared_from_this(), frame_idx, concrete_frame_idx, cfa,
-        cfa_is_valid, pc, StackFrame::Kind::Artificial,
+        cfa_is_valid, pc, StackFrame::Kind::Regular, artificial,
         behaves_like_zeroth_frame, &sc);
     m_frames.push_back(synth_frame);
     LLDB_LOG(log, "Pushed frame {0} at {1:x}", callee->GetDisplayName(), pc);
@@ -470,7 +471,8 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
       const bool cfa_is_valid = true;
       unwind_frame_sp = std::make_shared<StackFrame>(
           m_thread.shared_from_this(), m_frames.size(), idx, cfa, cfa_is_valid,
-          pc, StackFrame::Kind::Regular, behaves_like_zeroth_frame, nullptr);
+          pc, StackFrame::Kind::Regular, false, behaves_like_zeroth_frame,
+          nullptr);
 
       // Create synthetic tail call frames between the previous frame and the
       // newly-found frame. The new frame's index may change after this call,

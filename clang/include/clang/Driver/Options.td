@@ -1642,6 +1642,17 @@ defm auto_import : BoolFOption<"auto-import",
 def offload_EQ : CommaJoined<["--"], "offload=">, Flags<[NoXarchOption]>, Alias<offload_targets_EQ>,
   HelpText<"Specify comma-separated list of offloading target triples (CUDA and HIP only)">;
 
+// This flag is only here so we can test the named loops implementation
+// in C++ mode and C language modes before C2y to make sure it actually
+// works; it should be removed once the syntax of the feature is stable
+// enough to backport it to earlier language modes (and to C++ if it ever
+// gets standardised as a C++ feature).
+defm named_loops
+    : BoolFOption<
+          "named-loops", LangOpts<"NamedLoops">, DefaultFalse,
+          PosFlag<SetTrue, [], [CC1Option], "Enable support for named loops">,
+          NegFlag<SetFalse>>;
+
 // C++ Coroutines
 defm coroutines : BoolFOption<"coroutines",
   LangOpts<"Coroutines">, Default<cpp20.KeyPath>,
@@ -8708,7 +8719,8 @@ def fopenmp_is_target_device : Flag<["-"], "fopenmp-is-target-device">,
   HelpText<"Generate code only for an OpenMP target device.">;
 def : Flag<["-"], "fopenmp-is-device">, Alias<fopenmp_is_target_device>;
 def fopenmp_host_ir_file_path : Separate<["-"], "fopenmp-host-ir-file-path">,
-  HelpText<"Path to the IR file produced by the frontend for the host.">;
+  HelpText<"Path to the IR file produced by the frontend for the host.">,
+  MarshallingInfoString<LangOpts<"OMPHostIRFile">>;
 
 } // let Visibility = [CC1Option, FC1Option]
 

@@ -2517,10 +2517,8 @@ public:
   createInstrIncMemory(const MCSymbol *Target, MCContext *Ctx, bool IsLeaf,
                        unsigned CodePointerSize) const override {
     unsigned int I = 0;
-    InstructionListType Instrs(IsLeaf ? 12 : 10);
+    InstructionListType Instrs(10);
 
-    if (IsLeaf)
-      createStackPointerIncrement(Instrs[I++], 128);
     createPushRegisters(Instrs[I++], AArch64::X0, AArch64::X1);
     getSystemFlag(Instrs[I++], AArch64::X1);
     InstructionListType Addr = materializeAddress(Target, Ctx, AArch64::X0);
@@ -2535,8 +2533,6 @@ public:
     loadReg(Instrs[I++], AArch64::X2, AArch64::SP);
     setSystemFlag(Instrs[I++], AArch64::X1);
     createPopRegisters(Instrs[I++], AArch64::X0, AArch64::X1);
-    if (IsLeaf)
-      createStackPointerDecrement(Instrs[I++], 128);
     return Instrs;
   }
 

@@ -5551,16 +5551,6 @@ bool Sema::BuiltinComplex(CallExpr *TheCall) {
            << Real->getSourceRange() << Imag->getSourceRange();
   }
 
-  // We don't allow _Complex _Float16 nor _Complex __fp16 as type specifiers;
-  // don't allow this builtin to form those types either.
-  // FIXME: Should we allow these types?
-  if (Real->getType()->isFloat16Type())
-    return Diag(TheCall->getBeginLoc(), diag::err_invalid_complex_spec)
-           << "_Float16";
-  if (Real->getType()->isHalfType())
-    return Diag(TheCall->getBeginLoc(), diag::err_invalid_complex_spec)
-           << "half";
-
   TheCall->setType(Context.getComplexType(Real->getType()));
   return false;
 }

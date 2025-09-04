@@ -236,6 +236,16 @@ public:
   clang::CharUnits getNaturalTypeAlignment(clang::QualType t,
                                            LValueBaseInfo *baseInfo);
 
+  /// TODO: Add TBAAAccessInfo
+  CharUnits getDynamicOffsetAlignment(CharUnits actualBaseAlign,
+                                      const CXXRecordDecl *baseDecl,
+                                      CharUnits expectedTargetAlign);
+
+  /// Returns the assumed alignment of a virtual base of a class.
+  CharUnits getVBaseAlignment(CharUnits derivedAlign,
+                              const CXXRecordDecl *derived,
+                              const CXXRecordDecl *vbase);
+
   cir::FuncOp
   getAddrOfCXXStructor(clang::GlobalDecl gd,
                        const CIRGenFunctionInfo *fnInfo = nullptr,

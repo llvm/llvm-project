@@ -1728,7 +1728,9 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
            "Whole wave functions can use the reg mapped for their i1 argument");
 
     // FIXME: Be more efficient!
-    for (MCRegister Reg : AMDGPU::VGPR_32RegClass)
+    unsigned NumArchVGPRs = ST.has1024AddressableVGPRs() ? 1024 : 256;
+    for (MCRegister Reg :
+         AMDGPU::VGPR_32RegClass.getRegisters().take_front(NumArchVGPRs))
       if (MF.getRegInfo().isPhysRegModified(Reg)) {
         MFI->reserveWWMRegister(Reg);
         MF.begin()->addLiveIn(Reg);

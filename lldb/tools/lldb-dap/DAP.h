@@ -156,6 +156,9 @@ struct DAP final : private DAPTransport::MessageHandler {
   /// The set of features supported by the connected client.
   llvm::DenseSet<ClientFeature> clientFeatures;
 
+  /// Whether to disable sourcing .lldbinit files.
+  bool no_lldbinit;
+
   /// The initial thread list upon attaching.
   std::vector<protocol::Thread> initial_thread_list;
 
@@ -178,13 +181,16 @@ struct DAP final : private DAPTransport::MessageHandler {
   /// \param[in] pre_init_commands
   ///     LLDB commands to execute as soon as the debugger instance is
   ///     allocated.
+  /// \param[in] no_lldbinit
+  ///     Whether to disable sourcing .lldbinit files.
   /// \param[in] transport
   ///     Transport for this debug session.
   /// \param[in] loop
   ///     Main loop associated with this instance.
   DAP(Log *log, const ReplMode default_repl_mode,
-      std::vector<std::string> pre_init_commands, llvm::StringRef client_name,
-      DAPTransport &transport, lldb_private::MainLoop &loop);
+      std::vector<std::string> pre_init_commands, bool no_lldbinit,
+      llvm::StringRef client_name, DAPTransport &transport,
+      lldb_private::MainLoop &loop);
 
   ~DAP();
 

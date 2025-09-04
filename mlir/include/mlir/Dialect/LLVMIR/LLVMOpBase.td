@@ -95,8 +95,7 @@ def LLVM_NonLoadableTargetExtType : Type<
 // type that has size (not void, function, opaque struct type or target
 // extension type which does not support memory operations).
 def LLVM_LoadableType : Type<
-  Or<[And<[LLVM_PrimitiveType.predicate, Neg<LLVM_OpaqueStruct.predicate>,
-          Neg<LLVM_NonLoadableTargetExtType.predicate>]>,
+  Or<[CPred<"mlir::LLVM::isLoadableType($_self)">,
       LLVM_PointerElementTypeInterface.predicate]>,
   "LLVM type with size">;
 

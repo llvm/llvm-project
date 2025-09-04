@@ -1001,10 +1001,17 @@ cir::GlobalOp CIRGenModule::createOrReplaceCXXRuntimeVariable(
       mlir::SymbolTable::lookupSymbolIn(theModule, name));
 
   if (gv) {
-    // There should be handling added here to check the type as assert that
-    // gv was a declaration if the type doesn't match and handling below
-    // to replace the variable if it was a declaration.
-    errorNYI(loc, "createOrReplaceCXXRuntimeVariable: already exists");
+    // Check if the variable has the right type.
+    if (gv.getSymType() == ty)
+      return gv;
+
+    // Because of C++ name mangling, the only way we can end up with an already
+    // existing global with the same name is if it has been declared extern
+    // "C".
+    assert(gv.isDeclaration() && "Declaration has wrong type!");
+
+    errorNYI(loc, "createOrReplaceCXXRuntimeVariable: declaration exists with "
+                  "wrong type");
     return gv;
   }
 

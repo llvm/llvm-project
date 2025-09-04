@@ -682,13 +682,90 @@ struct UnrollUpdateOffsetOp : public UnrollPattern<xegpu::UpdateOffsetOp> {
   }
 };
 
+struct UnrollLoadMatrixOp : public UnrollPattern<xegpu::LoadMatrixOp> {
+  using UnrollPattern<xegpu::LoadMatrixOp>::UnrollPattern;
+  LogicalResult matchAndRewrite(xegpu::LoadMatrixOp op,
+                                PatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    VectorType valueTy = op.getType();
+    std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
+    if (!targetShape || targetShape->size() != (size_t)valueTy.getRank())
+      return failure();
+
+    Type elemTy = valueTy.getElementType();
+    ArrayRef<int64_t> shape = valueTy.getShape();
+    auto layout = dyn_cast<xegpu::LayoutAttr>(op.getLayoutAttr());
+
+    VectorType newValueTy = valueTy.cloneWith(*targetShape, elemTy);
+
+    SmallVector<OpFoldResult> mixedOffsets = op.getMixedOffsets();
+    SmallVector<SmallVector<OpFoldResult>> offsetsList;
+    for (SmallVector<int64_t> offsets :
+         StaticTileOffsetRange(shape, *targetShape)) {
+      auto adds = xegpu::addElementwise(
+          rewriter, loc, mixedOffsets,
+          getAsIndexOpFoldResult(op.getContext(), offsets));
+      offsetsList.push_back(adds);
+    }
+
+    SmallVector<Value> newOps;
+    layout = layout.dropInstData();
+    for (SmallVector<OpFoldResult> offsets : offsetsList) {
+      auto newOp = rewriter.create<xegpu::LoadMatrixOp>(
+          op.getLoc(), newValueTy, op.getMemDesc(), offsets, layout);
+      newOps.push_back(newOp);
+    }
+    Value castOp = unpack(newOps, op.getType(), *targetShape, loc, rewriter);
+    rewriter.replaceOp(op, castOp);
+    return success();
+  }
+};
+
+struct UnrollStoreMatrixOp : public UnrollPattern<xegpu::StoreMatrixOp> {
+  using UnrollPattern<xegpu::StoreMatrixOp>::UnrollPattern;
+  LogicalResult matchAndRewrite(xegpu::StoreMatrixOp op,
+                                PatternRewriter &rewriter) const override {
+    std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
+    if (!targetShape)
+      return failure();
+
+    Location loc = op.getLoc();
+    VectorType valueTy = op.getData().getType();
+    ArrayRef<int64_t> shape = valueTy.getShape();
+    auto layout = dyn_cast<xegpu::LayoutAttr>(op.getLayoutAttr());
+
+    SmallVector<Type> convertedValTypes =
+        getUnrolledTypes(valueTy, *targetShape);
+    SmallVector<Value> convertedValues =
+        pack(op.getData(), convertedValTypes, *targetShape, loc, rewriter);
+
+    SmallVector<OpFoldResult> mixedOffsets = op.getMixedOffsets();
+    SmallVector<SmallVector<OpFoldResult>> offsetsList;
+    for (SmallVector<int64_t> offsets :
+         StaticTileOffsetRange(shape, *targetShape)) {
+      auto adds = xegpu::addElementwise(
+          rewriter, loc, mixedOffsets,
+          getAsIndexOpFoldResult(op.getContext(), offsets));
+      offsetsList.push_back(adds);
+    }
+
+    for (auto [v, offsets] : llvm::zip_equal(convertedValues, offsetsList))
+      rewriter.create<xegpu::StoreMatrixOp>(loc, v, op.getMemDesc(), offsets,
+                                            layout.dropInstData());
+
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::xegpu::populateXeGPUUnrollPatterns(
     RewritePatternSet &patterns, const xegpu::UnrollOptions &options) {
-  patterns.add<UnrollCreateNdOp, UnrollUpdateNdOffsetOp, UnrollPrefetchNdOp,
-               UnrollLoadNdOp, UnrollStoreNdOp, UnrollDpasOp,
-               UnrollCreateDescOp, UnrollLoadGatherOp, UnrollStoreScatterOp,
-               UnrollPrefetchOp, UnrollUpdateOffsetOp>(patterns.getContext(),
-                                                       options);
+  patterns
+      .add<UnrollCreateNdOp, UnrollUpdateNdOffsetOp, UnrollPrefetchNdOp,
+           UnrollLoadNdOp, UnrollStoreNdOp, UnrollDpasOp, UnrollCreateDescOp,
+           UnrollLoadGatherOp, UnrollStoreScatterOp, UnrollPrefetchOp,
+           UnrollUpdateOffsetOp, UnrollLoadMatrixOp, UnrollStoreMatrixOp>(
+          patterns.getContext(), options);
 }

@@ -694,7 +694,12 @@ void DataLayout::setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth,
 
 Align DataLayout::getIntegerAlignment(uint32_t BitWidth,
                                       bool abi_or_pref) const {
-  auto I = lower_bound(IntSpecs, BitWidth, LessPrimitiveBitWidth());
+  auto I = IntSpecs.begin();
+  for (; I != IntSpecs.end(); ++I) {
+    if (I->BitWidth >= BitWidth)
+      break;
+  }
+
   // If we don't have an exact match, use alignment of next larger integer
   // type. If there is none, use alignment of largest integer type by going
   // back one element.
@@ -926,12 +931,13 @@ static APInt getElementIndex(TypeSize ElemSize, APInt &Offset) {
     return APInt::getZero(BitWidth);
   }
 
-  APInt Index = Offset.sdiv(ElemSize);
-  Offset -= Index * ElemSize;
+  uint64_t FixedElemSize = ElemSize.getFixedValue();
+  APInt Index = Offset.sdiv(FixedElemSize);
+  Offset -= Index * FixedElemSize;
   if (Offset.isNegative()) {
     // Prefer a positive remaining offset to allow struct indexing.
     --Index;
-    Offset += ElemSize;
+    Offset += FixedElemSize;
     assert(Offset.isNonNegative() && "Remaining offset shouldn't be negative");
   }
   return Index;

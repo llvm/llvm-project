@@ -1766,9 +1766,8 @@ _mm256_mullo_epi16(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit vector of [8 x i32] containing one of the source operands.
 /// \returns A 256-bit vector of [8 x i32] containing the products.
-static __inline__  __m256i __DEFAULT_FN_ATTRS256
-_mm256_mullo_epi32 (__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_mullo_epi32(__m256i __a, __m256i __b) {
   return (__m256i)((__v8su)__a * (__v8su)__b);
 }
 

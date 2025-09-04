@@ -5,22 +5,17 @@ define void @vec_reduce_smin_v32i8(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: vec_reduce_smin_v32i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 78
-; CHECK-NEXT:    xvshuf4i.b $xr1, $xr1, 228
-; CHECK-NEXT:    xvmin.b $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 68
-; CHECK-NEXT:    xvbsrl.v $xr1, $xr1, 8
-; CHECK-NEXT:    xvmin.b $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 68
-; CHECK-NEXT:    xvsrli.d $xr1, $xr1, 32
-; CHECK-NEXT:    xvmin.b $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 68
-; CHECK-NEXT:    xvshuf4i.b $xr1, $xr1, 14
-; CHECK-NEXT:    xvmin.b $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 68
-; CHECK-NEXT:    xvrepl128vei.b $xr1, $xr1, 1
-; CHECK-NEXT:    xvmin.b $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvstelm.b $xr0, $a1, 0, 0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vmin.b $vr0, $vr0, $vr1
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 8
+; CHECK-NEXT:    vmin.b $vr0, $vr1, $vr0
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 4
+; CHECK-NEXT:    vmin.b $vr0, $vr1, $vr0
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 2
+; CHECK-NEXT:    vmin.b $vr0, $vr1, $vr0
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 1
+; CHECK-NEXT:    vmin.b $vr0, $vr1, $vr0
+; CHECK-NEXT:    vstelm.b $vr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %v = load <32 x i8>, ptr %src
   %res = call i8 @llvm.vector.reduce.smin.v32i8(<32 x i8> %v)
@@ -32,19 +27,15 @@ define void @vec_reduce_smin_v16i16(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: vec_reduce_smin_v16i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 78
-; CHECK-NEXT:    xvshuf4i.h $xr1, $xr1, 228
-; CHECK-NEXT:    xvmin.h $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 68
-; CHECK-NEXT:    xvbsrl.v $xr1, $xr1, 8
-; CHECK-NEXT:    xvmin.h $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 68
-; CHECK-NEXT:    xvshuf4i.h $xr1, $xr1, 14
-; CHECK-NEXT:    xvmin.h $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 68
-; CHECK-NEXT:    xvrepl128vei.h $xr1, $xr1, 1
-; CHECK-NEXT:    xvmin.h $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvstelm.h $xr0, $a1, 0, 0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vmin.h $vr0, $vr0, $vr1
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 8
+; CHECK-NEXT:    vmin.h $vr0, $vr1, $vr0
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 4
+; CHECK-NEXT:    vmin.h $vr0, $vr1, $vr0
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 2
+; CHECK-NEXT:    vmin.h $vr0, $vr1, $vr0
+; CHECK-NEXT:    vstelm.h $vr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %v = load <16 x i16>, ptr %src
   %res = call i16 @llvm.vector.reduce.smin.v16i16(<16 x i16> %v)
@@ -56,16 +47,13 @@ define void @vec_reduce_smin_v8i32(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: vec_reduce_smin_v8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 78
-; CHECK-NEXT:    xvshuf4i.w $xr1, $xr1, 228
-; CHECK-NEXT:    xvmin.w $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 68
-; CHECK-NEXT:    xvshuf4i.w $xr1, $xr1, 14
-; CHECK-NEXT:    xvmin.w $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 68
-; CHECK-NEXT:    xvrepl128vei.w $xr1, $xr1, 1
-; CHECK-NEXT:    xvmin.w $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvstelm.w $xr0, $a1, 0, 0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vmin.w $vr0, $vr0, $vr1
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 8
+; CHECK-NEXT:    vmin.w $vr0, $vr1, $vr0
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 4
+; CHECK-NEXT:    vmin.w $vr0, $vr1, $vr0
+; CHECK-NEXT:    vstelm.w $vr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %v = load <8 x i32>, ptr %src
   %res = call i32 @llvm.vector.reduce.smin.v8i32(<8 x i32> %v)
@@ -77,15 +65,11 @@ define void @vec_reduce_smin_v4i64(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: vec_reduce_smin_v4i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; CHECK-NEXT:    xvld $xr1, $a0, %pc_lo12(.LCPI3_0)
-; CHECK-NEXT:    xvpermi.d $xr2, $xr0, 78
-; CHECK-NEXT:    xvshuf.d $xr1, $xr0, $xr2
-; CHECK-NEXT:    xvmin.d $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 68
-; CHECK-NEXT:    xvrepl128vei.d $xr1, $xr1, 1
-; CHECK-NEXT:    xvmin.d $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvstelm.d $xr0, $a1, 0, 0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vmin.d $vr0, $vr0, $vr1
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 8
+; CHECK-NEXT:    vmin.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vstelm.d $vr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %v = load <4 x i64>, ptr %src
   %res = call i64 @llvm.vector.reduce.smin.v4i64(<4 x i64> %v)

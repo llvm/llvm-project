@@ -1,11 +1,12 @@
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1250 --amdhsa-code-object-version=4 < %s | FileCheck --check-prefixes=ASM %s
+// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1250 --amdhsa-code-object-version=4 < %s | FileCheck --check-prefixes=ASM,W32 %s
 // RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1250 --amdhsa-code-object-version=4 -filetype=obj < %s > %t
 // RUN: llvm-readelf -S -r -s %t | FileCheck --check-prefix=READOBJ %s
 // RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
+// RUN: not llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=+wavefrontsize64,-wavefrontsize32 --amdhsa-code-object-version=4 < %s 2>&1 | FileCheck --check-prefix=W64-ERR %s
 
 // READOBJ: Section Headers
 // READOBJ: .text   PROGBITS {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9]+}} AX {{[0-9]+}} {{[0-9]+}} 256
-// READOBJ: .rodata PROGBITS {{[0-9a-f]+}}        000540 {{[0-9a-f]+}} {{[0-9]+}}  A {{[0-9]+}} {{[0-9]+}} 64
+// READOBJ: .rodata PROGBITS {{[0-9a-f]+}}        000640 {{[0-9a-f]+}} {{[0-9]+}}  A {{[0-9]+}} {{[0-9]+}} 64
 
 // READOBJ: Relocation section '.rela.rodata' at offset
 // READOBJ: 0000000000000010 {{[0-9a-f]+}}00000005 R_AMDGPU_REL64 0000000000000000 .text + 10
@@ -20,11 +21,13 @@
 // READOBJ-NEXT: 0000000000000200  0 FUNC    LOCAL  PROTECTED 2 special_sgpr
 // READOBJ-NEXT: 0000000000000300  0 FUNC    LOCAL  PROTECTED 2 disabled_user_sgpr
 // READOBJ-NEXT: 0000000000000400  0 FUNC    LOCAL  PROTECTED 2 max_lds_size
+// READOBJ-NEXT: 0000000000000500  0 FUNC    LOCAL  PROTECTED 2 max_vgprs
 // READOBJ-NEXT: 0000000000000000 64 OBJECT  LOCAL  DEFAULT   3 minimal.kd
 // READOBJ-NEXT: 0000000000000040 64 OBJECT  LOCAL  DEFAULT   3 complete.kd
 // READOBJ-NEXT: 0000000000000080 64 OBJECT  LOCAL  DEFAULT   3 special_sgpr.kd
 // READOBJ-NEXT: 00000000000000c0 64 OBJECT  LOCAL  DEFAULT   3 disabled_user_sgpr.kd
 // READOBJ-NEXT: 0000000000000100 64 OBJECT  LOCAL  DEFAULT   3 max_lds_size.kd
+// READOBJ-NEXT: 0000000000000140 64 OBJECT  LOCAL  DEFAULT   3 max_vgprs.kd
 
 // OBJDUMP: Contents of section .rodata
 // Note, relocation for KERNEL_CODE_ENTRY_BYTE_OFFSET is not resolved here.
@@ -37,7 +40,7 @@
 // OBJDUMP-NEXT: 0040 01000000 01000000 0c000000 00000000
 // OBJDUMP-NEXT: 0050 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0060 00000000 00000000 00000000 00c00000
-// OBJDUMP-NEXT: 0070 015021c4 410f007f 5e068200 00000000
+// OBJDUMP-NEXT: 0070 005021c4 410f007f 5e068200 00000000
 // special_sgpr
 // OBJDUMP-NEXT: 0080 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0090 00000000 00000000 00000000 00000000
@@ -53,6 +56,11 @@
 // OBJDUMP-NEXT: 0110 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0120 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0130 00000cc0 80000000 00040000 00000000
+// max_vgprs
+// OBJDUMP-NEXT: 0140 00000000 00000000 00000000 00000000
+// OBJDUMP-NEXT: 0150 00000000 00000000 00000000 00000000
+// OBJDUMP-NEXT: 0160 00000000 00000000 00000000 00000000
+// OBJDUMP-NEXT: 0170 3f000cc0 80000000 00040000 00000000
 
 .text
 
@@ -82,6 +90,11 @@ disabled_user_sgpr:
 .p2align 8
 .type max_lds_size,@function
 max_lds_size:
+  s_endpgm
+
+.p2align 8
+.type max_vgprs,@function
+max_vgprs:
   s_endpgm
 
 .rodata
@@ -227,6 +240,18 @@ max_lds_size:
 // ASM: .amdhsa_kernel max_lds_size
 // ASM: .amdhsa_group_segment_fixed_size 393216
 // ASM: .end_amdhsa_kernel
+
+// Test maximum VGPR allocation
+
+// ASM: .amdhsa_kernel max_vgprs
+// W32: .amdhsa_next_free_vgpr 1024
+// W64-ERR: error: value out of range
+// ASM: .end_amdhsa_kernel
+.p2align 6
+.amdhsa_kernel max_vgprs
+ .amdhsa_next_free_vgpr 1024
+ .amdhsa_next_free_sgpr 1
+.end_amdhsa_kernel
 
 .section .foo
 

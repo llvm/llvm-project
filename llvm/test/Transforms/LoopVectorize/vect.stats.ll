@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=loop-vectorize -force-vector-interleave=4 -force-vector-width=4 -debug-only=loop-vectorize -enable-early-exit-vectorization -use-symbolic-maxbtc-deref-loop --disable-output -stats -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -force-vector-interleave=4 -force-vector-width=4 -debug-only=loop-vectorize -enable-early-exit-vectorization --disable-output -stats -S 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; We have 3 loops, two of them are vectorizable (with one being early-exit

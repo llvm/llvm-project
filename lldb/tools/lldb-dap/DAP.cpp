@@ -121,12 +121,13 @@ static std::string capitalize(llvm::StringRef str) {
 llvm::StringRef DAP::debug_adapter_path = "";
 
 DAP::DAP(Log *log, const ReplMode default_repl_mode,
-         std::vector<std::string> pre_init_commands,
+         std::vector<std::string> pre_init_commands, bool no_lldbinit,
          llvm::StringRef client_name, DAPTransport &transport, MainLoop &loop)
     : log(log), transport(transport), broadcaster("lldb-dap"),
       progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
-      repl_mode(default_repl_mode), m_client_name(client_name), m_loop(loop) {
+      repl_mode(default_repl_mode), no_lldbinit(no_lldbinit),
+      m_client_name(client_name), m_loop(loop) {
   configuration.preInitCommands = std::move(pre_init_commands);
   RegisterRequests();
 }

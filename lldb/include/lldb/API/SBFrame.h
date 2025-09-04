@@ -104,6 +104,8 @@ public:
 
   bool IsArtificial() const;
 
+  bool IsSynthetic() const;
+
   /// Return whether a frame recognizer decided this frame should not
   /// be displayes in backtraces etc.
   bool IsHidden() const;

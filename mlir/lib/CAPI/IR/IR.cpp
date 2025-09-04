@@ -465,6 +465,14 @@ MlirModule mlirModuleFromOperation(MlirOperation op) {
   return wrap(dyn_cast<ModuleOp>(unwrap(op)));
 }
 
+bool mlirModuleEqual(MlirModule lhs, MlirModule rhs) {
+  return unwrap(lhs) == unwrap(rhs);
+}
+
+size_t mlirModuleHashValue(MlirModule mod) {
+  return OperationEquivalence::computeHash(unwrap(mod).getOperation());
+}
+
 //===----------------------------------------------------------------------===//
 // Operation state API.
 //===----------------------------------------------------------------------===//
@@ -634,6 +642,10 @@ void mlirOperationRemoveFromParent(MlirOperation op) { unwrap(op)->remove(); }
 
 bool mlirOperationEqual(MlirOperation op, MlirOperation other) {
   return unwrap(op) == unwrap(other);
+}
+
+size_t mlirOperationHashValue(MlirOperation op) {
+  return OperationEquivalence::computeHash(unwrap(op));
 }
 
 MlirContext mlirOperationGetContext(MlirOperation op) {

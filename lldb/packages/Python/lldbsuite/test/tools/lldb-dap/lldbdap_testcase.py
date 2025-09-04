@@ -21,6 +21,7 @@ class DAPTestCaseBase(TestBase):
         self,
         lldbDAPEnv: Optional[dict[str, str]] = None,
         connection: Optional[str] = None,
+        additional_args: Optional[list[str]] = None,
     ):
         """Create the Visual Studio Code debug adapter"""
         self.assertTrue(
@@ -33,15 +34,17 @@ class DAPTestCaseBase(TestBase):
             init_commands=self.setUpCommands(),
             log_file=log_file_path,
             env=lldbDAPEnv,
+            additional_args=additional_args or [],
         )
 
     def build_and_create_debug_adapter(
         self,
         lldbDAPEnv: Optional[dict[str, str]] = None,
         dictionary: Optional[dict] = None,
+        additional_args: Optional[list[str]] = None,
     ):
         self.build(dictionary=dictionary)
-        self.create_debug_adapter(lldbDAPEnv)
+        self.create_debug_adapter(lldbDAPEnv, additional_args=additional_args)
 
     def build_and_create_debug_adapter_for_attach(self):
         """Variant of build_and_create_debug_adapter that builds a uniquely

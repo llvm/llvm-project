@@ -2068,3 +2068,63 @@ func.func @acc_loop_container() {
 // CHECK:       acc.loop
 // CHECK:       scf.for
 // CHECK:       scf.for
+
+// -----
+
+// Test private recipe with data bounds for array slicing
+acc.private.recipe @privatization_memref_slice : memref<10x10xf32> init {
+^bb0(%arg0: memref<10x10xf32>, %bounds0: !acc.data_bounds_ty, %bounds1: !acc.data_bounds_ty):
+  // NOTE: OpenACC bounds are ordered from inner-most to outer-most dimension (rank 0 = inner-most)
+  // MLIR memref<10x10xf32> has first dimension as outer (10) and second as inner (10)
+  // So bounds0 corresponds to memref's second dimension (inner), bounds1 to first dimension (outer)
+
+  // Extract bounds information for the slice
+  // bounds0 = inner dimension (memref dimension 1)
+  %lb0 = acc.get_lowerbound %bounds0 : (!acc.data_bounds_ty) -> index
+  %extent0 = acc.get_extent %bounds0 : (!acc.data_bounds_ty) -> index
+  %stride0 = acc.get_stride %bounds0 : (!acc.data_bounds_ty) -> index
+
+  // bounds1 = outer dimension (memref dimension 0)
+  %lb1 = acc.get_lowerbound %bounds1 : (!acc.data_bounds_ty) -> index
+  %extent1 = acc.get_extent %bounds1 : (!acc.data_bounds_ty) -> index
+  %stride1 = acc.get_stride %bounds1 : (!acc.data_bounds_ty) -> index
+
+  // Allocate memory for only the slice dimensions on the stack
+  // Note: memref dimensions are outer-first, so extent1 (outer) comes first, extent0 (inner) second
+  %slice_alloc = memref.alloca(%extent1, %extent0) : memref<?x?xf32>
+
+  // Adjust base pointer to account for the slice offset
+  // We need to create a view that makes the slice appear as if it starts at the original indices
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+
+  // Calculate linear offset: -(lb1 * stride1 + lb0 * stride0)
+  // For memref<10x10xf32>, stride1=10, stride0=1
+  %lb1_scaled = arith.muli %lb1, %c10 : index  // lb1 * 10
+  %lb0_scaled = arith.muli %lb0, %c1 : index   // lb0 * 1
+  %total_offset = arith.addi %lb1_scaled, %lb0_scaled : index  // lb1*10 + lb0*1
+  %neg_offset = arith.subi %c0, %total_offset : index  // -(lb1*10 + lb0*1)
+
+  // Create a view that adjusts for the lowerbound offset
+  // This makes accesses like result[lb1][lb0] map to slice_alloc[0][0]
+  //
+  // Example for slice a[2:4, 3:5] where:
+  // - bounds0 (inner): lb0=3, extent0=2
+  // - bounds1 (outer): lb1=2, extent1=2
+  // - Allocated memory: 2x2 array (extent1 x extent0 = 2 rows x 2 cols)
+  // - Linear offset calculation: -(2*10 + 3*1) = -23
+  // - Result mapping:
+  //   * result[2][3] -> slice_alloc[0][0] (because 2*10+3 + (-23) = 0)
+  //   * result[2][4] -> slice_alloc[0][1] (because 2*10+4 + (-23) = 1)
+  //   * result[3][3] -> slice_alloc[1][0] (because 3*10+3 + (-23) = 10)
+  //   * result[3][4] -> slice_alloc[1][1] (because 3*10+4 + (-23) = 11)
+  %adjusted_view = memref.reinterpret_cast %slice_alloc to
+    offset: [%neg_offset], sizes: [10, 10], strides: [%c10, %c1]
+    : memref<?x?xf32> to memref<10x10xf32, strided<[?, ?], offset: ?>>
+
+  // Cast to the expected return type
+  %result = memref.cast %adjusted_view : memref<10x10xf32, strided<[?, ?], offset: ?>> to memref<10x10xf32>
+
+  acc.yield %result : memref<10x10xf32>
+}

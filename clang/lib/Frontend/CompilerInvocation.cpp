@@ -623,6 +623,9 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
     LangOpts.RawStringLiterals = true;
   }
 
+  LangOpts.NamedLoops =
+      Args.hasFlag(OPT_fnamed_loops, OPT_fno_named_loops, LangOpts.C2y);
+
   // Prevent the user from specifying both -fsycl-is-device and -fsycl-is-host.
   if (LangOpts.SYCLIsDevice && LangOpts.SYCLIsHost)
     Diags.Report(diag::err_drv_argument_not_allowed_with) << "-fsycl-is-device"
@@ -1319,15 +1322,6 @@ static void parseAnalyzerConfigs(AnalyzerOptions &AnOpts,
   if (AnOpts.ShouldTrackConditionsDebug && !AnOpts.ShouldTrackConditions)
     Diags->Report(diag::err_analyzer_config_invalid_input)
         << "track-conditions-debug" << "'track-conditions' to also be enabled";
-
-  if (!AnOpts.CTUDir.empty() && !llvm::sys::fs::is_directory(AnOpts.CTUDir))
-    Diags->Report(diag::err_analyzer_config_invalid_input) << "ctu-dir"
-                                                           << "a filename";
-
-  if (!AnOpts.ModelPath.empty() &&
-      !llvm::sys::fs::is_directory(AnOpts.ModelPath))
-    Diags->Report(diag::err_analyzer_config_invalid_input) << "model-path"
-                                                           << "a filename";
 }
 
 /// Generate a remark argument. This is an inverse of `ParseOptimizationRemark`.
@@ -3925,9 +3919,6 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_offload_targets_EQ, Targets);
   }
 
-  if (!Opts.OMPHostIRFile.empty())
-    GenerateArg(Consumer, OPT_fopenmp_host_ir_file_path, Opts.OMPHostIRFile);
-
   if (Opts.OpenMPCUDAMode)
     GenerateArg(Consumer, OPT_fopenmp_cuda_mode);
 
@@ -4392,15 +4383,6 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       else
         Opts.OMPTargetTriples.push_back(TT);
     }
-  }
-
-  // Get OpenMP host file path if any and report if a non existent file is
-  // found
-  if (Arg *A = Args.getLastArg(options::OPT_fopenmp_host_ir_file_path)) {
-    Opts.OMPHostIRFile = A->getValue();
-    if (!llvm::sys::fs::exists(Opts.OMPHostIRFile))
-      Diags.Report(diag::err_drv_omp_host_ir_file_not_found)
-          << Opts.OMPHostIRFile;
   }
 
   // Set CUDA mode for OpenMP target NVPTX/AMDGCN if specified in options

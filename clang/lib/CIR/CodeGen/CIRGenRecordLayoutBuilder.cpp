@@ -108,6 +108,16 @@ struct CIRRecordLowering final {
   // not the primary vbase of some base class.
   bool hasOwnStorage(const CXXRecordDecl *decl, const CXXRecordDecl *query);
 
+  /// The Microsoft bitfield layout rule allocates discrete storage
+  /// units of the field's formal type and only combines adjacent
+  /// fields of the same formal type.  We want to emit a layout with
+  /// these discrete storage units instead of combining them into a
+  /// continuous run.
+  bool isDiscreteBitFieldABI() {
+    return astContext.getTargetInfo().getCXXABI().isMicrosoft() ||
+           recordDecl->isMsStruct(astContext);
+  }
+
   CharUnits bitsToCharUnits(uint64_t bitOffset) {
     return astContext.toCharUnitsFromBits(bitOffset);
   }
@@ -323,7 +333,45 @@ void CIRRecordLowering::fillOutputFields() {
 RecordDecl::field_iterator
 CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
                                        RecordDecl::field_iterator fieldEnd) {
-  assert(!cir::MissingFeatures::isDiscreteBitFieldABI());
+  if (isDiscreteBitFieldABI()) {
+    // run stores the first element of the current run of bitfields. fieldEnd is
+    // used as a special value to note that we don't have a current run. A
+    // bitfield run is a contiguous collection of bitfields that can be stored
+    // in the same storage block. Zero-sized bitfields and bitfields that would
+    // cross an alignment boundary break a run and start a new one.
+    RecordDecl::field_iterator run = fieldEnd;
+    // tail is the offset of the first bit off the end of the current run. It's
+    // used to determine if the ASTRecordLayout is treating these two bitfields
+    // as contiguous. StartBitOffset is offset of the beginning of the Run.
+    uint64_t startBitOffset, tail = 0;
+    for (; field != fieldEnd && field->isBitField(); ++field) {
+      // Zero-width bitfields end runs.
+      if (field->isZeroLengthBitField()) {
+        run = fieldEnd;
+        continue;
+      }
+      uint64_t bitOffset = getFieldBitOffset(*field);
+      mlir::Type type = cirGenTypes.convertTypeForMem(field->getType());
+      // If we don't have a run yet, or don't live within the previous run's
+      // allocated storage then we allocate some storage and start a new run.
+      if (run == fieldEnd || bitOffset >= tail) {
+        run = field;
+        startBitOffset = bitOffset;
+        tail = startBitOffset + dataLayout.getTypeAllocSizeInBits(type);
+        // Add the storage member to the record.  This must be added to the
+        // record before the bitfield members so that it gets laid out before
+        // the bitfields it contains get laid out.
+        members.push_back(
+            makeStorageInfo(bitsToCharUnits(startBitOffset), type));
+      }
+      // Bitfields get the offset of their storage but come afterward and remain
+      // there after a stable sort.
+      members.push_back(MemberInfo(bitsToCharUnits(startBitOffset),
+                                   MemberInfo::InfoKind::Field, nullptr,
+                                   *field));
+    }
+    return field;
+  }
 
   CharUnits regSize =
       bitsToCharUnits(astContext.getTargetInfo().getRegisterWidth());

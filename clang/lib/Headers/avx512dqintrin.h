@@ -156,19 +156,19 @@ _store_mask8(__mmask8 *__A, __mmask8 __B) {
   *(__mmask8 *)__A = __builtin_ia32_kmovb((__mmask8)__B);
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS512
-_mm512_mullo_epi64 (__m512i __A, __m512i __B) {
+static __inline__ __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_mullo_epi64(__m512i __A, __m512i __B) {
   return (__m512i) ((__v8du) __A * (__v8du) __B);
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS512
+static __inline__ __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_mask_mullo_epi64(__m512i __W, __mmask8 __U, __m512i __A, __m512i __B) {
   return (__m512i)__builtin_ia32_selectq_512((__mmask8)__U,
                                              (__v8di)_mm512_mullo_epi64(__A, __B),
                                              (__v8di)__W);
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS512
+static __inline__ __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_maskz_mullo_epi64(__mmask8 __U, __m512i __A, __m512i __B) {
   return (__m512i)__builtin_ia32_selectq_512((__mmask8)__U,
                                              (__v8di)_mm512_mullo_epi64(__A, __B),

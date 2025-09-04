@@ -55,6 +55,7 @@ void DAPTestBase::SetUp() {
       /*log=*/log.get(),
       /*default_repl_mode=*/ReplMode::Auto,
       /*pre_init_commands=*/std::vector<std::string>(),
+      /*no_lldbinit=*/false,
       /*client_name=*/"test_client",
       /*transport=*/*transport, /*loop=*/loop);
 }

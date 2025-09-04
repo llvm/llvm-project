@@ -1090,18 +1090,18 @@ define dso_local void @test_atomic_cmpxchg_i64(i64 %wanted, i64 %new) nounwind {
 ; INLINE_ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; INLINE_ATOMICS-NEXT:    ldxr x8, [x9]
 ; INLINE_ATOMICS-NEXT:    cmp x8, x0
-; INLINE_ATOMICS-NEXT:    b.ne .LBB43_3
+; INLINE_ATOMICS-NEXT:    b.ne .LBB43_4
 ; INLINE_ATOMICS-NEXT:  // %bb.2: // %cmpxchg.trystore
 ; INLINE_ATOMICS-NEXT:    // in Loop: Header=BB43_1 Depth=1
 ; INLINE_ATOMICS-NEXT:    stxr w10, x1, [x9]
 ; INLINE_ATOMICS-NEXT:    cbnz w10, .LBB43_1
-; INLINE_ATOMICS-NEXT:    b .LBB43_4
-; INLINE_ATOMICS-NEXT:  .LBB43_3: // %cmpxchg.nostore
-; INLINE_ATOMICS-NEXT:    clrex
-; INLINE_ATOMICS-NEXT:  .LBB43_4: // %cmpxchg.end
+; INLINE_ATOMICS-NEXT:  .LBB43_3: // %cmpxchg.end
 ; INLINE_ATOMICS-NEXT:    adrp x9, var64
 ; INLINE_ATOMICS-NEXT:    str x8, [x9, :lo12:var64]
 ; INLINE_ATOMICS-NEXT:    ret
+; INLINE_ATOMICS-NEXT:  .LBB43_4: // %cmpxchg.nostore
+; INLINE_ATOMICS-NEXT:    clrex
+; INLINE_ATOMICS-NEXT:    b .LBB43_3
 ;
 ; OUTLINE_ATOMICS-LABEL: test_atomic_cmpxchg_i64:
 ; OUTLINE_ATOMICS:       // %bb.0:

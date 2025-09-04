@@ -50,8 +50,7 @@ private:
 
 char SMEABI::ID = 0;
 static const char *name = "SME ABI Pass";
-INITIALIZE_PASS_BEGIN(SMEABI, DEBUG_TYPE, name, false, false)
-INITIALIZE_PASS_END(SMEABI, DEBUG_TYPE, name, false, false)
+INITIALIZE_PASS(SMEABI, DEBUG_TYPE, name, false, false)
 
 FunctionPass *llvm::createSMEABIPass() { return new SMEABI(); }
 

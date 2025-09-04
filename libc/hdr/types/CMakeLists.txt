@@ -461,3 +461,12 @@ add_proxy_header_library(
     libc.include.llvm-libc-types.struct_sched_param
     libc.include.sched
 )
+
+add_proxy_header_library(
+  dl_info
+  HDRS
+    dl_info.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.dl_info
+    libc.include.dlfcn
+)

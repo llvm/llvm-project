@@ -672,7 +672,7 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
           /*WantNontrivialTypeSourceInfo=*/true);
 
       UED = Actions.ActOnUsingEnumDeclaration(
-          getCurScope(), AS, UsingLoc, UELoc, IdentLoc, *IdentInfo, Type, &SS);
+          getCurScope(), AS, UsingLoc, UELoc, IdentLoc, *IdentInfo, Type, SS);
     } else if (Tok.is(tok::annot_template_id)) {
       TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
 
@@ -687,7 +687,7 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
 
         UED = Actions.ActOnUsingEnumDeclaration(getCurScope(), AS, UsingLoc,
                                                 UELoc, Loc, *TemplateId->Name,
-                                                Type.get(), &SS);
+                                                Type.get(), SS);
       } else {
         Diag(Tok.getLocation(), diag::err_using_enum_not_enum)
             << TemplateId->Name->getName()

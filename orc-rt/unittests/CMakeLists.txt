@@ -21,7 +21,7 @@ add_orc_rt_unittest(CoreTests
   MathTest.cpp
   RTTITest.cpp
   SimplePackedSerializationTest.cpp
-  WrapperFunctionResultTest.cpp
+  WrapperFunctionBufferTest.cpp
   bind-test.cpp
   bit-test.cpp
   move_only_function-test.cpp

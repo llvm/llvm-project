@@ -59,9 +59,6 @@ struct tuple_size<const volatile _Tp> : public tuple_size<_Tp> {};
 template <class... _Tp>
 struct tuple_size<tuple<_Tp...> > : public integral_constant<size_t, sizeof...(_Tp)> {};
 
-template <class... _Tp>
-struct tuple_size<__tuple_types<_Tp...> > : public integral_constant<size_t, sizeof...(_Tp)> {};
-
 #  if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr size_t tuple_size_v = tuple_size<_Tp>::value;

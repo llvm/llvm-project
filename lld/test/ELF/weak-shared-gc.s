@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t1.o
-# RUN: echo -e '.globl __cxa_finalize\n__cxa_finalize:' | \
+# RUN: printf '.globl __cxa_finalize\n__cxa_finalize:' | \
 # RUN:   llvm-mc -filetype=obj -triple=x86_64-pc-linux - -o %t2.o
 # RUN: ld.lld %t2.o -o %t2.so -shared
 # RUN: ld.lld %t1.o --as-needed --gc-sections %t2.so -o %t

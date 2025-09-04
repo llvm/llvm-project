@@ -670,7 +670,7 @@ BuiltinTypeDeclBuilder::addHandleConstructorFromImplicitBinding() {
       .addParam("orderId", AST.UnsignedIntTy)
       .addParam("name", AST.getPointerType(AST.CharTy.withConst()))
       .callBuiltin("__builtin_hlsl_resource_handlefromimplicitbinding",
-                   HandleType, PH::Handle, PH::_0, PH::_1, PH::_2, PH::_3,
+                   HandleType, PH::Handle, PH::_3, PH::_0, PH::_1, PH::_2,
                    PH::_4)
       .assign(PH::Handle, PH::LastStmt)
       .finalize();

@@ -117,7 +117,7 @@ struct __fn : __range_adaptor_closure<__fn> {
     return /*---------------------------------*/ as_rvalue_view(std::forward<_Range>(__range));
   }
 
-  template <class _Range>
+  template <input_range _Range>
     requires same_as<range_rvalue_reference_t<_Range>, range_reference_t<_Range>>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto
   operator()(_Range&& __range) noexcept(noexcept(views::all(std::forward<_Range>(__range))))

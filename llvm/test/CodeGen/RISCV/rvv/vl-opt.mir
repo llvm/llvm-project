@@ -603,4 +603,61 @@ body: |
     $x10 = COPY %9
     PseudoRET implicit $x10
 ...
-
+---
+name: vleff_imm
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vleff_imm
+    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 3 /* e8 */, 3 /* ta, ma */
+    ; CHECK-NEXT: %y:vr, %vl:gprnox0 = PseudoVLE8FF_V_M1 $noreg, $noreg, 1, 3 /* e8 */, 3 /* ta, ma */
+    ; CHECK-NEXT: PseudoVSE8_V_M1 %x, $noreg, %vl, 3 /* e8 */
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 3 /* ta, ma */
+    %y:vr, %vl:gprnox0 = PseudoVLE8FF_V_M1 $noreg, $noreg, 1, 3 /* e8 */, 3 /* ta, ma */
+    PseudoVSE8_V_M1 %x, $noreg, %vl, 3 /* e8 */
+...
+---
+name: vleff_reg_dominates
+body: |
+  bb.0:
+    liveins: $x8
+    ; CHECK-LABEL: name: vleff_reg_dominates
+    ; CHECK: liveins: $x8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %avl:gprnox0 = COPY $x8
+    ; CHECK-NEXT: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, %avl, 3 /* e8 */, 3 /* ta, ma */
+    ; CHECK-NEXT: %y:vr, %vl:gprnox0 = PseudoVLE8FF_V_M1 $noreg, $noreg, %avl, 3 /* e8 */, 3 /* ta, ma */
+    ; CHECK-NEXT: PseudoVSE8_V_M1 %x, $noreg, %vl, 3 /* e8 */
+    %avl:gprnox0 = COPY $x8
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 3 /* ta, ma */
+    %y:vr, %vl:gprnox0 = PseudoVLE8FF_V_M1 $noreg, $noreg, %avl, 3 /* e8 */, 3 /* ta, ma */
+    PseudoVSE8_V_M1 %x, $noreg, %vl, 3 /* e8 */
+...
+---
+name: vleff_reg_doesnt_dominate
+body: |
+  bb.0:
+    liveins: $x8
+    ; CHECK-LABEL: name: vleff_reg_doesnt_dominate
+    ; CHECK: liveins: $x8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 3 /* ta, ma */
+    ; CHECK-NEXT: %avl:gprnox0 = COPY $x8
+    ; CHECK-NEXT: %y:vr, %vl:gprnox0 = PseudoVLE8FF_V_M1 $noreg, $noreg, %avl, 3 /* e8 */, 3 /* ta, ma */
+    ; CHECK-NEXT: PseudoVSE8_V_M1 %x, $noreg, %vl, 3 /* e8 */
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 3 /* ta, ma */
+    %avl:gprnox0 = COPY $x8
+    %y:vr, %vl:gprnox0 = PseudoVLE8FF_V_M1 $noreg, $noreg, %avl, 3 /* e8 */, 3 /* ta, ma */
+    PseudoVSE8_V_M1 %x, $noreg, %vl, 3 /* e8 */
+...
+---
+name: vleff_mask_imm
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vleff_mask_imm
+    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 3 /* e8 */, 3 /* ta, ma */
+    ; CHECK-NEXT: %y:vrnov0, %vl:gprnox0 = PseudoVLE8FF_V_M1_MASK $noreg, $noreg, $noreg, 1, 3 /* e8 */, 3 /* ta, ma */
+    ; CHECK-NEXT: PseudoVSE8_V_M1 %x, $noreg, %vl, 3 /* e8 */
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 3 /* ta, ma */
+    %y:vrnov0, %vl:gprnox0 = PseudoVLE8FF_V_M1_MASK $noreg, $noreg, $noreg, 1, 3 /* e8 */, 3 /* ta, ma */
+    PseudoVSE8_V_M1 %x, $noreg, %vl, 3 /* e8 */
+...

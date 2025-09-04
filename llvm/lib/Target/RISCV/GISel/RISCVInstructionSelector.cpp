@@ -1158,8 +1158,8 @@ bool RISCVInstructionSelector::selectAddr(MachineInstr &MI,
 
   switch (TM.getCodeModel()) {
   default: {
-    reportGISelFailure(const_cast<MachineFunction &>(*MF), *TPC, *MORE,
-                       getName(), "Unsupported code model for lowering", MI);
+    reportGISelFailure(*MF, *TPC, *MORE, getName(),
+                       "Unsupported code model for lowering", MI);
     return false;
   }
   case CodeModel::Small: {

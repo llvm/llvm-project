@@ -18,7 +18,13 @@ float function() {
 
 // CIR-LABEL: cir.func dso_local @_Z8functionv() -> !cir.float
 // CIR:  %[[RETVAL:.+]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["__retval"]
-// CIR:  %[[STRUCT:.+]] = cir.alloca !rec_some_struct, !cir.ptr<!rec_some_struct>, [""]
+// CIR:  %[[STRUCT:.+]] = cir.alloca !rec_some_struct, !cir.ptr<!rec_some_struct>, ["", init]
+// CIR:  %[[MEMBER_A:.+]] = cir.get_member %[[STRUCT]][0] {name = "a"} : !cir.ptr<!rec_some_struct> -> !cir.ptr<!s32i>
+// CIR:  %[[CONST_1:.+]] = cir.const #cir.int<1> : !s32i
+// CIR:  cir.store{{.*}} %[[CONST_1]], %[[MEMBER_A]]
+// CIR:  %[[MEMBER_B:.+]] = cir.get_member %[[STRUCT]][1] {name = "b"} : !cir.ptr<!rec_some_struct> -> !cir.ptr<!cir.float>
+// CIR:  %[[TWO_FP:.+]] = cir.const #cir.fp<2.000000e+00> : !cir.float
+// CIR:  cir.store{{.*}} %[[TWO_FP]], %[[MEMBER_B]]
 // CIR:  %[[MEMBER_A:.+]] = cir.get_member %[[STRUCT]][0] {name = "a"} : !cir.ptr<!rec_some_struct> -> !cir.ptr<!s32i>
 // CIR:  %[[LOAD_A:.+]] = cir.load align(4) %[[MEMBER_A]] : !cir.ptr<!s32i>, !s32i
 // CIR:  %[[CAST_A:.+]] = cir.cast(int_to_float, %[[LOAD_A]] : !s32i), !cir.float
@@ -32,6 +38,10 @@ float function() {
 // LLVM-LABEL: define dso_local float @_Z8functionv()
 // LLVM:  %[[RETVAL:.+]] = alloca float, i64 1
 // LLVM:  %[[STRUCT:.+]] = alloca %struct.some_struct, i64 1
+// LLVM:  %[[GEP_A:.+]] = getelementptr %struct.some_struct, ptr %[[STRUCT]], i32 0, i32 0
+// LLVM:  store i32 1, ptr %[[GEP_A]]
+// LLVM:  %[[GEP_B:.+]] = getelementptr %struct.some_struct, ptr %[[STRUCT]], i32 0, i32 1
+// LLVM:  store float 2.000000e+00, ptr %[[GEP_B]]
 // LLVM:  %[[GEP_A:.+]] = getelementptr %struct.some_struct, ptr %[[STRUCT]], i32 0, i32 0
 // LLVM:  %[[LOAD_A:.+]] = load i32, ptr %[[GEP_A]]
 // LLVM:  %[[CAST_A:.+]] = sitofp i32 %[[LOAD_A]] to float

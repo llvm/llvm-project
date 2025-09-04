@@ -76,6 +76,10 @@ FunctionType Builder::getFunctionType(TypeRange inputs, TypeRange results) {
   return FunctionType::get(context, inputs, results);
 }
 
+GraphType Builder::getGraphType(TypeRange inputs, TypeRange results) {
+  return GraphType::get(context, inputs, results);
+}
+
 TupleType Builder::getTupleType(TypeRange elementTypes) {
   return TupleType::get(context, elementTypes);
 }

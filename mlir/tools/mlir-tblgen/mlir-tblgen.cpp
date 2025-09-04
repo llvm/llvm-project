@@ -18,10 +18,11 @@ using namespace llvm;
 using namespace mlir;
 
 // Generator that prints records.
-GenRegistration printRecords("print-records", "Print all records to stdout",
-                             [](const RecordKeeper &records, raw_ostream &os) {
-                               os << records;
-                               return false;
-                             });
+static GenRegistration
+    printRecords("print-records", "Print all records to stdout",
+                 [](const RecordKeeper &records, raw_ostream &os) {
+                   os << records;
+                   return false;
+                 });
 
 int main(int argc, char **argv) { return MlirTblgenMain(argc, argv); }

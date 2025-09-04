@@ -62,8 +62,6 @@ bool llvm::streamFile(HTTPServerRequest &Request, StringRef FilePath) {
   return true;
 }
 
-HTTPServer::HTTPServer(HTTPServer &&) = default;
-
 #ifdef LLVM_ENABLE_HTTPLIB
 
 bool HTTPServer::isAvailable() { return true; }

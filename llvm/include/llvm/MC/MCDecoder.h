@@ -72,13 +72,6 @@ insertBits(IntType &field, IntType bits, unsigned startBit, unsigned numBits) {
   field |= bits << startBit;
 }
 
-// InsnBitWidth is essentially a type trait used by the decoder emitter to query
-// the supported bitwidth for a given type. But default, the value is 0, making
-// it an invalid type for use as `InsnType` when instantiating the decoder.
-// Individual targets are expected to provide specializations for these based
-// on their usage.
-template <typename T> static constexpr uint32_t InsnBitWidth = 0;
-
 } // namespace llvm::MCD
 
 #endif // LLVM_MC_MCDECODER_H

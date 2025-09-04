@@ -1482,3 +1482,16 @@ bool CapturedStmt::capturesVariable(const VarDecl *Var) const {
 
   return false;
 }
+
+const Stmt *LabelStmt::getInnermostLabeledStmt() const {
+  const Stmt *S = getSubStmt();
+  while (isa_and_present<LabelStmt>(S))
+    S = cast<LabelStmt>(S)->getSubStmt();
+  return S;
+}
+
+const Stmt *LoopControlStmt::getNamedLoopOrSwitch() const {
+  if (!hasLabelTarget())
+    return nullptr;
+  return getLabelDecl()->getStmt()->getInnermostLabeledStmt();
+}

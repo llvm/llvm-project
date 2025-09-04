@@ -134,6 +134,14 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
     if (auto loadNd = dyn_cast<xegpu::LoadNdOp>(defOp))
       return getDistributeLayoutAttr(loadNd.getTensorDesc());
 
+    // for LoadMatrixOp, the layout is attached to the property of the op
+    if (auto loadOp = dyn_cast<xegpu::LoadMatrixOp>(defOp))
+      return loadOp.getLayoutAttr();
+
+    // for StoreMatrixOp, the layout is attached to the property of the op
+    if (auto storeOp = dyn_cast<xegpu::StoreMatrixOp>(defOp))
+      return storeOp.getLayoutAttr();
+
     std::string layoutName = getLayoutName(result);
     if (defOp->hasAttr(layoutName))
       return defOp->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
@@ -154,6 +162,13 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
 xegpu::DistributeLayoutAttr
 xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
   Operation *op = opr.getOwner();
+
+  if (auto loadOp = dyn_cast<xegpu::LoadMatrixOp>(op))
+    return loadOp.getLayoutAttr();
+
+  if (auto storeOp = dyn_cast<xegpu::StoreMatrixOp>(op))
+    return storeOp.getLayoutAttr();
+
   std::string layoutName = xegpu::getLayoutName(opr);
   if (op->hasAttr(layoutName))
     return op->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
@@ -182,6 +197,9 @@ template void xegpu::setDistributeLayoutAttr<mlir::OpOperand>(
 void xegpu::setDistributeLayoutAttrs(
     Operation *op, function_ref<DistributeLayoutAttr(Value)> getLayoutImpl) {
   op->walk([&](Operation *nestOp) {
+    if (isa<xegpu::LoadMatrixOp, xegpu::StoreMatrixOp>(nestOp))
+      return;
+
     for (OpOperand &opr : nestOp->getOpOperands()) {
       auto layout = getLayoutImpl(opr.get());
       setDistributeLayoutAttr(opr, layout);
@@ -429,6 +447,21 @@ std::optional<std::string> xegpu::getChipStr(Operation *op) {
   return std::nullopt;
 }
 
+/// Generates element-wise addition ops of two arrays with same length.
+SmallVector<OpFoldResult> xegpu::addElementwise(OpBuilder &builder,
+                                                Location loc,
+                                                ArrayRef<OpFoldResult> lhs,
+                                                ArrayRef<OpFoldResult> rhs) {
+  assert(lhs.size() == rhs.size() && "lhs and rhs must have the same size");
+  SmallVector<OpFoldResult> results;
+  for (auto [l, r] : llvm::zip_equal(lhs, rhs)) {
+    auto lval = getValueOrCreateConstantIndexOp(builder, loc, l);
+    auto rval = getValueOrCreateConstantIndexOp(builder, loc, r);
+    results.push_back(builder.createOrFold<index::AddOp>(loc, lval, rval));
+  }
+  return results;
+}
+
 /// Generates element-wise addition ops of two arrays with automatic alignment.
 /// When the input arrays have different sizes, the shorter array is
 /// right-aligned with the longer array, and the unmatched leading elements from
@@ -448,11 +481,6 @@ xegpu::addWithRightAligned(OpBuilder &builder, Location loc,
   ArrayRef<OpFoldResult> b = lhs.size() >= rhs.size() ? rhs : lhs;
   SmallVector<OpFoldResult> results(a.take_front(a.size() - b.size()));
   a = a.slice(a.size() - b.size());
-  for (auto [l, r] : llvm::zip(a, b)) {
-    auto lval = getValueOrCreateConstantIndexOp(builder, loc, l);
-    auto rval = getValueOrCreateConstantIndexOp(builder, loc, r);
-    results.push_back(builder.createOrFold<index::AddOp>(loc, lval, rval));
-  }
+  results.append(addElementwise(builder, loc, a, b));
   return results;
-  return {};
 }

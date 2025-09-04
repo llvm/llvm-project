@@ -49,7 +49,9 @@ def TestEnum
 
 def TestSimpleEnum : I32Enum<"SimpleEnum", "", [
     I32EnumCase<"a", 0>,
-    I32EnumCase<"b", 1>
+    I32EnumCase<"b", 1>,
+    I32EnumCase<"Plus", 2, "+">,
+    I32EnumCase<"LongString", 3, "dash-separated-sentence">,
   ]> {
   let cppNamespace = "::test";
 }

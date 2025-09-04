@@ -3,9 +3,9 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx71 | FileCheck --check-prefixes=CHECK,SM80 %s
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx71 -denormal-fp-math-f32=preserve-sign | FileCheck --check-prefixes=CHECK,SM80-FTZ %s
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_90 -mattr=+ptx78 | FileCheck --check-prefixes=CHECK,SM90 %s
-; RUN: %if ptxas-11.8 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx71 | %ptxas-verify -arch=sm_80 %}
-; RUN: %if ptxas-11.8 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx71 -denormal-fp-math-f32=preserve-sign | %ptxas-verify -arch=sm_80 %}
-; RUN: %if ptxas-11.8 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_90 -mattr=+ptx78 | %ptxas-verify -arch=sm_90 %}
+; RUN: %if ptxas-sm_80 && ptxas-isa-7.1 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx71 | %ptxas-verify -arch=sm_80 %}
+; RUN: %if ptxas-sm_80 && ptxas-isa-7.1 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx71 -denormal-fp-math-f32=preserve-sign | %ptxas-verify -arch=sm_80 %}
+; RUN: %if ptxas-sm_90 && ptxas-isa-7.8 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_90 -mattr=+ptx78 | %ptxas-verify -arch=sm_90 %}
 
 target triple = "nvptx64-nvidia-cuda"
 

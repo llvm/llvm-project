@@ -13,6 +13,7 @@
 #include "clang/AST/ASTImporter.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/ParentMapContext.h"
+#include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CrossTU/CrossTUDiagnostic.h"
 #include "clang/Frontend/ASTUnit.h"
@@ -237,7 +238,16 @@ template <typename T> static bool hasBodyOrInit(const T *D) {
 }
 
 CrossTranslationUnitContext::CrossTranslationUnitContext(CompilerInstance &CI)
-    : Context(CI.getASTContext()), ASTStorage(CI) {}
+    : Context(CI.getASTContext()), ASTStorage(CI) {
+  if (CI.getAnalyzerOpts().ShouldEmitErrorsOnInvalidConfigValue &&
+      !CI.getAnalyzerOpts().CTUDir.empty()) {
+    auto S = CI.getVirtualFileSystem().status(CI.getAnalyzerOpts().CTUDir);
+    if (!S || S->getType() != llvm::sys::fs::file_type::directory_file)
+      CI.getDiagnostics().Report(diag::err_analyzer_config_invalid_input)
+          << "ctu-dir"
+          << "a filename";
+  }
+}
 
 CrossTranslationUnitContext::~CrossTranslationUnitContext() {}
 

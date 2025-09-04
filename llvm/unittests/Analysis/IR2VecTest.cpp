@@ -431,6 +431,7 @@ TEST_F(IR2VecTestFixture, GetFunctionVector_FlowAware) {
 }
 
 static constexpr unsigned MaxOpcodes = Vocabulary::MaxOpcodes;
+[[maybe_unused]]
 static constexpr unsigned MaxTypeIDs = Vocabulary::MaxTypeIDs;
 static constexpr unsigned MaxCanonicalTypeIDs = Vocabulary::MaxCanonicalTypeIDs;
 static constexpr unsigned MaxOperands = Vocabulary::MaxOperandKinds;

@@ -398,6 +398,54 @@ public:
 
 }
 
+[[nodiscard]] static bool ExtendNestedNameSpecifier(Sema &S, CXXScopeSpec &SS,
+                                                    const NamedDecl *ND,
+                                                    SourceLocation NameLoc,
+                                                    SourceLocation CCLoc) {
+  TypeLocBuilder TLB;
+  QualType T;
+  if (const auto *USD = dyn_cast<UsingShadowDecl>(ND)) {
+    T = S.Context.getUsingType(ElaboratedTypeKeyword::None, SS.getScopeRep(),
+                               USD);
+    TLB.push<UsingTypeLoc>(T).set(/*ElaboratedKeywordLoc=*/SourceLocation(),
+                                  SS.getWithLocInContext(S.Context), NameLoc);
+  } else if (const auto *TD = dyn_cast<TypeDecl>(ND)) {
+    T = S.Context.getTypeDeclType(ElaboratedTypeKeyword::None, SS.getScopeRep(),
+                                  TD);
+    switch (T->getTypeClass()) {
+    case Type::Record:
+    case Type::InjectedClassName:
+    case Type::Enum: {
+      auto TTL = TLB.push<TagTypeLoc>(T);
+      TTL.setElaboratedKeywordLoc(SourceLocation());
+      TTL.setQualifierLoc(SS.getWithLocInContext(S.Context));
+      TTL.setNameLoc(NameLoc);
+      break;
+    }
+    case Type::Typedef:
+      TLB.push<TypedefTypeLoc>(T).set(/*ElaboratedKeywordLoc=*/SourceLocation(),
+                                      SS.getWithLocInContext(S.Context),
+                                      NameLoc);
+      break;
+    case Type::UnresolvedUsing:
+      TLB.push<UnresolvedUsingTypeLoc>(T).set(
+          /*ElaboratedKeywordLoc=*/SourceLocation(),
+          SS.getWithLocInContext(S.Context), NameLoc);
+      break;
+    default:
+      assert(SS.isEmpty());
+      T = S.Context.getTypeDeclType(TD);
+      TLB.pushTypeSpec(T).setNameLoc(NameLoc);
+      break;
+    }
+  } else {
+    return false;
+  }
+  SS.clear();
+  SS.Make(S.Context, TLB.getTypeLocInContext(S.Context, T), CCLoc);
+  return true;
+}
+
 bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
                                        bool EnteringContext, CXXScopeSpec &SS,
                                        NamedDecl *ScopeLookupResult,
@@ -653,40 +701,9 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
     if (isa<EnumDecl>(TD))
       Diag(IdInfo.IdentifierLoc, diag::warn_cxx98_compat_enum_nested_name_spec);
 
-    QualType T;
-    TypeLocBuilder TLB;
-    if (const auto *USD = dyn_cast<UsingShadowDecl>(SD)) {
-      T = Context.getUsingType(ElaboratedTypeKeyword::None, SS.getScopeRep(),
-                               USD);
-      TLB.push<UsingTypeLoc>(T).set(/*ElaboratedKeywordLoc=*/SourceLocation(),
-                                    SS.getWithLocInContext(Context),
-                                    IdInfo.IdentifierLoc);
-    } else if (const auto *Tag = dyn_cast<TagDecl>(TD)) {
-      T = Context.getTagType(ElaboratedTypeKeyword::None, SS.getScopeRep(), Tag,
-                             /*OwnsTag=*/false);
-      auto TTL = TLB.push<TagTypeLoc>(T);
-      TTL.setElaboratedKeywordLoc(SourceLocation());
-      TTL.setQualifierLoc(SS.getWithLocInContext(SemaRef.Context));
-      TTL.setNameLoc(IdInfo.IdentifierLoc);
-    } else if (auto *TN = dyn_cast<TypedefNameDecl>(TD)) {
-      T = Context.getTypedefType(ElaboratedTypeKeyword::None, SS.getScopeRep(),
-                                 TN);
-      TLB.push<TypedefTypeLoc>(T).set(/*ElaboratedKeywordLoc=*/SourceLocation(),
-                                      SS.getWithLocInContext(SemaRef.Context),
-                                      IdInfo.IdentifierLoc);
-    } else if (auto *UD = dyn_cast<UnresolvedUsingTypenameDecl>(TD)) {
-      T = Context.getUnresolvedUsingType(ElaboratedTypeKeyword::None,
-                                         SS.getScopeRep(), UD);
-      TLB.push<UnresolvedUsingTypeLoc>(T).set(
-          /*ElaboratedKeywordLoc=*/SourceLocation(),
-          SS.getWithLocInContext(SemaRef.Context), IdInfo.IdentifierLoc);
-    } else {
-      assert(SS.isEmpty());
-      T = Context.getTypeDeclType(TD);
-      TLB.pushTypeSpec(T).setNameLoc(IdInfo.IdentifierLoc);
-    }
-    SS.clear();
-    SS.Make(Context, TLB.getTypeLocInContext(Context, T), IdInfo.CCLoc);
+    [[maybe_unused]] bool IsType = ::ExtendNestedNameSpecifier(
+        *this, SS, SD, IdInfo.IdentifierLoc, IdInfo.CCLoc);
+    assert(IsType && "unhandled declaration kind");
     return false;
   }
 
@@ -762,21 +779,16 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
   }
 
   if (!Found.empty()) {
-    if (TypeDecl *TD = Found.getAsSingle<TypeDecl>()) {
-      QualType T;
-      if (auto *TN = dyn_cast<TypedefNameDecl>(TD)) {
-        T = Context.getTypedefType(ElaboratedTypeKeyword::None,
-                                   SS.getScopeRep(), TN);
-      } else {
-        // FIXME: Enumerate the possibilities here.
-        assert(!isa<TagDecl>(TD));
-        assert(SS.isEmpty());
-        T = Context.getTypeDeclType(TD);
-      }
-
+    const auto *ND = Found.getAsSingle<NamedDecl>();
+    if (::ExtendNestedNameSpecifier(*this, SS, ND, IdInfo.IdentifierLoc,
+                                    IdInfo.CCLoc)) {
+      const Type *T = SS.getScopeRep().getAsType();
       Diag(IdInfo.IdentifierLoc, diag::err_expected_class_or_namespace)
-          << T << getLangOpts().CPlusPlus;
-    } else if (Found.getAsSingle<TemplateDecl>()) {
+          << QualType(T, 0) << getLangOpts().CPlusPlus;
+      // Recover with this type if it would be a valid nested name specifier.
+      return !T->getAsCanonical<TagType>();
+    }
+    if (isa<TemplateDecl>(ND)) {
       ParsedType SuggestedType;
       DiagnoseUnknownTypeName(IdInfo.Identifier, IdInfo.IdentifierLoc, S, &SS,
                               SuggestedType);

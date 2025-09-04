@@ -3910,8 +3910,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     FixedVectorType *ImplicitReturnType = ReturnType;
     // Step 1: instrument multiplication of corresponding vector elements
     if (EltSizeInBits) {
-      ImplicitReturnType = cast<FixedVectorType>(getMMXVectorTy(
-          EltSizeInBits * 2, ParamType->getPrimitiveSizeInBits()));
+      ImplicitReturnType = cast<FixedVectorType>(
+          getMMXVectorTy(EltSizeInBits * ReductionFactor,
+                         ParamType->getPrimitiveSizeInBits()));
       ParamType = cast<FixedVectorType>(
           getMMXVectorTy(EltSizeInBits, ParamType->getPrimitiveSizeInBits()));
 
@@ -3959,7 +3960,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     // Step 2: instrument horizontal add
     // We don't need bit-precise horizontalReduce because we only want to check
-    // if each pair of elements is fully zero.
+    // if each pair/quad of elements is fully zero.
     // Cast to <4 x i32>.
     Value *Horizontal = IRB.CreateBitCast(And, ImplicitReturnType);
 
@@ -3969,7 +3970,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                          Constant::getNullValue(Horizontal->getType())),
         ImplicitReturnType);
 
-    // Cast it back to the required fake return type (<1 x i64>).
+    // Cast it back to the required fake return type (if MMX: <1 x i64>; for
+    // AVX, it is already correct).
     if (EltSizeInBits)
       OutShadow = CreateShadowCast(IRB, OutShadow, getShadowTy(&I));
 

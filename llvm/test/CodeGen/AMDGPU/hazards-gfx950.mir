@@ -1112,7 +1112,7 @@ body:             |
     ; GCN-NEXT: S_WAITCNT 0
     ; GCN-NEXT: renamable $vgpr2 = V_CVT_SCALEF32_PK_FP4_F16_e64 8, killed $vgpr0, 0, killed $vgpr1, 4, killed $vgpr2, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_NOP 0
-    ; GCN-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:VGPR_32 */, killed renamable $vgpr2
+    ; GCN-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2228233 /* reguse:VS_32_Lo128 */, killed renamable $vgpr2
     ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31
     S_WAITCNT 0
     renamable $vgpr2 = V_CVT_SCALEF32_PK_FP4_F16_e64 8, killed $vgpr0, 0, killed $vgpr1, 4, killed $vgpr2, 0, implicit $mode, implicit $exec

@@ -60,10 +60,9 @@ public:
     /// local variables.
     History,
 
-    /// An artificial stack frame (e.g. a synthesized result of inferring
-    /// missing tail call frames from a backtrace) with limited support for
-    /// local variables.
-    Artificial
+    /// An synthetic stack frame (e.g. a synthesized result from script
+    /// resource) possibly without support for local variables or register.
+    Synthetic
   };
 
   /// Construct a StackFrame object without supplying a RegisterContextSP.
@@ -109,7 +108,8 @@ public:
   StackFrame(const lldb::ThreadSP &thread_sp, lldb::user_id_t frame_idx,
              lldb::user_id_t concrete_frame_idx, lldb::addr_t cfa,
              bool cfa_is_valid, lldb::addr_t pc, Kind frame_kind,
-             bool behaves_like_zeroth_frame, const SymbolContext *sc_ptr);
+             bool artificial, bool behaves_like_zeroth_frame,
+             const SymbolContext *sc_ptr);
 
   StackFrame(const lldb::ThreadSP &thread_sp, lldb::user_id_t frame_idx,
              lldb::user_id_t concrete_frame_idx,
@@ -400,6 +400,9 @@ public:
   ///   true if this is an inlined frame.
   bool IsInlined();
 
+  /// Query whether this frame is synthetic.
+  bool IsSynthetic() const;
+
   /// Query whether this frame is part of a historical backtrace.
   bool IsHistorical() const;
 
@@ -571,6 +574,10 @@ private:
   /// Does this frame have a CFA?  Different from CFA == LLDB_INVALID_ADDRESS.
   bool m_cfa_is_valid;
   Kind m_stack_frame_kind;
+  /// Is this an artificial stack frame (e.g. a synthesized result of inferring
+  /// missing tail call frames from a backtrace) with limited support for
+  /// local variables. Orthogonal to `StackFrame::Kind`.
+  bool m_artificial;
 
   /// Whether this frame behaves like the zeroth frame, in the sense
   /// that its pc value might not immediately follow a call (and thus might

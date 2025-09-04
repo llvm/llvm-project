@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clcmacro.h>
 #include <clc/math/clc_log.h>
 #include <clc/opencl/math/log.h>
 

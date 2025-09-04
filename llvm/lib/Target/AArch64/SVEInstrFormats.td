@@ -5966,16 +5966,20 @@ class sve2_int_while_rr<bits<2> sz8_64, bits<1> rw, string asm,
   let isWhile = 1;
 }
 
-multiclass sve2_int_while_rr<bits<1> rw, string asm, string op> {
+multiclass sve2_int_while_rr<bits<1> rw, string asm, SDPatternOperator op> {
   def _B : sve2_int_while_rr<0b00, rw, asm, PPR8>;
   def _H : sve2_int_while_rr<0b01, rw, asm, PPR16>;
   def _S : sve2_int_while_rr<0b10, rw, asm, PPR32>;
   def _D : sve2_int_while_rr<0b11, rw, asm, PPR64>;
 
-  def : SVE_2_Op_Pat<nxv16i1, !cast<SDPatternOperator>(op # _b), i64, i64, !cast<Instruction>(NAME # _B)>;
-  def : SVE_2_Op_Pat<nxv8i1,  !cast<SDPatternOperator>(op # _h), i64, i64, !cast<Instruction>(NAME # _H)>;
-  def : SVE_2_Op_Pat<nxv4i1,  !cast<SDPatternOperator>(op # _s), i64, i64, !cast<Instruction>(NAME # _S)>;
-  def : SVE_2_Op_Pat<nxv2i1,  !cast<SDPatternOperator>(op # _d), i64, i64, !cast<Instruction>(NAME # _D)>;
+  def : Pat<(nxv16i1 (op i64:$Op1, i64:$Op2, (i64 1))),
+            (!cast<Instruction>(NAME # _B) $Op1, $Op2)>;
+  def : Pat<(nxv8i1 (op i64:$Op1, i64:$Op2, (i64 2))),
+            (!cast<Instruction>(NAME # _H) $Op1, $Op2)>;
+  def : Pat<(nxv4i1 (op i64:$Op1, i64:$Op2, (i64 4))),
+            (!cast<Instruction>(NAME # _S) $Op1, $Op2)>;
+  def : Pat<(nxv2i1 (op i64:$Op1, i64:$Op2, (i64 8))),
+            (!cast<Instruction>(NAME # _D) $Op1, $Op2)>;
 }
 
 //===----------------------------------------------------------------------===//

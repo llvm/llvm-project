@@ -286,6 +286,9 @@ struct VPlanTransforms {
   /// removing dead edges to their successors.
   static void removeBranchOnConst(VPlan &Plan);
 
+  /// Perform common-subexpression-elimination on \p Plan.
+  static void cse(VPlan &Plan);
+
   /// If there's a single exit block, optimize its phi recipes that use exiting
   /// IV values by feeding them precomputed end values instead, possibly taken
   /// one step backwards.

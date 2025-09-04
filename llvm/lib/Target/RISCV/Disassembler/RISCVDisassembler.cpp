@@ -701,11 +701,13 @@ static constexpr DecoderListEntry DecoderList32[]{
     {DecoderTableZdinxRV32Only32, {}, "RV32-only Zdinx (Double in Integer)"},
 };
 
+namespace {
 // Define bitwidths for various types used to instantiate the decoder.
-template <> inline constexpr uint32_t llvm::MCD::InsnBitWidth<uint16_t> = 16;
-template <> inline constexpr uint32_t llvm::MCD::InsnBitWidth<uint32_t> = 32;
+template <> constexpr uint32_t InsnBitWidth<uint16_t> = 16;
+template <> constexpr uint32_t InsnBitWidth<uint32_t> = 32;
 // Use uint64_t to represent 48 bit instructions.
-template <> inline constexpr uint32_t llvm::MCD::InsnBitWidth<uint64_t> = 48;
+template <> constexpr uint32_t InsnBitWidth<uint64_t> = 48;
+} // namespace
 
 DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
                                                  ArrayRef<uint8_t> Bytes,

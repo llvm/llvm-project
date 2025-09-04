@@ -21,6 +21,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <size_t, class>
 struct tuple_element;
 
+template <size_t _Np, class _Tp>
+using __tuple_element_t _LIBCPP_NODEBUG = typename tuple_element<_Np, _Tp>::type;
+
 #ifndef _LIBCPP_CXX03_LANG
 
 template <class...>

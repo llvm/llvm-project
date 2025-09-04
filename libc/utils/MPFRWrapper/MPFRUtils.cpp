@@ -45,6 +45,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.atan();
   case Operation::Atanh:
     return mpfrInput.atanh();
+  case Operation::Atanpi:
+    return mpfrInput.atanpi();
   case Operation::Cbrt:
     return mpfrInput.cbrt();
   case Operation::Ceil:
