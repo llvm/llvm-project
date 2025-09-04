@@ -188,7 +188,7 @@ struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
     handleAlias(I);
   }
 
-  void visitInsertValueInst(InsertValueInst &I)  {
+  void visitInsertValueInst(InsertValueInst &I) {
     enqueueUsers(I);
     handleAlias(I);
   }
