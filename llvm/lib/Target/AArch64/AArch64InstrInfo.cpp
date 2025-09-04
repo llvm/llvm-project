@@ -1488,21 +1488,6 @@ AArch64InstrInfo::canRemovePTestInstr(MachineInstr *PTest, MachineInstr *Mask,
   bool PredIsPTestLike = isPTestLikeOpcode(PredOpcode);
   bool PredIsWhileLike = isWhileOpcode(PredOpcode);
 
-  uint64_t PredEltSize = 0;
-  if (PredIsWhileLike)
-    PredEltSize = getElementSizeForOpcode(PredOpcode);
-
-  if (Pred->isCopy()) {
-    // Instructions which return a multi-vector (e.g. WHILECC_x2) require copies
-    // before the branch to extract each subregister.
-    auto Op = Pred->getOperand(1);
-    if (Op.isReg() && Op.getReg().isVirtual() && Op.getSubReg() != 0) {
-      MachineInstr *DefMI = MRI->getVRegDef(Op.getReg());
-      PredIsWhileLike = isWhileOpcode(DefMI->getOpcode());
-      PredEltSize = getElementSizeForOpcode(DefMI->getOpcode());
-    }
-  }
-
   if (PredIsWhileLike) {
     // For PTEST(PG, PG), PTEST is redundant when PG is the result of a WHILEcc
     // instruction and the condition is "any" since WHILcc does an implicit
@@ -1514,7 +1499,8 @@ AArch64InstrInfo::canRemovePTestInstr(MachineInstr *PTest, MachineInstr *Mask,
     // redundant since WHILE performs an implicit PTEST with an all active
     // mask.
     if (isPTrueOpcode(MaskOpcode) && Mask->getOperand(1).getImm() == 31 &&
-        getElementSizeForOpcode(MaskOpcode) == PredEltSize)
+        getElementSizeForOpcode(MaskOpcode) ==
+        getElementSizeForOpcode(PredOpcode))
       return PredOpcode;
 
     return {};
@@ -1627,6 +1613,15 @@ bool AArch64InstrInfo::optimizePTestInstr(
     const MachineRegisterInfo *MRI) const {
   auto *Mask = MRI->getUniqueVRegDef(MaskReg);
   auto *Pred = MRI->getUniqueVRegDef(PredReg);
+
+  if (Pred->isCopy()) {
+    // Instructions which return a multi-vector (e.g. WHILECC_x2) require copies
+    // before the branch to extract each subregister.
+    auto Op = Pred->getOperand(1);
+    if (Op.isReg() && Op.getSubReg() == AArch64::psub0)
+      Pred = MRI->getUniqueVRegDef(Op.getReg());
+  }
+
   unsigned PredOpcode = Pred->getOpcode();
   auto NewOp = canRemovePTestInstr(PTest, Mask, Pred, MRI);
   if (!NewOp)

@@ -20235,7 +20235,7 @@ performFirstTrueTestVectorCombine(SDNode *N,
 
   // Restricted the DAG combine to only cases where we're extracting from a
   // flag-setting operation.
-  if (!isPredicateCCSettingOp(N0))
+  if (!isPredicateCCSettingOp(N0) || N0.getResNo() != 0)
     return SDValue();
 
   // Extracts of lane 0 for SVE can be expressed as PTEST(Op, FIRST) ? 1 : 0
