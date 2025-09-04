@@ -329,10 +329,16 @@ bool TargetTransformInfo::isNoopAddrSpaceCast(unsigned FromAS,
   return TTIImpl->isNoopAddrSpaceCast(FromAS, ToAS);
 }
 
-KnownBits
+std::optional<std::pair<KnownBits, KnownBits>>
 TargetTransformInfo::computeKnownBitsAddrSpaceCast(unsigned FromAS,
-                                                   unsigned ToAS) const {
-  return TTIImpl->computeKnownBitsAddrSpaceCast(FromAS, ToAS);
+                                                   unsigned ToAS,
+                                                   const Value &PtrOp) const {
+  return TTIImpl->computeKnownBitsAddrSpaceCast(FromAS, ToAS, PtrOp);
+}
+
+std::optional<KnownBits> TargetTransformInfo::computeKnownBitsAddrSpaceCast(
+    unsigned FromAS, unsigned ToAS, const KnownBits &FromPtrBits) const {
+  return TTIImpl->computeKnownBitsAddrSpaceCast(FromAS, ToAS, FromPtrBits);
 }
 
 bool TargetTransformInfo::canHaveNonUndefGlobalInitializerInAddressSpace(
