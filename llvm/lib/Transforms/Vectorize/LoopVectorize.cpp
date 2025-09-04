@@ -7169,6 +7169,12 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
                 RepR->getUnderlyingInstr(), VF))
           return true;
       }
+
+      // The strided load is transformed from a gather through VPlanTransform,
+      // and its cost will be lower than the original gather.
+      if (isa<VPWidenStridedLoadRecipe>(&R))
+        return true;
+
       if (Instruction *UI = GetInstructionForCost(&R)) {
         // If we adjusted the predicate of the recipe, the cost in the legacy
         // cost model may be different.
