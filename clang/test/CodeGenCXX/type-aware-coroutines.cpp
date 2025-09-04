@@ -55,7 +55,7 @@ extern "C" resumable f1(int) {
   co_return;
 // CHECK: coro.alloc:
 // CHECK: _ZN9resumable12promise_typenwEmi
-// CHECK: coro.free:
+// CHECK: coro.free.defer:
 // CHECK: _ZN9resumable12promise_typedlEPv
 }
 
@@ -64,7 +64,7 @@ extern "C" resumable f2(float) {
   co_return;
 // CHECK: coro.alloc:
 // CHECK: _ZN9resumable12promise_typenwEmf
-// CHECK: coro.free:
+// CHECK: coro.free.defer:
 // CHECK: _ZN9resumable12promise_typedlEPv
 }
 
@@ -74,7 +74,7 @@ extern "C" resumable2 f3(int, float, const char*, Allocator) {
    co_return;
 // CHECK: coro.alloc:
 // CHECK: _ZN10resumable212promise_typenwIJifPKc9AllocatorEEEPvmDpT_
-// CHECK: coro.free:
+// CHECK: coro.free.defer:
 // CHECK: _ZN10resumable212promise_typedlEPv
 // CHECK: _ZN10resumable212promise_typedlEPv
 }
@@ -84,7 +84,7 @@ extern "C" resumable f4(int n = 10) {
    for (int i = 0; i < n; i++) co_yield i;
 // CHECK: coro.alloc:
 // CHECK: call {{.*}}@_ZN9resumable12promise_typenwEmi(
-// CHECK: coro.free:
+// CHECK: coro.free.defer:
 // CHECK: call void @_ZN9resumable12promise_typedlEPv(
 // CHECK: call void @_ZN9resumable12promise_typedlEPv(
 }
@@ -110,7 +110,7 @@ extern "C" resumable3 f5(float) {
   co_return;
 // CHECK: coro.alloc:
 // CHECK: call {{.*}}@_Znwm(
-// CHECK: coro.free:
+// CHECK: coro.free.defer:
 // CHECK: call void @_ZdlPvm(
 // CHECK: call void @_ZdlPvm(
 }

@@ -262,18 +262,6 @@ void coro::Shape::analyze(Function &F,
 
         if (CoroEnds.back()->isUnwind())
           HasUnwindCoroEnd = true;
-
-        if (CoroEnds.back()->isFallthrough() && isa<CoroEndInst>(II)) {
-          // Make sure that the fallthrough coro.end is the first element in the
-          // CoroEnds vector.
-          // Note: I don't think this is neccessary anymore.
-          if (CoroEnds.size() > 1) {
-            if (CoroEnds.front()->isFallthrough())
-              report_fatal_error(
-                  "Only one coro.end can be marked as fallthrough");
-            std::swap(CoroEnds.front(), CoroEnds.back());
-          }
-        }
         break;
       case Intrinsic::coro_promise:
         assert(CoroPromise == nullptr &&

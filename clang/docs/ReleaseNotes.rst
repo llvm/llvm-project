@@ -123,6 +123,9 @@ C++23 Feature Support
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Fixed premature coroutine promise destruction when the coroutine completes
+  without suspending, as part of CWG2563. (#GH120200)
+
 C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
