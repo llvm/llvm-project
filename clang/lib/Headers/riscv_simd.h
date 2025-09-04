@@ -279,6 +279,26 @@ static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
 __riscv_pasubu_h(uint32_t __x, uint32_t __y) {
   return __builtin_riscv_pasubu_h_32(__x, __y);
 }
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pdif_b(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_pdif_b_32(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pdif_h(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_pdif_h_32(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pdifu_b(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_pdifu_b_32(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pdifu_h(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_pdifu_h_32(__x, __y);
+}
 #endif
 
 
@@ -606,6 +626,26 @@ __riscv_pasubu_h(uint64_t __x, uint64_t __y) {
 static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
 __riscv_pasubu_w(uint64_t __x, uint64_t __y) {
   return __builtin_riscv_pasubu_w(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pdif_b(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pdif_b_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pdif_h(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pdif_h_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pdifu_b(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pdifu_b_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pdifu_h(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pdifu_h_64(__x, __y);
 }
 #endif
 

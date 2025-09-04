@@ -193,6 +193,10 @@ def pssubu_h_32    : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 def asubu          : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 def pasubu_b_32    : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 def pasubu_h_32    : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def pdif_b_32      : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def pdif_h_32      : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def pdifu_b_32     : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def pdifu_h_32     : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 } // Features = "experimental-p,32bit"
 
 let Features = "experimental-p,64bit" in {
@@ -261,6 +265,10 @@ def pssubu_w       : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 def pasubu_b_64    : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 def pasubu_h_64    : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 def pasubu_w       : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def pdif_b_64      : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def pdif_h_64      : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def pdifu_b_64     : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def pdifu_h_64     : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 } // Features = "experimental-p,64bit"
 } // Attributes = [Const, NoThrow]
 

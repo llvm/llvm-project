@@ -606,3 +606,39 @@ uint64_t pasubu_h(uint64_t rs1, uint64_t rs2) {
 uint64_t pasubu_w(uint64_t rs1, uint64_t rs2) {
   return __riscv_pasubu_w(rs1, rs2);
 }
+
+// RV64P-LABEL: @pdif_b(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.pdif.b.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t pdif_b(uint64_t rs1, uint64_t rs2) {
+  return __riscv_pdif_b(rs1, rs2);
+}
+
+// RV64P-LABEL: @pdif_h(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.pdif.h.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t pdif_h(uint64_t rs1, uint64_t rs2) {
+  return __riscv_pdif_h(rs1, rs2);
+}
+
+// RV64P-LABEL: @pdifu_b(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.pdifu.b.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t pdifu_b(uint64_t rs1, uint64_t rs2) {
+  return __riscv_pdifu_b(rs1, rs2);
+}
+
+// RV64P-LABEL: @pdifu_h(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.pdifu.h.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t pdifu_h(uint64_t rs1, uint64_t rs2) {
+  return __riscv_pdifu_h(rs1, rs2);
+}

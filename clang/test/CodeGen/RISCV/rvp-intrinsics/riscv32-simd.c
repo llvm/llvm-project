@@ -472,3 +472,39 @@ uint32_t pasubu_b(uint32_t rs1, uint32_t rs2) {
 uint32_t pasubu_h(uint32_t rs1, uint32_t rs2) {
   return __riscv_pasubu_h(rs1, rs2);
 }
+
+// RV32P-LABEL: @pdif_b(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.pdif.b.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t pdif_b(uint32_t rs1, uint32_t rs2) {
+  return __riscv_pdif_b(rs1, rs2);
+}
+
+// RV32P-LABEL: @pdif_h(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.pdif.h.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t pdif_h(uint32_t rs1, uint32_t rs2) {
+  return __riscv_pdif_h(rs1, rs2);
+}
+
+// RV32P-LABEL: @pdifu_b(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.pdifu.b.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t pdifu_b(uint32_t rs1, uint32_t rs2) {
+  return __riscv_pdifu_b(rs1, rs2);
+}
+
+// RV32P-LABEL: @pdifu_h(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.pdifu.h.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t pdifu_h(uint32_t rs1, uint32_t rs2) {
+  return __riscv_pdifu_h(rs1, rs2);
+}
