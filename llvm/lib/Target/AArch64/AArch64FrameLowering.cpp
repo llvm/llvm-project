@@ -384,7 +384,7 @@ static bool isLikelyToHaveSVEStack(const AArch64FrameLowering &AFL,
 }
 
 static bool isTargetWindows(const MachineFunction &MF) {
-  return MF.getSubtarget<AArch64Subtarget>().isTargetWindows();
+  return MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
 }
 
 bool AArch64FrameLowering::hasSVECalleeSavesAboveFrameRecord(
