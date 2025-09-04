@@ -181,7 +181,7 @@ constexpr std::array<unsigned, 8> SyscallArgumentRegisters{
     AArch64::X4, AArch64::X5, AArch64::X6, AArch64::X7,
 };
 
-static void saveSysCallRegisters(std::vector<MCInst> &GeneratedCode,
+static void saveSyscallRegisters(std::vector<MCInst> &GeneratedCode,
                                  unsigned ArgumentCount) {
   // AArch64 follows the AAPCS (ARM Architecture Procedure Call Standard):
   // X0-X7 registers contain the first 8 arguments.
@@ -195,7 +195,7 @@ static void saveSysCallRegisters(std::vector<MCInst> &GeneratedCode,
   }
 }
 
-static void restoreSysCallRegisters(std::vector<MCInst> &GeneratedCode,
+static void restoreSyscallRegisters(std::vector<MCInst> &GeneratedCode,
                                     unsigned ArgumentCount) {
   assert(ArgumentCount <= 8 &&
          "This implementation restores up to 8 argument registers (X0-X7)");
@@ -383,11 +383,18 @@ uintptr_t ExegesisAArch64Target::getAuxiliaryMemoryStartAddress() const {
 std::vector<MCInst>
 ExegesisAArch64Target::configurePerfCounter(long Request,
                                             bool SaveRegisters) const {
-  std::vector<MCInst> ConfigurePerfCounterCode; // NOP
+  std::vector<MCInst> ConfigurePerfCounterCode;
+  if (SaveRegisters)
+    saveSyscallRegisters(ConfigurePerfCounterCode, 3);
+
   // FIXME: SYSCALL exits with EBADF error - file descriptor is invalid
   // No file is opened previosly to add as file descriptor
   dbgs() << "Warning: configurePerfCounter not implemented, measurements will "
             "be unreliable\n";
+
+  if (SaveRegisters)
+    restoreSyscallRegisters(ConfigurePerfCounterCode, 3);
+
   return ConfigurePerfCounterCode;
 }
 
