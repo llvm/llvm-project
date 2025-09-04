@@ -34,14 +34,14 @@ return:
 
 ; FORCE-NOT: define internal i32 @foo(
 ;
-; FORCE:      define internal i32 @foo.specialized.1(i32 %x, ptr %b) {
+; FORCE:      define internal i32 @foo.specialized.1(i32 %x, ptr %b) {{(!prof !0 )?}}{
 ; FORCE-NEXT: entry:
 ; FORCE-NEXT:   %0 = load i32, ptr @A, align 4
 ; FORCE-NEXT:   %add = add nsw i32 %x, %0
 ; FORCE-NEXT:   ret i32 %add
 ; FORCE-NEXT: }
 ;
-; FORCE:      define internal i32 @foo.specialized.2(i32 %x, ptr %b) {
+; FORCE:      define internal i32 @foo.specialized.2(i32 %x, ptr %b) {{(!prof !0 )?}}{
 ; FORCE-NEXT: entry:
 ; FORCE-NEXT:   %0 = load i32, ptr @B, align 4
 ; FORCE-NEXT:   %add = add nsw i32 %x, %0
