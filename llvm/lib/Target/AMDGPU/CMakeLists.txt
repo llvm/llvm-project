@@ -7,7 +7,9 @@ tablegen(LLVM AMDGPUGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM AMDGPUGenCallingConv.inc -gen-callingconv)
 tablegen(LLVM AMDGPUGenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM AMDGPUGenDisassemblerTables.inc -gen-disassembler
-              --specialize-decoders-per-bitwidth)
+              --specialize-decoders-per-bitwidth
+              -ignore-non-decodable-operands
+              -ignore-fully-defined-operands)
 tablegen(LLVM AMDGPUGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM AMDGPUGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM AMDGPUGenMCPseudoLowering.inc -gen-pseudo-lowering)
