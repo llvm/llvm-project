@@ -136,7 +136,7 @@ Improvements to clang-tidy
   same name instead.
 
 - Improved :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py` 
-  scripts by adding the `-hide-progress` option to suppressing progress and
+  scripts by adding the `-hide-progress` option to suppress progress and
   informational messages.
 
 New checks
