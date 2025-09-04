@@ -3839,7 +3839,7 @@ void llvm::maybeMarkSanitizerLibraryCallNoBuiltin(
 bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
   const auto *Op = I->getOperand(OpIdx);
   // We can't have a PHI with a metadata or token type.
-  if (Op->getType()->isMetadataTy() || Op->getType()->isTokenTy())
+  if (Op->getType()->isMetadataTy() || Op->getType()->isTokenLikeTy())
     return false;
 
   // swifterror pointers can only be used by a load, store, or as a swifterror

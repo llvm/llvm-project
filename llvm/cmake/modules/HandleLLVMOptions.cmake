@@ -183,7 +183,15 @@ CHECK_CXX_SOURCE_COMPILES("
 int main() { return 0; }
 " LLVM_USES_LIBSTDCXX)
 
-option(GLIBCXX_USE_CXX11_ABI "Use new libstdc++ CXX11 ABI" ON)
+CHECK_CXX_SOURCE_COMPILES("
+#include <string>
+#if _GLIBCXX_USE_CXX11_ABI == 0
+#error _GLIBCXX_USE_CXX11_ABI not active
+#endif
+int main() { return 0; }
+" LLVM_DEFAULT_TO_GLIBCXX_USE_CXX11_ABI)
+
+option(GLIBCXX_USE_CXX11_ABI "Use new libstdc++ CXX11 ABI" ${LLVM_DEFAULT_TO_GLIBCXX_USE_CXX11_ABI})
 
 if (LLVM_USES_LIBSTDCXX)
   if (GLIBCXX_USE_CXX11_ABI)
@@ -191,10 +199,6 @@ if (LLVM_USES_LIBSTDCXX)
   else()
     add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=0)
   endif()
-endif()
-
-if (LLVM_ENABLE_STRICT_FIXED_SIZE_VECTORS)
-  add_compile_definitions(STRICT_FIXED_SIZE_VECTORS)
 endif()
 
 string(TOUPPER "${LLVM_ABI_BREAKING_CHECKS}" uppercase_LLVM_ABI_BREAKING_CHECKS)
@@ -1330,7 +1334,7 @@ endif()
 # linking (due to incompatibility). With MSVC, note that the plugin has to
 # explicitly link against (exactly one) tool so we can't unilaterally turn on
 # LLVM_ENABLE_PLUGINS when it's enabled.
-if("${CMAKE_SYSTEM_NAME}" MATCHES AIX)
+if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   set(LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_OPTION OFF)
 else()
   set(LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_OPTION ON)
