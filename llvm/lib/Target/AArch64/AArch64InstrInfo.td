@@ -246,6 +246,12 @@ def HasCMH          : Predicate<"Subtarget->hasCMH()">,
                                  AssemblerPredicateWithAll<(all_of FeatureCMH), "cmh">;
 def HasLSCP         : Predicate<"Subtarget->hasLSCP()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLSCP), "lscp">;
+def HasSVE2p2       : Predicate<"Subtarget->hasSVE2p2()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSVE2p2), "sve2p2">;
+def HasSVE_B16MM    : Predicate<"Subtarget->isSVEAvailable() &&ubtarget->hasSVE_B16MM()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSVE_B16MM), "sve-b16mm">;
+def HasF16MM        : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasF16MM()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureF16MM), "f16mm">;
 
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.

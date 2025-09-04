@@ -613,6 +613,12 @@ def FeatureSVE2p3 : ExtensionWithMArch<"sve2p3", "SVE2p3", "FEAT_SVE2p3",
 def FeatureSME2p3 : ExtensionWithMArch<"sme2p3", "SME2p3", "FEAT_SME2p3",
   "Enable Armv9.7-A Scalable Matrix Extension 2.3 instructions", [FeatureSME2p2]>;
 
+def FeatureSVE_B16MM : ExtensionWithMArch<"sve-b16mm", "SVE_B16MM", "FEAT_SVE_B16MM",
+  "Enable Armv9.7-A SVE non-widening BFloat16 matrix multiply-accumulate", [FeatureSVE]>;
+
+def FeatureF16MM : ExtensionWithMArch<"f16mm", "F16MM", "FEAT_F16MM",
+  "Enable Armv9.7-A non-widening half-precision matrix multiply-accumulate", [FeatureFullFP16]>;
+
 //===----------------------------------------------------------------------===//
 //  Other Features
 //===----------------------------------------------------------------------===//

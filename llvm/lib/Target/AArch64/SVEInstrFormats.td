@@ -3787,7 +3787,7 @@ multiclass sve2p1_two_way_dot_vv<string mnemonic, bit u, SDPatternOperator intri
 // SVE Integer Dot Product Group - Indexed Group
 //===----------------------------------------------------------------------===//
 
-class sve_intx_dot_by_indexed_elem<bit sz, bit U, string asm,
+class sve_intx_dot_by_indexed_elem<bit U, string asm,
                                    ZPRRegOp zprty1, ZPRRegOp zprty2,
                                    ZPRRegOp zprty3, Operand itype>
 : I<(outs zprty1:$Zda), (ins zprty1:$_Zda, zprty2:$Zn, zprty3:$Zm, itype:$iop),
@@ -3795,8 +3795,7 @@ class sve_intx_dot_by_indexed_elem<bit sz, bit U, string asm,
   "", []>, Sched<[]> {
   bits<5> Zda;
   bits<5> Zn;
-  let Inst{31-23} = 0b010001001;
-  let Inst{22}    = sz;
+  let Inst{31-24} = 0b01000100;
   let Inst{21}    = 0b1;
   let Inst{15-11} = 0;
   let Inst{10}    = U;
@@ -3810,21 +3809,33 @@ class sve_intx_dot_by_indexed_elem<bit sz, bit U, string asm,
 
 multiclass sve_intx_dot_by_indexed_elem<bit opc, string asm,
                                         SDPatternOperator op> {
-  def _BtoS : sve_intx_dot_by_indexed_elem<0b0, opc, asm, ZPR32, ZPR8, ZPR3b8, VectorIndexS32b_timm> {
+  def _BtoS : sve_intx_dot_by_indexed_elem<opc, asm, ZPR32, ZPR8, ZPR3b8, VectorIndexS32b_timm> {
     bits<2> iop;
     bits<3> Zm;
+    let Inst{23-22} = 0b10;
     let Inst{20-19} = iop;
     let Inst{18-16} = Zm;
   }
-  def _HtoD : sve_intx_dot_by_indexed_elem<0b1, opc, asm, ZPR64, ZPR16, ZPR4b16, VectorIndexD32b_timm> {
+  def _HtoD : sve_intx_dot_by_indexed_elem<opc, asm, ZPR64, ZPR16, ZPR4b16, VectorIndexD32b_timm> {
     bits<1> iop;
     bits<4> Zm;
-    let Inst{20} = iop;
+    let Inst{23-22} = 0b11;
+    let Inst{20}    = iop;
     let Inst{19-16} = Zm;
   }
 
   def : SVE_4_Op_Imm_Pat<nxv4i32, op, nxv4i32, nxv16i8, nxv16i8, i32, VectorIndexS32b_timm, !cast<Instruction>(NAME # _BtoS)>;
   def : SVE_4_Op_Imm_Pat<nxv2i64, op, nxv2i64, nxv8i16, nxv8i16, i32, VectorIndexD32b_timm, !cast<Instruction>(NAME # _HtoD)>;
+}
+
+class sve_intx_dot_by_indexed_elem_x<bit opc, string asm>
+: sve_intx_dot_by_indexed_elem<opc, asm, ZPR16, ZPR8, ZPR3b8, VectorIndexH32b_timm> {
+ bits<3> iop;
+ bits<3> Zm;
+ let Inst{23}    = 0b0;
+ let Inst{22}    = iop{2-2};
+ let Inst{20-19} = iop{1-0};
+ let Inst{18-16} = Zm;
 }
 
 //===----------------------------------------------------------------------===//
@@ -9616,17 +9627,18 @@ multiclass sve_int_dot_mixed_indexed<bit U, string asm, SDPatternOperator op> {
 // SVE Floating Point Matrix Multiply Accumulate Group
 //===----------------------------------------------------------------------===//
 
-class sve_fp_matrix_mla<bits<2> opc, string asm, ZPRRegOp zda_ty, ZPRRegOp reg_ty>
+class sve_fp_matrix_mla<bits<3> opc, string asm, ZPRRegOp zda_ty, ZPRRegOp reg_ty>
 : I<(outs zda_ty:$Zda), (ins zda_ty:$_Zda, reg_ty:$Zn, reg_ty:$Zm),
     asm, "\t$Zda, $Zn, $Zm", "", []>, Sched<[]> {
   bits<5> Zda;
   bits<5> Zn;
   bits<5> Zm;
   let Inst{31-24} = 0b01100100;
-  let Inst{23-22} = opc;
+  let Inst{23-22} = opc{2-1};
   let Inst{21}    = 1;
   let Inst{20-16} = Zm;
-  let Inst{15-10} = 0b111001;
+  let Inst{15-11} = 0b11100;
+  let Inst{10}    = opc{0};
   let Inst{9-5}   = Zn;
   let Inst{4-0}   = Zda;
 
@@ -9636,10 +9648,12 @@ class sve_fp_matrix_mla<bits<2> opc, string asm, ZPRRegOp zda_ty, ZPRRegOp reg_t
   let mayRaiseFPException = 1;
 }
 
-multiclass sve_fp_matrix_mla<bits<2> opc, string asm, ZPRRegOp zda_ty, ZPRRegOp reg_ty, SDPatternOperator op, ValueType zda_vt, ValueType reg_vt> {
+multiclass sve_fp_matrix_mla<bits<3> opc, string asm, ZPRRegOp zda_ty,
+                             ZPRRegOp reg_ty, SDPatternOperator op,
+                             ValueType zda_vt, ValueType reg_vt> {
   def NAME : sve_fp_matrix_mla<opc, asm, zda_ty, reg_ty>;
 
-  def : SVE_3_Op_Pat<zda_vt, op , zda_vt, reg_vt, reg_vt, !cast<Instruction>(NAME)>;
+  def : SVE_3_Op_Pat<zda_vt, op, zda_vt, reg_vt, reg_vt, !cast<Instruction>(NAME)>;
 }
 
 //===----------------------------------------------------------------------===//
