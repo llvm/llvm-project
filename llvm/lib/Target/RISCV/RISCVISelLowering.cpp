@@ -9131,13 +9131,14 @@ static SDValue lowerSelectToBinOp(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(ISD::OR, DL, VT, Neg, DAG.getFreeze(TrueV));
     }
 
-    const bool HasCZero = VT.isScalarInteger() &&
-      (Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps());
+    const bool HasCZero =
+        VT.isScalarInteger() &&
+        (Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps());
 
     // (select c, 0, y) -> (c-1) & y
     if (isNullConstant(TrueV) && (!HasCZero || isSimm12Constant(FalseV))) {
-      SDValue Neg = DAG.getNode(ISD::ADD, DL, VT, CondV,
-                                DAG.getAllOnesConstant(DL, VT));
+      SDValue Neg =
+          DAG.getNode(ISD::ADD, DL, VT, CondV, DAG.getAllOnesConstant(DL, VT));
       return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(FalseV));
     }
     // (select c, y, 0) -> -c & y
