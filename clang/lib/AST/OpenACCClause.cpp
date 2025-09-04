@@ -317,11 +317,11 @@ OpenACCTileClause *OpenACCTileClause::Create(const ASTContext &C,
 OpenACCPrivateClause *
 OpenACCPrivateClause::Create(const ASTContext &C, SourceLocation BeginLoc,
                              SourceLocation LParenLoc, ArrayRef<Expr *> VarList,
-                             ArrayRef<VarDecl *> InitRecipes,
+                             ArrayRef<OpenACCPrivateRecipe> InitRecipes,
                              SourceLocation EndLoc) {
   assert(VarList.size() == InitRecipes.size());
-  void *Mem =
-      C.Allocate(OpenACCPrivateClause::totalSizeToAlloc<Expr *, VarDecl *>(
+  void *Mem = C.Allocate(
+      OpenACCPrivateClause::totalSizeToAlloc<Expr *, OpenACCPrivateRecipe>(
           VarList.size(), InitRecipes.size()));
   return new (Mem)
       OpenACCPrivateClause(BeginLoc, LParenLoc, VarList, InitRecipes, EndLoc);

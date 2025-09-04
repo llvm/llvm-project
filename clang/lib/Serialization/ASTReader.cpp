@@ -12858,9 +12858,13 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     SourceLocation LParenLoc = readSourceLocation();
     llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
 
-    llvm::SmallVector<VarDecl *> RecipeList;
-    for (unsigned I = 0; I < VarList.size(); ++I)
-      RecipeList.push_back(readDeclAs<VarDecl>());
+    llvm::SmallVector<OpenACCPrivateRecipe> RecipeList;
+    for (unsigned I = 0; I < VarList.size(); ++I) {
+      static_assert(sizeof(OpenACCPrivateRecipe) == 2 * sizeof(int *));
+      VarDecl *Alloca = readDeclAs<VarDecl>();
+      Expr *InitExpr = readSubExpr();
+      RecipeList.push_back({Alloca, InitExpr});
+    }
 
     return OpenACCPrivateClause::Create(getContext(), BeginLoc, LParenLoc,
                                         VarList, RecipeList, EndLoc);
@@ -12882,9 +12886,11 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
     llvm::SmallVector<OpenACCFirstPrivateRecipe> RecipeList;
     for (unsigned I = 0; I < VarList.size(); ++I) {
+      static_assert(sizeof(OpenACCFirstPrivateRecipe) == 3 * sizeof(int *));
       VarDecl *Recipe = readDeclAs<VarDecl>();
+      Expr *InitExpr = readSubExpr();
       VarDecl *RecipeTemp = readDeclAs<VarDecl>();
-      RecipeList.push_back({Recipe, RecipeTemp});
+      RecipeList.push_back({Recipe, InitExpr, RecipeTemp});
     }
 
     return OpenACCFirstPrivateClause::Create(getContext(), BeginLoc, LParenLoc,
@@ -13005,9 +13011,10 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     llvm::SmallVector<OpenACCReductionRecipe> RecipeList;
 
     for (unsigned I = 0; I < VarList.size(); ++I) {
+      static_assert(sizeof(OpenACCReductionRecipe) == 2 * sizeof(int *));
       VarDecl *Recipe = readDeclAs<VarDecl>();
-      static_assert(sizeof(OpenACCReductionRecipe) == sizeof(int *));
-      RecipeList.push_back({Recipe});
+      Expr *InitExpr = readSubExpr();
+      RecipeList.push_back({Recipe, InitExpr});
     }
 
     return OpenACCReductionClause::Create(getContext(), BeginLoc, LParenLoc, Op,
