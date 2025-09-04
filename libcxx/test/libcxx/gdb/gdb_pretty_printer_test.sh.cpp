@@ -684,7 +684,7 @@ void mi_mode_test() {
   one_two_three_umap.insert({2, "two"});
   one_two_three_umap.insert({1, "one"});
   CompareListChildrenToChars(
-      one_two_three_umap, R"([{"key": 3, "value": "three"}, {"key": 2, "value": "two"}, {"key": 1, "value": "one"}])");
+      one_two_three_umap, R"([{"key": 1, "value": "one"}, {"key": 2, "value": "two"}, {"key": 3, "value": "three"}])");
 
   std::deque<int> one_two_three_deque{1, 2, 3};
   CompareListChildrenToChars(one_two_three_deque, "[1, 2, 3]");
