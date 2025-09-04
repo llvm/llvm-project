@@ -583,6 +583,12 @@ def FeatureRealTrue16Insts : SubtargetFeature<"real-true16",
   "Use true 16-bit registers"
 >;
 
+def FeatureRealTrueD16Insts : SubtargetFeature<"real-true-d16",
+  "EnableRealTrueD16Insts",
+  "true",
+  "Use D16 instructions with true 16-bit registere"
+>;
+
 def FeatureBF16TransInsts : SubtargetFeature<"bf16-trans-insts",
   "HasBF16TransInsts",
   "true",
@@ -2563,6 +2569,13 @@ def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() &&
   AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;
   // FIXME When we default to RealTrue16 instead of Fake, change the line as follows.
   // AssemblerPredicate<(all_of FeatureTrue16BitInsts, (not FeatureRealTrue16Insts))>;
+
+// Use D16 Insts in true16 mode
+def UseRealTrueD16Insts : TrueD16PredicateClass<"Subtarget->useRealTrueD16Insts()">,
+  AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts, FeatureRealTrueD16Insts)>;
+def NotUseRealTrueD16Insts : TrueD16PredicateClass<"Subtarget->useRealTrue16Insts() && "
+                                                    "!Subtarget->useRealTrueD16Insts()">,
+  AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts)>;
 
 def HasBF16TransInsts : Predicate<"Subtarget->hasBF16TransInsts()">,
   AssemblerPredicate<(all_of FeatureBF16TransInsts)>;

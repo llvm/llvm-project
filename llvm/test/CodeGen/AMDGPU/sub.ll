@@ -437,16 +437,16 @@ define amdgpu_kernel void @test_sub_i16(ptr addrspace(1) %out, ptr addrspace(1) 
 ; GFX12-TRUE16:       ; %bb.0:
 ; GFX12-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[2:3] scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    global_load_u16 v1, v0, s[2:3] scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v1, s[2:3] offset:2 scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    global_load_u16 v0, v0, s[2:3] offset:2 scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-TRUE16-NEXT:    v_sub_nc_u16 v0.l, v0.l, v0.h
-; GFX12-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX12-TRUE16-NEXT:    v_sub_nc_u16 v0.l, v1.l, v0.l
+; GFX12-TRUE16-NEXT:    global_store_b16 v2, v0, s[0:1]
 ; GFX12-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX12-FAKE16-LABEL: test_sub_i16:

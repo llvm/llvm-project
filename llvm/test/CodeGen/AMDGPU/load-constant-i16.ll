@@ -84,7 +84,7 @@ define amdgpu_kernel void @constant_load_i16(ptr addrspace(1) %out, ptr addrspac
 ; GFX12-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[2:3]
+; GFX12-TRUE16-NEXT:    global_load_u16 v0, v1, s[2:3]
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; GFX12-TRUE16-NEXT:    s_endpgm
@@ -760,77 +760,41 @@ define amdgpu_kernel void @constant_load_v16i16_align2(ptr addrspace(4) %ptr0) #
 ; EG-NEXT:     MOV * T2.X, literal.x,
 ; EG-NEXT:    0(0.000000e+00), 0(0.000000e+00)
 ;
-; GFX12-TRUE16-LABEL: constant_load_v16i16_align2:
-; GFX12-TRUE16:       ; %bb.0: ; %entry
-; GFX12-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v8, 0
-; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    s_clause 0x7
-; GFX12-TRUE16-NEXT:    global_load_d16_b16 v3, v8, s[0:1] offset:12
-; GFX12-TRUE16-NEXT:    global_load_d16_b16 v7, v8, s[0:1] offset:28
-; GFX12-TRUE16-NEXT:    global_load_d16_b16 v6, v8, s[0:1] offset:24
-; GFX12-TRUE16-NEXT:    global_load_d16_b16 v5, v8, s[0:1] offset:20
-; GFX12-TRUE16-NEXT:    global_load_d16_b16 v4, v8, s[0:1] offset:16
-; GFX12-TRUE16-NEXT:    global_load_d16_b16 v2, v8, s[0:1] offset:8
-; GFX12-TRUE16-NEXT:    global_load_d16_b16 v1, v8, s[0:1] offset:4
-; GFX12-TRUE16-NEXT:    global_load_d16_b16 v0, v8, s[0:1]
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x7
-; GFX12-TRUE16-NEXT:    global_load_d16_hi_b16 v3, v8, s[0:1] offset:14
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x7
-; GFX12-TRUE16-NEXT:    global_load_d16_hi_b16 v7, v8, s[0:1] offset:30
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x7
-; GFX12-TRUE16-NEXT:    global_load_d16_hi_b16 v6, v8, s[0:1] offset:26
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x7
-; GFX12-TRUE16-NEXT:    global_load_d16_hi_b16 v5, v8, s[0:1] offset:22
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x7
-; GFX12-TRUE16-NEXT:    global_load_d16_hi_b16 v4, v8, s[0:1] offset:18
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x7
-; GFX12-TRUE16-NEXT:    global_load_d16_hi_b16 v2, v8, s[0:1] offset:10
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x7
-; GFX12-TRUE16-NEXT:    global_load_d16_hi_b16 v1, v8, s[0:1] offset:6
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x7
-; GFX12-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v8, s[0:1] offset:2
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    s_clause 0x1
-; GFX12-TRUE16-NEXT:    global_store_b128 v[0:1], v[4:7], off
-; GFX12-TRUE16-NEXT:    global_store_b128 v[0:1], v[0:3], off
-; GFX12-TRUE16-NEXT:    s_endpgm
-;
-; GFX12-FAKE16-LABEL: constant_load_v16i16_align2:
-; GFX12-FAKE16:       ; %bb.0: ; %entry
-; GFX12-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v8, 0
-; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-FAKE16-NEXT:    s_clause 0x7
-; GFX12-FAKE16-NEXT:    global_load_u16 v3, v8, s[0:1] offset:12
-; GFX12-FAKE16-NEXT:    global_load_u16 v7, v8, s[0:1] offset:28
-; GFX12-FAKE16-NEXT:    global_load_u16 v6, v8, s[0:1] offset:24
-; GFX12-FAKE16-NEXT:    global_load_u16 v5, v8, s[0:1] offset:20
-; GFX12-FAKE16-NEXT:    global_load_u16 v4, v8, s[0:1] offset:16
-; GFX12-FAKE16-NEXT:    global_load_u16 v2, v8, s[0:1] offset:8
-; GFX12-FAKE16-NEXT:    global_load_u16 v1, v8, s[0:1] offset:4
-; GFX12-FAKE16-NEXT:    global_load_u16 v0, v8, s[0:1]
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x7
-; GFX12-FAKE16-NEXT:    global_load_d16_hi_b16 v3, v8, s[0:1] offset:14
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x7
-; GFX12-FAKE16-NEXT:    global_load_d16_hi_b16 v7, v8, s[0:1] offset:30
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x7
-; GFX12-FAKE16-NEXT:    global_load_d16_hi_b16 v6, v8, s[0:1] offset:26
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x7
-; GFX12-FAKE16-NEXT:    global_load_d16_hi_b16 v5, v8, s[0:1] offset:22
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x7
-; GFX12-FAKE16-NEXT:    global_load_d16_hi_b16 v4, v8, s[0:1] offset:18
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x7
-; GFX12-FAKE16-NEXT:    global_load_d16_hi_b16 v2, v8, s[0:1] offset:10
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x7
-; GFX12-FAKE16-NEXT:    global_load_d16_hi_b16 v1, v8, s[0:1] offset:6
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x7
-; GFX12-FAKE16-NEXT:    global_load_d16_hi_b16 v0, v8, s[0:1] offset:2
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-FAKE16-NEXT:    s_clause 0x1
-; GFX12-FAKE16-NEXT:    global_store_b128 v[0:1], v[4:7], off
-; GFX12-FAKE16-NEXT:    global_store_b128 v[0:1], v[0:3], off
-; GFX12-FAKE16-NEXT:    s_endpgm
+; GFX12-LABEL: constant_load_v16i16_align2:
+; GFX12:       ; %bb.0: ; %entry
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX12-NEXT:    v_mov_b32_e32 v8, 0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_clause 0x7
+; GFX12-NEXT:    global_load_u16 v3, v8, s[0:1] offset:12
+; GFX12-NEXT:    global_load_u16 v7, v8, s[0:1] offset:28
+; GFX12-NEXT:    global_load_u16 v6, v8, s[0:1] offset:24
+; GFX12-NEXT:    global_load_u16 v5, v8, s[0:1] offset:20
+; GFX12-NEXT:    global_load_u16 v4, v8, s[0:1] offset:16
+; GFX12-NEXT:    global_load_u16 v2, v8, s[0:1] offset:8
+; GFX12-NEXT:    global_load_u16 v1, v8, s[0:1] offset:4
+; GFX12-NEXT:    global_load_u16 v0, v8, s[0:1]
+; GFX12-NEXT:    s_wait_loadcnt 0x7
+; GFX12-NEXT:    global_load_d16_hi_b16 v3, v8, s[0:1] offset:14
+; GFX12-NEXT:    s_wait_loadcnt 0x7
+; GFX12-NEXT:    global_load_d16_hi_b16 v7, v8, s[0:1] offset:30
+; GFX12-NEXT:    s_wait_loadcnt 0x7
+; GFX12-NEXT:    global_load_d16_hi_b16 v6, v8, s[0:1] offset:26
+; GFX12-NEXT:    s_wait_loadcnt 0x7
+; GFX12-NEXT:    global_load_d16_hi_b16 v5, v8, s[0:1] offset:22
+; GFX12-NEXT:    s_wait_loadcnt 0x7
+; GFX12-NEXT:    global_load_d16_hi_b16 v4, v8, s[0:1] offset:18
+; GFX12-NEXT:    s_wait_loadcnt 0x7
+; GFX12-NEXT:    global_load_d16_hi_b16 v2, v8, s[0:1] offset:10
+; GFX12-NEXT:    s_wait_loadcnt 0x7
+; GFX12-NEXT:    global_load_d16_hi_b16 v1, v8, s[0:1] offset:6
+; GFX12-NEXT:    s_wait_loadcnt 0x7
+; GFX12-NEXT:    global_load_d16_hi_b16 v0, v8, s[0:1] offset:2
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    s_clause 0x1
+; GFX12-NEXT:    global_store_b128 v[0:1], v[4:7], off
+; GFX12-NEXT:    global_store_b128 v[0:1], v[0:3], off
+; GFX12-NEXT:    s_endpgm
 entry:
   %ld =  load <16 x i16>, ptr addrspace(4) %ptr0, align 2
   store <16 x i16> %ld, ptr addrspace(1) poison, align 32
@@ -5510,27 +5474,16 @@ define amdgpu_kernel void @constant_zextload_i16_to_i64(ptr addrspace(1) %out, p
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
-; GFX12-TRUE16-LABEL: constant_zextload_i16_to_i64:
-; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[2:3]
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX12-TRUE16-NEXT:    global_store_b64 v1, v[0:1], s[0:1]
-; GFX12-TRUE16-NEXT:    s_endpgm
-;
-; GFX12-FAKE16-LABEL: constant_zextload_i16_to_i64:
-; GFX12-FAKE16:       ; %bb.0:
-; GFX12-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-FAKE16-NEXT:    global_load_u16 v0, v1, s[2:3]
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX12-FAKE16-NEXT:    global_store_b64 v1, v[0:1], s[0:1]
-; GFX12-FAKE16-NEXT:    s_endpgm
+; GFX12-LABEL: constant_zextload_i16_to_i64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX12-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_load_u16 v0, v1, s[2:3]
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX12-NEXT:    global_store_b64 v1, v[0:1], s[0:1]
+; GFX12-NEXT:    s_endpgm
   %a = load i16, ptr addrspace(4) %in
   %ext = zext i16 %a to i64
   store i64 %ext, ptr addrspace(1) %out
@@ -5612,31 +5565,18 @@ define amdgpu_kernel void @constant_sextload_i16_to_i64(ptr addrspace(1) %out, p
 ; EG-NEXT:     ASHR * T0.Y, PV.X, literal.x,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
 ;
-; GFX12-TRUE16-LABEL: constant_sextload_i16_to_i64:
-; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
-; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    global_load_d16_b16 v0, v2, s[2:3]
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; GFX12-TRUE16-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX12-TRUE16-NEXT:    s_endpgm
-;
-; GFX12-FAKE16-LABEL: constant_sextload_i16_to_i64:
-; GFX12-FAKE16:       ; %bb.0:
-; GFX12-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v2, 0
-; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-FAKE16-NEXT:    global_load_u16 v0, v2, s[2:3]
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-FAKE16-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; GFX12-FAKE16-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX12-FAKE16-NEXT:    s_endpgm
+; GFX12-LABEL: constant_sextload_i16_to_i64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX12-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_load_u16 v0, v2, s[2:3]
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX12-NEXT:    s_endpgm
   %a = load i16, ptr addrspace(4) %in
   %ext = sext i16 %a to i64
   store i64 %ext, ptr addrspace(1) %out
@@ -5711,27 +5651,16 @@ define amdgpu_kernel void @constant_zextload_v1i16_to_v1i64(ptr addrspace(1) %ou
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
-; GFX12-TRUE16-LABEL: constant_zextload_v1i16_to_v1i64:
-; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[2:3]
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX12-TRUE16-NEXT:    global_store_b64 v1, v[0:1], s[0:1]
-; GFX12-TRUE16-NEXT:    s_endpgm
-;
-; GFX12-FAKE16-LABEL: constant_zextload_v1i16_to_v1i64:
-; GFX12-FAKE16:       ; %bb.0:
-; GFX12-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-FAKE16-NEXT:    global_load_u16 v0, v1, s[2:3]
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX12-FAKE16-NEXT:    global_store_b64 v1, v[0:1], s[0:1]
-; GFX12-FAKE16-NEXT:    s_endpgm
+; GFX12-LABEL: constant_zextload_v1i16_to_v1i64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX12-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_load_u16 v0, v1, s[2:3]
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX12-NEXT:    global_store_b64 v1, v[0:1], s[0:1]
+; GFX12-NEXT:    s_endpgm
   %load = load <1 x i16>, ptr addrspace(4) %in
   %ext = zext <1 x i16> %load to <1 x i64>
   store <1 x i64> %ext, ptr addrspace(1) %out
@@ -5808,31 +5737,18 @@ define amdgpu_kernel void @constant_sextload_v1i16_to_v1i64(ptr addrspace(1) %ou
 ; EG-NEXT:     ASHR * T0.Y, PV.X, literal.x,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
 ;
-; GFX12-TRUE16-LABEL: constant_sextload_v1i16_to_v1i64:
-; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
-; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    global_load_d16_b16 v0, v2, s[2:3]
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; GFX12-TRUE16-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX12-TRUE16-NEXT:    s_endpgm
-;
-; GFX12-FAKE16-LABEL: constant_sextload_v1i16_to_v1i64:
-; GFX12-FAKE16:       ; %bb.0:
-; GFX12-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v2, 0
-; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-FAKE16-NEXT:    global_load_u16 v0, v2, s[2:3]
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-FAKE16-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; GFX12-FAKE16-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX12-FAKE16-NEXT:    s_endpgm
+; GFX12-LABEL: constant_sextload_v1i16_to_v1i64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX12-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_load_u16 v0, v2, s[2:3]
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX12-NEXT:    s_endpgm
   %load = load <1 x i16>, ptr addrspace(4) %in
   %ext = sext <1 x i16> %load to <1 x i64>
   store <1 x i64> %ext, ptr addrspace(1) %out
