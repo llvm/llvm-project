@@ -47,8 +47,7 @@ struct _LIBCXXABI_HIDDEN __cxa_exception {
     // In Wasm, a destructor returns its argument
     void *(_LIBCXXABI_DTOR_FUNC *exceptionDestructor)(void *);
 #else
-    void (_LIBCXXABI_DTOR_FUNC* __ptrauth_cxxabi_exception_destructor
-             exceptionDestructor)(void*);
+    void(_LIBCXXABI_DTOR_FUNC* __ptrauth_cxxabi_exception_destructor exceptionDestructor)(void*);
 #endif
     std::unexpected_handler __ptrauth_cxxabi_unexpected_handler unexpectedHandler;
     std::terminate_handler __ptrauth_cxxabi_terminate_handler terminateHandler;
@@ -89,8 +88,7 @@ struct _LIBCXXABI_HIDDEN __cxa_dependent_exception {
 #endif
 
     std::type_info *exceptionType;
-    void (_LIBCXXABI_DTOR_FUNC* __ptrauth_cxxabi_exception_destructor
-             exceptionDestructor)(void*);
+    void(_LIBCXXABI_DTOR_FUNC* __ptrauth_cxxabi_exception_destructor exceptionDestructor)(void*);
     std::unexpected_handler __ptrauth_cxxabi_unexpected_handler unexpectedHandler;
     std::terminate_handler __ptrauth_cxxabi_terminate_handler terminateHandler;
 

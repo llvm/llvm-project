@@ -25,44 +25,39 @@
 
 // CXXABI depends on defintions in libunwind as pointer auth couples the
 // definitions
-#include "libunwind.h"
+#  include "libunwind.h"
 
 // The actual value of the discriminators listed below is not important.
 // The derivation of the constants is only being included for the purpose
 // of maintaining a record of how they were originally produced.
 
 // ptrauth_string_discriminator("scan_results::languageSpecificData") == 0xE50D)
-#define __ptrauth_scan_results_lsd \
-  __ptrauth(ptrauth_key_process_dependent_code, 1, 0xE50D)
+#  define __ptrauth_scan_results_lsd __ptrauth(ptrauth_key_process_dependent_code, 1, 0xE50D)
 
 // ptrauth_string_discriminator("scan_results::actionRecord") == 0x9823
-#define __ptrauth_scan_results_action_record \
-  __ptrauth(ptrauth_key_process_dependent_code, 1, 0x9823)
+#  define __ptrauth_scan_results_action_record __ptrauth(ptrauth_key_process_dependent_code, 1, 0x9823)
 
 // scan result is broken up as we have a manual re-sign that requires each component
-#define __ptrauth_scan_results_landingpad_key ptrauth_key_process_dependent_code
+#  define __ptrauth_scan_results_landingpad_key ptrauth_key_process_dependent_code
 // ptrauth_string_discriminator("scan_results::landingPad") == 0xD27C
-#define __ptrauth_scan_results_landingpad_disc 0xD27C
-#define __ptrauth_scan_results_landingpad \
-   __ptrauth(__ptrauth_scan_results_landingpad_key, 1, __ptrauth_scan_results_landingpad_disc)
+#  define __ptrauth_scan_results_landingpad_disc 0xD27C
+#  define __ptrauth_scan_results_landingpad                                                                            \
+    __ptrauth(__ptrauth_scan_results_landingpad_key, 1, __ptrauth_scan_results_landingpad_disc)
 
-#if __has_extension(__ptrauth_restricted_intptr)
-#define __ptrauth_scan_results_landingpad_intptr \
-   __ptrauth_restricted_intptr(__ptrauth_scan_results_landingpad_key, 1, \
-                               __ptrauth_scan_results_landingpad_disc)
-#else
-#define __ptrauth_scan_results_landingpad_intptr \
-   __ptrauth(__ptrauth_scan_results_landingpad_key, 1, \
-             __ptrauth_scan_results_landingpad_disc)
-#endif
+#  if __has_extension(__ptrauth_restricted_intptr)
+#    define __ptrauth_scan_results_landingpad_intptr                                                                   \
+      __ptrauth_restricted_intptr(__ptrauth_scan_results_landingpad_key, 1, __ptrauth_scan_results_landingpad_disc)
+#  else
+#    define __ptrauth_scan_results_landingpad_intptr                                                                   \
+      __ptrauth(__ptrauth_scan_results_landingpad_key, 1, __ptrauth_scan_results_landingpad_disc)
+#  endif
 
 #else
-#define __ptrauth_scan_results_lsd
-#define __ptrauth_scan_results_action_record
-#define __ptrauth_scan_results_landingpad
-#define __ptrauth_scan_results_landingpad_intptr
+#  define __ptrauth_scan_results_lsd
+#  define __ptrauth_scan_results_action_record
+#  define __ptrauth_scan_results_landingpad
+#  define __ptrauth_scan_results_landingpad_intptr
 #endif
-
 
 // TODO: This is a temporary workaround for libc++abi to recognize that it's being
 // built against LLVM's libunwind. LLVM's libunwind started reporting _LIBUNWIND_VERSION
@@ -577,9 +572,9 @@ typedef void* __ptrauth_scan_results_landingpad landing_pad_ptr_t;
 struct scan_results
 {
     int64_t        ttypeIndex;   // > 0 catch handler, < 0 exception spec handler, == 0 a cleanup
-    action_ptr_t   actionRecord; // Currently unused.  Retained to ease future maintenance.
-    lsd_ptr_t      languageSpecificData; // Needed only for __cxa_call_unexpected
-    landing_pad_t  landingPad;   // null -> nothing found, else something found
+    action_ptr_t actionRecord;   // Currently unused.  Retained to ease future maintenance.
+    lsd_ptr_t languageSpecificData; // Needed only for __cxa_call_unexpected
+    landing_pad_t landingPad;       // null -> nothing found, else something found
     void*          adjustedPtr;  // Used in cxa_exception.cpp
     _Unwind_Reason_Code reason;  // One of _URC_FATAL_PHASE1_ERROR,
                                  //        _URC_FATAL_PHASE2_ERROR,
@@ -634,14 +629,11 @@ set_registers(_Unwind_Exception* unwind_exception, _Unwind_Context* context,
   auto stackPointer = _Unwind_GetGR(context, UNW_REG_SP);
   // We manually re-sign the IP as the __ptrauth qualifiers cannot
   // express the required relationship with the destination address
-  const auto existingDiscriminator = ptrauth_blend_discriminator(
-      &results.landingPad, __ptrauth_scan_results_landingpad_disc);
+  const auto existingDiscriminator =
+      ptrauth_blend_discriminator(&results.landingPad, __ptrauth_scan_results_landingpad_disc);
   unw_word_t newIP /* opaque __ptrauth(ptrauth_key_return_address, stackPointer, 0) */ =
-      (unw_word_t)ptrauth_auth_and_resign(*(void* const*)&results.landingPad,
-                                          __ptrauth_scan_results_landingpad_key,
-                                          existingDiscriminator,
-                                          ptrauth_key_return_address,
-                                          stackPointer);
+      (unw_word_t)ptrauth_auth_and_resign(*(void* const*)&results.landingPad, __ptrauth_scan_results_landingpad_key,
+                                          existingDiscriminator, ptrauth_key_return_address, stackPointer);
   _Unwind_SetIP(context, newIP);
 #else
   _Unwind_SetIP(context, results.landingPad);

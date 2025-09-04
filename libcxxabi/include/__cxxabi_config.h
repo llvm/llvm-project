@@ -110,32 +110,25 @@
 #if __has_feature(ptrauth_calls)
 
 // ptrauth_string_discriminator("__cxa_exception::actionRecord") == 0xFC91
-#  define __ptrauth_cxxabi_action_record \
-            __ptrauth(ptrauth_key_process_dependent_data, 1, 0xFC91)
+#  define __ptrauth_cxxabi_action_record __ptrauth(ptrauth_key_process_dependent_data, 1, 0xFC91)
 
 // ptrauth_string_discriminator("__cxa_exception::languageSpecificData") == 0xE8EE
-#  define __ptrauth_cxxabi_lsd \
-            __ptrauth(ptrauth_key_process_dependent_data, 1, 0xE8EE)
+#  define __ptrauth_cxxabi_lsd __ptrauth(ptrauth_key_process_dependent_data, 1, 0xE8EE)
 
 // ptrauth_string_discriminator("__cxa_exception::catchTemp") == 0xFA58
-#  define __ptrauth_cxxabi_catch_temp \
-            __ptrauth(ptrauth_key_process_dependent_data, 1, 0xFA58)
+#  define __ptrauth_cxxabi_catch_temp __ptrauth(ptrauth_key_process_dependent_data, 1, 0xFA58)
 
 // ptrauth_string_discriminator("__cxa_exception::adjustedPtr") == 0x99E4
-#  define __ptrauth_cxxabi_adjusted_ptr \
-            __ptrauth(ptrauth_key_process_dependent_data, 1, 0x99E4)
+#  define __ptrauth_cxxabi_adjusted_ptr __ptrauth(ptrauth_key_process_dependent_data, 1, 0x99E4)
 
 // ptrauth_string_discriminator("__cxa_exception::unexpectedHandler") == 0x99A9
-#  define __ptrauth_cxxabi_unexpected_handler \
-            __ptrauth(ptrauth_key_function_pointer, 1, 0x99A9)
+#  define __ptrauth_cxxabi_unexpected_handler __ptrauth(ptrauth_key_function_pointer, 1, 0x99A9)
 
 // ptrauth_string_discriminator("__cxa_exception::terminateHandler") == 0x0886)
-#  define __ptrauth_cxxabi_terminate_handler \
-            __ptrauth(ptrauth_key_function_pointer, 1, 0x886)
+#  define __ptrauth_cxxabi_terminate_handler __ptrauth(ptrauth_key_function_pointer, 1, 0x886)
 
 // ptrauth_string_discriminator("__cxa_exception::exceptionDestructor") == 0xC088
-#  define __ptrauth_cxxabi_exception_destructor \
-            __ptrauth(ptrauth_key_function_pointer, 1, 0xC088)
+#  define __ptrauth_cxxabi_exception_destructor __ptrauth(ptrauth_key_function_pointer, 1, 0xC088)
 
 #else
 
