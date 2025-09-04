@@ -141,7 +141,10 @@ public:
         // Treat small-int vector binops as profitable when SDWA is available.
         // We explicitly gate to 8/16-bit to avoid i1 vectors and keep behavior
         // tight.
-        if (Elt->isIntegerTy(8) || (Elt->isIntegerTy(16) && ST.hasSDWA())) {
+        // Require SDWA for both i8 and i16, and keep vectors within 32 bits.
+        std::optional<unsigned> Bits = VTy->getPrimitiveSizeInBits();
+        if (ST.hasSDWA() && Bits && Bits->get() <= 32 &&
+            (Elt->isIntegerTy(8) || Elt->isIntegerTy(16))) {
           switch (BO->getOpcode()) {
           case Instruction::Add:
           case Instruction::Sub:
