@@ -206,6 +206,7 @@ the configuration (without a prefix: ``Auto``).
     true:                         vs.   false
     someLongFunction(argument1,         someLongFunction(argument1,
                      argument2);            argument2);
+
   This applies to round brackets (parentheses), angle brackets and square
   brackets.
 
