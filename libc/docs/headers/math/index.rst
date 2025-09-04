@@ -540,7 +540,7 @@ Notes:
 
 * Exhaustive tests check every representable point in the input space. This method is used for half-precision functions and single-precision univariate functions.
 * Randomized tests check a large, deterministic subset of the input space, typically using 2\ :sup:`32` samples. This method is used for functions with larger input spaces, such as single-precision bivariate and double-precision functions.
-* ULP tolerances are based on *The Khronos Group, The OpenCL C Specification v3.0.19, Sec. 7.4, Khronos Registry [July 10, 2025]*.
+* ULP tolerances are based on The Khronos Group, `The OpenCL C Specification v3.0.19 <https://registry.khronos.org/OpenCL/specs/3.0-unified/html/OpenCL_C.html>`_, Sec. 7.4, Khronos Registry [July 10, 2025].
 * The AMD GPU used for testing is AMD Radeon RX 6950 XT.
 * The NVIDIA GPU used for testing is NVIDIA RTX 4000 SFF Ada Generation.
 
