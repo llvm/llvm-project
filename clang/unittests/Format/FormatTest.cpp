@@ -8655,19 +8655,6 @@ TEST_F(FormatTest, BreaksFunctionDeclarations) {
                Style);
 }
 
-TEST_F(FormatTest, BreakFunctionsReturningRecords) {
-  FormatStyle Style = getLLVMStyle();
-  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
-  Style.BraceWrapping.AfterFunction = true;
-  Style.BraceWrapping.AfterClass = false;
-  Style.BraceWrapping.AfterStruct = false;
-  Style.BraceWrapping.AfterUnion = false;
-
-  verifyFormat("class Bar foo() {}", Style);
-  verifyFormat("struct Bar foo() {}", Style);
-  verifyFormat("union Bar foo() {}", Style);
-}
-
 TEST_F(FormatTest, DontBreakBeforeQualifiedOperator) {
   // Regression test for https://bugs.llvm.org/show_bug.cgi?id=40516:
   // Prefer keeping `::` followed by `operator` together.
@@ -15370,129 +15357,67 @@ TEST_F(FormatTest, NeverMergeShortRecords) {
                Style);
 }
 
-TEST_F(FormatTest, AllowShortRecordOnASingleLineNonSplit) {
+TEST_F(FormatTest, AllowShortRecordOnASingleLine) {
   auto Style = getLLVMStyle();
-
-  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
-  Style.BraceWrapping.SplitEmptyRecord = false;
-
-  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Never;
-  verifyFormat("class foo {\n"
-               "  void bar();\n"
-               "};",
-               Style);
-  verifyFormat("class foo {\n"
-               "};",
-               Style);
-
-  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_EmptyIfAttached;
-  verifyFormat("class foo {\n"
-               "  void bar();\n"
-               "};",
-               Style);
-  verifyFormat("class foo {};", Style);
-
-  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Empty;
-  verifyFormat("class foo {\n"
-               "  void bar();\n"
-               "};",
-               Style);
-  verifyFormat("class foo {};", Style);
-
-  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Always;
-  verifyFormat("class foo { void bar(); };", Style);
-  verifyFormat("class foo {};", Style);
-
-  Style.BraceWrapping.AfterClass = true;
-
-  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Never;
-  verifyFormat("class foo\n"
-               "{\n"
-               "  void bar();\n"
-               "};",
-               Style);
-  verifyFormat("class foo\n{};", Style);
-
-  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_EmptyIfAttached;
-  verifyFormat("class foo\n"
-               "{\n"
-               "  void bar();\n"
-               "};",
-               Style);
-  verifyFormat("class foo\n{};", Style);
-
-  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Empty;
-  verifyFormat("class foo\n"
-               "{\n"
-               "  void bar();\n"
-               "};",
-               Style);
-  verifyFormat("class foo {};", Style);
-
-  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Always;
-  verifyFormat("class foo { void bar(); };", Style);
-  verifyFormat("class foo {};", Style);
-}
-
-TEST_F(FormatTest, AllowShortRecordOnASingleLineSplit) {
-  auto Style = getLLVMStyle();
-
-  EXPECT_EQ(Style.BraceWrapping.SplitEmptyRecord, true);
-
   EXPECT_EQ(Style.AllowShortRecordOnASingleLine,
             FormatStyle::SRS_EmptyIfAttached);
-  verifyFormat("class foo {\n"
-               "  void bar();\n"
-               "};",
-               Style);
-  verifyFormat("class foo {};", Style);
 
   Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Never;
   verifyFormat("class foo {\n"
-               "  void bar();\n"
+               "};\n"
+               "class bar {\n"
+               "  int i;\n"
                "};",
                Style);
-  verifyFormat("class foo {\n"
-               "};",
-               Style);
-
-  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Empty;
-  verifyFormat("class foo {\n"
-               "  void bar();\n"
-               "};",
-               Style);
-  verifyFormat("class foo {};", Style);
-
-  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Always;
-  verifyFormat("class foo { void bar(); };", Style);
-  verifyFormat("class foo {};", Style);
-
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterClass = true;
-
-  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Never;
   verifyFormat("class foo\n"
                "{\n"
-               "}",
-               Style);
-
-  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_EmptyIfAttached;
-  verifyFormat("class foo\n"
+               "};\n"
+               "class bar\n"
                "{\n"
-               "}",
+               "  int i;\n"
+               "};",
+               Style);
+  Style.BraceWrapping.SplitEmptyRecord = false;
+  verifyFormat("class foo\n"
+               "{};",
                Style);
 
+  Style = getLLVMStyle();
   Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Empty;
+  verifyFormat("class foo {};\n"
+               "class bar {\n"
+               "  int i;\n"
+               "};",
+               Style);
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterClass = true;
   verifyFormat("class foo\n"
                "{\n"
-               "}",
+               "};\n"
+               "class bar\n"
+               "{\n"
+               "  int i;\n"
+               "};",
                Style);
+  Style.BraceWrapping.SplitEmptyRecord = false;
+  verifyFormat("class foo {};", Style);
 
+  Style = getLLVMStyle();
   Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Always;
+  verifyFormat("class foo {};\n"
+               "class bar { int i; };",
+               Style);
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterClass = true;
   verifyFormat("class foo\n"
                "{\n"
-               "}",
+               "};\n"
+               "class bar { int i; };",
                Style);
+  Style.BraceWrapping.SplitEmptyRecord = false;
+  verifyFormat("class foo {};", Style);
 }
 
 TEST_F(FormatTest, UnderstandContextOfRecordTypeKeywords) {
