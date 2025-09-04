@@ -131,6 +131,14 @@ static void printKnownBits(raw_ostream &OS, const KnownBits &Bits,
 
 namespace {
 
+// Represents a span of bits in the instruction encoding that's based on a span
+// of bits in an operand's encoding.
+//
+// Width is the width of the span.
+// Base is the starting position of that span in the instruction encoding.
+// Offset if the starting position of that span in the operand's encoding.
+// That is, bits {Base + Width - 1, Base} in the instruction encoding form
+// bits {Offset + Width - 1, Offset} in the operands encoding.
 struct EncodingField {
   unsigned Base, Width, Offset;
   EncodingField(unsigned B, unsigned W, unsigned O)
@@ -146,15 +154,12 @@ struct OperandInfo {
   OperandInfo(std::string D, bool HCD) : Decoder(D), HasCompleteDecoder(HCD) {}
 
   void addField(unsigned Base, unsigned Width, unsigned Offset) {
-    Fields.push_back(EncodingField(Base, Width, Offset));
+    Fields.emplace_back(Base, Width, Offset);
   }
 
   unsigned numFields() const { return Fields.size(); }
 
-  typedef std::vector<EncodingField>::const_iterator const_iterator;
-
-  const_iterator begin() const { return Fields.begin(); }
-  const_iterator end() const { return Fields.end(); }
+  ArrayRef<EncodingField> fields() const { return Fields; }
 };
 
 /// Represents a parsed InstructionEncoding record or a record derived from it.
@@ -1113,17 +1118,17 @@ void DecoderTableBuilder::emitBinaryParser(raw_ostream &OS, indent Indent,
     OS << ";\n";
   }
 
-  for (const EncodingField &EF : OpInfo) {
+  for (const auto &[Base, Width, Offset] : OpInfo.fields()) {
     OS << Indent;
     if (UseInsertBits)
       OS << "insertBits(tmp, ";
     else
       OS << "tmp = ";
-    OS << "fieldFromInstruction(insn, " << EF.Base << ", " << EF.Width << ')';
+    OS << "fieldFromInstruction(insn, " << Base << ", " << Width << ')';
     if (UseInsertBits)
-      OS << ", " << EF.Offset << ", " << EF.Width << ')';
-    else if (EF.Offset != 0)
-      OS << " << " << EF.Offset;
+      OS << ", " << Offset << ", " << Width << ')';
+    else if (Offset != 0)
+      OS << " << " << Offset;
     OS << ";\n";
   }
 
@@ -1933,7 +1938,8 @@ static void debugDumpRecord(const Record &Rec) {
 /// For an operand field named OpName: populate OpInfo.InitValue with the
 /// constant-valued bit values, and OpInfo.Fields with the ranges of bits to
 /// insert from the decoded instruction.
-static void addOneOperandFields(const Record *EncodingDef, const BitsInit &Bits,
+static void addOneOperandFields(const Record *EncodingDef,
+                                const BitsInit &InstBits,
                                 std::map<StringRef, StringRef> &TiedNames,
                                 StringRef OpName, OperandInfo &OpInfo) {
   // Some bits of the operand may be required to be 1 depending on the
@@ -1945,19 +1951,33 @@ static void addOneOperandFields(const Record *EncodingDef, const BitsInit &Bits,
           if (OpBit->getValue())
             OpInfo.InitValue |= 1ULL << I;
 
-  for (unsigned I = 0, J = 0; I != Bits.getNumBits(); I = J) {
+  // Find out where the variable bits of the operand are encoded. The bits don't
+  // have to be consecutive or in ascending order. For example, an operand could
+  // be encoded as follows:
+  //
+  //  7    6      5      4    3    2      1    0
+  // {1, op{5}, op{2}, op{1}, 0, op{4}, op{3}, ?}
+  //
+  // In this example the operand is encoded in three segments:
+  //
+  //           Base Width Offset
+  // op{2...1}   4    2     1
+  // op{4...3}   1    2     3
+  // op{5}       6    1     5
+  //
+  for (unsigned I = 0, J = 0; I != InstBits.getNumBits(); I = J) {
     const VarInit *Var;
     unsigned Offset = 0;
-    for (; J != Bits.getNumBits(); ++J) {
-      const VarBitInit *BJ = dyn_cast<VarBitInit>(Bits.getBit(J));
-      if (BJ) {
-        Var = dyn_cast<VarInit>(BJ->getBitVar());
+    for (; J != InstBits.getNumBits(); ++J) {
+      const Init *BitJ = InstBits.getBit(J);
+      if (const auto *VBI = dyn_cast<VarBitInit>(BitJ)) {
+        Var = dyn_cast<VarInit>(VBI->getBitVar());
         if (I == J)
-          Offset = BJ->getBitNum();
-        else if (BJ->getBitNum() != Offset + J - I)
+          Offset = VBI->getBitNum();
+        else if (VBI->getBitNum() != Offset + J - I)
           break;
       } else {
-        Var = dyn_cast<VarInit>(Bits.getBit(J));
+        Var = dyn_cast<VarInit>(BitJ);
       }
       if (!Var ||
           (Var->getName() != OpName && Var->getName() != TiedNames[OpName]))
