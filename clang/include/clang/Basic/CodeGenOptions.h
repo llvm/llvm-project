@@ -447,6 +447,9 @@ public:
 
   std::optional<double> AllowRuntimeCheckSkipHotCutoff;
 
+  /// Maximum number of allocation tokens (0 = no max).
+  std::optional<uint64_t> AllocTokenMax;
+
   /// List of backend command-line options for -fembed-bitcode.
   std::vector<uint8_t> CmdArgs;
 
