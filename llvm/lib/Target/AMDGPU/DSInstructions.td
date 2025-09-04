@@ -253,17 +253,22 @@ class DS_1A1D_RET <string opName, RegisterOperand data_op = AVLdSt_32>
   let IsAtomicRet = 1;
 }
 
-multiclass DS_1A1D_RET_mc <string opName, RegisterOperand rc = AVLdSt_32> {
+multiclass DS_1A1D_RET_mc <string opName, RegisterOperand rc = VGPROp_32> {
+  assert OperandIsVGPR<rc>.ret,
+         "DS with 2 data operands should be declared with VGPRs";
+
   def "" : DS_1A1D_RET<opName, rc>;
 
   let has_m0_read = 0 in {
     def _gfx9 : DS_1A1D_RET<opName, rc>;
+    def _agpr : DS_1A1D_RET<opName, getEquivalentAGPROperand<rc>.ret>;
   }
 }
 
-multiclass DS_1A1D_RET_mc_gfx9 <string opName, RegisterOperand rc = AVLdSt_32> {
+multiclass DS_1A1D_RET_mc_gfx9 <string opName, RegisterOperand rc = VGPROp_32> {
   let has_m0_read = 0 in {
     def "" : DS_1A1D_RET<opName, rc>;
+    def _agpr : DS_1A1D_RET<opName, getEquivalentAGPROperand<rc>.ret>;
   }
 }
 
@@ -617,7 +622,7 @@ def DS_WRITE_ADDTID_B32 : DS_0A1D_NORET<"ds_write_addtid_b32">;
 
 let SubtargetPredicate = HasLdsAtomicAddF64 in {
   defm DS_ADD_F64     : DS_1A1D_NORET_mc_gfx9<"ds_add_f64", AVLdSt_64>;
-  defm DS_ADD_RTN_F64 : DS_1A1D_RET_mc_gfx9<"ds_add_rtn_f64", AVLdSt_64>;
+  defm DS_ADD_RTN_F64 : DS_1A1D_RET_mc_gfx9<"ds_add_rtn_f64", VGPROp_64>;
 } // End SubtargetPredicate = HasLdsAtomicAddF64
 
 let SubtargetPredicate = HasAtomicDsPkAdd16Insts in {
@@ -689,25 +694,25 @@ defm DS_WRXCHG_RTN_B32 : DS_1A1D_RET_mc<"ds_wrxchg_rtn_b32">;
 defm DS_WRXCHG2_RTN_B32 : DS_1A2D_Off8_RET_mc<"ds_wrxchg2_rtn_b32", VGPROp_64, VGPROp_32>;
 defm DS_WRXCHG2ST64_RTN_B32 : DS_1A2D_Off8_RET_mc<"ds_wrxchg2st64_rtn_b32", VGPROp_64, VGPROp_32>;
 
-defm DS_ADD_RTN_U64  : DS_1A1D_RET_mc<"ds_add_rtn_u64", AVLdSt_64>;
-defm DS_SUB_RTN_U64  : DS_1A1D_RET_mc<"ds_sub_rtn_u64", AVLdSt_64>;
-defm DS_RSUB_RTN_U64  : DS_1A1D_RET_mc<"ds_rsub_rtn_u64", AVLdSt_64>;
-defm DS_INC_RTN_U64   : DS_1A1D_RET_mc<"ds_inc_rtn_u64", AVLdSt_64>;
-defm DS_DEC_RTN_U64   : DS_1A1D_RET_mc<"ds_dec_rtn_u64", AVLdSt_64>;
-defm DS_MIN_RTN_I64    : DS_1A1D_RET_mc<"ds_min_rtn_i64", AVLdSt_64>;
-defm DS_MAX_RTN_I64    : DS_1A1D_RET_mc<"ds_max_rtn_i64", AVLdSt_64>;
-defm DS_MIN_RTN_U64   : DS_1A1D_RET_mc<"ds_min_rtn_u64", AVLdSt_64>;
-defm DS_MAX_RTN_U64   : DS_1A1D_RET_mc<"ds_max_rtn_u64", AVLdSt_64>;
-defm DS_AND_RTN_B64    : DS_1A1D_RET_mc<"ds_and_rtn_b64", AVLdSt_64>;
-defm DS_OR_RTN_B64     : DS_1A1D_RET_mc<"ds_or_rtn_b64", AVLdSt_64>;
-defm DS_XOR_RTN_B64    : DS_1A1D_RET_mc<"ds_xor_rtn_b64", AVLdSt_64>;
+defm DS_ADD_RTN_U64  : DS_1A1D_RET_mc<"ds_add_rtn_u64", VGPROp_64>;
+defm DS_SUB_RTN_U64  : DS_1A1D_RET_mc<"ds_sub_rtn_u64", VGPROp_64>;
+defm DS_RSUB_RTN_U64  : DS_1A1D_RET_mc<"ds_rsub_rtn_u64", VGPROp_64>;
+defm DS_INC_RTN_U64   : DS_1A1D_RET_mc<"ds_inc_rtn_u64", VGPROp_64>;
+defm DS_DEC_RTN_U64   : DS_1A1D_RET_mc<"ds_dec_rtn_u64", VGPROp_64>;
+defm DS_MIN_RTN_I64    : DS_1A1D_RET_mc<"ds_min_rtn_i64", VGPROp_64>;
+defm DS_MAX_RTN_I64    : DS_1A1D_RET_mc<"ds_max_rtn_i64", VGPROp_64>;
+defm DS_MIN_RTN_U64   : DS_1A1D_RET_mc<"ds_min_rtn_u64", VGPROp_64>;
+defm DS_MAX_RTN_U64   : DS_1A1D_RET_mc<"ds_max_rtn_u64", VGPROp_64>;
+defm DS_AND_RTN_B64    : DS_1A1D_RET_mc<"ds_and_rtn_b64", VGPROp_64>;
+defm DS_OR_RTN_B64     : DS_1A1D_RET_mc<"ds_or_rtn_b64", VGPROp_64>;
+defm DS_XOR_RTN_B64    : DS_1A1D_RET_mc<"ds_xor_rtn_b64", VGPROp_64>;
 defm DS_MSKOR_RTN_B64  : DS_1A2D_RET_mc<"ds_mskor_rtn_b64", VGPROp_64>;
 defm DS_CMPST_RTN_B64  : DS_1A2D_RET_mc<"ds_cmpst_rtn_b64", VGPROp_64>;
 defm DS_CMPST_RTN_F64  : DS_1A2D_RET_mc<"ds_cmpst_rtn_f64", VGPROp_64>;
-defm DS_MIN_RTN_F64    : DS_1A1D_RET_mc<"ds_min_rtn_f64", AVLdSt_64>;
-defm DS_MAX_RTN_F64    : DS_1A1D_RET_mc<"ds_max_rtn_f64", AVLdSt_64>;
+defm DS_MIN_RTN_F64    : DS_1A1D_RET_mc<"ds_min_rtn_f64", VGPROp_64>;
+defm DS_MAX_RTN_F64    : DS_1A1D_RET_mc<"ds_max_rtn_f64", VGPROp_64>;
 
-defm DS_WRXCHG_RTN_B64 : DS_1A1D_RET_mc<"ds_wrxchg_rtn_b64", AVLdSt_64>;
+defm DS_WRXCHG_RTN_B64 : DS_1A1D_RET_mc<"ds_wrxchg_rtn_b64", VGPROp_64>;
 defm DS_WRXCHG2_RTN_B64 : DS_1A2D_Off8_RET_mc<"ds_wrxchg2_rtn_b64", VGPROp_128, VGPROp_64>;
 defm DS_WRXCHG2ST64_RTN_B64 : DS_1A2D_Off8_RET_mc<"ds_wrxchg2st64_rtn_b64", VGPROp_128, VGPROp_64>;
 
@@ -805,7 +810,7 @@ def DS_ORDERED_COUNT : DS_1A_RET_GDS<"ds_ordered_count">;
 let SubtargetPredicate = isGFX7Plus in {
 
 defm DS_WRAP_RTN_B32 : DS_1A2D_RET_mc<"ds_wrap_rtn_b32", VGPROp_32>;
-defm DS_CONDXCHG32_RTN_B64 : DS_1A1D_RET_mc<"ds_condxchg32_rtn_b64", AVLdSt_64>;
+defm DS_CONDXCHG32_RTN_B64 : DS_1A1D_RET_mc<"ds_condxchg32_rtn_b64", VGPROp_64>;
 
 let isConvergent = 1, usesCustomInserter = 1 in {
 def DS_GWS_SEMA_RELEASE_ALL : DS_GWS_0D<"ds_gws_sema_release_all">;
@@ -1833,30 +1838,32 @@ class DS_Real_Base_vi <bits<8> op, DS_Pseudo ps> :
   let Inst{63-56} = !if(ps.has_vdst, vdst{7-0}, 0);
 }
 
-multiclass DS_Real_vi <bits<8> op, DS_Pseudo base_pseudo> {
+
+multiclass DS_Real_vi <bits<8> op, DS_Pseudo base_pseudo, bit need_gfx9_suffix = true> {
   def "" : DS_Real_Base_vi<op, base_pseudo>;
 
-  def _gfx9 : DS_Real_Base_vi<op, !cast<DS_Pseudo>(!cast<string>(base_pseudo)#"_gfx9")> {
-    let DecoderNamespace = "GFX9";
+  if need_gfx9_suffix then {
+    def _gfx9 : DS_Real_Base_vi<op, !cast<DS_Pseudo>(!cast<string>(base_pseudo)#"_gfx9")> {
+      let DecoderNamespace = "GFX9";
+    }
+  }
+
+  // Handle cases that are available in all-AGPR or all-VGPR data
+  // operand forms. This should be used for all DS instructions with 2
+  // data operands.
+  defvar agpr_suffixed_name = !cast<string>(base_pseudo)#"_agpr";
+
+  if !exists<DS_Pseudo>(agpr_suffixed_name) then {
+    def _agpr : DS_Real_Base_vi<op, !cast<DS_Pseudo>(agpr_suffixed_name)> {
+      let DecoderNamespace = "GFX9";
+      let AssemblerPredicate = isGFX90APlus;
+    }
   }
 }
 
 // Instructions which use m0 or not for both gfx8 and gfx9 (or did not
 // exist on gfx8)
-class DS_Real_m0_vi<bits<8> op, DS_Pseudo ps> : DS_Real_Base_vi<op, ps>;
-
-// Handle cases that are available in all-AGPR or all-VGPR data
-// operand forms. This should be used for all DS instructions with 2
-// data operands.
-multiclass DS_Real_1A2D_vi<bits<8> op, DS_Pseudo base_pseudo> {
-  defm "" : DS_Real_vi<op, base_pseudo>;
-
-  // gfx90a+ only
-  def _agpr : DS_Real_Base_vi<op, !cast<DS_Pseudo>(!cast<string>(base_pseudo)#"_agpr")> {
-    let DecoderNamespace = "GFX9";
-    let AssemblerPredicate = isGFX90APlus;
-  }
-}
+multiclass DS_Real_m0_vi<bits<8> op, DS_Pseudo ps> : DS_Real_vi<op, ps, false>;
 
 defm DS_ADD_U32_vi        : DS_Real_vi<0x0,  DS_ADD_U32>;
 defm DS_SUB_U32_vi        : DS_Real_vi<0x1,  DS_SUB_U32>;
@@ -1870,23 +1877,23 @@ defm DS_MAX_U32_vi        : DS_Real_vi<0x8,  DS_MAX_U32>;
 defm DS_AND_B32_vi        : DS_Real_vi<0x9,  DS_AND_B32>;
 defm DS_OR_B32_vi         : DS_Real_vi<0xa,  DS_OR_B32>;
 defm DS_XOR_B32_vi        : DS_Real_vi<0xb,  DS_XOR_B32>;
-defm DS_MSKOR_B32_vi      : DS_Real_1A2D_vi<0xc,  DS_MSKOR_B32>;
+defm DS_MSKOR_B32_vi      : DS_Real_vi<0xc,  DS_MSKOR_B32>;
 defm DS_WRITE_B32_vi      : DS_Real_vi<0xd,  DS_WRITE_B32>;
-defm DS_WRITE2_B32_vi     : DS_Real_1A2D_vi<0xe,  DS_WRITE2_B32>;
-defm DS_WRITE2ST64_B32_vi : DS_Real_1A2D_vi<0xf,  DS_WRITE2ST64_B32>;
+defm DS_WRITE2_B32_vi     : DS_Real_vi<0xe,  DS_WRITE2_B32>;
+defm DS_WRITE2ST64_B32_vi : DS_Real_vi<0xf,  DS_WRITE2ST64_B32>;
 
-defm DS_CMPST_B32_vi      : DS_Real_1A2D_vi<0x10, DS_CMPST_B32>;
-defm DS_CMPST_F32_vi      : DS_Real_1A2D_vi<0x11, DS_CMPST_F32>;
+defm DS_CMPST_B32_vi      : DS_Real_vi<0x10, DS_CMPST_B32>;
+defm DS_CMPST_F32_vi      : DS_Real_vi<0x11, DS_CMPST_F32>;
 defm DS_MIN_F32_vi        : DS_Real_vi<0x12, DS_MIN_F32>;
 defm DS_MAX_F32_vi        : DS_Real_vi<0x13, DS_MAX_F32>;
-def DS_NOP_vi             : DS_Real_m0_vi<0x14, DS_NOP>;
+defm DS_NOP_vi            : DS_Real_m0_vi<0x14, DS_NOP>;
 defm DS_ADD_F32_vi        : DS_Real_vi<0x15, DS_ADD_F32>;
-def DS_GWS_INIT_vi       : DS_Real_m0_vi<0x99, DS_GWS_INIT>;
-def DS_GWS_SEMA_V_vi     : DS_Real_m0_vi<0x9a, DS_GWS_SEMA_V>;
-def DS_GWS_SEMA_BR_vi    : DS_Real_m0_vi<0x9b, DS_GWS_SEMA_BR>;
-def DS_GWS_SEMA_P_vi     : DS_Real_m0_vi<0x9c, DS_GWS_SEMA_P>;
-def DS_GWS_BARRIER_vi    : DS_Real_m0_vi<0x9d, DS_GWS_BARRIER>;
-def DS_WRITE_ADDTID_B32_vi: DS_Real_m0_vi<0x1d, DS_WRITE_ADDTID_B32>;
+defm DS_GWS_INIT_vi       : DS_Real_m0_vi<0x99, DS_GWS_INIT>;
+defm DS_GWS_SEMA_V_vi     : DS_Real_m0_vi<0x9a, DS_GWS_SEMA_V>;
+defm DS_GWS_SEMA_BR_vi    : DS_Real_m0_vi<0x9b, DS_GWS_SEMA_BR>;
+defm DS_GWS_SEMA_P_vi     : DS_Real_m0_vi<0x9c, DS_GWS_SEMA_P>;
+defm DS_GWS_BARRIER_vi    : DS_Real_m0_vi<0x9d, DS_GWS_BARRIER>;
+defm DS_WRITE_ADDTID_B32_vi: DS_Real_m0_vi<0x1d, DS_WRITE_ADDTID_B32>;
 defm DS_WRITE_B8_vi       : DS_Real_vi<0x1e, DS_WRITE_B8>;
 defm DS_WRITE_B16_vi      : DS_Real_vi<0x1f, DS_WRITE_B16>;
 defm DS_ADD_RTN_U32_vi    : DS_Real_vi<0x20, DS_ADD_RTN_U32>;
@@ -1901,15 +1908,15 @@ defm DS_MAX_RTN_U32_vi    : DS_Real_vi<0x28, DS_MAX_RTN_U32>;
 defm DS_AND_RTN_B32_vi    : DS_Real_vi<0x29, DS_AND_RTN_B32>;
 defm DS_OR_RTN_B32_vi     : DS_Real_vi<0x2a, DS_OR_RTN_B32>;
 defm DS_XOR_RTN_B32_vi    : DS_Real_vi<0x2b, DS_XOR_RTN_B32>;
-defm DS_MSKOR_RTN_B32_vi  : DS_Real_1A2D_vi<0x2c, DS_MSKOR_RTN_B32>;
+defm DS_MSKOR_RTN_B32_vi  : DS_Real_vi<0x2c, DS_MSKOR_RTN_B32>;
 defm DS_WRXCHG_RTN_B32_vi : DS_Real_vi<0x2d, DS_WRXCHG_RTN_B32>;
-defm DS_WRXCHG2_RTN_B32_vi : DS_Real_1A2D_vi<0x2e, DS_WRXCHG2_RTN_B32>;
-defm DS_WRXCHG2ST64_RTN_B32_vi : DS_Real_1A2D_vi<0x2f, DS_WRXCHG2ST64_RTN_B32>;
-defm DS_CMPST_RTN_B32_vi  : DS_Real_1A2D_vi<0x30, DS_CMPST_RTN_B32>;
-defm DS_CMPST_RTN_F32_vi  : DS_Real_1A2D_vi<0x31, DS_CMPST_RTN_F32>;
+defm DS_WRXCHG2_RTN_B32_vi : DS_Real_vi<0x2e, DS_WRXCHG2_RTN_B32>;
+defm DS_WRXCHG2ST64_RTN_B32_vi : DS_Real_vi<0x2f, DS_WRXCHG2ST64_RTN_B32>;
+defm DS_CMPST_RTN_B32_vi  : DS_Real_vi<0x30, DS_CMPST_RTN_B32>;
+defm DS_CMPST_RTN_F32_vi  : DS_Real_vi<0x31, DS_CMPST_RTN_F32>;
 defm DS_MIN_RTN_F32_vi    : DS_Real_vi<0x32, DS_MIN_RTN_F32>;
 defm DS_MAX_RTN_F32_vi    : DS_Real_vi<0x33, DS_MAX_RTN_F32>;
-defm DS_WRAP_RTN_B32_vi   : DS_Real_1A2D_vi<0x34, DS_WRAP_RTN_B32>;
+defm DS_WRAP_RTN_B32_vi   : DS_Real_vi<0x34, DS_WRAP_RTN_B32>;
 defm DS_ADD_RTN_F32_vi    : DS_Real_vi<0x35, DS_ADD_RTN_F32>;
 defm DS_READ_B32_vi       : DS_Real_vi<0x36, DS_READ_B32>;
 defm DS_READ2_B32_vi      : DS_Real_vi<0x37, DS_READ2_B32>;
@@ -1918,13 +1925,13 @@ defm DS_READ_I8_vi        : DS_Real_vi<0x39, DS_READ_I8>;
 defm DS_READ_U8_vi        : DS_Real_vi<0x3a, DS_READ_U8>;
 defm DS_READ_I16_vi       : DS_Real_vi<0x3b, DS_READ_I16>;
 defm DS_READ_U16_vi       : DS_Real_vi<0x3c, DS_READ_U16>;
-def DS_READ_ADDTID_B32_vi : DS_Real_m0_vi<0xb6, DS_READ_ADDTID_B32>;
-def DS_CONSUME_vi         : DS_Real_m0_vi<0xbd, DS_CONSUME>;
-def DS_APPEND_vi          : DS_Real_m0_vi<0xbe, DS_APPEND>;
-def DS_ORDERED_COUNT_vi   : DS_Real_m0_vi<0xbf, DS_ORDERED_COUNT>;
-def DS_SWIZZLE_B32_vi     : DS_Real_m0_vi<0x3d, DS_SWIZZLE_B32>;
-def DS_PERMUTE_B32_vi    : DS_Real_m0_vi<0x3e, DS_PERMUTE_B32>;
-def DS_BPERMUTE_B32_vi   : DS_Real_m0_vi<0x3f, DS_BPERMUTE_B32>;
+defm DS_READ_ADDTID_B32_vi : DS_Real_m0_vi<0xb6, DS_READ_ADDTID_B32>;
+defm DS_CONSUME_vi         : DS_Real_m0_vi<0xbd, DS_CONSUME>;
+defm DS_APPEND_vi          : DS_Real_m0_vi<0xbe, DS_APPEND>;
+defm DS_ORDERED_COUNT_vi   : DS_Real_m0_vi<0xbf, DS_ORDERED_COUNT>;
+defm DS_SWIZZLE_B32_vi     : DS_Real_m0_vi<0x3d, DS_SWIZZLE_B32>;
+defm DS_PERMUTE_B32_vi    : DS_Real_m0_vi<0x3e, DS_PERMUTE_B32>;
+defm DS_BPERMUTE_B32_vi   : DS_Real_m0_vi<0x3f, DS_BPERMUTE_B32>;
 
 defm DS_ADD_U64_vi        : DS_Real_vi<0x40, DS_ADD_U64>;
 defm DS_SUB_U64_vi        : DS_Real_vi<0x41, DS_SUB_U64>;
@@ -1938,25 +1945,25 @@ defm DS_MAX_U64_vi        : DS_Real_vi<0x48, DS_MAX_U64>;
 defm DS_AND_B64_vi        : DS_Real_vi<0x49, DS_AND_B64>;
 defm DS_OR_B64_vi         : DS_Real_vi<0x4a, DS_OR_B64>;
 defm DS_XOR_B64_vi        : DS_Real_vi<0x4b, DS_XOR_B64>;
-defm DS_MSKOR_B64_vi      : DS_Real_1A2D_vi<0x4c, DS_MSKOR_B64>;
+defm DS_MSKOR_B64_vi      : DS_Real_vi<0x4c, DS_MSKOR_B64>;
 defm DS_WRITE_B64_vi      : DS_Real_vi<0x4d, DS_WRITE_B64>;
-defm DS_WRITE2_B64_vi     : DS_Real_1A2D_vi<0x4E, DS_WRITE2_B64>;
-defm DS_WRITE2ST64_B64_vi : DS_Real_1A2D_vi<0x4f, DS_WRITE2ST64_B64>;
+defm DS_WRITE2_B64_vi     : DS_Real_vi<0x4E, DS_WRITE2_B64>;
+defm DS_WRITE2ST64_B64_vi : DS_Real_vi<0x4f, DS_WRITE2ST64_B64>;
 
-defm DS_CMPST_B64_vi      : DS_Real_1A2D_vi<0x50, DS_CMPST_B64>;
-defm DS_CMPST_F64_vi      : DS_Real_1A2D_vi<0x51, DS_CMPST_F64>;
+defm DS_CMPST_B64_vi      : DS_Real_vi<0x50, DS_CMPST_B64>;
+defm DS_CMPST_F64_vi      : DS_Real_vi<0x51, DS_CMPST_F64>;
 defm DS_MIN_F64_vi        : DS_Real_vi<0x52, DS_MIN_F64>;
 defm DS_MAX_F64_vi        : DS_Real_vi<0x53, DS_MAX_F64>;
 
-def DS_WRITE_B8_D16_HI_vi : DS_Real_m0_vi<0x54, DS_WRITE_B8_D16_HI>;
-def DS_WRITE_B16_D16_HI_vi: DS_Real_m0_vi<0x55, DS_WRITE_B16_D16_HI>;
+defm DS_WRITE_B8_D16_HI_vi : DS_Real_m0_vi<0x54, DS_WRITE_B8_D16_HI>;
+defm DS_WRITE_B16_D16_HI_vi: DS_Real_m0_vi<0x55, DS_WRITE_B16_D16_HI>;
 
-def DS_READ_U8_D16_vi    : DS_Real_m0_vi<0x56, DS_READ_U8_D16>;
-def DS_READ_U8_D16_HI_vi : DS_Real_m0_vi<0x57, DS_READ_U8_D16_HI>;
-def DS_READ_I8_D16_vi    : DS_Real_m0_vi<0x58, DS_READ_I8_D16>;
-def DS_READ_I8_D16_HI_vi : DS_Real_m0_vi<0x59, DS_READ_I8_D16_HI>;
-def DS_READ_U16_D16_vi   : DS_Real_m0_vi<0x5a, DS_READ_U16_D16>;
-def DS_READ_U16_D16_HI_vi: DS_Real_m0_vi<0x5b, DS_READ_U16_D16_HI>;
+defm DS_READ_U8_D16_vi    : DS_Real_m0_vi<0x56, DS_READ_U8_D16>;
+defm DS_READ_U8_D16_HI_vi : DS_Real_m0_vi<0x57, DS_READ_U8_D16_HI>;
+defm DS_READ_I8_D16_vi    : DS_Real_m0_vi<0x58, DS_READ_I8_D16>;
+defm DS_READ_I8_D16_HI_vi : DS_Real_m0_vi<0x59, DS_READ_I8_D16_HI>;
+defm DS_READ_U16_D16_vi   : DS_Real_m0_vi<0x5a, DS_READ_U16_D16>;
+defm DS_READ_U16_D16_HI_vi: DS_Real_m0_vi<0x5b, DS_READ_U16_D16_HI>;
 
 defm DS_ADD_RTN_U64_vi    : DS_Real_vi<0x60, DS_ADD_RTN_U64>;
 defm DS_SUB_RTN_U64_vi    : DS_Real_vi<0x61, DS_SUB_RTN_U64>;
@@ -1970,14 +1977,14 @@ defm DS_MAX_RTN_U64_vi    : DS_Real_vi<0x68, DS_MAX_RTN_U64>;
 defm DS_AND_RTN_B64_vi    : DS_Real_vi<0x69, DS_AND_RTN_B64>;
 defm DS_OR_RTN_B64_vi     : DS_Real_vi<0x6a, DS_OR_RTN_B64>;
 defm DS_XOR_RTN_B64_vi    : DS_Real_vi<0x6b, DS_XOR_RTN_B64>;
-defm DS_MSKOR_RTN_B64_vi  : DS_Real_1A2D_vi<0x6c, DS_MSKOR_RTN_B64>;
+defm DS_MSKOR_RTN_B64_vi  : DS_Real_vi<0x6c, DS_MSKOR_RTN_B64>;
 defm DS_WRXCHG_RTN_B64_vi : DS_Real_vi<0x6d, DS_WRXCHG_RTN_B64>;
-defm DS_WRXCHG2_RTN_B64_vi : DS_Real_1A2D_vi<0x6e, DS_WRXCHG2_RTN_B64>;
-defm DS_WRXCHG2ST64_RTN_B64_vi : DS_Real_1A2D_vi<0x6f, DS_WRXCHG2ST64_RTN_B64>;
+defm DS_WRXCHG2_RTN_B64_vi : DS_Real_vi<0x6e, DS_WRXCHG2_RTN_B64>;
+defm DS_WRXCHG2ST64_RTN_B64_vi : DS_Real_vi<0x6f, DS_WRXCHG2ST64_RTN_B64>;
 defm DS_CONDXCHG32_RTN_B64_vi  : DS_Real_vi<0x7e, DS_CONDXCHG32_RTN_B64>;
-def DS_GWS_SEMA_RELEASE_ALL_vi: DS_Real_m0_vi<0x98, DS_GWS_SEMA_RELEASE_ALL>;
-defm DS_CMPST_RTN_B64_vi  : DS_Real_1A2D_vi<0x70, DS_CMPST_RTN_B64>;
-defm DS_CMPST_RTN_F64_vi  : DS_Real_1A2D_vi<0x71, DS_CMPST_RTN_F64>;
+defm DS_GWS_SEMA_RELEASE_ALL_vi: DS_Real_m0_vi<0x98, DS_GWS_SEMA_RELEASE_ALL>;
+defm DS_CMPST_RTN_B64_vi  : DS_Real_vi<0x70, DS_CMPST_RTN_B64>;
+defm DS_CMPST_RTN_F64_vi  : DS_Real_vi<0x71, DS_CMPST_RTN_F64>;
 defm DS_MIN_RTN_F64_vi    : DS_Real_vi<0x72, DS_MIN_RTN_F64>;
 defm DS_MAX_RTN_F64_vi    : DS_Real_vi<0x73, DS_MAX_RTN_F64>;
 
@@ -1985,56 +1992,56 @@ defm DS_READ_B64_vi       : DS_Real_vi<0x76, DS_READ_B64>;
 defm DS_READ2_B64_vi      : DS_Real_vi<0x77, DS_READ2_B64>;
 defm DS_READ2ST64_B64_vi  : DS_Real_vi<0x78, DS_READ2ST64_B64>;
 
-def DS_ADD_SRC2_U32_vi   : DS_Real_m0_vi<0x80, DS_ADD_SRC2_U32>;
-def DS_SUB_SRC2_U32_vi   : DS_Real_m0_vi<0x81, DS_SUB_SRC2_U32>;
-def DS_RSUB_SRC2_U32_vi  : DS_Real_m0_vi<0x82, DS_RSUB_SRC2_U32>;
-def DS_INC_SRC2_U32_vi   : DS_Real_m0_vi<0x83, DS_INC_SRC2_U32>;
-def DS_DEC_SRC2_U32_vi   : DS_Real_m0_vi<0x84, DS_DEC_SRC2_U32>;
-def DS_MIN_SRC2_I32_vi   : DS_Real_m0_vi<0x85, DS_MIN_SRC2_I32>;
-def DS_MAX_SRC2_I32_vi   : DS_Real_m0_vi<0x86, DS_MAX_SRC2_I32>;
-def DS_MIN_SRC2_U32_vi   : DS_Real_m0_vi<0x87, DS_MIN_SRC2_U32>;
-def DS_MAX_SRC2_U32_vi   : DS_Real_m0_vi<0x88, DS_MAX_SRC2_U32>;
-def DS_AND_SRC2_B32_vi   : DS_Real_m0_vi<0x89, DS_AND_SRC2_B32>;
-def DS_OR_SRC2_B32_vi    : DS_Real_m0_vi<0x8a, DS_OR_SRC2_B32>;
-def DS_XOR_SRC2_B32_vi   : DS_Real_m0_vi<0x8b, DS_XOR_SRC2_B32>;
-def DS_WRITE_SRC2_B32_vi : DS_Real_m0_vi<0x8d, DS_WRITE_SRC2_B32>;
-def DS_MIN_SRC2_F32_vi   : DS_Real_m0_vi<0x92, DS_MIN_SRC2_F32>;
-def DS_MAX_SRC2_F32_vi   : DS_Real_m0_vi<0x93, DS_MAX_SRC2_F32>;
-def DS_ADD_SRC2_F32_vi   : DS_Real_m0_vi<0x95, DS_ADD_SRC2_F32>;
-def DS_ADD_SRC2_U64_vi   : DS_Real_m0_vi<0xc0, DS_ADD_SRC2_U64>;
-def DS_SUB_SRC2_U64_vi   : DS_Real_m0_vi<0xc1, DS_SUB_SRC2_U64>;
-def DS_RSUB_SRC2_U64_vi  : DS_Real_m0_vi<0xc2, DS_RSUB_SRC2_U64>;
-def DS_INC_SRC2_U64_vi   : DS_Real_m0_vi<0xc3, DS_INC_SRC2_U64>;
-def DS_DEC_SRC2_U64_vi   : DS_Real_m0_vi<0xc4, DS_DEC_SRC2_U64>;
-def DS_MIN_SRC2_I64_vi   : DS_Real_m0_vi<0xc5, DS_MIN_SRC2_I64>;
-def DS_MAX_SRC2_I64_vi   : DS_Real_m0_vi<0xc6, DS_MAX_SRC2_I64>;
-def DS_MIN_SRC2_U64_vi   : DS_Real_m0_vi<0xc7, DS_MIN_SRC2_U64>;
-def DS_MAX_SRC2_U64_vi   : DS_Real_m0_vi<0xc8, DS_MAX_SRC2_U64>;
-def DS_AND_SRC2_B64_vi   : DS_Real_m0_vi<0xc9, DS_AND_SRC2_B64>;
-def DS_OR_SRC2_B64_vi    : DS_Real_m0_vi<0xca, DS_OR_SRC2_B64>;
-def DS_XOR_SRC2_B64_vi   : DS_Real_m0_vi<0xcb, DS_XOR_SRC2_B64>;
-def DS_WRITE_SRC2_B64_vi : DS_Real_m0_vi<0xcd, DS_WRITE_SRC2_B64>;
-def DS_MIN_SRC2_F64_vi   : DS_Real_m0_vi<0xd2, DS_MIN_SRC2_F64>;
-def DS_MAX_SRC2_F64_vi   : DS_Real_m0_vi<0xd3, DS_MAX_SRC2_F64>;
+defm DS_ADD_SRC2_U32_vi   : DS_Real_m0_vi<0x80, DS_ADD_SRC2_U32>;
+defm DS_SUB_SRC2_U32_vi   : DS_Real_m0_vi<0x81, DS_SUB_SRC2_U32>;
+defm DS_RSUB_SRC2_U32_vi  : DS_Real_m0_vi<0x82, DS_RSUB_SRC2_U32>;
+defm DS_INC_SRC2_U32_vi   : DS_Real_m0_vi<0x83, DS_INC_SRC2_U32>;
+defm DS_DEC_SRC2_U32_vi   : DS_Real_m0_vi<0x84, DS_DEC_SRC2_U32>;
+defm DS_MIN_SRC2_I32_vi   : DS_Real_m0_vi<0x85, DS_MIN_SRC2_I32>;
+defm DS_MAX_SRC2_I32_vi   : DS_Real_m0_vi<0x86, DS_MAX_SRC2_I32>;
+defm DS_MIN_SRC2_U32_vi   : DS_Real_m0_vi<0x87, DS_MIN_SRC2_U32>;
+defm DS_MAX_SRC2_U32_vi   : DS_Real_m0_vi<0x88, DS_MAX_SRC2_U32>;
+defm DS_AND_SRC2_B32_vi   : DS_Real_m0_vi<0x89, DS_AND_SRC2_B32>;
+defm DS_OR_SRC2_B32_vi    : DS_Real_m0_vi<0x8a, DS_OR_SRC2_B32>;
+defm DS_XOR_SRC2_B32_vi   : DS_Real_m0_vi<0x8b, DS_XOR_SRC2_B32>;
+defm DS_WRITE_SRC2_B32_vi : DS_Real_m0_vi<0x8d, DS_WRITE_SRC2_B32>;
+defm DS_MIN_SRC2_F32_vi   : DS_Real_m0_vi<0x92, DS_MIN_SRC2_F32>;
+defm DS_MAX_SRC2_F32_vi   : DS_Real_m0_vi<0x93, DS_MAX_SRC2_F32>;
+defm DS_ADD_SRC2_F32_vi   : DS_Real_m0_vi<0x95, DS_ADD_SRC2_F32>;
+defm DS_ADD_SRC2_U64_vi   : DS_Real_m0_vi<0xc0, DS_ADD_SRC2_U64>;
+defm DS_SUB_SRC2_U64_vi   : DS_Real_m0_vi<0xc1, DS_SUB_SRC2_U64>;
+defm DS_RSUB_SRC2_U64_vi  : DS_Real_m0_vi<0xc2, DS_RSUB_SRC2_U64>;
+defm DS_INC_SRC2_U64_vi   : DS_Real_m0_vi<0xc3, DS_INC_SRC2_U64>;
+defm DS_DEC_SRC2_U64_vi   : DS_Real_m0_vi<0xc4, DS_DEC_SRC2_U64>;
+defm DS_MIN_SRC2_I64_vi   : DS_Real_m0_vi<0xc5, DS_MIN_SRC2_I64>;
+defm DS_MAX_SRC2_I64_vi   : DS_Real_m0_vi<0xc6, DS_MAX_SRC2_I64>;
+defm DS_MIN_SRC2_U64_vi   : DS_Real_m0_vi<0xc7, DS_MIN_SRC2_U64>;
+defm DS_MAX_SRC2_U64_vi   : DS_Real_m0_vi<0xc8, DS_MAX_SRC2_U64>;
+defm DS_AND_SRC2_B64_vi   : DS_Real_m0_vi<0xc9, DS_AND_SRC2_B64>;
+defm DS_OR_SRC2_B64_vi    : DS_Real_m0_vi<0xca, DS_OR_SRC2_B64>;
+defm DS_XOR_SRC2_B64_vi   : DS_Real_m0_vi<0xcb, DS_XOR_SRC2_B64>;
+defm DS_WRITE_SRC2_B64_vi : DS_Real_m0_vi<0xcd, DS_WRITE_SRC2_B64>;
+defm DS_MIN_SRC2_F64_vi   : DS_Real_m0_vi<0xd2, DS_MIN_SRC2_F64>;
+defm DS_MAX_SRC2_F64_vi   : DS_Real_m0_vi<0xd3, DS_MAX_SRC2_F64>;
 defm DS_WRITE_B96_vi      : DS_Real_vi<0xde, DS_WRITE_B96>;
 defm DS_WRITE_B128_vi     : DS_Real_vi<0xdf, DS_WRITE_B128>;
 defm DS_READ_B96_vi       : DS_Real_vi<0xfe, DS_READ_B96>;
 defm DS_READ_B128_vi      : DS_Real_vi<0xff, DS_READ_B128>;
 
 // GFX90A+.
-def DS_ADD_F64_vi    : DS_Real_m0_vi<0x5c, DS_ADD_F64>;
-def DS_ADD_RTN_F64_vi: DS_Real_m0_vi<0x7c, DS_ADD_RTN_F64>;
+defm DS_ADD_F64_vi    : DS_Real_m0_vi<0x5c, DS_ADD_F64>;
+defm DS_ADD_RTN_F64_vi: DS_Real_m0_vi<0x7c, DS_ADD_RTN_F64>;
 
 // GFX942+.
-def DS_PK_ADD_F16_vi     : DS_Real_m0_vi<0x17, DS_PK_ADD_F16>;
-def DS_PK_ADD_RTN_F16_vi : DS_Real_m0_vi<0xb7, DS_PK_ADD_RTN_F16>;
-def DS_PK_ADD_BF16_vi    : DS_Real_m0_vi<0x18, DS_PK_ADD_BF16>;
-def DS_PK_ADD_RTN_BF16_vi: DS_Real_m0_vi<0xb8, DS_PK_ADD_RTN_BF16>;
+defm DS_PK_ADD_F16_vi     : DS_Real_m0_vi<0x17, DS_PK_ADD_F16>;
+defm DS_PK_ADD_RTN_F16_vi : DS_Real_m0_vi<0xb7, DS_PK_ADD_RTN_F16>;
+defm DS_PK_ADD_BF16_vi    : DS_Real_m0_vi<0x18, DS_PK_ADD_BF16>;
+defm DS_PK_ADD_RTN_BF16_vi: DS_Real_m0_vi<0xb8, DS_PK_ADD_RTN_BF16>;
 
 //===----------------------------------------------------------------------===//
 // GFX950.
 //===----------------------------------------------------------------------===//
-def DS_READ_B64_TR_B4_vi : DS_Real_m0_vi<0x0e0, DS_READ_B64_TR_B4>;
-def DS_READ_B96_TR_B6_vi : DS_Real_m0_vi<0x0e1, DS_READ_B96_TR_B6>;
-def DS_READ_B64_TR_B8_vi : DS_Real_m0_vi<0x0e2, DS_READ_B64_TR_B8>;
-def DS_READ_B64_TR_B16_vi: DS_Real_m0_vi<0x0e3, DS_READ_B64_TR_B16>;
+defm DS_READ_B64_TR_B4_vi : DS_Real_m0_vi<0x0e0, DS_READ_B64_TR_B4>;
+defm DS_READ_B96_TR_B6_vi : DS_Real_m0_vi<0x0e1, DS_READ_B96_TR_B6>;
+defm DS_READ_B64_TR_B8_vi : DS_Real_m0_vi<0x0e2, DS_READ_B64_TR_B8>;
+defm DS_READ_B64_TR_B16_vi: DS_Real_m0_vi<0x0e3, DS_READ_B64_TR_B16>;
