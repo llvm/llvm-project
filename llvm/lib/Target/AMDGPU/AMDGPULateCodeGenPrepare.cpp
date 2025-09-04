@@ -135,7 +135,6 @@ public:
     if (isa<StoreInst>(I))
       return true;
 
-    // Treat small-int vector binops as profitable when SDWA is available
     if (auto *BO = dyn_cast<BinaryOperator>(I)) {
       if (auto *VTy = dyn_cast<VectorType>(BO->getType())) {
         Type *Elt = VTy->getElementType();
