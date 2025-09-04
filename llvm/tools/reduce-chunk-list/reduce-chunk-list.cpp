@@ -116,7 +116,7 @@ int main(int argc, char **argv) {
         break;
 
       Range Testing = CurrChunks[Idx];
-      errs() << "Trying to remove : " << Testing.Begin;
+      errs() << "Trying to remove : ";
       Testing.print(errs());
       errs() << "\n";
 
