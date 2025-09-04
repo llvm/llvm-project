@@ -896,14 +896,7 @@ bool X86LegalizerInfo::legalizeSETROUNDING(MachineInstr &MI,
 
   // Convert Src (rounding mode) to bits for control word
   // (0xc9 << (2 * Src + 4)) & 0xc00
-  LLT SrcTy = MRI.getType(Src);
-  Register Src32;
-  if (SrcTy.getSizeInBits() < 32)
-    Src32 = MIRBuilder.buildZExt(s32, Src).getReg(0);
-  else if (SrcTy.getSizeInBits() > 32)
-    Src32 = MIRBuilder.buildTrunc(s32, Src).getReg(0);
-  else
-    Src32 = Src;
+  auto Src32 = MIRBuilder.buildZExtOrTrunc(s32, Src);
   auto ShiftAmt = MIRBuilder.buildAdd(
       s32, MIRBuilder.buildShl(s32, Src32, MIRBuilder.buildConstant(s32, 1)),
       MIRBuilder.buildConstant(s32, 4));
@@ -914,7 +907,8 @@ bool X86LegalizerInfo::legalizeSETROUNDING(MachineInstr &MI,
       MIRBuilder.buildAnd(s16, Shifted, MIRBuilder.buildConstant(s16, 0xc00));
 
   // Update rounding mode bits
-  auto NewCWD = MIRBuilder.buildOr(s16, ClearedCWD, RMBits);
+  auto NewCWD =
+      MIRBuilder.buildOr(s16, ClearedCWD, RMBits, MachineInstr::Disjoint);
 
   // Store new FP Control Word to stack
   auto StoreNewMMO =
