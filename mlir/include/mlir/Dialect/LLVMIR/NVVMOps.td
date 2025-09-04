@@ -4062,8 +4062,8 @@ def NVVM_ClusterLaunchControlTryCancelOp
   }];
 
   let arguments = (ins UnitAttr:$multicast, 
-                       LLVM_PointerShared: $addr,
-                       LLVM_PointerShared: $mbar);
+                       LLVM_PointerShared: $smemAddress,
+                       LLVM_PointerShared: $mbarrier);
 
   let assemblyFormat = "(`multicast` $multicast^ `,`)? $addr `,` $mbar attr-dict";
 

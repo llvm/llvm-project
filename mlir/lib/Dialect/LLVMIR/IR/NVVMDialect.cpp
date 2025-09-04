@@ -2110,8 +2110,8 @@ NVVM::IDArgPair ClusterLaunchControlTryCancelOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto curOp = cast<NVVM::ClusterLaunchControlTryCancelOp>(op);
   llvm::SmallVector<llvm::Value *> args;
-  args.push_back(mt.lookupValue(curOp.getAddr()));
-  args.push_back(mt.lookupValue(curOp.getMbar()));
+  args.push_back(mt.lookupValue(curOp.getSmemAddress()));
+  args.push_back(mt.lookupValue(curOp.getMbarrrier()));
 
   return curOp.getMulticast()
              ? NVVM::IDArgPair(
