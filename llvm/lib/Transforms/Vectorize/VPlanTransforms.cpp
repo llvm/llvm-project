@@ -3460,14 +3460,22 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
   };
 
   VPValue *VecOp = Red->getVecOp();
+  VPValue *Mul = nullptr;
+  VPValue *Sub = nullptr;
   VPValue *A, *B;
+  // Sub reductions could have a sub between the add reduction and vec op.
+  if (match(VecOp,
+            m_Binary<Instruction::Sub>(m_SpecificInt(0), m_VPValue(Mul))))
+    Sub = VecOp;
+  else
+    Mul = VecOp;
   // Try to match reduce.add/sub(mul(...)).
-  if (match(VecOp, m_Mul(m_VPValue(A), m_VPValue(B)))) {
+  if (match(Mul, m_Mul(m_VPValue(A), m_VPValue(B)))) {
     auto *RecipeA =
         dyn_cast_if_present<VPWidenCastRecipe>(A->getDefiningRecipe());
     auto *RecipeB =
         dyn_cast_if_present<VPWidenCastRecipe>(B->getDefiningRecipe());
-    auto *Mul = cast<VPWidenRecipe>(VecOp->getDefiningRecipe());
+    auto *MulR = cast<VPWidenRecipe>(Mul->getDefiningRecipe());
 
     // Match reduce.add/sub(mul(ext, ext)).
     if (RecipeA && RecipeB &&
@@ -3477,18 +3485,25 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
         (IsPartialReduction ||
          IsMulAccValidAndClampRange(RecipeA->getOpcode() ==
                                         Instruction::CastOps::ZExt,
-                                    Mul, RecipeA, RecipeB, nullptr))) {
-      return new VPExpressionRecipe(RecipeA, RecipeB, Mul, Red);
+                                    MulR, RecipeA, RecipeB, nullptr))) {
+      if (Sub)
+        return new VPExpressionRecipe(
+            RecipeA, RecipeB, MulR,
+            cast<VPWidenRecipe>(Sub->getDefiningRecipe()), Red);
+      return new VPExpressionRecipe(RecipeA, RecipeB, MulR, Red);
     }
     // Match reduce.add(mul).
-    if (IsMulAccValidAndClampRange(true, Mul, nullptr, nullptr, nullptr))
-      return new VPExpressionRecipe(Mul, Red);
+    // TODO: Add an expression type for this variant with a negated mul
+    if (!Sub &&
+        IsMulAccValidAndClampRange(true, MulR, nullptr, nullptr, nullptr))
+      return new VPExpressionRecipe(MulR, Red);
   }
   // Match reduce.add(ext(mul(ext(A), ext(B)))).
   // All extend recipes must have same opcode or A == B
   // which can be transform to reduce.add(zext(mul(sext(A), sext(B)))).
-  if (match(VecOp, m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue()),
-                                      m_ZExtOrSExt(m_VPValue()))))) {
+  // TODO: Add an expression type for this variant with a negated mul
+  if (!Sub && match(VecOp, m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue()),
+                                              m_ZExtOrSExt(m_VPValue()))))) {
     auto *Ext = cast<VPWidenCastRecipe>(VecOp->getDefiningRecipe());
     auto *Mul = cast<VPWidenRecipe>(Ext->getOperand(0)->getDefiningRecipe());
     auto *Ext0 =
