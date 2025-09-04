@@ -34,6 +34,7 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -42,6 +43,12 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-pre-ra-optimizations"
+
+static cl::opt<bool> EnableRegisterAvoidListForMFMARegs(
+    "amdgpu-avoid-hazard-hint-for-mfma", cl::Hidden,
+    cl::desc("Enable Register Avoidance for "
+             "MFMA in GCNPreRAOptimizations stage."),
+    cl::init(true));
 
 namespace {
 
@@ -247,6 +254,93 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
   TRI = ST.getRegisterInfo();
 
   bool Changed = false;
+
+  // Single pass implementation
+  if (EnableRegisterAvoidListForMFMARegs && ST.hasMAIInsts()) {
+    // Max lookback window for RAW or WAW hazard
+    constexpr unsigned MaxLookbackWindow = 19;
+    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+    for (const MachineBasicBlock &MBB : MF) {
+
+      SmallVector<std::pair<SlotIndex, SmallVector<Register, 4>>, 16>
+          RecentMFMAs;
+      for (const MachineInstr &MI : MBB) {
+        if (MI.isDebugInstr())
+          continue;
+        const SlotIndex CurrentSlot = LIS->getInstructionIndex(MI).getRegSlot();
+        // Handle MFMA instructions
+        if (SIInstrInfo::isMFMA(MI)) {
+          SmallVector<Register, 4> MFMARegisters;
+          auto collectMFMARegister = [&](unsigned OpIdx) {
+            if (OpIdx >= MI.getNumOperands())
+              return;
+
+            const MachineOperand &MO = MI.getOperand(OpIdx);
+            if (MO.isReg() && MO.getReg().isVirtual())
+              MFMARegisters.push_back(MO.getReg());
+          };
+          // Only collect Matrix C (operand 3) and destination (operand 0)
+          // registers
+          collectMFMARegister(0);
+          collectMFMARegister(3);
+
+          if (!MFMARegisters.empty()) {
+            RecentMFMAs.emplace_back(CurrentSlot, std::move(MFMARegisters));
+            // Maintain window
+            if (RecentMFMAs.size() > MaxLookbackWindow)
+              RecentMFMAs.erase(RecentMFMAs.begin());
+          }
+          continue;
+        }
+        bool ShouldCheckReuse = MI.mayLoad() || MI.mayStore() || MI.isCopy() ||
+                                SIInstrInfo::isVALU(MI);
+        // Skip non-relevant instructions, or skip until at least one MFMA is
+        // encountered
+        if (!ShouldCheckReuse || RecentMFMAs.empty())
+          continue;
+
+        // Process operands that might reuse MFMA registers
+        for (const MachineOperand &MO : MI.operands()) {
+          if (!MO.isReg() || !MO.getReg().isVirtual())
+            continue;
+
+          const Register CandidateReg = MO.getReg();
+          const TargetRegisterClass *CandidateRC =
+              MRI->getRegClass(CandidateReg);
+
+          // Only process VGPR registers
+          if (!TRI->isVGPRClass(CandidateRC))
+            continue;
+
+          for (auto It = RecentMFMAs.rbegin(); It != RecentMFMAs.rend(); ++It) {
+            const SmallVector<Register, 4> &MFMARegs = It->second;
+            for (Register MFMAReg : MFMARegs) {
+              // Verify register class compatibility
+              const TargetRegisterClass *MFMARC = MRI->getRegClass(MFMAReg);
+              if (!TRI->hasVGPRs(MFMARC))
+                continue;
+
+              // Check if MFMA register is dead at current instruction
+              const LiveInterval &MFMAInterval = LIS->getInterval(MFMAReg);
+              if (!MFMAInterval.liveAt(CurrentSlot)) {
+
+                // Add bidirectional avoidance hint
+                MFI->addRegisterToAvoid(CandidateReg, MFMAReg);
+                MFI->addRegisterToAvoid(MFMAReg, CandidateReg);
+
+                // Set hint if we found registers to avoid
+                MRI->setRegAllocationHint(
+                    MFMAReg, AMDGPURI::HasRegisterAvoidanceList, Register());
+                MRI->setRegAllocationHint(CandidateReg,
+                                          AMDGPURI::HasRegisterAvoidanceList,
+                                          Register());
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 
   for (unsigned I = 0, E = MRI->getNumVirtRegs(); I != E; ++I) {
     Register Reg = Register::index2VirtReg(I);
