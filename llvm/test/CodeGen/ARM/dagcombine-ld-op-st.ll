@@ -41,10 +41,11 @@ define i16 @test(ptr %p1) {
 ;
 ; CHECK-BE-NORMAL-LABEL: test:
 ; CHECK-BE-NORMAL:       @ %bb.0: @ %entry
-; CHECK-BE-NORMAL-NEXT:    ldrh r1, [r0]
+; CHECK-BE-NORMAL-NEXT:    ldr r1, [r0]
 ; CHECK-BE-NORMAL-NEXT:    movw r2, #65534
-; CHECK-BE-NORMAL-NEXT:    orr r1, r1, r2
-; CHECK-BE-NORMAL-NEXT:    strh r1, [r0]
+; CHECK-BE-NORMAL-NEXT:    orr r2, r2, r1, lsr #16
+; CHECK-BE-NORMAL-NEXT:    pkhbt r1, r1, r2, lsl #16
+; CHECK-BE-NORMAL-NEXT:    str r1, [r0]
 ; CHECK-BE-NORMAL-NEXT:    mov r0, #0
 ; CHECK-BE-NORMAL-NEXT:    bx lr
 ;

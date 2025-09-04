@@ -124,9 +124,9 @@ define i64 @test_rotl_udiv_special_case(i64 %i) {
 ; CHECK-NEXT:    ldr r12, .LCPI8_0
 ; CHECK-NEXT:    adc lr, r2, #0
 ; CHECK-NEXT:    umull r3, r2, lr, r12
-; CHECK-NEXT:    bic r3, r2, #1
-; CHECK-NEXT:    add r2, r3, r2, lsr #1
 ; CHECK-NEXT:    ldr r3, .LCPI8_1
+; CHECK-NEXT:    lsr r2, r2, #1
+; CHECK-NEXT:    add r2, r2, r2, lsl #1
 ; CHECK-NEXT:    sub r2, lr, r2
 ; CHECK-NEXT:    subs r0, r0, r2
 ; CHECK-NEXT:    sbc r1, r1, #0
