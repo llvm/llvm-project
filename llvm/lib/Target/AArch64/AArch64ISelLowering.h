@@ -869,6 +869,12 @@ private:
                                          TargetLoweringOpt &TLO,
                                          unsigned Depth) const override;
 
+  bool canCreateUndefOrPoisonForTargetNode(SDValue Op,
+                                           const APInt &DemandedElts,
+                                           const SelectionDAG &DAG,
+                                           bool PoisonOnly, bool ConsiderFlags,
+                                           unsigned Depth) const override;
+
   bool isTargetCanonicalConstantNode(SDValue Op) const override;
 
   // With the exception of data-predicate transitions, no instructions are
