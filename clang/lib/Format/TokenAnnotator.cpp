@@ -6044,6 +6044,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     }
 
     // Don't attempt to interpret record return types as records.
+    // FIXME: Not covered by tests.
     if (Right.isNot(TT_FunctionLBrace)) {
       return ((Line.startsWith(tok::kw_class) &&
                Style.BraceWrapping.AfterClass) ||

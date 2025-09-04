@@ -267,9 +267,10 @@ private:
     }
 
     // Try merging record blocks that have had their left brace wrapped.
-    if (TheLine->First->isOneOf(tok::kw_class, tok::kw_struct, tok::kw_union) &&
-        NextLine.First->is(tok::l_brace) && NextLine.First == NextLine.Last &&
-        I + 2 != E && !I[2]->First->is(tok::r_brace)) {
+    if (NextLine.First->isOneOf(TT_ClassLBrace, TT_StructLBrace,
+                                TT_UnionLBrace) &&
+        NextLine.First == NextLine.Last && I + 2 != E &&
+        !I[2]->First->is(tok::r_brace)) {
       if (unsigned MergedLines = tryMergeSimpleBlock(I, E, Limit))
         return MergedLines;
     }
@@ -500,7 +501,7 @@ private:
                  : 0;
     }
 
-    const bool TryMergeShortRecord = [this, &NextLine]() {
+    const bool TryMergeShortRecord = [&]() {
       switch (Style.AllowShortRecordOnASingleLine) {
       case FormatStyle::SRS_Never:
         return false;
@@ -521,7 +522,7 @@ private:
         ShouldMerge = Style.AllowShortCompoundRequirementOnASingleLine;
       } else if (TheLine->Last->isOneOf(TT_ClassLBrace, TT_StructLBrace,
                                         TT_UnionLBrace)) {
-        if (Style.AllowShortRecordOnASingleLine > FormatStyle::SRS_Never) {
+        if (Style.AllowShortRecordOnASingleLine != FormatStyle::SRS_Never) {
           // NOTE: We use AfterClass (whereas AfterStruct exists) for both
           // classes and structs, but it seems that wrapping is still handled
           // correctly elsewhere.
@@ -905,7 +906,7 @@ private:
                  !startsExternCBlock(Line)) {
         // Merge short records only when requested.
         if (isRecordLBrace(*Line.Last) &&
-            Style.AllowShortRecordOnASingleLine < FormatStyle::SRS_Always) {
+            Style.AllowShortRecordOnASingleLine != FormatStyle::SRS_Always) {
           return 0;
         }
 
