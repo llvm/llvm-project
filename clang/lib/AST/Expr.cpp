@@ -3184,7 +3184,7 @@ Expr *Expr::IgnoreUnlessSpelledInSource() {
     // 1 argument (i.e., the structure being decomposed). If it has
     // more than 1 argument, the others need to be defaulted.
     unsigned NumArgs = C->getNumArgs();
-    if (NumArgs > 1 && !isa<CXXDefaultArgExpr>(C->getArg(1)))
+    if (NumArgs == 0 || (NumArgs > 1 && !isa<CXXDefaultArgExpr>(C->getArg(1))))
       return E;
 
     Expr *A = C->getArg(0);
