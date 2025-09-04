@@ -79,7 +79,9 @@ static cl::opt<std::string> OptBisectRanges(
       getOptBisector().setRanges(std::move(*Ranges));
     }),
     cl::desc("Run optimization passes only for the specified ranges. "
-             "Format: '1-10,20-30,45' runs passes 1-10, 20-30, and 45, where index 1 is the first pass. Supply '0' to run no passes and -1 to run all passes."));
+             "Format: '1-10,20-30,45' runs passes 1-10, 20-30, and 45, where "
+             "index 1 is the first pass. Supply '0' to run no passes and -1 to "
+             "run all passes."));
 
 static cl::opt<bool> OptBisectVerbose(
     "opt-bisect-verbose",
