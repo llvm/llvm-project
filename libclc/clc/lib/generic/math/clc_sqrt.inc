@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE
-__clc_sqrt(__CLC_GENTYPE val) {
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_sqrt(__CLC_GENTYPE val) {
   return __builtin_elementwise_sqrt(val);
 }

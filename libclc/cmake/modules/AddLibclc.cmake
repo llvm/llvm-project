@@ -95,8 +95,8 @@ function(link_bc)
   if( ARG_INTERNALIZE )
     set( inputs_with_flag ${ARG_INPUTS} )
   else()
-    # Add --override for non-generic bitcode file so that its symbols can
-    # override definition in generic bitcode file.
+    # Add the --override flag for non-generic bitcode files so that their
+    # symbols can override definitions in generic bitcode files.
     set( inputs_with_flag )
     foreach( file IN LISTS ARG_INPUTS )
       string( FIND ${file} "/generic/" is_generic )
