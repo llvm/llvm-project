@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Address.h"
+#include "CIRGenCXXABI.h"
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenModule.h"
 #include "CIRGenRecordLayout.h"
@@ -28,8 +29,10 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <functional>
 #include <iterator>
 
 using namespace clang;
@@ -47,7 +50,7 @@ static mlir::TypedAttr computePadding(CIRGenModule &cgm, CharUnits size) {
   clang::CharUnits::QuantityType arSize = size.getQuantity();
   CIRGenBuilderTy &bld = cgm.getBuilder();
   if (size > CharUnits::One()) {
-    SmallVector<mlir::Attribute, 4> elts(arSize, cir::ZeroAttr::get(eltTy));
+    SmallVector<mlir::Attribute> elts(arSize, cir::ZeroAttr::get(eltTy));
     return bld.getConstArray(mlir::ArrayAttr::get(bld.getContext(), elts),
                              cir::ArrayType::get(eltTy, arSize));
   }
@@ -70,7 +73,7 @@ struct ConstantAggregateBuilderUtils {
 
   CharUnits getAlignment(const mlir::TypedAttr c) const {
     return CharUnits::fromQuantity(
-        dataLayout.getAlignment(c.getType(), /*abiOrPref=*/true));
+        dataLayout.getAlignment(c.getType(), /*useABIAlign=*/true));
   }
 
   CharUnits getSize(mlir::Type ty) const {
@@ -89,30 +92,36 @@ struct ConstantAggregateBuilderUtils {
 /// Incremental builder for an mlir::TypedAttr holding a record or array
 /// constant.
 class ConstantAggregateBuilder : private ConstantAggregateBuilderUtils {
-  /// The elements of the constant. These two arrays must have the same size;
-  /// Offsets[i] describes the offset of Elems[i] within the constant. The
-  /// elements are kept in increasing offset order, and we ensure that there
-  /// is no overlap: Offsets[i+1] >= Offsets[i] + getSize(Elemes[i]).
+  struct Element {
+    Element(mlir::TypedAttr element, CharUnits offset)
+        : element(element), offset(offset) {}
+
+    mlir::TypedAttr element;
+    /// Describes the offset of `element` within the constant.
+    CharUnits offset;
+  };
+  /// The elements of the constant. The elements are kept in increasing offset
+  /// order, and we ensure that there is no overlap:
+  /// elements.offset[i+1] >= elements.offset[i] + getSize(elements.element[i])
   ///
   /// This may contain explicit padding elements (in order to create a
   /// natural layout), but need not. Gaps between elements are implicitly
   /// considered to be filled with undef.
-  llvm::SmallVector<mlir::TypedAttr, 32> elems;
-  llvm::SmallVector<CharUnits, 32> offsets;
+  llvm::SmallVector<Element, 32> elements;
 
   /// The size of the constant (the maximum end offset of any added element).
-  /// May be larger than the end of Elems.back() if we split the last element
+  /// May be larger than the end of elems.back() if we split the last element
   /// and removed some trailing undefs.
   CharUnits size = CharUnits::Zero();
 
-  /// This is true only if laying out Elems in order as the elements of a
+  /// This is true only if laying out elems in order as the elements of a
   /// non-packed LLVM struct will give the correct layout.
   bool naturalLayout = true;
 
-  static mlir::Attribute
-  buildFrom(CIRGenModule &cgm, ArrayRef<mlir::TypedAttr> elems,
-            ArrayRef<CharUnits> offsets, CharUnits startOffset, CharUnits size,
-            bool naturalLayout, mlir::Type desiredTy, bool allowOversized);
+  static mlir::Attribute buildFrom(CIRGenModule &cgm, ArrayRef<Element> elems,
+                                   CharUnits startOffset, CharUnits size,
+                                   bool naturalLayout, mlir::Type desiredTy,
+                                   bool allowOversized);
 
 public:
   ConstantAggregateBuilder(CIRGenModule &cgm)
@@ -134,8 +143,8 @@ public:
   /// Otherwise, the constant will be of exactly the same size as \p desiredTy
   /// even if we can't represent it as that type.
   mlir::Attribute build(mlir::Type desiredTy, bool allowOversized) const {
-    return buildFrom(cgm, elems, offsets, CharUnits::Zero(), size,
-                     naturalLayout, desiredTy, allowOversized);
+    return buildFrom(cgm, elements, CharUnits::Zero(), size, naturalLayout,
+                     desiredTy, allowOversized);
   }
 };
 
@@ -152,14 +161,12 @@ bool ConstantAggregateBuilder::add(mlir::TypedAttr typedAttr, CharUnits offset,
   if (offset >= size) {
     CharUnits align = getAlignment(typedAttr);
     CharUnits alignedSize = size.alignTo(align);
-    if (alignedSize > offset || offset.alignTo(align) != offset)
+    if (alignedSize > offset || offset.alignTo(align) != offset) {
       naturalLayout = false;
-    else if (alignedSize < offset) {
-      elems.push_back(getPadding(offset - size));
-      offsets.push_back(size);
+    } else if (alignedSize < offset) {
+      elements.emplace_back(getPadding(offset - size), size);
     }
-    elems.push_back(typedAttr);
-    offsets.push_back(offset);
+    elements.emplace_back(typedAttr, offset);
     size = offset + getSize(typedAttr);
     return true;
   }
@@ -169,16 +176,15 @@ bool ConstantAggregateBuilder::add(mlir::TypedAttr typedAttr, CharUnits offset,
   return false;
 }
 
-mlir::Attribute ConstantAggregateBuilder::buildFrom(
-    CIRGenModule &cgm, ArrayRef<mlir::TypedAttr> elems,
-    ArrayRef<CharUnits> offsets, CharUnits startOffset, CharUnits size,
-    bool naturalLayout, mlir::Type desiredTy, bool allowOversized) {
+mlir::Attribute
+ConstantAggregateBuilder::buildFrom(CIRGenModule &cgm, ArrayRef<Element> elems,
+                                    CharUnits startOffset, CharUnits size,
+                                    bool naturalLayout, mlir::Type desiredTy,
+                                    bool allowOversized) {
   ConstantAggregateBuilderUtils utils(cgm);
 
   if (elems.empty())
     return cir::UndefAttr::get(desiredTy);
-
-  auto offset = [&](size_t i) { return offsets[i] - startOffset; };
 
   // If we want an array type, see if all the elements are the same type and
   // appropriately spaced.
@@ -192,45 +198,46 @@ mlir::Attribute ConstantAggregateBuilder::buildFrom(
   // init), it can be larger.
   CharUnits desiredSize = utils.getSize(desiredTy);
   if (size > desiredSize) {
-    assert(allowOversized && "Elems are oversized");
+    assert(allowOversized && "elems are oversized");
     desiredSize = size;
   }
 
   // The natural alignment of an unpacked CIR record with the given elements.
   CharUnits align = CharUnits::One();
-  for (mlir::TypedAttr e : elems) {
+  for (auto [e, offset] : elems)
     align = std::max(align, utils.getAlignment(e));
-  }
 
   // The natural size of an unpacked LLVM struct with the given elements.
   CharUnits alignedSize = size.alignTo(align);
 
   bool packed = false;
   bool padded = false;
-  ArrayRef<mlir::TypedAttr> unpackedElems = elems;
 
-  llvm::SmallVector<mlir::TypedAttr, 32> unpackedElemStorage;
+  llvm::SmallVector<mlir::Attribute, 32> unpackedElems;
   if (desiredSize < alignedSize || desiredSize.alignTo(align) != desiredSize) {
     naturalLayout = false;
     packed = true;
-  } else if (desiredSize > alignedSize) {
+  } else {
     // The natural layout would be too small. Add padding to fix it. (This
     // is ignored if we choose a packed layout.)
-    unpackedElemStorage.assign(unpackedElems.begin(), unpackedElems.end());
-    unpackedElemStorage.push_back(utils.getPadding(desiredSize - size));
-    unpackedElems = unpackedElemStorage;
+    unpackedElems.reserve(elems.size() + 1);
+    llvm::transform(elems, std::back_inserter(unpackedElems),
+                    std::mem_fn(&Element::element));
+    if (desiredSize > alignedSize)
+      unpackedElems.push_back(utils.getPadding(desiredSize - size));
   }
 
   // If we don't have a natural layout, insert padding as necessary.
   // As we go, double-check to see if we can actually just emit Elems
   // as a non-packed record and do so opportunistically if possible.
-  llvm::SmallVector<mlir::TypedAttr, 32> packedElems;
+  llvm::SmallVector<mlir::Attribute, 32> packedElems;
+  packedElems.reserve(elems.size());
   if (!naturalLayout) {
     CharUnits sizeSoFar = CharUnits::Zero();
-    for (auto [index, element] : llvm::enumerate(elems)) {
+    for (auto [element, offset] : elems) {
       CharUnits align = utils.getAlignment(element);
       CharUnits naturalOffset = sizeSoFar.alignTo(align);
-      CharUnits desiredOffset = offset(index);
+      CharUnits desiredOffset = offset - startOffset;
       assert(desiredOffset >= sizeSoFar && "elements out of order");
 
       if (desiredOffset != naturalOffset)
@@ -252,20 +259,15 @@ mlir::Attribute ConstantAggregateBuilder::buildFrom(
   }
 
   CIRGenBuilderTy &builder = cgm.getBuilder();
-  llvm::SmallVector<mlir::Attribute, 32> arrayElements;
-  arrayElements.reserve(elems.size());
-  if (packed)
-    llvm::copy(packedElems, std::back_inserter(arrayElements));
-  else
-    llvm::copy(unpackedElems, std::back_inserter(arrayElements));
-  auto arrAttr = mlir::ArrayAttr::get(builder.getContext(), arrayElements);
+  auto arrAttr = mlir::ArrayAttr::get(builder.getContext(),
+                                      packed ? packedElems : unpackedElems);
 
-  cir::RecordType strType = builder.getCompleteRecordType(arrAttr, packed);
+  cir::RecordType recordType = builder.getCompleteRecordType(arrAttr, packed);
   if (auto desired = mlir::dyn_cast<cir::RecordType>(desiredTy))
-    if (desired.isLayoutIdentical(strType))
-      strType = desired;
+    if (desired.isLayoutIdentical(recordType))
+      recordType = desired;
 
-  return builder.getConstRecordOrZeroAttr(arrAttr, packed, padded, strType);
+  return builder.getConstRecordOrZeroAttr(arrAttr, packed, padded, recordType);
 }
 
 //===----------------------------------------------------------------------===//
@@ -437,11 +439,29 @@ bool ConstRecordBuilder::build(const APValue &val, const RecordDecl *rd,
                                CharUnits offset) {
   const ASTRecordLayout &layout = cgm.getASTContext().getASTRecordLayout(rd);
   if (const CXXRecordDecl *cd = dyn_cast<CXXRecordDecl>(rd)) {
-    assert(!cir::MissingFeatures::vtableInitialization());
+    // Add a vtable pointer, if we need one and it hasn't already been added.
+    if (layout.hasOwnVFPtr()) {
+      CIRGenBuilderTy &builder = cgm.getBuilder();
+      cir::GlobalOp vtable =
+          cgm.getCXXABI().getAddrOfVTable(vTableClass, CharUnits());
+      clang::VTableLayout::AddressPointLocation addressPoint =
+          cgm.getItaniumVTableContext()
+              .getVTableLayout(vTableClass)
+              .getAddressPoint(BaseSubobject(cd, offset));
+      assert(!cir::MissingFeatures::addressPointerAuthInfo());
+      mlir::ArrayAttr indices = builder.getArrayAttr({
+          builder.getI32IntegerAttr(addressPoint.VTableIndex),
+          builder.getI32IntegerAttr(addressPoint.AddressPointIndex),
+      });
+      cir::GlobalViewAttr vtableInit =
+          cgm.getBuilder().getGlobalViewAttr(vtable, indices);
+      if (!appendBytes(offset, vtableInit))
+        return false;
+    }
 
     // Accumulate and sort bases, in order to visit them in address order, which
     // may not be the same as declaration order.
-    SmallVector<BaseInfo, 8> bases;
+    SmallVector<BaseInfo> bases;
     bases.reserve(cd->getNumBases());
     for (auto [index, base] : llvm::enumerate(cd->bases())) {
       assert(!base.isVirtual() && "should not have virtual bases here");
@@ -449,7 +469,9 @@ bool ConstRecordBuilder::build(const APValue &val, const RecordDecl *rd,
       CharUnits baseOffset = layout.getBaseClassOffset(bd);
       bases.push_back(BaseInfo(bd, baseOffset, index));
     }
-    llvm::stable_sort(bases);
+#ifdef EXPENSIVE_CHECKS
+    assert(llvm::is_sorted(bases) && "bases not sorted by offset");
+#endif
 
     for (BaseInfo &base : bases) {
       bool isPrimaryBase = layout.getPrimaryBase() == base.decl;
@@ -815,7 +837,7 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
       // If all the elements had the same type up to the trailing zeroes and
       // there are eight or more nonzero elements, emit a struct of two arrays
       // (the nonzero data and the zeroinitializer).
-      SmallVector<mlir::Attribute, 4> eles;
+      SmallVector<mlir::Attribute> eles;
       eles.reserve(nonzeroLength);
       for (const auto &element : elements)
         eles.push_back(element);
@@ -845,7 +867,7 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
   }
 
   if (commonElementType) {
-    SmallVector<mlir::Attribute, 4> eles;
+    SmallVector<mlir::Attribute> eles;
     eles.reserve(elements.size());
 
     for (const auto &element : elements)
@@ -856,7 +878,7 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
         mlir::ArrayAttr::get(builder.getContext(), eles));
   }
 
-  SmallVector<mlir::Attribute, 4> eles;
+  SmallVector<mlir::Attribute> eles;
   eles.reserve(elements.size());
   for (auto const &element : elements)
     eles.push_back(element);
