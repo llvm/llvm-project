@@ -3267,7 +3267,7 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
       //  NLI * LI * {Start,+,Step}  -->  NLI * {LI*Start,+,LI*Step}
       SmallVector<const SCEV *, 4> NewOps;
       NewOps.reserve(AddRec->getNumOperands());
-      const SCEV *Scale = getMulExpr(LIOps, SCEV::FlagAnyWrap, Depth + 1);
+      const SCEV *Scale = getMulExpr(LIOps, OrigFlags, Depth + 1);
 
       // If both the mul and addrec are nuw, we can preserve nuw.
       // If both the mul and addrec are nsw, we can only preserve nsw if either
@@ -3275,6 +3275,15 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
       // b) all multiplications of addrec operands with scale are nsw.
       SCEV::NoWrapFlags Flags =
           AddRec->getNoWrapFlags(ComputeFlags({Scale, AddRec}));
+
+      // Preserve flags for positive constant Scale.
+      if (auto *SC = dyn_cast<SCEVConstant>(Scale))
+        if (SC->getAPInt().isStrictlyPositive()) {
+          if (hasFlags(OrigFlags, SCEV::FlagNSW))
+            Flags = setFlags(Flags, SCEV::FlagNSW);
+          if (hasFlags(OrigFlags, SCEV::FlagNUW))
+            Flags = setFlags(Flags, SCEV::FlagNUW);
+        }
 
       for (unsigned i = 0, e = AddRec->getNumOperands(); i != e; ++i) {
         NewOps.push_back(getMulExpr(Scale, AddRec->getOperand(i),
@@ -3285,7 +3294,9 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
               Instruction::Mul, getSignedRange(Scale),
               OverflowingBinaryOperator::NoSignedWrap);
           if (!NSWRegion.contains(getSignedRange(AddRec->getOperand(i))))
-            Flags = clearFlags(Flags, SCEV::FlagNSW);
+            if (!hasFlags(OrigFlags, SCEV::FlagNSW))
+              Flags = clearFlags(Flags, SCEV::FlagNSW);
+          // Keep NSW flag if it was in OrigFlags.
         }
       }
 
