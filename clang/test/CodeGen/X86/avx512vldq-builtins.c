@@ -440,6 +440,8 @@ __m128d test_mm_cvtepi64_pd(__m128i __A) {
   return _mm_cvtepi64_pd(__A); 
 }
 
+TEST_CONSTEXPR(match_m128d(_mm_cvtepi64_pd((__m128i)(__v2di){-1, -1}), -1.0, -1.0));
+
 __m128d test_mm_mask_cvtepi64_pd(__m128d __W, __mmask8 __U, __m128i __A) {
   // CHECK-LABEL: test_mm_mask_cvtepi64_pd
   // CHECK: sitofp <2 x i64> %{{.*}} to <2 x double>
