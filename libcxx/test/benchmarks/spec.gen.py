@@ -66,8 +66,8 @@ spec_benchmarks &= no_fortran
 
 for benchmark in spec_benchmarks:
     print(f'#--- {benchmark}.sh.test')
+    print(f'RUN: rm -rf %T') # clean up any previous (potentially incomplete) run
+    print(f'RUN: mkdir %T')
     print(f'RUN: cp {spec_config} %T/spec-config.cfg')
-    print(f'RUN: rm -rf %T/output') # clean up any previous (potentially incomplete) run
-    print(f'RUN: %{{spec_dir}}/bin/runcpu --config %T/spec-config.cfg --size train --output-root %T/output --rebuild {benchmark}')
-    print(f'RUN: cp %T/output/result/*.log %T/output/result/*.train.csv %T') # copy relevant output files
-    print(f'RUN: rm -rf %T/output') # remove the temporary directory, which can become quite large
+    print(f'RUN: %{{spec_dir}}/bin/runcpu --config %T/spec-config.cfg --size train --output-root %T --rebuild {benchmark}')
+    print(f'RUN: rm -rf %T/benchspec') # remove the temporary directory, which can become quite large
