@@ -4611,6 +4611,8 @@ void CodeGenModule::emitMultiVersionFunctions() {
     llvm::Function *ResolverFunc = cast<llvm::Function>(ResolverConstant);
 
     ResolverFunc->setLinkage(getMultiversionLinkage(*this, GD));
+    setGlobalVisibility(ResolverFunc, /*D=*/nullptr);
+    setDSOLocal(ResolverFunc);
 
     if (!ResolverFunc->hasLocalLinkage() && supportsCOMDAT())
       ResolverFunc->setComdat(
@@ -4675,6 +4677,9 @@ void CodeGenModule::emitCPUDispatchDefinition(GlobalDecl GD) {
   auto *ResolverFunc = cast<llvm::Function>(GetOrCreateLLVMFunction(
       ResolverName, ResolverType, ResolverGD, /*ForVTable=*/false));
   ResolverFunc->setLinkage(getMultiversionLinkage(*this, GD));
+  setGlobalVisibility(ResolverFunc, /*D=*/nullptr);
+  setDSOLocal(ResolverFunc);
+
   if (supportsCOMDAT())
     ResolverFunc->setComdat(
         getModule().getOrInsertComdat(ResolverFunc->getName()));
