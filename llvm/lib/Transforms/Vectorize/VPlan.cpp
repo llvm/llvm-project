@@ -1677,19 +1677,16 @@ static void addRuntimeUnrollDisableMetaData(Loop *L) {
   }
 }
 
-void LoopVectorizationPlanner::updateLoopMetadata(Loop *VectorLoop, Loop *OrigLoop, ScalarEvolution &SE,
-                               OptimizationRemarkEmitter *ORE,
-                               VPBasicBlock *HeaderVPBB, VPlan &Plan,
-                               const TargetTransformInfo &TTI,
-                               bool VectorizingEpilogue, MDNode *LID,
-                               std::optional<unsigned> OrigAverageTripCount,
-                               unsigned OrigLoopInvocationWeight,
-                               ElementCount BestVF,
-                               unsigned EstimatedVFxUF, bool DisableRuntimeUnroll) {
-  MDNode *LID = OrigLoop->getLoopID();
+void LoopVectorizationPlanner::updateLoopMetadata(
+    Loop *VectorLoop, VPBasicBlock *HeaderVPBB, VPlan &Plan,
+    bool VectorizingEpilogue, MDNode *LID,
+    std::optional<unsigned> OrigAverageTripCount,
+    unsigned OrigLoopInvocationWeight, unsigned EstimatedVFxUF,
+    bool DisableRuntimeUnroll) {
   // Update the metadata of the scalar loop. Skip the update when vectorizing
-  // the epilogue loop, to ensure it is only updated once.
-  if (!VectorizingEpilogue) {
+  // the epilogue loop, to ensure it is only updated once, or when the became
+  // unreachable.
+  if (Plan.getScalarPreheader()->hasPredecessors() && !VectorizingEpilogue) {
     std::optional<MDNode *> RemainderLoopID = makeFollowupLoopID(
         LID, {LLVMLoopVectorizeFollowupAll, LLVMLoopVectorizeFollowupEpilogue});
     if (RemainderLoopID) {
@@ -1759,10 +1756,23 @@ void LoopVectorizationPlanner::updateLoopMetadata(Loop *VectorLoop, Loop *OrigLo
   // For scalable vectorization we can't know at compile time how many
   // iterations of the loop are handled in one vector iteration, so instead
   // use the value of vscale used for tuning.
-  setProfileInfoAfterUnrolling(OrigLoop, VectorLoop, OrigLoop, EstimatedVFxUF);
+  if (OrigAverageTripCount) {
+    // Calculate number of iterations in unrolled loop.
+    unsigned AverageVectorTripCount = *OrigAverageTripCount / EstimatedVFxUF;
+    // Calculate number of iterations for remainder loop.
+    unsigned RemainderAverageTripCount = *OrigAverageTripCount % EstimatedVFxUF;
+
+    if (HeaderVPBB) {
+      setLoopEstimatedTripCount(VectorLoop, AverageVectorTripCount,
+                                OrigLoopInvocationWeight);
+    }
+    if (Plan.getScalarPreheader()->hasPredecessors()) {
+      setLoopEstimatedTripCount(OrigLoop, RemainderAverageTripCount,
+                                OrigLoopInvocationWeight);
+    }
+  }
 }
 
->>>>>>> main
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void LoopVectorizationPlanner::printPlans(raw_ostream &O) {
   if (VPlans.empty()) {

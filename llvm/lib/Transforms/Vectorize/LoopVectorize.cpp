@@ -7283,9 +7283,11 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   updateLoopMetadata(
       HeaderVPBB ? LI->getLoopFor(State.CFG.VPBB2IRBB.lookup(HeaderVPBB))
                  : nullptr,
-      OrigLoop, *PSE.getSE(), ORE, HeaderVPBB, BestVPlan, TTI,
-      VectorizingEpilogue, LID, OrigAverageTripCount,
-      OrigLoopInvocationWeight, BestVF, estimateElementCount(BestVF * BestUF, CM.getVScaleForTuning()), DisableRuntimeUnroll);
+      HeaderVPBB, BestVPlan, VectorizingEpilogue, LID, OrigAverageTripCount,
+      OrigLoopInvocationWeight,
+      estimateElementCount(BestVF * BestUF, CM.getVScaleForTuning()),
+      DisableRuntimeUnroll);
+
   // 3. Fix the vectorized code: take care of header phi's, live-outs,
   //    predication, updating analyses.
   ILV.fixVectorizedLoop(State);
