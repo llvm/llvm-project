@@ -2952,30 +2952,34 @@ static bool isWorthFoldingAdd(SDValue Add) {
 }
 
 bool isRegImmLoadOrStore(SDNode *User, SDValue Add) {
-  // If the user is a load or store, then the offset is 0.
-  if (User->getOpcode() != ISD::LOAD && User->getOpcode() != ISD::STORE &&
-      User->getOpcode() != RISCVISD::LD_RV32 &&
-      User->getOpcode() != RISCVISD::SD_RV32 &&
-      User->getOpcode() != ISD::ATOMIC_LOAD &&
-      User->getOpcode() != ISD::ATOMIC_STORE)
+  switch (User->getOpcode()) {
+  default:
     return false;
-
-  // Don't allow stores of the value. It must be used as the address.
-  if (User->getOpcode() == ISD::STORE &&
-      cast<StoreSDNode>(User)->getValue() == Add)
-    return false;
-  if (User->getOpcode() == RISCVISD::SD_RV32 &&
-      (User->getOperand(0) == Add || User->getOperand(1) == Add))
-    return false;
-  if (User->getOpcode() == ISD::ATOMIC_STORE &&
-      cast<AtomicSDNode>(User)->getVal() == Add)
-    return false;
+  case ISD::LOAD:
+  case RISCVISD::LD_RV32:
+  case ISD::ATOMIC_LOAD:
+    break;
+  case ISD::STORE:
+    // Don't allow stores of Add. It must only be used as the address.
+    if (cast<StoreSDNode>(User)->getValue() == Add)
+      return false;
+    break;
+  case RISCVISD::SD_RV32:
+    // Don't allow stores of Add. It must only be used as the address.
+    if (User->getOperand(0) == Add || User->getOperand(1) == Add)
+      return false;
+    break;
+  case ISD::ATOMIC_STORE:
+    // Don't allow stores of Add. It must only be used as the address.
+    if (cast<AtomicSDNode>(User)->getVal() == Add)
+      return false;
+    break;
+  }
 
   return true;
 }
 
 // To prevent SelectAddrRegImm from folding offsets that conflict with the
-// fusion of PseudoMovAddr, check if the offset of every use of a given address
 // fusion of PseudoMovAddr, check if the offset of every use of a given address
 // is within the alignment.
 bool RISCVDAGToDAGISel::areOffsetsWithinAlignment(SDValue Addr,
