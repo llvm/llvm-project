@@ -7,8 +7,8 @@
 # RUN: llvm-bolt %t.exe --inline-memcpy -o %t.bolt 2>&1 | FileCheck %s --check-prefix=CHECK-INLINE
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=CHECK-ASM
 
-# Verify BOLT reports that it inlined memcpy calls (12 successful inlines out of 16 total calls)
-# CHECK-INLINE: BOLT-INFO: inlined 12 memcpy() calls
+# Verify BOLT reports that it inlined memcpy calls (11 successful inlines out of 16 total calls)
+# CHECK-INLINE: BOLT-INFO: inlined 11 memcpy() calls
 
 # Each function should use optimal size-specific instructions and NO memcpy calls
 
@@ -68,10 +68,9 @@
 # CHECK-ASM-NOT: str
 # CHECK-ASM-NOT: bl{{.*}}<memcpy
 
-# 128-byte copy should be "inlined" by removing the call entirely (too large for real inlining)
+# 128-byte copy should NOT be inlined (too large, original call preserved)
 # CHECK-ASM-LABEL: <test_128_byte_too_large>:
-# CHECK-ASM-NOT: bl{{.*}}<memcpy
-# CHECK-ASM-NOT: ldr{{.*}}q{{[0-9]+}}
+# CHECK-ASM: bl{{.*}}<memcpy
 
 # ADD immediate with non-zero source should NOT be inlined (can't track mov+add chain)
 # CHECK-ASM-LABEL: <test_4_byte_add_immediate>:

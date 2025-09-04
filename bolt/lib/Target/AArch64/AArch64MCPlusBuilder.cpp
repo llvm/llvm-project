@@ -2706,8 +2706,7 @@ public:
             Remaining -= OpSize;
             Offset += OpSize;
           }
-      } else
-        Code.clear();
+      }
       break;
     }
     return Code;

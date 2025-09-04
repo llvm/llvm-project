@@ -1871,7 +1871,7 @@ Error InlineMemcpy::runOnFunctions(BinaryContext &BC) {
         std::optional<uint64_t> KnownSize =
             BC.MIB->findMemcpySizeInBytes(BB, II);
 
-        if (BC.isAArch64() && !KnownSize.has_value())
+        if (BC.isAArch64() && (!KnownSize.has_value() || *KnownSize > 64))
           continue;
 
         const InstructionListType NewCode =
