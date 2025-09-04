@@ -207,20 +207,6 @@
 // RUN: %clang -### --target=arm-apple-none-macho -S -O1 -fno-omit-frame-pointer %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
 
-// AArch64 bare metal targets behave like hosted targets
-// RUN: %clang -### --target=aarch64-none-elf -S %s 2>&1 |  \
-// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
-// RUN: %clang -### --target=aarch64-none-elf -S -O1 %s 2>&1 |  \
-// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
-// RUN: %clang -### --target=aarch64-none-elf -S -fno-omit-frame-pointer %s 2>&1 |  \
-// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
-// RUN: %clang -### --target=aarch64-none-elf -S -O1 -fno-omit-frame-pointer %s 2>&1 |  \
-// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
-
-// AArch64 Windows requires that the frame pointer be reserved
-// RUN: %clang -### --target=aarch64-pc-windows-msvc -S -fomit-frame-pointer %s 2>&1 |  \
-// RUN:   FileCheck --check-prefix=KEEP-RESERVED %s
-
 // When targeting Mach-O on Arm, the frame pointer is "none" if
 // -fomit-frame-pointer is specified.
 // RUN: %clang --target=armv7-apple-macho -### -S %s 2>&1	\
@@ -238,5 +224,20 @@
 // RUN: %clang --target=armv7-apple-macho -### -S %s 2>&1 \
 // RUN:        -fomit-frame-pointer -mno-omit-leaf-frame-pointer \
 // RUN:        | FileCheck -check-prefix=KEEP-NONE %s
+
+// AArch64 bare metal targets behave like hosted targets
+// RUN: %clang -### --target=aarch64-none-elf -S %s 2>&1 |  \
+// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
+// RUN: %clang -### --target=aarch64-none-elf -S -O1 %s 2>&1 |  \
+// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
+// RUN: %clang -### --target=aarch64-none-elf -S -fno-omit-frame-pointer %s 2>&1 |  \
+// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
+// RUN: %clang -### --target=aarch64-none-elf -S -O1 -fno-omit-frame-pointer %s 2>&1 |  \
+// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
+
+// AArch64 Windows requires that the frame pointer be reserved
+// RUN: %clang -### --target=aarch64-pc-windows-msvc -S -fomit-frame-pointer %s 2>&1 |  \
+// RUN:   FileCheck --check-prefix=KEEP-RESERVED %s
+
 void f0() {}
 void f1() { f0(); }
