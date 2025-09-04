@@ -476,6 +476,47 @@ The SYCL kernel in the previous code sample meets these expectations.
   }];
 }
 
+def SYCLExternalDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "sycl_external";
+  let Content = [{
+The ``sycl_external`` attribute indicates that a function defined in another
+translation unit may be called by a device function defined in the current
+translation unit or, if defined in the current translation unit, the function
+may be called by device functions defined in other translation units.
+The attribute is intended for use in the implementation of the ``SYCL_EXTERNAL``
+macro as specified in section 5.10.1, "SYCL functions and member functions
+linkage", of the SYCL 2020 specification.
+
+The attribute only appertains to functions and only those that meet the
+following requirements:
+
+* Has external linkage
+* Is not explicitly defined as deleted (the function may be an explicitly
+  defaulted function that is defined as deleted)
+
+The attribute shall be present on the first declaration of a function and
+may optionally be present on subsequent declarations.
+
+When compiling for a SYCL device target that does not support the generic
+address space, the function shall not specify a raw pointer or reference type
+as the return type or as a parameter type.
+See section 5.10, "SYCL offline linking", of the SYCL 2020 specification.
+The following examples demonstrate the use of this attribute:
+
+.. code-block:: c++
+
+  [[clang::sycl_external]] void Foo(); // Ok.
+
+  [[clang::sycl_external]] void Bar() { /* ... */ } // Ok.
+
+  [[clang::sycl_external]] extern void Baz(); // Ok.
+
+  [[clang::sycl_external]] static void Quux() { /* ... */ } // error:  Quux() has internal linkage.
+
+  }];
+}
+
 def SYCLKernelEntryPointDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -930,6 +971,21 @@ An example of how to use ``alloc_size``
     assert(__builtin_object_size(p, 0) == 100);
     void *const a = my_calloc(20, 5);
     assert(__builtin_object_size(a, 0) == 100);
+  }
+
+When ``-Walloc-size`` is enabled, this attribute allows the compiler to
+diagnose cases when the allocated memory is insufficient for the size of the
+type the returned pointer is cast to.
+
+.. code-block:: c
+
+  void *my_malloc(int a) __attribute__((alloc_size(1)));
+  void consumer_func(int *);
+
+  int main() {
+    int *ptr = my_malloc(sizeof(int)); // no warning
+    int *w = my_malloc(1); // warning: allocation of insufficient size '1' for type 'int' with size '4'
+    consumer_func(my_malloc(1)); // warning: allocation of insufficient size '1' for type 'int' with size '4'
   }
 
 .. Note:: This attribute works differently in clang than it does in GCC.
@@ -3696,33 +3752,33 @@ functions intended for different purposes have distinct CFI identities.
 
   // Header file - define convenience macros
   #define __cfi_salt(s) __attribute__((cfi_salt(s)))
-  
+
   // Typedef for regular function pointers
   typedef int (*fptr_t)(void);
-  
-  // Typedef for salted function pointers  
+
+  // Typedef for salted function pointers
   typedef int (*fptr_salted_t)(void) __cfi_salt("pepper");
-  
+
   struct widget_ops {
     fptr_t init;          // Regular CFI
     fptr_salted_t exec;   // Salted CFI
     fptr_t cleanup;       // Regular CFI
   };
-  
+
   // Function implementations
   static int widget_init(void) { return 0; }
   static int widget_exec(void) __cfi_salt("pepper") { return 1; }
   static int widget_cleanup(void) { return 0; }
-  
+
   static struct widget_ops ops = {
     .init = widget_init,      // OK - compatible types
     .exec = widget_exec,      // OK - both use "pepper" salt
     .cleanup = widget_cleanup // OK - compatible types
   };
-  
+
   // Using C++11 attribute syntax
   void secure_callback(void) [[clang::cfi_salt("secure")]];
-  
+
   // This would cause a compilation error:
   // fptr_t bad_ptr = widget_exec;  // Error: incompatible types
 
@@ -3730,11 +3786,11 @@ functions intended for different purposes have distinct CFI identities.
 
 * The salt string can contain non-NULL ASCII characters, including spaces and
   quotes
-* This attribute only applies to function types; using it on non-function 
+* This attribute only applies to function types; using it on non-function
   types will generate a warning
-* All declarations and definitions of the same function must use identical 
+* All declarations and definitions of the same function must use identical
   salt values
-* The attribute affects type compatibility during compilation and CFI hash 
+* The attribute affects type compatibility during compilation and CFI hash
   generation during code generation
   }];
 }

@@ -1638,6 +1638,37 @@ define void @vpstore_factor3_mask(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i
   ret void
 }
 
+; mask = all ones, skip the last field.
+define void @vpstore_factor3_gap(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2) {
+; CHECK-LABEL: vpstore_factor3_gap:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 12
+; CHECK-NEXT:    vsetivli zero, 6, e32, m1, ta, ma
+; CHECK-NEXT:    vssseg2e32.v v8, (a0), a1
+; CHECK-NEXT:    ret
+  %s0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %s1 = shufflevector <4 x i32> %v2, <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+  %interleaved.vec = shufflevector <8 x i32> %s0, <8 x i32> %s1, <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
+  tail call void @llvm.vp.store.v12i32.p0(<12 x i32> %interleaved.vec, ptr %ptr, <12 x i1> <i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0>, i32 12)
+  ret void
+}
+
+; mask = 1010, skip the last field.
+define void @vpstore_factor3_gap_with_mask(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2) {
+; CHECK-LABEL: vpstore_factor3_gap_with_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v0, 5
+; CHECK-NEXT:    li a1, 12
+; CHECK-NEXT:    vssseg2e32.v v8, (a0), a1, v0.t
+; CHECK-NEXT:    ret
+  %s0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %s1 = shufflevector <4 x i32> %v2, <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+  %interleaved.vec = shufflevector <8 x i32> %s0, <8 x i32> %s1, <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
+  tail call void @llvm.vp.store.v12i32.p0(<12 x i32> %interleaved.vec, ptr %ptr, <12 x i1> <i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0>, i32 12)
+  ret void
+}
+
 define void @vpstore_factor4(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2, <4 x i32> %v3) {
 ; CHECK-LABEL: vpstore_factor4:
 ; CHECK:       # %bb.0:
@@ -1998,8 +2029,8 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @invalid_vp_mask(ptr %ptr) {
 ; RV32-NEXT:    vle32.v v12, (a0), v0.t
 ; RV32-NEXT:    li a0, 36
 ; RV32-NEXT:    vmv.s.x v20, a1
-; RV32-NEXT:    lui a1, %hi(.LCPI63_0)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI63_0)
+; RV32-NEXT:    lui a1, %hi(.LCPI65_0)
+; RV32-NEXT:    addi a1, a1, %lo(.LCPI65_0)
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vle16.v v21, (a1)
 ; RV32-NEXT:    vcompress.vm v8, v12, v11
@@ -2074,8 +2105,8 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @invalid_vp_evl(ptr %ptr) {
 ; RV32-NEXT:    vmv.s.x v10, a0
 ; RV32-NEXT:    li a0, 146
 ; RV32-NEXT:    vmv.s.x v11, a0
-; RV32-NEXT:    lui a0, %hi(.LCPI64_0)
-; RV32-NEXT:    addi a0, a0, %lo(.LCPI64_0)
+; RV32-NEXT:    lui a0, %hi(.LCPI66_0)
+; RV32-NEXT:    addi a0, a0, %lo(.LCPI66_0)
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vle16.v v20, (a0)
 ; RV32-NEXT:    li a0, 36
@@ -2162,6 +2193,53 @@ define void @maskedstore_factor2(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1) {
 ; CHECK-NEXT:    ret
   %interleaved.vec = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
   tail call void @llvm.masked.store(<8 x i32> %interleaved.vec, ptr %ptr, i32 4, <8 x i1> splat (i1 true))
+  ret void
+}
+
+; mask = all ones, skip the last field.
+define void @maskedstore_factor3_gap(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2) {
+; CHECK-LABEL: maskedstore_factor3_gap:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 12
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vssseg2e32.v v8, (a0), a1
+; CHECK-NEXT:    ret
+  %s0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %s1 = shufflevector <4 x i32> %v2, <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+  %interleaved.vec = shufflevector <8 x i32> %s0, <8 x i32> %s1, <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
+  tail call void @llvm.masked.store(<12 x i32> %interleaved.vec, ptr %ptr, i32 4, <12 x i1> <i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0>)
+  ret void
+}
+
+; mask = 1010, skip the last two fields.
+define void @maskedstore_factor4_gap_with_mask(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2, <4 x i32> %v3) {
+; CHECK-LABEL: maskedstore_factor4_gap_with_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v0, 5
+; CHECK-NEXT:    li a1, 16
+; CHECK-NEXT:    vssseg2e32.v v8, (a0), a1, v0.t
+; CHECK-NEXT:    ret
+  %s0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %s1 = shufflevector <4 x i32> %v2, <4 x i32> %v3, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %interleaved.vec = shufflevector <8 x i32> %s0, <8 x i32> %s1, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
+  tail call void @llvm.masked.store(<16 x i32> %interleaved.vec, ptr %ptr, i32 4, <16 x i1> <i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0>)
+  ret void
+}
+
+; mask = %m, skip the last two fields.
+define void @maskedstore_factor4_gap_by_intrinsic_with_mask(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2, <4 x i32> %v3, <4 x i1> %m) {
+; CHECK-LABEL: maskedstore_factor4_gap_by_intrinsic_with_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 16
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vssseg2e32.v v8, (a0), a1, v0.t
+; CHECK-NEXT:    ret
+  %s0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %s1 = shufflevector <4 x i32> %v2, <4 x i32> %v3, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %interleaved.vec = shufflevector <8 x i32> %s0, <8 x i32> %s1, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
+  %interleaved.mask = call <16 x i1> @llvm.vector.interleave4(<4 x i1> %m, <4 x i1> %m, <4 x i1> splat (i1 false), <4 x i1> splat (i1 false))
+  tail call void @llvm.masked.store(<16 x i32> %interleaved.vec, ptr %ptr, i32 4, <16 x i1> %interleaved.mask)
   ret void
 }
 
@@ -2294,8 +2372,8 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @maskedload_factor3_invalid_skip_field(
 ; RV32-NEXT:    vle32.v v12, (a0), v0.t
 ; RV32-NEXT:    li a0, 36
 ; RV32-NEXT:    vmv.s.x v20, a1
-; RV32-NEXT:    lui a1, %hi(.LCPI73_0)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI73_0)
+; RV32-NEXT:    lui a1, %hi(.LCPI78_0)
+; RV32-NEXT:    addi a1, a1, %lo(.LCPI78_0)
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vle16.v v21, (a1)
 ; RV32-NEXT:    vcompress.vm v8, v12, v11

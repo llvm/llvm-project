@@ -189,15 +189,6 @@ AST_MATCHER(TypeLoc, isType) {
 static constexpr char Bind[] = "";
 
 void TypeTraitsCheck::registerMatchers(MatchFinder *Finder) {
-  const ast_matchers::internal::VariadicDynCastAllOfMatcher<
-      Stmt,
-      DependentScopeDeclRefExpr>
-      dependentScopeDeclRefExpr; // NOLINT(readability-identifier-naming)
-  const ast_matchers::internal::VariadicDynCastAllOfMatcher<
-      TypeLoc,
-      DependentNameTypeLoc>
-      dependentNameTypeLoc; // NOLINT(readability-identifier-naming)
-
   // Only register matchers for trait<...>::value in c++17 mode.
   if (getLangOpts().CPlusPlus17) {
     Finder->addMatcher(mapAnyOf(declRefExpr, dependentScopeDeclRefExpr)

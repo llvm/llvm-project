@@ -454,6 +454,7 @@ namespace SourceLocation {
 }
 
 #define BITSIZE(x) (sizeof(x) * 8)
+constexpr bool __attribute__((ext_vector_type(4))) v4b{};
 namespace popcount {
   static_assert(__builtin_popcount(~0u) == __CHAR_BIT__ * sizeof(unsigned int), "");
   static_assert(__builtin_popcount(0) == 0, "");
@@ -471,6 +472,7 @@ namespace popcount {
   static_assert(__builtin_popcountg(0ul) == 0, "");
   static_assert(__builtin_popcountg(~0ull) == __CHAR_BIT__ * sizeof(unsigned long long), "");
   static_assert(__builtin_popcountg(0ull) == 0, "");
+  static_assert(__builtin_popcountg(v4b) == 0, "");
 #ifdef __SIZEOF_INT128__
   static_assert(__builtin_popcountg(~(unsigned __int128)0) == __CHAR_BIT__ * sizeof(unsigned __int128), "");
   static_assert(__builtin_popcountg((unsigned __int128)0) == 0, "");
@@ -743,6 +745,7 @@ namespace clz {
   char clz62[__builtin_clzg((unsigned _BitInt(128))0xf) == BITSIZE(_BitInt(128)) - 4 ? 1 : -1];
   char clz63[__builtin_clzg((unsigned _BitInt(128))0xf, 42) == BITSIZE(_BitInt(128)) - 4 ? 1 : -1];
 #endif
+  char clz64[__builtin_clzg(v4b, 0) == 0 ? 1 : -1];
 }
 
 namespace ctz {
@@ -813,6 +816,7 @@ namespace ctz {
   char ctz62[__builtin_ctzg((unsigned _BitInt(128))1 << (BITSIZE(_BitInt(128)) - 1)) == BITSIZE(_BitInt(128)) - 1 ? 1 : -1];
   char ctz63[__builtin_ctzg((unsigned _BitInt(128))1 << (BITSIZE(_BitInt(128)) - 1), 42) == BITSIZE(_BitInt(128)) - 1 ? 1 : -1];
 #endif
+  char clz64[__builtin_ctzg(v4b, 0) == 0 ? 1 : -1];
 }
 
 namespace bswap {
@@ -1789,9 +1793,11 @@ namespace WithinLifetime {
   } xstd; // both-error {{is not a constant expression}} \
           // both-note {{in call to}}
 
+  /// FIXME: We do not have per-element lifetime information for primitive arrays.
+  /// See https://github.com/llvm/llvm-project/issues/147528
   consteval bool test_dynamic(bool read_after_deallocate) {
     std::allocator<int> a;
-    int* p = a.allocate(1);
+    int* p = a.allocate(1); // expected-note 2{{allocation performed here was not deallocated}}
     // a.allocate starts the lifetime of an array,
     // the complete object of *p has started its lifetime
     if (__builtin_is_within_lifetime(p))
@@ -1804,12 +1810,12 @@ namespace WithinLifetime {
       return false;
     a.deallocate(p, 1);
     if (read_after_deallocate)
-      __builtin_is_within_lifetime(p); // both-note {{read of heap allocated object that has been deleted}}
+      __builtin_is_within_lifetime(p); // ref-note {{read of heap allocated object that has been deleted}}
     return true;
   }
-  static_assert(test_dynamic(false));
+  static_assert(test_dynamic(false)); // expected-error {{not an integral constant expression}}
   static_assert(test_dynamic(true)); // both-error {{not an integral constant expression}} \
-                                     // both-note {{in call to}}
+                                     // ref-note {{in call to}}
 }
 
 #ifdef __SIZEOF_INT128__

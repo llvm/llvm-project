@@ -8,7 +8,7 @@
 # CHECK-NEXT:     0x4 R_LARCH_CALL36 foo 0x0
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section ({{.*}}) .rela.data {
-# CHECK-NEXT:     0x0 R_LARCH_64 .text 0xC
+# CHECK-NEXT:     0x0 R_LARCH_64 .L1 0x0
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 

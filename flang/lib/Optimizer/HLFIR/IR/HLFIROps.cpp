@@ -279,7 +279,8 @@ void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
   auto [hlfirVariableType, firVarType] =
       getDeclareOutputTypes(inputType, hasExplicitLbs);
   build(builder, result, {hlfirVariableType, firVarType}, memref, shape,
-        typeparams, dummy_scope, nameAttr, fortran_attrs, data_attr);
+        typeparams, dummy_scope, /*storage=*/nullptr, /*storage_offset=*/0,
+        nameAttr, fortran_attrs, data_attr);
 }
 
 llvm::LogicalResult hlfir::DeclareOp::verify() {
@@ -814,6 +815,40 @@ void hlfir::ConcatOp::build(mlir::OpBuilder &builder,
 }
 
 void hlfir::ConcatOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
+}
+
+//===----------------------------------------------------------------------===//
+// CmpCharOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult hlfir::CmpCharOp::verify() {
+  mlir::Value lchr = getLchr();
+  mlir::Value rchr = getRchr();
+
+  unsigned kind = getCharacterKind(lchr.getType());
+  if (kind != getCharacterKind(rchr.getType()))
+    return emitOpError("character arguments must have the same KIND");
+
+  switch (getPredicate()) {
+  case mlir::arith::CmpIPredicate::slt:
+  case mlir::arith::CmpIPredicate::sle:
+  case mlir::arith::CmpIPredicate::eq:
+  case mlir::arith::CmpIPredicate::ne:
+  case mlir::arith::CmpIPredicate::sgt:
+  case mlir::arith::CmpIPredicate::sge:
+    break;
+  default:
+    return emitOpError("expected signed predicate");
+  }
+
+  return mlir::success();
+}
+
+void hlfir::CmpCharOp::getEffects(
     llvm::SmallVectorImpl<
         mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
         &effects) {
@@ -1900,8 +1935,7 @@ hlfir::ShapeOfOp::canonicalize(ShapeOfOp shapeOf,
     // shape information is not available at compile time
     return llvm::LogicalResult::failure();
 
-  rewriter.replaceAllUsesWith(shapeOf.getResult(), shape);
-  rewriter.eraseOp(shapeOf);
+  rewriter.replaceOp(shapeOf, shape);
   return llvm::LogicalResult::success();
 }
 

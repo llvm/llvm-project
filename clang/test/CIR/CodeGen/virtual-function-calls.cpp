@@ -46,3 +46,36 @@ A::A() {}
 // NOTE: The GEP in OGCG looks very different from the one generated with CIR,
 //       but it is equivalent. The OGCG GEP indexes by base pointer, then
 //       structure, then array, whereas the CIR GEP indexes by byte offset.
+
+void f1(A *a) {
+  a->f('c');
+}
+
+// CIR: cir.func{{.*}} @_Z2f1P1A(%arg0: !cir.ptr<!rec_A> {{.*}})
+// CIR:   %[[A_ADDR:.*]] = cir.alloca !cir.ptr<!rec_A>
+// CIR:   cir.store %arg0, %[[A_ADDR]]
+// CIR:   %[[A:.*]] = cir.load{{.*}} %[[A_ADDR]]
+// CIR:   %[[C_LITERAL:.*]] = cir.const #cir.int<99> : !s8i
+// CIR:   %[[VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[A]] : !cir.ptr<!rec_A> -> !cir.ptr<!cir.vptr>
+// CIR:   %[[VPTR:.*]] = cir.load{{.*}} %[[VPTR_ADDR]] : !cir.ptr<!cir.vptr>, !cir.vptr
+// CIR:   %[[FN_PTR_PTR:.*]] = cir.vtable.get_virtual_fn_addr %[[VPTR]][0] : !cir.vptr -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_A>, !s8i)>>>
+// CIR:   %[[FN_PTR:.*]] = cir.load{{.*}} %[[FN_PTR_PTR:.*]] : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_A>, !s8i)>>>, !cir.ptr<!cir.func<(!cir.ptr<!rec_A>, !s8i)>>
+// CIR:   cir.call %[[FN_PTR]](%[[A]], %[[C_LITERAL]]) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_A>, !s8i)>>, !cir.ptr<!rec_A>, !s8i) -> ()
+
+// LLVM: define{{.*}} void @_Z2f1P1A(ptr %[[ARG0:.*]])
+// LLVM:   %[[A_ADDR:.*]] = alloca ptr
+// LLVM:   store ptr %[[ARG0]], ptr %[[A_ADDR]]
+// LLVM:   %[[A:.*]] = load ptr, ptr %[[A_ADDR]]
+// LLVM:   %[[VPTR:.*]] = load ptr, ptr %[[A]]
+// LLVM:   %[[FN_PTR_PTR:.*]] = getelementptr inbounds ptr, ptr %[[VPTR]], i32 0
+// LLVM:   %[[FN_PTR:.*]] = load ptr, ptr %[[FN_PTR_PTR]]
+// LLVM:   call void %[[FN_PTR]](ptr %[[A]], i8 99)
+
+// OGCG: define{{.*}} void @_Z2f1P1A(ptr {{.*}} %[[ARG0:.*]])
+// OGCG:   %[[A_ADDR:.*]] = alloca ptr
+// OGCG:   store ptr %[[ARG0]], ptr %[[A_ADDR]]
+// OGCG:   %[[A:.*]] = load ptr, ptr %[[A_ADDR]]
+// OGCG:   %[[VPTR:.*]] = load ptr, ptr %[[A]]
+// OGCG:   %[[FN_PTR_PTR:.*]] = getelementptr inbounds ptr, ptr %[[VPTR]], i64 0
+// OGCG:   %[[FN_PTR:.*]] = load ptr, ptr %[[FN_PTR_PTR]]
+// OGCG:   call void %[[FN_PTR]](ptr {{.*}} %[[A]], i8 {{.*}} 99)
