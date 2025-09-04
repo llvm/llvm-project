@@ -718,7 +718,12 @@ def NVVM_MBarrierTryWaitParityOp : NVVM_PTXBuilder_Op<"mbarrier.try_wait.parity"
   let description = [{
     The `nvvm.mbarrier.try_wait.parity` operation performs a potentially-blocking 
     test for the completion of a specific phase of an *mbarrier object* using phase 
-    parity. It uses the default `.acquire.cta` semantics.
+    parity. It uses the default `.acquire.cta` semantics. This acquire pattern 
+    establishes memory ordering for operations occurring in program order after this 
+    wait instruction by making operations from other threads visible to subsequent 
+    operations in the current thread. When this wait completes, it synchronizes with 
+    the corresponding release pattern from the `mbarrier.arrive` operation, establishing 
+    memory ordering within the CTA.
 
     This operation waits for the completion of the mbarrier phase indicated by the 
     phase parity. While it uses the underlying PTX `mbarrier.try_wait.parity` 
@@ -733,6 +738,23 @@ def NVVM_MBarrierTryWaitParityOp : NVVM_PTXBuilder_Op<"mbarrier.try_wait.parity"
       have parity 0, odd phases have parity 1.
     - `ticks`: An unsigned integer specifying the suspend time hint in 
       nanoseconds. This may be used instead of the system-dependent time limit.
+
+    **Memory ordering guarantees**: When this wait returns true, the following 
+    ordering guarantees hold:
+
+    1. All memory accesses (except async operations) requested prior to
+       `mbarrier.arrive` having release semantics by participating CTA threads
+       are visible to the executing thread.
+    2. All `cp.async` operations requested prior to `cp.async.mbarrier.arrive`
+       by participating CTA threads are visible to the executing thread.
+    3. All `cp.async.bulk` operations using the same mbarrier object requested
+       prior to `mbarrier.arrive` having release semantics by participating CTA
+       threads are visible to the executing thread.
+    4. Memory accesses requested after this wait are not visible to memory
+       accesses performed prior to `mbarrier.arrive` by other participating
+       threads.
+    5. No ordering guarantee exists for memory accesses by the same thread
+       between `mbarrier.arrive` and this wait.
 
     **Implementation behavior**:
     This operation generates a PTX loop that repeatedly calls the underlying 
@@ -793,7 +815,12 @@ def NVVM_MBarrierTestWaitOp : NVVM_Op<"mbarrier.test.wait">,
   let description = [{
     The `nvvm.mbarrier.test.wait` operation performs a non-blocking test for the 
     completion of a specific phase of an *mbarrier object*. It uses the default
-    `.acquire.cta` semantics.
+    `.acquire.cta` semantics. This acquire pattern establishes memory ordering for 
+    operations occurring in program order after this wait instruction by making 
+    operations from other threads visible to subsequent operations in the current 
+    thread. When this wait completes, it synchronizes with the corresponding release 
+    pattern from the `mbarrier.arrive` operation, establishing memory ordering within 
+    the CTA.
 
     This operation tests whether the mbarrier phase specified by the state operand 
     has completed. It is a non-blocking instruction that immediately returns the 
@@ -810,6 +837,23 @@ def NVVM_MBarrierTestWaitOp : NVVM_Op<"mbarrier.test.wait">,
     has completed:
     - `true`: The immediately preceding phase has completed
     - `false`: The phase is still incomplete (current phase)
+
+    **Memory ordering guarantees**: When this wait returns true, the following 
+    ordering guarantees hold:
+
+    1. All memory accesses (except async operations) requested prior to
+       `mbarrier.arrive` having release semantics by participating CTA threads
+       are visible to the executing thread.
+    2. All `cp.async` operations requested prior to `cp.async.mbarrier.arrive`
+       by participating CTA threads are visible to the executing thread.
+    3. All `cp.async.bulk` operations using the same mbarrier object requested
+       prior to `mbarrier.arrive` having release semantics by participating CTA
+       threads are visible to the executing thread.
+    4. Memory accesses requested after this wait are not visible to memory
+       accesses performed prior to `mbarrier.arrive` by other participating
+       threads.
+    5. No ordering guarantee exists for memory accesses by the same thread
+       between `mbarrier.arrive` and this wait.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-mbarrier-test-wait-try-wait)
   }];
