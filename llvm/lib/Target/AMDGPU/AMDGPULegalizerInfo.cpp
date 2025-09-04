@@ -3414,10 +3414,7 @@ static bool valueIsKnownNeverF32Denorm(const MachineRegisterInfo &MRI,
 }
 
 static bool allowApproxFunc(const MachineFunction &MF, unsigned Flags) {
-  if (Flags & MachineInstr::FmAfn)
-    return true;
-  const auto &Options = MF.getTarget().Options;
-  return Options.ApproxFuncFPMath;
+  return Flags & MachineInstr::FmAfn;
 }
 
 static bool needsDenormHandlingF32(const MachineFunction &MF, Register Src,
@@ -3522,8 +3519,7 @@ bool AMDGPULegalizerInfo::legalizeFlogCommon(MachineInstr &MI,
   const AMDGPUTargetMachine &TM =
       static_cast<const AMDGPUTargetMachine &>(MF.getTarget());
 
-  if (Ty == F16 || MI.getFlag(MachineInstr::FmAfn) ||
-      TM.Options.ApproxFuncFPMath) {
+  if (Ty == F16 || MI.getFlag(MachineInstr::FmAfn)) {
     if (Ty == F16 && !ST.has16BitInsts()) {
       Register LogVal = MRI.createGenericVirtualRegister(F32);
       auto PromoteSrc = B.buildFPExt(F32, X);
@@ -7823,6 +7819,20 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
+  case Intrinsic::amdgcn_cooperative_atomic_load_32x4B:
+  case Intrinsic::amdgcn_cooperative_atomic_load_16x8B:
+  case Intrinsic::amdgcn_cooperative_atomic_load_8x16B:
+    assert(MI.hasOneMemOperand() && "Expected IRTranslator to set MemOp!");
+    B.buildLoad(MI.getOperand(0), MI.getOperand(2), **MI.memoperands_begin());
+    MI.eraseFromParent();
+    return true;
+  case Intrinsic::amdgcn_cooperative_atomic_store_32x4B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_16x8B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_8x16B:
+    assert(MI.hasOneMemOperand() && "Expected IRTranslator to set MemOp!");
+    B.buildStore(MI.getOperand(2), MI.getOperand(1), **MI.memoperands_begin());
+    MI.eraseFromParent();
+    return true;
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrID))

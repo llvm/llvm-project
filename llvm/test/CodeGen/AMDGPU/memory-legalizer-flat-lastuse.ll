@@ -46,7 +46,6 @@ define amdgpu_kernel void @flat_last_use_load_1(ptr %in, ptr %out) {
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    v_lshlrev_b32_e64 v1, s2, v0
 ; GFX12-NEXT:    s_mov_b32 s2, 0
-; GFX12-NEXT:    ; implicit-def: $sgpr2
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX12-NEXT:    v_mov_b32_e32 v2, v0

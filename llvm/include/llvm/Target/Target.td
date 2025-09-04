@@ -735,10 +735,6 @@ class Instruction : InstructionEncoding {
   ///   discussion of inline assembly constraint strings.
   string Constraints = "";
 
-  /// DisableEncoding - List of operand names (e.g. "$op1,$op2") that should not
-  /// be encoded into the output machineinstr.
-  string DisableEncoding = "";
-
   string PostEncoderMethod = "";
 
   /// Target-specific flags. This becomes the TSFlags field in TargetInstrDesc.

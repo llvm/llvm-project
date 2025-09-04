@@ -15,6 +15,8 @@
 
 #include "IntervalMap.h"
 
+#include <variant> // For std::monostate.
+
 namespace orc_rt {
 
 /// Implements a coalescing interval set.
