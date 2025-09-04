@@ -424,7 +424,7 @@ public:
     return TailFoldingStyle::DataWithoutLaneMask;
   }
 
-  bool preferFixedOverScalableIfEqualCost() const override;
+  bool preferFixedOverScalableIfEqualCost(bool IsEpilogue) const override;
 
   unsigned getEpilogueVectorizationMinVF() const override;
 

@@ -6022,9 +6022,15 @@ static bool containsDecreasingPointers(Loop *TheLoop,
   return false;
 }
 
-bool AArch64TTIImpl::preferFixedOverScalableIfEqualCost() const {
+bool AArch64TTIImpl::preferFixedOverScalableIfEqualCost(bool IsEpilogue) const {
   if (SVEPreferFixedOverScalableIfEqualCost.getNumOccurrences())
     return SVEPreferFixedOverScalableIfEqualCost;
+  // For cases like post-LTO vectorization, when we eventually know the trip
+  // count, epilogue with fixed-width vectorization can be deleted if the trip
+  // count is less than the epilogue iterations. That's why we prefer
+  // fixed-width vectorization in epilogue in case of equal costs.
+  if (IsEpilogue)
+    return true;
   return ST->useFixedOverScalableIfEqualCost();
 }
 
