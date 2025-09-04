@@ -43,7 +43,7 @@ static
 int test_no_exception() {               // CHECK:  [[@LINE]]| 1|int test_no_exception()
   try {                                 // CHECK:  [[@LINE]]| 1|  try {
     do_throw(false);                    // CHECK:  [[@LINE]]| 1|    do_throw(
-  } catch (...) {                       // CHECK:  [[@LINE]]| 1|  } catch (
+  } catch (...) {                       // CHECK:  [[@LINE]]| 0|  } catch (
     abort();                            // CHECK:  [[@LINE]]| 0|    abort(
   }                                     // CHECK:  [[@LINE]]| 0|  }
   printf("%s\n", __func__);             // CHECK:  [[@LINE]]| 1|  printf(
@@ -78,7 +78,7 @@ static
 int test_exception_macro_nested() {     // CHECK:  [[@LINE]]| 1|int test_exception_macro_nested()
   try {                                 // CHECK:  [[@LINE]]| 1|  try {
     TRY_AND_CATCH_ALL(do_throw(true));  // CHECK:  [[@LINE]]| 1|    TRY_AND_CATCH_ALL(
-  } catch (...) {                       // CHECK:  [[@LINE]]| 1|  } catch (
+  } catch (...) {                       // CHECK:  [[@LINE]]| 0|  } catch (
     abort();                            // CHECK:  [[@LINE]]| 0|    abort(
   }                                     // CHECK:  [[@LINE]]| 0|  }
   printf("%s\n", __func__);             // CHECK:  [[@LINE]]| 1|  printf(
@@ -104,10 +104,10 @@ int test_conditional(int i) {           // CHECK:  [[@LINE]]| 1|int test_conditi
   try {                                 // CHECK:  [[@LINE]]| 1|  try {
     if (i % 2 == 0) {                   // CHECK:  [[@LINE]]| 1|    if (
       printf("%s\n", __func__);         // CHECK:  [[@LINE]]| 1|      printf(
-    } else {                            // CHECK:  [[@LINE]]| 1|    } else {
+    } else {                            // CHECK:  [[@LINE]]| 0|    } else {
       do_throw(true);                   // CHECK:  [[@LINE]]| 0|      do_throw(
     }                                   // CHECK:  [[@LINE]]| 0|    }
-  } catch (...) {                       // CHECK:  [[@LINE]]| 1|  } catch (
+  } catch (...) {                       // CHECK:  [[@LINE]]| 0|  } catch (
     abort();                            // CHECK:  [[@LINE]]| 0|    abort(
   }                                     // CHECK:  [[@LINE]]| 0|  }
   return 0;                             // CHECK:  [[@LINE]]| 1|  return
@@ -117,11 +117,11 @@ static
 int test_multiple_catch() {             // CHECK:  [[@LINE]]| 1|int test_multiple_catch()
   try {                                 // CHECK:  [[@LINE]]| 1|  try {
     do_throw(true);                     // CHECK:  [[@LINE]]| 1|    do_throw(
-  } catch (double) {                    // CHECK:  [[@LINE]]| 1|  } catch (double)
+  } catch (double) {                    // CHECK:  [[@LINE]]| 0|  } catch (double)
     abort();                            // CHECK:  [[@LINE]]| 0|    abort(
   } catch (bool) {                      // CHECK:  [[@LINE]]| 1|  } catch (bool)
     printf("bool\n");                   // CHECK:  [[@LINE]]| 1|    printf(
-  } catch (float) {                     // CHECK:  [[@LINE]]| 1|  } catch (float)
+  } catch (float) {                     // CHECK:  [[@LINE]]| 0|  } catch (float)
     abort();                            // CHECK:  [[@LINE]]| 0|    abort(
   } catch (...) {                       // CHECK:  [[@LINE]]| 0|  } catch (
     abort();                            // CHECK:  [[@LINE]]| 0|    abort(
