@@ -6,20 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Globals.h"
-#include "IRModule.h"
-#include "NanobindUtils.h"
-#include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/Debug.h"
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
-#include "mlir/Bindings/Python/Nanobind.h"
-#include "mlir/Bindings/Python/NanobindAdaptors.h"
+#include "mlir/Bindings/Python/Globals.h"
+#include "mlir/Bindings/Python/IRModule.h"
 #include "nanobind/nanobind.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+
+// clang-format off
+#include "mlir/Bindings/Python/Nanobind.h"
+#include "mlir/Bindings/Python/NanobindAdaptors.h"
+#include "mlir/Bindings/Python/NanobindUtils.h"
+#include "mlir-c/Bindings/Python/Interop.h" // ON WINDOWS This is expected after nanobind.
+// clang-format on
 
 #include <optional>
 
@@ -1545,81 +1548,47 @@ void PyOperation::erase() {
   mlirOperationDestroy(operation);
 }
 
-namespace {
-/// CRTP base class for Python MLIR values that subclass Value and should be
-/// castable from it. The value hierarchy is one level deep and is not supposed
-/// to accommodate other levels unless core MLIR changes.
 template <typename DerivedTy>
-class PyConcreteValue : public PyValue {
-public:
-  // Derived classes must define statics for:
-  //   IsAFunctionTy isaFunction
-  //   const char *pyClassName
-  // and redefine bindDerived.
-  using ClassTy = nb::class_<DerivedTy, PyValue>;
-  using IsAFunctionTy = bool (*)(MlirValue);
-
-  PyConcreteValue() = default;
-  PyConcreteValue(PyOperationRef operationRef, MlirValue value)
-      : PyValue(operationRef, value) {}
-  PyConcreteValue(PyValue &orig)
-      : PyConcreteValue(orig.getParentOperation(), castFrom(orig)) {}
-
-  /// Attempts to cast the original value to the derived type and throws on
-  /// type mismatches.
-  static MlirValue castFrom(PyValue &orig) {
-    if (!DerivedTy::isaFunction(orig.get())) {
-      auto origRepr = nb::cast<std::string>(nb::repr(nb::cast(orig)));
-      throw nb::value_error((Twine("Cannot cast value to ") +
-                             DerivedTy::pyClassName + " (from " + origRepr +
-                             ")")
-                                .str()
-                                .c_str());
-    }
-    return orig.get();
+MlirValue PyConcreteValue<DerivedTy>::castFrom(PyValue &orig) {
+  if (!DerivedTy::isaFunction(orig.get())) {
+    auto origRepr = nb::cast<std::string>(nb::repr(nb::cast(orig)));
+    throw nb::value_error((Twine("Cannot cast value to ") +
+                           DerivedTy::pyClassName + " (from " + origRepr + ")")
+                              .str()
+                              .c_str());
   }
+  return orig.get();
+}
 
-  /// Binds the Python module objects to functions of this class.
-  static void bind(nb::module_ &m) {
-    auto cls = ClassTy(m, DerivedTy::pyClassName);
-    cls.def(nb::init<PyValue &>(), nb::keep_alive<0, 1>(), nb::arg("value"));
-    cls.def_static(
-        "isinstance",
-        [](PyValue &otherValue) -> bool {
-          return DerivedTy::isaFunction(otherValue);
-        },
-        nb::arg("other_value"));
-    cls.def(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR,
-            [](DerivedTy &self) { return self.maybeDownCast(); });
-    DerivedTy::bindDerived(cls);
-  }
+template <typename DerivedTy>
+void PyConcreteValue<DerivedTy>::bind(nb::module_ &m) {
+  auto cls = ClassTy(m, DerivedTy::pyClassName);
+  cls.def(nb::init<PyValue &>(), nb::keep_alive<0, 1>(), nb::arg("value"));
+  cls.def_static(
+      "isinstance",
+      [](PyValue &otherValue) -> bool {
+        return DerivedTy::isaFunction(otherValue);
+      },
+      nb::arg("other_value"));
+  cls.def(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR,
+          [](DerivedTy &self) { return self.maybeDownCast(); });
+  DerivedTy::bindDerived(cls);
+}
 
-  /// Implemented by derived classes to add methods to the Python subclass.
-  static void bindDerived(ClassTy &m) {}
-};
+template <typename DerivedTy>
+void PyConcreteValue<DerivedTy>::bindDerived(ClassTy &m) {}
 
-} // namespace
-
-/// Python wrapper for MlirOpResult.
-class PyOpResult : public PyConcreteValue<PyOpResult> {
-public:
-  static constexpr IsAFunctionTy isaFunction = mlirValueIsAOpResult;
-  static constexpr const char *pyClassName = "OpResult";
-  using PyConcreteValue::PyConcreteValue;
-
-  static void bindDerived(ClassTy &c) {
-    c.def_prop_ro("owner", [](PyOpResult &self) {
-      assert(
-          mlirOperationEqual(self.getParentOperation()->get(),
-                             mlirOpResultGetOwner(self.get())) &&
-          "expected the owner of the value in Python to match that in the IR");
-      return self.getParentOperation().getObject();
-    });
-    c.def_prop_ro("result_number", [](PyOpResult &self) {
-      return mlirOpResultGetResultNumber(self.get());
-    });
-  }
-};
+void PyOpResult::bindDerived(ClassTy &c) {
+  c.def_prop_ro("owner", [](PyOpResult &self) {
+    assert(mlirOperationEqual(self.getParentOperation()->get(),
+                              mlirOpResultGetOwner(self.get())) &&
+           "expected the owner of the value in Python to match that in the IR");
+    return self.getParentOperation().getObject();
+  });
+  c.def_prop_ro("result_number", [](PyOpResult &self) {
+    return mlirOpResultGetResultNumber(self.get());
+  });
+}
 
 /// Returns the list of types of the values held by container.
 template <typename Container>
@@ -2349,32 +2318,23 @@ void PySymbolTable::walkSymbolTables(PyOperationBase &from,
   }
 }
 
+void PyBlockArgument::bindDerived(ClassTy &c) {
+  c.def_prop_ro("owner", [](PyBlockArgument &self) {
+    return PyBlock(self.getParentOperation(),
+                   mlirBlockArgumentGetOwner(self.get()));
+  });
+  c.def_prop_ro("arg_number", [](PyBlockArgument &self) {
+    return mlirBlockArgumentGetArgNumber(self.get());
+  });
+  c.def(
+      "set_type",
+      [](PyBlockArgument &self, PyType type) {
+        return mlirBlockArgumentSetType(self.get(), type);
+      },
+      nb::arg("type"));
+}
+
 namespace {
-
-/// Python wrapper for MlirBlockArgument.
-class PyBlockArgument : public PyConcreteValue<PyBlockArgument> {
-public:
-  static constexpr IsAFunctionTy isaFunction = mlirValueIsABlockArgument;
-  static constexpr const char *pyClassName = "BlockArgument";
-  using PyConcreteValue::PyConcreteValue;
-
-  static void bindDerived(ClassTy &c) {
-    c.def_prop_ro("owner", [](PyBlockArgument &self) {
-      return PyBlock(self.getParentOperation(),
-                     mlirBlockArgumentGetOwner(self.get()));
-    });
-    c.def_prop_ro("arg_number", [](PyBlockArgument &self) {
-      return mlirBlockArgumentGetArgNumber(self.get());
-    });
-    c.def(
-        "set_type",
-        [](PyBlockArgument &self, PyType type) {
-          return mlirBlockArgumentSetType(self.get(), type);
-        },
-        nb::arg("type"));
-  }
-};
-
 /// A list of block arguments. Internally, these are stored as consecutive
 /// elements, random access is cheap. The argument list is associated with the
 /// operation that contains the block (detached blocks are not allowed in
