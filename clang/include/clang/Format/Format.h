@@ -3558,6 +3558,85 @@ struct FormatStyle {
   /// \version 9
   std::vector<std::string> NamespaceMacros;
 
+  /// Control over each component in a numeric literal.
+  enum NumericLiteralComponentStyle : int8_t {
+    /// Leave this component of the literal as is.
+    NLCS_Leave,
+    /// Format this component with upper case characters.
+    NLCS_Upper,
+    /// Format this component with lower case characters.
+    NLCS_Lower,
+  };
+
+  /// Separate control for each numeric literal component.
+  ///
+  /// For example, the config below will leave exponent letters alone, reformat
+  /// hexadecimal digits in lower case, reformat numeric literal prefixes in
+  /// upper case, and reformat suffixes in lower case.
+  /// \code
+  ///   NumericLiteralCase:
+  ///     ExponentLetter: Leave
+  ///     HexDigit: Lower
+  ///     Prefix: Upper
+  ///     Suffix: Lower
+  /// \endcode
+  struct NumericLiteralCaseStyle {
+    /// Format floating point exponent separator letter case.
+    /// \code
+    ///   // ExponentLetter = Leave
+    ///   float a = 6.02e23 + 1.0E10;
+    ///   // ExponentLetter = Upper
+    ///   float a = 6.02E23 + 1.0E10;
+    ///   // ExponentLetter = Lower
+    ///   float a = 6.02e23 + 1.0e10;
+    /// \endcode
+    NumericLiteralComponentStyle ExponentLetter;
+    /// Format hexadecimal digit case.
+    /// \code
+    ///   // HexDigit = Leave
+    ///   a = 0xaBcDeF;
+    ///   // HexDigit = Upper
+    ///   a = 0xABCDEF;
+    ///   // HexDigit = Lower
+    ///   a = 0xabcdef;
+    /// \endcode
+    NumericLiteralComponentStyle HexDigit;
+    /// Format integer prefix case.
+    /// \code
+    ///    // Prefix = Leave
+    ///    a = 0XF0 | 0b1;
+    ///    // Prefix = Upper
+    ///    a = 0XF0 | 0B1;
+    ///    // Prefix = Lower
+    ///    a = 0xF0 | 0b1;
+    /// \endcode
+    NumericLiteralComponentStyle Prefix;
+    /// Format suffix case. This option excludes case-sensitive reserved
+    /// suffixes, such as ``min`` in C++.
+    /// \code
+    ///   // Suffix = Leave
+    ///   a = 1uLL;
+    ///   // Suffix = Upper
+    ///   a = 1ULL;
+    ///   // Suffix = Lower
+    ///   a = 1ull;
+    /// \endcode
+    NumericLiteralComponentStyle Suffix;
+
+    bool operator==(const NumericLiteralCaseStyle &R) const {
+      return ExponentLetter == R.ExponentLetter && HexDigit == R.HexDigit &&
+             Prefix == R.Prefix && Suffix == R.Suffix;
+    }
+
+    bool operator!=(const NumericLiteralCaseStyle &R) const {
+      return !(*this == R);
+    }
+  };
+
+  /// Capitalization style for numeric literals.
+  /// \version 22
+  NumericLiteralCaseStyle NumericLiteralCase;
+
   /// Controls bin-packing Objective-C protocol conformance list
   /// items into as few lines as possible when they go over ``ColumnLimit``.
   ///
@@ -5469,6 +5548,7 @@ struct FormatStyle {
            MaxEmptyLinesToKeep == R.MaxEmptyLinesToKeep &&
            NamespaceIndentation == R.NamespaceIndentation &&
            NamespaceMacros == R.NamespaceMacros &&
+           NumericLiteralCase == R.NumericLiteralCase &&
            ObjCBinPackProtocolList == R.ObjCBinPackProtocolList &&
            ObjCBlockIndentWidth == R.ObjCBlockIndentWidth &&
            ObjCBreakBeforeNestedBlockParam ==

@@ -5079,6 +5079,125 @@ the configuration (without a prefix: ``Auto``).
 
   For example: TESTSUITE
 
+.. _NumericLiteralCase:
+
+**NumericLiteralCase** (``NumericLiteralCaseStyle``) :versionbadge:`clang-format 22` :ref:`¶ <NumericLiteralCase>`
+  Capitalization style for numeric literals.
+
+  Nested configuration flags:
+
+  Separate control for each numeric literal component.
+
+  For example, the config below will leave exponent letters alone, reformat
+  hexadecimal digits in lower case, reformat numeric literal prefixes in
+  upper case, and reformat suffixes in lower case.
+
+  .. code-block:: c++
+
+    NumericLiteralCase:
+      ExponentLetter: Leave
+      HexDigit: Lower
+      Prefix: Upper
+      Suffix: Lower
+
+  * ``NumericLiteralComponentStyle ExponentLetter``
+    Format floating point exponent separator letter case.
+
+    .. code-block:: c++
+
+      // ExponentLetter = Leave
+      float a = 6.02e23 + 1.0E10;
+      // ExponentLetter = Upper
+      float a = 6.02E23 + 1.0E10;
+      // ExponentLetter = Lower
+      float a = 6.02e23 + 1.0e10;
+
+    Possible values:
+
+    * ``NLCS_Leave`` (in configuration: ``Leave``)
+      Leave this component of the literal as is.
+
+    * ``NLCS_Upper`` (in configuration: ``Upper``)
+      Format this component with upper case characters.
+
+    * ``NLCS_Lower`` (in configuration: ``Lower``)
+      Format this component with lower case characters.
+
+
+  * ``NumericLiteralComponentStyle HexDigit``
+    Format hexadecimal digit case.
+
+    .. code-block:: c++
+
+      // HexDigit = Leave
+      a = 0xaBcDeF;
+      // HexDigit = Upper
+      a = 0xABCDEF;
+      // HexDigit = Lower
+      a = 0xabcdef;
+
+    Possible values:
+
+    * ``NLCS_Leave`` (in configuration: ``Leave``)
+      Leave this component of the literal as is.
+
+    * ``NLCS_Upper`` (in configuration: ``Upper``)
+      Format this component with upper case characters.
+
+    * ``NLCS_Lower`` (in configuration: ``Lower``)
+      Format this component with lower case characters.
+
+
+  * ``NumericLiteralComponentStyle Prefix``
+    Format integer prefix case.
+
+    .. code-block:: c++
+
+       // Prefix = Leave
+       a = 0XF0 | 0b1;
+       // Prefix = Upper
+       a = 0XF0 | 0B1;
+       // Prefix = Lower
+       a = 0xF0 | 0b1;
+
+    Possible values:
+
+    * ``NLCS_Leave`` (in configuration: ``Leave``)
+      Leave this component of the literal as is.
+
+    * ``NLCS_Upper`` (in configuration: ``Upper``)
+      Format this component with upper case characters.
+
+    * ``NLCS_Lower`` (in configuration: ``Lower``)
+      Format this component with lower case characters.
+
+
+  * ``NumericLiteralComponentStyle Suffix``
+    Format suffix case. This option excludes case-sensitive reserved
+    suffixes, such as ``min`` in C++.
+
+    .. code-block:: c++
+
+      // Suffix = Leave
+      a = 1uLL;
+      // Suffix = Upper
+      a = 1ULL;
+      // Suffix = Lower
+      a = 1ull;
+
+    Possible values:
+
+    * ``NLCS_Leave`` (in configuration: ``Leave``)
+      Leave this component of the literal as is.
+
+    * ``NLCS_Upper`` (in configuration: ``Upper``)
+      Format this component with upper case characters.
+
+    * ``NLCS_Lower`` (in configuration: ``Lower``)
+      Format this component with lower case characters.
+
+
+
 .. _ObjCBinPackProtocolList:
 
 **ObjCBinPackProtocolList** (``BinPackStyle``) :versionbadge:`clang-format 7` :ref:`¶ <ObjCBinPackProtocolList>`
