@@ -520,6 +520,19 @@ class DS_1A1D_PERMUTE <string opName, SDPatternOperator node = null_frag,
   let has_gds = 0;
 }
 
+multiclass DS_1A1D_PERMUTE_mc <string opName, SDPatternOperator node = null_frag,
+                                RegisterOperand data_op = VGPROp_32> {
+  assert OperandIsVGPR<data_op>.ret,
+         "DS with 2 data operands should be declared with VGPRs";
+  def "" : DS_1A1D_PERMUTE<opName, node, data_op>;
+
+  let SubtargetPredicate = isGFX90APlus in {
+    def _agpr : DS_1A1D_PERMUTE<opName, null_frag,
+                                getEquivalentAGPROperand<data_op>.ret>;
+  }
+}
+
+
 class DSAtomicRetPat<DS_Pseudo inst, ValueType vt, PatFrag frag, int complexity = 0,
   bit gds=0> : GCNPat <(frag (DS1Addr1Offset i32:$ptr, i32:$offset), vt:$value),
   (inst $ptr, getVregSrcForVT<vt>.ret:$value, Offset:$offset, (i1 gds))> {
@@ -837,10 +850,10 @@ def DS_NOP : DS_VOID<"ds_nop">;
 let SubtargetPredicate = isGFX8Plus in {
 
 let Uses = [EXEC] in {
-def DS_PERMUTE_B32  : DS_1A1D_PERMUTE <"ds_permute_b32",
-                                       int_amdgcn_ds_permute>;
-def DS_BPERMUTE_B32 : DS_1A1D_PERMUTE <"ds_bpermute_b32",
-                                       int_amdgcn_ds_bpermute>;
+defm DS_PERMUTE_B32  : DS_1A1D_PERMUTE_mc<"ds_permute_b32",
+                                         int_amdgcn_ds_permute>;
+defm DS_BPERMUTE_B32 : DS_1A1D_PERMUTE_mc<"ds_bpermute_b32",
+                                         int_amdgcn_ds_bpermute>;
 }
 
 } // let SubtargetPredicate = isGFX8Plus

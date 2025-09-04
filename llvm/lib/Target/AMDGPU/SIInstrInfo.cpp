@@ -5960,7 +5960,7 @@ adjustAllocatableRegClass(const GCNSubtarget &ST, const SIRegisterInfo &RI,
   if ((IsAllocatable || !ST.hasGFX90AInsts()) &&
       (((TID.mayLoad() || TID.mayStore()) &&
         !(TID.TSFlags & SIInstrFlags::Spill)) ||
-       (TID.TSFlags & (SIInstrFlags::DS | SIInstrFlags::MIMG)))) {
+       (TID.TSFlags & SIInstrFlags::MIMG))) {
     switch (RCID) {
     case AMDGPU::AV_32RegClassID:
       RCID = AMDGPU::VGPR_32RegClassID;
@@ -5996,23 +5996,18 @@ const TargetRegisterClass *SIInstrInfo::getRegClass(const MCInstrDesc &TID,
     return nullptr;
   auto RegClass = TID.operands()[OpNum].RegClass;
   bool IsAllocatable = false;
-  if (TID.TSFlags & (SIInstrFlags::DS | SIInstrFlags::FLAT)) {
+  if (TID.TSFlags & SIInstrFlags::FLAT) {
     // vdst and vdata should be both VGPR or AGPR, same for the DS instructions
     // with two data operands. Request register class constrained to VGPR only
     // of both operands present as Machine Copy Propagation can not check this
     // constraint and possibly other passes too.
     //
-    // The check is limited to FLAT and DS because atomics in non-flat encoding
-    // have their vdst and vdata tied to be the same register.
-    const int VDstIdx = AMDGPU::getNamedOperandIdx(TID.Opcode,
-                                                   AMDGPU::OpName::vdst);
-    const int DataIdx = AMDGPU::getNamedOperandIdx(TID.Opcode,
-        (TID.TSFlags & SIInstrFlags::DS) ? AMDGPU::OpName::data0
-                                         : AMDGPU::OpName::vdata);
-    if (DataIdx != -1) {
-      IsAllocatable = VDstIdx != -1 || AMDGPU::hasNamedOperand(
-                                           TID.Opcode, AMDGPU::OpName::data1);
-    }
+    // The check is limited to FLAT because atomics in non-flat encoding have
+    // their vdst and vdata tied to be the same register, and DS instructions
+    // have separate instruction definitions with AGPR and VGPR operand lists.
+    IsAllocatable =
+        AMDGPU::hasNamedOperand(TID.Opcode, AMDGPU::OpName::vdata) &&
+        AMDGPU::hasNamedOperand(TID.Opcode, AMDGPU::OpName::vdst);
   } else if (TID.getOpcode() == AMDGPU::AV_MOV_B64_IMM_PSEUDO) {
     // Special pseudos have no alignment requirement
     return RI.getRegClass(RegClass);
