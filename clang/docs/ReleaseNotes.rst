@@ -677,8 +677,8 @@ Improvements to Clang's diagnostics
   trigger a ``'Blue' is deprecated`` warning, which can be turned off with
   ``-Wno-deprecated-declarations-switch-case``.
 
-- Split diagnosis of implicit integer comparison on negation to a new
-  diagnostic group ``-Wimplicit-int-comparison-on-negation``, grouped under
+- Split diagnosis of implicit integer conversion on negation to a new
+  diagnostic group ``-Wimplicit-int-conversion-on-negation``, grouped under
   ``-Wimplicit-int-conversion``, so user can turn it off independently.
 
 - Improved the FixIts for unused lambda captures.
