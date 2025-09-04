@@ -204,7 +204,7 @@ FileShardedIndex::getShard(llvm::StringRef Uri) const {
     SymB.insert(*S);
   IF.Symbols = std::move(SymB).build();
 
-  RefSlab::Builder RefB;
+  RefSlab::BuilderExpectUnique RefB;
   for (const auto *Ref : It->getValue().Refs) {
     auto SID = RefToSymID.lookup(Ref);
     RefB.insert(SID, *Ref);
