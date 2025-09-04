@@ -131,6 +131,24 @@ int32_t srari(int32_t rs1, int32_t rs2) {
   return __riscv_srari(rs1, 1);
 }
 
+// RV32P-LABEL: @psati_h(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.psati.h.i32.i32(i32 [[RS1:%.*]], i32 1)
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t psati_h(uint32_t rs1, int32_t rs2) {
+  return __riscv_psati_h(rs1, 1);
+}
+
+// RV32P-LABEL: @sati(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.sati.i32.i32(i32 [[RS1:%.*]], i32 1)
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+int32_t sati(int32_t rs1, int32_t rs2) {
+  return __riscv_sati(rs1, 1);
+}
+
 // RV32P-LABEL: @sadd(
 // RV32P-NEXT:  entry:
 // RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.sadd.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])

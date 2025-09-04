@@ -90,6 +90,16 @@ __riscv_srari(int32_t __x, int __y) {
   return __builtin_riscv_srari_32(__x, __y);
 }
 
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_psati_h(uint32_t __x, int __y) {
+  return __builtin_riscv_psati_h_32(__x, __y);
+}
+
+static __inline__ int32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_sati(int32_t __x, int __y) {
+  return __builtin_riscv_sati_32(__x, __y);
+}
+
 static __inline__ int32_t __attribute__((__always_inline__, __nodebug__))
 __riscv_sadd(int32_t __x, int32_t __y) {
   return __builtin_riscv_sadd(__x, __y);
@@ -196,6 +206,21 @@ __riscv_psrari_w(uint64_t __x, int __y) {
 static __inline__ int64_t __attribute__((__always_inline__, __nodebug__))
 __riscv_srari(int64_t __x, int __y) {
   return __builtin_riscv_srari_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_psati_h(uint64_t __x, int __y) {
+  return __builtin_riscv_psati_h_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_psati_w(uint64_t __x, int __y) {
+  return __builtin_riscv_psati_w(__x, __y);
+}
+
+static __inline__ int64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_sati(int64_t __x, int __y) {
+  return __builtin_riscv_sati_64(__x, __y);
 }
 #endif
 
