@@ -585,7 +585,7 @@ def NVVM_MBarrierInvalSharedOp : NVVM_Op<"mbarrier.inval.shared">,
 }
 
 def NVVM_MBarrierArriveOp : NVVM_Op<"mbarrier.arrive">,
-  Results<(outs LLVM_Type:$res)>,
+  Results<(outs I64:$res)>,
   Arguments<(ins LLVM_AnyPointer:$addr)> {
   let summary = "MBarrier Arrive Operation";
   let description = [{
@@ -593,7 +593,7 @@ def NVVM_MBarrierArriveOp : NVVM_Op<"mbarrier.arrive">,
     *mbarrier object* at the specified address. Uses the default `.release.cta` semantics.
 
     This operation causes the executing thread to signal its arrival at the barrier.
-    The operation returns an opaque 64-bit value that captures the phase of the 
+    The operation returns an opaque value that captures the phase of the 
     *mbarrier object* prior to the arrive-on operation. The contents of this state 
     value are implementation-specific.
 
@@ -610,7 +610,7 @@ def NVVM_MBarrierArriveOp : NVVM_Op<"mbarrier.arrive">,
 }
 
 def NVVM_MBarrierArriveSharedOp : NVVM_Op<"mbarrier.arrive.shared">,
-  Results<(outs LLVM_Type:$res)>,
+  Results<(outs I64:$res)>,
   Arguments<(ins LLVM_PointerShared:$addr)> {
   let summary = "Shared MBarrier Arrive Operation";
   let description = [{
@@ -626,7 +626,7 @@ def NVVM_MBarrierArriveSharedOp : NVVM_Op<"mbarrier.arrive.shared">,
 }
 
 def NVVM_MBarrierArriveNocompleteOp : NVVM_Op<"mbarrier.arrive.nocomplete">,
-  Results<(outs LLVM_Type:$res)>,
+  Results<(outs I64:$res)>,
   Arguments<(ins LLVM_AnyPointer:$addr, I32:$count)> {
   let summary = "MBarrier Arrive No-Complete Operation";
   let description = [{
@@ -636,7 +636,7 @@ def NVVM_MBarrierArriveNocompleteOp : NVVM_Op<"mbarrier.arrive.nocomplete">,
 
     This operation causes the executing thread to signal its arrival at the barrier 
     with a specified count, but ensures that the barrier phase will not complete as 
-    a result of this operation. The operation returns an opaque 64-bit value that 
+    a result of this operation. The operation returns an opaque value that 
     captures the phase of the *mbarrier object* prior to the arrive-on operation.
 
     The operation takes the following operands:
@@ -654,7 +654,7 @@ def NVVM_MBarrierArriveNocompleteOp : NVVM_Op<"mbarrier.arrive.nocomplete">,
 }
 
 def NVVM_MBarrierArriveNocompleteSharedOp : NVVM_Op<"mbarrier.arrive.nocomplete.shared">,
-  Results<(outs LLVM_Type:$res)>,
+  Results<(outs I64:$res)>,
   Arguments<(ins LLVM_PointerShared:$addr, I32:$count)> {
   let summary = "Shared MBarrier Arrive No-Complete Operation";
   let description = [{
@@ -844,7 +844,7 @@ def NVVM_Barrier0Op : NVVM_Op<"barrier0"> {
   let description = [{
     The `nvvm.barrier0` operation is a convenience operation that performs barrier 
     synchronization and communication within a CTA (Cooperative Thread Array) using 
-    barrier ID 0. It is functionally equivalent to `nvvm.barrier` with `barrierId = 0`. 
+    barrier ID 0. It is functionally equivalent to `nvvm.barrier` or `nvvm.barrier id=0`. 
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-barrier)
   }];
@@ -1274,7 +1274,7 @@ def NVVM_VoteSyncOp
 
 def NVVM_SyncWarpOp :
   NVVM_Op<"bar.warp.sync">,
-  Arguments<(ins LLVM_Type:$mask)> {
+  Arguments<(ins I32:$mask)> {
   let summary = "Warp Barrier Synchronization Op";
   let description = [{
     The `nvvm.bar.warp.sync` operation performs barrier synchronization for threads 
@@ -1284,10 +1284,9 @@ def NVVM_SyncWarpOp :
     to the `mask` operand have executed a `bar.warp.sync` with the same mask value 
     before resuming execution.
 
-    The `mask` operand specifies a 32-bit integer mask indicating threads participating 
-    in the barrier, where each bit position corresponds to the thread's lane ID within 
-    the warp. Only threads with their corresponding bit set in the mask participate 
-    in the barrier synchronization.
+    The `mask` operand specifies the threads participating in the barrier, where each 
+    bit position corresponds to the thread's lane ID within the warp. Only threads with 
+    their corresponding bit set in the mask participate in the barrier synchronization.
 
     **Important constraints**:
     - The behavior is undefined if the executing thread is not included in the mask 
