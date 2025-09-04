@@ -2102,8 +2102,8 @@ instCombineSVECntElts(InstCombiner &IC, IntrinsicInst &II, unsigned NumElts) {
 }
 
 static std::optional<Instruction *>
-instCombineSMECntsElts(InstCombiner &IC, IntrinsicInst &II,
-                       const AArch64Subtarget *ST) {
+instCombineSMECntsd(InstCombiner &IC, IntrinsicInst &II,
+                    const AArch64Subtarget *ST) {
   if (!ST->isStreaming())
     return std::nullopt;
 
@@ -2825,7 +2825,7 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_cntb:
     return instCombineSVECntElts(IC, II, 16);
   case Intrinsic::aarch64_sme_cntsd:
-    return instCombineSMECntsElts(IC, II, ST);
+    return instCombineSMECntsd(IC, II, ST);
   case Intrinsic::aarch64_sve_ptest_any:
   case Intrinsic::aarch64_sve_ptest_first:
   case Intrinsic::aarch64_sve_ptest_last:

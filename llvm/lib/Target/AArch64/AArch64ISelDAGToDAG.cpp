@@ -940,6 +940,9 @@ bool AArch64DAGToDAGISel::SelectRDVLImm(SDValue N, SDValue &Imm) {
   return false;
 }
 
+// Given cntsd = (rdsvl, #1) >> 3, attempt to return a suitable multiplier
+// for RDSVL to calculate the streaming vector length in bytes * N. i.e.
+//   rdsvl, #(ShlImm - 3)
 template <signed Low, signed High>
 bool AArch64DAGToDAGISel::SelectRDSVLShiftImm(SDValue N, SDValue &Imm) {
   if (!isa<ConstantSDNode>(N))

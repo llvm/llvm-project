@@ -846,31 +846,13 @@ struct StreamingVLOpConversion
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = streamingVlOp.getLoc();
     auto i64Type = rewriter.getI64Type();
-    auto *intrOp = [&]() -> Operation * {
-      auto cntsd = arm_sme::aarch64_sme_cntsd::create(rewriter, loc, i64Type);
-      switch (streamingVlOp.getTypeSize()) {
-      case arm_sme::TypeSize::Byte: {
-        auto mul = arith::ConstantIndexOp::create(rewriter, loc, 8);
-        auto mul64 = arith::IndexCastOp::create(rewriter, loc, i64Type, mul);
-        return arith::MulIOp::create(rewriter, loc, cntsd, mul64);
-      }
-      case arm_sme::TypeSize::Half: {
-        auto mul = arith::ConstantIndexOp::create(rewriter, loc, 4);
-        auto mul64 = arith::IndexCastOp::create(rewriter, loc, i64Type, mul);
-        return arith::MulIOp::create(rewriter, loc, cntsd, mul64);
-      }
-      case arm_sme::TypeSize::Word: {
-        auto mul = arith::ConstantIndexOp::create(rewriter, loc, 2);
-        auto mul64 = arith::IndexCastOp::create(rewriter, loc, i64Type, mul);
-        return arith::MulIOp::create(rewriter, loc, cntsd, mul64);
-      }
-      case arm_sme::TypeSize::Double:
-        return cntsd;
-      }
-      llvm_unreachable("unknown type size in StreamingVLOpConversion");
-    }();
-    rewriter.replaceOpWithNewOp<arith::IndexCastOp>(
-        streamingVlOp, rewriter.getIndexType(), intrOp->getResult(0));
+    auto cntsd = arm_sme::aarch64_sme_cntsd::create(rewriter, loc, i64Type);
+    auto cntsdIdx = arith::IndexCastOp::create(rewriter, loc,
+                                               rewriter.getIndexType(), cntsd);
+    auto scale = arith::ConstantIndexOp::create(
+        rewriter, loc,
+        8 / arm_sme::getSizeInBytes(streamingVlOp.getTypeSize()));
+    rewriter.replaceOpWithNewOp<arith::MulIOp>(streamingVlOp, cntsdIdx, scale);
     return success();
   }
 };

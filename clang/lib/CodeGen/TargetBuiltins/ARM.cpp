@@ -4919,25 +4919,20 @@ Value *CodeGenFunction::EmitAArch64SMEBuiltinExpr(unsigned BuiltinID,
   // Handle builtins which require their multi-vector operands to be swapped
   swapCommutativeSMEOperands(BuiltinID, Ops);
 
-  auto isCntsBuiltin = [&](int64_t &Mul) {
+  auto isCntsBuiltin = [&]() {
     switch (BuiltinID) {
     default:
-      Mul = 0;
-      return false;
+      return 0;
     case SME::BI__builtin_sme_svcntsb:
-      Mul = 8;
-      return true;
+      return 8;
     case SME::BI__builtin_sme_svcntsh:
-      Mul = 4;
-      return true;
+      return 4;
     case SME::BI__builtin_sme_svcntsw:
-      Mul = 2;
-      return true;
+      return 2;
     }
   };
 
-  int64_t Mul = 0;
-  if (isCntsBuiltin(Mul)) {
+  if (auto Mul = isCntsBuiltin()) {
     llvm::Value *Cntd =
         Builder.CreateCall(CGM.getIntrinsic(Intrinsic::aarch64_sme_cntsd));
     return Builder.CreateMul(Cntd, llvm::ConstantInt::get(Int64Ty, Mul),
