@@ -30,8 +30,7 @@ body:             |
     ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
     ; RV32ZBB-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 8
     ; RV32ZBB-NEXT: [[ASSERT_SEXT1:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY1]], 8
-    ; RV32ZBB-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_SEXT1]](s32)
-    ; RV32ZBB-NEXT: [[ABDS:%[0-9]+]]:_(s32) = G_ABDS [[ASSERT_SEXT]], [[TRUNC]]
+    ; RV32ZBB-NEXT: [[ABDS:%[0-9]+]]:_(s32) = G_ABDS [[ASSERT_SEXT]], [[ASSERT_SEXT1]]
     ; RV32ZBB-NEXT: $x10 = COPY [[ABDS]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
     %1:_(s32) = COPY $x10
@@ -71,8 +70,7 @@ body:             |
     ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
     ; RV32ZBB-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 16
     ; RV32ZBB-NEXT: [[ASSERT_SEXT1:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY1]], 16
-    ; RV32ZBB-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_SEXT1]](s32)
-    ; RV32ZBB-NEXT: [[ABDS:%[0-9]+]]:_(s32) = G_ABDS [[ASSERT_SEXT]], [[TRUNC]]
+    ; RV32ZBB-NEXT: [[ABDS:%[0-9]+]]:_(s32) = G_ABDS [[ASSERT_SEXT]], [[ASSERT_SEXT1]]
     ; RV32ZBB-NEXT: $x10 = COPY [[ABDS]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
     %1:_(s32) = COPY $x10
@@ -165,14 +163,11 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-    ; RV32I-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 8
-    ; RV32I-NEXT: [[ASSERT_SEXT1:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY1]], 8
-    ; RV32I-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[ASSERT_SEXT]], [[ASSERT_SEXT1]]
-    ; RV32I-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[ASSERT_SEXT1]], [[ASSERT_SEXT]]
-    ; RV32I-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; RV32I-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ASSERT_SEXT]], [[C]]
-    ; RV32I-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[ASSERT_SEXT1]], [[C]]
-    ; RV32I-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ugt), [[AND]](s32), [[AND1]]
+    ; RV32I-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 8
+    ; RV32I-NEXT: [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY1]], 8
+    ; RV32I-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
+    ; RV32I-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[ASSERT_ZEXT1]], [[ASSERT_ZEXT]]
+    ; RV32I-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ugt), [[ASSERT_ZEXT]](s32), [[ASSERT_ZEXT1]]
     ; RV32I-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[SUB]], [[SUB1]]
     ; RV32I-NEXT: $x10 = COPY [[SELECT]](s32)
     ; RV32I-NEXT: PseudoRET implicit $x10
@@ -182,18 +177,15 @@ body:             |
     ; RV32ZBB-NEXT: {{  $}}
     ; RV32ZBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-    ; RV32ZBB-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 8
-    ; RV32ZBB-NEXT: [[ASSERT_SEXT1:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY1]], 8
-    ; RV32ZBB-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_SEXT1]](s32)
-    ; RV32ZBB-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; RV32ZBB-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ASSERT_SEXT]], [[C]]
-    ; RV32ZBB-NEXT: [[ABDU:%[0-9]+]]:_(s32) = G_ABDU [[AND]], [[TRUNC]]
+    ; RV32ZBB-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 8
+    ; RV32ZBB-NEXT: [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY1]], 8
+    ; RV32ZBB-NEXT: [[ABDU:%[0-9]+]]:_(s32) = G_ABDU [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
     ; RV32ZBB-NEXT: $x10 = COPY [[ABDU]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
     %1:_(s32) = COPY $x10
     %2:_(s32) = COPY $x11
-    %3:_(s32) = G_ASSERT_SEXT %1, 8
-    %4:_(s32) = G_ASSERT_SEXT %2, 8
+    %3:_(s32) = G_ASSERT_ZEXT %1, 8
+    %4:_(s32) = G_ASSERT_ZEXT %2, 8
     %5:_(s8) = G_TRUNC %3(s32)
     %6:_(s8) = G_TRUNC %4(s32)
     %7:_(s8) = G_ABDU %5, %6
@@ -211,14 +203,11 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-    ; RV32I-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 16
-    ; RV32I-NEXT: [[ASSERT_SEXT1:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY1]], 16
-    ; RV32I-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[ASSERT_SEXT]], [[ASSERT_SEXT1]]
-    ; RV32I-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[ASSERT_SEXT1]], [[ASSERT_SEXT]]
-    ; RV32I-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; RV32I-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ASSERT_SEXT]], [[C]]
-    ; RV32I-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[ASSERT_SEXT1]], [[C]]
-    ; RV32I-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ugt), [[AND]](s32), [[AND1]]
+    ; RV32I-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 16
+    ; RV32I-NEXT: [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY1]], 16
+    ; RV32I-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
+    ; RV32I-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[ASSERT_ZEXT1]], [[ASSERT_ZEXT]]
+    ; RV32I-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ugt), [[ASSERT_ZEXT]](s32), [[ASSERT_ZEXT1]]
     ; RV32I-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[SUB]], [[SUB1]]
     ; RV32I-NEXT: $x10 = COPY [[SELECT]](s32)
     ; RV32I-NEXT: PseudoRET implicit $x10
@@ -228,18 +217,15 @@ body:             |
     ; RV32ZBB-NEXT: {{  $}}
     ; RV32ZBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-    ; RV32ZBB-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 16
-    ; RV32ZBB-NEXT: [[ASSERT_SEXT1:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY1]], 16
-    ; RV32ZBB-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_SEXT1]](s32)
-    ; RV32ZBB-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; RV32ZBB-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ASSERT_SEXT]], [[C]]
-    ; RV32ZBB-NEXT: [[ABDU:%[0-9]+]]:_(s32) = G_ABDU [[AND]], [[TRUNC]]
+    ; RV32ZBB-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 16
+    ; RV32ZBB-NEXT: [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY1]], 16
+    ; RV32ZBB-NEXT: [[ABDU:%[0-9]+]]:_(s32) = G_ABDU [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
     ; RV32ZBB-NEXT: $x10 = COPY [[ABDU]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
     %1:_(s32) = COPY $x10
     %2:_(s32) = COPY $x11
-    %3:_(s32) = G_ASSERT_SEXT %1, 16
-    %4:_(s32) = G_ASSERT_SEXT %2, 16
+    %3:_(s32) = G_ASSERT_ZEXT %1, 16
+    %4:_(s32) = G_ASSERT_ZEXT %2, 16
     %5:_(s16) = G_TRUNC %3(s32)
     %6:_(s16) = G_TRUNC %4(s32)
     %7:_(s16) = G_ABDU %5, %6

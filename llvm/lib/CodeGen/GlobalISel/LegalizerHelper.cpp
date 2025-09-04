@@ -2848,12 +2848,20 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     return Legalized;
 
   case TargetOpcode::G_ABS:
+    Observer.changingInstr(MI);
+    widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_SEXT);
+    widenScalarDst(MI, WideTy);
+    Observer.changedInstr(MI);
+    return Legalized;
+
   case TargetOpcode::G_ABDS:
   case TargetOpcode::G_ABDU: {
-    bool IsUnsigned = MI.getOpcode() == TargetOpcode::G_ABDU;
+    auto ExtOpc = (MI.getOpcode() == TargetOpcode::G_ABDU)
+                      ? TargetOpcode::G_ZEXT
+                      : TargetOpcode::G_SEXT;
     Observer.changingInstr(MI);
-    widenScalarSrc(MI, WideTy, 1,
-                   IsUnsigned ? TargetOpcode::G_ZEXT : TargetOpcode::G_SEXT);
+    widenScalarSrc(MI, WideTy, 1, ExtOpc);
+    widenScalarSrc(MI, WideTy, 2, ExtOpc);
     widenScalarDst(MI, WideTy);
     Observer.changedInstr(MI);
     return Legalized;

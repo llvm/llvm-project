@@ -33,8 +33,7 @@ body:             |
     ; RV64ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; RV64ZBB-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s64) = G_ASSERT_SEXT [[COPY]], 8
     ; RV64ZBB-NEXT: [[ASSERT_SEXT1:%[0-9]+]]:_(s64) = G_ASSERT_SEXT [[COPY1]], 8
-    ; RV64ZBB-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_SEXT1]](s64)
-    ; RV64ZBB-NEXT: [[ABDS:%[0-9]+]]:_(s64) = G_ABDS [[ASSERT_SEXT]], [[TRUNC]]
+    ; RV64ZBB-NEXT: [[ABDS:%[0-9]+]]:_(s64) = G_ABDS [[ASSERT_SEXT]], [[ASSERT_SEXT1]]
     ; RV64ZBB-NEXT: $x10 = COPY [[ABDS]](s64)
     ; RV64ZBB-NEXT: PseudoRET implicit $x10
     %1:_(s64) = COPY $x10
@@ -78,8 +77,7 @@ body:             |
     ; RV64ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; RV64ZBB-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s64) = G_ASSERT_SEXT [[COPY]], 16
     ; RV64ZBB-NEXT: [[ASSERT_SEXT1:%[0-9]+]]:_(s64) = G_ASSERT_SEXT [[COPY1]], 16
-    ; RV64ZBB-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_SEXT1]](s64)
-    ; RV64ZBB-NEXT: [[ABDS:%[0-9]+]]:_(s64) = G_ABDS [[ASSERT_SEXT]], [[TRUNC]]
+    ; RV64ZBB-NEXT: [[ABDS:%[0-9]+]]:_(s64) = G_ABDS [[ASSERT_SEXT]], [[ASSERT_SEXT1]]
     ; RV64ZBB-NEXT: $x10 = COPY [[ABDS]](s64)
     ; RV64ZBB-NEXT: PseudoRET implicit $x10
     %1:_(s64) = COPY $x10
@@ -125,8 +123,7 @@ body:             |
     ; RV64ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; RV64ZBB-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s64) = G_ASSERT_SEXT [[COPY]], 32
     ; RV64ZBB-NEXT: [[ASSERT_SEXT1:%[0-9]+]]:_(s64) = G_ASSERT_SEXT [[COPY1]], 32
-    ; RV64ZBB-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[ASSERT_SEXT1]](s64)
-    ; RV64ZBB-NEXT: [[ABDS:%[0-9]+]]:_(s64) = G_ABDS [[ASSERT_SEXT]], [[TRUNC]]
+    ; RV64ZBB-NEXT: [[ABDS:%[0-9]+]]:_(s64) = G_ABDS [[ASSERT_SEXT]], [[ASSERT_SEXT1]]
     ; RV64ZBB-NEXT: $x10 = COPY [[ABDS]](s64)
     ; RV64ZBB-NEXT: PseudoRET implicit $x10
     %1:_(s64) = COPY $x10
@@ -177,14 +174,11 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; RV64I-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s64) = G_ASSERT_SEXT [[COPY]], 8
-    ; RV64I-NEXT: [[ASSERT_SEXT1:%[0-9]+]]:_(s64) = G_ASSERT_SEXT [[COPY1]], 8
-    ; RV64I-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[ASSERT_SEXT]], [[ASSERT_SEXT1]]
-    ; RV64I-NEXT: [[SUB1:%[0-9]+]]:_(s64) = G_SUB [[ASSERT_SEXT1]], [[ASSERT_SEXT]]
-    ; RV64I-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
-    ; RV64I-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ASSERT_SEXT]], [[C]]
-    ; RV64I-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[ASSERT_SEXT1]], [[C]]
-    ; RV64I-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(ugt), [[AND]](s64), [[AND1]]
+    ; RV64I-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s64) = G_ASSERT_ZEXT [[COPY]], 8
+    ; RV64I-NEXT: [[ASSERT_ZEXT1:%[0-9]+]]:_(s64) = G_ASSERT_ZEXT [[COPY1]], 8
+    ; RV64I-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
+    ; RV64I-NEXT: [[SUB1:%[0-9]+]]:_(s64) = G_SUB [[ASSERT_ZEXT1]], [[ASSERT_ZEXT]]
+    ; RV64I-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(ugt), [[ASSERT_ZEXT]](s64), [[ASSERT_ZEXT1]]
     ; RV64I-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[SUB]](s64)
     ; RV64I-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[SUB1]](s64)
     ; RV64I-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s64), [[TRUNC]], [[TRUNC1]]
@@ -197,18 +191,15 @@ body:             |
     ; RV64ZBB-NEXT: {{  $}}
     ; RV64ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; RV64ZBB-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s64) = G_ASSERT_SEXT [[COPY]], 8
-    ; RV64ZBB-NEXT: [[ASSERT_SEXT1:%[0-9]+]]:_(s64) = G_ASSERT_SEXT [[COPY1]], 8
-    ; RV64ZBB-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_SEXT1]](s64)
-    ; RV64ZBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
-    ; RV64ZBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ASSERT_SEXT]], [[C]]
-    ; RV64ZBB-NEXT: [[ABDU:%[0-9]+]]:_(s64) = G_ABDU [[AND]], [[TRUNC]]
+    ; RV64ZBB-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s64) = G_ASSERT_ZEXT [[COPY]], 8
+    ; RV64ZBB-NEXT: [[ASSERT_ZEXT1:%[0-9]+]]:_(s64) = G_ASSERT_ZEXT [[COPY1]], 8
+    ; RV64ZBB-NEXT: [[ABDU:%[0-9]+]]:_(s64) = G_ABDU [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
     ; RV64ZBB-NEXT: $x10 = COPY [[ABDU]](s64)
     ; RV64ZBB-NEXT: PseudoRET implicit $x10
     %1:_(s64) = COPY $x10
     %2:_(s64) = COPY $x11
-    %3:_(s64) = G_ASSERT_SEXT %1, 8
-    %4:_(s64) = G_ASSERT_SEXT %2, 8
+    %3:_(s64) = G_ASSERT_ZEXT %1, 8
+    %4:_(s64) = G_ASSERT_ZEXT %2, 8
     %5:_(s8) = G_TRUNC %3(s64)
     %6:_(s8) = G_TRUNC %4(s64)
     %7:_(s8) = G_ABDU %5, %6
@@ -227,14 +218,11 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; RV64I-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s64) = G_ASSERT_SEXT [[COPY]], 16
-    ; RV64I-NEXT: [[ASSERT_SEXT1:%[0-9]+]]:_(s64) = G_ASSERT_SEXT [[COPY1]], 16
-    ; RV64I-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[ASSERT_SEXT]], [[ASSERT_SEXT1]]
-    ; RV64I-NEXT: [[SUB1:%[0-9]+]]:_(s64) = G_SUB [[ASSERT_SEXT1]], [[ASSERT_SEXT]]
-    ; RV64I-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 65535
-    ; RV64I-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ASSERT_SEXT]], [[C]]
-    ; RV64I-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[ASSERT_SEXT1]], [[C]]
-    ; RV64I-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(ugt), [[AND]](s64), [[AND1]]
+    ; RV64I-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s64) = G_ASSERT_ZEXT [[COPY]], 16
+    ; RV64I-NEXT: [[ASSERT_ZEXT1:%[0-9]+]]:_(s64) = G_ASSERT_ZEXT [[COPY1]], 16
+    ; RV64I-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
+    ; RV64I-NEXT: [[SUB1:%[0-9]+]]:_(s64) = G_SUB [[ASSERT_ZEXT1]], [[ASSERT_ZEXT]]
+    ; RV64I-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(ugt), [[ASSERT_ZEXT]](s64), [[ASSERT_ZEXT1]]
     ; RV64I-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[SUB]](s64)
     ; RV64I-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[SUB1]](s64)
     ; RV64I-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s64), [[TRUNC]], [[TRUNC1]]
@@ -247,18 +235,15 @@ body:             |
     ; RV64ZBB-NEXT: {{  $}}
     ; RV64ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; RV64ZBB-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s64) = G_ASSERT_SEXT [[COPY]], 16
-    ; RV64ZBB-NEXT: [[ASSERT_SEXT1:%[0-9]+]]:_(s64) = G_ASSERT_SEXT [[COPY1]], 16
-    ; RV64ZBB-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_SEXT1]](s64)
-    ; RV64ZBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 65535
-    ; RV64ZBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ASSERT_SEXT]], [[C]]
-    ; RV64ZBB-NEXT: [[ABDU:%[0-9]+]]:_(s64) = G_ABDU [[AND]], [[TRUNC]]
+    ; RV64ZBB-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s64) = G_ASSERT_ZEXT [[COPY]], 16
+    ; RV64ZBB-NEXT: [[ASSERT_ZEXT1:%[0-9]+]]:_(s64) = G_ASSERT_ZEXT [[COPY1]], 16
+    ; RV64ZBB-NEXT: [[ABDU:%[0-9]+]]:_(s64) = G_ABDU [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
     ; RV64ZBB-NEXT: $x10 = COPY [[ABDU]](s64)
     ; RV64ZBB-NEXT: PseudoRET implicit $x10
     %1:_(s64) = COPY $x10
     %2:_(s64) = COPY $x11
-    %3:_(s64) = G_ASSERT_SEXT %1, 16
-    %4:_(s64) = G_ASSERT_SEXT %2, 16
+    %3:_(s64) = G_ASSERT_ZEXT %1, 16
+    %4:_(s64) = G_ASSERT_ZEXT %2, 16
     %5:_(s16) = G_TRUNC %3(s64)
     %6:_(s16) = G_TRUNC %4(s64)
     %7:_(s16) = G_ABDU %5, %6
@@ -277,15 +262,17 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; RV64I-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s64) = G_ASSERT_SEXT [[COPY]], 32
-    ; RV64I-NEXT: [[ASSERT_SEXT1:%[0-9]+]]:_(s64) = G_ASSERT_SEXT [[COPY1]], 32
-    ; RV64I-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[ASSERT_SEXT]], [[ASSERT_SEXT1]]
+    ; RV64I-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s64) = G_ASSERT_ZEXT [[COPY]], 32
+    ; RV64I-NEXT: [[ASSERT_ZEXT1:%[0-9]+]]:_(s64) = G_ASSERT_ZEXT [[COPY1]], 32
+    ; RV64I-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
     ; RV64I-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[SUB]], 32
     ; RV64I-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[SEXT_INREG]](s64)
-    ; RV64I-NEXT: [[SUB1:%[0-9]+]]:_(s64) = G_SUB [[ASSERT_SEXT1]], [[ASSERT_SEXT]]
+    ; RV64I-NEXT: [[SUB1:%[0-9]+]]:_(s64) = G_SUB [[ASSERT_ZEXT1]], [[ASSERT_ZEXT]]
     ; RV64I-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[SUB1]], 32
     ; RV64I-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[SEXT_INREG1]](s64)
-    ; RV64I-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(ugt), [[ASSERT_SEXT]](s64), [[ASSERT_SEXT1]]
+    ; RV64I-NEXT: [[SEXT_INREG2:%[0-9]+]]:_(s64) = G_SEXT_INREG [[ASSERT_ZEXT]], 32
+    ; RV64I-NEXT: [[SEXT_INREG3:%[0-9]+]]:_(s64) = G_SEXT_INREG [[ASSERT_ZEXT1]], 32
+    ; RV64I-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(ugt), [[SEXT_INREG2]](s64), [[SEXT_INREG3]]
     ; RV64I-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s64), [[TRUNC]], [[TRUNC1]]
     ; RV64I-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[SELECT]](s32)
     ; RV64I-NEXT: $x10 = COPY [[ANYEXT]](s64)
@@ -296,18 +283,15 @@ body:             |
     ; RV64ZBB-NEXT: {{  $}}
     ; RV64ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; RV64ZBB-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s64) = G_ASSERT_SEXT [[COPY]], 32
-    ; RV64ZBB-NEXT: [[ASSERT_SEXT1:%[0-9]+]]:_(s64) = G_ASSERT_SEXT [[COPY1]], 32
-    ; RV64ZBB-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[ASSERT_SEXT1]](s64)
-    ; RV64ZBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
-    ; RV64ZBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ASSERT_SEXT]], [[C]]
-    ; RV64ZBB-NEXT: [[ABDU:%[0-9]+]]:_(s64) = G_ABDU [[AND]], [[TRUNC]]
+    ; RV64ZBB-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s64) = G_ASSERT_ZEXT [[COPY]], 32
+    ; RV64ZBB-NEXT: [[ASSERT_ZEXT1:%[0-9]+]]:_(s64) = G_ASSERT_ZEXT [[COPY1]], 32
+    ; RV64ZBB-NEXT: [[ABDU:%[0-9]+]]:_(s64) = G_ABDU [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
     ; RV64ZBB-NEXT: $x10 = COPY [[ABDU]](s64)
     ; RV64ZBB-NEXT: PseudoRET implicit $x10
     %1:_(s64) = COPY $x10
     %2:_(s64) = COPY $x11
-    %3:_(s64) = G_ASSERT_SEXT %1, 32
-    %4:_(s64) = G_ASSERT_SEXT %2, 32
+    %3:_(s64) = G_ASSERT_ZEXT %1, 32
+    %4:_(s64) = G_ASSERT_ZEXT %2, 32
     %5:_(s32) = G_TRUNC %3(s64)
     %6:_(s32) = G_TRUNC %4(s64)
     %7:_(s32) = G_ABDU %5, %6
