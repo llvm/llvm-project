@@ -294,6 +294,10 @@ static cl::opt<bool> ForceTargetSupportsScalableVectors(
         "Pretend that scalable vectors are supported, even if the target does "
         "not support them. This flag should only be used for testing."));
 
+static cl::opt<unsigned> VScaleForTuningOpt(
+    "force-vscale-for-tuning", cl::Hidden,
+    cl::desc("Force a vscale for tuning factor in the loop vectorizer"));
+
 static cl::opt<unsigned> SmallLoopCost(
     "small-loop-cost", cl::init(20), cl::Hidden,
     cl::desc(
@@ -1463,6 +1467,11 @@ private:
   /// vscale_range.min == vscale_range.max then return vscale_range.max, else
   /// return the value returned by the corresponding TTI method.
   void initializeVScaleForTuning() {
+    if (VScaleForTuningOpt.getNumOccurrences()) {
+      VScaleForTuning = VScaleForTuningOpt;
+      return;
+    }
+
     const Function *Fn = TheLoop->getHeader()->getParent();
     if (Fn->hasFnAttribute(Attribute::VScaleRange)) {
       auto Attr = Fn->getFnAttribute(Attribute::VScaleRange);
