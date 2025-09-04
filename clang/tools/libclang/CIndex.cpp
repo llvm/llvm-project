@@ -1728,7 +1728,7 @@ bool CursorVisitor::VisitUsingTypeLoc(UsingTypeLoc TL) {
   if (VisitNestedNameSpecifierLoc(TL.getQualifierLoc()))
     return true;
 
-  auto *underlyingDecl = TL.getTypePtr()->desugar()->getAsTagDecl();
+  auto *underlyingDecl = TL.getTypePtr()->getAsTagDecl();
   if (underlyingDecl) {
     return Visit(MakeCursorTypeRef(underlyingDecl, TL.getNameLoc(), TU));
   }

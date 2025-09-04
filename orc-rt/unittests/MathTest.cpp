@@ -15,7 +15,7 @@
 
 using namespace orc_rt;
 
-TEST(STLExtrasTest, isPowerOf2) {
+TEST(MathTest, isPowerOf2) {
   // Test [0..16]
   EXPECT_FALSE(isPowerOf2(0x00));
   EXPECT_TRUE(isPowerOf2(0x01));
@@ -57,7 +57,7 @@ TEST(STLExtrasTest, isPowerOf2) {
   EXPECT_FALSE(isPowerOf2(-1));
 }
 
-TEST(STLExtrasTest, nextPowerOf2) {
+TEST(MathTest, nextPowerOf2) {
   EXPECT_EQ(nextPowerOf2(0x00), (1 << 0));
   EXPECT_EQ(nextPowerOf2(0x01), (1 << 1));
   EXPECT_EQ(nextPowerOf2(0x02), (1 << 2));

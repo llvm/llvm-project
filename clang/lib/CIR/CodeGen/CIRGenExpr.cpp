@@ -325,6 +325,7 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
     const auto vecTy = cast<cir::VectorType>(elementType);
 
     // TODO(CIR): Use `ABIInfo::getOptimalVectorMemoryType` once it upstreamed
+    assert(!cir::MissingFeatures::cirgenABIInfo());
     if (vecTy.getSize() == 3 && !getLangOpts().PreserveVec3Type)
       cgm.errorNYI(addr.getPointer().getLoc(),
                    "emitStoreOfScalar Vec3 & PreserveVec3Type disabled");
@@ -345,7 +346,7 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
   }
 
   assert(currSrcLoc && "must pass in source location");
-  builder.createStore(*currSrcLoc, value, addr /*, isVolatile*/);
+  builder.createStore(*currSrcLoc, value, addr, isVolatile);
 
   if (isNontemporal) {
     cgm.errorNYI(addr.getPointer().getLoc(), "emitStoreOfScalar nontemporal");
@@ -543,21 +544,50 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, LValue lvalue,
                     lvalue.getType(), isInit, /*isNontemporal=*/false);
 }
 
-mlir::Value CIRGenFunction::emitLoadOfScalar(LValue lvalue,
-                                             SourceLocation loc) {
+mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
+                                             QualType ty, SourceLocation loc,
+                                             LValueBaseInfo baseInfo) {
   assert(!cir::MissingFeatures::opLoadStoreThreadLocal());
-  assert(!cir::MissingFeatures::opLoadEmitScalarRangeCheck());
-  assert(!cir::MissingFeatures::opLoadBooleanRepresentation());
-
-  Address addr = lvalue.getAddress();
   mlir::Type eltTy = addr.getElementType();
+
+  if (const auto *clangVecTy = ty->getAs<clang::VectorType>()) {
+    if (clangVecTy->isExtVectorBoolType()) {
+      cgm.errorNYI(loc, "emitLoadOfScalar: ExtVectorBoolType");
+      return nullptr;
+    }
+
+    const auto vecTy = cast<cir::VectorType>(eltTy);
+
+    // Handle vectors of size 3 like size 4 for better performance.
+    assert(!cir::MissingFeatures::cirgenABIInfo());
+    if (vecTy.getSize() == 3 && !getLangOpts().PreserveVec3Type)
+      cgm.errorNYI(addr.getPointer().getLoc(),
+                   "emitLoadOfScalar Vec3 & PreserveVec3Type disabled");
+  }
+
+  assert(!cir::MissingFeatures::opLoadStoreTbaa());
+  LValue atomicLValue = LValue::makeAddr(addr, ty, baseInfo);
+  if (ty->isAtomicType() || isLValueSuitableForInlineAtomic(atomicLValue))
+    cgm.errorNYI("emitLoadOfScalar: load atomic");
 
   if (mlir::isa<cir::VoidType>(eltTy))
     cgm.errorNYI(loc, "emitLoadOfScalar: void type");
 
-  mlir::Value loadOp = builder.createLoad(getLoc(loc), addr);
+  assert(!cir::MissingFeatures::opLoadEmitScalarRangeCheck());
+
+  mlir::Value loadOp = builder.createLoad(getLoc(loc), addr, isVolatile);
+  if (!ty->isBooleanType() && ty->hasBooleanRepresentation())
+    cgm.errorNYI("emitLoadOfScalar: boolean type with boolean representation");
 
   return loadOp;
+}
+
+mlir::Value CIRGenFunction::emitLoadOfScalar(LValue lvalue,
+                                             SourceLocation loc) {
+  assert(!cir::MissingFeatures::opLoadStoreNontemporal());
+  assert(!cir::MissingFeatures::opLoadStoreTbaa());
+  return emitLoadOfScalar(lvalue.getAddress(), lvalue.isVolatile(),
+                          lvalue.getType(), loc, lvalue.getBaseInfo());
 }
 
 /// Given an expression that represents a value lvalue, this
@@ -1092,11 +1122,7 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
 
   case CK_UncheckedDerivedToBase:
   case CK_DerivedToBase: {
-    const auto *derivedClassTy =
-        e->getSubExpr()->getType()->castAs<clang::RecordType>();
-    auto *derivedClassDecl =
-        cast<CXXRecordDecl>(derivedClassTy->getOriginalDecl())
-            ->getDefinitionOrSelf();
+    auto *derivedClassDecl = e->getSubExpr()->getType()->castAsCXXRecordDecl();
 
     LValue lv = emitLValue(e->getSubExpr());
     Address thisAddr = lv.getAddress();
@@ -1265,17 +1291,11 @@ static void pushTemporaryCleanup(CIRGenFunction &cgf,
   case SD_Static:
   case SD_Thread: {
     CXXDestructorDecl *referenceTemporaryDtor = nullptr;
-    if (const clang::RecordType *rt = e->getType()
-                                          ->getBaseElementTypeUnsafe()
-                                          ->getAs<clang::RecordType>()) {
+    if (const auto *classDecl =
+            e->getType()->getBaseElementTypeUnsafe()->getAsCXXRecordDecl();
+        classDecl && !classDecl->hasTrivialDestructor())
       // Get the destructor for the reference temporary.
-      if (const auto *classDecl = dyn_cast<CXXRecordDecl>(
-              rt->getOriginalDecl()->getDefinitionOrSelf())) {
-        if (!classDecl->hasTrivialDestructor())
-          referenceTemporaryDtor =
-              classDecl->getDefinitionOrSelf()->getDestructor();
-      }
-    }
+      referenceTemporaryDtor = classDecl->getDestructor();
 
     if (!referenceTemporaryDtor)
       return;
@@ -1982,12 +2002,8 @@ void CIRGenFunction::emitCXXConstructExpr(const CXXConstructExpr *e,
       delegating = true;
       break;
     case CXXConstructionKind::VirtualBase:
-      // This should just set 'forVirtualBase' to true and fall through, but
-      // virtual base class support is otherwise missing, so this needs to wait
-      // until it can be tested.
-      cgm.errorNYI(e->getSourceRange(),
-                   "emitCXXConstructExpr: virtual base constructor");
-      return;
+      forVirtualBase = true;
+      [[fallthrough]];
     case CXXConstructionKind::NonVirtualBase:
       type = Ctor_Base;
       break;

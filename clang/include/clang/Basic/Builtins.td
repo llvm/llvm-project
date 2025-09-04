@@ -1244,6 +1244,18 @@ def MaskedStore : Builtin {
   let Prototype = "void(...)";
 }
 
+def MaskedExpandLoad : Builtin {
+  let Spellings = ["__builtin_masked_expand_load"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def MaskedCompressStore : Builtin {
+  let Spellings = ["__builtin_masked_compress_store"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def AllocaUninitialized : Builtin {
   let Spellings = ["__builtin_alloca_uninitialized"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow];

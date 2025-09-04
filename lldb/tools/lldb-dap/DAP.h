@@ -367,6 +367,9 @@ struct DAP final : private DAPTransport::MessageHandler {
   /// The set of capabilities supported by this adapter.
   protocol::Capabilities GetCapabilities();
 
+  /// The set of custom capabilities supported by this adapter.
+  protocol::Capabilities GetCustomCapabilities();
+
   /// Debuggee will continue from stopped state.
   void WillContinue() { variables.Clear(); }
 

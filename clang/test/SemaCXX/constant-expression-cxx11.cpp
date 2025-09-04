@@ -2645,3 +2645,19 @@ namespace GH150709 {
   static_assert((e2[0].*mp)() == 1, ""); // expected-error {{constant expression}}
   static_assert((g.*mp)() == 1, ""); // expected-error {{constant expression}}
 }
+
+namespace GH154567 {
+  struct T {
+    int i;
+  };
+
+  struct S {
+    struct { // expected-warning {{GNU extension}}
+      T val;
+    };
+    constexpr S() : val() {}
+  };
+
+  constexpr S s{};
+  static_assert(s.val.i == 0, "");
+}

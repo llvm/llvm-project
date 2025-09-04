@@ -26,7 +26,6 @@
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
-#include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/Pointer.h"
 #include "flang/Optimizer/Builder/Todo.h"
@@ -1286,16 +1285,8 @@ struct BinaryOp<Fortran::evaluate::Relational<
                                          fir::FirOpBuilder &builder,
                                          const Op &op, hlfir::Entity lhs,
                                          hlfir::Entity rhs) {
-    auto [lhsExv, lhsCleanUp] =
-        hlfir::translateToExtendedValue(loc, builder, lhs);
-    auto [rhsExv, rhsCleanUp] =
-        hlfir::translateToExtendedValue(loc, builder, rhs);
-    auto cmp = fir::runtime::genCharCompare(
-        builder, loc, translateSignedRelational(op.opr), lhsExv, rhsExv);
-    if (lhsCleanUp)
-      (*lhsCleanUp)();
-    if (rhsCleanUp)
-      (*rhsCleanUp)();
+    auto cmp = hlfir::CmpCharOp::create(
+        builder, loc, translateSignedRelational(op.opr), lhs, rhs);
     return hlfir::EntityWithAttributes{cmp};
   }
 };

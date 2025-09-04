@@ -1261,6 +1261,27 @@ protocol::Capabilities DAP::GetCapabilities() {
   return capabilities;
 }
 
+protocol::Capabilities DAP::GetCustomCapabilities() {
+  protocol::Capabilities capabilities;
+
+  // Add all custom capabilities here.
+  const llvm::DenseSet<AdapterFeature> all_custom_features = {
+      protocol::eAdapterFeatureSupportsModuleSymbolsRequest,
+  };
+
+  for (auto &kv : request_handlers) {
+    llvm::SmallDenseSet<AdapterFeature, 1> features =
+        kv.second->GetSupportedFeatures();
+
+    for (auto &feature : features) {
+      if (all_custom_features.contains(feature))
+        capabilities.supportedFeatures.insert(feature);
+    }
+  }
+
+  return capabilities;
+}
+
 void DAP::StartEventThread() {
   event_thread = std::thread(&DAP::EventThread, this);
 }
@@ -1617,6 +1638,7 @@ void DAP::RegisterRequests() {
   // Custom requests
   RegisterRequest<CompileUnitsRequestHandler>();
   RegisterRequest<ModulesRequestHandler>();
+  RegisterRequest<ModuleSymbolsRequestHandler>();
 
   // Testing requests
   RegisterRequest<TestGetTargetBreakpointsRequestHandler>();
