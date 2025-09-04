@@ -80,7 +80,6 @@ public:
 
   // Builtin types constructors
   BuiltinTypeDeclBuilder &addDefaultConstructor();
-  BuiltinTypeDeclBuilder &addHandleConstructor();
   BuiltinTypeDeclBuilder &addHandleConstructorFromBinding();
   BuiltinTypeDeclBuilder &addHandleConstructorFromImplicitBinding();
 
