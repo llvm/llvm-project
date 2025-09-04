@@ -2,6 +2,7 @@
 // RUN: %libomp-compile-and-run | FileCheck %s
 // REQUIRES: ompt
 // UNSUPPORTED: gcc-4, gcc-5, gcc-6, gcc-7
+// UNSUPPORTED: riscv64
 // clang-format on
 #define TEST_NEED_PRINT_FRAME_FROM_OUTLINED_FN
 #include "callback.h"

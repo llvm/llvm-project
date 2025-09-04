@@ -4,6 +4,7 @@
 // GCC generates code that does not call the runtime for the flush construct
 // XFAIL: gcc
 // clang-format on
+// UNSUPPORTED: riscv64
 
 #include "callback.h"
 #include <omp.h>
