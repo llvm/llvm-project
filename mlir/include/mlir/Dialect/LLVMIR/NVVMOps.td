@@ -63,8 +63,8 @@ def NVVM_Dialect : Dialect {
 
   **Placement in the lowering pipeline:** NVVM sits below target-agnostic dialects
   like `gpu` and NVIDIA's `nvgpu`. Typical pipelines convert `gpu`/`nvgpu` ops
-  into NVVM using `-convert-gpu-to-nvvm` and `-convert-nvgpu-to-nvvm`, then lower
-  to the LLVM dialect for final code generation via LLVM's NVPTX backend.
+  into NVVM using `-convert-gpu-to-nvvm` and `-convert-nvgpu-to-nvvm`, then translate
+  into the LLVM for final code generation via NVPTX backend.
 
   **Target configuration and serialization:** NVVM provides a `#nvvm.target`
   attribute to describe the GPU target (SM, features, and flags). In conjunction
