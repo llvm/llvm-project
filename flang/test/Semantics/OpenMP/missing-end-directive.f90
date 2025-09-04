@@ -2,15 +2,15 @@
 
 ! Test that we can diagnose missing end directives without an explosion of errors
 
-! ERROR: Expected OpenMP end directive
+! ERROR: Expected OpenMP END PARALLEL directive
 !$omp parallel
-! ERROR: Expected OpenMP end directive
+! ERROR: Expected OpenMP END TASK directive
 !$omp task
 ! ERROR: Expected OpenMP END SECTIONS directive
 !$omp sections
-! ERROR: Expected OpenMP end directive
+! ERROR: Expected OpenMP END PARALLEL directive
 !$omp parallel
-! ERROR: Expected OpenMP end directive
+! ERROR: Expected OpenMP END TASK directive
 !$omp task
 ! ERROR: Expected OpenMP END SECTIONS directive
 !$omp sections
