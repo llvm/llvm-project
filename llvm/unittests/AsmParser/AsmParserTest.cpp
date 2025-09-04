@@ -22,6 +22,8 @@
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 
+#define DEBUG_TYPE "Unittest-asm-parser-tests"
+
 using namespace llvm;
 
 namespace {
@@ -486,14 +488,14 @@ TEST(AsmParserTest, DIExpressionBodyAtBeginningWithSlotMappingParsing) {
 #define ASSERT_EQ_LOC(Loc1, Loc2)                                              \
   do {                                                                         \
     bool AreLocsEqual = Loc1.contains(Loc2) && Loc2.contains(Loc1);            \
-    if (!AreLocsEqual) {                                                       \
+    LLVM_DEBUG(if (!AreLocsEqual) {                                            \
       dbgs() << #Loc1 " location: " << Loc1.Start.Line << ":"                  \
              << Loc1.Start.Col << " - " << Loc1.End.Line << ":"                \
              << Loc1.End.Col << "\n";                                          \
       dbgs() << #Loc2 " location: " << Loc2.Start.Line << ":"                  \
              << Loc2.Start.Col << " - " << Loc2.End.Line << ":"                \
              << Loc2.End.Col << "\n";                                          \
-    }                                                                          \
+    });                                                                        \
     ASSERT_TRUE(AreLocsEqual);                                                 \
   } while (false)
 
