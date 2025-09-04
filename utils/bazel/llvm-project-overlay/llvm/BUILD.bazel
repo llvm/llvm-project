@@ -2222,6 +2222,8 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/AArch64/AArch64GenSubtargetInfo.inc": ["-gen-subtarget"],
             "lib/Target/AArch64/AArch64GenDisassemblerTables.inc": [
                 "-gen-disassembler",
+                "-ignore-non-decodable-operands",
+                "-ignore-fully-defined-operands",
             ],
             "lib/Target/AArch64/AArch64GenSystemOperands.inc": ["-gen-searchable-tables"],
             "lib/Target/AArch64/AArch64GenExegesis.inc": ["-gen-exegesis"],
@@ -2244,7 +2246,10 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/ARM/ARMGenGlobalISel.inc": ["-gen-global-isel"],
             "lib/Target/ARM/ARMGenCallingConv.inc": ["-gen-callingconv"],
             "lib/Target/ARM/ARMGenSubtargetInfo.inc": ["-gen-subtarget"],
-            "lib/Target/ARM/ARMGenDisassemblerTables.inc": ["-gen-disassembler"],
+            "lib/Target/ARM/ARMGenDisassemblerTables.inc": [
+                "-gen-disassembler",
+                "-ignore-non-decodable-operands",
+            ],
         },
     },
     {
@@ -2264,6 +2269,8 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/AMDGPU/AMDGPUGenDisassemblerTables.inc": [
                 "-gen-disassembler",
                 "--specialize-decoders-per-bitwidth",
+                "-ignore-non-decodable-operands",
+                "-ignore-fully-defined-operands",
             ],
             "lib/Target/AMDGPU/AMDGPUGenSearchableTables.inc": ["-gen-searchable-tables"],
         },
@@ -2281,7 +2288,10 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/AVR/AVRGenAsmWriter.inc": ["-gen-asm-writer"],
             "lib/Target/AVR/AVRGenCallingConv.inc": ["-gen-callingconv"],
             "lib/Target/AVR/AVRGenDAGISel.inc": ["-gen-dag-isel"],
-            "lib/Target/AVR/AVRGenDisassemblerTables.inc": ["-gen-disassembler"],
+            "lib/Target/AVR/AVRGenDisassemblerTables.inc": [
+                "-gen-disassembler",
+                "-ignore-non-decodable-operands",
+            ],
             "lib/Target/AVR/AVRGenMCCodeEmitter.inc": ["-gen-emitter"],
             "lib/Target/AVR/AVRGenInstrInfo.inc": ["-gen-instr-info"],
             "lib/Target/AVR/AVRGenRegisterInfo.inc": ["-gen-register-info"],
@@ -2299,7 +2309,10 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/BPF/BPFGenCallingConv.inc": ["-gen-callingconv"],
             "lib/Target/BPF/BPFGenDAGISel.inc": ["-gen-dag-isel"],
             "lib/Target/BPF/BPFGenGlobalISel.inc": ["-gen-global-isel"],
-            "lib/Target/BPF/BPFGenDisassemblerTables.inc": ["-gen-disassembler"],
+            "lib/Target/BPF/BPFGenDisassemblerTables.inc": [
+                "-gen-disassembler",
+                "-ignore-non-decodable-operands",
+            ],
             "lib/Target/BPF/BPFGenMCCodeEmitter.inc": ["-gen-emitter"],
             "lib/Target/BPF/BPFGenInstrInfo.inc": ["-gen-instr-info"],
             "lib/Target/BPF/BPFGenRegisterInfo.inc": ["-gen-register-info"],
@@ -2315,7 +2328,10 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/Hexagon/HexagonGenCallingConv.inc": ["-gen-callingconv"],
             "lib/Target/Hexagon/HexagonGenDAGISel.inc": ["-gen-dag-isel"],
             "lib/Target/Hexagon/HexagonGenDFAPacketizer.inc": ["-gen-dfa-packetizer"],
-            "lib/Target/Hexagon/HexagonGenDisassemblerTables.inc": ["-gen-disassembler"],
+            "lib/Target/Hexagon/HexagonGenDisassemblerTables.inc": [
+                "-gen-disassembler",
+                "-ignore-non-decodable-operands",
+            ],
             "lib/Target/Hexagon/HexagonGenInstrInfo.inc": ["-gen-instr-info"],
             "lib/Target/Hexagon/HexagonGenMCCodeEmitter.inc": ["-gen-emitter"],
             "lib/Target/Hexagon/HexagonGenRegisterInfo.inc": ["-gen-register-info"],
@@ -2361,7 +2377,10 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/Mips/MipsGenAsmWriter.inc": ["-gen-asm-writer"],
             "lib/Target/Mips/MipsGenCallingConv.inc": ["-gen-callingconv"],
             "lib/Target/Mips/MipsGenDAGISel.inc": ["-gen-dag-isel"],
-            "lib/Target/Mips/MipsGenDisassemblerTables.inc": ["-gen-disassembler"],
+            "lib/Target/Mips/MipsGenDisassemblerTables.inc": [
+                "-gen-disassembler",
+                "-ignore-non-decodable-operands",
+            ],
             "lib/Target/Mips/MipsGenMCCodeEmitter.inc": ["-gen-emitter"],
             "lib/Target/Mips/MipsGenExegesis.inc": ["-gen-exegesis"],
             "lib/Target/Mips/MipsGenFastISel.inc": ["-gen-fast-isel"],
@@ -2434,6 +2453,7 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/RISCV/RISCVGenDisassemblerTables.inc": [
                 "-gen-disassembler",
                 "--specialize-decoders-per-bitwidth",
+                "-ignore-non-decodable-operands",
             ],
             "lib/Target/RISCV/RISCVGenInstrInfo.inc": ["-gen-instr-info"],
             "lib/Target/RISCV/RISCVGenMacroFusion.inc": ["-gen-macro-fusion-pred"],
