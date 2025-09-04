@@ -115,7 +115,7 @@ public:
       break;
     }
 
-    return HasTcgen05 && PTXVersion >= 86;
+    return HasTcgen05;
   }
   // f32x2 instructions in Blackwell family
   bool hasF32x2Instructions() const;
