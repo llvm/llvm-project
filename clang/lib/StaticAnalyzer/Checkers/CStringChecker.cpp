@@ -2313,13 +2313,12 @@ void CStringChecker::evalStrxfrm(CheckerContext &C,
   auto ComparisonVal = SVB.evalBinOp(StateSizeNonZero, BO_LT, RetVal, SizeVal,
                                      SVB.getConditionType())
                            .getAs<DefinedOrUnknownSVal>();
-
   if (ComparisonVal) {
     auto [StateSuccess, StateFailure] =
         StateSizeNonZero->assume(*ComparisonVal);
 
     if (StateSuccess) {
-      // In this case, the transformation invalidated the buffer.
+      // The transformation invalidated the buffer.
       StateSuccess = invalidateDestinationBufferBySize(
           C, StateSuccess, Dest.Expression, Call.getCFGElementRef(), DestVal,
           SizeVal, Size.Expression->getType());
@@ -2329,9 +2328,10 @@ void CStringChecker::evalStrxfrm(CheckerContext &C,
     }
 
     if (StateFailure) {
-      // In this case, dest buffer content is undefined
-      if (std::optional<Loc> DestLoc = DestVal.getAs<Loc>()) {
-        StateFailure = StateFailure->bindLoc(*DestLoc, UndefinedVal{}, LCtx);
+      // `dest` buffer content is undefined
+      if (auto DestLoc = DestVal.getAs<loc::MemRegionVal>()) {
+        StateFailure = StateFailure->killBinding(*DestLoc);
+        StateFailure = StateFailure->bindDefaultInitial(*DestLoc, UndefinedVal{}, LCtx);
       }
 
       StateFailure = StateFailure->BindExpr(Call.getOriginExpr(), LCtx, RetVal);

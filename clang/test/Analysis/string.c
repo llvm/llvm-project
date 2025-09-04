@@ -1830,19 +1830,66 @@ void strxfrm_regular(const char *src) {
   free(dest);
 }
 
-int strxfrm_dest_undef(const char *src) {
-  char dest[10] = {0};
+void clang_analyzer_warnIfReached();
+
+int strxfrm_dest_undef(const char *src, int oracle) {
+  char dest[5] = {0};
+  clang_analyzer_eval(dest[0] == 0); // expected-warning {{TRUE}}
+
   size_t n = strxfrm(dest, src, sizeof(dest));
+
+  if (oracle >= sizeof(dest) || oracle < 0) {
+    return 0;
+  }
 
   int c = 0;
   if (n >= sizeof(dest)) {
-    for (int i = 0; i < sizeof(dest); ++i) {
-      c += dest[i]; // expected-warning {{Assigned value is uninitialized}}
-    }
+    // Since accessing uninitialized sinks the execution, use this trick to check all positions
+	switch (oracle) {
+	  case 0:
+		c = dest[0]; // expected-warning {{Assigned value is uninitialized}}
+		break;
+      case 1:
+		c = dest[1]; // expected-warning {{Assigned value is uninitialized}}
+		break;
+      case 2:
+		c = dest[2]; // expected-warning {{Assigned value is uninitialized}}
+		break;
+      case 3:
+		c = dest[3];  // expected-warning {{Assigned value is uninitialized}}
+		break;
+      case 4:
+		c = dest[4];  // expected-warning {{Assigned value is uninitialized}}
+		break;
+	  default:
+		clang_analyzer_warnIfReached();
+	}
   } else {
-    for (int i = 0; i < sizeof(dest); ++i) {
-      c += dest[i]; // no-warning
-    }
+	clang_analyzer_eval(n >= 0); // expected-warning {{TRUE}}
+	clang_analyzer_eval(dest[0] == 0); // expected-warning {{UNKNOWN}}
+	clang_analyzer_eval(dest[1] == 0); // expected-warning {{UNKNOWN}}
+	clang_analyzer_eval(dest[2] == 0); // expected-warning {{UNKNOWN}}
+	clang_analyzer_eval(dest[3] == 0); // expected-warning {{UNKNOWN}}
+	clang_analyzer_eval(dest[4] == 0); // expected-warning {{UNKNOWN}}
   }
+  return c;
+}
+
+int strxfrm_unknown_dest_undef(const char *src, int oracle) {
+  size_t n = strlen(src);
+
+  char *dest = (char*)malloc(n * 2);
+
+  size_t n2 = strxfrm(dest, src, n);
+
+  int c = 0;
+
+  if (n2 < n) {
+  	c += dest[50];
+  } else {
+	c += dest[50]; // expected-warning {{Assigned value is uninitialized}}
+  }
+
+  free(dest);
   return c;
 }
