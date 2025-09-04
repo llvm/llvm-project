@@ -25,7 +25,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
@@ -1291,9 +1291,8 @@ void InstrInfoEmitter::emitRecord(
 
 // emitEnums - Print out enum values for all of the instructions.
 void InstrInfoEmitter::emitEnums(
-    raw_ostream &RawOS,
+    raw_ostream &OS,
     ArrayRef<const CodeGenInstruction *> NumberedInstructions) {
-  formatted_raw_ostream OS(RawOS);
   OS << "#ifdef GET_INSTRINFO_ENUM\n";
   OS << "#undef GET_INSTRINFO_ENUM\n";
 
@@ -1314,11 +1313,10 @@ void InstrInfoEmitter::emitEnums(
 
   OS << "  enum {\n";
   for (const CodeGenInstruction *Inst : NumberedInstructions) {
-    OS << "    " << Inst->TheDef->getName();
-    OS.PadToColumn(MaxNameSize + 5);
-    OS << " = " << Target.getInstrIntValue(Inst->TheDef) << ", // ";
-    OS << SrcMgr.getFormattedLocationNoOffset(Inst->TheDef->getLoc().front());
-    OS << '\n';
+    OS << "    " << left_justify(Inst->TheDef->getName(), MaxNameSize) << " = "
+       << Target.getInstrIntValue(Inst->TheDef) << ", // "
+       << SrcMgr.getFormattedLocationNoOffset(Inst->TheDef->getLoc().front())
+       << '\n';
   }
   OS << "    INSTRUCTION_LIST_END = " << NumberedInstructions.size() << '\n';
   OS << "  };\n";
