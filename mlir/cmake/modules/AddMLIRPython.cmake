@@ -166,10 +166,11 @@ endfunction()
 #     on. These will be collected for all extensions and put into an
 #     aggregate dylib that is linked against.
 #   PYTHON_BINDINGS_LIBRARY: Either pybind11 or nanobind.
+#   GENERATE_TYPE_STUBS: Enable type stub generation.
 function(declare_mlir_python_extension name)
   cmake_parse_arguments(ARG
-    ""
-    "ROOT_DIR;MODULE_NAME;ADD_TO_PARENT;PYTHON_BINDINGS_LIBRARY;GENERATE_TYPE_STUBS"
+    "GENERATE_TYPE_STUBS"
+    "ROOT_DIR;MODULE_NAME;ADD_TO_PARENT;PYTHON_BINDINGS_LIBRARY"
     "SOURCES;PRIVATE_LINK_LIBS;EMBED_CAPI_LINK_LIBS"
     ${ARGN})
 
@@ -180,9 +181,6 @@ function(declare_mlir_python_extension name)
 
   if(NOT ARG_PYTHON_BINDINGS_LIBRARY)
     set(ARG_PYTHON_BINDINGS_LIBRARY "pybind11")
-  endif()
-  if(NOT DEFINED ARG_GENERATE_TYPE_STUBS)
-    set(ARG_GENERATE_TYPE_STUBS ON)
   endif()
 
   add_library(${name} INTERFACE)
