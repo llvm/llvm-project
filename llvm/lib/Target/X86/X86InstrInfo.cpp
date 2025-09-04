@@ -667,8 +667,6 @@ bool X86InstrInfo::expandCtSelectVector(MachineInstr &MI) const {
   Register TrueVal = MI.getOperand(4).getReg();  // false_value
   X86::CondCode CC = X86::CondCode(MI.getOperand(5).getImm()); // condition
 
-  auto BundleStart = MI.getIterator();
-
   // Create scalar mask in tempGPR and broadcast to vector mask
   BuildMI(*MBB, MI, DL, get(X86::MOV32ri), TmpGPR)
       .addImm(0)
@@ -849,15 +847,12 @@ bool X86InstrInfo::expandCtSelectVector(MachineInstr &MI) const {
         .setMIFlags(MachineInstr::MIFlag::NoMerge);
   }
 
-  MI.eraseFromParent();
+  // TODO: Bundle instructions to avoid future optimizations from breaking up
+  // the instructions sequence. However, bundled instructions disappears after
+  // unpack-mi-bundles pass. Look into the issue and fix it before enabling the
+  // instruction bundling.
 
-  auto BundleEnd = MI.getIterator();
-  if (BundleStart != BundleEnd) {
-    // Only bundle if we have multiple instructions
-    MachineInstr *BundleHeader =
-        BuildMI(*MBB, BundleStart, DL, get(TargetOpcode::BUNDLE));
-    finalizeBundle(*MBB, BundleHeader->getIterator(), std::next(BundleEnd));
-  }
+  MI.eraseFromParent();
 
   return true;
 }
