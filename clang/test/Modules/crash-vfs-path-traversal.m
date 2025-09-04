@@ -1,4 +1,4 @@
-// REQUIRES: crash-recovery, shell
+// REQUIRES: crash-recovery
 // UNSUPPORTED: ms-sdk, target={{.*-(ps4|ps5)}}
 
 // FIXME: Canonicalizing paths to remove relative traversal components
@@ -57,7 +57,7 @@
 // RUN: sed -e "s@usr/include@usr/include/../include@g" \
 // RUN:     %t/crash-vfs-*.cache/vfs/vfs.yaml > %t/vfs.yaml
 // RUN: cp %t/vfs.yaml %t/crash-vfs-*.cache/vfs/vfs.yaml
-// RUN: unset FORCE_CLANG_DIAGNOSTICS_CRASH
+// RUN: env -u FORCE_CLANG_DIAGNOSTICS_CRASH \
 // RUN: %clang -E %s -I %S/Inputs/crash-recovery -isysroot %/t/i/ \
 // RUN:     -ivfsoverlay %t/crash-vfs-*.cache/vfs/vfs.yaml -fmodules \
 // RUN:     -fmodules-cache-path=%t/m/ 2>&1 \
