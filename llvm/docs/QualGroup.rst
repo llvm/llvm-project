@@ -75,7 +75,7 @@ The LLVM Qualification Working Group is a collaborative effort involving partici
 from across the LLVM ecosystem. These include community members and industry contributors
 with experience in compiler development, tool qualification, and functional safety.
 
-While contributor names are recorded in the `Meeting Minutes`_ for those who attend 
+While contributor names are recorded in the meeting minutes for those who attend 
 sync-up calls, we also recognize contributions made asynchronously via Discord, GitHub, 
 and other discussion channels.
 
