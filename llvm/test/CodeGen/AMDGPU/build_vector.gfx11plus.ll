@@ -2,6 +2,8 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -stop-after=amdgpu-isel | FileCheck %s --check-prefixes=GFX11-REAL16
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -stop-after=amdgpu-isel | FileCheck %s --check-prefixes=GFX11-FAKE16
 
+; Make sure no "vgpr32 = copy vgpr16" is generated
+
 define amdgpu_kernel void @build_vector_bfi (ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %out) {
   ; GFX11-REAL16-LABEL: name: build_vector_bfi
   ; GFX11-REAL16: bb.0.entry:
