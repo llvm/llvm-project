@@ -9274,8 +9274,8 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
 
     // select c, 0, simm12 -> andi (addi c, -1), simm12
     if (isNullConstant(TrueV) && isSimm12Constant(FalseV)) {
-      SDValue Mask = DAG.getNode(ISD::SUB, DL, VT, CondV,
-                                 DAG.getConstant(1, DL, XLenVT));
+      SDValue Mask = DAG.getNode(ISD::ADD, DL, VT, CondV,
+                                 DAG.getSignedConstant(-1, DL, XLenVT));
       return DAG.getNode(ISD::AND, DL, VT, FalseV, Mask);
     }
 
