@@ -42,6 +42,21 @@ constexpr const char *ext = ".so";
 
 static bool EnvReady = true;
 
+static bool CheckHostSupport() {
+  auto JTMB = JITTargetMachineBuilder::detectHost();
+  // Bail out if we can not detect the host.
+  if (!JTMB) {
+    consumeError(JTMB.takeError());
+    return false;
+  }
+
+  auto Triple = JTMB->getTargetTriple();
+  if (!Triple.isOSBinFormatMachO())
+    return false;
+
+  return true;
+}
+
 class LibraryTestEnvironment : public ::testing::Environment {
   std::vector<std::string> createdDylibsDir;
   std::vector<std::string> createdDylibs;
@@ -49,6 +64,11 @@ class LibraryTestEnvironment : public ::testing::Environment {
 
 public:
   void SetUp() override {
+    if (!CheckHostSupport()) {
+      EnvReady = false;
+      return;
+    }
+
     StringRef thisFile = __FILE__;
     SmallVector<char, 128> filedirpath(thisFile.begin(), thisFile.end());
     sys::path::remove_filename(filedirpath);
@@ -438,14 +458,13 @@ TEST_F(LibraryResolverIT, EnumeratorSeesInterLibraryRelationship) {
       << "libC should have an undefined reference to sayA (defined in libA)";
 }
 
-// // // --- 5) Optional: stress SymbolQuery with the real resolve flow ---
+// // // --- 5) Optional: stress SymbolQuery with the real resolve flow
+// // // And resolve libC dependency libA, libB, libZ ---
 TEST_F(LibraryResolverIT, ResolveManySymbols) {
   auto setup = LibraryResolver::Setup::create({baseDir});
   auto driver = LibraryResolutionDriver::create(setup);
   ASSERT_NE(driver, nullptr);
-  driver->addScanPath(libdir("A"), PathType::User);
-  driver->addScanPath(libdir("B"), PathType::User);
-  driver->addScanPath(libdir("Z"), PathType::User);
+  driver->addScanPath(libdir("C"), PathType::User);
 
   // Many duplicates to provoke concurrent updates inside SymbolQuery
   std::vector<std::string> symbols = {
@@ -459,6 +478,7 @@ TEST_F(LibraryResolverIT, ResolveManySymbols) {
   driver->resolveSymbols(symbols, [&](SymbolQuery &query) {
     EXPECT_TRUE(query.isResolved(platformSymbolName("sayA")));
     EXPECT_TRUE(query.isResolved(platformSymbolName("sayB")));
+    EXPECT_TRUE(query.isResolved(platformSymbolName("sayZ")));
 
     auto a = query.getResolvedLib(platformSymbolName("sayA"));
     auto b = query.getResolvedLib(platformSymbolName("sayB"));
@@ -470,6 +490,44 @@ TEST_F(LibraryResolverIT, ResolveManySymbols) {
     EXPECT_TRUE(endsWith(b->str(), libname("B")));
     EXPECT_TRUE(endsWith(z->str(), libname("Z")));
     EXPECT_TRUE(query.allResolved());
+  });
+}
+
+// // // --- 5) Optional: stress SymbolQuery with the real resolve flow
+// // // And resolve libD dependency libA ---
+TEST_F(LibraryResolverIT, ResolveManySymbols2) {
+  auto setup = LibraryResolver::Setup::create({baseDir});
+  auto driver = LibraryResolutionDriver::create(setup);
+  ASSERT_NE(driver, nullptr);
+  driver->addScanPath(libdir("D"), PathType::User);
+
+  // Many duplicates to provoke concurrent updates inside SymbolQuery
+  std::vector<std::string> symbols = {
+      platformSymbolName("sayA"), platformSymbolName("sayB"),
+      platformSymbolName("sayA"), platformSymbolName("sayB"),
+      platformSymbolName("sayZ"), platformSymbolName("sayZ"),
+      platformSymbolName("sayZ"), platformSymbolName("sayZ"),
+      platformSymbolName("sayD"), platformSymbolName("sayD"),
+      platformSymbolName("sayA"), platformSymbolName("sayB"),
+      platformSymbolName("sayA"), platformSymbolName("sayB")};
+
+  driver->resolveSymbols(symbols, [&](SymbolQuery &query) {
+    EXPECT_TRUE(query.isResolved(platformSymbolName("sayA")));
+    EXPECT_FALSE(query.isResolved(platformSymbolName("sayB")));
+    EXPECT_TRUE(query.isResolved(platformSymbolName("sayD")));
+    EXPECT_FALSE(query.isResolved(platformSymbolName("sayZ")));
+
+    auto a = query.getResolvedLib(platformSymbolName("sayA"));
+    auto b = query.getResolvedLib(platformSymbolName("sayB"));
+    auto d = query.getResolvedLib(platformSymbolName("sayD"));
+    auto z = query.getResolvedLib(platformSymbolName("sayZ"));
+    ASSERT_TRUE(a.has_value());
+    ASSERT_FALSE(b.has_value());
+    ASSERT_TRUE(d.has_value());
+    ASSERT_FALSE(z.has_value());
+    EXPECT_TRUE(endsWith(a->str(), libname("A")));
+    EXPECT_TRUE(endsWith(d->str(), libname("D")));
+    EXPECT_FALSE(query.allResolved());
   });
 }
 
