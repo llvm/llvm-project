@@ -10,7 +10,7 @@
 # We may not want to guarantee this forever, but since this works today and
 # it's something that users rely on, it makes sense to put a test on it.
 #
-# https://github.com/llvm/llvm-project/issues/117630
+# https://llvm.org/PR117630
 
 # Some parts of the code like <fstream> use non-standard functions in their implementation,
 # and these functions are not provided when _XOPEN_SOURCE is set to older values. This
