@@ -51,9 +51,7 @@ struct Range {
     return std::to_string(Begin) + "-" + std::to_string(End);
   }
 
-  void print(raw_ostream &OS) const {
-    OS << Begin << "-" << End;
-  }
+  void print(raw_ostream &OS) const { OS << Begin << "-" << End; }
 
   bool operator==(const Range &Other) const {
     return Begin == Other.Begin && End == Other.End;
