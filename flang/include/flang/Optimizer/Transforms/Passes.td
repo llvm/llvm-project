@@ -326,7 +326,8 @@ def AddAliasTags : Pass<"fir-add-alias-tags", "mlir::ModuleOp"> {
     theory, each operation could be considered in prallel, so long as there
     aren't races adding new tags to the mlir context.
   }];
-  let dependentDialects = [ "fir::FIROpsDialect" ];
+  // The pass inserts TBAA attributes from LLVM dialect.
+  let dependentDialects = ["mlir::LLVM::LLVMDialect"];
 }
 
 def SimplifyRegionLite : Pass<"simplify-region-lite", "mlir::ModuleOp"> {
