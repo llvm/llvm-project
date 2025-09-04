@@ -1348,7 +1348,7 @@ def VGPRSrc_16 : RegisterOperand<VGPR_16> {
 def VGPROp_16 : RegisterOperand<VGPR_16>;
 def VGPROp_32 : RegisterOperand<VGPR_32>;
 
-foreach size = ["64", "96", "128", "256" ] in {
+foreach size = ["64", "96", "128", "256", "1024" ] in {
   def VGPROp_#size : RegisterOperand<!cast<RegisterClass>("VReg_"#size)>;
   def VGPROp_#size#_Align1 : RegisterOperand<!cast<RegisterClass>("VReg_"#size)>;
   def VGPROp_#size#_Align2 : RegisterOperand<!cast<RegisterClass>("VReg_"#size#_Align2)>;
