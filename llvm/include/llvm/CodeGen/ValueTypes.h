@@ -332,7 +332,7 @@ namespace llvm {
       assert(isVector() && "Invalid vector type!");
 
       if (isScalableVector())
-        llvm::reportInvalidSizeRequest(
+        llvm::reportFatalInternalError(
             "Possible incorrect use of EVT::getVectorNumElements() for "
             "scalable vector. Scalable flag may be dropped, use "
             "EVT::getVectorElementCount() instead");

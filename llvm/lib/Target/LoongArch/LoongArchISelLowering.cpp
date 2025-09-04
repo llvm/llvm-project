@@ -342,6 +342,13 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
           MVT::v2i16, MVT::v4i32, MVT::v2i32, MVT::v2i64}) {
       setOperationAction(ISD::TRUNCATE, VT, Custom);
       setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_AND, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_OR, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_XOR, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_UMIN, VT, Custom);
     }
   }
 
@@ -415,6 +422,11 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine(ISD::INTRINSIC_WO_CHAIN);
     setTargetDAGCombine(ISD::BITCAST);
   }
+
+  // Set DAG combine for 'LASX' feature.
+
+  if (Subtarget.hasExtLASX())
+    setTargetDAGCombine(ISD::EXTRACT_VECTOR_ELT);
 
   // Compute derived properties from the register classes.
   computeRegisterProperties(Subtarget.getRegisterInfo());
@@ -529,6 +541,14 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerBF16_TO_FP(Op, DAG);
   case ISD::VECREDUCE_ADD:
     return lowerVECREDUCE_ADD(Op, DAG);
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:
+  case ISD::VECREDUCE_SMAX:
+  case ISD::VECREDUCE_SMIN:
+  case ISD::VECREDUCE_UMAX:
+  case ISD::VECREDUCE_UMIN:
+    return lowerVECREDUCE(Op, DAG);
   }
   return SDValue();
 }
@@ -577,6 +597,45 @@ SDValue LoongArchTargetLowering::lowerVECREDUCE_ADD(SDValue Op,
     SDValue Tmp = DAG.getNode(LoongArchISD::XVPERMI, DL, MVT::v4i64, Val,
                               DAG.getConstant(2, DL, MVT::i64));
     Val = DAG.getNode(ISD::ADD, DL, MVT::v4i64, Tmp, Val);
+  }
+
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, OpVT, Val,
+                     DAG.getConstant(0, DL, Subtarget.getGRLenVT()));
+}
+
+// Lower vecreduce_and/or/xor/[s/u]max/[s/u]min.
+// For Example:
+//  call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> %a)
+// can be lowered to:
+//  VBSRL_V       vr1, vr0, 8
+//  VMAX_W        vr0, vr1, vr0
+//  VBSRL_V       vr1, vr0, 4
+//  VMAX_W        vr0, vr1, vr0
+//  VPICKVE2GR_W  a0,  vr0, 0
+// For 256 bit vector, it is illegal and will be spilt into
+// two 128 bit vector by default then processed by this.
+SDValue LoongArchTargetLowering::lowerVECREDUCE(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+
+  MVT OpVT = Op.getSimpleValueType();
+  SDValue Val = Op.getOperand(0);
+
+  unsigned NumEles = Val.getSimpleValueType().getVectorNumElements();
+  unsigned EleBits = Val.getSimpleValueType().getScalarSizeInBits();
+
+  // Ensure operand type legal or enable it legal.
+  while (!isTypeLegal(Val.getSimpleValueType())) {
+    Val = DAG.WidenVector(Val, DL);
+  }
+
+  unsigned Opcode = ISD::getVecReduceBaseOpcode(Op.getOpcode());
+  MVT VecTy = Val.getSimpleValueType();
+
+  for (int i = NumEles; i > 1; i /= 2) {
+    SDValue ShiftAmt = DAG.getConstant(i * EleBits / 16, DL, MVT::i64);
+    SDValue Tmp = DAG.getNode(LoongArchISD::VBSRL, DL, VecTy, Val, ShiftAmt);
+    Val = DAG.getNode(Opcode, DL, VecTy, Tmp, Val);
   }
 
   return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, OpVT, Val,
@@ -1931,6 +1990,48 @@ lowerVECTOR_SHUFFLE_XVSHUF4I(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
   return lowerVECTOR_SHUFFLE_VSHUF4I(DL, Mask, VT, V1, V2, DAG, Subtarget);
 }
 
+/// Lower VECTOR_SHUFFLE into XVPERM (if possible).
+static SDValue lowerVECTOR_SHUFFLE_XVPERM(const SDLoc &DL, ArrayRef<int> Mask,
+                                          MVT VT, SDValue V1, SDValue V2,
+                                          SelectionDAG &DAG) {
+  // LoongArch LASX only have XVPERM_W.
+  if (Mask.size() != 8 || (VT != MVT::v8i32 && VT != MVT::v8f32))
+    return SDValue();
+
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned HalfSize = NumElts / 2;
+  bool FrontLo = true, FrontHi = true;
+  bool BackLo = true, BackHi = true;
+
+  auto inRange = [](int val, int low, int high) {
+    return (val == -1) || (val >= low && val < high);
+  };
+
+  for (unsigned i = 0; i < HalfSize; ++i) {
+    int Fronti = Mask[i];
+    int Backi = Mask[i + HalfSize];
+
+    FrontLo &= inRange(Fronti, 0, HalfSize);
+    FrontHi &= inRange(Fronti, HalfSize, NumElts);
+    BackLo &= inRange(Backi, 0, HalfSize);
+    BackHi &= inRange(Backi, HalfSize, NumElts);
+  }
+
+  // If both the lower and upper 128-bit parts access only one half of the
+  // vector (either lower or upper), avoid using xvperm.w. The latency of
+  // xvperm.w(3) is higher than using xvshuf(1) and xvori(1).
+  if ((FrontLo || FrontHi) && (BackLo || BackHi))
+    return SDValue();
+
+  SmallVector<SDValue, 8> Masks;
+  for (unsigned i = 0; i < NumElts; ++i)
+    Masks.push_back(Mask[i] == -1 ? DAG.getUNDEF(MVT::i64)
+                                  : DAG.getConstant(Mask[i], DL, MVT::i64));
+  SDValue MaskVec = DAG.getBuildVector(MVT::v8i32, DL, Masks);
+
+  return DAG.getNode(LoongArchISD::XVPERM, DL, VT, V1, MaskVec);
+}
+
 /// Lower VECTOR_SHUFFLE into XVPACKEV (if possible).
 static SDValue lowerVECTOR_SHUFFLE_XVPACKEV(const SDLoc &DL, ArrayRef<int> Mask,
                                             MVT VT, SDValue V1, SDValue V2,
@@ -2337,6 +2438,8 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
     if ((Result = lowerVECTOR_SHUFFLE_XVSHUF4I(DL, NewMask, VT, V1, V2, DAG,
                                                Subtarget)))
       return Result;
+    if ((Result = lowerVECTOR_SHUFFLE_XVPERM(DL, NewMask, VT, V1, V2, DAG)))
+      return Result;
     if ((Result = lowerVECTOR_SHUFFLEAsLanePermuteAndShuffle(DL, NewMask, VT,
                                                              V1, V2, DAG)))
       return Result;
@@ -2516,11 +2619,14 @@ static SDValue lowerBUILD_VECTORAsBroadCastLoad(BuildVectorSDNode *BVOp,
   }
 
   // make sure that this load is valid and only has one user.
-  if (!IdentitySrc || !BVOp->isOnlyUserOf(IdentitySrc.getNode()))
+  if (!IsIdeneity || !IdentitySrc || !BVOp->isOnlyUserOf(IdentitySrc.getNode()))
     return SDValue();
 
-  if (IsIdeneity) {
-    auto *LN = cast<LoadSDNode>(IdentitySrc);
+  auto *LN = cast<LoadSDNode>(IdentitySrc);
+  auto ExtType = LN->getExtensionType();
+
+  if ((ExtType == ISD::EXTLOAD || ExtType == ISD::NON_EXTLOAD) &&
+      VT.getScalarSizeInBits() == LN->getMemoryVT().getScalarSizeInBits()) {
     SDVTList Tys =
         LN->isIndexed()
             ? DAG.getVTList(VT, LN->getBasePtr().getValueType(), MVT::Other)
@@ -2721,14 +2827,58 @@ SDValue LoongArchTargetLowering::lowerCONCAT_VECTORS(SDValue Op,
 SDValue
 LoongArchTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
                                                  SelectionDAG &DAG) const {
-  EVT VecTy = Op->getOperand(0)->getValueType(0);
+  MVT EltVT = Op.getSimpleValueType();
+  SDValue Vec = Op->getOperand(0);
+  EVT VecTy = Vec->getValueType(0);
   SDValue Idx = Op->getOperand(1);
-  unsigned NumElts = VecTy.getVectorNumElements();
+  SDLoc DL(Op);
+  MVT GRLenVT = Subtarget.getGRLenVT();
 
-  if (isa<ConstantSDNode>(Idx) && Idx->getAsZExtVal() < NumElts)
+  assert(VecTy.is256BitVector() && "Unexpected EXTRACT_VECTOR_ELT vector type");
+
+  if (isa<ConstantSDNode>(Idx))
     return Op;
 
-  return SDValue();
+  switch (VecTy.getSimpleVT().SimpleTy) {
+  default:
+    llvm_unreachable("Unexpected type");
+  case MVT::v32i8:
+  case MVT::v16i16:
+  case MVT::v4i64:
+  case MVT::v4f64: {
+    // Extract the high half subvector and place it to the low half of a new
+    // vector. It doesn't matter what the high half of the new vector is.
+    EVT HalfTy = VecTy.getHalfNumVectorElementsVT(*DAG.getContext());
+    SDValue VecHi =
+        DAG.getExtractSubvector(DL, HalfTy, Vec, HalfTy.getVectorNumElements());
+    SDValue TmpVec =
+        DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VecTy, DAG.getUNDEF(VecTy),
+                    VecHi, DAG.getConstant(0, DL, GRLenVT));
+
+    // Shuffle the origin Vec and the TmpVec using MaskVec, the lowest element
+    // of MaskVec is Idx, the rest do not matter. ResVec[0] will hold the
+    // desired element.
+    SDValue IdxCp =
+        DAG.getNode(LoongArchISD::MOVGR2FR_W_LA64, DL, MVT::f32, Idx);
+    SDValue IdxVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8f32, IdxCp);
+    SDValue MaskVec =
+        DAG.getBitcast((VecTy == MVT::v4f64) ? MVT::v4i64 : VecTy, IdxVec);
+    SDValue ResVec =
+        DAG.getNode(LoongArchISD::VSHUF, DL, VecTy, MaskVec, TmpVec, Vec);
+
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, ResVec,
+                       DAG.getConstant(0, DL, GRLenVT));
+  }
+  case MVT::v8i32:
+  case MVT::v8f32: {
+    SDValue SplatIdx = DAG.getSplatBuildVector(MVT::v8i32, DL, Idx);
+    SDValue SplatValue =
+        DAG.getNode(LoongArchISD::XVPERM, DL, VecTy, Vec, SplatIdx);
+
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, SplatValue,
+                       DAG.getConstant(0, DL, GRLenVT));
+  }
+  }
 }
 
 SDValue
@@ -6095,6 +6245,42 @@ performSPLIT_PAIR_F64Combine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue
+performEXTRACT_VECTOR_ELTCombine(SDNode *N, SelectionDAG &DAG,
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const LoongArchSubtarget &Subtarget) {
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  MVT EltVT = N->getSimpleValueType(0);
+  SDValue Vec = N->getOperand(0);
+  EVT VecTy = Vec->getValueType(0);
+  SDValue Idx = N->getOperand(1);
+  unsigned IdxOp = Idx.getOpcode();
+  SDLoc DL(N);
+
+  if (!VecTy.is256BitVector() || isa<ConstantSDNode>(Idx))
+    return SDValue();
+
+  // Combine:
+  //   t2 = truncate t1
+  //   t3 = {zero/sign/any}_extend t2
+  //   t4 = extract_vector_elt t0, t3
+  // to:
+  //   t4 = extract_vector_elt t0, t1
+  if (IdxOp == ISD::ZERO_EXTEND || IdxOp == ISD::SIGN_EXTEND ||
+      IdxOp == ISD::ANY_EXTEND) {
+    SDValue IdxOrig = Idx.getOperand(0);
+    if (!(IdxOrig.getOpcode() == ISD::TRUNCATE))
+      return SDValue();
+
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Vec,
+                       IdxOrig.getOperand(0));
+  }
+
+  return SDValue();
+}
+
 SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
                                                    DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -6128,6 +6314,8 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performVMSKLTZCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::SPLIT_PAIR_F64:
     return performSPLIT_PAIR_F64Combine(N, DAG, DCI, Subtarget);
+  case ISD::EXTRACT_VECTOR_ELT:
+    return performEXTRACT_VECTOR_ELTCombine(N, DAG, DCI, Subtarget);
   }
   return SDValue();
 }
@@ -6910,6 +7098,7 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(VREPLVEI)
     NODE_NAME_CASE(VREPLGR2VR)
     NODE_NAME_CASE(XVPERMI)
+    NODE_NAME_CASE(XVPERM)
     NODE_NAME_CASE(VPICK_SEXT_ELT)
     NODE_NAME_CASE(VPICK_ZEXT_ELT)
     NODE_NAME_CASE(VREPLVE)

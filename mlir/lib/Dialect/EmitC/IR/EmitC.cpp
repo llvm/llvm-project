@@ -381,6 +381,52 @@ OpFoldResult emitc::ConstantOp::fold(FoldAdaptor adaptor) { return getValue(); }
 // ExpressionOp
 //===----------------------------------------------------------------------===//
 
+ParseResult ExpressionOp::parse(OpAsmParser &parser, OperationState &result) {
+  SmallVector<OpAsmParser::UnresolvedOperand> operands;
+  if (parser.parseOperandList(operands))
+    return parser.emitError(parser.getCurrentLocation()) << "expected operands";
+  if (succeeded(parser.parseOptionalKeyword("noinline")))
+    result.addAttribute(ExpressionOp::getDoNotInlineAttrName(result.name),
+                        parser.getBuilder().getUnitAttr());
+  Type type;
+  if (parser.parseColonType(type))
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected function type");
+  auto fnType = llvm::dyn_cast<FunctionType>(type);
+  if (!fnType)
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected function type");
+  if (parser.resolveOperands(operands, fnType.getInputs(),
+                             parser.getCurrentLocation(), result.operands))
+    return failure();
+  if (fnType.getNumResults() != 1)
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected single return type");
+  result.addTypes(fnType.getResults());
+  Region *body = result.addRegion();
+  SmallVector<OpAsmParser::Argument> argsInfo;
+  for (auto [unresolvedOperand, operandType] :
+       llvm::zip(operands, fnType.getInputs())) {
+    OpAsmParser::Argument argInfo;
+    argInfo.ssaName = unresolvedOperand;
+    argInfo.type = operandType;
+    argsInfo.push_back(argInfo);
+  }
+  if (parser.parseRegion(*body, argsInfo, /*enableNameShadowing=*/true))
+    return failure();
+  return success();
+}
+
+void emitc::ExpressionOp::print(OpAsmPrinter &p) {
+  p << ' ';
+  p.printOperands(getDefs());
+  p << " : ";
+  p.printFunctionalType(getOperation());
+  p.shadowRegionArgs(getRegion(), getDefs());
+  p << ' ';
+  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
+}
+
 Operation *ExpressionOp::getRootOp() {
   auto yieldOp = cast<YieldOp>(getBody()->getTerminator());
   Value yieldedValue = yieldOp.getResult();
