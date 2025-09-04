@@ -1990,6 +1990,48 @@ lowerVECTOR_SHUFFLE_XVSHUF4I(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
   return lowerVECTOR_SHUFFLE_VSHUF4I(DL, Mask, VT, V1, V2, DAG, Subtarget);
 }
 
+/// Lower VECTOR_SHUFFLE into XVPERM (if possible).
+static SDValue lowerVECTOR_SHUFFLE_XVPERM(const SDLoc &DL, ArrayRef<int> Mask,
+                                          MVT VT, SDValue V1, SDValue V2,
+                                          SelectionDAG &DAG) {
+  // LoongArch LASX only have XVPERM_W.
+  if (Mask.size() != 8 || (VT != MVT::v8i32 && VT != MVT::v8f32))
+    return SDValue();
+
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned HalfSize = NumElts / 2;
+  bool FrontLo = true, FrontHi = true;
+  bool BackLo = true, BackHi = true;
+
+  auto inRange = [](int val, int low, int high) {
+    return (val == -1) || (val >= low && val < high);
+  };
+
+  for (unsigned i = 0; i < HalfSize; ++i) {
+    int Fronti = Mask[i];
+    int Backi = Mask[i + HalfSize];
+
+    FrontLo &= inRange(Fronti, 0, HalfSize);
+    FrontHi &= inRange(Fronti, HalfSize, NumElts);
+    BackLo &= inRange(Backi, 0, HalfSize);
+    BackHi &= inRange(Backi, HalfSize, NumElts);
+  }
+
+  // If both the lower and upper 128-bit parts access only one half of the
+  // vector (either lower or upper), avoid using xvperm.w. The latency of
+  // xvperm.w(3) is higher than using xvshuf(1) and xvori(1).
+  if ((FrontLo || FrontHi) && (BackLo || BackHi))
+    return SDValue();
+
+  SmallVector<SDValue, 8> Masks;
+  for (unsigned i = 0; i < NumElts; ++i)
+    Masks.push_back(Mask[i] == -1 ? DAG.getUNDEF(MVT::i64)
+                                  : DAG.getConstant(Mask[i], DL, MVT::i64));
+  SDValue MaskVec = DAG.getBuildVector(MVT::v8i32, DL, Masks);
+
+  return DAG.getNode(LoongArchISD::XVPERM, DL, VT, V1, MaskVec);
+}
+
 /// Lower VECTOR_SHUFFLE into XVPACKEV (if possible).
 static SDValue lowerVECTOR_SHUFFLE_XVPACKEV(const SDLoc &DL, ArrayRef<int> Mask,
                                             MVT VT, SDValue V1, SDValue V2,
@@ -2395,6 +2437,8 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
       return Result;
     if ((Result = lowerVECTOR_SHUFFLE_XVSHUF4I(DL, NewMask, VT, V1, V2, DAG,
                                                Subtarget)))
+      return Result;
+    if ((Result = lowerVECTOR_SHUFFLE_XVPERM(DL, NewMask, VT, V1, V2, DAG)))
       return Result;
     if ((Result = lowerVECTOR_SHUFFLEAsLanePermuteAndShuffle(DL, NewMask, VT,
                                                              V1, V2, DAG)))
