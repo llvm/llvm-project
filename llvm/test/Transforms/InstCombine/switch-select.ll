@@ -75,13 +75,12 @@ bb3:
 define void @test_ult_rhsc_invalid_cond(i8 %x, i8 %y) {
 ; CHECK-LABEL: define void @test_ult_rhsc_invalid_cond(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[VAL:%.*]] = add nsw i8 [[X]], -2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[Y]], 11
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i8 [[VAL]], i8 6
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i8 [[X]], i8 8
 ; CHECK-NEXT:    switch i8 [[COND]], label [[BB1:%.*]] [
-; CHECK-NEXT:      i8 0, label [[BB2:%.*]]
-; CHECK-NEXT:      i8 10, label [[BB3:%.*]]
-; CHECK-NEXT:      i8 13, label [[BB3]]
+; CHECK-NEXT:      i8 2, label [[BB2:%.*]]
+; CHECK-NEXT:      i8 12, label [[BB3:%.*]]
+; CHECK-NEXT:      i8 15, label [[BB3]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    call void @func1()
@@ -157,13 +156,12 @@ bb3:
 define void @remove_redundant_binop_add(i8 %lhs, i8 %value) {
 ; CHECK-LABEL: define void @remove_redundant_binop_add(
 ; CHECK-SAME: i8 [[LHS:%.*]], i8 [[VALUE:%.*]]) {
-; CHECK-NEXT:    [[COND:%.*]] = icmp samesign ugt i8 [[LHS]], 1
-; CHECK-NEXT:    [[BINOP:%.*]] = add nuw nsw i8 [[VALUE]], 25
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND]], i8 [[BINOP]], i8 27
+; CHECK-NEXT:    [[COND_INV:%.*]] = icmp ult i8 [[LHS]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND_INV]], i8 2, i8 [[VALUE]]
 ; CHECK-NEXT:    switch i8 [[TMP1]], label [[BB1:%.*]] [
-; CHECK-NEXT:      i8 27, label [[BB1]]
-; CHECK-NEXT:      i8 28, label [[BB2:%.*]]
-; CHECK-NEXT:      i8 29, label [[BB3:%.*]]
+; CHECK-NEXT:      i8 2, label [[BB1]]
+; CHECK-NEXT:      i8 3, label [[BB2:%.*]]
+; CHECK-NEXT:      i8 4, label [[BB3:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    call void @func1()
@@ -199,12 +197,11 @@ define void @remove_redundant_binop_sub(i8 %lhs, i8 %value) {
 ; CHECK-LABEL: define void @remove_redundant_binop_sub(
 ; CHECK-SAME: i8 [[LHS:%.*]], i8 [[VALUE:%.*]]) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp samesign ugt i8 [[LHS]], 1
-; CHECK-NEXT:    [[BINOP:%.*]] = add nsw i8 [[VALUE]], -10
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND]], i8 [[BINOP]], i8 -10
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND]], i8 [[VALUE]], i8 0
 ; CHECK-NEXT:    switch i8 [[TMP1]], label [[BB1:%.*]] [
-; CHECK-NEXT:      i8 -10, label [[BB1]]
-; CHECK-NEXT:      i8 -9, label [[BB2:%.*]]
-; CHECK-NEXT:      i8 -8, label [[BB3:%.*]]
+; CHECK-NEXT:      i8 0, label [[BB1]]
+; CHECK-NEXT:      i8 1, label [[BB2:%.*]]
+; CHECK-NEXT:      i8 2, label [[BB3:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    call void @func1()
