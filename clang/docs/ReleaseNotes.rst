@@ -219,6 +219,7 @@ Deprecated Compiler Flags
 
 Modified Compiler Flags
 -----------------------
+- The `-gkey-instructions` compiler flag is now enabled by default when DWARF is emitted for plain C/C++ and optimizations are enabled. (#GH149509)
 
 Removed Compiler Flags
 -------------------------
@@ -482,6 +483,7 @@ OpenMP Support
   modifier in the ``adjust_args`` clause.
 - Allow array length to be omitted in array section subscript expression.
 - Fixed non-contiguous strided update in the ``omp target update`` directive with the ``from`` clause.
+- Properly handle array section/assumed-size array privatization in C/C++.
 
 Improvements
 ^^^^^^^^^^^^

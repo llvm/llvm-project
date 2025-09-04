@@ -186,3 +186,25 @@ body: |
     $vgpr2_vgpr3 = AV_MOV_B64_IMM_PSEUDO 4477415320595726336, implicit $exec
     $vgpr4_vgpr5 = AV_MOV_B64_IMM_PSEUDO 4477415321638205827, implicit $exec
 ...
+
+---
+name: av_mov_b64_imm_pseudo_unaligned_agpr
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: av_mov_b64_imm_pseudo_unaligned_agpr
+    ; CHECK: $agpr1 = V_ACCVGPR_WRITE_B32_e64 9, implicit $exec, implicit-def $agpr1_agpr2
+    ; CHECK-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 -16, implicit $exec, implicit-def $agpr1_agpr2
+    $agpr1_agpr2 = AV_MOV_B64_IMM_PSEUDO 18446744004990074889, implicit $exec
+...
+
+---
+name: av_mov_b64_imm_pseudo_unaligned_vgpr
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: av_mov_b64_imm_pseudo_unaligned_vgpr
+    ; CHECK: $vgpr1 = V_MOV_B32_e32 9, implicit $exec, implicit-def $vgpr1_vgpr2
+    ; CHECK-NEXT: $vgpr2 = V_MOV_B32_e32 -16, implicit $exec, implicit-def $vgpr1_vgpr2
+    $vgpr1_vgpr2 = AV_MOV_B64_IMM_PSEUDO 18446744004990074889, implicit $exec
+...

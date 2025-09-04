@@ -10,7 +10,7 @@
 # We may not want to guarantee this forever, but since this works today and
 # it's something that users rely on, it makes sense to put a test on it.
 #
-# https://github.com/llvm/llvm-project/issues/117630
+# https://llvm.org/PR117630
 
 # RUN: %{python} %s %{libcxx-dir}/utils
 # END.
