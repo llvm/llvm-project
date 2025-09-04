@@ -692,6 +692,33 @@ def SI_WHOLE_WAVE_FUNC_RETURN : SPseudoInstSI <
 def : GCNPat<
   (AMDGPUwhole_wave_return), (SI_WHOLE_WAVE_FUNC_RETURN (i1 (IMPLICIT_DEF)))>;
 
+// Restores the previous EXEC and otherwise behaves entirely like a SI_TCRETURN.
+// This is used for tail calls *from* a whole wave function. Tail calls to
+// a whole wave function may use the usual opcodes, depending on the calling
+// convention of the caller.
+def SI_TCRETURN_GFX_WholeWave : SPseudoInstSI <
+  (outs),
+  (ins SReg_1:$orig_exec, Gfx_CCR_SGPR_64:$src0, unknown:$callee, i32imm:$fpdiff)> {
+  let isCall = 1;
+  let isTerminator = 1;
+  let isReturn = 1;
+  let isBarrier = 1;
+  let UseNamedOperandTable = 1;
+  let SchedRW = [WriteBranch];
+  let isConvergent = 1;
+
+  // We're going to use custom handling to set the $orig_exec to the correct value.
+  let usesCustomInserter = 1;
+}
+
+// Generate a SI_TCRETURN_GFX_WholeWave pseudo with a placeholder for its
+// argument. It will be filled in by the custom inserter.
+def : GCNPat<
+  (AMDGPUtc_return_gfx_ww i64:$src0, tglobaladdr:$callee, i32:$fpdiff),
+  (SI_TCRETURN_GFX_WholeWave (i1 (IMPLICIT_DEF)), Gfx_CCR_SGPR_64:$src0,
+   tglobaladdr:$callee, i32:$fpdiff)>;
+
+
 // Return for returning shaders to a shader variant epilog.
 def SI_RETURN_TO_EPILOG : SPseudoInstSI <
   (outs), (ins variable_ops), [(AMDGPUreturn_to_epilog)]> {

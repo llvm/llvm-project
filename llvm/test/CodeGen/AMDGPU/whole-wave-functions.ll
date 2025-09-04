@@ -2413,6 +2413,1275 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
   ret <2 x half> %ret
 }
 
+define amdgpu_gfx_whole_wave <2 x half> @tail_call_gfx_from_whole_wave(i1 %active, <2 x half> %x, <2 x half> %y) {
+  ; This should not be turned into a tail call.
+; DAGISEL-LABEL: tail_call_gfx_from_whole_wave:
+; DAGISEL:       ; %bb.0:
+; DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; DAGISEL-NEXT:    s_wait_expcnt 0x0
+; DAGISEL-NEXT:    s_wait_samplecnt 0x0
+; DAGISEL-NEXT:    s_wait_bvhcnt 0x0
+; DAGISEL-NEXT:    s_wait_kmcnt 0x0
+; DAGISEL-NEXT:    s_xor_saveexec_b32 s0, -1
+; DAGISEL-NEXT:    s_clause 0x1f
+; DAGISEL-NEXT:    scratch_store_b32 off, v0, s32
+; DAGISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4
+; DAGISEL-NEXT:    scratch_store_b32 off, v2, s32 offset:8
+; DAGISEL-NEXT:    scratch_store_b32 off, v3, s32 offset:12
+; DAGISEL-NEXT:    scratch_store_b32 off, v4, s32 offset:16
+; DAGISEL-NEXT:    scratch_store_b32 off, v5, s32 offset:20
+; DAGISEL-NEXT:    scratch_store_b32 off, v6, s32 offset:24
+; DAGISEL-NEXT:    scratch_store_b32 off, v7, s32 offset:28
+; DAGISEL-NEXT:    scratch_store_b32 off, v8, s32 offset:32
+; DAGISEL-NEXT:    scratch_store_b32 off, v9, s32 offset:36
+; DAGISEL-NEXT:    scratch_store_b32 off, v10, s32 offset:40
+; DAGISEL-NEXT:    scratch_store_b32 off, v11, s32 offset:44
+; DAGISEL-NEXT:    scratch_store_b32 off, v12, s32 offset:48
+; DAGISEL-NEXT:    scratch_store_b32 off, v13, s32 offset:52
+; DAGISEL-NEXT:    scratch_store_b32 off, v14, s32 offset:56
+; DAGISEL-NEXT:    scratch_store_b32 off, v15, s32 offset:60
+; DAGISEL-NEXT:    scratch_store_b32 off, v16, s32 offset:64
+; DAGISEL-NEXT:    scratch_store_b32 off, v17, s32 offset:68
+; DAGISEL-NEXT:    scratch_store_b32 off, v18, s32 offset:72
+; DAGISEL-NEXT:    scratch_store_b32 off, v19, s32 offset:76
+; DAGISEL-NEXT:    scratch_store_b32 off, v20, s32 offset:80
+; DAGISEL-NEXT:    scratch_store_b32 off, v21, s32 offset:84
+; DAGISEL-NEXT:    scratch_store_b32 off, v22, s32 offset:88
+; DAGISEL-NEXT:    scratch_store_b32 off, v23, s32 offset:92
+; DAGISEL-NEXT:    scratch_store_b32 off, v24, s32 offset:96
+; DAGISEL-NEXT:    scratch_store_b32 off, v25, s32 offset:100
+; DAGISEL-NEXT:    scratch_store_b32 off, v26, s32 offset:104
+; DAGISEL-NEXT:    scratch_store_b32 off, v27, s32 offset:108
+; DAGISEL-NEXT:    scratch_store_b32 off, v28, s32 offset:112
+; DAGISEL-NEXT:    scratch_store_b32 off, v29, s32 offset:116
+; DAGISEL-NEXT:    scratch_store_b32 off, v30, s32 offset:120
+; DAGISEL-NEXT:    scratch_store_b32 off, v31, s32 offset:124
+; DAGISEL-NEXT:    s_clause 0x1f
+; DAGISEL-NEXT:    scratch_store_b32 off, v32, s32 offset:128
+; DAGISEL-NEXT:    scratch_store_b32 off, v33, s32 offset:132
+; DAGISEL-NEXT:    scratch_store_b32 off, v34, s32 offset:136
+; DAGISEL-NEXT:    scratch_store_b32 off, v35, s32 offset:140
+; DAGISEL-NEXT:    scratch_store_b32 off, v36, s32 offset:144
+; DAGISEL-NEXT:    scratch_store_b32 off, v37, s32 offset:148
+; DAGISEL-NEXT:    scratch_store_b32 off, v38, s32 offset:152
+; DAGISEL-NEXT:    scratch_store_b32 off, v39, s32 offset:156
+; DAGISEL-NEXT:    scratch_store_b32 off, v48, s32 offset:160
+; DAGISEL-NEXT:    scratch_store_b32 off, v49, s32 offset:164
+; DAGISEL-NEXT:    scratch_store_b32 off, v50, s32 offset:168
+; DAGISEL-NEXT:    scratch_store_b32 off, v51, s32 offset:172
+; DAGISEL-NEXT:    scratch_store_b32 off, v52, s32 offset:176
+; DAGISEL-NEXT:    scratch_store_b32 off, v53, s32 offset:180
+; DAGISEL-NEXT:    scratch_store_b32 off, v54, s32 offset:184
+; DAGISEL-NEXT:    scratch_store_b32 off, v55, s32 offset:188
+; DAGISEL-NEXT:    scratch_store_b32 off, v64, s32 offset:192
+; DAGISEL-NEXT:    scratch_store_b32 off, v65, s32 offset:196
+; DAGISEL-NEXT:    scratch_store_b32 off, v66, s32 offset:200
+; DAGISEL-NEXT:    scratch_store_b32 off, v67, s32 offset:204
+; DAGISEL-NEXT:    scratch_store_b32 off, v68, s32 offset:208
+; DAGISEL-NEXT:    scratch_store_b32 off, v69, s32 offset:212
+; DAGISEL-NEXT:    scratch_store_b32 off, v70, s32 offset:216
+; DAGISEL-NEXT:    scratch_store_b32 off, v71, s32 offset:220
+; DAGISEL-NEXT:    scratch_store_b32 off, v80, s32 offset:224
+; DAGISEL-NEXT:    scratch_store_b32 off, v81, s32 offset:228
+; DAGISEL-NEXT:    scratch_store_b32 off, v82, s32 offset:232
+; DAGISEL-NEXT:    scratch_store_b32 off, v83, s32 offset:236
+; DAGISEL-NEXT:    scratch_store_b32 off, v84, s32 offset:240
+; DAGISEL-NEXT:    scratch_store_b32 off, v85, s32 offset:244
+; DAGISEL-NEXT:    scratch_store_b32 off, v86, s32 offset:248
+; DAGISEL-NEXT:    scratch_store_b32 off, v87, s32 offset:252
+; DAGISEL-NEXT:    s_clause 0x1f
+; DAGISEL-NEXT:    scratch_store_b32 off, v96, s32 offset:256
+; DAGISEL-NEXT:    scratch_store_b32 off, v97, s32 offset:260
+; DAGISEL-NEXT:    scratch_store_b32 off, v98, s32 offset:264
+; DAGISEL-NEXT:    scratch_store_b32 off, v99, s32 offset:268
+; DAGISEL-NEXT:    scratch_store_b32 off, v100, s32 offset:272
+; DAGISEL-NEXT:    scratch_store_b32 off, v101, s32 offset:276
+; DAGISEL-NEXT:    scratch_store_b32 off, v102, s32 offset:280
+; DAGISEL-NEXT:    scratch_store_b32 off, v103, s32 offset:284
+; DAGISEL-NEXT:    scratch_store_b32 off, v112, s32 offset:288
+; DAGISEL-NEXT:    scratch_store_b32 off, v113, s32 offset:292
+; DAGISEL-NEXT:    scratch_store_b32 off, v114, s32 offset:296
+; DAGISEL-NEXT:    scratch_store_b32 off, v115, s32 offset:300
+; DAGISEL-NEXT:    scratch_store_b32 off, v116, s32 offset:304
+; DAGISEL-NEXT:    scratch_store_b32 off, v117, s32 offset:308
+; DAGISEL-NEXT:    scratch_store_b32 off, v118, s32 offset:312
+; DAGISEL-NEXT:    scratch_store_b32 off, v119, s32 offset:316
+; DAGISEL-NEXT:    scratch_store_b32 off, v128, s32 offset:320
+; DAGISEL-NEXT:    scratch_store_b32 off, v129, s32 offset:324
+; DAGISEL-NEXT:    scratch_store_b32 off, v130, s32 offset:328
+; DAGISEL-NEXT:    scratch_store_b32 off, v131, s32 offset:332
+; DAGISEL-NEXT:    scratch_store_b32 off, v132, s32 offset:336
+; DAGISEL-NEXT:    scratch_store_b32 off, v133, s32 offset:340
+; DAGISEL-NEXT:    scratch_store_b32 off, v134, s32 offset:344
+; DAGISEL-NEXT:    scratch_store_b32 off, v135, s32 offset:348
+; DAGISEL-NEXT:    scratch_store_b32 off, v144, s32 offset:352
+; DAGISEL-NEXT:    scratch_store_b32 off, v145, s32 offset:356
+; DAGISEL-NEXT:    scratch_store_b32 off, v146, s32 offset:360
+; DAGISEL-NEXT:    scratch_store_b32 off, v147, s32 offset:364
+; DAGISEL-NEXT:    scratch_store_b32 off, v148, s32 offset:368
+; DAGISEL-NEXT:    scratch_store_b32 off, v149, s32 offset:372
+; DAGISEL-NEXT:    scratch_store_b32 off, v150, s32 offset:376
+; DAGISEL-NEXT:    scratch_store_b32 off, v151, s32 offset:380
+; DAGISEL-NEXT:    s_clause 0x1f
+; DAGISEL-NEXT:    scratch_store_b32 off, v160, s32 offset:384
+; DAGISEL-NEXT:    scratch_store_b32 off, v161, s32 offset:388
+; DAGISEL-NEXT:    scratch_store_b32 off, v162, s32 offset:392
+; DAGISEL-NEXT:    scratch_store_b32 off, v163, s32 offset:396
+; DAGISEL-NEXT:    scratch_store_b32 off, v164, s32 offset:400
+; DAGISEL-NEXT:    scratch_store_b32 off, v165, s32 offset:404
+; DAGISEL-NEXT:    scratch_store_b32 off, v166, s32 offset:408
+; DAGISEL-NEXT:    scratch_store_b32 off, v167, s32 offset:412
+; DAGISEL-NEXT:    scratch_store_b32 off, v176, s32 offset:416
+; DAGISEL-NEXT:    scratch_store_b32 off, v177, s32 offset:420
+; DAGISEL-NEXT:    scratch_store_b32 off, v178, s32 offset:424
+; DAGISEL-NEXT:    scratch_store_b32 off, v179, s32 offset:428
+; DAGISEL-NEXT:    scratch_store_b32 off, v180, s32 offset:432
+; DAGISEL-NEXT:    scratch_store_b32 off, v181, s32 offset:436
+; DAGISEL-NEXT:    scratch_store_b32 off, v182, s32 offset:440
+; DAGISEL-NEXT:    scratch_store_b32 off, v183, s32 offset:444
+; DAGISEL-NEXT:    scratch_store_b32 off, v192, s32 offset:448
+; DAGISEL-NEXT:    scratch_store_b32 off, v193, s32 offset:452
+; DAGISEL-NEXT:    scratch_store_b32 off, v194, s32 offset:456
+; DAGISEL-NEXT:    scratch_store_b32 off, v195, s32 offset:460
+; DAGISEL-NEXT:    scratch_store_b32 off, v196, s32 offset:464
+; DAGISEL-NEXT:    scratch_store_b32 off, v197, s32 offset:468
+; DAGISEL-NEXT:    scratch_store_b32 off, v198, s32 offset:472
+; DAGISEL-NEXT:    scratch_store_b32 off, v199, s32 offset:476
+; DAGISEL-NEXT:    scratch_store_b32 off, v208, s32 offset:480
+; DAGISEL-NEXT:    scratch_store_b32 off, v209, s32 offset:484
+; DAGISEL-NEXT:    scratch_store_b32 off, v210, s32 offset:488
+; DAGISEL-NEXT:    scratch_store_b32 off, v211, s32 offset:492
+; DAGISEL-NEXT:    scratch_store_b32 off, v212, s32 offset:496
+; DAGISEL-NEXT:    scratch_store_b32 off, v213, s32 offset:500
+; DAGISEL-NEXT:    scratch_store_b32 off, v214, s32 offset:504
+; DAGISEL-NEXT:    scratch_store_b32 off, v215, s32 offset:508
+; DAGISEL-NEXT:    s_clause 0xf
+; DAGISEL-NEXT:    scratch_store_b32 off, v224, s32 offset:512
+; DAGISEL-NEXT:    scratch_store_b32 off, v225, s32 offset:516
+; DAGISEL-NEXT:    scratch_store_b32 off, v226, s32 offset:520
+; DAGISEL-NEXT:    scratch_store_b32 off, v227, s32 offset:524
+; DAGISEL-NEXT:    scratch_store_b32 off, v228, s32 offset:528
+; DAGISEL-NEXT:    scratch_store_b32 off, v229, s32 offset:532
+; DAGISEL-NEXT:    scratch_store_b32 off, v230, s32 offset:536
+; DAGISEL-NEXT:    scratch_store_b32 off, v231, s32 offset:540
+; DAGISEL-NEXT:    scratch_store_b32 off, v240, s32 offset:544
+; DAGISEL-NEXT:    scratch_store_b32 off, v241, s32 offset:548
+; DAGISEL-NEXT:    scratch_store_b32 off, v242, s32 offset:552
+; DAGISEL-NEXT:    scratch_store_b32 off, v243, s32 offset:556
+; DAGISEL-NEXT:    scratch_store_b32 off, v244, s32 offset:560
+; DAGISEL-NEXT:    scratch_store_b32 off, v245, s32 offset:564
+; DAGISEL-NEXT:    scratch_store_b32 off, v246, s32 offset:568
+; DAGISEL-NEXT:    scratch_store_b32 off, v247, s32 offset:572
+; DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
+; DAGISEL-NEXT:    v_mov_b32_e32 v2, v0
+; DAGISEL-NEXT:    s_mov_b32 s37, gfx_callee@abs32@hi
+; DAGISEL-NEXT:    s_mov_b32 s36, gfx_callee@abs32@lo
+; DAGISEL-NEXT:    v_swap_b32 v0, v1
+; DAGISEL-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-NEXT:    s_xor_b32 exec_lo, s0, -1
+; DAGISEL-NEXT:    s_clause 0x1f
+; DAGISEL-NEXT:    scratch_load_b32 v0, off, s32
+; DAGISEL-NEXT:    scratch_load_b32 v1, off, s32 offset:4
+; DAGISEL-NEXT:    scratch_load_b32 v2, off, s32 offset:8
+; DAGISEL-NEXT:    scratch_load_b32 v3, off, s32 offset:12
+; DAGISEL-NEXT:    scratch_load_b32 v4, off, s32 offset:16
+; DAGISEL-NEXT:    scratch_load_b32 v5, off, s32 offset:20
+; DAGISEL-NEXT:    scratch_load_b32 v6, off, s32 offset:24
+; DAGISEL-NEXT:    scratch_load_b32 v7, off, s32 offset:28
+; DAGISEL-NEXT:    scratch_load_b32 v8, off, s32 offset:32
+; DAGISEL-NEXT:    scratch_load_b32 v9, off, s32 offset:36
+; DAGISEL-NEXT:    scratch_load_b32 v10, off, s32 offset:40
+; DAGISEL-NEXT:    scratch_load_b32 v11, off, s32 offset:44
+; DAGISEL-NEXT:    scratch_load_b32 v12, off, s32 offset:48
+; DAGISEL-NEXT:    scratch_load_b32 v13, off, s32 offset:52
+; DAGISEL-NEXT:    scratch_load_b32 v14, off, s32 offset:56
+; DAGISEL-NEXT:    scratch_load_b32 v15, off, s32 offset:60
+; DAGISEL-NEXT:    scratch_load_b32 v16, off, s32 offset:64
+; DAGISEL-NEXT:    scratch_load_b32 v17, off, s32 offset:68
+; DAGISEL-NEXT:    scratch_load_b32 v18, off, s32 offset:72
+; DAGISEL-NEXT:    scratch_load_b32 v19, off, s32 offset:76
+; DAGISEL-NEXT:    scratch_load_b32 v20, off, s32 offset:80
+; DAGISEL-NEXT:    scratch_load_b32 v21, off, s32 offset:84
+; DAGISEL-NEXT:    scratch_load_b32 v22, off, s32 offset:88
+; DAGISEL-NEXT:    scratch_load_b32 v23, off, s32 offset:92
+; DAGISEL-NEXT:    scratch_load_b32 v24, off, s32 offset:96
+; DAGISEL-NEXT:    scratch_load_b32 v25, off, s32 offset:100
+; DAGISEL-NEXT:    scratch_load_b32 v26, off, s32 offset:104
+; DAGISEL-NEXT:    scratch_load_b32 v27, off, s32 offset:108
+; DAGISEL-NEXT:    scratch_load_b32 v28, off, s32 offset:112
+; DAGISEL-NEXT:    scratch_load_b32 v29, off, s32 offset:116
+; DAGISEL-NEXT:    scratch_load_b32 v30, off, s32 offset:120
+; DAGISEL-NEXT:    scratch_load_b32 v31, off, s32 offset:124
+; DAGISEL-NEXT:    s_clause 0x1f
+; DAGISEL-NEXT:    scratch_load_b32 v32, off, s32 offset:128
+; DAGISEL-NEXT:    scratch_load_b32 v33, off, s32 offset:132
+; DAGISEL-NEXT:    scratch_load_b32 v34, off, s32 offset:136
+; DAGISEL-NEXT:    scratch_load_b32 v35, off, s32 offset:140
+; DAGISEL-NEXT:    scratch_load_b32 v36, off, s32 offset:144
+; DAGISEL-NEXT:    scratch_load_b32 v37, off, s32 offset:148
+; DAGISEL-NEXT:    scratch_load_b32 v38, off, s32 offset:152
+; DAGISEL-NEXT:    scratch_load_b32 v39, off, s32 offset:156
+; DAGISEL-NEXT:    scratch_load_b32 v48, off, s32 offset:160
+; DAGISEL-NEXT:    scratch_load_b32 v49, off, s32 offset:164
+; DAGISEL-NEXT:    scratch_load_b32 v50, off, s32 offset:168
+; DAGISEL-NEXT:    scratch_load_b32 v51, off, s32 offset:172
+; DAGISEL-NEXT:    scratch_load_b32 v52, off, s32 offset:176
+; DAGISEL-NEXT:    scratch_load_b32 v53, off, s32 offset:180
+; DAGISEL-NEXT:    scratch_load_b32 v54, off, s32 offset:184
+; DAGISEL-NEXT:    scratch_load_b32 v55, off, s32 offset:188
+; DAGISEL-NEXT:    scratch_load_b32 v64, off, s32 offset:192
+; DAGISEL-NEXT:    scratch_load_b32 v65, off, s32 offset:196
+; DAGISEL-NEXT:    scratch_load_b32 v66, off, s32 offset:200
+; DAGISEL-NEXT:    scratch_load_b32 v67, off, s32 offset:204
+; DAGISEL-NEXT:    scratch_load_b32 v68, off, s32 offset:208
+; DAGISEL-NEXT:    scratch_load_b32 v69, off, s32 offset:212
+; DAGISEL-NEXT:    scratch_load_b32 v70, off, s32 offset:216
+; DAGISEL-NEXT:    scratch_load_b32 v71, off, s32 offset:220
+; DAGISEL-NEXT:    scratch_load_b32 v80, off, s32 offset:224
+; DAGISEL-NEXT:    scratch_load_b32 v81, off, s32 offset:228
+; DAGISEL-NEXT:    scratch_load_b32 v82, off, s32 offset:232
+; DAGISEL-NEXT:    scratch_load_b32 v83, off, s32 offset:236
+; DAGISEL-NEXT:    scratch_load_b32 v84, off, s32 offset:240
+; DAGISEL-NEXT:    scratch_load_b32 v85, off, s32 offset:244
+; DAGISEL-NEXT:    scratch_load_b32 v86, off, s32 offset:248
+; DAGISEL-NEXT:    scratch_load_b32 v87, off, s32 offset:252
+; DAGISEL-NEXT:    s_clause 0x1f
+; DAGISEL-NEXT:    scratch_load_b32 v96, off, s32 offset:256
+; DAGISEL-NEXT:    scratch_load_b32 v97, off, s32 offset:260
+; DAGISEL-NEXT:    scratch_load_b32 v98, off, s32 offset:264
+; DAGISEL-NEXT:    scratch_load_b32 v99, off, s32 offset:268
+; DAGISEL-NEXT:    scratch_load_b32 v100, off, s32 offset:272
+; DAGISEL-NEXT:    scratch_load_b32 v101, off, s32 offset:276
+; DAGISEL-NEXT:    scratch_load_b32 v102, off, s32 offset:280
+; DAGISEL-NEXT:    scratch_load_b32 v103, off, s32 offset:284
+; DAGISEL-NEXT:    scratch_load_b32 v112, off, s32 offset:288
+; DAGISEL-NEXT:    scratch_load_b32 v113, off, s32 offset:292
+; DAGISEL-NEXT:    scratch_load_b32 v114, off, s32 offset:296
+; DAGISEL-NEXT:    scratch_load_b32 v115, off, s32 offset:300
+; DAGISEL-NEXT:    scratch_load_b32 v116, off, s32 offset:304
+; DAGISEL-NEXT:    scratch_load_b32 v117, off, s32 offset:308
+; DAGISEL-NEXT:    scratch_load_b32 v118, off, s32 offset:312
+; DAGISEL-NEXT:    scratch_load_b32 v119, off, s32 offset:316
+; DAGISEL-NEXT:    scratch_load_b32 v128, off, s32 offset:320
+; DAGISEL-NEXT:    scratch_load_b32 v129, off, s32 offset:324
+; DAGISEL-NEXT:    scratch_load_b32 v130, off, s32 offset:328
+; DAGISEL-NEXT:    scratch_load_b32 v131, off, s32 offset:332
+; DAGISEL-NEXT:    scratch_load_b32 v132, off, s32 offset:336
+; DAGISEL-NEXT:    scratch_load_b32 v133, off, s32 offset:340
+; DAGISEL-NEXT:    scratch_load_b32 v134, off, s32 offset:344
+; DAGISEL-NEXT:    scratch_load_b32 v135, off, s32 offset:348
+; DAGISEL-NEXT:    scratch_load_b32 v144, off, s32 offset:352
+; DAGISEL-NEXT:    scratch_load_b32 v145, off, s32 offset:356
+; DAGISEL-NEXT:    scratch_load_b32 v146, off, s32 offset:360
+; DAGISEL-NEXT:    scratch_load_b32 v147, off, s32 offset:364
+; DAGISEL-NEXT:    scratch_load_b32 v148, off, s32 offset:368
+; DAGISEL-NEXT:    scratch_load_b32 v149, off, s32 offset:372
+; DAGISEL-NEXT:    scratch_load_b32 v150, off, s32 offset:376
+; DAGISEL-NEXT:    scratch_load_b32 v151, off, s32 offset:380
+; DAGISEL-NEXT:    s_clause 0x1f
+; DAGISEL-NEXT:    scratch_load_b32 v160, off, s32 offset:384
+; DAGISEL-NEXT:    scratch_load_b32 v161, off, s32 offset:388
+; DAGISEL-NEXT:    scratch_load_b32 v162, off, s32 offset:392
+; DAGISEL-NEXT:    scratch_load_b32 v163, off, s32 offset:396
+; DAGISEL-NEXT:    scratch_load_b32 v164, off, s32 offset:400
+; DAGISEL-NEXT:    scratch_load_b32 v165, off, s32 offset:404
+; DAGISEL-NEXT:    scratch_load_b32 v166, off, s32 offset:408
+; DAGISEL-NEXT:    scratch_load_b32 v167, off, s32 offset:412
+; DAGISEL-NEXT:    scratch_load_b32 v176, off, s32 offset:416
+; DAGISEL-NEXT:    scratch_load_b32 v177, off, s32 offset:420
+; DAGISEL-NEXT:    scratch_load_b32 v178, off, s32 offset:424
+; DAGISEL-NEXT:    scratch_load_b32 v179, off, s32 offset:428
+; DAGISEL-NEXT:    scratch_load_b32 v180, off, s32 offset:432
+; DAGISEL-NEXT:    scratch_load_b32 v181, off, s32 offset:436
+; DAGISEL-NEXT:    scratch_load_b32 v182, off, s32 offset:440
+; DAGISEL-NEXT:    scratch_load_b32 v183, off, s32 offset:444
+; DAGISEL-NEXT:    scratch_load_b32 v192, off, s32 offset:448
+; DAGISEL-NEXT:    scratch_load_b32 v193, off, s32 offset:452
+; DAGISEL-NEXT:    scratch_load_b32 v194, off, s32 offset:456
+; DAGISEL-NEXT:    scratch_load_b32 v195, off, s32 offset:460
+; DAGISEL-NEXT:    scratch_load_b32 v196, off, s32 offset:464
+; DAGISEL-NEXT:    scratch_load_b32 v197, off, s32 offset:468
+; DAGISEL-NEXT:    scratch_load_b32 v198, off, s32 offset:472
+; DAGISEL-NEXT:    scratch_load_b32 v199, off, s32 offset:476
+; DAGISEL-NEXT:    scratch_load_b32 v208, off, s32 offset:480
+; DAGISEL-NEXT:    scratch_load_b32 v209, off, s32 offset:484
+; DAGISEL-NEXT:    scratch_load_b32 v210, off, s32 offset:488
+; DAGISEL-NEXT:    scratch_load_b32 v211, off, s32 offset:492
+; DAGISEL-NEXT:    scratch_load_b32 v212, off, s32 offset:496
+; DAGISEL-NEXT:    scratch_load_b32 v213, off, s32 offset:500
+; DAGISEL-NEXT:    scratch_load_b32 v214, off, s32 offset:504
+; DAGISEL-NEXT:    scratch_load_b32 v215, off, s32 offset:508
+; DAGISEL-NEXT:    s_clause 0xf
+; DAGISEL-NEXT:    scratch_load_b32 v224, off, s32 offset:512
+; DAGISEL-NEXT:    scratch_load_b32 v225, off, s32 offset:516
+; DAGISEL-NEXT:    scratch_load_b32 v226, off, s32 offset:520
+; DAGISEL-NEXT:    scratch_load_b32 v227, off, s32 offset:524
+; DAGISEL-NEXT:    scratch_load_b32 v228, off, s32 offset:528
+; DAGISEL-NEXT:    scratch_load_b32 v229, off, s32 offset:532
+; DAGISEL-NEXT:    scratch_load_b32 v230, off, s32 offset:536
+; DAGISEL-NEXT:    scratch_load_b32 v231, off, s32 offset:540
+; DAGISEL-NEXT:    scratch_load_b32 v240, off, s32 offset:544
+; DAGISEL-NEXT:    scratch_load_b32 v241, off, s32 offset:548
+; DAGISEL-NEXT:    scratch_load_b32 v242, off, s32 offset:552
+; DAGISEL-NEXT:    scratch_load_b32 v243, off, s32 offset:556
+; DAGISEL-NEXT:    scratch_load_b32 v244, off, s32 offset:560
+; DAGISEL-NEXT:    scratch_load_b32 v245, off, s32 offset:564
+; DAGISEL-NEXT:    scratch_load_b32 v246, off, s32 offset:568
+; DAGISEL-NEXT:    scratch_load_b32 v247, off, s32 offset:572
+; DAGISEL-NEXT:    s_mov_b32 exec_lo, s0
+; DAGISEL-NEXT:    s_setpc_b64 s[36:37]
+;
+; GISEL-LABEL: tail_call_gfx_from_whole_wave:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL-NEXT:    s_wait_expcnt 0x0
+; GISEL-NEXT:    s_wait_samplecnt 0x0
+; GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GISEL-NEXT:    s_wait_kmcnt 0x0
+; GISEL-NEXT:    s_xor_saveexec_b32 s0, -1
+; GISEL-NEXT:    s_clause 0x1f
+; GISEL-NEXT:    scratch_store_b32 off, v0, s32
+; GISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4
+; GISEL-NEXT:    scratch_store_b32 off, v2, s32 offset:8
+; GISEL-NEXT:    scratch_store_b32 off, v3, s32 offset:12
+; GISEL-NEXT:    scratch_store_b32 off, v4, s32 offset:16
+; GISEL-NEXT:    scratch_store_b32 off, v5, s32 offset:20
+; GISEL-NEXT:    scratch_store_b32 off, v6, s32 offset:24
+; GISEL-NEXT:    scratch_store_b32 off, v7, s32 offset:28
+; GISEL-NEXT:    scratch_store_b32 off, v8, s32 offset:32
+; GISEL-NEXT:    scratch_store_b32 off, v9, s32 offset:36
+; GISEL-NEXT:    scratch_store_b32 off, v10, s32 offset:40
+; GISEL-NEXT:    scratch_store_b32 off, v11, s32 offset:44
+; GISEL-NEXT:    scratch_store_b32 off, v12, s32 offset:48
+; GISEL-NEXT:    scratch_store_b32 off, v13, s32 offset:52
+; GISEL-NEXT:    scratch_store_b32 off, v14, s32 offset:56
+; GISEL-NEXT:    scratch_store_b32 off, v15, s32 offset:60
+; GISEL-NEXT:    scratch_store_b32 off, v16, s32 offset:64
+; GISEL-NEXT:    scratch_store_b32 off, v17, s32 offset:68
+; GISEL-NEXT:    scratch_store_b32 off, v18, s32 offset:72
+; GISEL-NEXT:    scratch_store_b32 off, v19, s32 offset:76
+; GISEL-NEXT:    scratch_store_b32 off, v20, s32 offset:80
+; GISEL-NEXT:    scratch_store_b32 off, v21, s32 offset:84
+; GISEL-NEXT:    scratch_store_b32 off, v22, s32 offset:88
+; GISEL-NEXT:    scratch_store_b32 off, v23, s32 offset:92
+; GISEL-NEXT:    scratch_store_b32 off, v24, s32 offset:96
+; GISEL-NEXT:    scratch_store_b32 off, v25, s32 offset:100
+; GISEL-NEXT:    scratch_store_b32 off, v26, s32 offset:104
+; GISEL-NEXT:    scratch_store_b32 off, v27, s32 offset:108
+; GISEL-NEXT:    scratch_store_b32 off, v28, s32 offset:112
+; GISEL-NEXT:    scratch_store_b32 off, v29, s32 offset:116
+; GISEL-NEXT:    scratch_store_b32 off, v30, s32 offset:120
+; GISEL-NEXT:    scratch_store_b32 off, v31, s32 offset:124
+; GISEL-NEXT:    s_clause 0x1f
+; GISEL-NEXT:    scratch_store_b32 off, v32, s32 offset:128
+; GISEL-NEXT:    scratch_store_b32 off, v33, s32 offset:132
+; GISEL-NEXT:    scratch_store_b32 off, v34, s32 offset:136
+; GISEL-NEXT:    scratch_store_b32 off, v35, s32 offset:140
+; GISEL-NEXT:    scratch_store_b32 off, v36, s32 offset:144
+; GISEL-NEXT:    scratch_store_b32 off, v37, s32 offset:148
+; GISEL-NEXT:    scratch_store_b32 off, v38, s32 offset:152
+; GISEL-NEXT:    scratch_store_b32 off, v39, s32 offset:156
+; GISEL-NEXT:    scratch_store_b32 off, v48, s32 offset:160
+; GISEL-NEXT:    scratch_store_b32 off, v49, s32 offset:164
+; GISEL-NEXT:    scratch_store_b32 off, v50, s32 offset:168
+; GISEL-NEXT:    scratch_store_b32 off, v51, s32 offset:172
+; GISEL-NEXT:    scratch_store_b32 off, v52, s32 offset:176
+; GISEL-NEXT:    scratch_store_b32 off, v53, s32 offset:180
+; GISEL-NEXT:    scratch_store_b32 off, v54, s32 offset:184
+; GISEL-NEXT:    scratch_store_b32 off, v55, s32 offset:188
+; GISEL-NEXT:    scratch_store_b32 off, v64, s32 offset:192
+; GISEL-NEXT:    scratch_store_b32 off, v65, s32 offset:196
+; GISEL-NEXT:    scratch_store_b32 off, v66, s32 offset:200
+; GISEL-NEXT:    scratch_store_b32 off, v67, s32 offset:204
+; GISEL-NEXT:    scratch_store_b32 off, v68, s32 offset:208
+; GISEL-NEXT:    scratch_store_b32 off, v69, s32 offset:212
+; GISEL-NEXT:    scratch_store_b32 off, v70, s32 offset:216
+; GISEL-NEXT:    scratch_store_b32 off, v71, s32 offset:220
+; GISEL-NEXT:    scratch_store_b32 off, v80, s32 offset:224
+; GISEL-NEXT:    scratch_store_b32 off, v81, s32 offset:228
+; GISEL-NEXT:    scratch_store_b32 off, v82, s32 offset:232
+; GISEL-NEXT:    scratch_store_b32 off, v83, s32 offset:236
+; GISEL-NEXT:    scratch_store_b32 off, v84, s32 offset:240
+; GISEL-NEXT:    scratch_store_b32 off, v85, s32 offset:244
+; GISEL-NEXT:    scratch_store_b32 off, v86, s32 offset:248
+; GISEL-NEXT:    scratch_store_b32 off, v87, s32 offset:252
+; GISEL-NEXT:    s_clause 0x1f
+; GISEL-NEXT:    scratch_store_b32 off, v96, s32 offset:256
+; GISEL-NEXT:    scratch_store_b32 off, v97, s32 offset:260
+; GISEL-NEXT:    scratch_store_b32 off, v98, s32 offset:264
+; GISEL-NEXT:    scratch_store_b32 off, v99, s32 offset:268
+; GISEL-NEXT:    scratch_store_b32 off, v100, s32 offset:272
+; GISEL-NEXT:    scratch_store_b32 off, v101, s32 offset:276
+; GISEL-NEXT:    scratch_store_b32 off, v102, s32 offset:280
+; GISEL-NEXT:    scratch_store_b32 off, v103, s32 offset:284
+; GISEL-NEXT:    scratch_store_b32 off, v112, s32 offset:288
+; GISEL-NEXT:    scratch_store_b32 off, v113, s32 offset:292
+; GISEL-NEXT:    scratch_store_b32 off, v114, s32 offset:296
+; GISEL-NEXT:    scratch_store_b32 off, v115, s32 offset:300
+; GISEL-NEXT:    scratch_store_b32 off, v116, s32 offset:304
+; GISEL-NEXT:    scratch_store_b32 off, v117, s32 offset:308
+; GISEL-NEXT:    scratch_store_b32 off, v118, s32 offset:312
+; GISEL-NEXT:    scratch_store_b32 off, v119, s32 offset:316
+; GISEL-NEXT:    scratch_store_b32 off, v128, s32 offset:320
+; GISEL-NEXT:    scratch_store_b32 off, v129, s32 offset:324
+; GISEL-NEXT:    scratch_store_b32 off, v130, s32 offset:328
+; GISEL-NEXT:    scratch_store_b32 off, v131, s32 offset:332
+; GISEL-NEXT:    scratch_store_b32 off, v132, s32 offset:336
+; GISEL-NEXT:    scratch_store_b32 off, v133, s32 offset:340
+; GISEL-NEXT:    scratch_store_b32 off, v134, s32 offset:344
+; GISEL-NEXT:    scratch_store_b32 off, v135, s32 offset:348
+; GISEL-NEXT:    scratch_store_b32 off, v144, s32 offset:352
+; GISEL-NEXT:    scratch_store_b32 off, v145, s32 offset:356
+; GISEL-NEXT:    scratch_store_b32 off, v146, s32 offset:360
+; GISEL-NEXT:    scratch_store_b32 off, v147, s32 offset:364
+; GISEL-NEXT:    scratch_store_b32 off, v148, s32 offset:368
+; GISEL-NEXT:    scratch_store_b32 off, v149, s32 offset:372
+; GISEL-NEXT:    scratch_store_b32 off, v150, s32 offset:376
+; GISEL-NEXT:    scratch_store_b32 off, v151, s32 offset:380
+; GISEL-NEXT:    s_clause 0x1f
+; GISEL-NEXT:    scratch_store_b32 off, v160, s32 offset:384
+; GISEL-NEXT:    scratch_store_b32 off, v161, s32 offset:388
+; GISEL-NEXT:    scratch_store_b32 off, v162, s32 offset:392
+; GISEL-NEXT:    scratch_store_b32 off, v163, s32 offset:396
+; GISEL-NEXT:    scratch_store_b32 off, v164, s32 offset:400
+; GISEL-NEXT:    scratch_store_b32 off, v165, s32 offset:404
+; GISEL-NEXT:    scratch_store_b32 off, v166, s32 offset:408
+; GISEL-NEXT:    scratch_store_b32 off, v167, s32 offset:412
+; GISEL-NEXT:    scratch_store_b32 off, v176, s32 offset:416
+; GISEL-NEXT:    scratch_store_b32 off, v177, s32 offset:420
+; GISEL-NEXT:    scratch_store_b32 off, v178, s32 offset:424
+; GISEL-NEXT:    scratch_store_b32 off, v179, s32 offset:428
+; GISEL-NEXT:    scratch_store_b32 off, v180, s32 offset:432
+; GISEL-NEXT:    scratch_store_b32 off, v181, s32 offset:436
+; GISEL-NEXT:    scratch_store_b32 off, v182, s32 offset:440
+; GISEL-NEXT:    scratch_store_b32 off, v183, s32 offset:444
+; GISEL-NEXT:    scratch_store_b32 off, v192, s32 offset:448
+; GISEL-NEXT:    scratch_store_b32 off, v193, s32 offset:452
+; GISEL-NEXT:    scratch_store_b32 off, v194, s32 offset:456
+; GISEL-NEXT:    scratch_store_b32 off, v195, s32 offset:460
+; GISEL-NEXT:    scratch_store_b32 off, v196, s32 offset:464
+; GISEL-NEXT:    scratch_store_b32 off, v197, s32 offset:468
+; GISEL-NEXT:    scratch_store_b32 off, v198, s32 offset:472
+; GISEL-NEXT:    scratch_store_b32 off, v199, s32 offset:476
+; GISEL-NEXT:    scratch_store_b32 off, v208, s32 offset:480
+; GISEL-NEXT:    scratch_store_b32 off, v209, s32 offset:484
+; GISEL-NEXT:    scratch_store_b32 off, v210, s32 offset:488
+; GISEL-NEXT:    scratch_store_b32 off, v211, s32 offset:492
+; GISEL-NEXT:    scratch_store_b32 off, v212, s32 offset:496
+; GISEL-NEXT:    scratch_store_b32 off, v213, s32 offset:500
+; GISEL-NEXT:    scratch_store_b32 off, v214, s32 offset:504
+; GISEL-NEXT:    scratch_store_b32 off, v215, s32 offset:508
+; GISEL-NEXT:    s_clause 0xf
+; GISEL-NEXT:    scratch_store_b32 off, v224, s32 offset:512
+; GISEL-NEXT:    scratch_store_b32 off, v225, s32 offset:516
+; GISEL-NEXT:    scratch_store_b32 off, v226, s32 offset:520
+; GISEL-NEXT:    scratch_store_b32 off, v227, s32 offset:524
+; GISEL-NEXT:    scratch_store_b32 off, v228, s32 offset:528
+; GISEL-NEXT:    scratch_store_b32 off, v229, s32 offset:532
+; GISEL-NEXT:    scratch_store_b32 off, v230, s32 offset:536
+; GISEL-NEXT:    scratch_store_b32 off, v231, s32 offset:540
+; GISEL-NEXT:    scratch_store_b32 off, v240, s32 offset:544
+; GISEL-NEXT:    scratch_store_b32 off, v241, s32 offset:548
+; GISEL-NEXT:    scratch_store_b32 off, v242, s32 offset:552
+; GISEL-NEXT:    scratch_store_b32 off, v243, s32 offset:556
+; GISEL-NEXT:    scratch_store_b32 off, v244, s32 offset:560
+; GISEL-NEXT:    scratch_store_b32 off, v245, s32 offset:564
+; GISEL-NEXT:    scratch_store_b32 off, v246, s32 offset:568
+; GISEL-NEXT:    scratch_store_b32 off, v247, s32 offset:572
+; GISEL-NEXT:    s_mov_b32 exec_lo, -1
+; GISEL-NEXT:    v_mov_b32_e32 v2, v0
+; GISEL-NEXT:    v_swap_b32 v0, v1
+; GISEL-NEXT:    s_mov_b32 s36, gfx_callee@abs32@lo
+; GISEL-NEXT:    s_mov_b32 s37, gfx_callee@abs32@hi
+; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_xor_b32 exec_lo, s0, -1
+; GISEL-NEXT:    s_clause 0x1f
+; GISEL-NEXT:    scratch_load_b32 v0, off, s32
+; GISEL-NEXT:    scratch_load_b32 v1, off, s32 offset:4
+; GISEL-NEXT:    scratch_load_b32 v2, off, s32 offset:8
+; GISEL-NEXT:    scratch_load_b32 v3, off, s32 offset:12
+; GISEL-NEXT:    scratch_load_b32 v4, off, s32 offset:16
+; GISEL-NEXT:    scratch_load_b32 v5, off, s32 offset:20
+; GISEL-NEXT:    scratch_load_b32 v6, off, s32 offset:24
+; GISEL-NEXT:    scratch_load_b32 v7, off, s32 offset:28
+; GISEL-NEXT:    scratch_load_b32 v8, off, s32 offset:32
+; GISEL-NEXT:    scratch_load_b32 v9, off, s32 offset:36
+; GISEL-NEXT:    scratch_load_b32 v10, off, s32 offset:40
+; GISEL-NEXT:    scratch_load_b32 v11, off, s32 offset:44
+; GISEL-NEXT:    scratch_load_b32 v12, off, s32 offset:48
+; GISEL-NEXT:    scratch_load_b32 v13, off, s32 offset:52
+; GISEL-NEXT:    scratch_load_b32 v14, off, s32 offset:56
+; GISEL-NEXT:    scratch_load_b32 v15, off, s32 offset:60
+; GISEL-NEXT:    scratch_load_b32 v16, off, s32 offset:64
+; GISEL-NEXT:    scratch_load_b32 v17, off, s32 offset:68
+; GISEL-NEXT:    scratch_load_b32 v18, off, s32 offset:72
+; GISEL-NEXT:    scratch_load_b32 v19, off, s32 offset:76
+; GISEL-NEXT:    scratch_load_b32 v20, off, s32 offset:80
+; GISEL-NEXT:    scratch_load_b32 v21, off, s32 offset:84
+; GISEL-NEXT:    scratch_load_b32 v22, off, s32 offset:88
+; GISEL-NEXT:    scratch_load_b32 v23, off, s32 offset:92
+; GISEL-NEXT:    scratch_load_b32 v24, off, s32 offset:96
+; GISEL-NEXT:    scratch_load_b32 v25, off, s32 offset:100
+; GISEL-NEXT:    scratch_load_b32 v26, off, s32 offset:104
+; GISEL-NEXT:    scratch_load_b32 v27, off, s32 offset:108
+; GISEL-NEXT:    scratch_load_b32 v28, off, s32 offset:112
+; GISEL-NEXT:    scratch_load_b32 v29, off, s32 offset:116
+; GISEL-NEXT:    scratch_load_b32 v30, off, s32 offset:120
+; GISEL-NEXT:    scratch_load_b32 v31, off, s32 offset:124
+; GISEL-NEXT:    s_clause 0x1f
+; GISEL-NEXT:    scratch_load_b32 v32, off, s32 offset:128
+; GISEL-NEXT:    scratch_load_b32 v33, off, s32 offset:132
+; GISEL-NEXT:    scratch_load_b32 v34, off, s32 offset:136
+; GISEL-NEXT:    scratch_load_b32 v35, off, s32 offset:140
+; GISEL-NEXT:    scratch_load_b32 v36, off, s32 offset:144
+; GISEL-NEXT:    scratch_load_b32 v37, off, s32 offset:148
+; GISEL-NEXT:    scratch_load_b32 v38, off, s32 offset:152
+; GISEL-NEXT:    scratch_load_b32 v39, off, s32 offset:156
+; GISEL-NEXT:    scratch_load_b32 v48, off, s32 offset:160
+; GISEL-NEXT:    scratch_load_b32 v49, off, s32 offset:164
+; GISEL-NEXT:    scratch_load_b32 v50, off, s32 offset:168
+; GISEL-NEXT:    scratch_load_b32 v51, off, s32 offset:172
+; GISEL-NEXT:    scratch_load_b32 v52, off, s32 offset:176
+; GISEL-NEXT:    scratch_load_b32 v53, off, s32 offset:180
+; GISEL-NEXT:    scratch_load_b32 v54, off, s32 offset:184
+; GISEL-NEXT:    scratch_load_b32 v55, off, s32 offset:188
+; GISEL-NEXT:    scratch_load_b32 v64, off, s32 offset:192
+; GISEL-NEXT:    scratch_load_b32 v65, off, s32 offset:196
+; GISEL-NEXT:    scratch_load_b32 v66, off, s32 offset:200
+; GISEL-NEXT:    scratch_load_b32 v67, off, s32 offset:204
+; GISEL-NEXT:    scratch_load_b32 v68, off, s32 offset:208
+; GISEL-NEXT:    scratch_load_b32 v69, off, s32 offset:212
+; GISEL-NEXT:    scratch_load_b32 v70, off, s32 offset:216
+; GISEL-NEXT:    scratch_load_b32 v71, off, s32 offset:220
+; GISEL-NEXT:    scratch_load_b32 v80, off, s32 offset:224
+; GISEL-NEXT:    scratch_load_b32 v81, off, s32 offset:228
+; GISEL-NEXT:    scratch_load_b32 v82, off, s32 offset:232
+; GISEL-NEXT:    scratch_load_b32 v83, off, s32 offset:236
+; GISEL-NEXT:    scratch_load_b32 v84, off, s32 offset:240
+; GISEL-NEXT:    scratch_load_b32 v85, off, s32 offset:244
+; GISEL-NEXT:    scratch_load_b32 v86, off, s32 offset:248
+; GISEL-NEXT:    scratch_load_b32 v87, off, s32 offset:252
+; GISEL-NEXT:    s_clause 0x1f
+; GISEL-NEXT:    scratch_load_b32 v96, off, s32 offset:256
+; GISEL-NEXT:    scratch_load_b32 v97, off, s32 offset:260
+; GISEL-NEXT:    scratch_load_b32 v98, off, s32 offset:264
+; GISEL-NEXT:    scratch_load_b32 v99, off, s32 offset:268
+; GISEL-NEXT:    scratch_load_b32 v100, off, s32 offset:272
+; GISEL-NEXT:    scratch_load_b32 v101, off, s32 offset:276
+; GISEL-NEXT:    scratch_load_b32 v102, off, s32 offset:280
+; GISEL-NEXT:    scratch_load_b32 v103, off, s32 offset:284
+; GISEL-NEXT:    scratch_load_b32 v112, off, s32 offset:288
+; GISEL-NEXT:    scratch_load_b32 v113, off, s32 offset:292
+; GISEL-NEXT:    scratch_load_b32 v114, off, s32 offset:296
+; GISEL-NEXT:    scratch_load_b32 v115, off, s32 offset:300
+; GISEL-NEXT:    scratch_load_b32 v116, off, s32 offset:304
+; GISEL-NEXT:    scratch_load_b32 v117, off, s32 offset:308
+; GISEL-NEXT:    scratch_load_b32 v118, off, s32 offset:312
+; GISEL-NEXT:    scratch_load_b32 v119, off, s32 offset:316
+; GISEL-NEXT:    scratch_load_b32 v128, off, s32 offset:320
+; GISEL-NEXT:    scratch_load_b32 v129, off, s32 offset:324
+; GISEL-NEXT:    scratch_load_b32 v130, off, s32 offset:328
+; GISEL-NEXT:    scratch_load_b32 v131, off, s32 offset:332
+; GISEL-NEXT:    scratch_load_b32 v132, off, s32 offset:336
+; GISEL-NEXT:    scratch_load_b32 v133, off, s32 offset:340
+; GISEL-NEXT:    scratch_load_b32 v134, off, s32 offset:344
+; GISEL-NEXT:    scratch_load_b32 v135, off, s32 offset:348
+; GISEL-NEXT:    scratch_load_b32 v144, off, s32 offset:352
+; GISEL-NEXT:    scratch_load_b32 v145, off, s32 offset:356
+; GISEL-NEXT:    scratch_load_b32 v146, off, s32 offset:360
+; GISEL-NEXT:    scratch_load_b32 v147, off, s32 offset:364
+; GISEL-NEXT:    scratch_load_b32 v148, off, s32 offset:368
+; GISEL-NEXT:    scratch_load_b32 v149, off, s32 offset:372
+; GISEL-NEXT:    scratch_load_b32 v150, off, s32 offset:376
+; GISEL-NEXT:    scratch_load_b32 v151, off, s32 offset:380
+; GISEL-NEXT:    s_clause 0x1f
+; GISEL-NEXT:    scratch_load_b32 v160, off, s32 offset:384
+; GISEL-NEXT:    scratch_load_b32 v161, off, s32 offset:388
+; GISEL-NEXT:    scratch_load_b32 v162, off, s32 offset:392
+; GISEL-NEXT:    scratch_load_b32 v163, off, s32 offset:396
+; GISEL-NEXT:    scratch_load_b32 v164, off, s32 offset:400
+; GISEL-NEXT:    scratch_load_b32 v165, off, s32 offset:404
+; GISEL-NEXT:    scratch_load_b32 v166, off, s32 offset:408
+; GISEL-NEXT:    scratch_load_b32 v167, off, s32 offset:412
+; GISEL-NEXT:    scratch_load_b32 v176, off, s32 offset:416
+; GISEL-NEXT:    scratch_load_b32 v177, off, s32 offset:420
+; GISEL-NEXT:    scratch_load_b32 v178, off, s32 offset:424
+; GISEL-NEXT:    scratch_load_b32 v179, off, s32 offset:428
+; GISEL-NEXT:    scratch_load_b32 v180, off, s32 offset:432
+; GISEL-NEXT:    scratch_load_b32 v181, off, s32 offset:436
+; GISEL-NEXT:    scratch_load_b32 v182, off, s32 offset:440
+; GISEL-NEXT:    scratch_load_b32 v183, off, s32 offset:444
+; GISEL-NEXT:    scratch_load_b32 v192, off, s32 offset:448
+; GISEL-NEXT:    scratch_load_b32 v193, off, s32 offset:452
+; GISEL-NEXT:    scratch_load_b32 v194, off, s32 offset:456
+; GISEL-NEXT:    scratch_load_b32 v195, off, s32 offset:460
+; GISEL-NEXT:    scratch_load_b32 v196, off, s32 offset:464
+; GISEL-NEXT:    scratch_load_b32 v197, off, s32 offset:468
+; GISEL-NEXT:    scratch_load_b32 v198, off, s32 offset:472
+; GISEL-NEXT:    scratch_load_b32 v199, off, s32 offset:476
+; GISEL-NEXT:    scratch_load_b32 v208, off, s32 offset:480
+; GISEL-NEXT:    scratch_load_b32 v209, off, s32 offset:484
+; GISEL-NEXT:    scratch_load_b32 v210, off, s32 offset:488
+; GISEL-NEXT:    scratch_load_b32 v211, off, s32 offset:492
+; GISEL-NEXT:    scratch_load_b32 v212, off, s32 offset:496
+; GISEL-NEXT:    scratch_load_b32 v213, off, s32 offset:500
+; GISEL-NEXT:    scratch_load_b32 v214, off, s32 offset:504
+; GISEL-NEXT:    scratch_load_b32 v215, off, s32 offset:508
+; GISEL-NEXT:    s_clause 0xf
+; GISEL-NEXT:    scratch_load_b32 v224, off, s32 offset:512
+; GISEL-NEXT:    scratch_load_b32 v225, off, s32 offset:516
+; GISEL-NEXT:    scratch_load_b32 v226, off, s32 offset:520
+; GISEL-NEXT:    scratch_load_b32 v227, off, s32 offset:524
+; GISEL-NEXT:    scratch_load_b32 v228, off, s32 offset:528
+; GISEL-NEXT:    scratch_load_b32 v229, off, s32 offset:532
+; GISEL-NEXT:    scratch_load_b32 v230, off, s32 offset:536
+; GISEL-NEXT:    scratch_load_b32 v231, off, s32 offset:540
+; GISEL-NEXT:    scratch_load_b32 v240, off, s32 offset:544
+; GISEL-NEXT:    scratch_load_b32 v241, off, s32 offset:548
+; GISEL-NEXT:    scratch_load_b32 v242, off, s32 offset:552
+; GISEL-NEXT:    scratch_load_b32 v243, off, s32 offset:556
+; GISEL-NEXT:    scratch_load_b32 v244, off, s32 offset:560
+; GISEL-NEXT:    scratch_load_b32 v245, off, s32 offset:564
+; GISEL-NEXT:    scratch_load_b32 v246, off, s32 offset:568
+; GISEL-NEXT:    scratch_load_b32 v247, off, s32 offset:572
+; GISEL-NEXT:    s_mov_b32 exec_lo, s0
+; GISEL-NEXT:    s_setpc_b64 s[36:37]
+;
+; DAGISEL64-LABEL: tail_call_gfx_from_whole_wave:
+; DAGISEL64:       ; %bb.0:
+; DAGISEL64-NEXT:    s_wait_loadcnt_dscnt 0x0
+; DAGISEL64-NEXT:    s_wait_expcnt 0x0
+; DAGISEL64-NEXT:    s_wait_samplecnt 0x0
+; DAGISEL64-NEXT:    s_wait_bvhcnt 0x0
+; DAGISEL64-NEXT:    s_wait_kmcnt 0x0
+; DAGISEL64-NEXT:    s_xor_saveexec_b64 s[0:1], -1
+; DAGISEL64-NEXT:    s_clause 0x1f
+; DAGISEL64-NEXT:    scratch_store_b32 off, v0, s32
+; DAGISEL64-NEXT:    scratch_store_b32 off, v1, s32 offset:4
+; DAGISEL64-NEXT:    scratch_store_b32 off, v2, s32 offset:8
+; DAGISEL64-NEXT:    scratch_store_b32 off, v3, s32 offset:12
+; DAGISEL64-NEXT:    scratch_store_b32 off, v4, s32 offset:16
+; DAGISEL64-NEXT:    scratch_store_b32 off, v5, s32 offset:20
+; DAGISEL64-NEXT:    scratch_store_b32 off, v6, s32 offset:24
+; DAGISEL64-NEXT:    scratch_store_b32 off, v7, s32 offset:28
+; DAGISEL64-NEXT:    scratch_store_b32 off, v8, s32 offset:32
+; DAGISEL64-NEXT:    scratch_store_b32 off, v9, s32 offset:36
+; DAGISEL64-NEXT:    scratch_store_b32 off, v10, s32 offset:40
+; DAGISEL64-NEXT:    scratch_store_b32 off, v11, s32 offset:44
+; DAGISEL64-NEXT:    scratch_store_b32 off, v12, s32 offset:48
+; DAGISEL64-NEXT:    scratch_store_b32 off, v13, s32 offset:52
+; DAGISEL64-NEXT:    scratch_store_b32 off, v14, s32 offset:56
+; DAGISEL64-NEXT:    scratch_store_b32 off, v15, s32 offset:60
+; DAGISEL64-NEXT:    scratch_store_b32 off, v16, s32 offset:64
+; DAGISEL64-NEXT:    scratch_store_b32 off, v17, s32 offset:68
+; DAGISEL64-NEXT:    scratch_store_b32 off, v18, s32 offset:72
+; DAGISEL64-NEXT:    scratch_store_b32 off, v19, s32 offset:76
+; DAGISEL64-NEXT:    scratch_store_b32 off, v20, s32 offset:80
+; DAGISEL64-NEXT:    scratch_store_b32 off, v21, s32 offset:84
+; DAGISEL64-NEXT:    scratch_store_b32 off, v22, s32 offset:88
+; DAGISEL64-NEXT:    scratch_store_b32 off, v23, s32 offset:92
+; DAGISEL64-NEXT:    scratch_store_b32 off, v24, s32 offset:96
+; DAGISEL64-NEXT:    scratch_store_b32 off, v25, s32 offset:100
+; DAGISEL64-NEXT:    scratch_store_b32 off, v26, s32 offset:104
+; DAGISEL64-NEXT:    scratch_store_b32 off, v27, s32 offset:108
+; DAGISEL64-NEXT:    scratch_store_b32 off, v28, s32 offset:112
+; DAGISEL64-NEXT:    scratch_store_b32 off, v29, s32 offset:116
+; DAGISEL64-NEXT:    scratch_store_b32 off, v30, s32 offset:120
+; DAGISEL64-NEXT:    scratch_store_b32 off, v31, s32 offset:124
+; DAGISEL64-NEXT:    s_clause 0x1f
+; DAGISEL64-NEXT:    scratch_store_b32 off, v32, s32 offset:128
+; DAGISEL64-NEXT:    scratch_store_b32 off, v33, s32 offset:132
+; DAGISEL64-NEXT:    scratch_store_b32 off, v34, s32 offset:136
+; DAGISEL64-NEXT:    scratch_store_b32 off, v35, s32 offset:140
+; DAGISEL64-NEXT:    scratch_store_b32 off, v36, s32 offset:144
+; DAGISEL64-NEXT:    scratch_store_b32 off, v37, s32 offset:148
+; DAGISEL64-NEXT:    scratch_store_b32 off, v38, s32 offset:152
+; DAGISEL64-NEXT:    scratch_store_b32 off, v39, s32 offset:156
+; DAGISEL64-NEXT:    scratch_store_b32 off, v48, s32 offset:160
+; DAGISEL64-NEXT:    scratch_store_b32 off, v49, s32 offset:164
+; DAGISEL64-NEXT:    scratch_store_b32 off, v50, s32 offset:168
+; DAGISEL64-NEXT:    scratch_store_b32 off, v51, s32 offset:172
+; DAGISEL64-NEXT:    scratch_store_b32 off, v52, s32 offset:176
+; DAGISEL64-NEXT:    scratch_store_b32 off, v53, s32 offset:180
+; DAGISEL64-NEXT:    scratch_store_b32 off, v54, s32 offset:184
+; DAGISEL64-NEXT:    scratch_store_b32 off, v55, s32 offset:188
+; DAGISEL64-NEXT:    scratch_store_b32 off, v64, s32 offset:192
+; DAGISEL64-NEXT:    scratch_store_b32 off, v65, s32 offset:196
+; DAGISEL64-NEXT:    scratch_store_b32 off, v66, s32 offset:200
+; DAGISEL64-NEXT:    scratch_store_b32 off, v67, s32 offset:204
+; DAGISEL64-NEXT:    scratch_store_b32 off, v68, s32 offset:208
+; DAGISEL64-NEXT:    scratch_store_b32 off, v69, s32 offset:212
+; DAGISEL64-NEXT:    scratch_store_b32 off, v70, s32 offset:216
+; DAGISEL64-NEXT:    scratch_store_b32 off, v71, s32 offset:220
+; DAGISEL64-NEXT:    scratch_store_b32 off, v80, s32 offset:224
+; DAGISEL64-NEXT:    scratch_store_b32 off, v81, s32 offset:228
+; DAGISEL64-NEXT:    scratch_store_b32 off, v82, s32 offset:232
+; DAGISEL64-NEXT:    scratch_store_b32 off, v83, s32 offset:236
+; DAGISEL64-NEXT:    scratch_store_b32 off, v84, s32 offset:240
+; DAGISEL64-NEXT:    scratch_store_b32 off, v85, s32 offset:244
+; DAGISEL64-NEXT:    scratch_store_b32 off, v86, s32 offset:248
+; DAGISEL64-NEXT:    scratch_store_b32 off, v87, s32 offset:252
+; DAGISEL64-NEXT:    s_clause 0x1f
+; DAGISEL64-NEXT:    scratch_store_b32 off, v96, s32 offset:256
+; DAGISEL64-NEXT:    scratch_store_b32 off, v97, s32 offset:260
+; DAGISEL64-NEXT:    scratch_store_b32 off, v98, s32 offset:264
+; DAGISEL64-NEXT:    scratch_store_b32 off, v99, s32 offset:268
+; DAGISEL64-NEXT:    scratch_store_b32 off, v100, s32 offset:272
+; DAGISEL64-NEXT:    scratch_store_b32 off, v101, s32 offset:276
+; DAGISEL64-NEXT:    scratch_store_b32 off, v102, s32 offset:280
+; DAGISEL64-NEXT:    scratch_store_b32 off, v103, s32 offset:284
+; DAGISEL64-NEXT:    scratch_store_b32 off, v112, s32 offset:288
+; DAGISEL64-NEXT:    scratch_store_b32 off, v113, s32 offset:292
+; DAGISEL64-NEXT:    scratch_store_b32 off, v114, s32 offset:296
+; DAGISEL64-NEXT:    scratch_store_b32 off, v115, s32 offset:300
+; DAGISEL64-NEXT:    scratch_store_b32 off, v116, s32 offset:304
+; DAGISEL64-NEXT:    scratch_store_b32 off, v117, s32 offset:308
+; DAGISEL64-NEXT:    scratch_store_b32 off, v118, s32 offset:312
+; DAGISEL64-NEXT:    scratch_store_b32 off, v119, s32 offset:316
+; DAGISEL64-NEXT:    scratch_store_b32 off, v128, s32 offset:320
+; DAGISEL64-NEXT:    scratch_store_b32 off, v129, s32 offset:324
+; DAGISEL64-NEXT:    scratch_store_b32 off, v130, s32 offset:328
+; DAGISEL64-NEXT:    scratch_store_b32 off, v131, s32 offset:332
+; DAGISEL64-NEXT:    scratch_store_b32 off, v132, s32 offset:336
+; DAGISEL64-NEXT:    scratch_store_b32 off, v133, s32 offset:340
+; DAGISEL64-NEXT:    scratch_store_b32 off, v134, s32 offset:344
+; DAGISEL64-NEXT:    scratch_store_b32 off, v135, s32 offset:348
+; DAGISEL64-NEXT:    scratch_store_b32 off, v144, s32 offset:352
+; DAGISEL64-NEXT:    scratch_store_b32 off, v145, s32 offset:356
+; DAGISEL64-NEXT:    scratch_store_b32 off, v146, s32 offset:360
+; DAGISEL64-NEXT:    scratch_store_b32 off, v147, s32 offset:364
+; DAGISEL64-NEXT:    scratch_store_b32 off, v148, s32 offset:368
+; DAGISEL64-NEXT:    scratch_store_b32 off, v149, s32 offset:372
+; DAGISEL64-NEXT:    scratch_store_b32 off, v150, s32 offset:376
+; DAGISEL64-NEXT:    scratch_store_b32 off, v151, s32 offset:380
+; DAGISEL64-NEXT:    s_clause 0x1f
+; DAGISEL64-NEXT:    scratch_store_b32 off, v160, s32 offset:384
+; DAGISEL64-NEXT:    scratch_store_b32 off, v161, s32 offset:388
+; DAGISEL64-NEXT:    scratch_store_b32 off, v162, s32 offset:392
+; DAGISEL64-NEXT:    scratch_store_b32 off, v163, s32 offset:396
+; DAGISEL64-NEXT:    scratch_store_b32 off, v164, s32 offset:400
+; DAGISEL64-NEXT:    scratch_store_b32 off, v165, s32 offset:404
+; DAGISEL64-NEXT:    scratch_store_b32 off, v166, s32 offset:408
+; DAGISEL64-NEXT:    scratch_store_b32 off, v167, s32 offset:412
+; DAGISEL64-NEXT:    scratch_store_b32 off, v176, s32 offset:416
+; DAGISEL64-NEXT:    scratch_store_b32 off, v177, s32 offset:420
+; DAGISEL64-NEXT:    scratch_store_b32 off, v178, s32 offset:424
+; DAGISEL64-NEXT:    scratch_store_b32 off, v179, s32 offset:428
+; DAGISEL64-NEXT:    scratch_store_b32 off, v180, s32 offset:432
+; DAGISEL64-NEXT:    scratch_store_b32 off, v181, s32 offset:436
+; DAGISEL64-NEXT:    scratch_store_b32 off, v182, s32 offset:440
+; DAGISEL64-NEXT:    scratch_store_b32 off, v183, s32 offset:444
+; DAGISEL64-NEXT:    scratch_store_b32 off, v192, s32 offset:448
+; DAGISEL64-NEXT:    scratch_store_b32 off, v193, s32 offset:452
+; DAGISEL64-NEXT:    scratch_store_b32 off, v194, s32 offset:456
+; DAGISEL64-NEXT:    scratch_store_b32 off, v195, s32 offset:460
+; DAGISEL64-NEXT:    scratch_store_b32 off, v196, s32 offset:464
+; DAGISEL64-NEXT:    scratch_store_b32 off, v197, s32 offset:468
+; DAGISEL64-NEXT:    scratch_store_b32 off, v198, s32 offset:472
+; DAGISEL64-NEXT:    scratch_store_b32 off, v199, s32 offset:476
+; DAGISEL64-NEXT:    scratch_store_b32 off, v208, s32 offset:480
+; DAGISEL64-NEXT:    scratch_store_b32 off, v209, s32 offset:484
+; DAGISEL64-NEXT:    scratch_store_b32 off, v210, s32 offset:488
+; DAGISEL64-NEXT:    scratch_store_b32 off, v211, s32 offset:492
+; DAGISEL64-NEXT:    scratch_store_b32 off, v212, s32 offset:496
+; DAGISEL64-NEXT:    scratch_store_b32 off, v213, s32 offset:500
+; DAGISEL64-NEXT:    scratch_store_b32 off, v214, s32 offset:504
+; DAGISEL64-NEXT:    scratch_store_b32 off, v215, s32 offset:508
+; DAGISEL64-NEXT:    s_clause 0xf
+; DAGISEL64-NEXT:    scratch_store_b32 off, v224, s32 offset:512
+; DAGISEL64-NEXT:    scratch_store_b32 off, v225, s32 offset:516
+; DAGISEL64-NEXT:    scratch_store_b32 off, v226, s32 offset:520
+; DAGISEL64-NEXT:    scratch_store_b32 off, v227, s32 offset:524
+; DAGISEL64-NEXT:    scratch_store_b32 off, v228, s32 offset:528
+; DAGISEL64-NEXT:    scratch_store_b32 off, v229, s32 offset:532
+; DAGISEL64-NEXT:    scratch_store_b32 off, v230, s32 offset:536
+; DAGISEL64-NEXT:    scratch_store_b32 off, v231, s32 offset:540
+; DAGISEL64-NEXT:    scratch_store_b32 off, v240, s32 offset:544
+; DAGISEL64-NEXT:    scratch_store_b32 off, v241, s32 offset:548
+; DAGISEL64-NEXT:    scratch_store_b32 off, v242, s32 offset:552
+; DAGISEL64-NEXT:    scratch_store_b32 off, v243, s32 offset:556
+; DAGISEL64-NEXT:    scratch_store_b32 off, v244, s32 offset:560
+; DAGISEL64-NEXT:    scratch_store_b32 off, v245, s32 offset:564
+; DAGISEL64-NEXT:    scratch_store_b32 off, v246, s32 offset:568
+; DAGISEL64-NEXT:    scratch_store_b32 off, v247, s32 offset:572
+; DAGISEL64-NEXT:    s_mov_b64 exec, -1
+; DAGISEL64-NEXT:    v_mov_b32_e32 v2, v0
+; DAGISEL64-NEXT:    s_mov_b32 s37, gfx_callee@abs32@hi
+; DAGISEL64-NEXT:    s_mov_b32 s36, gfx_callee@abs32@lo
+; DAGISEL64-NEXT:    v_swap_b32 v0, v1
+; DAGISEL64-NEXT:    s_wait_alu 0xfffe
+; DAGISEL64-NEXT:    s_xor_b64 exec, s[0:1], -1
+; DAGISEL64-NEXT:    s_clause 0x1f
+; DAGISEL64-NEXT:    scratch_load_b32 v0, off, s32
+; DAGISEL64-NEXT:    scratch_load_b32 v1, off, s32 offset:4
+; DAGISEL64-NEXT:    scratch_load_b32 v2, off, s32 offset:8
+; DAGISEL64-NEXT:    scratch_load_b32 v3, off, s32 offset:12
+; DAGISEL64-NEXT:    scratch_load_b32 v4, off, s32 offset:16
+; DAGISEL64-NEXT:    scratch_load_b32 v5, off, s32 offset:20
+; DAGISEL64-NEXT:    scratch_load_b32 v6, off, s32 offset:24
+; DAGISEL64-NEXT:    scratch_load_b32 v7, off, s32 offset:28
+; DAGISEL64-NEXT:    scratch_load_b32 v8, off, s32 offset:32
+; DAGISEL64-NEXT:    scratch_load_b32 v9, off, s32 offset:36
+; DAGISEL64-NEXT:    scratch_load_b32 v10, off, s32 offset:40
+; DAGISEL64-NEXT:    scratch_load_b32 v11, off, s32 offset:44
+; DAGISEL64-NEXT:    scratch_load_b32 v12, off, s32 offset:48
+; DAGISEL64-NEXT:    scratch_load_b32 v13, off, s32 offset:52
+; DAGISEL64-NEXT:    scratch_load_b32 v14, off, s32 offset:56
+; DAGISEL64-NEXT:    scratch_load_b32 v15, off, s32 offset:60
+; DAGISEL64-NEXT:    scratch_load_b32 v16, off, s32 offset:64
+; DAGISEL64-NEXT:    scratch_load_b32 v17, off, s32 offset:68
+; DAGISEL64-NEXT:    scratch_load_b32 v18, off, s32 offset:72
+; DAGISEL64-NEXT:    scratch_load_b32 v19, off, s32 offset:76
+; DAGISEL64-NEXT:    scratch_load_b32 v20, off, s32 offset:80
+; DAGISEL64-NEXT:    scratch_load_b32 v21, off, s32 offset:84
+; DAGISEL64-NEXT:    scratch_load_b32 v22, off, s32 offset:88
+; DAGISEL64-NEXT:    scratch_load_b32 v23, off, s32 offset:92
+; DAGISEL64-NEXT:    scratch_load_b32 v24, off, s32 offset:96
+; DAGISEL64-NEXT:    scratch_load_b32 v25, off, s32 offset:100
+; DAGISEL64-NEXT:    scratch_load_b32 v26, off, s32 offset:104
+; DAGISEL64-NEXT:    scratch_load_b32 v27, off, s32 offset:108
+; DAGISEL64-NEXT:    scratch_load_b32 v28, off, s32 offset:112
+; DAGISEL64-NEXT:    scratch_load_b32 v29, off, s32 offset:116
+; DAGISEL64-NEXT:    scratch_load_b32 v30, off, s32 offset:120
+; DAGISEL64-NEXT:    scratch_load_b32 v31, off, s32 offset:124
+; DAGISEL64-NEXT:    s_clause 0x1f
+; DAGISEL64-NEXT:    scratch_load_b32 v32, off, s32 offset:128
+; DAGISEL64-NEXT:    scratch_load_b32 v33, off, s32 offset:132
+; DAGISEL64-NEXT:    scratch_load_b32 v34, off, s32 offset:136
+; DAGISEL64-NEXT:    scratch_load_b32 v35, off, s32 offset:140
+; DAGISEL64-NEXT:    scratch_load_b32 v36, off, s32 offset:144
+; DAGISEL64-NEXT:    scratch_load_b32 v37, off, s32 offset:148
+; DAGISEL64-NEXT:    scratch_load_b32 v38, off, s32 offset:152
+; DAGISEL64-NEXT:    scratch_load_b32 v39, off, s32 offset:156
+; DAGISEL64-NEXT:    scratch_load_b32 v48, off, s32 offset:160
+; DAGISEL64-NEXT:    scratch_load_b32 v49, off, s32 offset:164
+; DAGISEL64-NEXT:    scratch_load_b32 v50, off, s32 offset:168
+; DAGISEL64-NEXT:    scratch_load_b32 v51, off, s32 offset:172
+; DAGISEL64-NEXT:    scratch_load_b32 v52, off, s32 offset:176
+; DAGISEL64-NEXT:    scratch_load_b32 v53, off, s32 offset:180
+; DAGISEL64-NEXT:    scratch_load_b32 v54, off, s32 offset:184
+; DAGISEL64-NEXT:    scratch_load_b32 v55, off, s32 offset:188
+; DAGISEL64-NEXT:    scratch_load_b32 v64, off, s32 offset:192
+; DAGISEL64-NEXT:    scratch_load_b32 v65, off, s32 offset:196
+; DAGISEL64-NEXT:    scratch_load_b32 v66, off, s32 offset:200
+; DAGISEL64-NEXT:    scratch_load_b32 v67, off, s32 offset:204
+; DAGISEL64-NEXT:    scratch_load_b32 v68, off, s32 offset:208
+; DAGISEL64-NEXT:    scratch_load_b32 v69, off, s32 offset:212
+; DAGISEL64-NEXT:    scratch_load_b32 v70, off, s32 offset:216
+; DAGISEL64-NEXT:    scratch_load_b32 v71, off, s32 offset:220
+; DAGISEL64-NEXT:    scratch_load_b32 v80, off, s32 offset:224
+; DAGISEL64-NEXT:    scratch_load_b32 v81, off, s32 offset:228
+; DAGISEL64-NEXT:    scratch_load_b32 v82, off, s32 offset:232
+; DAGISEL64-NEXT:    scratch_load_b32 v83, off, s32 offset:236
+; DAGISEL64-NEXT:    scratch_load_b32 v84, off, s32 offset:240
+; DAGISEL64-NEXT:    scratch_load_b32 v85, off, s32 offset:244
+; DAGISEL64-NEXT:    scratch_load_b32 v86, off, s32 offset:248
+; DAGISEL64-NEXT:    scratch_load_b32 v87, off, s32 offset:252
+; DAGISEL64-NEXT:    s_clause 0x1f
+; DAGISEL64-NEXT:    scratch_load_b32 v96, off, s32 offset:256
+; DAGISEL64-NEXT:    scratch_load_b32 v97, off, s32 offset:260
+; DAGISEL64-NEXT:    scratch_load_b32 v98, off, s32 offset:264
+; DAGISEL64-NEXT:    scratch_load_b32 v99, off, s32 offset:268
+; DAGISEL64-NEXT:    scratch_load_b32 v100, off, s32 offset:272
+; DAGISEL64-NEXT:    scratch_load_b32 v101, off, s32 offset:276
+; DAGISEL64-NEXT:    scratch_load_b32 v102, off, s32 offset:280
+; DAGISEL64-NEXT:    scratch_load_b32 v103, off, s32 offset:284
+; DAGISEL64-NEXT:    scratch_load_b32 v112, off, s32 offset:288
+; DAGISEL64-NEXT:    scratch_load_b32 v113, off, s32 offset:292
+; DAGISEL64-NEXT:    scratch_load_b32 v114, off, s32 offset:296
+; DAGISEL64-NEXT:    scratch_load_b32 v115, off, s32 offset:300
+; DAGISEL64-NEXT:    scratch_load_b32 v116, off, s32 offset:304
+; DAGISEL64-NEXT:    scratch_load_b32 v117, off, s32 offset:308
+; DAGISEL64-NEXT:    scratch_load_b32 v118, off, s32 offset:312
+; DAGISEL64-NEXT:    scratch_load_b32 v119, off, s32 offset:316
+; DAGISEL64-NEXT:    scratch_load_b32 v128, off, s32 offset:320
+; DAGISEL64-NEXT:    scratch_load_b32 v129, off, s32 offset:324
+; DAGISEL64-NEXT:    scratch_load_b32 v130, off, s32 offset:328
+; DAGISEL64-NEXT:    scratch_load_b32 v131, off, s32 offset:332
+; DAGISEL64-NEXT:    scratch_load_b32 v132, off, s32 offset:336
+; DAGISEL64-NEXT:    scratch_load_b32 v133, off, s32 offset:340
+; DAGISEL64-NEXT:    scratch_load_b32 v134, off, s32 offset:344
+; DAGISEL64-NEXT:    scratch_load_b32 v135, off, s32 offset:348
+; DAGISEL64-NEXT:    scratch_load_b32 v144, off, s32 offset:352
+; DAGISEL64-NEXT:    scratch_load_b32 v145, off, s32 offset:356
+; DAGISEL64-NEXT:    scratch_load_b32 v146, off, s32 offset:360
+; DAGISEL64-NEXT:    scratch_load_b32 v147, off, s32 offset:364
+; DAGISEL64-NEXT:    scratch_load_b32 v148, off, s32 offset:368
+; DAGISEL64-NEXT:    scratch_load_b32 v149, off, s32 offset:372
+; DAGISEL64-NEXT:    scratch_load_b32 v150, off, s32 offset:376
+; DAGISEL64-NEXT:    scratch_load_b32 v151, off, s32 offset:380
+; DAGISEL64-NEXT:    s_clause 0x1f
+; DAGISEL64-NEXT:    scratch_load_b32 v160, off, s32 offset:384
+; DAGISEL64-NEXT:    scratch_load_b32 v161, off, s32 offset:388
+; DAGISEL64-NEXT:    scratch_load_b32 v162, off, s32 offset:392
+; DAGISEL64-NEXT:    scratch_load_b32 v163, off, s32 offset:396
+; DAGISEL64-NEXT:    scratch_load_b32 v164, off, s32 offset:400
+; DAGISEL64-NEXT:    scratch_load_b32 v165, off, s32 offset:404
+; DAGISEL64-NEXT:    scratch_load_b32 v166, off, s32 offset:408
+; DAGISEL64-NEXT:    scratch_load_b32 v167, off, s32 offset:412
+; DAGISEL64-NEXT:    scratch_load_b32 v176, off, s32 offset:416
+; DAGISEL64-NEXT:    scratch_load_b32 v177, off, s32 offset:420
+; DAGISEL64-NEXT:    scratch_load_b32 v178, off, s32 offset:424
+; DAGISEL64-NEXT:    scratch_load_b32 v179, off, s32 offset:428
+; DAGISEL64-NEXT:    scratch_load_b32 v180, off, s32 offset:432
+; DAGISEL64-NEXT:    scratch_load_b32 v181, off, s32 offset:436
+; DAGISEL64-NEXT:    scratch_load_b32 v182, off, s32 offset:440
+; DAGISEL64-NEXT:    scratch_load_b32 v183, off, s32 offset:444
+; DAGISEL64-NEXT:    scratch_load_b32 v192, off, s32 offset:448
+; DAGISEL64-NEXT:    scratch_load_b32 v193, off, s32 offset:452
+; DAGISEL64-NEXT:    scratch_load_b32 v194, off, s32 offset:456
+; DAGISEL64-NEXT:    scratch_load_b32 v195, off, s32 offset:460
+; DAGISEL64-NEXT:    scratch_load_b32 v196, off, s32 offset:464
+; DAGISEL64-NEXT:    scratch_load_b32 v197, off, s32 offset:468
+; DAGISEL64-NEXT:    scratch_load_b32 v198, off, s32 offset:472
+; DAGISEL64-NEXT:    scratch_load_b32 v199, off, s32 offset:476
+; DAGISEL64-NEXT:    scratch_load_b32 v208, off, s32 offset:480
+; DAGISEL64-NEXT:    scratch_load_b32 v209, off, s32 offset:484
+; DAGISEL64-NEXT:    scratch_load_b32 v210, off, s32 offset:488
+; DAGISEL64-NEXT:    scratch_load_b32 v211, off, s32 offset:492
+; DAGISEL64-NEXT:    scratch_load_b32 v212, off, s32 offset:496
+; DAGISEL64-NEXT:    scratch_load_b32 v213, off, s32 offset:500
+; DAGISEL64-NEXT:    scratch_load_b32 v214, off, s32 offset:504
+; DAGISEL64-NEXT:    scratch_load_b32 v215, off, s32 offset:508
+; DAGISEL64-NEXT:    s_clause 0xf
+; DAGISEL64-NEXT:    scratch_load_b32 v224, off, s32 offset:512
+; DAGISEL64-NEXT:    scratch_load_b32 v225, off, s32 offset:516
+; DAGISEL64-NEXT:    scratch_load_b32 v226, off, s32 offset:520
+; DAGISEL64-NEXT:    scratch_load_b32 v227, off, s32 offset:524
+; DAGISEL64-NEXT:    scratch_load_b32 v228, off, s32 offset:528
+; DAGISEL64-NEXT:    scratch_load_b32 v229, off, s32 offset:532
+; DAGISEL64-NEXT:    scratch_load_b32 v230, off, s32 offset:536
+; DAGISEL64-NEXT:    scratch_load_b32 v231, off, s32 offset:540
+; DAGISEL64-NEXT:    scratch_load_b32 v240, off, s32 offset:544
+; DAGISEL64-NEXT:    scratch_load_b32 v241, off, s32 offset:548
+; DAGISEL64-NEXT:    scratch_load_b32 v242, off, s32 offset:552
+; DAGISEL64-NEXT:    scratch_load_b32 v243, off, s32 offset:556
+; DAGISEL64-NEXT:    scratch_load_b32 v244, off, s32 offset:560
+; DAGISEL64-NEXT:    scratch_load_b32 v245, off, s32 offset:564
+; DAGISEL64-NEXT:    scratch_load_b32 v246, off, s32 offset:568
+; DAGISEL64-NEXT:    scratch_load_b32 v247, off, s32 offset:572
+; DAGISEL64-NEXT:    s_mov_b64 exec, s[0:1]
+; DAGISEL64-NEXT:    s_setpc_b64 s[36:37]
+;
+; GISEL64-LABEL: tail_call_gfx_from_whole_wave:
+; GISEL64:       ; %bb.0:
+; GISEL64-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL64-NEXT:    s_wait_expcnt 0x0
+; GISEL64-NEXT:    s_wait_samplecnt 0x0
+; GISEL64-NEXT:    s_wait_bvhcnt 0x0
+; GISEL64-NEXT:    s_wait_kmcnt 0x0
+; GISEL64-NEXT:    s_xor_saveexec_b64 s[0:1], -1
+; GISEL64-NEXT:    s_clause 0x1f
+; GISEL64-NEXT:    scratch_store_b32 off, v0, s32
+; GISEL64-NEXT:    scratch_store_b32 off, v1, s32 offset:4
+; GISEL64-NEXT:    scratch_store_b32 off, v2, s32 offset:8
+; GISEL64-NEXT:    scratch_store_b32 off, v3, s32 offset:12
+; GISEL64-NEXT:    scratch_store_b32 off, v4, s32 offset:16
+; GISEL64-NEXT:    scratch_store_b32 off, v5, s32 offset:20
+; GISEL64-NEXT:    scratch_store_b32 off, v6, s32 offset:24
+; GISEL64-NEXT:    scratch_store_b32 off, v7, s32 offset:28
+; GISEL64-NEXT:    scratch_store_b32 off, v8, s32 offset:32
+; GISEL64-NEXT:    scratch_store_b32 off, v9, s32 offset:36
+; GISEL64-NEXT:    scratch_store_b32 off, v10, s32 offset:40
+; GISEL64-NEXT:    scratch_store_b32 off, v11, s32 offset:44
+; GISEL64-NEXT:    scratch_store_b32 off, v12, s32 offset:48
+; GISEL64-NEXT:    scratch_store_b32 off, v13, s32 offset:52
+; GISEL64-NEXT:    scratch_store_b32 off, v14, s32 offset:56
+; GISEL64-NEXT:    scratch_store_b32 off, v15, s32 offset:60
+; GISEL64-NEXT:    scratch_store_b32 off, v16, s32 offset:64
+; GISEL64-NEXT:    scratch_store_b32 off, v17, s32 offset:68
+; GISEL64-NEXT:    scratch_store_b32 off, v18, s32 offset:72
+; GISEL64-NEXT:    scratch_store_b32 off, v19, s32 offset:76
+; GISEL64-NEXT:    scratch_store_b32 off, v20, s32 offset:80
+; GISEL64-NEXT:    scratch_store_b32 off, v21, s32 offset:84
+; GISEL64-NEXT:    scratch_store_b32 off, v22, s32 offset:88
+; GISEL64-NEXT:    scratch_store_b32 off, v23, s32 offset:92
+; GISEL64-NEXT:    scratch_store_b32 off, v24, s32 offset:96
+; GISEL64-NEXT:    scratch_store_b32 off, v25, s32 offset:100
+; GISEL64-NEXT:    scratch_store_b32 off, v26, s32 offset:104
+; GISEL64-NEXT:    scratch_store_b32 off, v27, s32 offset:108
+; GISEL64-NEXT:    scratch_store_b32 off, v28, s32 offset:112
+; GISEL64-NEXT:    scratch_store_b32 off, v29, s32 offset:116
+; GISEL64-NEXT:    scratch_store_b32 off, v30, s32 offset:120
+; GISEL64-NEXT:    scratch_store_b32 off, v31, s32 offset:124
+; GISEL64-NEXT:    s_clause 0x1f
+; GISEL64-NEXT:    scratch_store_b32 off, v32, s32 offset:128
+; GISEL64-NEXT:    scratch_store_b32 off, v33, s32 offset:132
+; GISEL64-NEXT:    scratch_store_b32 off, v34, s32 offset:136
+; GISEL64-NEXT:    scratch_store_b32 off, v35, s32 offset:140
+; GISEL64-NEXT:    scratch_store_b32 off, v36, s32 offset:144
+; GISEL64-NEXT:    scratch_store_b32 off, v37, s32 offset:148
+; GISEL64-NEXT:    scratch_store_b32 off, v38, s32 offset:152
+; GISEL64-NEXT:    scratch_store_b32 off, v39, s32 offset:156
+; GISEL64-NEXT:    scratch_store_b32 off, v48, s32 offset:160
+; GISEL64-NEXT:    scratch_store_b32 off, v49, s32 offset:164
+; GISEL64-NEXT:    scratch_store_b32 off, v50, s32 offset:168
+; GISEL64-NEXT:    scratch_store_b32 off, v51, s32 offset:172
+; GISEL64-NEXT:    scratch_store_b32 off, v52, s32 offset:176
+; GISEL64-NEXT:    scratch_store_b32 off, v53, s32 offset:180
+; GISEL64-NEXT:    scratch_store_b32 off, v54, s32 offset:184
+; GISEL64-NEXT:    scratch_store_b32 off, v55, s32 offset:188
+; GISEL64-NEXT:    scratch_store_b32 off, v64, s32 offset:192
+; GISEL64-NEXT:    scratch_store_b32 off, v65, s32 offset:196
+; GISEL64-NEXT:    scratch_store_b32 off, v66, s32 offset:200
+; GISEL64-NEXT:    scratch_store_b32 off, v67, s32 offset:204
+; GISEL64-NEXT:    scratch_store_b32 off, v68, s32 offset:208
+; GISEL64-NEXT:    scratch_store_b32 off, v69, s32 offset:212
+; GISEL64-NEXT:    scratch_store_b32 off, v70, s32 offset:216
+; GISEL64-NEXT:    scratch_store_b32 off, v71, s32 offset:220
+; GISEL64-NEXT:    scratch_store_b32 off, v80, s32 offset:224
+; GISEL64-NEXT:    scratch_store_b32 off, v81, s32 offset:228
+; GISEL64-NEXT:    scratch_store_b32 off, v82, s32 offset:232
+; GISEL64-NEXT:    scratch_store_b32 off, v83, s32 offset:236
+; GISEL64-NEXT:    scratch_store_b32 off, v84, s32 offset:240
+; GISEL64-NEXT:    scratch_store_b32 off, v85, s32 offset:244
+; GISEL64-NEXT:    scratch_store_b32 off, v86, s32 offset:248
+; GISEL64-NEXT:    scratch_store_b32 off, v87, s32 offset:252
+; GISEL64-NEXT:    s_clause 0x1f
+; GISEL64-NEXT:    scratch_store_b32 off, v96, s32 offset:256
+; GISEL64-NEXT:    scratch_store_b32 off, v97, s32 offset:260
+; GISEL64-NEXT:    scratch_store_b32 off, v98, s32 offset:264
+; GISEL64-NEXT:    scratch_store_b32 off, v99, s32 offset:268
+; GISEL64-NEXT:    scratch_store_b32 off, v100, s32 offset:272
+; GISEL64-NEXT:    scratch_store_b32 off, v101, s32 offset:276
+; GISEL64-NEXT:    scratch_store_b32 off, v102, s32 offset:280
+; GISEL64-NEXT:    scratch_store_b32 off, v103, s32 offset:284
+; GISEL64-NEXT:    scratch_store_b32 off, v112, s32 offset:288
+; GISEL64-NEXT:    scratch_store_b32 off, v113, s32 offset:292
+; GISEL64-NEXT:    scratch_store_b32 off, v114, s32 offset:296
+; GISEL64-NEXT:    scratch_store_b32 off, v115, s32 offset:300
+; GISEL64-NEXT:    scratch_store_b32 off, v116, s32 offset:304
+; GISEL64-NEXT:    scratch_store_b32 off, v117, s32 offset:308
+; GISEL64-NEXT:    scratch_store_b32 off, v118, s32 offset:312
+; GISEL64-NEXT:    scratch_store_b32 off, v119, s32 offset:316
+; GISEL64-NEXT:    scratch_store_b32 off, v128, s32 offset:320
+; GISEL64-NEXT:    scratch_store_b32 off, v129, s32 offset:324
+; GISEL64-NEXT:    scratch_store_b32 off, v130, s32 offset:328
+; GISEL64-NEXT:    scratch_store_b32 off, v131, s32 offset:332
+; GISEL64-NEXT:    scratch_store_b32 off, v132, s32 offset:336
+; GISEL64-NEXT:    scratch_store_b32 off, v133, s32 offset:340
+; GISEL64-NEXT:    scratch_store_b32 off, v134, s32 offset:344
+; GISEL64-NEXT:    scratch_store_b32 off, v135, s32 offset:348
+; GISEL64-NEXT:    scratch_store_b32 off, v144, s32 offset:352
+; GISEL64-NEXT:    scratch_store_b32 off, v145, s32 offset:356
+; GISEL64-NEXT:    scratch_store_b32 off, v146, s32 offset:360
+; GISEL64-NEXT:    scratch_store_b32 off, v147, s32 offset:364
+; GISEL64-NEXT:    scratch_store_b32 off, v148, s32 offset:368
+; GISEL64-NEXT:    scratch_store_b32 off, v149, s32 offset:372
+; GISEL64-NEXT:    scratch_store_b32 off, v150, s32 offset:376
+; GISEL64-NEXT:    scratch_store_b32 off, v151, s32 offset:380
+; GISEL64-NEXT:    s_clause 0x1f
+; GISEL64-NEXT:    scratch_store_b32 off, v160, s32 offset:384
+; GISEL64-NEXT:    scratch_store_b32 off, v161, s32 offset:388
+; GISEL64-NEXT:    scratch_store_b32 off, v162, s32 offset:392
+; GISEL64-NEXT:    scratch_store_b32 off, v163, s32 offset:396
+; GISEL64-NEXT:    scratch_store_b32 off, v164, s32 offset:400
+; GISEL64-NEXT:    scratch_store_b32 off, v165, s32 offset:404
+; GISEL64-NEXT:    scratch_store_b32 off, v166, s32 offset:408
+; GISEL64-NEXT:    scratch_store_b32 off, v167, s32 offset:412
+; GISEL64-NEXT:    scratch_store_b32 off, v176, s32 offset:416
+; GISEL64-NEXT:    scratch_store_b32 off, v177, s32 offset:420
+; GISEL64-NEXT:    scratch_store_b32 off, v178, s32 offset:424
+; GISEL64-NEXT:    scratch_store_b32 off, v179, s32 offset:428
+; GISEL64-NEXT:    scratch_store_b32 off, v180, s32 offset:432
+; GISEL64-NEXT:    scratch_store_b32 off, v181, s32 offset:436
+; GISEL64-NEXT:    scratch_store_b32 off, v182, s32 offset:440
+; GISEL64-NEXT:    scratch_store_b32 off, v183, s32 offset:444
+; GISEL64-NEXT:    scratch_store_b32 off, v192, s32 offset:448
+; GISEL64-NEXT:    scratch_store_b32 off, v193, s32 offset:452
+; GISEL64-NEXT:    scratch_store_b32 off, v194, s32 offset:456
+; GISEL64-NEXT:    scratch_store_b32 off, v195, s32 offset:460
+; GISEL64-NEXT:    scratch_store_b32 off, v196, s32 offset:464
+; GISEL64-NEXT:    scratch_store_b32 off, v197, s32 offset:468
+; GISEL64-NEXT:    scratch_store_b32 off, v198, s32 offset:472
+; GISEL64-NEXT:    scratch_store_b32 off, v199, s32 offset:476
+; GISEL64-NEXT:    scratch_store_b32 off, v208, s32 offset:480
+; GISEL64-NEXT:    scratch_store_b32 off, v209, s32 offset:484
+; GISEL64-NEXT:    scratch_store_b32 off, v210, s32 offset:488
+; GISEL64-NEXT:    scratch_store_b32 off, v211, s32 offset:492
+; GISEL64-NEXT:    scratch_store_b32 off, v212, s32 offset:496
+; GISEL64-NEXT:    scratch_store_b32 off, v213, s32 offset:500
+; GISEL64-NEXT:    scratch_store_b32 off, v214, s32 offset:504
+; GISEL64-NEXT:    scratch_store_b32 off, v215, s32 offset:508
+; GISEL64-NEXT:    s_clause 0xf
+; GISEL64-NEXT:    scratch_store_b32 off, v224, s32 offset:512
+; GISEL64-NEXT:    scratch_store_b32 off, v225, s32 offset:516
+; GISEL64-NEXT:    scratch_store_b32 off, v226, s32 offset:520
+; GISEL64-NEXT:    scratch_store_b32 off, v227, s32 offset:524
+; GISEL64-NEXT:    scratch_store_b32 off, v228, s32 offset:528
+; GISEL64-NEXT:    scratch_store_b32 off, v229, s32 offset:532
+; GISEL64-NEXT:    scratch_store_b32 off, v230, s32 offset:536
+; GISEL64-NEXT:    scratch_store_b32 off, v231, s32 offset:540
+; GISEL64-NEXT:    scratch_store_b32 off, v240, s32 offset:544
+; GISEL64-NEXT:    scratch_store_b32 off, v241, s32 offset:548
+; GISEL64-NEXT:    scratch_store_b32 off, v242, s32 offset:552
+; GISEL64-NEXT:    scratch_store_b32 off, v243, s32 offset:556
+; GISEL64-NEXT:    scratch_store_b32 off, v244, s32 offset:560
+; GISEL64-NEXT:    scratch_store_b32 off, v245, s32 offset:564
+; GISEL64-NEXT:    scratch_store_b32 off, v246, s32 offset:568
+; GISEL64-NEXT:    scratch_store_b32 off, v247, s32 offset:572
+; GISEL64-NEXT:    s_mov_b64 exec, -1
+; GISEL64-NEXT:    v_mov_b32_e32 v2, v0
+; GISEL64-NEXT:    v_swap_b32 v0, v1
+; GISEL64-NEXT:    s_mov_b32 s36, gfx_callee@abs32@lo
+; GISEL64-NEXT:    s_mov_b32 s37, gfx_callee@abs32@hi
+; GISEL64-NEXT:    s_wait_alu 0xfffe
+; GISEL64-NEXT:    s_xor_b64 exec, s[0:1], -1
+; GISEL64-NEXT:    s_clause 0x1f
+; GISEL64-NEXT:    scratch_load_b32 v0, off, s32
+; GISEL64-NEXT:    scratch_load_b32 v1, off, s32 offset:4
+; GISEL64-NEXT:    scratch_load_b32 v2, off, s32 offset:8
+; GISEL64-NEXT:    scratch_load_b32 v3, off, s32 offset:12
+; GISEL64-NEXT:    scratch_load_b32 v4, off, s32 offset:16
+; GISEL64-NEXT:    scratch_load_b32 v5, off, s32 offset:20
+; GISEL64-NEXT:    scratch_load_b32 v6, off, s32 offset:24
+; GISEL64-NEXT:    scratch_load_b32 v7, off, s32 offset:28
+; GISEL64-NEXT:    scratch_load_b32 v8, off, s32 offset:32
+; GISEL64-NEXT:    scratch_load_b32 v9, off, s32 offset:36
+; GISEL64-NEXT:    scratch_load_b32 v10, off, s32 offset:40
+; GISEL64-NEXT:    scratch_load_b32 v11, off, s32 offset:44
+; GISEL64-NEXT:    scratch_load_b32 v12, off, s32 offset:48
+; GISEL64-NEXT:    scratch_load_b32 v13, off, s32 offset:52
+; GISEL64-NEXT:    scratch_load_b32 v14, off, s32 offset:56
+; GISEL64-NEXT:    scratch_load_b32 v15, off, s32 offset:60
+; GISEL64-NEXT:    scratch_load_b32 v16, off, s32 offset:64
+; GISEL64-NEXT:    scratch_load_b32 v17, off, s32 offset:68
+; GISEL64-NEXT:    scratch_load_b32 v18, off, s32 offset:72
+; GISEL64-NEXT:    scratch_load_b32 v19, off, s32 offset:76
+; GISEL64-NEXT:    scratch_load_b32 v20, off, s32 offset:80
+; GISEL64-NEXT:    scratch_load_b32 v21, off, s32 offset:84
+; GISEL64-NEXT:    scratch_load_b32 v22, off, s32 offset:88
+; GISEL64-NEXT:    scratch_load_b32 v23, off, s32 offset:92
+; GISEL64-NEXT:    scratch_load_b32 v24, off, s32 offset:96
+; GISEL64-NEXT:    scratch_load_b32 v25, off, s32 offset:100
+; GISEL64-NEXT:    scratch_load_b32 v26, off, s32 offset:104
+; GISEL64-NEXT:    scratch_load_b32 v27, off, s32 offset:108
+; GISEL64-NEXT:    scratch_load_b32 v28, off, s32 offset:112
+; GISEL64-NEXT:    scratch_load_b32 v29, off, s32 offset:116
+; GISEL64-NEXT:    scratch_load_b32 v30, off, s32 offset:120
+; GISEL64-NEXT:    scratch_load_b32 v31, off, s32 offset:124
+; GISEL64-NEXT:    s_clause 0x1f
+; GISEL64-NEXT:    scratch_load_b32 v32, off, s32 offset:128
+; GISEL64-NEXT:    scratch_load_b32 v33, off, s32 offset:132
+; GISEL64-NEXT:    scratch_load_b32 v34, off, s32 offset:136
+; GISEL64-NEXT:    scratch_load_b32 v35, off, s32 offset:140
+; GISEL64-NEXT:    scratch_load_b32 v36, off, s32 offset:144
+; GISEL64-NEXT:    scratch_load_b32 v37, off, s32 offset:148
+; GISEL64-NEXT:    scratch_load_b32 v38, off, s32 offset:152
+; GISEL64-NEXT:    scratch_load_b32 v39, off, s32 offset:156
+; GISEL64-NEXT:    scratch_load_b32 v48, off, s32 offset:160
+; GISEL64-NEXT:    scratch_load_b32 v49, off, s32 offset:164
+; GISEL64-NEXT:    scratch_load_b32 v50, off, s32 offset:168
+; GISEL64-NEXT:    scratch_load_b32 v51, off, s32 offset:172
+; GISEL64-NEXT:    scratch_load_b32 v52, off, s32 offset:176
+; GISEL64-NEXT:    scratch_load_b32 v53, off, s32 offset:180
+; GISEL64-NEXT:    scratch_load_b32 v54, off, s32 offset:184
+; GISEL64-NEXT:    scratch_load_b32 v55, off, s32 offset:188
+; GISEL64-NEXT:    scratch_load_b32 v64, off, s32 offset:192
+; GISEL64-NEXT:    scratch_load_b32 v65, off, s32 offset:196
+; GISEL64-NEXT:    scratch_load_b32 v66, off, s32 offset:200
+; GISEL64-NEXT:    scratch_load_b32 v67, off, s32 offset:204
+; GISEL64-NEXT:    scratch_load_b32 v68, off, s32 offset:208
+; GISEL64-NEXT:    scratch_load_b32 v69, off, s32 offset:212
+; GISEL64-NEXT:    scratch_load_b32 v70, off, s32 offset:216
+; GISEL64-NEXT:    scratch_load_b32 v71, off, s32 offset:220
+; GISEL64-NEXT:    scratch_load_b32 v80, off, s32 offset:224
+; GISEL64-NEXT:    scratch_load_b32 v81, off, s32 offset:228
+; GISEL64-NEXT:    scratch_load_b32 v82, off, s32 offset:232
+; GISEL64-NEXT:    scratch_load_b32 v83, off, s32 offset:236
+; GISEL64-NEXT:    scratch_load_b32 v84, off, s32 offset:240
+; GISEL64-NEXT:    scratch_load_b32 v85, off, s32 offset:244
+; GISEL64-NEXT:    scratch_load_b32 v86, off, s32 offset:248
+; GISEL64-NEXT:    scratch_load_b32 v87, off, s32 offset:252
+; GISEL64-NEXT:    s_clause 0x1f
+; GISEL64-NEXT:    scratch_load_b32 v96, off, s32 offset:256
+; GISEL64-NEXT:    scratch_load_b32 v97, off, s32 offset:260
+; GISEL64-NEXT:    scratch_load_b32 v98, off, s32 offset:264
+; GISEL64-NEXT:    scratch_load_b32 v99, off, s32 offset:268
+; GISEL64-NEXT:    scratch_load_b32 v100, off, s32 offset:272
+; GISEL64-NEXT:    scratch_load_b32 v101, off, s32 offset:276
+; GISEL64-NEXT:    scratch_load_b32 v102, off, s32 offset:280
+; GISEL64-NEXT:    scratch_load_b32 v103, off, s32 offset:284
+; GISEL64-NEXT:    scratch_load_b32 v112, off, s32 offset:288
+; GISEL64-NEXT:    scratch_load_b32 v113, off, s32 offset:292
+; GISEL64-NEXT:    scratch_load_b32 v114, off, s32 offset:296
+; GISEL64-NEXT:    scratch_load_b32 v115, off, s32 offset:300
+; GISEL64-NEXT:    scratch_load_b32 v116, off, s32 offset:304
+; GISEL64-NEXT:    scratch_load_b32 v117, off, s32 offset:308
+; GISEL64-NEXT:    scratch_load_b32 v118, off, s32 offset:312
+; GISEL64-NEXT:    scratch_load_b32 v119, off, s32 offset:316
+; GISEL64-NEXT:    scratch_load_b32 v128, off, s32 offset:320
+; GISEL64-NEXT:    scratch_load_b32 v129, off, s32 offset:324
+; GISEL64-NEXT:    scratch_load_b32 v130, off, s32 offset:328
+; GISEL64-NEXT:    scratch_load_b32 v131, off, s32 offset:332
+; GISEL64-NEXT:    scratch_load_b32 v132, off, s32 offset:336
+; GISEL64-NEXT:    scratch_load_b32 v133, off, s32 offset:340
+; GISEL64-NEXT:    scratch_load_b32 v134, off, s32 offset:344
+; GISEL64-NEXT:    scratch_load_b32 v135, off, s32 offset:348
+; GISEL64-NEXT:    scratch_load_b32 v144, off, s32 offset:352
+; GISEL64-NEXT:    scratch_load_b32 v145, off, s32 offset:356
+; GISEL64-NEXT:    scratch_load_b32 v146, off, s32 offset:360
+; GISEL64-NEXT:    scratch_load_b32 v147, off, s32 offset:364
+; GISEL64-NEXT:    scratch_load_b32 v148, off, s32 offset:368
+; GISEL64-NEXT:    scratch_load_b32 v149, off, s32 offset:372
+; GISEL64-NEXT:    scratch_load_b32 v150, off, s32 offset:376
+; GISEL64-NEXT:    scratch_load_b32 v151, off, s32 offset:380
+; GISEL64-NEXT:    s_clause 0x1f
+; GISEL64-NEXT:    scratch_load_b32 v160, off, s32 offset:384
+; GISEL64-NEXT:    scratch_load_b32 v161, off, s32 offset:388
+; GISEL64-NEXT:    scratch_load_b32 v162, off, s32 offset:392
+; GISEL64-NEXT:    scratch_load_b32 v163, off, s32 offset:396
+; GISEL64-NEXT:    scratch_load_b32 v164, off, s32 offset:400
+; GISEL64-NEXT:    scratch_load_b32 v165, off, s32 offset:404
+; GISEL64-NEXT:    scratch_load_b32 v166, off, s32 offset:408
+; GISEL64-NEXT:    scratch_load_b32 v167, off, s32 offset:412
+; GISEL64-NEXT:    scratch_load_b32 v176, off, s32 offset:416
+; GISEL64-NEXT:    scratch_load_b32 v177, off, s32 offset:420
+; GISEL64-NEXT:    scratch_load_b32 v178, off, s32 offset:424
+; GISEL64-NEXT:    scratch_load_b32 v179, off, s32 offset:428
+; GISEL64-NEXT:    scratch_load_b32 v180, off, s32 offset:432
+; GISEL64-NEXT:    scratch_load_b32 v181, off, s32 offset:436
+; GISEL64-NEXT:    scratch_load_b32 v182, off, s32 offset:440
+; GISEL64-NEXT:    scratch_load_b32 v183, off, s32 offset:444
+; GISEL64-NEXT:    scratch_load_b32 v192, off, s32 offset:448
+; GISEL64-NEXT:    scratch_load_b32 v193, off, s32 offset:452
+; GISEL64-NEXT:    scratch_load_b32 v194, off, s32 offset:456
+; GISEL64-NEXT:    scratch_load_b32 v195, off, s32 offset:460
+; GISEL64-NEXT:    scratch_load_b32 v196, off, s32 offset:464
+; GISEL64-NEXT:    scratch_load_b32 v197, off, s32 offset:468
+; GISEL64-NEXT:    scratch_load_b32 v198, off, s32 offset:472
+; GISEL64-NEXT:    scratch_load_b32 v199, off, s32 offset:476
+; GISEL64-NEXT:    scratch_load_b32 v208, off, s32 offset:480
+; GISEL64-NEXT:    scratch_load_b32 v209, off, s32 offset:484
+; GISEL64-NEXT:    scratch_load_b32 v210, off, s32 offset:488
+; GISEL64-NEXT:    scratch_load_b32 v211, off, s32 offset:492
+; GISEL64-NEXT:    scratch_load_b32 v212, off, s32 offset:496
+; GISEL64-NEXT:    scratch_load_b32 v213, off, s32 offset:500
+; GISEL64-NEXT:    scratch_load_b32 v214, off, s32 offset:504
+; GISEL64-NEXT:    scratch_load_b32 v215, off, s32 offset:508
+; GISEL64-NEXT:    s_clause 0xf
+; GISEL64-NEXT:    scratch_load_b32 v224, off, s32 offset:512
+; GISEL64-NEXT:    scratch_load_b32 v225, off, s32 offset:516
+; GISEL64-NEXT:    scratch_load_b32 v226, off, s32 offset:520
+; GISEL64-NEXT:    scratch_load_b32 v227, off, s32 offset:524
+; GISEL64-NEXT:    scratch_load_b32 v228, off, s32 offset:528
+; GISEL64-NEXT:    scratch_load_b32 v229, off, s32 offset:532
+; GISEL64-NEXT:    scratch_load_b32 v230, off, s32 offset:536
+; GISEL64-NEXT:    scratch_load_b32 v231, off, s32 offset:540
+; GISEL64-NEXT:    scratch_load_b32 v240, off, s32 offset:544
+; GISEL64-NEXT:    scratch_load_b32 v241, off, s32 offset:548
+; GISEL64-NEXT:    scratch_load_b32 v242, off, s32 offset:552
+; GISEL64-NEXT:    scratch_load_b32 v243, off, s32 offset:556
+; GISEL64-NEXT:    scratch_load_b32 v244, off, s32 offset:560
+; GISEL64-NEXT:    scratch_load_b32 v245, off, s32 offset:564
+; GISEL64-NEXT:    scratch_load_b32 v246, off, s32 offset:568
+; GISEL64-NEXT:    scratch_load_b32 v247, off, s32 offset:572
+; GISEL64-NEXT:    s_mov_b64 exec, s[0:1]
+; GISEL64-NEXT:    s_setpc_b64 s[36:37]
+  %ret = tail call amdgpu_gfx <2 x half>(<2 x half>, <2 x half>) @gfx_callee(<2 x half> %y, <2 x half> %x) convergent
+  ret <2 x half> %ret
+}
+
 declare amdgpu_gfx_whole_wave float @callee(i1 %active, <8 x float> %x)
 
 define amdgpu_cs void @call_from_entry(<8 x float> %x, ptr %p) {
