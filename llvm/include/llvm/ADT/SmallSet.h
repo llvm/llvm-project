@@ -269,7 +269,7 @@ private:
 /// If this set is of pointer values, transparently switch over to using
 /// SmallPtrSet for performance.
 template <typename PointeeType, unsigned N>
-class SmallSet<PointeeType*, N> : public SmallPtrSet<PointeeType*, N> {};
+class SmallSet<PointeeType *, N> : public SmallPtrSet<PointeeType *, N> {};
 
 /// Equality comparison for SmallSet.
 ///

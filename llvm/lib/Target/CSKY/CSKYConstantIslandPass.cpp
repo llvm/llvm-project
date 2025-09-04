@@ -116,7 +116,7 @@ class CSKYConstantIslands : public MachineFunctionPass {
 
   /// NewWaterList - The subset of WaterList that was created since the
   /// previous iteration by inserting unconditional branches.
-  SmallSet<MachineBasicBlock *, 4> NewWaterList;
+  SmallPtrSet<MachineBasicBlock *, 4> NewWaterList;
 
   using water_iterator = std::vector<MachineBasicBlock *>::iterator;
 

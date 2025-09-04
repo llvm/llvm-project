@@ -153,6 +153,10 @@ public:
   ActOnFinishRootSignatureDecl(SourceLocation Loc, IdentifierInfo *DeclIdent,
                                ArrayRef<hlsl::RootSignatureElement> Elements);
 
+  void SetRootSignatureOverride(IdentifierInfo *DeclIdent) {
+    RootSigOverrideIdent = DeclIdent;
+  }
+
   // Returns true if any RootSignatureElement is invalid and a diagnostic was
   // produced
   bool
@@ -221,6 +225,8 @@ private:
 
   uint32_t ImplicitBindingNextOrderID = 0;
 
+  IdentifierInfo *RootSigOverrideIdent = nullptr;
+
 private:
   void collectResourceBindingsOnVarDecl(VarDecl *D);
   void collectResourceBindingsOnUserRecordDecl(const VarDecl *VD,
@@ -229,10 +235,17 @@ private:
 
   void diagnoseAvailabilityViolations(TranslationUnitDecl *TU);
 
-  bool initGlobalResourceDecl(VarDecl *VD);
   uint32_t getNextImplicitBindingOrderID() {
     return ImplicitBindingNextOrderID++;
   }
+
+  bool initGlobalResourceDecl(VarDecl *VD);
+  bool initGlobalResourceArrayDecl(VarDecl *VD);
+  void createResourceRecordCtorArgs(const Type *ResourceTy, StringRef VarName,
+                                    HLSLResourceBindingAttr *RBA,
+                                    HLSLVkBindingAttr *VkBinding,
+                                    uint32_t ArrayIndex,
+                                    llvm::SmallVectorImpl<Expr *> &Args);
 };
 
 } // namespace clang
