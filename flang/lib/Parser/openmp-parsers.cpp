@@ -1281,6 +1281,16 @@ static bool IsFortranBlockConstruct(const ExecutionPartConstruct &epc) {
   }
 }
 
+static bool IsStandaloneOrdered(const OmpDirectiveSpecification &dirSpec) {
+  // An ORDERED construct is standalone if it has DOACROSS or DEPEND clause.
+  return dirSpec.DirId() == llvm::omp::Directive::OMPD_ordered &&
+      llvm::any_of(dirSpec.Clauses().v, [](const OmpClause &clause) {
+        llvm::omp::Clause id{clause.Id()};
+        return id == llvm::omp::Clause::OMPC_depend ||
+            id == llvm::omp::Clause::OMPC_doacross;
+      });
+}
+
 struct StrictlyStructuredBlockParser {
   using resultType = Block;
 
@@ -1464,6 +1474,9 @@ struct OmpBlockConstructParser {
 
   std::optional<resultType> Parse(ParseState &state) const {
     if (auto &&begin{OmpBeginDirectiveParser(dir_).Parse(state)}) {
+      if (IsStandaloneOrdered(*begin)) {
+        return std::nullopt;
+      }
       if (auto &&body{attempt(StrictlyStructuredBlockParser{}).Parse(state)}) {
         // Try strictly-structured block with an optional end-directive
         auto end{maybe(OmpEndDirectiveParser{dir_}).Parse(state)};
@@ -1475,17 +1488,6 @@ struct OmpBlockConstructParser {
                      attempt(LooselyStructuredBlockParser{}).Parse(state)}) {
         // Try loosely-structured block with a mandatory end-directive.
         auto end{maybe(OmpEndDirectiveParser{dir_}).Parse(state)};
-        // Dereference outer optional (maybe() always succeeds) and look at the
-        // inner optional.
-        bool endPresent{end->has_value()};
-
-        // ORDERED is special. We do need to return failure here so that the
-        // standalone ORDERED construct can be distinguished from the block
-        // associated construct.
-        if (!endPresent && dir_ == llvm::omp::Directive::OMPD_ordered) {
-          return std::nullopt;
-        }
-
         // Delay the error for a missing end-directive until semantics so that
         // we have better control over the output.
         return OmpBlockConstruct{OmpBeginDirective(std::move(*begin)),
@@ -1642,7 +1644,6 @@ TYPE_PARSER(sourced( //
 static bool IsSimpleStandalone(const OmpDirectiveName &name) {
   switch (name.v) {
   case llvm::omp::Directive::OMPD_barrier:
-  case llvm::omp::Directive::OMPD_ordered:
   case llvm::omp::Directive::OMPD_scan:
   case llvm::omp::Directive::OMPD_target_enter_data:
   case llvm::omp::Directive::OMPD_target_exit_data:
@@ -1658,7 +1659,9 @@ static bool IsSimpleStandalone(const OmpDirectiveName &name) {
 TYPE_PARSER(sourced( //
     construct<OpenMPSimpleStandaloneConstruct>(
         predicated(OmpDirectiveNameParser{}, IsSimpleStandalone) >=
-        Parser<OmpDirectiveSpecification>{})))
+        Parser<OmpDirectiveSpecification>{}) ||
+    construct<OpenMPSimpleStandaloneConstruct>(
+        predicated(Parser<OmpDirectiveSpecification>{}, IsStandaloneOrdered))))
 
 TYPE_PARSER(sourced( //
     construct<OpenMPFlushConstruct>(
