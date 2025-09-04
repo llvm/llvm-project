@@ -145,6 +145,7 @@ enum NodeType : unsigned {
   VREPLVEI,
   VREPLGR2VR,
   XVPERMI,
+  XVPERM,
 
   // Extended vector element extraction
   VPICK_SEXT_ELT,
@@ -395,6 +396,7 @@ private:
   SDValue lowerFP_TO_BF16(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBF16_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECREDUCE_ADD(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;

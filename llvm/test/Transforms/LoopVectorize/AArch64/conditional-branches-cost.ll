@@ -1339,7 +1339,7 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; PRED-NEXT:    [[TMP19:%.*]] = udiv <vscale x 16 x i8> [[TMP17]], [[TMP18]]
 ; PRED-NEXT:    [[TMP20:%.*]] = icmp ugt <vscale x 16 x i8> [[TMP19]], splat (i8 1)
 ; PRED-NEXT:    [[TMP21:%.*]] = select <vscale x 16 x i1> [[TMP20]], <vscale x 16 x i32> zeroinitializer, <vscale x 16 x i32> splat (i32 255)
-; PRED-NEXT:    [[PREDPHI:%.*]] = select <vscale x 16 x i1> [[TMP16]], <vscale x 16 x i32> [[TMP21]], <vscale x 16 x i32> zeroinitializer
+; PRED-NEXT:    [[PREDPHI:%.*]] = select <vscale x 16 x i1> [[TMP15]], <vscale x 16 x i32> [[TMP21]], <vscale x 16 x i32> zeroinitializer
 ; PRED-NEXT:    [[TMP22:%.*]] = zext <vscale x 16 x i8> [[WIDE_MASKED_LOAD]] to <vscale x 16 x i32>
 ; PRED-NEXT:    [[TMP23:%.*]] = sub <vscale x 16 x i32> [[PREDPHI]], [[TMP22]]
 ; PRED-NEXT:    [[TMP24:%.*]] = sitofp <vscale x 16 x i32> [[TMP23]] to <vscale x 16 x float>
