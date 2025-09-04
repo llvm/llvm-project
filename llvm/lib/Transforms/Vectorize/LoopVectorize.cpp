@@ -3702,6 +3702,9 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
 
 bool LoopVectorizationCostModel::shouldConsiderRegPressureForVF(
     ElementCount VF) {
+  if (TTI.shouldConsiderVectorizationRegPressure())
+    return true;
+
   if (!useMaxBandwidth(VF.isScalable()
                            ? TargetTransformInfo::RGK_ScalableVector
                            : TargetTransformInfo::RGK_FixedWidthVector))
