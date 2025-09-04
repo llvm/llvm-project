@@ -235,10 +235,13 @@ defm skip_symbols
          "be repeated to read symbols from many files">,
       MetaVarName<"filename">;
 
+defm dump_offload_bundle : Eq<"dump-offload-bundle", "Dump the contents specified by URI">;
+
 defm dump_section
     : Eq<"dump-section",
          "Dump contents of section named <section> into file <file>">,
       MetaVarName<"section=file">;
+
 defm prefix_symbols
     : Eq<"prefix-symbols", "Add <prefix> to the start of every symbol name">,
       MetaVarName<"prefix">;
