@@ -501,46 +501,6 @@ static CharUnits getArrayElementAlign(CharUnits arrayAlign, llvm::Value *idx,
   return arrayAlign.alignmentOfArrayElement(eltSize);
 }
 
-[[maybe_unused]]
-static void EmitHLSLCBufferArrayCopy(CodeGenFunction &CGF, Address DestVal,
-                                     QualType DestTy, Address SrcVal,
-                                     QualType SrcTy, SourceLocation Loc) {
-  auto *SrcArrTy = cast<ConstantArrayType>(SrcTy);
-
-  // TODO: This is wrong...
-  llvm::IntegerType *IdxTy = llvm::IntegerType::get(CGF.getLLVMContext(), 32);
-
-  QualType ElemTy = SrcArrTy->getElementType();
-  CharUnits RowAlignedSize =
-      CGF.getContext().getTypeSizeInChars(ElemTy).alignTo(
-          CharUnits::fromQuantity(32));
-
-  uint64_t SrcSize = SrcArrTy->getZExtSize();
-  uint64_t DestSize = cast<ConstantArrayType>(DestTy)->getZExtSize();
-  assert(SrcSize == DestSize && "Cannot copy arrays of mismatches size");
-
-  for (uint64_t I = 0; I != SrcSize; ++I) {
-    llvm::ConstantInt *Idx = llvm::ConstantInt::get(IdxTy, I);
-
-    llvm::Value *RowAlignedSizeVal =
-        llvm::ConstantInt::get(IdxTy, RowAlignedSize.getQuantity());
-    llvm::Value *ScaledIdx = CGF.Builder.CreateMul(Idx, RowAlignedSizeVal);
-    CharUnits SrcAlign =
-      getArrayElementAlign(SrcVal.getAlignment(), Idx, RowAlignedSize);
-    Address SrcGEP =
-        CGF.Builder.CreateInBoundsGEP(SrcVal, ScaledIdx, CGF.Int8Ty, SrcAlign);
-
-    CharUnits DestAlign = CGF.getContext().getTypeAlignInChars(DestTy);
-    Address DestGEP = CGF.Builder.CreateInBoundsGEP(
-        DestVal, Idx, CGF.ConvertTypeForMem(DestTy), DestAlign);
-
-    llvm::Value *Load = CGF.Builder.CreateLoad(SrcGEP, "load");
-    //llvm::Value *Cast = CGF.EmitScalarConversion(Load, SrcTy, DestTy, Loc);
-
-    CGF.Builder.CreateStore(Load, DestGEP);
-  }
-}
-
 static void EmitHLSLAggregateSplatCast(CodeGenFunction &CGF, Address DestVal,
                                        QualType DestTy, llvm::Value *SrcVal,
                                        QualType SrcTy, SourceLocation Loc) {
@@ -1035,18 +995,7 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
     [[fallthrough]];
 
   case CK_HLSLArrayRValue:
-    // if (E->getSubExpr()->getType().getAddressSpace() == LangAS::hlsl_constant) {
-    //   Expr *Src = E->getSubExpr();
-    //   QualType SrcTy = Src->getType();
-    //   LValue LV = CGF.EmitLValue(Src);
-    //   QualType DestTy = E->getType();
-    //   Address DestVal = Dest.getAddress();
-    //   SourceLocation Loc = E->getExprLoc();
-
-    //   Address SrcVal = LV.getAggregateAddress();
-    //   EmitHLSLCBufferArrayCopy(CGF, DestVal, DestTy, SrcVal, SrcTy, Loc);
-    // } else
-      Visit(E->getSubExpr());
+    Visit(E->getSubExpr());
     break;
   case CK_HLSLAggregateSplatCast: {
     Expr *Src = E->getSubExpr();
