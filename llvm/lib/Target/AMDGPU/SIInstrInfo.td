@@ -1806,15 +1806,15 @@ class getVALUDstForVT<ValueType VT, bit IsTrue16 = 0, bit IsVOP3Encoding = 0> {
                                    VOPDstOperand_t16Lo128),
                     VOPDstOperand<VGPR_32>);
   RegisterOperand ret = !cond(!eq(VT.Size, 1024) : VOPDstOperand<VReg_1024>,
-                              !eq(VT.Size, 512) : VOPDstOperand<VReg_512>,
-                              !eq(VT.Size, 256) : VOPDstOperand<VReg_256>,
-                              !eq(VT.Size, 192) : VOPDstOperand<VReg_192>,
-                              !eq(VT.Size, 128) : VOPDstOperand<VReg_128>,
+                              !eq(VT.Size, 512)  : VOPDstOperand<VReg_512>,
+                              !eq(VT.Size, 256)  : VOPDstOperand<VReg_256>,
+                              !eq(VT.Size, 192)  : VOPDstOperand<VReg_192>,
+                              !eq(VT.Size, 128)  : VOPDstOperand<VReg_128>,
                               !eq(VT.Size, 96)   : VOPDstOperand<VReg_96>,
-                              !eq(VT.Size, 64)  : VOPDstOperand<VReg_64>,
-                              !eq(VT.Size, 32)  : VOPDstOperand<VGPR_32>,
-                              !eq(VT.Size, 16)  : op16,
-                              1                 : VOPDstS64orS32); // else VT == i1
+                              !eq(VT.Size, 64)   : VOPDstOperand<VReg_64>,
+                              !eq(VT.Size, 32)   : VOPDstOperand<VGPR_32>,
+                              !eq(VT.Size, 16)   : op16,
+                              1                  : VOPDstS64orS32); // else VT == i1
 }
 
 class getVALUDstForVT_fake16<ValueType VT> {
@@ -2595,6 +2595,17 @@ class getLdStRegisterOperand<RegisterClass RC> {
           !eq(RC.Size, 160)  : AVLdSt_160,
           !eq(RC.Size, 1024) : AVLdSt_1024);
 }
+
+class getEquivalentAGPRClass<RegisterClass RC> {
+  RegisterClass ret =
+    !cond(!eq(RC.Size, 32)   : AGPR_32,
+          !eq(RC.Size, 64)   : AReg_64,
+          !eq(RC.Size, 96)   : AReg_96,
+          !eq(RC.Size, 128)  : AReg_128,
+          !eq(RC.Size, 160)  : AReg_160,
+          !eq(RC.Size, 1024) : AReg_1024);
+}
+
 
 class getHasVOP3DPP <ValueType DstVT = i32, ValueType Src0VT = i32,
                  ValueType Src1VT = i32, ValueType Src2VT = i32> {
