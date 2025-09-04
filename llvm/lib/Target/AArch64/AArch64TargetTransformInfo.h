@@ -174,6 +174,11 @@ public:
 
   bool prefersVectorizedAddressing() const override;
 
+  /// Check whether Opcode1 has less throughput according to the scheduling
+  /// model than Opcode2.
+  bool hasKnownLowerThroughputFromSchedulingModel(unsigned Opcode1,
+                                                  unsigned Opcode2) const;
+
   InstructionCost
   getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                         unsigned AddressSpace,
