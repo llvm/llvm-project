@@ -85,8 +85,8 @@
 # CHECK-ASM-LABEL: <test_live_in_negative>:
 # CHECK-ASM: bl{{.*}}<memcpy
 
-# Register-based size should NOT be inlined (isAArch64 & size unknown at compile time)
-# CHECK-ASM-LABEL: <test_register_size_negative>:
+# Negative size should NOT be inlined (invalid size parameter)
+# CHECK-ASM-LABEL: <test_negative_size>:
 # CHECK-ASM: bl{{.*}}<memcpy
 
 # _memcpy8 should be inlined with end-pointer return (dest+size)
@@ -274,20 +274,19 @@ test_live_in_negative:
 	ret
 	.size	test_live_in_negative, .-test_live_in_negative
 
-	.globl	test_register_size_negative
-	.type	test_register_size_negative,@function
-test_register_size_negative:
-	# This would crash without isAArch64() check: size from register parameter
+	.globl	test_negative_size
+	.type	test_negative_size,@function
+test_negative_size:
+	# Negative size should not be inlined
 	stp	x29, x30, [sp, #-32]!
 	mov	x29, sp
 	add	x1, sp, #16
 	add	x0, sp, #8
-	mov	x3, #4
-	mov	x2, x3
+	mov	x2, #-1
 	bl	memcpy
 	ldp	x29, x30, [sp], #32
 	ret
-	.size	test_register_size_negative, .-test_register_size_negative
+	.size	test_negative_size, .-test_negative_size
 
 	.globl	test_memcpy8_4_byte
 	.type	test_memcpy8_4_byte,@function
@@ -384,40 +383,3 @@ complex_fp_operation:
 use_fp:
 	ret
 	.size	use_fp, .-use_fp
-
-	.globl	main
-	.type	main,@function
-main:
-	stp	x29, x30, [sp, #-208]!
-	mov	x29, sp
-
-	bl	test_1_byte_direct
-	bl	test_2_byte_direct
-	bl	test_4_byte_direct
-	bl	test_8_byte_direct
-	bl	test_16_byte_direct
-	bl	test_32_byte_direct
-	bl	test_37_byte_arbitrary
-	bl	test_0_byte
-	bl	test_128_byte_too_large
-	bl	test_4_byte_add_immediate
-	bl	test_register_move_negative
-	bl	test_live_in_negative
-	bl	test_register_size_negative
-	bl	test_memcpy8_4_byte
-
-	add     x0, sp, #32
-	add     x1, sp, #96
-	mov     x2, #10
-	mov     x3, #20
-	mov     x4, #0xFF
-	bl      complex_operation
-
-	add     x0, sp, #160
-	add     x1, sp, #96
-	bl      complex_fp_operation
-
-	mov	w0, #0
-	ldp	x29, x30, [sp], #208
-	ret
-	.size	main, .-main
