@@ -675,8 +675,8 @@ _mm_stream_load_si128(const void *__V) {
 /// \param __V2
 ///    A 128-bit vector of [16 x i8]
 /// \returns A 128-bit vector of [16 x i8] containing the lesser values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_min_epi8(__m128i __V1,
-                                                          __m128i __V2) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_min_epi8(__m128i __V1, __m128i __V2) {
   return (__m128i)__builtin_elementwise_min((__v16qs)__V1, (__v16qs)__V2);
 }
 
@@ -693,8 +693,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_min_epi8(__m128i __V1,
 /// \param __V2
 ///    A 128-bit vector of [16 x i8].
 /// \returns A 128-bit vector of [16 x i8] containing the greater values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_max_epi8(__m128i __V1,
-                                                          __m128i __V2) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_max_epi8(__m128i __V1, __m128i __V2) {
   return (__m128i)__builtin_elementwise_max((__v16qs)__V1, (__v16qs)__V2);
 }
 
@@ -711,8 +711,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_max_epi8(__m128i __V1,
 /// \param __V2
 ///    A 128-bit vector of [8 x u16].
 /// \returns A 128-bit vector of [8 x u16] containing the lesser values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_min_epu16(__m128i __V1,
-                                                           __m128i __V2) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_min_epu16(__m128i __V1, __m128i __V2) {
   return (__m128i)__builtin_elementwise_min((__v8hu)__V1, (__v8hu)__V2);
 }
 
@@ -729,8 +729,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_min_epu16(__m128i __V1,
 /// \param __V2
 ///    A 128-bit vector of [8 x u16].
 /// \returns A 128-bit vector of [8 x u16] containing the greater values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_max_epu16(__m128i __V1,
-                                                           __m128i __V2) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_max_epu16(__m128i __V1, __m128i __V2) {
   return (__m128i)__builtin_elementwise_max((__v8hu)__V1, (__v8hu)__V2);
 }
 
@@ -747,8 +747,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_max_epu16(__m128i __V1,
 /// \param __V2
 ///    A 128-bit vector of [4 x i32].
 /// \returns A 128-bit vector of [4 x i32] containing the lesser values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_min_epi32(__m128i __V1,
-                                                           __m128i __V2) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_min_epi32(__m128i __V1, __m128i __V2) {
   return (__m128i)__builtin_elementwise_min((__v4si)__V1, (__v4si)__V2);
 }
 
@@ -765,8 +765,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_min_epi32(__m128i __V1,
 /// \param __V2
 ///    A 128-bit vector of [4 x i32].
 /// \returns A 128-bit vector of [4 x i32] containing the greater values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_max_epi32(__m128i __V1,
-                                                           __m128i __V2) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_max_epi32(__m128i __V1, __m128i __V2) {
   return (__m128i)__builtin_elementwise_max((__v4si)__V1, (__v4si)__V2);
 }
 
@@ -783,8 +783,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_max_epi32(__m128i __V1,
 /// \param __V2
 ///    A 128-bit vector of [4 x u32].
 /// \returns A 128-bit vector of [4 x u32] containing the lesser values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_min_epu32(__m128i __V1,
-                                                           __m128i __V2) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_min_epu32(__m128i __V1, __m128i __V2) {
   return (__m128i)__builtin_elementwise_min((__v4su)__V1, (__v4su)__V2);
 }
 
@@ -801,8 +801,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_min_epu32(__m128i __V1,
 /// \param __V2
 ///    A 128-bit vector of [4 x u32].
 /// \returns A 128-bit vector of [4 x u32] containing the greater values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_max_epu32(__m128i __V1,
-                                                           __m128i __V2) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_max_epu32(__m128i __V1, __m128i __V2) {
   return (__m128i)__builtin_elementwise_max((__v4su)__V1, (__v4su)__V2);
 }
 

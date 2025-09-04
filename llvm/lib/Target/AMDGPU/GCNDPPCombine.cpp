@@ -193,16 +193,6 @@ MachineOperand *GCNDPPCombine::getOldOpndValue(MachineOperand &OldOpnd) const {
   return &OldOpnd;
 }
 
-[[maybe_unused]] static unsigned getOperandSize(MachineInstr &MI, unsigned Idx,
-                               MachineRegisterInfo &MRI) {
-  int16_t RegClass = MI.getDesc().operands()[Idx].RegClass;
-  if (RegClass == -1)
-    return 0;
-
-  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
-  return TRI->getRegSizeInBits(*TRI->getRegClass(RegClass));
-}
-
 MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
                                            MachineInstr &MovMI,
                                            RegSubRegPair CombOldVGPR,
@@ -295,7 +285,7 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
     }
     auto *Src0 = TII->getNamedOperand(MovMI, AMDGPU::OpName::src0);
     assert(Src0);
-    int Src0Idx = NumOperands;
+    [[maybe_unused]] int Src0Idx = NumOperands;
 
     DPPInst.add(*Src0);
     DPPInst->getOperand(NumOperands).setIsKill(false);
@@ -321,8 +311,8 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       // requirements are the same as for src0. We check src0 instead because
       // pseudos are shared between subtargets and allow SGPR for src1 on all.
       if (!ST->hasDPPSrc1SGPR()) {
-        assert(getOperandSize(*DPPInst, Src0Idx, *MRI) ==
-                   getOperandSize(*DPPInst, NumOperands, *MRI) &&
+        assert(TII->getOpSize(*DPPInst, Src0Idx) ==
+                   TII->getOpSize(*DPPInst, NumOperands) &&
                "Src0 and Src1 operands should have the same size");
       }
 

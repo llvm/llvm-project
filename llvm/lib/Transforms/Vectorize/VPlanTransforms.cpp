@@ -1081,20 +1081,21 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  // OR x, 1 -> 1.
-  if (match(Def, m_c_BinaryOr(m_VPValue(X), m_AllOnes()))) {
-    Def->replaceAllUsesWith(Def->getOperand(0) == X ? Def->getOperand(1)
-                                                    : Def->getOperand(0));
-    Def->eraseFromParent();
-    return;
-  }
+  // x | 1 -> 1
+  if (match(Def, m_c_BinaryOr(m_VPValue(X), m_AllOnes())))
+    return Def->replaceAllUsesWith(Def->getOperand(Def->getOperand(0) == X));
 
-  // AND x, 0 -> 0
-  if (match(&R, m_c_BinaryAnd(m_VPValue(X), m_ZeroInt()))) {
-    Def->replaceAllUsesWith(R.getOperand(0) == X ? R.getOperand(1)
-                                                 : R.getOperand(0));
-    return;
-  }
+  // x | 0 -> x
+  if (match(Def, m_c_BinaryOr(m_VPValue(X), m_ZeroInt())))
+    return Def->replaceAllUsesWith(X);
+
+  // x & 0 -> 0
+  if (match(Def, m_c_BinaryAnd(m_VPValue(X), m_ZeroInt())))
+    return Def->replaceAllUsesWith(Def->getOperand(Def->getOperand(0) == X));
+
+  // x && false -> false
+  if (match(Def, m_LogicalAnd(m_VPValue(X), m_False())))
+    return Def->replaceAllUsesWith(Def->getOperand(1));
 
   // (x && y) || (x && z) -> x && (y || z)
   VPBuilder Builder(Def);
@@ -1118,6 +1119,15 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     Def->setOperand(2, X);
     return;
   }
+
+  // Reassociate (x && y) && z -> x && (y && z) if x has multiple users. With
+  // tail folding it is likely that x is a header mask and can be simplified
+  // further.
+  if (match(Def, m_LogicalAnd(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
+                              m_VPValue(Z))) &&
+      X->hasMoreThanOneUniqueUser())
+    return Def->replaceAllUsesWith(
+        Builder.createLogicalAnd(X, Builder.createLogicalAnd(Y, Z)));
 
   if (match(Def, m_c_Mul(m_VPValue(A), m_SpecificInt(1))))
     return Def->replaceAllUsesWith(A);

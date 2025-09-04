@@ -154,9 +154,9 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
       const RTLIB::LibcallImpl Impl;
     } LibraryCalls[] = {
         // Integer Multiply - EABI Table 9
-        {RTLIB::MUL_I16, RTLIB::__mspabi_mpyi_hw},
-        {RTLIB::MUL_I32, RTLIB::__mspabi_mpyl_hw},
-        {RTLIB::MUL_I64, RTLIB::__mspabi_mpyll_hw},
+        {RTLIB::MUL_I16, RTLIB::impl___mspabi_mpyi_hw},
+        {RTLIB::MUL_I32, RTLIB::impl___mspabi_mpyl_hw},
+        {RTLIB::MUL_I64, RTLIB::impl___mspabi_mpyll_hw},
         // TODO The __mspabi_mpysl*_hw functions ARE implemented in libgcc
         // TODO The __mspabi_mpyul*_hw functions ARE implemented in libgcc
     };
@@ -169,9 +169,9 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
       const RTLIB::LibcallImpl Impl;
     } LibraryCalls[] = {
         // Integer Multiply - EABI Table 9
-        {RTLIB::MUL_I16, RTLIB::__mspabi_mpyi_hw},
-        {RTLIB::MUL_I32, RTLIB::__mspabi_mpyl_hw32},
-        {RTLIB::MUL_I64, RTLIB::__mspabi_mpyll_hw32},
+        {RTLIB::MUL_I16, RTLIB::impl___mspabi_mpyi_hw},
+        {RTLIB::MUL_I32, RTLIB::impl___mspabi_mpyl_hw32},
+        {RTLIB::MUL_I64, RTLIB::impl___mspabi_mpyll_hw32},
         // TODO The __mspabi_mpysl*_hw32 functions ARE implemented in libgcc
         // TODO The __mspabi_mpyul*_hw32 functions ARE implemented in libgcc
     };
@@ -184,9 +184,9 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
       const RTLIB::LibcallImpl Impl;
     } LibraryCalls[] = {
         // Integer Multiply - EABI Table 9
-        {RTLIB::MUL_I16, RTLIB::__mspabi_mpyi_f5hw},
-        {RTLIB::MUL_I32, RTLIB::__mspabi_mpyl_f5hw},
-        {RTLIB::MUL_I64, RTLIB::__mspabi_mpyll_f5hw},
+        {RTLIB::MUL_I16, RTLIB::impl___mspabi_mpyi_f5hw},
+        {RTLIB::MUL_I32, RTLIB::impl___mspabi_mpyl_f5hw},
+        {RTLIB::MUL_I64, RTLIB::impl___mspabi_mpyll_f5hw},
         // TODO The __mspabi_mpysl*_f5hw functions ARE implemented in libgcc
         // TODO The __mspabi_mpyul*_f5hw functions ARE implemented in libgcc
     };
@@ -199,9 +199,9 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
       const RTLIB::LibcallImpl Impl;
     } LibraryCalls[] = {
         // Integer Multiply - EABI Table 9
-        {RTLIB::MUL_I16, RTLIB::__mspabi_mpyi},
-        {RTLIB::MUL_I32, RTLIB::__mspabi_mpyl},
-        {RTLIB::MUL_I64, RTLIB::__mspabi_mpyll},
+        {RTLIB::MUL_I16, RTLIB::impl___mspabi_mpyi},
+        {RTLIB::MUL_I32, RTLIB::impl___mspabi_mpyl},
+        {RTLIB::MUL_I64, RTLIB::impl___mspabi_mpyll},
         // The __mspabi_mpysl* functions are NOT implemented in libgcc
         // The __mspabi_mpyul* functions are NOT implemented in libgcc
     };

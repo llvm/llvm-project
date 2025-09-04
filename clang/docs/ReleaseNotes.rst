@@ -134,6 +134,7 @@ C Language Changes
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
+- Clang now supports `N3355 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3355.htm>`_ Named Loops.
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -218,6 +219,7 @@ Deprecated Compiler Flags
 
 Modified Compiler Flags
 -----------------------
+- The `-gkey-instructions` compiler flag is now enabled by default when DWARF is emitted for plain C/C++ and optimizations are enabled. (#GH149509)
 
 Removed Compiler Flags
 -------------------------
@@ -336,6 +338,8 @@ Bug Fixes to C++ Support
 - Fix the parsing of variadic member functions when the ellipis immediately follows a default argument.(#GH153445)
 - Fixed a bug that caused ``this`` captured by value in a lambda with a dependent explicit object parameter to not be
   instantiated properly. (#GH154054)
+- Fixed a crash when implicit conversions from initialize list to arrays of
+  unknown bound during constant evaluation. (#GH151716)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -481,6 +485,7 @@ OpenMP Support
   modifier in the ``adjust_args`` clause.
 - Allow array length to be omitted in array section subscript expression.
 - Fixed non-contiguous strided update in the ``omp target update`` directive with the ``from`` clause.
+- Properly handle array section/assumed-size array privatization in C/C++.
 
 Improvements
 ^^^^^^^^^^^^
