@@ -15,51 +15,51 @@
 # 1-byte copy should use single byte load/store (ldrb/strb)
 # CHECK-ASM-LABEL: <test_1_byte_direct>:
 # CHECK-ASM: ldrb{{.*}}w9, [x1]
-# CHECK-ASM: strb{{.*}}w9, [x0]
+# CHECK-ASM-NEXT: strb{{.*}}w9, [x0]
 # CHECK-ASM-NOT: bl{{.*}}<memcpy
 
 # 2-byte copy should use single 16-bit load/store (ldrh/strh)
 # CHECK-ASM-LABEL: <test_2_byte_direct>:
 # CHECK-ASM: ldrh{{.*}}w9, [x1]
-# CHECK-ASM: strh{{.*}}w9, [x0]
+# CHECK-ASM-NEXT: strh{{.*}}w9, [x0]
 # CHECK-ASM-NOT: bl{{.*}}<memcpy
 
 # 4-byte copy should use single 32-bit load/store (w register)
 # CHECK-ASM-LABEL: <test_4_byte_direct>:
 # CHECK-ASM: ldr{{.*}}w9, [x1]
-# CHECK-ASM: str{{.*}}w9, [x0]
+# CHECK-ASM-NEXT: str{{.*}}w9, [x0]
 # CHECK-ASM-NOT: bl{{.*}}<memcpy
 
 # 8-byte copy should use single 64-bit load/store (x register)
 # CHECK-ASM-LABEL: <test_8_byte_direct>:
 # CHECK-ASM: ldr{{.*}}x9, [x1]
-# CHECK-ASM: str{{.*}}x9, [x0]
+# CHECK-ASM-NEXT: str{{.*}}x9, [x0]
 # CHECK-ASM-NOT: bl{{.*}}<memcpy
 
 # 16-byte copy should use single 128-bit SIMD load/store (q register)
 # CHECK-ASM-LABEL: <test_16_byte_direct>:
 # CHECK-ASM: ldr{{.*}}q16, [x1]
-# CHECK-ASM: str{{.*}}q16, [x0]
+# CHECK-ASM-NEXT: str{{.*}}q16, [x0]
 # CHECK-ASM-NOT: bl{{.*}}<memcpy
 
 # 32-byte copy should use two 128-bit SIMD operations
 # CHECK-ASM-LABEL: <test_32_byte_direct>:
 # CHECK-ASM: ldr{{.*}}q16, [x1]
-# CHECK-ASM: str{{.*}}q16, [x0]
-# CHECK-ASM: ldr{{.*}}q17, [x1, #0x10]
-# CHECK-ASM: str{{.*}}q17, [x0, #0x10]
+# CHECK-ASM-NEXT: str{{.*}}q16, [x0]
+# CHECK-ASM-NEXT: ldr{{.*}}q17, [x1, #0x10]
+# CHECK-ASM-NEXT: str{{.*}}q17, [x0, #0x10]
 # CHECK-ASM-NOT: bl{{.*}}<memcpy
 
 # 37-byte copy should use greedy decomposition: (2*16) + (1*4) + (1*1)
 # CHECK-ASM-LABEL: <test_37_byte_arbitrary>:
 # CHECK-ASM: ldr{{.*}}q16, [x1]
-# CHECK-ASM: str{{.*}}q16, [x0]
-# CHECK-ASM: ldr{{.*}}q16, [x1, #0x10]
-# CHECK-ASM: str{{.*}}q16, [x0, #0x10]
-# CHECK-ASM: ldr{{.*}}w9, [x1, #0x20]
-# CHECK-ASM: str{{.*}}w9, [x0, #0x20]
-# CHECK-ASM: ldrb{{.*}}w9, [x1, #0x24]
-# CHECK-ASM: strb{{.*}}w9, [x0, #0x24]
+# CHECK-ASM-NEXT: str{{.*}}q16, [x0]
+# CHECK-ASM-NEXT: ldr{{.*}}q16, [x1, #0x10]
+# CHECK-ASM-NEXT: str{{.*}}q16, [x0, #0x10]
+# CHECK-ASM-NEXT: ldr{{.*}}w9, [x1, #0x20]
+# CHECK-ASM-NEXT: str{{.*}}w9, [x0, #0x20]
+# CHECK-ASM-NEXT: ldrb{{.*}}w9, [x1, #0x24]
+# CHECK-ASM-NEXT: strb{{.*}}w9, [x0, #0x24]
 # CHECK-ASM-NOT: bl{{.*}}<memcpy
 
 # 0-byte copy should be inlined with no load/store instructions (nothing to copy)
@@ -92,26 +92,26 @@
 # _memcpy8 should be inlined with end-pointer return (dest+size)
 # CHECK-ASM-LABEL: <test_memcpy8_4_byte>:
 # CHECK-ASM: ldr{{.*}}w9, [x1]
-# CHECK-ASM: str{{.*}}w9, [x0]
-# CHECK-ASM: add{{.*}}x0, x0, #0x4
+# CHECK-ASM-NEXT: str{{.*}}w9, [x0]
+# CHECK-ASM-NEXT: add{{.*}}x0, x0, #0x4
 # CHECK-ASM-NOT: bl{{.*}}<_memcpy8
 
 # Complex function with caller-saved X9 should inline 8-byte memcpy using X9 as temp register
 # CHECK-ASM-LABEL: <complex_operation>:
 # CHECK-ASM: ldr{{.*}}x9, [x1]
-# CHECK-ASM: str{{.*}}x9, [x0]
+# CHECK-ASM-NEXT: str{{.*}}x9, [x0]
 # CHECK-ASM-NOT: bl{{.*}}<memcpy
 
 # Complex function with caller-saved Q16/Q17 should inline 64-byte memcpy using Q16 as temp register
 # CHECK-ASM-LABEL: <complex_fp_operation>:
 # CHECK-ASM: ldr{{.*}}q16, [x1]
-# CHECK-ASM: str{{.*}}q16, [x0]
-# CHECK-ASM: ldr{{.*}}q16, [x1, #0x10]
-# CHECK-ASM: str{{.*}}q16, [x0, #0x10]
-# CHECK-ASM: ldr{{.*}}q16, [x1, #0x20]
-# CHECK-ASM: str{{.*}}q16, [x0, #0x20]
-# CHECK-ASM: ldr{{.*}}q16, [x1, #0x30]
-# CHECK-ASM: str{{.*}}q16, [x0, #0x30]
+# CHECK-ASM-NEXT: str{{.*}}q16, [x0]
+# CHECK-ASM-NEXT: ldr{{.*}}q16, [x1, #0x10]
+# CHECK-ASM-NEXT: str{{.*}}q16, [x0, #0x10]
+# CHECK-ASM-NEXT: ldr{{.*}}q16, [x1, #0x20]
+# CHECK-ASM-NEXT: str{{.*}}q16, [x0, #0x20]
+# CHECK-ASM-NEXT: ldr{{.*}}q16, [x1, #0x30]
+# CHECK-ASM-NEXT: str{{.*}}q16, [x0, #0x30]
 # CHECK-ASM-NOT: bl{{.*}}<memcpy
 
 	.text
