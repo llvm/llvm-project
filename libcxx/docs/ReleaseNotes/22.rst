@@ -75,11 +75,19 @@ Potentially breaking changes
   first element being returned from ``find`` will be broken, and ``lower_bound`` or ``equal_range`` should be used
   instead.
 
+- The ABI flag ``_LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER`` has been split off from
+  ``_LIBCPP_ABI_NO_ITERATOR_BASES``. If you are using this flag and care about ABI stability, you should set
+  ``_LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER`` as well.
+
 Announcements About Future Releases
 -----------------------------------
 
 ABI Affecting Changes
 ---------------------
+
+- The ABI flag ``_LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER`` has been split off from
+  ``_LIBCPP_ABI_NO_ITERATOR_BASES``. If you are using this flag and care about ABI stability, you should set
+  ``_LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER`` as well.
 
 Build System Changes
 --------------------
