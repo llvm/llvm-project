@@ -46,7 +46,8 @@
 ; RUN: not llvm-lto2 run --unified-lto=1 -o %t3 %t1 %t2 2>&1 | \
 ; RUN: FileCheck %s --check-prefix INVALIDMODE
 
-; INVALIDMODE: invalid LTO mode
+; INVALIDMODE: llvm-lto2: for the --unified-lto option: Cannot find option named
+
 
 ; UNIFIEDERR: unified LTO compilation must use compatible bitcode modules
 ; NOUNIFIEDERR-NOT: unified LTO compilation must use compatible bitcode modules

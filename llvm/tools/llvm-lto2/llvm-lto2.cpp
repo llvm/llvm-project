@@ -201,15 +201,13 @@ static cl::list<std::string>
 static cl::opt<LTO::LTOKind> UnifiedLTOMode(
     "unified-lto", cl::Optional,
     cl::desc("Set LTO mode with the following options:"),
-    cl::values(
-        clEnumValN(LTO::LTOK_UnifiedThin, "thin",
-                   "ThinLTO with Unified LTO enabled"),
-        clEnumValN(LTO::LTOK_UnifiedRegular, "full",
-                   "Regular LTO with Unified LTO enabled"),
-        clEnumValN(LTO::LTOK_Default, "default",
-                   "Any LTO mode without Unified LTO. The default mode")
-    ),
-    cl::value_desc("mode"), cl::init(LTO::LTOK_Default)); 
+    cl::values(clEnumValN(LTO::LTOK_UnifiedThin, "thin",
+                          "ThinLTO with Unified LTO enabled"),
+               clEnumValN(LTO::LTOK_UnifiedRegular, "full",
+                          "Regular LTO with Unified LTO enabled"),
+               clEnumValN(LTO::LTOK_Default, "default",
+                          "Any LTO mode without Unified LTO")),
+    cl::value_desc("mode"), cl::init(LTO::LTOK_Default));
 
 static cl::opt<bool> EnableFreestanding(
     "lto-freestanding",
@@ -576,7 +574,8 @@ static int dumpSymtab(int argc, char **argv) {
       }
 
       if (TT.isOSBinFormatCOFF() && Sym.isWeak() && Sym.isIndirect())
-        outs() << "         fallback " << Sym.getCOFFWeakExternalFallback() << '\n';
+        outs() << "         fallback " << Sym.getCOFFWeakExternalFallback()
+               << '\n';
 
       if (!Sym.getSectionName().empty())
         outs() << "         section " << Sym.getSectionName() << "\n";
