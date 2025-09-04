@@ -117,8 +117,7 @@ int main(int argc, char **argv) {
 
       Range Testing = CurrChunks[Idx];
       errs() << "Trying to remove : " << Testing.Begin;
-      if (Testing.Begin != Testing.End)
-        errs() << "-" << Testing.End;
+      Testing.print(errs());
       errs() << "\n";
 
       CurrChunks.erase(CurrChunks.begin() + Idx);

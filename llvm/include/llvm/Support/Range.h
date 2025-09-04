@@ -47,6 +47,14 @@ struct Range {
   /// Get the size of this range
   int64_t size() const { return End - Begin + 1; }
 
+  std::string toString() const {
+    return std::to_string(Begin) + "-" + std::to_string(End);
+  }
+
+  void print(raw_ostream &OS) const {
+    OS << Begin << "-" << End;
+  }
+
   bool operator==(const Range &Other) const {
     return Begin == Other.Begin && End == Other.End;
   }
