@@ -17,6 +17,8 @@ source .ci/utils.sh
 
 projects="${1}"
 targets="${2}"
+runtimes="${3}"
+runtimes_targets="${4}"
 
 start-group "CMake"
 pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
@@ -46,9 +48,14 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
       -D CMAKE_EXE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_MODULE_LINKER_FLAGS="/MANIFEST:NO" \
-      -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO"
+      -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO" \
+      -D LLVM_ENABLE_RUNTIMES="${runtimes}"
 
 start-group "ninja"
 
 # Targets are not escaped as they are passed as separate arguments.
 ninja -C "${BUILD_DIR}" -k 0 ${targets} |& tee ninja.log
+
+start-group "ninja runtimes"
+
+ninja -C "${BUILD_DIR}" -k 0 ${runtimes_targets} |& tee ninja_runtimes.log

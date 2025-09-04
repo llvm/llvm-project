@@ -12,7 +12,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 define void @_Z3fooPf(ptr %a) {
 ; CHECK-LABEL: define void @_Z3fooPf(
 ; CHECK-SAME: ptr [[A:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -28,10 +28,9 @@ define void @_Z3fooPf(ptr %a) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[P:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[P]], 2.000000e+00
@@ -44,7 +43,7 @@ define void @_Z3fooPf(ptr %a) {
 ;
 ; DEBUGLOC-LABEL: define void @_Z3fooPf(
 ; DEBUGLOC-SAME: ptr [[A:%.*]]) !dbg [[DBG5:![0-9]+]] {
-; DEBUGLOC-NEXT:  [[ENTRY:.*]]:
+; DEBUGLOC-NEXT:  [[ENTRY:.*:]]
 ; DEBUGLOC-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]], !dbg [[DBG18:![0-9]+]]
 ; DEBUGLOC:       [[VECTOR_PH]]:
 ; DEBUGLOC-NEXT:    br label %[[VECTOR_BODY:.*]], !dbg [[DBG18]]
@@ -60,10 +59,9 @@ define void @_Z3fooPf(ptr %a) {
 ; DEBUGLOC:       [[MIDDLE_BLOCK]]:
 ; DEBUGLOC-NEXT:    br label %[[FOR_END:.*]], !dbg [[DBG24]]
 ; DEBUGLOC:       [[SCALAR_PH]]:
-; DEBUGLOC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], !dbg [[DBG19]]
 ; DEBUGLOC-NEXT:    br label %[[FOR_BODY:.*]], !dbg [[DBG18]]
 ; DEBUGLOC:       [[FOR_BODY]]:
-; DEBUGLOC-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ], !dbg [[DBG19]]
+; DEBUGLOC-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ], !dbg [[DBG19]]
 ; DEBUGLOC-NEXT:      #dbg_value(i64 [[INDVARS_IV]], [[META9:![0-9]+]], !DIExpression(), [[DBG19]])
 ; DEBUGLOC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]], !dbg [[DBG20]]
 ; DEBUGLOC-NEXT:      #dbg_value(ptr [[ARRAYIDX]], [[META11:![0-9]+]], !DIExpression(), [[DBG20]])
@@ -450,7 +448,7 @@ define void @scalar_cast_dbg(ptr nocapture %a, i32 %start, i64 %k) {
 ; DEBUGLOC:       [[VECTOR_PH]]:
 ; DEBUGLOC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[K]], 4
 ; DEBUGLOC-NEXT:    [[N_VEC:%.*]] = sub i64 [[K]], [[N_MOD_VF]]
-; DEBUGLOC-NEXT:    br label %[[VECTOR_BODY:.*]], !dbg [[DBG77]]
+; DEBUGLOC-NEXT:    br label %[[VECTOR_BODY:.*]], !dbg [[DBG78]]
 ; DEBUGLOC:       [[VECTOR_BODY]]:
 ; DEBUGLOC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ], !dbg [[DBG78]]
 ; DEBUGLOC-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ], !dbg [[DBG79:![0-9]+]]
@@ -558,7 +556,7 @@ define void @widen_intrinsic_dbg(i64 %n, ptr %y, ptr %x) {
 ; DEBUGLOC:       [[VECTOR_PH]]:
 ; DEBUGLOC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
 ; DEBUGLOC-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; DEBUGLOC-NEXT:    br label %[[VECTOR_BODY:.*]], !dbg [[DBG97]]
+; DEBUGLOC-NEXT:    br label %[[VECTOR_BODY:.*]], !dbg [[DBG98]]
 ; DEBUGLOC:       [[VECTOR_BODY]]:
 ; DEBUGLOC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ], !dbg [[DBG98]]
 ; DEBUGLOC-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[Y]], i64 [[INDEX]], !dbg [[DBG99:![0-9]+]]

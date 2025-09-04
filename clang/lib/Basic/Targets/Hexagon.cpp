@@ -149,7 +149,7 @@ bool HexagonTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAudio = true;
   }
   if (CPU.compare("hexagonv68") >= 0) {
-    HasLegalHalfType = true;
+    HasFastHalfType = true;
     HasFloat16 = true;
   }
   return true;

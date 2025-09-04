@@ -1068,6 +1068,13 @@ def SplitBarrier : ImmOperand<i32> {
   let PrintMethod = "printOperand";
 }
 
+// Pseudo-operand type. This is a pair of 32-bit inline constants
+// packed into a single 64-bit value.
+def AV_64_PSEUDO_IMM : Operand<i64> {
+  let OperandNamespace = "AMDGPU";
+  let OperandType = "OPERAND_INLINE_C_AV64_PSEUDO";
+}
+
 def VReg32OrOffClass : AsmOperandClass {
   let Name = "VReg32OrOff";
   let ParserMethod = "parseVReg32OrOff";
@@ -1799,15 +1806,15 @@ class getVALUDstForVT<ValueType VT, bit IsTrue16 = 0, bit IsVOP3Encoding = 0> {
                                    VOPDstOperand_t16Lo128),
                     VOPDstOperand<VGPR_32>);
   RegisterOperand ret = !cond(!eq(VT.Size, 1024) : VOPDstOperand<VReg_1024>,
-                              !eq(VT.Size, 512) : VOPDstOperand<VReg_512>,
-                              !eq(VT.Size, 256) : VOPDstOperand<VReg_256>,
-                              !eq(VT.Size, 192) : VOPDstOperand<VReg_192>,
-                              !eq(VT.Size, 128) : VOPDstOperand<VReg_128>,
+                              !eq(VT.Size, 512)  : VOPDstOperand<VReg_512>,
+                              !eq(VT.Size, 256)  : VOPDstOperand<VReg_256>,
+                              !eq(VT.Size, 192)  : VOPDstOperand<VReg_192>,
+                              !eq(VT.Size, 128)  : VOPDstOperand<VReg_128>,
                               !eq(VT.Size, 96)   : VOPDstOperand<VReg_96>,
-                              !eq(VT.Size, 64)  : VOPDstOperand<VReg_64>,
-                              !eq(VT.Size, 32)  : VOPDstOperand<VGPR_32>,
-                              !eq(VT.Size, 16)  : op16,
-                              1                 : VOPDstS64orS32); // else VT == i1
+                              !eq(VT.Size, 64)   : VOPDstOperand<VReg_64>,
+                              !eq(VT.Size, 32)   : VOPDstOperand<VGPR_32>,
+                              !eq(VT.Size, 16)   : op16,
+                              1                  : VOPDstS64orS32); // else VT == i1
 }
 
 class getVALUDstForVT_fake16<ValueType VT> {
@@ -2588,6 +2595,28 @@ class getLdStRegisterOperand<RegisterClass RC> {
           !eq(RC.Size, 160)  : AVLdSt_160,
           !eq(RC.Size, 1024) : AVLdSt_1024);
 }
+
+class getEquivalentAGPRClass<RegisterClass RC> {
+  RegisterClass ret =
+    !cond(!eq(RC.Size, 32)   : AGPR_32,
+          !eq(RC.Size, 64)   : AReg_64,
+          !eq(RC.Size, 96)   : AReg_96,
+          !eq(RC.Size, 128)  : AReg_128,
+          !eq(RC.Size, 160)  : AReg_160,
+          !eq(RC.Size, 1024) : AReg_1024);
+}
+
+class getEquivalentAGPROperand<RegisterOperand RC> {
+  defvar Size = RC.RegClass.Size;
+  RegisterOperand ret =
+    !cond(!eq(Size, 32)   : RegisterOperand<AGPR_32>,
+          !eq(Size, 64)   : RegisterOperand<AReg_64>,
+          !eq(Size, 96)   : RegisterOperand<AReg_96>,
+          !eq(Size, 128)  : RegisterOperand<AReg_128>,
+          !eq(Size, 160)  : RegisterOperand<AReg_160>,
+          !eq(Size, 1024) : RegisterOperand<AReg_1024>);
+}
+
 
 class getHasVOP3DPP <ValueType DstVT = i32, ValueType Src0VT = i32,
                  ValueType Src1VT = i32, ValueType Src2VT = i32> {
