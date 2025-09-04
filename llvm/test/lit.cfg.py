@@ -47,7 +47,7 @@ config.excludes = ["Inputs", "CMakeLists.txt", "README.txt", "LICENSE.txt"]
 # so we just exclude llvm-reduce tests from this config altogether. This should
 # be fine though as profcheck config tests are mostly concerned with opt.
 if config.enable_profcheck:
-  config.excludes = config.excludes + ["llvm-reduce"]
+    config.excludes = config.excludes + ["llvm-reduce"]
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
