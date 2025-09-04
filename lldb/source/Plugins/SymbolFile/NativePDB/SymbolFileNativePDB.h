@@ -260,7 +260,10 @@ private:
 
   std::vector<CompilerContext> GetContextForType(llvm::codeview::TypeIndex ti);
 
-  void CacheFunctionNames();
+  /// Caches the basenames of symbols found in the globals stream.
+  ///
+  /// This includes functions and global variables
+  void CacheGlobalBaseNames();
 
   void CacheUdtDeclarations();
   llvm::Expected<Declaration> ResolveUdtDeclaration(PdbTypeSymId type_id);
@@ -306,6 +309,9 @@ private:
   lldb_private::UniqueCStringMap<uint32_t> m_func_base_names;
   /// method basename -> Global ID(s)
   lldb_private::UniqueCStringMap<uint32_t> m_func_method_names;
+
+  /// global variable basename -> Global ID(s)
+  lldb_private::UniqueCStringMap<uint32_t> m_global_variable_base_names;
 };
 
 } // namespace npdb

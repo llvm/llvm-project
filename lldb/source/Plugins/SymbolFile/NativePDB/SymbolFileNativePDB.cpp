@@ -1655,22 +1655,62 @@ void SymbolFileNativePDB::DumpClangAST(Stream &s, llvm::StringRef filter) {
   clang->GetNativePDBParser()->Dump(s, filter);
 }
 
-void SymbolFileNativePDB::CacheFunctionNames() {
-  if (!m_func_full_names.IsEmpty())
+void SymbolFileNativePDB::CacheGlobalBaseNames() {
+  if (!m_func_full_names.IsEmpty() || !m_global_variable_base_names.IsEmpty())
     return;
 
   // (segment, code offset) -> gid
-  std::map<std::pair<uint16_t, uint32_t>, uint32_t> addr_ids;
+  std::map<std::pair<uint16_t, uint32_t>, uint32_t> func_addr_ids;
 
-  // First, find all function references in the globals table.
+  // First, look through all items in the globals table.
   for (const uint32_t gid : m_index->globals().getGlobalsTable()) {
-    CVSymbol ref_sym = m_index->symrecords().readRecord(gid);
-    auto kind = ref_sym.kind();
+    CVSymbol sym = m_index->symrecords().readRecord(gid);
+    auto kind = sym.kind();
+
+    // If this is a global variable, we only need to look at the name
+    llvm::StringRef name;
+    switch (kind) {
+    case SymbolKind::S_GDATA32:
+    case SymbolKind::S_LDATA32: {
+      DataSym data =
+          llvm::cantFail(SymbolDeserializer::deserializeAs<DataSym>(sym));
+      name = data.Name;
+      break;
+    }
+    case SymbolKind::S_GTHREAD32:
+    case SymbolKind::S_LTHREAD32: {
+      ThreadLocalDataSym data = llvm::cantFail(
+          SymbolDeserializer::deserializeAs<ThreadLocalDataSym>(sym));
+      name = data.Name;
+      break;
+    }
+    case SymbolKind::S_CONSTANT: {
+      ConstantSym data =
+          llvm::cantFail(SymbolDeserializer::deserializeAs<ConstantSym>(sym));
+      name = data.Name;
+      break;
+    }
+    default:
+      break;
+    }
+
+    if (!name.empty()) {
+      llvm::StringRef base = MSVCUndecoratedNameParser::DropScope(name);
+      if (base.empty())
+        base = name;
+
+      m_global_variable_base_names.Append(ConstString(base), gid);
+      continue;
+    }
+
     if (kind != S_PROCREF && kind != S_LPROCREF)
       continue;
 
+    // For functions, we need to follow the reference to the procedure and look
+    // at the type
+
     ProcRefSym ref =
-        llvm::cantFail(SymbolDeserializer::deserializeAs<ProcRefSym>(ref_sym));
+        llvm::cantFail(SymbolDeserializer::deserializeAs<ProcRefSym>(sym));
     if (ref.Name.empty())
       continue;
 
@@ -1694,7 +1734,7 @@ void SymbolFileNativePDB::CacheFunctionNames() {
     // The function/procedure symbol only contains the demangled name.
     // The mangled names are in the publics table. Save the address of this
     // function to lookup the mangled name later.
-    addr_ids.emplace(std::make_pair(proc.Segment, proc.CodeOffset), gid);
+    func_addr_ids.emplace(std::make_pair(proc.Segment, proc.CodeOffset), gid);
 
     llvm::StringRef basename = MSVCUndecoratedNameParser::DropScope(proc.Name);
     if (basename.empty())
@@ -1729,8 +1769,8 @@ void SymbolFileNativePDB::CacheFunctionNames() {
       continue;
 
     // Check if this symbol is for one of our functions.
-    auto it = addr_ids.find({pub.Segment, pub.Offset});
-    if (it != addr_ids.end())
+    auto it = func_addr_ids.find({pub.Segment, pub.Offset});
+    if (it != func_addr_ids.end())
       m_func_full_names.Append(ConstString(pub.Name), it->second);
   }
 
@@ -1741,31 +1781,35 @@ void SymbolFileNativePDB::CacheFunctionNames() {
   m_func_method_names.SizeToFit();
   m_func_base_names.Sort(std::less<uint32_t>());
   m_func_base_names.SizeToFit();
+  m_global_variable_base_names.Sort(std::less<uint32_t>());
+  m_global_variable_base_names.SizeToFit();
 }
 
 void SymbolFileNativePDB::FindGlobalVariables(
     ConstString name, const CompilerDeclContext &parent_decl_ctx,
     uint32_t max_matches, VariableList &variables) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  using SymbolAndOffset = std::pair<uint32_t, llvm::codeview::CVSymbol>;
 
-  std::vector<SymbolAndOffset> results = m_index->globals().findRecordsByName(
-      name.GetStringRef(), m_index->symrecords());
-  for (const SymbolAndOffset &result : results) {
-    switch (result.second.kind()) {
-    case SymbolKind::S_GDATA32:
-    case SymbolKind::S_LDATA32:
-    case SymbolKind::S_GTHREAD32:
-    case SymbolKind::S_LTHREAD32:
-    case SymbolKind::S_CONSTANT: {
-      PdbGlobalSymId global(result.first, false);
-      if (VariableSP var = GetOrCreateGlobalVariable(global))
-        variables.AddVariable(var);
-      break;
-    }
-    default:
+  CacheGlobalBaseNames();
+
+  std::vector<uint32_t> results;
+  m_global_variable_base_names.GetValues(name, results);
+
+  size_t n_matches = 0;
+  for (uint32_t gid : results) {
+    PdbGlobalSymId global(gid, false);
+
+    if (parent_decl_ctx.IsValid() &&
+        GetDeclContextContainingUID(toOpaqueUid(global)) != parent_decl_ctx)
       continue;
-    }
+
+    VariableSP var = GetOrCreateGlobalVariable(global);
+    if (!var)
+      continue;
+    variables.AddVariable(var);
+
+    if (++n_matches >= max_matches)
+      break;
   }
 }
 
@@ -1783,7 +1827,7 @@ void SymbolFileNativePDB::FindFunctions(
         name_type_mask & eFunctionNameTypeBase ||
         name_type_mask & eFunctionNameTypeMethod))
     return;
-  CacheFunctionNames();
+  CacheGlobalBaseNames();
 
   std::set<uint32_t> resolved_ids; // avoid duplicate lookups
   auto resolve_from = [&](UniqueCStringMap<uint32_t> &Names) {
