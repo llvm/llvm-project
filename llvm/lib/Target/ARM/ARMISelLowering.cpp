@@ -13878,7 +13878,7 @@ bool ARMTargetLowering::isDesirableToCommuteXorWithShift(
 }
 
 bool ARMTargetLowering::shouldFoldConstantShiftPairToMask(
-    const SDNode *N, CombineLevel Level) const {
+    const SDNode *N) const {
   assert(((N->getOpcode() == ISD::SHL &&
            N->getOperand(0).getOpcode() == ISD::SRL) ||
           (N->getOpcode() == ISD::SRL &&
@@ -13888,7 +13888,8 @@ bool ARMTargetLowering::shouldFoldConstantShiftPairToMask(
   if (!Subtarget->isThumb1Only())
     return true;
 
-  if (Level == BeforeLegalizeTypes)
+  EVT VT = N->getValueType(0);
+  if (VT.getScalarSizeInBits() > 32)
     return true;
 
   return false;
