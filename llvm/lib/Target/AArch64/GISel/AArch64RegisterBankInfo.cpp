@@ -568,9 +568,7 @@ bool AArch64RegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
     case Intrinsic::aarch64_neon_fcvtnu:
     case Intrinsic::aarch64_neon_fcvtps:
     case Intrinsic::aarch64_neon_fcvtpu:
-      // Force FPR register bank for half types, as those types otherwise
-      // don't get legalized correctly resulting in fp16 <-> gpr32 COPY's.
-      return MRI.getType(MI.getOperand(2).getReg()) == LLT::float16();
+      return true;
     default:
       break;
     }
@@ -864,10 +862,24 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_FPTOUI:
   case TargetOpcode::G_INTRINSIC_LRINT:
   case TargetOpcode::G_INTRINSIC_LLRINT:
+  case TargetOpcode::G_LROUND:
+  case TargetOpcode::G_LLROUND: {
     if (MRI.getType(MI.getOperand(0).getReg()).isVector())
       break;
-    OpRegBankIdx = {PMI_FirstGPR, PMI_FirstFPR};
+    TypeSize DstSize = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
+    TypeSize SrcSize = getSizeInBits(MI.getOperand(1).getReg(), MRI, TRI);
+    if (((DstSize == SrcSize) || STI.hasFeature(AArch64::FeatureFPRCVT)) &
+        all_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
+               [&](const MachineInstr &UseMI) {
+                 return onlyUsesFP(UseMI, MRI, TRI) ||
+                        prefersFPUse(UseMI, MRI, TRI);
+               }))
+      OpRegBankIdx = {PMI_FirstFPR, PMI_FirstFPR};
+    else
+      OpRegBankIdx = {PMI_FirstGPR, PMI_FirstFPR};
     break;
+  }
+
   case TargetOpcode::G_FCMP: {
     // If the result is a vector, it must use a FPR.
     AArch64GenRegisterBankInfo::PartialMappingIdx Idx0 =
@@ -1143,6 +1155,34 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_INTRINSIC:
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS: {
     switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
+    case Intrinsic::aarch64_neon_fcvtas:
+    case Intrinsic::aarch64_neon_fcvtau:
+    case Intrinsic::aarch64_neon_fcvtzs:
+    case Intrinsic::aarch64_neon_fcvtzu:
+    case Intrinsic::aarch64_neon_fcvtms:
+    case Intrinsic::aarch64_neon_fcvtmu:
+    case Intrinsic::aarch64_neon_fcvtns:
+    case Intrinsic::aarch64_neon_fcvtnu:
+    case Intrinsic::aarch64_neon_fcvtps:
+    case Intrinsic::aarch64_neon_fcvtpu: {
+      OpRegBankIdx[2] = PMI_FirstFPR;
+      if (MRI.getType(MI.getOperand(0).getReg()).isVector()) {
+        OpRegBankIdx[0] = PMI_FirstFPR;
+        break;
+      }
+      TypeSize DstSize = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
+      TypeSize SrcSize = getSizeInBits(MI.getOperand(2).getReg(), MRI, TRI);
+      if (((DstSize == SrcSize) || STI.hasFeature(AArch64::FeatureFPRCVT)) &
+          all_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
+                 [&](const MachineInstr &UseMI) {
+                   return onlyUsesFP(UseMI, MRI, TRI) ||
+                          prefersFPUse(UseMI, MRI, TRI);
+                 }))
+        OpRegBankIdx[0] = PMI_FirstFPR;
+      else
+        OpRegBankIdx[0] = PMI_FirstGPR;
+      break;
+    }
     case Intrinsic::aarch64_neon_vcvtfxs2fp:
     case Intrinsic::aarch64_neon_vcvtfxu2fp:
     case Intrinsic::aarch64_neon_vcvtfp2fxs:
@@ -1177,12 +1217,6 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
     }
-    break;
-  }
-  case TargetOpcode::G_LROUND:
-  case TargetOpcode::G_LLROUND: {
-    // Source is always floating point and destination is always integer.
-    OpRegBankIdx = {PMI_FirstGPR, PMI_FirstFPR};
     break;
   }
   }
