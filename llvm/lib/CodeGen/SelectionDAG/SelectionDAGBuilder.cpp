@@ -7750,6 +7750,17 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
 
+  case Intrinsic::reloc_none: {
+    SDValue V = getValue(I.getArgOperand(0));
+    const auto *GA = cast<GlobalAddressSDNode>(V);
+    SDValue Ops[2];
+    Ops[0] = getRoot();
+    Ops[1] = DAG.getTargetGlobalAddress(GA->getGlobal(), sdl, V.getValueType(),
+                                        GA->getOffset());
+    DAG.setRoot(DAG.getNode(ISD::RELOC_NONE, sdl, MVT::Other, Ops));
+    return;
+  }
+
   case Intrinsic::eh_exceptionpointer:
   case Intrinsic::eh_exceptioncode: {
     // Get the exception pointer vreg, copy from it, and resize it to fit.
