@@ -171,9 +171,11 @@ public:
   template <typename TLHS, typename TRHS>
   BuiltinTypeMethodBuilder &assign(TLHS LHS, TRHS RHS);
   template <typename T> BuiltinTypeMethodBuilder &dereference(T Ptr);
-  template <typename T> BuiltinTypeMethodBuilder &getResourceHandle(T ResourceRecord);
+  template <typename T>
+  BuiltinTypeMethodBuilder &getResourceHandle(T ResourceRecord);
   template <typename TResource, typename TValue>
-  BuiltinTypeMethodBuilder &setHandleFieldOnResource(TResource ResourceRecord, TValue HandleValue);
+  BuiltinTypeMethodBuilder &setHandleFieldOnResource(TResource ResourceRecord,
+                                                     TValue HandleValue);
   template <typename T> BuiltinTypeMethodBuilder &returnValue(T ReturnValue);
   BuiltinTypeDeclBuilder &finalize();
   Expr *getResourceHandleExpr();
@@ -531,7 +533,8 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::dereference(T Ptr) {
 }
 
 template <typename T>
-BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::getResourceHandle(T ResourceRecord) {
+BuiltinTypeMethodBuilder &
+BuiltinTypeMethodBuilder::getResourceHandle(T ResourceRecord) {
   ensureCompleteDecl();
 
   Expr *ResourceExpr = convertPlaceholder(ResourceRecord);
@@ -546,7 +549,9 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::getResourceHandle(T Resource
 }
 
 template <typename TResource, typename TValue>
-BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::setHandleFieldOnResource(TResource ResourceRecord, TValue HandleValue) {
+BuiltinTypeMethodBuilder &
+BuiltinTypeMethodBuilder::setHandleFieldOnResource(TResource ResourceRecord,
+                                                   TValue HandleValue) {
   ensureCompleteDecl();
 
   Expr *ResourceExpr = convertPlaceholder(ResourceRecord);
@@ -558,8 +563,8 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::setHandleFieldOnResource(TRe
       AST, ResourceExpr, false, HandleField, HandleField->getType(), VK_LValue,
       OK_Ordinary);
   Stmt *AssignStmt = BinaryOperator::Create(
-      DeclBuilder.SemaRef.getASTContext(), HandleMemberExpr, HandleValueExpr, BO_Assign,
-      HandleMemberExpr->getType(), ExprValueKind::VK_PRValue,
+      DeclBuilder.SemaRef.getASTContext(), HandleMemberExpr, HandleValueExpr,
+      BO_Assign, HandleMemberExpr->getType(), ExprValueKind::VK_PRValue,
       ExprObjectKind::OK_Ordinary, SourceLocation(), FPOptionsOverride());
   StmtsList.push_back(AssignStmt);
   return *this;
@@ -571,12 +576,12 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::returnValue(T ReturnValue) {
 
   Expr *ReturnValueExpr = convertPlaceholder(ReturnValue);
   ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
-  StmtsList.push_back(ReturnStmt::Create(AST, SourceLocation(), ReturnValueExpr, nullptr));
+  StmtsList.push_back(
+      ReturnStmt::Create(AST, SourceLocation(), ReturnValueExpr, nullptr));
   return *this;
 }
 
-BuiltinTypeDeclBuilder &
-BuiltinTypeMethodBuilder::finalize() {
+BuiltinTypeDeclBuilder &BuiltinTypeMethodBuilder::finalize() {
   assert(!DeclBuilder.Record->isCompleteDefinition() &&
          "record is already complete");
 
