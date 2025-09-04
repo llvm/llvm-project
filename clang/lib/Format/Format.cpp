@@ -961,10 +961,12 @@ template <> struct MappingTraits<FormatStyle> {
         FormatStyle::LanguageKind Language =
             ((FormatStyle *)IO.getContext())->Language;
         if (Style.Language == FormatStyle::LK_JavaScript ||
-            Language == FormatStyle::LK_JavaScript) {
+            (Style.Language == FormatStyle::LK_None &&
+             Language == FormatStyle::LK_JavaScript)) {
           LocalBAS = BAS_AlwaysBreak;
         } else if (Style.Language == FormatStyle::LK_Java ||
-                   Language == FormatStyle::LK_Java) {
+                   (Style.Language == FormatStyle::LK_None &&
+                    Language == FormatStyle::LK_Java)) {
           LocalBAS = BAS_DontAlign;
         }
       } else if (BasedOnStyle.equals_insensitive("webkit")) {
