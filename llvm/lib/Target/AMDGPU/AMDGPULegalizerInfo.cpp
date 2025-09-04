@@ -2083,7 +2083,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .lower();
 
   auto &FSHRActionDefs = getActionDefinitionsBuilder(G_FSHR);
-  FSHRActionDefs.legalFor({{S32, S32}}).clampMaxNumElementsStrict(0, S16, 2);
+  FSHRActionDefs.legalFor({{S32, S32}})
+                              .clampMaxNumElementsStrict(0, S16, 2);
   if (ST.hasVOP3PInsts())
     FSHRActionDefs.lowerFor({{V2S16, V2S16}});
   FSHRActionDefs.scalarize(0).lower();
