@@ -147,6 +147,7 @@ public:
     case Extension::fp8e4m3:
     case Extension::fp8e5m2:
     case Extension::fft:
+    case Extension::mxfp:
       return {Profile::pro_fp};
     case Extension::variable:
     case Extension::controlflow:
