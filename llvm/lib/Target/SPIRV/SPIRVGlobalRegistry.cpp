@@ -1122,19 +1122,20 @@ SPIRVType *SPIRVGlobalRegistry::restOfCreateSPIRVType(
   SPIRVType *SpirvType = createSPIRVType(Ty, MIRBuilder, AccessQual,
                                          ExplicitLayoutRequired, EmitIR);
   TypesInProcessing.erase(Ty);
+  VRegToTypeMap[&MIRBuilder.getMF()][getSPIRVTypeID(SpirvType)] = SpirvType;
 
   // Record the FPVariant of the floating-point registers in the
   // VRegFPVariantMap.
-  MachineFunction *MF = &MIRBuilder.getMF();
-  Register TypeReg = getSPIRVTypeID(SpirvType);
-  if (Ty->isFloatingPointTy()) {
-    if (Ty->isBFloatTy()) {
-      VRegFPVariantMap[MF][TypeReg] = FPVariant::BRAIN_FLOAT;
-    } else {
-      VRegFPVariantMap[MF][TypeReg] = FPVariant::IEEE_FLOAT;
-    }
-  }
-  VRegToTypeMap[MF][TypeReg] = SpirvType;
+  // MachineFunction *MF = &MIRBuilder.getMF();
+  // Register TypeReg = getSPIRVTypeID(SpirvType);
+  // if (Ty->isFloatingPointTy()) {
+  //   if (Ty->isBFloatTy()) {
+  //     VRegFPVariantMap[MF][TypeReg] = FPVariant::BRAIN_FLOAT;
+  //   } else {
+  //     VRegFPVariantMap[MF][TypeReg] = FPVariant::IEEE_FLOAT;
+  //   }
+  // }
+  // VRegToTypeMap[MF][TypeReg] = SpirvType;
 
   // TODO: We could end up with two SPIR-V types pointing to the same llvm type.
   // Is that a problem?
@@ -2101,14 +2102,20 @@ bool SPIRVGlobalRegistry::hasBlockDecoration(SPIRVType *Type) const {
   return false;
 }
 
-SPIRVGlobalRegistry::FPVariant
-SPIRVGlobalRegistry::getFPVariantForVReg(Register VReg,
-                                         const MachineFunction *MF) {
-  auto t = VRegFPVariantMap.find(MF ? MF : CurMF);
-  if (t != VRegFPVariantMap.end()) {
-    auto tt = t->second.find(VReg);
-    if (tt != t->second.end())
-      return tt->second;
-  }
-  return FPVariant::NONE;
-}
+// SPIRVGlobalRegistry::FPVariant
+// SPIRVGlobalRegistry::getFPVariantForVReg(Register VReg,
+//                                          const MachineFunction *MF) {
+//   const MachineFunction *Func = MF ? MF : CurMF;
+//   DenseMap<const MachineFunction *,
+//            DenseMap<Register, FPVariant>>::const_iterator FuncIt =
+//       VRegFPVariantMap.find(Func);
+
+//   if (FuncIt != VRegFPVariantMap.end()) {
+//     const DenseMap<Register, FPVariant> &VRegMap = FuncIt->second;
+//     DenseMap<Register, FPVariant>::const_iterator VRegIt = VRegMap.find(VReg);
+
+//     if (VRegIt != VRegMap.end())
+//       return VRegIt->second;
+//   }
+//   return FPVariant::NONE;
+// }
