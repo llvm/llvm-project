@@ -736,7 +736,7 @@ def NVVM_MBarrierTryWaitParityOp : NVVM_PTXBuilder_Op<"mbarrier.try_wait.parity"
     test for the completion of a specific phase of an *mbarrier object* using phase 
     parity. It uses the default `.acquire.cta` semantics. This acquire pattern 
     establishes memory ordering for operations occurring in program order after this 
-    wait instruction by making operations from other threads visible to subsequent 
+    wait instruction by making operations from other threads in the CTA visible to subsequent 
     operations in the current thread. When this wait completes, it synchronizes with 
     the corresponding release pattern from the `mbarrier.arrive` operation, establishing 
     memory ordering within the CTA.
@@ -833,7 +833,7 @@ def NVVM_MBarrierTestWaitOp : NVVM_Op<"mbarrier.test.wait">,
     completion of a specific phase of an *mbarrier object*. It uses the default
     `.acquire.cta` semantics. This acquire pattern establishes memory ordering for 
     operations occurring in program order after this wait instruction by making 
-    operations from other threads visible to subsequent operations in the current 
+    operations from other threads in the CTA visible to subsequent operations in the current 
     thread. When this wait completes, it synchronizes with the corresponding release 
     pattern from the `mbarrier.arrive` operation, establishing memory ordering within 
     the CTA.
@@ -941,8 +941,8 @@ def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
     the barrier is reinitialized so that it can be immediately reused.
 
     This operation generates an aligned barrier, indicating that all threads in the CTA 
-    will execute the same barrier instruction. Behavior is undefined if not all threads 
-    in the CTA reach this instruction.
+    will execute the same barrier instruction. Behavior is undefined if all threads in the 
+    CTA do not reach this instruction.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar)
   }];
