@@ -92,7 +92,7 @@ _start:
   call func
 
   ## Test 8 checks that subsequent upper bits operations on the same register
-  ## correctly updates the tracked register value to the value written by the
+  ## correctly update the tracked register value to the value written by the
   ## latest instruction. Resolution must occur based on the update upper bit
   ## value.
   auipc a0, 0x1000     ## Initial  upper bit value
