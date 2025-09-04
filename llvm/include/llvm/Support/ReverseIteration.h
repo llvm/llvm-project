@@ -7,10 +7,11 @@
 namespace llvm {
 
 template <class T = void *> constexpr bool shouldReverseIterate() {
-  if constexpr (LLVM_ENABLE_REVERSE_ITERATION)
-    return detail::IsPointerLike<T>::value;
-  else
-    return false;
+#if LLVM_ENABLE_REVERSE_ITERATION
+  return detail::IsPointerLike<T>::value;
+#else
+  return false;
+#endif
 }
 
 } // namespace llvm
