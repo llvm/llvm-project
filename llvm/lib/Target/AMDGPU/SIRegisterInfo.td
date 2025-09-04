@@ -1347,18 +1347,12 @@ def VGPRSrc_16 : RegisterOperand<VGPR_16> {
 // TODO: These cases should use default target alignment
 def VGPROp_16 : RegisterOperand<VGPR_16>;
 def VGPROp_32 : RegisterOperand<VGPR_32>;
-def VGPROp_64 : RegisterOperand<VReg_64>;
-def VGPROp_96 : RegisterOperand<VReg_96>;
-def VGPROp_128 : RegisterOperand<VReg_128>;
-def VGPROp_256 : RegisterOperand<VReg_256>;
 
-def VGPROp_64_Align1 : RegisterOperand<VReg_64>;
-def VGPROp_96_Align1 : RegisterOperand<VReg_96>;
-def VGPROp_128_Align1 : RegisterOperand<VReg_128>;
-
-def VGPROp_64_Align2 : RegisterOperand<VReg_64_Align2>;
-def VGPROp_128_Align2 : RegisterOperand<VReg_128_Align2>;
-
+foreach size = ["64", "96", "128", "256" ] in {
+  def VGPROp_#size : RegisterOperand<!cast<RegisterClass>("VReg_"#size)>;
+  def VGPROp_#size#_Align1 : RegisterOperand<!cast<RegisterClass>("VReg_"#size)>;
+  def VGPROp_#size#_Align2 : RegisterOperand<!cast<RegisterClass>("VReg_"#size#_Align2)>;
+}
 
 //===----------------------------------------------------------------------===//
 //  ASrc_* Operands with an AccVGPR
