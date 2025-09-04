@@ -133,6 +133,7 @@ struct MissingFeatures {
   static bool skippedLayout() { return false; }
   static bool astRecordDeclAttr() { return false; }
   static bool recordZeroInit() { return false; }
+  static bool recordZeroInitPadding() { return false; }
   static bool zeroSizeRecordMembers() { return false; }
 
   // Various handling of deferred processing in CIRGenModule.
@@ -146,7 +147,6 @@ struct MissingFeatures {
   static bool cxxabiUseARMMethodPtrABI() { return false; }
   static bool cxxabiUseARMGuardVarABI() { return false; }
   static bool cxxabiAppleARM64CXXABI() { return false; }
-  static bool isDiscreteBitFieldABI() { return false; }
 
   // Address class
   static bool addressOffset() { return false; }
