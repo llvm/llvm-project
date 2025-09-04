@@ -7,17 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 // clang-format off
-#include "IRModule.h"
+#include "mlir/Bindings/Python/IRModule.h"
 #include "mlir/Bindings/Python/IRTypes.h"
 // clang-format on
 
 #include <optional>
 
-#include "IRModule.h"
-#include "NanobindUtils.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/Support.h"
+#include "mlir/Bindings/Python/NanobindUtils.h"
 
 namespace nb = nanobind;
 using namespace mlir;
