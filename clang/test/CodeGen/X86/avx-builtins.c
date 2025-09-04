@@ -1083,23 +1083,52 @@ __m256d test_mm256_hadd_pd(__m256d A, __m256d B) {
   // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}})
   return _mm256_hadd_pd(A, B);
 }
+constexpr bool test_mm256_hadd_epi32_constexpr() {
+    constexpr __m256d a = _mm256_set_pd(1.0, 2.0, 3.0, 4.0);
+    constexpr __m256d b = _mm256_set_pd(5.0, 6.0, 7.0, 8.0);
+    constexpr __m256d result = _mm256_hadd_pd(a, b);
+    return match_m256d(result,1.0+2.0,3.0+4.0,5.0+6.0,7.0+8.0);
+}
+TEST_CONSTEXPR(test_mm256_hadd_epi32_constexpr())
 
 __m256 test_mm256_hadd_ps(__m256 A, __m256 B) {
   // CHECK-LABEL: test_mm256_hadd_ps
   // CHECK: call {{.*}}<8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}})
   return _mm256_hadd_ps(A, B);
 }
+constexpr bool test_mm256_hadd_ps_constexpr() {
+    constexpr __m256 a = _mm256_set_ps(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f);
+    constexpr __m256 b = _mm256_set_ps(9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f);
+    constexpr __m256 result = _mm256_hadd_ps(a, b);
+    return match_m256(result,1.0f+2.0f,3.0f+4.0f,5.0f+6.0f,7.0f+8.0f,
+                             9.0f+10.0f,11.0f+12.0f,13.0f+14.0f,15.0f+16.0f);
+}
+TEST_CONSTEXPR(test_mm256_hadd_ps_constexpr())
 
 __m256d test_mm256_hsub_pd(__m256d A, __m256d B) {
   // CHECK-LABEL: test_mm256_hsub_pd
   // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.hsub.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}})
   return _mm256_hsub_pd(A, B);
 }
+constexpr bool test_mm256_hsub_pd_constexpr() {
+    constexpr __m256d a = _mm256_set_pd(1.0, 2.0, 3.0, 4.0);
+    constexpr __m256d b = _mm256_set_pd(5.0, 6.0, 7.0, 8.0);
+    constexpr __m256d result = _mm256_hsub_pd(a, b);
+    return match_m256d(result,1.0-2.0,3.0-4.0,5.0-6.0,7.0-8.0);
+}
+TEST_CONSTEXPR(test_mm256_hsub_pd_constexpr())
 
 __m256 test_mm256_hsub_ps(__m256 A, __m256 B) {
   // CHECK-LABEL: test_mm256_hsub_ps
   // CHECK: call {{.*}}<8 x float> @llvm.x86.avx.hsub.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}})
   return _mm256_hsub_ps(A, B);
+}
+constexpr bool test_mm256_hsub_ps_constexpr() {
+    constexpr __m256 a = _mm256_set_ps(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f);
+    constexpr __m256 b = _mm256_set_ps(9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f);
+    constexpr __m256 result = _mm256_hsub_ps(a, b);
+    return match_m256(result,1.0f-2.0f,3.0f-4.0f,5.0f-6.0f,7.0f-8.0f,
+                             9.0f-10.0f,11.0f-12.0f,13.0f-14.0f,15.0f-16.0f);
 }
 
 __m256i test_mm256_insert_epi8(__m256i x, char b) {

@@ -462,17 +462,48 @@ __m256i test_mm256_hadd_epi16(__m256i a, __m256i b) {
   return _mm256_hadd_epi16(a, b);
 }
 
+constexpr bool test_mm256_hadd_epi16_constexpr() {
+    constexpr __m256i a = _mm256_setr_epi16(1, 2, 3, 4, 5, 6, 7, 
+        8,9,10,11,12,13,14,15,16);
+    constexpr __m256i b = _mm256_setr_epi16(17,18,19,20,21,22,23,
+        24,25,26,27,28,29,30,31,32);
+    
+    constexpr __m256i result = _mm256_hadd_epi16(a, b);
+    return match_v16si(result,1+2,3+4,5+6,7+8,9+10,11+12,13+14,15+16,17+18,19+20,21+22,23+24,25+26,27+28,29+30,31+32);
+}
+TEST_CONSTEXPR(test_mm256_hadd_epi16_constexpr())
+
 __m256i test_mm256_hadd_epi32(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_hadd_epi32
   // CHECK: call <8 x i32> @llvm.x86.avx2.phadd.d(<8 x i32> %{{.*}}, <8 x i32> %{{.*}})
   return _mm256_hadd_epi32(a, b);
 }
 
+constexpr bool test_mm256_hadd_epi32_constexpr() {
+    constexpr __m256i a = _mm256_setr_epi32(10, 20, 30, 40, 50, 60, 70, 80);
+    constexpr __m256i b = _mm256_setr_epi32(5, 15, 25, 35, 45, 55, 65, 75);
+    
+    constexpr __m256i result = _mm256_hadd_epi32(a, b);
+    return match_v8si(result,10+20,30+40,50+60,70+80,5+15,25+35, 45+55,65+75);
+}
+TEST_CONSTEXPR(test_mm256_hadd_epi32_constexpr())
+
 __m256i test_mm256_hadds_epi16(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_hadds_epi16
   // CHECK:call <16 x i16> @llvm.x86.avx2.phadd.sw(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
   return _mm256_hadds_epi16(a, b);
 }
+constexpr bool test_mm256_hadds_epi16_constexpr() {
+    constexpr __m256i a = _mm256_setr_epi16(32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767,
+        32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767);
+    constexpr __m256i b = _mm256_setr_epi16(1, 1, 1, 1, 1, 1, 1, 1, 1, 
+        1, 1, 1, 1, 1, 1, 1);
+    constexpr __m256i result = _mm256_hadds_epi16(a, b);
+
+    return match_v16si(result, 32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767,
+    32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767);
+}
+TEST_CONSTEXPR(test_mm256_hadds_epi16_constexpr())
 
 __m256i test_mm256_hsub_epi16(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_hsub_epi16
@@ -480,17 +511,49 @@ __m256i test_mm256_hsub_epi16(__m256i a, __m256i b) {
   return _mm256_hsub_epi16(a, b);
 }
 
+constexpr bool test_mm256_hsub_epi16_constexpr() {
+    constexpr __m256i a = _mm256_setr_epi16(1, 2, 3, 4, 5, 6, 7, 
+        8,9,10,11,12,13,14,15,16);
+    constexpr __m256i b = _mm256_setr_epi16(17,18,19,20,21,22,23,
+        24,25,26,27,28,29,30,31,32);
+    
+    constexpr __m256i result = _mm256_hsub_epi16(a, b);
+    return match_v16si(result,1-2,3-4,5-6,7-8,9-10,11-12,13-14,15-16,17-18,19-20,21-22,23-24,25-26,27-28,29-30,31-32);
+}
+TEST_CONSTEXPR(test_mm256_hsub_epi16_constexpr())
+
 __m256i test_mm256_hsub_epi32(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_hsub_epi32
   // CHECK: call <8 x i32> @llvm.x86.avx2.phsub.d(<8 x i32> %{{.*}}, <8 x i32> %{{.*}})
   return _mm256_hsub_epi32(a, b);
 }
 
+constexpr bool test_mm256_hsub_epi32_constexpr() {
+    constexpr __m256i a = _mm256_setr_epi32(10, 20, 30, 40, 50, 60, 70, 80);
+    constexpr __m256i b = _mm256_setr_epi32(5, 15, 25, 35, 45, 55, 65, 75);
+    
+    constexpr __m256i result = _mm256_hsub_epi32(a, b);
+    return match_v8si(result,10-20,30-40,50-60,70-80,5-15,25-35, 45-55,65-75);
+}
+TEST_CONSTEXPR(test_mm256_hsub_epi32_constexpr())
+
 __m256i test_mm256_hsubs_epi16(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_hsubs_epi16
   // CHECK:call <16 x i16> @llvm.x86.avx2.phsub.sw(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
   return _mm256_hsubs_epi16(a, b);
 }
+
+constexpr bool test_mm256_hsubs_epi16_constexpr() {
+    constexpr __m256i a = _mm256_setr_epi16(32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767,
+        32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767);
+    constexpr __m256i b = _mm256_setr_epi16(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
+    constexpr __m256i result3 = _mm256_hsubs_epi16(a, b);
+
+    return match_v16si(result3, 32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767,
+    32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767);
+}
+TEST_CONSTEXPR(test_mm256_hsubs_epi16_constexpr())
+
 
 __m128i test_mm_i32gather_epi32(int const *b, __m128i c) {
   // CHECK-LABEL: test_mm_i32gather_epi32

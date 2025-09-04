@@ -204,10 +204,10 @@ _mm_abs_epi32(__m128i __a) {
 ///    destination.
 /// \returns A 128-bit vector of [8 x i16] containing the horizontal sums of
 ///    both operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_hadd_epi16(__m128i __a, __m128i __b)
-{
-    return (__m128i)__builtin_ia32_phaddw128((__v8hi)__a, (__v8hi)__b);
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_hadd_epi16(__m128i __a, __m128i __b) {
+  return (__m128i)__builtin_ia32_phaddw128(
+      (__v8hi)__a, (__v8hi)__b);
 }
 
 /// Horizontally adds the adjacent pairs of values contained in 2 packed
@@ -227,10 +227,9 @@ _mm_hadd_epi16(__m128i __a, __m128i __b)
 ///    destination.
 /// \returns A 128-bit vector of [4 x i32] containing the horizontal sums of
 ///    both operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_hadd_epi32(__m128i __a, __m128i __b)
-{
-    return (__m128i)__builtin_ia32_phaddd128((__v4si)__a, (__v4si)__b);
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_hadd_epi32(__m128i __a, __m128i __b) {
+  return (__m128i)__builtin_ia32_phaddd128((__v4si)__a, (__v4si)__b);
 }
 
 /// Horizontally adds the adjacent pairs of values contained in 2 packed
@@ -250,11 +249,10 @@ _mm_hadd_epi32(__m128i __a, __m128i __b)
 ///    destination.
 /// \returns A 64-bit vector of [4 x i16] containing the horizontal sums of both
 ///    operands.
-static __inline__ __m64 __DEFAULT_FN_ATTRS
-_mm_hadd_pi16(__m64 __a, __m64 __b)
-{
-    return __trunc64(__builtin_ia32_phaddw128(
-        (__v8hi)__builtin_shufflevector(__a, __b, 0, 1), (__v8hi){}));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_CONSTEXPR
+ _mm_hadd_pi16(__m64 __a, __m64 __b) {
+  return __trunc64(__builtin_ia32_phaddw128(
+      (__v8hi)__builtin_shufflevector(__a, __b, 0, 1), (__v8hi){}));
 }
 
 /// Horizontally adds the adjacent pairs of values contained in 2 packed
@@ -274,7 +272,7 @@ _mm_hadd_pi16(__m64 __a, __m64 __b)
 ///    destination.
 /// \returns A 64-bit vector of [2 x i32] containing the horizontal sums of both
 ///    operands.
-static __inline__ __m64 __DEFAULT_FN_ATTRS
+static __inline__ __m64 __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm_hadd_pi32(__m64 __a, __m64 __b)
 {
     return __trunc64(__builtin_ia32_phaddd128(
@@ -301,10 +299,9 @@ _mm_hadd_pi32(__m64 __a, __m64 __b)
 ///    destination.
 /// \returns A 128-bit vector of [8 x i16] containing the horizontal saturated
 ///    sums of both operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_hadds_epi16(__m128i __a, __m128i __b)
-{
-    return (__m128i)__builtin_ia32_phaddsw128((__v8hi)__a, (__v8hi)__b);
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_hadds_epi16(__m128i __a, __m128i __b) {
+  return (__m128i)__builtin_ia32_phaddsw128((__v8hi)__a, (__v8hi)__b);
 }
 
 /// Horizontally adds, with saturation, the adjacent pairs of values contained
@@ -327,7 +324,7 @@ _mm_hadds_epi16(__m128i __a, __m128i __b)
 ///    destination.
 /// \returns A 64-bit vector of [4 x i16] containing the horizontal saturated
 ///    sums of both operands.
-static __inline__ __m64 __DEFAULT_FN_ATTRS
+static __inline__ __m64 __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm_hadds_pi16(__m64 __a, __m64 __b)
 {
     return __trunc64(__builtin_ia32_phaddsw128(
@@ -351,10 +348,9 @@ _mm_hadds_pi16(__m64 __a, __m64 __b)
 ///    the destination.
 /// \returns A 128-bit vector of [8 x i16] containing the horizontal differences
 ///    of both operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_hsub_epi16(__m128i __a, __m128i __b)
-{
-    return (__m128i)__builtin_ia32_phsubw128((__v8hi)__a, (__v8hi)__b);
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_hsub_epi16(__m128i __a, __m128i __b) {
+  return (__m128i)__builtin_ia32_phsubw128((__v8hi)__a, (__v8hi)__b);
 }
 
 /// Horizontally subtracts the adjacent pairs of values contained in 2
@@ -374,10 +370,9 @@ _mm_hsub_epi16(__m128i __a, __m128i __b)
 ///    the destination.
 /// \returns A 128-bit vector of [4 x i32] containing the horizontal differences
 ///    of both operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_hsub_epi32(__m128i __a, __m128i __b)
-{
-    return (__m128i)__builtin_ia32_phsubd128((__v4si)__a, (__v4si)__b);
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_hsub_epi32(__m128i __a, __m128i __b) {
+  return (__m128i)__builtin_ia32_phsubd128((__v4si)__a, (__v4si)__b);
 }
 
 /// Horizontally subtracts the adjacent pairs of values contained in 2
@@ -397,7 +392,7 @@ _mm_hsub_epi32(__m128i __a, __m128i __b)
 ///    the destination.
 /// \returns A 64-bit vector of [4 x i16] containing the horizontal differences
 ///    of both operands.
-static __inline__ __m64 __DEFAULT_FN_ATTRS
+static __inline__ __m64 __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm_hsub_pi16(__m64 __a, __m64 __b)
 {
     return __trunc64(__builtin_ia32_phsubw128(
@@ -421,7 +416,7 @@ _mm_hsub_pi16(__m64 __a, __m64 __b)
 ///    the destination.
 /// \returns A 64-bit vector of [2 x i32] containing the horizontal differences
 ///    of both operands.
-static __inline__ __m64 __DEFAULT_FN_ATTRS
+static __inline__ __m64 __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm_hsub_pi32(__m64 __a, __m64 __b)
 {
     return __trunc64(__builtin_ia32_phsubd128(
@@ -448,10 +443,9 @@ _mm_hsub_pi32(__m64 __a, __m64 __b)
 ///    the destination.
 /// \returns A 128-bit vector of [8 x i16] containing the horizontal saturated
 ///    differences of both operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_hsubs_epi16(__m128i __a, __m128i __b)
-{
-    return (__m128i)__builtin_ia32_phsubsw128((__v8hi)__a, (__v8hi)__b);
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_hsubs_epi16(__m128i __a, __m128i __b) {
+  return (__m128i)__builtin_ia32_phsubsw128((__v8hi)__a, (__v8hi)__b);
 }
 
 /// Horizontally subtracts, with saturation, the adjacent pairs of values
@@ -474,7 +468,7 @@ _mm_hsubs_epi16(__m128i __a, __m128i __b)
 ///    the destination.
 /// \returns A 64-bit vector of [4 x i16] containing the horizontal saturated
 ///    differences of both operands.
-static __inline__ __m64 __DEFAULT_FN_ATTRS
+static __inline__ __m64 __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm_hsubs_pi16(__m64 __a, __m64 __b)
 {
     return __trunc64(__builtin_ia32_phsubsw128(
@@ -509,10 +503,9 @@ _mm_hsubs_pi16(__m64 __a, __m64 __b)
 ///    \a R5 := (\a __a10 * \a __b10) + (\a __a11 * \a __b11) \n
 ///    \a R6 := (\a __a12 * \a __b12) + (\a __a13 * \a __b13) \n
 ///    \a R7 := (\a __a14 * \a __b14) + (\a __a15 * \a __b15)
-static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_maddubs_epi16(__m128i __a, __m128i __b)
-{
-    return (__m128i)__builtin_ia32_pmaddubsw128((__v16qi)__a, (__v16qi)__b);
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_maddubs_epi16(__m128i __a, __m128i __b) {
+  return (__m128i)__builtin_ia32_pmaddubsw128((__v16qi)__a, (__v16qi)__b);
 }
 
 /// Multiplies corresponding pairs of packed 8-bit unsigned integer
@@ -539,11 +532,10 @@ _mm_maddubs_epi16(__m128i __a, __m128i __b)
 ///    \a R1 := (\a __a2 * \a __b2) + (\a __a3 * \a __b3) \n
 ///    \a R2 := (\a __a4 * \a __b4) + (\a __a5 * \a __b5) \n
 ///    \a R3 := (\a __a6 * \a __b6) + (\a __a7 * \a __b7)
-static __inline__ __m64 __DEFAULT_FN_ATTRS
-_mm_maddubs_pi16(__m64 __a, __m64 __b)
-{
-    return __trunc64(__builtin_ia32_pmaddubsw128((__v16qi)__anyext128(__a),
-                                                 (__v16qi)__anyext128(__b)));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_maddubs_pi16(__m64 __a, __m64 __b) {
+  return __trunc64(__builtin_ia32_pmaddubsw128((__v16qi)__anyext128(__a),
+                                               (__v16qi)__anyext128(__b)));
 }
 
 /// Multiplies packed 16-bit signed integer values, truncates the 32-bit
@@ -560,7 +552,7 @@ _mm_maddubs_pi16(__m64 __a, __m64 __b)
 ///    A 128-bit vector of [8 x i16] containing one of the source operands.
 /// \returns A 128-bit vector of [8 x i16] containing the rounded and scaled
 ///    products of both operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm_mulhrs_epi16(__m128i __a, __m128i __b)
 {
     return (__m128i)__builtin_ia32_pmulhrsw128((__v8hi)__a, (__v8hi)__b);
