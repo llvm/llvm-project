@@ -180,7 +180,7 @@ bool FileAnalysis::willTrapOnCFIViolation(const Instr &InstrMeta) const {
   if (!InstrDesc.isCall())
     return false;
   uint64_t Target;
-  if (!MIA->evaluateBranch(InstrMeta.Instruction, InstrMeta.VMAddress,
+  if (!MIA->findTargetAddress(InstrMeta.Instruction, InstrMeta.VMAddress,
                            InstrMeta.InstructionSize, Target))
     return false;
   return TrapOnFailFunctionAddresses.contains(Target);
@@ -215,7 +215,7 @@ FileAnalysis::getDefiniteNextInstruction(const Instr &InstrMeta) const {
       return nullptr;
 
     uint64_t Target;
-    if (!MIA->evaluateBranch(InstrMeta.Instruction, InstrMeta.VMAddress,
+    if (!MIA->findTargetAddress(InstrMeta.Instruction, InstrMeta.VMAddress,
                              InstrMeta.InstructionSize, Target))
       return nullptr;
 
@@ -508,7 +508,7 @@ void FileAnalysis::parseSectionContents(ArrayRef<uint8_t> SectionBytes,
       continue;
 
     uint64_t Target;
-    if (MIA->evaluateBranch(Instruction, VMAddress, InstructionSize, Target)) {
+    if (MIA->findTargetAddress(Instruction, VMAddress, InstructionSize, Target)) {
       // If the target can be evaluated, it's not indirect.
       StaticBranchTargetings[Target].push_back(VMAddress);
       continue;

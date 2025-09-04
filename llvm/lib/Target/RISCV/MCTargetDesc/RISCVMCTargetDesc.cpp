@@ -32,6 +32,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include <bitset>
+#include <cstdint>
 
 #define GET_INSTRINFO_MC_DESC
 #define ENABLE_INSTR_PREDICATE_VERIFIER
@@ -184,6 +185,17 @@ public:
     }
 
     switch (Inst.getOpcode()) {
+    case RISCV::C_LUI:
+    case RISCV::LUI: {
+      setGPRState(Inst.getOperand(0).getReg(),
+                  SignExtend64<32>(Inst.getOperand(1).getImm() << 12));
+      break;
+    }
+    case RISCV::AUIPC: {
+      setGPRState(Inst.getOperand(0).getReg(),
+                  Addr + SignExtend64<32>(Inst.getOperand(1).getImm() << 12));
+      break;
+    }
     default: {
       // Clear the state of all defined registers for instructions that we don't
       // explicitly support.
@@ -195,15 +207,12 @@ public:
       }
       break;
     }
-    case RISCV::AUIPC:
-      setGPRState(Inst.getOperand(0).getReg(),
-                  Addr + SignExtend64<32>(Inst.getOperand(1).getImm() << 12));
-      break;
     }
   }
 
-  bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                      uint64_t &Target) const override {
+  bool findTargetAddress(const MCInst &Inst, uint64_t Addr, uint64_t Size,
+                         uint64_t &Target,
+                         const MCSubtargetInfo *STI) const override {
     if (isConditionalBranch(Inst)) {
       int64_t Imm;
       if (Size == 2)
@@ -215,6 +224,8 @@ public:
     }
 
     switch (Inst.getOpcode()) {
+    default:
+      return false;
     case RISCV::C_J:
     case RISCV::C_JAL:
     case RISCV::QC_E_J:
@@ -231,8 +242,85 @@ public:
       }
       return false;
     }
+    case RISCV::C_ADDI:
+    case RISCV::ADDI: {
+      if (!STI)
+        return false;
+      unsigned int ArchRegWidth =
+          STI->getTargetTriple().getArchPointerBitWidth();
+      MCRegister Reg = Inst.getOperand(1).getReg();
+      auto TargetRegState = getGPRState(Reg);
+      if (TargetRegState && Reg != RISCV::X0) {
+        Target = *TargetRegState + Inst.getOperand(2).getImm();
+        Target &= maskTrailingOnes<uint64_t>(ArchRegWidth);
+        return true;
+      }
+      break;
     }
-
+    case RISCV::C_ADDIW:
+    case RISCV::ADDIW: {
+      MCRegister Reg = Inst.getOperand(1).getReg();
+      auto TargetRegState = getGPRState(Reg);
+      if (TargetRegState && Reg != RISCV::X0) {
+        Target = *TargetRegState + Inst.getOperand(2).getImm();
+        Target = SignExtend64<32>(Target);
+        return true;
+      }
+      break;
+    }
+    case RISCV::LB:
+    case RISCV::LH:
+    case RISCV::LD:
+    case RISCV::LW:
+    case RISCV::LBU:
+    case RISCV::LHU:
+    case RISCV::LWU:
+    case RISCV::SB:
+    case RISCV::SH:
+    case RISCV::SW:
+    case RISCV::SD:
+    case RISCV::FLH:
+    case RISCV::FLW:
+    case RISCV::FLD:
+    case RISCV::FSH:
+    case RISCV::FSW:
+    case RISCV::FSD:
+    case RISCV::C_LD:
+    case RISCV::C_SD:
+    case RISCV::C_FLD:
+    case RISCV::C_FSD:
+    case RISCV::C_SW:
+    case RISCV::C_LW:
+    case RISCV::C_FSW:
+    case RISCV::C_FLW:
+    case RISCV::C_LBU:
+    case RISCV::C_LH:
+    case RISCV::C_LHU:
+    case RISCV::C_SB:
+    case RISCV::C_SH:
+    case RISCV::C_LWSP:
+    case RISCV::C_SWSP:
+    case RISCV::C_LDSP:
+    case RISCV::C_SDSP:
+    case RISCV::C_FLWSP:
+    case RISCV::C_FSWSP:
+    case RISCV::C_FLDSP:
+    case RISCV::C_FSDSP:
+    case RISCV::C_LD_RV32:
+    case RISCV::C_SD_RV32:
+    case RISCV::C_SDSP_RV32:
+    case RISCV::LD_RV32:
+    case RISCV::C_LDSP_RV32:
+    case RISCV::SD_RV32: {
+      MCRegister Reg = Inst.getOperand(1).getReg();
+      auto TargetRegState = getGPRState(Reg);
+      if (TargetRegState) {
+        Target = *TargetRegState + Inst.getOperand(2).getImm();
+        return true;
+      }
+      break;
+    }
+    }
     return false;
   }
 
@@ -389,12 +477,11 @@ LLVMInitializeRISCVTargetMC() {
     TargetRegistry::RegisterELFStreamer(*T, createRISCVELFStreamer);
     TargetRegistry::RegisterObjectTargetStreamer(
         *T, createRISCVObjectTargetStreamer);
-    TargetRegistry::RegisterMCInstrAnalysis(*T, createRISCVInstrAnalysis);
-
     // Register the asm target streamer.
     TargetRegistry::RegisterAsmTargetStreamer(*T, createRISCVAsmTargetStreamer);
     // Register the null target streamer.
     TargetRegistry::RegisterNullTargetStreamer(*T,
                                                createRISCVNullTargetStreamer);
+    TargetRegistry::RegisterMCInstrAnalysis(*T, createRISCVInstrAnalysis);
   }
 }

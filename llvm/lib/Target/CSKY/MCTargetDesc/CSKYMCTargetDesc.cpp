@@ -111,8 +111,9 @@ public:
   explicit CSKYMCInstrAnalysis(const MCInstrInfo *Info)
       : MCInstrAnalysis(Info) {}
 
-  bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                      uint64_t &Target) const override {
+  bool findTargetAddress(const MCInst &Inst, uint64_t Addr, uint64_t Size,
+                         uint64_t &Target,
+                         const MCSubtargetInfo *STI) const override {
     if (isConditionalBranch(Inst) || isUnconditionalBranch(Inst)) {
       int64_t Imm;
       Imm = Inst.getOperand(Inst.getNumOperands() - 1).getImm();
