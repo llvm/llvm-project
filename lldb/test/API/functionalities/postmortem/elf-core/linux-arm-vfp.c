@@ -1,4 +1,5 @@
-// commandline: -march=armv7+fp -nostdlib -static -Wl,--build-id=none linux-arm-vfp.c
+// commandline: -march=armv7+fp -nostdlib -static -Wl,--build-id=none
+// linux-arm-vfp.c
 
 static void foo(char *boom) {
   asm volatile(R"(
@@ -16,6 +17,4 @@ static void foo(char *boom) {
   *boom = 47;
 }
 
-void _start(void) {
-  foo(0);
-}
+void _start(void) { foo(0); }
