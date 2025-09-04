@@ -11,8 +11,10 @@ int test_select_bool_int(bool cond0, int tVal, int fVal) {
 
 struct S { int a; };
 // CHECK-LABEL: test_select_infer
-// CHECK: [[SELECT:%.*]] = select i1 {{%.*}}, ptr {{%.*}}, ptr {{%.*}}
-// CHECK: store ptr [[SELECT]]
+// CHECK: [[TRUE_VAL:%.*]] = load %struct.S, ptr {{%.*}}, align 1
+// CHECK: [[FALSE_VAL:%.*]] = load %struct.S, ptr {{%.*}}, align 1
+// CHECK: [[SELECT:%.*]] = select i1 {{%.*}}, %struct.S [[TRUE_VAL]], %struct.S [[FALSE_VAL]]
+// CHECK: store %struct.S [[SELECT]], ptr {{%.*}}, align 1
 // CHECK: ret void
 struct S test_select_infer(bool cond0, struct S tVal, struct S fVal) {
   return select(cond0, tVal, fVal);
