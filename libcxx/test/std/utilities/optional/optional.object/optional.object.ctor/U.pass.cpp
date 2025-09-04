@@ -84,6 +84,11 @@ void test_implicit()
         using T = TestTypes::TestType;
         assert(implicit_conversion<T>(3, T(3)));
     }
+    {
+      using T = TestTypes::TestType;
+      optional<T> opt({3});
+      assert(opt && *opt == static_cast<T>(3));
+    }
   {
     using O = optional<ImplicitAny>;
     static_assert(!test_convertible<O, std::in_place_t>(), "");
@@ -131,15 +136,6 @@ void test_explicit() {
             assert(T::move_constructed == 0);
             assert(T::copy_constructed == 0);
             assert(t.value().value == 42);
-        }
-        T::reset();
-        {
-          optional<T> t{43};
-          assert(T::alive == 1);
-          assert(T::value_constructed == 1);
-          assert(T::move_constructed == 0);
-          assert(T::copy_constructed == 0);
-          assert(t.value().value == 43);
         }
         assert(T::alive == 0);
     }

@@ -349,14 +349,17 @@ constexpr bool test() {
     {
       MoveOnlyMulti t{};
       std::expected<MoveOnlyMulti, int> e1(std::unexpect);
-      e1 = std::move(t);
+      static_assert(std::is_same_v<decltype(std::move(t)), MoveOnlyMulti&&>);
+      e1 = {std::move(t)};
       assert(e1.value().used_move1);
     }
     {
       const MoveOnlyMulti t{};
       std::expected<MoveOnlyMulti, int> e1(std::unexpect);
-      e1 = std::move(t);
-      assert(e1.value().used_move2);
+      static_assert(std::is_same_v<decltype(std::move(t)), const MoveOnlyMulti&&>);
+      // _Up = remove_cv_t<const MoveOnlyMulti&&> --> should use MoveOnlyMulti(MoveOnlyMulti&&)
+      e1 = {std::move(t)};
+      assert(e1.value().used_move1);
     }
   }
 
