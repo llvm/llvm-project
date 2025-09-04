@@ -1,5 +1,7 @@
 // REQUIRES: crash-recovery
 // UNSUPPORTED: ms-sdk, target={{.*-(ps4|ps5)}}
+// Some assertions in this test use Linux style (/) file paths.
+// UNSUPPORTED: system-windows
 
 // FIXME: Canonicalizing paths to remove relative traversal components
 // currenty fails a unittest on windows and is disable by default.
