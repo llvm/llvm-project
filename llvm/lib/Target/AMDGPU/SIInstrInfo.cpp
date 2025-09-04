@@ -5034,7 +5034,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     // aligned register constraint.
     // FIXME: We do not verify inline asm operands, but custom inline asm
     // verification is broken anyway
-    if (ST.needsAlignedVGPRs()) {
+    if (ST.needsAlignedVGPRs() && Opcode != AMDGPU::AV_MOV_B64_IMM_PSEUDO) {
       const TargetRegisterClass *RC = RI.getRegClassForReg(MRI, Reg);
       if (RI.hasVectorRegisters(RC) && MO.getSubReg()) {
         if (const TargetRegisterClass *SubRC =
@@ -6013,7 +6013,11 @@ const TargetRegisterClass *SIInstrInfo::getRegClass(const MCInstrDesc &TID,
       IsAllocatable = VDstIdx != -1 || AMDGPU::hasNamedOperand(
                                            TID.Opcode, AMDGPU::OpName::data1);
     }
+  } else if (TID.getOpcode() == AMDGPU::AV_MOV_B64_IMM_PSEUDO) {
+    // Special pseudos have no alignment requirement
+    return RI.getRegClass(RegClass);
   }
+
   return adjustAllocatableRegClass(ST, RI, TID, RegClass, IsAllocatable);
 }
 
