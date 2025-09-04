@@ -164,7 +164,7 @@ LLDB_REGNUM_GENERIC_ARG8 = _lldb.LLDB_REGNUM_GENERIC_ARG8
 LLDB_REGNUM_GENERIC_TP = _lldb.LLDB_REGNUM_GENERIC_TP
 
 LLDB_INVALID_STOP_ID = _lldb.LLDB_INVALID_STOP_ID
-
+r"""Invalid value definitions"""
 LLDB_INVALID_ADDRESS = _lldb.LLDB_INVALID_ADDRESS
 
 LLDB_INVALID_INDEX32 = _lldb.LLDB_INVALID_INDEX32
@@ -200,7 +200,7 @@ LLDB_INVALID_CPU_ID = _lldb.LLDB_INVALID_CPU_ID
 LLDB_INVALID_WATCHPOINT_RESOURCE_ID = _lldb.LLDB_INVALID_WATCHPOINT_RESOURCE_ID
 
 LLDB_ARCH_DEFAULT = _lldb.LLDB_ARCH_DEFAULT
-
+r"""CPU Type definitions"""
 LLDB_ARCH_DEFAULT_32BIT = _lldb.LLDB_ARCH_DEFAULT_32BIT
 
 LLDB_ARCH_DEFAULT_64BIT = _lldb.LLDB_ARCH_DEFAULT_64BIT
@@ -208,7 +208,7 @@ LLDB_ARCH_DEFAULT_64BIT = _lldb.LLDB_ARCH_DEFAULT_64BIT
 LLDB_INVALID_CPUTYPE = _lldb.LLDB_INVALID_CPUTYPE
 
 LLDB_MAX_NUM_OPTION_SETS = _lldb.LLDB_MAX_NUM_OPTION_SETS
-
+r"""Option Set definitions"""
 LLDB_OPT_SET_ALL = _lldb.LLDB_OPT_SET_ALL
 
 LLDB_OPT_SET_1 = _lldb.LLDB_OPT_SET_1
@@ -236,61 +236,84 @@ LLDB_OPT_SET_11 = _lldb.LLDB_OPT_SET_11
 LLDB_OPT_SET_12 = _lldb.LLDB_OPT_SET_12
 
 LLDB_INVALID_ADDRESS_MASK = _lldb.LLDB_INVALID_ADDRESS_MASK
-
+r"""
+    Address Mask
+    Bits not used for addressing are set to 1 in the mask;
+    all mask bits set is an invalid value.
+    """
 eStateInvalid = _lldb.eStateInvalid
 
 eStateUnloaded = _lldb.eStateUnloaded
-
+r"""Process is object is valid, but not currently loaded"""
 eStateConnected = _lldb.eStateConnected
-
+r"""Process is connected to remote debug services, but not"""
 eStateAttaching = _lldb.eStateAttaching
-
+r"""launched or attached to anything yet Process is currently trying to attach"""
 eStateLaunching = _lldb.eStateLaunching
-
+r"""Process is in the process of launching"""
 eStateStopped = _lldb.eStateStopped
-
+r"""Process or thread is stopped and can be examined."""
 eStateRunning = _lldb.eStateRunning
-
+r"""Process or thread is running and can't be examined."""
 eStateStepping = _lldb.eStateStepping
-
+r"""Process or thread is in the process of stepping and can"""
 eStateCrashed = _lldb.eStateCrashed
-
+r"""not be examined. Process or thread has crashed and can be examined."""
 eStateDetached = _lldb.eStateDetached
-
+r"""Process has been detached and can't be examined."""
 eStateExited = _lldb.eStateExited
-
+r"""Process has exited and can't be examined."""
 eStateSuspended = _lldb.eStateSuspended
-
+r"""
+    Process or thread is in a suspended state as far
+    as the debugger is concerned while other processes
+    or threads get the chance to run.
+    """
 kLastStateType = _lldb.kLastStateType
 
 eLaunchFlagNone = _lldb.eLaunchFlagNone
 
 eLaunchFlagExec = _lldb.eLaunchFlagExec
-
+r"""Exec when launching and turn the calling"""
 eLaunchFlagDebug = _lldb.eLaunchFlagDebug
-
+r"""process into a new process Stop as soon as the process launches to"""
 eLaunchFlagStopAtEntry = _lldb.eLaunchFlagStopAtEntry
-
+r"""allow the process to be debugged Stop at the program entry point"""
 eLaunchFlagDisableASLR = _lldb.eLaunchFlagDisableASLR
-
+r"""
+    instead of auto-continuing when
+    launching or attaching at entry point Disable Address Space Layout Randomization
+    """
 eLaunchFlagDisableSTDIO = _lldb.eLaunchFlagDisableSTDIO
-
+r"""Disable stdio for inferior process (e.g. for a GUI app)"""
 eLaunchFlagLaunchInTTY = _lldb.eLaunchFlagLaunchInTTY
-
+r"""Launch the process in a new TTY if supported by the host"""
 eLaunchFlagLaunchInShell = _lldb.eLaunchFlagLaunchInShell
-
+r"""Launch the process inside a shell to get shell expansion"""
 eLaunchFlagLaunchInSeparateProcessGroup = _lldb.eLaunchFlagLaunchInSeparateProcessGroup
-
+r"""
+    Launch the process in a separate process group
+    If you are going to hand the process off (e.g. to
+    debugserver)
+    """
 eLaunchFlagDontSetExitStatus = _lldb.eLaunchFlagDontSetExitStatus
-
+r"""set this flag so lldb & the handee don't race to set its exit status."""
 eLaunchFlagDetachOnError = _lldb.eLaunchFlagDetachOnError
-
+r"""
+    If set, then the client stub
+    should detach rather than killing
+    the debugee
+    if it loses connection with lldb.
+    """
 eLaunchFlagShellExpandArguments = _lldb.eLaunchFlagShellExpandArguments
-
+r"""Perform shell-style argument expansion"""
 eLaunchFlagCloseTTYOnExit = _lldb.eLaunchFlagCloseTTYOnExit
-
+r"""Close the open TTY on exit"""
 eLaunchFlagInheritTCCFromParent = _lldb.eLaunchFlagInheritTCCFromParent
-
+r"""
+    Don't make the inferior responsible for its own TCC
+    permissions but instead inherit them from its parent.
+    """
 eOnlyThisThread = _lldb.eOnlyThisThread
 
 eAllThreads = _lldb.eAllThreads
@@ -312,13 +335,13 @@ eByteOrderLittle = _lldb.eByteOrderLittle
 eEncodingInvalid = _lldb.eEncodingInvalid
 
 eEncodingUint = _lldb.eEncodingUint
-
+r"""unsigned integer"""
 eEncodingSint = _lldb.eEncodingSint
-
+r"""signed integer"""
 eEncodingIEEE754 = _lldb.eEncodingIEEE754
-
+r"""float"""
 eEncodingVector = _lldb.eEncodingVector
-
+r"""vector registers"""
 eFormatDefault = _lldb.eFormatDefault
 
 eFormatInvalid = _lldb.eFormatInvalid
@@ -334,13 +357,13 @@ eFormatBytesWithASCII = _lldb.eFormatBytesWithASCII
 eFormatChar = _lldb.eFormatChar
 
 eFormatCharPrintable = _lldb.eFormatCharPrintable
-
+r"""Only printable characters, '.' if not printable"""
 eFormatComplex = _lldb.eFormatComplex
-
+r"""Floating point complex type"""
 eFormatComplexFloat = _lldb.eFormatComplexFloat
 
 eFormatCString = _lldb.eFormatCString
-
+r"""NULL terminated C strings"""
 eFormatDecimal = _lldb.eFormatDecimal
 
 eFormatEnum = _lldb.eFormatEnum
@@ -354,7 +377,10 @@ eFormatFloat = _lldb.eFormatFloat
 eFormatOctal = _lldb.eFormatOctal
 
 eFormatOSType = _lldb.eFormatOSType
-
+r"""
+    OS character codes encoded into an integer 'PICT' 'text'
+    etc...
+    """
 eFormatUnicode16 = _lldb.eFormatUnicode16
 
 eFormatUnicode32 = _lldb.eFormatUnicode32
@@ -390,17 +416,24 @@ eFormatVectorOfFloat64 = _lldb.eFormatVectorOfFloat64
 eFormatVectorOfUInt128 = _lldb.eFormatVectorOfUInt128
 
 eFormatComplexInteger = _lldb.eFormatComplexInteger
-
+r"""Integer complex type"""
 eFormatCharArray = _lldb.eFormatCharArray
-
+r"""
+    Print characters with no single quotes, used for
+    character arrays that can contain non printable
+    characters
+    """
 eFormatAddressInfo = _lldb.eFormatAddressInfo
-
+r"""
+    Describe what an address points to (func + offset
+    with file/line, symbol + offset, data, etc)
+    """
 eFormatHexFloat = _lldb.eFormatHexFloat
-
+r"""ISO C99 hex float string"""
 eFormatInstruction = _lldb.eFormatInstruction
-
+r"""Disassemble an opcode"""
 eFormatVoid = _lldb.eFormatVoid
-
+r"""Do not print this"""
 eFormatUnicode8 = _lldb.eFormatUnicode8
 
 kNumFormats = _lldb.kNumFormats
@@ -426,15 +459,21 @@ eScriptLanguageUnknown = _lldb.eScriptLanguageUnknown
 eScriptLanguageDefault = _lldb.eScriptLanguageDefault
 
 eRegisterKindEHFrame = _lldb.eRegisterKindEHFrame
-
+r"""the register numbers seen in eh_frame"""
 eRegisterKindDWARF = _lldb.eRegisterKindDWARF
-
+r"""the register numbers seen DWARF"""
 eRegisterKindGeneric = _lldb.eRegisterKindGeneric
-
+r"""
+    insn ptr reg, stack ptr reg, etc not specific to
+    any particular target
+    """
 eRegisterKindProcessPlugin = _lldb.eRegisterKindProcessPlugin
-
+r"""
+    num used by the process plugin - e.g. by the
+    remote gdb-protocol stub program
+    """
 eRegisterKindLLDB = _lldb.eRegisterKindLLDB
-
+r"""lldb's internal register numbers"""
 kNumRegisterKinds = _lldb.kNumRegisterKinds
 
 eStopReasonInvalid = _lldb.eStopReasonInvalid
@@ -452,7 +491,7 @@ eStopReasonSignal = _lldb.eStopReasonSignal
 eStopReasonException = _lldb.eStopReasonException
 
 eStopReasonExec = _lldb.eStopReasonExec
-
+r"""Program was re-exec'ed"""
 eStopReasonPlanComplete = _lldb.eStopReasonPlanComplete
 
 eStopReasonThreadExiting = _lldb.eStopReasonThreadExiting
@@ -468,7 +507,7 @@ eStopReasonVFork = _lldb.eStopReasonVFork
 eStopReasonVForkDone = _lldb.eStopReasonVForkDone
 
 eStopReasonInterrupt = _lldb.eStopReasonInterrupt
-
+r"""Thread requested interrupt"""
 eStopReasonHistoryBoundary = _lldb.eStopReasonHistoryBoundary
 
 eReturnStatusInvalid = _lldb.eReturnStatusInvalid
@@ -524,53 +563,56 @@ eSearchDepthAddress = _lldb.eSearchDepthAddress
 kLastSearchDepthKind = _lldb.kLastSearchDepthKind
 
 eConnectionStatusSuccess = _lldb.eConnectionStatusSuccess
-
+r"""Success"""
 eConnectionStatusEndOfFile = _lldb.eConnectionStatusEndOfFile
-
+r"""End-of-file encountered"""
 eConnectionStatusError = _lldb.eConnectionStatusError
-
+r"""Check GetError() for details"""
 eConnectionStatusTimedOut = _lldb.eConnectionStatusTimedOut
-
+r"""Request timed out"""
 eConnectionStatusNoConnection = _lldb.eConnectionStatusNoConnection
-
+r"""No connection"""
 eConnectionStatusLostConnection = _lldb.eConnectionStatusLostConnection
-
+r"""
+    Lost connection while connected to a
+    valid connection
+    """
 eConnectionStatusInterrupted = _lldb.eConnectionStatusInterrupted
-
+r"""Interrupted read"""
 eErrorTypeInvalid = _lldb.eErrorTypeInvalid
 
 eErrorTypeGeneric = _lldb.eErrorTypeGeneric
-
+r"""Generic errors that can be any value."""
 eErrorTypeMachKernel = _lldb.eErrorTypeMachKernel
-
+r"""Mach kernel error codes."""
 eErrorTypePOSIX = _lldb.eErrorTypePOSIX
-
+r"""POSIX error codes."""
 eErrorTypeExpression = _lldb.eErrorTypeExpression
-
+r"""These are from the ExpressionResults enum."""
 eErrorTypeWin32 = _lldb.eErrorTypeWin32
-
+r"""Standard Win32 error codes."""
 eValueTypeInvalid = _lldb.eValueTypeInvalid
 
 eValueTypeVariableGlobal = _lldb.eValueTypeVariableGlobal
-
+r"""globals variable"""
 eValueTypeVariableStatic = _lldb.eValueTypeVariableStatic
-
+r"""static variable"""
 eValueTypeVariableArgument = _lldb.eValueTypeVariableArgument
-
+r"""function argument variables"""
 eValueTypeVariableLocal = _lldb.eValueTypeVariableLocal
-
+r"""function local variables"""
 eValueTypeRegister = _lldb.eValueTypeRegister
-
+r"""stack frame register value"""
 eValueTypeRegisterSet = _lldb.eValueTypeRegisterSet
-
+r"""A collection of stack frame register values"""
 eValueTypeConstResult = _lldb.eValueTypeConstResult
-
+r"""constant result variables"""
 eValueTypeVariableThreadLocal = _lldb.eValueTypeVariableThreadLocal
-
+r"""thread local storage variable"""
 eValueTypeVTable = _lldb.eValueTypeVTable
-
+r"""virtual function table"""
 eValueTypeVTableEntry = _lldb.eValueTypeVTableEntry
-
+r"""function pointer in virtual function table"""
 eInputReaderGranularityInvalid = _lldb.eInputReaderGranularityInvalid
 
 eInputReaderGranularityByte = _lldb.eInputReaderGranularityByte
@@ -582,23 +624,54 @@ eInputReaderGranularityLine = _lldb.eInputReaderGranularityLine
 eInputReaderGranularityAll = _lldb.eInputReaderGranularityAll
 
 eSymbolContextTarget = _lldb.eSymbolContextTarget
-
+r"""
+    Set when *target* is requested from a query, or was located
+    in query results
+    """
 eSymbolContextModule = _lldb.eSymbolContextModule
-
+r"""
+    Set when *module* is requested from a query, or was located
+    in query results
+    """
 eSymbolContextCompUnit = _lldb.eSymbolContextCompUnit
-
+r"""
+    Set when *comp_unit* is requested from a query, or was
+    located in query results
+    """
 eSymbolContextFunction = _lldb.eSymbolContextFunction
-
+r"""
+    Set when *function* is requested from a query, or was located
+    in query results
+    """
 eSymbolContextBlock = _lldb.eSymbolContextBlock
-
+r"""
+    Set when the deepest *block* is requested from a query, or
+    was located in query results
+    """
 eSymbolContextLineEntry = _lldb.eSymbolContextLineEntry
-
+r"""
+    Set when *line_entry* is requested from a query, or was
+    located in query results
+    """
 eSymbolContextSymbol = _lldb.eSymbolContextSymbol
-
+r"""
+    Set when *symbol* is requested from a query, or was located
+    in query results
+    """
 eSymbolContextEverything = _lldb.eSymbolContextEverything
-
+r"""
+    Indicates to try and lookup everything up during a routine
+    symbol context query.
+    """
 eSymbolContextVariable = _lldb.eSymbolContextVariable
-
+r"""
+    Set when *global* or static variable is requested from a
+    query, or was located in query results.
+    eSymbolContextVariable is potentially expensive to lookup so
+    it isn't included in eSymbolContextEverything which stops it
+    from being used during frame PC lookups and many other
+    potential address to symbol context lookups.
+    """
 eSymbolContextLastItem = _lldb.eSymbolContextLastItem
 
 ePermissionsWritable = _lldb.ePermissionsWritable
@@ -608,21 +681,34 @@ ePermissionsReadable = _lldb.ePermissionsReadable
 ePermissionsExecutable = _lldb.ePermissionsExecutable
 
 eInputReaderActivate = _lldb.eInputReaderActivate
-
+r"""reader is newly pushed onto the reader stack"""
 eInputReaderAsynchronousOutputWritten = _lldb.eInputReaderAsynchronousOutputWritten
-
+r"""
+    an async output event occurred;
+    the reader may want to do
+    something
+    """
 eInputReaderReactivate = _lldb.eInputReaderReactivate
-
+r"""
+    reader is on top of the stack again after another
+    reader was popped off
+    """
 eInputReaderDeactivate = _lldb.eInputReaderDeactivate
-
+r"""another reader was pushed on the stack"""
 eInputReaderGotToken = _lldb.eInputReaderGotToken
-
+r"""reader got one of its tokens (granularity)"""
 eInputReaderInterrupt = _lldb.eInputReaderInterrupt
-
+r"""
+    reader received an interrupt signal (probably from
+    a control-c)
+    """
 eInputReaderEndOfFile = _lldb.eInputReaderEndOfFile
-
+r"""
+    reader received an EOF char (probably from a
+    control-d)
+    """
 eInputReaderDone = _lldb.eInputReaderDone
-
+r"""reader was just popped off the stack and is done"""
 eBreakpointEventTypeInvalidType = _lldb.eBreakpointEventTypeInvalidType
 
 eBreakpointEventTypeAdded = _lldb.eBreakpointEventTypeAdded
@@ -630,7 +716,11 @@ eBreakpointEventTypeAdded = _lldb.eBreakpointEventTypeAdded
 eBreakpointEventTypeRemoved = _lldb.eBreakpointEventTypeRemoved
 
 eBreakpointEventTypeLocationsAdded = _lldb.eBreakpointEventTypeLocationsAdded
-
+r"""
+    Locations added doesn't
+    get sent when the
+    breakpoint is created
+    """
 eBreakpointEventTypeLocationsRemoved = _lldb.eBreakpointEventTypeLocationsRemoved
 
 eBreakpointEventTypeLocationsResolved = _lldb.eBreakpointEventTypeLocationsResolved
@@ -670,83 +760,93 @@ eWatchpointEventTypeThreadChanged = _lldb.eWatchpointEventTypeThreadChanged
 eWatchpointEventTypeTypeChanged = _lldb.eWatchpointEventTypeTypeChanged
 
 eWatchpointWriteTypeDisabled = _lldb.eWatchpointWriteTypeDisabled
-
+r"""Don't stop when the watched memory region is written to."""
 eWatchpointWriteTypeAlways = _lldb.eWatchpointWriteTypeAlways
-
+r"""
+    Stop on any write access to the memory region, even if
+    the value doesn't change.  On some architectures, a write
+    near the memory region may be falsely reported as a match,
+    and notify this spurious stop as a watchpoint trap.
+    """
 eWatchpointWriteTypeOnModify = _lldb.eWatchpointWriteTypeOnModify
-
+r"""
+    Stop on a write to the memory region that changes its value.
+    This is most likely the behavior a user expects, and is the
+    behavior in gdb.  lldb can silently ignore writes near the
+    watched memory region that are reported as accesses to lldb.
+    """
 eLanguageTypeUnknown = _lldb.eLanguageTypeUnknown
-
+r"""Unknown or invalid language value."""
 eLanguageTypeC89 = _lldb.eLanguageTypeC89
-
+r"""ISO C:1989."""
 eLanguageTypeC = _lldb.eLanguageTypeC
-
+r"""Non-standardized C, such as K&R."""
 eLanguageTypeAda83 = _lldb.eLanguageTypeAda83
-
+r"""ISO Ada:1983."""
 eLanguageTypeC_plus_plus = _lldb.eLanguageTypeC_plus_plus
-
+r"""ISO C++:1998."""
 eLanguageTypeCobol74 = _lldb.eLanguageTypeCobol74
-
+r"""ISO Cobol:1974."""
 eLanguageTypeCobol85 = _lldb.eLanguageTypeCobol85
-
+r"""ISO Cobol:1985."""
 eLanguageTypeFortran77 = _lldb.eLanguageTypeFortran77
-
+r"""ISO Fortran 77."""
 eLanguageTypeFortran90 = _lldb.eLanguageTypeFortran90
-
+r"""ISO Fortran 90."""
 eLanguageTypePascal83 = _lldb.eLanguageTypePascal83
-
+r"""ISO Pascal:1983."""
 eLanguageTypeModula2 = _lldb.eLanguageTypeModula2
-
+r"""ISO Modula-2:1996."""
 eLanguageTypeJava = _lldb.eLanguageTypeJava
-
+r"""Java."""
 eLanguageTypeC99 = _lldb.eLanguageTypeC99
-
+r"""ISO C:1999."""
 eLanguageTypeAda95 = _lldb.eLanguageTypeAda95
-
+r"""ISO Ada:1995."""
 eLanguageTypeFortran95 = _lldb.eLanguageTypeFortran95
-
+r"""ISO Fortran 95."""
 eLanguageTypePLI = _lldb.eLanguageTypePLI
-
+r"""ANSI PL/I:1976."""
 eLanguageTypeObjC = _lldb.eLanguageTypeObjC
-
+r"""Objective-C."""
 eLanguageTypeObjC_plus_plus = _lldb.eLanguageTypeObjC_plus_plus
-
+r"""Objective-C++."""
 eLanguageTypeUPC = _lldb.eLanguageTypeUPC
-
+r"""Unified Parallel C."""
 eLanguageTypeD = _lldb.eLanguageTypeD
-
+r"""D."""
 eLanguageTypePython = _lldb.eLanguageTypePython
-
+r"""Python."""
 eLanguageTypeOpenCL = _lldb.eLanguageTypeOpenCL
-
+r"""OpenCL."""
 eLanguageTypeGo = _lldb.eLanguageTypeGo
-
+r"""Go."""
 eLanguageTypeModula3 = _lldb.eLanguageTypeModula3
-
+r"""Modula 3."""
 eLanguageTypeHaskell = _lldb.eLanguageTypeHaskell
-
+r"""Haskell."""
 eLanguageTypeC_plus_plus_03 = _lldb.eLanguageTypeC_plus_plus_03
-
+r"""ISO C++:2003."""
 eLanguageTypeC_plus_plus_11 = _lldb.eLanguageTypeC_plus_plus_11
-
+r"""ISO C++:2011."""
 eLanguageTypeOCaml = _lldb.eLanguageTypeOCaml
-
+r"""OCaml."""
 eLanguageTypeRust = _lldb.eLanguageTypeRust
-
+r"""Rust."""
 eLanguageTypeC11 = _lldb.eLanguageTypeC11
-
+r"""ISO C:2011."""
 eLanguageTypeSwift = _lldb.eLanguageTypeSwift
-
+r"""Swift."""
 eLanguageTypeJulia = _lldb.eLanguageTypeJulia
-
+r"""Julia."""
 eLanguageTypeDylan = _lldb.eLanguageTypeDylan
-
+r"""Dylan."""
 eLanguageTypeC_plus_plus_14 = _lldb.eLanguageTypeC_plus_plus_14
-
+r"""ISO C++:2014."""
 eLanguageTypeFortran03 = _lldb.eLanguageTypeFortran03
-
+r"""ISO Fortran 2003."""
 eLanguageTypeFortran08 = _lldb.eLanguageTypeFortran08
-
+r"""ISO Fortran 2008."""
 eLanguageTypeRenderScript = _lldb.eLanguageTypeRenderScript
 
 eLanguageTypeBLISS = _lldb.eLanguageTypeBLISS
@@ -758,9 +858,9 @@ eLanguageTypeZig = _lldb.eLanguageTypeZig
 eLanguageTypeCrystal = _lldb.eLanguageTypeCrystal
 
 eLanguageTypeC_plus_plus_17 = _lldb.eLanguageTypeC_plus_plus_17
-
+r"""ISO C++:2017."""
 eLanguageTypeC_plus_plus_20 = _lldb.eLanguageTypeC_plus_plus_20
-
+r"""ISO C++:2020."""
 eLanguageTypeC17 = _lldb.eLanguageTypeC17
 
 eLanguageTypeFortran18 = _lldb.eLanguageTypeFortran18
@@ -778,7 +878,7 @@ eLanguageTypeC_sharp = _lldb.eLanguageTypeC_sharp
 eLanguageTypeMojo = _lldb.eLanguageTypeMojo
 
 eLanguageTypeMipsAssembler = _lldb.eLanguageTypeMipsAssembler
-
+r"""Mips_Assembler."""
 eNumLanguageTypes = _lldb.eNumLanguageTypes
 
 eInstrumentationRuntimeTypeAddressSanitizer = _lldb.eInstrumentationRuntimeTypeAddressSanitizer
@@ -1029,6 +1129,10 @@ eArgTypeCPUName = _lldb.eArgTypeCPUName
 
 eArgTypeCPUFeatures = _lldb.eArgTypeCPUFeatures
 
+eArgTypeManagedPlugin = _lldb.eArgTypeManagedPlugin
+
+eArgTypeProtocol = _lldb.eArgTypeProtocol
+
 eArgTypeLastArg = _lldb.eArgTypeLastArg
 
 eSymbolTypeAny = _lldb.eSymbolTypeAny
@@ -1076,7 +1180,10 @@ eSymbolTypeScopeBegin = _lldb.eSymbolTypeScopeBegin
 eSymbolTypeScopeEnd = _lldb.eSymbolTypeScopeEnd
 
 eSymbolTypeAdditional = _lldb.eSymbolTypeAdditional
-
+r"""
+    When symbols take more than one entry, the extra
+    entries get this type
+    """
 eSymbolTypeCompiler = _lldb.eSymbolTypeCompiler
 
 eSymbolTypeInstrumentation = _lldb.eSymbolTypeInstrumentation
@@ -1098,15 +1205,15 @@ eSectionTypeInvalid = _lldb.eSectionTypeInvalid
 eSectionTypeCode = _lldb.eSectionTypeCode
 
 eSectionTypeContainer = _lldb.eSectionTypeContainer
-
+r"""The section contains child sections"""
 eSectionTypeData = _lldb.eSectionTypeData
 
 eSectionTypeDataCString = _lldb.eSectionTypeDataCString
-
+r"""Inlined C string data"""
 eSectionTypeDataCStringPointers = _lldb.eSectionTypeDataCStringPointers
-
+r"""Pointers to C string data"""
 eSectionTypeDataSymbolAddress = _lldb.eSectionTypeDataSymbolAddress
-
+r"""Address of a symbol in the symbol table"""
 eSectionTypeData4 = _lldb.eSectionTypeData4
 
 eSectionTypeData8 = _lldb.eSectionTypeData8
@@ -1120,9 +1227,12 @@ eSectionTypeDebug = _lldb.eSectionTypeDebug
 eSectionTypeZeroFill = _lldb.eSectionTypeZeroFill
 
 eSectionTypeDataObjCMessageRefs = _lldb.eSectionTypeDataObjCMessageRefs
-
+r"""Pointer to function pointer + selector"""
 eSectionTypeDataObjCCFStrings = _lldb.eSectionTypeDataObjCCFStrings
-
+r"""
+    Objective-C const CFString/NSString
+    objects
+    """
 eSectionTypeDWARFDebugAbbrev = _lldb.eSectionTypeDWARFDebugAbbrev
 
 eSectionTypeDWARFDebugAddr = _lldb.eSectionTypeDWARFDebugAddr
@@ -1162,13 +1272,13 @@ eSectionTypeDWARFAppleNamespaces = _lldb.eSectionTypeDWARFAppleNamespaces
 eSectionTypeDWARFAppleObjC = _lldb.eSectionTypeDWARFAppleObjC
 
 eSectionTypeELFSymbolTable = _lldb.eSectionTypeELFSymbolTable
-
+r"""Elf SHT_SYMTAB section"""
 eSectionTypeELFDynamicSymbols = _lldb.eSectionTypeELFDynamicSymbols
-
+r"""Elf SHT_DYNSYM section"""
 eSectionTypeELFRelocationEntries = _lldb.eSectionTypeELFRelocationEntries
-
+r"""Elf SHT_REL or SHT_REL section"""
 eSectionTypeELFDynamicLinkInfo = _lldb.eSectionTypeELFDynamicLinkInfo
-
+r"""Elf SHT_DYNAMIC section"""
 eSectionTypeEHFrame = _lldb.eSectionTypeEHFrame
 
 eSectionTypeARMexidx = _lldb.eSectionTypeARMexidx
@@ -1176,25 +1286,31 @@ eSectionTypeARMexidx = _lldb.eSectionTypeARMexidx
 eSectionTypeARMextab = _lldb.eSectionTypeARMextab
 
 eSectionTypeCompactUnwind = _lldb.eSectionTypeCompactUnwind
-
+r"""
+    compact unwind section in Mach-O,
+    __TEXT,__unwind_info
+    """
 eSectionTypeGoSymtab = _lldb.eSectionTypeGoSymtab
 
 eSectionTypeAbsoluteAddress = _lldb.eSectionTypeAbsoluteAddress
-
+r"""
+    Dummy section for symbols with absolute
+    address
+    """
 eSectionTypeDWARFGNUDebugAltLink = _lldb.eSectionTypeDWARFGNUDebugAltLink
 
 eSectionTypeDWARFDebugTypes = _lldb.eSectionTypeDWARFDebugTypes
-
+r"""DWARF .debug_types section"""
 eSectionTypeDWARFDebugNames = _lldb.eSectionTypeDWARFDebugNames
-
+r"""DWARF v5 .debug_names"""
 eSectionTypeOther = _lldb.eSectionTypeOther
 
 eSectionTypeDWARFDebugLineStr = _lldb.eSectionTypeDWARFDebugLineStr
-
+r"""DWARF v5 .debug_line_str"""
 eSectionTypeDWARFDebugRngLists = _lldb.eSectionTypeDWARFDebugRngLists
-
+r"""DWARF v5 .debug_rnglists"""
 eSectionTypeDWARFDebugLocLists = _lldb.eSectionTypeDWARFDebugLocLists
-
+r"""DWARF v5 .debug_loclists"""
 eSectionTypeDWARFDebugAbbrevDwo = _lldb.eSectionTypeDWARFDebugAbbrevDwo
 
 eSectionTypeDWARFDebugInfoDwo = _lldb.eSectionTypeDWARFDebugInfoDwo
@@ -1221,6 +1337,8 @@ eSectionTypeLLDBFormatters = _lldb.eSectionTypeLLDBFormatters
 
 eSectionTypeSwiftModules = _lldb.eSectionTypeSwiftModules
 
+eSectionTypeWasmName = _lldb.eSectionTypeWasmName
+
 eEmulateInstructionOptionNone = _lldb.eEmulateInstructionOptionNone
 
 eEmulateInstructionOptionAutoAdvancePC = _lldb.eEmulateInstructionOptionAutoAdvancePC
@@ -1230,17 +1348,33 @@ eEmulateInstructionOptionIgnoreConditions = _lldb.eEmulateInstructionOptionIgnor
 eFunctionNameTypeNone = _lldb.eFunctionNameTypeNone
 
 eFunctionNameTypeAuto = _lldb.eFunctionNameTypeAuto
-
+r"""
+    Automatically figure out which FunctionNameType
+    bits to set based on the function name.
+    """
 eFunctionNameTypeFull = _lldb.eFunctionNameTypeFull
-
+r"""
+    The function name.
+    For C this is the same as just the name of the function For C++ this is
+    the mangled or demangled version of the mangled name. For ObjC this is
+    the full function signature with the + or - and the square brackets and
+    the class and selector
+    """
 eFunctionNameTypeBase = _lldb.eFunctionNameTypeBase
-
+r"""
+    The function name only, no namespaces
+    or arguments and no class
+    methods or selectors will be searched.
+    """
 eFunctionNameTypeMethod = _lldb.eFunctionNameTypeMethod
-
+r"""
+    Find function by method name (C++)
+    with no namespace or arguments
+    """
 eFunctionNameTypeSelector = _lldb.eFunctionNameTypeSelector
-
+r"""Find function by selector name (ObjC) names"""
 eFunctionNameTypeAny = _lldb.eFunctionNameTypeAny
-
+r"""DEPRECATED: use eFunctionNameTypeAuto"""
 eBasicTypeInvalid = _lldb.eBasicTypeInvalid
 
 eBasicTypeVoid = _lldb.eBasicTypeVoid
@@ -1312,7 +1446,7 @@ eBasicTypeOther = _lldb.eBasicTypeOther
 eTraceTypeNone = _lldb.eTraceTypeNone
 
 eTraceTypeProcessorTrace = _lldb.eTraceTypeProcessorTrace
-
+r"""Intel Processor Trace"""
 eStructuredDataTypeInvalid = _lldb.eStructuredDataTypeInvalid
 
 eStructuredDataTypeNull = _lldb.eStructuredDataTypeNull
@@ -1518,23 +1652,35 @@ eExpressionEvaluationExecution = _lldb.eExpressionEvaluationExecution
 eExpressionEvaluationComplete = _lldb.eExpressionEvaluationComplete
 
 eInstructionControlFlowKindUnknown = _lldb.eInstructionControlFlowKindUnknown
-
+r"""The instruction could not be classified."""
 eInstructionControlFlowKindOther = _lldb.eInstructionControlFlowKindOther
-
+r"""
+    The instruction is something not listed below, i.e. it's a sequential
+    instruction that doesn't affect the control flow of the program.
+    """
 eInstructionControlFlowKindCall = _lldb.eInstructionControlFlowKindCall
-
+r"""The instruction is a near (function) call."""
 eInstructionControlFlowKindReturn = _lldb.eInstructionControlFlowKindReturn
-
+r"""The instruction is a near (function) return."""
 eInstructionControlFlowKindJump = _lldb.eInstructionControlFlowKindJump
-
+r"""The instruction is a near unconditional jump."""
 eInstructionControlFlowKindCondJump = _lldb.eInstructionControlFlowKindCondJump
-
+r"""The instruction is a near conditional jump."""
 eInstructionControlFlowKindFarCall = _lldb.eInstructionControlFlowKindFarCall
-
+r"""
+    The instruction is a call-like far transfer.
+    E.g. SYSCALL, SYSENTER, or FAR CALL.
+    """
 eInstructionControlFlowKindFarReturn = _lldb.eInstructionControlFlowKindFarReturn
-
+r"""
+    The instruction is a return-like far transfer.
+    E.g. SYSRET, SYSEXIT, IRET, or FAR RET.
+    """
 eInstructionControlFlowKindFarJump = _lldb.eInstructionControlFlowKindFarJump
-
+r"""
+    The instruction is a jump-like far transfer.
+    E.g. FAR JMP.
+    """
 eWatchpointKindWrite = _lldb.eWatchpointKindWrite
 
 eWatchpointKindRead = _lldb.eWatchpointKindRead
@@ -1552,35 +1698,56 @@ eGdbSignalSoftware = _lldb.eGdbSignalSoftware
 eGdbSignalBreakpoint = _lldb.eGdbSignalBreakpoint
 
 ePathTypeLLDBShlibDir = _lldb.ePathTypeLLDBShlibDir
-
+r"""
+    The directory where the lldb.so (unix) or LLDB
+    mach-o file in LLDB.framework (MacOSX) exists
+    """
 ePathTypeSupportExecutableDir = _lldb.ePathTypeSupportExecutableDir
-
+r"""
+    Find LLDB support executable directory
+    (debugserver, etc)
+    """
 ePathTypeHeaderDir = _lldb.ePathTypeHeaderDir
-
+r"""Find LLDB header file directory"""
 ePathTypePythonDir = _lldb.ePathTypePythonDir
-
+r"""Find Python modules (PYTHONPATH) directory"""
 ePathTypeLLDBSystemPlugins = _lldb.ePathTypeLLDBSystemPlugins
-
+r"""System plug-ins directory"""
 ePathTypeLLDBUserPlugins = _lldb.ePathTypeLLDBUserPlugins
-
+r"""User plug-ins directory"""
 ePathTypeLLDBTempSystemDir = _lldb.ePathTypeLLDBTempSystemDir
-
+r"""
+    The LLDB temp directory for this system that
+    will be cleaned up on exit
+    """
 ePathTypeGlobalLLDBTempSystemDir = _lldb.ePathTypeGlobalLLDBTempSystemDir
-
+r"""
+    The LLDB temp directory for this system,
+    NOT cleaned up on a process exit.
+    """
 ePathTypeClangDir = _lldb.ePathTypeClangDir
-
+r"""Find path to Clang builtin headers"""
 ePathTypeSwiftDir = _lldb.ePathTypeSwiftDir
-
+r"""Find path to Swift libraries"""
 eMemberFunctionKindUnknown = _lldb.eMemberFunctionKindUnknown
-
+r"""Not sure what the type of this is"""
 eMemberFunctionKindConstructor = _lldb.eMemberFunctionKindConstructor
-
+r"""A function used to create instances"""
 eMemberFunctionKindDestructor = _lldb.eMemberFunctionKindDestructor
-
+r"""
+    A function used to tear down existing
+    instances
+    """
 eMemberFunctionKindInstanceMethod = _lldb.eMemberFunctionKindInstanceMethod
-
+r"""
+    A function that applies to a specific
+    instance
+    """
 eMemberFunctionKindStaticMethod = _lldb.eMemberFunctionKindStaticMethod
-
+r"""
+    A function that applies to a type rather
+    than any instance
+    """
 eMatchTypeNormal = _lldb.eMatchTypeNormal
 
 eMatchTypeRegex = _lldb.eMatchTypeRegex
@@ -1652,35 +1819,105 @@ eTypeHasDynamicSelf = _lldb.eTypeHasDynamicSelf
 eTypeIsPack = _lldb.eTypeIsPack
 
 eCommandRequiresTarget = _lldb.eCommandRequiresTarget
+r"""
+    eCommandRequiresTarget
 
+    Ensures a valid target is contained in m_exe_ctx prior to executing the
+    command. If a target doesn't exist or is invalid, the command will fail
+    and CommandObject::GetInvalidTargetDescription() will be returned as the
+    error. CommandObject subclasses can override the virtual function for
+    GetInvalidTargetDescription() to provide custom strings when needed.
+    """
 eCommandRequiresProcess = _lldb.eCommandRequiresProcess
+r"""
+    eCommandRequiresProcess
 
+    Ensures a valid process is contained in m_exe_ctx prior to executing the
+    command. If a process doesn't exist or is invalid, the command will fail
+    and CommandObject::GetInvalidProcessDescription() will be returned as
+    the error. CommandObject subclasses can override the virtual function
+    for GetInvalidProcessDescription() to provide custom strings when
+    needed.
+    """
 eCommandRequiresThread = _lldb.eCommandRequiresThread
+r"""
+    eCommandRequiresThread
 
+    Ensures a valid thread is contained in m_exe_ctx prior to executing the
+    command. If a thread doesn't exist or is invalid, the command will fail
+    and CommandObject::GetInvalidThreadDescription() will be returned as the
+    error. CommandObject subclasses can override the virtual function for
+    GetInvalidThreadDescription() to provide custom strings when needed.
+    """
 eCommandRequiresFrame = _lldb.eCommandRequiresFrame
+r"""
+    eCommandRequiresFrame
 
+    Ensures a valid frame is contained in m_exe_ctx prior to executing the
+    command. If a frame doesn't exist or is invalid, the command will fail
+    and CommandObject::GetInvalidFrameDescription() will be returned as the
+    error. CommandObject subclasses can override the virtual function for
+    GetInvalidFrameDescription() to provide custom strings when needed.
+    """
 eCommandRequiresRegContext = _lldb.eCommandRequiresRegContext
+r"""
+    eCommandRequiresRegContext
 
+    Ensures a valid register context (from the selected frame if there is a
+    frame in m_exe_ctx, or from the selected thread from m_exe_ctx) is
+    available from m_exe_ctx prior to executing the command. If a target
+    doesn't exist or is invalid, the command will fail and
+    CommandObject::GetInvalidRegContextDescription() will be returned as the
+    error. CommandObject subclasses can override the virtual function for
+    GetInvalidRegContextDescription() to provide custom strings when needed.
+    """
 eCommandTryTargetAPILock = _lldb.eCommandTryTargetAPILock
+r"""
+    eCommandTryTargetAPILock
 
+    Attempts to acquire the target lock if a target is selected in the
+    command interpreter. If the command object fails to acquire the API
+    lock, the command will fail with an appropriate error message.
+    """
 eCommandProcessMustBeLaunched = _lldb.eCommandProcessMustBeLaunched
+r"""
+    eCommandProcessMustBeLaunched
 
+    Verifies that there is a launched process in m_exe_ctx, if there isn't,
+    the command will fail with an appropriate error message.
+    """
 eCommandProcessMustBePaused = _lldb.eCommandProcessMustBePaused
+r"""
+    eCommandProcessMustBePaused
 
+    Verifies that there is a paused process in m_exe_ctx, if there isn't,
+    the command will fail with an appropriate error message.
+    """
 eCommandProcessMustBeTraced = _lldb.eCommandProcessMustBeTraced
+r"""
+    eCommandProcessMustBeTraced
 
+    Verifies that the process is being traced by a Trace plug-in, if it
+    isn't the command will fail with an appropriate error message.
+    """
 eTypeSummaryCapped = _lldb.eTypeSummaryCapped
 
 eTypeSummaryUncapped = _lldb.eTypeSummaryUncapped
 
 eCommandInterpreterResultSuccess = _lldb.eCommandInterpreterResultSuccess
-
+r"""Command interpreter finished successfully."""
 eCommandInterpreterResultInferiorCrash = _lldb.eCommandInterpreterResultInferiorCrash
-
+r"""
+    Stopped because the corresponding option was set and the inferior
+    crashed.
+    """
 eCommandInterpreterResultCommandError = _lldb.eCommandInterpreterResultCommandError
-
+r"""
+    Stopped because the corresponding option was set and a command returned
+    an error.
+    """
 eCommandInterpreterResultQuitRequested = _lldb.eCommandInterpreterResultQuitRequested
-
+r"""Stopped because quit was requested."""
 eSaveCoreUnspecified = _lldb.eSaveCoreUnspecified
 
 eSaveCoreFull = _lldb.eSaveCoreFull
@@ -1692,15 +1929,21 @@ eSaveCoreStackOnly = _lldb.eSaveCoreStackOnly
 eSaveCoreCustomOnly = _lldb.eSaveCoreCustomOnly
 
 eTraceEventDisabledSW = _lldb.eTraceEventDisabledSW
-
+r"""Tracing was disabled for some time due to a software trigger."""
 eTraceEventDisabledHW = _lldb.eTraceEventDisabledHW
-
+r"""Tracing was disable for some time due to a hardware trigger."""
 eTraceEventCPUChanged = _lldb.eTraceEventCPUChanged
-
+r"""
+    Event due to CPU change for a thread. This event is also fired when
+    suddenly it's not possible to identify the cpu of a given thread.
+    """
 eTraceEventHWClockTick = _lldb.eTraceEventHWClockTick
-
+r"""Event due to a CPU HW clock tick."""
 eTraceEventSyncPoint = _lldb.eTraceEventSyncPoint
-
+r"""
+    The underlying tracing technology emitted a synchronization event used by
+    trace processors.
+    """
 eTraceItemKindError = _lldb.eTraceItemKindError
 
 eTraceItemKindEvent = _lldb.eTraceItemKindEvent
@@ -1708,21 +1951,27 @@ eTraceItemKindEvent = _lldb.eTraceItemKindEvent
 eTraceItemKindInstruction = _lldb.eTraceItemKindInstruction
 
 eTraceCursorSeekTypeBeginning = _lldb.eTraceCursorSeekTypeBeginning
-
+r"""The beginning of the trace, i.e the oldest item."""
 eTraceCursorSeekTypeCurrent = _lldb.eTraceCursorSeekTypeCurrent
-
+r"""The current position in the trace."""
 eTraceCursorSeekTypeEnd = _lldb.eTraceCursorSeekTypeEnd
-
+r"""The end of the trace, i.e the most recent item."""
 eDWIMPrintVerbosityNone = _lldb.eDWIMPrintVerbosityNone
-
+r"""Run `dwim-print` with no verbosity."""
 eDWIMPrintVerbosityExpression = _lldb.eDWIMPrintVerbosityExpression
-
+r"""Print a message when `dwim-print` uses `expression` evaluation."""
 eDWIMPrintVerbosityFull = _lldb.eDWIMPrintVerbosityFull
-
+r"""
+    Always print a message indicating how `dwim-print` is evaluating its
+    expression.
+    """
 eWatchPointValueKindInvalid = _lldb.eWatchPointValueKindInvalid
-
+r"""Watchpoint was created watching a variable"""
 eWatchPointValueKindVariable = _lldb.eWatchPointValueKindVariable
-
+r"""
+    Watchpoint was created watching the result of an expression that was
+    evaluated at creation time.
+    """
 eWatchPointValueKindExpression = _lldb.eWatchPointValueKindExpression
 
 eNoCompletion = _lldb.eNoCompletion
@@ -1784,9 +2033,12 @@ eThreadIDCompletion = _lldb.eThreadIDCompletion
 eTerminatorCompletion = _lldb.eTerminatorCompletion
 
 eRefetch = _lldb.eRefetch
-
+r"""Children need to be recomputed dynamically."""
 eReuse = _lldb.eReuse
-
+r"""
+    Children did not change and don't need to be recomputed;
+    re-use what we computed the last time we called Update.
+    """
 eSymbolDownloadOff = _lldb.eSymbolDownloadOff
 
 eSymbolDownloadBackground = _lldb.eSymbolDownloadBackground
@@ -1818,11 +2070,11 @@ eBroadcastBitError = _lldb.eBroadcastBitError
 eBroadcastSymbolChange = _lldb.eBroadcastSymbolChange
 
 eBroadcastBitProgressCategory = _lldb.eBroadcastBitProgressCategory
-
+r"""Deprecated"""
 eBroadcastBitExternalProgress = _lldb.eBroadcastBitExternalProgress
 
 eBroadcastBitExternalProgressCategory = _lldb.eBroadcastBitExternalProgressCategory
-
+r"""Deprecated"""
 eSeverityError = _lldb.eSeverityError
 
 eSeverityWarning = _lldb.eSeverityWarning
@@ -1830,9 +2082,9 @@ eSeverityWarning = _lldb.eSeverityWarning
 eSeverityInfo = _lldb.eSeverityInfo
 
 eCommandReturnObjectPrintCallbackSkipped = _lldb.eCommandReturnObjectPrintCallbackSkipped
-
+r"""The callback deferred printing the command return object."""
 eCommandReturnObjectPrintCallbackHandled = _lldb.eCommandReturnObjectPrintCallbackHandled
-
+r"""The callback handled printing the command return object."""
 eStopDisassemblyTypeNever = _lldb.eStopDisassemblyTypeNever
 
 eStopDisassemblyTypeNoDebugInfo = _lldb.eStopDisassemblyTypeNoDebugInfo
@@ -2062,15 +2314,34 @@ class SBAddressRange(object):
         return _lldb.SBAddressRange_Clear(self)
 
     def IsValid(self):
-        r"""IsValid(SBAddressRange self) -> bool"""
+        r"""
+        Check the address range refers to a valid base address and has a byte
+        size greater than zero.
+
+        :rtype: boolean
+        :return: 
+                True if the address range is valid, false otherwise.
+        """
         return _lldb.SBAddressRange_IsValid(self)
 
     def GetBaseAddress(self):
-        r"""GetBaseAddress(SBAddressRange self) -> SBAddress"""
+        r"""
+        Get the base address of the range.
+
+        :rtype: :py:class:`SBAddress`
+        :return: 
+                Base address object.
+        """
         return _lldb.SBAddressRange_GetBaseAddress(self)
 
     def GetByteSize(self):
-        r"""GetByteSize(SBAddressRange self) -> lldb::addr_t"""
+        r"""
+        Get the byte size of this range.
+
+        :rtype: int
+        :return: 
+                The size in bytes of this address range.
+        """
         return _lldb.SBAddressRange_GetByteSize(self)
 
     def __eq__(self, rhs):
@@ -2196,8 +2467,43 @@ class SBAttachInfo(object):
 
     def SetWaitForLaunch(self, *args):
         r"""
-        SetWaitForLaunch(SBAttachInfo self, bool b)
-        SetWaitForLaunch(SBAttachInfo self, bool b, bool _async)
+        *Overload 1:*
+        Set attach by process name settings.
+
+        Designed to be used after a call to SBAttachInfo::SetExecutable().
+        This function implies that a call to SBTarget::Attach(...) will
+        be synchronous.
+
+        :type b: boolean, in
+        :param b:
+                If **false**, attach to an existing process whose name matches.
+                If **true**, then wait for the next process whose name matches.
+
+        |
+
+        *Overload 2:*
+        Set attach by process name settings.
+
+        Designed to be used after a call to SBAttachInfo::SetExecutable().
+        Future calls to SBTarget::Attach(...) will be synchronous or
+        asynchronous depending on the *async* argument.
+
+        :type b: boolean, in
+        :param b:
+                If **false**, attach to an existing process whose name matches.
+                If **true**, then wait for the next process whose name matches.
+
+        :type async: boolean, in
+        :param async:
+                If **false**, then the SBTarget::Attach(...) call will be a
+                synchronous call with no way to cancel the attach in
+                progress.
+                If **true**, then the SBTarget::Attach(...) function will
+                return immediately and clients are expected to wait for a
+                process eStateStopped event if a suitable process is
+                eventually found. If the client wants to cancel the event,
+                SBProcess::Stop() can be called and an eStateExited process
+                event will be delivered.
         """
         return _lldb.SBAttachInfo_SetWaitForLaunch(self, *args)
 
@@ -2286,19 +2592,49 @@ class SBAttachInfo(object):
         return _lldb.SBAttachInfo_ParentProcessIDIsValid(self)
 
     def GetListener(self):
-        r"""GetListener(SBAttachInfo self) -> SBListener"""
+        r"""
+        Get the listener that will be used to receive process events.
+
+        If no listener has been set via a call to
+        SBAttachInfo::SetListener(), then an invalid SBListener will be
+        returned (SBListener::IsValid() will return false). If a listener
+        has been set, then the valid listener object will be returned.
+        """
         return _lldb.SBAttachInfo_GetListener(self)
 
     def SetListener(self, listener):
-        r"""SetListener(SBAttachInfo self, SBListener listener)"""
+        r"""
+        Set the listener that will be used to receive process events.
+
+        By default the SBDebugger, which has a listener, that the SBTarget
+        belongs to will listen for the process events. Calling this function
+        allows a different listener to be used to listen for process events.
+        """
         return _lldb.SBAttachInfo_SetListener(self, listener)
 
     def GetShadowListener(self):
-        r"""GetShadowListener(SBAttachInfo self) -> SBListener"""
+        r"""
+        Get the shadow listener that receive public process events,
+        additionally to the default process event listener.
+
+        If no listener has been set via a call to
+        SBLaunchInfo::SetShadowListener(), then an invalid SBListener will
+        be returned (SBListener::IsValid() will return false). If a listener
+        has been set, then the valid listener object will be returned.
+        """
         return _lldb.SBAttachInfo_GetShadowListener(self)
 
     def SetShadowListener(self, listener):
-        r"""SetShadowListener(SBAttachInfo self, SBListener listener)"""
+        r"""
+        Set the shadow listener that will receive public process events,
+        additionally to the default process event listener.
+
+        By default a process have no shadow event listener.
+        Calling this function allows public process events to be broadcasted to an
+        additional listener on top of the default process event listener.
+        If the `listener` argument is invalid (SBListener::IsValid() will
+        return false), this will clear the shadow listener.
+        """
         return _lldb.SBAttachInfo_SetShadowListener(self, listener)
 
     def GetScriptedProcessClassName(self):
@@ -2815,6 +3151,14 @@ class SBBreakpoint(object):
         r"""IsHardware(SBBreakpoint self) -> bool"""
         return _lldb.SBBreakpoint_IsHardware(self)
 
+    def SetIsHardware(self, is_hardware):
+        r"""
+        Make this breakpoint a hardware breakpoint. This will replace all existing
+        breakpoint locations with hardware breakpoints. Returns an error if this
+        fails, e.g. when there aren't enough hardware resources available.
+        """
+        return _lldb.SBBreakpoint_SetIsHardware(self, is_hardware)
+
     def AddLocation(self, address):
         r"""AddLocation(SBBreakpoint self, SBAddress address) -> SBError"""
         return _lldb.SBBreakpoint_AddLocation(self, address)
@@ -2874,6 +3218,15 @@ class SBBreakpoint(object):
     enabled = property(IsEnabled, SetEnabled, doc='''A read/write property that configures whether this breakpoint is enabled or not.''')
     one_shot = property(IsOneShot, SetOneShot, doc='''A read/write property that configures whether this breakpoint is one-shot (deleted when hit) or not.''')
     num_locations = property(GetNumLocations, None, doc='''A read only property that returns the count of locations of this breakpoint.''')
+    auto_continue = property(GetAutoContinue, SetAutoContinue, doc='A read/write property that configures the auto-continue property of this breakpoint.')
+    condition = property(GetCondition, SetCondition, doc='A read/write property that configures the condition of this breakpoint.')
+    hit_count = property(GetHitCount, doc='A read only property that returns the hit count of this breakpoint.')
+    ignore_count = property(GetIgnoreCount, SetIgnoreCount, doc='A read/write property that configures the ignore count of this breakpoint.')
+    queue_name = property(GetQueueName, SetQueueName, doc='A read/write property that configures the queue name criteria of this breakpoint.')
+    target = property(GetTarget, doc='A read only property that returns the target of this breakpoint.')
+    thread_id = property(GetThreadID, SetThreadID, doc='A read/write property that configures the thread id criteria of this breakpoint.')
+    thread_index = property(GetThreadIndex, SetThreadIndex, doc='A read/write property that configures the thread index criteria of this breakpoint.')
+    thread_name = property(GetThreadName, SetThreadName, doc='A read/write property that configures the thread name criteria of this breakpoint.')
 
 
     def __eq__(self, rhs):
@@ -3117,6 +3470,19 @@ class SBBreakpointLocation(object):
     def __eq__(self, other):
       return not self.__ne__(other)
 
+    addr = property(GetAddress, doc='A read only property that returns the address of this breakpoint location.')
+    auto_continue = property(GetAutoContinue, SetAutoContinue, doc='A read/write property that configures the auto-continue property of this breakpoint location.')
+    breakpoint = property(GetBreakpoint, doc='A read only property that returns the parent breakpoint of this breakpoint location.')
+    condition = property(GetCondition, SetCondition, doc='A read/write property that configures the condition of this breakpoint location.')
+    hit_count = property(GetHitCount, doc='A read only property that returns the hit count of this breakpoint location.')
+    id = property(GetID, doc='A read only property that returns the id of this breakpoint location.')
+    ignore_count = property(GetIgnoreCount, SetIgnoreCount, doc='A read/write property that configures the ignore count of this breakpoint location.')
+    load_addr = property(GetLoadAddress, doc='A read only property that returns the load address of this breakpoint location.')
+    queue_name = property(GetQueueName, SetQueueName, doc='A read/write property that configures the queue name criteria of this breakpoint location.')
+    thread_id = property(GetThreadID, SetThreadID, doc='A read/write property that configures the thread id criteria of this breakpoint location.')
+    thread_index = property(GetThreadIndex, SetThreadIndex, doc='A read/write property that configures the thread index criteria of this breakpoint location.')
+    thread_name = property(GetThreadName, SetThreadName, doc='A read/write property that configures the thread name criteria of this breakpoint location.')
+
 
 # Register SBBreakpointLocation in _lldb:
 _lldb.SBBreakpointLocation_swigregister(SBBreakpointLocation)
@@ -3306,6 +3672,16 @@ class SBBreakpointName(object):
         # our own equality operator here
     def __eq__(self, other):
       return not self.__ne__(other)
+
+    auto_continue = property(GetAutoContinue, SetAutoContinue, doc='A read/write property that configures the auto-continue property of this breakpoint name.')
+    condition = property(GetCondition, SetCondition, doc='A read/write property that configures the condition of this breakpoint name.')
+    enabled = property(IsEnabled, SetEnabled, doc='''A read/write property that configures whether this breakpoint name is enabled or not.''')
+    ignore_count = property(GetIgnoreCount, SetIgnoreCount, doc='A read/write property that configures the ignore count of this breakpoint name.')
+    one_shot = property(IsOneShot, SetOneShot, doc='''A read/write property that configures whether this breakpoint name is one-shot (deleted when hit) or not.''')
+    queue_name = property(GetQueueName, SetQueueName, doc='A read/write property that configures the queue name criteria of this breakpoint name.')
+    thread_id = property(GetThreadID, SetThreadID, doc='A read/write property that configures the thread id criteria of this breakpoint name.')
+    thread_index = property(GetThreadIndex, SetThreadIndex, doc='A read/write property that configures the thread index criteria of this breakpoint name.')
+    thread_name = property(GetThreadName, SetThreadName, doc='A read/write property that configures the thread name criteria of this breakpoint name.')
 
 
 # Register SBBreakpointName in _lldb:
@@ -3507,15 +3883,48 @@ class SBCommandInterpreter(object):
         return _lldb.SBCommandInterpreter_IsValid(self)
 
     def CommandExists(self, cmd):
-        r"""CommandExists(SBCommandInterpreter self, char const * cmd) -> bool"""
+        r"""
+        Return whether a built-in command with the passed in
+        name or command path exists.
+
+        :type cmd: string, in
+        :param cmd:
+              The command or command path to search for.
+
+        :rtype: boolean
+        :return: 
+              **true** if the command exists, **false** otherwise.
+        """
         return _lldb.SBCommandInterpreter_CommandExists(self, cmd)
 
     def UserCommandExists(self, cmd):
-        r"""UserCommandExists(SBCommandInterpreter self, char const * cmd) -> bool"""
+        r"""
+        Return whether a user defined command with the passed in
+        name or command path exists.
+
+        :type cmd: string, in
+        :param cmd:
+              The command or command path to search for.
+
+        :rtype: boolean
+        :return: 
+              **true** if the command exists, **false** otherwise.
+        """
         return _lldb.SBCommandInterpreter_UserCommandExists(self, cmd)
 
     def AliasExists(self, cmd):
-        r"""AliasExists(SBCommandInterpreter self, char const * cmd) -> bool"""
+        r"""
+        Return whether the passed in name or command path
+        exists and is an alias to some other command.
+
+        :type cmd: string, in
+        :param cmd:
+              The command or command path to search for.
+
+        :rtype: boolean
+        :return: 
+              **true** if the command exists, **false** otherwise.
+        """
         return _lldb.SBCommandInterpreter_AliasExists(self, cmd)
 
     def GetBroadcaster(self):
@@ -3582,11 +3991,25 @@ class SBCommandInterpreter(object):
         return _lldb.SBCommandInterpreter_HandleCompletionWithDescriptions(self, current_line, cursor_pos, match_start_point, max_return_elements, matches, descriptions)
 
     def WasInterrupted(self):
-        r"""WasInterrupted(SBCommandInterpreter self) -> bool"""
+        r"""
+        Returns whether an interrupt flag was raised either by the SBDebugger -
+        when the function is not running on the RunCommandInterpreter thread, or
+        by SBCommandInterpreter::InterruptCommand if it is.  If your code is doing
+        interruptible work, check this API periodically, and interrupt if it
+        returns true.
+        """
         return _lldb.SBCommandInterpreter_WasInterrupted(self)
 
     def InterruptCommand(self):
-        r"""InterruptCommand(SBCommandInterpreter self) -> bool"""
+        r"""
+        Interrupts the command currently executing in the RunCommandInterpreter
+        thread.
+
+        :rtype: boolean
+        :return: 
+              **true** if there was a command in progress to recieve the interrupt.
+              **false** if there's no command currently in flight.
+        """
         return _lldb.SBCommandInterpreter_InterruptCommand(self)
 
     def SetCommandOverrideCallback(self, command_name, callback):
@@ -3594,11 +4017,35 @@ class SBCommandInterpreter(object):
         return _lldb.SBCommandInterpreter_SetCommandOverrideCallback(self, command_name, callback)
 
     def IsActive(self):
-        r"""IsActive(SBCommandInterpreter self) -> bool"""
+        r"""
+        Return true if the command interpreter is the active IO handler.
+
+        This indicates that any input coming into the debugger handles will
+        go to the command interpreter and will result in LLDB command line
+        commands being executed.
+        """
         return _lldb.SBCommandInterpreter_IsActive(self)
 
     def GetIOHandlerControlSequence(self, ch):
-        r"""GetIOHandlerControlSequence(SBCommandInterpreter self, char ch) -> char const *"""
+        r"""
+        Get the string that needs to be written to the debugger stdin file
+        handle when a control character is typed.
+
+        Some GUI programs will intercept "control + char" sequences and want
+        to have them do what normally would happen when using a real
+        terminal, so this function allows GUI programs to emulate this
+        functionality.
+
+        :type ch: char, in
+        :param ch:
+                The character that was typed along with the control key
+
+        :rtype: string
+        :return: 
+                The string that should be written into the file handle that is
+                feeding the input stream for the debugger, or nullptr if there is
+                no string for this control key.
+        """
         return _lldb.SBCommandInterpreter_GetIOHandlerControlSequence(self, ch)
 
     def GetPromptOnQuit(self):
@@ -3610,19 +4057,32 @@ class SBCommandInterpreter(object):
         return _lldb.SBCommandInterpreter_SetPromptOnQuit(self, b)
 
     def AllowExitCodeOnQuit(self, allow):
-        r"""AllowExitCodeOnQuit(SBCommandInterpreter self, bool allow)"""
+        r"""
+        Sets whether the command interpreter should allow custom exit codes
+        for the 'quit' command.
+        """
         return _lldb.SBCommandInterpreter_AllowExitCodeOnQuit(self, allow)
 
     def HasCustomQuitExitCode(self):
-        r"""HasCustomQuitExitCode(SBCommandInterpreter self) -> bool"""
+        r"""
+        Returns true if the user has called the 'quit' command with a custom exit
+        code.
+        """
         return _lldb.SBCommandInterpreter_HasCustomQuitExitCode(self)
 
     def GetQuitStatus(self):
-        r"""GetQuitStatus(SBCommandInterpreter self) -> int"""
+        r"""
+        Returns the exit code that the user has specified when running the
+        'quit' command. Returns 0 if the user hasn't called 'quit' at all or
+        without a custom exit code.
+        """
         return _lldb.SBCommandInterpreter_GetQuitStatus(self)
 
     def ResolveCommand(self, command_line, result):
-        r"""ResolveCommand(SBCommandInterpreter self, char const * command_line, SBCommandReturnObject result)"""
+        r"""
+        Resolve the command just as HandleCommand would, expanding abbreviations
+        and aliases.  If successful, result->GetOutput has the full expansion.
+        """
         return _lldb.SBCommandInterpreter_ResolveCommand(self, command_line, result)
 
     def GetStatistics(self):
@@ -3630,7 +4090,21 @@ class SBCommandInterpreter(object):
         return _lldb.SBCommandInterpreter_GetStatistics(self)
 
     def GetTranscript(self):
-        r"""GetTranscript(SBCommandInterpreter self) -> SBStructuredData"""
+        r"""
+        Returns a list of handled commands, output and error. Each element in
+        the list is a dictionary with the following keys/values:
+        - "command" (string): The command that was given by the user.
+        - "commandName" (string): The name of the executed command.
+        - "commandArguments" (string): The arguments of the executed command.
+        - "output" (string): The output of the command. Empty ("") if no output.
+        - "error" (string): The error of the command. Empty ("") if no error.
+        - "durationInSeconds" (float): The time it took to execute the command.
+        - "timestampInEpochSeconds" (int): The timestamp when the command is
+          executed.
+
+        Turn on settings `interpreter.save-transcript` for LLDB to populate
+        this list. Otherwise this list is empty.
+        """
         return _lldb.SBCommandInterpreter_GetTranscript(self)
 
     def SetPrintCallback(self, callback):
@@ -3755,7 +4229,12 @@ class SBCommandInterpreterRunOptions(object):
         return _lldb.SBCommandInterpreterRunOptions_GetAllowRepeats(self)
 
     def SetAllowRepeats(self, arg2):
-        r"""SetAllowRepeats(SBCommandInterpreterRunOptions self, bool arg2)"""
+        r"""
+        By default, RunCommandInterpreter will discard repeats if the
+        IOHandler being used is not interactive.  Setting AllowRepeats to true
+        will override this behavior and always process empty lines in the input
+        as a repeat command.
+        """
         return _lldb.SBCommandInterpreterRunOptions_SetAllowRepeats(self, arg2)
 
 # Register SBCommandInterpreterRunOptions in _lldb:
@@ -3790,7 +4269,10 @@ class SBCommandReturnObject(object):
         return _lldb.SBCommandReturnObject_IsValid(self)
 
     def GetCommand(self):
-        r"""GetCommand(SBCommandReturnObject self) -> char const *"""
+        r"""
+        Get the command as the user typed it. Empty string if commands were run on
+        behalf of lldb.
+        """
         return _lldb.SBCommandReturnObject_GetCommand(self)
 
     def GetErrorData(self):
@@ -3920,15 +4402,15 @@ class SBCommunication(object):
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
     eBroadcastBitDisconnected = _lldb.SBCommunication_eBroadcastBitDisconnected
-    
+    r"""Sent when the communications connection is lost."""
     eBroadcastBitReadThreadGotBytes = _lldb.SBCommunication_eBroadcastBitReadThreadGotBytes
-    
+    r"""Sent by the read thread when bytes become available."""
     eBroadcastBitReadThreadDidExit = _lldb.SBCommunication_eBroadcastBitReadThreadDidExit
-    
+    r"""Sent by the read thread when it exits to inform clients."""
     eBroadcastBitReadThreadShouldExit = _lldb.SBCommunication_eBroadcastBitReadThreadShouldExit
-    
+    r"""Sent by clients that need to cancel the read thread."""
     eBroadcastBitPacketAvailable = _lldb.SBCommunication_eBroadcastBitPacketAvailable
-    
+    r"""Sent when data received makes a complete packet."""
     eAllEventBits = _lldb.SBCommunication_eAllEventBits
     
 
@@ -4791,75 +5273,140 @@ class SBDebugger(object):
 
     @staticmethod
     def GetBroadcasterClass():
-        r"""GetBroadcasterClass() -> char const *"""
+        r"""Get the broadcaster class name."""
         return _lldb.SBDebugger_GetBroadcasterClass()
 
     @staticmethod
     def SupportsLanguage(language):
-        r"""SupportsLanguage(lldb::LanguageType language) -> bool"""
+        r"""Check if a specific language is supported by LLDB."""
         return _lldb.SBDebugger_SupportsLanguage(language)
 
     def GetBroadcaster(self):
-        r"""GetBroadcaster(SBDebugger self) -> SBBroadcaster"""
+        r"""
+        Get the broadcaster that allows subscribing to events from this
+        debugger.
+        """
         return _lldb.SBDebugger_GetBroadcaster(self)
 
     @staticmethod
     def GetProgressFromEvent(event):
-        r"""GetProgressFromEvent(SBEvent event) -> char const *"""
+        r"""
+        Get progress data from a SBEvent whose type is eBroadcastBitProgress.
+
+        :param [in]: event
+              The event to extract the progress information from.
+
+        :param [out]: progress_id
+              The unique integer identifier for the progress to report.
+
+        :param [out]: completed
+              The amount of work completed. If *completed* is zero, then this event
+              is a progress started event. If *completed* is equal to *total*, then
+              this event is a progress end event. Otherwise completed indicates the
+              current progress update.
+
+        :param [out]: total
+              The total amount of work units that need to be completed. If this value
+              is UINT64_MAX, then an indeterminate progress indicator should be
+              displayed.
+
+        :param [out]: is_debugger_specific
+              Set to true if this progress is specific to this debugger only. Many
+              progress events are not specific to a debugger instance, like any
+              progress events for loading information in modules since LLDB has a
+              global module cache that all debuggers use.
+
+        :rtype: string
+        :return: The message for the progress. If the returned value is NULL, then
+              *event* was not a eBroadcastBitProgress event.
+        """
         return _lldb.SBDebugger_GetProgressFromEvent(event)
 
     @staticmethod
     def GetProgressDataFromEvent(event):
-        r"""GetProgressDataFromEvent(SBEvent event) -> SBStructuredData"""
+        r"""Get progress data from an event."""
         return _lldb.SBDebugger_GetProgressDataFromEvent(event)
 
     @staticmethod
     def GetDiagnosticFromEvent(event):
-        r"""GetDiagnosticFromEvent(SBEvent event) -> SBStructuredData"""
+        r"""Get diagnostic information from an event."""
         return _lldb.SBDebugger_GetDiagnosticFromEvent(event)
 
     @staticmethod
     def Initialize():
-        r"""Initialize()"""
+        r"""
+        Initialize LLDB and its subsystems.
+
+        This function should be called before any other LLDB functions. It
+        initializes all required subsystems for proper LLDB functionality.
+        """
         return _lldb.SBDebugger_Initialize()
 
     @staticmethod
     def InitializeWithErrorHandling():
-        r"""InitializeWithErrorHandling() -> SBError"""
+        r"""
+        Initialize the LLDB debugger subsystem with error handling.
+
+        Similar to Initialize(), but returns an error if initialization fails.
+        """
         return _lldb.SBDebugger_InitializeWithErrorHandling()
 
     @staticmethod
     def PrintStackTraceOnError():
-        r"""PrintStackTraceOnError()"""
+        r"""Configure LLDB to print a stack trace when it crashes."""
         return _lldb.SBDebugger_PrintStackTraceOnError()
 
     @staticmethod
     def PrintDiagnosticsOnError():
-        r"""PrintDiagnosticsOnError()"""
+        r"""Configure LLDB to print diagnostic information when it crashes."""
         return _lldb.SBDebugger_PrintDiagnosticsOnError()
 
     @staticmethod
     def Terminate():
-        r"""Terminate()"""
+        r"""
+        Terminate LLDB and its subsystems.
+
+        This should be called when LLDB is no longer needed.
+        """
         return _lldb.SBDebugger_Terminate()
 
     @staticmethod
     def Create(*args):
         r"""
-        Create() -> SBDebugger
-        Create(bool source_init_files) -> SBDebugger
-        Create(bool source_init_files, lldb::LogOutputCallback log_callback) -> SBDebugger
+        *Overload 1:*
+        Create a new debugger instance (deprecated).
+
+        |
+
+        *Overload 2:*
+        Create a new debugger instance.
+
+        If source_init_files is true, the debugger will source .lldbinit files
+        from the home directory and current directory.
+
+        |
+
+        *Overload 3:*
+        Create a new debugger instance with a custom log handler and user data
+        passed to the log callback.
+
+        If source_init_files is true, the debugger will source .lldbinit files
+        from the home directory and current directory.
         """
         return _lldb.SBDebugger_Create(*args)
 
     @staticmethod
     def Destroy(debugger):
-        r"""Destroy(SBDebugger debugger)"""
+        r"""Destroy a debugger instance."""
         return _lldb.SBDebugger_Destroy(debugger)
 
     @staticmethod
     def MemoryPressureDetected():
-        r"""MemoryPressureDetected()"""
+        r"""
+        Notify the debugger that system memory pressure has been detected.
+
+        This can be used to free up memory resources by clearing caches.
+        """
         return _lldb.SBDebugger_MemoryPressureDetected()
 
     def __nonzero__(self):
@@ -4869,121 +5416,170 @@ class SBDebugger(object):
 
 
     def IsValid(self):
-        r"""IsValid(SBDebugger self) -> bool"""
+        r"""Check if this is a valid SBDebugger object."""
         return _lldb.SBDebugger_IsValid(self)
 
     def Clear(self):
-        r"""Clear(SBDebugger self)"""
+        r"""
+        Clear this debugger instance.
+
+        This will close all IO handlers and reset the debugger to its initial
+        state.
+        """
         return _lldb.SBDebugger_Clear(self)
 
     def GetSetting(self, setting=None):
-        r"""GetSetting(SBDebugger self, char const * setting=None) -> SBStructuredData"""
+        r"""
+        Get debugger settings as structured data.
+
+        Client can specify empty string or null to get all settings.
+
+        Example usages:
+        lldb::SBStructuredData settings = debugger.GetSetting();
+        lldb::SBStructuredData settings = debugger.GetSetting(nullptr);
+        lldb::SBStructuredData settings = debugger.GetSetting("");
+        lldb::SBStructuredData settings = debugger.GetSetting("target.arg0");
+        lldb::SBStructuredData settings = debugger.GetSetting("target");
+        """
         return _lldb.SBDebugger_GetSetting(self, setting)
 
     def SetAsync(self, b):
-        r"""SetAsync(SBDebugger self, bool b)"""
+        r"""
+        Set whether the debugger should run in asynchronous mode.
+
+        When in asynchronous mode, events are processed on a background thread.
+        """
         return _lldb.SBDebugger_SetAsync(self, b)
 
     def GetAsync(self):
-        r"""GetAsync(SBDebugger self) -> bool"""
+        r"""Get whether the debugger is running in asynchronous mode."""
         return _lldb.SBDebugger_GetAsync(self)
 
     def SkipLLDBInitFiles(self, b):
-        r"""SkipLLDBInitFiles(SBDebugger self, bool b)"""
+        r"""Set whether to skip loading .lldbinit files."""
         return _lldb.SBDebugger_SkipLLDBInitFiles(self, b)
 
     def SkipAppInitFiles(self, b):
-        r"""SkipAppInitFiles(SBDebugger self, bool b)"""
+        r"""Set whether to skip loading application-specific .lldbinit files."""
         return _lldb.SBDebugger_SkipAppInitFiles(self, b)
 
     def SetInputString(self, data):
-        r"""SetInputString(SBDebugger self, char const * data) -> SBError"""
+        r"""Set the input from a string."""
         return _lldb.SBDebugger_SetInputString(self, data)
 
     def SetInputFile(self, *args):
         r"""
-        SetInputFile(SBDebugger self, SBFile file) -> SBError
-        SetInputFile(SBDebugger self, lldb::FileSP file) -> SBError
+        *Overload 1:*
+        Set the input file for the debugger.
+
+        |
+
+        *Overload 2:*
+        Set the input file for the debugger using a FileSP.
         """
         return _lldb.SBDebugger_SetInputFile(self, *args)
 
     def SetOutputFile(self, *args):
         r"""
-        SetOutputFile(SBDebugger self, SBFile file) -> SBError
-        SetOutputFile(SBDebugger self, lldb::FileSP file) -> SBError
+        *Overload 1:*
+        Set the output file for the debugger.
+
+        |
+
+        *Overload 2:*
+        Set the output file for the debugger using a FileSP.
         """
         return _lldb.SBDebugger_SetOutputFile(self, *args)
 
     def SetErrorFile(self, *args):
         r"""
-        SetErrorFile(SBDebugger self, SBFile file) -> SBError
-        SetErrorFile(SBDebugger self, lldb::FileSP file) -> SBError
+        *Overload 1:*
+        Set the error file for the debugger.
+
+        |
+
+        *Overload 2:*
+        Set the error file for the debugger using a FileSP.
         """
         return _lldb.SBDebugger_SetErrorFile(self, *args)
 
     def GetInputFile(self):
-        r"""GetInputFile(SBDebugger self) -> SBFile"""
+        r"""Get the input file for the debugger."""
         return _lldb.SBDebugger_GetInputFile(self)
 
     def GetOutputFile(self):
-        r"""GetOutputFile(SBDebugger self) -> SBFile"""
+        r"""Get the output file for the debugger."""
         return _lldb.SBDebugger_GetOutputFile(self)
 
     def GetErrorFile(self):
-        r"""GetErrorFile(SBDebugger self) -> SBFile"""
+        r"""Get the error file for the debugger."""
         return _lldb.SBDebugger_GetErrorFile(self)
 
     def SaveInputTerminalState(self):
-        r"""SaveInputTerminalState(SBDebugger self)"""
+        r"""
+        Save the current terminal state.
+
+        This should be called before modifying terminal settings.
+        """
         return _lldb.SBDebugger_SaveInputTerminalState(self)
 
     def RestoreInputTerminalState(self):
-        r"""RestoreInputTerminalState(SBDebugger self)"""
+        r"""Restore the previously saved terminal state."""
         return _lldb.SBDebugger_RestoreInputTerminalState(self)
 
     def GetCommandInterpreter(self):
-        r"""GetCommandInterpreter(SBDebugger self) -> SBCommandInterpreter"""
+        r"""Get the command interpreter for this debugger."""
         return _lldb.SBDebugger_GetCommandInterpreter(self)
 
     def HandleCommand(self, command):
-        r"""HandleCommand(SBDebugger self, char const * command)"""
+        r"""Execute a command in the command interpreter."""
         return _lldb.SBDebugger_HandleCommand(self, command)
 
     def RequestInterrupt(self):
-        r"""RequestInterrupt(SBDebugger self)"""
+        r"""Request an interrupt of the current operation."""
         return _lldb.SBDebugger_RequestInterrupt(self)
 
     def CancelInterruptRequest(self):
-        r"""CancelInterruptRequest(SBDebugger self)"""
+        r"""Cancel a previously requested interrupt."""
         return _lldb.SBDebugger_CancelInterruptRequest(self)
 
     def InterruptRequested(self):
-        r"""InterruptRequested(SBDebugger self) -> bool"""
+        r"""Check if an interrupt has been requested."""
         return _lldb.SBDebugger_InterruptRequested(self)
 
     def GetListener(self):
-        r"""GetListener(SBDebugger self) -> SBListener"""
+        r"""Get the listener associated with this debugger."""
         return _lldb.SBDebugger_GetListener(self)
 
     def HandleProcessEvent(self, *args):
         r"""
-        HandleProcessEvent(SBDebugger self, SBProcess process, SBEvent event, SBFile out, SBFile err)
-        HandleProcessEvent(SBDebugger self, SBProcess process, SBEvent event, lldb::FileSP arg4, lldb::FileSP arg5)
+        *Overload 1:*
+        Handle a process event.
+
+        |
+
+        *Overload 2:*
+        Handle a process event using FileSP objects.
         """
         return _lldb.SBDebugger_HandleProcessEvent(self, *args)
 
     def CreateTargetWithFileAndTargetTriple(self, filename, target_triple):
-        r"""CreateTargetWithFileAndTargetTriple(SBDebugger self, char const * filename, char const * target_triple) -> SBTarget"""
+        r"""Create a target with the specified file and target triple."""
         return _lldb.SBDebugger_CreateTargetWithFileAndTargetTriple(self, filename, target_triple)
 
     def CreateTargetWithFileAndArch(self, filename, archname):
-        r"""CreateTargetWithFileAndArch(SBDebugger self, char const * filename, char const * archname) -> SBTarget"""
+        r"""Create a target with the specified file and architecture."""
         return _lldb.SBDebugger_CreateTargetWithFileAndArch(self, filename, archname)
 
     def CreateTarget(self, *args):
         r"""
-        CreateTarget(SBDebugger self, char const * filename, char const * target_triple, char const * platform_name, bool add_dependent_modules, SBError error) -> SBTarget
-        CreateTarget(SBDebugger self, char const * filename) -> SBTarget
+        *Overload 1:*
+        Create a target with the specified parameters.
+
+        |
+
+        *Overload 2:*
+        Create a target with the specified file.
         """
         return _lldb.SBDebugger_CreateTarget(self, *args)
 
@@ -5002,39 +5598,39 @@ class SBDebugger(object):
         return _lldb.SBDebugger_DeleteTarget(self, target)
 
     def GetTargetAtIndex(self, idx):
-        r"""GetTargetAtIndex(SBDebugger self, uint32_t idx) -> SBTarget"""
+        r"""Get a target by index."""
         return _lldb.SBDebugger_GetTargetAtIndex(self, idx)
 
     def GetIndexOfTarget(self, target):
-        r"""GetIndexOfTarget(SBDebugger self, SBTarget target) -> uint32_t"""
+        r"""Get the index of a target."""
         return _lldb.SBDebugger_GetIndexOfTarget(self, target)
 
     def FindTargetWithProcessID(self, pid):
-        r"""FindTargetWithProcessID(SBDebugger self, lldb::pid_t pid) -> SBTarget"""
+        r"""Find a target with the specified process ID."""
         return _lldb.SBDebugger_FindTargetWithProcessID(self, pid)
 
     def FindTargetWithFileAndArch(self, filename, arch):
-        r"""FindTargetWithFileAndArch(SBDebugger self, char const * filename, char const * arch) -> SBTarget"""
+        r"""Find a target with the specified file and architecture."""
         return _lldb.SBDebugger_FindTargetWithFileAndArch(self, filename, arch)
 
     def GetNumTargets(self):
-        r"""GetNumTargets(SBDebugger self) -> uint32_t"""
+        r"""Get the number of targets in the debugger."""
         return _lldb.SBDebugger_GetNumTargets(self)
 
     def GetSelectedTarget(self):
-        r"""GetSelectedTarget(SBDebugger self) -> SBTarget"""
+        r"""Get the currently selected target."""
         return _lldb.SBDebugger_GetSelectedTarget(self)
 
     def SetSelectedTarget(self, target):
-        r"""SetSelectedTarget(SBDebugger self, SBTarget target)"""
+        r"""Set the selected target."""
         return _lldb.SBDebugger_SetSelectedTarget(self, target)
 
     def GetSelectedPlatform(self):
-        r"""GetSelectedPlatform(SBDebugger self) -> SBPlatform"""
+        r"""Get the selected platform."""
         return _lldb.SBDebugger_GetSelectedPlatform(self)
 
     def SetSelectedPlatform(self, platform):
-        r"""SetSelectedPlatform(SBDebugger self, SBPlatform platform)"""
+        r"""Set the selected platform."""
         return _lldb.SBDebugger_SetSelectedPlatform(self, platform)
 
     def GetNumPlatforms(self):
@@ -5071,244 +5667,257 @@ class SBDebugger(object):
         return _lldb.SBDebugger_GetAvailablePlatformInfoAtIndex(self, idx)
 
     def GetSourceManager(self):
-        r"""GetSourceManager(SBDebugger self) -> SBSourceManager"""
+        r"""Get the source manager for this debugger."""
         return _lldb.SBDebugger_GetSourceManager(self)
 
     def SetCurrentPlatform(self, platform_name):
-        r"""SetCurrentPlatform(SBDebugger self, char const * platform_name) -> SBError"""
+        r"""Set the current platform by name."""
         return _lldb.SBDebugger_SetCurrentPlatform(self, platform_name)
 
     def SetCurrentPlatformSDKRoot(self, sysroot):
-        r"""SetCurrentPlatformSDKRoot(SBDebugger self, char const * sysroot) -> bool"""
+        r"""Set the SDK root for the current platform."""
         return _lldb.SBDebugger_SetCurrentPlatformSDKRoot(self, sysroot)
 
     def SetUseExternalEditor(self, input):
-        r"""SetUseExternalEditor(SBDebugger self, bool input) -> bool"""
+        r"""Set whether to use an external editor."""
         return _lldb.SBDebugger_SetUseExternalEditor(self, input)
 
     def GetUseExternalEditor(self):
-        r"""GetUseExternalEditor(SBDebugger self) -> bool"""
+        r"""Get whether an external editor is being used."""
         return _lldb.SBDebugger_GetUseExternalEditor(self)
 
     def SetUseColor(self, use_color):
-        r"""SetUseColor(SBDebugger self, bool use_color) -> bool"""
+        r"""Set whether to use color in output."""
         return _lldb.SBDebugger_SetUseColor(self, use_color)
 
     def GetUseColor(self):
-        r"""GetUseColor(SBDebugger self) -> bool"""
+        r"""Get whether color is being used in output."""
         return _lldb.SBDebugger_GetUseColor(self)
 
-    def SetShowInlineDiagnostics(self, arg2):
-        r"""SetShowInlineDiagnostics(SBDebugger self, bool arg2) -> bool"""
-        return _lldb.SBDebugger_SetShowInlineDiagnostics(self, arg2)
+    def SetShowInlineDiagnostics(self, b):
+        r"""Set whether to show inline diagnostics."""
+        return _lldb.SBDebugger_SetShowInlineDiagnostics(self, b)
 
     def SetUseSourceCache(self, use_source_cache):
-        r"""SetUseSourceCache(SBDebugger self, bool use_source_cache) -> bool"""
+        r"""Set whether to use the source cache."""
         return _lldb.SBDebugger_SetUseSourceCache(self, use_source_cache)
 
     def GetUseSourceCache(self):
-        r"""GetUseSourceCache(SBDebugger self) -> bool"""
+        r"""Get whether the source cache is being used."""
         return _lldb.SBDebugger_GetUseSourceCache(self)
 
     @staticmethod
     def GetDefaultArchitecture(arch_name, arch_name_len):
-        r"""GetDefaultArchitecture(char * arch_name, size_t arch_name_len) -> bool"""
+        r"""Get the default architecture."""
         return _lldb.SBDebugger_GetDefaultArchitecture(arch_name, arch_name_len)
 
     @staticmethod
     def SetDefaultArchitecture(arch_name):
-        r"""SetDefaultArchitecture(char const * arch_name) -> bool"""
+        r"""Set the default architecture."""
         return _lldb.SBDebugger_SetDefaultArchitecture(arch_name)
 
     def GetScriptingLanguage(self, script_language_name):
-        r"""GetScriptingLanguage(SBDebugger self, char const * script_language_name) -> lldb::ScriptLanguage"""
+        r"""Get the scripting language by name."""
         return _lldb.SBDebugger_GetScriptingLanguage(self, script_language_name)
 
-    def GetScriptInterpreterInfo(self, arg2):
-        r"""GetScriptInterpreterInfo(SBDebugger self, lldb::ScriptLanguage arg2) -> SBStructuredData"""
-        return _lldb.SBDebugger_GetScriptInterpreterInfo(self, arg2)
+    def GetScriptInterpreterInfo(self, language):
+        r"""Get information about a script interpreter as structured data."""
+        return _lldb.SBDebugger_GetScriptInterpreterInfo(self, language)
 
     @staticmethod
     def GetVersionString():
-        r"""GetVersionString() -> char const *"""
+        r"""Get the LLDB version string."""
         return _lldb.SBDebugger_GetVersionString()
 
     @staticmethod
     def StateAsCString(state):
-        r"""StateAsCString(lldb::StateType state) -> char const *"""
+        r"""Convert a state type to a string."""
         return _lldb.SBDebugger_StateAsCString(state)
 
     @staticmethod
     def GetBuildConfiguration():
-        r"""GetBuildConfiguration() -> SBStructuredData"""
+        r"""Get the build configuration as structured data."""
         return _lldb.SBDebugger_GetBuildConfiguration()
 
     @staticmethod
     def StateIsRunningState(state):
-        r"""StateIsRunningState(lldb::StateType state) -> bool"""
+        r"""Check if a state is a running state."""
         return _lldb.SBDebugger_StateIsRunningState(state)
 
     @staticmethod
     def StateIsStoppedState(state):
-        r"""StateIsStoppedState(lldb::StateType state) -> bool"""
+        r"""Check if a state is a stopped state."""
         return _lldb.SBDebugger_StateIsStoppedState(state)
 
     def EnableLog(self, channel, categories):
-        r"""EnableLog(SBDebugger self, char const * channel, char const ** categories) -> bool"""
+        r"""Enable logging for a specific channel and category."""
         return _lldb.SBDebugger_EnableLog(self, channel, categories)
 
     def SetLoggingCallback(self, log_callback):
-        r"""SetLoggingCallback(SBDebugger self, lldb::LogOutputCallback log_callback)"""
+        r"""Set a callback for log output."""
         return _lldb.SBDebugger_SetLoggingCallback(self, log_callback)
 
     def SetDestroyCallback(self, destroy_callback):
-        r"""SetDestroyCallback(SBDebugger self, lldb::SBDebuggerDestroyCallback destroy_callback)"""
+        r"""Set a callback for when the debugger is destroyed (deprecated)."""
         return _lldb.SBDebugger_SetDestroyCallback(self, destroy_callback)
 
     def AddDestroyCallback(self, destroy_callback):
-        r"""AddDestroyCallback(SBDebugger self, lldb::SBDebuggerDestroyCallback destroy_callback) -> lldb::callback_token_t"""
+        r"""
+        Add a callback for when the debugger is destroyed. Returns a token that
+        can be used to remove the callback.
+        """
         return _lldb.SBDebugger_AddDestroyCallback(self, destroy_callback)
 
     def RemoveDestroyCallback(self, token):
-        r"""RemoveDestroyCallback(SBDebugger self, lldb::callback_token_t token) -> bool"""
+        r"""Remove a destroy callback."""
         return _lldb.SBDebugger_RemoveDestroyCallback(self, token)
 
     def DispatchInput(self, data):
-        r"""DispatchInput(SBDebugger self, void const * data)"""
+        r"""Dispatch input to the debugger."""
         return _lldb.SBDebugger_DispatchInput(self, data)
 
     def DispatchInputInterrupt(self):
-        r"""DispatchInputInterrupt(SBDebugger self)"""
+        r"""Interrupt the current input dispatch."""
         return _lldb.SBDebugger_DispatchInputInterrupt(self)
 
     def DispatchInputEndOfFile(self):
-        r"""DispatchInputEndOfFile(SBDebugger self)"""
+        r"""Signal end-of-file to the current input dispatch."""
         return _lldb.SBDebugger_DispatchInputEndOfFile(self)
 
     def GetInstanceName(self):
-        r"""GetInstanceName(SBDebugger self) -> char const *"""
+        r"""Get the instance name of this debugger."""
         return _lldb.SBDebugger_GetInstanceName(self)
 
     @staticmethod
     def FindDebuggerWithID(id):
-        r"""FindDebuggerWithID(int id) -> SBDebugger"""
+        r"""Find a debugger by ID. Returns an invalid debugger if not found."""
         return _lldb.SBDebugger_FindDebuggerWithID(id)
 
     @staticmethod
     def SetInternalVariable(var_name, value, debugger_instance_name):
-        r"""SetInternalVariable(char const * var_name, char const * value, char const * debugger_instance_name) -> SBError"""
+        r"""Set an internal variable."""
         return _lldb.SBDebugger_SetInternalVariable(var_name, value, debugger_instance_name)
 
     @staticmethod
     def GetInternalVariableValue(var_name, debugger_instance_name):
-        r"""GetInternalVariableValue(char const * var_name, char const * debugger_instance_name) -> SBStringList"""
+        r"""Get the value of an internal variable."""
         return _lldb.SBDebugger_GetInternalVariableValue(var_name, debugger_instance_name)
 
     def GetDescription(self, description):
-        r"""GetDescription(SBDebugger self, SBStream description) -> bool"""
+        r"""Get a description of this debugger."""
         return _lldb.SBDebugger_GetDescription(self, description)
 
     def GetTerminalWidth(self):
-        r"""GetTerminalWidth(SBDebugger self) -> uint32_t"""
+        r"""Get the terminal width."""
         return _lldb.SBDebugger_GetTerminalWidth(self)
 
     def SetTerminalWidth(self, term_width):
-        r"""SetTerminalWidth(SBDebugger self, uint32_t term_width)"""
+        r"""Set the terminal width."""
         return _lldb.SBDebugger_SetTerminalWidth(self, term_width)
 
     def GetTerminalHeight(self):
-        r"""GetTerminalHeight(SBDebugger self) -> uint32_t"""
+        r"""Get the terminal height."""
         return _lldb.SBDebugger_GetTerminalHeight(self)
 
     def SetTerminalHeight(self, term_height):
-        r"""SetTerminalHeight(SBDebugger self, uint32_t term_height)"""
+        r"""Set the terminal height."""
         return _lldb.SBDebugger_SetTerminalHeight(self, term_height)
 
     def GetID(self):
-        r"""GetID(SBDebugger self) -> lldb::user_id_t"""
+        r"""Get the unique ID of this debugger."""
         return _lldb.SBDebugger_GetID(self)
 
     def GetPrompt(self):
-        r"""GetPrompt(SBDebugger self) -> char const *"""
+        r"""Get the command prompt string."""
         return _lldb.SBDebugger_GetPrompt(self)
 
     def SetPrompt(self, prompt):
-        r"""SetPrompt(SBDebugger self, char const * prompt)"""
+        r"""Set the command prompt string."""
         return _lldb.SBDebugger_SetPrompt(self, prompt)
 
     def GetReproducerPath(self):
-        r"""GetReproducerPath(SBDebugger self) -> char const *"""
+        r"""Get the path to the reproducer."""
         return _lldb.SBDebugger_GetReproducerPath(self)
 
     def GetScriptLanguage(self):
-        r"""GetScriptLanguage(SBDebugger self) -> lldb::ScriptLanguage"""
+        r"""Get the current scripting language."""
         return _lldb.SBDebugger_GetScriptLanguage(self)
 
     def SetScriptLanguage(self, script_lang):
-        r"""SetScriptLanguage(SBDebugger self, lldb::ScriptLanguage script_lang)"""
+        r"""Set the current scripting language."""
         return _lldb.SBDebugger_SetScriptLanguage(self, script_lang)
 
     def GetREPLLanguage(self):
-        r"""GetREPLLanguage(SBDebugger self) -> lldb::LanguageType"""
+        r"""Get the current REPL language."""
         return _lldb.SBDebugger_GetREPLLanguage(self)
 
     def SetREPLLanguage(self, repl_lang):
-        r"""SetREPLLanguage(SBDebugger self, lldb::LanguageType repl_lang)"""
+        r"""Set the current REPL language."""
         return _lldb.SBDebugger_SetREPLLanguage(self, repl_lang)
 
     def GetCloseInputOnEOF(self):
-        r"""GetCloseInputOnEOF(SBDebugger self) -> bool"""
+        r"""Get whether to close input on EOF (deprecated)."""
         return _lldb.SBDebugger_GetCloseInputOnEOF(self)
 
     def SetCloseInputOnEOF(self, b):
-        r"""SetCloseInputOnEOF(SBDebugger self, bool b)"""
+        r"""Set whether to close input on EOF (deprecated)."""
         return _lldb.SBDebugger_SetCloseInputOnEOF(self, b)
 
     def GetCategory(self, *args):
         r"""
-        GetCategory(SBDebugger self, char const * category_name) -> SBTypeCategory
-        GetCategory(SBDebugger self, lldb::LanguageType lang_type) -> SBTypeCategory
+        *Overload 1:*
+        Get a type category by name.
+
+        |
+
+        *Overload 2:*
+        Get a type category by language.
         """
         return _lldb.SBDebugger_GetCategory(self, *args)
 
     def CreateCategory(self, category_name):
-        r"""CreateCategory(SBDebugger self, char const * category_name) -> SBTypeCategory"""
+        r"""Create a new type category."""
         return _lldb.SBDebugger_CreateCategory(self, category_name)
 
     def DeleteCategory(self, category_name):
-        r"""DeleteCategory(SBDebugger self, char const * category_name) -> bool"""
+        r"""Delete a type category."""
         return _lldb.SBDebugger_DeleteCategory(self, category_name)
 
     def GetNumCategories(self):
-        r"""GetNumCategories(SBDebugger self) -> uint32_t"""
+        r"""Get the number of type categories."""
         return _lldb.SBDebugger_GetNumCategories(self)
 
-    def GetCategoryAtIndex(self, arg2):
-        r"""GetCategoryAtIndex(SBDebugger self, uint32_t arg2) -> SBTypeCategory"""
-        return _lldb.SBDebugger_GetCategoryAtIndex(self, arg2)
+    def GetCategoryAtIndex(self, index):
+        r"""Get a type category by index."""
+        return _lldb.SBDebugger_GetCategoryAtIndex(self, index)
 
     def GetDefaultCategory(self):
-        r"""GetDefaultCategory(SBDebugger self) -> SBTypeCategory"""
+        r"""Get the default type category."""
         return _lldb.SBDebugger_GetDefaultCategory(self)
 
-    def GetFormatForType(self, arg2):
-        r"""GetFormatForType(SBDebugger self, SBTypeNameSpecifier arg2) -> SBTypeFormat"""
-        return _lldb.SBDebugger_GetFormatForType(self, arg2)
+    def GetFormatForType(self, type_name_spec):
+        r"""Get the format for a type."""
+        return _lldb.SBDebugger_GetFormatForType(self, type_name_spec)
 
-    def GetSummaryForType(self, arg2):
-        r"""GetSummaryForType(SBDebugger self, SBTypeNameSpecifier arg2) -> SBTypeSummary"""
-        return _lldb.SBDebugger_GetSummaryForType(self, arg2)
+    def GetSummaryForType(self, type_name_spec):
+        r"""Get the summary for a type."""
+        return _lldb.SBDebugger_GetSummaryForType(self, type_name_spec)
 
-    def GetFilterForType(self, arg2):
-        r"""GetFilterForType(SBDebugger self, SBTypeNameSpecifier arg2) -> SBTypeFilter"""
-        return _lldb.SBDebugger_GetFilterForType(self, arg2)
+    def GetFilterForType(self, type_name_spec):
+        r"""Get the filter for a type."""
+        return _lldb.SBDebugger_GetFilterForType(self, type_name_spec)
 
-    def GetSyntheticForType(self, arg2):
-        r"""GetSyntheticForType(SBDebugger self, SBTypeNameSpecifier arg2) -> SBTypeSynthetic"""
-        return _lldb.SBDebugger_GetSyntheticForType(self, arg2)
+    def GetSyntheticForType(self, type_name_spec):
+        r"""Get the synthetic for a type."""
+        return _lldb.SBDebugger_GetSyntheticForType(self, type_name_spec)
 
     def ResetStatistics(self):
-        r"""ResetStatistics(SBDebugger self)"""
+        r"""
+        Clear collected statistics for targets belonging to this debugger.
+
+        This includes clearing symbol table and debug info parsing/index time for
+        all modules, breakpoint resolve time, and target statistics.
+        """
         return _lldb.SBDebugger_ResetStatistics(self)
 
     def RunCommandInterpreter(self, auto_handle_events, spawn_thread, options, num_errors, quit_requested, stopped_for_crash):
@@ -5340,11 +5949,28 @@ class SBDebugger(object):
         return _lldb.SBDebugger_RunCommandInterpreter(self, auto_handle_events, spawn_thread, options, num_errors, quit_requested, stopped_for_crash)
 
     def RunREPL(self, language, repl_options):
-        r"""RunREPL(SBDebugger self, lldb::LanguageType language, char const * repl_options) -> SBError"""
+        r"""Run a REPL (Read-Eval-Print Loop) for the specified language."""
         return _lldb.SBDebugger_RunREPL(self, language, repl_options)
 
     def LoadTraceFromFile(self, error, trace_description_file):
-        r"""LoadTraceFromFile(SBDebugger self, SBError error, SBFileSpec trace_description_file) -> SBTrace"""
+        r"""
+        Load a trace from a trace description file.
+
+        This will create Targets, Processes and Threads based on the contents of
+        the file.
+
+        :type error: :py:class:`SBError`, out
+        :param error:
+              An error if the trace could not be created.
+
+        :type trace_description_file: :py:class:`SBFileSpec`, in
+        :param trace_description_file:
+              The file containing the necessary information to load the trace.
+
+        :rtype: :py:class:`SBTrace`
+        :return: 
+              An SBTrace object representing the loaded trace.
+        """
         return _lldb.SBDebugger_LoadTraceFromFile(self, error, trace_description_file)
 
     def __repr__(self):
@@ -5392,6 +6018,16 @@ class SBDebugger(object):
     def GetErrorFileHandle(self):
         r"""GetErrorFileHandle(SBDebugger self) -> lldb::FileSP"""
         return _lldb.SBDebugger_GetErrorFileHandle(self)
+
+    class staticproperty:
+        def __init__(self, func):
+            self.func = func
+        def __get__(self, instance, owner):
+            return self.func()
+    @staticproperty
+    def version():
+        return SBDebugger.GetVersionString()
+
 
 # Register SBDebugger in _lldb:
 _lldb.SBDebugger_swigregister(SBDebugger)
@@ -5546,7 +6182,12 @@ class SBError(object):
     __swig_destroy__ = _lldb.delete_SBError
 
     def GetCString(self):
-        r"""GetCString(SBError self) -> char const *"""
+        r"""
+        Get the error string as a NULL terminated UTF8 c-string.
+
+        This SBError object owns the returned string and this object must be kept
+        around long enough to use the returned string.
+        """
         return _lldb.SBError_GetCString(self)
 
     def Clear(self):
@@ -5562,11 +6203,14 @@ class SBError(object):
         return _lldb.SBError_Success(self)
 
     def GetError(self):
-        r"""GetError(SBError self) -> uint32_t"""
+        r"""Get the error code."""
         return _lldb.SBError_GetError(self)
 
     def GetErrorData(self):
-        r"""GetErrorData(SBError self) -> SBStructuredData"""
+        r"""
+        Get the error in machine-readable form. Particularly useful for
+        compiler diagnostics.
+        """
         return _lldb.SBError_GetErrorData(self)
 
     def GetType(self):
@@ -5647,43 +6291,134 @@ class SBEnvironment(object):
     __swig_destroy__ = _lldb.delete_SBEnvironment
 
     def Get(self, name):
-        r"""Get(SBEnvironment self, char const * name) -> char const *"""
+        r"""
+        Return the value of a given environment variable.
+
+        :param [in]: name
+                The name of the environment variable.
+
+        :rtype: string
+        :return: 
+                The value of the environment variable or null if not present.
+                If the environment variable has no value but is present, a valid
+                pointer to an empty string will be returned.
+        """
         return _lldb.SBEnvironment_Get(self, name)
 
     def GetNumValues(self):
-        r"""GetNumValues(SBEnvironment self) -> size_t"""
+        r"""
+        :rtype: int
+        :return: 
+                The number of environment variables.
+        """
         return _lldb.SBEnvironment_GetNumValues(self)
 
     def GetNameAtIndex(self, index):
-        r"""GetNameAtIndex(SBEnvironment self, size_t index) -> char const *"""
+        r"""
+        Return the name of the environment variable at a given index from the
+        internal list of environment variables.
+
+        :param [in]: index
+                The index of the environment variable in the internal list.
+
+        :rtype: string
+        :return: 
+                The name at the given index or null if the index is invalid.
+        """
         return _lldb.SBEnvironment_GetNameAtIndex(self, index)
 
     def GetValueAtIndex(self, index):
-        r"""GetValueAtIndex(SBEnvironment self, size_t index) -> char const *"""
+        r"""
+        Return the value of the environment variable at a given index from the
+        internal list of environment variables.
+
+        :param [in]: index
+                The index of the environment variable in the internal list.
+
+        :rtype: string
+        :return: 
+                The value at the given index or null if the index is invalid.
+                If the environment variable has no value but is present, a valid
+                pointer to an empty string will be returned.
+        """
         return _lldb.SBEnvironment_GetValueAtIndex(self, index)
 
     def GetEntries(self):
-        r"""GetEntries(SBEnvironment self) -> SBStringList"""
+        r"""
+        Return all environment variables contained in this object. Each variable
+        is returned as a string with the following format
+            name=value
+
+        :rtype: :py:class:`SBStringList`
+        :return: 
+                Return an lldb::SBStringList object with the environment variables.
+        """
         return _lldb.SBEnvironment_GetEntries(self)
 
     def PutEntry(self, name_and_value):
-        r"""PutEntry(SBEnvironment self, char const * name_and_value)"""
+        r"""
+        Add or replace an existing environment variable. The input must be a
+        string with the format
+            name=value
+
+        :param [in]: name_and_value
+                The entry to set which conforms to the format mentioned above.
+        """
         return _lldb.SBEnvironment_PutEntry(self, name_and_value)
 
     def SetEntries(self, entries, append):
-        r"""SetEntries(SBEnvironment self, SBStringList entries, bool append)"""
+        r"""
+        Update this object with the given environment variables. The input is a
+        list of entries with the same format required by SBEnvironment::PutEntry.
+
+        If append is false, the provided environment will replace the existing
+        environment. Otherwise, existing values will be updated of left untouched
+        accordingly.
+
+        :param [in]: entries
+                The environment variable entries.
+
+        :param [in]: append
+                Flag that controls whether to replace the existing environment.
+        """
         return _lldb.SBEnvironment_SetEntries(self, entries, append)
 
     def Set(self, name, value, overwrite):
-        r"""Set(SBEnvironment self, char const * name, char const * value, bool overwrite) -> bool"""
+        r"""
+        Set the value of a given environment variable.
+        If the variable exists, its value is updated only if overwrite is true.
+
+        :param [in]: name
+                The name of the environment variable to set.
+
+        :param [in]: value
+                The value of the environment variable to set.
+
+        :param [in]: overwrite
+                Flag that indicates whether to overwrite an existing environment
+                variable.
+
+        :rtype: boolean
+        :return: 
+                Return whether the variable was added or modified.
+        """
         return _lldb.SBEnvironment_Set(self, name, value, overwrite)
 
     def Unset(self, name):
-        r"""Unset(SBEnvironment self, char const * name) -> bool"""
+        r"""
+        Unset an environment variable if exists.
+
+        :param [in]: name
+                The name of the environment variable to unset.
+
+        :rtype: boolean
+        :return: 
+                Return whether a variable was actually unset.
+        """
         return _lldb.SBEnvironment_Unset(self, name)
 
     def Clear(self):
-        r"""Clear(SBEnvironment self)"""
+        r"""Delete all the environment variables."""
         return _lldb.SBEnvironment_Clear(self)
 
 # Register SBEnvironment in _lldb:
@@ -6602,7 +7337,10 @@ class SBFrame(object):
         return _lldb.SBFrame_IsArtificial(self, *args)
 
     def IsHidden(self):
-        r"""IsHidden(SBFrame self) -> bool"""
+        r"""
+        Return whether a frame recognizer decided this frame should not
+        be displayes in backtraces etc.
+        """
         return _lldb.SBFrame_IsHidden(self)
 
     def EvaluateExpression(self, *args):
@@ -6618,7 +7356,11 @@ class SBFrame(object):
         return _lldb.SBFrame_EvaluateExpression(self, *args)
 
     def GetLanguageSpecificData(self):
-        r"""GetLanguageSpecificData(SBFrame self) -> SBStructuredData"""
+        r"""
+        Language plugins can use this API to report language-specific
+        runtime information about this compile unit, such as additional
+        language version details or feature flags.
+        """
         return _lldb.SBFrame_GetLanguageSpecificData(self)
 
     def GetFrameBlock(self):
@@ -6761,7 +7503,24 @@ class SBFrame(object):
         return _lldb.SBFrame_GetDescription(self, description)
 
     def GetDescriptionWithFormat(self, format, output):
-        r"""GetDescriptionWithFormat(SBFrame self, SBFormat format, SBStream output) -> SBError"""
+        r"""
+        Similar to *GetDescription()* but the format of the description can be
+        configured via the ``format`` parameter. See
+        https://lldb.llvm.org/use/formatting.html for more information on format
+        strings.
+
+        :type format: :py:class:`SBFormat`, in
+        :param format:
+              The format to use for generating the description.
+
+        :type output: :py:class:`SBStream`, out
+        :param output:
+              The stream where the description will be written to.
+
+        :rtype: :py:class:`SBError`
+        :return: 
+              An error object with an error message in case of failures.
+        """
         return _lldb.SBFrame_GetDescriptionWithFormat(self, format, output)
 
     def __repr__(self):
@@ -7342,37 +8101,50 @@ class SBLanguageRuntime(object):
 
     @staticmethod
     def LanguageIsCPlusPlus(language):
-        r"""LanguageIsCPlusPlus(lldb::LanguageType language) -> bool"""
+        r"""Returns whether the given language is any version of C++."""
         return _lldb.SBLanguageRuntime_LanguageIsCPlusPlus(language)
 
     @staticmethod
     def LanguageIsObjC(language):
-        r"""LanguageIsObjC(lldb::LanguageType language) -> bool"""
+        r"""Returns whether the given language is Obj-C or Obj-C++."""
         return _lldb.SBLanguageRuntime_LanguageIsObjC(language)
 
     @staticmethod
     def LanguageIsCFamily(language):
-        r"""LanguageIsCFamily(lldb::LanguageType language) -> bool"""
+        r"""Returns whether the given language is any version of C, C++ or Obj-C."""
         return _lldb.SBLanguageRuntime_LanguageIsCFamily(language)
 
     @staticmethod
     def SupportsExceptionBreakpointsOnThrow(language):
-        r"""SupportsExceptionBreakpointsOnThrow(lldb::LanguageType language) -> bool"""
+        r"""
+        Returns whether the given language supports exception breakpoints on
+        throw statements.
+        """
         return _lldb.SBLanguageRuntime_SupportsExceptionBreakpointsOnThrow(language)
 
     @staticmethod
     def SupportsExceptionBreakpointsOnCatch(language):
-        r"""SupportsExceptionBreakpointsOnCatch(lldb::LanguageType language) -> bool"""
+        r"""
+        Returns whether the given language supports exception breakpoints on
+        catch statements.
+        """
         return _lldb.SBLanguageRuntime_SupportsExceptionBreakpointsOnCatch(language)
 
     @staticmethod
     def GetThrowKeywordForLanguage(language):
-        r"""GetThrowKeywordForLanguage(lldb::LanguageType language) -> char const *"""
+        r"""
+        Returns the keyword used for throw statements in the given language, e.g.
+        Python uses **raise**. Returns **nullptr** if the language is not supported.
+        """
         return _lldb.SBLanguageRuntime_GetThrowKeywordForLanguage(language)
 
     @staticmethod
     def GetCatchKeywordForLanguage(language):
-        r"""GetCatchKeywordForLanguage(lldb::LanguageType language) -> char const *"""
+        r"""
+        Returns the keyword used for catch statements in the given language, e.g.
+        Python uses **except**. Returns **nullptr** if the language is not
+        supported.
+        """
         return _lldb.SBLanguageRuntime_GetCatchKeywordForLanguage(language)
 
     def __init__(self):
@@ -7383,87 +8155,87 @@ class SBLanguageRuntime(object):
 # Register SBLanguageRuntime in _lldb:
 _lldb.SBLanguageRuntime_swigregister(SBLanguageRuntime)
 eLanguageNameAda = _lldb.eLanguageNameAda
-
+r"""ISO Ada."""
 eLanguageNameBLISS = _lldb.eLanguageNameBLISS
-
+r"""BLISS."""
 eLanguageNameC = _lldb.eLanguageNameC
-
+r"""C (K&R and ISO)."""
 eLanguageNameC_plus_plus = _lldb.eLanguageNameC_plus_plus
-
+r"""ISO C++."""
 eLanguageNameCobol = _lldb.eLanguageNameCobol
-
+r"""ISO Cobol."""
 eLanguageNameCrystal = _lldb.eLanguageNameCrystal
-
+r"""Crystal."""
 eLanguageNameD = _lldb.eLanguageNameD
-
+r"""D."""
 eLanguageNameDylan = _lldb.eLanguageNameDylan
-
+r"""Dylan."""
 eLanguageNameFortran = _lldb.eLanguageNameFortran
-
+r"""ISO Fortran."""
 eLanguageNameGo = _lldb.eLanguageNameGo
-
+r"""Go."""
 eLanguageNameHaskell = _lldb.eLanguageNameHaskell
-
+r"""Haskell."""
 eLanguageNameJava = _lldb.eLanguageNameJava
-
+r"""Java."""
 eLanguageNameJulia = _lldb.eLanguageNameJulia
-
+r"""Julia."""
 eLanguageNameKotlin = _lldb.eLanguageNameKotlin
-
+r"""Kotlin."""
 eLanguageNameModula2 = _lldb.eLanguageNameModula2
-
+r"""Modula 2."""
 eLanguageNameModula3 = _lldb.eLanguageNameModula3
-
+r"""Modula 3."""
 eLanguageNameObjC = _lldb.eLanguageNameObjC
-
+r"""Objective C."""
 eLanguageNameObjC_plus_plus = _lldb.eLanguageNameObjC_plus_plus
-
+r"""Objective C++."""
 eLanguageNameOCaml = _lldb.eLanguageNameOCaml
-
+r"""OCaml."""
 eLanguageNameOpenCL_C = _lldb.eLanguageNameOpenCL_C
-
+r"""OpenCL C."""
 eLanguageNamePascal = _lldb.eLanguageNamePascal
-
+r"""ISO Pascal."""
 eLanguageNamePLI = _lldb.eLanguageNamePLI
-
+r"""ANSI PL/I."""
 eLanguageNamePython = _lldb.eLanguageNamePython
-
+r"""Python."""
 eLanguageNameRenderScript = _lldb.eLanguageNameRenderScript
-
+r"""RenderScript Kernel Language."""
 eLanguageNameRust = _lldb.eLanguageNameRust
-
+r"""Rust."""
 eLanguageNameSwift = _lldb.eLanguageNameSwift
-
+r"""Swift."""
 eLanguageNameUPC = _lldb.eLanguageNameUPC
-
+r"""Unified Parallel C (UPC)."""
 eLanguageNameZig = _lldb.eLanguageNameZig
-
+r"""Zig."""
 eLanguageNameAssembly = _lldb.eLanguageNameAssembly
-
+r"""Assembly."""
 eLanguageNameC_sharp = _lldb.eLanguageNameC_sharp
-
+r"""C#."""
 eLanguageNameMojo = _lldb.eLanguageNameMojo
-
+r"""Mojo."""
 eLanguageNameGLSL = _lldb.eLanguageNameGLSL
-
+r"""OpenGL Shading Language."""
 eLanguageNameGLSL_ES = _lldb.eLanguageNameGLSL_ES
-
+r"""OpenGL ES Shading Language."""
 eLanguageNameHLSL = _lldb.eLanguageNameHLSL
-
+r"""High Level Shading Language."""
 eLanguageNameOpenCL_CPP = _lldb.eLanguageNameOpenCL_CPP
-
+r"""OpenCL C++."""
 eLanguageNameCPP_for_OpenCL = _lldb.eLanguageNameCPP_for_OpenCL
-
+r"""C++ for OpenCL."""
 eLanguageNameSYCL = _lldb.eLanguageNameSYCL
-
+r"""SYCL."""
 eLanguageNameRuby = _lldb.eLanguageNameRuby
-
+r"""Ruby."""
 eLanguageNameMove = _lldb.eLanguageNameMove
-
+r"""Move."""
 eLanguageNameHylo = _lldb.eLanguageNameHylo
-
+r"""Hylo."""
 eLanguageNameMetal = _lldb.eLanguageNameMetal
-
+r"""Metal."""
 class SBLaunchInfo(object):
     r"""Describes how a target or program should be launched."""
 
@@ -7508,23 +8280,77 @@ class SBLaunchInfo(object):
         return _lldb.SBLaunchInfo_GetExecutableFile(self)
 
     def SetExecutableFile(self, exe_file, add_as_first_arg):
-        r"""SetExecutableFile(SBLaunchInfo self, SBFileSpec exe_file, bool add_as_first_arg)"""
+        r"""
+        Set the executable file that will be used to launch the process and
+        optionally set it as the first argument in the argument vector.
+
+        This only needs to be specified if clients wish to carefully control
+        the exact path will be used to launch a binary. If you create a
+        target with a symlink, that symlink will get resolved in the target
+        and the resolved path will get used to launch the process. Calling
+        this function can help you still launch your process using the
+        path of your choice.
+
+        If this function is not called prior to launching with
+        SBTarget::Launch(...), the target will use the resolved executable
+        path that was used to create the target.
+
+        :type exe_file: :py:class:`SBFileSpec`, in
+        :param exe_file:
+                The override path to use when launching the executable.
+
+        :type add_as_first_arg: boolean, in
+        :param add_as_first_arg:
+                If true, then the path will be inserted into the argument vector
+                prior to launching. Otherwise the argument vector will be left
+                alone.
+        """
         return _lldb.SBLaunchInfo_SetExecutableFile(self, exe_file, add_as_first_arg)
 
     def GetListener(self):
-        r"""GetListener(SBLaunchInfo self) -> SBListener"""
+        r"""
+        Get the listener that will be used to receive process events.
+
+        If no listener has been set via a call to
+        SBLaunchInfo::SetListener(), then an invalid SBListener will be
+        returned (SBListener::IsValid() will return false). If a listener
+        has been set, then the valid listener object will be returned.
+        """
         return _lldb.SBLaunchInfo_GetListener(self)
 
     def SetListener(self, listener):
-        r"""SetListener(SBLaunchInfo self, SBListener listener)"""
+        r"""
+        Set the listener that will be used to receive process events.
+
+        By default the SBDebugger, which has a listener, that the SBTarget
+        belongs to will listen for the process events. Calling this function
+        allows a different listener to be used to listen for process events.
+        """
         return _lldb.SBLaunchInfo_SetListener(self, listener)
 
     def GetShadowListener(self):
-        r"""GetShadowListener(SBLaunchInfo self) -> SBListener"""
+        r"""
+        Get the shadow listener that receive public process events,
+        additionally to the default process event listener.
+
+        If no listener has been set via a call to
+        SBLaunchInfo::SetShadowListener(), then an invalid SBListener will
+        be returned (SBListener::IsValid() will return false). If a listener
+        has been set, then the valid listener object will be returned.
+        """
         return _lldb.SBLaunchInfo_GetShadowListener(self)
 
     def SetShadowListener(self, listener):
-        r"""SetShadowListener(SBLaunchInfo self, SBListener listener)"""
+        r"""
+        Set the shadow listener that will receive public process events,
+        additionally to the default process event listener.
+
+        By default a process have no shadow event listener.
+        Calling this function allows public process events to be broadcasted to an
+        additional listener on top of the default process event listener.
+        If the `listener` argument is invalid (SBListener::IsValid() will
+        return false), this will clear the shadow listener.
+        """
         return _lldb.SBLaunchInfo_SetShadowListener(self, listener)
 
     def GetNumArguments(self):
@@ -7548,15 +8374,48 @@ class SBLaunchInfo(object):
         return _lldb.SBLaunchInfo_GetEnvironmentEntryAtIndex(self, idx)
 
     def SetEnvironmentEntries(self, envp, append):
-        r"""SetEnvironmentEntries(SBLaunchInfo self, char const ** envp, bool append)"""
+        r"""
+        Update this object with the given environment variables.
+
+        If append is false, the provided environment will replace the existing
+        environment. Otherwise, existing values will be updated of left untouched
+        accordingly.
+
+        :param [in]: envp
+                The new environment variables as a list of strings with the following
+                format
+                    name=value
+
+        :param [in]: append
+                Flag that controls whether to replace the existing environment.
+        """
         return _lldb.SBLaunchInfo_SetEnvironmentEntries(self, envp, append)
 
     def SetEnvironment(self, env, append):
-        r"""SetEnvironment(SBLaunchInfo self, SBEnvironment env, bool append)"""
+        r"""
+        Update this object with the given environment variables.
+
+        If append is false, the provided environment will replace the existing
+        environment. Otherwise, existing values will be updated of left untouched
+        accordingly.
+
+        :param [in]: env
+                The new environment variables.
+
+        :param [in]: append
+                Flag that controls whether to replace the existing environment.
+        """
         return _lldb.SBLaunchInfo_SetEnvironment(self, env, append)
 
     def GetEnvironment(self):
-        r"""GetEnvironment(SBLaunchInfo self) -> SBEnvironment"""
+        r"""
+        Return the environment variables of this object.
+
+        :rtype: :py:class:`SBEnvironment`
+        :return: 
+                An lldb::SBEnvironment object which is a copy of the SBLaunchInfo's
+                environment.
+        """
         return _lldb.SBLaunchInfo_GetEnvironment(self)
 
     def Clear(self):
@@ -7911,31 +8770,77 @@ class SBMemoryRegionInfo(object):
         return _lldb.SBMemoryRegionInfo_Clear(self)
 
     def GetRegionBase(self):
-        r"""GetRegionBase(SBMemoryRegionInfo self) -> lldb::addr_t"""
+        r"""
+        Get the base address of this memory range.
+
+        :rtype: int
+        :return: 
+                The base address of this memory range.
+        """
         return _lldb.SBMemoryRegionInfo_GetRegionBase(self)
 
     def GetRegionEnd(self):
-        r"""GetRegionEnd(SBMemoryRegionInfo self) -> lldb::addr_t"""
+        r"""
+        Get the end address of this memory range.
+
+        :rtype: int
+        :return: 
+                The base address of this memory range.
+        """
         return _lldb.SBMemoryRegionInfo_GetRegionEnd(self)
 
     def IsReadable(self):
-        r"""IsReadable(SBMemoryRegionInfo self) -> bool"""
+        r"""
+        Check if this memory address is marked readable to the process.
+
+        :rtype: boolean
+        :return: 
+                true if this memory address is marked readable
+        """
         return _lldb.SBMemoryRegionInfo_IsReadable(self)
 
     def IsWritable(self):
-        r"""IsWritable(SBMemoryRegionInfo self) -> bool"""
+        r"""
+        Check if this memory address is marked writable to the process.
+
+        :rtype: boolean
+        :return: 
+                true if this memory address is marked writable
+        """
         return _lldb.SBMemoryRegionInfo_IsWritable(self)
 
     def IsExecutable(self):
-        r"""IsExecutable(SBMemoryRegionInfo self) -> bool"""
+        r"""
+        Check if this memory address is marked executable to the process.
+
+        :rtype: boolean
+        :return: 
+                true if this memory address is marked executable
+        """
         return _lldb.SBMemoryRegionInfo_IsExecutable(self)
 
     def IsMapped(self):
-        r"""IsMapped(SBMemoryRegionInfo self) -> bool"""
+        r"""
+        Check if this memory address is mapped into the process address
+        space.
+
+        :rtype: boolean
+        :return: 
+                true if this memory address is in the process address space.
+        """
         return _lldb.SBMemoryRegionInfo_IsMapped(self)
 
     def GetName(self):
-        r"""GetName(SBMemoryRegionInfo self) -> char const *"""
+        r"""
+        Returns the name of the memory region mapped at the given
+        address.
+
+        :rtype: string
+        :return: 
+                In case of memory mapped files it is the absolute path of
+                the file otherwise it is a name associated with the memory
+                region. If no name can be determined the returns nullptr.
+        """
         return _lldb.SBMemoryRegionInfo_GetName(self)
 
     def HasDirtyMemoryPageList(self):
@@ -8057,8 +8962,8 @@ class SBMemoryRegionInfoList(object):
       '''Iterate over all the memory regions in a lldb.SBMemoryRegionInfoList object.'''
       import lldb
       size = self.GetSize()
-      region = lldb.SBMemoryRegionInfo()
       for i in range(size):
+        region = lldb.SBMemoryRegionInfo()
         self.GetMemoryRegionAtIndex(i, region)
         yield region
 
@@ -8227,11 +9132,41 @@ class SBModule(object):
         return _lldb.SBModule_SetPlatformFileSpec(self, platform_file)
 
     def GetRemoteInstallFileSpec(self):
-        r"""GetRemoteInstallFileSpec(SBModule self) -> SBFileSpec"""
+        r"""
+        Get accessor for the remote install path for a module.
+
+        When debugging to a remote platform by connecting to a remote
+        platform, the install path of the module can be set. If the
+        install path is set, every time the process is about to launch
+        the target will install this module on the remote platform prior
+        to launching.
+
+        :rtype: :py:class:`SBFileSpec`
+        :return: 
+                A file specification object.
+        """
         return _lldb.SBModule_GetRemoteInstallFileSpec(self)
 
     def SetRemoteInstallFileSpec(self, file):
-        r"""SetRemoteInstallFileSpec(SBModule self, SBFileSpec file) -> bool"""
+        r"""
+        Set accessor for the remote install path for a module.
+
+        When debugging to a remote platform by connecting to a remote
+        platform, the install path of the module can be set. If the
+        install path is set, every time the process is about to launch
+        the target will install this module on the remote platform prior
+        to launching.
+
+        If *file* specifies a full path to an install location, the
+        module will be installed to this path. If the path is relative
+        (no directory specified, or the path is partial like "usr/lib"
+        or "./usr/lib", then the install path will be resolved using
+        the platform's current working directory as the base path.
+
+        :type file: :py:class:`SBFileSpec`, in
+        :param file:
+                A file specification object.
+        """
         return _lldb.SBModule_SetRemoteInstallFileSpec(self, file)
 
     def GetByteOrder(self):
@@ -8400,7 +9335,24 @@ class SBModule(object):
         return _lldb.SBModule_FindTypes(self, type)
 
     def GetTypeByID(self, uid):
-        r"""GetTypeByID(SBModule self, lldb::user_id_t uid) -> SBType"""
+        r"""
+        Get a type using its type ID.
+
+        Each symbol file reader will assign different user IDs to their
+        types, but it is sometimes useful when debugging type issues to
+        be able to grab a type using its type ID.
+
+        For DWARF debug info, the type ID is the DIE offset.
+
+        :type uid: int, in
+        :param uid:
+                The type user ID.
+
+        :rtype: :py:class:`SBType`
+        :return: 
+                An SBType for the given type ID, or an empty SBType if the
+                type was not found.
+        """
         return _lldb.SBModule_GetTypeByID(self, uid)
 
     def GetBasicType(self, type):
@@ -8427,11 +9379,64 @@ class SBModule(object):
         return _lldb.SBModule_GetTypes(self, *args)
 
     def GetVersion(self):
-        r"""GetVersion(SBModule self) -> uint32_t"""
+        r"""
+        Get the module version numbers.
+
+        Many object files have a set of version numbers that describe
+        the version of the executable or shared library. Typically there
+        are major, minor and build, but there may be more. This function
+        will extract the versions from object files if they are available.
+
+        If *versions* is NULL, or if *num_versions* is 0, the return
+        value will indicate how many version numbers are available in
+        this object file. Then a subsequent call can be made to this
+        function with a value of *versions* and *num_versions* that
+        has enough storage to store some or all version numbers.
+
+        :type versions: int, out
+        :param versions:
+                A pointer to an array of uint32_t types that is *num_versions*
+                long. If this value is NULL, the return value will indicate
+                how many version numbers are required for a subsequent call
+                to this function so that all versions can be retrieved. If
+                the value is non-NULL, then at most *num_versions* of the
+                existing versions numbers will be filled into *versions*.
+                If there is no version information available, *versions*
+                will be filled with *num_versions* UINT32_MAX values
+                and zero will be returned.
+
+        :type num_versions: int, in
+        :param num_versions:
+                The maximum number of entries to fill into *versions*. If
+                this value is zero, then the return value will indicate
+                how many version numbers there are in total so another call
+                to this function can be make with adequate storage in
+                *versions* to get all of the version numbers. If
+           *num_versions* is less than the actual number of version
+                numbers in this object file, only *num_versions* will be
+                filled into *versions* (if *versions* is non-NULL).
+
+        :rtype: int
+        :return: 
+                This function always returns the number of version numbers
+                that this object file has regardless of the number of
+                version numbers that were copied into *versions*.
+        """
         return _lldb.SBModule_GetVersion(self)
 
     def GetSymbolFileSpec(self):
-        r"""GetSymbolFileSpec(SBModule self) -> SBFileSpec"""
+        r"""
+        Get accessor for the symbol file specification.
+
+        When debugging an object file an additional debug information can
+        be provided in separate file. Therefore if you debugging something
+        like '/usr/lib/liba.dylib' then debug information can be located
+        in folder like '/usr/lib/liba.dylib.dSYM/'.
+
+        :rtype: :py:class:`SBFileSpec`
+        :return: 
+                A const reference to the file specification object.
+        """
         return _lldb.SBModule_GetSymbolFileSpec(self)
 
     def GetObjectFileHeaderAddress(self):
@@ -8908,15 +9913,15 @@ class SBMutex(object):
     __swig_destroy__ = _lldb.delete_SBMutex
 
     def IsValid(self):
-        r"""IsValid(SBMutex self) -> bool"""
+        r"""Returns true if this lock has ownership of the underlying mutex."""
         return _lldb.SBMutex_IsValid(self)
 
     def lock(self):
-        r"""lock(SBMutex self)"""
+        r"""Blocking operation that takes ownership of this lock."""
         return _lldb.SBMutex_lock(self)
 
     def unlock(self):
-        r"""unlock(SBMutex self)"""
+        r"""Releases ownership of this lock."""
         return _lldb.SBMutex_unlock(self)
 
     def __enter__(self):
@@ -9198,11 +10203,29 @@ class SBPlatform(object):
         return _lldb.SBPlatform_GetUnixSignals(self)
 
     def GetEnvironment(self):
-        r"""GetEnvironment(SBPlatform self) -> SBEnvironment"""
+        r"""
+        Return the environment variables of the remote platform connection
+        process.
+
+        :rtype: :py:class:`SBEnvironment`
+        :return: 
+                An lldb::SBEnvironment object which is a copy of the platform's
+                environment.
+        """
         return _lldb.SBPlatform_GetEnvironment(self)
 
     def SetLocateModuleCallback(self, callback):
-        r"""SetLocateModuleCallback(SBPlatform self, lldb::SBPlatformLocateModuleCallback callback) -> SBError"""
+        r"""
+        Set a callback as an implementation for locating module in order to
+        implement own module cache system. For example, to leverage distributed
+        build system, to bypass pulling files from remote platform, or to search
+        symbol files from symbol servers. The target will call this callback to
+        get a module file and a symbol file, and it will fallback to the LLDB
+        implementation when this callback failed or returned non-existent file.
+        This callback can set either module_file_spec or symbol_file_spec, or both
+        module_file_spec and symbol_file_spec. The callback will be cleared if
+        nullptr or None is set.
+        """
         return _lldb.SBPlatform_SetLocateModuleCallback(self, callback)
 
 # Register SBPlatform in _lldb:
@@ -9510,11 +10533,28 @@ class SBProcess(object):
         return _lldb.SBProcess_GetStopID(self, include_expression_stops)
 
     def GetStopEventForStopID(self, stop_id):
-        r"""GetStopEventForStopID(SBProcess self, uint32_t stop_id) -> SBEvent"""
+        r"""
+        Gets the stop event corresponding to stop ID.
+        Note that it wasn't fully implemented and tracks only the stop
+        event for the last natural stop ID.
+
+        :param [in]: stop_id
+              The ID of the stop event to return.
+
+        :rtype: :py:class:`SBEvent`
+        :return: 
+              The stop event corresponding to stop ID.
+        """
         return _lldb.SBProcess_GetStopEventForStopID(self, stop_id)
 
     def ForceScriptedState(self, new_state):
-        r"""ForceScriptedState(SBProcess self, lldb::StateType new_state)"""
+        r"""
+        If the process is a scripted process, changes its state to the new state.
+        No-op otherwise.
+
+        :param [in]: new_state
+              The new state that the scripted process should be set to.
+        """
         return _lldb.SBProcess_ForceScriptedState(self, new_state)
 
     def ReadMemory(self, addr, buf, error):
@@ -9680,8 +10720,57 @@ class SBProcess(object):
 
     def LoadImage(self, *args):
         r"""
-        LoadImage(SBProcess self, SBFileSpec remote_image_spec, SBError error) -> uint32_t
-        LoadImage(SBProcess self, SBFileSpec local_image_spec, SBFileSpec remote_image_spec, SBError error) -> uint32_t
+        *Overload 1:*
+        Load a shared library into this process.
+
+        :type remote_image_spec: :py:class:`SBFileSpec`, in
+        :param remote_image_spec:
+                The path for the shared library on the target what you want
+                to load.
+
+        :type error: :py:class:`SBError`, out
+        :param error:
+                An error object that gets filled in with any errors that
+                might occur when trying to load the shared library.
+
+        :rtype: int
+        :return: 
+                A token that represents the shared library that can be
+                later used to unload the shared library. A value of
+                LLDB_INVALID_IMAGE_TOKEN will be returned if the shared
+                library can't be opened.
+
+        |
+
+        *Overload 2:*
+        Load a shared library into this process.
+
+        :type local_image_spec: :py:class:`SBFileSpec`, in
+        :param local_image_spec:
+                The file spec that points to the shared library that you
+                want to load if the library is located on the host. The
+                library will be copied over to the location specified by
+                remote_image_spec or into the current working directory with
+                the same filename if the remote_image_spec isn't specified.
+
+        :type remote_image_spec: :py:class:`SBFileSpec`, in
+        :param remote_image_spec:
+                If local_image_spec is specified then the location where the
+                library should be copied over from the host. If
+                local_image_spec isn't specified, then the path for the
+                shared library on the target what you want to load.
+
+        :type error: :py:class:`SBError`, out
+        :param error:
+                An error object that gets filled in with any errors that
+                might occur when trying to load the shared library.
+
+        :rtype: int
+        :return: 
+                A token that represents the shared library that can be
+                later used to unload the shared library. A value of
+                LLDB_INVALID_IMAGE_TOKEN will be returned if the shared
+                library can't be opened.
         """
         return _lldb.SBProcess_LoadImage(self, *args)
 
@@ -9737,14 +10826,59 @@ class SBProcess(object):
 
     def SaveCore(self, *args):
         r"""
-        SaveCore(SBProcess self, char const * file_name, char const * flavor, lldb::SaveCoreStyle core_style) -> SBError
-        SaveCore(SBProcess self, char const * file_name) -> SBError
-        SaveCore(SBProcess self, SBSaveCoreOptions options) -> SBError
+        *Overload 1:*
+        Save the state of the process in a core file.
+
+        :type file_name: string, in
+        :param file_name: - The name of the file to save the core file to.
+
+        :type flavor: string, in
+        :param flavor: - Specify the flavor of a core file plug-in to save.
+            Currently supported flavors include "mach-o" and "minidump"
+
+        :type core_style: int, in
+        :param core_style: - Specify the style of a core file to save.
+
+        |
+
+        *Overload 2:*
+        Save the state of the process with the a flavor that matches the
+        current process' main executable (if supported).
+
+        :type file_name: string, in
+        :param file_name: - The name of the file to save the core file to.
+
+        |
+
+        *Overload 3:*
+        Save the state of the process with the desired settings
+        as defined in the options object.
+
+        :type options: :py:class:`SBSaveCoreOptions`, in
+        :param options: - The options to use when saving the core file.
         """
         return _lldb.SBProcess_SaveCore(self, *args)
 
     def GetMemoryRegionInfo(self, load_addr, region_info):
-        r"""GetMemoryRegionInfo(SBProcess self, lldb::addr_t load_addr, SBMemoryRegionInfo region_info) -> SBError"""
+        r"""
+        Query the address load_addr and store the details of the memory
+        region that contains it in the supplied SBMemoryRegionInfo object.
+        To iterate over all memory regions use GetMemoryRegionList.
+
+        :type load_addr: int, in
+        :param load_addr:
+                The address to be queried.
+
+        :type region_info: :py:class:`SBMemoryRegionInfo`, out
+        :param region_info:
+                A reference to an SBMemoryRegionInfo object that will contain
+                the details of the memory region containing load_addr.
+
+        :rtype: :py:class:`SBError`
+        :return: 
+                An error object describes any errors that occurred while
+                querying load_addr.
+        """
         return _lldb.SBProcess_GetMemoryRegionInfo(self, load_addr, region_info)
 
     def GetMemoryRegions(self):
@@ -9777,7 +10911,16 @@ class SBProcess(object):
         return _lldb.SBProcess_GetProcessInfo(self)
 
     def GetCoreFile(self):
-        r"""GetCoreFile(SBProcess self) -> SBFileSpec"""
+        r"""
+        Get the file specification for the core file that is currently being used
+        for the process. If the process is not loaded from a core file, then an
+        invalid file specification will be returned.
+
+        :rtype: :py:class:`SBFileSpec`
+        :return: 
+                The path to the core file for this target or an invalid file spec if
+                the process isn't loaded from a core file.
+        """
         return _lldb.SBProcess_GetCoreFile(self)
 
     def GetAddressMask(self, *args):
@@ -10165,8 +11308,35 @@ class SBProgress(object):
 
     def __init__(self, *args):
         r"""
-        __init__(SBProgress self, char const * title, char const * details, SBDebugger debugger) -> SBProgress
-        __init__(SBProgress self, char const * title, char const * details, uint64_t total_units, SBDebugger debugger) -> SBProgress
+        *Overload 1:*
+        Construct a progress object with a title, details and a given debugger.
+        :type title: string
+        :param title:
+              The title of the progress object.
+        :type details: string
+        :param details:
+              The details of the progress object.
+        :type debugger: :py:class:`SBDebugger`
+        :param debugger:
+              The debugger for this progress object to report to.
+
+        |
+
+        *Overload 2:*
+        Construct a progress object with a title, details, the total units of work
+        to be done, and a given debugger.
+        :type title: string
+        :param title:
+              The title of the progress object.
+        :type details: string
+        :param details:
+              The details of the progress object.
+        :type total_units: int
+        :param total_units:
+              The total number of units of work to be done.
+        :type debugger: :py:class:`SBDebugger`
+        :param debugger:
+              The debugger for this progress object to report to.
         """
         _lldb.SBProgress_swiginit(self, _lldb.new_SBProgress(*args))
     __swig_destroy__ = _lldb.delete_SBProgress
@@ -10354,7 +11524,13 @@ class SBReproducer(object):
 
     @staticmethod
     def SetWorkingDirectory(path):
-        r"""SetWorkingDirectory(char const * path)"""
+        r"""
+        The working directory is set to the current working directory when the
+        reproducers are initialized. This method allows setting a different
+        working directory. This is used by the API test suite  which temporarily
+        changes the directory to where the test lives. This is a NO-OP in every
+        mode but capture.
+        """
         return _lldb.SBReproducer_SetWorkingDirectory(path)
 
     def __init__(self):
@@ -10512,7 +11688,19 @@ class SBSection(object):
         return _lldb.SBSection_GetSectionType(self)
 
     def GetPermissions(self):
-        r"""GetPermissions(SBSection self) -> uint32_t"""
+        r"""
+        Gets the permissions (RWX) of the section of the object file
+
+        Returns a mask of bits of enum lldb::Permissions for this section.
+        Sections for which permissions are not defined, 0 is returned for
+        them. The binary representation of this value corresponds to [XRW]
+        i.e. for a section having read and execute permissions, the value
+        returned is 6
+
+        :rtype: int
+        :return: 
+                Returns an unsigned value for Permissions for the section.
+        """
         return _lldb.SBSection_GetPermissions(self)
 
     def GetTargetByteSize(self):
@@ -10530,7 +11718,13 @@ class SBSection(object):
         return _lldb.SBSection_GetTargetByteSize(self)
 
     def GetAlignment(self):
-        r"""GetAlignment(SBSection self) -> uint32_t"""
+        r"""
+        Return the alignment of the section in bytes
+
+        :rtype: int
+        :return: 
+                The alignment of the section in bytes
+        """
         return _lldb.SBSection_GetAlignment(self)
 
     def __eq__(self, rhs):
@@ -10671,7 +11865,16 @@ class SBStatisticsOptions(object):
         return _lldb.SBStatisticsOptions_GetSummaryOnly(self)
 
     def SetIncludeTargets(self, b):
-        r"""SetIncludeTargets(SBStatisticsOptions self, bool b)"""
+        r"""
+        If true, dump statistics for the targets, including breakpoints,
+        expression evaluations, frame variables, etc.
+
+        Defaults to true, unless the `SummaryOnly` mode is enabled, in which case
+        this is turned off unless specified.
+
+        If both `IncludeTargets` and `IncludeModules` are true, a list of module
+        identifiers will be added to the "targets" section.
+        """
         return _lldb.SBStatisticsOptions_SetIncludeTargets(self, b)
 
     def GetIncludeTargets(self):
@@ -10679,7 +11882,17 @@ class SBStatisticsOptions(object):
         return _lldb.SBStatisticsOptions_GetIncludeTargets(self)
 
     def SetIncludeModules(self, b):
-        r"""SetIncludeModules(SBStatisticsOptions self, bool b)"""
+        r"""
+        If true, dump statistics for the modules, including time and size of
+        various aspects of the module and debug information, type system, path,
+        etc.
+
+        Defaults to true, unless the `SummaryOnly` mode is enabled, in which case
+        this is turned off unless specified.
+
+        If both `IncludeTargets` and `IncludeModules` are true, a list of module
+        identifiers will be added to the "targets" section.
+        """
         return _lldb.SBStatisticsOptions_SetIncludeModules(self, b)
 
     def GetIncludeModules(self):
@@ -10687,7 +11900,13 @@ class SBStatisticsOptions(object):
         return _lldb.SBStatisticsOptions_GetIncludeModules(self)
 
     def SetIncludeTranscript(self, b):
-        r"""SetIncludeTranscript(SBStatisticsOptions self, bool b)"""
+        r"""
+        If true and the setting `interpreter.save-transcript` is enabled, include
+        a JSON array with all commands the user and/or scripts executed during a
+        debug session.
+
+        Defaults to false.
+        """
         return _lldb.SBStatisticsOptions_SetIncludeTranscript(self, b)
 
     def GetIncludeTranscript(self):
@@ -10931,31 +12150,43 @@ class SBStructuredData(object):
         return _lldb.SBStructuredData_GetDescription(self, stream)
 
     def GetType(self):
-        r"""GetType(SBStructuredData self) -> lldb::StructuredDataType"""
+        r"""Return the type of data in this data structure"""
         return _lldb.SBStructuredData_GetType(self)
 
     def GetSize(self):
-        r"""GetSize(SBStructuredData self) -> size_t"""
+        r"""
+        Return the size (i.e. number of elements) in this data structure
+        if it is an array or dictionary type. For other types, 0 will be
+        """
         return _lldb.SBStructuredData_GetSize(self)
 
     def GetKeys(self, keys):
-        r"""GetKeys(SBStructuredData self, SBStringList keys) -> bool"""
+        r"""
+        Fill keys with the keys in this object and return true if this data
+        structure is a dictionary.  Returns false otherwise.
+        """
         return _lldb.SBStructuredData_GetKeys(self, keys)
 
     def GetValueForKey(self, key):
-        r"""GetValueForKey(SBStructuredData self, char const * key) -> SBStructuredData"""
+        r"""
+        Return the value corresponding to a key if this data structure
+        is a dictionary type.
+        """
         return _lldb.SBStructuredData_GetValueForKey(self, key)
 
     def GetItemAtIndex(self, idx):
-        r"""GetItemAtIndex(SBStructuredData self, size_t idx) -> SBStructuredData"""
+        r"""
+        Return the value corresponding to an index if this data structure
+        is array.
+        """
         return _lldb.SBStructuredData_GetItemAtIndex(self, idx)
 
     def GetUnsignedIntegerValue(self, fail_value=0):
-        r"""GetUnsignedIntegerValue(SBStructuredData self, uint64_t fail_value=0) -> uint64_t"""
+        r"""Return the integer value if this data structure is an integer type."""
         return _lldb.SBStructuredData_GetUnsignedIntegerValue(self, fail_value)
 
     def GetSignedIntegerValue(self, fail_value=0):
-        r"""GetSignedIntegerValue(SBStructuredData self, int64_t fail_value=0) -> int64_t"""
+        r"""Return the integer value if this data structure is an integer type."""
         return _lldb.SBStructuredData_GetSignedIntegerValue(self, fail_value)
 
     def GetIntegerValue(self, fail_value=0):
@@ -10963,19 +12194,41 @@ class SBStructuredData(object):
         return _lldb.SBStructuredData_GetIntegerValue(self, fail_value)
 
     def GetFloatValue(self, fail_value=0.0):
-        r"""GetFloatValue(SBStructuredData self, double fail_value=0.0) -> double"""
+        r"""
+        Return the floating point value if this data structure is a floating
+        type.
+        """
         return _lldb.SBStructuredData_GetFloatValue(self, fail_value)
 
     def GetBooleanValue(self, fail_value=False):
-        r"""GetBooleanValue(SBStructuredData self, bool fail_value=False) -> bool"""
+        r"""Return the boolean value if this data structure is a boolean type."""
         return _lldb.SBStructuredData_GetBooleanValue(self, fail_value)
 
     def GetStringValue(self, dst):
-        r"""GetStringValue(SBStructuredData self, char * dst) -> size_t"""
+        r"""
+        Provides the string value if this data structure is a string type.
+
+        :type dst: string, out
+        :param dst:
+                pointer where the string value will be written. In case it is null,
+                nothing will be written at *dst*.
+
+        :type dst_len: int, in
+        :param dst_len:
+                max number of characters that can be written at *dst*. In case it is
+                zero, nothing will be written at *dst*. If this length is not enough
+                to write the complete string value, (*dst_len* - 1) bytes of the
+                string value will be written at *dst* followed by a null character.
+
+        :rtype: int
+        :return: 
+                Returns the byte size needed to completely write the string value at
+                *dst* in all cases.
+        """
         return _lldb.SBStructuredData_GetStringValue(self, dst)
 
     def GetGenericValue(self):
-        r"""GetGenericValue(SBStructuredData self) -> SBScriptObject"""
+        r"""Return the generic pointer if this data structure is a generic type."""
         return _lldb.SBStructuredData_GetGenericValue(self)
 
     def __repr__(self):
@@ -11042,19 +12295,59 @@ class SBSymbol(object):
         return _lldb.SBSymbol_GetInstructions(self, *args)
 
     def GetStartAddress(self):
-        r"""GetStartAddress(SBSymbol self) -> SBAddress"""
+        r"""
+        Get the start address of this symbol
+
+        :rtype: :py:class:`SBAddress`
+        :return: 
+              If the symbol's value is not an address, an invalid SBAddress object
+              will be returned. If the symbol's value is an address, a valid SBAddress
+              object will be returned.
+        """
         return _lldb.SBSymbol_GetStartAddress(self)
 
     def GetEndAddress(self):
-        r"""GetEndAddress(SBSymbol self) -> SBAddress"""
+        r"""
+        Get the end address of this symbol
+
+        :rtype: :py:class:`SBAddress`
+        :return: 
+              If the symbol's value is not an address, an invalid SBAddress object
+              will be returned. If the symbol's value is an address, a valid SBAddress
+              object will be returned.
+        """
         return _lldb.SBSymbol_GetEndAddress(self)
 
     def GetValue(self):
-        r"""GetValue(SBSymbol self) -> uint64_t"""
+        r"""
+        Get the raw value of a symbol.
+
+        This accessor allows direct access to the symbol's value from the symbol
+        table regardless of what the value is. The value can be a file address or
+        it can be an integer value that depends on what the symbol's type is. Some
+        symbol values are not addresses, but absolute values or integer values
+        that can be mean different things. The GetStartAddress() accessor will
+        only return a valid SBAddress if the symbol's value is an address, so this
+        accessor provides a way to access the symbol's value when the value is
+        not an address.
+
+        :rtype: int
+        :return: 
+              Returns the raw integer value of a symbol from the symbol table.
+        """
         return _lldb.SBSymbol_GetValue(self)
 
     def GetSize(self):
-        r"""GetSize(SBSymbol self) -> uint64_t"""
+        r"""
+        Get the size of the symbol.
+
+        This accessor allows direct access to the symbol's size from the symbol
+        table regardless of what the value is (address or integer value).
+
+        :rtype: int
+        :return: 
+              Returns the size of a symbol from the symbol table.
+        """
         return _lldb.SBSymbol_GetSize(self)
 
     def GetPrologueByteSize(self):
@@ -11499,22 +12792,56 @@ class SBTarget(object):
         return _lldb.SBTarget_GetProcess(self)
 
     def SetCollectingStats(self, v):
-        r"""SetCollectingStats(SBTarget self, bool v)"""
+        r"""
+        Sets whether we should collect statistics on lldb or not.
+
+        :type v: boolean, in
+        :param v:
+                A boolean to control the collection.
+        """
         return _lldb.SBTarget_SetCollectingStats(self, v)
 
     def GetCollectingStats(self):
-        r"""GetCollectingStats(SBTarget self) -> bool"""
+        r"""
+        Returns whether statistics collection are enabled.
+
+        :rtype: boolean
+        :return: 
+                true if statistics are currently being collected, false
+                otherwise.
+        """
         return _lldb.SBTarget_GetCollectingStats(self)
 
     def GetStatistics(self, *args):
         r"""
-        GetStatistics(SBTarget self) -> SBStructuredData
-        GetStatistics(SBTarget self, SBStatisticsOptions options) -> SBStructuredData
+        *Overload 1:*
+        Returns a dump of the collected statistics.
+
+        :rtype: :py:class:`SBStructuredData`
+        :return: 
+                A SBStructuredData with the statistics collected.
+
+        |
+
+        *Overload 2:*
+        Returns a dump of the collected statistics.
+
+        :type options: :py:class:`SBStatisticsOptions`, in
+        :param options:
+              An objects object that contains all options for the statistics dumping.
+
+        :rtype: :py:class:`SBStructuredData`
+        :return: 
+                A SBStructuredData with the statistics collected.
         """
         return _lldb.SBTarget_GetStatistics(self, *args)
 
     def ResetStatistics(self):
-        r"""ResetStatistics(SBTarget self)"""
+        r"""
+        Reset the statistics collected for this target.
+        This includes clearing symbol table and debug info parsing/index time for
+        all modules, breakpoint resolve time and target statistics.
+        """
         return _lldb.SBTarget_ResetStatistics(self)
 
     def GetPlatform(self):
@@ -11532,7 +12859,15 @@ class SBTarget(object):
         return _lldb.SBTarget_GetPlatform(self)
 
     def GetEnvironment(self):
-        r"""GetEnvironment(SBTarget self) -> SBEnvironment"""
+        r"""
+        Return the environment variables that would be used to launch a new
+        process.
+
+        :rtype: :py:class:`SBEnvironment`
+        :return: 
+                An lldb::SBEnvironment object which is a copy of the target's
+                environment.
+        """
         return _lldb.SBTarget_GetEnvironment(self)
 
     def Install(self):
@@ -11838,11 +13173,23 @@ class SBTarget(object):
         return _lldb.SBTarget_SetLabel(self, label)
 
     def GetMinimumOpcodeByteSize(self):
-        r"""GetMinimumOpcodeByteSize(SBTarget self) -> uint32_t"""
+        r"""
+        Architecture opcode byte size width accessor
+
+        :rtype: int
+        :return: 
+            The minimum size in 8-bit (host) bytes of an opcode.
+        """
         return _lldb.SBTarget_GetMinimumOpcodeByteSize(self)
 
     def GetMaximumOpcodeByteSize(self):
-        r"""GetMaximumOpcodeByteSize(SBTarget self) -> uint32_t"""
+        r"""
+        Architecture opcode byte size width accessor
+
+        :rtype: int
+        :return: 
+            The maximum size in 8-bit (host) bytes of an opcode.
+        """
         return _lldb.SBTarget_GetMaximumOpcodeByteSize(self)
 
     def GetDataByteSize(self):
@@ -11870,23 +13217,88 @@ class SBTarget(object):
         return _lldb.SBTarget_GetCodeByteSize(self)
 
     def GetMaximumNumberOfChildrenToDisplay(self):
-        r"""GetMaximumNumberOfChildrenToDisplay(SBTarget self) -> uint32_t"""
+        r"""
+        Gets the target.max-children-count value
+        It should be used to limit the number of
+        children of large data structures to be displayed.
+        """
         return _lldb.SBTarget_GetMaximumNumberOfChildrenToDisplay(self)
 
     def SetSectionLoadAddress(self, section, section_base_addr):
-        r"""SetSectionLoadAddress(SBTarget self, SBSection section, lldb::addr_t section_base_addr) -> SBError"""
+        r"""
+        Set the base load address for a module section.
+
+        :type section: :py:class:`SBSection`, in
+        :param section:
+                The section whose base load address will be set within this
+                target.
+
+        :type section_base_addr: int, in
+        :param section_base_addr:
+                The base address for the section.
+
+        :rtype: :py:class:`SBError`
+        :return: 
+                 An error to indicate success, fail, and any reason for
+                failure.
+        """
         return _lldb.SBTarget_SetSectionLoadAddress(self, section, section_base_addr)
 
     def ClearSectionLoadAddress(self, section):
-        r"""ClearSectionLoadAddress(SBTarget self, SBSection section) -> SBError"""
+        r"""
+        Clear the base load address for a module section.
+
+        :type section: :py:class:`SBSection`, in
+        :param section:
+                The section whose base load address will be cleared within
+                this target.
+
+        :rtype: :py:class:`SBError`
+        :return: 
+                 An error to indicate success, fail, and any reason for
+                failure.
+        """
         return _lldb.SBTarget_ClearSectionLoadAddress(self, section)
 
     def SetModuleLoadAddress(self, module, sections_offset):
-        r"""SetModuleLoadAddress(SBTarget self, SBModule module, uint64_t sections_offset) -> SBError"""
+        r"""
+        Slide all file addresses for all module sections so that *module*
+        appears to loaded at these slide addresses.
+
+        When you need all sections within a module to be loaded at a
+        rigid slide from the addresses found in the module object file,
+        this function will allow you to easily and quickly slide all
+        module sections.
+
+        :type module: :py:class:`SBModule`, in
+        :param module:
+                The module to load.
+
+        :type sections_offset: int, in
+        :param sections_offset:
+                An offset that will be applied to all section file addresses
+                (the virtual addresses found in the object file itself).
+
+        :rtype: :py:class:`SBError`
+        :return: 
+                An error to indicate success, fail, and any reason for
+                failure.
+        """
         return _lldb.SBTarget_SetModuleLoadAddress(self, module, sections_offset)
 
     def ClearModuleLoadAddress(self, module):
-        r"""ClearModuleLoadAddress(SBTarget self, SBModule module) -> SBError"""
+        r"""
+        Clear the section base load addresses for all sections in a module.
+
+        :type module: :py:class:`SBModule`, in
+        :param module:
+                The module to unload.
+
+        :rtype: :py:class:`SBError`
+        :return: 
+                An error to indicate success, fail, and any reason for
+                failure.
+        """
         return _lldb.SBTarget_ClearModuleLoadAddress(self, module)
 
     def FindFunctions(self, *args):
@@ -11945,7 +13357,25 @@ class SBTarget(object):
         return _lldb.SBTarget_FindGlobalVariables(self, *args)
 
     def FindGlobalFunctions(self, name, max_matches, matchtype):
-        r"""FindGlobalFunctions(SBTarget self, char const * name, uint32_t max_matches, lldb::MatchType matchtype) -> SBSymbolContextList"""
+        r"""
+        Find global functions by their name with pattern matching.
+
+        :type name: string, in
+        :param name:
+                The pattern to search for global or static variables
+
+        :type max_matches: int, in
+        :param max_matches:
+                Allow the number of matches to be limited to *max_matches*.
+
+        :type matchtype: int, in
+        :param matchtype:
+                The match type to use.
+
+        :rtype: :py:class:`SBSymbolContextList`
+        :return: 
+                A list of matched variables in an SBValueList.
+        """
         return _lldb.SBTarget_FindGlobalFunctions(self, name, max_matches, matchtype)
 
     def Clear(self):
@@ -11966,11 +13396,49 @@ class SBTarget(object):
         return _lldb.SBTarget_ResolveFileAddress(self, file_addr)
 
     def ResolveLoadAddress(self, vm_addr):
-        r"""ResolveLoadAddress(SBTarget self, lldb::addr_t vm_addr) -> SBAddress"""
+        r"""
+        Resolve a current load address into a section offset address.
+
+        :type vm_addr: int, in
+        :param vm_addr:
+                A virtual address from the current process state that is to
+                be translated into a section offset address.
+
+        :rtype: :py:class:`SBAddress`
+        :return: 
+                An SBAddress which will be valid if *vm_addr* was
+                successfully resolved into a section offset address, or an
+                invalid SBAddress if *vm_addr* doesn't resolve to a section
+                in a module.
+        """
         return _lldb.SBTarget_ResolveLoadAddress(self, vm_addr)
 
     def ResolvePastLoadAddress(self, stop_id, vm_addr):
-        r"""ResolvePastLoadAddress(SBTarget self, uint32_t stop_id, lldb::addr_t vm_addr) -> SBAddress"""
+        r"""
+        Resolve a current load address into a section offset address
+        using the process stop ID to identify a time in the past.
+
+        :type stop_id: int, in
+        :param stop_id:
+                Each time a process stops, the process stop ID integer gets
+                incremented. These stop IDs are used to identify past times
+                and can be used in history objects as a cheap way to store
+                the time at which the sample was taken. Specifying
+                UINT32_MAX will always resolve the address using the
+                currently loaded sections.
+
+        :type vm_addr: int, in
+        :param vm_addr:
+                A virtual address from the current process state that is to
+                be translated into a section offset address.
+
+        :rtype: :py:class:`SBAddress`
+        :return: 
+                An SBAddress which will be valid if *vm_addr* was
+                successfully resolved into a section offset address, or an
+                invalid SBAddress if *vm_addr* doesn't resolve to a section
+                in a module.
+        """
         return _lldb.SBTarget_ResolvePastLoadAddress(self, stop_id, vm_addr)
 
     def ResolveSymbolContextForAddress(self, addr, resolve_scope):
@@ -12393,11 +13861,26 @@ class SBTarget(object):
         return _lldb.SBTarget_SetLaunchInfo(self, launch_info)
 
     def GetTrace(self):
-        r"""GetTrace(SBTarget self) -> SBTrace"""
+        r"""
+        Get a *SBTrace* object the can manage the processor trace information of
+        this target.
+
+        :rtype: :py:class:`SBTrace`
+        :return: 
+              The trace object. The returned SBTrace object might not be valid, so it
+              should be checked with a call to "bool SBTrace::IsValid()".
+        """
         return _lldb.SBTarget_GetTrace(self)
 
     def CreateTrace(self, error):
-        r"""CreateTrace(SBTarget self, SBError error) -> SBTrace"""
+        r"""
+        Create a *Trace* object for the current target using the using the
+        default supported tracing technology for this process.
+
+        :type error: :py:class:`SBError`, out
+        :param error:
+                An error if a Trace already exists or the trace couldn't be created.
+        """
         return _lldb.SBTarget_CreateTrace(self, error)
 
     def GetAPIMutex(self):
@@ -12995,7 +14478,24 @@ class SBThread(object):
         return _lldb.SBThread_GetDescription(self, *args)
 
     def GetDescriptionWithFormat(self, format, output):
-        r"""GetDescriptionWithFormat(SBThread self, SBFormat format, SBStream output) -> SBError"""
+        r"""
+        Similar to *GetDescription()* but the format of the description can be
+        configured via the ``format`` parameter. See
+        https://lldb.llvm.org/use/formatting.html for more information on format
+        strings.
+
+        :type format: :py:class:`SBFormat`, in
+        :param format:
+              The format to use for generating the description.
+
+        :type output: :py:class:`SBStream`, out
+        :param output:
+              The stream where the description will be written to.
+
+        :rtype: :py:class:`SBError`
+        :return: 
+              An error object with an error message in case of failures.
+        """
         return _lldb.SBThread_GetDescriptionWithFormat(self, format, output)
 
     def GetStatus(self, status):
@@ -13367,37 +14867,149 @@ class SBTrace(object):
     __repr__ = _swig_repr
 
     def __init__(self):
-        r"""__init__(SBTrace self) -> SBTrace"""
+        r"""Default constructor for an invalid Trace object."""
         _lldb.SBTrace_swiginit(self, _lldb.new_SBTrace())
 
     @staticmethod
     def LoadTraceFromFile(error, debugger, trace_description_file):
-        r"""LoadTraceFromFile(SBError error, SBDebugger debugger, SBFileSpec trace_description_file) -> SBTrace"""
+        r"""See SBDebugger::LoadTraceFromFile."""
         return _lldb.SBTrace_LoadTraceFromFile(error, debugger, trace_description_file)
 
     def CreateNewCursor(self, error, thread):
-        r"""CreateNewCursor(SBTrace self, SBError error, SBThread thread) -> SBTraceCursor"""
+        r"""
+        Get a *TraceCursor* for the given thread's trace.
+
+        :type error: :py:class:`SBError`, out
+        :param error:
+              This will be set with an error in case of failures.
+        :type thread: :py:class:`SBThread`, in
+        :param thread:
+              The thread to get a *TraceCursor* for.
+        :rtype: :py:class:`SBTraceCursor`
+        :return: 
+                A *SBTraceCursor*. If the thread is not traced or its trace
+                information failed to load, an invalid *SBTraceCursor* is returned
+                and the ``error`` parameter is set.
+        """
         return _lldb.SBTrace_CreateNewCursor(self, error, thread)
 
     def SaveToDisk(self, error, bundle_dir, compact=False):
-        r"""SaveToDisk(SBTrace self, SBError error, SBFileSpec bundle_dir, bool compact=False) -> SBFileSpec"""
+        r"""
+        Save the trace to the specified directory, which will be created if
+        needed. This will also create a file <directory>/trace.json with the
+        main properties of the trace session, along with others files which
+        contain the actual trace data. The trace.json file can be used later as
+        input for the "trace load" command to load the trace in LLDB, or for the
+        method *SBDebugger.LoadTraceFromFile()*.
+
+        :type error: :py:class:`SBError`, out
+        :param error:
+              This will be set with an error in case of failures.
+
+        :type bundle_dir: :py:class:`SBFileSpec`, in
+        :param bundle_dir:
+              The directory where the trace files will be saved.
+
+        :type compact: boolean, in, optional
+        :param compact:
+              Try not to save to disk information irrelevant to the traced processes.
+              Each trace plug-in implements this in a different fashion.
+
+        :rtype: :py:class:`SBFileSpec`
+        :return: 
+              A *SBFileSpec* pointing to the bundle description file.
+        """
         return _lldb.SBTrace_SaveToDisk(self, error, bundle_dir, compact)
 
     def GetStartConfigurationHelp(self):
-        r"""GetStartConfigurationHelp(SBTrace self) -> char const *"""
+        r"""
+        :rtype: string
+        :return: 
+                A description of the parameters to use for the *SBTrace::Start*
+                method, or **null** if the object is invalid.
+        """
         return _lldb.SBTrace_GetStartConfigurationHelp(self)
 
     def Start(self, *args):
         r"""
-        Start(SBTrace self, SBStructuredData configuration) -> SBError
-        Start(SBTrace self, SBThread thread, SBStructuredData configuration) -> SBError
+        *Overload 1:*
+         Start tracing all current and future threads in a live process using a
+         provided configuration. This is referred as "process tracing" in the
+         documentation.
+
+         This is equivalent to the command "process trace start".
+
+         This operation fails if it is invoked twice in a row without
+         first stopping the process trace with *SBTrace::Stop()*.
+
+         If a thread is already being traced explicitly, e.g. with
+        *SBTrace::Start(const* SBThread &thread, const SBStructuredData
+         &configuration), it is left unaffected by this operation.
+
+         :type configuration: :py:class:`SBStructuredData`, in
+         :param configuration:
+                 Dictionary object with custom fields for the corresponding trace
+                 technology.
+
+             Full details for the trace start parameters that can be set can be
+             retrieved by calling *SBTrace::GetStartConfigurationHelp()*.
+
+         :rtype: :py:class:`SBError`
+         :return: 
+                 An error explaining any failures.
+
+        |
+
+        *Overload 2:*
+         Start tracing a specific thread in a live process using a provided
+         configuration. This is referred as "thread tracing" in the documentation.
+
+         This is equivalent to the command "thread trace start".
+
+         If the thread is already being traced by a "process tracing" operation,
+         e.g. with *SBTrace::Start(const* SBStructuredData &configuration), this
+         operation fails.
+
+         :type configuration: :py:class:`SBStructuredData`, in
+         :param configuration:
+                 Dictionary object with custom fields for the corresponding trace
+                 technology.
+
+             Full details for the trace start parameters that can be set can be
+             retrieved by calling *SBTrace::GetStartConfigurationHelp()*.
+
+         :rtype: :py:class:`SBError`
+         :return: 
+                 An error explaining any failures.
         """
         return _lldb.SBTrace_Start(self, *args)
 
     def Stop(self, *args):
         r"""
-        Stop(SBTrace self) -> SBError
-        Stop(SBTrace self, SBThread thread) -> SBError
+        *Overload 1:*
+        Stop tracing all threads in a live process.
+
+        If a "process tracing" operation is active, e.g. *SBTrace::Start(const*
+        SBStructuredData &configuration), this effectively prevents future threads
+        from being traced.
+
+        This is equivalent to the command "process trace stop".
+
+        :rtype: :py:class:`SBError`
+        :return: 
+                An error explaining any failures.
+
+        |
+
+        *Overload 2:*
+        Stop tracing a specific thread in a live process regardless of whether the
+        thread was traced explicitly or as part of a "process tracing" operation.
+
+        This is equivalent to the command "thread trace stop".
+
+        :rtype: :py:class:`SBError`
+        :return: 
+                An error explaining any failures.
         """
         return _lldb.SBTrace_Stop(self, *args)
 
@@ -13421,75 +15033,213 @@ class SBTraceCursor(object):
     __repr__ = _swig_repr
 
     def __init__(self):
-        r"""__init__(SBTraceCursor self) -> SBTraceCursor"""
+        r"""Default constructor for an invalid *SBTraceCursor* object."""
         _lldb.SBTraceCursor_swiginit(self, _lldb.new_SBTraceCursor())
 
     def SetForwards(self, forwards):
-        r"""SetForwards(SBTraceCursor self, bool forwards)"""
+        r"""
+        Set the direction to use in the *SBTraceCursor::Next()* method.
+
+        :type forwards: boolean, in
+        :param forwards:
+                If **true**, then the traversal will be forwards, otherwise backwards.
+        """
         return _lldb.SBTraceCursor_SetForwards(self, forwards)
 
     def IsForwards(self):
-        r"""IsForwards(SBTraceCursor self) -> bool"""
+        r"""
+        Check if the direction to use in the *SBTraceCursor::Next()* method is
+        forwards.
+
+        :rtype: boolean
+        :return: 
+                **true** if the current direction is forwards, **false** if backwards.
+        """
         return _lldb.SBTraceCursor_IsForwards(self)
 
     def Next(self):
-        r"""Next(SBTraceCursor self)"""
+        r"""
+        Move the cursor to the next item (instruction or error).
+
+        Direction:
+            The traversal is done following the current direction of the trace. If
+            it is forwards, the instructions are visited forwards
+            chronologically. Otherwise, the traversal is done in
+            the opposite direction. By default, a cursor moves backwards unless
+            changed with *SBTraceCursor::SetForwards()*.
+        """
         return _lldb.SBTraceCursor_Next(self)
 
     def HasValue(self):
-        r"""HasValue(SBTraceCursor self) -> bool"""
+        r"""
+        :rtype: boolean
+        :return: 
+                **true** if the cursor is pointing to a valid item. **false** if the
+                cursor has reached the end of the trace.
+        """
         return _lldb.SBTraceCursor_HasValue(self)
 
     def GoToId(self, id):
-        r"""GoToId(SBTraceCursor self, lldb::user_id_t id) -> bool"""
+        r"""
+         Instruction identifiers:
+
+         When building complex higher level tools, fast random accesses in the
+         trace might be needed, for which each instruction requires a unique
+         identifier within its thread trace. For example, a tool might want to
+         repeatedly inspect random consecutive portions of a trace. This means that
+         it will need to first move quickly to the beginning of each section and
+         then start its iteration. Given that the number of instructions can be in
+         the order of hundreds of millions, fast random access is necessary.
+
+         An example of such a tool could be an inspector of the call graph of a
+         trace, where each call is represented with its start and end instructions.
+         Inspecting all the instructions of a call requires moving to its first
+         instruction and then iterating until the last instruction, which following
+         the pattern explained above.
+
+         Instead of using 0-based indices as identifiers, each Trace plug-in can
+         decide the nature of these identifiers and thus no assumptions can be made
+         regarding their ordering and sequentiality. The reason is that an
+         instruction might be encoded by the plug-in in a way that hides its actual
+         0-based index in the trace, but it's still possible to efficiently find
+         it.
+
+         Requirements:
+         - For a given thread, no two instructions have the same id.
+         - In terms of efficiency, moving the cursor to a given id should be as
+           fast as possible, but not necessarily O(1). That's why the recommended
+           way to traverse sequential instructions is to use the
+        *SBTraceCursor::Next()* method and only use *SBTraceCursor::GoToId(id)*
+           sparingly.
+         Make the cursor point to the item whose identifier is ``id``.
+
+         :rtype: boolean
+         :return: 
+                 **true** if the given identifier exists and the cursor effectively
+                 moved to it. Otherwise, **false** is returned and the cursor now points
+                 to an invalid item, i.e. calling *HasValue()* will return **false**.
+        """
         return _lldb.SBTraceCursor_GoToId(self, id)
 
     def HasId(self, id):
-        r"""HasId(SBTraceCursor self, lldb::user_id_t id) -> bool"""
+        r"""
+        :rtype: boolean
+        :return: 
+                **true** if and only if there's an instruction item with the given
+           ``id``.
+        """
         return _lldb.SBTraceCursor_HasId(self, id)
 
     def GetId(self):
-        r"""GetId(SBTraceCursor self) -> lldb::user_id_t"""
+        r"""
+        :rtype: int
+        :return: 
+                A unique identifier for the instruction or error this cursor is
+                pointing to.
+        """
         return _lldb.SBTraceCursor_GetId(self)
 
     def Seek(self, offset, origin):
-        r"""Seek(SBTraceCursor self, int64_t offset, lldb::TraceCursorSeekType origin) -> bool"""
+        r"""
+        Make the cursor point to an item in the trace based on an origin point and
+        an offset.
+
+        The resulting position of the trace is
+            origin + offset
+
+        If this resulting position would be out of bounds, the trace then points
+        to an invalid item, i.e. calling *HasValue()* returns **false**.
+
+        :type offset: int, in
+        :param offset:
+                How many items to move forwards (if positive) or backwards (if
+                negative) from the given origin point. For example, if origin is
+           **End**, then a negative offset would move backward in the trace, but a
+                positive offset would move past the trace to an invalid item.
+
+        :type origin: int, in
+        :param origin:
+                The reference point to use when moving the cursor.
+
+        :rtype: boolean
+        :return: 
+                **true** if and only if the cursor ends up pointing to a valid item.
+        """
         return _lldb.SBTraceCursor_Seek(self, offset, origin)
 
     def GetItemKind(self):
-        r"""GetItemKind(SBTraceCursor self) -> lldb::TraceItemKind"""
+        r"""
+        Trace item information (instructions, errors and events)
+
+        :rtype: int
+        :return: 
+                The kind of item the cursor is pointing at.
+        """
         return _lldb.SBTraceCursor_GetItemKind(self)
 
     def IsError(self):
-        r"""IsError(SBTraceCursor self) -> bool"""
+        r"""
+        :rtype: boolean
+        :return: 
+                Whether the cursor points to an error or not.
+        """
         return _lldb.SBTraceCursor_IsError(self)
 
     def GetError(self):
-        r"""GetError(SBTraceCursor self) -> char const *"""
+        r"""
+        :rtype: string
+        :return: 
+                The error message the cursor is pointing at.
+        """
         return _lldb.SBTraceCursor_GetError(self)
 
     def IsEvent(self):
-        r"""IsEvent(SBTraceCursor self) -> bool"""
+        r"""
+        :rtype: boolean
+        :return: 
+                Whether the cursor points to an event or not.
+        """
         return _lldb.SBTraceCursor_IsEvent(self)
 
     def GetEventType(self):
-        r"""GetEventType(SBTraceCursor self) -> lldb::TraceEvent"""
+        r"""
+        :rtype: int
+        :return: 
+                The specific kind of event the cursor is pointing at.
+        """
         return _lldb.SBTraceCursor_GetEventType(self)
 
     def GetEventTypeAsString(self):
-        r"""GetEventTypeAsString(SBTraceCursor self) -> char const *"""
+        r"""
+        :rtype: string
+        :return: 
+                A human-readable description of the event this cursor is pointing at.
+        """
         return _lldb.SBTraceCursor_GetEventTypeAsString(self)
 
     def IsInstruction(self):
-        r"""IsInstruction(SBTraceCursor self) -> bool"""
+        r"""
+        :rtype: boolean
+        :return: 
+                Whether the cursor points to an instruction.
+        """
         return _lldb.SBTraceCursor_IsInstruction(self)
 
     def GetLoadAddress(self):
-        r"""GetLoadAddress(SBTraceCursor self) -> lldb::addr_t"""
+        r"""
+        :rtype: int
+        :return: 
+                The load address of the instruction the cursor is pointing at.
+        """
         return _lldb.SBTraceCursor_GetLoadAddress(self)
 
     def GetCPU(self):
-        r"""GetCPU(SBTraceCursor self) -> lldb::cpu_id_t"""
+        r"""
+        :rtype: int
+        :return: 
+               The requested CPU id, or LLDB_INVALID_CPU_ID if this information is
+               not available for the current item.
+        """
         return _lldb.SBTraceCursor_GetCPU(self)
 
     def IsValid(self):
@@ -14335,7 +16085,13 @@ class SBType(object):
         return _lldb.SBType_GetTemplateArgumentType(self, idx)
 
     def GetTemplateArgumentValue(self, target, idx):
-        r"""GetTemplateArgumentValue(SBType self, SBTarget target, uint32_t idx) -> SBValue"""
+        r"""
+        Returns the value of the non-type template parameter at index ``idx``.
+        If ``idx`` is out-of-bounds or the template parameter doesn't have
+        a value, returns an empty SBValue.
+
+        This function will expand parameter packs.
+        """
         return _lldb.SBType_GetTemplateArgumentValue(self, target, idx)
 
     def GetTemplateArgumentKind(self, idx):
@@ -15532,6 +17288,14 @@ class SBTypeSummary(object):
         r"""SetFunctionCode(SBTypeSummary self, char const * data)"""
         return _lldb.SBTypeSummary_SetFunctionCode(self, data)
 
+    def GetPtrMatchDepth(self):
+        r"""GetPtrMatchDepth(SBTypeSummary self) -> uint32_t"""
+        return _lldb.SBTypeSummary_GetPtrMatchDepth(self)
+
+    def SetPtrMatchDepth(self, ptr_match_depth):
+        r"""SetPtrMatchDepth(SBTypeSummary self, uint32_t ptr_match_depth)"""
+        return _lldb.SBTypeSummary_SetPtrMatchDepth(self, ptr_match_depth)
+
     def GetOptions(self):
         r"""GetOptions(SBTypeSummary self) -> uint32_t"""
         return _lldb.SBTypeSummary_GetOptions(self)
@@ -16215,7 +17979,12 @@ class SBValue(object):
         return _lldb.SBValue_SetData(self, data, error)
 
     def Clone(self, new_name):
-        r"""Clone(SBValue self, char const * new_name) -> SBValue"""
+        r"""
+        Creates a copy of the SBValue with a new name and setting the current
+        SBValue as its parent. It should be used when we want to change the
+        name of a SBValue without modifying the actual SBValue itself
+        (e.g. sythetic child provider).
+        """
         return _lldb.SBValue_Clone(self, new_name)
 
     def GetDeclaration(self):
@@ -16223,7 +17992,23 @@ class SBValue(object):
         return _lldb.SBValue_GetDeclaration(self)
 
     def MightHaveChildren(self):
-        r"""MightHaveChildren(SBValue self) -> bool"""
+        r"""
+        Find out if a SBValue might have children.
+
+        This call is much more efficient than GetNumChildren() as it
+        doesn't need to complete the underlying type. This is designed
+        to be used in a UI environment in order to detect if the
+        disclosure triangle should be displayed or not.
+
+        This function returns true for class, union, structure,
+        pointers, references, arrays and more. Again, it does so without
+        doing any expensive type completion.
+
+        :rtype: boolean
+        :return: 
+                Returns **true** if the SBValue might have children, or
+           **false** otherwise.
+        """
         return _lldb.SBValue_MightHaveChildren(self)
 
     def IsRuntimeSupportValue(self):
@@ -16232,8 +18017,25 @@ class SBValue(object):
 
     def GetNumChildren(self, *args):
         r"""
-        GetNumChildren(SBValue self) -> uint32_t
-        GetNumChildren(SBValue self, uint32_t max) -> uint32_t
+        *Overload 1:*
+        Return the number of children of this variable. Note that for some
+        variables this operation can be expensive. If possible, prefer calling
+        GetNumChildren(max) with the maximum number of children you are interested
+        in.
+
+        |
+
+        *Overload 2:*
+        Return the numer of children of this variable, with a hint that the
+        caller is interested in at most *max* children. Use this function to
+        avoid expensive child computations in some cases. For example, if you know
+        you will only ever display 100 elements, calling GetNumChildren(100) can
+        avoid enumerating all the other children. If the returned value is smaller
+        than *max*, then it represents the true number of children, otherwise it
+        indicates that their number is at least *max*. Do not assume the returned
+        number will always be less than or equal to *max*, as the implementation
+        may choose to return a larger (but still smaller than the actual number of
+        children) value.
         """
         return _lldb.SBValue_GetNumChildren(self, *args)
 
@@ -16313,7 +18115,52 @@ class SBValue(object):
         return _lldb.SBValue_WatchPointee(self, resolve_location, read, write, error)
 
     def GetVTable(self):
-        r"""GetVTable(SBValue self) -> SBValue"""
+        r"""
+        If this value represents a C++ class that has a vtable, return an value
+        that represents the virtual function table.
+
+        SBValue::GetError() will be in the success state if this value represents
+        a C++ class with a vtable, or an appropriate error describing that the
+        object isn't a C++ class with a vtable or not a C++ class.
+
+        SBValue::GetName() will be the demangled symbol name for the virtual
+        function table like "vtable for <classname>".
+
+        SBValue::GetValue() will be the address of the first vtable entry if the
+        current SBValue is a class with a vtable, or nothing the current SBValue
+        is not a C++ class or not a C++ class that has a vtable.
+
+        SBValue::GetValueAtUnsigned(...) will return the address of the first
+        vtable entry.
+
+        SBValue::GetLoadAddress() will return the address of the vtable pointer
+        found in the parent SBValue.
+
+        SBValue::GetNumChildren() will return the number of virtual function
+        pointers in the vtable, or zero on error.
+
+        SBValue::GetChildAtIndex(...) will return each virtual function pointer
+        as a SBValue object.
+
+        The child SBValue objects will have the following values:
+
+        SBValue::GetError() will indicate success if the vtable entry was
+        successfully read from memory, or an error if not.
+
+        SBValue::GetName() will be the vtable function index in the form "[%u]"
+        where %u is the index.
+
+        SBValue::GetValue() will be the virtual function pointer value as a
+        string.
+
+        SBValue::GetValueAtUnsigned(...) will return the virtual function
+        pointer value.
+
+        SBValue::GetLoadAddress() will return the address of the virtual function
+        pointer.
+
+        SBValue::GetNumChildren() returns 0
+        """
         return _lldb.SBValue_GetVTable(self)
 
     def __repr__(self):

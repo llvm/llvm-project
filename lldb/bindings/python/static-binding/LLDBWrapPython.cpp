@@ -3428,42 +3428,43 @@ SWIG_Python_NonDynamicSetAttr(PyObject *obj, PyObject *name, PyObject *value) {
 #define SWIGTYPE_p_std__unique_ptrT_lldb_private__JITLoaderList_t swig_types[220]
 #define SWIGTYPE_p_std__unique_ptrT_lldb_private__MemoryRegionInfo_t swig_types[221]
 #define SWIGTYPE_p_std__unique_ptrT_lldb_private__OperatingSystem_t swig_types[222]
-#define SWIGTYPE_p_std__unique_ptrT_lldb_private__ScriptedPlatformInterface_t swig_types[223]
-#define SWIGTYPE_p_std__unique_ptrT_lldb_private__ScriptedProcessInterface_t swig_types[224]
-#define SWIGTYPE_p_std__unique_ptrT_lldb_private__SectionList_t swig_types[225]
-#define SWIGTYPE_p_std__unique_ptrT_lldb_private__SourceManager_t swig_types[226]
-#define SWIGTYPE_p_std__unique_ptrT_lldb_private__StackFrameRecognizerManager_t swig_types[227]
-#define SWIGTYPE_p_std__unique_ptrT_lldb_private__Stream_t swig_types[228]
-#define SWIGTYPE_p_std__unique_ptrT_lldb_private__StructuredDataImpl_t swig_types[229]
-#define SWIGTYPE_p_std__unique_ptrT_lldb_private__SymbolVendor_t swig_types[230]
-#define SWIGTYPE_p_std__unique_ptrT_lldb_private__SystemRuntime_t swig_types[231]
-#define SWIGTYPE_p_std__unique_ptrT_lldb_private__TraceExporter_t swig_types[232]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__BreakpointLocation_t swig_types[233]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Breakpoint_t swig_types[234]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__BroadcasterManager_t swig_types[235]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Debugger_t swig_types[236]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Listener_t swig_types[237]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Module_t swig_types[238]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__ObjectFileJITDelegate_t swig_types[239]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__OptionValue_t swig_types[240]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Process_t swig_types[241]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Queue_t swig_types[242]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Section_t swig_types[243]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__StackFrame_t swig_types[244]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__StructuredDataPlugin_t swig_types[245]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Target_t swig_types[246]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__ThreadPlan_t swig_types[247]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Thread_t swig_types[248]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__TypeSystem_t swig_types[249]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Type_t swig_types[250]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__UnixSignals_t swig_types[251]
-#define SWIGTYPE_p_unsigned_char swig_types[252]
-#define SWIGTYPE_p_unsigned_int swig_types[253]
-#define SWIGTYPE_p_unsigned_long_long swig_types[254]
-#define SWIGTYPE_p_unsigned_short swig_types[255]
-#define SWIGTYPE_p_void swig_types[256]
-static swig_type_info *swig_types[258];
-static swig_module_info swig_module = {swig_types, 257, 0, 0, 0, 0};
+#define SWIGTYPE_p_std__unique_ptrT_lldb_private__ProtocolServer_t swig_types[223]
+#define SWIGTYPE_p_std__unique_ptrT_lldb_private__ScriptedPlatformInterface_t swig_types[224]
+#define SWIGTYPE_p_std__unique_ptrT_lldb_private__ScriptedProcessInterface_t swig_types[225]
+#define SWIGTYPE_p_std__unique_ptrT_lldb_private__SectionList_t swig_types[226]
+#define SWIGTYPE_p_std__unique_ptrT_lldb_private__SourceManager_t swig_types[227]
+#define SWIGTYPE_p_std__unique_ptrT_lldb_private__StackFrameRecognizerManager_t swig_types[228]
+#define SWIGTYPE_p_std__unique_ptrT_lldb_private__Stream_t swig_types[229]
+#define SWIGTYPE_p_std__unique_ptrT_lldb_private__StructuredDataImpl_t swig_types[230]
+#define SWIGTYPE_p_std__unique_ptrT_lldb_private__SymbolVendor_t swig_types[231]
+#define SWIGTYPE_p_std__unique_ptrT_lldb_private__SystemRuntime_t swig_types[232]
+#define SWIGTYPE_p_std__unique_ptrT_lldb_private__TraceExporter_t swig_types[233]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__BreakpointLocation_t swig_types[234]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Breakpoint_t swig_types[235]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__BroadcasterManager_t swig_types[236]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Debugger_t swig_types[237]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Listener_t swig_types[238]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Module_t swig_types[239]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__ObjectFileJITDelegate_t swig_types[240]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__OptionValue_t swig_types[241]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Process_t swig_types[242]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Queue_t swig_types[243]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Section_t swig_types[244]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__StackFrame_t swig_types[245]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__StructuredDataPlugin_t swig_types[246]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Target_t swig_types[247]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__ThreadPlan_t swig_types[248]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Thread_t swig_types[249]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__TypeSystem_t swig_types[250]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Type_t swig_types[251]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__UnixSignals_t swig_types[252]
+#define SWIGTYPE_p_unsigned_char swig_types[253]
+#define SWIGTYPE_p_unsigned_int swig_types[254]
+#define SWIGTYPE_p_unsigned_long_long swig_types[255]
+#define SWIGTYPE_p_unsigned_short swig_types[256]
+#define SWIGTYPE_p_void swig_types[257]
+static swig_type_info *swig_types[259];
+static swig_module_info swig_module = {swig_types, 258, 0, 0, 0, 0};
 #define SWIG_TypeQuery(name) SWIG_TypeQueryModule(&swig_module, &swig_module, name)
 #define SWIG_MangledTypeQuery(name) SWIG_MangledTypeQueryModule(&swig_module, &swig_module, name)
 
@@ -11903,6 +11904,41 @@ SWIGINTERN PyObject *_wrap_SBBreakpoint_IsHardware(PyObject *self, PyObject *arg
     SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBBreakpoint_SetIsHardware(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBBreakpoint *arg1 = (lldb::SBBreakpoint *) 0 ;
+  bool arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  bool val2 ;
+  int ecode2 = 0 ;
+  PyObject *swig_obj[2] ;
+  lldb::SBError result;
+  
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "SBBreakpoint_SetIsHardware", 2, 2, swig_obj)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBBreakpoint, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBBreakpoint_SetIsHardware" "', argument " "1"" of type '" "lldb::SBBreakpoint *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBBreakpoint * >(argp1);
+  ecode2 = SWIG_AsVal_bool(swig_obj[1], &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SBBreakpoint_SetIsHardware" "', argument " "2"" of type '" "bool""'");
+  } 
+  arg2 = static_cast< bool >(val2);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (arg1)->SetIsHardware(arg2);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_NewPointerObj((new lldb::SBError(result)), SWIGTYPE_p_lldb__SBError, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
   return NULL;
@@ -88585,6 +88621,68 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBTypeSummary_GetPtrMatchDepth(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBTypeSummary *arg1 = (lldb::SBTypeSummary *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  uint32_t result;
+  
+  (void)self;
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBTypeSummary, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBTypeSummary_GetPtrMatchDepth" "', argument " "1"" of type '" "lldb::SBTypeSummary *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBTypeSummary * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (uint32_t)(arg1)->GetPtrMatchDepth();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_From_unsigned_SS_int(static_cast< unsigned int >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBTypeSummary_SetPtrMatchDepth(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBTypeSummary *arg1 = (lldb::SBTypeSummary *) 0 ;
+  uint32_t arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  unsigned int val2 ;
+  int ecode2 = 0 ;
+  PyObject *swig_obj[2] ;
+  
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "SBTypeSummary_SetPtrMatchDepth", 2, 2, swig_obj)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBTypeSummary, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBTypeSummary_SetPtrMatchDepth" "', argument " "1"" of type '" "lldb::SBTypeSummary *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBTypeSummary * >(argp1);
+  ecode2 = SWIG_AsVal_unsigned_SS_int(swig_obj[1], &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SBTypeSummary_SetPtrMatchDepth" "', argument " "2"" of type '" "uint32_t""'");
+  } 
+  arg2 = static_cast< uint32_t >(val2);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    (arg1)->SetPtrMatchDepth(arg2);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBTypeSummary_GetOptions(PyObject *self, PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBTypeSummary *arg1 = (lldb::SBTypeSummary *) 0 ;
@@ -96708,9 +96806,28 @@ static PyMethodDef SwigMethods[] = {
 		""},
 	 { "delete_SBAddressRange", _wrap_delete_SBAddressRange, METH_O, "delete_SBAddressRange(SBAddressRange self)"},
 	 { "SBAddressRange_Clear", _wrap_SBAddressRange_Clear, METH_O, "SBAddressRange_Clear(SBAddressRange self)"},
-	 { "SBAddressRange_IsValid", _wrap_SBAddressRange_IsValid, METH_O, "SBAddressRange_IsValid(SBAddressRange self) -> bool"},
-	 { "SBAddressRange_GetBaseAddress", _wrap_SBAddressRange_GetBaseAddress, METH_O, "SBAddressRange_GetBaseAddress(SBAddressRange self) -> SBAddress"},
-	 { "SBAddressRange_GetByteSize", _wrap_SBAddressRange_GetByteSize, METH_O, "SBAddressRange_GetByteSize(SBAddressRange self) -> lldb::addr_t"},
+	 { "SBAddressRange_IsValid", _wrap_SBAddressRange_IsValid, METH_O, "\n"
+		"Check the address range refers to a valid base address and has a byte\n"
+		"size greater than zero.\n"
+		"\n"
+		":rtype: boolean\n"
+		":return: \n"
+		"        True if the address range is valid, false otherwise.\n"
+		""},
+	 { "SBAddressRange_GetBaseAddress", _wrap_SBAddressRange_GetBaseAddress, METH_O, "\n"
+		"Get the base address of the range.\n"
+		"\n"
+		":rtype: :py:class:`SBAddress`\n"
+		":return: \n"
+		"        Base address object.\n"
+		""},
+	 { "SBAddressRange_GetByteSize", _wrap_SBAddressRange_GetByteSize, METH_O, "\n"
+		"Get the byte size of this range.\n"
+		"\n"
+		":rtype: int\n"
+		":return: \n"
+		"        The size in bytes of this address range.\n"
+		""},
 	 { "SBAddressRange___eq__", _wrap_SBAddressRange___eq__, METH_VARARGS, "SBAddressRange___eq__(SBAddressRange self, SBAddressRange rhs) -> bool"},
 	 { "SBAddressRange___ne__", _wrap_SBAddressRange___ne__, METH_VARARGS, "SBAddressRange___ne__(SBAddressRange self, SBAddressRange rhs) -> bool"},
 	 { "SBAddressRange_GetDescription", _wrap_SBAddressRange_GetDescription, METH_VARARGS, "SBAddressRange_GetDescription(SBAddressRange self, SBStream description, SBTarget target) -> bool"},
@@ -96747,8 +96864,43 @@ static PyMethodDef SwigMethods[] = {
 		""},
 	 { "SBAttachInfo_GetWaitForLaunch", _wrap_SBAttachInfo_GetWaitForLaunch, METH_O, "SBAttachInfo_GetWaitForLaunch(SBAttachInfo self) -> bool"},
 	 { "SBAttachInfo_SetWaitForLaunch", _wrap_SBAttachInfo_SetWaitForLaunch, METH_VARARGS, "\n"
-		"SBAttachInfo_SetWaitForLaunch(SBAttachInfo self, bool b)\n"
-		"SBAttachInfo_SetWaitForLaunch(SBAttachInfo self, bool b, bool _async)\n"
+		"*Overload 1:*\n"
+		"Set attach by process name settings.\n"
+		"\n"
+		"Designed to be used after a call to SBAttachInfo::SetExecutable().\n"
+		"This function implies that a call to SBTarget::Attach(...) will\n"
+		"be synchronous.\n"
+		"\n"
+		":type b: boolean, in\n"
+		":param b:\n"
+		"        If **false**, attach to an existing process whose name matches.\n"
+		"        If **true**, then wait for the next process whose name matches.\n"
+		"\n"
+		"|\n"
+		"\n"
+		"*Overload 2:*\n"
+		"Set attach by process name settings.\n"
+		"\n"
+		"Designed to be used after a call to SBAttachInfo::SetExecutable().\n"
+		"Future calls to SBTarget::Attach(...) will be synchronous or\n"
+		"asynchronous depending on the *async* argument.\n"
+		"\n"
+		":type b: boolean, in\n"
+		":param b:\n"
+		"        If **false**, attach to an existing process whose name matches.\n"
+		"        If **true**, then wait for the next process whose name matches.\n"
+		"\n"
+		":type async: boolean, in\n"
+		":param async:\n"
+		"        If **false**, then the SBTarget::Attach(...) call will be a\n"
+		"        synchronous call with no way to cancel the attach in\n"
+		"        progress.\n"
+		"        If **true**, then the SBTarget::Attach(...) function will\n"
+		"        return immediately and clients are expected to wait for a\n"
+		"        process eStateStopped event if a suitable process is\n"
+		"        eventually found. If the client wants to cancel the event,\n"
+		"        SBProcess::Stop() can be called and an eStateExited process\n"
+		"        event will be delivered.\n"
 		""},
 	 { "SBAttachInfo_GetIgnoreExisting", _wrap_SBAttachInfo_GetIgnoreExisting, METH_O, "SBAttachInfo_GetIgnoreExisting(SBAttachInfo self) -> bool"},
 	 { "SBAttachInfo_SetIgnoreExisting", _wrap_SBAttachInfo_SetIgnoreExisting, METH_VARARGS, "SBAttachInfo_SetIgnoreExisting(SBAttachInfo self, bool b)"},
@@ -96771,10 +96923,40 @@ static PyMethodDef SwigMethods[] = {
 	 { "SBAttachInfo_GetParentProcessID", _wrap_SBAttachInfo_GetParentProcessID, METH_O, "SBAttachInfo_GetParentProcessID(SBAttachInfo self) -> lldb::pid_t"},
 	 { "SBAttachInfo_SetParentProcessID", _wrap_SBAttachInfo_SetParentProcessID, METH_VARARGS, "SBAttachInfo_SetParentProcessID(SBAttachInfo self, lldb::pid_t pid)"},
 	 { "SBAttachInfo_ParentProcessIDIsValid", _wrap_SBAttachInfo_ParentProcessIDIsValid, METH_O, "SBAttachInfo_ParentProcessIDIsValid(SBAttachInfo self) -> bool"},
-	 { "SBAttachInfo_GetListener", _wrap_SBAttachInfo_GetListener, METH_O, "SBAttachInfo_GetListener(SBAttachInfo self) -> SBListener"},
-	 { "SBAttachInfo_SetListener", _wrap_SBAttachInfo_SetListener, METH_VARARGS, "SBAttachInfo_SetListener(SBAttachInfo self, SBListener listener)"},
-	 { "SBAttachInfo_GetShadowListener", _wrap_SBAttachInfo_GetShadowListener, METH_O, "SBAttachInfo_GetShadowListener(SBAttachInfo self) -> SBListener"},
-	 { "SBAttachInfo_SetShadowListener", _wrap_SBAttachInfo_SetShadowListener, METH_VARARGS, "SBAttachInfo_SetShadowListener(SBAttachInfo self, SBListener listener)"},
+	 { "SBAttachInfo_GetListener", _wrap_SBAttachInfo_GetListener, METH_O, "\n"
+		"Get the listener that will be used to receive process events.\n"
+		"\n"
+		"If no listener has been set via a call to\n"
+		"SBAttachInfo::SetListener(), then an invalid SBListener will be\n"
+		"returned (SBListener::IsValid() will return false). If a listener\n"
+		"has been set, then the valid listener object will be returned.\n"
+		""},
+	 { "SBAttachInfo_SetListener", _wrap_SBAttachInfo_SetListener, METH_VARARGS, "\n"
+		"Set the listener that will be used to receive process events.\n"
+		"\n"
+		"By default the SBDebugger, which has a listener, that the SBTarget\n"
+		"belongs to will listen for the process events. Calling this function\n"
+		"allows a different listener to be used to listen for process events.\n"
+		""},
+	 { "SBAttachInfo_GetShadowListener", _wrap_SBAttachInfo_GetShadowListener, METH_O, "\n"
+		"Get the shadow listener that receive public process events,\n"
+		"additionally to the default process event listener.\n"
+		"\n"
+		"If no listener has been set via a call to\n"
+		"SBLaunchInfo::SetShadowListener(), then an invalid SBListener will\n"
+		"be returned (SBListener::IsValid() will return false). If a listener\n"
+		"has been set, then the valid listener object will be returned.\n"
+		""},
+	 { "SBAttachInfo_SetShadowListener", _wrap_SBAttachInfo_SetShadowListener, METH_VARARGS, "\n"
+		"Set the shadow listener that will receive public process events,\n"
+		"additionally to the default process event listener.\n"
+		"\n"
+		"By default a process have no shadow event listener.\n"
+		"Calling this function allows public process events to be broadcasted to an\n"
+		"additional listener on top of the default process event listener.\n"
+		"If the `listener` argument is invalid (SBListener::IsValid() will\n"
+		"return false), this will clear the shadow listener.\n"
+		""},
 	 { "SBAttachInfo_GetScriptedProcessClassName", _wrap_SBAttachInfo_GetScriptedProcessClassName, METH_O, "SBAttachInfo_GetScriptedProcessClassName(SBAttachInfo self) -> char const *"},
 	 { "SBAttachInfo_SetScriptedProcessClassName", _wrap_SBAttachInfo_SetScriptedProcessClassName, METH_VARARGS, "SBAttachInfo_SetScriptedProcessClassName(SBAttachInfo self, char const * class_name)"},
 	 { "SBAttachInfo_GetScriptedProcessDictionary", _wrap_SBAttachInfo_GetScriptedProcessDictionary, METH_O, "SBAttachInfo_GetScriptedProcessDictionary(SBAttachInfo self) -> SBStructuredData"},
@@ -96928,6 +97110,11 @@ static PyMethodDef SwigMethods[] = {
 	 { "SBBreakpoint_GetBreakpointLocationAtIndexFromEvent", _wrap_SBBreakpoint_GetBreakpointLocationAtIndexFromEvent, METH_VARARGS, "SBBreakpoint_GetBreakpointLocationAtIndexFromEvent(SBEvent event, uint32_t loc_idx) -> SBBreakpointLocation"},
 	 { "SBBreakpoint_GetNumBreakpointLocationsFromEvent", _wrap_SBBreakpoint_GetNumBreakpointLocationsFromEvent, METH_O, "SBBreakpoint_GetNumBreakpointLocationsFromEvent(SBEvent event_sp) -> uint32_t"},
 	 { "SBBreakpoint_IsHardware", _wrap_SBBreakpoint_IsHardware, METH_O, "SBBreakpoint_IsHardware(SBBreakpoint self) -> bool"},
+	 { "SBBreakpoint_SetIsHardware", _wrap_SBBreakpoint_SetIsHardware, METH_VARARGS, "\n"
+		"Make this breakpoint a hardware breakpoint. This will replace all existing\n"
+		"breakpoint locations with hardware breakpoints. Returns an error if this\n"
+		"fails, e.g. when there aren't enough hardware resources available.\n"
+		""},
 	 { "SBBreakpoint_AddLocation", _wrap_SBBreakpoint_AddLocation, METH_VARARGS, "SBBreakpoint_AddLocation(SBBreakpoint self, SBAddress address) -> SBError"},
 	 { "SBBreakpoint_SerializeToStructuredData", _wrap_SBBreakpoint_SerializeToStructuredData, METH_O, "SBBreakpoint_SerializeToStructuredData(SBBreakpoint self) -> SBStructuredData"},
 	 { "SBBreakpoint___repr__", _wrap_SBBreakpoint___repr__, METH_O, "SBBreakpoint___repr__(SBBreakpoint self) -> std::string"},
@@ -97088,9 +97275,42 @@ static PyMethodDef SwigMethods[] = {
 	 { "SBCommandInterpreter_EventIsCommandInterpreterEvent", _wrap_SBCommandInterpreter_EventIsCommandInterpreterEvent, METH_O, "SBCommandInterpreter_EventIsCommandInterpreterEvent(SBEvent event) -> bool"},
 	 { "SBCommandInterpreter___nonzero__", _wrap_SBCommandInterpreter___nonzero__, METH_O, "SBCommandInterpreter___nonzero__(SBCommandInterpreter self) -> bool"},
 	 { "SBCommandInterpreter_IsValid", _wrap_SBCommandInterpreter_IsValid, METH_O, "SBCommandInterpreter_IsValid(SBCommandInterpreter self) -> bool"},
-	 { "SBCommandInterpreter_CommandExists", _wrap_SBCommandInterpreter_CommandExists, METH_VARARGS, "SBCommandInterpreter_CommandExists(SBCommandInterpreter self, char const * cmd) -> bool"},
-	 { "SBCommandInterpreter_UserCommandExists", _wrap_SBCommandInterpreter_UserCommandExists, METH_VARARGS, "SBCommandInterpreter_UserCommandExists(SBCommandInterpreter self, char const * cmd) -> bool"},
-	 { "SBCommandInterpreter_AliasExists", _wrap_SBCommandInterpreter_AliasExists, METH_VARARGS, "SBCommandInterpreter_AliasExists(SBCommandInterpreter self, char const * cmd) -> bool"},
+	 { "SBCommandInterpreter_CommandExists", _wrap_SBCommandInterpreter_CommandExists, METH_VARARGS, "\n"
+		"Return whether a built-in command with the passed in\n"
+		"name or command path exists.\n"
+		"\n"
+		":type cmd: string, in\n"
+		":param cmd:\n"
+		"      The command or command path to search for.\n"
+		"\n"
+		":rtype: boolean\n"
+		":return: \n"
+		"      **true** if the command exists, **false** otherwise.\n"
+		""},
+	 { "SBCommandInterpreter_UserCommandExists", _wrap_SBCommandInterpreter_UserCommandExists, METH_VARARGS, "\n"
+		"Return whether a user defined command with the passed in\n"
+		"name or command path exists.\n"
+		"\n"
+		":type cmd: string, in\n"
+		":param cmd:\n"
+		"      The command or command path to search for.\n"
+		"\n"
+		":rtype: boolean\n"
+		":return: \n"
+		"      **true** if the command exists, **false** otherwise.\n"
+		""},
+	 { "SBCommandInterpreter_AliasExists", _wrap_SBCommandInterpreter_AliasExists, METH_VARARGS, "\n"
+		"Return whether the passed in name or command path\n"
+		"exists and is an alias to some other command.\n"
+		"\n"
+		":type cmd: string, in\n"
+		":param cmd:\n"
+		"      The command or command path to search for.\n"
+		"\n"
+		":rtype: boolean\n"
+		":return: \n"
+		"      **true** if the command exists, **false** otherwise.\n"
+		""},
 	 { "SBCommandInterpreter_GetBroadcaster", _wrap_SBCommandInterpreter_GetBroadcaster, METH_O, "SBCommandInterpreter_GetBroadcaster(SBCommandInterpreter self) -> SBBroadcaster"},
 	 { "SBCommandInterpreter_GetBroadcasterClass", _wrap_SBCommandInterpreter_GetBroadcasterClass, METH_NOARGS, "SBCommandInterpreter_GetBroadcasterClass() -> char const *"},
 	 { "SBCommandInterpreter_HasCommands", _wrap_SBCommandInterpreter_HasCommands, METH_O, "SBCommandInterpreter_HasCommands(SBCommandInterpreter self) -> bool"},
@@ -97111,19 +97331,84 @@ static PyMethodDef SwigMethods[] = {
 	 { "SBCommandInterpreter_HandleCommandsFromFile", _wrap_SBCommandInterpreter_HandleCommandsFromFile, METH_VARARGS, "SBCommandInterpreter_HandleCommandsFromFile(SBCommandInterpreter self, SBFileSpec file, SBExecutionContext override_context, SBCommandInterpreterRunOptions options, SBCommandReturnObject result)"},
 	 { "SBCommandInterpreter_HandleCompletion", _wrap_SBCommandInterpreter_HandleCompletion, METH_VARARGS, "SBCommandInterpreter_HandleCompletion(SBCommandInterpreter self, char const * current_line, uint32_t cursor_pos, int match_start_point, int max_return_elements, SBStringList matches) -> int"},
 	 { "SBCommandInterpreter_HandleCompletionWithDescriptions", _wrap_SBCommandInterpreter_HandleCompletionWithDescriptions, METH_VARARGS, "SBCommandInterpreter_HandleCompletionWithDescriptions(SBCommandInterpreter self, char const * current_line, uint32_t cursor_pos, int match_start_point, int max_return_elements, SBStringList matches, SBStringList descriptions) -> int"},
-	 { "SBCommandInterpreter_WasInterrupted", _wrap_SBCommandInterpreter_WasInterrupted, METH_O, "SBCommandInterpreter_WasInterrupted(SBCommandInterpreter self) -> bool"},
-	 { "SBCommandInterpreter_InterruptCommand", _wrap_SBCommandInterpreter_InterruptCommand, METH_O, "SBCommandInterpreter_InterruptCommand(SBCommandInterpreter self) -> bool"},
+	 { "SBCommandInterpreter_WasInterrupted", _wrap_SBCommandInterpreter_WasInterrupted, METH_O, "\n"
+		"Returns whether an interrupt flag was raised either by the SBDebugger -\n"
+		"when the function is not running on the RunCommandInterpreter thread, or\n"
+		"by SBCommandInterpreter::InterruptCommand if it is.  If your code is doing\n"
+		"interruptible work, check this API periodically, and interrupt if it\n"
+		"returns true.\n"
+		""},
+	 { "SBCommandInterpreter_InterruptCommand", _wrap_SBCommandInterpreter_InterruptCommand, METH_O, "\n"
+		"Interrupts the command currently executing in the RunCommandInterpreter\n"
+		"thread.\n"
+		"\n"
+		":rtype: boolean\n"
+		":return: \n"
+		"      **true** if there was a command in progress to recieve the interrupt.\n"
+		"      **false** if there's no command currently in flight.\n"
+		""},
 	 { "SBCommandInterpreter_SetCommandOverrideCallback", _wrap_SBCommandInterpreter_SetCommandOverrideCallback, METH_VARARGS, "SBCommandInterpreter_SetCommandOverrideCallback(SBCommandInterpreter self, char const * command_name, lldb::CommandOverrideCallback callback) -> bool"},
-	 { "SBCommandInterpreter_IsActive", _wrap_SBCommandInterpreter_IsActive, METH_O, "SBCommandInterpreter_IsActive(SBCommandInterpreter self) -> bool"},
-	 { "SBCommandInterpreter_GetIOHandlerControlSequence", _wrap_SBCommandInterpreter_GetIOHandlerControlSequence, METH_VARARGS, "SBCommandInterpreter_GetIOHandlerControlSequence(SBCommandInterpreter self, char ch) -> char const *"},
+	 { "SBCommandInterpreter_IsActive", _wrap_SBCommandInterpreter_IsActive, METH_O, "\n"
+		"Return true if the command interpreter is the active IO handler.\n"
+		"\n"
+		"This indicates that any input coming into the debugger handles will\n"
+		"go to the command interpreter and will result in LLDB command line\n"
+		"commands being executed.\n"
+		""},
+	 { "SBCommandInterpreter_GetIOHandlerControlSequence", _wrap_SBCommandInterpreter_GetIOHandlerControlSequence, METH_VARARGS, "\n"
+		"Get the string that needs to be written to the debugger stdin file\n"
+		"handle when a control character is typed.\n"
+		"\n"
+		"Some GUI programs will intercept \"control + char\" sequences and want\n"
+		"to have them do what normally would happen when using a real\n"
+		"terminal, so this function allows GUI programs to emulate this\n"
+		"functionality.\n"
+		"\n"
+		":type ch: char, in\n"
+		":param ch:\n"
+		"        The character that was typed along with the control key\n"
+		"\n"
+		":rtype: string\n"
+		":return: \n"
+		"        The string that should be written into the file handle that is\n"
+		"        feeding the input stream for the debugger, or nullptr if there is\n"
+		"        no string for this control key.\n"
+		""},
 	 { "SBCommandInterpreter_GetPromptOnQuit", _wrap_SBCommandInterpreter_GetPromptOnQuit, METH_O, "SBCommandInterpreter_GetPromptOnQuit(SBCommandInterpreter self) -> bool"},
 	 { "SBCommandInterpreter_SetPromptOnQuit", _wrap_SBCommandInterpreter_SetPromptOnQuit, METH_VARARGS, "SBCommandInterpreter_SetPromptOnQuit(SBCommandInterpreter self, bool b)"},
-	 { "SBCommandInterpreter_AllowExitCodeOnQuit", _wrap_SBCommandInterpreter_AllowExitCodeOnQuit, METH_VARARGS, "SBCommandInterpreter_AllowExitCodeOnQuit(SBCommandInterpreter self, bool allow)"},
-	 { "SBCommandInterpreter_HasCustomQuitExitCode", _wrap_SBCommandInterpreter_HasCustomQuitExitCode, METH_O, "SBCommandInterpreter_HasCustomQuitExitCode(SBCommandInterpreter self) -> bool"},
-	 { "SBCommandInterpreter_GetQuitStatus", _wrap_SBCommandInterpreter_GetQuitStatus, METH_O, "SBCommandInterpreter_GetQuitStatus(SBCommandInterpreter self) -> int"},
-	 { "SBCommandInterpreter_ResolveCommand", _wrap_SBCommandInterpreter_ResolveCommand, METH_VARARGS, "SBCommandInterpreter_ResolveCommand(SBCommandInterpreter self, char const * command_line, SBCommandReturnObject result)"},
+	 { "SBCommandInterpreter_AllowExitCodeOnQuit", _wrap_SBCommandInterpreter_AllowExitCodeOnQuit, METH_VARARGS, "\n"
+		"Sets whether the command interpreter should allow custom exit codes\n"
+		"for the 'quit' command.\n"
+		""},
+	 { "SBCommandInterpreter_HasCustomQuitExitCode", _wrap_SBCommandInterpreter_HasCustomQuitExitCode, METH_O, "\n"
+		"Returns true if the user has called the 'quit' command with a custom exit\n"
+		"code.\n"
+		""},
+	 { "SBCommandInterpreter_GetQuitStatus", _wrap_SBCommandInterpreter_GetQuitStatus, METH_O, "\n"
+		"Returns the exit code that the user has specified when running the\n"
+		"'quit' command. Returns 0 if the user hasn't called 'quit' at all or\n"
+		"without a custom exit code.\n"
+		""},
+	 { "SBCommandInterpreter_ResolveCommand", _wrap_SBCommandInterpreter_ResolveCommand, METH_VARARGS, "\n"
+		"Resolve the command just as HandleCommand would, expanding abbreviations\n"
+		"and aliases.  If successful, result->GetOutput has the full expansion.\n"
+		""},
 	 { "SBCommandInterpreter_GetStatistics", _wrap_SBCommandInterpreter_GetStatistics, METH_O, "SBCommandInterpreter_GetStatistics(SBCommandInterpreter self) -> SBStructuredData"},
-	 { "SBCommandInterpreter_GetTranscript", _wrap_SBCommandInterpreter_GetTranscript, METH_O, "SBCommandInterpreter_GetTranscript(SBCommandInterpreter self) -> SBStructuredData"},
+	 { "SBCommandInterpreter_GetTranscript", _wrap_SBCommandInterpreter_GetTranscript, METH_O, "\n"
+		"Returns a list of handled commands, output and error. Each element in\n"
+		"the list is a dictionary with the following keys/values:\n"
+		"- \"command\" (string): The command that was given by the user.\n"
+		"- \"commandName\" (string): The name of the executed command.\n"
+		"- \"commandArguments\" (string): The arguments of the executed command.\n"
+		"- \"output\" (string): The output of the command. Empty (\"\") if no output.\n"
+		"- \"error\" (string): The error of the command. Empty (\"\") if no error.\n"
+		"- \"durationInSeconds\" (float): The time it took to execute the command.\n"
+		"- \"timestampInEpochSeconds\" (int): The timestamp when the command is\n"
+		"  executed.\n"
+		"\n"
+		"Turn on settings `interpreter.save-transcript` for LLDB to populate\n"
+		"this list. Otherwise this list is empty.\n"
+		""},
 	 { "SBCommandInterpreter_SetPrintCallback", _wrap_SBCommandInterpreter_SetPrintCallback, METH_VARARGS, "SBCommandInterpreter_SetPrintCallback(SBCommandInterpreter self, lldb::SBCommandPrintCallback callback)"},
 	 { "SBCommandInterpreter_swigregister", SBCommandInterpreter_swigregister, METH_O, NULL},
 	 { "SBCommandInterpreter_swiginit", SBCommandInterpreter_swiginit, METH_VARARGS, NULL},
@@ -97153,7 +97438,12 @@ static PyMethodDef SwigMethods[] = {
 	 { "SBCommandInterpreterRunOptions_GetSpawnThread", _wrap_SBCommandInterpreterRunOptions_GetSpawnThread, METH_O, "SBCommandInterpreterRunOptions_GetSpawnThread(SBCommandInterpreterRunOptions self) -> bool"},
 	 { "SBCommandInterpreterRunOptions_SetSpawnThread", _wrap_SBCommandInterpreterRunOptions_SetSpawnThread, METH_VARARGS, "SBCommandInterpreterRunOptions_SetSpawnThread(SBCommandInterpreterRunOptions self, bool arg2)"},
 	 { "SBCommandInterpreterRunOptions_GetAllowRepeats", _wrap_SBCommandInterpreterRunOptions_GetAllowRepeats, METH_O, "SBCommandInterpreterRunOptions_GetAllowRepeats(SBCommandInterpreterRunOptions self) -> bool"},
-	 { "SBCommandInterpreterRunOptions_SetAllowRepeats", _wrap_SBCommandInterpreterRunOptions_SetAllowRepeats, METH_VARARGS, "SBCommandInterpreterRunOptions_SetAllowRepeats(SBCommandInterpreterRunOptions self, bool arg2)"},
+	 { "SBCommandInterpreterRunOptions_SetAllowRepeats", _wrap_SBCommandInterpreterRunOptions_SetAllowRepeats, METH_VARARGS, "\n"
+		"By default, RunCommandInterpreter will discard repeats if the\n"
+		"IOHandler being used is not interactive.  Setting AllowRepeats to true\n"
+		"will override this behavior and always process empty lines in the input\n"
+		"as a repeat command.\n"
+		""},
 	 { "SBCommandInterpreterRunOptions_swigregister", SBCommandInterpreterRunOptions_swigregister, METH_O, NULL},
 	 { "SBCommandInterpreterRunOptions_swiginit", SBCommandInterpreterRunOptions_swiginit, METH_VARARGS, NULL},
 	 { "new_SBCommandReturnObject", _wrap_new_SBCommandReturnObject, METH_VARARGS, "\n"
@@ -97163,7 +97453,10 @@ static PyMethodDef SwigMethods[] = {
 	 { "delete_SBCommandReturnObject", _wrap_delete_SBCommandReturnObject, METH_O, "delete_SBCommandReturnObject(SBCommandReturnObject self)"},
 	 { "SBCommandReturnObject___nonzero__", _wrap_SBCommandReturnObject___nonzero__, METH_O, "SBCommandReturnObject___nonzero__(SBCommandReturnObject self) -> bool"},
 	 { "SBCommandReturnObject_IsValid", _wrap_SBCommandReturnObject_IsValid, METH_O, "SBCommandReturnObject_IsValid(SBCommandReturnObject self) -> bool"},
-	 { "SBCommandReturnObject_GetCommand", _wrap_SBCommandReturnObject_GetCommand, METH_O, "SBCommandReturnObject_GetCommand(SBCommandReturnObject self) -> char const *"},
+	 { "SBCommandReturnObject_GetCommand", _wrap_SBCommandReturnObject_GetCommand, METH_O, "\n"
+		"Get the command as the user typed it. Empty string if commands were run on\n"
+		"behalf of lldb.\n"
+		""},
 	 { "SBCommandReturnObject_GetErrorData", _wrap_SBCommandReturnObject_GetErrorData, METH_O, "SBCommandReturnObject_GetErrorData(SBCommandReturnObject self) -> SBStructuredData"},
 	 { "SBCommandReturnObject_PutOutput", _wrap_SBCommandReturnObject_PutOutput, METH_VARARGS, "\n"
 		"SBCommandReturnObject_PutOutput(SBCommandReturnObject self, SBFile file) -> size_t\n"
@@ -97419,65 +97712,179 @@ static PyMethodDef SwigMethods[] = {
 		"new_SBDebugger(SBDebugger rhs) -> SBDebugger\n"
 		""},
 	 { "delete_SBDebugger", _wrap_delete_SBDebugger, METH_O, "delete_SBDebugger(SBDebugger self)"},
-	 { "SBDebugger_GetBroadcasterClass", _wrap_SBDebugger_GetBroadcasterClass, METH_NOARGS, "SBDebugger_GetBroadcasterClass() -> char const *"},
-	 { "SBDebugger_SupportsLanguage", _wrap_SBDebugger_SupportsLanguage, METH_O, "SBDebugger_SupportsLanguage(lldb::LanguageType language) -> bool"},
-	 { "SBDebugger_GetBroadcaster", _wrap_SBDebugger_GetBroadcaster, METH_O, "SBDebugger_GetBroadcaster(SBDebugger self) -> SBBroadcaster"},
-	 { "SBDebugger_GetProgressFromEvent", _wrap_SBDebugger_GetProgressFromEvent, METH_O, "SBDebugger_GetProgressFromEvent(SBEvent event) -> char const *"},
-	 { "SBDebugger_GetProgressDataFromEvent", _wrap_SBDebugger_GetProgressDataFromEvent, METH_O, "SBDebugger_GetProgressDataFromEvent(SBEvent event) -> SBStructuredData"},
-	 { "SBDebugger_GetDiagnosticFromEvent", _wrap_SBDebugger_GetDiagnosticFromEvent, METH_O, "SBDebugger_GetDiagnosticFromEvent(SBEvent event) -> SBStructuredData"},
-	 { "SBDebugger_Initialize", _wrap_SBDebugger_Initialize, METH_NOARGS, "SBDebugger_Initialize()"},
-	 { "SBDebugger_InitializeWithErrorHandling", _wrap_SBDebugger_InitializeWithErrorHandling, METH_NOARGS, "SBDebugger_InitializeWithErrorHandling() -> SBError"},
-	 { "SBDebugger_PrintStackTraceOnError", _wrap_SBDebugger_PrintStackTraceOnError, METH_NOARGS, "SBDebugger_PrintStackTraceOnError()"},
-	 { "SBDebugger_PrintDiagnosticsOnError", _wrap_SBDebugger_PrintDiagnosticsOnError, METH_NOARGS, "SBDebugger_PrintDiagnosticsOnError()"},
-	 { "SBDebugger_Terminate", _wrap_SBDebugger_Terminate, METH_NOARGS, "SBDebugger_Terminate()"},
-	 { "SBDebugger_Create", _wrap_SBDebugger_Create, METH_VARARGS, "\n"
-		"SBDebugger_Create() -> SBDebugger\n"
-		"SBDebugger_Create(bool source_init_files) -> SBDebugger\n"
-		"SBDebugger_Create(bool source_init_files, lldb::LogOutputCallback log_callback) -> SBDebugger\n"
+	 { "SBDebugger_GetBroadcasterClass", _wrap_SBDebugger_GetBroadcasterClass, METH_NOARGS, "Get the broadcaster class name."},
+	 { "SBDebugger_SupportsLanguage", _wrap_SBDebugger_SupportsLanguage, METH_O, "Check if a specific language is supported by LLDB."},
+	 { "SBDebugger_GetBroadcaster", _wrap_SBDebugger_GetBroadcaster, METH_O, "\n"
+		"Get the broadcaster that allows subscribing to events from this\n"
+		"debugger.\n"
 		""},
-	 { "SBDebugger_Destroy", _wrap_SBDebugger_Destroy, METH_O, "SBDebugger_Destroy(SBDebugger debugger)"},
-	 { "SBDebugger_MemoryPressureDetected", _wrap_SBDebugger_MemoryPressureDetected, METH_NOARGS, "SBDebugger_MemoryPressureDetected()"},
-	 { "SBDebugger___nonzero__", _wrap_SBDebugger___nonzero__, METH_O, "SBDebugger___nonzero__(SBDebugger self) -> bool"},
-	 { "SBDebugger_IsValid", _wrap_SBDebugger_IsValid, METH_O, "SBDebugger_IsValid(SBDebugger self) -> bool"},
-	 { "SBDebugger_Clear", _wrap_SBDebugger_Clear, METH_O, "SBDebugger_Clear(SBDebugger self)"},
-	 { "SBDebugger_GetSetting", _wrap_SBDebugger_GetSetting, METH_VARARGS, "SBDebugger_GetSetting(SBDebugger self, char const * setting=None) -> SBStructuredData"},
-	 { "SBDebugger_SetAsync", _wrap_SBDebugger_SetAsync, METH_VARARGS, "SBDebugger_SetAsync(SBDebugger self, bool b)"},
-	 { "SBDebugger_GetAsync", _wrap_SBDebugger_GetAsync, METH_O, "SBDebugger_GetAsync(SBDebugger self) -> bool"},
-	 { "SBDebugger_SkipLLDBInitFiles", _wrap_SBDebugger_SkipLLDBInitFiles, METH_VARARGS, "SBDebugger_SkipLLDBInitFiles(SBDebugger self, bool b)"},
-	 { "SBDebugger_SkipAppInitFiles", _wrap_SBDebugger_SkipAppInitFiles, METH_VARARGS, "SBDebugger_SkipAppInitFiles(SBDebugger self, bool b)"},
-	 { "SBDebugger_SetInputString", _wrap_SBDebugger_SetInputString, METH_VARARGS, "SBDebugger_SetInputString(SBDebugger self, char const * data) -> SBError"},
+	 { "SBDebugger_GetProgressFromEvent", _wrap_SBDebugger_GetProgressFromEvent, METH_O, "\n"
+		"Get progress data from a SBEvent whose type is eBroadcastBitProgress.\n"
+		"\n"
+		":param [in]: event\n"
+		"      The event to extract the progress information from.\n"
+		"\n"
+		":param [out]: progress_id\n"
+		"      The unique integer identifier for the progress to report.\n"
+		"\n"
+		":param [out]: completed\n"
+		"      The amount of work completed. If *completed* is zero, then this event\n"
+		"      is a progress started event. If *completed* is equal to *total*, then\n"
+		"      this event is a progress end event. Otherwise completed indicates the\n"
+		"      current progress update.\n"
+		"\n"
+		":param [out]: total\n"
+		"      The total amount of work units that need to be completed. If this value\n"
+		"      is UINT64_MAX, then an indeterminate progress indicator should be\n"
+		"      displayed.\n"
+		"\n"
+		":param [out]: is_debugger_specific\n"
+		"      Set to true if this progress is specific to this debugger only. Many\n"
+		"      progress events are not specific to a debugger instance, like any\n"
+		"      progress events for loading information in modules since LLDB has a\n"
+		"      global module cache that all debuggers use.\n"
+		"\n"
+		":rtype: string\n"
+		":return: The message for the progress. If the returned value is NULL, then\n"
+		"      *event* was not a eBroadcastBitProgress event.\n"
+		""},
+	 { "SBDebugger_GetProgressDataFromEvent", _wrap_SBDebugger_GetProgressDataFromEvent, METH_O, "Get progress data from an event."},
+	 { "SBDebugger_GetDiagnosticFromEvent", _wrap_SBDebugger_GetDiagnosticFromEvent, METH_O, "Get diagnostic information from an event."},
+	 { "SBDebugger_Initialize", _wrap_SBDebugger_Initialize, METH_NOARGS, "\n"
+		"Initialize LLDB and its subsystems.\n"
+		"\n"
+		"This function should be called before any other LLDB functions. It\n"
+		"initializes all required subsystems for proper LLDB functionality.\n"
+		""},
+	 { "SBDebugger_InitializeWithErrorHandling", _wrap_SBDebugger_InitializeWithErrorHandling, METH_NOARGS, "\n"
+		"Initialize the LLDB debugger subsystem with error handling.\n"
+		"\n"
+		"Similar to Initialize(), but returns an error if initialization fails.\n"
+		""},
+	 { "SBDebugger_PrintStackTraceOnError", _wrap_SBDebugger_PrintStackTraceOnError, METH_NOARGS, "Configure LLDB to print a stack trace when it crashes."},
+	 { "SBDebugger_PrintDiagnosticsOnError", _wrap_SBDebugger_PrintDiagnosticsOnError, METH_NOARGS, "Configure LLDB to print diagnostic information when it crashes."},
+	 { "SBDebugger_Terminate", _wrap_SBDebugger_Terminate, METH_NOARGS, "\n"
+		"Terminate LLDB and its subsystems.\n"
+		"\n"
+		"This should be called when LLDB is no longer needed.\n"
+		""},
+	 { "SBDebugger_Create", _wrap_SBDebugger_Create, METH_VARARGS, "\n"
+		"*Overload 1:*\n"
+		"Create a new debugger instance (deprecated).\n"
+		"\n"
+		"|\n"
+		"\n"
+		"*Overload 2:*\n"
+		"Create a new debugger instance.\n"
+		"\n"
+		"If source_init_files is true, the debugger will source .lldbinit files\n"
+		"from the home directory and current directory.\n"
+		"\n"
+		"|\n"
+		"\n"
+		"*Overload 3:*\n"
+		"Create a new debugger instance with a custom log handler and user data\n"
+		"passed to the log callback.\n"
+		"\n"
+		"If source_init_files is true, the debugger will source .lldbinit files\n"
+		"from the home directory and current directory.\n"
+		""},
+	 { "SBDebugger_Destroy", _wrap_SBDebugger_Destroy, METH_O, "Destroy a debugger instance."},
+	 { "SBDebugger_MemoryPressureDetected", _wrap_SBDebugger_MemoryPressureDetected, METH_NOARGS, "\n"
+		"Notify the debugger that system memory pressure has been detected.\n"
+		"\n"
+		"This can be used to free up memory resources by clearing caches.\n"
+		""},
+	 { "SBDebugger___nonzero__", _wrap_SBDebugger___nonzero__, METH_O, "Check if this is a valid SBDebugger object."},
+	 { "SBDebugger_IsValid", _wrap_SBDebugger_IsValid, METH_O, "Check if this is a valid SBDebugger object."},
+	 { "SBDebugger_Clear", _wrap_SBDebugger_Clear, METH_O, "\n"
+		"Clear this debugger instance.\n"
+		"\n"
+		"This will close all IO handlers and reset the debugger to its initial\n"
+		"state.\n"
+		""},
+	 { "SBDebugger_GetSetting", _wrap_SBDebugger_GetSetting, METH_VARARGS, "\n"
+		"Get debugger settings as structured data.\n"
+		"\n"
+		"Client can specify empty string or null to get all settings.\n"
+		"\n"
+		"Example usages:\n"
+		"lldb::SBStructuredData settings = debugger.GetSetting();\n"
+		"lldb::SBStructuredData settings = debugger.GetSetting(nullptr);\n"
+		"lldb::SBStructuredData settings = debugger.GetSetting(\"\");\n"
+		"lldb::SBStructuredData settings = debugger.GetSetting(\"target.arg0\");\n"
+		"lldb::SBStructuredData settings = debugger.GetSetting(\"target\");\n"
+		""},
+	 { "SBDebugger_SetAsync", _wrap_SBDebugger_SetAsync, METH_VARARGS, "\n"
+		"Set whether the debugger should run in asynchronous mode.\n"
+		"\n"
+		"When in asynchronous mode, events are processed on a background thread.\n"
+		""},
+	 { "SBDebugger_GetAsync", _wrap_SBDebugger_GetAsync, METH_O, "Get whether the debugger is running in asynchronous mode."},
+	 { "SBDebugger_SkipLLDBInitFiles", _wrap_SBDebugger_SkipLLDBInitFiles, METH_VARARGS, "Set whether to skip loading .lldbinit files."},
+	 { "SBDebugger_SkipAppInitFiles", _wrap_SBDebugger_SkipAppInitFiles, METH_VARARGS, "Set whether to skip loading application-specific .lldbinit files."},
+	 { "SBDebugger_SetInputString", _wrap_SBDebugger_SetInputString, METH_VARARGS, "Set the input from a string."},
 	 { "SBDebugger_SetInputFile", _wrap_SBDebugger_SetInputFile, METH_VARARGS, "\n"
-		"SBDebugger_SetInputFile(SBDebugger self, SBFile file) -> SBError\n"
-		"SBDebugger_SetInputFile(SBDebugger self, lldb::FileSP file) -> SBError\n"
+		"*Overload 1:*\n"
+		"Set the input file for the debugger.\n"
+		"\n"
+		"|\n"
+		"\n"
+		"*Overload 2:*\n"
+		"Set the input file for the debugger using a FileSP.\n"
 		""},
 	 { "SBDebugger_SetOutputFile", _wrap_SBDebugger_SetOutputFile, METH_VARARGS, "\n"
-		"SBDebugger_SetOutputFile(SBDebugger self, SBFile file) -> SBError\n"
-		"SBDebugger_SetOutputFile(SBDebugger self, lldb::FileSP file) -> SBError\n"
+		"*Overload 1:*\n"
+		"Set the output file for the debugger.\n"
+		"\n"
+		"|\n"
+		"\n"
+		"*Overload 2:*\n"
+		"Set the output file for the debugger using a FileSP.\n"
 		""},
 	 { "SBDebugger_SetErrorFile", _wrap_SBDebugger_SetErrorFile, METH_VARARGS, "\n"
-		"SBDebugger_SetErrorFile(SBDebugger self, SBFile file) -> SBError\n"
-		"SBDebugger_SetErrorFile(SBDebugger self, lldb::FileSP file) -> SBError\n"
+		"*Overload 1:*\n"
+		"Set the error file for the debugger.\n"
+		"\n"
+		"|\n"
+		"\n"
+		"*Overload 2:*\n"
+		"Set the error file for the debugger using a FileSP.\n"
 		""},
-	 { "SBDebugger_GetInputFile", _wrap_SBDebugger_GetInputFile, METH_O, "SBDebugger_GetInputFile(SBDebugger self) -> SBFile"},
-	 { "SBDebugger_GetOutputFile", _wrap_SBDebugger_GetOutputFile, METH_O, "SBDebugger_GetOutputFile(SBDebugger self) -> SBFile"},
-	 { "SBDebugger_GetErrorFile", _wrap_SBDebugger_GetErrorFile, METH_O, "SBDebugger_GetErrorFile(SBDebugger self) -> SBFile"},
-	 { "SBDebugger_SaveInputTerminalState", _wrap_SBDebugger_SaveInputTerminalState, METH_O, "SBDebugger_SaveInputTerminalState(SBDebugger self)"},
-	 { "SBDebugger_RestoreInputTerminalState", _wrap_SBDebugger_RestoreInputTerminalState, METH_O, "SBDebugger_RestoreInputTerminalState(SBDebugger self)"},
-	 { "SBDebugger_GetCommandInterpreter", _wrap_SBDebugger_GetCommandInterpreter, METH_O, "SBDebugger_GetCommandInterpreter(SBDebugger self) -> SBCommandInterpreter"},
-	 { "SBDebugger_HandleCommand", _wrap_SBDebugger_HandleCommand, METH_VARARGS, "SBDebugger_HandleCommand(SBDebugger self, char const * command)"},
-	 { "SBDebugger_RequestInterrupt", _wrap_SBDebugger_RequestInterrupt, METH_O, "SBDebugger_RequestInterrupt(SBDebugger self)"},
-	 { "SBDebugger_CancelInterruptRequest", _wrap_SBDebugger_CancelInterruptRequest, METH_O, "SBDebugger_CancelInterruptRequest(SBDebugger self)"},
-	 { "SBDebugger_InterruptRequested", _wrap_SBDebugger_InterruptRequested, METH_O, "SBDebugger_InterruptRequested(SBDebugger self) -> bool"},
-	 { "SBDebugger_GetListener", _wrap_SBDebugger_GetListener, METH_O, "SBDebugger_GetListener(SBDebugger self) -> SBListener"},
+	 { "SBDebugger_GetInputFile", _wrap_SBDebugger_GetInputFile, METH_O, "Get the input file for the debugger."},
+	 { "SBDebugger_GetOutputFile", _wrap_SBDebugger_GetOutputFile, METH_O, "Get the output file for the debugger."},
+	 { "SBDebugger_GetErrorFile", _wrap_SBDebugger_GetErrorFile, METH_O, "Get the error file for the debugger."},
+	 { "SBDebugger_SaveInputTerminalState", _wrap_SBDebugger_SaveInputTerminalState, METH_O, "\n"
+		"Save the current terminal state.\n"
+		"\n"
+		"This should be called before modifying terminal settings.\n"
+		""},
+	 { "SBDebugger_RestoreInputTerminalState", _wrap_SBDebugger_RestoreInputTerminalState, METH_O, "Restore the previously saved terminal state."},
+	 { "SBDebugger_GetCommandInterpreter", _wrap_SBDebugger_GetCommandInterpreter, METH_O, "Get the command interpreter for this debugger."},
+	 { "SBDebugger_HandleCommand", _wrap_SBDebugger_HandleCommand, METH_VARARGS, "Execute a command in the command interpreter."},
+	 { "SBDebugger_RequestInterrupt", _wrap_SBDebugger_RequestInterrupt, METH_O, "Request an interrupt of the current operation."},
+	 { "SBDebugger_CancelInterruptRequest", _wrap_SBDebugger_CancelInterruptRequest, METH_O, "Cancel a previously requested interrupt."},
+	 { "SBDebugger_InterruptRequested", _wrap_SBDebugger_InterruptRequested, METH_O, "Check if an interrupt has been requested."},
+	 { "SBDebugger_GetListener", _wrap_SBDebugger_GetListener, METH_O, "Get the listener associated with this debugger."},
 	 { "SBDebugger_HandleProcessEvent", _wrap_SBDebugger_HandleProcessEvent, METH_VARARGS, "\n"
-		"SBDebugger_HandleProcessEvent(SBDebugger self, SBProcess process, SBEvent event, SBFile out, SBFile err)\n"
-		"SBDebugger_HandleProcessEvent(SBDebugger self, SBProcess process, SBEvent event, lldb::FileSP arg4, lldb::FileSP arg5)\n"
+		"*Overload 1:*\n"
+		"Handle a process event.\n"
+		"\n"
+		"|\n"
+		"\n"
+		"*Overload 2:*\n"
+		"Handle a process event using FileSP objects.\n"
 		""},
-	 { "SBDebugger_CreateTargetWithFileAndTargetTriple", _wrap_SBDebugger_CreateTargetWithFileAndTargetTriple, METH_VARARGS, "SBDebugger_CreateTargetWithFileAndTargetTriple(SBDebugger self, char const * filename, char const * target_triple) -> SBTarget"},
-	 { "SBDebugger_CreateTargetWithFileAndArch", _wrap_SBDebugger_CreateTargetWithFileAndArch, METH_VARARGS, "SBDebugger_CreateTargetWithFileAndArch(SBDebugger self, char const * filename, char const * archname) -> SBTarget"},
+	 { "SBDebugger_CreateTargetWithFileAndTargetTriple", _wrap_SBDebugger_CreateTargetWithFileAndTargetTriple, METH_VARARGS, "Create a target with the specified file and target triple."},
+	 { "SBDebugger_CreateTargetWithFileAndArch", _wrap_SBDebugger_CreateTargetWithFileAndArch, METH_VARARGS, "Create a target with the specified file and architecture."},
 	 { "SBDebugger_CreateTarget", _wrap_SBDebugger_CreateTarget, METH_VARARGS, "\n"
-		"SBDebugger_CreateTarget(SBDebugger self, char const * filename, char const * target_triple, char const * platform_name, bool add_dependent_modules, SBError error) -> SBTarget\n"
-		"SBDebugger_CreateTarget(SBDebugger self, char const * filename) -> SBTarget\n"
+		"*Overload 1:*\n"
+		"Create a target with the specified parameters.\n"
+		"\n"
+		"|\n"
+		"\n"
+		"*Overload 2:*\n"
+		"Create a target with the specified file.\n"
 		""},
 	 { "SBDebugger_GetDummyTarget", _wrap_SBDebugger_GetDummyTarget, METH_O, "\n"
 		"SBDebugger_GetDummyTarget(SBDebugger self) -> SBTarget\n"
@@ -97487,15 +97894,15 @@ static PyMethodDef SwigMethods[] = {
 		"SBDebugger_DeleteTarget(SBDebugger self, SBTarget target) -> bool\n"
 		"Return true if target is deleted from the target list of the debugger.\n"
 		""},
-	 { "SBDebugger_GetTargetAtIndex", _wrap_SBDebugger_GetTargetAtIndex, METH_VARARGS, "SBDebugger_GetTargetAtIndex(SBDebugger self, uint32_t idx) -> SBTarget"},
-	 { "SBDebugger_GetIndexOfTarget", _wrap_SBDebugger_GetIndexOfTarget, METH_VARARGS, "SBDebugger_GetIndexOfTarget(SBDebugger self, SBTarget target) -> uint32_t"},
-	 { "SBDebugger_FindTargetWithProcessID", _wrap_SBDebugger_FindTargetWithProcessID, METH_VARARGS, "SBDebugger_FindTargetWithProcessID(SBDebugger self, lldb::pid_t pid) -> SBTarget"},
-	 { "SBDebugger_FindTargetWithFileAndArch", _wrap_SBDebugger_FindTargetWithFileAndArch, METH_VARARGS, "SBDebugger_FindTargetWithFileAndArch(SBDebugger self, char const * filename, char const * arch) -> SBTarget"},
-	 { "SBDebugger_GetNumTargets", _wrap_SBDebugger_GetNumTargets, METH_O, "SBDebugger_GetNumTargets(SBDebugger self) -> uint32_t"},
-	 { "SBDebugger_GetSelectedTarget", _wrap_SBDebugger_GetSelectedTarget, METH_O, "SBDebugger_GetSelectedTarget(SBDebugger self) -> SBTarget"},
-	 { "SBDebugger_SetSelectedTarget", _wrap_SBDebugger_SetSelectedTarget, METH_VARARGS, "SBDebugger_SetSelectedTarget(SBDebugger self, SBTarget target)"},
-	 { "SBDebugger_GetSelectedPlatform", _wrap_SBDebugger_GetSelectedPlatform, METH_O, "SBDebugger_GetSelectedPlatform(SBDebugger self) -> SBPlatform"},
-	 { "SBDebugger_SetSelectedPlatform", _wrap_SBDebugger_SetSelectedPlatform, METH_VARARGS, "SBDebugger_SetSelectedPlatform(SBDebugger self, SBPlatform platform)"},
+	 { "SBDebugger_GetTargetAtIndex", _wrap_SBDebugger_GetTargetAtIndex, METH_VARARGS, "Get a target by index."},
+	 { "SBDebugger_GetIndexOfTarget", _wrap_SBDebugger_GetIndexOfTarget, METH_VARARGS, "Get the index of a target."},
+	 { "SBDebugger_FindTargetWithProcessID", _wrap_SBDebugger_FindTargetWithProcessID, METH_VARARGS, "Find a target with the specified process ID."},
+	 { "SBDebugger_FindTargetWithFileAndArch", _wrap_SBDebugger_FindTargetWithFileAndArch, METH_VARARGS, "Find a target with the specified file and architecture."},
+	 { "SBDebugger_GetNumTargets", _wrap_SBDebugger_GetNumTargets, METH_O, "Get the number of targets in the debugger."},
+	 { "SBDebugger_GetSelectedTarget", _wrap_SBDebugger_GetSelectedTarget, METH_O, "Get the currently selected target."},
+	 { "SBDebugger_SetSelectedTarget", _wrap_SBDebugger_SetSelectedTarget, METH_VARARGS, "Set the selected target."},
+	 { "SBDebugger_GetSelectedPlatform", _wrap_SBDebugger_GetSelectedPlatform, METH_O, "Get the selected platform."},
+	 { "SBDebugger_SetSelectedPlatform", _wrap_SBDebugger_SetSelectedPlatform, METH_VARARGS, "Set the selected platform."},
 	 { "SBDebugger_GetNumPlatforms", _wrap_SBDebugger_GetNumPlatforms, METH_O, "\n"
 		"SBDebugger_GetNumPlatforms(SBDebugger self) -> uint32_t\n"
 		"Get the number of currently active platforms.\n"
@@ -97517,66 +97924,79 @@ static PyMethodDef SwigMethods[] = {
 		"               retrieved, must be less than the value returned by\n"
 		"               GetNumAvailablePlatforms().\n"
 		""},
-	 { "SBDebugger_GetSourceManager", _wrap_SBDebugger_GetSourceManager, METH_O, "SBDebugger_GetSourceManager(SBDebugger self) -> SBSourceManager"},
-	 { "SBDebugger_SetCurrentPlatform", _wrap_SBDebugger_SetCurrentPlatform, METH_VARARGS, "SBDebugger_SetCurrentPlatform(SBDebugger self, char const * platform_name) -> SBError"},
-	 { "SBDebugger_SetCurrentPlatformSDKRoot", _wrap_SBDebugger_SetCurrentPlatformSDKRoot, METH_VARARGS, "SBDebugger_SetCurrentPlatformSDKRoot(SBDebugger self, char const * sysroot) -> bool"},
-	 { "SBDebugger_SetUseExternalEditor", _wrap_SBDebugger_SetUseExternalEditor, METH_VARARGS, "SBDebugger_SetUseExternalEditor(SBDebugger self, bool input) -> bool"},
-	 { "SBDebugger_GetUseExternalEditor", _wrap_SBDebugger_GetUseExternalEditor, METH_O, "SBDebugger_GetUseExternalEditor(SBDebugger self) -> bool"},
-	 { "SBDebugger_SetUseColor", _wrap_SBDebugger_SetUseColor, METH_VARARGS, "SBDebugger_SetUseColor(SBDebugger self, bool use_color) -> bool"},
-	 { "SBDebugger_GetUseColor", _wrap_SBDebugger_GetUseColor, METH_O, "SBDebugger_GetUseColor(SBDebugger self) -> bool"},
-	 { "SBDebugger_SetShowInlineDiagnostics", _wrap_SBDebugger_SetShowInlineDiagnostics, METH_VARARGS, "SBDebugger_SetShowInlineDiagnostics(SBDebugger self, bool arg2) -> bool"},
-	 { "SBDebugger_SetUseSourceCache", _wrap_SBDebugger_SetUseSourceCache, METH_VARARGS, "SBDebugger_SetUseSourceCache(SBDebugger self, bool use_source_cache) -> bool"},
-	 { "SBDebugger_GetUseSourceCache", _wrap_SBDebugger_GetUseSourceCache, METH_O, "SBDebugger_GetUseSourceCache(SBDebugger self) -> bool"},
-	 { "SBDebugger_GetDefaultArchitecture", _wrap_SBDebugger_GetDefaultArchitecture, METH_VARARGS, "SBDebugger_GetDefaultArchitecture(char * arch_name, size_t arch_name_len) -> bool"},
-	 { "SBDebugger_SetDefaultArchitecture", _wrap_SBDebugger_SetDefaultArchitecture, METH_O, "SBDebugger_SetDefaultArchitecture(char const * arch_name) -> bool"},
-	 { "SBDebugger_GetScriptingLanguage", _wrap_SBDebugger_GetScriptingLanguage, METH_VARARGS, "SBDebugger_GetScriptingLanguage(SBDebugger self, char const * script_language_name) -> lldb::ScriptLanguage"},
-	 { "SBDebugger_GetScriptInterpreterInfo", _wrap_SBDebugger_GetScriptInterpreterInfo, METH_VARARGS, "SBDebugger_GetScriptInterpreterInfo(SBDebugger self, lldb::ScriptLanguage arg2) -> SBStructuredData"},
-	 { "SBDebugger_GetVersionString", _wrap_SBDebugger_GetVersionString, METH_NOARGS, "SBDebugger_GetVersionString() -> char const *"},
-	 { "SBDebugger_StateAsCString", _wrap_SBDebugger_StateAsCString, METH_O, "SBDebugger_StateAsCString(lldb::StateType state) -> char const *"},
-	 { "SBDebugger_GetBuildConfiguration", _wrap_SBDebugger_GetBuildConfiguration, METH_NOARGS, "SBDebugger_GetBuildConfiguration() -> SBStructuredData"},
-	 { "SBDebugger_StateIsRunningState", _wrap_SBDebugger_StateIsRunningState, METH_O, "SBDebugger_StateIsRunningState(lldb::StateType state) -> bool"},
-	 { "SBDebugger_StateIsStoppedState", _wrap_SBDebugger_StateIsStoppedState, METH_O, "SBDebugger_StateIsStoppedState(lldb::StateType state) -> bool"},
-	 { "SBDebugger_EnableLog", _wrap_SBDebugger_EnableLog, METH_VARARGS, "SBDebugger_EnableLog(SBDebugger self, char const * channel, char const ** categories) -> bool"},
-	 { "SBDebugger_SetLoggingCallback", _wrap_SBDebugger_SetLoggingCallback, METH_VARARGS, "SBDebugger_SetLoggingCallback(SBDebugger self, lldb::LogOutputCallback log_callback)"},
-	 { "SBDebugger_SetDestroyCallback", _wrap_SBDebugger_SetDestroyCallback, METH_VARARGS, "SBDebugger_SetDestroyCallback(SBDebugger self, lldb::SBDebuggerDestroyCallback destroy_callback)"},
-	 { "SBDebugger_AddDestroyCallback", _wrap_SBDebugger_AddDestroyCallback, METH_VARARGS, "SBDebugger_AddDestroyCallback(SBDebugger self, lldb::SBDebuggerDestroyCallback destroy_callback) -> lldb::callback_token_t"},
-	 { "SBDebugger_RemoveDestroyCallback", _wrap_SBDebugger_RemoveDestroyCallback, METH_VARARGS, "SBDebugger_RemoveDestroyCallback(SBDebugger self, lldb::callback_token_t token) -> bool"},
-	 { "SBDebugger_DispatchInput", _wrap_SBDebugger_DispatchInput, METH_VARARGS, "SBDebugger_DispatchInput(SBDebugger self, void const * data)"},
-	 { "SBDebugger_DispatchInputInterrupt", _wrap_SBDebugger_DispatchInputInterrupt, METH_O, "SBDebugger_DispatchInputInterrupt(SBDebugger self)"},
-	 { "SBDebugger_DispatchInputEndOfFile", _wrap_SBDebugger_DispatchInputEndOfFile, METH_O, "SBDebugger_DispatchInputEndOfFile(SBDebugger self)"},
-	 { "SBDebugger_GetInstanceName", _wrap_SBDebugger_GetInstanceName, METH_O, "SBDebugger_GetInstanceName(SBDebugger self) -> char const *"},
-	 { "SBDebugger_FindDebuggerWithID", _wrap_SBDebugger_FindDebuggerWithID, METH_O, "SBDebugger_FindDebuggerWithID(int id) -> SBDebugger"},
-	 { "SBDebugger_SetInternalVariable", _wrap_SBDebugger_SetInternalVariable, METH_VARARGS, "SBDebugger_SetInternalVariable(char const * var_name, char const * value, char const * debugger_instance_name) -> SBError"},
-	 { "SBDebugger_GetInternalVariableValue", _wrap_SBDebugger_GetInternalVariableValue, METH_VARARGS, "SBDebugger_GetInternalVariableValue(char const * var_name, char const * debugger_instance_name) -> SBStringList"},
-	 { "SBDebugger_GetDescription", _wrap_SBDebugger_GetDescription, METH_VARARGS, "SBDebugger_GetDescription(SBDebugger self, SBStream description) -> bool"},
-	 { "SBDebugger_GetTerminalWidth", _wrap_SBDebugger_GetTerminalWidth, METH_O, "SBDebugger_GetTerminalWidth(SBDebugger self) -> uint32_t"},
-	 { "SBDebugger_SetTerminalWidth", _wrap_SBDebugger_SetTerminalWidth, METH_VARARGS, "SBDebugger_SetTerminalWidth(SBDebugger self, uint32_t term_width)"},
-	 { "SBDebugger_GetTerminalHeight", _wrap_SBDebugger_GetTerminalHeight, METH_O, "SBDebugger_GetTerminalHeight(SBDebugger self) -> uint32_t"},
-	 { "SBDebugger_SetTerminalHeight", _wrap_SBDebugger_SetTerminalHeight, METH_VARARGS, "SBDebugger_SetTerminalHeight(SBDebugger self, uint32_t term_height)"},
-	 { "SBDebugger_GetID", _wrap_SBDebugger_GetID, METH_O, "SBDebugger_GetID(SBDebugger self) -> lldb::user_id_t"},
-	 { "SBDebugger_GetPrompt", _wrap_SBDebugger_GetPrompt, METH_O, "SBDebugger_GetPrompt(SBDebugger self) -> char const *"},
-	 { "SBDebugger_SetPrompt", _wrap_SBDebugger_SetPrompt, METH_VARARGS, "SBDebugger_SetPrompt(SBDebugger self, char const * prompt)"},
-	 { "SBDebugger_GetReproducerPath", _wrap_SBDebugger_GetReproducerPath, METH_O, "SBDebugger_GetReproducerPath(SBDebugger self) -> char const *"},
-	 { "SBDebugger_GetScriptLanguage", _wrap_SBDebugger_GetScriptLanguage, METH_O, "SBDebugger_GetScriptLanguage(SBDebugger self) -> lldb::ScriptLanguage"},
-	 { "SBDebugger_SetScriptLanguage", _wrap_SBDebugger_SetScriptLanguage, METH_VARARGS, "SBDebugger_SetScriptLanguage(SBDebugger self, lldb::ScriptLanguage script_lang)"},
-	 { "SBDebugger_GetREPLLanguage", _wrap_SBDebugger_GetREPLLanguage, METH_O, "SBDebugger_GetREPLLanguage(SBDebugger self) -> lldb::LanguageType"},
-	 { "SBDebugger_SetREPLLanguage", _wrap_SBDebugger_SetREPLLanguage, METH_VARARGS, "SBDebugger_SetREPLLanguage(SBDebugger self, lldb::LanguageType repl_lang)"},
-	 { "SBDebugger_GetCloseInputOnEOF", _wrap_SBDebugger_GetCloseInputOnEOF, METH_O, "SBDebugger_GetCloseInputOnEOF(SBDebugger self) -> bool"},
-	 { "SBDebugger_SetCloseInputOnEOF", _wrap_SBDebugger_SetCloseInputOnEOF, METH_VARARGS, "SBDebugger_SetCloseInputOnEOF(SBDebugger self, bool b)"},
-	 { "SBDebugger_GetCategory", _wrap_SBDebugger_GetCategory, METH_VARARGS, "\n"
-		"SBDebugger_GetCategory(SBDebugger self, char const * category_name) -> SBTypeCategory\n"
-		"SBDebugger_GetCategory(SBDebugger self, lldb::LanguageType lang_type) -> SBTypeCategory\n"
+	 { "SBDebugger_GetSourceManager", _wrap_SBDebugger_GetSourceManager, METH_O, "Get the source manager for this debugger."},
+	 { "SBDebugger_SetCurrentPlatform", _wrap_SBDebugger_SetCurrentPlatform, METH_VARARGS, "Set the current platform by name."},
+	 { "SBDebugger_SetCurrentPlatformSDKRoot", _wrap_SBDebugger_SetCurrentPlatformSDKRoot, METH_VARARGS, "Set the SDK root for the current platform."},
+	 { "SBDebugger_SetUseExternalEditor", _wrap_SBDebugger_SetUseExternalEditor, METH_VARARGS, "Set whether to use an external editor."},
+	 { "SBDebugger_GetUseExternalEditor", _wrap_SBDebugger_GetUseExternalEditor, METH_O, "Get whether an external editor is being used."},
+	 { "SBDebugger_SetUseColor", _wrap_SBDebugger_SetUseColor, METH_VARARGS, "Set whether to use color in output."},
+	 { "SBDebugger_GetUseColor", _wrap_SBDebugger_GetUseColor, METH_O, "Get whether color is being used in output."},
+	 { "SBDebugger_SetShowInlineDiagnostics", _wrap_SBDebugger_SetShowInlineDiagnostics, METH_VARARGS, "Set whether to show inline diagnostics."},
+	 { "SBDebugger_SetUseSourceCache", _wrap_SBDebugger_SetUseSourceCache, METH_VARARGS, "Set whether to use the source cache."},
+	 { "SBDebugger_GetUseSourceCache", _wrap_SBDebugger_GetUseSourceCache, METH_O, "Get whether the source cache is being used."},
+	 { "SBDebugger_GetDefaultArchitecture", _wrap_SBDebugger_GetDefaultArchitecture, METH_VARARGS, "Get the default architecture."},
+	 { "SBDebugger_SetDefaultArchitecture", _wrap_SBDebugger_SetDefaultArchitecture, METH_O, "Set the default architecture."},
+	 { "SBDebugger_GetScriptingLanguage", _wrap_SBDebugger_GetScriptingLanguage, METH_VARARGS, "Get the scripting language by name."},
+	 { "SBDebugger_GetScriptInterpreterInfo", _wrap_SBDebugger_GetScriptInterpreterInfo, METH_VARARGS, "Get information about a script interpreter as structured data."},
+	 { "SBDebugger_GetVersionString", _wrap_SBDebugger_GetVersionString, METH_NOARGS, "Get the LLDB version string."},
+	 { "SBDebugger_StateAsCString", _wrap_SBDebugger_StateAsCString, METH_O, "Convert a state type to a string."},
+	 { "SBDebugger_GetBuildConfiguration", _wrap_SBDebugger_GetBuildConfiguration, METH_NOARGS, "Get the build configuration as structured data."},
+	 { "SBDebugger_StateIsRunningState", _wrap_SBDebugger_StateIsRunningState, METH_O, "Check if a state is a running state."},
+	 { "SBDebugger_StateIsStoppedState", _wrap_SBDebugger_StateIsStoppedState, METH_O, "Check if a state is a stopped state."},
+	 { "SBDebugger_EnableLog", _wrap_SBDebugger_EnableLog, METH_VARARGS, "Enable logging for a specific channel and category."},
+	 { "SBDebugger_SetLoggingCallback", _wrap_SBDebugger_SetLoggingCallback, METH_VARARGS, "Set a callback for log output."},
+	 { "SBDebugger_SetDestroyCallback", _wrap_SBDebugger_SetDestroyCallback, METH_VARARGS, "Set a callback for when the debugger is destroyed (deprecated)."},
+	 { "SBDebugger_AddDestroyCallback", _wrap_SBDebugger_AddDestroyCallback, METH_VARARGS, "\n"
+		"Add a callback for when the debugger is destroyed. Returns a token that\n"
+		"can be used to remove the callback.\n"
 		""},
-	 { "SBDebugger_CreateCategory", _wrap_SBDebugger_CreateCategory, METH_VARARGS, "SBDebugger_CreateCategory(SBDebugger self, char const * category_name) -> SBTypeCategory"},
-	 { "SBDebugger_DeleteCategory", _wrap_SBDebugger_DeleteCategory, METH_VARARGS, "SBDebugger_DeleteCategory(SBDebugger self, char const * category_name) -> bool"},
-	 { "SBDebugger_GetNumCategories", _wrap_SBDebugger_GetNumCategories, METH_O, "SBDebugger_GetNumCategories(SBDebugger self) -> uint32_t"},
-	 { "SBDebugger_GetCategoryAtIndex", _wrap_SBDebugger_GetCategoryAtIndex, METH_VARARGS, "SBDebugger_GetCategoryAtIndex(SBDebugger self, uint32_t arg2) -> SBTypeCategory"},
-	 { "SBDebugger_GetDefaultCategory", _wrap_SBDebugger_GetDefaultCategory, METH_O, "SBDebugger_GetDefaultCategory(SBDebugger self) -> SBTypeCategory"},
-	 { "SBDebugger_GetFormatForType", _wrap_SBDebugger_GetFormatForType, METH_VARARGS, "SBDebugger_GetFormatForType(SBDebugger self, SBTypeNameSpecifier arg2) -> SBTypeFormat"},
-	 { "SBDebugger_GetSummaryForType", _wrap_SBDebugger_GetSummaryForType, METH_VARARGS, "SBDebugger_GetSummaryForType(SBDebugger self, SBTypeNameSpecifier arg2) -> SBTypeSummary"},
-	 { "SBDebugger_GetFilterForType", _wrap_SBDebugger_GetFilterForType, METH_VARARGS, "SBDebugger_GetFilterForType(SBDebugger self, SBTypeNameSpecifier arg2) -> SBTypeFilter"},
-	 { "SBDebugger_GetSyntheticForType", _wrap_SBDebugger_GetSyntheticForType, METH_VARARGS, "SBDebugger_GetSyntheticForType(SBDebugger self, SBTypeNameSpecifier arg2) -> SBTypeSynthetic"},
-	 { "SBDebugger_ResetStatistics", _wrap_SBDebugger_ResetStatistics, METH_O, "SBDebugger_ResetStatistics(SBDebugger self)"},
+	 { "SBDebugger_RemoveDestroyCallback", _wrap_SBDebugger_RemoveDestroyCallback, METH_VARARGS, "Remove a destroy callback."},
+	 { "SBDebugger_DispatchInput", _wrap_SBDebugger_DispatchInput, METH_VARARGS, "Dispatch input to the debugger."},
+	 { "SBDebugger_DispatchInputInterrupt", _wrap_SBDebugger_DispatchInputInterrupt, METH_O, "Interrupt the current input dispatch."},
+	 { "SBDebugger_DispatchInputEndOfFile", _wrap_SBDebugger_DispatchInputEndOfFile, METH_O, "Signal end-of-file to the current input dispatch."},
+	 { "SBDebugger_GetInstanceName", _wrap_SBDebugger_GetInstanceName, METH_O, "Get the instance name of this debugger."},
+	 { "SBDebugger_FindDebuggerWithID", _wrap_SBDebugger_FindDebuggerWithID, METH_O, "Find a debugger by ID. Returns an invalid debugger if not found."},
+	 { "SBDebugger_SetInternalVariable", _wrap_SBDebugger_SetInternalVariable, METH_VARARGS, "Set an internal variable."},
+	 { "SBDebugger_GetInternalVariableValue", _wrap_SBDebugger_GetInternalVariableValue, METH_VARARGS, "Get the value of an internal variable."},
+	 { "SBDebugger_GetDescription", _wrap_SBDebugger_GetDescription, METH_VARARGS, "Get a description of this debugger."},
+	 { "SBDebugger_GetTerminalWidth", _wrap_SBDebugger_GetTerminalWidth, METH_O, "Get the terminal width."},
+	 { "SBDebugger_SetTerminalWidth", _wrap_SBDebugger_SetTerminalWidth, METH_VARARGS, "Set the terminal width."},
+	 { "SBDebugger_GetTerminalHeight", _wrap_SBDebugger_GetTerminalHeight, METH_O, "Get the terminal height."},
+	 { "SBDebugger_SetTerminalHeight", _wrap_SBDebugger_SetTerminalHeight, METH_VARARGS, "Set the terminal height."},
+	 { "SBDebugger_GetID", _wrap_SBDebugger_GetID, METH_O, "Get the unique ID of this debugger."},
+	 { "SBDebugger_GetPrompt", _wrap_SBDebugger_GetPrompt, METH_O, "Get the command prompt string."},
+	 { "SBDebugger_SetPrompt", _wrap_SBDebugger_SetPrompt, METH_VARARGS, "Set the command prompt string."},
+	 { "SBDebugger_GetReproducerPath", _wrap_SBDebugger_GetReproducerPath, METH_O, "Get the path to the reproducer."},
+	 { "SBDebugger_GetScriptLanguage", _wrap_SBDebugger_GetScriptLanguage, METH_O, "Get the current scripting language."},
+	 { "SBDebugger_SetScriptLanguage", _wrap_SBDebugger_SetScriptLanguage, METH_VARARGS, "Set the current scripting language."},
+	 { "SBDebugger_GetREPLLanguage", _wrap_SBDebugger_GetREPLLanguage, METH_O, "Get the current REPL language."},
+	 { "SBDebugger_SetREPLLanguage", _wrap_SBDebugger_SetREPLLanguage, METH_VARARGS, "Set the current REPL language."},
+	 { "SBDebugger_GetCloseInputOnEOF", _wrap_SBDebugger_GetCloseInputOnEOF, METH_O, "Get whether to close input on EOF (deprecated)."},
+	 { "SBDebugger_SetCloseInputOnEOF", _wrap_SBDebugger_SetCloseInputOnEOF, METH_VARARGS, "Set whether to close input on EOF (deprecated)."},
+	 { "SBDebugger_GetCategory", _wrap_SBDebugger_GetCategory, METH_VARARGS, "\n"
+		"*Overload 1:*\n"
+		"Get a type category by name.\n"
+		"\n"
+		"|\n"
+		"\n"
+		"*Overload 2:*\n"
+		"Get a type category by language.\n"
+		""},
+	 { "SBDebugger_CreateCategory", _wrap_SBDebugger_CreateCategory, METH_VARARGS, "Create a new type category."},
+	 { "SBDebugger_DeleteCategory", _wrap_SBDebugger_DeleteCategory, METH_VARARGS, "Delete a type category."},
+	 { "SBDebugger_GetNumCategories", _wrap_SBDebugger_GetNumCategories, METH_O, "Get the number of type categories."},
+	 { "SBDebugger_GetCategoryAtIndex", _wrap_SBDebugger_GetCategoryAtIndex, METH_VARARGS, "Get a type category by index."},
+	 { "SBDebugger_GetDefaultCategory", _wrap_SBDebugger_GetDefaultCategory, METH_O, "Get the default type category."},
+	 { "SBDebugger_GetFormatForType", _wrap_SBDebugger_GetFormatForType, METH_VARARGS, "Get the format for a type."},
+	 { "SBDebugger_GetSummaryForType", _wrap_SBDebugger_GetSummaryForType, METH_VARARGS, "Get the summary for a type."},
+	 { "SBDebugger_GetFilterForType", _wrap_SBDebugger_GetFilterForType, METH_VARARGS, "Get the filter for a type."},
+	 { "SBDebugger_GetSyntheticForType", _wrap_SBDebugger_GetSyntheticForType, METH_VARARGS, "Get the synthetic for a type."},
+	 { "SBDebugger_ResetStatistics", _wrap_SBDebugger_ResetStatistics, METH_O, "\n"
+		"Clear collected statistics for targets belonging to this debugger.\n"
+		"\n"
+		"This includes clearing symbol table and debug info parsing/index time for\n"
+		"all modules, breakpoint resolve time, and target statistics.\n"
+		""},
 	 { "SBDebugger_RunCommandInterpreter", _wrap_SBDebugger_RunCommandInterpreter, METH_VARARGS, "\n"
 		"SBDebugger_RunCommandInterpreter(SBDebugger self, bool auto_handle_events, bool spawn_thread, SBCommandInterpreterRunOptions options, int & num_errors, bool & quit_requested, bool & stopped_for_crash)\n"
 		"Launch a command interpreter session. Commands are read from standard input or\n"
@@ -97602,8 +98022,25 @@ static PyMethodDef SwigMethods[] = {
 		"    n_errors, quit_requested, has_crashed = debugger.RunCommandInterpreter(True,\n"
 		"        False, lldb.SBCommandInterpreterRunOptions(), 0, False, False)\n"
 		""},
-	 { "SBDebugger_RunREPL", _wrap_SBDebugger_RunREPL, METH_VARARGS, "SBDebugger_RunREPL(SBDebugger self, lldb::LanguageType language, char const * repl_options) -> SBError"},
-	 { "SBDebugger_LoadTraceFromFile", _wrap_SBDebugger_LoadTraceFromFile, METH_VARARGS, "SBDebugger_LoadTraceFromFile(SBDebugger self, SBError error, SBFileSpec trace_description_file) -> SBTrace"},
+	 { "SBDebugger_RunREPL", _wrap_SBDebugger_RunREPL, METH_VARARGS, "Run a REPL (Read-Eval-Print Loop) for the specified language."},
+	 { "SBDebugger_LoadTraceFromFile", _wrap_SBDebugger_LoadTraceFromFile, METH_VARARGS, "\n"
+		"Load a trace from a trace description file.\n"
+		"\n"
+		"This will create Targets, Processes and Threads based on the contents of\n"
+		"the file.\n"
+		"\n"
+		":type error: :py:class:`SBError`, out\n"
+		":param error:\n"
+		"      An error if the trace could not be created.\n"
+		"\n"
+		":type trace_description_file: :py:class:`SBFileSpec`, in\n"
+		":param trace_description_file:\n"
+		"      The file containing the necessary information to load the trace.\n"
+		"\n"
+		":rtype: :py:class:`SBTrace`\n"
+		":return: \n"
+		"      An SBTrace object representing the loaded trace.\n"
+		""},
 	 { "SBDebugger___repr__", _wrap_SBDebugger___repr__, METH_O, "SBDebugger___repr__(SBDebugger self) -> std::string"},
 	 { "SBDebugger_GetInputFileHandle", _wrap_SBDebugger_GetInputFileHandle, METH_O, "SBDebugger_GetInputFileHandle(SBDebugger self) -> lldb::FileSP"},
 	 { "SBDebugger_GetOutputFileHandle", _wrap_SBDebugger_GetOutputFileHandle, METH_O, "SBDebugger_GetOutputFileHandle(SBDebugger self) -> lldb::FileSP"},
@@ -97635,12 +98072,20 @@ static PyMethodDef SwigMethods[] = {
 		"new_SBError(char const * message) -> SBError\n"
 		""},
 	 { "delete_SBError", _wrap_delete_SBError, METH_O, "delete_SBError(SBError self)"},
-	 { "SBError_GetCString", _wrap_SBError_GetCString, METH_O, "SBError_GetCString(SBError self) -> char const *"},
+	 { "SBError_GetCString", _wrap_SBError_GetCString, METH_O, "\n"
+		"Get the error string as a NULL terminated UTF8 c-string.\n"
+		"\n"
+		"This SBError object owns the returned string and this object must be kept\n"
+		"around long enough to use the returned string.\n"
+		""},
 	 { "SBError_Clear", _wrap_SBError_Clear, METH_O, "SBError_Clear(SBError self)"},
 	 { "SBError_Fail", _wrap_SBError_Fail, METH_O, "SBError_Fail(SBError self) -> bool"},
 	 { "SBError_Success", _wrap_SBError_Success, METH_O, "SBError_Success(SBError self) -> bool"},
-	 { "SBError_GetError", _wrap_SBError_GetError, METH_O, "SBError_GetError(SBError self) -> uint32_t"},
-	 { "SBError_GetErrorData", _wrap_SBError_GetErrorData, METH_O, "SBError_GetErrorData(SBError self) -> SBStructuredData"},
+	 { "SBError_GetError", _wrap_SBError_GetError, METH_O, "Get the error code."},
+	 { "SBError_GetErrorData", _wrap_SBError_GetErrorData, METH_O, "\n"
+		"Get the error in machine-readable form. Particularly useful for\n"
+		"compiler diagnostics.\n"
+		""},
 	 { "SBError_GetType", _wrap_SBError_GetType, METH_O, "SBError_GetType(SBError self) -> lldb::ErrorType"},
 	 { "SBError_SetError", _wrap_SBError_SetError, METH_VARARGS, "SBError_SetError(SBError self, uint32_t err, lldb::ErrorType type)"},
 	 { "SBError_SetErrorToErrno", _wrap_SBError_SetErrorToErrno, METH_O, "SBError_SetErrorToErrno(SBError self)"},
@@ -97658,16 +98103,107 @@ static PyMethodDef SwigMethods[] = {
 		"new_SBEnvironment(SBEnvironment rhs) -> SBEnvironment\n"
 		""},
 	 { "delete_SBEnvironment", _wrap_delete_SBEnvironment, METH_O, "delete_SBEnvironment(SBEnvironment self)"},
-	 { "SBEnvironment_Get", _wrap_SBEnvironment_Get, METH_VARARGS, "SBEnvironment_Get(SBEnvironment self, char const * name) -> char const *"},
-	 { "SBEnvironment_GetNumValues", _wrap_SBEnvironment_GetNumValues, METH_O, "SBEnvironment_GetNumValues(SBEnvironment self) -> size_t"},
-	 { "SBEnvironment_GetNameAtIndex", _wrap_SBEnvironment_GetNameAtIndex, METH_VARARGS, "SBEnvironment_GetNameAtIndex(SBEnvironment self, size_t index) -> char const *"},
-	 { "SBEnvironment_GetValueAtIndex", _wrap_SBEnvironment_GetValueAtIndex, METH_VARARGS, "SBEnvironment_GetValueAtIndex(SBEnvironment self, size_t index) -> char const *"},
-	 { "SBEnvironment_GetEntries", _wrap_SBEnvironment_GetEntries, METH_O, "SBEnvironment_GetEntries(SBEnvironment self) -> SBStringList"},
-	 { "SBEnvironment_PutEntry", _wrap_SBEnvironment_PutEntry, METH_VARARGS, "SBEnvironment_PutEntry(SBEnvironment self, char const * name_and_value)"},
-	 { "SBEnvironment_SetEntries", _wrap_SBEnvironment_SetEntries, METH_VARARGS, "SBEnvironment_SetEntries(SBEnvironment self, SBStringList entries, bool append)"},
-	 { "SBEnvironment_Set", _wrap_SBEnvironment_Set, METH_VARARGS, "SBEnvironment_Set(SBEnvironment self, char const * name, char const * value, bool overwrite) -> bool"},
-	 { "SBEnvironment_Unset", _wrap_SBEnvironment_Unset, METH_VARARGS, "SBEnvironment_Unset(SBEnvironment self, char const * name) -> bool"},
-	 { "SBEnvironment_Clear", _wrap_SBEnvironment_Clear, METH_O, "SBEnvironment_Clear(SBEnvironment self)"},
+	 { "SBEnvironment_Get", _wrap_SBEnvironment_Get, METH_VARARGS, "\n"
+		"Return the value of a given environment variable.\n"
+		"\n"
+		":param [in]: name\n"
+		"        The name of the environment variable.\n"
+		"\n"
+		":rtype: string\n"
+		":return: \n"
+		"        The value of the environment variable or null if not present.\n"
+		"        If the environment variable has no value but is present, a valid\n"
+		"        pointer to an empty string will be returned.\n"
+		""},
+	 { "SBEnvironment_GetNumValues", _wrap_SBEnvironment_GetNumValues, METH_O, "\n"
+		":rtype: int\n"
+		":return: \n"
+		"        The number of environment variables.\n"
+		""},
+	 { "SBEnvironment_GetNameAtIndex", _wrap_SBEnvironment_GetNameAtIndex, METH_VARARGS, "\n"
+		"Return the name of the environment variable at a given index from the\n"
+		"internal list of environment variables.\n"
+		"\n"
+		":param [in]: index\n"
+		"        The index of the environment variable in the internal list.\n"
+		"\n"
+		":rtype: string\n"
+		":return: \n"
+		"        The name at the given index or null if the index is invalid.\n"
+		""},
+	 { "SBEnvironment_GetValueAtIndex", _wrap_SBEnvironment_GetValueAtIndex, METH_VARARGS, "\n"
+		"Return the value of the environment variable at a given index from the\n"
+		"internal list of environment variables.\n"
+		"\n"
+		":param [in]: index\n"
+		"        The index of the environment variable in the internal list.\n"
+		"\n"
+		":rtype: string\n"
+		":return: \n"
+		"        The value at the given index or null if the index is invalid.\n"
+		"        If the environment variable has no value but is present, a valid\n"
+		"        pointer to an empty string will be returned.\n"
+		""},
+	 { "SBEnvironment_GetEntries", _wrap_SBEnvironment_GetEntries, METH_O, "\n"
+		"Return all environment variables contained in this object. Each variable\n"
+		"is returned as a string with the following format\n"
+		"    name=value\n"
+		"\n"
+		":rtype: :py:class:`SBStringList`\n"
+		":return: \n"
+		"        Return an lldb::SBStringList object with the environment variables.\n"
+		""},
+	 { "SBEnvironment_PutEntry", _wrap_SBEnvironment_PutEntry, METH_VARARGS, "\n"
+		"Add or replace an existing environment variable. The input must be a\n"
+		"string with the format\n"
+		"    name=value\n"
+		"\n"
+		":param [in]: name_and_value\n"
+		"        The entry to set which conforms to the format mentioned above.\n"
+		""},
+	 { "SBEnvironment_SetEntries", _wrap_SBEnvironment_SetEntries, METH_VARARGS, "\n"
+		"Update this object with the given environment variables. The input is a\n"
+		"list of entries with the same format required by SBEnvironment::PutEntry.\n"
+		"\n"
+		"If append is false, the provided environment will replace the existing\n"
+		"environment. Otherwise, existing values will be updated of left untouched\n"
+		"accordingly.\n"
+		"\n"
+		":param [in]: entries\n"
+		"        The environment variable entries.\n"
+		"\n"
+		":param [in]: append\n"
+		"        Flag that controls whether to replace the existing environment.\n"
+		""},
+	 { "SBEnvironment_Set", _wrap_SBEnvironment_Set, METH_VARARGS, "\n"
+		"Set the value of a given environment variable.\n"
+		"If the variable exists, its value is updated only if overwrite is true.\n"
+		"\n"
+		":param [in]: name\n"
+		"        The name of the environment variable to set.\n"
+		"\n"
+		":param [in]: value\n"
+		"        The value of the environment variable to set.\n"
+		"\n"
+		":param [in]: overwrite\n"
+		"        Flag that indicates whether to overwrite an existing environment\n"
+		"        variable.\n"
+		"\n"
+		":rtype: boolean\n"
+		":return: \n"
+		"        Return whether the variable was added or modified.\n"
+		""},
+	 { "SBEnvironment_Unset", _wrap_SBEnvironment_Unset, METH_VARARGS, "\n"
+		"Unset an environment variable if exists.\n"
+		"\n"
+		":param [in]: name\n"
+		"        The name of the environment variable to unset.\n"
+		"\n"
+		":rtype: boolean\n"
+		":return: \n"
+		"        Return whether a variable was actually unset.\n"
+		""},
+	 { "SBEnvironment_Clear", _wrap_SBEnvironment_Clear, METH_O, "Delete all the environment variables."},
 	 { "SBEnvironment_swigregister", SBEnvironment_swigregister, METH_O, NULL},
 	 { "SBEnvironment_swiginit", SBEnvironment_swiginit, METH_VARARGS, NULL},
 	 { "new_SBEvent", _wrap_new_SBEvent, METH_VARARGS, "__init__(self, int type, str data) -> SBEvent (make an event that contains a C string)__init__(self, int type, str data) -> SBEvent (make an event that contains a C string)__init__(self, int type, str data) -> SBEvent (make an event that contains a C string)"},
@@ -97890,7 +98426,12 @@ static PyMethodDef SwigMethods[] = {
 		"new_SBFormat(SBFormat rhs) -> SBFormat\n"
 		""},
 	 { "delete_SBFormat", _wrap_delete_SBFormat, METH_O, "delete_SBFormat(SBFormat self)"},
-	 { "SBFormat___nonzero__", _wrap_SBFormat___nonzero__, METH_O, "SBFormat___nonzero__(SBFormat self) -> bool"},
+	 { "SBFormat___nonzero__", _wrap_SBFormat___nonzero__, METH_O, "\n"
+		":rtype: boolean\n"
+		":return: \n"
+		"      **true** if and only if this object is valid and can be used for\n"
+		"      formatting.\n"
+		""},
 	 { "SBFormat_swigregister", SBFormat_swigregister, METH_O, NULL},
 	 { "SBFormat_swiginit", SBFormat_swiginit, METH_VARARGS, NULL},
 	 { "new_SBFrame", _wrap_new_SBFrame, METH_VARARGS, "\n"
@@ -97971,7 +98512,10 @@ static PyMethodDef SwigMethods[] = {
 		"    capture a tail call). Local variables may not be available in an artificial\n"
 		"    frame.\n"
 		""},
-	 { "SBFrame_IsHidden", _wrap_SBFrame_IsHidden, METH_O, "SBFrame_IsHidden(SBFrame self) -> bool"},
+	 { "SBFrame_IsHidden", _wrap_SBFrame_IsHidden, METH_O, "\n"
+		"Return whether a frame recognizer decided this frame should not\n"
+		"be displayes in backtraces etc.\n"
+		""},
 	 { "SBFrame_EvaluateExpression", _wrap_SBFrame_EvaluateExpression, METH_VARARGS, "\n"
 		"SBFrame_EvaluateExpression(SBFrame self, char const * expr) -> SBValue\n"
 		"SBFrame_EvaluateExpression(SBFrame self, char const * expr, lldb::DynamicValueType use_dynamic) -> SBValue\n"
@@ -97981,7 +98525,11 @@ static PyMethodDef SwigMethods[] = {
 		"    The version that doesn't supply a 'use_dynamic' value will use the\n"
 		"    target's default.\n"
 		""},
-	 { "SBFrame_GetLanguageSpecificData", _wrap_SBFrame_GetLanguageSpecificData, METH_O, "SBFrame_GetLanguageSpecificData(SBFrame self) -> SBStructuredData"},
+	 { "SBFrame_GetLanguageSpecificData", _wrap_SBFrame_GetLanguageSpecificData, METH_O, "\n"
+		"Language plugins can use this API to report language-specific\n"
+		"runtime information about this compile unit, such as additional\n"
+		"language version details or feature flags.\n"
+		""},
 	 { "SBFrame_GetFrameBlock", _wrap_SBFrame_GetFrameBlock, METH_O, "\n"
 		"SBFrame_GetFrameBlock(SBFrame self) -> SBBlock\n"
 		"\n"
@@ -98079,7 +98627,24 @@ static PyMethodDef SwigMethods[] = {
 		"    target's default.\n"
 		""},
 	 { "SBFrame_GetDescription", _wrap_SBFrame_GetDescription, METH_VARARGS, "SBFrame_GetDescription(SBFrame self, SBStream description) -> bool"},
-	 { "SBFrame_GetDescriptionWithFormat", _wrap_SBFrame_GetDescriptionWithFormat, METH_VARARGS, "SBFrame_GetDescriptionWithFormat(SBFrame self, SBFormat format, SBStream output) -> SBError"},
+	 { "SBFrame_GetDescriptionWithFormat", _wrap_SBFrame_GetDescriptionWithFormat, METH_VARARGS, "\n"
+		"Similar to *GetDescription()* but the format of the description can be\n"
+		"configured via the ``format`` parameter. See\n"
+		"https://lldb.llvm.org/use/formatting.html for more information on format\n"
+		"strings.\n"
+		"\n"
+		":type format: :py:class:`SBFormat`, in\n"
+		":param format:\n"
+		"      The format to use for generating the description.\n"
+		"\n"
+		":type output: :py:class:`SBStream`, out\n"
+		":param output:\n"
+		"      The stream where the description will be written to.\n"
+		"\n"
+		":rtype: :py:class:`SBError`\n"
+		":return: \n"
+		"      An error object with an error message in case of failures.\n"
+		""},
 	 { "SBFrame___repr__", _wrap_SBFrame___repr__, METH_O, "SBFrame___repr__(SBFrame self) -> std::string"},
 	 { "SBFrame_swigregister", SBFrame_swigregister, METH_O, NULL},
 	 { "SBFrame_swiginit", SBFrame_swiginit, METH_VARARGS, NULL},
@@ -98189,13 +98754,26 @@ static PyMethodDef SwigMethods[] = {
 	 { "SBInstructionList_swiginit", SBInstructionList_swiginit, METH_VARARGS, NULL},
 	 { "SBLanguageRuntime_GetLanguageTypeFromString", _wrap_SBLanguageRuntime_GetLanguageTypeFromString, METH_O, "SBLanguageRuntime_GetLanguageTypeFromString(char const * string) -> lldb::LanguageType"},
 	 { "SBLanguageRuntime_GetNameForLanguageType", _wrap_SBLanguageRuntime_GetNameForLanguageType, METH_O, "SBLanguageRuntime_GetNameForLanguageType(lldb::LanguageType language) -> char const *"},
-	 { "SBLanguageRuntime_LanguageIsCPlusPlus", _wrap_SBLanguageRuntime_LanguageIsCPlusPlus, METH_O, "SBLanguageRuntime_LanguageIsCPlusPlus(lldb::LanguageType language) -> bool"},
-	 { "SBLanguageRuntime_LanguageIsObjC", _wrap_SBLanguageRuntime_LanguageIsObjC, METH_O, "SBLanguageRuntime_LanguageIsObjC(lldb::LanguageType language) -> bool"},
-	 { "SBLanguageRuntime_LanguageIsCFamily", _wrap_SBLanguageRuntime_LanguageIsCFamily, METH_O, "SBLanguageRuntime_LanguageIsCFamily(lldb::LanguageType language) -> bool"},
-	 { "SBLanguageRuntime_SupportsExceptionBreakpointsOnThrow", _wrap_SBLanguageRuntime_SupportsExceptionBreakpointsOnThrow, METH_O, "SBLanguageRuntime_SupportsExceptionBreakpointsOnThrow(lldb::LanguageType language) -> bool"},
-	 { "SBLanguageRuntime_SupportsExceptionBreakpointsOnCatch", _wrap_SBLanguageRuntime_SupportsExceptionBreakpointsOnCatch, METH_O, "SBLanguageRuntime_SupportsExceptionBreakpointsOnCatch(lldb::LanguageType language) -> bool"},
-	 { "SBLanguageRuntime_GetThrowKeywordForLanguage", _wrap_SBLanguageRuntime_GetThrowKeywordForLanguage, METH_O, "SBLanguageRuntime_GetThrowKeywordForLanguage(lldb::LanguageType language) -> char const *"},
-	 { "SBLanguageRuntime_GetCatchKeywordForLanguage", _wrap_SBLanguageRuntime_GetCatchKeywordForLanguage, METH_O, "SBLanguageRuntime_GetCatchKeywordForLanguage(lldb::LanguageType language) -> char const *"},
+	 { "SBLanguageRuntime_LanguageIsCPlusPlus", _wrap_SBLanguageRuntime_LanguageIsCPlusPlus, METH_O, "Returns whether the given language is any version of C++."},
+	 { "SBLanguageRuntime_LanguageIsObjC", _wrap_SBLanguageRuntime_LanguageIsObjC, METH_O, "Returns whether the given language is Obj-C or Obj-C++."},
+	 { "SBLanguageRuntime_LanguageIsCFamily", _wrap_SBLanguageRuntime_LanguageIsCFamily, METH_O, "Returns whether the given language is any version of C, C++ or Obj-C."},
+	 { "SBLanguageRuntime_SupportsExceptionBreakpointsOnThrow", _wrap_SBLanguageRuntime_SupportsExceptionBreakpointsOnThrow, METH_O, "\n"
+		"Returns whether the given language supports exception breakpoints on\n"
+		"throw statements.\n"
+		""},
+	 { "SBLanguageRuntime_SupportsExceptionBreakpointsOnCatch", _wrap_SBLanguageRuntime_SupportsExceptionBreakpointsOnCatch, METH_O, "\n"
+		"Returns whether the given language supports exception breakpoints on\n"
+		"catch statements.\n"
+		""},
+	 { "SBLanguageRuntime_GetThrowKeywordForLanguage", _wrap_SBLanguageRuntime_GetThrowKeywordForLanguage, METH_O, "\n"
+		"Returns the keyword used for throw statements in the given language, e.g.\n"
+		"Python uses **raise**. Returns **nullptr** if the language is not supported.\n"
+		""},
+	 { "SBLanguageRuntime_GetCatchKeywordForLanguage", _wrap_SBLanguageRuntime_GetCatchKeywordForLanguage, METH_O, "\n"
+		"Returns the keyword used for catch statements in the given language, e.g.\n"
+		"Python uses **except**. Returns **nullptr** if the language is not\n"
+		"supported.\n"
+		""},
 	 { "new_SBLanguageRuntime", _wrap_new_SBLanguageRuntime, METH_NOARGS, "new_SBLanguageRuntime() -> SBLanguageRuntime"},
 	 { "delete_SBLanguageRuntime", _wrap_delete_SBLanguageRuntime, METH_O, "delete_SBLanguageRuntime(SBLanguageRuntime self)"},
 	 { "SBLanguageRuntime_swigregister", SBLanguageRuntime_swigregister, METH_O, NULL},
@@ -98210,19 +98788,106 @@ static PyMethodDef SwigMethods[] = {
 	 { "SBLaunchInfo_SetUserID", _wrap_SBLaunchInfo_SetUserID, METH_VARARGS, "SBLaunchInfo_SetUserID(SBLaunchInfo self, uint32_t uid)"},
 	 { "SBLaunchInfo_SetGroupID", _wrap_SBLaunchInfo_SetGroupID, METH_VARARGS, "SBLaunchInfo_SetGroupID(SBLaunchInfo self, uint32_t gid)"},
 	 { "SBLaunchInfo_GetExecutableFile", _wrap_SBLaunchInfo_GetExecutableFile, METH_O, "SBLaunchInfo_GetExecutableFile(SBLaunchInfo self) -> SBFileSpec"},
-	 { "SBLaunchInfo_SetExecutableFile", _wrap_SBLaunchInfo_SetExecutableFile, METH_VARARGS, "SBLaunchInfo_SetExecutableFile(SBLaunchInfo self, SBFileSpec exe_file, bool add_as_first_arg)"},
-	 { "SBLaunchInfo_GetListener", _wrap_SBLaunchInfo_GetListener, METH_O, "SBLaunchInfo_GetListener(SBLaunchInfo self) -> SBListener"},
-	 { "SBLaunchInfo_SetListener", _wrap_SBLaunchInfo_SetListener, METH_VARARGS, "SBLaunchInfo_SetListener(SBLaunchInfo self, SBListener listener)"},
-	 { "SBLaunchInfo_GetShadowListener", _wrap_SBLaunchInfo_GetShadowListener, METH_O, "SBLaunchInfo_GetShadowListener(SBLaunchInfo self) -> SBListener"},
-	 { "SBLaunchInfo_SetShadowListener", _wrap_SBLaunchInfo_SetShadowListener, METH_VARARGS, "SBLaunchInfo_SetShadowListener(SBLaunchInfo self, SBListener listener)"},
+	 { "SBLaunchInfo_SetExecutableFile", _wrap_SBLaunchInfo_SetExecutableFile, METH_VARARGS, "\n"
+		"Set the executable file that will be used to launch the process and\n"
+		"optionally set it as the first argument in the argument vector.\n"
+		"\n"
+		"This only needs to be specified if clients wish to carefully control\n"
+		"the exact path will be used to launch a binary. If you create a\n"
+		"target with a symlink, that symlink will get resolved in the target\n"
+		"and the resolved path will get used to launch the process. Calling\n"
+		"this function can help you still launch your process using the\n"
+		"path of your choice.\n"
+		"\n"
+		"If this function is not called prior to launching with\n"
+		"SBTarget::Launch(...), the target will use the resolved executable\n"
+		"path that was used to create the target.\n"
+		"\n"
+		":type exe_file: :py:class:`SBFileSpec`, in\n"
+		":param exe_file:\n"
+		"        The override path to use when launching the executable.\n"
+		"\n"
+		":type add_as_first_arg: boolean, in\n"
+		":param add_as_first_arg:\n"
+		"        If true, then the path will be inserted into the argument vector\n"
+		"        prior to launching. Otherwise the argument vector will be left\n"
+		"        alone.\n"
+		""},
+	 { "SBLaunchInfo_GetListener", _wrap_SBLaunchInfo_GetListener, METH_O, "\n"
+		"Get the listener that will be used to receive process events.\n"
+		"\n"
+		"If no listener has been set via a call to\n"
+		"SBLaunchInfo::SetListener(), then an invalid SBListener will be\n"
+		"returned (SBListener::IsValid() will return false). If a listener\n"
+		"has been set, then the valid listener object will be returned.\n"
+		""},
+	 { "SBLaunchInfo_SetListener", _wrap_SBLaunchInfo_SetListener, METH_VARARGS, "\n"
+		"Set the listener that will be used to receive process events.\n"
+		"\n"
+		"By default the SBDebugger, which has a listener, that the SBTarget\n"
+		"belongs to will listen for the process events. Calling this function\n"
+		"allows a different listener to be used to listen for process events.\n"
+		""},
+	 { "SBLaunchInfo_GetShadowListener", _wrap_SBLaunchInfo_GetShadowListener, METH_O, "\n"
+		"Get the shadow listener that receive public process events,\n"
+		"additionally to the default process event listener.\n"
+		"\n"
+		"If no listener has been set via a call to\n"
+		"SBLaunchInfo::SetShadowListener(), then an invalid SBListener will\n"
+		"be returned (SBListener::IsValid() will return false). If a listener\n"
+		"has been set, then the valid listener object will be returned.\n"
+		""},
+	 { "SBLaunchInfo_SetShadowListener", _wrap_SBLaunchInfo_SetShadowListener, METH_VARARGS, "\n"
+		"Set the shadow listener that will receive public process events,\n"
+		"additionally to the default process event listener.\n"
+		"\n"
+		"By default a process have no shadow event listener.\n"
+		"Calling this function allows public process events to be broadcasted to an\n"
+		"additional listener on top of the default process event listener.\n"
+		"If the `listener` argument is invalid (SBListener::IsValid() will\n"
+		"return false), this will clear the shadow listener.\n"
+		""},
 	 { "SBLaunchInfo_GetNumArguments", _wrap_SBLaunchInfo_GetNumArguments, METH_O, "SBLaunchInfo_GetNumArguments(SBLaunchInfo self) -> uint32_t"},
 	 { "SBLaunchInfo_GetArgumentAtIndex", _wrap_SBLaunchInfo_GetArgumentAtIndex, METH_VARARGS, "SBLaunchInfo_GetArgumentAtIndex(SBLaunchInfo self, uint32_t idx) -> char const *"},
 	 { "SBLaunchInfo_SetArguments", _wrap_SBLaunchInfo_SetArguments, METH_VARARGS, "SBLaunchInfo_SetArguments(SBLaunchInfo self, char const ** argv, bool append)"},
 	 { "SBLaunchInfo_GetNumEnvironmentEntries", _wrap_SBLaunchInfo_GetNumEnvironmentEntries, METH_O, "SBLaunchInfo_GetNumEnvironmentEntries(SBLaunchInfo self) -> uint32_t"},
 	 { "SBLaunchInfo_GetEnvironmentEntryAtIndex", _wrap_SBLaunchInfo_GetEnvironmentEntryAtIndex, METH_VARARGS, "SBLaunchInfo_GetEnvironmentEntryAtIndex(SBLaunchInfo self, uint32_t idx) -> char const *"},
-	 { "SBLaunchInfo_SetEnvironmentEntries", _wrap_SBLaunchInfo_SetEnvironmentEntries, METH_VARARGS, "SBLaunchInfo_SetEnvironmentEntries(SBLaunchInfo self, char const ** envp, bool append)"},
-	 { "SBLaunchInfo_SetEnvironment", _wrap_SBLaunchInfo_SetEnvironment, METH_VARARGS, "SBLaunchInfo_SetEnvironment(SBLaunchInfo self, SBEnvironment env, bool append)"},
-	 { "SBLaunchInfo_GetEnvironment", _wrap_SBLaunchInfo_GetEnvironment, METH_O, "SBLaunchInfo_GetEnvironment(SBLaunchInfo self) -> SBEnvironment"},
+	 { "SBLaunchInfo_SetEnvironmentEntries", _wrap_SBLaunchInfo_SetEnvironmentEntries, METH_VARARGS, "\n"
+		"Update this object with the given environment variables.\n"
+		"\n"
+		"If append is false, the provided environment will replace the existing\n"
+		"environment. Otherwise, existing values will be updated of left untouched\n"
+		"accordingly.\n"
+		"\n"
+		":param [in]: envp\n"
+		"        The new environment variables as a list of strings with the following\n"
+		"        format\n"
+		"            name=value\n"
+		"\n"
+		":param [in]: append\n"
+		"        Flag that controls whether to replace the existing environment.\n"
+		""},
+	 { "SBLaunchInfo_SetEnvironment", _wrap_SBLaunchInfo_SetEnvironment, METH_VARARGS, "\n"
+		"Update this object with the given environment variables.\n"
+		"\n"
+		"If append is false, the provided environment will replace the existing\n"
+		"environment. Otherwise, existing values will be updated of left untouched\n"
+		"accordingly.\n"
+		"\n"
+		":param [in]: env\n"
+		"        The new environment variables.\n"
+		"\n"
+		":param [in]: append\n"
+		"        Flag that controls whether to replace the existing environment.\n"
+		""},
+	 { "SBLaunchInfo_GetEnvironment", _wrap_SBLaunchInfo_GetEnvironment, METH_O, "\n"
+		"Return the environment variables of this object.\n"
+		"\n"
+		":rtype: :py:class:`SBEnvironment`\n"
+		":return: \n"
+		"        An lldb::SBEnvironment object which is a copy of the SBLaunchInfo's\n"
+		"        environment.\n"
+		""},
 	 { "SBLaunchInfo_Clear", _wrap_SBLaunchInfo_Clear, METH_O, "SBLaunchInfo_Clear(SBLaunchInfo self)"},
 	 { "SBLaunchInfo_GetWorkingDirectory", _wrap_SBLaunchInfo_GetWorkingDirectory, METH_O, "SBLaunchInfo_GetWorkingDirectory(SBLaunchInfo self) -> char const *"},
 	 { "SBLaunchInfo_SetWorkingDirectory", _wrap_SBLaunchInfo_SetWorkingDirectory, METH_VARARGS, "SBLaunchInfo_SetWorkingDirectory(SBLaunchInfo self, char const * working_dir)"},
@@ -98305,13 +98970,59 @@ static PyMethodDef SwigMethods[] = {
 		""},
 	 { "delete_SBMemoryRegionInfo", _wrap_delete_SBMemoryRegionInfo, METH_O, "delete_SBMemoryRegionInfo(SBMemoryRegionInfo self)"},
 	 { "SBMemoryRegionInfo_Clear", _wrap_SBMemoryRegionInfo_Clear, METH_O, "SBMemoryRegionInfo_Clear(SBMemoryRegionInfo self)"},
-	 { "SBMemoryRegionInfo_GetRegionBase", _wrap_SBMemoryRegionInfo_GetRegionBase, METH_O, "SBMemoryRegionInfo_GetRegionBase(SBMemoryRegionInfo self) -> lldb::addr_t"},
-	 { "SBMemoryRegionInfo_GetRegionEnd", _wrap_SBMemoryRegionInfo_GetRegionEnd, METH_O, "SBMemoryRegionInfo_GetRegionEnd(SBMemoryRegionInfo self) -> lldb::addr_t"},
-	 { "SBMemoryRegionInfo_IsReadable", _wrap_SBMemoryRegionInfo_IsReadable, METH_O, "SBMemoryRegionInfo_IsReadable(SBMemoryRegionInfo self) -> bool"},
-	 { "SBMemoryRegionInfo_IsWritable", _wrap_SBMemoryRegionInfo_IsWritable, METH_O, "SBMemoryRegionInfo_IsWritable(SBMemoryRegionInfo self) -> bool"},
-	 { "SBMemoryRegionInfo_IsExecutable", _wrap_SBMemoryRegionInfo_IsExecutable, METH_O, "SBMemoryRegionInfo_IsExecutable(SBMemoryRegionInfo self) -> bool"},
-	 { "SBMemoryRegionInfo_IsMapped", _wrap_SBMemoryRegionInfo_IsMapped, METH_O, "SBMemoryRegionInfo_IsMapped(SBMemoryRegionInfo self) -> bool"},
-	 { "SBMemoryRegionInfo_GetName", _wrap_SBMemoryRegionInfo_GetName, METH_O, "SBMemoryRegionInfo_GetName(SBMemoryRegionInfo self) -> char const *"},
+	 { "SBMemoryRegionInfo_GetRegionBase", _wrap_SBMemoryRegionInfo_GetRegionBase, METH_O, "\n"
+		"Get the base address of this memory range.\n"
+		"\n"
+		":rtype: int\n"
+		":return: \n"
+		"        The base address of this memory range.\n"
+		""},
+	 { "SBMemoryRegionInfo_GetRegionEnd", _wrap_SBMemoryRegionInfo_GetRegionEnd, METH_O, "\n"
+		"Get the end address of this memory range.\n"
+		"\n"
+		":rtype: int\n"
+		":return: \n"
+		"        The base address of this memory range.\n"
+		""},
+	 { "SBMemoryRegionInfo_IsReadable", _wrap_SBMemoryRegionInfo_IsReadable, METH_O, "\n"
+		"Check if this memory address is marked readable to the process.\n"
+		"\n"
+		":rtype: boolean\n"
+		":return: \n"
+		"        true if this memory address is marked readable\n"
+		""},
+	 { "SBMemoryRegionInfo_IsWritable", _wrap_SBMemoryRegionInfo_IsWritable, METH_O, "\n"
+		"Check if this memory address is marked writable to the process.\n"
+		"\n"
+		":rtype: boolean\n"
+		":return: \n"
+		"        true if this memory address is marked writable\n"
+		""},
+	 { "SBMemoryRegionInfo_IsExecutable", _wrap_SBMemoryRegionInfo_IsExecutable, METH_O, "\n"
+		"Check if this memory address is marked executable to the process.\n"
+		"\n"
+		":rtype: boolean\n"
+		":return: \n"
+		"        true if this memory address is marked executable\n"
+		""},
+	 { "SBMemoryRegionInfo_IsMapped", _wrap_SBMemoryRegionInfo_IsMapped, METH_O, "\n"
+		"Check if this memory address is mapped into the process address\n"
+		"space.\n"
+		"\n"
+		":rtype: boolean\n"
+		":return: \n"
+		"        true if this memory address is in the process address space.\n"
+		""},
+	 { "SBMemoryRegionInfo_GetName", _wrap_SBMemoryRegionInfo_GetName, METH_O, "\n"
+		"Returns the name of the memory region mapped at the given\n"
+		"address.\n"
+		"\n"
+		":rtype: string\n"
+		":return: \n"
+		"        In case of memory mapped files it is the absolute path of\n"
+		"        the file otherwise it is a name associated with the memory\n"
+		"        region. If no name can be determined the returns nullptr.\n"
+		""},
 	 { "SBMemoryRegionInfo_HasDirtyMemoryPageList", _wrap_SBMemoryRegionInfo_HasDirtyMemoryPageList, METH_O, "\n"
 		"SBMemoryRegionInfo_HasDirtyMemoryPageList(SBMemoryRegionInfo self) -> bool\n"
 		"\n"
@@ -98415,8 +99126,38 @@ static PyMethodDef SwigMethods[] = {
 		"        A const reference to the file specification object.\n"
 		""},
 	 { "SBModule_SetPlatformFileSpec", _wrap_SBModule_SetPlatformFileSpec, METH_VARARGS, "SBModule_SetPlatformFileSpec(SBModule self, SBFileSpec platform_file) -> bool"},
-	 { "SBModule_GetRemoteInstallFileSpec", _wrap_SBModule_GetRemoteInstallFileSpec, METH_O, "SBModule_GetRemoteInstallFileSpec(SBModule self) -> SBFileSpec"},
-	 { "SBModule_SetRemoteInstallFileSpec", _wrap_SBModule_SetRemoteInstallFileSpec, METH_VARARGS, "SBModule_SetRemoteInstallFileSpec(SBModule self, SBFileSpec file) -> bool"},
+	 { "SBModule_GetRemoteInstallFileSpec", _wrap_SBModule_GetRemoteInstallFileSpec, METH_O, "\n"
+		"Get accessor for the remote install path for a module.\n"
+		"\n"
+		"When debugging to a remote platform by connecting to a remote\n"
+		"platform, the install path of the module can be set. If the\n"
+		"install path is set, every time the process is about to launch\n"
+		"the target will install this module on the remote platform prior\n"
+		"to launching.\n"
+		"\n"
+		":rtype: :py:class:`SBFileSpec`\n"
+		":return: \n"
+		"        A file specification object.\n"
+		""},
+	 { "SBModule_SetRemoteInstallFileSpec", _wrap_SBModule_SetRemoteInstallFileSpec, METH_VARARGS, "\n"
+		"Set accessor for the remote install path for a module.\n"
+		"\n"
+		"When debugging to a remote platform by connecting to a remote\n"
+		"platform, the install path of the module can be set. If the\n"
+		"install path is set, every time the process is about to launch\n"
+		"the target will install this module on the remote platform prior\n"
+		"to launching.\n"
+		"\n"
+		"If *file* specifies a full path to an install location, the\n"
+		"module will be installed to this path. If the path is relative\n"
+		"(no directory specified, or the path is partial like \"usr/lib\"\n"
+		"or \"./usr/lib\", then the install path will be resolved using\n"
+		"the platform's current working directory as the base path.\n"
+		"\n"
+		":type file: :py:class:`SBFileSpec`, in\n"
+		":param file:\n"
+		"        A file specification object.\n"
+		""},
 	 { "SBModule_GetByteOrder", _wrap_SBModule_GetByteOrder, METH_O, "SBModule_GetByteOrder(SBModule self) -> lldb::ByteOrder"},
 	 { "SBModule_GetAddressByteSize", _wrap_SBModule_GetAddressByteSize, METH_O, "SBModule_GetAddressByteSize(SBModule self) -> uint32_t"},
 	 { "SBModule_GetTriple", _wrap_SBModule_GetTriple, METH_O, "SBModule_GetTriple(SBModule self) -> char const *"},
@@ -98507,7 +99248,24 @@ static PyMethodDef SwigMethods[] = {
 		""},
 	 { "SBModule_FindFirstType", _wrap_SBModule_FindFirstType, METH_VARARGS, "SBModule_FindFirstType(SBModule self, char const * name) -> SBType"},
 	 { "SBModule_FindTypes", _wrap_SBModule_FindTypes, METH_VARARGS, "SBModule_FindTypes(SBModule self, char const * type) -> SBTypeList"},
-	 { "SBModule_GetTypeByID", _wrap_SBModule_GetTypeByID, METH_VARARGS, "SBModule_GetTypeByID(SBModule self, lldb::user_id_t uid) -> SBType"},
+	 { "SBModule_GetTypeByID", _wrap_SBModule_GetTypeByID, METH_VARARGS, "\n"
+		"Get a type using its type ID.\n"
+		"\n"
+		"Each symbol file reader will assign different user IDs to their\n"
+		"types, but it is sometimes useful when debugging type issues to\n"
+		"be able to grab a type using its type ID.\n"
+		"\n"
+		"For DWARF debug info, the type ID is the DIE offset.\n"
+		"\n"
+		":type uid: int, in\n"
+		":param uid:\n"
+		"        The type user ID.\n"
+		"\n"
+		":rtype: :py:class:`SBType`\n"
+		":return: \n"
+		"        An SBType for the given type ID, or an empty SBType if the\n"
+		"        type was not found.\n"
+		""},
 	 { "SBModule_GetBasicType", _wrap_SBModule_GetBasicType, METH_VARARGS, "SBModule_GetBasicType(SBModule self, lldb::BasicType type) -> SBType"},
 	 { "SBModule_GetTypes", _wrap_SBModule_GetTypes, METH_VARARGS, "\n"
 		"SBModule_GetTypes(SBModule self, uint32_t type_mask=eTypeClassAny) -> SBTypeList\n"
@@ -98525,8 +99283,61 @@ static PyMethodDef SwigMethods[] = {
 		"    @return\n"
 		"        A list of types in this module that match type_mask\n"
 		""},
-	 { "SBModule_GetVersion", _wrap_SBModule_GetVersion, METH_O, "SBModule_GetVersion(SBModule self) -> uint32_t"},
-	 { "SBModule_GetSymbolFileSpec", _wrap_SBModule_GetSymbolFileSpec, METH_O, "SBModule_GetSymbolFileSpec(SBModule self) -> SBFileSpec"},
+	 { "SBModule_GetVersion", _wrap_SBModule_GetVersion, METH_O, "\n"
+		"Get the module version numbers.\n"
+		"\n"
+		"Many object files have a set of version numbers that describe\n"
+		"the version of the executable or shared library. Typically there\n"
+		"are major, minor and build, but there may be more. This function\n"
+		"will extract the versions from object files if they are available.\n"
+		"\n"
+		"If *versions* is NULL, or if *num_versions* is 0, the return\n"
+		"value will indicate how many version numbers are available in\n"
+		"this object file. Then a subsequent call can be made to this\n"
+		"function with a value of *versions* and *num_versions* that\n"
+		"has enough storage to store some or all version numbers.\n"
+		"\n"
+		":type versions: int, out\n"
+		":param versions:\n"
+		"        A pointer to an array of uint32_t types that is *num_versions*\n"
+		"        long. If this value is NULL, the return value will indicate\n"
+		"        how many version numbers are required for a subsequent call\n"
+		"        to this function so that all versions can be retrieved. If\n"
+		"        the value is non-NULL, then at most *num_versions* of the\n"
+		"        existing versions numbers will be filled into *versions*.\n"
+		"        If there is no version information available, *versions*\n"
+		"        will be filled with *num_versions* UINT32_MAX values\n"
+		"        and zero will be returned.\n"
+		"\n"
+		":type num_versions: int, in\n"
+		":param num_versions:\n"
+		"        The maximum number of entries to fill into *versions*. If\n"
+		"        this value is zero, then the return value will indicate\n"
+		"        how many version numbers there are in total so another call\n"
+		"        to this function can be make with adequate storage in\n"
+		"        *versions* to get all of the version numbers. If\n"
+		"   *num_versions* is less than the actual number of version\n"
+		"        numbers in this object file, only *num_versions* will be\n"
+		"        filled into *versions* (if *versions* is non-NULL).\n"
+		"\n"
+		":rtype: int\n"
+		":return: \n"
+		"        This function always returns the number of version numbers\n"
+		"        that this object file has regardless of the number of\n"
+		"        version numbers that were copied into *versions*.\n"
+		""},
+	 { "SBModule_GetSymbolFileSpec", _wrap_SBModule_GetSymbolFileSpec, METH_O, "\n"
+		"Get accessor for the symbol file specification.\n"
+		"\n"
+		"When debugging an object file an additional debug information can\n"
+		"be provided in separate file. Therefore if you debugging something\n"
+		"like '/usr/lib/liba.dylib' then debug information can be located\n"
+		"in folder like '/usr/lib/liba.dylib.dSYM/'.\n"
+		"\n"
+		":rtype: :py:class:`SBFileSpec`\n"
+		":return: \n"
+		"        A const reference to the file specification object.\n"
+		""},
 	 { "SBModule_GetObjectFileHeaderAddress", _wrap_SBModule_GetObjectFileHeaderAddress, METH_O, "SBModule_GetObjectFileHeaderAddress(SBModule self) -> SBAddress"},
 	 { "SBModule_GetObjectFileEntryPointAddress", _wrap_SBModule_GetObjectFileEntryPointAddress, METH_O, "SBModule_GetObjectFileEntryPointAddress(SBModule self) -> SBAddress"},
 	 { "SBModule_IsTypeSystemCompatible", _wrap_SBModule_IsTypeSystemCompatible, METH_VARARGS, "SBModule_IsTypeSystemCompatible(SBModule self, lldb::LanguageType language) -> SBError"},
@@ -98632,9 +99443,9 @@ static PyMethodDef SwigMethods[] = {
 		"new_SBMutex(SBMutex rhs) -> SBMutex\n"
 		""},
 	 { "delete_SBMutex", _wrap_delete_SBMutex, METH_O, "delete_SBMutex(SBMutex self)"},
-	 { "SBMutex_IsValid", _wrap_SBMutex_IsValid, METH_O, "SBMutex_IsValid(SBMutex self) -> bool"},
-	 { "SBMutex_lock", _wrap_SBMutex_lock, METH_O, "SBMutex_lock(SBMutex self)"},
-	 { "SBMutex_unlock", _wrap_SBMutex_unlock, METH_O, "SBMutex_unlock(SBMutex self)"},
+	 { "SBMutex_IsValid", _wrap_SBMutex_IsValid, METH_O, "Returns true if this lock has ownership of the underlying mutex."},
+	 { "SBMutex_lock", _wrap_SBMutex_lock, METH_O, "Blocking operation that takes ownership of this lock."},
+	 { "SBMutex_unlock", _wrap_SBMutex_unlock, METH_O, "Releases ownership of this lock."},
 	 { "SBMutex_swigregister", SBMutex_swigregister, METH_O, NULL},
 	 { "SBMutex_swiginit", SBMutex_swiginit, METH_VARARGS, NULL},
 	 { "new_SBPlatformConnectOptions", _wrap_new_SBPlatformConnectOptions, METH_VARARGS, "\n"
@@ -98707,8 +99518,26 @@ static PyMethodDef SwigMethods[] = {
 	 { "SBPlatform_GetFilePermissions", _wrap_SBPlatform_GetFilePermissions, METH_VARARGS, "SBPlatform_GetFilePermissions(SBPlatform self, char const * path) -> uint32_t"},
 	 { "SBPlatform_SetFilePermissions", _wrap_SBPlatform_SetFilePermissions, METH_VARARGS, "SBPlatform_SetFilePermissions(SBPlatform self, char const * path, uint32_t file_permissions) -> SBError"},
 	 { "SBPlatform_GetUnixSignals", _wrap_SBPlatform_GetUnixSignals, METH_O, "SBPlatform_GetUnixSignals(SBPlatform self) -> SBUnixSignals"},
-	 { "SBPlatform_GetEnvironment", _wrap_SBPlatform_GetEnvironment, METH_O, "SBPlatform_GetEnvironment(SBPlatform self) -> SBEnvironment"},
-	 { "SBPlatform_SetLocateModuleCallback", _wrap_SBPlatform_SetLocateModuleCallback, METH_VARARGS, "SBPlatform_SetLocateModuleCallback(SBPlatform self, lldb::SBPlatformLocateModuleCallback callback) -> SBError"},
+	 { "SBPlatform_GetEnvironment", _wrap_SBPlatform_GetEnvironment, METH_O, "\n"
+		"Return the environment variables of the remote platform connection\n"
+		"process.\n"
+		"\n"
+		":rtype: :py:class:`SBEnvironment`\n"
+		":return: \n"
+		"        An lldb::SBEnvironment object which is a copy of the platform's\n"
+		"        environment.\n"
+		""},
+	 { "SBPlatform_SetLocateModuleCallback", _wrap_SBPlatform_SetLocateModuleCallback, METH_VARARGS, "\n"
+		"Set a callback as an implementation for locating module in order to\n"
+		"implement own module cache system. For example, to leverage distributed\n"
+		"build system, to bypass pulling files from remote platform, or to search\n"
+		"symbol files from symbol servers. The target will call this callback to\n"
+		"get a module file and a symbol file, and it will fallback to the LLDB\n"
+		"implementation when this callback failed or returned non-existent file.\n"
+		"This callback can set either module_file_spec or symbol_file_spec, or both\n"
+		"module_file_spec and symbol_file_spec. The callback will be cleared if\n"
+		"nullptr or None is set.\n"
+		""},
 	 { "SBPlatform_swigregister", SBPlatform_swigregister, METH_O, NULL},
 	 { "SBPlatform_swiginit", SBPlatform_swiginit, METH_VARARGS, NULL},
 	 { "new_SBProcess", _wrap_new_SBProcess, METH_VARARGS, "\n"
@@ -98841,8 +99670,25 @@ static PyMethodDef SwigMethods[] = {
 		"    only increase when execution is continued explicitly by the user.  Note, the value\n"
 		"    will always increase, but may increase by more than one per stop.\n"
 		""},
-	 { "SBProcess_GetStopEventForStopID", _wrap_SBProcess_GetStopEventForStopID, METH_VARARGS, "SBProcess_GetStopEventForStopID(SBProcess self, uint32_t stop_id) -> SBEvent"},
-	 { "SBProcess_ForceScriptedState", _wrap_SBProcess_ForceScriptedState, METH_VARARGS, "SBProcess_ForceScriptedState(SBProcess self, lldb::StateType new_state)"},
+	 { "SBProcess_GetStopEventForStopID", _wrap_SBProcess_GetStopEventForStopID, METH_VARARGS, "\n"
+		"Gets the stop event corresponding to stop ID.\n"
+		"Note that it wasn't fully implemented and tracks only the stop\n"
+		"event for the last natural stop ID.\n"
+		"\n"
+		":param [in]: stop_id\n"
+		"      The ID of the stop event to return.\n"
+		"\n"
+		":rtype: :py:class:`SBEvent`\n"
+		":return: \n"
+		"      The stop event corresponding to stop ID.\n"
+		""},
+	 { "SBProcess_ForceScriptedState", _wrap_SBProcess_ForceScriptedState, METH_VARARGS, "\n"
+		"If the process is a scripted process, changes its state to the new state.\n"
+		"No-op otherwise.\n"
+		"\n"
+		":param [in]: new_state\n"
+		"      The new state that the scripted process should be set to.\n"
+		""},
 	 { "SBProcess_ReadMemory", _wrap_SBProcess_ReadMemory, METH_VARARGS, "\n"
 		"SBProcess_ReadMemory(SBProcess self, lldb::addr_t addr, void * buf, SBError error) -> size_t\n"
 		"\n"
@@ -98932,8 +99778,57 @@ static PyMethodDef SwigMethods[] = {
 		""},
 	 { "SBProcess_GetNumSupportedHardwareWatchpoints", _wrap_SBProcess_GetNumSupportedHardwareWatchpoints, METH_VARARGS, "SBProcess_GetNumSupportedHardwareWatchpoints(SBProcess self, SBError error) -> uint32_t"},
 	 { "SBProcess_LoadImage", _wrap_SBProcess_LoadImage, METH_VARARGS, "\n"
-		"SBProcess_LoadImage(SBProcess self, SBFileSpec remote_image_spec, SBError error) -> uint32_t\n"
-		"SBProcess_LoadImage(SBProcess self, SBFileSpec local_image_spec, SBFileSpec remote_image_spec, SBError error) -> uint32_t\n"
+		"*Overload 1:*\n"
+		"Load a shared library into this process.\n"
+		"\n"
+		":type remote_image_spec: :py:class:`SBFileSpec`, in\n"
+		":param remote_image_spec:\n"
+		"        The path for the shared library on the target what you want\n"
+		"        to load.\n"
+		"\n"
+		":type error: :py:class:`SBError`, out\n"
+		":param error:\n"
+		"        An error object that gets filled in with any errors that\n"
+		"        might occur when trying to load the shared library.\n"
+		"\n"
+		":rtype: int\n"
+		":return: \n"
+		"        A token that represents the shared library that can be\n"
+		"        later used to unload the shared library. A value of\n"
+		"        LLDB_INVALID_IMAGE_TOKEN will be returned if the shared\n"
+		"        library can't be opened.\n"
+		"\n"
+		"|\n"
+		"\n"
+		"*Overload 2:*\n"
+		"Load a shared library into this process.\n"
+		"\n"
+		":type local_image_spec: :py:class:`SBFileSpec`, in\n"
+		":param local_image_spec:\n"
+		"        The file spec that points to the shared library that you\n"
+		"        want to load if the library is located on the host. The\n"
+		"        library will be copied over to the location specified by\n"
+		"        remote_image_spec or into the current working directory with\n"
+		"        the same filename if the remote_image_spec isn't specified.\n"
+		"\n"
+		":type remote_image_spec: :py:class:`SBFileSpec`, in\n"
+		":param remote_image_spec:\n"
+		"        If local_image_spec is specified then the location where the\n"
+		"        library should be copied over from the host. If\n"
+		"        local_image_spec isn't specified, then the path for the\n"
+		"        shared library on the target what you want to load.\n"
+		"\n"
+		":type error: :py:class:`SBError`, out\n"
+		":param error:\n"
+		"        An error object that gets filled in with any errors that\n"
+		"        might occur when trying to load the shared library.\n"
+		"\n"
+		":rtype: int\n"
+		":return: \n"
+		"        A token that represents the shared library that can be\n"
+		"        later used to unload the shared library. A value of\n"
+		"        LLDB_INVALID_IMAGE_TOKEN will be returned if the shared\n"
+		"        library can't be opened.\n"
 		""},
 	 { "SBProcess_LoadImageUsingPaths", _wrap_SBProcess_LoadImageUsingPaths, METH_VARARGS, "\n"
 		"SBProcess_LoadImageUsingPaths(SBProcess self, SBFileSpec image_spec, SBStringList paths, SBFileSpec loaded_path, SBError error) -> uint32_t\n"
@@ -98965,11 +99860,56 @@ static PyMethodDef SwigMethods[] = {
 	 { "SBProcess_GetHistoryThreads", _wrap_SBProcess_GetHistoryThreads, METH_VARARGS, "SBProcess_GetHistoryThreads(SBProcess self, lldb::addr_t addr) -> SBThreadCollection"},
 	 { "SBProcess_IsInstrumentationRuntimePresent", _wrap_SBProcess_IsInstrumentationRuntimePresent, METH_VARARGS, "SBProcess_IsInstrumentationRuntimePresent(SBProcess self, lldb::InstrumentationRuntimeType type) -> bool"},
 	 { "SBProcess_SaveCore", _wrap_SBProcess_SaveCore, METH_VARARGS, "\n"
-		"SBProcess_SaveCore(SBProcess self, char const * file_name, char const * flavor, lldb::SaveCoreStyle core_style) -> SBError\n"
-		"SBProcess_SaveCore(SBProcess self, char const * file_name) -> SBError\n"
-		"SBProcess_SaveCore(SBProcess self, SBSaveCoreOptions options) -> SBError\n"
+		"*Overload 1:*\n"
+		"Save the state of the process in a core file.\n"
+		"\n"
+		":type file_name: string, in\n"
+		":param file_name: - The name of the file to save the core file to.\n"
+		"\n"
+		":type flavor: string, in\n"
+		":param flavor: - Specify the flavor of a core file plug-in to save.\n"
+		"    Currently supported flavors include \"mach-o\" and \"minidump\"\n"
+		"\n"
+		":type core_style: int, in\n"
+		":param core_style: - Specify the style of a core file to save.\n"
+		"\n"
+		"|\n"
+		"\n"
+		"*Overload 2:*\n"
+		"Save the state of the process with the a flavor that matches the\n"
+		"current process' main executable (if supported).\n"
+		"\n"
+		":type file_name: string, in\n"
+		":param file_name: - The name of the file to save the core file to.\n"
+		"\n"
+		"|\n"
+		"\n"
+		"*Overload 3:*\n"
+		"Save the state of the process with the desired settings\n"
+		"as defined in the options object.\n"
+		"\n"
+		":type options: :py:class:`SBSaveCoreOptions`, in\n"
+		":param options: - The options to use when saving the core file.\n"
 		""},
-	 { "SBProcess_GetMemoryRegionInfo", _wrap_SBProcess_GetMemoryRegionInfo, METH_VARARGS, "SBProcess_GetMemoryRegionInfo(SBProcess self, lldb::addr_t load_addr, SBMemoryRegionInfo region_info) -> SBError"},
+	 { "SBProcess_GetMemoryRegionInfo", _wrap_SBProcess_GetMemoryRegionInfo, METH_VARARGS, "\n"
+		"Query the address load_addr and store the details of the memory\n"
+		"region that contains it in the supplied SBMemoryRegionInfo object.\n"
+		"To iterate over all memory regions use GetMemoryRegionList.\n"
+		"\n"
+		":type load_addr: int, in\n"
+		":param load_addr:\n"
+		"        The address to be queried.\n"
+		"\n"
+		":type region_info: :py:class:`SBMemoryRegionInfo`, out\n"
+		":param region_info:\n"
+		"        A reference to an SBMemoryRegionInfo object that will contain\n"
+		"        the details of the memory region containing load_addr.\n"
+		"\n"
+		":rtype: :py:class:`SBError`\n"
+		":return: \n"
+		"        An error object describes any errors that occurred while\n"
+		"        querying load_addr.\n"
+		""},
 	 { "SBProcess_GetMemoryRegions", _wrap_SBProcess_GetMemoryRegions, METH_O, "\n"
 		"SBProcess_GetMemoryRegions(SBProcess self) -> SBMemoryRegionInfoList\n"
 		"\n"
@@ -98993,7 +99933,16 @@ static PyMethodDef SwigMethods[] = {
 		"        if process_info.IsValid():\n"
 		"            process_info.GetProcessID()\n"
 		""},
-	 { "SBProcess_GetCoreFile", _wrap_SBProcess_GetCoreFile, METH_O, "SBProcess_GetCoreFile(SBProcess self) -> SBFileSpec"},
+	 { "SBProcess_GetCoreFile", _wrap_SBProcess_GetCoreFile, METH_O, "\n"
+		"Get the file specification for the core file that is currently being used\n"
+		"for the process. If the process is not loaded from a core file, then an\n"
+		"invalid file specification will be returned.\n"
+		"\n"
+		":rtype: :py:class:`SBFileSpec`\n"
+		":return: \n"
+		"        The path to the core file for this target or an invalid file spec if\n"
+		"        the process isn't loaded from a core file.\n"
+		""},
 	 { "SBProcess_GetAddressMask", _wrap_SBProcess_GetAddressMask, METH_VARARGS, "\n"
 		"SBProcess_GetAddressMask(SBProcess self, lldb::AddressMaskType type, lldb::AddressMaskRange addr_range=eAddressMaskRangeLow) -> lldb::addr_t\n"
 		"\n"
@@ -99102,8 +100051,35 @@ static PyMethodDef SwigMethods[] = {
 	 { "SBProcessInfoList_swigregister", SBProcessInfoList_swigregister, METH_O, NULL},
 	 { "SBProcessInfoList_swiginit", SBProcessInfoList_swiginit, METH_VARARGS, NULL},
 	 { "new_SBProgress", _wrap_new_SBProgress, METH_VARARGS, "\n"
-		"SBProgress(char const * title, char const * details, SBDebugger debugger)\n"
-		"new_SBProgress(char const * title, char const * details, uint64_t total_units, SBDebugger debugger) -> SBProgress\n"
+		"*Overload 1:*\n"
+		"Construct a progress object with a title, details and a given debugger.\n"
+		":type title: string\n"
+		":param title:\n"
+		"      The title of the progress object.\n"
+		":type details: string\n"
+		":param details:\n"
+		"      The details of the progress object.\n"
+		":type debugger: :py:class:`SBDebugger`\n"
+		":param debugger:\n"
+		"      The debugger for this progress object to report to.\n"
+		"\n"
+		"|\n"
+		"\n"
+		"*Overload 2:*\n"
+		"Construct a progress object with a title, details, the total units of work\n"
+		"to be done, and a given debugger.\n"
+		":type title: string\n"
+		":param title:\n"
+		"      The title of the progress object.\n"
+		":type details: string\n"
+		":param details:\n"
+		"      The details of the progress object.\n"
+		":type total_units: int\n"
+		":param total_units:\n"
+		"      The total number of units of work to be done.\n"
+		":type debugger: :py:class:`SBDebugger`\n"
+		":param debugger:\n"
+		"      The debugger for this progress object to report to.\n"
 		""},
 	 { "delete_SBProgress", _wrap_delete_SBProgress, METH_O, "delete_SBProgress(SBProgress self)"},
 	 { "SBProgress_Increment", _wrap_SBProgress_Increment, METH_VARARGS, "SBProgress_Increment(SBProgress self, uint64_t amount, char const * description=None)"},
@@ -99165,7 +100141,13 @@ static PyMethodDef SwigMethods[] = {
 	 { "SBReproducer_Capture", _wrap_SBReproducer_Capture, METH_O, "SBReproducer_Capture(char const * path) -> char const *"},
 	 { "SBReproducer_PassiveReplay", _wrap_SBReproducer_PassiveReplay, METH_O, "SBReproducer_PassiveReplay(char const * path) -> char const *"},
 	 { "SBReproducer_SetAutoGenerate", _wrap_SBReproducer_SetAutoGenerate, METH_O, "SBReproducer_SetAutoGenerate(bool b) -> bool"},
-	 { "SBReproducer_SetWorkingDirectory", _wrap_SBReproducer_SetWorkingDirectory, METH_O, "SBReproducer_SetWorkingDirectory(char const * path)"},
+	 { "SBReproducer_SetWorkingDirectory", _wrap_SBReproducer_SetWorkingDirectory, METH_O, "\n"
+		"The working directory is set to the current working directory when the\n"
+		"reproducers are initialized. This method allows setting a different\n"
+		"working directory. This is used by the API test suite  which temporarily\n"
+		"changes the directory to where the test lives. This is a NO-OP in every\n"
+		"mode but capture.\n"
+		""},
 	 { "new_SBReproducer", _wrap_new_SBReproducer, METH_NOARGS, "new_SBReproducer() -> SBReproducer"},
 	 { "delete_SBReproducer", _wrap_delete_SBReproducer, METH_O, "delete_SBReproducer(SBReproducer self)"},
 	 { "SBReproducer_swigregister", SBReproducer_swigregister, METH_O, NULL},
@@ -99204,7 +100186,19 @@ static PyMethodDef SwigMethods[] = {
 		"SBSection_GetSectionData(SBSection self, uint64_t offset, uint64_t size) -> SBData\n"
 		""},
 	 { "SBSection_GetSectionType", _wrap_SBSection_GetSectionType, METH_O, "SBSection_GetSectionType(SBSection self) -> lldb::SectionType"},
-	 { "SBSection_GetPermissions", _wrap_SBSection_GetPermissions, METH_O, "SBSection_GetPermissions(SBSection self) -> uint32_t"},
+	 { "SBSection_GetPermissions", _wrap_SBSection_GetPermissions, METH_O, "\n"
+		"Gets the permissions (RWX) of the section of the object file\n"
+		"\n"
+		"Returns a mask of bits of enum lldb::Permissions for this section.\n"
+		"Sections for which permissions are not defined, 0 is returned for\n"
+		"them. The binary representation of this value corresponds to [XRW]\n"
+		"i.e. for a section having read and execute permissions, the value\n"
+		"returned is 6\n"
+		"\n"
+		":rtype: int\n"
+		":return: \n"
+		"        Returns an unsigned value for Permissions for the section.\n"
+		""},
 	 { "SBSection_GetTargetByteSize", _wrap_SBSection_GetTargetByteSize, METH_O, "\n"
 		"SBSection_GetTargetByteSize(SBSection self) -> uint32_t\n"
 		"\n"
@@ -99216,7 +100210,13 @@ static PyMethodDef SwigMethods[] = {
 		"    @return\n"
 		"        The number of host (8-bit) bytes needed to hold a target byte\n"
 		""},
-	 { "SBSection_GetAlignment", _wrap_SBSection_GetAlignment, METH_O, "SBSection_GetAlignment(SBSection self) -> uint32_t"},
+	 { "SBSection_GetAlignment", _wrap_SBSection_GetAlignment, METH_O, "\n"
+		"Return the alignment of the section in bytes\n"
+		"\n"
+		":rtype: int\n"
+		":return: \n"
+		"        The alignment of the section in bytes\n"
+		""},
 	 { "SBSection___eq__", _wrap_SBSection___eq__, METH_VARARGS, "SBSection___eq__(SBSection self, SBSection rhs) -> bool"},
 	 { "SBSection___ne__", _wrap_SBSection___ne__, METH_VARARGS, "SBSection___ne__(SBSection self, SBSection rhs) -> bool"},
 	 { "SBSection_GetDescription", _wrap_SBSection_GetDescription, METH_VARARGS, "SBSection_GetDescription(SBSection self, SBStream description) -> bool"},
@@ -99246,11 +100246,36 @@ static PyMethodDef SwigMethods[] = {
 		"SBStatisticsOptions_GetSummaryOnly(SBStatisticsOptions self) -> bool\n"
 		"Gets whether the statistics only dump a summary.\n"
 		""},
-	 { "SBStatisticsOptions_SetIncludeTargets", _wrap_SBStatisticsOptions_SetIncludeTargets, METH_VARARGS, "SBStatisticsOptions_SetIncludeTargets(SBStatisticsOptions self, bool b)"},
+	 { "SBStatisticsOptions_SetIncludeTargets", _wrap_SBStatisticsOptions_SetIncludeTargets, METH_VARARGS, "\n"
+		"If true, dump statistics for the targets, including breakpoints,\n"
+		"expression evaluations, frame variables, etc.\n"
+		"\n"
+		"Defaults to true, unless the `SummaryOnly` mode is enabled, in which case\n"
+		"this is turned off unless specified.\n"
+		"\n"
+		"If both `IncludeTargets` and `IncludeModules` are true, a list of module\n"
+		"identifiers will be added to the \"targets\" section.\n"
+		""},
 	 { "SBStatisticsOptions_GetIncludeTargets", _wrap_SBStatisticsOptions_GetIncludeTargets, METH_O, "SBStatisticsOptions_GetIncludeTargets(SBStatisticsOptions self) -> bool"},
-	 { "SBStatisticsOptions_SetIncludeModules", _wrap_SBStatisticsOptions_SetIncludeModules, METH_VARARGS, "SBStatisticsOptions_SetIncludeModules(SBStatisticsOptions self, bool b)"},
+	 { "SBStatisticsOptions_SetIncludeModules", _wrap_SBStatisticsOptions_SetIncludeModules, METH_VARARGS, "\n"
+		"If true, dump statistics for the modules, including time and size of\n"
+		"various aspects of the module and debug information, type system, path,\n"
+		"etc.\n"
+		"\n"
+		"Defaults to true, unless the `SummaryOnly` mode is enabled, in which case\n"
+		"this is turned off unless specified.\n"
+		"\n"
+		"If both `IncludeTargets` and `IncludeModules` are true, a list of module\n"
+		"identifiers will be added to the \"targets\" section.\n"
+		""},
 	 { "SBStatisticsOptions_GetIncludeModules", _wrap_SBStatisticsOptions_GetIncludeModules, METH_O, "SBStatisticsOptions_GetIncludeModules(SBStatisticsOptions self) -> bool"},
-	 { "SBStatisticsOptions_SetIncludeTranscript", _wrap_SBStatisticsOptions_SetIncludeTranscript, METH_VARARGS, "SBStatisticsOptions_SetIncludeTranscript(SBStatisticsOptions self, bool b)"},
+	 { "SBStatisticsOptions_SetIncludeTranscript", _wrap_SBStatisticsOptions_SetIncludeTranscript, METH_VARARGS, "\n"
+		"If true and the setting `interpreter.save-transcript` is enabled, include\n"
+		"a JSON array with all commands the user and/or scripts executed during a\n"
+		"debug session.\n"
+		"\n"
+		"Defaults to false.\n"
+		""},
 	 { "SBStatisticsOptions_GetIncludeTranscript", _wrap_SBStatisticsOptions_GetIncludeTranscript, METH_O, "SBStatisticsOptions_GetIncludeTranscript(SBStatisticsOptions self) -> bool"},
 	 { "SBStatisticsOptions_SetReportAllAvailableDebugInfo", _wrap_SBStatisticsOptions_SetReportAllAvailableDebugInfo, METH_VARARGS, "\n"
 		"SBStatisticsOptions_SetReportAllAvailableDebugInfo(SBStatisticsOptions self, bool b)\n"
@@ -99335,18 +100360,52 @@ static PyMethodDef SwigMethods[] = {
 	 { "SBStructuredData_Clear", _wrap_SBStructuredData_Clear, METH_O, "SBStructuredData_Clear(SBStructuredData self)"},
 	 { "SBStructuredData_GetAsJSON", _wrap_SBStructuredData_GetAsJSON, METH_VARARGS, "SBStructuredData_GetAsJSON(SBStructuredData self, SBStream stream) -> SBError"},
 	 { "SBStructuredData_GetDescription", _wrap_SBStructuredData_GetDescription, METH_VARARGS, "SBStructuredData_GetDescription(SBStructuredData self, SBStream stream) -> SBError"},
-	 { "SBStructuredData_GetType", _wrap_SBStructuredData_GetType, METH_O, "SBStructuredData_GetType(SBStructuredData self) -> lldb::StructuredDataType"},
-	 { "SBStructuredData_GetSize", _wrap_SBStructuredData_GetSize, METH_O, "SBStructuredData_GetSize(SBStructuredData self) -> size_t"},
-	 { "SBStructuredData_GetKeys", _wrap_SBStructuredData_GetKeys, METH_VARARGS, "SBStructuredData_GetKeys(SBStructuredData self, SBStringList keys) -> bool"},
-	 { "SBStructuredData_GetValueForKey", _wrap_SBStructuredData_GetValueForKey, METH_VARARGS, "SBStructuredData_GetValueForKey(SBStructuredData self, char const * key) -> SBStructuredData"},
-	 { "SBStructuredData_GetItemAtIndex", _wrap_SBStructuredData_GetItemAtIndex, METH_VARARGS, "SBStructuredData_GetItemAtIndex(SBStructuredData self, size_t idx) -> SBStructuredData"},
-	 { "SBStructuredData_GetUnsignedIntegerValue", _wrap_SBStructuredData_GetUnsignedIntegerValue, METH_VARARGS, "SBStructuredData_GetUnsignedIntegerValue(SBStructuredData self, uint64_t fail_value=0) -> uint64_t"},
-	 { "SBStructuredData_GetSignedIntegerValue", _wrap_SBStructuredData_GetSignedIntegerValue, METH_VARARGS, "SBStructuredData_GetSignedIntegerValue(SBStructuredData self, int64_t fail_value=0) -> int64_t"},
+	 { "SBStructuredData_GetType", _wrap_SBStructuredData_GetType, METH_O, "Return the type of data in this data structure"},
+	 { "SBStructuredData_GetSize", _wrap_SBStructuredData_GetSize, METH_O, "\n"
+		"Return the size (i.e. number of elements) in this data structure\n"
+		"if it is an array or dictionary type. For other types, 0 will be\n"
+		""},
+	 { "SBStructuredData_GetKeys", _wrap_SBStructuredData_GetKeys, METH_VARARGS, "\n"
+		"Fill keys with the keys in this object and return true if this data\n"
+		"structure is a dictionary.  Returns false otherwise.\n"
+		""},
+	 { "SBStructuredData_GetValueForKey", _wrap_SBStructuredData_GetValueForKey, METH_VARARGS, "\n"
+		"Return the value corresponding to a key if this data structure\n"
+		"is a dictionary type.\n"
+		""},
+	 { "SBStructuredData_GetItemAtIndex", _wrap_SBStructuredData_GetItemAtIndex, METH_VARARGS, "\n"
+		"Return the value corresponding to an index if this data structure\n"
+		"is array.\n"
+		""},
+	 { "SBStructuredData_GetUnsignedIntegerValue", _wrap_SBStructuredData_GetUnsignedIntegerValue, METH_VARARGS, "Return the integer value if this data structure is an integer type."},
+	 { "SBStructuredData_GetSignedIntegerValue", _wrap_SBStructuredData_GetSignedIntegerValue, METH_VARARGS, "Return the integer value if this data structure is an integer type."},
 	 { "SBStructuredData_GetIntegerValue", _wrap_SBStructuredData_GetIntegerValue, METH_VARARGS, "SBStructuredData_GetIntegerValue(SBStructuredData self, uint64_t fail_value=0) -> uint64_t"},
-	 { "SBStructuredData_GetFloatValue", _wrap_SBStructuredData_GetFloatValue, METH_VARARGS, "SBStructuredData_GetFloatValue(SBStructuredData self, double fail_value=0.0) -> double"},
-	 { "SBStructuredData_GetBooleanValue", _wrap_SBStructuredData_GetBooleanValue, METH_VARARGS, "SBStructuredData_GetBooleanValue(SBStructuredData self, bool fail_value=False) -> bool"},
-	 { "SBStructuredData_GetStringValue", _wrap_SBStructuredData_GetStringValue, METH_VARARGS, "SBStructuredData_GetStringValue(SBStructuredData self, char * dst) -> size_t"},
-	 { "SBStructuredData_GetGenericValue", _wrap_SBStructuredData_GetGenericValue, METH_O, "SBStructuredData_GetGenericValue(SBStructuredData self) -> SBScriptObject"},
+	 { "SBStructuredData_GetFloatValue", _wrap_SBStructuredData_GetFloatValue, METH_VARARGS, "\n"
+		"Return the floating point value if this data structure is a floating\n"
+		"type.\n"
+		""},
+	 { "SBStructuredData_GetBooleanValue", _wrap_SBStructuredData_GetBooleanValue, METH_VARARGS, "Return the boolean value if this data structure is a boolean type."},
+	 { "SBStructuredData_GetStringValue", _wrap_SBStructuredData_GetStringValue, METH_VARARGS, "\n"
+		"Provides the string value if this data structure is a string type.\n"
+		"\n"
+		":type dst: string, out\n"
+		":param dst:\n"
+		"        pointer where the string value will be written. In case it is null,\n"
+		"        nothing will be written at *dst*.\n"
+		"\n"
+		":type dst_len: int, in\n"
+		":param dst_len:\n"
+		"        max number of characters that can be written at *dst*. In case it is\n"
+		"        zero, nothing will be written at *dst*. If this length is not enough\n"
+		"        to write the complete string value, (*dst_len* - 1) bytes of the\n"
+		"        string value will be written at *dst* followed by a null character.\n"
+		"\n"
+		":rtype: int\n"
+		":return: \n"
+		"        Returns the byte size needed to completely write the string value at\n"
+		"        *dst* in all cases.\n"
+		""},
+	 { "SBStructuredData_GetGenericValue", _wrap_SBStructuredData_GetGenericValue, METH_O, "Return the generic pointer if this data structure is a generic type."},
 	 { "SBStructuredData___repr__", _wrap_SBStructuredData___repr__, METH_O, "SBStructuredData___repr__(SBStructuredData self) -> std::string"},
 	 { "SBStructuredData_swigregister", SBStructuredData_swigregister, METH_O, NULL},
 	 { "SBStructuredData_swiginit", SBStructuredData_swiginit, METH_VARARGS, NULL},
@@ -99364,10 +100423,50 @@ static PyMethodDef SwigMethods[] = {
 		"SBSymbol_GetInstructions(SBSymbol self, SBTarget target) -> SBInstructionList\n"
 		"SBSymbol_GetInstructions(SBSymbol self, SBTarget target, char const * flavor_string) -> SBInstructionList\n"
 		""},
-	 { "SBSymbol_GetStartAddress", _wrap_SBSymbol_GetStartAddress, METH_O, "SBSymbol_GetStartAddress(SBSymbol self) -> SBAddress"},
-	 { "SBSymbol_GetEndAddress", _wrap_SBSymbol_GetEndAddress, METH_O, "SBSymbol_GetEndAddress(SBSymbol self) -> SBAddress"},
-	 { "SBSymbol_GetValue", _wrap_SBSymbol_GetValue, METH_O, "SBSymbol_GetValue(SBSymbol self) -> uint64_t"},
-	 { "SBSymbol_GetSize", _wrap_SBSymbol_GetSize, METH_O, "SBSymbol_GetSize(SBSymbol self) -> uint64_t"},
+	 { "SBSymbol_GetStartAddress", _wrap_SBSymbol_GetStartAddress, METH_O, "\n"
+		"Get the start address of this symbol\n"
+		"\n"
+		":rtype: :py:class:`SBAddress`\n"
+		":return: \n"
+		"      If the symbol's value is not an address, an invalid SBAddress object\n"
+		"      will be returned. If the symbol's value is an address, a valid SBAddress\n"
+		"      object will be returned.\n"
+		""},
+	 { "SBSymbol_GetEndAddress", _wrap_SBSymbol_GetEndAddress, METH_O, "\n"
+		"Get the end address of this symbol\n"
+		"\n"
+		":rtype: :py:class:`SBAddress`\n"
+		":return: \n"
+		"      If the symbol's value is not an address, an invalid SBAddress object\n"
+		"      will be returned. If the symbol's value is an address, a valid SBAddress\n"
+		"      object will be returned.\n"
+		""},
+	 { "SBSymbol_GetValue", _wrap_SBSymbol_GetValue, METH_O, "\n"
+		"Get the raw value of a symbol.\n"
+		"\n"
+		"This accessor allows direct access to the symbol's value from the symbol\n"
+		"table regardless of what the value is. The value can be a file address or\n"
+		"it can be an integer value that depends on what the symbol's type is. Some\n"
+		"symbol values are not addresses, but absolute values or integer values\n"
+		"that can be mean different things. The GetStartAddress() accessor will\n"
+		"only return a valid SBAddress if the symbol's value is an address, so this\n"
+		"accessor provides a way to access the symbol's value when the value is\n"
+		"not an address.\n"
+		"\n"
+		":rtype: int\n"
+		":return: \n"
+		"      Returns the raw integer value of a symbol from the symbol table.\n"
+		""},
+	 { "SBSymbol_GetSize", _wrap_SBSymbol_GetSize, METH_O, "\n"
+		"Get the size of the symbol.\n"
+		"\n"
+		"This accessor allows direct access to the symbol's size from the symbol\n"
+		"table regardless of what the value is (address or integer value).\n"
+		"\n"
+		":rtype: int\n"
+		":return: \n"
+		"      Returns the size of a symbol from the symbol table.\n"
+		""},
 	 { "SBSymbol_GetPrologueByteSize", _wrap_SBSymbol_GetPrologueByteSize, METH_O, "SBSymbol_GetPrologueByteSize(SBSymbol self) -> uint32_t"},
 	 { "SBSymbol_GetType", _wrap_SBSymbol_GetType, METH_O, "SBSymbol_GetType(SBSymbol self) -> lldb::SymbolType"},
 	 { "SBSymbol___eq__", _wrap_SBSymbol___eq__, METH_VARARGS, "SBSymbol___eq__(SBSymbol self, SBSymbol rhs) -> bool"},
@@ -99433,13 +100532,47 @@ static PyMethodDef SwigMethods[] = {
 	 { "SBTarget_GetModuleAtIndexFromEvent", _wrap_SBTarget_GetModuleAtIndexFromEvent, METH_VARARGS, "SBTarget_GetModuleAtIndexFromEvent(uint32_t const idx, SBEvent event) -> SBModule"},
 	 { "SBTarget_GetBroadcasterClassName", _wrap_SBTarget_GetBroadcasterClassName, METH_NOARGS, "SBTarget_GetBroadcasterClassName() -> char const *"},
 	 { "SBTarget_GetProcess", _wrap_SBTarget_GetProcess, METH_O, "SBTarget_GetProcess(SBTarget self) -> SBProcess"},
-	 { "SBTarget_SetCollectingStats", _wrap_SBTarget_SetCollectingStats, METH_VARARGS, "SBTarget_SetCollectingStats(SBTarget self, bool v)"},
-	 { "SBTarget_GetCollectingStats", _wrap_SBTarget_GetCollectingStats, METH_O, "SBTarget_GetCollectingStats(SBTarget self) -> bool"},
-	 { "SBTarget_GetStatistics", _wrap_SBTarget_GetStatistics, METH_VARARGS, "\n"
-		"SBTarget_GetStatistics(SBTarget self) -> SBStructuredData\n"
-		"SBTarget_GetStatistics(SBTarget self, SBStatisticsOptions options) -> SBStructuredData\n"
+	 { "SBTarget_SetCollectingStats", _wrap_SBTarget_SetCollectingStats, METH_VARARGS, "\n"
+		"Sets whether we should collect statistics on lldb or not.\n"
+		"\n"
+		":type v: boolean, in\n"
+		":param v:\n"
+		"        A boolean to control the collection.\n"
 		""},
-	 { "SBTarget_ResetStatistics", _wrap_SBTarget_ResetStatistics, METH_O, "SBTarget_ResetStatistics(SBTarget self)"},
+	 { "SBTarget_GetCollectingStats", _wrap_SBTarget_GetCollectingStats, METH_O, "\n"
+		"Returns whether statistics collection are enabled.\n"
+		"\n"
+		":rtype: boolean\n"
+		":return: \n"
+		"        true if statistics are currently being collected, false\n"
+		"        otherwise.\n"
+		""},
+	 { "SBTarget_GetStatistics", _wrap_SBTarget_GetStatistics, METH_VARARGS, "\n"
+		"*Overload 1:*\n"
+		"Returns a dump of the collected statistics.\n"
+		"\n"
+		":rtype: :py:class:`SBStructuredData`\n"
+		":return: \n"
+		"        A SBStructuredData with the statistics collected.\n"
+		"\n"
+		"|\n"
+		"\n"
+		"*Overload 2:*\n"
+		"Returns a dump of the collected statistics.\n"
+		"\n"
+		":type options: :py:class:`SBStatisticsOptions`, in\n"
+		":param options:\n"
+		"      An objects object that contains all options for the statistics dumping.\n"
+		"\n"
+		":rtype: :py:class:`SBStructuredData`\n"
+		":return: \n"
+		"        A SBStructuredData with the statistics collected.\n"
+		""},
+	 { "SBTarget_ResetStatistics", _wrap_SBTarget_ResetStatistics, METH_O, "\n"
+		"Reset the statistics collected for this target.\n"
+		"This includes clearing symbol table and debug info parsing/index time for\n"
+		"all modules, breakpoint resolve time and target statistics.\n"
+		""},
 	 { "SBTarget_GetPlatform", _wrap_SBTarget_GetPlatform, METH_O, "\n"
 		"SBTarget_GetPlatform(SBTarget self) -> SBPlatform\n"
 		"\n"
@@ -99451,7 +100584,15 @@ static PyMethodDef SwigMethods[] = {
 		"    @return\n"
 		"        A platform object.\n"
 		""},
-	 { "SBTarget_GetEnvironment", _wrap_SBTarget_GetEnvironment, METH_O, "SBTarget_GetEnvironment(SBTarget self) -> SBEnvironment"},
+	 { "SBTarget_GetEnvironment", _wrap_SBTarget_GetEnvironment, METH_O, "\n"
+		"Return the environment variables that would be used to launch a new\n"
+		"process.\n"
+		"\n"
+		":rtype: :py:class:`SBEnvironment`\n"
+		":return: \n"
+		"        An lldb::SBEnvironment object which is a copy of the target's\n"
+		"        environment.\n"
+		""},
 	 { "SBTarget_Install", _wrap_SBTarget_Install, METH_O, "\n"
 		"SBTarget_Install(SBTarget self) -> SBError\n"
 		"\n"
@@ -99685,8 +100826,20 @@ static PyMethodDef SwigMethods[] = {
 	 { "SBTarget_GetABIName", _wrap_SBTarget_GetABIName, METH_O, "SBTarget_GetABIName(SBTarget self) -> char const *"},
 	 { "SBTarget_GetLabel", _wrap_SBTarget_GetLabel, METH_O, "SBTarget_GetLabel(SBTarget self) -> char const *"},
 	 { "SBTarget_SetLabel", _wrap_SBTarget_SetLabel, METH_VARARGS, "SBTarget_SetLabel(SBTarget self, char const * label) -> SBError"},
-	 { "SBTarget_GetMinimumOpcodeByteSize", _wrap_SBTarget_GetMinimumOpcodeByteSize, METH_O, "SBTarget_GetMinimumOpcodeByteSize(SBTarget self) -> uint32_t"},
-	 { "SBTarget_GetMaximumOpcodeByteSize", _wrap_SBTarget_GetMaximumOpcodeByteSize, METH_O, "SBTarget_GetMaximumOpcodeByteSize(SBTarget self) -> uint32_t"},
+	 { "SBTarget_GetMinimumOpcodeByteSize", _wrap_SBTarget_GetMinimumOpcodeByteSize, METH_O, "\n"
+		"Architecture opcode byte size width accessor\n"
+		"\n"
+		":rtype: int\n"
+		":return: \n"
+		"    The minimum size in 8-bit (host) bytes of an opcode.\n"
+		""},
+	 { "SBTarget_GetMaximumOpcodeByteSize", _wrap_SBTarget_GetMaximumOpcodeByteSize, METH_O, "\n"
+		"Architecture opcode byte size width accessor\n"
+		"\n"
+		":rtype: int\n"
+		":return: \n"
+		"    The maximum size in 8-bit (host) bytes of an opcode.\n"
+		""},
 	 { "SBTarget_GetDataByteSize", _wrap_SBTarget_GetDataByteSize, METH_O, "\n"
 		"SBTarget_GetDataByteSize(SBTarget self) -> uint32_t\n"
 		"\n"
@@ -99705,11 +100858,76 @@ static PyMethodDef SwigMethods[] = {
 		"\n"
 		"\n"
 		""},
-	 { "SBTarget_GetMaximumNumberOfChildrenToDisplay", _wrap_SBTarget_GetMaximumNumberOfChildrenToDisplay, METH_O, "SBTarget_GetMaximumNumberOfChildrenToDisplay(SBTarget self) -> uint32_t"},
-	 { "SBTarget_SetSectionLoadAddress", _wrap_SBTarget_SetSectionLoadAddress, METH_VARARGS, "SBTarget_SetSectionLoadAddress(SBTarget self, SBSection section, lldb::addr_t section_base_addr) -> SBError"},
-	 { "SBTarget_ClearSectionLoadAddress", _wrap_SBTarget_ClearSectionLoadAddress, METH_VARARGS, "SBTarget_ClearSectionLoadAddress(SBTarget self, SBSection section) -> SBError"},
-	 { "SBTarget_SetModuleLoadAddress", _wrap_SBTarget_SetModuleLoadAddress, METH_VARARGS, "SBTarget_SetModuleLoadAddress(SBTarget self, SBModule module, uint64_t sections_offset) -> SBError"},
-	 { "SBTarget_ClearModuleLoadAddress", _wrap_SBTarget_ClearModuleLoadAddress, METH_VARARGS, "SBTarget_ClearModuleLoadAddress(SBTarget self, SBModule module) -> SBError"},
+	 { "SBTarget_GetMaximumNumberOfChildrenToDisplay", _wrap_SBTarget_GetMaximumNumberOfChildrenToDisplay, METH_O, "\n"
+		"Gets the target.max-children-count value\n"
+		"It should be used to limit the number of\n"
+		"children of large data structures to be displayed.\n"
+		""},
+	 { "SBTarget_SetSectionLoadAddress", _wrap_SBTarget_SetSectionLoadAddress, METH_VARARGS, "\n"
+		"Set the base load address for a module section.\n"
+		"\n"
+		":type section: :py:class:`SBSection`, in\n"
+		":param section:\n"
+		"        The section whose base load address will be set within this\n"
+		"        target.\n"
+		"\n"
+		":type section_base_addr: int, in\n"
+		":param section_base_addr:\n"
+		"        The base address for the section.\n"
+		"\n"
+		":rtype: :py:class:`SBError`\n"
+		":return: \n"
+		"         An error to indicate success, fail, and any reason for\n"
+		"        failure.\n"
+		""},
+	 { "SBTarget_ClearSectionLoadAddress", _wrap_SBTarget_ClearSectionLoadAddress, METH_VARARGS, "\n"
+		"Clear the base load address for a module section.\n"
+		"\n"
+		":type section: :py:class:`SBSection`, in\n"
+		":param section:\n"
+		"        The section whose base load address will be cleared within\n"
+		"        this target.\n"
+		"\n"
+		":rtype: :py:class:`SBError`\n"
+		":return: \n"
+		"         An error to indicate success, fail, and any reason for\n"
+		"        failure.\n"
+		""},
+	 { "SBTarget_SetModuleLoadAddress", _wrap_SBTarget_SetModuleLoadAddress, METH_VARARGS, "\n"
+		"Slide all file addresses for all module sections so that *module*\n"
+		"appears to loaded at these slide addresses.\n"
+		"\n"
+		"When you need all sections within a module to be loaded at a\n"
+		"rigid slide from the addresses found in the module object file,\n"
+		"this function will allow you to easily and quickly slide all\n"
+		"module sections.\n"
+		"\n"
+		":type module: :py:class:`SBModule`, in\n"
+		":param module:\n"
+		"        The module to load.\n"
+		"\n"
+		":type sections_offset: int, in\n"
+		":param sections_offset:\n"
+		"        An offset that will be applied to all section file addresses\n"
+		"        (the virtual addresses found in the object file itself).\n"
+		"\n"
+		":rtype: :py:class:`SBError`\n"
+		":return: \n"
+		"        An error to indicate success, fail, and any reason for\n"
+		"        failure.\n"
+		""},
+	 { "SBTarget_ClearModuleLoadAddress", _wrap_SBTarget_ClearModuleLoadAddress, METH_VARARGS, "\n"
+		"Clear the section base load addresses for all sections in a module.\n"
+		"\n"
+		":type module: :py:class:`SBModule`, in\n"
+		":param module:\n"
+		"        The module to unload.\n"
+		"\n"
+		":rtype: :py:class:`SBError`\n"
+		":return: \n"
+		"        An error to indicate success, fail, and any reason for\n"
+		"        failure.\n"
+		""},
 	 { "SBTarget_FindFunctions", _wrap_SBTarget_FindFunctions, METH_VARARGS, "\n"
 		"SBTarget_FindFunctions(SBTarget self, char const * name, uint32_t name_type_mask=eFunctionNameTypeAny) -> SBSymbolContextList\n"
 		"\n"
@@ -99756,7 +100974,25 @@ static PyMethodDef SwigMethods[] = {
 		"    @return\n"
 		"        A list of matched variables in an SBValueList.\n"
 		""},
-	 { "SBTarget_FindGlobalFunctions", _wrap_SBTarget_FindGlobalFunctions, METH_VARARGS, "SBTarget_FindGlobalFunctions(SBTarget self, char const * name, uint32_t max_matches, lldb::MatchType matchtype) -> SBSymbolContextList"},
+	 { "SBTarget_FindGlobalFunctions", _wrap_SBTarget_FindGlobalFunctions, METH_VARARGS, "\n"
+		"Find global functions by their name with pattern matching.\n"
+		"\n"
+		":type name: string, in\n"
+		":param name:\n"
+		"        The pattern to search for global or static variables\n"
+		"\n"
+		":type max_matches: int, in\n"
+		":param max_matches:\n"
+		"        Allow the number of matches to be limited to *max_matches*.\n"
+		"\n"
+		":type matchtype: int, in\n"
+		":param matchtype:\n"
+		"        The match type to use.\n"
+		"\n"
+		":rtype: :py:class:`SBSymbolContextList`\n"
+		":return: \n"
+		"        A list of matched variables in an SBValueList.\n"
+		""},
 	 { "SBTarget_Clear", _wrap_SBTarget_Clear, METH_O, "SBTarget_Clear(SBTarget self)"},
 	 { "SBTarget_ResolveFileAddress", _wrap_SBTarget_ResolveFileAddress, METH_VARARGS, "\n"
 		"SBTarget_ResolveFileAddress(SBTarget self, lldb::addr_t file_addr) -> SBAddress\n"
@@ -99768,8 +101004,46 @@ static PyMethodDef SwigMethods[] = {
 		"    @return\n"
 		"        An SBAddress which will be valid if...\n"
 		""},
-	 { "SBTarget_ResolveLoadAddress", _wrap_SBTarget_ResolveLoadAddress, METH_VARARGS, "SBTarget_ResolveLoadAddress(SBTarget self, lldb::addr_t vm_addr) -> SBAddress"},
-	 { "SBTarget_ResolvePastLoadAddress", _wrap_SBTarget_ResolvePastLoadAddress, METH_VARARGS, "SBTarget_ResolvePastLoadAddress(SBTarget self, uint32_t stop_id, lldb::addr_t vm_addr) -> SBAddress"},
+	 { "SBTarget_ResolveLoadAddress", _wrap_SBTarget_ResolveLoadAddress, METH_VARARGS, "\n"
+		"Resolve a current load address into a section offset address.\n"
+		"\n"
+		":type vm_addr: int, in\n"
+		":param vm_addr:\n"
+		"        A virtual address from the current process state that is to\n"
+		"        be translated into a section offset address.\n"
+		"\n"
+		":rtype: :py:class:`SBAddress`\n"
+		":return: \n"
+		"        An SBAddress which will be valid if *vm_addr* was\n"
+		"        successfully resolved into a section offset address, or an\n"
+		"        invalid SBAddress if *vm_addr* doesn't resolve to a section\n"
+		"        in a module.\n"
+		""},
+	 { "SBTarget_ResolvePastLoadAddress", _wrap_SBTarget_ResolvePastLoadAddress, METH_VARARGS, "\n"
+		"Resolve a current load address into a section offset address\n"
+		"using the process stop ID to identify a time in the past.\n"
+		"\n"
+		":type stop_id: int, in\n"
+		":param stop_id:\n"
+		"        Each time a process stops, the process stop ID integer gets\n"
+		"        incremented. These stop IDs are used to identify past times\n"
+		"        and can be used in history objects as a cheap way to store\n"
+		"        the time at which the sample was taken. Specifying\n"
+		"        UINT32_MAX will always resolve the address using the\n"
+		"        currently loaded sections.\n"
+		"\n"
+		":type vm_addr: int, in\n"
+		":param vm_addr:\n"
+		"        A virtual address from the current process state that is to\n"
+		"        be translated into a section offset address.\n"
+		"\n"
+		":rtype: :py:class:`SBAddress`\n"
+		":return: \n"
+		"        An SBAddress which will be valid if *vm_addr* was\n"
+		"        successfully resolved into a section offset address, or an\n"
+		"        invalid SBAddress if *vm_addr* doesn't resolve to a section\n"
+		"        in a module.\n"
+		""},
 	 { "SBTarget_ResolveSymbolContextForAddress", _wrap_SBTarget_ResolveSymbolContextForAddress, METH_VARARGS, "SBTarget_ResolveSymbolContextForAddress(SBTarget self, SBAddress addr, uint32_t resolve_scope) -> SBSymbolContext"},
 	 { "SBTarget_ReadMemory", _wrap_SBTarget_ReadMemory, METH_VARARGS, "\n"
 		"SBTarget_ReadMemory(SBTarget self, SBAddress addr, void * buf, SBError error) -> size_t\n"
@@ -100033,8 +101307,23 @@ static PyMethodDef SwigMethods[] = {
 		""},
 	 { "SBTarget_GetLaunchInfo", _wrap_SBTarget_GetLaunchInfo, METH_O, "SBTarget_GetLaunchInfo(SBTarget self) -> SBLaunchInfo"},
 	 { "SBTarget_SetLaunchInfo", _wrap_SBTarget_SetLaunchInfo, METH_VARARGS, "SBTarget_SetLaunchInfo(SBTarget self, SBLaunchInfo launch_info)"},
-	 { "SBTarget_GetTrace", _wrap_SBTarget_GetTrace, METH_O, "SBTarget_GetTrace(SBTarget self) -> SBTrace"},
-	 { "SBTarget_CreateTrace", _wrap_SBTarget_CreateTrace, METH_VARARGS, "SBTarget_CreateTrace(SBTarget self, SBError error) -> SBTrace"},
+	 { "SBTarget_GetTrace", _wrap_SBTarget_GetTrace, METH_O, "\n"
+		"Get a *SBTrace* object the can manage the processor trace information of\n"
+		"this target.\n"
+		"\n"
+		":rtype: :py:class:`SBTrace`\n"
+		":return: \n"
+		"      The trace object. The returned SBTrace object might not be valid, so it\n"
+		"      should be checked with a call to \"bool SBTrace::IsValid()\".\n"
+		""},
+	 { "SBTarget_CreateTrace", _wrap_SBTarget_CreateTrace, METH_VARARGS, "\n"
+		"Create a *Trace* object for the current target using the using the\n"
+		"default supported tracing technology for this process.\n"
+		"\n"
+		":type error: :py:class:`SBError`, out\n"
+		":param error:\n"
+		"        An error if a Trace already exists or the trace couldn't be created.\n"
+		""},
 	 { "SBTarget_GetAPIMutex", _wrap_SBTarget_GetAPIMutex, METH_O, "SBTarget_GetAPIMutex(SBTarget self) -> SBMutex"},
 	 { "SBTarget___repr__", _wrap_SBTarget___repr__, METH_O, "SBTarget___repr__(SBTarget self) -> std::string"},
 	 { "SBTarget_swigregister", SBTarget_swigregister, METH_O, NULL},
@@ -100257,7 +101546,24 @@ static PyMethodDef SwigMethods[] = {
 		"    lldb driver will present, using the thread-format (stop_format==false)\n"
 		"    or thread-stop-format (stop_format = true).\n"
 		""},
-	 { "SBThread_GetDescriptionWithFormat", _wrap_SBThread_GetDescriptionWithFormat, METH_VARARGS, "SBThread_GetDescriptionWithFormat(SBThread self, SBFormat format, SBStream output) -> SBError"},
+	 { "SBThread_GetDescriptionWithFormat", _wrap_SBThread_GetDescriptionWithFormat, METH_VARARGS, "\n"
+		"Similar to *GetDescription()* but the format of the description can be\n"
+		"configured via the ``format`` parameter. See\n"
+		"https://lldb.llvm.org/use/formatting.html for more information on format\n"
+		"strings.\n"
+		"\n"
+		":type format: :py:class:`SBFormat`, in\n"
+		":param format:\n"
+		"      The format to use for generating the description.\n"
+		"\n"
+		":type output: :py:class:`SBStream`, out\n"
+		":param output:\n"
+		"      The stream where the description will be written to.\n"
+		"\n"
+		":rtype: :py:class:`SBError`\n"
+		":return: \n"
+		"      An error object with an error message in case of failures.\n"
+		""},
 	 { "SBThread_GetStatus", _wrap_SBThread_GetStatus, METH_VARARGS, "SBThread_GetStatus(SBThread self, SBStream status) -> bool"},
 	 { "SBThread_GetExtendedBacktraceThread", _wrap_SBThread_GetExtendedBacktraceThread, METH_VARARGS, "\n"
 		"SBThread_GetExtendedBacktraceThread(SBThread self, char const * type) -> SBThread\n"
@@ -100405,42 +101711,292 @@ static PyMethodDef SwigMethods[] = {
 		""},
 	 { "SBThreadPlan_swigregister", SBThreadPlan_swigregister, METH_O, NULL},
 	 { "SBThreadPlan_swiginit", SBThreadPlan_swiginit, METH_VARARGS, NULL},
-	 { "new_SBTrace", _wrap_new_SBTrace, METH_NOARGS, "new_SBTrace() -> SBTrace"},
-	 { "SBTrace_LoadTraceFromFile", _wrap_SBTrace_LoadTraceFromFile, METH_VARARGS, "SBTrace_LoadTraceFromFile(SBError error, SBDebugger debugger, SBFileSpec trace_description_file) -> SBTrace"},
-	 { "SBTrace_CreateNewCursor", _wrap_SBTrace_CreateNewCursor, METH_VARARGS, "SBTrace_CreateNewCursor(SBTrace self, SBError error, SBThread thread) -> SBTraceCursor"},
-	 { "SBTrace_SaveToDisk", _wrap_SBTrace_SaveToDisk, METH_VARARGS, "SBTrace_SaveToDisk(SBTrace self, SBError error, SBFileSpec bundle_dir, bool compact=False) -> SBFileSpec"},
-	 { "SBTrace_GetStartConfigurationHelp", _wrap_SBTrace_GetStartConfigurationHelp, METH_O, "SBTrace_GetStartConfigurationHelp(SBTrace self) -> char const *"},
+	 { "new_SBTrace", _wrap_new_SBTrace, METH_NOARGS, "Default constructor for an invalid Trace object."},
+	 { "SBTrace_LoadTraceFromFile", _wrap_SBTrace_LoadTraceFromFile, METH_VARARGS, "See SBDebugger::LoadTraceFromFile."},
+	 { "SBTrace_CreateNewCursor", _wrap_SBTrace_CreateNewCursor, METH_VARARGS, "\n"
+		"Get a *TraceCursor* for the given thread's trace.\n"
+		"\n"
+		":type error: :py:class:`SBError`, out\n"
+		":param error:\n"
+		"      This will be set with an error in case of failures.\n"
+		":type thread: :py:class:`SBThread`, in\n"
+		":param thread:\n"
+		"      The thread to get a *TraceCursor* for.\n"
+		":rtype: :py:class:`SBTraceCursor`\n"
+		":return: \n"
+		"        A *SBTraceCursor*. If the thread is not traced or its trace\n"
+		"        information failed to load, an invalid *SBTraceCursor* is returned\n"
+		"        and the ``error`` parameter is set.\n"
+		""},
+	 { "SBTrace_SaveToDisk", _wrap_SBTrace_SaveToDisk, METH_VARARGS, "\n"
+		"Save the trace to the specified directory, which will be created if\n"
+		"needed. This will also create a file <directory>/trace.json with the\n"
+		"main properties of the trace session, along with others files which\n"
+		"contain the actual trace data. The trace.json file can be used later as\n"
+		"input for the \"trace load\" command to load the trace in LLDB, or for the\n"
+		"method *SBDebugger.LoadTraceFromFile()*.\n"
+		"\n"
+		":type error: :py:class:`SBError`, out\n"
+		":param error:\n"
+		"      This will be set with an error in case of failures.\n"
+		"\n"
+		":type bundle_dir: :py:class:`SBFileSpec`, in\n"
+		":param bundle_dir:\n"
+		"      The directory where the trace files will be saved.\n"
+		"\n"
+		":type compact: boolean, in, optional\n"
+		":param compact:\n"
+		"      Try not to save to disk information irrelevant to the traced processes.\n"
+		"      Each trace plug-in implements this in a different fashion.\n"
+		"\n"
+		":rtype: :py:class:`SBFileSpec`\n"
+		":return: \n"
+		"      A *SBFileSpec* pointing to the bundle description file.\n"
+		""},
+	 { "SBTrace_GetStartConfigurationHelp", _wrap_SBTrace_GetStartConfigurationHelp, METH_O, "\n"
+		":rtype: string\n"
+		":return: \n"
+		"        A description of the parameters to use for the *SBTrace::Start*\n"
+		"        method, or **null** if the object is invalid.\n"
+		""},
 	 { "SBTrace_Start", _wrap_SBTrace_Start, METH_VARARGS, "\n"
-		"SBTrace_Start(SBTrace self, SBStructuredData configuration) -> SBError\n"
-		"SBTrace_Start(SBTrace self, SBThread thread, SBStructuredData configuration) -> SBError\n"
+		"*Overload 1:*\n"
+		" Start tracing all current and future threads in a live process using a\n"
+		" provided configuration. This is referred as \"process tracing\" in the\n"
+		" documentation.\n"
+		"\n"
+		" This is equivalent to the command \"process trace start\".\n"
+		"\n"
+		" This operation fails if it is invoked twice in a row without\n"
+		" first stopping the process trace with *SBTrace::Stop()*.\n"
+		"\n"
+		" If a thread is already being traced explicitly, e.g. with\n"
+		"*SBTrace::Start(const* SBThread &thread, const SBStructuredData\n"
+		" &configuration), it is left unaffected by this operation.\n"
+		"\n"
+		" :type configuration: :py:class:`SBStructuredData`, in\n"
+		" :param configuration:\n"
+		"         Dictionary object with custom fields for the corresponding trace\n"
+		"         technology.\n"
+		"\n"
+		"     Full details for the trace start parameters that can be set can be\n"
+		"     retrieved by calling *SBTrace::GetStartConfigurationHelp()*.\n"
+		"\n"
+		" :rtype: :py:class:`SBError`\n"
+		" :return: \n"
+		"         An error explaining any failures.\n"
+		"\n"
+		"|\n"
+		"\n"
+		"*Overload 2:*\n"
+		" Start tracing a specific thread in a live process using a provided\n"
+		" configuration. This is referred as \"thread tracing\" in the documentation.\n"
+		"\n"
+		" This is equivalent to the command \"thread trace start\".\n"
+		"\n"
+		" If the thread is already being traced by a \"process tracing\" operation,\n"
+		" e.g. with *SBTrace::Start(const* SBStructuredData &configuration), this\n"
+		" operation fails.\n"
+		"\n"
+		" :type configuration: :py:class:`SBStructuredData`, in\n"
+		" :param configuration:\n"
+		"         Dictionary object with custom fields for the corresponding trace\n"
+		"         technology.\n"
+		"\n"
+		"     Full details for the trace start parameters that can be set can be\n"
+		"     retrieved by calling *SBTrace::GetStartConfigurationHelp()*.\n"
+		"\n"
+		" :rtype: :py:class:`SBError`\n"
+		" :return: \n"
+		"         An error explaining any failures.\n"
 		""},
 	 { "SBTrace_Stop", _wrap_SBTrace_Stop, METH_VARARGS, "\n"
-		"SBTrace_Stop(SBTrace self) -> SBError\n"
-		"SBTrace_Stop(SBTrace self, SBThread thread) -> SBError\n"
+		"*Overload 1:*\n"
+		"Stop tracing all threads in a live process.\n"
+		"\n"
+		"If a \"process tracing\" operation is active, e.g. *SBTrace::Start(const*\n"
+		"SBStructuredData &configuration), this effectively prevents future threads\n"
+		"from being traced.\n"
+		"\n"
+		"This is equivalent to the command \"process trace stop\".\n"
+		"\n"
+		":rtype: :py:class:`SBError`\n"
+		":return: \n"
+		"        An error explaining any failures.\n"
+		"\n"
+		"|\n"
+		"\n"
+		"*Overload 2:*\n"
+		"Stop tracing a specific thread in a live process regardless of whether the\n"
+		"thread was traced explicitly or as part of a \"process tracing\" operation.\n"
+		"\n"
+		"This is equivalent to the command \"thread trace stop\".\n"
+		"\n"
+		":rtype: :py:class:`SBError`\n"
+		":return: \n"
+		"        An error explaining any failures.\n"
 		""},
 	 { "SBTrace___nonzero__", _wrap_SBTrace___nonzero__, METH_O, "SBTrace___nonzero__(SBTrace self) -> bool"},
 	 { "SBTrace_IsValid", _wrap_SBTrace_IsValid, METH_O, "SBTrace_IsValid(SBTrace self) -> bool"},
 	 { "delete_SBTrace", _wrap_delete_SBTrace, METH_O, "delete_SBTrace(SBTrace self)"},
 	 { "SBTrace_swigregister", SBTrace_swigregister, METH_O, NULL},
 	 { "SBTrace_swiginit", SBTrace_swiginit, METH_VARARGS, NULL},
-	 { "new_SBTraceCursor", _wrap_new_SBTraceCursor, METH_NOARGS, "new_SBTraceCursor() -> SBTraceCursor"},
-	 { "SBTraceCursor_SetForwards", _wrap_SBTraceCursor_SetForwards, METH_VARARGS, "SBTraceCursor_SetForwards(SBTraceCursor self, bool forwards)"},
-	 { "SBTraceCursor_IsForwards", _wrap_SBTraceCursor_IsForwards, METH_O, "SBTraceCursor_IsForwards(SBTraceCursor self) -> bool"},
-	 { "SBTraceCursor_Next", _wrap_SBTraceCursor_Next, METH_O, "SBTraceCursor_Next(SBTraceCursor self)"},
-	 { "SBTraceCursor_HasValue", _wrap_SBTraceCursor_HasValue, METH_O, "SBTraceCursor_HasValue(SBTraceCursor self) -> bool"},
-	 { "SBTraceCursor_GoToId", _wrap_SBTraceCursor_GoToId, METH_VARARGS, "SBTraceCursor_GoToId(SBTraceCursor self, lldb::user_id_t id) -> bool"},
-	 { "SBTraceCursor_HasId", _wrap_SBTraceCursor_HasId, METH_VARARGS, "SBTraceCursor_HasId(SBTraceCursor self, lldb::user_id_t id) -> bool"},
-	 { "SBTraceCursor_GetId", _wrap_SBTraceCursor_GetId, METH_O, "SBTraceCursor_GetId(SBTraceCursor self) -> lldb::user_id_t"},
-	 { "SBTraceCursor_Seek", _wrap_SBTraceCursor_Seek, METH_VARARGS, "SBTraceCursor_Seek(SBTraceCursor self, int64_t offset, lldb::TraceCursorSeekType origin) -> bool"},
-	 { "SBTraceCursor_GetItemKind", _wrap_SBTraceCursor_GetItemKind, METH_O, "SBTraceCursor_GetItemKind(SBTraceCursor self) -> lldb::TraceItemKind"},
-	 { "SBTraceCursor_IsError", _wrap_SBTraceCursor_IsError, METH_O, "SBTraceCursor_IsError(SBTraceCursor self) -> bool"},
-	 { "SBTraceCursor_GetError", _wrap_SBTraceCursor_GetError, METH_O, "SBTraceCursor_GetError(SBTraceCursor self) -> char const *"},
-	 { "SBTraceCursor_IsEvent", _wrap_SBTraceCursor_IsEvent, METH_O, "SBTraceCursor_IsEvent(SBTraceCursor self) -> bool"},
-	 { "SBTraceCursor_GetEventType", _wrap_SBTraceCursor_GetEventType, METH_O, "SBTraceCursor_GetEventType(SBTraceCursor self) -> lldb::TraceEvent"},
-	 { "SBTraceCursor_GetEventTypeAsString", _wrap_SBTraceCursor_GetEventTypeAsString, METH_O, "SBTraceCursor_GetEventTypeAsString(SBTraceCursor self) -> char const *"},
-	 { "SBTraceCursor_IsInstruction", _wrap_SBTraceCursor_IsInstruction, METH_O, "SBTraceCursor_IsInstruction(SBTraceCursor self) -> bool"},
-	 { "SBTraceCursor_GetLoadAddress", _wrap_SBTraceCursor_GetLoadAddress, METH_O, "SBTraceCursor_GetLoadAddress(SBTraceCursor self) -> lldb::addr_t"},
-	 { "SBTraceCursor_GetCPU", _wrap_SBTraceCursor_GetCPU, METH_O, "SBTraceCursor_GetCPU(SBTraceCursor self) -> lldb::cpu_id_t"},
+	 { "new_SBTraceCursor", _wrap_new_SBTraceCursor, METH_NOARGS, "Default constructor for an invalid *SBTraceCursor* object."},
+	 { "SBTraceCursor_SetForwards", _wrap_SBTraceCursor_SetForwards, METH_VARARGS, "\n"
+		"Set the direction to use in the *SBTraceCursor::Next()* method.\n"
+		"\n"
+		":type forwards: boolean, in\n"
+		":param forwards:\n"
+		"        If **true**, then the traversal will be forwards, otherwise backwards.\n"
+		""},
+	 { "SBTraceCursor_IsForwards", _wrap_SBTraceCursor_IsForwards, METH_O, "\n"
+		"Check if the direction to use in the *SBTraceCursor::Next()* method is\n"
+		"forwards.\n"
+		"\n"
+		":rtype: boolean\n"
+		":return: \n"
+		"        **true** if the current direction is forwards, **false** if backwards.\n"
+		""},
+	 { "SBTraceCursor_Next", _wrap_SBTraceCursor_Next, METH_O, "\n"
+		"Move the cursor to the next item (instruction or error).\n"
+		"\n"
+		"Direction:\n"
+		"    The traversal is done following the current direction of the trace. If\n"
+		"    it is forwards, the instructions are visited forwards\n"
+		"    chronologically. Otherwise, the traversal is done in\n"
+		"    the opposite direction. By default, a cursor moves backwards unless\n"
+		"    changed with *SBTraceCursor::SetForwards()*.\n"
+		""},
+	 { "SBTraceCursor_HasValue", _wrap_SBTraceCursor_HasValue, METH_O, "\n"
+		":rtype: boolean\n"
+		":return: \n"
+		"        **true** if the cursor is pointing to a valid item. **false** if the\n"
+		"        cursor has reached the end of the trace.\n"
+		""},
+	 { "SBTraceCursor_GoToId", _wrap_SBTraceCursor_GoToId, METH_VARARGS, "\n"
+		" Instruction identifiers:\n"
+		"\n"
+		" When building complex higher level tools, fast random accesses in the\n"
+		" trace might be needed, for which each instruction requires a unique\n"
+		" identifier within its thread trace. For example, a tool might want to\n"
+		" repeatedly inspect random consecutive portions of a trace. This means that\n"
+		" it will need to first move quickly to the beginning of each section and\n"
+		" then start its iteration. Given that the number of instructions can be in\n"
+		" the order of hundreds of millions, fast random access is necessary.\n"
+		"\n"
+		" An example of such a tool could be an inspector of the call graph of a\n"
+		" trace, where each call is represented with its start and end instructions.\n"
+		" Inspecting all the instructions of a call requires moving to its first\n"
+		" instruction and then iterating until the last instruction, which following\n"
+		" the pattern explained above.\n"
+		"\n"
+		" Instead of using 0-based indices as identifiers, each Trace plug-in can\n"
+		" decide the nature of these identifiers and thus no assumptions can be made\n"
+		" regarding their ordering and sequentiality. The reason is that an\n"
+		" instruction might be encoded by the plug-in in a way that hides its actual\n"
+		" 0-based index in the trace, but it's still possible to efficiently find\n"
+		" it.\n"
+		"\n"
+		" Requirements:\n"
+		" - For a given thread, no two instructions have the same id.\n"
+		" - In terms of efficiency, moving the cursor to a given id should be as\n"
+		"   fast as possible, but not necessarily O(1). That's why the recommended\n"
+		"   way to traverse sequential instructions is to use the\n"
+		"*SBTraceCursor::Next()* method and only use *SBTraceCursor::GoToId(id)*\n"
+		"   sparingly.\n"
+		" Make the cursor point to the item whose identifier is ``id``.\n"
+		"\n"
+		" :rtype: boolean\n"
+		" :return: \n"
+		"         **true** if the given identifier exists and the cursor effectively\n"
+		"         moved to it. Otherwise, **false** is returned and the cursor now points\n"
+		"         to an invalid item, i.e. calling *HasValue()* will return **false**.\n"
+		""},
+	 { "SBTraceCursor_HasId", _wrap_SBTraceCursor_HasId, METH_VARARGS, "\n"
+		":rtype: boolean\n"
+		":return: \n"
+		"        **true** if and only if there's an instruction item with the given\n"
+		"   ``id``.\n"
+		""},
+	 { "SBTraceCursor_GetId", _wrap_SBTraceCursor_GetId, METH_O, "\n"
+		":rtype: int\n"
+		":return: \n"
+		"        A unique identifier for the instruction or error this cursor is\n"
+		"        pointing to.\n"
+		""},
+	 { "SBTraceCursor_Seek", _wrap_SBTraceCursor_Seek, METH_VARARGS, "\n"
+		"Make the cursor point to an item in the trace based on an origin point and\n"
+		"an offset.\n"
+		"\n"
+		"The resulting position of the trace is\n"
+		"    origin + offset\n"
+		"\n"
+		"If this resulting position would be out of bounds, the trace then points\n"
+		"to an invalid item, i.e. calling *HasValue()* returns **false**.\n"
+		"\n"
+		":type offset: int, in\n"
+		":param offset:\n"
+		"        How many items to move forwards (if positive) or backwards (if\n"
+		"        negative) from the given origin point. For example, if origin is\n"
+		"   **End**, then a negative offset would move backward in the trace, but a\n"
+		"        positive offset would move past the trace to an invalid item.\n"
+		"\n"
+		":type origin: int, in\n"
+		":param origin:\n"
+		"        The reference point to use when moving the cursor.\n"
+		"\n"
+		":rtype: boolean\n"
+		":return: \n"
+		"        **true** if and only if the cursor ends up pointing to a valid item.\n"
+		""},
+	 { "SBTraceCursor_GetItemKind", _wrap_SBTraceCursor_GetItemKind, METH_O, "\n"
+		"Trace item information (instructions, errors and events)\n"
+		"\n"
+		":rtype: int\n"
+		":return: \n"
+		"        The kind of item the cursor is pointing at.\n"
+		""},
+	 { "SBTraceCursor_IsError", _wrap_SBTraceCursor_IsError, METH_O, "\n"
+		":rtype: boolean\n"
+		":return: \n"
+		"        Whether the cursor points to an error or not.\n"
+		""},
+	 { "SBTraceCursor_GetError", _wrap_SBTraceCursor_GetError, METH_O, "\n"
+		":rtype: string\n"
+		":return: \n"
+		"        The error message the cursor is pointing at.\n"
+		""},
+	 { "SBTraceCursor_IsEvent", _wrap_SBTraceCursor_IsEvent, METH_O, "\n"
+		":rtype: boolean\n"
+		":return: \n"
+		"        Whether the cursor points to an event or not.\n"
+		""},
+	 { "SBTraceCursor_GetEventType", _wrap_SBTraceCursor_GetEventType, METH_O, "\n"
+		":rtype: int\n"
+		":return: \n"
+		"        The specific kind of event the cursor is pointing at.\n"
+		""},
+	 { "SBTraceCursor_GetEventTypeAsString", _wrap_SBTraceCursor_GetEventTypeAsString, METH_O, "\n"
+		":rtype: string\n"
+		":return: \n"
+		"        A human-readable description of the event this cursor is pointing at.\n"
+		""},
+	 { "SBTraceCursor_IsInstruction", _wrap_SBTraceCursor_IsInstruction, METH_O, "\n"
+		":rtype: boolean\n"
+		":return: \n"
+		"        Whether the cursor points to an instruction.\n"
+		""},
+	 { "SBTraceCursor_GetLoadAddress", _wrap_SBTraceCursor_GetLoadAddress, METH_O, "\n"
+		":rtype: int\n"
+		":return: \n"
+		"        The load address of the instruction the cursor is pointing at.\n"
+		""},
+	 { "SBTraceCursor_GetCPU", _wrap_SBTraceCursor_GetCPU, METH_O, "\n"
+		":rtype: int\n"
+		":return: \n"
+		"       The requested CPU id, or LLDB_INVALID_CPU_ID if this information is\n"
+		"       not available for the current item.\n"
+		""},
 	 { "SBTraceCursor_IsValid", _wrap_SBTraceCursor_IsValid, METH_O, "SBTraceCursor_IsValid(SBTraceCursor self) -> bool"},
 	 { "SBTraceCursor___nonzero__", _wrap_SBTraceCursor___nonzero__, METH_O, "SBTraceCursor___nonzero__(SBTraceCursor self) -> bool"},
 	 { "delete_SBTraceCursor", _wrap_delete_SBTraceCursor, METH_O, "delete_SBTraceCursor(SBTraceCursor self)"},
@@ -100934,7 +102490,13 @@ static PyMethodDef SwigMethods[] = {
 		"    * Objective-C: Always returns an invalid SBType.\n"
 		"\n"
 		""},
-	 { "SBType_GetTemplateArgumentValue", _wrap_SBType_GetTemplateArgumentValue, METH_VARARGS, "SBType_GetTemplateArgumentValue(SBType self, SBTarget target, uint32_t idx) -> SBValue"},
+	 { "SBType_GetTemplateArgumentValue", _wrap_SBType_GetTemplateArgumentValue, METH_VARARGS, "\n"
+		"Returns the value of the non-type template parameter at index ``idx``.\n"
+		"If ``idx`` is out-of-bounds or the template parameter doesn't have\n"
+		"a value, returns an empty SBValue.\n"
+		"\n"
+		"This function will expand parameter packs.\n"
+		""},
 	 { "SBType_GetTemplateArgumentKind", _wrap_SBType_GetTemplateArgumentKind, METH_VARARGS, "\n"
 		"SBType_GetTemplateArgumentKind(SBType self, uint32_t idx) -> lldb::TemplateArgumentKind\n"
 		"Returns the kind of the template argument with the given index.\n"
@@ -101306,6 +102868,8 @@ static PyMethodDef SwigMethods[] = {
 	 { "SBTypeSummary_SetSummaryString", _wrap_SBTypeSummary_SetSummaryString, METH_VARARGS, "SBTypeSummary_SetSummaryString(SBTypeSummary self, char const * data)"},
 	 { "SBTypeSummary_SetFunctionName", _wrap_SBTypeSummary_SetFunctionName, METH_VARARGS, "SBTypeSummary_SetFunctionName(SBTypeSummary self, char const * data)"},
 	 { "SBTypeSummary_SetFunctionCode", _wrap_SBTypeSummary_SetFunctionCode, METH_VARARGS, "SBTypeSummary_SetFunctionCode(SBTypeSummary self, char const * data)"},
+	 { "SBTypeSummary_GetPtrMatchDepth", _wrap_SBTypeSummary_GetPtrMatchDepth, METH_O, "SBTypeSummary_GetPtrMatchDepth(SBTypeSummary self) -> uint32_t"},
+	 { "SBTypeSummary_SetPtrMatchDepth", _wrap_SBTypeSummary_SetPtrMatchDepth, METH_VARARGS, "SBTypeSummary_SetPtrMatchDepth(SBTypeSummary self, uint32_t ptr_match_depth)"},
 	 { "SBTypeSummary_GetOptions", _wrap_SBTypeSummary_GetOptions, METH_O, "SBTypeSummary_GetOptions(SBTypeSummary self) -> uint32_t"},
 	 { "SBTypeSummary_SetOptions", _wrap_SBTypeSummary_SetOptions, METH_VARARGS, "SBTypeSummary_SetOptions(SBTypeSummary self, uint32_t arg2)"},
 	 { "SBTypeSummary_GetDescription", _wrap_SBTypeSummary_GetDescription, METH_VARARGS, "SBTypeSummary_GetDescription(SBTypeSummary self, SBStream description, lldb::DescriptionLevel description_level) -> bool"},
@@ -101573,13 +103137,51 @@ static PyMethodDef SwigMethods[] = {
 		"        An empty SBData otherwise.\n"
 		""},
 	 { "SBValue_SetData", _wrap_SBValue_SetData, METH_VARARGS, "SBValue_SetData(SBValue self, SBData data, SBError error) -> bool"},
-	 { "SBValue_Clone", _wrap_SBValue_Clone, METH_VARARGS, "SBValue_Clone(SBValue self, char const * new_name) -> SBValue"},
+	 { "SBValue_Clone", _wrap_SBValue_Clone, METH_VARARGS, "\n"
+		"Creates a copy of the SBValue with a new name and setting the current\n"
+		"SBValue as its parent. It should be used when we want to change the\n"
+		"name of a SBValue without modifying the actual SBValue itself\n"
+		"(e.g. sythetic child provider).\n"
+		""},
 	 { "SBValue_GetDeclaration", _wrap_SBValue_GetDeclaration, METH_O, "SBValue_GetDeclaration(SBValue self) -> SBDeclaration"},
-	 { "SBValue_MightHaveChildren", _wrap_SBValue_MightHaveChildren, METH_O, "SBValue_MightHaveChildren(SBValue self) -> bool"},
+	 { "SBValue_MightHaveChildren", _wrap_SBValue_MightHaveChildren, METH_O, "\n"
+		"Find out if a SBValue might have children.\n"
+		"\n"
+		"This call is much more efficient than GetNumChildren() as it\n"
+		"doesn't need to complete the underlying type. This is designed\n"
+		"to be used in a UI environment in order to detect if the\n"
+		"disclosure triangle should be displayed or not.\n"
+		"\n"
+		"This function returns true for class, union, structure,\n"
+		"pointers, references, arrays and more. Again, it does so without\n"
+		"doing any expensive type completion.\n"
+		"\n"
+		":rtype: boolean\n"
+		":return: \n"
+		"        Returns **true** if the SBValue might have children, or\n"
+		"   **false** otherwise.\n"
+		""},
 	 { "SBValue_IsRuntimeSupportValue", _wrap_SBValue_IsRuntimeSupportValue, METH_O, "SBValue_IsRuntimeSupportValue(SBValue self) -> bool"},
 	 { "SBValue_GetNumChildren", _wrap_SBValue_GetNumChildren, METH_VARARGS, "\n"
-		"SBValue_GetNumChildren(SBValue self) -> uint32_t\n"
-		"SBValue_GetNumChildren(SBValue self, uint32_t max) -> uint32_t\n"
+		"*Overload 1:*\n"
+		"Return the number of children of this variable. Note that for some\n"
+		"variables this operation can be expensive. If possible, prefer calling\n"
+		"GetNumChildren(max) with the maximum number of children you are interested\n"
+		"in.\n"
+		"\n"
+		"|\n"
+		"\n"
+		"*Overload 2:*\n"
+		"Return the numer of children of this variable, with a hint that the\n"
+		"caller is interested in at most *max* children. Use this function to\n"
+		"avoid expensive child computations in some cases. For example, if you know\n"
+		"you will only ever display 100 elements, calling GetNumChildren(100) can\n"
+		"avoid enumerating all the other children. If the returned value is smaller\n"
+		"than *max*, then it represents the true number of children, otherwise it\n"
+		"indicates that their number is at least *max*. Do not assume the returned\n"
+		"number will always be less than or equal to *max*, as the implementation\n"
+		"may choose to return a larger (but still smaller than the actual number of\n"
+		"children) value.\n"
 		""},
 	 { "SBValue_GetOpaqueType", _wrap_SBValue_GetOpaqueType, METH_O, "SBValue_GetOpaqueType(SBValue self) -> void *"},
 	 { "SBValue_GetTarget", _wrap_SBValue_GetTarget, METH_O, "SBValue_GetTarget(SBValue self) -> SBTarget"},
@@ -101614,7 +103216,52 @@ static PyMethodDef SwigMethods[] = {
 		"    Find and watch the location pointed to by a variable.\n"
 		"    It returns an SBWatchpoint, which may be invalid.\n"
 		""},
-	 { "SBValue_GetVTable", _wrap_SBValue_GetVTable, METH_O, "SBValue_GetVTable(SBValue self) -> SBValue"},
+	 { "SBValue_GetVTable", _wrap_SBValue_GetVTable, METH_O, "\n"
+		"If this value represents a C++ class that has a vtable, return an value\n"
+		"that represents the virtual function table.\n"
+		"\n"
+		"SBValue::GetError() will be in the success state if this value represents\n"
+		"a C++ class with a vtable, or an appropriate error describing that the\n"
+		"object isn't a C++ class with a vtable or not a C++ class.\n"
+		"\n"
+		"SBValue::GetName() will be the demangled symbol name for the virtual\n"
+		"function table like \"vtable for <classname>\".\n"
+		"\n"
+		"SBValue::GetValue() will be the address of the first vtable entry if the\n"
+		"current SBValue is a class with a vtable, or nothing the current SBValue\n"
+		"is not a C++ class or not a C++ class that has a vtable.\n"
+		"\n"
+		"SBValue::GetValueAtUnsigned(...) will return the address of the first\n"
+		"vtable entry.\n"
+		"\n"
+		"SBValue::GetLoadAddress() will return the address of the vtable pointer\n"
+		"found in the parent SBValue.\n"
+		"\n"
+		"SBValue::GetNumChildren() will return the number of virtual function\n"
+		"pointers in the vtable, or zero on error.\n"
+		"\n"
+		"SBValue::GetChildAtIndex(...) will return each virtual function pointer\n"
+		"as a SBValue object.\n"
+		"\n"
+		"The child SBValue objects will have the following values:\n"
+		"\n"
+		"SBValue::GetError() will indicate success if the vtable entry was\n"
+		"successfully read from memory, or an error if not.\n"
+		"\n"
+		"SBValue::GetName() will be the vtable function index in the form \"[%u]\"\n"
+		"where %u is the index.\n"
+		"\n"
+		"SBValue::GetValue() will be the virtual function pointer value as a\n"
+		"string.\n"
+		"\n"
+		"SBValue::GetValueAtUnsigned(...) will return the virtual function\n"
+		"pointer value.\n"
+		"\n"
+		"SBValue::GetLoadAddress() will return the address of the virtual function\n"
+		"pointer.\n"
+		"\n"
+		"SBValue::GetNumChildren() returns 0\n"
+		""},
 	 { "SBValue___repr__", _wrap_SBValue___repr__, METH_O, "SBValue___repr__(SBValue self) -> std::string"},
 	 { "SBValue_swigregister", SBValue_swigregister, METH_O, NULL},
 	 { "SBValue_swiginit", SBValue_swiginit, METH_VARARGS, NULL},
@@ -101987,6 +103634,7 @@ static swig_type_info _swigt__p_std__unique_ptrT_lldb_private__File_t = {"_p_std
 static swig_type_info _swigt__p_std__unique_ptrT_lldb_private__JITLoaderList_t = {"_p_std__unique_ptrT_lldb_private__JITLoaderList_t", "lldb::JITLoaderListUP *|std::unique_ptr< lldb_private::JITLoaderList > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__unique_ptrT_lldb_private__MemoryRegionInfo_t = {"_p_std__unique_ptrT_lldb_private__MemoryRegionInfo_t", "lldb::MemoryRegionInfoUP *|std::unique_ptr< lldb_private::MemoryRegionInfo > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__unique_ptrT_lldb_private__OperatingSystem_t = {"_p_std__unique_ptrT_lldb_private__OperatingSystem_t", "lldb::OperatingSystemUP *|std::unique_ptr< lldb_private::OperatingSystem > *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_std__unique_ptrT_lldb_private__ProtocolServer_t = {"_p_std__unique_ptrT_lldb_private__ProtocolServer_t", "lldb::ProtocolServerUP *|std::unique_ptr< lldb_private::ProtocolServer > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__unique_ptrT_lldb_private__ScriptedPlatformInterface_t = {"_p_std__unique_ptrT_lldb_private__ScriptedPlatformInterface_t", "lldb::ScriptedPlatformInterfaceUP *|std::unique_ptr< lldb_private::ScriptedPlatformInterface > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__unique_ptrT_lldb_private__ScriptedProcessInterface_t = {"_p_std__unique_ptrT_lldb_private__ScriptedProcessInterface_t", "lldb::ScriptedProcessInterfaceUP *|std::unique_ptr< lldb_private::ScriptedProcessInterface > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__unique_ptrT_lldb_private__SectionList_t = {"_p_std__unique_ptrT_lldb_private__SectionList_t", "lldb::SectionListUP *|std::unique_ptr< lldb_private::SectionList > *", 0, 0, (void*)0, 0};
@@ -102246,6 +103894,7 @@ static swig_type_info *swig_type_initial[] = {
   &_swigt__p_std__unique_ptrT_lldb_private__JITLoaderList_t,
   &_swigt__p_std__unique_ptrT_lldb_private__MemoryRegionInfo_t,
   &_swigt__p_std__unique_ptrT_lldb_private__OperatingSystem_t,
+  &_swigt__p_std__unique_ptrT_lldb_private__ProtocolServer_t,
   &_swigt__p_std__unique_ptrT_lldb_private__ScriptedPlatformInterface_t,
   &_swigt__p_std__unique_ptrT_lldb_private__ScriptedProcessInterface_t,
   &_swigt__p_std__unique_ptrT_lldb_private__SectionList_t,
@@ -102505,6 +104154,7 @@ static swig_cast_info _swigc__p_std__unique_ptrT_lldb_private__File_t[] = {  {&_
 static swig_cast_info _swigc__p_std__unique_ptrT_lldb_private__JITLoaderList_t[] = {  {&_swigt__p_std__unique_ptrT_lldb_private__JITLoaderList_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__unique_ptrT_lldb_private__MemoryRegionInfo_t[] = {  {&_swigt__p_std__unique_ptrT_lldb_private__MemoryRegionInfo_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__unique_ptrT_lldb_private__OperatingSystem_t[] = {  {&_swigt__p_std__unique_ptrT_lldb_private__OperatingSystem_t, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_std__unique_ptrT_lldb_private__ProtocolServer_t[] = {  {&_swigt__p_std__unique_ptrT_lldb_private__ProtocolServer_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__unique_ptrT_lldb_private__ScriptedPlatformInterface_t[] = {  {&_swigt__p_std__unique_ptrT_lldb_private__ScriptedPlatformInterface_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__unique_ptrT_lldb_private__ScriptedProcessInterface_t[] = {  {&_swigt__p_std__unique_ptrT_lldb_private__ScriptedProcessInterface_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__unique_ptrT_lldb_private__SectionList_t[] = {  {&_swigt__p_std__unique_ptrT_lldb_private__SectionList_t, 0, 0, 0},{0, 0, 0, 0}};
@@ -102764,6 +104414,7 @@ static swig_cast_info *swig_cast_initial[] = {
   _swigc__p_std__unique_ptrT_lldb_private__JITLoaderList_t,
   _swigc__p_std__unique_ptrT_lldb_private__MemoryRegionInfo_t,
   _swigc__p_std__unique_ptrT_lldb_private__OperatingSystem_t,
+  _swigc__p_std__unique_ptrT_lldb_private__ProtocolServer_t,
   _swigc__p_std__unique_ptrT_lldb_private__ScriptedPlatformInterface_t,
   _swigc__p_std__unique_ptrT_lldb_private__ScriptedProcessInterface_t,
   _swigc__p_std__unique_ptrT_lldb_private__SectionList_t,
@@ -103722,6 +105373,8 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "eArgTypeModule",SWIG_From_int(static_cast< int >(lldb::eArgTypeModule)));
   SWIG_Python_SetConstant(d, "eArgTypeCPUName",SWIG_From_int(static_cast< int >(lldb::eArgTypeCPUName)));
   SWIG_Python_SetConstant(d, "eArgTypeCPUFeatures",SWIG_From_int(static_cast< int >(lldb::eArgTypeCPUFeatures)));
+  SWIG_Python_SetConstant(d, "eArgTypeManagedPlugin",SWIG_From_int(static_cast< int >(lldb::eArgTypeManagedPlugin)));
+  SWIG_Python_SetConstant(d, "eArgTypeProtocol",SWIG_From_int(static_cast< int >(lldb::eArgTypeProtocol)));
   SWIG_Python_SetConstant(d, "eArgTypeLastArg",SWIG_From_int(static_cast< int >(lldb::eArgTypeLastArg)));
   SWIG_Python_SetConstant(d, "eSymbolTypeAny",SWIG_From_int(static_cast< int >(lldb::eSymbolTypeAny)));
   SWIG_Python_SetConstant(d, "eSymbolTypeInvalid",SWIG_From_int(static_cast< int >(lldb::eSymbolTypeInvalid)));
@@ -103818,6 +105471,7 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "eSectionTypeLLDBTypeSummaries",SWIG_From_int(static_cast< int >(lldb::eSectionTypeLLDBTypeSummaries)));
   SWIG_Python_SetConstant(d, "eSectionTypeLLDBFormatters",SWIG_From_int(static_cast< int >(lldb::eSectionTypeLLDBFormatters)));
   SWIG_Python_SetConstant(d, "eSectionTypeSwiftModules",SWIG_From_int(static_cast< int >(lldb::eSectionTypeSwiftModules)));
+  SWIG_Python_SetConstant(d, "eSectionTypeWasmName",SWIG_From_int(static_cast< int >(lldb::eSectionTypeWasmName)));
   SWIG_Python_SetConstant(d, "eEmulateInstructionOptionNone",SWIG_From_int(static_cast< int >(lldb::eEmulateInstructionOptionNone)));
   SWIG_Python_SetConstant(d, "eEmulateInstructionOptionAutoAdvancePC",SWIG_From_int(static_cast< int >(lldb::eEmulateInstructionOptionAutoAdvancePC)));
   SWIG_Python_SetConstant(d, "eEmulateInstructionOptionIgnoreConditions",SWIG_From_int(static_cast< int >(lldb::eEmulateInstructionOptionIgnoreConditions)));
