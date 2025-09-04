@@ -47,6 +47,13 @@
 #define __NOEXCEPT throw()
 #endif
 
+#undef _Returns_twice
+#if __cplusplus >= 201103L
+#define _Returns_twice [[gnu::returns_twice]]
+#else
+#define _Returns_twice __attribute__((returns_twice))
+#endif
+
 // This macro serves as a generic cast implementation for use in both C and C++,
 // similar to `__BIONIC_CAST` in Android.
 #undef __LLVM_LIBC_CAST

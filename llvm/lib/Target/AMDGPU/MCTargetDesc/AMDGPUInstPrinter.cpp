@@ -80,12 +80,9 @@ void AMDGPUInstPrinter::printFP64ImmOperand(const MCInst *MI, unsigned OpNo,
                                             const MCSubtargetInfo &STI,
                                             raw_ostream &O) {
   // KIMM64
-  // This part needs to align with AMDGPUInstPrinter::printImmediate64.
+  const MCInstrDesc &Desc = MII.get(MI->getOpcode());
   uint64_t Imm = MI->getOperand(OpNo).getImm();
-  if (STI.hasFeature(AMDGPU::Feature64BitLiterals) && Lo_32(Imm))
-    O << "lit64(" << formatHex(static_cast<uint64_t>(Imm)) << ')';
-  else
-    O << formatHex(static_cast<uint64_t>(Hi_32(Imm)));
+  printLiteral64(Desc, Imm, STI, O, /*IsFP=*/true);
 }
 
 void AMDGPUInstPrinter::printNamedBit(const MCInst *MI, unsigned OpNo,
@@ -594,7 +591,7 @@ void AMDGPUInstPrinter::printImmediate32(uint32_t Imm,
   O << formatHex(static_cast<uint64_t>(Imm));
 }
 
-void AMDGPUInstPrinter::printImmediate64(uint64_t Imm,
+void AMDGPUInstPrinter::printImmediate64(const MCInstrDesc &Desc, uint64_t Imm,
                                          const MCSubtargetInfo &STI,
                                          raw_ostream &O, bool IsFP) {
   int64_t SImm = static_cast<int64_t>(Imm);
@@ -624,18 +621,24 @@ void AMDGPUInstPrinter::printImmediate64(uint64_t Imm,
   else if (Imm == 0x3fc45f306dc9c882 &&
            STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm))
     O << "0.15915494309189532";
-  else {
-    // This part needs to align with AMDGPUOperand::addLiteralImmOperand.
-    if (IsFP) {
-      if (STI.hasFeature(AMDGPU::Feature64BitLiterals) && Lo_32(Imm))
-        O << "lit64(" << formatHex(static_cast<uint64_t>(Imm)) << ')';
-      else
-        O << formatHex(static_cast<uint64_t>(Hi_32(Imm)));
-      return;
-    }
+  else
+    printLiteral64(Desc, Imm, STI, O, IsFP);
+}
 
-    if (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
-        (!isInt<32>(Imm) || !isUInt<32>(Imm)))
+void AMDGPUInstPrinter::printLiteral64(const MCInstrDesc &Desc, uint64_t Imm,
+                                       const MCSubtargetInfo &STI,
+                                       raw_ostream &O, bool IsFP) {
+  // This part needs to align with AMDGPUOperand::addLiteralImmOperand.
+  bool CanUse64BitLiterals =
+      STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
+      !(Desc.TSFlags & (SIInstrFlags::VOP3 | SIInstrFlags::VOP3P));
+  if (IsFP) {
+    if (CanUse64BitLiterals && Lo_32(Imm))
+      O << "lit64(" << formatHex(static_cast<uint64_t>(Imm)) << ')';
+    else
+      O << formatHex(static_cast<uint64_t>(Hi_32(Imm)));
+  } else {
+    if (CanUse64BitLiterals && (!isInt<32>(Imm) || !isUInt<32>(Imm)))
       O << "lit64(" << formatHex(static_cast<uint64_t>(Imm)) << ')';
     else
       O << formatHex(static_cast<uint64_t>(Imm));
@@ -750,12 +753,12 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
       break;
     case AMDGPU::OPERAND_REG_IMM_INT64:
     case AMDGPU::OPERAND_REG_INLINE_C_INT64:
-      printImmediate64(Op.getImm(), STI, O, false);
+      printImmediate64(Desc, Op.getImm(), STI, O, false);
       break;
     case AMDGPU::OPERAND_REG_IMM_FP64:
     case AMDGPU::OPERAND_REG_INLINE_C_FP64:
     case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
-      printImmediate64(Op.getImm(), STI, O, true);
+      printImmediate64(Desc, Op.getImm(), STI, O, true);
       break;
     case AMDGPU::OPERAND_REG_INLINE_C_INT16:
     case AMDGPU::OPERAND_REG_IMM_INT16:
@@ -792,22 +795,6 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
       // We hit this for the immediate instruction bits that don't yet have a
       // custom printer.
       llvm_unreachable("unexpected immediate operand type");
-    }
-  } else if (Op.isDFPImm()) {
-    double Value = bit_cast<double>(Op.getDFPImm());
-    // We special case 0.0 because otherwise it will be printed as an integer.
-    if (Value == 0.0)
-      O << "0.0";
-    else {
-      const MCInstrDesc &Desc = MII.get(MI->getOpcode());
-      int RCID = Desc.operands()[OpNo].RegClass;
-      unsigned RCBits = AMDGPU::getRegBitWidth(MRI.getRegClass(RCID));
-      if (RCBits == 32)
-        printImmediate32(llvm::bit_cast<uint32_t>((float)Value), STI, O);
-      else if (RCBits == 64)
-        printImmediate64(llvm::bit_cast<uint64_t>(Value), STI, O, true);
-      else
-        llvm_unreachable("Invalid register class size");
     }
   } else if (Op.isExpr()) {
     const MCExpr *Exp = Op.getExpr();
@@ -891,7 +878,7 @@ void AMDGPUInstPrinter::printOperandAndFPInputMods(const MCInst *MI,
     if (OpNo + 1 < MI->getNumOperands() &&
         (InputModifiers & SISrcMods::ABS) == 0) {
       const MCOperand &Op = MI->getOperand(OpNo + 1);
-      NegMnemo = Op.isImm() || Op.isDFPImm();
+      NegMnemo = Op.isImm();
     }
     if (NegMnemo) {
       O << "neg(";
@@ -976,8 +963,10 @@ void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
   unsigned Imm = MI->getOperand(OpNo).getImm();
   const MCInstrDesc &Desc = MII.get(MI->getOpcode());
 
-  if (!AMDGPU::isLegalDPALU_DPPControl(Imm) && AMDGPU::isDPALU_DPP(Desc)) {
-    O << " /* DP ALU dpp only supports row_newbcast */";
+  if (!AMDGPU::isLegalDPALU_DPPControl(STI, Imm) &&
+      AMDGPU::isDPALU_DPP(Desc, STI)) {
+    O << " /* DP ALU dpp only supports "
+      << (isGFX12(STI) ? "row_share" : "row_newbcast") << " */";
     return;
   }
   if (Imm <= DppCtrl::QUAD_PERM_LAST) {
@@ -1391,6 +1380,75 @@ void AMDGPUInstPrinter::printMatrixBFMT(const MCInst *MI, unsigned OpNo,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
   printMatrixFMT(MI, OpNo, STI, O, 'b');
+}
+
+void AMDGPUInstPrinter::printMatrixScale(const MCInst *MI, unsigned OpNo,
+                                         const MCSubtargetInfo &STI,
+                                         raw_ostream &O, char AorB) {
+  auto Imm = MI->getOperand(OpNo).getImm() & 1;
+  if (Imm == 0)
+    return;
+
+  O << " matrix_" << AorB << "_scale:";
+  switch (Imm) {
+  default:
+    O << Imm;
+    break;
+  case WMMA::MatrixScale::MATRIX_SCALE_ROW0:
+    O << "MATRIX_SCALE_ROW0";
+    break;
+  case WMMA::MatrixScale::MATRIX_SCALE_ROW1:
+    O << "MATRIX_SCALE_ROW1";
+    break;
+  }
+}
+
+void AMDGPUInstPrinter::printMatrixAScale(const MCInst *MI, unsigned OpNo,
+                                          const MCSubtargetInfo &STI,
+                                          raw_ostream &O) {
+  printMatrixScale(MI, OpNo, STI, O, 'a');
+}
+
+void AMDGPUInstPrinter::printMatrixBScale(const MCInst *MI, unsigned OpNo,
+                                          const MCSubtargetInfo &STI,
+                                          raw_ostream &O) {
+  printMatrixScale(MI, OpNo, STI, O, 'b');
+}
+
+void AMDGPUInstPrinter::printMatrixScaleFmt(const MCInst *MI, unsigned OpNo,
+                                            const MCSubtargetInfo &STI,
+                                            raw_ostream &O, char AorB) {
+  auto Imm = MI->getOperand(OpNo).getImm() & 3;
+  if (Imm == 0)
+    return;
+
+  O << " matrix_" << AorB << "_scale_fmt:";
+  switch (Imm) {
+  default:
+    O << Imm;
+    break;
+  case WMMA::MatrixScaleFmt::MATRIX_SCALE_FMT_E8:
+    O << "MATRIX_SCALE_FMT_E8";
+    break;
+  case WMMA::MatrixScaleFmt::MATRIX_SCALE_FMT_E5M3:
+    O << "MATRIX_SCALE_FMT_E5M3";
+    break;
+  case WMMA::MatrixScaleFmt::MATRIX_SCALE_FMT_E4M3:
+    O << "MATRIX_SCALE_FMT_E4M3";
+    break;
+  }
+}
+
+void AMDGPUInstPrinter::printMatrixAScaleFmt(const MCInst *MI, unsigned OpNo,
+                                             const MCSubtargetInfo &STI,
+                                             raw_ostream &O) {
+  printMatrixScaleFmt(MI, OpNo, STI, O, 'a');
+}
+
+void AMDGPUInstPrinter::printMatrixBScaleFmt(const MCInst *MI, unsigned OpNo,
+                                             const MCSubtargetInfo &STI,
+                                             raw_ostream &O) {
+  printMatrixScaleFmt(MI, OpNo, STI, O, 'b');
 }
 
 void AMDGPUInstPrinter::printInterpSlot(const MCInst *MI, unsigned OpNum,

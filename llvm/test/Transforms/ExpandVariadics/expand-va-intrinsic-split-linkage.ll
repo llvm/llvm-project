@@ -25,11 +25,11 @@ define void @defn_simple(...) {
 ; OPT-LABEL: define {{[^@]+}}@defn_simple(...) {
 ; OPT-NEXT:  entry:
 ; OPT-NEXT:    %va_start = alloca ptr, align 4
-; OPT-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr %va_start)
+; OPT-NEXT:    call void @llvm.lifetime.start.p0(ptr %va_start)
 ; OPT-NEXT:    call void @llvm.va_start.p0(ptr %va_start)
 ; OPT-NEXT:    %0 = load ptr, ptr %va_start, align 4
 ; OPT-NEXT:    call void @defn_simple.valist(ptr %0)
-; OPT-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr %va_start)
+; OPT-NEXT:    call void @llvm.lifetime.end.p0(ptr %va_start)
 ; OPT-NEXT:    ret void
 ;
 ; ABI-LABEL: define {{[^@]+}}@defn_simple(ptr %varargs) {
@@ -50,11 +50,11 @@ define private void @defn_private_simple(...) {
 ; OPT-LABEL: define {{[^@]+}}@defn_private_simple(...) {
 ; OPT-NEXT:  entry:
 ; OPT-NEXT:    %va_start = alloca ptr, align 4
-; OPT-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr %va_start)
+; OPT-NEXT:    call void @llvm.lifetime.start.p0(ptr %va_start)
 ; OPT-NEXT:    call void @llvm.va_start.p0(ptr %va_start)
 ; OPT-NEXT:    %0 = load ptr, ptr %va_start, align 4
 ; OPT-NEXT:    call void @defn_private_simple.valist(ptr %0)
-; OPT-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr %va_start)
+; OPT-NEXT:    call void @llvm.lifetime.end.p0(ptr %va_start)
 ; OPT-NEXT:    ret void
 ;
 ; ABI-LABEL: define {{[^@]+}}@defn_private_simple(ptr %varargs) {
@@ -75,11 +75,11 @@ define internal void @defn_internal_simple(...) {
 ; OPT-LABEL: define {{[^@]+}}@defn_internal_simple(...) {
 ; OPT-NEXT:  entry:
 ; OPT-NEXT:    %va_start = alloca ptr, align 4
-; OPT-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr %va_start)
+; OPT-NEXT:    call void @llvm.lifetime.start.p0(ptr %va_start)
 ; OPT-NEXT:    call void @llvm.va_start.p0(ptr %va_start)
 ; OPT-NEXT:    %0 = load ptr, ptr %va_start, align 4
 ; OPT-NEXT:    call void @defn_internal_simple.valist(ptr %0)
-; OPT-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr %va_start)
+; OPT-NEXT:    call void @llvm.lifetime.end.p0(ptr %va_start)
 ; OPT-NEXT:    ret void
 ;
 ; ABI-LABEL: define {{[^@]+}}@defn_internal_simple(ptr %varargs) {
@@ -211,11 +211,11 @@ define external void @defn_external_simple(...) {
 ; OPT-LABEL: define {{[^@]+}}@defn_external_simple(...) {
 ; OPT-NEXT:  entry:
 ; OPT-NEXT:    %va_start = alloca ptr, align 4
-; OPT-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr %va_start)
+; OPT-NEXT:    call void @llvm.lifetime.start.p0(ptr %va_start)
 ; OPT-NEXT:    call void @llvm.va_start.p0(ptr %va_start)
 ; OPT-NEXT:    %0 = load ptr, ptr %va_start, align 4
 ; OPT-NEXT:    call void @defn_external_simple.valist(ptr %0)
-; OPT-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr %va_start)
+; OPT-NEXT:    call void @llvm.lifetime.end.p0(ptr %va_start)
 ; OPT-NEXT:    ret void
 ;
 ; ABI-LABEL: define {{[^@]+}}@defn_external_simple(ptr %varargs) {

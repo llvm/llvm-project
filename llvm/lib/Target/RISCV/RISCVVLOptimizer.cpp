@@ -69,6 +69,7 @@ struct OperandInfo {
   // Represent as 1,2,4,8, ... and fractional indicator. This is because
   // EMUL can take on values that don't map to RISCVVType::VLMUL values exactly.
   // For example, a mask operand can have an EMUL less than MF8.
+  // If nullopt, then EMUL isn't used (i.e. only a single scalar is read).
   std::optional<std::pair<unsigned, bool>> EMUL;
 
   unsigned Log2EEW;
@@ -83,12 +84,14 @@ struct OperandInfo {
 
   OperandInfo() = delete;
 
-  static bool EMULAndEEWAreEqual(const OperandInfo &A, const OperandInfo &B) {
-    return A.Log2EEW == B.Log2EEW && A.EMUL == B.EMUL;
-  }
-
-  static bool EEWAreEqual(const OperandInfo &A, const OperandInfo &B) {
-    return A.Log2EEW == B.Log2EEW;
+  /// Return true if the EMUL and EEW produced by \p Def is compatible with the
+  /// EMUL and EEW used by \p User.
+  static bool areCompatible(const OperandInfo &Def, const OperandInfo &User) {
+    if (Def.Log2EEW != User.Log2EEW)
+      return false;
+    if (User.EMUL && Def.EMUL != User.EMUL)
+      return false;
+    return true;
   }
 
   void print(raw_ostream &OS) const {
@@ -98,7 +101,7 @@ struct OperandInfo {
         OS << "f";
       OS << EMUL->first;
     } else
-      OS << "EMUL: unknown\n";
+      OS << "EMUL: none\n";
     OS << ", EEW: " << (1 << Log2EEW);
   }
 };
@@ -419,9 +422,6 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VRGATHER_VI:
   case RISCV::VRGATHER_VV:
   case RISCV::VRGATHER_VX:
-  // Vector Compress Instruction
-  // EEW=SEW.
-  case RISCV::VCOMPRESS_VM:
   // Vector Element Index Instruction
   case RISCV::VID_V:
   // Vector Single-Width Floating-Point Add/Subtract Instructions
@@ -488,8 +488,42 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   // vfirst find-first-set mask bit
   case RISCV::VCPOP_M:
   case RISCV::VFIRST_M:
+  // Vector Bit-manipulation Instructions (Zvbb)
+  // Vector And-Not
+  case RISCV::VANDN_VV:
+  case RISCV::VANDN_VX:
+  // Vector Reverse Bits in Elements
+  case RISCV::VBREV_V:
+  // Vector Reverse Bits in Bytes
+  case RISCV::VBREV8_V:
+  // Vector Reverse Bytes
+  case RISCV::VREV8_V:
+  // Vector Count Leading Zeros
+  case RISCV::VCLZ_V:
+  // Vector Count Trailing Zeros
+  case RISCV::VCTZ_V:
+  // Vector Population Count
+  case RISCV::VCPOP_V:
+  // Vector Rotate Left
+  case RISCV::VROL_VV:
+  case RISCV::VROL_VX:
+  // Vector Rotate Right
+  case RISCV::VROR_VI:
+  case RISCV::VROR_VV:
+  case RISCV::VROR_VX:
+  // Vector Carry-less Multiplication Instructions (Zvbc)
+  // Vector Carry-less Multiply
+  case RISCV::VCLMUL_VV:
+  case RISCV::VCLMUL_VX:
+  // Vector Carry-less Multiply Return High Half
+  case RISCV::VCLMULH_VV:
+  case RISCV::VCLMULH_VX:
     return MILog2SEW;
 
+  // Vector Widening Shift Left Logical (Zvbb)
+  case RISCV::VWSLL_VI:
+  case RISCV::VWSLL_VX:
+  case RISCV::VWSLL_VV:
   // Vector Widening Integer Add/Subtract
   // Def uses EEW=2*SEW . Operands use EEW=SEW.
   case RISCV::VWADDU_VV:
@@ -500,9 +534,6 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VWADD_VX:
   case RISCV::VWSUB_VV:
   case RISCV::VWSUB_VX:
-  case RISCV::VWSLL_VI:
-  case RISCV::VWSLL_VX:
-  case RISCV::VWSLL_VV:
   // Vector Widening Integer Multiply Instructions
   // Destination EEW=2*SEW. Source EEW=SEW.
   case RISCV::VWMUL_VV:
@@ -639,6 +670,12 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VMSOF_M: {
     return MILog2SEW;
   }
+
+  // Vector Compress Instruction
+  // EEW=SEW, except the mask operand has EEW=1. Mask operand is not handled
+  // before this switch.
+  case RISCV::VCOMPRESS_VM:
+    return MO.getOperandNo() == 3 ? 0 : MILog2SEW;
 
   // Vector Iota Instruction
   // EEW=SEW, except the mask operand has EEW=1. Mask operand is not handled
@@ -813,13 +850,7 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VLUXEI32_V:
   case RISCV::VLOXEI32_V:
   case RISCV::VLUXEI64_V:
-  case RISCV::VLOXEI64_V: {
-    for (const MachineMemOperand *MMO : MI.memoperands())
-      if (MMO->isVolatile())
-        return false;
-    return true;
-  }
-
+  case RISCV::VLOXEI64_V:
   // Vector Single-Width Integer Add and Subtract
   case RISCV::VADD_VI:
   case RISCV::VADD_VV:
@@ -872,13 +903,6 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VSEXT_VF4:
   case RISCV::VZEXT_VF8:
   case RISCV::VSEXT_VF8:
-  // Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
-  // FIXME: Add support
-  case RISCV::VMADC_VV:
-  case RISCV::VMADC_VI:
-  case RISCV::VMADC_VX:
-  case RISCV::VMSBC_VV:
-  case RISCV::VMSBC_VX:
   // Vector Narrowing Integer Right Shift Instructions
   case RISCV::VNSRL_WX:
   case RISCV::VNSRL_WI:
@@ -965,6 +989,11 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VSBC_VXM:
   case RISCV::VMSBC_VVM:
   case RISCV::VMSBC_VXM:
+  case RISCV::VMADC_VV:
+  case RISCV::VMADC_VI:
+  case RISCV::VMADC_VX:
+  case RISCV::VMSBC_VV:
+  case RISCV::VMSBC_VX:
   // Vector Widening Integer Multiply-Add Instructions
   case RISCV::VWMACCU_VV:
   case RISCV::VWMACCU_VX:
@@ -973,10 +1002,7 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VWMACCSU_VV:
   case RISCV::VWMACCSU_VX:
   case RISCV::VWMACCUS_VX:
-  // Vector Integer Merge Instructions
-  // FIXME: Add support
   // Vector Integer Move Instructions
-  // FIXME: Add support
   case RISCV::VMV_V_I:
   case RISCV::VMV_V_X:
   case RISCV::VMV_V_V:
@@ -1017,12 +1043,40 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VNCLIP_WV:
   case RISCV::VNCLIP_WX:
   case RISCV::VNCLIP_WI:
-
-  // Vector Crypto
+  // Vector Bit-manipulation Instructions (Zvbb)
+  // Vector And-Not
+  case RISCV::VANDN_VV:
+  case RISCV::VANDN_VX:
+  // Vector Reverse Bits in Elements
+  case RISCV::VBREV_V:
+  // Vector Reverse Bits in Bytes
+  case RISCV::VBREV8_V:
+  // Vector Reverse Bytes
+  case RISCV::VREV8_V:
+  // Vector Count Leading Zeros
+  case RISCV::VCLZ_V:
+  // Vector Count Trailing Zeros
+  case RISCV::VCTZ_V:
+  // Vector Population Count
+  case RISCV::VCPOP_V:
+  // Vector Rotate Left
+  case RISCV::VROL_VV:
+  case RISCV::VROL_VX:
+  // Vector Rotate Right
+  case RISCV::VROR_VI:
+  case RISCV::VROR_VV:
+  case RISCV::VROR_VX:
+  // Vector Widening Shift Left Logical
   case RISCV::VWSLL_VI:
   case RISCV::VWSLL_VX:
   case RISCV::VWSLL_VV:
-
+  // Vector Carry-less Multiplication Instructions (Zvbc)
+  // Vector Carry-less Multiply
+  case RISCV::VCLMUL_VV:
+  case RISCV::VCLMUL_VX:
+  // Vector Carry-less Multiply Return High Half
+  case RISCV::VCLMULH_VV:
+  case RISCV::VCLMULH_VX:
   // Vector Mask Instructions
   // Vector Mask-Register Logical Instructions
   // vmsbf.m set-before-first mask bit
@@ -1210,34 +1264,6 @@ static bool isVectorOpUsedAsScalarOp(const MachineOperand &MO) {
   }
 }
 
-/// Return true if MI may read elements past VL.
-static bool mayReadPastVL(const MachineInstr &MI) {
-  const RISCVVPseudosTable::PseudoInfo *RVV =
-      RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
-  if (!RVV)
-    return true;
-
-  switch (RVV->BaseInstr) {
-  // vslidedown instructions may read elements past VL. They are handled
-  // according to current tail policy.
-  case RISCV::VSLIDEDOWN_VI:
-  case RISCV::VSLIDEDOWN_VX:
-  case RISCV::VSLIDE1DOWN_VX:
-  case RISCV::VFSLIDE1DOWN_VF:
-
-  // vrgather instructions may read the source vector at any index < VLMAX,
-  // regardless of VL.
-  case RISCV::VRGATHER_VI:
-  case RISCV::VRGATHER_VV:
-  case RISCV::VRGATHER_VX:
-  case RISCV::VRGATHEREI16_VV:
-    return true;
-
-  default:
-    return false;
-  }
-}
-
 bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   const MCInstrDesc &Desc = MI.getDesc();
   if (!RISCVII::hasVLOp(Desc.TSFlags) || !RISCVII::hasSEWOp(Desc.TSFlags))
@@ -1258,6 +1284,13 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
     return false;
   }
 
+  for (const MachineMemOperand *MMO : MI.memoperands()) {
+    if (MMO->isVolatile()) {
+      LLVM_DEBUG(dbgs() << "Not a candidate because contains volatile MMO\n");
+      return false;
+    }
+  }
+
   // Some instructions that produce vectors have semantics that make it more
   // difficult to determine whether the VL can be reduced. For example, some
   // instructions, such as reductions, may write lanes past VL to a scalar
@@ -1271,7 +1304,8 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   // TODO: Use a better approach than a white-list, such as adding
   // properties to instructions using something like TSFlags.
   if (!isSupportedInstr(MI)) {
-    LLVM_DEBUG(dbgs() << "Not a candidate due to unsupported instruction\n");
+    LLVM_DEBUG(dbgs() << "Not a candidate due to unsupported instruction: "
+                      << MI);
     return false;
   }
 
@@ -1293,13 +1327,14 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
   const MCInstrDesc &Desc = UserMI.getDesc();
 
   if (!RISCVII::hasVLOp(Desc.TSFlags) || !RISCVII::hasSEWOp(Desc.TSFlags)) {
-    LLVM_DEBUG(dbgs() << "    Abort due to lack of VL, assume that"
+    LLVM_DEBUG(dbgs() << "  Abort due to lack of VL, assume that"
                          " use VLMAX\n");
     return std::nullopt;
   }
 
-  if (mayReadPastVL(UserMI)) {
-    LLVM_DEBUG(dbgs() << "    Abort because used by unsafe instruction\n");
+  if (RISCVII::readsPastVL(
+          TII->get(RISCV::getRVVMCOpcode(UserMI.getOpcode())).TSFlags)) {
+    LLVM_DEBUG(dbgs() << "  Abort because used by unsafe instruction\n");
     return std::nullopt;
   }
 
@@ -1316,7 +1351,7 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
            RISCVII::isFirstDefTiedToFirstUse(UserMI.getDesc()));
     auto DemandedVL = DemandedVLs.lookup(&UserMI);
     if (!DemandedVL || !RISCV::isVLKnownLE(*DemandedVL, VLOp)) {
-      LLVM_DEBUG(dbgs() << "    Abort because user is passthru in "
+      LLVM_DEBUG(dbgs() << "  Abort because user is passthru in "
                            "instruction with demanded tail\n");
       return std::nullopt;
     }
@@ -1399,13 +1434,7 @@ RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
       return std::nullopt;
     }
 
-    // If the operand is used as a scalar operand, then the EEW must be
-    // compatible. Otherwise, the EMUL *and* EEW must be compatible.
-    bool IsVectorOpUsedAsScalarOp = isVectorOpUsedAsScalarOp(UserOp);
-    if ((IsVectorOpUsedAsScalarOp &&
-         !OperandInfo::EEWAreEqual(*ConsumerInfo, *ProducerInfo)) ||
-        (!IsVectorOpUsedAsScalarOp &&
-         !OperandInfo::EMULAndEEWAreEqual(*ConsumerInfo, *ProducerInfo))) {
+    if (!OperandInfo::areCompatible(*ProducerInfo, *ConsumerInfo)) {
       LLVM_DEBUG(
           dbgs()
           << "    Abort due to incompatible information for EMUL or EEW.\n");
@@ -1419,7 +1448,7 @@ RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
 }
 
 bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) const {
-  LLVM_DEBUG(dbgs() << "Trying to reduce VL for " << MI << "\n");
+  LLVM_DEBUG(dbgs() << "Trying to reduce VL for " << MI);
 
   unsigned VLOpNum = RISCVII::getVLOpNum(MI.getDesc());
   MachineOperand &VLOp = MI.getOperand(VLOpNum);
@@ -1438,14 +1467,23 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) const {
   assert((CommonVL->isImm() || CommonVL->getReg().isVirtual()) &&
          "Expected VL to be an Imm or virtual Reg");
 
+  // If the VL is defined by a vleff that doesn't dominate MI, try using the
+  // vleff's AVL. It will be greater than or equal to the output VL.
+  if (CommonVL->isReg()) {
+    const MachineInstr *VLMI = MRI->getVRegDef(CommonVL->getReg());
+    if (RISCVInstrInfo::isFaultOnlyFirstLoad(*VLMI) &&
+        !MDT->dominates(VLMI, &MI))
+      CommonVL = VLMI->getOperand(RISCVII::getVLOpNum(VLMI->getDesc()));
+  }
+
   if (!RISCV::isVLKnownLE(*CommonVL, VLOp)) {
-    LLVM_DEBUG(dbgs() << "    Abort due to CommonVL not <= VLOp.\n");
+    LLVM_DEBUG(dbgs() << "  Abort due to CommonVL not <= VLOp.\n");
     return false;
   }
 
   if (CommonVL->isIdenticalTo(VLOp)) {
     LLVM_DEBUG(
-        dbgs() << "    Abort due to CommonVL == VLOp, no point in reducing.\n");
+        dbgs() << "  Abort due to CommonVL == VLOp, no point in reducing.\n");
     return false;
   }
 
@@ -1456,8 +1494,10 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) const {
     return true;
   }
   const MachineInstr *VLMI = MRI->getVRegDef(CommonVL->getReg());
-  if (!MDT->dominates(VLMI, &MI))
+  if (!MDT->dominates(VLMI, &MI)) {
+    LLVM_DEBUG(dbgs() << "  Abort due to VL not dominating.\n");
     return false;
+  }
   LLVM_DEBUG(
       dbgs() << "  Reduce VL from " << VLOp << " to "
              << printReg(CommonVL->getReg(), MRI->getTargetRegisterInfo())

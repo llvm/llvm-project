@@ -108,6 +108,7 @@ constexpr Definition g_frame_child_entries[] = {
     Entry::DefinitionWithChildren("reg", EntryType::FrameRegisterByName,
                                   g_string_entry),
     Definition("is-artificial", EntryType::FrameIsArtificial),
+    Definition("kind", EntryType::FrameKind),
 };
 
 constexpr Definition g_function_child_entries[] = {
@@ -128,6 +129,7 @@ constexpr Definition g_function_child_entries[] = {
     Definition("prefix", EntryType::FunctionPrefix),
     Definition("scope", EntryType::FunctionScope),
     Definition("basename", EntryType::FunctionBasename),
+    Definition("name-qualifiers", EntryType::FunctionNameQualifiers),
     Definition("template-arguments", EntryType::FunctionTemplateArguments),
     Definition("formatted-arguments", EntryType::FunctionFormattedArguments),
     Definition("return-left", EntryType::FunctionReturnLeft),
@@ -379,6 +381,7 @@ const char *FormatEntity::Entry::TypeToCString(Type t) {
     ENUM_TO_CSTR(FrameRegisterFlags);
     ENUM_TO_CSTR(FrameRegisterByName);
     ENUM_TO_CSTR(FrameIsArtificial);
+    ENUM_TO_CSTR(FrameKind);
     ENUM_TO_CSTR(ScriptFrame);
     ENUM_TO_CSTR(FunctionID);
     ENUM_TO_CSTR(FunctionDidChange);
@@ -390,6 +393,7 @@ const char *FormatEntity::Entry::TypeToCString(Type t) {
     ENUM_TO_CSTR(FunctionPrefix);
     ENUM_TO_CSTR(FunctionScope);
     ENUM_TO_CSTR(FunctionBasename);
+    ENUM_TO_CSTR(FunctionNameQualifiers);
     ENUM_TO_CSTR(FunctionTemplateArguments);
     ENUM_TO_CSTR(FunctionFormattedArguments);
     ENUM_TO_CSTR(FunctionReturnLeft);
@@ -1745,6 +1749,18 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
   }
 
+  case Entry::Type::FrameKind: {
+    if (exe_ctx)
+      if (StackFrame *frame = exe_ctx->GetFramePtr()) {
+        if (frame->IsSynthetic())
+          s.PutCString(" [synthetic]");
+        else if (frame->IsHistorical())
+          s.PutCString(" [history]");
+        return true;
+      }
+    return false;
+  }
+
   case Entry::Type::ScriptFrame:
     if (exe_ctx) {
       StackFrame *frame = exe_ctx->GetFramePtr();
@@ -1842,6 +1858,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
   case Entry::Type::FunctionPrefix:
   case Entry::Type::FunctionScope:
   case Entry::Type::FunctionBasename:
+  case Entry::Type::FunctionNameQualifiers:
   case Entry::Type::FunctionTemplateArguments:
   case Entry::Type::FunctionFormattedArguments:
   case Entry::Type::FunctionReturnRight:

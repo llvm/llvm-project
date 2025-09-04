@@ -298,7 +298,7 @@ Register allocation is split between vector and scalar registers, with vector al
 
 There are four register classes for vectors:
 
-- ``VR`` for vector registers (``v0``, ``v1,``, ..., ``v32``). Used when :math:`\text{LMUL} \leq 1` and mask registers.
+- ``VR`` for vector registers (``v0``, ``v1,``, ..., ``v31``). Used when :math:`\text{LMUL} \leq 1` and mask registers.
 - ``VRM2`` for vector groups of length 2 i.e., :math:`\text{LMUL}=2` (``v0m2``, ``v2m2``, ..., ``v30m2``)
 - ``VRM4`` for vector groups of length 4 i.e., :math:`\text{LMUL}=4` (``v0m4``, ``v4m4``, ..., ``v28m4``)
 - ``VRM8`` for vector groups of length 8 i.e., :math:`\text{LMUL}=8` (``v0m8``, ``v8m8``, ..., ``v24m8``)

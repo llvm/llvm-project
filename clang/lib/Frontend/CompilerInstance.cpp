@@ -1473,16 +1473,26 @@ static bool compileModuleAndReadASTImpl(CompilerInstance &ImportingInstance,
                                         SourceLocation ModuleNameLoc,
                                         Module *Module,
                                         StringRef ModuleFileName) {
-  auto Instance = ImportingInstance.cloneForModuleCompile(ModuleNameLoc, Module,
-                                                          ModuleFileName);
+  {
+    auto Instance = ImportingInstance.cloneForModuleCompile(
+        ModuleNameLoc, Module, ModuleFileName);
 
-  if (!ImportingInstance.compileModule(ModuleNameLoc,
-                                       Module->getTopLevelModuleName(),
-                                       ModuleFileName, *Instance)) {
-    ImportingInstance.getDiagnostics().Report(ModuleNameLoc,
-                                              diag::err_module_not_built)
-        << Module->Name << SourceRange(ImportLoc, ModuleNameLoc);
-    return false;
+    if (!ImportingInstance.compileModule(ModuleNameLoc,
+                                         Module->getTopLevelModuleName(),
+                                         ModuleFileName, *Instance)) {
+      ImportingInstance.getDiagnostics().Report(ModuleNameLoc,
+                                                diag::err_module_not_built)
+          << Module->Name << SourceRange(ImportLoc, ModuleNameLoc);
+      return false;
+    }
+  }
+
+  // The module is built successfully, we can update its timestamp now.
+  if (ImportingInstance.getPreprocessor()
+          .getHeaderSearchInfo()
+          .getHeaderSearchOpts()
+          .ModulesValidateOncePerBuildSession) {
+    ImportingInstance.getModuleCache().updateModuleTimestamp(ModuleFileName);
   }
 
   return readASTAfterCompileModule(ImportingInstance, ImportLoc, ModuleNameLoc,
