@@ -1431,8 +1431,11 @@ void Writer::layoutSections() {
                       if (aInOrder && bInOrder) {
                         return itA->second < itB->second;
                       } else if (aInOrder && !bInOrder) {
-                        return true;
+                        return true; // ordered sections come before unordered
                       } else {
+                        // (!aInOrder && bInOrder): unordered comes after ordered
+                        // (!aInOrder && !bInOrder): both unspecified, preserve
+                        // the original order
                         return false;
                       }
                     });
