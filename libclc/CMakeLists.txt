@@ -461,14 +461,12 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       -D__CLC_GENERIC_ADDRSPACE_VAL=${generic_addrspace_val}
     )
 
-    set( clc_build_flags ${build_flags} -DCLC_INTERNAL )
-
     add_libclc_builtin_set(
       CLC_INTERNAL
       ARCH ${ARCH}
       ARCH_SUFFIX clc-${arch_suffix}
       TRIPLE ${clang_triple}
-      COMPILE_FLAGS ${clc_build_flags}
+      COMPILE_FLAGS ${build_flags}
       OPT_FLAGS ${opt_flags}
       LIB_FILES ${clc_lib_files}
       GEN_FILES ${clc_gen_files}
