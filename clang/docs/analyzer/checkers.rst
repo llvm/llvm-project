@@ -1880,7 +1880,7 @@ the operators ``*`` and ``->``.
    return va_arg(va, int); // warn: va is uninitialized
  }
 
- int test_leak(int x, ...) {
+ void test_leak(int x, ...) {
    va_list va;
    va_start(va, x);
  } // warn: va is leaked
