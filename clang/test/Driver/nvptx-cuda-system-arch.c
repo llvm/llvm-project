@@ -1,3 +1,4 @@
+// UNSUPPORTED: system-windows
 // XFAIL: target={{.*}}-zos{{.*}}
 
 // RUN: mkdir -p %t

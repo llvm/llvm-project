@@ -1,3 +1,6 @@
+// Most likely platform specific sed differences
+// UNSUPPORTED: system-windows
+
 // This test verifies modules that are entirely comprised from stable directory inputs are captured in
 // dependency information.
 

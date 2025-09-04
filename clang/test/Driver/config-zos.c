@@ -1,3 +1,5 @@
+// Needs symlinks
+// UNSUPPORTED: system-windows
 // REQUIRES: systemz-registered-target
 
 // RUN: rm -rf %t && mkdir %t

@@ -1,3 +1,6 @@
+/// Most likely platform specific sed differences
+// UNSUPPORTED: system-windows
+
 /// This test validates that modules that depend on prebuilt modules 
 ///   resolve `is-in-stable-directories` correctly. 
 /// The steps are: 

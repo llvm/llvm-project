@@ -1,3 +1,6 @@
+// Needs symlinks
+// UNSUPPORTED: system-windows
+
 // Basic test
 // RUN: rm -rf %t.dir
 // RUN: mkdir %t.dir

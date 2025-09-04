@@ -1,3 +1,6 @@
+// Needs symlinks
+// UNSUPPORTED: system-windows
+
 // Check that we canonicalize the module map path without changing the module
 // directory, which would break header lookup.
 

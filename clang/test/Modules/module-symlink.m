@@ -1,3 +1,6 @@
+// Needs symlinks
+// UNSUPPORTED: system-windows
+
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -fmodules-cache-path=%t/modules -fmodules -fimplicit-module-maps -I %S/Inputs -emit-pch -o %t.pch %s -verify
 

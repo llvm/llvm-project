@@ -1,3 +1,5 @@
+// Most likely platform specific sed differences
+// UNSUPPORTED: system-windows
 // Test current directory pruning when computing the context hash.
 
 // RUN: rm -rf %t

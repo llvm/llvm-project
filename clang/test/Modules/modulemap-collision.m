@@ -1,3 +1,6 @@
+// Most likely platform specific sed differences
+// UNSUPPORTED: system-windows
+
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/sources %t/build
 // RUN: echo "// A.h" > %t/sources/A.h

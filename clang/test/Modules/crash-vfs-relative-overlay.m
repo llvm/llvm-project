@@ -1,3 +1,4 @@
+// UNSUPPORTED: system-windows
 // REQUIRES: crash-recovery
 
 // FIXME: This XFAIL is cargo-culted from crash-report.c. Do we need it?
