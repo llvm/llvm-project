@@ -99,6 +99,11 @@ static cl::opt<bool>
                    cl::desc("Proceed with Loop Idiom Vectorize Pass, but do "
                             "not convert byte-compare loop(s)."));
 
+static cl::opt<bool> DisableMinMaxlocPattern(
+    "disable-loop-idiom-vectorize-minmaxloc", cl::Hidden, cl::init(false),
+    cl::desc("Proceed with Loop Idiom Vectorize Pass, but do "
+             "not convert minidx/maxidx loop(s)."));
+
 static cl::opt<unsigned>
     ByteCmpVF("loop-idiom-vectorize-bytecmp-vf", cl::Hidden,
               cl::desc("The vectorization factor for byte-compare patterns."),
@@ -148,6 +153,13 @@ private:
                       SmallVectorImpl<BasicBlock *> &ExitBlocks);
 
   bool recognizeByteCompare();
+
+  bool recognizeMinIdxPattern();
+
+  bool transformMinIdxPattern(unsigned VF, Value *FirstIndex,
+                              Value *SecondIndex, BasicBlock *LoopPreheader,
+                              Value *BasePtr, BasicBlock *Header,
+                              BasicBlock *ExitBB, Type *LoadType);
 
   Value *expandFindMismatch(IRBuilder<> &Builder, DomTreeUpdater &DTU,
                             GetElementPtrInst *GEPA, GetElementPtrInst *GEPB,
@@ -239,7 +251,772 @@ bool LoopIdiomVectorize::run(Loop *L) {
   if (recognizeFindFirstByte())
     return true;
 
+  if (recognizeMinIdxPattern())
+    return true;
+
   return false;
+}
+
+bool LoopIdiomVectorize::recognizeMinIdxPattern() {
+  BasicBlock *Header = CurLoop->getHeader(),
+             *LoopPreheader = CurLoop->getLoopPreheader();
+  Function *F = Header->getParent();
+
+  if (!TTI->supportsScalableVectors() || DisableMinMaxlocPattern) {
+    LLVM_DEBUG(dbgs() << "Does not meet pre-requisites for minidx idiom\n");
+    return false;
+  }
+
+  if (CurLoop->getNumBackEdges() != 1 || CurLoop->getNumBlocks() != 1) {
+    LLVM_DEBUG(dbgs() << "Loop does not match the required number of "
+                         "have 1 back edge and 3 blocks and backedges\n");
+    return false;
+  }
+
+  if (Header->sizeWithoutDebug() < 14) {
+    LLVM_DEBUG(dbgs() << "Header block is too small for minidx pattern\n");
+    return false;
+  }
+
+  // Ensure that there should be exactly one predecessor of the loop header
+  // block.
+  if (LoopPreheader && !LoopPreheader->getSinglePredecessor()) {
+    LLVM_DEBUG(dbgs() << "Loop header should have exactly one predecessor\n");
+    return false;
+  }
+
+  // We need the below things to be able to transform the pattern:
+  // 1. Fist index. For this we look at the terminator instruction of
+  // the predecessor of the loop preheader. The condition of the terminator
+  // instruction decides whether to jump to scalar loop.
+  // 2. Second index.
+  // 3. Base pointer.
+  // For 2 and 3, we iterate backward from the header block to find the select
+  // instruction. The select instruction should be of the form select (fcmp
+  // contract olt loadA, loadB). Firther details below. Once we find the
+  // required pattern, we can extract the base pointer from the first load
+  // instruction
+  // 4. Exit basic block. For this we look at the terminator instruction of the
+  // header block.
+
+  // Extract the first index from the preheader.
+  Value *ICmpSLTFirstVal = nullptr, *FirstIndex = nullptr;
+  BasicBlock *RetBB = nullptr;
+  BasicBlock *PreheaderPred = LoopPreheader->getSinglePredecessor();
+  if (!match(PreheaderPred->getTerminator(),
+             m_Br(m_SpecificICmp(ICmpInst::ICMP_SLT, m_Value(ICmpSLTFirstVal),
+                                 m_ZeroInt()),
+                  m_BasicBlock(), m_BasicBlock(RetBB)))) {
+    LLVM_DEBUG(dbgs() << "Terminator doesn't match expected pattern\n");
+    return false;
+  }
+
+  // The Add operand can be either below:
+  // 1. add(sext(sub(0 - SecondIndex)), sext(FirstIndex))
+  // 2. add(sext(FirstIndex), sext(sub(0 - SecondIndex)))
+  // This depends on whether canonicalization has been done or not.
+  // TODO: Handle the case where there is no sign extension and return type is i64.
+  if (match(ICmpSLTFirstVal, m_Add(m_SExt(m_Sub(m_ZeroInt(), m_Value())),
+                                   (m_SExt(m_Value()))))) {
+    FirstIndex = dyn_cast<Instruction>(ICmpSLTFirstVal)->getOperand(1);
+  } else if (match(ICmpSLTFirstVal,
+                   m_Add(m_SExt(m_Value()),
+                         m_SExt(m_Sub(m_ZeroInt(), m_Value()))))) {
+    FirstIndex = dyn_cast<Instruction>(ICmpSLTFirstVal)->getOperand(0);
+  } else {
+    LLVM_DEBUG(dbgs() << "Cannot extract FirstIndex from ICmpSLTFirstVal\n");
+    return false;
+  }
+
+  BasicBlock::reverse_iterator RI = Header->rbegin();
+  SelectInst *SelectToInspect = nullptr;
+  Value *BasePtr = nullptr;
+  Instruction *Trunc = nullptr;
+
+  // Iterate in backward direction to extract the select instruction which
+  // matches the pattern:
+
+  // %load1_gep = getelementptr float, ptr %invariant.gep, i64 %indvars.iv
+  // %load1 = load float, ptr %load1_gep, align 4
+  // %load2_gep = getelementptr float, ptr ..., ...
+  // %load2 = load float, ptr %load2_gep, align 4
+  // %trunc = trunc nsw i64 %indvars.iv.next to i32
+  // %fcmp = fcmp contract olt float %load1, %load2
+  // %select = select i1 %fcmp, i32 %trunc, i32 <phi>
+  // %indvars.iv.next = add nsw i64 %indvars.iv, -1
+  while (RI != Header->rend()) {
+    if (auto *Sel = dyn_cast<SelectInst>(&*RI)) {
+      if (match(Sel, m_Select(m_SpecificFCmp(
+                                  FCmpInst::FCMP_OLT,
+                                  m_Load(m_GEP(m_Value(BasePtr), m_Value())),
+                                  m_Load(m_GEP(m_Value(), m_Value()))),
+                              m_Instruction(Trunc), m_Value()))) {
+        SelectToInspect = Sel;
+      }
+    }
+    ++RI;
+  }
+  if (!SelectToInspect || !BasePtr) {
+    LLVM_DEBUG(dbgs() << "Select or BasePtr not found\n");
+    return false;
+  }
+
+  // In some cases, the pointer used to load comes from a GEP instruction.
+  // In particular, Flang uses offsetted pointer but for vectorized
+  // version, we need the base of the GEP.
+  if (isa<GetElementPtrInst>(BasePtr)) {
+    LLVM_DEBUG(dbgs() << "Extracting BasePtr from GEP\n");
+    BasePtr = cast<GetElementPtrInst>(BasePtr)->getPointerOperand();
+  }
+
+  // Extract FCmp and validate load types
+  auto *FCmp = dyn_cast<FCmpInst>(SelectToInspect->getCondition());
+  if (!FCmp || !isa<LoadInst>(FCmp->getOperand(0)) ||
+      !isa<LoadInst>(FCmp->getOperand(1)))
+    return false;
+
+  auto *LoadA = cast<LoadInst>(FCmp->getOperand(0));
+  auto *LoadB = cast<LoadInst>(FCmp->getOperand(1));
+
+  if (LoadA->getType() != LoadB->getType()) {
+    LLVM_DEBUG(dbgs() << "Load types don't match\n");
+    return false;
+  }
+
+  // Validate truncation instruction matches expected pattern
+  TruncInst *TInst = dyn_cast<TruncInst>(Trunc);
+  if (!TInst || TInst->getDestTy() != F->getReturnType()) {
+    LLVM_DEBUG(dbgs() << "Trunc instruction validation failed\n");
+    return false;
+  }
+  // Trunc instruction's operand should be of the form (add IVPHI, -1).
+  Instruction *IVInst = nullptr;
+  if (!match(TInst->getOperand(0),
+             m_Add(m_Instruction(IVInst), m_SpecificInt(-1)))) {
+    LLVM_DEBUG(
+        dbgs() << "Trunc instruction operand doesn't match expected pattern\n");
+    return false;
+  }
+
+  PHINode *IVPhi = dyn_cast<PHINode>(IVInst);
+  if (!IVPhi) {
+    LLVM_DEBUG(dbgs() << "Add operand of trunc instruction is not a PHINode\n");
+    return false;
+  }
+
+  Value *SecondIndex = IVPhi->getIncomingValueForBlock(LoopPreheader);
+  LLVM_DEBUG(dbgs() << "SecondIndex is " << *SecondIndex << "\n");
+
+  // 4. Inspect Terminator to extract the exit block.
+  // Example LLVM IR to inspect:
+  //   %20 = icmp sgt i64 %13, 1
+  //   br i1 %20, label %.lr.ph, label %._crit_edge.loopexit
+  Value *ICmpFirstVal = nullptr;
+  BasicBlock *FalseBB = nullptr;
+  BranchInst *Terminator = dyn_cast<BranchInst>(Header->getTerminator());
+  if (!match(Terminator, m_Br(m_SpecificICmp(ICmpInst::ICMP_SGT,
+                                             m_Value(ICmpFirstVal), m_One()),
+                              m_BasicBlock(Header), m_BasicBlock(FalseBB)))) {
+    LLVM_DEBUG(dbgs() << "Terminator doesn't match expected pattern\n");
+    return false;
+  }
+
+  // TODO: Handle other vector widths.
+  unsigned VF = 128 / LoadA->getType()->getPrimitiveSizeInBits();
+
+  // We've recognized the pattern, now transform it.
+  LLVM_DEBUG(dbgs() << "FOUND MINIDX PATTERN\n");
+
+  return transformMinIdxPattern(VF, FirstIndex, SecondIndex, LoopPreheader,
+                                BasePtr, Header, FalseBB, LoadA->getType());
+}
+
+bool LoopIdiomVectorize::transformMinIdxPattern(
+    unsigned VF, Value *FirstIndex, Value *SecondIndex,
+    BasicBlock *LoopPreheader, Value *BasePtr, BasicBlock *Header,
+    BasicBlock *ExitBB, Type *LoadType) {
+
+  LLVMContext &Ctx = Header->getContext();
+  Function *F = Header->getParent();
+  Module *M = F->getParent();
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+  Type *I32Ty = Type::getInt32Ty(Ctx);
+  Type *I64Ty = Type::getInt64Ty(Ctx);
+  Type *I1Ty = Type::getInt1Ty(Ctx);
+  Type *PointerType = PointerType::get(Ctx, 0);
+  auto *MaskTy = ScalableVectorType::get(Type::getInt1Ty(Ctx), 4);
+  auto *VecTy = ScalableVectorType::get(
+      LoadType, VF); // This is the vector type for i32 values
+
+  // High-level overview of the transformation:
+  // We divide the process in three phases:
+  // In the first phase, we process a chunk which is not multiple of VF.
+  // We do this by rounding down the `SecondIndex` to the nearest multiple of VF.
+  // The minimum value and the index of the minimum value are computed for this chunk.
+  // In the second phase, we process all chunks which are multiple of VF.
+  // In the third phase, we process the last chunk which is not multiple of VF.
+  // The third phase is required because the FirstIndex is necessary to start from zero
+  // thus we take max(0, FirstIndex) as the starting index.
+
+  // Overview of the algorithm to compute minindex within a chunk:
+  // 1. We compare the current loaded vector against a splat of infinity.
+  // 2. Further, we set the bits until we find the first set bit in the output of the
+  // above comparison. This is realized using the `cttz` intrinsic.
+  // 3. Next, we count the number of bits set and this gives us the offset from the
+  // base. The base of the chunk is updated in each phase.
+  // Step 1 and 2 are done using brkb + cnt which is realized using the `cttz` intrinsic.
+
+  // The below basic blocks are used to process the first phase
+  // and are for processing the chunk which is not multiple of VF.
+  BasicBlock *VecEntry = BasicBlock::Create(Ctx, "minidx.vec.entry", F);
+  BasicBlock *VecScalarForkBlock =
+      BasicBlock::Create(Ctx, "minidx.vec.scalar.fork", F);
+  BasicBlock *MinIdxPartial1If =
+      BasicBlock::Create(Ctx, "minidx.partial.1.if", F);
+  BasicBlock *MinIdxPartial1ProcExit =
+      BasicBlock::Create(Ctx, "minidx.partial.1.proc.exit", F);
+  
+  // The below basic blocks are used to process the second phase
+  // and are for processing the chunks which are multiple of VF.
+  BasicBlock *MinIdxWhileBodyLrPh =
+      BasicBlock::Create(Ctx, "minidx.while.body.ph", F);
+  BasicBlock *MinIdxVectBody = BasicBlock::Create(Ctx, "minidx.vect.body", F);
+  BasicBlock *MinIdxVectUpdate =
+      BasicBlock::Create(Ctx, "minidx.vect.update", F);
+  BasicBlock *MinIdxVectContinue =
+      BasicBlock::Create(Ctx, "minidx.vect.continue", F);
+  BasicBlock *MinIdxVectEnd = BasicBlock::Create(Ctx, "minidx.vect.end", F);
+
+  // The below basic blocks are used to process the third phase
+  // and are for processing the last chunk which is not multiple of VF.
+  BasicBlock *MinIdxPartial2If =
+      BasicBlock::Create(Ctx, "minidx.partial.2.if", F);
+  BasicBlock *MinIdxPartial2Exit =
+      BasicBlock::Create(Ctx, "minidx.partial.2.exit", F);
+  BasicBlock *MinIdxEnd = BasicBlock::Create(Ctx, "minidx.end", F);
+
+  Loop *VecLoop = LI->AllocateLoop();
+  VecLoop->addBasicBlockToLoop(MinIdxVectBody, *LI);
+  VecLoop->addBasicBlockToLoop(MinIdxVectUpdate, *LI);
+  VecLoop->addBasicBlockToLoop(MinIdxVectContinue, *LI);
+
+  LI->addTopLevelLoop(VecLoop);
+
+  // In loop preheader, we check to fail fast.
+  // If the FirstIndex is equal to the SecondIndex,
+  // we branch to the exit block and return the SecondIndex.
+  // Thus, the loop preheader is split into two blocks.
+  // The original one has the early exit check
+  // and the new one sets up the code for vectorization.
+  // TODO: Can use splitBasicBlock(...) API to split the loop preheader.
+
+  IRBuilder<> Builder(LoopPreheader->getTerminator());
+  Value *FirstIndexCmp =
+      Builder.CreateICmpEQ(FirstIndex, SecondIndex, "first.index.cmp");
+  Value *SecondIndexBitCast = Builder.CreateTruncOrBitCast(
+      SecondIndex, F->getReturnType(), "second.index.bitcast");
+  Builder.CreateCondBr(FirstIndexCmp, ExitBB, VecScalarForkBlock);
+
+  // Add edges from LoopPreheader to VecScalarForkBlock and ExitBB.
+  DTU.applyUpdates(
+      {{DominatorTree::Insert, LoopPreheader, VecScalarForkBlock}});
+  DTU.applyUpdates({{DominatorTree::Insert, LoopPreheader, ExitBB}});
+
+  DTU.applyUpdates({{DominatorTree::Insert, VecScalarForkBlock, Header}});
+  DTU.applyUpdates({{DominatorTree::Insert, VecScalarForkBlock, ExitBB}});
+
+  // We change PHI values in the loop's header to point to the new block.
+  // This is done to avoid the PHI node being optimized out.
+  for (PHINode &PHI : Header->phis()) {
+    PHI.replaceIncomingBlockWith(LoopPreheader, VecScalarForkBlock);
+  }
+
+  // Change the name as it is no longer the loop preheader.
+  LoopPreheader->setName("minidx.early.exit1");
+
+  // Start populating preheader.
+  Builder.SetInsertPoint(VecScalarForkBlock);
+
+  // %VScale = tail call i64 @llvm.vscale.i64()
+  // %VLen = shl nuw nsw i64 %VScale, 2
+  // %minidx.not = sub nsw i64 0, %VLen
+  // %minidx.and = and i64 %SecondIndex, %minidx.not
+  Value *GMax = Builder.CreateVectorSplat(ElementCount::getScalable(VF),
+                                          ConstantFP::getInfinity(LoadType, 0),
+                                          "minidx.gmax");
+  Value *VScale = Builder.CreateVScale(I64Ty);
+  Value *VLen =
+      Builder.CreateShl(VScale, ConstantInt::get(I64Ty, 2), "minidx.vlen");
+  Value *Not =
+      Builder.CreateSub(ConstantInt::get(I64Ty, 0), VLen, "minidx.not");
+  Value *And = Builder.CreateAnd(SecondIndex, Not, "minidx.and");
+
+  // %minidx.umax = tail call i64 @llvm.umax.i64(i64 %minidx.and, i64 %FirstIndex)
+  // %minidx.add = add i64 %SecondIndex, 1
+  Value *Umax = Builder.CreateIntrinsic(
+      Intrinsic::smax, {I64Ty}, {And, FirstIndex}, nullptr, "minidx.umax");
+  Value *Add =
+      Builder.CreateAdd(SecondIndex, ConstantInt::get(I64Ty, 1), "minidx.add");
+  // %minidx.mask = call <vscale x 4 x i1>
+  // @llvm.get.active.lane.mask.nxv4i1.i64(i64 %minidx.umax, i64 %minidx.add)
+  Value *MinIdxMask = Builder.CreateCall(
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::get_active_lane_mask,
+                                        {MaskTy, I64Ty}),
+      {Umax, Add}, "minidx.mask");
+
+  // %minidx.add.ptr.i = getelementptr inbounds nuw float, ptr %p, i64
+  // %minidx.umax %minidx.masked.load = tail call <vscale x 4 x float>
+  // @llvm.masked.load.nxv4f32.p0(ptr %minidx.add.ptr.i, i32 1, <vscale x 4 x
+  // i1> %minidx.mask, <vscale x 4 x float> zeroinitializer) %minidx.currentVals
+  // = select <vscale x 4 x i1> %minidx.mask, <vscale x 4 x float>
+  // %minidx.masked.load, <vscale x 4 x float> splat (float 0x7FF0000000000000)
+  // %minidx.reverse = tail call <vscale x 4 x i1>
+  // @llvm.vector.reverse.nxv4i1(<vscale x 4 x i1> %minidx.mask)
+  // %minidx.reverseVals = tail call <vscale x 4 x float>
+  // @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> %minidx.currentVals)
+  // %minidx.minVal = call float @llvm.vector.reduce.fminimum.nxv4f32(<vscale x
+  // 4 x float> %minidx.reverseVals)
+
+  Value *UmaxMinus1 =
+      Builder.CreateSub(Umax, ConstantInt::get(I64Ty, 1), "minidx.umax.minus1");
+  Value *AddPtrI = Builder.CreateInBoundsGEP(LoadType, BasePtr, UmaxMinus1,
+                                             "minidx.add.ptr.i");
+
+  Value *LoadVals =
+      Builder.CreateCall(Intrinsic::getOrInsertDeclaration(
+                             M, Intrinsic::masked_load, {VecTy, PointerType}),
+                         {AddPtrI, ConstantInt::get(I32Ty, 1), MinIdxMask,
+                          Constant::getNullValue(VecTy)},
+                         "minidx.loadVals");
+  Value *CurrentVals =
+      Builder.CreateSelect(MinIdxMask, LoadVals, GMax, "minidx.currentVals");
+  Value *Reverse = Builder.CreateCall(
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::vector_reverse, {MaskTy}),
+      {MinIdxMask}, "minidx.reverse");
+  Value *ReverseVals = Builder.CreateCall(
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::vector_reverse, {VecTy}),
+      {CurrentVals}, "minidx.reverseVals");
+  Value *MinVal =
+      Builder.CreateCall(Intrinsic::getOrInsertDeclaration(
+                             M, Intrinsic::vector_reduce_fminimum, {VecTy}),
+                         {ReverseVals}, "minidx.minVal");
+
+  Builder.CreateCondBr(Builder.getTrue(), VecEntry, Header);
+  LoopPreheader->getTerminator()->eraseFromParent();
+
+  // Add edge from preheader to VecEntry
+  DTU.applyUpdates({{DominatorTree::Insert, VecScalarForkBlock, VecEntry}});
+
+  // %minidx.entry.cmp = fcmp olt float %minidx.minVal, %init
+  // br i1 %minidx.entry.cmp, label %minidx.partial.1.if, label
+  // %minidx.partial.1.proc.exit
+  Builder.SetInsertPoint(VecEntry);
+  Value *VecEntryCmp = Builder.CreateFCmpOLT(
+      MinVal, ConstantFP::getInfinity(LoadType, 0), "minidx.entry.cmp");
+  Builder.CreateCondBr(VecEntryCmp, MinIdxPartial1If, MinIdxPartial1ProcExit);
+
+  // Connect edges from VecEntry to MinIdxPartial1If and MinIdxPartial1ProcExit
+  DTU.applyUpdates({{DominatorTree::Insert, VecEntry, MinIdxPartial1If},
+                    {DominatorTree::Insert, VecEntry, MinIdxPartial1ProcExit}});
+
+  Builder.SetInsertPoint(MinIdxPartial1If);
+  // %minVal.splatinsert = insertelement <vscale x 4 x float> poison, float
+  // %minidx.minVal, i64 0 %minVal.splat = shufflevector <vscale x 4 x float>
+  // %minVal.splatinsert, <vscale x 4 x float> poison, <vscale x 4 x i32>
+  // zeroinitializer
+  Value *MinValSplat = Builder.CreateVectorSplat(ElementCount::getScalable(VF),
+                                                 MinVal, "minval.splat");
+  // %minidx.partial.1.cmp = fcmp oeq <vscale x 4 x float> %minidx.reverseVals,
+  // %minVal.splat %minidx.partial.1.and = and <vscale x 4 x i1>
+  // %minidx.reverse, %minidx.partial.1.cmp %minidx.partial.1.cttz = tail call
+  // i64 @llvm.experimental.cttz.elts.i64.nxv4i1(<vscale x 4 x i1>
+  // %minidx.partial.1.and, i1 true)
+  Value *FirstPartialCmp =
+      Builder.CreateFCmpOEQ(ReverseVals, MinValSplat, "minidx.partial.1.cmp");
+  Value *FirstPartialAnd =
+      Builder.CreateAnd(Reverse, FirstPartialCmp, "minidx.partial.1.and");
+  Value *FirstPartialCTTZ = Builder.CreateCountTrailingZeroElems(
+      I64Ty, FirstPartialAnd, ConstantInt::get(I1Ty, 1),
+      "minidx.partial.1.cttz");
+
+  // %minidx.partial.1.tmp = sub i64 vlen, %minidx.partial.1.cttz
+  // %minidx.partial.1.tmp.minus1 = sub i64 %minidx.partial.1.tmp, 1
+  // %minidx.partial.1.add2 = add i64 %minidx.umax, %minidx.partial.1.tmp.minus1
+  Value *FirstPartialTmp1 =
+      Builder.CreateSub(VLen, FirstPartialCTTZ, "minidx.partial.1.tmp");
+  Value *FirstPartialTmp =
+      Builder.CreateSub(FirstPartialTmp1, ConstantInt::get(I64Ty, 1),
+                        "minidx.partial.1.tmp.minus1");
+  Value *FirstPartialAdd2 =
+      Builder.CreateAdd(Umax, FirstPartialTmp, "minidx.partial.1.add2");
+
+  Builder.CreateBr(MinIdxPartial1ProcExit);
+
+  DTU.applyUpdates(
+      {{DominatorTree::Insert, MinIdxPartial1If, MinIdxPartial1ProcExit}});
+
+  Builder.SetInsertPoint(MinIdxPartial1ProcExit);
+  // %minidx.partial.1.exit.known_min = phi float [ %minidx.minVal,
+  // %minidx.partial.1.if ], [ %init, %entry ] %partial1.exit.known_arg = phi
+  // i64 [ %minidx.partial.1.add2, %minidx.partial.1.if ], [ 0, %entry ]
+  PHINode *Partial1ExitKnownMin =
+      Builder.CreatePHI(LoadType, 2, "minidx.partial.1.exit.known_min");
+  PHINode *Partial1ExitKnownArg =
+      Builder.CreatePHI(I64Ty, 2, "partial1.exit.known_arg");
+
+  Partial1ExitKnownMin->addIncoming(MinVal, MinIdxPartial1If);
+  Partial1ExitKnownMin->addIncoming(ConstantFP::getInfinity(LoadType, 0),
+                                    VecEntry);
+  Partial1ExitKnownArg->addIncoming(FirstPartialAdd2, MinIdxPartial1If);
+  Partial1ExitKnownArg->addIncoming(ConstantInt::get(I64Ty, 0), VecEntry);
+
+  // %minidx.partial.1.proc.exit.add = add i64 %VLen, %FirstIndex
+  // %minidx.partial.1.proc.exit.icmp = icmp ult i64 %minidx.umax,
+  // %minidx.partial.1.proc.exit.add br i1 %minidx.partial.1.proc.exit.icmp,
+  // label %minidx.vect.end, label %minidx.while.body.ph
+  Value *MinIdxPartial1ProcExitAdd =
+      Builder.CreateAdd(VLen, FirstIndex, "minidx.partial.1.proc.exit.add");
+  Value *MinIdxPartial1ProcExitICmp = Builder.CreateICmpULT(
+      Umax, MinIdxPartial1ProcExitAdd, "minidx.partial.1.proc.exit.icmp");
+  Builder.CreateCondBr(MinIdxPartial1ProcExitICmp, MinIdxVectEnd,
+                       MinIdxWhileBodyLrPh);
+
+  DTU.applyUpdates(
+      {{DominatorTree::Insert, MinIdxPartial1ProcExit, MinIdxVectEnd},
+       {DominatorTree::Insert, MinIdxPartial1ProcExit, MinIdxWhileBodyLrPh}});
+
+  Builder.SetInsertPoint(MinIdxWhileBodyLrPh);
+  // %minidx.while.body.ph.mul = mul nsw i64 %VScale, -16
+  // %minidx.while.body.ph.gep = getelementptr i8, ptr %p, i64
+  // %minidx.while.body.ph.mul br label %minidx.vect.body
+  Builder.CreateBr(MinIdxVectBody);
+
+  DTU.applyUpdates(
+      {{DominatorTree::Insert, MinIdxWhileBodyLrPh, MinIdxVectBody}});
+
+  Builder.SetInsertPoint(MinIdxVectBody);
+  // %minidx.vect.body.phi1 = phi i64 [ %minidx.umax, %minidx.while.body.ph ], [
+  // %minidx.vect.body.sub, %minidx.vect.continue ] %minidx.vect.body.known_arg
+  // = phi i64 [ %partial1.exit.known_arg, %minidx.while.body.ph ], [
+  // %minidx.vect.continue.known_arg, %minidx.vect.continue ]
+  // %minidx.vect.body.known_min = phi float [ %minidx.partial.1.exit.known_min,
+  // %minidx.while.body.ph ], [ %minidx.vect.continue.known_min,
+  // %minidx.vect.continue ]
+  PHINode *MinIdxVectBodyPhi1 =
+      Builder.CreatePHI(I64Ty, 2, "minidx.vect.body.phi1");
+  PHINode *MinIdxVectBodyKnownArg =
+      Builder.CreatePHI(I64Ty, 2, "minidx.vect.body.known_arg");
+  PHINode *MinIdxVectBodyKnownMin =
+      Builder.CreatePHI(LoadType, 2, "minidx.vect.body.known_min");
+
+  // %minidx.vect.body.sub = sub i64 %minidx.vect.body.phi1, %VLen
+  // %minidx.vect.body.shl = shl i64 %minidx.vect.body.phi1, 2
+  // %minidx.vect.body.gep = getelementptr i8, ptr %minidx.while.body.ph.gep,
+  // i64 %minidx.vect.body.shl
+  Value *MinIdxVectBodySub =
+      Builder.CreateSub(MinIdxVectBodyPhi1, VLen, "minidx.vect.body.sub");
+  Value *MinIdxVectBodyShl =
+      Builder.CreateSub(MinIdxVectBodySub, ConstantInt::get(I64Ty, 1),
+                        "minidx.vect.body.sub.minus1");
+  Value *MinIdxVectBodyGEP = Builder.CreateInBoundsGEP(
+      LoadType, BasePtr, MinIdxVectBodyShl, "minidx.vect.body.gep");
+
+  // %minidx.vect.body.unmaskedload = load <vscale x 4 x float>, ptr
+  // %minidx.vect.body.gep, align 1 %minidx.vect.body.load.rev = tail call
+  // <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float>
+  // %minidx.vect.body.unmaskedload) %minidx.vect.body.load.reduce = tail call
+  // float @llvm.vector.reduce.fminimum.nxv4f32(<vscale x 4 x float>
+  // %minidx.vect.body.load.rev)
+  Value *MinIdxVectBodyUnmaskedLoad = Builder.CreateLoad(
+      VecTy, MinIdxVectBodyGEP, "minidx.vect.body.unmaskedload");
+  Value *MinIdxVectBodyReverse = Builder.CreateCall(
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::vector_reverse, {VecTy}),
+      {MinIdxVectBodyUnmaskedLoad}, "minidx.vect.body.reverse");
+  Value *MinIdxVectBodyReduce =
+      Builder.CreateCall(Intrinsic::getOrInsertDeclaration(
+                             M, Intrinsic::vector_reduce_fminimum, {VecTy}),
+                         {MinIdxVectBodyReverse}, "minidx.vect.body.reduce");
+
+  // %minidx.vect.body.fcmp = fcmp olt float %minidx.vect.body.load.reduce,
+  // %minidx.vect.body.known_min br i1 %minidx.vect.body.fcmp, label
+  // %minidx.vect.update, label %minidx.vect.continue
+  Value *MinIdxVectBodyFCmp = Builder.CreateFCmpOLT(
+      MinIdxVectBodyReduce, MinIdxVectBodyKnownMin, "minidx.vect.body.fcmp");
+
+  Builder.CreateCondBr(MinIdxVectBodyFCmp, MinIdxVectUpdate,
+                       MinIdxVectContinue);
+
+  DTU.applyUpdates(
+      {{DominatorTree::Insert, MinIdxVectBody, MinIdxVectUpdate},
+       {DominatorTree::Insert, MinIdxVectBody, MinIdxVectContinue}});
+
+  Builder.SetInsertPoint(MinIdxVectUpdate);
+  // %minidx.vect.update.splatinsert = insertelement <vscale x 4 x float>
+  // poison, float %minidx.vect.body.load.reduce, i64 0
+  // %minidx.vect.update.splat = shufflevector <vscale x 4 x float>
+  // %minidx.vect.update.splatinsert, <vscale x 4 x float> poison, <vscale x 4 x
+  // i32> zeroinitializer %minidx.vect.update.fcmp = fcmp ueq <vscale x 4 x
+  // float> %minidx.vect.body.load.rev, %minidx.vect.update.splat
+  Value *MinIdxVectUpdateSplat = Builder.CreateVectorSplat(
+      ElementCount::getScalable(VF), MinIdxVectBodyReduce,
+      "minidx.vect.update.splatinsert");
+  Value *MinIdxVectUpdateFCmp = Builder.CreateFCmpUEQ(
+      MinIdxVectBodyReverse, MinIdxVectUpdateSplat, "minidx.vect.update.fcmp");
+
+  // %minidx.vect.update.cttz = call i64
+  // @llvm.experimental.cttz.elts.i64.nxv4i1(<vscale x 4 x i1>
+  // %minidx.vect.update.fcmp, i1 true) %minidx.vect.update.mul = mul i64
+  // %minidx.vect.update.cttz, -1 %minidx.vect.update.add = add i64
+  // %minidx.vect.body.phi1, %minidx.vect.update.mul
+  Value *MinIdxVectUpdateCTTZ = Builder.CreateCountTrailingZeroElems(
+      I64Ty, MinIdxVectUpdateFCmp, ConstantInt::get(I1Ty, 1),
+      "minidx.vect.update.cttz");
+  Value *MinIdxVectUpdateMul =
+      Builder.CreateMul(MinIdxVectUpdateCTTZ, ConstantInt::get(I64Ty, -1),
+                        "minidx.vect.update.mul");
+  Value *MinIdxVectUpdateAdd = Builder.CreateAdd(
+      MinIdxVectBodyPhi1, MinIdxVectUpdateMul, "minidx.vect.update.add");
+
+  // %minidx.vect.body.add2 = add i64 %minidx.vect.update.add, -1
+  // br label %minidx.vect.continue
+  Value *MinIdxVectBodyAdd2 =
+      Builder.CreateAdd(MinIdxVectUpdateAdd, ConstantInt::get(I64Ty, -1),
+                        "minidx.vect.body.add2");
+  Builder.CreateBr(MinIdxVectContinue);
+
+  DTU.applyUpdates(
+      {{DominatorTree::Insert, MinIdxVectUpdate, MinIdxVectContinue}});
+
+  Builder.SetInsertPoint(MinIdxVectContinue);
+  // %minidx.vect.continue.known_min = phi float [
+  // %minidx.vect.body.load.reduce, %minidx.vect.update ], [
+  // %minidx.vect.body.known_min, %minidx.vect.body ]
+  // %minidx.vect.continue.known_arg = phi i64 [ %minidx.vect.body.add2,
+  // %minidx.vect.update ], [ %minidx.vect.body.known_arg, %minidx.vect.body ]
+  // %minidx.vect.continue.icmp = icmp ult i64 %minidx.vect.body.sub,
+  // %minidx.partial.1.proc.exit.add
+  PHINode *MinIdxVectContinueKnownMin =
+      Builder.CreatePHI(LoadType, 2, "minidx.vect.continue.known_min");
+  PHINode *MinIdxVectContinueKnownArg =
+      Builder.CreatePHI(I64Ty, 2, "minidx.vect.continue.known_arg");
+
+  MinIdxVectContinueKnownMin->addIncoming(MinIdxVectBodyReduce,
+                                          MinIdxVectUpdate);
+  MinIdxVectContinueKnownMin->addIncoming(MinIdxVectBodyKnownMin,
+                                          MinIdxVectBody);
+  MinIdxVectContinueKnownArg->addIncoming(MinIdxVectBodyAdd2, MinIdxVectUpdate);
+  MinIdxVectContinueKnownArg->addIncoming(MinIdxVectBodyKnownArg,
+                                          MinIdxVectBody);
+
+  // br i1 %minidx.vect.continue.icmp, label %minidx.vect.end, label
+  // %minidx.vect.body
+  Value *MinIdxVectContinueICmp =
+      Builder.CreateICmpULT(MinIdxVectBodySub, MinIdxPartial1ProcExitAdd,
+                            "minidx.vect.continue.icmp");
+
+  Builder.CreateCondBr(MinIdxVectContinueICmp, MinIdxVectEnd, MinIdxVectBody);
+  DTU.applyUpdates(
+      {{DominatorTree::Insert, MinIdxVectContinue, MinIdxVectEnd},
+       {DominatorTree::Insert, MinIdxVectContinue, MinIdxVectBody}});
+
+  Builder.SetInsertPoint(MinIdxVectEnd);
+  // %minidx.vect.end.known_min.lcssa = phi float [
+  // %minidx.partial.1.exit.known_min, %minidx.partial.1.proc.exit ], [
+  // %minidx.vect.continue.known_min, %minidx.vect.continue ]
+  // %minidx.vect.end.known_arg.lcssa = phi i64 [ %partial1.exit.known_arg,
+  // %minidx.partial.1.proc.exit ], [ %known_arg.3, %minidx.vect.continue ]
+  // %minidx.vect.end.lcssa = phi i64 [ %minidx.umax,
+  // %minidx.partial.1.proc.exit ], [ %minidx.vect.body.sub,
+  // %minidx.vect.continue ]
+  PHINode *MinIdxVectEndKnownMin =
+      Builder.CreatePHI(LoadType, 2, "minidx.vect.end.known_min.lcssa");
+  PHINode *MinIdxVectEndKnownArg =
+      Builder.CreatePHI(I64Ty, 2, "minidx.vect.end.known_arg.lcssa");
+  PHINode *MinIdxVectEndLCSSA =
+      Builder.CreatePHI(I64Ty, 2, "minidx.vect.end.lcssa");
+
+  MinIdxVectEndKnownMin->addIncoming(Partial1ExitKnownMin,
+                                     MinIdxPartial1ProcExit);
+  MinIdxVectEndKnownMin->addIncoming(MinIdxVectContinueKnownMin,
+                                     MinIdxVectContinue);
+  MinIdxVectEndKnownArg->addIncoming(Partial1ExitKnownArg,
+                                     MinIdxPartial1ProcExit);
+  MinIdxVectEndKnownArg->addIncoming(MinIdxVectContinueKnownArg,
+                                     MinIdxVectContinue);
+  MinIdxVectEndLCSSA->addIncoming(Umax, MinIdxPartial1ProcExit);
+  MinIdxVectEndLCSSA->addIncoming(MinIdxVectBodySub, MinIdxVectContinue);
+
+  // %minidx.vect.end.icmp = icmp ugt i64 %minidx.vect.end.lcssa, %FirstIndex
+  // br i1 %minidx.vect.end.icmp, label %minidx.partial.2.if, label %minidx.end
+
+  Value *MinIdxVectEndCmp = Builder.CreateICmpUGT(
+      MinIdxVectEndLCSSA, FirstIndex, "minidx.vect.end.cmp");
+  Builder.CreateCondBr(MinIdxVectEndCmp, MinIdxPartial2If, MinIdxEnd);
+  DTU.applyUpdates({{DominatorTree::Insert, MinIdxVectEnd, MinIdxPartial2If},
+                    {DominatorTree::Insert, MinIdxVectEnd, MinIdxEnd}});
+
+  Builder.SetInsertPoint(MinIdxPartial2If);
+  // %minidx.partial.2.if.add = add nuw i64 %minidx.vect.end.lcssa, 1
+  // %minidx.partial.2.if.mask = call <vscale x 4 x i1>
+  // @llvm.get.active.lane.mask.nxv4i1.i64(i64 %FirstIndex, i64
+  // %minidx.partial.2.if.add) %minidx.partial.2.if.gep = getelementptr inbounds
+  // nuw float, ptr %p, i64 %FirstIndex
+  Value *MinIdxPartial2IfAdd =
+      Builder.CreateAdd(MinIdxVectEndLCSSA, ConstantInt::get(I64Ty, 1),
+                        "minidx.partial.2.if.add.zero");
+  Value *MinIdxPartial2IfMask = Builder.CreateCall(
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::get_active_lane_mask,
+                                        {MaskTy, I64Ty}),
+      {FirstIndex, MinIdxPartial2IfAdd}, "minidx.partial.2.if.mask");
+
+  Value *FirstIndexMinus1 =
+      Builder.CreateSub(FirstIndex, ConstantInt::get(I64Ty, 1),
+                        "minidx.partial.2.if.firstindex.minus1");
+  Value *MinIdxPartial2IfGEP = Builder.CreateInBoundsGEP(
+      LoadType, BasePtr, FirstIndexMinus1, "minidx.partial.2.if.gep");
+
+  // %minidx.partial.2.if.load = tail call <vscale x 4 x float>
+  // @llvm.masked.load.nxv4f32.p0(ptr %minidx.partial.2.if.gep, i32 1, <vscale x
+  // 4 x i1> %minidx.partial.2.if.mask, <vscale x 4 x float> zeroinitializer)
+  // %minidx.partial.2.if.rev = tail call <vscale x 4 x float>
+  // @llvm.vector.reverse.nxv4f32(<vscale x 4 x float>
+  // %minidx.partial.2.if.load) %minidx.partial.2.if.reduce = tail call float
+  // @llvm.vector.reduce.fminimum.nxv4f32(<vscale x 4 x float>
+  // %minidx.partial.2.if.rev)
+  Value *MinIdxPartial2IfLoad =
+      Builder.CreateCall(Intrinsic::getOrInsertDeclaration(
+                             M, Intrinsic::masked_load, {VecTy, PointerType}),
+                         {MinIdxPartial2IfGEP, ConstantInt::get(I32Ty, 1),
+                          MinIdxPartial2IfMask, Constant::getNullValue(VecTy)},
+                         "minidx.partial.2.if.load");
+  Value *MinIdxPartial2IfSelectVals =
+      Builder.CreateSelect(MinIdxPartial2IfMask, MinIdxPartial2IfLoad, GMax,
+                           "minidx.partial2.if.finalVals");
+
+  // Reverse the mask.
+  MinIdxPartial2IfMask = Builder.CreateCall(
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::vector_reverse, {MaskTy}),
+      {MinIdxPartial2IfMask}, "minidx.partial.2.if.mask.reverse");
+  Value *MinIdxPartial2IfReverse = Builder.CreateCall(
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::vector_reverse, {VecTy}),
+      {MinIdxPartial2IfSelectVals}, "minidx.partial.2.if.reverse");
+  Value *MinIdxPartial2IfReduce = Builder.CreateCall(
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::vector_reduce_fminimum,
+                                        {VecTy}),
+      {MinIdxPartial2IfReverse}, "minidx.partial.2.if.reduce");
+
+  // %minidx.partial.2.if.fcmp = fcmp olt float %minidx.partial.2.if.reduce,
+  // %minidx.vect.end.known_min.lcssa br i1 %minidx.partial.2.if.fcmp, label
+  // %minidx.partial.2.exit, label %minidx.end
+  Value *MinIdxPartial2IfFCmp =
+      Builder.CreateFCmpOLT(MinIdxPartial2IfReduce, MinIdxVectEndKnownMin,
+                            "minidx.partial.2.if.fcmp");
+  Builder.CreateCondBr(MinIdxPartial2IfFCmp, MinIdxPartial2Exit, MinIdxEnd);
+  DTU.applyUpdates(
+      {{DominatorTree::Insert, MinIdxPartial2If, MinIdxPartial2Exit},
+       {DominatorTree::Insert, MinIdxPartial2If, MinIdxEnd}});
+
+  Builder.SetInsertPoint(MinIdxPartial2Exit);
+  // %minidx.partial.2.exit.splatinsert = insertelement <vscale x 4 x float>
+  // poison, float %minidx.partial.2.if.reduce, i64 0
+  // %minidx.partial.2.exit.splat = shufflevector <vscale x 4 x float>
+  // %minidx.partial.2.exit.splatinsert, <vscale x 4 x float> poison, <vscale x
+  // 4 x i32> zeroinitializer %minidx.partial.2.exit.fcmp = fcmp oeq <vscale x 4
+  // x float>  %minidx.partial.2.if.rev, %minidx.partial.2.exit.splat
+  Value *MinIdxPartial2ExitSplat = Builder.CreateVectorSplat(
+      ElementCount::getScalable(VF), MinIdxPartial2IfReduce,
+      "minidx.partial.2.exit.splatinsert");
+  Value *MinIdxPartial2ExitFCmp =
+      Builder.CreateFCmpOEQ(MinIdxPartial2IfReverse, MinIdxPartial2ExitSplat,
+                            "minidx.partial.2.exit.fcmp");
+
+  // %minidx.partial.2.exit.and = and <vscale x 4 x i1>
+  // %minidx.partial.2.exit.fcmp, %minidx.partial.2.if.mask
+  // %minidx.partial.2.exit.cttz = call i64
+  // @llvm.experimental.cttz.elts.i64.nxv4i1(<vscale x 4 x i1>
+  // %minidx.partial.2.exit.and, i1 true)
+  Value *MinIdxPartial2ExitAnd =
+      Builder.CreateAnd(MinIdxPartial2ExitFCmp, MinIdxPartial2IfMask,
+                        "minidx.partial.2.exit.and");
+  Value *MinIdxPartial2ExitCTTZ = Builder.CreateCountTrailingZeroElems(
+      I64Ty, MinIdxPartial2ExitAnd, ConstantInt::get(I1Ty, 1),
+      "minidx.partial.2.exit.cttz");
+
+  Value *MinIdxPartial2ExitTmp1 = Builder.CreateSub(
+      VLen, MinIdxPartial2ExitCTTZ, "minidx.partial.2.exit.tmp");
+  Value *MinIdxPartial2ExitTmp =
+      Builder.CreateSub(MinIdxPartial2ExitTmp1, ConstantInt::get(I64Ty, 1),
+                        "minidx.partial.2.exit.tmp.minus1");
+  Value *MinIdxPartial2ExitAdd = Builder.CreateAdd(
+      FirstIndex, MinIdxPartial2ExitTmp, "minidx.partial.2.exit.add2");
+
+  // %minidx.partial.2.exit.xor = xor i64 %minidx.partial.2.exit.cttz, -1
+  // %minidx.partial.2.add = add i64 %minidx.partial.1.proc.exit.add,
+  // %minidx.partial.2.exit.xor br label %minidx.end
+  Builder.CreateBr(MinIdxEnd);
+
+  DTU.applyUpdates({{DominatorTree::Insert, MinIdxPartial2Exit, MinIdxEnd}});
+
+  Builder.SetInsertPoint(MinIdxEnd);
+  // %minidx.ret = phi i64 [ %minidx.vect.end.known_arg.lcssa, %minidx.vect.end
+  // ], [ %minidx.partial.2.add, %minidx.partial.2.exit ], [
+  // %minidx.vect.end.known_arg.lcssa, %minidx.partial.2.if ] br label %ExitBB
+  PHINode *MinIdxRet = Builder.CreatePHI(I64Ty, 3, "minidx.ret");
+  MinIdxRet->addIncoming(MinIdxVectEndKnownArg, MinIdxVectEnd);
+  MinIdxRet->addIncoming(MinIdxPartial2ExitAdd, MinIdxPartial2Exit);
+  MinIdxRet->addIncoming(MinIdxVectEndKnownArg, MinIdxPartial2If);
+
+  // create bitcast.
+  Value *MinIdxRetBitCast = Builder.CreateTruncOrBitCast(
+      MinIdxRet, F->getReturnType(), "minidx.ret.bitcast");
+
+  Builder.CreateBr(ExitBB);
+  DTU.applyUpdates({{DominatorTree::Insert, MinIdxEnd, ExitBB}});
+
+  MinIdxVectBodyPhi1->addIncoming(Umax, MinIdxWhileBodyLrPh);
+  MinIdxVectBodyPhi1->addIncoming(MinIdxVectBodySub, MinIdxVectContinue);
+
+  MinIdxVectBodyKnownArg->addIncoming(Partial1ExitKnownArg,
+                                      MinIdxWhileBodyLrPh);
+  MinIdxVectBodyKnownArg->addIncoming(MinIdxVectContinueKnownArg,
+                                      MinIdxVectContinue);
+
+  MinIdxVectBodyKnownMin->addIncoming(Partial1ExitKnownMin,
+                                      MinIdxWhileBodyLrPh);
+  MinIdxVectBodyKnownMin->addIncoming(MinIdxVectContinueKnownMin,
+                                      MinIdxVectContinue);
+
+  // Collect PHIs that need to be replaced
+  SmallVector<PHINode *, 8> PHIsToReplace;
+  for (PHINode &PHI : ExitBB->phis()) {
+    PHIsToReplace.push_back(&PHI);
+  }
+
+  // Now perform the replacement
+  for (PHINode *PHI : PHIsToReplace) {
+    // Create PHI at the beginning of the block
+    Builder.SetInsertPoint(ExitBB, ExitBB->getFirstInsertionPt());
+    // TODO: Add comment.
+    PHINode *ExitPHI =
+        Builder.CreatePHI(F->getReturnType(), PHI->getNumIncomingValues() + 2);
+    for (unsigned I = 0; I < PHI->getNumIncomingValues(); ++I) {
+      ExitPHI->addIncoming(PHI->getIncomingValue(I), PHI->getIncomingBlock(I));
+    }
+    ExitPHI->addIncoming(MinIdxRetBitCast, MinIdxEnd);
+    ExitPHI->addIncoming(SecondIndexBitCast, LoopPreheader);
+    // Replace all uses of PHI with ExitPHI.
+    PHI->replaceAllUsesWith(ExitPHI);
+    PHI->eraseFromParent();
+  }
+
+  VecLoop->verifyLoop();
+  if (!VecLoop->isRecursivelyLCSSAForm(*DT, *LI)) {
+    LLVM_DEBUG(dbgs() << "Loop is not in LCSSA form\n");
+    VecLoop->print(dbgs());
+    VecLoop->dump();
+  }
+
+  return true;
 }
 
 bool LoopIdiomVectorize::recognizeByteCompare() {
