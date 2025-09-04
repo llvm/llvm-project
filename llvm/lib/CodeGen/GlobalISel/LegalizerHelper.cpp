@@ -2848,11 +2848,16 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     return Legalized;
 
   case TargetOpcode::G_ABS:
+  case TargetOpcode::G_ABDS:
+  case TargetOpcode::G_ABDU: {
+    bool IsUnsigned = MI.getOpcode() == TargetOpcode::G_ABDU;
     Observer.changingInstr(MI);
-    widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_SEXT);
+    widenScalarSrc(MI, WideTy, 1,
+                   IsUnsigned ? TargetOpcode::G_ZEXT : TargetOpcode::G_SEXT);
     widenScalarDst(MI, WideTy);
     Observer.changedInstr(MI);
     return Legalized;
+  }
 
   case TargetOpcode::G_ADD:
   case TargetOpcode::G_AND:
@@ -9561,9 +9566,7 @@ LegalizerHelper::lowerAbsDiffToSelect(MachineInstr &MI) {
           MI.getOpcode() == TargetOpcode::G_ABDU) &&
          "Expected G_ABDS or G_ABDU instruction");
 
-  Register DstReg = MI.getOperand(0).getReg();
-  Register LHS = MI.getOperand(1).getReg();
-  Register RHS = MI.getOperand(2).getReg();
+  auto [DstReg, LHS, RHS] = MI.getFirst3Regs();
   LLT Ty = MRI.getType(LHS);
 
   // abds(lhs, rhs) -> select(sgt(lhs,rhs), sub(lhs,rhs), sub(rhs,lhs))
@@ -9586,9 +9589,7 @@ LegalizerHelper::lowerAbsDiffToMinMax(MachineInstr &MI) {
           MI.getOpcode() == TargetOpcode::G_ABDU) &&
          "Expected G_ABDS or G_ABDU instruction");
 
-  Register DstReg = MI.getOperand(0).getReg();
-  Register LHS = MI.getOperand(1).getReg();
-  Register RHS = MI.getOperand(2).getReg();
+  auto [DstReg, LHS, RHS] = MI.getFirst3Regs();
   LLT Ty = MRI.getType(LHS);
 
   // abds(lhs, rhs) -→ sub(smax(lhs, rhs), smin(lhs, rhs))
