@@ -13630,4 +13630,6 @@ def err_amdgcn_predicate_type_needs_explicit_bool_cast
             "guarding of target dependent code, and thus should be avoided">;
 def note_amdgcn_protected_by_predicate : Note<"jump enters statement controlled"
                                               " by AMDGPU feature predicate">;
+
+def err_amdgcn_coop_atomic_invalid_as : Error<"cooperative atomic requires a global or generic pointer">;
 } // end of sema component.
