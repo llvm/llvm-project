@@ -511,4 +511,7 @@ def ReturnLike : TraitList<[
     >
 ]>;
 
+// Op is "convergent".
+def Convergent : NativeOpTrait<"Convergent">;
+
 #endif // MLIR_INTERFACES_CONTROLFLOWINTERFACES

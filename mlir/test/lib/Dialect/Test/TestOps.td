@@ -2139,6 +2139,11 @@ def TestTypeChangerOp : TEST_Op<"type_changer">,
 def TestValidOp : TEST_Op<"valid", [Terminator]>,
   Arguments<(ins Variadic<AnyType>)>;
 
+def TestConvergentOp : TEST_Op<"convergent", [Convergent]> {
+  let arguments = (ins AnyType);
+  let results = (outs AnyType);
+}
+
 def TestMergeBlocksOp : TEST_Op<"merge_blocks"> {
   let summary = "merge_blocks operation";
   let description = [{

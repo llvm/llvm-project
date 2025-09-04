@@ -14,12 +14,13 @@
 #define NVVMIR_OPS
 
 include "mlir/IR/EnumAttr.td"
+include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/InferIntRangeInterface.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.td"
-include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.td"
-include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Dialect/LLVMIR/LLVMTypes.td"
 
 def LLVM_PointerGeneric : LLVM_PointerInAddressSpace<0>;
@@ -647,7 +648,7 @@ def NVVM_MBarrierTestWaitSharedOp : NVVM_Op<"mbarrier.test.wait.shared">,
 // NVVM synchronization op definitions
 //===----------------------------------------------------------------------===//
 
-def NVVM_Barrier0Op : NVVM_Op<"barrier0"> {
+def NVVM_Barrier0Op : NVVM_Op<"barrier0", [Convergent]> {
   let assemblyFormat = "attr-dict";
   string llvmBuilder = [{
       createIntrinsicCall(

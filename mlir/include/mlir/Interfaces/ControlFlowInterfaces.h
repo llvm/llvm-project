@@ -337,8 +337,12 @@ struct ReturnLike : public TraitBase<ConcreteType, ReturnLike> {
     return success();
   }
 };
-} // namespace OpTrait
 
+// The Operation may not be made control-dependent on any additional values.
+// See https://llvm.org/docs/ConvergentOperations.html for more details.
+template <typename ConcreteType>
+struct Convergent : public TraitBase<ConcreteType, Convergent> {};
+} // namespace OpTrait
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//
