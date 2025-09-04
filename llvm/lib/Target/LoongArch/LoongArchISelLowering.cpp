@@ -423,6 +423,11 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine(ISD::BITCAST);
   }
 
+  // Set DAG combine for 'LASX' feature.
+
+  if (Subtarget.hasExtLASX())
+    setTargetDAGCombine(ISD::EXTRACT_VECTOR_ELT);
+
   // Compute derived properties from the register classes.
   computeRegisterProperties(Subtarget.getRegisterInfo());
 
@@ -2778,14 +2783,58 @@ SDValue LoongArchTargetLowering::lowerCONCAT_VECTORS(SDValue Op,
 SDValue
 LoongArchTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
                                                  SelectionDAG &DAG) const {
-  EVT VecTy = Op->getOperand(0)->getValueType(0);
+  MVT EltVT = Op.getSimpleValueType();
+  SDValue Vec = Op->getOperand(0);
+  EVT VecTy = Vec->getValueType(0);
   SDValue Idx = Op->getOperand(1);
-  unsigned NumElts = VecTy.getVectorNumElements();
+  SDLoc DL(Op);
+  MVT GRLenVT = Subtarget.getGRLenVT();
 
-  if (isa<ConstantSDNode>(Idx) && Idx->getAsZExtVal() < NumElts)
+  assert(VecTy.is256BitVector() && "Unexpected EXTRACT_VECTOR_ELT vector type");
+
+  if (isa<ConstantSDNode>(Idx))
     return Op;
 
-  return SDValue();
+  switch (VecTy.getSimpleVT().SimpleTy) {
+  default:
+    llvm_unreachable("Unexpected type");
+  case MVT::v32i8:
+  case MVT::v16i16:
+  case MVT::v4i64:
+  case MVT::v4f64: {
+    // Extract the high half subvector and place it to the low half of a new
+    // vector. It doesn't matter what the high half of the new vector is.
+    EVT HalfTy = VecTy.getHalfNumVectorElementsVT(*DAG.getContext());
+    SDValue VecHi =
+        DAG.getExtractSubvector(DL, HalfTy, Vec, HalfTy.getVectorNumElements());
+    SDValue TmpVec =
+        DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VecTy, DAG.getUNDEF(VecTy),
+                    VecHi, DAG.getConstant(0, DL, GRLenVT));
+
+    // Shuffle the origin Vec and the TmpVec using MaskVec, the lowest element
+    // of MaskVec is Idx, the rest do not matter. ResVec[0] will hold the
+    // desired element.
+    SDValue IdxCp =
+        DAG.getNode(LoongArchISD::MOVGR2FR_W_LA64, DL, MVT::f32, Idx);
+    SDValue IdxVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8f32, IdxCp);
+    SDValue MaskVec =
+        DAG.getBitcast((VecTy == MVT::v4f64) ? MVT::v4i64 : VecTy, IdxVec);
+    SDValue ResVec =
+        DAG.getNode(LoongArchISD::VSHUF, DL, VecTy, MaskVec, TmpVec, Vec);
+
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, ResVec,
+                       DAG.getConstant(0, DL, GRLenVT));
+  }
+  case MVT::v8i32:
+  case MVT::v8f32: {
+    SDValue SplatIdx = DAG.getSplatBuildVector(MVT::v8i32, DL, Idx);
+    SDValue SplatValue =
+        DAG.getNode(LoongArchISD::XVPERM, DL, VecTy, Vec, SplatIdx);
+
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, SplatValue,
+                       DAG.getConstant(0, DL, GRLenVT));
+  }
+  }
 }
 
 SDValue
@@ -6152,6 +6201,42 @@ performSPLIT_PAIR_F64Combine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue
+performEXTRACT_VECTOR_ELTCombine(SDNode *N, SelectionDAG &DAG,
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const LoongArchSubtarget &Subtarget) {
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  MVT EltVT = N->getSimpleValueType(0);
+  SDValue Vec = N->getOperand(0);
+  EVT VecTy = Vec->getValueType(0);
+  SDValue Idx = N->getOperand(1);
+  unsigned IdxOp = Idx.getOpcode();
+  SDLoc DL(N);
+
+  if (!VecTy.is256BitVector() || isa<ConstantSDNode>(Idx))
+    return SDValue();
+
+  // Combine:
+  //   t2 = truncate t1
+  //   t3 = {zero/sign/any}_extend t2
+  //   t4 = extract_vector_elt t0, t3
+  // to:
+  //   t4 = extract_vector_elt t0, t1
+  if (IdxOp == ISD::ZERO_EXTEND || IdxOp == ISD::SIGN_EXTEND ||
+      IdxOp == ISD::ANY_EXTEND) {
+    SDValue IdxOrig = Idx.getOperand(0);
+    if (!(IdxOrig.getOpcode() == ISD::TRUNCATE))
+      return SDValue();
+
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Vec,
+                       IdxOrig.getOperand(0));
+  }
+
+  return SDValue();
+}
+
 SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
                                                    DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -6185,6 +6270,8 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performVMSKLTZCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::SPLIT_PAIR_F64:
     return performSPLIT_PAIR_F64Combine(N, DAG, DCI, Subtarget);
+  case ISD::EXTRACT_VECTOR_ELT:
+    return performEXTRACT_VECTOR_ELTCombine(N, DAG, DCI, Subtarget);
   }
   return SDValue();
 }
@@ -6967,6 +7054,7 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(VREPLVEI)
     NODE_NAME_CASE(VREPLGR2VR)
     NODE_NAME_CASE(XVPERMI)
+    NODE_NAME_CASE(XVPERM)
     NODE_NAME_CASE(VPICK_SEXT_ELT)
     NODE_NAME_CASE(VPICK_ZEXT_ELT)
     NODE_NAME_CASE(VREPLVE)
