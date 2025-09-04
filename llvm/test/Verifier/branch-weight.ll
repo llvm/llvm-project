@@ -11,7 +11,7 @@
 ; RUN: opt -passes=verify %t/unknown-correct.ll --disable-output
 
 ; RUN: not opt -passes=verify %t/unknown-invalid.ll --disable-output 2>&1 | FileCheck %s --check-prefix=EXTRA-ARGS
-; RUN: not opt -passes=verify %t/unknown-on-function1.ll --disable-output 2>&1 | FileCheck %s --check-prefix=ON-FUNCTION1
+; RUN: opt -passes=verify %t/unknown-on-function1.ll -S -o - | FileCheck %s --check-prefix=ON-FUNCTION1
 ; RUN: not opt -passes=verify %t/unknown-on-function2.ll --disable-output 2>&1 | FileCheck %s --check-prefix=ON-FUNCTION2
 ; RUN: not opt -passes=verify %t/invalid-unknown-placement.ll --disable-output 2>&1 | FileCheck %s --check-prefix=INVALID-UNKNOWN-PLACEMENT
 
@@ -132,7 +132,7 @@ define void @test() !prof !0 {
 }
 
 !0 = !{!"unknown"}
-; ON-FUNCTION1: 'unknown' !prof metadata should appear only on instructions supporting the 'branch_weights' metadata
+; ON-FUNCTION1: define void @test() !prof !0
 
 ;--- unknown-on-function2.ll
 define void @test() !prof !0 {
