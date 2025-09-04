@@ -26,15 +26,18 @@ from itertools import product
 from pathlib import Path
 from typing import Dict, Iterable, List, Sequence, Tuple
 
+
 # Are we testing arm_sve.h or arm_sme.h based builtins.
 class Mode(Enum):
     SVE = "sve"
     SME = "sme"
 
+
 class FunctionType(Enum):
     NORMAL = "normal"
     STREAMING = "streaming"
     STREAMING_COMPATIBLE = "streaming-compatible"
+
 
 # Builtins are grouped by their required features.
 @dataclass(frozen=True, order=True, slots=True)
@@ -44,15 +47,18 @@ class BuiltinContext:
     flags: tuple[str, ...]
 
     def __str__(self) -> str:
-        return (f'// Properties: '
-                f'guard="{self.guard}" '
-                f'streaming_guard="{self.streaming_guard}" '
-                f'flags="{",".join(self.flags)}"')
+        return (
+            f"// Properties: "
+            f'guard="{self.guard}" '
+            f'streaming_guard="{self.streaming_guard}" '
+            f'flags="{",".join(self.flags)}"'
+        )
 
     @classmethod
     def from_json(cls, obj: dict[str, Any]) -> "BuiltinContext":
         flags = tuple(p.strip() for p in obj["flags"].split(",") if p.strip())
         return cls(obj["guard"], obj["streaming_guard"], flags)
+
 
 # --- Parsing builtins -------------------------------------------------------
 
@@ -64,6 +70,7 @@ FUNC_RE = re.compile(r"^\s*([a-zA-Z_][\w\s\*]*[\w\*])\s*\(\s*([^)]*)\s*\)\s*;\s*
 
 # Pulls the final word out of the left side (the function name).
 NAME_RE = re.compile(r"([a-zA-Z_][\w]*)\s*$")
+
 
 def parse_builtin_declaration(decl: str) -> Tuple[str, List[str]]:
     """Return (func_name, param_types) from a builtin declaration string.
@@ -88,9 +95,10 @@ def parse_builtin_declaration(decl: str) -> Tuple[str, List[str]]:
         param_types: List[str] = []
     else:
         # Split by commas respecting no pointers/arrays with commas (not expected here)
-        param_types = [p.strip() for p in params.split(',') if p.strip()]
+        param_types = [p.strip() for p in params.split(",") if p.strip()]
 
     return func_name, param_types
+
 
 # --- Variable synthesis -----------------------------------------------------
 
@@ -125,8 +133,9 @@ LITERAL_TYPES_MAP: dict[str, str] = {
     "ImmCheckShiftRight": "2",
     "enum svpattern": "SV_MUL3",
     "enum svprfop": "SV_PSTL1KEEP",
-    "void": ""
-    }
+    "void": "",
+}
+
 
 def make_arg_for_type(ty: str) -> Tuple[str, str]:
     """Return (var_decl, var_use) for a parameter type.
@@ -142,18 +151,21 @@ def make_arg_for_type(ty: str) -> Tuple[str, str]:
     name = ty.replace(" ", "_").replace("*", "ptr") + "_val"
     return f"{ty} {name};", name
 
+
 # NOTE: Parsing is limited to the minimum required for guard strings.
 # Specifically the expected input is of the form:
 #   feat1,feat2,...(feat3 | feat4 | ...),...
-def expand_feature_guard(guard: str, flags: str, base_feature: str = None) -> list[set[str]]:
+def expand_feature_guard(
+    guard: str, flags: str, base_feature: str = None
+) -> list[set[str]]:
     """
     Expand a guard expression where ',' = AND and '|' = OR, with parentheses
     grouping OR-expressions. Returns a list of feature sets.
     """
     if not guard:
-        return [];
+        return []
 
-    parts = re.split(r',(?![^(]*\))', guard)
+    parts = re.split(r",(?![^(]*\))", guard)
 
     choices_per_part = []
     for part in parts:
@@ -185,8 +197,10 @@ def expand_feature_guard(guard: str, flags: str, base_feature: str = None) -> li
 
     return unique
 
+
 def cc1_args_for_features(features: set[str]) -> str:
     return " ".join("-target-feature +" + s for s in sorted(features))
+
 
 def sanitise_guard(s: str) -> str:
     """Rewrite guard strings in a form more suitable for file naming."""
@@ -203,6 +217,7 @@ def sanitise_guard(s: str) -> str:
     s = re.sub(r"_+", "_", s)
     return s.strip("_")
 
+
 def make_filename(prefix: str, ctx: BuiltinContext, ext: str) -> str:
     parts = [sanitise_guard(ctx.guard), sanitise_guard(ctx.streaming_guard)]
     sanitised_guard = "___".join(p for p in parts if p)
@@ -218,7 +233,9 @@ def make_filename(prefix: str, ctx: BuiltinContext, ext: str) -> str:
 
     return f"{prefix}_{sanitised_guard}{ext}"
 
+
 # --- Code Generation --------------------------------------------------------
+
 
 def emit_streaming_guard_run_lines(ctx: BuiltinContext) -> str:
     """Emit lit RUN lines that will exercise the relevent Sema diagnistics."""
@@ -227,13 +244,17 @@ def emit_streaming_guard_run_lines(ctx: BuiltinContext) -> str:
 
     # All RUN lines have SVE and SME enabled
     guard_features = expand_feature_guard(ctx.guard, ctx.flags, "sme")
-    streaming_guard_features = expand_feature_guard(ctx.streaming_guard, ctx.flags, "sve")
+    streaming_guard_features = expand_feature_guard(
+        ctx.streaming_guard, ctx.flags, "sve"
+    )
 
     if "streaming-only" in ctx.flags:
         assert not guard_features
         # Generate RUN lines for features only availble to streaming functions
         for feats in streaming_guard_features:
-            out.append(f"{run_prefix} {cc1_args_for_features(feats)} -verify=streaming-guard")
+            out.append(
+                f"{run_prefix} {cc1_args_for_features(feats)} -verify=streaming-guard"
+            )
     elif "streaming-compatible" in ctx.flags:
         assert not guard_features
         # NOTE: Streaming compatible builtins don't require SVE.
@@ -243,7 +264,9 @@ def emit_streaming_guard_run_lines(ctx: BuiltinContext) -> str:
         out.append("// expected-no-diagnostics")
     elif "feature-dependent" in ctx.flags:
         assert guard_features and streaming_guard_features
-        combined_features = expand_feature_guard(ctx.guard + "," + ctx.streaming_guard, ctx.flags)
+        combined_features = expand_feature_guard(
+            ctx.guard + "," + ctx.streaming_guard, ctx.flags
+        )
 
         # Generate RUN lines for features only availble to normal functions
         for feats in guard_features:
@@ -253,7 +276,9 @@ def emit_streaming_guard_run_lines(ctx: BuiltinContext) -> str:
         # Geneate RUN lines for features only available to streaming functions
         for feats in streaming_guard_features:
             if feats not in combined_features:
-                out.append(f"{run_prefix} {cc1_args_for_features(feats)} -verify=streaming-guard")
+                out.append(
+                    f"{run_prefix} {cc1_args_for_features(feats)} -verify=streaming-guard"
+                )
 
         # Generate RUN lines for features available to all functions
         for feats in combined_features:
@@ -268,7 +293,14 @@ def emit_streaming_guard_run_lines(ctx: BuiltinContext) -> str:
 
     return "\n".join(out)
 
-def emit_streaming_guard_function(ctx: BuiltinContext, var_decls: Sequence[str], calls: Sequence[str], func_name: str, func_type: FunctionType = FunctionType.NORMAL) -> str:
+
+def emit_streaming_guard_function(
+    ctx: BuiltinContext,
+    var_decls: Sequence[str],
+    calls: Sequence[str],
+    func_name: str,
+    func_type: FunctionType = FunctionType.NORMAL,
+) -> str:
     """Emit a C function calling all builtins.
 
     `calls` is a sequence of tuples: (name, call_line)
@@ -279,17 +311,23 @@ def emit_streaming_guard_function(ctx: BuiltinContext, var_decls: Sequence[str],
         if func_type != FunctionType.STREAMING:
             require_streaming_diagnostic = True
     elif "streaming-compatible" in ctx.flags:
-        pass # streaming compatible builtins are always available
+        pass  # streaming compatible builtins are always available
     elif "feature-dependent" in ctx.flags:
         guard_features = expand_feature_guard(ctx.guard, ctx.flags, "sme")
-        streaming_guard_features = expand_feature_guard(ctx.streaming_guard, ctx.flags, "sve")
-        combined_features = expand_feature_guard(ctx.guard + "," + ctx.streaming_guard, ctx.flags)
+        streaming_guard_features = expand_feature_guard(
+            ctx.streaming_guard, ctx.flags, "sve"
+        )
+        combined_features = expand_feature_guard(
+            ctx.guard + "," + ctx.streaming_guard, ctx.flags
+        )
 
         if func_type != FunctionType.NORMAL:
             if any(feats not in combined_features for feats in guard_features):
                 require_diagnostic = True
         if func_type != FunctionType.STREAMING:
-            if any(feats not in combined_features for feats in streaming_guard_features):
+            if any(
+                feats not in combined_features for feats in streaming_guard_features
+            ):
                 require_streaming_diagnostic = True
     else:
         if func_type != FunctionType.NORMAL:
@@ -319,26 +357,35 @@ def emit_streaming_guard_function(ctx: BuiltinContext, var_decls: Sequence[str],
     # Emit calls
     for call in calls:
         if require_diagnostic and require_streaming_diagnostic:
-            out.append("  // guard-error@+2 {{builtin can only be called from a non-streaming function}}")
-            out.append("  // streaming-guard-error@+1 {{builtin can only be called from a streaming function}}")
+            out.append(
+                "  // guard-error@+2 {{builtin can only be called from a non-streaming function}}"
+            )
+            out.append(
+                "  // streaming-guard-error@+1 {{builtin can only be called from a streaming function}}"
+            )
         elif require_diagnostic:
-            out.append("  // guard-error@+1 {{builtin can only be called from a non-streaming function}}")
+            out.append(
+                "  // guard-error@+1 {{builtin can only be called from a non-streaming function}}"
+            )
         elif require_streaming_diagnostic:
-            out.append("  // streaming-guard-error@+1 {{builtin can only be called from a streaming function}}")
+            out.append(
+                "  // streaming-guard-error@+1 {{builtin can only be called from a streaming function}}"
+            )
         out.append(f"  {call}")
 
     out.append("}")
     return "\n".join(out) + "\n"
 
+
 def natural_key(s: str):
     """Allow sorting akin to "sort -V"""
-    return [int(text) if text.isdigit() else text
-            for text in re.split(r'(\d+)', s)]
+    return [int(text) if text.isdigit() else text for text in re.split(r"(\d+)", s)]
+
 
 def build_calls_for_group(builtins: Iterable[str]) -> Tuple[List[str], List[str]]:
     """From a list of builtin declaration strings, produce:
-      - a sorted list of unique variable declarations
-      - a sorted list of builtin calls
+    - a sorted list of unique variable declarations
+    - a sorted list of builtin calls
     """
     var_decls: List[str] = []
     seen_types: set[str] = set()
@@ -363,6 +410,7 @@ def build_calls_for_group(builtins: Iterable[str]) -> Tuple[List[str], List[str]
 
     return var_decls, calls
 
+
 def gen_streaming_guard_tests(mode: MODE, json_path: Path, out_dir: Path) -> None:
     """Generate a set of Clang Sema test files to ensure SVE/SME builtins are
     callable based on the function type, or the required diagnostic is emitted.
@@ -381,8 +429,10 @@ def gen_streaming_guard_tests(mode: MODE, json_path: Path, out_dir: Path) -> Non
     for builtin_ctx, builtin_decls in by_guard.items():
         var_decls, calls = build_calls_for_group(builtin_decls)
 
-        out_parts: List[str] = [];
-        out_parts.append("// NOTE: File has been autogenerated by utils/aarch64_builtins_test_generator.py")
+        out_parts: List[str] = []
+        out_parts.append(
+            "// NOTE: File has been autogenerated by utils/aarch64_builtins_test_generator.py"
+        )
         out_parts.append(emit_streaming_guard_run_lines(builtin_ctx))
         out_parts.append("")
         out_parts.append("// REQUIRES: aarch64-registered-target")
@@ -391,9 +441,23 @@ def gen_streaming_guard_tests(mode: MODE, json_path: Path, out_dir: Path) -> Non
         out_parts.append("")
         out_parts.append(str(builtin_ctx))
         out_parts.append("")
-        out_parts.append(emit_streaming_guard_function(builtin_ctx, var_decls, calls, "test"))
-        out_parts.append(emit_streaming_guard_function(builtin_ctx, var_decls, calls, "test_streaming", FunctionType.STREAMING))
-        out_parts.append(emit_streaming_guard_function(builtin_ctx, var_decls, calls, "test_streaming_compatible", FunctionType.STREAMING_COMPATIBLE))
+        out_parts.append(
+            emit_streaming_guard_function(builtin_ctx, var_decls, calls, "test")
+        )
+        out_parts.append(
+            emit_streaming_guard_function(
+                builtin_ctx, var_decls, calls, "test_streaming", FunctionType.STREAMING
+            )
+        )
+        out_parts.append(
+            emit_streaming_guard_function(
+                builtin_ctx,
+                var_decls,
+                calls,
+                "test_streaming_compatible",
+                FunctionType.STREAMING_COMPATIBLE,
+            )
+        )
 
         output = "\n".join(out_parts).rstrip() + "\n"
 
@@ -402,11 +466,13 @@ def gen_streaming_guard_tests(mode: MODE, json_path: Path, out_dir: Path) -> Non
             filename = make_filename(f"arm_{mode.value}", builtin_ctx, ".c")
             (out_dir / filename).write_text(output)
         else:
-           print(output)
+            print(output)
 
     return 0
 
+
 # --- Main -------------------------------------------------------------------
+
 
 def existing_file(path: str) -> Path:
     p = Path(path)
@@ -414,30 +480,45 @@ def existing_file(path: str) -> Path:
         raise argparse.ArgumentTypeError(f"{p} is not a valid file")
     return p
 
+
 def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Emit C tests for SVE/SME builtins")
-    ap.add_argument("json", type=existing_file,
-                    help="Path to json formatted builtin descriptions")
-    ap.add_argument("--out-dir", type=Path, default=None,
-                    help="Output directory (default: stdout)")
-    ap.add_argument("--gen-streaming-guard-tests", action="store_true",
-                    help="Generate C tests to validate SVE/SME builtin usage base on streaming attribute")
-    ap.add_argument("--gen-target-guard-tests", action="store_true",
-                    help="Generate C tests to validate SVE/SME builtin usage based on target features")
-    ap.add_argument("--gen-builtin-tests", action="store_true",
-                    help="Generate C tests to exercise SVE/SME builtins")
-    ap.add_argument("--base-target-feature", choices=["sve", "sme"],
-                    help="Force builtin source (sve: arm_sve.h, sme: arm_sme.h)")
+    ap.add_argument(
+        "json", type=existing_file, help="Path to json formatted builtin descriptions"
+    )
+    ap.add_argument(
+        "--out-dir", type=Path, default=None, help="Output directory (default: stdout)"
+    )
+    ap.add_argument(
+        "--gen-streaming-guard-tests",
+        action="store_true",
+        help="Generate C tests to validate SVE/SME builtin usage base on streaming attribute",
+    )
+    ap.add_argument(
+        "--gen-target-guard-tests",
+        action="store_true",
+        help="Generate C tests to validate SVE/SME builtin usage based on target features",
+    )
+    ap.add_argument(
+        "--gen-builtin-tests",
+        action="store_true",
+        help="Generate C tests to exercise SVE/SME builtins",
+    )
+    ap.add_argument(
+        "--base-target-feature",
+        choices=["sve", "sme"],
+        help="Force builtin source (sve: arm_sve.h, sme: arm_sme.h)",
+    )
 
     args = ap.parse_args(argv)
 
     # When not forced, try to infer the mode from the input, defaulting to SVE.
     if args.base_target_feature:
-        mode=Mode(args.base_target_feature)
+        mode = Mode(args.base_target_feature)
     elif args.json and args.json.name == "arm_sme_builtins.json":
-        mode=Mode.SME
+        mode = Mode.SME
     else:
-        mode=Mode.SVE
+        mode = Mode.SVE
 
     # Generate test file
     if args.gen_streaming_guard_tests:
@@ -448,6 +529,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         ap.error("--gen-builtin-tests not implemented yet!")
 
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
