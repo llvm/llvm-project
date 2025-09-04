@@ -43,15 +43,7 @@ static Error extractPartAsObject(StringRef PartName, StringRef OutFilename,
 }
 
 static Error handleArgs(const CommonConfig &Config, Object &Obj) {
-  std::function<bool(const Part &)> RemovePred = [](const Part &) {
-    return false;
-  };
-
-  if (!Config.ToRemove.empty())
-    RemovePred = [&Config](const Part &P) {
-      return Config.ToRemove.matches(P.Name);
-    };
-
+  // Extract all sections before any modifications.
   for (StringRef Flag : Config.ExtractSection) {
     StringRef SectionName;
     StringRef FileName;
@@ -60,6 +52,15 @@ static Error handleArgs(const CommonConfig &Config, Object &Obj) {
                                       Config.InputFilename, Obj))
       return E;
   }
+
+  std::function<bool(const Part &)> RemovePred = [](const Part &) {
+    return false;
+  };
+
+  if (!Config.ToRemove.empty())
+    RemovePred = [&Config](const Part &P) {
+      return Config.ToRemove.matches(P.Name);
+    };
 
   if (auto E = Obj.removeParts(RemovePred))
     return E;
