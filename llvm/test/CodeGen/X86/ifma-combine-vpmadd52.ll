@@ -155,12 +155,9 @@ define <8 x i64> @const_2pow51_times_2(<8 x i64> %acc) #0 {
 ; X64:       vpaddq
 ; X64:       ret
 entry:
-  %a = insertelement <8 x i64> undef, i64 2251799813685248, i32 0 ; 2^51
-  %a.s = shufflevector <8 x i64> %a, <8 x i64> poison, <8 x i32> splat (i32 0)
-  %b = insertelement <8 x i64> undef, i64 2, i32 0
-  %b.s = shufflevector <8 x i64> %b, <8 x i64> poison, <8 x i32> splat (i32 0)
-  %mul = mul <8 x i64> %a.s, %b.s        ; product = 2^52
-  %res = add <8 x i64> %acc, %mul        ; needs full low-64 add
+  ; product = 2^52
+  %mul = mul <8 x i64> splat(i64 2251799813685248), splat(i64 2)
+  %res = add <8 x i64> %acc, %mul    ; needs full low-64 add
   ret <8 x i64> %res
 }
 
