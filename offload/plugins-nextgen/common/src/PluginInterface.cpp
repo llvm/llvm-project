@@ -573,7 +573,7 @@ KernelLaunchParamsTy GenericKernelTy::prepareArgs(
   }
 
   size_t ArgsSize = sizeof(void *) * NumArgs;
-  return KernelLaunchParamsTy{ArgsSize, ArgsSize, &Args[0], &Ptrs[0]};
+  return KernelLaunchParamsTy{ArgsSize, &Args[0], &Ptrs[0]};
 }
 
 uint32_t GenericKernelTy::getNumThreads(GenericDeviceTy &GenericDevice,

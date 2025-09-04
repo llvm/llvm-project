@@ -119,10 +119,8 @@ static_assert(sizeof(KernelArgsTy) ==
 
 /// Flat array of kernel launch parameters and their total size.
 struct KernelLaunchParamsTy {
-  /// Size of the Data array.
+  /// Size of the Data array without the tail padding.
   size_t Size = 0;
-  /// Size of the Data array without tail padding.
-  size_t SizeNoTailPadding = 0;
   /// Flat array of kernel parameters.
   void *Data = nullptr;
   /// Ptrs to the Data entries. Only strictly required for the host plugin.

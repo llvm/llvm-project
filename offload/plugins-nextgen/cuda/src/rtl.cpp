@@ -1414,7 +1414,7 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
 
   void *Config[] = {CU_LAUNCH_PARAM_BUFFER_POINTER, LaunchParams.Data,
                     CU_LAUNCH_PARAM_BUFFER_SIZE,
-                    reinterpret_cast<void *>(&LaunchParams.SizeNoTailPadding),
+                    reinterpret_cast<void *>(&LaunchParams.Size),
                     CU_LAUNCH_PARAM_END};
 
   // If we are running an RPC server we want to wake up the server thread
