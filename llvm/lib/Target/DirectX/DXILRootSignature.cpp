@@ -72,34 +72,42 @@ analyzeModule(Module &M) {
   if (RootSignatureNode == nullptr)
     return RSDMap;
 
-  auto HandleNode = [&Ctx, &RSDMap](MDNode *RSDefNode, bool NullFunc = false) {
+  bool AllowNullFunctions = false;
+  if (M.getTargetTriple().getEnvironment() ==
+      Triple::EnvironmentType::RootSignature) {
+    assert(RootSignatureNode->getNumOperands() == 1);
+    AllowNullFunctions = true;
+  }
+
+  for (const auto &RSDefNode : RootSignatureNode->operands()) {
     if (RSDefNode->getNumOperands() != 3) {
       reportError(Ctx, "Invalid Root Signature metadata - expected function, "
                        "signature, and version.");
-      return;
+      continue;
     }
 
+    // Function was pruned during compilation.
     Function *F = nullptr;
-    if (!NullFunc) {
-      // Function was pruned during compilation.
+
+    if (!AllowNullFunctions) {
       const MDOperand &FunctionPointerMdNode = RSDefNode->getOperand(0);
       if (FunctionPointerMdNode == nullptr) {
         reportError(
             Ctx, "Function associated with Root Signature definition is null.");
-        return;
+        continue;
       }
 
       ValueAsMetadata *VAM =
           llvm::dyn_cast<ValueAsMetadata>(FunctionPointerMdNode.get());
       if (VAM == nullptr) {
         reportError(Ctx, "First element of root signature is not a Value");
-        return;
+        continue;
       }
 
       F = dyn_cast<Function>(VAM->getValue());
       if (F == nullptr) {
         reportError(Ctx, "First element of root signature is not a Function");
-        return;
+        continue;
       }
     }
 
@@ -107,18 +115,18 @@ analyzeModule(Module &M) {
 
     if (RootElementListOperand == nullptr) {
       reportError(Ctx, "Root Element mdnode is null.");
-      return;
+      continue;
     }
 
     MDNode *RootElementListNode = dyn_cast<MDNode>(RootElementListOperand);
     if (RootElementListNode == nullptr) {
       reportError(Ctx, "Root Element is not a metadata node.");
-      return;
+      continue;
     }
     std::optional<uint32_t> V = extractMdIntValue(RSDefNode, 2);
     if (!V.has_value()) {
       reportError(Ctx, "Invalid RSDefNode value, expected constant int");
-      return;
+      continue;
     }
 
     llvm::hlsl::rootsig::MetadataParser MDParser(RootElementListNode);
@@ -129,7 +137,7 @@ analyzeModule(Module &M) {
       handleAllErrors(RSDOrErr.takeError(), [&](ErrorInfoBase &EIB) {
         Ctx->emitError(EIB.message());
       });
-      return;
+      continue;
     }
 
     auto &RSD = *RSDOrErr;
@@ -143,18 +151,7 @@ analyzeModule(Module &M) {
     RSD.StaticSamplersOffset = 0u;
 
     RSDMap.insert(std::make_pair(F, RSD));
-  };
-
-  if (M.getTargetTriple().getEnvironment() ==
-      Triple::EnvironmentType::RootSignature) {
-    assert(RootSignatureNode->getNumOperands() == 1);
-    MDNode *RSDefNode = RootSignatureNode->getOperand(0);
-    HandleNode(RSDefNode, true);
-    return RSDMap;
   }
-
-  for (MDNode *RSDefNode : RootSignatureNode->operands())
-    HandleNode(RSDefNode);
 
   return RSDMap;
 }

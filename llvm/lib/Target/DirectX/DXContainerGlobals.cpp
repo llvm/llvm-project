@@ -167,7 +167,6 @@ void DXContainerGlobals::addRootSignature(Module &M,
   }
 
   const mcdxbc::RootSignatureDesc *RS = RSA.getDescForFunction(EntryFunction);
-
   if (!RS)
     return;
 
