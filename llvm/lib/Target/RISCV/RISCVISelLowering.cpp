@@ -21199,6 +21199,38 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return N->getOperand(0);
     break;
   }
+  case RISCVISD::VSLIDE1UP_VL:
+  case RISCVISD::VFSLIDE1UP_VL: {
+    using namespace SDPatternMatch;
+    SDValue SrcVec;
+    SDLoc DL(N);
+    MVT VT = N->getSimpleValueType(0);
+    // If the scalar we're sliding in was extracted from the first element of a
+    // vector, we can use that vector as the passthru in a normal slideup of 1.
+    // This saves us an extract_element instruction (i.e. vfmv.f.s, vmv.x.s).
+    if (!N->getOperand(0).isUndef() ||
+        !sd_match(N->getOperand(2),
+                  m_AnyOf(m_ExtractElt(m_Value(SrcVec), m_Zero()),
+                          m_Node(RISCVISD::VMV_X_S, m_Value(SrcVec)))))
+      break;
+
+    MVT SrcVecVT = SrcVec.getSimpleValueType();
+    if (SrcVecVT.getVectorElementType() != VT.getVectorElementType())
+      break;
+    // Adapt the value type of source vector.
+    if (SrcVecVT.isFixedLengthVector()) {
+      SrcVecVT = getContainerForFixedLengthVector(SrcVecVT);
+      SrcVec = convertToScalableVector(SrcVecVT, SrcVec, DAG, Subtarget);
+    }
+    if (SrcVecVT.getVectorMinNumElements() < VT.getVectorMinNumElements())
+      SrcVec = DAG.getInsertSubvector(DL, DAG.getUNDEF(VT), SrcVec, 0);
+    else
+      SrcVec = DAG.getExtractSubvector(DL, VT, SrcVec, 0);
+
+    return getVSlideup(DAG, Subtarget, DL, VT, SrcVec, N->getOperand(1),
+                       DAG.getConstant(1, DL, XLenVT), N->getOperand(3),
+                       N->getOperand(4));
+  }
   }
 
   return SDValue();
