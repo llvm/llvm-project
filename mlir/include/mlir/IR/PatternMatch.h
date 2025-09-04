@@ -576,24 +576,39 @@ public:
 
   /// Split the operations starting at "before" (inclusive) out of the given
   /// block into a new block, and return it.
+  ///
+  /// If the current insertion point is before the split point, the insertion
+  /// point is adjusted to the new block.
   Block *splitBlock(Block *block, Block::iterator before);
 
   /// Unlink this operation from its current block and insert it right before
   /// `existingOp` which may be in the same or another block in the same
   /// function.
+  ///
+  /// If the insertion point is before the moved operation, the insertion block
+  /// is adjusted to the block of `existingOp`.
   void moveOpBefore(Operation *op, Operation *existingOp);
 
   /// Unlink this operation from its current block and insert it right before
   /// `iterator` in the specified block.
+  ///
+  /// If the insertion point is before the moved operation, the insertion block
+  /// is adjusted to the specified block.
   void moveOpBefore(Operation *op, Block *block, Block::iterator iterator);
 
   /// Unlink this operation from its current block and insert it right after
   /// `existingOp` which may be in the same or another block in the same
   /// function.
+  ///
+  /// If the insertion point is before the moved operation, the insertion block
+  /// is adjusted to the block of `existingOp`.
   void moveOpAfter(Operation *op, Operation *existingOp);
 
   /// Unlink this operation from its current block and insert it right after
   /// `iterator` in the specified block.
+  ///
+  /// If the insertion point is before the moved operation, the insertion block
+  /// is adjusted to the specified block.
   void moveOpAfter(Operation *op, Block *block, Block::iterator iterator);
 
   /// Unlink this block and insert it right before `existingBlock`.
