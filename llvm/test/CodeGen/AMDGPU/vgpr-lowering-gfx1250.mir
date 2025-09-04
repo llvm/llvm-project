@@ -1,0 +1,848 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -start-before=amdgpu-lower-vgpr-encoding -o - %s | FileCheck -check-prefixes=GCN,ASM %s
+
+# ASM-LABEL: {{^}}high_vgprs:
+# DIS-LABEL: <high_vgprs>:
+---
+name:            high_vgprs
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; ASM: %bb.0:
+
+    ; VOP1
+
+    ; GCN-NEXT: s_set_vgpr_msb 0x41
+    ; ASM-SAME:                                         ;  msbs: dst=1 src0=1 src1=0 src2=0
+    ; GCN-NEXT: v_mov_b32_e32 v0 /*v256*/, v255 /*v511*/
+    $vgpr256 = V_MOV_B32_e32 undef $vgpr511, implicit $exec
+
+    ; No mask change
+    ; GCN-NEXT: v_mov_b32_e32 v1 /*v257*/, v254 /*v510*/
+    $vgpr257 = V_MOV_B32_e32 undef $vgpr510, implicit $exec
+
+    ; Single bit change
+    ; GCN-NEXT: s_set_vgpr_msb 1
+    ; ASM-SAME:                                         ;  msbs: dst=0 src0=1 src1=0 src2=0
+    ; GCN-NEXT: v_rcp_f32_e64 v255, v2 /*v258*/
+    $vgpr255 = V_RCP_F32_e64 0, undef $vgpr258, 0, 0, implicit $exec, implicit $mode
+
+    ; Reset
+    ; GCN-NEXT: s_set_vgpr_msb 0
+    ; ASM-SAME:                                         ;  msbs: dst=0 src0=0 src1=0 src2=0
+    ; GCN-NEXT: v_rcp_f32_e64 v255, v1
+    $vgpr255 = V_RCP_F32_e64 0, undef $vgpr1, 0, 0, implicit $exec, implicit $mode
+
+    ; VOP2
+
+    ; GCN-NEXT: s_set_vgpr_msb 5
+    ; ASM-SAME:                                         ;  msbs: dst=0 src0=1 src1=1 src2=0
+    ; GCN-NEXT: v_add_nc_u32_e32 v0, v253 /*v509*/, v252 /*v508*/
+    $vgpr0 = V_ADD_U32_e32 undef $vgpr509, undef $vgpr508, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 0x44
+    ; ASM-SAME:                                         ;  msbs: dst=1 src0=0 src1=1 src2=0
+    ; GCN-NEXT: s_delay_alu instid0(VALU_DEP_1)
+    ; GCN-NEXT: v_add_f32_e64 v2 /*v258*/, v0, v251 /*v507*/
+    $vgpr258 = V_ADD_F32_e64 0, $vgpr0, 0, undef $vgpr507, 0, 0, implicit $exec, implicit $mode
+
+    ; VOP3
+
+    ; GCN-NEXT: s_set_vgpr_msb 0x55
+    ; ASM-SAME:                                         ;  msbs: dst=1 src0=1 src1=1 src2=1
+    ; GCN-NEXT: v_fma_f32 v3 /*v259*/, v4 /*v260*/, v5 /*v261*/, v6 /*v262*/
+    $vgpr259 = V_FMA_F32_e64 0, undef $vgpr260, 0, undef $vgpr261, 0, undef $vgpr262, 0, 0, implicit $exec, implicit $mode
+
+    ; No change
+    ; GCN-NEXT: v_fma_f32 v3 /*v259*/, v4 /*v260*/, v5 /*v261*/, v6 /*v262*/
+    $vgpr259 = V_FMA_F32_e64 0, undef $vgpr260, 0, undef $vgpr261, 0, undef $vgpr262, 0, 0, implicit $exec, implicit $mode
+
+    ; Tuple crossing the 256 boundary
+    ; GCN-NEXT: s_set_vgpr_msb 17
+    ; ASM-SAME:                                         ;  msbs: dst=0 src0=1 src1=0 src2=1
+    ; GCN-NEXT: v_mqsad_u32_u8 v[254:257], v[2:3] /*v[258:259]*/, v0, v[244:247] /*v[500:503]*/
+    $vgpr254_vgpr255_vgpr256_vgpr257 = V_MQSAD_U32_U8_e64 $vgpr258_vgpr259, $vgpr0, undef $vgpr500_vgpr501_vgpr502_vgpr503, 0, implicit $exec
+
+    ; DPP/tied operand
+    ; GCN-NEXT: s_set_vgpr_msb 0x45
+    ; ASM-SAME:                                         ;  msbs: dst=1 src0=1 src1=1 src2=0
+    ; GCN-NEXT: s_delay_alu instid0(VALU_DEP_1)
+    ; GCN-NEXT: v_add_nc_u16_e64_dpp v0 /*v256*/, v1 /*v257*/, v2 /*v258*/ quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
+    $vgpr256 = V_ADD_NC_U16_fake16_e64_dpp $vgpr256, 0, $vgpr257, 0, undef $vgpr258, 0, 0, 1, 15, 15, 1, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 17
+    ; ASM-SAME:                                         ;  msbs: dst=0 src0=1 src1=0 src2=1
+    ; GCN-NEXT: v_add3_u32_e64_dpp v0, v1 /*v257*/, v0, v2 /*v258*/ quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
+    $vgpr0 = V_ADD3_U32_e64_dpp $vgpr0, $vgpr257, $vgpr0, undef $vgpr258, 1, 15, 15, 1, implicit $exec
+
+    ; DS (addr, data0, and data1 operands)
+
+    ; GCN-NEXT: s_set_vgpr_msb 20
+    ; ASM-SAME:                                         ;  msbs: dst=0 src0=0 src1=1 src2=1
+    ; GCN-NEXT: ds_store_2addr_b32 v0, v248 /*v504*/, v249 /*v505*/ offset1:1
+    DS_WRITE2_B32_gfx9 $vgpr0, undef $vgpr504, undef $vgpr505, 0, 1, 0, implicit $exec
+
+    ; Reset
+    ; GCN-NEXT: s_set_vgpr_msb 0
+    ; ASM-SAME:                                         ;  msbs: dst=0 src0=0 src1=0 src2=0
+    ; GCN-NEXT: ds_store_2addr_b32 v0, v248, v249 offset1:1
+    DS_WRITE2_B32_gfx9 $vgpr0, undef $vgpr248, undef $vgpr249, 0, 1, 0, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 1
+    ; ASM-SAME:                                         ;  msbs: dst=0 src0=1 src1=0 src2=0
+    ; GCN-NEXT: ds_load_b32 v0, v255 /*v511*/
+    $vgpr0 = DS_READ_B32_gfx9 $vgpr511, 0, 0, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 0x44
+    ; ASM-SAME:                                         ;  msbs: dst=1 src0=0 src1=1 src2=0
+    ; GCN-NEXT: ds_add_rtn_u32 v255 /*v511*/, v0, v248 /*v504*/
+    $vgpr511 = DS_ADD_RTN_U32_gfx9 $vgpr0, undef $vgpr504, 0, 0, implicit $exec
+
+    ; Reset
+    ; GCN-NEXT: s_set_vgpr_msb 0
+    ; ASM-SAME:                                         ;  msbs: dst=0 src0=0 src1=0 src2=0
+    ; GCN-NEXT: ds_add_rtn_u32 v0, v0, v0
+    $vgpr0 = DS_ADD_RTN_U32_gfx9 $vgpr0, $vgpr0, 0, 0, implicit $exec
+
+    ; FLAT (vaddr, vdata and vdst operands)
+
+    ; GCN-NEXT: s_set_vgpr_msb 1
+    ; ASM-SAME:                                         ;  msbs: dst=0 src0=1 src1=0 src2=0
+    ; GCN-NEXT: global_load_b32 v2, v[2:3] /*v[258:259]*/, off
+    $vgpr2 = GLOBAL_LOAD_DWORD undef $vgpr258_vgpr259, 0, 0, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 64
+    ; ASM-SAME:                                         ;  msbs: dst=1 src0=0 src1=0 src2=0
+    ; GCN-NEXT: global_load_b32 v255 /*v511*/, v0, s[0:1]
+    $vgpr511 = GLOBAL_LOAD_DWORD_SADDR undef $sgpr0_sgpr1, $vgpr0, 0, 0, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 1
+    ; ASM-SAME:                                         ;  msbs: dst=0 src0=1 src1=0 src2=0
+    ; GCN-NEXT: scratch_load_u8 v0, v255 /*v511*/, s0
+    $vgpr0 = SCRATCH_LOAD_UBYTE_SVS $vgpr511, undef $sgpr0, 0, 0, implicit $exec, implicit $flat_scr
+
+    ; GCN-NEXT: s_set_vgpr_msb 0
+    ; ASM-SAME:                                         ;  msbs: dst=0 src0=0 src1=0 src2=0
+    ; GCN-NEXT: global_store_b32 v[0:1], v2, off
+    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 5
+    ; ASM-SAME:                                         ;  msbs: dst=0 src0=1 src1=1 src2=0
+    ; GCN-NEXT: global_store_b32 v[0:1] /*v[256:257]*/, v255 /*v511*/, off
+    GLOBAL_STORE_DWORD $vgpr256_vgpr257, $vgpr511, 0, 0, implicit $exec
+
+    ; No change
+    ; GCN-NEXT: global_store_b96 v[0:1] /*v[256:257]*/, v[244:246] /*v[500:502]*/, off
+    GLOBAL_STORE_DWORDX3 $vgpr256_vgpr257, $vgpr500_vgpr501_vgpr502, 0, 0, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 0x44
+    ; ASM-SAME:                                         ;  msbs: dst=1 src0=0 src1=1 src2=0
+    ; GCN-NEXT: flat_atomic_add_u32 v254 /*v510*/, v[0:1], v255 /*v511*/ th:TH_ATOMIC_RETURN
+    $vgpr510 = FLAT_ATOMIC_ADD_RTN $vgpr0_vgpr1, $vgpr511, 0, 1, implicit $exec, implicit $flat_scr
+
+    ; Reset
+    ; GCN-NEXT: s_set_vgpr_msb 0
+    ; ASM-SAME:                                         ;  msbs: dst=0 src0=0 src1=0 src2=0
+    ; GCN-NEXT: flat_atomic_add_u32 v0, v[0:1], v255 th:TH_ATOMIC_RETURN
+    $vgpr0 = FLAT_ATOMIC_ADD_RTN $vgpr0_vgpr1, $vgpr255, 0, 1, implicit $exec, implicit $flat_scr
+
+    ; VBUFFER (vdata, vaddr operands)
+
+    ; GCN-NEXT: buffer_load_b32 v1, v0, s[8:11], s3 offen
+    $vgpr1 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN $vgpr0, undef $sgpr8_sgpr9_sgpr10_sgpr11, undef $sgpr3, 0, 0, 0, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 64
+    ; ASM-SAME:                                         ;  msbs: dst=1 src0=0 src1=0 src2=0
+    ; GCN-NEXT: buffer_load_b32 v1 /*v257*/, v0, s[8:11], s3 offen
+    $vgpr257 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN $vgpr0, undef $sgpr8_sgpr9_sgpr10_sgpr11, undef $sgpr3, 0, 0, 0, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 0x41
+    ; ASM-SAME:                                         ;  msbs: dst=1 src0=1 src1=0 src2=0
+    ; GCN-NEXT: buffer_load_b32 v1 /*v257*/, v0 /*v256*/, s[8:11], s3 offen
+    $vgpr257 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN $vgpr256, undef $sgpr8_sgpr9_sgpr10_sgpr11, undef $sgpr3, 0, 0, 0, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 0
+    ; ASM-SAME:                                         ;  msbs: dst=0 src0=0 src1=0 src2=0
+    ; GCN-NEXT: buffer_store_b32 v0, v1, s[0:3], s3 offen
+    BUFFER_STORE_DWORD_VBUFFER_OFFEN $vgpr0, $vgpr1, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr3, 0, 0, 0, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 0x41
+    ; ASM-SAME:                                         ;  msbs: dst=1 src0=1 src1=0 src2=0
+    ; GCN-NEXT: buffer_store_b32 v0 /*v256*/, v1 /*v257*/, s[0:3], s3 offen
+    BUFFER_STORE_DWORD_VBUFFER_OFFEN $vgpr256, $vgpr257, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr3, 0, 0, 0, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 0
+    ; ASM-SAME:                                         ;  msbs: dst=0 src0=0 src1=0 src2=0
+    ; GCN-NEXT: buffer_atomic_add_f32 v0, v1, s[0:3], s3 offen
+    BUFFER_ATOMIC_ADD_F32_VBUFFER_OFFEN $vgpr0, $vgpr1, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr3, 0, 0, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 0x41
+    ; ASM-SAME:                                         ;  msbs: dst=1 src0=1 src1=0 src2=0
+    ; GCN-NEXT: buffer_atomic_add_f32 v0 /*v256*/, v1 /*v257*/, s[0:3], s3 offen
+    BUFFER_ATOMIC_ADD_F32_VBUFFER_OFFEN $vgpr256, $vgpr257, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr3, 0, 0, implicit $exec
+
+    ; VGPRs above 512
+
+    ; GCN-NEXT: s_set_vgpr_msb 0xaa
+    ; ASM-SAME:                                         ;  msbs: dst=2 src0=2 src1=2 src2=2
+    ; GCN-NEXT: v_fma_f32 v0 /*v512*/, v1 /*v513*/, v2 /*v514*/, v3 /*v515*/
+    $vgpr512 = V_FMA_F32_e64 0, undef $vgpr513, 0, undef $vgpr514, 0, undef $vgpr515, 0, 0, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: s_set_vgpr_msb 0xab
+    ; ASM-SAME:                                         ;  msbs: dst=2 src0=3 src1=2 src2=2
+    ; GCN-NEXT: v_fma_f32 v0 /*v512*/, v0 /*v768*/, v2 /*v514*/, v3 /*v515*/
+    $vgpr512 = V_FMA_F32_e64 0, undef $vgpr768, 0, undef $vgpr514, 0, undef $vgpr515, 0, 0, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: s_set_vgpr_msb 0xae
+    ; ASM-SAME:                                         ;  msbs: dst=2 src0=2 src1=3 src2=2
+    ; GCN-NEXT: v_fma_f32 v0 /*v512*/, v1 /*v513*/, v2 /*v770*/, v3 /*v515*/
+    $vgpr512 = V_FMA_F32_e64 0, undef $vgpr513, 0, undef $vgpr770, 0, undef $vgpr515, 0, 0, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: s_set_vgpr_msb 0xba
+    ; ASM-SAME:                                         ;  msbs: dst=2 src0=2 src1=2 src2=3
+    ; GCN-NEXT: v_fma_f32 v0 /*v512*/, v1 /*v513*/, v2 /*v514*/, v3 /*v771*/
+    $vgpr512 = V_FMA_F32_e64 0, undef $vgpr513, 0, undef $vgpr514, 0, undef $vgpr771, 0, 0, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: s_set_vgpr_msb 0xea
+    ; ASM-SAME:                                         ;  msbs: dst=3 src0=2 src1=2 src2=2
+    ; GCN-NEXT: v_fma_f32 v255 /*v1023*/, v1 /*v513*/, v2 /*v514*/, v3 /*v515*/
+    $vgpr1023 = V_FMA_F32_e64 0, undef $vgpr513, 0, undef $vgpr514, 0, undef $vgpr515, 0, 0, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: s_set_vgpr_msb 0xff
+    ; ASM-SAME:                                         ;  msbs: dst=3 src0=3 src1=3 src2=3
+    ; GCN-NEXT: v_fma_f32 v0 /*v768*/, v1 /*v769*/, v2 /*v770*/, v3 /*v771*/
+    $vgpr768 = V_FMA_F32_e64 0, undef $vgpr769, 0, undef $vgpr770, 0, undef $vgpr771, 0, 0, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: s_set_vgpr_msb 0x42
+    ; ASM-SAME:                                         ;  msbs: dst=1 src0=2 src1=0 src2=0
+    ; GCN-NEXT: v_mov_b32_e32 v0 /*v256*/, v0 /*v512*/
+    $vgpr256 = V_MOV_B32_e32 undef $vgpr512, implicit $exec
+
+    ; Reset
+
+    ; GCN-NEXT: s_set_vgpr_msb 0
+    ; ASM-SAME:                                         ;  msbs: dst=0 src0=0 src1=0 src2=0
+    ; GCN-NEXT: v_fma_f32 v0, v1, v2, v3
+    $vgpr0 = V_FMA_F32_e64 0, undef $vgpr1, 0, undef $vgpr2, 0, undef $vgpr3, 0, 0, implicit $exec, implicit $mode
+
+    ; Tuples
+
+    ; GCN-NEXT: s_set_vgpr_msb 10
+    ; ASM-SAME:                                         ;  msbs: dst=0 src0=2 src1=2 src2=0
+    ; GCN-NEXT: global_store_b96 v[0:1] /*v[512:513]*/, v[0:2] /*v[512:514]*/, off
+    GLOBAL_STORE_DWORDX3 $vgpr512_vgpr513, $vgpr512_vgpr513_vgpr514, 0, 0, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 11
+    ; ASM-SAME:                                         ;  msbs: dst=0 src0=3 src1=2 src2=0
+    ; GCN-NEXT: global_store_b64 v[254:255] /*v[1022:1023]*/, v[254:255] /*v[766:767]*/, off
+    GLOBAL_STORE_DWORDX2 $vgpr1022_vgpr1023, $vgpr766_vgpr767, 0, 0, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 0x55
+    ; ASM-SAME:                                         ;  msbs: dst=1 src0=1 src1=1 src2=1
+    ; GCN-NEXT: v_wmma_f32_16x16x32_bf16 v[14:21] /*v[270:277]*/, v[26:33] /*v[282:289]*/, v[34:41] /*v[290:297]*/, v[14:21] /*v[270:277]*/
+    early-clobber $vgpr270_vgpr271_vgpr272_vgpr273_vgpr274_vgpr275_vgpr276_vgpr277 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, undef $vgpr282_vgpr283_vgpr284_vgpr285_vgpr286_vgpr287_vgpr288_vgpr289, 8, undef $vgpr290_vgpr291_vgpr292_vgpr293_vgpr294_vgpr295_vgpr296_vgpr297, 8, killed undef $vgpr270_vgpr271_vgpr272_vgpr273_vgpr274_vgpr275_vgpr276_vgpr277, 0, 0, 0, 0, implicit $exec
+
+    ; ASM: NumVgprs: 1024
+
+...
+
+# ASM-LABEL: {{^}}vopd:
+# DIS-LABEL: <vopd>:
+---
+name:            vopd
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; ASM: %bb.0:
+
+    ; GCN-NEXT: v_dual_sub_f32 v255, v1, v1 :: v_dual_mul_f32 v6, v0, v0
+    $vgpr255, $vgpr6 = V_DUAL_SUB_F32_e32_X_MUL_F32_e32_gfx1250 undef $vgpr1, undef $vgpr1, undef $vgpr0, undef $vgpr0, implicit $mode, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 64
+    ; GCN-NEXT: v_dual_sub_f32 v244 /*v500*/, v1, v2 :: v_dual_mul_f32 v0 /*v256*/, v3, v4
+    $vgpr500, $vgpr256 = V_DUAL_SUB_F32_e32_X_MUL_F32_e32_gfx1250 undef $vgpr1, undef $vgpr2, undef $vgpr3, undef $vgpr4, implicit $mode, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 0x41
+    ; GCN-NEXT: v_dual_sub_f32 v244 /*v500*/, s1, v2 :: v_dual_mul_f32 v0 /*v256*/, v44 /*v300*/, v4
+    $vgpr500, $vgpr256 = V_DUAL_SUB_F32_e32_X_MUL_F32_e32_gfx1250 undef $sgpr1, undef $vgpr2, undef $vgpr300, undef $vgpr4, implicit $mode, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 4
+    ; GCN-NEXT: v_dual_sub_f32 v255, v1, v44 /*v300*/ :: v_dual_mul_f32 v6, v0, v1 /*v257*/
+    $vgpr255, $vgpr6 = V_DUAL_SUB_F32_e32_X_MUL_F32_e32_gfx1250 undef $vgpr1, undef $vgpr300, undef $vgpr0, $vgpr257, implicit $mode, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 1
+    ; GCN-NEXT: v_dual_sub_f32 v255, 0, v1 :: v_dual_mul_f32 v6, v44 /*v300*/, v3
+    $vgpr255, $vgpr6 = V_DUAL_SUB_F32_e32_X_MUL_F32_e32_gfx1250 0, undef $vgpr1, undef $vgpr300, undef $vgpr3, implicit $mode, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 64
+    ; GCN-NEXT: v_dual_fmamk_f32 v243 /*v499*/, v0, 0xa, v3 :: v_dual_fmac_f32 v0 /*v256*/, v1, v1
+    $vgpr499, $vgpr256 = V_DUAL_FMAMK_F32_X_FMAC_F32_e32_gfx1250 undef $vgpr0, 10, undef $vgpr3, undef $vgpr1, undef $vgpr1, $vgpr256, implicit $mode, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 5
+    ; GCN-NEXT: v_dual_mov_b32 v2, v3 /*v259*/ :: v_dual_add_f32 v3, v1 /*v257*/, v2 /*v258*/
+    $vgpr2, $vgpr3 = V_DUAL_MOV_B32_e32_X_ADD_F32_e32_gfx1250 undef $vgpr259, undef $vgpr257, undef $vgpr258, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: s_set_vgpr_msb 0x44
+    ; GCN-NEXT: v_dual_fmamk_f32 v244 /*v500*/, v0, 0xa, v44 /*v300*/ :: v_dual_fmac_f32 v3 /*v259*/, v1, v1 /*v257*/
+    $vgpr500, $vgpr259 = V_DUAL_FMAMK_F32_X_FMAC_F32_e32_gfx1250 undef $vgpr0, 10, undef $vgpr300, undef $vgpr1, undef $vgpr257, $vgpr259, implicit $mode, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 16
+    ; GCN-NEXT: v_dual_fma_f32 v0, v6, v6, v44 /*v300*/ :: v_dual_fma_f32 v1, v4, v5, v45 /*v301*/
+    $vgpr0, $vgpr1 = V_DUAL_FMA_F32_e64_X_FMA_F32_e64_e96_gfx1250 0, undef $vgpr6, 0, undef $vgpr6, 0, undef $vgpr300, 0, undef $vgpr4, 0, undef $vgpr5, 0, undef $vgpr301, implicit $mode, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 0
+    ; GCN-NEXT: v_dual_fmac_f32 v2, v6, v6 :: v_dual_fma_f32 v3, v4, v5, v3
+    $vgpr2, $vgpr3 = V_DUAL_FMAC_F32_e32_X_FMA_F32_e64_e96_gfx1250 0, undef $vgpr6, 0, undef $vgpr6, undef $vgpr2, 0, undef $vgpr4, 0, undef $vgpr5, 0, $vgpr3, implicit $mode, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 64
+    ; GCN-NEXT: v_dual_fma_f32 v244 /*v500*/, v6, v7, v8 :: v_dual_add_f32 v3 /*v259*/, v4, v5
+    $vgpr500, $vgpr259 = V_DUAL_FMA_F32_e64_X_ADD_F32_e32_e96_gfx1250 0, undef $vgpr6, 0, undef $vgpr7, 0, undef $vgpr8, 0, undef $vgpr4, 0, undef $vgpr5, implicit $mode, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 0xae
+    ; GCN-NEXT: v_dual_fmac_f32 v2 /*v514*/, v6 /*v518*/, v8 /*v776*/ :: v_dual_fma_f32 v3 /*v515*/, v4 /*v516*/, v7 /*v775*/, v3 /*v515*/
+    $vgpr514, $vgpr515 = V_DUAL_FMAC_F32_e32_X_FMA_F32_e64_e96_gfx1250 0, undef $vgpr518, 0, undef $vgpr776, undef $vgpr514, 0, undef $vgpr516, 0, undef $vgpr775, 0, $vgpr515, implicit $mode, implicit $exec
+
+    ; ASM: NumVgprs: 777
+
+...
+
+# ASM-LABEL: {{^}}fmaak_fmamk:
+# DIS-LABEL: <fmaak_fmamk>:
+---
+name:            fmaak_fmamk
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; ASM: %bb.0:
+
+    ; GCN-NEXT: s_set_vgpr_msb 0x45
+    ; GCN-NEXT: v_fmaak_f32 v0 /*v256*/, v1 /*v257*/, v2 /*v258*/, 0x1
+    $vgpr256 = V_FMAAK_F32 undef $vgpr257, undef $vgpr258, 1, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: s_set_vgpr_msb 5
+    ; GCN-NEXT: v_fmaak_f32 v0, v1 /*v257*/, v2 /*v258*/, 0x1
+    $vgpr0 = V_FMAAK_F32 undef $vgpr257, undef $vgpr258, 1, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: s_set_vgpr_msb 0x41
+    ; GCN-NEXT: v_fmaak_f32 v0 /*v256*/, v1 /*v257*/, v2, 0x1
+    $vgpr256 = V_FMAAK_F32 undef $vgpr257, undef $vgpr2, 1, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: s_set_vgpr_msb 0x44
+    ; GCN-NEXT: v_fmaak_f32 v0 /*v256*/, v1, v2 /*v258*/, 0x1
+    $vgpr256 = V_FMAAK_F32 undef $vgpr1, undef $vgpr258, 1, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: s_set_vgpr_msb 0x45
+    ; GCN-NEXT: v_fmamk_f32 v0 /*v256*/, v1 /*v257*/, 0x1, v2 /*v258*/
+    $vgpr256 = V_FMAMK_F32 undef $vgpr257, 1, undef $vgpr258, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: s_set_vgpr_msb 5
+    ; GCN-NEXT: v_fmamk_f32 v0, v1 /*v257*/, 0x1, v2 /*v258*/
+    $vgpr0 = V_FMAMK_F32 undef $vgpr257, 1, undef $vgpr258, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: s_set_vgpr_msb 0x41
+    ; GCN-NEXT: v_fmamk_f32 v0 /*v256*/, v1 /*v257*/, 0x1, v2
+    $vgpr256 = V_FMAMK_F32 undef $vgpr257, 1, undef $vgpr2, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: s_set_vgpr_msb 0x44
+    ; GCN-NEXT: v_fmamk_f32 v0 /*v256*/, v1, 0x1, v2 /*v258*/
+    $vgpr256 = V_FMAMK_F32 undef $vgpr1, 1, undef $vgpr258, implicit $exec, implicit $mode
+
+    ; ASM: NumVgprs: 259
+
+...
+
+# ASM-LABEL: {{^}}fmac:
+# DIS-LABEL: <fmac>:
+---
+name:            fmac
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; ASM: %bb.0:
+
+    ; Accumulation instructions apply DST to both the destination and one of the source VGPRs
+    ; GCN-NEXT: s_set_vgpr_msb 64
+    ; GCN-NEXT: v_fmac_f32_e64 v0 /*v256*/, |v0|, |v1| clamp mul:4
+    $vgpr256 = V_FMAC_F32_e64 2, undef $vgpr0, 2, undef $vgpr1, 2, undef $vgpr256, 1, 2, implicit $mode, implicit $exec
+
+    ; GCN-NEXT: v_fmac_f32_e32 v1 /*v257*/, v0, v1
+    $vgpr257 = V_FMAC_F32_e32 undef $vgpr0, undef $vgpr1, undef $vgpr257, implicit $mode, implicit $exec
+
+    ; ASM: NumVgprs: 258
+
+...
+
+# ASM-LABEL: {{^}}rev_opcodes:
+# DIS-LABEL: <rev_opcodes>:
+---
+name:            rev_opcodes
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; ASM: %bb.0:
+
+    ; V_LSHLREV, V_SUBREV: SRC0 and SRC1 apply to the operands in the order in the ISA (before "reversing")
+    ; e.g. v_lshlrev_b32 v0(vdst), v1(src0), v2(src1) // v0 = v2 << v1
+    ; DST applies to V0, SRC0 applies to V1, and SRC1 applies to V2.
+
+    ; GCN-NEXT: s_set_vgpr_msb 1
+    ; GCN-NEXT: v_lshlrev_b32_e64 v0, v0 /*v256*/, v2
+    $vgpr0 = V_LSHLREV_B32_e64 undef $vgpr256, undef $vgpr2, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 4
+    ; GCN-NEXT: v_lshlrev_b32_e64 v0, v1, v0 /*v256*/
+    $vgpr0 = V_LSHLREV_B32_e64 undef $vgpr1, undef $vgpr256, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 1
+    ; GCN-NEXT: v_subrev_nc_u32_e32 v0, v0 /*v256*/, v2
+    $vgpr0 = V_SUBREV_U32_e32 undef $vgpr256, undef $vgpr2, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 4
+    ; GCN-NEXT: v_subrev_nc_u32_e32 v0, v1, v0 /*v256*/
+    $vgpr0 = V_SUBREV_U32_e32 undef $vgpr1, undef $vgpr256, implicit $exec
+
+    ; ASM: NumVgprs: 257
+...
+
+# ASM-LABEL: {{^}}minimal_mode_change:
+# DIS-LABEL: <minimal_mode_change>:
+---
+name:            minimal_mode_change
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; ASM: %bb.0:
+
+    ; GCN-NEXT: s_set_vgpr_msb 0x55
+    ; GCN-NEXT: v_fma_f32 v3 /*v259*/, v4 /*v260*/, v5 /*v261*/, v6 /*v262*/
+    $vgpr259 = V_FMA_F32_e64 0, undef $vgpr260, 0, undef $vgpr261, 0, undef $vgpr262, 0, 0, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: s_set_vgpr_msb 0
+    ; GCN-NEXT: v_add_nc_u32_e32 v0, v1, v2
+    $vgpr0 = V_ADD_U32_e32 undef $vgpr1, undef $vgpr2, implicit $exec
+
+    ; GCN-NEXT: v_mov_b32_e32 v0, v1
+    $vgpr0 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 64
+    ; GCN-NEXT: v_mov_b32_e32 v3 /*v259*/, v1
+    $vgpr259 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+
+    ; GCN-NEXT: v_add_nc_u32_e32 v0 /*v256*/, v1, v2
+    $vgpr256 = V_ADD_U32_e32 undef $vgpr1, undef $vgpr2, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 0
+    ; GCN-NEXT: v_fma_f32 v3, v4, v5, s2
+    $vgpr3 = V_FMA_F32_e64 0, undef $vgpr4, 0, undef $vgpr5, 0, undef $sgpr2, 0, 0, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: s_set_vgpr_msb 1
+    ; GCN-NEXT: v_fma_f32 v3, v4 /*v260*/, v5, 1
+    $vgpr3 = V_FMA_F32_e64 0, undef $vgpr260, 0, undef $vgpr5, 0, 1, 0, 0, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: s_set_vgpr_msb 4
+    ; GCN-NEXT: v_mov_b32_e32 v0, v1
+    $vgpr0 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+
+    ; GCN-NEXT: v_add_nc_u32_e32 v2, v1, v3 /*v259*/
+    $vgpr2 = V_ADD_U32_e32 undef $vgpr1, undef $vgpr259, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 1
+    ; GCN-NEXT: v_mov_b32_e32 v0, v0 /*v256*/
+    ; GCN-NEXT: v_add_nc_u32_e32 v1, v1 /*v257*/, v1
+    ; GCN-NEXT: s_set_vgpr_msb 5
+    ; GCN-NEXT: v_add_nc_u32_e32 v2, v2 /*v258*/, v2 /*v258*/
+    $vgpr0 = V_MOV_B32_e32 undef $vgpr256, implicit $exec
+    $vgpr1 = V_ADD_U32_e32 undef $vgpr257, undef $vgpr1, implicit $exec
+    $vgpr2 = V_ADD_U32_e32 undef $vgpr258, undef $vgpr258, implicit $exec
+
+    ; ASM: NumVgprs: 263
+
+...
+
+# ASM-LABEL: {{^}}terminators:
+# DIS-LABEL: <terminators>:
+---
+name:            terminators
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; ASM: %bb.0:
+    ; GCN-NEXT: s_nop 0
+    ; GCN-NEXT: s_branch
+    S_NOP 0
+    S_BRANCH %bb.1
+
+    ; No mode switch if it was zero
+
+  bb.1:
+    ; ASM: .LBB{{.*_1}}:
+    ; GCN-NEXT: s_set_vgpr_msb 64
+    ; GCN-NEXT: v_mov_b32_e32 v0 /*v256*/, v1
+    $vgpr256 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+
+    ; No mode switch on fall through
+
+  bb.2:
+    ; ASM-NEXT: %bb.2:
+    ; GCN-NEXT: s_nop 0
+    ; GCN-NEXT: s_set_vgpr_msb 0
+    ; GCN-NEXT: s_branch
+    S_NOP 0
+    S_BRANCH %bb.3
+
+    ; Reset mode on terminator
+
+  bb.3:
+    ; ASM: .LBB{{.*_3}}:
+    ; GCN-NEXT: s_set_vgpr_msb 64
+    ; GCN-NEXT: v_mov_b32_e32 v0 /*v256*/, v1
+    ; GCN-NEXT: s_set_vgpr_msb 0
+    ; GCN-NEXT: s_swap_pc_i64
+    $vgpr256 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+    $exec = S_SWAPPC_B64 undef $sgpr0_sgpr1
+
+    ; Reset mode before a call
+
+  bb.4:
+    ; ASM-NEXT: %bb.4:
+    ; GCN-NEXT: s_set_vgpr_msb 64
+    ; GCN-NEXT: v_mov_b32_e32 v0 /*v256*/, v1
+    ; GCN-NEXT: s_endpgm
+    $vgpr256 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+    S_ENDPGM 0
+
+    ; No mode reset before S_ENDPGM
+
+  bb.5:
+    ; ASM-NEXT: %bb.5:
+    ; GCN-NEXT: v_mov_b32_e32 v0, v1
+    ; GCN-NEXT: s_set_vgpr_msb 64
+    ; GCN-NEXT: v_mov_b32_e32 v0 /*v256*/, v1
+    ; GCN-NEXT: s_set_vgpr_msb 0
+    ; GCN-NEXT: s_set_pc_i64
+    $vgpr0 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+    $vgpr256 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+    S_SETPC_B64 undef $sgpr0_sgpr1, implicit-def $exec
+
+    ; Assume mode zero at block begin even if we did not reset if before
+    ; Reset mode before branch
+
+  bb.6:
+    ; ASM-NEXT: %bb.6:
+    ; GCN-NEXT: s_set_pc_i64
+    S_SETPC_B64 undef $sgpr0_sgpr1, implicit-def $exec
+
+    ; But do not reset mode before a branch if it was zero
+
+  bb.7:
+    ; ASM-NEXT: %bb.7:
+    ; GCN-NEXT: s_set_vgpr_msb 64
+    ; GCN-NEXT: v_mov_b32_e32 v0 /*v256*/, v1
+    ; GCN-NEXT: s_set_vgpr_msb 0
+    ; ASM-NEXT: ; return to shader part epilog
+    $vgpr256 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+    SI_RETURN_TO_EPILOG undef $vgpr0, implicit-def $exec
+
+    ; Reset mode before returning from a call
+
+  bb.8:
+    ; ASM-NEXT: %bb.8:
+    ; ASM-NEXT: ; return to shader part epilog
+    SI_RETURN_TO_EPILOG undef $vgpr0, implicit-def $exec
+
+    ; But do not reset mode before a call return if it was zero
+
+  bb.9:
+    ; ASM-NEXT: %bb.9:
+    ; GCN-NEXT: s_set_vgpr_msb 64
+    ; GCN-NEXT: v_mov_b32_e32 v0 /*v256*/, v1
+    ; GCN-NEXT: s_set_vgpr_msb 0
+    ; GCN-NEXT: s_set_pc_i64
+    $vgpr256 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+    S_SETPC_B64_return undef $sgpr0_sgpr1, implicit-def $exec
+
+    ; ASM: NumVgprs: 257
+...
+
+# ASM-LABEL: {{^}}control_flow:
+# DIS-LABEL: <control_flow>:
+---
+name:            control_flow
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; ASM: %bb.0:
+    ; GCN-NEXT: s_set_vgpr_msb 64
+    ; GCN-NEXT: v_mov_b32_e32 v0 /*v256*/, v0
+    $vgpr256 = V_MOV_B32_e32 undef $vgpr0, implicit $exec
+
+  bb.1:
+    ; ASM: .LBB{{[0-9]+}}_1:
+    ; GCN-NEXT: s_set_vgpr_msb 64
+    ; GCN-NEXT: v_mov_b32_e32 v1 /*v257*/, v1
+    ; GCN-NEXT: s_set_vgpr_msb 0
+    ; GCN-NEXT: s_cbranch_scc0
+    $vgpr257 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+    S_CBRANCH_SCC0 %bb.1, undef implicit $scc
+
+  bb.2:
+    ; ASM: %bb.2:
+    ; GCN-NEXT: s_set_vgpr_msb 64
+    ; GCN-NEXT: v_mov_b32_e32 v2 /*v258*/, v2
+    ; GCN-NEXT: s_endpgm
+    $vgpr258 = V_MOV_B32_e32 undef $vgpr2, implicit $exec
+    S_ENDPGM 0
+...
+
+# ASM-LABEL: {{^}}inline_asm:
+# DIS-LABEL: <inline_asm>:
+---
+name:            inline_asm
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; ASM: %bb.0:
+    ; GCN-NEXT: s_set_vgpr_msb 64
+    ; GCN-NEXT: v_mov_b32_e32 v0 /*v256*/, v1
+    ; GCN-NEXT: s_set_vgpr_msb 0
+    ; ASM:      def v0
+    ; GCN-NOT:  s_set_vgpr_msb
+    ; ASM:      use v0
+    ; GCN-NOT:  s_set_vgpr_msb
+    ; ASM:      use v1
+    ; GCN:      s_set_vgpr_msb 64
+    ; GCN-NEXT: v_mov_b32_e32 v0 /*v256*/, v1
+    ; GCN-NOT:  s_set_vgpr_msb
+    ; ASM:      no vgprs, mode preserved
+    ; GCN-NOT:  s_set_vgpr_msb
+    ; GCN:      v_mov_b32_e32 v0 /*v256*/, v1
+    $vgpr256 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+    INLINEASM &"; def v0", 1, 327690, def $vgpr0
+    INLINEASM &"; use v0", 1, 327690, $vgpr0
+    INLINEASM &"; use v1", 1, 327690, undef $vgpr1
+    $vgpr256 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+    INLINEASM &"; no vgprs, mode preserved", 1, 327690, undef $sgpr0
+    $vgpr256 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+
+    ; ASM: NumVgprs: 257
+...
+
+# ASM-LABEL: {{^}}bundle:
+# DIS-LABEL: <bundle>:
+---
+name:            bundle
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; ASM: %bb.0:
+    ; GCN-NEXT: s_set_vgpr_msb 64
+    ; GCN-NEXT: v_mov_b32_e32 v0 /*v256*/, v1
+    ; GCN-NEXT: s_nop 0
+    ; GCN-NEXT: s_set_vgpr_msb 1
+    ; GCN-NEXT: v_mov_b32_e32 v1, v0 /*v256*/
+    BUNDLE implicit-def $vgpr256 {
+      $vgpr256 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+    }
+    BUNDLE implicit $vgpr256 {
+      S_NOP 0
+      $vgpr1 = V_MOV_B32_e32 $vgpr256, implicit $exec
+    }
+
+    ; ASM: NumVgprs: 257
+...
+
+# ASM-LABEL: {{^}}hard_clauses:
+# DIS-LABEL: <hard_clauses>:
+---
+name:            hard_clauses
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; ASM: %bb.0:
+
+    ; s_set_vgpr_msb cannot be a first instruction in a clause and must be placed before it.
+
+    ; GCN-NEXT: s_set_vgpr_msb 64
+    ; GCN-NEXT: s_clause 0x2
+    ; GCN-NEXT: v_mov_b32_e32 v0 /*v256*/, v1
+    ; GCN-NEXT: v_mov_b32_e32 v1 /*v257*/, v1
+    ; GCN-NEXT: v_mov_b32_e32 v2 /*v258*/, v1
+    BUNDLE implicit-def $vgpr256, implicit-def $vgpr257, implicit-def $vgpr248, implicit undef $vgpr1 {
+      S_CLAUSE 2
+      $vgpr256 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr257 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr258 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+    }
+
+    ; S_CLAUSE 515 means 4 instructions broken in groups of 2.
+    ; A mode change cannot be a first instruction of each group.
+    ; If we cannot insert a mode change right before the clause just drop it.
+
+    ; GCN-NEXT: v_mov_b32_e32 v0 /*v256*/, v1
+    ; GCN-NEXT: v_mov_b32_e32 v1 /*v257*/, v1
+    ; GCN-NEXT: s_set_vgpr_msb 0
+    ; GCN-NEXT: v_mov_b32_e32 v2, v1
+    ; GCN-NEXT: v_mov_b32_e32 v3, v1
+    BUNDLE implicit-def $vgpr256, implicit-def $vgpr257, implicit-def $vgpr2, implicit-def $vgpr3, implicit undef $vgpr1 {
+      S_CLAUSE 515
+      $vgpr256 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr257 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr2 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr3 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+    }
+
+    ; Check that we properly update the clause length.
+
+    ; GCN-NEXT: s_clause 0x3
+    ; GCN-NEXT: v_mov_b32_e32 v0, v1
+    ; GCN-NEXT: s_set_vgpr_msb 64
+    ; GCN-NEXT: v_mov_b32_e32 v1 /*v257*/, v1
+    ; GCN-NEXT: v_mov_b32_e32 v2 /*v258*/, v1
+    BUNDLE implicit-def $vgpr0, implicit-def $vgpr257, implicit-def $vgpr248, implicit undef $vgpr1 {
+      S_CLAUSE 2
+      $vgpr0 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr257 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr258 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+    }
+
+    ; Check that we do not exceed the limit of 63 instructions or simm16 value of 62.
+
+    ; GCN-NEXT: s_clause 0x3e
+    ; GCN-NEXT: v_mov_b32_e32 v0 /*v256*/, v1
+    ; GCN-NEXT: s_set_vgpr_msb 0
+    ; GCN-NEXT: v_mov_b32_e32 v1, v1
+    ; GCN-NEXT: v_mov_b32_e32 v2, v1
+    ; GCN-COUNT-60: v_mov_b32_e32 v1, v1
+    BUNDLE implicit-def $vgpr256, implicit-def $vgpr1, implicit-def $vgpr2, implicit undef $vgpr1 {
+      S_CLAUSE 62
+      $vgpr256 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr2 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+    }
+
+    ; ASM: NumVgprs: 259
+...
+
+# ASM-LABEL: {{^}}pseudo:
+# DIS-LABEL: <pseudo>:
+---
+name:            pseudo
+body:             |
+  bb.0:
+    liveins: $vgpr0
+
+    $sgpr0 = SI_ILLEGAL_COPY killed $vgpr0, implicit-def $exec, implicit-def $vcc, implicit $exec
+    ; Just do not assert here.
+    ; ASM: illegal copy v0 to s0
+    SI_RETURN_TO_EPILOG killed $sgpr0
+    S_ENDPGM 0
+...
+
+# LD_SCALE operands ignores MSB and always use low 256 VGPRs.
+
+# ASM-LABEL: {{^}}ld_scale:
+# DIS-LABEL: <ld_scale>:
+---
+name:            ld_scale
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; ASM: %bb.0:
+
+    ; GCN: s_set_vgpr_msb 5
+    ; GCN-NEXT: v_add_nc_u32_e32 v0, v253 /*v509*/, v252 /*v508*/
+    $vgpr0 = V_ADD_U32_e32 undef $vgpr509, undef $vgpr508, implicit $exec
+
+    ; Do not change mode for LD_SCALE.
+
+    ; GCN-NOT: s_set_vgpr_msb
+    ; GCN-NEXT: v_wmma_ld_scale_paired_b32 v1, v2
+    V_WMMA_LD_SCALE_PAIRED_B32 undef $vgpr1, undef $vgpr2, 0, 0, 0, 0, 0, 0, implicit $exec
+
+    ; GCN-NOT: s_set_vgpr_msb
+    ; GCN-NEXT: v_wmma_scale_f32_16x16x128_f8f6f4 v[210:217], v[244:259] /*v[500:515]*/, v[244:259] /*v[500:515]*/, v[10:17], v1, v2
+    $vgpr210_vgpr211_vgpr212_vgpr213_vgpr214_vgpr215_vgpr216_vgpr217 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr undef $vgpr500_vgpr501_vgpr502_vgpr503_vgpr504_vgpr505_vgpr506_vgpr507_vgpr508_vgpr509_vgpr510_vgpr511_vgpr512_vgpr513_vgpr514_vgpr515, undef $vgpr500_vgpr501_vgpr502_vgpr503_vgpr504_vgpr505_vgpr506_vgpr507_vgpr508_vgpr509_vgpr510_vgpr511_vgpr512_vgpr513_vgpr514_vgpr515, 0, undef $vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, undef $vgpr1, undef $vgpr2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 0
+    ; GCN-NEXT: v_wmma_scale_f32_16x16x128_f8f6f4 v[210:217], v[100:115], v[100:115], v[10:17], v1, v2
+    $vgpr210_vgpr211_vgpr212_vgpr213_vgpr214_vgpr215_vgpr216_vgpr217 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr undef $vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115, undef $vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115, 0, undef $vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, undef $vgpr1, undef $vgpr2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 1
+    ; GCN-NEXT: v_wmma_scale_f32_16x16x128_f8f6f4 v[210:217], v[244:259] /*v[500:515]*/, v[0:15], v[10:17], v1, v2
+    $vgpr210_vgpr211_vgpr212_vgpr213_vgpr214_vgpr215_vgpr216_vgpr217 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr undef $vgpr500_vgpr501_vgpr502_vgpr503_vgpr504_vgpr505_vgpr506_vgpr507_vgpr508_vgpr509_vgpr510_vgpr511_vgpr512_vgpr513_vgpr514_vgpr515, undef $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, undef $vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, undef $vgpr1, undef $vgpr2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+
+    ; GCN-NOT: s_set_vgpr_msb
+    ; GCN-NEXT: v_wmma_ld_scale16_paired_b64 v[0:1], v[2:3]
+    V_WMMA_LD_SCALE16_PAIRED_B64 undef $vgpr0_vgpr1, undef $vgpr2_vgpr3, 0, 0, 0, 0, 0, 0, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 5
+    ; GCN-NEXT: v_wmma_scale16_f32_16x16x128_f8f6f4 v[210:217], v[244:259] /*v[500:515]*/, v[244:259] /*v[500:515]*/, v[10:17], v[0:1], v[2:3]
+    $vgpr210_vgpr211_vgpr212_vgpr213_vgpr214_vgpr215_vgpr216_vgpr217 = V_WMMA_SCALE16_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr undef $vgpr500_vgpr501_vgpr502_vgpr503_vgpr504_vgpr505_vgpr506_vgpr507_vgpr508_vgpr509_vgpr510_vgpr511_vgpr512_vgpr513_vgpr514_vgpr515, undef $vgpr500_vgpr501_vgpr502_vgpr503_vgpr504_vgpr505_vgpr506_vgpr507_vgpr508_vgpr509_vgpr510_vgpr511_vgpr512_vgpr513_vgpr514_vgpr515, 0, undef $vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, undef $vgpr0_vgpr1, undef $vgpr2_vgpr3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 0
+    ; GCN-NEXT: v_wmma_scale16_f32_16x16x128_f8f6f4 v[210:217], v[100:115], v[100:115], v[10:17], v[0:1], v[2:3]
+    $vgpr210_vgpr211_vgpr212_vgpr213_vgpr214_vgpr215_vgpr216_vgpr217 = V_WMMA_SCALE16_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr undef $vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115, undef $vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115, 0, undef $vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, undef $vgpr0_vgpr1, undef $vgpr2_vgpr3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 1
+    ; GCN-NEXT: v_wmma_scale16_f32_16x16x128_f8f6f4 v[210:217], v[244:259] /*v[500:515]*/, v[0:15], v[10:17], v[0:1], v[2:3]
+    $vgpr210_vgpr211_vgpr212_vgpr213_vgpr214_vgpr215_vgpr216_vgpr217 = V_WMMA_SCALE16_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr undef $vgpr500_vgpr501_vgpr502_vgpr503_vgpr504_vgpr505_vgpr506_vgpr507_vgpr508_vgpr509_vgpr510_vgpr511_vgpr512_vgpr513_vgpr514_vgpr515, undef $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, undef $vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, undef $vgpr0_vgpr1, undef $vgpr2_vgpr3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+...

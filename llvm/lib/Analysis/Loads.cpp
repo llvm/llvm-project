@@ -394,7 +394,8 @@ bool llvm::isDereferenceableAndAlignedInLoop(
              Base, Alignment,
              [&SE, AccessSizeSCEV, &LoopGuards](const RetainedKnowledge &RK) {
                return SE.isKnownPredicate(
-                   CmpInst::ICMP_ULE, AccessSizeSCEV,
+                   CmpInst::ICMP_ULE,
+                   SE.applyLoopGuards(AccessSizeSCEV, *LoopGuards),
                    SE.applyLoopGuards(SE.getSCEV(RK.IRArgValue), *LoopGuards));
              },
              DL, HeaderFirstNonPHI, AC, &DT) ||
