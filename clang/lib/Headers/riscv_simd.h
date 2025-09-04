@@ -100,6 +100,16 @@ __riscv_sati(int32_t __x, int __y) {
   return __builtin_riscv_sati_32(__x, __y);
 }
 
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_psrl_bs(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_psrl_bs_32(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_psrl_hs(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_psrl_hs_32(__x, __y);
+}
+
 static __inline__ int32_t __attribute__((__always_inline__, __nodebug__))
 __riscv_sadd(int32_t __x, int32_t __y) {
   return __builtin_riscv_sadd(__x, __y);
@@ -221,6 +231,21 @@ __riscv_psati_w(uint64_t __x, int __y) {
 static __inline__ int64_t __attribute__((__always_inline__, __nodebug__))
 __riscv_sati(int64_t __x, int __y) {
   return __builtin_riscv_sati_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_psrl_bs(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_psrl_bs_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_psrl_hs(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_psrl_hs_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_psrl_ws(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_psrl_ws(__x, __y);
 }
 #endif
 

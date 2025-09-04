@@ -228,3 +228,30 @@ uint64_t psati_w(uint64_t rs1, int64_t rs2) {
 int64_t sati(int64_t rs1, int64_t rs2) {
   return __riscv_sati(rs1, 1);
 }
+
+// RV64P-LABEL: @psrl_bs(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.psrl.bs.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t psrl_bs(uint64_t rs1, uint64_t rs2) {
+  return __riscv_psrl_bs(rs1, rs2);
+}
+
+// RV64P-LABEL: @psrl_hs(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.psrl.hs.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t psrl_hs(uint64_t rs1, uint64_t rs2) {
+  return __riscv_psrl_hs(rs1, rs2);
+}
+
+// RV64P-LABEL: @psrl_ws(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.psrl.ws.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t psrl_ws(uint64_t rs1, uint64_t rs2) {
+  return __riscv_psrl_ws(rs1, rs2);
+}
