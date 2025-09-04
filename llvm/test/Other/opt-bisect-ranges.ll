@@ -20,6 +20,24 @@
 ; CHECK-SINGLE: BISECT: running pass (5) simplifycfg on foo
 ; CHECK-SINGLE: BISECT: NOT running pass (6) sroa on foo
 
+; Test running no passes
+; RUN: opt -O1 -opt-bisect=0 %s 2>&1 | FileCheck %s --check-prefix=CHECK-NONE
+; CHECK-NONE: BISECT: NOT running pass (1) annotation2metadata on [module]
+; CHECK-NONE: BISECT: NOT running pass (2) forceattrs on [module]
+; CHECK-NONE: BISECT: NOT running pass (3) inferattrs on [module]
+; CHECK-NONE: BISECT: NOT running pass (4) lower-expect on foo
+; CHECK-NONE: BISECT: NOT running pass (5) simplifycfg on foo
+; CHECK-NONE: BISECT: NOT running pass (6) sroa on foo
+
+; Test running all passes
+; RUN: opt -O1 -opt-bisect=-1 %s 2>&1 | FileCheck %s --check-prefix=CHECK-ALL
+; CHECK-ALL: BISECT: running pass (1) annotation2metadata on [module]
+; CHECK-ALL: BISECT: running pass (2) forceattrs on [module]
+; CHECK-ALL: BISECT: running pass (3) inferattrs on [module]
+; CHECK-ALL: BISECT: running pass (4) lower-expect on foo
+; CHECK-ALL: BISECT: running pass (5) simplifycfg on foo
+; CHECK-ALL: BISECT: running pass (6) sroa on foo
+
 ; Test backward compatibility: -opt-bisect-limit=3 should be equivalent to -opt-bisect=1-3
 ; RUN: opt -O1 -opt-bisect-limit=3 %s 2>&1 | FileCheck %s --check-prefix=CHECK-LIMIT
 ; CHECK-LIMIT: BISECT: running pass (1) annotation2metadata on [module]

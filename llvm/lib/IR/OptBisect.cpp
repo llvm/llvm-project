@@ -37,8 +37,11 @@ static cl::opt<int> OptBisectLimit(
     "opt-bisect-limit", cl::Hidden, cl::init(-1), cl::Optional,
     cl::cb<void, int>([](int Limit) {
       if (Limit == -1) {
-        // -1 means run all passes, which is equivalent to no ranges
-        getOptBisector().clearRanges();
+        // -1 means run all passes
+        getOptBisector().setRanges({{1, std::numeric_limits<int>::max()}});
+      } else if (Limit == 0) {
+        // 0 means run no passes
+        getOptBisector().setRanges({{0, 0}});
       } else if (Limit > 0) {
         // Convert limit to range 1-Limit
         std::string RangeStr = Limit == 1 ? "1" : "1-" + llvm::utostr(Limit);
@@ -59,6 +62,12 @@ static cl::opt<int> OptBisectLimit(
 static cl::opt<std::string> OptBisectRanges(
     "opt-bisect", cl::Hidden, cl::Optional,
     cl::cb<void, const std::string &>([](const std::string &RangeStr) {
+      if (RangeStr == "-1") {
+        // -1 means run all passes
+        getOptBisector().setRanges({{1, std::numeric_limits<int>::max()}});
+        return;
+      }
+
       auto Ranges = RangeUtils::parseRanges(RangeStr);
       if (!Ranges) {
         handleAllErrors(Ranges.takeError(), [&](const StringError &E) {
@@ -70,7 +79,7 @@ static cl::opt<std::string> OptBisectRanges(
       getOptBisector().setRanges(std::move(*Ranges));
     }),
     cl::desc("Run optimization passes only for the specified ranges. "
-             "Format: '1-10,20-30,45' (runs passes 1-10, 20-30, and 45)"));
+             "Format: '1-10,20-30,45' (runs passes 1-10, 20-30, and 45). Pass '0' to run no passes and -1 to run all passes."));
 
 static cl::opt<bool> OptBisectVerbose(
     "opt-bisect-verbose",
