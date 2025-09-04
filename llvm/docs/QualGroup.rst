@@ -48,15 +48,22 @@ Participation is open to anyone interested. There are several ways to get involv
 
 We welcome contributors from diverse backgrounds, organizations, and experience levels.
 
-Meeting Minutes
-===============
+Meeting Materials
+=================
 
-Meeting notes for the LLVM Qualification Working Group are published on the 
-LLVM Discourse forum. These notes provide a summary of topics discussed, 
-decisions made, and next steps. 
+Agendas, meeting notes, and presentation slides for the LLVM Qualification Working Group sync-ups
+are shared to ensure transparency and continuity.
 
-You can access all minutes here:
-https://discourse.llvm.org/t/llvm-qualification-wg-sync-ups-meeting-minutes/87148
+Upcoming and past meeting agendas, and meeting minutes are published in a dedicated thread
+on the LLVM Discourse forum: `Meeting Agendas and Minutes <https://discourse.llvm.org/t/llvm-qualification-wg-sync-ups-meeting-minutes/87148>`_ 
+
+Slides used to support discussions during sync-up meetings are stored in LLVM's GitHub repository.
+
+Available slides:
+* `September 2025 <../qual-wg/slides/202509_llvm_qual_wg.pdf>`_
+* `August 2025 <../qual-wg/slides/202508_llvm_qual_wg.pdf>`_
+* `July 2025 <../qual-wg/slides/202507_llvm_qual_wg.pdf>`_
+* (add future entries here)
 
 Contributors
 ============
@@ -70,17 +77,6 @@ sync-up calls, we also recognize contributions made asynchronously via Discord, 
 and other discussion channels.
 
 All forms of constructive participation are valued and acknowledged.
-
-Presentation Slides
-===================
-
-Slides used to support discussions during sync-up meetings are stored in the
- `qual-wg/slides/` directory of the LLVM repository.
-
- Available slides:
-
-* :download:`July 2025 <qual-wg/slides/202507_llvm_qual_wg.pdf>`
-* (add future entries here)
 
 Code of Conduct
 ===============
