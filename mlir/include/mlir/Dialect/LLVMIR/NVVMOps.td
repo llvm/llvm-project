@@ -4065,7 +4065,7 @@ def NVVM_ClusterLaunchControlTryCancelOp
                        LLVM_PointerShared: $smemAddress,
                        LLVM_PointerShared: $mbarrier);
 
-  let assemblyFormat = "(`multicast` $multicast^ `,`)? $addr `,` $mbar attr-dict";
+  let assemblyFormat = "(`multicast` $multicast^ `,`)? $smemAddress `,` $mbarrier attr-dict";
 
   let extraClassDeclaration = [{
     static mlir::NVVM::IDArgPair
