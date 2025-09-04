@@ -1,8 +1,8 @@
 ; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
 ;
 ;    #define N 400
-;
-;    void first_higher_dimensional(float A[][N]) {
+;    float A[N][N], B[N][N];
+;    void first_higher_dimensional() {
 ;      for (long i = 0; i < N; i++)
 ;        for (long j = 0; j < N; j++)
 ;          A[i][j] += i + j;
@@ -14,7 +14,7 @@
 ;          A[i][j] += i + j;
 ;    }
 
-;    void first_lower_dimensional(float A[][N], float B[][N]) {
+;    void first_lower_dimensional() {
 ;      for (long i = 0; i < N; i++)
 ;        for (long j = 0; j < N; j++)
 ;          B[i][j] += i + j;
@@ -90,9 +90,10 @@
 ; CHECK-NEXT:             { Stmt_bb26[i0, i1] -> MemRef_A[i0, i1] };
 ; CHECK-NEXT: }
 
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+@A = common global [400 x [400 x float]] zeroinitializer
+@B = common global [400 x [400 x float]] zeroinitializer
 
-define void @first_higher_dimensional(ptr %A) {
+define void @first_higher_dimensional() {
 bb:
   br label %bb4
 
@@ -112,7 +113,7 @@ bb6:                                              ; preds = %bb12, %bb5
 bb7:                                              ; preds = %bb6
   %tmp = add nuw nsw i64 %i.0, %j.0
   %tmp8 = sitofp i64 %tmp to float
-  %tmp9 = getelementptr inbounds [400 x float], ptr %A, i64 %i.0, i64 %j.0
+  %tmp9 = getelementptr inbounds [400 x float], ptr @A, i64 %i.0, i64 %j.0
   %tmp10 = load float, ptr %tmp9, align 4
   %tmp11 = fadd float %tmp10, %tmp8
   store float %tmp11, ptr %tmp9, align 4
@@ -130,11 +131,11 @@ bb15:                                             ; preds = %bb14
   br label %bb4
 
 bb17:                                             ; preds = %bb4
-  %tmp18 = getelementptr inbounds [400 x float], ptr %A, i64 100, i64 100
+  %tmp18 = getelementptr inbounds [400 x float], ptr @A, i64 100, i64 100
   %tmp19 = load float, ptr %tmp18, align 4
-  %tmp21 = load float, ptr %A, align 4
+  %tmp21 = load float, ptr @A, align 4
   %tmp22 = fadd float %tmp21, %tmp19
-  store float %tmp22, ptr %A, align 4
+  store float %tmp22, ptr @A, align 4
   br label %bb23
 
 bb23:                                             ; preds = %bb35, %bb17
@@ -153,7 +154,7 @@ bb25:                                             ; preds = %bb32, %bb24
 bb26:                                             ; preds = %bb25
   %tmp27 = add nuw nsw i64 %i1.0, %j2.0
   %tmp28 = sitofp i64 %tmp27 to float
-  %tmp29 = getelementptr inbounds [400 x float], ptr %A, i64 %i1.0, i64 %j2.0
+  %tmp29 = getelementptr inbounds [400 x float], ptr @A, i64 %i1.0, i64 %j2.0
   %tmp30 = load float, ptr %tmp29, align 4
   %tmp31 = fadd float %tmp30, %tmp28
   store float %tmp31, ptr %tmp29, align 4
@@ -174,7 +175,7 @@ bb37:                                             ; preds = %bb23
   ret void
 }
 
-define void @first_lower_dimensional(ptr %A, ptr %B) {
+define void @first_lower_dimensional() {
 bb:
   br label %bb4
 
@@ -194,7 +195,7 @@ bb6:                                              ; preds = %bb12, %bb5
 bb7:                                              ; preds = %bb6
   %tmp = add nuw nsw i64 %i.0, %j.0
   %tmp8 = sitofp i64 %tmp to float
-  %tmp9 = getelementptr inbounds [400 x float], ptr %B, i64 %i.0, i64 %j.0
+  %tmp9 = getelementptr inbounds [400 x float], ptr @B, i64 %i.0, i64 %j.0
   %tmp10 = load float, ptr %tmp9, align 4
   %tmp11 = fadd float %tmp10, %tmp8
   store float %tmp11, ptr %tmp9, align 4
@@ -212,11 +213,11 @@ bb15:                                             ; preds = %bb14
   br label %bb4
 
 bb17:                                             ; preds = %bb4
-  %tmp18 = getelementptr inbounds [400 x float], ptr %B, i64 100, i64 100
+  %tmp18 = getelementptr inbounds [400 x float], ptr @B, i64 100, i64 100
   %tmp19 = load float, ptr %tmp18, align 4
-  %tmp21 = load float, ptr %A, align 4
+  %tmp21 = load float, ptr @A, align 4
   %tmp22 = fadd float %tmp21, %tmp19
-  store float %tmp22, ptr %A, align 4
+  store float %tmp22, ptr @A, align 4
   br label %bb23
 
 bb23:                                             ; preds = %bb35, %bb17
@@ -235,7 +236,7 @@ bb25:                                             ; preds = %bb32, %bb24
 bb26:                                             ; preds = %bb25
   %tmp27 = add nuw nsw i64 %i1.0, %j2.0
   %tmp28 = sitofp i64 %tmp27 to float
-  %tmp29 = getelementptr inbounds [400 x float], ptr %A, i64 %i1.0, i64 %j2.0
+  %tmp29 = getelementptr inbounds [400 x float], ptr @A, i64 %i1.0, i64 %j2.0
   %tmp30 = load float, ptr %tmp29, align 4
   %tmp31 = fadd float %tmp30, %tmp28
   store float %tmp31, ptr %tmp29, align 4

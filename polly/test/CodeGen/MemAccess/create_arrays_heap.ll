@@ -5,7 +5,8 @@
 ; #define Nj 1056
 ; #define Nk 1024
 ;
-; void create_arrays_heap(double beta, double A[Ni][Nk], double B[Ni][Nj]) {
+; double A[Ni][Nk], B[Ni][Nj];
+; void create_arrays_heap(double beta) {
 ;   int i,j,k;
 ;
 ;   for (i = 0; i < Ni; i++) {
@@ -19,9 +20,9 @@
 ;
 ; Check if the info from the JSON file has been analysed without errors.
 ; CHECK: Arrays {
-; CHECK: double MemRef_A[*][1024]; // Element size 8
+; CHECK: double MemRef_A[1056][1024]; // Element size 8
 ; CHECK: double MemRef_beta; // Element size 8
-; CHECK: double MemRef_B[*][1056]; // Element size 8
+; CHECK: double MemRef_B[1056][1056]; // Element size 8
 ; CHECK: double D[270336]; // Element size 8
 ; CHECK: double E[270336][200000]; // Element size 8
 ; CHECK: i64 F[270336]; // Element size 8
@@ -47,13 +48,11 @@
 ; CODEGEN: %polly.access.add.{{.*}} = add nsw i64 %polly.access.mul.{{.*}}, %
 ; CODEGEN: %polly.access.{{.*}} = getelementptr double, ptr %E, i64 %polly.access.add.{{.*}}
 ;
-; ModuleID = 'create_arrays_heap.ll'
-;
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
-; Function Attrs: nounwind uwtable
-define void @create_arrays_heap(double %beta, ptr nocapture readonly %A, ptr nocapture %B) local_unnamed_addr {
+@A = common global [1056 x [1024 x double]] zeroinitializer
+@B = common global [1056 x [1056 x double]] zeroinitializer
+
+define void @create_arrays_heap(double %beta) local_unnamed_addr {
 entry:
   br label %for.cond1.preheader
 
@@ -63,27 +62,27 @@ for.cond1.preheader:                              ; preds = %for.inc16, %entry
 
 for.cond4.preheader:                              ; preds = %for.inc13, %for.cond1.preheader
   %indvars.iv32 = phi i64 [ 0, %for.cond1.preheader ], [ %indvars.iv.next33, %for.inc13 ]
-  %arrayidx12 = getelementptr inbounds [1056 x double], ptr %B, i64 %indvars.iv35, i64 %indvars.iv32
+  %arrayidx12 = getelementptr inbounds [1056 x double], ptr @B, i64 %indvars.iv35, i64 %indvars.iv32
   br label %for.body6
 
 for.body6:                                        ; preds = %for.body6, %for.cond4.preheader
   %indvars.iv = phi i64 [ 0, %for.cond4.preheader ], [ %indvars.iv.next.3, %for.body6 ]
-  %arrayidx8 = getelementptr inbounds [1024 x double], ptr %A, i64 %indvars.iv35, i64 %indvars.iv
+  %arrayidx8 = getelementptr inbounds [1024 x double], ptr @A, i64 %indvars.iv35, i64 %indvars.iv
   %0 = load double, ptr %arrayidx8, align 8
   %mul = fmul double %0, %beta
   store double %mul, ptr %arrayidx12, align 8
   %indvars.iv.next = or disjoint i64 %indvars.iv, 1
-  %arrayidx8.1 = getelementptr inbounds [1024 x double], ptr %A, i64 %indvars.iv35, i64 %indvars.iv.next
+  %arrayidx8.1 = getelementptr inbounds [1024 x double], ptr @A, i64 %indvars.iv35, i64 %indvars.iv.next
   %1 = load double, ptr %arrayidx8.1, align 8
   %mul.1 = fmul double %1, %beta
   store double %mul.1, ptr %arrayidx12, align 8
   %indvars.iv.next.1 = or disjoint i64 %indvars.iv, 2
-  %arrayidx8.2 = getelementptr inbounds [1024 x double], ptr %A, i64 %indvars.iv35, i64 %indvars.iv.next.1
+  %arrayidx8.2 = getelementptr inbounds [1024 x double], ptr @A, i64 %indvars.iv35, i64 %indvars.iv.next.1
   %2 = load double, ptr %arrayidx8.2, align 8
   %mul.2 = fmul double %2, %beta
   store double %mul.2, ptr %arrayidx12, align 8
   %indvars.iv.next.2 = or disjoint i64 %indvars.iv, 3
-  %arrayidx8.3 = getelementptr inbounds [1024 x double], ptr %A, i64 %indvars.iv35, i64 %indvars.iv.next.2
+  %arrayidx8.3 = getelementptr inbounds [1024 x double], ptr @A, i64 %indvars.iv35, i64 %indvars.iv.next.2
   %3 = load double, ptr %arrayidx8.3, align 8
   %mul.3 = fmul double %3, %beta
   store double %mul.3, ptr %arrayidx12, align 8
