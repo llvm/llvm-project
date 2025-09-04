@@ -208,6 +208,8 @@ bool isASafeCallArg(const Expr *E) {
         return true;
     }
   }
+  if (isa<CXXTemporaryObjectExpr>(E))
+    return true; // A temporary lives until the end of this statement.
   if (isConstOwnerPtrMemberExpr(E))
     return true;
 
