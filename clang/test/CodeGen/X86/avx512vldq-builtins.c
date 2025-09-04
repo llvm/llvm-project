@@ -475,6 +475,8 @@ __m256d test_mm256_mask_cvtepi64_pd(__m256d __W, __mmask8 __U, __m256i __A) {
   return _mm256_mask_cvtepi64_pd(__W, __U, __A); 
 }
 
+TEST_CONSTEXPR(match_m256d(_mm256_mask_cvtepi64_pd((__m256d){-777.0, -777.0, -777.0, -777.0}, /*1100*/0xc, (__m256i)(__v4di){-1, -1, 2, 2}), -777.0, -777.0, 2.0, 2.0));
+
 __m256d test_mm256_maskz_cvtepi64_pd(__mmask8 __U, __m256i __A) {
   // CHECK-LABEL: test_mm256_maskz_cvtepi64_pd
   // CHECK: sitofp <4 x i64> %{{.*}} to <4 x double>
