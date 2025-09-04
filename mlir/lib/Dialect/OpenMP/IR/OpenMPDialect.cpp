@@ -2173,8 +2173,6 @@ TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {
     if (!teamsOp)
       return TargetRegionFlags::generic;
 
-    TargetRegionFlags result;
-
     if (teamsOp->getParentOp() == targetOp.getOperation()) {
       TargetRegionFlags result =
           TargetRegionFlags::spmd | TargetRegionFlags::trip_count;
