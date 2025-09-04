@@ -4255,7 +4255,8 @@ function, because doing so violates bounds safety conventions.
 
 ``__builtin_stack_address`` returns the address that separates the current
 function's (i.e. the one calling the builtin) stack space and the region of the
-stack that may be modified by called functions. The semantics match those of GCC's builtin of the same name.
+stack that may be modified by called functions. The semantics match those of
+GCC's builtin of the same name.
 
 **Syntax**:
 
@@ -4274,10 +4275,11 @@ stack that may be modified by called functions. The semantics match those of GCC
 The address returned by ``__builtin_stack_address`` identifies the starting
 address of the stack region that may be used by called functions.
 
-On some architectures (e.g. x86), it's sufficient to return the value in the stack pointer register
-directly. On others (e.g. SPARCv9), adjustments are required to the value of the stack pointer
-register. ``__builtin_stack_address`` performs the necessary adjustments and returns the correct
-boundary address.
+On some architectures (e.g. x86), it's sufficient to return the value in the
+stack pointer register directly. On others (e.g. SPARCv9), adjustments are
+required to the value of the stack pointer register.
+``__builtin_stack_address`` performs the necessary adjustments and returns the
+correct boundary address.
 
 Multiprecision Arithmetic Builtins
 ----------------------------------

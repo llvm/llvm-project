@@ -111,7 +111,8 @@ Resolutions to C++ Defect Reports
 C Language Changes
 ------------------
 
-- Clang now supports the :ref:`__builtin_stack_address <builtin_stack_address-doc>` () builtin.
+- Clang now supports the
+  :ref:`__builtin_stack_address <builtin_stack_address-doc>` () builtin.
   The semantics match those of GCC's builtin with the same name.
 
 C2y Feature Support
