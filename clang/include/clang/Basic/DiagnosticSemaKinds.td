@@ -1772,7 +1772,9 @@ def note_unsatisfied_trait
            "%Replaceable{replaceable}|"
            "%TriviallyCopyable{trivially copyable}|"
            "%Empty{empty}|"
-           "%StandardLayout{standard-layout}"
+           "%StandardLayout{standard-layout}|"
+           "%Aggregate{aggregate}|"
+           "%Final{final}"
            "}1">;
 
 def note_unsatisfied_trait_reason
@@ -1793,6 +1795,7 @@ def note_unsatisfied_trait_reason
            "%NTCBase{has a non-trivially-copyable base %1}|"
            "%NTCField{has a non-trivially-copyable member %1 of type %2}|"
            "%NonEmptyMember{has a non-static data member %1 of type %2}|"
+           "%PolymorphicType{is a polymorphic type}|"
            "%VirtualFunction{has a virtual function %1}|"
            "%NonEmptyBase{has a base class %1 that is not empty}|"
            "%NonZeroLengthField{field %1 is a non-zero-length bit-field}|"
@@ -1805,6 +1808,8 @@ def note_unsatisfied_trait_reason
            "%DeletedDtr{has a %select{deleted|user-provided}1 destructor}|"
            "%UserProvidedCtr{has a user provided %select{copy|move}1 "
            "constructor}|"
+           "%UserDeclaredCtr{has a user-declared constructor}|"
+           "%InheritedCtr{has an inherited constructor}|"
            "%DeletedCtr{has a deleted %select{copy|move}1 "
            "constructor}|"
            "%UserProvidedAssign{has a user provided %select{copy|move}1 "
@@ -1815,7 +1820,11 @@ def note_unsatisfied_trait_reason
            "%sub{select_special_member_kind}1}|"
            "%FunctionType{is a function type}|"
            "%CVVoidType{is a cv void type}|"
-           "%IncompleteArrayType{is an incomplete array type}"
+           "%IncompleteArrayType{is an incomplete array type}|"
+           "%PrivateProtectedDirectDataMember{has a %select{private|protected}1 direct data member}|"
+           "%PrivateProtectedDirectBase{has a %select{private|protected}1 direct base}|"
+           "%NotClassOrUnion{is not a class or union type}|"
+           "%NotMarkedFinal{is not marked 'final'}"
            "}0">;
 
 def warn_consteval_if_always_true : Warning<
@@ -3684,6 +3693,10 @@ def warn_alloca_align_alignof : Warning<
   "second argument to __builtin_alloca_with_align is supposed to be in bits">,
   InGroup<DiagGroup<"alloca-with-align-alignof">>;
 
+def warn_alloc_size : Warning<
+  "allocation of insufficient size '%0' for type %1 with size '%2'">,
+  InGroup<DiagGroup<"alloc-size">>;
+
 def err_alignment_too_small : Error<
   "requested alignment must be %0 or greater">;
 def err_alignment_too_big : Error<
@@ -4404,6 +4417,11 @@ def warn_impcast_different_enum_types : Warning<
 def warn_impcast_int_to_enum : Warning<
   "implicit conversion from %0 to enumeration type %1 is invalid in C++">,
   InGroup<ImplicitIntToEnumCast>, DefaultIgnore;
+
+def note_no_implicit_conversion_for_scoped_enum
+    : Note<"no implicit conversion for scoped enum; consider casting to "
+           "underlying type">;
+
 def warn_impcast_bool_to_null_pointer : Warning<
     "initialization of pointer of type %0 to null from a constant boolean "
     "expression">, InGroup<BoolConversion>;
@@ -10680,7 +10698,7 @@ def warn_dangling_reference_captured_by_unknown : Warning<
 
 // Diagnostics based on the Lifetime safety analysis.
 def warn_lifetime_safety_loan_expires_permissive : Warning<
-   "object whose reference is captured does not live long enough">, 
+   "object whose reference is captured does not live long enough">,
    InGroup<LifetimeSafetyPermissive>, DefaultIgnore;
 def warn_lifetime_safety_loan_expires_strict : Warning<
    "object whose reference is captured may not live long enough">,
@@ -10812,6 +10830,11 @@ def err_continue_not_in_loop : Error<
   "'continue' statement not in loop statement">;
 def err_break_not_in_loop_or_switch : Error<
   "'break' statement not in loop or switch statement">;
+def err_break_continue_label_not_found : Error<
+  "'%select{break|continue}0' label does not name an enclosing "
+  "%select{loop or 'switch'|loop}0">;
+def err_continue_switch : Error<
+  "label of 'continue' refers to a switch statement">;
 def warn_loop_ctrl_binds_to_inner : Warning<
   "'%0' is bound to current loop, GCC binds it to the enclosing loop">,
   InGroup<GccCompat>;
@@ -12606,7 +12629,7 @@ def warn_zero_as_null_pointer_constant : Warning<
   InGroup<DiagGroup<"zero-as-null-pointer-constant">>, DefaultIgnore;
 
 def warn_not_eliding_copy_on_return : Warning<
-  "not eliding copy on return">, 
+  "not eliding copy on return">,
   InGroup<DiagGroup<"nrvo">>, DefaultIgnore;
 
 def err_nullability_cs_multilevel : Error<

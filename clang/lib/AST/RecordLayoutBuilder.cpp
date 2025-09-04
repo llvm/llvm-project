@@ -204,15 +204,13 @@ void EmptySubobjectMap::ComputeEmptySubobjectSizes() {
 
   // Check the fields.
   for (const FieldDecl *FD : Class->fields()) {
-    const RecordType *RT =
-        Context.getBaseElementType(FD->getType())->getAs<RecordType>();
-
-    // We only care about record types.
-    if (!RT)
+    // We only care about records.
+    const auto *MemberDecl =
+        Context.getBaseElementType(FD->getType())->getAsCXXRecordDecl();
+    if (!MemberDecl)
       continue;
 
     CharUnits EmptySize;
-    const CXXRecordDecl *MemberDecl = RT->getAsCXXRecordDecl();
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(MemberDecl);
     if (MemberDecl->isEmpty()) {
       // If the class decl is empty, get its size.
@@ -433,11 +431,10 @@ EmptySubobjectMap::CanPlaceFieldSubobjectAtOffset(const FieldDecl *FD,
   // If we have an array type we need to look at every element.
   if (const ConstantArrayType *AT = Context.getAsConstantArrayType(T)) {
     QualType ElemTy = Context.getBaseElementType(AT);
-    const RecordType *RT = ElemTy->getAs<RecordType>();
-    if (!RT)
+    const auto *RD = ElemTy->getAsCXXRecordDecl();
+    if (!RD)
       return true;
 
-    const CXXRecordDecl *RD = RT->getAsCXXRecordDecl();
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
 
     uint64_t NumElements = Context.getConstantArrayElementCount(AT);
@@ -533,11 +530,10 @@ void EmptySubobjectMap::UpdateEmptyFieldSubobjects(
   // If we have an array type we need to update every element.
   if (const ConstantArrayType *AT = Context.getAsConstantArrayType(T)) {
     QualType ElemTy = Context.getBaseElementType(AT);
-    const RecordType *RT = ElemTy->getAs<RecordType>();
-    if (!RT)
+    const auto *RD = ElemTy->getAsCXXRecordDecl();
+    if (!RD)
       return;
 
-    const CXXRecordDecl *RD = RT->getAsCXXRecordDecl();
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
 
     uint64_t NumElements = Context.getConstantArrayElementCount(AT);
@@ -2011,7 +2007,7 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
           CTy->getElementType()->castAs<BuiltinType>());
     } else if (const BuiltinType *BTy = BaseTy->getAs<BuiltinType>()) {
       performBuiltinTypeAlignmentUpgrade(BTy);
-    } else if (const RecordType *RT = BaseTy->getAs<RecordType>()) {
+    } else if (const RecordType *RT = BaseTy->getAsCanonical<RecordType>()) {
       const RecordDecl *RD = RT->getOriginalDecl();
       const ASTRecordLayout &FieldRecord = Context.getASTRecordLayout(RD);
       PreferredAlign = FieldRecord.getPreferredAlignment();
@@ -2711,8 +2707,9 @@ MicrosoftRecordLayoutBuilder::getAdjustedElementInfo(
     // alignment when it is applied to bitfields.
     Info.Alignment = std::max(Info.Alignment, FieldRequiredAlignment);
   else {
-    if (auto RT =
-            FD->getType()->getBaseElementTypeUnsafe()->getAs<RecordType>()) {
+    if (const auto *RT = FD->getType()
+                             ->getBaseElementTypeUnsafe()
+                             ->getAsCanonical<RecordType>()) {
       auto const &Layout = Context.getASTRecordLayout(RT->getOriginalDecl());
       EndsWithZeroSizedObject = Layout.endsWithZeroSizedObject();
       FieldRequiredAlignment = std::max(FieldRequiredAlignment,
@@ -3695,9 +3692,9 @@ static void DumpRecordLayout(raw_ostream &OS, const RecordDecl *RD,
       Offset + C.toCharUnitsFromBits(LocalFieldOffsetInBits);
 
     // Recursively dump fields of record type.
-    if (auto RT = Field->getType()->getAs<RecordType>()) {
-      DumpRecordLayout(OS, RT->getOriginalDecl()->getDefinitionOrSelf(), C,
-                       FieldOffset, IndentLevel, Field->getName().data(),
+    if (const auto *RD = Field->getType()->getAsRecordDecl()) {
+      DumpRecordLayout(OS, RD, C, FieldOffset, IndentLevel,
+                       Field->getName().data(),
                        /*PrintSizeInfo=*/false,
                        /*IncludeVirtualBases=*/true);
       continue;

@@ -1,6 +1,6 @@
 set(files
   orc-rt-executor.cpp
-  rtti.cpp
+  RTTI.cpp
   )
 
 add_library(orc-rt-executor STATIC ${files})

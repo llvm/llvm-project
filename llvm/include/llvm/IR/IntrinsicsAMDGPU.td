@@ -2434,9 +2434,13 @@ def int_amdgcn_ballot :
   Intrinsic<[llvm_anyint_ty], [llvm_i1_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
+// Inverse of ballot: return the bit corresponding to the current lane from the
+// given mask.
+//
+// This is only defined for dynamically uniform masks and therefore convergent.
 def int_amdgcn_inverse_ballot :
   Intrinsic<[llvm_i1_ty], [llvm_anyint_ty],
-            [IntrNoMem, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+            [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 // Lowers to S_BITREPLICATE_B64_B32.
 // The argument must be uniform; otherwise, the result is undefined.
@@ -3811,6 +3815,21 @@ def int_amdgcn_fdiv_fast : DefaultAttrsIntrinsic<
   [IntrNoMem, IntrSpeculatable]
 >;
 
+// Async instructions increment ASYNCcnt which is modeled as InaccessibleMem.
+class AMDGPUAsyncClusterLoadLDS : Intrinsic <
+  [],
+  [global_ptr_ty,          // Base global pointer to load from
+   local_ptr_ty,           // LDS base pointer to store to
+   llvm_i32_ty,            // offset
+   llvm_i32_ty,            // gfx12+ cachepolicy:
+                           //   bits [0-2] = th
+                           //   bits [3-4] = scope
+   llvm_i32_ty],           // workgroup broadcast mask (to M0)
+  [IntrInaccessibleMemOrArgMemOnly, ReadOnly<ArgIndex<0>>, WriteOnly<ArgIndex<1>>,  NoCapture<ArgIndex<0>>,
+   NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, IntrWillReturn, IntrNoCallback, IntrNoFree],
+  "", [SDNPMemOperand]
+>;
+
 class AMDGPUAsyncGlobalLoadToLDS : Intrinsic <
   [],
   [global_ptr_ty,          // Base global pointer to load from
@@ -3836,6 +3855,15 @@ class AMDGPUAsyncGlobalStoreFromLDS : Intrinsic <
    NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, IntrWillReturn, IntrNoCallback, IntrNoFree],
   "", [SDNPMemOperand]
 >;
+
+def int_amdgcn_cluster_load_async_to_lds_b8     :
+  ClangBuiltin<"__builtin_amdgcn_cluster_load_async_to_lds_b8">, AMDGPUAsyncClusterLoadLDS;
+def int_amdgcn_cluster_load_async_to_lds_b32    :
+  ClangBuiltin<"__builtin_amdgcn_cluster_load_async_to_lds_b32">, AMDGPUAsyncClusterLoadLDS;
+def int_amdgcn_cluster_load_async_to_lds_b64    :
+  ClangBuiltin<"__builtin_amdgcn_cluster_load_async_to_lds_b64">, AMDGPUAsyncClusterLoadLDS;
+def int_amdgcn_cluster_load_async_to_lds_b128   :
+  ClangBuiltin<"__builtin_amdgcn_cluster_load_async_to_lds_b128">, AMDGPUAsyncClusterLoadLDS;
 
 def int_amdgcn_global_load_async_to_lds_b8      :
   ClangBuiltin<"__builtin_amdgcn_global_load_async_to_lds_b8">, AMDGPUAsyncGlobalLoadToLDS;
@@ -4108,6 +4136,23 @@ def int_amdgcn_tensor_load_to_lds_d2 :
   ClangBuiltin<"__builtin_amdgcn_tensor_load_to_lds_d2">, AMDGPUTensorLoadStoreD2;
 def int_amdgcn_tensor_store_from_lds_d2 :
   ClangBuiltin<"__builtin_amdgcn_tensor_store_from_lds_d2">, AMDGPUTensorLoadStoreD2;
+
+class AMDGPUClusterLoad<LLVMType ptr_ty>:
+  Intrinsic<
+    [llvm_any_ty],
+    [ptr_ty,
+     llvm_i32_ty,      // gfx12+ cachepolicy:
+                       //   bits [0-2] = th
+                       //   bits [3-4] = scope
+     llvm_i32_ty],     // workgroup broadcast mask (in M0)
+    [IntrArgMemOnly, IntrReadMem, ReadOnly<ArgIndex<0>>, IntrWillReturn, IntrConvergent,
+     NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>, IntrNoCallback, IntrNoFree],
+    "", [SDNPMemOperand]
+  >;
+
+def int_amdgcn_cluster_load_b32         : AMDGPUClusterLoad<global_ptr_ty>;
+def int_amdgcn_cluster_load_b64         : AMDGPUClusterLoad<global_ptr_ty>;
+def int_amdgcn_cluster_load_b128        : AMDGPUClusterLoad<global_ptr_ty>;
 
 class AMDGPULoadMonitor<LLVMType ptr_ty>:
   Intrinsic<

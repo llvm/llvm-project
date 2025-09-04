@@ -55,7 +55,6 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -528,6 +527,7 @@ private:
   void visitRangeMetadata(Instruction &I, MDNode *Range, Type *Ty);
   void visitNoaliasAddrspaceMetadata(Instruction &I, MDNode *Range, Type *Ty);
   void visitDereferenceableMetadata(Instruction &I, MDNode *MD);
+  void visitNofreeMetadata(Instruction &I, MDNode *MD);
   void visitProfMetadata(Instruction &I, MDNode *MD);
   void visitCallStackMetadata(MDNode *MD);
   void visitMemProfMetadata(Instruction &I, MDNode *MD);
@@ -1300,9 +1300,11 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
   if (N.getTag() == dwarf::DW_TAG_set_type) {
     if (auto *T = N.getRawBaseType()) {
       auto *Enum = dyn_cast_or_null<DICompositeType>(T);
+      auto *Subrange = dyn_cast_or_null<DISubrangeType>(T);
       auto *Basic = dyn_cast_or_null<DIBasicType>(T);
       CheckDI(
           (Enum && Enum->getTag() == dwarf::DW_TAG_enumeration_type) ||
+              (Subrange && Subrange->getTag() == dwarf::DW_TAG_subrange_type) ||
               (Basic && (Basic->getEncoding() == dwarf::DW_ATE_unsigned ||
                          Basic->getEncoding() == dwarf::DW_ATE_signed ||
                          Basic->getEncoding() == dwarf::DW_ATE_unsigned_char ||
@@ -3008,7 +3010,7 @@ void Verifier::visitFunction(const Function &F) {
     if (!IsIntrinsic) {
       Check(!Arg.getType()->isMetadataTy(),
             "Function takes metadata but isn't an intrinsic", &Arg, &F);
-      Check(!Arg.getType()->isTokenTy(),
+      Check(!Arg.getType()->isTokenLikeTy(),
             "Function takes token but isn't an intrinsic", &Arg, &F);
       Check(!Arg.getType()->isX86_AMXTy(),
             "Function takes x86_amx but isn't an intrinsic", &Arg, &F);
@@ -3022,7 +3024,7 @@ void Verifier::visitFunction(const Function &F) {
   }
 
   if (!IsIntrinsic) {
-    Check(!F.getReturnType()->isTokenTy(),
+    Check(!F.getReturnType()->isTokenLikeTy(),
           "Function returns a token but isn't an intrinsic", &F);
     Check(!F.getReturnType()->isX86_AMXTy(),
           "Function returns a x86_amx but isn't an intrinsic", &F);
@@ -3636,7 +3638,7 @@ void Verifier::visitPHINode(PHINode &PN) {
         "PHI nodes not grouped at top of basic block!", &PN, PN.getParent());
 
   // Check that a PHI doesn't yield a Token.
-  Check(!PN.getType()->isTokenTy(), "PHI nodes cannot have token type!");
+  Check(!PN.getType()->isTokenLikeTy(), "PHI nodes cannot have token type!");
 
   // Check that all of the values of the PHI node have the same type as the
   // result.
@@ -3841,14 +3843,14 @@ void Verifier::visitCallBase(CallBase &Call) {
     for (Type *ParamTy : FTy->params()) {
       Check(!ParamTy->isMetadataTy(),
             "Function has metadata parameter but isn't an intrinsic", Call);
-      Check(!ParamTy->isTokenTy(),
+      Check(!ParamTy->isTokenLikeTy(),
             "Function has token parameter but isn't an intrinsic", Call);
     }
   }
 
   // Verify that indirect calls don't return tokens.
   if (!Call.getCalledFunction()) {
-    Check(!FTy->getReturnType()->isTokenTy(),
+    Check(!FTy->getReturnType()->isTokenLikeTy(),
           "Return type cannot be token for indirect call!");
     Check(!FTy->getReturnType()->isX86_AMXTy(),
           "Return type cannot be x86_amx for indirect call!");
@@ -5030,6 +5032,13 @@ void Verifier::visitDereferenceableMetadata(Instruction& I, MDNode* MD) {
         &I);
 }
 
+void Verifier::visitNofreeMetadata(Instruction &I, MDNode *MD) {
+  Check(I.getType()->isPointerTy(), "nofree applies only to pointer types", &I);
+  Check((isa<IntToPtrInst>(I)), "nofree applies only to inttoptr instruction",
+        &I);
+  Check(MD->getNumOperands() == 0, "nofree metadata must be empty", &I);
+}
+
 void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
   auto GetBranchingTerminatorNumOperands = [&]() {
     unsigned ExpectedNumOperands = 0;
@@ -5504,6 +5513,9 @@ void Verifier::visitInstruction(Instruction &I) {
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_dereferenceable_or_null))
     visitDereferenceableMetadata(I, MD);
+
+  if (MDNode *MD = I.getMetadata(LLVMContext::MD_nofree))
+    visitNofreeMetadata(I, MD);
 
   if (MDNode *TBAA = I.getMetadata(LLVMContext::MD_tbaa))
     TBAAVerifyHelper.visitTBAAMetadata(I, TBAA);
@@ -6733,7 +6745,9 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "invalid vector type for format", &Call, Src1, Call.getArgOperand(5));
     break;
   }
-  case Intrinsic::amdgcn_wmma_f32_16x16x128_f8f6f4: {
+  case Intrinsic::amdgcn_wmma_f32_16x16x128_f8f6f4:
+  case Intrinsic::amdgcn_wmma_scale_f32_16x16x128_f8f6f4:
+  case Intrinsic::amdgcn_wmma_scale16_f32_16x16x128_f8f6f4: {
     Value *Src0 = Call.getArgOperand(1);
     Value *Src1 = Call.getArgOperand(3);
 
