@@ -703,16 +703,28 @@ class LinuxCoreTestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
         process = target.LoadCore("linux-arm-vfp.core")
 
-        values = {}
-        values["d0"] = "0.5"
-        values["d1"] = "1.5"
-        values["d2"] = "2.5"
-        values["d3"] = "3.5"
-        values["s8"] = "4.5"
-        values["s9"] = "5.5"
-        values["s10"] = "6.5"
-        values["s11"] = "7.5"
-        values["fpscr"] = "0x20000000"
+        values = {
+            "d0": "0.5",
+            "d1": "1.5",
+            "d14": "14.5",
+            "d15": "15.5",
+            "s4": "4.5",
+            "s5": "5.5",
+            "s6": "6.5",
+            "s7": "7.5",
+            "fpscr": "0x20000000",
+            # s0 and s1 overlap d0, s2 and s3 overlap d1 and so on. Therefore,
+            # the following values are not as neat as those in the explicitly
+            # set registers.
+            "s0": "0",
+            "s1": "1.75",
+            "s2": "0",
+            "s3": "1.9375",
+            "s28": "0",
+            "s29": "2.703125",
+            "s30": "0",
+            "s31": "2.734375",
+        }
         for regname, value in values.items():
             self.expect(
                 "register read {}".format(regname),
