@@ -487,15 +487,10 @@ struct WgToSgVectorBroadcastOp
     for (auto operand : adaptor.getOperands().front()) {
       auto newBroadcast = vector::BroadcastOp::create(rewriter, op.getLoc(),
                                                       newResultType, operand);
-      if (auto sliceAttr = dyn_cast_if_present<xegpu::SliceAttr>(layout)) {
-        if (sliceAttr.isForSubgroup())
-          xegpu::setDistributeLayoutAttr(newBroadcast->getResult(0),
-                                         sliceAttr.dropSgLayoutAndData());
-      } else if (auto layoutAttr =
-                     dyn_cast_if_present<xegpu::LayoutAttr>(layout)) {
-        if (auto newLayout = layoutAttr.dropSgLayoutAndData())
-          xegpu::setDistributeLayoutAttr(newBroadcast->getResult(0), newLayout);
-      }
+      if (!layout.getLaneLayoutAsInt().empty())
+        xegpu::setDistributeLayoutAttr(newBroadcast->getResult(0),
+                                       layout.dropSgLayoutAndData());
+
       newBroadcastOps.push_back(newBroadcast.getResult());
     }
     rewriter.replaceOpWithMultiple(op, {newBroadcastOps});
@@ -549,13 +544,10 @@ struct WgToSgElementwiseOp : public ConversionPattern {
       // Copy all attributes, but update "layout_result_0" to drop
       // sgLayout/sgData
       for (auto attr : op->getAttrs()) {
-        if (auto layout = dyn_cast<xegpu::LayoutAttr>(attr.getValue())) {
-          if (auto newLayout = layout.dropSgLayoutAndData())
-            state.addAttribute(attr.getName(), newLayout);
-        } else if (auto sliceAttr =
-                       dyn_cast<xegpu::SliceAttr>(attr.getValue())) {
-          if (sliceAttr.isForSubgroup())
-            state.addAttribute(attr.getName(), sliceAttr.dropSgLayoutAndData());
+        if (auto layout =
+                dyn_cast<xegpu::DistributeLayoutAttr>(attr.getValue())) {
+          if (!layout.getLaneLayoutAsInt().empty())
+            state.addAttribute(attr.getName(), layout.dropSgLayoutAndData());
         } else {
           state.addAttribute(attr.getName(), attr.getValue());
         }
@@ -746,15 +738,9 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
     auto sgAttr = DenseElementsAttr::get(newType, singleVal);
     auto cstOp =
         arith::ConstantOp::create(rewriter, op.getLoc(), newType, sgAttr);
-    if (auto sliceAttr = dyn_cast_if_present<xegpu::SliceAttr>(layout)) {
-      if (sliceAttr.isForSubgroup())
-        xegpu::setDistributeLayoutAttr(cstOp->getResult(0),
-                                       sliceAttr.dropSgLayoutAndData());
-    } else if (auto layoutAttr =
-                   dyn_cast_if_present<xegpu::LayoutAttr>(layout)) {
-      if (auto newLayout = layoutAttr.dropSgLayoutAndData())
-        xegpu::setDistributeLayoutAttr(cstOp->getResult(0), newLayout);
-    }
+    if (!layout.getLaneLayoutAsInt().empty())
+      xegpu::setDistributeLayoutAttr(cstOp->getResult(0),
+                                     layout.dropSgLayoutAndData());
     SmallVector<Value> newConsts(count, cstOp);
 
     rewriter.replaceOpWithMultiple(op, {newConsts});
@@ -983,15 +969,9 @@ struct WgToSgVectorShapeCastOp
     for (auto src : adaptor.getSource()) {
       auto newShapeCast =
           rewriter.create<vector::ShapeCastOp>(op.getLoc(), newResultType, src);
-      if (auto sliceAttr = dyn_cast_if_present<xegpu::SliceAttr>(layout)) {
-        if (sliceAttr.isForSubgroup())
-          xegpu::setDistributeLayoutAttr(newShapeCast->getResult(0),
-                                         sliceAttr.dropSgLayoutAndData());
-      } else if (auto layoutAttr =
-                     dyn_cast_if_present<xegpu::LayoutAttr>(layout)) {
-        if (auto newLayout = layoutAttr.dropSgLayoutAndData())
-          xegpu::setDistributeLayoutAttr(newShapeCast->getResult(0), newLayout);
-      }
+      if (!layout.getLaneLayoutAsInt().empty())
+        xegpu::setDistributeLayoutAttr(newShapeCast->getResult(0),
+                                       layout.dropSgLayoutAndData());
       newShapeCastOps.push_back(newShapeCast.getResult());
     }
 
