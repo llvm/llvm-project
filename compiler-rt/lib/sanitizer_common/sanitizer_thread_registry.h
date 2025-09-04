@@ -135,7 +135,7 @@ class SANITIZER_MUTEX ThreadRegistry {
   // Finishes thread and returns previous status.
   ThreadStatus FinishThread(u32 tid);
   void StartThread(u32 tid, ThreadID os_id, ThreadType thread_type, void *arg);
-  u32 ConsumeThreadUserId(uptr user_id);
+  bool ConsumeThreadUserId(uptr user_id, u32 *tid_out);
   void SetThreadUserId(u32 tid, uptr user_id);
 
   // OnFork must be called in the child process after fork to purge old
