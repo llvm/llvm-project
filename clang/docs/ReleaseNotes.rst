@@ -467,6 +467,9 @@ Crash and bug fixes
   ``[[assume(expr)]]`` attribute was enclosed in parentheses.  (#GH151529)
 - Fixed a crash when parsing ``#embed`` parameters with unmatched closing brackets. (#GH152829)
 
+- Fixed a crash when analyzing default bindings as compound literals in
+  designated initializers for bitfields in unions. (#GH146050)
+
 Improvements
 ^^^^^^^^^^^^
 
