@@ -69,6 +69,9 @@ public:
                               FunctionNameRepresentation representation,
                               Stream &s) override;
 
+  std::string GetDemangledFunctionName(const SymbolContext &sc,
+                                       const ExecutionContext *exe_ctx);
+
   /// Returns the name of function up to the first generic or opening
   /// parenthesis.
   ///
@@ -82,6 +85,9 @@ public:
   /// \returns The name of a function as an std::string.
   std::string GetFunctionName(const SymbolContext &sc,
                               const ExecutionContext *exe_ctx);
+
+  std::string GetFunctionTemplateArguments(const SymbolContext &sc,
+                                           const ExecutionContext *exe_ctx);
 
   /// Returns the arguments of a function call with its generics if any.
   ///
