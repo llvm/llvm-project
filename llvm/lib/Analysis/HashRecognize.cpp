@@ -73,9 +73,9 @@ using namespace SCEVPatternMatch;
 
 #define DEBUG_TYPE "hash-recognize"
 
-/// Checks that all instructions reachable from \p Roots on the use-def chain
-/// are contained within loop \p L, and that that are no stray instructions in
-/// the loop not visited by the use-def walk.
+/// Checks if there's a stray instruction in the loop \p L outside of the
+/// use-def chains from \p Roots, or if we escape the loop during the use-def
+/// walk.
 static bool containsUnreachable(const Loop &L,
                                 ArrayRef<const Instruction *> Roots) {
   SmallPtrSet<const Instruction *, 16> Visited;
@@ -157,8 +157,8 @@ private:
 /// compare are swapped). We check that the LHS is (ConditionalRecurrence.Phi
 /// [xor SimpleRecurrence.Phi]) in the big-endian case, and additionally check
 /// for an AND with one in the little-endian case. We then check AllowedByR
-/// against CheckAllowedByR, which is [0, smin) in the big-endian case, and
-/// against [0, 1) in the little-endian case: CheckAllowedByR checks for
+/// against CheckAllowedByR, which is [0, smin) in the big-endian case, and is
+/// [0, 1) in the little-endian case. CheckAllowedByR checks for
 /// significant-bit-clear, and we match the corresponding arms of the select
 /// against bit-shift and bit-shift-and-xor-gen-poly.
 static bool
@@ -196,10 +196,12 @@ isSignificantBitCheckWellFormed(const RecurrenceInfo &ConditionalRecurrence,
   BinaryOperator *BitShift = ConditionalRecurrence.BO;
   if (AllowedByR == CheckAllowedByR)
     return TV == BitShift &&
-           match(FV, m_c_Xor(m_Specific(BitShift), m_Constant()));
+           match(FV, m_c_Xor(m_Specific(BitShift),
+                             m_SpecificInt(*ConditionalRecurrence.ExtraConst)));
   if (AllowedByR.inverse() == CheckAllowedByR)
     return FV == BitShift &&
-           match(TV, m_c_Xor(m_Specific(BitShift), m_Constant()));
+           match(TV, m_c_Xor(m_Specific(BitShift),
+                             m_SpecificInt(*ConditionalRecurrence.ExtraConst)));
   return false;
 }
 
