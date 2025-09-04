@@ -2272,6 +2272,21 @@ body: |
     PseudoVSSEG3E32_V_M1 killed %8, $noreg, 1, 6 /* e64 */
 ...
 ---
+name: vsseg3e32_v_incompatible_insert_subreg
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: vsseg3e32_v_incompatible_insert_subreg
+    ; CHECK: [[PseudoVADD_VV_M2_:%[0-9]+]]:vrm2 = PseudoVADD_VV_M2 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 3 /* ta, ma */
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrn3m1 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrn3m1 = INSERT_SUBREG [[DEF]], [[PseudoVADD_VV_M2_]], %subreg.sub_vrm2_0
+    ; CHECK-NEXT: PseudoVSSEG3E32_V_M1 killed [[INSERT_SUBREG]], $noreg, 1, 5 /* e32 */
+    %2:vrm2 = PseudoVADD_VV_M2 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 3 /* ta, ma */
+    %6:vrn3m1 = IMPLICIT_DEF
+    %5:vrn3m1 = INSERT_SUBREG %6, %2, %subreg.sub_vrm2_0
+    PseudoVSSEG3E32_V_M1 killed %5, $noreg, 1, 5 /* e32 */
+...
+---
 name: vssseg3e32_v
 body: |
   bb.0:

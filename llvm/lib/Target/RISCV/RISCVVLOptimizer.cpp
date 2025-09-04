@@ -1413,29 +1413,23 @@ static bool isTupleInsertInstr(const MachineInstr &MI,
     return false;
 
   const TargetRegisterClass *DstRC = MRI.getRegClass(MI.getOperand(0).getReg());
+  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
   if (!RISCVRI::isVRegClass(DstRC->TSFlags))
     return false;
   unsigned NF = RISCVRI::getNF(DstRC->TSFlags);
   if (NF < 2)
     return false;
 
-  // Check whether INSERT_SUBREG was lowered with the correct subreg index.
+  // Check whether INSERT_SUBREG has the correct subreg index for tuple inserts.
   auto VLMul = RISCVRI::getLMul(DstRC->TSFlags);
+  unsigned SubRegIdx = MI.getOperand(3).getImm();
   [[maybe_unused]] auto [LMul, IsFractional] = RISCVVType::decodeVLMUL(VLMul);
   assert(!IsFractional && "unexpected LMUL for tuple register classes");
-  [[maybe_unused]] const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
-  [[maybe_unused]] unsigned SubRegIdx = MI.getOperand(3).getImm();
-  assert(TRI->getSubRegIdxSize(SubRegIdx) == RISCV::RVVBitsPerBlock * LMul &&
-         "unexpected subreg index of tuple register class");
-  return true;
+  return TRI->getSubRegIdxSize(SubRegIdx) == RISCV::RVVBitsPerBlock * LMul;
 }
 
 static bool isSegmentedStoreInstr(const MachineInstr &MI) {
-  const RISCVVPseudosTable::PseudoInfo *RVV =
-      RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
-  if (!RVV)
-    return false;
-  switch (RVV->BaseInstr) {
+  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
   case VSSEG_CASES(8):
   case VSSSEG_CASES(8):
   case VSUXSEG_CASES(8):
