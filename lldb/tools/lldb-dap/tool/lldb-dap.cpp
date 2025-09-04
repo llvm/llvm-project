@@ -223,6 +223,36 @@ static int DuplicateFileDescriptor(int fd) {
 #endif
 }
 
+static void ResetTimeToLive(std::mutex &ttl_mutex,
+                            MainLoopBase::TimePoint &ttl_time_point) {
+  std::scoped_lock<std::mutex> lock(ttl_mutex);
+  ttl_time_point = MainLoopBase::TimePoint();
+}
+
+static void TrackTimeToLive(MainLoop &loop, std::mutex &ttl_mutex,
+                            MainLoopBase::TimePoint &ttl_time_point,
+                            std::chrono::seconds ttl_seconds) {
+  MainLoopBase::TimePoint next_checkpoint =
+      std::chrono::steady_clock::now() + std::chrono::seconds(ttl_seconds);
+  {
+    std::scoped_lock<std::mutex> lock(ttl_mutex);
+    // We don't need to take the max of `ttl_time_point` and `next_checkpoint`,
+    // because `next_checkpoint` must be the latest.
+    ttl_time_point = next_checkpoint;
+  }
+  loop.AddCallback(
+      [&ttl_mutex, &ttl_time_point, next_checkpoint](MainLoopBase &loop) {
+        bool should_request_terimation;
+        {
+          std::scoped_lock<std::mutex> lock(ttl_mutex);
+          should_request_terimation = ttl_time_point == next_checkpoint;
+        }
+        if (should_request_terimation)
+          loop.RequestTermination();
+      },
+      next_checkpoint);
+}
+
 static llvm::Expected<std::pair<Socket::SocketProtocol, std::string>>
 validateConnection(llvm::StringRef conn) {
   auto uri = lldb_private::URI::Parse(conn);
@@ -258,7 +288,8 @@ validateConnection(llvm::StringRef conn) {
 static llvm::Error
 serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
                 Log *log, const ReplMode default_repl_mode,
-                const std::vector<std::string> &pre_init_commands, int ttl) {
+                const std::vector<std::string> &pre_init_commands,
+                std::optional<std::chrono::seconds> ttl_seconds) {
   Status status;
   static std::unique_ptr<Socket> listener = Socket::Create(protocol, status);
   if (status.Fail()) {
@@ -283,21 +314,10 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
     g_loop.AddPendingCallback(
         [](MainLoopBase &loop) { loop.RequestTermination(); });
   });
-  static MainLoopBase::TimePoint ttl_time_point;
-  static std::mutex ttl_mutex;
-  if (ttl > 0) {
-    std::scoped_lock<std::mutex> lock(ttl_mutex);
-    MainLoopBase::TimePoint future =
-        std::chrono::steady_clock::now() + std::chrono::milliseconds(ttl);
-    ttl_time_point = future;
-    g_loop.AddCallback(
-        [future](MainLoopBase &loop) {
-          if (ttl_time_point == future) {
-            loop.RequestTermination();
-          }
-        },
-        future);
-  }
+  static MainLoopBase::TimePoint g_ttl_time_point;
+  static std::mutex g_ttl_mutex;
+  if (ttl_seconds)
+    TrackTimeToLive(g_loop, g_ttl_mutex, g_ttl_time_point, ttl_seconds.value());
   std::condition_variable dap_sessions_condition;
   std::mutex dap_sessions_mutex;
   std::map<MainLoop *, DAP *> dap_sessions;
@@ -306,12 +326,10 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
                                           &dap_sessions_mutex, &dap_sessions,
                                           &clientCount](
                                              std::unique_ptr<Socket> sock) {
-    if (ttl > 0) {
-      // Reset the keep alive timer, because we won't be killing the server
-      // while this connection is being served.
-      std::scoped_lock<std::mutex> lock(ttl_mutex);
-      ttl_time_point = MainLoopBase::TimePoint();
-    }
+    // Reset the keep alive timer, because we won't be killing the server
+    // while this connection is being served.
+    if (ttl_seconds)
+      ResetTimeToLive(g_ttl_mutex, g_ttl_time_point);
     std::string client_name = llvm::formatv("client_{0}", clientCount++).str();
     DAP_LOG(log, "({0}) client connected", client_name);
 
@@ -349,22 +367,10 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
       dap_sessions.erase(&loop);
       std::notify_all_at_thread_exit(dap_sessions_condition, std::move(lock));
 
-      if (ttl > 0) {
-        // Start the countdown to kill the server at the end of each connection.
-        std::scoped_lock<std::mutex> lock(ttl_mutex);
-        MainLoopBase::TimePoint future =
-            std::chrono::steady_clock::now() + std::chrono::milliseconds(ttl);
-        // We don't need to take the max of `keep_alive_up_to` and `future`,
-        // because `future` must be the latest.
-        ttl_time_point = future;
-        g_loop.AddCallback(
-            [future](MainLoopBase &loop) {
-              if (ttl_time_point == future) {
-                loop.RequestTermination();
-              }
-            },
-            future);
-      }
+      // Start the countdown to kill the server at the end of each connection.
+      if (ttl_seconds)
+        TrackTimeToLive(g_loop, g_ttl_mutex, g_ttl_time_point,
+                        ttl_seconds.value());
     });
     client.detach();
   });
@@ -547,15 +553,19 @@ int main(int argc, char *argv[]) {
   }
 
   if (!connection.empty()) {
-    int ttl = 0;
+    std::optional<std::chrono::seconds> ttl_seconds;
     llvm::opt::Arg *time_to_live = input_args.getLastArg(OPT_time_to_live);
     if (time_to_live) {
-      llvm::StringRef time_to_live_value = time_to_live->getValue();
-      if (time_to_live_value.getAsInteger(10, ttl)) {
-        llvm::errs() << "'" << time_to_live_value
-                      << "' is not a valid time-to-live value\n";
+      llvm::StringRef time_to_live_string_value = time_to_live->getValue();
+      int time_to_live_int_value;
+      if (time_to_live_string_value.getAsInteger(10, time_to_live_int_value)) {
+        llvm::errs() << "'" << time_to_live_string_value
+                     << "' is not a valid time-to-live value\n";
         return EXIT_FAILURE;
       }
+      // Ignore non-positive values.
+      if (time_to_live_int_value > 0)
+        ttl_seconds = std::chrono::seconds(time_to_live_int_value);
     }
 
     auto maybeProtoclAndName = validateConnection(connection);
@@ -569,7 +579,7 @@ int main(int argc, char *argv[]) {
     std::string name;
     std::tie(protocol, name) = *maybeProtoclAndName;
     if (auto Err = serveConnection(protocol, name, log.get(), default_repl_mode,
-                                   pre_init_commands, ttl)) {
+                                   pre_init_commands, ttl_seconds)) {
       llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
                                   "Connection failed: ");
       return EXIT_FAILURE;
