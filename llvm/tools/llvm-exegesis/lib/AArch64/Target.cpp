@@ -17,7 +17,6 @@
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include <vector>
-#define DEBUG_TYPE "exegesis-aarch64-target"
 
 #if defined(__aarch64__) && defined(__linux__)
 #include <sys/mman.h>
@@ -26,8 +25,7 @@
 #ifdef HAVE_LIBPFM
 #include <perfmon/perf_event.h>
 #endif                   // HAVE_LIBPFM
-#include <linux/prctl.h> // For PR_PAC_* constants
-#include <sys/prctl.h>
+#include <sys/prctl.h> // For PR_PAC_* constants
 #ifndef PR_PAC_APIAKEY
 #define PR_PAC_APIAKEY (1UL << 0)
 #endif
