@@ -4542,7 +4542,8 @@ static bool IsLibstdcxxStdFormatKind(Preprocessor &PP, VarDecl *Var) {
 DeclResult
 Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
                          SourceLocation TemplateNameLoc,
-                         const TemplateArgumentListInfo &TemplateArgs) {
+                         const TemplateArgumentListInfo &TemplateArgs,
+                         bool SetWrittenArgs) {
   assert(Template && "A variable template id without template?");
 
   // Check that the template argument list is well-formed for this template.
@@ -4725,10 +4726,12 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
   // in DoMarkVarDeclReferenced().
   // FIXME: LateAttrs et al.?
   VarTemplateSpecializationDecl *Decl = BuildVarTemplateInstantiation(
-      Template, InstantiationPattern, PartialSpecArgs, TemplateArgs,
-      CTAI.CanonicalConverted, TemplateNameLoc /*, LateAttrs, StartingScope*/);
+      Template, InstantiationPattern, PartialSpecArgs, CTAI.CanonicalConverted,
+      TemplateNameLoc /*, LateAttrs, StartingScope*/);
   if (!Decl)
     return true;
+  if (SetWrittenArgs)
+    Decl->setTemplateArgsAsWritten(TemplateArgs);
 
   if (AmbiguousPartialSpec) {
     // Partial ordering did not produce a clear winner. Complain.
@@ -4760,7 +4763,7 @@ ExprResult Sema::CheckVarTemplateId(
     const TemplateArgumentListInfo *TemplateArgs) {
 
   DeclResult Decl = CheckVarTemplateId(Template, TemplateLoc, NameInfo.getLoc(),
-                                       *TemplateArgs);
+                                       *TemplateArgs, /*SetWrittenArgs=*/false);
   if (Decl.isInvalid())
     return ExprError();
 
@@ -10707,8 +10710,9 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
       TemplateArgumentListInfo TemplateArgs =
           makeTemplateArgumentListInfo(*this, *D.getName().TemplateId);
 
-      DeclResult Res = CheckVarTemplateId(PrevTemplate, TemplateLoc,
-                                          D.getIdentifierLoc(), TemplateArgs);
+      DeclResult Res =
+          CheckVarTemplateId(PrevTemplate, TemplateLoc, D.getIdentifierLoc(),
+                             TemplateArgs, /*SetWrittenArgs=*/true);
       if (Res.isInvalid())
         return true;
 
