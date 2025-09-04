@@ -5994,25 +5994,12 @@ const TargetRegisterClass *SIInstrInfo::getRegClass(const MCInstrDesc &TID,
   if (OpNum >= TID.getNumOperands())
     return nullptr;
   auto RegClass = TID.operands()[OpNum].RegClass;
-  bool IsAllocatable = false;
-  if (TID.TSFlags & SIInstrFlags::FLAT) {
-    // vdst and vdata should be both VGPR or AGPR, same for the DS instructions
-    // with two data operands. Request register class constrained to VGPR only
-    // of both operands present as Machine Copy Propagation can not check this
-    // constraint and possibly other passes too.
-    //
-    // The check is limited to FLAT because atomics in non-flat encoding have
-    // their vdst and vdata tied to be the same register, and DS instructions
-    // have separate instruction definitions with AGPR and VGPR operand lists.
-    IsAllocatable =
-        AMDGPU::hasNamedOperand(TID.Opcode, AMDGPU::OpName::vdata) &&
-        AMDGPU::hasNamedOperand(TID.Opcode, AMDGPU::OpName::vdst);
-  } else if (TID.getOpcode() == AMDGPU::AV_MOV_B64_IMM_PSEUDO) {
+  if (TID.getOpcode() == AMDGPU::AV_MOV_B64_IMM_PSEUDO) {
     // Special pseudos have no alignment requirement
     return RI.getRegClass(RegClass);
   }
 
-  return adjustAllocatableRegClass(ST, RI, TID, RegClass, IsAllocatable);
+  return adjustAllocatableRegClass(ST, RI, TID, RegClass, false);
 }
 
 const TargetRegisterClass *SIInstrInfo::getOpRegClass(const MachineInstr &MI,
