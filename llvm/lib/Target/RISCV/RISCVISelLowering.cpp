@@ -16726,10 +16726,6 @@ combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y, ISD::CondCode CC,
                       DAG.getConstant(0, DL, XLenVT), CC);
 }
 
-// Replace (seteq (i64 (and X, 0xffffffff)), C1) with
-// (seteq (i64 (sext_inreg (X, i32)), C1')) where C1' is C1 sign extended from
-// bit 31. Same for setne. C1' may be cheaper to materialize and the sext_inreg
-// can become a sext.w instead of a shift pair.
 static SDValue performSETCCCombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    const RISCVSubtarget &Subtarget) {
@@ -16749,20 +16745,36 @@ static SDValue performSETCCCombine(SDNode *N,
           combineVectorSizedSetCCEquality(VT, N0, N1, Cond, dl, DAG, Subtarget))
     return V;
 
-  // (X & -4096) == 0 -> (X >> 12) == 0 if the AND constant can't use ANDI.
   if (DCI.isAfterLegalizeDAG() && isNullConstant(N1) &&
       N0.getOpcode() == ISD::AND && N0.hasOneUse() &&
       isa<ConstantSDNode>(N0.getOperand(1))) {
     const APInt &AndRHSC =
         cast<ConstantSDNode>(N0.getOperand(1))->getAPIntValue();
+    // (X & -(1 << C)) == 0 -> (X >> C) == 0 if the AND constant can't use ANDI.
     if (!isInt<12>(AndRHSC.getSExtValue()) && AndRHSC.isNegatedPowerOf2()) {
       unsigned ShiftBits = AndRHSC.countr_zero();
-      SDValue Shift = DAG.getNode(ISD::SRL, dl, VT, N0.getOperand(0),
-                                  DAG.getConstant(ShiftBits, dl, VT));
+      SDValue Shift = DAG.getNode(ISD::SRL, dl, OpVT, N0.getOperand(0),
+                                  DAG.getConstant(ShiftBits, dl, OpVT));
+      return DAG.getSetCC(dl, VT, Shift, N1, Cond);
+    }
+
+    // Similar to above but handling the lower 32 bits by using srliw.
+    // FIXME: Handle the case where N1 is non-zero.
+    if (OpVT == MVT::i64 && AndRHSC.getZExtValue() <= 0xffffffff &&
+        isPowerOf2_32(-uint32_t(AndRHSC.getZExtValue()))) {
+      unsigned ShiftBits = llvm::countr_zero(AndRHSC.getZExtValue());
+      SDValue And = DAG.getNode(ISD::AND, dl, OpVT, N0.getOperand(0),
+                                DAG.getConstant(0xffffffff, dl, OpVT));
+      SDValue Shift = DAG.getNode(ISD::SRL, dl, OpVT, And,
+                                  DAG.getConstant(ShiftBits, dl, OpVT));
       return DAG.getSetCC(dl, VT, Shift, N1, Cond);
     }
   }
 
+  // Replace (seteq (i64 (and X, 0xffffffff)), C1) with
+  // (seteq (i64 (sext_inreg (X, i32)), C1')) where C1' is C1 sign extended from
+  // bit 31. Same for setne. C1' may be cheaper to materialize and the
+  // sext_inreg can become a sext.w instead of a shift pair.
   if (OpVT != MVT::i64 || !Subtarget.is64Bit())
     return SDValue();
 
