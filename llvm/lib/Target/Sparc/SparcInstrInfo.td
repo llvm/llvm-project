@@ -1785,22 +1785,22 @@ let Predicates = [HasV9], Uses = [ASR3], Constraints = "$swap = $rd" in
 // as inline assembler-supported instructions.
 let Predicates = [HasUMAC_SMAC], Defs = [Y, ASR18], Uses = [Y, ASR18] in {
   def SMACrr :  F3_1<2, 0b111111,
-                   (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2, ASRRegs:$asr18),
+                   (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2),
                    "smac $rs1, $rs2, $rd",
                    [], IIC_smac_umac>;
 
   def SMACri :  F3_2<2, 0b111111,
-                  (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13, ASRRegs:$asr18),
+                  (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13),
                    "smac $rs1, $simm13, $rd",
                    [], IIC_smac_umac>;
 
   def UMACrr :  F3_1<2, 0b111110,
-                  (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2, ASRRegs:$asr18),
+                  (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2),
                    "umac $rs1, $rs2, $rd",
                    [], IIC_smac_umac>;
 
   def UMACri :  F3_2<2, 0b111110,
-                  (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13, ASRRegs:$asr18),
+                  (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13),
                    "umac $rs1, $simm13, $rd",
                    [], IIC_smac_umac>;
 }
