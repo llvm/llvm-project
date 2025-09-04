@@ -7,30 +7,26 @@
 define i32 @mask_pair(i32 %x, i32 %y) {
 ; V7M-LABEL: mask_pair:
 ; V7M:       @ %bb.0:
-; V7M-NEXT:    mov.w r2, #-1
-; V7M-NEXT:    lsl.w r1, r2, r1
-; V7M-NEXT:    ands r0, r1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    lsls r0, r1
 ; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: mask_pair:
 ; V7A:       @ %bb.0:
-; V7A-NEXT:    mvn r2, #0
-; V7A-NEXT:    and r0, r0, r2, lsl r1
+; V7A-NEXT:    lsr r0, r0, r1
+; V7A-NEXT:    lsl r0, r0, r1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: mask_pair:
 ; V7A-T:       @ %bb.0:
-; V7A-T-NEXT:    mov.w r2, #-1
-; V7A-T-NEXT:    lsl.w r1, r2, r1
-; V7A-T-NEXT:    ands r0, r1
+; V7A-T-NEXT:    lsrs r0, r1
+; V7A-T-NEXT:    lsls r0, r1
 ; V7A-T-NEXT:    bx lr
 ;
 ; V6M-LABEL: mask_pair:
 ; V6M:       @ %bb.0:
-; V6M-NEXT:    movs r2, #0
-; V6M-NEXT:    mvns r2, r2
-; V6M-NEXT:    lsls r2, r1
-; V6M-NEXT:    ands r0, r2
+; V6M-NEXT:    lsrs r0, r1
+; V6M-NEXT:    lsls r0, r1
 ; V6M-NEXT:    bx lr
   %shl = shl nsw i32 -1, %y
   %and = and i32 %shl, %x
