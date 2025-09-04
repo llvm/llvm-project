@@ -1263,15 +1263,19 @@ MVT SITargetLowering::getPointerMemTy(const DataLayout &DL, unsigned AS) const {
 static unsigned getIntrMemWidth(unsigned IntrID) {
   switch (IntrID) {
   case Intrinsic::amdgcn_global_load_async_to_lds_b8:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b8:
   case Intrinsic::amdgcn_global_store_async_from_lds_b8:
     return 8;
   case Intrinsic::amdgcn_global_load_async_to_lds_b32:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
   case Intrinsic::amdgcn_global_store_async_from_lds_b32:
     return 32;
   case Intrinsic::amdgcn_global_load_async_to_lds_b64:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
   case Intrinsic::amdgcn_global_store_async_from_lds_b64:
     return 64;
   case Intrinsic::amdgcn_global_load_async_to_lds_b128:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b128:
   case Intrinsic::amdgcn_global_store_async_from_lds_b128:
     return 128;
   default:
@@ -1506,6 +1510,9 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_global_load_monitor_b32:
   case Intrinsic::amdgcn_global_load_monitor_b64:
   case Intrinsic::amdgcn_global_load_monitor_b128:
+  case Intrinsic::amdgcn_cluster_load_b32:
+  case Intrinsic::amdgcn_cluster_load_b64:
+  case Intrinsic::amdgcn_cluster_load_b128:
   case Intrinsic::amdgcn_ds_load_tr6_b96:
   case Intrinsic::amdgcn_ds_load_tr4_b64:
   case Intrinsic::amdgcn_ds_load_tr8_b64:
@@ -1553,7 +1560,11 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_global_load_async_to_lds_b8:
   case Intrinsic::amdgcn_global_load_async_to_lds_b32:
   case Intrinsic::amdgcn_global_load_async_to_lds_b64:
-  case Intrinsic::amdgcn_global_load_async_to_lds_b128: {
+  case Intrinsic::amdgcn_global_load_async_to_lds_b128:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b8:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b128: {
     Info.opc = ISD::INTRINSIC_VOID;
     Info.memVT = EVT::getIntegerVT(CI.getContext(), getIntrMemWidth(IntrID));
     Info.ptrVal = CI.getArgOperand(1);
@@ -1636,6 +1647,9 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   Value *Ptr = nullptr;
   switch (II->getIntrinsicID()) {
   case Intrinsic::amdgcn_atomic_cond_sub_u32:
+  case Intrinsic::amdgcn_cluster_load_b128:
+  case Intrinsic::amdgcn_cluster_load_b64:
+  case Intrinsic::amdgcn_cluster_load_b32:
   case Intrinsic::amdgcn_ds_append:
   case Intrinsic::amdgcn_ds_consume:
   case Intrinsic::amdgcn_ds_load_tr8_b64:
@@ -1678,6 +1692,10 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   case Intrinsic::amdgcn_global_load_async_to_lds_b32:
   case Intrinsic::amdgcn_global_load_async_to_lds_b64:
   case Intrinsic::amdgcn_global_load_async_to_lds_b128:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b8:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b128:
     Ptr = II->getArgOperand(1);
     break;
   default:
@@ -16898,7 +16916,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
       switch (BitWidth) {
       case 16:
         RC = Subtarget->useRealTrue16Insts() ? &AMDGPU::VGPR_16RegClass
-                                             : &AMDGPU::VGPR_32RegClass;
+                                             : &AMDGPU::VGPR_32_Lo256RegClass;
         break;
       default:
         RC = TRI->getVGPRClassForBitWidth(BitWidth);
@@ -16945,7 +16963,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
   auto [Kind, Idx, NumRegs] = AMDGPU::parseAsmConstraintPhysReg(Constraint);
   if (Kind != '\0') {
     if (Kind == 'v') {
-      RC = &AMDGPU::VGPR_32RegClass;
+      RC = &AMDGPU::VGPR_32_Lo256RegClass;
     } else if (Kind == 's') {
       RC = &AMDGPU::SGPR_32RegClass;
     } else if (Kind == 'a') {
@@ -16987,6 +17005,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
         return std::pair(0U, nullptr);
       if (Idx < RC->getNumRegs())
         return std::pair(RC->getRegister(Idx), RC);
+      return std::pair(0U, nullptr);
     }
   }
 

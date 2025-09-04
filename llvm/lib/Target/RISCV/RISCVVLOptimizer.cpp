@@ -943,13 +943,6 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VSEXT_VF4:
   case RISCV::VZEXT_VF8:
   case RISCV::VSEXT_VF8:
-  // Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
-  // FIXME: Add support
-  case RISCV::VMADC_VV:
-  case RISCV::VMADC_VI:
-  case RISCV::VMADC_VX:
-  case RISCV::VMSBC_VV:
-  case RISCV::VMSBC_VX:
   // Vector Narrowing Integer Right Shift Instructions
   case RISCV::VNSRL_WX:
   case RISCV::VNSRL_WI:
@@ -1036,6 +1029,11 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VSBC_VXM:
   case RISCV::VMSBC_VVM:
   case RISCV::VMSBC_VXM:
+  case RISCV::VMADC_VV:
+  case RISCV::VMADC_VI:
+  case RISCV::VMADC_VX:
+  case RISCV::VMSBC_VV:
+  case RISCV::VMSBC_VX:
   // Vector Widening Integer Multiply-Add Instructions
   case RISCV::VWMACCU_VV:
   case RISCV::VWMACCU_VX:
@@ -1044,10 +1042,7 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VWMACCSU_VV:
   case RISCV::VWMACCSU_VX:
   case RISCV::VWMACCUS_VX:
-  // Vector Integer Merge Instructions
-  // FIXME: Add support
   // Vector Integer Move Instructions
-  // FIXME: Add support
   case RISCV::VMV_V_I:
   case RISCV::VMV_V_X:
   case RISCV::VMV_V_V:
@@ -1495,6 +1490,15 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) const {
 
   assert((CommonVL->isImm() || CommonVL->getReg().isVirtual()) &&
          "Expected VL to be an Imm or virtual Reg");
+
+  // If the VL is defined by a vleff that doesn't dominate MI, try using the
+  // vleff's AVL. It will be greater than or equal to the output VL.
+  if (CommonVL->isReg()) {
+    const MachineInstr *VLMI = MRI->getVRegDef(CommonVL->getReg());
+    if (RISCVInstrInfo::isFaultOnlyFirstLoad(*VLMI) &&
+        !MDT->dominates(VLMI, &MI))
+      CommonVL = &VLMI->getOperand(RISCVII::getVLOpNum(VLMI->getDesc()));
+  }
 
   if (!RISCV::isVLKnownLE(*CommonVL, VLOp)) {
     LLVM_DEBUG(dbgs() << "  Abort due to CommonVL not <= VLOp.\n");

@@ -740,8 +740,6 @@ exit:
   ret void
 }
 
-; FIXME: Currently %l.idx is incorrectly executed unconditionally in the vector
-; loop.
 define void @adding_offset_overflows(i32 %n, ptr %A) {
 ; CHECK-LABEL: @adding_offset_overflows(
 ; CHECK-NEXT:  entry:
@@ -767,8 +765,26 @@ define void @adding_offset_overflows(i32 %n, ptr %A) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <2 x i32> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[B]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i32>, ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP3]], i32 0
+; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
+; CHECK:       pred.load.if:
+; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[OFFSET_IDX]], 0
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i32, ptr [[B]], i64 [[TMP15]]
+; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP16]], align 4
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <2 x i32> poison, i32 [[TMP17]], i32 0
+; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
+; CHECK:       pred.load.continue:
+; CHECK-NEXT:    [[TMP19:%.*]] = phi <2 x i32> [ poison, [[VECTOR_BODY]] ], [ [[TMP18]], [[PRED_LOAD_IF]] ]
+; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <2 x i1> [[TMP3]], i32 1
+; CHECK-NEXT:    br i1 [[TMP20]], label [[PRED_LOAD_IF1:%.*]], label [[PRED_LOAD_CONTINUE2:%.*]]
+; CHECK:       pred.load.if1:
+; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[OFFSET_IDX]], 1
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i32, ptr [[B]], i64 [[TMP21]]
+; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP22]], align 4
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x i32> [[TMP19]], i32 [[TMP13]], i32 1
+; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE2]]
+; CHECK:       pred.load.continue2:
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = phi <2 x i32> [ [[TMP19]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP14]], [[PRED_LOAD_IF1]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext <2 x i32> [[WIDE_LOAD1]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP3]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
@@ -780,12 +796,12 @@ define void @adding_offset_overflows(i32 %n, ptr %A) {
 ; CHECK:       pred.store.continue:
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i1> [[TMP3]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[PRED_STORE_IF2:%.*]], label [[PRED_STORE_CONTINUE3]]
-; CHECK:       pred.store.if2:
+; CHECK:       pred.store.if3:
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP5]], i32 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[C]], i64 [[TMP10]]
 ; CHECK-NEXT:    store i32 0, ptr [[TMP11]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE3]]
-; CHECK:       pred.store.continue3:
+; CHECK:       pred.store.continue4:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]

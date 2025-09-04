@@ -3317,7 +3317,9 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           [](PyModule &self, PyModule &other) {
             return mlirModuleEqual(self.get(), other.get());
           },
-          "other"_a);
+          "other"_a)
+      .def("__hash__",
+           [](PyModule &self) { return mlirModuleHashValue(self.get()); });
 
   //----------------------------------------------------------------------------
   // Mapping of Operation.
@@ -3336,7 +3338,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
            [](PyOperationBase &self, nb::object other) { return false; })
       .def("__hash__",
            [](PyOperationBase &self) {
-             return static_cast<size_t>(llvm::hash_value(&self.getOperation()));
+             return mlirOperationHashValue(self.getOperation().get());
            })
       .def_prop_ro("attributes",
                    [](PyOperationBase &self) {
