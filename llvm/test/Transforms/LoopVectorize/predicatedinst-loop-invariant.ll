@@ -20,9 +20,8 @@ define void @loop_invariant_store(ptr %p, i64 %a, i8 %b) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE8:.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE8]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ule <4 x i32> [[VEC_IND]], splat (i32 8)
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp sge <4 x i32> [[VEC_IND]], splat (i32 2)
-; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP4]], <4 x i1> [[TMP5]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP6]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt <4 x i32> [[VEC_IND]], splat (i32 2)
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> [[TMP3]], <4 x i32> [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl <4 x i32> [[PREDPHI]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc <4 x i32> [[TMP7]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i1> [[TMP4]], i32 0
@@ -132,9 +131,8 @@ define void @loop_invariant_srem(ptr %p, i64 %a, i8 %b) {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT3]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = add <4 x i32> [[BROADCAST_SPLAT4]], <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ule <4 x i32> [[VEC_IND]], splat (i32 8)
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp sge <4 x i8> [[VEC_IND1]], splat (i8 2)
-; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP4]], <4 x i1> [[TMP5]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP6]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt <4 x i8> [[VEC_IND1]], splat (i8 2)
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> [[TMP3]], <4 x i32> [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl <4 x i32> [[PREDPHI]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc <4 x i32> [[TMP7]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP11:%.*]] = srem <4 x i8> [[VEC_IND1]], [[TMP8]]
@@ -311,7 +309,7 @@ define void @test_store_to_invariant_address_needs_mask_due_to_low_trip_count(pt
 ; CHECK:       [[PRED_STORE_CONTINUE4]]:
 ; CHECK-NEXT:    br i1 false, label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
 ; CHECK:       [[PRED_STORE_IF5]]:
-; CHECK-NEXT:    store i32 0, ptr [[DST]], align 4
+; CHECK-NEXT:    store i32 1, ptr [[DST]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
 ; CHECK:       [[PRED_STORE_CONTINUE6]]:
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]

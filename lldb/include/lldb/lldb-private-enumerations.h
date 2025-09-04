@@ -248,6 +248,22 @@ enum class IterationAction {
   Stop,
 };
 
+/// Specifies the type of PCs when creating a `HistoryThread`.
+/// - `Returns` - Usually, when LLDB unwinds the stack or we retrieve a stack
+///   trace via `backtrace()` we are collecting return addresses (except for the
+///   topmost frame which is the actual PC).  LLDB then maps these return
+///   addresses back to call addresses to give accurate source line annotations.
+/// - `ReturnsNoZerothFrame` - Some trace providers (e.g., libsanitizers traces)
+///   collect return addresses but prune the topmost frames, so we should skip
+///   the special treatment of frame 0.
+/// - `Calls` - Other trace providers (e.g., ASan compiler-rt runtime) already
+///   perform this mapping, so we need to prevent LLDB from doing it again.
+enum class HistoryPCType {
+  Returns,              ///< PCs are return addresses, except for topmost frame.
+  ReturnsNoZerothFrame, ///< All PCs are return addresses.
+  Calls                 ///< PCs are call addresses.
+};
+
 inline std::string GetStatDescription(lldb_private::StatisticKind K) {
    switch (K) {
    case StatisticKind::ExpressionSuccessful:

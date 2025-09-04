@@ -143,7 +143,7 @@ template <typename T> static T *getPlanEntry(T *Start) {
 
   for (unsigned i = 0; i < WorkList.size(); i++) {
     T *Current = WorkList[i];
-    if (Current->getNumPredecessors() == 0)
+    if (!Current->hasPredecessors())
       return Current;
     auto &Predecessors = Current->getPredecessors();
     WorkList.insert_range(Predecessors);
@@ -216,7 +216,7 @@ bool VPBlockUtils::isHeader(const VPBlockBase *VPB,
   // If VPBB is in a region R, VPBB is a loop header if R is a loop region with
   // VPBB as its entry, i.e., free of predecessors.
   if (auto *R = VPBB->getParent())
-    return !R->isReplicator() && VPBB->getNumPredecessors() == 0;
+    return !R->isReplicator() && !VPBB->hasPredecessors();
 
   // A header dominates its second predecessor (the latch), with the other
   // predecessor being the preheader
@@ -295,27 +295,11 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   if (hasVectorValue(Def))
     return Data.VPV2Vector[Def];
 
-  auto GetBroadcastInstrs = [this, Def](Value *V) {
-    bool SafeToHoist =
-        !Def->hasDefiningRecipe() ||
-        VPDT.properlyDominates(Def->getDefiningRecipe()->getParent(),
-                               Plan->getVectorPreheader());
-
+  auto GetBroadcastInstrs = [this](Value *V) {
     if (VF.isScalar())
       return V;
-    // Place the code for broadcasting invariant variables in the new preheader.
-    IRBuilder<>::InsertPointGuard Guard(Builder);
-    if (SafeToHoist) {
-      BasicBlock *LoopVectorPreHeader =
-          CFG.VPBB2IRBB[Plan->getVectorPreheader()];
-      if (LoopVectorPreHeader)
-        Builder.SetInsertPoint(LoopVectorPreHeader->getTerminator());
-    }
-
-    // Place the code for broadcasting invariant variables in the new preheader.
     // Broadcast the scalar into all locations in the vector.
     Value *Shuf = Builder.CreateVectorSplat(VF, V, "broadcast");
-
     return Shuf;
   };
 
@@ -371,6 +355,9 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
     set(Def, VectorValue);
   } else {
     assert(!VF.isScalable() && "VF is assumed to be non scalable.");
+    assert(isa<VPInstruction>(Def) &&
+           "Explicit BuildVector recipes must have"
+           "handled packing for non-VPInstructions.");
     // Initialize packing with insertelements to start from poison.
     VectorValue = PoisonValue::get(toVectorizedTy(LastInst->getType(), VF));
     for (unsigned Lane = 0; Lane < VF.getFixedValue(); ++Lane)
@@ -506,6 +493,9 @@ void VPBasicBlock::connectToPredecessors(VPTransformState &State) {
 void VPIRBasicBlock::execute(VPTransformState *State) {
   assert(getHierarchicalSuccessors().size() <= 2 &&
          "VPIRBasicBlock can have at most two successors at the moment!");
+  // Move completely disconnected blocks to their final position.
+  if (IRBB->hasNPredecessors(0) && succ_begin(IRBB) == succ_end(IRBB))
+    IRBB->moveAfter(State->CFG.PrevBB);
   State->Builder.SetInsertPoint(IRBB->getTerminator());
   State->CFG.PrevBB = IRBB;
   State->CFG.VPBB2IRBB[this] = IRBB;
@@ -822,7 +812,7 @@ InstructionCost VPBasicBlock::cost(ElementCount VF, VPCostContext &Ctx) {
 
 const VPBasicBlock *VPBasicBlock::getCFGPredecessor(unsigned Idx) const {
   const VPBlockBase *Pred = nullptr;
-  if (getNumPredecessors() > 0) {
+  if (hasPredecessors()) {
     Pred = getPredecessors()[Idx];
   } else {
     auto *Region = getParent();
@@ -1196,14 +1186,14 @@ VPlan *VPlan::duplicate() {
 
   BasicBlock *ScalarHeaderIRBB = getScalarHeader()->getIRBasicBlock();
   VPIRBasicBlock *NewScalarHeader = nullptr;
-  if (getScalarHeader()->getNumPredecessors() == 0) {
-    NewScalarHeader = createVPIRBasicBlock(ScalarHeaderIRBB);
-  } else {
+  if (getScalarHeader()->hasPredecessors()) {
     NewScalarHeader = cast<VPIRBasicBlock>(*find_if(
         vp_depth_first_shallow(NewEntry), [ScalarHeaderIRBB](VPBlockBase *VPB) {
           auto *VPIRBB = dyn_cast<VPIRBasicBlock>(VPB);
           return VPIRBB && VPIRBB->getIRBasicBlock() == ScalarHeaderIRBB;
         }));
+  } else {
+    NewScalarHeader = createVPIRBasicBlock(ScalarHeaderIRBB);
   }
   // Create VPlan, clone live-ins and remap operands in the cloned blocks.
   auto *NewPlan = new VPlan(cast<VPBasicBlock>(NewEntry), NewScalarHeader);
@@ -1486,7 +1476,7 @@ void VPSlotTracker::assignName(const VPValue *V) {
   std::string BaseName = (Twine(Prefix) + Name + Twine(">")).str();
 
   // First assign the base name for V.
-  const auto &[A, _] = VPValue2Name.insert({V, BaseName});
+  const auto &[A, _] = VPValue2Name.try_emplace(V, BaseName);
   // Integer or FP constants with different types will result in he same string
   // due to stripping types.
   if (V->isLiveIn() && isa<ConstantInt, ConstantFP>(UV))
@@ -1494,7 +1484,7 @@ void VPSlotTracker::assignName(const VPValue *V) {
 
   // If it is already used by C > 0 other VPValues, increase the version counter
   // C and use it for V.
-  const auto &[C, UseInserted] = BaseName2Version.insert({BaseName, 0});
+  const auto &[C, UseInserted] = BaseName2Version.try_emplace(BaseName, 0);
   if (!UseInserted) {
     C->second++;
     A->second = (BaseName + Twine(".") + Twine(C->second)).str();

@@ -26,12 +26,10 @@ define i64 @pr62565_incoming_value_known_undef(i64 %a, ptr %src) {
 ; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP5]], i64 [[A]], i64 undef
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ undef, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[ADD:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SELECT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 1, [[SCALAR_PH]] ], [ [[ADD:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ undef, [[SCALAR_PH]] ], [ [[SELECT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[IV]]
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[L]], 1
@@ -86,12 +84,10 @@ define i64 @pr62565_incoming_value_known_poison(i64 %a, ptr %src) {
 ; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP5]], i64 [[A]], i64 poison
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ poison, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[ADD:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SELECT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 1, [[SCALAR_PH]] ], [ [[ADD:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ poison, [[SCALAR_PH]] ], [ [[SELECT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[IV]]
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[L]], 1
@@ -146,12 +142,10 @@ define i64 @pr62565_incoming_value_may_be_poison(i64 %a, ptr %src, i64 %start) {
 ; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP5]], i64 [[A]], i64 [[START]]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[START]], [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[ADD:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SELECT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 1, [[SCALAR_PH]] ], [ [[ADD:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ [[START]], [[SCALAR_PH]] ], [ [[SELECT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[IV]]
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[L]], 1

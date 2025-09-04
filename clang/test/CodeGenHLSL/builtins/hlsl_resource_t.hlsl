@@ -2,23 +2,28 @@
 
 using handle_float_t = __hlsl_resource_t [[hlsl::resource_class(UAV)]] [[hlsl::contained_type(float)]];
 
+struct CustomResource {
+  handle_float_t h;
+};
+
+// CHECK: %struct.CustomResource = type { target("dx.TypedBuffer", float, 1, 0, 0) }
 // CHECK: %"class.hlsl::RWBuffer" = type { target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
 // CHECK: %"class.hlsl::StructuredBuffer" = type { target("dx.RawBuffer", %struct.MyStruct, 0, 0)
 // CHECK: %struct.MyStruct = type <{ <4 x float>, <2 x i32> }>
 
-// CHECK: define hidden void @_Z2faU9_Res_u_CTfu17__hlsl_resource_t(target("dx.TypedBuffer", float, 1, 0, 0) %a)
-// CHECK: call void @_Z4foo1U9_Res_u_CTfu17__hlsl_resource_t(target("dx.TypedBuffer", float, 1, 0, 0) %0)
-// CHECK: declare hidden void @_Z4foo1U9_Res_u_CTfu17__hlsl_resource_t(target("dx.TypedBuffer", float, 1, 0, 0))
+// CHECK: define hidden void @_Z2fa14CustomResource(ptr noundef byval(%struct.CustomResource) align 1 %a)
+// CHECK: call void @_Z4foo114CustomResource(ptr noundef byval(%struct.CustomResource) align 1 %agg.tmp)
+// CHECK: declare hidden void @_Z4foo114CustomResource(ptr noundef byval(%struct.CustomResource) align 1)
 
-void foo1(handle_float_t res);
+void foo1(CustomResource res);
 
-void fa(handle_float_t a) {
+void fa(CustomResource a) {
     foo1(a);
 }
 
-// CHECK: define hidden void @_Z2fbU9_Res_u_CTfu17__hlsl_resource_t(target("dx.TypedBuffer", float, 1, 0, 0) %a)
-void fb(handle_float_t a) {
-    handle_float_t b = a;
+// CHECK: define hidden void @_Z2fb14CustomResource(ptr noundef byval(%struct.CustomResource) align 1 %a)
+void fb(CustomResource a) {
+    CustomResource b = a;
 }
 
 // CHECK: define hidden void @_Z2fcN4hlsl8RWBufferIDv4_fEE(ptr noundef byval(%"class.hlsl::RWBuffer") align 4 %a)

@@ -1,6 +1,7 @@
 !Offloading test for AUTOMAP modifier in declare target enter
 ! REQUIRES: flang, amdgpu
 
+! RUN: %libomptarget-compile-fortran-run-and-check-generic
 program automap_program
    use iso_c_binding, only: c_loc
    use omp_lib, only: omp_get_default_device, omp_target_is_present

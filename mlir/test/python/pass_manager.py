@@ -176,14 +176,6 @@ def testRunPipelineError():
 @run
 def testPostPassOpInvalidation():
     with Context() as ctx:
-        log_op_count = lambda: log("live ops:", ctx._get_live_operation_count())
-
-        # CHECK: invalidate_ops=False
-        log("invalidate_ops=False")
-
-        # CHECK: live ops: 0
-        log_op_count()
-
         module = ModuleOp.parse(
             """
           module {
@@ -195,9 +187,6 @@ def testPostPassOpInvalidation():
           }
         """
         )
-
-        # CHECK: live ops: 1
-        log_op_count()
 
         outer_const_op = module.body.operations[0]
         # CHECK: %[[VAL0:.*]] = arith.constant 10 : i64
@@ -214,12 +203,7 @@ def testPostPassOpInvalidation():
         # CHECK: %[[VAL1]] = arith.constant 10 : i64
         log(inner_const_op)
 
-        # CHECK: live ops: 4
-        log_op_count()
-
-        PassManager.parse("builtin.module(canonicalize)").run(
-            module, invalidate_ops=False
-        )
+        PassManager.parse("builtin.module(canonicalize)").run(module)
         # CHECK: func.func @foo() {
         # CHECK:   return
         # CHECK: }
@@ -233,9 +217,6 @@ def testPostPassOpInvalidation():
         # CHECK: invalidate_ops=True
         log("invalidate_ops=True")
 
-        # CHECK: live ops: 4
-        log_op_count()
-
         module = ModuleOp.parse(
             """
           module {
@@ -247,30 +228,24 @@ def testPostPassOpInvalidation():
           }
         """
         )
-        outer_const_op = module.body.operations[0]
-        func_op = module.body.operations[1]
-        inner_const_op = func_op.body.blocks[0].operations[0]
-
-        # CHECK: live ops: 4
-        log_op_count()
 
         PassManager.parse("builtin.module(canonicalize)").run(module)
 
-        # CHECK: live ops: 1
-        log_op_count()
-
+        func_op._set_invalid()
         try:
             log(func_op)
         except RuntimeError as e:
             # CHECK: the operation has been invalidated
             log(e)
 
+        outer_const_op._set_invalid()
         try:
             log(outer_const_op)
         except RuntimeError as e:
             # CHECK: the operation has been invalidated
             log(e)
 
+        inner_const_op._set_invalid()
         try:
             log(inner_const_op)
         except RuntimeError as e:

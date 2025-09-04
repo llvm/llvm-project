@@ -9,7 +9,7 @@ if (HAS_WERROR_GLOBAL_CTORS AND NOT LLVM_HAS_NOGLOBAL_CTOR_MUTEX)
 endif()
 
 # Solaris code uses kstat, so specify dependency explicitly for shared builds.
-if (${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
+if ("${CMAKE_SYSTEM_NAME}" MATCHES "SunOS")
   set(system_libs kstat)
 endif()
 
