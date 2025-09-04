@@ -91,23 +91,6 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
                       X86::CATCHRET, (STI.is64Bit() ? X86::RET64 : X86::RET32)),
       Subtarget(STI), RI(STI.getTargetTriple()) {}
 
-const TargetRegisterClass *
-X86InstrInfo::getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
-                          const TargetRegisterInfo *TRI,
-                          const MachineFunction &MF) const {
-  auto *RC = TargetInstrInfo::getRegClass(MCID, OpNum, TRI, MF);
-  // If the target does not have egpr, then r16-r31 will be resereved for all
-  // instructions.
-  if (!RC || !Subtarget.hasEGPR())
-    return RC;
-
-  if (X86II::canUseApxExtendedReg(MCID))
-    return RC;
-
-  const X86RegisterInfo *RI = Subtarget.getRegisterInfo();
-  return RI->constrainRegClassToNonRex2(RC);
-}
-
 bool X86InstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
                                          Register &SrcReg, Register &DstReg,
                                          unsigned &SubIdx) const {

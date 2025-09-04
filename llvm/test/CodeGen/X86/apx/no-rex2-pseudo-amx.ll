@@ -7,8 +7,8 @@ define dso_local void @amx(ptr noundef %data) {
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   liveins: $rdi
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64_norex2 = COPY $rdi
-  ; CHECK-NEXT:   [[MOV32ri64_:%[0-9]+]]:gr64_norex2_nosp = MOV32ri64 8
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rdi
+  ; CHECK-NEXT:   [[MOV32ri64_:%[0-9]+]]:gr64_nosp = MOV32ri64 8
   ; CHECK-NEXT:   PTILELOADD 4, [[COPY]], 1, killed [[MOV32ri64_]], 0, $noreg
   ; CHECK-NEXT:   RET 0
   entry:

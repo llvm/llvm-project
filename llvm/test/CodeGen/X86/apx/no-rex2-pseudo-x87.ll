@@ -7,8 +7,8 @@ define void @x87(ptr %0, ptr %1) {
   ; CHECK: bb.0 (%ir-block.2):
   ; CHECK-NEXT:   liveins: $rdi, $rsi
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64_norex2 = COPY $rsi
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64_norex2 = COPY $rdi
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rsi
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
   ; CHECK-NEXT:   [[LD_Fp32m:%[0-9]+]]:rfp32 = nofpexcept LD_Fp32m [[COPY1]], 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s32) from %ir.0)
   ; CHECK-NEXT:   nofpexcept ST_Fp32m [[COPY]], 1, $noreg, 0, $noreg, killed [[LD_Fp32m]], implicit-def dead $fpsw, implicit $fpcw :: (store (s32) into %ir.1)
   ; CHECK-NEXT:   RET 0
