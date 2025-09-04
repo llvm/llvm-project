@@ -19,12 +19,15 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
 from itertools import product
 from pathlib import Path
-from typing import Dict, Iterable, List, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Sequence, Tuple
+
+assert sys.version_info >= (3, 10), "Only Python 3.10+ is supported."
 
 
 # Are we testing arm_sve.h or arm_sme.h based builtins.
@@ -156,7 +159,7 @@ def make_arg_for_type(ty: str) -> Tuple[str, str]:
 # Specifically the expected input is of the form:
 #   feat1,feat2,...(feat3 | feat4 | ...),...
 def expand_feature_guard(
-    guard: str, flags: str, base_feature: str = None
+    guard: str, flags: Sequence[str], base_feature: str = ""
 ) -> list[set[str]]:
     """
     Expand a guard expression where ',' = AND and '|' = OR, with parentheses
@@ -389,7 +392,7 @@ def build_calls_for_group(builtins: Iterable[str]) -> Tuple[List[str], List[str]
     """
     var_decls: List[str] = []
     seen_types: set[str] = set()
-    calls: List[Tuple[str, str]] = []
+    calls: List[str] = []
 
     for decl in builtins:
         fn, param_types = parse_builtin_declaration(decl)
@@ -411,14 +414,15 @@ def build_calls_for_group(builtins: Iterable[str]) -> Tuple[List[str], List[str]
     return var_decls, calls
 
 
-def gen_streaming_guard_tests(mode: MODE, json_path: Path, out_dir: Path) -> None:
+def gen_streaming_guard_tests(mode: Mode, json_path: Path, out_dir: Path) -> None:
     """Generate a set of Clang Sema test files to ensure SVE/SME builtins are
     callable based on the function type, or the required diagnostic is emitted.
     """
     try:
         data = json.loads(json_path.read_text())
     except json.JSONDecodeError as e:
-        ap.error(f"Failed to parse JSON {args.json}: {e}")
+        print(f"Failed to parse JSON {json_path}: {e}", file=sys.stderr)
+        return
 
     # Group by (guard, streaming_guard)
     by_guard: Dict[BuiltinContext, List[str]] = defaultdict(list)
@@ -468,7 +472,7 @@ def gen_streaming_guard_tests(mode: MODE, json_path: Path, out_dir: Path) -> Non
         else:
             print(output)
 
-    return 0
+    return
 
 
 # --- Main -------------------------------------------------------------------
