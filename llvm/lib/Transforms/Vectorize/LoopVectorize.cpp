@@ -7237,6 +7237,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::narrowInterleaveGroups(
       BestVPlan, BestVF,
       TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector));
+  VPlanTransforms::cse(BestVPlan);
   VPlanTransforms::removeDeadRecipes(BestVPlan);
 
   VPlanTransforms::convertToConcreteRecipes(BestVPlan);
@@ -7547,21 +7548,21 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
 
   BranchInst &BI =
       *BranchInst::Create(Bypass, LoopVectorPreHeader, CheckMinIters);
-  if (hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())) {
-    auto VScale = Cost->getVScaleForTuning();
-    unsigned MainLoopStep =
-        estimateElementCount(EPI.MainLoopVF * EPI.MainLoopUF, VScale);
-    unsigned EpilogueLoopStep =
-        estimateElementCount(EPI.EpilogueVF * EPI.EpilogueUF, VScale);
-    // We assume the remaining `Count` is equally distributed in
-    // [0, MainLoopStep)
-    // So the probability for `Count < EpilogueLoopStep` should be
-    // min(MainLoopStep, EpilogueLoopStep) / MainLoopStep
-    unsigned EstimatedSkipCount = std::min(MainLoopStep, EpilogueLoopStep);
-    const uint32_t Weights[] = {EstimatedSkipCount,
-                                MainLoopStep - EstimatedSkipCount};
-    setBranchWeights(BI, Weights, /*IsExpected=*/false);
-  }
+  auto VScale = Cost->getVScaleForTuning();
+  unsigned MainLoopStep =
+      estimateElementCount(EPI.MainLoopVF * EPI.MainLoopUF, VScale);
+  unsigned EpilogueLoopStep =
+      estimateElementCount(EPI.EpilogueVF * EPI.EpilogueUF, VScale);
+  // We assume the remaining `Count` is equally distributed in
+  // [0, MainLoopStep)
+  // So the probability for `Count < EpilogueLoopStep` should be
+  // min(MainLoopStep, EpilogueLoopStep) / MainLoopStep
+  // TODO: Improve the estimate by taking the estimated trip count into
+  // consideration.
+  unsigned EstimatedSkipCount = std::min(MainLoopStep, EpilogueLoopStep);
+  const uint32_t Weights[] = {EstimatedSkipCount,
+                              MainLoopStep - EstimatedSkipCount};
+  setBranchWeights(BI, Weights, /*IsExpected=*/false);
   ReplaceInstWithInst(Insert->getTerminator(), &BI);
 
   // A new entry block has been created for the epilogue VPlan. Hook it in, as
