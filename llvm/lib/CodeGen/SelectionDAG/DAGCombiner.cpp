@@ -10097,10 +10097,10 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   // fold (xor (umin(x, C), C)) -> select (x < C), xor(x, C), 0
   // fold (xor (umax(x, C), C)) -> select (x > C), xor(x, C), 0
   SDValue Op0;
-  if ((sd_match(N0, m_OneUse(m_AnyOf(m_SMin(m_Value(Op0), m_Specific(N1)),
-                                     m_SMax(m_Value(Op0), m_Specific(N1)),
-                                     m_UMin(m_Value(Op0), m_Specific(N1)),
-                                     m_UMax(m_Value(Op0), m_Specific(N1))))))) {
+  if (sd_match(N0, m_OneUse(m_AnyOf(m_SMin(m_Value(Op0), m_Specific(N1)),
+                                    m_SMax(m_Value(Op0), m_Specific(N1)),
+                                    m_UMin(m_Value(Op0), m_Specific(N1)),
+                                    m_UMax(m_Value(Op0), m_Specific(N1)))))) {
 
     if (isa<ConstantSDNode>(N1) ||
         ISD::isBuildVectorOfConstantSDNodes(N1.getNode())) {
