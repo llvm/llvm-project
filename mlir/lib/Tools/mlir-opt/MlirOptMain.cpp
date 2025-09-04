@@ -225,6 +225,11 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
                        "Print bitstream file")),
         llvm::cl::cat(remarkCategory)};
 
+    static cl::opt<std::string, /*ExternalStorage=*/true> remarksAll(
+        "remarks",
+        cl::desc("Show all remarks: passed, missed, failed, analysis"),
+        cl::location(remarksAllFlag), cl::init(""), cl::cat(remarkCategory));
+
     static cl::opt<std::string, /*ExternalStorage=*/true> remarksPassed(
         "remarks-passed", cl::desc("Show passed remarks"),
         cl::location(remarksPassedFlag), cl::init(""), cl::cat(remarkCategory));
@@ -502,15 +507,26 @@ performActions(raw_ostream &os,
 
   // Set up optimization remarks.
   if (config.shouldEmitRemarks()) {
+    auto combine = [](const std::string &a, const std::string &b) {
+      if (a.empty())
+        return b;
+      if (b.empty())
+        return a;
+      return a + "|" + b;
+    };
+
     remark::RemarkCategories cats{
-        config.remarksPassedFlag, config.remarksFailedFlag,
-        config.remarksMissedFlag, config.remarksAnalyseFlag};
+        combine(config.remarksAllFlag, config.remarksPassedFlag),
+        combine(config.remarksAllFlag, config.remarksMissedFlag),
+        combine(config.remarksAllFlag, config.remarksAnalyseFlag),
+        combine(config.remarksAllFlag, config.remarksFailedFlag)};
 
     mlir::MLIRContext &ctx = *context;
 
     switch (config.remarkFormatFlag) {
     case REMARK_FORMAT_STDOUT:
-      if (failed(mlir::remark::enableOptimizationRemarks(ctx, nullptr, cats)))
+      if (failed(mlir::remark::enableOptimizationRemarks(
+              ctx, nullptr, cats, true /*printAsEmitRemarks*/)))
         return failure();
       break;
 
@@ -523,9 +539,9 @@ performActions(raw_ostream &os,
     }
 
     case REMARK_FORMAT_BITSTREAM: {
-      constexpr llvm::StringLiteral File{"mlir-remarks.bitstream"};
+      constexpr llvm::StringLiteral file{"mlir-remarks.bitstream"};
       if (failed(mlir::remark::enableOptimizationRemarksWithLLVMStreamer(
-              ctx, File, llvm::remarks::Format::Bitstream, cats)))
+              ctx, file, llvm::remarks::Format::Bitstream, cats)))
         return failure();
       break;
     }

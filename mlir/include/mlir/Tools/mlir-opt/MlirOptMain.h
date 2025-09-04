@@ -231,8 +231,9 @@ public:
   bool shouldEmitRemarks() const {
     // Emit all remarks only when no filters are specified.
     const bool hasFilters =
-        !remarksPassedFlag.empty() || !remarksFailedFlag.empty() ||
-        !remarksMissedFlag.empty() || !remarksAnalyseFlag.empty();
+        !remarksAllFlag.empty() || !remarksPassedFlag.empty() ||
+        !remarksFailedFlag.empty() || !remarksMissedFlag.empty() ||
+        !remarksAnalyseFlag.empty();
     return hasFilters;
   }
 
@@ -241,6 +242,7 @@ public:
 
   /// Remark options
   RemarkFormat remarkFormatFlag;
+  std::string remarksAllFlag = "";
   std::string remarksPassedFlag = "";
   std::string remarksFailedFlag = "";
   std::string remarksMissedFlag = "";
