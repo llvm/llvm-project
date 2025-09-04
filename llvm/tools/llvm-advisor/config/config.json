@@ -1,0 +1,7 @@
+{
+  "outputDir": ".llvm-advisor",
+  "verbose": false,
+  "keepTemps": false,
+  "runProfiler": true,
+  "timeout": 60
+}
