@@ -1446,3 +1446,35 @@ def AISrc_512_f32 : SrcRegOrImmA9 <AReg_512, "OPERAND_REG_INLINE_AC_FP32">;
 def AISrc_512_b32 : SrcRegOrImmA9 <AReg_512, "OPERAND_REG_INLINE_AC_INT32">;
 def AISrc_1024_f32 : SrcRegOrImmA9 <AReg_1024, "OPERAND_REG_INLINE_AC_FP32">;
 def AISrc_1024_b32 : SrcRegOrImmA9 <AReg_1024, "OPERAND_REG_INLINE_AC_INT32">;
+
+//===----------------------------------------------------------------------===//
+//  Tablegen programming utilities
+//===----------------------------------------------------------------------===//
+
+/// Helper function to extract the register class from an
+/// instruction's operand list, which may be a RegisterOperand or a
+/// direct RegisterClass reference.
+class getRegClassFromOp<DAGOperand Op> {
+  SIRegisterClass ret = !if(
+    !isa<RegisterOperand>(Op),
+    !cast<SIRegisterClass>(!cast<RegisterOperand>(Op).RegClass),
+    !cast<SIRegisterClass>(Op));
+}
+
+/// Check if the operand will use an AV_* class.
+class OperandIsAV<DAGOperand Op> {
+  defvar reg_class = getRegClassFromOp<Op>.ret;
+  bit ret = !and(reg_class.HasAGPR, reg_class.HasVGPR);
+}
+
+/// Check if the operand will use an AGPR class.
+class OperandIsAGPR<DAGOperand Op> {
+  defvar reg_class = getRegClassFromOp<Op>.ret;
+  bit ret = !and(reg_class.HasAGPR, !not(reg_class.HasVGPR));
+}
+
+/// Check if the operand will use a VGPR class.
+class OperandIsVGPR<DAGOperand Op> {
+  defvar reg_class = getRegClassFromOp<Op>.ret;
+  bit ret = !and(reg_class.HasVGPR, !not(reg_class.HasAGPR));
+}
