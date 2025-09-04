@@ -85,6 +85,14 @@ static RValue emitUnaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
   return RValue::get(call->getResult(0));
 }
 
+template <class Operation>
+static RValue emitUnaryFPBuiltin(CIRGenFunction &cgf, const CallExpr &e) {
+  mlir::Value arg = cgf.emitScalarExpr(e.getArg(0));
+  auto call =
+      Operation::create(cgf.getBuilder(), arg.getLoc(), arg.getType(), arg);
+  return RValue::get(call->getResult(0));
+}
+
 RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                                        const CallExpr *e,
                                        ReturnValueSlot returnValue) {
@@ -124,6 +132,22 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   switch (builtinIDIfNoAsmLabel) {
   default:
     break;
+
+  // C stdarg builtins.
+  case Builtin::BI__builtin_stdarg_start:
+  case Builtin::BI__builtin_va_start:
+  case Builtin::BI__va_start: {
+    mlir::Value vaList = builtinID == Builtin::BI__va_start
+                             ? emitScalarExpr(e->getArg(0))
+                             : emitVAListRef(e->getArg(0)).getPointer();
+    mlir::Value count = emitScalarExpr(e->getArg(1));
+    emitVAStart(vaList, count);
+    return {};
+  }
+
+  case Builtin::BI__builtin_va_end:
+    emitVAEnd(emitVAListRef(e->getArg(0)).getPointer());
+    return {};
 
   case Builtin::BIfabs:
   case Builtin::BIfabsf:
@@ -333,6 +357,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_unreachable:
     emitUnreachable(e->getExprLoc(), /*createNewBlock=*/true);
     return RValue::get(nullptr);
+
+  case Builtin::BI__builtin_elementwise_acos:
+    return emitUnaryFPBuiltin<cir::ACosOp>(*this, *e);
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
@@ -374,4 +401,26 @@ mlir::Value CIRGenFunction::emitCheckedArgForAssume(const Expr *e) {
   cgm.errorNYI(e->getSourceRange(),
                "emitCheckedArgForAssume: sanitizers are NYI");
   return {};
+}
+
+void CIRGenFunction::emitVAStart(mlir::Value vaList, mlir::Value count) {
+  // LLVM codegen casts to *i8, no real gain on doing this for CIRGen this
+  // early, defer to LLVM lowering.
+  cir::VAStartOp::create(builder, vaList.getLoc(), vaList, count);
+}
+
+void CIRGenFunction::emitVAEnd(mlir::Value vaList) {
+  cir::VAEndOp::create(builder, vaList.getLoc(), vaList);
+}
+
+// FIXME(cir): This completely abstracts away the ABI with a generic CIR Op. By
+// default this lowers to llvm.va_arg which is incomplete and not ABI-compliant
+// on most targets so cir.va_arg will need some ABI handling in LoweringPrepare
+mlir::Value CIRGenFunction::emitVAArg(VAArgExpr *ve) {
+  assert(!cir::MissingFeatures::msabi());
+  assert(!cir::MissingFeatures::vlas());
+  mlir::Location loc = cgm.getLoc(ve->getExprLoc());
+  mlir::Type type = convertType(ve->getType());
+  mlir::Value vaList = emitVAListRef(ve->getSubExpr()).getPointer();
+  return cir::VAArgOp::create(builder, loc, type, vaList);
 }

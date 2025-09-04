@@ -310,15 +310,23 @@ void ASTStmtWriter::VisitIndirectGotoStmt(IndirectGotoStmt *S) {
   Code = serialization::STMT_INDIRECT_GOTO;
 }
 
-void ASTStmtWriter::VisitContinueStmt(ContinueStmt *S) {
+void ASTStmtWriter::VisitLoopControlStmt(LoopControlStmt *S) {
   VisitStmt(S);
-  Record.AddSourceLocation(S->getContinueLoc());
+  Record.AddSourceLocation(S->getKwLoc());
+  Record.push_back(S->hasLabelTarget());
+  if (S->hasLabelTarget()) {
+    Record.AddDeclRef(S->getLabelDecl());
+    Record.AddSourceLocation(S->getLabelLoc());
+  }
+}
+
+void ASTStmtWriter::VisitContinueStmt(ContinueStmt *S) {
+  VisitLoopControlStmt(S);
   Code = serialization::STMT_CONTINUE;
 }
 
 void ASTStmtWriter::VisitBreakStmt(BreakStmt *S) {
-  VisitStmt(S);
-  Record.AddSourceLocation(S->getBreakLoc());
+  VisitLoopControlStmt(S);
   Code = serialization::STMT_BREAK;
 }
 
@@ -730,7 +738,7 @@ void ASTStmtWriter::VisitIntegerLiteral(IntegerLiteral *E) {
   Record.AddSourceLocation(E->getLocation());
   Record.AddAPInt(E->getValue());
 
-  if (E->getValue().getBitWidth() == 32) {
+  if (E->getBitWidth() == 32) {
     AbbrevToUse = Writer.getIntegerLiteralAbbrev();
   }
 
