@@ -115,11 +115,15 @@ class Interpreter {
   /// An optional compiler instance for CUDA offloading
   std::unique_ptr<CompilerInstance> DeviceCI;
 
+  /// An optional code model to provide to the JITTargetMachineBuilder
+  std::optional<llvm::CodeModel::Model> CM;
+
 protected:
   // Derived classes can use an extended interface of the Interpreter.
   Interpreter(std::unique_ptr<CompilerInstance> Instance, llvm::Error &Err,
               std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder = nullptr,
-              std::unique_ptr<clang::ASTConsumer> Consumer = nullptr);
+              std::unique_ptr<clang::ASTConsumer> Consumer = nullptr,
+              const std::optional<llvm::CodeModel::Model> &CM = std::nullopt);
 
   // Create the internal IncrementalExecutor, or re-create it after calling
   // ResetExecutor().
@@ -133,7 +137,8 @@ public:
   virtual ~Interpreter();
   static llvm::Expected<std::unique_ptr<Interpreter>>
   create(std::unique_ptr<CompilerInstance> CI,
-         std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder = nullptr);
+         std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder = nullptr,
+         const std::optional<llvm::CodeModel::Model> &CM = std::nullopt);
   static llvm::Expected<std::unique_ptr<Interpreter>>
   createWithCUDA(std::unique_ptr<CompilerInstance> CI,
                  std::unique_ptr<CompilerInstance> DCI);

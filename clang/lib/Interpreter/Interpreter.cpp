@@ -251,8 +251,9 @@ IncrementalCompilerBuilder::CreateCudaHost() {
 Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
                          llvm::Error &ErrOut,
                          std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder,
-                         std::unique_ptr<clang::ASTConsumer> Consumer)
-    : JITBuilder(std::move(JITBuilder)) {
+                         std::unique_ptr<clang::ASTConsumer> Consumer,
+                         const std::optional<llvm::CodeModel::Model> &CM)
+    : CM(CM), JITBuilder(std::move(JITBuilder)) {
   CI = std::move(Instance);
   llvm::ErrorAsOutParameter EAO(&ErrOut);
   auto LLVMCtx = std::make_unique<llvm::LLVMContext>();
@@ -349,10 +350,11 @@ const char *const Runtimes = R"(
 
 llvm::Expected<std::unique_ptr<Interpreter>>
 Interpreter::create(std::unique_ptr<CompilerInstance> CI,
-                    std::unique_ptr<llvm::orc::LLJITBuilder> JB) {
+                    std::unique_ptr<llvm::orc::LLJITBuilder> JB,
+                    const std::optional<llvm::CodeModel::Model> &CM) {
   llvm::Error Err = llvm::Error::success();
   auto Interp = std::unique_ptr<Interpreter>(
-      new Interpreter(std::move(CI), Err, JB ? std::move(JB) : nullptr));
+      new Interpreter(std::move(CI), Err, JB ? std::move(JB) : nullptr, nullptr, CM));
   if (Err)
     return std::move(Err);
 
@@ -526,6 +528,8 @@ llvm::Error Interpreter::CreateExecutor() {
     auto JTMB = createJITTargetMachineBuilder(TT);
     if (!JTMB)
       return JTMB.takeError();
+    if (CM)
+      JTMB->setCodeModel(CM);
     auto JB = IncrementalExecutor::createDefaultJITBuilder(std::move(*JTMB));
     if (!JB)
       return JB.takeError();
