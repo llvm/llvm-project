@@ -8,7 +8,6 @@
 
 #if __has_feature(ptrauth_calls)
 #include <ptrauth.h>
-#else
 #endif
 
 struct S {
