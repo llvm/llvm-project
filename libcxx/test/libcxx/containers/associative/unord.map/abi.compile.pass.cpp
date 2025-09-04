@@ -91,6 +91,33 @@ struct user_struct {
   [[no_unique_address]] common_base_allocator<int> a;
 };
 
+struct TEST_ALIGNAS(32) AlignedHash {};
+struct FinalHash final {};
+struct NonEmptyHash final {
+  int i;
+  char c;
+};
+struct UnalignedEqualTo {};
+struct FinalEqualTo final {};
+struct NonEmptyEqualTo {
+  int i;
+  char c;
+};
+
+static_assert(std::is_empty<std::__unordered_map_hasher<int, std::pair<const int, int>, std::hash<int>, int> >::value,
+              "");
+static_assert(std::is_empty<std::__unordered_map_hasher<int, std::pair<const int, int>, AlignedHash, int> >::value, "");
+static_assert(!std::is_empty<std::__unordered_map_hasher<int, std::pair<const int, int>, FinalHash, int> >::value, "");
+static_assert(!std::is_empty<std::__unordered_map_hasher<int, std::pair<const int, int>, NonEmptyHash, int> >::value,
+              "");
+
+static_assert(std::is_empty<std::__unordered_map_equal<int, std::pair<const int, int>, std::hash<int>, int> >::value,
+              "");
+static_assert(std::is_empty<std::__unordered_map_equal<int, std::pair<const int, int>, AlignedHash, int> >::value, "");
+static_assert(!std::is_empty<std::__unordered_map_equal<int, std::pair<const int, int>, FinalHash, int> >::value, "");
+static_assert(!std::is_empty<std::__unordered_map_equal<int, std::pair<const int, int>, NonEmptyHash, int> >::value,
+              "");
+
 #if __SIZE_WIDTH__ == 64
 // TODO: Fix the ABI for GCC as well once https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121637 is fixed
 #  ifdef TEST_COMPILER_GCC
@@ -125,8 +152,20 @@ static_assert(TEST_ALIGNOF(unordered_map_alloc<char, small_iter_allocator<std::p
 static_assert(TEST_ALIGNOF(unordered_map_alloc<char, final_small_iter_allocator<std::pair<const char, char> > >) == 4,
               "");
 
-struct TEST_ALIGNAS(32) AlignedHash {};
-struct UnalignedEqualTo {};
+#ifdef TEST_COMPILER_GCC
+static_assert(sizeof(std::unordered_map<int, int, FinalHash, UnalignedEqualTo>) == 40, "");
+#else
+static_assert(sizeof(std::unordered_map<int, int, FinalHash, UnalignedEqualTo>) == 48, "");
+#endif
+static_assert(sizeof(std::unordered_map<int, int, FinalHash, FinalEqualTo>) == 48, "");
+static_assert(sizeof(std::unordered_map<int, int, NonEmptyHash, FinalEqualTo>) == 48, "");
+static_assert(sizeof(std::unordered_map<int, int, NonEmptyHash, NonEmptyEqualTo>) == 56, "");
+
+static_assert(TEST_ALIGNOF(std::unordered_map<int, int, FinalHash, UnalignedEqualTo>) == 8, "");
+static_assert(TEST_ALIGNOF(std::unordered_map<int, int, FinalHash, FinalEqualTo>) == 8, "");
+static_assert(TEST_ALIGNOF(std::unordered_map<int, int, NonEmptyHash, FinalEqualTo>) == 8, "");
+static_assert(TEST_ALIGNOF(std::unordered_map<int, int, NonEmptyHash, NonEmptyEqualTo>) == 8, "");
+
 // TODO: Fix the ABI for GCC as well once https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121637 is fixed
 #  ifdef TEST_COMPILER_GCC
 static_assert(sizeof(std::unordered_map<int, int, AlignedHash, UnalignedEqualTo>) == 64, "");
@@ -169,8 +208,15 @@ static_assert(TEST_ALIGNOF(unordered_map_alloc<char, small_iter_allocator<std::p
 static_assert(TEST_ALIGNOF(unordered_map_alloc<char, final_small_iter_allocator<std::pair<const char, char> > >) == 4,
               "");
 
-struct TEST_ALIGNAS(32) AlignedHash {};
-struct UnalignedEqualTo {};
+static_assert(sizeof(std::unordered_map<int, int, FinalHash, UnalignedEqualTo>) == 24, "");
+static_assert(sizeof(std::unordered_map<int, int, FinalHash, FinalEqualTo>) == 24, "");
+static_assert(sizeof(std::unordered_map<int, int, NonEmptyHash, FinalEqualTo>) == 28, "");
+static_assert(sizeof(std::unordered_map<int, int, NonEmptyHash, NonEmptyEqualTo>) == 32, "");
+
+static_assert(TEST_ALIGNOF(std::unordered_map<int, int, FinalHash, UnalignedEqualTo>) == 4, "");
+static_assert(TEST_ALIGNOF(std::unordered_map<int, int, FinalHash, FinalEqualTo>) == 4, "");
+static_assert(TEST_ALIGNOF(std::unordered_map<int, int, NonEmptyHash, FinalEqualTo>) == 4, "");
+static_assert(TEST_ALIGNOF(std::unordered_map<int, int, NonEmptyHash, NonEmptyEqualTo>) == 4, "");
 
 // TODO: Fix the ABI for GCC as well once https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121637 is fixed
 #  ifdef TEST_COMPILER_GCC
