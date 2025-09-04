@@ -154,8 +154,10 @@ static bool isLittleEndianTriple(const Triple &T) {
 }
 
 /// Return the datalayout string of a subtarget.
-static std::string getDataLayoutString(const Triple &T) {
+static std::string computeDataLayout(const Triple &T,
+                                     const TargetOptions &Options) {
   bool is64Bit = T.getArch() == Triple::ppc64 || T.getArch() == Triple::ppc64le;
+  StringRef ABIName = Options.MCOptions.getABIName();
   std::string Ret;
 
   // Most PPC* platforms are big endian, PPC(64)LE is little endian.
@@ -174,7 +176,8 @@ static std::string getDataLayoutString(const Triple &T) {
   // If the target ABI uses function descriptors, then the alignment of function
   // pointers depends on the alignment used to emit the descriptor. Otherwise,
   // function pointers are aligned to 32 bits because the instructions must be.
-  if ((T.getArch() == Triple::ppc64 && !T.isPPC64ELFv2ABI())) {
+  if ((T.getArch() == Triple::ppc64 &&
+       (!T.isPPC64ELFv2ABI() && ABIName != "elfv2"))) {
     Ret += "-Fi64";
   } else if (T.isOSAIX()) {
     Ret += is64Bit ? "-Fi64" : "-Fi32";
@@ -348,7 +351,7 @@ PPCTargetMachine::PPCTargetMachine(const Target &T, const Triple &TT,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, getDataLayoutString(TT), TT, CPU,
+    : CodeGenTargetMachineImpl(T, computeDataLayout(TT, Options), TT, CPU,
                                computeFSAdditions(FS, OL, TT), Options,
                                getEffectiveRelocModel(TT, RM),
                                getEffectivePPCCodeModel(TT, CM, JIT), OL),
