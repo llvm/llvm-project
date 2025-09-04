@@ -31,7 +31,7 @@ void f1() {
 } // expected-warning {{mutex 'm0' is still held at the end of function}} \
      expected-warning {{mutex 'm1' is still held at the end of function}}
 
-#if TEST_STD_VER >= 11 && TEST_CLANG_VER >= 2101
+#if TEST_STD_VER >= 11 && defined(TEST_CLANG_VER) && TEST_CLANG_VER >= 2101
 void f2() {
   std::lock(m0, m1, m2);
 } // expected-warning {{mutex 'm0' is still held at the end of function}} \
