@@ -1307,22 +1307,11 @@ struct LooselyStructuredBlockParser {
     if (lookAhead(skipStuffBeforeStatement >> "BLOCK"_tok).Parse(state)) {
       return std::nullopt;
     }
-    Block body;
-    if (auto epc{attempt(Parser<ExecutionPartConstruct>{}).Parse(state)}) {
-      if (!IsFortranBlockConstruct(*epc)) {
-        body.emplace_back(std::move(*epc));
-        if (auto &&blk{attempt(block).Parse(state)}) {
-          for (auto &&s : *blk) {
-            body.emplace_back(std::move(s));
-          }
-        }
-      } else {
-        // Fail if the first construct is BLOCK.
-        return std::nullopt;
-      }
+    if (auto &&body{block.Parse(state)}) {
+      // Empty body is ok.
+      return std::move(body);
     }
-    // Empty body is ok.
-    return std::move(body);
+    return std::nullopt;
   }
 };
 
