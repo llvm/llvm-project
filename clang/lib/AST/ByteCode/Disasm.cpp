@@ -44,7 +44,20 @@ inline static std::string printArg(Program &P, CodePtr &OpPC) {
     std::string Result;
     llvm::raw_string_ostream SS(Result);
     auto Arg = OpPC.read<T>();
-    SS << Arg;
+    // Make sure we print the integral value of chars.
+    if constexpr (std::is_integral_v<T>) {
+      if constexpr (sizeof(T) == 1) {
+        if constexpr (std::is_signed_v<T>)
+          SS << static_cast<int32_t>(Arg);
+        else
+          SS << static_cast<uint32_t>(Arg);
+      } else {
+        SS << Arg;
+      }
+    } else {
+      SS << Arg;
+    }
+
     return Result;
   }
 }
@@ -549,7 +562,6 @@ LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
 }
 
 LLVM_DUMP_METHOD void EvaluationResult::dump() const {
-  assert(Ctx);
   auto &OS = llvm::errs();
 
   if (empty()) {
@@ -558,6 +570,9 @@ LLVM_DUMP_METHOD void EvaluationResult::dump() const {
     OS << "Invalid\n";
   } else {
     OS << "Value: ";
+#ifndef NDEBUG
+    assert(Ctx);
     Value.dump(OS, Ctx->getASTContext());
+#endif
   }
 }

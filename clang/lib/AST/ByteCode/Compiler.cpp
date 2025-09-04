@@ -942,7 +942,7 @@ bool Compiler<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
     if (!Result)
       return false;
     if (DiscardResult)
-      return this->emitPop(*T, BO);
+      return this->emitPopBool(BO);
     if (T != PT_Bool)
       return this->emitCast(PT_Bool, *T, BO);
     return true;
@@ -4199,8 +4199,7 @@ template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
     return this->discard(E);
 
   // Create local variable to hold the return value.
-  if (!E->isGLValue() && !E->getType()->isAnyComplexType() &&
-      !canClassify(E->getType())) {
+  if (!E->isGLValue() && !canClassify(E->getType())) {
     UnsignedOrNone LocalIndex = allocateLocal(E);
     if (!LocalIndex)
       return false;

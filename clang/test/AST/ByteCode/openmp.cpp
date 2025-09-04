@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both -fopenmp %s
-// RUN: %clang_cc1 -verify=ref,both -fopenmp %s
+// RUN: %clang_cc1 -verify=expected,both -fopenmp -fopenmp-version=60 %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -verify=ref,both      -fopenmp -fopenmp-version=60 %s
 
 int test1() {
   int i;
@@ -10,4 +10,20 @@ int test1() {
   #pragma omp for simd aligned(f:j)
   for (int i = 0; i < 10; ++i);
 }
+
+extern int omp_get_thread_num(void);
+
+#define N 64
+
+int test2() {
+  int x = 0;
+  int device_result[N] = {0};
+
+  #pragma omp target parallel loop num_threads(strict: N) severity(warning) message("msg")
+  for (int i = 0; i < N; i++) {
+    x = omp_get_thread_num();
+    device_result[i] = i + x;
+  }
+}
+
 

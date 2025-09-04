@@ -11,6 +11,7 @@ import * as vscode from "vscode";
 export class LLDBDapServer implements vscode.Disposable {
   private serverProcess?: child_process.ChildProcessWithoutNullStreams;
   private serverInfo?: Promise<{ host: string; port: number }>;
+  private serverSpawnInfo?: string[];
 
   constructor() {
     vscode.commands.registerCommand(
@@ -34,7 +35,7 @@ export class LLDBDapServer implements vscode.Disposable {
     options?: child_process.SpawnOptionsWithoutStdio,
   ): Promise<{ host: string; port: number } | undefined> {
     const dapArgs = [...args, "--connection", "listen://localhost:0"];
-    if (!(await this.shouldContinueStartup(dapPath, dapArgs))) {
+    if (!(await this.shouldContinueStartup(dapPath, dapArgs, options?.env))) {
       return undefined;
     }
 
@@ -70,6 +71,7 @@ export class LLDBDapServer implements vscode.Disposable {
         }
       });
       this.serverProcess = process;
+      this.serverSpawnInfo = this.getSpawnInfo(dapPath, dapArgs, options?.env);
     });
     return this.serverInfo;
   }
@@ -85,12 +87,14 @@ export class LLDBDapServer implements vscode.Disposable {
   private async shouldContinueStartup(
     dapPath: string,
     args: string[],
+    env: NodeJS.ProcessEnv | { [key: string]: string } | undefined,
   ): Promise<boolean> {
-    if (!this.serverProcess || !this.serverInfo) {
+    if (!this.serverProcess || !this.serverInfo || !this.serverSpawnInfo) {
       return true;
     }
 
-    if (isDeepStrictEqual(this.serverProcess.spawnargs, [dapPath, ...args])) {
+    const newSpawnInfo = this.getSpawnInfo(dapPath, args, env);
+    if (isDeepStrictEqual(this.serverSpawnInfo, newSpawnInfo)) {
       return true;
     }
 
@@ -102,11 +106,11 @@ export class LLDBDapServer implements vscode.Disposable {
 
 The previous lldb-dap server was started with:
 
-${this.serverProcess.spawnargs.join(" ")}
+${this.serverSpawnInfo.join(" ")}
 
 The new lldb-dap server will be started with:
 
-${dapPath} ${args.join(" ")}
+${newSpawnInfo.join(" ")}
 
 Restarting the server will interrupt any existing debug sessions and start a new server.`,
       },
@@ -142,5 +146,19 @@ Restarting the server will interrupt any existing debug sessions and start a new
       this.serverProcess = undefined;
       this.serverInfo = undefined;
     }
+  }
+
+  getSpawnInfo(
+    path: string,
+    args: string[],
+    env: NodeJS.ProcessEnv | { [key: string]: string } | undefined,
+  ): string[] {
+    return [
+      path,
+      ...args,
+      ...Object.entries(env ?? {}).map(
+        (entry) => String(entry[0]) + "=" + String(entry[1]),
+      ),
+    ];
   }
 }

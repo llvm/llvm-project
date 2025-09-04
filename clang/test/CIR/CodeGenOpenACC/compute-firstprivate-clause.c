@@ -1,7 +1,4 @@
-// RUN: not %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir -triple x86_64-linux-pc %s -o - | FileCheck %s
-
-// This encounters NYI errors because of a non-ignored copy of an aggregate.
-// When that is fixed, the 'not' should be removed from the RUN line above.
+// RUN: %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir -triple x86_64-linux-pc %s -o - | FileCheck %s
 
 struct NoCopyConstruct {};
 
@@ -12,19 +9,38 @@ struct NoCopyConstruct {};
 // CHECK-NEXT: } copy {
 // CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {{.*}}):
 // CHECK-NEXT: %[[DECAY_TO:.*]] = cir.cast(array_to_ptrdecay, %[[ARG_TO]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>), !cir.ptr<!rec_NoCopyConstruct>
-// TODO: OpenACC: cir.copy isn't implemented correctly yet, so this doesn't actually do any initialization.
+// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0>
+// CHECK-NEXT: %[[DECAY_FROM:.*]] = cir.cast(array_to_ptrdecay, %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>), !cir.ptr<!rec_NoCopyConstruct>
+// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!rec_NoCopyConstruct>, %[[ZERO]] : !u64i), !cir.ptr<!rec_NoCopyConstruct>
+// CHECK-NEXT: cir.copy %[[FROM_OFFSET:.*]] to %[[DECAY_TO]] : !cir.ptr<!rec_NoCopyConstruct>
 //
 // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1>
 // CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_TO]] : !cir.ptr<!rec_NoCopyConstruct>, %[[ONE]] : !s64i), !cir.ptr<!rec_NoCopyConstruct>
+// CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1>
+// CHECK-NEXT: %[[DECAY_FROM:.*]] = cir.cast(array_to_ptrdecay, %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>), !cir.ptr<!rec_NoCopyConstruct>
+// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!rec_NoCopyConstruct>, %[[ONE]] : !u64i), !cir.ptr<!rec_NoCopyConstruct>
+// CHECK-NEXT: cir.copy %[[FROM_OFFSET]] to %[[TO_OFFSET]] : !cir.ptr<!rec_NoCopyConstruct>
 //
 // CHECK-NEXT: %[[TWO:.*]] = cir.const #cir.int<2>
 // CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_TO]] : !cir.ptr<!rec_NoCopyConstruct>, %[[TWO]] : !s64i), !cir.ptr<!rec_NoCopyConstruct>
+// CHECK-NEXT: %[[TWO:.*]] = cir.const #cir.int<2>
+// CHECK-NEXT: %[[DECAY_FROM:.*]] = cir.cast(array_to_ptrdecay, %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>), !cir.ptr<!rec_NoCopyConstruct>
+// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!rec_NoCopyConstruct>, %[[TWO]] : !u64i), !cir.ptr<!rec_NoCopyConstruct>
+// CHECK-NEXT: cir.copy %[[FROM_OFFSET]] to %[[TO_OFFSET]] : !cir.ptr<!rec_NoCopyConstruct>
 //
 // CHECK-NEXT: %[[THREE:.*]] = cir.const #cir.int<3>
 // CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_TO]] : !cir.ptr<!rec_NoCopyConstruct>, %[[THREE]] : !s64i), !cir.ptr<!rec_NoCopyConstruct>
+// CHECK-NEXT: %[[THREE:.*]] = cir.const #cir.int<3>
+// CHECK-NEXT: %[[DECAY_FROM:.*]] = cir.cast(array_to_ptrdecay, %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>), !cir.ptr<!rec_NoCopyConstruct>
+// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!rec_NoCopyConstruct>, %[[THREE]] : !u64i), !cir.ptr<!rec_NoCopyConstruct>
+// CHECK-NEXT: cir.copy %[[FROM_OFFSET]] to %[[TO_OFFSET]] : !cir.ptr<!rec_NoCopyConstruct>
 //
 // CHECK-NEXT: %[[FOUR:.*]] = cir.const #cir.int<4>
 // CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_TO]] : !cir.ptr<!rec_NoCopyConstruct>, %[[FOUR]] : !s64i), !cir.ptr<!rec_NoCopyConstruct>
+// CHECK-NEXT: %[[FOUR:.*]] = cir.const #cir.int<4>
+// CHECK-NEXT: %[[DECAY_FROM:.*]] = cir.cast(array_to_ptrdecay, %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>), !cir.ptr<!rec_NoCopyConstruct>
+// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!rec_NoCopyConstruct>, %[[FOUR]] : !u64i), !cir.ptr<!rec_NoCopyConstruct>
+// CHECK-NEXT: cir.copy %[[FROM_OFFSET]] to %[[TO_OFFSET]] : !cir.ptr<!rec_NoCopyConstruct>
 //
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
@@ -129,7 +145,7 @@ struct NoCopyConstruct {};
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
 // CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!rec_NoCopyConstruct> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!rec_NoCopyConstruct> {{.*}}):
-// TODO: OpenACC: This should emit a copy, but cir.copy isn't implemented yet.
+// CHECK-NEXT: cir.copy %[[ARG_FROM]] to %[[ARG_TO]] : !cir.ptr<!rec_NoCopyConstruct>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 //
