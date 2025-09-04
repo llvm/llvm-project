@@ -38,11 +38,7 @@ class Enc_041d7b : OpcodeHexagon {
   let Inst{7-1} = Ii{8-2};
   bits <4> Rs16;
   let Inst{19-16} = Rs16{3-0};
-  bits <5> n1;
-  let Inst{28-28} = n1{4-4};
-  let Inst{24-23} = n1{3-2};
-  let Inst{13-13} = n1{1-1};
-  let Inst{8-8} = n1{0-0};
+  bits <0> n1;
 }
 class Enc_046afa : OpcodeHexagon {
   bits <1> Mu2;
@@ -244,10 +240,7 @@ class Enc_14640c : OpcodeHexagon {
   let Inst{7-1} = Ii{8-2};
   bits <4> Rs16;
   let Inst{19-16} = Rs16{3-0};
-  bits <5> n1;
-  let Inst{28-28} = n1{4-4};
-  let Inst{24-22} = n1{3-1};
-  let Inst{13-13} = n1{0-0};
+  bits <0> n1;
 }
 class Enc_14d27a : OpcodeHexagon {
   bits <5> II;
@@ -300,11 +293,7 @@ class Enc_178717 : OpcodeHexagon {
   let Inst{7-1} = Ii{8-2};
   bits <4> Rs16;
   let Inst{19-16} = Rs16{3-0};
-  bits <6> n1;
-  let Inst{28-28} = n1{5-5};
-  let Inst{25-23} = n1{4-2};
-  let Inst{13-13} = n1{1-1};
-  let Inst{8-8} = n1{0-0};
+  bits <0> n1;
 }
 class Enc_179b35 : OpcodeHexagon {
   bits <5> Rs32;
@@ -384,9 +373,7 @@ class Enc_1de724 : OpcodeHexagon {
   let Inst{7-1} = Ii{8-2};
   bits <4> Rs16;
   let Inst{19-16} = Rs16{3-0};
-  bits <4> n1;
-  let Inst{28-28} = n1{3-3};
-  let Inst{24-22} = n1{2-0};
+  bits <0> n1;
 }
 class Enc_1ef990 : OpcodeHexagon {
   bits <2> Pv4;
@@ -772,10 +759,7 @@ class Enc_3694bd : OpcodeHexagon {
   let Inst{7-1} = Ii{8-2};
   bits <3> Ns8;
   let Inst{18-16} = Ns8{2-0};
-  bits <5> n1;
-  let Inst{29-29} = n1{4-4};
-  let Inst{26-25} = n1{3-2};
-  let Inst{23-22} = n1{1-0};
+  bits <0> n1;
 }
 class Enc_372c9d : OpcodeHexagon {
   bits <2> Pv4;
@@ -820,10 +804,7 @@ class Enc_3a2484 : OpcodeHexagon {
   let Inst{7-1} = Ii{8-2};
   bits <4> Rs16;
   let Inst{19-16} = Rs16{3-0};
-  bits <4> n1;
-  let Inst{28-28} = n1{3-3};
-  let Inst{24-23} = n1{2-1};
-  let Inst{13-13} = n1{0-0};
+  bits <0> n1;
 }
 class Enc_3a3d62 : OpcodeHexagon {
   bits <5> Rs32;
@@ -883,10 +864,7 @@ class Enc_3e3989 : OpcodeHexagon {
   let Inst{7-1} = Ii{8-2};
   bits <4> Rs16;
   let Inst{19-16} = Rs16{3-0};
-  bits <6> n1;
-  let Inst{28-28} = n1{5-5};
-  let Inst{25-22} = n1{4-1};
-  let Inst{8-8} = n1{0-0};
+  bits <0> n1;
 }
 class Enc_3f97c8 : OpcodeHexagon {
   bits <6> Ii;
@@ -916,9 +894,7 @@ class Enc_405228 : OpcodeHexagon {
   let Inst{7-1} = Ii{8-2};
   bits <4> Rs16;
   let Inst{19-16} = Rs16{3-0};
-  bits <3> n1;
-  let Inst{28-28} = n1{2-2};
-  let Inst{24-23} = n1{1-0};
+  bits <0> n1;
 }
 class Enc_412ff0 : OpcodeHexagon {
   bits <5> Rss32;
@@ -1046,9 +1022,7 @@ class Enc_4aca3a : OpcodeHexagon {
   let Inst{7-1} = Ii{8-2};
   bits <3> Ns8;
   let Inst{18-16} = Ns8{2-0};
-  bits <3> n1;
-  let Inst{29-29} = n1{2-2};
-  let Inst{26-25} = n1{1-0};
+  bits <0> n1;
 }
 class Enc_4b39e4 : OpcodeHexagon {
   bits <3> Ii;
@@ -1265,11 +1239,7 @@ class Enc_5a18b3 : OpcodeHexagon {
   let Inst{7-1} = Ii{8-2};
   bits <3> Ns8;
   let Inst{18-16} = Ns8{2-0};
-  bits <5> n1;
-  let Inst{29-29} = n1{4-4};
-  let Inst{26-25} = n1{3-2};
-  let Inst{22-22} = n1{1-1};
-  let Inst{13-13} = n1{0-0};
+  bits <0> n1;
 }
 class Enc_5ab2be : OpcodeHexagon {
   bits <5> Rs32;
@@ -1445,11 +1415,7 @@ class Enc_6413b6 : OpcodeHexagon {
   let Inst{7-1} = Ii{8-2};
   bits <3> Ns8;
   let Inst{18-16} = Ns8{2-0};
-  bits <5> n1;
-  let Inst{29-29} = n1{4-4};
-  let Inst{26-25} = n1{3-2};
-  let Inst{23-23} = n1{1-1};
-  let Inst{13-13} = n1{0-0};
+  bits <0> n1;
 }
 class Enc_645d54 : OpcodeHexagon {
   bits <2> Ii;
@@ -1490,9 +1456,7 @@ class Enc_668704 : OpcodeHexagon {
   let Inst{7-1} = Ii{8-2};
   bits <4> Rs16;
   let Inst{19-16} = Rs16{3-0};
-  bits <5> n1;
-  let Inst{28-28} = n1{4-4};
-  let Inst{25-22} = n1{3-0};
+  bits <0> n1;
 }
 class Enc_66bce1 : OpcodeHexagon {
   bits <11> Ii;
@@ -1650,9 +1614,7 @@ class Enc_736575 : OpcodeHexagon {
   let Inst{7-1} = Ii{8-2};
   bits <4> Rs16;
   let Inst{19-16} = Rs16{3-0};
-  bits <4> n1;
-  let Inst{28-28} = n1{3-3};
-  let Inst{25-23} = n1{2-0};
+  bits <0> n1;
 }
 class Enc_74aef2 : OpcodeHexagon {
   bits <4> Ii;
@@ -1718,8 +1680,7 @@ class Enc_79b8c8 : OpcodeHexagon {
 class Enc_7a0ea6 : OpcodeHexagon {
   bits <4> Rd16;
   let Inst{3-0} = Rd16{3-0};
-  bits <1> n1;
-  let Inst{9-9} = n1{0-0};
+  bits <0> n1;
 }
 class Enc_7b523d : OpcodeHexagon {
   bits <5> Vu32;
@@ -1805,10 +1766,7 @@ class Enc_800e04 : OpcodeHexagon {
   let Inst{7-1} = Ii{8-2};
   bits <4> Rs16;
   let Inst{19-16} = Rs16{3-0};
-  bits <6> n1;
-  let Inst{28-28} = n1{5-5};
-  let Inst{25-22} = n1{4-1};
-  let Inst{13-13} = n1{0-0};
+  bits <0> n1;
 }
 class Enc_80296d : OpcodeHexagon {
   bits <5> Rs32;
@@ -2067,10 +2025,7 @@ class Enc_8e583a : OpcodeHexagon {
   let Inst{7-1} = Ii{8-2};
   bits <4> Rs16;
   let Inst{19-16} = Rs16{3-0};
-  bits <5> n1;
-  let Inst{28-28} = n1{4-4};
-  let Inst{25-23} = n1{3-1};
-  let Inst{13-13} = n1{0-0};
+  bits <0> n1;
 }
 class Enc_8f7633 : OpcodeHexagon {
   bits <5> Rs32;
@@ -2361,10 +2316,7 @@ class Enc_a42857 : OpcodeHexagon {
   let Inst{7-1} = Ii{8-2};
   bits <4> Rs16;
   let Inst{19-16} = Rs16{3-0};
-  bits <5> n1;
-  let Inst{28-28} = n1{4-4};
-  let Inst{24-22} = n1{3-1};
-  let Inst{8-8} = n1{0-0};
+  bits <0> n1;
 }
 class Enc_a4ef14 : OpcodeHexagon {
   bits <5> Rd32;
@@ -2413,11 +2365,7 @@ class Enc_a6853f : OpcodeHexagon {
   let Inst{7-1} = Ii{8-2};
   bits <3> Ns8;
   let Inst{18-16} = Ns8{2-0};
-  bits <6> n1;
-  let Inst{29-29} = n1{5-5};
-  let Inst{26-25} = n1{4-3};
-  let Inst{23-22} = n1{2-1};
-  let Inst{13-13} = n1{0-0};
+  bits <0> n1;
 }
 class Enc_a6ce9c : OpcodeHexagon {
   bits <6> Ii;
@@ -2593,10 +2541,7 @@ class Enc_b1e1fb : OpcodeHexagon {
   let Inst{7-1} = Ii{8-2};
   bits <4> Rs16;
   let Inst{19-16} = Rs16{3-0};
-  bits <5> n1;
-  let Inst{28-28} = n1{4-4};
-  let Inst{25-23} = n1{3-1};
-  let Inst{8-8} = n1{0-0};
+  bits <0> n1;
 }
 class Enc_b388cf : OpcodeHexagon {
   bits <5> Ii;
@@ -2661,10 +2606,7 @@ class Enc_b78edd : OpcodeHexagon {
   let Inst{7-1} = Ii{8-2};
   bits <4> Rs16;
   let Inst{19-16} = Rs16{3-0};
-  bits <4> n1;
-  let Inst{28-28} = n1{3-3};
-  let Inst{24-23} = n1{2-1};
-  let Inst{8-8} = n1{0-0};
+  bits <0> n1;
 }
 class Enc_b7fad3 : OpcodeHexagon {
   bits <2> Pv4;
@@ -2715,11 +2657,7 @@ class Enc_b909d2 : OpcodeHexagon {
   let Inst{7-1} = Ii{8-2};
   bits <4> Rs16;
   let Inst{19-16} = Rs16{3-0};
-  bits <7> n1;
-  let Inst{28-28} = n1{6-6};
-  let Inst{25-22} = n1{5-2};
-  let Inst{13-13} = n1{1-1};
-  let Inst{8-8} = n1{0-0};
+  bits <0> n1;
 }
 class Enc_b91167 : OpcodeHexagon {
   bits <2> Ii;
@@ -3049,6 +2987,7 @@ class Enc_cf1927 : OpcodeHexagon {
 class Enc_d0fe02 : OpcodeHexagon {
   bits <5> Rxx32;
   let Inst{20-16} = Rxx32{4-0};
+  bits <0> sgp10;
 }
 class Enc_d15d19 : OpcodeHexagon {
   bits <1> Mu2;
@@ -3334,10 +3273,7 @@ class Enc_e90a15 : OpcodeHexagon {
   let Inst{7-1} = Ii{8-2};
   bits <3> Ns8;
   let Inst{18-16} = Ns8{2-0};
-  bits <4> n1;
-  let Inst{29-29} = n1{3-3};
-  let Inst{26-25} = n1{2-1};
-  let Inst{22-22} = n1{0-0};
+  bits <0> n1;
 }
 class Enc_e957fb : OpcodeHexagon {
   bits <12> Ii;
@@ -3416,8 +3352,7 @@ class Enc_ee5ed0 : OpcodeHexagon {
   let Inst{7-4} = Rs16{3-0};
   bits <4> Rd16;
   let Inst{3-0} = Rd16{3-0};
-  bits <2> n1;
-  let Inst{9-8} = n1{1-0};
+  bits <0> n1;
 }
 class Enc_ef601b : OpcodeHexagon {
   bits <4> Ii;
@@ -3530,11 +3465,7 @@ class Enc_f6fe0b : OpcodeHexagon {
   let Inst{7-1} = Ii{8-2};
   bits <4> Rs16;
   let Inst{19-16} = Rs16{3-0};
-  bits <6> n1;
-  let Inst{28-28} = n1{5-5};
-  let Inst{24-22} = n1{4-2};
-  let Inst{13-13} = n1{1-1};
-  let Inst{8-8} = n1{0-0};
+  bits <0> n1;
 }
 class Enc_f7430e : OpcodeHexagon {
   bits <4> Ii;
@@ -3573,10 +3504,7 @@ class Enc_f7ea77 : OpcodeHexagon {
   let Inst{7-1} = Ii{8-2};
   bits <3> Ns8;
   let Inst{18-16} = Ns8{2-0};
-  bits <4> n1;
-  let Inst{29-29} = n1{3-3};
-  let Inst{26-25} = n1{2-1};
-  let Inst{13-13} = n1{0-0};
+  bits <0> n1;
 }
 class Enc_f82302 : OpcodeHexagon {
   bits <11> Ii;
@@ -3584,10 +3512,7 @@ class Enc_f82302 : OpcodeHexagon {
   let Inst{7-1} = Ii{8-2};
   bits <3> Ns8;
   let Inst{18-16} = Ns8{2-0};
-  bits <4> n1;
-  let Inst{29-29} = n1{3-3};
-  let Inst{26-25} = n1{2-1};
-  let Inst{23-23} = n1{0-0};
+  bits <0> n1;
 }
 class Enc_f82eaf : OpcodeHexagon {
   bits <8> Ii;

@@ -173,6 +173,19 @@ static DecodeStatus s32_0ImmDecoder(MCInst &MI, unsigned tmp,
                                     const MCDisassembler *Decoder);
 static DecodeStatus brtargetDecoder(MCInst &MI, unsigned tmp, uint64_t Address,
                                     const MCDisassembler *Decoder);
+
+static DecodeStatus n1ConstDecoder(MCInst &MI, const MCDisassembler *Decoder) {
+  MCContext &Ctx = Decoder->getContext();
+  MI.addOperand(MCOperand::createExpr(MCConstantExpr::create(-1, Ctx)));
+  return DecodeStatus::Success;
+}
+
+static DecodeStatus sgp10ConstDecoder(MCInst &MI,
+                                      const MCDisassembler *Decoder) {
+  MI.addOperand(MCOperand::createReg(Hexagon::SGP1_0));
+  return DecodeStatus::Success;
+}
+
 #include "HexagonDepDecoders.inc"
 #include "HexagonGenDisassemblerTables.inc"
 
@@ -349,21 +362,6 @@ void HexagonDisassembler::remapInstruction(MCInst &Instr) const {
   }
 }
 
-static void adjustDuplex(MCInst &MI, MCContext &Context) {
-  switch (MI.getOpcode()) {
-  case Hexagon::SA1_setin1:
-    MI.insert(MI.begin() + 1,
-              MCOperand::createExpr(MCConstantExpr::create(-1, Context)));
-    break;
-  case Hexagon::SA1_dec:
-    MI.insert(MI.begin() + 2,
-              MCOperand::createExpr(MCConstantExpr::create(-1, Context)));
-    break;
-  default:
-    break;
-  }
-}
-
 DecodeStatus HexagonDisassembler::getSingleInstruction(MCInst &MI, MCInst &MCB,
                                                        ArrayRef<uint8_t> Bytes,
                                                        uint64_t Address,
@@ -468,12 +466,10 @@ DecodeStatus HexagonDisassembler::getSingleInstruction(MCInst &MI, MCInst &MCB,
     CurrentExtender = TmpExtender;
     if (Result != DecodeStatus::Success)
       return DecodeStatus::Fail;
-    adjustDuplex(*MILow, getContext());
     Result = decodeInstruction(
         DecodeHigh, *MIHigh, (Instruction >> 16) & 0x1fff, Address, this, STI);
     if (Result != DecodeStatus::Success)
       return DecodeStatus::Fail;
-    adjustDuplex(*MIHigh, getContext());
     MCOperand OPLow = MCOperand::createInst(MILow);
     MCOperand OPHigh = MCOperand::createInst(MIHigh);
     MI.addOperand(OPLow);
@@ -497,41 +493,6 @@ DecodeStatus HexagonDisassembler::getSingleInstruction(MCInst &MI, MCInst &MCB,
       Result = decodeInstruction(DecoderTableEXT_mmvec32, MI, Instruction,
                                  Address, this, STI);
 
-  }
-
-  switch (MI.getOpcode()) {
-  case Hexagon::J4_cmpeqn1_f_jumpnv_nt:
-  case Hexagon::J4_cmpeqn1_f_jumpnv_t:
-  case Hexagon::J4_cmpeqn1_fp0_jump_nt:
-  case Hexagon::J4_cmpeqn1_fp0_jump_t:
-  case Hexagon::J4_cmpeqn1_fp1_jump_nt:
-  case Hexagon::J4_cmpeqn1_fp1_jump_t:
-  case Hexagon::J4_cmpeqn1_t_jumpnv_nt:
-  case Hexagon::J4_cmpeqn1_t_jumpnv_t:
-  case Hexagon::J4_cmpeqn1_tp0_jump_nt:
-  case Hexagon::J4_cmpeqn1_tp0_jump_t:
-  case Hexagon::J4_cmpeqn1_tp1_jump_nt:
-  case Hexagon::J4_cmpeqn1_tp1_jump_t:
-  case Hexagon::J4_cmpgtn1_f_jumpnv_nt:
-  case Hexagon::J4_cmpgtn1_f_jumpnv_t:
-  case Hexagon::J4_cmpgtn1_fp0_jump_nt:
-  case Hexagon::J4_cmpgtn1_fp0_jump_t:
-  case Hexagon::J4_cmpgtn1_fp1_jump_nt:
-  case Hexagon::J4_cmpgtn1_fp1_jump_t:
-  case Hexagon::J4_cmpgtn1_t_jumpnv_nt:
-  case Hexagon::J4_cmpgtn1_t_jumpnv_t:
-  case Hexagon::J4_cmpgtn1_tp0_jump_nt:
-  case Hexagon::J4_cmpgtn1_tp0_jump_t:
-  case Hexagon::J4_cmpgtn1_tp1_jump_nt:
-  case Hexagon::J4_cmpgtn1_tp1_jump_t:
-    MI.insert(MI.begin() + 1,
-              MCOperand::createExpr(MCConstantExpr::create(-1, getContext())));
-    break;
-  case Hexagon::Y4_crswap10:
-    MI.addOperand(MCOperand::createReg(Hexagon::SGP1_0));
-    break;
-  default:
-    break;
   }
 
   if (HexagonMCInstrInfo::isNewValue(*MCII, MI)) {
