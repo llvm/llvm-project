@@ -36,6 +36,7 @@
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
+#include <__utility/pointer_int_pair.h>
 #include <__utility/swap.h>
 #include <__utility/try_key_extraction.h>
 #include <limits>
@@ -575,6 +576,8 @@ public:
   using pointer                            = __rebind_pointer_t<_VoidPtr, __tree_node_base>;
   using __end_node_pointer _LIBCPP_NODEBUG = __rebind_pointer_t<_VoidPtr, __tree_end_node<pointer> >;
 
+  static_assert(is_same<typename pointer_traits<_VoidPtr>::element_type, void>::value);
+
   pointer __right_;
 
 private:
@@ -594,6 +597,43 @@ public:
   __tree_node_base(__tree_node_base const&)            = delete;
   __tree_node_base& operator=(__tree_node_base const&) = delete;
 };
+
+#ifdef _LIBCPP_ABI_TREE_POINTER_INT_PAIR
+template <>
+class __tree_node_base<void*> : public __tree_end_node<__tree_node_base<void*>*> {
+public:
+  using pointer                            = __tree_node_base<void*>*;
+  using __end_node_pointer _LIBCPP_NODEBUG = __tree_end_node<__tree_node_base<void*>*>*;
+
+  pointer __right_;
+
+private:
+  using __pair_t = __pointer_int_pair<__end_node_pointer, bool, __integer_width(1)>;
+
+  __pair_t __parent_and_color_;
+
+public:
+  _LIBCPP_HIDE_FROM_ABI pointer __parent_unsafe() const {
+    return static_cast<pointer>(__parent_and_color_.__get_ptr());
+  }
+
+  _LIBCPP_HIDE_FROM_ABI void __set_parent(pointer __ptr) { __set_parent(static_cast<__end_node_pointer>(__ptr)); }
+
+  _LIBCPP_HIDE_FROM_ABI void __set_parent(__end_node_pointer __ptr) {
+    __parent_and_color_ = __pair_t(__ptr, __parent_and_color_.__get_value());
+  }
+
+  _LIBCPP_HIDE_FROM_ABI __end_node_pointer __get_parent() const { return __parent_and_color_.__get_ptr(); }
+  _LIBCPP_HIDE_FROM_ABI __tree_color __get_color() const {
+    return static_cast<__tree_color>(__parent_and_color_.__get_value());
+  }
+  _LIBCPP_HIDE_FROM_ABI void __set_color(__tree_color __color) {
+    __parent_and_color_ = __pair_t(__parent_and_color_.__get_ptr(), __color == __tree_color::__black);
+  }
+};
+#endif // _LIBCPP_ABI_TREE_POINTER_INT_PAIR
+
+static_assert(sizeof(__tree_node_base<void*>) == 24);
 
 template <class _Tp, class _VoidPtr>
 class _LIBCPP_STANDALONE_DEBUG __tree_node : public __tree_node_base<_VoidPtr> {
