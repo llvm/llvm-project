@@ -46,7 +46,7 @@ ASM_FUNCTION_AARCH64_RE = re.compile(
     r"(?:[ \t]+.cfi_startproc\n)?"  # drop optional cfi noise
     r"(?P<body>.*?)"
     # This list is incomplete
-    r"^(\.Lfunc_end[0-9]+:|// -- End function)",
+    r"^\s*(\.Lfunc_end[0-9]+:|// -- End function)",
     flags=(re.M | re.S),
 )
 

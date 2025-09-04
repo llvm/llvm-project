@@ -73,6 +73,8 @@ add_math_entrypoint_object(atanh)
 add_math_entrypoint_object(atanhf)
 add_math_entrypoint_object(atanhf16)
 
+add_math_entrypoint_object(atanpif16)
+
 add_math_entrypoint_object(canonicalize)
 add_math_entrypoint_object(canonicalizef)
 add_math_entrypoint_object(canonicalizel)
@@ -306,6 +308,7 @@ add_math_entrypoint_object(fmodf)
 add_math_entrypoint_object(fmodl)
 add_math_entrypoint_object(fmodf16)
 add_math_entrypoint_object(fmodf128)
+add_math_entrypoint_object(fmodbf16)
 
 add_math_entrypoint_object(frexp)
 add_math_entrypoint_object(frexpf)
