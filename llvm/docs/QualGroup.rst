@@ -65,6 +65,9 @@ Available slides:
 * `July 2025 <../qual-wg/slides/202507_llvm_qual_wg.pdf>`_
 * (add future entries here)
 
+A future patch will migrate these slide files to the `llvm-www` repository, once
+a suitable hosting location is confirmed with the community.
+
 Contributors
 ============
 
