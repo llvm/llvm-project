@@ -4,6 +4,7 @@ include_directories(
   )
 
 set(LLVM_LINK_COMPONENTS
+  Analysis
   ARMCodeGen
   ARMDesc
   ARMInfo
