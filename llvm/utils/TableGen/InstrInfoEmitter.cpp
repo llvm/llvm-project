@@ -1316,9 +1316,9 @@ void InstrInfoEmitter::emitEnums(
   for (const CodeGenInstruction *Inst : NumberedInstructions) {
     OS << "    " << Inst->TheDef->getName();
     OS.PadToColumn(MaxNameSize + 5);
-    OS << " = " << Target.getInstrIntValue(Inst->TheDef) << ", // (";
-    OS << SrcMgr.getFormattedLocationNoOffset(Inst->TheDef->getLoc().front())
-       << ")\n";
+    OS << " = " << Target.getInstrIntValue(Inst->TheDef) << ", // ";
+    OS << SrcMgr.getFormattedLocationNoOffset(Inst->TheDef->getLoc().front());
+    OS << '\n';
   }
   OS << "    INSTRUCTION_LIST_END = " << NumberedInstructions.size() << '\n';
   OS << "  };\n";
