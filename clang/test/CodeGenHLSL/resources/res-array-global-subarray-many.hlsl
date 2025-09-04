@@ -17,11 +17,6 @@ float foo(RWBuffer<float> Arr[3][2]) {
   return Arr[1][0][0];
 }
 
-// NOTE:
-// - _ZN4hlsl8RWBufferIfEC1EjjijPKc is the constructor call for explicit binding
-//    (has "jjij" in the mangled name) and the arguments are (register, space, range_size, index, name).
-// - _ZN4hlsl8RWBufferIfEixEj is the subscript operator for RWBuffer<float>
-
 // CHECK: define internal void @_Z4mainj(i32 noundef %GI)
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %[[GI_alloca:.*]] = alloca i32, align 4
@@ -35,21 +30,27 @@ float foo(RWBuffer<float> Arr[3][2]) {
 [numthreads(4,1,1)]
 void main(uint GI : SV_GroupThreadID) {
 // Codegen for "A[4][1]" - create local array [[Tmp0]] of size 3 x 2 and initialize
-// each element by a call to the resource constructor
+// each element by a call to RWBuffer<float>::__createFromBinding
 // The resource index for A[4][1][0][0] is 102 = 4 * (4 * 3 * 2) + 1 * (3 * 2)
 // (index in the resource array as if it was flattened)
 // CHECK-NEXT: %[[Ptr_Tmp0_0_0:.*]] = getelementptr [3 x [2 x %"class.hlsl::RWBuffer"]], ptr %tmp, i32 0, i32 0, i32 0
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1EjjijPKc(ptr {{.*}} %[[Ptr_Tmp0_0_0]], i32 noundef 10, i32 noundef 2, i32 noundef 120, i32 noundef 102, ptr noundef @[[BufA]])
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfE19__createFromBindingEjjijPKc(ptr {{.*}} sret(%"class.hlsl::RWBuffer") align 4 %[[Ptr_Tmp0_0_0]],
+// CHECK-SAME: i32 noundef 10, i32 noundef 2, i32 noundef 120, i32 noundef 102, ptr noundef @[[BufA]])
 // CHECK-NEXT: %[[Ptr_Tmp0_0_1:.*]] = getelementptr [3 x [2 x %"class.hlsl::RWBuffer"]], ptr %tmp, i32 0, i32 0, i32 1
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1EjjijPKc(ptr {{.*}} %[[Ptr_Tmp0_0_1]], i32 noundef 10, i32 noundef 2, i32 noundef 120, i32 noundef 103, ptr noundef @[[BufA]])
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfE19__createFromBindingEjjijPKc(ptr {{.*}} sret(%"class.hlsl::RWBuffer") align 4 %[[Ptr_Tmp0_0_1]],
+// CHECK-SAME: i32 noundef 10, i32 noundef 2, i32 noundef 120, i32 noundef 103, ptr noundef @[[BufA]])
 // CHECK-NEXT: %[[Ptr_Tmp0_1_0:.*]] = getelementptr [3 x [2 x %"class.hlsl::RWBuffer"]], ptr %tmp, i32 0, i32 1, i32 0
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1EjjijPKc(ptr {{.*}} %[[Ptr_Tmp0_1_0]], i32 noundef 10, i32 noundef 2, i32 noundef 120, i32 noundef 104, ptr noundef @[[BufA]])
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfE19__createFromBindingEjjijPKc(ptr {{.*}} sret(%"class.hlsl::RWBuffer") align 4 %[[Ptr_Tmp0_1_0]],
+// CHECK-SAME: i32 noundef 10, i32 noundef 2, i32 noundef 120, i32 noundef 104, ptr noundef @[[BufA]])
 // CHECK-NEXT: %[[Ptr_Tmp0_1_1:.*]] = getelementptr [3 x [2 x %"class.hlsl::RWBuffer"]], ptr %tmp, i32 0, i32 1, i32 1
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1EjjijPKc(ptr {{.*}} %[[Ptr_Tmp0_1_1]], i32 noundef 10, i32 noundef 2, i32 noundef 120, i32 noundef 105, ptr noundef @[[BufA]])
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfE19__createFromBindingEjjijPKc(ptr {{.*}} sret(%"class.hlsl::RWBuffer") align 4 %[[Ptr_Tmp0_1_1]],
+// CHECK-SAME: i32 noundef 10, i32 noundef 2, i32 noundef 120, i32 noundef 105, ptr noundef @[[BufA]])
 // CHECK-NEXT: %[[Ptr_Tmp0_2_0:.*]] = getelementptr [3 x [2 x %"class.hlsl::RWBuffer"]], ptr %tmp, i32 0, i32 2, i32 0
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1EjjijPKc(ptr {{.*}} %[[Ptr_Tmp0_2_0]], i32 noundef 10, i32 noundef 2, i32 noundef 120, i32 noundef 106, ptr noundef @[[BufA]])
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfE19__createFromBindingEjjijPKc(ptr {{.*}} sret(%"class.hlsl::RWBuffer") align 4 %[[Ptr_Tmp0_2_0]],
+// CHECK-SAME: i32 noundef 10, i32 noundef 2, i32 noundef 120, i32 noundef 106, ptr noundef @[[BufA]])
 // CHECK-NEXT: %[[Ptr_Tmp0_2_1:.*]] = getelementptr [3 x [2 x %"class.hlsl::RWBuffer"]], ptr %tmp, i32 0, i32 2, i32 1
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1EjjijPKc(ptr {{.*}} %[[Ptr_Tmp0_2_1]], i32 noundef 10, i32 noundef 2, i32 noundef 120, i32 noundef 107, ptr noundef @[[BufA]])
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfE19__createFromBindingEjjijPKc(ptr {{.*}} sret(%"class.hlsl::RWBuffer") align 4 %[[Ptr_Tmp0_2_1]],
+// CHECK-SAME: i32 noundef 10, i32 noundef 2, i32 noundef 120, i32 noundef 107, ptr noundef @[[BufA]])
 // After this Tmp0 values are copied to %Sub using the standard array loop initializaion
 // (generated from ArrayInitLoopExpr AST node)
   RWBuffer<float> Sub[3][2] = A[4][1];
@@ -62,8 +63,8 @@ void main(uint GI : SV_GroupThreadID) {
   float a = Sub[2][1][0];
 
 // Codegen for "foo(A[2][GI])" - create local array [[Tmp2]] of size 3 x 2 and initialize
-// each element by a call to the resource constructor with dynamic index, and then
-// copy-in the array as an argument of "foo"
+// each element by a call to the RWBuffer<float>::__createFromBinding with dynamic index,
+// and then copy-in the array as an argument of "foo"
 
 // Calculate the resource index for A[2][GI][0][0] (index in the resource array as if it was flattened)
 // The index is 2 * (4 * 3 * 2) + GI * (3 * 2) = 48 + GI * 6
@@ -73,32 +74,38 @@ void main(uint GI : SV_GroupThreadID) {
 
 // A[2][GI][0][0]
 // CHECK-NEXT: %[[Ptr_Tmp2_0_0:.*]] = getelementptr [3 x [2 x %"class.hlsl::RWBuffer"]], ptr %[[Tmp2]], i32 0, i32 0, i32 0
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1EjjijPKc(ptr {{.*}} %[[Ptr_Tmp2_0_0]], i32 noundef 10, i32 noundef 2, i32 noundef 120, i32 noundef %[[Index_A_2_GI_0_0]], ptr noundef @[[BufA]])
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfE19__createFromBindingEjjijPKc(ptr {{.*}} sret(%"class.hlsl::RWBuffer") align 4 %[[Ptr_Tmp2_0_0]],
+// CHECK-SAME: i32 noundef 10, i32 noundef 2, i32 noundef 120, i32 noundef %[[Index_A_2_GI_0_0]], ptr noundef @[[BufA]])
 
 // A[2][GI][0][1]
 // CHECK-NEXT: %[[Index_A_2_GI_0_1:.*]] = add i32 %[[Index_A_2_GI_0_0]], 1
 // CHECK-NEXT: %[[Ptr_Tmp2_0_1:.*]] = getelementptr [3 x [2 x %"class.hlsl::RWBuffer"]], ptr %[[Tmp2]], i32 0, i32 0, i32 1
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1EjjijPKc(ptr {{.*}} %[[Ptr_Tmp2_0_1]], i32 noundef 10, i32 noundef 2, i32 noundef 120, i32 noundef %[[Index_A_2_GI_0_1]], ptr noundef @[[BufA]])
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfE19__createFromBindingEjjijPKc(ptr {{.*}} sret(%"class.hlsl::RWBuffer") align 4 %[[Ptr_Tmp2_0_1]],
+// CHECK-SAME: i32 noundef 10, i32 noundef 2, i32 noundef 120, i32 noundef %[[Index_A_2_GI_0_1]], ptr noundef @[[BufA]])
 
 // A[2][GI][1][0]
 // CHECK-NEXT: %[[Index_A_2_GI_1_0:.*]] = add i32 %[[Index_A_2_GI_0_1]], 1
 // CHECK-NEXT: %[[Ptr_Tmp2_1_0:.*]] = getelementptr [3 x [2 x %"class.hlsl::RWBuffer"]], ptr %[[Tmp2]], i32 0, i32 1, i32 0
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1EjjijPKc(ptr {{.*}} %[[Ptr_Tmp2_1_0]], i32 noundef 10, i32 noundef 2, i32 noundef 120, i32 noundef %[[Index_A_2_GI_1_0]], ptr noundef @[[BufA]])
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfE19__createFromBindingEjjijPKc(ptr {{.*}} sret(%"class.hlsl::RWBuffer") align 4 %[[Ptr_Tmp2_1_0]],
+// CHECK-SAME: i32 noundef 10, i32 noundef 2, i32 noundef 120, i32 noundef %[[Index_A_2_GI_1_0]], ptr noundef @[[BufA]])
 
 // A[2][GI][1][1]
 // CHECK-NEXT: %[[Index_A_2_GI_1_1:.*]] = add i32 %[[Index_A_2_GI_1_0]], 1
 // CHECK-NEXT: %[[Ptr_Tmp2_1_1:.*]] = getelementptr [3 x [2 x %"class.hlsl::RWBuffer"]], ptr %[[Tmp2]], i32 0, i32 1, i32 1
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1EjjijPKc(ptr {{.*}} %[[Ptr_Tmp2_1_1]], i32 noundef 10, i32 noundef 2, i32 noundef 120, i32 noundef %[[Index_A_2_GI_1_1]], ptr noundef @[[BufA]])
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfE19__createFromBindingEjjijPKc(ptr {{.*}} sret(%"class.hlsl::RWBuffer") align 4 %[[Ptr_Tmp2_1_1]],
+// CHECK-SAME: i32 noundef 10, i32 noundef 2, i32 noundef 120, i32 noundef %[[Index_A_2_GI_1_1]], ptr noundef @[[BufA]])
 
 // A[2][GI][2][0]
 // CHECK-NEXT: %[[Index_A_2_GI_2_0:.*]] = add i32 %[[Index_A_2_GI_1_1]], 1
 // CHECK-NEXT: %[[Ptr_Tmp2_2_0:.*]] = getelementptr [3 x [2 x %"class.hlsl::RWBuffer"]], ptr %[[Tmp2]], i32 0, i32 2, i32 0
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1EjjijPKc(ptr {{.*}} %[[Ptr_Tmp2_2_0]], i32 noundef 10, i32 noundef 2, i32 noundef 120, i32 noundef %[[Index_A_2_GI_2_0]], ptr noundef @[[BufA]])
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfE19__createFromBindingEjjijPKc(ptr {{.*}} sret(%"class.hlsl::RWBuffer") align 4 %[[Ptr_Tmp2_2_0]],
+// CHECK-SAME: i32 noundef 10, i32 noundef 2, i32 noundef 120, i32 noundef %[[Index_A_2_GI_2_0]], ptr noundef @[[BufA]])
 
 // A[2][GI][2][1]
 // CHECK-NEXT: %[[Index_A_2_GI_2_1:.*]] = add i32 %[[Index_A_2_GI_2_0]], 1
 // CHECK-NEXT: %[[Ptr_Tmp2_2_1:.*]] = getelementptr [3 x [2 x %"class.hlsl::RWBuffer"]], ptr %[[Tmp2]], i32 0, i32 2, i32 1
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1EjjijPKc(ptr {{.*}} %[[Ptr_Tmp2_2_1]], i32 noundef 10, i32 noundef 2, i32 noundef 120, i32 noundef %[[Index_A_2_GI_2_1]], ptr noundef @[[BufA]])
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfE19__createFromBindingEjjijPKc(ptr {{.*}} sret(%"class.hlsl::RWBuffer") align 4 %[[Ptr_Tmp2_2_1]],
+// CHECK-SAME: i32 noundef 10, i32 noundef 2, i32 noundef 120, i32 noundef %[[Index_A_2_GI_2_1]], ptr noundef @[[BufA]])
 
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %[[Tmp1]], ptr align 4 %[[Tmp2]], i32 24, i1 false)
 // CHECK-NEXT: %[[FooReturned:.*]] = call {{.*}} float @_Z3fooA3_A2_N4hlsl8RWBufferIfEE(ptr noundef byval([3 x [2 x %"class.hlsl::RWBuffer"]]) align 4 %[[Tmp1]])

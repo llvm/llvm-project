@@ -10,11 +10,6 @@ float foo(RWBuffer<float> Arr[2]) {
   return Arr[1][0];
 }
 
-// NOTE:
-// - _ZN4hlsl8RWBufferIfEC1EjjijPKc is the constructor call for explicit binding
-//    (has "jjij" in the mangled name) and the arguments are (register, space, range_size, index, name).
-// - _ZN4hlsl8RWBufferIfEixEj is the subscript operator for RWBuffer<float>
-
 // CHECK: define internal void @_Z4mainj(i32 noundef %GI)
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %[[GI_alloca:.*]] = alloca i32, align 4
@@ -28,11 +23,13 @@ float foo(RWBuffer<float> Arr[2]) {
 [numthreads(4,1,1)]
 void main(uint GI : SV_GroupThreadID) {
 // Codegen for "A[2]" - create local array [[Tmp0]] of size 2 and initialize
-// each element by a call to the resource constructor
+// each element by a call to RWBuffer<float>::__createFromBinding method
 // CHECK-NEXT: %[[Ptr_Tmp0_0:.*]] = getelementptr [2 x %"class.hlsl::RWBuffer"], ptr %[[Tmp0]], i32 0, i32 0
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1EjjijPKc(ptr {{.*}} %[[Ptr_Tmp0_0]], i32 noundef 10, i32 noundef 2, i32 noundef 8, i32 noundef 6, ptr noundef @[[BufA]])
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfE19__createFromBindingEjjijPKc(ptr {{.*}} sret(%"class.hlsl::RWBuffer") align 4 %[[Ptr_Tmp0_0]],
+// CHECK-SAME: i32 noundef 10, i32 noundef 2, i32 noundef 8, i32 noundef 6, ptr noundef @[[BufA]])
 // CHECK-NEXT: %[[Ptr_Tmp0_1:.*]] = getelementptr [2 x %"class.hlsl::RWBuffer"], ptr %[[Tmp0]], i32 0, i32 1
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1EjjijPKc(ptr {{.*}} %[[Ptr_Tmp0_1]], i32 noundef 10, i32 noundef 2, i32 noundef 8, i32 noundef 7, ptr noundef @[[BufA]])
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfE19__createFromBindingEjjijPKc(ptr {{.*}} sret(%"class.hlsl::RWBuffer") align 4 %[[Ptr_Tmp0_1]],
+// CHECK-SAME: i32 noundef 10, i32 noundef 2, i32 noundef 8, i32 noundef 7, ptr noundef @[[BufA]])
 // After this Tmp0 values are copied to %Sub using the standard array loop initializaion
 // (generated from ArrayInitLoopExpr AST node)
   RWBuffer<float> Sub[2] = A[3];
@@ -44,15 +41,17 @@ void main(uint GI : SV_GroupThreadID) {
   float a = Sub[1][0];
 
 // Codegen for "foo(A[GI])" - create local array [[Tmp2]] of size 2 and initialize
-// each element by a call to the resource constructor with dynamic index, and then
-// copy-in the array as an argument of "foo"
+// each element by a call to the RWBuffer<float>::__createFromBinding method 
+// with dynamic index, and then copy-in the array as an argument of "foo"
 // CHECK: %[[GI:.*]] = load i32, ptr %[[GI_alloca]], align 4
 // CHECK-NEXT: %[[Index_A_GI_0:.*]] = mul i32 %[[GI]], 2
 // CHECK-NEXT: %[[Ptr_Tmp2_GI_0:.*]] = getelementptr [2 x %"class.hlsl::RWBuffer"], ptr %[[Tmp2]], i32 0, i32 0
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1EjjijPKc(ptr {{.*}} %[[Ptr_Tmp2_GI_0]], i32 noundef 10, i32 noundef 2, i32 noundef 8, i32 noundef %[[Index_A_GI_0]], ptr noundef @[[BufA]])
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfE19__createFromBindingEjjijPKc(ptr {{.*}} sret(%"class.hlsl::RWBuffer") align 4 %[[Ptr_Tmp2_GI_0]],
+// CHECK-SAME: i32 noundef 10, i32 noundef 2, i32 noundef 8, i32 noundef %[[Index_A_GI_0]], ptr noundef @[[BufA]])
 // CHECK-NEXT: %[[Index_A_GI_1:.*]] = add i32 %[[Index_A_GI_0]], 1
 // CHECK-NEXT: %[[Ptr_Tmp2_GI_1:.*]] = getelementptr [2 x %"class.hlsl::RWBuffer"], ptr %[[Tmp2]], i32 0, i32 1
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1EjjijPKc(ptr {{.*}} %[[Ptr_Tmp2_GI_1]], i32 noundef 10, i32 noundef 2, i32 noundef 8, i32 noundef %[[Index_A_GI_1]], ptr noundef @[[BufA]])
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfE19__createFromBindingEjjijPKc(ptr {{.*}} sret(%"class.hlsl::RWBuffer") align 4 %[[Ptr_Tmp2_GI_1]],
+// CHECK-SAME: i32 noundef 10, i32 noundef 2, i32 noundef 8, i32 noundef %[[Index_A_GI_1]], ptr noundef @[[BufA]])
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %[[Tmp1]], ptr align 4 %[[Tmp2]], i32 8, i1 false)
 // CHECK-NEXT: %[[FooReturned:.*]] = call {{.*}} float @_Z3fooA2_N4hlsl8RWBufferIfEE(ptr noundef byval([2 x %"class.hlsl::RWBuffer"]) align 4 %[[Tmp1]])
 // CHECK-NEXT: store float %[[FooReturned]], ptr %b, align 4

@@ -6,10 +6,8 @@
 RWBuffer<float> A[4][3] : register(u2);
 RWStructuredBuffer<float> Out;
 
-// Make sure A[GI.x][GI.y] is translated to a RWBuffer<float> constructor call with range 12 and dynamically calculated index
-
-// NOTE:
-// Constructor call for explicit binding has "jjij" in the mangled name and the arguments are (register, space, range_size, index, name).
+// Make sure A[GI.x][GI.y] is translated to a RWBuffer<float>::__createFromBinding call
+// with range 12 and dynamically calculated index
 
 // CHECK: define internal void @_Z4mainDv3_j(<3 x i32> noundef %GI)
 // CHECK: %[[GI_alloca:.*]] = alloca <3 x i32>, align 16
@@ -22,7 +20,8 @@ RWStructuredBuffer<float> Out;
 // CHECK: %[[GI_x:.*]] = extractelement <3 x i32> %[[GI]], i32 0
 // CHECK: %[[Tmp1:.*]] = mul i32 %[[GI_x]], 3
 // CHECK: %[[Index:.*]] = add i32 %[[GI_y]], %[[Tmp1]]
-// CHECK: call void @_ZN4hlsl8RWBufferIfEC1EjjijPKc(ptr {{.*}} %[[Tmp0]], i32 noundef 2, i32 noundef 0, i32 noundef 12, i32 noundef %[[Index]], ptr noundef @A.str)
+// CHECK: call void @_ZN4hlsl8RWBufferIfE19__createFromBindingEjjijPKc(ptr {{.*}} sret(%"class.hlsl::RWBuffer") align 4 %[[Tmp0]],
+// CHECK-SAME: i32 noundef 2, i32 noundef 0, i32 noundef 12, i32 noundef %[[Index]], ptr noundef @A.str)
 [numthreads(4,1,1)]
 void main(uint3 GI : SV_GroupThreadID) {
   Out[0] = A[GI.x][GI.y][0];
