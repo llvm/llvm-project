@@ -4030,10 +4030,12 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
     LastField = nullptr;
     if (ObjType->isArrayType()) {
       // Next subobject is an array element.
-      const ConstantArrayType *CAT = Info.Ctx.getAsConstantArrayType(ObjType);
-      assert(CAT && "vla in literal type?");
+      const ArrayType *AT = Info.Ctx.getAsArrayType(ObjType);
+      assert((isa<ConstantArrayType>(AT) || isa<IncompleteArrayType>(AT)) &&
+             "vla in literal type?");
       uint64_t Index = Sub.Entries[I].getAsArrayIndex();
-      if (CAT->getSize().ule(Index)) {
+      if (const auto *CAT = dyn_cast<ConstantArrayType>(AT);
+          CAT && CAT->getSize().ule(Index)) {
         // Note, it should not be possible to form a pointer with a valid
         // designator which points more than one past the end of the array.
         if (Info.getLangOpts().CPlusPlus11)
@@ -4044,12 +4046,13 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
         return handler.failed();
       }
 
-      ObjType = CAT->getElementType();
+      ObjType = AT->getElementType();
 
       if (O->getArrayInitializedElts() > Index)
         O = &O->getArrayInitializedElt(Index);
       else if (!isRead(handler.AccessKind)) {
-        if (!CheckArraySize(Info, CAT, E->getExprLoc()))
+        if (const auto *CAT = dyn_cast<ConstantArrayType>(AT);
+            CAT && !CheckArraySize(Info, CAT, E->getExprLoc()))
           return handler.failed();
 
         expandArray(*O, Index);
@@ -12105,6 +12108,40 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     }
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
+
+  case Builtin::BI__builtin_elementwise_fshl:
+  case Builtin::BI__builtin_elementwise_fshr: {
+    APValue SourceHi, SourceLo, SourceShift;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceHi) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceLo) ||
+        !EvaluateAsRValue(Info, E->getArg(2), SourceShift))
+      return false;
+
+    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+    if (!DestEltTy->isIntegerType())
+      return false;
+
+    unsigned SourceLen = SourceHi.getVectorLength();
+    SmallVector<APValue> ResultElements;
+    ResultElements.reserve(SourceLen);
+    for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
+      const APSInt &Hi = SourceHi.getVectorElt(EltNum).getInt();
+      const APSInt &Lo = SourceLo.getVectorElt(EltNum).getInt();
+      const APSInt &Shift = SourceShift.getVectorElt(EltNum).getInt();
+      switch (E->getBuiltinCallee()) {
+      case Builtin::BI__builtin_elementwise_fshl:
+        ResultElements.push_back(APValue(
+            APSInt(llvm::APIntOps::fshl(Hi, Lo, Shift), Hi.isUnsigned())));
+        break;
+      case Builtin::BI__builtin_elementwise_fshr:
+        ResultElements.push_back(APValue(
+            APSInt(llvm::APIntOps::fshr(Hi, Lo, Shift), Hi.isUnsigned())));
+        break;
+      }
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
   }
 }
 
@@ -14057,6 +14094,25 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
     APInt Result = std::min(LHS, RHS);
     return Success(APSInt(Result, !LHS.isSigned()), E);
+  }
+  case Builtin::BI__builtin_elementwise_fshl:
+  case Builtin::BI__builtin_elementwise_fshr: {
+    APSInt Hi, Lo, Shift;
+    if (!EvaluateInteger(E->getArg(0), Hi, Info) ||
+        !EvaluateInteger(E->getArg(1), Lo, Info) ||
+        !EvaluateInteger(E->getArg(2), Shift, Info))
+      return false;
+
+    switch (BuiltinOp) {
+    case Builtin::BI__builtin_elementwise_fshl: {
+      APSInt Result(llvm::APIntOps::fshl(Hi, Lo, Shift), Hi.isUnsigned());
+      return Success(Result, E);
+    }
+    case Builtin::BI__builtin_elementwise_fshr: {
+      APSInt Result(llvm::APIntOps::fshr(Hi, Lo, Shift), Hi.isUnsigned());
+      return Success(Result, E);
+    }
+    }
   }
   case Builtin::BIstrlen:
   case Builtin::BIwcslen:

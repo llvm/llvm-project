@@ -843,6 +843,18 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     }
   }
 
+  // Validate buffer instruction offsets for GFX12+ - must not be a negative.
+  if (isGFX12Plus() && isBufferInstruction(MI)) {
+    int OffsetIdx =
+        AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::offset);
+    if (OffsetIdx != -1) {
+      uint32_t Imm = MI.getOperand(OffsetIdx).getImm();
+      int64_t SignedOffset = SignExtend64<24>(Imm);
+      if (SignedOffset < 0)
+        return MCDisassembler::Fail;
+    }
+  }
+
   if (MCII->get(MI.getOpcode()).TSFlags &
       (SIInstrFlags::MTBUF | SIInstrFlags::MUBUF)) {
     int SWZOpIdx =
@@ -1223,6 +1235,26 @@ void AMDGPUDisassembler::convertVOP3DPPInst(MCInst &MI) const {
   }
 }
 
+// Given a wide tuple \p Reg check if it will overflow 256 registers.
+// \returns \p Reg on success or NoRegister otherwise.
+static unsigned CheckVGPROverflow(unsigned Reg, const MCRegisterClass &RC,
+                                  const MCRegisterInfo &MRI) {
+  unsigned NumRegs = RC.getSizeInBits() / 32;
+  MCRegister Sub0 = MRI.getSubReg(Reg, AMDGPU::sub0);
+  if (!Sub0)
+    return Reg;
+
+  MCRegister BaseReg;
+  if (MRI.getRegClass(AMDGPU::VGPR_32RegClassID).contains(Sub0))
+    BaseReg = AMDGPU::VGPR0;
+  else if (MRI.getRegClass(AMDGPU::AGPR_32RegClassID).contains(Sub0))
+    BaseReg = AMDGPU::AGPR0;
+
+  assert(BaseReg && "Only vector registers expected");
+
+  return (Sub0 - BaseReg + NumRegs <= 256) ? Reg : AMDGPU::NoRegister;
+}
+
 // Note that before gfx10, the MIMG encoding provided no information about
 // VADDR size. Consequently, decoded instructions always show address as if it
 // has 1 dword, which could be not really so.
@@ -1327,8 +1359,9 @@ void AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
     MCRegister VdataSub0 = MRI.getSubReg(Vdata0, AMDGPU::sub0);
     Vdata0 = (VdataSub0 != 0)? VdataSub0 : Vdata0;
 
-    NewVdata = MRI.getMatchingSuperReg(Vdata0, AMDGPU::sub0,
-                                       &MRI.getRegClass(DataRCID));
+    const MCRegisterClass &NewRC = MRI.getRegClass(DataRCID);
+    NewVdata = MRI.getMatchingSuperReg(Vdata0, AMDGPU::sub0, &NewRC);
+    NewVdata = CheckVGPROverflow(NewVdata, NewRC, MRI);
     if (!NewVdata) {
       // It's possible to encode this such that the low register + enabled
       // components exceeds the register count.
@@ -1347,8 +1380,9 @@ void AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
     VAddrSA = VAddrSubSA ? VAddrSubSA : VAddrSA;
 
     auto AddrRCID = MCII->get(NewOpcode).operands()[VAddrSAIdx].RegClass;
-    NewVAddrSA = MRI.getMatchingSuperReg(VAddrSA, AMDGPU::sub0,
-                                        &MRI.getRegClass(AddrRCID));
+    const MCRegisterClass &NewRC = MRI.getRegClass(AddrRCID);
+    NewVAddrSA = MRI.getMatchingSuperReg(VAddrSA, AMDGPU::sub0, &NewRC);
+    NewVAddrSA = CheckVGPROverflow(NewVAddrSA, NewRC, MRI);
     if (!NewVAddrSA)
       return;
   }
@@ -2748,6 +2782,20 @@ const MCExpr *AMDGPUDisassembler::createConstantSymbolExpr(StringRef Id,
       Ctx.reportWarning(SMLoc(), "unsupported redefinition of " + Id);
   }
   return MCSymbolRefExpr::create(Sym, Ctx);
+}
+
+bool AMDGPUDisassembler::isBufferInstruction(const MCInst &MI) const {
+  const uint64_t TSFlags = MCII->get(MI.getOpcode()).TSFlags;
+
+  // Check for MUBUF and MTBUF instructions
+  if (TSFlags & (SIInstrFlags::MTBUF | SIInstrFlags::MUBUF))
+    return true;
+
+  // Check for SMEM buffer instructions (S_BUFFER_* instructions)
+  if ((TSFlags & SIInstrFlags::SMRD) && AMDGPU::getSMEMIsBuffer(MI.getOpcode()))
+    return true;
+
+  return false;
 }
 
 //===----------------------------------------------------------------------===//

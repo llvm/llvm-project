@@ -575,6 +575,9 @@ private:
 
   bool shouldExpandBuildVectorWithShuffles(EVT, unsigned) const override;
 
+  SDValue lowerEHPadEntry(SDValue Chain, SDLoc const &DL,
+                          SelectionDAG &DAG) const override;
+
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
                                bool isVarArg,
                                const SmallVectorImpl<ISD::InputArg> &Ins,
@@ -868,6 +871,12 @@ private:
                                          KnownBits &Known,
                                          TargetLoweringOpt &TLO,
                                          unsigned Depth) const override;
+
+  bool canCreateUndefOrPoisonForTargetNode(SDValue Op,
+                                           const APInt &DemandedElts,
+                                           const SelectionDAG &DAG,
+                                           bool PoisonOnly, bool ConsiderFlags,
+                                           unsigned Depth) const override;
 
   bool isTargetCanonicalConstantNode(SDValue Op) const override;
 

@@ -5251,6 +5251,16 @@ libc_function(
     ],
 )
 
+libc_function(
+    name = "strtok_r",
+    srcs = ["src/string/strtok_r.cpp"],
+    hdrs = ["src/string/strtok_r.h"],
+    deps = [
+        ":__support_common",
+        ":string_utils",
+    ],
+)
+
 ################################ fcntl targets #################################
 
 libc_function(
