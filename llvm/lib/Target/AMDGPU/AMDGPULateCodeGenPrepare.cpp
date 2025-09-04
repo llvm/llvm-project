@@ -127,7 +127,7 @@ public:
   }
 
   bool isOpLegal(Instruction *I) {
-    if (auto *Intr = dyn_cast<IntrinsicInst>(I))
+    if (dyn_cast<IntrinsicInst>(I))
       return true; // FIXME: narrow to known native intrinsics
                    // (DOT/MFMA/tbuffer) or use TTI cost.
 
@@ -141,7 +141,7 @@ public:
         // Treat small-int vector binops as profitable when SDWA is available.
         // We explicitly gate to 8/16-bit to avoid i1 vectors and keep behavior
         // tight.
-        if ((Elt->isIntegerTy(8) || (Elt->isIntegerTy(16)) && ST.hasSDWA())) {
+        if (Elt->isIntegerTy(8) || (Elt->isIntegerTy(16) && ST.hasSDWA())) {
           switch (BO->getOpcode()) {
           case Instruction::Add:
           case Instruction::Sub:
