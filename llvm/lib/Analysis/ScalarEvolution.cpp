@@ -3775,6 +3775,31 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
   if (NW.hasNoUnsignedWrap())
     OffsetWrap = setFlags(OffsetWrap, SCEV::FlagNUW);
 
+  // Inherit flags from index expressions when GEP has no explicit flags.
+  if (OffsetWrap == SCEV::FlagAnyWrap) {
+    // Check if all index expressions have compatible no-wrap flags
+    bool AllHaveNSW = true, AllHaveNUW = true;
+    for (const SCEV *IndexExpr : IndexExprs) {
+      if (auto *AR = dyn_cast<SCEVAddRecExpr>(IndexExpr)) {
+        if (!AR->hasNoSignedWrap())
+          AllHaveNSW = false;
+        if (!AR->hasNoUnsignedWrap())
+          AllHaveNUW = false;
+      } else {
+        // Be conservative for non-AddRec expressions.
+        AllHaveNSW = false;
+        AllHaveNUW = false;
+        break;
+      }
+    }
+    // Inherit NSW if all have NSW.
+    if (AllHaveNSW)
+      OffsetWrap = setFlags(OffsetWrap, SCEV::FlagNSW);
+    // Inherit NUW if all have NUW.
+    if (AllHaveNUW)
+      OffsetWrap = setFlags(OffsetWrap, SCEV::FlagNUW);
+  }
+
   Type *CurTy = GEP->getType();
   bool FirstIter = true;
   SmallVector<const SCEV *, 4> Offsets;

@@ -13,19 +13,19 @@ define void @test1(ptr %p) nounwind {
 ; CHECK-NEXT:    %tmp2 = sext i32 %i.01 to i64
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%bb> U: [0,-9223372036854775808) S: [0,-9223372036854775808) Exits: <<Unknown>> LoopDispositions: { %bb: Computable }
 ; CHECK-NEXT:    %tmp3 = getelementptr double, ptr %p, i64 %tmp2
-; CHECK-NEXT:    --> {%p,+,8}<%bb> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb: Computable }
+; CHECK-NEXT:    --> {%p,+,8}<nw><%bb> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb: Computable }
 ; CHECK-NEXT:    %tmp6 = sext i32 %i.01 to i64
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%bb> U: [0,-9223372036854775808) S: [0,-9223372036854775808) Exits: <<Unknown>> LoopDispositions: { %bb: Computable }
 ; CHECK-NEXT:    %tmp7 = getelementptr double, ptr %p, i64 %tmp6
-; CHECK-NEXT:    --> {%p,+,8}<%bb> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb: Computable }
+; CHECK-NEXT:    --> {%p,+,8}<nw><%bb> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb: Computable }
 ; CHECK-NEXT:    %tmp8 = add nsw i32 %i.01, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%bb> U: [1,-2147483648) S: [1,-2147483648) Exits: <<Unknown>> LoopDispositions: { %bb: Computable }
 ; CHECK-NEXT:    %p.gep = getelementptr double, ptr %p, i32 %tmp8
-; CHECK-NEXT:    --> {(8 + %p),+,8}<%bb> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb: Computable }
+; CHECK-NEXT:    --> {(8 + %p),+,8}<nw><%bb> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb: Computable }
 ; CHECK-NEXT:    %phitmp = sext i32 %tmp8 to i64
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%bb> U: [1,-9223372036854775808) S: [1,-9223372036854775808) Exits: <<Unknown>> LoopDispositions: { %bb: Computable }
 ; CHECK-NEXT:    %tmp9 = getelementptr inbounds double, ptr %p, i64 %phitmp
-; CHECK-NEXT:    --> {(8 + %p),+,8}<%bb> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb: Computable }
+; CHECK-NEXT:    --> {(8 + %p),+,8}<nw><%bb> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test1
 ; CHECK-NEXT:  Loop %bb: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %bb: Unpredictable constant max backedge-taken count.
