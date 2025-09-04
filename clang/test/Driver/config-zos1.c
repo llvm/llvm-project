@@ -1,3 +1,4 @@
+// UNSUPPORTED: system-windows
 // REQUIRES: systemz-registered-target
 
 // RUN: export CLANG_CONFIG_PATH=%S/Inputs/config-zos
