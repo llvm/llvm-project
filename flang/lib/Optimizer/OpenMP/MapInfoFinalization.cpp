@@ -317,20 +317,16 @@ public:
   /// and some of the runtime descriptor behaviour at the moment can cause
   /// issues.
   unsigned long getDescriptorMapType(unsigned long mapTypeFlag,
-                                     mlir::Operation *target,
-                                     bool IsHasDeviceAddr) {
+                                     mlir::Operation *target) {
     using mapFlags = llvm::omp::OpenMPOffloadMappingFlags;
- 
     if (llvm::isa_and_nonnull<mlir::omp::TargetExitDataOp,
                               mlir::omp::TargetUpdateOp>(target)) {
       mapFlags flags = mapFlags(mapTypeFlag);
-      if (!IsHasDeviceAddr)
-        flags |= mapFlags::OMP_MAP_DESCRIPTOR;
       return llvm::to_underlying(flags);
     }
 
-    mapFlags flags = mapFlags::OMP_MAP_TO |
-            (mapFlags(mapTypeFlag) & mapFlags::OMP_MAP_IMPLICIT);
+    mapFlags flags = mapFlags::OMP_MAP_TO | mapFlags::OMP_MAP_DESCRIPTOR |
+                     (mapFlags(mapTypeFlag) & mapFlags::OMP_MAP_IMPLICIT);
     // Descriptors for objects will always be copied. This is because the
     // descriptor can be rematerialized by the compiler, and so the addres
     // of the descriptor for a given object at one place in the code may
@@ -344,8 +340,6 @@ public:
               mapFlags::OMP_MAP_CLOSE)
                  ? mapFlags::OMP_MAP_CLOSE
                  : mapFlags::OMP_MAP_ALWAYS;
-    if (!IsHasDeviceAddr)
-      flags |= mapFlags::OMP_MAP_DESCRIPTOR;
     return llvm::to_underlying(flags);
   }
 
@@ -517,9 +511,8 @@ public:
     mlir::omp::MapInfoOp newDescParentMapOp = mlir::omp::MapInfoOp::create(
         builder, op->getLoc(), op.getResult().getType(), descriptor,
         mlir::TypeAttr::get(fir::unwrapRefType(descriptor.getType())),
-        builder.getIntegerAttr(
-            builder.getIntegerType(64, false),
-            getDescriptorMapType(op.getMapType(), target, IsHasDeviceAddr)),
+        builder.getIntegerAttr(builder.getIntegerType(64, false),
+                               getDescriptorMapType(op.getMapType(), target)),
         op.getMapCaptureTypeAttr(), /*varPtrPtr=*/mlir::Value{}, newMembers,
         newMembersAttr, /*bounds=*/mlir::SmallVector<mlir::Value>{},
         /*mapperId*/ mlir::FlatSymbolRefAttr(), op.getNameAttr(),
