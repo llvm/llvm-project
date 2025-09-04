@@ -1367,7 +1367,7 @@ static ParseResult parseCallTypeAndResolveOperands(
   if (parser.resolveOperands(operands, types, parser.getNameLoc(),
                              result.operands))
     return failure();
-  if (resTypes.size() != 0)
+  if (!resTypes.empty())
     result.addTypes(resTypes);
 
   return success();
