@@ -356,7 +356,7 @@ static bool isLikelyToHaveSVEStack(const MachineFunction &MF) {
 }
 
 static bool isTargetWindows(const MachineFunction &MF) {
-  return MF.getSubtarget<AArch64Subtarget>().isTargetWindows();
+  return MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
 }
 
 // Windows unwind can't represent the required stack adjustments if we have
