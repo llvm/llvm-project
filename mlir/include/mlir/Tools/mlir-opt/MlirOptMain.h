@@ -38,6 +38,12 @@ enum class VerbosityLevel {
   ErrorsWarningsAndRemarks
 };
 
+using RemarkFormat = enum {
+  REMARK_FORMAT_STDOUT,
+  REMARK_FORMAT_YAML,
+  REMARK_FORMAT_BITSTREAM,
+};
+
 /// Configuration options for the mlir-opt tool.
 /// This is intended to help building tools like mlir-opt by collecting the
 /// supported options.
@@ -221,8 +227,24 @@ public:
   }
   bool shouldVerifyRoundtrip() const { return verifyRoundtripFlag; }
 
+  /// Checks if any remark filters are set.
+  bool shouldEmitRemarks() const {
+    // Emit all remarks only when no filters are specified.
+    const bool hasFilters =
+        !remarksPassedFlag.empty() || !remarksFailedFlag.empty() ||
+        !remarksMissedFlag.empty() || !remarksAnalyseFlag.empty();
+    return hasFilters;
+  }
+
   /// Reproducer file generation (no crash required).
   StringRef getReproducerFilename() const { return generateReproducerFileFlag; }
+
+  /// Remark options
+  RemarkFormat remarkFormatFlag;
+  std::string remarksPassedFlag = "";
+  std::string remarksFailedFlag = "";
+  std::string remarksMissedFlag = "";
+  std::string remarksAnalyseFlag = "";
 
 protected:
   /// Allow operation with no registered dialects.
