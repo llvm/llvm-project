@@ -2059,7 +2059,7 @@ unsigned GISelValueTracking::computeNumSignBitsImpl(Register R,
   // Finally, if we can prove that the top bits of the result are 0's or 1's,
   // use this information.
   KnownBits Known;
-  computeKnownBitsImpl(R, Known, DemandedElts, Depth + 1);
+  computeKnownBitsImpl(R, Known, DemandedElts, Depth);
   APInt Mask;
   if (Known.isNonNegative()) { // sign bit is 0
     Mask = Known.Zero;
