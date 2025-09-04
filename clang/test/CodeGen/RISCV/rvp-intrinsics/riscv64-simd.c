@@ -255,3 +255,57 @@ uint64_t psrl_hs(uint64_t rs1, uint64_t rs2) {
 uint64_t psrl_ws(uint64_t rs1, uint64_t rs2) {
   return __riscv_psrl_ws(rs1, rs2);
 }
+
+// RV64P-LABEL: @predsum_bs(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.predsum.bs.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t predsum_bs(uint64_t rs1, uint64_t rs2) {
+  return __riscv_predsum_bs(rs1, rs2);
+}
+
+// RV64P-LABEL: @predsum_hs(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.predsum.hs.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t predsum_hs(uint64_t rs1, uint64_t rs2) {
+  return __riscv_predsum_hs(rs1, rs2);
+}
+
+// RV64P-LABEL: @predsum_ws(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.predsum.ws.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t predsum_ws(uint64_t rs1, uint64_t rs2) {
+  return __riscv_predsum_ws(rs1, rs2);
+}
+
+// RV64P-LABEL: @predsumu_bs(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.predsumu.bs.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t predsumu_bs(uint64_t rs1, uint64_t rs2) {
+  return __riscv_predsumu_bs(rs1, rs2);
+}
+
+// RV64P-LABEL: @predsumu_hs(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.predsumu.hs.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t predsumu_hs(uint64_t rs1, uint64_t rs2) {
+  return __riscv_predsumu_hs(rs1, rs2);
+}
+
+// RV64P-LABEL: @predsumu_ws(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.predsumu.ws.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t predsumu_ws(uint64_t rs1, uint64_t rs2) {
+  return __riscv_predsumu_ws(rs1, rs2);
+}

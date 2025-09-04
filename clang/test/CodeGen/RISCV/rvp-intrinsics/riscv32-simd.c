@@ -167,6 +167,42 @@ uint32_t psrl_hs(uint32_t rs1, uint32_t rs2) {
   return __riscv_psrl_hs(rs1, rs2);
 }
 
+// RV32P-LABEL: @predsum_bs(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.predsum.bs.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t predsum_bs(uint32_t rs1, uint32_t rs2) {
+  return __riscv_predsum_bs(rs1, rs2);
+}
+
+// RV32P-LABEL: @predsum_hs(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.predsum.hs.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t predsum_hs(uint32_t rs1, uint32_t rs2) {
+  return __riscv_predsum_hs(rs1, rs2);
+}
+
+// RV32P-LABEL: @predsumu_bs(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.predsumu.bs.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t predsumu_bs(uint32_t rs1, uint32_t rs2) {
+  return __riscv_predsumu_bs(rs1, rs2);
+}
+
+// RV32P-LABEL: @predsumu_hs(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.predsumu.hs.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t predsumu_hs(uint32_t rs1, uint32_t rs2) {
+  return __riscv_predsumu_hs(rs1, rs2);
+}
+
 // RV32P-LABEL: @sadd(
 // RV32P-NEXT:  entry:
 // RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.sadd.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
