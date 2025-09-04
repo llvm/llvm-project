@@ -42,8 +42,9 @@ def NVVM_Dialect : Dialect {
   models NVVM intrinsics and public ISA functionality and introduces NVIDIA
   extensions to the LLVM type system and address spaces (e.g., global, shared,
   and cluster memory), enabling faithful lowering of GPU kernels to the NVPTX
-  toolchain. Many ops have a one-to-many mapping to NVVM/PTX: a single overloaded op
-  emits one intrinsic, selected by its operand types.
+  toolchain. While a NVVM op maps to a single LLVM IR intrinsics, the NVVM dialect uses type
+  polymorphism and other attributes that make it so that a NVVM op can map to different LLVM 
+  intrinsics.
 
   **Scope and capabilities:** The dialect covers core GPU features such as
   thread/block builtins, barriers and atomics, warp-level collectives (e.g.,
