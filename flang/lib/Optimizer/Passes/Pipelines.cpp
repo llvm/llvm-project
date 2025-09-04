@@ -217,9 +217,6 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
   pm.addPass(fir::createSimplifyFIROperations(
       {/*preferInlineImplementation=*/pc.OptLevel.isOptimizingForSpeed()}));
 
-  if (pc.AliasAnalysis && !disableFirAliasTags && !useOldAliasTags)
-    pm.addPass(fir::createAddAliasTags());
-
   addNestedPassToAllTopLevelOperations<PassConstructor>(
       pm, fir::createStackReclaim);
   // convert control flow to CFG form
@@ -345,6 +342,9 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
                                          MLIRToLLVMPassPipelineConfig config,
                                          llvm::StringRef inputFilename) {
   fir::addBoxedProcedurePass(pm);
+  if (config.OptLevel.isOptimizingForSpeed() && config.AliasAnalysis &&
+      !disableFirAliasTags && !useOldAliasTags)
+    pm.addPass(fir::createAddAliasTags());
   addNestedPassToAllTopLevelOperations<PassConstructor>(
       pm, fir::createAbstractResultOpt);
   addPassToGPUModuleOperations<PassConstructor>(pm,
