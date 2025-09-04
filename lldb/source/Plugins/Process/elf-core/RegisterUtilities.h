@@ -153,7 +153,8 @@ constexpr RegsetDesc AARCH64_GCS_Desc[] = {
 };
 
 constexpr RegsetDesc ARM_VFP_Desc[] = {
-    {llvm::Triple::UnknownOS, llvm::Triple::arm, llvm::ELF::NT_ARM_VFP},
+    {llvm::Triple::FreeBSD, llvm::Triple::UnknownArch, llvm::ELF::NT_ARM_VFP},
+    {llvm::Triple::Linux, llvm::Triple::UnknownArch, llvm::ELF::NT_ARM_VFP},
 };
 
 constexpr RegsetDesc PPC_VMX_Desc[] = {
