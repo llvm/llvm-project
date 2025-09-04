@@ -274,8 +274,8 @@ define dso_local void @required_fp(i32 %0, i32 %1) {
   ret void
 }
 
-define dso_local noundef i32 @non_leaf_tailcall(i32 noundef %0) {
-; FP-LABEL: non_leaf_tailcall:
+define dso_local noundef i32 @leaf_tailcall(i32 noundef %0) {
+; FP-LABEL: leaf_tailcall:
 ; FP:       @ %bb.0:
 ; FP-NEXT:    .save {r7, lr}
 ; FP-NEXT:    push {r7, lr}
@@ -284,7 +284,7 @@ define dso_local noundef i32 @non_leaf_tailcall(i32 noundef %0) {
 ; FP-NEXT:    bl leaf
 ; FP-NEXT:    pop {r7, pc}
 ;
-; FP-AAPCS-LABEL: non_leaf_tailcall:
+; FP-AAPCS-LABEL: leaf_tailcall:
 ; FP-AAPCS:       @ %bb.0:
 ; FP-AAPCS-NEXT:    .save {lr}
 ; FP-AAPCS-NEXT:    push {lr}
@@ -298,14 +298,14 @@ define dso_local noundef i32 @non_leaf_tailcall(i32 noundef %0) {
 ; FP-AAPCS-NEXT:    mov r11, r1
 ; FP-AAPCS-NEXT:    pop {pc}
 ;
-; NOFP-LABEL: non_leaf_tailcall:
+; NOFP-LABEL: leaf_tailcall:
 ; NOFP:       @ %bb.0:
 ; NOFP-NEXT:    .save {r7, lr}
 ; NOFP-NEXT:    push {r7, lr}
 ; NOFP-NEXT:    bl leaf
 ; NOFP-NEXT:    pop {r7, pc}
 ;
-; NOFP-AAPCS-LABEL: non_leaf_tailcall:
+; NOFP-AAPCS-LABEL: leaf_tailcall:
 ; NOFP-AAPCS:       @ %bb.0:
 ; NOFP-AAPCS-NEXT:    .save {r7, lr}
 ; NOFP-AAPCS-NEXT:    push {r7, lr}
