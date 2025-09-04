@@ -1,4 +1,3 @@
-import glob
 import json
 import os
 import re
@@ -682,9 +681,20 @@ class TestCase(TestBase):
         self.addTearDownCleanup(dictionary=da)
         exe = self.getBuildArtifact("a.out")
 
-        # Remove the two .dwo files to trigger a DWO load error
-        dwo_files = glob.glob(self.getBuildArtifact("*.dwo"))
-        for dwo_file in dwo_files:
+        expected_dwo_files = [
+            self.getBuildArtifact("dwo_error_main.dwo"),
+            self.getBuildArtifact("dwo_error_foo.dwo"),
+        ]
+
+        # Verify expected files exist
+        for dwo_file in expected_dwo_files:
+            self.assertTrue(
+                os.path.exists(dwo_file),
+                f"Expected .dwo file does not exist: {dwo_file}",
+            )
+
+        # Remove the two .dwo files to trigger DWO load errors
+        for dwo_file in expected_dwo_files:
             os.rename(dwo_file, dwo_file + ".bak")
 
         target = self.createTestTarget(file_path=exe)
@@ -699,7 +709,7 @@ class TestCase(TestBase):
         self.assertEqual(debug_stats["modules"][0]["dwoErrorCount"], 2)
 
         # Restore the original .dwo file
-        for dwo_file in dwo_files:
+        for dwo_file in expected_dwo_files:
             os.rename(dwo_file + ".bak", dwo_file)
 
     @add_test_categories(["dwo"])
@@ -723,10 +733,20 @@ class TestCase(TestBase):
         self.addTearDownCleanup(dictionary=da)
         exe = self.getBuildArtifact("a.out")
 
-        # Find and make a backup of the original .dwo file
-        dwo_files = glob.glob(self.getBuildArtifact("*.dwo"))
+        expected_dwo_files = [
+            self.getBuildArtifact("dwo_error_main.dwo"),
+            self.getBuildArtifact("dwo_error_foo.dwo"),
+        ]
 
-        original_dwo_file = dwo_files[1]
+        # Verify expected files exist
+        for dwo_file in expected_dwo_files:
+            self.assertTrue(
+                os.path.exists(dwo_file),
+                f"Expected .dwo file does not exist: {dwo_file}",
+            )
+
+        # Find and make a backup of the original .dwo file
+        original_dwo_file = self.getBuildArtifact("dwo_error_foo.dwo")
         original_dwo_backup = original_dwo_file + ".bak"
         shutil.copy2(original_dwo_file, original_dwo_backup)
 
@@ -749,7 +769,7 @@ class TestCase(TestBase):
             self.build(dictionary=da, debug_info="dwo")
             shutil.copy2(original_dwo_backup, original_dwo_file)
 
-            # Create a new target and run to a breakpoint to force DWO file loading
+            # Create a new target and get stats
             target = self.createTestTarget(file_path=exe)
             debug_stats = self.get_stats()
 
