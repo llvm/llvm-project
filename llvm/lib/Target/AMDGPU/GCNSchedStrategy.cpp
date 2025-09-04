@@ -1041,22 +1041,20 @@ bool GCNSchedStage::initGCNSchedStage() {
   return true;
 }
 
-SlotIndex
-RewriteScheduleStage::findReachingDefs(MachineOperand &UseMO,
-                                       LiveIntervals *LIS,
-                                       SmallVectorImpl<SlotIndex> &DefIdxs) {
+void RewriteScheduleStage::findReachingDefs(
+    MachineOperand &UseMO, LiveIntervals *LIS,
+    SmallVectorImpl<SlotIndex> &DefIdxs) {
   assert(UseMO.isReg());
   MachineInstr *UseMI = UseMO.getParent();
   LiveInterval &UseLI = LIS->getInterval(UseMO.getReg());
-  auto VNInfo = UseLI.getVNInfoAt(LIS->getInstructionIndex(*UseMI));
+  VNInfo *VNI = UseLI.getVNInfoAt(LIS->getInstructionIndex(*UseMI));
 
-  SlotIndex DefMBBStart =
-      LIS->getMBBStartIdx(LIS->getMBBFromIndex(VNInfo->def));
+  SlotIndex DefMBBStart = LIS->getMBBStartIdx(LIS->getMBBFromIndex(VNI->def));
 
   // If the def is in the block, then it must be the only reaching def.
-  if (DefMBBStart != VNInfo->def) {
-    DefIdxs.push_back(VNInfo->def);
-    return VNInfo->def;
+  if (DefMBBStart != VNI->def) {
+    DefIdxs.push_back(VNI->def);
+    return;
   }
 
   SmallPtrSet<MachineBasicBlock *, 8> Visited;
@@ -1074,15 +1072,15 @@ RewriteScheduleStage::findReachingDefs(MachineOperand &UseMO,
     MachineBasicBlock *CurrMBB = Worklist.pop_back_val();
 
     SlotIndex CurrMBBEnd = LIS->getMBBEndIdx(CurrMBB);
-    auto VNInfo = UseLI.getVNInfoAt(CurrMBBEnd.getPrevSlot());
+    VNInfo *VNI = UseLI.getVNInfoAt(CurrMBBEnd.getPrevSlot());
 
-    MachineBasicBlock *DefMBB = LIS->getMBBFromIndex(VNInfo->def);
+    MachineBasicBlock *DefMBB = LIS->getMBBFromIndex(VNI->def);
     SlotIndex DefMBBStart = LIS->getMBBStartIdx(DefMBB);
 
     // If there is a def in this block, then add it to the list. This is the
     // reaching def of this path.
-    if (DefMBBStart != VNInfo->def) {
-      DefIdxs.push_back(VNInfo->def);
+    if (DefMBBStart != VNI->def) {
+      DefIdxs.push_back(VNI->def);
       continue;
     }
 
@@ -1091,8 +1089,6 @@ RewriteScheduleStage::findReachingDefs(MachineOperand &UseMO,
         Worklist.push_back(PredMBB);
     }
   }
-
-  return VNInfo->def;
 }
 
 void RewriteScheduleStage::findReachingUses(
@@ -1106,9 +1102,9 @@ void RewriteScheduleStage::findReachingUses(
 
     // If we find a use that contains this DefMI in its reachingDefs, then it is
     // a reaching use.
-    if (find_if(ReachingDefIndexes, [DefIdx](SlotIndex RDIdx) {
+    if (any_of(ReachingDefIndexes, [DefIdx](SlotIndex RDIdx) {
           return SlotIndex::isSameInstr(RDIdx, DefIdx);
-        }) != ReachingDefIndexes.end())
+        }))
       ReachingUses.push_back(&UseMO);
   }
 }
@@ -1769,27 +1765,29 @@ bool RewriteScheduleStage::initHeuristics(
   // Prepare for the heuristics
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
-      if (isRewriteCandidate(&MI)) {
-        int ReplacementOp = AMDGPU::getMFMASrcCVDstAGPROp(MI.getOpcode());
-        if (ReplacementOp == -1)
-          continue;
+      if (!isRewriteCandidate(&MI))
+        continue;
 
-        RewriteCands.push_back({&MI, MI.getOpcode()});
-        MI.setDesc(TII->get(ReplacementOp));
+      int ReplacementOp = AMDGPU::getMFMASrcCVDstAGPROp(MI.getOpcode());
+      if (ReplacementOp == -1)
+        continue;
 
-        MachineOperand *Src2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2);
-        if (Src2->isReg()) {
-          SmallVector<SlotIndex, 8> Src2ReachingDefs;
-          findReachingDefs(*Src2, DAG.LIS, Src2ReachingDefs);
+      RewriteCands.push_back({&MI, MI.getOpcode()});
+      MI.setDesc(TII->get(ReplacementOp));
 
-          // For any definition of the src2 register which is non-MFMA, we
-          // insert a copy.
-          for (SlotIndex RDIdx : Src2ReachingDefs) {
-            MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
-            if (!TII->isMAI(*RD))
-              CopyForDef.insert(RD);
-          }
+      MachineOperand *Src2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2);
+      if (Src2->isReg()) {
+        SmallVector<SlotIndex, 8> Src2ReachingDefs;
+        findReachingDefs(*Src2, DAG.LIS, Src2ReachingDefs);
+
+        // For any definition of the src2 register which is non-MFMA, we
+        // insert a copy.
+        for (SlotIndex RDIdx : Src2ReachingDefs) {
+          MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
+          if (!TII->isMAI(*RD))
+            CopyForDef.insert(RD);
         }
+      }
 
         MachineOperand &Dst = MI.getOperand(0);
         SmallVector<MachineOperand *, 8> DstReachingUses;
@@ -1827,7 +1825,6 @@ bool RewriteScheduleStage::initHeuristics(
         DAG.MRI.setRegClass(Dst.getReg(), AGPRRC);
         if (Src2->isReg())
           DAG.MRI.setRegClass(Src2->getReg(), AGPRRC);
-      }
     }
   }
 
@@ -1835,28 +1832,32 @@ bool RewriteScheduleStage::initHeuristics(
 }
 
 int64_t RewriteScheduleStage::getRewriteCost(
-    std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands,
-    DenseMap<MachineBasicBlock *, std::set<Register>> &CopyForUse,
-    SmallPtrSetImpl<MachineInstr *> &CopyForDef) {
+    const std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands,
+    const DenseMap<MachineBasicBlock *, std::set<Register>> &CopyForUse,
+    const SmallPtrSetImpl<MachineInstr *> &CopyForDef) {
+  MachineBranchProbabilityInfo MBPI;
+  MachineBlockFrequencyInfo MBFI;
+
   MBFI.calculate(MF, MBPI, *DAG.MLI);
   int64_t BestSpillCost = 0;
   int64_t Cost = 0;
+
+  uint64_t EntryFreq = MBFI.getEntryFreq().getFrequency();
 
   for (unsigned Region = 0; Region < DAG.Regions.size(); Region++) {
     if (!RegionsWithExcessArchVGPR[Region])
       continue;
 
-    auto PressureBefore = DAG.Pressure[Region];
-    unsigned SpillCostBefore = PressureBefore.getVGPRSpills(ST, MF);
+    GCNRegPressure &PressureBefore = DAG.Pressure[Region];
+    unsigned SpillCostBefore = PressureBefore.getVGPRSpills(MF);
 
     // For the cases we care about (i.e. ArchVGPR usage is greater than the
     // addressable limit), rewriting alone should bring pressure to manageable
     // level. If we find any such region, then the rewrite is potentially
     // beneficial.
-    auto PressureAfter = DAG.getRealRegPressure(Region);
-    unsigned SpillCostAfter = PressureAfter.getVGPRSpills(ST, MF);
+    GCNRegPressure PressureAfter = DAG.getRealRegPressure(Region);
+    unsigned SpillCostAfter = PressureAfter.getVGPRSpills(MF);
 
-    uint64_t EntryFreq = MBFI.getEntryFreq().getFrequency();
     uint64_t BlockFreq =
         MBFI.getBlockFreq(DAG.Regions[Region].first->getParent())
             .getFrequency();
@@ -1893,8 +1894,6 @@ int64_t RewriteScheduleStage::getRewriteCost(
 
   unsigned CopyCost = 0;
 
-  uint64_t EntryFreq = MBFI.getEntryFreq().getFrequency();
-
   // For each CopyForDef, increase the cost by the register size while
   // accounting for block frequency.
   for (auto *DefMI : CopyForDef) {
@@ -1910,12 +1909,11 @@ int64_t RewriteScheduleStage::getRewriteCost(
   }
 
   // Account for CopyForUse copies in each block that the register is used.
-  for (auto &UseEntry : CopyForUse) {
+  for (auto &[UseBlock, UseRegs] : CopyForUse) {
     uint64_t UseFreq =
-        EntryFreq ? MBFI.getBlockFreq(UseEntry.first).getFrequency() / EntryFreq
-                  : 1;
+        EntryFreq ? MBFI.getBlockFreq(UseBlock).getFrequency() / EntryFreq : 1;
 
-    for (auto UseReg : UseEntry.second) {
+    for (auto UseReg : UseRegs) {
       unsigned RegSize =
           DAG.TRI->getRegSizeInBits(*DAG.MRI.getRegClass(UseReg));
       unsigned NumRegs = std::max(RegSize / 32, (unsigned)1);
@@ -1927,9 +1925,7 @@ int64_t RewriteScheduleStage::getRewriteCost(
 
   // Reset to the vgpr form. We must do rewriting after copy-insertion, as some
   // defs of the register may require VGPR.
-  for (auto RI : RewriteCands) {
-    MachineInstr *MI = RI.first;
-
+  for (auto &[MI, OriginalOpcode] : RewriteCands) {
     assert(TII->isMAI(*MI));
     const TargetRegisterClass *AGPRRC =
         DAG.MRI.getRegClass(MI->getOperand(0).getReg());
@@ -1938,18 +1934,17 @@ int64_t RewriteScheduleStage::getRewriteCost(
     MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
     assert(Src2);
 
-    if (Src2->isReg()) {
+    if (Src2->isReg())
       DAG.MRI.setRegClass(Src2->getReg(), VGPRRC);
-    }
     DAG.MRI.setRegClass(MI->getOperand(0).getReg(), VGPRRC);
-    MI->setDesc(TII->get(RI.second));
+    MI->setDesc(TII->get(OriginalOpcode));
   }
 
   return Cost;
 }
 
 bool RewriteScheduleStage::rewrite(
-    std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands) {
+    const std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands) {
   DenseMap<MachineInstr *, unsigned> FirstMIToRegion;
   DenseMap<MachineInstr *, unsigned> LastMIToRegion;
 
@@ -1983,7 +1978,7 @@ bool RewriteScheduleStage::rewrite(
   // want to replace the register it is using with the result of the copy, we
   // must handle case 3. In the third case, we simply insert a copy after each
   // of the reaching defs to connect to the copy of the reaching uses of the dst
-  // reg. This allows us to avoid inserting copies next to the' MFMAs.
+  // reg. This allows us to avoid inserting copies next to the MFMAs.
   //
   // While inserting the copies, we maintain a map of operands which will use
   // different regs (i.e. the result of the copies). For example, a case 1 src2
@@ -1994,14 +1989,14 @@ bool RewriteScheduleStage::rewrite(
   // queries.
   //
   // While inserting the copies, we also maintain a list or registers which we
-  // will want to reclassify as AGPR. After doing the copy isnertion and the
+  // will want to reclassify as AGPR. After doing the copy insertion and the
   // register replacement, we can finally do the reclassification. This uses the
   // redef map, as the registers we are interested in reclassifying may be
   // replaced by the result of a copy. We must do this after the copy analysis
   // and placement as we must have an accurate redef map -- otherwise we may end
   // up creating illegal instructions.
 
-  // The original registers of the MFMA that need to be reclassified as AGPR
+  // The original registers of the MFMA that need to be reclassified as AGPR.
   std::set<Register> RewriteRegs;
   // The map of an original register in the MFMA to a new register (result of a
   // copy) that it should be replaced with.
@@ -2015,16 +2010,15 @@ bool RewriteScheduleStage::rewrite(
   DenseMap<unsigned, DenseMap<Register, SmallPtrSet<MachineOperand *, 8>>>
       ReachingUseTracker;
 
-  for (auto &RI : RewriteCands) {
-    MachineInstr &MI = *RI.first;
+  for (auto &[MI, OriginalOpcode] : RewriteCands) {
 
-    int ReplacementOp = AMDGPU::getMFMASrcCVDstAGPROp(MI.getOpcode());
+    int ReplacementOp = AMDGPU::getMFMASrcCVDstAGPROp(MI->getOpcode());
     if (ReplacementOp == -1)
       continue;
-    MI.setDesc(TII->get(ReplacementOp));
+    MI->setDesc(TII->get(ReplacementOp));
 
     // Case 1: insert copies for the reaching defs of the Src2Reg.
-    MachineOperand *Src2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2);
+    MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
 
     if (Src2->isReg()) {
       Register Src2Reg = Src2->getReg();
@@ -2094,7 +2088,7 @@ bool RewriteScheduleStage::rewrite(
     // Case 2 and Case 3: insert copies before the reaching uses of the dsts,
     // and after the reaching defs of the reaching uses of the dsts.
 
-    MachineOperand *Dst = &MI.getOperand(0);
+    MachineOperand *Dst = &MI->getOperand(0);
     Register DstReg = Dst->getReg();
     if (!DstReg.isVirtual())
       return false;
@@ -2105,7 +2099,7 @@ bool RewriteScheduleStage::rewrite(
     SmallVector<MachineOperand *, 8> DstReachingUseCopies;
     SmallVector<MachineInstr *, 8> DstUseDefsReplace;
 
-    findReachingUses(&MI, DAG.LIS, DstReachingUses);
+    findReachingUses(MI, DAG.LIS, DstReachingUses);
 
     for (MachineOperand *RUOp : DstReachingUses) {
       if (TII->isMAI(*RUOp->getParent()))
@@ -2169,7 +2163,7 @@ bool RewriteScheduleStage::rewrite(
       MachineBasicBlock *RUBlock = RU->getParent()->getParent();
       // Just keep track of the reaching use of this register by block. After we
       // have scanned all the MFMAs we can find optimal insert pts.
-      if (RUBlock != MI.getParent()) {
+      if (RUBlock != MI->getParent()) {
         ReachingUseTracker[RUBlock->getNumber()][DstReg].insert(RU);
         continue;
       }

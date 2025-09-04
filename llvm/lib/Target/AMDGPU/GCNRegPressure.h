@@ -90,7 +90,8 @@ struct GCNRegPressure {
                                                 DynamicVGPRBlockSize));
   }
 
-  unsigned getVGPRSpills(const GCNSubtarget &ST, MachineFunction &MF) {
+  unsigned getVGPRSpills(MachineFunction &MF) {
+    const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
     if (!ST.hasGFX90AInsts())
       return 0;
 

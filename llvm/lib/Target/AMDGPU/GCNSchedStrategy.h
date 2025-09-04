@@ -413,9 +413,6 @@ private:
   // spilling.
   BitVector RegionsWithExcessArchVGPR;
 
-  MachineBranchProbabilityInfo MBPI;
-  MachineBlockFrequencyInfo MBFI;
-
   const SIInstrInfo *TII;
   const SIRegisterInfo *SRI;
 
@@ -431,23 +428,24 @@ private:
                  SmallPtrSetImpl<MachineInstr *> &CopyForDef);
 
   /// Calculate the rewrite cost and undo the state change (e.g. rewriting) done
-  /// in initHueristics. Uses \p CopyForUse and \p CopyForDef to calculate copy
+  /// in initHeuristics. Uses \p CopyForUse and \p CopyForDef to calculate copy
   /// costs, and \p RewriteCands to undo rewriting.
-  int64_t
-  getRewriteCost(std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands,
-                 DenseMap<MachineBasicBlock *, std::set<Register>> &CopyForUse,
-                 SmallPtrSetImpl<MachineInstr *> &CopyForDef);
+  int64_t getRewriteCost(
+      const std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands,
+      const DenseMap<MachineBasicBlock *, std::set<Register>> &CopyForUse,
+      const SmallPtrSetImpl<MachineInstr *> &CopyForDef);
 
   /// Do the final rewrite on \p RewriteCands and insert any needed copies.
-  bool rewrite(std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands);
+  bool
+  rewrite(const std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands);
 
   /// \returns true if this MI is a rewrite candidate.
   bool isRewriteCandidate(MachineInstr *MI) const;
 
   /// Finds all the reaching defs of \p UseMO and stores the SlotIndexes into \p
-  /// DefIdx
-  SlotIndex findReachingDefs(MachineOperand &UseMO, LiveIntervals *LIS,
-                             SmallVectorImpl<SlotIndex> &DefIdxs);
+  /// DefIdxs
+  void findReachingDefs(MachineOperand &UseMO, LiveIntervals *LIS,
+                        SmallVectorImpl<SlotIndex> &DefIdxs);
 
   /// Finds all the reaching uses of \p DefMI and stores the use operands in \p
   /// ReachingUses
