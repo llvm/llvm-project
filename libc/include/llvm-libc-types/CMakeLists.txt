@@ -151,7 +151,8 @@ add_header(
   DEPENDS
     libc.include.llvm-libc-macros.cfloat128_macros
 )
-add_header(cfloat16
+add_header(
+  cfloat16
   HDR
     cfloat16.h
   DEPENDS
