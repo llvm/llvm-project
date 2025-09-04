@@ -52,18 +52,6 @@ STRING_EXTENSION_OUTSIDE(SBStructuredData)
         else:
             raise TypeError("cannot convert generic to bool")
 
-    def __str__(self):
-        data_type = self.GetType()
-        if data_type in (
-            eStructuredDataTypeString,
-            eStructuredDataTypeInteger,
-            eStructuredDataTypeSignedInteger,
-            eStructuredDataTypeFloat,
-        ):
-            return str(self.dynamic)
-        else:
-            raise TypeError(f"cannot convert {self.type_name(data_type)} to string")
-
     def __int__(self):
         data_type = self.GetType()
         if data_type in (

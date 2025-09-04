@@ -293,3 +293,22 @@ void pointer_indirection() {
   int *q = *pp;
 // CHECK:   AssignOrigin (Dest: {{[0-9]+}} (Decl: q), Src: {{[0-9]+}} (Expr: ImplicitCastExpr))
 }
+
+// CHECK-LABEL: Function: ternary_operator
+// FIXME: Propagate origins across ConditionalOperator.
+void ternary_operator() {
+  int a, b;
+  int *p;
+  p = (a > b) ? &a : &b;
+  // CHECK: Block B2:
+  // CHECK:   Issue (LoanID: [[L_A:[0-9]+]], ToOrigin: [[O_ADDR_A:[0-9]+]] (Expr: UnaryOperator))
+  // CHECK: End of Block
+  
+  // CHECK: Block B3:
+  // CHECK:   Issue (LoanID: [[L_B:[0-9]+]], ToOrigin: [[O_ADDR_A:[0-9]+]] (Expr: UnaryOperator))
+  // CHECK: End of Block
+  
+  // CHECK: Block B1:
+  // CHECK:   AssignOrigin (Dest: [[O_P:[0-9]+]] (Decl: p), Src: {{[0-9]+}} (Expr: ConditionalOperator))
+  // CHECK: End of Block
+}
