@@ -40,10 +40,9 @@ public:
   }
 
   WrapperFunctionResult &operator=(WrapperFunctionResult &&Other) {
-    orc_rt_WrapperFunctionResult Tmp;
-    orc_rt_WrapperFunctionResultInit(&Tmp);
-    std::swap(Tmp, Other.R);
-    std::swap(R, Tmp);
+    orc_rt_DisposeWrapperFunctionResult(&R);
+    orc_rt_WrapperFunctionResultInit(&R);
+    std::swap(R, Other.R);
     return *this;
   }
 
