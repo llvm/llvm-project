@@ -229,7 +229,9 @@ namespace llvm {
     }
 
     /// Return true if this is a capability type.
-    bool isCapability() const { return isSimple() ? V.isCapability() : false; }
+    bool isCheriCapability() const {
+      return isSimple() ? V.isCheriCapability() : false;
+    }
 
     /// Return true if this is an overloaded type for TableGen.
     bool isOverloaded() const {

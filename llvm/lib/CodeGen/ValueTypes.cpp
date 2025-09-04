@@ -176,7 +176,7 @@ std::string EVT::getEVTString() const {
       return "i" + utostr(getSizeInBits());
     if (isFloatingPoint())
       return "f" + utostr(getSizeInBits());
-    if (isCapability())
+    if (isCheriCapability())
       return "c" + utostr(getSizeInBits());
     llvm_unreachable("Invalid EVT!");
   case MVT::bf16:      return "bf16";
