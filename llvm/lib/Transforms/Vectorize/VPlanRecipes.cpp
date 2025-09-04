@@ -28,7 +28,6 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -41,7 +40,6 @@
 #include <cassert>
 
 using namespace llvm;
-using namespace llvm::PatternMatch;
 
 using VectorParts = SmallVector<Value *, 2>;
 
@@ -1126,8 +1124,8 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     // some cases we get a cost that's too high due to counting a cmp that
     // later gets removed.
     Value *TC = getParent()->getPlan()->getTripCount()->getUnderlyingValue();
-    uint64_t C0;
-    if (TC && match(TC, m_ConstantInt(C0)) && C0 <= VF.getKnownMinValue())
+    ConstantInt *TCConst = dyn_cast_if_present<ConstantInt>(TC);
+    if (TCConst && TCConst->getValue().ule(VF.getKnownMinValue()))
       return 0;
     // Otherwise BranchOnCount generates ICmpEQ followed by a branch.
     Type *ValTy = Ctx.Types.inferScalarType(getOperand(0));
