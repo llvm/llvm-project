@@ -64,7 +64,9 @@ def: Separate<["-"], "c">,
 
 def time_to_live: S<"time-to-live">,
       MetaVarName<"<ttl>">,
-      HelpText<"When using --connection, the number of milliseconds to wait "
-        "for new connections at the beginning and after all clients have "
-        "disconnected. Not specifying this argument or specifying "
-        "non-positive values will wait indefinitely.">;
+      HelpText<"When using --connection, the number of seconds to wait for "
+        "new connections after the server has started and after all clients "
+        "have disconnected. New connections will reset the timer. When the "
+        "timer is reached, the server will be closed and the process will "
+        "exit. Not specifying this argument or specifying non-positive values "
+        "will cause the server to wait for new connections indefinitely.">;
