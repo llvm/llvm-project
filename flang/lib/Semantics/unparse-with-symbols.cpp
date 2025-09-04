@@ -47,6 +47,11 @@ public:
     return true;
   }
   void Post(const parser::OmpClause &) { currStmt_ = std::nullopt; }
+  bool Pre(const parser::OpenMPGroupprivate &dir) {
+    currStmt_ = dir.source;
+    return true;
+  }
+  void Post(const parser::OpenMPGroupprivate &) { currStmt_ = std::nullopt; }
   bool Pre(const parser::OpenMPThreadprivate &dir) {
     currStmt_ = dir.source;
     return true;
@@ -67,20 +72,6 @@ public:
     return true;
   }
   void Post(const parser::OpenMPDeclareTargetConstruct &) {
-    currStmt_ = std::nullopt;
-  }
-
-  bool Pre(const parser::OmpCriticalDirective &x) {
-    currStmt_ = x.source;
-    return true;
-  }
-  void Post(const parser::OmpCriticalDirective &) { currStmt_ = std::nullopt; }
-
-  bool Pre(const parser::OmpEndCriticalDirective &x) {
-    currStmt_ = x.source;
-    return true;
-  }
-  void Post(const parser::OmpEndCriticalDirective &) {
     currStmt_ = std::nullopt;
   }
 

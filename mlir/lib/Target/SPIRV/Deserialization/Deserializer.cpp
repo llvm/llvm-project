@@ -229,7 +229,7 @@ spirv::Deserializer::processMemoryModel(ArrayRef<uint32_t> operands) {
 }
 
 template <typename AttrTy, typename EnumAttrTy, typename EnumTy>
-LogicalResult deserializeCacheControlDecoration(
+static LogicalResult deserializeCacheControlDecoration(
     Location loc, OpBuilder &opBuilder,
     DenseMap<uint32_t, NamedAttrList> &decorations, ArrayRef<uint32_t> words,
     StringAttr symbol, StringRef decorationName, StringRef cacheControlKind) {
@@ -1560,7 +1560,19 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
   }
 
   auto resultID = operands[1];
-  if (auto shapedType = dyn_cast<ShapedType>(resultType)) {
+  if (auto tensorType = dyn_cast<TensorArmType>(resultType)) {
+    SmallVector<Attribute> flattenedElems;
+    for (Attribute element : elements) {
+      if (auto denseElemAttr = dyn_cast<DenseElementsAttr>(element)) {
+        for (auto value : denseElemAttr.getValues<Attribute>())
+          flattenedElems.push_back(value);
+      } else {
+        flattenedElems.push_back(element);
+      }
+    }
+    auto attr = DenseElementsAttr::get(tensorType, flattenedElems);
+    constantMap.try_emplace(resultID, attr, tensorType);
+  } else if (auto shapedType = dyn_cast<ShapedType>(resultType)) {
     auto attr = DenseElementsAttr::get(shapedType, elements);
     // For normal constants, we just record the attribute (and its type) for
     // later materialization at use sites.

@@ -475,7 +475,9 @@ public:
         fir::runtime::genMain(*builder, toLocation(),
                               bridge.getEnvironmentDefaults(),
                               getFoldingContext().languageFeatures().IsEnabled(
-                                  Fortran::common::LanguageFeature::CUDA));
+                                  Fortran::common::LanguageFeature::CUDA),
+                              getFoldingContext().languageFeatures().IsEnabled(
+                                  Fortran::common::LanguageFeature::Coarray));
       });
 
     finalizeOpenMPLowering(globalOmpRequiresSymbol);
@@ -1400,21 +1402,23 @@ private:
   mlir::Value genLoopVariableAddress(mlir::Location loc,
                                      const Fortran::semantics::Symbol &sym,
                                      bool isUnordered) {
-    if (isUnordered || sym.has<Fortran::semantics::HostAssocDetails>() ||
-        sym.has<Fortran::semantics::UseDetails>()) {
-      if (!shallowLookupSymbol(sym) &&
-          !GetSymbolDSA(sym).test(
-              Fortran::semantics::Symbol::Flag::OmpShared)) {
-        // Do concurrent loop variables are not mapped yet since they are local
-        // to the Do concurrent scope (same for OpenMP loops).
-        mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
-        builder->setInsertionPointToStart(builder->getAllocaBlock());
-        mlir::Type tempTy = genType(sym);
-        mlir::Value temp =
-            builder->createTemporaryAlloc(loc, tempTy, toStringRef(sym.name()));
-        bindIfNewSymbol(sym, temp);
-        builder->restoreInsertionPoint(insPt);
-      }
+    if (!shallowLookupSymbol(sym) &&
+        (isUnordered ||
+         GetSymbolDSA(sym).test(Fortran::semantics::Symbol::Flag::OmpPrivate) ||
+         GetSymbolDSA(sym).test(
+             Fortran::semantics::Symbol::Flag::OmpFirstPrivate) ||
+         GetSymbolDSA(sym).test(
+             Fortran::semantics::Symbol::Flag::OmpLastPrivate) ||
+         GetSymbolDSA(sym).test(Fortran::semantics::Symbol::Flag::OmpLinear))) {
+      // Do concurrent loop variables are not mapped yet since they are
+      // local to the Do concurrent scope (same for OpenMP loops).
+      mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
+      builder->setInsertionPointToStart(builder->getAllocaBlock());
+      mlir::Type tempTy = genType(sym);
+      mlir::Value temp =
+          builder->createTemporaryAlloc(loc, tempTy, toStringRef(sym.name()));
+      bindIfNewSymbol(sym, temp);
+      builder->restoreInsertionPoint(insPt);
     }
     auto entry = lookupSymbol(sym);
     (void)entry;
@@ -2060,10 +2064,10 @@ private:
     // TODO Promote to using `enableDelayedPrivatization` (which is enabled by
     // default unlike the staging flag) once the implementation of this is more
     // complete.
-    bool useDelayedPriv =
-        enableDelayedPrivatizationStaging && doConcurrentLoopOp;
+    bool useDelayedPriv = enableDelayedPrivatization && doConcurrentLoopOp;
     llvm::SetVector<const Fortran::semantics::Symbol *> allPrivatizedSymbols;
-    llvm::SmallSet<const Fortran::semantics::Symbol *, 16> mightHaveReadHostSym;
+    llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 16>
+        mightHaveReadHostSym;
 
     for (const Fortran::semantics::Symbol *symToPrivatize : info.localSymList) {
       if (useDelayedPriv) {
@@ -2121,6 +2125,9 @@ private:
                              .first);
       }
     }
+
+    if (!doConcurrentLoopOp)
+      return;
 
     llvm::SmallVector<bool> reduceVarByRef;
     llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
@@ -4824,7 +4831,9 @@ private:
 
   void genCUDADataTransfer(fir::FirOpBuilder &builder, mlir::Location loc,
                            const Fortran::evaluate::Assignment &assign,
-                           hlfir::Entity &lhs, hlfir::Entity &rhs) {
+                           hlfir::Entity &lhs, hlfir::Entity &rhs,
+                           bool isWholeAllocatableAssignment,
+                           bool keepLhsLengthInAllocatableAssignment) {
     bool lhsIsDevice = Fortran::evaluate::HasCUDADeviceAttrs(assign.lhs);
     bool rhsIsDevice = Fortran::evaluate::HasCUDADeviceAttrs(assign.rhs);
 
@@ -4889,6 +4898,28 @@ private:
 
     // host = device
     if (!lhsIsDevice && rhsIsDevice) {
+      if (Fortran::lower::isTransferWithConversion(rhs)) {
+        mlir::OpBuilder::InsertionGuard insertionGuard(builder);
+        auto elementalOp =
+            mlir::dyn_cast<hlfir::ElementalOp>(rhs.getDefiningOp());
+        assert(elementalOp && "expect elemental op");
+        auto designateOp =
+            *elementalOp.getBody()->getOps<hlfir::DesignateOp>().begin();
+        builder.setInsertionPoint(elementalOp);
+        // Create a temp to transfer the rhs before applying the conversion.
+        hlfir::Entity entity{designateOp.getMemref()};
+        auto [temp, cleanup] = hlfir::createTempFromMold(loc, builder, entity);
+        auto transferKindAttr = cuf::DataTransferKindAttr::get(
+            builder.getContext(), cuf::DataTransferKind::DeviceHost);
+        cuf::DataTransferOp::create(builder, loc, designateOp.getMemref(), temp,
+                                    /*shape=*/mlir::Value{}, transferKindAttr);
+        designateOp.getMemrefMutable().assign(temp);
+        builder.setInsertionPointAfter(elementalOp);
+        hlfir::AssignOp::create(builder, loc, elementalOp, lhs,
+                                isWholeAllocatableAssignment,
+                                keepLhsLengthInAllocatableAssignment);
+        return;
+      }
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::DeviceHost);
       cuf::DataTransferOp::create(builder, loc, rhsVal, lhsVal, shape,
@@ -5036,7 +5067,9 @@ private:
       hlfir::Entity rhs = evaluateRhs(localStmtCtx);
       hlfir::Entity lhs = evaluateLhs(localStmtCtx);
       if (isCUDATransfer && !hasCUDAImplicitTransfer)
-        genCUDADataTransfer(builder, loc, assign, lhs, rhs);
+        genCUDADataTransfer(builder, loc, assign, lhs, rhs,
+                            isWholeAllocatableAssignment,
+                            keepLhsLengthInAllocatableAssignment);
       else
         hlfir::AssignOp::create(builder, loc, rhs, lhs,
                                 isWholeAllocatableAssignment,

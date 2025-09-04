@@ -584,9 +584,10 @@ public:
   dropUBImplyingAttrsAndUnknownMetadata(ArrayRef<unsigned> KnownIDs = {});
 
   /// Drop any attributes or metadata that can cause immediate undefined
-  /// behavior. Retain other attributes/metadata on a best-effort basis.
-  /// This should be used when speculating instructions.
-  LLVM_ABI void dropUBImplyingAttrsAndMetadata();
+  /// behavior. Retain other attributes/metadata on a best-effort basis, as well
+  /// as those passed in `Keep`. This should be used when speculating
+  /// instructions.
+  LLVM_ABI void dropUBImplyingAttrsAndMetadata(ArrayRef<unsigned> Keep = {});
 
   /// Return true if this instruction has UB-implying attributes
   /// that can cause immediate undefined behavior.

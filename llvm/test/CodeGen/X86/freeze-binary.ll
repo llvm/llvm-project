@@ -924,6 +924,76 @@ define i32 @freeze_usubo(i32 %a0, i32 %a1, i8 %a2, i8 %a3) nounwind {
   ret i32 %r
 }
 
+define i32 @freeze_scmp(i32 %a0) nounwind {
+; X86-LABEL: freeze_scmp:
+; X86:       # %bb.0:
+; X86-NEXT:    movl $2, %eax
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    setl %al
+; X86-NEXT:    setg %cl
+; X86-NEXT:    subb %al, %cl
+; X86-NEXT:    movsbl %cl, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    setl %al
+; X86-NEXT:    setg %cl
+; X86-NEXT:    subb %al, %cl
+; X86-NEXT:    movsbl %cl, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_scmp:
+; X64:       # %bb.0:
+; X64-NEXT:    movl $2, %eax
+; X64-NEXT:    cmpl %edi, %eax
+; X64-NEXT:    setl %al
+; X64-NEXT:    setg %cl
+; X64-NEXT:    subb %al, %cl
+; X64-NEXT:    movsbl %cl, %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    setl %al
+; X64-NEXT:    setg %cl
+; X64-NEXT:    subb %al, %cl
+; X64-NEXT:    movsbl %cl, %eax
+; X64-NEXT:    retq
+  %x = call i32 @llvm.scmp.i32(i32 2, i32 %a0)
+  %y = freeze i32 %x
+  %z = call i32 @llvm.scmp.i32(i32 0, i32 %y)
+  ret i32 %z
+}
+
+define i32 @freeze_ucmp(i32 %a0) nounwind {
+; X86-LABEL: freeze_ucmp:
+; X86:       # %bb.0:
+; X86-NEXT:    movl $2, %eax
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    seta %al
+; X86-NEXT:    sbbb $0, %al
+; X86-NEXT:    movsbl %al, %eax
+; X86-NEXT:    cmpl $2, %eax
+; X86-NEXT:    setae %cl
+; X86-NEXT:    cmpl $1, %eax
+; X86-NEXT:    sbbb $0, %cl
+; X86-NEXT:    movsbl %cl, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_ucmp:
+; X64:       # %bb.0:
+; X64-NEXT:    movl $2, %eax
+; X64-NEXT:    cmpl %edi, %eax
+; X64-NEXT:    seta %al
+; X64-NEXT:    sbbb $0, %al
+; X64-NEXT:    movsbl %al, %eax
+; X64-NEXT:    cmpl $2, %eax
+; X64-NEXT:    setae %cl
+; X64-NEXT:    cmpl $1, %eax
+; X64-NEXT:    sbbb $0, %cl
+; X64-NEXT:    movsbl %cl, %eax
+; X64-NEXT:    retq
+  %x = call i32 @llvm.ucmp.i32(i32 2, i32 %a0)
+  %y = freeze i32 %x
+  %z = call i32 @llvm.ucmp.i32(i32 %y, i32 1)
+  ret i32 %z
+}
+
 define void @pr59676_frozen(ptr %dst, i32 %x.orig) {
 ; X86-LABEL: pr59676_frozen:
 ; X86:       # %bb.0:

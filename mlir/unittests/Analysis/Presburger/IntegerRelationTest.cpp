@@ -714,3 +714,14 @@ TEST(IntegerRelationTest, getVarKindRange) {
   }
   EXPECT_THAT(actual, ElementsAre(2, 3, 4));
 }
+
+TEST(IntegerRelationTest, addLocalModulo) {
+  IntegerRelation rel = parseRelationFromSet("(x) : (x >= 0, 100 - x >= 0)", 1);
+  unsigned result = rel.addLocalModulo({1, 0}, 32); // x % 32
+  rel.convertVarKind(VarKind::Local,
+                     result - rel.getVarKindOffset(VarKind::Local),
+                     rel.getNumVarKind(VarKind::Local), VarKind::Range);
+  for (unsigned x = 0; x <= 100; ++x) {
+    EXPECT_TRUE(rel.containsPointNoLocal({x, x % 32}));
+  }
+}

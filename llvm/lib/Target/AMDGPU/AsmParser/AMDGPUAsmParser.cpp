@@ -564,6 +564,14 @@ public:
     return isRegOrInlineNoMods(AMDGPU::VS_32RegClassID, MVT::i32);
   }
 
+  bool isVCSrc_b32_Lo256() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_32_Lo256RegClassID, MVT::i32);
+  }
+
+  bool isVCSrc_b64_Lo256() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_64_Lo256RegClassID, MVT::i64);
+  }
+
   bool isVCSrc_b64() const {
     return isRegOrInlineNoMods(AMDGPU::VS_64RegClassID, MVT::i64);
   }
@@ -1007,7 +1015,7 @@ public:
   bool isEndpgm() const;
 
   auto getPredicate(std::function<bool(const AMDGPUOperand &Op)> P) const {
-    return [=](){ return P(*this); };
+    return [this, P]() { return P(*this); };
   }
 
   StringRef getToken() const {
@@ -1886,6 +1894,7 @@ private:
   bool validateTHAndScopeBits(const MCInst &Inst, const OperandVector &Operands,
                               const unsigned CPol);
   bool validateTFE(const MCInst &Inst, const OperandVector &Operands);
+  bool validateSetVgprMSB(const MCInst &Inst, const OperandVector &Operands);
   std::optional<StringRef> validateLdsDirect(const MCInst &Inst);
   bool validateWMMA(const MCInst &Inst, const OperandVector &Operands);
   unsigned getConstantBusLimit(unsigned Opcode) const;
@@ -2985,7 +2994,12 @@ MCRegister AMDGPUAsmParser::getRegularReg(RegisterKind RegKind, unsigned RegNum,
 
   const MCRegisterInfo *TRI = getContext().getRegisterInfo();
   const MCRegisterClass RC = TRI->getRegClass(RCID);
-  if (RegIdx >= RC.getNumRegs()) {
+  if (RegIdx >= RC.getNumRegs() || (RegKind == IS_VGPR && RegIdx > 255)) {
+    Error(Loc, "register index is out of range");
+    return AMDGPU::NoRegister;
+  }
+
+  if (RegKind == IS_VGPR && !isGFX1250() && RegIdx + RegWidth / 32 > 256) {
     Error(Loc, "register index is out of range");
     return MCRegister();
   }
@@ -4933,6 +4947,43 @@ bool AMDGPUAsmParser::validateOpSel(const MCInst &Inst) {
       return false;
   }
 
+  // Packed math FP32 instructions typically accept SGPRs or VGPRs as source
+  // operands. On gfx12+, if a source operand uses SGPRs, the HW can only read
+  // the first SGPR and use it for both the low and high operations.
+  if (isPackedFP32Inst(Opc) && isGFX12Plus()) {
+    int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
+    int Src1Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
+    int OpSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel);
+    int OpSelHiIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel_hi);
+
+    const MCOperand &Src0 = Inst.getOperand(Src0Idx);
+    const MCOperand &Src1 = Inst.getOperand(Src1Idx);
+    unsigned OpSel = Inst.getOperand(OpSelIdx).getImm();
+    unsigned OpSelHi = Inst.getOperand(OpSelHiIdx).getImm();
+
+    const MCRegisterInfo *TRI = getContext().getRegisterInfo();
+
+    auto VerifyOneSGPR = [OpSel, OpSelHi](unsigned Index) -> bool {
+      unsigned Mask = 1U << Index;
+      return ((OpSel & Mask) == 0) && ((OpSelHi & Mask) == 0);
+    };
+
+    if (Src0.isReg() && isSGPR(Src0.getReg(), TRI) &&
+        !VerifyOneSGPR(/*Index=*/0))
+      return false;
+    if (Src1.isReg() && isSGPR(Src1.getReg(), TRI) &&
+        !VerifyOneSGPR(/*Index=*/1))
+      return false;
+
+    int Src2Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
+    if (Src2Idx != -1) {
+      const MCOperand &Src2 = Inst.getOperand(Src2Idx);
+      if (Src2.isReg() && isSGPR(Src2.getReg(), TRI) &&
+          !VerifyOneSGPR(/*Index=*/2))
+        return false;
+    }
+  }
+
   return true;
 }
 
@@ -5015,11 +5066,13 @@ bool AMDGPUAsmParser::validateDPP(const MCInst &Inst,
   if (DppCtrlIdx >= 0) {
     unsigned DppCtrl = Inst.getOperand(DppCtrlIdx).getImm();
 
-    if (!AMDGPU::isLegalDPALU_DPPControl(DppCtrl) &&
-        AMDGPU::isDPALU_DPP(MII.get(Opc))) {
-      // DP ALU DPP is supported for row_newbcast only on GFX9*
+    if (!AMDGPU::isLegalDPALU_DPPControl(getSTI(), DppCtrl) &&
+        AMDGPU::isDPALU_DPP(MII.get(Opc), getSTI())) {
+      // DP ALU DPP is supported for row_newbcast only on GFX9* and row_share
+      // only on GFX12.
       SMLoc S = getImmLoc(AMDGPUOperand::ImmTyDppCtrl, Operands);
-      Error(S, "DP ALU dpp only supports row_newbcast");
+      Error(S, isGFX12() ? "DP ALU dpp only supports row_share"
+                         : "DP ALU dpp only supports row_newbcast");
       return false;
     }
   }
@@ -5503,6 +5556,22 @@ bool AMDGPUAsmParser::validateTFE(const MCInst &Inst,
   return true;
 }
 
+bool AMDGPUAsmParser::validateSetVgprMSB(const MCInst &Inst,
+                                         const OperandVector &Operands) {
+  if (Inst.getOpcode() != AMDGPU::S_SET_VGPR_MSB_gfx12)
+    return true;
+
+  int Simm16Pos =
+      AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::simm16);
+  if ((unsigned)Inst.getOperand(Simm16Pos).getImm() > 255) {
+    SMLoc Loc = Operands[1]->getStartLoc();
+    Error(Loc, "s_set_vgpr_msb accepts values in range [0..255]");
+    return false;
+  }
+
+  return true;
+}
+
 bool AMDGPUAsmParser::validateWMMA(const MCInst &Inst,
                                    const OperandVector &Operands) {
   unsigned Opc = Inst.getOpcode();
@@ -5667,6 +5736,9 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
   if (!validateTFE(Inst, Operands)) {
     return false;
   }
+  if (!validateSetVgprMSB(Inst, Operands)) {
+    return false;
+  }
   if (!validateWMMA(Inst, Operands)) {
     return false;
   }
@@ -5760,6 +5832,7 @@ bool AMDGPUAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                               uint64_t &ErrorInfo,
                                               bool MatchingInlineAsm) {
   MCInst Inst;
+  Inst.setLoc(IDLoc);
   unsigned Result = Match_Success;
   for (auto Variant : getMatchedVariants()) {
     uint64_t EI;
@@ -5783,7 +5856,6 @@ bool AMDGPUAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     if (!validateInstruction(Inst, IDLoc, Operands)) {
       return true;
     }
-    Inst.setLoc(IDLoc);
     Out.emitInstruction(Inst, getSTI());
     return false;
   }
@@ -5947,6 +6019,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
   SMRange VGPRRange;
   const MCExpr *NextFreeVGPR = ZeroExpr;
   const MCExpr *AccumOffset = MCConstantExpr::create(0, getContext());
+  const MCExpr *NamedBarCnt = ZeroExpr;
   uint64_t SharedVGPRCount = 0;
   uint64_t PreloadLength = 0;
   uint64_t PreloadOffset = 0;
@@ -6169,6 +6242,10 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       if (!isGFX90A())
         return Error(IDRange.Start, "directive requires gfx90a+", IDRange);
       AccumOffset = ExprVal;
+    } else if (ID == ".amdhsa_named_barrier_count") {
+      if (!isGFX1250())
+        return Error(IDRange.Start, "directive requires gfx1250+", IDRange);
+      NamedBarCnt = ExprVal;
     } else if (ID == ".amdhsa_reserve_vcc") {
       if (EvaluatableExpr && !isUInt<1>(Val))
         return OutOfRangeError(ValRange);
@@ -6231,8 +6308,9 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc3, COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT,
                        ExprVal, ValRange);
     } else if (ID == ".amdhsa_workgroup_processor_mode") {
-      if (IVersion.Major < 10)
-        return Error(IDRange.Start, "directive requires gfx10+", IDRange);
+      if (!supportsWGP(getSTI()))
+        return Error(IDRange.Start,
+                     "directive unsupported on " + getSTI().getCPU(), IDRange);
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
                        COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE, ExprVal,
                        ValRange);
@@ -6365,12 +6443,24 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
     return TokError("amdgpu_user_sgpr_count smaller than than implied by "
                     "enabled user SGPRs");
 
-  if (!isUInt<COMPUTE_PGM_RSRC2_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
-    return TokError("too many user SGPRs enabled");
-  AMDGPU::MCKernelDescriptor::bits_set(
-      KD.compute_pgm_rsrc2, MCConstantExpr::create(UserSGPRCount, getContext()),
-      COMPUTE_PGM_RSRC2_USER_SGPR_COUNT_SHIFT,
-      COMPUTE_PGM_RSRC2_USER_SGPR_COUNT, getContext());
+  if (isGFX1250()) {
+    if (!isUInt<COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
+      return TokError("too many user SGPRs enabled");
+    AMDGPU::MCKernelDescriptor::bits_set(
+        KD.compute_pgm_rsrc2,
+        MCConstantExpr::create(UserSGPRCount, getContext()),
+        COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT_SHIFT,
+        COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT, getContext());
+  } else {
+    if (!isUInt<COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT_WIDTH>(
+            UserSGPRCount))
+      return TokError("too many user SGPRs enabled");
+    AMDGPU::MCKernelDescriptor::bits_set(
+        KD.compute_pgm_rsrc2,
+        MCConstantExpr::create(UserSGPRCount, getContext()),
+        COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT_SHIFT,
+        COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT, getContext());
+  }
 
   int64_t IVal = 0;
   if (!KD.kernarg_size->evaluateAsAbsolute(IVal))
@@ -6407,6 +6497,12 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                                  COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET,
                                  getContext());
   }
+
+  if (isGFX1250())
+    MCKernelDescriptor::bits_set(KD.compute_pgm_rsrc3, NamedBarCnt,
+                                 COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT_SHIFT,
+                                 COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT,
+                                 getContext());
 
   if (IVersion.Major >= 10 && IVersion.Major < 12) {
     // SharedVGPRCount < 16 checked by PARSE_ENTRY_BITS

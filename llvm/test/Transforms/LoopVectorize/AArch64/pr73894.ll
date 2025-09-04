@@ -12,9 +12,6 @@ define i32 @pr70988(ptr %src, i32 %n) {
 ; CHECK-NEXT:    [[UMAX:%.*]] = zext i32 [[TMP2]] to i64
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[UMAX]], 1
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 2
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = icmp ult i64 0, [[UMAX]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY1:%.*]] = icmp ult i64 1, [[UMAX]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -55,8 +52,6 @@ define i32 @pr70988(ptr %src, i32 %n) {
 ; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP17]], i32 [[TMP18]])
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDUC:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INDUC_NEXT:%.*]], [[LOOP]] ]

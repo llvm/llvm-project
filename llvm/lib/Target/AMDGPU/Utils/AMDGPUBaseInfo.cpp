@@ -21,6 +21,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -1160,17 +1161,28 @@ unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
     return 65536;
   if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize163840))
     return 163840;
-  return 0;
+  if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
+    return 327680;
+  return 32768;
 }
 
 unsigned getEUsPerCU(const MCSubtargetInfo *STI) {
   // "Per CU" really means "per whatever functional block the waves of a
-  // workgroup must share". For gfx10 in CU mode this is the CU, which contains
+  // workgroup must share".
+
+  // GFX12.5 only supports CU mode, which contains four SIMDs.
+  if (isGFX1250(*STI)) {
+    assert(STI->getFeatureBits().test(FeatureCuMode));
+    return 4;
+  }
+
+  // For gfx10 in CU mode the functional block is the CU, which contains
   // two SIMDs.
   if (isGFX10Plus(*STI) && STI->getFeatureBits().test(FeatureCuMode))
     return 2;
-  // Pre-gfx10 a CU contains four SIMDs. For gfx10 in WGP mode the WGP contains
-  // two CUs, so a total of four SIMDs.
+
+  // Pre-gfx10 a CU contains four SIMDs. For gfx10 in WGP mode the WGP
+  // contains two CUs, so a total of four SIMDs.
   return 4;
 }
 
@@ -1364,6 +1376,9 @@ unsigned getVGPREncodingGranule(const MCSubtargetInfo *STI,
                       ? *EnableWavefrontSize32
                       : STI->getFeatureBits().test(FeatureWavefrontSize32);
 
+  if (STI->getFeatureBits().test(Feature1024AddressableVGPRs))
+    return IsWave32 ? 16 : 8;
+
   return IsWave32 ? 8 : 4;
 }
 
@@ -1384,7 +1399,10 @@ unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI) { return 256; }
 
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI,
                                 unsigned DynamicVGPRBlockSize) {
-  if (STI->getFeatureBits().test(FeatureGFX90AInsts))
+  const auto &Features = STI->getFeatureBits();
+  if (Features.test(FeatureGFX1250Insts))
+    return Features.test(FeatureWavefrontSize32) ? 1024 : 512;
+  if (Features.test(FeatureGFX90AInsts))
     return 512;
 
   // Temporarily check the subtarget feature, until we fully switch to using
@@ -1664,6 +1682,29 @@ getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size) {
     return std::nullopt;
   }
   return Vals;
+}
+
+bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val) {
+  assert((MD.getNumOperands() % 2 == 0) && "invalid number of operands!");
+  for (unsigned I = 0, E = MD.getNumOperands() / 2; I != E; ++I) {
+    auto Low =
+        mdconst::extract<ConstantInt>(MD.getOperand(2 * I + 0))->getValue();
+    auto High =
+        mdconst::extract<ConstantInt>(MD.getOperand(2 * I + 1))->getValue();
+    // There are two types of [A; B) ranges:
+    //  A < B, e.g. [4; 5) which is a range that only includes 4.
+    //  A > B, e.g. [5; 4) which is a range that wraps around and includes
+    //         everything except 4.
+    if (Low.ult(High)) {
+      if (Low.ule(Val) && High.ugt(Val))
+        return true;
+    } else {
+      if (Low.uge(Val) && High.ult(Val))
+        return true;
+    }
+  }
+
+  return false;
 }
 
 unsigned getVmcntBitMask(const IsaVersion &Version) {
@@ -2406,7 +2447,11 @@ unsigned getNSAMaxSize(const MCSubtargetInfo &STI, bool HasSampler) {
   return 0;
 }
 
-unsigned getMaxNumUserSGPRs(const MCSubtargetInfo &STI) { return 16; }
+unsigned getMaxNumUserSGPRs(const MCSubtargetInfo &STI) {
+  if (isGFX1250(STI))
+    return 32;
+  return 16;
+}
 
 bool isSI(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureSouthernIslands);
@@ -2476,6 +2521,12 @@ bool isNotGFX12Plus(const MCSubtargetInfo &STI) { return !isGFX12Plus(STI); }
 
 bool isGFX1250(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX1250Insts];
+}
+
+bool supportsWGP(const MCSubtargetInfo &STI) {
+  if (isGFX1250(STI))
+    return false;
+  return isGFX10Plus(STI);
 }
 
 bool isNotGFX11Plus(const MCSubtargetInfo &STI) { return !isGFX11Plus(STI); }
@@ -2675,13 +2726,6 @@ bool isInlineValue(unsigned Reg) {
 #undef CASE_GFXPRE11_GFX11PLUS_TO
 #undef MAP_REG2REG
 
-bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo) {
-  assert(OpNo < Desc.NumOperands);
-  unsigned OpType = Desc.operands()[OpNo].OperandType;
-  return OpType >= AMDGPU::OPERAND_SRC_FIRST &&
-         OpType <= AMDGPU::OPERAND_SRC_LAST;
-}
-
 bool isKImmOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
   unsigned OpType = Desc.operands()[OpNo].OperandType;
@@ -2731,6 +2775,7 @@ unsigned getRegBitWidth(unsigned RCID) {
     return 16;
   case AMDGPU::SGPR_32RegClassID:
   case AMDGPU::VGPR_32RegClassID:
+  case AMDGPU::VGPR_32_Lo256RegClassID:
   case AMDGPU::VRegOrLds_32RegClassID:
   case AMDGPU::AGPR_32RegClassID:
   case AMDGPU::VS_32RegClassID:
@@ -2749,6 +2794,8 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_64_Align2RegClassID:
   case AMDGPU::AV_64RegClassID:
   case AMDGPU::AV_64_Align2RegClassID:
+  case AMDGPU::VReg_64_Lo256_Align2RegClassID:
+  case AMDGPU::VS_64_Lo256RegClassID:
     return 64;
   case AMDGPU::SGPR_96RegClassID:
   case AMDGPU::SReg_96RegClassID:
@@ -2758,6 +2805,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_96_Align2RegClassID:
   case AMDGPU::AV_96RegClassID:
   case AMDGPU::AV_96_Align2RegClassID:
+  case AMDGPU::VReg_96_Lo256_Align2RegClassID:
     return 96;
   case AMDGPU::SGPR_128RegClassID:
   case AMDGPU::SReg_128RegClassID:
@@ -2768,6 +2816,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_128RegClassID:
   case AMDGPU::AV_128_Align2RegClassID:
   case AMDGPU::SReg_128_XNULLRegClassID:
+  case AMDGPU::VReg_128_Lo256_Align2RegClassID:
     return 128;
   case AMDGPU::SGPR_160RegClassID:
   case AMDGPU::SReg_160RegClassID:
@@ -2777,6 +2826,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_160_Align2RegClassID:
   case AMDGPU::AV_160RegClassID:
   case AMDGPU::AV_160_Align2RegClassID:
+  case AMDGPU::VReg_160_Lo256_Align2RegClassID:
     return 160;
   case AMDGPU::SGPR_192RegClassID:
   case AMDGPU::SReg_192RegClassID:
@@ -2786,6 +2836,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_192_Align2RegClassID:
   case AMDGPU::AV_192RegClassID:
   case AMDGPU::AV_192_Align2RegClassID:
+  case AMDGPU::VReg_192_Lo256_Align2RegClassID:
     return 192;
   case AMDGPU::SGPR_224RegClassID:
   case AMDGPU::SReg_224RegClassID:
@@ -2795,6 +2846,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_224_Align2RegClassID:
   case AMDGPU::AV_224RegClassID:
   case AMDGPU::AV_224_Align2RegClassID:
+  case AMDGPU::VReg_224_Lo256_Align2RegClassID:
     return 224;
   case AMDGPU::SGPR_256RegClassID:
   case AMDGPU::SReg_256RegClassID:
@@ -2805,6 +2857,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_256RegClassID:
   case AMDGPU::AV_256_Align2RegClassID:
   case AMDGPU::SReg_256_XNULLRegClassID:
+  case AMDGPU::VReg_256_Lo256_Align2RegClassID:
     return 256;
   case AMDGPU::SGPR_288RegClassID:
   case AMDGPU::SReg_288RegClassID:
@@ -2814,6 +2867,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_288_Align2RegClassID:
   case AMDGPU::AV_288RegClassID:
   case AMDGPU::AV_288_Align2RegClassID:
+  case AMDGPU::VReg_288_Lo256_Align2RegClassID:
     return 288;
   case AMDGPU::SGPR_320RegClassID:
   case AMDGPU::SReg_320RegClassID:
@@ -2823,6 +2877,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_320_Align2RegClassID:
   case AMDGPU::AV_320RegClassID:
   case AMDGPU::AV_320_Align2RegClassID:
+  case AMDGPU::VReg_320_Lo256_Align2RegClassID:
     return 320;
   case AMDGPU::SGPR_352RegClassID:
   case AMDGPU::SReg_352RegClassID:
@@ -2832,6 +2887,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_352_Align2RegClassID:
   case AMDGPU::AV_352RegClassID:
   case AMDGPU::AV_352_Align2RegClassID:
+  case AMDGPU::VReg_352_Lo256_Align2RegClassID:
     return 352;
   case AMDGPU::SGPR_384RegClassID:
   case AMDGPU::SReg_384RegClassID:
@@ -2841,6 +2897,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_384_Align2RegClassID:
   case AMDGPU::AV_384RegClassID:
   case AMDGPU::AV_384_Align2RegClassID:
+  case AMDGPU::VReg_384_Lo256_Align2RegClassID:
     return 384;
   case AMDGPU::SGPR_512RegClassID:
   case AMDGPU::SReg_512RegClassID:
@@ -2850,6 +2907,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_512_Align2RegClassID:
   case AMDGPU::AV_512RegClassID:
   case AMDGPU::AV_512_Align2RegClassID:
+  case AMDGPU::VReg_512_Lo256_Align2RegClassID:
     return 512;
   case AMDGPU::SGPR_1024RegClassID:
   case AMDGPU::SReg_1024RegClassID:
@@ -2859,6 +2917,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_1024_Align2RegClassID:
   case AMDGPU::AV_1024RegClassID:
   case AMDGPU::AV_1024_Align2RegClassID:
+  case AMDGPU::VReg_1024_Lo256_Align2RegClassID:
     return 1024;
   default:
     llvm_unreachable("Unexpected register class");
@@ -3309,13 +3368,53 @@ bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc) {
   return false;
 }
 
-bool isDPALU_DPP(const MCInstrDesc &OpDesc) {
+bool isDPALU_DPP32BitOpc(unsigned Opc) {
+  switch (Opc) {
+  case AMDGPU::V_MUL_LO_U32_e64:
+  case AMDGPU::V_MUL_LO_U32_e64_dpp:
+  case AMDGPU::V_MUL_LO_U32_e64_dpp_gfx1250:
+  case AMDGPU::V_MUL_HI_U32_e64:
+  case AMDGPU::V_MUL_HI_U32_e64_dpp:
+  case AMDGPU::V_MUL_HI_U32_e64_dpp_gfx1250:
+  case AMDGPU::V_MUL_HI_I32_e64:
+  case AMDGPU::V_MUL_HI_I32_e64_dpp:
+  case AMDGPU::V_MUL_HI_I32_e64_dpp_gfx1250:
+  case AMDGPU::V_MAD_U32_e64:
+  case AMDGPU::V_MAD_U32_e64_dpp:
+  case AMDGPU::V_MAD_U32_e64_dpp_gfx1250:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCSubtargetInfo &ST) {
+  if (!ST.hasFeature(AMDGPU::FeatureDPALU_DPP))
+    return false;
+
+  if (isDPALU_DPP32BitOpc(OpDesc.getOpcode()))
+    return ST.hasFeature(AMDGPU::FeatureGFX1250Insts);
+
   return hasAny64BitVGPROperands(OpDesc);
 }
 
 unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
-  // Currently this is 128 for all subtargets
-  return 128;
+  return ST.hasFeature(AMDGPU::FeatureAddressableLocalMemorySize327680) ? 256
+                                                                        : 128;
+}
+
+bool isPackedFP32Inst(unsigned Opc) {
+  switch (Opc) {
+  case AMDGPU::V_PK_ADD_F32:
+  case AMDGPU::V_PK_ADD_F32_gfx12:
+  case AMDGPU::V_PK_MUL_F32:
+  case AMDGPU::V_PK_MUL_F32_gfx12:
+  case AMDGPU::V_PK_FMA_F32:
+  case AMDGPU::V_PK_FMA_F32_gfx12:
+    return true;
+  default:
+    return false;
+  }
 }
 
 } // namespace AMDGPU

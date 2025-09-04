@@ -396,7 +396,7 @@ void ASTUnit::CacheCodeCompletionResults() {
 
       // Keep track of the type of this completion in an ASTContext-agnostic
       // way.
-      QualType UsageType = getDeclUsageType(*Ctx, R.Declaration);
+      QualType UsageType = getDeclUsageType(*Ctx, R.Qualifier, R.Declaration);
       if (UsageType.isNull()) {
         CachedResult.TypeClass = STC_Void;
         CachedResult.Type = 0;

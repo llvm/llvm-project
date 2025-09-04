@@ -27,14 +27,16 @@ def int_deref_ptr_ret : Intrinsic<[llvm_ptr_ty], [], [Dereferenceable<RetIndex, 
 // CHECK: static constexpr uint16_t IntrinsicsToAttributesMap[] = {
 // CHECK: 0 << 8 | 0, // llvm.deref.ptr.ret
 // CHECK: 1 << 8 | 1, // llvm.random.gen
+// CHECK: }; // IntrinsicsToAttributesMap
+
+// CHECK: static constexpr ArgNoAttrIDPair ArgAttrIdTable[] = {
+// CHECK-NEXT:   {0, 0},
+// CHECK: }; // ArgAttrIdTable
+
+// CHECK: static constexpr ArgAttributesInfo ArgAttributesInfoTable[] = {
+// CHECK-NEXT:  {0, 1},
+// CHECK-NEXT:  {0, 0},
+// CHECK-NEXT: }; // ArgAttributesInfoTable
 
 // CHECK: getAttributes(LLVMContext &C, ID id,
 // CHECK-NEXT: FunctionType *FT) {
-// CHECK:      case 1:
-// CHECK-NEXT:   HasFnAttr = true;
-// CHECK-NEXT:   break;
-// CHECK-NEXT: case 0:
-// CHECK-NEXT:   AS[0] = {0, getIntrinsicArgAttributeSet(C, 0, FT->getContainedType(0))};
-// CHECK-NEXT:   HasFnAttr = true;
-// CHECK-NEXT:   NumAttrs = 1
-// CHECK-NEXT:   break;

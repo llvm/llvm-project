@@ -33,7 +33,7 @@ bool CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
 
 bool CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
                   CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                  CCState &State);
+                  Type *OrigTy, CCState &State);
 
 namespace RISCV {
 

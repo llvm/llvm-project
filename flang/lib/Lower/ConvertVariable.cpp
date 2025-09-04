@@ -1720,7 +1720,7 @@ static bool lowerToBoxValue(const Fortran::semantics::Symbol &sym,
     return true;
   // Assumed rank and optional fir.box cannot yet be read while lowering the
   // specifications.
-  if (Fortran::evaluate::IsAssumedRank(sym) ||
+  if (Fortran::semantics::IsAssumedRank(sym) ||
       Fortran::semantics::IsOptional(sym))
     return true;
   // Polymorphic entity should be tracked through a fir.box that has the
@@ -2172,7 +2172,7 @@ void Fortran::lower::mapSymbolAttributes(
     return;
   }
 
-  const bool isAssumedRank = Fortran::evaluate::IsAssumedRank(sym);
+  const bool isAssumedRank = Fortran::semantics::IsAssumedRank(sym);
   if (isAssumedRank && !allowAssumedRank)
     TODO(loc, "assumed-rank variable in procedure implemented in Fortran");
 
