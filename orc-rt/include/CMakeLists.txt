@@ -13,6 +13,7 @@ set(ORC_RT_HEADERS
     orc-rt/MemoryFlags.h
     orc-rt/RTTI.h
     orc-rt/WrapperFunction.h
+    orc-rt/ScopeExit.h
     orc-rt/SimplePackedSerialization.h
     orc-rt/SPSWrapperFunction.h
     orc-rt/bind.h
