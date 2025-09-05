@@ -9,6 +9,7 @@
 #include "llvm/Support/Range.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
+#include <limits>
 
 using namespace llvm;
 
@@ -30,6 +31,43 @@ TEST(RangeTest, SingleValueRange) {
   EXPECT_TRUE(R.contains(42));
   EXPECT_FALSE(R.contains(41));
   EXPECT_FALSE(R.contains(43));
+}
+
+TEST(RangeTest, SizeBasic) {
+  Range R1(5, 10);
+  EXPECT_EQ(R1.size(), 6u);
+
+  Range R2(0, 0);
+  EXPECT_EQ(R2.size(), 1u);
+}
+
+TEST(RangeTest, SizeMixedSigns) {
+  Range R1(-2, 2);
+  EXPECT_EQ(R1.size(), 5u);
+
+  Range R2(-1, 0);
+  EXPECT_EQ(R2.size(), 2u);
+}
+
+TEST(RangeTest, SizeExtremesNonOverflow) {
+  // [INT64_MIN, -1] has size 2^63
+  Range R1(std::numeric_limits<int64_t>::min(), -1);
+  EXPECT_EQ(R1.size(), (1ULL << 63));
+
+  // [0, INT64_MAX] has size 2^63
+  Range R2(0, std::numeric_limits<int64_t>::max());
+  EXPECT_EQ(R2.size(), (1ULL << 63));
+
+  // [INT64_MIN, 0] has size 2^63 + 1
+  Range R3(std::numeric_limits<int64_t>::min(), 0);
+  EXPECT_EQ(R3.size(), (1ULL << 63) + 1);
+
+  // Small extreme windows
+  Range R4(std::numeric_limits<int64_t>::min(), std::numeric_limits<int64_t>::min() + 10);
+  EXPECT_EQ(R4.size(), 11u);
+
+  Range R5(std::numeric_limits<int64_t>::max() - 10, std::numeric_limits<int64_t>::max());
+  EXPECT_EQ(R5.size(), 11u);
 }
 
 TEST(RangeTest, RangeOverlaps) {
