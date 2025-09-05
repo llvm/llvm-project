@@ -290,16 +290,16 @@ export namespace std {
       using std::ranges::views::zip;
     } // namespace views
 
-#if 0
+#  if 0
     // [range.zip.transform], zip transform view
     using std::ranges::zip_transform_view;
 
     namespace views {
       using std::ranges::views::zip_transform;
     }
-#endif // _LIBCPP_STD_VER >= 23
+#  endif // _LIBCPP_STD_VER >= 23
 
-#if 0
+#  if 0
     using std::ranges::adjacent_view;
 
     namespace views {
@@ -327,33 +327,33 @@ export namespace std {
     namespace views {
       using std::ranges::views::slide;
     }
-#endif
+#  endif
 
-#if _LIBCPP_STD_VER >= 23
+#  if _LIBCPP_STD_VER >= 23
     // [range.chunk.by], chunk by view
     using std::ranges::chunk_by_view;
 
     namespace views {
       using std::ranges::views::chunk_by;
     }
-#endif // _LIBCPP_STD_VER >= 23
+#  endif // _LIBCPP_STD_VER >= 23
 
-#if _LIBCPP_STD_VER >= 23
+#  if _LIBCPP_STD_VER >= 23
     // [range.stride], stride view
     using std::ranges::stride_view;
 
     namespace views {
       using std::ranges::views::stride;
     } // namespace views
-#endif // _LIBCPP_STD_VER >= 23
+#  endif // _LIBCPP_STD_VER >= 23
 
-#if 0
+#  if 0
     using std::ranges::cartesian_product_view;
 
     namespace views {
       using std::ranges::views::cartesian_product;
     }
-#endif
+#  endif
   } // namespace ranges
 
   namespace views = ranges::views;
@@ -361,8 +361,8 @@ export namespace std {
   using std::tuple_element;
   using std::tuple_size;
 
-#if _LIBCPP_STD_VER >= 23
+#  if _LIBCPP_STD_VER >= 23
   using std::from_range;
   using std::from_range_t;
-#endif // _LIBCPP_STD_VER >= 23
+#  endif // _LIBCPP_STD_VER >= 23
 } // namespace std
