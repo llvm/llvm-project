@@ -34,7 +34,7 @@ TEST(BitTest, endian) {
 #endif
 }
 
-TEST(MathTest, byte_swap_32) {
+TEST(BitTest, byte_swap_32) {
   unsigned char Seq[] = {0x01, 0x23, 0x45, 0x67};
   uint32_t X = 0;
   memcpy(&X, Seq, sizeof(X));
@@ -56,7 +56,7 @@ TEST(MathTest, byte_swap_32) {
 #endif
 }
 
-TEST(MathTest, byte_swap_64) {
+TEST(BitTest, byte_swap_64) {
   unsigned char Seq[] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF};
   uint64_t X = 0;
   memcpy(&X, Seq, sizeof(X));

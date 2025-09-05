@@ -95,8 +95,8 @@ template <typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
 #elif defined(_MSC_VER) && !defined(_DEBUG)
     return _byteswap_uint64(UV);
 #else
-    uint64_t Hi = llvm::byteswap<uint32_t>(UV);
-    uint32_t Lo = llvm::byteswap<uint32_t>(UV >> 32);
+    uint64_t Hi = byteswap<uint32_t>(UV);
+    uint32_t Lo = byteswap<uint32_t>(UV >> 32);
     return (Hi << 32) | Lo;
 #endif
   } else {
