@@ -1116,7 +1116,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   }
   case VPInstruction::Reverse: {
     assert(VF.isVector() && "Reverse operation must be vector type");
-    Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
+    Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
     return Ctx.TTI.getShuffleCost(
         TargetTransformInfo::SK_Reverse, cast<VectorType>(VectorTy),
         cast<VectorType>(VectorTy), {}, Ctx.CostKind, 0);
