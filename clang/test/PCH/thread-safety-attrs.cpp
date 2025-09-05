@@ -60,6 +60,20 @@ class SCOPED_LOCKABLE ReleasableMutexLock {
   void Release() UNLOCK_FUNCTION();
 };
 
+template<typename T>
+struct lock_guard {
+  lock_guard<T>(T) {}
+  ~lock_guard<T>() {}
+};
+template<typename T>
+struct unique_lock {
+  unique_lock<T>(T) {}
+  ~unique_lock<T>() {}
+};
+
+template <class T, class... Ts>
+void LockMutexes(T &m, Ts &...ms) __attribute__((exclusive_lock_function(m, ms...)));
+
 
 // The universal lock, written "*", allows checking to be selectively turned
 // off for a particular piece of code.
@@ -316,10 +330,6 @@ void sls_fun_bad_12() {
     expected-warning{{releasing mutex 'sls_mu' that was not held}}
 }
 
-
-template <class T, class... Ts>
-void LockMutexes(T &m, Ts &...ms) __attribute__((exclusive_lock_function(m, ms...)));
-
 Mutex m0, m1;
 void non_local_mutex_held() {
   LockMutexes(m0, m1); // expected-note {{mutex acquired here}} \
@@ -332,5 +342,11 @@ void no_local_mutex_held_warning() {
   Mutex local_m1;
   LockMutexes(local_m0, local_m1);
 } // No warnings expected at end of function scope as the mutexes are function local.
+
+void no_local_unique_locks_held_warning() {
+  unique_lock<Mutex> ul0(m0);
+  unique_lock<Mutex> ul1(m1);
+  LockMutexes(ul0, ul1);
+} // No warnings expected at end of function scope as the unique_locks held are function local.
 
 #endif
