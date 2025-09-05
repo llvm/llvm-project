@@ -361,6 +361,44 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_pasa_hx_32:
   case RISCV::BI__builtin_riscv_pasa_hx_64:
   case RISCV::BI__builtin_riscv_pasa_wx:
+  case RISCV::BI__builtin_riscv_mseq:
+  case RISCV::BI__builtin_riscv_pmseq_b_32:
+  case RISCV::BI__builtin_riscv_pmseq_b_64:
+  case RISCV::BI__builtin_riscv_pmseq_h_32:
+  case RISCV::BI__builtin_riscv_pmseq_h_64:
+  case RISCV::BI__builtin_riscv_pmseq_w:
+  case RISCV::BI__builtin_riscv_mslt:
+  case RISCV::BI__builtin_riscv_pmslt_b_32:
+  case RISCV::BI__builtin_riscv_pmslt_b_64:
+  case RISCV::BI__builtin_riscv_pmslt_h_32:
+  case RISCV::BI__builtin_riscv_pmslt_h_64:
+  case RISCV::BI__builtin_riscv_pmslt_w:
+  case RISCV::BI__builtin_riscv_msltu:
+  case RISCV::BI__builtin_riscv_pmsltu_b_32:
+  case RISCV::BI__builtin_riscv_pmsltu_b_64:
+  case RISCV::BI__builtin_riscv_pmsltu_h_32:
+  case RISCV::BI__builtin_riscv_pmsltu_h_64:
+  case RISCV::BI__builtin_riscv_pmsltu_w:
+  case RISCV::BI__builtin_riscv_pmin_b_32:
+  case RISCV::BI__builtin_riscv_pmin_b_64:
+  case RISCV::BI__builtin_riscv_pmin_h_32:
+  case RISCV::BI__builtin_riscv_pmin_h_64:
+  case RISCV::BI__builtin_riscv_pmin_w:
+  case RISCV::BI__builtin_riscv_pminu_b_32:
+  case RISCV::BI__builtin_riscv_pminu_b_64:
+  case RISCV::BI__builtin_riscv_pminu_h_32:
+  case RISCV::BI__builtin_riscv_pminu_h_64:
+  case RISCV::BI__builtin_riscv_pminu_w:
+  case RISCV::BI__builtin_riscv_pmax_b_32:
+  case RISCV::BI__builtin_riscv_pmax_b_64:
+  case RISCV::BI__builtin_riscv_pmax_h_32:
+  case RISCV::BI__builtin_riscv_pmax_h_64:
+  case RISCV::BI__builtin_riscv_pmax_w:
+  case RISCV::BI__builtin_riscv_pmaxu_b_32:
+  case RISCV::BI__builtin_riscv_pmaxu_b_64:
+  case RISCV::BI__builtin_riscv_pmaxu_h_32:
+  case RISCV::BI__builtin_riscv_pmaxu_h_64:
+  case RISCV::BI__builtin_riscv_pmaxu_w:
   case RISCV::BI__builtin_riscv_sadd: {
     switch (BuiltinID) {
     default: llvm_unreachable("unexpected builtin ID");
@@ -758,6 +796,92 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
       break;
     case RISCV::BI__builtin_riscv_pasa_wx:
       ID = Intrinsic::riscv_pasa_wx;
+      break;
+    case RISCV::BI__builtin_riscv_mseq:
+      ID = Intrinsic::riscv_mseq;
+      break;
+    case RISCV::BI__builtin_riscv_pmseq_b_32:
+    case RISCV::BI__builtin_riscv_pmseq_b_64:
+      ID = Intrinsic::riscv_pmseq_b;
+      break;
+    case RISCV::BI__builtin_riscv_pmseq_h_32:
+    case RISCV::BI__builtin_riscv_pmseq_h_64:
+      ID = Intrinsic::riscv_pmseq_h;
+      break;
+    case RISCV::BI__builtin_riscv_pmseq_w:
+      ID = Intrinsic::riscv_pmseq_w;
+      break;
+    case RISCV::BI__builtin_riscv_mslt:
+      ID = Intrinsic::riscv_mslt;
+      break;
+    case RISCV::BI__builtin_riscv_pmslt_b_32:
+    case RISCV::BI__builtin_riscv_pmslt_b_64:
+      ID = Intrinsic::riscv_pmslt_b;
+      break;
+    case RISCV::BI__builtin_riscv_pmslt_h_32:
+    case RISCV::BI__builtin_riscv_pmslt_h_64:
+      ID = Intrinsic::riscv_pmslt_h;
+      break;
+    case RISCV::BI__builtin_riscv_pmslt_w:
+      ID = Intrinsic::riscv_pmslt_w;
+      break;
+    case RISCV::BI__builtin_riscv_msltu:
+      ID = Intrinsic::riscv_msltu;
+      break;
+    case RISCV::BI__builtin_riscv_pmsltu_b_32:
+    case RISCV::BI__builtin_riscv_pmsltu_b_64:
+      ID = Intrinsic::riscv_pmsltu_b;
+      break;
+    case RISCV::BI__builtin_riscv_pmsltu_h_32:
+    case RISCV::BI__builtin_riscv_pmsltu_h_64:
+      ID = Intrinsic::riscv_pmsltu_h;
+      break;
+    case RISCV::BI__builtin_riscv_pmsltu_w:
+      ID = Intrinsic::riscv_pmsltu_w;
+      break;
+    case RISCV::BI__builtin_riscv_pmin_b_32:
+    case RISCV::BI__builtin_riscv_pmin_b_64:
+      ID = Intrinsic::riscv_pmin_b;
+      break;
+    case RISCV::BI__builtin_riscv_pmin_h_32:
+    case RISCV::BI__builtin_riscv_pmin_h_64:
+      ID = Intrinsic::riscv_pmin_h;
+      break;
+    case RISCV::BI__builtin_riscv_pmin_w:
+      ID = Intrinsic::riscv_pmin_w;
+      break;
+    case RISCV::BI__builtin_riscv_pminu_b_32:
+    case RISCV::BI__builtin_riscv_pminu_b_64:
+      ID = Intrinsic::riscv_pminu_b;
+      break;
+    case RISCV::BI__builtin_riscv_pminu_h_32:
+    case RISCV::BI__builtin_riscv_pminu_h_64:
+      ID = Intrinsic::riscv_pminu_h;
+      break;
+    case RISCV::BI__builtin_riscv_pminu_w:
+      ID = Intrinsic::riscv_pminu_w;
+      break;
+    case RISCV::BI__builtin_riscv_pmax_b_32:
+    case RISCV::BI__builtin_riscv_pmax_b_64:
+      ID = Intrinsic::riscv_pmax_b;
+      break;
+    case RISCV::BI__builtin_riscv_pmax_h_32:
+    case RISCV::BI__builtin_riscv_pmax_h_64:
+      ID = Intrinsic::riscv_pmax_h;
+      break;
+    case RISCV::BI__builtin_riscv_pmax_w:
+      ID = Intrinsic::riscv_pmax_w;
+      break;
+    case RISCV::BI__builtin_riscv_pmaxu_b_32:
+    case RISCV::BI__builtin_riscv_pmaxu_b_64:
+      ID = Intrinsic::riscv_pmaxu_b;
+      break;
+    case RISCV::BI__builtin_riscv_pmaxu_h_32:
+    case RISCV::BI__builtin_riscv_pmaxu_h_64:
+      ID = Intrinsic::riscv_pmaxu_h;
+      break;
+    case RISCV::BI__builtin_riscv_pmaxu_w:
+      ID = Intrinsic::riscv_pmaxu_w;
       break;
     case RISCV::BI__builtin_riscv_sadd:
       ID = Intrinsic::riscv_sadd;
