@@ -389,6 +389,8 @@ Non-comprehensive list of changes in this release
   this build without optimizations (i.e. use `-O0` or use the `optnone` function
   attribute) or use the `fno-sanitize-merge=` flag in optimized builds.
 
+- ``__builtin_assume_dereferenceable`` now accepts non-constant size operands.
+
 New Compiler Flags
 ------------------
 - New option ``-fno-sanitize-debug-trap-reasons`` added to disable emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
