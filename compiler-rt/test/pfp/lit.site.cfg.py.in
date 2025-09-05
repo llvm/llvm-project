@@ -1,0 +1,16 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+# Tool-specific config options.
+config.name_suffix = "@PFP_TEST_CONFIG_SUFFIX@"
+config.target_cflags = "@PFP_TEST_TARGET_CFLAGS@"
+config.target_arch = "@PFP_TEST_TARGET_ARCH@"
+config.use_lld = True
+config.use_thinlto = @PFP_TEST_USE_THINLTO@
+config.libunwind_shared = "@LIBUNWIND_ENABLE_SHARED@"
+config.libunwind_install_dir = "@LLVM_BINARY_DIR@/@LIBUNWIND_INSTALL_LIBRARY_DIR@"
+
+# Load common config for all compiler-rt lit tests.
+lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")
+
+# Load tool-specific config that would do the real work.
+lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg.py")
