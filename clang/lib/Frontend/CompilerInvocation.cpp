@@ -1857,6 +1857,10 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
        serializeSanitizerKinds(Opts.SanitizeAnnotateDebugInfo))
     GenerateArg(Consumer, OPT_fsanitize_annotate_debug_info_EQ, Sanitizer);
 
+  if (Opts.AllocTokenMax)
+    GenerateArg(Consumer, OPT_falloc_token_max_EQ,
+                std::to_string(*Opts.AllocTokenMax));
+
   if (!Opts.EmitVersionIdentMetadata)
     GenerateArg(Consumer, OPT_Qn);
 
@@ -2364,6 +2368,16 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
           << "-fallow-runtime-check-skip-hot-cutoff=" << V;
     } else {
       Opts.AllowRuntimeCheckSkipHotCutoff = A;
+    }
+  }
+
+  if (const auto *Arg = Args.getLastArg(options::OPT_falloc_token_max_EQ)) {
+    StringRef S = Arg->getValue();
+    uint64_t Value = 0;
+    if (S.getAsInteger(0, Value)) {
+      Diags.Report(diag::err_drv_invalid_value) << Arg->getAsString(Args) << S;
+    } else {
+      Opts.AllocTokenMax = Value;
     }
   }
 
