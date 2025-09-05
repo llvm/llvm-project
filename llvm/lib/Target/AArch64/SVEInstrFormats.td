@@ -11300,3 +11300,49 @@ class sve_int_mla_cpa<string asm>
 
   let ElementSize = ZPR64.ElementSize;
 }
+
+//===----------------------------------------------------------------------===//
+// FCVTZSN
+//===----------------------------------------------------------------------===//
+class sve2_fp_to_int_downcvt<string asm, ZPRRegOp ZdRC, RegisterOperand ZSrcOp, bits<2> size, bit U>
+  : I<(outs ZdRC:$Zd), (ins ZSrcOp:$Zn),
+      asm, "\t$Zd, $Zn", "", []>, Sched<[]> {
+  bits<5> Zd;
+  bits<4> Zn;
+  let Inst{31-24} = 0b01100101;
+  let Inst{23-22} = size;
+  let Inst{21-11} = 0b00110100110;
+  let Inst{10}    = U;
+  let Inst{9-6}   = Zn;
+  let Inst{5}     = 0b0;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve2_fp_to_int_downcvt<string asm, bit U> {
+  def _HtoB : sve2_fp_to_int_downcvt<asm, ZPR8,  ZZ_h_mul_r, 0b01, U>;
+  def _StoH : sve2_fp_to_int_downcvt<asm, ZPR16, ZZ_s_mul_r, 0b10, U>;
+  def _DtoS : sve2_fp_to_int_downcvt<asm, ZPR32, ZZ_d_mul_r, 0b11, U>;
+}
+
+//===----------------------------------------------------------------------===//
+// SCVTF
+//===----------------------------------------------------------------------===//
+class sve2_int_to_fp_upcvt<string asm, ZPRRegOp ZdRC, ZPRRegOp ZnRC,
+                        bits<2> size, bits<2> U>
+  : I<(outs ZdRC:$Zd), (ins  ZnRC:$Zn),
+      asm, "\t$Zd, $Zn", "", []>, Sched<[]> {
+  bits<5> Zd;
+  bits<5> Zn;
+  let Inst{31-24} = 0b01100101;
+  let Inst{23-22} = size;
+  let Inst{21-12} = 0b0011000011;
+  let Inst{11-10} = U;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve2_int_to_fp_upcvt<string asm, bits<2> U> {
+  def _BtoH : sve2_int_to_fp_upcvt<asm, ZPR16, ZPR8,  0b01, U>;
+  def _HtoS : sve2_int_to_fp_upcvt<asm, ZPR32, ZPR16, 0b10, U>;
+  def _StoD : sve2_int_to_fp_upcvt<asm, ZPR64, ZPR32, 0b11, U>;
+}
