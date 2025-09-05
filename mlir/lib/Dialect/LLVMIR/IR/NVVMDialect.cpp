@@ -2252,8 +2252,6 @@ ShflOp::getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
       id = resultType.isFloat() ? llvm::Intrinsic::nvvm_shfl_sync_idx_f32p
                                 : llvm::Intrinsic::nvvm_shfl_sync_idx_i32p;
       break;
-    default:
-      llvm_unreachable("unknown shuffle kind");
     }
   } else {
     switch (kind) {
@@ -2273,8 +2271,6 @@ ShflOp::getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
       id = resultType.isFloat() ? llvm::Intrinsic::nvvm_shfl_sync_idx_f32
                                 : llvm::Intrinsic::nvvm_shfl_sync_idx_i32;
       break;
-    default:
-      llvm_unreachable("unknown shuffle kind");
     }
   }
 
@@ -2467,7 +2463,6 @@ StMatrixOp::getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
   NVVM::MMALayout layout = thisOp.getLayout();
   int32_t num = thisOp.getSources().size();
   NVVM::LdStMatrixShapeAttr shape = thisOp.getShape();
-  NVVM::LdStMatrixEltType eltType = thisOp.getEltType();
 
   if (shape.getM() == 8 && shape.getN() == 8) {
     switch (num) {
