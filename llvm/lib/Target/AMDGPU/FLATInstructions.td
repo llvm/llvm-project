@@ -852,10 +852,13 @@ multiclass FLAT_Global_Atomic_Pseudo_RTN<
   ValueType data_vt = vt,
   RegisterOperand data_op = vdst_op> {
 
+  defvar vdst_op_vgpr = getEquivalentVGPROperand<vdst_op>.ret;
+  defvar data_op_vgpr = getEquivalentVGPROperand<data_op>.ret;
+
   let is_flat_global = 1 in {
     def _RTN : FLAT_AtomicRet_Pseudo <opName,
-      (outs vdst_op:$vdst),
-        (ins VReg_64:$vaddr, data_op:$vdata, flat_offset:$offset, CPol_GLC1:$cpol),
+      (outs vdst_op_vgpr:$vdst),
+        (ins VReg_64:$vaddr, data_op_vgpr:$vdata, flat_offset:$offset, CPol_GLC1:$cpol),
       " $vdst, $vaddr, $vdata, off$offset$cpol">,
       GlobalSaddrTable<0, opName#"_rtn"> {
       let has_saddr = 1;
@@ -863,8 +866,8 @@ multiclass FLAT_Global_Atomic_Pseudo_RTN<
     }
 
     def _SADDR_RTN : FLAT_AtomicRet_Pseudo <opName,
-      (outs vdst_op:$vdst),
-        (ins VGPR_32:$vaddr, data_op:$vdata, SReg_64_XEXEC_XNULL:$saddr, flat_offset:$offset, CPol_GLC1:$cpol),
+      (outs vdst_op_vgpr:$vdst),
+        (ins VGPR_32:$vaddr, data_op_vgpr:$vdata, SReg_64_XEXEC_XNULL:$saddr, flat_offset:$offset, CPol_GLC1:$cpol),
       " $vdst, $vaddr, $vdata, $saddr$offset$cpol">,
       GlobalSaddrTable<1, opName#"_rtn"> {
        let has_saddr = 1;

@@ -2625,6 +2625,16 @@ class getEquivalentAGPROperand<RegisterOperand RC> {
           !eq(Size, 1024) : RegisterOperand<AReg_1024>);
 }
 
+class getEquivalentVGPROperand<RegisterOperand RC> {
+  defvar Size = RC.RegClass.Size;
+  RegisterOperand ret =
+    !cond(!eq(Size, 32)   : RegisterOperand<VGPR_32>,
+          !eq(Size, 64)   : RegisterOperand<VReg_64>,
+          !eq(Size, 96)   : RegisterOperand<VReg_96>,
+          !eq(Size, 128)  : RegisterOperand<VReg_128>,
+          !eq(Size, 160)  : RegisterOperand<VReg_160>,
+          !eq(Size, 1024) : RegisterOperand<VReg_1024>);
+}
 
 class getHasVOP3DPP <ValueType DstVT = i32, ValueType Src0VT = i32,
                  ValueType Src1VT = i32, ValueType Src2VT = i32> {
