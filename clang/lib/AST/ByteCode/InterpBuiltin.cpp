@@ -2830,7 +2830,7 @@ static bool interp__builtin_select(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp__builtin_elementwise_triop(
-    InterpState &S, CodePtr OpPC, const CallExpr *Call, unsigned BuiltinID,
+    InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<APInt(const APSInt &, const APSInt &, const APSInt &)>
         Fn) {
   assert(Call->getNumArgs() == 3);
@@ -3439,10 +3439,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_select(S, OpPC, Call);
 
   case Builtin::BI__builtin_elementwise_fshl:
-    return interp__builtin_elementwise_triop(S, OpPC, Call, BuiltinID,
+    return interp__builtin_elementwise_triop(S, OpPC, Call,
                                              llvm::APIntOps::fshl);
   case Builtin::BI__builtin_elementwise_fshr:
-    return interp__builtin_elementwise_triop(S, OpPC, Call, BuiltinID,
+    return interp__builtin_elementwise_triop(S, OpPC, Call,
                                              llvm::APIntOps::fshr);
 
   default:
