@@ -5670,10 +5670,12 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::UADDSAT:
   case ISD::SSUBSAT:
   case ISD::USUBSAT:
-  case ISD::AVGFLOORU:
-  case ISD::AVGCEILU:
   case ISD::MULHU:
   case ISD::MULHS:
+  case ISD::AVGFLOORS:
+  case ISD::AVGFLOORU:
+  case ISD::AVGCEILS:
+  case ISD::AVGCEILU:
   case ISD::ABDU:
   case ISD::ABDS:
   case ISD::SMIN:
