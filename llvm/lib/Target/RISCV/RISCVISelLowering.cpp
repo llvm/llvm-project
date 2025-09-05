@@ -3744,9 +3744,11 @@ static SDValue matchSplatAsGather(SDValue SplatVal, MVT VT, const SDLoc &DL,
   // different
   // FIXME: Support i1 vectors, maybe by promoting to i8?
   MVT EltTy = VT.getVectorElementType();
+  if (EltTy == MVT::i1 ||
+      !DAG.getTargetLoweringInfo().isTypeLegal(Src.getValueType()))
+    return SDValue();
   MVT SrcVT = Src.getSimpleValueType();
-  if (EltTy == MVT::i1 || EltTy != SrcVT.getVectorElementType() ||
-      !DAG.getTargetLoweringInfo().isTypeLegal(SrcVT))
+  if (EltTy != SrcVT.getVectorElementType())
     return SDValue();
   SDValue Idx = SplatVal.getOperand(1);
   // The index must be a legal type.
