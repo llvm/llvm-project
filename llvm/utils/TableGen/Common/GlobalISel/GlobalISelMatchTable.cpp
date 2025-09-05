@@ -10,6 +10,7 @@
 #include "Common/CodeGenInstruction.h"
 #include "Common/CodeGenRegisters.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -19,6 +20,11 @@
 #define DEBUG_TYPE "gi-match-table"
 
 STATISTIC(NumPatternEmitted, "Number of patterns emitted");
+
+static llvm::cl::opt<bool> AllowExtendedLLT(
+    "gisel-extended-llt",
+    llvm::cl::desc("Generate an extended llt names in match tables"),
+    llvm::cl::init(false));
 
 namespace llvm {
 namespace gi {
@@ -360,42 +366,98 @@ std::string LLTCodeGen::getCxxEnumValue() const {
 
 void LLTCodeGen::emitCxxEnumValue(raw_ostream &OS) const {
   if (Ty.isScalar()) {
-    OS << "GILLT_s" << Ty.getSizeInBits();
+    if (Ty.isBFloat(16))
+      OS << "GILLT_bf16";
+    else if (Ty.isPPCF128())
+      OS << "GILLT_ppcf128";
+    else if (Ty.isX86FP80())
+      OS << "GILLT_x86fp80";
+    else if (Ty.isFloat())
+      OS << "GILLT_f" << Ty.getSizeInBits();
+    else if (Ty.isInteger())
+      OS << "GILLT_i" << Ty.getSizeInBits();
+    else
+      OS << "GILLT_s" << Ty.getSizeInBits();
     return;
   }
   if (Ty.isVector()) {
     OS << (Ty.isScalable() ? "GILLT_nxv" : "GILLT_v")
-       << Ty.getElementCount().getKnownMinValue() << "s"
-       << Ty.getScalarSizeInBits();
+       << Ty.getElementCount().getKnownMinValue();
+
+    LLT ElemTy = Ty.getElementType();
+    if (ElemTy.isBFloat(16))
+      OS << "bf16";
+    else if (ElemTy.isPPCF128())
+      OS << "ppcf128";
+    else if (ElemTy.isX86FP80())
+      OS << "x86fp80";
+    else if (ElemTy.isFloat())
+      OS << "f" << ElemTy.getSizeInBits();
+    else if (Ty.isInteger())
+      OS << "i" << ElemTy.getSizeInBits();
+    else
+      OS << "s" << ElemTy.getSizeInBits();
     return;
   }
+
   if (Ty.isPointer()) {
     OS << "GILLT_p" << Ty.getAddressSpace();
     if (Ty.getSizeInBits() > 0)
       OS << "s" << Ty.getSizeInBits();
     return;
   }
+
   llvm_unreachable("Unhandled LLT");
 }
 
 void LLTCodeGen::emitCxxConstructorCall(raw_ostream &OS) const {
   if (Ty.isScalar()) {
-    OS << "LLT::scalar(" << Ty.getSizeInBits() << ")";
+    if (Ty.isInteger())
+      OS << "LLT::integer(" << Ty.getScalarSizeInBits() << ")";
+    else if (Ty.isBFloat(16))
+      OS << "LLT::bfloat()";
+    else if (Ty.isPPCF128())
+      OS << "LLT::ppcf128()";
+    else if (Ty.isX86FP80())
+      OS << "LLT::x86fp80()";
+    else if (Ty.isFloat())
+      OS << "LLT::floatingPoint(" << Ty.getScalarSizeInBits()
+         << ", LLT::FPVariant::IEEE_FLOAT)";
+    else
+      OS << "LLT::scalar(" << Ty.getScalarSizeInBits() << ")";
     return;
   }
+
   if (Ty.isVector()) {
     OS << "LLT::vector("
        << (Ty.isScalable() ? "ElementCount::getScalable("
                            : "ElementCount::getFixed(")
-       << Ty.getElementCount().getKnownMinValue() << "), "
-       << Ty.getScalarSizeInBits() << ")";
+       << Ty.getElementCount().getKnownMinValue() << "), ";
+
+    LLT ElemTy = Ty.getElementType();
+    if (ElemTy.isInteger())
+      OS << "LLT::integer(" << ElemTy.getScalarSizeInBits() << ")";
+    else if (ElemTy.isBFloat(16))
+      OS << "LLT::bfloat()";
+    else if (ElemTy.isPPCF128())
+      OS << "LLT::ppcf128()";
+    else if (ElemTy.isX86FP80())
+      OS << "LLT::x86fp80()";
+    else if (ElemTy.isFloat())
+      OS << "LLT::floatingPoint(" << ElemTy.getScalarSizeInBits()
+         << ", LLT::FPVariant::IEEE_FLOAT)";
+    else
+      OS << "LLT::scalar(" << Ty.getScalarSizeInBits() << ")";
+    OS << ")";
     return;
   }
+
   if (Ty.isPointer() && Ty.getSizeInBits() > 0) {
     OS << "LLT::pointer(" << Ty.getAddressSpace() << ", " << Ty.getSizeInBits()
        << ")";
     return;
   }
+
   llvm_unreachable("Unhandled LLT");
 }
 
@@ -441,11 +503,10 @@ std::optional<LLTCodeGen> MVTToLLT(MVT::SimpleValueType SVT) {
   MVT VT(SVT);
 
   if (VT.isVector() && !VT.getVectorElementCount().isScalar())
-    return LLTCodeGen(
-        LLT::vector(VT.getVectorElementCount(), VT.getScalarSizeInBits()));
+    return LLTCodeGen(LLT(VT, AllowExtendedLLT));
 
   if (VT.isInteger() || VT.isFloatingPoint())
-    return LLTCodeGen(LLT::scalar(VT.getSizeInBits()));
+    return LLTCodeGen(LLT(VT, AllowExtendedLLT));
 
   return std::nullopt;
 }
