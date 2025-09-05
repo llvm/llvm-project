@@ -16,6 +16,7 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_PROTOCOL_DAP_TYPES_H
 #define LLDB_TOOLS_LLDB_DAP_PROTOCOL_DAP_TYPES_H
 
+#include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 #include "llvm/Support/JSON.h"
 #include <optional>
