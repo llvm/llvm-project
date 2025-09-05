@@ -1814,9 +1814,10 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
                      << arg->getValue() << "'";
     else if (!ctx.arg.plugin.empty())
 #if LLD_ENABLE_GNU_LTO
-        ctx.arg.pluginOpt.push_back(v.str());
+      ctx.arg.pluginOpt.push_back(v.str());
 #else
-      ErrAlways(ctx) << arg->getSpelling() << " : support for GNU LTO is disabled";
+      ErrAlways(ctx) << arg->getSpelling()
+                     << " : support for GNU LTO is disabled";
 #endif
   }
 

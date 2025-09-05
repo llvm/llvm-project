@@ -324,8 +324,8 @@ private:
 
 class IRFile : public InputFile {
 public:
-  IRFile(Ctx &ctx, MemoryBufferRef m, StringRef archiveName, uint64_t offsetInArchive,
-         bool lazy);
+  IRFile(Ctx &ctx, MemoryBufferRef m, StringRef archiveName,
+         uint64_t offsetInArchive, bool lazy);
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
   virtual void parse() = 0;
   void parseLazy();

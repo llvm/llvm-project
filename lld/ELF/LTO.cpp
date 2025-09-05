@@ -430,7 +430,7 @@ void BitcodeCompiler::addObject(IRFile &f,
 #if LLD_ENABLE_GNU_LTO
 GccIRCompiler *GccIRCompiler::singleton = nullptr;
 
- GccIRCompiler *GccIRCompiler::getInstance() {
+GccIRCompiler *GccIRCompiler::getInstance() {
   assert(singleton != nullptr);
   return singleton;
 }
@@ -502,21 +502,22 @@ GccIRCompiler::registerClaimFileV2(ld_plugin_claim_file_handler_v2 handler) {
 }
 #endif
 
-enum ld_plugin_status regAllSymbolsRead(ld_plugin_all_symbols_read_handler handler) {
+enum ld_plugin_status
+regAllSymbolsRead(ld_plugin_all_symbols_read_handler handler) {
   GccIRCompiler *c = GccIRCompiler::getInstance();
   return c->registerAllSymbolsRead(handler);
 }
 
-enum ld_plugin_status
-GccIRCompiler::registerAllSymbolsRead(ld_plugin_all_symbols_read_handler handler) {
+enum ld_plugin_status GccIRCompiler::registerAllSymbolsRead(
+    ld_plugin_all_symbols_read_handler handler) {
   allSymbolsReadHandler = handler;
   return LDPS_OK;
 }
 
 static enum ld_plugin_status addSymbols(void *handle, int nsyms,
                                         const struct ld_plugin_symbol *syms) {
-  ELFFileBase *f = (ELFFileBase *) handle;
-  if(f == NULL)
+  ELFFileBase *f = (ELFFileBase *)handle;
+  if (f == NULL)
     return LDPS_ERR;
 
   for (int i = 0; i < nsyms; i++) {
@@ -632,7 +633,7 @@ SmallVector<std::unique_ptr<InputFile>, 0> GccIRCompiler::compile() {
   if (status != LDPS_OK)
     error("The plugin returned an error after all symbols were read.");
 
-  for (auto& m : files) {
+  for (auto &m : files) {
     ret.push_back(createObjFile(ctx, m->getMemBufferRef()));
   }
   return ret;
