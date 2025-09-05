@@ -60,6 +60,7 @@ add_clang_library(clangStaticAnalyzerCore
   clangAnalysis
   clangBasic
   clangCrossTU
+  clangFormat
   clangFrontend
   clangLex
   clangRewrite
