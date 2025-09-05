@@ -5420,7 +5420,7 @@ bool Type::isHLSLResourceRecordArray() const {
   const Type *Ty = getUnqualifiedDesugaredType();
   if (!Ty->isArrayType())
     return false;
-  while (isa<ConstantArrayType>(Ty))
+  while (isa<ArrayType>(Ty))
     Ty = Ty->getArrayElementTypeNoTypeQual();
   return Ty->isHLSLResourceRecord();
 }
@@ -5433,7 +5433,7 @@ bool Type::isHLSLIntangibleType() const {
     return Ty->isHLSLBuiltinIntangibleType();
 
   // unwrap arrays
-  while (isa<ConstantArrayType>(Ty))
+  while (isa<ArrayType>(Ty))
     Ty = Ty->getArrayElementTypeNoTypeQual();
 
   const RecordType *RT =

@@ -13205,6 +13205,9 @@ def err_hlsl_resource_range_overlap: Error<
   "%select{All|Vertex|Hull|Domain|Geometry|Pixel|Amplification|Mesh}9">;
 def note_hlsl_resource_range_here: Note<"overlapping resource range here">;
 
+def err_hlsl_incomplete_resource_array_in_function_param: Error<
+  "incomplete resource array in a function parameter">;
+
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
   "a randomized struct can only be initialized with a designated initializer">;
