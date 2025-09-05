@@ -15,12 +15,14 @@
 #endif
 
 _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __CLC_FUNCTION(__CLC_GENTYPE x) {
-  __CLC_GENTYPE result;
-  __CLC_SCALAR_GENTYPE *a = (__CLC_SCALAR_GENTYPE *)&x;
-  __CLC_SCALAR_GENTYPE *b = (__CLC_SCALAR_GENTYPE *)&result;
+  union {
+    __CLC_GENTYPE vec;
+    __CLC_SCALAR_GENTYPE arr[__CLC_VECSIZE_OR_1];
+  } u_x, u_result;
+  u_x.vec = x;
   for (int i = 0; i < __CLC_VECSIZE_OR_1; ++i)
-    b[i] = __CLC_IMPL_FUNCTION(a[i]);
-  return result;
+    u_result.arr[i] = __CLC_IMPL_FUNCTION(u_x.arr[i]);
+  return u_result.vec;
 }
 
 #endif // __CLC_VECSIZE_OR_1 >= 2
