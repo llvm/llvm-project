@@ -1807,6 +1807,8 @@ __m128h test_mm_mask_cvtepi16_ph(__m128h A, __mmask8 B, __m128i C) {
   return _mm_mask_cvtepi16_ph(A, B, C);
 }
 
+TEST_CONSTEXPR(match_m128h(_mm_mask_cvtepi16_ph(_mm_set1_ph(-777.0), /*1001 0011=*/0x93, (__m128i)(__v8hi){1, 1, 2, 2, 4, 4, 8, 8}), 1.0, 1.0, -777.0, -777.0, 4.0, -777.0, -777.0, 8.0));
+
 __m128h test_mm_maskz_cvtepi16_ph(__mmask8 A, __m128i B) {
   // CHECK-LABEL: test_mm_maskz_cvtepi16_ph
   // CHECK: %{{.*}} = sitofp <8 x i16> %{{.*}} to <8 x half>
