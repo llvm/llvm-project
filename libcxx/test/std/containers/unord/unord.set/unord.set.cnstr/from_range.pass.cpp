@@ -30,13 +30,9 @@
 void test_duplicates() {
   using T = KeyValue;
 
-  std::array input = {
-    T{1, 'a'}, T{2, 'a'}, T{3, 'a'}, T{3, 'b'}, T{3, 'c'}, T{2, 'b'}, T{4, 'a'}
-  };
-  std::array expected = {
-    T{1, 'a'}, T{2, 'b'}, T{3, 'c'}, T{4, 'a'}
-  };
-  auto c = std::unordered_set<T>(std::from_range, input);
+  std::array input    = {T{1, 'a'}, T{2, 'a'}, T{3, 'a'}, T{3, 'b'}, T{3, 'c'}, T{2, 'b'}, T{4, 'a'}};
+  std::array expected = {T{1, 'a'}, T{2, 'b'}, T{3, 'c'}, T{4, 'a'}};
+  auto c              = std::unordered_set<T>(std::from_range, input);
   assert(std::ranges::is_permutation(expected, c));
 }
 

@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_GSYM_OBJECTFILETRANSFORMER_H
 #define LLVM_DEBUGINFO_GSYM_OBJECTFILETRANSFORMER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -39,8 +40,9 @@ public:
   ///
   /// \returns An error indicating any fatal issues that happen when parsing
   /// the DWARF, or Error::success() if all goes well.
-  static llvm::Error convert(const object::ObjectFile &Obj,
-                             OutputAggregator &Output, GsymCreator &Gsym);
+  LLVM_ABI static llvm::Error convert(const object::ObjectFile &Obj,
+                                      OutputAggregator &Output,
+                                      GsymCreator &Gsym);
 };
 
 } // namespace gsym

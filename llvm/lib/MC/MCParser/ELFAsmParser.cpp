@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -13,7 +14,7 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDirectives.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -21,8 +22,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/SectionKind.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
 #include <cassert>
 #include <cstdint>
@@ -41,7 +40,7 @@ class ELFAsmParser : public MCAsmParserExtension {
     getParser().addDirectiveHandler(Directive, Handler);
   }
 
-  bool ParseSectionSwitch(StringRef Section, unsigned Type, unsigned Flags,
+  bool parseSectionSwitch(StringRef Section, unsigned Type, unsigned Flags,
                           SectionKind Kind);
 
 public:
@@ -51,121 +50,98 @@ public:
     // Call the base implementation.
     this->MCAsmParserExtension::Initialize(Parser);
 
-    addDirectiveHandler<&ELFAsmParser::ParseSectionDirectiveData>(".data");
-    addDirectiveHandler<&ELFAsmParser::ParseSectionDirectiveText>(".text");
-    addDirectiveHandler<&ELFAsmParser::ParseSectionDirectiveBSS>(".bss");
-    addDirectiveHandler<&ELFAsmParser::ParseSectionDirectiveRoData>(".rodata");
-    addDirectiveHandler<&ELFAsmParser::ParseSectionDirectiveTData>(".tdata");
-    addDirectiveHandler<&ELFAsmParser::ParseSectionDirectiveTBSS>(".tbss");
+    addDirectiveHandler<&ELFAsmParser::parseSectionDirectiveData>(".data");
+    addDirectiveHandler<&ELFAsmParser::parseSectionDirectiveText>(".text");
+    addDirectiveHandler<&ELFAsmParser::parseSectionDirectiveBSS>(".bss");
+    addDirectiveHandler<&ELFAsmParser::parseSectionDirectiveRoData>(".rodata");
+    addDirectiveHandler<&ELFAsmParser::parseSectionDirectiveTData>(".tdata");
+    addDirectiveHandler<&ELFAsmParser::parseSectionDirectiveTBSS>(".tbss");
+    addDirectiveHandler<&ELFAsmParser::parseDirectiveSection>(".section");
     addDirectiveHandler<
-      &ELFAsmParser::ParseSectionDirectiveDataRel>(".data.rel");
+      &ELFAsmParser::parseDirectivePushSection>(".pushsection");
+    addDirectiveHandler<&ELFAsmParser::parseDirectivePopSection>(".popsection");
+    addDirectiveHandler<&ELFAsmParser::parseDirectiveSize>(".size");
+    addDirectiveHandler<&ELFAsmParser::parseDirectivePrevious>(".previous");
+    addDirectiveHandler<&ELFAsmParser::parseDirectiveType>(".type");
+    addDirectiveHandler<&ELFAsmParser::parseDirectiveIdent>(".ident");
+    addDirectiveHandler<&ELFAsmParser::parseDirectiveSymver>(".symver");
+    addDirectiveHandler<&ELFAsmParser::parseDirectiveVersion>(".version");
+    addDirectiveHandler<&ELFAsmParser::parseDirectiveWeakref>(".weakref");
+    addDirectiveHandler<&ELFAsmParser::parseDirectiveSymbolAttribute>(".weak");
+    addDirectiveHandler<&ELFAsmParser::parseDirectiveSymbolAttribute>(".local");
     addDirectiveHandler<
-      &ELFAsmParser::ParseSectionDirectiveDataRelRo>(".data.rel.ro");
+      &ELFAsmParser::parseDirectiveSymbolAttribute>(".protected");
     addDirectiveHandler<
-      &ELFAsmParser::ParseSectionDirectiveEhFrame>(".eh_frame");
-    addDirectiveHandler<&ELFAsmParser::ParseDirectiveSection>(".section");
+      &ELFAsmParser::parseDirectiveSymbolAttribute>(".internal");
     addDirectiveHandler<
-      &ELFAsmParser::ParseDirectivePushSection>(".pushsection");
-    addDirectiveHandler<&ELFAsmParser::ParseDirectivePopSection>(".popsection");
-    addDirectiveHandler<&ELFAsmParser::ParseDirectiveSize>(".size");
-    addDirectiveHandler<&ELFAsmParser::ParseDirectivePrevious>(".previous");
-    addDirectiveHandler<&ELFAsmParser::ParseDirectiveType>(".type");
-    addDirectiveHandler<&ELFAsmParser::ParseDirectiveIdent>(".ident");
-    addDirectiveHandler<&ELFAsmParser::ParseDirectiveSymver>(".symver");
-    addDirectiveHandler<&ELFAsmParser::ParseDirectiveVersion>(".version");
-    addDirectiveHandler<&ELFAsmParser::ParseDirectiveWeakref>(".weakref");
-    addDirectiveHandler<&ELFAsmParser::ParseDirectiveSymbolAttribute>(".weak");
-    addDirectiveHandler<&ELFAsmParser::ParseDirectiveSymbolAttribute>(".local");
-    addDirectiveHandler<
-      &ELFAsmParser::ParseDirectiveSymbolAttribute>(".protected");
-    addDirectiveHandler<
-      &ELFAsmParser::ParseDirectiveSymbolAttribute>(".internal");
-    addDirectiveHandler<
-      &ELFAsmParser::ParseDirectiveSymbolAttribute>(".hidden");
-    addDirectiveHandler<&ELFAsmParser::ParseDirectiveSubsection>(".subsection");
-    addDirectiveHandler<&ELFAsmParser::ParseDirectiveCGProfile>(".cg_profile");
+      &ELFAsmParser::parseDirectiveSymbolAttribute>(".hidden");
+    addDirectiveHandler<&ELFAsmParser::parseDirectiveSubsection>(".subsection");
+    addDirectiveHandler<&ELFAsmParser::parseDirectiveCGProfile>(".cg_profile");
   }
 
   // FIXME: Part of this logic is duplicated in the MCELFStreamer. What is
   // the best way for us to get access to it?
-  bool ParseSectionDirectiveData(StringRef, SMLoc) {
-    return ParseSectionSwitch(".data", ELF::SHT_PROGBITS,
+  bool parseSectionDirectiveData(StringRef, SMLoc) {
+    return parseSectionSwitch(".data", ELF::SHT_PROGBITS,
                               ELF::SHF_WRITE | ELF::SHF_ALLOC,
                               SectionKind::getData());
   }
-  bool ParseSectionDirectiveText(StringRef, SMLoc) {
-    return ParseSectionSwitch(".text", ELF::SHT_PROGBITS,
+  bool parseSectionDirectiveText(StringRef, SMLoc) {
+    return parseSectionSwitch(".text", ELF::SHT_PROGBITS,
                               ELF::SHF_EXECINSTR |
                               ELF::SHF_ALLOC, SectionKind::getText());
   }
-  bool ParseSectionDirectiveBSS(StringRef, SMLoc) {
-    return ParseSectionSwitch(".bss", ELF::SHT_NOBITS,
+  bool parseSectionDirectiveBSS(StringRef, SMLoc) {
+    return parseSectionSwitch(".bss", ELF::SHT_NOBITS,
                               ELF::SHF_WRITE |
                               ELF::SHF_ALLOC, SectionKind::getBSS());
   }
-  bool ParseSectionDirectiveRoData(StringRef, SMLoc) {
-    return ParseSectionSwitch(".rodata", ELF::SHT_PROGBITS,
+  bool parseSectionDirectiveRoData(StringRef, SMLoc) {
+    return parseSectionSwitch(".rodata", ELF::SHT_PROGBITS,
                               ELF::SHF_ALLOC,
                               SectionKind::getReadOnly());
   }
-  bool ParseSectionDirectiveTData(StringRef, SMLoc) {
-    return ParseSectionSwitch(".tdata", ELF::SHT_PROGBITS,
+  bool parseSectionDirectiveTData(StringRef, SMLoc) {
+    return parseSectionSwitch(".tdata", ELF::SHT_PROGBITS,
                               ELF::SHF_ALLOC |
                               ELF::SHF_TLS | ELF::SHF_WRITE,
                               SectionKind::getThreadData());
   }
-  bool ParseSectionDirectiveTBSS(StringRef, SMLoc) {
-    return ParseSectionSwitch(".tbss", ELF::SHT_NOBITS,
+  bool parseSectionDirectiveTBSS(StringRef, SMLoc) {
+    return parseSectionSwitch(".tbss", ELF::SHT_NOBITS,
                               ELF::SHF_ALLOC |
                               ELF::SHF_TLS | ELF::SHF_WRITE,
                               SectionKind::getThreadBSS());
   }
-  bool ParseSectionDirectiveDataRel(StringRef, SMLoc) {
-    return ParseSectionSwitch(".data.rel", ELF::SHT_PROGBITS,
-                              ELF::SHF_ALLOC | ELF::SHF_WRITE,
-                              SectionKind::getData());
-  }
-  bool ParseSectionDirectiveDataRelRo(StringRef, SMLoc) {
-    return ParseSectionSwitch(".data.rel.ro", ELF::SHT_PROGBITS,
-                              ELF::SHF_ALLOC |
-                              ELF::SHF_WRITE,
-                              SectionKind::getReadOnlyWithRel());
-  }
-  bool ParseSectionDirectiveEhFrame(StringRef, SMLoc) {
-    return ParseSectionSwitch(".eh_frame", ELF::SHT_PROGBITS,
-                              ELF::SHF_ALLOC | ELF::SHF_WRITE,
-                              SectionKind::getData());
-  }
-  bool ParseDirectivePushSection(StringRef, SMLoc);
-  bool ParseDirectivePopSection(StringRef, SMLoc);
-  bool ParseDirectiveSection(StringRef, SMLoc);
-  bool ParseDirectiveSize(StringRef, SMLoc);
-  bool ParseDirectivePrevious(StringRef, SMLoc);
-  bool ParseDirectiveType(StringRef, SMLoc);
-  bool ParseDirectiveIdent(StringRef, SMLoc);
-  bool ParseDirectiveSymver(StringRef, SMLoc);
-  bool ParseDirectiveVersion(StringRef, SMLoc);
-  bool ParseDirectiveWeakref(StringRef, SMLoc);
-  bool ParseDirectiveSymbolAttribute(StringRef, SMLoc);
-  bool ParseDirectiveSubsection(StringRef, SMLoc);
-  bool ParseDirectiveCGProfile(StringRef, SMLoc);
+  bool parseDirectivePushSection(StringRef, SMLoc);
+  bool parseDirectivePopSection(StringRef, SMLoc);
+  bool parseDirectiveSection(StringRef, SMLoc);
+  bool parseDirectiveSize(StringRef, SMLoc);
+  bool parseDirectivePrevious(StringRef, SMLoc);
+  bool parseDirectiveType(StringRef, SMLoc);
+  bool parseDirectiveIdent(StringRef, SMLoc);
+  bool parseDirectiveSymver(StringRef, SMLoc);
+  bool parseDirectiveVersion(StringRef, SMLoc);
+  bool parseDirectiveWeakref(StringRef, SMLoc);
+  bool parseDirectiveSymbolAttribute(StringRef, SMLoc);
+  bool parseDirectiveSubsection(StringRef, SMLoc);
+  bool parseDirectiveCGProfile(StringRef, SMLoc);
 
 private:
-  bool ParseSectionName(StringRef &SectionName);
-  bool ParseSectionArguments(bool IsPush, SMLoc loc);
+  bool parseSectionName(StringRef &SectionName);
+  bool parseSectionArguments(bool IsPush, SMLoc loc);
   unsigned parseSunStyleSectionFlags();
   bool maybeParseSectionType(StringRef &TypeName);
   bool parseMergeSize(int64_t &Size);
   bool parseGroup(StringRef &GroupName, bool &IsComdat);
   bool parseLinkedToSym(MCSymbolELF *&LinkedToSym);
-  bool maybeParseUniqueID(int64_t &UniqueID);
 };
 
 } // end anonymous namespace
 
-/// ParseDirectiveSymbolAttribute
+/// parseDirectiveSymbolAttribute
 ///  ::= { ".local", ".weak", ... } [ identifier ( , identifier )* ]
-bool ELFAsmParser::ParseDirectiveSymbolAttribute(StringRef Directive, SMLoc) {
+bool ELFAsmParser::parseDirectiveSymbolAttribute(StringRef Directive, SMLoc) {
   MCSymbolAttr Attr = StringSwitch<MCSymbolAttr>(Directive)
     .Case(".weak", MCSA_Weak)
     .Case(".local", MCSA_Local)
@@ -204,7 +180,7 @@ bool ELFAsmParser::ParseDirectiveSymbolAttribute(StringRef Directive, SMLoc) {
   return false;
 }
 
-bool ELFAsmParser::ParseSectionSwitch(StringRef Section, unsigned Type,
+bool ELFAsmParser::parseSectionSwitch(StringRef Section, unsigned Type,
                                       unsigned Flags, SectionKind Kind) {
   const MCExpr *Subsection = nullptr;
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
@@ -219,11 +195,11 @@ bool ELFAsmParser::ParseSectionSwitch(StringRef Section, unsigned Type,
   return false;
 }
 
-bool ELFAsmParser::ParseDirectiveSize(StringRef, SMLoc) {
+bool ELFAsmParser::parseDirectiveSize(StringRef, SMLoc) {
   StringRef Name;
   if (getParser().parseIdentifier(Name))
     return TokError("expected identifier");
-  MCSymbolELF *Sym = cast<MCSymbolELF>(getContext().getOrCreateSymbol(Name));
+  auto *Sym = static_cast<MCSymbolELF *>(getContext().getOrCreateSymbol(Name));
 
   if (getLexer().isNot(AsmToken::Comma))
     return TokError("expected comma");
@@ -241,7 +217,7 @@ bool ELFAsmParser::ParseDirectiveSize(StringRef, SMLoc) {
   return false;
 }
 
-bool ELFAsmParser::ParseSectionName(StringRef &SectionName) {
+bool ELFAsmParser::parseSectionName(StringRef &SectionName) {
   // A section name can contain -, so we cannot just use
   // parseIdentifier.
   SMLoc FirstLoc = getLexer().getLoc();
@@ -328,9 +304,12 @@ static unsigned parseSectionFlags(const Triple &TT, StringRef flagsStr,
       flags |= ELF::XCORE_SHF_DP_SECTION;
       break;
     case 'y':
-      if (!(TT.isARM() || TT.isThumb()))
+      if (TT.isARM() || TT.isThumb())
+        flags |= ELF::SHF_ARM_PURECODE;
+      else if (TT.isAArch64())
+        flags |= ELF::SHF_AARCH64_PURECODE;
+      else
         return -1U;
-      flags |= ELF::SHF_ARM_PURECODE;
       break;
     case 's':
       if (TT.getArch() != Triple::hexagon)
@@ -392,10 +371,10 @@ unsigned ELFAsmParser::parseSunStyleSectionFlags() {
 }
 
 
-bool ELFAsmParser::ParseDirectivePushSection(StringRef s, SMLoc loc) {
+bool ELFAsmParser::parseDirectivePushSection(StringRef s, SMLoc loc) {
   getStreamer().pushSection();
 
-  if (ParseSectionArguments(/*IsPush=*/true, loc)) {
+  if (parseSectionArguments(/*IsPush=*/true, loc)) {
     getStreamer().popSection();
     return true;
   }
@@ -403,27 +382,27 @@ bool ELFAsmParser::ParseDirectivePushSection(StringRef s, SMLoc loc) {
   return false;
 }
 
-bool ELFAsmParser::ParseDirectivePopSection(StringRef, SMLoc) {
+bool ELFAsmParser::parseDirectivePopSection(StringRef, SMLoc) {
   if (!getStreamer().popSection())
     return TokError(".popsection without corresponding .pushsection");
   return false;
 }
 
-bool ELFAsmParser::ParseDirectiveSection(StringRef, SMLoc loc) {
-  return ParseSectionArguments(/*IsPush=*/false, loc);
+bool ELFAsmParser::parseDirectiveSection(StringRef, SMLoc loc) {
+  return parseSectionArguments(/*IsPush=*/false, loc);
 }
 
 bool ELFAsmParser::maybeParseSectionType(StringRef &TypeName) {
-  MCAsmLexer &L = getLexer();
+  AsmLexer &L = getLexer();
   if (L.isNot(AsmToken::Comma))
     return false;
   Lex();
   if (L.isNot(AsmToken::At) && L.isNot(AsmToken::Percent) &&
       L.isNot(AsmToken::String)) {
-    if (L.getAllowAtInIdentifier())
-      return TokError("expected '@<type>', '%<type>' or \"<type>\"");
-    else
+    if (getContext().getAsmInfo()->getCommentString().starts_with('@'))
       return TokError("expected '%<type>' or \"<type>\"");
+    else
+      return TokError("expected '@<type>', '%<type>' or \"<type>\"");
   }
   if (!L.is(AsmToken::String))
     Lex();
@@ -447,7 +426,7 @@ bool ELFAsmParser::parseMergeSize(int64_t &Size) {
 }
 
 bool ELFAsmParser::parseGroup(StringRef &GroupName, bool &IsComdat) {
-  MCAsmLexer &L = getLexer();
+  AsmLexer &L = getLexer();
   if (L.isNot(AsmToken::Comma))
     return TokError("expected group name");
   Lex();
@@ -472,7 +451,7 @@ bool ELFAsmParser::parseGroup(StringRef &GroupName, bool &IsComdat) {
 }
 
 bool ELFAsmParser::parseLinkedToSym(MCSymbolELF *&LinkedToSym) {
-  MCAsmLexer &L = getLexer();
+  AsmLexer &L = getLexer();
   if (L.isNot(AsmToken::Comma))
     return TokError("expected linked-to symbol");
   Lex();
@@ -486,31 +465,9 @@ bool ELFAsmParser::parseLinkedToSym(MCSymbolELF *&LinkedToSym) {
     }
     return TokError("invalid linked-to symbol");
   }
-  LinkedToSym = dyn_cast_or_null<MCSymbolELF>(getContext().lookupSymbol(Name));
+  LinkedToSym = static_cast<MCSymbolELF *>(getContext().lookupSymbol(Name));
   if (!LinkedToSym || !LinkedToSym->isInSection())
     return Error(StartLoc, "linked-to symbol is not in a section: " + Name);
-  return false;
-}
-
-bool ELFAsmParser::maybeParseUniqueID(int64_t &UniqueID) {
-  MCAsmLexer &L = getLexer();
-  if (L.isNot(AsmToken::Comma))
-    return false;
-  Lex();
-  StringRef UniqueStr;
-  if (getParser().parseIdentifier(UniqueStr))
-    return TokError("expected identifier");
-  if (UniqueStr != "unique")
-    return TokError("expected 'unique'");
-  if (L.isNot(AsmToken::Comma))
-    return TokError("expected commma");
-  Lex();
-  if (getParser().parseAbsoluteExpression(UniqueID))
-    return true;
-  if (UniqueID < 0)
-    return TokError("unique id must be positive");
-  if (!isUInt<32>(UniqueID) || UniqueID == ~0U)
-    return TokError("unique id is too large");
   return false;
 }
 
@@ -536,10 +493,10 @@ static bool allowSectionTypeMismatch(const Triple &TT, StringRef SectionName,
   return false;
 }
 
-bool ELFAsmParser::ParseSectionArguments(bool IsPush, SMLoc loc) {
+bool ELFAsmParser::parseSectionArguments(bool IsPush, SMLoc loc) {
   StringRef SectionName;
 
-  if (ParseSectionName(SectionName))
+  if (parseSectionName(SectionName))
     return TokError("expected identifier");
 
   StringRef TypeName;
@@ -603,7 +560,7 @@ bool ELFAsmParser::ParseSectionArguments(bool IsPush, SMLoc loc) {
     if (maybeParseSectionType(TypeName))
       return true;
 
-    MCAsmLexer &L = getLexer();
+    AsmLexer &L = getLexer();
     if (TypeName.empty()) {
       if (Mergeable)
         return TokError("Mergeable section must specify the type");
@@ -613,7 +570,7 @@ bool ELFAsmParser::ParseSectionArguments(bool IsPush, SMLoc loc) {
         return TokError("expected end of directive");
     }
 
-    if (Mergeable)
+    if (Mergeable || TypeName == "llvm_cfi_jump_table")
       if (parseMergeSize(Size))
         return true;
     if (Flags & ELF::SHF_LINK_ORDER)
@@ -679,13 +636,15 @@ EndStmt:
       Type = ELF::SHT_LLVM_LTO;
     else if (TypeName == "llvm_jt_sizes")
       Type = ELF::SHT_LLVM_JT_SIZES;
+    else if (TypeName == "llvm_cfi_jump_table")
+      Type = ELF::SHT_LLVM_CFI_JUMP_TABLE;
     else if (TypeName.getAsInteger(0, Type))
       return TokError("unknown section type");
   }
 
   if (UseLastGroup) {
-    if (const MCSectionELF *Section =
-            cast_or_null<MCSectionELF>(getStreamer().getCurrentSectionOnly()))
+    if (auto *Section = static_cast<const MCSectionELF *>(
+            getStreamer().getCurrentSectionOnly()))
       if (const MCSymbol *Group = Section->getGroup()) {
         GroupName = Group->getName();
         IsComdat = Section->isComdat();
@@ -724,7 +683,7 @@ EndStmt:
   return false;
 }
 
-bool ELFAsmParser::ParseDirectivePrevious(StringRef DirName, SMLoc) {
+bool ELFAsmParser::parseDirectivePrevious(StringRef DirName, SMLoc) {
   MCSectionSubPair PreviousSection = getStreamer().getPreviousSection();
   if (PreviousSection.first == nullptr)
       return TokError(".previous without corresponding .section");
@@ -746,19 +705,26 @@ static MCSymbolAttr MCAttrForString(StringRef Type) {
           .Default(MCSA_Invalid);
 }
 
-/// ParseDirectiveELFType
+/// parseDirectiveELFType
 ///  ::= .type identifier , STT_<TYPE_IN_UPPER_CASE>
 ///  ::= .type identifier , #attribute
 ///  ::= .type identifier , @attribute
 ///  ::= .type identifier , %attribute
 ///  ::= .type identifier , "attribute"
-bool ELFAsmParser::ParseDirectiveType(StringRef, SMLoc) {
+bool ELFAsmParser::parseDirectiveType(StringRef, SMLoc) {
   StringRef Name;
   if (getParser().parseIdentifier(Name))
     return TokError("expected identifier");
 
   // Handle the identifier as the key symbol.
   MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+
+  bool AllowAt = getLexer().getAllowAtInIdentifier();
+  if (!AllowAt &&
+      !getContext().getAsmInfo()->getCommentString().starts_with("@"))
+    getLexer().setAllowAtInIdentifier(true);
+  auto _ =
+      make_scope_exit([&]() { getLexer().setAllowAtInIdentifier(AllowAt); });
 
   // NOTE the comma is optional in all cases.  It is only documented as being
   // optional in the first case, however, GAS will silently treat the comma as
@@ -803,9 +769,9 @@ bool ELFAsmParser::ParseDirectiveType(StringRef, SMLoc) {
   return false;
 }
 
-/// ParseDirectiveIdent
+/// parseDirectiveIdent
 ///  ::= .ident string
-bool ELFAsmParser::ParseDirectiveIdent(StringRef, SMLoc) {
+bool ELFAsmParser::parseDirectiveIdent(StringRef, SMLoc) {
   if (getLexer().isNot(AsmToken::String))
     return TokError("expected string");
 
@@ -821,9 +787,9 @@ bool ELFAsmParser::ParseDirectiveIdent(StringRef, SMLoc) {
   return false;
 }
 
-/// ParseDirectiveSymver
+/// parseDirectiveSymver
 ///  ::= .symver foo, bar2@zed
-bool ELFAsmParser::ParseDirectiveSymver(StringRef, SMLoc) {
+bool ELFAsmParser::parseDirectiveSymver(StringRef, SMLoc) {
   StringRef OriginalName, Name, Action;
   if (getParser().parseIdentifier(OriginalName))
     return TokError("expected identifier");
@@ -858,9 +824,9 @@ bool ELFAsmParser::ParseDirectiveSymver(StringRef, SMLoc) {
   return false;
 }
 
-/// ParseDirectiveVersion
+/// parseDirectiveVersion
 ///  ::= .version string
-bool ELFAsmParser::ParseDirectiveVersion(StringRef, SMLoc) {
+bool ELFAsmParser::parseDirectiveVersion(StringRef, SMLoc) {
   if (getLexer().isNot(AsmToken::String))
     return TokError("expected string");
 
@@ -882,9 +848,9 @@ bool ELFAsmParser::ParseDirectiveVersion(StringRef, SMLoc) {
   return false;
 }
 
-/// ParseDirectiveWeakref
+/// parseDirectiveWeakref
 ///  ::= .weakref foo, bar
-bool ELFAsmParser::ParseDirectiveWeakref(StringRef, SMLoc) {
+bool ELFAsmParser::parseDirectiveWeakref(StringRef, SMLoc) {
   // FIXME: Share code with the other alias building directives.
 
   StringRef AliasName;
@@ -908,7 +874,7 @@ bool ELFAsmParser::ParseDirectiveWeakref(StringRef, SMLoc) {
   return false;
 }
 
-bool ELFAsmParser::ParseDirectiveSubsection(StringRef, SMLoc) {
+bool ELFAsmParser::parseDirectiveSubsection(StringRef, SMLoc) {
   const MCExpr *Subsection = MCConstantExpr::create(0, getContext());
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
     if (getParser().parseExpression(Subsection))
@@ -924,8 +890,8 @@ bool ELFAsmParser::ParseDirectiveSubsection(StringRef, SMLoc) {
                                      Subsection);
 }
 
-bool ELFAsmParser::ParseDirectiveCGProfile(StringRef S, SMLoc Loc) {
-  return MCAsmParserExtension::ParseDirectiveCGProfile(S, Loc);
+bool ELFAsmParser::parseDirectiveCGProfile(StringRef S, SMLoc Loc) {
+  return MCAsmParserExtension::parseDirectiveCGProfile(S, Loc);
 }
 
 namespace llvm {

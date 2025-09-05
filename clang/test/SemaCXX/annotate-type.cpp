@@ -2,7 +2,7 @@
 
 struct S1 {
   void f() [[clang::annotate_type("foo")]];
-  [[clang::annotate_type("foo")]] void g(); // expected-error {{'annotate_type' attribute cannot be applied to a declaration}}
+  [[clang::annotate_type("foo")]] void g(); // expected-error {{'clang::annotate_type' attribute cannot be applied to a declaration}}
 };
 
 template <typename T1, typename T2> struct is_same {
@@ -40,26 +40,26 @@ int f2() { variadic_func_template<1, 2, 3>(); }
 // [[clang::annotate_type]] inside a template argument.
 template <typename Ty> void func_template();
 void f3() {
-  func_template<int [[clang::annotate_type()]]>(); // expected-error {{'annotate_type' attribute takes at least 1 argument}}
+  func_template<int [[clang::annotate_type()]]>(); // expected-error {{'clang::annotate_type' attribute takes at least 1 argument}}
 }
 
 // More error cases: Prohibit adding the attribute to declarations.
 // Different declarations hit different code paths, so they need separate tests.
-namespace [[clang::annotate_type("foo")]] my_namespace {} // expected-error {{'annotate_type' attribute cannot be applied to a declaration}}
-struct [[clang::annotate_type("foo")]] S3; // expected-error {{'annotate_type' attribute cannot be applied to a declaration}}
-struct [[clang::annotate_type("foo")]] S3{ // expected-error {{'annotate_type' attribute cannot be applied to a declaration}}
-  [[clang::annotate_type("foo")]] int member; // expected-error {{'annotate_type' attribute cannot be applied to a declaration}}
+namespace [[clang::annotate_type("foo")]] my_namespace {} // expected-error {{'clang::annotate_type' attribute cannot be applied to a declaration}}
+struct [[clang::annotate_type("foo")]] S3; // expected-error {{'clang::annotate_type' attribute cannot be applied to a declaration}}
+struct [[clang::annotate_type("foo")]] S3{ // expected-error {{'clang::annotate_type' attribute cannot be applied to a declaration}}
+  [[clang::annotate_type("foo")]] int member; // expected-error {{'clang::annotate_type' attribute cannot be applied to a declaration}}
 };
 void f4() {
-  for ([[clang::annotate_type("foo")]] int i = 0; i < 42; ++i) {} // expected-error {{'annotate_type' attribute cannot be applied to a declaration}}
-  for (; [[clang::annotate_type("foo")]] bool b = false;) {} // expected-error {{'annotate_type' attribute cannot be applied to a declaration}}
-  while ([[clang::annotate_type("foo")]] bool b = false) {} // expected-error {{'annotate_type' attribute cannot be applied to a declaration}}
-  if ([[clang::annotate_type("foo")]] bool b = false) {} // expected-error {{'annotate_type' attribute cannot be applied to a declaration}}
+  for ([[clang::annotate_type("foo")]] int i = 0; i < 42; ++i) {} // expected-error {{'clang::annotate_type' attribute cannot be applied to a declaration}}
+  for (; [[clang::annotate_type("foo")]] bool b = false;) {} // expected-error {{'clang::annotate_type' attribute cannot be applied to a declaration}}
+  while ([[clang::annotate_type("foo")]] bool b = false) {} // expected-error {{'clang::annotate_type' attribute cannot be applied to a declaration}}
+  if ([[clang::annotate_type("foo")]] bool b = false) {} // expected-error {{'clang::annotate_type' attribute cannot be applied to a declaration}}
   try {
-  } catch ([[clang::annotate_type("foo")]] int i) { // expected-error {{'annotate_type' attribute cannot be applied to a declaration}}
+  } catch ([[clang::annotate_type("foo")]] int i) { // expected-error {{'clang::annotate_type' attribute cannot be applied to a declaration}}
   }
 }
 template <class T>
-[[clang::annotate_type("foo")]] T var_template; // expected-error {{'annotate_type' attribute cannot be applied to a declaration}}
+[[clang::annotate_type("foo")]] T var_template; // expected-error {{'clang::annotate_type' attribute cannot be applied to a declaration}}
 [[clang::annotate_type("foo")]] extern "C" int extern_c_func(); // expected-error {{an attribute list cannot appear here}}
-extern "C" [[clang::annotate_type("foo")]] int extern_c_func(); // expected-error {{'annotate_type' attribute cannot be applied to a declaration}}
+extern "C" [[clang::annotate_type("foo")]] int extern_c_func(); // expected-error {{'clang::annotate_type' attribute cannot be applied to a declaration}}

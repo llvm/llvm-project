@@ -14,7 +14,6 @@
 #include "clang/Lex/LexDiagnostic.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Preprocessor.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <algorithm>
 
@@ -67,7 +66,7 @@ MacroArgs *MacroArgs::create(const MacroInfo *MI,
                   "uninitialized array (as opposed to reusing a cached "
                   "MacroArgs)");
     std::copy(UnexpArgTokens.begin(), UnexpArgTokens.end(),
-              Result->getTrailingObjects<Token>());
+              Result->getTrailingObjects());
   }
 
   return Result;
@@ -120,7 +119,7 @@ const Token *MacroArgs::getUnexpArgument(unsigned Arg) const {
   assert(Arg < getNumMacroArguments() && "Invalid arg #");
   // The unexpanded argument tokens start immediately after the MacroArgs object
   // in memory.
-  const Token *Start = getTrailingObjects<Token>();
+  const Token *Start = getTrailingObjects();
   const Token *Result = Start;
 
   // Scan to find Arg.

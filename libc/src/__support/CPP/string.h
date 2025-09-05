@@ -9,6 +9,9 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_STRING_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_STRING_H
 
+#include "hdr/func/free.h"
+#include "hdr/func/malloc.h"
+#include "hdr/func/realloc.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/integer_to_string.h" // IntegerToString
 #include "src/__support/macros/config.h"
@@ -17,7 +20,6 @@
 #include "src/string/string_utils.h" // string_length
 
 #include <stddef.h> // size_t
-#include <stdlib.h> // malloc, free
 
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
@@ -65,7 +67,8 @@ public:
       : string(cstr, ::LIBC_NAMESPACE::internal::string_length(cstr)) {}
   LIBC_INLINE string(size_t size_, char value) {
     resize(size_);
-    inline_memset((void *)buffer_, value, size_);
+    static_assert(sizeof(char) == sizeof(uint8_t));
+    inline_memset((void *)buffer_, static_cast<uint8_t>(value), size_);
   }
 
   LIBC_INLINE string &operator=(const string &other) {

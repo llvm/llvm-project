@@ -19,7 +19,7 @@ define <2 x i32> @fneg_as_int_v2f32_noimplicitfloat(<2 x float> %x) noimplicitfl
 ; CHECK-LABEL: define <2 x i32> @fneg_as_int_v2f32_noimplicitfloat
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x float> [[X]] to <2 x i32>
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[BC]], <i32 -2147483648, i32 -2147483648>
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[BC]], splat (i32 -2147483648)
 ; CHECK-NEXT:    ret <2 x i32> [[XOR]]
 ;
   %bc = bitcast <2 x float> %x to <2 x i32>
@@ -291,8 +291,8 @@ define i128 @fneg_as_int_ppc_fp128_f64_mask(ppc_fp128 %x) {
 define i128 @fneg_as_int_ppc_fp128_f128_mask(ppc_fp128 %x) {
 ; CHECK-LABEL: define i128 @fneg_as_int_ppc_fp128_f128_mask
 ; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
-; CHECK-NEXT:    [[BC:%.*]] = bitcast ppc_fp128 [[X]] to i128
-; CHECK-NEXT:    [[XOR:%.*]] = xor i128 [[BC]], -170141183460469231731687303715884105728
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg ppc_fp128 [[X]]
+; CHECK-NEXT:    [[XOR:%.*]] = bitcast ppc_fp128 [[TMP1]] to i128
 ; CHECK-NEXT:    ret i128 [[XOR]]
 ;
   %bc = bitcast ppc_fp128 %x to i128

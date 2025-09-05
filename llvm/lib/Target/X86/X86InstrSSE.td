@@ -267,6 +267,18 @@ multiclass sse12_move_rm<RegisterClass RC, ValueType vt, X86MemOperand x86memop,
   }
 }
 
+// pseudo instruction for fp16 spilling.
+let isPseudo = 1, Predicates = [HasSSE2] in {
+  let mayStore = 1 in
+  def MOVSHPmr : I<0, Pseudo, (outs), (ins f32mem:$dst, FR16X:$src), "",
+                   [], SSEPackedSingle>,
+                   Sched<[WriteFStore]>;
+  let  mayLoad = 1 in
+  def MOVSHPrm : I<0, Pseudo, (outs FR16X:$dst), (ins f32mem:$src), "",
+                   [], SSEPackedSingle>,
+                   Sched<[WriteFLoad]>;
+}
+
 defm MOVSS : sse12_move<FR32, X86Movss, v4f32, f32mem, "movss",
                         SSEPackedSingle, UseSSE1>, TB, XS;
 defm MOVSD : sse12_move<FR64, X86Movsd, v2f64, f64mem, "movsd",
@@ -5705,7 +5717,7 @@ let Predicates = [UseSSE41, OptForSize] in {
 // commuting would change which operand is inverted.
 def X86ptest_commutable : PatFrag<(ops node:$src1, node:$src2),
                                   (X86ptest node:$src1, node:$src2), [{
-  return onlyUsesZeroFlag(SDValue(Node, 0));
+  return onlyUsesZeroFlag(SDValue(N, 0));
 }]>;
 
 // ptest instruction we'll lower to this in X86ISelLowering primarily from
@@ -5772,7 +5784,7 @@ multiclass avx_bittest<bits<8> opc, string OpcodeStr, RegisterClass RC,
 // used, commuting would change which operand is inverted.
 def X86testp_commutable : PatFrag<(ops node:$src1, node:$src2),
                                   (X86testp node:$src1, node:$src2), [{
-  return onlyUsesZeroFlag(SDValue(Node, 0));
+  return onlyUsesZeroFlag(SDValue(N, 0));
 }]>;
 
 let Defs = [EFLAGS], Predicates = [HasAVX] in {
@@ -6121,8 +6133,9 @@ let Predicates = [HasAVX, NoAVX10_2] in {
                                     v8i16, VR128, load, i128mem, 0,
                                     SchedWriteMPSAD.XMM>, VEX, VVVV, WIG;
   }
+}
 
-let Uses = [MXCSR], mayRaiseFPException = 1 in {
+let Predicates = [HasAVX], Uses = [MXCSR], mayRaiseFPException = 1 in {
   let ExeDomain = SSEPackedSingle in
   defm VDPPS : SS41I_binop_rmi_int<0x40, "vdpps", int_x86_sse41_dpps,
                                    VR128, load, f128mem, 0,
@@ -6135,7 +6148,6 @@ let Uses = [MXCSR], mayRaiseFPException = 1 in {
   defm VDPPSY : SS41I_binop_rmi_int<0x40, "vdpps", int_x86_avx_dp_ps_256,
                                     VR256, load, i256mem, 0,
                                     SchedWriteDPPS.YMM>, VEX, VVVV, VEX_L, WIG;
-}
 }
 
 let Predicates = [HasAVX2, NoAVX10_2] in {
@@ -8078,26 +8090,26 @@ let Predicates = [HasAVX2] in {
     = "@earlyclobber $dst,@earlyclobber $mask_wb, $src1 = $dst, $mask = $mask_wb"
     in {
     defm VPGATHERDQ : avx2_gather<0x90, "vpgatherdq",
-                                  VR256, vx128mem, vx256mem>, REX_W;
+                                  VR256, vx64mem, vx64mem>, REX_W;
     defm VPGATHERQQ : avx2_gather<0x91, "vpgatherqq",
-                                  VR256, vx128mem, vy256mem>, REX_W;
+                                  VR256, vx64mem, vy64mem>, REX_W;
     defm VPGATHERDD : avx2_gather<0x90, "vpgatherdd",
-                                  VR256, vx128mem, vy256mem>;
+                                  VR256, vx32mem, vy32mem>;
     defm VPGATHERQD : avx2_gather<0x91, "vpgatherqd",
-                                  VR128, vx64mem, vy128mem>;
+                                  VR128, vx32mem, vy32mem>;
 
     let ExeDomain = SSEPackedDouble in {
       defm VGATHERDPD : avx2_gather<0x92, "vgatherdpd",
-                                    VR256, vx128mem, vx256mem>, REX_W;
+                                    VR256, vx64mem, vx64mem>, REX_W;
       defm VGATHERQPD : avx2_gather<0x93, "vgatherqpd",
-                                    VR256, vx128mem, vy256mem>, REX_W;
+                                    VR256, vx64mem, vy64mem>, REX_W;
     }
 
     let ExeDomain = SSEPackedSingle in {
       defm VGATHERDPS : avx2_gather<0x92, "vgatherdps",
-                                    VR256, vx128mem, vy256mem>;
+                                    VR256, vx32mem, vy32mem>;
       defm VGATHERQPS : avx2_gather<0x93, "vgatherqps",
-                                    VR128, vx64mem, vy128mem>;
+                                    VR128, vx32mem, vy32mem>;
     }
   }
 }
@@ -8384,14 +8396,14 @@ let Predicates = [HasSM3], Constraints = "$src1 = $dst" in {
   }
 
   multiclass VSM3RNDS2_Base {
-    def rr : Ii8<0xde, MRMSrcReg, (outs VR128:$dst),
+    def rri : Ii8<0xde, MRMSrcReg, (outs VR128:$dst),
               (ins VR128:$src1, VR128:$src2, VR128:$src3, i32u8imm:$src4),
               "vsm3rnds2\t{$src4, $src3, $src2, $dst|$dst, $src2, $src3, $src4}",
               [(set VR128:$dst,
                (int_x86_vsm3rnds2 VR128:$src1,
                 VR128:$src2, VR128:$src3, timm:$src4))]>,
               Sched<[WriteVecIMul]>;
-    def rm : Ii8<0xde, MRMSrcMem, (outs VR128:$dst),
+    def rmi : Ii8<0xde, MRMSrcMem, (outs VR128:$dst),
               (ins VR128:$src1, VR128:$src2, i128mem:$src3, i32u8imm:$src4),
               "vsm3rnds2\t{$src4, $src3, $src2, $dst|$dst, $src2, $src3, $src4}",
               [(set VR128:$dst,

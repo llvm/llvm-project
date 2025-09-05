@@ -12,10 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86CustomBehaviour.h"
-#include "TargetInfo/X86TargetInfo.h"
 #include "MCTargetDesc/X86BaseInfo.h"
+#include "TargetInfo/X86TargetInfo.h"
+#include "llvm-c/Visibility.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/WithColor.h"
 
 namespace llvm {
 namespace mca {
@@ -36,11 +36,31 @@ void X86InstrPostProcess::setMemBarriers(std::unique_ptr<Instruction> &Inst,
   }
 }
 
+void X86InstrPostProcess::useStackEngine(std::unique_ptr<Instruction> &Inst,
+                                         const MCInst &MCI) {
+  // TODO(boomanaiden154): We currently do not handle PUSHF/POPF because we
+  // have not done the necessary benchmarking to see if they are also
+  // optimized by the stack engine.
+  // TODO: We currently just remove all RSP writes from stack operations. This
+  // is not fully correct because we do not model sync uops which will
+  // delay subsequent rsp using non-stack instructions.
+  if (X86::isPOP(MCI.getOpcode()) || X86::isPUSH(MCI.getOpcode())) {
+    auto *StackRegisterDef =
+        llvm::find_if(Inst->getDefs(), [](const WriteState &State) {
+          return State.getRegisterID() == X86::RSP;
+        });
+    assert(
+        StackRegisterDef != Inst->getDefs().end() &&
+        "Expected push instruction to implicitly use stack pointer register.");
+    Inst->getDefs().erase(StackRegisterDef);
+  }
+}
+
 void X86InstrPostProcess::postProcessInstruction(
     std::unique_ptr<Instruction> &Inst, const MCInst &MCI) {
-  // Currently, we only modify certain instructions' IsALoadBarrier and
-  // IsAStoreBarrier flags.
+  // Set IsALoadBarrier and IsAStoreBarrier flags.
   setMemBarriers(Inst, MCI);
+  useStackEngine(Inst, MCI);
 }
 
 } // namespace mca
@@ -56,7 +76,7 @@ static InstrPostProcess *createX86InstrPostProcess(const MCSubtargetInfo &STI,
 
 /// Extern function to initialize the targets for the X86 backend
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86TargetMCA() {
+extern "C" LLVM_C_ABI void LLVMInitializeX86TargetMCA() {
   TargetRegistry::RegisterInstrPostProcess(getTheX86_32Target(),
                                            createX86InstrPostProcess);
   TargetRegistry::RegisterInstrPostProcess(getTheX86_64Target(),

@@ -20,7 +20,8 @@ define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" 
 ; CHECK-LINUX:         .quad .Lxray_sled_1
 ; CHECK-LINUX-LABEL: .Lxray_sleds_end0:
 ; CHECK-LINUX-LABEL: .section xray_fn_idx,"ao",@progbits,foo{{$}}
-; CHECK-LINUX:       [[IDX:\.Lxray_fn_idx[0-9]+]]:
+; CHECK-LINUX-NEXT:    .p2align 3, 0x0
+; CHECK-LINUX-NEXT:  [[IDX:\.Lxray_fn_idx[0-9]+]]:
 ; CHECK-LINUX-NEXT:    .quad .Lxray_sleds_start0-[[IDX]]
 ; CHECK-LINUX-NEXT:    .quad 2
 

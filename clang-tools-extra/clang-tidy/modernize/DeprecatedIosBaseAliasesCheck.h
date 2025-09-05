@@ -13,8 +13,8 @@
 
 namespace clang::tidy::modernize {
 
-/// This check warns the uses of the deprecated member types of ``std::ios_base``
-/// and replaces those that have a non-deprecated equivalent.
+/// This check warns the uses of the deprecated member types of
+/// ``std::ios_base`` and replaces those that have a non-deprecated equivalent.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/modernize/deprecated-ios-base-aliases.html

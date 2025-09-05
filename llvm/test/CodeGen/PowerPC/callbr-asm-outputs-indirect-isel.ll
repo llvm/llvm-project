@@ -22,7 +22,7 @@ define void @strncpy_from_kernel_nofault_count() {
   ; CHECK-NEXT: bb.2.Efault:
   ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.3.Efault.split (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.3.Efault.split (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   STB %1, 0, $zero8 :: (store (s8) into `ptr null`)

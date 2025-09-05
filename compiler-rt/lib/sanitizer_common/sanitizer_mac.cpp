@@ -38,14 +38,7 @@
 extern char **environ;
 #  endif
 
-#  if defined(__has_include) && __has_include(<os/trace.h>)
-#    define SANITIZER_OS_TRACE 1
-#    include <os/trace.h>
-#  else
-#    define SANITIZER_OS_TRACE 0
-#  endif
-
-// import new crash reporting api
+// Integrate with CrashReporter library if available
 #  if defined(__has_include) && __has_include(<CrashReporterClient.h>)
 #    define HAVE_CRASHREPORTERCLIENT_H 1
 #    include <CrashReporterClient.h>
@@ -401,8 +394,8 @@ bool DirExists(const char *path) {
   return S_ISDIR(st.st_mode);
 }
 
-tid_t GetTid() {
-  tid_t tid;
+ThreadID GetTid() {
+  ThreadID tid;
   pthread_threadid_np(nullptr, &tid);
   return tid;
 }
@@ -776,11 +769,17 @@ void internal_join_thread(void *th) { pthread_join((pthread_t)th, 0); }
 static Mutex syslog_lock;
 #  endif
 
+#  if SANITIZER_DRIVERKIT
+#    define SANITIZER_OS_LOG os_log
+#  else
+#    define SANITIZER_OS_LOG os_log_error
+#  endif
+
 void WriteOneLineToSyslog(const char *s) {
 #if !SANITIZER_GO
   syslog_lock.CheckLocked();
   if (GetMacosAlignedVersion() >= MacosVersion(10, 12)) {
-    os_log_error(OS_LOG_DEFAULT, "%{public}s", s);
+    SANITIZER_OS_LOG(OS_LOG_DEFAULT, "%{public}s", s);
   } else {
 #pragma clang diagnostic push
 // as_log is deprecated.
@@ -796,8 +795,13 @@ static char crashreporter_info_buff[__sanitizer::kErrorMessageBufferSize] = {};
 static Mutex crashreporter_info_mutex;
 
 extern "C" {
-// Integrate with crash reporter libraries.
+
 #if HAVE_CRASHREPORTERCLIENT_H
+// Available in CRASHREPORTER_ANNOTATIONS_VERSION 5+
+#    ifdef CRASHREPORTER_ANNOTATIONS_INITIALIZER
+CRASHREPORTER_ANNOTATIONS_INITIALIZER()
+#    else
+// Support for older CrashRerporter annotiations
 CRASH_REPORTER_CLIENT_HIDDEN
 struct crashreporter_annotations_t gCRAnnotations
     __attribute__((section("__DATA," CRASHREPORTER_ANNOTATIONS_SECTION))) = {
@@ -808,17 +812,17 @@ struct crashreporter_annotations_t gCRAnnotations
         0,
         0,
         0,
-#if CRASHREPORTER_ANNOTATIONS_VERSION > 4
+#      if CRASHREPORTER_ANNOTATIONS_VERSION > 4
         0,
-#endif
+#      endif
 };
-
-#else
-// fall back to old crashreporter api
+#    endif
+#  else
+// Revert to previous crash reporter API if client header is not available
 static const char *__crashreporter_info__ __attribute__((__used__)) =
     &crashreporter_info_buff[0];
 asm(".desc ___crashreporter_info__, 0x10");
-#endif
+#endif  // HAVE_CRASHREPORTERCLIENT_H
 
 }  // extern "C"
 
@@ -838,31 +842,23 @@ void LogMessageOnPrintf(const char *str) {
 }
 
 void LogFullErrorReport(const char *buffer) {
-#if !SANITIZER_GO
-  // Log with os_trace. This will make it into the crash log.
-#if SANITIZER_OS_TRACE
-#pragma clang diagnostic push
-// os_trace is deprecated.
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-  if (GetMacosAlignedVersion() >= MacosVersion(10, 10)) {
-    // os_trace requires the message (format parameter) to be a string literal.
-    if (internal_strncmp(SanitizerToolName, "AddressSanitizer",
-                         sizeof("AddressSanitizer") - 1) == 0)
-      os_trace("Address Sanitizer reported a failure.");
-    else if (internal_strncmp(SanitizerToolName, "UndefinedBehaviorSanitizer",
-                              sizeof("UndefinedBehaviorSanitizer") - 1) == 0)
-      os_trace("Undefined Behavior Sanitizer reported a failure.");
-    else if (internal_strncmp(SanitizerToolName, "ThreadSanitizer",
-                              sizeof("ThreadSanitizer") - 1) == 0)
-      os_trace("Thread Sanitizer reported a failure.");
-    else
-      os_trace("Sanitizer tool reported a failure.");
+#  if !SANITIZER_GO
+  // When logging with os_log_error this will make it into the crash log.
+  if (internal_strncmp(SanitizerToolName, "AddressSanitizer",
+                       sizeof("AddressSanitizer") - 1) == 0)
+    SANITIZER_OS_LOG(OS_LOG_DEFAULT, "Address Sanitizer reported a failure.");
+  else if (internal_strncmp(SanitizerToolName, "UndefinedBehaviorSanitizer",
+                            sizeof("UndefinedBehaviorSanitizer") - 1) == 0)
+    SANITIZER_OS_LOG(OS_LOG_DEFAULT,
+                     "Undefined Behavior Sanitizer reported a failure.");
+  else if (internal_strncmp(SanitizerToolName, "ThreadSanitizer",
+                            sizeof("ThreadSanitizer") - 1) == 0)
+    SANITIZER_OS_LOG(OS_LOG_DEFAULT, "Thread Sanitizer reported a failure.");
+  else
+    SANITIZER_OS_LOG(OS_LOG_DEFAULT, "Sanitizer tool reported a failure.");
 
-    if (common_flags()->log_to_syslog)
-      os_trace("Consult syslog for more information.");
-  }
-#pragma clang diagnostic pop
-#endif
+  if (common_flags()->log_to_syslog)
+    SANITIZER_OS_LOG(OS_LOG_DEFAULT, "Consult syslog for more information.");
 
   // Log to syslog.
   // The logging on OS X may call pthread_create so we need the threading
@@ -876,7 +872,7 @@ void LogFullErrorReport(const char *buffer) {
     WriteToSyslog(buffer);
 
   // The report is added to CrashLog as part of logging all of Printf output.
-#endif
+#  endif  // !SANITIZER_GO
 }
 
 SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
@@ -972,8 +968,9 @@ static const char kDyldInsertLibraries[] = "DYLD_INSERT_LIBRARIES";
 LowLevelAllocator allocator_for_env;
 
 static bool ShouldCheckInterceptors() {
-  // Restrict "interceptors working?" check to ASan and TSan.
-  const char *sanitizer_names[] = {"AddressSanitizer", "ThreadSanitizer"};
+  // Restrict "interceptors working?" check
+  const char *sanitizer_names[] = {"AddressSanitizer", "ThreadSanitizer",
+                                   "RealtimeSanitizer"};
   size_t count = sizeof(sanitizer_names) / sizeof(sanitizer_names[0]);
   for (size_t i = 0; i < count; i++) {
     if (internal_strcmp(sanitizer_names[i], SanitizerToolName) == 0)
@@ -1197,13 +1194,14 @@ uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
   const uptr left_padding =
       Max<uptr>(granularity, 1ULL << min_shadow_base_alignment);
 
-  uptr space_size = shadow_size_bytes + left_padding;
+  uptr space_size = shadow_size_bytes;
 
   uptr largest_gap_found = 0;
   uptr max_occupied_addr = 0;
+
   VReport(2, "FindDynamicShadowStart, space_size = %p\n", (void *)space_size);
   uptr shadow_start =
-      FindAvailableMemoryRange(space_size, alignment, granularity,
+      FindAvailableMemoryRange(space_size, alignment, left_padding,
                                &largest_gap_found, &max_occupied_addr);
   // If the shadow doesn't fit, restrict the address space to make it fit.
   if (shadow_start == 0) {
@@ -1223,9 +1221,9 @@ uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
     }
     RestrictMemoryToMaxAddress(new_max_vm);
     high_mem_end = new_max_vm - 1;
-    space_size = (high_mem_end >> shadow_scale) + left_padding;
+    space_size = (high_mem_end >> shadow_scale);
     VReport(2, "FindDynamicShadowStart, space_size = %p\n", (void *)space_size);
-    shadow_start = FindAvailableMemoryRange(space_size, alignment, granularity,
+    shadow_start = FindAvailableMemoryRange(space_size, alignment, left_padding,
                                             nullptr, nullptr);
     if (shadow_start == 0) {
       Report("Unable to find a memory range after restricting VM.\n");
@@ -1266,10 +1264,15 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
     mach_msg_type_number_t count = kRegionInfoSize;
     kr = mach_vm_region_recurse(mach_task_self(), &address, &vmsize, &depth,
                                 (vm_region_info_t)&vminfo, &count);
-    if (kr == KERN_INVALID_ADDRESS) {
+
+    // There are cases where going beyond the processes' max vm does
+    // not return KERN_INVALID_ADDRESS so we check for going beyond that
+    // max address as well.
+    if (kr == KERN_INVALID_ADDRESS || address > max_vm_address) {
       // No more regions beyond "address", consider the gap at the end of VM.
       address = max_vm_address;
       vmsize = 0;
+      kr = -1;  // break after this iteration.
     } else {
       if (max_occupied_addr) *max_occupied_addr = address + vmsize;
     }

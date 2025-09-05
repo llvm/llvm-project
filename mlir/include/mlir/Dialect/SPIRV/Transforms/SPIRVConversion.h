@@ -20,7 +20,6 @@
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "mlir/Transforms/OneToNTypeConversion.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/LogicalResult.h"
 
@@ -39,6 +38,10 @@ enum class SPIRVSubByteTypeStorage {
 struct SPIRVConversionOptions {
   /// The number of bits to store a boolean value.
   unsigned boolNumBits{8};
+
+  /// Whether to emulate unsupported floats with integer types of same bit
+  /// width.
+  bool emulateUnsupportedFloatTypes{true};
 
   /// How sub-byte values are storaged in memory.
   SPIRVSubByteTypeStorage subByteTypeStorage{SPIRVSubByteTypeStorage::Packed};

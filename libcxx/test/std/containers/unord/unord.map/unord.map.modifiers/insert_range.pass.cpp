@@ -23,10 +23,13 @@
 int main(int, char**) {
   // Note: we want to use a pair with non-const elements for input (an assignable type is a lot more convenient) but
   // have to use the exact `value_type` of the map (that is, `pair<const K, V>`) for the allocator.
-  using Pair = std::pair<int, char>;
+  using Pair      = std::pair<int, char>;
   using ConstPair = std::pair<const int, char>;
   for_all_iterators_and_allocators<ConstPair, const Pair*>([]<class Iter, class Sent, class Alloc>() {
-    test_map_set_insert_range<std::unordered_map<int, char, test_hash<int>, test_equal_to<int>, Alloc>, Pair, Iter, Sent>();
+    test_map_set_insert_range<std::unordered_map<int, char, test_hash<int>, test_equal_to<int>, Alloc>,
+                              Pair,
+                              Iter,
+                              Sent>();
   });
 
   static_assert(test_map_constraints_insert_range<std::unordered_map, int, int, char, double>());

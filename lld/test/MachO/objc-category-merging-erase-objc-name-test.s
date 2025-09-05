@@ -4,9 +4,11 @@
 ; then when merging the category into the base class (and deleting the category), we don't
 ; delete the 'MyTestProtocol' name
 
-; RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o %T/erase-objc-name.o %s
-; RUN: %lld -no_objc_relative_method_lists -arch arm64 -dylib -o %T/erase-objc-name.dylib %T/erase-objc-name.o -objc_category_merging
-; RUN: llvm-objdump --objc-meta-data --macho %T/erase-objc-name.dylib | FileCheck %s --check-prefixes=MERGE_CATS
+; RUN: mkdir -p %t.dir
+
+; RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o %t.dir/erase-objc-name.o %s
+; RUN: %lld -no_objc_relative_method_lists -arch arm64 -dylib -o %t.dir/erase-objc-name.dylib %t.dir/erase-objc-name.o -objc_category_merging
+; RUN: llvm-objdump --objc-meta-data --macho %t.dir/erase-objc-name.dylib | FileCheck %s --check-prefixes=MERGE_CATS
 
 ; === Check merge categories enabled ===
 ; Check that the original categories are not there

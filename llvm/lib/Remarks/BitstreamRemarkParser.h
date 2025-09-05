@@ -45,13 +45,7 @@ struct BitstreamRemarkParser : public RemarkParser {
 
   /// Create a parser that expects to find a string table embedded in the
   /// stream.
-  explicit BitstreamRemarkParser(StringRef Buf)
-      : RemarkParser(Format::Bitstream), ParserHelper(Buf) {}
-
-  /// Create a parser that uses a pre-parsed string table.
-  BitstreamRemarkParser(StringRef Buf, ParsedStringTable StrTab)
-      : RemarkParser(Format::Bitstream), ParserHelper(Buf),
-        StrTab(std::move(StrTab)) {}
+  explicit BitstreamRemarkParser(StringRef Buf);
 
   Expected<std::unique_ptr<Remark>> next() override;
 
@@ -77,7 +71,7 @@ private:
 };
 
 Expected<std::unique_ptr<BitstreamRemarkParser>> createBitstreamParserFromMeta(
-    StringRef Buf, std::optional<ParsedStringTable> StrTab = std::nullopt,
+    StringRef Buf,
     std::optional<StringRef> ExternalFilePrependPath = std::nullopt);
 
 } // end namespace remarks

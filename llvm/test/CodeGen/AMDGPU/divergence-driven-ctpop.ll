@@ -11,7 +11,7 @@ define amdgpu_kernel void @s_ctpop_i32(ptr addrspace(1) noalias %out, i32 %val) 
 
 ; GCN-LABEL: name:            s_ctpop_i64
 ; GCN: %[[BCNT:[0-9]+]]:sreg_32 = S_BCNT1_I32_B64
-; GCN: %[[SREG1:[0-9]+]]:sreg_32 = COPY %[[BCNT]]
+; GCN: %[[SREG1:[0-9]+]]:sreg_32 = COPY killed %[[BCNT]]
 ; GCN: %[[SREG2:[0-9]+]]:sreg_32 = S_MOV_B32 0
 ; GCN: REG_SEQUENCE killed %[[SREG1]], %subreg.sub0, killed %[[SREG2]], %subreg.sub1
 define amdgpu_kernel void @s_ctpop_i64(ptr addrspace(1) noalias %out, i64 %val) nounwind {

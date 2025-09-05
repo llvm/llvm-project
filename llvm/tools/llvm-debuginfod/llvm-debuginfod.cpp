@@ -36,12 +36,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 using namespace llvm::opt;
 static constexpr opt::OptTable::Info InfoTable[] = {
@@ -52,7 +53,8 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class DebuginfodOptTable : public opt::GenericOptTable {
 public:
-  DebuginfodOptTable() : GenericOptTable(InfoTable) {}
+  DebuginfodOptTable()
+      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
 };
 } // end anonymous namespace
 
@@ -124,8 +126,7 @@ int llvm_debuginfod_main(int argc, char **argv, const llvm::ToolContext &) {
   parseArgs(argc, argv);
 
   SmallVector<StringRef, 1> Paths;
-  for (const std::string &Path : ScanPaths)
-    Paths.push_back(Path);
+  llvm::append_range(Paths, ScanPaths);
 
   DefaultThreadPool Pool(hardware_concurrency(MaxConcurrency));
   DebuginfodLog Log;

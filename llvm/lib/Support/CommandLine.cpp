@@ -29,6 +29,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/config.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
@@ -54,24 +55,32 @@ using namespace cl;
 //
 namespace llvm {
 namespace cl {
-template class basic_parser<bool>;
-template class basic_parser<boolOrDefault>;
-template class basic_parser<int>;
-template class basic_parser<long>;
-template class basic_parser<long long>;
-template class basic_parser<unsigned>;
-template class basic_parser<unsigned long>;
-template class basic_parser<unsigned long long>;
-template class basic_parser<double>;
-template class basic_parser<float>;
-template class basic_parser<std::string>;
-template class basic_parser<char>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<bool>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<boolOrDefault>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<int>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<long>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<long long>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<unsigned>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<unsigned long>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<unsigned long long>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<double>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<float>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<std::string>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<char>;
 
-template class opt<unsigned>;
-template class opt<int>;
-template class opt<std::string>;
-template class opt<char>;
-template class opt<bool>;
+#if !(defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS) && defined(_MSC_VER))
+// Only instantiate opt<std::string> when not building a Windows DLL. When
+// exporting opt<std::string>, MSVC implicitly exports symbols for
+// std::basic_string through transitive inheritance via std::string. These
+// symbols may appear in clients, leading to duplicate symbol conflicts.
+template class LLVM_EXPORT_TEMPLATE opt<std::string>;
+#endif
+
+template class LLVM_EXPORT_TEMPLATE opt<bool>;
+template class LLVM_EXPORT_TEMPLATE opt<char>;
+template class LLVM_EXPORT_TEMPLATE opt<int>;
+template class LLVM_EXPORT_TEMPLATE opt<unsigned>;
+
 } // namespace cl
 } // namespace llvm
 
@@ -93,6 +102,15 @@ void parser<double>::anchor() {}
 void parser<float>::anchor() {}
 void parser<std::string>::anchor() {}
 void parser<char>::anchor() {}
+
+// These anchor functions instantiate opt<T> and reference its virtual
+// destructor to ensure MSVC exports the corresponding vtable and typeinfo when
+// building a Windows DLL. Without an explicit reference, MSVC may omit the
+// instantiation at link time even if it is marked DLL-export.
+void opt_bool_anchor() { opt<bool> anchor{""}; }
+void opt_char_anchor() { opt<char> anchor{""}; }
+void opt_int_anchor() { opt<int> anchor{""}; }
+void opt_unsigned_anchor() { opt<unsigned> anchor{""}; }
 
 //===----------------------------------------------------------------------===//
 
@@ -726,7 +744,7 @@ static Option *getOptionPred(StringRef Name, size_t &Length,
   // characters in it (so that the next iteration will not be the empty
   // string.
   while (OMI == OptionsMap.end() && Name.size() > 1) {
-    Name = Name.substr(0, Name.size() - 1); // Chop off the last character.
+    Name = Name.drop_back();
     OMI = OptionsMap.find(Name);
     if (OMI != OptionsMap.end() && !Pred(OMI->getValue()))
       OMI = OptionsMap.end();
@@ -2312,8 +2330,8 @@ protected:
       StrSubCommandPairVector;
   // Print the options. Opts is assumed to be alphabetically sorted.
   virtual void printOptions(StrOptionPairVector &Opts, size_t MaxArgLen) {
-    for (size_t i = 0, e = Opts.size(); i != e; ++i)
-      Opts[i].second->printOptionInfo(MaxArgLen);
+    for (const auto &Opt : Opts)
+      Opt.second->printOptionInfo(MaxArgLen);
   }
 
   void printSubCommands(StrSubCommandPairVector &Subs, size_t MaxSubLen) {
@@ -2383,8 +2401,8 @@ public:
     if (Sub == &SubCommand::getTopLevel() && !Subs.empty()) {
       // Compute the maximum subcommand length...
       size_t MaxSubLen = 0;
-      for (size_t i = 0, e = Subs.size(); i != e; ++i)
-        MaxSubLen = std::max(MaxSubLen, strlen(Subs[i].first));
+      for (const auto &Sub : Subs)
+        MaxSubLen = std::max(MaxSubLen, strlen(Sub.first));
 
       outs() << "\n\n";
       outs() << "SUBCOMMANDS:\n\n";
@@ -2399,8 +2417,8 @@ public:
 
     // Compute the maximum argument length...
     size_t MaxArgLen = 0;
-    for (size_t i = 0, e = Opts.size(); i != e; ++i)
-      MaxArgLen = std::max(MaxArgLen, Opts[i].second->getOptionWidth());
+    for (const auto &Opt : Opts)
+      MaxArgLen = std::max(MaxArgLen, Opt.second->getOptionWidth());
 
     outs() << "OPTIONS:\n";
     printOptions(Opts, MaxArgLen);
@@ -2435,8 +2453,8 @@ protected:
 
     // Collect registered option categories into vector in preparation for
     // sorting.
-    for (OptionCategory *Category : GlobalParser->RegisteredOptionCategories)
-      SortedCategories.push_back(Category);
+    llvm::append_range(SortedCategories,
+                       GlobalParser->RegisteredOptionCategories);
 
     // Sort the different option categories alphabetically.
     assert(SortedCategories.size() > 0 && "No option categories registered!");
@@ -2446,9 +2464,9 @@ protected:
     // Walk through pre-sorted options and assign into categories.
     // Because the options are already alphabetically sorted the
     // options within categories will also be alphabetically sorted.
-    for (size_t I = 0, E = Opts.size(); I != E; ++I) {
-      Option *Opt = Opts[I].second;
-      for (auto &Cat : Opt->Categories) {
+    for (const auto &I : Opts) {
+      Option *Opt = I.second;
+      for (OptionCategory *Cat : Opt->Categories) {
         assert(llvm::is_contained(SortedCategories, Cat) &&
                "Option has an unregistered category");
         CategorizedOptions[Cat].push_back(Opt);
@@ -2653,7 +2671,6 @@ static void initCommonOptions() {
   initSignalsOptions();
   initStatisticOptions();
   initTimerOptions();
-  initTypeSizeOptions();
   initWithColorOptions();
   initDebugOptions();
   initRandomSeedOptions();
@@ -2691,8 +2708,9 @@ void HelpPrinterWrapper::operator=(bool Value) {
     CommonOptions->HLOp.setHiddenFlag(NotHidden);
 
     CategorizedPrinter = true; // Invoke categorized printer
-  } else
+  } else {
     UncategorizedPrinter = true; // Invoke uncategorized printer
+  }
 }
 
 // Print the value of each option.
@@ -2707,11 +2725,11 @@ void CommandLineParser::printOptionValues() {
 
   // Compute the maximum argument length...
   size_t MaxArgLen = 0;
-  for (size_t i = 0, e = Opts.size(); i != e; ++i)
-    MaxArgLen = std::max(MaxArgLen, Opts[i].second->getOptionWidth());
+  for (const auto &Opt : Opts)
+    MaxArgLen = std::max(MaxArgLen, Opt.second->getOptionWidth());
 
-  for (size_t i = 0, e = Opts.size(); i != e; ++i)
-    Opts[i].second->printOptionValue(MaxArgLen, CommonOptions->PrintAllOptions);
+  for (const auto &Opt : Opts)
+    Opt.second->printOptionValue(MaxArgLen, CommonOptions->PrintAllOptions);
 }
 
 // Utility function for printing the help message.

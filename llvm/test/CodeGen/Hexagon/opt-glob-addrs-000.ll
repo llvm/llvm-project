@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 -disable-hexagon-misched < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 -disable-hexagon-misched < %s | FileCheck %s
 
 target triple = "hexagon-unknown--elf"
 

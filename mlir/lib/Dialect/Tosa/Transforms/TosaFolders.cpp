@@ -18,10 +18,8 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/Matchers.h"
-#include "mlir/Pass/Pass.h"
-#include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/SmallVector.h"
 
 using namespace mlir;
@@ -176,6 +174,28 @@ DenseElementsAttr transposeType(const RangeType &data, ShapedType inputType,
                                 llvm::ArrayRef<ElementType>(outputValues));
 }
 
+// Try to get the values of a DenseResourceElementsAttr construct
+template <typename T>
+std::optional<ArrayRef<T>> tryGetDenseResourceValues(ElementsAttr attr) {
+  if (auto denseResource = dyn_cast<DenseResourceElementsAttr>(attr)) {
+    // Check that the resource memory blob exists
+    AsmResourceBlob *blob = denseResource.getRawHandle().getBlob();
+    if (!blob)
+      return std::nullopt;
+
+    // Check that the data are in a valid form
+    bool isSplat = false;
+    if (!DenseElementsAttr::isValidRawBuffer(attr.getShapedType(),
+                                             blob->getData(), isSplat)) {
+      return std::nullopt;
+    }
+
+    return blob->template getDataAs<T>();
+  }
+
+  return std::nullopt;
+}
+
 // A type specialized transposition of an ElementsAttr.
 // This implementation tries to operate on the underlying data in its raw
 // representation when possible to avoid allocating a large number of Attribute
@@ -183,6 +203,7 @@ DenseElementsAttr transposeType(const RangeType &data, ShapedType inputType,
 DenseElementsAttr transpose(ElementsAttr attr, ShapedType inputType,
                             ShapedType outputType,
                             llvm::ArrayRef<int64_t> permValues) {
+  // Handle generic ElementsAttr
   if (auto data = attr.tryGetValues<bool>())
     return transposeType(*data, inputType, outputType, permValues);
 
@@ -204,6 +225,35 @@ DenseElementsAttr transpose(ElementsAttr attr, ShapedType inputType,
   if (auto data = attr.tryGetValues<APFloat>())
     return transposeType(*data, inputType, outputType, permValues);
 
+  // Handle DenseResourceElementsAttr
+  if (isa<DenseResourceElementsAttr>(attr)) {
+    auto elementTy = attr.getElementType();
+
+    if (auto data = tryGetDenseResourceValues<bool>(attr);
+        data && elementTy.isInteger(1))
+      return transposeType(*data, inputType, outputType, permValues);
+
+    if (auto data = tryGetDenseResourceValues<int8_t>(attr);
+        data && elementTy.isInteger(8))
+      return transposeType(*data, inputType, outputType, permValues);
+
+    if (auto data = tryGetDenseResourceValues<int16_t>(attr);
+        data && elementTy.isInteger(16))
+      return transposeType(*data, inputType, outputType, permValues);
+
+    if (auto data = tryGetDenseResourceValues<int32_t>(attr);
+        data && elementTy.isInteger(32))
+      return transposeType(*data, inputType, outputType, permValues);
+
+    if (auto data = tryGetDenseResourceValues<int64_t>(attr);
+        data && elementTy.isInteger(64))
+      return transposeType(*data, inputType, outputType, permValues);
+
+    if (auto data = tryGetDenseResourceValues<float>(attr);
+        data && elementTy.isF32())
+      return transposeType(*data, inputType, outputType, permValues);
+  }
+
   return nullptr;
 }
 
@@ -224,13 +274,8 @@ struct TosaFoldConstantTranspose : public OpRewritePattern<tosa::TransposeOp> {
     if (!llvm::hasSingleElement(op.getInput1().getDefiningOp()->getUsers()))
       return failure();
 
-    DenseIntElementsAttr permAttr;
-    if (!matchPattern(op.getPerms(), m_Constant(&permAttr)))
-      return failure();
     auto permValues = llvm::map_to_vector(
-        // TOSA allows both 32- and 64-bit integer tensors here.
-        permAttr.getValues<APInt>(),
-        [](const APInt &val) { return val.getSExtValue(); });
+        op.getPerms(), [](const int32_t v) { return static_cast<int64_t>(v); });
 
     auto inputType = cast<ShapedType>(op.getInput1().getType());
 
@@ -368,7 +413,7 @@ struct ReduceConstantOptimization : public OpRewritePattern<OperationType> {
       return rewriter.notifyMatchFailure(op, "result type shape is not static");
 
     auto reductionAxis = op.getAxis();
-    const auto denseElementsAttr = constOp.getValue();
+    const auto denseElementsAttr = constOp.getValues();
     const auto shapedOldElementsValues =
         cast<ShapedType>(denseElementsAttr.getType());
 
@@ -413,7 +458,7 @@ void mlir::tosa::populateTosaConstantReduction(MLIRContext *ctx,
       ctx, aggressiveReduceConstant);
   patterns.add<ReduceConstantOptimization<ReduceMinOp>>(
       ctx, aggressiveReduceConstant);
-  patterns.add<ReduceConstantOptimization<ReduceProdOp>>(
+  patterns.add<ReduceConstantOptimization<ReduceProductOp>>(
       ctx, aggressiveReduceConstant);
   patterns.add<ReduceConstantOptimization<ReduceSumOp>>(
       ctx, aggressiveReduceConstant);

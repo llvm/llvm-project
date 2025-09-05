@@ -1,0 +1,50 @@
+// RUN: cir-opt %s | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!u32i = !cir.int<u, 32>
+!u64i = !cir.int<u, 64>
+
+module {
+  cir.func @test_unary_unsigned() {
+    %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["a"] {alignment = 4 : i64}
+    %1 = cir.load %0 : !cir.ptr<!u32i>, !u32i
+    %2 = cir.unary(plus, %1) : !u32i, !u32i
+    %3 = cir.unary(minus, %1) : !u32i, !u32i
+    %4 = cir.unary(not, %1) : !u32i, !u32i
+    %5 = cir.unary(inc, %1) : !u32i, !u32i
+    %6 = cir.unary(dec, %1) : !u32i, !u32i
+    cir.return
+  }
+// CHECK: cir.func{{.*}} @test_unary_unsigned() {
+// CHECK:   %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["a"] {alignment = 4 : i64}
+// CHECK:   %1 = cir.load %0 : !cir.ptr<!u32i>, !u32i
+// CHECK:   %2 = cir.unary(plus, %1) : !u32i, !u32i
+// CHECK:   %3 = cir.unary(minus, %1) : !u32i, !u32i
+// CHECK:   %4 = cir.unary(not, %1) : !u32i, !u32i
+// CHECK:   %5 = cir.unary(inc, %1) : !u32i, !u32i
+// CHECK:   %6 = cir.unary(dec, %1) : !u32i, !u32i
+// CHECK:   cir.return
+// CHECK: }
+
+  cir.func @test_unary_signed() {
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a"] {alignment = 4 : i64}
+    %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    %2 = cir.unary(plus, %1) : !s32i, !s32i
+    %3 = cir.unary(minus, %1) nsw : !s32i, !s32i
+    %4 = cir.unary(not, %1) : !s32i, !s32i
+    %5 = cir.unary(inc, %1) nsw : !s32i, !s32i
+    %6 = cir.unary(dec, %1) nsw : !s32i, !s32i
+    cir.return
+  }
+// CHECK: cir.func{{.*}} @test_unary_signed() {
+// CHECK:   %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a"] {alignment = 4 : i64}
+// CHECK:   %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+// CHECK:   %2 = cir.unary(plus, %1) : !s32i, !s32i
+// CHECK:   %3 = cir.unary(minus, %1) nsw : !s32i, !s32i
+// CHECK:   %4 = cir.unary(not, %1) : !s32i, !s32i
+// CHECK:   %5 = cir.unary(inc, %1) nsw : !s32i, !s32i
+// CHECK:   %6 = cir.unary(dec, %1) nsw : !s32i, !s32i
+// CHECK:   cir.return
+// CHECK: }
+}

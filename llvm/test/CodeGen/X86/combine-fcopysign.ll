@@ -248,6 +248,41 @@ define <4 x float> @combine_vec_fcopysign_fptrunc_sgn(<4 x float> %x, <4 x doubl
   ret <4 x float> %2
 }
 
+define double @PR136368(double %x) {
+; SSE-LABEL: PR136368:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movapd {{.*#+}} xmm1 = [NaN,NaN]
+; SSE-NEXT:    movapd %xmm0, %xmm2
+; SSE-NEXT:    andpd %xmm1, %xmm2
+; SSE-NEXT:    movsd {{.*#+}} xmm3 = [1.5707963267948966E+0,0.0E+0]
+; SSE-NEXT:    movapd %xmm3, %xmm4
+; SSE-NEXT:    cmpltsd %xmm2, %xmm4
+; SSE-NEXT:    andpd %xmm3, %xmm4
+; SSE-NEXT:    andpd %xmm1, %xmm4
+; SSE-NEXT:    andnpd %xmm0, %xmm1
+; SSE-NEXT:    orpd %xmm4, %xmm1
+; SSE-NEXT:    movapd %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR136368:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovddup {{.*#+}} xmm1 = [NaN,NaN]
+; AVX-NEXT:    # xmm1 = mem[0,0]
+; AVX-NEXT:    vandpd %xmm1, %xmm0, %xmm2
+; AVX-NEXT:    vmovsd {{.*#+}} xmm3 = [1.5707963267948966E+0,0.0E+0]
+; AVX-NEXT:    vcmpltsd %xmm2, %xmm3, %xmm2
+; AVX-NEXT:    vandpd %xmm3, %xmm2, %xmm2
+; AVX-NEXT:    vandnpd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vandpd %xmm1, %xmm2, %xmm1
+; AVX-NEXT:    vorpd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %fabs = tail call double @llvm.fabs.f64(double %x)
+  %cmp = fcmp ogt double %fabs, 0x3FF921FB54442D18
+  %cond = select i1 %cmp, double 0x3FF921FB54442D18, double 0.000000e+00
+  %res = tail call double @llvm.copysign.f64(double %cond, double %x)
+  ret double %res
+}
+
 declare <4 x float> @llvm.fabs.v4f32(<4 x float> %p)
 declare <4 x float> @llvm.copysign.v4f32(<4 x float> %Mag, <4 x float> %Sgn)
 declare <4 x double> @llvm.copysign.v4f64(<4 x double> %Mag, <4 x double> %Sgn)

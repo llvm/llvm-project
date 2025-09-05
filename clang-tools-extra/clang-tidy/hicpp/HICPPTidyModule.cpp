@@ -17,7 +17,6 @@
 #include "../cppcoreguidelines/ProTypeMemberInitCheck.h"
 #include "../cppcoreguidelines/ProTypeVarargCheck.h"
 #include "../cppcoreguidelines/SpecialMemberFunctionsCheck.h"
-#include "../google/DefaultArgumentsCheck.h"
 #include "../google/ExplicitConstructorCheck.h"
 #include "../misc/NewDeleteOverloadsCheck.h"
 #include "../misc/StaticAssertCheck.h"
@@ -120,6 +119,6 @@ static ClangTidyModuleRegistry::Add<HICPPModule>
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the HICPPModule.
-volatile int HICPPModuleAnchorSource = 0;
+volatile int HICPPModuleAnchorSource = 0; // NOLINT(misc-use-internal-linkage)
 
 } // namespace clang::tidy

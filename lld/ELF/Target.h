@@ -20,12 +20,12 @@
 #include <array>
 
 namespace lld {
-std::string toString(elf::RelType type);
-
 namespace elf {
 class Defined;
 class InputFile;
 class Symbol;
+
+std::string toStr(Ctx &, RelType type);
 
 class TargetInfo {
 public:
@@ -96,11 +96,15 @@ public:
 
   // Do a linker relaxation pass and return true if we changed something.
   virtual bool relaxOnce(int pass) const { return false; }
+  virtual bool synthesizeAlign(uint64_t &dot, InputSection *sec) {
+    return false;
+  }
   // Do finalize relaxation after collecting relaxation infos.
   virtual void finalizeRelax(int passes) const {}
 
   virtual void applyJumpInstrMod(uint8_t *loc, JumpModType type,
                                  JumpModType val) const {}
+  virtual void applyBranchToBranchOpt() const {}
 
   virtual ~TargetInfo();
 
@@ -211,8 +215,9 @@ static inline std::string getErrorLoc(Ctx &ctx, const uint8_t *loc) {
 void processArmCmseSymbols(Ctx &);
 
 template <class ELFT> uint32_t calcMipsEFlags(Ctx &);
-uint8_t getMipsFpAbiFlag(uint8_t oldFlag, uint8_t newFlag,
-                         llvm::StringRef fileName);
+uint8_t getMipsFpAbiFlag(Ctx &, InputFile *file, uint8_t oldFlag,
+                         uint8_t newFlag);
+uint64_t getMipsPageAddr(uint64_t addr);
 bool isMipsN32Abi(Ctx &, const InputFile &f);
 bool isMicroMips(Ctx &);
 bool isMipsR6(Ctx &);
@@ -229,7 +234,7 @@ unsigned getPPCDSFormOp(unsigned secondaryOp);
 // offset between GEP and LEP is encoded in a function's st_other flags.
 // This function will return the offset (in bytes) from the global entry-point
 // to the local entry-point.
-unsigned getPPC64GlobalEntryToLocalEntryOffset(uint8_t stOther);
+unsigned getPPC64GlobalEntryToLocalEntryOffset(Ctx &, uint8_t stOther);
 
 // Write a prefixed instruction, which is a 4-byte prefix followed by a 4-byte
 // instruction (regardless of endianness). Therefore, the prefix is always in
@@ -244,16 +249,19 @@ template <typename ELFT> void writeARMCmseImportLib(Ctx &);
 uint64_t getLoongArchPageDelta(uint64_t dest, uint64_t pc, RelType type);
 void riscvFinalizeRelax(int passes);
 void mergeRISCVAttributesSections(Ctx &);
+void mergeHexagonAttributesSections(Ctx &);
 void addArmInputSectionMappingSymbols(Ctx &);
 void addArmSyntheticSectionMappingSymbol(Defined *);
-void sortArmMappingSymbols();
-void convertArmInstructionstoBE8(InputSection *sec, uint8_t *buf);
+void sortArmMappingSymbols(Ctx &);
+void convertArmInstructionstoBE8(Ctx &, InputSection *sec, uint8_t *buf);
 void createTaggedSymbols(Ctx &);
 void initSymbolAnchors(Ctx &);
 
 void setTarget(Ctx &);
 
 template <class ELFT> bool isMipsPIC(const Defined *sym);
+
+const ELFSyncStream &operator<<(const ELFSyncStream &, RelType);
 
 void reportRangeError(Ctx &, uint8_t *loc, const Relocation &rel,
                       const Twine &v, int64_t min, uint64_t max);
@@ -288,9 +296,9 @@ inline void checkIntUInt(Ctx &ctx, uint8_t *loc, uint64_t v, int n,
 inline void checkAlignment(Ctx &ctx, uint8_t *loc, uint64_t v, int n,
                            const Relocation &rel) {
   if ((v & (n - 1)) != 0)
-    error(getErrorLoc(ctx, loc) + "improper alignment for relocation " +
-          lld::toString(rel.type) + ": 0x" + llvm::utohexstr(v) +
-          " is not aligned to " + Twine(n) + " bytes");
+    Err(ctx) << getErrorLoc(ctx, loc) << "improper alignment for relocation "
+             << rel.type << ": 0x" << llvm::utohexstr(v)
+             << " is not aligned to " << n << " bytes";
 }
 
 // Endianness-aware read/write.
@@ -334,21 +342,23 @@ inline uint64_t overwriteULEB128(uint8_t *bufLoc, uint64_t val) {
 #pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
 #endif
 #define invokeELFT(f, ...)                                                     \
-  switch (ctx.arg.ekind) {                                                     \
-  case lld::elf::ELF32LEKind:                                                  \
-    f<llvm::object::ELF32LE>(__VA_ARGS__);                                     \
-    break;                                                                     \
-  case lld::elf::ELF32BEKind:                                                  \
-    f<llvm::object::ELF32BE>(__VA_ARGS__);                                     \
-    break;                                                                     \
-  case lld::elf::ELF64LEKind:                                                  \
-    f<llvm::object::ELF64LE>(__VA_ARGS__);                                     \
-    break;                                                                     \
-  case lld::elf::ELF64BEKind:                                                  \
-    f<llvm::object::ELF64BE>(__VA_ARGS__);                                     \
-    break;                                                                     \
-  default:                                                                     \
-    llvm_unreachable("unknown ctx.arg.ekind");                                 \
-  }
+  do {                                                                         \
+    switch (ctx.arg.ekind) {                                                   \
+    case lld::elf::ELF32LEKind:                                                \
+      f<llvm::object::ELF32LE>(__VA_ARGS__);                                   \
+      break;                                                                   \
+    case lld::elf::ELF32BEKind:                                                \
+      f<llvm::object::ELF32BE>(__VA_ARGS__);                                   \
+      break;                                                                   \
+    case lld::elf::ELF64LEKind:                                                \
+      f<llvm::object::ELF64LE>(__VA_ARGS__);                                   \
+      break;                                                                   \
+    case lld::elf::ELF64BEKind:                                                \
+      f<llvm::object::ELF64BE>(__VA_ARGS__);                                   \
+      break;                                                                   \
+    default:                                                                   \
+      llvm_unreachable("unknown ctx.arg.ekind");                               \
+    }                                                                          \
+  } while (0)
 
 #endif

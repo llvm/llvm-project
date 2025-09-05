@@ -12,7 +12,6 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
-#include "clang/Tooling/FixIt.h"
 
 using namespace clang::ast_matchers;
 
@@ -34,7 +33,7 @@ UseStdFormatCheck::UseStdFormatCheck(StringRef Name, ClangTidyContext *Context)
                       areDiagsSelfContained()),
       MaybeHeaderToInclude(Options.get("FormatHeader")) {
   if (StrFormatLikeFunctions.empty())
-    StrFormatLikeFunctions.push_back("absl::StrFormat");
+    StrFormatLikeFunctions.emplace_back("absl::StrFormat");
 
   if (!MaybeHeaderToInclude && ReplacementFormatFunction == "std::format")
     MaybeHeaderToInclude = "<format>";

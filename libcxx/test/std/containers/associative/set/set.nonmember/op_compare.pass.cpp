@@ -39,27 +39,27 @@
 #include "test_comparisons.h"
 
 int main(int, char**) {
-    {
-        std::set<int> s1, s2;
-        s1.insert(1);
-        s2.insert(2);
-        const std::set<int>& cs1 = s1, cs2 = s2;
-        assert(testComparisons(cs1, cs2, false, true));
-    }
-    {
-        std::set<int> s1, s2;
-        s1.insert(1);
-        s2.insert(1);
-        const std::set<int>& cs1 = s1, cs2 = s2;
-        assert(testComparisons(cs1, cs2, true, false));
-    }
-    {
-        std::set<int> s1, s2;
-        s1.insert(1);
-        s2.insert(1);
-        s2.insert(2);
-        const std::set<int>& cs1 = s1, cs2 = s2;
-        assert(testComparisons(cs1, cs2, false, true));
-    }
-    return 0;
+  {
+    std::set<int> s1, s2;
+    s1.insert(1);
+    s2.insert(2);
+    const std::set<int>&cs1 = s1, cs2 = s2;
+    assert(testComparisons(cs1, cs2, false, true));
+  }
+  {
+    std::set<int> s1, s2;
+    s1.insert(1);
+    s2.insert(1);
+    const std::set<int>&cs1 = s1, cs2 = s2;
+    assert(testComparisons(cs1, cs2, true, false));
+  }
+  {
+    std::set<int> s1, s2;
+    s1.insert(1);
+    s2.insert(1);
+    s2.insert(2);
+    const std::set<int>&cs1 = s1, cs2 = s2;
+    assert(testComparisons(cs1, cs2, false, true));
+  }
+  return 0;
 }

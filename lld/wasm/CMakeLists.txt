@@ -21,6 +21,7 @@ add_lld_library(lldWasm
   LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   BinaryFormat
+  BitWriter
   Core
   Demangle
   LTO

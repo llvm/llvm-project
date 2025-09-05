@@ -59,7 +59,7 @@ static bool maxCondition(const BinaryOperator::Opcode Op, const Expr *CondLhs,
   return false;
 }
 
-QualType getNonTemplateAlias(QualType QT) {
+static QualType getNonTemplateAlias(QualType QT) {
   while (true) {
     // cast to a TypedefType
     if (const TypedefType *TT = dyn_cast<TypedefType>(QT)) {
@@ -67,16 +67,33 @@ QualType getNonTemplateAlias(QualType QT) {
       if (!TT->getDecl()->getDescribedTemplate() &&
           !TT->getDecl()->getDeclContext()->isDependentContext())
         return QT;
-      QT = TT->getDecl()->getUnderlyingType();
-    }
-    // cast to elaborated type
-    else if (const ElaboratedType *ET = dyn_cast<ElaboratedType>(QT)) {
-      QT = ET->getNamedType();
+      QT = TT->desugar();
     } else {
       break;
     }
   }
   return QT;
+}
+
+static QualType getReplacementCastType(const Expr *CondLhs, const Expr *CondRhs,
+                                       QualType ComparedType) {
+  QualType LhsType = CondLhs->getType();
+  QualType RhsType = CondRhs->getType();
+  QualType LhsCanonicalType =
+      LhsType.getCanonicalType().getNonReferenceType().getUnqualifiedType();
+  QualType RhsCanonicalType =
+      RhsType.getCanonicalType().getNonReferenceType().getUnqualifiedType();
+  QualType GlobalImplicitCastType;
+  if (LhsCanonicalType != RhsCanonicalType) {
+    if (llvm::isa<IntegerLiteral>(CondRhs)) {
+      GlobalImplicitCastType = getNonTemplateAlias(LhsType);
+    } else if (llvm::isa<IntegerLiteral>(CondLhs)) {
+      GlobalImplicitCastType = getNonTemplateAlias(RhsType);
+    } else {
+      GlobalImplicitCastType = getNonTemplateAlias(ComparedType);
+    }
+  }
+  return GlobalImplicitCastType;
 }
 
 static std::string createReplacement(const Expr *CondLhs, const Expr *CondRhs,
@@ -92,18 +109,8 @@ static std::string createReplacement(const Expr *CondLhs, const Expr *CondRhs,
   const llvm::StringRef AssignLhsStr = Lexer::getSourceText(
       Source.getExpansionRange(AssignLhs->getSourceRange()), Source, LO);
 
-  clang::QualType GlobalImplicitCastType;
-  clang::QualType LhsType = CondLhs->getType()
-                                .getCanonicalType()
-                                .getNonReferenceType()
-                                .getUnqualifiedType();
-  clang::QualType RhsType = CondRhs->getType()
-                                .getCanonicalType()
-                                .getNonReferenceType()
-                                .getUnqualifiedType();
-  if (LhsType != RhsType) {
-    GlobalImplicitCastType = getNonTemplateAlias(BO->getLHS()->getType());
-  }
+  QualType GlobalImplicitCastType =
+      getReplacementCastType(CondLhs, CondRhs, BO->getLHS()->getType());
 
   return (AssignLhsStr + " = " + FunctionName +
           (!GlobalImplicitCastType.isNull()

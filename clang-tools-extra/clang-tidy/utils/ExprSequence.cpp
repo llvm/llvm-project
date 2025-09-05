@@ -71,12 +71,12 @@ bool isDescendantOfArgs(const Stmt *Descendant, const CallExpr *Call,
 
 llvm::SmallVector<const InitListExpr *>
 getAllInitListForms(const InitListExpr *InitList) {
-  llvm::SmallVector<const InitListExpr *> result = {InitList};
+  llvm::SmallVector<const InitListExpr *> Result = {InitList};
   if (const InitListExpr *AltForm = InitList->getSyntacticForm())
-    result.push_back(AltForm);
+    Result.push_back(AltForm);
   if (const InitListExpr *AltForm = InitList->getSemanticForm())
-    result.push_back(AltForm);
-  return result;
+    Result.push_back(AltForm);
+  return Result;
 }
 
 } // namespace
@@ -84,9 +84,7 @@ getAllInitListForms(const InitListExpr *InitList) {
 ExprSequence::ExprSequence(const CFG *TheCFG, const Stmt *Root,
                            ASTContext *TheContext)
     : Context(TheContext), Root(Root) {
-  for (const auto &SyntheticStmt : TheCFG->synthetic_stmts()) {
-    SyntheticStmtSourceMap[SyntheticStmt.first] = SyntheticStmt.second;
-  }
+  SyntheticStmtSourceMap.insert_range(TheCFG->synthetic_stmts());
 }
 
 bool ExprSequence::inSequence(const Stmt *Before, const Stmt *After) const {

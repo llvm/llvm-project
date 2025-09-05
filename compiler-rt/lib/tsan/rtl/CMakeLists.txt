@@ -259,7 +259,6 @@ else()
       STATIC
       ARCHS ${arch}
       SOURCES ${TSAN_CXX_SOURCES}
-              $<TARGET_OBJECTS:RTUbsan_cxx.${arch}>
       ADDITIONAL_HEADERS ${TSAN_HEADERS}
       CFLAGS ${TSAN_RTL_CFLAGS}
       PARENT_TARGET tsan)
