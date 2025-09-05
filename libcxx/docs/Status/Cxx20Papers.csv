@@ -59,7 +59,7 @@
 "`P0591R4 <https://wg21.link/P0591R4>`__","Utility functions to implement uses-allocator construction","2018-11 (San Diego)","|Partial|","","The changes in [mem.poly.allocator.mem] are missing"
 "`P0595R2 <https://wg21.link/P0595R2>`__","std::is_constant_evaluated()","2018-11 (San Diego)","|Complete|","9",""
 "`P0602R4 <https://wg21.link/P0602R4>`__","variant and optional should propagate copy/move triviality","2018-11 (San Diego)","|Complete|","8",""
-"`P0608R3 <https://wg21.link/P0608R3>`__","A sound variant converting constructor","2018-11 (San Diego)","|Complete|","9",""
+"`P0608R3 <https://wg21.link/P0608R3>`__","A sane variant converting constructor","2018-11 (San Diego)","|Complete|","9",""
 "`P0655R1 <https://wg21.link/P0655R1>`__","visit<R>: Explicit Return Type for visit","2018-11 (San Diego)","|Complete|","12",""
 "`P0771R1 <https://wg21.link/P0771R1>`__","std::function move constructor should be noexcept","2018-11 (San Diego)","|Complete|","6",""
 "`P0896R4 <https://wg21.link/P0896R4>`__","The One Ranges Proposal","2018-11 (San Diego)","|Complete|","15",""
