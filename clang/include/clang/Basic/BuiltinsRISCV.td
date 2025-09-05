@@ -205,6 +205,18 @@ def slx_32         : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 def psh1add_h_32   : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 def ssh1sadd       : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
 def pssh1sadd_h_32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def pmul_h_b00_32  : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def pmul_h_b11_32  : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def pmulu_h_b00_32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def pmulu_h_b11_32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def pmulsu_h_b00_32: RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def pmulsu_h_b11_32: RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def mul_h00        : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def mul_h11        : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def mulu_h00       : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def mulu_h11       : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def mulsu_h00      : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def mulsu_h11      : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 } // Features = "experimental-p,32bit"
 
 let Features = "experimental-p,64bit" in {
@@ -296,6 +308,24 @@ def zip8p          : RISCVBuiltin<"int64_t(int64_t, int64_t)">;
 def zip16p         : RISCVBuiltin<"int64_t(int64_t, int64_t)">;
 def zip8hp         : RISCVBuiltin<"int64_t(int64_t, int64_t)">;
 def zip16hp        : RISCVBuiltin<"int64_t(int64_t, int64_t)">;
+def pmul_h_b00_64  : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def pmul_w_h00     : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def pmul_h_b11_64  : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def pmul_w_h11     : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def pmulu_h_b00_64 : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def pmulu_w_h00    : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def pmulu_h_b11_64 : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def pmulu_w_h11    : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def pmulsu_h_b00_64: RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def pmulsu_w_h00   : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def pmulsu_h_b11_64: RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def pmulsu_w_h11   : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def mul_w00        : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def mul_w11        : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def mulu_w00       : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def mulu_w11       : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def mulsu_w00      : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def mulsu_w11      : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 } // Features = "experimental-p,64bit"
 } // Attributes = [Const, NoThrow]
 
