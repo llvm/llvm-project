@@ -8,7 +8,7 @@ define void @scalable_wide_active_lane_mask(ptr noalias %dst, ptr readonly %src,
 ; CHECK-UF1-LABEL: define void @scalable_wide_active_lane_mask(
 ; CHECK-UF1-SAME: ptr noalias [[DST:%.*]], ptr readonly [[SRC:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-UF1-NEXT:  entry:
-; CHECK-UF1-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH1:%.*]]
+; CHECK-UF1-NEXT:    br label [[VECTOR_PH1:%.*]]
 ; CHECK-UF1:       vector.ph:
 ; CHECK-UF1-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-UF1-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP5]], 16
@@ -37,7 +37,7 @@ define void @scalable_wide_active_lane_mask(ptr noalias %dst, ptr readonly %src,
 ; CHECK-UF4-LABEL: define void @scalable_wide_active_lane_mask(
 ; CHECK-UF4-SAME: ptr noalias [[DST:%.*]], ptr readonly [[SRC:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-UF4-NEXT:  entry:
-; CHECK-UF4-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH1:%.*]]
+; CHECK-UF4-NEXT:    br label [[VECTOR_PH1:%.*]]
 ; CHECK-UF4:       vector.ph:
 ; CHECK-UF4-NEXT:    [[TMP61:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-UF4-NEXT:    [[TMP62:%.*]] = mul nuw i64 [[TMP61]], 64
@@ -150,7 +150,7 @@ define void @scalable_wide_active_lane_mask_double(ptr noalias %dst, ptr readonl
 ; CHECK-UF1-NEXT:    [[CMP6:%.*]] = icmp sgt i64 [[N]], 0
 ; CHECK-UF1-NEXT:    br i1 [[CMP6]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK-UF1:       for.body.preheader:
-; CHECK-UF1-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-UF1-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-UF1:       vector.ph:
 ; CHECK-UF1-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-UF1-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP12]], 2
@@ -173,7 +173,7 @@ define void @scalable_wide_active_lane_mask_double(ptr noalias %dst, ptr readonl
 ; CHECK-UF1-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TMP13]])
 ; CHECK-UF1-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; CHECK-UF1-NEXT:    [[TMP6:%.*]] = xor i1 [[TMP7]], true
-; CHECK-UF1-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-UF1-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK-UF1:       middle.block:
 ;
 ; CHECK-UF4-LABEL: define void @scalable_wide_active_lane_mask_double(
@@ -182,7 +182,7 @@ define void @scalable_wide_active_lane_mask_double(ptr noalias %dst, ptr readonl
 ; CHECK-UF4-NEXT:    [[CMP6:%.*]] = icmp sgt i64 [[N]], 0
 ; CHECK-UF4-NEXT:    br i1 [[CMP6]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK-UF4:       for.body.preheader:
-; CHECK-UF4-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-UF4-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-UF4:       vector.ph:
 ; CHECK-UF4-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-UF4-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 8
@@ -267,7 +267,7 @@ define void @scalable_wide_active_lane_mask_double(ptr noalias %dst, ptr readonl
 ; CHECK-UF4-NEXT:    [[ACTIVE_LANE_MASK_NEXT14:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[TMP49]], i64 [[WIDE_TRIP_COUNT]])
 ; CHECK-UF4-NEXT:    [[TMP54:%.*]] = extractelement <vscale x 2 x i1> [[TMP50]], i32 0
 ; CHECK-UF4-NEXT:    [[TMP55:%.*]] = xor i1 [[TMP54]], true
-; CHECK-UF4-NEXT:    br i1 [[TMP55]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-UF4-NEXT:    br i1 [[TMP55]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK-UF4:       middle.block:
 ;
 entry:
@@ -295,10 +295,10 @@ attributes #0 = { nounwind vscale_range(1,16) "target-features"="+sve2p1" }
 ; CHECK-UF1: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK-UF1: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK-UF1: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK-UF1: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+; CHECK-UF1: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
 ;.
 ; CHECK-UF4: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK-UF4: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK-UF4: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK-UF4: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+; CHECK-UF4: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
 ;.

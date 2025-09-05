@@ -4,7 +4,7 @@
 define void @d() {
 ; CHECK-LABEL: define void @d() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -24,7 +24,7 @@ define void @d() {
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[I7:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[I7:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I3:%.*]] = load float, ptr null, align 4
 ; CHECK-NEXT:    [[I4:%.*]] = getelementptr float, ptr @d, i64 [[I]]
 ; CHECK-NEXT:    [[I5:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[I3]], i32 0)
@@ -32,7 +32,7 @@ define void @d() {
 ; CHECK-NEXT:    store float [[I6]], ptr [[I4]], align 4
 ; CHECK-NEXT:    [[I7]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[I8:%.*]] = icmp eq i64 [[I7]], 128
-; CHECK-NEXT:    br i1 [[I8]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[I8]], label [[EXIT]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

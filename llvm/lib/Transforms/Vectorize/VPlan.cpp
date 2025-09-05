@@ -985,12 +985,25 @@ void VPlan::execute(VPTransformState *State) {
   setName("Final VPlan");
   LLVM_DEBUG(dump());
 
-  // Disconnect scalar preheader and scalar header, as the dominator tree edge
-  // will be updated as part of VPlan execution. This allows keeping the DTU
-  // logic generic during VPlan execution.
   BasicBlock *ScalarPh = State->CFG.ExitBB;
-  State->CFG.DTU.applyUpdates(
-      {{DominatorTree::Delete, ScalarPh, ScalarPh->getSingleSuccessor()}});
+  if (getScalarPreheader()->hasPredecessors()) {
+    // Disconnect scalar preheader and scalar header, as the dominator tree edge
+    // will be updated as part of VPlan execution. This allows keeping the DTU
+    // logic generic during VPlan execution.
+    State->CFG.DTU.applyUpdates(
+        {{DominatorTree::Delete, ScalarPh, ScalarPh->getSingleSuccessor()}});
+  } else {
+    Loop *OrigLoop = State->LI->getLoopFor(
+        cast<VPIRBasicBlock>(getScalarPreheader()->getSingleSuccessor())
+            ->getIRBasicBlock());
+    // If the original loop is unreachable, we need to delete it.
+    auto Blocks = OrigLoop->getBlocksVector();
+    Blocks.push_back(
+        cast<VPIRBasicBlock>(getScalarPreheader())->getIRBasicBlock());
+    for (auto *BB : Blocks)
+      State->LI->removeBlock(BB);
+    State->LI->erase(OrigLoop);
+  }
 
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       Entry);
@@ -1664,12 +1677,15 @@ static void addRuntimeUnrollDisableMetaData(Loop *L) {
 }
 
 void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
-    Loop *VectorLoop, VPBasicBlock *HeaderVPBB, bool VectorizingEpilogue,
-    unsigned EstimatedVFxUF, bool DisableRuntimeUnroll) {
-  MDNode *LID = OrigLoop->getLoopID();
+    Loop *VectorLoop, VPBasicBlock *HeaderVPBB, const VPlan &Plan,
+    bool VectorizingEpilogue, MDNode *LID,
+    std::optional<unsigned> OrigAverageTripCount,
+    unsigned OrigLoopInvocationWeight, unsigned EstimatedVFxUF,
+    bool DisableRuntimeUnroll) {
   // Update the metadata of the scalar loop. Skip the update when vectorizing
-  // the epilogue loop, to ensure it is only updated once.
-  if (!VectorizingEpilogue) {
+  // the epilogue loop, to ensure it is only updated once, or when the became
+  // unreachable.
+  if (Plan.getScalarPreheader()->hasPredecessors() && !VectorizingEpilogue) {
     std::optional<MDNode *> RemainderLoopID = makeFollowupLoopID(
         LID, {LLVMLoopVectorizeFollowupAll, LLVMLoopVectorizeFollowupEpilogue});
     if (RemainderLoopID) {
@@ -1739,7 +1755,21 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
   // For scalable vectorization we can't know at compile time how many
   // iterations of the loop are handled in one vector iteration, so instead
   // use the value of vscale used for tuning.
-  setProfileInfoAfterUnrolling(OrigLoop, VectorLoop, OrigLoop, EstimatedVFxUF);
+  if (OrigAverageTripCount) {
+    // Calculate number of iterations in unrolled loop.
+    unsigned AverageVectorTripCount = *OrigAverageTripCount / EstimatedVFxUF;
+    // Calculate number of iterations for remainder loop.
+    unsigned RemainderAverageTripCount = *OrigAverageTripCount % EstimatedVFxUF;
+
+    if (HeaderVPBB) {
+      setLoopEstimatedTripCount(VectorLoop, AverageVectorTripCount,
+                                OrigLoopInvocationWeight);
+    }
+    if (Plan.getScalarPreheader()->hasPredecessors()) {
+      setLoopEstimatedTripCount(OrigLoop, RemainderAverageTripCount,
+                                OrigLoopInvocationWeight);
+    }
+  }
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
