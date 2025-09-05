@@ -206,6 +206,7 @@ Non-comprehensive list of changes in this release
   Currently, the use of ``__builtin_dedup_pack`` is limited to template arguments and base
   specifiers, it also must be used within a template context.
 
+- ``__builtin_assume_dereferenceable`` now accepts non-constant size operands.
 
 New Compiler Flags
 ------------------
