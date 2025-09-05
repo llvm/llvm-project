@@ -2960,8 +2960,7 @@ OMPClause *Parser::ParseOpenMPUsesAllocatorClause(OpenMPDirectiveKind DKind) {
   SmallVector<SemaOpenMP::UsesAllocatorsData, 4> Data;
   do {
     // Parse 'traits(expr) : Allocator' for >=5.2
-    if (getLangOpts().OpenMP >= 52 &&
-        Tok.is(tok::identifier) &&
+    if (getLangOpts().OpenMP >= 52 && Tok.is(tok::identifier) &&
         Tok.getIdentifierInfo()->getName() == "traits") {
 
       SemaOpenMP::UsesAllocatorsData &D = Data.emplace_back();
@@ -2969,23 +2968,26 @@ OMPClause *Parser::ParseOpenMPUsesAllocatorClause(OpenMPDirectiveKind DKind) {
       ConsumeToken();
 
       // Parse '(' <expr> ')'
-      BalancedDelimiterTracker TraitParens(*this, tok::l_paren, tok::annot_pragma_openmp_end);
+      BalancedDelimiterTracker TraitParens(*this, tok::l_paren,
+                                           tok::annot_pragma_openmp_end);
       TraitParens.consumeOpen();
       ExprResult AllocatorTraits =
           getLangOpts().CPlusPlus ? ParseCXXIdExpression() : ParseExpression();
       TraitParens.consumeClose();
 
       if (AllocatorTraits.isInvalid()) {
-        SkipUntil({tok::comma, tok::semi, tok::r_paren, tok::annot_pragma_openmp_end},
-                  StopBeforeMatch);
+        SkipUntil(
+            {tok::comma, tok::semi, tok::r_paren, tok::annot_pragma_openmp_end},
+            StopBeforeMatch);
         break;
       }
 
       // Expect ':'
       if (Tok.isNot(tok::colon)) {
         Diag(Tok, diag::err_expected) << tok::colon;
-        SkipUntil({tok::comma, tok::semi, tok::r_paren, tok::annot_pragma_openmp_end},
-                  StopBeforeMatch);
+        SkipUntil(
+            {tok::comma, tok::semi, tok::r_paren, tok::annot_pragma_openmp_end},
+            StopBeforeMatch);
         continue;
       }
       ConsumeToken();
@@ -2995,11 +2997,13 @@ OMPClause *Parser::ParseOpenMPUsesAllocatorClause(OpenMPDirectiveKind DKind) {
       ExprResult AllocatorExpr =
           getLangOpts().CPlusPlus
               ? ParseCXXIdExpression()
-              : tryParseCXXIdExpression(SS, /*isAddressOfOperand=*/false, Replacement);
+              : tryParseCXXIdExpression(SS, /*isAddressOfOperand=*/false,
+                                        Replacement);
 
       if (AllocatorExpr.isInvalid()) {
-        SkipUntil({tok::comma, tok::semi, tok::r_paren, tok::annot_pragma_openmp_end},
-                  StopBeforeMatch);
+        SkipUntil(
+            {tok::comma, tok::semi, tok::r_paren, tok::annot_pragma_openmp_end},
+            StopBeforeMatch);
         break;
       }
 
