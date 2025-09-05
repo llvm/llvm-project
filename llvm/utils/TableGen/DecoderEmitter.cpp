@@ -407,10 +407,6 @@ private:
   void parseInstructionEncodings();
 };
 
-} // end anonymous namespace
-
-namespace {
-
 /// Filter - Filter works with FilterChooser to produce the decoding tree for
 /// the ISA.
 ///
@@ -665,11 +661,8 @@ private:
 
 } // end anonymous namespace
 
-///////////////////////////
-//                       //
-// Filter Implementation //
-//                       //
-///////////////////////////
+//------------------------------------------------------------------------------
+// Filter Implementation
 
 Filter::Filter(ArrayRef<InstructionEncoding> Encodings,
                ArrayRef<unsigned> EncodingIDs, unsigned StartBit,
@@ -696,6 +689,15 @@ Filter::Filter(ArrayRef<InstructionEncoding> Encodings,
   assert((FilteredIDs.size() + VariableIDs.size() > 0) &&
          "Filter returns no instruction categories");
 }
+
+// Returns the number of fanout produced by the filter.  More fanout implies
+// the filter distinguishes more categories of instructions.
+unsigned Filter::usefulness() const {
+  return FilteredIDs.size() + VariableIDs.empty();
+}
+
+//------------------------------------------------------------------------------
+// FilterChooser Implementation
 
 void FilterChooser::applyFilter(const Filter &F) {
   StartBit = F.StartBit;
@@ -724,17 +726,17 @@ void FilterChooser::applyFilter(const Filter &F) {
   }
 }
 
-// Returns the number of fanout produced by the filter.  More fanout implies
-// the filter distinguishes more categories of instructions.
-unsigned Filter::usefulness() const {
-  return FilteredIDs.size() + VariableIDs.empty();
+/// dumpStack - dumpStack traverses the filter chooser chain and calls
+/// dumpFilterArray on each filter chooser up to the top level one.
+void FilterChooser::dumpStack(raw_ostream &OS, indent Indent,
+                              unsigned PadToWidth) const {
+  if (Parent)
+    Parent->dumpStack(OS, Indent, PadToWidth);
+  assert(PadToWidth >= FilterBits.getBitWidth());
+  OS << Indent << indent(PadToWidth - FilterBits.getBitWidth());
+  printKnownBits(OS, FilterBits, '.');
+  OS << '\n';
 }
-
-//////////////////////////////////
-//                              //
-// Filterchooser Implementation //
-//                              //
-//////////////////////////////////
 
 // Emit the decoder state machine table. Returns a mask of MCD decoder ops
 // that were emitted.
@@ -1055,18 +1057,6 @@ void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
     OS << "  }\n";
   }
   OS << "}\n";
-}
-
-/// dumpStack - dumpStack traverses the filter chooser chain and calls
-/// dumpFilterArray on each filter chooser up to the top level one.
-void FilterChooser::dumpStack(raw_ostream &OS, indent Indent,
-                              unsigned PadToWidth) const {
-  if (Parent)
-    Parent->dumpStack(OS, Indent, PadToWidth);
-  assert(PadToWidth >= FilterBits.getBitWidth());
-  OS << Indent << indent(PadToWidth - FilterBits.getBitWidth());
-  printKnownBits(OS, FilterBits, '.');
-  OS << '\n';
 }
 
 // Calculates the island(s) needed to decode the instruction.
