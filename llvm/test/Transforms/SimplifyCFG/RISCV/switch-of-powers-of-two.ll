@@ -158,22 +158,10 @@ return:
 define i32 @unable_to_create_dense_switch(i32 %x) {
 ; CHECK-LABEL: @unable_to_create_dense_switch(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    switch i32 [[X:%.*]], label [[DEFAULT_CASE:%.*]] [
-; CHECK-NEXT:      i32 1, label [[RETURN:%.*]]
-; CHECK-NEXT:      i32 2, label [[BB3:%.*]]
-; CHECK-NEXT:      i32 4, label [[BB4:%.*]]
-; CHECK-NEXT:      i32 4096, label [[BB5:%.*]]
-; CHECK-NEXT:    ]
-; CHECK:       default_case:
-; CHECK-NEXT:    unreachable
-; CHECK:       bb3:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       bb4:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       bb5:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       return:
-; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 1, [[BB3]] ], [ 0, [[BB4]] ], [ 42, [[BB5]] ], [ 2, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], 4095
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [5 x i32], ptr @switch.table.unable_to_create_dense_switch, i32 0, i32 [[TMP1]]
+; CHECK-NEXT:    [[P:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    ret i32 [[P]]
 ;
 entry:
@@ -201,11 +189,13 @@ declare i32 @bar(i32)
 define i32 @unable_to_generate_lookup_table(i32 %x, i32 %y) {
 ; RV64I-LABEL: @unable_to_generate_lookup_table(
 ; RV64I-NEXT:  entry:
-; RV64I-NEXT:    switch i32 [[Y:%.*]], label [[DEFAULT_CASE:%.*]] [
+; RV64I-NEXT:    [[TMP0:%.*]] = add i32 [[Y1:%.*]], 0
+; RV64I-NEXT:    [[Y:%.*]] = and i32 [[TMP0]], 63
+; RV64I-NEXT:    switch i32 [[Y]], label [[DEFAULT_CASE:%.*]] [
 ; RV64I-NEXT:      i32 1, label [[BB2:%.*]]
 ; RV64I-NEXT:      i32 2, label [[BB3:%.*]]
 ; RV64I-NEXT:      i32 8, label [[BB4:%.*]]
-; RV64I-NEXT:      i32 64, label [[BB5:%.*]]
+; RV64I-NEXT:      i32 0, label [[BB5:%.*]]
 ; RV64I-NEXT:    ]
 ; RV64I:       default_case:
 ; RV64I-NEXT:    unreachable
