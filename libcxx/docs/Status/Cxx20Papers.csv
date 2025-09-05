@@ -18,7 +18,7 @@
 "`P0777R1 <https://wg21.link/P0777R1>`__","Treating Unnecessary ``decay``\ ","2017-11 (Albuquerque)","|Complete|","7",""
 "","","","","",""
 "`P0122R7 <https://wg21.link/P0122R7>`__","<span>","2018-03 (Jacksonville)","|Complete|","7",""
-"`P0355R7 <https://wg21.link/P0355R7>`__","Extending chrono to Calendars and Time Zones","2018-03 (Jacksonville)","|Partial|","","See the `Github issue <https://github.com/llvm/llvm-project/issues/99982>`__ for detailed status"
+"`P0355R7 <https://wg21.link/P0355R7>`__","Extending chrono to Calendars and Time Zones","2018-03 (Jacksonville)","|Partial|","","See the `Github issue <https://llvm.org/PR99982>`__ for detailed status"
 "`P0551R3 <https://wg21.link/P0551R3>`__","Thou Shalt Not Specialize ``std``\  Function Templates!","2018-03 (Jacksonville)","|Complete|","11",""
 "`P0753R2 <https://wg21.link/P0753R2>`__","Manipulators for C++ Synchronized Buffered Ostream","2018-03 (Jacksonville)","","",""
 "`P0754R2 <https://wg21.link/P0754R2>`__","<version>","2018-03 (Jacksonville)","|Complete|","7",""

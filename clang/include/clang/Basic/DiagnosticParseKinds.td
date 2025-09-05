@@ -215,6 +215,8 @@ def warn_c23_compat_case_range : Warning<
   DefaultIgnore, InGroup<CPre2yCompat>;
 def ext_c2y_case_range : Extension<
   "case ranges are a C2y extension">, InGroup<C2y>;
+def err_c2y_labeled_break_continue : Error<
+  "named %select{'break'|'continue'}0 is only supported in C2y">;
 
 // Generic errors.
 def err_expected_expression : Error<"expected expression">;
@@ -1506,8 +1508,8 @@ def err_omp_unexpected_directive : Error<
   "unexpected OpenMP directive %select{|'#pragma omp %1'}0">;
 def err_omp_expected_punc : Error<
   "expected ',' or ')' in '%0' %select{clause|directive}1">;
-def warn_clause_expected_string : Warning<
-  "expected string literal in 'clause %0' - ignoring">, InGroup<IgnoredPragmas>;
+def warn_clause_expected_string: Warning<
+  "expected string %select{|literal }1in 'clause %0' - ignoring">, InGroup<IgnoredPragmas>;
 def err_omp_unexpected_clause : Error<
   "unexpected OpenMP clause '%0' in directive '#pragma omp %1'">;
 def err_omp_unexpected_clause_extension_only : Error<

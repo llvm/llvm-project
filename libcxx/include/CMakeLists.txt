@@ -778,7 +778,6 @@ set(files
   __tree
   __tuple/find_index.h
   __tuple/ignore.h
-  __tuple/make_tuple_types.h
   __tuple/sfinae_helpers.h
   __tuple/tuple_element.h
   __tuple/tuple_like.h
@@ -872,6 +871,7 @@ set(files
   __type_traits/is_trivially_relocatable.h
   __type_traits/is_unbounded_array.h
   __type_traits/is_union.h
+  __type_traits/is_unqualified.h
   __type_traits/is_unsigned.h
   __type_traits/is_valid_expansion.h
   __type_traits/is_void.h

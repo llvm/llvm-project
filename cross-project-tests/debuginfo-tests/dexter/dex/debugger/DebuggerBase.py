@@ -233,6 +233,17 @@ class DebuggerBase(object, metaclass=abc.ABCMeta):
     def evaluate_expression(self, expression, frame_idx=0) -> ValueIR:
         pass
 
+    def get_pc(self, frame_idx: int = 0) -> str:
+        """Get the current PC in frame at frame_idx depth.
+        frame_idx 0 is the current function.
+        """
+        r = self.evaluate_expression("$pc", frame_idx)
+        if not r.could_evaluate or r.is_optimized_away or r.is_irretrievable:
+            raise DebuggerException(
+                "evaluating '$pc' failed - possibly unsupported by the debugger"
+            )
+        return r.value
+
     def _external_to_debug_path(self, path):
         if not self.options.debugger_use_relative_paths:
             return path

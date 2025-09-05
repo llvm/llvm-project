@@ -1,0 +1,108 @@
+#!/usr/bin/env python3
+
+import argparse
+import csv
+import sys
+
+def parse_table(rows, table_title):
+    """
+    Parse a CSV table out of an iterator over rows.
+
+    Return a tuple containing (extracted headers, extracted rows).
+    """
+    in_table = False
+    rows_iter = iter(rows)
+    extracted = []
+    headers = None
+    while True:
+        try:
+            row = next(rows_iter)
+        except StopIteration:
+            break
+
+        if not in_table and row == [table_title]:
+            in_table = True
+            next_row = next(rows_iter)
+            assert next_row == [], f'There should be an empty row after the title of the table, found {next_row}'
+            headers = next(rows_iter) # Extract the headers
+            continue
+
+        elif in_table and row == []: # An empty row marks the end of the table
+            in_table = False
+            break
+
+        elif in_table:
+            extracted.append(row)
+
+    assert len(extracted) != 0, f'Could not extract rows from the table, this is suspicious. Table title was {table_title}'
+    assert headers is not None, f'Could not extract headers from the table, this is suspicious. Table title was {table_title}'
+
+    return (headers, extracted)
+
+def main(argv):
+    parser = argparse.ArgumentParser(
+        prog='parse-spec-results',
+        description='Parse SPEC result files (in CSV format) and extract the selected result table, in the selected format.')
+    parser.add_argument('filename', type=argparse.FileType('r'), nargs='+',
+        help='One of more CSV files to extract the results from. The results parsed from each file are concatenated '
+             'together, creating a single CSV table.')
+    parser.add_argument('--table', type=str, choices=['full', 'selected'], default='full',
+        help='The name of the table to extract from SPEC results. `full` means extracting the Full Results Table '
+             'and `selected` means extracting the Selected Results Table. Default is `full`.')
+    parser.add_argument('--output-format', type=str, choices=['csv', 'lnt'], default='csv',
+        help='The desired output format for the data. `csv` is CSV format and `lnt` is a format compatible with '
+             '`lnt importreport` (see https://llvm.org/docs/lnt/importing_data.html#importing-data-in-a-text-file).')
+    parser.add_argument('--extract', type=str,
+        help='A comma-separated list of headers to extract from the table. If provided, only the data associated to '
+             'those headers will be present in the resulting data. Invalid header names are diagnosed. Please make '
+             'sure to use appropriate quoting for header names that contain spaces. This option only makes sense '
+             'when the output format is CSV.')
+    parser.add_argument('--keep-not-run', action='store_true',
+        help='Keep entries whose \'Base Status\' is marked as \'NR\', aka \'Not Run\'. By default, such entries are discarded.')
+    args = parser.parse_args(argv)
+
+    if args.table == 'full':
+        table_title = 'Full Results Table'
+    elif args.table == 'selected':
+        table_title = 'Selected Results Table'
+
+    # Parse the headers and the rows in each file, aggregating all the results
+    headers = None
+    rows = []
+    for file in args.filename:
+        reader = csv.reader(file)
+        (parsed_headers, parsed_rows) = parse_table(reader, table_title)
+        assert headers is None or headers == parsed_headers, f'Found files with different headers: {headers} and {parsed_headers}'
+        headers = parsed_headers
+        rows.extend(parsed_rows)
+
+    # Remove rows that were not run unless we were asked to keep them
+    if not args.keep_not_run:
+        not_run = headers.index('Base Status')
+        rows = [row for row in rows if row[not_run] != 'NR']
+
+    if args.extract is not None:
+        if args.output_format != 'csv':
+            raise RuntimeError('Passing --extract requires the output format to be csv')
+        for h in args.extract.split(','):
+            if h not in headers:
+                raise RuntimeError(f'Header name {h} was not present in the parsed headers {headers}')
+
+        extracted_fields = [headers.index(h) for h in args.extract.split(',')]
+        headers = [headers[i] for i in extracted_fields]
+        rows = [[row[i] for i in extracted_fields] for row in rows]
+
+    # Print the results in the right format
+    if args.output_format == 'csv':
+        writer = csv.writer(sys.stdout)
+        writer.writerow(headers)
+        for row in rows:
+            writer.writerow(row)
+    elif args.output_format == 'lnt':
+        benchmark = headers.index('Benchmark')
+        time = headers.index('Est. Base Run Time')
+        for row in rows:
+            print(f'{row[benchmark].replace('.', '_')}.execution_time {row[time]}')
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

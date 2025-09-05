@@ -296,7 +296,7 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
           .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPReplicateRecipe,
                 VPWidenCallRecipe, VPWidenMemoryRecipe, VPWidenSelectRecipe>(
               [this](const auto *R) { return inferScalarTypeForRecipe(R); })
-          .Case<VPInterleaveRecipe>([V](const VPInterleaveRecipe *R) {
+          .Case<VPInterleaveBase>([V](const auto *R) {
             // TODO: Use info from interleave group.
             return V->getUnderlyingValue()->getType();
           })
