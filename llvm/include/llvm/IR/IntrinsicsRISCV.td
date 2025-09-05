@@ -1893,6 +1893,51 @@ let TargetPrefix = "riscv" in {
   def int_riscv_vsm3me   : RISCVBinaryAAXUnMasked;
 } // TargetPrefix = "riscv"
 
+//===----------------------------------------------------------------------===//
+// Zvqdotq - Vector quad widening 4D Dot Product
+//
+// 8-bit Integer dot-product instructions performing the dot product between two
+// 4-element vectors of 8-bit integer elements and accumulating it into a 32-bit
+// integer accumulator.
+let TargetPrefix = "riscv" in {
+  // We use llvm_anyvector_ty and llvm_anyint_ty for future extensibility
+  // purpose but only EEW=32 is defined for now
+  // Input: (vector_in, vector_in, vector_in/scalar_in, vl, policy)
+  class RISCVVQDOTUnMasked<bit HasVV>
+        : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                [LLVMMatchType<0>, llvm_anyvector_ty,
+                                 !if(HasVV, llvm_any_ty, llvm_anyint_ty),
+                                 llvm_anyint_ty, LLVMMatchType<3>],
+                                [ImmArg<ArgIndex<4>>, IntrNoMem]>,
+                                RISCVVIntrinsic {
+    let ScalarOperand = 2;
+    let VLOperand = 3;
+  }
+  // Input: (vector_in, vector_in, vector_in/scalar_in, mask, vl, policy)
+  class RISCVVQDOTMasked<bit HasVV>
+        : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                [LLVMMatchType<0>, llvm_anyvector_ty,
+                                 !if(HasVV, llvm_any_ty, llvm_anyint_ty),
+                                 LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                 llvm_anyint_ty, LLVMMatchType<3>],
+                                [ImmArg<ArgIndex<5>>, IntrNoMem]>,
+                                RISCVVIntrinsic {
+    let ScalarOperand = 2;
+    let VLOperand = 4;
+  }
+
+  multiclass RISCVVQDOT<bit HasVV = 1> {
+    def "int_riscv_" # NAME : RISCVVQDOTUnMasked<HasVV=HasVV>;
+    def "int_riscv_" # NAME # "_mask" : RISCVVQDOTMasked<HasVV=HasVV>;
+  }
+
+  defm vqdot   : RISCVVQDOT;
+  defm vqdotu  : RISCVVQDOT;
+  defm vqdotsu : RISCVVQDOT;
+  defm vqdotus : RISCVVQDOT<HasVV=0>;
+} // TargetPrefix = "riscv"
+
+
 // Zihintpause extensions
 //===----------------------------------------------------------------------===//
 let TargetPrefix = "riscv" in

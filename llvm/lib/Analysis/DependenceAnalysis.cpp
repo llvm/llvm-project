@@ -3713,13 +3713,24 @@ bool DependenceInfo::tryDelinearizeFixedSize(
       size_t SSize = Subscripts.size();
       for (size_t I = 1; I < SSize; ++I) {
         const SCEV *S = Subscripts[I];
-        if (!isKnownNonNegative(S, Ptr))
+        if (!isKnownNonNegative(S, Ptr)) {
+          LLVM_DEBUG({
+            dbgs() << "Check failed: !isKnownNonNegative(S, Ptr)\n";
+            dbgs() << "  S: " << *S << "\n" << "  Ptr: " << *Ptr << "\n";
+          });
           return false;
+        }
         if (auto *SType = dyn_cast<IntegerType>(S->getType())) {
           const SCEV *Range = SE->getConstant(
               ConstantInt::get(SType, DimensionSizes[I - 1], false));
-          if (!isKnownLessThan(S, Range))
+          if (!isKnownLessThan(S, Range)) {
+            LLVM_DEBUG({
+              dbgs() << "Check failed: !isKnownLessThan(S, Range)\n";
+              dbgs() << "  S: " << *S << "\n"
+                     << "  Range: " << *Range << "\n";
+            });
             return false;
+          }
         }
       }
       return true;
@@ -3727,6 +3738,7 @@ bool DependenceInfo::tryDelinearizeFixedSize(
 
     if (!AllIndicesInRange(SrcSizes, SrcSubscripts, SrcPtr) ||
         !AllIndicesInRange(DstSizes, DstSubscripts, DstPtr)) {
+      LLVM_DEBUG(dbgs() << "Check failed: AllIndicesInRange.\n");
       SrcSubscripts.clear();
       DstSubscripts.clear();
       return false;
@@ -3813,23 +3825,33 @@ bool DependenceInfo::tryDelinearizeParametricSize(
       if (SrcMonotonicity == MonotonicityType::Unknown)
         return false;
 
-      if (!isKnownNonNegative(SrcSubscripts[I], SrcPtr))
-        return false;
-
-      if (!isKnownLessThan(SrcSubscripts[I], Sizes[I - 1]))
-        return false;
-
       MonotonicityType DstMonotonicity =
           SCEVSignedMonotonicityChecker::checkMonotonicity(
               SE, DstSubscripts[I], OutermostLoop, DstPtr);
       if (DstMonotonicity == MonotonicityType::Unknown)
         return false;
 
-      if (!isKnownNonNegative(DstSubscripts[I], DstPtr))
-        return false;
+      bool SNN = isKnownNonNegative(SrcSubscripts[I], SrcPtr);
+      bool DNN = isKnownNonNegative(DstSubscripts[I], DstPtr);
+      bool SLT = isKnownLessThan(SrcSubscripts[I], Sizes[I - 1]);
+      bool DLT = isKnownLessThan(DstSubscripts[I], Sizes[I - 1]);
+      if (SNN && DNN && SLT && DLT)
+        continue;
 
-      if (!isKnownLessThan(DstSubscripts[I], Sizes[I - 1]))
-        return false;
+      LLVM_DEBUG({
+        dbgs() << "Delinearization checks failed: can't prove the following\n";
+        if (!SNN)
+          dbgs() << "  isKnownNonNegative(" << *SrcSubscripts[I] << ")\n";
+        if (!DNN)
+          dbgs() << "  isKnownNonNegative(" << *DstSubscripts[I] << ")\n";
+        if (!SLT)
+          dbgs() << "  isKnownLessThan(" << *SrcSubscripts[I] << ", "
+                 << *Sizes[I - 1] << ")\n";
+        if (!DLT)
+          dbgs() << "  isKnownLessThan(" << *DstSubscripts[I] << ", "
+                 << *Sizes[I - 1] << ")\n";
+      });
+      return false;
     }
 
   return true;

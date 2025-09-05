@@ -548,14 +548,18 @@ class OpenACCClauseCIREmitter final
                                   mlir::Value mainOp, CharUnits alignment,
                                   QualType baseType,
                                   mlir::Region &destroyRegion) {
-    mlir::Block *block = builder.createBlock(
-        &destroyRegion, destroyRegion.end(), {mainOp.getType()}, {loc});
+    mlir::Block *block =
+        builder.createBlock(&destroyRegion, destroyRegion.end(),
+                            {mainOp.getType(), mainOp.getType()}, {loc, loc});
     builder.setInsertionPointToEnd(&destroyRegion.back());
     CIRGenFunction::LexicalScope ls(cgf, loc, block);
 
     mlir::Type elementTy =
         mlir::cast<cir::PointerType>(mainOp.getType()).getPointee();
-    Address addr{block->getArgument(0), elementTy, alignment};
+    // The destroy region has a signature of "original item, privatized item".
+    // So the 2nd item is the one that needs destroying, the former is just for
+    // reference and we don't really have a need for it at the moment.
+    Address addr{block->getArgument(1), elementTy, alignment};
     cgf.emitDestroy(addr, baseType,
                     cgf.getDestroyer(QualType::DK_cxx_destructor));
 
@@ -595,6 +599,20 @@ class OpenACCClauseCIREmitter final
                              OpenACCReductionOperator reductionOp,
                              DeclContext *dc, QualType baseType,
                              mlir::Value mainOp) {
+
+    if (baseType->isPointerType() ||
+        (baseType->isArrayType() && !baseType->isConstantArrayType())) {
+      // It is clear that the use of pointers/VLAs in a recipe are not properly
+      // generated/don't do what they are supposed to do.  In the case where we
+      // have 'bounds', we can actually figure out what we want to
+      // initialize/copy/destroy/compare/etc, but we haven't figured out how
+      // that looks yet, both between the IR and generation code.  For now, we
+      // will do an NYI error no it.
+      cgf.cgm.errorNYI(
+          varRef->getSourceRange(),
+          "OpenACC recipe generation for pointer/non-constant arrays");
+    }
+
     mlir::ModuleOp mod = builder.getBlock()
                              ->getParent()
                              ->template getParentOfType<mlir::ModuleOp>();
@@ -1262,10 +1280,16 @@ public:
 
         {
           mlir::OpBuilder::InsertionGuard guardCase(builder);
-          auto recipe = getOrCreateRecipe<mlir::acc::PrivateRecipeOp>(
-              cgf.getContext(), varExpr, varRecipe, /*temporary=*/nullptr,
-              OpenACCReductionOperator::Invalid,
+          // TODO: OpenACC: At the moment this is a bit of a hacky way of doing
+          // this, and won't work when we get to bounds/etc. Do this for now to
+          // limit the scope of this refactor.
+          VarDecl *allocaDecl = varRecipe.AllocaDecl;
+          allocaDecl->setInit(varRecipe.InitExpr);
+          allocaDecl->setInitStyle(VarDecl::CallInit);
 
+          auto recipe = getOrCreateRecipe<mlir::acc::PrivateRecipeOp>(
+              cgf.getContext(), varExpr, allocaDecl, /*temporary=*/nullptr,
+              OpenACCReductionOperator::Invalid,
               Decl::castToDeclContext(cgf.curFuncDecl), opInfo.baseType,
               privateOp.getResult());
           // TODO: OpenACC: The dialect is going to change in the near future to
@@ -1298,8 +1322,15 @@ public:
 
         {
           mlir::OpBuilder::InsertionGuard guardCase(builder);
+          // TODO: OpenACC: At the moment this is a bit of a hacky way of doing
+          // this, and won't work when we get to bounds/etc. Do this for now to
+          // limit the scope of this refactor.
+          VarDecl *allocaDecl = varRecipe.AllocaDecl;
+          allocaDecl->setInit(varRecipe.InitExpr);
+          allocaDecl->setInitStyle(VarDecl::CallInit);
+
           auto recipe = getOrCreateRecipe<mlir::acc::FirstprivateRecipeOp>(
-              cgf.getContext(), varExpr, varRecipe.RecipeDecl,
+              cgf.getContext(), varExpr, allocaDecl,
               varRecipe.InitFromTemporary, OpenACCReductionOperator::Invalid,
               Decl::castToDeclContext(cgf.curFuncDecl), opInfo.baseType,
               firstPrivateOp.getResult());
@@ -1335,9 +1366,15 @@ public:
 
         {
           mlir::OpBuilder::InsertionGuard guardCase(builder);
+          // TODO: OpenACC: At the moment this is a bit of a hacky way of doing
+          // this, and won't work when we get to bounds/etc. Do this for now to
+          // limit the scope of this refactor.
+          VarDecl *allocaDecl = varRecipe.AllocaDecl;
+          allocaDecl->setInit(varRecipe.InitExpr);
+          allocaDecl->setInitStyle(VarDecl::CallInit);
 
           auto recipe = getOrCreateRecipe<mlir::acc::ReductionRecipeOp>(
-              cgf.getContext(), varExpr, varRecipe.RecipeDecl,
+              cgf.getContext(), varExpr, allocaDecl,
               /*temporary=*/nullptr, clause.getReductionOp(),
               Decl::castToDeclContext(cgf.curFuncDecl), opInfo.baseType,
               reductionOp.getResult());
