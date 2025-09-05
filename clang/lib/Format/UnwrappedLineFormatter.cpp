@@ -501,7 +501,7 @@ private:
                  : 0;
     }
 
-    const bool TryMergeShortRecord = [&]() {
+    auto TryMergeShortRecord = [&]() {
       switch (Style.AllowShortRecordOnASingleLine) {
       case FormatStyle::SRS_Never:
         return false;
@@ -511,7 +511,7 @@ private:
       case FormatStyle::SRS_Always:
         return true;
       }
-    }() && !Style.BraceWrapping.SplitEmptyRecord;
+    };
 
     if (TheLine->Last->is(tok::l_brace)) {
       bool ShouldMerge = false;
@@ -526,7 +526,9 @@ private:
           // NOTE: We use AfterClass (whereas AfterStruct exists) for both
           // classes and structs, but it seems that wrapping is still handled
           // correctly elsewhere.
-          ShouldMerge = !Style.BraceWrapping.AfterClass || TryMergeShortRecord;
+          ShouldMerge =
+              !Style.BraceWrapping.AfterClass ||
+              (TryMergeShortRecord() && !Style.BraceWrapping.SplitEmptyRecord);
         }
       } else if (TheLine->InPPDirective ||
                  TheLine->First->isNoneOf(tok::kw_class, tok::kw_enum,
@@ -962,12 +964,12 @@ private:
       Limit -= 2;
       unsigned MergedLines = 0;
 
-      bool TryMergeBlock =
+      const bool TryMergeBlock =
           Style.AllowShortBlocksOnASingleLine != FormatStyle::SBS_Never;
-      bool TryMergeRecord =
+      const bool TryMergeRecord =
           Style.AllowShortRecordOnASingleLine == FormatStyle::SRS_Always;
-      bool NextIsEmptyBlock = I[1]->First == I[1]->Last && I + 2 != E &&
-                              I[2]->First->is(tok::r_brace);
+      const bool NextIsEmptyBlock = I[1]->First == I[1]->Last && I + 2 != E &&
+                                    I[2]->First->is(tok::r_brace);
 
       if (TryMergeBlock || TryMergeRecord || NextIsEmptyBlock) {
         MergedLines = tryMergeSimpleBlock(I + 1, E, Limit);
