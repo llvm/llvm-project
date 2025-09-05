@@ -1280,10 +1280,16 @@ public:
 
         {
           mlir::OpBuilder::InsertionGuard guardCase(builder);
-          auto recipe = getOrCreateRecipe<mlir::acc::PrivateRecipeOp>(
-              cgf.getContext(), varExpr, varRecipe, /*temporary=*/nullptr,
-              OpenACCReductionOperator::Invalid,
+          // TODO: OpenACC: At the moment this is a bit of a hacky way of doing
+          // this, and won't work when we get to bounds/etc. Do this for now to
+          // limit the scope of this refactor.
+          VarDecl *allocaDecl = varRecipe.AllocaDecl;
+          allocaDecl->setInit(varRecipe.InitExpr);
+          allocaDecl->setInitStyle(VarDecl::CallInit);
 
+          auto recipe = getOrCreateRecipe<mlir::acc::PrivateRecipeOp>(
+              cgf.getContext(), varExpr, allocaDecl, /*temporary=*/nullptr,
+              OpenACCReductionOperator::Invalid,
               Decl::castToDeclContext(cgf.curFuncDecl), opInfo.baseType,
               privateOp.getResult());
           // TODO: OpenACC: The dialect is going to change in the near future to
@@ -1316,8 +1322,15 @@ public:
 
         {
           mlir::OpBuilder::InsertionGuard guardCase(builder);
+          // TODO: OpenACC: At the moment this is a bit of a hacky way of doing
+          // this, and won't work when we get to bounds/etc. Do this for now to
+          // limit the scope of this refactor.
+          VarDecl *allocaDecl = varRecipe.AllocaDecl;
+          allocaDecl->setInit(varRecipe.InitExpr);
+          allocaDecl->setInitStyle(VarDecl::CallInit);
+
           auto recipe = getOrCreateRecipe<mlir::acc::FirstprivateRecipeOp>(
-              cgf.getContext(), varExpr, varRecipe.RecipeDecl,
+              cgf.getContext(), varExpr, allocaDecl,
               varRecipe.InitFromTemporary, OpenACCReductionOperator::Invalid,
               Decl::castToDeclContext(cgf.curFuncDecl), opInfo.baseType,
               firstPrivateOp.getResult());
@@ -1353,9 +1366,15 @@ public:
 
         {
           mlir::OpBuilder::InsertionGuard guardCase(builder);
+          // TODO: OpenACC: At the moment this is a bit of a hacky way of doing
+          // this, and won't work when we get to bounds/etc. Do this for now to
+          // limit the scope of this refactor.
+          VarDecl *allocaDecl = varRecipe.AllocaDecl;
+          allocaDecl->setInit(varRecipe.InitExpr);
+          allocaDecl->setInitStyle(VarDecl::CallInit);
 
           auto recipe = getOrCreateRecipe<mlir::acc::ReductionRecipeOp>(
-              cgf.getContext(), varExpr, varRecipe.RecipeDecl,
+              cgf.getContext(), varExpr, allocaDecl,
               /*temporary=*/nullptr, clause.getReductionOp(),
               Decl::castToDeclContext(cgf.curFuncDecl), opInfo.baseType,
               reductionOp.getResult());
