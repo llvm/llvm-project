@@ -568,6 +568,15 @@ public:
   void addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
                                 ElementCount MinProfitableTripCount) const;
 
+  /// Update loop metadata and profile info for both the scalar remainder loop
+  /// and \p VectorLoop, if it exists. Keeps all loop hints from the original
+  /// loop on the vector loop and replaces vectorizer-specific metadata.
+  void updateLoopMetadataAndProfileInfo(Loop *VectorLoop,
+                                        VPBasicBlock *HeaderVPBB,
+                                        bool VectorizingEpilogue,
+                                        unsigned EstimatedVFxUF,
+                                        bool DisableRuntimeUnroll);
+
 protected:
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// according to the information gathered by Legal when it checked if it is
