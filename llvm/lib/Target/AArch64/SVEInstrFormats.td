@@ -11192,7 +11192,7 @@ multiclass sve2_fp8_dot_indexed_s<string asm, SDPatternOperator op> {
   def : SVE_4_Op_Pat<nxv4f32, op, nxv4f32, nxv16i8, nxv16i8, i32, !cast<Instruction>(NAME)>;
 }
 
-// FP8 Look up table
+// Look up table
 class sve2_lut_vector_index<ZPRRegOp zd_ty, RegisterOperand zn_ty,
                             Operand idx_ty, bits<4>opc, string mnemonic>
     : I<(outs zd_ty:$Zd), (ins zn_ty:$Zn, ZPRAny:$Zm, idx_ty:$idx),
@@ -11211,7 +11211,7 @@ class sve2_lut_vector_index<ZPRRegOp zd_ty, RegisterOperand zn_ty,
   let Inst{4-0}   = Zd;
 }
 
-// FP8 Look up table read with 2-bit indices
+// Look up table read with 2-bit indices
 multiclass sve2_luti2_vector_index<string mnemonic> {
   def _B : sve2_lut_vector_index<ZPR8, Z_b, VectorIndexS32b, {?, 0b100}, mnemonic> {
     bits<2> idx;
@@ -11233,7 +11233,7 @@ multiclass sve2_luti2_vector_index<string mnemonic> {
                          i32, timm32_0_7, !cast<Instruction>(NAME # _H)>;
 }
 
-// FP8 Look up table read with 4-bit indices
+// Look up table read with 4-bit indices
 multiclass sve2_luti4_vector_index<string mnemonic> {
   def _B : sve2_lut_vector_index<ZPR8, Z_b, VectorIndexD32b, 0b1001, mnemonic> {
     bit idx;
@@ -11254,7 +11254,7 @@ multiclass sve2_luti4_vector_index<string mnemonic> {
                          i32, timm32_0_3, !cast<Instruction>(NAME # _H)>;
 }
 
-// FP8 Look up table read with 4-bit indices (two contiguous registers)
+// Look up table read with 4-bit indices (two contiguous registers)
 multiclass sve2_luti4_vector_vg2_index<string mnemonic> {
   def NAME : sve2_lut_vector_index<ZPR16, ZZ_h, VectorIndexS32b, {?, 0b101}, mnemonic> {
     bits<2> idx;
@@ -11276,6 +11276,33 @@ multiclass sve2_luti4_vector_vg2_index<string mnemonic> {
             (nxv8bf16 (!cast<Instruction>(NAME) (REG_SEQUENCE ZPR2, nxv8bf16:$Op1, zsub0,
                                                                     nxv8bf16:$Op2, zsub1),
                                                 nxv16i8:$Op3, timm32_0_3:$Op4))>;
+}
+
+// Look up table read with 6-bit indices
+multiclass sve2_luti6_vector_index<string mnemonic> {
+  def _H : sve2_lut_vector_index<ZPR16, ZZ_h, VectorIndexD32b, 0b1011, mnemonic> {
+    bit idx;
+    let Inst{23} = idx;
+  }
+}
+
+// Look up table
+class sve2_luti6_vector<ZPRRegOp zd_ty, RegisterOperand zn_ty,
+                        bits<5>opc, string mnemonic>
+    : I<(outs zd_ty:$Zd), (ins zn_ty:$Zn, ZPRAny:$Zm),
+      mnemonic, "\t$Zd, $Zn, $Zm",
+      "", []>, Sched<[]> {
+  bits<5> Zd;
+  bits<5> Zn;
+  bits<5> Zm;
+  let Inst{31-24} = 0b01000101;
+  let Inst{23-22} = opc{4-3};
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = Zm;
+  let Inst{15-13} = 0b101;
+  let Inst{12-10} = opc{2-0};
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
 }
 
 //===----------------------------------------------------------------------===//
