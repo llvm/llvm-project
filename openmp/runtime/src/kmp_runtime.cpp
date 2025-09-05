@@ -93,6 +93,9 @@ static void __kmp_partition_places(kmp_team_t *team,
                                    int update_master_only = 0);
 #endif
 static void __kmp_do_serial_initialize(void);
+#if ENABLE_LIBOMPTARGET
+static void __kmp_target_init(void);
+#endif // ENABLE_LIBOMPTARGET
 void __kmp_fork_barrier(int gtid, int tid);
 void __kmp_join_barrier(int gtid);
 void __kmp_setup_icv_copy(kmp_team_t *team, int new_nproc,
@@ -7129,6 +7132,9 @@ static void __kmp_do_serial_initialize(void) {
 #if KMP_MIC_SUPPORTED
   __kmp_check_mic_type();
 #endif
+#if ENABLE_LIBOMPTARGET
+  __kmp_target_init();
+#endif /* ENABLE_LIBOMPTARGET */
 
 // Some global variable initialization moved here from kmp_env_initialize()
 #ifdef KMP_DEBUG
@@ -9354,6 +9360,15 @@ void __kmp_set_nesting_mode_threads() {
   if (__kmp_nesting_mode == 1) // turn on nesting for this case only
     set__max_active_levels(thread, __kmp_nesting_mode_nlevels);
 }
+
+#if ENABLE_LIBOMPTARGET
+void (*kmp_target_sync_cb)(ident_t *loc_ref, int gtid, void *current_task,
+                           void *event) = NULL;
+void __kmp_target_init() {
+  // Look for hooks in the libomptarget library
+  *(void **)(&kmp_target_sync_cb) = KMP_DLSYM("__tgt_target_sync");
+}
+#endif // ENABLE_LIBOMPTARGET
 
 // Empty symbols to export (see exports_so.txt) when feature is disabled
 extern "C" {

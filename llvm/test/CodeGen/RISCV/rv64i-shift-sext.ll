@@ -220,3 +220,18 @@ define signext i32 @test14(ptr %0, ptr %1, i64 %2) {
   %12 = add i32 %9, %11
   ret i32 %12
 }
+
+; Test that we can propagate sign bits through sraw. We should use an slli
+; instead of slliw.
+define signext i32 @test15(i32 signext %x, i32 signext %y) {
+; RV64I-LABEL: test15:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srli a0, a0, 1
+; RV64I-NEXT:    sraw a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 1
+; RV64I-NEXT:    ret
+  %a = ashr i32 %x, 1
+  %b = ashr i32 %a, %y
+  %c = shl i32 %b, 1
+  ret i32 %c
+}

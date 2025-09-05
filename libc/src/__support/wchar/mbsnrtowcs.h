@@ -36,7 +36,7 @@ LIBC_INLINE static ErrorOr<size_t> mbsnrtowcs(wchar_t *__restrict dst,
   StringConverter<char8_t> str_conv(reinterpret_cast<const char8_t *>(*src), ps,
                                     len, nmc);
   size_t dst_idx = 0;
-  ErrorOr<char32_t> converted = str_conv.popUTF32();
+  ErrorOr<char32_t> converted = str_conv.pop<char32_t>();
   while (converted.has_value()) {
     if (dst != nullptr)
       dst[dst_idx] = converted.value();
@@ -47,7 +47,7 @@ LIBC_INLINE static ErrorOr<size_t> mbsnrtowcs(wchar_t *__restrict dst,
       return dst_idx;
     }
     dst_idx++;
-    converted = str_conv.popUTF32();
+    converted = str_conv.pop<char32_t>();
   }
 
   if (converted.error() == -1) { // if we hit conversion limit

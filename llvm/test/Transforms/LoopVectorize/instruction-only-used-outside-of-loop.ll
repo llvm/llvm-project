@@ -20,10 +20,9 @@ define i32 @one_direct_branch(ptr %src) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP3]], i32 3
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[SRC_GEP:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[IV]]
 ; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[SRC_GEP]], align 4
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 25500, [[LV]]
@@ -76,10 +75,9 @@ define i32 @two_direct_branch(ptr %src) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP3]], i32 3
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[SRC_GEP:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[IV]]
 ; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[SRC_GEP]], align 4
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 25500, [[LV]]
@@ -145,10 +143,9 @@ define i32 @cond_branch(i32 %a, ptr %src) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[PREDPHI]], i32 3
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[SRC_GEP:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[IV]]
 ; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[SRC_GEP]], align 4
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 25500, [[LV]]
@@ -210,10 +207,9 @@ define i32 @optimizable_trunc_used_outside() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[VEC_IND]], i32 3
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV]] to i32
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT_I_I:%.*]] = icmp eq i64 [[IV_NEXT]], 1000

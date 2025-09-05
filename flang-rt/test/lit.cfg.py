@@ -62,25 +62,24 @@ config.test_source_root = os.path.dirname(__file__)
 # lit writes a '.lit_test_times.txt' file into this directory.
 config.test_exec_root = config.flang_rt_binary_test_dir
 
-# On MacOS, -isysroot is needed to build binaries.
+# On MacOS, some tests need -isysroot to build binaries.
 isysroot_flag = []
 if config.osx_sysroot:
     isysroot_flag = ["-isysroot", config.osx_sysroot]
+config.substitutions.append(("%isysroot", " ".join(isysroot_flag)))
 
 tools = [
     ToolSubst(
         "%flang",
         command=config.flang,
-        extra_args=isysroot_flag,
         unresolved="fatal",
     ),
     ToolSubst(
         "%clang",
         command=FindTool("clang"),
-        extra_args=isysroot_flag,
         unresolved="fatal",
     ),
-    ToolSubst("%cc", command=config.cc, extra_args=isysroot_flag, unresolved="fatal"),
+    ToolSubst("%cc", command=config.cc, unresolved="fatal"),
 ]
 llvm_config.add_tool_substitutions(tools)
 
