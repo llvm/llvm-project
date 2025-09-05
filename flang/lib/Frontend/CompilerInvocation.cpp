@@ -22,6 +22,7 @@
 #include "flang/Tools/TargetSetup.h"
 #include "flang/Version.inc"
 #include "clang/Basic/DiagnosticDriver.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
@@ -1152,6 +1153,17 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       diags.Report(diagID);
     }
   }
+  // -fcoarray
+  if (args.hasArg(clang::driver::options::OPT_fcoarray)) {
+    res.getFrontendOpts().features.Enable(
+        Fortran::common::LanguageFeature::Coarray);
+    const unsigned diagID =
+        diags.getCustomDiagID(clang::DiagnosticsEngine::Warning,
+                              "Support for multi image Fortran features is "
+                              "still experimental and in development.");
+    diags.Report(diagID);
+  }
+
   return diags.getNumErrors() == numErrorsBefore;
 }
 
@@ -1162,13 +1174,21 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
                             clang::DiagnosticsEngine &diags) {
   llvm::opt::Arg *arg = args.getLastArg(clang::driver::options::OPT_fopenmp,
                                         clang::driver::options::OPT_fno_openmp);
-  if (!arg || arg->getOption().matches(clang::driver::options::OPT_fno_openmp))
-    return true;
+  if (!arg ||
+      arg->getOption().matches(clang::driver::options::OPT_fno_openmp)) {
+    bool isSimdSpecified = args.hasFlag(
+        clang::driver::options::OPT_fopenmp_simd,
+        clang::driver::options::OPT_fno_openmp_simd, /*Default=*/false);
+    if (!isSimdSpecified)
+      return true;
+    res.getLangOpts().OpenMPSimd = 1;
+  }
 
   unsigned numErrorsBefore = diags.getNumErrors();
   llvm::Triple t(res.getTargetOpts().triple);
 
   constexpr unsigned newestFullySupported = 31;
+  constexpr unsigned latestFinalized = 60;
   // By default OpenMP is set to the most recent fully supported version
   res.getLangOpts().OpenMPVersion = newestFullySupported;
   res.getFrontendOpts().features.Enable(
@@ -1191,12 +1211,26 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       diags.Report(diagID) << value << arg->getAsString(args) << versions.str();
     };
 
+    auto reportFutureVersion = [&](llvm::StringRef value) {
+      const unsigned diagID = diags.getCustomDiagID(
+          clang::DiagnosticsEngine::Warning,
+          "The specification for OpenMP version %0 is still under development; "
+          "the syntax and semantics of new features may be subject to change");
+      std::string buffer;
+      llvm::raw_string_ostream versions(buffer);
+      llvm::interleaveComma(ompVersions, versions);
+
+      diags.Report(diagID) << value;
+    };
+
     llvm::StringRef value = arg->getValue();
     if (!value.getAsInteger(/*radix=*/10, version)) {
       if (llvm::is_contained(ompVersions, version)) {
         res.getLangOpts().OpenMPVersion = version;
 
-        if (version > newestFullySupported)
+        if (version > latestFinalized)
+          reportFutureVersion(value);
+        else if (version > newestFullySupported)
           diags.Report(clang::diag::warn_openmp_incomplete) << version;
       } else if (llvm::is_contained(oldVersions, version)) {
         const unsigned diagID =
@@ -1225,7 +1259,7 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
             clang::driver::options::OPT_fopenmp_host_ir_file_path)) {
       res.getLangOpts().OMPHostIRFile = arg->getValue();
       if (!llvm::sys::fs::exists(res.getLangOpts().OMPHostIRFile))
-        diags.Report(clang::diag::err_drv_omp_host_ir_file_not_found)
+        diags.Report(clang::diag::err_omp_host_ir_file_not_found)
             << res.getLangOpts().OMPHostIRFile;
     }
 
@@ -1696,6 +1730,20 @@ void CompilerInvocation::setDefaultPredefinitions() {
   fortranOptions.predefinitions.emplace_back("__flang_patchlevel__",
                                              FLANG_VERSION_PATCHLEVEL_STRING);
 
+  // Add predefinitions based on the relocation model
+  if (unsigned PICLevel = getCodeGenOpts().PICLevel) {
+    fortranOptions.predefinitions.emplace_back("__PIC__",
+                                               std::to_string(PICLevel));
+    fortranOptions.predefinitions.emplace_back("__pic__",
+                                               std::to_string(PICLevel));
+    if (getCodeGenOpts().IsPIE) {
+      fortranOptions.predefinitions.emplace_back("__PIE__",
+                                                 std::to_string(PICLevel));
+      fortranOptions.predefinitions.emplace_back("__pie__",
+                                                 std::to_string(PICLevel));
+    }
+  }
+
   // Add predefinitions based on extensions enabled
   if (frontendOptions.features.IsEnabled(
           Fortran::common::LanguageFeature::OpenACC)) {
@@ -1705,6 +1753,11 @@ void CompilerInvocation::setDefaultPredefinitions() {
           Fortran::common::LanguageFeature::OpenMP)) {
     Fortran::common::setOpenMPMacro(getLangOpts().OpenMPVersion,
                                     fortranOptions.predefinitions);
+  }
+
+  if (frontendOptions.features.IsEnabled(
+          Fortran::common::LanguageFeature::CUDA)) {
+    fortranOptions.predefinitions.emplace_back("_CUDA", "1");
   }
 
   llvm::Triple targetTriple{llvm::Triple(this->targetOpts.triple)};

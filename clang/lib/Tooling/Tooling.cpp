@@ -212,8 +212,8 @@ bool runToolOnCodeWithArgs(
   SmallString<16> FileNameStorage;
   StringRef FileNameRef = FileName.toNullTerminatedStringRef(FileNameStorage);
 
-  llvm::IntrusiveRefCntPtr<FileManager> Files(
-      new FileManager(FileSystemOptions(), VFS));
+  llvm::IntrusiveRefCntPtr<FileManager> Files =
+      llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(), VFS);
   ArgumentsAdjuster Adjuster = getClangStripDependencyFileAdjuster();
   ToolInvocation Invocation(
       getSyntaxOnlyToolArgs(ToolName, Adjuster(Args, FileNameRef), FileNameRef),
@@ -479,7 +479,8 @@ ClangTool::ClangTool(const CompilationDatabase &Compilations,
       InMemoryFileSystem(
           llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>()),
       Files(Files ? Files
-                  : new FileManager(FileSystemOptions(), OverlayFileSystem)) {
+                  : llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(),
+                                                           OverlayFileSystem)) {
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
   appendArgumentsAdjuster(getClangStripOutputAdjuster());
   appendArgumentsAdjuster(getClangSyntaxOnlyAdjuster());
@@ -643,9 +644,13 @@ namespace {
 
 class ASTBuilderAction : public ToolAction {
   std::vector<std::unique_ptr<ASTUnit>> &ASTs;
+  CaptureDiagsKind CaptureKind;
 
 public:
-  ASTBuilderAction(std::vector<std::unique_ptr<ASTUnit>> &ASTs) : ASTs(ASTs) {}
+  ASTBuilderAction(
+      std::vector<std::unique_ptr<ASTUnit>> &ASTs,
+      CaptureDiagsKind CaptureDiagnosticsKind = CaptureDiagsKind::None)
+      : ASTs(ASTs), CaptureKind(CaptureDiagnosticsKind) {}
 
   bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
                      FileManager *Files,
@@ -657,7 +662,7 @@ public:
                                             Invocation->getDiagnosticOpts(),
                                             DiagConsumer,
                                             /*ShouldOwnClient=*/false),
-        Files);
+        Files, false, CaptureKind);
     if (!AST)
       return false;
 
@@ -692,17 +697,21 @@ std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
     StringRef ToolName, std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     ArgumentsAdjuster Adjuster, const FileContentMappings &VirtualMappedFiles,
     DiagnosticConsumer *DiagConsumer,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS) {
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+    CaptureDiagsKind CaptureKind) {
   std::vector<std::unique_ptr<ASTUnit>> ASTs;
-  ASTBuilderAction Action(ASTs);
+
+  ASTBuilderAction Action(ASTs, CaptureKind);
+
   auto OverlayFileSystem =
       llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
           std::move(BaseFS));
   auto InMemoryFileSystem =
       llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-  llvm::IntrusiveRefCntPtr<FileManager> Files(
-      new FileManager(FileSystemOptions(), OverlayFileSystem));
+  llvm::IntrusiveRefCntPtr<FileManager> Files =
+      llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(),
+                                             OverlayFileSystem);
 
   ToolInvocation Invocation(
       getSyntaxOnlyToolArgs(ToolName, Adjuster(Args, FileName), FileName),

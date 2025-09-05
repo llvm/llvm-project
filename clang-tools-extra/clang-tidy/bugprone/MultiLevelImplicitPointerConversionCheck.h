@@ -31,7 +31,7 @@ public:
   }
 
 private:
-  bool const EnableInC;
+  const bool EnableInC;
 };
 
 } // namespace clang::tidy::bugprone

@@ -619,6 +619,19 @@ TEST(StringRefTest, Hashing) {
             hash_value(StringRef("hello world").slice(1, -1)));
 }
 
+TEST(StringRefTest, getAutoSenseRadix) {
+  struct RadixPair {
+    const char *Str;
+    unsigned Expected;
+  } RadixNumbers[] = {{"123", 10}, {"1", 10}, {"0b1", 2}, {"01", 8}, {"0o1", 8},
+                      {"0x1", 16}, {"0", 10}, {"00", 8},  {"", 10}};
+  for (size_t i = 0; i < std::size(RadixNumbers); ++i) {
+    StringRef number = RadixNumbers[i].Str;
+    unsigned radix = getAutoSenseRadix(number);
+    EXPECT_EQ(radix, RadixNumbers[i].Expected);
+  }
+}
+
 struct UnsignedPair {
   const char *Str;
   uint64_t Expected;

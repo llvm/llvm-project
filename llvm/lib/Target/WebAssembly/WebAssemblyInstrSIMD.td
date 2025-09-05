@@ -1144,6 +1144,9 @@ def : Pat<(wasm_shr_u
               (vec.splat (i32 1))),
             (i32 1)),
           (inst $lhs, $rhs)>;
+
+def : Pat<(vec.vt (avgceilu (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
+          (inst $lhs, $rhs)>;
 }
 
 // Widening dot product: i32x4.dot_i16x8_s

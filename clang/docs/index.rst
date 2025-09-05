@@ -45,6 +45,7 @@ Using Clang as a Compiler
    BoundsSafetyImplPlans
    ControlFlowIntegrity
    LTOVisibility
+   PointerAuthentication
    SafeStack
    ShadowCallStack
    SourceBasedCodeCoverage
@@ -117,6 +118,7 @@ Design Documents
    OffloadingDesign
    PCHInternals
    ItaniumMangleAbiTags
+   ControlFlowIntegrityDesign
    HardwareAssistedAddressSanitizerDesign.rst
    ConstantInterpreter
 

@@ -111,6 +111,38 @@ void assume(bool arg) {
 // OGCG:   call void @llvm.assume(i1 %{{.+}})
 // OGCG: }
 
+void *assume_aligned(void *ptr) {
+  return __builtin_assume_aligned(ptr, 16);
+}
+
+// CIR: @_Z14assume_alignedPv
+// CIR:   %{{.+}} = cir.assume_aligned %{{.+}} alignment 16 : !cir.ptr<!void>
+// CIR: }
+
+// LLVM: @_Z14assume_alignedPv
+// LLVM:   call void @llvm.assume(i1 true) [ "align"(ptr %{{.+}}, i64 16) ]
+// LLVM: }
+
+// OGCG: @_Z14assume_alignedPv
+// OGCG:   call void @llvm.assume(i1 true) [ "align"(ptr %{{.+}}, i64 16) ]
+// OGCG: }
+
+void *assume_aligned_misalignment(void *ptr, unsigned misalignment) {
+  return __builtin_assume_aligned(ptr, 16, misalignment);
+}
+
+// CIR: @_Z27assume_aligned_misalignmentPvj
+// CIR:   %{{.+}} = cir.assume_aligned %{{.+}} alignment 16[offset %{{.+}} : !u64i] : !cir.ptr<!void>
+// CIR: }
+
+// LLVM: @_Z27assume_aligned_misalignmentPvj
+// LLVM:   call void @llvm.assume(i1 true) [ "align"(ptr %{{.+}}, i64 16, i64 %{{.+}}) ]
+// LLVM: }
+
+// OGCG: @_Z27assume_aligned_misalignmentPvj
+// OGCG:   call void @llvm.assume(i1 true) [ "align"(ptr %{{.+}}, i64 16, i64 %{{.+}}) ]
+// OGCG: }
+
 void assume_separate_storage(void *p1, void *p2) {
   __builtin_assume_separate_storage(p1, p2);
 }
@@ -165,4 +197,64 @@ void expect_prob(int x, int y) {
 // LLVM-NEXT:    %[[Y:.+]] = load i32, ptr %{{.+}}, align 4
 // LLVM-NEXT:    %[[Y_LONG:.+]] = sext i32 %[[Y]] to i64
 // LLVM-NEXT:    %{{.+}} = call i64 @llvm.expect.with.probability.i64(i64 %[[X_LONG]], i64 %[[Y_LONG]], double 2.500000e-01)
+// LLVM:       }
+
+void unreachable() {
+  __builtin_unreachable();
+}
+
+// CIR-LABEL: @_Z11unreachablev
+// CIR:         cir.unreachable
+// CIR:       }
+
+// LLVM-LABEL: @_Z11unreachablev
+// LLVM:         unreachable
+// LLVM:       }
+
+void f1();
+void unreachable2() {
+  __builtin_unreachable();
+  f1();
+}
+
+// CIR-LABEL: @_Z12unreachable2v
+// CIR:         cir.unreachable
+// CIR-NEXT:  ^{{.+}}:
+// CIR-NEXT:    cir.call @_Z2f1v() : () -> ()
+// CIR:       }
+
+// LLVM-LABEL: @_Z12unreachable2v
+// LLVM:         unreachable
+// LLVM:       {{.+}}:
+// LLVM-NEXT:    call void @_Z2f1v()
+// LLVM:       }
+
+void trap() {
+  __builtin_trap();
+}
+
+// CIR-LABEL: @_Z4trapv
+// CIR:         cir.trap
+// CIR:       }
+
+// LLVM-LABEL: @_Z4trapv
+// LLVM:         call void @llvm.trap()
+// LLVM:       }
+
+void trap2() {
+  __builtin_trap();
+  f1();
+}
+
+// CIR-LABEL: @_Z5trap2v
+// CIR:         cir.trap
+// CIR-NEXT:  ^{{.+}}:
+// CIR-NEXT:    cir.call @_Z2f1v() : () -> ()
+// CIR:       }
+
+// LLVM-LABEL: @_Z5trap2v
+// LLVM:         call void @llvm.trap()
+// LLVM-NEXT:    unreachable
+// LLVM:       {{.+}}:
+// LLVM-NEXT:    call void @_Z2f1v()
 // LLVM:       }

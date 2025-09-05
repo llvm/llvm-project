@@ -721,6 +721,7 @@ public:
   Instruction *foldICmpUsingKnownBits(ICmpInst &Cmp);
   Instruction *foldICmpWithDominatingICmp(ICmpInst &Cmp);
   Instruction *foldICmpWithConstant(ICmpInst &Cmp);
+  Instruction *foldIsMultipleOfAPowerOfTwo(ICmpInst &Cmp);
   Instruction *foldICmpUsingBoolRange(ICmpInst &I);
   Instruction *foldICmpInstWithConstant(ICmpInst &Cmp);
   Instruction *foldICmpInstWithConstantNotInt(ICmpInst &Cmp);

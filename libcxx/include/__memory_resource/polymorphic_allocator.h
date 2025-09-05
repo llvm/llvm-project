@@ -18,6 +18,7 @@
 #include <__new/exceptions.h>
 #include <__new/placement_new_delete.h>
 #include <__utility/exception_guard.h>
+#include <__utility/piecewise_construct.h>
 #include <limits>
 #include <tuple>
 

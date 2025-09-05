@@ -97,8 +97,8 @@ public:
     test_one_input(func, F(-1.0), I(-1), false);
     test_one_input(func, F(10.0), I(10), false);
     test_one_input(func, F(-10.0), I(-10), false);
-    test_one_input(func, F(1234.0), I(1234), false);
-    test_one_input(func, F(-1234.0), I(-1234), false);
+    test_one_input(func, F(1232.0), I(1232), false);
+    test_one_input(func, F(-1232.0), I(-1232), false);
   }
 
   void testRoundNumbers(RoundToIntegerFunc func) {
@@ -124,7 +124,7 @@ public:
         continue;
       // All subnormal numbers should round to zero.
       if (TestModes) {
-        if (x > 0) {
+        if (x > zero) {
           LIBC_NAMESPACE::fputil::set_round(FE_UPWARD);
           test_one_input(func, x, I(1), false);
           LIBC_NAMESPACE::fputil::set_round(FE_DOWNWARD);
