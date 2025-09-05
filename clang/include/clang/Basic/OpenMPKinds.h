@@ -264,8 +264,8 @@ struct OMPInteropInfo final {
   llvm::SmallVector<Expr *, 4> PreferTypes;
 };
 
-unsigned getOpenMPDefaultVariableCategory(StringRef Str,
-                                          const LangOptions &LangOpts);
+OpenMPDefaultClauseVariableCategory
+getOpenMPDefaultVariableCategory(StringRef Str, const LangOptions &LangOpts);
 const char *getOpenMPDefaultVariableCategoryName(unsigned VC);
 
 unsigned getOpenMPSimpleClauseType(OpenMPClauseKind Kind, llvm::StringRef Str,

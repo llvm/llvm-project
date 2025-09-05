@@ -20,14 +20,14 @@
 using namespace clang;
 using namespace llvm::omp;
 
-unsigned clang::getOpenMPDefaultVariableCategory(StringRef Str,
-                                                 const LangOptions &LangOpts) {
-  unsigned VC = llvm::StringSwitch<unsigned>(Str)
+OpenMPDefaultClauseVariableCategory
+clang::getOpenMPDefaultVariableCategory(StringRef Str,
+                                        const LangOptions &LangOpts) {
+  return llvm::StringSwitch<OpenMPDefaultClauseVariableCategory>(Str)
 #define OPENMP_DEFAULT_VARIABLE_CATEGORY(Name)                                 \
   .Case(#Name, OMPC_DEFAULT_VC_##Name)
 #include "clang/Basic/OpenMPKinds.def"
-                    .Default(OMPC_DEFAULT_VC_unknown);
-  return VC;
+      .Default(OMPC_DEFAULT_VC_unknown);
 }
 
 const char *clang::getOpenMPDefaultVariableCategoryName(unsigned VC) {
@@ -36,8 +36,6 @@ const char *clang::getOpenMPDefaultVariableCategoryName(unsigned VC) {
   case OMPC_DEFAULT_VC_##Name:                                                 \
     return #Name;
 #include "clang/Basic/OpenMPKinds.def"
-  default:
-    return "unknown";
   }
 }
 
@@ -917,4 +915,3 @@ bool clang::checkFailClauseParameter(OpenMPClauseKind FailClauseParameter) {
          FailClauseParameter == llvm::omp::OMPC_relaxed ||
          FailClauseParameter == llvm::omp::OMPC_seq_cst;
 }
-

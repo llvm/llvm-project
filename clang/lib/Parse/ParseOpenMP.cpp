@@ -3748,8 +3748,9 @@ OMPClause *Parser::ParseOpenMPSingleExprWithArgClause(OpenMPDirectiveKind DKind,
     if (Tok.is(tok::colon) && getLangOpts().OpenMP >= 60) {
       ConsumeAnyToken();
       // Get a variable-category attribute for default clause modifier
-      unsigned VariableCategory = getOpenMPDefaultVariableCategory(
-          Tok.isAnnotation() ? "" : PP.getSpelling(Tok), getLangOpts());
+      OpenMPDefaultClauseVariableCategory VariableCategory =
+          getOpenMPDefaultVariableCategory(
+              Tok.isAnnotation() ? "" : PP.getSpelling(Tok), getLangOpts());
       Arg.push_back(VariableCategory);
       KLoc.push_back(Tok.getLocation());
       if (Tok.isNot(tok::r_paren) && Tok.isNot(tok::comma) &&
