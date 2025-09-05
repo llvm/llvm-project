@@ -228,22 +228,37 @@ class FMOVWRdRr<dag outs, dag ins, string asmstr, list<dag> pattern>
 }
 
 //===----------------------------------------------------------------------===//
-// MULSrr special encoding: <|0000|0010|dddd|rrrr|>
+// MULS special encoding: <|0000|0010|dddd|rrrr|>
 // d = multiplicand = 4 bits
 // r = multiplier = 4 bits
 // (Only accepts r16-r31)
 //===----------------------------------------------------------------------===//
-class FMUL2RdRr<bit f, dag outs, dag ins, string asmstr, list<dag> pattern>
+class FMULSRdRr<dag outs, dag ins, string asmstr, list<dag> pattern>
     : AVRInst16<outs, ins, asmstr, pattern> {
-  bits<5> rd; // accept 5 bits but only encode the lower 4
-  bits<5> rr; // accept 5 bits but only encode the lower 4
+  bits<4> rd;
+  bits<4> rr;
 
-  let Inst{15 - 9} = 0b0000001;
-  let Inst{8} = f;
-  let Inst{7 - 4} = rd{3 - 0};
-  let Inst{3 - 0} = rr{3 - 0};
+  let Inst{15 - 8} = 0b00000010;
+  let Inst{7 - 4} = rd;
+  let Inst{3 - 0} = rr;
+}
 
-  let DecoderMethod = "decodeFMUL2RdRr";
+//===----------------------------------------------------------------------===//
+// MULSU special encoding: <|0000|0011|0ddd|0rrr|>
+// d = multiplicand = 3 bits
+// r = multiplier = 3 bits
+// (Only accepts r16-r23)
+//===----------------------------------------------------------------------===//
+class FMULSURdRr<dag outs, dag ins, string asmstr, list<dag> pattern>
+    : AVRInst16<outs, ins, asmstr, pattern> {
+  bits<3> rd;
+  bits<3> rr;
+
+  let Inst{15 - 8} = 0b00000011;
+  let Inst{7} = 0;
+  let Inst{6 - 4} = rd;
+  let Inst{3} = 0;
+  let Inst{2 - 0} = rr;
 }
 
 // Special encoding for the FMUL family of instructions.
@@ -266,8 +281,6 @@ class FFMULRdRr<bits<2> f, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{6 - 4} = rd;
   let Inst{3} = f{0};
   let Inst{2 - 0} = rr;
-
-  let DecoderMethod = "decodeFFMULRdRr";
 }
 
 //===----------------------------------------------------------------------===//
