@@ -126,3 +126,44 @@ void test_dmf_basic2(char *p1, char *res1, char *res2,
   __builtin_mma_build_dmr((__dmr1024*)res2, vv, vv, vv, vv, vv, vv, vv, vv);
   __builtin_mma_disassemble_dmr(res1, (__dmr1024*)p1);
 }
+
+// CHECK-LABEL: @test_dmsha2hash(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP1:%.*]], align 128, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load <1024 x i1>, ptr [[VDMRP2:%.*]], align 128, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmsha2hash(<1024 x i1> [[TMP0]], <1024 x i1> [[TMP1]], i32 1)
+// CHECK-NEXT:    store <1024 x i1> [[TMP2]], ptr [[RESP:%.*]], align 128, !tbaa [[TBAA6]]
+// CHECK-NEXT:    ret void
+//
+void test_dmsha2hash(unsigned char *vdmrp1, unsigned char *vdmrp2, unsigned char *resp) {
+  __dmr1024 vdmr1 = *((__dmr1024 *)vdmrp1);
+  __dmr1024 vdmr2 = *((__dmr1024 *)vdmrp2);
+  __builtin_mma_dmsha2hash(&vdmr1, &vdmr2, 1);
+  *((__dmr1024 *)resp) = vdmr1;
+}
+
+// CHECK-LABEL: @test_dmsha3hash(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2048 x i1>, ptr [[VDMRPP:%.*]], align 256, !tbaa [[TBAA9:![0-9]+]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <2048 x i1> @llvm.ppc.mma.dmsha3hash(<2048 x i1> [[TMP0]], i32 4)
+// CHECK-NEXT:    store <2048 x i1> [[TMP1]], ptr [[RESP:%.*]], align 256, !tbaa [[TBAA9]]
+// CHECK-NEXT:    ret void
+//
+void test_dmsha3hash(unsigned char *vdmrpp,  unsigned char *resp) {
+  __dmr2048 vdmrp = *((__dmr2048 *)vdmrpp);
+  __builtin_mma_dmsha3hash(&vdmrp, 4);
+  *((__dmr2048 *)resp) = vdmrp;
+}
+
+// CHECK-LABEL: @test_dmxxshapad(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP:%.*]], align 128, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], i32 2, i32 1, i32 5)
+// CHECK-NEXT:    store <1024 x i1> [[TMP1]], ptr [[RESP:%.*]], align 128, !tbaa [[TBAA6]]
+// CHECK-NEXT:    ret void
+//
+void test_dmxxshapad(unsigned char *vdmrp, vector unsigned char vc, unsigned char *resp) {
+  __dmr1024 vdmr = *((__dmr1024 *)vdmrp);
+  __builtin_mma_dmxxshapad(&vdmr, vc, 2, 1, 5);
+  *((__dmr1024 *)resp) = vdmr;
+}
