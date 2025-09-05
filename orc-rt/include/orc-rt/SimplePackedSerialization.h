@@ -513,12 +513,6 @@ public:
 /// SPS tag type for errors.
 class SPSError;
 
-/// SPS tag type for expecteds, which are either a T or a string representing
-/// an error.
-template <typename SPSTagT> class SPSExpected;
-
-namespace detail {
-
 /// Helper type for serializing Errors.
 ///
 /// llvm::Errors are move-only, and not inspectable except by consuming them.
@@ -529,139 +523,141 @@ namespace detail {
 /// The SPSSerializableError type is a helper that can be
 /// constructed from an llvm::Error, but inspected more than once.
 struct SPSSerializableError {
-  bool HasError = false;
-  std::string ErrMsg;
+  SPSSerializableError() = default;
+  SPSSerializableError(Error Err) {
+    if (Err)
+      Msg = toString(std::move(Err));
+  }
+
+  Error toError() {
+    if (Msg)
+      return make_error<StringError>(std::move(*Msg));
+    return Error::success();
+  }
+
+  std::optional<std::string> Msg;
 };
+
+template <> class SPSSerializationTraits<SPSError, SPSSerializableError> {
+public:
+  static size_t size(const SPSSerializableError &E) {
+    if (E.Msg)
+      return SPSArgList<bool, SPSString>::size(true, *E.Msg);
+    else
+      return SPSArgList<bool>::size(false);
+  }
+
+  static bool serialize(SPSOutputBuffer &OB, const SPSSerializableError &E) {
+    if (E.Msg)
+      return SPSArgList<bool, SPSString>::serialize(OB, true, *E.Msg);
+    else
+      return SPSArgList<bool>::serialize(OB, false);
+  }
+
+  static bool deserialize(SPSInputBuffer &IB, SPSSerializableError &E) {
+    bool HasError = false;
+    if (!SPSArgList<bool>::deserialize(IB, HasError))
+      return false;
+    if (HasError) {
+      std::string Msg;
+      if (!SPSArgList<SPSString>::deserialize(IB, Msg))
+        return false;
+      E.Msg = std::move(Msg);
+    } else
+      E.Msg = std::nullopt;
+    return true;
+  }
+};
+
+/// SPS tag type for expecteds, which are either a T or a string representing
+/// an error.
+template <typename SPSTagT> class SPSExpected;
 
 /// Helper type for serializing Expected<T>s.
 ///
 /// See SPSSerializableError for more details.
-///
-// FIXME: Use std::variant for storage once we have c++17.
 template <typename T> struct SPSSerializableExpected {
-  bool HasValue = false;
-  T Value{};
-  std::string ErrMsg;
+  SPSSerializableExpected() = default;
+  SPSSerializableExpected(Expected<T> E) {
+    if (E)
+      Val = decltype(Val)(std::in_place_index<0>, std::move(*E));
+    else
+      Val = decltype(Val)(std::in_place_index<1>, toString(E.takeError()));
+  }
+  SPSSerializableExpected(Error E) {
+    assert(E && "Cannot create Expected from Error::success()");
+    Val = decltype(Val)(std::in_place_index<1>, toString(std::move(E)));
+  }
+
+  Expected<T> toExpected() {
+    if (Val.index() == 0)
+      return Expected<T>(std::move(std::get<0>(Val)));
+    return Expected<T>(make_error<StringError>(std::move(std::get<1>(Val))));
+  }
+
+  std::variant<T, std::string> Val{std::in_place_index<0>, T()};
 };
 
-inline SPSSerializableError toSPSSerializable(Error Err) {
-  if (Err)
-    return {true, toString(std::move(Err))};
-  return {false, {}};
-}
-
-inline Error fromSPSSerializable(SPSSerializableError BSE) {
-  if (BSE.HasError)
-    return make_error<StringError>(BSE.ErrMsg);
-  return Error::success();
+template <typename T>
+SPSSerializableExpected<T> toSPSSerializableExpected(Expected<T> E) {
+  return std::move(E);
 }
 
 template <typename T>
-SPSSerializableExpected<T> toSPSSerializable(Expected<T> E) {
-  if (E)
-    return {true, std::move(*E), {}};
-  else
-    return {false, {}, toString(E.takeError())};
+SPSSerializableExpected<T> toSPSSerializableExpected(Error E) {
+  return std::move(E);
 }
 
-template <typename T>
-Expected<T> fromSPSSerializable(SPSSerializableExpected<T> BSE) {
-  if (BSE.HasValue)
-    return std::move(BSE.Value);
-  else
-    return make_error<StringError>(BSE.ErrMsg);
-}
-
-} // namespace detail
-
-/// Serialize to a SPSError from a detail::SPSSerializableError.
-template <>
-class SPSSerializationTraits<SPSError, detail::SPSSerializableError> {
+template <typename SPSTagT, typename T>
+class SPSSerializationTraits<SPSExpected<SPSTagT>, SPSSerializableExpected<T>> {
 public:
-  static size_t size(const detail::SPSSerializableError &BSE) {
-    size_t Size = SPSArgList<bool>::size(BSE.HasError);
-    if (BSE.HasError)
-      Size += SPSArgList<SPSString>::size(BSE.ErrMsg);
-    return Size;
+  static size_t size(const SPSSerializableExpected<T> &E) {
+    if (E.Val.index() == 0)
+      return SPSArgList<bool, SPSTagT>::size(true, std::get<0>(E.Val));
+    else
+      return SPSArgList<bool, SPSString>::size(false, std::get<1>(E.Val));
   }
 
   static bool serialize(SPSOutputBuffer &OB,
-                        const detail::SPSSerializableError &BSE) {
-    if (!SPSArgList<bool>::serialize(OB, BSE.HasError))
+                        const SPSSerializableExpected<T> &E) {
+    if (E.Val.index() == 0)
+      return SPSArgList<bool, SPSTagT>::serialize(OB, true, std::get<0>(E.Val));
+    else
+      return SPSArgList<bool, SPSString>::serialize(OB, false,
+                                                    std::get<1>(E.Val));
+  }
+
+  static bool deserialize(SPSInputBuffer &IB, SPSSerializableExpected<T> &E) {
+    bool HasValue = false;
+    if (!SPSArgList<bool>::deserialize(IB, HasValue))
       return false;
-    if (BSE.HasError)
-      if (!SPSArgList<SPSString>::serialize(OB, BSE.ErrMsg))
+    if (HasValue) {
+      T Val;
+      if (!SPSArgList<SPSTagT>::deserialize(IB, Val))
         return false;
+      E.Val = decltype(E.Val){std::in_place_index<0>, std::move(Val)};
+    } else {
+      std::string Msg;
+      if (!SPSArgList<SPSString>::deserialize(IB, Msg))
+        return false;
+      E.Val = decltype(E.Val){std::in_place_index<1>, std::move(Msg)};
+    }
     return true;
   }
-
-  static bool deserialize(SPSInputBuffer &IB,
-                          detail::SPSSerializableError &BSE) {
-    if (!SPSArgList<bool>::deserialize(IB, BSE.HasError))
-      return false;
-
-    if (!BSE.HasError)
-      return true;
-
-    return SPSArgList<SPSString>::deserialize(IB, BSE.ErrMsg);
-  }
 };
 
-/// Serialize to a SPSExpected<SPSTagT> from a
-/// detail::SPSSerializableExpected<T>.
-template <typename SPSTagT, typename T>
-class SPSSerializationTraits<SPSExpected<SPSTagT>,
-                             detail::SPSSerializableExpected<T>> {
-public:
-  static size_t size(const detail::SPSSerializableExpected<T> &BSE) {
-    size_t Size = SPSArgList<bool>::size(BSE.HasValue);
-    if (BSE.HasValue)
-      Size += SPSArgList<SPSTagT>::size(BSE.Value);
-    else
-      Size += SPSArgList<SPSString>::size(BSE.ErrMsg);
-    return Size;
-  }
-
-  static bool serialize(SPSOutputBuffer &OB,
-                        const detail::SPSSerializableExpected<T> &BSE) {
-    if (!SPSArgList<bool>::serialize(OB, BSE.HasValue))
-      return false;
-
-    if (BSE.HasValue)
-      return SPSArgList<SPSTagT>::serialize(OB, BSE.Value);
-
-    return SPSArgList<SPSString>::serialize(OB, BSE.ErrMsg);
-  }
-
-  static bool deserialize(SPSInputBuffer &IB,
-                          detail::SPSSerializableExpected<T> &BSE) {
-    if (!SPSArgList<bool>::deserialize(IB, BSE.HasValue))
-      return false;
-
-    if (BSE.HasValue)
-      return SPSArgList<SPSTagT>::deserialize(IB, BSE.Value);
-
-    return SPSArgList<SPSString>::deserialize(IB, BSE.ErrMsg);
-  }
-};
-
-/// Serialize to a SPSExpected<SPSTagT> from a detail::SPSSerializableError.
+/// Serialize to a SPSExpected<SPSTagT> from a SPSSerializableError.
 template <typename SPSTagT>
-class SPSSerializationTraits<SPSExpected<SPSTagT>,
-                             detail::SPSSerializableError> {
+class SPSSerializationTraits<SPSExpected<SPSTagT>, SPSSerializableError> {
 public:
-  static size_t size(const detail::SPSSerializableError &BSE) {
-    assert(BSE.HasError && "Cannot serialize expected from a success value");
-    return SPSArgList<bool>::size(false) +
-           SPSArgList<SPSString>::size(BSE.ErrMsg);
+  static size_t size(const SPSSerializableError &SE) {
+    assert(SE.Msg && "Cannot serialize expected from a success value");
+    return SPSArgList<bool, SPSString>::size(false, *SE.Msg);
   }
 
-  static bool serialize(SPSOutputBuffer &OB,
-                        const detail::SPSSerializableError &BSE) {
-    assert(BSE.HasError && "Cannot serialize expected from a success value");
-    if (!SPSArgList<bool>::serialize(OB, false))
-      return false;
-    return SPSArgList<SPSString>::serialize(OB, BSE.ErrMsg);
+  static bool serialize(SPSOutputBuffer &OB, const SPSSerializableError &SE) {
+    assert(SE.Msg && "Cannot serialize expected from a success value");
+    return SPSArgList<bool, SPSString>::serialize(OB, false, *SE.Msg);
   }
 };
 
@@ -674,9 +670,7 @@ public:
   }
 
   static bool serialize(SPSOutputBuffer &OB, const T &Value) {
-    if (!SPSArgList<bool>::serialize(OB, true))
-      return false;
-    return SPSArgList<SPSTagT>::serialize(Value);
+    return SPSArgList<bool, SPSTagT>::serialize(OB, true, Value);
   }
 };
 
