@@ -912,7 +912,7 @@ define void @strided_load_startval_add_with_splat(ptr noalias nocapture %arg, pt
 ; CHECK-NEXT:    addi a6, a4, 1
 ; CHECK-NEXT:    andi a7, a6, -32
 ; CHECK-NEXT:    add a4, a7, a2
-; CHECK-NEXT:    add a2, a4, a0
+; CHECK-NEXT:    add a2, a0, a4
 ; CHECK-NEXT:    li t1, 5
 ; CHECK-NEXT:    vsetvli zero, t2, e8, m1, ta, ma
 ; CHECK-NEXT:  .LBB14_3: # %bb15
@@ -1019,10 +1019,7 @@ define void @gather_no_scalar_remainder(ptr noalias nocapture noundef %arg, ptr 
 ; CHECK-NEXT:    slli a2, a2, 4
 ; CHECK-NEXT:    beqz a2, .LBB15_3
 ; CHECK-NEXT:  # %bb.1: # %bb2
-; CHECK-NEXT:    addi a2, a2, -16
-; CHECK-NEXT:    andi a2, a2, -16
-; CHECK-NEXT:    add a2, a2, a0
-; CHECK-NEXT:    addi a2, a2, 16
+; CHECK-NEXT:    add a2, a0, a2
 ; CHECK-NEXT:    li a3, 5
 ; CHECK-NEXT:    vsetivli zero, 16, e8, mf2, ta, ma
 ; CHECK-NEXT:  .LBB15_2: # %bb4
