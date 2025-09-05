@@ -215,7 +215,7 @@ class FLPMX<bit e, bit p, dag outs, dag ins, string asmstr, list<dag> pattern>
 // r = source = 4 bits
 // (Only accepts register pairs)
 //===----------------------------------------------------------------------===//
-class FMOVW<dag outs, dag ins, string asmstr, list<dag> pattern>
+class FMOVWRdRr<dag outs, dag ins, string asmstr, list<dag> pattern>
     : AVRInst16<outs, ins, asmstr, pattern> {
   bits<4> rd;
   bits<4> rr;
