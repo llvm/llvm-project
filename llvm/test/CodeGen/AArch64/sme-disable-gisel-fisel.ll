@@ -250,10 +250,7 @@ define double  @za_shared_caller_to_za_none_callee(double %x) nounwind noinline 
 ; CHECK-COMMON-NEXT:    mov x9, sp
 ; CHECK-COMMON-NEXT:    msub x9, x8, x8, x9
 ; CHECK-COMMON-NEXT:    mov sp, x9
-; CHECK-COMMON-NEXT:    stur x9, [x29, #-16]
-; CHECK-COMMON-NEXT:    sturh wzr, [x29, #-6]
-; CHECK-COMMON-NEXT:    stur wzr, [x29, #-4]
-; CHECK-COMMON-NEXT:    sturh w8, [x29, #-8]
+; CHECK-COMMON-NEXT:    stp x9, x8, [x29, #-16]
 ; CHECK-COMMON-NEXT:    sub x8, x29, #16
 ; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, x8
 ; CHECK-COMMON-NEXT:    bl normal_callee
@@ -292,12 +289,9 @@ define fp128 @f128_call_za(fp128 %a, fp128 %b) "aarch64_inout_za" nounwind {
 ; CHECK-COMMON-NEXT:    mov x9, sp
 ; CHECK-COMMON-NEXT:    msub x9, x8, x8, x9
 ; CHECK-COMMON-NEXT:    mov sp, x9
-; CHECK-COMMON-NEXT:    stur x9, [x29, #-16]
-; CHECK-COMMON-NEXT:    sub x9, x29, #16
-; CHECK-COMMON-NEXT:    sturh wzr, [x29, #-6]
-; CHECK-COMMON-NEXT:    stur wzr, [x29, #-4]
-; CHECK-COMMON-NEXT:    sturh w8, [x29, #-8]
-; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, x9
+; CHECK-COMMON-NEXT:    sub x10, x29, #16
+; CHECK-COMMON-NEXT:    stp x9, x8, [x29, #-16]
+; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK-COMMON-NEXT:    bl __addtf3
 ; CHECK-COMMON-NEXT:    smstart za
 ; CHECK-COMMON-NEXT:    mrs x8, TPIDR2_EL0
@@ -356,12 +350,9 @@ define double @frem_call_za(double %a, double %b) "aarch64_inout_za" nounwind {
 ; CHECK-COMMON-NEXT:    mov x9, sp
 ; CHECK-COMMON-NEXT:    msub x9, x8, x8, x9
 ; CHECK-COMMON-NEXT:    mov sp, x9
-; CHECK-COMMON-NEXT:    stur x9, [x29, #-16]
-; CHECK-COMMON-NEXT:    sub x9, x29, #16
-; CHECK-COMMON-NEXT:    sturh wzr, [x29, #-6]
-; CHECK-COMMON-NEXT:    stur wzr, [x29, #-4]
-; CHECK-COMMON-NEXT:    sturh w8, [x29, #-8]
-; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, x9
+; CHECK-COMMON-NEXT:    sub x10, x29, #16
+; CHECK-COMMON-NEXT:    stp x9, x8, [x29, #-16]
+; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK-COMMON-NEXT:    bl fmod
 ; CHECK-COMMON-NEXT:    smstart za
 ; CHECK-COMMON-NEXT:    mrs x8, TPIDR2_EL0

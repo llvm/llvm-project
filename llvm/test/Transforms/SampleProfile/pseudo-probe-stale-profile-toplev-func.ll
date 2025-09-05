@@ -1,5 +1,4 @@
-; REQUIRES: x86_64-linux
-; REQUIRES: asserts
+; REQUIRES: asserts && x86-registered-target
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-toplev-func.prof --salvage-stale-profile --salvage-unused-profile -report-profile-staleness -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl -pass-remarks=inline --min-call-count-for-cg-matching=0 --min-func-count-for-cg-matching=0 --load-func-profile-for-cg-matching 2>&1 | FileCheck %s -check-prefix=CHECK-TEXT
 ; RUN: llvm-profdata merge --sample %S/Inputs/pseudo-probe-stale-profile-toplev-func.prof -extbinary -o %t.extbinary
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.extbinary --salvage-stale-profile --salvage-unused-profile -report-profile-staleness -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl -pass-remarks=inline --min-call-count-for-cg-matching=0 --min-func-count-for-cg-matching=0 --load-func-profile-for-cg-matching 2>&1 | FileCheck %s -check-prefix=CHECK-EXTBIN
@@ -29,9 +28,6 @@
 ; CHECK-EXTBIN: Processing Function foo_rename
 ; CHECK-EXTBIN:     2:  %call = call i32 @bar(i32 noundef %0), !dbg ![[#]] - weight: 452674
 
-
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
 @x = dso_local global i32 0, align 4, !dbg !0
 

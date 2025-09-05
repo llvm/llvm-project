@@ -102,11 +102,19 @@ public:
   /// member of the FileSpec is filled in.
   static FileSpec GetSystemPluginDir();
 
+  /// Returns the directory containing the users home (e.g. `~/`). Only the
+  /// directory member of the FileSpec is filled in.
+  static FileSpec GetUserHomeDir();
+
+  /// Returns the directory containing the users lldb home (e.g. `~/.lldb/`).
+  /// Only the directory member of the FileSpec is filled in.
+  static FileSpec GetUserLLDBDir();
+
   /// Returns the directory containing the user plugins. Only the directory
   /// member of the FileSpec is filled in.
   static FileSpec GetUserPluginDir();
 
-  /// Returns the proces temporary directory. This directory will be cleaned up
+  /// Returns the process temporary directory. This directory will be cleaned up
   /// when this process exits. Only the directory member of the FileSpec is
   /// filled in.
   static FileSpec GetProcessTempDir();
@@ -167,11 +175,13 @@ protected:
   static bool ComputeTempFileBaseDirectory(FileSpec &file_spec);
   static bool ComputeHeaderDirectory(FileSpec &file_spec);
   static bool ComputeSystemPluginsDirectory(FileSpec &file_spec);
+  static bool ComputeUserHomeDirectory(FileSpec &file_spec);
+  static bool ComputeUserLLDBHomeDirectory(FileSpec &file_spec);
   static bool ComputeUserPluginsDirectory(FileSpec &file_spec);
 
   static void ComputeHostArchitectureSupport(ArchSpec &arch_32,
                                              ArchSpec &arch_64);
 };
-}
+} // namespace lldb_private
 
 #endif

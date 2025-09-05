@@ -47,7 +47,6 @@ class I<dag out_ops, dag in_ops> : Instruction {
 // CHECK-NEXT: /* 59 */ MCD::OPC_CheckField, 6, 6, 0, 4, 0,          // Skip to: 69
 // CHECK-NEXT: /* 65 */ MCD::OPC_Decode, {{[0-9]+}}, 2, 0,           // Opcode: {{.*}}:NOP
 // CHECK-NEXT: /* 69 */ MCD::OPC_TryDecodeOrFail, {{[0-9]+}}, 2, 1,
-// CHECK-NEXT: /* 73 */ MCD::OPC_Fail,
 
 class SHIFT<bits<2> opc> : I<(outs), (ins ShAmtOp:$shamt)>, EncSHIFT<opc>;
 def SHIFT0 : SHIFT<0>;

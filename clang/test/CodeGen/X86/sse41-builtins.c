@@ -7,6 +7,15 @@
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse4.1 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse4.1 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK
 
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4.1 -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4.1 -fno-signed-char -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse4.1 -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse4.1 -fno-signed-char -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4.1 -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4.1 -fno-signed-char -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse4.1 -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse4.1 -fno-signed-char -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK
+
 
 #include <immintrin.h>
 #include "builtin_test_helpers.h"
@@ -79,6 +88,7 @@ __m128i test_mm_cmpeq_epi64(__m128i A, __m128i B) {
   // CHECK: sext <2 x i1> %{{.*}} to <2 x i64>
   return _mm_cmpeq_epi64(A, B);
 }
+TEST_CONSTEXPR(match_v2di(_mm_cmpeq_epi64((__m128i)(__v2di){+1, -8}, (__m128i)(__v2di){-10, -8}), 0, -1));
 
 __m128i test_mm_cvtepi8_epi16(__m128i a) {
   // CHECK-LABEL: test_mm_cvtepi8_epi16
@@ -281,11 +291,15 @@ __m128i test_mm_max_epi8(__m128i x, __m128i y) {
   return _mm_max_epi8(x, y);
 }
 
+TEST_CONSTEXPR(match_v16qi(_mm_max_epi8((__m128i)(__v16qs){-1, +2, -3, +4, -5, +6, -7, +8, -9, +10, -11, +12, -13, +14, -15, +16}, (__m128i)(__v16qs){+1, -2, +3, -4, +5, -6, +7, -8, +9, -10, +11, -12, +13, -14, +15, -16}), +1, +2, +3, +4, +5, +6, +7, +8, +9, +10, +11, +12, +13, +14, +15, +16));
+
 __m128i test_mm_max_epi32(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_max_epi32
   // CHECK: call <4 x i32> @llvm.smax.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   return _mm_max_epi32(x, y);
 }
+
+TEST_CONSTEXPR(match_v4si(_mm_max_epi32((__m128i)(__v4si){-1, +2, -3, +4}, (__m128i)(__v4si){+1, -2, +3, -4}), +1, +2, +3, +4 ));
 
 __m128i test_mm_max_epu16(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_max_epu16
@@ -293,11 +307,15 @@ __m128i test_mm_max_epu16(__m128i x, __m128i y) {
   return _mm_max_epu16(x, y);
 }
 
+TEST_CONSTEXPR(match_v8hu(_mm_max_epu16((__m128i)(__v8hu){1, 3, 5, 7, 9, 11, 13, 15}, (__m128i)(__v8hu){3, 4, 5, 6, 7, 8, 9, 10}), 3, 4, 5, 7, 9, 11, 13, 15));
+
 __m128i test_mm_max_epu32(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_max_epu32
   // CHECK: call <4 x i32> @llvm.umax.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   return _mm_max_epu32(x, y);
 }
+
+TEST_CONSTEXPR(match_v4su(_mm_max_epu32((__m128i)(__v4su){1, 3, 5, 7}, (__m128i)(__v4su){3, 4, 5, 6}), 3, 4, 5, 7));
 
 __m128i test_mm_min_epi8(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_min_epi8
@@ -305,11 +323,15 @@ __m128i test_mm_min_epi8(__m128i x, __m128i y) {
   return _mm_min_epi8(x, y);
 }
 
+TEST_CONSTEXPR(match_v16qi(_mm_min_epi8((__m128i)(__v16qs){-1, +2, -3, +4, -5, +6, -7, +8, -9, +10, -11, +12, -13, +14, -15, +16}, (__m128i)(__v16qs){+1, -2, +3, -4, +5, -6, +7, -8, +9, -10, +11, -12, +13, -14, +15, -16}), -1, -2, -3, -4, -5, -6, -7, -8, -9, -10, -11, -12, -13, -14, -15, -16));
+
 __m128i test_mm_min_epi32(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_min_epi32
   // CHECK: call <4 x i32> @llvm.smin.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   return _mm_min_epi32(x, y);
 }
+
+TEST_CONSTEXPR(match_v4si(_mm_min_epi32((__m128i)(__v4si){-1, +2, -3, +4}, (__m128i)(__v4si){+1, -2, +3, -4}), -1, -2, -3, -4 ));
 
 __m128i test_mm_min_epu16(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_min_epu16
@@ -317,11 +339,15 @@ __m128i test_mm_min_epu16(__m128i x, __m128i y) {
   return _mm_min_epu16(x, y);
 }
 
+TEST_CONSTEXPR(match_v8hu(_mm_min_epu16((__m128i)(__v8hu){1, 3, 5, 7, 9, 11, 13, 15}, (__m128i)(__v8hu){3, 4, 5, 6, 7, 8, 9, 10}), 1, 3, 5, 6, 7, 8, 9, 10));
+
 __m128i test_mm_min_epu32(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_min_epu32
   // CHECK: call <4 x i32> @llvm.umin.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   return _mm_min_epu32(x, y);
 }
+
+TEST_CONSTEXPR(match_v4su(_mm_min_epu32((__m128i)(__v4su){1, 3, 5, 7}, (__m128i)(__v4su){3, 4, 5, 6}), 1, 3, 5, 6));
 
 __m128i test_mm_minpos_epu16(__m128i x) {
   // CHECK-LABEL: test_mm_minpos_epu16
@@ -351,6 +377,7 @@ __m128i test_mm_mullo_epi32(__m128i x, __m128i y) {
   // CHECK: mul <4 x i32>
   return _mm_mullo_epi32(x, y);
 }
+TEST_CONSTEXPR(match_v4si(_mm_mullo_epi32((__m128i)(__v4si){+1, -2, +3, -4}, (__m128i)(__v4si){-16, +14, +12, -10}), -16, -28, +36, +40));
 
 __m128i test_mm_packus_epi32(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_packus_epi32

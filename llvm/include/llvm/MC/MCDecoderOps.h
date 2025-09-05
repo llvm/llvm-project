@@ -30,7 +30,6 @@ enum DecoderOps {
                             //               nts_t NumToSkip)
   OPC_TryDecodeOrFail,      // OPC_TryDecodeOrFail(uleb128 Opcode, uleb128 DIdx)
   OPC_SoftFail,             // OPC_SoftFail(uleb128 PMask, uleb128 NMask)
-  OPC_Fail                  // OPC_Fail()
 };
 
 } // namespace llvm::MCD
