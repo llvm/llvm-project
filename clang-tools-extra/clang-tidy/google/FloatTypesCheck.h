@@ -13,8 +13,7 @@
 
 namespace clang::tidy::google::runtime {
 
-/// Finds usages of `long double` and suggests replacing them with other
-/// floating-point types.
+/// Finds usages of `long double` and warns due to portability issues.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/google/runtime-float.html
