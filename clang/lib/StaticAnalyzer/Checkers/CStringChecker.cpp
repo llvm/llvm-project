@@ -2315,34 +2315,34 @@ void CStringChecker::evalStrxfrm(CheckerContext &C,
   auto ComparisonVal = SVB.evalBinOp(StateSizeNonZero, BO_LT, RetVal, SizeVal,
                                      SVB.getConditionType())
                            .getAs<DefinedOrUnknownSVal>();
-  if (ComparisonVal) {
-    auto [StateSuccess, StateFailure] =
-        StateSizeNonZero->assume(*ComparisonVal);
-
-    if (StateSuccess) {
-      // The transformation invalidated the buffer.
-      StateSuccess = invalidateDestinationBufferBySize(
-          C, StateSuccess, Dest.Expression, Call.getCFGElementRef(), DestVal,
-          SizeVal, Size.Expression->getType());
-      BindReturnAndTransition(StateSuccess);
-    }
-
-    if (StateFailure) {
-      // `dest` buffer content is undefined
-      if (auto DestLoc = DestVal.getAs<loc::MemRegionVal>()) {
-        StateFailure = StateFailure->killBinding(*DestLoc);
-        StateFailure =
-            StateFailure->bindDefaultInitial(*DestLoc, UndefinedVal{}, LCtx);
-      }
-
-      BindReturnAndTransition(StateFailure);
-    }
-  } else {
+  if (!ComparisonVal) {
     // Fallback: invalidate the buffer.
     StateSizeNonZero = invalidateDestinationBufferBySize(
         C, StateSizeNonZero, Dest.Expression, Call.getCFGElementRef(), DestVal,
         SizeVal, Size.Expression->getType());
-    BindReturnAndTransition(StateSizeNonZero);
+    return BindReturnAndTransition(StateSizeNonZero);
+  }
+
+  auto [StateSuccess, StateFailure] = StateSizeNonZero->assume(*ComparisonVal);
+
+  if (StateSuccess) {
+    // The transformation invalidated the buffer.
+    StateSuccess = invalidateDestinationBufferBySize(
+        C, StateSuccess, Dest.Expression, Call.getCFGElementRef(), DestVal,
+        SizeVal, Size.Expression->getType());
+    BindReturnAndTransition(StateSuccess);
+    // Fallthrough: We also want to add a transition to the failure state below.
+  }
+
+  if (StateFailure) {
+    // `dest` buffer content is undefined
+    if (auto DestLoc = DestVal.getAs<loc::MemRegionVal>()) {
+      StateFailure = StateFailure->killBinding(*DestLoc);
+      StateFailure =
+          StateFailure->bindDefaultInitial(*DestLoc, UndefinedVal{}, LCtx);
+    }
+
+    BindReturnAndTransition(StateFailure);
   }
 }
 
