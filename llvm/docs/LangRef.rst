@@ -2256,12 +2256,16 @@ For example:
     behavior at runtime if the function ever does dynamically return. Annotated
     functions may still raise an exception, i.a., ``nounwind`` is not implied.
 ``norecurse``
-    This function attribute indicates that the function does not participate in
-    recursion, either directly or through mutual recursion. At runtime it is
-    undefined behavior if any dynamic call stack contains this function more
-    than once at the same time. A function must not be marked ``norecurse`` if,
-    along any call path starting from its body, control may reach an external
-    function whose definition is not available.
+    This function attribute indicates that the function is not recursive and
+    does not participate in recursion. This means that the function never
+    occurs inside a cycle in the dynamic call graph.
+    For example:
+
+.. code-block:: llvm
+
+    fn -> other_fn -> fn       ; fn is not norecurse
+    other_fn -> fn -> other_fn ; fn is not norecurse
+    fn -> other_fn -> other_fn ; fn is norecurse
 
 .. _langref_willreturn:
 
