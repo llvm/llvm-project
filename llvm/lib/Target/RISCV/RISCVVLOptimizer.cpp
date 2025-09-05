@@ -53,6 +53,14 @@ struct DemandedVL {
   }
 };
 
+static DemandedVL max(const DemandedVL &LHS, const DemandedVL &RHS) {
+  if (RISCV::isVLKnownLE(LHS.VL, RHS.VL))
+    return RHS;
+  if (RISCV::isVLKnownLE(RHS.VL, LHS.VL))
+    return LHS;
+  return DemandedVL::vlmax();
+}
+
 class RISCVVLOptimizer : public MachineFunctionPass {
   const MachineRegisterInfo *MRI;
   const MachineDominatorTree *MDT;
@@ -94,14 +102,6 @@ private:
   /// downstream users.
   DenseMap<const MachineInstr *, DemandedVL> DemandedVLs;
   SetVector<const MachineInstr *> Worklist;
-
-  DemandedVL max(const DemandedVL &LHS, const DemandedVL &RHS) {
-    if (RISCV::isVLKnownLE(LHS.VL, RHS.VL, MRI))
-      return RHS;
-    if (RISCV::isVLKnownLE(RHS.VL, LHS.VL, MRI))
-      return LHS;
-    return DemandedVL::vlmax();
-  }
 };
 
 /// Represents the EMUL and EEW of a MachineOperand.
@@ -231,8 +231,7 @@ static unsigned getIntegerExtensionOperandEEW(unsigned Factor,
 #define VSUXSEG_CASES(EEW)  VSEG_CASES(VSUX, I##EEW)
 #define VSOXSEG_CASES(EEW)  VSEG_CASES(VSOX, I##EEW)
 
-static std::optional<unsigned>
-getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
+static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   const MachineInstr &MI = *MO.getParent();
   const MCInstrDesc &Desc = MI.getDesc();
   const RISCVVPseudosTable::PseudoInfo *RVV =
@@ -850,15 +849,14 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   }
 }
 
-static std::optional<OperandInfo>
-getOperandInfo(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
+static std::optional<OperandInfo> getOperandInfo(const MachineOperand &MO) {
   const MachineInstr &MI = *MO.getParent();
   const RISCVVPseudosTable::PseudoInfo *RVV =
     RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
   MI.dump();
   assert(RVV && "Could not find MI in PseudoTable");
 
-  std::optional<unsigned> Log2EEW = getOperandLog2EEW(MO, MRI);
+  std::optional<unsigned> Log2EEW = getOperandLog2EEW(MO);
   if (!Log2EEW)
     return std::nullopt;
 
@@ -1427,7 +1425,7 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
   if (UserOp.isTied()) {
     assert(UserOp.getOperandNo() == UserMI.getNumExplicitDefs() &&
            RISCVII::isFirstDefTiedToFirstUse(UserMI.getDesc()));
-    if (!RISCV::isVLKnownLE(DemandedVLs.lookup(&UserMI).VL, VLOp, MRI)) {
+    if (!RISCV::isVLKnownLE(DemandedVLs.lookup(&UserMI).VL, VLOp)) {
       LLVM_DEBUG(dbgs() << "  Abort because user is passthru in "
                            "instruction with demanded tail\n");
       return DemandedVL::vlmax();
@@ -1443,7 +1441,7 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
 
   // If we know the demanded VL of UserMI, then we can reduce the VL it
   // requires.
-  if (RISCV::isVLKnownLE(DemandedVLs.lookup(&UserMI).VL, VLOp, MRI))
+  if (RISCV::isVLKnownLE(DemandedVLs.lookup(&UserMI).VL, VLOp))
     return DemandedVLs.lookup(&UserMI);
 
   return VLOp;
@@ -1453,11 +1451,10 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
 /// for segmented store instructions, namely, RISCVISD::TUPLE_INSERT.
 /// Currently it's lowered to INSERT_SUBREG.
 static bool isTupleInsertInstr(const MachineInstr &MI) {
-  if (MI.getOpcode() != RISCV::INSERT_SUBREG)
+  if (!MI.isInsertSubreg())
     return false;
 
-  const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
-
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   const TargetRegisterClass *DstRC = MRI.getRegClass(MI.getOperand(0).getReg());
   const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
   if (!RISCVRI::isVRegClass(DstRC->TSFlags))
@@ -1552,9 +1549,8 @@ RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
       return false;
     }
 
-    std::optional<OperandInfo> ConsumerInfo = getOperandInfo(UserOp, MRI);
-    std::optional<OperandInfo> ProducerInfo =
-        getOperandInfo(MI.getOperand(0), MRI);
+    std::optional<OperandInfo> ConsumerInfo = getOperandInfo(UserOp);
+    std::optional<OperandInfo> ProducerInfo = getOperandInfo(MI.getOperand(0));
     if (!ConsumerInfo || !ProducerInfo) {
       LLVM_DEBUG(dbgs() << "    Abort due to unknown operand information.\n");
       LLVM_DEBUG(dbgs() << "      ConsumerInfo is: " << ConsumerInfo << "\n");
@@ -1602,7 +1598,7 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) const {
       CommonVL = &VLMI->getOperand(RISCVII::getVLOpNum(VLMI->getDesc()));
   }
 
-  if (!RISCV::isVLKnownLE(*CommonVL, VLOp, MRI)) {
+  if (!RISCV::isVLKnownLE(*CommonVL, VLOp)) {
     LLVM_DEBUG(dbgs() << "  Abort due to CommonVL not <= VLOp.\n");
     return false;
   }
