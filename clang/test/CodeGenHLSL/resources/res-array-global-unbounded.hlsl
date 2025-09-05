@@ -42,8 +42,10 @@ void main(uint GI : SV_GroupIndex) {
   float a = A[100][0];
 
   // Make sure B[2][3] is translated to a local RWBuffer<int>[4] array where each array element
-  // is initialized by a constructor call with range -1 and index 52-54
-  // and implicit binding (space 0, order_id 0) 
+  // is initialized by a constructor call with range -1 and index 52-55 and implicit binding 
+  // (space 0, order_id 0) 
+  // The first index is calculated from the array dimensions (unbounded x 5 x 4) and indices (2, 3)
+  // as 2 * 5 * 4 + 3 * 4 = 52 and the following indices are sequential.
   // CHECK-NEXT: %[[Ptr_Tmp2_0:.*]] = getelementptr [4 x %"class.hlsl::RWBuffer"], ptr %[[Tmp2]], i32 0, i32 0
   // CHECK-NEXT: call void @_ZN4hlsl8RWBufferIiEC1EjijjPKc(ptr {{.*}} %[[Ptr_Tmp2_0]], i32 noundef 0, i32 noundef -1, i32 noundef 52, i32 noundef 0, ptr noundef @B.str)
   // CHECK-NEXT: %[[Ptr_Tmp2_1:.*]] = getelementptr [4 x %"class.hlsl::RWBuffer"], ptr %[[Tmp2]], i32 0, i32 1
