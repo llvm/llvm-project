@@ -361,6 +361,8 @@ TEST_F(SuppressionMappingTest, ParsingRespectsOtherWarningOpts) {
   EXPECT_THAT(diags(), IsEmpty());
 }
 
+#ifdef _WIN32
+// We're only slash-agnostic on windows hosts
 TEST_F(SuppressionMappingTest, ForwardSlashMatchesBothDirections) {
   llvm::StringLiteral SuppressionMappingFile = R"(
   [unused]
@@ -383,4 +385,5 @@ TEST_F(SuppressionMappingTest, ForwardSlashMatchesBothDirections) {
   EXPECT_FALSE(Diags.isSuppressedViaMapping(
       diag::warn_unused_function, locForFile(R"(clang/lib/Sema/foo.h)")));
 }
+#endif
 } // namespace
