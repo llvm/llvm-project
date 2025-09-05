@@ -148,6 +148,12 @@ New checks
   Detects default initialization (to 0) of variables with ``enum`` type where
   the enum has no enumerator with value of 0.
 
+- New :doc:`bugprone-loop-variable-copied-then-modified
+  <clang-tidy/checks/bugprone/loop-variable-copied-then-modified>` check.
+
+  Detects when a loop variable is copied and then subsequently modified and
+  suggests replacing with a ``const`` reference or an explicit copy.
+
 - New :doc:`cppcoreguidelines-pro-bounds-avoid-unchecked-container-access
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-avoid-unchecked-container-access>`
   check.
