@@ -427,6 +427,7 @@ void BitcodeCompiler::addObject(IRFile &f,
   checkError(ctx.e, ltoObj->add(std::move(f.obj), r));
 }
 
+#if LLD_ENABLE_GNU_LTO
 GccIRCompiler *GccIRCompiler::singleton = nullptr;
 
  GccIRCompiler *GccIRCompiler::getInstance() {
@@ -655,3 +656,4 @@ bool GccIRCompiler::addCompiledFile(StringRef path) {
   files.push_back(std::move(MemoryBuffer::getMemBuffer(*mbref)));
   return true;
 }
+#endif

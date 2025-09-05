@@ -1813,16 +1813,22 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       ErrAlways(ctx) << arg->getSpelling() << ": unknown plugin option '"
                      << arg->getValue() << "'";
     else if (!ctx.arg.plugin.empty())
+#if LLD_ENABLE_GNU_LTO
         ctx.arg.pluginOpt.push_back(v.str());
+#else
+      ErrAlways(ctx) << arg->getSpelling() << " : support for GNU LTO is disabled";
+#endif
   }
 
   // Parse GCC collect2 options.
   if (!ctx.arg.plugin.empty()) {
+#if LLD_ENABLE_GNU_LTO
     StringRef v = args.getLastArgValue(OPT_plugin_opt_fresolution);
     if (!v.empty()) {
       ctx.arg.resolutionFile = v;
       ctx.arg.pluginOpt.push_back(std::string("-fresolution=" + v.str()));
     }
+#endif
   }
 
   ctx.arg.passPlugins = args::getStrings(args, OPT_load_pass_plugins);
@@ -2751,6 +2757,7 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
   }
 }
 
+#if LLD_ENABLE_GNU_LTO
 template <class ELFT>
 void LinkerDriver::compileGccIRFiles(bool skipLinkedOutput) {
   llvm::TimeTraceScope timeScope("LTO");
@@ -2781,6 +2788,7 @@ void LinkerDriver::compileGccIRFiles(bool skipLinkedOutput) {
   }
   return;
 }
+#endif
 
 // The --wrap option is a feature to rename symbols so that you can write
 // wrappers for existing functions. If you pass `--wrap=foo`, all
@@ -3341,8 +3349,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   const size_t numInputFilesBeforeLTO = ctx.driver.files.size();
   if (ctx.arg.plugin.empty()) {
     compileBitcodeFiles<ELFT>(skipLinkedOutput);
+#if LLD_ENABLE_GNU_LTO
   } else {
     compileGccIRFiles<ELFT>(skipLinkedOutput);
+#endif
   }
 
   // Symbol resolution finished. Report backward reference problems,

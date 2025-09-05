@@ -77,6 +77,7 @@ private:
   std::unique_ptr<llvm::raw_fd_ostream> indexFile;
 };
 
+#if LLD_ENABLE_GNU_LTO
 class GccIRCompiler : public IRCompiler {
 protected:
   void addObject(IRFile &f,
@@ -115,6 +116,7 @@ private:
 
   void initializeTv();
 };
+#endif
 
 } // namespace lld::elf
 

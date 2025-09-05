@@ -19,7 +19,7 @@ if(LLVM_ENABLE_ZSTD)
 endif()
 
 set(GNULTO_INCLUDE_DIR "" CACHE PATH "Additional directory, where CMake should search for plugin-api.h")
-if(LLD_ENABLE_GNULTO)
+if(LLD_ENABLE_GNU_LTO)
   find_package(GNULTO REQUIRED)
 endif()
 
