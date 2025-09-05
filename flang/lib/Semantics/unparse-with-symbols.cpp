@@ -47,6 +47,11 @@ public:
     return true;
   }
   void Post(const parser::OmpClause &) { currStmt_ = std::nullopt; }
+  bool Pre(const parser::OpenMPGroupprivate &dir) {
+    currStmt_ = dir.source;
+    return true;
+  }
+  void Post(const parser::OpenMPGroupprivate &) { currStmt_ = std::nullopt; }
   bool Pre(const parser::OpenMPThreadprivate &dir) {
     currStmt_ = dir.source;
     return true;
@@ -69,6 +74,19 @@ public:
   void Post(const parser::OpenMPDeclareTargetConstruct &) {
     currStmt_ = std::nullopt;
   }
+
+  // Directive arguments can be objects with symbols.
+  bool Pre(const parser::OmpBeginDirective &x) {
+    currStmt_ = x.source;
+    return true;
+  }
+  void Post(const parser::OmpBeginDirective &) { currStmt_ = std::nullopt; }
+
+  bool Pre(const parser::OmpEndDirective &x) {
+    currStmt_ = x.source;
+    return true;
+  }
+  void Post(const parser::OmpEndDirective &) { currStmt_ = std::nullopt; }
 
 private:
   std::optional<SourceName> currStmt_; // current statement we are processing

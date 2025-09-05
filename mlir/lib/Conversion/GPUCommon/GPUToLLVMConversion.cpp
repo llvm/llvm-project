@@ -532,6 +532,9 @@ void GpuToLLVMConversionPass::runOnOperation() {
     // Vector transfer ops with rank > 1 should be lowered with VectorToSCF.
     vector::populateVectorTransferLoweringPatterns(patterns,
                                                    /*maxTransferRank=*/1);
+    // Transform N-D vector.from_elements to 1-D vector.from_elements before
+    // conversion.
+    vector::populateVectorFromElementsLoweringPatterns(patterns);
     if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
   }
@@ -579,8 +582,8 @@ LLVM::CallOp FunctionCallBuilder::create(Location loc, OpBuilder &builder,
   auto function = [&] {
     if (auto function = module.lookupSymbol<LLVM::LLVMFuncOp>(functionName))
       return function;
-    return OpBuilder::atBlockEnd(module.getBody())
-        .create<LLVM::LLVMFuncOp>(loc, functionName, functionType);
+    auto builder = OpBuilder::atBlockEnd(module.getBody());
+    return LLVM::LLVMFuncOp::create(builder, loc, functionName, functionType);
   }();
   return LLVM::CallOp::create(builder, loc, function, arguments);
 }

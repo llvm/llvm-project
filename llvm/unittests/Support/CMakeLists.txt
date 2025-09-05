@@ -31,6 +31,7 @@ add_llvm_unittest(SupportTests
   DataExtractorTest.cpp
   DebugCounterTest.cpp
   DebugTest.cpp
+  DebugLogTest.cpp
   DivisionByConstantTest.cpp
   DJBTest.cpp
   EndianStreamTest.cpp
@@ -110,6 +111,7 @@ add_llvm_unittest(SupportTests
   formatted_raw_ostream_test.cpp
   raw_fd_stream_test.cpp
   raw_ostream_test.cpp
+  raw_ostream_proxy_test.cpp
   raw_pwrite_stream_test.cpp
   raw_sha1_ostream_test.cpp
   raw_socket_stream_test.cpp

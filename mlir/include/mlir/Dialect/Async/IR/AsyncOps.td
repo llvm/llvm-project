@@ -38,7 +38,8 @@ def Async_ExecuteOp :
                                                  ["getEntrySuccessorOperands",
                                                   "areTypesCompatible"]>,
                        AttrSizedOperandSegments,
-                       AutomaticAllocationScope]> {
+                       AutomaticAllocationScope,
+                       RecursiveMemoryEffects]> {
   let summary = "Asynchronous execute operation";
   let description = [{
     The `body` region attached to the `async.execute` operation semantically

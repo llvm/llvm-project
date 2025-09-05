@@ -199,7 +199,8 @@ public:
     SUSE,
     OpenEmbedded,
     Intel,
-    LastVendorType = Intel
+    Meta,
+    LastVendorType = Meta
   };
   enum OSType {
     UnknownOS,
@@ -244,7 +245,8 @@ public:
     LiteOS,
     Serenity,
     Vulkan, // Vulkan SPIR-V
-    LastOSType = Vulkan
+    CheriotRTOS,
+    LastOSType = CheriotRTOS
   };
   enum EnvironmentType {
     UnknownEnvironment,
@@ -307,8 +309,8 @@ public:
     Mlibc,
 
     PAuthTest,
-
-    LastEnvironmentType = PAuthTest
+    MTIA,
+    LastEnvironmentType = MTIA
   };
   enum ObjectFormatType {
     UnknownObjectFormat,

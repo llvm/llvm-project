@@ -1,31 +1,31 @@
-// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics \
+// RUN: %clang_cc1 %s -x c++ -std=c++20 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics \
 // RUN:   -emit-llvm -o - | FileCheck --check-prefixes=CHECK,NODISC %s
 
-// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple arm64-apple-ios   -fptrauth-calls -fptrauth-intrinsics \
+// RUN: %clang_cc1 %s -x c++ -std=c++20 -triple arm64-apple-ios   -fptrauth-calls -fptrauth-intrinsics \
 // RUN:   -fptrauth-vtable-pointer-type-discrimination \
 // RUN:   -emit-llvm -o - | FileCheck --check-prefixes=CHECK,TYPE %s
 
-// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple arm64-apple-ios   -fptrauth-calls -fptrauth-intrinsics \
+// RUN: %clang_cc1 %s -x c++ -std=c++20 -triple arm64-apple-ios   -fptrauth-calls -fptrauth-intrinsics \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
 // RUN:   -emit-llvm -o - | FileCheck --check-prefixes=CHECK,ADDR %s
 
-// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple arm64-apple-ios   -fptrauth-calls -fptrauth-intrinsics \
+// RUN: %clang_cc1 %s -x c++ -std=c++20 -triple arm64-apple-ios   -fptrauth-calls -fptrauth-intrinsics \
 // RUN:   -fptrauth-vtable-pointer-type-discrimination \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
 // RUN:   -emit-llvm -o - | FileCheck --check-prefixes=CHECK,BOTH %s
 
-// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics \
+// RUN: %clang_cc1 %s -x c++ -std=c++20 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics \
 // RUN:   -emit-llvm -o - | FileCheck --check-prefixes=CHECK,NODISC %s
 
-// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics \
+// RUN: %clang_cc1 %s -x c++ -std=c++20 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics \
 // RUN:   -fptrauth-vtable-pointer-type-discrimination \
 // RUN:   -emit-llvm -o - | FileCheck --check-prefixes=CHECK,TYPE %s
 
-// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics \
+// RUN: %clang_cc1 %s -x c++ -std=c++20 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
 // RUN:   -emit-llvm -o - | FileCheck --check-prefixes=CHECK,ADDR %s
 
-// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics \
+// RUN: %clang_cc1 %s -x c++ -std=c++20 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics \
 // RUN:   -fptrauth-vtable-pointer-type-discrimination \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination \
 // RUN:   -emit-llvm -o - | FileCheck --check-prefixes=CHECK,BOTH %s
@@ -77,6 +77,27 @@ struct authenticated(default_key, default_address_discrimination, custom_discrim
   virtual void f();
   virtual void g();
 };
+
+// CHECK: @_ZTVN5test19ConstEvalE = external unnamed_addr constant { [3 x ptr] }, align 8
+// CHECK: @_ZN5test12ceE = global %{{.*}} { ptr ptrauth (ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTVN5test19ConstEvalE, i32 0, i32 0, i32 2), i32 2, i64 0, ptr @_ZN5test12ceE) }, align 8
+// CHECK: @_ZTVN5test116ConstEvalDerivedE = linkonce_odr unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTIN5test116ConstEvalDerivedE, ptr ptrauth (ptr @_ZN5test19ConstEval1fEv, i32 0, i64 26259, ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTVN5test116ConstEvalDerivedE, i32 0, i32 0, i32 2))] },{{.*}}align 8
+// CHECK: @_ZN5test13cedE = global { ptr } { ptr ptrauth (ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTVN5test116ConstEvalDerivedE, i32 0, i32 0, i32 2), i32 2, i64 0, ptr @_ZN5test13cedE) }, align 8
+
+struct authenticated(default_key, address_discrimination, no_extra_discrimination) ConstEval {
+  consteval ConstEval() {}
+  virtual void f();
+};
+
+// clang used to bail out with error message "could not emit constant value abstractly".
+ConstEval ce;
+
+struct ConstEvalDerived : public ConstEval {
+public:
+  consteval ConstEvalDerived() {}
+};
+
+// clang used to emit an undef initializer.
+ConstEvalDerived ced;
 
 template <typename T>
 struct SubClass : T {

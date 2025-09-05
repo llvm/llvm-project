@@ -2512,16 +2512,16 @@ define half @buffer_fat_ptr_agent_atomic_fmax_ret_f16__offset__amdgpu_no_fine_gr
 ; GFX12-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, s4, v2
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0
 ; GFX12-TRUE16-NEXT:    s_wait_storecnt 0x0
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v0.h, v1.l, v1.l
 ; GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v1.l, v0.h, v0.l
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, s4, v1
 ; GFX12-TRUE16-NEXT:    s_wait_alu 0xfffe
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_and_or_b32 v1, v2, s6, v1
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_dual_mov_b32 v4, v2 :: v_dual_mov_b32 v3, v1
 ; GFX12-TRUE16-NEXT:    buffer_atomic_cmpswap_b32 v[3:4], v5, s[0:3], null offen th:TH_ATOMIC_RETURN
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
@@ -2640,20 +2640,19 @@ define half @buffer_fat_ptr_agent_atomic_fmax_ret_f16__offset__amdgpu_no_fine_gr
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v2, v5, s[0:3], 0 offen
 ; GFX11-TRUE16-NEXT:    s_not_b32 s6, s5
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s5, 0
-; GFX11-TRUE16-NEXT:    .p2align 6
 ; GFX11-TRUE16-NEXT:  .LBB10_1: ; %atomicrmw.start
 ; GFX11-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, s4, v2
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0
 ; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.h, v1.l, v1.l
 ; GFX11-TRUE16-NEXT:    v_max_f16_e32 v1.l, v0.h, v0.l
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, s4, v1
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_and_or_b32 v1, v2, s6, v1
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v4, v2 :: v_dual_mov_b32 v3, v1
 ; GFX11-TRUE16-NEXT:    buffer_atomic_cmpswap_b32 v[3:4], v5, s[0:3], 0 offen glc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -2973,16 +2972,16 @@ define void @buffer_fat_ptr_agent_atomic_fmax_noret_f16__offset__amdgpu_no_fine_
 ; GFX12-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, s4, v2
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0
 ; GFX12-TRUE16-NEXT:    s_wait_storecnt 0x0
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v0.h, v1.l, v1.l
 ; GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v1.l, v0.h, v0.l
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, s4, v1
 ; GFX12-TRUE16-NEXT:    s_wait_alu 0xfffe
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_and_or_b32 v1, v2, s6, v1
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_mov_b32 v4, v1
 ; GFX12-TRUE16-NEXT:    buffer_atomic_cmpswap_b32 v[4:5], v3, s[0:3], null offen th:TH_ATOMIC_RETURN
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
@@ -3098,20 +3097,19 @@ define void @buffer_fat_ptr_agent_atomic_fmax_noret_f16__offset__amdgpu_no_fine_
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v2, v3, s[0:3], 0 offen
 ; GFX11-TRUE16-NEXT:    s_not_b32 s6, s5
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s5, 0
-; GFX11-TRUE16-NEXT:    .p2align 6
 ; GFX11-TRUE16-NEXT:  .LBB11_1: ; %atomicrmw.start
 ; GFX11-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, s4, v2
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0
 ; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.h, v1.l, v1.l
 ; GFX11-TRUE16-NEXT:    v_max_f16_e32 v1.l, v0.h, v0.l
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, s4, v1
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_and_or_b32 v1, v2, s6, v1
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_mov_b32 v4, v1
 ; GFX11-TRUE16-NEXT:    buffer_atomic_cmpswap_b32 v[4:5], v3, s[0:3], 0 offen glc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -3437,16 +3435,16 @@ define half @buffer_fat_ptr_agent_atomic_fmax_ret_f16__offset__waterfall__amdgpu
 ; GFX12-TRUE16-NEXT:    ; Child Loop BB12_4 Depth 2
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v5, v9, v6
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v5.h, 0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s2, exec_lo
 ; GFX12-TRUE16-NEXT:    s_wait_storecnt 0x0
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v4.h, v5.l, v5.l
 ; GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v5.l, v4.h, v4.l
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_and_b32_e32 v5, 0xffff, v5
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, v9, v5
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_and_or_b32 v5, v6, v11, v5
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_dual_mov_b32 v8, v6 :: v_dual_mov_b32 v7, v5
 ; GFX12-TRUE16-NEXT:  .LBB12_4: ; Parent Loop BB12_3 Depth=1
 ; GFX12-TRUE16-NEXT:    ; => This Inner Loop Header: Depth=2
@@ -3672,16 +3670,16 @@ define half @buffer_fat_ptr_agent_atomic_fmax_ret_f16__offset__waterfall__amdgpu
 ; GFX11-TRUE16-NEXT:    ; Child Loop BB12_4 Depth 2
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v5, v9, v6
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v5.h, 0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, exec_lo
 ; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_max_f16_e32 v4.h, v5.l, v5.l
 ; GFX11-TRUE16-NEXT:    v_max_f16_e32 v5.l, v4.h, v4.l
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v5, 0xffff, v5
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, v9, v5
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_and_or_b32 v5, v6, v11, v5
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v8, v6 :: v_dual_mov_b32 v7, v5
 ; GFX11-TRUE16-NEXT:  .LBB12_4: ; Parent Loop BB12_3 Depth=1
 ; GFX11-TRUE16-NEXT:    ; => This Inner Loop Header: Depth=2
@@ -7428,12 +7426,10 @@ define <2 x bfloat> @buffer_fat_ptr_agent_atomic_fmax_ret_v2bf16__offset__amdgpu
 ; GFX12-TRUE16-NEXT:    s_wait_alu 0xfffd
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v0, v5, v8, vcc_lo
 ; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v1, v1
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
 ; GFX12-TRUE16-NEXT:    s_wait_alu 0xfffd
-; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v1, v7, v9, vcc_lo
-; GFX12-TRUE16-NEXT:    v_bfi_b32 v5, 0xffff, v0, v1
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v7, v9, vcc_lo
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v0.h
 ; GFX12-TRUE16-NEXT:    v_dual_mov_b32 v0, v5 :: v_dual_mov_b32 v1, v6
 ; GFX12-TRUE16-NEXT:    buffer_atomic_cmpswap_b32 v[0:1], v4, s[0:3], null offen th:TH_ATOMIC_RETURN
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
@@ -7583,11 +7579,9 @@ define <2 x bfloat> @buffer_fat_ptr_agent_atomic_fmax_ret_v2bf16__offset__amdgpu
 ; GFX11-TRUE16-NEXT:    v_add3_u32 v5, v5, v0, 0x7fff
 ; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v0, v5, v8, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v1, v1
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v1, v7, v9, vcc_lo
-; GFX11-TRUE16-NEXT:    v_bfi_b32 v5, 0xffff, v0, v1
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v7, v9, vcc_lo
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v0.h
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, v5 :: v_dual_mov_b32 v1, v6
 ; GFX11-TRUE16-NEXT:    buffer_atomic_cmpswap_b32 v[0:1], v4, s[0:3], 0 offen glc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -7957,13 +7951,12 @@ define void @buffer_fat_ptr_agent_atomic_fmax_noret_v2bf16__offset__amdgpu_no_fi
 ; GFX12-TRUE16-NEXT:    v_add3_u32 v6, v6, v0, 0x7fff
 ; GFX12-TRUE16-NEXT:    s_wait_alu 0xfffd
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_3)
-; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v0, v6, v8, vcc_lo
+; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v6, v6, v8, vcc_lo
 ; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
 ; GFX12-TRUE16-NEXT:    s_wait_alu 0xfffd
-; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v7, v9, vcc_lo
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_bfi_b32 v0, 0xffff, v0, v5
+; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v0, v7, v9, vcc_lo
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v6.h
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v5, v0
 ; GFX12-TRUE16-NEXT:    buffer_atomic_cmpswap_b32 v[5:6], v4, s[0:3], null offen th:TH_ATOMIC_RETURN
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
@@ -8103,13 +8096,11 @@ define void @buffer_fat_ptr_agent_atomic_fmax_noret_v2bf16__offset__amdgpu_no_fi
 ; GFX11-TRUE16-NEXT:    v_add3_u32 v7, v7, v5, 0x7fff
 ; GFX11-TRUE16-NEXT:    v_add3_u32 v6, v6, v0, 0x7fff
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v0, v6, v8, vcc_lo
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v6, v6, v8, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v7, v9, vcc_lo
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v0, v7, v9, vcc_lo
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
-; GFX11-TRUE16-NEXT:    v_bfi_b32 v0, 0xffff, v0, v5
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v6.h
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v5, v0
 ; GFX11-TRUE16-NEXT:    buffer_atomic_cmpswap_b32 v[5:6], v4, s[0:3], 0 offen glc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -8497,9 +8488,8 @@ define <2 x bfloat> @buffer_fat_ptr_agent_atomic_fmax_ret_v2bf16__offset__waterf
 ; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
 ; GFX12-TRUE16-NEXT:    s_wait_alu 0xfffd
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v11, v13, vcc_lo
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v4.h
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_bfi_b32 v5, 0xffff, v4, v5
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v4.h
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v4, v5
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v5, v6
 ; GFX12-TRUE16-NEXT:  .LBB21_4: ; Parent Loop BB21_3 Depth=1
@@ -8730,6 +8720,8 @@ define <2 x bfloat> @buffer_fat_ptr_agent_atomic_fmax_ret_v2bf16__offset__waterf
 ; GFX11-TRUE16-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v8, 0xffff0000, v5
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v9, 16, v5
+; GFX11-TRUE16-NEXT:    s_set_inst_prefetch_distance 0x1
+; GFX11-TRUE16-NEXT:    .p2align 6
 ; GFX11-TRUE16-NEXT:  .LBB21_3: ; %atomicrmw.start
 ; GFX11-TRUE16-NEXT:    ; =>This Loop Header: Depth=1
 ; GFX11-TRUE16-NEXT:    ; Child Loop BB21_4 Depth 2
@@ -8753,9 +8745,7 @@ define <2 x bfloat> @buffer_fat_ptr_agent_atomic_fmax_ret_v2bf16__offset__waterf
 ; GFX11-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
 ; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v11, v13, vcc_lo
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v4.h
-; GFX11-TRUE16-NEXT:    v_bfi_b32 v5, 0xffff, v4, v5
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v4.h
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v4, v5
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v5, v6
 ; GFX11-TRUE16-NEXT:  .LBB21_4: ; Parent Loop BB21_3 Depth=1
@@ -8786,6 +8776,7 @@ define <2 x bfloat> @buffer_fat_ptr_agent_atomic_fmax_ret_v2bf16__offset__waterf
 ; GFX11-TRUE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s1
 ; GFX11-TRUE16-NEXT:    s_cbranch_execnz .LBB21_3
 ; GFX11-TRUE16-NEXT:  ; %bb.6: ; %atomicrmw.end
+; GFX11-TRUE16-NEXT:    s_set_inst_prefetch_distance 0x2
 ; GFX11-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]

@@ -18,6 +18,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -26,6 +27,7 @@
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
@@ -89,10 +91,6 @@ static cl::opt<bool> DisableFDivExpand(
   cl::ReallyHidden,
   cl::init(false));
 
-static bool hasUnsafeFPMath(const Function &F) {
-  return F.getFnAttribute("unsafe-fp-math").getValueAsBool();
-}
-
 class AMDGPUCodeGenPrepareImpl
     : public InstVisitor<AMDGPUCodeGenPrepareImpl, bool> {
 public:
@@ -104,7 +102,6 @@ public:
   const DominatorTree *DT;
   const UniformityInfo &UA;
   const DataLayout &DL;
-  const bool HasUnsafeFPMath;
   const bool HasFP32DenormalFlush;
   bool FlowChanged = false;
   mutable Function *SqrtF32 = nullptr;
@@ -117,7 +114,6 @@ public:
                            const DominatorTree *DT, const UniformityInfo &UA)
       : F(F), ST(TM.getSubtarget<GCNSubtarget>(F)), TM(TM), TLI(TLI), AC(AC),
         DT(DT), UA(UA), DL(F.getDataLayout()),
-        HasUnsafeFPMath(hasUnsafeFPMath(F)),
         HasFP32DenormalFlush(SIModeRegisterDefaults(F, ST).FP32Denormals ==
                              DenormalMode::getPreserveSign()) {}
 
@@ -637,8 +633,7 @@ bool AMDGPUCodeGenPrepareImpl::canOptimizeWithRsq(const FPMathOperator *SqrtOp,
     return false;
 
   // v_rsq_f32 gives 1ulp
-  return SqrtFMF.approxFunc() || HasUnsafeFPMath ||
-         SqrtOp->getFPAccuracy() >= 1.0f;
+  return SqrtFMF.approxFunc() || SqrtOp->getFPAccuracy() >= 1.0f;
 }
 
 Value *AMDGPUCodeGenPrepareImpl::optimizeWithRsq(
@@ -664,7 +659,7 @@ Value *AMDGPUCodeGenPrepareImpl::optimizeWithRsq(
     IRBuilder<>::FastMathFlagGuard Guard(Builder);
     Builder.setFastMathFlags(DivFMF | SqrtFMF);
 
-    if ((DivFMF.approxFunc() && SqrtFMF.approxFunc()) || HasUnsafeFPMath ||
+    if ((DivFMF.approxFunc() && SqrtFMF.approxFunc()) ||
         canIgnoreDenormalInput(Den, CtxI)) {
       Value *Result = Builder.CreateUnaryIntrinsic(Intrinsic::amdgcn_rsq, Den);
       // -1.0 / sqrt(x) -> fneg(rsq(x))
@@ -680,7 +675,7 @@ Value *AMDGPUCodeGenPrepareImpl::optimizeWithRsq(
 // Optimize fdiv with rcp:
 //
 // 1/x -> rcp(x) when rcp is sufficiently accurate or inaccurate rcp is
-//               allowed with unsafe-fp-math or afn.
+//               allowed with afn.
 //
 // a/b -> a*rcp(b) when arcp is allowed, and we only need provide ULP 1.0
 Value *
@@ -803,9 +798,9 @@ Value *AMDGPUCodeGenPrepareImpl::visitFDivElement(
 //
 // With rcp:
 //   1/x -> rcp(x) when rcp is sufficiently accurate or inaccurate rcp is
-//                 allowed with unsafe-fp-math or afn.
+//                 allowed with afn.
 //
-//   a/b -> a*rcp(b) when inaccurate rcp is allowed with unsafe-fp-math or afn.
+//   a/b -> a*rcp(b) when inaccurate rcp is allowed with afn.
 //
 // With fdiv.fast:
 //   a/b -> fdiv.fast(a, b) when !fpmath >= 2.5ulp with denormals flushed.
@@ -843,7 +838,7 @@ bool AMDGPUCodeGenPrepareImpl::visitFDiv(BinaryOperator &FDiv) {
       RsqOp = SqrtOp->getOperand(0);
   }
 
-  // Inaccurate rcp is allowed with unsafe-fp-math or afn.
+  // Inaccurate rcp is allowed with afn.
   //
   // Defer to codegen to handle this.
   //
@@ -852,7 +847,7 @@ bool AMDGPUCodeGenPrepareImpl::visitFDiv(BinaryOperator &FDiv) {
   // expansion of afn to codegen. The current interpretation is so aggressive we
   // don't need any pre-consideration here when we have better information. A
   // more conservative interpretation could use handling here.
-  const bool AllowInaccurateRcp = HasUnsafeFPMath || DivFMF.approxFunc();
+  const bool AllowInaccurateRcp = DivFMF.approxFunc();
   if (!RsqOp && AllowInaccurateRcp)
     return false;
 
@@ -2026,7 +2021,7 @@ bool AMDGPUCodeGenPrepareImpl::visitSqrt(IntrinsicInst &Sqrt) {
 
   // We're trying to handle the fast-but-not-that-fast case only. The lowering
   // of fast llvm.sqrt will give the raw instruction anyway.
-  if (SqrtFMF.approxFunc() || HasUnsafeFPMath)
+  if (SqrtFMF.approxFunc())
     return false;
 
   const float ReqdAccuracy = FPOp->getFPAccuracy();

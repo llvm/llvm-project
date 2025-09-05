@@ -259,7 +259,7 @@ protected:
         if (!exe_module_sp)
           exe_module_sp = target->GetExecutableModule();
         if (!exe_module_sp) {
-          result.AppendWarning("Could not get executable module after launch.");
+          result.AppendWarning("could not get executable module after launch");
         } else {
 
           const char *archname =

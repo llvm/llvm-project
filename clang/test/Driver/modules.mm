@@ -3,6 +3,9 @@
 // RUN: %clang -fmodules -fno-cxx-modules -### %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MODULES %s
 // CHECK-NO-MODULES-NOT: -fmodules
 
+// RUN: %clang -std=c++20 -fno-cxx-modules -### %s 2>&1 | FileCheck -check-prefix=CHECK-NO-CPP-20-MODULES %s
+// CHECK-NO-CPP-20-MODULES: -fno-cxx-modules
+
 // RUN: %clang -fmodules -### %s 2>&1 | FileCheck -check-prefix=CHECK-HAS-MODULES %s
 // RUN: %clang -fmodules -fno-cxx-modules -fcxx-modules -### %s 2>&1 | FileCheck -check-prefix=CHECK-HAS-MODULES %s
 // CHECK-HAS-MODULES: -fmodules

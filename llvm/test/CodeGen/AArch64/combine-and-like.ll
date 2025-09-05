@@ -4,7 +4,6 @@
 define i32 @f(i32 %a0) {
 ; CHECK-LABEL: f:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
   %1 = lshr i32 %a0, 2147483647
   %2 = add i32 %1, 2147483647

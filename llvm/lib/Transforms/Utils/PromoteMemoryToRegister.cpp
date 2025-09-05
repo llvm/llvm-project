@@ -136,7 +136,7 @@ public:
   /// \p ToDelete that stores to this alloca.
   void updateForDeletedStore(
       StoreInst *ToDelete, DIBuilder &DIB,
-      SmallSet<DbgVariableRecord *, 8> *DVRAssignsToDelete) const {
+      SmallPtrSet<DbgVariableRecord *, 8> *DVRAssignsToDelete) const {
     // There's nothing to do if the alloca doesn't have any variables using
     // assignment tracking.
     if (DVRAssigns.empty())
@@ -382,7 +382,7 @@ struct PromoteMem2Reg {
   SmallVector<AssignmentTrackingInfo, 8> AllocaATInfo;
   /// A set of dbg.assigns to delete because they've been demoted to
   /// dbg.values. Call cleanUpDbgAssigns to delete them.
-  SmallSet<DbgVariableRecord *, 8> DVRAssignsToDelete;
+  SmallPtrSet<DbgVariableRecord *, 8> DVRAssignsToDelete;
 
   /// The set of basic blocks the renamer has already visited.
   BitVector Visited;
@@ -533,11 +533,10 @@ static void removeIntrinsicUsers(AllocaInst *AI) {
 /// false there were some loads which were not dominated by the single store
 /// and thus must be phi-ed with undef. We fall back to the standard alloca
 /// promotion algorithm in that case.
-static bool
-rewriteSingleStoreAlloca(AllocaInst *AI, AllocaInfo &Info, LargeBlockInfo &LBI,
-                         const DataLayout &DL, DominatorTree &DT,
-                         AssumptionCache *AC,
-                         SmallSet<DbgVariableRecord *, 8> *DVRAssignsToDelete) {
+static bool rewriteSingleStoreAlloca(
+    AllocaInst *AI, AllocaInfo &Info, LargeBlockInfo &LBI, const DataLayout &DL,
+    DominatorTree &DT, AssumptionCache *AC,
+    SmallPtrSet<DbgVariableRecord *, 8> *DVRAssignsToDelete) {
   StoreInst *OnlyStore = Info.OnlyStore;
   Value *ReplVal = OnlyStore->getOperand(0);
   // Loads may either load the stored value or uninitialized memory (undef).
@@ -647,11 +646,10 @@ rewriteSingleStoreAlloca(AllocaInst *AI, AllocaInfo &Info, LargeBlockInfo &LBI,
 ///      use(t);
 ///    *A = 42;
 ///  }
-static bool
-promoteSingleBlockAlloca(AllocaInst *AI, const AllocaInfo &Info,
-                         LargeBlockInfo &LBI, const DataLayout &DL,
-                         DominatorTree &DT, AssumptionCache *AC,
-                         SmallSet<DbgVariableRecord *, 8> *DVRAssignsToDelete) {
+static bool promoteSingleBlockAlloca(
+    AllocaInst *AI, const AllocaInfo &Info, LargeBlockInfo &LBI,
+    const DataLayout &DL, DominatorTree &DT, AssumptionCache *AC,
+    SmallPtrSet<DbgVariableRecord *, 8> *DVRAssignsToDelete) {
   // The trickiest case to handle is when we have large blocks. Because of this,
   // this code is optimized assuming that large blocks happen.  This does not
   // significantly pessimize the small block case.  This uses LargeBlockInfo to

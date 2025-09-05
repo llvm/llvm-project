@@ -402,8 +402,8 @@ public:
     Value actualOp = adaptValueType(adaptor.getIn(), rewriter, castSrcType);
 
     // Actual cast (may change bitwidth)
-    auto cast = rewriter.template create<emitc::CastOp>(op.getLoc(),
-                                                        castDestType, actualOp);
+    auto cast =
+        emitc::CastOp::create(rewriter, op.getLoc(), castDestType, actualOp);
 
     // Cast to the expected output type
     auto result = adaptValueType(cast, rewriter, opReturnType);
@@ -507,8 +507,8 @@ public:
     Value lhs = adaptValueType(adaptor.getLhs(), rewriter, arithmeticType);
     Value rhs = adaptValueType(adaptor.getRhs(), rewriter, arithmeticType);
 
-    Value arithmeticResult = rewriter.template create<EmitCOp>(
-        op.getLoc(), arithmeticType, lhs, rhs);
+    Value arithmeticResult =
+        EmitCOp::create(rewriter, op.getLoc(), arithmeticType, lhs, rhs);
 
     Value result = adaptValueType(arithmeticResult, rewriter, type);
 
@@ -547,8 +547,8 @@ public:
     Value lhs = adaptValueType(adaptor.getLhs(), rewriter, arithmeticType);
     Value rhs = adaptValueType(adaptor.getRhs(), rewriter, arithmeticType);
 
-    Value arithmeticResult = rewriter.template create<EmitCOp>(
-        op.getLoc(), arithmeticType, lhs, rhs);
+    Value arithmeticResult =
+        EmitCOp::create(rewriter, op.getLoc(), arithmeticType, lhs, rhs);
 
     Value result = adaptValueType(arithmeticResult, rewriter, type);
 
@@ -610,16 +610,19 @@ public:
              ? rewriter.getIntegerAttr(arithmeticType, 0)
              : rewriter.getIndexAttr(0)));
 
-    emitc::ExpressionOp ternary = emitc::ExpressionOp::create(
-        rewriter, op.getLoc(), arithmeticType, /*do_not_inline=*/false);
-    Block &bodyBlock = ternary.getBodyRegion().emplaceBlock();
+    emitc::ExpressionOp ternary =
+        emitc::ExpressionOp::create(rewriter, op.getLoc(), arithmeticType,
+                                    ValueRange({lhs, rhs, excessCheck, poison}),
+                                    /*do_not_inline=*/false);
+    Block &bodyBlock = ternary.createBody();
     auto currentPoint = rewriter.getInsertionPoint();
     rewriter.setInsertionPointToStart(&bodyBlock);
     Value arithmeticResult =
-        EmitCOp::create(rewriter, op.getLoc(), arithmeticType, lhs, rhs);
-    Value resultOrPoison =
-        emitc::ConditionalOp::create(rewriter, op.getLoc(), arithmeticType,
-                                     excessCheck, arithmeticResult, poison);
+        EmitCOp::create(rewriter, op.getLoc(), arithmeticType,
+                        bodyBlock.getArgument(0), bodyBlock.getArgument(1));
+    Value resultOrPoison = emitc::ConditionalOp::create(
+        rewriter, op.getLoc(), arithmeticType, bodyBlock.getArgument(2),
+        arithmeticResult, bodyBlock.getArgument(3));
     emitc::YieldOp::create(rewriter, op.getLoc(), resultOrPoison);
     rewriter.setInsertionPoint(op->getBlock(), currentPoint);
 
@@ -748,8 +751,8 @@ public:
     }
     Value fpCastOperand = adaptor.getIn();
     if (actualOperandType != operandType) {
-      fpCastOperand = rewriter.template create<emitc::CastOp>(
-          castOp.getLoc(), actualOperandType, fpCastOperand);
+      fpCastOperand = emitc::CastOp::create(rewriter, castOp.getLoc(),
+                                            actualOperandType, fpCastOperand);
     }
     rewriter.replaceOpWithNewOp<emitc::CastOp>(castOp, dstType, fpCastOperand);
 

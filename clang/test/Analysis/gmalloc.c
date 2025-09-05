@@ -41,7 +41,7 @@ void f1(void) {
 
   g_free(g1);
   g_free(g2);
-  g_free(g2); // expected-warning{{Attempt to free released memory}}
+  g_free(g2); // expected-warning{{Attempt to release already released memory}}
 }
 
 void f2(void) {
@@ -61,7 +61,7 @@ void f2(void) {
   g_free(g1);
   g_free(g2);
   g_free(g3);
-  g3 = g_memdup(g3, n_bytes); // expected-warning{{Use of memory after it is freed}}
+  g3 = g_memdup(g3, n_bytes); // expected-warning{{Use of memory after it is released}}
 }
 
 void f3(void) {

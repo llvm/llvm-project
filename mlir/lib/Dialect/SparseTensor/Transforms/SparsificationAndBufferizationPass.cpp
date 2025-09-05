@@ -115,8 +115,7 @@ public:
 
     bufferization::BufferizationState bufferizationState;
 
-    if (failed(bufferization::bufferizeModuleOp(cast<ModuleOp>(getOperation()),
-                                                updatedOptions,
+    if (failed(bufferization::bufferizeModuleOp(getOperation(), updatedOptions,
                                                 bufferizationState)))
       return failure();
 

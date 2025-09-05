@@ -58,7 +58,7 @@ inline _LIBCPP_HIDE_FROM_ABI double log10(_A1 __x) _NOEXCEPT {
 inline _LIBCPP_HIDE_FROM_ABI int ilogb(float __x) _NOEXCEPT { return __builtin_ilogbf(__x); }
 
 template <class = int>
-_LIBCPP_HIDE_FROM_ABI double ilogb(double __x) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI int ilogb(double __x) _NOEXCEPT {
   return __builtin_ilogb(__x);
 }
 

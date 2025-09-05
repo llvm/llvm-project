@@ -731,6 +731,7 @@ template <> struct MappingTraits<FormatStyle::SpaceBeforeParensCustom> {
     IO.mapOptional("AfterFunctionDeclarationName",
                    Spacing.AfterFunctionDeclarationName);
     IO.mapOptional("AfterIfMacros", Spacing.AfterIfMacros);
+    IO.mapOptional("AfterNot", Spacing.AfterNot);
     IO.mapOptional("AfterOverloadedOperator", Spacing.AfterOverloadedOperator);
     IO.mapOptional("AfterPlacementOperator", Spacing.AfterPlacementOperator);
     IO.mapOptional("AfterRequiresInClause", Spacing.AfterRequiresInClause);
@@ -759,6 +760,15 @@ struct ScalarEnumerationTraits<FormatStyle::SpaceBeforeParensStyle> {
     IO.enumCase(Value, "true", FormatStyle::SBPO_ControlStatements);
     IO.enumCase(Value, "ControlStatementsExceptForEachMacros",
                 FormatStyle::SBPO_ControlStatementsExceptControlMacros);
+  }
+};
+
+template <>
+struct ScalarEnumerationTraits<FormatStyle::SpaceInEmptyBracesStyle> {
+  static void enumeration(IO &IO, FormatStyle::SpaceInEmptyBracesStyle &Value) {
+    IO.enumCase(Value, "Always", FormatStyle::SIEB_Always);
+    IO.enumCase(Value, "Block", FormatStyle::SIEB_Block);
+    IO.enumCase(Value, "Never", FormatStyle::SIEB_Never);
   }
 };
 
@@ -930,6 +940,7 @@ template <> struct MappingTraits<FormatStyle> {
     bool DeriveLineEnding = true;
     bool UseCRLF = false;
 
+    bool SpaceInEmptyBlock = false;
     bool SpaceInEmptyParentheses = false;
     bool SpacesInConditionalStatement = false;
     bool SpacesInCStyleCastParentheses = false;
@@ -959,6 +970,7 @@ template <> struct MappingTraits<FormatStyle> {
       IO.mapOptional("PointerBindsToType", Style.PointerAlignment);
       IO.mapOptional("SpaceAfterControlStatementKeyword",
                      Style.SpaceBeforeParens);
+      IO.mapOptional("SpaceInEmptyBlock", SpaceInEmptyBlock);
       IO.mapOptional("SpaceInEmptyParentheses", SpaceInEmptyParentheses);
       IO.mapOptional("SpacesInConditionalStatement",
                      SpacesInConditionalStatement);
@@ -1192,7 +1204,7 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.SpaceBeforeRangeBasedForLoopColon);
     IO.mapOptional("SpaceBeforeSquareBrackets",
                    Style.SpaceBeforeSquareBrackets);
-    IO.mapOptional("SpaceInEmptyBlock", Style.SpaceInEmptyBlock);
+    IO.mapOptional("SpaceInEmptyBraces", Style.SpaceInEmptyBraces);
     IO.mapOptional("SpacesBeforeTrailingComments",
                    Style.SpacesBeforeTrailingComments);
     IO.mapOptional("SpacesInAngles", Style.SpacesInAngles);
@@ -1273,6 +1285,13 @@ template <> struct MappingTraits<FormatStyle> {
         Style.LineEnding = UseCRLF ? FormatStyle::LE_CRLF : FormatStyle::LE_LF;
       else if (UseCRLF)
         Style.LineEnding = FormatStyle::LE_DeriveCRLF;
+    }
+
+    // If SpaceInEmptyBlock was specified but SpaceInEmptyBraces was not,
+    // initialize the latter from the former for backward compatibility.
+    if (SpaceInEmptyBlock &&
+        Style.SpaceInEmptyBraces == FormatStyle::SIEB_Never) {
+      Style.SpaceInEmptyBraces = FormatStyle::SIEB_Block;
     }
 
     if (Style.SpacesInParens != FormatStyle::SIPO_Custom &&
@@ -1676,7 +1695,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SpaceBeforeParensOptions.AfterIfMacros = true;
   LLVMStyle.SpaceBeforeRangeBasedForLoopColon = true;
   LLVMStyle.SpaceBeforeSquareBrackets = false;
-  LLVMStyle.SpaceInEmptyBlock = false;
+  LLVMStyle.SpaceInEmptyBraces = FormatStyle::SIEB_Never;
   LLVMStyle.SpacesBeforeTrailingComments = 1;
   LLVMStyle.SpacesInAngles = FormatStyle::SIAS_Never;
   LLVMStyle.SpacesInContainerLiterals = true;
@@ -1753,7 +1772,6 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   GoogleStyle.AttributeMacros.push_back("absl_nullable");
   GoogleStyle.AttributeMacros.push_back("absl_nullability_unknown");
   GoogleStyle.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
-  GoogleStyle.DerivePointerAlignment = true;
   GoogleStyle.IncludeStyle.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
   GoogleStyle.IncludeStyle.IncludeCategories = {{"^<ext/.*\\.h>", 2, 0, false},
                                                 {"^<.*\\.h>", 1, 0, false},
@@ -1862,6 +1880,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   } else if (Language == FormatStyle::LK_ObjC) {
     GoogleStyle.AlwaysBreakBeforeMultilineStrings = false;
     GoogleStyle.ColumnLimit = 100;
+    GoogleStyle.DerivePointerAlignment = true;
     // "Regroup" doesn't work well for ObjC yet (main header heuristic,
     // relationship between ObjC standard library headers and other heades,
     // #imports, etc.)
@@ -1983,7 +2002,7 @@ FormatStyle getWebKitStyle() {
   Style.ObjCSpaceAfterProperty = true;
   Style.PointerAlignment = FormatStyle::PAS_Left;
   Style.SpaceBeforeCpp11BracedList = true;
-  Style.SpaceInEmptyBlock = true;
+  Style.SpaceInEmptyBraces = FormatStyle::SIEB_Always;
   return Style;
 }
 
@@ -2638,31 +2657,44 @@ private:
 
   int countVariableAlignments(const SmallVectorImpl<AnnotatedLine *> &Lines) {
     int AlignmentDiff = 0;
+
     for (const AnnotatedLine *Line : Lines) {
       AlignmentDiff += countVariableAlignments(Line->Children);
-      for (FormatToken *Tok = Line->First; Tok && Tok->Next; Tok = Tok->Next) {
+
+      for (const auto *Tok = Line->getFirstNonComment(); Tok; Tok = Tok->Next) {
         if (Tok->isNot(TT_PointerOrReference))
           continue;
-        // Don't treat space in `void foo() &&` as evidence.
-        if (const auto *Prev = Tok->getPreviousNonComment()) {
-          if (Prev->is(tok::r_paren) && Prev->MatchingParen) {
-            if (const auto *Func =
-                    Prev->MatchingParen->getPreviousNonComment()) {
-              if (Func->isOneOf(TT_FunctionDeclarationName, TT_StartOfName,
-                                TT_OverloadedOperator)) {
-                continue;
-              }
-            }
-          }
+
+        const auto *Prev = Tok->Previous;
+        const bool PrecededByName = Prev && Prev->Tok.getIdentifierInfo();
+        const bool SpaceBefore = Tok->hasWhitespaceBefore();
+
+        // e.g. `int **`, `int*&`, etc.
+        while (Tok->Next && Tok->Next->is(TT_PointerOrReference))
+          Tok = Tok->Next;
+
+        const auto *Next = Tok->Next;
+        const bool FollowedByName = Next && Next->Tok.getIdentifierInfo();
+        const bool SpaceAfter = Next && Next->hasWhitespaceBefore();
+
+        if ((!PrecededByName && !FollowedByName) ||
+            // e.g. `int * i` or `int*i`
+            (PrecededByName && FollowedByName && SpaceBefore == SpaceAfter)) {
+          continue;
         }
-        bool SpaceBefore = Tok->hasWhitespaceBefore();
-        bool SpaceAfter = Tok->Next->hasWhitespaceBefore();
-        if (SpaceBefore && !SpaceAfter)
+
+        if ((PrecededByName && SpaceBefore) ||
+            (FollowedByName && !SpaceAfter)) {
+          // Right alignment.
           ++AlignmentDiff;
-        if (!SpaceBefore && SpaceAfter)
+        } else if ((PrecededByName && !SpaceBefore) ||
+                   (FollowedByName && SpaceAfter)) {
+          // Left alignment.
           --AlignmentDiff;
+        }
       }
     }
+
     return AlignmentDiff;
   }
 

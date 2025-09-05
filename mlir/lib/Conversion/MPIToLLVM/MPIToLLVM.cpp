@@ -35,7 +35,7 @@ static Op getOrDefineGlobal(ModuleOp &moduleOp, const Location loc,
   if (!(ret = moduleOp.lookupSymbol<Op>(name))) {
     ConversionPatternRewriter::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointToStart(moduleOp.getBody());
-    ret = rewriter.template create<Op>(loc, std::forward<Args>(args)...);
+    ret = Op::create(rewriter, loc, std::forward<Args>(args)...);
   }
   return ret;
 }

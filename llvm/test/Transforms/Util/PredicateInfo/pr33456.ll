@@ -61,8 +61,8 @@ define i32 @main() {
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
