@@ -30,7 +30,6 @@
 #include "polly/JSONExporter.h"
 #include "polly/LinkAllPasses.h"
 #include "polly/MaximalStaticExpansion.h"
-#include "polly/PolyhedralInfo.h"
 #include "polly/PruneUnprofitable.h"
 #include "polly/ScheduleOptimizer.h"
 #include "polly/ScopDetection.h"
@@ -232,8 +231,6 @@ void initializePollyPasses(llvm::PassRegistry &Registry) {
   initializeIslScheduleOptimizerWrapperPassPass(Registry);
   initializeIslScheduleOptimizerPrinterLegacyPassPass(Registry);
   initializePollyCanonicalizePass(Registry);
-  initializePolyhedralInfoPass(Registry);
-  initializePolyhedralInfoPrinterLegacyPassPass(Registry);
   initializeScopDetectionWrapperPassPass(Registry);
   initializeScopDetectionPrinterLegacyPassPass(Registry);
   initializeScopInlinerPass(Registry);
