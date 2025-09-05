@@ -22,6 +22,7 @@ User Guide for AMDGPU Backend
    AMDGPU/AMDGPUAsmGFX1013
    AMDGPU/AMDGPUAsmGFX1030
    AMDGPU/AMDGPUAsmGFX11
+   AMDGPU/AMDGPUAsmGFX12
    AMDGPUModifierSyntax
    AMDGPUOperandSyntax
    AMDGPUInstructionSyntax
