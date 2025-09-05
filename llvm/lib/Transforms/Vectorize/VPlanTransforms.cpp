@@ -1081,20 +1081,21 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  // OR x, 1 -> 1.
-  if (match(Def, m_c_BinaryOr(m_VPValue(X), m_AllOnes()))) {
-    Def->replaceAllUsesWith(Def->getOperand(0) == X ? Def->getOperand(1)
-                                                    : Def->getOperand(0));
-    Def->eraseFromParent();
-    return;
-  }
+  // x | 1 -> 1
+  if (match(Def, m_c_BinaryOr(m_VPValue(X), m_AllOnes())))
+    return Def->replaceAllUsesWith(Def->getOperand(Def->getOperand(0) == X));
 
-  // AND x, 0 -> 0
-  if (match(&R, m_c_BinaryAnd(m_VPValue(X), m_ZeroInt()))) {
-    Def->replaceAllUsesWith(R.getOperand(0) == X ? R.getOperand(1)
-                                                 : R.getOperand(0));
-    return;
-  }
+  // x | 0 -> x
+  if (match(Def, m_c_BinaryOr(m_VPValue(X), m_ZeroInt())))
+    return Def->replaceAllUsesWith(X);
+
+  // x & 0 -> 0
+  if (match(Def, m_c_BinaryAnd(m_VPValue(X), m_ZeroInt())))
+    return Def->replaceAllUsesWith(Def->getOperand(Def->getOperand(0) == X));
+
+  // x && false -> false
+  if (match(Def, m_LogicalAnd(m_VPValue(X), m_False())))
+    return Def->replaceAllUsesWith(Def->getOperand(1));
 
   // (x && y) || (x && z) -> x && (y || z)
   VPBuilder Builder(Def);
@@ -1106,6 +1107,11 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
        !Def->getOperand(1)->hasMoreThanOneUniqueUser()))
     return Def->replaceAllUsesWith(
         Builder.createLogicalAnd(X, Builder.createOr(Y, Z)));
+
+  // x && !x -> 0
+  if (match(&R, m_LogicalAnd(m_VPValue(X), m_Not(m_Deferred(X)))))
+    return Def->replaceAllUsesWith(Plan->getOrAddLiveIn(
+        ConstantInt::getFalse(VPTypeAnalysis(*Plan).inferScalarType(Def))));
 
   if (match(Def, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
     return Def->replaceAllUsesWith(X);
@@ -1317,6 +1323,23 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
   }
 }
 
+/// Try to see if all of \p Blend's masks share a common value logically and'ed
+/// and remove it from the masks.
+static void removeCommonBlendMask(VPBlendRecipe *Blend) {
+  if (Blend->isNormalized())
+    return;
+  VPValue *CommonEdgeMask;
+  if (!match(Blend->getMask(0),
+             m_LogicalAnd(m_VPValue(CommonEdgeMask), m_VPValue())))
+    return;
+  for (unsigned I = 0; I < Blend->getNumIncomingValues(); I++)
+    if (!match(Blend->getMask(I),
+               m_LogicalAnd(m_Specific(CommonEdgeMask), m_VPValue())))
+      return;
+  for (unsigned I = 0; I < Blend->getNumIncomingValues(); I++)
+    Blend->setMask(I, Blend->getMask(I)->getDefiningRecipe()->getOperand(1));
+}
+
 /// Normalize and simplify VPBlendRecipes. Should be run after simplifyRecipes
 /// to make sure the masks are simplified.
 static void simplifyBlends(VPlan &Plan) {
@@ -1326,6 +1349,8 @@ static void simplifyBlends(VPlan &Plan) {
       auto *Blend = dyn_cast<VPBlendRecipe>(&R);
       if (!Blend)
         continue;
+
+      removeCommonBlendMask(Blend);
 
       // Try to remove redundant blend recipes.
       SmallPtrSet<VPValue *, 4> UniqueValues;

@@ -1348,7 +1348,7 @@ def VGPRSrc_16 : RegisterOperand<VGPR_16> {
 def VGPROp_16 : RegisterOperand<VGPR_16>;
 def VGPROp_32 : RegisterOperand<VGPR_32>;
 
-foreach size = ["64", "96", "128", "256" ] in {
+foreach size = ["64", "96", "128", "256", "1024" ] in {
   def VGPROp_#size : RegisterOperand<!cast<RegisterClass>("VReg_"#size)>;
   def VGPROp_#size#_Align1 : RegisterOperand<!cast<RegisterClass>("VReg_"#size)>;
   def VGPROp_#size#_Align2 : RegisterOperand<!cast<RegisterClass>("VReg_"#size#_Align2)>;
@@ -1491,4 +1491,28 @@ class OperandIsAGPR<DAGOperand Op> {
 class OperandIsVGPR<DAGOperand Op> {
   defvar reg_class = getRegClassFromOp<Op>.ret;
   bit ret = !and(reg_class.HasVGPR, !not(reg_class.HasAGPR));
+}
+
+class VDstOperandIsAV<dag OperandList> {
+  bit ret = OperandIsAV<!getdagarg<DAGOperand>(OperandList, "vdst")>.ret;
+}
+
+class VDstOperandIsAGPR<dag OperandList> {
+  bit ret = OperandIsAGPR<!getdagarg<DAGOperand>(OperandList, "vdst")>.ret;
+}
+
+class Data0OperandIsAV<dag OperandList> {
+  bit ret = OperandIsAV<!getdagarg<DAGOperand>(OperandList, "data0")>.ret;
+}
+
+class Data0OperandIsAGPR<dag OperandList> {
+  bit ret = OperandIsAGPR<!getdagarg<DAGOperand>(OperandList, "data0")>.ret;
+}
+
+class VDataOperandIsAV<dag OperandList> {
+  bit ret = OperandIsAV<!getdagarg<DAGOperand>(OperandList, "vdata")>.ret;
+}
+
+class VDataOperandIsAGPR<dag OperandList> {
+  bit ret = OperandIsAGPR<!getdagarg<DAGOperand>(OperandList, "vdata")>.ret;
 }
