@@ -20,6 +20,7 @@
 #include "llvm/Support/Error.h"
 #include <cassert>
 #include <cstdint>
+#include <limits>
 
 namespace llvm {
 class raw_ostream;
@@ -62,7 +63,20 @@ public:
   }
 
   /// Get the size of this range.
-  int64_t size() const { return End - Begin + 1; }
+  uint64_t size() const {
+    if (Begin >= 0 || End < 0) {
+      // Safe: (End - Begin) fits in int64_t in both same-sign cases.
+      return static_cast<uint64_t>(End - Begin) + 1;
+    }
+    // Mixed signs: Begin < 0 <= End.
+    // Handle potential extreme overflow case explicitly.
+    assert(!(Begin == std::numeric_limits<int64_t>::min() &&
+             End == std::numeric_limits<int64_t>::max()) &&
+           "Range size would overflow uint64_t");
+    // Compute |Begin| without overflowing when Begin == INT64_MIN.
+    const uint64_t AbsBegin = static_cast<uint64_t>(-(Begin + 1)) + 1;
+    return static_cast<uint64_t>(End) + AbsBegin + 1;
+  }
 
   /// Print the range to the output stream.
   void print(raw_ostream &OS) const {
