@@ -22,6 +22,7 @@ add_orc_rt_unittest(CoreTests
   MemoryFlagsTest.cpp
   RTTITest.cpp
   SimplePackedSerializationTest.cpp
+  SPSWrapperFunctionTest.cpp
   WrapperFunctionBufferTest.cpp
   bind-test.cpp
   bit-test.cpp

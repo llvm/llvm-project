@@ -1,4 +1,5 @@
 set(ORC_RT_HEADERS
+    orc-rt-c/CoreTyspe.h
     orc-rt-c/ExternC.h
     orc-rt-c/WrapperFunction.h
     orc-rt-c/orc-rt.h
@@ -13,6 +14,7 @@ set(ORC_RT_HEADERS
     orc-rt/RTTI.h
     orc-rt/WrapperFunction.h
     orc-rt/SimplePackedSerialization.h
+    orc-rt/SPSWrapperFunction.h
     orc-rt/bind.h
     orc-rt/bit.h
     orc-rt/move_only_function.h
