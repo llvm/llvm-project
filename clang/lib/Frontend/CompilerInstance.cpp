@@ -844,8 +844,7 @@ void CompilerInstance::setOutputManager(
 
 void CompilerInstance::createOutputManager() {
   assert(!OutputMgr && "Already has an output manager");
-  OutputMgr =
-      llvm::makeIntrusiveRefCnt<llvm::vfs::OnDiskOutputBackend>();
+  OutputMgr = llvm::makeIntrusiveRefCnt<llvm::vfs::OnDiskOutputBackend>();
 }
 
 llvm::vfs::OutputBackend &CompilerInstance::getOutputManager() {
