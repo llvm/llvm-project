@@ -783,9 +783,13 @@ multiclass FLAT_Atomic_Pseudo_RTN<
   ValueType vt,
   ValueType data_vt = vt,
   RegisterOperand data_op = vdst_op> {
+
+  defvar vdst_op_vgpr = getEquivalentVGPROperand<vdst_op>.ret;
+  defvar data_op_vgpr = getEquivalentVGPROperand<data_op>.ret;
+
   def _RTN : FLAT_AtomicRet_Pseudo <opName,
-    (outs vdst_op:$vdst),
-    (ins VReg_64:$vaddr, data_op:$vdata, flat_offset:$offset, CPol_GLC1:$cpol),
+    (outs vdst_op_vgpr:$vdst),
+    (ins VReg_64:$vaddr, data_op_vgpr:$vdata, flat_offset:$offset, CPol_GLC1:$cpol),
     " $vdst, $vaddr, $vdata$offset$cpol">,
     GlobalSaddrTable<0, opName#"_rtn"> {
     let FPAtomic = data_vt.isFP;
@@ -793,8 +797,8 @@ multiclass FLAT_Atomic_Pseudo_RTN<
   }
 
   def _SADDR_RTN : FLAT_AtomicRet_Pseudo <opName,
-    (outs vdst_op:$vdst),
-      (ins VGPR_32:$vaddr, data_op:$vdata, SReg_64:$saddr, flat_offset:$offset, CPol_GLC1:$cpol),
+    (outs vdst_op_vgpr:$vdst),
+      (ins VGPR_32:$vaddr, data_op_vgpr:$vdata, SReg_64:$saddr, flat_offset:$offset, CPol_GLC1:$cpol),
     " $vdst, $vaddr, $vdata, $saddr$offset$cpol">,
     GlobalSaddrTable<1, opName#"_rtn"> {
     let OtherPredicates = [HasFlatGVSMode];
@@ -804,6 +808,19 @@ multiclass FLAT_Atomic_Pseudo_RTN<
     let FPAtomic = data_vt.isFP;
     let AddedComplexity = -1; // Prefer global atomics if available
   }
+
+  defvar vdst_op_agpr = getEquivalentAGPROperand<vdst_op>.ret;
+  defvar data_op_agpr = getEquivalentAGPROperand<data_op>.ret;
+
+  def _RTN_agpr : FLAT_AtomicRet_Pseudo <opName,
+    (outs vdst_op_agpr:$vdst),
+    (ins VReg_64:$vaddr, data_op_agpr:$vdata, flat_offset:$offset, CPol_GLC1:$cpol),
+    " $vdst, $vaddr, $vdata$offset$cpol">,
+    GlobalSaddrTable<0, opName#"_rtn_agpr"> {
+    let FPAtomic = data_vt.isFP;
+    let AddedComplexity = -1; // Prefer global atomics if available
+  }
+  // No saddr agpr form. HasFlatGVSMode targets do not have AGPRs.
 }
 
 multiclass FLAT_Atomic_Pseudo<
@@ -2668,6 +2685,7 @@ multiclass FLAT_Real_Atomics_vi <bits<7> op,
   defvar ps = !cast<FLAT_Pseudo>(NAME);
   def _vi     : FLAT_Real_vi<op, !cast<FLAT_Pseudo>(ps.PseudoInstr), has_sccb>;
   def _RTN_vi : FLAT_Real_vi<op, !cast<FLAT_Pseudo>(ps.PseudoInstr # "_RTN"), has_sccb>;
+  def _RTN_agpr_vi : FLAT_Real_vi<op, !cast<FLAT_Pseudo>(ps.PseudoInstr # "_RTN_agpr"), has_sccb>;
 }
 
 multiclass FLAT_Global_Real_Atomics_vi<bits<7> op,
