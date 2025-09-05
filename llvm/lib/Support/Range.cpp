@@ -95,8 +95,7 @@ void RangeUtils::printRanges(raw_ostream &OS, ArrayRef<Range> Ranges) {
   }
 }
 
-RangeUtils::RangeList
-RangeUtils::mergeAdjacentRanges(ArrayRef<Range> Ranges) {
+RangeUtils::RangeList RangeUtils::mergeAdjacentRanges(ArrayRef<Range> Ranges) {
   if (Ranges.empty())
     return {};
 
