@@ -2161,6 +2161,597 @@ NVVM::IIDArgsMaybeWithTypes PrefetchOp::getIntrinsicIDAndArgsMaybeWithTypes(
   }
 }
 
+#define REDUX_F32_ID_IMPL(op, abs, hasNaN)                                     \
+  hasNaN ? llvm::Intrinsic::nvvm_redux_sync_f##op##abs##_NaN                   \
+         : llvm::Intrinsic::nvvm_redux_sync_f##op##abs
+
+#define GET_REDUX_F32_ID(op, hasAbs, hasNaN)                                   \
+  hasAbs ? REDUX_F32_ID_IMPL(op, _abs, hasNaN) : REDUX_F32_ID_IMPL(op, , hasNaN)
+
+NVVM::IIDArgsMaybeWithTypes ReduxOp::getIntrinsicIDAndArgsMaybeWithTypes(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::ReduxOp>(op);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getVal()));
+  args.push_back(mt.lookupValue(thisOp.getMaskAndClamp()));
+
+  bool hasAbs = thisOp.getAbs();
+  bool hasNaN = thisOp.getNan();
+  NVVM::ReduxKind kind = thisOp.getKind();
+
+  llvm::Intrinsic::ID id;
+
+  switch (kind) {
+  case NVVM::ReduxKind::ADD:
+    id = llvm::Intrinsic::nvvm_redux_sync_add;
+    break;
+  case NVVM::ReduxKind::UMAX:
+    id = llvm::Intrinsic::nvvm_redux_sync_umax;
+    break;
+  case NVVM::ReduxKind::UMIN:
+    id = llvm::Intrinsic::nvvm_redux_sync_umin;
+    break;
+  case NVVM::ReduxKind::AND:
+    id = llvm::Intrinsic::nvvm_redux_sync_and;
+    break;
+  case NVVM::ReduxKind::OR:
+    id = llvm::Intrinsic::nvvm_redux_sync_or;
+    break;
+  case NVVM::ReduxKind::XOR:
+    id = llvm::Intrinsic::nvvm_redux_sync_xor;
+    break;
+  case NVVM::ReduxKind::MAX:
+    id = llvm::Intrinsic::nvvm_redux_sync_max;
+    break;
+  case NVVM::ReduxKind::MIN:
+    id = llvm::Intrinsic::nvvm_redux_sync_min;
+    break;
+  case NVVM::ReduxKind::FMIN:
+    id = GET_REDUX_F32_ID(min, hasAbs, hasNaN);
+    break;
+  case NVVM::ReduxKind::FMAX:
+    id = GET_REDUX_F32_ID(max, hasAbs, hasNaN);
+    break;
+  }
+
+  return {id, std::move(args), {}};
+}
+
+NVVM::IIDArgsMaybeWithTypes ShflOp::getIntrinsicIDAndArgsMaybeWithTypes(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::ShflOp>(op);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getThreadMask()));
+  args.push_back(mt.lookupValue(thisOp.getVal()));
+  args.push_back(mt.lookupValue(thisOp.getOffset()));
+  args.push_back(mt.lookupValue(thisOp.getMaskAndClamp()));
+
+  mlir::Type resultType = thisOp.getResult().getType();
+  NVVM::ShflKind kind = thisOp.getKind();
+  bool withPredicate = static_cast<bool>(thisOp.getReturnValueAndIsValid());
+
+  llvm::Intrinsic::ID id;
+
+  if (withPredicate) {
+    resultType = cast<LLVM::LLVMStructType>(resultType).getBody()[0];
+    switch (kind) {
+    case NVVM::ShflKind::bfly:
+      id = resultType.isFloat() ? llvm::Intrinsic::nvvm_shfl_sync_bfly_f32p
+                                : llvm::Intrinsic::nvvm_shfl_sync_bfly_i32p;
+      break;
+    case NVVM::ShflKind::up:
+      id = resultType.isFloat() ? llvm::Intrinsic::nvvm_shfl_sync_up_f32p
+                                : llvm::Intrinsic::nvvm_shfl_sync_up_i32p;
+      break;
+    case NVVM::ShflKind::down:
+      id = resultType.isFloat() ? llvm::Intrinsic::nvvm_shfl_sync_down_f32p
+                                : llvm::Intrinsic::nvvm_shfl_sync_down_i32p;
+      break;
+    case NVVM::ShflKind::idx:
+      id = resultType.isFloat() ? llvm::Intrinsic::nvvm_shfl_sync_idx_f32p
+                                : llvm::Intrinsic::nvvm_shfl_sync_idx_i32p;
+      break;
+    default:
+      llvm_unreachable("unknown shuffle kind");
+    }
+  } else {
+    switch (kind) {
+    case NVVM::ShflKind::bfly:
+      id = resultType.isFloat() ? llvm::Intrinsic::nvvm_shfl_sync_bfly_f32
+                                : llvm::Intrinsic::nvvm_shfl_sync_bfly_i32;
+      break;
+    case NVVM::ShflKind::up:
+      id = resultType.isFloat() ? llvm::Intrinsic::nvvm_shfl_sync_up_f32
+                                : llvm::Intrinsic::nvvm_shfl_sync_up_i32;
+      break;
+    case NVVM::ShflKind::down:
+      id = resultType.isFloat() ? llvm::Intrinsic::nvvm_shfl_sync_down_f32
+                                : llvm::Intrinsic::nvvm_shfl_sync_down_i32;
+      break;
+    case NVVM::ShflKind::idx:
+      id = resultType.isFloat() ? llvm::Intrinsic::nvvm_shfl_sync_idx_f32
+                                : llvm::Intrinsic::nvvm_shfl_sync_idx_i32;
+      break;
+    default:
+      llvm_unreachable("unknown shuffle kind");
+    }
+  }
+
+  return {id, std::move(args), {}};
+}
+
+NVVM::IIDArgsMaybeWithTypes MatchSyncOp::getIntrinsicIDAndArgsMaybeWithTypes(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::MatchSyncOp>(op);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getThreadMask()));
+  args.push_back(mt.lookupValue(thisOp.getVal()));
+
+  llvm::Intrinsic::ID id;
+
+  mlir::Type valType = thisOp.getVal().getType();
+  NVVM::MatchSyncKind kind = thisOp.getKind();
+
+  switch (kind) {
+  case NVVM::MatchSyncKind::any:
+    id = valType.isInteger(32) ? llvm::Intrinsic::nvvm_match_any_sync_i32
+                               : llvm::Intrinsic::nvvm_match_any_sync_i64;
+    break;
+  case NVVM::MatchSyncKind::all:
+    // match.all instruction has two variants -- one returns a single value,
+    // another returns a pair {value, predicate}. We currently only implement
+    // the latter as that's the variant exposed by CUDA API.
+    id = valType.isInteger(32) ? llvm::Intrinsic::nvvm_match_all_sync_i32p
+                               : llvm::Intrinsic::nvvm_match_all_sync_i64p;
+    break;
+  }
+
+  return {id, std::move(args), {}};
+}
+
+NVVM::IIDArgsMaybeWithTypes VoteSyncOp::getIntrinsicIDAndArgsMaybeWithTypes(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::VoteSyncOp>(op);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getMask()));
+  args.push_back(mt.lookupValue(thisOp.getPred()));
+
+  llvm::Intrinsic::ID id;
+
+  NVVM::VoteSyncKind kind = thisOp.getKind();
+
+  switch (kind) {
+  case NVVM::VoteSyncKind::any:
+    id = llvm::Intrinsic::nvvm_vote_any_sync;
+    break;
+  case NVVM::VoteSyncKind::all:
+    id = llvm::Intrinsic::nvvm_vote_all_sync;
+    break;
+  case NVVM::VoteSyncKind::ballot:
+    id = llvm::Intrinsic::nvvm_vote_ballot_sync;
+    break;
+  case NVVM::VoteSyncKind::uni:
+    id = llvm::Intrinsic::nvvm_vote_uni_sync;
+    break;
+  }
+
+  return {id, std::move(args), {}};
+}
+
+NVVM::IIDArgsMaybeWithTypes LdMatrixOp::getIntrinsicIDAndArgsMaybeWithTypes(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::LdMatrixOp>(op);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.reserve(op.getOperands().size());
+  for (mlir::Value v : op.getOperands())
+    args.push_back(mt.lookupValue(v));
+
+  llvm::SmallVector<llvm::Type *> types = {args[0]->getType()};
+
+  llvm::Intrinsic::ID id;
+
+  NVVM::MMALayout layout = thisOp.getLayout();
+  int32_t num = thisOp.getNum();
+  NVVM::LdStMatrixShapeAttr shape = thisOp.getShape();
+  NVVM::LdStMatrixEltType eltType = thisOp.getEltType();
+
+  if (shape.getM() == 8 && shape.getN() == 8) {
+    switch (num) {
+    case 1:
+      id = (layout == NVVM::MMALayout::row)
+               ? llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_b16
+               : llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_trans_b16;
+      break;
+    case 2:
+      id = (layout == NVVM::MMALayout::row)
+               ? llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x2_b16
+               : llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x2_trans_b16;
+      break;
+    case 4:
+      id = (layout == NVVM::MMALayout::row)
+               ? llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x4_b16
+               : llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x4_trans_b16;
+      break;
+    }
+  } else if (shape.getM() == 8 && shape.getN() == 16) {
+    if (eltType == NVVM::LdStMatrixEltType::B8X16_B6X16_P32) {
+      switch (num) {
+      case 1:
+        id = llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m8n16_x1_b8x16_b6x16_p32;
+        break;
+      case 2:
+        id = llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m8n16_x2_b8x16_b6x16_p32;
+        break;
+      case 4:
+        id = llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m8n16_x4_b8x16_b6x16_p32;
+        break;
+      }
+    } else if (eltType == NVVM::LdStMatrixEltType::B8X16_B4X16_P64) {
+      switch (num) {
+      case 1:
+        id = llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m8n16_x1_b8x16_b4x16_p64;
+        break;
+      case 2:
+        id = llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m8n16_x2_b8x16_b4x16_p64;
+        break;
+      case 4:
+        id = llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m8n16_x4_b8x16_b4x16_p64;
+        break;
+      }
+    }
+  } else if (shape.getM() == 16 && shape.getN() == 16) {
+    if (eltType == NVVM::LdStMatrixEltType::B8) {
+      switch (num) {
+      case 1:
+        id = llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x1_trans_b8;
+        break;
+      case 2:
+        id = llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8;
+        break;
+      }
+    } else if (eltType == NVVM::LdStMatrixEltType::B8X16_B6X16_P32) {
+      switch (num) {
+      case 1:
+        id = llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m16n16_x1_trans_b8x16_b6x16_p32;
+        break;
+      case 2:
+        id = llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8x16_b6x16_p32;
+        break;
+      }
+    } else if (eltType == NVVM::LdStMatrixEltType::B8X16_B4X16_P64) {
+      switch (num) {
+      case 1:
+        id = llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m16n16_x1_trans_b8x16_b4x16_p64;
+        break;
+      case 2:
+        id = llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8x16_b4x16_p64;
+        break;
+      }
+    }
+  }
+
+  return {id, std::move(args), types};
+}
+
+NVVM::IIDArgsMaybeWithTypes StMatrixOp::getIntrinsicIDAndArgsMaybeWithTypes(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::StMatrixOp>(op);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.reserve(op.getOperands().size());
+  for (mlir::Value v : op.getOperands())
+    args.push_back(mt.lookupValue(v));
+
+  llvm::SmallVector<llvm::Type *> types = {args[0]->getType()};
+
+  llvm::Intrinsic::ID id;
+
+  NVVM::MMALayout layout = thisOp.getLayout();
+  int32_t num = thisOp.getSources().size();
+  NVVM::LdStMatrixShapeAttr shape = thisOp.getShape();
+  NVVM::LdStMatrixEltType eltType = thisOp.getEltType();
+
+  if (shape.getM() == 8 && shape.getN() == 8) {
+    switch (num) {
+    case 1:
+      id = (layout == NVVM::MMALayout::row)
+               ? llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x1_b16
+               : llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x1_trans_b16;
+      break;
+    case 2:
+      id = (layout == NVVM::MMALayout::row)
+               ? llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x2_b16
+               : llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x2_trans_b16;
+      break;
+    case 4:
+      id = (layout == NVVM::MMALayout::row)
+               ? llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x4_b16
+               : llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x4_trans_b16;
+      break;
+    }
+  } else if (shape.getM() == 16 && shape.getN() == 8) {
+    switch (num) {
+    case 1:
+      id = llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m16n8_x1_trans_b8;
+      break;
+    case 2:
+      id = llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m16n8_x2_trans_b8;
+      break;
+    case 4:
+      id = llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m16n8_x4_trans_b8;
+      break;
+    }
+  }
+
+  return {id, std::move(args), types};
+}
+
+NVVM::IIDArgsMaybeWithTypes BulkStoreOp::getIntrinsicIDAndArgsMaybeWithTypes(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::BulkStoreOp>(op);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getAddr()));
+  args.push_back(mt.lookupValue(thisOp.getSize()));
+  args.push_back(builder.getInt64(thisOp.getInitVal()));
+
+  llvm::Intrinsic::ID id;
+
+  auto addrType = llvm::cast<LLVM::LLVMPointerType>(thisOp.getAddr().getType());
+  bool isSharedMemory =
+      addrType.getAddressSpace() == NVVM::NVVMMemorySpace::kSharedMemorySpace;
+  id = isSharedMemory ? llvm::Intrinsic::nvvm_st_bulk_shared_cta
+                      : llvm::Intrinsic::nvvm_st_bulk;
+
+  return {id, std::move(args), {}};
+}
+
+NVVM::IIDArgsMaybeWithTypes
+FenceProxyAcquireOp::getIntrinsicIDAndArgsMaybeWithTypes(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::FenceProxyAcquireOp>(op);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getAddr()));
+  args.push_back(mt.lookupValue(thisOp.getSize()));
+
+  llvm::Intrinsic::ID id;
+
+  NVVM::ProxyKind fromProxy = thisOp.getFromProxy();
+  NVVM::ProxyKind toProxy = thisOp.getToProxy();
+  NVVM::MemScopeKind scope = thisOp.getScope();
+
+  if (fromProxy == NVVM::ProxyKind::GENERIC &&
+      toProxy == NVVM::ProxyKind::TENSORMAP) {
+    switch (scope) {
+    case NVVM::MemScopeKind::CTA:
+      id = llvm::Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_cta;
+      break;
+    case NVVM::MemScopeKind::CLUSTER:
+      id = llvm::Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_cluster;
+      break;
+    case NVVM::MemScopeKind::GPU:
+      id = llvm::Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_gpu;
+      break;
+    case NVVM::MemScopeKind::SYS:
+      id = llvm::Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_sys;
+      break;
+    }
+  }
+
+  return {id, std::move(args), {}};
+}
+
+NVVM::IIDArgsMaybeWithTypes
+FenceProxyReleaseOp::getIntrinsicIDAndArgsMaybeWithTypes(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::FenceProxyReleaseOp>(op);
+
+  llvm::Intrinsic::ID id;
+
+  NVVM::ProxyKind fromProxy = thisOp.getFromProxy();
+  NVVM::ProxyKind toProxy = thisOp.getToProxy();
+  NVVM::MemScopeKind scope = thisOp.getScope();
+
+  if (fromProxy == NVVM::ProxyKind::GENERIC &&
+      toProxy == NVVM::ProxyKind::TENSORMAP) {
+    switch (scope) {
+    case NVVM::MemScopeKind::CTA:
+      id = llvm::Intrinsic::nvvm_fence_proxy_tensormap_generic_release_cta;
+      break;
+    case NVVM::MemScopeKind::CLUSTER:
+      id = llvm::Intrinsic::nvvm_fence_proxy_tensormap_generic_release_cluster;
+      break;
+    case NVVM::MemScopeKind::GPU:
+      id = llvm::Intrinsic::nvvm_fence_proxy_tensormap_generic_release_gpu;
+      break;
+    case NVVM::MemScopeKind::SYS:
+      id = llvm::Intrinsic::nvvm_fence_proxy_tensormap_generic_release_sys;
+      break;
+    }
+  }
+
+  return {id, {}, {}};
+}
+
+#define TCGEN05LD(SHAPE, NUM) llvm::Intrinsic::nvvm_tcgen05_ld_##SHAPE##_##NUM
+
+NVVM::IIDArgsMaybeWithTypes Tcgen05LdOp::getIntrinsicIDAndArgsMaybeWithTypes(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::Tcgen05LdOp>(op);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getTmemAddr()));
+  if (mt.lookupValue(thisOp.getOffset()))
+    args.push_back(mt.lookupValue(thisOp.getOffset()));
+
+  llvm::LLVMContext &ctx = mt.getLLVMContext();
+  auto Pack = llvm::ConstantInt::get(ctx, llvm::APInt(1, thisOp.getPack()));
+  args.push_back(Pack);
+
+  mlir::Type resultType = thisOp.getResult().getType();
+  uint32_t num = isa<VectorType>(resultType)
+                     ? llvm::cast<VectorType>(resultType).getNumElements()
+                     : 1;
+  NVVM::Tcgen05LdStShape shape = thisOp.getShape();
+
+  llvm::Intrinsic::ID id;
+
+  llvm::Intrinsic::ID Shape16x64b[] = {
+      TCGEN05LD(16x64b, x1),  TCGEN05LD(16x64b, x2),   TCGEN05LD(16x64b, x4),
+      TCGEN05LD(16x64b, x8),  TCGEN05LD(16x64b, x16),  TCGEN05LD(16x64b, x32),
+      TCGEN05LD(16x64b, x64), TCGEN05LD(16x64b, x128),
+  };
+
+  llvm::Intrinsic::ID Shape16x128b[] = {
+      TCGEN05LD(16x128b, x1),  TCGEN05LD(16x128b, x2),  TCGEN05LD(16x128b, x4),
+      TCGEN05LD(16x128b, x8),  TCGEN05LD(16x128b, x16), TCGEN05LD(16x128b, x32),
+      TCGEN05LD(16x128b, x64),
+  };
+
+  llvm::Intrinsic::ID Shape16x256b[] = {
+      TCGEN05LD(16x256b, x1), TCGEN05LD(16x256b, x2),  TCGEN05LD(16x256b, x4),
+      TCGEN05LD(16x256b, x8), TCGEN05LD(16x256b, x16), TCGEN05LD(16x256b, x32),
+  };
+
+  llvm::Intrinsic::ID Shape16x32bx2[] = {
+      TCGEN05LD(16x32bx2, x1),  TCGEN05LD(16x32bx2, x2),
+      TCGEN05LD(16x32bx2, x4),  TCGEN05LD(16x32bx2, x8),
+      TCGEN05LD(16x32bx2, x16), TCGEN05LD(16x32bx2, x32),
+      TCGEN05LD(16x32bx2, x64), TCGEN05LD(16x32bx2, x128),
+  };
+
+  llvm::Intrinsic::ID Shape32x32b[] = {
+      TCGEN05LD(32x32b, x1),  TCGEN05LD(32x32b, x2),   TCGEN05LD(32x32b, x4),
+      TCGEN05LD(32x32b, x8),  TCGEN05LD(32x32b, x16),  TCGEN05LD(32x32b, x32),
+      TCGEN05LD(32x32b, x64), TCGEN05LD(32x32b, x128),
+  };
+
+  // `num` contains the length of vector and log2 of `num` returns the index
+  // into the shape array
+  unsigned Idx = std::log2(num);
+
+  switch (shape) {
+  case NVVM::Tcgen05LdStShape::SHAPE_16X64B:
+    id = Shape16x64b[Idx];
+    break;
+  case NVVM::Tcgen05LdStShape::SHAPE_16X128B:
+    id = Shape16x128b[Idx - 1];
+    break;
+  case NVVM::Tcgen05LdStShape::SHAPE_16X256B:
+    id = Shape16x256b[Idx - 2];
+    break;
+  case NVVM::Tcgen05LdStShape::SHAPE_32X32B:
+    id = Shape32x32b[Idx];
+    break;
+  case NVVM::Tcgen05LdStShape::SHAPE_16X32BX2:
+    id = Shape16x32bx2[Idx];
+    break;
+  }
+
+  if (id == llvm::Intrinsic::not_intrinsic)
+    llvm::report_fatal_error("unknow intrinsic signature for tcgen05.ld");
+
+  return {id, std::move(args), {}};
+}
+
+#define TCGEN05ST(SHAPE, NUM) llvm::Intrinsic::nvvm_tcgen05_st_##SHAPE##_##NUM
+
+NVVM::IIDArgsMaybeWithTypes Tcgen05StOp::getIntrinsicIDAndArgsMaybeWithTypes(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::Tcgen05StOp>(op);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getTmemAddr()));
+  if (mt.lookupValue(thisOp.getOffset()))
+    args.push_back(mt.lookupValue(thisOp.getOffset()));
+  args.push_back(mt.lookupValue(thisOp.getVal()));
+
+  llvm::LLVMContext &ctx = mt.getLLVMContext();
+  auto Unpack = llvm::ConstantInt::get(ctx, llvm::APInt(1, thisOp.getUnpack()));
+  args.push_back(Unpack);
+
+  mlir::Type resultType = thisOp.getVal().getType();
+  uint32_t num = isa<VectorType>(resultType)
+                     ? llvm::cast<VectorType>(resultType).getNumElements()
+                     : 1;
+  NVVM::Tcgen05LdStShape shape = thisOp.getShape();
+
+  llvm::Intrinsic::ID id;
+
+  llvm::Intrinsic::ID Shape16x64b[] = {
+      TCGEN05ST(16x64b, x1),  TCGEN05ST(16x64b, x2),   TCGEN05ST(16x64b, x4),
+      TCGEN05ST(16x64b, x8),  TCGEN05ST(16x64b, x16),  TCGEN05ST(16x64b, x32),
+      TCGEN05ST(16x64b, x64), TCGEN05ST(16x64b, x128),
+  };
+
+  llvm::Intrinsic::ID Shape16x128b[] = {
+      TCGEN05ST(16x128b, x1),  TCGEN05ST(16x128b, x2),  TCGEN05ST(16x128b, x4),
+      TCGEN05ST(16x128b, x8),  TCGEN05ST(16x128b, x16), TCGEN05ST(16x128b, x32),
+      TCGEN05ST(16x128b, x64),
+  };
+
+  llvm::Intrinsic::ID Shape16x256b[] = {
+      TCGEN05ST(16x256b, x1), TCGEN05ST(16x256b, x2),  TCGEN05ST(16x256b, x4),
+      TCGEN05ST(16x256b, x8), TCGEN05ST(16x256b, x16), TCGEN05ST(16x256b, x32),
+  };
+
+  llvm::Intrinsic::ID Shape16x32bx2[] = {
+      TCGEN05ST(16x32bx2, x1),  TCGEN05ST(16x32bx2, x2),
+      TCGEN05ST(16x32bx2, x4),  TCGEN05ST(16x32bx2, x8),
+      TCGEN05ST(16x32bx2, x16), TCGEN05ST(16x32bx2, x32),
+      TCGEN05ST(16x32bx2, x64), TCGEN05ST(16x32bx2, x128),
+  };
+
+  llvm::Intrinsic::ID Shape32x32b[] = {
+      TCGEN05ST(32x32b, x1),  TCGEN05ST(32x32b, x2),   TCGEN05ST(32x32b, x4),
+      TCGEN05ST(32x32b, x8),  TCGEN05ST(32x32b, x16),  TCGEN05ST(32x32b, x32),
+      TCGEN05ST(32x32b, x64), TCGEN05ST(32x32b, x128),
+  };
+
+  // `num` contains the length of vector and log2 of `num` returns the index
+  // into the shape array
+  unsigned Idx = std::log2(num);
+
+  switch (shape) {
+  case NVVM::Tcgen05LdStShape::SHAPE_16X64B:
+    id = Shape16x64b[Idx];
+    break;
+  case NVVM::Tcgen05LdStShape::SHAPE_16X128B:
+    id = Shape16x128b[Idx - 1];
+    break;
+  case NVVM::Tcgen05LdStShape::SHAPE_16X256B:
+    id = Shape16x256b[Idx - 2];
+    break;
+  case NVVM::Tcgen05LdStShape::SHAPE_32X32B:
+    id = Shape32x32b[Idx];
+    break;
+  case NVVM::Tcgen05LdStShape::SHAPE_16X32BX2:
+    id = Shape16x32bx2[Idx];
+    break;
+  }
+
+  if (id == llvm::Intrinsic::not_intrinsic)
+    llvm::report_fatal_error("unknow intrinsic signature for tcgen05.st");
+
+  return {id, std::move(args), {}};
+}
+
 bool NVVM::InlinePtxOp::getAsmValues(
     RewriterBase &rewriter,
     llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>>
