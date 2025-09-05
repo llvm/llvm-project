@@ -1147,7 +1147,6 @@ define void @sextw_removal_ext(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64XTHEADBB-NEXT:    sraw a0, a0, a1
 ; RV64XTHEADBB-NEXT:  .LBB36_1: # %bb2
 ; RV64XTHEADBB-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64XTHEADBB-NEXT:    sext.w a0, a0
 ; RV64XTHEADBB-NEXT:    call foo
 ; RV64XTHEADBB-NEXT:    th.ext a0, a0, 47, 16
 ; RV64XTHEADBB-NEXT:    bnez a0, .LBB36_1
@@ -1198,7 +1197,6 @@ define void @sextw_removal_extu(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64XTHEADBB-NEXT:    sraw a0, a0, a1
 ; RV64XTHEADBB-NEXT:  .LBB37_1: # %bb2
 ; RV64XTHEADBB-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64XTHEADBB-NEXT:    sext.w a0, a0
 ; RV64XTHEADBB-NEXT:    call foo
 ; RV64XTHEADBB-NEXT:    th.extu a0, a0, 47, 17
 ; RV64XTHEADBB-NEXT:    bnez a0, .LBB37_1
