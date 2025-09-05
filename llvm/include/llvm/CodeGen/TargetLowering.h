@@ -4464,6 +4464,10 @@ public:
   ///
   virtual SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
+  ///  For targets which need get QNaN by assigning a certain value to the
+  ///  parameter payload.
+  virtual APFloat getNaNValue(EVT VT) const;
+
   /// Return true if it is profitable to move this shift by a constant amount
   /// through its operand, adjusting any immediate operands as necessary to
   /// preserve semantics. This transformation may not be desirable if it
