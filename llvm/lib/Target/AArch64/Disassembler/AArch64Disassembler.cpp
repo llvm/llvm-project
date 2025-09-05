@@ -130,47 +130,57 @@ DecodeMatrixTileListRegisterClass(MCInst &Inst, unsigned RegMask,
   return Success;
 }
 
-static DecodeStatus DecodeMPRRegisterClass(MCInst &Inst,
-                                           const MCDisassembler *Decoder) {
-  Inst.addOperand(MCOperand::createReg(AArch64::ZA));
-  return Success;
-}
-
 static DecodeStatus DecodeZTRRegisterClass(MCInst &Inst,
                                            const MCDisassembler *Decoder) {
   Inst.addOperand(MCOperand::createReg(AArch64::ZT0));
   return Success;
 }
 
-static const MCPhysReg MatrixZATileDecoderTable[5][16] = {
-    {AArch64::ZAB0},
-    {AArch64::ZAH0, AArch64::ZAH1},
-    {AArch64::ZAS0, AArch64::ZAS1, AArch64::ZAS2, AArch64::ZAS3},
-    {AArch64::ZAD0, AArch64::ZAD1, AArch64::ZAD2, AArch64::ZAD3, AArch64::ZAD4,
-     AArch64::ZAD5, AArch64::ZAD6, AArch64::ZAD7},
-    {AArch64::ZAQ0, AArch64::ZAQ1, AArch64::ZAQ2, AArch64::ZAQ3, AArch64::ZAQ4,
-     AArch64::ZAQ5, AArch64::ZAQ6, AArch64::ZAQ7, AArch64::ZAQ8, AArch64::ZAQ9,
-     AArch64::ZAQ10, AArch64::ZAQ11, AArch64::ZAQ12, AArch64::ZAQ13,
-     AArch64::ZAQ14, AArch64::ZAQ15}};
+static DecodeStatus DecodeMPRRegisterClass(MCInst &Inst,
+                                           const MCDisassembler *Decoder) {
+  Inst.addOperand(MCOperand::createReg(AArch64::ZA));
+  return Success;
+}
 
-template <unsigned NumBitsForTile>
-static DecodeStatus DecodeMatrixTile(MCInst &Inst,
-                                     const MCDisassembler *Decoder) {
-  static_assert(NumBitsForTile == 0);
+static DecodeStatus DecodeMPR8RegisterClass(MCInst &Inst,
+                                            const MCDisassembler *Decoder) {
   Inst.addOperand(MCOperand::createReg(AArch64::ZAB0));
   return Success;
 }
 
-template <unsigned NumBitsForTile>
-static DecodeStatus DecodeMatrixTile(MCInst &Inst, unsigned RegNo,
-                                     uint64_t Address,
-                                     const MCDisassembler *Decoder) {
-  static_assert(NumBitsForTile != 0);
-  unsigned LastReg = (1 << NumBitsForTile) - 1;
-  if (RegNo > LastReg)
-    return Fail;
-  Inst.addOperand(
-      MCOperand::createReg(MatrixZATileDecoderTable[NumBitsForTile][RegNo]));
+static DecodeStatus DecodeMPR16RegisterClass(MCInst &Inst, unsigned RegNo,
+                                             uint64_t Address,
+                                             const MCDisassembler *Decoder) {
+  MCRegister Reg =
+      AArch64MCRegisterClasses[AArch64::MPR16RegClassID].getRegister(RegNo);
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return Success;
+}
+
+static DecodeStatus DecodeMPR32RegisterClass(MCInst &Inst, unsigned RegNo,
+                                             uint64_t Address,
+                                             const MCDisassembler *Decoder) {
+  MCRegister Reg =
+      AArch64MCRegisterClasses[AArch64::MPR32RegClassID].getRegister(RegNo);
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return Success;
+}
+
+static DecodeStatus DecodeMPR64RegisterClass(MCInst &Inst, unsigned RegNo,
+                                             uint64_t Address,
+                                             const MCDisassembler *Decoder) {
+  MCRegister Reg =
+      AArch64MCRegisterClasses[AArch64::MPR64RegClassID].getRegister(RegNo);
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return Success;
+}
+
+static DecodeStatus DecodeMPR128RegisterClass(MCInst &Inst, unsigned RegNo,
+                                              uint64_t Address,
+                                              const MCDisassembler *Decoder) {
+  MCRegister Reg =
+      AArch64MCRegisterClasses[AArch64::MPR128RegClassID].getRegister(RegNo);
+  Inst.addOperand(MCOperand::createReg(Reg));
   return Success;
 }
 
