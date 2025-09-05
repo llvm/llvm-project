@@ -8,6 +8,7 @@
 
 #include "llvm/Linker/IRMover.h"
 #include "LinkDiagnosticInfo.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
@@ -1138,7 +1139,7 @@ void IRLinker::linkNamedMDNodes() {
     NamedMDNode *DestNMD = DstM.getOrInsertNamedMetadata(NMD.getName());
 
     auto &Inserted = NamedMDNodes[DestNMD->getName()];
-    if (Inserted.size() < DestNMD->getNumOperands()) {
+    if (Inserted.empty()) {
       // Must be the first module, copy everything from DestNMD.
       Inserted.insert(DestNMD->operands().begin(), DestNMD->operands().end());
     }
