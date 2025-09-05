@@ -926,19 +926,6 @@ namespace {
     /// fold (not just why it's not strictly a constant expression)?
     bool HasFoldFailureDiagnostic;
 
-    /// Whether we're checking that an expression is a potential constant
-    /// expression. If so, do not fail on constructs that could become constant
-    /// later on (such as a use of an undefined global).
-    bool CheckingPotentialConstantExpression = false;
-
-    /// Whether we're checking for an expression that has undefined behavior.
-    /// If so, we will produce warnings if we encounter an operation that is
-    /// always undefined.
-    ///
-    /// Note that we still need to evaluate the expression normally when this
-    /// is set; this is used when evaluating ICEs in C.
-    bool CheckingForUndefinedBehavior = false;
-
     enum EvaluationMode {
       /// Evaluate as a constant expression. Stop if we find that the expression
       /// is not a constant expression.
@@ -959,19 +946,6 @@ namespace {
       /// can't be modeled.
       EM_IgnoreSideEffects,
     } EvalMode;
-
-    /// Are we checking whether the expression is a potential constant
-    /// expression?
-    bool checkingPotentialConstantExpression() const override  {
-      return CheckingPotentialConstantExpression;
-    }
-
-    /// Are we checking an expression for overflow?
-    // FIXME: We should check for any kind of undefined or suspicious behavior
-    // in such constructs, not just overflow.
-    bool checkingForUndefinedBehavior() const override {
-      return CheckingForUndefinedBehavior;
-    }
 
     EvalInfo(const ASTContext &C, Expr::EvalStatus &S, EvaluationMode Mode)
         : Ctx(const_cast<ASTContext &>(C)), EvalStatus(S), CurrentCall(nullptr),

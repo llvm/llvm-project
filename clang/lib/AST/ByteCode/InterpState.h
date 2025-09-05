@@ -70,17 +70,11 @@ public:
   ASTContext &getASTContext() const override { return Parent.getASTContext(); }
 
   // Forward status checks and updates to the walker.
-  bool checkingForUndefinedBehavior() const override {
-    return Parent.checkingForUndefinedBehavior();
-  }
   bool keepEvaluatingAfterFailure() const override {
     return Parent.keepEvaluatingAfterFailure();
   }
   bool keepEvaluatingAfterSideEffect() const override {
     return Parent.keepEvaluatingAfterSideEffect();
-  }
-  bool checkingPotentialConstantExpression() const override {
-    return Parent.checkingPotentialConstantExpression();
   }
   bool noteUndefinedBehavior() override {
     return Parent.noteUndefinedBehavior();

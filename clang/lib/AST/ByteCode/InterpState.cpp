@@ -20,13 +20,21 @@ using namespace clang::interp;
 InterpState::InterpState(State &Parent, Program &P, InterpStack &Stk,
                          Context &Ctx, SourceMapper *M)
     : Parent(Parent), M(M), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this),
-      Current(&BottomFrame) {}
+      Current(&BottomFrame) {
+  CheckingPotentialConstantExpression =
+      Parent.CheckingPotentialConstantExpression;
+  CheckingForUndefinedBehavior = Parent.CheckingForUndefinedBehavior;
+}
 
 InterpState::InterpState(State &Parent, Program &P, InterpStack &Stk,
                          Context &Ctx, const Function *Func)
     : Parent(Parent), M(nullptr), P(P), Stk(Stk), Ctx(Ctx),
       BottomFrame(*this, Func, nullptr, CodePtr(), Func->getArgSize()),
-      Current(&BottomFrame) {}
+      Current(&BottomFrame) {
+  CheckingPotentialConstantExpression =
+      Parent.CheckingPotentialConstantExpression;
+  CheckingForUndefinedBehavior = Parent.CheckingForUndefinedBehavior;
+}
 
 bool InterpState::inConstantContext() const {
   if (ConstantContextOverride)
