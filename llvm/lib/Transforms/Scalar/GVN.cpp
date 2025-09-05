@@ -50,6 +50,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -2287,6 +2288,50 @@ bool GVNPass::processLoad(LoadInst *L) {
   return true;
 }
 
+// Attempt to process masked loads which have loaded from
+// masked stores with the same mask
+bool GVNPass::processMaskedLoad(IntrinsicInst *I) {
+  Value *Mask = I->getOperand(2);
+  Value *Passthrough = I->getOperand(3);
+
+  MemDepResult Dep = MD->getDependency(I);
+  Instruction *DepInst = Dep.getInst();
+  if (!DepInst || !Dep.isLocal())
+    return false;
+
+  auto *MaskedStore = dyn_cast<IntrinsicInst>(DepInst);
+  if (!MaskedStore || MaskedStore->getIntrinsicID() != Intrinsic::masked_store)
+    return false;
+
+  auto StoreMask = MaskedStore->getOperand(3);
+  if (StoreMask != Mask)
+    return false;
+
+  Value *OpToForward =
+      AvailableValue::get(MaskedStore->getOperand(0)).getSimpleValue();
+  if (auto *LoadToForward = dyn_cast<IntrinsicInst>(OpToForward);
+      LoadToForward &&
+      LoadToForward->getIntrinsicID() == Intrinsic::masked_load) {
+    // For MaskedLoad->MaskedStore->MaskedLoad, the mask must be the same for
+    // all three instructions. The Passthrough on the two loads must also be the
+    // same.
+    if (LoadToForward->getOperand(2) != Mask ||
+        LoadToForward->getOperand(3) != Passthrough)
+      return false;
+  } else {
+    // MaskedStore(Op, ptr, mask)->MaskedLoad(ptr, mask, passthrough) can be
+    // replaced with MaskedStore(Op, ptr, mask)->select(mask, Op, passthrough)
+    IRBuilder<> Builder(I);
+    OpToForward = Builder.CreateSelect(StoreMask, OpToForward, Passthrough);
+  }
+
+  I->replaceAllUsesWith(OpToForward);
+  ICF->removeUsersOf(I);
+  salvageAndRemoveInstruction(I);
+  ++NumGVNLoad;
+  return true;
+}
+
 /// Return a pair the first field showing the value number of \p Exp and the
 /// second field showing whether it is a value number newly created.
 std::pair<uint32_t, bool>
@@ -2733,6 +2778,11 @@ bool GVNPass::processInstruction(Instruction *I) {
     LeaderTable.insert(Num, Load, Load->getParent());
     return false;
   }
+
+  if (auto *II = dyn_cast<IntrinsicInst>(I))
+    if (II && II->getIntrinsicID() == Intrinsic::masked_load)
+      if (processMaskedLoad(II))
+        return true;
 
   // For conditional branches, we can perform simple conditional propagation on
   // the condition value itself.
