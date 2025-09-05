@@ -3192,7 +3192,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   {
     auto ast_context = swift_ast_sp->GetASTContext();
     if (!ast_context) {
-      logError("couldn't initialize Swift cxompiler");
+      logError("couldn't initialize Swift compiler");
      return {};
     }
 
