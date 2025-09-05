@@ -37,13 +37,13 @@ static cl::opt<int> OptBisectLimit(
     "opt-bisect-limit", cl::Hidden, cl::init(-1), cl::Optional,
     cl::cb<void, int>([](int Limit) {
       if (Limit == -1)
-        // -1 means run all passes
+        // -1 means run all passes.
         getOptBisector().setRanges({{1, std::numeric_limits<int>::max()}});
       else if (Limit == 0)
-        // 0 means run no passes
+        // 0 means run no passes.
         getOptBisector().setRanges({{0, 0}});
       else if (Limit > 0)
-        // Convert limit to range 1-Limit
+        // Convert limit to range 1-Limit.
         getOptBisector().setRanges({{1, Limit}});
       else
         llvm_unreachable(
@@ -57,7 +57,7 @@ static cl::opt<std::string> OptBisectRanges(
     "opt-bisect", cl::Hidden, cl::Optional,
     cl::cb<void, const std::string &>([](const std::string &RangeStr) {
       if (RangeStr == "-1") {
-        // -1 means run all passes
+        // -1 means run all passes.
         getOptBisector().setRanges({{1, std::numeric_limits<int>::max()}});
         return;
       }
@@ -107,7 +107,7 @@ bool OptBisect::shouldRunPass(StringRef PassName,
 
   int CurBisectNum = ++LastBisectNum;
 
-  // Check if current pass number falls within any of the specified ranges
+  // Check if current pass number falls within any of the specified ranges.
   bool ShouldRun = RangeUtils::contains(BisectRanges, CurBisectNum);
 
   if (OptBisectVerbose)
