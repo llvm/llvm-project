@@ -529,9 +529,11 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
     case RISCV::ANDI:
     case RISCV::ORI:
     case RISCV::XORI:
+    case RISCV::SRAI:
       // |Remainder| is always <= |Dividend|. If D is 32-bit, then so is R.
       // DIV doesn't work because of the edge case 0xf..f 8000 0000 / (long)-1
       // Logical operations use a sign extended 12-bit immediate.
+      // Arithmetic shift right can only increase the number of sign bits.
       if (!AddRegToWorkList(MI->getOperand(1).getReg()))
         return false;
 
