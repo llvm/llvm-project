@@ -122,6 +122,16 @@ libc_support_library(
 ################################# Include Files ################################
 
 libc_support_library(
+    name = "llvm_libc_macros_complex_macros",
+    hdrs = [
+        "include/llvm-libc-macros/cfloat128-macros.h",
+        "include/llvm-libc-macros/cfloat16-macros.h",
+        "include/llvm-libc-macros/complex-macros.h",
+    ],
+    deps = [":llvm_libc_macros_float_macros"],
+)
+
+libc_support_library(
     name = "llvm_libc_macros_math_macros",
     hdrs = ["include/llvm-libc-macros/math-macros.h"],
     deps = [":llvm_libc_macros_limits_macros"],
@@ -168,12 +178,16 @@ libc_support_library(
 libc_support_library(
     name = "llvm_libc_types_cfloat128",
     hdrs = ["include/llvm-libc-types/cfloat128.h"],
-    deps = [":llvm_libc_macros_float_macros"],
+    deps = [
+        ":llvm_libc_macros_complex_macros",
+        ":llvm_libc_macros_float_macros",
+    ],
 )
 
 libc_support_library(
     name = "llvm_libc_types_cfloat16",
     hdrs = ["include/llvm-libc-types/cfloat16.h"],
+    deps = [":llvm_libc_macros_complex_macros"],
 )
 
 libc_support_library(
