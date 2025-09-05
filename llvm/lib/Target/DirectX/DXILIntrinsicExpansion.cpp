@@ -58,9 +58,7 @@ static Value *expand16BitIsInf(CallInst *Orig) {
 
   Value *Val = Orig->getOperand(0);
   Type *ValTy = Val->getType();
-  if (!(ValTy->isHalfTy() ||
-        (ValTy->isVectorTy() &&
-         cast<FixedVectorType>(ValTy)->getElementType()->isHalfTy())))
+  if (!ValTy->getScalarType()->isHalfTy())
     return nullptr;
 
   IRBuilder<> Builder(Orig);
