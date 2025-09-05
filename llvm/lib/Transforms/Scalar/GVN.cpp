@@ -978,7 +978,7 @@ static bool IsValueFullyAvailableInBlock(
   unsigned NumNewNewSpeculativelyAvailableBBs = 0;
 
 #ifndef NDEBUG
-  SmallSet<BasicBlock *, 32> NewSpeculativelyAvailableBBs;
+  SmallPtrSet<BasicBlock *, 32> NewSpeculativelyAvailableBBs;
   SmallVector<BasicBlock *, 32> AvailableBBs;
 #endif
 
@@ -1222,7 +1222,7 @@ static bool liesBetween(const Instruction *From, Instruction *Between,
                         const Instruction *To, const DominatorTree *DT) {
   if (From->getParent() == Between->getParent())
     return DT->dominates(From, Between);
-  SmallSet<BasicBlock *, 1> Exclusion;
+  SmallPtrSet<BasicBlock *, 1> Exclusion;
   Exclusion.insert(Between->getParent());
   return !isPotentiallyReachable(From, To, &Exclusion, DT);
 }
@@ -2499,9 +2499,13 @@ void GVNPass::assignBlockRPONumber(Function &F) {
 bool GVNPass::replaceOperandsForInBlockEquality(Instruction *Instr) const {
   bool Changed = false;
   for (unsigned OpNum = 0; OpNum < Instr->getNumOperands(); ++OpNum) {
-    Value *Operand = Instr->getOperand(OpNum);
-    auto It = ReplaceOperandsWithMap.find(Operand);
+    Use &Operand = Instr->getOperandUse(OpNum);
+    auto It = ReplaceOperandsWithMap.find(Operand.get());
     if (It != ReplaceOperandsWithMap.end()) {
+      const DataLayout &DL = Instr->getDataLayout();
+      if (!canReplacePointersInUseIfEqual(Operand, It->second, DL))
+        continue;
+
       LLVM_DEBUG(dbgs() << "GVN replacing: " << *Operand << " with "
                         << *It->second << " in instruction " << *Instr << '\n');
       Instr->setOperand(OpNum, It->second);
@@ -2677,6 +2681,11 @@ bool GVNPass::propagateEquality(Value *LHS, Value *RHS,
     // "false"
     if (match(LHS, m_NUWTrunc(m_Value(A)))) {
       Worklist.emplace_back(A, ConstantInt::get(A->getType(), IsKnownTrue));
+      continue;
+    }
+
+    if (match(LHS, m_Not(m_Value(A)))) {
+      Worklist.emplace_back(A, ConstantInt::get(A->getType(), !IsKnownTrue));
       continue;
     }
   }

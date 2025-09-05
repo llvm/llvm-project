@@ -289,9 +289,6 @@ public:
     /// An Expression (optional) that performs the writeback with any required
     /// casting.
     const Expr *WritebackExpr;
-
-    // Size for optional lifetime end on the temporary.
-    llvm::Value *LifetimeSz;
   };
 
   struct CallArgCleanup {
@@ -321,9 +318,8 @@ public:
   }
 
   void addWriteback(LValue srcLV, Address temporary, llvm::Value *toUse,
-                    const Expr *writebackExpr = nullptr,
-                    llvm::Value *lifetimeSz = nullptr) {
-    Writeback writeback = {srcLV, temporary, toUse, writebackExpr, lifetimeSz};
+                    const Expr *writebackExpr = nullptr) {
+    Writeback writeback = {srcLV, temporary, toUse, writebackExpr};
     Writebacks.push_back(writeback);
   }
 

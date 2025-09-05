@@ -24,7 +24,7 @@ LogicalResult mlir::impl::verifyHasDefaultDLTIDataLayoutTrait(Operation *op) {
 }
 
 DataLayoutSpecInterface mlir::impl::getDataLayoutSpec(Operation *op) {
-  return op->getAttrOfType<DataLayoutSpecAttr>(
+  return op->getAttrOfType<DataLayoutSpecInterface>(
       DLTIDialect::kDataLayoutAttrName);
 }
 
