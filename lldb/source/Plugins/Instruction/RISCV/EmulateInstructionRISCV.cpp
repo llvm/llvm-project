@@ -1899,4 +1899,24 @@ RISCVSingleStepBreakpointLocationsPredictor::HandleAtomicSequence(
   return bp_addrs;
 }
 
+bool EmulateInstructionRISCV::CreateFunctionEntryUnwind(
+    UnwindPlan &unwind_plan) {
+  unwind_plan.Clear();
+  unwind_plan.SetRegisterKind(eRegisterKindLLDB);
+
+  UnwindPlan::Row row;
+
+  // Our previous Call Frame Address is the stack pointer
+  row.GetCFAValue().SetIsRegisterPlusOffset(gpr_sp_riscv, 0);
+  row.SetRegisterLocationToSame(gpr_fp_riscv, /*must_replace=*/false);
+
+  unwind_plan.AppendRow(std::move(row));
+  unwind_plan.SetSourceName("EmulateInstructionRISCV");
+  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
+  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolYes);
+  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
+  unwind_plan.SetReturnAddressRegister(gpr_ra_riscv);
+  return true;
+}
+
 } // namespace lldb_private
