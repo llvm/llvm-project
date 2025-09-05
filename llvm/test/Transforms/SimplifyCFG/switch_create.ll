@@ -1125,3 +1125,143 @@ F:
   ret void
 }
 
+define void @extra_cond_is_eq_cmp(i8 %c, i32 %x)  {
+; CHECK-LABEL: @extra_cond_is_eq_cmp(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 32
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze i1 [[CMP]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[IF_THEN:%.*]], label [[SWITCH_EARLY_TEST:%.*]]
+; CHECK:       switch.early.test:
+; CHECK-NEXT:    switch i8 [[C:%.*]], label [[COMMON_RET:%.*]] [
+; CHECK-NEXT:      i8 99, label [[IF_THEN]]
+; CHECK-NEXT:      i8 97, label [[IF_THEN]]
+; CHECK-NEXT:    ]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       if.then:
+; CHECK-NEXT:    tail call void @foo1()
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+entry:
+  %cmp = icmp eq i32 %x, 32
+  %cmp4 = icmp eq i8 %c, 97
+  %or.cond = or i1 %cmp, %cmp4
+  %cmp9 = icmp eq i8 %c, 99
+  %or.cond11 = or i1 %or.cond, %cmp9
+  br i1 %or.cond11, label %if.then, label %if.end
+
+if.then:
+  tail call void @foo1()
+  ret void
+
+if.end:
+  ret void
+
+}
+
+define void @extra_cond_is_eq_cmp_c(i8 %c, i32 %x)  {
+; CHECK-LABEL: @extra_cond_is_eq_cmp_c(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 32
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze i1 [[CMP]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[IF_THEN:%.*]], label [[SWITCH_EARLY_TEST:%.*]]
+; CHECK:       switch.early.test:
+; CHECK-NEXT:    switch i8 [[C:%.*]], label [[COMMON_RET:%.*]] [
+; CHECK-NEXT:      i8 99, label [[IF_THEN]]
+; CHECK-NEXT:      i8 97, label [[IF_THEN]]
+; CHECK-NEXT:    ]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       if.then:
+; CHECK-NEXT:    tail call void @foo1()
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+entry:
+  %cmp = icmp eq i32 %x, 32
+  %cmp4 = icmp eq i8 %c, 97
+  %or.cond = or i1 %cmp4, %cmp
+  %cmp9 = icmp eq i8 %c, 99
+  %or.cond11 = or i1 %or.cond, %cmp9
+  br i1 %or.cond11, label %if.then, label %if.end
+
+if.then:
+  tail call void @foo1()
+  ret void
+
+if.end:
+  ret void
+
+}
+
+define void @and_chain_trunc_nuw_i1_condition(i8 %x) {
+; CHECK-LABEL: @and_chain_trunc_nuw_i1_condition(
+; CHECK-NEXT:    switch i8 [[X:%.*]], label [[IF_THEN:%.*]] [
+; CHECK-NEXT:      i8 4, label [[COMMON_RET:%.*]]
+; CHECK-NEXT:      i8 3, label [[COMMON_RET]]
+; CHECK-NEXT:      i8 2, label [[COMMON_RET]]
+; CHECK-NEXT:      i8 0, label [[COMMON_RET]]
+; CHECK-NEXT:    ]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       if.then:
+; CHECK-NEXT:    tail call void @foo1()
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+  %add = add nsw i8 %x, -2
+  %icmp = icmp ugt i8 %add, 2
+  %trunc = trunc nuw i8 %x to i1
+  %and = select i1 %icmp, i1 %trunc, i1 false
+  br i1 %and, label %if.then, label %if.end
+if.then:
+  tail call void @foo1()
+  ret void
+if.end:
+  ret void
+}
+
+define void @or_chain_trunc_nuw_i1_condition(i8 %x) {
+; CHECK-LABEL: @or_chain_trunc_nuw_i1_condition(
+; CHECK-NEXT:    [[X_OFF:%.*]] = add i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i8 [[X_OFF]], 2
+; CHECK-NEXT:    br i1 [[SWITCH]], label [[IF_THEN:%.*]], label [[COMMON_RET:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       if.then:
+; CHECK-NEXT:    tail call void @foo1()
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+  %icmp = icmp eq i8 %x, 2
+  %trunc = trunc nuw i8 %x to i1
+  %or = select i1 %icmp, i1 true, i1 %trunc
+  br i1 %or, label %if.then, label %if.end
+if.then:
+  tail call void @foo1()
+  ret void
+if.end:
+  ret void
+}
+
+define void @neg_and_chain_trunc_i1_condition(i8 %x) {
+; CHECK-LABEL: @neg_and_chain_trunc_i1_condition(
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X:%.*]], -2
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ugt i8 [[ADD]], 2
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X]] to i1
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[ICMP]], i1 [[TRUNC]], i1 false
+; CHECK-NEXT:    br i1 [[AND]], label [[IF_THEN:%.*]], label [[COMMON_RET:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       if.then:
+; CHECK-NEXT:    tail call void @foo1()
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+  %add = add nsw i8 %x, -2
+  %icmp = icmp ugt i8 %add, 2
+  %trunc = trunc i8 %x to i1
+  %and = select i1 %icmp, i1 %trunc, i1 false
+  br i1 %and, label %if.then, label %if.end
+if.then:
+  tail call void @foo1()
+  ret void
+if.end:
+  ret void
+}

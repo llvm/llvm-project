@@ -182,6 +182,7 @@ static void createResourceCtorArgs(CodeGenModule &CGM, CXXConstructorDecl *CD,
 
   } else {
     // implicit binding
+    assert(RBA && "missing implicit binding attribute");
     auto *OrderID =
         llvm::ConstantInt::get(CGM.IntTy, RBA->getImplicitBindingOrderID());
     Args.add(RValue::get(Space), AST.UnsignedIntTy);
@@ -195,7 +196,7 @@ static void createResourceCtorArgs(CodeGenModule &CGM, CXXConstructorDecl *CD,
 // Initializes local resource array variable. For multi-dimensional arrays it
 // calls itself recursively to initialize its sub-arrays. The Index used in the
 // resource constructor calls will begin at StartIndex and will be incremented
-// for each array element. The last last used resource Index is returned to the
+// for each array element. The last used resource Index is returned to the
 // caller.
 static Value *initializeLocalResourceArray(
     CodeGenFunction &CGF, AggValueSlot &ValueSlot,
@@ -207,7 +208,7 @@ static Value *initializeLocalResourceArray(
   llvm::IntegerType *IntTy = CGF.CGM.IntTy;
   llvm::Value *Index = StartIndex;
   llvm::Value *One = llvm::ConstantInt::get(IntTy, 1);
-  uint64_t ArraySize = ArrayTy->getSExtSize();
+  const uint64_t ArraySize = ArrayTy->getSExtSize();
   QualType ElemType = ArrayTy->getElementType();
   Address TmpArrayAddr = ValueSlot.getAddress();
 
@@ -216,7 +217,7 @@ static Value *initializeLocalResourceArray(
   SmallVector<llvm::Value *> GEPIndices(PrevGEPIndices);
   GEPIndices.push_back(llvm::ConstantInt::get(IntTy, 0));
 
-  // array of arrays - recursively initialize the sub-arrays
+  // For array of arrays, recursively initialize the sub-arrays.
   if (ElemType->isArrayType()) {
     const ConstantArrayType *SubArrayTy = cast<ConstantArrayType>(ElemType);
     for (uint64_t I = 0; I < ArraySize; I++) {
@@ -224,7 +225,6 @@ static Value *initializeLocalResourceArray(
         Index = CGF.Builder.CreateAdd(Index, One);
         GEPIndices.back() = llvm::ConstantInt::get(IntTy, I);
       }
-      // recursively initialize the sub-array
       Index = initializeLocalResourceArray(
           CGF, ValueSlot, SubArrayTy, CD, Range, Index, ResourceName, RBA,
           VkBinding, GEPIndices, ArraySubsExprLoc);
@@ -232,7 +232,7 @@ static Value *initializeLocalResourceArray(
     return Index;
   }
 
-  // array of resources - initialize each resource in the array
+  // For array of resources, initialize each resource in the array.
   llvm::Type *Ty = CGF.ConvertTypeForMem(ElemType);
   CharUnits ElemSize = CD->getASTContext().getTypeSizeInChars(ElemType);
   CharUnits Align =
@@ -766,8 +766,6 @@ void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
                                                 llvm::GlobalVariable *GV,
                                                 HLSLVkBindingAttr *VkBinding) {
   assert(VkBinding && "expect a nonnull binding attribute");
-  llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGM.getLLVMContext());
-  auto *NonUniform = llvm::ConstantInt::get(Int1Ty, false);
   auto *Index = llvm::ConstantInt::get(CGM.IntTy, 0);
   auto *RangeSize = llvm::ConstantInt::get(CGM.IntTy, 1);
   auto *Set = llvm::ConstantInt::get(CGM.IntTy, VkBinding->getSet());
@@ -776,7 +774,7 @@ void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
   llvm::Intrinsic::ID IntrinsicID =
       CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic();
 
-  SmallVector<Value *> Args{Set, Binding, RangeSize, Index, NonUniform, Name};
+  SmallVector<Value *> Args{Set, Binding, RangeSize, Index, Name};
   initializeBuffer(CGM, GV, IntrinsicID, Args);
 }
 
@@ -784,8 +782,6 @@ void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
                                                 llvm::GlobalVariable *GV,
                                                 HLSLResourceBindingAttr *RBA) {
   assert(RBA && "expect a nonnull binding attribute");
-  llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGM.getLLVMContext());
-  auto *NonUniform = llvm::ConstantInt::get(Int1Ty, false);
   auto *Index = llvm::ConstantInt::get(CGM.IntTy, 0);
   auto *RangeSize = llvm::ConstantInt::get(CGM.IntTy, 1);
   auto *Space = llvm::ConstantInt::get(CGM.IntTy, RBA->getSpaceNumber());
@@ -799,15 +795,13 @@ void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
   // buffer with explicit binding
   if (RBA->hasRegisterSlot()) {
     auto *RegSlot = llvm::ConstantInt::get(CGM.IntTy, RBA->getSlotNumber());
-    SmallVector<Value *> Args{Space, RegSlot,    RangeSize,
-                              Index, NonUniform, Name};
+    SmallVector<Value *> Args{Space, RegSlot, RangeSize, Index, Name};
     initializeBuffer(CGM, GV, IntrinsicID, Args);
   } else {
     // buffer with implicit binding
     auto *OrderID =
         llvm::ConstantInt::get(CGM.IntTy, RBA->getImplicitBindingOrderID());
-    SmallVector<Value *> Args{OrderID, Space,      RangeSize,
-                              Index,   NonUniform, Name};
+    SmallVector<Value *> Args{OrderID, Space, RangeSize, Index, Name};
     initializeBuffer(CGM, GV, IntrinsicID, Args);
   }
 }
@@ -901,25 +895,25 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
     ASE = dyn_cast<ArraySubscriptExpr>(ASE->getBase()->IgnoreParenImpCasts());
   }
 
-  // find binding info for the resource array (for implicit binding
-  // an HLSLResourceBindingAttr should have been added by SemaHLSL)
+  // Find binding info for the resource array. For implicit binding
+  // an HLSLResourceBindingAttr should have been added by SemaHLSL.
   HLSLVkBindingAttr *VkBinding = ArrayDecl->getAttr<HLSLVkBindingAttr>();
   HLSLResourceBindingAttr *RBA = ArrayDecl->getAttr<HLSLResourceBindingAttr>();
   assert((VkBinding || RBA) && "resource array must have a binding attribute");
 
-  // Find the individual resource type
+  // Find the individual resource type.
   QualType ResultTy = ArraySubsExpr->getType();
   QualType ResourceTy =
       ResultTy->isArrayType() ? AST.getBaseElementType(ResultTy) : ResultTy;
 
-  // lookup the resource class constructor based on the resource type and
-  // binding
+  // Lookup the resource class constructor based on the resource type and
+  // binding.
   CXXConstructorDecl *CD = findResourceConstructorDecl(
       AST, ResourceTy, VkBinding || RBA->hasRegisterSlot());
 
-  // create a temporary variable for the result, which is either going
+  // Create a temporary variable for the result, which is either going
   // to be a single resource instance or a local array of resources (we need to
-  // return an LValue)
+  // return an LValue).
   RawAddress TmpVar = CGF.CreateMemTemp(ResultTy);
   if (CGF.EmitLifetimeStart(TmpVar.getPointer()))
     CGF.pushFullExprCleanup<CodeGenFunction::CallLifetimeEnd>(
@@ -931,27 +925,28 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
       AggValueSlot::DoesNotOverlap);
   Address TmpVarAddress = ValueSlot.getAddress();
 
-  // get total array size (= range size)
+  // Calculate total array size (= range size).
   llvm::Value *Range =
       llvm::ConstantInt::get(CGM.IntTy, getTotalArraySize(AST, ResArrayTy));
 
-  // if the result of the subscript operation is a single resource - call the
-  // constructor
+  // If the result of the subscript operation is a single resource, call the
+  // constructor.
   if (ResultTy == ResourceTy) {
     QualType ThisType = CD->getThisType()->getPointeeType();
     llvm::Value *ThisPtr = CGF.getAsNaturalPointerTo(TmpVarAddress, ThisType);
 
-    // assemble the constructor parameters
+    // Assemble the constructor parameters.
     CallArgList Args;
     createResourceCtorArgs(CGM, CD, ThisPtr, Range, Index, ArrayDecl->getName(),
                            RBA, VkBinding, Args);
-    // call the constructor
+    // Call the constructor.
     CGF.EmitCXXConstructorCall(CD, Ctor_Complete, false, false, TmpVarAddress,
                                Args, ValueSlot.mayOverlap(),
                                ArraySubsExpr->getExprLoc(),
                                ValueSlot.isSanitizerChecked());
   } else {
-    // result of the subscript operation is a local resource array
+    // The result of the subscript operation is a local resource array which
+    // needs to be initialized.
     const ConstantArrayType *ArrayTy =
         cast<ConstantArrayType>(ResultTy.getTypePtr());
     initializeLocalResourceArray(CGF, ValueSlot, ArrayTy, CD, Range, Index,

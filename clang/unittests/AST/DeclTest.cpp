@@ -570,3 +570,38 @@ void instantiate_template() {
   EXPECT_EQ(GetNameInfoRange(Matches[1]), "<input.cc:6:14, col:15>");
   EXPECT_EQ(GetNameInfoRange(Matches[2]), "<input.cc:6:14, col:15>");
 }
+
+TEST(Decl, getQualifiedNameAsString) {
+  llvm::Annotations Code(R"cpp(
+namespace x::y {
+  template <class T> class Foo { Foo() {} };
+}
+)cpp");
+
+  auto AST = tooling::buildASTFromCode(Code.code());
+  ASTContext &Ctx = AST->getASTContext();
+
+  auto const *FD = selectFirst<CXXConstructorDecl>(
+      "ctor", match(cxxConstructorDecl().bind("ctor"), Ctx));
+  ASSERT_NE(FD, nullptr);
+  ASSERT_EQ(FD->getQualifiedNameAsString(), "x::y::Foo::Foo<T>");
+}
+
+TEST(Decl, NoWrittenArgsInImplicitlyInstantiatedVarSpec) {
+  const char *Code = R"cpp(
+    template <typename>
+    int VarTpl;
+
+    void fn() {
+      (void)VarTpl<char>;
+    }
+  )cpp";
+
+  auto AST = tooling::buildASTFromCode(Code);
+  ASTContext &Ctx = AST->getASTContext();
+
+  const auto *VTSD = selectFirst<VarTemplateSpecializationDecl>(
+      "id", match(varDecl(isTemplateInstantiation()).bind("id"), Ctx));
+  ASSERT_NE(VTSD, nullptr);
+  EXPECT_EQ(VTSD->getTemplateArgsAsWritten(), nullptr);
+}

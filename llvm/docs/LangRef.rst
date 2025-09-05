@@ -415,6 +415,8 @@ added in the future:
 
     - On RISC-V the callee preserves x5-x31 except x6, x7 and x28 registers.
 
+    - On LoongArch the callee preserves r4-r31 except r12-r15 and r20-r21 registers.
+
     The idea behind this convention is to support calls to runtime functions
     that have a hot path and a cold path. The hot path is usually a small piece
     of code that doesn't use many registers. The cold path might need to call out to
@@ -665,7 +667,7 @@ representation; that is, the integral representation may be target dependent or
 unstable (not backed by a fixed integer).
 
 ``inttoptr`` and ``ptrtoint`` instructions have the same semantics as for
-integral (i.e. normal) pointers in that they convert integers to and from
+integral (i.e., normal) pointers in that they convert integers to and from
 corresponding pointer types, but there are additional implications to be
 aware of.  Because the bit-representation of a non-integral pointer may
 not be stable, two identical casts of the same operand may or may not
@@ -729,7 +731,7 @@ optimizations based on the 'constantness' are valid for the translation
 units that do not include the definition.
 
 As SSA values, global variables define pointer values that are in scope
-for (i.e. they dominate) all basic blocks in the program. Global variables
+for (i.e., they dominate) all basic blocks in the program. Global variables
 always define a pointer to their "content" type because they describe a
 region of memory, and all :ref:`allocated object<allocatedobjects>` in LLVM are
 accessed through pointers.
@@ -932,7 +934,7 @@ would be used implicitly.
 
 The first basic block in a function is special in two ways: it is
 immediately executed on entrance to the function, and it is not allowed
-to have predecessor basic blocks (i.e. there can not be any branches to
+to have predecessor basic blocks (i.e., there can not be any branches to
 the entry block of a function). Because the block can have no
 predecessors, it also cannot have any :ref:`PHI nodes <i_phi>`.
 
@@ -1485,7 +1487,7 @@ Currently, only the following parameter attributes are defined:
     a pointer is exactly one of ``dereferenceable(<n>)`` or ``null``,
     and in other address spaces ``dereferenceable_or_null(<n>)``
     implies that a pointer is at least one of ``dereferenceable(<n>)``
-    or ``null`` (i.e. it may be both ``null`` and
+    or ``null`` (i.e., it may be both ``null`` and
     ``dereferenceable(<n>)``). This attribute may only be applied to
     pointer typed parameters.
 
@@ -2346,7 +2348,7 @@ For example:
        fully changed via an atomic compare-and-swap instruction.
        While the first requirement can be satisfied by inserting large
        enough NOP, LLVM can and will try to re-purpose an existing
-       instruction (i.e. one that would have to be emitted anyway) as
+       instruction (i.e., one that would have to be emitted anyway) as
        the patchable instruction larger than a short jump.
 
        ``"prologue-short-redirect"`` is currently only supported on
@@ -3259,7 +3261,7 @@ the preceding ``:`` should also be omitted and ``<pref>`` will be equal to
 
 Unless explicitly stated otherwise, every alignment specification is provided in
 bits and must be in the range [1,2^16). The value must be a power of two times
-the width of a byte (i.e. ``align = 8 * 2^N``).
+the width of a byte (i.e., ``align = 8 * 2^N``).
 
 When constructing the data layout for a given target, LLVM starts with a
 default set of specifications which are then (possibly) overridden by
@@ -4478,7 +4480,7 @@ the type size is smaller than the type's store size.
       < vscale x <# elements> x <elementtype> > ; Scalable vector
 
 The number of elements is a constant integer value larger than 0;
-elementtype may be any integer, floating-point, pointer type, or a sized  
+elementtype may be any integer, floating-point, pointer type, or a sized
 target extension type that has the ``CanBeVectorElement`` property. Vectors
 of size zero are not allowed. For scalable vectors, the total number of
 elements is a constant multiple (called vscale) of the specified number
@@ -4679,7 +4681,7 @@ Simple Constants
     '``s0x8000``' gives -32768.
 
     Note that hexadecimal integers are sign extended from the number
-    of active bits, i.e. the bit width minus the number of leading
+    of active bits, i.e., the bit width minus the number of leading
     zeros. So '``s0x0001``' of type '``i16``' will be -1, not 1.
 **Floating-point constants**
     Floating-point constants use standard decimal notation (e.g.
@@ -5551,9 +5553,9 @@ AArch64:
 
 - ``z``: An immediate integer 0. Outputs ``WZR`` or ``XZR``, as appropriate.
 - ``I``: An immediate integer valid for an ``ADD`` or ``SUB`` instruction,
-  i.e. 0 to 4095 with optional shift by 12.
+  i.e., 0 to 4095 with optional shift by 12.
 - ``J``: An immediate integer that, when negated, is valid for an ``ADD`` or
-  ``SUB`` instruction, i.e. -1 to -4095 with optional left shift by 12.
+  ``SUB`` instruction, i.e., -1 to -4095 with optional left shift by 12.
 - ``K``: An immediate integer that is valid for the 'bitmask immediate 32' of a
   logical instruction like ``AND``, ``EOR``, or ``ORR`` with a 32-bit register.
 - ``L``: An immediate integer that is valid for the 'bitmask immediate 64' of a
@@ -6752,160 +6754,22 @@ parameter, and it will be included in the ``retainedNodes:`` field of its
                           type: !3)
     !2 = !DILocalVariable(name: "y", scope: !5, file: !2, line: 7, type: !3)
 
-.. _DIExpression:
-
 DIExpression
 """"""""""""
 
 ``DIExpression`` nodes represent expressions that are inspired by the DWARF
-expression language. They are used in :ref:`debug records <debugrecords>`
-(such as ``#dbg_declare`` and ``#dbg_value``) to describe how the
-referenced LLVM variable relates to the source language variable. Debug
-expressions are interpreted left-to-right: start by pushing the value/address
-operand of the record onto a stack, then repeatedly push and evaluate
-opcodes from the ``DIExpression`` until the final variable description is produced.
+expression language. They are used in :ref:`debug records <debug_records>`
+(such as ``#dbg_declare`` and ``#dbg_value``) to describe how the referenced
+LLVM variable relates to the source language variable.
 
-The current supported opcode vocabulary is limited:
-
-- ``DW_OP_deref`` dereferences the top of the expression stack.
-- ``DW_OP_plus`` pops the last two entries from the expression stack, adds
-  them together and appends the result to the expression stack.
-- ``DW_OP_minus`` pops the last two entries from the expression stack, subtracts
-  the last entry from the second last entry and appends the result to the
-  expression stack.
-- ``DW_OP_plus_uconst, 93`` adds ``93`` to the working expression.
-- ``DW_OP_LLVM_fragment, 16, 8`` specifies the offset and size (``16`` and ``8``
-  here, respectively) of the variable fragment from the working expression. Note
-  that contrary to ``DW_OP_bit_piece``, the offset is describing the location
-  within the described source variable.
-- ``DW_OP_LLVM_convert, 16, DW_ATE_signed`` specifies a bit size and encoding
-  (``16`` and ``DW_ATE_signed`` here, respectively) to which the top of the
-  expression stack is to be converted. Maps into a ``DW_OP_convert`` operation
-  that references a base type constructed from the supplied values.
-- ``DW_OP_LLVM_extract_bits_sext, 16, 8,`` specifies the offset and size
-  (``16`` and ``8`` here, respectively) of bits that are to be extracted and
-  sign-extended from the value at the top of the expression stack. If the top of
-  the expression stack is a memory location then these bits are extracted from
-  the value pointed to by that memory location. Maps into a ``DW_OP_shl``
-  followed by ``DW_OP_shra``.
-- ``DW_OP_LLVM_extract_bits_zext`` behaves similarly to
-  ``DW_OP_LLVM_extract_bits_sext``, but zero-extends instead of sign-extending.
-  Maps into a ``DW_OP_shl`` followed by ``DW_OP_shr``.
-- ``DW_OP_LLVM_tag_offset, tag_offset`` specifies that a memory tag should be
-  optionally applied to the pointer. The memory tag is derived from the
-  given tag offset in an implementation-defined manner.
-- ``DW_OP_swap`` swaps top two stack entries.
-- ``DW_OP_xderef`` provides extended dereference mechanism. The entry at the top
-  of the stack is treated as an address. The second stack entry is treated as an
-  address space identifier.
-- ``DW_OP_stack_value`` marks a constant value.
-- ``DW_OP_LLVM_entry_value, N`` refers to the value a register had upon
-  function entry. When targeting DWARF, a ``DBG_VALUE(reg, ...,
-  DIExpression(DW_OP_LLVM_entry_value, 1, ...)`` is lowered to
-  ``DW_OP_entry_value [reg], ...``, which pushes the value ``reg`` had upon
-  function entry onto the DWARF expression stack.
-
-  The next ``(N - 1)`` operations will be part of the ``DW_OP_entry_value``
-  block argument. For example, ``!DIExpression(DW_OP_LLVM_entry_value, 1,
-  DW_OP_plus_uconst, 123, DW_OP_stack_value)`` specifies an expression where
-  the entry value of ``reg`` is pushed onto the stack, and is added with 123.
-  Due to framework limitations ``N`` must be 1, in other words,
-  ``DW_OP_entry_value`` always refers to the value/address operand of the
-  instruction.
-
-  Because ``DW_OP_LLVM_entry_value`` is defined in terms of registers, it is
-  usually used in MIR, but it is also allowed in LLVM IR when targeting a
-  :ref:`swiftasync <swiftasync>` argument. The operation is introduced by:
-
-    - ``LiveDebugValues`` pass, which applies it to function parameters that
-      are unmodified throughout the function. Support is limited to simple
-      register location descriptions, or as indirect locations (e.g.,
-      parameters passed-by-value to a callee via a pointer to a temporary copy
-      made in the caller).
-    - ``AsmPrinter`` pass when a call site parameter value
-      (``DW_AT_call_site_parameter_value``) is represented as entry value of
-      the parameter.
-    - ``CoroSplit`` pass, which may move variables from allocas into a
-      coroutine frame. If the coroutine frame is a
-      :ref:`swiftasync <swiftasync>` argument, the variable is described with
-      an ``DW_OP_LLVM_entry_value`` operation.
-
-- ``DW_OP_LLVM_arg, N`` is used in debug intrinsics that refer to more than one
-  value, such as one that calculates the sum of two registers. This is always
-  used in combination with an ordered list of values, such that
-  ``DW_OP_LLVM_arg, N`` refers to the ``N``\ :sup:`th` element in that list. For
-  example, ``!DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_minus,
-  DW_OP_stack_value)`` used with the list ``(%reg1, %reg2)`` would evaluate to
-  ``%reg1 - reg2``. This list of values should be provided by the containing
-  intrinsic/instruction.
-- ``DW_OP_breg`` (or ``DW_OP_bregx``) represents a content on the provided
-  signed offset of the specified register. The opcode is only generated by the
-  ``AsmPrinter`` pass to describe call site parameter value which requires an
-  expression over two registers.
-- ``DW_OP_push_object_address`` pushes the address of the object which can then
-  serve as a descriptor in subsequent calculation. This opcode can be used to
-  calculate bounds of an Fortran allocatable array which has array descriptors.
-- ``DW_OP_over`` duplicates the entry currently second in the stack at the top
-  of the stack. This opcode can be used to calculate bounds of a Fortran assumed
-  rank array which has rank known at run time and current dimension number is
-  implicitly first element of the stack.
-- ``DW_OP_LLVM_implicit_pointer`` It specifies the dereferenced value. It can
-  be used to represent pointer variables which are optimized out but the value
-  it points to is known. This operator is required as it is different than DWARF
-  operator ``DW_OP_implicit_pointer`` in representation and specification (number
-  and types of operands) and later can not be used as multiple level.
-
-.. code-block:: text
-
-    IR for "*ptr = 4;"
-    --------------
-      #dbg_value(i32 4, !17, !DIExpression(DW_OP_LLVM_implicit_pointer), !20)
-    !17 = !DILocalVariable(name: "ptr1", scope: !12, file: !3, line: 5,
-                           type: !18)
-    !18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
-    !19 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-    !20 = !DILocation(line: 10, scope: !12)
-
-    IR for "**ptr = 4;"
-    --------------
-      #dbg_value(i32 4, !17,
-        !DIExpression(DW_OP_LLVM_implicit_pointer, DW_OP_LLVM_implicit_pointer),
-        !21)
-    !17 = !DILocalVariable(name: "ptr1", scope: !12, file: !3, line: 5,
-                           type: !18)
-    !18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
-    !19 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !20, size: 64)
-    !20 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-    !21 = !DILocation(line: 10, scope: !12)
-
-DWARF specifies three kinds of simple location descriptions: Register, memory,
-and implicit location descriptions.  Note that a location description is
-defined over certain ranges of a program, i.e the location of a variable may
-change over the course of the program. Register and memory location
-descriptions describe the *concrete location* of a source variable (in the
-sense that a debugger might modify its value), whereas *implicit locations*
-describe merely the actual *value* of a source variable which might not exist
-in registers or in memory (see ``DW_OP_stack_value``).
-
-A ``#dbg_declare`` record describes an indirect value (the address) of a
-source variable. The first operand of the record must be an address of some
-kind. A ``DIExpression`` operand to the record refines this address to produce a
-concrete location for the source variable.
-
-A ``#dbg_value`` record describes the direct value of a source variable.
-The first operand of the record may be a direct or indirect value. A
-``DIExpression`` operand to the record refines the first operand to produce a
-direct value. For example, if the first operand is an indirect value, it may be
-necessary to insert ``DW_OP_deref`` into the ``DIExpression`` in order to produce a
-valid debug record.
+See :ref:`diexpression` for details.
 
 .. note::
 
-   A ``DIExpression`` is interpreted in the same way regardless of which kind of
-   debug record it's attached to.
-
-   ``DIExpressions`` are always printed and parsed inline; they can never be
+   ``DIExpression``\s are always printed and parsed inline; they can never be
    referenced by an ID (e.g. ``!1``).
+
+Some examples of expressions:
 
 .. code-block:: text
 
@@ -7028,7 +6892,7 @@ label identifier. The ``file:`` field is the :ref:`DIFile` the label is
 present in. The ``line:`` and ``column:`` field are the source line and column
 within the file where the label is declared.
 
-Furthermore, a label can be marked as artificial, i.e. compiler-generated,
+Furthermore, a label can be marked as artificial, i.e., compiler-generated,
 using ``isArtificial:``. Such artificial labels are generated, e.g., by
 the ``CoroSplit`` pass. In addition, the ``CoroSplit`` pass also uses the
 ``coroSuspendIdx:`` field to identify the coroutine suspend points.
@@ -7942,7 +7806,7 @@ identification metadata.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This metadata defines which attributes extracted loops with no cyclic
-dependencies will have (i.e. can be vectorized). See
+dependencies will have (i.e., can be vectorized). See
 :ref:`Transformation Metadata <transformation-metadata>` for details.
 
 '``llvm.loop.distribute.followup_sequential``' Metadata
@@ -7964,6 +7828,13 @@ the non-distributed fallback version will have. See
 
 The attributes in this metadata are added to all followup loops of the
 loop distribution pass. See
+:ref:`Transformation Metadata <transformation-metadata>` for details.
+
+'``llvm.loop.isdistributed``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If a loop was successfully processed by the loop distribution pass,
+this metadata is added (i.e., has been distributed).  See
 :ref:`Transformation Metadata <transformation-metadata>` for details.
 
 '``llvm.licm.disable``' Metadata
@@ -8480,6 +8351,44 @@ spaces. The interpretation of the address space values is target specific.
 The behavior is undefined if the runtime memory address does
 resolve to an object defined in one of the indicated address spaces.
 
+'``mmra``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``mmra`` metadata represents target-defined properties on instructions that
+can be used to selectively relax constraints placed by the memory model.
+
+Refer to :doc:`MemoryModelRelaxationAnnotations` for more information on how this metadata
+affects the memory model of a given target.
+
+It is attached to memory instructions such as:
+:ref:`atomicrmw <i_atomicrmw>`, :ref:`cmpxchg <i_cmpxchg>`, :ref:`load <i_load>`,
+:ref:`store <i_store>`, :ref:`fence <i_fence>` and
+:ref:`call <i_call>` instructions that read or write memory.
+
+The metadata is structured as pairs of strings: a prefix, and suffix that form a MMRA "tag".
+The ``!mmra`` operand can either point to a pair of metadata strings, or a tuple containing
+multiple pairs of metadata strings.
+
+Example:
+
+.. code-block:: llvm
+
+    ; Simple pair of strings used directly:
+    %rmw.valid = atomicrmw and ptr %ptr, i64 %value seq_cst, !mmra !0
+
+    ; Using multiple pairs of strings using a metadata tuple:
+    %rmw.valid = atomicrmw and ptr %ptr, i64 %value seq_cst, !mmra !2
+
+    !0 = !{!"amdgpu-synchronize-as", !"global"}
+    !1 = !{!"amdgpu-synchronize-as", !"private"}
+    !2 = !{!0, !1}
+
+'``nofree``' Metadata
+^^^^^^^^^^^^^^^^^^^^^
+
+The ``nofree`` metadata indicates the memory pointed by the pointer will not be
+freed after the attached instruction.
+
 
 Module Flags Metadata
 =====================
@@ -8815,7 +8724,7 @@ input file).
 Eventually, the summary will be parsed into a ModuleSummaryIndex object under
 the same conditions where summary index is currently built from bitcode.
 Specifically, tools that test the Thin Link portion of a ThinLTO compile
-(i.e. llvm-lto and llvm-lto2), or when parsing a combined index
+(i.e., llvm-lto and llvm-lto2), or when parsing a combined index
 for a distributed ThinLTO backend via clang's "``-fthinlto-index=<>``" flag
 (this part is not yet implemented, use llvm-as to create a bitcode object
 before feeding into thin link tools for now).
@@ -9242,7 +9151,7 @@ The '``llvm.global_ctors``' Global Variable
 The ``@llvm.global_ctors`` array contains a list of constructor
 functions, priorities, and an associated global or function.
 The functions referenced by this array will be called in ascending order
-of priority (i.e. lowest first) when the module is loaded. The order of
+of priority (i.e., lowest first) when the module is loaded. The order of
 functions with the same priority is not defined.
 
 If the third field is non-null, and points to a global variable
@@ -9263,7 +9172,7 @@ The '``llvm.global_dtors``' Global Variable
 The ``@llvm.global_dtors`` array contains a list of destructor
 functions, priorities, and an associated global or function.
 The functions referenced by this array will be called in descending
-order of priority (i.e. highest first) when the module is unloaded. The
+order of priority (i.e., highest first) when the module is unloaded. The
 order of functions with the same priority is not defined.
 
 If the third field is non-null, and points to a global variable
@@ -11308,7 +11217,7 @@ Arguments:
 
 The argument to the ``load`` instruction specifies the memory address from which
 to load. The type specified must be a :ref:`first class <t_firstclass>` type of
-known size (i.e. not containing an :ref:`opaque structural type <t_opaque>`). If
+known size (i.e., not containing an :ref:`opaque structural type <t_opaque>`). If
 the ``load`` is marked as ``volatile``, then the optimizer is not allowed to
 modify the number or order of execution of this ``load`` with other
 :ref:`volatile operations <volatile>`.
@@ -11451,7 +11360,7 @@ pointer to the :ref:`first class <t_firstclass>` type of the ``<value>``
 operand. If the ``store`` is marked as ``volatile``, then the optimizer is not
 allowed to modify the number or order of execution of this ``store`` with other
 :ref:`volatile operations <volatile>`.  Only values of :ref:`first class
-<t_firstclass>` types of known size (i.e. not containing an :ref:`opaque
+<t_firstclass>` types of known size (i.e., not containing an :ref:`opaque
 structural type <t_opaque>`) can be stored.
 
 If the ``store`` is marked as ``atomic``, it takes an extra :ref:`ordering
@@ -12592,7 +12501,7 @@ Syntax:
 
 ::
 
-      <result> = inttoptr <ty> <value> to <ty2>[, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node>]             ; yields ty2
+      <result> = inttoptr <ty> <value> to <ty2>[, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node>][, !nofree !<empty_node>]            ; yields ty2
 
 Overview:
 """""""""
@@ -12616,6 +12525,11 @@ The optional ``!dereferenceable_or_null`` metadata must reference a single
 metadata name ``<deref_bytes_node>`` corresponding to a metadata node with one
 ``i64`` entry.
 See ``dereferenceable_or_null`` metadata.
+
+The optional ``!nofree`` metadata must reference a single metadata name
+``<empty_node>`` corresponding to a metadata node with no entries.
+The existence of the ``!nofree`` metadata on the instruction tells the optimizer
+that the memory pointed by the pointer will not be freed after this point.
 
 Semantics:
 """"""""""
@@ -12740,7 +12654,7 @@ If the source is :ref:`poison <poisonvalues>`, the result is
 If the source is not :ref:`poison <poisonvalues>`, and both source and
 destination are :ref:`integral pointers <nointptrtype>`, and the
 result pointer is dereferenceable, the cast is assumed to be
-reversible (i.e. casting the result back to the original address space
+reversible (i.e., casting the result back to the original address space
 should yield the original bit pattern).
 
 Which address space casts are supported depends on the target. Unsupported
@@ -13000,7 +12914,7 @@ the value arguments to the PHI node. Only labels may be used as the
 label arguments.
 
 There must be no non-phi instructions between the start of a basic block
-and the PHI instructions: i.e. PHI instructions must be first in a basic
+and the PHI instructions: i.e., PHI instructions must be first in a basic
 block.
 
 For the purposes of the SSA form, the use of each incoming value is
@@ -15006,7 +14920,7 @@ Semantics:
 
 This is lowered by contextual profiling. In contextual profiling, functions get,
 from compiler-rt, a pointer to a context object. The context object consists of
-a buffer LLVM can use to perform counter increments (i.e. the lowering of
+a buffer LLVM can use to perform counter increments (i.e., the lowering of
 ``llvm.instrprof.increment[.step]``. The address range following the counter
 buffer, ``<num-counters>`` x ``sizeof(ptr)`` - sized, is expected to contain
 pointers to contexts of functions called from this function ("subcontexts").
@@ -17957,7 +17871,7 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic function. You can use bswap on any
-integer type that is an even number of bytes (i.e. BitWidth % 16 == 0).
+integer type that is an even number of bytes (i.e., BitWidth % 16 == 0).
 
 ::
 
@@ -20832,7 +20746,7 @@ Arguments:
 """"""""""
 
 The first argument is the search vector, the second argument the vector of
-elements we are searching for (i.e. for which we consider a match successful),
+elements we are searching for (i.e., for which we consider a match successful),
 and the third argument is a mask that controls which elements of the first
 argument are active. The first two arguments must be vectors of matching
 integer element types. The first and third arguments and the result type must
@@ -23162,7 +23076,7 @@ Semantics:
 The '``llvm.vp.reduce.add``' intrinsic performs the integer ``ADD`` reduction
 (:ref:`llvm.vector.reduce.add <int_vector_reduce_add>`) of the vector argument
 ``val`` on each enabled lane, adding it to the scalar ``start_value``. Disabled
-lanes are treated as containing the neutral value ``0`` (i.e. having no effect
+lanes are treated as containing the neutral value ``0`` (i.e., having no effect
 on the reduction operation). If the vector length is zero, the result is equal
 to ``start_value``.
 
@@ -23220,7 +23134,7 @@ The '``llvm.vp.reduce.fadd``' intrinsic performs the floating-point ``ADD``
 reduction (:ref:`llvm.vector.reduce.fadd <int_vector_reduce_fadd>`) of the
 vector argument ``val`` on each enabled lane, adding it to the scalar
 ``start_value``. Disabled lanes are treated as containing the neutral value
-``-0.0`` (i.e. having no effect on the reduction operation). If no lanes are
+``-0.0`` (i.e., having no effect on the reduction operation). If no lanes are
 enabled, the resulting value will be equal to ``start_value``.
 
 To ignore the start value, the neutral value can be used.
@@ -23278,7 +23192,7 @@ Semantics:
 The '``llvm.vp.reduce.mul``' intrinsic performs the integer ``MUL`` reduction
 (:ref:`llvm.vector.reduce.mul <int_vector_reduce_mul>`) of the vector argument ``val``
 on each enabled lane, multiplying it by the scalar ``start_value``. Disabled
-lanes are treated as containing the neutral value ``1`` (i.e. having no effect
+lanes are treated as containing the neutral value ``1`` (i.e., having no effect
 on the reduction operation). If the vector length is zero, the result is the
 start value.
 
@@ -23336,7 +23250,7 @@ The '``llvm.vp.reduce.fmul``' intrinsic performs the floating-point ``MUL``
 reduction (:ref:`llvm.vector.reduce.fmul <int_vector_reduce_fmul>`) of the
 vector argument ``val`` on each enabled lane, multiplying it by the scalar
 `start_value``. Disabled lanes are treated as containing the neutral value
-``1.0`` (i.e. having no effect on the reduction operation). If no lanes are
+``1.0`` (i.e., having no effect on the reduction operation). If no lanes are
 enabled, the resulting value will be equal to the starting value.
 
 To ignore the start value, the neutral value can be used.
@@ -23395,7 +23309,7 @@ The '``llvm.vp.reduce.and``' intrinsic performs the integer ``AND`` reduction
 (:ref:`llvm.vector.reduce.and <int_vector_reduce_and>`) of the vector argument
 ``val`` on each enabled lane, performing an '``and``' of that with with the
 scalar ``start_value``. Disabled lanes are treated as containing the neutral
-value ``UINT_MAX``, or ``-1`` (i.e. having no effect on the reduction
+value ``UINT_MAX``, or ``-1`` (i.e., having no effect on the reduction
 operation). If the vector length is zero, the result is the start value.
 
 To ignore the start value, the neutral value can be used.
@@ -23452,7 +23366,7 @@ The '``llvm.vp.reduce.or``' intrinsic performs the integer ``OR`` reduction
 (:ref:`llvm.vector.reduce.or <int_vector_reduce_or>`) of the vector argument
 ``val`` on each enabled lane, performing an '``or``' of that with the scalar
 ``start_value``. Disabled lanes are treated as containing the neutral value
-``0`` (i.e. having no effect on the reduction operation). If the vector length
+``0`` (i.e., having no effect on the reduction operation). If the vector length
 is zero, the result is the start value.
 
 To ignore the start value, the neutral value can be used.
@@ -23508,7 +23422,7 @@ The '``llvm.vp.reduce.xor``' intrinsic performs the integer ``XOR`` reduction
 (:ref:`llvm.vector.reduce.xor <int_vector_reduce_xor>`) of the vector argument
 ``val`` on each enabled lane, performing an '``xor``' of that with the scalar
 ``start_value``. Disabled lanes are treated as containing the neutral value
-``0`` (i.e. having no effect on the reduction operation). If the vector length
+``0`` (i.e., having no effect on the reduction operation). If the vector length
 is zero, the result is the start value.
 
 To ignore the start value, the neutral value can be used.
@@ -23565,7 +23479,7 @@ The '``llvm.vp.reduce.smax``' intrinsic performs the signed-integer ``MAX``
 reduction (:ref:`llvm.vector.reduce.smax <int_vector_reduce_smax>`) of the
 vector argument ``val`` on each enabled lane, and taking the maximum of that and
 the scalar ``start_value``. Disabled lanes are treated as containing the
-neutral value ``INT_MIN`` (i.e. having no effect on the reduction operation).
+neutral value ``INT_MIN`` (i.e., having no effect on the reduction operation).
 If the vector length is zero, the result is the start value.
 
 To ignore the start value, the neutral value can be used.
@@ -23622,7 +23536,7 @@ The '``llvm.vp.reduce.smin``' intrinsic performs the signed-integer ``MIN``
 reduction (:ref:`llvm.vector.reduce.smin <int_vector_reduce_smin>`) of the
 vector argument ``val`` on each enabled lane, and taking the minimum of that and
 the scalar ``start_value``. Disabled lanes are treated as containing the
-neutral value ``INT_MAX`` (i.e. having no effect on the reduction operation).
+neutral value ``INT_MAX`` (i.e., having no effect on the reduction operation).
 If the vector length is zero, the result is the start value.
 
 To ignore the start value, the neutral value can be used.
@@ -23679,7 +23593,7 @@ The '``llvm.vp.reduce.umax``' intrinsic performs the unsigned-integer ``MAX``
 reduction (:ref:`llvm.vector.reduce.umax <int_vector_reduce_umax>`) of the
 vector argument ``val`` on each enabled lane, and taking the maximum of that and
 the scalar ``start_value``. Disabled lanes are treated as containing the
-neutral value ``0`` (i.e. having no effect on the reduction operation). If the
+neutral value ``0`` (i.e., having no effect on the reduction operation). If the
 vector length is zero, the result is the start value.
 
 To ignore the start value, the neutral value can be used.
@@ -23736,7 +23650,7 @@ The '``llvm.vp.reduce.umin``' intrinsic performs the unsigned-integer ``MIN``
 reduction (:ref:`llvm.vector.reduce.umin <int_vector_reduce_umin>`) of the
 vector argument ``val`` on each enabled lane, taking the minimum of that and the
 scalar ``start_value``. Disabled lanes are treated as containing the neutral
-value ``UINT_MAX``, or ``-1`` (i.e. having no effect on the reduction
+value ``UINT_MAX``, or ``-1`` (i.e., having no effect on the reduction
 operation). If the vector length is zero, the result is the start value.
 
 To ignore the start value, the neutral value can be used.
@@ -23794,7 +23708,7 @@ The '``llvm.vp.reduce.fmax``' intrinsic performs the floating-point ``MAX``
 reduction (:ref:`llvm.vector.reduce.fmax <int_vector_reduce_fmax>`) of the
 vector argument ``val`` on each enabled lane, taking the maximum of that and the
 scalar ``start_value``. Disabled lanes are treated as containing the neutral
-value (i.e. having no effect on the reduction operation). If the vector length
+value (i.e., having no effect on the reduction operation). If the vector length
 is zero, the result is the start value.
 
 The neutral value is dependent on the :ref:`fast-math flags <fastmath>`. If no
@@ -23861,7 +23775,7 @@ The '``llvm.vp.reduce.fmin``' intrinsic performs the floating-point ``MIN``
 reduction (:ref:`llvm.vector.reduce.fmin <int_vector_reduce_fmin>`) of the
 vector argument ``val`` on each enabled lane, taking the minimum of that and the
 scalar ``start_value``. Disabled lanes are treated as containing the neutral
-value (i.e. having no effect on the reduction operation). If the vector length
+value (i.e., having no effect on the reduction operation). If the vector length
 is zero, the result is the start value.
 
 The neutral value is dependent on the :ref:`fast-math flags <fastmath>`. If no
@@ -23928,7 +23842,7 @@ The '``llvm.vp.reduce.fmaximum``' intrinsic performs the floating-point ``MAX``
 reduction (:ref:`llvm.vector.reduce.fmaximum <int_vector_reduce_fmaximum>`) of
 the vector argument ``val`` on each enabled lane, taking the maximum of that and
 the scalar ``start_value``. Disabled lanes are treated as containing the
-neutral value (i.e. having no effect on the reduction operation). If the vector
+neutral value (i.e., having no effect on the reduction operation). If the vector
 length is zero, the result is the start value.
 
 The neutral value is dependent on the :ref:`fast-math flags <fastmath>`. If no
@@ -23998,7 +23912,7 @@ The '``llvm.vp.reduce.fminimum``' intrinsic performs the floating-point ``MIN``
 reduction (:ref:`llvm.vector.reduce.fminimum <int_vector_reduce_fminimum>`) of
 the vector argument ``val`` on each enabled lane, taking the minimum of that and
 the scalar ``start_value``. Disabled lanes are treated as containing the neutral
-value (i.e. having no effect on the reduction operation). If the vector length
+value (i.e., having no effect on the reduction operation). If the vector length
 is zero, the result is the start value.
 
 The neutral value is dependent on the :ref:`fast-math flags <fastmath>`. If no
@@ -24104,6 +24018,130 @@ Examples:
       %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 %elem0, i64 429)
       %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %3, i32 4, <4 x i1> %active.lane.mask, <4 x i32> poison)
 
+
+.. _int_loop_dependence_war_mask:
+
+'``llvm.loop.dependence.war.mask.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <4 x i1> @llvm.loop.dependence.war.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <8 x i1> @llvm.loop.dependence.war.mask.v8i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <16 x i1> @llvm.loop.dependence.war.mask.v16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+
+
+Overview:
+"""""""""
+
+Given a vector load from %ptrA followed by a vector store to %ptrB, this
+instruction generates a mask where an active lane indicates that the
+write-after-read sequence can be performed safely for that lane, without the
+danger of a write-after-read hazard occurring.
+
+A write-after-read hazard occurs when a write-after-read sequence for a given
+lane in a vector ends up being executed as a read-after-write sequence due to
+the aliasing of pointers.
+
+Arguments:
+""""""""""
+
+The first two arguments are pointers and the last argument is an immediate.
+The result is a vector with the i1 element type.
+
+Semantics:
+""""""""""
+
+``%elementSize`` is the size of the accessed elements in bytes.
+The intrinsic returns ``poison`` if the distance between ``%prtA`` and ``%ptrB``
+is smaller than ``VF * %elementsize`` and either ``%ptrA + VF * %elementSize``
+or ``%ptrB + VF * %elementSize`` wrap.
+The element of the result mask is active when loading from %ptrA then storing to
+%ptrB is safe and doesn't result in a write-after-read hazard, meaning that:
+
+* (ptrB - ptrA) <= 0 (guarantees that all lanes are loaded before any stores), or
+* (ptrB - ptrA) >= elementSize * lane (guarantees that this lane is loaded
+  before the store to the same address)
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %loop.dependence.mask = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 4)
+      %vecA = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(ptr %ptrA, i32 4, <4 x i1> %loop.dependence.mask, <4 x i32> poison)
+      [...]
+      call @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %vecA, ptr %ptrB, i32 4, <4 x i1> %loop.dependence.mask)
+
+.. _int_loop_dependence_raw_mask:
+
+'``llvm.loop.dependence.raw.mask.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <4 x i1> @llvm.loop.dependence.raw.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <8 x i1> @llvm.loop.dependence.raw.mask.v8i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <16 x i1> @llvm.loop.dependence.raw.mask.v16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <vscale x 16 x i1> @llvm.loop.dependence.raw.mask.nxv16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+
+
+Overview:
+"""""""""
+
+Given a vector store to %ptrA followed by a vector load from %ptrB, this
+instruction generates a mask where an active lane indicates that the
+read-after-write sequence can be performed safely for that lane, without a
+read-after-write hazard or a store-to-load forwarding hazard being introduced.
+
+A read-after-write hazard occurs when a read-after-write sequence for a given
+lane in a vector ends up being executed as a write-after-read sequence due to
+the aliasing of pointers.
+
+A store-to-load forwarding hazard occurs when a vector store writes to an
+address that partially overlaps with the address of a subsequent vector load,
+meaning that the vector load can't be performed until the vector store is
+complete.
+
+Arguments:
+""""""""""
+
+The first two arguments are pointers and the last argument is an immediate.
+The result is a vector with the i1 element type.
+
+Semantics:
+""""""""""
+
+``%elementSize`` is the size of the accessed elements in bytes.
+The intrinsic returns ``poison`` if the distance between ``%prtA`` and ``%ptrB``
+is smaller than ``VF * %elementsize`` and either ``%ptrA + VF * %elementSize``
+or ``%ptrB + VF * %elementSize`` wrap.
+The element of the result mask is active when storing to %ptrA then loading from
+%ptrB is safe and doesn't result in aliasing, meaning that:
+
+* abs(ptrB - ptrA) >= elementSize * lane (guarantees that the store of this lane
+  occurs before loading from this address), or
+* ptrA == ptrB (doesn't introduce any new hazards that weren't in the scalar
+  code)
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %loop.dependence.mask = call <4 x i1> @llvm.loop.dependence.raw.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 4)
+      call @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %vecA, ptr %ptrA, i32 4, <4 x i1> %loop.dependence.mask)
+      [...]
+      %vecB = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(ptr %ptrB, i32 4, <4 x i1> %loop.dependence.mask, <4 x i32> poison)
 
 .. _int_experimental_vp_splice:
 
@@ -26107,7 +26145,7 @@ Semantics:
 The '``llvm.vp.cttz.elts``' intrinsic counts the trailing (least
 significant / lowest-numbered) zero elements in the first argument on each
 enabled lane. If the first argument is all zero and the second argument is true,
-the result is poison. Otherwise, it returns the explicit vector length (i.e. the
+the result is poison. Otherwise, it returns the explicit vector length (i.e., the
 fourth argument).
 
 .. _int_vp_sadd_sat:
@@ -29686,9 +29724,15 @@ Arguments:
 """"""""""
 
 The ``llvm.objectsize`` intrinsic takes four arguments. The first argument is a
-pointer to or into the ``object``. The second argument determines whether
-``llvm.objectsize`` returns 0 (if true) or -1 (if false) when the object size is
-unknown. The third argument controls how ``llvm.objectsize`` acts when ``null``
+pointer to or into the ``object``.
+
+The second argument determines whether ``llvm.objectsize`` returns the minimum
+(if true) or maximum (if false) object size. The minimum size may be any size
+smaller than or equal to the actual object size (including 0 if unknown). The
+maximum size may be any size greater than or equal to the actual object size
+(including -1 if unknown).
+
+The third argument controls how ``llvm.objectsize`` acts when ``null``
 in address space 0 is used as its pointer argument. If it's ``false``,
 ``llvm.objectsize`` reports 0 bytes available when given ``null``. Otherwise, if
 the ``null`` is in a non-zero address space or if ``true`` is given for the
@@ -30131,7 +30175,7 @@ In words, ``@llvm.experimental.guard`` executes the attached
 ``"deopt"`` continuation if (but **not** only if) its first argument
 is ``false``.  Since the optimizer is allowed to replace the ``undef``
 with an arbitrary value, it can optimize guard to fail "spuriously",
-i.e. without the original condition being false (hence the "not only
+i.e., without the original condition being false (hence the "not only
 if"); and this allows for "check widening" type optimizations.
 
 ``@llvm.experimental.guard`` cannot be invoked.

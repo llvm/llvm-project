@@ -643,6 +643,13 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         LT.second.getScalarSizeInBits() == RetTy->getScalarSizeInBits() ? 1 : 4;
     if (any_of(ValidSatTys, [&LT](MVT M) { return M == LT.second; }))
       return LT.first * Instrs;
+
+    TypeSize TS = getDataLayout().getTypeSizeInBits(RetTy);
+    uint64_t VectorSize = TS.getKnownMinValue();
+
+    if (ST->isSVEAvailable() && VectorSize >= 128 && isPowerOf2_64(VectorSize))
+      return LT.first * Instrs;
+
     break;
   }
   case Intrinsic::abs: {
@@ -2094,6 +2101,20 @@ instCombineSVECntElts(InstCombiner &IC, IntrinsicInst &II, unsigned NumElts) {
              : std::nullopt;
 }
 
+static std::optional<Instruction *>
+instCombineSMECntsElts(InstCombiner &IC, IntrinsicInst &II, unsigned NumElts,
+                       const AArch64Subtarget *ST) {
+  if (!ST->isStreaming())
+    return std::nullopt;
+
+  // In streaming-mode, aarch64_sme_cnts is equivalent to aarch64_sve_cnt
+  // with SVEPredPattern::all
+  Value *Cnt = IC.Builder.CreateElementCount(
+      II.getType(), ElementCount::getScalable(NumElts));
+  Cnt->takeName(&II);
+  return IC.replaceInstUsesWith(II, Cnt);
+}
+
 static std::optional<Instruction *> instCombineSVEPTest(InstCombiner &IC,
                                                         IntrinsicInst &II) {
   Value *PgVal = II.getArgOperand(0);
@@ -2803,6 +2824,14 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVECntElts(IC, II, 8);
   case Intrinsic::aarch64_sve_cntb:
     return instCombineSVECntElts(IC, II, 16);
+  case Intrinsic::aarch64_sme_cntsd:
+    return instCombineSMECntsElts(IC, II, 2, ST);
+  case Intrinsic::aarch64_sme_cntsw:
+    return instCombineSMECntsElts(IC, II, 4, ST);
+  case Intrinsic::aarch64_sme_cntsh:
+    return instCombineSMECntsElts(IC, II, 8, ST);
+  case Intrinsic::aarch64_sme_cntsb:
+    return instCombineSMECntsElts(IC, II, 16, ST);
   case Intrinsic::aarch64_sve_ptest_any:
   case Intrinsic::aarch64_sve_ptest_first:
   case Intrinsic::aarch64_sve_ptest_last:
@@ -3983,6 +4012,24 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(const Instruction &I,
   return getVectorInstrCostHelper(I.getOpcode(), Val, CostKind, Index, &I);
 }
 
+InstructionCost
+AArch64TTIImpl::getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
+                                                 TTI::TargetCostKind CostKind,
+                                                 unsigned Index) const {
+  if (isa<FixedVectorType>(Val))
+    return BaseT::getIndexedVectorInstrCostFromEnd(Opcode, Val, CostKind,
+                                                   Index);
+
+  // This typically requires both while and lastb instructions in order
+  // to extract the last element. If this is in a loop the while
+  // instruction can at least be hoisted out, although it will consume a
+  // predicate register. The cost should be more expensive than the base
+  // extract cost, which is 2 for most CPUs.
+  return CostKind == TTI::TCK_CodeSize
+             ? 2
+             : ST->getVectorInsertExtractBaseCost() + 1;
+}
+
 InstructionCost AArch64TTIImpl::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
     TTI::TargetCostKind CostKind, bool ForPoisonSrc,
@@ -4362,6 +4409,32 @@ AArch64TTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
   return 1;
 }
 
+/// Check whether Opcode1 has less throughput according to the scheduling
+/// model than Opcode2.
+bool AArch64TTIImpl::hasKnownLowerThroughputFromSchedulingModel(
+    unsigned Opcode1, unsigned Opcode2) const {
+  const MCSchedModel &Sched = ST->getSchedModel();
+  const TargetInstrInfo *TII = ST->getInstrInfo();
+  if (!Sched.hasInstrSchedModel())
+    return false;
+
+  const MCSchedClassDesc *SCD1 =
+      Sched.getSchedClassDesc(TII->get(Opcode1).getSchedClass());
+  const MCSchedClassDesc *SCD2 =
+      Sched.getSchedClassDesc(TII->get(Opcode2).getSchedClass());
+  // We cannot handle variant scheduling classes without an MI. If we need to
+  // support them for any of the instructions we query the information of we
+  // might need to add a way to resolve them without a MI or not use the
+  // scheduling info.
+  assert(!SCD1->isVariant() && !SCD2->isVariant() &&
+         "Cannot handle variant scheduling classes without an MI");
+  if (!SCD1->isValid() || !SCD2->isValid())
+    return false;
+
+  return MCSchedModel::getReciprocalThroughput(*ST, *SCD1) >
+         MCSchedModel::getReciprocalThroughput(*ST, *SCD2);
+}
+
 InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
     unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
     TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
@@ -4458,6 +4531,12 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
     else if (isa<ScalableVectorType>(ValTy) &&
              (VecPred == FCmpInst::FCMP_ONE || VecPred == FCmpInst::FCMP_UEQ))
       Factor = 3; // fcmxx+fcmyy+or
+
+    if (isa<ScalableVectorType>(ValTy) &&
+        CostKind == TTI::TCK_RecipThroughput &&
+        hasKnownLowerThroughputFromSchedulingModel(AArch64::FCMEQ_PPzZZ_S,
+                                                   AArch64::FCMEQv4f32))
+      Factor *= 2;
 
     return Factor * (CostKind == TTI::TCK_Latency ? 2 : LT.first);
   }
@@ -5439,13 +5518,14 @@ InstructionCost AArch64TTIImpl::getExtendedReductionCost(
 }
 
 InstructionCost
-AArch64TTIImpl::getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
-                                       VectorType *VecTy,
+AArch64TTIImpl::getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode,
+                                       Type *ResTy, VectorType *VecTy,
                                        TTI::TargetCostKind CostKind) const {
   EVT VecVT = TLI->getValueType(DL, VecTy);
   EVT ResVT = TLI->getValueType(DL, ResTy);
 
-  if (ST->hasDotProd() && VecVT.isSimple() && ResVT.isSimple()) {
+  if (ST->hasDotProd() && VecVT.isSimple() && ResVT.isSimple() &&
+      RedOpcode == Instruction::Add) {
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VecTy);
 
     // The legal cases with dotprod are
@@ -5456,7 +5536,8 @@ AArch64TTIImpl::getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
       return LT.first + 2;
   }
 
-  return BaseT::getMulAccReductionCost(IsUnsigned, ResTy, VecTy, CostKind);
+  return BaseT::getMulAccReductionCost(IsUnsigned, RedOpcode, ResTy, VecTy,
+                                       CostKind);
 }
 
 InstructionCost
@@ -5703,11 +5784,14 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
 
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
   bool IsExtractSubvector = Kind == TTI::SK_ExtractSubvector;
-  // A subvector extract can be implemented with an ext (or trivial extract, if
-  // from lane 0). This currently only handles low or high extracts to prevent
-  // SLP vectorizer regressions.
+  // A subvector extract can be implemented with a NEON/SVE ext (or trivial
+  // extract, if from lane 0) for 128-bit NEON vectors or legal SVE vectors.
+  // This currently only handles low or high extracts to prevent SLP vectorizer
+  // regressions.
+  // Note that SVE's ext instruction is destructive, but it can be fused with
+  // a movprfx to act like a constructive instruction.
   if (IsExtractSubvector && LT.second.isFixedLengthVector()) {
-    if (LT.second.is128BitVector() &&
+    if (LT.second.getFixedSizeInBits() >= 128 &&
         cast<FixedVectorType>(SubTp)->getNumElements() ==
             LT.second.getVectorNumElements() / 2) {
       if (Index == 0)
@@ -5970,9 +6054,15 @@ static bool containsDecreasingPointers(Loop *TheLoop,
   return false;
 }
 
-bool AArch64TTIImpl::preferFixedOverScalableIfEqualCost() const {
+bool AArch64TTIImpl::preferFixedOverScalableIfEqualCost(bool IsEpilogue) const {
   if (SVEPreferFixedOverScalableIfEqualCost.getNumOccurrences())
     return SVEPreferFixedOverScalableIfEqualCost;
+  // For cases like post-LTO vectorization, when we eventually know the trip
+  // count, epilogue with fixed-width vectorization can be deleted if the trip
+  // count is less than the epilogue iterations. That's why we prefer
+  // fixed-width vectorization in epilogue in case of equal costs.
+  if (IsEpilogue)
+    return true;
   return ST->useFixedOverScalableIfEqualCost();
 }
 

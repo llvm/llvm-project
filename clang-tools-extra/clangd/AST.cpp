@@ -985,7 +985,7 @@ resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth) {
     // Recurse on pack parameters
     size_t Depth = 0;
     const FunctionDecl *CurrentFunction = D;
-    llvm::SmallSet<const FunctionTemplateDecl *, 4> SeenTemplates;
+    llvm::SmallPtrSet<const FunctionTemplateDecl *, 4> SeenTemplates;
     if (const auto *Template = D->getPrimaryTemplate()) {
       SeenTemplates.insert(Template);
     }

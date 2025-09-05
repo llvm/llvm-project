@@ -29,6 +29,12 @@ static cl::opt<bool>
     NoF16Math("nvptx-no-f16-math", cl::Hidden,
               cl::desc("NVPTX Specific: Disable generation of f16 math ops."),
               cl::init(false));
+
+static cl::opt<bool> NoF32x2("nvptx-no-f32x2", cl::Hidden,
+                             cl::desc("NVPTX Specific: Disable generation of "
+                                      "f32x2 instructions and registers."),
+                             cl::init(false));
+
 // Pin the vtable to this file.
 void NVPTXSubtarget::anchor() {}
 
@@ -68,6 +74,10 @@ const SelectionDAGTargetInfo *NVPTXSubtarget::getSelectionDAGInfo() const {
 
 bool NVPTXSubtarget::allowFP16Math() const {
   return hasFP16Math() && NoF16Math == false;
+}
+
+bool NVPTXSubtarget::hasF32x2Instructions() const {
+  return SmVersion >= 100 && PTXVersion >= 86 && !NoF32x2;
 }
 
 bool NVPTXSubtarget::hasNativeBF16Support(int Opcode) const {

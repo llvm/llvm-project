@@ -9,6 +9,7 @@
 #include "clang/Parse/ParseHLSLRootSignature.h"
 
 #include "clang/Lex/LiteralSupport.h"
+#include "clang/Sema/Sema.h"
 
 using namespace llvm::hlsl::rootsig;
 
@@ -1446,6 +1447,29 @@ bool RootSignatureParser::skipUntilClosedParens(uint32_t NumParens) {
 SourceLocation RootSignatureParser::getTokenLocation(RootSignatureToken Tok) {
   return Signature->getLocationOfByte(Tok.LocOffset, PP.getSourceManager(),
                                       PP.getLangOpts(), PP.getTargetInfo());
+}
+
+IdentifierInfo *ParseHLSLRootSignature(Sema &Actions,
+                                       llvm::dxbc::RootSignatureVersion Version,
+                                       StringLiteral *Signature) {
+  // Construct our identifier
+  auto [DeclIdent, Found] =
+      Actions.HLSL().ActOnStartRootSignatureDecl(Signature->getString());
+  // If we haven't found an already defined DeclIdent then parse the root
+  // signature string and construct the in-memory elements
+  if (!Found) {
+    // Invoke the root signature parser to construct the in-memory constructs
+    hlsl::RootSignatureParser Parser(Version, Signature,
+                                     Actions.getPreprocessor());
+    if (Parser.parse())
+      return nullptr;
+
+    // Construct the declaration.
+    Actions.HLSL().ActOnFinishRootSignatureDecl(
+        Signature->getBeginLoc(), DeclIdent, Parser.getElements());
+  }
+
+  return DeclIdent;
 }
 
 } // namespace hlsl
