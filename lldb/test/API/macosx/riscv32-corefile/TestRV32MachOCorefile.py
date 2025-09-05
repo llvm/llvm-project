@@ -13,6 +13,7 @@ from lldbsuite.test import lldbutil
 class TestRV32MachOCorefile(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIfWindows  # windows CI failure, says only 1 thread in corefile
     @no_debug_info_test
     def test_riscv32_gpr_corefile_registers(self):
         corefile = self.getBuildArtifact("core")
