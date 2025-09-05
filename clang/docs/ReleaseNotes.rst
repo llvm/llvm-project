@@ -308,6 +308,8 @@ Bug Fixes in This Version
 - Builtin elementwise operators now accept vector arguments that have different
   qualifiers on their elements. For example, vector of 4 ``const float`` values
   and vector of 4 ``float`` values. (#GH155405)
+- Fix the check for narrowing int-to-float conversions, so that they are detected in
+  cases where converting the float back to an integer is undefined behaviour.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
