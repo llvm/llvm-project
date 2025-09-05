@@ -70,22 +70,31 @@ public:
   bool HandlePrintfSpecifier(const analyze_printf::PrintfSpecifier &FS,
                              const char *StartSpecifier, unsigned SpecifierLen,
                              const TargetInfo &) override {
+    // Set the argument expression. Arguments of struct/class/complex types are
+    // ignored.
+    auto CheckAndSetArgExpr = [&](unsigned Idx, auto &ArgE) {
+      const Expr *E = Args[Idx];
+      if (E && (E->getType()->isRecordType() || E->getType()->isComplexType()))
+        return false;
+      ArgE = E;
+      return true;
+    };
+
     if (!FS.consumesDataArgument() &&
         FS.getConversionSpecifier().getKind() !=
             clang::analyze_format_string::ConversionSpecifier::PrintErrno)
       return true;
 
-    ArgsData.emplace_back();
+    ArgData ArgD;
     unsigned ArgIndex = FS.getArgIndex();
     if (ArgIndex < Args.size())
-      ArgsData.back().E = Args[ArgIndex];
+      if (!CheckAndSetArgExpr(ArgIndex, ArgD.E))
+        return true;
 
     // First get the Kind
-    ArgsData.back().Kind = getKind(FS.getConversionSpecifier().getKind());
-    if (ArgsData.back().Kind != OSLogBufferItem::ErrnoKind &&
-        !ArgsData.back().E) {
+    ArgD.Kind = getKind(FS.getConversionSpecifier().getKind());
+    if (ArgD.Kind != OSLogBufferItem::ErrnoKind && !ArgD.E) {
       // missing argument
-      ArgsData.pop_back();
       return false;
     }
 
@@ -97,10 +106,11 @@ public:
       case clang::analyze_format_string::OptionalAmount::NotSpecified: // "%s"
         break;
       case clang::analyze_format_string::OptionalAmount::Constant: // "%.16s"
-        ArgsData.back().Size = precision.getConstantAmount();
+        ArgD.Size = precision.getConstantAmount();
         break;
       case clang::analyze_format_string::OptionalAmount::Arg: // "%.*s"
-        ArgsData.back().Count = Args[precision.getArgIndex()];
+        if (!CheckAndSetArgExpr(precision.getArgIndex(), ArgD.Count))
+          return true;
         break;
       case clang::analyze_format_string::OptionalAmount::Invalid:
         return false;
@@ -113,10 +123,11 @@ public:
       case clang::analyze_format_string::OptionalAmount::NotSpecified: // "%P"
         return false; // length must be supplied with pointer format specifier
       case clang::analyze_format_string::OptionalAmount::Constant: // "%.16P"
-        ArgsData.back().Size = precision.getConstantAmount();
+        ArgD.Size = precision.getConstantAmount();
         break;
       case clang::analyze_format_string::OptionalAmount::Arg: // "%.*P"
-        ArgsData.back().Count = Args[precision.getArgIndex()];
+        if (!CheckAndSetArgExpr(precision.getArgIndex(), ArgD.Count))
+          return true;
         break;
       case clang::analyze_format_string::OptionalAmount::Invalid:
         return false;
@@ -125,22 +136,27 @@ public:
     }
     default:
       if (FS.getPrecision().hasDataArgument()) {
-        ArgsData.back().Precision = Args[FS.getPrecision().getArgIndex()];
+        if (!CheckAndSetArgExpr(FS.getPrecision().getArgIndex(),
+                                ArgD.Precision))
+          return true;
       }
       break;
     }
     if (FS.getFieldWidth().hasDataArgument()) {
-      ArgsData.back().FieldWidth = Args[FS.getFieldWidth().getArgIndex()];
+      if (!CheckAndSetArgExpr(FS.getFieldWidth().getArgIndex(),
+                              ArgD.FieldWidth))
+        return true;
     }
 
     if (FS.isSensitive())
-      ArgsData.back().Flags |= OSLogBufferItem::IsSensitive;
+      ArgD.Flags |= OSLogBufferItem::IsSensitive;
     else if (FS.isPrivate())
-      ArgsData.back().Flags |= OSLogBufferItem::IsPrivate;
+      ArgD.Flags |= OSLogBufferItem::IsPrivate;
     else if (FS.isPublic())
-      ArgsData.back().Flags |= OSLogBufferItem::IsPublic;
+      ArgD.Flags |= OSLogBufferItem::IsPublic;
 
-    ArgsData.back().MaskType = FS.getMaskType();
+    ArgD.MaskType = FS.getMaskType();
+    ArgsData.push_back(ArgD);
     return true;
   }
 
