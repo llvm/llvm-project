@@ -109,6 +109,7 @@ static DecodeStatus decodeCallTarget(MCInst &Inst, unsigned Field,
 static DecodeStatus decodeRelCondBrTarget7(MCInst &Inst, unsigned Field,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder) {
+  // The legal range is [-128, 126] (in bytes).
   Inst.addOperand(MCOperand::createImm(SignExtend32(Field, 7) << 1));
   return MCDisassembler::Success;
 }
@@ -116,6 +117,7 @@ static DecodeStatus decodeRelCondBrTarget7(MCInst &Inst, unsigned Field,
 static DecodeStatus decodeRelCondBrTarget13(MCInst &Inst, unsigned Field,
                                             uint64_t Address,
                                             const MCDisassembler *Decoder) {
+  // The legal range is [-4096, 4094] (in bytes).
   Inst.addOperand(MCOperand::createImm(SignExtend32(Field, 12) << 1));
   return MCDisassembler::Success;
 }
