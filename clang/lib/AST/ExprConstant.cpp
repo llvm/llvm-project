@@ -11995,6 +11995,28 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
+  case X86::BI__builtin_ia32_pblendvb128:
+  case X86::BI__builtin_ia32_pblendvb256: {
+    // SSE blendv by mask signbit: "Result = C[] < 0 ? T[] : F[]".
+    APValue SourceF, SourceT, SourceC;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceF) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceT) ||
+        !EvaluateAsRValue(Info, E->getArg(2), SourceC))
+      return false;
+
+    unsigned SourceLen = SourceF.getVectorLength();
+    SmallVector<APValue, 32> ResultElements;
+    ResultElements.reserve(SourceLen);
+
+    for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
+      const APValue &F = SourceF.getVectorElt(EltNum);
+      const APValue &T = SourceT.getVectorElt(EltNum);
+      APInt C = SourceC.getVectorElt(EltNum).getInt();
+      ResultElements.push_back(C.isNegative() ? T : F);
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
   case X86::BI__builtin_ia32_selectb_128:
   case X86::BI__builtin_ia32_selectb_256:
   case X86::BI__builtin_ia32_selectb_512:
