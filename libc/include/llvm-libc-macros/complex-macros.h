@@ -22,7 +22,7 @@
 
 // TODO: Add imaginary macros once GCC or Clang support _Imaginary builtin-type.
 
-#if !defined(__clang__) || (__clang_major__ >= 12)
+#if __has_builtin(__builtin_complex)
 #define __CMPLX(r, i, t) (__builtin_complex((t)(r), (t)(i)))
 #else
 #define __CMPLX(r, i, t) ((_Complex t){(t)(r), (t)(i)})
