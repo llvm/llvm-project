@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "rdivi.h"
 #include "include/llvm-libc-macros/stdfix-macros.h" // fract
-#include "src/__support/common.h"                   // LLVM_LIBC_FUNCTION
-#include "src/__support/fixed_point/fx_bits.h"      // fixed_point
-#include "src/__support/macros/config.h"            // LIBC_NAMESPACE_DECL
+#include "rdivi.h"
+#include "src/__support/common.h"              // LLVM_LIBC_FUNCTION
+#include "src/__support/fixed_point/fx_bits.h" // fixed_point
+#include "src/__support/macros/config.h"       // LIBC_NAMESPACE_DECL
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(fract, rdivi, (int a, int b)) {
-  return fixed_point::divi<fract>(a,b);
+  return fixed_point::divi<fract>(a, b);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
