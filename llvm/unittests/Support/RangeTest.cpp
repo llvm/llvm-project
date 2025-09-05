@@ -46,27 +46,30 @@ TEST(RangeTest, RangeOverlaps) {
 }
 
 TEST(RangeUtilsTest, ParseSingleNumber) {
-  RangeUtils::RangeList Ranges;
-  EXPECT_TRUE(RangeUtils::parseRanges("42", Ranges));
+  auto ER = RangeUtils::parseRanges("42");
+  ASSERT_TRUE(ER);
+  auto Ranges = std::move(*ER);
   EXPECT_EQ(Ranges.size(), 1U);
   EXPECT_EQ(Ranges[0].Begin, 42);
   EXPECT_EQ(Ranges[0].End, 42);
 }
 
 TEST(RangeUtilsTest, ParseSingleRange) {
-  RangeUtils::RangeList Ranges;
-  EXPECT_TRUE(RangeUtils::parseRanges("10-20", Ranges));
+  auto ER = RangeUtils::parseRanges("10-20");
+  ASSERT_TRUE(ER);
+  auto Ranges = std::move(*ER);
   EXPECT_EQ(Ranges.size(), 1U);
   EXPECT_EQ(Ranges[0].Begin, 10);
   EXPECT_EQ(Ranges[0].End, 20);
 }
 
 TEST(RangeUtilsTest, ParseMultipleRanges) {
-  RangeUtils::RangeList Ranges;
-  EXPECT_TRUE(RangeUtils::parseRanges("1-5,10,15-20", Ranges));
+  auto ER = RangeUtils::parseRanges("1-5,10,15-20");
+  ASSERT_TRUE(ER);
+  auto Ranges = std::move(*ER);
   EXPECT_EQ(Ranges.size(), 3U);
 
-  // Ranges are in input order (DebugCounter style)
+  // Ranges are in input order (DebugCounter style).
   EXPECT_EQ(Ranges[0].Begin, 1);
   EXPECT_EQ(Ranges[0].End, 5);
   EXPECT_EQ(Ranges[1].Begin, 10);
@@ -76,8 +79,9 @@ TEST(RangeUtilsTest, ParseMultipleRanges) {
 }
 
 TEST(RangeUtilsTest, ParseColonSeparated) {
-  RangeUtils::RangeList Ranges;
-  EXPECT_TRUE(RangeUtils::parseRanges("1-5:10:15-20", Ranges, ':'));
+  auto ER = RangeUtils::parseRanges("1-5:10:15-20", ':');
+  ASSERT_TRUE(ER);
+  auto Ranges = std::move(*ER);
   EXPECT_EQ(Ranges.size(), 3U);
   EXPECT_EQ(Ranges[0].Begin, 1);
   EXPECT_EQ(Ranges[0].End, 5);
@@ -88,29 +92,37 @@ TEST(RangeUtilsTest, ParseColonSeparated) {
 }
 
 TEST(RangeUtilsTest, ParseEmptyString) {
-  RangeUtils::RangeList Ranges;
-  EXPECT_TRUE(RangeUtils::parseRanges("", Ranges));
+  auto ER = RangeUtils::parseRanges("");
+  ASSERT_TRUE(ER);
+  auto Ranges = std::move(*ER);
   EXPECT_TRUE(Ranges.empty());
 }
 
 TEST(RangeUtilsTest, ParseInvalidRanges) {
-  RangeUtils::RangeList Ranges;
+  // Invalid number.
+  auto ER1 = RangeUtils::parseRanges("abc");
+  EXPECT_FALSE(ER1);
+  consumeError(ER1.takeError());
 
-  // Invalid number
-  EXPECT_FALSE(RangeUtils::parseRanges("abc", Ranges));
+  // Invalid range (begin > end).
+  auto ER2 = RangeUtils::parseRanges("10-5");
+  EXPECT_FALSE(ER2);
+  consumeError(ER2.takeError());
 
-  // Invalid range (begin > end)
-  EXPECT_FALSE(RangeUtils::parseRanges("10-5", Ranges));
+  // Out of order ranges (DebugCounter constraint and overlap).
+  auto ER3 = RangeUtils::parseRanges("10,5");
+  EXPECT_FALSE(ER3);
+  consumeError(ER3.takeError());
 
-  // Out of order ranges (DebugCounter constraint)
-  EXPECT_FALSE(RangeUtils::parseRanges("10,5", Ranges));
-  EXPECT_FALSE(
-      RangeUtils::parseRanges("1-5,3-7", Ranges)); // Overlapping not allowed
+  auto ER4 = RangeUtils::parseRanges("1-5,3-7");
+  EXPECT_FALSE(ER4);
+  consumeError(ER4.takeError());
 }
 
 TEST(RangeUtilsTest, Contains) {
-  RangeUtils::RangeList Ranges;
-  EXPECT_TRUE(RangeUtils::parseRanges("1-5,10,15-20", Ranges));
+  auto ER = RangeUtils::parseRanges("1-5,10,15-20");
+  ASSERT_TRUE(ER);
+  auto Ranges = std::move(*ER);
 
   EXPECT_TRUE(RangeUtils::contains(Ranges, 1));
   EXPECT_TRUE(RangeUtils::contains(Ranges, 3));
@@ -130,9 +142,14 @@ TEST(RangeUtilsTest, Contains) {
 TEST(RangeUtilsTest, SeparatorParameter) {
   RangeUtils::RangeList ColonRanges, CommaRanges;
 
-  // Test explicit separator parameters
-  EXPECT_TRUE(RangeUtils::parseRanges("1-5:10:15-20", ColonRanges, ':'));
-  EXPECT_TRUE(RangeUtils::parseRanges("1-5,10,15-20", CommaRanges, ','));
+  // Test explicit separator parameters.
+  auto ERC = RangeUtils::parseRanges("1-5:10:15-20", ':');
+  ASSERT_TRUE(ERC);
+  ColonRanges = std::move(*ERC);
+
+  auto ERM = RangeUtils::parseRanges("1-5,10,15-20", ',');
+  ASSERT_TRUE(ERM);
+  CommaRanges = std::move(*ERM);
 
   EXPECT_EQ(ColonRanges.size(), CommaRanges.size());
   for (size_t I = 0; I < ColonRanges.size(); ++I) {
@@ -140,7 +157,7 @@ TEST(RangeUtilsTest, SeparatorParameter) {
     EXPECT_EQ(ColonRanges[I].End, CommaRanges[I].End);
   }
 
-  // Test that both work with contains()
+  // Test that both work with contains().
   EXPECT_TRUE(RangeUtils::contains(ColonRanges, 3));
   EXPECT_TRUE(RangeUtils::contains(CommaRanges, 3));
   EXPECT_TRUE(RangeUtils::contains(ColonRanges, 10));
@@ -153,10 +170,10 @@ TEST(RangeUtilsTest, SeparatorParameter) {
 }
 
 TEST(RangeUtilsTest, DefaultCommaSeparator) {
-  RangeUtils::RangeList Ranges;
-
-  // Test that comma is the default separator
-  EXPECT_TRUE(RangeUtils::parseRanges("1-5,10,15-20", Ranges));
+  // Test that comma is the default separator.
+  auto ER = RangeUtils::parseRanges("1-5,10,15-20");
+  ASSERT_TRUE(ER);
+  auto Ranges = std::move(*ER);
   EXPECT_EQ(Ranges.size(), 3U);
   EXPECT_EQ(Ranges[0].Begin, 1);
   EXPECT_EQ(Ranges[0].End, 5);
@@ -173,13 +190,13 @@ TEST(RangeTest, MergeAdjacentRanges) {
   Result = RangeUtils::mergeAdjacentRanges(Input);
   EXPECT_TRUE(Result.empty());
 
-  // Single range - no change
+  // Single range - no change.
   Input.push_back(Range(5, 10));
   Expected.push_back(Range(5, 10));
   Result = RangeUtils::mergeAdjacentRanges(Input);
   EXPECT_EQ(Expected, Result);
 
-  // Adjacent ranges should merge
+  // Adjacent ranges should merge.
   Input.clear();
   Expected.clear();
   Input.push_back(Range(1, 3));
@@ -189,32 +206,32 @@ TEST(RangeTest, MergeAdjacentRanges) {
   Result = RangeUtils::mergeAdjacentRanges(Input);
   EXPECT_EQ(Expected, Result);
 
-  // Non-adjacent ranges should not merge
+  // Non-adjacent ranges should not merge.
   Input.clear();
   Expected.clear();
   Input.push_back(Range(1, 3));
-  Input.push_back(Range(5, 7));   // Gap between 3 and 5
-  Input.push_back(Range(10, 12)); // Gap between 7 and 10
+  Input.push_back(Range(5, 7));   // Gap between 3 and 5.
+  Input.push_back(Range(10, 12)); // Gap between 7 and 10.
   Expected.push_back(Range(1, 3));
   Expected.push_back(Range(5, 7));
   Expected.push_back(Range(10, 12));
   Result = RangeUtils::mergeAdjacentRanges(Input);
   EXPECT_EQ(Expected, Result);
 
-  // Mixed adjacent and non-adjacent
+  // Mixed adjacent and non-adjacent.
   Input.clear();
   Expected.clear();
   Input.push_back(Range(1, 3));
-  Input.push_back(Range(4, 6));     // Adjacent to first
-  Input.push_back(Range(8, 10));    // Gap
-  Input.push_back(Range(11, 13));   // Adjacent to third
-  Input.push_back(Range(14, 16));   // Adjacent to fourth
-  Expected.push_back(Range(1, 6));  // Merged 1-3 and 4-6
-  Expected.push_back(Range(8, 16)); // Merged 8-10, 11-13, 14-16
+  Input.push_back(Range(4, 6));     // Adjacent to first.
+  Input.push_back(Range(8, 10));    // Gap.
+  Input.push_back(Range(11, 13));   // Adjacent to third.
+  Input.push_back(Range(14, 16));   // Adjacent to fourth.
+  Expected.push_back(Range(1, 6));  // Merged 1-3 and 4-6.
+  Expected.push_back(Range(8, 16)); // Merged 8-10, 11-13, 14-16.
   Result = RangeUtils::mergeAdjacentRanges(Input);
   EXPECT_EQ(Expected, Result);
 
-  // Single numbers that are adjacent
+  // Single numbers that are adjacent.
   Input.clear();
   Expected.clear();
   Input.push_back(Range(5));

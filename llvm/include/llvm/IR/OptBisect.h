@@ -71,7 +71,7 @@ public:
   /// isEnabled() should return true before calling shouldRunPass().
   bool isEnabled() const override { return !BisectRanges.empty(); }
 
-  /// Set ranges directly from a RangeList
+  /// Set ranges directly from a RangeList.
   void setRanges(RangeUtils::RangeList Ranges) {
     BisectRanges = std::move(Ranges);
   }

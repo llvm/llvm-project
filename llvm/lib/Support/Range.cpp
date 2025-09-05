@@ -22,7 +22,7 @@ Expected<RangeUtils::RangeList> RangeUtils::parseRanges(StringRef Str,
   if (Str.empty())
     return std::move(Ranges);
 
-  // Regex to match either single number or range "num1-num2"
+  // Regex to match either single number or range "num1-num2".
   const Regex RangeRegex("^([0-9]+)(-([0-9]+))?$");
 
   for (StringRef Part : llvm::split(Str, Separator)) {
@@ -43,7 +43,7 @@ Expected<RangeUtils::RangeList> RangeUtils::parseRanges(StringRef Str,
                                Matches[1].str().c_str());
 
     if (!Matches[3].empty()) {
-      // Range format "begin-end"
+      // Range format "begin-end".
       if (Matches[3].getAsInteger(10, End))
         return createStringError(std::errc::invalid_argument,
                                  "Failed to parse number: '%s'",
@@ -52,10 +52,10 @@ Expected<RangeUtils::RangeList> RangeUtils::parseRanges(StringRef Str,
         return createStringError(std::errc::invalid_argument,
                                  "Invalid range: %lld >= %lld", Begin, End);
     } else
-      // Single number
+      // Single number.
       End = Begin;
 
-    // Check ordering constraint (ranges must be in increasing order)
+    // Check ordering constraint (ranges must be in increasing order).
     if (!Ranges.empty() && Begin <= Ranges.back().End)
       return createStringError(
           std::errc::invalid_argument,
@@ -76,21 +76,17 @@ bool RangeUtils::contains(ArrayRef<Range> Ranges, int64_t Value) {
   return false;
 }
 
-void RangeUtils::printRanges(raw_ostream &OS, ArrayRef<Range> Ranges) {
+void RangeUtils::printRanges(raw_ostream &OS, ArrayRef<Range> Ranges, char Separator) {
   if (Ranges.empty())
     OS << "empty";
   else {
     bool IsFirst = true;
     for (const Range &R : Ranges) {
       if (!IsFirst)
-        OS << ':';
+        OS << Separator;
       else
         IsFirst = false;
-
-      if (R.Begin == R.End)
-        OS << R.Begin;
-      else
-        OS << R.Begin << "-" << R.End;
+      R.print(OS);
     }
   }
 }
@@ -106,12 +102,12 @@ RangeUtils::RangeList RangeUtils::mergeAdjacentRanges(ArrayRef<Range> Ranges) {
     const Range &Current = Ranges[I];
     Range &Last = Result.back();
 
-    // Check if current range is adjacent to the last merged range
+    // Check if current range is adjacent to the last merged range.
     if (Current.Begin == Last.End + 1) {
-      // Merge by extending the end of the last range
+      // Merge by extending the end of the last range.
       Last.End = Current.End;
     } else {
-      // Not adjacent, add as separate range
+      // Not adjacent, add as separate range.
       Result.push_back(Current);
     }
   }

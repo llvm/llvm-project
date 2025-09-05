@@ -11,7 +11,7 @@ using namespace llvm;
 namespace llvm {
 
 void DebugCounter::printChunks(raw_ostream &OS, ArrayRef<Range> Ranges) {
-  RangeUtils::printRanges(OS, Ranges);
+  RangeUtils::printRanges(OS, Ranges, ':');
 }
 
 } // namespace llvm
