@@ -1633,17 +1633,18 @@ void BinaryContext::preprocessDWODebugInfo() {
           DwarfUnit->getUnitDIE().find(
               {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
           "");
-      SmallString<16> AbsolutePath;
+      SmallString<16> AbsolutePath(DWOName);
+      std::string DWOCompDir = DwarfUnit->getCompilationDir();
       if (!opts::CompDirOverride.empty()) {
-        sys::path::append(AbsolutePath, opts::CompDirOverride);
-        sys::path::append(AbsolutePath, DWOName);
-      } else if (!sys::fs::exists(DwarfUnit->getCompilationDir()) &&
-                 sys::fs::exists(DWOName)) {
+        DWOCompDir = opts::CompDirOverride;
+      } else if (!sys::fs::exists(DWOCompDir) && sys::fs::exists(DWOName)) {
+        DWOCompDir = ".";
         this->outs()
             << "BOLT-WARNING: Debug Fission: Debug Compilation Dir wrong for "
-            << DWOName << ". DWO Name will be directly used for retrieving.\n";
-        AbsolutePath = DWOName;
+            << DWOName << ". Relative path will be used for retrieving.\n";
       }
+      // Prevent failures when DWOName is already an absolute path.
+      sys::fs::make_absolute(DWOCompDir, AbsolutePath);
       DWARFUnit *DWOCU =
           DwarfUnit->getNonSkeletonUnitDIE(false, AbsolutePath).getDwarfUnit();
       if (!DWOCU->isDWOUnit()) {
@@ -1651,7 +1652,8 @@ void BinaryContext::preprocessDWODebugInfo() {
             << "BOLT-WARNING: Debug Fission: DWO debug information for "
             << DWOName
             << " was not retrieved and won't be updated. Please check "
-               "relative path.\n";
+               "relative path or use '--comp-dir-override' to specify the base "
+               "location.\n";
         continue;
       }
       DWOCUs[*DWOId] = DWOCU;
