@@ -129,5 +129,6 @@ add_mlir_dialect_library(MLIRXeVMDialect
   MLIRDialectUtils
   MLIRIR
   MLIRLLVMDialect
+  MLIRXeGPUuArch
   MLIRSideEffectInterfaces
 )
