@@ -72,9 +72,7 @@ public:
 
   llvm::orc::LLJIT &GetExecutionEngine() { return *Jit; }
 
-#ifndef _WIN32
   uint32_t getOutOfProcessChildPid() const { return OutOfProcessChildPid; }
-#endif
 
   static llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
   createDefaultJITBuilder(llvm::orc::JITTargetMachineBuilder JTMB);
