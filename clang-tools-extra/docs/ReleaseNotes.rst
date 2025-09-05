@@ -145,8 +145,8 @@ New checks
 - New :doc:`google-runtime-float
   <clang-tidy/checks/google/runtime-float>` check.
 
-  Checks for and warns of uses of the ``long double`` type, which is
-  problematic since it produces non-portable code.
+  Finds uses of ``long double`` and suggests against their use due to lack of
+  portability.
 
 - New :doc:`llvm-mlir-op-builder
   <clang-tidy/checks/llvm/use-new-mlir-op-builder>` check.
