@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if __CLC_VECSIZE_OR_1 >= 2
-
 #include <clc/utils.h>
+
+#if __CLC_VECSIZE_OR_1 >= 2
 
 #ifndef __CLC_IMPL_FUNCTION
 #define __CLC_IMPL_FUNCTION __CLC_FUNCTION
