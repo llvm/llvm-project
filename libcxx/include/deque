@@ -488,7 +488,7 @@ const _DiffType __deque_iterator<_ValueType, _Pointer, _Reference, _MapPointer, 
 template <class _Tp, class _Allocator /*= allocator<_Tp>*/>
 class deque {
   template <class _Up, class _Alloc>
-  using __split_buffer = std::__split_buffer<_Up, _Alloc, __split_buffer_pointer_layout>;
+  using __split_buffer _LIBCPP_NODEBUG = std::__split_buffer<_Up, _Alloc, __split_buffer_pointer_layout>;
 
 public:
   // types:

@@ -87,7 +87,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
 class vector {
   template <class _Up, class _Alloc>
-  using __split_buffer = std::__split_buffer<_Up, _Alloc, __split_buffer_pointer_layout>;
+  using __split_buffer _LIBCPP_NODEBUG = std::__split_buffer<_Up, _Alloc, __split_buffer_pointer_layout>;
 
 public:
   //
