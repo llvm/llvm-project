@@ -688,3 +688,66 @@ uint32_t mulsu_h00(uint32_t rs1, uint32_t rs2) {
 uint32_t mulsu_h11(uint32_t rs1, uint32_t rs2) {
   return __riscv_mulsu_h11(rs1, rs2);
 }
+
+// RV32P-LABEL: @ppack_h(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.ppack.h.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t ppack_h(uint32_t rs1, uint32_t rs2) {
+  return __riscv_ppack_h(rs1, rs2);
+}
+
+// RV32P-LABEL: @ppackbt_h(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.ppackbt.h.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t ppackbt_h(uint32_t rs1, uint32_t rs2) {
+  return __riscv_ppackbt_h(rs1, rs2);
+}
+
+// RV32P-LABEL: @packbt(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.packbt.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+int32_t packbt(int32_t rs1, int32_t rs2) {
+  return __riscv_packbt(rs1, rs2);
+}
+
+// RV32P-LABEL: @ppacktb_h(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.ppacktb.h.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t ppacktb_h(uint32_t rs1, uint32_t rs2) {
+  return __riscv_ppacktb_h(rs1, rs2);
+}
+
+// RV32P-LABEL: @packtb(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.packtb.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+int32_t packtb(int32_t rs1, int32_t rs2) {
+  return __riscv_packtb(rs1, rs2);
+}
+
+// RV32P-LABEL: @ppackt_h(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.ppackt.h.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t ppackt_h(uint32_t rs1, uint32_t rs2) {
+  return __riscv_ppackt_h(rs1, rs2);
+}
+
+// RV32P-LABEL: @packt(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.packt.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+int32_t packt(int32_t rs1, int32_t rs2) {
+  return __riscv_packt(rs1, rs2);
+}

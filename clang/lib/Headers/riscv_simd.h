@@ -399,6 +399,41 @@ static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
 __riscv_mulsu_h11(uint32_t __x, uint32_t __y) {
   return __builtin_riscv_mulsu_h11(__x, __y);
 }
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_ppack_h(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_ppack_h_32(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_ppackbt_h(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_ppackbt_h_32(__x, __y);
+}
+
+static __inline__ int32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_packbt(int32_t __x, int32_t __y) {
+  return __builtin_riscv_packbt_32(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_ppacktb_h(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_ppacktb_h_32(__x, __y);
+}
+
+static __inline__ int32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_packtb(int32_t __x, int32_t __y) {
+  return __builtin_riscv_packtb_32(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_ppackt_h(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_ppackt_h_32(__x, __y);
+}
+
+static __inline__ int32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_packt(int32_t __x, int32_t __y) {
+  return __builtin_riscv_packt_32(__x, __y);
+}
 #endif
 
 
@@ -931,6 +966,61 @@ __riscv_mulsu_w00(uint64_t __x, uint64_t __y) {
 static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
 __riscv_mulsu_w11(uint64_t __x, uint64_t __y) {
   return __builtin_riscv_mulsu_w11(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_ppack_h(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_ppack_h_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_ppack_w(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_ppack_w(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_ppackbt_h(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_ppackbt_h_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_ppackbt_w(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_ppackbt_w(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_packbt(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_packbt_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_ppacktb_h(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_ppacktb_h_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_ppacktb_w(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_ppacktb_w(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_packtb(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_packtb_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_ppackt_h(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_ppackt_h_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_ppackt_w(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_ppackt_w(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_packt(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_packt_64(__x, __y);
 }
 #endif
 

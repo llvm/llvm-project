@@ -217,6 +217,13 @@ def mulu_h00       : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 def mulu_h11       : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 def mulsu_h00      : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 def mulsu_h11      : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def ppack_h_32     : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def ppackbt_h_32   : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def packbt_32      : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
+def ppacktb_h_32   : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def packtb_32      : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
+def ppackt_h_32    : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def packt_32       : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
 } // Features = "experimental-p,32bit"
 
 let Features = "experimental-p,64bit" in {
@@ -326,6 +333,17 @@ def mulu_w00       : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 def mulu_w11       : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 def mulsu_w00      : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 def mulsu_w11      : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def ppack_h_64     : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def ppack_w        : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def ppackbt_h_64   : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def ppackbt_w      : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def packbt_64      : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def ppacktb_h_64   : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def ppacktb_w      : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def packtb_64      : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def ppackt_h_64    : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def ppackt_w       : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def packt_64       : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 } // Features = "experimental-p,64bit"
 } // Attributes = [Const, NoThrow]
 

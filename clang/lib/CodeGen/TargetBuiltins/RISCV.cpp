@@ -325,6 +325,24 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_zip16p:
   case RISCV::BI__builtin_riscv_zip8hp:
   case RISCV::BI__builtin_riscv_zip16hp:
+  case RISCV::BI__builtin_riscv_ppack_h_32:
+  case RISCV::BI__builtin_riscv_ppack_h_64:
+  case RISCV::BI__builtin_riscv_ppack_w:
+  case RISCV::BI__builtin_riscv_ppackbt_h_32:
+  case RISCV::BI__builtin_riscv_ppackbt_h_64:
+  case RISCV::BI__builtin_riscv_ppackbt_w:
+  case RISCV::BI__builtin_riscv_packbt_32:
+  case RISCV::BI__builtin_riscv_packbt_64:
+  case RISCV::BI__builtin_riscv_ppacktb_h_32:
+  case RISCV::BI__builtin_riscv_ppacktb_h_64:
+  case RISCV::BI__builtin_riscv_ppacktb_w:
+  case RISCV::BI__builtin_riscv_packtb_32:
+  case RISCV::BI__builtin_riscv_packtb_64:
+  case RISCV::BI__builtin_riscv_ppackt_h_32:
+  case RISCV::BI__builtin_riscv_ppackt_h_64:
+  case RISCV::BI__builtin_riscv_ppackt_w:
+  case RISCV::BI__builtin_riscv_packt_32:
+  case RISCV::BI__builtin_riscv_packt_64:
   case RISCV::BI__builtin_riscv_sadd: {
     switch (BuiltinID) {
     default: llvm_unreachable("unexpected builtin ID");
@@ -640,6 +658,46 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
       break;
     case RISCV::BI__builtin_riscv_zip16hp:
       ID = Intrinsic::riscv_zip16hp;
+      break;
+    case RISCV::BI__builtin_riscv_ppack_h_32:
+    case RISCV::BI__builtin_riscv_ppack_h_64:
+      ID = Intrinsic::riscv_ppack_h;
+      break;
+    case RISCV::BI__builtin_riscv_ppack_w:
+      ID = Intrinsic::riscv_ppack_w;
+      break;
+    case RISCV::BI__builtin_riscv_ppackbt_h_32:
+    case RISCV::BI__builtin_riscv_ppackbt_h_64:
+      ID = Intrinsic::riscv_ppackbt_h;
+      break;
+    case RISCV::BI__builtin_riscv_ppackbt_w:
+      ID = Intrinsic::riscv_ppackbt_w;
+      break;
+    case RISCV::BI__builtin_riscv_packbt_32:
+    case RISCV::BI__builtin_riscv_packbt_64:
+      ID = Intrinsic::riscv_packbt;
+      break;
+    case RISCV::BI__builtin_riscv_ppacktb_h_32:
+    case RISCV::BI__builtin_riscv_ppacktb_h_64:
+      ID = Intrinsic::riscv_ppacktb_h;
+      break;
+    case RISCV::BI__builtin_riscv_ppacktb_w:
+      ID = Intrinsic::riscv_ppacktb_w;
+      break;
+    case RISCV::BI__builtin_riscv_packtb_32:
+    case RISCV::BI__builtin_riscv_packtb_64:
+      ID = Intrinsic::riscv_packtb;
+      break;
+    case RISCV::BI__builtin_riscv_ppackt_h_32:
+    case RISCV::BI__builtin_riscv_ppackt_h_64:
+      ID = Intrinsic::riscv_ppackt_h;
+      break;
+    case RISCV::BI__builtin_riscv_ppackt_w:
+      ID = Intrinsic::riscv_ppackt_w;
+      break;
+    case RISCV::BI__builtin_riscv_packt_32:
+    case RISCV::BI__builtin_riscv_packt_64:
+      ID = Intrinsic::riscv_packt;
       break;
     case RISCV::BI__builtin_riscv_sadd:
       ID = Intrinsic::riscv_sadd;

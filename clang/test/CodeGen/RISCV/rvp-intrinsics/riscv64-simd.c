@@ -975,3 +975,102 @@ uint64_t mulsu_w00(uint64_t rs1, uint64_t rs2) {
 uint64_t mulsu_w11(uint64_t rs1, uint64_t rs2) {
   return __riscv_mulsu_w11(rs1, rs2);
 }
+
+// RV64P-LABEL: @ppack_h(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.ppack.h.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t ppack_h(uint64_t rs1, uint64_t rs2) {
+  return __riscv_ppack_h(rs1, rs2);
+}
+
+// RV64P-LABEL: @ppack_w(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.ppack.w.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t ppack_w(uint64_t rs1, uint64_t rs2) {
+  return __riscv_ppack_w(rs1, rs2);
+}
+
+// RV64P-LABEL: @ppackbt_h(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.ppackbt.h.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t ppackbt_h(uint64_t rs1, uint64_t rs2) {
+  return __riscv_ppackbt_h(rs1, rs2);
+}
+
+// RV64P-LABEL: @ppackbt_w(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.ppackbt.w.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t ppackbt_w(uint64_t rs1, uint64_t rs2) {
+  return __riscv_ppackbt_w(rs1, rs2);
+}
+
+// RV64P-LABEL: @packbt(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.packbt.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t packbt(uint64_t rs1, uint64_t rs2) {
+  return __riscv_packbt(rs1, rs2);
+}
+
+// RV64P-LABEL: @ppacktb_h(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.ppacktb.h.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t ppacktb_h(uint64_t rs1, uint64_t rs2) {
+  return __riscv_ppacktb_h(rs1, rs2);
+}
+
+// RV64P-LABEL: @ppacktb_w(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.ppacktb.w.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t ppacktb_w(uint64_t rs1, uint64_t rs2) {
+  return __riscv_ppacktb_w(rs1, rs2);
+}
+
+// RV64P-LABEL: @packtb(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.packtb.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t packtb(uint64_t rs1, uint64_t rs2) {
+  return __riscv_packtb(rs1, rs2);
+}
+
+// RV64P-LABEL: @ppackt_h(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.ppackt.h.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t ppackt_h(uint64_t rs1, uint64_t rs2) {
+  return __riscv_ppackt_h(rs1, rs2);
+}
+
+// RV64P-LABEL: @ppackt_w(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.ppackt.w.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t ppackt_w(uint64_t rs1, uint64_t rs2) {
+  return __riscv_ppackt_w(rs1, rs2);
+}
+
+// RV64P-LABEL: @packt(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.packt.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t packt(uint64_t rs1, uint64_t rs2) {
+  return __riscv_packt(rs1, rs2);
+}
