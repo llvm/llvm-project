@@ -63,10 +63,12 @@ TEST(RangeTest, SizeExtremesNonOverflow) {
   EXPECT_EQ(R3.size(), (1ULL << 63) + 1);
 
   // Small extreme windows
-  Range R4(std::numeric_limits<int64_t>::min(), std::numeric_limits<int64_t>::min() + 10);
+  Range R4(std::numeric_limits<int64_t>::min(),
+           std::numeric_limits<int64_t>::min() + 10);
   EXPECT_EQ(R4.size(), 11u);
 
-  Range R5(std::numeric_limits<int64_t>::max() - 10, std::numeric_limits<int64_t>::max());
+  Range R5(std::numeric_limits<int64_t>::max() - 10,
+           std::numeric_limits<int64_t>::max());
   EXPECT_EQ(R5.size(), 11u);
 }
 
