@@ -8496,15 +8496,6 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
         SDValue SVL = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
                                   DAG.getConstant(1, DL, MVT::i32));
         Size = DAG.getNode(ISD::MUL, DL, MVT::i64, SVL, SVL);
-      } else if (Attrs.hasAgnosticZAInterface()) {
-        RTLIB::Libcall LC = RTLIB::SMEABI_SME_STATE_SIZE;
-        SDValue Callee = DAG.getExternalSymbol(
-            getLibcallName(LC), getPointerTy(DAG.getDataLayout()));
-        auto *RetTy = EVT(MVT::i64).getTypeForEVT(*DAG.getContext());
-        TargetLowering::CallLoweringInfo CLI(DAG);
-        CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
-            getLibcallCallingConv(LC), RetTy, Callee, {});
-        std::tie(Size, Chain) = LowerCallTo(CLI);
       }
       if (Size) {
         SDValue Buffer = DAG.getNode(
