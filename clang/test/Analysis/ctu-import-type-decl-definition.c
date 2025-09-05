@@ -4,8 +4,8 @@
 
 // RUN: %clang_cc1 -emit-pch -o %t/import.c.ast %t/import.c
 
-// RUN: %clang_extdef_map -- -x c %t/import.c >> %t/externalDefMap.txt
-// RUN: sed -i='' 's/$/.ast/' %t/externalDefMap.txt
+// RUN: %clang_extdef_map -- -x c %t/import.c >> %t/externalDefMap_.txt
+// RUN: sed 's/$/.ast/' %t/externalDefMap_.txt >> %t/externalDefMap.txt
 
 // RUN: %clang_cc1 -analyze \
 // RUN:   -analyzer-checker=core \
