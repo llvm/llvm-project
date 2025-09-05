@@ -2452,6 +2452,52 @@ def CIR_CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
 }
 
 //===----------------------------------------------------------------------===//
+// CopyOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CopyOp : CIR_Op<"copy",[
+  SameTypeOperands,
+  DeclareOpInterfaceMethods<PromotableMemOpInterface>
+]> {
+  let summary = "Copies contents from a CIR pointer to another";
+  let description = [{
+    Given two CIR pointers, `src` and `dst`, `cir.copy` will copy the memory
+    pointed by `src` to the memory pointed by `dst`.
+
+    The number of bytes copied is inferred from the pointee type. The pointee
+    type of `src` and `dst` must match and both must implement the
+    `DataLayoutTypeInterface`.
+
+    Examples:
+
+    ```mlir
+      // Copying contents from one record to another:
+      cir.copy %0 to %1 : !cir.ptr<!record_ty>
+    ```
+  }];
+
+  let arguments = (ins
+      Arg<CIR_PointerType, "", [MemWrite]>:$dst,
+      Arg<CIR_PointerType, "", [MemRead]>:$src
+  );
+
+  let assemblyFormat = [{$src `to` $dst
+                        attr-dict `:` qualified(type($dst))
+  }];
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    /// Returns the pointer type being copied.
+    cir::PointerType getType() { return getSrc().getType(); }
+
+    /// Returns the number of bytes to be copied.
+    unsigned getLength(const mlir::DataLayout &dt) {
+      return dt.getTypeSize(getType().getPointee());
+    }    
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // ReturnAddrOp and FrameAddrOp
 //===----------------------------------------------------------------------===//
 
@@ -3752,12 +3798,23 @@ class CIR_UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   let llvmOp = llvmOpName;
 }
 
+def CIR_ACosOp : CIR_UnaryFPToFPBuiltinOp<"acos", "ACosOp"> {
+  let summary = "Computes the arcus cosine of the specified value";
+  let description = [{
+    `cir.acos`computes the arcus cosine of a given value and
+    returns a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
 def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp"> {
   let summary = "Computes the floating-point absolute value";
   let description = [{
     `cir.fabs` computes the absolute value of a floating-point operand
-    and returns a result of the same type, ignoring floating-point
-    exceptions. It does not set `errno`.
+    and returns a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
   }];
 }
 

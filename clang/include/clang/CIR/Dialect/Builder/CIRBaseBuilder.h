@@ -228,6 +228,14 @@ public:
   }
 
   /// Get constant address of a global variable as an MLIR attribute.
+  /// This wrapper infers the attribute type through the global op.
+  cir::GlobalViewAttr getGlobalViewAttr(cir::GlobalOp globalOp,
+                                        mlir::ArrayAttr indices = {}) {
+    cir::PointerType type = getPointerTo(globalOp.getSymType());
+    return getGlobalViewAttr(type, globalOp, indices);
+  }
+
+  /// Get constant address of a global variable as an MLIR attribute.
   cir::GlobalViewAttr getGlobalViewAttr(cir::PointerType type,
                                         cir::GlobalOp globalOp,
                                         mlir::ArrayAttr indices = {}) {
@@ -243,6 +251,11 @@ public:
 
   mlir::Value createGetGlobal(cir::GlobalOp global) {
     return createGetGlobal(global.getLoc(), global);
+  }
+
+  /// Create a copy with inferred length.
+  cir::CopyOp createCopy(mlir::Value dst, mlir::Value src) {
+    return cir::CopyOp::create(*this, dst.getLoc(), dst, src);
   }
 
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, mlir::Value dst,

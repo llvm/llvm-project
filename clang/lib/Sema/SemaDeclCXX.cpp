@@ -12628,16 +12628,17 @@ Decl *Sema::ActOnUsingEnumDeclaration(Scope *S, AccessSpecifier AS,
                                       SourceLocation UsingLoc,
                                       SourceLocation EnumLoc, SourceRange TyLoc,
                                       const IdentifierInfo &II, ParsedType Ty,
-                                      CXXScopeSpec *SS) {
-  assert(SS && !SS->isInvalid() && "ScopeSpec is invalid");
+                                      const CXXScopeSpec &SS) {
   TypeSourceInfo *TSI = nullptr;
   SourceLocation IdentLoc = TyLoc.getBegin();
   QualType EnumTy = GetTypeFromParser(Ty, &TSI);
   if (EnumTy.isNull()) {
-    Diag(IdentLoc, isDependentScopeSpecifier(*SS)
+    Diag(IdentLoc, isDependentScopeSpecifier(SS)
                        ? diag::err_using_enum_is_dependent
                        : diag::err_unknown_typename)
-        << II.getName() << SourceRange(SS->getBeginLoc(), TyLoc.getEnd());
+        << II.getName()
+        << SourceRange(SS.isValid() ? SS.getBeginLoc() : IdentLoc,
+                       TyLoc.getEnd());
     return nullptr;
   }
 
