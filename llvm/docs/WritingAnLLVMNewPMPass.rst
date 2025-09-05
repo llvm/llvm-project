@@ -254,7 +254,7 @@ See the definition of ``add_llvm_pass_plugin`` for more CMake details.
 The pass must provide at least one of two entry points for the new pass manager,
 one for static registration and one for dynamically loaded plugins:
 
-- ``llvm::PassPluginLibraryInfo get##Name##PluginInfo();``
+- ``LLVM_ABI llvm::PassPluginLibraryInfo get##Name##PluginInfo();``
 - ``extern "C" ::llvm::PassPluginLibraryInfo llvmGetPassPluginInfo() LLVM_ATTRIBUTE_WEAK;``
 
 Pass plugins are compiled and linked dynamically by default. Setting
@@ -268,7 +268,7 @@ To make ``PassBuilder`` aware of statically linked pass plugins:
 .. code-block:: c++
 
     // Declare plugin extension function declarations.
-    #define HANDLE_EXTENSION(Ext) llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
+    #define HANDLE_EXTENSION(Ext) LLVM_ABI llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
     #include "llvm/Support/Extension.def"
 
     ...
