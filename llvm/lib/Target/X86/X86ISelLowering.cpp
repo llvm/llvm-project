@@ -2574,6 +2574,22 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     addRegisterClass(MVT::x86amx, &X86::TILERegClass);
   }
 
+  // Handle 512-bit vector CTSELECT without AVX512 by setting them to Expand
+  // This allows type legalization to split them into smaller vectors
+  for (auto VT : {MVT::v64i8, MVT::v32i16, MVT::v16i32, MVT::v8i64, MVT::v32f16,
+                  MVT::v16f32, MVT::v8f64}) {
+    setOperationAction(ISD::CTSELECT, VT, Expand);
+  }
+
+  // Handle 256-bit vector CTSELECT without AVX by setting them to Expand
+  // This allows type legalization to split them into 128-bit vectors
+  if (!Subtarget.hasAVX()) {
+    for (auto VT : {MVT::v4f64, MVT::v4i64, MVT::v8i32, MVT::v16i16,
+                    MVT::v16f16, MVT::v32i8, MVT::v8f32}) {
+      setOperationAction(ISD::CTSELECT, VT, Expand);
+    }
+  }
+
   // We want to custom lower some of our intrinsics.
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
@@ -24960,12 +24976,9 @@ SDValue X86TargetLowering::LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const {
     unsigned VectorWidth = VT.getSizeInBits();
     MVT EltVT = VT.getVectorElementType();
 
-    // don't support 512-bit vectors yet; report error??
-    if (VectorWidth == 512)
-      return SDValue();
-
-    if (VectorWidth == 256 && !Subtarget.hasAVX())
-      return SDValue();
+    // 512-bit vectors without AVX512 are now handled by type legalization
+    // (Expand action) 256-bit vectors without AVX are now handled by type
+    // legalization (Expand action)
 
     if (VectorWidth == 128 && !Subtarget.hasSSE1())
       return SDValue();

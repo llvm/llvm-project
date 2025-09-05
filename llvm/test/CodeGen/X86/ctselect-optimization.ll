@@ -283,7 +283,7 @@ define double @test_ctselect_f64_zero_positive(double %x) {
 define i32 @test_ctselect_chain(i1 %c1, i1 %c2, i1 %c3, i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: test_ctselect_chain:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl 8(%rsp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    cmovnel %ecx, %r8d
 ; CHECK-NEXT:    testb $1, %sil

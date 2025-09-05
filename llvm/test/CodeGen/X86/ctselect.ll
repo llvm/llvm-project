@@ -10,7 +10,7 @@ define i8 @test_ctselect_i8(i1 %cond, i8 %a, i8 %b) {
 ; X64-NEXT:    movl %edx, %eax
 ; X64-NEXT:    testb $1, %dil
 ; X64-NEXT:    cmovnel %esi, %eax
-; X64-NEXT:                                        # kill: def $al killed $al killed $eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_ctselect_i8:
@@ -18,7 +18,8 @@ define i8 @test_ctselect_i8(i1 %cond, i8 %a, i8 %b) {
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; X32-NEXT:    cmovnel {{[0-9]+}}(%esp), %eax
-; X32:    retl
+; X32-NEXT:    # kill: def $al killed $al killed $eax
+; X32-NEXT:    retl
   %result = call i8 @llvm.ct.select.i8(i1 %cond, i8 %a, i8 %b)
   ret i8 %result
 }
@@ -29,7 +30,7 @@ define i16 @test_ctselect_i16(i1 %cond, i16 %a, i16 %b) {
 ; X64-NEXT:    movl %edx, %eax
 ; X64-NEXT:    testb $1, %dil
 ; X64-NEXT:    cmovnel %esi, %eax
-; X64-NEXT:                                        # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_ctselect_i16:
@@ -37,7 +38,7 @@ define i16 @test_ctselect_i16(i1 %cond, i16 %a, i16 %b) {
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; X32-NEXT:    cmovnew {{[0-9]+}}(%esp), %ax
-; X32:    retl
+; X32-NEXT:    retl
   %result = call i16 @llvm.ct.select.i16(i1 %cond, i16 %a, i16 %b)
   ret i16 %result
 }
@@ -48,14 +49,14 @@ define i32 @test_ctselect_i32(i1 %cond, i32 %a, i32 %b) {
 ; X64-NEXT:    movl %edx, %eax
 ; X64-NEXT:    testb $1, %dil
 ; X64-NEXT:    cmovnel %esi, %eax
-; X64:    retq
+; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_ctselect_i32:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; X32-NEXT:    cmovnel {{[0-9]+}}(%esp), %eax
-; X32:    retl
+; X32-NEXT:    retl
   %result = call i32 @llvm.ct.select.i32(i1 %cond, i32 %a, i32 %b)
   ret i32 %result
 }

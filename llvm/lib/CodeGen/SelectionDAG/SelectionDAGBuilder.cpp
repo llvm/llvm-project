@@ -6846,12 +6846,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
           "llvm.ct.select: predicates with vector types not supported yet");
     }
 
-    // report error for vector types of 512 bits
-    if (VT.isVector() && VT.getSizeInBits() == 512) {
-      report_fatal_error(
-          "llvm.ct.select: vector types of 512 bits not supported yet");
-    }
-
     // Handle scalar types
     if (TLI.isSelectSupported(
             TargetLoweringBase::SelectSupportKind::CtSelect) &&
