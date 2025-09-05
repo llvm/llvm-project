@@ -993,6 +993,7 @@ class CoverageMapping {
   std::vector<FunctionRecord> Functions;
   DenseMap<size_t, SmallVector<unsigned, 0>> FilenameHash2RecordIndices;
   std::vector<std::pair<std::string, uint64_t>> FuncHashMismatches;
+  DenseMap<std::pair<size_t, hash_code>, unsigned> RecordIndices;
 
   std::optional<bool> SingleByteCoverage;
 
@@ -1003,7 +1004,8 @@ class CoverageMapping {
       ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
       std::optional<std::reference_wrapper<IndexedInstrProfReader>>
           &ProfileReader,
-      CoverageMapping &Coverage);
+      CoverageMapping &Coverage, StringRef ObjectFilename = "",
+      bool MergeBinaryCoverage = false);
 
   // Load coverage records from file.
   static Error
@@ -1011,13 +1013,15 @@ class CoverageMapping {
                std::optional<std::reference_wrapper<IndexedInstrProfReader>>
                    &ProfileReader,
                CoverageMapping &Coverage, bool &DataFound,
-               SmallVectorImpl<object::BuildID> *FoundBinaryIDs = nullptr);
+               SmallVectorImpl<object::BuildID> *FoundBinaryIDs = nullptr,
+               StringRef ObjectFilename = "", bool MergeBinaryCoverage = false);
 
   /// Add a function record corresponding to \p Record.
   Error loadFunctionRecord(
       const CoverageMappingRecord &Record,
       const std::optional<std::reference_wrapper<IndexedInstrProfReader>>
-          &ProfileReader);
+          &ProfileReader,
+      StringRef ObjectFilename = "", bool MergeBinaryCoverage = false);
 
   /// Look up the indices for function records which are at least partially
   /// defined in the specified file. This is guaranteed to return a superset of
@@ -1044,7 +1048,7 @@ public:
        std::optional<StringRef> ProfileFilename, vfs::FileSystem &FS,
        ArrayRef<StringRef> Arches = {}, StringRef CompilationDir = "",
        const object::BuildIDFetcher *BIDFetcher = nullptr,
-       bool CheckBinaryIDs = false);
+       bool CheckBinaryIDs = false, bool MergeBinaryCoverage = false);
 
   /// The number of functions that couldn't have their profiles mapped.
   ///
