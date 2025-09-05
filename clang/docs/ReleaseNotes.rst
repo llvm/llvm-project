@@ -380,6 +380,10 @@ X86 Support
 - NOTE: Please avoid use of the __builtin_ia32_* intrinsics - these are not
   guaranteed to exist in future releases, or match behaviour with previous
   releases of clang or other compilers.
+- Remove `m[no-]avx10.x-[256,512]` and `m[no-]evex512` options from Clang
+  driver.
+- Remove `[no-]evex512` feature request from intrinsics and builtins.
+- Change features `avx10.x-[256,512]` to `avx10.x`.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -392,6 +396,7 @@ Windows Support
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
+- Enable linker relaxation by default for loongarch64.
 
 RISC-V Support
 ^^^^^^^^^^^^^^
