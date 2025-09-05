@@ -2028,7 +2028,8 @@ llvm::MDNode *CodeGenFunction::getRangeForLoadFromType(QualType Ty) {
     return nullptr;
 
   const std::optional<llvm::ConstantRange> Range =
-      getRangeForType(Ty, LTy->getIntegerBitWidth());
+      getRangeForType(Ty, LTy->getIntegerBitWidth(), /*ForceStrictEnums=*/false,
+                      /*AssumeBooleanRepresentation=*/false);
   if (!Range || Range->isFullSet() || Range->isEmptySet())
     return nullptr;
 
@@ -2077,7 +2078,7 @@ bool CodeGenFunction::EmitScalarRangeCheck(llvm::Value *Value, QualType Ty,
 
   const std::optional<llvm::ConstantRange> Range = getRangeForType(
       Ty, getContext().getTypeSize(Ty), /*ForceStrictEnums=*/true,
-      /*AssumeBooleanRepresentation*/ IsBool);
+      /*AssumeBooleanRepresentation=*/IsBool);
   if (!Range || Range->isFullSet())
     return true;
 

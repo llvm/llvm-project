@@ -5543,8 +5543,8 @@ private:
   llvm::Value *EmitAArch64CpuSupports(ArrayRef<StringRef> FeatureStrs);
 
   std::optional<llvm::ConstantRange>
-  getRangeForType(QualType Ty, unsigned BitWidth, bool ForceStrictEnums = false,
-                  bool AssumeBooleanRepresentation = false);
+  getRangeForType(QualType Ty, unsigned BitWidth, bool ForceStrictEnums,
+                  bool AssumeBooleanRepresentation);
 };
 
 inline DominatingLLVMValue::saved_type

@@ -3212,8 +3212,9 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
       bool HasBoolCheck = SanOpts.has(SanitizerKind::Bool);
       bool HasEnumCheck = SanOpts.has(SanitizerKind::Enum);
       if (!HasBoolCheck && !HasEnumCheck && LTy->isIntegerTy()) {
-        const std::optional<llvm::ConstantRange> Range =
-            getRangeForType(Arg->getType(), LTy->getIntegerBitWidth());
+        const std::optional<llvm::ConstantRange> Range = getRangeForType(
+            Arg->getType(), LTy->getIntegerBitWidth(),
+            /*ForceStrictEnums=*/false, /*AssumeBooleanRepresentation=*/false);
         if (Range && !Range->isFullSet())
           AI->addAttr(llvm::Attribute::get(getLLVMContext(),
                                            llvm::Attribute::Range, *Range));
