@@ -35,7 +35,6 @@ struct UnrollToElements final : OpRewritePattern<vector::ToElementsOp> {
     // May be a large vector.
     SmallVector<Value, 0> results;
     for (const Value &vector : vectors) {
-      // we need to replace the current result
       auto subElements =
           rewriter.create<vector::ToElementsOp>(op.getLoc(), vector);
       llvm::append_range(results, subElements.getResults());
