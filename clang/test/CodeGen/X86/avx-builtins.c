@@ -99,12 +99,14 @@ __m256d test_mm256_blendv_pd(__m256d V1, __m256d V2, __m256d V3) {
   // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.blendv.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}})
   return _mm256_blendv_pd(V1, V2, V3);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_blendv_pd((__m256d)(__v4df){1.0, 2.0, 3.0, 4.0},(__m256d)(__v4df){-100.0, -101.0, -102.0, -103.0},(__m256d)(__v4df){0.0, -1.0, 1.0, -1.0}), 1.0f, -101.0, 3.0, -103.0));
 
 __m256 test_mm256_blendv_ps(__m256 V1, __m256 V2, __m256 V3) {
   // CHECK-LABEL: test_mm256_blendv_ps
   // CHECK: call {{.*}}<8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}})
   return _mm256_blendv_ps(V1, V2, V3);
 }
+TEST_CONSTEXPR(match_m256(_mm256_blendv_ps((__m256)(__v8sf){0.0f,1.0f,2.0f,3.0f,4.0f,5.0f,6.0f,7.0f},(__m256)(__v8sf){-100.0f, -101.0f, -102.0f, -103.0f, -104.0f, -105.0f, -106.0f, -107.0f},(__m256)(__v8sf){-1.0f, 2.0f, -3.0f, 4.0f, -5.0f, -6.0f, 7.0f, -0.0f}), -100.0f, 1.0f, -102.0f, 3.0f, -104.0f, -105.0f, 6.0f, -107.0f));
 
 __m256d test_mm256_broadcast_pd(__m128d* A) {
   // CHECK-LABEL: test_mm256_broadcast_pd

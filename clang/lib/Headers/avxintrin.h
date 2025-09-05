@@ -1402,9 +1402,8 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 ///    64-bit element in operand \a __b is copied to the same position in the
 ///    destination.
 /// \returns A 256-bit vector of [4 x double] containing the copied values.
-static __inline __m256d __DEFAULT_FN_ATTRS
-_mm256_blendv_pd(__m256d __a, __m256d __b, __m256d __c)
-{
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_blendv_pd(__m256d __a, __m256d __b, __m256d __c) {
   return (__m256d)__builtin_ia32_blendvpd256(
     (__v4df)__a, (__v4df)__b, (__v4df)__c);
 }
@@ -1430,9 +1429,8 @@ _mm256_blendv_pd(__m256d __a, __m256d __b, __m256d __c)
 ///    corresponding 32-bit element in operand \a __b is copied to the same
 ///    position in the destination.
 /// \returns A 256-bit vector of [8 x float] containing the copied values.
-static __inline __m256 __DEFAULT_FN_ATTRS
-_mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
-{
+static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c) {
   return (__m256)__builtin_ia32_blendvps256(
     (__v8sf)__a, (__v8sf)__b, (__v8sf)__c);
 }

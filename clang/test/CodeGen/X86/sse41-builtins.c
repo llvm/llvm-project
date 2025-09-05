@@ -52,12 +52,14 @@ __m128d test_mm_blendv_pd(__m128d V1, __m128d V2, __m128d V3) {
   // CHECK: call {{.*}}<2 x double> @llvm.x86.sse41.blendvpd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_blendv_pd(V1, V2, V3);
 }
+TEST_CONSTEXPR(match_m128d(_mm_blendv_pd((__m128d)(__v2df){2.0, -4.0},(__m128d)(__v2df){-111.0, +222.0},(__m128d)(__v2df){2.0, -2.0}), 2.0, 222.0));
 
 __m128 test_mm_blendv_ps(__m128 V1, __m128 V2, __m128 V3) {
   // CHECK-LABEL: test_mm_blendv_ps
   // CHECK: call {{.*}}<4 x float> @llvm.x86.sse41.blendvps(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_blendv_ps(V1, V2, V3);
 }
+TEST_CONSTEXPR(match_m128(_mm_blendv_ps((__m128)(__v4sf){0.0f, 1.0f, 2.0f, 3.0f},(__m128)(__v4sf){-100.0f, -101.0f, -102.0f, -103.0f},(__m128)(__v4sf){-1.0f, 2.0f, -3.0f, 0.0f}), -100.0f, 1.0f, -102.0f, 3.0f));
 
 __m128d test_mm_ceil_pd(__m128d x) {
   // CHECK-LABEL: test_mm_ceil_pd
