@@ -20,26 +20,25 @@ using namespace mlir;
 
 namespace {
 
-struct UnrollToElements : OpRewritePattern<vector::ToElementsOp> {
+struct UnrollToElements final : OpRewritePattern<vector::ToElementsOp> {
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::ToElementsOp op,
                                 PatternRewriter &rewriter) const override {
     SmallVector<Value> vectors;
-    LogicalResult match =
-        mlir::vector::unrollVectorValue(op.getSource(), rewriter, vectors);
-    if (failed(match)) {
+    if (LogicalResult match =
+            vector::unrollVectorValue(op.getSource(), rewriter, vectors);
+        failed(match)) {
       return match;
     }
 
-    // May be large vector.
-    std::vector<Value> results;
-    for (const auto &vector : vectors) {
+    // May be a large vector.
+    SmallVector<Value, 0> results;
+    for (const Value &vector : vectors) {
       // we need to replace the current result
       auto subElements =
           rewriter.create<vector::ToElementsOp>(op.getLoc(), vector);
-      results.insert(results.end(), subElements.getResults().begin(),
-                     subElements.getResults().end());
+      llvm::append_range(results, subElements.getResults());
     }
     rewriter.replaceOp(op, results);
     return success();
@@ -48,7 +47,7 @@ struct UnrollToElements : OpRewritePattern<vector::ToElementsOp> {
 
 /// Flattens 2 or more dimensional `vector.to_elements` ops by
 /// `vector.shape_cast` + `vector.to_elements`.
-struct FlattenToElements : OpRewritePattern<vector::ToElementsOp> {
+struct FlattenToElements final : OpRewritePattern<vector::ToElementsOp> {
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::ToElementsOp op,
@@ -57,9 +56,9 @@ struct FlattenToElements : OpRewritePattern<vector::ToElementsOp> {
     if (vecType.getRank() <= 1)
       return rewriter.notifyMatchFailure(
           op, "the rank is already less than or equal to 1");
-    if (vecType.getNumScalableDims() > 0)
-      return rewriter.notifyMatchFailure(
-          op, "scalable vector is not yet supported");
+
+    assert(vecType.getNumScalableDims() == 0 &&
+           "scalable vector is not yet supported");
     auto vec1DType =
         VectorType::get({vecType.getNumElements()}, vecType.getElementType());
     Value shapeCast = vector::ShapeCastOp::create(rewriter, op.getLoc(),

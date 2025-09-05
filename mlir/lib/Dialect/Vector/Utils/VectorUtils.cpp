@@ -395,7 +395,6 @@ vector::isValidMaskedInputVector(ArrayRef<int64_t> shape,
 
 LogicalResult vector::unrollVectorValue(Value vector, PatternRewriter &rewriter,
                                         SmallVector<Value> &subvectors) {
-  assert(isa<VectorType>(vector.getType()) && "expected vector type");
   VectorType ty = cast<VectorType>(vector.getType());
   Location loc = vector.getLoc();
   if (ty.getRank() < 2)
@@ -406,7 +405,6 @@ LogicalResult vector::unrollVectorValue(Value vector, PatternRewriter &rewriter,
   if (ty.getScalableDims().front())
     return rewriter.notifyMatchFailure(loc, "cannot unroll scalable dim");
 
-  // We just need zero indices for the all dimensions except the leading one.
   for (int64_t i = 0, e = ty.getShape().front(); i < e; ++i) {
     subvectors.push_back(vector::ExtractOp::create(rewriter, loc, vector, i));
   }
