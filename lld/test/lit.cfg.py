@@ -182,3 +182,23 @@ if tar_executable:
 # ELF tests expect the default target for ld.lld to be ELF.
 if config.ld_lld_default_mingw:
     config.excludes.append("ELF")
+
+def prepend_path(path):
+    target_arch = getattr(config, 'target_arch', None)
+    name = 'PATH'
+    if config.operating_system == 'Windows':
+        sep = ';'
+    else:
+        sep = ':'
+    if name in config.environment:
+        config.environment[name] = path + sep + config.environment[name]
+    else:
+        config.environment[name] = path
+
+gcc_executable = lit.util.which("gcc", config.environment["PATH"])
+if gcc_executable:
+    config.available_features.add("gcc")
+
+if config.has_gnu_lto:
+    prepend_path(config.llvm_obj_root)
+    config.available_features.add("gnu_lto")
