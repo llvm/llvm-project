@@ -406,9 +406,6 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   // important to do this before we enter the return block or return
   // edges will be *really* confused.
 
-  // Process deferred function cleanups before checking for regular cleanups
-  processDeferredFunctionCleanups();
-
   bool HasCleanups = EHStack.stable_begin() != PrologueCleanupDepth;
   bool HasOnlyNoopCleanups =
       HasCleanups && EHStack.containsOnlyNoopCleanups(PrologueCleanupDepth);
