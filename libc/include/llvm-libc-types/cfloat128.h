@@ -13,7 +13,12 @@
 
 #ifdef LIBC_TYPES_HAS_CFLOAT128
 #ifndef LIBC_TYPES_CFLOAT128_IS_COMPLEX_LONG_DOUBLE
+#if defined(__GNUC__) && !defined(__clang__)
+// Remove the workaround when https://gcc.gnu.org/PR32187 gets fixed.
+typedef __typeof__(_Complex __float128) cfloat128;
+#else  // ^^^ workaround / no workaround vvv
 typedef _Complex __float128 cfloat128;
+#endif // ^^^ workaround ^^^
 #else
 typedef _Complex long double cfloat128;
 #endif // LIBC_TYPES_CFLOAT128_IS_COMPLEX_LONG_DOUBLE
