@@ -84,6 +84,7 @@ static DecodeStatus DecodeLD8RegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder) {
   assert(isUInt<4>(RegNo));
+  // Only r16...r31 are legal.
   Inst.addOperand(MCOperand::createReg(GPRDecoderTable[16 + RegNo]));
   return MCDisassembler::Success;
 }
@@ -92,6 +93,7 @@ static DecodeStatus DecodeLD8loRegisterClass(MCInst &Inst, unsigned RegNo,
                                              uint64_t Address,
                                              const MCDisassembler *Decoder) {
   assert(isUInt<3>(RegNo));
+  // Only r16...r23 are legal.
   Inst.addOperand(MCOperand::createReg(GPRDecoderTable[16 + RegNo]));
   return MCDisassembler::Success;
 }
