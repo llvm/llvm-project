@@ -1,7 +1,8 @@
 // REQUIRES: x86
 
 // Check that we can wrap a dllimported symbol, so that references to
-// __imp_<symbol> gets redirected to a symbol already exists or a defined local import instead
+// __imp_<symbol> gets redirected to a symbol that already exists or a defined
+// local import instead.
 
 // RUN: split-file %s %t.dir
 // RUN: llvm-mc -filetype=obj -triple=i686-win32-gnu %t.dir/main.s -o %t.main.obj
@@ -30,9 +31,9 @@
 // which is the first 4 bytes of the .rdata section (above), which is a
 // pointer that points at ___wrap_foo.
 
-// The second jmpl instruction in _entry points the null since the referenced symbol
-// `__imp____wrap_bar` is declared as a weak reference to prevent pull a reference
-// from an external DLL.
+// The second jmpl instruction in _entry points to null because the referenced
+// symbol `__imp____wrap_bar` is declared as a weak reference to prevent pull a
+// reference from an external DLL.
 
 #--- main.s
 .global _entry
