@@ -257,12 +257,21 @@ Status ProcessElfCore::DoLoadCore() {
   // the main executable using data we found in the core file notes.
   lldb::ModuleSP exe_module_sp = GetTarget().GetExecutableModule();
   if (!exe_module_sp) {
-    // The first entry in the NT_FILE might be our executable
     if (!m_nt_file_entries.empty()) {
+      // The first entry in the NT_FILE might be our executable
+      llvm::StringRef executable_path = m_nt_file_entries[0].path;
+      // Prefer the NT_FILE entry matching m_executable_name as main executable.
+      for (const NT_FILE_Entry &file_entry : m_nt_file_entries)
+        if (llvm::StringRef(file_entry.path)
+                .ends_with("/" + m_executable_name)) {
+          executable_path = file_entry.path;
+          break;
+        }
+
       ModuleSpec exe_module_spec;
       exe_module_spec.GetArchitecture() = arch;
-      exe_module_spec.GetUUID() = m_nt_file_entries[0].uuid;
-      exe_module_spec.GetFileSpec().SetFile(m_nt_file_entries[0].path,
+      exe_module_spec.GetUUID() = FindModuleUUID(executable_path);
+      exe_module_spec.GetFileSpec().SetFile(executable_path,
                                             FileSpec::Style::native);
       if (exe_module_spec.GetFileSpec()) {
         exe_module_sp =
@@ -935,6 +944,7 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
         return status.ToError();
       thread_data.name.assign (prpsinfo.pr_fname, strnlen (prpsinfo.pr_fname, sizeof (prpsinfo.pr_fname)));
       SetID(prpsinfo.pr_pid);
+      m_executable_name = prpsinfo.pr_fname;
       break;
     }
     case ELF::NT_SIGINFO: {
