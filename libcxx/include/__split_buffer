@@ -47,6 +47,9 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+template <class _Tp, class _Allocator, template <class, class, class> class _Layout>
+class __split_buffer;
+
 template <class _SplitBuffer, class _Tp, class _Allocator>
 class __split_buffer_pointer_layout {
 protected:
@@ -65,11 +68,12 @@ protected:
   using __sentinel_type _LIBCPP_NODEBUG = pointer;
 
 public:
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __split_buffer_pointer_layout() = default;
+  // Can't be defaulted due to _LIBCPP_COMPRESSED_PAIR not being an aggregate in C++03 and C++11.
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __split_buffer_pointer_layout() : __back_cap_(nullptr) {}
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20
   _LIBCPP_HIDE_FROM_ABI explicit __split_buffer_pointer_layout(const allocator_type& __alloc)
-      : __alloc_(__alloc) {}
+      : __back_cap_(nullptr), __alloc_(__alloc) {}
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __front_cap() _NOEXCEPT { return __front_cap_; }
 
@@ -155,8 +159,10 @@ public:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_reference back() const _NOEXCEPT { return *(__end_ - 1); }
 
-  template <class _OtherLayout>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_without_allocator(_OtherLayout& __other) _NOEXCEPT {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_without_allocator(
+      __split_buffer_pointer_layout<__split_buffer<value_type, __alloc_rr&, __split_buffer_pointer_layout>,
+                                    value_type,
+                                    __alloc_rr&>& __other) _NOEXCEPT {
     std::swap(__front_cap_, __other.__front_cap_);
     std::swap(__begin_, __other.__begin_);
     std::swap(__back_cap_, __other.__back_cap_);
@@ -164,7 +170,10 @@ public:
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void swap(__split_buffer_pointer_layout& __other) _NOEXCEPT {
-    __swap_without_allocator(__other);
+    std::swap(__front_cap_, __other.__front_cap_);
+    std::swap(__begin_, __other.__begin_);
+    std::swap(__back_cap_, __other.__back_cap_);
+    std::swap(__end_, __other.__end_);
     std::__swap_allocator(__alloc_, __other.__alloc_);
   }
 
@@ -188,7 +197,7 @@ private:
   pointer __front_cap_ = nullptr;
   pointer __begin_     = nullptr;
   pointer __end_       = nullptr;
-  _LIBCPP_COMPRESSED_PAIR(pointer, __back_cap_ = nullptr, allocator_type, __alloc_);
+  _LIBCPP_COMPRESSED_PAIR(pointer, __back_cap_, allocator_type, __alloc_);
 
   template <class, class, class>
   friend class __split_buffer_pointer_layout;
@@ -307,8 +316,10 @@ public:
     return __begin_[__size_ - 1];
   }
 
-  template <class _Data2>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_without_allocator(_Data2& __other) _NOEXCEPT {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_without_allocator(
+      __split_buffer_pointer_layout<__split_buffer<value_type, __alloc_rr&, __split_buffer_pointer_layout>,
+                                    value_type,
+                                    __alloc_rr&>& __other) _NOEXCEPT {
     std::swap(__front_cap_, __other.__front_cap_);
     std::swap(__begin_, __other.__begin_);
     std::swap(__cap_, __other.__cap_);
@@ -316,7 +327,10 @@ public:
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void swap(__split_buffer_size_layout& __other) _NOEXCEPT {
-    __swap_without_allocator(__other);
+    std::swap(__front_cap_, __other.__front_cap_);
+    std::swap(__begin_, __other.__begin_);
+    std::swap(__cap_, __other.__cap_);
+    std::swap(__size_, __other.__size_);
     std::__swap_allocator(__alloc_, __other.__alloc_);
   }
 
@@ -431,23 +445,23 @@ private:
 //      void __copy_without_alloc(__layout const&);
 //    };
 //
-template <class _Tp,
-          class _Allocator                             = allocator<_Tp>,
-          template <class, class, class> class _Layout = __split_buffer_pointer_layout>
-struct __split_buffer : _Layout<__split_buffer<_Tp, _Allocator, _Layout>, _Tp, _Allocator> {
+template <class _Tp, class _Allocator, template <class, class, class> class _Layout>
+class __split_buffer : _Layout<__split_buffer<_Tp, _Allocator, _Layout>, _Tp, _Allocator> {
   using __base_type _LIBCPP_NODEBUG = _Layout<__split_buffer<_Tp, _Allocator, _Layout>, _Tp, _Allocator>;
 
+public:
   using __base_type::__back_spare;
   using __base_type::__copy_without_alloc;
   using __base_type::__front_cap;
   using __base_type::__front_spare;
   using __base_type::__get_allocator;
+  using __base_type::__raw_capacity;
+  using __base_type::__raw_sentinel;
   using __base_type::__reset;
   using __base_type::__set_capacity;
   using __base_type::__set_data;
   using __base_type::__set_sentinel;
   using __base_type::__set_valid_range;
-  using __base_type::__swap_without_allocator;
 
   using typename __base_type::__alloc_rr;
   using typename __base_type::__alloc_traits;
@@ -579,6 +593,11 @@ struct __split_buffer : _Layout<__split_buffer<_Tp, _Allocator, _Layout>, _Tp, _
     }
   }
 
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
+  __swap_without_allocator(__split_buffer<value_type, __alloc_rr&, _Layout>& __other) _NOEXCEPT {
+    __base_type::__swap_without_allocator(__other);
+  }
+
 private:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__split_buffer& __c, true_type)
       _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value) {
@@ -602,6 +621,9 @@ private:
   private:
     __split_buffer* __parent_;
   };
+
+  template <class _T2, class _A2, template <class, class, class> class _L2>
+  friend class __split_buffer;
 };
 
 //  Default constructs __n objects starting at `end()`
@@ -774,7 +796,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator, _Layout>::shr
 #if _LIBCPP_HAS_EXCEPTIONS
     try {
 #endif // _LIBCPP_HAS_EXCEPTIONS
-      __split_buffer<value_type, __alloc_rr&> __t(size(), 0, __get_allocator());
+      __split_buffer<value_type, __alloc_rr&, _Layout> __t(size(), 0, __get_allocator());
       if (__t.capacity() < capacity()) {
         __t.__construct_at_end(move_iterator<pointer>(begin()), move_iterator<pointer>(end()));
         __t.__set_sentinel(size());
@@ -801,9 +823,9 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator, _Layout>::emp
       __set_valid_range(std::move_backward(begin(), __end, __new_end), __new_end);
     } else {
       size_type __c = std::max<size_type>(2 * capacity(), 1);
-      __split_buffer<value_type, __alloc_rr&> __t(__c, (__c + 3) / 4, __get_allocator());
+      __split_buffer<value_type, __alloc_rr&, _Layout> __t(__c, (__c + 3) / 4, __get_allocator());
       __t.__construct_at_end(move_iterator<pointer>(begin()), move_iterator<pointer>(__end));
-      __swap_without_allocator(__t);
+      __base_type::__swap_without_allocator(__t);
     }
   }
 
@@ -823,9 +845,9 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator, _Layout>::emp
       __set_valid_range(begin() - __d, __end);
     } else {
       size_type __c = std::max<size_type>(2 * capacity(), 1);
-      __split_buffer<value_type, __alloc_rr&> __t(__c, __c / 4, __get_allocator());
+      __split_buffer<value_type, __alloc_rr&, _Layout> __t(__c, __c / 4, __get_allocator());
       __t.__construct_at_end(move_iterator<pointer>(begin()), move_iterator<pointer>(__end));
-      __swap_without_allocator(__t);
+      __base_type::__swap_without_allocator(__t);
     }
   }
 
@@ -833,9 +855,10 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator, _Layout>::emp
   __set_sentinel(++__end);
 }
 
-template <class _Tp, class _Allocator>
+template <class _Tp, class _Allocator, template <class, class, class> class _Layout>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI void
-swap(__split_buffer<_Tp, _Allocator>& __x, __split_buffer<_Tp, _Allocator>& __y) _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
+swap(__split_buffer<_Tp, _Allocator, _Layout>& __x, __split_buffer<_Tp, _Allocator, _Layout>& __y)
+    _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
   __x.swap(__y);
 }
 

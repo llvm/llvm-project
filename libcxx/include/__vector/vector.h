@@ -86,6 +86,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
 class vector {
+  template <class _Up, class _Alloc>
+  using __split_buffer = std::__split_buffer<_Up, _Alloc, __split_buffer_pointer_layout>;
+
 public:
   //
   // Types
@@ -821,9 +824,7 @@ private:
     return __p;
   }
 
-  template <template <class, class, class> class _Layout>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
-  __swap_layouts(__split_buffer<_Tp, allocator_type&, _Layout>& __sb) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_layouts(__split_buffer<_Tp, allocator_type&>& __sb) {
     auto __vector_begin    = __begin_;
     auto __vector_sentinel = __end_;
     auto __vector_cap      = __cap_;
