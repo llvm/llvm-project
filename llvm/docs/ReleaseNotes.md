@@ -151,6 +151,8 @@ Changes to the Debug Info
 Changes to the LLVM tools
 ---------------------------------
 
+* `llvm-readelf` now dumps all hex format values in lower-case mode.
+
 Changes to LLDB
 ---------------------------------
 
