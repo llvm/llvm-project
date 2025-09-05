@@ -63,12 +63,19 @@
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-machine-sme-abi"
+
+static cl::opt<int>
+    LoopEdgeWeight("aarch64-sme-abi-loop-edge-weight", cl::ReallyHidden,
+                   cl::init(10),
+                   cl::desc("Edge weight for basic blocks witin loops (used "
+                            "for placing ZA saves/restores)"));
 
 namespace {
 
@@ -255,6 +262,9 @@ struct MachineSMEABI : public MachineFunctionPass {
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<EdgeBundlesWrapperLegacy>();
+    // Only analyse loops at -01 and above.
+    if (OptLevel != CodeGenOptLevel::None)
+      AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addPreservedID(MachineLoopInfoID);
     AU.addPreservedID(MachineDominatorsID);
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -516,24 +526,31 @@ MachineSMEABI::assignBundleZAStates(const EdgeBundles &Bundles,
     int EdgeStateCounts[ZAState::NUM_ZA_STATE] = {0};
     for (unsigned BlockID : Bundles.getBlocks(I)) {
       LLVM_DEBUG(dbgs() << "- bb." << BlockID);
-
       const BlockInfo &Block = FnInfo.Blocks[BlockID];
+      bool IsLoop = MLI && MLI->getLoopFor(MF->getBlockNumbered(BlockID));
       bool InEdge = Bundles.getBundle(BlockID, /*Out=*/false) == I;
       bool OutEdge = Bundles.getBundle(BlockID, /*Out=*/true) == I;
+
+      // TODO: Use MachineBranchProbabilityInfo for edge weights?
+      int EdgeWeight = IsLoop ? LoopEdgeWeight : 1;
+      if (IsLoop)
+        LLVM_DEBUG(dbgs() << " IsLoop");
 
       bool LegalInEdge =
           InEdge && isLegalEdgeBundleZAState(Block.DesiredIncomingState);
       bool LegalOutEgde =
           OutEdge && isLegalEdgeBundleZAState(Block.DesiredOutgoingState);
+
+      LLVM_DEBUG(dbgs() << " (EdgeWeight: " << EdgeWeight << ')');
       if (LegalInEdge) {
         LLVM_DEBUG(dbgs() << " DesiredIncomingState: "
                           << getZAStateString(Block.DesiredIncomingState));
-        EdgeStateCounts[Block.DesiredIncomingState]++;
+        EdgeStateCounts[Block.DesiredIncomingState] += EdgeWeight;
       }
       if (LegalOutEgde) {
         LLVM_DEBUG(dbgs() << " DesiredOutgoingState: "
                           << getZAStateString(Block.DesiredOutgoingState));
-        EdgeStateCounts[Block.DesiredOutgoingState]++;
+        EdgeStateCounts[Block.DesiredOutgoingState] += EdgeWeight;
       }
       if (!LegalInEdge && !LegalOutEgde)
         LLVM_DEBUG(dbgs() << " (no state preference)");
@@ -982,6 +999,8 @@ bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
   TII = Subtarget->getInstrInfo();
   TRI = Subtarget->getRegisterInfo();
   MRI = &MF.getRegInfo();
+  if (OptLevel != CodeGenOptLevel::None)
+    MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
 
   const EdgeBundles &Bundles =
       getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
