@@ -74,21 +74,23 @@ int test13(int *a) {
 }
 
 int test14(int *a, int b) {
-  a = (int *)__builtin_assume_aligned(b, 32); // expected-error {{non-pointer argument to '__builtin_assume_aligned' is not allowed}}
+  a = (int *)__builtin_assume_aligned(b, 32); // expected-error {{incompatible integer to pointer conversion passing 'int' to parameter of type 'const void *'}}
+  void *y = __builtin_assume_aligned(1, 1); // expected-error {{incompatible integer to pointer conversion passing 'int' to parameter of type 'const void *'}}
 }
 
-int test15(int *b) {
+void test15(void (*f)()) {
+  f = (void (*)())__builtin_assume_aligned(f, 32);
+}
+
+void foo();
+
+void test16(void (*f)()) {
+  f = (void (*)())__builtin_assume_aligned(foo, 32);
+}
+
+int test17(int *b) {
   int arr[3] = {1, 2, 3};
   b = (int *)__builtin_assume_aligned(arr, 32);
-  return b[0];
-}
-
-int val(int x) {
-  return x;
-}
-
-int test16(int *b) {
-  b = (int *)__builtin_assume_aligned(val, 32);
   return b[0];
 }
 
