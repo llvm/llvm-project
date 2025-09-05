@@ -2548,15 +2548,15 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     AFI->setLocalStackSize(NumBytes - PrologueSaveSize);
   if (homogeneousPrologEpilog(MF, &MBB)) {
     assert(!NeedsWinCFI);
-    auto LastPopI = MBB.getFirstTerminator();
-    if (LastPopI != MBB.begin()) {
-      auto HomogeneousEpilog = std::prev(LastPopI);
+    auto FirstHomogenousEpilogI = MBB.getFirstTerminator();
+    if (FirstHomogenousEpilogI != MBB.begin()) {
+      auto HomogeneousEpilog = std::prev(FirstHomogenousEpilogI);
       if (HomogeneousEpilog->getOpcode() == AArch64::HOM_Epilog)
-        LastPopI = HomogeneousEpilog;
+        FirstHomogenousEpilogI = HomogeneousEpilog;
     }
 
     // Adjust local stack
-    emitFrameOffset(MBB, LastPopI, DL, AArch64::SP, AArch64::SP,
+    emitFrameOffset(MBB, FirstHomogenousEpilogI, DL, AArch64::SP, AArch64::SP,
                     StackOffset::getFixed(AFI->getLocalStackSize()), TII,
                     MachineInstr::FrameDestroy, false, NeedsWinCFI, &HasWinCFI);
 
@@ -2602,17 +2602,17 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // Move past the restores of the callee-saved registers.
   // If we plan on combining the sp bump of the local stack size and the callee
   // save stack size, we might need to adjust the CSR save and restore offsets.
-  MachineBasicBlock::iterator LastPopI = MBB.getFirstTerminator();
+  MachineBasicBlock::iterator FirstGPRRestoreI = MBB.getFirstTerminator();
   MachineBasicBlock::iterator Begin = MBB.begin();
-  while (LastPopI != Begin) {
-    --LastPopI;
-    if (!LastPopI->getFlag(MachineInstr::FrameDestroy) ||
-        (!FPAfterSVECalleeSaves && IsSVECalleeSave(LastPopI))) {
-      ++LastPopI;
+  while (FirstGPRRestoreI != Begin) {
+    --FirstGPRRestoreI;
+    if (!FirstGPRRestoreI->getFlag(MachineInstr::FrameDestroy) ||
+        (!FPAfterSVECalleeSaves && IsSVECalleeSave(FirstGPRRestoreI))) {
+      ++FirstGPRRestoreI;
       break;
     } else if (CombineSPBump)
-      fixupCalleeSaveRestoreStackOffset(*LastPopI, AFI->getLocalStackSize(),
-                                        NeedsWinCFI, &HasWinCFI);
+      fixupCalleeSaveRestoreStackOffset(
+          *FirstGPRRestoreI, AFI->getLocalStackSize(), NeedsWinCFI, &HasWinCFI);
   }
 
   if (NeedsWinCFI) {
@@ -2622,9 +2622,9 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     // arguments. Insert the SEH_EpilogStart and remove it later if it
     // we didn't emit any SEH opcodes to avoid generating WinCFI for
     // functions that don't need it.
-    BuildMI(MBB, LastPopI, DL, TII->get(AArch64::SEH_EpilogStart))
+    BuildMI(MBB, FirstGPRRestoreI, DL, TII->get(AArch64::SEH_EpilogStart))
         .setMIFlag(MachineInstr::FrameDestroy);
-    EpilogStartI = LastPopI;
+    EpilogStartI = FirstGPRRestoreI;
     --EpilogStartI;
   }
 
@@ -2665,7 +2665,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
 
     // When we are about to restore the CSRs, the CFA register is SP again.
     if (EmitCFI && hasFP(MF))
-      CFIInstBuilder(MBB, LastPopI, MachineInstr::FrameDestroy)
+      CFIInstBuilder(MBB, FirstGPRRestoreI, MachineInstr::FrameDestroy)
           .buildDefCFA(AArch64::SP, NumBytes);
 
     emitFrameOffset(MBB, MBB.getFirstTerminator(), DL, AArch64::SP, AArch64::SP,
@@ -2681,7 +2681,8 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // Process the SVE callee-saves to determine what space needs to be
   // deallocated.
   StackOffset DeallocateBefore = {}, DeallocateAfter = SVEStackSize;
-  MachineBasicBlock::iterator RestoreBegin = LastPopI, RestoreEnd = LastPopI;
+  MachineBasicBlock::iterator RestoreBegin = FirstGPRRestoreI,
+                              RestoreEnd = FirstGPRRestoreI;
   if (int64_t CalleeSavedSize = AFI->getSVECalleeSavedStackSize()) {
     if (FPAfterSVECalleeSaves)
       RestoreEnd = MBB.getFirstTerminator();
@@ -2706,7 +2707,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     // deallocates non-callee-save SVE allocations.  Otherwise, deallocate
     // them explicitly.
     if (!AFI->isStackRealigned() && !MFI.hasVarSizedObjects()) {
-      emitFrameOffset(MBB, LastPopI, DL, AArch64::SP, AArch64::SP,
+      emitFrameOffset(MBB, FirstGPRRestoreI, DL, AArch64::SP, AArch64::SP,
                       DeallocateBefore, TII, MachineInstr::FrameDestroy, false,
                       NeedsWinCFI, &HasWinCFI);
     }
@@ -2796,7 +2797,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
       StackRestoreBytes += AfterCSRPopSize;
 
     emitFrameOffset(
-        MBB, LastPopI, DL, AArch64::SP, AArch64::SP,
+        MBB, FirstGPRRestoreI, DL, AArch64::SP, AArch64::SP,
         StackOffset::getFixed(StackRestoreBytes), TII,
         MachineInstr::FrameDestroy, false, NeedsWinCFI, &HasWinCFI, EmitCFI,
         StackOffset::getFixed((RedZone ? 0 : NumBytes) + PrologueSaveSize));
@@ -2816,17 +2817,17 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // be able to save any instructions.
   if (!IsFunclet && (MFI.hasVarSizedObjects() || AFI->isStackRealigned())) {
     emitFrameOffset(
-        MBB, LastPopI, DL, AArch64::SP, AArch64::FP,
+        MBB, FirstGPRRestoreI, DL, AArch64::SP, AArch64::FP,
         StackOffset::getFixed(-AFI->getCalleeSaveBaseToFrameRecordOffset()),
         TII, MachineInstr::FrameDestroy, false, NeedsWinCFI, &HasWinCFI);
   } else if (NumBytes)
-    emitFrameOffset(MBB, LastPopI, DL, AArch64::SP, AArch64::SP,
+    emitFrameOffset(MBB, FirstGPRRestoreI, DL, AArch64::SP, AArch64::SP,
                     StackOffset::getFixed(NumBytes), TII,
                     MachineInstr::FrameDestroy, false, NeedsWinCFI, &HasWinCFI);
 
   // When we are about to restore the CSRs, the CFA register is SP again.
   if (EmitCFI && hasFP(MF))
-    CFIInstBuilder(MBB, LastPopI, MachineInstr::FrameDestroy)
+    CFIInstBuilder(MBB, FirstGPRRestoreI, MachineInstr::FrameDestroy)
         .buildDefCFA(AArch64::SP, PrologueSaveSize);
 
   // This must be placed after the callee-save restore code because that code
