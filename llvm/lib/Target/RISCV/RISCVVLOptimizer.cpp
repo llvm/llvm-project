@@ -53,14 +53,6 @@ struct DemandedVL {
   }
 };
 
-static DemandedVL max(const DemandedVL &LHS, const DemandedVL &RHS) {
-  if (RISCV::isVLKnownLE(LHS.VL, RHS.VL))
-    return RHS;
-  if (RISCV::isVLKnownLE(RHS.VL, LHS.VL))
-    return LHS;
-  return DemandedVL::vlmax();
-}
-
 class RISCVVLOptimizer : public MachineFunctionPass {
   const MachineRegisterInfo *MRI;
   const MachineDominatorTree *MDT;
@@ -102,6 +94,14 @@ private:
   /// downstream users.
   DenseMap<const MachineInstr *, DemandedVL> DemandedVLs;
   SetVector<const MachineInstr *> Worklist;
+
+  DemandedVL max(const DemandedVL &LHS, const DemandedVL &RHS) {
+    if (RISCV::isVLKnownLE(LHS.VL, RHS.VL, MRI))
+      return RHS;
+    if (RISCV::isVLKnownLE(RHS.VL, LHS.VL, MRI))
+      return LHS;
+    return DemandedVL::vlmax();
+  }
 };
 
 /// Represents the EMUL and EEW of a MachineOperand.
@@ -218,6 +218,19 @@ static unsigned getIntegerExtensionOperandEEW(unsigned Factor,
   return Log2EEW;
 }
 
+#define VSEG_CASES(Prefix, EEW)                                                \
+  RISCV::Prefix##SEG2E##EEW##_V:                                               \
+  case RISCV::Prefix##SEG3E##EEW##_V:                                          \
+  case RISCV::Prefix##SEG4E##EEW##_V:                                          \
+  case RISCV::Prefix##SEG5E##EEW##_V:                                          \
+  case RISCV::Prefix##SEG6E##EEW##_V:                                          \
+  case RISCV::Prefix##SEG7E##EEW##_V:                                          \
+  case RISCV::Prefix##SEG8E##EEW##_V
+#define VSSEG_CASES(EEW)    VSEG_CASES(VS, EEW)
+#define VSSSEG_CASES(EEW)   VSEG_CASES(VSS, EEW)
+#define VSUXSEG_CASES(EEW)  VSEG_CASES(VSUX, I##EEW)
+#define VSOXSEG_CASES(EEW)  VSEG_CASES(VSOX, I##EEW)
+
 static std::optional<unsigned>
 getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   const MachineInstr &MI = *MO.getParent();
@@ -265,21 +278,29 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VSE8_V:
   case RISCV::VLSE8_V:
   case RISCV::VSSE8_V:
+  case VSSEG_CASES(8):
+  case VSSSEG_CASES(8):
     return 3;
   case RISCV::VLE16_V:
   case RISCV::VSE16_V:
   case RISCV::VLSE16_V:
   case RISCV::VSSE16_V:
+  case VSSEG_CASES(16):
+  case VSSSEG_CASES(16):
     return 4;
   case RISCV::VLE32_V:
   case RISCV::VSE32_V:
   case RISCV::VLSE32_V:
   case RISCV::VSSE32_V:
+  case VSSEG_CASES(32):
+  case VSSSEG_CASES(32):
     return 5;
   case RISCV::VLE64_V:
   case RISCV::VSE64_V:
   case RISCV::VLSE64_V:
   case RISCV::VSSE64_V:
+  case VSSEG_CASES(64):
+  case VSSSEG_CASES(64):
     return 6;
 
   // Vector Indexed Instructions
@@ -288,7 +309,9 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VLUXEI8_V:
   case RISCV::VLOXEI8_V:
   case RISCV::VSUXEI8_V:
-  case RISCV::VSOXEI8_V: {
+  case RISCV::VSOXEI8_V:
+  case VSUXSEG_CASES(8):
+  case VSOXSEG_CASES(8): {
     if (MO.getOperandNo() == 0)
       return MILog2SEW;
     return 3;
@@ -296,7 +319,9 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VLUXEI16_V:
   case RISCV::VLOXEI16_V:
   case RISCV::VSUXEI16_V:
-  case RISCV::VSOXEI16_V: {
+  case RISCV::VSOXEI16_V:
+  case VSUXSEG_CASES(16):
+  case VSOXSEG_CASES(16): {
     if (MO.getOperandNo() == 0)
       return MILog2SEW;
     return 4;
@@ -304,7 +329,9 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VLUXEI32_V:
   case RISCV::VLOXEI32_V:
   case RISCV::VSUXEI32_V:
-  case RISCV::VSOXEI32_V: {
+  case RISCV::VSOXEI32_V:
+  case VSUXSEG_CASES(32):
+  case VSOXSEG_CASES(32): {
     if (MO.getOperandNo() == 0)
       return MILog2SEW;
     return 5;
@@ -312,7 +339,9 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VLUXEI64_V:
   case RISCV::VLOXEI64_V:
   case RISCV::VSUXEI64_V:
-  case RISCV::VSOXEI64_V: {
+  case RISCV::VSOXEI64_V:
+  case VSUXSEG_CASES(64):
+  case VSOXSEG_CASES(64): {
     if (MO.getOperandNo() == 0)
       return MILog2SEW;
     return 6;
@@ -825,7 +854,8 @@ static std::optional<OperandInfo>
 getOperandInfo(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   const MachineInstr &MI = *MO.getParent();
   const RISCVVPseudosTable::PseudoInfo *RVV =
-      RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
+    RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
+  MI.dump();
   assert(RVV && "Could not find MI in PseudoTable");
 
   std::optional<unsigned> Log2EEW = getOperandLog2EEW(MO, MRI);
@@ -860,11 +890,13 @@ getOperandInfo(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   return OperandInfo(getEMULEqualsEEWDivSEWTimesLMUL(*Log2EEW, MI), *Log2EEW);
 }
 
+static bool isTupleInsertInstr(const MachineInstr &MI);
+
 /// Return true if this optimization should consider MI for VL reduction. This
 /// white-list approach simplifies this optimization for instructions that may
 /// have more complex semantics with relation to how it uses VL.
 static bool isSupportedInstr(const MachineInstr &MI) {
-  if (MI.isPHI() || MI.isFullCopy())
+  if (MI.isPHI() || MI.isFullCopy() || isTupleInsertInstr(MI))
     return true;
 
   const RISCVVPseudosTable::PseudoInfo *RVV =
@@ -1369,7 +1401,7 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
   const MachineInstr &UserMI = *UserOp.getParent();
   const MCInstrDesc &Desc = UserMI.getDesc();
 
-  if (UserMI.isPHI() || UserMI.isFullCopy())
+  if (UserMI.isPHI() || UserMI.isFullCopy() || isTupleInsertInstr(UserMI))
     return DemandedVLs.lookup(&UserMI);
 
   if (!RISCVII::hasVLOp(Desc.TSFlags) || !RISCVII::hasSEWOp(Desc.TSFlags)) {
@@ -1395,7 +1427,7 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
   if (UserOp.isTied()) {
     assert(UserOp.getOperandNo() == UserMI.getNumExplicitDefs() &&
            RISCVII::isFirstDefTiedToFirstUse(UserMI.getDesc()));
-    if (!RISCV::isVLKnownLE(DemandedVLs.lookup(&UserMI).VL, VLOp)) {
+    if (!RISCV::isVLKnownLE(DemandedVLs.lookup(&UserMI).VL, VLOp, MRI)) {
       LLVM_DEBUG(dbgs() << "  Abort because user is passthru in "
                            "instruction with demanded tail\n");
       return DemandedVL::vlmax();
@@ -1411,14 +1443,64 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
 
   // If we know the demanded VL of UserMI, then we can reduce the VL it
   // requires.
-  if (RISCV::isVLKnownLE(DemandedVLs.lookup(&UserMI).VL, VLOp))
+  if (RISCV::isVLKnownLE(DemandedVLs.lookup(&UserMI).VL, VLOp, MRI))
     return DemandedVLs.lookup(&UserMI);
 
   return VLOp;
 }
 
-bool RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
-  if (MI.isPHI() || MI.isFullCopy())
+/// Return true if MI is an instruction used for assembling registers
+/// for segmented store instructions, namely, RISCVISD::TUPLE_INSERT.
+/// Currently it's lowered to INSERT_SUBREG.
+static bool isTupleInsertInstr(const MachineInstr &MI) {
+  if (MI.getOpcode() != RISCV::INSERT_SUBREG)
+    return false;
+
+  const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+
+  const TargetRegisterClass *DstRC = MRI.getRegClass(MI.getOperand(0).getReg());
+  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+  if (!RISCVRI::isVRegClass(DstRC->TSFlags))
+    return false;
+  unsigned NF = RISCVRI::getNF(DstRC->TSFlags);
+  if (NF < 2)
+    return false;
+
+  // Check whether INSERT_SUBREG has the correct subreg index for tuple inserts.
+  auto VLMul = RISCVRI::getLMul(DstRC->TSFlags);
+  unsigned SubRegIdx = MI.getOperand(3).getImm();
+  [[maybe_unused]] auto [LMul, IsFractional] = RISCVVType::decodeVLMUL(VLMul);
+  assert(!IsFractional && "unexpected LMUL for tuple register classes");
+  return TRI->getSubRegIdxSize(SubRegIdx) == RISCV::RVVBitsPerBlock * LMul;
+}
+
+static bool isSegmentedStoreInstr(const MachineInstr &MI) {
+  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
+  case VSSEG_CASES(8):
+  case VSSSEG_CASES(8):
+  case VSUXSEG_CASES(8):
+  case VSOXSEG_CASES(8):
+  case VSSEG_CASES(16):
+  case VSSSEG_CASES(16):
+  case VSUXSEG_CASES(16):
+  case VSOXSEG_CASES(16):
+  case VSSEG_CASES(32):
+  case VSSSEG_CASES(32):
+  case VSUXSEG_CASES(32):
+  case VSOXSEG_CASES(32):
+  case VSSEG_CASES(64):
+  case VSSSEG_CASES(64):
+  case VSUXSEG_CASES(64):
+  case VSOXSEG_CASES(64):
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool
+RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
+  if (MI.isPHI() || MI.isFullCopy() || isTupleInsertInstr(MI))
     return true;
 
   SmallSetVector<MachineOperand *, 8> Worklist;
@@ -1435,6 +1517,23 @@ bool RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
       LLVM_DEBUG(dbgs() << "    Peeking through uses of COPY\n");
       Worklist.insert_range(llvm::make_pointer_range(
           MRI->use_operands(UserMI.getOperand(0).getReg())));
+      continue;
+    }
+
+    if (isTupleInsertInstr(UserMI)) {
+      LLVM_DEBUG(dbgs().indent(4) << "Peeking through uses of INSERT_SUBREG\n");
+      for (MachineOperand &UseOp :
+           MRI->use_operands(UserMI.getOperand(0).getReg())) {
+        const MachineInstr &CandidateMI = *UseOp.getParent();
+        // We should not propagate the VL if the user is not a segmented store
+        // or another INSERT_SUBREG, since VL just works differently
+        // between segmented operations (per-field) v.s. other RVV ops (on the
+        // whole register group).
+        if (!isTupleInsertInstr(CandidateMI) &&
+            !isSegmentedStoreInstr(CandidateMI))
+          return false;
+        Worklist.insert(&UseOp);
+      }
       continue;
     }
 
@@ -1503,7 +1602,7 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) const {
       CommonVL = &VLMI->getOperand(RISCVII::getVLOpNum(VLMI->getDesc()));
   }
 
-  if (!RISCV::isVLKnownLE(*CommonVL, VLOp)) {
+  if (!RISCV::isVLKnownLE(*CommonVL, VLOp, MRI)) {
     LLVM_DEBUG(dbgs() << "  Abort due to CommonVL not <= VLOp.\n");
     return false;
   }

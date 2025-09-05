@@ -223,16 +223,32 @@ define <vscale x 8 x i32> @vcompress_add(<vscale x 8 x i32> %a, <vscale x 8 x i3
   ret <vscale x 8 x i32> %compress
 }
 
+; Make sure we peek through INSERT_SUBREG of tuple registers.
+define void @segmented_store_insert_subreg(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vscale x 4 x float> %v2, ptr %p, iXLen %vl) {
+; CHECK-LABEL: segmented_store_insert_subreg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; CHECK-NEXT:    vfadd.vv v10, v8, v10
+; CHECK-NEXT:    vsseg3e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %fadd = fadd <vscale x 4 x float> %v0, %v1
+  %t0 = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.tuple.insert(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison, <vscale x 4 x float> %v0, i32 0)
+  %t1 = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.tuple.insert(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) %t0, <vscale x 4 x float> %fadd, i32 1)
+  %t2 = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.tuple.insert(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) %t1, <vscale x 4 x float> %v2, i32 2)
+  call void @llvm.riscv.vsseg3(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) %t2, ptr %p, iXLen %vl, iXLen 5)
+  ret void
+}
+
 define void @recurrence(<vscale x 4 x i32> %v, ptr %p, iXLen %n, iXLen %vl) {
 ; CHECK-LABEL: recurrence:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:  .LBB15_1: # %loop
+; CHECK-NEXT:  .LBB16_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    vadd.vv v10, v10, v8
-; CHECK-NEXT:    bnez a1, .LBB15_1
+; CHECK-NEXT:    bnez a1, .LBB16_1
 ; CHECK-NEXT:  # %bb.2: # %exit
 ; CHECK-NEXT:    vse32.v v10, (a0)
 ; CHECK-NEXT:    ret
@@ -256,12 +272,12 @@ define <vscale x 4 x i32> @join(<vscale x 4 x i32> %v, i1 %cond, iXLen %vl) {
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m2, ta, ma
 ; CHECK-NEXT:    vadd.vi v8, v8, 1
-; CHECK-NEXT:    beqz a0, .LBB16_2
+; CHECK-NEXT:    beqz a0, .LBB17_2
 ; CHECK-NEXT:  # %bb.1: # %foo
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; CHECK-NEXT:    vadd.vi v8, v8, 1
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB16_2: # %bar
+; CHECK-NEXT:  .LBB17_2: # %bar
 ; CHECK-NEXT:    vadd.vi v8, v8, 2
 ; CHECK-NEXT:    ret
 entry:

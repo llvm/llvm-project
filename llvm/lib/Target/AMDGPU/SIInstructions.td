@@ -2201,7 +2201,6 @@ def : GCNPat <
 }
 
 foreach fp16vt = [f16, bf16] in {
-
 def : GCNPat <
   (fcopysign fp16vt:$src0, fp16vt:$src1),
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)), $src0, $src1)
@@ -3694,12 +3693,23 @@ def : GCNPat <
 >;
 
 foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-let True16Predicate = p in
+let True16Predicate = p in {
 // Take the lower 16 bits from each VGPR_32 and concat them
 def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector> (Ty VGPR_32:$a), (Ty VGPR_32:$b))),
   (V_PERM_B32_e64 VGPR_32:$b, VGPR_32:$a, (S_MOV_B32 (i32 0x05040100)))
 >;
+
+// Take the lower 16 bits from V[0] and the upper 16 bits from V[1]
+// Special case, can use V_BFI (0xffff literal likely more reusable than 0x70601000)
+def : GCNPat <
+  (vecTy (DivergentBinFrag<build_vector> (Ty VGPR_32:$a),
+    (Ty !if(!eq(Ty, i16),
+      (Ty (trunc (srl VGPR_32:$b, (i32 16)))),
+      (Ty (bitconvert (i16 (trunc (srl VGPR_32:$b, (i32 16)))))))))),
+  (V_BFI_B32_e64 (S_MOV_B32 (i32 0x0000ffff)),  VGPR_32:$a, VGPR_32:$b)
+>;
+}
 
 let True16Predicate = UseRealTrue16Insts in {
 def : GCNPat <
@@ -3725,18 +3735,6 @@ def : GCNPat <
       (Ty (bitconvert (i16 (trunc (srl VGPR_32:$b, (i32 16)))))))))),
   (V_AND_B32_e64 (S_MOV_B32 (i32 0xffff0000)), VGPR_32:$b)
 >;
-
-
-// Take the lower 16 bits from V[0] and the upper 16 bits from V[1]
-// Special case, can use V_BFI (0xffff literal likely more reusable than 0x70601000)
-def : GCNPat <
-  (vecTy (DivergentBinFrag<build_vector> (Ty VGPR_32:$a),
-    (Ty !if(!eq(Ty, i16),
-      (Ty (trunc (srl VGPR_32:$b, (i32 16)))),
-      (Ty (bitconvert (i16 (trunc (srl VGPR_32:$b, (i32 16)))))))))),
-  (V_BFI_B32_e64 (S_MOV_B32 (i32 0x0000ffff)),  VGPR_32:$a, VGPR_32:$b)
->;
-
 
 // Take the upper 16 bits from V[0] and the lower 16 bits from V[1]
 // Special case, can use V_ALIGNBIT (always uses encoded literal)
