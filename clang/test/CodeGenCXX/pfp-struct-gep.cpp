@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple aarch64-linux -fexperimental-pointer-field-protection=tagged -emit-llvm -o - %s | FileCheck %s -check-prefixes=CHECK,AARCH64
-// RUN: %clang_cc1 -triple x86_64-linux  -fexperimental-pointer-field-protection=tagged -emit-llvm -o - %s | FileCheck %s -check-prefixes=CHECK,X86_64
+// RUN: %clang_cc1 -triple aarch64-linux -fexperimental-pointer-field-protection -fexperimental-pointer-field-protection-tagged -emit-llvm -o - %s | FileCheck %s -check-prefixes=CHECK,AARCH64
+// RUN: %clang_cc1 -triple x86_64-linux  -fexperimental-pointer-field-protection -fexperimental-pointer-field-protection-tagged -emit-llvm -o - %s | FileCheck %s -check-prefixes=CHECK,X86_64
 
 struct S {
   int* ptr;
@@ -13,8 +13,8 @@ int* load_pointers(S *t) {
   // CHECK: store ptr %t, ptr %t.addr, align 8
   // CHECK: %0 = load ptr, ptr %t.addr, align 8
   // CHECK: %ptr = getelementptr inbounds nuw %struct.S, ptr %0, i32 0, i32 0
-  // AARCH64: %1 = call ptr @llvm.protected.field.ptr(ptr %ptr, i64 63261, i1 true) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS1S.ptr) ]
-  // X86_64: %1 = call ptr @llvm.protected.field.ptr(ptr %ptr, i64 29, i1 false) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS1S.ptr) ]
+  // AARCH64: %1 = call ptr @llvm.protected.field.ptr.p0(ptr %ptr, i64 63261, i1 true) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS1S.ptr) ]
+  // X86_64: %1 = call ptr @llvm.protected.field.ptr.p0(ptr %ptr, i64 29, i1 false) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS1S.ptr) ]
   // CHECK: %2 = load ptr, ptr %1, align 8
   // CHECK: ret ptr %2
    return t->ptr;
@@ -29,8 +29,8 @@ void store_pointers(S* t, int* p) {
   // CHECK: %0 = load ptr, ptr %p.addr, align 8
   // CHECK: %1 = load ptr, ptr %t.addr, align 8
   // CHECK: %ptr = getelementptr inbounds nuw %struct.S, ptr %1, i32 0, i32 0
-  // AARCH64: %2 = call ptr @llvm.protected.field.ptr(ptr %ptr, i64 63261, i1 true) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS1S.ptr) ]
-  // X86_64: %2 = call ptr @llvm.protected.field.ptr(ptr %ptr, i64 29, i1 false) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS1S.ptr) ]
+  // AARCH64: %2 = call ptr @llvm.protected.field.ptr.p0(ptr %ptr, i64 63261, i1 true) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS1S.ptr) ]
+  // X86_64: %2 = call ptr @llvm.protected.field.ptr.p0(ptr %ptr, i64 29, i1 false) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS1S.ptr) ]
   // CHECK: store ptr %0, ptr %2, align 8
   t->ptr = p;
 }

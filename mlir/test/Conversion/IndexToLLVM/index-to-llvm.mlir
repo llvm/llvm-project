@@ -5,6 +5,7 @@
 // Same below, but using the `ConvertToLLVMPatternInterface` entry point
 // and the generic `convert-to-llvm` pass.
 // RUN: mlir-opt --convert-to-llvm="filter-dialects=index" --split-input-file %s | FileCheck %s
+// RUN: mlir-opt --convert-to-llvm="filter-dialects=index allow-pattern-rollback=0" --split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: @trivial_ops
 func.func @trivial_ops(%a: index, %b: index) {

@@ -914,6 +914,8 @@ constexpr Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK) {
   switch (RK) {
   default:
     llvm_unreachable("Unexpected recurrence kind");
+  case RecurKind::AddChainWithSubs:
+  case RecurKind::Sub:
   case RecurKind::Add:
     return Intrinsic::vector_reduce_add;
   case RecurKind::Mul:
@@ -951,6 +953,21 @@ constexpr Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK) {
     return Intrinsic::vector_reduce_fmax;
   case RecurKind::FMinimumNum:
     return Intrinsic::vector_reduce_fmin;
+  }
+}
+
+Intrinsic::ID llvm::getMinMaxReductionIntrinsicID(Intrinsic::ID IID) {
+  switch (IID) {
+  default:
+    llvm_unreachable("Unexpected intrinsic id");
+  case Intrinsic::umin:
+    return Intrinsic::vector_reduce_umin;
+  case Intrinsic::umax:
+    return Intrinsic::vector_reduce_umax;
+  case Intrinsic::smin:
+    return Intrinsic::vector_reduce_smin;
+  case Intrinsic::smax:
+    return Intrinsic::vector_reduce_smax;
   }
 }
 
@@ -1301,6 +1318,8 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
                                  Builder.getFastMathFlags());
   };
   switch (RdxKind) {
+  case RecurKind::AddChainWithSubs:
+  case RecurKind::Sub:
   case RecurKind::Add:
   case RecurKind::Mul:
   case RecurKind::And:

@@ -400,6 +400,9 @@ def note_constexpr_non_const_vectorelements : Note<
   "cannot determine number of elements for sizeless vectors in a constant expression">;
 def note_constexpr_assumption_failed : Note<
   "assumption evaluated to false">;
+def note_constexpr_countzeroes_zero : Note<
+  "evaluation of %select{__builtin_elementwise_ctlz|__builtin_elementwise_cttz}0 "
+  "with a zero value is undefined">;
 def err_experimental_clang_interp_failed : Error<
   "the experimental clang interpreter failed to evaluate an expression">;
 

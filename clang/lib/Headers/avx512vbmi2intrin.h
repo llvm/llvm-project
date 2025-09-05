@@ -215,8 +215,8 @@ _mm512_maskz_expandloadu_epi8(__mmask64 __U, void const *__P)
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_shldv_epi64(__m512i __A, __m512i __B, __m512i __C)
 {
-  return (__m512i)__builtin_ia32_vpshldvq512((__v8di)__A, (__v8di)__B,
-                                             (__v8di)__C);
+  return (__m512i)__builtin_elementwise_fshl((__v8du)__A, (__v8du)__B,
+                                             (__v8du)__C);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
@@ -238,8 +238,8 @@ _mm512_maskz_shldv_epi64(__mmask8 __U, __m512i __A, __m512i __B, __m512i __C)
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_shldv_epi32(__m512i __A, __m512i __B, __m512i __C)
 {
-  return (__m512i)__builtin_ia32_vpshldvd512((__v16si)__A, (__v16si)__B,
-                                             (__v16si)__C);
+  return (__m512i)__builtin_elementwise_fshl((__v16su)__A, (__v16su)__B,
+                                             (__v16su)__C);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
@@ -261,8 +261,8 @@ _mm512_maskz_shldv_epi32(__mmask16 __U, __m512i __A, __m512i __B, __m512i __C)
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_shldv_epi16(__m512i __A, __m512i __B, __m512i __C)
 {
-  return (__m512i)__builtin_ia32_vpshldvw512((__v32hi)__A, (__v32hi)__B,
-                                             (__v32hi)__C);
+  return (__m512i)__builtin_elementwise_fshl((__v32hu)__A, (__v32hu)__B,
+                                             (__v32hu)__C);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
@@ -284,8 +284,9 @@ _mm512_maskz_shldv_epi16(__mmask32 __U, __m512i __A, __m512i __B, __m512i __C)
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_shrdv_epi64(__m512i __A, __m512i __B, __m512i __C)
 {
-  return (__m512i)__builtin_ia32_vpshrdvq512((__v8di)__A, (__v8di)__B,
-                                             (__v8di)__C);
+  // Ops __A and __B are swapped.
+  return (__m512i)__builtin_elementwise_fshr((__v8du)__B, (__v8du)__A,
+                                             (__v8du)__C);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
@@ -307,8 +308,9 @@ _mm512_maskz_shrdv_epi64(__mmask8 __U, __m512i __A, __m512i __B, __m512i __C)
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_shrdv_epi32(__m512i __A, __m512i __B, __m512i __C)
 {
-  return (__m512i)__builtin_ia32_vpshrdvd512((__v16si)__A, (__v16si)__B,
-                                             (__v16si)__C);
+  // Ops __A and __B are swapped.
+  return (__m512i)__builtin_elementwise_fshr((__v16su)__B, (__v16su)__A,
+                                             (__v16su)__C);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
@@ -330,8 +332,9 @@ _mm512_maskz_shrdv_epi32(__mmask16 __U, __m512i __A, __m512i __B, __m512i __C)
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_shrdv_epi16(__m512i __A, __m512i __B, __m512i __C)
 {
-  return (__m512i)__builtin_ia32_vpshrdvw512((__v32hi)__A, (__v32hi)__B,
-                                             (__v32hi)__C);
+  // Ops __A and __B are swapped.
+  return (__m512i)__builtin_elementwise_fshr((__v32hu)__B, (__v32hu)__A,
+                                             (__v32hu)__C);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS

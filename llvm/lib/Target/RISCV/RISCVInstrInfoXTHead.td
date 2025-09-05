@@ -590,12 +590,12 @@ let Predicates = [HasVendorXTHeadBb, IsRV64] in {
 def : PatGprImm<riscv_rorw, TH_SRRIW, uimm5>;
 def : Pat<(riscv_rolw GPR:$rs1, uimm5:$rs2),
           (TH_SRRIW GPR:$rs1, (ImmSubFrom32 uimm5:$rs2))>;
-def : Pat<(sra (bswap i64:$rs1), (i64 32)),
-          (TH_REVW i64:$rs1)>;
-def : Pat<(binop_allwusers<srl> (bswap i64:$rs1), (i64 32)),
-          (TH_REVW i64:$rs1)>;
-def : Pat<(riscv_clzw i64:$rs1),
-          (TH_FF0 (i64 (SLLI (i64 (XORI i64:$rs1, -1)), 32)))>;
+def : Pat<(i64 (sra (bswap GPR:$rs1), (i64 32))),
+          (TH_REVW GPR:$rs1)>;
+def : Pat<(binop_allwusers<srl> (bswap GPR:$rs1), (i64 32)),
+          (TH_REVW GPR:$rs1)>;
+def : Pat<(riscv_clzw GPR:$rs1),
+          (TH_FF0 (i64 (SLLI (i64 (XORI GPR:$rs1, -1)), 32)))>;
 } // Predicates = [HasVendorXTHeadBb, IsRV64]
 
 let Predicates = [HasVendorXTHeadBs] in {
@@ -697,11 +697,13 @@ def uimm2_4 : Operand<XLenVT>, ImmLeaf<XLenVT, [{
 }], uimm2_4_XFORM>;
 
 let Predicates = [HasVendorXTHeadMemPair, IsRV64] in {
-def : Pat<(th_lwud i64:$rs1, uimm2_3:$uimm2_3), (TH_LWUD i64:$rs1, uimm2_3:$uimm2_3, 3)>;
-def : Pat<(th_ldd i64:$rs1, uimm2_4:$uimm2_4), (TH_LDD i64:$rs1, uimm2_4:$uimm2_4, 4)>;
+def : Pat<(th_lwud GPR:$rs1, (i64 uimm2_3:$uimm2_3)),
+          (TH_LWUD GPR:$rs1, uimm2_3:$uimm2_3, 3)>;
+def : Pat<(th_ldd GPR:$rs1, (i64 uimm2_4:$uimm2_4)),
+          (TH_LDD GPR:$rs1, uimm2_4:$uimm2_4, 4)>;
 
-def : Pat<(th_sdd i64:$rd1, i64:$rd2, i64:$rs1, uimm2_4:$uimm2_4),
-          (TH_SDD i64:$rd1, i64:$rd2, i64:$rs1, uimm2_4:$uimm2_4, 4)>;
+def : Pat<(th_sdd (i64 GPR:$rd1), GPR:$rd2, GPR:$rs1, uimm2_4:$uimm2_4),
+          (TH_SDD GPR:$rd1, GPR:$rd2, GPR:$rs1, uimm2_4:$uimm2_4, 4)>;
 }
 
 let Predicates = [HasVendorXTHeadMemPair] in {

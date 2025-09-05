@@ -102,7 +102,7 @@ private:
 
   void processDebugInfo();
 
-  void processExtension();
+  LogicalResult processExtension();
 
   void processMemoryModel();
 

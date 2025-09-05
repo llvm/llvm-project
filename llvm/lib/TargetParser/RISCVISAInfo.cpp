@@ -833,19 +833,6 @@ static bool operator<(StringRef LHS, const ImpliedExtsEntry &RHS) {
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
 
 void RISCVISAInfo::updateImplication() {
-  bool HasE = Exts.count("e") != 0;
-  bool HasI = Exts.count("i") != 0;
-
-  // If not in e extension and i extension does not exist, i extension is
-  // implied
-  if (!HasE && !HasI) {
-    auto Version = findDefaultVersion("i");
-    Exts["i"] = *Version;
-  }
-
-  if (HasE && HasI)
-    Exts.erase("i");
-
   assert(llvm::is_sorted(ImpliedExts) && "Table not sorted by Name");
 
   // This loop may execute over 1 iteration since implication can be layered
@@ -887,6 +874,21 @@ void RISCVISAInfo::updateImplication() {
     auto Version = findDefaultVersion("zcf");
     Exts["zcf"] = *Version;
   }
+
+  // Handle I/E after implications have been resolved, in case either
+  // of them was implied by another extension.
+  bool HasE = Exts.count("e") != 0;
+  bool HasI = Exts.count("i") != 0;
+
+  // If not in e extension and i extension does not exist, i extension is
+  // implied
+  if (!HasE && !HasI) {
+    auto Version = findDefaultVersion("i");
+    Exts["i"] = *Version;
+  }
+
+  if (HasE && HasI)
+    Exts.erase("i");
 }
 
 static constexpr StringLiteral CombineIntoExts[] = {

@@ -118,6 +118,7 @@ Design Documents
    OffloadingDesign
    PCHInternals
    ItaniumMangleAbiTags
+   ControlFlowIntegrityDesign
    HardwareAssistedAddressSanitizerDesign.rst
    ConstantInterpreter
 

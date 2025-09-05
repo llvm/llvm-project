@@ -73,12 +73,10 @@ define float @reduction_sum_float_fastmath(i32 %n, ptr %array) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[BIN_RDX]])
 ; CHECK-NEXT:    br label [[LOOP_EXIT_LOOPEXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_INC:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[SUM:%.*]] = phi float [ [[SUM_INC:%.*]], [[LOOP]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_INC:%.*]], [[LOOP]] ], [ 0, [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi float [ [[SUM_INC:%.*]], [[LOOP]] ], [ 0.000000e+00, [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ADDRESS:%.*]] = getelementptr float, ptr [[ARRAY]], i32 [[IDX]]
 ; CHECK-NEXT:    [[VALUE:%.*]] = load float, ptr [[ADDRESS]], align 4
 ; CHECK-NEXT:    [[SUM_INC]] = fadd fast float [[SUM]], [[VALUE]]
@@ -138,12 +136,10 @@ define float @reduction_sum_float_only_reassoc(i32 %n, ptr %array) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = call reassoc float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[BIN_RDX]])
 ; CHECK-NEXT:    br label [[LOOP_EXIT_LOOPEXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ -0.000000e+00, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_INC:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[SUM:%.*]] = phi float [ [[SUM_INC:%.*]], [[LOOP]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_INC:%.*]], [[LOOP]] ], [ 0, [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi float [ [[SUM_INC:%.*]], [[LOOP]] ], [ -0.000000e+00, [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ADDRESS:%.*]] = getelementptr float, ptr [[ARRAY]], i32 [[IDX]]
 ; CHECK-NEXT:    [[VALUE:%.*]] = load float, ptr [[ADDRESS]], align 4
 ; CHECK-NEXT:    [[SUM_INC]] = fadd reassoc float [[SUM]], [[VALUE]]
@@ -203,12 +199,10 @@ define float @reduction_sum_float_only_reassoc_and_contract(i32 %n, ptr %array) 
 ; CHECK-NEXT:    [[TMP9:%.*]] = call reassoc contract float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[BIN_RDX]])
 ; CHECK-NEXT:    br label [[LOOP_EXIT_LOOPEXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ -0.000000e+00, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_INC:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[SUM:%.*]] = phi float [ [[SUM_INC:%.*]], [[LOOP]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_INC:%.*]], [[LOOP]] ], [ 0, [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi float [ [[SUM_INC:%.*]], [[LOOP]] ], [ -0.000000e+00, [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ADDRESS:%.*]] = getelementptr float, ptr [[ARRAY]], i32 [[IDX]]
 ; CHECK-NEXT:    [[VALUE:%.*]] = load float, ptr [[ADDRESS]], align 4
 ; CHECK-NEXT:    [[SUM_INC]] = fadd reassoc contract float [[SUM]], [[VALUE]]
