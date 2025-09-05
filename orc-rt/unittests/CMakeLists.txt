@@ -19,6 +19,7 @@ add_orc_rt_unittest(CoreTests
   IntervalMapTest.cpp
   IntervalSetTest.cpp
   MathTest.cpp
+  MemoryFlagsTest.cpp
   RTTITest.cpp
   SimplePackedSerializationTest.cpp
   WrapperFunctionBufferTest.cpp
