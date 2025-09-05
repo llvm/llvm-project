@@ -24,9 +24,9 @@ unsigned getSizeInBytes(TypeSize type) {
     return 4;
   case arm_sme::TypeSize::Double:
     return 8;
-  default:
-    llvm_unreachable("unknown type size");
   }
+  llvm_unreachable("unknown type size");
+  return 0;
 }
 
 unsigned getSMETileSliceMinNumElts(Type type) {
