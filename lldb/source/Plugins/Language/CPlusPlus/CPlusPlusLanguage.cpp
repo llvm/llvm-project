@@ -749,31 +749,27 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 lldb_private::formatters::LibcxxStringSummaryProviderASCII,
                 "std::string summary provider",
                 "^std::__[[:alnum:]]+::basic_string<char, "
-                "std::__[[:alnum:]]+::char_traits<char>, "
-                "std::__[[:alnum:]]+::allocator<char> >$",
+                "std::__[[:alnum:]]+::char_traits<char>,.*>$",
                 stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxStringSummaryProviderASCII,
                 "std::string summary provider",
                 "^std::__[[:alnum:]]+::basic_string<unsigned char, "
-                "std::__[[:alnum:]]+::char_traits<unsigned char>, "
-                "std::__[[:alnum:]]+::allocator<unsigned char> >$",
+                "std::__[[:alnum:]]+::char_traits<unsigned char>,.*>$",
                 stl_summary_flags, true);
 
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxStringSummaryProviderUTF16,
                 "std::u16string summary provider",
                 "^std::__[[:alnum:]]+::basic_string<char16_t, "
-                "std::__[[:alnum:]]+::char_traits<char16_t>, "
-                "std::__[[:alnum:]]+::allocator<char16_t> >$",
+                "std::__[[:alnum:]]+::char_traits<char16_t>,.*>$",
                 stl_summary_flags, true);
 
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxStringSummaryProviderUTF32,
                 "std::u32string summary provider",
                 "^std::__[[:alnum:]]+::basic_string<char32_t, "
-                "std::__[[:alnum:]]+::char_traits<char32_t>, "
-                "std::__[[:alnum:]]+::allocator<char32_t> >$",
+                "std::__[[:alnum:]]+::char_traits<char32_t>,.*>$",
                 stl_summary_flags, true);
 
   AddCXXSummary(cpp_category_sp,
@@ -784,8 +780,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 lldb_private::formatters::LibcxxWStringSummaryProvider,
                 "std::wstring summary provider",
                 "^std::__[[:alnum:]]+::basic_string<wchar_t, "
-                "std::__[[:alnum:]]+::char_traits<wchar_t>, "
-                "std::__[[:alnum:]]+::allocator<wchar_t> >$",
+                "std::__[[:alnum:]]+::char_traits<wchar_t>,.*>$",
                 stl_summary_flags, true);
 
   AddCXXSummary(cpp_category_sp,
@@ -1301,24 +1296,16 @@ static void RegisterStdStringSummaryProvider(
 
   category_sp->AddTypeSummary(makeSpecifier(string_ty), summary_sp);
 
-  // std::basic_string<char>
   category_sp->AddTypeSummary(
       makeSpecifier(llvm::formatv("std::basic_string<{}>", char_ty).str()),
       summary_sp);
-  // std::basic_string<char,std::char_traits<char>,std::allocator<char> >
+
   category_sp->AddTypeSummary(
-      makeSpecifier(llvm::formatv("std::basic_string<{0},std::char_traits<{0}>,"
-                                  "std::allocator<{0}> >",
-                                  char_ty)
-                        .str()),
-      summary_sp);
-  // std::basic_string<char, std::char_traits<char>, std::allocator<char> >
-  category_sp->AddTypeSummary(
-      makeSpecifier(
-          llvm::formatv("std::basic_string<{0}, std::char_traits<{0}>, "
-                        "std::allocator<{0}> >",
+      std::make_shared<lldb_private::TypeNameSpecifierImpl>(
+          llvm::formatv("^std::basic_string<{0}, ?std::char_traits<{0}>,.*>$",
                         char_ty)
-              .str()),
+              .str(),
+          eFormatterMatchRegex),
       summary_sp);
 }
 
@@ -1363,20 +1350,17 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   cpp_category_sp->AddTypeSummary("std::__cxx11::string", eFormatterMatchExact,
                                   string_summary_sp);
   cpp_category_sp->AddTypeSummary(
-      "std::__cxx11::basic_string<char, std::char_traits<char>, "
-      "std::allocator<char> >",
-      eFormatterMatchExact, string_summary_sp);
-  cpp_category_sp->AddTypeSummary("std::__cxx11::basic_string<unsigned char, "
-                                  "std::char_traits<unsigned char>, "
-                                  "std::allocator<unsigned char> >",
-                                  eFormatterMatchExact, string_summary_sp);
+      "^std::__cxx11::basic_string<char, std::char_traits<char>,.*>$",
+      eFormatterMatchRegex, string_summary_sp);
+  cpp_category_sp->AddTypeSummary("^std::__cxx11::basic_string<unsigned char, "
+                                  "std::char_traits<unsigned char>,.*>$",
+                                  eFormatterMatchRegex, string_summary_sp);
 
   cpp_category_sp->AddTypeSummary("std::__cxx11::wstring", eFormatterMatchExact,
                                   string_summary_sp);
   cpp_category_sp->AddTypeSummary(
-      "std::__cxx11::basic_string<wchar_t, std::char_traits<wchar_t>, "
-      "std::allocator<wchar_t> >",
-      eFormatterMatchExact, string_summary_sp);
+      "^std::__cxx11::basic_string<wchar_t, std::char_traits<wchar_t>,.*>$",
+      eFormatterMatchRegex, string_summary_sp);
 
   SyntheticChildren::Flags stl_synth_flags;
   stl_synth_flags.SetCascades(true).SetSkipPointers(false).SetSkipReferences(
