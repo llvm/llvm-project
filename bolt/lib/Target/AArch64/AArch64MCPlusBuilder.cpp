@@ -2687,26 +2687,28 @@ public:
       break;
 
     default:
-      if (Size <= 64) {
-        // For sizes up to 64 bytes, greedily use the largest possible loads.
-        uint64_t Remaining = Size;
-        uint64_t Offset = 0;
+      // For sizes up to 64 bytes, greedily use the largest possible loads.
+      // Caller should have already filtered out sizes > 64 bytes.
+      assert(Size <= 64 &&
+             "Size should be <= 64 bytes for AArch64 memcpy inlining");
 
-        const std::array<std::tuple<uint64_t, unsigned, unsigned, unsigned>, 5>
-            LoadStoreOps = {
-                {{16, AArch64::LDRQui, AArch64::STRQui, AArch64::Q16},
-                 {8, AArch64::LDRXui, AArch64::STRXui, AArch64::X9},
-                 {4, AArch64::LDRWui, AArch64::STRWui, AArch64::W9},
-                 {2, AArch64::LDRHHui, AArch64::STRHHui, AArch64::W9},
-                 {1, AArch64::LDRBBui, AArch64::STRBBui, AArch64::W9}}};
+      uint64_t Remaining = Size;
+      uint64_t Offset = 0;
 
-        for (const auto &[OpSize, LoadOp, StoreOp, TempReg] : LoadStoreOps)
-          while (Remaining >= OpSize) {
-            AddLoadStorePair(LoadOp, StoreOp, TempReg, Offset / OpSize);
-            Remaining -= OpSize;
-            Offset += OpSize;
-          }
-      }
+      const std::array<std::tuple<uint64_t, unsigned, unsigned, unsigned>, 5>
+          LoadStoreOps = {
+              {{16, AArch64::LDRQui, AArch64::STRQui, AArch64::Q16},
+               {8, AArch64::LDRXui, AArch64::STRXui, AArch64::X9},
+               {4, AArch64::LDRWui, AArch64::STRWui, AArch64::W9},
+               {2, AArch64::LDRHHui, AArch64::STRHHui, AArch64::W9},
+               {1, AArch64::LDRBBui, AArch64::STRBBui, AArch64::W9}}};
+
+      for (const auto &[OpSize, LoadOp, StoreOp, TempReg] : LoadStoreOps)
+        while (Remaining >= OpSize) {
+          AddLoadStorePair(LoadOp, StoreOp, TempReg, Offset / OpSize);
+          Remaining -= OpSize;
+          Offset += OpSize;
+        }
       break;
     }
     return Code;
