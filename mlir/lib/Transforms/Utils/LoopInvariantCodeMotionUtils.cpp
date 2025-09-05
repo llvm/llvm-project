@@ -60,8 +60,11 @@ static bool canBeHoisted(Operation *op,
       op, [&](OpOperand &operand) { return definedOutside(operand.get()); });
 }
 
+/// Merges srcEffect's Memory Effect on its resource into the 
+/// resourceConflicts map, flagging resources if the srcEffect
+/// results in a conflict
 static void mergeResource(
-  DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>> &dstMap,
+  DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>> &resourceConflicts,
   const MemoryEffects::EffectInstance &srcEffect,
   bool srcHasConflict) {
 
@@ -72,11 +75,11 @@ static void mergeResource(
 
   bool conflict = srcHasConflict || srcIsAllocOrFree;
 
-  auto dstIt = dstMap.find(srcResourceID);
+  auto dstIt = resourceConflicts.find(srcResourceID);
 
   // if it doesn't already exist, create entry for resource in map
-  if (dstIt == dstMap.end()) {
-    dstMap.insert(std::make_pair(srcResourceID, std::make_pair(conflict, srcEffect)));
+  if (dstIt == resourceConflicts.end()) {
+    resourceConflicts.insert(std::make_pair(srcResourceID, std::make_pair(conflict, srcEffect)));
     return;
   }
 
@@ -96,6 +99,7 @@ static void mergeResource(
   dstIt->second =std::make_pair(conflict, srcEffect);
 }
 
+/// Returns true if any of op's OpOperands are defined outside of loopLike
 static bool hasLoopVariantInput(LoopLikeOpInterface loopLike, Operation *op) {
   for (OpOperand &input : op->getOpOperands())
     if (!loopLike.isDefinedOutsideOfLoop(input.get()))
@@ -104,6 +108,11 @@ static bool hasLoopVariantInput(LoopLikeOpInterface loopLike, Operation *op) {
   return false;
 }
 
+/// Returns true if:
+/// (a) any of the resources used by op's Memory Effects have been
+/// flagged as having a conflict within the resourceConflicts map
+/// (b) op doesn't have a MemoryEffectOpInterface or has one but
+/// without any specific effects
 static bool mayHaveMemoryEffectConflict(Operation *op,
   DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>> &resourceConflicts) {
 
