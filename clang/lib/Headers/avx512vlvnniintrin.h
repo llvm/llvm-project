@@ -42,7 +42,7 @@
 ///    DST[MAX:256] := 0
 /// \endcode
 #define _mm256_dpbusd_epi32(S, A, B)                                           \
-  ((__m256i)__builtin_ia32_vpdpbusd256((__v8si)(S), (__v32qi)(A), (__v32qi)(B)))
+  ((__m256i)__builtin_ia32_vpdpbusd256((__v8si)(S), (__v32qu)(A), (__v32qi)(B)))
 
 /// Multiply groups of 4 adjacent pairs of unsigned 8-bit integers in \a A with
 /// corresponding signed 8-bit integers in \a B, producing 4 intermediate signed
@@ -62,7 +62,7 @@
 ///    DST[MAX:256] := 0
 /// \endcode
 #define _mm256_dpbusds_epi32(S, A, B)                                          \
-  ((__m256i)__builtin_ia32_vpdpbusds256((__v8si)(S), (__v32qi)(A),             \
+  ((__m256i)__builtin_ia32_vpdpbusds256((__v8si)(S), (__v32qu)(A),             \
                                         (__v32qi)(B)))
 
 /// Multiply groups of 2 adjacent pairs of signed 16-bit integers in \a A with
@@ -119,7 +119,7 @@
 ///    DST[MAX:128] := 0
 /// \endcode
 #define _mm_dpbusd_epi32(S, A, B)                                              \
-  ((__m128i)__builtin_ia32_vpdpbusd128((__v4si)(S), (__v16qi)(A), (__v16qi)(B)))
+  ((__m128i)__builtin_ia32_vpdpbusd128((__v4si)(S), (__v16qu)(A), (__v16qi)(B)))
 
 /// Multiply groups of 4 adjacent pairs of unsigned 8-bit integers in \a A with
 /// corresponding signed 8-bit integers in \a B, producing 4 intermediate signed
@@ -139,7 +139,7 @@
 ///    DST[MAX:128] := 0
 /// \endcode
 #define _mm_dpbusds_epi32(S, A, B)                                             \
-  ((__m128i)__builtin_ia32_vpdpbusds128((__v4si)(S), (__v16qi)(A),             \
+  ((__m128i)__builtin_ia32_vpdpbusds128((__v4si)(S), (__v16qu)(A),             \
                                         (__v16qi)(B)))
 
 /// Multiply groups of 2 adjacent pairs of signed 16-bit integers in \a A with

@@ -1108,27 +1108,27 @@ let Features = "avx512f,evex512", Attributes = [NoThrow, Const, RequiredVectorWi
 }
 
 let Features = "avx512vl,avx512vnni|avxvnni", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def vpdpbusd128 : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Vector<16, char>, _Vector<16, char>)">;
+  def vpdpbusd128 : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Vector<16, unsigned char>, _Vector<16, char>)">;
 }
 
 let Features = "avx512vl,avx512vnni|avxvnni", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vpdpbusd256 : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Vector<32, char>, _Vector<32, char>)">;
+  def vpdpbusd256 : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Vector<32, unsigned char>, _Vector<32, char>)">;
 }
 
 let Features = "avx512vnni,evex512", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
-  def vpdpbusd512 : X86Builtin<"_Vector<16, int>(_Vector<16, int>, _Vector<64, char>, _Vector<64, char>)">;
+  def vpdpbusd512 : X86Builtin<"_Vector<16, int>(_Vector<16, int>, _Vector<64, unsigned char>, _Vector<64, char>)">;
 }
 
 let Features = "avx512vl,avx512vnni|avxvnni", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def vpdpbusds128 : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Vector<16, char>, _Vector<16, char>)">;
+  def vpdpbusds128 : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Vector<16, unsigned char>, _Vector<16, char>)">;
 }
 
 let Features = "avx512vl,avx512vnni|avxvnni", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vpdpbusds256 : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Vector<32, char>, _Vector<32, char>)">;
+  def vpdpbusds256 : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Vector<32, unsigned char>, _Vector<32, char>)">;
 }
 
 let Features = "avx512vnni,evex512", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
-  def vpdpbusds512 : X86Builtin<"_Vector<16, int>(_Vector<16, int>, _Vector<64, char>, _Vector<64, char>)">;
+  def vpdpbusds512 : X86Builtin<"_Vector<16, int>(_Vector<16, int>, _Vector<64, unsigned char>, _Vector<64, char>)">;
 }
 
 let Features = "avx512vl,avx512vnni|avxvnni", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
