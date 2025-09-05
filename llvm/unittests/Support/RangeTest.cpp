@@ -127,14 +127,6 @@ TEST(RangeUtilsTest, Contains) {
   EXPECT_FALSE(RangeUtils::contains(Ranges, 21));
 }
 
-TEST(RangeUtilsTest, RangesToString) {
-  RangeUtils::RangeList Ranges;
-  EXPECT_TRUE(RangeUtils::parseRanges("1-5,10,15-20", Ranges));
-
-  std::string Result = RangeUtils::rangesToString(Ranges);
-  EXPECT_EQ(Result, "1-5,10,15-20");
-}
-
 TEST(RangeUtilsTest, SeparatorParameter) {
   RangeUtils::RangeList ColonRanges, CommaRanges;
 

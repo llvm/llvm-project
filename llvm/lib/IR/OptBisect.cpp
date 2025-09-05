@@ -36,25 +36,18 @@ static OptDisable &getOptDisabler() {
 static cl::opt<int> OptBisectLimit(
     "opt-bisect-limit", cl::Hidden, cl::init(-1), cl::Optional,
     cl::cb<void, int>([](int Limit) {
-      if (Limit == -1) {
+      if (Limit == -1)
         // -1 means run all passes
         getOptBisector().setRanges({{1, std::numeric_limits<int>::max()}});
-      } else if (Limit == 0) {
+      else if (Limit == 0)
         // 0 means run no passes
         getOptBisector().setRanges({{0, 0}});
-      } else if (Limit > 0) {
+      else if (Limit > 0)
         // Convert limit to range 1-Limit
-        std::string RangeStr = Limit == 1 ? "1" : "1-" + llvm::utostr(Limit);
-        auto Ranges = RangeUtils::parseRanges(RangeStr);
-        if (!Ranges) {
-          handleAllErrors(Ranges.takeError(), [&](const StringError &E) {
-            errs() << "Error: Invalid limit for -opt-bisect-limit: " << Limit
-                   << " (" << E.getMessage() << ")\n";
-          });
-          exit(1);
-        }
-        getOptBisector().setRanges(std::move(*Ranges));
-      }
+        getOptBisector().setRanges({{1, Limit}});
+      else
+        llvm_unreachable(
+            ("Invalid limit for -opt-bisect-limit: " + llvm::utostr(Limit)).c_str());
     }),
     cl::desc(
         "Maximum optimization to perform (equivalent to -opt-bisect=1-N)"));
