@@ -187,7 +187,7 @@ public:
           Cmd.Heuristic.empty() ? "from CDB" : Cmd.Heuristic, Cmd.Directory,
           printArgv(Cmd.CommandLine));
     } else {
-      Cmd = CDB->getFallbackCommand(File);
+      Cmd = CDB->getFallbackCommand(File, Opts.FallbackProjectRoot);
       log("Generic fallback command is: [{0}] {1}", Cmd.Directory,
           printArgv(Cmd.CommandLine));
     }
@@ -502,7 +502,7 @@ bool check(llvm::StringRef File, const ThreadsafeFS &TFS,
                  config::DiagnosticCallback Diag) const override {
       config::Fragment F;
       // If we're timing clang-tidy checks, implicitly disabling the slow ones
-      // is counterproductive! 
+      // is counterproductive!
       if (CheckTidyTime.getNumOccurrences())
         F.Diagnostics.ClangTidy.FastCheckFilter.emplace("None");
       return {std::move(F).compile(Diag)};

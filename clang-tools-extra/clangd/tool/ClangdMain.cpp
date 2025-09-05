@@ -499,6 +499,14 @@ opt<bool> EnableConfig{
     init(true),
 };
 
+opt<Path> ProjectRoot{
+    "project-root",
+    cat(Misc),
+    desc("Path to use as the current working directory for fallback commands."),
+    init(""),
+    ValueOptional,
+};
+
 opt<bool> UseDirtyHeaders{"use-dirty-headers", cat(Misc),
                           desc("Use files open in the editor when parsing "
                                "headers instead of reading from the disk"),
@@ -906,6 +914,8 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   }
   if (!ResourceDir.empty())
     Opts.ResourceDir = ResourceDir;
+  if (!ProjectRoot.empty())
+    Opts.FallbackProjectRoot = ProjectRoot;
   Opts.BuildDynamicSymbolIndex = true;
 #if CLANGD_ENABLE_REMOTE
   if (RemoteIndexAddress.empty() != ProjectRoot.empty()) {
