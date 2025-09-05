@@ -99,8 +99,7 @@ private:
   /// \param RecordReloc Record relocation if needed.
   /// relocation.
   bool evaluateFixup(const MCFragment &F, MCFixup &Fixup, MCValue &Target,
-                     uint64_t &Value, bool RecordReloc,
-                     MutableArrayRef<char> Contents) const;
+                     uint64_t &Value, bool RecordReloc, uint8_t *Data) const;
 
   /// Check whether a fixup can be satisfied, or whether it needs to be relaxed
   /// (increased in size, in order to hold its value correctly).
@@ -113,14 +112,11 @@ private:
 
   /// Perform relaxation on a single fragment.
   bool relaxFragment(MCFragment &F);
-  bool relaxInstruction(MCFragment &F);
-  bool relaxLEB(MCFragment &F);
-  bool relaxBoundaryAlign(MCBoundaryAlignFragment &BF);
-  bool relaxDwarfLineAddr(MCFragment &F);
-  bool relaxDwarfCallFrameFragment(MCFragment &F);
-  bool relaxCVInlineLineTable(MCCVInlineLineTableFragment &DF);
-  bool relaxCVDefRange(MCCVDefRangeFragment &DF);
-  bool relaxFill(MCFillFragment &F);
+  void relaxInstruction(MCFragment &F);
+  void relaxLEB(MCFragment &F);
+  void relaxBoundaryAlign(MCBoundaryAlignFragment &BF);
+  void relaxDwarfLineAddr(MCFragment &F);
+  void relaxDwarfCallFrameFragment(MCFragment &F);
 
 public:
   /// Construct a new assembler instance.

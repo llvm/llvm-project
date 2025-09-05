@@ -1099,7 +1099,7 @@ static void eraseLifetimeMarkersOnInputs(const SetVector<BasicBlock *> &Blocks,
       // Get the memory operand of the lifetime marker. If the underlying
       // object is a sunk alloca, or is otherwise defined in the extraction
       // region, the lifetime marker must not be erased.
-      Value *Mem = II->getOperand(1)->stripInBoundsOffsets();
+      Value *Mem = II->getOperand(0);
       if (SunkAllocas.count(Mem) || definedInRegion(Blocks, Mem))
         continue;
 
@@ -1115,8 +1115,6 @@ static void eraseLifetimeMarkersOnInputs(const SetVector<BasicBlock *> &Blocks,
 static void insertLifetimeMarkersSurroundingCall(
     Module *M, ArrayRef<Value *> LifetimesStart, ArrayRef<Value *> LifetimesEnd,
     CallInst *TheCall) {
-  LLVMContext &Ctx = M->getContext();
-  auto NegativeOne = ConstantInt::getSigned(Type::getInt64Ty(Ctx), -1);
   Instruction *Term = TheCall->getParent()->getTerminator();
 
   // Emit lifetime markers for the pointers given in \p Objects. Insert the
@@ -1130,7 +1128,7 @@ static void insertLifetimeMarkersSurroundingCall(
 
       Function *Func =
           Intrinsic::getOrInsertDeclaration(M, MarkerFunc, Mem->getType());
-      auto Marker = CallInst::Create(Func, {NegativeOne, Mem});
+      auto Marker = CallInst::Create(Func, Mem);
       if (InsertBefore)
         Marker->insertBefore(TheCall->getIterator());
       else

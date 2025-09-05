@@ -705,7 +705,7 @@ SymbolVector FinalsForDerivedTypeInstantiation(const DerivedTypeSpec &spec) {
 
 const Symbol *IsFinalizable(const Symbol &symbol,
     std::set<const DerivedTypeSpec *> *inProgress, bool withImpureFinalizer) {
-  if (IsPointer(symbol) || evaluate::IsAssumedRank(symbol)) {
+  if (IsPointer(symbol) || IsAssumedRank(symbol)) {
     return nullptr;
   }
   if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
@@ -741,7 +741,7 @@ const Symbol *IsFinalizable(const DerivedTypeSpec &derived,
         if (const SubprogramDetails *
             subp{symbol->detailsIf<SubprogramDetails>()}) {
           if (const auto &args{subp->dummyArgs()}; !args.empty() &&
-              args.at(0) && !evaluate::IsAssumedRank(*args.at(0)) &&
+              args.at(0) && !IsAssumedRank(*args.at(0)) &&
               args.at(0)->Rank() != *rank) {
             continue; // not a finalizer for this rank
           }
@@ -790,7 +790,7 @@ const Symbol *HasImpureFinal(const Symbol &original, std::optional<int> rank) {
   if (symbol.has<ObjectEntityDetails>()) {
     if (const DeclTypeSpec * symType{symbol.GetType()}) {
       if (const DerivedTypeSpec * derived{symType->AsDerived()}) {
-        if (evaluate::IsAssumedRank(symbol)) {
+        if (IsAssumedRank(symbol)) {
           // finalizable assumed-rank not allowed (C839)
           return nullptr;
         } else {
@@ -1087,6 +1087,21 @@ bool IsDeviceAllocatable(const Symbol &symbol) {
             symbol.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
       if (details->cudaDataAttr() &&
           *details->cudaDataAttr() != common::CUDADataAttr::Pinned) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool HasCUDAComponent(const Symbol &symbol) {
+  if (const auto *details{symbol.GetUltimate()
+              .detailsIf<Fortran::semantics::ObjectEntityDetails>()}) {
+    const Fortran::semantics::DeclTypeSpec *type{details->type()};
+    const Fortran::semantics::DerivedTypeSpec *derived{
+        type ? type->AsDerived() : nullptr};
+    if (derived) {
+      if (FindCUDADeviceAllocatableUltimateComponent(*derived)) {
         return true;
       }
     }

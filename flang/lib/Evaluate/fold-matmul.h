@@ -92,10 +92,8 @@ static Expr<T> FoldMatmul(FoldingContext &context, FunctionRef<T> &&funcRef) {
       elements.push_back(sum);
     }
   }
-  if (overflow &&
-      context.languageFeatures().ShouldWarn(
-          common::UsageWarning::FoldingException)) {
-    context.messages().Say(common::UsageWarning::FoldingException,
+  if (overflow) {
+    context.Warn(common::UsageWarning::FoldingException,
         "MATMUL of %s data overflowed during computation"_warn_en_US,
         T::AsFortran());
   }

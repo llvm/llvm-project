@@ -1519,6 +1519,18 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (TI.getTriple().isOSBinFormatELF())
     Builder.defineMacro("__ELF__");
 
+  if (LangOpts.Sanitize.has(SanitizerKind::Address))
+    Builder.defineMacro("__SANITIZE_ADDRESS__");
+  if (LangOpts.Sanitize.has(SanitizerKind::HWAddress))
+    Builder.defineMacro("__SANITIZE_HWADDRESS__");
+  if (LangOpts.Sanitize.has(SanitizerKind::Thread))
+    Builder.defineMacro("__SANITIZE_THREAD__");
+
+  if (LangOpts.PointerFieldProtection)
+    Builder.defineMacro("__POINTER_FIELD_PROTECTION__");
+  if (LangOpts.PointerFieldProtectionTagged)
+    Builder.defineMacro("__POINTER_FIELD_PROTECTION_TAGGED__");
+
   // Target OS macro definitions.
   if (PPOpts.DefineTargetOSMacros) {
     const llvm::Triple &Triple = TI.getTriple();
@@ -1527,6 +1539,9 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 #include "clang/Basic/TargetOSMacros.def"
 #undef TARGET_OS
   }
+
+  if (LangOpts.PointerAuthIntrinsics)
+    Builder.defineMacro("__PTRAUTH__");
 
   // Get other target #defines.
   TI.getTargetDefines(LangOpts, Builder);

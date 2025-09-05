@@ -89,7 +89,7 @@ CCState::AnalyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
   for (unsigned i = 0; i != NumArgs; ++i) {
     MVT ArgVT = Ins[i].VT;
     ISD::ArgFlagsTy ArgFlags = Ins[i].Flags;
-    if (Fn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, *this))
+    if (Fn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, Ins[i].OrigTy, *this))
       report_fatal_error("unable to allocate function argument #" + Twine(i));
   }
 }
@@ -102,7 +102,7 @@ bool CCState::CheckReturn(const SmallVectorImpl<ISD::OutputArg> &Outs,
   for (unsigned i = 0, e = Outs.size(); i != e; ++i) {
     MVT VT = Outs[i].VT;
     ISD::ArgFlagsTy ArgFlags = Outs[i].Flags;
-    if (Fn(i, VT, VT, CCValAssign::Full, ArgFlags, *this))
+    if (Fn(i, VT, VT, CCValAssign::Full, ArgFlags, Outs[i].OrigTy, *this))
       return false;
   }
   return true;
@@ -116,7 +116,7 @@ void CCState::AnalyzeReturn(const SmallVectorImpl<ISD::OutputArg> &Outs,
   for (unsigned i = 0, e = Outs.size(); i != e; ++i) {
     MVT VT = Outs[i].VT;
     ISD::ArgFlagsTy ArgFlags = Outs[i].Flags;
-    if (Fn(i, VT, VT, CCValAssign::Full, ArgFlags, *this))
+    if (Fn(i, VT, VT, CCValAssign::Full, ArgFlags, Outs[i].OrigTy, *this))
       report_fatal_error("unable to allocate function return #" + Twine(i));
   }
 }
@@ -129,7 +129,8 @@ void CCState::AnalyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Outs,
   for (unsigned i = 0; i != NumOps; ++i) {
     MVT ArgVT = Outs[i].VT;
     ISD::ArgFlagsTy ArgFlags = Outs[i].Flags;
-    if (Fn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, *this)) {
+    if (Fn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, Outs[i].OrigTy,
+           *this)) {
 #ifndef NDEBUG
       dbgs() << "Call operand #" << i << " has unhandled type "
              << ArgVT << '\n';
@@ -142,12 +143,13 @@ void CCState::AnalyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Outs,
 /// Same as above except it takes vectors of types and argument flags.
 void CCState::AnalyzeCallOperands(SmallVectorImpl<MVT> &ArgVTs,
                                   SmallVectorImpl<ISD::ArgFlagsTy> &Flags,
+                                  SmallVectorImpl<Type *> &OrigTys,
                                   CCAssignFn Fn) {
   unsigned NumOps = ArgVTs.size();
   for (unsigned i = 0; i != NumOps; ++i) {
     MVT ArgVT = ArgVTs[i];
     ISD::ArgFlagsTy ArgFlags = Flags[i];
-    if (Fn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, *this)) {
+    if (Fn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, OrigTys[i], *this)) {
 #ifndef NDEBUG
       dbgs() << "Call operand #" << i << " has unhandled type "
              << ArgVT << '\n';
@@ -164,7 +166,7 @@ void CCState::AnalyzeCallResult(const SmallVectorImpl<ISD::InputArg> &Ins,
   for (unsigned i = 0, e = Ins.size(); i != e; ++i) {
     MVT VT = Ins[i].VT;
     ISD::ArgFlagsTy Flags = Ins[i].Flags;
-    if (Fn(i, VT, VT, CCValAssign::Full, Flags, *this)) {
+    if (Fn(i, VT, VT, CCValAssign::Full, Flags, Ins[i].OrigTy, *this)) {
 #ifndef NDEBUG
       dbgs() << "Call result #" << i << " has unhandled type "
              << VT << '\n';
@@ -175,8 +177,8 @@ void CCState::AnalyzeCallResult(const SmallVectorImpl<ISD::InputArg> &Ins,
 }
 
 /// Same as above except it's specialized for calls that produce a single value.
-void CCState::AnalyzeCallResult(MVT VT, CCAssignFn Fn) {
-  if (Fn(0, VT, VT, CCValAssign::Full, ISD::ArgFlagsTy(), *this)) {
+void CCState::AnalyzeCallResult(MVT VT, Type *OrigTy, CCAssignFn Fn) {
+  if (Fn(0, VT, VT, CCValAssign::Full, ISD::ArgFlagsTy(), OrigTy, *this)) {
 #ifndef NDEBUG
     dbgs() << "Call result has unhandled type "
            << VT << '\n';
@@ -213,7 +215,8 @@ void CCState::getRemainingRegParmsForType(SmallVectorImpl<MCRegister> &Regs,
   // location in memory.
   bool HaveRegParm;
   do {
-    if (Fn(0, VT, VT, CCValAssign::Full, Flags, *this)) {
+    Type *OrigTy = EVT(VT).getTypeForEVT(Context);
+    if (Fn(0, VT, VT, CCValAssign::Full, Flags, OrigTy, *this)) {
 #ifndef NDEBUG
       dbgs() << "Call has unhandled type " << VT
              << " while computing remaining regparms\n";

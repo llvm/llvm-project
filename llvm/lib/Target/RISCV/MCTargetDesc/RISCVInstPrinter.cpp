@@ -75,7 +75,7 @@ void RISCVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   if (PrintAliases && !NoAliases)
     Res = RISCVRVC::uncompress(UncompressedMI, *MI, STI);
   if (Res)
-    NewMI = const_cast<MCInst *>(&UncompressedMI);
+    NewMI = &UncompressedMI;
   if (!PrintAliases || NoAliases || !printAliasInstr(NewMI, Address, STI, O))
     printInstruction(NewMI, Address, STI, O);
   printAnnotation(O, Annot);

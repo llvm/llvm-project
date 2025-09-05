@@ -1017,14 +1017,22 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
   else
     return false;
 
+  StringRef Reg = getRegisterName(MI->getOperand(4).getReg());
+  bool NotXZR = Reg != "xzr";
+
+  // If a mandatory is not specified in the TableGen
+  // (i.e. no register operand should be present), and the register value
+  // is not xzr/x31, then disassemble to a SYS alias instead.
+  if (NotXZR && !NeedsReg)
+    return false;
+
   std::string Str = Ins + Name;
   llvm::transform(Str, Str.begin(), ::tolower);
 
   O << '\t' << Str;
-  if (NeedsReg) {
-    O << ", ";
-    printRegName(O, MI->getOperand(4).getReg());
-  }
+
+  if (NeedsReg)
+    O << ", " << Reg;
 
   return true;
 }

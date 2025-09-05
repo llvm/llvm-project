@@ -41,6 +41,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UriParser.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/TargetParser/Triple.h"
@@ -536,14 +537,54 @@ static llvm::StringRef GetEncodingNameOrEmpty(const RegisterInfo &reg_info) {
 
 static llvm::StringRef GetFormatNameOrEmpty(const RegisterInfo &reg_info) {
   switch (reg_info.format) {
+  case eFormatDefault:
+    return "";
+  case eFormatBoolean:
+    return "boolean";
   case eFormatBinary:
     return "binary";
+  case eFormatBytes:
+    return "bytes";
+  case eFormatBytesWithASCII:
+    return "bytes-with-ascii";
+  case eFormatChar:
+    return "char";
+  case eFormatCharPrintable:
+    return "char-printable";
+  case eFormatComplex:
+    return "complex";
+  case eFormatCString:
+    return "cstring";
   case eFormatDecimal:
     return "decimal";
+  case eFormatEnum:
+    return "enum";
   case eFormatHex:
     return "hex";
+  case eFormatHexUppercase:
+    return "hex-uppercase";
   case eFormatFloat:
     return "float";
+  case eFormatOctal:
+    return "octal";
+  case eFormatOSType:
+    return "ostype";
+  case eFormatUnicode16:
+    return "unicode16";
+  case eFormatUnicode32:
+    return "unicode32";
+  case eFormatUnsigned:
+    return "unsigned";
+  case eFormatPointer:
+    return "pointer";
+  case eFormatVectorOfChar:
+    return "vector-char";
+  case eFormatVectorOfSInt64:
+    return "vector-sint64";
+  case eFormatVectorOfFloat16:
+    return "vector-float16";
+  case eFormatVectorOfFloat64:
+    return "vector-float64";
   case eFormatVectorOfSInt8:
     return "vector-sint8";
   case eFormatVectorOfUInt8:
@@ -562,8 +603,24 @@ static llvm::StringRef GetFormatNameOrEmpty(const RegisterInfo &reg_info) {
     return "vector-uint64";
   case eFormatVectorOfUInt128:
     return "vector-uint128";
+  case eFormatComplexInteger:
+    return "complex-integer";
+  case eFormatCharArray:
+    return "char-array";
+  case eFormatAddressInfo:
+    return "address-info";
+  case eFormatHexFloat:
+    return "hex-float";
+  case eFormatInstruction:
+    return "instruction";
+  case eFormatVoid:
+    return "void";
+  case eFormatUnicode8:
+    return "unicode8";
+  case eFormatFloat128:
+    return "float128";
   default:
-    return "";
+    llvm_unreachable("Unknown register format");
   };
 }
 

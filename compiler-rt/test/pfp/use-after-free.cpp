@@ -5,6 +5,8 @@
 
 #include <iostream>
 
+#include "utils.h"
+
 // Struct1.ptr and Struct2.ptr have different locks.
 struct Struct1 {
   int *ptr;
@@ -33,12 +35,17 @@ Struct2 *new_object2() {
 }
 
 int main() {
+#if defined(__POINTER_FIELD_PROTECTION__)
+  crash_if_crash_tests_unsupported();
+#endif
+
   Struct1 *obj1 = new_object1();
   delete obj1;
   // obj1's memory will be reused.
   Struct2 *obj2 = new_object2();
   std::cout << "Struct2: " << *(obj2->ptr) << "\n";
-  // Uses a wrong lock. The Program should crash when "-fexperimental-pointer-field-protection=tagged".
+  // Uses a wrong lock. The Program should crash with
+  // "-fexperimental-pointer-field-protection -fexperimental-pointer-field-protection-tagged".
   std::cout << "Struct1: " << *(obj1->ptr) << "\n";
   delete obj2;
   return 0;

@@ -725,6 +725,24 @@ s_barrier_signal_isfirst -1
 s_barrier_signal_isfirst m0
 // GFX12: s_barrier_signal_isfirst m0             ; encoding: [0x7d,0x4f,0x80,0xbe]
 
+s_barrier_init -1
+// GFX12: s_barrier_init -1                       ; encoding: [0xc1,0x51,0x80,0xbe]
+
+s_barrier_init -2
+// GFX12: s_barrier_init -2                       ; encoding: [0xc2,0x51,0x80,0xbe]
+
+s_barrier_init m0
+// GFX12: s_barrier_init m0                       ; encoding: [0x7d,0x51,0x80,0xbe]
+
+s_barrier_join -1
+// GFX12: s_barrier_join -1                       ; encoding: [0xc1,0x52,0x80,0xbe]
+
+s_barrier_join -2
+// GFX12: s_barrier_join -2                       ; encoding: [0xc2,0x52,0x80,0xbe]
+
+s_barrier_join m0
+// GFX12: s_barrier_join m0                       ; encoding: [0x7d,0x52,0x80,0xbe]
+
 s_get_barrier_state s3, -1
 // GFX12: s_get_barrier_state s3, -1              ; encoding: [0xc1,0x50,0x83,0xbe]
 

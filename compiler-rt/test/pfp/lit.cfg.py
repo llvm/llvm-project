@@ -17,7 +17,7 @@ config.test_source_root = os.path.dirname(__file__)
 clang_cflags = [config.target_cflags] + config.debug_info_flags
 clang_cxxflags = config.cxx_mode_flags + clang_cflags
 clang_pfp_tagged_common_cflags = clang_cflags + [
-    "-fexperimental-pointer-field-protection=tagged"
+    "-fexperimental-pointer-field-protection -fexperimental-pointer-field-protection-tagged"
 ]
 
 
