@@ -592,6 +592,7 @@ clang-format
   literals.
 - Add ``Leave`` suboption to ``IndentPPDirectives``.
 - Add ``AllowBreakBeforeQtProperty`` option.
+- Add ``AllowShortRecordOnASingleLine`` option and set it to ``EmptyIfAttached`` for LLVM style.
 
 libclang
 --------
