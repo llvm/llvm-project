@@ -35,7 +35,8 @@ namespace llvm {
 ///   expansions are not supported. If \p MaxSubPatterns is empty then
 ///   brace expansions are not supported and characters `{,}` are treated as
 ///   literals.
-/// * `/` matches both unix and windows path separators: `/` and `\`.
+/// * If IsSlashAgnostic is passed, `/` matches both unix and windows path
+///   separators: `/` and `\`.
 /// * `\` escapes the next character so it is treated as a literal.
 ///
 /// Some known edge cases are:

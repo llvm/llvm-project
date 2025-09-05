@@ -174,7 +174,7 @@ tool-specific docs.
     # Lines starting with # are ignored.
     # Turn off checks for the source file
     # Entries without sections are placed into [*] and apply to all sanitizers
-    # "/" matches both windows and unix path separators ("/" and "\")
+    # On windows, "/" matches both styles of path separator ("/" and "\")
     src:path/to/source/file.c
     src:*/source/file.c
     # Turn off checks for this main file, including files included by it.
