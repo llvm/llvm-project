@@ -5058,10 +5058,10 @@ define amdgpu_kernel void @test_mfma_f32_4x4x1f32_imm(ptr addrspace(1) %arg) #0 
 ; GFX90A-NEXT:    v_mov_b32_e32 v1, 1.0
 ; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a0, 1.0
-; GFX90A-NEXT:    v_mov_b32_e32 v2, 2.0
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a1, 2.0
 ; GFX90A-NEXT:    v_accvgpr_mov_b32 a2, a0
 ; GFX90A-NEXT:    v_accvgpr_mov_b32 a3, a0
+; GFX90A-NEXT:    v_mov_b32_e32 v2, 2.0
 ; GFX90A-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    v_mfma_f32_4x4x1f32 a[0:3], v1, v2, a[0:3]
@@ -5075,10 +5075,10 @@ define amdgpu_kernel void @test_mfma_f32_4x4x1f32_imm(ptr addrspace(1) %arg) #0 
 ; GFX942-NEXT:    v_mov_b32_e32 v1, 1.0
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX942-NEXT:    v_accvgpr_write_b32 a0, 1.0
-; GFX942-NEXT:    v_mov_b32_e32 v2, 2.0
 ; GFX942-NEXT:    v_accvgpr_write_b32 a1, 2.0
 ; GFX942-NEXT:    v_accvgpr_mov_b32 a2, a0
 ; GFX942-NEXT:    v_accvgpr_mov_b32 a3, a0
+; GFX942-NEXT:    v_mov_b32_e32 v2, 2.0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_mfma_f32_4x4x1_16b_f32 a[0:3], v1, v2, a[0:3]
@@ -5222,7 +5222,6 @@ define amdgpu_kernel void @test_mfma_f32_16x16x1f32_imm(ptr addrspace(1) %arg) #
 ; GFX90A:       ; %bb.0: ; %bb
 ; GFX90A-NEXT:    v_mov_b32_e32 v1, 1.0
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a0, 1.0
-; GFX90A-NEXT:    v_mov_b32_e32 v2, 2.0
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a15, 2.0
 ; GFX90A-NEXT:    v_accvgpr_mov_b32 a1, a0
 ; GFX90A-NEXT:    v_accvgpr_mov_b32 a2, a0
@@ -5238,6 +5237,7 @@ define amdgpu_kernel void @test_mfma_f32_16x16x1f32_imm(ptr addrspace(1) %arg) #
 ; GFX90A-NEXT:    v_accvgpr_mov_b32 a12, a0
 ; GFX90A-NEXT:    v_accvgpr_mov_b32 a13, a0
 ; GFX90A-NEXT:    v_accvgpr_mov_b32 a14, a0
+; GFX90A-NEXT:    v_mov_b32_e32 v2, 2.0
 ; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX90A-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-NEXT:    v_mfma_f32_16x16x1f32 a[0:15], v1, v2, a[0:15]
@@ -5254,7 +5254,6 @@ define amdgpu_kernel void @test_mfma_f32_16x16x1f32_imm(ptr addrspace(1) %arg) #
 ; GFX942:       ; %bb.0: ; %bb
 ; GFX942-NEXT:    v_mov_b32_e32 v1, 1.0
 ; GFX942-NEXT:    v_accvgpr_write_b32 a0, 1.0
-; GFX942-NEXT:    v_mov_b32_e32 v2, 2.0
 ; GFX942-NEXT:    v_accvgpr_write_b32 a15, 2.0
 ; GFX942-NEXT:    v_accvgpr_mov_b32 a1, a0
 ; GFX942-NEXT:    v_accvgpr_mov_b32 a2, a0
@@ -5270,6 +5269,7 @@ define amdgpu_kernel void @test_mfma_f32_16x16x1f32_imm(ptr addrspace(1) %arg) #
 ; GFX942-NEXT:    v_accvgpr_mov_b32 a12, a0
 ; GFX942-NEXT:    v_accvgpr_mov_b32 a13, a0
 ; GFX942-NEXT:    v_accvgpr_mov_b32 a14, a0
+; GFX942-NEXT:    v_mov_b32_e32 v2, 2.0
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX942-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-NEXT:    v_mfma_f32_16x16x1_4b_f32 a[0:15], v1, v2, a[0:15]
