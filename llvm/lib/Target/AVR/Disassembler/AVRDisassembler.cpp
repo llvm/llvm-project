@@ -90,11 +90,18 @@ static DecodeStatus DecodeGPR8RegisterClass(MCInst &Inst, unsigned RegNo,
 static DecodeStatus DecodeLD8RegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder) {
-  if (RegNo > 15)
-    return MCDisassembler::Fail;
+  assert(isUInt<4>(RegNo));
+  // Only r16...r31 are legal.
+  Inst.addOperand(MCOperand::createReg(GPRDecoderTable[16 + RegNo]));
+  return MCDisassembler::Success;
+}
 
-  unsigned Register = GPRDecoderTable[RegNo + 16];
-  Inst.addOperand(MCOperand::createReg(Register));
+static DecodeStatus DecodeLD8loRegisterClass(MCInst &Inst, unsigned RegNo,
+                                             uint64_t Address,
+                                             const MCDisassembler *Decoder) {
+  assert(isUInt<3>(RegNo));
+  // Only r16...r23 are legal.
+  Inst.addOperand(MCOperand::createReg(GPRDecoderTable[16 + RegNo]));
   return MCDisassembler::Success;
 }
 
@@ -143,34 +150,6 @@ static DecodeStatus decodeRelCondBrTarget13(MCInst &Inst, unsigned Field,
                                             const MCDisassembler *Decoder) {
   // The legal range is [-4096, 4094] (in bytes).
   Inst.addOperand(MCOperand::createImm(SignExtend32(Field, 12) * 2));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus decodeFFMULRdRr(MCInst &Inst, unsigned Insn,
-                                    uint64_t Address,
-                                    const MCDisassembler *Decoder) {
-  unsigned d = fieldFromInstruction(Insn, 4, 3) + 16;
-  unsigned r = fieldFromInstruction(Insn, 0, 3) + 16;
-  if (DecodeGPR8RegisterClass(Inst, d, Address, Decoder) ==
-      MCDisassembler::Fail)
-    return MCDisassembler::Fail;
-  if (DecodeGPR8RegisterClass(Inst, r, Address, Decoder) ==
-      MCDisassembler::Fail)
-    return MCDisassembler::Fail;
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus decodeFMUL2RdRr(MCInst &Inst, unsigned Insn,
-                                    uint64_t Address,
-                                    const MCDisassembler *Decoder) {
-  unsigned rd = fieldFromInstruction(Insn, 4, 4) + 16;
-  unsigned rr = fieldFromInstruction(Insn, 0, 4) + 16;
-  if (DecodeGPR8RegisterClass(Inst, rd, Address, Decoder) ==
-      MCDisassembler::Fail)
-    return MCDisassembler::Fail;
-  if (DecodeGPR8RegisterClass(Inst, rr, Address, Decoder) ==
-      MCDisassembler::Fail)
-    return MCDisassembler::Fail;
   return MCDisassembler::Success;
 }
 
