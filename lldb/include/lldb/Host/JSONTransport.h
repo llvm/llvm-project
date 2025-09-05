@@ -100,7 +100,8 @@ public:
   virtual llvm::Expected<MainLoop::ReadHandleUP>
   RegisterMessageHandler(MainLoop &loop, MessageHandler &handler) = 0;
 
-protected:
+  // FIXME: Refactor mcp::Server to not directly access log on the transport.
+  // protected:
   template <typename... Ts> inline auto Logv(const char *Fmt, Ts &&...Vals) {
     Log(llvm::formatv(Fmt, std::forward<Ts>(Vals)...).str());
   }
@@ -139,15 +140,17 @@ public:
   /// detail.
   static constexpr size_t kReadBufferSize = 1024;
 
-protected:
-  virtual llvm::Expected<std::vector<std::string>> Parse() = 0;
-  virtual std::string Encode(const llvm::json::Value &message) = 0;
+  // FIXME: Write should be protected.
   llvm::Error Write(const llvm::json::Value &message) {
     this->Logv("<-- {0}", message);
     std::string output = Encode(message);
     size_t bytes_written = output.size();
     return m_out->Write(output.data(), bytes_written).takeError();
   }
+
+protected:
+  virtual llvm::Expected<std::vector<std::string>> Parse() = 0;
+  virtual std::string Encode(const llvm::json::Value &message) = 0;
 
   llvm::SmallString<kReadBufferSize> m_buffer;
 

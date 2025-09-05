@@ -54,7 +54,6 @@ class RVInst16CSS<bits<3> funct3, bits<2> opcode, dag outs, dag ins,
     : RVInst16<outs, ins, opcodestr, argstr, [], InstFormatCSS> {
   bits<10> imm;
   bits<5> rs2;
-  bits<5> rs1;
 
   let Inst{15-13} = funct3;
   let Inst{12-7} = imm{5-0};

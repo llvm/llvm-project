@@ -7,7 +7,9 @@ tablegen(LLVM AArch64GenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM AArch64GenAsmWriter1.inc -gen-asm-writer -asmwriternum=1)
 tablegen(LLVM AArch64GenCallingConv.inc -gen-callingconv)
 tablegen(LLVM AArch64GenDAGISel.inc -gen-dag-isel)
-tablegen(LLVM AArch64GenDisassemblerTables.inc -gen-disassembler)
+tablegen(LLVM AArch64GenDisassemblerTables.inc -gen-disassembler
+              -ignore-non-decodable-operands
+              -ignore-fully-defined-operands)
 tablegen(LLVM AArch64GenFastISel.inc -gen-fast-isel)
 tablegen(LLVM AArch64GenGlobalISel.inc -gen-global-isel)
 tablegen(LLVM AArch64GenO0PreLegalizeGICombiner.inc -gen-global-isel-combiner

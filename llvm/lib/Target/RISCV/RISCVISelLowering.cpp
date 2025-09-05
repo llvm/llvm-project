@@ -9240,6 +9240,10 @@ foldBinOpIntoSelectIfProfitable(SDNode *BO, SelectionDAG &DAG,
   return DAG.getSelect(DL, VT, Sel.getOperand(0), NewT, NewF);
 }
 
+static bool isSimm12Constant(SDValue V) {
+  return isa<ConstantSDNode>(V) && V->getAsAPIntVal().isSignedIntN(12);
+}
+
 SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   SDValue CondV = Op.getOperand(0);
   SDValue TrueV = Op.getOperand(1);
@@ -9261,6 +9265,20 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   // sequence or RISCVISD::SELECT_CC node (branch-based select).
   if ((Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps()) &&
       VT.isScalarInteger()) {
+
+    // select c, simm12, 0 -> andi (sub x0, c), simm12
+    if (isSimm12Constant(TrueV) && isNullConstant(FalseV)) {
+      SDValue Mask = DAG.getNegative(CondV, DL, VT);
+      return DAG.getNode(ISD::AND, DL, VT, TrueV, Mask);
+    }
+
+    // select c, 0, simm12 -> andi (addi c, -1), simm12
+    if (isNullConstant(TrueV) && isSimm12Constant(FalseV)) {
+      SDValue Mask = DAG.getNode(ISD::ADD, DL, VT, CondV,
+                                 DAG.getSignedConstant(-1, DL, XLenVT));
+      return DAG.getNode(ISD::AND, DL, VT, FalseV, Mask);
+    }
+
     // (select c, t, 0) -> (czero_eqz t, c)
     if (isNullConstant(FalseV))
       return DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, CondV);

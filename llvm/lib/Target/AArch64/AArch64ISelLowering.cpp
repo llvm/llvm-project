@@ -8034,6 +8034,39 @@ static bool isPassedInFPR(EVT VT) {
          (VT.isFloatingPoint() && !VT.isScalableVector());
 }
 
+SDValue AArch64TargetLowering::lowerEHPadEntry(SDValue Chain, SDLoc const &DL,
+                                               SelectionDAG &DAG) const {
+  assert(Chain.getOpcode() == ISD::EntryToken && "Unexpected Chain value");
+  SDValue Glue = Chain.getValue(1);
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  SMEAttrs SMEFnAttrs = MF.getInfo<AArch64FunctionInfo>()->getSMEFnAttrs();
+
+  // The following conditions are true on entry to an exception handler:
+  // - PSTATE.SM is 0.
+  // - PSTATE.ZA is 0.
+  // - TPIDR2_EL0 is null.
+  // See:
+  // https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst#exceptions
+  //
+  // Therefore, if the function that contains this exception handler is a
+  // streaming[-compatible] function, we must re-enable streaming mode.
+  //
+  // These mode changes are usually optimized away in catch blocks as they
+  // occur before the __cxa_begin_catch (which is a non-streaming function),
+  // but are necessary in some cases (such as for cleanups).
+
+  if (SMEFnAttrs.hasStreamingInterfaceOrBody())
+    return changeStreamingMode(DAG, DL, /*Enable=*/true, Chain,
+                               /*Glue*/ Glue, AArch64SME::Always);
+
+  if (SMEFnAttrs.hasStreamingCompatibleInterface())
+    return changeStreamingMode(DAG, DL, /*Enable=*/true, Chain, Glue,
+                               AArch64SME::IfCallerIsStreaming);
+
+  return Chain;
+}
+
 SDValue AArch64TargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,

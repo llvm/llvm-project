@@ -91,6 +91,12 @@ static DecodeStatus DecodeLD8RegisterClass(MCInst &Inst, unsigned RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeZREGRegisterClass(MCInst &Inst,
+                                            const MCDisassembler *Decoder) {
+  Inst.addOperand(MCOperand::createReg(AVR::R31R30));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeFIOARr(MCInst &Inst, unsigned Insn, uint64_t Address,
                                  const MCDisassembler *Decoder) {
   unsigned addr = 0;

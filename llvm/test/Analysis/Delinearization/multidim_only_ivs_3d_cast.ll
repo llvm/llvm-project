@@ -14,7 +14,6 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @foo(i32 %n, i32 %m, i32 %o, ptr %A) {
 ; CHECK-LABEL: 'foo'
 ; CHECK-NEXT:  Inst: store double 1.000000e+00, ptr %idx, align 8
-; CHECK-NEXT:  In Loop with Header: for.k
 ; CHECK-NEXT:  AccessFunction: {{\{\{\{}}0,+,(8 * (zext i32 %m to i64) * (zext i32 %o to i64))}<%for.i>,+,(8 * (zext i32 %o to i64))<nuw><nsw>}<%for.j>,+,8}<%for.k>
 ; CHECK-NEXT:  Base offset: %A
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][(zext i32 %m to i64)][(zext i32 %o to i64)] with elements of 8 bytes.

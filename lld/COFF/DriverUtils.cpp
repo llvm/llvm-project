@@ -214,6 +214,43 @@ void LinkerDriver::parseSection(StringRef s) {
   ctx.config.section[name] = parseSectionAttributes(ctx, attrs);
 }
 
+// Parses /sectionlayout: option argument.
+void LinkerDriver::parseSectionLayout(StringRef path) {
+  if (path.starts_with("@"))
+    path = path.substr(1);
+  std::unique_ptr<MemoryBuffer> layoutFile =
+      CHECK(MemoryBuffer::getFile(path), "could not open " + path);
+  StringRef content = layoutFile->getBuffer();
+  int index = 0;
+
+  while (!content.empty()) {
+    size_t pos = content.find_first_of("\r\n");
+    StringRef line;
+
+    if (pos == StringRef::npos) {
+      line = content;
+      content = StringRef();
+    } else {
+      line = content.substr(0, pos);
+      content = content.substr(pos).ltrim("\r\n");
+    }
+
+    line = line.trim();
+    if (line.empty())
+      continue;
+
+    StringRef sectionName = line.split(' ').first;
+
+    if (ctx.config.sectionOrder.count(sectionName.str())) {
+      Warn(ctx) << "duplicate section '" << sectionName.str()
+                << "' in section layout file, ignoring";
+      continue;
+    }
+
+    ctx.config.sectionOrder[sectionName.str()] = index++;
+  }
+}
+
 void LinkerDriver::parseDosStub(StringRef path) {
   std::unique_ptr<MemoryBuffer> stub =
       CHECK(MemoryBuffer::getFile(path), "could not open " + path);

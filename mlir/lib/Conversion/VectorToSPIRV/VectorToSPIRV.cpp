@@ -278,7 +278,7 @@ struct VectorFromElementsOpConvert final
     Type resultType = getTypeConverter()->convertType(op.getType());
     if (!resultType)
       return failure();
-    OperandRange elements = op.getElements();
+    ValueRange elements = adaptor.getElements();
     if (isa<spirv::ScalarType>(resultType)) {
       // In the case with a single scalar operand / single-element result,
       // pass through the scalar.

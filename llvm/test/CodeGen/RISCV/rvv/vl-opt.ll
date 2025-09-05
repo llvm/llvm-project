@@ -222,3 +222,19 @@ define <vscale x 8 x i32> @vcompress_add(<vscale x 8 x i32> %a, <vscale x 8 x i3
   %compress = call <vscale x 8 x i32> @llvm.riscv.vcompress.nxv8i32(<vscale x 8 x i32> poison, <vscale x 8 x i32> %add, <vscale x 8 x i1> %c, iXLen %vl)
   ret <vscale x 8 x i32> %compress
 }
+
+; Make sure we peek through INSERT_SUBREG of tuple registers.
+define void @segmented_store_insert_subreg(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vscale x 4 x float> %v2, ptr %p, iXLen %vl) {
+; CHECK-LABEL: segmented_store_insert_subreg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; CHECK-NEXT:    vfadd.vv v10, v8, v10
+; CHECK-NEXT:    vsseg3e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %fadd = fadd <vscale x 4 x float> %v0, %v1
+  %t0 = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.tuple.insert(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison, <vscale x 4 x float> %v0, i32 0)
+  %t1 = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.tuple.insert(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) %t0, <vscale x 4 x float> %fadd, i32 1)
+  %t2 = call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.tuple.insert(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) %t1, <vscale x 4 x float> %v2, i32 2)
+  call void @llvm.riscv.vsseg3(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) %t2, ptr %p, iXLen %vl, iXLen 5)
+  ret void
+}

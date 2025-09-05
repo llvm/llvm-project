@@ -2529,12 +2529,11 @@ void Verifier::verifyFunctionMetadata(
   for (const auto &Pair : MDs) {
     if (Pair.first == LLVMContext::MD_prof) {
       MDNode *MD = Pair.second;
-      if (isExplicitlyUnknownBranchWeightsMetadata(*MD)) {
-        CheckFailed("'unknown' !prof metadata should appear only on "
-                    "instructions supporting the 'branch_weights' metadata",
-                    MD);
+      // We may have functions that are synthesized by the compiler, e.g. in
+      // WPD, that we can't currently determine the entry count.
+      if (isExplicitlyUnknownProfileMetadata(*MD))
         continue;
-      }
+
       Check(MD->getNumOperands() >= 2,
             "!prof annotations should have no less than 2 operands", MD);
 

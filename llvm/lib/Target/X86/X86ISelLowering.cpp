@@ -44964,7 +44964,7 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
   }
   case X86ISD::VPMADD52L:
   case X86ISD::VPMADD52H: {
-    KnownBits KnownOp0, KnownOp1;
+    KnownBits KnownOp0, KnownOp1, KnownOp2;
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
     SDValue Op2 = Op.getOperand(2);
@@ -44977,6 +44977,10 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
 
     if (SimplifyDemandedBits(Op1, Low52Bits, OriginalDemandedElts, KnownOp1,
                              TLO, Depth + 1))
+      return true;
+
+    if (SimplifyDemandedBits(Op2, APInt::getAllOnes(64), OriginalDemandedElts,
+                             KnownOp2, TLO, Depth + 1))
       return true;
 
     KnownBits KnownMul;
@@ -44993,8 +44997,8 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
       return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::ADD, DL, VT, C, Op2));
     }
 
-    // TODO: Compute the known bits for VPMADD52L/VPMADD52H.
-    break;
+    Known = KnownBits::add(KnownMul, KnownOp2);
+    return false;
   }
   }
 

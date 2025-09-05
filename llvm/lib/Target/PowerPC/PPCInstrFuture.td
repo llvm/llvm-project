@@ -23,11 +23,11 @@ class XOForm_RTAB5_L1<bits<6> opcode, bits<9> xo, dag OOL, dag IOL,
 
   bit RC = 0;    // set by isRecordForm
 
-  let Inst{6-10}  = RT;
-  let Inst{11-15} = RA;
-  let Inst{16-20} = RB;
+  let Inst{6...10}  = RT;
+  let Inst{11...15} = RA;
+  let Inst{16...20} = RB;
   let Inst{21}    = L;
-  let Inst{22-30} = xo;
+  let Inst{22...30} = xo;
   let Inst{31}    = RC;
 }
 
@@ -52,10 +52,10 @@ class VXForm_VRTB5<bits<11> xo, bits<5> R, dag OOL, dag IOL, string asmstr,
 
   let Pattern = pattern;
 
-  let Inst{6 -10} = VRT;
-  let Inst{11 -15} = R;
-  let Inst{16 -20} = VRB;
-  let Inst{21 -31} = xo;
+  let Inst{6...10} = VRT;
+  let Inst{11...15} = R;
+  let Inst{16...20} = VRB;
+  let Inst{21...31} = xo;
 }
 
 class VXForm_VRTB5_UIM2<bits<11> xo, bits<3> R, dag OOL, dag IOL, string asmstr,
@@ -67,11 +67,11 @@ class VXForm_VRTB5_UIM2<bits<11> xo, bits<3> R, dag OOL, dag IOL, string asmstr,
 
   let Pattern = pattern;
 
-  let Inst{6 -10} = VRT;
-  let Inst{11 -13} = R;
-  let Inst{14 -15} = UIM;
-  let Inst{16 -20} = VRB;
-  let Inst{21 -31} = xo;
+  let Inst{6...10} = VRT;
+  let Inst{11...13} = R;
+  let Inst{14...15} = UIM;
+  let Inst{16...20} = VRB;
+  let Inst{21...31} = xo;
 }
 
 class VXForm_VRTB5_UIM1<bits<11> xo, bits<4> R, dag OOL, dag IOL, string asmstr,
@@ -83,11 +83,11 @@ class VXForm_VRTB5_UIM1<bits<11> xo, bits<4> R, dag OOL, dag IOL, string asmstr,
 
   let Pattern = pattern;
 
-  let Inst{6 -10} = VRT;
-  let Inst{11 -14} = R;
+  let Inst{6...10} = VRT;
+  let Inst{11...14} = R;
   let Inst{15} = UIM;
-  let Inst{16 -20} = VRB;
-  let Inst{21 -31} = xo;
+  let Inst{16...20} = VRB;
+  let Inst{21...31} = xo;
 }
 
 class VXForm_VRTB5_UIM3<bits<11> xo, bits<2> R, dag OOL, dag IOL, string asmstr,
@@ -99,11 +99,11 @@ class VXForm_VRTB5_UIM3<bits<11> xo, bits<2> R, dag OOL, dag IOL, string asmstr,
 
   let Pattern = pattern;
 
-  let Inst{6 -10} = VRT;
-  let Inst{11 -12} = R;
-  let Inst{13 -15} = UIM;
-  let Inst{16 -20} = VRB;
-  let Inst{21 -31} = xo;
+  let Inst{6...10} = VRT;
+  let Inst{11...12} = R;
+  let Inst{13...15} = UIM;
+  let Inst{16...20} = VRB;
+  let Inst{21...31} = xo;
 }
 
 class VXForm_VRTAB5<bits<11> xo, dag OOL, dag IOL, string asmstr,
@@ -114,10 +114,10 @@ class VXForm_VRTAB5<bits<11> xo, dag OOL, dag IOL, string asmstr,
 
   let Pattern = pattern;
 
-  let Inst{6 -10} = VRT;
-  let Inst{11 -15} = VRA;
-  let Inst{16 -20} = VRB;
-  let Inst{21 -31} = xo;
+  let Inst{6...10} = VRT;
+  let Inst{11...15} = VRA;
+  let Inst{16...20} = VRB;
+  let Inst{21...31} = xo;
 }
 
 let Predicates = [IsISAFuture] in {

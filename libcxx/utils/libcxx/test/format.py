@@ -34,11 +34,14 @@ def _checkBaseSubstitutions(substitutions):
 
 def _executeScriptInternal(test, litConfig, commands):
     """
-    Returns (stdout, stderr, exitCode, timeoutInfo, parsedCommands)
+    Returns (stdout, stderr, exitCode, timeoutInfo, parsedCommands), or an appropriate lit.Test.Result
+    in case of an error while parsing the script.
 
     TODO: This really should be easier to access from Lit itself
     """
     parsedCommands = parseScript(test, preamble=commands)
+    if isinstance(parsedCommands, lit.Test.Result):
+        return parsedCommands
 
     _, tmpBase = _getTempPaths(test)
     execDir = os.path.dirname(test.getExecPath())
@@ -65,7 +68,8 @@ def parseScript(test, preamble):
     """
     Extract the script from a test, with substitutions applied.
 
-    Returns a list of commands ready to be executed.
+    Returns a list of commands ready to be executed, or an appropriate lit.Test.Result in case of error
+    while parsing the script (this includes the script being unsupported).
 
     - test
         The lit.Test to parse.
@@ -350,6 +354,8 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
             if "enable-benchmarks=run" in test.config.available_features:
                 steps += ["%dbg(EXECUTED AS) %{exec} %t.exe --benchmark_out=%T/benchmark-result.json --benchmark_out_format=json"]
             return self._executeShTest(test, litConfig, steps)
+        elif re.search('[.]gen[.][^.]+$', filename): # This only happens when a generator test is not supported
+            return self._executeShTest(test, litConfig, [])
         else:
             return lit.Test.Result(
                 lit.Test.UNRESOLVED, "Unknown test suffix for '{}'".format(filename)
@@ -381,11 +387,19 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
         generatorExecDir = os.path.dirname(testSuite.getExecPath(pathInSuite))
         os.makedirs(generatorExecDir, exist_ok=True)
 
-        # Run the generator test
+        # Run the generator test. It's possible for this to fail for two reasons: the generator test
+        # is unsupported or the generator ran but failed at runtime -- handle both. In the first case,
+        # we return the generator test itself, since it should produce the same result when run after
+        # test suite generation. In the second case, it's a true error so we report it.
         steps = [] # Steps must already be in the script
-        (out, err, exitCode, _, _) = _executeScriptInternal(generator, litConfig, steps)
+        result = _executeScriptInternal(generator, litConfig, steps)
+        if isinstance(result, lit.Test.Result):
+            yield generator
+            return
+
+        (out, err, exitCode, _, _) = result
         if exitCode != 0:
-            raise RuntimeError(f"Error while trying to generate gen test\nstdout:\n{out}\n\nstderr:\n{err}")
+            raise RuntimeError(f"Error while trying to generate gen test {'/'.join(pathInSuite)}\nstdout:\n{out}\n\nstderr:\n{err}")
 
         # Split the generated output into multiple files and generate one test for each file
         for subfile, content in self._splitFile(out):

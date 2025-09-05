@@ -675,9 +675,9 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
       CIRRecordLowering baseLowering(*this, rd, /*Packed=*/lowering.packed);
       baseLowering.lower(/*NonVirtualBaseType=*/true);
       std::string baseIdentifier = getRecordTypeName(rd, ".base");
-      baseTy =
-          builder.getCompleteRecordTy(baseLowering.fieldTypes, baseIdentifier,
-                                      baseLowering.packed, baseLowering.padded);
+      baseTy = builder.getCompleteNamedRecordType(
+          baseLowering.fieldTypes, baseLowering.packed, baseLowering.padded,
+          baseIdentifier);
       // TODO(cir): add something like addRecordTypeName
 
       // BaseTy and Ty must agree on their packedness for getCIRFieldNo to work
@@ -961,8 +961,9 @@ void CIRRecordLowering::computeVolatileBitfields() {
 void CIRRecordLowering::accumulateBases() {
   // If we've got a primary virtual base, we need to add it with the bases.
   if (astRecordLayout.isPrimaryBaseVirtual()) {
-    cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
-                                       "accumulateBases: primary virtual base");
+    const CXXRecordDecl *baseDecl = astRecordLayout.getPrimaryBase();
+    members.push_back(MemberInfo(CharUnits::Zero(), MemberInfo::InfoKind::Base,
+                                 getStorageType(baseDecl), baseDecl));
   }
 
   // Accumulate the non-virtual bases.

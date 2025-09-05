@@ -585,6 +585,34 @@ class CmpCharOpConversion : public HlfirIntrinsicConversion<hlfir::CmpCharOp> {
   }
 };
 
+class CharTrimOpConversion
+    : public HlfirIntrinsicConversion<hlfir::CharTrimOp> {
+  using HlfirIntrinsicConversion<hlfir::CharTrimOp>::HlfirIntrinsicConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::CharTrimOp trim,
+                  mlir::PatternRewriter &rewriter) const override {
+    fir::FirOpBuilder builder{rewriter, trim.getOperation()};
+    const mlir::Location &loc = trim->getLoc();
+
+    llvm::SmallVector<IntrinsicArgument, 1> inArgs;
+    mlir::Value chr = trim.getChr();
+    inArgs.push_back({chr, chr.getType()});
+
+    auto *argLowering = fir::getIntrinsicArgumentLowering("trim");
+    llvm::SmallVector<fir::ExtendedValue, 1> args =
+        lowerArguments(trim, inArgs, rewriter, argLowering);
+
+    mlir::Type resultType = hlfir::getFortranElementType(trim.getType());
+
+    auto [resultExv, mustBeFreed] =
+        fir::genIntrinsicCall(builder, loc, "trim", resultType, args);
+
+    processReturnValue(trim, resultExv, mustBeFreed, builder, rewriter);
+    return mlir::success();
+  }
+};
+
 class LowerHLFIRIntrinsics
     : public hlfir::impl::LowerHLFIRIntrinsicsBase<LowerHLFIRIntrinsics> {
 public:
@@ -592,14 +620,14 @@ public:
     mlir::ModuleOp module = this->getOperation();
     mlir::MLIRContext *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns.insert<MatmulOpConversion, MatmulTransposeOpConversion,
-                    AllOpConversion, AnyOpConversion, SumOpConversion,
-                    ProductOpConversion, TransposeOpConversion,
-                    CountOpConversion, DotProductOpConversion,
-                    MaxvalOpConversion, MinvalOpConversion, MinlocOpConversion,
-                    MaxlocOpConversion, ArrayShiftOpConversion<hlfir::CShiftOp>,
-                    ArrayShiftOpConversion<hlfir::EOShiftOp>,
-                    ReshapeOpConversion, CmpCharOpConversion>(context);
+    patterns.insert<
+        MatmulOpConversion, MatmulTransposeOpConversion, AllOpConversion,
+        AnyOpConversion, SumOpConversion, ProductOpConversion,
+        TransposeOpConversion, CountOpConversion, DotProductOpConversion,
+        MaxvalOpConversion, MinvalOpConversion, MinlocOpConversion,
+        MaxlocOpConversion, ArrayShiftOpConversion<hlfir::CShiftOp>,
+        ArrayShiftOpConversion<hlfir::EOShiftOp>, ReshapeOpConversion,
+        CmpCharOpConversion, CharTrimOpConversion>(context);
 
     // While conceptually this pass is performing dialect conversion, we use
     // pattern rewrites here instead of dialect conversion because this pass

@@ -1570,7 +1570,7 @@ protected:
     uint32_t frame_idx = frame_sp->GetFrameIndex();
 
     if (frame_sp->IsInlined()) {
-      result.AppendError("Don't know how to return from inlined frames.");
+      result.AppendError("don't know how to return from inlined frames");
       return;
     }
 

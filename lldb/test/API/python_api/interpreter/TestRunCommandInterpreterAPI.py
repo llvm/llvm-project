@@ -105,7 +105,7 @@ class CommandRunInterpreterAPICase(TestBase):
         self.assertFalse(has_crashed)
 
         self.assertIn("invalid target", result_str)
-        self.assertIn("No auto repeat", result_str)
+        self.assertIn("no auto repeat", result_str)
 
 
 class SBCommandInterpreterRunOptionsCase(TestBase):

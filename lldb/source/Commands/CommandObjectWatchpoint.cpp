@@ -44,7 +44,7 @@ static bool CheckTargetForWatchpointOperations(Target &target,
   bool process_is_valid =
       target.GetProcessSP() && target.GetProcessSP()->IsAlive();
   if (!process_is_valid) {
-    result.AppendError("There's no process or it is not alive.");
+    result.AppendError("there's no process or it is not alive");
     return false;
   }
   // Target passes our checks, return true.
@@ -243,7 +243,7 @@ protected:
       std::vector<uint32_t> wp_ids;
       if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(
               target, command, wp_ids)) {
-        result.AppendError("Invalid watchpoints specification.");
+        result.AppendError("invalid watchpoints specification");
         return;
       }
 
@@ -298,7 +298,7 @@ protected:
     size_t num_watchpoints = watchpoints.GetSize();
 
     if (num_watchpoints == 0) {
-      result.AppendError("No watchpoints exist to be enabled.");
+      result.AppendError("no watchpoints exist to be enabled");
       return;
     }
 
@@ -314,7 +314,7 @@ protected:
       std::vector<uint32_t> wp_ids;
       if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(
               target, command, wp_ids)) {
-        result.AppendError("Invalid watchpoints specification.");
+        result.AppendError("invalid watchpoints specification");
         return;
       }
 
@@ -366,7 +366,7 @@ protected:
     size_t num_watchpoints = watchpoints.GetSize();
 
     if (num_watchpoints == 0) {
-      result.AppendError("No watchpoints exist to be disabled.");
+      result.AppendError("no watchpoints exist to be disabled");
       return;
     }
 
@@ -385,7 +385,7 @@ protected:
       std::vector<uint32_t> wp_ids;
       if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(
               target, command, wp_ids)) {
-        result.AppendError("Invalid watchpoints specification.");
+        result.AppendError("invalid watchpoints specification");
         return;
       }
 
@@ -476,7 +476,7 @@ protected:
     size_t num_watchpoints = watchpoints.GetSize();
 
     if (num_watchpoints == 0) {
-      result.AppendError("No watchpoints exist to be deleted.");
+      result.AppendError("no watchpoints exist to be deleted");
       return;
     }
 
@@ -500,7 +500,7 @@ protected:
     std::vector<uint32_t> wp_ids;
     if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(target, command,
                                                                wp_ids)) {
-      result.AppendError("Invalid watchpoints specification.");
+      result.AppendError("invalid watchpoints specification");
       return;
     }
 
@@ -596,7 +596,7 @@ protected:
     size_t num_watchpoints = watchpoints.GetSize();
 
     if (num_watchpoints == 0) {
-      result.AppendError("No watchpoints exist to be ignored.");
+      result.AppendError("no watchpoints exist to be ignored");
       return;
     }
 
@@ -611,7 +611,7 @@ protected:
       std::vector<uint32_t> wp_ids;
       if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(
               target, command, wp_ids)) {
-        result.AppendError("Invalid watchpoints specification.");
+        result.AppendError("invalid watchpoints specification");
         return;
       }
 
@@ -715,7 +715,7 @@ protected:
     size_t num_watchpoints = watchpoints.GetSize();
 
     if (num_watchpoints == 0) {
-      result.AppendError("No watchpoints exist to be modified.");
+      result.AppendError("no watchpoints exist to be modified");
       return;
     }
 
@@ -728,7 +728,7 @@ protected:
       std::vector<uint32_t> wp_ids;
       if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(
               target, command, wp_ids)) {
-        result.AppendError("Invalid watchpoints specification.");
+        result.AppendError("invalid watchpoints specification");
         return;
       }
 

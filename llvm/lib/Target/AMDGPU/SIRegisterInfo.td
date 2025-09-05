@@ -1492,3 +1492,27 @@ class OperandIsVGPR<DAGOperand Op> {
   defvar reg_class = getRegClassFromOp<Op>.ret;
   bit ret = !and(reg_class.HasVGPR, !not(reg_class.HasAGPR));
 }
+
+class VDstOperandIsAV<dag OperandList> {
+  bit ret = OperandIsAV<!getdagarg<DAGOperand>(OperandList, "vdst")>.ret;
+}
+
+class VDstOperandIsAGPR<dag OperandList> {
+  bit ret = OperandIsAGPR<!getdagarg<DAGOperand>(OperandList, "vdst")>.ret;
+}
+
+class Data0OperandIsAV<dag OperandList> {
+  bit ret = OperandIsAV<!getdagarg<DAGOperand>(OperandList, "data0")>.ret;
+}
+
+class Data0OperandIsAGPR<dag OperandList> {
+  bit ret = OperandIsAGPR<!getdagarg<DAGOperand>(OperandList, "data0")>.ret;
+}
+
+class VDataOperandIsAV<dag OperandList> {
+  bit ret = OperandIsAV<!getdagarg<DAGOperand>(OperandList, "vdata")>.ret;
+}
+
+class VDataOperandIsAGPR<dag OperandList> {
+  bit ret = OperandIsAGPR<!getdagarg<DAGOperand>(OperandList, "vdata")>.ret;
+}

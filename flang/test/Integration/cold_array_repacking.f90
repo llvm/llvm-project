@@ -1,9 +1,9 @@
 ! Check that the branch weights used by the array repacking
 ! are propagated all the way to LLVM IR:
-! RUN: %flang_fc1 -frepack-arrays -mmlir --force-no-alias=false -emit-llvm %s -o - | FileCheck %s
+! RUN: %flang_fc1 -frepack-arrays -emit-llvm %s -o - | FileCheck %s
 
 ! CHECK-LABEL: define void @test_(
-! CHECK-SAME:      ptr [[TMP0:%.*]])
+! CHECK-SAME:      ptr noalias [[TMP0:%.*]])
 ! CHECK:    [[TMP4:%.*]] = ptrtoint ptr [[TMP0]] to i64
 ! CHECK:    [[TMP5:%.*]] = icmp ne i64 [[TMP4]], 0
 ! CHECK:    br i1 [[TMP5]], label %[[BB6:.*]], label %[[BB46:.*]]

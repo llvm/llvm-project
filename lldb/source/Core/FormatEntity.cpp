@@ -1681,7 +1681,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       StackFrame *frame = exe_ctx->GetFramePtr();
       if (frame) {
         const Address &pc_addr = frame->GetFrameCodeAddress();
-        if (pc_addr.IsValid()) {
+        if (pc_addr.IsValid() || frame->IsSynthetic()) {
           if (DumpAddressAndContent(s, sc, exe_ctx, pc_addr, false))
             return true;
         }

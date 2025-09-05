@@ -122,7 +122,7 @@ StringRef Availability::getMergeInstance() const {
 }
 
 // Returns the availability spec of the given `def`.
-std::vector<Availability> getAvailabilities(const Record &def) {
+static std::vector<Availability> getAvailabilities(const Record &def) {
   std::vector<Availability> availabilities;
 
   if (def.getValue("availability")) {

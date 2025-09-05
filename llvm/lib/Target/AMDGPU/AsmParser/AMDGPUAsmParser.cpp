@@ -4782,12 +4782,14 @@ bool AMDGPUAsmParser::validateOffset(const MCInst &Inst,
     return validateSMEMOffset(Inst, Operands);
 
   const auto &Op = Inst.getOperand(OpNum);
+  // GFX12+ buffer ops: InstOffset is signed 24, but must not be a negative.
   if (isGFX12Plus() &&
       (TSFlags & (SIInstrFlags::MUBUF | SIInstrFlags::MTBUF))) {
     const unsigned OffsetSize = 24;
-    if (!isIntN(OffsetSize, Op.getImm())) {
+    if (!isUIntN(OffsetSize - 1, Op.getImm())) {
       Error(getFlatOffsetLoc(Operands),
-            Twine("expected a ") + Twine(OffsetSize) + "-bit signed offset");
+            Twine("expected a ") + Twine(OffsetSize - 1) +
+                "-bit unsigned offset for buffer ops");
       return false;
     }
   } else {
@@ -4870,7 +4872,9 @@ bool AMDGPUAsmParser::validateSMEMOffset(const MCInst &Inst,
     return true;
 
   Error(getSMEMOffsetLoc(Operands),
-        isGFX12Plus()          ? "expected a 24-bit signed offset"
+        isGFX12Plus() && IsBuffer
+            ? "expected a 23-bit unsigned offset for buffer ops"
+        : isGFX12Plus()        ? "expected a 24-bit signed offset"
         : (isVI() || IsBuffer) ? "expected a 20-bit unsigned offset"
                                : "expected a 21-bit signed offset");
 

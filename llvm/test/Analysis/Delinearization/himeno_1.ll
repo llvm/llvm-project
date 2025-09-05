@@ -32,7 +32,6 @@
 define void @jacobi(i32 %nn, ptr nocapture %a, ptr nocapture %p) nounwind uwtable {
 ; CHECK-LABEL: 'jacobi'
 ; CHECK-NEXT:  Inst: store float 1.000000e+00, ptr %arrayidx, align 4
-; CHECK-NEXT:  In Loop with Header: for.k
 ; CHECK-NEXT:  AccessFunction: {{\{\{\{}}(4 + (4 * (sext i32 %a.deps to i64) * (1 + (sext i32 %a.cols to i64))<nsw>)),+,(4 * (sext i32 %a.deps to i64) * (sext i32 %a.cols to i64))}<%for.i>,+,(4 * (sext i32 %a.deps to i64))<nsw>}<%for.j>,+,4}<%for.k>
 ; CHECK-NEXT:  Base offset: %a.base
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][(sext i32 %a.cols to i64)][(sext i32 %a.deps to i64)] with elements of 4 bytes.

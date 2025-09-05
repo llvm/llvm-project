@@ -10,7 +10,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @foo(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i64 %len) #0 {
 ; CHECK-EPILOG:      vec.epilog.ph:
 ; CHECK-EPILOG:      vec.epilog.vector.body:
-; CHECK-EPILOG:        load <vscale x 4 x i16>
+; CHECK-EPILOG:        load <8 x i16>
 
 ; The epilogue loop gets vectorised vscale x 2 x i16 wide.
 ; CHECK-EPILOG-V2:      vec.epilog.ph:

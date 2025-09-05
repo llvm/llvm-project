@@ -575,6 +575,9 @@ private:
 
   bool shouldExpandBuildVectorWithShuffles(EVT, unsigned) const override;
 
+  SDValue lowerEHPadEntry(SDValue Chain, SDLoc const &DL,
+                          SelectionDAG &DAG) const override;
+
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
                                bool isVarArg,
                                const SmallVectorImpl<ISD::InputArg> &Ins,

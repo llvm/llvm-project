@@ -890,8 +890,16 @@ void OmpStructureChecker::Enter(const parser::OmpBlockConstruct &x) {
         executableConstruct->u);
   }};
   if (!endSpec && !isStrictlyStructuredBlock(block)) {
-    context_.Say(
-        x.BeginDir().source, "Expected OpenMP end directive"_err_en_US);
+    llvm::omp::Directive dirId{beginSpec.DirId()};
+    auto &msg{context_.Say(beginSpec.source,
+        "Expected OpenMP END %s directive"_err_en_US,
+        parser::ToUpperCaseLetters(getDirectiveName(dirId)))};
+    // ORDERED has two variants, so be explicit about which variant we think
+    // this is.
+    if (dirId == llvm::omp::Directive::OMPD_ordered) {
+      msg.Attach(
+          beginSpec.source, "The ORDERED directive is block-associated"_en_US);
+    }
   }
 
   if (llvm::omp::allTargetSet.test(GetContext().directive)) {

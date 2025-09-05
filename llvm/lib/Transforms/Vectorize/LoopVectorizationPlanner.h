@@ -568,6 +568,15 @@ public:
   void addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
                                 ElementCount MinProfitableTripCount) const;
 
+  /// Update loop metadata and profile info for both the scalar remainder loop
+  /// and \p VectorLoop, if it exists. Keeps all loop hints from the original
+  /// loop on the vector loop and replaces vectorizer-specific metadata.
+  void updateLoopMetadataAndProfileInfo(Loop *VectorLoop,
+                                        VPBasicBlock *HeaderVPBB,
+                                        bool VectorizingEpilogue,
+                                        unsigned EstimatedVFxUF,
+                                        bool DisableRuntimeUnroll);
+
 protected:
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// according to the information gathered by Legal when it checked if it is
@@ -622,13 +631,15 @@ private:
   /// Returns true if the per-lane cost of VectorizationFactor A is lower than
   /// that of B.
   bool isMoreProfitable(const VectorizationFactor &A,
-                        const VectorizationFactor &B, bool HasTail) const;
+                        const VectorizationFactor &B, bool HasTail,
+                        bool IsEpilogue = false) const;
 
   /// Returns true if the per-lane cost of VectorizationFactor A is lower than
   /// that of B in the context of vectorizing a loop with known \p MaxTripCount.
   bool isMoreProfitable(const VectorizationFactor &A,
                         const VectorizationFactor &B,
-                        const unsigned MaxTripCount, bool HasTail) const;
+                        const unsigned MaxTripCount, bool HasTail,
+                        bool IsEpilogue = false) const;
 
   /// Determines if we have the infrastructure to vectorize the loop and its
   /// epilogue, assuming the main loop is vectorized by \p VF.

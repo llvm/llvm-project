@@ -79,7 +79,7 @@ static lldb_private::RegisterInfo g_register_infos_mte[] = {
     DEFINE_EXTENSION_REG(mte_ctrl)};
 
 static lldb_private::RegisterInfo g_register_infos_tls[] = {
-    DEFINE_EXTENSION_REG(tpidr),
+    DEFINE_EXTENSION_REG_GENERIC(tpidr, LLDB_REGNUM_GENERIC_TP),
     // Only present when SME is present
     DEFINE_EXTENSION_REG(tpidr2)};
 

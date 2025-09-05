@@ -31,34 +31,38 @@ namespace {
 class CallAndMessageChecker
     : public Checker<check::PreObjCMessage, check::ObjCMessageNil,
                      check::PreCall> {
-  mutable std::unique_ptr<BugType> BT_call_null;
-  mutable std::unique_ptr<BugType> BT_call_undef;
-  mutable std::unique_ptr<BugType> BT_cxx_call_null;
-  mutable std::unique_ptr<BugType> BT_cxx_call_undef;
-  mutable std::unique_ptr<BugType> BT_call_arg;
-  mutable std::unique_ptr<BugType> BT_cxx_delete_undef;
-  mutable std::unique_ptr<BugType> BT_msg_undef;
-  mutable std::unique_ptr<BugType> BT_objc_prop_undef;
-  mutable std::unique_ptr<BugType> BT_objc_subscript_undef;
-  mutable std::unique_ptr<BugType> BT_msg_arg;
-  mutable std::unique_ptr<BugType> BT_msg_ret;
-  mutable std::unique_ptr<BugType> BT_call_few_args;
+  const BugType CallNullBug{
+      this, "Called function pointer is null (null dereference)"};
+  const BugType CallUndefBug{
+      this, "Called function pointer is an uninitialized pointer value"};
+  const BugType CXXCallNullBug{this, "Called C++ object pointer is null"};
+  const BugType CXXCallUndefBug{this,
+                                "Called C++ object pointer is uninitialized"};
+  const BugType CallArgBug{this, "Uninitialized argument value"};
+  const BugType CXXDeleteUndefBug{this, "Uninitialized argument value"};
+  const BugType MsgUndefBug{
+      this, "Receiver in message expression is an uninitialized value"};
+  const BugType ObjCPropUndefBug{
+      this, "Property access on an uninitialized object pointer"};
+  const BugType ObjCSubscriptUndefBug{
+      this, "Subscript access on an uninitialized object pointer"};
+  const BugType MsgArgBug{this, "Uninitialized argument value"};
+  const BugType MsgRetBug{this, "Receiver in message expression is 'nil'"};
+  const BugType CallFewArgsBug{this, "Function call with too few arguments"};
 
 public:
-  // These correspond with the checker options. Looking at other checkers such
-  // as MallocChecker and CStringChecker, this is similar as to how they pull
-  // off having a modeling class, but emitting diagnostics under a smaller
-  // checker's name that can be safely disabled without disturbing the
-  // underlaying modeling engine.
-  // The reason behind having *checker options* rather then actual *checkers*
-  // here is that CallAndMessage is among the oldest checkers out there, and can
+  // Like a checker family, CallAndMessageChecker can produce many kinds of
+  // warnings which can be separately enabled or disabled. However, for
+  // historical reasons these warning kinds are represented by checker options
+  // (and not separate checker frontends with their own names) because
+  // CallAndMessage is among the oldest checkers out there, and can
   // be responsible for the majority of the reports on any given project. This
   // is obviously not ideal, but changing checker name has the consequence of
   // changing the issue hashes associated with the reports, and databases
   // relying on this (CodeChecker, for instance) would suffer greatly.
   // If we ever end up making changes to the issue hash generation algorithm, or
   // the warning messages here, we should totally jump on the opportunity to
-  // convert these to actual checkers.
+  // convert these to actual checker frontends.
   enum CheckKind {
     CK_FunctionPointer,
     CK_ParameterCount,
@@ -72,9 +76,6 @@ public:
   };
 
   bool ChecksEnabled[CK_NumCheckKinds] = {false};
-  // The original core.CallAndMessage checker name. This should rather be an
-  // array, as seen in MallocChecker and CStringChecker.
-  CheckerNameRef OriginalName;
 
   void checkPreObjCMessage(const ObjCMethodCall &msg, CheckerContext &C) const;
 
@@ -108,10 +109,11 @@ private:
   bool PreVisitProcessArg(CheckerContext &C, SVal V, SourceRange ArgRange,
                           const Expr *ArgEx, int ArgumentNumber,
                           bool CheckUninitFields, const CallEvent &Call,
-                          std::unique_ptr<BugType> &BT,
+                          const BugType &BT,
                           const ParmVarDecl *ParamDecl) const;
 
-  static void emitBadCall(BugType *BT, CheckerContext &C, const Expr *BadE);
+  static void emitBadCall(const BugType &BT, CheckerContext &C,
+                          const Expr *BadE);
   void emitNilReceiverBug(CheckerContext &C, const ObjCMethodCall &msg,
                           ExplodedNode *N) const;
 
@@ -119,24 +121,20 @@ private:
                          ProgramStateRef state,
                          const ObjCMethodCall &msg) const;
 
-  void LazyInit_BT(const char *desc, std::unique_ptr<BugType> &BT) const {
-    if (!BT)
-      BT.reset(new BugType(OriginalName, desc));
-  }
   bool uninitRefOrPointer(CheckerContext &C, SVal V, SourceRange ArgRange,
-                          const Expr *ArgEx, std::unique_ptr<BugType> &BT,
-                          const ParmVarDecl *ParamDecl, const char *BD,
+                          const Expr *ArgEx, const BugType &BT,
+                          const ParmVarDecl *ParamDecl,
                           int ArgumentNumber) const;
 };
 } // end anonymous namespace
 
-void CallAndMessageChecker::emitBadCall(BugType *BT, CheckerContext &C,
+void CallAndMessageChecker::emitBadCall(const BugType &BT, CheckerContext &C,
                                         const Expr *BadE) {
   ExplodedNode *N = C.generateErrorNode();
   if (!N)
     return;
 
-  auto R = std::make_unique<PathSensitiveBugReport>(*BT, BT->getDescription(), N);
+  auto R = std::make_unique<PathSensitiveBugReport>(BT, BT.getDescription(), N);
   if (BadE) {
     R->addRange(BadE->getSourceRange());
     if (BadE->isGLValue())
@@ -183,8 +181,7 @@ static void describeUninitializedArgumentInCall(const CallEvent &Call,
 
 bool CallAndMessageChecker::uninitRefOrPointer(
     CheckerContext &C, SVal V, SourceRange ArgRange, const Expr *ArgEx,
-    std::unique_ptr<BugType> &BT, const ParmVarDecl *ParamDecl, const char *BD,
-    int ArgumentNumber) const {
+    const BugType &BT, const ParmVarDecl *ParamDecl, int ArgumentNumber) const {
 
   // The pointee being uninitialized is a sign of code smell, not a bug, no need
   // to sink here.
@@ -218,8 +215,7 @@ bool CallAndMessageChecker::uninitRefOrPointer(
     const SVal PSV = State->getSVal(SValMemRegion, C.getASTContext().CharTy);
     if (PSV.isUndef()) {
       if (ExplodedNode *N = C.generateErrorNode()) {
-        LazyInit_BT(BD, BT);
-        auto R = std::make_unique<PathSensitiveBugReport>(*BT, Os.str(), N);
+        auto R = std::make_unique<PathSensitiveBugReport>(BT, Os.str(), N);
         R->addRange(ArgRange);
         if (ArgEx)
           bugreporter::trackExpressionValue(N, ArgEx, *R);
@@ -275,20 +271,11 @@ public:
 };
 } // namespace
 
-bool CallAndMessageChecker::PreVisitProcessArg(CheckerContext &C,
-                                               SVal V,
-                                               SourceRange ArgRange,
-                                               const Expr *ArgEx,
-                                               int ArgumentNumber,
-                                               bool CheckUninitFields,
-                                               const CallEvent &Call,
-                                               std::unique_ptr<BugType> &BT,
-                                               const ParmVarDecl *ParamDecl
-                                               ) const {
-  const char *BD = "Uninitialized argument value";
-
-  if (uninitRefOrPointer(C, V, ArgRange, ArgEx, BT, ParamDecl, BD,
-                         ArgumentNumber))
+bool CallAndMessageChecker::PreVisitProcessArg(
+    CheckerContext &C, SVal V, SourceRange ArgRange, const Expr *ArgEx,
+    int ArgumentNumber, bool CheckUninitFields, const CallEvent &Call,
+    const BugType &BT, const ParmVarDecl *ParamDecl) const {
+  if (uninitRefOrPointer(C, V, ArgRange, ArgEx, BT, ParamDecl, ArgumentNumber))
     return true;
 
   if (V.isUndef()) {
@@ -297,12 +284,11 @@ bool CallAndMessageChecker::PreVisitProcessArg(CheckerContext &C,
       return true;
     }
     if (ExplodedNode *N = C.generateErrorNode()) {
-      LazyInit_BT(BD, BT);
       // Generate a report for this bug.
       SmallString<200> Buf;
       llvm::raw_svector_ostream Os(Buf);
       describeUninitializedArgumentInCall(Call, ArgumentNumber, Os);
-      auto R = std::make_unique<PathSensitiveBugReport>(*BT, Os.str(), N);
+      auto R = std::make_unique<PathSensitiveBugReport>(BT, Os.str(), N);
 
       R->addRange(ArgRange);
       if (ArgEx)
@@ -327,7 +313,6 @@ bool CallAndMessageChecker::PreVisitProcessArg(CheckerContext &C,
         return true;
       }
       if (ExplodedNode *N = C.generateErrorNode()) {
-        LazyInit_BT(BD, BT);
         SmallString<512> Str;
         llvm::raw_svector_ostream os(Str);
         os << "Passed-by-value struct argument contains uninitialized data";
@@ -349,7 +334,7 @@ bool CallAndMessageChecker::PreVisitProcessArg(CheckerContext &C,
         }
 
         // Generate a report for this bug.
-        auto R = std::make_unique<PathSensitiveBugReport>(*BT, os.str(), N);
+        auto R = std::make_unique<PathSensitiveBugReport>(BT, os.str(), N);
         R->addRange(ArgRange);
 
         if (ArgEx)
@@ -377,11 +362,7 @@ ProgramStateRef CallAndMessageChecker::checkFunctionPointerCall(
       C.addSink(State);
       return nullptr;
     }
-    if (!BT_call_undef)
-      BT_call_undef.reset(new BugType(
-          OriginalName,
-          "Called function pointer is an uninitialized pointer value"));
-    emitBadCall(BT_call_undef.get(), C, Callee);
+    emitBadCall(CallUndefBug, C, Callee);
     return nullptr;
   }
 
@@ -393,10 +374,7 @@ ProgramStateRef CallAndMessageChecker::checkFunctionPointerCall(
       C.addSink(StNull);
       return nullptr;
     }
-    if (!BT_call_null)
-      BT_call_null.reset(new BugType(
-          OriginalName, "Called function pointer is null (null dereference)"));
-    emitBadCall(BT_call_null.get(), C, Callee);
+    emitBadCall(CallNullBug, C, Callee);
     return nullptr;
   }
 
@@ -421,8 +399,6 @@ ProgramStateRef CallAndMessageChecker::checkParameterCount(
   if (!N)
     return nullptr;
 
-  LazyInit_BT("Function call with too few arguments", BT_call_few_args);
-
   SmallString<512> Str;
   llvm::raw_svector_ostream os(Str);
   if (isa<AnyFunctionCall>(Call)) {
@@ -435,7 +411,7 @@ ProgramStateRef CallAndMessageChecker::checkParameterCount(
      << " is called with fewer (" << Call.getNumArgs() << ")";
 
   C.emitReport(
-      std::make_unique<PathSensitiveBugReport>(*BT_call_few_args, os.str(), N));
+      std::make_unique<PathSensitiveBugReport>(CallFewArgsBug, os.str(), N));
   return nullptr;
 }
 
@@ -448,10 +424,7 @@ ProgramStateRef CallAndMessageChecker::checkCXXMethodCall(
       C.addSink(State);
       return nullptr;
     }
-    if (!BT_cxx_call_undef)
-      BT_cxx_call_undef.reset(new BugType(
-          OriginalName, "Called C++ object pointer is uninitialized"));
-    emitBadCall(BT_cxx_call_undef.get(), C, CC->getCXXThisExpr());
+    emitBadCall(CXXCallUndefBug, C, CC->getCXXThisExpr());
     return nullptr;
   }
 
@@ -463,10 +436,7 @@ ProgramStateRef CallAndMessageChecker::checkCXXMethodCall(
       C.addSink(StNull);
       return nullptr;
     }
-    if (!BT_cxx_call_null)
-      BT_cxx_call_null.reset(
-          new BugType(OriginalName, "Called C++ object pointer is null"));
-    emitBadCall(BT_cxx_call_null.get(), C, CC->getCXXThisExpr());
+    emitBadCall(CXXCallNullBug, C, CC->getCXXThisExpr());
     return nullptr;
   }
 
@@ -492,15 +462,11 @@ CallAndMessageChecker::checkCXXDeallocation(const CXXDeallocatorCall *DC,
   ExplodedNode *N = C.generateErrorNode();
   if (!N)
     return nullptr;
-  if (!BT_cxx_delete_undef)
-    BT_cxx_delete_undef.reset(
-        new BugType(OriginalName, "Uninitialized argument value"));
   if (DE->isArrayFormAsWritten())
     Desc = "Argument to 'delete[]' is uninitialized";
   else
     Desc = "Argument to 'delete' is uninitialized";
-  auto R =
-      std::make_unique<PathSensitiveBugReport>(*BT_cxx_delete_undef, Desc, N);
+  auto R = std::make_unique<PathSensitiveBugReport>(CXXDeleteUndefBug, Desc, N);
   bugreporter::trackExpressionValue(N, DE, *R);
   C.emitReport(std::move(R));
   return nullptr;
@@ -518,11 +484,7 @@ ProgramStateRef CallAndMessageChecker::checkArgInitializedness(
   const bool checkUninitFields =
       !(C.getAnalysisManager().shouldInlineCall() && (D && D->getBody()));
 
-  std::unique_ptr<BugType> *BT;
-  if (isa<ObjCMethodCall>(Call))
-    BT = &BT_msg_arg;
-  else
-    BT = &BT_call_arg;
+  const BugType &BT = isa<ObjCMethodCall>(Call) ? MsgArgBug : CallArgBug;
 
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
   for (unsigned i = 0, e = Call.getNumArgs(); i != e; ++i) {
@@ -530,7 +492,7 @@ ProgramStateRef CallAndMessageChecker::checkArgInitializedness(
     if (FD && i < FD->getNumParams())
       ParamDecl = FD->getParamDecl(i);
     if (PreVisitProcessArg(C, Call.getArgSVal(i), Call.getArgSourceRange(i),
-                           Call.getArgExpr(i), i, checkUninitFields, Call, *BT,
+                           Call.getArgExpr(i), i, checkUninitFields, Call, BT,
                            ParamDecl))
       return nullptr;
   }
@@ -580,28 +542,16 @@ void CallAndMessageChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
       return;
     }
     if (ExplodedNode *N = C.generateErrorNode()) {
-      BugType *BT = nullptr;
+      const BugType *BT = nullptr;
       switch (msg.getMessageKind()) {
       case OCM_Message:
-        if (!BT_msg_undef)
-          BT_msg_undef.reset(new BugType(OriginalName,
-                                         "Receiver in message expression "
-                                         "is an uninitialized value"));
-        BT = BT_msg_undef.get();
+        BT = &MsgUndefBug;
         break;
       case OCM_PropertyAccess:
-        if (!BT_objc_prop_undef)
-          BT_objc_prop_undef.reset(new BugType(
-              OriginalName,
-              "Property access on an uninitialized object pointer"));
-        BT = BT_objc_prop_undef.get();
+        BT = &ObjCPropUndefBug;
         break;
       case OCM_Subscript:
-        if (!BT_objc_subscript_undef)
-          BT_objc_subscript_undef.reset(new BugType(
-              OriginalName,
-              "Subscript access on an uninitialized object pointer"));
-        BT = BT_objc_subscript_undef.get();
+        BT = &ObjCSubscriptUndefBug;
         break;
       }
       assert(BT && "Unknown message kind.");
@@ -632,10 +582,6 @@ void CallAndMessageChecker::emitNilReceiverBug(CheckerContext &C,
     return;
   }
 
-  if (!BT_msg_ret)
-    BT_msg_ret.reset(
-        new BugType(OriginalName, "Receiver in message expression is 'nil'"));
-
   const ObjCMessageExpr *ME = msg.getOriginExpr();
 
   QualType ResTy = msg.getResultType();
@@ -654,7 +600,7 @@ void CallAndMessageChecker::emitNilReceiverBug(CheckerContext &C,
   }
 
   auto report =
-      std::make_unique<PathSensitiveBugReport>(*BT_msg_ret, os.str(), N);
+      std::make_unique<PathSensitiveBugReport>(MsgRetBug, os.str(), N);
   report->addRange(ME->getReceiverRange());
   // FIXME: This won't track "self" in messages to super.
   if (const Expr *receiver = ME->getInstanceReceiver()) {
@@ -728,23 +674,13 @@ void CallAndMessageChecker::HandleNilReceiver(CheckerContext &C,
   C.addTransition(state);
 }
 
-void ento::registerCallAndMessageModeling(CheckerManager &mgr) {
-  mgr.registerChecker<CallAndMessageChecker>();
-}
-
-bool ento::shouldRegisterCallAndMessageModeling(const CheckerManager &mgr) {
-  return true;
-}
-
-void ento::registerCallAndMessageChecker(CheckerManager &mgr) {
-  CallAndMessageChecker *checker = mgr.getChecker<CallAndMessageChecker>();
-
-  checker->OriginalName = mgr.getCurrentCheckerName();
+void ento::registerCallAndMessageChecker(CheckerManager &Mgr) {
+  CallAndMessageChecker *Chk = Mgr.registerChecker<CallAndMessageChecker>();
 
 #define QUERY_CHECKER_OPTION(OPTION)                                           \
-  checker->ChecksEnabled[CallAndMessageChecker::CK_##OPTION] =                 \
-      mgr.getAnalyzerOptions().getCheckerBooleanOption(                        \
-          mgr.getCurrentCheckerName(), #OPTION);
+  Chk->ChecksEnabled[CallAndMessageChecker::CK_##OPTION] =                     \
+      Mgr.getAnalyzerOptions().getCheckerBooleanOption(                        \
+          Mgr.getCurrentCheckerName(), #OPTION);
 
   QUERY_CHECKER_OPTION(FunctionPointer)
   QUERY_CHECKER_OPTION(ParameterCount)
@@ -756,6 +692,6 @@ void ento::registerCallAndMessageChecker(CheckerManager &mgr) {
   QUERY_CHECKER_OPTION(UndefReceiver)
 }
 
-bool ento::shouldRegisterCallAndMessageChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterCallAndMessageChecker(const CheckerManager &) {
   return true;
 }

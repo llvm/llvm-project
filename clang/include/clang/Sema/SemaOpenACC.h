@@ -15,6 +15,7 @@
 #define LLVM_CLANG_SEMA_SEMAOPENACC_H
 
 #include "clang/AST/DeclGroup.h"
+#include "clang/AST/OpenACCClause.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OpenACCKinds.h"
@@ -237,21 +238,11 @@ public:
                                 SourceLocation ClauseLoc,
                                 ArrayRef<const OpenACCClause *> Clauses);
 
-  // Creates a VarDecl with a proper default init for the purposes of a
-  // `private`/'firstprivate'/'reduction' clause, so it can be used to generate
-  // a recipe later.
-  //  The first entry is the recipe itself, the second is any required
-  //  'temporary' created for the init (in the case of a copy), such as with
-  //  firstprivate.
-  std::pair<VarDecl *, VarDecl *> CreateInitRecipe(OpenACCClauseKind CK,
-                                                   const Expr *VarExpr) {
-    assert(CK != OpenACCClauseKind::Reduction);
-    return CreateInitRecipe(CK, OpenACCReductionOperator::Invalid, VarExpr);
-  }
-  std::pair<VarDecl *, VarDecl *>
-  CreateInitRecipe(OpenACCClauseKind CK,
-                   OpenACCReductionOperator ReductionOperator,
-                   const Expr *VarExpr);
+  OpenACCPrivateRecipe CreatePrivateInitRecipe(const Expr *VarExpr);
+  OpenACCFirstPrivateRecipe CreateFirstPrivateInitRecipe(const Expr *VarExpr);
+  OpenACCReductionRecipe
+  CreateReductionInitRecipe(OpenACCReductionOperator ReductionOperator,
+                            const Expr *VarExpr);
 
 public:
   ComputeConstructInfo &getActiveComputeConstructInfo() {

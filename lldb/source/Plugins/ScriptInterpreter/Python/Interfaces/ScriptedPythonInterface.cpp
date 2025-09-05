@@ -167,7 +167,8 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<
 
   if (!sb_mem_reg_info) {
     error = Status::FromErrorStringWithFormat(
-        "Couldn't cast lldb::SBMemoryRegionInfo to lldb::MemoryRegionInfoSP.");
+        "Couldn't cast lldb::SBMemoryRegionInfo to "
+        "lldb_private::MemoryRegionInfo.");
     return {};
   }
 

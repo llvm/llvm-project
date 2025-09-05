@@ -870,7 +870,7 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 }
 
 bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  if (!Ptr.isBlockPointer())
+  if (!Ptr.isBlockPointer() || Ptr.isZero())
     return false;
 
   if (!Ptr.block()->isAccessible()) {

@@ -219,6 +219,7 @@ private:
   void sortECChunks();
   void appendECImportTables();
   void removeUnusedSections();
+  void layoutSections();
   void assignAddresses();
   bool isInRange(uint16_t relType, uint64_t s, uint64_t p, int margin,
                  MachineTypes machine);
@@ -783,6 +784,7 @@ void Writer::run() {
     appendECImportTables();
     createDynamicRelocs();
     removeUnusedSections();
+    layoutSections();
     finalizeAddresses();
     removeEmptySections();
     assignOutputSectionIndices();
@@ -1411,6 +1413,33 @@ void Writer::removeUnusedSections() {
     return s->chunks.empty();
   };
   llvm::erase_if(ctx.outputSections, isUnused);
+}
+
+void Writer::layoutSections() {
+  llvm::TimeTraceScope timeScope("Layout sections");
+  if (ctx.config.sectionOrder.empty())
+    return;
+
+  llvm::stable_sort(ctx.outputSections,
+                    [this](const OutputSection *a, const OutputSection *b) {
+                      auto itA = ctx.config.sectionOrder.find(a->name.str());
+                      auto itB = ctx.config.sectionOrder.find(b->name.str());
+                      bool aInOrder = itA != ctx.config.sectionOrder.end();
+                      bool bInOrder = itB != ctx.config.sectionOrder.end();
+
+                      // Put unspecified sections after all specified sections
+                      if (aInOrder && bInOrder) {
+                        return itA->second < itB->second;
+                      } else if (aInOrder && !bInOrder) {
+                        return true; // ordered sections come before unordered
+                      } else {
+                        // (!aInOrder && bInOrder): unordered comes after
+                        // ordered
+                        // (!aInOrder && !bInOrder): both unspecified, preserve
+                        // the original order
+                        return false;
+                      }
+                    });
 }
 
 // The Windows loader doesn't seem to like empty sections,

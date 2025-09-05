@@ -212,6 +212,8 @@ struct Configuration {
 
   // Used for /section=.name,{DEKPRSW} to set section attributes.
   std::map<StringRef, uint32_t> section;
+  // Used for /sectionlayout: to layout sections in specified order.
+  std::map<std::string, int> sectionOrder;
 
   // Options for manifest files.
   ManifestKind manifest = Default;

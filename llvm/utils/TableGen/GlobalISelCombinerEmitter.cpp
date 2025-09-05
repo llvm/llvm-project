@@ -1662,8 +1662,7 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
 
   const bool IsUsingCustomCXXAction = hasOnlyCXXApplyPatterns();
   for (const CodeGenInstruction *CGI : AOP.insts()) {
-    auto &M = addRuleMatcher(Alts, "wip_match_opcode '" +
-                                       CGI->TheDef->getName() + "'");
+    auto &M = addRuleMatcher(Alts, "wip_match_opcode '" + CGI->getName() + "'");
 
     InstructionMatcher &IM = M.addInstructionMatcher(AOP.getName());
     declareInstExpansion(CE, IM, AOP.getName());
@@ -2201,7 +2200,7 @@ bool CombineRuleBuilder::emitBuiltinApplyPattern(
 
 bool isLiteralImm(const InstructionPattern &P, unsigned OpIdx) {
   if (const auto *CGP = dyn_cast<CodeGenInstructionPattern>(&P)) {
-    StringRef InstName = CGP->getInst().TheDef->getName();
+    StringRef InstName = CGP->getInst().getName();
     return (InstName == "G_CONSTANT" || InstName == "G_FCONSTANT") &&
            OpIdx == 1;
   }

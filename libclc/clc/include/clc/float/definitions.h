@@ -70,10 +70,6 @@
 #define M_SQRT2 0x1.6a09e667f3bcdp+0
 #define M_SQRT1_2 0x1.6a09e667f3bcdp-1
 
-#ifdef __CLC_INTERNAL
-#define M_LOG210 0x1.a934f0979a371p+1
-#endif
-
 #endif
 
 #ifdef cl_khr_fp16

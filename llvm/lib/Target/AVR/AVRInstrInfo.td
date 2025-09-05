@@ -1230,7 +1230,9 @@ let Uses = [R1, R0] in {
 
   let Defs = [R31R30] in 
   def SPMZPi : F16<0b1001010111111000, (outs), (ins ZREG:$z), "spm $z+", []>,
-               Requires<[HasSPMX]>;
+               Requires<[HasSPMX]> {
+    bits<0> z;
+  }
 }
 
 // Read data from IO location operations.

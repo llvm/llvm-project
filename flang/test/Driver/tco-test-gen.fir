@@ -1,8 +1,8 @@
-// RUN: tco -emit-final-mlir --force-no-alias=false %s | FileCheck %s --check-prefixes=CHECK,AA,CMPLX
-// RUN: tco -emit-final-mlir --force-no-alias=false -enable-aa=false %s | FileCheck %s --check-prefixes=CHECK,NOAA,CMPLX
-// RUN: tco -emit-final-mlir --force-no-alias=false -simplify-mlir %s | FileCheck %s --check-prefixes=CHECK,AA,SIMPLE
-// RUN: tco -emit-final-mlir --force-no-alias=false -enable-aa=false -simplify-mlir %s | FileCheck %s --check-prefixes=CHECK,NOAA,SIMPLE
-// RUN: tco -test-gen --force-no-alias=false %s | FileCheck %s --check-prefixes=CHECK,NOAA,SIMPLE
+// RUN: tco -emit-final-mlir %s | FileCheck %s --check-prefixes=CHECK,AA,CMPLX
+// RUN: tco -emit-final-mlir -enable-aa=false %s | FileCheck %s --check-prefixes=CHECK,NOAA,CMPLX
+// RUN: tco -emit-final-mlir -simplify-mlir %s | FileCheck %s --check-prefixes=CHECK,AA,SIMPLE
+// RUN: tco -emit-final-mlir -enable-aa=false -simplify-mlir %s | FileCheck %s --check-prefixes=CHECK,NOAA,SIMPLE
+// RUN: tco -test-gen %s | FileCheck %s --check-prefixes=CHECK,NOAA,SIMPLE
 
 // Just a dummy function that exhibits all of the things we want to turn on and off
 func.func @_QPtest(%arg0: !fir.ref<i32> {fir.bindc_name = "num"}, %arg1: !fir.ref<i32> {fir.bindc_name = "lb"}, %arg2: !fir.ref<i32> {fir.bindc_name = "ub"}, %arg3: !fir.ref<i32> {fir.bindc_name = "step"}) {
@@ -37,10 +37,10 @@ func.func @_QPtest(%arg0: !fir.ref<i32> {fir.bindc_name = "num"}, %arg1: !fir.re
 }
 
 // CHECK-LABEL:   llvm.func @_QPtest(
-// CHECK-SAME:      %[[ARG0:.*]]: !llvm.ptr {fir.bindc_name = "num", llvm.nocapture},
-// CHECK-SAME:      %[[ARG1:.*]]: !llvm.ptr {fir.bindc_name = "lb", llvm.nocapture},
-// CHECK-SAME:      %[[ARG2:.*]]: !llvm.ptr {fir.bindc_name = "ub", llvm.nocapture},
-// CHECK-SAME:      %[[ARG3:.*]]: !llvm.ptr {fir.bindc_name = "step", llvm.nocapture}) {
+// CHECK-SAME:      %[[ARG0:.*]]: !llvm.ptr {fir.bindc_name = "num", llvm.noalias, llvm.nocapture},
+// CHECK-SAME:      %[[ARG1:.*]]: !llvm.ptr {fir.bindc_name = "lb", llvm.noalias, llvm.nocapture},
+// CHECK-SAME:      %[[ARG2:.*]]: !llvm.ptr {fir.bindc_name = "ub", llvm.noalias, llvm.nocapture},
+// CHECK-SAME:      %[[ARG3:.*]]: !llvm.ptr {fir.bindc_name = "step", llvm.noalias, llvm.nocapture}) {
 
 // CMPLX:           %[[VAL_0:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CMPLX:           %[[VAL_1:.*]] = llvm.alloca %[[VAL_0]] x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr

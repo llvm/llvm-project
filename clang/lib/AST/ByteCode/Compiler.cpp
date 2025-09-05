@@ -4191,6 +4191,31 @@ template <class Emitter> bool Compiler<Emitter>::delegate(const Expr *E) {
   return this->Visit(E);
 }
 
+static const Expr *stripCheckedDerivedToBaseCasts(const Expr *E) {
+  if (const auto *PE = dyn_cast<ParenExpr>(E))
+    return stripCheckedDerivedToBaseCasts(PE->getSubExpr());
+
+  if (const auto *CE = dyn_cast<CastExpr>(E);
+      CE &&
+      (CE->getCastKind() == CK_DerivedToBase || CE->getCastKind() == CK_NoOp))
+    return stripCheckedDerivedToBaseCasts(CE->getSubExpr());
+
+  return E;
+}
+
+static const Expr *stripDerivedToBaseCasts(const Expr *E) {
+  if (const auto *PE = dyn_cast<ParenExpr>(E))
+    return stripDerivedToBaseCasts(PE->getSubExpr());
+
+  if (const auto *CE = dyn_cast<CastExpr>(E);
+      CE && (CE->getCastKind() == CK_DerivedToBase ||
+             CE->getCastKind() == CK_UncheckedDerivedToBase ||
+             CE->getCastKind() == CK_NoOp))
+    return stripDerivedToBaseCasts(CE->getSubExpr());
+
+  return E;
+}
+
 template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
   if (E->getType().isNull())
     return false;
@@ -4200,7 +4225,7 @@ template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
 
   // Create local variable to hold the return value.
   if (!E->isGLValue() && !canClassify(E->getType())) {
-    UnsignedOrNone LocalIndex = allocateLocal(E);
+    UnsignedOrNone LocalIndex = allocateLocal(stripDerivedToBaseCasts(E));
     if (!LocalIndex)
       return false;
 
@@ -5078,18 +5103,6 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
   return true;
 }
 
-static const Expr *stripDerivedToBaseCasts(const Expr *E) {
-  if (const auto *PE = dyn_cast<ParenExpr>(E))
-    return stripDerivedToBaseCasts(PE->getSubExpr());
-
-  if (const auto *CE = dyn_cast<CastExpr>(E);
-      CE &&
-      (CE->getCastKind() == CK_DerivedToBase || CE->getCastKind() == CK_NoOp))
-    return stripDerivedToBaseCasts(CE->getSubExpr());
-
-  return E;
-}
-
 template <class Emitter>
 bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
   const FunctionDecl *FuncDecl = E->getDirectCallee();
@@ -5194,7 +5207,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
       const auto *InstancePtr = MC->getImplicitObjectArgument();
       if (isa_and_nonnull<CXXDestructorDecl>(CompilingFunction) ||
           isa_and_nonnull<CXXConstructorDecl>(CompilingFunction)) {
-        const auto *Stripped = stripDerivedToBaseCasts(InstancePtr);
+        const auto *Stripped = stripCheckedDerivedToBaseCasts(InstancePtr);
         if (isa<CXXThisExpr>(Stripped)) {
           FuncDecl =
               cast<CXXMethodDecl>(FuncDecl)->getCorrespondingMethodInClass(

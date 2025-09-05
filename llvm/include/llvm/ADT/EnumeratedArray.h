@@ -57,8 +57,7 @@ public:
   }
   ValueType &operator[](Enumeration Index) {
     return const_cast<ValueType &>(
-        static_cast<const EnumeratedArray<ValueType, Enumeration, LargestEnum,
-                                          IndexType, Size> &>(*this)[Index]);
+        static_cast<const EnumeratedArray &>(*this)[Index]);
   }
   IndexType size() const { return Size; }
   bool empty() const { return size() == 0; }

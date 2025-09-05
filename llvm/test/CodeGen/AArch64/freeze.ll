@@ -430,6 +430,82 @@ define <8 x i16> @freeze_abds(<8 x i16> %a, <8 x i16> %b) {
   ret <8 x i16> %r
 }
 
+; TODO: Unnecessary final and
+define <8 x i16> @freeze_uhadd(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: freeze_uhadd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.8h, #15
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    movi v2.8h, #31
+; CHECK-NEXT:    uhadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    ret
+  %m0 = and <8 x i16> %a0, splat (i16 15)
+  %m1 = and <8 x i16> %a1, splat (i16 15)
+  %avg = call <8 x i16> @llvm.aarch64.neon.uhadd.v8i16(<8 x i16> %m0, <8 x i16> %m1)
+  %frozen = freeze <8 x i16> %avg
+  %masked = and <8 x i16> %frozen, splat (i16 31)
+  ret <8 x i16> %masked
+}
+
+; TODO: Unnecessary final and
+define <8 x i16> @freeze_urhadd(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: freeze_urhadd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.8h, #15
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    movi v2.8h, #31
+; CHECK-NEXT:    urhadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    ret
+  %m0 = and <8 x i16> %a0, splat (i16 15)
+  %m1 = and <8 x i16> %a1, splat (i16 15)
+  %avg = call <8 x i16> @llvm.aarch64.neon.urhadd.v8i16(<8 x i16> %m0, <8 x i16> %m1)
+  %frozen = freeze <8 x i16> %avg
+  %masked = and <8 x i16> %frozen, splat (i16 31)
+  ret <8 x i16> %masked
+}
+
+; TODO: Unnecessary sext_inreg
+define <8 x i16> @freeze_shadd(<8 x i8> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: freeze_shadd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-NEXT:    sshr v1.8h, v1.8h, #8
+; CHECK-NEXT:    shadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    shl v0.8h, v0.8h, #8
+; CHECK-NEXT:    sshr v0.8h, v0.8h, #8
+; CHECK-NEXT:    ret
+  %x0 = sext <8 x i8> %a0 to <8 x i16>
+  %x1 = ashr <8 x i16> %a1, splat (i16 8)
+  %avg = call <8 x i16> @llvm.aarch64.neon.shadd.v8i16(<8 x i16> %x0, <8 x i16> %x1)
+  %frozen = freeze <8 x i16> %avg
+  %trunc = trunc <8 x i16> %frozen to <8 x i8>
+  %sext = sext <8 x i8> %trunc to <8 x i16>
+  ret <8 x i16> %sext
+}
+
+; TODO: Unnecessary sext_inreg
+define <8 x i16> @freeze_srhadd(<8 x i8> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: freeze_srhadd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-NEXT:    sshr v1.8h, v1.8h, #8
+; CHECK-NEXT:    srhadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    shl v0.8h, v0.8h, #8
+; CHECK-NEXT:    sshr v0.8h, v0.8h, #8
+; CHECK-NEXT:    ret
+  %x0 = sext <8 x i8> %a0 to <8 x i16>
+  %x1 = ashr <8 x i16> %a1, splat (i16 8)
+  %avg = call <8 x i16> @llvm.aarch64.neon.srhadd.v8i16(<8 x i16> %x0, <8 x i16> %x1)
+  %frozen = freeze <8 x i16> %avg
+  %trunc = trunc <8 x i16> %frozen to <8 x i8>
+  %sext = sext <8 x i8> %trunc to <8 x i16>
+  ret <8 x i16> %sext
+}
+
 define i32 @freeze_scmp(i32 %a0) nounwind {
 ; CHECK-LABEL: freeze_scmp:
 ; CHECK:       // %bb.0:

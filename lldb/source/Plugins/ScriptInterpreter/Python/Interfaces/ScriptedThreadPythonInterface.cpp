@@ -144,4 +144,21 @@ StructuredData::ArraySP ScriptedThreadPythonInterface::GetExtendedInfo() {
   return arr;
 }
 
+std::optional<std::string>
+ScriptedThreadPythonInterface::GetScriptedFramePluginName() {
+  Status error;
+  StructuredData::ObjectSP obj = Dispatch("get_scripted_frame_plugin", error);
+
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
+                                                    error))
+    return {};
+
+  return obj->GetStringValue().str();
+}
+
+lldb::ScriptedFrameInterfaceSP
+ScriptedThreadPythonInterface::CreateScriptedFrameInterface() {
+  return m_interpreter.CreateScriptedFrameInterface();
+}
+
 #endif

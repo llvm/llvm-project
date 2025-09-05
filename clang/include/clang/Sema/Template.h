@@ -723,9 +723,8 @@ enum class TemplateSubstitutionKind : char {
     bool SubstQualifier(const TagDecl *OldDecl,
                         TagDecl *NewDecl);
 
-    Decl *VisitVarTemplateSpecializationDecl(
+    VarTemplateSpecializationDecl *VisitVarTemplateSpecializationDecl(
         VarTemplateDecl *VarTemplate, VarDecl *FromVar,
-        const TemplateArgumentListInfo &TemplateArgsInfo,
         ArrayRef<TemplateArgument> Converted,
         VarTemplateSpecializationDecl *PrevDecl = nullptr);
 
