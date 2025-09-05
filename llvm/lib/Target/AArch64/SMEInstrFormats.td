@@ -1108,6 +1108,10 @@ class sme_spill_fill_base<bit isStore, dag outs, dag ins, string opcodestr>
     : I<outs, ins, opcodestr, "\t$ZAt[$Rv, $imm4], [$Rn, $offset, mul vl]", "",
         []>,
       Sched<[]> {
+  // 'offset' operand is encoded in the same bits as 'imm4'. There is currently
+  // no way to tell TableGen about this.
+  let DecoderMethod = "DecodeSMESpillFillInstruction";
+  bits<0> ZAt;
   bits<2> Rv;
   bits<5> Rn;
   bits<4> imm4;

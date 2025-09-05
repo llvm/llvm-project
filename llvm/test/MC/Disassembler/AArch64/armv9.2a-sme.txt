@@ -1,0 +1,4 @@
+# RUN: llvm-mc -triple=aarch64 -mattr=+sme -disassemble %s | FileCheck %s
+
+[0x45,0x41,0x00,0xe1] # CHECK: ldr za[w14, 5], [x10, #5, mul vl]
+[0x45,0x41,0x20,0xe1] # CHECK: str za[w14, 5], [x10, #5, mul vl]
