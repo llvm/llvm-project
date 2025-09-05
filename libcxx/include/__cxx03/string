@@ -1101,12 +1101,20 @@ public:
   _LIBCPP_HIDE_FROM_ABI size_type length() const _NOEXCEPT { return size(); }
 
   _LIBCPP_HIDE_FROM_ABI size_type max_size() const _NOEXCEPT {
-    size_type __m = __alloc_traits::max_size(__alloc());
-    if (__m <= std::numeric_limits<size_type>::max() / 2) {
-      return __m - __alignment;
+    if (size_type __m = __alloc_traits::max_size(__alloc()); __m <= std::numeric_limits<size_type>::max() / 2) {
+      size_type __res = __m - __alignment;
+
+      // When the __endian_factor == 2, our string representation assumes that the capacity
+      // (including the null terminator) is always even, so we have to make sure the lowest bit isn't set when the
+      // string grows to max_size()
+      if (__endian_factor == 2)
+        __res &= ~size_type(1);
+
+      // We have to allocate space for the null terminator, but max_size() doesn't include it.
+      return __res - 1;
     } else {
       bool __uses_lsb = __endian_factor == 2;
-      return __uses_lsb ? __m - __alignment : (__m / 2) - __alignment;
+      return __uses_lsb ? __m - __alignment - 1 : (__m / 2) - __alignment - 1;
     }
   }
 
@@ -1970,11 +1978,11 @@ void basic_string<_CharT, _Traits, _Allocator>::__grow_by_and_replace(
     size_type __n_add,
     const value_type* __p_new_stuff) {
   size_type __ms = max_size();
-  if (__delta_cap > __ms - __old_cap - 1)
+  if (__delta_cap > __ms - __old_cap)
     __throw_length_error();
   pointer __old_p = __get_pointer();
   size_type __cap =
-      __old_cap < __ms / 2 - __alignment ? __recommend(std::max(__old_cap + __delta_cap, 2 * __old_cap)) : __ms - 1;
+      __old_cap < __ms / 2 - __alignment ? __recommend(std::max(__old_cap + __delta_cap, 2 * __old_cap)) : __ms;
   __annotate_delete();
   auto __allocation = std::__allocate_at_least(__alloc(), __cap + 1);
   pointer __p       = __allocation.ptr;
@@ -2017,7 +2025,7 @@ void
     __throw_length_error();
   pointer __old_p = __get_pointer();
   size_type __cap =
-      __old_cap < __ms / 2 - __alignment ? __recommend(std::max(__old_cap + __delta_cap, 2 * __old_cap)) : __ms - 1;
+      __old_cap < __ms / 2 - __alignment ? __recommend(std::max(__old_cap + __delta_cap, 2 * __old_cap)) : __ms;
   __annotate_delete();
   auto __allocation = std::__allocate_at_least(__alloc(), __cap + 1);
   pointer __p       = __allocation.ptr;
