@@ -1939,14 +1939,13 @@ NVVM::IIDArgsWithTypes Tcgen05CommitOp::getIIDAndArgsWithTypes(
           : TCGEN05_CP_IMPL(shape_mc, src_fmt, _cg1)
 
 #define GET_TCGEN05_CP_ID(shape_mc, src_fmt, is_2cta)                          \
-  [&]() -> auto{                                                               \
+  [&]() -> auto {                                                              \
     if ((src_fmt) == Tcgen05CpSrcFormat::B6x16_P32)                            \
       return TCGEN05_CP_2CTA(shape_mc, _b6x16_p32, is_2cta);                   \
     if ((src_fmt) == Tcgen05CpSrcFormat::B4x16_P64)                            \
       return TCGEN05_CP_2CTA(shape_mc, _b4x16_p64, is_2cta);                   \
     return TCGEN05_CP_2CTA(shape_mc, , is_2cta);                               \
-  }                                                                            \
-  ()
+  }()
 
 NVVM::IIDArgsWithTypes
 Tcgen05CpOp::getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
