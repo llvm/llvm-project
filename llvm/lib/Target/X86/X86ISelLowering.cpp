@@ -27,7 +27,6 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
@@ -4462,7 +4461,6 @@ SDValue SplitOpsAndApply(SelectionDAG &DAG, const X86Subtarget &Subtarget,
   unsigned NumSubs = 1;
   if ((CheckBWI && Subtarget.useBWIRegs()) ||
       (!CheckBWI && Subtarget.useAVX512Regs())) {
-    // if (0) {
     if (VT.getSizeInBits() > 512) {
       NumSubs = VT.getSizeInBits() / 512;
       assert((VT.getSizeInBits() % 512) == 0 && "Illegal vector size");
@@ -57978,7 +57976,8 @@ static SDValue matchVPMADD52(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
     return SDValue();
 
   // Need AVX-512VL vector length extensions if operating on XMM/YMM registers
-  if (!Subtarget.hasVLX() && VT.getSizeInBits() < 512)
+  if (!Subtarget.hasAVXIFMA() && !Subtarget.hasVLX() &&
+      VT.getSizeInBits() < 512)
     return SDValue();
 
   SDValue X, Y, Acc;
@@ -57996,9 +57995,10 @@ static SDValue matchVPMADD52(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
   auto VPMADD52Builder = [](SelectionDAG &G, SDLoc DL,
                             ArrayRef<SDValue> SubOps) {
     EVT SubVT = SubOps[0].getValueType();
-    assert(SubVT.getScalarSizeInBits() == 64);
-    return G.getNode(X86ISD::VPMADD52L, DL, SubVT, SubOps[0] /*Acc*/,
-                     SubOps[1] /*X*/, SubOps[2] /*Y*/);
+    assert(SubVT.getScalarSizeInBits() == 64 &&
+           "Unexpected element size, only supports 64bit size");
+    return G.getNode(X86ISD::VPMADD52L, DL, SubVT, SubOps[1] /*X*/,
+                     SubOps[2] /*Y*/, SubOps[0] /*Acc*/);
   };
 
   return SplitOpsAndApply(DAG, Subtarget, DL, VT, {Acc, X, Y}, VPMADD52Builder,
