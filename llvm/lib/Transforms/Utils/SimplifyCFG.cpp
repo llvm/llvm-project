@@ -6469,6 +6469,9 @@ public:
   /// Return true if the replacement is a lookup table.
   bool isLookupTable();
 
+  /// Return true if the replacement is a bitmap.
+  bool isBitMap();
+
 private:
   // Depending on the switch, there are different alternatives.
   enum {
@@ -6757,6 +6760,8 @@ static bool isTypeLegalForLookupTable(Type *Ty, const TargetTransformInfo &TTI,
 Constant *SwitchReplacement::getDefaultValue() { return DefaultValue; }
 
 bool SwitchReplacement::isLookupTable() { return Kind == LookupTableKind; }
+
+bool SwitchReplacement::isBitMap() { return Kind == BitMapKind; }
 
 static bool isSwitchDense(uint64_t NumCases, uint64_t CaseRange) {
   // 40% is the default density for building a jump table in optsize/minsize
@@ -7105,6 +7110,14 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
   if (AnyLookupTables &&
       (!ConvertSwitchToLookupTable || !TTI.shouldBuildLookupTables() ||
        Fn->getFnAttribute("no-jump-tables").getValueAsBool()))
+    return false;
+
+  bool AnyBitMaps = any_of(PhiToReplacementMap,
+                           [](auto &KV) { return KV.second.isBitMap(); });
+
+  // Bitmaps can also cause missed optimizations due to difficult-to-analyze
+  // code. Delay the creation of bitmaps until later in the pipeline.
+  if (AnyBitMaps && !ConvertSwitchToLookupTable)
     return false;
 
   Builder.SetInsertPoint(SI);
