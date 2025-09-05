@@ -46,12 +46,12 @@ static_assert(HasOnlyConstBegin<std::ranges::stride_view<SimpleCommonConstView>>
 static_assert(HasConstAndNonConstBegin<std::ranges::stride_view<UnSimpleConstView>>);
 
 constexpr bool test() {
-  const auto unsimple_const_view    = UnSimpleConstView();
-  const auto sv_unsimple_const = std::ranges::stride_view(unsimple_const_view, 1);
+  const auto unsimple_const_view = UnSimpleConstView();
+  const auto sv_unsimple_const   = std::ranges::stride_view(unsimple_const_view, 1);
   static_assert(std::same_as<decltype(*sv_unsimple_const.begin()), double&>);
 
-  auto simple_const_view    = SimpleCommonConstView();
-  auto sv_simple_const = std::ranges::stride_view(simple_const_view, 1);
+  auto simple_const_view = SimpleCommonConstView();
+  auto sv_simple_const   = std::ranges::stride_view(simple_const_view, 1);
   static_assert(std::same_as<decltype(*sv_simple_const.begin()), int&>);
 
   return true;
