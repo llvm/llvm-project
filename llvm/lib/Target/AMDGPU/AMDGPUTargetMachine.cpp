@@ -567,6 +567,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPULowerKernelArgumentsPass(*PR);
   initializeAMDGPUPromoteKernelArgumentsPass(*PR);
   initializeAMDGPULowerKernelAttributesPass(*PR);
+  initializeAMDGPUEliminateAGPRToVGPRCopyLegacyPass(*PR);
   initializeAMDGPUExportKernelRuntimeHandlesLegacyPass(*PR);
   initializeAMDGPUPostLegalizerCombinerPass(*PR);
   initializeAMDGPUPreLegalizerCombinerPass(*PR);
@@ -1634,6 +1635,7 @@ bool GCNPassConfig::addPreRewrite() {
   if (EnableRegReassign)
     addPass(&GCNNSAReassignID);
 
+  addPass(&AMDGPUEliminateAGPRToVGPRCopyLegacyID);
   addPass(&AMDGPURewriteAGPRCopyMFMALegacyID);
   return true;
 }
