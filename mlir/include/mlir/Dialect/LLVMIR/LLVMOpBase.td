@@ -475,11 +475,12 @@ class LLVM_OneResultIntrOp<string mnem, list<int> overloadedResults = [],
                            list<int> overloadedOperands = [],
                            list<Trait> traits = [],
                            bit requiresFastmath = 0,
+                           bit requiresArgAndResultAttrs = 0,
                            list<int> immArgPositions = [],
                            list<string> immArgAttrNames = []>
     : LLVM_IntrOp<mnem, overloadedResults, overloadedOperands, traits, 1,
                   /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
-                  requiresFastmath, /*requiresArgAndResultAttrs=*/0,
+                  requiresFastmath, requiresArgAndResultAttrs,
                   /*requiresOpBundles=*/0, immArgPositions,
                   immArgAttrNames>;
 

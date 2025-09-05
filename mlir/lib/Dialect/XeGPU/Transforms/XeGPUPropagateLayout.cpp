@@ -718,7 +718,7 @@ static LogicalResult updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
     }
     // If the result is a vector type, add a temporary layout attribute to the
     // op.
-    xegpu::setLayoutAttr(result, layout);
+    xegpu::setDistributeLayoutAttr(result, layout);
   }
   return success();
 }
@@ -800,7 +800,7 @@ updateControlFlowOps(mlir::OpBuilder &builder,
       // If the type is a vector type and this region argument is an OpResult,
       // set the layout attribute on the OpResult.
       if (auto result = dyn_cast<OpResult>(successorInput))
-        xegpu::setLayoutAttr(result, successorOperandLayout);
+        xegpu::setDistributeLayoutAttr(result, successorOperandLayout);
     }
   }
   return success();

@@ -43,7 +43,7 @@ public:
 
 class HipStdParMathFixupPass : public PassInfoMixin<HipStdParMathFixupPass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 
   static bool isRequired() { return true; }
 };

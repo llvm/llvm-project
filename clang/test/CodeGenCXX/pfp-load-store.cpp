@@ -1,4 +1,4 @@
-// RUN: %clang_cc1  -fexperimental-pointer-field-protection=tagged -emit-llvm -O1 -o - %s | FileCheck %s
+// RUN: %clang_cc1  -fexperimental-pointer-field-protection -fexperimental-pointer-field-protection-tagged -emit-llvm -O1 -o - %s | FileCheck %s
 
 int val;
 
@@ -29,7 +29,7 @@ Pointer test_pointer(Pointer t) {
     t.ptr = &val;
     return t;
 }
-// CHECK: call {{.*}} @llvm.protected.field.ptr{{.*}}
+// CHECK: call {{.*}} @llvm.protected.field.ptr.p0{{.*}}
 
 
 
@@ -37,4 +37,4 @@ Pointer test_pointer(Pointer t) {
 int* test_struct(Struct *t) {
   return (t->ptr).ptr;
 }
-// CHECK: call {{.*}} @llvm.protected.field.ptr{{.*}}
+// CHECK: call {{.*}} @llvm.protected.field.ptr.p0{{.*}}

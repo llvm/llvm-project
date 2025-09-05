@@ -1564,9 +1564,24 @@ const Init *BinOpInit::Fold(const Record *CurRec) const {
       case AND: Result = LHSv & RHSv; break;
       case OR:  Result = LHSv | RHSv; break;
       case XOR: Result = LHSv ^ RHSv; break;
-      case SHL: Result = (uint64_t)LHSv << (uint64_t)RHSv; break;
-      case SRA: Result = LHSv >> RHSv; break;
-      case SRL: Result = (uint64_t)LHSv >> (uint64_t)RHSv; break;
+      case SHL:
+        if (RHSv < 0 || RHSv >= 64)
+          PrintFatalError(CurRec->getLoc(),
+                          "Illegal operation: out of bounds shift");
+        Result = (uint64_t)LHSv << (uint64_t)RHSv;
+        break;
+      case SRA:
+        if (RHSv < 0 || RHSv >= 64)
+          PrintFatalError(CurRec->getLoc(),
+                          "Illegal operation: out of bounds shift");
+        Result = LHSv >> (uint64_t)RHSv;
+        break;
+      case SRL:
+        if (RHSv < 0 || RHSv >= 64)
+          PrintFatalError(CurRec->getLoc(),
+                          "Illegal operation: out of bounds shift");
+        Result = (uint64_t)LHSv >> (uint64_t)RHSv;
+        break;
       }
       return IntInit::get(getRecordKeeper(), Result);
     }
@@ -3064,11 +3079,11 @@ const Init *Record::getValueInit(StringRef FieldName) const {
 }
 
 StringRef Record::getValueAsString(StringRef FieldName) const {
-  std::optional<StringRef> S = getValueAsOptionalString(FieldName);
-  if (!S)
-    PrintFatalError(getLoc(), "Record `" + getName() +
-      "' does not have a field named `" + FieldName + "'!\n");
-  return *S;
+  const Init *I = getValueInit(FieldName);
+  if (const auto *SI = dyn_cast<StringInit>(I))
+    return SI->getValue();
+  PrintFatalError(getLoc(), "Record `" + getName() + "', field `" + FieldName +
+                                "' exists but does not have a string value");
 }
 
 std::optional<StringRef>
@@ -3088,24 +3103,16 @@ Record::getValueAsOptionalString(StringRef FieldName) const {
 }
 
 const BitsInit *Record::getValueAsBitsInit(StringRef FieldName) const {
-  const RecordVal *R = getValue(FieldName);
-  if (!R || !R->getValue())
-    PrintFatalError(getLoc(), "Record `" + getName() +
-      "' does not have a field named `" + FieldName + "'!\n");
-
-  if (const auto *BI = dyn_cast<BitsInit>(R->getValue()))
+  const Init *I = getValueInit(FieldName);
+  if (const auto *BI = dyn_cast<BitsInit>(I))
     return BI;
   PrintFatalError(getLoc(), "Record `" + getName() + "', field `" + FieldName +
                                 "' exists but does not have a bits value");
 }
 
 const ListInit *Record::getValueAsListInit(StringRef FieldName) const {
-  const RecordVal *R = getValue(FieldName);
-  if (!R || !R->getValue())
-    PrintFatalError(getLoc(), "Record `" + getName() +
-      "' does not have a field named `" + FieldName + "'!\n");
-
-  if (const auto *LI = dyn_cast<ListInit>(R->getValue()))
+  const Init *I = getValueInit(FieldName);
+  if (const auto *LI = dyn_cast<ListInit>(I))
     return LI;
   PrintFatalError(getLoc(), "Record `" + getName() + "', field `" + FieldName +
                                 "' exists but does not have a list value");
@@ -3127,17 +3134,13 @@ Record::getValueAsListOfDefs(StringRef FieldName) const {
 }
 
 int64_t Record::getValueAsInt(StringRef FieldName) const {
-  const RecordVal *R = getValue(FieldName);
-  if (!R || !R->getValue())
-    PrintFatalError(getLoc(), "Record `" + getName() +
-      "' does not have a field named `" + FieldName + "'!\n");
-
-  if (const auto *II = dyn_cast<IntInit>(R->getValue()))
+  const Init *I = getValueInit(FieldName);
+  if (const auto *II = dyn_cast<IntInit>(I))
     return II->getValue();
-  PrintFatalError(getLoc(), Twine("Record `") + getName() + "', field `" +
-                                FieldName +
-                                "' exists but does not have an int value: " +
-                                R->getValue()->getAsString());
+  PrintFatalError(
+      getLoc(),
+      Twine("Record `") + getName() + "', field `" + FieldName +
+          "' exists but does not have an int value: " + I->getAsString());
 }
 
 std::vector<int64_t>
@@ -3173,67 +3176,47 @@ Record::getValueAsListOfStrings(StringRef FieldName) const {
 }
 
 const Record *Record::getValueAsDef(StringRef FieldName) const {
-  const RecordVal *R = getValue(FieldName);
-  if (!R || !R->getValue())
-    PrintFatalError(getLoc(), "Record `" + getName() +
-      "' does not have a field named `" + FieldName + "'!\n");
-
-  if (const auto *DI = dyn_cast<DefInit>(R->getValue()))
+  const Init *I = getValueInit(FieldName);
+  if (const auto *DI = dyn_cast<DefInit>(I))
     return DI->getDef();
   PrintFatalError(getLoc(), "Record `" + getName() + "', field `" +
     FieldName + "' does not have a def initializer!");
 }
 
 const Record *Record::getValueAsOptionalDef(StringRef FieldName) const {
-  const RecordVal *R = getValue(FieldName);
-  if (!R || !R->getValue())
-    PrintFatalError(getLoc(), "Record `" + getName() +
-      "' does not have a field named `" + FieldName + "'!\n");
-
-  if (const auto *DI = dyn_cast<DefInit>(R->getValue()))
+  const Init *I = getValueInit(FieldName);
+  if (const auto *DI = dyn_cast<DefInit>(I))
     return DI->getDef();
-  if (isa<UnsetInit>(R->getValue()))
+  if (isa<UnsetInit>(I))
     return nullptr;
   PrintFatalError(getLoc(), "Record `" + getName() + "', field `" +
     FieldName + "' does not have either a def initializer or '?'!");
 }
 
 bool Record::getValueAsBit(StringRef FieldName) const {
-  const RecordVal *R = getValue(FieldName);
-  if (!R || !R->getValue())
-    PrintFatalError(getLoc(), "Record `" + getName() +
-      "' does not have a field named `" + FieldName + "'!\n");
-
-  if (const auto *BI = dyn_cast<BitInit>(R->getValue()))
+  const Init *I = getValueInit(FieldName);
+  if (const auto *BI = dyn_cast<BitInit>(I))
     return BI->getValue();
   PrintFatalError(getLoc(), "Record `" + getName() + "', field `" +
     FieldName + "' does not have a bit initializer!");
 }
 
 bool Record::getValueAsBitOrUnset(StringRef FieldName, bool &Unset) const {
-  const RecordVal *R = getValue(FieldName);
-  if (!R || !R->getValue())
-    PrintFatalError(getLoc(), "Record `" + getName() +
-      "' does not have a field named `" + FieldName.str() + "'!\n");
-
-  if (isa<UnsetInit>(R->getValue())) {
+  const Init *I = getValueInit(FieldName);
+  if (isa<UnsetInit>(I)) {
     Unset = true;
     return false;
   }
   Unset = false;
-  if (const auto *BI = dyn_cast<BitInit>(R->getValue()))
+  if (const auto *BI = dyn_cast<BitInit>(I))
     return BI->getValue();
   PrintFatalError(getLoc(), "Record `" + getName() + "', field `" +
     FieldName + "' does not have a bit initializer!");
 }
 
 const DagInit *Record::getValueAsDag(StringRef FieldName) const {
-  const RecordVal *R = getValue(FieldName);
-  if (!R || !R->getValue())
-    PrintFatalError(getLoc(), "Record `" + getName() +
-      "' does not have a field named `" + FieldName + "'!\n");
-
-  if (const auto *DI = dyn_cast<DagInit>(R->getValue()))
+  const Init *I = getValueInit(FieldName);
+  if (const auto *DI = dyn_cast<DagInit>(I))
     return DI;
   PrintFatalError(getLoc(), "Record `" + getName() + "', field `" +
     FieldName + "' does not have a dag initializer!");

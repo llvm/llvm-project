@@ -356,8 +356,8 @@ public:
       auto funcWalkResult = func.walk([&](gpu::LaunchOp op) {
         SetVector<Value> operands;
         std::string kernelFnName;
-        if (op.getKernelFunc()) {
-          kernelFnName = op.getKernelFunc()->getRootReference().str();
+        if (op.getFunction()) {
+          kernelFnName = op.getFunction()->str();
         } else {
           kernelFnName =
               Twine(op->getParentOfType<SymbolOpInterface>().getName(),
@@ -403,9 +403,8 @@ private:
     OpBuilder builder(context);
     std::string kernelModuleName;
     gpu::GPUModuleOp kernelModule;
-    if (gpuLaunchOp.getKernelModule()) {
-      kernelModuleName =
-          gpuLaunchOp.getKernelModule()->getRootReference().str();
+    if (gpuLaunchOp.getModule()) {
+      kernelModuleName = gpuLaunchOp.getModule()->str();
       kernelModule =
           parentSymbolTable.lookup<gpu::GPUModuleOp>(kernelModuleName);
     } else {
@@ -432,8 +431,7 @@ private:
       if (std::optional<SymbolTable::UseRange> symbolUses =
               SymbolTable::getSymbolUses(symbolDefWorklist.pop_back_val())) {
         for (SymbolTable::SymbolUse symbolUse : *symbolUses) {
-          StringRef symbolName =
-              cast<FlatSymbolRefAttr>(symbolUse.getSymbolRef()).getValue();
+          StringAttr symbolName = symbolUse.getSymbolRef().getLeafReference();
           if (symbolTable.lookup(symbolName))
             continue;
 

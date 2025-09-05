@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple aarch64-linux -fexperimental-pointer-field-protection=tagged -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,AARCH64 %s
-// RUN: %clang_cc1 -triple x86_64-linux  -fexperimental-pointer-field-protection=tagged -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,X86_64 %s
+// RUN: %clang_cc1 -triple aarch64-linux -fexperimental-pointer-field-protection -fexperimental-pointer-field-protection-tagged -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,AARCH64 %s
+// RUN: %clang_cc1 -triple x86_64-linux  -fexperimental-pointer-field-protection -fexperimental-pointer-field-protection-tagged -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,X86_64 %s
 
 // Non-standard layout. Pointer fields are signed and discriminated by type.
 struct Pointer {
@@ -16,8 +16,8 @@ void pass_pointer(Pointer *pp) {
   // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %agg.tmp, ptr align 8 %0, i64 16, i1 false)
   // CHECK: %1 = getelementptr inbounds i8, ptr %agg.tmp, i64 0
 
-  // AARCH64: %2 = call ptr @llvm.protected.field.ptr(ptr %1, i64 36403, i1 true) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS7Pointer.ptr) ]
-  // X86_64: %2 = call ptr @llvm.protected.field.ptr(ptr %1, i64 51, i1 false) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS7Pointer.ptr) ]
+  // AARCH64: %2 = call ptr @llvm.protected.field.ptr.p0(ptr %1, i64 36403, i1 true) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS7Pointer.ptr) ]
+  // X86_64: %2 = call ptr @llvm.protected.field.ptr.p0(ptr %1, i64 51, i1 false) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS7Pointer.ptr) ]
 
   // CHECK: %3 = load ptr, ptr %2, align 8
 
@@ -48,7 +48,7 @@ void passed_pointer(Pointer p, Pointer *pp) {
   // AARCH64: %pp.addr = alloca ptr, align 8
   // AARCH64: %0 = extractvalue [2 x i64] %p.coerce, 0
   // AARCH64: %1 = getelementptr inbounds i8, ptr %p, i64 0
-  // AARCH64: %2 = call ptr @llvm.protected.field.ptr(ptr %1, i64 36403, i1 true) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS7Pointer.ptr) ]
+  // AARCH64: %2 = call ptr @llvm.protected.field.ptr.p0(ptr %1, i64 36403, i1 true) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS7Pointer.ptr) ]
   // AARCH64: %3 = inttoptr i64 %0 to ptr
   // AARCH64: store ptr %3, ptr %2, align 8
   // AARCH64: %4 = extractvalue [2 x i64] %p.coerce, 1
@@ -67,7 +67,7 @@ void passed_pointer(Pointer p, Pointer *pp) {
   // X86_64: %2 = load %struct.Pointer, ptr %p, align 8
   // X86_64: %3 = extractvalue %struct.Pointer %2, 0
   // X86_64: %4 = getelementptr inbounds i8, ptr %p, i64 0
-  // X86_64: %5 = call ptr @llvm.protected.field.ptr(ptr %4, i64 51, i1 false) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS7Pointer.ptr) ]
+  // X86_64: %5 = call ptr @llvm.protected.field.ptr.p0(ptr %4, i64 51, i1 false) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS7Pointer.ptr) ]
   // X86_64: store ptr %3, ptr %5, align 8
   // X86_64: %6 = extractvalue %struct.Pointer %2, 1
   // X86_64: %7 = getelementptr inbounds i8, ptr %p, i64 8
@@ -90,7 +90,7 @@ Pointer return_pointer(Pointer *pp) {
   // AARCH64: %0 = load ptr, ptr %pp.addr, align 8
   // AARCH64: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %retval, ptr align 8 %0, i64 16, i1 false)
   // AARCH64: %1 = getelementptr inbounds i8, ptr %retval, i64 0
-  // AARCH64: %2 = call ptr @llvm.protected.field.ptr(ptr %1, i64 36403, i1 true) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS7Pointer.ptr) ]
+  // AARCH64: %2 = call ptr @llvm.protected.field.ptr.p0(ptr %1, i64 36403, i1 true) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS7Pointer.ptr) ]
   // AARCH64: %3 = load ptr, ptr %2, align 8
   // AARCH64: %4 = ptrtoint ptr %3 to i64
   // AARCH64: %5 = insertvalue [2 x i64] poison, i64 %4, 0
@@ -105,7 +105,7 @@ Pointer return_pointer(Pointer *pp) {
   // X86_64: %0 = load ptr, ptr %pp.addr, align 8
   // X86_64: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %retval, ptr align 8 %0, i64 16, i1 false)
   // X86_64: %1 = getelementptr inbounds i8, ptr %retval, i64 0
-  // X86_64: %2 = call ptr @llvm.protected.field.ptr(ptr %1, i64 51, i1 false) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS7Pointer.ptr) ]
+  // X86_64: %2 = call ptr @llvm.protected.field.ptr.p0(ptr %1, i64 51, i1 false) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS7Pointer.ptr) ]
   // X86_64: %3 = load ptr, ptr %2, align 8
   // X86_64: %4 = insertvalue { ptr, i32 } poison, ptr %3, 0
   // X86_64: %5 = getelementptr inbounds i8, ptr %retval, i64 8
@@ -125,7 +125,7 @@ void returned_pointer(Pointer *pp) {
   // AARCH64: %call = call [2 x i64] @_Z23returned_pointer_calleev()
   // AARCH64: %0 = extractvalue [2 x i64] %call, 0
   // AARCH64: %1 = getelementptr inbounds i8, ptr %ref.tmp, i64 0
-  // AARCH64: %2 = call ptr @llvm.protected.field.ptr(ptr %1, i64 36403, i1 true) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS7Pointer.ptr) ]
+  // AARCH64: %2 = call ptr @llvm.protected.field.ptr.p0(ptr %1, i64 36403, i1 true) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS7Pointer.ptr) ]
   // AARCH64: %3 = inttoptr i64 %0 to ptr
   // AARCH64: store ptr %3, ptr %2, align 8
   // AARCH64: %4 = extractvalue [2 x i64] %call, 1
@@ -140,7 +140,7 @@ void returned_pointer(Pointer *pp) {
   // X86_64: %call = call { ptr, i32 } @_Z23returned_pointer_calleev()
   // X86_64: %0 = extractvalue { ptr, i32 } %call, 0
   // X86_64: %1 = getelementptr inbounds i8, ptr %ref.tmp, i64 0
-  // X86_64: %2 = call ptr @llvm.protected.field.ptr(ptr %1, i64 51, i1 false) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS7Pointer.ptr) ]
+  // X86_64: %2 = call ptr @llvm.protected.field.ptr.p0(ptr %1, i64 51, i1 false) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS7Pointer.ptr) ]
   // X86_64: store ptr %0, ptr %2, align 8
   // X86_64: %3 = extractvalue { ptr, i32 } %call, 1
   // X86_64: %4 = getelementptr inbounds i8, ptr %ref.tmp, i64 8
@@ -150,39 +150,41 @@ void returned_pointer(Pointer *pp) {
   *pp = returned_pointer_callee();
 }
 
-class __force_nonstandard_layout_base1 {};
-class __force_nonstandard_layout_base2 : __force_nonstandard_layout_base1 {};
-class __force_nonstandard_layout : __force_nonstandard_layout_base1, __force_nonstandard_layout_base2 {};
-
-// Non-standard layout, non-trivially destructible.
+// Manual opt into PFP, non-trivially destructible.
 // Pointer fields are signed and discriminated by address.
 // Trivial ABI: passed and returned by value despite being non-trivial.
-struct [[clang::trivial_abi]] TrivialAbiPointer : __force_nonstandard_layout {
+struct [[clang::trivial_abi]] [[clang::pointer_field_protection]] TrivialAbiPointer {
   int *ptr;
   ~TrivialAbiPointer();
 };
 
-// AARCH64: define dso_local void @_Z24pass_trivial_abi_pointer17TrivialAbiPointerPS_(i64 %p.coerce, ptr noundef %pp)
-// X86_64: define dso_local void @_Z24pass_trivial_abi_pointer17TrivialAbiPointerPS_(ptr %p.coerce, ptr noundef %pp)
+// CHECK: define dso_local void @_Z24pass_trivial_abi_pointer17TrivialAbiPointerPS_(ptr %p.coerce, ptr noundef %pp)
 void pass_trivial_abi_pointer(TrivialAbiPointer p, TrivialAbiPointer *pp) {
   // AARCH64: %p = alloca %struct.TrivialAbiPointer, align 8
   // AARCH64: %pp.addr = alloca ptr, align 8
   // AARCH64: %coerce.dive = getelementptr inbounds nuw %struct.TrivialAbiPointer, ptr %p, i32 0, i32 0
-  // AARCH64: %0 = inttoptr i64 %p.coerce to ptr
-  // AARCH64: %1 = getelementptr inbounds i8, ptr %coerce.dive, i64 0
-  // AARCH64: %2 = ptrtoint ptr %coerce.dive to i64
-  // AARCH64: %3 = call ptr @llvm.protected.field.ptr(ptr %1, i64 %2, i1 true) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS17TrivialAbiPointer.ptr) ]
-  // AARCH64: store ptr %0, ptr %3, align 8
+  // AARCH64: %0 = getelementptr inbounds i8, ptr %coerce.dive, i64 0
+  // AARCH64: %1 = ptrtoint ptr %coerce.dive to i64
+  // AARCH64: %2 = call ptr @llvm.protected.field.ptr.p0(ptr %0, i64 %1, i1 true) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS17TrivialAbiPointer.ptr) ]
+  // AARCH64: store ptr %p.coerce, ptr %2, align 8
   // AARCH64: store ptr %pp, ptr %pp.addr, align 8
-  // AARCH64: %4 = load ptr, ptr %pp.addr, align 8
-  // AARCH64: %call = call noundef nonnull align 8 dereferenceable(8) ptr @_ZN17TrivialAbiPointeraSERKS_(ptr noundef nonnull align 8 dereferenceable(8) %4, ptr noundef nonnull align 8 dereferenceable(8) %p)
+  // AARCH64: %3 = load ptr, ptr %pp.addr, align 8
+  // AARCH64: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %3, ptr align 8 %p, i64 8, i1 false)
+  // AARCH64: %4 = getelementptr inbounds i8, ptr %3, i64 0
+  // AARCH64: %5 = ptrtoint ptr %3 to i64
+  // AARCH64: %6 = call ptr @llvm.protected.field.ptr.p0(ptr %4, i64 %5, i1 true) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS17TrivialAbiPointer.ptr) ]
+  // AARCH64: %7 = getelementptr inbounds i8, ptr %p, i64 0
+  // AARCH64: %8 = ptrtoint ptr %p to i64
+  // AARCH64: %9 = call ptr @llvm.protected.field.ptr.p0(ptr %7, i64 %8, i1 true) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS17TrivialAbiPointer.ptr) ]
+  // AARCH64: %10 = load ptr, ptr %9, align 8
+  // AARCH64: store ptr %10, ptr %6, align 8
   // AARCH64: call void @_ZN17TrivialAbiPointerD1Ev(ptr noundef nonnull align 8 dereferenceable(8) %p)
 
   // X86_64: %p = alloca %struct.TrivialAbiPointer, align 8
   // X86_64: %pp.addr = alloca ptr, align 8
   // X86_64: %coerce.dive = getelementptr inbounds nuw %struct.TrivialAbiPointer, ptr %p, i32 0, i32 0
   // X86_64: %0 = getelementptr inbounds i8, ptr %coerce.dive, i64 0
-  // X86_64: %1 = call ptr @llvm.protected.field.ptr(ptr %0, i64 33, i1 false) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS17TrivialAbiPointer.ptr) ]
+  // X86_64: %1 = call ptr @llvm.protected.field.ptr.p0(ptr %0, i64 33, i1 false) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS17TrivialAbiPointer.ptr) ]
   // X86_64: store ptr %p.coerce, ptr %1, align 8
   // X86_64: store ptr %pp, ptr %pp.addr, align 8
   // X86_64: %2 = load ptr, ptr %pp.addr, align 8
@@ -201,7 +203,7 @@ TrivialAbiPointer return_trivial_abi_pointer(TrivialAbiPointer *pp) {
   // AARCH64: call void @_ZN17TrivialAbiPointerC1ERKS_(ptr noundef nonnull align 8 dereferenceable(8) %retval, ptr noundef nonnull align 8 dereferenceable(8) %0)
   // AARCH64: %1 = getelementptr inbounds i8, ptr %retval, i64 0
   // AARCH64: %2 = ptrtoint ptr %retval to i64
-  // AARCH64: %3 = call ptr @llvm.protected.field.ptr(ptr %1, i64 %2, i1 true) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS17TrivialAbiPointer.ptr) ]
+  // AARCH64: %3 = call ptr @llvm.protected.field.ptr.p0(ptr %1, i64 %2, i1 true) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS17TrivialAbiPointer.ptr) ]
   // AARCH64: %4 = load ptr, ptr %3, align 8
   // AARCH64: %5 = ptrtoint ptr %4 to i64
   // AARCH64: ret i64 %5
@@ -212,7 +214,7 @@ TrivialAbiPointer return_trivial_abi_pointer(TrivialAbiPointer *pp) {
   // X86_64: %0 = load ptr, ptr %pp.addr, align 8
   // X86_64: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %retval, ptr align 8 %0, i64 8, i1 false)
   // X86_64: %1 = getelementptr inbounds i8, ptr %retval, i64 0
-  // X86_64: %2 = call ptr @llvm.protected.field.ptr(ptr %1, i64 33, i1 false) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS17TrivialAbiPointer.ptr) ]
+  // X86_64: %2 = call ptr @llvm.protected.field.ptr.p0(ptr %1, i64 33, i1 false) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS17TrivialAbiPointer.ptr) ]
   // X86_64: %3 = load ptr, ptr %2, align 8
   // X86_64: ret ptr %3
   return *pp;
