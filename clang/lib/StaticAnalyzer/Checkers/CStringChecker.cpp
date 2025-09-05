@@ -2275,7 +2275,8 @@ void CStringChecker::evalStrxfrm(CheckerContext &C,
   // transformation
   SVal RetVal = SVB.conjureSymbolVal(Call, C.blockCount());
 
-  auto BindReturnAndTransition = [&RetVal, &Call, LCtx, &C](ProgramStateRef State) {
+  auto BindReturnAndTransition = [&RetVal, &Call, LCtx,
+                                  &C](ProgramStateRef State) {
     if (State) {
       State = State->BindExpr(Call.getOriginExpr(), LCtx, RetVal);
       C.addTransition(State);
