@@ -132,10 +132,12 @@ ABIArgInfo SPIRVABIInfo::classifyReturnType(QualType RetTy) const {
 }
 
 ABIArgInfo SPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
-  if (getContext().getLangOpts().CUDAIsDevice) {
+  if (getContext().getLangOpts().CUDAIsDevice ||
+      getContext().getLangOpts().OpenMPIsTargetDevice) {
     // Coerce pointer arguments with default address space to CrossWorkGroup
-    // pointers for HIPSPV/CUDASPV. When the language mode is HIP/CUDA, the
-    // SPIRTargetInfo maps cuda_device to SPIR-V's CrossWorkGroup address space.
+    // pointers for HIPSPV/CUDASPV/OMPSPV. When the language mode is
+    // HIP/CUDA/OMP, the SPIRTargetInfo maps cuda_device to SPIR-V's
+    // CrossWorkGroup address space.
     llvm::Type *LTy = CGT.ConvertType(Ty);
     auto DefaultAS = getContext().getTargetAddressSpace(LangAS::Default);
     auto GlobalAS = getContext().getTargetAddressSpace(LangAS::cuda_device);
