@@ -18,9 +18,10 @@ let Command = "target modules dump separate debug info" in {
       : Option<"errors-only", "e">,
         Group<1>,
         Desc<"Filter to show only debug info files with ${e}rrors.">;
-  def tm_force_load_all_debug_info : Option<"force-load-all-debug-info", "f">,
-                                     Group<1>,
-                                     Desc<"Load all debug in${f}o files.">;
+  def tm_force_load_all_debug_info
+      : Option<"force-load-all-debug-info", "f">,
+        Group<1>,
+        Desc<"${F}orce load all debug info files.">;
 }
 
 let Command = "help" in {
@@ -124,20 +125,20 @@ let Command = "breakpoint modify" in {
       : Option<"thread-name", "T">,
         Group<1>,
         Arg<"ThreadName">,
-        Desc<"The breakpoint stops only for the thread whose thread name "
+        Desc<"The breakpoint stops only for the ${t}hread whose thread name "
              "matches this argument.">;
   def breakpoint_modify_queue_name
       : Option<"queue-name", "q">,
         Group<1>,
         Arg<"QueueName">,
-        Desc<"The breakpoint stops only for threads in the queue whose name is "
-             "given by this argument.">;
+        Desc<"The breakpoint stops only for threads in the ${q}ueue whose name "
+             "is given by this argument.">;
   def breakpoint_modify_condition
       : Option<"condition", "c">,
         Group<1>,
         Arg<"Expression">,
-        Desc<"The breakpoint stops only if this condition expression evaluates "
-             "to true.">;
+        Desc<"The breakpoint stops only if this ${c}ondition expression "
+             "evaluates to true.">;
   def breakpoint_modify_condition_language
       : Option<"condition-language", "Y">,
         Group<1>,
@@ -241,7 +242,7 @@ let Command = "breakpoint set" in {
         Arg<"FullName">,
         Required,
         Completion<"Symbol">,
-        Desc<"Set the breakpoint by ${F}ully qualified function names. For C++ "
+        Desc<"Set the breakpoint by ${f}ully qualified function names. For C++ "
              "this means namespaces and all arguments, and for Objective-C "
              "this means a full function prototype with class and selector.  "
              "Can be repeated multiple times to make one breakpoint for "
@@ -362,13 +363,13 @@ let Command = "breakpoint clear" in {
                               Arg<"Filename">,
                               Completion<"SourceFile">,
                               Desc<"Specify the breakpoint by source location "
-                                   "in this particular file.">;
+                                   "in this particular ${f}ile.">;
   def breakpoint_clear_line : Option<"line", "l">,
                               Group<1>,
                               Arg<"LineNum">,
                               Required,
                               Desc<"Specify the breakpoint by source location "
-                                   "at this particular line.">;
+                                   "at this particular ${l}ine.">;
 }
 
 let Command = "breakpoint delete" in {
@@ -437,7 +438,7 @@ let Command = "breakpoint read" in {
         Arg<"Filename">,
         Required,
         Completion<"DiskFile">,
-        Desc<"The file from which to read the breakpoints.">;
+        Desc<"The ${f}ile from which to read the breakpoints.">;
   def breakpoint_read_breakpoint_name
       : Option<"breakpoint-name", "N">,
         Arg<"BreakpointName">,
@@ -450,10 +451,10 @@ let Command = "breakpoint write" in {
         Arg<"Filename">,
         Required,
         Completion<"DiskFile">,
-        Desc<"The file into which to write the breakpoints.">;
+        Desc<"The ${f}ile into which to write the breakpoints.">;
   def breakpoint_write_append
       : Option<"append", "a">,
-        Desc<"Append to saved breakpoints file if it exists.">;
+        Desc<"${A}ppend to saved breakpoints file if it exists.">;
 }
 
 let Command = "breakpoint command add" in {
@@ -461,7 +462,7 @@ let Command = "breakpoint command add" in {
       : Option<"one-liner", "o">,
         Group<1>,
         Arg<"OneLiner">,
-        Desc<"Specify a one-line breakpoint command inline. Be sure to "
+        Desc<"Specify a ${o}ne-line breakpoint command inline. Be sure to "
              "surround it with quotes.">;
   def breakpoint_add_stop_on_error
       : Option<"stop-on-error", "e">,
@@ -488,32 +489,33 @@ let Command = "breakpoint command delete" in {
 }
 
 let Command = "disassemble" in {
-  def disassemble_options_bytes : Option<"bytes", "b">,
-                                  Desc<"Show opcode bytes when disassembling.">;
+  def disassemble_options_bytes
+      : Option<"bytes", "b">,
+        Desc<"Show opcode ${b}ytes when disassembling.">;
   def disassemble_options_kind
       : Option<"kind", "k">,
-        Desc<"Show instruction control flow kind. Refer to the enum "
+        Desc<"Show instruction control flow ${k}ind. Refer to the enum "
              "`InstructionControlFlowKind` for a list of control flow kind. As "
              "an important note, far jumps, far calls and far returns often "
              "indicate calls to and from kernel.">;
   def disassemble_options_context
       : Option<"context", "C">,
         Arg<"NumLines">,
-        Desc<"Number of context lines of source to show.">;
+        Desc<"Number of ${c}ontext lines of source to show.">;
   def disassemble_options_mixed
       : Option<"mixed", "m">,
-        Desc<"Enable mixed source and assembly display.">;
+        Desc<"Enable ${m}ixed source and assembly display.">;
   def disassemble_options_raw
       : Option<"raw", "r">,
-        Desc<"Print raw disassembly with no symbol information.">;
+        Desc<"Print ${r}aw disassembly with no symbol information.">;
   def disassemble_options_plugin
       : Option<"plugin", "P">,
         Arg<"Plugin">,
-        Desc<"Name of the disassembler plugin you want to use.">;
+        Desc<"Name of the disassembler ${p}lugin you want to use.">;
   def disassemble_options_flavor
       : Option<"flavor", "F">,
         Arg<"DisassemblyFlavor">,
-        Desc<"Name of the disassembly flavor you want to use. Currently the "
+        Desc<"Name of the disassembly ${f}lavor you want to use. Currently the "
              "only valid options are default, and for Intel architectures, att "
              "and intel.">;
   def disassemble_options_cpu : Option<"cpu", "X">,
@@ -526,7 +528,7 @@ let Command = "disassemble" in {
   def disassemble_options_arch
       : Option<"arch", "A">,
         Arg<"Architecture">,
-        Desc<"Specify the architecture to use for cross disassembly.">;
+        Desc<"Specify the ${a}rchitecture to use for cross disassembly.">;
   def disassemble_options_start_address
       : Option<"start-address", "s">,
         Groups<[1, 2]>,
@@ -547,31 +549,31 @@ let Command = "disassemble" in {
         Group<3>,
         Arg<"FunctionName">,
         Completion<"Symbol">,
-        Desc<"Disassemble entire contents of the given function name.">;
+        Desc<"Disassemble entire contents of the given function ${n}ame.">;
   def disassemble_options_frame
       : Option<"frame", "f">,
         Group<4>,
         Desc<"Disassemble from the start of the current frame's function.">;
   def disassemble_options_pc : Option<"pc", "p">,
                                Group<5>,
-                               Desc<"Disassemble around the current pc.">;
-  def disassemble_options_line : Option<"line", "l">,
-                                 Group<6>,
-                                 Desc<"Disassemble the current frame's current "
-                                      "source line instructions if "
-                                      "there is debug line table information, "
-                                      "else disassemble around the pc.">;
+                               Desc<"Disassemble around the current ${p}c.">;
+  def disassemble_options_line
+      : Option<"line", "l">,
+        Group<6>,
+        Desc<"Disassemble the current frame's current source ${l}ine "
+             "instructions if there is debug line table information, else "
+             "disassemble around the pc.">;
   def disassemble_options_address
       : Option<"address", "a">,
         Group<7>,
         Arg<"AddressOrExpression">,
-        Desc<"Disassemble function containing this address.">;
+        Desc<"Disassemble function containing this ${a}ddress.">;
   def disassemble_options_force : Option<"force", "\\x01">,
                                   Groups<[2, 3, 4, 5, 7]>,
                                   Desc<"Force disassembly of large functions.">;
   def disassemble_options_variable
       : Option<"variable", "v">,
-        Desc<"Enable variable disassembly annotations for this invocation.">;
+        Desc<"Enable ${v}ariable disassembly annotations for this invocation.">;
 }
 
 let Command = "diagnostics dump" in {
@@ -587,18 +589,19 @@ let Command = "expression" in {
       : Option<"all-threads", "a">,
         Groups<[1, 2]>,
         Arg<"Boolean">,
-        Desc<"Should we run all threads if the execution doesn't complete on "
-             "one thread.">;
+        Desc<
+            "Should we run ${a}ll threads if the execution doesn't complete on "
+            "one thread.">;
   def expression_options_ignore_breakpoints
       : Option<"ignore-breakpoints", "i">,
         Groups<[1, 2]>,
         Arg<"Boolean">,
-        Desc<"Ignore breakpoint hits while running expressions">;
+        Desc<"${I}gnore breakpoint hits while running expressions">;
   def expression_options_timeout
       : Option<"timeout", "t">,
         Groups<[1, 2]>,
         Arg<"UnsignedInteger">,
-        Desc<"Timeout value (in microseconds) for running the expression.">;
+        Desc<"${T}imeout value (in microseconds) for running the expression.">;
   def expression_options_unwind_on_error
       : Option<"unwind-on-error", "u">,
         Groups<[1, 2]>,
@@ -1708,36 +1711,37 @@ let Command = "target stop hook add" in {
   def target_stop_hook_add_queue_name
       : Option<"queue-name", "q">,
         Arg<"QueueName">,
-        Desc<"The stop hook is run only for threads in the queue whose name is "
-             "given by this argument.">;
-  def target_stop_hook_add_file
-      : Option<"file", "f">,
-        Groups<[1, 4]>,
-        Arg<"Filename">,
-        Desc<"Specify the source file within which the stop-hook "
-             "is to be run.">,
-        Completion<"SourceFile">;
+        Desc<"The stop hook is run only for threads in the ${q}ueue whose name "
+             "is given by this argument.">;
+  def target_stop_hook_add_file : Option<"file", "f">,
+                                  Groups<[1, 4]>,
+                                  Arg<"Filename">,
+                                  Desc<"Specify the source ${f}ile within "
+                                       "which the stop-hook is to be run.">,
+                                  Completion<"SourceFile">;
   def target_stop_hook_add_start_line
       : Option<"start-line", "l">,
         Groups<[1, 4]>,
         Arg<"LineNum">,
-        Desc<"Set the start of the line range for which the "
+        Desc<"Set the start of the ${l}ine range for which the "
              "stop-hook is to be run.">;
-  def target_stop_hook_add_end_line : Option<"end-line", "e">,
-                                      Groups<[1, 4]>,
-                                      Arg<"LineNum">,
-                                      Desc<"Set the end of the line range for "
-                                           "which the stop-hook is to be run.">;
+  def target_stop_hook_add_end_line
+      : Option<"end-line", "e">,
+        Groups<[1, 4]>,
+        Arg<"LineNum">,
+        Desc<"Set the ${e}nd of the line range for which the stop-hook is to "
+             "be run.">;
   def target_stop_hook_add_classname
       : Option<"classname", "c">,
         Groups<[2, 5]>,
         Arg<"ClassName">,
-        Desc<"Specify the class within which the stop-hook is to be run.">;
+        Desc<"Specify the ${c}lass within which the stop-hook is to be run.">;
   def target_stop_hook_add_name
       : Option<"name", "n">,
         Groups<[3, 6]>,
         Arg<"FunctionName">,
-        Desc<"Set the function name within which the stop hook will be run.">,
+        Desc<
+            "Set the ${f}unction name within which the stop hook will be run.">,
         Completion<"Symbol">;
   def target_stop_hook_add_auto_continue
       : Option<"auto-continue", "G">,
@@ -1746,7 +1750,7 @@ let Command = "target stop hook add" in {
   def target_stop_hook_add_at_initial_stop
       : Option<"at-initial-stop", "I">,
         Arg<"Boolean">,
-        Desc<"Whether the stop-hook will trigger when lldb initially gains "
+        Desc<"Whether the stop-hook will trigger when lldb ${i}nitially gains "
              "control of the process. For a process launch, this initial stop "
              "may happen very early on - before the loader has run. You can "
              "use this option if you do not want some stop-hooks to run then. "
@@ -1761,12 +1765,12 @@ let Command = "thread backtrace" in {
   def thread_backtrace_start : Option<"start", "s">,
                                Group<1>,
                                Arg<"FrameIndex">,
-                               Desc<"Frame in which to start the backtrace">;
+                               Desc<"Frame in which to ${s}tart the backtrace">;
   def thread_backtrace_extended
       : Option<"extended", "e">,
         Group<1>,
         Arg<"Boolean">,
-        Desc<"Show the extended backtrace, if available">;
+        Desc<"Show the ${e}xtended backtrace, if available">;
   def thread_backtrace_unfiltered : Option<"unfiltered", "u">,
                                     Group<1>,
                                     Desc<"Do not filter out frames according "
@@ -1810,8 +1814,8 @@ let Command = "thread step scope" in {
       : Option<"step-over-regexp", "r">,
         Group<1>,
         Arg<"RegularExpression">,
-        Desc<"A regular expression that defines function names to not to stop "
-             "at when stepping in.">;
+        Desc<"A ${r}egular expression that defines function names to not to "
+             "stop at when stepping in.">;
   def thread_step_scope_step_in_target
       : Option<"step-in-target", "t">,
         Group<1>,
