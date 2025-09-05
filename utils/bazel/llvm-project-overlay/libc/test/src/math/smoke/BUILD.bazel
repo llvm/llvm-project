@@ -740,7 +740,12 @@ math_test(
 
 math_test(
     name = "fmodbf16",
-    hdrs = ["FModTest.h"],
+    hdrs = [
+        "FModTest.h",
+    ],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
 )
 
 math_test(
