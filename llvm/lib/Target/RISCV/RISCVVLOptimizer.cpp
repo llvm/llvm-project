@@ -843,7 +843,7 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
 static std::optional<OperandInfo> getOperandInfo(const MachineOperand &MO) {
   const MachineInstr &MI = *MO.getParent();
   const RISCVVPseudosTable::PseudoInfo *RVV =
-    RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
+      RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
   MI.dump();
   assert(RVV && "Could not find MI in PseudoTable");
 
@@ -1486,8 +1486,7 @@ static bool isSegmentedStoreInstr(const MachineInstr &MI) {
   }
 }
 
-bool
-RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
+bool RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
   if (MI.isPHI() || MI.isFullCopy() || isTupleInsertInstr(MI))
     return true;
 
