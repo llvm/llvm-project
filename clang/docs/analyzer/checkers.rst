@@ -205,6 +205,47 @@ pointers with a specified address space. If the option is set to false, then
 reports from the specific x86 address spaces 256, 257 and 258 are still
 suppressed, but null dereferences from other address spaces are reported.
 
+.. _core-NullPointerArithm:
+
+core.NullPointerArithm (C, C++)
+"""""""""""""""""""""""""""""""
+Check for undefined arithmetic operations with null pointers.
+
+The checker can detect the following cases:
+
+  - `p + x` and `x + p` where `p` is a null pointer and `x` is a nonzero integer
+    value.
+  - `p - x` where `p` is a null pointer and `x` is a nonzero integer
+    value.
+  - `p1` - `p2` where one of `p1` and `p2` is null and the other a non-null
+    pointer.
+
+Result of these operations is undefined according to the standard.
+
+.. code-block:: c
+
+ void test1(int *p, int offset) {
+   if (p)
+     return;
+
+   int *p1 = p + offset; // warn: 'p' is null, 'offset' can be likely non-zero
+ }
+
+ void test2(int *p, int offset) {
+   if (p) { ... }
+   if (offset == 0)
+     return;
+
+   int *p1 = p - offset; // warn: 'p' can be null, 'offset' is non-zero
+ }
+
+ void test3(char *p1, char *p2) {
+   if (p1)
+     return;
+
+   int a = p1 - p2; // warn: 'p1' is null, 'p2' can be likely non-null
+ }
+
 .. _core-StackAddressEscape:
 
 core.StackAddressEscape (C)
