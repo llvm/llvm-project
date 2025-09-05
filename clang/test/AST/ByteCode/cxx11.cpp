@@ -210,7 +210,7 @@ namespace GlobalInitializer {
   extern int &g; // both-note {{here}}
   struct S {
     int G : g; // both-error {{constant expression}} \
-               // both-note {{initializer of 'g' is unknown}}
+               // both-note {{read of non-constexpr variable 'g' is not allowed in a constant expression}}
   };
 }
 
@@ -246,7 +246,7 @@ namespace IntToPtrCast {
 }
 
 namespace Volatile {
-  constexpr int f(volatile int &&r) {
+  constexpr int f(volatile int &&r) { // expected-error {{constexpr function never produces a constant expression}}
     return r; // both-note {{read of volatile-qualified type 'volatile int'}}
   }
   struct S {

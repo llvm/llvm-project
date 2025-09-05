@@ -615,7 +615,7 @@ namespace MemcpyEtc {
   static_assert(test_nontrivial_memmove()); // expected-error {{constant}} expected-note {{in call}}
 
   // Type puns via constant evaluated memcpy are not supported yet.
-  constexpr float type_pun(const unsigned &n) {
+  constexpr float type_pun(const unsigned &n) { // expected-error {{constexpr function never produces a constant expression}}
     float f = 0.0f;
     __builtin_memcpy(&f, &n, 4); // expected-note {{cannot constant evaluate 'memcpy' from object of type 'const unsigned int' to object of type 'float'}}
     return f;

@@ -1354,7 +1354,7 @@ constexpr int m2b = const_cast<const int&>(n2); // expected-error {{constant exp
 struct T { int n; };
 const T t = { 42 }; // expected-note {{declared here}}
 
-constexpr int f(volatile int &&r) {
+constexpr int f(volatile int &&r) { // cxx11_20-error {{constexpr function never produces a constant expression}}
   return r; // expected-note {{read of volatile-qualified type 'volatile int'}}
 }
 constexpr int g(volatile int &&r) {
@@ -1475,9 +1475,9 @@ namespace ConvertedConstantExpr {
   // useless note and instead just point to the non-constant subexpression.
   enum class E {
     em = m,
-    en = n, // expected-error {{enumerator value is not a constant expression}} cxx11_20-note {{initializer of 'n' is unknown}} cxx23-note {{read of non-constexpr variable 'n'}}
+    en = n, // expected-error {{enumerator value is not a constant expression}} expected-note {{read of non-constexpr variable 'n'}}
     eo = (m + // expected-error {{not a constant expression}}
-          n // cxx11_20-note {{initializer of 'n' is unknown}} cxx23-note {{read of non-constexpr variable 'n'}}
+          n // expected-note {{read of non-constexpr variable 'n'}}
           ),
     eq = reinterpret_cast<long>((int*)0) // expected-error {{not a constant expression}} expected-note {{reinterpret_cast}}
   };
@@ -2435,15 +2435,15 @@ namespace array_size {
   template<typename T> void f1(T t) {
     constexpr int k = t.size();
   }
-  template<typename T> void f2(const T &t) { // cxx11_20-note 2{{declared here}}
-    constexpr int k = t.size();  // cxx11_20-error 2{{constexpr variable 'k' must be initialized by a constant expression}} cxx11_20-note 2{{function parameter 't' with unknown value cannot be used in a constant expression}}
+  template<typename T> void f2(const T &t) {
+    constexpr int k = t.size();
   }
   template<typename T> void f3(const T &t) {
     constexpr int k = T::size();
   }
   void g(array<3> a) {
     f1(a);
-    f2(a); // cxx11_20-note {{in instantiation of function template}}
+    f2(a);
     f3(a);
   }
 
@@ -2452,7 +2452,7 @@ namespace array_size {
   };
   void h(array_nonstatic<3> a) {
     f1(a);
-    f2(a); // cxx11_20-note {{instantiation of}}
+    f2(a);
   }
   //static_assert(f2(array_size::array<3>{}));
 }

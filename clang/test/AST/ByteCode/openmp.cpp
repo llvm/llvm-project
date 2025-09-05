@@ -5,7 +5,7 @@ int test1() {
   int i;
   int &j = i; // both-note {{declared here}}
   float *f;
-  // both-note@+2 {{initializer of 'j' is not a constant expression}}
+  // both-note@+2 {{read of non-constexpr variable 'j' is not allowed in a constant expression}}
   // both-error@+1 {{integral constant expression}}
   #pragma omp for simd aligned(f:j)
   for (int i = 0; i < 10; ++i);

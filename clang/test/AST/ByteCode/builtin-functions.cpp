@@ -1398,7 +1398,7 @@ namespace BuiltinMemcpy {
                                                                                                     // both-note {{destination of 'memcpy' is (void *)123}}
 
 
-  constexpr float type_pun(const unsigned &n) {
+  constexpr float type_pun(const unsigned &n) { // expected-error {{constexpr function never produces a constant expression}}
     float f = 0.0f;
     __builtin_memcpy(&f, &n, 4); // both-note {{cannot constant evaluate 'memcpy' from object of type 'const unsigned int' to object of type 'float'}}
     return f;
