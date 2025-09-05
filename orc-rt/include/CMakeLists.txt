@@ -9,6 +9,7 @@ set(ORC_RT_HEADERS
     orc-rt/IntervalMap.h
     orc-rt/IntervalSet.h
     orc-rt/Math.h
+    orc-rt/MemoryFlags.h
     orc-rt/RTTI.h
     orc-rt/WrapperFunction.h
     orc-rt/SimplePackedSerialization.h
