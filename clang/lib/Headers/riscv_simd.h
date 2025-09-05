@@ -324,6 +324,21 @@ static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
 __riscv_slx(uint32_t __x, uint32_t __y) {
   return __builtin_riscv_slx_32(__x, __y);
 }
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_psh1add_h(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_psh1add_h_32(__x, __y);
+}
+
+static __inline__ int32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_ssh1sadd(int32_t __x, int32_t __y) {
+  return __builtin_riscv_ssh1sadd(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pssh1sadd_h(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_pssh1sadd_h_32(__x, __y);
+}
 #endif
 
 
@@ -706,6 +721,26 @@ __riscv_mulu_w01(uint64_t __x, uint64_t __y) {
 static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
 __riscv_slx(uint64_t __x, uint64_t __y) {
   return __builtin_riscv_slx_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_psh1add_h(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_psh1add_h_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_psh1add_w(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_psh1add_w(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pssh1sadd_h(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pssh1sadd_h_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pssh1sadd_w(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pssh1sadd_w(__x, __y);
 }
 #endif
 

@@ -705,3 +705,39 @@ uint64_t mulu_w01(uint64_t rs1, uint64_t rs2) {
 uint64_t slx(uint64_t rs1, uint64_t rs2) {
   return __riscv_slx(rs1, rs2);
 }
+
+// RV64P-LABEL: @psh1add_h(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.psh1add.h.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t psh1add_h(uint64_t rs1, uint64_t rs2) {
+  return __riscv_psh1add_h(rs1, rs2);
+}
+
+// RV64P-LABEL: @psh1add_w(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.psh1add.w.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t psh1add_w(uint64_t rs1, uint64_t rs2) {
+  return __riscv_psh1add_w(rs1, rs2);
+}
+
+// RV64P-LABEL: @pssh1sadd_h(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.pssh1sadd.h.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t pssh1sadd_h(uint64_t rs1, uint64_t rs2) {
+  return __riscv_pssh1sadd_h(rs1, rs2);
+}
+
+// RV64P-LABEL: @pssh1sadd_w(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.pssh1sadd.w.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t pssh1sadd_w(uint64_t rs1, uint64_t rs2) {
+  return __riscv_pssh1sadd_w(rs1, rs2);
+}
