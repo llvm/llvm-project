@@ -22,8 +22,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/SourceMgr.h"
 
@@ -300,8 +298,19 @@ public:
       // alignment of the root buffer. If it is not, we cannot safely guarantee
       // that the specified alignment is globally correct.
       //
-      // E.g. if the buffer is 8k aligned and the section is 16k aligned,
-      // we could end up at an offset of 24k, which is not globally 16k aligned.
+      // E.g. if the buffer is 8k aligned and the section is marked to be 16k
+      // aligned:
+      // - (a) the alignTo call early returns when the pointer is 16k
+      // aligned but given the original 8k alignment we could offset into the
+      // padding by ~8k giving us 16k pointer alignment leaving another ~8k of
+      // padding in the bytecode file that will inadvertently be read when we
+      // attempt to parse the next section.
+      // - (b) we update alignTo to align relative to the start of the buffer,
+      // but given an 8k aligned buffer and section alignment of 16k, we could
+      // end up with a pointer that is 24k aligned (8k start alignment + 16k
+      // offset) instead of globally 16k aligned (versus 16k start alignment +
+      // 16k offset). This would result in incorrectly stated alignment for
+      // resources that reference data inside of the bytecode buffer.
       if (failed(alignmentValidator(alignment)))
         return emitError("failed to align section ID: ", unsigned(sectionID));
 
