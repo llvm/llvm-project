@@ -570,7 +570,7 @@ static SDValue addBitcastHints(SelectionDAG &DAG, SDNode &N) {
 }
 
 /// isIntImmediate - This method tests to see if the node is a constant
-/// operand. If so Imm will receive the 32-bit value.
+/// operand. If so Imm will receive the 64-bit value.
 static bool isIntImmediate(const SDNode *N, uint64_t &Imm) {
   if (const ConstantSDNode *C = dyn_cast<const ConstantSDNode>(N)) {
     Imm = C->getZExtValue();
