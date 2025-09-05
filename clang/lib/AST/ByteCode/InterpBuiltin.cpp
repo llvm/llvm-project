@@ -3421,6 +3421,15 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return F;
         });
 
+  case clang::X86::BI__builtin_ia32_blendvpd:
+  case clang::X86::BI__builtin_ia32_blendvpd256:
+  case clang::X86::BI__builtin_ia32_blendvps:
+  case clang::X86::BI__builtin_ia32_blendvps256:
+    return interp__builtin_elementwise_triop_fp(
+        S, OpPC, Call,
+        [](const APFloat &F, const APFloat &T, const APFloat &C,
+           llvm::RoundingMode) { return C.isNegative() ? T : F; });
+
   case clang::X86::BI__builtin_ia32_pblendvb128:
   case clang::X86::BI__builtin_ia32_pblendvb256:
     return interp__builtin_elementwise_triop(
