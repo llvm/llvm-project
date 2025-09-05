@@ -59,8 +59,9 @@ int RTDEF(CUFAllocatableAllocate)(Descriptor &desc, int32_t allocIdx,
 }
 
 int RTDEF(CUFAllocatableAllocateSource)(Descriptor &alloc,
-    const Descriptor &source, int32_t allocIdx, int64_t *stream, bool *pinned, bool hasStat,
-    const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
+    const Descriptor &source, int32_t allocIdx, int64_t *stream, bool *pinned,
+    bool hasStat, const Descriptor *errMsg, const char *sourceFile,
+    int sourceLine) {
   int stat{RTNAME(CUFAllocatableAllocate)(alloc, allocIdx, stream, pinned,
       hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
@@ -72,8 +73,9 @@ int RTDEF(CUFAllocatableAllocateSource)(Descriptor &alloc,
 }
 
 int RTDEF(CUFAllocatableAllocateSourceSync)(Descriptor &alloc,
-    const Descriptor &source, int32_t allocIdx, int64_t *stream, bool *pinned, bool hasStat,
-    const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
+    const Descriptor &source, int32_t allocIdx, int64_t *stream, bool *pinned,
+    bool hasStat, const Descriptor *errMsg, const char *sourceFile,
+    int sourceLine) {
   int stat{RTNAME(CUFAllocatableAllocateSync)(alloc, allocIdx, stream, pinned,
       hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
