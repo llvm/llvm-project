@@ -661,6 +661,11 @@ public:
 
   mlir::Value VisitUnaryImag(const UnaryOperator *e);
 
+  mlir::Value VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die) {
+    CIRGenFunction::CXXDefaultInitExprScope scope(cgf, die);
+    return Visit(die->getExpr());
+  }
+
   mlir::Value VisitCXXThisExpr(CXXThisExpr *te) { return cgf.loadCXXThis(); }
 
   mlir::Value VisitExprWithCleanups(ExprWithCleanups *e);

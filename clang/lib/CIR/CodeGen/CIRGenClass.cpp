@@ -517,17 +517,23 @@ void CIRGenFunction::emitInitializerForField(FieldDecl *field, LValue lhs,
   QualType fieldType = field->getType();
   switch (getEvaluationKind(fieldType)) {
   case cir::TEK_Scalar:
-    if (lhs.isSimple())
+    if (lhs.isSimple()) {
       emitExprAsInit(init, field, lhs, false);
-    else
-      cgm.errorNYI(field->getSourceRange(),
-                   "emitInitializerForField: non-simple scalar");
+    } else {
+      RValue rhs = RValue::get(emitScalarExpr(init));
+      emitStoreThroughLValue(rhs, lhs);
+    }
     break;
   case cir::TEK_Complex:
-    cgm.errorNYI(field->getSourceRange(), "emitInitializerForField: complex");
+    emitComplexExprIntoLValue(init, lhs, /*isInit=*/true);
     break;
   case cir::TEK_Aggregate: {
-    cgm.errorNYI(field->getSourceRange(), "emitInitializerForField: aggregate");
+    assert(!cir::MissingFeatures::aggValueSlotGC());
+    assert(!cir::MissingFeatures::sanitizers());
+    AggValueSlot slot = AggValueSlot::forLValue(
+        lhs, AggValueSlot::IsDestructed, AggValueSlot::IsNotAliased,
+        getOverlapForFieldInit(field), AggValueSlot::IsNotZeroed);
+    emitAggExpr(init, slot);
     break;
   }
   }
