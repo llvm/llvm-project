@@ -13,6 +13,7 @@
 #include "mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
+#include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/TransformOps/Utils.h"
@@ -43,6 +44,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/LogicalResult.h"
+#include <optional>
 #include <type_traits>
 
 using namespace mlir;
@@ -170,7 +172,16 @@ void ApplyGPURewritePatternsOp::populatePatterns(RewritePatternSet &patterns) {
 
 void transform::ApplyGPUPromoteShuffleToAMDGPUPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  populateGpuPromoteShuffleToAMDGPUPatterns(patterns);
+  std::optional<StringRef> chipsetName = getChipset();
+  std::optional<amdgpu::Chipset> maybeChipset;
+  if (chipsetName) {
+    FailureOr<amdgpu::Chipset> parsedChipset =
+        amdgpu::Chipset::parse(*chipsetName);
+    assert(llvm::succeeded(parsedChipset) && "expected valid chipset");
+    maybeChipset = parsedChipset;
+  }
+
+  populateGpuPromoteShuffleToAMDGPUPatterns(patterns, maybeChipset);
 }
 
 //===----------------------------------------------------------------------===//

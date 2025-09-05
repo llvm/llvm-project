@@ -21,8 +21,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "vplan"
 
-VPTypeAnalysis::VPTypeAnalysis(const VPlan &Plan)
-    : Ctx(Plan.getScalarHeader()->getIRBasicBlock()->getContext()) {
+VPTypeAnalysis::VPTypeAnalysis(const VPlan &Plan) : Ctx(Plan.getContext()) {
   if (auto LoopRegion = Plan.getVectorLoopRegion()) {
     if (const auto *CanIV = dyn_cast<VPCanonicalIVPHIRecipe>(
             &LoopRegion->getEntryBasicBlock()->front())) {
@@ -74,6 +73,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case Instruction::ExtractElement:
   case Instruction::Freeze:
   case VPInstruction::ReductionStartVector:
+  case VPInstruction::ResumeForEpilogue:
     return inferScalarType(R->getOperand(0));
   case Instruction::Select: {
     Type *ResTy = inferScalarType(R->getOperand(1));
@@ -128,6 +128,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     return IntegerType::get(Ctx, 1);
   case VPInstruction::Broadcast:
   case VPInstruction::PtrAdd:
+  case VPInstruction::WidePtrAdd:
     // Return the type based on first operand.
     return inferScalarType(R->getOperand(0));
   case VPInstruction::BranchOnCond:
@@ -441,8 +442,9 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
   // assume that each recipe that has in-loop users starts an interval. We
   // record every time that an in-loop value is used, so we have a list of the
   // first and last occurrences of each recipe.
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
-      Plan.getVectorLoopRegion());
+      LoopRegion);
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     if (!VPBB->getParent())
       break;
@@ -472,10 +474,10 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
         Ends.insert(DefR);
       }
     }
-    if (VPBB == Plan.getVectorLoopRegion()->getExiting()) {
+    if (VPBB == LoopRegion->getExiting()) {
       // VPWidenIntOrFpInductionRecipes are used implicitly at the end of the
       // exiting block, where their increment will get materialized eventually.
-      for (auto &R : Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
+      for (auto &R : LoopRegion->getEntryBasicBlock()->phis()) {
         if (isa<VPWidenIntOrFpInductionRecipe>(&R)) {
           EndPoint[&R] = Idx2Recipe.size();
           Ends.insert(&R);
@@ -499,7 +501,7 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
 
   LLVM_DEBUG(dbgs() << "LV(REG): Calculating max register usage:\n");
 
-  VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
+  VPTypeAnalysis TypeInfo(Plan);
 
   const auto &TTICapture = TTI;
   auto GetRegUsage = [&TTICapture](Type *Ty, ElementCount VF) -> unsigned {
@@ -554,13 +556,9 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
 
         if (VFs[J].isScalar() ||
             isa<VPCanonicalIVPHIRecipe, VPReplicateRecipe, VPDerivedIVRecipe,
-                VPScalarIVStepsRecipe>(R) ||
+                VPEVLBasedIVPHIRecipe, VPScalarIVStepsRecipe>(R) ||
             (isa<VPInstruction>(R) &&
-             all_of(cast<VPSingleDefRecipe>(R)->users(),
-                    [&](VPUser *U) {
-                      return cast<VPRecipeBase>(U)->usesScalars(
-                          R->getVPSingleValue());
-                    })) ||
+             vputils::onlyScalarValuesUsed(cast<VPSingleDefRecipe>(R))) ||
             (isa<VPReductionPHIRecipe>(R) &&
              (cast<VPReductionPHIRecipe>(R))->isInLoop())) {
           unsigned ClassID = TTI.getRegisterClassForType(
@@ -613,9 +611,7 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
     for (auto *In : LoopInvariants) {
       // FIXME: The target might use more than one register for the type
       // even in the scalar case.
-      bool IsScalar = all_of(In->users(), [&](VPUser *U) {
-        return cast<VPRecipeBase>(U)->usesScalars(In);
-      });
+      bool IsScalar = vputils::onlyScalarValuesUsed(In);
 
       ElementCount VF = IsScalar ? ElementCount::getFixed(1) : VFs[Idx];
       unsigned ClassID = TTI.getRegisterClassForType(

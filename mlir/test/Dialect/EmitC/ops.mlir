@@ -310,3 +310,15 @@ func.func @switch() {
 
   return 
 }
+
+emitc.class final @finalClass {
+  emitc.field @fieldName0 : !emitc.array<1xf32>
+  emitc.field @fieldName1 : !emitc.array<1xf32>
+  emitc.func @execute() {
+    %0 = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
+    %1 = get_field @fieldName0 : !emitc.array<1xf32>
+    %2 = get_field @fieldName1 : !emitc.array<1xf32>
+    %3 = subscript %1[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
+    return
+  }
+}

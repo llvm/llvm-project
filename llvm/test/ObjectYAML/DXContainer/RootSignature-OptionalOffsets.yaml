@@ -1,0 +1,56 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+## This test checks that we correctly compute the RootParametersOffset and
+## StaticSamplersOffset when they are not explicitly provided
+
+## StaticSamplerOffset
+##  = 24 (root signature header)
+##  + 12 (header) + 12 (root constants)
+##  + 12 (header) + 12 (v1.1 root descriptor)
+##  + 12 (header) + 8 (root descriptor table)
+##  + 24 (v1.1 descriptor range)
+##  = 116
+
+# CHECK: RootParametersOffset: 24
+# CHECK: StaticSamplersOffset: 116
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  PartCount:       1
+  PartOffsets:     [ 60 ]
+Parts:
+  - Name:            RTS0
+    Size:            116
+    RootSignature:
+      Version: 2
+      NumRootParameters: 3
+      NumStaticSamplers: 0
+      Parameters:
+      - ParameterType: 1 # RootConstants
+        ShaderVisibility: 0
+        Constants:
+          Num32BitValues: 16
+          ShaderRegister: 15
+          RegisterSpace: 14
+      - ParameterType: 2 # SRV
+        ShaderVisibility: 0
+        Descriptor:
+          ShaderRegister: 31
+          RegisterSpace: 32
+          DATA_STATIC_WHILE_SET_AT_EXECUTE: true
+      - ParameterType: 0 # Descriptor Table
+        ShaderVisibility: 0
+        Table:
+          NumRanges: 1
+          Ranges:
+            - RangeType: 0 # CBV
+              NumDescriptors: -1
+              BaseShaderRegister: 42
+              RegisterSpace: 43
+              OffsetInDescriptorsFromTableStart: 41
+              DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS: true
