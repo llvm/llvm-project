@@ -574,13 +574,8 @@ Value *LoopIdiomVectorize::createPredicatedFindMismatch(
       Intrinsic::vp_load, {VectorLoadType, VectorLhsGep->getType()},
       {VectorRhsGep, AllTrueMask, VL}, nullptr, "rhs.load");
 
-  StringRef PredicateStr = CmpInst::getPredicateName(CmpInst::ICMP_NE);
-  auto *PredicateMDS = MDString::get(VectorLhsLoad->getContext(), PredicateStr);
-  Value *Pred = MetadataAsValue::get(VectorLhsLoad->getContext(), PredicateMDS);
-  Value *VectorMatchCmp = Builder.CreateIntrinsic(
-      Intrinsic::vp_icmp, {VectorLhsLoad->getType()},
-      {VectorLhsLoad, VectorRhsLoad, Pred, AllTrueMask, VL}, nullptr,
-      "mismatch.cmp");
+  Value *VectorMatchCmp =
+      Builder.CreateICmpNE(VectorLhsLoad, VectorRhsLoad, "mismatch.cmp");
   Value *CTZ = Builder.CreateIntrinsic(
       Intrinsic::vp_cttz_elts, {ResType, VectorMatchCmp->getType()},
       {VectorMatchCmp, /*ZeroIsPoison=*/Builder.getInt1(false), AllTrueMask,

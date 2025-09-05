@@ -42,7 +42,7 @@ define i32 @compare_bytes_simple(ptr %a, ptr %b, i32 %len, i32 %n) {
 ; CHECK-NEXT:    [[LHS_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr [[TMP20]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[MISMATCH_VECTOR_INDEX]]
 ; CHECK-NEXT:    [[RHS_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr [[TMP21]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
-; CHECK-NEXT:    [[MISMATCH_CMP:%.*]] = call <vscale x 16 x i1> @llvm.vp.icmp.nxv16i8(<vscale x 16 x i8> [[LHS_LOAD]], <vscale x 16 x i8> [[RHS_LOAD]], metadata !"ne", <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
+; CHECK-NEXT:    [[MISMATCH_CMP:%.*]] = icmp ne <vscale x 16 x i8> [[LHS_LOAD]], [[RHS_LOAD]]
 ; CHECK-NEXT:    [[FIRST:%.*]] = call i32 @llvm.vp.cttz.elts.i32.nxv16i1(<vscale x 16 x i1> [[MISMATCH_CMP]], i1 false, <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
 ; CHECK-NEXT:    [[TMP22:%.*]] = icmp ne i32 [[FIRST]], [[TMP19]]
 ; CHECK-NEXT:    br i1 [[TMP22]], label [[MISMATCH_VECTOR_LOOP_FOUND:%.*]], label [[MISMATCH_VECTOR_LOOP_INC]]
@@ -132,7 +132,7 @@ define i32 @compare_bytes_simple(ptr %a, ptr %b, i32 %len, i32 %n) {
 ; LMUL8-NEXT:    [[LHS_LOAD:%.*]] = call <vscale x 64 x i8> @llvm.vp.load.nxv64i8.p0(ptr [[TMP20]], <vscale x 64 x i1> splat (i1 true), i32 [[TMP19]])
 ; LMUL8-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[MISMATCH_VECTOR_INDEX]]
 ; LMUL8-NEXT:    [[RHS_LOAD:%.*]] = call <vscale x 64 x i8> @llvm.vp.load.nxv64i8.p0(ptr [[TMP21]], <vscale x 64 x i1> splat (i1 true), i32 [[TMP19]])
-; LMUL8-NEXT:    [[MISMATCH_CMP:%.*]] = call <vscale x 64 x i1> @llvm.vp.icmp.nxv64i8(<vscale x 64 x i8> [[LHS_LOAD]], <vscale x 64 x i8> [[RHS_LOAD]], metadata !"ne", <vscale x 64 x i1> splat (i1 true), i32 [[TMP19]])
+; LMUL8-NEXT:    [[MISMATCH_CMP:%.*]] = icmp ne <vscale x 64 x i8> [[LHS_LOAD]], [[RHS_LOAD]]
 ; LMUL8-NEXT:    [[FIRST:%.*]] = call i32 @llvm.vp.cttz.elts.i32.nxv64i1(<vscale x 64 x i1> [[MISMATCH_CMP]], i1 false, <vscale x 64 x i1> splat (i1 true), i32 [[TMP19]])
 ; LMUL8-NEXT:    [[TMP22:%.*]] = icmp ne i32 [[FIRST]], [[TMP19]]
 ; LMUL8-NEXT:    br i1 [[TMP22]], label [[MISMATCH_VECTOR_LOOP_FOUND:%.*]], label [[MISMATCH_VECTOR_LOOP_INC]]
@@ -218,7 +218,7 @@ define i32 @compare_bytes_simple(ptr %a, ptr %b, i32 %len, i32 %n) {
 ; LOOP-DEL-NEXT:    [[LHS_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr [[TMP20]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
 ; LOOP-DEL-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[MISMATCH_VECTOR_INDEX]]
 ; LOOP-DEL-NEXT:    [[RHS_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr [[TMP21]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
-; LOOP-DEL-NEXT:    [[MISMATCH_CMP:%.*]] = call <vscale x 16 x i1> @llvm.vp.icmp.nxv16i8(<vscale x 16 x i8> [[LHS_LOAD]], <vscale x 16 x i8> [[RHS_LOAD]], metadata !"ne", <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
+; LOOP-DEL-NEXT:    [[MISMATCH_CMP:%.*]] = icmp ne <vscale x 16 x i8> [[LHS_LOAD]], [[RHS_LOAD]]
 ; LOOP-DEL-NEXT:    [[FIRST:%.*]] = call i32 @llvm.vp.cttz.elts.i32.nxv16i1(<vscale x 16 x i1> [[MISMATCH_CMP]], i1 false, <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
 ; LOOP-DEL-NEXT:    [[TMP22:%.*]] = icmp ne i32 [[FIRST]], [[TMP19]]
 ; LOOP-DEL-NEXT:    br i1 [[TMP22]], label [[MISMATCH_VECTOR_LOOP_FOUND:%.*]], label [[MISMATCH_VECTOR_LOOP_INC]]
@@ -409,7 +409,7 @@ define i32 @compare_bytes_signed_wrap(ptr %a, ptr %b, i32 %len, i32 %n) {
 ; CHECK-NEXT:    [[LHS_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr [[TMP20]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[MISMATCH_VECTOR_INDEX]]
 ; CHECK-NEXT:    [[RHS_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr [[TMP21]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
-; CHECK-NEXT:    [[MISMATCH_CMP:%.*]] = call <vscale x 16 x i1> @llvm.vp.icmp.nxv16i8(<vscale x 16 x i8> [[LHS_LOAD]], <vscale x 16 x i8> [[RHS_LOAD]], metadata !"ne", <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
+; CHECK-NEXT:    [[MISMATCH_CMP:%.*]] = icmp ne <vscale x 16 x i8> [[LHS_LOAD]], [[RHS_LOAD]]
 ; CHECK-NEXT:    [[FIRST:%.*]] = call i32 @llvm.vp.cttz.elts.i32.nxv16i1(<vscale x 16 x i1> [[MISMATCH_CMP]], i1 false, <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
 ; CHECK-NEXT:    [[TMP22:%.*]] = icmp ne i32 [[FIRST]], [[TMP19]]
 ; CHECK-NEXT:    br i1 [[TMP22]], label [[MISMATCH_VECTOR_LOOP_FOUND:%.*]], label [[MISMATCH_VECTOR_LOOP_INC]]
@@ -499,7 +499,7 @@ define i32 @compare_bytes_signed_wrap(ptr %a, ptr %b, i32 %len, i32 %n) {
 ; LMUL8-NEXT:    [[LHS_LOAD:%.*]] = call <vscale x 64 x i8> @llvm.vp.load.nxv64i8.p0(ptr [[TMP20]], <vscale x 64 x i1> splat (i1 true), i32 [[TMP19]])
 ; LMUL8-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[MISMATCH_VECTOR_INDEX]]
 ; LMUL8-NEXT:    [[RHS_LOAD:%.*]] = call <vscale x 64 x i8> @llvm.vp.load.nxv64i8.p0(ptr [[TMP21]], <vscale x 64 x i1> splat (i1 true), i32 [[TMP19]])
-; LMUL8-NEXT:    [[MISMATCH_CMP:%.*]] = call <vscale x 64 x i1> @llvm.vp.icmp.nxv64i8(<vscale x 64 x i8> [[LHS_LOAD]], <vscale x 64 x i8> [[RHS_LOAD]], metadata !"ne", <vscale x 64 x i1> splat (i1 true), i32 [[TMP19]])
+; LMUL8-NEXT:    [[MISMATCH_CMP:%.*]] = icmp ne <vscale x 64 x i8> [[LHS_LOAD]], [[RHS_LOAD]]
 ; LMUL8-NEXT:    [[FIRST:%.*]] = call i32 @llvm.vp.cttz.elts.i32.nxv64i1(<vscale x 64 x i1> [[MISMATCH_CMP]], i1 false, <vscale x 64 x i1> splat (i1 true), i32 [[TMP19]])
 ; LMUL8-NEXT:    [[TMP22:%.*]] = icmp ne i32 [[FIRST]], [[TMP19]]
 ; LMUL8-NEXT:    br i1 [[TMP22]], label [[MISMATCH_VECTOR_LOOP_FOUND:%.*]], label [[MISMATCH_VECTOR_LOOP_INC]]
@@ -585,7 +585,7 @@ define i32 @compare_bytes_signed_wrap(ptr %a, ptr %b, i32 %len, i32 %n) {
 ; LOOP-DEL-NEXT:    [[LHS_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr [[TMP20]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
 ; LOOP-DEL-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[MISMATCH_VECTOR_INDEX]]
 ; LOOP-DEL-NEXT:    [[RHS_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr [[TMP21]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
-; LOOP-DEL-NEXT:    [[MISMATCH_CMP:%.*]] = call <vscale x 16 x i1> @llvm.vp.icmp.nxv16i8(<vscale x 16 x i8> [[LHS_LOAD]], <vscale x 16 x i8> [[RHS_LOAD]], metadata !"ne", <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
+; LOOP-DEL-NEXT:    [[MISMATCH_CMP:%.*]] = icmp ne <vscale x 16 x i8> [[LHS_LOAD]], [[RHS_LOAD]]
 ; LOOP-DEL-NEXT:    [[FIRST:%.*]] = call i32 @llvm.vp.cttz.elts.i32.nxv16i1(<vscale x 16 x i1> [[MISMATCH_CMP]], i1 false, <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
 ; LOOP-DEL-NEXT:    [[TMP22:%.*]] = icmp ne i32 [[FIRST]], [[TMP19]]
 ; LOOP-DEL-NEXT:    br i1 [[TMP22]], label [[MISMATCH_VECTOR_LOOP_FOUND:%.*]], label [[MISMATCH_VECTOR_LOOP_INC]]
@@ -797,7 +797,7 @@ define i32 @compare_bytes_simple_end_ne_found(ptr %a, ptr %b, ptr %c, ptr %d, i3
 ; CHECK-NEXT:    [[LHS_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr [[TMP20]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[MISMATCH_VECTOR_INDEX]]
 ; CHECK-NEXT:    [[RHS_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr [[TMP21]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
-; CHECK-NEXT:    [[MISMATCH_CMP:%.*]] = call <vscale x 16 x i1> @llvm.vp.icmp.nxv16i8(<vscale x 16 x i8> [[LHS_LOAD]], <vscale x 16 x i8> [[RHS_LOAD]], metadata !"ne", <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
+; CHECK-NEXT:    [[MISMATCH_CMP:%.*]] = icmp ne <vscale x 16 x i8> [[LHS_LOAD]], [[RHS_LOAD]]
 ; CHECK-NEXT:    [[FIRST:%.*]] = call i32 @llvm.vp.cttz.elts.i32.nxv16i1(<vscale x 16 x i1> [[MISMATCH_CMP]], i1 false, <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
 ; CHECK-NEXT:    [[TMP22:%.*]] = icmp ne i32 [[FIRST]], [[TMP19]]
 ; CHECK-NEXT:    br i1 [[TMP22]], label [[MISMATCH_VECTOR_LOOP_FOUND:%.*]], label [[MISMATCH_VECTOR_LOOP_INC]]
@@ -898,7 +898,7 @@ define i32 @compare_bytes_simple_end_ne_found(ptr %a, ptr %b, ptr %c, ptr %d, i3
 ; LMUL8-NEXT:    [[LHS_LOAD:%.*]] = call <vscale x 64 x i8> @llvm.vp.load.nxv64i8.p0(ptr [[TMP20]], <vscale x 64 x i1> splat (i1 true), i32 [[TMP19]])
 ; LMUL8-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[MISMATCH_VECTOR_INDEX]]
 ; LMUL8-NEXT:    [[RHS_LOAD:%.*]] = call <vscale x 64 x i8> @llvm.vp.load.nxv64i8.p0(ptr [[TMP21]], <vscale x 64 x i1> splat (i1 true), i32 [[TMP19]])
-; LMUL8-NEXT:    [[MISMATCH_CMP:%.*]] = call <vscale x 64 x i1> @llvm.vp.icmp.nxv64i8(<vscale x 64 x i8> [[LHS_LOAD]], <vscale x 64 x i8> [[RHS_LOAD]], metadata !"ne", <vscale x 64 x i1> splat (i1 true), i32 [[TMP19]])
+; LMUL8-NEXT:    [[MISMATCH_CMP:%.*]] = icmp ne <vscale x 64 x i8> [[LHS_LOAD]], [[RHS_LOAD]]
 ; LMUL8-NEXT:    [[FIRST:%.*]] = call i32 @llvm.vp.cttz.elts.i32.nxv64i1(<vscale x 64 x i1> [[MISMATCH_CMP]], i1 false, <vscale x 64 x i1> splat (i1 true), i32 [[TMP19]])
 ; LMUL8-NEXT:    [[TMP22:%.*]] = icmp ne i32 [[FIRST]], [[TMP19]]
 ; LMUL8-NEXT:    br i1 [[TMP22]], label [[MISMATCH_VECTOR_LOOP_FOUND:%.*]], label [[MISMATCH_VECTOR_LOOP_INC]]
@@ -995,7 +995,7 @@ define i32 @compare_bytes_simple_end_ne_found(ptr %a, ptr %b, ptr %c, ptr %d, i3
 ; LOOP-DEL-NEXT:    [[LHS_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr [[TMP20]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
 ; LOOP-DEL-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[MISMATCH_VECTOR_INDEX]]
 ; LOOP-DEL-NEXT:    [[RHS_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr [[TMP21]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
-; LOOP-DEL-NEXT:    [[MISMATCH_CMP:%.*]] = call <vscale x 16 x i1> @llvm.vp.icmp.nxv16i8(<vscale x 16 x i8> [[LHS_LOAD]], <vscale x 16 x i8> [[RHS_LOAD]], metadata !"ne", <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
+; LOOP-DEL-NEXT:    [[MISMATCH_CMP:%.*]] = icmp ne <vscale x 16 x i8> [[LHS_LOAD]], [[RHS_LOAD]]
 ; LOOP-DEL-NEXT:    [[FIRST:%.*]] = call i32 @llvm.vp.cttz.elts.i32.nxv16i1(<vscale x 16 x i1> [[MISMATCH_CMP]], i1 false, <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
 ; LOOP-DEL-NEXT:    [[TMP22:%.*]] = icmp ne i32 [[FIRST]], [[TMP19]]
 ; LOOP-DEL-NEXT:    br i1 [[TMP22]], label [[MISMATCH_VECTOR_LOOP_FOUND:%.*]], label [[MISMATCH_VECTOR_LOOP_INC]]
@@ -1248,7 +1248,7 @@ define i32 @compare_bytes_extra_cmp(ptr %a, ptr %b, i32 %len, i32 %n, i32 %x) {
 ; CHECK-NEXT:    [[LHS_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr [[TMP20]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[MISMATCH_VECTOR_INDEX]]
 ; CHECK-NEXT:    [[RHS_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr [[TMP21]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
-; CHECK-NEXT:    [[MISMATCH_CMP:%.*]] = call <vscale x 16 x i1> @llvm.vp.icmp.nxv16i8(<vscale x 16 x i8> [[LHS_LOAD]], <vscale x 16 x i8> [[RHS_LOAD]], metadata !"ne", <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
+; CHECK-NEXT:    [[MISMATCH_CMP:%.*]] = icmp ne <vscale x 16 x i8> [[LHS_LOAD]], [[RHS_LOAD]]
 ; CHECK-NEXT:    [[FIRST:%.*]] = call i32 @llvm.vp.cttz.elts.i32.nxv16i1(<vscale x 16 x i1> [[MISMATCH_CMP]], i1 false, <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
 ; CHECK-NEXT:    [[TMP22:%.*]] = icmp ne i32 [[FIRST]], [[TMP19]]
 ; CHECK-NEXT:    br i1 [[TMP22]], label [[MISMATCH_VECTOR_LOOP_FOUND:%.*]], label [[MISMATCH_VECTOR_LOOP_INC]]
@@ -1344,7 +1344,7 @@ define i32 @compare_bytes_extra_cmp(ptr %a, ptr %b, i32 %len, i32 %n, i32 %x) {
 ; LMUL8-NEXT:    [[LHS_LOAD:%.*]] = call <vscale x 64 x i8> @llvm.vp.load.nxv64i8.p0(ptr [[TMP20]], <vscale x 64 x i1> splat (i1 true), i32 [[TMP19]])
 ; LMUL8-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[MISMATCH_VECTOR_INDEX]]
 ; LMUL8-NEXT:    [[RHS_LOAD:%.*]] = call <vscale x 64 x i8> @llvm.vp.load.nxv64i8.p0(ptr [[TMP21]], <vscale x 64 x i1> splat (i1 true), i32 [[TMP19]])
-; LMUL8-NEXT:    [[MISMATCH_CMP:%.*]] = call <vscale x 64 x i1> @llvm.vp.icmp.nxv64i8(<vscale x 64 x i8> [[LHS_LOAD]], <vscale x 64 x i8> [[RHS_LOAD]], metadata !"ne", <vscale x 64 x i1> splat (i1 true), i32 [[TMP19]])
+; LMUL8-NEXT:    [[MISMATCH_CMP:%.*]] = icmp ne <vscale x 64 x i8> [[LHS_LOAD]], [[RHS_LOAD]]
 ; LMUL8-NEXT:    [[FIRST:%.*]] = call i32 @llvm.vp.cttz.elts.i32.nxv64i1(<vscale x 64 x i1> [[MISMATCH_CMP]], i1 false, <vscale x 64 x i1> splat (i1 true), i32 [[TMP19]])
 ; LMUL8-NEXT:    [[TMP22:%.*]] = icmp ne i32 [[FIRST]], [[TMP19]]
 ; LMUL8-NEXT:    br i1 [[TMP22]], label [[MISMATCH_VECTOR_LOOP_FOUND:%.*]], label [[MISMATCH_VECTOR_LOOP_INC]]
@@ -1436,7 +1436,7 @@ define i32 @compare_bytes_extra_cmp(ptr %a, ptr %b, i32 %len, i32 %n, i32 %x) {
 ; LOOP-DEL-NEXT:    [[LHS_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr [[TMP20]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
 ; LOOP-DEL-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[MISMATCH_VECTOR_INDEX]]
 ; LOOP-DEL-NEXT:    [[RHS_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr [[TMP21]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
-; LOOP-DEL-NEXT:    [[MISMATCH_CMP:%.*]] = call <vscale x 16 x i1> @llvm.vp.icmp.nxv16i8(<vscale x 16 x i8> [[LHS_LOAD]], <vscale x 16 x i8> [[RHS_LOAD]], metadata !"ne", <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
+; LOOP-DEL-NEXT:    [[MISMATCH_CMP:%.*]] = icmp ne <vscale x 16 x i8> [[LHS_LOAD]], [[RHS_LOAD]]
 ; LOOP-DEL-NEXT:    [[FIRST:%.*]] = call i32 @llvm.vp.cttz.elts.i32.nxv16i1(<vscale x 16 x i1> [[MISMATCH_CMP]], i1 false, <vscale x 16 x i1> splat (i1 true), i32 [[TMP19]])
 ; LOOP-DEL-NEXT:    [[TMP22:%.*]] = icmp ne i32 [[FIRST]], [[TMP19]]
 ; LOOP-DEL-NEXT:    br i1 [[TMP22]], label [[MISMATCH_VECTOR_LOOP_FOUND:%.*]], label [[MISMATCH_VECTOR_LOOP_INC]]
@@ -1656,7 +1656,7 @@ define void @compare_bytes_cleanup_block(ptr %src1, ptr %src2) {
 ; CHECK-NEXT:    [[LHS_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr [[TMP16]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP15]])
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[SRC2]], i64 [[MISMATCH_VECTOR_INDEX]]
 ; CHECK-NEXT:    [[RHS_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr [[TMP17]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP15]])
-; CHECK-NEXT:    [[MISMATCH_CMP:%.*]] = call <vscale x 16 x i1> @llvm.vp.icmp.nxv16i8(<vscale x 16 x i8> [[LHS_LOAD]], <vscale x 16 x i8> [[RHS_LOAD]], metadata !"ne", <vscale x 16 x i1> splat (i1 true), i32 [[TMP15]])
+; CHECK-NEXT:    [[MISMATCH_CMP:%.*]] = icmp ne <vscale x 16 x i8> [[LHS_LOAD]], [[RHS_LOAD]]
 ; CHECK-NEXT:    [[FIRST:%.*]] = call i32 @llvm.vp.cttz.elts.i32.nxv16i1(<vscale x 16 x i1> [[MISMATCH_CMP]], i1 false, <vscale x 16 x i1> splat (i1 true), i32 [[TMP15]])
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp ne i32 [[FIRST]], [[TMP15]]
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[MISMATCH_VECTOR_LOOP_FOUND:%.*]], label [[MISMATCH_VECTOR_LOOP_INC]]
@@ -1745,7 +1745,7 @@ define void @compare_bytes_cleanup_block(ptr %src1, ptr %src2) {
 ; LMUL8-NEXT:    [[LHS_LOAD:%.*]] = call <vscale x 64 x i8> @llvm.vp.load.nxv64i8.p0(ptr [[TMP16]], <vscale x 64 x i1> splat (i1 true), i32 [[TMP15]])
 ; LMUL8-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[SRC2]], i64 [[MISMATCH_VECTOR_INDEX]]
 ; LMUL8-NEXT:    [[RHS_LOAD:%.*]] = call <vscale x 64 x i8> @llvm.vp.load.nxv64i8.p0(ptr [[TMP17]], <vscale x 64 x i1> splat (i1 true), i32 [[TMP15]])
-; LMUL8-NEXT:    [[MISMATCH_CMP:%.*]] = call <vscale x 64 x i1> @llvm.vp.icmp.nxv64i8(<vscale x 64 x i8> [[LHS_LOAD]], <vscale x 64 x i8> [[RHS_LOAD]], metadata !"ne", <vscale x 64 x i1> splat (i1 true), i32 [[TMP15]])
+; LMUL8-NEXT:    [[MISMATCH_CMP:%.*]] = icmp ne <vscale x 64 x i8> [[LHS_LOAD]], [[RHS_LOAD]]
 ; LMUL8-NEXT:    [[FIRST:%.*]] = call i32 @llvm.vp.cttz.elts.i32.nxv64i1(<vscale x 64 x i1> [[MISMATCH_CMP]], i1 false, <vscale x 64 x i1> splat (i1 true), i32 [[TMP15]])
 ; LMUL8-NEXT:    [[TMP18:%.*]] = icmp ne i32 [[FIRST]], [[TMP15]]
 ; LMUL8-NEXT:    br i1 [[TMP18]], label [[MISMATCH_VECTOR_LOOP_FOUND:%.*]], label [[MISMATCH_VECTOR_LOOP_INC]]
