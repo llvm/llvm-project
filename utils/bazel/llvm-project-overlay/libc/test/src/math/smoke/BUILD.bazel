@@ -739,6 +739,11 @@ math_test(
 )
 
 math_test(
+    name = "fmodbf16",
+    hdrs = ["FModTest.h"],
+)
+
+math_test(
     name = "fmodf",
     hdrs = ["FModTest.h"],
 )
