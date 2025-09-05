@@ -16,10 +16,14 @@
 #include "RISCV.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/Support/KnownBits.h"
 
 // RISC-V specific code to select RISC-V machine instructions for
 // SelectionDAG operations.
+
+llvm::SDValue selectImm(llvm::SelectionDAG *CurDAG, const llvm::SDLoc &DL, const llvm::MVT VT,
+		                         int64_t Imm, const llvm::RISCVSubtarget &Subtarget);
 namespace llvm {
 class RISCVDAGToDAGISel : public SelectionDAGISel {
   const RISCVSubtarget *Subtarget = nullptr;
@@ -74,9 +78,7 @@ public:
   bool tryShrinkShlLogicImm(SDNode *Node);
   bool trySignedBitfieldExtract(SDNode *Node);
   bool trySignedBitfieldInsertInSign(SDNode *Node);
-  bool trySignedBitfieldInsertInMask(SDNode *Node);
   bool tryBitfieldInsertOpFromXor(SDNode *Node);
-  bool tryBitfieldInsertOpFromOrAndImm(SDNode *Node);
   bool tryUnsignedBitfieldExtract(SDNode *Node, const SDLoc &DL, MVT VT,
                                   SDValue X, unsigned Msb, unsigned Lsb);
   bool tryUnsignedBitfieldInsertInZero(SDNode *Node, const SDLoc &DL, MVT VT,
