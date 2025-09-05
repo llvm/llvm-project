@@ -6,7 +6,6 @@
 ## GCC collect2 passes several LTO related options to the linker even if -flto is not used.
 ## We need to ignore them. Note that the lto-wrapper path can be relative.
 # RUN: ld.lld %t.o -o /dev/null \
-# RUN:   -plugin path/to/liblto_plugin.so \
 # RUN:   -plugin-opt=/path/to/lto-wrapper \
 # RUN:   -plugin-opt=/path/to/lto-wrapper.exe \
 # RUN:   -plugin-opt=relative/path/to/lto-wrapper \

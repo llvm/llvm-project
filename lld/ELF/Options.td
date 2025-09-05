@@ -793,7 +793,7 @@ def: J<"plugin-opt=thinlto-prefix-replace=">,
 // just ignore the option on lld side as it's easier. In fact, the linker could
 // be called 'ld' and understanding which linker is used would require parsing of
 // --version output.
-defm plugin: Eq<"plugin", "Ignored for compatibility with GNU linkers">;
+defm plugin: Eq<"plugin", "Use a plugin in the linking process">;
 
 def plugin_opt_eq_minus: J<"plugin-opt=-">,
   HelpText<"Specify an LLVM option for compatibility with LLVMgold.so">;

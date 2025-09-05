@@ -241,6 +241,7 @@ struct Config {
   llvm::StringRef optRemarksPasses;
   llvm::StringRef optRemarksFormat;
   llvm::StringRef optStatsFilename;
+  llvm::StringRef plugin;
   llvm::StringRef progName;
   llvm::StringRef printArchiveStats;
   llvm::StringRef printSymbolOrder;

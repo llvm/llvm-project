@@ -1806,6 +1806,14 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
                      << arg->getValue() << "'";
   }
 
+  // Ignore -plugin=LLVMgold.so because we don't need to load it.
+  StringRef v = args.getLastArgValue(OPT_plugin);
+  if (!v.empty() && !v.ends_with("LLVMgold.so"))
+    if (!llvm::sys::fs::exists(v))
+      ErrAlways(ctx) << "Cannot find plugin " << v;
+    else
+      ctx.arg.plugin = v;
+
   ctx.arg.passPlugins = args::getStrings(args, OPT_load_pass_plugins);
 
   // Parse -mllvm options.
