@@ -233,8 +233,9 @@ struct PreservedCastFlags {
   bool NSW = false;
 };
 
-/// Try to cast C to InvC losslessly, satisfying CastOp(InvC) == C.
-/// Will try best to preserve the flags.
+/// Try to cast C to InvC losslessly, satisfying CastOp(InvC) equals C, or
+/// CastOp(InvC) is a refined value of undefined C. Will try best to
+/// preserve the flags.
 LLVM_ABI Constant *getLosslessInvCast(Constant *C, Type *InvCastTo,
                                       unsigned CastOp, const DataLayout &DL,
                                       PreservedCastFlags *Flags = nullptr);
