@@ -17,7 +17,7 @@
 extern "C" {
 #endif
 
-#if defined (__riscv_p)
+#if defined(__riscv_p)
 
 #if __riscv_xlen == 32
 static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
@@ -31,7 +31,7 @@ __riscv_pslli_h(uint32_t __x, int __y) {
 }
 
 static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
-  __riscv_psslai_h(uint32_t __x, int __y) {
+__riscv_psslai_h(uint32_t __x, int __y) {
   return __builtin_riscv_psslai_h_32(__x, __y);
 }
 
@@ -635,7 +635,6 @@ __riscv_mulhrsu(uint32_t __x, int32_t __y) {
   return __builtin_riscv_mulhrsu(__x, __y);
 }
 #endif
-
 
 #if __riscv_xlen == 64
 static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
@@ -1490,7 +1489,6 @@ __riscv_pmulhrsu_w(uint64_t __x, uint64_t __y) {
 #endif
 
 #endif // defined(__riscv_p)
-
 
 #if defined(__cplusplus)
 }
