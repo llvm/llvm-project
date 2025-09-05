@@ -494,10 +494,20 @@ Fortran::lower::genCallOpAndResult(
     // arguments of any type and vice versa.
     mlir::Value cast;
     auto *context = builder.getContext();
-    if (mlir::isa<fir::BoxProcType>(snd) &&
-        mlir::isa<mlir::FunctionType>(fst.getType())) {
-      auto funcTy = mlir::FunctionType::get(context, {}, {});
-      auto boxProcTy = builder.getBoxProcType(funcTy);
+
+    // Special handling for %VAL arguments: internal procedures expect
+    // reference parameters. When %VAL is used, the argument should be
+    // passed by value. So we need to create a temporary variable and
+    // pass its address to avoid a type conversion error.
+    if (fir::isa_ref_type(snd) && !fir::isa_ref_type(fst.getType()) &&
+        fir::dyn_cast_ptrEleTy(snd) == fst.getType()) {
+      mlir::Value temp = builder.createTemporary(loc, fst.getType());
+      builder.create<fir::StoreOp>(loc, fst, temp);
+      cast = temp;
+    } else if (mlir::isa<fir::BoxProcType>(snd) &&
+               mlir::isa<mlir::FunctionType>(fst.getType())) {
+      mlir::FunctionType funcTy = mlir::FunctionType::get(context, {}, {});
+      fir::BoxProcType boxProcTy = builder.getBoxProcType(funcTy);
       if (mlir::Value host = argumentHostAssocs(converter, fst)) {
         cast = fir::EmboxProcOp::create(builder, loc, boxProcTy,
                                         llvm::ArrayRef<mlir::Value>{fst, host});
@@ -1637,7 +1647,20 @@ void prepareUserCallArguments(
           (*cleanup)();
         break;
       }
-      caller.placeInput(arg, builder.createConvert(loc, argTy, value));
+      // For %VAL arguments, we should pass the value directly without
+      // conversion to reference types. If argTy is different from value type,
+      // it might be due to signature mismatch with internal procedures.
+      if (argTy == value.getType())
+        caller.placeInput(arg, value);
+      else if (fir::isa_ref_type(argTy) &&
+               fir::dyn_cast_ptrEleTy(argTy) == value.getType()) {
+        // We're trying to convert value to reference - create temporary
+        mlir::Value temp = builder.createTemporary(loc, value.getType());
+        builder.create<fir::StoreOp>(loc, value, temp);
+        caller.placeInput(arg, temp);
+      } else
+        caller.placeInput(arg, builder.createConvert(loc, argTy, value));
+
     } break;
     case PassBy::BaseAddressValueAttribute:
     case PassBy::CharBoxValueAttribute:
