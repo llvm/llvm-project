@@ -4462,6 +4462,7 @@ SDValue SplitOpsAndApply(SelectionDAG &DAG, const X86Subtarget &Subtarget,
   unsigned NumSubs = 1;
   if ((CheckBWI && Subtarget.useBWIRegs()) ||
       (!CheckBWI && Subtarget.useAVX512Regs())) {
+    // if (0) {
     if (VT.getSizeInBits() > 512) {
       NumSubs = VT.getSizeInBits() / 512;
       assert((VT.getSizeInBits() % 512) == 0 && "Illegal vector size");
@@ -57967,6 +57968,8 @@ static SDValue pushAddIntoCmovOfConsts(SDNode *N, const SDLoc &DL,
                      Cmov.getOperand(3));
 }
 
+// Attempt to turn ADD(MUL(x, y), acc)) -> VPMADD52L
+// When upper 12 bits of x, y and MUL(x, y) are known to be 0
 static SDValue matchVPMADD52(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
                              EVT VT, const X86Subtarget &Subtarget) {
   using namespace SDPatternMatch;
@@ -57990,7 +57993,16 @@ static SDValue matchVPMADD52(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
       KnownMul.countMinLeadingZeros() < 12)
     return SDValue();
 
-  return DAG.getNode(X86ISD::VPMADD52L, DL, VT, Acc, X, Y);
+  auto VPMADD52Builder = [](SelectionDAG &G, SDLoc DL,
+                            ArrayRef<SDValue> SubOps) {
+    EVT SubVT = SubOps[0].getValueType();
+    assert(SubVT.getScalarSizeInBits() == 64);
+    return G.getNode(X86ISD::VPMADD52L, DL, SubVT, SubOps[0] /*Acc*/,
+                     SubOps[1] /*X*/, SubOps[2] /*Y*/);
+  };
+
+  return SplitOpsAndApply(DAG, Subtarget, DL, VT, {Acc, X, Y}, VPMADD52Builder,
+                          /*CheckBWI*/ false);
 }
 
 static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
