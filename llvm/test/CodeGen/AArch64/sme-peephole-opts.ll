@@ -63,8 +63,7 @@ define void @test2() nounwind "aarch64_pstate_sm_compatible" {
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    mrs x19, SVCR
 ; CHECK-NEXT:    tbz w19, #0, .LBB2_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstop sm
@@ -95,8 +94,7 @@ define void @test3() nounwind "aarch64_pstate_sm_compatible" {
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    mrs x19, SVCR
 ; CHECK-NEXT:    tbnz w19, #0, .LBB3_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstart sm

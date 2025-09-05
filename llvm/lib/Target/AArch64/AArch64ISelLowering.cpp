@@ -3175,21 +3175,24 @@ MachineBasicBlock *
 AArch64TargetLowering::EmitEntryPStateSM(MachineInstr &MI,
                                          MachineBasicBlock *BB) const {
   MachineFunction *MF = BB->getParent();
-  AArch64FunctionInfo *FuncInfo = MF->getInfo<AArch64FunctionInfo>();
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+  const DebugLoc &DL = MI.getDebugLoc();
   Register ResultReg = MI.getOperand(0).getReg();
-  if (FuncInfo->isPStateSMRegUsed()) {
+  if (MF->getRegInfo().use_empty(ResultReg)) {
+    // Nothing to do. Pseudo erased below.
+  } else if (Subtarget->hasSME()) {
+    BuildMI(*BB, MI, DL, TII->get(AArch64::MRS), ResultReg)
+        .addImm(AArch64SysReg::SVCR)
+        .addReg(AArch64::VG, RegState::Implicit);
+  } else {
     RTLIB::Libcall LC = RTLIB::SMEABI_SME_STATE;
     const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
-    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::BL))
+    BuildMI(*BB, MI, DL, TII->get(AArch64::BL))
         .addExternalSymbol(getLibcallName(LC))
         .addReg(AArch64::X0, RegState::ImplicitDefine)
         .addRegMask(TRI->getCallPreservedMask(*MF, getLibcallCallingConv(LC)));
-    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY), ResultReg)
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), ResultReg)
         .addReg(AArch64::X0);
-  } else {
-    assert(MI.getMF()->getRegInfo().use_empty(ResultReg) &&
-           "Expected no users of the entry pstate.sm!");
   }
   MI.eraseFromParent();
   return BB;
@@ -9102,7 +9105,6 @@ SDValue AArch64TargetLowering::changeStreamingMode(SelectionDAG &DAG, SDLoc DL,
   SmallVector<SDValue> Ops = {Chain, MSROp};
   unsigned Opcode;
   if (Condition != AArch64SME::Always) {
-    FuncInfo->setPStateSMRegUsed(true);
     Register PStateReg = FuncInfo->getPStateSMReg();
     assert(PStateReg.isValid() && "PStateSM Register is invalid");
     SDValue PStateSM =
