@@ -570,7 +570,8 @@ m_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
 
 template <typename Op0_t, typename Op1_t>
 using VPVectorEndPointer_match =
-    Recipe_match<std::tuple<Op0_t, Op1_t>, 0, false, VPVectorEndPointerRecipe>;
+    Recipe_match<std::tuple<Op0_t, Op1_t>, 0, /*Commutative=*/false,
+                 VPVectorEndPointerRecipe>;
 
 template <typename Op0_t, typename Op1_t>
 inline VPVectorEndPointer_match<Op0_t, Op1_t>
