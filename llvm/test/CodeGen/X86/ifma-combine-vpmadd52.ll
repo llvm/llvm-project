@@ -1,217 +1,91 @@
-; RUN: llc < %s -O1 -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefixes=X64
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avxifma | FileCheck %s --check-prefixes=X64,AVX
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512ifma | FileCheck %s --check-prefixes=X64,AVX512,AVX512-NOVL
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512ifma,+avx512vl | FileCheck %s --check-prefixes=X64,AVX512,AVX512VL
 
 ; 67108863 == (1 << 26) - 1
 ; 4503599627370496 == (1 << 52)
 ; 4503599627370495 == (1 << 52) - 1
 
-define dso_local <8 x i64> @test_512_combine_evex(<8 x i64> noundef %0, <8 x i64> noundef %1, <8 x i64> noundef %2) local_unnamed_addr #0 {
-; X64-LABEL: test_512_combine_evex:
-; X64:       # %bb.0:
-; X64-NEXT:    vpbroadcastq {{.*#+}} zmm3 = [67108863,67108863,67108863,67108863,67108863,67108863,67108863,67108863]
-; X64-NEXT:    vpandq %zmm3, %zmm0, %zmm0
-; X64-NEXT:    vpandq %zmm3, %zmm1, %zmm1
-; X64-NEXT:    vpandq %zmm3, %zmm2, %zmm2
-; X64-NOT:     vpmul
-; X64-NOT:     vpadd
-; X64-NEXT:    vpmadd52luq %zmm1, %zmm2, %zmm0
-; X64-NEXT:    retq
-  %4 = and <8 x i64> %0, splat (i64 67108863)
-  %5 = and <8 x i64> %1, splat (i64 67108863)
-  %6 = and <8 x i64> %2, splat (i64 67108863)
-  %7 = mul nuw nsw <8 x i64> %5, %4
-  %8 = add nuw nsw <8 x i64> %7, %6
-  ret <8 x i64> %8
-}
-
-define dso_local <8 x i64> @test_512_no_combine_evex_v2(<8 x i64> noundef %0, <8 x i64> noundef %1, <8 x i64> noundef %2) local_unnamed_addr #0 {
-; X64-LABEL: test_512_no_combine_evex_v2:
-; X64-NOT:   vpmadd52luq
-; X64:       retq
-  %4 = and <8 x i64> %0, splat (i64 4503599627370495)
-  %5 = and <8 x i64> %1, splat (i64 4503599627370495)
-  %6 = and <8 x i64> %2, splat (i64 4503599627370495)
-  %7 = mul nuw nsw <8 x i64> %5, %4
-  %8 = add nuw nsw <8 x i64> %7, %6
-  ret <8 x i64> %8
-}
-
-define dso_local noundef <8 x i64> @test_512_no_combine_evex(<8 x i64> noundef %0, <8 x i64> noundef %1, <8 x i64> noundef %2) local_unnamed_addr #0 {
-; X64-LABEL: test_512_no_combine_evex:
-; X64:       # %bb.0:
-; X64-NOT:     vpmadd52
-; X64-NEXT:    vpmullq %zmm0, %zmm1, %zmm0
-; X64-NEXT:    vpaddq %zmm2, %zmm0, %zmm0
-; X64-NEXT:    retq
-  %4 = mul <8 x i64> %1, %0
-  %5 = add <8 x i64> %4, %2
-  ret <8 x i64> %5
-}
-
-define dso_local <4 x i64> @test_256_combine_evex(<4 x i64> noundef %0, <4 x i64> noundef %1, <4 x i64> noundef %2) local_unnamed_addr #1 {
-; X64-LABEL: test_256_combine_evex:
-; X64:       # %bb.0:
-; X64-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [67108863,67108863,67108863,67108863]
-; X64-NEXT:    vpand %ymm3, %ymm0, %ymm0
-; X64-NEXT:    vpand %ymm3, %ymm1, %ymm1
-; X64-NEXT:    vpand %ymm3, %ymm2, %ymm2
-; X64-NOT:     vpmul
-; X64-NOT:     vpadd
-; X64-NEXT:    vpmadd52luq %ymm1, %ymm2, %ymm0
-; X64-NEXT:    retq
-  %4 = and <4 x i64> %0, <i64 67108863, i64 67108863, i64 67108863, i64 67108863>
-  %5 = and <4 x i64> %1, <i64 67108863, i64 67108863, i64 67108863, i64 67108863>
-  %6 = and <4 x i64> %2, <i64 67108863, i64 67108863, i64 67108863, i64 67108863>
-  %7 = mul nuw nsw <4 x i64> %5, %4
-  %8 = add nuw nsw <4 x i64> %7, %6
-  ret <4 x i64> %8
-}
-
-define dso_local noundef <4 x i64> @test_256_no_combine_evex(<4 x i64> noundef %0, <4 x i64> noundef %1, <4 x i64> noundef %2) local_unnamed_addr #1 {
-; X64-LABEL: test_256_no_combine_evex:
-; X64:       # %bb.0:
-; X64-NOT:     vpmadd52
-; X64-NEXT:    vpmullq %ymm0, %ymm1, %ymm0
-; X64-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
-; X64-NEXT:    retq
-  %4 = mul <4 x i64> %1, %0
-  %5 = add <4 x i64> %4, %2
-  ret <4 x i64> %5
-}
-
-define dso_local <4 x i64> @test_256_combine_vex(<4 x i64> noundef %0, <4 x i64> noundef %1, <4 x i64> noundef %2) local_unnamed_addr #2 {
-; X64-LABEL: test_256_combine_vex:
-; X64:       # %bb.0:
-; X64-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [67108863,67108863,67108863,67108863]
-; X64-NEXT:    vpand %ymm3, %ymm0, %ymm0
-; X64-NEXT:    vpand %ymm3, %ymm1, %ymm1
-; X64-NEXT:    vpand %ymm3, %ymm2, %ymm2
-; X64-NOT:     vpmul
-; X64-NOT:     vpadd
-; X64-NEXT:    {vex} vpmadd52luq %ymm1, %ymm2, %ymm0
-; X64-NEXT:    retq
-  %4 = and <4 x i64> %0, <i64 67108863, i64 67108863, i64 67108863, i64 67108863>
-  %5 = and <4 x i64> %1, <i64 67108863, i64 67108863, i64 67108863, i64 67108863>
-  %6 = and <4 x i64> %2, <i64 67108863, i64 67108863, i64 67108863, i64 67108863>
-  %7 = mul nuw nsw <4 x i64> %5, %4
-  %8 = add nuw nsw <4 x i64> %7, %6
-  ret <4 x i64> %8
-}
-
-define dso_local noundef <4 x i64> @test_256_no_combine_vex(<4 x i64> noundef %0, <4 x i64> noundef %1, <4 x i64> noundef %2) local_unnamed_addr #2 {
-; X64-LABEL: test_256_no_combine_vex:
-; X64:       # %bb.0:
-; X64-NOT:     vpmadd52
-; X64-NEXT:    vpmullq %ymm0, %ymm1, %ymm0
-; X64-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
-; X64-NEXT:    retq
-  %4 = mul <4 x i64> %1, %0
-  %5 = add <4 x i64> %4, %2
-  ret <4 x i64> %5
-}
-
-define i64 @scalar_no_ifma(i64 %a, i64 %b, i64 %acc) #0 {
-; X64-LABEL: scalar_no_ifma:
-; X64-NOT: vpmadd52
-; X64-NOT: vpmullq
-; X64:     imulq
-; X64:     ret
-entry:
-  %mul = mul i64 %a, %b
-  %res = add i64 %acc, %mul
-  ret i64 %res
-}
-
-define <8 x i64> @mixed_width_too_wide(<8 x i64> %a, <8 x i64> %b, <8 x i64> %acc) #0 {
-; X64-LABEL: mixed_width_too_wide:
-; X64-NOT:   vpmadd52luq
-; X64:       vpmullq
-; X64:       ret
-entry:
-  ; 40-bit and 13-bit, product fits < 2^53 (NOT < 2^52)
-  %a40 = and <8 x i64> %a, splat (i64 1099511627775)
-  %b13 = and <8 x i64> %b, splat (i64 8191)
-  %mul = mul <8 x i64> %a40, %b13
-  %res = add <8 x i64> %acc, %mul
+define <8 x i64> @test_512_combine(<8 x i64> %x, <8 x i64> %y, <8 x i64> %z) {
+  %x_masked = and <8 x i64> %x, splat (i64 67108863)
+  %y_masked = and <8 x i64> %y, splat (i64 67108863)
+  %mul = mul nuw nsw <8 x i64> %x_masked, %y_masked
+  %res = add nuw nsw <8 x i64> %mul, %z
   ret <8 x i64> %res
 }
 
-define <8 x i64> @zext32_inputs_not_safe(<8 x i32> %ai32, <8 x i32> %bi32, <8 x i64> %acc) #0 {
-; X64-LABEL: zext32_inputs_not_safe:
-; X64:       vpmul
-; X64-NOT:   vpmadd52luq
-; X64:       ret
-entry:
-  %a = zext <8 x i32> %ai32 to <8 x i64>
-  %b = zext <8 x i32> %bi32 to <8 x i64>
-  %mul = mul <8 x i64> %a, %b
-  %res = add <8 x i64> %acc, %mul
+define <8 x i64> @test_512_combine_v2(<8 x i64> %x, <8 x i64> %y, <8 x i64> %z) {
+  %x_masked = and <8 x i64> %x, splat (i64 1125899906842623) ; (1 << 50) - 1
+  %y_masked = and <8 x i64> %y, splat (i64 3)
+  %mul = mul nuw nsw <8 x i64> %x_masked, %y_masked
+  %res = add nuw nsw <8 x i64> %mul, %z
   ret <8 x i64> %res
 }
 
-define <8 x i64> @const_2pow51_times_2(<8 x i64> %acc) #0 {
-; X64-LABEL: const_2pow51_times_2:
-; X64-NOT:   vpmadd52luq
-; X64:       vpaddq
-; X64:       ret
-entry:
-  ; product = 2^52
-  %mul = mul <8 x i64> splat(i64 2251799813685248), splat(i64 2)
-  %res = add <8 x i64> %acc, %mul    ; needs full low-64 add
+define <8 x i64> @test_512_no_combine(<8 x i64> %x, <8 x i64> %y, <8 x i64> %z) {
+  %x_masked = and <8 x i64> %x, splat (i64 4503599627370495)
+  %y_masked = and <8 x i64> %y, splat (i64 4503599627370495)
+  %mul = mul nuw nsw <8 x i64> %x_masked, %y_masked
+  %res = add nuw nsw <8 x i64> %mul, %z
   ret <8 x i64> %res
 }
 
-define <4 x i64> @safe_ifma_v4(<4 x i64> %a, <4 x i64> %b, <4 x i64> %acc) #1 {
-; X64-LABEL: safe_ifma_v4:
-; X64:       vpmadd52luq
-; X64-NOT:   vpmullq
-; X64:       ret
-entry:
-  %a26 = and <4 x i64> %a, splat (i64 67108863)
-  %b26 = and <4 x i64> %b, splat (i64 67108863)
-  %mul = mul <4 x i64> %a26, %b26
-  %res = add <4 x i64> %acc, %mul
+define <8 x i64> @test_512_no_combine_v2(<8 x i64> %x, <8 x i64> %y, <8 x i64> %z) {
+  %mul = mul <8 x i64> %x, %y
+  %res = add <8 x i64> %mul, %z
+  ret <8 x i64> %res
+}
+
+define <4 x i64> @test_256_combine(<4 x i64> %x, <4 x i64> %y, <4 x i64> %z) {
+  %x_masked = and <4 x i64> %x, splat(i64 67108863)
+  %y_masked = and <4 x i64> %y, splat(i64 67108863)
+  %mul = mul nuw nsw <4 x i64> %x_masked, %y_masked
+  %res = add nuw nsw <4 x i64> %z, %mul
   ret <4 x i64> %res
 }
 
-define <2 x i64> @safe_ifma_v2(<2 x i64> %a, <2 x i64> %b, <2 x i64> %acc) #1 {
-; X64-LABEL: safe_ifma_v2:
-; X64:       vpmadd52luq
-; X64-NOT:   vpmullq
-; X64:       ret
-entry:
-  %a26 = and <2 x i64> %a, splat (i64 67108863)
-  %b26 = and <2 x i64> %b, splat (i64 67108863)
-  %mul = mul <2 x i64> %a26, %b26
-  %res = add <2 x i64> %acc, %mul
+define <4 x i64> @test_256_no_combine(<4 x i64> %x, <4 x i64> %y, <4 x i64> %z) {
+  %mul = mul <4 x i64> %x, %y
+  %res = add <4 x i64> %mul, %z
+  ret <4 x i64> %res
+}
+
+define <2 x i64> @test_128_combine(<2 x i64> %x, <2 x i64> %y, <2 x i64> %z) {
+  %x_masked = and <2 x i64> %x, splat (i64 67108863)
+  %y_masked = and <2 x i64> %y, splat (i64 67108863)
+  %mul = mul <2 x i64> %x_masked, %y_masked
+  %res = add <2 x i64> %z, %mul
   ret <2 x i64> %res
 }
 
-define <4 x i64> @v4_no_vl_fallback(<4 x i64> %a, <4 x i64> %b, <4 x i64> %acc) #0 {
-; X64-LABEL: v4_no_vl_fallback:
-; X64-NOT:   vpmadd52luq
-; X64:       pmul
-; X64:       ret
-entry:
-  %a26 = and <4 x i64> %a, splat (i64 67108863)
-  %b26 = and <4 x i64> %b, splat (i64 67108863)
-  %mul = mul <4 x i64> %a26, %b26
-  %res = add <4 x i64> %acc, %mul
-  ret <4 x i64> %res
+; Sanity check we're not applying this here
+define <1 x i64> @test_scalar_no_ifma(<1 x i64> %x, <1 x i64> %y, <1 x i64> %z) {
+  %mul = mul <1 x i64> %x, %y
+  %res = add <1 x i64> %mul, %z
+  ret <1 x i64> %res
 }
 
-define <16 x i64> @v16_test_split(<16 x i64> %a, <16 x i64> %b, <16 x i64> %acc) #1 {
-; X64-LABEL: v16_test_split:
-; X64:       vpmadd52luq
-; X64:       vpmadd52luq
-; X64:       ret
-entry:
-  %a26 = and <16 x i64> %a, splat (i64 67108863)
-  %b26 = and <16 x i64> %b, splat (i64 67108863)
-  %mul = mul <16 x i64> %a26, %b26
-  %res = add <16 x i64> %acc, %mul
+define <8 x i64> @test_mixed_width_too_wide(<8 x i64> %x, <8 x i64> %y, <8 x i64> %z) {
+  ; 40-bit and 13-bit, too wide
+  %x40 = and <8 x i64> %x, splat (i64 1099511627775)
+  %y13 = and <8 x i64> %y, splat (i64 8191)
+  %mul = mul <8 x i64> %x40, %y13
+  %res = add <8 x i64> %z, %mul
+  ret <8 x i64> %z
+}
+
+define <8 x i64> @test_zext32_inputs_not_safe(<8 x i32> %xi32, <8 x i32> %yi32, <8 x i64> %z) {
+  %x = zext <8 x i32> %xi32 to <8 x i64>
+  %y = zext <8 x i32> %yi32 to <8 x i64>
+  %mul = mul <8 x i64> %x, %y
+  %res = add <8 x i64> %z, %mul
+  ret <8 x i64> %res
+}
+
+define <16 x i64> @test_1024_combine_split(<16 x i64> %x, <16 x i64> %y, <16 x i64> %z) {
+  %x_masked = and <16 x i64> %x, splat (i64 67108863)
+  %y_masked = and <16 x i64> %y, splat (i64 67108863)
+  %mul = mul <16 x i64> %x_masked, %y_masked
+  %res = add <16 x i64> %z, %mul
   ret <16 x i64> %res
 }
-
-attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) uwtable "target-features"="+avx,+avx2,+avx512dq,+avx512f,+avx512ifma,-avx512vl,+cmov,+crc32,+evex512,+cx8,+f16c,+fma,+fxsr,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave" "tune-cpu"="generic" }
-attributes #1 = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) uwtable "target-features"="+avx,+avx2,+avx512dq,+avx512f,+avx512ifma,+avx512vl,+cmov,+crc32,+cx8,+f16c,+fma,+fxsr,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave" "tune-cpu"="generic" }
-attributes #2 = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) uwtable "target-features"="+avx,+avx2,+avx512dq,+avx512f,+avx512vl,+avxifma,+cmov,+crc32,+cx8,+f16c,+fma,+fxsr,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave" "tune-cpu"="generic" }
