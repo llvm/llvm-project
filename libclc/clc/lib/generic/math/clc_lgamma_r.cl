@@ -582,7 +582,7 @@ _CLC_OVERLOAD _CLC_DEF double __clc_lgamma_r(double x, private int *ip) {
   return r;
 }
 
-#endif // cl_khr_fp64
+#endif
 
 #ifdef cl_khr_fp16
 
@@ -592,11 +592,10 @@ _CLC_OVERLOAD _CLC_DEF half __clc_lgamma_r(half x, private int *iptr) {
   return (half)__clc_lgamma_r((float)x, iptr);
 }
 
-#endif // cl_khr_fp16
+#endif
 
 #define __CLC_FUNCTION __clc_lgamma_r
 #define __CLC_ARG2_TYPE int
-
 #define __CLC_ADDRSPACE private
 #define __CLC_BODY <clc/shared/unary_def_with_ptr_scalarize.inc>
 #include <clc/math/gentype.inc>
@@ -617,4 +616,4 @@ _CLC_OVERLOAD _CLC_DEF half __clc_lgamma_r(half x, private int *iptr) {
 #define __CLC_BODY <clc_lgamma_r.inc>
 #include <clc/math/gentype.inc>
 #undef __CLC_ADDRSPACE
-#endif // _CLC_DISTINCT_GENERIC_AS_SUPPORTED
+#endif
