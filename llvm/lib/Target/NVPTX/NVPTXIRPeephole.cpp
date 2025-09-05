@@ -1,4 +1,4 @@
-//===------ NVPTXFoldFMA.cpp - Fold FMA --------------===//
+//===------ NVPTXIRPeephole.cpp - NVPTX IR Peephole --------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,18 +22,37 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 
-#define DEBUG_TYPE "nvptx-fold-fma"
+#define DEBUG_TYPE "nvptx-ir-peephole"
 
 using namespace llvm;
 
-static bool tryFoldBinaryFMul(BinaryOperator *BI, Value *MulOperand,
-                              Value *OtherOperand, bool IsFirstOperand,
-                              bool IsFSub) {
-  auto *FMul = dyn_cast<BinaryOperator>(MulOperand);
-  if (!FMul || FMul->getOpcode() != Instruction::FMul || !FMul->hasOneUse() ||
-      !FMul->hasAllowContract())
-    return false;
+static bool tryFoldBinaryFMul(BinaryOperator *BI) {
+  Value *Op0 = BI->getOperand(0);
+  Value *Op1 = BI->getOperand(1);
 
+  auto *FMul0 = dyn_cast<BinaryOperator>(Op0);
+  auto *FMul1 = dyn_cast<BinaryOperator>(Op1);
+
+  BinaryOperator *FMul = nullptr;
+  Value *OtherOperand = nullptr;
+  bool IsFirstOperand = false;
+
+  // Either Op0 or Op1 should be a valid FMul
+  if (FMul0 && FMul0->getOpcode() == Instruction::FMul && FMul0->hasOneUse() &&
+      FMul0->hasAllowContract()) {
+    FMul = FMul0;
+    OtherOperand = Op1;
+    IsFirstOperand = true;
+  } else if (FMul1 && FMul1->getOpcode() == Instruction::FMul &&
+             FMul1->hasOneUse() && FMul1->hasAllowContract()) {
+    FMul = FMul1;
+    OtherOperand = Op0;
+    IsFirstOperand = false;
+  } else {
+    return false;
+  }
+
+  bool IsFSub = BI->getOpcode() == Instruction::FSub;
   LLVM_DEBUG({
     const char *OpName = IsFSub ? "FSub" : "FAdd";
     dbgs() << "Found " << OpName << " with FMul (single use) as "
@@ -87,10 +106,9 @@ static bool tryFoldBinaryFMul(BinaryOperator *BI, Value *MulOperand,
 
 static bool foldFMA(Function &F) {
   bool Changed = false;
-  SmallVector<BinaryOperator *, 16> FAddFSubInsts;
 
-  // Collect all float/double FAdd/FSub instructions with allow-contract
-  for (auto &I : instructions(F)) {
+  // Iterate and process float/double FAdd/FSub instructions with allow-contract
+  for (auto &I : llvm::make_early_inc_range(instructions(F))) {
     if (auto *BI = dyn_cast<BinaryOperator>(&I)) {
       // Only FAdd and FSub are supported.
       if (BI->getOpcode() != Instruction::FAdd &&
@@ -105,42 +123,35 @@ static bool foldFMA(Function &F) {
       if (!BI->getType()->isFloatTy() && !BI->getType()->isDoubleTy())
         continue;
 
-      FAddFSubInsts.push_back(BI);
+      if (tryFoldBinaryFMul(BI))
+        Changed = true;
     }
   }
-
-  for (auto *BI : FAddFSubInsts) {
-    Value *Op0 = BI->getOperand(0);
-    Value *Op1 = BI->getOperand(1);
-    bool IsFSub = BI->getOpcode() == Instruction::FSub;
-
-    if (tryFoldBinaryFMul(BI, Op0, Op1, true /*IsFirstOperand*/, IsFSub) ||
-        tryFoldBinaryFMul(BI, Op1, Op0, false /*IsFirstOperand*/, IsFSub))
-      Changed = true;
-  }
-
   return Changed;
 }
 
 namespace {
 
-struct NVPTXFoldFMA : public FunctionPass {
+struct NVPTXIRPeephole : public FunctionPass {
   static char ID;
-  NVPTXFoldFMA() : FunctionPass(ID) {}
+  NVPTXIRPeephole() : FunctionPass(ID) {}
   bool runOnFunction(Function &F) override;
 };
 
 } // namespace
 
-char NVPTXFoldFMA::ID = 0;
-INITIALIZE_PASS(NVPTXFoldFMA, "nvptx-fold-fma", "NVPTX Fold FMA", false, false)
+char NVPTXIRPeephole::ID = 0;
+INITIALIZE_PASS(NVPTXIRPeephole, "nvptx-ir-peephole", "NVPTX IR Peephole",
+                false, false)
 
-bool NVPTXFoldFMA::runOnFunction(Function &F) { return foldFMA(F); }
+bool NVPTXIRPeephole::runOnFunction(Function &F) { return foldFMA(F); }
 
-FunctionPass *llvm::createNVPTXFoldFMAPass() { return new NVPTXFoldFMA(); }
+FunctionPass *llvm::createNVPTXIRPeepholePass() {
+  return new NVPTXIRPeephole();
+}
 
-PreservedAnalyses NVPTXFoldFMAPass::run(Function &F,
-                                        FunctionAnalysisManager &) {
+PreservedAnalyses NVPTXIRPeepholePass::run(Function &F,
+                                           FunctionAnalysisManager &) {
   if (!foldFMA(F))
     return PreservedAnalyses::all();
 
