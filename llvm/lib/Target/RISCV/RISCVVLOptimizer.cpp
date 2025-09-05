@@ -89,15 +89,6 @@ private:
   bool isCandidate(const MachineInstr &MI) const;
   void transfer(const MachineInstr &MI);
 
-  /// Returns all uses of vector virtual registers.
-  auto vector_uses(const MachineInstr &MI) const {
-    auto Pred = [this](const MachineOperand &MO) -> bool {
-      return MO.isReg() && MO.getReg().isVirtual() &&
-             RISCVRegisterInfo::isRVVRegClass(MRI->getRegClass(MO.getReg()));
-    };
-    return make_filter_range(MI.uses(), Pred);
-  }
-
   /// For a given instruction, records what elements of it are demanded by
   /// downstream users.
   DenseMap<const MachineInstr *, DemandedVL> DemandedVLs;
@@ -1634,12 +1625,18 @@ static bool isPhysical(const MachineOperand &MO) {
   return MO.isReg() && MO.getReg().isPhysical();
 }
 
+static bool isVirtualVec(const MachineOperand &MO) {
+  return MO.isReg() && MO.getReg().isVirtual() &&
+         RISCVRegisterInfo::isRVVRegClass(
+             MO.getParent()->getMF()->getRegInfo().getRegClass(MO.getReg()));
+}
+
 /// Look through \p MI's operands and propagate what it demands to its uses.
 void RISCVVLOptimizer::transfer(const MachineInstr &MI) {
   if (!isSupportedInstr(MI) || !checkUsers(MI) || any_of(MI.defs(), isPhysical))
     DemandedVLs[&MI] = DemandedVL::vlmax();
 
-  for (const MachineOperand &MO : vector_uses(MI)) {
+  for (const MachineOperand &MO : make_filter_range(MI.uses(), isVirtualVec)) {
     const MachineInstr *Def = MRI->getVRegDef(MO.getReg());
     DemandedVL Prev = DemandedVLs[Def];
     DemandedVLs[Def] = max(DemandedVLs[Def], getMinimumVLForUser(MO));
