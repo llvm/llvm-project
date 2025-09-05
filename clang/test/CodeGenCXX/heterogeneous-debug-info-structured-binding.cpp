@@ -25,20 +25,20 @@ struct A {
 // CHECK-NEXT:      #dbg_declare(ptr addrspace(5) [[TMP1]], [[META23:![0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(ptr), DIOpDeref([[STRUCT_A]]), DIOpConstant(i32 0), DIOpBitOffset(i32)), [[META24:![0-9]+]])
 // CHECK-NEXT:      #dbg_declare(ptr addrspace(5) [[TMP1]], [[META25:![0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(ptr), DIOpDeref([[STRUCT_A]]), DIOpConstant(i32 32), DIOpBitOffset(i32)), [[META26:![0-9]+]])
 // CHECK-NEXT:    store ptr [[A_ASCAST]], ptr [[TMP3]], align 8, !dbg [[DBG27:![0-9]+]]
-// CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_A]], ptr [[TMP2]], i32 0, i32 0, !dbg [[META19]]
-// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[X]], align 4, !dbg [[DBG28:![0-9]+]]
-// CHECK-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_A]], ptr [[TMP2]], i32 0, i32 1, !dbg [[META21]]
-// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[Y]], align 4, !dbg [[DBG29:![0-9]+]]
+// CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_A]], ptr [[TMP2]], i32 0, i32 0, !dbg [[DBG28:![0-9]+]]
+// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[X]], align 4, !dbg [[DBG28]]
+// CHECK-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_A]], ptr [[TMP2]], i32 0, i32 1, !dbg [[DBG29:![0-9]+]]
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[Y]], align 4, !dbg [[DBG29]]
 // CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP4]], [[TMP5]], !dbg [[DBG30:![0-9]+]]
-// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[TMP3]], align 8, !dbg [[META24]]
-// CHECK-NEXT:    [[X1:%.*]] = getelementptr inbounds nuw [[STRUCT_A]], ptr [[TMP6]], i32 0, i32 0, !dbg [[META24]]
-// CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[X1]], align 4, !dbg [[DBG31:![0-9]+]]
-// CHECK-NEXT:    [[ADD2:%.*]] = add nsw i32 [[ADD]], [[TMP7]], !dbg [[DBG32:![0-9]+]]
-// CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP3]], align 8, !dbg [[META26]]
-// CHECK-NEXT:    [[Y3:%.*]] = getelementptr inbounds nuw [[STRUCT_A]], ptr [[TMP8]], i32 0, i32 1, !dbg [[META26]]
-// CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[Y3]], align 4, !dbg [[DBG33:![0-9]+]]
-// CHECK-NEXT:    [[ADD4:%.*]] = add nsw i32 [[ADD2]], [[TMP9]], !dbg [[DBG34:![0-9]+]]
-// CHECK-NEXT:    ret i32 [[ADD4]], !dbg [[DBG35:![0-9]+]]
+// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[TMP3]], align 8, !dbg [[DBG31:![0-9]+]], !nonnull [[META32:![0-9]+]], !align [[META33:![0-9]+]]
+// CHECK-NEXT:    [[X1:%.*]] = getelementptr inbounds nuw [[STRUCT_A]], ptr [[TMP6]], i32 0, i32 0, !dbg [[DBG31]]
+// CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[X1]], align 4, !dbg [[DBG31]]
+// CHECK-NEXT:    [[ADD2:%.*]] = add nsw i32 [[ADD]], [[TMP7]], !dbg [[DBG34:![0-9]+]]
+// CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP3]], align 8, !dbg [[DBG35:![0-9]+]], !nonnull [[META32]], !align [[META33]]
+// CHECK-NEXT:    [[Y3:%.*]] = getelementptr inbounds nuw [[STRUCT_A]], ptr [[TMP8]], i32 0, i32 1, !dbg [[DBG35]]
+// CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[Y3]], align 4, !dbg [[DBG35]]
+// CHECK-NEXT:    [[ADD4:%.*]] = add nsw i32 [[ADD2]], [[TMP9]], !dbg [[DBG36:![0-9]+]]
+// CHECK-NEXT:    ret i32 [[ADD4]], !dbg [[DBG37:![0-9]+]]
 //
 int f() {
   A a{10, 20};
@@ -48,7 +48,7 @@ int f() {
 }
 
 // CHECK-LABEL: define dso_local noundef i32 @_Z1gv(
-// CHECK-SAME: ) #[[ATTR0]] !dbg [[DBG36:![0-9]+]] {
+// CHECK-SAME: ) #[[ATTR0]] !dbg [[DBG38:![0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[A:%.*]] = alloca [2 x i32], align 4, addrspace(5)
@@ -58,28 +58,28 @@ int f() {
 // CHECK-NEXT:    [[A_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A]] to ptr
 // CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(5) [[TMP0]] to ptr
 // CHECK-NEXT:    [[TMP3:%.*]] = addrspacecast ptr addrspace(5) [[TMP1]] to ptr
-// CHECK-NEXT:      #dbg_declare(ptr addrspace(5) [[A]], [[META38:![0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref([2 x i32])), [[META44:![0-9]+]])
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p4.i64(ptr align 4 [[A_ASCAST]], ptr addrspace(4) align 4 @__const._Z1gv.A, i64 8, i1 false), !dbg [[META44]]
-// CHECK-NEXT:      #dbg_declare(ptr addrspace(5) [[TMP0]], [[META45:![0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref([2 x i32]), DIOpConstant(i32 0), DIOpByteOffset(i32)), [[META46:![0-9]+]])
-// CHECK-NEXT:      #dbg_declare(ptr addrspace(5) [[TMP0]], [[META47:![0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref([2 x i32]), DIOpConstant(i32 4), DIOpByteOffset(i32)), [[META48:![0-9]+]])
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p4.i64(ptr align 4 [[TMP2]], ptr addrspace(4) align 4 @__const._Z1gv., i64 8, i1 false), !dbg [[DBG49:![0-9]+]]
-// CHECK-NEXT:      #dbg_declare(ptr addrspace(5) [[TMP1]], [[META50:![0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(ptr), DIOpDeref([2 x i32]), DIOpConstant(i32 0), DIOpByteOffset(i32)), [[META51:![0-9]+]])
-// CHECK-NEXT:      #dbg_declare(ptr addrspace(5) [[TMP1]], [[META52:![0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(ptr), DIOpDeref([2 x i32]), DIOpConstant(i32 4), DIOpByteOffset(i32)), [[META53:![0-9]+]])
-// CHECK-NEXT:    store ptr [[A_ASCAST]], ptr [[TMP3]], align 8, !dbg [[DBG54:![0-9]+]]
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[TMP2]], i64 0, i64 0, !dbg [[META46]]
-// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !dbg [[DBG55:![0-9]+]]
-// CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [2 x i32], ptr [[TMP2]], i64 0, i64 1, !dbg [[META48]]
-// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4, !dbg [[DBG56:![0-9]+]]
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP4]], [[TMP5]], !dbg [[DBG57:![0-9]+]]
-// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[TMP3]], align 8, !dbg [[META51]]
-// CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [2 x i32], ptr [[TMP6]], i64 0, i64 0, !dbg [[META51]]
-// CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4, !dbg [[DBG58:![0-9]+]]
-// CHECK-NEXT:    [[ADD3:%.*]] = add i32 [[ADD]], [[TMP7]], !dbg [[DBG59:![0-9]+]]
-// CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP3]], align 8, !dbg [[META53]]
-// CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [2 x i32], ptr [[TMP8]], i64 0, i64 1, !dbg [[META53]]
-// CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[ARRAYIDX4]], align 4, !dbg [[DBG60:![0-9]+]]
-// CHECK-NEXT:    [[ADD5:%.*]] = add i32 [[ADD3]], [[TMP9]], !dbg [[DBG61:![0-9]+]]
-// CHECK-NEXT:    ret i32 [[ADD5]], !dbg [[DBG62:![0-9]+]]
+// CHECK-NEXT:      #dbg_declare(ptr addrspace(5) [[A]], [[META40:![0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref([2 x i32])), [[META46:![0-9]+]])
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p4.i64(ptr align 4 [[A_ASCAST]], ptr addrspace(4) align 4 @__const._Z1gv.A, i64 8, i1 false), !dbg [[META46]]
+// CHECK-NEXT:      #dbg_declare(ptr addrspace(5) [[TMP0]], [[META47:![0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref([2 x i32]), DIOpConstant(i32 0), DIOpByteOffset(i32)), [[META48:![0-9]+]])
+// CHECK-NEXT:      #dbg_declare(ptr addrspace(5) [[TMP0]], [[META49:![0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref([2 x i32]), DIOpConstant(i32 4), DIOpByteOffset(i32)), [[META50:![0-9]+]])
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p4.i64(ptr align 4 [[TMP2]], ptr addrspace(4) align 4 @__const._Z1gv., i64 8, i1 false), !dbg [[DBG51:![0-9]+]]
+// CHECK-NEXT:      #dbg_declare(ptr addrspace(5) [[TMP1]], [[META52:![0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(ptr), DIOpDeref([2 x i32]), DIOpConstant(i32 0), DIOpByteOffset(i32)), [[META53:![0-9]+]])
+// CHECK-NEXT:      #dbg_declare(ptr addrspace(5) [[TMP1]], [[META54:![0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(ptr), DIOpDeref([2 x i32]), DIOpConstant(i32 4), DIOpByteOffset(i32)), [[META55:![0-9]+]])
+// CHECK-NEXT:    store ptr [[A_ASCAST]], ptr [[TMP3]], align 8, !dbg [[DBG56:![0-9]+]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[TMP2]], i64 0, i64 0, !dbg [[DBG57:![0-9]+]]
+// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !dbg [[DBG57]]
+// CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [2 x i32], ptr [[TMP2]], i64 0, i64 1, !dbg [[DBG58:![0-9]+]]
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4, !dbg [[DBG58]]
+// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP4]], [[TMP5]], !dbg [[DBG59:![0-9]+]]
+// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[TMP3]], align 8, !dbg [[DBG60:![0-9]+]], !nonnull [[META32]], !align [[META33]]
+// CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [2 x i32], ptr [[TMP6]], i64 0, i64 0, !dbg [[DBG60]]
+// CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4, !dbg [[DBG60]]
+// CHECK-NEXT:    [[ADD3:%.*]] = add i32 [[ADD]], [[TMP7]], !dbg [[DBG61:![0-9]+]]
+// CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP3]], align 8, !dbg [[DBG62:![0-9]+]], !nonnull [[META32]], !align [[META33]]
+// CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [2 x i32], ptr [[TMP8]], i64 0, i64 1, !dbg [[DBG62]]
+// CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[ARRAYIDX4]], align 4, !dbg [[DBG62]]
+// CHECK-NEXT:    [[ADD5:%.*]] = add i32 [[ADD3]], [[TMP9]], !dbg [[DBG63:![0-9]+]]
+// CHECK-NEXT:    ret i32 [[ADD5]], !dbg [[DBG64:![0-9]+]]
 //
 int g() {
   const unsigned A[] = { 10, 20};
@@ -89,9 +89,9 @@ int g() {
 }
 //.
 // CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-// CHECK: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
+// CHECK: [[META1]] = !DIFile(filename: {{.*}}clang/test/CodeGenCXX/<stdin>", directory: "")
 // CHECK: [[DBG6]] = distinct !DISubprogram(name: "f", linkageName: "_Z1fv", scope: [[META7:![0-9]+]], file: [[META7]], line: 43, type: [[META8:![0-9]+]], scopeLine: 43, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META11:![0-9]+]])
-// CHECK: [[META7]] = !DIFile(filename: "{{.*}}heterogeneous-debug-info-structured-binding.cpp", directory: {{.*}})
+// CHECK: [[META7]] = !DIFile(filename: {{.*}}/clang/test/CodeGenCXX/heterogeneous-debug-info-structured-binding.cpp", directory: "")
 // CHECK: [[META8]] = !DISubroutineType(types: [[META9:![0-9]+]])
 // CHECK: [[META9]] = !{[[META10:![0-9]+]]}
 // CHECK: [[META10]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
@@ -116,35 +116,37 @@ int g() {
 // CHECK: [[DBG29]] = !DILocation(line: 47, column: 15, scope: [[DBG6]])
 // CHECK: [[DBG30]] = !DILocation(line: 47, column: 13, scope: [[DBG6]])
 // CHECK: [[DBG31]] = !DILocation(line: 47, column: 20, scope: [[DBG6]])
-// CHECK: [[DBG32]] = !DILocation(line: 47, column: 18, scope: [[DBG6]])
-// CHECK: [[DBG33]] = !DILocation(line: 47, column: 25, scope: [[DBG6]])
-// CHECK: [[DBG34]] = !DILocation(line: 47, column: 23, scope: [[DBG6]])
-// CHECK: [[DBG35]] = !DILocation(line: 47, column: 3, scope: [[DBG6]])
-// CHECK: [[DBG36]] = distinct !DISubprogram(name: "g", linkageName: "_Z1gv", scope: [[META7]], file: [[META7]], line: 84, type: [[META8]], scopeLine: 84, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META37:![0-9]+]])
-// CHECK: [[META37]] = !{[[META38]]}
-// CHECK: [[META38]] = !DILocalVariable(name: "A", scope: [[DBG36]], file: [[META7]], line: 85, type: [[META39:![0-9]+]])
-// CHECK: [[META39]] = !DICompositeType(tag: DW_TAG_array_type, baseType: [[META40:![0-9]+]], size: 64, elements: [[META42:![0-9]+]])
-// CHECK: [[META40]] = !DIDerivedType(tag: DW_TAG_const_type, baseType: [[META41:![0-9]+]])
-// CHECK: [[META41]] = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
-// CHECK: [[META42]] = !{[[META43:![0-9]+]]}
-// CHECK: [[META43]] = !DISubrange(count: 2)
-// CHECK: [[META44]] = !DILocation(line: 85, column: 18, scope: [[DBG36]])
-// CHECK: [[META45]] = !DILocalVariable(name: "x3", scope: [[DBG36]], file: [[META7]], line: 86, type: [[META40]])
-// CHECK: [[META46]] = !DILocation(line: 86, column: 9, scope: [[DBG36]])
-// CHECK: [[META47]] = !DILocalVariable(name: "y3", scope: [[DBG36]], file: [[META7]], line: 86, type: [[META40]])
-// CHECK: [[META48]] = !DILocation(line: 86, column: 13, scope: [[DBG36]])
-// CHECK: [[DBG49]] = !DILocation(line: 86, column: 8, scope: [[DBG36]])
-// CHECK: [[META50]] = !DILocalVariable(name: "x4", scope: [[DBG36]], file: [[META7]], line: 87, type: [[META40]])
-// CHECK: [[META51]] = !DILocation(line: 87, column: 10, scope: [[DBG36]])
-// CHECK: [[META52]] = !DILocalVariable(name: "y4", scope: [[DBG36]], file: [[META7]], line: 87, type: [[META40]])
-// CHECK: [[META53]] = !DILocation(line: 87, column: 14, scope: [[DBG36]])
-// CHECK: [[DBG54]] = !DILocation(line: 87, column: 9, scope: [[DBG36]])
-// CHECK: [[DBG55]] = !DILocation(line: 88, column: 10, scope: [[DBG36]])
-// CHECK: [[DBG56]] = !DILocation(line: 88, column: 15, scope: [[DBG36]])
-// CHECK: [[DBG57]] = !DILocation(line: 88, column: 13, scope: [[DBG36]])
-// CHECK: [[DBG58]] = !DILocation(line: 88, column: 20, scope: [[DBG36]])
-// CHECK: [[DBG59]] = !DILocation(line: 88, column: 18, scope: [[DBG36]])
-// CHECK: [[DBG60]] = !DILocation(line: 88, column: 25, scope: [[DBG36]])
-// CHECK: [[DBG61]] = !DILocation(line: 88, column: 23, scope: [[DBG36]])
-// CHECK: [[DBG62]] = !DILocation(line: 88, column: 3, scope: [[DBG36]])
+// CHECK: [[META32]] = !{}
+// CHECK: [[META33]] = !{i64 4}
+// CHECK: [[DBG34]] = !DILocation(line: 47, column: 18, scope: [[DBG6]])
+// CHECK: [[DBG35]] = !DILocation(line: 47, column: 25, scope: [[DBG6]])
+// CHECK: [[DBG36]] = !DILocation(line: 47, column: 23, scope: [[DBG6]])
+// CHECK: [[DBG37]] = !DILocation(line: 47, column: 3, scope: [[DBG6]])
+// CHECK: [[DBG38]] = distinct !DISubprogram(name: "g", linkageName: "_Z1gv", scope: [[META7]], file: [[META7]], line: 84, type: [[META8]], scopeLine: 84, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META39:![0-9]+]])
+// CHECK: [[META39]] = !{[[META40]]}
+// CHECK: [[META40]] = !DILocalVariable(name: "A", scope: [[DBG38]], file: [[META7]], line: 85, type: [[META41:![0-9]+]])
+// CHECK: [[META41]] = !DICompositeType(tag: DW_TAG_array_type, baseType: [[META42:![0-9]+]], size: 64, elements: [[META44:![0-9]+]])
+// CHECK: [[META42]] = !DIDerivedType(tag: DW_TAG_const_type, baseType: [[META43:![0-9]+]])
+// CHECK: [[META43]] = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
+// CHECK: [[META44]] = !{[[META45:![0-9]+]]}
+// CHECK: [[META45]] = !DISubrange(count: 2)
+// CHECK: [[META46]] = !DILocation(line: 85, column: 18, scope: [[DBG38]])
+// CHECK: [[META47]] = !DILocalVariable(name: "x3", scope: [[DBG38]], file: [[META7]], line: 86, type: [[META42]])
+// CHECK: [[META48]] = !DILocation(line: 86, column: 9, scope: [[DBG38]])
+// CHECK: [[META49]] = !DILocalVariable(name: "y3", scope: [[DBG38]], file: [[META7]], line: 86, type: [[META42]])
+// CHECK: [[META50]] = !DILocation(line: 86, column: 13, scope: [[DBG38]])
+// CHECK: [[DBG51]] = !DILocation(line: 86, column: 8, scope: [[DBG38]])
+// CHECK: [[META52]] = !DILocalVariable(name: "x4", scope: [[DBG38]], file: [[META7]], line: 87, type: [[META42]])
+// CHECK: [[META53]] = !DILocation(line: 87, column: 10, scope: [[DBG38]])
+// CHECK: [[META54]] = !DILocalVariable(name: "y4", scope: [[DBG38]], file: [[META7]], line: 87, type: [[META42]])
+// CHECK: [[META55]] = !DILocation(line: 87, column: 14, scope: [[DBG38]])
+// CHECK: [[DBG56]] = !DILocation(line: 87, column: 9, scope: [[DBG38]])
+// CHECK: [[DBG57]] = !DILocation(line: 88, column: 10, scope: [[DBG38]])
+// CHECK: [[DBG58]] = !DILocation(line: 88, column: 15, scope: [[DBG38]])
+// CHECK: [[DBG59]] = !DILocation(line: 88, column: 13, scope: [[DBG38]])
+// CHECK: [[DBG60]] = !DILocation(line: 88, column: 20, scope: [[DBG38]])
+// CHECK: [[DBG61]] = !DILocation(line: 88, column: 18, scope: [[DBG38]])
+// CHECK: [[DBG62]] = !DILocation(line: 88, column: 25, scope: [[DBG38]])
+// CHECK: [[DBG63]] = !DILocation(line: 88, column: 23, scope: [[DBG38]])
+// CHECK: [[DBG64]] = !DILocation(line: 88, column: 3, scope: [[DBG38]])
 //.

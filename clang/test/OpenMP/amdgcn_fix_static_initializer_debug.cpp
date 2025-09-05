@@ -3,7 +3,7 @@
 
 // expected-no-diagnostics
 
-// CHECK: private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}};main;
+// CHECK: private unnamed_addr addrspace(1) constant [{{[0-9]+}} x i8] c";{{.*}};main;
 int main (void)
 {
   int res = 0;

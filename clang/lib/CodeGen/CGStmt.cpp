@@ -409,7 +409,7 @@ void CodeGenFunction::EmitNoLoopCode(const OMPExecutableDirective &D,
   // On a continue in the body, jump to the end.
   // A break is not allowed in this scope but it would be the end anyways
   JumpDest Continue = getJumpDestInCurrentScope(DoneBB);
-  BreakContinueStack.push_back(BreakContinue(Continue, Continue));
+  BreakContinueStack.push_back(BreakContinue(cast<ForStmt>(*CapturedForStmt), Continue, Continue));
 
   EmitBlock(ExecBB);
 
@@ -507,7 +507,7 @@ void CodeGenFunction::EmitNoLoopXteamScanPhaseOneCode(
   // On a continue in the body, jump to the end.
   // A break is not allowed in this scope but it would be the end anyways
   JumpDest Continue = getJumpDestInCurrentScope(DoneBB);
-  BreakContinueStack.push_back(BreakContinue(Continue, Continue));
+  BreakContinueStack.push_back(BreakContinue(cast<ForStmt>(*CapturedForStmt), Continue, Continue));
 
   // Emit the kernel body block
   EmitBlock(ExecBB);
@@ -2165,7 +2165,7 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
   JumpDest LoopExit = getJumpDestInCurrentScope("while.end");
 
   // Store the blocks to use for break and continue.
-  BreakContinueStack.push_back(BreakContinue(LoopExit, LoopHeader));
+  BreakContinueStack.push_back(BreakContinue(S, LoopExit, LoopHeader));
 
   // C++ [stmt.while]p2:
   //   When the condition of a while statement is a declaration, the
@@ -2284,7 +2284,7 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
   uint64_t ParentCount = getCurrentProfileCount();
 
   // Store the blocks to use for break and continue.
-  BreakContinueStack.push_back(BreakContinue(LoopExit, LoopCond));
+  BreakContinueStack.push_back(BreakContinue(S, LoopExit, LoopCond));
 
   // Emit the body of the loop.
   llvm::BasicBlock *LoopBody = createBasicBlock("do.body");
@@ -2510,7 +2510,7 @@ void CodeGenFunction::EmitForStmtWithArgs(const ForStmt &S,
     Continue = CondDest;
   else if (!S.getConditionVariable())
     Continue = getJumpDestInCurrentScope("for.inc");
-  BreakContinueStack.push_back(BreakContinue(LoopExit, Continue));
+  BreakContinueStack.push_back(BreakContinue(S, LoopExit, Continue));
 
   if (CondExpr) {
     // If the for statement has a condition scope, emit the local variable
@@ -2774,7 +2774,7 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
   JumpDest Continue = getJumpDestInCurrentScope("for.inc");
 
   // Store the blocks to use for break and continue.
-  BreakContinueStack.push_back(BreakContinue(LoopExit, Continue));
+  BreakContinueStack.push_back(BreakContinue(S, LoopExit, Continue));
 
   {
     // Create a separate cleanup scope for the loop variable and body.
@@ -2996,6 +2996,20 @@ void CodeGenFunction::EmitDeclStmt(const DeclStmt &S) {
     EmitDecl(*I, /*EvaluateConditionDecl=*/true);
 }
 
+auto CodeGenFunction::GetDestForLoopControlStmt(const LoopControlStmt &S)
+    -> const BreakContinue * {
+  if (!S.hasLabelTarget())
+    return &BreakContinueStack.back();
+
+  const Stmt *LoopOrSwitch = S.getNamedLoopOrSwitch();
+  assert(LoopOrSwitch && "break/continue target not set?");
+  for (const BreakContinue &BC : llvm::reverse(BreakContinueStack))
+    if (BC.LoopOrSwitch == LoopOrSwitch)
+      return &BC;
+
+  llvm_unreachable("break/continue target not found");
+}
+
 void CodeGenFunction::EmitBreakStmt(const BreakStmt &S) {
   assert(!BreakContinueStack.empty() && "break stmt not in a loop or switch!");
 
@@ -3006,7 +3020,7 @@ void CodeGenFunction::EmitBreakStmt(const BreakStmt &S) {
     EmitStopPoint(&S);
 
   ApplyAtomGroup Grp(getDebugInfo());
-  EmitBranchThroughCleanup(BreakContinueStack.back().BreakBlock);
+  EmitBranchThroughCleanup(GetDestForLoopControlStmt(S)->BreakBlock);
 }
 
 void CodeGenFunction::EmitContinueStmt(const ContinueStmt &S) {
@@ -3019,7 +3033,7 @@ void CodeGenFunction::EmitContinueStmt(const ContinueStmt &S) {
     EmitStopPoint(&S);
 
   ApplyAtomGroup Grp(getDebugInfo());
-  EmitBranchThroughCleanup(BreakContinueStack.back().ContinueBlock);
+  EmitBranchThroughCleanup(GetDestForLoopControlStmt(S)->ContinueBlock);
 }
 
 /// EmitCaseStmtRange - If case statement range is not too big then
@@ -3648,7 +3662,7 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   if (!BreakContinueStack.empty())
     OuterContinue = BreakContinueStack.back().ContinueBlock;
 
-  BreakContinueStack.push_back(BreakContinue(SwitchExit, OuterContinue));
+  BreakContinueStack.push_back(BreakContinue(S, SwitchExit, OuterContinue));
 
   // Emit switch body.
   EmitStmt(S.getBody());

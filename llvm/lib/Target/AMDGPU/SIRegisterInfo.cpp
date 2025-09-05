@@ -4172,6 +4172,8 @@ bool SIRegisterInfo::isProperlyAlignedRC(const TargetRegisterClass &RC) const {
     return RC.hasSuperClassEq(
         getVectorSuperClassForBitWidth(getRegSizeInBits(RC)));
 
+  assert(&RC != &AMDGPU::VS_64RegClass);
+
   return true;
 }
 
@@ -4183,6 +4185,9 @@ SIRegisterInfo::getProperlyAlignedRC(const TargetRegisterClass *RC) const {
   unsigned Size = getRegSizeInBits(*RC);
   if (Size <= 32)
     return RC;
+
+  if (RC == &AMDGPU::VS_64RegClass)
+    return &AMDGPU::VS_64_Align2RegClass;
 
   if (isVGPRClass(RC))
     return getAlignedVGPRClassForBitWidth(Size);

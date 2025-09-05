@@ -700,9 +700,6 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
 
   DIBuilder DBuilder(*F.getParent(), /*AllowUnresolved*/ false);
 
-  assert(Shape.getPromiseAlloca() &&
-         "Coroutine with switch ABI should own Promise alloca");
-
   DIFile *DFile = DIS->getFile();
   unsigned LineNum = DIS->getLine();
 

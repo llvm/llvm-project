@@ -58,6 +58,10 @@ def SDT_PPCVecShift : SDTypeProfile<1, 3, [ SDTCisVec<0>,
   SDTCisVec<1>, SDTCisVec<2>, SDTCisPtrTy<3>
 ]>;
 
+def SDT_PPCVecShiftQuad : SDTypeProfile<1, 2, [
+  SDTCisVec<0>, SDTCisSameAs<0,1>, SDTCisSameAs<0,2>
+]>;
+
 def SDT_PPCVecInsert : SDTypeProfile<1, 3, [ SDTCisVec<0>,
   SDTCisVec<1>, SDTCisVec<2>, SDTCisInt<3>
 ]>;
@@ -156,6 +160,8 @@ def PPCfctidz : SDNode<"PPCISD::FCTIDZ", SDTFPUnaryOp, []>;
 def PPCfctiwz : SDNode<"PPCISD::FCTIWZ", SDTFPUnaryOp, []>;
 def PPCfctiduz: SDNode<"PPCISD::FCTIDUZ",SDTFPUnaryOp, []>;
 def PPCfctiwuz: SDNode<"PPCISD::FCTIWUZ",SDTFPUnaryOp, []>;
+
+def PPCvsrq: SDNode<"PPCISD::VSRQ", SDT_PPCVecShiftQuad, []>;
 
 def PPCstrict_fcfid : SDNode<"PPCISD::STRICT_FCFID",
                              SDTFPUnaryOp, [SDNPHasChain]>;

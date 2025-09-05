@@ -419,10 +419,10 @@ struct GenericKernelTy {
     case OMP_TGT_EXEC_MODE_SPMD:
     case OMP_TGT_EXEC_MODE_GENERIC:
     case OMP_TGT_EXEC_MODE_GENERIC_SPMD:
+    case OMP_TGT_EXEC_MODE_SPMD_NO_LOOP:
       return true;
     // AMD-only execution modes
     case OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP:
-    case OMP_TGT_EXEC_MODE_SPMD_NO_LOOP:
     case OMP_TGT_EXEC_MODE_XTEAM_RED:
       DP("AMD-only execution mode\n");
       return true;

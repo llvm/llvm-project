@@ -173,6 +173,18 @@ mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage) {
   llvm_unreachable("Unknown CIR linkage type");
 }
 
+mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
+    cir::CopyOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
+  const mlir::Value length = mlir::LLVM::ConstantOp::create(
+      rewriter, op.getLoc(), rewriter.getI32Type(), op.getLength(layout));
+  assert(!cir::MissingFeatures::aggValueSlotVolatile());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::MemcpyOp>(
+      op, adaptor.getDst(), adaptor.getSrc(), length, /*isVolatile=*/false);
+  return mlir::success();
+}
+
 static mlir::Value getLLVMIntCast(mlir::ConversionPatternRewriter &rewriter,
                                   mlir::Value llvmSrc, mlir::Type llvmDstIntTy,
                                   bool isUnsigned, uint64_t cirSrcWidth,
@@ -576,6 +588,15 @@ struct ConvertCIRToLLVMPass
 
   StringRef getArgument() const override { return "cir-flat-to-llvm"; }
 };
+
+mlir::LogicalResult CIRToLLVMACosOpLowering::matchAndRewrite(
+    cir::ACosOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::ACosOp>(op, resTy,
+                                                  adaptor.getOperands()[0]);
+  return mlir::success();
+}
 
 mlir::LogicalResult CIRToLLVMAssumeOpLowering::matchAndRewrite(
     cir::AssumeOp op, OpAdaptor adaptor,
@@ -1214,10 +1235,10 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
   assert(!cir::MissingFeatures::lowerModeOptLevel());
 
   // TODO: nontemporal, syncscope.
-  assert(!cir::MissingFeatures::opLoadStoreVolatile());
+  assert(!cir::MissingFeatures::opLoadStoreNontemporal());
   mlir::LLVM::LoadOp newLoad = mlir::LLVM::LoadOp::create(
       rewriter, op->getLoc(), llvmTy, adaptor.getAddr(), alignment,
-      /*isVolatile=*/false, /*isNonTemporal=*/false,
+      op.getIsVolatile(), /*isNonTemporal=*/false,
       /*isInvariant=*/false, /*isInvariantGroup=*/false, ordering);
 
   // Convert adapted result to its original type if needed.
@@ -1244,10 +1265,11 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
   mlir::Value value = emitToMemory(rewriter, dataLayout,
                                    op.getValue().getType(), adaptor.getValue());
   // TODO: nontemporal, syncscope.
-  assert(!cir::MissingFeatures::opLoadStoreVolatile());
+  assert(!cir::MissingFeatures::opLoadStoreNontemporal());
+  assert(!cir::MissingFeatures::opLoadStoreTbaa());
   mlir::LLVM::StoreOp storeOp = mlir::LLVM::StoreOp::create(
       rewriter, op->getLoc(), value, adaptor.getAddr(), alignment,
-      /*isVolatile=*/false,
+      op.getIsVolatile(),
       /*isNonTemporal=*/false, /*isInvariantGroup=*/false, memorder);
   rewriter.replaceOp(op, storeOp);
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
@@ -2395,6 +2417,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                                              dl);
   patterns.add<
       // clang-format off
+               CIRToLLVMACosOpLowering,
                CIRToLLVMAssumeOpLowering,
                CIRToLLVMAssumeAlignedOpLowering,
                CIRToLLVMAssumeSepStorageOpLowering,
@@ -2419,6 +2442,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMComplexRealOpLowering,
                CIRToLLVMComplexRealPtrOpLowering,
                CIRToLLVMComplexSubOpLowering,
+               CIRToLLVMCopyOpLowering,
                CIRToLLVMConstantOpLowering,
                CIRToLLVMExpectOpLowering,
                CIRToLLVMFAbsOpLowering,

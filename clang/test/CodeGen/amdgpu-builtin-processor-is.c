@@ -26,7 +26,7 @@
 // AMDGCNSPIRV-LABEL: define spir_func void @foo(
 // AMDGCNSPIRV-SAME: ) addrspace(4) #[[ATTR0:[0-9]+]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load volatile i1, ptr addrspace(1) @llvm.amdgcn.is.gfx900, align 1
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load i1, ptr addrspace(1) @llvm.amdgcn.is.gfx900, align 1
 // AMDGCNSPIRV-NEXT:    [[TOBOOL:%.*]] = icmp ne i1 [[TMP0]], false
 // AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 // AMDGCNSPIRV:       [[IF_THEN]]:
