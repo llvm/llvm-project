@@ -2312,8 +2312,8 @@ AVRTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case AVR::Lsr32:
   case AVR::Asr32:
     return insertWideShift(MI, MBB);
-  case AVR::MUL:
-  case AVR::MULS:
+  case AVR::MULRdRr:
+  case AVR::MULSRdRr:
     return insertMul(MI, MBB);
   case AVR::CopyZero:
     return insertCopyZero(MI, MBB);

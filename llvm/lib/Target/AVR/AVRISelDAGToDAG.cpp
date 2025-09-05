@@ -514,7 +514,7 @@ bool AVRDAGToDAGISel::selectMultiplication(llvm::SDNode *N) {
   assert(Type == MVT::i8 && "unexpected value type");
 
   bool isSigned = N->getOpcode() == ISD::SMUL_LOHI;
-  unsigned MachineOp = isSigned ? AVR::MULS : AVR::MUL;
+  unsigned MachineOp = isSigned ? AVR::MULSRdRr : AVR::MULRdRr;
 
   SDValue Lhs = N->getOperand(0);
   SDValue Rhs = N->getOperand(1);

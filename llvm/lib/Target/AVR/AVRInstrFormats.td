@@ -233,7 +233,7 @@ class FMOVWRdRr<dag outs, dag ins, string asmstr, list<dag> pattern>
 // r = multiplier = 4 bits
 // (Only accepts r16-r31)
 //===----------------------------------------------------------------------===//
-class FMULS<dag outs, dag ins, string asmstr, list<dag> pattern>
+class FMULSRdRr<dag outs, dag ins, string asmstr, list<dag> pattern>
     : AVRInst16<outs, ins, asmstr, pattern> {
   bits<4> rd;
   bits<4> rr;
@@ -249,7 +249,7 @@ class FMULS<dag outs, dag ins, string asmstr, list<dag> pattern>
 // r = multiplier = 3 bits
 // (Only accepts r16-r23)
 //===----------------------------------------------------------------------===//
-class FMULSU<dag outs, dag ins, string asmstr, list<dag> pattern>
+class FMULSURdRr<dag outs, dag ins, string asmstr, list<dag> pattern>
     : AVRInst16<outs, ins, asmstr, pattern> {
   bits<3> rd;
   bits<3> rr;
@@ -271,7 +271,7 @@ class FMULSU<dag outs, dag ins, string asmstr, list<dag> pattern>
 //
 // ddd = destination register
 // rrr = source register
-class FFMUL<bits<2> f, dag outs, dag ins, string asmstr, list<dag> pattern>
+class FFMULRdRr<bits<2> f, dag outs, dag ins, string asmstr, list<dag> pattern>
     : AVRInst16<outs, ins, asmstr, pattern> {
   bits<3> rd;
   bits<3> rr;

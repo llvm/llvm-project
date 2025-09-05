@@ -491,29 +491,29 @@ let isCommutable = 1, Defs = [R1, R0, SREG] in {
   // MUL Rd, Rr
   // Multiplies Rd by Rr and places the result into R1:R0.
   let usesCustomInserter = 1 in {
-    def MUL : FRdRr<0b1001, 0b11, (outs), (ins GPR8:$rd, GPR8:$rr),
-                    "mul\t$rd, $rr", []>,
-              Requires<[SupportsMultiplication]>;
+    def MULRdRr : FRdRr<0b1001, 0b11, (outs), (ins GPR8:$rd, GPR8:$rr),
+                        "mul\t$rd, $rr", []>,
+                  Requires<[SupportsMultiplication]>;
 
-    def MULS : FMULS<(outs), (ins LD8:$rd, LD8:$rr),
-                     "muls\t$rd, $rr", []>,
-               Requires<[SupportsMultiplication]>;
+    def MULSRdRr : FMULSRdRr<(outs), (ins LD8:$rd, LD8:$rr),
+                             "muls\t$rd, $rr", []>,
+                   Requires<[SupportsMultiplication]>;
   }
 
-  def MULSU : FMULSU<(outs), (ins LD8lo:$rd, LD8lo:$rr),
-                     "mulsu\t$rd, $rr", []>,
-              Requires<[SupportsMultiplication]>;
+  def MULSURdRr : FMULSURdRr<(outs), (ins LD8lo:$rd, LD8lo:$rr),
+                             "mulsu\t$rd, $rr", []>,
+                  Requires<[SupportsMultiplication]>;
 
-  def FMUL : FFMUL<0b01, (outs), (ins LD8lo:$rd, LD8lo:$rr),
-                   "fmul\t$rd, $rr", []>,
+  def FMUL : FFMULRdRr<0b01, (outs), (ins LD8lo:$rd, LD8lo:$rr),
+                       "fmul\t$rd, $rr", []>,
              Requires<[SupportsMultiplication]>;
 
-  def FMULS : FFMUL<0b10, (outs), (ins LD8lo:$rd, LD8lo:$rr),
-                    "fmuls\t$rd, $rr", []>,
+  def FMULS : FFMULRdRr<0b10, (outs), (ins LD8lo:$rd, LD8lo:$rr),
+                        "fmuls\t$rd, $rr", []>,
               Requires<[SupportsMultiplication]>;
 
-  def FMULSU : FFMUL<0b11, (outs), (ins LD8lo:$rd, LD8lo:$rr),
-                     "fmulsu\t$rd, $rr", []>,
+  def FMULSU : FFMULRdRr<0b11, (outs), (ins LD8lo:$rd, LD8lo:$rr),
+                         "fmulsu\t$rd, $rr", []>,
                Requires<[SupportsMultiplication]>;
 }
 
