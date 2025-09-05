@@ -231,28 +231,48 @@ public:
   bool shouldEmitRemarks() const {
     // Emit all remarks only when no filters are specified.
     const bool hasFilters =
-        !remarksAllFlag.empty() || !remarksPassedFlag.empty() ||
-        !remarksFailedFlag.empty() || !remarksMissedFlag.empty() ||
-        !remarksAnalyseFlag.empty();
+        !getRemarksAllFilter().empty() || !getRemarksPassedFilter().empty() ||
+        !getRemarksFailedFilter().empty() ||
+        !getRemarksMissedFilter().empty() || !getRemarksAnalyseFilter().empty();
     return hasFilters;
   }
 
   /// Reproducer file generation (no crash required).
   StringRef getReproducerFilename() const { return generateReproducerFileFlag; }
 
-  /// Remark options
-  RemarkFormat remarkFormatFlag;
-  std::string remarksAllFlag = "";
-  std::string remarksPassedFlag = "";
-  std::string remarksFailedFlag = "";
-  std::string remarksMissedFlag = "";
-  std::string remarksAnalyseFlag = "";
+  /// Set the reproducer output filename
+  RemarkFormat getRemarkFormat() const { return remarkFormatFlag; }
+  /// Set the remark format to use.
+  std::string getRemarksAllFilter() const { return remarksAllFilterFlag; }
+  /// Set the remark output file.
+  std::string getRemarksOutputFile() const { return remarksOutputFileFlag; }
+  /// Set the remark passed filters.
+  std::string getRemarksPassedFilter() const { return remarksPassedFilterFlag; }
+  /// Set the remark failed filters.
+  std::string getRemarksFailedFilter() const { return remarksFailedFilterFlag; }
+  /// Set the remark missed filters.
+  std::string getRemarksMissedFilter() const { return remarksMissedFilterFlag; }
+  /// Set the remark analyse filters.
+  std::string getRemarksAnalyseFilter() const {
+    return remarksAnalyseFilterFlag;
+  }
 
 protected:
   /// Allow operation with no registered dialects.
   /// This option is for convenience during testing only and discouraged in
   /// general.
   bool allowUnregisteredDialectsFlag = false;
+
+  /// Remark format
+  RemarkFormat remarkFormatFlag;
+  /// Remark file to output to
+  std::string remarksOutputFileFlag = "";
+  /// Remark filters
+  std::string remarksAllFilterFlag = "";
+  std::string remarksPassedFilterFlag = "";
+  std::string remarksFailedFilterFlag = "";
+  std::string remarksMissedFilterFlag = "";
+  std::string remarksAnalyseFilterFlag = "";
 
   /// Configuration for the debugging hooks.
   tracing::DebugConfig debugConfig;

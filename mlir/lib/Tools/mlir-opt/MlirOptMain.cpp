@@ -228,23 +228,35 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
     static cl::opt<std::string, /*ExternalStorage=*/true> remarksAll(
         "remarks",
         cl::desc("Show all remarks: passed, missed, failed, analysis"),
-        cl::location(remarksAllFlag), cl::init(""), cl::cat(remarkCategory));
+        cl::location(remarksAllFilterFlag), cl::init(""),
+        cl::cat(remarkCategory));
+
+    static cl::opt<std::string, /*ExternalStorage=*/true> remarksFile(
+        "remarks-output-file",
+        cl::desc(
+            "Output file for yaml and bitstream remark formats. Default is "
+            "mlir-remarks.yaml or mlir-remarks.bitstream"),
+        cl::location(remarksOutputFileFlag), cl::init(""),
+        cl::cat(remarkCategory));
 
     static cl::opt<std::string, /*ExternalStorage=*/true> remarksPassed(
         "remarks-passed", cl::desc("Show passed remarks"),
-        cl::location(remarksPassedFlag), cl::init(""), cl::cat(remarkCategory));
+        cl::location(remarksPassedFilterFlag), cl::init(""),
+        cl::cat(remarkCategory));
 
     static cl::opt<std::string, /*ExternalStorage=*/true> remarksFailed(
         "remarks-failed", cl::desc("Show failed remarks"),
-        cl::location(remarksFailedFlag), cl::init(""), cl::cat(remarkCategory));
+        cl::location(remarksFailedFilterFlag), cl::init(""),
+        cl::cat(remarkCategory));
 
     static cl::opt<std::string, /*ExternalStorage=*/true> remarksMissed(
         "remarks-missed", cl::desc("Show missed remarks"),
-        cl::location(remarksMissedFlag), cl::init(""), cl::cat(remarkCategory));
+        cl::location(remarksMissedFilterFlag), cl::init(""),
+        cl::cat(remarkCategory));
 
     static cl::opt<std::string, /*ExternalStorage=*/true> remarksAnalyse(
         "remarks-analyse", cl::desc("Show analysis remarks"),
-        cl::location(remarksAnalyseFlag), cl::init(""),
+        cl::location(remarksAnalyseFilterFlag), cl::init(""),
         cl::cat(remarkCategory));
 
     /// Set the callback to load a pass plugin.
@@ -516,14 +528,14 @@ performActions(raw_ostream &os,
     };
 
     remark::RemarkCategories cats{
-        combine(config.remarksAllFlag, config.remarksPassedFlag),
-        combine(config.remarksAllFlag, config.remarksMissedFlag),
-        combine(config.remarksAllFlag, config.remarksAnalyseFlag),
-        combine(config.remarksAllFlag, config.remarksFailedFlag)};
+        combine(config.getRemarksAllFilter(), config.getRemarksPassedFilter()),
+        combine(config.getRemarksAllFilter(), config.getRemarksMissedFilter()),
+        combine(config.getRemarksAllFilter(), config.getRemarksAnalyseFilter()),
+        combine(config.getRemarksAllFilter(), config.getRemarksFailedFilter())};
 
     mlir::MLIRContext &ctx = *context;
 
-    switch (config.remarkFormatFlag) {
+    switch (config.getRemarkFormat()) {
     case REMARK_FORMAT_STDOUT:
       if (failed(mlir::remark::enableOptimizationRemarks(
               ctx, nullptr, cats, true /*printAsEmitRemarks*/)))
@@ -531,7 +543,9 @@ performActions(raw_ostream &os,
       break;
 
     case REMARK_FORMAT_YAML: {
-      constexpr llvm::StringLiteral file{"mlir-remarks.yaml"};
+      std::string file = config.getRemarksOutputFile().empty()
+                             ? "mlir-remarks.yaml"
+                             : config.getRemarksOutputFile();
       if (failed(mlir::remark::enableOptimizationRemarksWithLLVMStreamer(
               ctx, file, llvm::remarks::Format::YAML, cats)))
         return failure();
@@ -539,7 +553,9 @@ performActions(raw_ostream &os,
     }
 
     case REMARK_FORMAT_BITSTREAM: {
-      constexpr llvm::StringLiteral file{"mlir-remarks.bitstream"};
+      std::string file = config.getRemarksOutputFile().empty()
+                             ? "mlir-remarks.bitstream"
+                             : config.getRemarksOutputFile();
       if (failed(mlir::remark::enableOptimizationRemarksWithLLVMStreamer(
               ctx, file, llvm::remarks::Format::Bitstream, cats)))
         return failure();

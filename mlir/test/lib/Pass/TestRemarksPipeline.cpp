@@ -20,23 +20,16 @@ using namespace mlir;
 
 namespace {
 
-class TestRemarkPipelinePass
-    : public PassWrapper<TestRemarkPipelinePass, OperationPass<>> {
+class TestRemarkPass : public PassWrapper<TestRemarkPass, OperationPass<>> {
 public:
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestRemarkPipelinePass)
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestRemarkPass)
 
-  StringRef getArgument() const final { return "test-remark-pipeline"; }
+  StringRef getArgument() const final { return "test-remark"; }
   StringRef getDescription() const final {
     return "Tests the remark pipeline feature";
   }
-  void getDependentDialects(DialectRegistry &registry) const override {
-    OpPassManager pm(ModuleOp::getOperationName(),
-                     OpPassManager::Nesting::Implicit);
 
-    pm.getDependentDialects(registry);
-  }
-
-  TestRemarkPipelinePass() = default;
+  TestRemarkPass() = default;
 
   void runOnOperation() override {
 
@@ -73,8 +66,6 @@ public:
 
 namespace mlir {
 namespace test {
-void registerTestRemarkPipelinePass() {
-  PassRegistration<TestRemarkPipelinePass>();
-}
+void registerTestRemarkPass() { PassRegistration<TestRemarkPass>(); }
 } // namespace test
 } // namespace mlir

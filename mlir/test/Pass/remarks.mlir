@@ -1,9 +1,9 @@
-// RUN: mlir-opt %s --test-remark-pipeline --remarks-passed="category" 2>&1 | FileCheck %s -check-prefix=CHECK-PASSED 
-// RUN: mlir-opt %s --test-remark-pipeline --remarks-missed="category" 2>&1 | FileCheck %s -check-prefix=CHECK-MISSED
-// RUN: mlir-opt %s --test-remark-pipeline --remarks-failed="category" 2>&1 | FileCheck %s -check-prefix=CHECK-FAILED
-// RUN: mlir-opt %s --test-remark-pipeline --remarks-analyse="category" 2>&1 | FileCheck %s -check-prefix=CHECK-ANALYSIS
-// RUN: mlir-opt %s --test-remark-pipeline --remarks="category" 2>&1 | FileCheck %s -check-prefix=CHECK-ALL
-// RUN: mlir-opt %s --test-remark-pipeline --remarks="category-1" 2>&1 | FileCheck %s -check-prefix=CHECK-ALL1
+// RUN: mlir-opt %s --test-remark --remarks-passed="category" 2>&1 | FileCheck %s -check-prefix=CHECK-PASSED 
+// RUN: mlir-opt %s --test-remark --remarks-missed="category" 2>&1 | FileCheck %s -check-prefix=CHECK-MISSED
+// RUN: mlir-opt %s --test-remark --remarks-failed="category" 2>&1 | FileCheck %s -check-prefix=CHECK-FAILED
+// RUN: mlir-opt %s --test-remark --remarks-analyse="category" 2>&1 | FileCheck %s -check-prefix=CHECK-ANALYSIS
+// RUN: mlir-opt %s --test-remark --remarks="category" 2>&1 | FileCheck %s -check-prefix=CHECK-ALL
+// RUN: mlir-opt %s --test-remark --remarks="category-1" 2>&1 | FileCheck %s -check-prefix=CHECK-ALL1
 module @foo {
   "test.op"() : () -> ()
   "test.op2"() : () -> ()
@@ -46,3 +46,5 @@ module @foo {
 // CHECK-ALL1: remarks.mlir:9:3: remark: [Passed] test-remark | Category:category-1-passed | Reason="because we are testing the remark pipeline", Remark="This is a test passed remark", Suggestion="try using the remark pipeline feature"
 // CHECK-ALL1: remarks.mlir:7:1: remark: [Missed] test-remark | Category:category-1-missed | Reason="because we are testing the remark pipeline", Remark="This is a test missed remark", Suggestion="try using the remark pipeline feature"
 // CHECK-ALL1: remarks.mlir:7:1: remark: [Passed] test-remark | Category:category-1-passed | Reason="because we are testing the remark pipeline", Remark="This is a test passed remark", Suggestion="try using the remark pipeline feature"
+// CHECK-ALL1-NOT: remarks.mlir:8:3: remark: [Failure]
+// CHECK-ALL1-NOT: remarks.mlir:8:3: remark: [Analysis]
