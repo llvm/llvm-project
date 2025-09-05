@@ -4,13 +4,16 @@
 int main() { return 0; }
 
 // RUN: rm -rf %t && mkdir -p %t && cd %t
-// RUN: %clang %cflags -g -gsplit-dwarf -fdebug-compilation-dir=/path/does/not/exist %s -o main.exe
-// RUN: llvm-bolt %t/main.exe -o %t/main.exe.bolt -update-debug-sections  2>&1 | FileCheck %s -check-prefix=NOT-EXIST
+// RUN: %clang %cflags -g -gsplit-dwarf  \
+// RUN:   -fdebug-compilation-dir=/path/does/not/exist %s -o main.exe
+// RUN: llvm-bolt %t/main.exe -o %t/main.exe.bolt -update-debug-sections \
+// RUN:   2>&1 | FileCheck %s -check-prefix=DWO-NAME
+// RUN: %clang %cflags -g -gsplit-dwarf  \
+// RUN:   -fdebug-compilation-dir=/path/does/not/exist %s -o %t/main.exe
+// RUN: llvm-bolt %t/main.exe -o %t/main.exe.bolt -update-debug-sections \
+// RUN:   2>&1 | FileCheck %s -check-prefix=DWO-NAME
 
-// NOT-EXIST: BOLT-WARNING: Debug Fission: Debug Compilation Dir wrong for
+// DWO-NAME: BOLT-WARNING: Debug Fission: Debug Compilation Dir wrong for
 
-// RUN: rm -rf %t && mkdir -p %t && cd %t
-// RUN: %clang %cflags -g -gsplit-dwarf -fdebug-compilation-dir=/path/does/not/exist %s -o %t/main.exe
-// RUN: llvm-bolt %t/main.exe -o %t/main.exe.bolt -update-debug-sections  2>&1 | FileCheck %s -check-prefix=FOUND
+// DWO-NAMET-NOT: Debug Fission: DWO debug information for
 
-// FOUND-NOT: Debug Fission: DWO debug information for
