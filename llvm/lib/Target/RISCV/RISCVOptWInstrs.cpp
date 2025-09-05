@@ -568,6 +568,9 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
     case RISCV::PseudoCCAND:
     case RISCV::PseudoCCOR:
     case RISCV::PseudoCCXOR:
+    case RISCV::PseudoCCANDN:
+    case RISCV::PseudoCCORN:
+    case RISCV::PseudoCCXNOR:
     case RISCV::PHI: {
       // If all incoming values are sign-extended, the output of AND, OR, XOR,
       // MIN, MAX, or PHI is also sign-extended.
@@ -590,6 +593,9 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
       case RISCV::PseudoCCAND:
       case RISCV::PseudoCCOR:
       case RISCV::PseudoCCXOR:
+      case RISCV::PseudoCCANDN:
+      case RISCV::PseudoCCORN:
+      case RISCV::PseudoCCXNOR:
         B = 4;
         E = 7;
         break;
