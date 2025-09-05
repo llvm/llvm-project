@@ -50,13 +50,8 @@ struct PreparedActualArgument {
       : actual{actual}, isPresent{isPresent} {}
   PreparedActualArgument(hlfir::ElementalAddrOp vectorSubscriptedActual)
       : actual{vectorSubscriptedActual}, isPresent{std::nullopt} {}
-
   void setElementalIndices(mlir::ValueRange &indices) {
     oneBasedElementalIndices = &indices;
-  }
-  void resetElementalIndices() { oneBasedElementalIndices = nullptr; }
-  bool hasElementalIndices() const {
-    return oneBasedElementalIndices != nullptr;
   }
 
   /// Get the prepared actual. If this is an array argument in an elemental
@@ -108,6 +103,17 @@ struct PreparedActualArgument {
     assert(typeParams.size() == 1 &&
            "failed to retrieve vector subscripted character length");
     return typeParams[0];
+  }
+
+  void genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
+                           llvm::SmallVectorImpl<mlir::Value> &result) {
+    if (auto *actualEntity = std::get_if<hlfir::Entity>(&actual)) {
+      hlfir::genLengthParameters(loc, builder, *actualEntity, result);
+      return;
+    }
+    for (mlir::Value len :
+         std::get<hlfir::ElementalAddrOp>(actual).getTypeparams())
+      result.push_back(len);
   }
 
   /// When the argument is polymorphic, get mold value with the same dynamic
