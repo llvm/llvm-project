@@ -102,7 +102,7 @@ def main(argv):
         benchmark = headers.index('Benchmark')
         time = headers.index('Est. Base Run Time')
         for row in rows:
-            print(f'{row[benchmark].replace('.', '_')}.execution_time {row[time]}')
+            print(f'{row[benchmark].replace(".", "_")}.execution_time {row[time]}')
 
 if __name__ == '__main__':
     main(sys.argv[1:])
