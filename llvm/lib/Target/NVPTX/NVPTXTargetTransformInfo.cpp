@@ -564,7 +564,8 @@ bool NVPTXTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
   case Intrinsic::nvvm_isspacep_global:
   case Intrinsic::nvvm_isspacep_local:
   case Intrinsic::nvvm_isspacep_shared:
-  case Intrinsic::nvvm_isspacep_shared_cluster: {
+  case Intrinsic::nvvm_isspacep_shared_cluster:
+  case Intrinsic::nvvm_prefetch_tensormap: {
     OpIndexes.push_back(0);
     return true;
   }
@@ -586,6 +587,11 @@ Value *NVPTXTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
     if (const auto R = evaluateIsSpace(IID, NewAS))
       return ConstantInt::get(II->getType(), *R);
     return nullptr;
+  }
+  case Intrinsic::nvvm_prefetch_tensormap: {
+    IRBuilder<> Builder(II);
+    return Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_prefetch_tensormap,
+                                        NewV);
   }
   }
   return nullptr;

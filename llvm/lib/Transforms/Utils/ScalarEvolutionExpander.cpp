@@ -15,7 +15,6 @@
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
@@ -1240,16 +1239,20 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
     if (!isa<SCEVAddRecExpr>(ExitSCEV))
       continue;
     Type *PhiTy = PN.getType();
-    if (STy->isIntegerTy() && PhiTy->isPointerTy())
+    if (STy->isIntegerTy() && PhiTy->isPointerTy()) {
       ExitSCEV = SE.getPtrToIntExpr(ExitSCEV, STy);
-    else if (S->getType() != PN.getType())
+      if (isa<SCEVCouldNotCompute>(ExitSCEV))
+        continue;
+    } else if (S->getType() != PN.getType()) {
       continue;
+    }
 
     // Check if we can re-use the existing PN, by adjusting it with an expanded
     // offset, if the offset is simpler.
     const SCEV *Diff = SE.getMinusSCEV(S, ExitSCEV);
     const SCEV *Op = Diff;
-    match(Diff, m_scev_Mul(m_scev_AllOnes(), m_SCEV(Op)));
+    match(Op, m_scev_Add(m_SCEVConstant(), m_SCEV(Op)));
+    match(Op, m_scev_Mul(m_scev_AllOnes(), m_SCEV(Op)));
     match(Op, m_scev_PtrToInt(m_SCEV(Op)));
     if (!isa<SCEVConstant, SCEVUnknown>(Op))
       continue;
@@ -1257,7 +1260,7 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
     assert(Diff->getType()->isIntegerTy() &&
            "difference must be of integer type");
     Value *DiffV = expand(Diff);
-    Value *BaseV = &PN;
+    Value *BaseV = fixupLCSSAFormFor(&PN);
     if (PhiTy->isPointerTy()) {
       if (STy->isPointerTy())
         return Builder.CreatePtrAdd(BaseV, DiffV);
@@ -1345,7 +1348,7 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
     CanonicalIV->insertBefore(Header->begin());
     rememberInstruction(CanonicalIV);
 
-    SmallSet<BasicBlock *, 4> PredSeen;
+    SmallPtrSet<BasicBlock *, 4> PredSeen;
     Constant *One = ConstantInt::get(Ty, 1);
     for (pred_iterator HPI = HPB; HPI != HPE; ++HPI) {
       BasicBlock *HP = *HPI;

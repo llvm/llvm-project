@@ -571,3 +571,47 @@ module @return_void_with_unused_argument {
   }
 }
 
+// -----
+
+// CHECK-LABEL: module @dynamically_unreachable
+module @dynamically_unreachable {
+  func.func @dynamically_unreachable() {
+    // This value is used by an operation in a dynamically unreachable block.
+    %zero = arith.constant 0 : i64
+
+    // Dataflow analysis knows from the constant condition that
+    // ^bb1 is unreachable
+    %false = arith.constant false
+    cf.cond_br %false, ^bb1, ^bb4
+  ^bb1:
+    // This unreachable operation should be removed.
+    // CHECK-NOT: arith.cmpi
+    %3 = arith.cmpi eq, %zero, %zero : i64
+    cf.br ^bb1
+  ^bb4:
+    return
+  }
+}
+
+// CHECK-LABEL: module @last_block_not_exit
+module @last_block_not_exit {
+  // return value can be removed because it's private.
+  func.func private @terminated_with_condbr(%arg0: i1, %arg1: i1) -> i1 {
+    %true = arith.constant true
+    %false = arith.constant false
+    cf.cond_br %arg0, ^bb1(%false : i1), ^bb2
+  ^bb1(%1: i1):  // 2 preds: ^bb0, ^bb2
+    return %1 : i1
+  ^bb2:  // pred: ^bb3
+    cf.cond_br %arg1, ^bb1(%false : i1), ^bb1(%true : i1)
+  }
+
+  func.func public @call_private_but_not_use() {
+    %i0 = arith.constant 0: i1
+    %i1 = arith.constant 1: i1
+    call @terminated_with_condbr(%i0, %i1) : (i1, i1) -> i1
+    func.return
+  }
+  // CHECK-LABEL: @call_private_but_not_use
+  // CHECK: call @terminated_with_condbr(%false, %true) : (i1, i1)
+}

@@ -164,10 +164,10 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
   auto CallEmplacy = cxxMemberCallExpr(
       hasDeclaration(
           functionDecl(hasAnyNameIgnoringTemplates(EmplacyFunctions))),
-      on(hasTypeOrPointeeType(hasCanonicalType(hasDeclaration(
-          has(typedefNameDecl(hasName("value_type"),
-                              hasType(type(hasUnqualifiedDesugaredType(
-                                  recordType().bind("value_type")))))))))));
+      on(hasTypeOrPointeeType(
+          hasCanonicalType(hasDeclaration(has(typedefNameDecl(
+              hasName("value_type"),
+              hasType(hasCanonicalType(recordType().bind("value_type"))))))))));
 
   // We can't replace push_backs of smart pointer because
   // if emplacement fails (f.e. bad_alloc in vector) we will have leak of
@@ -241,17 +241,16 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
 
   auto HasConstructExprWithValueTypeType =
       has(ignoringImplicit(cxxConstructExpr(
-          SoughtConstructExpr, hasType(type(hasUnqualifiedDesugaredType(
-                                   type(equalsBoundNode("value_type"))))))));
+          SoughtConstructExpr,
+          hasType(hasCanonicalType(type(equalsBoundNode("value_type")))))));
 
-  auto HasBracedInitListWithValueTypeType =
-      anyOf(allOf(HasConstructInitListExpr,
-                  has(initListExpr(hasType(type(hasUnqualifiedDesugaredType(
-                      type(equalsBoundNode("value_type")))))))),
-            has(cxxBindTemporaryExpr(
-                HasConstructInitListExpr,
-                has(initListExpr(hasType(type(hasUnqualifiedDesugaredType(
-                    type(equalsBoundNode("value_type"))))))))));
+  auto HasBracedInitListWithValueTypeType = anyOf(
+      allOf(HasConstructInitListExpr,
+            has(initListExpr(hasType(
+                hasCanonicalType(type(equalsBoundNode("value_type"))))))),
+      has(cxxBindTemporaryExpr(HasConstructInitListExpr,
+                               has(initListExpr(hasType(hasCanonicalType(
+                                   type(equalsBoundNode("value_type")))))))));
 
   auto HasConstructExprWithValueTypeTypeAsLastArgument = hasLastArgument(
       materializeTemporaryExpr(
@@ -289,19 +288,17 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
       this);
 
   Finder->addMatcher(
-      traverse(
-          TK_AsIs,
-          cxxMemberCallExpr(
-              CallEmplacy,
-              on(hasType(cxxRecordDecl(has(typedefNameDecl(
-                  hasName("value_type"),
-                  hasType(type(
-                      hasUnqualifiedDesugaredType(recordType(hasDeclaration(
-                          cxxRecordDecl(hasAnyName(SmallVector<StringRef, 2>(
-                              TupleTypes.begin(), TupleTypes.end()))))))))))))),
-              has(MakeTuple), hasSameNumArgsAsDeclNumParams(),
-              unless(isInTemplateInstantiation()))
-              .bind("emplacy_call")),
+      traverse(TK_AsIs,
+               cxxMemberCallExpr(
+                   CallEmplacy,
+                   on(hasType(cxxRecordDecl(has(typedefNameDecl(
+                       hasName("value_type"),
+                       hasType(hasCanonicalType(recordType(hasDeclaration(
+                           cxxRecordDecl(hasAnyName(SmallVector<StringRef, 2>(
+                               TupleTypes.begin(), TupleTypes.end())))))))))))),
+                   has(MakeTuple), hasSameNumArgsAsDeclNumParams(),
+                   unless(isInTemplateInstantiation()))
+                   .bind("emplacy_call")),
       this);
 }
 

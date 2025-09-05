@@ -52,10 +52,10 @@ public:
     GetVendorDWARFOpcodeSize(const DataExtractor &data,
                              const lldb::offset_t data_offset,
                              const uint8_t op) const = 0;
-    virtual bool ParseVendorDWARFOpcode(uint8_t op,
-                                        const DataExtractor &opcodes,
-                                        lldb::offset_t &offset,
-                                        Stack &stack) const = 0;
+    virtual bool
+    ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
+                           lldb::offset_t &offset, RegisterContext *reg_ctx,
+                           lldb::RegisterKind reg_kind, Stack &stack) const = 0;
 
     Delegate(const Delegate &) = delete;
     Delegate &operator=(const Delegate &) = delete;
@@ -159,9 +159,14 @@ public:
     return data.GetByteSize() > 0;
   }
 
-  void DumpLocation(Stream *s, lldb::DescriptionLevel level, ABI *abi) const;
+  void DumpLocation(Stream *s, lldb::DescriptionLevel level, ABI *abi,
+                    llvm::DIDumpOptions options = {}) const;
 
   bool MatchesOperand(StackFrame &frame, const Instruction::Operand &op) const;
+
+  static llvm::Error ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
+                                               lldb::RegisterKind reg_kind,
+                                               uint32_t reg_num, Value &value);
 
 private:
   /// A data extractor capable of reading opcode bytes

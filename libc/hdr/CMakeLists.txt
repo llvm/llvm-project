@@ -73,6 +73,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  pthread_macros
+  HDRS
+    pthread_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.pthread_macros
+    libc.include.pthread
+)
+
+add_proxy_header_library(
   sched_macros
   HDRS
     sched_macros.h

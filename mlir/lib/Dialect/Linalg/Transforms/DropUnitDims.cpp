@@ -637,6 +637,7 @@ struct DropPadUnitDims : public OpRewritePattern<tensor::PadOp> {
     }
 
     ArrayRef<int64_t> sourceShape = padOp.getSourceType().getShape();
+    ArrayRef<int64_t> resultShape = padOp.getResultType().getShape();
     int64_t padRank = sourceShape.size();
 
     auto isStaticZero = [](OpFoldResult f) {
@@ -647,16 +648,18 @@ struct DropPadUnitDims : public OpRewritePattern<tensor::PadOp> {
                                                  allowedUnitDims.end());
     llvm::SmallDenseSet<unsigned> unitDims;
     SmallVector<int64_t> newShape;
+    SmallVector<int64_t> newResultShape;
     SmallVector<OpFoldResult> newLowPad;
     SmallVector<OpFoldResult> newHighPad;
-    for (const auto [dim, size, low, high] :
-         zip_equal(llvm::seq(static_cast<int64_t>(0), padRank), sourceShape,
-                   padOp.getMixedLowPad(), padOp.getMixedHighPad())) {
+    for (const auto [dim, size, outSize, low, high] : zip_equal(
+             llvm::seq(static_cast<int64_t>(0), padRank), sourceShape,
+             resultShape, padOp.getMixedLowPad(), padOp.getMixedHighPad())) {
       if (unitDimsFilter.contains(dim) && size == 1 && isStaticZero(low) &&
           isStaticZero(high)) {
         unitDims.insert(dim);
       } else {
         newShape.push_back(size);
+        newResultShape.push_back(outSize);
         newLowPad.push_back(low);
         newHighPad.push_back(high);
       }
@@ -686,9 +689,11 @@ struct DropPadUnitDims : public OpRewritePattern<tensor::PadOp> {
         collapseValue(rewriter, padOp.getLoc(), padOp.getSource(), newShape,
                       reassociationMap, options.rankReductionStrategy);
 
+    auto newResultType = RankedTensorType::get(
+        newResultShape, padOp.getResultType().getElementType());
     auto newPadOp = tensor::PadOp::create(
-        rewriter, padOp.getLoc(), /*result=*/Type(), collapsedSource, newLowPad,
-        newHighPad, paddingVal, padOp.getNofold());
+        rewriter, padOp.getLoc(), /*result=*/newResultType, collapsedSource,
+        newLowPad, newHighPad, paddingVal, padOp.getNofold());
 
     Value dest = padOp.getResult();
     if (options.rankReductionStrategy ==
@@ -1047,11 +1052,7 @@ struct RankReduceMatmul : RankReduceContractionOps<FromOpTy, ToOpTy> {
   static bool constexpr reduceLeft =
       (std::is_same_v<FromOpTy, BatchMatmulOp> &&
        std::is_same_v<ToOpTy, BatchVecmatOp>) ||
-      (std::is_same_v<FromOpTy, BatchMatmulTransposeAOp> &&
-       std::is_same_v<ToOpTy, BatchVecmatOp>) ||
       (std::is_same_v<FromOpTy, MatmulOp> &&
-       std::is_same_v<ToOpTy, VecmatOp>) ||
-      (std::is_same_v<FromOpTy, MatmulTransposeAOp> &&
        std::is_same_v<ToOpTy, VecmatOp>) ||
       (std::is_same_v<FromOpTy, MatvecOp> && std::is_same_v<ToOpTy, DotOp>);
 
@@ -1108,27 +1109,15 @@ void mlir::linalg::populateContractionOpRankReducingPatterns(
   MLIRContext *context = patterns.getContext();
   // Unbatching patterns for unit batch size
   patterns.add<RankReduceToUnBatched<BatchMatmulOp, MatmulOp>>(context);
-  patterns
-      .add<RankReduceToUnBatched<BatchMatmulTransposeAOp, MatmulTransposeAOp>>(
-          context);
-  patterns
-      .add<RankReduceToUnBatched<BatchMatmulTransposeBOp, MatmulTransposeBOp>>(
-          context);
   patterns.add<RankReduceToUnBatched<BatchMatvecOp, MatvecOp>>(context);
   patterns.add<RankReduceToUnBatched<BatchVecmatOp, VecmatOp>>(context);
 
   // Non-batch rank 1 reducing patterns
   patterns.add<RankReduceMatmul<MatmulOp, VecmatOp>>(context);
   patterns.add<RankReduceMatmul<MatmulOp, MatvecOp>>(context);
-  patterns.add<RankReduceMatmul<MatmulTransposeAOp, VecmatOp>>(context);
-  patterns.add<RankReduceMatmul<MatmulTransposeBOp, MatvecOp>>(context);
   // Batch rank 1 reducing patterns
   patterns.add<RankReduceMatmul<BatchMatmulOp, BatchVecmatOp>>(context);
   patterns.add<RankReduceMatmul<BatchMatmulOp, BatchMatvecOp>>(context);
-  patterns.add<RankReduceMatmul<BatchMatmulTransposeAOp, BatchVecmatOp>>(
-      context);
-  patterns.add<RankReduceMatmul<BatchMatmulTransposeBOp, BatchMatvecOp>>(
-      context);
 
   // Non-batch rank 0 reducing patterns
   patterns.add<RankReduceMatmul<MatvecOp, DotOp>>(context);

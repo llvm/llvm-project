@@ -23,7 +23,6 @@ class InstSP<dag outs, dag ins, string asmstr, list<dag> pattern,
   let Pattern = pattern;
 
   let DecoderNamespace = "Sparc";
-  field bits<32> SoftFail = 0;
 
   let Itinerary = itin;
 }

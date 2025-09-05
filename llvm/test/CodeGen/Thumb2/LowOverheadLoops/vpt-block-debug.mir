@@ -243,8 +243,8 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   hasTailCall:     false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
   - { id: 0, type: default, offset: 8, size: 4, alignment: 8, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,

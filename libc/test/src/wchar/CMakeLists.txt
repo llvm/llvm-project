@@ -76,6 +76,19 @@ add_libc_test(
 )
 
 add_libc_test(
+  mbstowcs_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    mbstowcs_test.cpp
+  DEPENDS
+    libc.src.__support.libc_errno
+    libc.src.wchar.mbstowcs
+    libc.hdr.types.wchar_t
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
   mblen_test
   SUITE
     libc_wchar_unittests
@@ -84,6 +97,22 @@ add_libc_test(
   DEPENDS
     libc.src.__support.libc_errno
     libc.src.wchar.mblen
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  mbsrtowcs_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    mbsrtowcs_test.cpp
+  DEPENDS
+    libc.src.__support.libc_errno
+    libc.src.__support.wchar.mbstate
+    libc.src.string.memset
+    libc.src.wchar.mbsrtowcs
+    libc.hdr.types.mbstate_t
+    libc.hdr.types.wchar_t
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
@@ -97,7 +126,23 @@ add_libc_test(
     libc.src.__support.libc_errno
     libc.src.__support.wchar.mbstate
     libc.src.string.memset
-    libc.src.wchar.mbrlen
+    libc.src.wchar.mbsrlen
+    libc.hdr.types.mbstate_t
+    libc.hdr.types.wchar_t
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  mbsnrtowcs_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    mbsnrtowcs_test.cpp
+  DEPENDS
+    libc.src.__support.libc_errno
+    libc.src.__support.wchar.mbstate
+    libc.src.string.memset
+    libc.src.wchar.mbsnrtowcs
     libc.hdr.types.mbstate_t
     libc.hdr.types.wchar_t
     libc.test.UnitTest.ErrnoCheckingTest

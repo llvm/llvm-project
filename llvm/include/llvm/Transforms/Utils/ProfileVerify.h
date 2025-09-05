@@ -15,13 +15,14 @@
 
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 /// Inject MD_prof metadata where it's missing. Used for testing that passes
 /// don't accidentally drop this metadata.
 class ProfileInjectorPass : public PassInfoMixin<ProfileInjectorPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 /// Checks that MD_prof is present on every instruction that supports it. Used
@@ -29,7 +30,7 @@ public:
 /// valid (i.e. !{!"unknown"})
 class ProfileVerifierPass : public PassInfoMixin<ProfileVerifierPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // namespace llvm

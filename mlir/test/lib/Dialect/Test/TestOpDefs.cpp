@@ -18,6 +18,32 @@ using namespace mlir;
 using namespace test;
 
 //===----------------------------------------------------------------------===//
+// OverridenSymbolVisibilityOp
+//===----------------------------------------------------------------------===//
+
+SymbolTable::Visibility OverriddenSymbolVisibilityOp::getVisibility() {
+  return SymbolTable::Visibility::Private;
+}
+
+static StringLiteral getVisibilityString(SymbolTable::Visibility visibility) {
+  switch (visibility) {
+  case SymbolTable::Visibility::Private:
+    return "private";
+  case SymbolTable::Visibility::Nested:
+    return "nested";
+  case SymbolTable::Visibility::Public:
+    return "public";
+  }
+}
+
+void OverriddenSymbolVisibilityOp::setVisibility(
+    SymbolTable::Visibility visibility) {
+
+  emitOpError("cannot change visibility of symbol to ")
+      << getVisibilityString(visibility);
+}
+
+//===----------------------------------------------------------------------===//
 // TestBranchOp
 //===----------------------------------------------------------------------===//
 

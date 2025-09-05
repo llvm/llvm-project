@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 ; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize --disable-output \
-; RUN: -prefer-predicate-over-epilogue=predicate-dont-vectorize \
+; RUN: -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
 ; RUN: -mtriple=riscv64 -mattr=+v -S < %s 2>&1 | FileCheck %s
 
 ; CHECK: Cost of 2 for VF vscale x 4: WIDEN-INTRINSIC vp<%{{.+}}> = call llvm.vp.merge(ir<true>, ir<%add>, ir<%rdx>, vp<%{{.+}}>)

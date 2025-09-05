@@ -33,8 +33,12 @@ static const OffloadArchToStringMap ArchNames[] = {
     SM(100a),                        // Blackwell
     SM(101),                         // Blackwell
     SM(101a),                        // Blackwell
+    SM(103),                         // Blackwell
+    SM(103a),                        // Blackwell
     SM(120),                         // Blackwell
     SM(120a),                        // Blackwell
+    SM(121),                         // Blackwell
+    SM(121a),                        // Blackwell
     GFX(600),  // gfx600
     GFX(601),  // gfx601
     GFX(602),  // gfx602

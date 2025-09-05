@@ -269,7 +269,7 @@ public:
     // Replace the `vector.mask` operation.
     rewriter.replaceOpWithNewOp<GatherOp>(
         maskingOp.getOperation(), gatherOp.getVectorType(), gatherOp.getBase(),
-        gatherOp.getIndices(), gatherOp.getIndexVec(), maskingOp.getMask(),
+        gatherOp.getOffsets(), gatherOp.getIndices(), maskingOp.getMask(),
         passthru);
     return success();
   }

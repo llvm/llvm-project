@@ -178,7 +178,7 @@ public:
   const char *GetTargetTriple();
 
   void SetExternalSource(
-      llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> &ast_source_up);
+      llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> ast_source_sp);
 
   bool GetCompleteDecl(clang::Decl *decl) {
     return TypeSystemClang::GetCompleteDecl(&getASTContext(), decl);
@@ -260,7 +260,7 @@ public:
 
   template <typename RecordDeclType>
   CompilerType
-  GetTypeForIdentifier(llvm::StringRef type_name,
+  GetTypeForIdentifier(const clang::ASTContext &Ctx, llvm::StringRef type_name,
                        clang::DeclContext *decl_context = nullptr) {
     CompilerType compiler_type;
     if (type_name.empty())
@@ -278,11 +278,10 @@ public:
       return compiler_type;
 
     clang::NamedDecl *named_decl = *result.begin();
-    if (const RecordDeclType *record_decl =
-            llvm::dyn_cast<RecordDeclType>(named_decl))
+    if (const auto *type_decl = llvm::dyn_cast<clang::TypeDecl>(named_decl);
+        llvm::isa_and_nonnull<RecordDeclType>(type_decl))
       compiler_type = CompilerType(
-          weak_from_this(),
-          clang::QualType(record_decl->getTypeForDecl(), 0).getAsOpaquePtr());
+          weak_from_this(), Ctx.getTypeDeclType(type_decl).getAsOpaquePtr());
 
     return compiler_type;
   }
@@ -477,7 +476,7 @@ public:
   clang::FunctionDecl *CreateFunctionDeclaration(
       clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
       llvm::StringRef name, const CompilerType &function_Type,
-      clang::StorageClass storage, bool is_inline);
+      clang::StorageClass storage, bool is_inline, llvm::StringRef asm_label);
 
   CompilerType
   CreateFunctionType(const CompilerType &result_type,
@@ -823,7 +822,8 @@ public:
 
   // Exploring the type
 
-  const llvm::fltSemantics &GetFloatTypeSemantics(size_t byte_size) override;
+  const llvm::fltSemantics &GetFloatTypeSemantics(size_t byte_size,
+                                                  lldb::Format format) override;
 
   llvm::Expected<uint64_t> GetByteSize(lldb::opaque_compiler_type_t type,
                                        ExecutionContextScope *exe_scope) {
@@ -1001,7 +1001,7 @@ public:
 
   clang::CXXMethodDecl *AddMethodToCXXRecordType(
       lldb::opaque_compiler_type_t type, llvm::StringRef name,
-      const char *mangled_name, const CompilerType &method_type,
+      llvm::StringRef asm_label, const CompilerType &method_type,
       lldb::AccessType access, bool is_virtual, bool is_static, bool is_inline,
       bool is_explicit, bool is_attr_used, bool is_artificial);
 

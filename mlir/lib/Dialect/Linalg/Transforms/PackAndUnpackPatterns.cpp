@@ -10,6 +10,7 @@
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/PatternMatch.h"
 
 namespace mlir {
@@ -347,7 +348,7 @@ public:
     auto innerDimsPos = packOp.getInnerDimsPos();
     auto mixedInnerTiles = packOp.getMixedTiles();
     auto outerDimsPerm = packOp.getOuterDimsPerm();
-    auto transposePerm = maybePerm.value();
+    const auto &transposePerm = maybePerm.value();
     SmallVector<int64_t> newOuterDimsPermVec;
     SmallVector<int64_t> newInnerDimsPosVec;
     SmallVector<OpFoldResult> newMixedInnerTilesVec;

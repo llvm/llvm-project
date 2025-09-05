@@ -58,14 +58,26 @@ static cl::opt<bool, true>
 // Loop implementation
 //
 
-bool Loop::isLoopInvariant(const Value *V) const {
-  if (const Instruction *I = dyn_cast<Instruction>(V))
-    return !contains(I);
+bool Loop::isLoopInvariant(const Value *V, bool HasCoroSuspendInst) const {
+  if (const Instruction *I = dyn_cast<Instruction>(V)) {
+    // FIXME: this is semantically inconsistent. We're tracking a proper fix in
+    // issue #149604.
+    // If V is a pointer to stack object and L contains a coro.suspend function
+    // call, then V may not be loop invariant because the ramp function and
+    // resume function have different stack frames.
+    if (HasCoroSuspendInst && isa<AllocaInst>(I))
+      return false;
+    else
+      return !contains(I);
+  }
   return true; // All non-instructions are loop invariant
 }
 
-bool Loop::hasLoopInvariantOperands(const Instruction *I) const {
-  return all_of(I->operands(), [this](Value *V) { return isLoopInvariant(V); });
+bool Loop::hasLoopInvariantOperands(const Instruction *I,
+                                    bool HasCoroSuspendInst) const {
+  return all_of(I->operands(), [&](Value *V) {
+    return isLoopInvariant(V, HasCoroSuspendInst);
+  });
 }
 
 bool Loop::makeLoopInvariant(Value *V, bool &Changed, Instruction *InsertPt,
