@@ -18,8 +18,8 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
-namespace llvm {
-namespace gi {
+using namespace llvm;
+using namespace gi;
 
 //===- PatternType --------------------------------------------------------===//
 
@@ -884,6 +884,3 @@ bool BuiltinPattern::checkSemantics(ArrayRef<SMLoc> Loc) {
 
   return true;
 }
-
-} // namespace gi
-} // namespace llvm

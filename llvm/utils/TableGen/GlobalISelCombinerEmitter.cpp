@@ -60,23 +60,22 @@ using namespace llvm::gi;
 
 #define DEBUG_TYPE "gicombiner-emitter"
 
-namespace {
-cl::OptionCategory
+static cl::OptionCategory
     GICombinerEmitterCat("Options for -gen-global-isel-combiner");
-cl::opt<bool> StopAfterParse(
+static cl::opt<bool> StopAfterParse(
     "gicombiner-stop-after-parse",
     cl::desc("Stop processing after parsing rules and dump state"),
     cl::cat(GICombinerEmitterCat));
-cl::list<std::string>
+static cl::list<std::string>
     SelectedCombiners("combiners", cl::desc("Emit the specified combiners"),
                       cl::cat(GICombinerEmitterCat), cl::CommaSeparated);
-cl::opt<bool> DebugCXXPreds(
+static cl::opt<bool> DebugCXXPreds(
     "gicombiner-debug-cxxpreds",
     cl::desc("Add Contextual/Debug comments to all C++ predicates"),
     cl::cat(GICombinerEmitterCat));
-cl::opt<bool> DebugTypeInfer("gicombiner-debug-typeinfer",
-                             cl::desc("Print type inference debug logs"),
-                             cl::cat(GICombinerEmitterCat));
+static cl::opt<bool> DebugTypeInfer("gicombiner-debug-typeinfer",
+                                    cl::desc("Print type inference debug logs"),
+                                    cl::cat(GICombinerEmitterCat));
 
 constexpr StringLiteral CXXCustomActionPrefix = "GICXXCustomAction_";
 constexpr StringLiteral CXXPredPrefix = "GICXXPred_MI_Predicate_";
@@ -84,20 +83,20 @@ constexpr StringLiteral MatchDataClassName = "GIDefMatchData";
 
 //===- CodeExpansions Helpers  --------------------------------------------===//
 
-void declareInstExpansion(CodeExpansions &CE, const InstructionMatcher &IM,
-                          StringRef Name) {
+static void declareInstExpansion(CodeExpansions &CE,
+                                 const InstructionMatcher &IM, StringRef Name) {
   CE.declare(Name, "State.MIs[" + to_string(IM.getInsnVarID()) + "]");
 }
 
-void declareInstExpansion(CodeExpansions &CE, const BuildMIAction &A,
-                          StringRef Name) {
+static void declareInstExpansion(CodeExpansions &CE, const BuildMIAction &A,
+                                 StringRef Name) {
   // Note: we use redeclare here because this may overwrite a matcher inst
   // expansion.
   CE.redeclare(Name, "OutMIs[" + to_string(A.getInsnID()) + "]");
 }
 
-void declareOperandExpansion(CodeExpansions &CE, const OperandMatcher &OM,
-                             StringRef Name) {
+static void declareOperandExpansion(CodeExpansions &CE,
+                                    const OperandMatcher &OM, StringRef Name) {
   if (OM.isVariadic()) {
     CE.declare(Name, "getRemainingOperands(*State.MIs[" +
                          to_string(OM.getInsnVarID()) + "], " +
@@ -108,33 +107,34 @@ void declareOperandExpansion(CodeExpansions &CE, const OperandMatcher &OM,
   }
 }
 
-void declareTempRegExpansion(CodeExpansions &CE, unsigned TempRegID,
-                             StringRef Name) {
+static void declareTempRegExpansion(CodeExpansions &CE, unsigned TempRegID,
+                                    StringRef Name) {
   CE.declare(Name, "State.TempRegisters[" + to_string(TempRegID) + "]");
 }
 
 //===- Misc. Helpers  -----------------------------------------------------===//
 
-template <typename Container> auto keys(Container &&C) {
+template <typename Container> static auto keys(Container &&C) {
   return map_range(C, [](auto &Entry) -> auto & { return Entry.first; });
 }
 
-template <typename Container> auto values(Container &&C) {
+template <typename Container> static auto values(Container &&C) {
   return map_range(C, [](auto &Entry) -> auto & { return Entry.second; });
 }
 
-std::string getIsEnabledPredicateEnumName(unsigned CombinerRuleID) {
+static std::string getIsEnabledPredicateEnumName(unsigned CombinerRuleID) {
   return "GICXXPred_Simple_IsRule" + to_string(CombinerRuleID) + "Enabled";
 }
 
 //===- MatchTable Helpers  ------------------------------------------------===//
 
-LLTCodeGen getLLTCodeGen(const PatternType &PT) {
+static LLTCodeGen getLLTCodeGen(const PatternType &PT) {
   return *MVTToLLT(getValueType(PT.getLLTRecord()));
 }
 
 //===- PrettyStackTrace Helpers  ------------------------------------------===//
 
+namespace {
 class PrettyStackTraceParse : public PrettyStackTraceEntry {
   const Record &Def;
 
@@ -277,6 +277,7 @@ private:
 
   const OperandTable &MatchOpTable;
 };
+} // namespace
 
 bool CombineRuleOperandTypeChecker::processMatchPattern(InstructionPattern &P) {
   MatchPats.push_back(&P);
@@ -2821,8 +2822,6 @@ void GICombinerEmitter::run(raw_ostream &OS) {
   emitPredicatesInit(OS, "GET_GICOMBINER_CONSTRUCTOR_INITS");
   emitTemporariesInit(OS, MaxTemporaries, "GET_GICOMBINER_CONSTRUCTOR_INITS");
 }
-
-} // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
 
