@@ -84,8 +84,10 @@ public:
   /// Print ranges to output stream.
   /// \param OS The output stream to print to.
   /// \param Ranges The ranges to print.
-  /// \param Separator The separator character to use between ranges (i.e. ',' or ':').
-  static void printRanges(raw_ostream &OS, ArrayRef<Range> Ranges, char Separator = ',');
+  /// \param Separator The separator character to use between ranges (i.e. ','
+  /// or ':').
+  static void printRanges(raw_ostream &OS, ArrayRef<Range> Ranges,
+                          char Separator = ',');
 
   /// Merge adjacent/consecutive ranges into single ranges.
   /// Example: [1-3, 4-6, 8-10] -> [1-6, 8-10].

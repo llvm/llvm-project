@@ -76,7 +76,8 @@ bool RangeUtils::contains(ArrayRef<Range> Ranges, int64_t Value) {
   return false;
 }
 
-void RangeUtils::printRanges(raw_ostream &OS, ArrayRef<Range> Ranges, char Separator) {
+void RangeUtils::printRanges(raw_ostream &OS, ArrayRef<Range> Ranges,
+                             char Separator) {
   if (Ranges.empty())
     OS << "empty";
   else {
