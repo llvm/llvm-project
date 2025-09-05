@@ -27,7 +27,7 @@ TEST(DebugLogTest, Basic) {
   {
     std::string str;
     raw_string_ostream os(str);
-    DEBUGLOG_WITH_STREAM_AND_TYPE(os, 0, nullptr) << "NoType";
+    DEBUGLOG_WITH_STREAM_AND_TYPE(os, "", 0) << "NoType";
     EXPECT_FALSE(StringRef(os.str()).starts_with('['));
     EXPECT_TRUE(StringRef(os.str()).ends_with("NoType\n"));
   }
@@ -37,7 +37,7 @@ TEST(DebugLogTest, Basic) {
     std::string str;
     raw_string_ostream os(str);
     DEBUGLOG_WITH_STREAM_AND_TYPE(os, 0, "A") << "A";
-    DEBUGLOG_WITH_STREAM_AND_TYPE(os, 0, "B") << "B";
+    DEBUGLOG_WITH_STREAM_AND_TYPE(os, "B", 0) << "B";
     EXPECT_TRUE(StringRef(os.str()).starts_with('['));
     EXPECT_THAT(os.str(), AllOf(HasSubstr("A\n"), HasSubstr("B\n")));
   }
@@ -128,6 +128,131 @@ TEST(DebugLogTest, DestructorPrefix) {
   // After destructors, nothing should have been printed.
   EXPECT_EQ(os.str(), "");
 }
+
+TEST(DebugLogTest, LDBG_MACROS) {
+  llvm::DebugFlag = true;
+  static const char *DT[] = {"A:3", "B:2"};
+  setCurrentDebugTypes(DT, sizeof(DT) / sizeof(DT[0]));
+  std::string Str;
+  raw_string_ostream DebugOs(Str);
+  std::string StrRef;
+  raw_string_ostream RefOs(StrRef);
+#undef LDBG_STREAM
+#define LDBG_STREAM DebugOs
+#define DEBUG_TYPE "A"
+  LDBG() << "Hello, world!";
+  RefOs << "[A:1] " << __LLVM_FILE_NAME__ << ":" << (__LINE__ - 1)
+        << " Hello, world!\n";
+  EXPECT_EQ(DebugOs.str(), RefOs.str());
+  Str.clear();
+  StrRef.clear();
+
+  // Test with a level, no type.
+  LDBG(2) << "Hello, world!";
+  RefOs << "[A:2] " << __LLVM_FILE_NAME__ << ":" << (__LINE__ - 1)
+        << " Hello, world!\n";
+  EXPECT_EQ(DebugOs.str(), RefOs.str());
+  Str.clear();
+  StrRef.clear();
+
+// Now the type will be explicit, check we don't use DEBUG_TYPE.
+#undef DEBUG_TYPE
+
+  // Test with a type
+  LDBG("B") << "Hello, world!";
+  RefOs << "[B:1] " << __LLVM_FILE_NAME__ << ":" << (__LINE__ - 1)
+        << " Hello, world!\n";
+  EXPECT_EQ(DebugOs.str(), RefOs.str());
+  Str.clear();
+  StrRef.clear();
+
+  // Test with a level and a type
+  LDBG(2, "B") << "Hello, world!";
+  RefOs << "[B:2] " << __LLVM_FILE_NAME__ << ":" << (__LINE__ - 1)
+        << " Hello, world!\n";
+  EXPECT_EQ(DebugOs.str(), RefOs.str());
+  Str.clear();
+  StrRef.clear();
+
+  // Test with a type and a level
+  LDBG("B", 2) << "Hello, world!";
+  RefOs << "[B:2] " << __LLVM_FILE_NAME__ << ":" << (__LINE__ - 1)
+        << " Hello, world!\n";
+  EXPECT_EQ(DebugOs.str(), RefOs.str());
+  Str.clear();
+  StrRef.clear();
+
+  // Test with a type not enabled.
+  LDBG("C", 1) << "Hello, world!";
+  EXPECT_EQ(DebugOs.str(), "");
+
+  // Test with a level not enabled.
+  LDBG("B", 3) << "Hello, world!";
+  EXPECT_EQ(DebugOs.str(), "");
+}
+
+TEST(DebugLogTest, LDBG_OS_MACROS) {
+  llvm::DebugFlag = true;
+  static const char *DT[] = {"A:3", "B:2"};
+  setCurrentDebugTypes(DT, sizeof(DT) / sizeof(DT[0]));
+  std::string Str;
+  raw_string_ostream DebugOs(Str);
+  std::string StrRef;
+  raw_string_ostream RefOs(StrRef);
+#undef LDBG_STREAM
+#define LDBG_STREAM DebugOs
+#define DEBUG_TYPE "A"
+  LDBG_OS([](raw_ostream &Os) { Os << "Hello, world!"; });
+  RefOs << "[A:1] " << __LLVM_FILE_NAME__ << ":" << (__LINE__ - 1)
+        << " Hello, world!\n";
+  EXPECT_EQ(DebugOs.str(), RefOs.str());
+  Str.clear();
+  StrRef.clear();
+
+  // Test with a level, no type.
+  LDBG_OS(2, [](raw_ostream &Os) { Os << "Hello, world!"; });
+  RefOs << "[A:2] " << __LLVM_FILE_NAME__ << ":" << (__LINE__ - 1)
+        << " Hello, world!\n";
+  EXPECT_EQ(DebugOs.str(), RefOs.str());
+  Str.clear();
+  StrRef.clear();
+
+// Now the type will be explicit, check we don't use DEBUG_TYPE.
+#undef DEBUG_TYPE
+
+  // Test with a type.
+  LDBG_OS("B", [](raw_ostream &Os) { Os << "Hello, world!"; });
+  RefOs << "[B:1] " << __LLVM_FILE_NAME__ << ":" << (__LINE__ - 1)
+        << " Hello, world!\n";
+  EXPECT_EQ(DebugOs.str(), RefOs.str());
+  Str.clear();
+  StrRef.clear();
+
+  // Test with a level and a type
+  LDBG(3, "A") << "Hello, world!";
+  RefOs << "[A:3] " << __LLVM_FILE_NAME__ << ":" << (__LINE__ - 1)
+        << " Hello, world!\n";
+  EXPECT_EQ(DebugOs.str(), RefOs.str());
+  Str.clear();
+  StrRef.clear();
+
+  // Test with a type and a level
+  LDBG("B", 2) << "Hello, world!";
+  RefOs << "[B:2] " << __LLVM_FILE_NAME__ << ":" << (__LINE__ - 1)
+        << " Hello, world!\n";
+  EXPECT_EQ(DebugOs.str(), RefOs.str());
+  Str.clear();
+  StrRef.clear();
+
+  // Test with a type not enabled.
+  LDBG_OS("C", 1, [](raw_ostream &Os) { Os << "Hello, world!"; });
+  EXPECT_EQ(DebugOs.str(), "");
+
+  // Test with a level not enabled.
+  LDBG_OS("B", 3, [](raw_ostream &Os) { Os << "Hello, world!"; });
+  EXPECT_EQ(DebugOs.str(), "");
+}
+
 #else
 TEST(DebugLogTest, Basic) {
   // LDBG should be compiled out in NDEBUG, so just check it compiles and has
