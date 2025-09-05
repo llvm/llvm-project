@@ -204,16 +204,19 @@ def memspi : Operand<iPTR> {
 def relbrtarget_7 : Operand<OtherVT> {
   let PrintMethod = "printPCRelImm";
   let EncoderMethod = "encodeRelCondBrTarget<AVR::fixup_7_pcrel>";
+  let DecoderMethod = "decodeRelCondBrTarget7";
 }
 
 def brtarget_13 : Operand<OtherVT> {
   let PrintMethod = "printPCRelImm";
   let EncoderMethod = "encodeRelCondBrTarget<AVR::fixup_13_pcrel>";
+  let DecoderMethod = "decodeRelCondBrTarget13";
 }
 
 def rcalltarget_13 : Operand<i16> {
   let PrintMethod = "printPCRelImm";
   let EncoderMethod = "encodeRelCondBrTarget<AVR::fixup_13_pcrel>";
+  let DecoderMethod = "decodeRelCondBrTarget13";
 }
 
 // The target of a 22 or 16-bit call/jmp instruction.
