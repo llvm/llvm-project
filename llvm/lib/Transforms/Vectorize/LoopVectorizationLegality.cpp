@@ -1776,15 +1776,30 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   assert(LatchBB->getUniquePredecessor() == SingleUncountableExitingBlock &&
          "Expected latch predecessor to be the early exiting block");
 
-  // TODO: Handle loops that may fault.
   Predicates.clear();
-  if (!isDereferenceableReadOnlyLoop(TheLoop, PSE.getSE(), DT, AC,
-                                     &Predicates)) {
-    reportVectorizationFailure(
-        "Loop may fault",
-        "Cannot vectorize potentially faulting early exit loop",
-        "PotentiallyFaultingEarlyExitLoop", ORE, TheLoop);
+  SmallVector<LoadInst *, 4> NonDerefLoads;
+  if (!isReadOnlyLoop(TheLoop, PSE.getSE(), DT, AC, NonDerefLoads,
+                      &Predicates)) {
+    reportVectorizationFailure("Loop may fault",
+                               "Cannot vectorize non-read-only early exit loop",
+                               "NonReadOnlyEarlyExitLoop", ORE, TheLoop);
     return false;
+  }
+  // Check non-dereferenceable loads if any.
+  for (LoadInst *LI : NonDerefLoads) {
+    // Only support unit-stride access for now.
+    int Stride = isConsecutivePtr(LI->getType(), LI->getPointerOperand());
+    if (Stride != 1) {
+      reportVectorizationFailure(
+          "Loop contains potentially faulting strided load",
+          "Cannot vectorize early exit loop with "
+          "strided fault-only-first load",
+          "EarlyExitLoopWithStridedFaultOnlyFirstLoad", ORE, TheLoop);
+      return false;
+    }
+    PotentiallyFaultingLoads.insert(LI);
+    LLVM_DEBUG(dbgs() << "LV: Found potentially faulting load: " << *LI
+                      << "\n");
   }
 
   [[maybe_unused]] const SCEV *SymbolicMaxBTC =
