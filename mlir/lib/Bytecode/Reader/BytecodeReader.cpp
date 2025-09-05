@@ -116,7 +116,7 @@ public:
     // Shift the reader position to the next alignment boundary.
     // Note: this assumes the pointer alignment matches the alignment of the
     // data from the start of the buffer. In other words, this code is only
-    // valid if the buffer `dataIt` is offsetting into is already aligned.
+    // valid if `dataIt` is offsetting into an already aligned buffer.
     while (isUnaligned(dataIt)) {
       uint8_t padding;
       if (failed(parseByte(padding)))
@@ -265,12 +265,12 @@ public:
   }
 
   /// Validate that the alignment requested in the section is valid.
-  using ValidateAlignment = function_ref<LogicalResult(unsigned alignment)>;
+  using ValidateAlignmentFn = function_ref<LogicalResult(unsigned alignment)>;
 
   /// Parse a section header, placing the kind of section in `sectionID` and the
   /// contents of the section in `sectionData`.
   LogicalResult parseSection(bytecode::Section::ID &sectionID,
-                             ValidateAlignment alignmentValidator,
+                             ValidateAlignmentFn alignmentValidator,
                              ArrayRef<uint8_t> &sectionData) {
     uint8_t sectionIDAndHasAlignment;
     uint64_t length;
@@ -300,7 +300,7 @@ public:
       // alignment of the root buffer. If it is not, we cannot safely guarantee
       // that the specified alignment is globally correct.
       //
-      // e.g. if the buffer is 8k aligned and the section is 16k aligned,
+      // E.g. if the buffer is 8k aligned and the section is 16k aligned,
       // we could end up at an offset of 24k, which is not globally 16k aligned.
       if (failed(alignmentValidator(alignment)))
         return emitError("failed to align section ID: ", unsigned(sectionID));
@@ -1423,8 +1423,7 @@ private:
   LogicalResult checkSectionAlignment(
       unsigned alignment,
       function_ref<InFlightDiagnostic(const Twine &error)> emitError) {
-    // Check that the bytecode buffer meets
-    // the requested section alignment.
+    // Check that the bytecode buffer meets the requested section alignment.
     //
     // If it does not, the virtual address of the item in the section will
     // not be aligned to the requested alignment.
@@ -1833,8 +1832,9 @@ BytecodeReader::Impl::parseDialectSection(ArrayRef<uint8_t> sectionData) {
   dialects.resize(numDialects);
 
   const auto checkSectionAlignment = [&](unsigned alignment) {
-    return this->checkSectionAlignment(
-        alignment, [&](const auto &msg) { return emitError(fileLoc, msg); });
+    return this->checkSectionAlignment(alignment, [&](const auto &msg) {
+      return sectionReader.emitError(msg);
+    });
   };
 
   // Parse each of the dialects.
