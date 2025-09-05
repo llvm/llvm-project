@@ -751,3 +751,57 @@ uint32_t ppackt_h(uint32_t rs1, uint32_t rs2) {
 int32_t packt(int32_t rs1, int32_t rs2) {
   return __riscv_packt(rs1, rs2);
 }
+
+// RV32P-LABEL: @pas_hx(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.pas.hx.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t pas_hx(uint32_t rs1, uint32_t rs2) {
+  return __riscv_pas_hx(rs1, rs2);
+}
+
+// RV32P-LABEL: @psa_hx(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.psa.hx.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t psa_hx(uint32_t rs1, uint32_t rs2) {
+  return __riscv_psa_hx(rs1, rs2);
+}
+
+// RV32P-LABEL: @psas_hx(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.psas.hx.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t psas_hx(uint32_t rs1, uint32_t rs2) {
+  return __riscv_psas_hx(rs1, rs2);
+}
+
+// RV32P-LABEL: @pssa_hx(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.pssa.hx.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t pssa_hx(uint32_t rs1, uint32_t rs2) {
+  return __riscv_pssa_hx(rs1, rs2);
+}
+
+// RV32P-LABEL: @paas_hx(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.paas.hx.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t paas_hx(uint32_t rs1, uint32_t rs2) {
+  return __riscv_paas_hx(rs1, rs2);
+}
+
+// RV32P-LABEL: @pasa_hx(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.pasa.hx.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t pasa_hx(uint32_t rs1, uint32_t rs2) {
+  return __riscv_pasa_hx(rs1, rs2);
+}

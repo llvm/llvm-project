@@ -434,6 +434,36 @@ static __inline__ int32_t __attribute__((__always_inline__, __nodebug__))
 __riscv_packt(int32_t __x, int32_t __y) {
   return __builtin_riscv_packt_32(__x, __y);
 }
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pas_hx(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_pas_hx_32(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_psa_hx(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_psa_hx_32(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_psas_hx(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_psas_hx_32(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pssa_hx(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_pssa_hx_32(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_paas_hx(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_paas_hx_32(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pasa_hx(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_pasa_hx_32(__x, __y);
+}
 #endif
 
 
@@ -1021,6 +1051,66 @@ __riscv_ppackt_w(uint64_t __x, uint64_t __y) {
 static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
 __riscv_packt(uint64_t __x, uint64_t __y) {
   return __builtin_riscv_packt_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pas_hx(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pas_hx_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pas_wx(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pas_wx(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_psa_hx(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_psa_hx_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_psa_wx(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_psa_wx(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_psas_hx(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_psas_hx_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_psas_wx(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_psas_wx(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pssa_hx(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pssa_hx_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pssa_wx(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pssa_wx(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_paas_hx(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_paas_hx_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_paas_wx(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_paas_wx(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pasa_hx(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pasa_hx_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pasa_wx(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pasa_wx(__x, __y);
 }
 #endif
 

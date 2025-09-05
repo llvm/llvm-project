@@ -224,6 +224,12 @@ def ppacktb_h_32   : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 def packtb_32      : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
 def ppackt_h_32    : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 def packt_32       : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
+def pas_hx_32      : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def psa_hx_32      : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def psas_hx_32     : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def pssa_hx_32     : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def paas_hx_32     : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def pasa_hx_32     : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 } // Features = "experimental-p,32bit"
 
 let Features = "experimental-p,64bit" in {
@@ -344,6 +350,18 @@ def packtb_64      : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 def ppackt_h_64    : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 def ppackt_w       : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 def packt_64       : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def pas_hx_64      : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def pas_wx         : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def psa_hx_64      : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def psa_wx         : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def psas_hx_64     : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def psas_wx        : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def pssa_hx_64     : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def pssa_wx        : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def paas_hx_64     : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def paas_wx        : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def pasa_hx_64     : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def pasa_wx        : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 } // Features = "experimental-p,64bit"
 } // Attributes = [Const, NoThrow]
 
