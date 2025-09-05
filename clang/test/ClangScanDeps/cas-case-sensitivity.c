@@ -10,14 +10,14 @@
 // RUN: sed -e 's/^.*llvmcas/llvmcas/' -e 's/ for.*$//' %t/result1.txt > %t/casid1
 // RUN: sed -e 's/^.*llvmcas/llvmcas/' -e 's/ for.*$//' %t/result2.txt > %t/casid2
 
-// RUN: llvm-cas --cas %t/cas --ls-tree-recursive @%t/casid1 | FileCheck -check-prefix=TREE %s -DPREFIX=%/t
-// RUN: llvm-cas --cas %t/cas --ls-tree-recursive @%t/casid2 | FileCheck -check-prefix=TREE %s -DPREFIX=%/t
+// RUN: llvm-cas --cas %t/cas --ls-tree-recursive @%t/casid1 | FileCheck -check-prefix=TREE %s -DPREFIX=%{t-tree-/}
+// RUN: llvm-cas --cas %t/cas --ls-tree-recursive @%t/casid2 | FileCheck -check-prefix=TREE %s -DPREFIX=%{t-tree-/}
 
 // asdf: FileCheck -check-prefix=TREE %s -input-file %t/result1.txt -DPREFIX=%/t
 
-// TREE: file llvmcas://{{.*}} [[PREFIX]]/Header.h
-// TREE: syml llvmcas://{{.*}} [[PREFIX]]/header.h -> Header
-// TREE: file llvmcas://{{.*}} [[PREFIX]]/t{{[12]}}.c
+// TREE: file llvmcas://{{.*}} [[PREFIX]]{{/|\\}}Header.h
+// TREE: syml llvmcas://{{.*}} [[PREFIX]]{{/|\\}}header.h -> Header
+// TREE: file llvmcas://{{.*}} [[PREFIX]]{{/|\\}}t{{[12]}}.c
 
 //--- cdb1.json.template
 [

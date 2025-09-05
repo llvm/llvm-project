@@ -22,9 +22,9 @@
 // RUN: %deps-to-rsp %t/deps_tu.json --tu-index 0 > %t/tu.rsp
 // RUN: %clang @%t/tu.rsp
 
-// RUN: cat %t/tu.ll | FileCheck %s -check-prefix=LLVMIR -DPREFIX=%/t
-// LLVMIR: !DIFile(filename: "[[PREFIX]]/tu.c", directory: "")
-// LLVMIR: !DICompileUnit({{.*}}, splitDebugFilename: "[[PREFIX]]/prefix.pch"
+// RUN: cat %t/tu.ll | %PathSanitizingFileCheck --sanitize PREFIX=%/t --enable-yaml-compatibility %s -check-prefix=LLVMIR
+// LLVMIR: !DIFile(filename: "PREFIX{{/|\\\\}}tu.c", directory: "")
+// LLVMIR: !DICompileUnit({{.*}}, splitDebugFilename: "PREFIX{{/|\\\\}}prefix.pch"
 // LLVMIR: !DIFile(filename: "prefix.h", directory: "")
 
 // Extract include-tree casid

@@ -19,7 +19,7 @@
 
 // RUN: cat %t/deps.0.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
 
-// RUN: CLANG_CACHE_USE_CASFS_DEPSCAN=1 c-index-test core -scan-deps -working-dir %t -cas-path %t/cas -output-dir %t/modules -- \
+// RUN: env CLANG_CACHE_USE_CASFS_DEPSCAN=1 c-index-test core -scan-deps -working-dir %t -cas-path %t/cas -output-dir %t/modules -- \
 // RUN:   %clang -target x86_64-apple-darwin -c %t/tu.c -save-temps=obj -o %t/tu.o \
 // RUN:   -fmodules -fimplicit-modules -fimplicit-module-maps -fmodules-cache-path=%t/cache \
 // RUN:   > %t/deps.txt
