@@ -35,6 +35,50 @@ def LLVM_PointerSharedCluster : LLVM_PointerInAddressSpace<7>;
 //===----------------------------------------------------------------------===//
 
 def NVVM_Dialect : Dialect {
+  let summary = "The NVVM dialect that models NVIDIA's public ISA";
+
+  let description = [{
+    The NVVM dialect is MLIR's LLVM-IR-based, NVIDIA-specific backend dialect. It
+    models NVVM intrinsics and public ISA functionality and introduces NVIDIA
+    extensions to the MLIR/LLVM type system and address spaces (e.g., global,
+    shared, and cluster memory), enabling faithful lowering of GPU kernels to the
+    NVPTX toolchain. While a NVVM op usually maps to a single LLVM IR intrinsic,
+    the NVVM dialect uses type polymorphism and other attributes so that a single
+    NVVM op can map to different LLVM intrinsics.
+
+    **Scope and capabilities:** The dialect covers core GPU features such as
+    thread/block builtins, barriers and atomics, warp-level collectives (e.g.,
+    shuffle/vote), matrix/tensor core operations (e.g., `mma.sync`, `wgmma`),
+    tensor memory accelerator (TMA) operations, asynchronous copies (`cp.async`,
+    bulk/tensor variants) with memory barriers, cache and prefetch controls, and
+    NVVM-specific attributes and enums (e.g., FP rounding modes, memory scopes,
+    and MMA types/layouts).
+
+    **Non-goals:** NVVM is not a place for convenience or “wrapper” ops. It is
+    not intended to introduce high-level ops that expand into multiple unrelated
+    NVVM intrinsics or that lower to no intrinsic at all. Such abstractions belong
+    in higher-level dialects (e.g., `nvgpu`, `gpu`, or project-specific dialects).
+    The design intent is a thin, predictable, low-level surface with
+    near-mechanical lowering to NVVM/LLVM IR.
+
+    **Placement in the lowering pipeline:** NVVM sits below target-agnostic
+    dialects like `gpu` and NVIDIA's `nvgpu`. Typical pipelines convert
+    `gpu`/`nvgpu` ops into NVVM using `-convert-gpu-to-nvvm` and
+    `-convert-nvgpu-to-nvvm`, then translate into LLVM for final code
+    generation via NVPTX backend.
+
+    **Target configuration and serialization:** NVVM provides a `#nvvm.target`
+    attribute to describe the GPU target (SM, features, and flags). In
+    conjunction with `gpu` serialization (e.g., `gpu-module-to-binary`), this
+    enables producing architecture-specific GPU binaries (such as CUBIN) from
+    nested GPU modules.
+
+    **Inline PTX:** When an intrinsic is unavailable or a performance-critical
+    sequence must be expressed directly, NVVM provides an `nvvm.inline_ptx` op to
+    embed PTX inline as a last-resort escape hatch, with explicit operands and
+    results.
+  }];
+
   let name = "nvvm";
   let cppNamespace = "::mlir::NVVM";
   let dependentDialects = ["LLVM::LLVMDialect"];
@@ -976,7 +1020,7 @@ def NVVM_ShflOp :
   let description = [{
     The `shfl.sync` Op implements data shuffle within threads of a warp.
     The `thread_mask` denotes the threads participating in the Op where
-    the bit position corresponds to a particular thread’s laneid.
+    the bit position corresponds to a particular thread's laneid.
     The `offset` specifies a source lane or source lane offset
     (depending on `kind`). The `val` is the input value to be copied from
     the source. The `mask_and_clamp` contains two packed values specifying
@@ -1031,7 +1075,7 @@ def NVVM_VoteSyncOp
     - `ballot`: In the ballot form, the destination result is a 32 bit integer.
       In this form, the predicate from each thread in membermask are copied into
       the corresponding bit position of the result, where the bit position
-      corresponds to the thread’s lane id.
+      corresponds to the thread's lane id.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-vote-sync)
   }];
