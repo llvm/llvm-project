@@ -1910,10 +1910,13 @@ void OMPClausePrinter::VisitOMPDetachClause(OMPDetachClause *Node) {
 void OMPClausePrinter::VisitOMPDefaultClause(OMPDefaultClause *Node) {
   OS << "default("
      << getOpenMPSimpleClauseTypeName(OMPC_default,
-                                      unsigned(Node->getDefaultKind()))
-     << ":"
-     << getOpenMPDefaultVariableCategoryName(unsigned(Node->getDefaultVC()))
-     << ")";
+                                      unsigned(Node->getDefaultKind()));
+  if (Version >= 60 && Node->getDefaultVC() != OMPC_DEFAULT_VC_all) {
+    OS << ":"
+       << getOpenMPDefaultVariableCategoryName(unsigned(Node->getDefaultVC()));
+  }
+
+  OS << ")";
 }
 
 void OMPClausePrinter::VisitOMPProcBindClause(OMPProcBindClause *Node) {
