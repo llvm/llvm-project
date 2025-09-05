@@ -441,7 +441,7 @@ class Class_Data_V1:
                 logger >> "Marking as invalid - name is not valid"
                 self.valid = 0
 
-    # perform sanisoundnessty checks on the contents of this class_t
+    # perform soundness checks on the contents of this class_t
     def check_valid(self):
         logger = lldb.formatters.Logger.Logger()
         self.valid = 1
