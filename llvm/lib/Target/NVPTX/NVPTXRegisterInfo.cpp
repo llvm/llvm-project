@@ -119,7 +119,8 @@ bool NVPTXRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                      MI.getOperand(FIOperandNum + 1).getImm();
 
   // Using I0 as the frame pointer
-  MI.getOperand(FIOperandNum).ChangeToRegister(getFrameRegister(MF), false);
+  MI.getOperand(FIOperandNum)
+      .ChangeToRegister(getFrameLocalRegister(MF), false);
   MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
   return false;
 }
@@ -127,14 +128,18 @@ bool NVPTXRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 Register NVPTXRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const NVPTXTargetMachine &TM =
       static_cast<const NVPTXTargetMachine &>(MF.getTarget());
-  return TM.is64Bit() ? NVPTX::VRFrame64 : NVPTX::VRFrame32;
+  return TM.getPointerSize(NVPTXAS::ADDRESS_SPACE_GENERIC) == 8
+             ? NVPTX::VRFrame64
+             : NVPTX::VRFrame32;
 }
 
 Register
 NVPTXRegisterInfo::getFrameLocalRegister(const MachineFunction &MF) const {
   const NVPTXTargetMachine &TM =
       static_cast<const NVPTXTargetMachine &>(MF.getTarget());
-  return TM.is64Bit() ? NVPTX::VRFrameLocal64 : NVPTX::VRFrameLocal32;
+  return TM.getPointerSize(NVPTXAS::ADDRESS_SPACE_LOCAL) == 8
+             ? NVPTX::VRFrameLocal64
+             : NVPTX::VRFrameLocal32;
 }
 
 void NVPTXRegisterInfo::clearDebugRegisterMap() const {

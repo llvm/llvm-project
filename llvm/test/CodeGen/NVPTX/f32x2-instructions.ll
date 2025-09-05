@@ -89,12 +89,12 @@ define float @test_extract_i(<2 x float> %a, i64 %idx) #0 {
 ; CHECK-NOF32X2-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NOF32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_extract_i_param_0];
 ; CHECK-NOF32X2-NEXT:    ld.param.b64 %rd1, [test_extract_i_param_1];
-; CHECK-NOF32X2-NEXT:    st.v2.b32 [%SP], {%r1, %r2};
+; CHECK-NOF32X2-NEXT:    st.local.v2.b32 [%SPL], {%r1, %r2};
 ; CHECK-NOF32X2-NEXT:    and.b64 %rd2, %rd1, 1;
 ; CHECK-NOF32X2-NEXT:    shl.b64 %rd3, %rd2, 2;
-; CHECK-NOF32X2-NEXT:    add.u64 %rd4, %SP, 0;
+; CHECK-NOF32X2-NEXT:    add.u64 %rd4, %SPL, 0;
 ; CHECK-NOF32X2-NEXT:    or.b64 %rd5, %rd4, %rd3;
-; CHECK-NOF32X2-NEXT:    ld.b32 %r3, [%rd5];
+; CHECK-NOF32X2-NEXT:    ld.local.b32 %r3, [%rd5];
 ; CHECK-NOF32X2-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NOF32X2-NEXT:    ret;
 ;

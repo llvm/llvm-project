@@ -80,6 +80,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -1480,14 +1481,12 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
   int64_t NumBytes = MFI.getStackSize();
   if (NumBytes) {
     O << "\t.local .align " << MFI.getMaxAlign().value() << " .b8 \t"
-      << DEPOTNAME << getFunctionNumber() << "[" << NumBytes << "];\n";
-    if (static_cast<const NVPTXTargetMachine &>(MF.getTarget()).is64Bit()) {
-      O << "\t.reg .b64 \t%SP;\n"
-        << "\t.reg .b64 \t%SPL;\n";
-    } else {
-      O << "\t.reg .b32 \t%SP;\n"
-        << "\t.reg .b32 \t%SPL;\n";
-    }
+      << DEPOTNAME << getFunctionNumber() << "[" << NumBytes << "];\n"
+      << "\t.reg .b"
+      << MF.getTarget().getPointerSizeInBits(ADDRESS_SPACE_GENERIC)
+      << " \t%SP;\n"
+      << "\t.reg .b" << MF.getTarget().getPointerSizeInBits(ADDRESS_SPACE_LOCAL)
+      << " \t%SPL;\n";
   }
 
   // Go through all virtual registers to establish the mapping between the

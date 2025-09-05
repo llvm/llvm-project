@@ -69,7 +69,6 @@ enum NodeType : unsigned {
   FMAXIMUM3,
   FMINIMUM3,
 
-  DYNAMIC_STACKALLOC,
   STACKRESTORE,
   STACKSAVE,
   BrxStart,
