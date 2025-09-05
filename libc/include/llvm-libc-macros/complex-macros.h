@@ -22,21 +22,26 @@
 
 // TODO: Add imaginary macros once GCC or Clang support _Imaginary builtin-type.
 
-#define CMPLX(x, y) __builtin_complex((double)(x), (double)(y))
-#define CMPLXF(x, y) __builtin_complex((float)(x), (float)(y))
-#define CMPLXL(x, y) __builtin_complex((long double)(x), (long double)(y))
+#if __has_builtin(__builtin_complex)
+#define __CMPLX(r, i, t) (__builtin_complex((t)(r), (t)(i)))
+#else
+#define __CMPLX(r, i, t) ((_Complex t){(t)(r), (t)(i)})
+#endif
+
+#define CMPLX(r, i) __CMPLX(r, i, double)
+#define CMPLXF(r, i) __CMPLX(r, i, float)
+#define CMPLXL(r, i) __CMPLX(r, i, long double)
 
 #ifdef LIBC_TYPES_HAS_CFLOAT16
 #if !defined(__clang__) || (__clang_major__ >= 22 && __clang_minor__ > 0)
-#define CMPLXF16(x, y) __builtin_complex((_Float16)(x), (_Float16)(y))
+#define CMPLXF16(r, i) __CMPLX(r, i, _Float16)
 #else
-#define CMPLXF16(x, y)                                                         \
-  ((complex _Float16)(__builtin_complex((float)(x), (float)(y))))
+#define CMPLXF16(r, i) ((complex _Float16)(__CMPLX(r, i, float)))
 #endif
 #endif // LIBC_TYPES_HAS_CFLOAT16
 
 #ifdef LIBC_TYPES_HAS_CFLOAT128
-#define CMPLXF128(x, y) __builtin_complex((float128)(x), (float128)(y))
+#define CMPLXF128(r, i) __CMPLX(r, i, float128)
 #endif // LIBC_TYPES_HAS_CFLOAT128
 
 #endif // __STDC_NO_COMPLEX__
