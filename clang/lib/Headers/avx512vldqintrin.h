@@ -772,8 +772,8 @@ _mm256_cvtepu64_ps(__m256i __A) {
   return (__m128)__builtin_convertvector((__v4du)__A, __v4sf);
 }
 
-static __inline__ __m128 __DEFAULT_FN_ATTRS256
-_mm256_mask_cvtepu64_ps (__m128 __W, __mmask8 __U, __m256i __A) {
+static __inline__ __m128 __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_mask_cvtepu64_ps(__m128 __W, __mmask8 __U, __m256i __A) {
   return (__m128)__builtin_ia32_selectps_128((__mmask8)__U,
                                              (__v4sf)_mm256_cvtepu64_ps(__A),
                                              (__v4sf)__W);

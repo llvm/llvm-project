@@ -759,6 +759,8 @@ __m128 test_mm256_mask_cvtepu64_ps(__m128 __W, __mmask8 __U, __m256i __A) {
   return _mm256_mask_cvtepu64_ps(__W, __U, __A); 
 }
 
+TEST_CONSTEXPR(match_m128(_mm256_mask_cvtepu64_ps((__m128){-777.0f, -777.0f, -777.0f, -777.0f}, /*1010=*/0xa, (__m256i)(__v4du){1, 1, 2, 2}), -777.0f, 1.0f, -777.0f, 2.0f));
+
 __m128 test_mm256_maskz_cvtepu64_ps(__mmask8 __U, __m256i __A) {
   // CHECK-LABEL: test_mm256_maskz_cvtepu64_ps
   // CHECK: uitofp <4 x i64> %{{.*}} to <4 x float>
