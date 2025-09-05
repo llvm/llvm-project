@@ -60,4 +60,4 @@ entry:
   ret ptr %ptr1
 }
 
-!0 = !{!"int"}
+!0 = !{!"int", i1 0}
