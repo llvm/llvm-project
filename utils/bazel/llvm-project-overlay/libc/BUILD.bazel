@@ -3751,6 +3751,7 @@ libc_math_function(
 libc_math_function(
     name = "fmodbf16",
     additional_deps = [
+        ":__support_fputil_bfloat16",
         ":__support_fputil_generic_fmod",
     ],
 )
