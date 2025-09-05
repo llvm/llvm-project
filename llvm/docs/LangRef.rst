@@ -5229,6 +5229,11 @@ flag that indicates whether or not the inline asm expression has side effects,
 and a flag indicating whether the function containing the asm needs to align its
 stack conservatively.
 
+LLVM will treat the actual instructions entirely opaquely (i.e. no optimizations
+will be performed based on the contents of the template string). Only the
+operand constraints are used to deduce what the expression may do during
+execution.
+
 The template string supports argument substitution of the operands using "``$``"
 followed by a number, to indicate substitution of the given register/memory
 location, as specified by the constraint string. "``${NUM:MODIFIER}``" may also
