@@ -219,16 +219,14 @@ class MTBUF_Load_Pseudo <string opName,
                          RegisterOperand vdataClass,
                          int elems,
                          bit hasRestrictedSOffset = 0,
-                         list<dag> pattern=[],
-                         // Workaround bug bz30254
-                         int addrKindCopy = addrKind>
+                         list<dag> pattern=[]>
   : MTBUF_Pseudo<opName,
                  (outs vdataClass:$vdata),
-                 getMTBUFIns<addrKindCopy, [], hasRestrictedSOffset>.ret,
-                 getMTBUFAsmOps<addrKindCopy>.ret,
+                 getMTBUFIns<addrKind, [], hasRestrictedSOffset>.ret,
+                 getMTBUFAsmOps<addrKind>.ret,
                  pattern>,
-    MTBUF_SetupAddr<addrKindCopy> {
-  let PseudoInstr = opName # "_" # getAddrName<addrKindCopy>.ret;
+    MTBUF_SetupAddr<addrKind> {
+  let PseudoInstr = opName # "_" # getAddrName<addrKind>.ret;
   let mayLoad = 1;
   let mayStore = 0;
   let elements = elems;
@@ -266,17 +264,14 @@ class MTBUF_Store_Pseudo <string opName,
                           RegisterOperand vdataClass,
                           int elems,
                           bit hasRestrictedSOffset = 0,
-                          list<dag> pattern=[],
-                          // Workaround bug bz30254
-                          int addrKindCopy = addrKind,
-                          RegisterOperand vdataClassCopy = vdataClass>
+                          list<dag> pattern=[]>
   : MTBUF_Pseudo<opName,
                  (outs),
-                 getMTBUFIns<addrKindCopy, [vdataClassCopy], hasRestrictedSOffset>.ret,
-                 getMTBUFAsmOps<addrKindCopy>.ret,
+                 getMTBUFIns<addrKind, [vdataClass], hasRestrictedSOffset>.ret,
+                 getMTBUFAsmOps<addrKind>.ret,
                  pattern>,
-    MTBUF_SetupAddr<addrKindCopy> {
-  let PseudoInstr = opName # "_" # getAddrName<addrKindCopy>.ret;
+    MTBUF_SetupAddr<addrKind> {
+  let PseudoInstr = opName # "_" # getAddrName<addrKind>.ret;
   let mayLoad = 0;
   let mayStore = 1;
   let elements = elems;
@@ -492,18 +487,16 @@ class MUBUF_Load_Pseudo <string opName,
                          bit isTFE = 0,
                          bit hasRestrictedSOffset = 0,
                          list<dag> pattern=[],
-                         // Workaround bug bz30254
-                         int addrKindCopy = addrKind,
                          RegisterOperand vdata_op = getLdStVDataRegisterOperand<vdata_vt.Size, isTFE>.ret>
   : MUBUF_Pseudo<opName,
                  !if(!or(isLds, isLdsOpc), (outs), (outs vdata_op:$vdata)),
-                 !con(getMUBUFIns<addrKindCopy, [], isTFE, hasRestrictedSOffset>.ret,
+                 !con(getMUBUFIns<addrKind, [], isTFE, hasRestrictedSOffset>.ret,
                       !if(HasTiedDest, (ins vdata_op:$vdata_in), (ins))),
-                 getMUBUFAsmOps<addrKindCopy, !or(isLds, isLdsOpc), isLds, isTFE>.ret,
+                 getMUBUFAsmOps<addrKind, !or(isLds, isLdsOpc), isLds, isTFE>.ret,
                  pattern>,
-    MUBUF_SetupAddr<addrKindCopy> {
+    MUBUF_SetupAddr<addrKind> {
   let PseudoInstr = opName # !if(isLds, "_lds", "") # !if(isTFE, "_tfe", "") #
-                    "_" # getAddrName<addrKindCopy>.ret;
+                    "_" # getAddrName<addrKind>.ret;
   let AsmMatchConverter = "cvtMubuf";
 
   let Constraints = !if(HasTiedDest, "$vdata = $vdata_in", "");
@@ -593,17 +586,15 @@ class MUBUF_Store_Pseudo <string opName,
                           ValueType store_vt,
                           bit isTFE = 0,
                           bit hasRestrictedSOffset = 0,
-                          list<dag> pattern=[],
-                          // Workaround bug bz30254
-                          int addrKindCopy = addrKind>
+                          list<dag> pattern=[]>
   : MUBUF_Pseudo<opName,
                  (outs),
-                 getMUBUFIns<addrKindCopy, [getVregSrcForVT<store_vt>.ret], isTFE, hasRestrictedSOffset>.ret,
-                 getMUBUFAsmOps<addrKindCopy, 0, 0, isTFE>.ret,
+                 getMUBUFIns<addrKind, [getVregSrcForVT<store_vt>.ret], isTFE, hasRestrictedSOffset>.ret,
+                 getMUBUFAsmOps<addrKind, 0, 0, isTFE>.ret,
                  pattern>,
-    MUBUF_SetupAddr<addrKindCopy> {
+    MUBUF_SetupAddr<addrKind> {
   let PseudoInstr = opName # "_" # !if(isTFE, "_tfe", "") #
-                    getAddrName<addrKindCopy>.ret;
+                    getAddrName<addrKind>.ret;
   let mayLoad = 0;
   let mayStore = 1;
   let elements = getMUBUFElements<store_vt>.ret;
@@ -693,20 +684,18 @@ class getMUBUFAtomicInsDA<RegisterOperand vdata_op, bit vdata_in, bit hasRestric
 class getMUBUFAtomicIns<int addrKind,
                         RegisterOperand vdataClass,
                         bit vdata_in,
-                        bit hasRestrictedSOffset,
-                        // Workaround bug bz30254
-                        RegisterOperand vdataClassCopy=vdataClass> {
+                        bit hasRestrictedSOffset> {
   dag ret =
     !if(!eq(addrKind, BUFAddrKind.Offset),
-            getMUBUFAtomicInsDA<vdataClassCopy, vdata_in, hasRestrictedSOffset>.ret,
+            getMUBUFAtomicInsDA<vdataClass, vdata_in, hasRestrictedSOffset>.ret,
     !if(!eq(addrKind, BUFAddrKind.OffEn),
-            getMUBUFAtomicInsDA<vdataClassCopy, vdata_in, hasRestrictedSOffset, [VGPR_32]>.ret,
+            getMUBUFAtomicInsDA<vdataClass, vdata_in, hasRestrictedSOffset, [VGPR_32]>.ret,
     !if(!eq(addrKind, BUFAddrKind.IdxEn),
-            getMUBUFAtomicInsDA<vdataClassCopy, vdata_in, hasRestrictedSOffset, [VGPR_32]>.ret,
+            getMUBUFAtomicInsDA<vdataClass, vdata_in, hasRestrictedSOffset, [VGPR_32]>.ret,
     !if(!eq(addrKind, BUFAddrKind.BothEn),
-            getMUBUFAtomicInsDA<vdataClassCopy, vdata_in, hasRestrictedSOffset, [VReg_64]>.ret,
+            getMUBUFAtomicInsDA<vdataClass, vdata_in, hasRestrictedSOffset, [VReg_64]>.ret,
     !if(!eq(addrKind, BUFAddrKind.Addr64),
-            getMUBUFAtomicInsDA<vdataClassCopy, vdata_in, hasRestrictedSOffset, [VReg_64]>.ret,
+            getMUBUFAtomicInsDA<vdataClass, vdata_in, hasRestrictedSOffset, [VReg_64]>.ret,
     (ins))))));
 }
 
@@ -715,11 +704,9 @@ class MUBUF_Atomic_Pseudo<string opName,
                           dag outs,
                           dag ins,
                           string asmOps,
-                          list<dag> pattern=[],
-                          // Workaround bug bz30254
-                          int addrKindCopy = addrKind>
+                          list<dag> pattern=[]>
   : MUBUF_Pseudo<opName, outs, ins, asmOps, pattern>,
-    MUBUF_SetupAddr<addrKindCopy> {
+    MUBUF_SetupAddr<addrKind> {
   let mayStore = 1;
   let mayLoad = 1;
   let hasSideEffects = 1;
@@ -733,16 +720,13 @@ class MUBUF_Atomic_Pseudo<string opName,
 class MUBUF_AtomicNoRet_Pseudo<string opName, int addrKind,
                                RegisterOperand vdataClass,
                                bit hasRestrictedSOffset = 0,
-                               list<dag> pattern=[],
-                               // Workaround bug bz30254
-                               int addrKindCopy = addrKind,
-                               RegisterOperand vdataClassCopy = vdataClass>
-  : MUBUF_Atomic_Pseudo<opName, addrKindCopy,
+                               list<dag> pattern=[]>
+  : MUBUF_Atomic_Pseudo<opName, addrKind,
                         (outs),
-                        getMUBUFAtomicIns<addrKindCopy, vdataClassCopy, 0, hasRestrictedSOffset>.ret,
-                        getMUBUFAsmOps<addrKindCopy>.ret,
+                        getMUBUFAtomicIns<addrKind, vdataClass, 0, hasRestrictedSOffset>.ret,
+                        getMUBUFAsmOps<addrKind>.ret,
                         pattern> {
-  let PseudoInstr = opName # "_" # getAddrName<addrKindCopy>.ret;
+  let PseudoInstr = opName # "_" # getAddrName<addrKind>.ret;
   let glc_value = 0;
   let dlc_value = 0;
   let sccb_value = 0;
@@ -752,16 +736,13 @@ class MUBUF_AtomicNoRet_Pseudo<string opName, int addrKind,
 class MUBUF_AtomicRet_Pseudo<string opName, int addrKind,
                              RegisterOperand vdata_op,
                              bit hasRestrictedSOffset = 0,
-                             list<dag> pattern=[],
-                             // Workaround bug bz30254
-                             int addrKindCopy = addrKind,
-                             RegisterOperand vdataClassCopy = vdata_op>
-  : MUBUF_Atomic_Pseudo<opName, addrKindCopy,
+                             list<dag> pattern=[]>
+  : MUBUF_Atomic_Pseudo<opName, addrKind,
                         (outs vdata_op:$vdata),
-                        getMUBUFAtomicIns<addrKindCopy, vdataClassCopy, 1, hasRestrictedSOffset>.ret,
-                        getMUBUFAsmOps<addrKindCopy>.ret,
+                        getMUBUFAtomicIns<addrKind, vdata_op, 1, hasRestrictedSOffset>.ret,
+                        getMUBUFAsmOps<addrKind>.ret,
                         pattern> {
-  let PseudoInstr = opName # "_rtn_" # getAddrName<addrKindCopy>.ret;
+  let PseudoInstr = opName # "_rtn_" # getAddrName<addrKind>.ret;
   let glc_value = 1;
   let dlc_value = 0;
   let sccb_value = 0;
