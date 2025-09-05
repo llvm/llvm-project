@@ -799,7 +799,8 @@ public:
   enum AddressingModeKind {
     AMK_PreIndexed,
     AMK_PostIndexed,
-    AMK_None
+    AMK_None,
+    AMK_All
   };
 
   /// Return the preferred addressing mode LSR should make efforts to generate.
