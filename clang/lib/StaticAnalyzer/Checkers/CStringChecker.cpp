@@ -2275,6 +2275,13 @@ void CStringChecker::evalStrxfrm(CheckerContext &C,
   // transformation
   SVal RetVal = SVB.conjureSymbolVal(Call, C.blockCount());
 
+  auto BindReturnAndTransition = [&RetVal, &Call, LCtx, &C](ProgramStateRef State) {
+    if (State) {
+      State = State->BindExpr(Call.getOriginExpr(), LCtx, RetVal);
+      C.addTransition(State);
+    }
+  };
+
   // Check if size is zero
   SVal SizeVal = State->getSVal(Size.Expression, LCtx);
   QualType SizeTy = Size.Expression->getType();
@@ -2283,18 +2290,12 @@ void CStringChecker::evalStrxfrm(CheckerContext &C,
       assumeZero(C, State, SizeVal, SizeTy);
 
   // We can't assume anything about size, just bind the return value and be done
-  if (!StateZeroSize && !StateSizeNonZero) {
-    State = State->BindExpr(Call.getOriginExpr(), LCtx, RetVal);
-    C.addTransition(State);
-    return;
-  }
+  if (!StateZeroSize && !StateSizeNonZero)
+    return BindReturnAndTransition(State);
 
   // If `n` is 0, we just return the implementation defined length
-  if (StateZeroSize && !StateSizeNonZero) {
-    StateZeroSize = StateZeroSize->BindExpr(Call.getOriginExpr(), LCtx, RetVal);
-    C.addTransition(StateZeroSize);
-    return;
-  }
+  if (StateZeroSize && !StateSizeNonZero)
+    return BindReturnAndTransition(StateZeroSize);
 
   // If `n` is not 0, `dest` can not be null.
   SVal DestVal = StateSizeNonZero->getSVal(Dest.Expression, LCtx);
@@ -2322,30 +2323,25 @@ void CStringChecker::evalStrxfrm(CheckerContext &C,
       StateSuccess = invalidateDestinationBufferBySize(
           C, StateSuccess, Dest.Expression, Call.getCFGElementRef(), DestVal,
           SizeVal, Size.Expression->getType());
-
-      StateSuccess = StateSuccess->BindExpr(Call.getOriginExpr(), LCtx, RetVal);
-      C.addTransition(StateSuccess);
+      BindReturnAndTransition(StateSuccess);
     }
 
     if (StateFailure) {
       // `dest` buffer content is undefined
       if (auto DestLoc = DestVal.getAs<loc::MemRegionVal>()) {
         StateFailure = StateFailure->killBinding(*DestLoc);
-        StateFailure = StateFailure->bindDefaultInitial(*DestLoc, UndefinedVal{}, LCtx);
+        StateFailure =
+            StateFailure->bindDefaultInitial(*DestLoc, UndefinedVal{}, LCtx);
       }
 
-      StateFailure = StateFailure->BindExpr(Call.getOriginExpr(), LCtx, RetVal);
-      C.addTransition(StateFailure);
+      BindReturnAndTransition(StateFailure);
     }
   } else {
     // Fallback: invalidate the buffer.
     StateSizeNonZero = invalidateDestinationBufferBySize(
         C, StateSizeNonZero, Dest.Expression, Call.getCFGElementRef(), DestVal,
         SizeVal, Size.Expression->getType());
-
-    StateSizeNonZero =
-        StateSizeNonZero->BindExpr(Call.getOriginExpr(), LCtx, RetVal);
-    C.addTransition(StateSizeNonZero);
+    BindReturnAndTransition(StateSizeNonZero);
   }
 }
 
