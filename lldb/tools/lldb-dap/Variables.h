@@ -43,9 +43,6 @@ protocol::Scope CreateScope(const ScopeKind kind, int64_t variablesReference,
 struct ScopeData {
   ScopeKind kind;
   lldb::SBValueList scope;
-
-  ScopeData(ScopeKind kind, lldb::SBValueList scope)
-      : kind(kind), scope(scope) {}
 };
 
 struct Variables {
