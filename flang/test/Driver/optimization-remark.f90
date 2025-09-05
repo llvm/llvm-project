@@ -19,7 +19,8 @@
 ! RUN: %flang %s -O2 -Rpass=loop -S %{output} 2>&1 | FileCheck %s --check-prefix=PASS-REGEX-LOOP-ONLY
 
 ! Check valid -Rpass-missed regex
-! RUN: %flang %s -O2 -Rpass-missed=loop -S %{output} 2>&1 | FileCheck %s --allow-empty --check-prefix=MISSED-REGEX-LOOP-ONLY
+! UNSUPPORTED: target=riscv{{.*}}
+! RUN: %flang %s -O2 -Rpass-missed=loop -S %{output} 2>&1 | FileCheck %s --check-prefix=MISSED-REGEX-LOOP-ONLY
 
 ! Check valid -Rpass-analysis regex
 ! RUN: %flang %s -O2 -Rpass-analysis=loop -S %{output} 2>&1 | FileCheck %s --check-prefix=ANALYSIS-REGEX-LOOP-ONLY
