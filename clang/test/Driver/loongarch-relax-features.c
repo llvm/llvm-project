@@ -17,7 +17,7 @@
 // RUN: not %clang -c --target=loongarch64 -mrelax -gsplit-dwarf=single %s 2>&1 | FileCheck %s --check-prefix=ERR-SPLIT-DWARF
 
 // LA32: "target-features"="+32bit"
-// LA64: "target-features"="+64bit,+d,+f,+lsx,+ual"
+// LA64: "target-features"="+64bit,+d,+f,+lsx,+relax,+ual"
 
 // LA32-NORELAX: "target-features"="+32bit,-relax"
 // LA64-NORELAX: "target-features"="+64bit,+d,+f,+lsx,+ual,-relax"
