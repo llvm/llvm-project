@@ -825,7 +825,7 @@ _mm_maskz_cvtepi16_ph(__mmask8 __U, __m128i __A) {
       (__mmask8)__U, (__v8hf)_mm_cvtepi16_ph(__A), (__v8hf)_mm_setzero_ph());
 }
 
-static __inline__ __m256h __DEFAULT_FN_ATTRS256
+static __inline__ __m256h __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_cvtepi16_ph(__m256i __A) {
   return (__m256h) __builtin_convertvector((__v16hi)__A, __v16hf);
 }

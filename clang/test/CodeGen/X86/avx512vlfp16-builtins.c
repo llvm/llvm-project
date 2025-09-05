@@ -1825,6 +1825,8 @@ __m256h test_mm256_cvtepi16_ph(__m256i A) {
   return _mm256_cvtepi16_ph(A);
 }
 
+TEST_CONSTEXPR(match_m256h(_mm256_cvtepi16_ph((__m256i)(__v16hi){-1, -1, 2, 2, -4, -4, 8, 8, -16, -16, 32, 32, -64, -64, 128, 128}), -1.0, -1.0, 2.0, 2.0, -4.0, -4.0, 8.0, 8.0, -16.0, -16.0, 32.0, 32.0, -64.0, -64.0, 128.0, 128.0));
+
 __m256h test_mm256_mask_cvtepi16_ph(__m256h A, __mmask16 B, __m256i C) {
   // CHECK-LABEL: test_mm256_mask_cvtepi16_ph
   // CHECK: %{{.*}} = sitofp <16 x i16> %{{.*}} to <16 x half>
