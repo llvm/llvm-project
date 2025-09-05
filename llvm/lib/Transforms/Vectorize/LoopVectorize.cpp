@@ -928,8 +928,8 @@ public:
   /// user options, for the given register kind.
   bool useMaxBandwidth(TargetTransformInfo::RegisterKind RegKind);
 
-  /// \return True if register pressure should be calculated for the given VF.
-  bool shouldCalculateRegPressureForVF(ElementCount VF);
+  /// \return True if register pressure should be considered for the given VF.
+  bool shouldConsiderRegPressureForVF(ElementCount VF);
 
   /// \return The size (in bits) of the smallest and widest types in the code
   /// that needs to be vectorized. We ignore values that remain scalar such as
@@ -3700,7 +3700,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   return FixedScalableVFPair::getNone();
 }
 
-bool LoopVectorizationCostModel::shouldCalculateRegPressureForVF(
+bool LoopVectorizationCostModel::shouldConsiderRegPressureForVF(
     ElementCount VF) {
   if (!useMaxBandwidth(VF.isScalable()
                            ? TargetTransformInfo::RGK_ScalableVector
@@ -4147,8 +4147,9 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
                                P->vectorFactors().end());
 
     SmallVector<VPRegisterUsage, 8> RUs;
-    if (CM.useMaxBandwidth(TargetTransformInfo::RGK_ScalableVector) ||
-        CM.useMaxBandwidth(TargetTransformInfo::RGK_FixedWidthVector))
+    if (any_of(VFs, [this](ElementCount VF) {
+          return CM.shouldConsiderRegPressureForVF(VF);
+        }))
       RUs = calculateRegisterUsageForPlan(*P, VFs, TTI, CM.ValuesToIgnore);
 
     for (unsigned I = 0; I < VFs.size(); I++) {
@@ -4160,7 +4161,7 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
       /// If the register pressure needs to be considered for VF,
       /// don't consider the VF as valid if it exceeds the number
       /// of registers for the target.
-      if (CM.shouldCalculateRegPressureForVF(VF) &&
+      if (CM.shouldConsiderRegPressureForVF(VF) &&
           RUs[I].exceedsMaxNumRegs(TTI, ForceTargetNumVectorRegs))
         continue;
 
@@ -6996,8 +6997,9 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
                                P->vectorFactors().end());
 
     SmallVector<VPRegisterUsage, 8> RUs;
-    if (CM.useMaxBandwidth(TargetTransformInfo::RGK_ScalableVector) ||
-        CM.useMaxBandwidth(TargetTransformInfo::RGK_FixedWidthVector))
+    if (any_of(VFs, [this](ElementCount VF) {
+          return CM.shouldConsiderRegPressureForVF(VF);
+        }))
       RUs = calculateRegisterUsageForPlan(*P, VFs, TTI, CM.ValuesToIgnore);
 
     for (unsigned I = 0; I < VFs.size(); I++) {
@@ -7023,7 +7025,7 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
       InstructionCost Cost = cost(*P, VF);
       VectorizationFactor CurrentFactor(VF, Cost, ScalarCost);
 
-      if (CM.shouldCalculateRegPressureForVF(VF) &&
+      if (CM.shouldConsiderRegPressureForVF(VF) &&
           RUs[I].exceedsMaxNumRegs(TTI, ForceTargetNumVectorRegs)) {
         LLVM_DEBUG(dbgs() << "LV(REG): Not considering vector loop of width "
                           << VF << " because it uses too many registers\n");
