@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/clc_convert.h>
-#include <clc/clcmacro.h>
 #include <clc/float/definitions.h>
 #include <clc/internal/clc.h>
 #include <clc/math/clc_fabs.h>
@@ -279,9 +278,6 @@ _CLC_OVERLOAD _CLC_DEF float __clc_lgamma_r(float x, private int *signp) {
   *signp = s;
   return r;
 }
-
-_CLC_V_V_VP_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, __clc_lgamma_r, float,
-                      private, int)
 
 #ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
@@ -586,9 +582,7 @@ _CLC_OVERLOAD _CLC_DEF double __clc_lgamma_r(double x, private int *ip) {
   return r;
 }
 
-_CLC_V_V_VP_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, __clc_lgamma_r, double,
-                      private, int)
-#endif
+#endif // cl_khr_fp64
 
 #ifdef cl_khr_fp16
 
@@ -598,18 +592,27 @@ _CLC_OVERLOAD _CLC_DEF half __clc_lgamma_r(half x, private int *iptr) {
   return (half)__clc_lgamma_r((float)x, iptr);
 }
 
-_CLC_V_V_VP_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, half, __clc_lgamma_r, half,
-                      private, int);
+#endif // cl_khr_fp16
 
-#endif
+#define __CLC_FUNCTION __clc_lgamma_r
+#define __CLC_ARG2_TYPE int
+
+#define __CLC_ADDRSPACE private
+#define __CLC_BODY <clc/shared/unary_def_with_ptr_scalarize.inc>
+#include <clc/math/gentype.inc>
+#undef __CLC_ADDRSPACE
 
 #define __CLC_ADDRSPACE global
 #define __CLC_BODY <clc_lgamma_r.inc>
+#include <clc/math/gentype.inc>
+#define __CLC_BODY <clc/shared/unary_def_with_ptr_scalarize.inc>
 #include <clc/math/gentype.inc>
 #undef __CLC_ADDRSPACE
 
 #define __CLC_ADDRSPACE local
 #define __CLC_BODY <clc_lgamma_r.inc>
+#include <clc/math/gentype.inc>
+#define __CLC_BODY <clc/shared/unary_def_with_ptr_scalarize.inc>
 #include <clc/math/gentype.inc>
 #undef __CLC_ADDRSPACE
 
@@ -617,5 +620,7 @@ _CLC_V_V_VP_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, half, __clc_lgamma_r, half,
 #define __CLC_ADDRSPACE generic
 #define __CLC_BODY <clc_lgamma_r.inc>
 #include <clc/math/gentype.inc>
+#define __CLC_BODY <clc/shared/unary_def_with_ptr_scalarize.inc>
+#include <clc/math/gentype.inc>
 #undef __CLC_ADDRSPACE
-#endif
+#endif // _CLC_DISTINCT_GENERIC_AS_SUPPORTED
