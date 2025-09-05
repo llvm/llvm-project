@@ -2443,6 +2443,22 @@ void ThreadSafetyAnalyzer::intersectAndWarn(FactSet &EntrySet,
       if (join(FactMan[*EntryIt], ExitFact, JoinLoc, EntryLEK))
         *EntryIt = Fact;
     } else if (!ExitFact.managed() || EntryLEK == LEK_LockedAtEndOfFunction) {
+      if (EntryLEK == LEK_LockedAtEndOfFunction) {
+        const til::SExpr *Sexp = ExitFact.sexpr();
+        const VarDecl *Var = nullptr;
+
+        if (const auto *Proj = dyn_cast<til::Project>(Sexp)) {
+          if (const auto *Base = dyn_cast<til::LiteralPtr>(Proj->record()))
+            Var = dyn_cast_or_null<VarDecl>(Base->clangDecl());
+        } else if (const auto *LP = dyn_cast<til::LiteralPtr>(Sexp)) {
+          Var = dyn_cast_or_null<VarDecl>(LP->clangDecl());
+        }
+
+        if (Var && Var->getStorageDuration() == SD_Automatic &&
+            Var->getDeclContext() == CurrentFunction) {
+          continue;
+        }
+      }
       ExitFact.handleRemovalFromIntersection(ExitSet, FactMan, JoinLoc,
                                              EntryLEK, Handler);
     }
