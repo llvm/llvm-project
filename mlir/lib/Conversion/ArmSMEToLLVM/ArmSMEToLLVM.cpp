@@ -831,9 +831,9 @@ struct OuterProductWideningOpConversion
 /// is converted to:
 ///
 ///   %cnt = "arm_sme.intr.cntsd"() : () -> i64
-///   %0 = arith.constant 4 : i64
-///   %1 = arith.muli %cnt, %0 : i64
-///   %2 = arith.index_cast %1 : i64 to index
+///   %scale = arith.constant 4 : index
+///   %cntIndex = arith.index_cast %cnt : i64 to index
+///   %0 = arith.muli %cntIndex, %scale : index
 ///
 struct StreamingVLOpConversion
     : public ConvertArmSMEOpToLLVMPattern<arm_sme::StreamingVLOp,
