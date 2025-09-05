@@ -143,12 +143,20 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
         MIOperandNo, NumOps, MIOpInfo);
 
     if (SubArgDag) {
-      if (SubArgDag->getNumArgs() != NumOps) {
+      if (!MIOpInfo) {
         PrintFatalError(R->getLoc(), "In instruction '" + R->getName() +
                                          "', operand #" + Twine(i) + " has " +
                                          Twine(SubArgDag->getNumArgs()) +
-                                         " sub-arg names, expected " +
-                                         Twine(NumOps) + ".");
+                                         " sub-arg names, but no sub-operands");
+      }
+
+      unsigned NumSubArgs = SubArgDag->getNumArgs();
+      unsigned NumSubOps = MIOpInfo->getNumArgs();
+      if (NumSubArgs != NumSubOps) {
+        PrintFatalError(R->getLoc(),
+                        "In instruction '" + R->getName() + "', operand #" +
+                            Twine(i) + " has " + Twine(NumSubArgs) +
+                            " sub-arg names, expected " + Twine(NumSubOps));
       }
 
       for (unsigned j = 0; j < NumOps; ++j) {
