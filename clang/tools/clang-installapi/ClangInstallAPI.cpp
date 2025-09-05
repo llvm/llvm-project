@@ -154,13 +154,12 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
     return EXIT_FAILURE;
 
   // After symbols have been collected, prepare to write output.
-  llvm::vfs::OnDiskOutputBackend Backend;
-  std::optional<llvm::vfs::OutputFile> Out = llvm::expectedToOptional(
-      Backend.createFile(Ctx.OutputLoc, llvm::vfs::OutputConfig()
-                                            .setTextWithCRLF()
-                                            .setNoDiscardOnSignal()
-                                            .setNoAtomicWrite()));
-  if (!Out.has_value()) {
+  auto Out = CI->getOrCreateOutputManager().createFile(
+      Ctx.OutputLoc, llvm::vfs::OutputConfig()
+                         .setTextWithCRLF()
+                         .setNoImplyCreateDirectories()
+                         .setNoAtomicWrite());
+  if (!Out) {
     Diag->Report(diag::err_cannot_open_file) << Ctx.OutputLoc;
     return EXIT_FAILURE;
   }
@@ -188,7 +187,7 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
   assignLibAttrs(Ctx.Reexports, &InterfaceFile::addReexportedLibrary);
 
   // Write output file and perform CI cleanup.
-  if (auto Err = TextAPIWriter::writeToStream(Out->getOS(), IF, Ctx.FT)) {
+  if (auto Err = TextAPIWriter::writeToStream(*Out, IF, Ctx.FT)) {
     Diag->Report(diag::err_cannot_write_file)
         << Ctx.OutputLoc << std::move(Err);
     if (auto Err = Out->discard())

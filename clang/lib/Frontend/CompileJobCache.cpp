@@ -492,7 +492,7 @@ bool CompileJobCache::CachingOutputs::prepareOutputCollectionCommon(
                Path != DependenciesFile;
       });
 
-  Clang.setOutputBackend(llvm::vfs::makeMirroringOutputBackend(
+  Clang.setOutputManager(llvm::vfs::makeMirroringOutputBackend(
       FilterBackend, std::move(OnDiskOutputs)));
 
   DiagProcessor->insertDiagConsumer(Clang.getDiagnostics());

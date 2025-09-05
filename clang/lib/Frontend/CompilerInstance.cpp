@@ -518,7 +518,7 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
   const DependencyOutputOptions &DepOpts = getDependencyOutputOpts();
   if (!DepOpts.OutputFile.empty())
     addDependencyCollector(
-        std::make_shared<DependencyFileGenerator>(DepOpts, TheOutputBackend));
+        std::make_shared<DependencyFileGenerator>(DepOpts, OutputMgr));
   if (!DepOpts.DOTOutputFile.empty())
     AttachDependencyGraphGen(*PP, DepOpts.DOTOutputFile,
                              getHeaderSearchOpts().Sysroot);
@@ -540,8 +540,8 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
   }
 
   // Modules need an output manager.
-  if (!hasOutputBackend())
-    createOutputBackend();
+  if (!hasOutputManager())
+    createOutputManager();
 
   for (auto &Listener : DependencyCollectors)
     Listener->attachToPreprocessor(*PP);
@@ -946,26 +946,28 @@ std::unique_ptr<raw_pwrite_stream> CompilerInstance::createNullOutputFile() {
   return std::make_unique<llvm::raw_null_ostream>();
 }
 
-void CompilerInstance::setOutputBackend(
+// Output Manager
+
+void CompilerInstance::setOutputManager(
     IntrusiveRefCntPtr<llvm::vfs::OutputBackend> NewOutputs) {
-  assert(!TheOutputBackend && "Already has an output manager");
-  TheOutputBackend = std::move(NewOutputs);
+  assert(!OutputMgr && "Already has an output manager");
+  OutputMgr = std::move(NewOutputs);
 }
 
-void CompilerInstance::createOutputBackend() {
-  assert(!TheOutputBackend && "Already has an output manager");
-  TheOutputBackend = llvm::makeIntrusiveRefCnt<llvm::vfs::OnDiskOutputBackend>();
+void CompilerInstance::createOutputManager() {
+  assert(!OutputMgr && "Already has an output manager");
+  OutputMgr = llvm::makeIntrusiveRefCnt<llvm::vfs::OnDiskOutputBackend>();
 }
 
-llvm::vfs::OutputBackend &CompilerInstance::getOutputBackend() {
-  assert(TheOutputBackend);
-  return *TheOutputBackend;
+llvm::vfs::OutputBackend &CompilerInstance::getOutputManager() {
+  assert(OutputMgr);
+  return *OutputMgr;
 }
 
-llvm::vfs::OutputBackend &CompilerInstance::getOrCreateOutputBackend() {
-  if (!hasOutputBackend())
-    createOutputBackend();
-  return getOutputBackend();
+llvm::vfs::OutputBackend &CompilerInstance::getOrCreateOutputManager() {
+  if (!hasOutputManager())
+    createOutputManager();
+  return getOutputManager();
 }
 
 std::pair<std::shared_ptr<llvm::cas::ObjectStore>,
@@ -1110,7 +1112,7 @@ CompilerInstance::createOutputFileImpl(StringRef OutputPath, bool Binary,
   }
 
   using namespace llvm::vfs;
-  Expected<OutputFile> O = getOrCreateOutputBackend().createFile(
+  Expected<OutputFile> O = getOrCreateOutputManager().createFile(
       OutputPath,
       OutputConfig()
           .setTextWithCRLF(!Binary)
@@ -1443,14 +1445,14 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   auto WrapGenModuleAction = getGenModuleActionWrapper();
   Instance.setGenModuleActionWrapper(WrapGenModuleAction);
 
-  assert(hasOutputBackend() &&
+  assert(hasOutputManager() &&
          "Expected an output manager to already be set up");
   if (ThreadSafeConfig) {
     // Create a clone of the existing output (pointing to the same destination).
-    Instance.setOutputBackend(getOutputBackend().clone());
+    Instance.setOutputManager(getOutputManager().clone());
   } else {
     // Share the existing output manager.
-    Instance.setOutputBackend(&getOutputBackend());
+    Instance.setOutputManager(&getOutputManager());
   }
 
   if (ThreadSafeConfig) {
