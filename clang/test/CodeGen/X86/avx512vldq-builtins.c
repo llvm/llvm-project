@@ -528,6 +528,8 @@ __m128 test_mm256_maskz_cvtepi64_ps(__mmask8 __U, __m256i __A) {
   return _mm256_maskz_cvtepi64_ps(__U, __A); 
 }
 
+TEST_CONSTEXPR(match_m128(_mm256_maskz_cvtepi64_ps(/*1010=*/0xa, (__m256i)(__v4di){-1, -1, 2, 2}), 0.0f, -1.0f, 0.0f, 2.0f));
+
 __m128i test_mm_cvttpd_epi64(__m128d __A) {
   // CHECK-LABEL: test_mm_cvttpd_epi64
   // CHECK: @llvm.x86.avx512.mask.cvttpd2qq.128
