@@ -10,15 +10,15 @@ define void @slice(ptr %ptr1, ptr %ptr2, ptr %out1, ptr %out2) {
 ;
   %alloca = alloca { ptr, ptr }
 
-  %protptrptr1.1 = call ptr @llvm.protected.field.ptr(ptr %alloca, i64 1, i1 true)
+  %protptrptr1.1 = call ptr @llvm.protected.field.ptr.p0(ptr %alloca, i64 1, i1 true)
   store ptr %ptr1, ptr %protptrptr1.1
-  %protptrptr1.2 = call ptr @llvm.protected.field.ptr(ptr %alloca, i64 1, i1 true)
+  %protptrptr1.2 = call ptr @llvm.protected.field.ptr.p0(ptr %alloca, i64 1, i1 true)
   %ptr1a = load ptr, ptr %protptrptr1.2
 
   %gep = getelementptr { ptr, ptr }, ptr %alloca, i64 0, i32 1
-  %protptrptr2.1 = call ptr @llvm.protected.field.ptr(ptr %gep, i64 2, i1 true)
+  %protptrptr2.1 = call ptr @llvm.protected.field.ptr.p0(ptr %gep, i64 2, i1 true)
   store ptr %ptr2, ptr %protptrptr2.1
-  %protptrptr2.2 = call ptr @llvm.protected.field.ptr(ptr %gep, i64 2, i1 true)
+  %protptrptr2.2 = call ptr @llvm.protected.field.ptr.p0(ptr %gep, i64 2, i1 true)
   %ptr2a = load ptr, ptr %protptrptr2.2
 
   store ptr %ptr1a, ptr %out1
@@ -31,14 +31,14 @@ define ptr @mixed(ptr %ptr) {
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    store ptr [[PTR]], ptr [[ALLOCA]], align 8
-; CHECK-NEXT:    [[PROTPTRPTR1_2:%.*]] = call ptr @llvm.protected.field.ptr(ptr [[ALLOCA]], i64 1, i1 true)
+; CHECK-NEXT:    [[PROTPTRPTR1_2:%.*]] = call ptr @llvm.protected.field.ptr.p0(ptr [[ALLOCA]], i64 1, i1 true)
 ; CHECK-NEXT:    [[PTR1A:%.*]] = load ptr, ptr [[PROTPTRPTR1_2]], align 8
 ; CHECK-NEXT:    ret ptr [[PTR1A]]
 ;
   %alloca = alloca ptr
 
   store ptr %ptr, ptr %alloca
-  %protptrptr1.2 = call ptr @llvm.protected.field.ptr(ptr %alloca, i64 1, i1 true)
+  %protptrptr1.2 = call ptr @llvm.protected.field.ptr.p0(ptr %alloca, i64 1, i1 true)
   %ptr1a = load ptr, ptr %protptrptr1.2
 
   ret ptr %ptr1a
@@ -56,15 +56,15 @@ define void @split_non_promotable(ptr %ptr1, ptr %ptr2, ptr %out1, ptr %out2) {
 ;
   %alloca = alloca { ptr, ptr }
 
-  %protptrptr1.1 = call ptr @llvm.protected.field.ptr(ptr %alloca, i64 1, i1 true)
+  %protptrptr1.1 = call ptr @llvm.protected.field.ptr.p0(ptr %alloca, i64 1, i1 true)
   store ptr %ptr1, ptr %protptrptr1.1
-  %protptrptr1.2 = call ptr @llvm.protected.field.ptr(ptr %alloca, i64 1, i1 true)
+  %protptrptr1.2 = call ptr @llvm.protected.field.ptr.p0(ptr %alloca, i64 1, i1 true)
   %ptr1a = load ptr, ptr %protptrptr1.2
 
   %gep = getelementptr { ptr, ptr }, ptr %alloca, i64 0, i32 1
-  %protptrptr2.1 = call ptr @llvm.protected.field.ptr(ptr %gep, i64 2, i1 true)
+  %protptrptr2.1 = call ptr @llvm.protected.field.ptr.p0(ptr %gep, i64 2, i1 true)
   store volatile ptr %ptr2, ptr %protptrptr2.1
-  %protptrptr2.2 = call ptr @llvm.protected.field.ptr(ptr %gep, i64 2, i1 true)
+  %protptrptr2.2 = call ptr @llvm.protected.field.ptr.p0(ptr %gep, i64 2, i1 true)
   %ptr2a = load volatile ptr, ptr %protptrptr2.2
 
   store ptr %ptr1a, ptr %out1

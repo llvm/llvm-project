@@ -379,9 +379,9 @@ entry:
   store i32 %s_p1, ptr %s_p1.addr, align 4, !tbaa !9
   store ptr %p2, ptr %p2.addr, align 8, !tbaa !4
   store i32 %s_p2, ptr %s_p2.addr, align 4, !tbaa !9
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i_sum) #3
+  call void @llvm.lifetime.start.p0(ptr %i_sum) #3
   store i32 0, ptr %i_sum, align 4, !tbaa !9
-  call void @llvm.lifetime.start.p0(i64 4, ptr %y) #3
+  call void @llvm.lifetime.start.p0(ptr %y) #3
   store i32 0, ptr %y, align 4, !tbaa !9
   br label %for.cond
 
@@ -392,11 +392,11 @@ for.cond:                                         ; preds = %for.inc10, %entry
 
 for.cond.cleanup:                                 ; preds = %for.cond
   store i32 2, ptr %cleanup.dest.slot, align 4
-  call void @llvm.lifetime.end.p0(i64 4, ptr %y) #3
+  call void @llvm.lifetime.end.p0(ptr %y) #3
   br label %for.end12
 
 for.body:                                         ; preds = %for.cond
-  call void @llvm.lifetime.start.p0(i64 4, ptr %x) #3
+  call void @llvm.lifetime.start.p0(ptr %x) #3
   store i32 0, ptr %x, align 4, !tbaa !9
   br label %for.cond1
 
@@ -407,7 +407,7 @@ for.cond1:                                        ; preds = %for.inc, %for.body
 
 for.cond.cleanup3:                                ; preds = %for.cond1
   store i32 5, ptr %cleanup.dest.slot, align 4
-  call void @llvm.lifetime.end.p0(i64 4, ptr %x) #3
+  call void @llvm.lifetime.end.p0(ptr %x) #3
   br label %for.end
 
 for.body4:                                        ; preds = %for.cond1
@@ -458,18 +458,18 @@ for.inc10:                                        ; preds = %for.end
 for.end12:                                        ; preds = %for.cond.cleanup
   %16 = load i32, ptr %i_sum, align 4, !tbaa !9
   store i32 1, ptr %cleanup.dest.slot, align 4
-  call void @llvm.lifetime.end.p0(i64 4, ptr %i_sum) #3
+  call void @llvm.lifetime.end.p0(ptr %i_sum) #3
   ret i32 %16
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr) #1
+declare void @llvm.lifetime.start.p0(ptr) #1
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare i32 @llvm.abs.i32(i32, i1 immarg) #2
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr) #1
+declare void @llvm.lifetime.end.p0(ptr) #1
 
 attributes #0 = { nounwind uwtable vscale_range(1,16) "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+bf16,+bti,+ccidx,+complxnum,+crc,+dit,+dotprod,+ete,+flagm,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jsconv,+lse,+mte,+neon,+pauth,+perfmon,+predres,+rand,+ras,+rcpc,+rdm,+sb,+spe,+ssbs,+sve,+sve-bitperm,+sve2,+trbe,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8a,+v9a,-fmv" }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }

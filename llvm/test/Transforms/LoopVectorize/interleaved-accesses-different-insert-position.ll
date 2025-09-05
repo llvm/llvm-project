@@ -6,7 +6,7 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128-Fn32"
 define void @gep_for_first_member_does_not_dominate_insert_point(ptr %str, ptr noalias %dst) {
 ; CHECK-LABEL: define void @gep_for_first_member_does_not_dominate_insert_point(
 ; CHECK-SAME: ptr [[STR:%.*]], ptr noalias [[DST:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -28,12 +28,10 @@ define void @gep_for_first_member_does_not_dominate_insert_point(ptr %str, ptr n
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV2:%.*]] = phi i64 [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ], [ [[IV2_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV2:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV2_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[OR_1:%.*]] = or disjoint i64 [[IV2]], 1
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[STR]], i64 [[OR_1]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i8, ptr [[GEP1]], align 1
@@ -88,7 +86,7 @@ define void @test_ig_insert_pos_at_end_of_vpbb(ptr noalias %dst, ptr noalias %sr
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr nusw { i16, i16, i16, i16 }, ptr [[SRC]], i64 [[TMP3]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP4]], i32 -4
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr nusw i8, ptr [[TMP4]], i32 -4
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i16>, ptr [[TMP5]], align 2
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i16> [[WIDE_VEC]], <16 x i16> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
 ; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <16 x i16> [[WIDE_VEC]], <16 x i16> poison, <4 x i32> <i32 2, i32 6, i32 10, i32 14>

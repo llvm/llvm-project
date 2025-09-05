@@ -194,9 +194,10 @@ static void buildMatmulOp(OpBuilder &b, OperationState &state,
                           ArrayRef<AffineMap> indexingMaps) {
   // Initialize indexingMaps attribute, for MatmulOp.
   SmallVector<Attribute, 3> indexingMapsAttrVal;
-  indexingMapsAttrVal = llvm::map_to_vector(
-      MatmulOp::getDefaultIndexingMaps(b.getContext()),
-      [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
+  indexingMapsAttrVal =
+      llvm::map_to_vector(indexingMaps, [](AffineMap map) -> Attribute {
+        return AffineMapAttr::get(map);
+      });
   state.addAttribute("indexing_maps", b.getArrayAttr(indexingMapsAttrVal));
   return buildStructuredOp(b, state, resultTensorTypes, inputs, outputs,
                            attributes, regionBuilder);
@@ -1569,40 +1570,50 @@ ParseResult MapOp::parse(OpAsmParser &parser, OperationState &result) {
   return success();
 }
 
-// Retrieve the operation from the body, if it is the only one (except
-// yield) and if it gets the same amount of arguments as the body does.
-// If initFirst flag is enabled, we check that init takes the first position in
-// operands of payload.
-static Operation *findPayloadOp(Block *body, bool initFirst = false) {
-  if (body->getOperations().size() != 2)
-    return nullptr;
-  Operation &payload = body->getOperations().front();
-  assert(isa<YieldOp>(body->getOperations().back()));
+static bool canUseShortForm(Block *body, bool initFirst = false) {
+  // Check if the body can be printed in short form. The following 4 conditions
+  // must be satisfied:
 
+  // 1) The body must contain exactly 2 operations: the payload op and a yield.
+  if (body->getOperations().size() != 2)
+    return false;
+  Operation &payload = body->getOperations().front();
+
+  // 2) The payload op must have the same number of operands as the number of
+  //    block arguments.
   if (payload.getNumOperands() == 0 ||
       payload.getNumOperands() != body->getNumArguments())
-    return nullptr;
+    return false;
+
+  // 3) If `initFirst` is true (e.g., for reduction ops), the init block
+  //    must be the first operand of the payload op, otherwise, the operands
+  //    must match the block arguments in order.
   if (initFirst) {
     // check init
     if (payload.getOperands().back() != body->getArgument(0))
-      return nullptr;
+      return false;
     // check rest
     for (const auto &[operand, bbArg] :
          llvm::zip(payload.getOperands(), body->getArguments().drop_front())) {
       if (bbArg != operand)
-        return nullptr;
+        return false;
     }
   } else {
     for (const auto &[operand, bbArg] :
          llvm::zip(payload.getOperands(), body->getArguments())) {
       if (bbArg != operand)
-        return nullptr;
+        return false;
     }
   }
-  return &payload;
+
+  // 4) The `yield` operand must be the result of the payload op.
+  auto yieldOp = cast<YieldOp>(body->getTerminator());
+  return yieldOp.getNumOperands() == 1 &&
+         yieldOp.getOperand(0).getDefiningOp() &&
+         yieldOp.getOperand(0).getDefiningOp() == &payload;
 }
 
-void printShortForm(OpAsmPrinter &p, Operation *payloadOp) {
+static void printShortForm(OpAsmPrinter &p, Operation *payloadOp) {
   SmallVector<StringRef> elidedAttrs;
   std::string attrToElide;
   p << " { " << payloadOp->getName().getStringRef();
@@ -1621,15 +1632,15 @@ void printShortForm(OpAsmPrinter &p, Operation *payloadOp) {
 
 void MapOp::print(OpAsmPrinter &p) {
   Block *mapper = getBody();
-  Operation *payloadOp = findPayloadOp(mapper);
-  if (payloadOp) {
-    printShortForm(p, payloadOp);
+  bool useShortForm = canUseShortForm(mapper);
+  if (useShortForm) {
+    printShortForm(p, &mapper->getOperations().front());
   }
 
   printCommonStructuredOpParts(p, getDpsInputs(), getDpsInits());
   p.printOptionalAttrDict((*this)->getAttrs());
 
-  if (!payloadOp) {
+  if (!useShortForm) {
     // Print region if the payload op was not detected.
     p.increaseIndent();
     p.printNewline();
@@ -1828,15 +1839,15 @@ static void printDenseI64ArrayAttr(OpAsmPrinter &p, StringRef attributeName,
 
 void ReduceOp::print(OpAsmPrinter &p) {
   Block *mapper = getBody();
-  Operation *payloadOp = findPayloadOp(mapper, /*initFirst=*/true);
-  if (payloadOp) {
-    printShortForm(p, payloadOp);
+  bool useShortForm = canUseShortForm(mapper, /*initFirst=*/true);
+  if (useShortForm) {
+    printShortForm(p, &mapper->getOperations().front());
   }
 
   printCommonStructuredOpParts(p, getDpsInputs(), getDpsInits());
   printDenseI64ArrayAttr(p, getDimensionsAttrName(), getDimensions());
   p.printOptionalAttrDict((*this)->getAttrs(), {getDimensionsAttrName()});
-  if (!payloadOp) {
+  if (!useShortForm) {
     // Print region if the payload op was not detected.
     p.increaseIndent();
     p.printNewline();
@@ -3749,6 +3760,25 @@ std::pair<int64_t, int64_t> getFmrFromWinogradConv2DFmr(WinogradConv2DFmr fmr) {
 // MatMulOp
 //===----------------------------------------------------------------------===//
 
+static FailureOr<SmallVector<SmallVector<int64_t>>>
+getAffineResultPositions(ArrayAttr maps) {
+  SmallVector<SmallVector<int64_t>> positions;
+  for (auto map : maps) {
+    AffineMapAttr attr = dyn_cast<AffineMapAttr>(map);
+    if (!attr)
+      return failure();
+    SmallVector<int64_t> pos;
+    for (auto result : attr.getAffineMap().getResults()) {
+      auto dim = dyn_cast<AffineDimExpr>(result);
+      if (!dim)
+        return failure();
+      pos.push_back(dim.getPosition());
+    }
+    positions.push_back(pos);
+  }
+  return positions;
+}
+
 /// Returns a list of AffineMap with the typical matmul indexing charactristic.
 SmallVector<AffineMap> MatmulOp::getDefaultIndexingMaps(MLIRContext *context) {
   AffineExpr d0, d1, d2;
@@ -3758,6 +3788,20 @@ SmallVector<AffineMap> MatmulOp::getDefaultIndexingMaps(MLIRContext *context) {
   indexingMaps.push_back(AffineMap::get(3, 0, {d2, d1}, context));
   indexingMaps.push_back(AffineMap::get(3, 0, {d0, d1}, context));
   return indexingMaps;
+}
+
+bool MatmulOp::isDefaultIndexingMaps(Attribute attr) {
+  ArrayAttr maps = dyn_cast<ArrayAttr>(attr);
+  if (!maps)
+    return false;
+  if (maps.size() != 3)
+    return false;
+  auto positions = getAffineResultPositions(maps);
+  if (failed(positions))
+    return false;
+  return (*positions)[0] == SmallVector<int64_t>{0, 2} &&
+         (*positions)[1] == SmallVector<int64_t>{2, 1} &&
+         (*positions)[2] == SmallVector<int64_t>{0, 1};
 }
 
 SmallVector<utils::IteratorType> MatmulOp::getIteratorTypesArray() {
@@ -3910,6 +3954,380 @@ void MatmulOp::getEffects(
 
 Speculation::Speculatability MatmulOp::getSpeculatability() {
   return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
+}
+
+SmallVector<AffineMap>
+MatmulTransposeAOp::getDefaultIndexingMaps(OpBuilder &builder) {
+  AffineExpr d0, d1, d2;
+  MLIRContext *context = builder.getContext();
+  bindDims(context, d0, d1, d2);
+  AffineMap mapLHS = AffineMap::get(3, 0, {d2, d0}, context);
+  AffineMap mapRHS = AffineMap::get(3, 0, {d2, d1}, context);
+  AffineMap mapOut = AffineMap::get(3, 0, {d0, d1}, context);
+  return {mapLHS, mapRHS, mapOut};
+}
+
+bool MatmulTransposeAOp::isDefaultIndexingMaps(Attribute attr) {
+  ArrayAttr maps = dyn_cast<ArrayAttr>(attr);
+  if (!maps)
+    return false;
+  if (maps.size() != 3)
+    return false;
+  auto positions = getAffineResultPositions(maps);
+  if (failed(positions))
+    return false;
+  return (*positions)[0] == SmallVector<int64_t>{2, 0} &&
+         (*positions)[1] == SmallVector<int64_t>{2, 1} &&
+         (*positions)[2] == SmallVector<int64_t>{0, 1};
+}
+
+void linalg::MatmulTransposeAOp::build(OpBuilder &builder,
+                                       OperationState &result,
+                                       ValueRange inputs, ValueRange outputs,
+                                       ArrayRef<NamedAttribute> attributes) {
+  buildMatmulOp(builder, result, std::nullopt, inputs, outputs, attributes,
+                MatmulOp::getRegionBuilder(), getDefaultIndexingMaps(builder));
+}
+
+MatmulTransposeAOp
+MatmulTransposeAOp::create(OpBuilder &builder, Location location,
+                           ValueRange inputs, ValueRange outputs,
+                           ArrayRef<NamedAttribute> attributes) {
+  OperationState state(location, getOperationName());
+  build(builder, state, inputs, outputs, attributes);
+  auto res = dyn_cast<MatmulTransposeAOp>(builder.create(state));
+  assert(res && "builder didn't return the right type");
+  return res;
+}
+
+void linalg::MatmulTransposeAOp::build(OpBuilder &builder,
+                                       OperationState &result,
+                                       TypeRange resultTensorTypes,
+                                       ValueRange inputs, ValueRange outputs,
+                                       ArrayRef<NamedAttribute> attributes) {
+  buildMatmulOp(builder, result, resultTensorTypes, inputs, outputs, attributes,
+                MatmulOp::getRegionBuilder(), getDefaultIndexingMaps(builder));
+}
+
+MatmulTransposeAOp
+MatmulTransposeAOp::create(OpBuilder &builder, Location location,
+                           TypeRange resultTensorTypes, ValueRange inputs,
+                           ValueRange outputs,
+                           ArrayRef<NamedAttribute> attributes) {
+  OperationState state(location, getOperationName());
+  build(builder, state, resultTensorTypes, inputs, outputs, attributes);
+  auto res = dyn_cast<MatmulTransposeAOp>(builder.create(state));
+  assert(res && "builder didn't return the right type");
+  return res;
+}
+
+void linalg::MatmulTransposeAOp::build(OpBuilder &builder,
+                                       OperationState &result,
+                                       TypeRange resultTensorTypes,
+                                       ValueRange inputs, ValueRange outputs,
+                                       Attribute cast,
+                                       ArrayRef<NamedAttribute> attributes) {
+  result.addAttribute("cast", cast);
+  buildMatmulOp(builder, result, resultTensorTypes, inputs, outputs, attributes,
+                MatmulOp::getRegionBuilder(), getDefaultIndexingMaps(builder));
+}
+
+MatmulTransposeAOp
+MatmulTransposeAOp::create(OpBuilder &builder, Location location,
+                           TypeRange resultTensorTypes, ValueRange inputs,
+                           ValueRange outputs, Attribute cast,
+                           ArrayRef<NamedAttribute> attributes) {
+  OperationState state(location, getOperationName());
+  build(builder, state, resultTensorTypes, inputs, outputs, cast, attributes);
+  auto res = dyn_cast<MatmulTransposeAOp>(builder.create(state));
+  assert(res && "builder didn't return the right type");
+  return res;
+}
+
+bool MatmulTransposeAOp::classof(Operation *op) {
+  return dyn_cast_or_null<linalg::MatmulOp>(op) &&
+         MatmulTransposeAOp::isDefaultIndexingMaps(
+             op->getAttr("indexing_maps"));
+}
+
+SmallVector<AffineMap>
+MatmulTransposeBOp::getDefaultIndexingMaps(OpBuilder &builder) {
+  AffineExpr d0, d1, d2;
+  MLIRContext *context = builder.getContext();
+  bindDims(context, d0, d1, d2);
+  AffineMap mapLHS = AffineMap::get(3, 0, {d0, d2}, context);
+  AffineMap mapRHS = AffineMap::get(3, 0, {d1, d2}, context);
+  AffineMap mapOut = AffineMap::get(3, 0, {d0, d1}, context);
+  return {mapLHS, mapRHS, mapOut};
+}
+
+bool MatmulTransposeBOp::isDefaultIndexingMaps(Attribute attr) {
+  ArrayAttr maps = dyn_cast<ArrayAttr>(attr);
+  if (!maps)
+    return false;
+  if (maps.size() != 3)
+    return false;
+  auto positions = getAffineResultPositions(maps);
+  if (failed(positions))
+    return false;
+  return (*positions)[0] == SmallVector<int64_t>{0, 2} &&
+         (*positions)[1] == SmallVector<int64_t>{1, 2} &&
+         (*positions)[2] == SmallVector<int64_t>{0, 1};
+}
+
+void linalg::MatmulTransposeBOp::build(OpBuilder &builder,
+                                       OperationState &result,
+                                       ValueRange inputs, ValueRange outputs,
+                                       ArrayRef<NamedAttribute> attributes) {
+  buildMatmulOp(builder, result, std::nullopt, inputs, outputs, attributes,
+                MatmulOp::getRegionBuilder(), getDefaultIndexingMaps(builder));
+}
+
+MatmulTransposeBOp
+MatmulTransposeBOp::create(OpBuilder &builder, Location location,
+                           ValueRange inputs, ValueRange outputs,
+                           ArrayRef<NamedAttribute> attributes) {
+  OperationState state(location, getOperationName());
+  build(builder, state, inputs, outputs, attributes);
+  auto res = dyn_cast<MatmulTransposeBOp>(builder.create(state));
+  assert(res && "builder didn't return the right type");
+  return res;
+}
+
+void linalg::MatmulTransposeBOp::build(OpBuilder &builder,
+                                       OperationState &result,
+                                       TypeRange resultTensorTypes,
+                                       ValueRange inputs, ValueRange outputs,
+                                       ArrayRef<NamedAttribute> attributes) {
+  buildMatmulOp(builder, result, resultTensorTypes, inputs, outputs, attributes,
+                MatmulOp::getRegionBuilder(), getDefaultIndexingMaps(builder));
+}
+
+MatmulTransposeBOp
+MatmulTransposeBOp::create(OpBuilder &builder, Location location,
+                           TypeRange resultTensorTypes, ValueRange inputs,
+                           ValueRange outputs,
+                           ArrayRef<NamedAttribute> attributes) {
+  OperationState state(location, getOperationName());
+  build(builder, state, resultTensorTypes, inputs, outputs, attributes);
+  auto res = dyn_cast<MatmulTransposeBOp>(builder.create(state));
+  assert(res && "builder didn't return the right type");
+  return res;
+}
+
+void linalg::MatmulTransposeBOp::build(OpBuilder &builder,
+                                       OperationState &result,
+                                       TypeRange resultTensorTypes,
+                                       ValueRange inputs, ValueRange outputs,
+                                       Attribute cast,
+                                       ArrayRef<NamedAttribute> attributes) {
+  result.addAttribute("cast", cast);
+  buildMatmulOp(builder, result, resultTensorTypes, inputs, outputs, attributes,
+                MatmulOp::getRegionBuilder(), getDefaultIndexingMaps(builder));
+}
+
+MatmulTransposeBOp
+MatmulTransposeBOp::create(OpBuilder &builder, Location location,
+                           TypeRange resultTensorTypes, ValueRange inputs,
+                           ValueRange outputs, Attribute cast,
+                           ArrayRef<NamedAttribute> attributes) {
+  OperationState state(location, getOperationName());
+  build(builder, state, resultTensorTypes, inputs, outputs, cast, attributes);
+  auto res = dyn_cast<MatmulTransposeBOp>(builder.create(state));
+  assert(res && "builder didn't return the right type");
+  return res;
+}
+
+bool MatmulTransposeBOp::classof(Operation *op) {
+  return dyn_cast_or_null<linalg::MatmulOp>(op) &&
+         MatmulTransposeBOp::isDefaultIndexingMaps(
+             op->getAttr("indexing_maps"));
+}
+
+SmallVector<AffineMap>
+BatchMatmulTransposeAOp::getDefaultIndexingMaps(OpBuilder &builder) {
+  AffineExpr d0, d1, d2, d3;
+  MLIRContext *context = builder.getContext();
+  bindDims(context, d0, d1, d2, d3);
+  AffineMap mapLHS = AffineMap::get(4, 0, {d0, d3, d1}, context);
+  AffineMap mapRHS = AffineMap::get(4, 0, {d0, d3, d2}, context);
+  AffineMap mapOut = AffineMap::get(4, 0, {d0, d1, d2}, context);
+  return {mapLHS, mapRHS, mapOut};
+}
+
+bool BatchMatmulTransposeAOp::isDefaultIndexingMaps(Attribute attr) {
+  ArrayAttr maps = dyn_cast<ArrayAttr>(attr);
+  if (!maps)
+    return false;
+  if (maps.size() != 3)
+    return false;
+  auto positions = getAffineResultPositions(maps);
+  if (failed(positions))
+    return false;
+  return (*positions)[0] == SmallVector<int64_t>{0, 3, 1} &&
+         (*positions)[1] == SmallVector<int64_t>{0, 3, 2} &&
+         (*positions)[2] == SmallVector<int64_t>{0, 1, 2};
+}
+
+void linalg::BatchMatmulTransposeAOp::build(
+    OpBuilder &builder, OperationState &result, ValueRange inputs,
+    ValueRange outputs, ArrayRef<NamedAttribute> attributes) {
+  buildMatmulOp(builder, result, std::nullopt, inputs, outputs, attributes,
+                BatchMatmulOp::getRegionBuilder(),
+                getDefaultIndexingMaps(builder));
+}
+
+BatchMatmulTransposeAOp
+BatchMatmulTransposeAOp::create(OpBuilder &builder, Location location,
+                                ValueRange inputs, ValueRange outputs,
+                                ArrayRef<NamedAttribute> attributes) {
+  OperationState state(location, getOperationName());
+  build(builder, state, inputs, outputs, attributes);
+  auto res = dyn_cast<BatchMatmulTransposeAOp>(builder.create(state));
+  assert(res && "builder didn't return the right type");
+  return res;
+}
+
+void linalg::BatchMatmulTransposeAOp::build(
+    OpBuilder &builder, OperationState &result, TypeRange resultTensorTypes,
+    ValueRange inputs, ValueRange outputs,
+    ArrayRef<NamedAttribute> attributes) {
+  buildMatmulOp(builder, result, resultTensorTypes, inputs, outputs, attributes,
+                BatchMatmulOp::getRegionBuilder(),
+                getDefaultIndexingMaps(builder));
+}
+
+BatchMatmulTransposeAOp
+BatchMatmulTransposeAOp::create(OpBuilder &builder, Location location,
+                                TypeRange resultTensorTypes, ValueRange inputs,
+                                ValueRange outputs,
+                                ArrayRef<NamedAttribute> attributes) {
+  OperationState state(location, getOperationName());
+  build(builder, state, resultTensorTypes, inputs, outputs, attributes);
+  auto res = dyn_cast<BatchMatmulTransposeAOp>(builder.create(state));
+  assert(res && "builder didn't return the right type");
+  return res;
+}
+
+void linalg::BatchMatmulTransposeAOp::build(
+    OpBuilder &builder, OperationState &result, TypeRange resultTensorTypes,
+    ValueRange inputs, ValueRange outputs, Attribute cast,
+    ArrayRef<NamedAttribute> attributes) {
+  result.addAttribute("cast", cast);
+  buildMatmulOp(builder, result, resultTensorTypes, inputs, outputs, attributes,
+                BatchMatmulOp::getRegionBuilder(),
+                getDefaultIndexingMaps(builder));
+}
+
+BatchMatmulTransposeAOp
+BatchMatmulTransposeAOp::create(OpBuilder &builder, Location location,
+                                TypeRange resultTensorTypes, ValueRange inputs,
+                                ValueRange outputs, Attribute cast,
+                                ArrayRef<NamedAttribute> attributes) {
+  OperationState state(location, getOperationName());
+  build(builder, state, resultTensorTypes, inputs, outputs, cast, attributes);
+  auto res = dyn_cast<BatchMatmulTransposeAOp>(builder.create(state));
+  assert(res && "builder didn't return the right type");
+  return res;
+}
+
+bool BatchMatmulTransposeAOp::classof(Operation *op) {
+  return dyn_cast_or_null<linalg::BatchMatmulOp>(op) &&
+         BatchMatmulTransposeAOp::isDefaultIndexingMaps(
+             op->getAttr("indexing_maps"));
+}
+
+SmallVector<AffineMap>
+BatchMatmulTransposeBOp::getDefaultIndexingMaps(OpBuilder &builder) {
+  AffineExpr d0, d1, d2, d3;
+  MLIRContext *context = builder.getContext();
+  bindDims(context, d0, d1, d2, d3);
+  AffineMap mapLHS = AffineMap::get(4, 0, {d0, d1, d3}, context);
+  AffineMap mapRHS = AffineMap::get(4, 0, {d0, d2, d3}, context);
+  AffineMap mapOut = AffineMap::get(4, 0, {d0, d1, d2}, context);
+  return {mapLHS, mapRHS, mapOut};
+}
+
+bool BatchMatmulTransposeBOp::isDefaultIndexingMaps(Attribute attr) {
+  ArrayAttr maps = dyn_cast<ArrayAttr>(attr);
+  if (!maps)
+    return false;
+  if (maps.size() != 3)
+    return false;
+  auto positions = getAffineResultPositions(maps);
+  if (failed(positions))
+    return false;
+  return (*positions)[0] == SmallVector<int64_t>{0, 1, 3} &&
+         (*positions)[1] == SmallVector<int64_t>{0, 2, 3} &&
+         (*positions)[2] == SmallVector<int64_t>{0, 1, 2};
+}
+
+void linalg::BatchMatmulTransposeBOp::build(
+    OpBuilder &builder, OperationState &result, ValueRange inputs,
+    ValueRange outputs, ArrayRef<NamedAttribute> attributes) {
+  buildMatmulOp(builder, result, std::nullopt, inputs, outputs, attributes,
+                BatchMatmulOp::getRegionBuilder(),
+                getDefaultIndexingMaps(builder));
+}
+
+BatchMatmulTransposeBOp
+BatchMatmulTransposeBOp::create(OpBuilder &builder, Location location,
+                                ValueRange inputs, ValueRange outputs,
+                                ArrayRef<NamedAttribute> attributes) {
+  OperationState state(location, getOperationName());
+  build(builder, state, inputs, outputs, attributes);
+  auto res = dyn_cast<BatchMatmulTransposeBOp>(builder.create(state));
+  assert(res && "builder didn't return the right type");
+  return res;
+}
+
+void linalg::BatchMatmulTransposeBOp::build(
+    OpBuilder &builder, OperationState &result, TypeRange resultTensorTypes,
+    ValueRange inputs, ValueRange outputs,
+    ArrayRef<NamedAttribute> attributes) {
+  buildMatmulOp(builder, result, resultTensorTypes, inputs, outputs, attributes,
+                BatchMatmulOp::getRegionBuilder(),
+                getDefaultIndexingMaps(builder));
+}
+
+BatchMatmulTransposeBOp
+BatchMatmulTransposeBOp::create(OpBuilder &builder, Location location,
+                                TypeRange resultTensorTypes, ValueRange inputs,
+                                ValueRange outputs,
+                                ArrayRef<NamedAttribute> attributes) {
+  OperationState state(location, getOperationName());
+  build(builder, state, resultTensorTypes, inputs, outputs, attributes);
+  auto res = dyn_cast<BatchMatmulTransposeBOp>(builder.create(state));
+  assert(res && "builder didn't return the right type");
+  return res;
+}
+
+void linalg::BatchMatmulTransposeBOp::build(
+    OpBuilder &builder, OperationState &result, TypeRange resultTensorTypes,
+    ValueRange inputs, ValueRange outputs, Attribute cast,
+    ArrayRef<NamedAttribute> attributes) {
+  result.addAttribute("cast", cast);
+  buildMatmulOp(builder, result, resultTensorTypes, inputs, outputs, attributes,
+                BatchMatmulOp::getRegionBuilder(),
+                getDefaultIndexingMaps(builder));
+}
+
+BatchMatmulTransposeBOp
+BatchMatmulTransposeBOp::create(OpBuilder &builder, Location location,
+                                TypeRange resultTensorTypes, ValueRange inputs,
+                                ValueRange outputs, Attribute cast,
+                                ArrayRef<NamedAttribute> attributes) {
+  OperationState state(location, getOperationName());
+  build(builder, state, resultTensorTypes, inputs, outputs, cast, attributes);
+  auto res = dyn_cast<BatchMatmulTransposeBOp>(builder.create(state));
+  assert(res && "builder didn't return the right type");
+  return res;
+}
+
+bool BatchMatmulTransposeBOp::classof(Operation *op) {
+  return dyn_cast_or_null<linalg::BatchMatmulOp>(op) &&
+         BatchMatmulTransposeBOp::isDefaultIndexingMaps(
+             op->getAttr("indexing_maps"));
 }
 
 //===----------------------------------------------------------------------===//
@@ -4118,6 +4536,20 @@ BatchMatmulOp::getDefaultIndexingMaps(MLIRContext *context) {
   indexingMaps.push_back(AffineMap::get(4, 0, {d0, d3, d2}, context));
   indexingMaps.push_back(AffineMap::get(4, 0, {d0, d1, d2}, context));
   return indexingMaps;
+}
+
+bool BatchMatmulOp::isDefaultIndexingMaps(Attribute attr) {
+  ArrayAttr maps = dyn_cast<ArrayAttr>(attr);
+  if (!maps)
+    return false;
+  if (maps.size() != 3)
+    return false;
+  auto positions = getAffineResultPositions(maps);
+  if (failed(positions))
+    return false;
+  return (*positions)[0] == SmallVector<int64_t>{0, 1, 3} &&
+         (*positions)[1] == SmallVector<int64_t>{0, 3, 2} &&
+         (*positions)[2] == SmallVector<int64_t>{0, 1, 2};
 }
 
 SmallVector<utils::IteratorType> BatchMatmulOp::getIteratorTypesArray() {
@@ -5345,11 +5777,18 @@ ArrayRef<int64_t> UnPackOp::getAllOuterDims() {
 
 SmallVector<int64_t> UnPackOp::getTiledOuterDims() {
   auto innerDimsPos = getInnerDimsPos();
-  auto packedShape = getSourceType().getShape();
+  SmallVector<int64_t> outerDims(getAllOuterDims());
   SmallVector<int64_t> res;
 
+  // Recover the original order of the outer dims.
+  SmallVector<int64_t> outerDimPermInv(getOuterDimsPerm());
+  invertPermutationVector(outerDimPermInv);
+  if (!outerDimPermInv.empty())
+    applyPermutationToVector(outerDims, outerDimPermInv);
+
+  // Collect the outer dims corresponding to the tilled inner dims.
   for (auto index : innerDimsPos)
-    res.push_back(packedShape[index]);
+    res.push_back(outerDims[index]);
 
   return res;
 }
@@ -5646,6 +6085,19 @@ BatchReduceMatmulOp::getDefaultIndexingMaps(MLIRContext *context) {
   return indexingMaps;
 }
 
+bool BatchReduceMatmulOp::isDefaultIndexingMaps(Attribute attr) {
+  ArrayAttr maps = dyn_cast<ArrayAttr>(attr);
+  if (!maps)
+    return false;
+  if (maps.size() != 3)
+    return false;
+  auto positions = getAffineResultPositions(maps);
+  if (failed(positions))
+    return false;
+  return (*positions)[0] == SmallVector<int64_t>{0, 1, 3} &&
+         (*positions)[1] == SmallVector<int64_t>{0, 3, 2} &&
+         (*positions)[2] == SmallVector<int64_t>{1, 2};
+}
 unsigned BatchReduceMatmulOp::getNumRegionArgs() { return 3; }
 
 std::string BatchReduceMatmulOp::getLibraryCallName() {

@@ -359,11 +359,6 @@ GetPointerBaseWithConstantOffset(const Value *Ptr, int64_t &Offset,
                                           AllowNonInbounds);
 }
 
-/// Returns true if the GEP is based on a pointer to a string (array of
-// \p CharSize integers) and is indexing into this string.
-LLVM_ABI bool isGEPBasedOnPointerToString(const GEPOperator *GEP,
-                                          unsigned CharSize = 8);
-
 /// Represents offset+length into a ConstantDataArray.
 struct ConstantDataArraySlice {
   /// ConstantDataArray pointer. nullptr indicates a zeroinitializer (a valid

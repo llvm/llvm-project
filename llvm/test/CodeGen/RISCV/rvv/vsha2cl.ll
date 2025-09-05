@@ -3,9 +3,9 @@
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v,+zvknhb \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK
-; RUN: sed 's/iXLen/i32/g' %s | not --crash llc -mtriple=riscv32 -mattr=+v,+zvknha 2>&1 \
+; RUN: sed 's/iXLen/i32/g' %s | not llc -mtriple=riscv32 -mattr=+v,+zvknha 2>&1 \
 ; RUN:   | FileCheck --check-prefixes=CHECK-ERROR %s
-; RUN: sed 's/iXLen/i64/g' %s | not --crash llc -mtriple=riscv64 -mattr=+v,+zvknha 2>&1 \
+; RUN: sed 's/iXLen/i64/g' %s | not llc -mtriple=riscv64 -mattr=+v,+zvknha 2>&1 \
 ; RUN:   | FileCheck --check-prefixes=CHECK-ERROR %s
 
 ; CHECK-ERROR: LLVM ERROR: SEW=64 needs Zvknhb to be enabled.
@@ -21,7 +21,7 @@ define <vscale x 4 x i32> @intrinsic_vsha2cl_vv_nxv4i32_nxv4i32(<vscale x 4 x i3
 ; CHECK-LABEL: intrinsic_vsha2cl_vv_nxv4i32_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
-; CHECK-NEXT:    vsha2ch.vv v8, v10, v12
+; CHECK-NEXT:    vsha2cl.vv v8, v10, v12
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i32> @llvm.riscv.vsha2cl.nxv4i32.nxv4i32(
@@ -45,7 +45,7 @@ define <vscale x 8 x i32> @intrinsic_vsha2cl_vv_nxv8i32_nxv8i32(<vscale x 8 x i3
 ; CHECK-LABEL: intrinsic_vsha2cl_vv_nxv8i32_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, tu, ma
-; CHECK-NEXT:    vsha2ch.vv v8, v12, v16
+; CHECK-NEXT:    vsha2cl.vv v8, v12, v16
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i32> @llvm.riscv.vsha2cl.nxv8i32.nxv8i32(
@@ -70,7 +70,7 @@ define <vscale x 16 x i32> @intrinsic_vsha2cl_vv_nxv16i32_nxv16i32(<vscale x 16 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vl8re32.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, tu, ma
-; CHECK-NEXT:    vsha2ch.vv v8, v16, v24
+; CHECK-NEXT:    vsha2cl.vv v8, v16, v24
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i32> @llvm.riscv.vsha2cl.nxv16i32.nxv16i32(
@@ -94,7 +94,7 @@ define <vscale x 4 x i64> @intrinsic_vsha2cl_vv_nxv4i64_nxv4i64(<vscale x 4 x i6
 ; CHECK-LABEL: intrinsic_vsha2cl_vv_nxv4i64_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, tu, ma
-; CHECK-NEXT:    vsha2ch.vv v8, v12, v16
+; CHECK-NEXT:    vsha2cl.vv v8, v12, v16
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i64> @llvm.riscv.vsha2cl.nxv4i64.nxv4i64(
@@ -119,7 +119,7 @@ define <vscale x 8 x i64> @intrinsic_vsha2cl_vv_nxv8i64_nxv8i64(<vscale x 8 x i6
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vl8re64.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, tu, ma
-; CHECK-NEXT:    vsha2ch.vv v8, v16, v24
+; CHECK-NEXT:    vsha2cl.vv v8, v16, v24
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i64> @llvm.riscv.vsha2cl.nxv8i64.nxv8i64(

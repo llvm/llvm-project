@@ -17,6 +17,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <optional>
 #include <tuple>
 #include <type_traits>
@@ -101,122 +102,32 @@ template<> struct DenseMapInfo<char> {
   }
 };
 
-// Provide DenseMapInfo for unsigned chars.
-template <> struct DenseMapInfo<unsigned char> {
-  static constexpr unsigned char getEmptyKey() { return ~0; }
-  static constexpr unsigned char getTombstoneKey() { return ~0 - 1; }
-  static unsigned getHashValue(const unsigned char &Val) { return Val * 37U; }
+// Provide DenseMapInfo for all integral types except char.
+//
+// The "char" case is excluded because it uses ~0 as the empty key despite
+// "char" being a signed type.  "std::is_same_v<T, char>" is included below
+// for clarity; technically, we do not need it because the explicit
+// specialization above "wins",
+template <typename T>
+struct DenseMapInfo<
+    T, std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<T, char>>> {
+  static constexpr T getEmptyKey() { return std::numeric_limits<T>::max(); }
 
-  static bool isEqual(const unsigned char &LHS, const unsigned char &RHS) {
-    return LHS == RHS;
-  }
-};
-
-// Provide DenseMapInfo for unsigned shorts.
-template <> struct DenseMapInfo<unsigned short> {
-  static constexpr unsigned short getEmptyKey() { return 0xFFFF; }
-  static constexpr unsigned short getTombstoneKey() { return 0xFFFF - 1; }
-  static unsigned getHashValue(const unsigned short &Val) { return Val * 37U; }
-
-  static bool isEqual(const unsigned short &LHS, const unsigned short &RHS) {
-    return LHS == RHS;
-  }
-};
-
-// Provide DenseMapInfo for unsigned ints.
-template<> struct DenseMapInfo<unsigned> {
-  static constexpr unsigned getEmptyKey() { return ~0U; }
-  static constexpr unsigned getTombstoneKey() { return ~0U - 1; }
-  static unsigned getHashValue(const unsigned& Val) { return Val * 37U; }
-
-  static bool isEqual(const unsigned& LHS, const unsigned& RHS) {
-    return LHS == RHS;
-  }
-};
-
-// Provide DenseMapInfo for unsigned longs.
-template<> struct DenseMapInfo<unsigned long> {
-  static constexpr unsigned long getEmptyKey() { return ~0UL; }
-  static constexpr unsigned long getTombstoneKey() { return ~0UL - 1L; }
-
-  static unsigned getHashValue(const unsigned long& Val) {
-    if constexpr (sizeof(Val) == 4)
-      return DenseMapInfo<unsigned>::getHashValue(Val);
+  static constexpr T getTombstoneKey() {
+    if constexpr (std::is_unsigned_v<T> || std::is_same_v<T, long>)
+      return std::numeric_limits<T>::max() - 1;
     else
+      return std::numeric_limits<T>::min();
+  }
+
+  static unsigned getHashValue(const T &Val) {
+    if constexpr (std::is_unsigned_v<T> && sizeof(T) > sizeof(unsigned))
       return densemap::detail::mix(Val);
+    else
+      return static_cast<unsigned>(Val * 37U);
   }
 
-  static bool isEqual(const unsigned long& LHS, const unsigned long& RHS) {
-    return LHS == RHS;
-  }
-};
-
-// Provide DenseMapInfo for unsigned long longs.
-template<> struct DenseMapInfo<unsigned long long> {
-  static constexpr unsigned long long getEmptyKey() { return ~0ULL; }
-  static constexpr unsigned long long getTombstoneKey() { return ~0ULL - 1ULL; }
-
-  static unsigned getHashValue(const unsigned long long& Val) {
-    return densemap::detail::mix(Val);
-  }
-
-  static bool isEqual(const unsigned long long& LHS,
-                      const unsigned long long& RHS) {
-    return LHS == RHS;
-  }
-};
-
-// Provide DenseMapInfo for shorts.
-template <> struct DenseMapInfo<short> {
-  static constexpr short getEmptyKey() { return 0x7FFF; }
-  static constexpr short getTombstoneKey() { return -0x7FFF - 1; }
-  static unsigned getHashValue(const short &Val) { return Val * 37U; }
-  static bool isEqual(const short &LHS, const short &RHS) { return LHS == RHS; }
-};
-
-// Provide DenseMapInfo for ints.
-template<> struct DenseMapInfo<int> {
-  static constexpr int getEmptyKey() { return 0x7fffffff; }
-  static constexpr int getTombstoneKey() { return -0x7fffffff - 1; }
-  static unsigned getHashValue(const int& Val) { return (unsigned)(Val * 37U); }
-
-  static bool isEqual(const int& LHS, const int& RHS) {
-    return LHS == RHS;
-  }
-};
-
-// Provide DenseMapInfo for longs.
-template<> struct DenseMapInfo<long> {
-  static constexpr long getEmptyKey() {
-    return (1UL << (sizeof(long) * 8 - 1)) - 1UL;
-  }
-
-  static constexpr long getTombstoneKey() { return getEmptyKey() - 1L; }
-
-  static unsigned getHashValue(const long& Val) {
-    return (unsigned)(Val * 37UL);
-  }
-
-  static bool isEqual(const long& LHS, const long& RHS) {
-    return LHS == RHS;
-  }
-};
-
-// Provide DenseMapInfo for long longs.
-template<> struct DenseMapInfo<long long> {
-  static constexpr long long getEmptyKey() { return 0x7fffffffffffffffLL; }
-  static constexpr long long getTombstoneKey() {
-    return -0x7fffffffffffffffLL - 1;
-  }
-
-  static unsigned getHashValue(const long long& Val) {
-    return (unsigned)(Val * 37ULL);
-  }
-
-  static bool isEqual(const long long& LHS,
-                      const long long& RHS) {
-    return LHS == RHS;
-  }
+  static bool isEqual(const T &LHS, const T &RHS) { return LHS == RHS; }
 };
 
 // Provide DenseMapInfo for all pairs whose members have info.

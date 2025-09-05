@@ -319,10 +319,9 @@ define void @test_v4_v4m(ptr noalias %a, ptr readonly %b) #3 {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[CALL:%.*]] = call i64 @foo(i64 [[LOAD]]) #[[ATTR1:[0-9]+]]
@@ -372,10 +371,9 @@ define void @test_v2_v4m(ptr noalias %a, ptr readonly %b) #3 {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[CALL:%.*]] = call i64 @foo(i64 [[LOAD]]) #[[ATTR2:[0-9]+]]
@@ -425,10 +423,9 @@ define void @test_v2_v4(ptr noalias %a, ptr readonly %b) #3 {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[CALL:%.*]] = call i64 @foo(i64 [[LOAD]]) #[[ATTR3:[0-9]+]]

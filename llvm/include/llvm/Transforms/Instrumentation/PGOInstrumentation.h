@@ -104,8 +104,8 @@ public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &MAM);
 };
 
-LLVM_ABI void setProfMetadata(Module *M, Instruction *TI,
-                              ArrayRef<uint64_t> EdgeCounts, uint64_t MaxCount);
+LLVM_ABI void setProfMetadata(Instruction *TI, ArrayRef<uint64_t> EdgeCounts,
+                              uint64_t MaxCount);
 
 LLVM_ABI void setIrrLoopHeaderMetadata(Module *M, Instruction *TI,
                                        uint64_t Count);
