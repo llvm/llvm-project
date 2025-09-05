@@ -126,6 +126,10 @@ Improvements to clang-tidy
 - Improved :program:`clang-tidy` option `-quiet` by suppressing diagnostic
   count messages.
 
+- Improved :program:`clang-tidy` by not crashing when an empty `directory`
+  field is used in a compilation database; the current working directory
+  will be used instead, and an error message will be printed.
+
 New checks
 ^^^^^^^^^^
 
@@ -232,8 +236,9 @@ Changes in existing checks
 
 - Improved :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check by correctly
-  generating fix-it hints when size method is called from implicit ``this``
-  and adding detection in container's method except ``empty``.
+  generating fix-it hints when size method is called from implicit ``this``,
+  ignoring default constructors with user provided arguments and adding
+  detection in container's method except ``empty``.
 
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check by ignoring
@@ -243,6 +248,10 @@ Changes in existing checks
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option
   `IgnoreAliasing`, that allows not looking at underlying types of type aliases.
+
+- Improved :doc:`readability-uppercase-literal-suffix
+  <clang-tidy/checks/readability/uppercase-literal-suffix>` check to recognize
+  literal suffixes added in C++23 and C23.
 
 Removed checks
 ^^^^^^^^^^^^^^

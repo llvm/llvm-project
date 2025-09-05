@@ -17,12 +17,10 @@
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS128                                                  \
   __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("avx512vl,avx512bw,no-evex512"),                   \
-                 __min_vector_width__(128)))
+                 __target__("avx512vl,avx512bw"), __min_vector_width__(128)))
 #define __DEFAULT_FN_ATTRS256                                                  \
   __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("avx512vl,avx512bw,no-evex512"),                   \
-                 __min_vector_width__(256)))
+                 __target__("avx512vl,avx512bw"), __min_vector_width__(256)))
 
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 #define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128 constexpr
@@ -426,28 +424,28 @@ _mm_maskz_sub_epi16(__mmask8 __U, __m128i __A, __m128i __B) {
                                              (__v8hi)_mm_setzero_si128());
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_mask_mullo_epi16(__m256i __W, __mmask16 __U, __m256i __A, __m256i __B) {
   return (__m256i)__builtin_ia32_selectw_256((__mmask16)__U,
                                              (__v16hi)_mm256_mullo_epi16(__A, __B),
                                              (__v16hi)__W);
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_maskz_mullo_epi16(__mmask16 __U, __m256i __A, __m256i __B) {
   return (__m256i)__builtin_ia32_selectw_256((__mmask16)__U,
                                              (__v16hi)_mm256_mullo_epi16(__A, __B),
                                              (__v16hi)_mm256_setzero_si256());
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_mask_mullo_epi16(__m128i __W, __mmask8 __U, __m128i __A, __m128i __B) {
   return (__m128i)__builtin_ia32_selectw_128((__mmask8)__U,
                                              (__v8hi)_mm_mullo_epi16(__A, __B),
                                              (__v8hi)__W);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_maskz_mullo_epi16(__mmask8 __U, __m128i __A, __m128i __B) {
   return (__m128i)__builtin_ia32_selectw_128((__mmask8)__U,
                                              (__v8hi)_mm_mullo_epi16(__A, __B),
