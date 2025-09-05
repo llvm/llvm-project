@@ -2644,6 +2644,9 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
       }
       assert(Candidate && "Must have one reverse operation for reverse access");
 
+      if (match(Candidate, m_Intrinsic<Intrinsic::experimental_vp_reverse>()))
+        continue;
+
       VPWidenIntrinsicRecipe *NewReverse =
           getEVLReverse(*Candidate, TypeInfo, EVL);
       assert(NewReverse &&
