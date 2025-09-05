@@ -73,6 +73,8 @@ __m256h test_mm256_set1_ph(_Float16 h) {
   return _mm256_set1_ph(h);
 }
 
+TEST_CONSTEXPR(match_m256h(_mm256_set1_ph(-777.0), -777.0, -777.0, -777.0, -777.0, -777.0, -777.0, -777.0, -777.0, -777.0, -777.0, -777.0, -777.0, -777.0, -777.0, -777.0, -777.0));
+
 __m128h test_mm_set1_pch(_Float16 _Complex h) {
   // CHECK-LABEL: test_mm_set1_pch
   // CHECK: insertelement <4 x float> {{.*}}, i32 0

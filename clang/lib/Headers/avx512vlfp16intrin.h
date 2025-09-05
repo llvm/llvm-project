@@ -51,7 +51,8 @@ _mm_set1_ph(_Float16 __h) {
   return (__m128h)(__v8hf){__h, __h, __h, __h, __h, __h, __h, __h};
 }
 
-static __inline __m256h __DEFAULT_FN_ATTRS256 _mm256_set1_ph(_Float16 __h) {
+static __inline __m256h __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_set1_ph(_Float16 __h) {
   return (__m256h)(__v16hf){__h, __h, __h, __h, __h, __h, __h, __h,
                             __h, __h, __h, __h, __h, __h, __h, __h};
 }
