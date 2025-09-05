@@ -50,3 +50,8 @@ void mlir::vector::populateVectorToElementsLoweringPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<FlattenToElements>(patterns.getContext(), benefit);
 }
+
+void mlir::vector::populateVectorToElementsFlatteningPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit) {
+  patterns.add<FlattenToElements>(patterns.getContext(), benefit);
+}

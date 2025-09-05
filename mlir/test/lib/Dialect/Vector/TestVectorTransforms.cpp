@@ -825,7 +825,7 @@ struct TestFlattenVectorToElements
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
-    populateVectorToElementsLoweringPatterns(patterns);
+    populateVectorToElementsFlatteningPatterns(patterns);
     (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
