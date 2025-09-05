@@ -31,12 +31,16 @@
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/Path.h"
 #include <algorithm>
 #include <optional>
+#include <string>
 
 namespace clang {
 namespace clangd {
@@ -1196,6 +1200,22 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
   // Attach the rename edits for the main file.
   Result.GlobalChanges.try_emplace(RInputs.MainFilePath,
                                    std::move(MainFileEdits));
+
+#if defined(_WIN32) || defined(_WIN64)
+  // Normalize all file path root names in GlobalChanges to uppercase to avoid
+  // Case-sensitive replication on Windows.
+  FileEdits Normalized;
+  for (auto &Entry : Result.GlobalChanges) {
+    std::string Key = Entry.first().str();
+    llvm::sys::path::convert_to_slash(Key);
+    if (llvm::sys::path::has_root_name(llvm::Twine(Key))) {
+      Key[0] = llvm::toUpper(Key[0]);
+    }
+    Normalized[Key] = std::move(Entry.second);
+  }
+  Result.GlobalChanges.swap(Normalized);
+#endif // defined(_WIN32) || defined(_WIN64)
+
   return Result;
 }
 
