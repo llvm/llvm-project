@@ -1245,23 +1245,19 @@ bool AccessAnalysis::createCheckForAccess(
   assert(!RTCheckPtrs.empty() &&
          "Must have some runtime-check pointer candidates");
 
+  // RTCheckPtrs must have size 2 if there are forked pointers. Otherwise, there
+  // are no forked pointers; replaceSymbolicStridesSCEV in this case.
   auto IsLoopInvariantOrAR =
       [&SE, &TheLoop](const PointerIntPair<const SCEV *, 1, bool> &P) {
         return SE->isLoopInvariant(get<0>(P), TheLoop) ||
                isa<SCEVAddRecExpr>(get<0>(P));
       };
-
-  // RTCheckPtrs must have size 2 if there are forked pointers. Otherwise, there
-  // are no forked pointers; replaceSymbolicStridesSCEV in this case.
   if (RTCheckPtrs.size() == 2 && all_of(RTCheckPtrs, IsLoopInvariantOrAR)) {
     LLVM_DEBUG(dbgs() << "LAA: Found forked pointer: " << *Ptr << "\n");
     for (auto [Idx, Q] : enumerate(RTCheckPtrs))
       LLVM_DEBUG(dbgs() << "\t(" << Idx << ") " << *Q.getPointer() << "\n");
   } else {
-    RTCheckPtrs.truncate(1);
-    RTCheckPtrs.front().setPointer(
-        replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr));
-    RTCheckPtrs.front().setInt(false);
+    RTCheckPtrs = {{replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr), false}};
   }
 
   /// Check whether all pointers can participate in a runtime bounds check. They
