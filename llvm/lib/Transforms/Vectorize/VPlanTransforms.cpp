@@ -2625,11 +2625,13 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
     // address uses EVL instead of VF.
     // TODO: Extend conversion along the def-use/use-def chain, as reverse
     // operations may be eliminated or moved in the future.
-    if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(EVLRecipe);
-        MemR && match(MemR->getAddr(),
-                      m_VectorEndPointer(m_VPValue(), m_Specific(&EVL)))) {
+    if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(EVLRecipe)) {
+      if (!match(MemR->getAddr(),
+                 m_VectorEndPointer(m_VPValue(), m_Specific(&EVL))))
+        continue;
       assert(MemR->isReverse() &&
              "Only reverse access uses VPVectorEndPointerRecipe as address");
+
       VPRecipeBase *Candidate = nullptr;
       if (auto *LoadR = dyn_cast<VPWidenLoadEVLRecipe>(MemR)) {
         assert(LoadR->getNumUsers() == 1 &&
