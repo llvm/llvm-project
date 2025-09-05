@@ -3,8 +3,8 @@
 google-runtime-float
 ====================
 
-Finds uses of ``long double`` and suggests replacing them with 64-bit
-or 128-bit floating-point types.
+Finds uses of ``long double`` and suggests against their use due to
+lack of portability.
 
 The corresponding style guide rule:
 https://google.github.io/styleguide/cppguide.html#Floating-Point_Types

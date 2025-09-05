@@ -61,15 +61,14 @@ void RuntimeFloatCheck::registerMatchers(MatchFinder *Finder) {
 
 void RuntimeFloatCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *TL = Result.Nodes.getNodeAs<TypeLoc>("longDoubleTypeLoc")) {
-    diag(TL->getBeginLoc(),
-         "consider replacing %0 with a 64-bit or 128-bit float type")
+    diag(TL->getBeginLoc(), "%0 type is not portable and should not be used")
         << TL->getType();
   }
 
   if (const auto *FL =
           Result.Nodes.getNodeAs<FloatingLiteral>("longDoubleFloatLiteral")) {
-    diag(FL->getBeginLoc(),
-         "%0 type from literal suffix 'L' should not be used")
+    diag(FL->getBeginLoc(), "%0 type from literal suffix 'L' is not portable "
+                            "and should not be used")
         << FL->getType();
   }
 }
