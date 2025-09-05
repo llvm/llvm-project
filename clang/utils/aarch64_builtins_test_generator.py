@@ -27,7 +27,7 @@ from itertools import product
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Sequence, Tuple
 
-assert sys.version_info >= (3, 10), "Only Python 3.10+ is supported."
+assert sys.version_info >= (3, 7), "Only Python 3.7+ is supported."
 
 
 # Are we testing arm_sve.h or arm_sme.h based builtins.
@@ -43,7 +43,7 @@ class FunctionType(Enum):
 
 
 # Builtins are grouped by their required features.
-@dataclass(frozen=True, order=True, slots=True)
+@dataclass(frozen=True, order=True)
 class BuiltinContext:
     guard: str
     streaming_guard: str
