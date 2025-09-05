@@ -2175,26 +2175,27 @@ ThreadForLiveTaskArgument(Args &command, ExecutionContext &exe_ctx) {
 
   StringRef arg = command[0].ref();
 
-  StackFrame &frame = exe_ctx.GetFrameRef();
-  uint32_t path_options =
-      StackFrame::eExpressionPathOptionsAllowDirectIVarAccess;
-  VariableSP var_sp;
-  Status status;
-  ValueObjectSP valobj_sp = frame.GetValueForVariableExpressionPath(
-      arg, eDynamicDontRunTarget, path_options, var_sp, status);
-
   addr_t task_ptr = LLDB_INVALID_ADDRESS;
-  if (status.Success() && valobj_sp) {
-    if (auto task_obj_sp = valobj_sp->GetChildMemberWithName("_task"))
-      task_ptr = task_obj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
-    if (task_ptr == LLDB_INVALID_ADDRESS)
-      return llvm::createStringError("failed to access Task pointer");
-  } else {
-    // The argument is not a valid variable expression, try parsing it as a
-    // (task) address.
-    if (arg.getAsInteger(0, task_ptr))
+  // First try the arg as a task address.
+  bool not_addr = arg.getAsInteger(0, task_ptr);
+  if (not_addr) {
+    StackFrame &frame = exe_ctx.GetFrameRef();
+    uint32_t path_options =
+        StackFrame::eExpressionPathOptionsAllowDirectIVarAccess;
+    VariableSP var_sp;
+    Status status;
+    ValueObjectSP valobj_sp = frame.GetValueForVariableExpressionPath(
+        arg, eDynamicDontRunTarget, path_options, var_sp, status);
+    if (!status.Success())
       return status.takeError();
+
+    if (valobj_sp)
+      if (auto task_obj_sp = valobj_sp->GetChildMemberWithName("_task"))
+        task_ptr = task_obj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
   }
+
+  if (task_ptr == 0 || task_ptr == LLDB_INVALID_ADDRESS)
+    return llvm::createStringError("failed to access Task pointer");
 
   if (auto *runtime = SwiftLanguageRuntime::Get(exe_ctx.GetProcessSP()))
     if (auto reflection_ctx = runtime->GetReflectionContext()) {
