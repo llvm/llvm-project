@@ -696,3 +696,12 @@ uint64_t mul_w01(uint64_t rs1, uint64_t rs2) {
 uint64_t mulu_w01(uint64_t rs1, uint64_t rs2) {
   return __riscv_mulu_w01(rs1, rs2);
 }
+
+// RV64P-LABEL: @slx(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.slx.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t slx(uint64_t rs1, uint64_t rs2) {
+  return __riscv_slx(rs1, rs2);
+}

@@ -319,6 +319,11 @@ static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
 __riscv_mulu_h01(uint32_t __x, uint32_t __y) {
   return __builtin_riscv_mulu_h01(__x, __y);
 }
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_slx(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_slx_32(__x, __y);
+}
 #endif
 
 
@@ -696,6 +701,11 @@ __riscv_mul_w01(uint64_t __x, uint64_t __y) {
 static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
 __riscv_mulu_w01(uint64_t __x, uint64_t __y) {
   return __builtin_riscv_mulu_w01(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_slx(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_slx_64(__x, __y);
 }
 #endif
 

@@ -201,6 +201,7 @@ def pmul_h_b01_32  : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 def pmulu_h_b01_32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 def mul_h01        : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 def mulu_h01       : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def slx_32         : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 } // Features = "experimental-p,32bit"
 
 let Features = "experimental-p,64bit" in {
@@ -279,6 +280,7 @@ def pmulu_h_b01_64 : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 def pmulu_w_h01    : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 def mul_w01        : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 def mulu_w01       : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def slx_64         : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 } // Features = "experimental-p,64bit"
 } // Attributes = [Const, NoThrow]
 

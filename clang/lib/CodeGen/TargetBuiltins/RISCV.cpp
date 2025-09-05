@@ -308,6 +308,8 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_mul_w01:
   case RISCV::BI__builtin_riscv_mulu_h01:
   case RISCV::BI__builtin_riscv_mulu_w01:
+  case RISCV::BI__builtin_riscv_slx_32:
+  case RISCV::BI__builtin_riscv_slx_64:
   case RISCV::BI__builtin_riscv_sadd: {
     switch (BuiltinID) {
     default: llvm_unreachable("unexpected builtin ID");
@@ -578,6 +580,10 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
       break;
     case RISCV::BI__builtin_riscv_mulu_w01:
       ID = Intrinsic::riscv_mulu_w01;
+      break;
+    case RISCV::BI__builtin_riscv_slx_32:
+    case RISCV::BI__builtin_riscv_slx_64:
+      ID = Intrinsic::riscv_slx;
       break;
     case RISCV::BI__builtin_riscv_sadd:
       ID = Intrinsic::riscv_sadd;

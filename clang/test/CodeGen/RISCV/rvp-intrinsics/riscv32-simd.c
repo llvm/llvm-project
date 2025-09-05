@@ -544,3 +544,12 @@ uint32_t mul_h01(uint32_t rs1, uint32_t rs2) {
 uint32_t mulu_h01(uint32_t rs1, uint32_t rs2) {
   return __riscv_mulu_h01(rs1, rs2);
 }
+
+// RV32P-LABEL: @slx(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.slx.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t slx(uint32_t rs1, uint32_t rs2) {
+  return __riscv_slx(rs1, rs2);
+}
