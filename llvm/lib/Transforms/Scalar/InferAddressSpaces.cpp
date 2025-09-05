@@ -685,7 +685,8 @@ Value *InferAddressSpacesImpl::clonePtrMaskWithNewAddressSpace(
   // Note: checking if the mask clears high bits is not sufficient as those
   // might have already been 0 in the old ptr.
   if (NewPtrBits && OldPtrBits->getBitWidth() > NewPtrBits->getBitWidth()) {
-    KnownBits MaskBits = computeKnownBits(MaskOp, *DL, /*AssumptionCache=*/nullptr, I);
+    KnownBits MaskBits =
+        computeKnownBits(MaskOp, *DL, /*AssumptionCache=*/nullptr, I);
     // Set all unknown bits of the old ptr to 1, so that we are conservative in
     // checking which bits are cleared by the mask.
     OldPtrBits->One |= ~OldPtrBits->Zero;
