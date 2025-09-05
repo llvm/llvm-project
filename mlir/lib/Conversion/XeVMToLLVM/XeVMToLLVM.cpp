@@ -254,7 +254,7 @@ int32_t getL3CacheControl(OpType op) {
   return getL3CacheControl(*getCacheControl(op));
 }
 
-template <bool isLoad, typename OpType>
+template <typename OpType>
 static std::optional<ArrayAttr>
 getCacheControlMetadata(ConversionPatternRewriter &rewriter, OpType op) {
   if (!getCacheControl(op))
@@ -262,6 +262,10 @@ getCacheControlMetadata(ConversionPatternRewriter &rewriter, OpType op) {
   constexpr int32_t decorationCacheControlArity{4};
   constexpr int32_t loadCacheControlKey{6442};
   constexpr int32_t storeCacheControlKey{6443};
+  constexpr bool isLoad = std::is_same_v<OpType, BlockLoad2dOp> ||
+                          std::is_same_v<OpType, BlockPrefetch2dOp> ||
+                          std::is_same_v<OpType, LLVM::LoadOp> ||
+                          std::is_same_v<OpType, PrefetchOp>;
   const int32_t controlKey{isLoad ? loadCacheControlKey : storeCacheControlKey};
   SmallVector<int32_t, decorationCacheControlArity> decorationsL1{
       controlKey, 0, getL1CacheControl<OpType>(op), 0};
@@ -446,7 +450,7 @@ class PrefetchToOCLPattern : public OpConversionPattern<PrefetchOp> {
         rewriter, fnName, LLVM::LLVMVoidType::get(rewriter.getContext()),
         argTypes, args, {}, funcAttr, op.getOperation());
     if (std::optional<ArrayAttr> optCacheControls =
-            getCacheControlMetadata<true>(rewriter, op))
+            getCacheControlMetadata(rewriter, op))
       call->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
     rewriter.eraseOp(op);
     return success();
@@ -605,7 +609,7 @@ class LoadStorePrefetchToOCLPattern : public OpConversionPattern<OpType> {
         rewriter, funcName, LLVM::LLVMVoidType::get(rewriter.getContext()),
         argTypes, args, paramAttrs, funcAttr, op.getOperation());
     if (std::optional<ArrayAttr> optCacheControls =
-            getCacheControlMetadata < isLoad || isPrefetch > (rewriter, op)) {
+            getCacheControlMetadata(rewriter, op)) {
       call->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
     }
     if constexpr (isLoad)
@@ -624,9 +628,8 @@ class LLVMLoadStoreToOCLPattern : public OpConversionPattern<OpType> {
                   ConversionPatternRewriter &rewriter) const override {
     if (!op->hasAttr("cache_control"))
       return failure();
-    constexpr bool isLoad = std::is_same_v<OpType, LLVM::LoadOp>;
     std::optional<ArrayAttr> optCacheControls =
-        getCacheControlMetadata<isLoad>(rewriter, op);
+        getCacheControlMetadata(rewriter, op);
     op->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
     op->removeAttr("cache_control");
     return success();
