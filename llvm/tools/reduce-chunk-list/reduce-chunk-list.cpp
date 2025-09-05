@@ -64,12 +64,12 @@ bool increaseGranularity(RangeUtils::RangeList &Chunks) {
   bool SplitOne = false;
 
   for (auto &C : Chunks) {
-    if (C.Begin == C.End) {
+    if (C.getBegin() == C.getEnd()) {
       NewChunks.push_back(C);
     } else {
-      int64_t Half = (C.Begin + C.End) / 2;
-      NewChunks.push_back(Range(C.Begin, Half));
-      NewChunks.push_back(Range(Half + 1, C.End));
+      int64_t Half = (C.getBegin() + C.getEnd()) / 2;
+      NewChunks.push_back(Range(C.getBegin(), Half));
+      NewChunks.push_back(Range(Half + 1, C.getEnd()));
       SplitOne = true;
     }
   }

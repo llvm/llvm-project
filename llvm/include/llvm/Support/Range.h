@@ -29,16 +29,29 @@ namespace llvm {
 
 /// Represents a range of integers [Begin, End], inclusive on both ends, where
 /// Begin <= End.
-struct Range {
+class Range {
   int64_t Begin;
   int64_t End;
 
+public:
   /// Create a range [Begin, End].
   Range(int64_t Begin, int64_t End) : Begin(Begin), End(End) {
     assert(Begin <= End && "Range Begin must be <= End");
   }
   /// Create a range [Single, Single].
   Range(int64_t Single) : Begin(Single), End(Single) {}
+
+  int64_t getBegin() const { return Begin; }
+  int64_t getEnd() const { return End; }
+
+  void setBegin(int64_t NewBegin) {
+    assert(NewBegin <= End && "Range Begin must be <= End");
+    Begin = NewBegin;
+  }
+  void setEnd(int64_t NewEnd) {
+    assert(Begin <= NewEnd && "Range Begin must be <= End");
+    End = NewEnd;
+  }
 
   /// Check if the given value is within this range (inclusive).
   bool contains(int64_t Value) const { return Value >= Begin && Value <= End; }

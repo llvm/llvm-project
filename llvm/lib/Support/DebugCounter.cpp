@@ -171,15 +171,15 @@ bool DebugCounter::shouldExecuteImpl(unsigned CounterName) {
 
     bool Res = CounterInfo.Chunks[CurrIdx].contains(CurrCount);
     if (Us.BreakOnLast && CurrIdx == (CounterInfo.Chunks.size() - 1) &&
-        CurrCount == CounterInfo.Chunks[CurrIdx].End) {
+        CurrCount == CounterInfo.Chunks[CurrIdx].getEnd()) {
       LLVM_BUILTIN_DEBUGTRAP;
     }
-    if (CurrCount > CounterInfo.Chunks[CurrIdx].End) {
+    if (CurrCount > CounterInfo.Chunks[CurrIdx].getEnd()) {
       CounterInfo.CurrChunkIdx++;
 
       /// Handle consecutive blocks.
       if (CounterInfo.CurrChunkIdx < CounterInfo.Chunks.size() &&
-          CurrCount == CounterInfo.Chunks[CounterInfo.CurrChunkIdx].Begin)
+          CurrCount == CounterInfo.Chunks[CounterInfo.CurrChunkIdx].getBegin())
         return true;
     }
     return Res;
