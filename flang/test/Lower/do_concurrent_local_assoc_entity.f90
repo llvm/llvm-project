@@ -14,9 +14,9 @@ end subroutine local_assoc
 
 ! CHECK: fir.local {type = local} @[[LOCALIZER:.*local_assocEa.*]] : !fir.box<!fir.array<8xf32>> init {
 ! CHECK-NEXT: ^{{.*}}(%{{.*}}: !{{.*}}, %[[LOCAL_ARG:.*]]: !{{.*}}):
-! CHECK-NEXT:   %[[TMP_ALLOC:.*]] = fir.alloca !{{.*}} {bindc_name = ".tmp"}
 ! CHECK-NEXT:   %[[C8:.*]] = arith.constant 8 : index
 ! CHECK-NEXT:   %[[SHAPE:.*]] = fir.shape %[[C8]]
+! CHECK-NEXT:   %[[TMP_ALLOC:.*]] = fir.allocmem !{{.*}} {bindc_name = ".tmp", {{.*}}}
 ! CHECK:        %[[TMP_DECL:.*]]:2 = hlfir.declare %[[TMP_ALLOC]](%[[SHAPE]])
 ! CHECK:        %[[C1:.*]] = arith.constant 1 : index
 ! CHECK-NEXT:   %[[C8:.*]] = arith.constant 8 : index
