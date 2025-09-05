@@ -8,6 +8,7 @@
 
 #include "llvm/Transforms/Utils/GlobalStatus.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -17,6 +18,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -26,6 +28,7 @@
 #include <cassert>
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 /// Return the stronger of the two ordering. If the two orderings are acquire
 /// and release, then return AcquireRelease.
@@ -158,6 +161,17 @@ static bool analyzeGlobalAux(const Value *V, GlobalStatus &GS,
             return true;
       } else if (isa<CmpInst>(I)) {
         GS.IsCompared = true;
+
+        const Value *UO = nullptr;
+        for (Value *Op : I->operands()) {
+          if (match(Op, m_Zero()))
+            continue;
+          const Value *OpUO = getUnderlyingObject(Op);
+          if (!UO)
+            UO = OpUO;
+          if (!OpUO || UO != OpUO)
+            return true;
+        }
       } else if (const MemTransferInst *MTI = dyn_cast<MemTransferInst>(I)) {
         if (MTI->isVolatile())
           return true;
