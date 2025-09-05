@@ -93,3 +93,13 @@ define i1 @test5(i32 %i, ptr %p) {
   ret i1 %op
 }
 
+define i1 @test6(i8 %x) {
+; CHECK-LABEL: define i1 @test6(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[TRUNC:%.*]] = icmp eq i8 [[X]], 2
+; CHECK-NEXT:    ret i1 [[TRUNC]]
+;
+  %lshr = lshr i8 4, %x
+  %trunc = trunc i8 %lshr to i1
+  ret i1 %trunc
+}
