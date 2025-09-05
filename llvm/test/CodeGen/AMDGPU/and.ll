@@ -949,6 +949,12 @@ define amdgpu_kernel void @s_and_multi_use_constant_i64(ptr addrspace(1) %out, i
   ret void
 }
 
+; FUNC-LABEL: {{^}}s_and_32_bit_constant_i64:
+; SI: s_load_dwordx4
+; SI-NOT: and
+; SI: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x12d687{{$}}
+; SI-NOT: and
+; SI: buffer_store_dwordx2
 define amdgpu_kernel void @s_and_32_bit_constant_i64(ptr addrspace(1) %out, i32, i64 %a) {
 ; GFX6-LABEL: s_and_32_bit_constant_i64:
 ; GFX6:       ; %bb.0:
@@ -992,6 +998,17 @@ define amdgpu_kernel void @s_and_32_bit_constant_i64(ptr addrspace(1) %out, i32,
   ret void
 }
 
+; FUNC-LABEL: {{^}}s_and_multi_use_inline_imm_i64:
+; SI: s_load_dwordx4
+; SI: s_load_dword
+; SI: s_load_dwordx2
+; SI-NOT: and
+; SI: s_lshl_b32 [[C:s[0-9]+]], [[A:s[0-9]+]], 1
+; SI: s_lshl_b32 [[D:s[0-9]+]], [[B:s[0-9]+]], 1
+; SI: s_and_b32 s{{[0-9]+}}, [[C]], 62
+; SI: s_and_b32 s{{[0-9]+}}, [[D]], 62
+; SI-NOT: and
+; SI: buffer_store_dwordx2
 define amdgpu_kernel void @s_and_multi_use_inline_imm_i64(ptr addrspace(1) %out, i32, i64 %a, i32, i64 %b, i32, i64 %c) {
 ; GFX6-LABEL: s_and_multi_use_inline_imm_i64:
 ; GFX6:       ; %bb.0:
@@ -1665,6 +1682,14 @@ define amdgpu_kernel void @s_and_inline_imm_64_i64(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
+; FUNC-LABEL: {{^}}s_and_inline_imm_64_i64_noshrink:
+; SI: s_load_dwordx4
+; SI: s_lshl_b32 [[B:s[0-9]+]], [[A:s[0-9]+]], 1{{$}}
+; SI-NOT: and
+; SI: s_and_b32 s{{[0-9]+}}, [[B:s[0-9]+]], 64
+; SI-NOT: and
+; SI: s_add_u32
+; SI-NEXT: s_mov_b32
 define amdgpu_kernel void @s_and_inline_imm_64_i64_noshrink(ptr addrspace(1) %out, ptr addrspace(1) %aptr, i64 %a, i32, i64 %b) {
 ; GFX6-LABEL: s_and_inline_imm_64_i64_noshrink:
 ; GFX6:       ; %bb.0:
@@ -1722,6 +1747,12 @@ define amdgpu_kernel void @s_and_inline_imm_64_i64_noshrink(ptr addrspace(1) %ou
   ret void
 }
 
+; FUNC-LABEL: {{^}}s_and_inline_imm_1_i64
+; SI: s_load_dwordx4
+; SI-NOT: and
+; SI: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 1
+; SI-NOT: and
+; SI: buffer_store_dwordx2
 define amdgpu_kernel void @s_and_inline_imm_1_i64(ptr addrspace(1) %out, ptr addrspace(1) %aptr, i64 %a) {
 ; GFX6-LABEL: s_and_inline_imm_1_i64:
 ; GFX6:       ; %bb.0:
@@ -1765,6 +1796,14 @@ define amdgpu_kernel void @s_and_inline_imm_1_i64(ptr addrspace(1) %out, ptr add
   ret void
 }
 
+; FUNC-LABEL: {{^}}s_and_inline_imm_1.0_i64
+; XSI: s_and_b64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 1.0
+
+; SI: s_load_dwordx4
+; SI-NOT: and
+; SI: s_and_b32 {{s[0-9]+}}, {{s[0-9]+}}, 0x3ff00000
+; SI-NOT: and
+; SI: buffer_store_dwordx2
 define amdgpu_kernel void @s_and_inline_imm_1.0_i64(ptr addrspace(1) %out, ptr addrspace(1) %aptr, i64 %a) {
 ; GFX6-LABEL: s_and_inline_imm_1.0_i64:
 ; GFX6:       ; %bb.0:
@@ -1809,6 +1848,14 @@ define amdgpu_kernel void @s_and_inline_imm_1.0_i64(ptr addrspace(1) %out, ptr a
   ret void
 }
 
+; FUNC-LABEL: {{^}}s_and_inline_imm_neg_1.0_i64
+; XSI: s_and_b64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, -1.0
+
+; SI: s_load_dwordx4
+; SI-NOT: and
+; SI: s_and_b32 {{s[0-9]+}}, {{s[0-9]+}}, 0xbff00000
+; SI-NOT: and
+; SI: buffer_store_dwordx2
 define amdgpu_kernel void @s_and_inline_imm_neg_1.0_i64(ptr addrspace(1) %out, ptr addrspace(1) %aptr, i64 %a) {
 ; GFX6-LABEL: s_and_inline_imm_neg_1.0_i64:
 ; GFX6:       ; %bb.0:
@@ -1853,6 +1900,14 @@ define amdgpu_kernel void @s_and_inline_imm_neg_1.0_i64(ptr addrspace(1) %out, p
   ret void
 }
 
+; FUNC-LABEL: {{^}}s_and_inline_imm_0.5_i64
+; XSI: s_and_b64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0.5
+
+; SI: s_load_dwordx4
+; SI-NOT: and
+; SI: s_and_b32 {{s[0-9]+}}, {{s[0-9]+}}, 0x3fe00000
+; SI-NOT: and
+; SI: buffer_store_dwordx2
 define amdgpu_kernel void @s_and_inline_imm_0.5_i64(ptr addrspace(1) %out, ptr addrspace(1) %aptr, i64 %a) {
 ; GFX6-LABEL: s_and_inline_imm_0.5_i64:
 ; GFX6:       ; %bb.0:
@@ -1897,6 +1952,14 @@ define amdgpu_kernel void @s_and_inline_imm_0.5_i64(ptr addrspace(1) %out, ptr a
   ret void
 }
 
+; FUNC-LABEL: {{^}}s_and_inline_imm_neg_0.5_i64:
+; XSI: s_and_b64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, -0.5
+
+; SI: s_load_dwordx4
+; SI-NOT: and
+; SI: s_and_b32 {{s[0-9]+}}, {{s[0-9]+}}, 0xbfe00000
+; SI-NOT: and
+; SI: buffer_store_dwordx2
 define amdgpu_kernel void @s_and_inline_imm_neg_0.5_i64(ptr addrspace(1) %out, ptr addrspace(1) %aptr, i64 %a) {
 ; GFX6-LABEL: s_and_inline_imm_neg_0.5_i64:
 ; GFX6:       ; %bb.0:
@@ -1941,6 +2004,12 @@ define amdgpu_kernel void @s_and_inline_imm_neg_0.5_i64(ptr addrspace(1) %out, p
   ret void
 }
 
+; FUNC-LABEL: {{^}}s_and_inline_imm_2.0_i64:
+; SI: s_load_dwordx4
+; SI-NOT: and
+; SI: s_and_b32 {{s[0-9]+}}, {{s[0-9]+}}, 2.0
+; SI-NOT: and
+; SI: buffer_store_dwordx2
 define amdgpu_kernel void @s_and_inline_imm_2.0_i64(ptr addrspace(1) %out, ptr addrspace(1) %aptr, i64 %a) {
 ; GFX6-LABEL: s_and_inline_imm_2.0_i64:
 ; GFX6:       ; %bb.0:
@@ -1985,6 +2054,12 @@ define amdgpu_kernel void @s_and_inline_imm_2.0_i64(ptr addrspace(1) %out, ptr a
   ret void
 }
 
+; FUNC-LABEL: {{^}}s_and_inline_imm_neg_2.0_i64:
+; SI: s_load_dwordx4
+; SI-NOT: and
+; SI: s_and_b32 {{s[0-9]+}}, {{s[0-9]+}}, -2.0
+; SI-NOT: and
+; SI: buffer_store_dwordx2
 define amdgpu_kernel void @s_and_inline_imm_neg_2.0_i64(ptr addrspace(1) %out, ptr addrspace(1) %aptr, i64 %a) {
 ; GFX6-LABEL: s_and_inline_imm_neg_2.0_i64:
 ; GFX6:       ; %bb.0:
@@ -2029,6 +2104,14 @@ define amdgpu_kernel void @s_and_inline_imm_neg_2.0_i64(ptr addrspace(1) %out, p
   ret void
 }
 
+; FUNC-LABEL: {{^}}s_and_inline_imm_4.0_i64:
+; XSI: s_and_b64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 4.0
+
+; SI: s_load_dwordx4
+; SI-NOT: and
+; SI: s_and_b32 {{s[0-9]+}}, {{s[0-9]+}}, 0x40100000
+; SI-NOT: and
+; SI: buffer_store_dwordx2
 define amdgpu_kernel void @s_and_inline_imm_4.0_i64(ptr addrspace(1) %out, ptr addrspace(1) %aptr, i64 %a) {
 ; GFX6-LABEL: s_and_inline_imm_4.0_i64:
 ; GFX6:       ; %bb.0:
@@ -2073,6 +2156,14 @@ define amdgpu_kernel void @s_and_inline_imm_4.0_i64(ptr addrspace(1) %out, ptr a
   ret void
 }
 
+; FUNC-LABEL: {{^}}s_and_inline_imm_neg_4.0_i64:
+; XSI: s_and_b64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, -4.0
+
+; SI: s_load_dwordx4
+; SI-NOT: and
+; SI: s_and_b32 {{s[0-9]+}}, {{s[0-9]+}}, 0xc0100000
+; SI-NOT: and
+; SI: buffer_store_dwordx2
 define amdgpu_kernel void @s_and_inline_imm_neg_4.0_i64(ptr addrspace(1) %out, ptr addrspace(1) %aptr, i64 %a) {
 ; GFX6-LABEL: s_and_inline_imm_neg_4.0_i64:
 ; GFX6:       ; %bb.0:
@@ -2120,6 +2211,12 @@ define amdgpu_kernel void @s_and_inline_imm_neg_4.0_i64(ptr addrspace(1) %out, p
 ; Test with the 64-bit integer bitpattern for a 32-bit float in the
 ; low 32-bits, which is not a valid 64-bit inline immmediate.
 
+; FUNC-LABEL: {{^}}s_and_inline_imm_f32_4.0_i64:
+; SI: s_load_dwordx4
+; SI-NOT: and
+; SI: s_and_b32 s[[K_HI:[0-9]+]], s{{[0-9]+}}, 4.0
+; SI-NOT: and
+; SI: buffer_store_dwordx2
 define amdgpu_kernel void @s_and_inline_imm_f32_4.0_i64(ptr addrspace(1) %out, ptr addrspace(1) %aptr, i64 %a) {
 ; GFX6-LABEL: s_and_inline_imm_f32_4.0_i64:
 ; GFX6:       ; %bb.0:
@@ -2163,6 +2260,12 @@ define amdgpu_kernel void @s_and_inline_imm_f32_4.0_i64(ptr addrspace(1) %out, p
   ret void
 }
 
+; FUNC-LABEL: {{^}}s_and_inline_imm_f32_neg_4.0_i64:
+; SI: s_load_dwordx4
+; SI-NOT: and
+; SI: s_and_b32 s[[K_HI:[0-9]+]], s{{[0-9]+}}, -4.0
+; SI-NOT: and
+; SI: buffer_store_dwordx2
 define amdgpu_kernel void @s_and_inline_imm_f32_neg_4.0_i64(ptr addrspace(1) %out, ptr addrspace(1) %aptr, i64 %a) {
 ; GFX6-LABEL: s_and_inline_imm_f32_neg_4.0_i64:
 ; GFX6:       ; %bb.0:
@@ -2207,7 +2310,11 @@ define amdgpu_kernel void @s_and_inline_imm_f32_neg_4.0_i64(ptr addrspace(1) %ou
 }
 
 ; Shift into upper 32-bits
-
+; SI: s_load_dwordx4
+; SI-NOT: and
+; SI: s_and_b32 s[[K_HI:[0-9]+]], s{{[0-9]+}}, 4.0
+; SI-NOT: and
+; SI: buffer_store_dwordx2
 define amdgpu_kernel void @s_and_inline_high_imm_f32_4.0_i64(ptr addrspace(1) %out, ptr addrspace(1) %aptr, i64 %a) {
 ; GFX6-LABEL: s_and_inline_high_imm_f32_4.0_i64:
 ; GFX6:       ; %bb.0:
@@ -2252,6 +2359,12 @@ define amdgpu_kernel void @s_and_inline_high_imm_f32_4.0_i64(ptr addrspace(1) %o
   ret void
 }
 
+; FUNC-LABEL: {{^}}s_and_inline_high_imm_f32_neg_4.0_i64:
+; SI: s_load_dwordx4
+; SI-NOT: and
+; SI: s_and_b32 s[[K_HI:[0-9]+]], s{{[0-9]+}}, -4.0
+; SI-NOT: and
+; SI: buffer_store_dwordx2
 define amdgpu_kernel void @s_and_inline_high_imm_f32_neg_4.0_i64(ptr addrspace(1) %out, ptr addrspace(1) %aptr, i64 %a) {
 ; GFX6-LABEL: s_and_inline_high_imm_f32_neg_4.0_i64:
 ; GFX6:       ; %bb.0:
