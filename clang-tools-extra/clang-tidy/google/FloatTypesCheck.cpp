@@ -16,12 +16,9 @@ using namespace ast_matchers;
 
 namespace {
 
-AST_MATCHER(TypeLoc, isTypeLocValidAndNotInMacro) {
-  const SourceLocation Loc = Node.getBeginLoc();
-  return Loc.isValid() && !Loc.isMacroID();
-}
-
-AST_MATCHER(FloatingLiteral, isFLValidAndNotInMacro) {
+AST_POLYMORPHIC_MATCHER(isValidAndNotInMacro,
+                        AST_POLYMORPHIC_SUPPORTED_TYPES(TypeLoc,
+                                                        FloatingLiteral)) {
   const SourceLocation Loc = Node.getBeginLoc();
   return Loc.isValid() && !Loc.isMacroID();
 }
@@ -35,11 +32,14 @@ AST_MATCHER(TypeLoc, isLongDoubleType) {
   if (!BuiltinLoc)
     return false;
 
-  return BuiltinLoc.getTypePtr()->getKind() == BuiltinType::LongDouble;
+  if (const auto *BT = BuiltinLoc.getTypePtr())
+    return BT->getKind() == BuiltinType::LongDouble;
+  return false;
 }
 
 AST_MATCHER(FloatingLiteral, isLongDoubleLiteral) {
-  if (const auto *BT = dyn_cast<BuiltinType>(Node.getType().getTypePtr()))
+  if (const auto *BT =
+          dyn_cast_if_present<BuiltinType>(Node.getType().getTypePtr()))
     return BT->getKind() == BuiltinType::LongDouble;
   return false;
 }
@@ -50,13 +50,12 @@ namespace tidy::google::runtime {
 
 void RuntimeFloatCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(typeLoc(loc(realFloatingPointType()),
-                             isTypeLocValidAndNotInMacro(), isLongDoubleType())
+                             isValidAndNotInMacro(), isLongDoubleType())
                          .bind("longDoubleTypeLoc"),
                      this);
-  Finder->addMatcher(
-      floatLiteral(isFLValidAndNotInMacro(), isLongDoubleLiteral())
-          .bind("longDoubleFloatLiteral"),
-      this);
+  Finder->addMatcher(floatLiteral(isValidAndNotInMacro(), isLongDoubleLiteral())
+                         .bind("longDoubleFloatLiteral"),
+                     this);
 }
 
 void RuntimeFloatCheck::check(const MatchFinder::MatchResult &Result) {
