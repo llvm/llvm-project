@@ -214,6 +214,7 @@ private:
     /// Map type identifiers to callsite labels. Labels are generated for each
     /// indirect callsite in the function.
     SmallVector<std::pair<CGTypeId, MCSymbol *>> CallSiteLabels;
+    SmallVector<std::pair<MCSymbol *, MCSymbol *>> DirectCallSiteLabels;
   };
 
   enum CallGraphSectionFormatVersion : uint64_t {
@@ -385,9 +386,9 @@ public:
   /// are available. Returns empty string otherwise.
   StringRef getConstantSectionSuffix(const Constant *C) const;
 
-  /// Generate and emit labels for callees of the indirect callsites which will
+  /// Generate and emit labels for callees of all callsites which will
   /// be used to populate the .callgraph section.
-  void emitIndirectCalleeLabels(
+  void emitCallsiteLabelsForCallgraph(
       FunctionInfo &FuncInfo,
       const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
       const MachineInstr &MI);
