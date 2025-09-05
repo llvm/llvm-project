@@ -768,6 +768,8 @@ __m128 test_mm256_maskz_cvtepu64_ps(__mmask8 __U, __m256i __A) {
   return _mm256_maskz_cvtepu64_ps(__U, __A); 
 }
 
+TEST_CONSTEXPR(match_m128(_mm256_maskz_cvtepu64_ps(/*1010=*/0xa, (__m256i)(__v4du){1, 1, 2, 2}), 0.0f, 1.0f, 0.0f, 2.0f));
+
 __m128d test_mm_range_pd(__m128d __A, __m128d __B) {
   // CHECK-LABEL: test_mm_range_pd
   // CHECK: @llvm.x86.avx512.mask.range.pd.128
