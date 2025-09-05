@@ -23,34 +23,44 @@ contains
 
   subroutine sub2()
     type(ty_device), pointer :: d1
+    allocate(d1)
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMm1Psub2()
 ! CHECK: %[[ALLOC:.*]] = cuf.alloc !fir.box<!fir.ptr<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>> {bindc_name = "d1", data_attr = #cuf.cuda<managed>, uniq_name = "_QMm1Fsub2Ed1"} -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>>
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ALLOC]] {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMm1Fsub2Ed1"} : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>>)
-! CHECK: %[[LOAD1:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>>
-! CHECK: %[[ADDR1:.*]] = fir.box_addr %[[LOAD1]] : (!fir.box<!fir.ptr<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>) -> !fir.ptr<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
-! CHECK: %[[DESIGNATE1:.*]] = hlfir.designate %[[ADDR1]]{"x"} : (!fir.ptr<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK: cuf.set_allocator_idx %[[DESIGNATE1]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {data_attr = #cuf.cuda<device>}
-! CHECK: %[[LOAD2:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>>
-! CHECK: %[[ADDR2:.*]] = fir.box_addr %[[LOAD2]] : (!fir.box<!fir.ptr<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>) -> !fir.ptr<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
-! CHECK: %[[DESIGNATE2:.*]] = hlfir.designate %[[ADDR2]]{"z"} : (!fir.ptr<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK: cuf.set_allocator_idx %[[DESIGNATE2]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {data_attr = #cuf.cuda<device>}
+! CHECK: cuf.allocate
+! CHECK: %[[LOAD:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>>
+! CHECK: %[[ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.ptr<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>) -> !fir.ptr<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
+! CHECK: %[[COORD1:.*]] = fir.coordinate_of %[[ADDR]], x : (!fir.ptr<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK: cuf.set_allocator_idx %[[COORD1]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {data_attr = #cuf.cuda<device>}
+! CHECK: %[[COORD2:.*]] = fir.coordinate_of %[[ADDR]], z : (!fir.ptr<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK: cuf.set_allocator_idx %[[COORD2]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {data_attr = #cuf.cuda<device>}
 
   subroutine sub3()
     type(ty_device), allocatable :: d1
+    allocate(d1)
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMm1Psub3()
 ! CHECK: %[[ALLOC:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>> {bindc_name = "d1", data_attr = #cuf.cuda<managed>, uniq_name = "_QMm1Fsub3Ed1"} -> !fir.ref<!fir.box<!fir.heap<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>>
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ALLOC]] {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMm1Fsub3Ed1"} : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>>, !fir.ref<!fir.box<!fir.heap<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>>)
-! CHECK: %[[LOAD1:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>>
-! CHECK: %[[ADDR1:.*]] = fir.box_addr %[[LOAD1]] : (!fir.box<!fir.heap<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>) -> !fir.heap<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
-! CHECK: %[[DESIGNATE1:.*]] = hlfir.designate %[[ADDR1]]{"x"} : (!fir.heap<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK: cuf.set_allocator_idx %[[DESIGNATE1]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {data_attr = #cuf.cuda<device>}
-! CHECK: %[[LOAD2:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>>
-! CHECK: %[[ADDR2:.*]] = fir.box_addr %[[LOAD2]] : (!fir.box<!fir.heap<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>) -> !fir.heap<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
-! CHECK: %[[DESIGNATE2:.*]] = hlfir.designate %[[ADDR2]]{"z"} : (!fir.heap<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK: cuf.set_allocator_idx %[[DESIGNATE2]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {data_attr = #cuf.cuda<device>}
+! CHECK: cuf.allocate
+! CHECK: %[[LOAD:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>>
+! CHECK: %[[ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.heap<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>) -> !fir.heap<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
+! CHECK: %[[COORD1:.*]] = fir.coordinate_of %[[ADDR]], x : (!fir.heap<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK: cuf.set_allocator_idx %[[COORD1]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {data_attr = #cuf.cuda<device>}
+! CHECK: %[[COORD2:.*]] = fir.coordinate_of %[[ADDR]], z : (!fir.heap<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>,y:i32,z:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK: cuf.set_allocator_idx %[[COORD2]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {data_attr = #cuf.cuda<device>}
+
+  subroutine sub4()
+    type(ty_device), allocatable :: d1(:,:)
+    allocate(d1(10, 10))
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMm1Psub4()
+! CHECK: cuf.allocate
+! CHECK-COUNT-2: fir.do_loop
+! CHECK-COUNT-2: cuf.set_allocator_idx
 
 end module

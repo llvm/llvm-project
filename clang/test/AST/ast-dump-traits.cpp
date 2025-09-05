@@ -40,9 +40,8 @@ void test_unary_expr_or_type_trait() {
 // CHECK-NEXT: |   | `-EnumDecl {{.*}} <col:3, col:11> col:8{{( imported)?}} referenced E
 // CHECK-NEXT: |   |-CStyleCastExpr {{.*}} <line:13:3, col:21> 'void' <ToVoid>
 // CHECK-NEXT: |   | `-TypeTraitExpr {{.*}} <col:10, col:21> 'bool' __is_enum
-// CHECK-NEXT: |   |   `-ElaboratedType {{.*}} 'E' sugar
-// CHECK-NEXT: |   |     `-EnumType {{.*}} 'E'
-// CHECK-NEXT: |   |       `-Enum {{.*}} 'E'
+// CHECK-NEXT: |   |   `-EnumType {{.*}} 'E'
+// CHECK-NEXT: |   |     `-Enum {{.*}} 'E'
 // CHECK-NEXT: |   |-CStyleCastExpr {{.*}} <line:15:3, col:30> 'void' <ToVoid>
 // CHECK-NEXT: |   | `-TypeTraitExpr {{.*}} <col:10, col:30> 'bool' __is_same
 // CHECK-NEXT: |   |   |-BuiltinType {{.*}} 'int'

@@ -490,7 +490,7 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_EXCEPTIONS_SIG e
 #  endif
 
-#  if __has_feature(pointer_field_protection)
+#  if defined(__POINTER_FIELD_PROTECTION__)
 #    define _LIBCPP_PFP_SIG p
 #  else
 #    define _LIBCPP_PFP_SIG
@@ -1275,9 +1275,11 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER 0
 #  endif
 
-#  if __has_feature(pointer_field_protection)
+#  if defined(__POINTER_FIELD_PROTECTION__)
+#    define _LIBCPP_PFP [[clang::pointer_field_protection]]
 #    define _LIBCPP_NO_PFP [[clang::no_field_protection]]
 #  else
+#    define _LIBCPP_PFP
 #    define _LIBCPP_NO_PFP
 #  endif
 

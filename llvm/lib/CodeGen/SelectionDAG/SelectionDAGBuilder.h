@@ -574,6 +574,7 @@ private:
   void visitFPToSI(const User &I);
   void visitUIToFP(const User &I);
   void visitSIToFP(const User &I);
+  void visitPtrToAddr(const User &I);
   void visitPtrToInt(const User &I);
   void visitIntToPtr(const User &I);
   void visitBitCast(const User &I);
@@ -631,6 +632,8 @@ private:
   void visitVectorExtractLastActive(const CallInst &I, unsigned Intrinsic);
   void visitVPLoad(const VPIntrinsic &VPIntrin, EVT VT,
                    const SmallVectorImpl<SDValue> &OpValues);
+  void visitVPLoadFF(const VPIntrinsic &VPIntrin, EVT VT, EVT EVLVT,
+                     const SmallVectorImpl<SDValue> &OpValues);
   void visitVPStore(const VPIntrinsic &VPIntrin,
                     const SmallVectorImpl<SDValue> &OpValues);
   void visitVPGather(const VPIntrinsic &VPIntrin, EVT VT,

@@ -66,6 +66,14 @@ if (NOT "${LIBCXX_HARDENING_MODE}" IN_LIST LIBCXX_SUPPORTED_HARDENING_MODES)
   message(FATAL_ERROR
     "Unsupported hardening mode: '${LIBCXX_HARDENING_MODE}'. Supported values are ${LIBCXX_SUPPORTED_HARDENING_MODES}.")
 endif()
+set(LIBCXX_SUPPORTED_PFP none untagged tagged)
+set(LIBCXX_PFP none CACHE STRING
+  "Specify whether to build with pointer field protection.
+   Supported values are ${LIBCXX_SUPPORTED_PFP}.")
+if (NOT "${LIBCXX_PFP}" IN_LIST LIBCXX_SUPPORTED_PFP)
+  message(FATAL_ERROR
+    "Unsupported PFP mode: '${LIBCXX_PFP}'. Supported values are ${LIBCXX_SUPPORTED_PFP}.")
+endif()
 set(LIBCXX_ASSERTION_HANDLER_FILE
   "vendor/llvm/default_assertion_handler.in"
   CACHE STRING
@@ -113,7 +121,7 @@ option(LIBCXX_ENABLE_MONOTONIC_CLOCK
 #
 # TODO TZDB make the default always ON when most platforms ship with the IANA
 # database.
-if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
   set(ENABLE_TIME_ZONE_DATABASE_DEFAULT ON)
 else()
   set(ENABLE_TIME_ZONE_DATABASE_DEFAULT OFF)
@@ -159,7 +167,7 @@ set(LIBCXX_TEST_PARAMS "" CACHE STRING
     "A list of parameters to run the Lit test suite with.")
 
 # TODO: Figure out how to build GoogleBenchmark on those platforms, and how to build when exceptions or RTTI is disabled
-if (WIN32 OR MINGW OR ANDROID OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX"
+if (WIN32 OR MINGW OR ANDROID OR "${CMAKE_SYSTEM_NAME}" MATCHES "AIX"
     OR NOT LIBCXX_ENABLE_LOCALIZATION
     OR NOT LIBCXX_ENABLE_THREADS
     OR NOT LIBCXX_ENABLE_FILESYSTEM
@@ -466,7 +474,7 @@ include(HandleLibcxxFlags)
 # 'config-ix' use them during feature checks. It also adds them to both
 # 'LIBCXX_COMPILE_FLAGS' and 'LIBCXX_LINK_FLAGS'
 
-if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   add_flags_if_supported("-mdefault-visibility-export-mapping=explicit")
   set(CMAKE_AIX_EXPORT_ALL_SYMBOLS OFF)
 endif()
@@ -561,6 +569,17 @@ function(cxx_add_rtti_flags target)
     else()
       target_add_compile_flags_if_supported(${target} PUBLIC -fno-rtti)
     endif()
+  endif()
+endfunction()
+
+function(cxx_add_pfp_flags target)
+  if (LIBCXX_PFP STREQUAL untagged)
+    target_add_compile_flags_if_supported(${target} PUBLIC
+      -fexperimental-pointer-field-protection)
+  elseif (LIBCXX_PFP STREQUAL tagged)
+    target_add_compile_flags_if_supported(${target} PUBLIC
+      -fexperimental-pointer-field-protection
+      -fexperimental-pointer-field-protection-tagged)
   endif()
 endfunction()
 
@@ -820,6 +839,7 @@ function(cxx_add_common_build_flags target)
   cxx_add_windows_flags(${target})
   cxx_add_exception_flags(${target})
   cxx_add_rtti_flags(${target})
+  cxx_add_pfp_flags(${target})
   cxx_add_module_flags(${target})
   cxx_link_system_libraries(${target})
   target_link_libraries(${target} PRIVATE cxx-sanitizer-flags)

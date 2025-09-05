@@ -21,7 +21,6 @@
 #include <__assert>
 #include <__config>
 #include <__debug_utils/sanitizers.h>
-#include <__force_nonstandard_layout>
 #include <__format/enable_insertable.h>
 #include <__fwd/vector.h>
 #include <__iterator/advance.h>
@@ -86,7 +85,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
-class vector _LIBCPP_MAYBE_FORCE_NONSTANDARD_LAYOUT {
+class _LIBCPP_PFP vector {
 public:
   //
   // Types

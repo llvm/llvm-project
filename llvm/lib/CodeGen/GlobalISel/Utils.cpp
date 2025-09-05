@@ -466,8 +466,14 @@ llvm::getConstantFPVRegVal(Register VReg, const MachineRegisterInfo &MRI) {
 std::optional<DefinitionAndSourceRegister>
 llvm::getDefSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI) {
   Register DefSrcReg = Reg;
-  auto *DefMI = MRI.getVRegDef(Reg);
-  auto DstTy = MRI.getType(DefMI->getOperand(0).getReg());
+  // This assumes that the code is in SSA form, so there should only be one
+  // definition.
+  auto DefIt = MRI.def_begin(Reg);
+  if (DefIt == MRI.def_end())
+    return {};
+  MachineOperand &DefOpnd = *DefIt;
+  MachineInstr *DefMI = DefOpnd.getParent();
+  auto DstTy = MRI.getType(DefOpnd.getReg());
   if (!DstTy.isValid())
     return std::nullopt;
   unsigned Opc = DefMI->getOpcode();
@@ -1401,9 +1407,31 @@ bool llvm::isBuildVectorConstantSplat(const Register Reg,
   return false;
 }
 
+bool llvm::isBuildVectorConstantSplat(const Register Reg,
+                                      const MachineRegisterInfo &MRI,
+                                      APInt SplatValue, bool AllowUndef) {
+  if (auto SplatValAndReg = getAnyConstantSplat(Reg, MRI, AllowUndef)) {
+    if (SplatValAndReg->Value.getBitWidth() < SplatValue.getBitWidth())
+      return APInt::isSameValue(
+          SplatValAndReg->Value.sext(SplatValue.getBitWidth()), SplatValue);
+    return APInt::isSameValue(
+        SplatValAndReg->Value,
+        SplatValue.sext(SplatValAndReg->Value.getBitWidth()));
+  }
+
+  return false;
+}
+
 bool llvm::isBuildVectorConstantSplat(const MachineInstr &MI,
                                       const MachineRegisterInfo &MRI,
                                       int64_t SplatValue, bool AllowUndef) {
+  return isBuildVectorConstantSplat(MI.getOperand(0).getReg(), MRI, SplatValue,
+                                    AllowUndef);
+}
+
+bool llvm::isBuildVectorConstantSplat(const MachineInstr &MI,
+                                      const MachineRegisterInfo &MRI,
+                                      APInt SplatValue, bool AllowUndef) {
   return isBuildVectorConstantSplat(MI.getOperand(0).getReg(), MRI, SplatValue,
                                     AllowUndef);
 }
@@ -1847,8 +1875,10 @@ static bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
   case TargetOpcode::G_FSHR:
   case TargetOpcode::G_SMAX:
   case TargetOpcode::G_SMIN:
+  case TargetOpcode::G_SCMP:
   case TargetOpcode::G_UMAX:
   case TargetOpcode::G_UMIN:
+  case TargetOpcode::G_UCMP:
   case TargetOpcode::G_PTRMASK:
   case TargetOpcode::G_SADDO:
   case TargetOpcode::G_SSUBO:

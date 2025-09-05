@@ -186,6 +186,7 @@ struct TypeInfoChars {
 struct PFPField {
   CharUnits offset;
   FieldDecl *field;
+  bool isWithinUnion;
 };
 
 /// Holds long-lived AST nodes (such as types and decls) that can be
@@ -235,13 +236,16 @@ class ASTContext : public RefCountedBase<ASTContext> {
     SubstTemplateTypeParmTypes;
   mutable llvm::FoldingSet<SubstTemplateTypeParmPackType>
     SubstTemplateTypeParmPackTypes;
+  mutable llvm::FoldingSet<SubstBuiltinTemplatePackType>
+      SubstBuiltinTemplatePackTypes;
   mutable llvm::ContextualFoldingSet<TemplateSpecializationType, ASTContext&>
     TemplateSpecializationTypes;
   mutable llvm::FoldingSet<ParenType> ParenTypes{GeneralTypesLog2InitSize};
+  mutable llvm::FoldingSet<TagTypeFoldingSetPlaceholder> TagTypes;
+  mutable llvm::FoldingSet<FoldingSetPlaceholder<UnresolvedUsingType>>
+      UnresolvedUsingTypes;
   mutable llvm::FoldingSet<UsingType> UsingTypes;
-  mutable llvm::FoldingSet<TypedefType> TypedefTypes;
-  mutable llvm::FoldingSet<ElaboratedType> ElaboratedTypes{
-      GeneralTypesLog2InitSize};
+  mutable llvm::FoldingSet<FoldingSetPlaceholder<TypedefType>> TypedefTypes;
   mutable llvm::FoldingSet<DependentNameType> DependentNameTypes;
   mutable llvm::DenseMap<llvm::FoldingSetNodeID,
                          DependentTemplateSpecializationType *>
@@ -287,11 +291,11 @@ class ASTContext : public RefCountedBase<ASTContext> {
                      llvm::to_underlying(PredefinedSugarType::Kind::Last) + 1>
       PredefinedSugarTypes{};
 
-  /// The set of nested name specifiers.
+  /// Internal storage for NestedNameSpecifiers.
   ///
   /// This set is managed by the NestedNameSpecifier class.
-  mutable llvm::FoldingSet<NestedNameSpecifier> NestedNameSpecifiers;
-  mutable NestedNameSpecifier *GlobalNestedNameSpecifier = nullptr;
+  mutable llvm::FoldingSet<NamespaceAndPrefixStorage>
+      NamespaceAndPrefixStorages;
 
   /// A cache mapping from RecordDecls to ASTRecordLayouts.
   ///
@@ -644,7 +648,7 @@ public:
   /// contain data that is address discriminated. This includes
   /// implicitly authenticated values like vtable pointers, as well as
   /// explicitly qualified fields.
-  bool containsAddressDiscriminatedPointerAuth(QualType T) {
+  bool containsAddressDiscriminatedPointerAuth(QualType T) const {
     if (!isPointerAuthenticationAvailable())
       return false;
     return findPointerAuthContent(T) != PointerAuthContent::None;
@@ -658,8 +662,7 @@ public:
   bool containsNonRelocatablePointerAuth(QualType T) {
     if (!isPointerAuthenticationAvailable())
       return false;
-    return findPointerAuthContent(T) ==
-           PointerAuthContent::AddressDiscriminatedData;
+    return findPointerAuthContent(T) != PointerAuthContent::None;
   }
 
 private:
@@ -677,8 +680,8 @@ private:
   bool isPointerAuthenticationAvailable() const {
     return LangOpts.PointerAuthCalls || LangOpts.PointerAuthIntrinsics;
   }
-  PointerAuthContent findPointerAuthContent(QualType T);
-  llvm::DenseMap<const RecordDecl *, PointerAuthContent>
+  PointerAuthContent findPointerAuthContent(QualType T) const;
+  mutable llvm::DenseMap<const RecordDecl *, PointerAuthContent>
       RecordContainsAddressDiscriminatedPointerAuth;
 
   ImportDecl *FirstLocalImport = nullptr;
@@ -1295,6 +1298,9 @@ public:
   // Implicitly-declared type 'struct _GUID'.
   mutable TagDecl *MSGuidTagDecl = nullptr;
 
+  // Implicitly-declared type 'struct type_info'.
+  mutable TagDecl *MSTypeInfoTagDecl = nullptr;
+
   /// Keep track of CUDA/HIP device-side variables ODR-used by host code.
   /// This does not include extern shared variables used by device host
   /// functions as addresses of shared variables are per warp, therefore
@@ -1340,6 +1346,12 @@ public:
     return ExternalSource.get();
   }
 
+  /// Retrieve a pointer to the external AST source associated
+  /// with this AST context, if any. Returns as an IntrusiveRefCntPtr.
+  IntrusiveRefCntPtr<ExternalASTSource> getExternalSourcePtr() const {
+    return ExternalSource;
+  }
+
   /// Attach an AST mutation listener to the AST context.
   ///
   /// The AST mutation listener provides the ability to track modifications to
@@ -1381,8 +1393,6 @@ public:
 private:
   /// Return a type with extended qualifiers.
   QualType getExtQualType(const Type *Base, Qualifiers Quals) const;
-
-  QualType getTypeDeclTypeSlow(const TypeDecl *Decl) const;
 
   QualType getPipeType(QualType T, bool ReadOnly) const;
 
@@ -1626,7 +1636,7 @@ public:
 
   /// Return the uniqued reference to the type for a member pointer to
   /// the specified type in the specified nested name.
-  QualType getMemberPointerType(QualType T, NestedNameSpecifier *Qualifier,
+  QualType getMemberPointerType(QualType T, NestedNameSpecifier Qualifier,
                                 const CXXRecordDecl *Cls) const;
 
   /// Return a non-unique reference to the type for a variable array of
@@ -1758,39 +1768,58 @@ private:
   QualType
   getAutoTypeInternal(QualType DeducedType, AutoTypeKeyword Keyword,
                       bool IsDependent, bool IsPack = false,
-                      ConceptDecl *TypeConstraintConcept = nullptr,
+                      TemplateDecl *TypeConstraintConcept = nullptr,
                       ArrayRef<TemplateArgument> TypeConstraintArgs = {},
                       bool IsCanon = false) const;
 
 public:
+  QualType getTypeDeclType(ElaboratedTypeKeyword Keyword,
+                           NestedNameSpecifier Qualifier,
+                           const TypeDecl *Decl) const;
+
   /// Return the unique reference to the type for the specified type
   /// declaration.
-  QualType getTypeDeclType(const TypeDecl *Decl,
-                           const TypeDecl *PrevDecl = nullptr) const {
-    assert(Decl && "Passed null for Decl param");
-    if (Decl->TypeForDecl) return QualType(Decl->TypeForDecl, 0);
+  QualType getTypeDeclType(const TypeDecl *Decl) const;
 
-    if (PrevDecl) {
-      assert(PrevDecl->TypeForDecl && "previous decl has no TypeForDecl");
-      Decl->TypeForDecl = PrevDecl->TypeForDecl;
-      return QualType(PrevDecl->TypeForDecl, 0);
-    }
+  /// Use the normal 'getFooBarType' constructors to obtain these types.
+  QualType getTypeDeclType(const TagDecl *) const = delete;
+  QualType getTypeDeclType(const TypedefDecl *) const = delete;
+  QualType getTypeDeclType(const TypeAliasDecl *) const = delete;
+  QualType getTypeDeclType(const UnresolvedUsingTypenameDecl *) const = delete;
 
-    return getTypeDeclTypeSlow(Decl);
-  }
+  CanQualType getCanonicalTypeDeclType(const TypeDecl *TD) const;
 
-  QualType getUsingType(const UsingShadowDecl *Found,
-                        QualType Underlying) const;
+  QualType getUsingType(ElaboratedTypeKeyword Keyword,
+                        NestedNameSpecifier Qualifier, const UsingShadowDecl *D,
+                        QualType UnderlyingType = QualType()) const;
 
   /// Return the unique reference to the type for the specified
   /// typedef-name decl.
-  QualType getTypedefType(const TypedefNameDecl *Decl,
-                          QualType Underlying = QualType()) const;
+  /// FIXME: TypeMatchesDeclOrNone is a workaround for a serialization issue:
+  /// The decl underlying type might still not be available.
+  QualType getTypedefType(
+      ElaboratedTypeKeyword Keyword, NestedNameSpecifier Qualifier,
+      const TypedefNameDecl *Decl, QualType UnderlyingType = QualType(),
+      std::optional<bool> TypeMatchesDeclOrNone = std::nullopt) const;
 
-  QualType getRecordType(const RecordDecl *Decl) const;
+  CanQualType getCanonicalTagType(const TagDecl *TD) const;
+  QualType getTagType(ElaboratedTypeKeyword Keyword,
+                      NestedNameSpecifier Qualifier, const TagDecl *TD,
+                      bool OwnsTag) const;
 
-  QualType getEnumType(const EnumDecl *Decl) const;
+private:
+  UnresolvedUsingType *getUnresolvedUsingTypeInternal(
+      ElaboratedTypeKeyword Keyword, NestedNameSpecifier Qualifier,
+      const UnresolvedUsingTypenameDecl *D, void *InsertPos,
+      const Type *CanonicalType) const;
 
+  TagType *getTagTypeInternal(ElaboratedTypeKeyword Keyword,
+                              NestedNameSpecifier Qualifier, const TagDecl *Tag,
+                              bool OwnsTag, bool IsInjected,
+                              const Type *CanonicalType,
+                              bool WithFoldingSetNode) const;
+
+public:
   /// Compute BestType and BestPromotionType for an enum based on the highest
   /// number of negative and positive bits of its elements.
   /// Returns true if enum width is too large.
@@ -1839,10 +1868,11 @@ public:
     return MembersRepresentableByInt;
   }
 
-  QualType
-  getUnresolvedUsingType(const UnresolvedUsingTypenameDecl *Decl) const;
-
-  QualType getInjectedClassNameType(CXXRecordDecl *Decl, QualType TST) const;
+  CanQualType
+  getCanonicalUnresolvedUsingType(const UnresolvedUsingTypenameDecl *D) const;
+  QualType getUnresolvedUsingType(ElaboratedTypeKeyword Keyword,
+                                  NestedNameSpecifier Qualifier,
+                                  const UnresolvedUsingTypenameDecl *D) const;
 
   QualType getAttributedType(attr::Kind attrKind, QualType modifiedType,
                              QualType equivalentType,
@@ -1872,6 +1902,7 @@ public:
   QualType getSubstTemplateTypeParmPackType(Decl *AssociatedDecl,
                                             unsigned Index, bool Final,
                                             const TemplateArgument &ArgPack);
+  QualType getSubstBuiltinTemplatePack(const TemplateArgument &ArgPack);
 
   QualType
   getTemplateTypeParmType(unsigned Depth, unsigned Index,
@@ -1882,18 +1913,20 @@ public:
       TemplateName T, ArrayRef<TemplateArgument> CanonicalArgs) const;
 
   QualType
-  getTemplateSpecializationType(TemplateName T,
+  getTemplateSpecializationType(ElaboratedTypeKeyword Keyword, TemplateName T,
                                 ArrayRef<TemplateArgument> SpecifiedArgs,
                                 ArrayRef<TemplateArgument> CanonicalArgs,
                                 QualType Underlying = QualType()) const;
 
   QualType
-  getTemplateSpecializationType(TemplateName T,
+  getTemplateSpecializationType(ElaboratedTypeKeyword Keyword, TemplateName T,
                                 ArrayRef<TemplateArgumentLoc> SpecifiedArgs,
                                 ArrayRef<TemplateArgument> CanonicalArgs,
                                 QualType Canon = QualType()) const;
 
   TypeSourceInfo *getTemplateSpecializationTypeInfo(
+      ElaboratedTypeKeyword Keyword, SourceLocation ElaboratedKeywordLoc,
+      NestedNameSpecifierLoc QualifierLoc, SourceLocation TemplateKeywordLoc,
       TemplateName T, SourceLocation TLoc,
       const TemplateArgumentListInfo &SpecifiedArgs,
       ArrayRef<TemplateArgument> CanonicalArgs,
@@ -1904,11 +1937,8 @@ public:
   QualType getMacroQualifiedType(QualType UnderlyingTy,
                                  const IdentifierInfo *MacroII) const;
 
-  QualType getElaboratedType(ElaboratedTypeKeyword Keyword,
-                             NestedNameSpecifier *NNS, QualType NamedType,
-                             TagDecl *OwnedTagDecl = nullptr) const;
   QualType getDependentNameType(ElaboratedTypeKeyword Keyword,
-                                NestedNameSpecifier *NNS,
+                                NestedNameSpecifier NNS,
                                 const IdentifierInfo *Name) const;
 
   QualType getDependentTemplateSpecializationType(
@@ -1978,10 +2008,11 @@ public:
                                  UnaryTransformType::UTTKind UKind) const;
 
   /// C++11 deduced auto type.
-  QualType getAutoType(QualType DeducedType, AutoTypeKeyword Keyword,
-                       bool IsDependent, bool IsPack = false,
-                       ConceptDecl *TypeConstraintConcept = nullptr,
-                       ArrayRef<TemplateArgument> TypeConstraintArgs ={}) const;
+  QualType
+  getAutoType(QualType DeducedType, AutoTypeKeyword Keyword, bool IsDependent,
+              bool IsPack = false,
+              TemplateDecl *TypeConstraintConcept = nullptr,
+              ArrayRef<TemplateArgument> TypeConstraintArgs = {}) const;
 
   /// C++11 deduction pattern for 'auto' type.
   QualType getAutoDeductType() const;
@@ -1994,21 +2025,17 @@ public:
   QualType getUnconstrainedType(QualType T) const;
 
   /// C++17 deduced class template specialization type.
-  QualType getDeducedTemplateSpecializationType(TemplateName Template,
+  QualType getDeducedTemplateSpecializationType(ElaboratedTypeKeyword Keyword,
+                                                TemplateName Template,
                                                 QualType DeducedType,
                                                 bool IsDependent) const;
 
 private:
-  QualType getDeducedTemplateSpecializationTypeInternal(TemplateName Template,
-                                                        QualType DeducedType,
-                                                        bool IsDependent,
-                                                        QualType Canon) const;
+  QualType getDeducedTemplateSpecializationTypeInternal(
+      ElaboratedTypeKeyword Keyword, TemplateName Template,
+      QualType DeducedType, bool IsDependent, QualType Canon) const;
 
 public:
-  /// Return the unique reference to the type for the specified TagDecl
-  /// (struct/union/class/enum) decl.
-  QualType getTagDeclType(const TagDecl *Decl) const;
-
   /// Return the unique type for "size_t" (C99 7.17), defined in
   /// <stddef.h>.
   ///
@@ -2084,7 +2111,9 @@ public:
   /// if it hasn't yet been built.
   QualType getRawCFConstantStringType() const {
     if (CFConstantStringTypeDecl)
-      return getTypedefType(CFConstantStringTypeDecl);
+      return getTypedefType(ElaboratedTypeKeyword::None,
+                            /*Qualifier=*/std::nullopt,
+                            CFConstantStringTypeDecl);
     return QualType();
   }
   void setCFConstantStringType(QualType T);
@@ -2181,10 +2210,11 @@ public:
   }
 #include "clang/Basic/BuiltinTemplates.inc"
 
-  /// Retrieve the Objective-C "instancetype" type, if already known;
-  /// otherwise, returns a NULL type;
+  /// Retrieve the Objective-C "instancetype" type.
   QualType getObjCInstanceType() {
-    return getTypeDeclType(getObjCInstanceTypeDecl());
+    return getTypedefType(ElaboratedTypeKeyword::None,
+                          /*Qualifier=*/std::nullopt,
+                          getObjCInstanceTypeDecl());
   }
 
   /// Retrieve the typedef declaration corresponding to the Objective-C
@@ -2197,7 +2227,8 @@ public:
   /// Retrieve the C FILE type.
   QualType getFILEType() const {
     if (FILEDecl)
-      return getTypeDeclType(FILEDecl);
+      return getTypeDeclType(ElaboratedTypeKeyword::None,
+                             /*Qualifier=*/std::nullopt, FILEDecl);
     return QualType();
   }
 
@@ -2209,7 +2240,8 @@ public:
   /// Retrieve the C jmp_buf type.
   QualType getjmp_bufType() const {
     if (jmp_bufDecl)
-      return getTypeDeclType(jmp_bufDecl);
+      return getTypeDeclType(ElaboratedTypeKeyword::None,
+                             /*Qualifier=*/std::nullopt, jmp_bufDecl);
     return QualType();
   }
 
@@ -2221,7 +2253,8 @@ public:
   /// Retrieve the C sigjmp_buf type.
   QualType getsigjmp_bufType() const {
     if (sigjmp_bufDecl)
-      return getTypeDeclType(sigjmp_bufDecl);
+      return getTypeDeclType(ElaboratedTypeKeyword::None,
+                             /*Qualifier=*/std::nullopt, sigjmp_bufDecl);
     return QualType();
   }
 
@@ -2233,12 +2266,13 @@ public:
   /// Retrieve the C ucontext_t type.
   QualType getucontext_tType() const {
     if (ucontext_tDecl)
-      return getTypeDeclType(ucontext_tDecl);
+      return getTypeDeclType(ElaboratedTypeKeyword::None,
+                             /*Qualifier=*/std::nullopt, ucontext_tDecl);
     return QualType();
   }
 
   /// The result type of logical operations, '<', '>', '!=', etc.
-  QualType getLogicalOperationType() const {
+  CanQualType getLogicalOperationType() const {
     return getLangOpts().CPlusPlus ? BoolTy : IntTy;
   }
 
@@ -2303,7 +2337,8 @@ public:
   /// This is set up lazily, by Sema.  \c id is always a (typedef for a)
   /// pointer type, a pointer to a struct.
   QualType getObjCIdType() const {
-    return getTypeDeclType(getObjCIdDecl());
+    return getTypedefType(ElaboratedTypeKeyword::None,
+                          /*Qualifier=*/std::nullopt, getObjCIdDecl());
   }
 
   /// Retrieve the typedef corresponding to the predefined 'SEL' type
@@ -2313,7 +2348,8 @@ public:
   /// Retrieve the type that corresponds to the predefined Objective-C
   /// 'SEL' type.
   QualType getObjCSelType() const {
-    return getTypeDeclType(getObjCSelDecl());
+    return getTypedefType(ElaboratedTypeKeyword::None,
+                          /*Qualifier=*/std::nullopt, getObjCSelDecl());
   }
 
   PointerAuthQualifier getObjCMemberSelTypePtrAuth();
@@ -2327,7 +2363,8 @@ public:
   /// This is set up lazily, by Sema.  \c Class is always a (typedef for a)
   /// pointer type, a pointer to a struct.
   QualType getObjCClassType() const {
-    return getTypeDeclType(getObjCClassDecl());
+    return getTypedefType(ElaboratedTypeKeyword::None,
+                          /*Qualifier=*/std::nullopt, getObjCClassDecl());
   }
 
   /// Retrieve the Objective-C class declaration corresponding to
@@ -2346,7 +2383,8 @@ public:
 
   /// type of 'BOOL' type.
   QualType getBOOLType() const {
-    return getTypeDeclType(getBOOLDecl());
+    return getTypedefType(ElaboratedTypeKeyword::None,
+                          /*Qualifier=*/std::nullopt, getBOOLDecl());
   }
 
   /// Retrieve the type of the Objective-C \c Protocol class.
@@ -2360,7 +2398,8 @@ public:
 
   /// Retrieve the type of the \c __builtin_va_list type.
   QualType getBuiltinVaListType() const {
-    return getTypeDeclType(getBuiltinVaListDecl());
+    return getTypedefType(ElaboratedTypeKeyword::None,
+                          /*Qualifier=*/std::nullopt, getBuiltinVaListDecl());
   }
 
   /// Retrieve the C type declaration corresponding to the predefined
@@ -2374,16 +2413,25 @@ public:
 
   /// Retrieve the type of the \c __builtin_ms_va_list type.
   QualType getBuiltinMSVaListType() const {
-    return getTypeDeclType(getBuiltinMSVaListDecl());
+    return getTypedefType(ElaboratedTypeKeyword::None,
+                          /*Qualifier=*/std::nullopt, getBuiltinMSVaListDecl());
   }
 
   /// Retrieve the implicitly-predeclared 'struct _GUID' declaration.
   TagDecl *getMSGuidTagDecl() const { return MSGuidTagDecl; }
 
   /// Retrieve the implicitly-predeclared 'struct _GUID' type.
-  QualType getMSGuidType() const {
+  CanQualType getMSGuidType() const {
     assert(MSGuidTagDecl && "asked for GUID type but MS extensions disabled");
-    return getTagDeclType(MSGuidTagDecl);
+    return getCanonicalTagType(MSGuidTagDecl);
+  }
+
+  /// Retrieve the implicitly-predeclared 'struct type_info' declaration.
+  TagDecl *getMSTypeInfoTagDecl() const {
+    // Lazily create this type on demand - it's only needed for MS builds.
+    if (!MSTypeInfoTagDecl)
+      MSTypeInfoTagDecl = buildImplicitRecord("type_info", TagTypeKind::Class);
+    return MSTypeInfoTagDecl;
   }
 
   /// Return whether a declaration to a builtin is allowed to be
@@ -2464,7 +2512,7 @@ public:
                                          UnresolvedSetIterator End) const;
   TemplateName getAssumedTemplateName(DeclarationName Name) const;
 
-  TemplateName getQualifiedTemplateName(NestedNameSpecifier *NNS,
+  TemplateName getQualifiedTemplateName(NestedNameSpecifier Qualifier,
                                         bool TemplateKeyword,
                                         TemplateName Template) const;
   TemplateName
@@ -2906,32 +2954,6 @@ public:
   /// Determine if two types are similar, ignoring only CVR qualifiers.
   bool hasCvrSimilarType(QualType T1, QualType T2);
 
-  /// Retrieves the "canonical" nested name specifier for a
-  /// given nested name specifier.
-  ///
-  /// The canonical nested name specifier is a nested name specifier
-  /// that uniquely identifies a type or namespace within the type
-  /// system. For example, given:
-  ///
-  /// \code
-  /// namespace N {
-  ///   struct S {
-  ///     template<typename T> struct X { typename T* type; };
-  ///   };
-  /// }
-  ///
-  /// template<typename T> struct Y {
-  ///   typename N::S::X<T>::type member;
-  /// };
-  /// \endcode
-  ///
-  /// Here, the nested-name-specifier for N::S::X<T>:: will be
-  /// S::X<template-param-0-0>, since 'S' and 'X' are uniquely defined
-  /// by declarations in the type system and the canonical type for
-  /// the template type parameter 'T' is template-param-0-0.
-  NestedNameSpecifier *
-  getCanonicalNestedNameSpecifier(NestedNameSpecifier *NNS) const;
-
   /// Retrieves the default calling convention for the current context.
   ///
   /// The context's default calling convention may differ from the current
@@ -3145,7 +3167,7 @@ public:
   mergeExceptionSpecs(FunctionProtoType::ExceptionSpecInfo ESI1,
                       FunctionProtoType::ExceptionSpecInfo ESI2,
                       SmallVectorImpl<QualType> &ExceptionTypeStorage,
-                      bool AcceptDependent);
+                      bool AcceptDependent) const;
 
   // For two "same" types, return a type which has
   // the common sugar between them. If Unqualified is true,
@@ -3153,7 +3175,7 @@ public:
   // The result will drop the qualifiers which do not occur
   // in both types.
   QualType getCommonSugaredType(QualType X, QualType Y,
-                                bool Unqualified = false);
+                                bool Unqualified = false) const;
 
 private:
   // Helper for integer ordering
@@ -3171,23 +3193,11 @@ public:
   bool propertyTypesAreCompatible(QualType, QualType);
   bool typesAreBlockPointerCompatible(QualType, QualType);
 
-  bool isObjCIdType(QualType T) const {
-    if (const auto *ET = dyn_cast<ElaboratedType>(T))
-      T = ET->getNamedType();
-    return T == getObjCIdType();
-  }
+  bool isObjCIdType(QualType T) const { return T == getObjCIdType(); }
 
-  bool isObjCClassType(QualType T) const {
-    if (const auto *ET = dyn_cast<ElaboratedType>(T))
-      T = ET->getNamedType();
-    return T == getObjCClassType();
-  }
+  bool isObjCClassType(QualType T) const { return T == getObjCClassType(); }
 
-  bool isObjCSelType(QualType T) const {
-    if (const auto *ET = dyn_cast<ElaboratedType>(T))
-      T = ET->getNamedType();
-    return T == getObjCSelType();
-  }
+  bool isObjCSelType(QualType T) const { return T == getObjCSelType(); }
 
   bool ObjCQualifiedIdTypesAreCompatible(const ObjCObjectPointerType *LHS,
                                          const ObjCObjectPointerType *RHS,
@@ -3718,24 +3728,24 @@ public:
   /// Resolve the root record to be used to derive the vtable pointer
   /// authentication policy for the specified record.
   const CXXRecordDecl *
-  baseForVTableAuthentication(const CXXRecordDecl *ThisClass);
+  baseForVTableAuthentication(const CXXRecordDecl *ThisClass) const;
 
   bool useAbbreviatedThunkName(GlobalDecl VirtualMethodDecl,
                                StringRef MangledName);
 
   StringRef getCUIDHash() const;
 
-  bool isPFPStruct(const RecordDecl *rec) const;
   void findPFPFields(QualType Ty, CharUnits Offset,
-                     std::vector<PFPField> &Fields, bool IncludeVBases) const;
+                     std::vector<PFPField> &Fields, bool IncludeVBases,
+                     bool IsWithinUnion = false) const;
   bool hasPFPFields(QualType ty) const;
   bool isPFPField(const FieldDecl *field) const;
 
   /// Returns whether this record's PFP fields (if any) are trivially
-  /// relocatable (i.e. may be memcpy'd). This may also return true if the
+  /// copyable (i.e. may be memcpy'd). This may also return true if the
   /// record does not have any PFP fields, so it may be necessary for the caller
   /// to check for PFP fields, e.g. by calling hasPFPFields().
-  bool arePFPFieldsTriviallyRelocatable(const RecordDecl *RD) const;
+  bool arePFPFieldsTriviallyCopyable(const RecordDecl *RD) const;
 
   llvm::SetVector<const FieldDecl *> PFPFieldsWithEvaluatedOffset;
   void recordMemberDataPointerEvaluation(const ValueDecl *VD);

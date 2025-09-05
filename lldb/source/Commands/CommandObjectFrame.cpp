@@ -349,7 +349,8 @@ protected:
             command[0].c_str());
         m_options.GenerateOptionUsage(
             result.GetErrorStream(), *this,
-            GetCommandInterpreter().GetDebugger().GetTerminalWidth());
+            GetCommandInterpreter().GetDebugger().GetTerminalWidth(),
+            GetCommandInterpreter().GetDebugger().GetUseColor());
         return;
       }
 

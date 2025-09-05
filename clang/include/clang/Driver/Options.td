@@ -1422,6 +1422,21 @@ def fno_hip_emit_relocatable : Flag<["-"], "fno-hip-emit-relocatable">,
   HelpText<"Do not override toolchain to compile HIP source to relocatable">;
 }
 
+// Clang specific/exclusive options for OpenACC.
+def openacc_macro_override
+    : Separate<["-"], "fexperimental-openacc-macro-override">,
+      Visibility<[ClangOption, CC1Option]>,
+      Group<f_Group>,
+      HelpText<"Overrides the _OPENACC macro value for experimental testing "
+               "during OpenACC support development">;
+def openacc_macro_override_EQ
+    : Joined<["-"], "fexperimental-openacc-macro-override=">,
+      Alias<openacc_macro_override>;
+
+// End Clang specific/exclusive options for OpenACC.
+
+def libclc_lib_EQ : Joined<["--"], "libclc-lib=">, Group<opencl_Group>,
+  HelpText<"Namespec of libclc OpenCL bitcode library to link">;
 def libomptarget_amdgpu_bc_path_EQ : Joined<["--"], "libomptarget-amdgpu-bc-path=">, Group<i_Group>,
   HelpText<"Path to libomptarget-amdgcn bitcode library">;
 def libomptarget_amdgcn_bc_path_EQ : Joined<["--"], "libomptarget-amdgcn-bc-path=">, Group<i_Group>,
@@ -2597,16 +2612,27 @@ def fsanitize_undefined_trap_on_error
 def fno_sanitize_undefined_trap_on_error
     : Flag<["-"], "fno-sanitize-undefined-trap-on-error">, Group<f_clang_Group>,
       Alias<fno_sanitize_trap_EQ>, AliasArgs<["undefined"]>;
-defm sanitize_debug_trap_reasons
-    : BoolFOption<
-          "sanitize-debug-trap-reasons",
-          CodeGenOpts<"SanitizeDebugTrapReasons">, DefaultTrue,
-          PosFlag<SetTrue, [], [ClangOption, CC1Option],
-                  "Annotate trap blocks in debug info with UBSan trap reasons">,
-          NegFlag<SetFalse, [], [ClangOption, CC1Option],
-                  "Do not annotate trap blocks in debug info with UBSan trap "
-                  "reasons">>;
-
+def fsanitize_debug_trap_reasons_EQ
+  : Joined<["-"], "fsanitize-debug-trap-reasons=">, Group<f_Group>,
+    Visibility<[ClangOption, CC1Option]>,
+    HelpText<"Set how trap reasons are emitted. "
+      "`none` - Not emitted. This gives the smallest debug info; "
+      "`basic` - Emit a fixed trap message per check type. This increases the "
+      "debug info size but not as much as `detailed`; "
+      "`detailed` - Emit a more detailed trap message. This increases the "
+      "debug info size the most. Default is `detailed`.">,
+    Values<"none,basic,detailed">,
+    NormalizedValuesScope<"CodeGenOptions::SanitizeDebugTrapReasonKind">,
+    NormalizedValues<["None", "Basic", "Detailed"]>,
+    MarshallingInfoEnum<CodeGenOpts<"SanitizeDebugTrapReasons">, "Detailed">;
+def fsanitize_debug_trap_reasons
+    : Flag<["-"], "fsanitize-debug-trap-reasons">, Group<f_clang_Group>,
+      Alias<fsanitize_debug_trap_reasons_EQ>, AliasArgs<["detailed"]>,
+      HelpText<"Alias for -fsanitize-debug-trap-reasons=detailed">;
+def fno_sanitize_debug_trap_reasons
+    : Flag<["-"], "fno-sanitize-debug-trap-reasons">, Group<f_clang_Group>,
+      Alias<fsanitize_debug_trap_reasons_EQ>, AliasArgs<["none"]>,
+      HelpText<"Alias for -fsanitize-debug-trap-reasons=none">;
 defm sanitize_minimal_runtime : BoolOption<"f", "sanitize-minimal-runtime",
   CodeGenOpts<"SanitizeMinimalRuntime">, DefaultFalse,
   PosFlag<SetTrue>,
@@ -3051,11 +3077,16 @@ defm experimental_omit_vtable_rtti : BoolFOption<"experimental-omit-vtable-rtti"
   NegFlag<SetFalse, [], [CC1Option], "Do not omit">,
   BothFlags<[], [CC1Option], " the RTTI component from virtual tables">>;
 
-def experimental_pointer_field_protection_EQ : Joined<["-"], "fexperimental-pointer-field-protection=">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-  Values<"none,untagged,tagged">, NormalizedValuesScope<"LangOptions::PointerFieldProtectionKind">,
-  NormalizedValues<["None", "Untagged", "Tagged"]>,
-  MarshallingInfoEnum<LangOpts<"PointerFieldProtection">, "None">;
+defm experimental_pointer_field_protection : BoolFOption<"experimental-pointer-field-protection",
+  LangOpts<"PointerFieldProtection">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [], "Do not enable">,
+  BothFlags<[], [ClangOption], " pointer field protection on all non-standard layout struct types">>;
+defm experimental_pointer_field_protection_tagged : BoolFOption<"experimental-pointer-field-protection-tagged",
+  LangOpts<"PointerFieldProtectionTagged">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option], "Use">,
+  NegFlag<SetFalse, [], [], "Do not use">,
+  BothFlags<[], [ClangOption], " pointer identity (tag) to discriminate pointers of non-trivially-copyable types">>;
 
 def fcxx_abi_EQ : Joined<["-"], "fc++-abi=">,
                   Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
@@ -3286,6 +3317,13 @@ defm modules_reduced_bmi : BoolOption<"f", "modules-reduced-bmi",
   NegFlag<SetFalse>,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Generate the reduced BMI">>;
+
+def fmodules_driver : Flag<["-"], "fmodules-driver">,
+  Group<f_Group>, Visibility<[ClangOption]>,
+  HelpText<"Enable support for driver managed module builds (experimental)">;
+def fno_modules_driver : Flag<["-"], "fno-modules-driver">,
+  Group<f_Group>, Visibility<[ClangOption]>,
+  HelpText<"Disable support for driver managed module builds (experimental)">;
 
 def experimental_modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduced-bmi">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>, Alias<fmodules_reduced_bmi>;
@@ -3722,14 +3760,20 @@ def fopenmp_relocatable_target : Flag<["-"], "fopenmp-relocatable-target">,
 def fnoopenmp_relocatable_target : Flag<["-"], "fnoopenmp-relocatable-target">,
   Group<f_Group>, Flags<[NoArgumentUnused, HelpHidden]>,
   Visibility<[ClangOption, CC1Option]>;
-def fopenmp_simd : Flag<["-"], "fopenmp-simd">, Group<f_Group>,
-  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Emit OpenMP code only for SIMD-based constructs.">;
+def fopenmp_simd : Flag<["-"], "fopenmp-simd">,
+                   Group<f_Group>,
+                   Flags<[NoArgumentUnused]>,
+                   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+                   HelpText<"Emit OpenMP code only for SIMD-based constructs.">;
 def fopenmp_enable_irbuilder : Flag<["-"], "fopenmp-enable-irbuilder">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Use the experimental OpenMP-IR-Builder codegen path.">;
-def fno_openmp_simd : Flag<["-"], "fno-openmp-simd">, Group<f_Group>,
-  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option]>;
+def fno_openmp_simd
+    : Flag<["-"], "fno-openmp-simd">,
+      Group<f_Group>,
+      Flags<[NoArgumentUnused]>,
+      Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+      HelpText<"Do not emit code for any OpenMP constructs.">;
 def fopenmp_cuda_mode : Flag<["-"], "fopenmp-cuda-mode">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
 def fno_openmp_cuda_mode : Flag<["-"], "fno-openmp-cuda-mode">, Group<f_Group>,
@@ -4531,6 +4575,7 @@ defm aarch64_jump_table_hardening: OptInCC1FFlag<"aarch64-jump-table-hardening",
 defm ptrauth_objc_isa : OptInCC1FFlag<"ptrauth-objc-isa", "Enable signing and authentication of Objective-C object's 'isa' field">;
 defm ptrauth_objc_interface_sel : OptInCC1FFlag<"ptrauth-objc-interface-sel", "Enable signing and authentication of Objective-C object's 'SEL' fields">;
 defm ptrauth_objc_class_ro : OptInCC1FFlag<"ptrauth-objc-class-ro", "Enable signing and authentication for ObjC class_ro pointers">;
+defm ptrauth_block_descriptor_pointers : OptInCC1FFlag<"ptrauth-block-descriptor-pointers", "Enable signing and authentication of block descriptors">;
 }
 
 def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
@@ -5580,7 +5625,8 @@ def mno_outline_atomics : Flag<["-"], "mno-outline-atomics">, Group<f_clang_Grou
   HelpText<"Don't generate local calls to out-of-line atomic operations">;
 def mno_implicit_float : Flag<["-"], "mno-implicit-float">, Group<m_Group>,
   HelpText<"Don't generate implicit floating point or vector instructions">;
-def mimplicit_float : Flag<["-"], "mimplicit-float">, Group<m_Group>;
+def mimplicit_float : Flag<["-"], "mimplicit-float">, Group<m_Group>,
+  HelpText<"Generate implicit floating point or vector instructions">;
 def mrecip : Flag<["-"], "mrecip">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Equivalent to '-mrecip=all'">;
@@ -6796,10 +6842,10 @@ def mapx_features_EQ : CommaJoined<["-"], "mapx-features=">, Group<m_x86_Feature
 def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_Features_Group>,
     HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu">, Visibility<[ClangOption, CLOption, FlangOption]>;
 def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>,
-            AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf","zu"]>,
+            AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","zu"]>,
             Group<m_x86_Features_Group>;
 def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>,
-               AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf","zu"]>,
+               AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","zu"]>,
                Group<m_x86_Features_Group>;
 def mapx_inline_asm_use_gpr32 : Flag<["-"], "mapx-inline-asm-use-gpr32">, Group<m_Group>,
                                 HelpText<"Enable use of GPR32 in inline assembly for APX">;
@@ -6970,7 +7016,6 @@ def static_libgfortran : Flag<["-"], "static-libgfortran">, Group<gfortran_Group
 // "f" options with values for gfortran.
 def fblas_matmul_limit_EQ : Joined<["-"], "fblas-matmul-limit=">, Group<gfortran_Group>;
 def fcheck_EQ : Joined<["-"], "fcheck=">, Group<gfortran_Group>;
-def fcoarray_EQ : Joined<["-"], "fcoarray=">, Group<gfortran_Group>;
 def ffpe_trap_EQ : Joined<["-"], "ffpe-trap=">, Group<gfortran_Group>;
 def ffree_line_length_VALUE : Joined<["-"], "ffree-line-length-">, Group<gfortran_Group>;
 def finit_character_EQ : Joined<["-"], "finit-character=">, Group<gfortran_Group>;
@@ -8679,6 +8724,15 @@ def fopenmp_host_ir_file_path : Separate<["-"], "fopenmp-host-ir-file-path">,
 } // let Visibility = [CC1Option, FC1Option]
 
 //===----------------------------------------------------------------------===//
+// Coarray Options
+//===----------------------------------------------------------------------===//
+
+def fcoarray : Flag<["-"], "fcoarray">,
+               Group<f_Group>,
+               Visibility<[FlangOption, FC1Option]>,
+               HelpText<"Enable Coarray features">;
+
+//===----------------------------------------------------------------------===//
 // SYCL Options
 //===----------------------------------------------------------------------===//
 
@@ -9372,6 +9426,11 @@ def res_may_alias : Option<["/", "-"], "res-may-alias", KIND_FLAG>,
   Visibility<[DXCOption, ClangOption, CC1Option]>,
   HelpText<"Assume that UAVs/SRVs may alias">,
   MarshallingInfoFlag<CodeGenOpts<"ResMayAlias">>;
+def dxc_strip_rootsignature :
+  Option<["/", "-"], "Qstrip-rootsignature", KIND_FLAG>,
+  Group<dxc_Group>,
+  Visibility<[DXCOption]>,
+  HelpText<"Omit the root signature from produced DXContainer">;
 def target_profile : DXCJoinedOrSeparate<"T">, MetaVarName<"<profile>">,
   HelpText<"Set target profile">,
   Values<"ps_6_0, ps_6_1, ps_6_2, ps_6_3, ps_6_4, ps_6_5, ps_6_6, ps_6_7,"
@@ -9402,6 +9461,18 @@ def fdx_rootsignature_version :
 def dxc_rootsig_ver :
   Separate<["/", "-"], "force-rootsig-ver">,
   Alias<fdx_rootsignature_version>,
+  Group<dxc_Group>,
+  Visibility<[DXCOption]>;
+def fdx_rootsignature_define :
+  Joined<["-"], "fdx-rootsignature-define=">,
+  Group<dxc_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoString<LangOpts<"HLSLRootSigOverride">, "\"\"">,
+  HelpText<"Override entry function root signature with root signature at "
+           "given macro name.">;
+def dxc_rootsig_define :
+  Separate<["-"], "rootsig-define">,
+  Alias<fdx_rootsignature_define>,
   Group<dxc_Group>,
   Visibility<[DXCOption]>;
 def hlsl_entrypoint : Option<["-"], "hlsl-entry", KIND_SEPARATE>,
@@ -9436,8 +9507,12 @@ def fspv_target_env_EQ : Joined<["-"], "fspv-target-env=">, Group<dxc_Group>,
 def fspv_extension_EQ
     : Joined<["-"], "fspv-extension=">,
       Group<dxc_Group>,
-      HelpText<"Specify the available SPIR-V extensions. If this option is not "
-               "specified, then all extensions are available.">;
+      HelpText<
+          "Specify the available SPIR-V extensions. If this option is not "
+          "specified, then all extensions are available. If KHR is specified, "
+          "then all KHR extensions will be available. If DXC is specifided, "
+          "then all extensions implemented by the DirectX Shader compiler will "
+          "be available. This option is useful for moving from DXC to Clang.">;
 def fvk_use_dx_layout
     : DXCFlag<"fvk-use-dx-layout">,
       HelpText<"Use DirectX memory layout for Vulkan resources.">;

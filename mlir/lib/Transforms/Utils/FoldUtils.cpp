@@ -154,11 +154,14 @@ bool OperationFolder::insertKnownConstant(Operation *op, Attribute constValue) {
   // already at the front of the block, or the previous operation is already a
   // constant we unique'd (i.e. one we inserted), then we don't need to do
   // anything. Otherwise, we move the constant to the insertion block.
+  // The location info is erased if the constant is moved to a different block.
   Block *insertBlock = &insertRegion->front();
-  if (opBlock != insertBlock || (&insertBlock->front() != op &&
-                                 !isFolderOwnedConstant(op->getPrevNode()))) {
+  if (opBlock != insertBlock) {
     op->moveBefore(&insertBlock->front());
     op->setLoc(erasedFoldedLocation);
+  } else if (&insertBlock->front() != op &&
+             !isFolderOwnedConstant(op->getPrevNode())) {
+    op->moveBefore(&insertBlock->front());
   }
 
   folderConstOp = op;

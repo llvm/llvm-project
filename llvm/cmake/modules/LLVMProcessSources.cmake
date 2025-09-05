@@ -58,21 +58,6 @@ function(llvm_process_sources OUT_VAR)
   set(sources ${ARG_UNPARSED_ARGUMENTS})
   llvm_check_source_file_list(${sources})
 
-  # Don't generate __SHORT_FILE__ on VS builds as it can prevent build parallelisation.
-  if(NOT CMAKE_GENERATOR MATCHES "Visual Studio")
-    foreach(fn ${sources})
-      get_filename_component(suf ${fn} EXT)
-      if("${suf}" STREQUAL ".cpp" OR "${suf}" STREQUAL ".c")
-        get_filename_component(short_name ${fn} NAME)
-        set_property(
-            SOURCE ${fn}
-            APPEND
-            PROPERTY COMPILE_DEFINITIONS __SHORT_FILE__="${short_name}")
-      endif()
-    endforeach()
-  endif()
-
-
   # This adds .td and .h files to the Visual Studio solution:
   add_td_sources(sources)
   find_all_header_files(hdrs "${ARG_ADDITIONAL_HEADER_DIRS}")

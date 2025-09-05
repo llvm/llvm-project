@@ -39,8 +39,6 @@
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
 #include "llvm/Transforms/Utils/LowerVectorIntrinsics.h"
 
-#include <set>
-
 using namespace llvm;
 
 /// Threshold to leave statically sized memory intrinsic calls. Calls of known
@@ -149,7 +147,7 @@ static bool lowerObjCCall(Function &F, RTLIB::LibcallImpl NewFn,
 
   // FIXME: When RuntimeLibcalls is an analysis, check if the function is really
   // supported, and go through RTLIB::Libcall.
-  const char *NewFnName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(NewFn);
+  StringRef NewFnName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(NewFn);
 
   // If we haven't already looked up this function, check to see if the
   // program already contains a function with this name.
@@ -465,19 +463,10 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(
   return Changed;
 }
 
-namespace {
-
-enum class PointerEncoding {
-  Rotate,
-  PACCopyable,
-  PACNonCopyable,
-};
-
-bool expandProtectedFieldPtr(Function &Intr) {
+static bool expandProtectedFieldPtr(Function &Intr) {
   Module &M = *Intr.getParent();
 
-  std::set<GlobalValue *> DSsToDeactivate;
-  std::set<Instruction *> LoadsStores;
+  SmallPtrSet<GlobalValue *, 2> DSsToDeactivate;
 
   Type *Int8Ty = Type::getInt8Ty(M.getContext());
   Type *Int64Ty = Type::getInt64Ty(M.getContext());
@@ -517,128 +506,97 @@ bool expandProtectedFieldPtr(Function &Intr) {
     return nullptr;
   };
 
-  for (User *U : Intr.users()) {
-    auto *Call = cast<CallInst>(U);
-    auto *DS = GetDeactivationSymbol(Call);
-    std::set<PHINode *> VisitedPhis;
-
-    std::function<void(Instruction *)> FindLoadsStores;
-    FindLoadsStores = [&](Instruction *I) {
-      for (Use &U : I->uses()) {
-        if (auto *LI = dyn_cast<LoadInst>(U.getUser())) {
-          if (isa<PointerType>(LI->getType())) {
-            LoadsStores.insert(LI);
-            continue;
-          }
-        }
-        if (auto *SI = dyn_cast<StoreInst>(U.getUser())) {
-          if (U.getOperandNo() == 1 &&
-              isa<PointerType>(SI->getValueOperand()->getType())) {
-            LoadsStores.insert(SI);
-            continue;
-          }
-        }
-        if (auto *P = dyn_cast<PHINode>(U.getUser())) {
-          if (VisitedPhis.insert(P).second)
-            FindLoadsStores(P);
-          continue;
-        }
-        // Comparisons against null cannot be used to recover the original
-        // pointer so we allow them.
-        if (auto *CI = dyn_cast<ICmpInst>(U.getUser())) {
-          if (auto *Op = dyn_cast<Constant>(CI->getOperand(0)))
-            if (Op->isNullValue())
-              continue;
-          if (auto *Op = dyn_cast<Constant>(CI->getOperand(1)))
-            if (Op->isNullValue())
-              continue;
-        }
-        if (DS)
-          DSsToDeactivate.insert(DS);
-      }
-    };
-
-    FindLoadsStores(Call);
-  }
-
-  for (Instruction *I : LoadsStores) {
-    std::set<Value *> Pointers;
-    std::set<Value *> Discs;
-    std::set<GlobalValue *> DSs;
-    std::set<PHINode *> VisitedPhis;
-    bool UseHWEncoding = false;
-
-    std::function<void(Value *)> FindFields;
-    FindFields = [&](Value *V) {
-      if (auto *Call = dyn_cast<CallInst>(V)) {
-        if (Call->getCalledOperand() == &Intr) {
-          Pointers.insert(Call->getArgOperand(0));
-          Discs.insert(Call->getArgOperand(1));
-          if (cast<ConstantInt>(Call->getArgOperand(2))->getZExtValue())
-            UseHWEncoding = true;
-          DSs.insert(GetDeactivationSymbol(Call));
-          return;
-        }
-      }
-      if (auto *P = dyn_cast<PHINode>(V)) {
-        if (VisitedPhis.insert(P).second)
-          for (Value *V : P->incoming_values())
-            FindFields(V);
-        return;
-      }
-      Pointers.insert(nullptr);
-    };
-    FindFields(isa<StoreInst>(I) ? cast<StoreInst>(I)->getPointerOperand()
-                                 : cast<LoadInst>(I)->getPointerOperand());
-    if (Pointers.size() != 1 || Discs.size() != 1 || DSs.size() != 1) {
-      for (GlobalValue *DS : DSs)
-        if (DS)
-          DSsToDeactivate.insert(DS);
-      continue;
-    }
-
-    GlobalValue *DS = *DSs.begin();
-    OperandBundleDef DSBundle("deactivation-symbol", DS);
-
-    if (auto *LI = dyn_cast<LoadInst>(I)) {
-      IRBuilder<> B(LI->getNextNode());
-      auto *LIInt = cast<Instruction>(B.CreatePtrToInt(LI, B.getInt64Ty()));
-      Value *Auth;
-      if (UseHWEncoding) {
-        Auth = CreateAuth(B, LIInt, *Discs.begin(), DSBundle);
-      } else {
-        Auth = B.CreateAdd(LIInt, *Discs.begin());
-        Auth = B.CreateIntrinsic(
-            Auth->getType(), Intrinsic::fshr,
-            {Auth, Auth, ConstantInt::get(Auth->getType(), 16)});
-      }
-      LI->replaceAllUsesWith(B.CreateIntToPtr(Auth, B.getPtrTy()));
-      LIInt->setOperand(0, LI);
-    } else if (auto *SI = dyn_cast<StoreInst>(I)) {
-      IRBuilder<> B(SI);
-      auto *SIValInt =
-          B.CreatePtrToInt(SI->getValueOperand(), B.getInt64Ty());
-      Value *Sign;
-      if (UseHWEncoding) {
-        Sign = CreateSign(B, SIValInt, *Discs.begin(), DSBundle);
-      } else {
-        Sign = B.CreateIntrinsic(
-            SIValInt->getType(), Intrinsic::fshl,
-            {SIValInt, SIValInt, ConstantInt::get(SIValInt->getType(), 16)});
-      }
-      SI->setOperand(0, B.CreateIntToPtr(Sign, B.getPtrTy()));
-    }
-  }
-
   for (User *U : llvm::make_early_inc_range(Intr.users())) {
     auto *Call = cast<CallInst>(U);
-    auto *Pointer = Call->getArgOperand(0);
 
-    Call->replaceAllUsesWith(Pointer);
+    auto *Pointer = Call->getArgOperand(0);
+    auto *Disc = Call->getArgOperand(1);
+    bool UseHWEncoding =
+        cast<ConstantInt>(Call->getArgOperand(2))->getZExtValue();
+
+    auto *DS = GetDeactivationSymbol(Call);
+    OperandBundleDef DSBundle("deactivation-symbol", DS);
+
+    for (Use &U : llvm::make_early_inc_range(Call->uses())) {
+      if (auto *LI = dyn_cast<LoadInst>(U.getUser())) {
+        if (isa<PointerType>(LI->getType())) {
+          IRBuilder<> B(LI);
+          auto *NewLI = cast<LoadInst>(LI->clone());
+          NewLI->setOperand(0, Pointer);
+          B.Insert(NewLI);
+          auto *LIInt = B.CreatePtrToInt(NewLI, B.getInt64Ty());
+          Value *Auth;
+          if (UseHWEncoding) {
+            Auth = CreateAuth(B, LIInt, Disc, DSBundle);
+          } else {
+            // FIXME: These don't have deactivation symbol attachments, we'll
+            // need to figure out how to add them.
+            Auth = B.CreateAdd(LIInt, Disc);
+            Auth = B.CreateIntrinsic(
+                Auth->getType(), Intrinsic::fshr,
+                {Auth, Auth, ConstantInt::get(Auth->getType(), 16)});
+          }
+          LI->replaceAllUsesWith(B.CreateIntToPtr(Auth, B.getPtrTy()));
+          LI->eraseFromParent();
+          continue;
+        }
+      }
+      if (auto *SI = dyn_cast<StoreInst>(U.getUser())) {
+        if (U.getOperandNo() == 1 &&
+            isa<PointerType>(SI->getValueOperand()->getType())) {
+          IRBuilder<> B(SI);
+          auto *SIValInt =
+              B.CreatePtrToInt(SI->getValueOperand(), B.getInt64Ty());
+          Value *Sign;
+          if (UseHWEncoding) {
+            Sign = CreateSign(B, SIValInt, Disc, DSBundle);
+          } else {
+            // FIXME: These don't have deactivation symbol attachments, we'll
+            // need to figure out how to add them.
+            Sign =
+                B.CreateIntrinsic(SIValInt->getType(), Intrinsic::fshl,
+                                  {SIValInt, SIValInt,
+                                   ConstantInt::get(SIValInt->getType(), 16)});
+            Sign = B.CreateSub(Sign, Disc);
+          }
+          SI->setOperand(0, B.CreateIntToPtr(Sign, B.getPtrTy()));
+          SI->setOperand(1, Pointer);
+          continue;
+        }
+      }
+
+      // Comparisons against null cannot be used to recover the original
+      // pointer so we replace them with comparisons against the original
+      // pointer.
+      if (auto *CI = dyn_cast<ICmpInst>(U.getUser())) {
+        if (auto *Op = dyn_cast<Constant>(CI->getOperand(0))) {
+          if (Op->isNullValue()) {
+            CI->setOperand(1, Pointer);
+            continue;
+          }
+        }
+        if (auto *Op = dyn_cast<Constant>(CI->getOperand(1))) {
+          if (Op->isNullValue()) {
+            CI->setOperand(0, Pointer);
+            continue;
+          }
+        }
+      }
+
+      // We couldn't rewrite away this use of the intrinsic. Replace it with the
+      // pointer operand, and arrange to define a deactivation symbol.
+      U.set(Pointer);
+      if (DS)
+        DSsToDeactivate.insert(DS);
+    }
+
     Call->eraseFromParent();
   }
 
   if (!DSsToDeactivate.empty()) {
+    // This is an AArch64 NOP instruction. When the deactivation symbol support
+    // is expanded to more architectures, there will likely need to be an API
+    // for retrieving this constant.
     Constant *Nop =
         ConstantExpr::getIntToPtr(ConstantInt::get(Int64Ty, 0xd503201f), PtrTy);
     for (GlobalValue *OldDS : DSsToDeactivate) {
@@ -653,8 +611,6 @@ bool expandProtectedFieldPtr(Function &Intr) {
     }
   }
   return true;
-}
-
 }
 
 bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
@@ -783,12 +739,14 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
       break;
     case Intrinsic::exp:
     case Intrinsic::exp2:
+    case Intrinsic::log:
       Changed |= forEachCall(F, [&](CallInst *CI) {
         Type *Ty = CI->getArgOperand(0)->getType();
         if (!isa<ScalableVectorType>(Ty))
           return false;
         const TargetLowering *TL = TM->getSubtargetImpl(F)->getTargetLowering();
         unsigned Op = TL->IntrinsicIDToISD(F.getIntrinsicID());
+        assert(Op != ISD::DELETED_NODE && "unsupported intrinsic");
         if (!TL->isOperationExpand(Op, EVT::getEVT(Ty)))
           return false;
         return lowerUnaryVectorIntrinsicAsLoop(M, CI);

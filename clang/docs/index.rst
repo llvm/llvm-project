@@ -47,6 +47,7 @@ Using Clang as a Compiler
    LTOVisibility
    SafeStack
    ShadowCallStack
+   StructureProtection
    SourceBasedCodeCoverage
    StandardCPlusPlusModules
    Modules
@@ -117,6 +118,7 @@ Design Documents
    OffloadingDesign
    PCHInternals
    ItaniumMangleAbiTags
+   ControlFlowIntegrityDesign
    HardwareAssistedAddressSanitizerDesign.rst
    ConstantInterpreter
 
