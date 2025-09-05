@@ -128,8 +128,6 @@ class FRd<bits<4> opcode, bits<7> f, dag outs, dag ins, string asmstr,
   let Inst{11 - 9} = f{6 - 4};
   let Inst{8 - 4} = rd;
   let Inst{3 - 0} = f{3 - 0};
-
-  let DecoderMethod = "decodeFRd";
 }
 
 //===----------------------------------------------------------------------===//
@@ -308,8 +306,6 @@ class FIORdA<dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{10 - 9} = A{5 - 4};
   let Inst{8 - 4} = rd;
   let Inst{3 - 0} = A{3 - 0};
-
-  let DecoderMethod = "decodeFIORdA";
 }
 
 //===----------------------------------------------------------------------===//
@@ -327,8 +323,6 @@ class FIOARr<dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{10 - 9} = A{5 - 4};
   let Inst{8 - 4} = rr;
   let Inst{3 - 0} = A{3 - 0};
-
-  let DecoderMethod = "decodeFIOARr";
 }
 
 //===----------------------------------------------------------------------===//
@@ -343,17 +337,10 @@ class FIOBIT<bits<2> t, dag outs, dag ins, string asmstr, list<dag> pattern>
   bits<5> addr;
   bits<3> b;
 
-  let Inst{15 - 12} = 0b1001;
-
-  let Inst{11 - 10} = 0b10;
+  let Inst{15 - 10} = 0b100110;
   let Inst{9 - 8} = t;
-
-  let Inst{7 - 4} = addr{4 - 1};
-
-  let Inst{3} = addr{0};
+  let Inst{7 - 3} = addr;
   let Inst{2 - 0} = b{2 - 0};
-
-  let DecoderMethod = "decodeFIOBIT";
 }
 
 //===----------------------------------------------------------------------===//
@@ -412,8 +399,6 @@ class FBRsk<bit f, bits<3> s, dag outs, dag ins, string asmstr,
   let Inst{10} = f;
   let Inst{9 - 3} = k;
   let Inst{2 - 0} = s;
-
-  let DecoderMethod = "decodeCondBranch";
 }
 
 //===----------------------------------------------------------------------===//
@@ -437,8 +422,6 @@ class FBRk<bit f, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{15 - 13} = 0b110;
   let Inst{12} = f;
   let Inst{11 - 0} = k;
-
-  let DecoderMethod = "decodeFBRk";
 }
 
 //===----------------------------------------------------------------------===//
@@ -532,14 +515,8 @@ class FSK<bit f, dag outs, dag ins, string asmstr, list<dag> pattern>
 
   let Inst{11} = 0;
   let Inst{10} = f;
-  let Inst{9 - 8} = k{6 - 5};
-
-  let Inst{7 - 4} = k{4 - 1};
-
-  let Inst{3} = k{0};
+  let Inst{9 - 3} = k;
   let Inst{2 - 0} = s;
-
-  let DecoderMethod = "decodeCondBranch";
 }
 
 class ExtensionPseudo<dag outs, dag ins, string asmstr, list<dag> pattern>
