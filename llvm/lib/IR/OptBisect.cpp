@@ -47,7 +47,8 @@ static cl::opt<int> OptBisectLimit(
         getOptBisector().setRanges({{1, Limit}});
       else
         llvm_unreachable(
-            ("Invalid limit for -opt-bisect-limit: " + llvm::utostr(Limit)).c_str());
+            ("Invalid limit for -opt-bisect-limit: " + llvm::utostr(Limit))
+                .c_str());
     }),
     cl::desc(
         "Maximum optimization to perform (equivalent to -opt-bisect=1-N)"));

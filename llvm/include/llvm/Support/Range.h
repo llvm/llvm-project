@@ -27,7 +27,8 @@ class raw_ostream;
 
 namespace llvm {
 
-/// Represents a range of integers [Begin, End], inclusive on both ends, where Begin <= End.
+/// Represents a range of integers [Begin, End], inclusive on both ends, where
+/// Begin <= End.
 struct Range {
   int64_t Begin;
   int64_t End;
@@ -38,9 +39,7 @@ struct Range {
   Range(int64_t Single) : Begin(Single), End(Single) {}
 
   /// Check if the given value is within this range (inclusive)
-  bool contains(int64_t Value) const {
-    return Value >= Begin && Value <= End;
-  }
+  bool contains(int64_t Value) const { return Value >= Begin && Value <= End; }
 
   /// Check if this range overlaps with another range
   bool overlaps(const Range &Other) const {
