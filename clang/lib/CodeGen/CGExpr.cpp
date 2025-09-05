@@ -1340,7 +1340,7 @@ void CodeGenFunction::EmitAllocTokenHint(llvm::CallBase *CB,
   // Format: !{<type-name>, <contains-pointer>}
   auto *MDN =
       llvm::MDNode::get(CGM.getLLVMContext(), {TypeNameMD, ContainsPtrMD});
-  CB->setMetadata("alloc_token_hint", MDN);
+  CB->setMetadata(llvm::LLVMContext::MD_alloc_token_hint, MDN);
 }
 
 /// Infer type from a simple sizeof expression.

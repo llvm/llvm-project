@@ -149,7 +149,7 @@ STATISTIC(NumAllocations, "Allocations found");
 ///
 /// Expected format is: !{<type-name>, <contains-pointer>}
 MDNode *getAllocTokenHintMetadata(const CallBase &CB) {
-  MDNode *Ret = CB.getMetadata("alloc_token_hint");
+  MDNode *Ret = CB.getMetadata(LLVMContext::MD_alloc_token_hint);
   if (!Ret)
     return nullptr;
   assert(Ret->getNumOperands() == 2 && "bad !alloc_token_hint");
