@@ -233,10 +233,10 @@ void __kmpc_push_num_threads(ident_t *loc, kmp_int32 global_tid,
                              kmp_int32 num_threads) {
   KA_TRACE(20, ("__kmpc_push_num_threads: enter T#%d num_threads=%d\n",
                 global_tid, num_threads));
-  // we'll do middle initialize first, as otherwise the assert on global_tid can
+  // we'll do serial initialize first, as otherwise the assert on global_tid can
   // fail when omp is not initialized and this function is called
-  if (!TCR_4(__kmp_init_middle)) {
-    __kmp_middle_initialize();
+  if (!TCR_4(__kmp_init_serial)) {
+    __kmp_serial_initialize();
   }
   __kmp_assert_valid_gtid(global_tid);
   __kmp_push_num_threads(loc, global_tid, num_threads);
