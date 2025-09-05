@@ -303,6 +303,7 @@ u32 ChainOrigin(u32 id, StackTrace *stack);
 const int STACK_TRACE_TAG_POISON = StackTrace::TAG_CUSTOM + 1;
 const int STACK_TRACE_TAG_FIELDS = STACK_TRACE_TAG_POISON + 1;
 const int STACK_TRACE_TAG_VPTR = STACK_TRACE_TAG_FIELDS + 1;
+const int STACK_TRACE_TAG_ALLOC_PADDING = STACK_TRACE_TAG_VPTR + 1;
 
 #define GET_MALLOC_STACK_TRACE                                             \
   UNINITIALIZED BufferedStackTrace stack;                                  \
