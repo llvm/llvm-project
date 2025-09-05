@@ -257,7 +257,7 @@ static void sharedInstantiateConstructorDestructorAttr(
       }
     }
   }
-  New->addAttr(new (C) Attr(C, *A, tempInstPriority));
+  New->addAttr(Attr::Create(C, tempInstPriority, *A));
 }
 
 static Expr *instantiateDependentFunctionAttrCondition(

@@ -2194,7 +2194,7 @@ static void handleConstructorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   S.Diag(D->getLocation(), diag::warn_global_constructor)
       << D->getSourceRange();
-  D->addAttr(::new (S.Context) ConstructorAttr(S.Context, AL, E.get()));
+  D->addAttr(ConstructorAttr::Create(S.Context, E.get(), AL));
 }
 
 static void handleDestructorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -2202,7 +2202,7 @@ static void handleDestructorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (E.isInvalid())
     return;
   S.Diag(D->getLocation(), diag::warn_global_destructor) << D->getSourceRange();
-  D->addAttr(::new (S.Context) DestructorAttr(S.Context, AL, E.get()));
+  D->addAttr(DestructorAttr::Create(S.Context, E.get(), AL));
 }
 
 template <typename AttrTy>
