@@ -435,8 +435,6 @@ private:
   bool optimizeMemoryInst(Instruction *MemoryInst, Value *Addr, Type *AccessTy,
                           unsigned AddrSpace);
   bool optimizeGatherScatterInst(Instruction *MemoryInst, Value *Ptr);
-  bool optimizeUMulWithOverflow(Instruction *I);
-  bool optimizeSMulWithOverflow(Instruction *I);
   bool optimizeMulWithOverflow(Instruction *I, bool IsSigned,
                                ModifyDT &ModifiedDT);
   bool optimizeInlineAsmInst(CallInst *CS);
@@ -6462,19 +6460,21 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
   //  overflow.res:
 
   // New BBs:
-  BasicBlock *OverflowoEntryBB =
+  std::string KeepBBName = I->getParent()->getName().str();
+  BasicBlock *OverflowEntryBB =
       I->getParent()->splitBasicBlock(I, "overflow.entry", /*Before*/ true);
   // Remove the 'br' instruction that is generated as a result of the split:
-  OverflowoEntryBB->getTerminator()->eraseFromParent();
+  OverflowEntryBB->getTerminator()->eraseFromParent();
   BasicBlock *NoOverflowBB =
       BasicBlock::Create(I->getContext(), "overflow.no", I->getFunction());
-  NoOverflowBB->moveAfter(OverflowoEntryBB);
-  I->getParent()->setName("overflow");
-  BasicBlock *OverflowBB = I->getParent();
+  NoOverflowBB->moveAfter(OverflowEntryBB);
+  BasicBlock *OverflowBB =
+      BasicBlock::Create(I->getContext(), "overflow", I->getFunction());
+  OverflowBB->moveAfter(NoOverflowBB);
 
   // BB overflow.entry:
+  IRBuilder<> Builder(OverflowEntryBB);
   // Get Lo and Hi of LHS & RHS:
-  IRBuilder<> Builder(OverflowoEntryBB);
   Value *LoLHS = Builder.CreateTrunc(LHS, LegalTy, "lo.lhs");
   Value *HiLHS = Builder.CreateLShr(LHS, VTHalfBitWidth, "lhs.lsr");
   HiLHS = Builder.CreateTrunc(HiLHS, LegalTy, "hi.lhs");
@@ -6504,16 +6504,7 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
 
   // BB overflow.no:
   Builder.SetInsertPoint(NoOverflowBB);
-  Value *ExtLoLHS, *ExtLoRHS;
-  if (IsSigned) {
-    ExtLoLHS = Builder.CreateSExt(LoLHS, Ty, "lo.lhs.ext");
-    ExtLoRHS = Builder.CreateSExt(LoRHS, Ty, "lo.rhs.ext");
-  } else {
-    ExtLoLHS = Builder.CreateZExt(LoLHS, Ty, "lo.lhs.ext");
-    ExtLoRHS = Builder.CreateZExt(LoRHS, Ty, "lo.rhs.ext");
-  }
-
-  Value *Mul = Builder.CreateMul(ExtLoLHS, ExtLoRHS, "mul.overflow.no");
+  Value *Mul = Builder.CreateMul(LHS, RHS, "mul.overflow.no");
 
   // In overflow.no BB: we are sure that the overflow flag is false.
   // So, if we found this pattern:
@@ -6547,6 +6538,7 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
   if (DetectNoOverflowBrBB) {
     // BB overflow.no: jump directly to if.end BB
     Builder.CreateBr(DetectNoOverflowBrBB);
+
     // BB if.end:
     Builder.SetInsertPoint(DetectNoOverflowBrBB,
                            DetectNoOverflowBrBB->getFirstInsertionPt());
@@ -6563,26 +6555,30 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
         StructValNoOverflow, ConstantInt::getFalse(I->getContext()), {1});
     // Replace all uses of I, only uses dominated by the if.end BB
     I->replaceUsesOutsideBlock(StructValNoOverflow, I->getParent());
+
+    // Remove the original BB as it's divided into 'overflow.entry' and
+    // 'overflow' BBs.
+    BasicBlock *ToBeRemoveBB = I->getParent();
     // BB overflow:
-    Builder.SetInsertPoint(OverflowBB,
-                           I->getParent()->getTerminator()->getIterator());
+    OverflowBB->splice(OverflowBB->end(), ToBeRemoveBB);
     // Extract the multiplication result to add it to the PHI node in the if.end
     // BB
+    Builder.SetInsertPoint(OverflowBB, OverflowBB->end());
     Value *IntrinsicMulRes = Builder.CreateExtractValue(I, {0}, "mul.extract");
+    cast<Instruction>(IntrinsicMulRes)->moveAfter(I);
     NoOverflowPHI->addIncoming(IntrinsicMulRes, OverflowBB);
+
+    ToBeRemoveBB->eraseFromParent();
+    // Restore the original name of the overflow.entry BB:
+    OverflowEntryBB->setName(KeepBBName);
     ModifiedDT = ModifyDT::ModifyBBDT;
     return true;
   }
 
   // Otherwise, we need to create the 'overflow.res' BB to merge the results of
-  // the two paths.
+  // the two paths:
   I->getParent()->setName("overflow.res");
   BasicBlock *OverflowResBB = I->getParent();
-  OverflowBB = BasicBlock::Create(I->getContext(), "overflow", I->getFunction(),
-                                  OverflowResBB);
-  // Initially I->getParent() was the overflow BB, now it becomes the
-  // overflow.res BB. So we need to keep the old reference to the overflow BB.
-  OverflowResBB->replaceAllUsesWith(OverflowBB);
 
   // BB overflow.no: jump to overflow.res BB
   Builder.CreateBr(OverflowResBB);
@@ -6617,6 +6613,10 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
   // Add The Extracted values to the PHINodes in the overflow.res block.
   OverflowResPHI->addIncoming(MulOverflow, OverflowBB);
   OverflowFlagPHI->addIncoming(OverflowFlag, OverflowBB);
+
+  // Restore the original name of the overflow.entry BB:
+  OverflowEntryBB->setName(KeepBBName);
+
   ModifiedDT = ModifyDT::ModifyBBDT;
   return true;
 }
