@@ -254,7 +254,7 @@ public:
 
   /// Return the last argument matching \p Id, or null.
   template<typename ...OptSpecifiers>
-  Arg *getLastArg(OptSpecifiers ...Ids) const {
+  LLVM_ATTRIBUTE_NOINLINE Arg * getLastArg(OptSpecifiers ...Ids) const  {
     Arg *Res = nullptr;
     for (Arg *A : filtered(Ids...)) {
       Res = A;
@@ -266,7 +266,7 @@ public:
   /// Return the last argument matching \p Id, or null. Do not "claim" the
   /// option (don't mark it as having been used).
   template<typename ...OptSpecifiers>
-  Arg *getLastArgNoClaim(OptSpecifiers ...Ids) const {
+  LLVM_ATTRIBUTE_NOINLINE Arg * getLastArgNoClaim(OptSpecifiers ...Ids) const {
     for (Arg *A : filtered_reverse(Ids...))
       return A;
     return nullptr;
