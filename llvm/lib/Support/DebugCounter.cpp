@@ -167,15 +167,15 @@ bool DebugCounter::handleCounterIncrement(CounterInfo &Info) {
 
   bool Res = Info.Chunks[CurrIdx].contains(CurrCount);
   if (BreakOnLast && CurrIdx == (Info.Chunks.size() - 1) &&
-      CurrCount == Info.Chunks[CurrIdx].End) {
+      CurrCount == Info.Chunks[CurrIdx].getEnd()) {
     LLVM_BUILTIN_DEBUGTRAP;
   }
-  if (CurrCount > Info.Chunks[CurrIdx].End) {
+  if (CurrCount > Info.Chunks[CurrIdx].getEnd()) {
     Info.CurrChunkIdx++;
 
     /// Handle consecutive blocks.
     if (Info.CurrChunkIdx < Info.Chunks.size() &&
-        CurrCount == Info.Chunks[Info.CurrChunkIdx].Begin)
+        CurrCount == Info.Chunks[Info.CurrChunkIdx].getBegin())
       return true;
   }
   return Res;

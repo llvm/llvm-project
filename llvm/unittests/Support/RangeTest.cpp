@@ -14,8 +14,8 @@ using namespace llvm;
 
 TEST(RangeTest, BasicRange) {
   Range R(5, 10);
-  EXPECT_EQ(R.Begin, 5);
-  EXPECT_EQ(R.End, 10);
+  EXPECT_EQ(R.getBegin(), 5);
+  EXPECT_EQ(R.getEnd(), 10);
   EXPECT_TRUE(R.contains(5));
   EXPECT_TRUE(R.contains(7));
   EXPECT_TRUE(R.contains(10));
@@ -25,8 +25,8 @@ TEST(RangeTest, BasicRange) {
 
 TEST(RangeTest, SingleValueRange) {
   Range R(42);
-  EXPECT_EQ(R.Begin, 42);
-  EXPECT_EQ(R.End, 42);
+  EXPECT_EQ(R.getBegin(), 42);
+  EXPECT_EQ(R.getEnd(), 42);
   EXPECT_TRUE(R.contains(42));
   EXPECT_FALSE(R.contains(41));
   EXPECT_FALSE(R.contains(43));
@@ -51,8 +51,8 @@ TEST(RangeUtilsTest, ParseSingleNumber) {
   ASSERT_THAT_EXPECTED(ER, Succeeded());
   auto Ranges = std::move(*ER);
   EXPECT_EQ(Ranges.size(), 1U);
-  EXPECT_EQ(Ranges[0].Begin, 42);
-  EXPECT_EQ(Ranges[0].End, 42);
+  EXPECT_EQ(Ranges[0].getBegin(), 42);
+  EXPECT_EQ(Ranges[0].getEnd(), 42);
 }
 
 TEST(RangeUtilsTest, ParseSingleRange) {
@@ -60,8 +60,8 @@ TEST(RangeUtilsTest, ParseSingleRange) {
   ASSERT_THAT_EXPECTED(ER, Succeeded());
   auto Ranges = std::move(*ER);
   EXPECT_EQ(Ranges.size(), 1U);
-  EXPECT_EQ(Ranges[0].Begin, 10);
-  EXPECT_EQ(Ranges[0].End, 20);
+  EXPECT_EQ(Ranges[0].getBegin(), 10);
+  EXPECT_EQ(Ranges[0].getEnd(), 20);
 }
 
 TEST(RangeUtilsTest, ParseMultipleRanges) {
@@ -71,12 +71,12 @@ TEST(RangeUtilsTest, ParseMultipleRanges) {
   EXPECT_EQ(Ranges.size(), 3U);
 
   // Ranges are in input order (DebugCounter style).
-  EXPECT_EQ(Ranges[0].Begin, 1);
-  EXPECT_EQ(Ranges[0].End, 5);
-  EXPECT_EQ(Ranges[1].Begin, 10);
-  EXPECT_EQ(Ranges[1].End, 10);
-  EXPECT_EQ(Ranges[2].Begin, 15);
-  EXPECT_EQ(Ranges[2].End, 20);
+  EXPECT_EQ(Ranges[0].getBegin(), 1);
+  EXPECT_EQ(Ranges[0].getEnd(), 5);
+  EXPECT_EQ(Ranges[1].getBegin(), 10);
+  EXPECT_EQ(Ranges[1].getEnd(), 10);
+  EXPECT_EQ(Ranges[2].getBegin(), 15);
+  EXPECT_EQ(Ranges[2].getEnd(), 20);
 }
 
 TEST(RangeUtilsTest, ParseColonSeparated) {
@@ -84,12 +84,12 @@ TEST(RangeUtilsTest, ParseColonSeparated) {
   ASSERT_THAT_EXPECTED(ER, Succeeded());
   auto Ranges = std::move(*ER);
   EXPECT_EQ(Ranges.size(), 3U);
-  EXPECT_EQ(Ranges[0].Begin, 1);
-  EXPECT_EQ(Ranges[0].End, 5);
-  EXPECT_EQ(Ranges[1].Begin, 10);
-  EXPECT_EQ(Ranges[1].End, 10);
-  EXPECT_EQ(Ranges[2].Begin, 15);
-  EXPECT_EQ(Ranges[2].End, 20);
+  EXPECT_EQ(Ranges[0].getBegin(), 1);
+  EXPECT_EQ(Ranges[0].getEnd(), 5);
+  EXPECT_EQ(Ranges[1].getBegin(), 10);
+  EXPECT_EQ(Ranges[1].getEnd(), 10);
+  EXPECT_EQ(Ranges[2].getBegin(), 15);
+  EXPECT_EQ(Ranges[2].getEnd(), 20);
 }
 
 TEST(RangeUtilsTest, ParseEmptyString) {
@@ -154,8 +154,8 @@ TEST(RangeUtilsTest, SeparatorParameter) {
 
   EXPECT_EQ(ColonRanges.size(), CommaRanges.size());
   for (size_t I = 0; I < ColonRanges.size(); ++I) {
-    EXPECT_EQ(ColonRanges[I].Begin, CommaRanges[I].Begin);
-    EXPECT_EQ(ColonRanges[I].End, CommaRanges[I].End);
+    EXPECT_EQ(ColonRanges[I].getBegin(), CommaRanges[I].getBegin());
+    EXPECT_EQ(ColonRanges[I].getEnd(), CommaRanges[I].getEnd());
   }
 
   // Test that both work with contains().
@@ -176,12 +176,12 @@ TEST(RangeUtilsTest, DefaultCommaSeparator) {
   ASSERT_THAT_EXPECTED(ER, Succeeded());
   auto Ranges = std::move(*ER);
   EXPECT_EQ(Ranges.size(), 3U);
-  EXPECT_EQ(Ranges[0].Begin, 1);
-  EXPECT_EQ(Ranges[0].End, 5);
-  EXPECT_EQ(Ranges[1].Begin, 10);
-  EXPECT_EQ(Ranges[1].End, 10);
-  EXPECT_EQ(Ranges[2].Begin, 15);
-  EXPECT_EQ(Ranges[2].End, 20);
+  EXPECT_EQ(Ranges[0].getBegin(), 1);
+  EXPECT_EQ(Ranges[0].getEnd(), 5);
+  EXPECT_EQ(Ranges[1].getBegin(), 10);
+  EXPECT_EQ(Ranges[1].getEnd(), 10);
+  EXPECT_EQ(Ranges[2].getBegin(), 15);
+  EXPECT_EQ(Ranges[2].getEnd(), 20);
 }
 
 TEST(RangeTest, MergeAdjacentRanges) {

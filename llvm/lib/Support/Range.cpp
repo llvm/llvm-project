@@ -56,11 +56,11 @@ Expected<RangeUtils::RangeList> RangeUtils::parseRanges(StringRef Str,
       End = Begin;
 
     // Check ordering constraint (ranges must be in increasing order).
-    if (!Ranges.empty() && Begin <= Ranges.back().End)
+    if (!Ranges.empty() && Begin <= Ranges.back().getEnd())
       return createStringError(
           std::errc::invalid_argument,
           "Expected ranges to be in increasing order: %lld <= %lld", Begin,
-          Ranges.back().End);
+          Ranges.back().getEnd());
 
     Ranges.push_back(Range(Begin, End));
   }
@@ -104,9 +104,9 @@ RangeUtils::RangeList RangeUtils::mergeAdjacentRanges(ArrayRef<Range> Ranges) {
     Range &Last = Result.back();
 
     // Check if current range is adjacent to the last merged range.
-    if (Current.Begin == Last.End + 1) {
+    if (Current.getBegin() == Last.getEnd() + 1) {
       // Merge by extending the end of the last range.
-      Last.End = Current.End;
+      Last.setEnd(Current.getEnd());
     } else {
       // Not adjacent, add as separate range.
       Result.push_back(Current);
