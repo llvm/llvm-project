@@ -3,7 +3,7 @@
 
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy %t --extract-section=RTS0=%t.rts0.out
-# RUN: obj2yaml %t.rts0.out | FileCheck %s
+# RUN: obj2yaml %t.rts0.out | FileCheck %s --implicit-check-not=Name:
 
 ## The DXContainer described below was generated with:
 
@@ -27,8 +27,7 @@
 # CHECK-NEXT:   PartCount:     1
 # CHECK-NEXT:   PartOffsets:   [ 36 ]
 # CHECK-NEXT:   Parts:
-# CHECK-NOT:  - Name: {{DXIL|SFI0|HASH|ISG1|OSG1|PSV0}}
-# CHECK:        Name:            RTS0
+# CHECK-NEXT:   Name:            RTS0
 # CHECK-NEXT    Size:            24
 # CHECK-NEXT    RootSignature:
 # CHECK-NEXT      Version:         2
@@ -37,7 +36,6 @@
 # CHECK-NEXT      NumStaticSamplers: 0
 # CHECK-NEXT      StaticSamplersOffset: 24
 # CHECK-NEXT      Parameters:      []
-# CHECK-NOT:  - Name: {{DXIL|SFI0|HASH|ISG1|OSG1|PSV0}}
 
 --- !dxcontainer
 Header:
