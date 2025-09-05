@@ -4796,7 +4796,8 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
       } else {
         auto *Spec = cast<ClassTemplateSpecializationDecl>(RD);
         Spec->setTemplateSpecializationKind(TSK);
-        Spec->setPointOfInstantiation(POI);
+        if (Spec->getPointOfInstantiation().isInvalid())
+          Spec->setPointOfInstantiation(POI);
 
         if (Record.readInt()) {
           auto *PartialSpec =
