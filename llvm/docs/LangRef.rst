@@ -5227,7 +5227,10 @@ represents the inline assembler as a template string (containing the
 instructions to emit), a list of operand constraints (stored as a string), a
 flag that indicates whether or not the inline asm expression has side effects,
 and a flag indicating whether the function containing the asm needs to align its
-stack conservatively.
+stack conservatively. The compiler's understanding of the semantics of the
+expression comes only from the list of operand constraints and the flags -- not
+the contents of the template string. In particular, no optimizations or analyses
+will be performed based on the contents of that string.
 
 The template string supports argument substitution of the operands using "``$``"
 followed by a number, to indicate substitution of the given register/memory
