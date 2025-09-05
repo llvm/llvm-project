@@ -301,14 +301,11 @@ define <8 x i64> @test_zext32_inputs_not_safe(<8 x i32> %xi32, <8 x i32> %yi32, 
   ret <8 x i64> %res
 }
 
-define <16 x i64> @test_1024_combine_split(<16 x i64> %x, <16 x i64> %y, <16 x i64> %z) {
+define <16 x i64> @test_1024_combine_split(<16 x i64> %x, <16 x i64> %y, <16 x i64> %z) nounwind {
 ; AVX-LABEL: test_1024_combine_split:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    pushq %rbp
-; AVX-NEXT:    .cfi_def_cfa_offset 16
-; AVX-NEXT:    .cfi_offset %rbp, -16
 ; AVX-NEXT:    movq %rsp, %rbp
-; AVX-NEXT:    .cfi_def_cfa_register %rbp
 ; AVX-NEXT:    andq $-32, %rsp
 ; AVX-NEXT:    subq $32, %rsp
 ; AVX-NEXT:    vmovdqa 112(%rbp), %ymm8
@@ -334,7 +331,6 @@ define <16 x i64> @test_1024_combine_split(<16 x i64> %x, <16 x i64> %y, <16 x i
 ; AVX-NEXT:    vmovdqa %ymm8, %ymm3
 ; AVX-NEXT:    movq %rbp, %rsp
 ; AVX-NEXT:    popq %rbp
-; AVX-NEXT:    .cfi_def_cfa %rsp, 8
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_1024_combine_split:
