@@ -707,6 +707,7 @@ clang-format
 - Rename ``(Binary|Decimal|Hex)MinDigits`` to ``...MinDigitsInsert`` and  add
   ``(Binary|Decimal|Hex)MaxDigitsSeparator`` suboptions to
   ``IntegerLiteralSeparator``.
+- Add ``AllowShortRecordOnASingleLine`` option and set it to ``EmptyIfAttached`` for LLVM style.
 
 libclang
 --------
