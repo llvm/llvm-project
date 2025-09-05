@@ -14,6 +14,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DIE.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Support/Allocator.h"
 #include <map>
 #include <memory>
@@ -25,9 +26,6 @@ class AsmPrinter;
 class DbgEntity;
 class DbgVariable;
 class DbgLabel;
-class DINode;
-class DILocalScope;
-class DwarfCompileUnit;
 class DwarfUnit;
 class LexicalScope;
 class MCSection;
@@ -49,6 +47,102 @@ struct RangeSpanList {
   const DwarfCompileUnit *CU;
   // List of ranges.
   SmallVector<RangeSpan, 2> Ranges;
+};
+
+/// Tracks abstract and concrete DIEs for debug info entities of a certain type.
+template <typename DINodeT, typename DbgEntityT> class DINodeInfoHolder {
+  DenseMap<const DINodeT *, DIE *> AbstractMap;
+  DenseMap<const DINodeT *, SmallDenseMap<const DbgEntityT *, DIE *, 2>>
+      ConcreteMap;
+
+  static const DINodeT *getNode(const DbgEntityT &N) {
+    return cast<DINodeT>(N.getEntity());
+  }
+
+public:
+  void insertAbstractDIE(const DINodeT *N, DIE *D) {
+    auto [_, Inserted] = AbstractMap.try_emplace(N, D);
+    assert(Inserted && "Duplicate abstract DIE for debug info node");
+  }
+
+  void insertConcreteDIE(const DbgEntityT &N, DIE *D) {
+    auto [_, Inserted] = ConcreteMap[getNode(N)].try_emplace(&N, D);
+    assert(Inserted && "Duplicate concrete DIE for debug info node");
+  }
+
+  void insertDIE(const DbgEntityT &N, DIE *D, bool Abstract) {
+    if (Abstract)
+      insertAbstractDIE(getNode(N), D);
+    else
+      insertConcreteDIE(N, D);
+  }
+
+  DIE *getAbstractDIE(const DINodeT *N) const { return AbstractMap.lookup(N); }
+
+  DIE *getConcreteDIE(const DbgEntityT &N) const {
+    if (auto I = ConcreteMap.find(getNode(N)); I != ConcreteMap.end())
+      return I->second.lookup(&N);
+    return nullptr;
+  }
+
+  /// Returns abstract DIE for the entity.
+  /// If no abstract DIE was created, returns any concrete DIE for the entity.
+  DIE *getDIE(const DINodeT *N) const {
+    if (DIE *D = getAbstractDIE(N))
+      return D;
+
+    if (auto I = ConcreteMap.find(N); I != ConcreteMap.end())
+      return I->second.empty() ? nullptr : I->second.begin()->second;
+
+    return nullptr;
+  }
+};
+
+/// Tracks DIEs for debug info entites.
+/// These DIEs can be shared across CUs, that is why we keep the map here
+/// instead of in DwarfCompileUnit.
+class DwarfInfoHolder {
+  // DIEs of local DbgVariables.
+  DINodeInfoHolder<DILocalVariable, DbgVariable> LVHolder;
+  DINodeInfoHolder<DILabel, DbgLabel> LabelHolder;
+
+  /// Other DINodes with the corresponding DIEs.
+  DenseMap<const DINode *, DIE *> MDNodeToDieMap;
+
+public:
+  void insertDIE(const DINode *N, DIE *Die) {
+    assert((!isa<DILabel>(N) && !isa<DILocalVariable>(N)) &&
+           "Use Labels().insertDIE() for labels or LVs().insertDIE() for "
+           "local variables");
+    auto [_, Inserted] = MDNodeToDieMap.try_emplace(N, Die);
+    assert((Inserted || isa<DISubprogram>(N) || isa<DIType>(N)) &&
+           "DIE for this DINode has already been added");
+  }
+
+  void insertDIE(DIE *D) { MDNodeToDieMap.try_emplace(nullptr, D); }
+
+  DIE *getDIE(const DINode *N) const {
+    DIE *D = MDNodeToDieMap.lookup(N);
+    assert((!D || (!isa<DILabel>(N) && !isa<DILocalVariable>(N))) &&
+           "Use Labels().getDIE() for labels or LVs().getDIE() for "
+           "local variables");
+    return D;
+  }
+
+  decltype(LVHolder) &LVs() { return LVHolder; }
+
+  decltype(LabelHolder) &Labels() { return LabelHolder; }
+
+  /// For a global variable, returns DIE of the variable.
+  ///
+  /// For a local variable, returns abstract DIE of the variable.
+  /// If no abstract DIE was created, returns any concrete DIE of the variable.
+  DIE *getVariableDIE(const DIVariable *V) {
+    if (auto *LV = dyn_cast<DILocalVariable>(V))
+      if (DIE *D = LVs().getDIE(LV))
+        return D;
+    return getDIE(V);
+  }
 };
 
 class DwarfFile {
@@ -92,13 +186,11 @@ class DwarfFile {
   DenseMap<LexicalScope *, LabelList> ScopeLabels;
 
   // Collection of abstract subprogram DIEs.
+  // TODO: move it to InfoHolder?
   DenseMap<const DILocalScope *, DIE *> AbstractLocalScopeDIEs;
   DenseMap<const DINode *, std::unique_ptr<DbgEntity>> AbstractEntities;
 
-  /// Maps MDNodes for type system with the corresponding DIEs. These DIEs can
-  /// be shared across CUs, that is why we keep the map here instead
-  /// of in DwarfCompileUnit.
-  DenseMap<const MDNode *, DIE *> DITypeNodeToDieMap;
+  DwarfInfoHolder InfoHolder;
 
 public:
   DwarfFile(AsmPrinter *AP, StringRef Pref, BumpPtrAllocator &DA);
@@ -174,13 +266,7 @@ public:
     return AbstractEntities;
   }
 
-  void insertDIE(const MDNode *TypeMD, DIE *Die) {
-    DITypeNodeToDieMap.insert(std::make_pair(TypeMD, Die));
-  }
-
-  DIE *getDIE(const MDNode *TypeMD) {
-    return DITypeNodeToDieMap.lookup(TypeMD);
-  }
+  DwarfInfoHolder &DIEs() { return InfoHolder; }
 };
 
 } // end namespace llvm
