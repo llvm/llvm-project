@@ -183,6 +183,7 @@ if tar_executable:
 if config.ld_lld_default_mingw:
     config.excludes.append("ELF")
 
+
 def prepend_path(path):
     target_arch = getattr(config, "target_arch", None)
     name = "PATH"
