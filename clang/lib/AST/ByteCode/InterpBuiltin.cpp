@@ -2739,11 +2739,12 @@ static bool interp__builtin_ia32_pmul(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_elementwise_triop_fp(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<APFloat(const APFloat &, const APFloat &,
-                               const APFloat &, const FPOptions &)>
+                               const APFloat &, llvm::RoundingMode)>
         Fn) {
   assert(Call->getNumArgs() == 3);
 
   FPOptions FPO = Call->getFPFeaturesInEffect(S.Ctx.getLangOpts());
+  llvm::RoundingMode RM = getRoundingMode(FPO);
   const QualType Arg1Type = Call->getArg(0)->getType();
   const QualType Arg2Type = Call->getArg(1)->getType();
   const QualType Arg3Type = Call->getArg(2)->getType();
@@ -2758,7 +2759,7 @@ static bool interp__builtin_elementwise_triop_fp(
     const Floating &Z = S.Stk.pop<Floating>();
     const Floating &Y = S.Stk.pop<Floating>();
     const Floating &X = S.Stk.pop<Floating>();
-    APFloat F = Fn(X.getAPFloat(), Y.getAPFloat(), Z.getAPFloat(), FPO);
+    APFloat F = Fn(X.getAPFloat(), Y.getAPFloat(), Z.getAPFloat(), RM);
     Floating Result = S.allocFloat(X.getSemantics());
     Result.copy(F);
     S.Stk.push<Floating>(Result);
@@ -2789,7 +2790,7 @@ static bool interp__builtin_elementwise_triop_fp(
     APFloat X = VX.elem<T>(I).getAPFloat();
     APFloat Y = VY.elem<T>(I).getAPFloat();
     APFloat Z = VZ.elem<T>(I).getAPFloat();
-    APFloat F = Fn(X, Y, Z, FPO);
+    APFloat F = Fn(X, Y, Z, RM);
     Dst.elem<Floating>(I) = Floating(F);
   }
   Dst.initializeAllElements();
@@ -3414,9 +3415,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_elementwise_triop_fp(
         S, OpPC, Call,
         [](const APFloat &X, const APFloat &Y, const APFloat &Z,
-           const FPOptions &FPO) {
+           llvm::RoundingMode RM) {
           APFloat F = X;
-          F.fusedMultiplyAdd(Y, Z, getRoundingMode(FPO));
+          F.fusedMultiplyAdd(Y, Z, RM);
           return F;
         });
 
