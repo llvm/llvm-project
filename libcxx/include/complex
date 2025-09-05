@@ -1237,6 +1237,32 @@ _LIBCPP_HIDE_FROM_ABI complex<_Tp> cosh(const complex<_Tp>& __x) {
 // tanh
 
 template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _Tp __sin2(const _Tp __x) noexcept {
+  static_assert(std::is_arithmetic<_Tp>::value, "requires an arithmetic type");
+  return 2 * std::sin(__x) * std::cos(__x);
+}
+
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _Tp __sinh2(const _Tp __x) noexcept {
+  static_assert(std::is_arithmetic<_Tp>::value, "requires an arithmetic type");
+  return 2 * std::sinh(__x) * std::cosh(__x);
+}
+
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _Tp __cos2(const _Tp __x) noexcept {
+  static_assert(std::is_arithmetic<_Tp>::value, "requires an arithmetic type");
+  const _Tp __cos = std::cos(__x);
+  return 2 * __cos * __cos - 1;
+}
+
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _Tp __cosh2(const _Tp __x) noexcept {
+  static_assert(std::is_arithmetic<_Tp>::value, "requires an arithmetic type");
+  const _Tp __cosh = std::cosh(__x);
+  return 2 * __cosh * __cosh - 1;
+}
+
+template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI complex<_Tp> tanh(const complex<_Tp>& __x) {
   if (std::isinf(__x.real())) {
     if (!std::isfinite(__x.imag()))
@@ -1245,13 +1271,11 @@ _LIBCPP_HIDE_FROM_ABI complex<_Tp> tanh(const complex<_Tp>& __x) {
   }
   if (std::isnan(__x.real()) && __x.imag() == 0)
     return __x;
-  _Tp __2r(_Tp(2) * __x.real());
-  _Tp __2i(_Tp(2) * __x.imag());
-  _Tp __d(std::cosh(__2r) + std::cos(__2i));
-  _Tp __2rsh(std::sinh(__2r));
+  _Tp __d(std::__cosh2(__x.real()) + std::__cos2(__x.imag()));
+  _Tp __2rsh(std::__sinh2(__x.real()));
   if (std::isinf(__2rsh) && std::isinf(__d))
-    return complex<_Tp>(__2rsh > _Tp(0) ? _Tp(1) : _Tp(-1), __2i > _Tp(0) ? _Tp(0) : _Tp(-0.));
-  return complex<_Tp>(__2rsh / __d, std::sin(__2i) / __d);
+    return complex<_Tp>(__2rsh > _Tp(0) ? _Tp(1) : _Tp(-1), __x.imag() > _Tp(0) ? _Tp(0) : _Tp(-0.));
+  return complex<_Tp>(__2rsh / __d, std::__sin2(__x.imag()) / __d);
 }
 
 // asin
