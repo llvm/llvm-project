@@ -1499,7 +1499,7 @@ AArch64InstrInfo::canRemovePTestInstr(MachineInstr *PTest, MachineInstr *Mask,
     // mask.
     if (isPTrueOpcode(MaskOpcode) && Mask->getOperand(1).getImm() == 31 &&
         getElementSizeForOpcode(MaskOpcode) ==
-        getElementSizeForOpcode(PredOpcode))
+            getElementSizeForOpcode(PredOpcode))
       return PredOpcode;
 
     return {};
