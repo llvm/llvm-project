@@ -169,19 +169,21 @@ TEST_F(CASProgramTest, MappedFileRegionBumpPtrSizeTest) {
     } while (Backoff.waitForNextAttempt());
 
     std::optional<MappedFileRegionBumpPtr> Alloc;
-    ASSERT_THAT_ERROR(
-        MappedFileRegionBumpPtr::create(File, /*Capacity=*/1024,
-                                        /*HeaderOffset=*/0, NewFileConstructor)
-            .moveInto(Alloc),
-        FailedWithMessage(
-            "specified capacity (1024) does not match existing config (2048)"));
+    ASSERT_THAT_ERROR(MappedFileRegionBumpPtr::create(File, /*Capacity=*/1024,
+                                                      /*HeaderOffset=*/0,
+                                                      NewFileConstructor)
+                          .moveInto(Alloc),
+                      Succeeded());
+    ASSERT_TRUE(Alloc->capacity() == 2048);
 
-    ASSERT_THAT_ERROR(
-        MappedFileRegionBumpPtr::create(File, /*Capacity=*/4096,
-                                        /*HeaderOffset=*/0, NewFileConstructor)
-            .moveInto(Alloc),
-        FailedWithMessage(
-            "specified capacity (4096) does not match existing config (2048)"));
+    Alloc.reset();
+    ASSERT_THAT_ERROR(MappedFileRegionBumpPtr::create(File, /*Capacity=*/4096,
+                                                      /*HeaderOffset=*/0,
+                                                      NewFileConstructor)
+                          .moveInto(Alloc),
+                      Succeeded());
+    ASSERT_TRUE(Alloc->capacity() == 2048);
+    Alloc.reset();
 
     ASSERT_THAT_ERROR(
         MappedFileRegionBumpPtr::create(File, /*Capacity=*/2048,

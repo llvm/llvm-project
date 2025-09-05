@@ -60,6 +60,7 @@ public:
          function_ref<Error(MappedFileRegionBumpPtr &)> NewFileConstructor);
 
   /// Finish initializing the header. Must be called by \c NewFileConstructor.
+  /// \c HeaderOffset passed should match the value passed to \c create.
   void initializeHeader(uint64_t HeaderOffset);
 
   /// Minimum alignment for allocations, currently hardcoded to 8B.
@@ -106,7 +107,7 @@ private:
     std::swap(H, RHS.H);
     std::swap(Path, RHS.Path);
     std::swap(FD, RHS.FD);
-    std::swap(SharedLockFD, RHS.SharedLockFD);
+    std::swap(SupportFD, RHS.SupportFD);
   }
 
 private:
@@ -115,8 +116,8 @@ private:
   std::string Path;
   // File descriptor for the main storage file.
   std::optional<int> FD;
-  // File descriptor for the file used as reader/writer lock.
-  std::optional<int> SharedLockFD;
+  // File descriptor for the file used as config and reader/writer lock.
+  std::optional<int> SupportFD;
 };
 
 } // namespace llvm::cas
