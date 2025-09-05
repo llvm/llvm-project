@@ -1,4 +1,3 @@
-// REQUIRES: rdar159531346
 // Test that importing Cocoa works.
 // REQUIRES: system-darwin
 // REQUIRES: swift
