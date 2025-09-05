@@ -1396,7 +1396,6 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(X86::FEATURE_BMI2);
   if (HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save) {
     setFeature(X86::FEATURE_AVX512F);
-    setFeature(X86::FEATURE_EVEX512);
   }
   if (HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save)
     setFeature(X86::FEATURE_AVX512DQ);
@@ -2063,8 +2062,6 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["rtm"]        = HasLeaf7 && ((EBX >> 11) & 1);
   // AVX512 is only supported if the OS supports the context save for it.
   Features["avx512f"]    = HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save;
-  if (Features["avx512f"])
-    Features["evex512"]  = true;
   Features["avx512dq"]   = HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save;
   Features["rdseed"]     = HasLeaf7 && ((EBX >> 18) & 1);
   Features["adx"]        = HasLeaf7 && ((EBX >> 19) & 1);
@@ -2176,11 +2173,8 @@ StringMap<bool> sys::getHostCPUFeatures() {
       MaxLevel >= 0x24 && !getX86CpuIDAndInfo(0x24, &EAX, &EBX, &ECX, &EDX);
 
   int AVX10Ver = HasLeaf24 && (EBX & 0xff);
-  int Has512Len = HasLeaf24 && ((EBX >> 18) & 1);
-  Features["avx10.1-256"] = HasAVX10 && AVX10Ver >= 1;
-  Features["avx10.1-512"] = HasAVX10 && AVX10Ver >= 1 && Has512Len;
-  Features["avx10.2-256"] = HasAVX10 && AVX10Ver >= 2;
-  Features["avx10.2-512"] = HasAVX10 && AVX10Ver >= 2 && Has512Len;
+  Features["avx10.1"] = HasAVX10 && AVX10Ver >= 1;
+  Features["avx10.2"] = HasAVX10 && AVX10Ver >= 2;
 
   return Features;
 }
