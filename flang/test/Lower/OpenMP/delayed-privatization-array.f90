@@ -1,5 +1,4 @@
 ! Test delayed privatization for arrays.
-! XFAIL: *
 
 ! RUN: split-file %s %t
 
