@@ -45,9 +45,7 @@ class IncrementalExecutor {
   using CtorDtorIterator = llvm::orc::CtorDtorIterator;
   std::unique_ptr<llvm::orc::LLJIT> Jit;
   llvm::orc::ThreadSafeContext &TSCtx;
-#ifndef _WIN32
-  pid_t OutOfProcessChildPid = -1;
-#endif
+  uint32_t OutOfProcessChildPid = -1;
 
   llvm::DenseMap<const PartialTranslationUnit *, llvm::orc::ResourceTrackerSP>
       ResourceTrackers;
@@ -60,11 +58,9 @@ public:
 
   IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
                       llvm::orc::LLJITBuilder &JITBuilder, llvm::Error &Err);
-#ifndef _WIN32
   IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
                       llvm::orc::LLJITBuilder &JITBuilder, llvm::Error &Err,
-                      pid_t ChildPid);
-#endif
+                      uint32_t ChildPid);
   virtual ~IncrementalExecutor();
 
   virtual llvm::Error addModule(PartialTranslationUnit &PTU);
@@ -77,22 +73,20 @@ public:
   llvm::orc::LLJIT &GetExecutionEngine() { return *Jit; }
 
 #ifndef _WIN32
-  pid_t getOutOfProcessChildPid() const { return OutOfProcessChildPid; }
+  uint32_t getOutOfProcessChildPid() const { return OutOfProcessChildPid; }
 #endif
 
   static llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
   createDefaultJITBuilder(llvm::orc::JITTargetMachineBuilder JTMB);
 
-#ifndef _WIN32
   static llvm::Expected<
-      std::pair<std::unique_ptr<llvm::orc::SimpleRemoteEPC>, pid_t>>
+      std::pair<std::unique_ptr<llvm::orc::SimpleRemoteEPC>, uint32_t>>
   launchExecutor(llvm::StringRef ExecutablePath, bool UseSharedMemory,
                  llvm::StringRef SlabAllocateSizeString);
 
   static llvm::Expected<std::unique_ptr<llvm::orc::SimpleRemoteEPC>>
   connectTCPSocket(llvm::StringRef NetworkAddress, bool UseSharedMemory,
                    llvm::StringRef SlabAllocateSizeString);
-#endif
 };
 
 } // end namespace clang

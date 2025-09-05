@@ -275,12 +275,11 @@ int main(int argc, const char **argv) {
 
   ExitOnErr(sanitizeOopArguments(argv[0]));
 
-  clang::Interpreter::OutOfProcessJITConfig OutOfProcessConfig;
-  OutOfProcessConfig.IsOutOfProcess =
-      !OOPExecutor.empty() || !OOPExecutorConnect.empty();
-  OutOfProcessConfig.OOPExecutor = OOPExecutor;
-  OutOfProcessConfig.SlabAllocateSizeString = SlabAllocateSizeString;
-  OutOfProcessConfig.UseSharedMemory = UseSharedMemory;
+  clang::Interpreter::JITConfig Config;
+  Config.IsOutOfProcess = !OOPExecutor.empty() || !OOPExecutorConnect.empty();
+  Config.OOPExecutor = OOPExecutor;
+  Config.SlabAllocateSizeString = SlabAllocateSizeString;
+  Config.UseSharedMemory = UseSharedMemory;
 
   // FIXME: Investigate if we could use runToolOnCodeWithArgs from tooling. It
   // can replace the boilerplate code for creation of the compiler instance.
@@ -314,8 +313,7 @@ int main(int argc, const char **argv) {
       ExitOnErr(Interp->LoadDynamicLibrary(CudaRuntimeLibPath.c_str()));
     }
   } else {
-    Interp = ExitOnErr(
-        clang::Interpreter::create(std::move(CI), OutOfProcessConfig));
+    Interp = ExitOnErr(clang::Interpreter::create(std::move(CI), Config));
   }
 
   bool HasError = false;

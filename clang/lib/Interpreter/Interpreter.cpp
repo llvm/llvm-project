@@ -252,7 +252,7 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
                          llvm::Error &ErrOut,
                          std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder,
                          std::unique_ptr<clang::ASTConsumer> Consumer,
-                         OutOfProcessJITConfig OOPConfig)
+                         JITConfig Config)
     : JITBuilder(std::move(JITBuilder)) {
   CI = std::move(Instance);
   llvm::ErrorAsOutParameter EAO(&ErrOut);
@@ -286,7 +286,7 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
       ASTContext &C = CI->getASTContext();
       IncrParser->RegisterPTU(C.getTranslationUnitDecl(), std::move(M));
     }
-    if (llvm::Error Err = CreateExecutor(OOPConfig)) {
+    if (llvm::Error Err = CreateExecutor(Config)) {
       ErrOut = joinErrors(std::move(ErrOut), std::move(Err));
       return;
     }
@@ -348,26 +348,24 @@ const char *const Runtimes = R"(
   EXTERN_C void __clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType, ...);
 )";
 
-#ifndef _WIN32
-llvm::Expected<std::pair<std::unique_ptr<llvm::orc::LLJITBuilder>, pid_t>>
-Interpreter::outOfProcessJITBuilder(OutOfProcessJITConfig OutOfProcessConfig) {
+llvm::Expected<std::pair<std::unique_ptr<llvm::orc::LLJITBuilder>, uint32_t>>
+Interpreter::outOfProcessJITBuilder(JITConfig Config) {
   std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC;
-  pid_t childPid = -1;
-  if (OutOfProcessConfig.OOPExecutor != "") {
+  uint32_t childPid = -1;
+  if (!Config.OOPExecutor.empty()) {
     // Launch an out-of-process executor locally in a child process.
     auto ResultOrErr = IncrementalExecutor::launchExecutor(
-        OutOfProcessConfig.OOPExecutor, OutOfProcessConfig.UseSharedMemory,
-        OutOfProcessConfig.SlabAllocateSizeString);
+        Config.OOPExecutor, Config.UseSharedMemory,
+        Config.SlabAllocateSizeString);
     if (!ResultOrErr)
       return ResultOrErr.takeError();
     childPid = ResultOrErr->second;
     auto EPCOrErr = std::move(ResultOrErr->first);
     EPC = std::move(EPCOrErr);
-  } else if (OutOfProcessConfig.OOPExecutorConnect != "") {
+  } else if (Config.OOPExecutorConnect != "") {
     auto EPCOrErr = IncrementalExecutor::connectTCPSocket(
-        OutOfProcessConfig.OOPExecutorConnect,
-        OutOfProcessConfig.UseSharedMemory,
-        OutOfProcessConfig.SlabAllocateSizeString);
+        Config.OOPExecutorConnect, Config.UseSharedMemory,
+        Config.SlabAllocateSizeString);
     if (!EPCOrErr)
       return EPCOrErr.takeError();
     EPC = std::move(*EPCOrErr);
@@ -376,7 +374,7 @@ Interpreter::outOfProcessJITBuilder(OutOfProcessJITConfig OutOfProcessConfig) {
   std::unique_ptr<llvm::orc::LLJITBuilder> JB;
   if (EPC) {
     auto JBOrErr = clang::Interpreter::createLLJITBuilder(
-        std::move(EPC), OutOfProcessConfig.OrcRuntimePath);
+        std::move(EPC), Config.OrcRuntimePath);
     if (!JBOrErr)
       return JBOrErr.takeError();
     JB = std::move(*JBOrErr);
@@ -411,18 +409,14 @@ Interpreter::getOrcRuntimePath(const driver::ToolChain &TC) {
       llvm::Twine("OrcRuntime library not found in: ") + (*CompilerRTPath),
       std::error_code());
 }
-#endif
 
 llvm::Expected<std::unique_ptr<Interpreter>>
-Interpreter::create(std::unique_ptr<CompilerInstance> CI,
-                    std::optional<OutOfProcessJITConfig> OutOfProcessConfig) {
+Interpreter::create(std::unique_ptr<CompilerInstance> CI, JITConfig Config) {
   llvm::Error Err = llvm::Error::success();
 
   std::unique_ptr<llvm::orc::LLJITBuilder> JB;
 
-#ifndef _WIN32
-  if (OutOfProcessConfig != std::nullopt &&
-      OutOfProcessConfig->IsOutOfProcess) {
+  if (Config.IsOutOfProcess) {
     const TargetInfo &TI = CI->getTarget();
     const llvm::Triple &Triple = TI.getTriple();
 
@@ -437,7 +431,7 @@ Interpreter::create(std::unique_ptr<CompilerInstance> CI,
           "Failed to create driver compilation for out-of-process JIT",
           std::error_code());
     }
-    if (OutOfProcessConfig->OrcRuntimePath == "") {
+    if (Config.OrcRuntimePath == "") {
       const clang::driver::ToolChain &TC = C->getDefaultToolChain();
 
       auto OrcRuntimePathOrErr = getOrcRuntimePath(TC);
@@ -445,14 +439,12 @@ Interpreter::create(std::unique_ptr<CompilerInstance> CI,
         return OrcRuntimePathOrErr.takeError();
       }
 
-      OutOfProcessConfig->OrcRuntimePath = *OrcRuntimePathOrErr;
+      Config.OrcRuntimePath = *OrcRuntimePathOrErr;
     }
   }
-#endif
 
   auto Interp = std::unique_ptr<Interpreter>(new Interpreter(
-      std::move(CI), Err, JB ? std::move(JB) : nullptr, nullptr,
-      OutOfProcessConfig ? *OutOfProcessConfig : OutOfProcessJITConfig()));
+      std::move(CI), Err, JB ? std::move(JB) : nullptr, nullptr, Config));
   if (auto E = std::move(Err))
     return std::move(E);
 
@@ -543,13 +535,11 @@ size_t Interpreter::getEffectivePTUSize() const {
   return PTUs.size() - InitPTUSize;
 }
 
-#ifndef _WIN32
-pid_t Interpreter::getOutOfProcessExecutorPID() const {
+uint32_t Interpreter::getOutOfProcessExecutorPID() const {
   if (IncrExecutor)
     return IncrExecutor->getOutOfProcessChildPid();
   return -1;
 }
-#endif
 
 llvm::Expected<PartialTranslationUnit &>
 Interpreter::Parse(llvm::StringRef Code) {
@@ -619,7 +609,7 @@ Interpreter::createLLJITBuilder(
   return std::move(*JB);
 }
 
-llvm::Error Interpreter::CreateExecutor(OutOfProcessJITConfig OOPConfig) {
+llvm::Error Interpreter::CreateExecutor(JITConfig Config) {
   if (IncrExecutor)
     return llvm::make_error<llvm::StringError>("Operation failed. "
                                                "Execution engine exists",
@@ -629,10 +619,10 @@ llvm::Error Interpreter::CreateExecutor(OutOfProcessJITConfig OOPConfig) {
                                                "No code generator available",
                                                std::error_code());
 #ifndef _WIN32
-  pid_t OOPChildPid = -1;
-  if (OOPConfig.IsOutOfProcess) {
+  uint32_t OOPChildPid = -1;
+  if (Config.IsOutOfProcess) {
     if (!JITBuilder) {
-      auto ResOrErr = outOfProcessJITBuilder(OOPConfig);
+      auto ResOrErr = outOfProcessJITBuilder(Config);
       if (!ResOrErr)
         return ResOrErr.takeError();
       JITBuilder = std::move(ResOrErr->first);

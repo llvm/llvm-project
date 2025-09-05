@@ -15,7 +15,6 @@
 #define LLVM_CLANG_INTERPRETER_INTERPRETER_H
 
 #include "clang/AST/GlobalDecl.h"
-#include "clang/Driver/ToolChain.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "clang/Interpreter/Value.h"
 
@@ -24,6 +23,7 @@
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/Support/Error.h"
+#include <cstdint>
 #include <memory>
 #include <vector>
 
@@ -36,6 +36,10 @@ class ThreadSafeContext;
 } // namespace llvm
 
 namespace clang {
+
+namespace driver {
+class ToolChain;
+} // namespace driver
 
 class CompilerInstance;
 class CXXRecordDecl;
@@ -117,7 +121,7 @@ class Interpreter {
   std::unique_ptr<CompilerInstance> DeviceCI;
 
 public:
-  struct OutOfProcessJITConfig {
+  struct JITConfig {
     /// Indicates whether out-of-process JIT execution is enabled.
     bool IsOutOfProcess;
     /// Path to the out-of-process JIT executor.
@@ -130,7 +134,7 @@ public:
     /// Path to the ORC runtime library.
     std::string OrcRuntimePath;
 
-    OutOfProcessJITConfig()
+    JITConfig()
         : IsOutOfProcess(false), OOPExecutor(""), OOPExecutorConnect(""),
           UseSharedMemory(false), SlabAllocateSizeString(""),
           OrcRuntimePath("") {}
@@ -141,12 +145,11 @@ protected:
   Interpreter(std::unique_ptr<CompilerInstance> Instance, llvm::Error &Err,
               std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder = nullptr,
               std::unique_ptr<clang::ASTConsumer> Consumer = nullptr,
-              OutOfProcessJITConfig OOPConfig = OutOfProcessJITConfig());
+              JITConfig Config = JITConfig());
 
   // Create the internal IncrementalExecutor, or re-create it after calling
   // ResetExecutor().
-  llvm::Error
-  CreateExecutor(OutOfProcessJITConfig OOPConfig = OutOfProcessJITConfig());
+  llvm::Error CreateExecutor(JITConfig Config = JITConfig());
 
   // Delete the internal IncrementalExecutor. This causes a hard shutdown of the
   // JIT engine. In particular, it doesn't run cleanup or destructors.
@@ -154,22 +157,20 @@ protected:
 
 public:
   virtual ~Interpreter();
-  static llvm::Expected<std::unique_ptr<Interpreter>> create(
-      std::unique_ptr<CompilerInstance> CI,
-      std::optional<OutOfProcessJITConfig> OutOfProcessConfig = std::nullopt);
+  static llvm::Expected<std::unique_ptr<Interpreter>>
+  create(std::unique_ptr<CompilerInstance> CI, JITConfig Config = {});
   static llvm::Expected<std::unique_ptr<Interpreter>>
   createWithCUDA(std::unique_ptr<CompilerInstance> CI,
                  std::unique_ptr<CompilerInstance> DCI);
   static llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
   createLLJITBuilder(std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC,
                      llvm::StringRef OrcRuntimePath);
-#ifndef _WIN32
   static llvm::Expected<
-      std::pair<std::unique_ptr<llvm::orc::LLJITBuilder>, pid_t>>
-  outOfProcessJITBuilder(OutOfProcessJITConfig OutOfProcessConfig);
+      std::pair<std::unique_ptr<llvm::orc::LLJITBuilder>, uint32_t>>
+  outOfProcessJITBuilder(JITConfig Config);
   static llvm::Expected<std::string>
   getOrcRuntimePath(const driver::ToolChain &TC);
-#endif
+
   const ASTContext &getASTContext() const;
   ASTContext &getASTContext();
   const CompilerInstance *getCompilerInstance() const;
@@ -200,9 +201,7 @@ public:
   llvm::Expected<llvm::orc::ExecutorAddr>
   getSymbolAddressFromLinkerName(llvm::StringRef LinkerName) const;
 
-#ifndef _WIN32
-  pid_t getOutOfProcessExecutorPID() const;
-#endif
+  uint32_t getOutOfProcessExecutorPID() const;
 
 private:
   size_t getEffectivePTUSize() const;

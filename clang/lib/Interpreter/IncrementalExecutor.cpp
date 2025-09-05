@@ -37,6 +37,7 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/Host.h"
 
 #ifdef LLVM_ON_UNIX
 #include <netdb.h>
@@ -44,9 +45,6 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #endif // LLVM_ON_UNIX
-
-using namespace llvm;
-using namespace llvm::orc;
 
 // Force linking some of the runtimes that helps attaching to a debugger.
 LLVM_ATTRIBUTE_USED void linkComponents() {
@@ -87,10 +85,9 @@ IncrementalExecutor::IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
   }
 }
 
-#ifndef _WIN32
 IncrementalExecutor::IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
                                          llvm::orc::LLJITBuilder &JITBuilder,
-                                         llvm::Error &Err, pid_t ChildPid)
+                                         llvm::Error &Err, uint32_t ChildPid)
     : TSCtx(TSC), OutOfProcessChildPid(ChildPid) {
   using namespace llvm::orc;
   llvm::ErrorAsOutParameter EAO(&Err);
@@ -102,7 +99,6 @@ IncrementalExecutor::IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
     return;
   }
 }
-#endif
 
 IncrementalExecutor::~IncrementalExecutor() {}
 
@@ -171,33 +167,37 @@ Expected<uint64_t> getSlabAllocSize(StringRef SizeString) {
 
   uint64_t SlabSize = 0;
   if (SizeString.getAsInteger(10, SlabSize))
-    return make_error<StringError>("Invalid numeric format for slab size",
-                                   inconvertibleErrorCode());
+    return llvm::make_error<llvm::StringError>(
+        "Invalid numeric format for slab size", llvm::inconvertibleErrorCode());
 
   return SlabSize * Units;
 }
 
-Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
-createSharedMemoryManager(SimpleRemoteEPC &SREPC,
+Expected<std::unique_ptr<llvm::jitlink::JITLinkMemoryManager>>
+createSharedMemoryManager(llvm::orc::SimpleRemoteEPC &SREPC,
                           StringRef SlabAllocateSizeString) {
-  SharedMemoryMapper::SymbolAddrs SAs;
+  llvm::orc::SharedMemoryMapper::SymbolAddrs SAs;
   if (auto Err = SREPC.getBootstrapSymbols(
-          {{SAs.Instance, rt::ExecutorSharedMemoryMapperServiceInstanceName},
+          {{SAs.Instance,
+            llvm::orc::rt::ExecutorSharedMemoryMapperServiceInstanceName},
            {SAs.Reserve,
-            rt::ExecutorSharedMemoryMapperServiceReserveWrapperName},
+            llvm::orc::rt::ExecutorSharedMemoryMapperServiceReserveWrapperName},
            {SAs.Initialize,
-            rt::ExecutorSharedMemoryMapperServiceInitializeWrapperName},
+            llvm::orc::rt::
+                ExecutorSharedMemoryMapperServiceInitializeWrapperName},
            {SAs.Deinitialize,
-            rt::ExecutorSharedMemoryMapperServiceDeinitializeWrapperName},
+            llvm::orc::rt::
+                ExecutorSharedMemoryMapperServiceDeinitializeWrapperName},
            {SAs.Release,
-            rt::ExecutorSharedMemoryMapperServiceReleaseWrapperName}}))
+            llvm::orc::rt::
+                ExecutorSharedMemoryMapperServiceReleaseWrapperName}}))
     return std::move(Err);
 
-#ifdef _WIN32
-  size_t SlabSize = 1024 * 1024;
-#else
-  size_t SlabSize = 1024 * 1024 * 1024;
-#endif
+  size_t SlabSize;
+  if (llvm::Triple(llvm::sys::getProcessTriple()).isOSWindows())
+    SlabSize = 1024 * 1024;
+  else
+    SlabSize = 1024 * 1024 * 1024;
 
   if (!SlabAllocateSizeString.empty()) {
     if (Expected<uint64_t> S = getSlabAllocSize(SlabAllocateSizeString))
@@ -206,33 +206,32 @@ createSharedMemoryManager(SimpleRemoteEPC &SREPC,
       return S.takeError();
   }
 
-  return MapperJITLinkMemoryManager::CreateWithMapper<SharedMemoryMapper>(
-      SlabSize, SREPC, SAs);
+  return llvm::orc::MapperJITLinkMemoryManager::CreateWithMapper<
+      llvm::orc::SharedMemoryMapper>(SlabSize, SREPC, SAs);
 }
 
-#ifndef _WIN32
-llvm::Expected<std::pair<std::unique_ptr<llvm::orc::SimpleRemoteEPC>, pid_t>>
+llvm::Expected<std::pair<std::unique_ptr<llvm::orc::SimpleRemoteEPC>, uint32_t>>
 IncrementalExecutor::launchExecutor(llvm::StringRef ExecutablePath,
                                     bool UseSharedMemory,
                                     llvm::StringRef SlabAllocateSizeString) {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add support for Windows.
-  return make_error<StringError>("-" + ExecutablePath +
-                                     " not supported on non-unix platforms",
-                                 inconvertibleErrorCode());
+  return llvm::make_error<llvm::StringError>(
+      "-" + ExecutablePath + " not supported on non-unix platforms",
+      llvm::inconvertibleErrorCode());
 #elif !LLVM_ENABLE_THREADS
   // Out of process mode using SimpleRemoteEPC depends on threads.
-  return make_error<StringError>(
+  return llvm::make_error<llvm::StringError>(
       "-" + ExecutablePath +
           " requires threads, but LLVM was built with "
           "LLVM_ENABLE_THREADS=Off",
-      inconvertibleErrorCode());
+      llvm::inconvertibleErrorCode());
 #else
 
-  if (!sys::fs::can_execute(ExecutablePath))
-    return make_error<StringError>(
-        formatv("Specified executor invalid: {0}", ExecutablePath),
-        inconvertibleErrorCode());
+  if (!llvm::sys::fs::can_execute(ExecutablePath))
+    return llvm::make_error<llvm::StringError>(
+        llvm::formatv("Specified executor invalid: {0}", ExecutablePath),
+        llvm::inconvertibleErrorCode());
 
   constexpr int ReadEnd = 0;
   constexpr int WriteEnd = 1;
@@ -241,12 +240,12 @@ IncrementalExecutor::launchExecutor(llvm::StringRef ExecutablePath,
   int ToExecutor[2];
   int FromExecutor[2];
 
-  pid_t ChildPID;
+  uint32_t ChildPID;
 
   // Create pipes to/from the executor..
   if (pipe(ToExecutor) != 0 || pipe(FromExecutor) != 0)
-    return make_error<StringError>("Unable to create pipe for executor",
-                                   inconvertibleErrorCode());
+    return llvm::make_error<llvm::StringError>(
+        "Unable to create pipe for executor", llvm::inconvertibleErrorCode());
 
   ChildPID = fork();
 
@@ -264,9 +263,9 @@ IncrementalExecutor::launchExecutor(llvm::StringRef ExecutablePath,
       strcpy(ExecutorPath.get(), ExecutablePath.data());
 
       std::string FDSpecifierStr("filedescs=");
-      FDSpecifierStr += utostr(ToExecutor[ReadEnd]);
+      FDSpecifierStr += llvm::utostr(ToExecutor[ReadEnd]);
       FDSpecifierStr += ',';
-      FDSpecifierStr += utostr(FromExecutor[WriteEnd]);
+      FDSpecifierStr += llvm::utostr(FromExecutor[WriteEnd]);
       FDSpecifier = std::make_unique<char[]>(FDSpecifierStr.size() + 1);
       strcpy(FDSpecifier.get(), FDSpecifierStr.c_str());
     }
@@ -274,8 +273,8 @@ IncrementalExecutor::launchExecutor(llvm::StringRef ExecutablePath,
     char *const Args[] = {ExecutorPath.get(), FDSpecifier.get(), nullptr};
     int RC = execvp(ExecutorPath.get(), Args);
     if (RC != 0) {
-      errs() << "unable to launch out-of-process executor \""
-             << ExecutorPath.get() << "\"\n";
+      llvm::errs() << "unable to launch out-of-process executor \""
+                   << ExecutorPath.get() << "\"\n";
       exit(1);
     }
   }
@@ -285,15 +284,18 @@ IncrementalExecutor::launchExecutor(llvm::StringRef ExecutablePath,
   close(ToExecutor[ReadEnd]);
   close(FromExecutor[WriteEnd]);
 
-  SimpleRemoteEPC::Setup S = SimpleRemoteEPC::Setup();
+  llvm::orc::SimpleRemoteEPC::Setup S = llvm::orc::SimpleRemoteEPC::Setup();
   if (UseSharedMemory)
-    S.CreateMemoryManager = [SlabAllocateSizeString](SimpleRemoteEPC &EPC) {
-      return createSharedMemoryManager(EPC, SlabAllocateSizeString);
-    };
+    S.CreateMemoryManager =
+        [SlabAllocateSizeString](llvm::orc::SimpleRemoteEPC &EPC) {
+          return createSharedMemoryManager(EPC, SlabAllocateSizeString);
+        };
 
-  auto EPCOrErr = SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
-      std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt),
-      std::move(S), FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
+  auto EPCOrErr =
+      llvm::orc::SimpleRemoteEPC::Create<llvm::orc::FDSimpleRemoteEPCTransport>(
+          std::make_unique<llvm::orc::DynamicThreadPoolTaskDispatcher>(
+              std::nullopt),
+          std::move(S), FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
   if (!EPCOrErr)
     return EPCOrErr.takeError();
   return std::make_pair(std::move(*EPCOrErr), ChildPID);
@@ -311,9 +313,9 @@ static Expected<int> connectTCPSocketImpl(std::string Host,
   Hints.ai_flags = AI_NUMERICSERV;
 
   if (int EC = getaddrinfo(Host.c_str(), PortStr.c_str(), &Hints, &AI))
-    return make_error<StringError>(
-        formatv("address resolution failed ({0})", strerror(EC)),
-        inconvertibleErrorCode());
+    return llvm::make_error<llvm::StringError>(
+        llvm::formatv("address resolution failed ({0})", strerror(EC)),
+        llvm::inconvertibleErrorCode());
   // Cycle through the returned addrinfo structures and connect to the first
   // reachable endpoint.
   int SockFD;
@@ -335,36 +337,35 @@ static Expected<int> connectTCPSocketImpl(std::string Host,
   // If we reached the end of the loop without connecting to a valid endpoint,
   // dump the last error that was logged in socket() or connect().
   if (Server == nullptr)
-    return make_error<StringError>("invalid hostname",
-                                   inconvertibleErrorCode());
+    return llvm::make_error<llvm::StringError>("invalid hostname",
+                                               llvm::inconvertibleErrorCode());
 
   return SockFD;
 }
-#endif
 
-llvm::Expected<std::unique_ptr<SimpleRemoteEPC>>
+llvm::Expected<std::unique_ptr<llvm::orc::SimpleRemoteEPC>>
 IncrementalExecutor::connectTCPSocket(llvm::StringRef NetworkAddress,
                                       bool UseSharedMemory,
                                       llvm::StringRef SlabAllocateSizeString) {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add TCP support for Windows.
-  return make_error<StringError>("-" + NetworkAddress +
-                                     " not supported on non-unix platforms",
-                                 inconvertibleErrorCode());
+  return llvm::make_error<llvm::StringError>(
+      "-" + NetworkAddress + " not supported on non-unix platforms",
+      llvm::inconvertibleErrorCode());
 #elif !LLVM_ENABLE_THREADS
   // Out of process mode using SimpleRemoteEPC depends on threads.
-  return make_error<StringError>(
+  return llvm::make_error<llvm::StringError>(
       "-" + NetworkAddress +
           " requires threads, but LLVM was built with "
           "LLVM_ENABLE_THREADS=Off",
-      inconvertibleErrorCode());
+      llvm::inconvertibleErrorCode());
 #else
 
   auto CreateErr = [NetworkAddress](Twine Details) {
-    return make_error<StringError>(
+    return llvm::make_error<llvm::StringError>(
         formatv("Failed to connect TCP socket '{0}': {1}", NetworkAddress,
                 Details),
-        inconvertibleErrorCode());
+        llvm::inconvertibleErrorCode());
   };
 
   StringRef Host, PortStr;
@@ -381,14 +382,17 @@ IncrementalExecutor::connectTCPSocket(llvm::StringRef NetworkAddress,
   if (!SockFD)
     return SockFD.takeError();
 
-  SimpleRemoteEPC::Setup S = SimpleRemoteEPC::Setup();
+  llvm::orc::SimpleRemoteEPC::Setup S = llvm::orc::SimpleRemoteEPC::Setup();
   if (UseSharedMemory)
-    S.CreateMemoryManager = [SlabAllocateSizeString](SimpleRemoteEPC &EPC) {
-      return createSharedMemoryManager(EPC, SlabAllocateSizeString);
-    };
+    S.CreateMemoryManager =
+        [SlabAllocateSizeString](llvm::orc::SimpleRemoteEPC &EPC) {
+          return createSharedMemoryManager(EPC, SlabAllocateSizeString);
+        };
 
-  return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
-      std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt),
+  return llvm::orc::SimpleRemoteEPC::Create<
+      llvm::orc::FDSimpleRemoteEPCTransport>(
+      std::make_unique<llvm::orc::DynamicThreadPoolTaskDispatcher>(
+          std::nullopt),
       std::move(S), *SockFD, *SockFD);
 #endif
 }
