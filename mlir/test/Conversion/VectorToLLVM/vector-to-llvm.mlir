@@ -1795,21 +1795,23 @@ func.func @to_elements_1d(%arg0: vector<2xf32>) -> (f32, f32) {
 
 // -----
 
-// NOTE: We flatten multi-dimensional to_elements ops with pattern
-// `FlattenToElements` and then convert the 1-D to_elements ops to llvm.
+// NOTE: We unroll multi-dimensional to_elements ops with pattern
+// `UnrollToElements` and then convert the 1-D to_elements ops to llvm.
 
 // CHECK-LABEL: func @to_elements_2d(
 // CHECK-SAME:    %[[ARG0:.+]]: vector<2x2xf32>
 // CHECK:         %[[CAST:.+]] = builtin.unrealized_conversion_cast %[[ARG0]] : vector<2x2xf32> to !llvm.array<2 x vector<2xf32>>
+// CHECK:         %[[V0:.+]] = llvm.extractvalue %[[CAST]][0] : !llvm.array<2 x vector<2xf32>>
+// CHECK:         %[[V1:.+]] = llvm.extractvalue %[[CAST]][1] : !llvm.array<2 x vector<2xf32>>
 // CHECK:         %[[C0:.+]] = llvm.mlir.constant(0 : i64) : i64
-// CHECK:         %[[V0:.+]] = llvm.extractelement %{{.+}}[%[[C0]] : i64] : vector<4xf32>
+// CHECK:         %[[R0:.+]] = llvm.extractelement %[[V0]][%[[C0]] : i64] : vector<2xf32>
 // CHECK:         %[[C1:.+]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK:         %[[V1:.+]] = llvm.extractelement %{{.+}}[%[[C1]] : i64] : vector<4xf32>
-// CHECK:         %[[C2:.+]] = llvm.mlir.constant(2 : i64) : i64
-// CHECK:         %[[V2:.+]] = llvm.extractelement %{{.+}}[%[[C2]] : i64] : vector<4xf32>
-// CHECK:         %[[C3:.+]] = llvm.mlir.constant(3 : i64) : i64
-// CHECK:         %[[V3:.+]] = llvm.extractelement %{{.+}}[%[[C3]] : i64] : vector<4xf32>
-// CHECK:         return %[[V0]], %[[V1]], %[[V2]], %[[V3]]
+// CHECK:         %[[R1:.+]] = llvm.extractelement %[[V0]][%[[C1]] : i64] : vector<2xf32>
+// CHECK:         %[[C0:.+]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:         %[[R2:.+]] = llvm.extractelement %[[V1]][%[[C0]] : i64] : vector<2xf32>
+// CHECK:         %[[C1:.+]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:         %[[R3:.+]] = llvm.extractelement %[[V1]][%[[C1]] : i64] : vector<2xf32>
+// CHECK:         return %[[R0]], %[[R1]], %[[R2]], %[[R3]]
 func.func @to_elements_2d(%arg0: vector<2x2xf32>) -> (f32, f32, f32, f32) {
   %0:4 = vector.to_elements %arg0 : vector<2x2xf32>
   return %0#0, %0#1, %0#2, %0#3 : f32, f32, f32, f32
