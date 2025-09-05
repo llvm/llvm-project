@@ -283,9 +283,9 @@ void calls_pr50025c(void) { pr50025c(); }
 // WINDOWS: call i32 @foo
 
 /// Internal linkage resolvers do not use comdat.
-// ITANIUM: define internal ptr @foo_internal.resolver() {
-
-// WINDOWS: define internal i32 @foo_internal.resolver() {
+// LINUX:   define internal ptr @foo_internal.resolver() comdat {
+// DARWIN:  define internal ptr @foo_internal.resolver() {
+// WINDOWS: define internal i32 @foo_internal.resolver() comdat {
 
 // ITANIUM: define{{.*}} i32 @bar2()
 // ITANIUM: call i32 @foo_inline.ifunc()

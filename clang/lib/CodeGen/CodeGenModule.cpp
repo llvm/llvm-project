@@ -4610,10 +4610,6 @@ void CodeGenModule::emitMultiVersionFunctions() {
     }
     llvm::Function *ResolverFunc = cast<llvm::Function>(ResolverConstant);
 
-    ResolverFunc->setLinkage(getMultiversionLinkage(*this, GD));
-    setGlobalVisibility(ResolverFunc, /*D=*/nullptr);
-    setDSOLocal(ResolverFunc);
-
     if (!ResolverFunc->hasLocalLinkage() && supportsCOMDAT())
       ResolverFunc->setComdat(
           getModule().getOrInsertComdat(ResolverFunc->getName()));
@@ -4626,6 +4622,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
         });
     CodeGenFunction CGF(*this);
     CGF.EmitMultiVersionResolver(ResolverFunc, Options);
+    setMultiVersionResolverAttributes(ResolverFunc, GD);
   }
 
   // Ensure that any additions to the deferred decls list caused by emitting a
@@ -4676,9 +4673,6 @@ void CodeGenModule::emitCPUDispatchDefinition(GlobalDecl GD) {
 
   auto *ResolverFunc = cast<llvm::Function>(GetOrCreateLLVMFunction(
       ResolverName, ResolverType, ResolverGD, /*ForVTable=*/false));
-  ResolverFunc->setLinkage(getMultiversionLinkage(*this, GD));
-  setGlobalVisibility(ResolverFunc, /*D=*/nullptr);
-  setDSOLocal(ResolverFunc);
 
   if (supportsCOMDAT())
     ResolverFunc->setComdat(
@@ -4745,6 +4739,7 @@ void CodeGenModule::emitCPUDispatchDefinition(GlobalDecl GD) {
 
   CodeGenFunction CGF(*this);
   CGF.EmitMultiVersionResolver(ResolverFunc, Options);
+  setMultiVersionResolverAttributes(ResolverFunc, GD);
 
   if (getTarget().supportsIFunc()) {
     llvm::GlobalValue::LinkageTypes Linkage = getMultiversionLinkage(*this, GD);
@@ -4836,13 +4831,6 @@ llvm::Constant *CodeGenModule::GetOrCreateMultiVersionResolver(GlobalDecl GD) {
   if (FD->isTargetMultiVersion() || FD->isTargetClonesMultiVersion())
     AddDeferredMultiVersionResolverToEmit(GD);
 
-  auto SetResolverAttrs = [&](llvm::Function *Resolver) {
-    // Set the default target-specific attributes, such as PAC and BTI ones on
-    // AArch64. Not passing Decl to prevent setting unrelated attributes,
-    // as Resolver can be shared by multiple declarations.
-    getTargetCodeGenInfo().setTargetAttributes(/*D=*/nullptr, Resolver, *this);
-  };
-
   // For cpu_specific, don't create an ifunc yet because we don't know if the
   // cpu_dispatch will be emitted in this translation unit.
   if (ShouldReturnIFunc) {
@@ -4857,7 +4845,6 @@ llvm::Constant *CodeGenModule::GetOrCreateMultiVersionResolver(GlobalDecl GD) {
                                   "", Resolver, &getModule());
     GIF->setName(ResolverName);
     SetCommonAttributes(FD, GIF);
-    SetResolverAttrs(cast<llvm::Function>(Resolver));
     if (ResolverGV)
       replaceDeclarationWith(ResolverGV, GIF);
     return GIF;
@@ -4868,8 +4855,27 @@ llvm::Constant *CodeGenModule::GetOrCreateMultiVersionResolver(GlobalDecl GD) {
   assert(isa<llvm::GlobalValue>(Resolver) && !ResolverGV &&
          "Resolver should be created for the first time");
   SetCommonAttributes(FD, cast<llvm::GlobalValue>(Resolver));
-  SetResolverAttrs(cast<llvm::Function>(Resolver));
   return Resolver;
+}
+
+void CodeGenModule::setMultiVersionResolverAttributes(llvm::Function *Resolver,
+                                                      GlobalDecl GD) {
+  const NamedDecl *D = dyn_cast_or_null<NamedDecl>(GD.getDecl());
+  Resolver->setLinkage(getMultiversionLinkage(*this, GD));
+
+  // Function body has to be emitted before calling setGlobalVisibility
+  // for Resolver to be considered as definition.
+  setGlobalVisibility(Resolver, D);
+
+  setDSOLocal(Resolver);
+
+  // Set the default target-specific attributes, such as PAC and BTI ones on
+  // AArch64. Not passing Decl to prevent setting unrelated attributes,
+  // as Resolver can be shared by multiple declarations.
+  // FIXME Some targets may require a non-null D to set some attributes
+  //       (such as "stackrealign" on X86, even when it is requested via
+  //       "-mstackrealign" command line option).
+  getTargetCodeGenInfo().setTargetAttributes(/*D=*/nullptr, Resolver, *this);
 }
 
 bool CodeGenModule::shouldDropDLLAttribute(const Decl *D,
