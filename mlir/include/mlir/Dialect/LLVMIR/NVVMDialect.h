@@ -59,8 +59,8 @@ enum NVVMMemorySpace {
 /// and args types (which are llvm types).
 /// Args types are only required for overloaded intrinsics to provide the
 /// correct argument types to the createIntrinsicCall() method.
-/// This type is returned by the getIntrinsicIDAndArgsMaybeWithTypes() methods.
-using IIDArgsMaybeWithTypes =
+/// This type is returned by the getIIDAndArgsWithTypes() methods.
+using IIDArgsWithTypes =
     std::tuple<llvm::Intrinsic::ID, llvm::SmallVector<llvm::Value *>,
                llvm::SmallVector<llvm::Type *>>;
 

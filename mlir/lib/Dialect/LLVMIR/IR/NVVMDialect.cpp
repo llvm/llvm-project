@@ -1447,7 +1447,7 @@ void Tcgen05MmaSmemDescOp::createSmemDescriptor(Operation &op,
 }
 
 //===----------------------------------------------------------------------===//
-// getIntrinsicID/getIntrinsicIDAndArgsMaybeWithTypes methods
+// getIntrinsicID/getIIDAndArgsWithTypes methods
 //===----------------------------------------------------------------------===//
 
 #define CP_ASYNC_ID_IMPL(mod, size, suffix)                                    \
@@ -1456,8 +1456,9 @@ void Tcgen05MmaSmemDescOp::createSmemDescriptor(Operation &op,
 #define GET_CP_ASYNC_ID(mod, size, has_cpsize)                                 \
   has_cpsize ? CP_ASYNC_ID_IMPL(mod, size, _s) : CP_ASYNC_ID_IMPL(mod, size, )
 
-NVVM::IIDArgsMaybeWithTypes CpAsyncOp::getIntrinsicIDAndArgsMaybeWithTypes(
-    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+NVVM::IIDArgsWithTypes
+CpAsyncOp::getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
+                                  llvm::IRBuilderBase &builder) {
   llvm::SmallVector<llvm::Value *> args;
   llvm::Intrinsic::ID id;
 
@@ -1488,8 +1489,7 @@ NVVM::IIDArgsMaybeWithTypes CpAsyncOp::getIntrinsicIDAndArgsMaybeWithTypes(
   return {id, std::move(args), {}};
 }
 
-mlir::NVVM::IIDArgsMaybeWithTypes
-CpAsyncBulkPrefetchOp::getIntrinsicIDAndArgsMaybeWithTypes(
+mlir::NVVM::IIDArgsWithTypes CpAsyncBulkPrefetchOp::getIIDAndArgsWithTypes(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::CpAsyncBulkPrefetchOp>(op);
   llvm::SmallVector<llvm::Value *> args;
@@ -1509,8 +1509,8 @@ CpAsyncBulkPrefetchOp::getIntrinsicIDAndArgsMaybeWithTypes(
   return {id, std::move(args), {}};
 }
 
-mlir::NVVM::IIDArgsMaybeWithTypes
-CpAsyncBulkSharedCTAToGlobalOp::getIntrinsicIDAndArgsMaybeWithTypes(
+mlir::NVVM::IIDArgsWithTypes
+CpAsyncBulkSharedCTAToGlobalOp::getIIDAndArgsWithTypes(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::CpAsyncBulkSharedCTAToGlobalOp>(op);
   llvm::SmallVector<llvm::Value *> args;
@@ -1538,8 +1538,8 @@ CpAsyncBulkSharedCTAToGlobalOp::getIntrinsicIDAndArgsMaybeWithTypes(
   return {id, std::move(args), {}};
 }
 
-mlir::NVVM::IIDArgsMaybeWithTypes
-CpAsyncBulkTensorPrefetchOp::getIntrinsicIDAndArgsMaybeWithTypes(
+mlir::NVVM::IIDArgsWithTypes
+CpAsyncBulkTensorPrefetchOp::getIIDAndArgsWithTypes(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::CpAsyncBulkTensorPrefetchOp>(op);
   llvm::SmallVector<llvm::Value *> args;
@@ -1592,8 +1592,8 @@ CpAsyncBulkTensorPrefetchOp::getIntrinsicIDAndArgsMaybeWithTypes(
   return {id, std::move(args), {}};
 }
 
-mlir::NVVM::IIDArgsMaybeWithTypes
-CpAsyncBulkTensorSharedCTAToGlobalOp::getIntrinsicIDAndArgsMaybeWithTypes(
+mlir::NVVM::IIDArgsWithTypes
+CpAsyncBulkTensorSharedCTAToGlobalOp::getIIDAndArgsWithTypes(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::CpAsyncBulkTensorSharedCTAToGlobalOp>(op);
   llvm::SmallVector<llvm::Value *> args;
@@ -1667,8 +1667,7 @@ CpAsyncBulkTensorSharedCTAToGlobalOp::getIntrinsicIDAndArgsMaybeWithTypes(
   }                                                                            \
   break;
 
-NVVM::IIDArgsMaybeWithTypes
-CpAsyncBulkTensorReduceOp::getIntrinsicIDAndArgsMaybeWithTypes(
+NVVM::IIDArgsWithTypes CpAsyncBulkTensorReduceOp::getIIDAndArgsWithTypes(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::CpAsyncBulkTensorReduceOp>(op);
   llvm::LLVMContext &ctx = mt.getLLVMContext();
@@ -1694,7 +1693,7 @@ CpAsyncBulkTensorReduceOp::getIntrinsicIDAndArgsMaybeWithTypes(
   llvm::Intrinsic::ID iid;
   int tensorDims = thisOp.getCoordinates().size();
   bool isIm2Col = thisOp.getMode() == NVVM::TMAStoreMode::IM2COL;
-  
+
   using RedTy = NVVM::TMAReduxKind;
   switch (thisOp.getRedKind()) {
   case RedTy::ADD:
@@ -1718,8 +1717,8 @@ CpAsyncBulkTensorReduceOp::getIntrinsicIDAndArgsMaybeWithTypes(
   return {iid, std::move(args), {}};
 }
 
-NVVM::IIDArgsMaybeWithTypes
-CpAsyncBulkGlobalToSharedClusterOp::getIntrinsicIDAndArgsMaybeWithTypes(
+NVVM::IIDArgsWithTypes
+CpAsyncBulkGlobalToSharedClusterOp::getIIDAndArgsWithTypes(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::CpAsyncBulkGlobalToSharedClusterOp>(op);
   llvm::SmallVector<llvm::Value *> args;
@@ -1862,7 +1861,7 @@ ConvertBF16x2ToF8x2Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
   }
 }
 
-NVVM::IIDArgsMaybeWithTypes Tcgen05AllocOp::getIntrinsicIDAndArgsMaybeWithTypes(
+NVVM::IIDArgsWithTypes Tcgen05AllocOp::getIIDAndArgsWithTypes(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto curOp = cast<NVVM::Tcgen05AllocOp>(op);
   unsigned as = llvm::cast<LLVM::LLVMPointerType>(curOp.getAddr().getType())
@@ -1887,8 +1886,7 @@ NVVM::IIDArgsMaybeWithTypes Tcgen05AllocOp::getIntrinsicIDAndArgsMaybeWithTypes(
   return {id, std::move(args), {}};
 }
 
-NVVM::IIDArgsMaybeWithTypes
-Tcgen05DeallocOp::getIntrinsicIDAndArgsMaybeWithTypes(
+NVVM::IIDArgsWithTypes Tcgen05DeallocOp::getIIDAndArgsWithTypes(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto curOp = cast<NVVM::Tcgen05DeallocOp>(op);
   auto id = (curOp.getGroup() == CTAGroupKind::CTA_1)
@@ -1911,8 +1909,7 @@ Tcgen05DeallocOp::getIntrinsicIDAndArgsMaybeWithTypes(
   has_mc ? TCGEN05_COMMIT_IMPL(cta_group, is_shared, _mc)                      \
          : TCGEN05_COMMIT_IMPL(cta_group, is_shared, )
 
-NVVM::IIDArgsMaybeWithTypes
-Tcgen05CommitOp::getIntrinsicIDAndArgsMaybeWithTypes(
+NVVM::IIDArgsWithTypes Tcgen05CommitOp::getIIDAndArgsWithTypes(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto curOp = cast<NVVM::Tcgen05CommitOp>(op);
   unsigned as = llvm::cast<LLVM::LLVMPointerType>(curOp.getAddr().getType())
@@ -1942,16 +1939,18 @@ Tcgen05CommitOp::getIntrinsicIDAndArgsMaybeWithTypes(
           : TCGEN05_CP_IMPL(shape_mc, src_fmt, _cg1)
 
 #define GET_TCGEN05_CP_ID(shape_mc, src_fmt, is_2cta)                          \
-  [&]() -> auto {                                                              \
+  [&]() -> auto{                                                               \
     if ((src_fmt) == Tcgen05CpSrcFormat::B6x16_P32)                            \
       return TCGEN05_CP_2CTA(shape_mc, _b6x16_p32, is_2cta);                   \
     if ((src_fmt) == Tcgen05CpSrcFormat::B4x16_P64)                            \
       return TCGEN05_CP_2CTA(shape_mc, _b4x16_p64, is_2cta);                   \
     return TCGEN05_CP_2CTA(shape_mc, , is_2cta);                               \
-  }()
+  }                                                                            \
+  ()
 
-NVVM::IIDArgsMaybeWithTypes Tcgen05CpOp::getIntrinsicIDAndArgsMaybeWithTypes(
-    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+NVVM::IIDArgsWithTypes
+Tcgen05CpOp::getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
+                                    llvm::IRBuilderBase &builder) {
   auto curOp = cast<NVVM::Tcgen05CpOp>(op);
   bool is2CTA = curOp.getGroup() == CTAGroupKind::CTA_2;
   auto srcFmt = curOp.getSrcFormat();
@@ -1974,10 +1973,10 @@ NVVM::IIDArgsMaybeWithTypes Tcgen05CpOp::getIntrinsicIDAndArgsMaybeWithTypes(
             {}};
   case Tcgen05CpShape::SHAPE_64x128b:
     return (mc == Tcgen05CpMulticast::WARPX2_01_23)
-               ? NVVM::IIDArgsMaybeWithTypes(
+               ? NVVM::IIDArgsWithTypes(
                      GET_TCGEN05_CP_ID(_64x128b_warpx2_01_23, srcFmt, is2CTA),
                      std::move(args), {})
-               : NVVM::IIDArgsMaybeWithTypes(
+               : NVVM::IIDArgsWithTypes(
                      GET_TCGEN05_CP_ID(_64x128b_warpx2_02_13, srcFmt, is2CTA),
                      std::move(args), {});
   }
@@ -2046,8 +2045,7 @@ static llvm::Value *getAsPackedI32(llvm::Value *arg,
                                llvm::Type::getInt32Ty(builder.getContext()));
 }
 
-NVVM::IIDArgsMaybeWithTypes
-DotAccumulate4WayOp::getIntrinsicIDAndArgsMaybeWithTypes(
+NVVM::IIDArgsWithTypes DotAccumulate4WayOp::getIIDAndArgsWithTypes(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto curOp = cast<NVVM::DotAccumulate4WayOp>(op);
 
@@ -2068,8 +2066,7 @@ DotAccumulate4WayOp::getIntrinsicIDAndArgsMaybeWithTypes(
   return {ids[type], args, {}};
 }
 
-NVVM::IIDArgsMaybeWithTypes
-DotAccumulate2WayOp::getIntrinsicIDAndArgsMaybeWithTypes(
+NVVM::IIDArgsWithTypes DotAccumulate2WayOp::getIIDAndArgsWithTypes(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto curOp = cast<NVVM::DotAccumulate2WayOp>(op);
 
@@ -2099,8 +2096,9 @@ static llvm::Value *getParamCastedAddr(llvm::Value *addr,
                              llvm::NVPTXAS::AddressSpace::ADDRESS_SPACE_PARAM));
 }
 
-NVVM::IIDArgsMaybeWithTypes PrefetchOp::getIntrinsicIDAndArgsMaybeWithTypes(
-    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+NVVM::IIDArgsWithTypes
+PrefetchOp::getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
+                                   llvm::IRBuilderBase &builder) {
   using MemSpace = NVVM::NVVMMemorySpace;
   using CacheLevel = NVVM::PrefetchCacheLevel;
 
@@ -2140,22 +2138,22 @@ NVVM::IIDArgsMaybeWithTypes PrefetchOp::getIntrinsicIDAndArgsMaybeWithTypes(
   switch (addressSpace) {
   case MemSpace::kGenericMemorySpace:
     return *cacheLevel == CacheLevel::L1
-               ? NVVM::IIDArgsMaybeWithTypes(llvm::Intrinsic::nvvm_prefetch_L1,
-                                             args, {})
-               : NVVM::IIDArgsMaybeWithTypes(llvm::Intrinsic::nvvm_prefetch_L2,
-                                             args, {});
+               ? NVVM::IIDArgsWithTypes(llvm::Intrinsic::nvvm_prefetch_L1, args,
+                                        {})
+               : NVVM::IIDArgsWithTypes(llvm::Intrinsic::nvvm_prefetch_L2, args,
+                                        {});
   case MemSpace::kGlobalMemorySpace:
     return *cacheLevel == CacheLevel::L1
-               ? NVVM::IIDArgsMaybeWithTypes(
+               ? NVVM::IIDArgsWithTypes(
                      llvm::Intrinsic::nvvm_prefetch_global_L1, args, {})
-               : NVVM::IIDArgsMaybeWithTypes(
+               : NVVM::IIDArgsWithTypes(
                      llvm::Intrinsic::nvvm_prefetch_global_L2, args, {});
   case MemSpace::kLocalMemorySpace:
     return *cacheLevel == CacheLevel::L1
-               ? NVVM::IIDArgsMaybeWithTypes(
-                     llvm::Intrinsic::nvvm_prefetch_local_L1, args, {})
-               : NVVM::IIDArgsMaybeWithTypes(
-                     llvm::Intrinsic::nvvm_prefetch_local_L2, args, {});
+               ? NVVM::IIDArgsWithTypes(llvm::Intrinsic::nvvm_prefetch_local_L1,
+                                        args, {})
+               : NVVM::IIDArgsWithTypes(llvm::Intrinsic::nvvm_prefetch_local_L2,
+                                        args, {});
   default:
     llvm_unreachable("Invalid pointer address space");
   }
@@ -2168,8 +2166,9 @@ NVVM::IIDArgsMaybeWithTypes PrefetchOp::getIntrinsicIDAndArgsMaybeWithTypes(
 #define GET_REDUX_F32_ID(op, hasAbs, hasNaN)                                   \
   hasAbs ? REDUX_F32_ID_IMPL(op, _abs, hasNaN) : REDUX_F32_ID_IMPL(op, , hasNaN)
 
-NVVM::IIDArgsMaybeWithTypes ReduxOp::getIntrinsicIDAndArgsMaybeWithTypes(
-    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+NVVM::IIDArgsWithTypes
+ReduxOp::getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
+                                llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::ReduxOp>(op);
 
   llvm::SmallVector<llvm::Value *> args;
@@ -2218,8 +2217,9 @@ NVVM::IIDArgsMaybeWithTypes ReduxOp::getIntrinsicIDAndArgsMaybeWithTypes(
   return {id, std::move(args), {}};
 }
 
-NVVM::IIDArgsMaybeWithTypes ShflOp::getIntrinsicIDAndArgsMaybeWithTypes(
-    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+NVVM::IIDArgsWithTypes
+ShflOp::getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
+                               llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::ShflOp>(op);
 
   llvm::SmallVector<llvm::Value *> args;
@@ -2282,8 +2282,9 @@ NVVM::IIDArgsMaybeWithTypes ShflOp::getIntrinsicIDAndArgsMaybeWithTypes(
   return {id, std::move(args), {}};
 }
 
-NVVM::IIDArgsMaybeWithTypes MatchSyncOp::getIntrinsicIDAndArgsMaybeWithTypes(
-    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+NVVM::IIDArgsWithTypes
+MatchSyncOp::getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
+                                    llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::MatchSyncOp>(op);
 
   llvm::SmallVector<llvm::Value *> args;
@@ -2312,8 +2313,9 @@ NVVM::IIDArgsMaybeWithTypes MatchSyncOp::getIntrinsicIDAndArgsMaybeWithTypes(
   return {id, std::move(args), {}};
 }
 
-NVVM::IIDArgsMaybeWithTypes VoteSyncOp::getIntrinsicIDAndArgsMaybeWithTypes(
-    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+NVVM::IIDArgsWithTypes
+VoteSyncOp::getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
+                                   llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::VoteSyncOp>(op);
 
   llvm::SmallVector<llvm::Value *> args;
@@ -2342,8 +2344,9 @@ NVVM::IIDArgsMaybeWithTypes VoteSyncOp::getIntrinsicIDAndArgsMaybeWithTypes(
   return {id, std::move(args), {}};
 }
 
-NVVM::IIDArgsMaybeWithTypes LdMatrixOp::getIntrinsicIDAndArgsMaybeWithTypes(
-    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+NVVM::IIDArgsWithTypes
+LdMatrixOp::getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
+                                   llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::LdMatrixOp>(op);
 
   llvm::SmallVector<llvm::Value *> args;
@@ -2448,8 +2451,9 @@ NVVM::IIDArgsMaybeWithTypes LdMatrixOp::getIntrinsicIDAndArgsMaybeWithTypes(
   return {id, std::move(args), types};
 }
 
-NVVM::IIDArgsMaybeWithTypes StMatrixOp::getIntrinsicIDAndArgsMaybeWithTypes(
-    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+NVVM::IIDArgsWithTypes
+StMatrixOp::getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
+                                   llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::StMatrixOp>(op);
 
   llvm::SmallVector<llvm::Value *> args;
@@ -2501,8 +2505,9 @@ NVVM::IIDArgsMaybeWithTypes StMatrixOp::getIntrinsicIDAndArgsMaybeWithTypes(
   return {id, std::move(args), types};
 }
 
-NVVM::IIDArgsMaybeWithTypes BulkStoreOp::getIntrinsicIDAndArgsMaybeWithTypes(
-    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+NVVM::IIDArgsWithTypes
+BulkStoreOp::getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
+                                    llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::BulkStoreOp>(op);
 
   llvm::SmallVector<llvm::Value *> args;
@@ -2521,8 +2526,7 @@ NVVM::IIDArgsMaybeWithTypes BulkStoreOp::getIntrinsicIDAndArgsMaybeWithTypes(
   return {id, std::move(args), {}};
 }
 
-NVVM::IIDArgsMaybeWithTypes
-FenceProxyAcquireOp::getIntrinsicIDAndArgsMaybeWithTypes(
+NVVM::IIDArgsWithTypes FenceProxyAcquireOp::getIIDAndArgsWithTypes(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::FenceProxyAcquireOp>(op);
 
@@ -2557,8 +2561,7 @@ FenceProxyAcquireOp::getIntrinsicIDAndArgsMaybeWithTypes(
   return {id, std::move(args), {}};
 }
 
-NVVM::IIDArgsMaybeWithTypes
-FenceProxyReleaseOp::getIntrinsicIDAndArgsMaybeWithTypes(
+NVVM::IIDArgsWithTypes FenceProxyReleaseOp::getIIDAndArgsWithTypes(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::FenceProxyReleaseOp>(op);
 
@@ -2591,8 +2594,9 @@ FenceProxyReleaseOp::getIntrinsicIDAndArgsMaybeWithTypes(
 
 #define TCGEN05LD(SHAPE, NUM) llvm::Intrinsic::nvvm_tcgen05_ld_##SHAPE##_##NUM
 
-NVVM::IIDArgsMaybeWithTypes Tcgen05LdOp::getIntrinsicIDAndArgsMaybeWithTypes(
-    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+NVVM::IIDArgsWithTypes
+Tcgen05LdOp::getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
+                                    llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::Tcgen05LdOp>(op);
 
   llvm::SmallVector<llvm::Value *> args;
@@ -2672,8 +2676,9 @@ NVVM::IIDArgsMaybeWithTypes Tcgen05LdOp::getIntrinsicIDAndArgsMaybeWithTypes(
 
 #define TCGEN05ST(SHAPE, NUM) llvm::Intrinsic::nvvm_tcgen05_st_##SHAPE##_##NUM
 
-NVVM::IIDArgsMaybeWithTypes Tcgen05StOp::getIntrinsicIDAndArgsMaybeWithTypes(
-    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+NVVM::IIDArgsWithTypes
+Tcgen05StOp::getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
+                                    llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::Tcgen05StOp>(op);
 
   llvm::SmallVector<llvm::Value *> args;
