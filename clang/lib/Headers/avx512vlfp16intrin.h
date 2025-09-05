@@ -818,7 +818,7 @@ _mm_mask_cvtepi16_ph(__m128h __W, __mmask8 __U, __m128i __A) {
       (__mmask8)__U, (__v8hf)_mm_cvtepi16_ph(__A), (__v8hf)__W);
 }
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS128
+static __inline__ __m128h __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_maskz_cvtepi16_ph(__mmask8 __U, __m128i __A) {
   return (__m128h)__builtin_ia32_selectph_128(
       (__mmask8)__U, (__v8hf)_mm_cvtepi16_ph(__A), (__v8hf)_mm_setzero_ph());
