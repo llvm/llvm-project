@@ -1685,9 +1685,9 @@ NVVM::IIDArgsWithTypes CpAsyncBulkTensorReduceOp::getIIDAndArgsWithTypes(
 
   mlir::Value cacheHint = thisOp.getL2CacheHint();
   const bool hasCacheHint = static_cast<bool>(cacheHint);
-  llvm::Value *i64Undef =
-      llvm::UndefValue::get(llvm::IntegerType::get(ctx, 64));
-  args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Undef);
+  llvm::Value *i64Poison =
+      llvm::PoisonValue::get(llvm::IntegerType::get(ctx, 64));
+  args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Poison);
   args.push_back(builder.getInt1(hasCacheHint));
 
   llvm::Intrinsic::ID iid;
