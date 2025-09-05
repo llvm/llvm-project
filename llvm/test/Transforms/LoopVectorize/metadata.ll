@@ -126,7 +126,7 @@ exit:
 define void @widen_call_range(ptr noalias %a, ptr readonly %b) {
 ; CHECK-LABEL: define void @widen_call_range(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr readonly [[B:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -143,10 +143,9 @@ define void @widen_call_range(ptr noalias %a, ptr readonly %b) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[B]], i64 [[IV]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[GEP]], align 4, !tbaa [[TBAA0]], !range [[RNG9:![0-9]+]]
 ; CHECK-NEXT:    [[CALL:%.*]] = call i64 @foo(i64 [[LOAD]]) #[[ATTR1:[0-9]+]], !range [[RNG9]]
@@ -160,7 +159,7 @@ define void @widen_call_range(ptr noalias %a, ptr readonly %b) {
 ;
 ; INTERLEAVE-LABEL: define void @widen_call_range(
 ; INTERLEAVE-SAME: ptr noalias [[A:%.*]], ptr readonly [[B:%.*]]) {
-; INTERLEAVE-NEXT:  [[ENTRY:.*]]:
+; INTERLEAVE-NEXT:  [[ENTRY:.*:]]
 ; INTERLEAVE-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; INTERLEAVE:       [[VECTOR_PH]]:
 ; INTERLEAVE-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -182,10 +181,9 @@ define void @widen_call_range(ptr noalias %a, ptr readonly %b) {
 ; INTERLEAVE:       [[MIDDLE_BLOCK]]:
 ; INTERLEAVE-NEXT:    br label %[[EXIT:.*]]
 ; INTERLEAVE:       [[SCALAR_PH]]:
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; INTERLEAVE-NEXT:    br label %[[LOOP:.*]]
 ; INTERLEAVE:       [[LOOP]]:
-; INTERLEAVE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; INTERLEAVE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; INTERLEAVE-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[B]], i64 [[IV]]
 ; INTERLEAVE-NEXT:    [[LOAD:%.*]] = load i64, ptr [[GEP]], align 4, !tbaa [[TBAA0]], !range [[RNG9:![0-9]+]]
 ; INTERLEAVE-NEXT:    [[CALL:%.*]] = call i64 @foo(i64 [[LOAD]]) #[[ATTR1:[0-9]+]], !range [[RNG9]]
@@ -218,7 +216,7 @@ exit:
 define void @widen_call_fpmath(ptr noalias %a, ptr readonly %b) {
 ; CHECK-LABEL: define void @widen_call_fpmath(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr readonly [[B:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -235,10 +233,9 @@ define void @widen_call_fpmath(ptr noalias %a, ptr readonly %b) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr double, ptr [[B]], i64 [[IV]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load double, ptr [[GEP]], align 8, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[CALL:%.*]] = call double @bar(double [[LOAD]]) #[[ATTR2:[0-9]+]], !fpmath [[META3]]
@@ -252,7 +249,7 @@ define void @widen_call_fpmath(ptr noalias %a, ptr readonly %b) {
 ;
 ; INTERLEAVE-LABEL: define void @widen_call_fpmath(
 ; INTERLEAVE-SAME: ptr noalias [[A:%.*]], ptr readonly [[B:%.*]]) {
-; INTERLEAVE-NEXT:  [[ENTRY:.*]]:
+; INTERLEAVE-NEXT:  [[ENTRY:.*:]]
 ; INTERLEAVE-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; INTERLEAVE:       [[VECTOR_PH]]:
 ; INTERLEAVE-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -274,10 +271,9 @@ define void @widen_call_fpmath(ptr noalias %a, ptr readonly %b) {
 ; INTERLEAVE:       [[MIDDLE_BLOCK]]:
 ; INTERLEAVE-NEXT:    br label %[[EXIT:.*]]
 ; INTERLEAVE:       [[SCALAR_PH]]:
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; INTERLEAVE-NEXT:    br label %[[LOOP:.*]]
 ; INTERLEAVE:       [[LOOP]]:
-; INTERLEAVE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; INTERLEAVE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; INTERLEAVE-NEXT:    [[GEP:%.*]] = getelementptr double, ptr [[B]], i64 [[IV]]
 ; INTERLEAVE-NEXT:    [[LOAD:%.*]] = load double, ptr [[GEP]], align 8, !tbaa [[TBAA0]]
 ; INTERLEAVE-NEXT:    [[CALL:%.*]] = call double @bar(double [[LOAD]]) #[[ATTR2:[0-9]+]], !fpmath [[META3]]
@@ -310,7 +306,7 @@ exit:
 define void @widen_intrinsic(ptr noalias %a, ptr readonly %b) {
 ; CHECK-LABEL: define void @widen_intrinsic(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr readonly [[B:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -327,10 +323,9 @@ define void @widen_intrinsic(ptr noalias %a, ptr readonly %b) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[B]], i64 [[IV]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[CALL:%.*]] = call i64 @llvm.abs.i64(i64 [[LOAD]], i1 true), !range [[RNG9]]
@@ -344,7 +339,7 @@ define void @widen_intrinsic(ptr noalias %a, ptr readonly %b) {
 ;
 ; INTERLEAVE-LABEL: define void @widen_intrinsic(
 ; INTERLEAVE-SAME: ptr noalias [[A:%.*]], ptr readonly [[B:%.*]]) {
-; INTERLEAVE-NEXT:  [[ENTRY:.*]]:
+; INTERLEAVE-NEXT:  [[ENTRY:.*:]]
 ; INTERLEAVE-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; INTERLEAVE:       [[VECTOR_PH]]:
 ; INTERLEAVE-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -366,10 +361,9 @@ define void @widen_intrinsic(ptr noalias %a, ptr readonly %b) {
 ; INTERLEAVE:       [[MIDDLE_BLOCK]]:
 ; INTERLEAVE-NEXT:    br label %[[EXIT:.*]]
 ; INTERLEAVE:       [[SCALAR_PH]]:
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; INTERLEAVE-NEXT:    br label %[[LOOP:.*]]
 ; INTERLEAVE:       [[LOOP]]:
-; INTERLEAVE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; INTERLEAVE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; INTERLEAVE-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[B]], i64 [[IV]]
 ; INTERLEAVE-NEXT:    [[LOAD:%.*]] = load i64, ptr [[GEP]], align 4
 ; INTERLEAVE-NEXT:    [[CALL:%.*]] = call i64 @llvm.abs.i64(i64 [[LOAD]], i1 true), !range [[RNG9]]
@@ -402,7 +396,7 @@ exit:
 define void @widen_intrinsic_fpmath(ptr noalias %a, ptr readonly %b) {
 ; CHECK-LABEL: define void @widen_intrinsic_fpmath(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr readonly [[B:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -419,10 +413,9 @@ define void @widen_intrinsic_fpmath(ptr noalias %a, ptr readonly %b) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr double, ptr [[B]], i64 [[IV]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load double, ptr [[GEP]], align 8, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[CALL:%.*]] = call double @llvm.sin.f64(double [[LOAD]]) #[[ATTR2]], !fpmath [[META3]]
@@ -436,7 +429,7 @@ define void @widen_intrinsic_fpmath(ptr noalias %a, ptr readonly %b) {
 ;
 ; INTERLEAVE-LABEL: define void @widen_intrinsic_fpmath(
 ; INTERLEAVE-SAME: ptr noalias [[A:%.*]], ptr readonly [[B:%.*]]) {
-; INTERLEAVE-NEXT:  [[ENTRY:.*]]:
+; INTERLEAVE-NEXT:  [[ENTRY:.*:]]
 ; INTERLEAVE-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; INTERLEAVE:       [[VECTOR_PH]]:
 ; INTERLEAVE-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -458,10 +451,9 @@ define void @widen_intrinsic_fpmath(ptr noalias %a, ptr readonly %b) {
 ; INTERLEAVE:       [[MIDDLE_BLOCK]]:
 ; INTERLEAVE-NEXT:    br label %[[EXIT:.*]]
 ; INTERLEAVE:       [[SCALAR_PH]]:
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; INTERLEAVE-NEXT:    br label %[[LOOP:.*]]
 ; INTERLEAVE:       [[LOOP]]:
-; INTERLEAVE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; INTERLEAVE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; INTERLEAVE-NEXT:    [[GEP:%.*]] = getelementptr double, ptr [[B]], i64 [[IV]]
 ; INTERLEAVE-NEXT:    [[LOAD:%.*]] = load double, ptr [[GEP]], align 8, !tbaa [[TBAA0]]
 ; INTERLEAVE-NEXT:    [[CALL:%.*]] = call double @llvm.sin.f64(double [[LOAD]]) #[[ATTR2]], !fpmath [[META3]]

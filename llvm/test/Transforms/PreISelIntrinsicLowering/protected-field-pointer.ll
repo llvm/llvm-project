@@ -43,7 +43,7 @@ define ptr @load_hw(ptr %ptrptr) {
 ; PAUTH-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
 ; PAUTH-NEXT:    ret ptr [[TMP3]]
 ;
-  %protptrptr = call ptr @llvm.protected.field.ptr(ptr %ptrptr, i64 1, i1 true) [ "deactivation-symbol"(ptr @ds1) ]
+  %protptrptr = call ptr @llvm.protected.field.ptr.p0(ptr %ptrptr, i64 1, i1 true) [ "deactivation-symbol"(ptr @ds1) ]
   %ptr = load ptr, ptr %protptrptr
   ret ptr %ptr
 }
@@ -65,7 +65,7 @@ define void @store_hw(ptr %ptrptr, ptr %ptr) {
 ; PAUTH-NEXT:    store ptr [[TMP3]], ptr [[PTRPTR]], align 8
 ; PAUTH-NEXT:    ret void
 ;
-  %protptrptr = call ptr @llvm.protected.field.ptr(ptr %ptrptr, i64 2, i1 true) [ "deactivation-symbol"(ptr @ds2) ]
+  %protptrptr = call ptr @llvm.protected.field.ptr.p0(ptr %ptrptr, i64 2, i1 true) [ "deactivation-symbol"(ptr @ds2) ]
   store ptr %ptr, ptr %protptrptr
   ret void
 }
@@ -89,7 +89,7 @@ define ptr @load_sw(ptr %ptrptr) {
 ; PAUTH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
 ; PAUTH-NEXT:    ret ptr [[TMP4]]
 ;
-  %protptrptr = call ptr @llvm.protected.field.ptr(ptr %ptrptr, i64 1, i1 false) [ "deactivation-symbol"(ptr @ds3) ]
+  %protptrptr = call ptr @llvm.protected.field.ptr.p0(ptr %ptrptr, i64 1, i1 false) [ "deactivation-symbol"(ptr @ds3) ]
   %ptr = load ptr, ptr %protptrptr
   ret ptr %ptr
 }
@@ -113,7 +113,7 @@ define void @store_sw(ptr %ptrptr, ptr %ptr) {
 ; PAUTH-NEXT:    store ptr [[TMP4]], ptr [[PTRPTR]], align 8
 ; PAUTH-NEXT:    ret void
 ;
-  %protptrptr = call ptr @llvm.protected.field.ptr(ptr %ptrptr, i64 2, i1 false) [ "deactivation-symbol"(ptr @ds4) ]
+  %protptrptr = call ptr @llvm.protected.field.ptr.p0(ptr %ptrptr, i64 2, i1 false) [ "deactivation-symbol"(ptr @ds4) ]
   store ptr %ptr, ptr %protptrptr
   ret void
 }
@@ -133,7 +133,7 @@ define i1 @compare(ptr %ptrptr) {
 ; PAUTH-NEXT:    [[CMP:%.*]] = or i1 [[CMP1]], [[CMP2]]
 ; PAUTH-NEXT:    ret i1 [[CMP]]
 ;
-  %protptrptr = call ptr @llvm.protected.field.ptr(ptr %ptrptr, i64 3, i1 true) [ "deactivation-symbol"(ptr @ds5) ]
+  %protptrptr = call ptr @llvm.protected.field.ptr.p0(ptr %ptrptr, i64 3, i1 true) [ "deactivation-symbol"(ptr @ds5) ]
   %cmp1 = icmp eq ptr %protptrptr, null
   %cmp2 = icmp eq ptr null, %protptrptr
   %cmp = or i1 %cmp1, %cmp2
@@ -149,11 +149,11 @@ define ptr @escape(ptr %ptrptr) {
 ; PAUTH-SAME: ptr [[PTRPTR:%.*]]) #[[ATTR0]] {
 ; PAUTH-NEXT:    ret ptr [[PTRPTR]]
 ;
-  %protptrptr = call ptr @llvm.protected.field.ptr(ptr %ptrptr, i64 3, i1 true) [ "deactivation-symbol"(ptr @ds6) ]
+  %protptrptr = call ptr @llvm.protected.field.ptr.p0(ptr %ptrptr, i64 3, i1 true) [ "deactivation-symbol"(ptr @ds6) ]
   ret ptr %protptrptr
 }
 
-declare ptr @llvm.protected.field.ptr(ptr, i64, i1 immarg)
+declare ptr @llvm.protected.field.ptr.p0(ptr, i64, i1 immarg)
 ;.
 ; NOPAUTH: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; NOPAUTH: attributes #[[ATTR1:[0-9]+]] = { nounwind memory(none) }

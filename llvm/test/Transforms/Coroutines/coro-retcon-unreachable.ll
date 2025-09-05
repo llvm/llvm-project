@@ -37,9 +37,9 @@ declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr) #5
 declare ptr @llvm.coro.begin(token, ptr writeonly) #5
 declare token @llvm.coro.alloca.alloc.i64(i64, i32) #5
 declare ptr @llvm.coro.alloca.get(token) #5
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #6
+declare void @llvm.lifetime.start.p0(ptr nocapture) #6
 declare i1 @llvm.coro.suspend.retcon.i1(...) #5
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #6
+declare void @llvm.lifetime.end.p0(ptr nocapture) #6
 declare void @llvm.coro.alloca.free(token) #5
 declare i1 @llvm.coro.end(ptr, i1, token) #5
 

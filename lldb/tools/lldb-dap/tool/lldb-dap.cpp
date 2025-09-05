@@ -39,6 +39,7 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <condition_variable>
 #include <cstdio>
@@ -284,7 +285,7 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
   });
   std::condition_variable dap_sessions_condition;
   std::mutex dap_sessions_mutex;
-  std::map<IOObject *, DAP *> dap_sessions;
+  std::map<MainLoop *, DAP *> dap_sessions;
   unsigned int clientCount = 0;
   auto handle = listener->Accept(g_loop, [=, &dap_sessions_condition,
                                           &dap_sessions_mutex, &dap_sessions,
@@ -300,8 +301,10 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
     std::thread client([=, &dap_sessions_condition, &dap_sessions_mutex,
                         &dap_sessions]() {
       llvm::set_thread_name(client_name + ".runloop");
+      MainLoop loop;
       Transport transport(client_name, log, io, io);
-      DAP dap(log, default_repl_mode, pre_init_commands, transport);
+      DAP dap(log, default_repl_mode, pre_init_commands, client_name, transport,
+              loop);
 
       if (auto Err = dap.ConfigureIO()) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
@@ -311,7 +314,7 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
 
       {
         std::scoped_lock<std::mutex> lock(dap_sessions_mutex);
-        dap_sessions[io.get()] = &dap;
+        dap_sessions[&loop] = &dap;
       }
 
       if (auto Err = dap.Loop()) {
@@ -322,7 +325,7 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
 
       DAP_LOG(log, "({0}) client disconnected", client_name);
       std::unique_lock<std::mutex> lock(dap_sessions_mutex);
-      dap_sessions.erase(io.get());
+      dap_sessions.erase(&loop);
       std::notify_all_at_thread_exit(dap_sessions_condition, std::move(lock));
     });
     client.detach();
@@ -344,13 +347,14 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
   bool client_failed = false;
   {
     std::scoped_lock<std::mutex> lock(dap_sessions_mutex);
-    for (auto [sock, dap] : dap_sessions) {
+    for (auto [loop, dap] : dap_sessions) {
       if (llvm::Error error = dap->Disconnect()) {
         client_failed = true;
-        llvm::errs() << "DAP client " << dap->transport.GetClientName()
-                     << " disconnected failed: "
-                     << llvm::toString(std::move(error)) << "\n";
+        llvm::WithColor::error() << "DAP client disconnected failed: "
+                                 << llvm::toString(std::move(error)) << "\n";
       }
+      loop->AddPendingCallback(
+          [](MainLoopBase &loop) { loop.RequestTermination(); });
     }
   }
 
@@ -550,8 +554,10 @@ int main(int argc, char *argv[]) {
       stdout_fd, File::eOpenOptionWriteOnly, NativeFile::Unowned);
 
   constexpr llvm::StringLiteral client_name = "stdio";
+  MainLoop loop;
   Transport transport(client_name, log.get(), input, output);
-  DAP dap(log.get(), default_repl_mode, pre_init_commands, transport);
+  DAP dap(log.get(), default_repl_mode, pre_init_commands, client_name,
+          transport, loop);
 
   // stdout/stderr redirection to the IDE's console
   if (auto Err = dap.ConfigureIO(stdout, stderr)) {

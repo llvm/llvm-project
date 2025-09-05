@@ -89,6 +89,10 @@ protected:
   /// setup the map as empty.
   LLVM_ABI void init(unsigned Size);
 
+  iterator_range<StringMapEntryBase **> buckets() {
+    return make_range(TheTable, TheTable + NumBuckets);
+  }
+
 public:
   static constexpr uintptr_t TombstoneIntVal =
       static_cast<uintptr_t>(-1)
@@ -198,8 +202,7 @@ public:
     // to default values.  This is a copy of clear(), but avoids unnecessary
     // work not required in the destructor.
     if (!empty()) {
-      for (unsigned I = 0, E = NumBuckets; I != E; ++I) {
-        StringMapEntryBase *Bucket = TheTable[I];
+      for (StringMapEntryBase *Bucket : buckets()) {
         if (Bucket && Bucket != getTombstoneVal()) {
           static_cast<MapEntryTy *>(Bucket)->Destroy(getAllocator());
         }
@@ -377,8 +380,8 @@ public:
     unsigned BucketNo = LookupBucketFor(Key, FullHashValue);
     StringMapEntryBase *&Bucket = TheTable[BucketNo];
     if (Bucket && Bucket != getTombstoneVal())
-      return std::make_pair(iterator(TheTable + BucketNo, false),
-                            false); // Already exists in map.
+      return {iterator(TheTable + BucketNo, false),
+              false}; // Already exists in map.
 
     if (Bucket == getTombstoneVal())
       --NumTombstones;
@@ -388,7 +391,7 @@ public:
     assert(NumItems + NumTombstones <= NumBuckets);
 
     BucketNo = RehashTable(BucketNo);
-    return std::make_pair(iterator(TheTable + BucketNo, false), true);
+    return {iterator(TheTable + BucketNo, false), true};
   }
 
   // clear - Empties out the StringMap
@@ -398,8 +401,7 @@ public:
 
     // Zap all values, resetting the keys back to non-present (not tombstone),
     // which is safe because we're removing all elements.
-    for (unsigned I = 0, E = NumBuckets; I != E; ++I) {
-      StringMapEntryBase *&Bucket = TheTable[I];
+    for (StringMapEntryBase *&Bucket : buckets()) {
       if (Bucket && Bucket != getTombstoneVal()) {
         static_cast<MapEntryTy *>(Bucket)->Destroy(getAllocator());
       }

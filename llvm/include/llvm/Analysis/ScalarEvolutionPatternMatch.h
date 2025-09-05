@@ -116,6 +116,18 @@ struct is_specific_cst {
 /// Match an SCEV constant with a plain unsigned integer.
 inline cst_pred_ty<is_specific_cst> m_scev_SpecificInt(uint64_t V) { return V; }
 
+struct is_specific_signed_cst {
+  int64_t CV;
+  is_specific_signed_cst(int64_t C) : CV(C) {}
+  bool isValue(const APInt &C) const { return C.trySExtValue() == CV; }
+};
+
+/// Match an SCEV constant with a plain signed integer (sign-extended value will
+/// be matched)
+inline cst_pred_ty<is_specific_signed_cst> m_scev_SpecificSInt(int64_t V) {
+  return V;
+}
+
 struct bind_cst_ty {
   const APInt *&CR;
 

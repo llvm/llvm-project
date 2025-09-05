@@ -33,6 +33,7 @@ package(default_visibility = ["//visibility:public"])
             "//mlir:include/mlir/IR/BytecodeBase.td",
             "//mlir:include/mlir/IR/OpBase.td",
             "//mlir:include/mlir/Interfaces/CallInterfaces.td",
+            "//mlir:include/mlir/Interfaces/DataLayoutInterfaces.td",
             "//mlir:include/mlir/Interfaces/InferTypeOpInterface.td",
             "//mlir:include/mlir/Interfaces/SideEffectInterfaces.td",
             "//mlir:include/mlir/Pass/PassBase.td",
