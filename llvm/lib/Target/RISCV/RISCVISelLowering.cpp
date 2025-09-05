@@ -8885,7 +8885,15 @@ SDValue RISCVTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
     reportFatalUsageError("Unsupported code model for lowering");
   case CodeModel::Small: {
     // Generate a sequence for accessing addresses within the first 2 GiB of
-    // address space. This generates the pattern (addi (lui %hi(sym)) %lo(sym)).
+    // address space.
+    if (Subtarget.hasVendorXqcili()) {
+      // Use QC.E.LI to generate the address, as this is easier to relax than
+      // LUI/ADDI.
+      SDValue Addr = getTargetNode(N, DL, Ty, DAG, 0);
+      return DAG.getNode(RISCVISD::QC_E_LI, DL, Ty, Addr);
+    }
+
+    // This generates the pattern (addi (lui %hi(sym)) %lo(sym)).
     SDValue AddrHi = getTargetNode(N, DL, Ty, DAG, RISCVII::MO_HI);
     SDValue AddrLo = getTargetNode(N, DL, Ty, DAG, RISCVII::MO_LO);
     SDValue MNHi = DAG.getNode(RISCVISD::HI, DL, Ty, AddrHi);
