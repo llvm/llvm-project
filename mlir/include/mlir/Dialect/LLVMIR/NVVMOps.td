@@ -585,7 +585,7 @@ def NVVM_MBarrierInvalSharedOp : NVVM_Op<"mbarrier.inval.shared">,
 }
 
 def NVVM_MBarrierArriveOp : NVVM_Op<"mbarrier.arrive">,
-  Results<(outs I64:$res)>,
+  Results<(outs LLVM_Type:$res)>,
   Arguments<(ins LLVM_AnyPointer:$addr)> {
   let summary = "MBarrier Arrive Operation";
   let description = [{
@@ -615,7 +615,7 @@ def NVVM_MBarrierArriveOp : NVVM_Op<"mbarrier.arrive">,
 }
 
 def NVVM_MBarrierArriveSharedOp : NVVM_Op<"mbarrier.arrive.shared">,
-  Results<(outs I64:$res)>,
+  Results<(outs LLVM_Type:$res)>,
   Arguments<(ins LLVM_PointerShared:$addr)> {
   let summary = "Shared MBarrier Arrive Operation";
   let description = [{
@@ -631,7 +631,7 @@ def NVVM_MBarrierArriveSharedOp : NVVM_Op<"mbarrier.arrive.shared">,
 }
 
 def NVVM_MBarrierArriveNocompleteOp : NVVM_Op<"mbarrier.arrive.nocomplete">,
-  Results<(outs I64:$res)>,
+  Results<(outs LLVM_Type:$res)>,
   Arguments<(ins LLVM_AnyPointer:$addr, I32:$count)> {
   let summary = "MBarrier Arrive No-Complete Operation";
   let description = [{
@@ -664,7 +664,7 @@ def NVVM_MBarrierArriveNocompleteOp : NVVM_Op<"mbarrier.arrive.nocomplete">,
 }
 
 def NVVM_MBarrierArriveNocompleteSharedOp : NVVM_Op<"mbarrier.arrive.nocomplete.shared">,
-  Results<(outs I64:$res)>,
+  Results<(outs LLVM_Type:$res)>,
   Arguments<(ins LLVM_PointerShared:$addr, I32:$count)> {
   let summary = "Shared MBarrier Arrive No-Complete Operation";
   let description = [{
@@ -1335,7 +1335,7 @@ def NVVM_VoteSyncOp
 
 def NVVM_SyncWarpOp :
   NVVM_Op<"bar.warp.sync">,
-  Arguments<(ins I32:$mask)> {
+  Arguments<(ins LLVM_Type:$mask)> {
   let summary = "Warp Barrier Synchronization Op";
   let description = [{
     The `nvvm.bar.warp.sync` operation performs barrier synchronization for threads 
