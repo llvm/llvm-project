@@ -36,6 +36,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <algorithm>
 #include <cassert>
 #include <optional>
@@ -563,6 +564,7 @@ bool llvm::stripDebugInfo(Function &F) {
 }
 
 bool llvm::StripDebugInfo(Module &M) {
+  llvm::TimeTraceScope timeScope("Strip debug info");
   bool Changed = false;
 
   for (NamedMDNode &NMD : llvm::make_early_inc_range(M.named_metadata())) {
