@@ -168,9 +168,91 @@ bool Sema::IsStringInit(Expr *Init, const ArrayType *AT) {
   return ::IsStringInit(Init, AT, Context) == SIF_None;
 }
 
+static StringLiteral *CloneStringLiteral(const StringLiteral *SL,
+                                         ASTContext &C) {
+  SourceLocation *SLocs = new (C) SourceLocation[SL->getNumConcatenated()];
+  std::copy(SL->tokloc_begin(), SL->tokloc_end(), SLocs);
+  return StringLiteral::Create(
+      C, SL->getBytes(), SL->getKind(), SL->isPascal(), SL->getType(),
+      ArrayRef<SourceLocation>(SLocs, SL->getNumConcatenated()));
+}
+
+// Exactly follow `IgnoreParensSingleStep` (`AST/IgnoreExpr.h`)
+// We only recursively visit those subexpressions which `IgnoreParensSingleStep`
+// drills down to.
+static Expr *CloneWithRecurseToInnermostSL(Expr *E, ASTContext &C) {
+  if (auto *SL = dyn_cast<StringLiteral>(E)) {
+    return CloneStringLiteral(SL, C);
+  }
+
+  if (auto *PE = dyn_cast<ParenExpr>(E)) {
+    return new (C)
+        ParenExpr(PE->getBeginLoc(), PE->getEndLoc(),
+                  CloneWithRecurseToInnermostSL(PE->getSubExpr(), C));
+  }
+
+  if (auto *UO = dyn_cast<UnaryOperator>(E)) {
+    if (UO->getOpcode() == UO_Extension) {
+      return UnaryOperator::Create(
+          C, CloneWithRecurseToInnermostSL(UO->getSubExpr(), C), UO_Extension,
+          UO->getType(), UO->getValueKind(), UO->getObjectKind(),
+          UO->getBeginLoc(), UO->canOverflow(), UO->getFPOptionsOverride());
+    }
+  }
+
+  else if (auto *GSE = dyn_cast<GenericSelectionExpr>(E)) {
+    if (!GSE->isResultDependent()) {
+      ArrayRef<Expr *> GSEAEs = GSE->getAssocExprs();
+      Expr **NewGSEAEs = new (C) Expr *[GSEAEs.size()];
+      std::copy(GSEAEs.begin(), GSEAEs.end(), NewGSEAEs);
+      NewGSEAEs[GSE->getResultIndex()] =
+          CloneWithRecurseToInnermostSL(GSE->getResultExpr(), C);
+
+      auto GSECreate = [&](auto *ExprOrTSI) -> Expr * {
+        return GenericSelectionExpr::Create(
+            C, GSE->getGenericLoc(), ExprOrTSI, GSE->getAssocTypeSourceInfos(),
+            ArrayRef<Expr *>(NewGSEAEs, GSEAEs.size()), GSE->getDefaultLoc(),
+            GSE->getRParenLoc(), GSE->containsUnexpandedParameterPack(),
+            GSE->getResultIndex());
+      };
+
+      return GSE->isExprPredicate() ? GSECreate(GSE->getControllingExpr())
+                                    : GSECreate(GSE->getControllingType());
+    }
+  }
+
+  else if (auto *CE = dyn_cast<ChooseExpr>(E)) {
+    if (!CE->isConditionDependent()) {
+      // Drills to `CE->getChosenSubExpr()`
+      const bool isCondTrue = CE->isConditionTrue();
+      return new (C) ChooseExpr(
+          CE->getBeginLoc(), CE->getCond(),
+          isCondTrue ? CloneWithRecurseToInnermostSL(CE->getLHS(), C)
+                     : CE->getLHS(),
+          isCondTrue ? CE->getRHS()
+                     : CloneWithRecurseToInnermostSL(CE->getRHS(), C),
+          CE->getType(), CE->getValueKind(), CE->getObjectKind(),
+          CE->getRParenLoc(), CE->isConditionTrue());
+    }
+  }
+
+  else if (auto *PE = dyn_cast<PredefinedExpr>(E)) {
+    if (PE->isTransparent() && PE->getFunctionName()) {
+      return PredefinedExpr::Create(
+          C, PE->getLocation(), PE->getType(), PE->getIdentKind(),
+          PE->isTransparent(), CloneStringLiteral(PE->getFunctionName(), C));
+    }
+  }
+
+  return E;
+}
+
 /// Update the type of a string literal, including any surrounding parentheses,
 /// to match the type of the object which it is initializing.
-static void updateStringLiteralType(Expr *E, QualType Ty) {
+static Expr *updateStringLiteralType(Expr *E, QualType Ty, Sema &S) {
+  Expr *ENew = CloneWithRecurseToInnermostSL(E, S.Context);
+  E = ENew;
+
   while (true) {
     E->setType(Ty);
     E->setValueKind(VK_PRValue);
@@ -178,6 +260,7 @@ static void updateStringLiteralType(Expr *E, QualType Ty) {
       break;
     E = IgnoreParensSingleStep(E);
   }
+  return ENew;
 }
 
 /// Fix a compound literal initializing an array so it's correctly marked
@@ -209,9 +292,9 @@ static bool initializingConstexprVariable(const InitializedEntity &Entity) {
 static void CheckC23ConstexprInitStringLiteral(const StringLiteral *SE,
                                                Sema &SemaRef, QualType &TT);
 
-static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
-                            Sema &S, const InitializedEntity &Entity,
-                            bool CheckC23ConstexprInit = false) {
+static Expr *CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
+                             Sema &S, const InitializedEntity &Entity,
+                             bool CheckC23ConstexprInit = false) {
   // Get the length of the string as parsed.
   auto *ConstantArrayTy =
       cast<ConstantArrayType>(Str->getType()->getAsArrayTypeUnsafe());
@@ -228,8 +311,7 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
     // Return a new array type (C99 6.7.8p22).
     DeclT = S.Context.getConstantArrayType(
         IAT->getElementType(), ConstVal, nullptr, ArraySizeModifier::Normal, 0);
-    updateStringLiteralType(Str, DeclT);
-    return;
+    return updateStringLiteralType(Str, DeclT, S);
   }
 
   const ConstantArrayType *CAT = cast<ConstantArrayType>(AT);
@@ -302,7 +384,7 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
   // something like:
   //   char x[1] = "foo";
   // then this will set the string literal's type to char[1].
-  updateStringLiteralType(Str, DeclT);
+  return updateStringLiteralType(Str, DeclT, S);
 }
 
 void emitUninitializedExplicitInitFields(Sema &S, const RecordDecl *R) {
@@ -1608,10 +1690,12 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
 
     if (IsStringInit(expr, arrayType, SemaRef.Context) == SIF_None) {
       // FIXME: Should we do this checking in verify-only mode?
-      if (!VerifyOnly)
-        CheckStringInit(expr, ElemType, arrayType, SemaRef, Entity,
-                        SemaRef.getLangOpts().C23 &&
-                            initializingConstexprVariable(Entity));
+      if (!VerifyOnly) {
+        expr = CheckStringInit(expr, ElemType, arrayType, SemaRef, Entity,
+                               SemaRef.getLangOpts().C23 &&
+                                   initializingConstexprVariable(Entity));
+        IList->setInit(Index, expr);
+      }
       if (StructuredList)
         UpdateStructuredListElement(StructuredList, StructuredIndex, expr);
       ++Index;
@@ -2121,10 +2205,13 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
       // because doing so would involve allocating one character
       // constant for each string.
       // FIXME: Should we do these checks in verify-only mode too?
-      if (!VerifyOnly)
-        CheckStringInit(
-            IList->getInit(Index), DeclType, arrayType, SemaRef, Entity,
-            SemaRef.getLangOpts().C23 && initializingConstexprVariable(Entity));
+      if (!VerifyOnly) {
+        IList->setInit(
+            Index, CheckStringInit(IList->getInit(Index), DeclType, arrayType,
+                                   SemaRef, Entity,
+                                   SemaRef.getLangOpts().C23 &&
+                                       initializingConstexprVariable(Entity)));
+      }
       if (StructuredList) {
         UpdateStructuredListElement(StructuredList, StructuredIndex,
                                     IList->getInit(Index));
@@ -8421,10 +8508,10 @@ ExprResult InitializationSequence::Perform(Sema &S,
     case SK_StringInit: {
       QualType Ty = Step->Type;
       bool UpdateType = ResultType && Entity.getType()->isIncompleteArrayType();
-      CheckStringInit(CurInit.get(), UpdateType ? *ResultType : Ty,
-                      S.Context.getAsArrayType(Ty), S, Entity,
-                      S.getLangOpts().C23 &&
-                          initializingConstexprVariable(Entity));
+      CurInit = CheckStringInit(CurInit.get(), UpdateType ? *ResultType : Ty,
+                                S.Context.getAsArrayType(Ty), S, Entity,
+                                S.getLangOpts().C23 &&
+                                    initializingConstexprVariable(Entity));
       break;
     }
 
