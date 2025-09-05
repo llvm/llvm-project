@@ -8885,7 +8885,15 @@ SDValue RISCVTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
     reportFatalUsageError("Unsupported code model for lowering");
   case CodeModel::Small: {
     // Generate a sequence for accessing addresses within the first 2 GiB of
-    // address space. This generates the pattern (addi (lui %hi(sym)) %lo(sym)).
+    // address space.
+    if (Subtarget.hasVendorXqcili()) {
+      // Use QC.E.LI to generate the address, as this is easier to relax than
+      // LUI/ADDI.
+      SDValue Addr = getTargetNode(N, DL, Ty, DAG, 0);
+      return DAG.getNode(RISCVISD::QC_E_LI, DL, Ty, Addr);
+    }
+
+    // This generates the pattern (addi (lui %hi(sym)) %lo(sym)).
     SDValue AddrHi = getTargetNode(N, DL, Ty, DAG, RISCVII::MO_HI);
     SDValue AddrLo = getTargetNode(N, DL, Ty, DAG, RISCVII::MO_LO);
     SDValue MNHi = DAG.getNode(RISCVISD::HI, DL, Ty, AddrHi);
@@ -9240,6 +9248,10 @@ foldBinOpIntoSelectIfProfitable(SDNode *BO, SelectionDAG &DAG,
   return DAG.getSelect(DL, VT, Sel.getOperand(0), NewT, NewF);
 }
 
+static bool isSimm12Constant(SDValue V) {
+  return isa<ConstantSDNode>(V) && V->getAsAPIntVal().isSignedIntN(12);
+}
+
 SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   SDValue CondV = Op.getOperand(0);
   SDValue TrueV = Op.getOperand(1);
@@ -9261,6 +9273,20 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   // sequence or RISCVISD::SELECT_CC node (branch-based select).
   if ((Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps()) &&
       VT.isScalarInteger()) {
+
+    // select c, simm12, 0 -> andi (sub x0, c), simm12
+    if (isSimm12Constant(TrueV) && isNullConstant(FalseV)) {
+      SDValue Mask = DAG.getNegative(CondV, DL, VT);
+      return DAG.getNode(ISD::AND, DL, VT, TrueV, Mask);
+    }
+
+    // select c, 0, simm12 -> andi (addi c, -1), simm12
+    if (isNullConstant(TrueV) && isSimm12Constant(FalseV)) {
+      SDValue Mask = DAG.getNode(ISD::ADD, DL, VT, CondV,
+                                 DAG.getSignedConstant(-1, DL, XLenVT));
+      return DAG.getNode(ISD::AND, DL, VT, FalseV, Mask);
+    }
+
     // (select c, t, 0) -> (czero_eqz t, c)
     if (isNullConstant(FalseV))
       return DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, CondV);
@@ -16156,6 +16182,48 @@ static SDValue combineOrOfCZERO(SDNode *N, SDValue N0, SDValue N1,
   return DAG.getNode(ISD::XOR, DL, VT, NewOr, TrueV.getOperand(1));
 }
 
+// (xor X, (xor (and X, C2), Y))
+// ->(qc_insb X, (sra Y, ShAmt), Width, ShAmt)
+// where C2 is a shifted mask with width = Width and shift = ShAmt
+// qc_insb might become qc.insb or qc.insbi depending on the operands.
+static SDValue combineXorToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
+                                          const RISCVSubtarget &Subtarget) {
+  if (!Subtarget.hasVendorXqcibm())
+    return SDValue();
+
+  using namespace SDPatternMatch;
+
+  SDValue Base, Inserted;
+  APInt CMask;
+  if (!sd_match(N, m_Xor(m_Value(Base),
+                         m_OneUse(m_Xor(m_OneUse(m_And(m_Deferred(Base),
+                                                       m_ConstInt(CMask))),
+                                        m_Value(Inserted))))))
+    return SDValue();
+
+  if (N->getValueType(0) != MVT::i32)
+    return SDValue();
+
+  unsigned Width, ShAmt;
+  if (!CMask.isShiftedMask(ShAmt, Width))
+    return SDValue();
+
+  // Check if all zero bits in CMask are also zero in Inserted
+  if (!DAG.MaskedValueIsZero(Inserted, ~CMask))
+    return SDValue();
+
+  SDLoc DL(N);
+
+  // `Inserted` needs to be right shifted before it is put into the
+  // instruction.
+  Inserted = DAG.getNode(ISD::SRA, DL, MVT::i32, Inserted,
+                         DAG.getShiftAmountConstant(ShAmt, MVT::i32, DL));
+
+  SDValue Ops[] = {Base, Inserted, DAG.getConstant(Width, DL, MVT::i32),
+                   DAG.getConstant(ShAmt, DL, MVT::i32)};
+  return DAG.getNode(RISCVISD::QC_INSB, DL, MVT::i32, Ops);
+}
+
 static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                 const RISCVSubtarget &Subtarget) {
   SelectionDAG &DAG = DCI.DAG;
@@ -16227,6 +16295,9 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
                             DAG.getConstant(Imm + 1, DL, VT), CC);
     }
   }
+
+  if (SDValue V = combineXorToBitfieldInsert(N, DAG, Subtarget))
+    return V;
 
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
@@ -16681,10 +16752,6 @@ combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y, ISD::CondCode CC,
                       DAG.getConstant(0, DL, XLenVT), CC);
 }
 
-// Replace (seteq (i64 (and X, 0xffffffff)), C1) with
-// (seteq (i64 (sext_inreg (X, i32)), C1')) where C1' is C1 sign extended from
-// bit 31. Same for setne. C1' may be cheaper to materialize and the sext_inreg
-// can become a sext.w instead of a shift pair.
 static SDValue performSETCCCombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    const RISCVSubtarget &Subtarget) {
@@ -16704,20 +16771,36 @@ static SDValue performSETCCCombine(SDNode *N,
           combineVectorSizedSetCCEquality(VT, N0, N1, Cond, dl, DAG, Subtarget))
     return V;
 
-  // (X & -4096) == 0 -> (X >> 12) == 0 if the AND constant can't use ANDI.
   if (DCI.isAfterLegalizeDAG() && isNullConstant(N1) &&
       N0.getOpcode() == ISD::AND && N0.hasOneUse() &&
       isa<ConstantSDNode>(N0.getOperand(1))) {
     const APInt &AndRHSC =
         cast<ConstantSDNode>(N0.getOperand(1))->getAPIntValue();
+    // (X & -(1 << C)) == 0 -> (X >> C) == 0 if the AND constant can't use ANDI.
     if (!isInt<12>(AndRHSC.getSExtValue()) && AndRHSC.isNegatedPowerOf2()) {
       unsigned ShiftBits = AndRHSC.countr_zero();
-      SDValue Shift = DAG.getNode(ISD::SRL, dl, VT, N0.getOperand(0),
-                                  DAG.getConstant(ShiftBits, dl, VT));
+      SDValue Shift = DAG.getNode(ISD::SRL, dl, OpVT, N0.getOperand(0),
+                                  DAG.getConstant(ShiftBits, dl, OpVT));
+      return DAG.getSetCC(dl, VT, Shift, N1, Cond);
+    }
+
+    // Similar to above but handling the lower 32 bits by using srliw.
+    // FIXME: Handle the case where N1 is non-zero.
+    if (OpVT == MVT::i64 && AndRHSC.getZExtValue() <= 0xffffffff &&
+        isPowerOf2_32(-uint32_t(AndRHSC.getZExtValue()))) {
+      unsigned ShiftBits = llvm::countr_zero(AndRHSC.getZExtValue());
+      SDValue And = DAG.getNode(ISD::AND, dl, OpVT, N0.getOperand(0),
+                                DAG.getConstant(0xffffffff, dl, OpVT));
+      SDValue Shift = DAG.getNode(ISD::SRL, dl, OpVT, And,
+                                  DAG.getConstant(ShiftBits, dl, OpVT));
       return DAG.getSetCC(dl, VT, Shift, N1, Cond);
     }
   }
 
+  // Replace (seteq (i64 (and X, 0xffffffff)), C1) with
+  // (seteq (i64 (sext_inreg (X, i32)), C1')) where C1' is C1 sign extended from
+  // bit 31. Same for setne. C1' may be cheaper to materialize and the
+  // sext_inreg can become a sext.w instead of a shift pair.
   if (OpVT != MVT::i64 || !Subtarget.is64Bit())
     return SDValue();
 
@@ -18837,6 +18920,10 @@ static SDValue foldSelectOfCTTZOrCTLZ(SDNode *N, SelectionDAG &DAG) {
   if (Cond->getOperand(0) != CountZeroesArgument)
     return SDValue();
 
+  unsigned BitWidth = CountZeroes.getValueSizeInBits();
+  if (!isPowerOf2_32(BitWidth))
+    return SDValue();
+
   if (CountZeroes.getOpcode() == ISD::CTTZ_ZERO_UNDEF) {
     CountZeroes = DAG.getNode(ISD::CTTZ, SDLoc(CountZeroes),
                               CountZeroes.getValueType(), CountZeroesArgument);
@@ -18845,7 +18932,6 @@ static SDValue foldSelectOfCTTZOrCTLZ(SDNode *N, SelectionDAG &DAG) {
                               CountZeroes.getValueType(), CountZeroesArgument);
   }
 
-  unsigned BitWidth = CountZeroes.getValueSizeInBits();
   SDValue BitWidthMinusOne =
       DAG.getConstant(BitWidth - 1, SDLoc(N), CountZeroes.getValueType());
 
@@ -21151,6 +21237,38 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return N->getOperand(0);
     break;
   }
+  case RISCVISD::VSLIDE1UP_VL:
+  case RISCVISD::VFSLIDE1UP_VL: {
+    using namespace SDPatternMatch;
+    SDValue SrcVec;
+    SDLoc DL(N);
+    MVT VT = N->getSimpleValueType(0);
+    // If the scalar we're sliding in was extracted from the first element of a
+    // vector, we can use that vector as the passthru in a normal slideup of 1.
+    // This saves us an extract_element instruction (i.e. vfmv.f.s, vmv.x.s).
+    if (!N->getOperand(0).isUndef() ||
+        !sd_match(N->getOperand(2),
+                  m_AnyOf(m_ExtractElt(m_Value(SrcVec), m_Zero()),
+                          m_Node(RISCVISD::VMV_X_S, m_Value(SrcVec)))))
+      break;
+
+    MVT SrcVecVT = SrcVec.getSimpleValueType();
+    if (SrcVecVT.getVectorElementType() != VT.getVectorElementType())
+      break;
+    // Adapt the value type of source vector.
+    if (SrcVecVT.isFixedLengthVector()) {
+      SrcVecVT = getContainerForFixedLengthVector(SrcVecVT);
+      SrcVec = convertToScalableVector(SrcVecVT, SrcVec, DAG, Subtarget);
+    }
+    if (SrcVecVT.getVectorMinNumElements() < VT.getVectorMinNumElements())
+      SrcVec = DAG.getInsertSubvector(DL, DAG.getUNDEF(VT), SrcVec, 0);
+    else
+      SrcVec = DAG.getExtractSubvector(DL, VT, SrcVec, 0);
+
+    return getVSlideup(DAG, Subtarget, DL, VT, SrcVec, N->getOperand(1),
+                       DAG.getConstant(1, DL, XLenVT), N->getOperand(3),
+                       N->getOperand(4));
+  }
   }
 
   return SDValue();
@@ -21438,6 +21556,15 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
     Known = KnownBits::shl(Known.trunc(32), Known2.trunc(5).zext(32));
+    // Restore the original width by sign extending.
+    Known = Known.sext(BitWidth);
+    break;
+  }
+  case RISCVISD::SRLW: {
+    KnownBits Known2;
+    Known = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known2 = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known = KnownBits::lshr(Known.trunc(32), Known2.trunc(5).zext(32));
     // Restore the original width by sign extending.
     Known = Known.sext(BitWidth);
     break;

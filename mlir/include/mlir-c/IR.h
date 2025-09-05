@@ -418,6 +418,9 @@ MLIR_CAPI_EXPORTED MlirModule mlirModuleFromOperation(MlirOperation op);
 /// Checks if two modules are equal.
 MLIR_CAPI_EXPORTED bool mlirModuleEqual(MlirModule lhs, MlirModule rhs);
 
+/// Compute a hash for the given module.
+MLIR_CAPI_EXPORTED size_t mlirModuleHashValue(MlirModule mod);
+
 //===----------------------------------------------------------------------===//
 // Operation state.
 //===----------------------------------------------------------------------===//
@@ -621,6 +624,9 @@ static inline bool mlirOperationIsNull(MlirOperation op) { return !op.ptr; }
 /// not perform deep comparison.
 MLIR_CAPI_EXPORTED bool mlirOperationEqual(MlirOperation op,
                                            MlirOperation other);
+
+/// Compute a hash for the given operation.
+MLIR_CAPI_EXPORTED size_t mlirOperationHashValue(MlirOperation op);
 
 /// Gets the context this operation is associated with
 MLIR_CAPI_EXPORTED MlirContext mlirOperationGetContext(MlirOperation op);

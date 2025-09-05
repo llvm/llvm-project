@@ -37,10 +37,9 @@
 /// which typically loses sparseness. These mitigations only work while the file
 /// is not in use.
 ///
-/// If different values of the capacity is used for concurrent users of the same
-/// mapping, the capacity is determined by the first value used to open the
-/// file. It is a requirement for the users to always open the file with the
-/// same \c HeaderOffset, otherwise the behavior is undefined.
+/// The capacity and the header offset is determined by the first user of the
+/// MappedFileRegionBumpPtr instance and any future mismatched value from the
+/// original will result in error on creation.
 ///
 /// To support resizing, we use two separate file locks:
 /// 1. We use a shared reader lock on a ".shared" file until destruction.
@@ -55,6 +54,8 @@
 
 #include "llvm/CAS/MappedFileRegionBumpPtr.h"
 #include "OnDiskCommon.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/EndianStream.h"
 
 #if LLVM_ON_UNIX
 #include <sys/stat.h>
@@ -100,6 +101,22 @@ struct FileLockRAII {
     }
     return Error::success();
   }
+
+  // Return true if succeed to lock the file exclusively.
+  bool tryLockExclusive() {
+    assert(!Locked && "can only try to lock if not locked");
+    if (tryLockFileThreadSafe(FD) == std::error_code()) {
+      Locked = sys::fs::LockKind::Exclusive;
+      return true;
+    }
+
+    return false;
+  }
+
+  // Release the lock so it will not be unlocked on destruction.
+  void release() {
+    Locked = std::nullopt;
+  }
 };
 
 struct FileSizeInfo {
@@ -138,11 +155,65 @@ Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
     return createFileError(SharedLockPath, EC);
   Result.SharedLockFD = SharedLockFD;
 
-  // Take shared/reader lock that will be held until we close the file; unlocked
-  // by destroyImpl.
-  if (std::error_code EC =
-          lockFileThreadSafe(SharedLockFD, sys::fs::LockKind::Shared))
-    return createFileError(Path, EC);
+  FileLockRAII InitSharedLock(SharedLockPath.str().str(), SharedLockFD);
+  sys::fs::file_status SharedFileStatus;
+  while (true) {
+    if (auto EC = sys::fs::status(SharedLockFD, SharedFileStatus))
+      return createFileError(SharedLockPath, EC);
+    if (SharedFileStatus.getSize() != 0)
+      break;
+
+    // Try exclusive lock and initialize the file.
+    if (InitSharedLock.tryLockExclusive()) {
+      // Check size again and exit if it is initialized.
+      if (auto EC = sys::fs::status(SharedLockFD, SharedFileStatus))
+        return createFileError(SharedLockPath, EC);
+      if (SharedFileStatus.getSize() != 0)
+        break;
+
+      // Write capacity and header offset to file.
+      std::error_code EC;
+      llvm::raw_fd_ostream OS(SharedLockPath, EC);
+      if (EC)
+        return createFileError(SharedLockPath, EC);
+      support::endian::write<uint64_t>(OS, Capacity, endianness::little);
+      support::endian::write<uint64_t>(OS, HeaderOffset, endianness::little);
+      break;
+    }
+  }
+
+  // Take shared/reader lock that will be held until we close the file;
+  // unlocked by destroyImpl if construction is successful.
+  if (auto E = InitSharedLock.lock(sys::fs::LockKind::Shared))
+    return std::move(E);
+
+  // Read the configuration and error out if the configuration is different.
+  SmallVector<char, 16> ConfigBuffer;
+  sys::fs::file_t SharedFile = sys::fs::convertFDToNativeFile(SharedLockFD);
+  if (auto E = sys::fs::readNativeFileToEOF(SharedFile, ConfigBuffer))
+    return std::move(E);
+
+  if (ConfigBuffer.size() != 2 * sizeof(uint64_t))
+    return createStringError(
+        std::make_error_code(std::errc::invalid_argument),
+        SharedLockPath + " does not have correct size");
+
+  uint64_t ExpectedCapacity =
+      support::endian::read<uint64_t, endianness::little>(ConfigBuffer.data());
+  uint64_t ExpectedOffset = support::endian::read<uint64_t, endianness::little>(
+      ConfigBuffer.data() + sizeof(uint64_t));
+
+  if (ExpectedCapacity != Capacity)
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
+                             "specified capacity (" + utostr(Capacity) +
+                                 ") does not match existing config (" +
+                                 utostr(ExpectedCapacity) + ")");
+  if (ExpectedOffset != HeaderOffset)
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
+                             "specified header offset (" +
+                                 utostr(HeaderOffset) +
+                                 ") does not match existing config (" +
+                                 utostr(ExpectedOffset) + ")");
 
   // Take shared/reader lock for initialization.
   FileLockRAII InitLock(Result.Path, FD);
@@ -166,21 +237,18 @@ Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
       return createFileError(Result.Path, FileSize.getError());
   }
 
-  uint64_t MappingSize = FileSize->Size;
-  // If the size is still smaller than the minimal required size, we need to
-  // resize the file to the capacity.
-  if (FileSize->Size < MinCapacity) {
+  // If the size is still smaller than capacity, we need to resize the file.
+  if (FileSize->Size < Capacity) {
     assert(InitLock.Locked == sys::fs::LockKind::Exclusive);
     if (std::error_code EC = sys::fs::resize_file_sparse(FD, Capacity))
       return createFileError(Result.Path, EC);
-    MappingSize = Capacity;
   }
 
   // Create the mapped region.
   {
     std::error_code EC;
     sys::fs::mapped_file_region Map(
-        File, sys::fs::mapped_file_region::readwrite, MappingSize, 0, EC);
+        File, sys::fs::mapped_file_region::readwrite, Capacity, 0, EC);
     if (EC)
       return createFileError(Result.Path, EC);
     Result.Region = std::move(Map);
@@ -190,28 +258,9 @@ Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
     assert(InitLock.Locked == sys::fs::LockKind::Exclusive);
     // If we need to fully initialize the file, call NewFileConstructor.
     if (Error E = NewFileConstructor(Result))
-      return E;
+      return std::move(E);
   } else
     Result.initializeHeader(HeaderOffset);
-
-  if (Result.H->BumpPtr >= FileSize->Size && FileSize->Size < Capacity) {
-    assert(InitLock.Locked == sys::fs::LockKind::Exclusive);
-    // If the BumpPtr larger than or equal to the size of the file (it can be
-    // larger if process is terminated when the out of memory allocation
-    // happens) and smaller than capacity, this was shrunken by a previous
-    // close, resize back to capacity and re-initialize the mapped_file_region.
-    Result.Region.unmap();
-    if (std::error_code EC = sys::fs::resize_file_sparse(FD, Capacity))
-      return createFileError(Result.Path, EC);
-
-    std::error_code EC;
-    sys::fs::mapped_file_region Map(
-        File, sys::fs::mapped_file_region::readwrite, Capacity, 0, EC);
-    if (EC)
-      return createFileError(Result.Path, EC);
-    Result.Region = std::move(Map);
-    Result.initializeHeader(HeaderOffset);
-  }
 
   if (InitLock.Locked == sys::fs::LockKind::Exclusive) {
     // If holding an exclusive lock, we might have resized the file and
@@ -224,6 +273,10 @@ Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
   }
 
   Result.H->AllocatedSize.exchange(FileSize->AllocatedSize);
+
+  // Release the shared lock from RAII so it can be closed in destoryImpl().
+  InitSharedLock.release();
+
   return Result;
 }
 

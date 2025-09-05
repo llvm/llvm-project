@@ -143,9 +143,9 @@ TEST_F(CASProgramTest, MappedFileRegionBumpPtrTest) {
   TestAllocator(FilePath);
 
   ASSERT_FALSE(ExecutionFailed) << Error;
-  ASSERT_TRUE(Error.empty());
   ASSERT_NE(PI.Pid, sys::ProcessInfo::InvalidPid) << "Invalid process id";
-  llvm::sys::Wait(PI, /*SecondsToWait=*/5, &Error);
+  PI = llvm::sys::Wait(PI, /*SecondsToWait=*/5, &Error);
+  ASSERT_TRUE(PI.ReturnCode == 0);
   ASSERT_TRUE(Error.empty());
 
   // Clean up after both processes finish testing.
@@ -169,23 +169,33 @@ TEST_F(CASProgramTest, MappedFileRegionBumpPtrSizeTest) {
     } while (Backoff.waitForNextAttempt());
 
     std::optional<MappedFileRegionBumpPtr> Alloc;
-    ASSERT_THAT_ERROR(MappedFileRegionBumpPtr::create(File, /*Capacity=*/1024,
+    ASSERT_THAT_ERROR(
+        MappedFileRegionBumpPtr::create(File, /*Capacity=*/1024,
+                                        /*HeaderOffset=*/0, NewFileConstructor)
+            .moveInto(Alloc),
+        FailedWithMessage(
+            "specified capacity (1024) does not match existing config (2048)"));
+
+    ASSERT_THAT_ERROR(
+        MappedFileRegionBumpPtr::create(File, /*Capacity=*/4096,
+                                        /*HeaderOffset=*/0, NewFileConstructor)
+            .moveInto(Alloc),
+        FailedWithMessage(
+            "specified capacity (4096) does not match existing config (2048)"));
+
+    ASSERT_THAT_ERROR(
+        MappedFileRegionBumpPtr::create(File, /*Capacity=*/2048,
+                                        /*HeaderOffset=*/32, NewFileConstructor)
+            .moveInto(Alloc),
+        FailedWithMessage(
+            "specified header offset (32) does not match existing config (0)"));
+
+    ASSERT_THAT_ERROR(MappedFileRegionBumpPtr::create(File, /*Capacity=*/2048,
                                                       /*HeaderOffset=*/0,
                                                       NewFileConstructor)
                           .moveInto(Alloc),
                       Succeeded());
 
-    ASSERT_TRUE(Alloc->capacity() == 2048);
-
-    Alloc.reset();
-
-    ASSERT_THAT_ERROR(MappedFileRegionBumpPtr::create(File, /*Capacity=*/4096,
-                                                      /*HeaderOffset=*/0,
-                                                      NewFileConstructor)
-                          .moveInto(Alloc),
-                      Succeeded());
-
-    ASSERT_TRUE(Alloc->capacity() == 2048);
     exit(0);
   }
 
@@ -204,11 +214,6 @@ TEST_F(CASProgramTest, MappedFileRegionBumpPtrSizeTest) {
   EnvVar += FilePath.str();
   addEnvVar(EnvVar);
 
-  std::string Error;
-  bool ExecutionFailed;
-  sys::ProcessInfo PI = sys::ExecuteNoWait(Executable, Argv, getEnviron(), {},
-                                           0, &Error, &ExecutionFailed);
-
   std::optional<MappedFileRegionBumpPtr> Alloc;
   ASSERT_THAT_ERROR(MappedFileRegionBumpPtr::create(FilePath, /*Capacity=*/2048,
                                                     /*HeaderOffset=*/0,
@@ -216,10 +221,15 @@ TEST_F(CASProgramTest, MappedFileRegionBumpPtrSizeTest) {
                         .moveInto(Alloc),
                     Succeeded());
 
+  std::string Error;
+  bool ExecutionFailed;
+  sys::ProcessInfo PI = sys::ExecuteNoWait(Executable, Argv, getEnviron(), {},
+                                           0, &Error, &ExecutionFailed);
+
   ASSERT_FALSE(ExecutionFailed) << Error;
-  ASSERT_TRUE(Error.empty());
   ASSERT_NE(PI.Pid, sys::ProcessInfo::InvalidPid) << "Invalid process id";
-  llvm::sys::Wait(PI, /*SecondsToWait=*/100, &Error);
+  PI = llvm::sys::Wait(PI, /*SecondsToWait=*/100, &Error);
+  ASSERT_TRUE(PI.ReturnCode == 0);
   ASSERT_TRUE(Error.empty());
 
   // Size is still the requested 2048.
