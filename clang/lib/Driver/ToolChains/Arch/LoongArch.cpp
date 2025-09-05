@@ -134,22 +134,19 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
       (!Args.hasArgNoClaim(clang::driver::options::OPT_march_EQ)))
     Features.push_back("+lsx");
 
-  // FIXME: Now we must use -mrelax to enable relax, maybe -mrelax will be set
-  // as default in the future.
-  if (const Arg *A =
-          Args.getLastArg(options::OPT_mrelax, options::OPT_mno_relax)) {
-    if (A->getOption().matches(options::OPT_mrelax)) {
-      Features.push_back("+relax");
-      // -gsplit-dwarf -mrelax requires DW_AT_high_pc/DW_AT_ranges/... indexing
-      // into .debug_addr, which is currently not implemented.
-      Arg *A;
-      if (getDebugFissionKind(D, Args, A) != DwarfFissionKind::None)
-        D.Diag(
-            clang::diag::err_drv_loongarch_unsupported_with_linker_relaxation)
-            << A->getAsString(Args);
-    } else {
-      Features.push_back("-relax");
-    }
+  // -mrelax is default, unless -mno-relax is specified.
+  // FIXME: Only for loongarch64, loongarch32 has not been fully verified.
+  if (Args.hasFlag(options::OPT_mrelax, options::OPT_mno_relax,
+                   Triple.isLoongArch64() ? true : false)) {
+    Features.push_back("+relax");
+    // -gsplit-dwarf -mrelax requires DW_AT_high_pc/DW_AT_ranges/... indexing
+    // into .debug_addr, which is currently not implemented.
+    Arg *A;
+    if (getDebugFissionKind(D, Args, A) != DwarfFissionKind::None)
+      D.Diag(clang::diag::err_drv_loongarch_unsupported_with_linker_relaxation)
+          << A->getAsString(Args);
+  } else if (Args.getLastArg(options::OPT_mno_relax)) {
+    Features.push_back("-relax");
   }
 
   std::string ArchName;
