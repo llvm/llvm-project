@@ -694,7 +694,12 @@ void DataLayout::setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth,
 
 Align DataLayout::getIntegerAlignment(uint32_t BitWidth,
                                       bool abi_or_pref) const {
-  auto I = lower_bound(IntSpecs, BitWidth, LessPrimitiveBitWidth());
+  auto I = IntSpecs.begin();
+  for (; I != IntSpecs.end(); ++I) {
+    if (I->BitWidth >= BitWidth)
+      break;
+  }
+
   // If we don't have an exact match, use alignment of next larger integer
   // type. If there is none, use alignment of largest integer type by going
   // back one element.
@@ -836,6 +841,44 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
   }
   default:
     llvm_unreachable("Bad type for getAlignment!!!");
+  }
+}
+
+TypeSize DataLayout::getTypeAllocSize(Type *Ty) const {
+  switch (Ty->getTypeID()) {
+  case Type::ArrayTyID: {
+    // The alignment of the array is the alignment of the element, so there
+    // is no need for further adjustment.
+    auto *ATy = cast<ArrayType>(Ty);
+    return ATy->getNumElements() * getTypeAllocSize(ATy->getElementType());
+  }
+  case Type::StructTyID: {
+    const StructLayout *Layout = getStructLayout(cast<StructType>(Ty));
+    TypeSize Size = Layout->getSizeInBytes();
+
+    if (cast<StructType>(Ty)->isPacked())
+      return Size;
+
+    Align A = std::max(StructABIAlignment, Layout->getAlignment());
+    return alignTo(Size, A.value());
+  }
+  case Type::IntegerTyID: {
+    unsigned BitWidth = Ty->getIntegerBitWidth();
+    TypeSize Size = TypeSize::getFixed(divideCeil(BitWidth, 8));
+    Align A = getIntegerAlignment(BitWidth, /*ABI=*/true);
+    return alignTo(Size, A.value());
+  }
+  case Type::PointerTyID: {
+    unsigned AS = Ty->getPointerAddressSpace();
+    TypeSize Size = TypeSize::getFixed(getPointerSize(AS));
+    return alignTo(Size, getPointerABIAlignment(AS).value());
+  }
+  case Type::TargetExtTyID: {
+    Type *LayoutTy = cast<TargetExtType>(Ty)->getLayoutType();
+    return getTypeAllocSize(LayoutTy);
+  }
+  default:
+    return alignTo(getTypeStoreSize(Ty), getABITypeAlign(Ty).value());
   }
 }
 

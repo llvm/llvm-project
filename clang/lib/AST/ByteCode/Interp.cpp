@@ -792,6 +792,7 @@ bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
 
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                AccessKinds AK) {
+  // Block pointers are the only ones we can actually read from.
   if (!Ptr.isBlockPointer()) {
     if (Ptr.isZero()) {
       const auto &Src = S.Current->getSource(OpPC);
@@ -804,7 +805,6 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
   }
 
-  // Block pointers are the only ones we can actually read from.
   if (!Ptr.block()->isAccessible()) {
     if (!CheckLive(S, OpPC, Ptr, AK))
       return false;
@@ -812,8 +812,7 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
       return false;
     if (!CheckDummy(S, OpPC, Ptr.block(), AK))
       return false;
-    if (!CheckWeak(S, OpPC, Ptr.block()))
-      return false;
+    return CheckWeak(S, OpPC, Ptr.block());
   }
 
   if (!CheckConstant(S, OpPC, Ptr))
@@ -870,7 +869,7 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 }
 
 bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  if (!Ptr.isBlockPointer())
+  if (!Ptr.isBlockPointer() || Ptr.isZero())
     return false;
 
   if (!Ptr.block()->isAccessible()) {

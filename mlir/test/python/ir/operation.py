@@ -1051,6 +1051,12 @@ def testOperationHash():
         op = Operation.create("custom.op1")
         assert hash(op) == hash(op.operation)
 
+        module = Module.create()
+        with InsertionPoint(module.body):
+            op2 = Operation.create("custom.op2")
+            custom_op2 = module.body.operations[0]
+            assert hash(op2) == hash(custom_op2)
+
 
 # CHECK-LABEL: TEST: testOperationParse
 @run

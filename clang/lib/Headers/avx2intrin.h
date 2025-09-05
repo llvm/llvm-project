@@ -15,21 +15,12 @@
 #define __AVX2INTRIN_H
 
 /* Define the default attributes for the functions in this file. */
-#if defined(__EVEX512__) && !defined(__AVX10_1_512__)
-#define __DEFAULT_FN_ATTRS256                                                  \
-  __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("avx2,no-evex512"), __min_vector_width__(256)))
-#define __DEFAULT_FN_ATTRS128                                                  \
-  __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("avx2,no-evex512"), __min_vector_width__(128)))
-#else
 #define __DEFAULT_FN_ATTRS256                                                  \
   __attribute__((__always_inline__, __nodebug__, __target__("avx2"),           \
                  __min_vector_width__(256)))
 #define __DEFAULT_FN_ATTRS128                                                  \
   __attribute__((__always_inline__, __nodebug__, __target__("avx2"),           \
                  __min_vector_width__(128)))
-#endif
 
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 #define __DEFAULT_FN_ATTRS256_CONSTEXPR __DEFAULT_FN_ATTRS256 constexpr
@@ -1106,9 +1097,8 @@ _mm256_madd_epi16(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit integer vector.
 /// \returns A 256-bit integer vector containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_max_epi8(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_max_epi8(__m256i __a, __m256i __b) {
   return (__m256i)__builtin_elementwise_max((__v32qs)__a, (__v32qs)__b);
 }
 
@@ -1125,9 +1115,8 @@ _mm256_max_epi8(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit vector of [16 x i16].
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_max_epi16(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_max_epi16(__m256i __a, __m256i __b) {
   return (__m256i)__builtin_elementwise_max((__v16hi)__a, (__v16hi)__b);
 }
 
@@ -1144,9 +1133,8 @@ _mm256_max_epi16(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit vector of [8 x i32].
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_max_epi32(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_max_epi32(__m256i __a, __m256i __b) {
   return (__m256i)__builtin_elementwise_max((__v8si)__a, (__v8si)__b);
 }
 
@@ -1163,9 +1151,8 @@ _mm256_max_epi32(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit integer vector.
 /// \returns A 256-bit integer vector containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_max_epu8(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_max_epu8(__m256i __a, __m256i __b) {
   return (__m256i)__builtin_elementwise_max((__v32qu)__a, (__v32qu)__b);
 }
 
@@ -1182,9 +1169,8 @@ _mm256_max_epu8(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit vector of [16 x i16].
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_max_epu16(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_max_epu16(__m256i __a, __m256i __b) {
   return (__m256i)__builtin_elementwise_max((__v16hu)__a, (__v16hu)__b);
 }
 
@@ -1201,9 +1187,8 @@ _mm256_max_epu16(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit vector of [8 x i32].
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_max_epu32(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_max_epu32(__m256i __a, __m256i __b) {
   return (__m256i)__builtin_elementwise_max((__v8su)__a, (__v8su)__b);
 }
 
@@ -1220,9 +1205,8 @@ _mm256_max_epu32(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit integer vector.
 /// \returns A 256-bit integer vector containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_min_epi8(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_min_epi8(__m256i __a, __m256i __b) {
   return (__m256i)__builtin_elementwise_min((__v32qs)__a, (__v32qs)__b);
 }
 
@@ -1239,9 +1223,8 @@ _mm256_min_epi8(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit vector of [16 x i16].
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_min_epi16(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_min_epi16(__m256i __a, __m256i __b) {
   return (__m256i)__builtin_elementwise_min((__v16hi)__a, (__v16hi)__b);
 }
 
@@ -1258,9 +1241,8 @@ _mm256_min_epi16(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit vector of [8 x i32].
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_min_epi32(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_min_epi32(__m256i __a, __m256i __b) {
   return (__m256i)__builtin_elementwise_min((__v8si)__a, (__v8si)__b);
 }
 
@@ -1277,9 +1259,8 @@ _mm256_min_epi32(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit integer vector.
 /// \returns A 256-bit integer vector containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_min_epu8(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_min_epu8(__m256i __a, __m256i __b) {
   return (__m256i)__builtin_elementwise_min((__v32qu)__a, (__v32qu)__b);
 }
 
@@ -1296,9 +1277,8 @@ _mm256_min_epu8(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit vector of [16 x i16].
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_min_epu16(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_min_epu16(__m256i __a, __m256i __b) {
   return (__m256i)__builtin_elementwise_min((__v16hu)__a, (__v16hu)__b);
 }
 
@@ -1315,9 +1295,8 @@ _mm256_min_epu16(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit vector of [8 x i32].
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_min_epu32(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_min_epu32(__m256i __a, __m256i __b) {
   return (__m256i)__builtin_elementwise_min((__v8su)__a, (__v8su)__b);
 }
 

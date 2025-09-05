@@ -2493,7 +2493,6 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.setDesc(get(ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64));
     break;
   }
-  case AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN:
   case AMDGPU::SI_RETURN: {
     const MachineFunction *MF = MBB.getParent();
     const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
@@ -3444,12 +3443,8 @@ bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) {
   case AMDGPU::V_ACCVGPR_READ_B32_e64:
   case AMDGPU::V_ACCVGPR_MOV_B32:
   case AMDGPU::AV_MOV_B32_IMM_PSEUDO:
-    return true;
   case AMDGPU::AV_MOV_B64_IMM_PSEUDO:
-    // TODO: We could fold this, but it's a strange case. The immediate value
-    // can't be directly folded into any real use. We would have to spread new
-    // immediate legality checks around and only accept subregister extracts for
-    // profitability.
+    return true;
   default:
     return false;
   }
@@ -4572,19 +4567,24 @@ static bool compareMachineOp(const MachineOperand &Op0,
   }
 }
 
-bool SIInstrInfo::isImmOperandLegal(const MCInstrDesc &InstDesc, unsigned OpNo,
-                                    const MachineOperand &MO) const {
-  const MCOperandInfo &OpInfo = InstDesc.operands()[OpNo];
-
-  assert(MO.isImm() || MO.isTargetIndex() || MO.isFI() || MO.isGlobal());
-
+bool SIInstrInfo::isLiteralOperandLegal(const MCInstrDesc &InstDesc,
+                                        const MCOperandInfo &OpInfo) const {
   if (OpInfo.OperandType == MCOI::OPERAND_IMMEDIATE)
     return true;
 
-  if (OpInfo.RegClass < 0)
+  if (!RI.opCanUseLiteralConstant(OpInfo.OperandType))
     return false;
 
-  if (MO.isImm() && isInlineConstant(MO, OpInfo)) {
+  if (!isVOP3(InstDesc) || !AMDGPU::isSISrcOperand(OpInfo))
+    return true;
+
+  return ST.hasVOP3Literal();
+}
+
+bool SIInstrInfo::isImmOperandLegal(const MCInstrDesc &InstDesc, unsigned OpNo,
+                                    int64_t ImmVal) const {
+  const MCOperandInfo &OpInfo = InstDesc.operands()[OpNo];
+  if (isInlineConstant(ImmVal, OpInfo.OperandType)) {
     if (isMAI(InstDesc) && ST.hasMFMAInlineLiteralBug() &&
         OpNo == (unsigned)AMDGPU::getNamedOperandIdx(InstDesc.getOpcode(),
                                                      AMDGPU::OpName::src2))
@@ -4592,13 +4592,18 @@ bool SIInstrInfo::isImmOperandLegal(const MCInstrDesc &InstDesc, unsigned OpNo,
     return RI.opCanUseInlineConstant(OpInfo.OperandType);
   }
 
-  if (!RI.opCanUseLiteralConstant(OpInfo.OperandType))
-    return false;
+  return isLiteralOperandLegal(InstDesc, OpInfo);
+}
 
-  if (!isVOP3(InstDesc) || !AMDGPU::isSISrcOperand(InstDesc, OpNo))
-    return true;
+bool SIInstrInfo::isImmOperandLegal(const MCInstrDesc &InstDesc, unsigned OpNo,
+                                    const MachineOperand &MO) const {
+  if (MO.isImm())
+    return isImmOperandLegal(InstDesc, OpNo, MO.getImm());
 
-  return ST.hasVOP3Literal();
+  assert((MO.isTargetIndex() || MO.isFI() || MO.isGlobal()) &&
+         "unexpected imm-like operand kind");
+  const MCOperandInfo &OpInfo = InstDesc.operands()[OpNo];
+  return isLiteralOperandLegal(InstDesc, OpInfo);
 }
 
 bool SIInstrInfo::isLegalAV64PseudoImm(uint64_t Imm) const {
@@ -5028,7 +5033,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     // aligned register constraint.
     // FIXME: We do not verify inline asm operands, but custom inline asm
     // verification is broken anyway
-    if (ST.needsAlignedVGPRs()) {
+    if (ST.needsAlignedVGPRs() && Opcode != AMDGPU::AV_MOV_B64_IMM_PSEUDO) {
       const TargetRegisterClass *RC = RI.getRegClassForReg(MRI, Reg);
       if (RI.hasVectorRegisters(RC) && MO.getSubReg()) {
         if (const TargetRegisterClass *SubRC =
@@ -5954,7 +5959,7 @@ adjustAllocatableRegClass(const GCNSubtarget &ST, const SIRegisterInfo &RI,
   if ((IsAllocatable || !ST.hasGFX90AInsts()) &&
       (((TID.mayLoad() || TID.mayStore()) &&
         !(TID.TSFlags & SIInstrFlags::Spill)) ||
-       (TID.TSFlags & (SIInstrFlags::DS | SIInstrFlags::MIMG)))) {
+       (TID.TSFlags & SIInstrFlags::MIMG))) {
     switch (RCID) {
     case AMDGPU::AV_32RegClassID:
       RCID = AMDGPU::VGPR_32RegClassID;
@@ -5990,24 +5995,23 @@ const TargetRegisterClass *SIInstrInfo::getRegClass(const MCInstrDesc &TID,
     return nullptr;
   auto RegClass = TID.operands()[OpNum].RegClass;
   bool IsAllocatable = false;
-  if (TID.TSFlags & (SIInstrFlags::DS | SIInstrFlags::FLAT)) {
+  if (TID.TSFlags & SIInstrFlags::FLAT) {
     // vdst and vdata should be both VGPR or AGPR, same for the DS instructions
     // with two data operands. Request register class constrained to VGPR only
     // of both operands present as Machine Copy Propagation can not check this
     // constraint and possibly other passes too.
     //
-    // The check is limited to FLAT and DS because atomics in non-flat encoding
-    // have their vdst and vdata tied to be the same register.
-    const int VDstIdx = AMDGPU::getNamedOperandIdx(TID.Opcode,
-                                                   AMDGPU::OpName::vdst);
-    const int DataIdx = AMDGPU::getNamedOperandIdx(TID.Opcode,
-        (TID.TSFlags & SIInstrFlags::DS) ? AMDGPU::OpName::data0
-                                         : AMDGPU::OpName::vdata);
-    if (DataIdx != -1) {
-      IsAllocatable = VDstIdx != -1 || AMDGPU::hasNamedOperand(
-                                           TID.Opcode, AMDGPU::OpName::data1);
-    }
+    // The check is limited to FLAT because atomics in non-flat encoding have
+    // their vdst and vdata tied to be the same register, and DS instructions
+    // have separate instruction definitions with AGPR and VGPR operand lists.
+    IsAllocatable =
+        AMDGPU::hasNamedOperand(TID.Opcode, AMDGPU::OpName::vdata) &&
+        AMDGPU::hasNamedOperand(TID.Opcode, AMDGPU::OpName::vdst);
+  } else if (TID.getOpcode() == AMDGPU::AV_MOV_B64_IMM_PSEUDO) {
+    // Special pseudos have no alignment requirement
+    return RI.getRegClass(RegClass);
   }
+
   return adjustAllocatableRegClass(ST, RI, TID, RegClass, IsAllocatable);
 }
 
@@ -6268,7 +6272,7 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
               return false;
           }
         }
-      } else if (AMDGPU::isSISrcOperand(InstDesc, i) &&
+      } else if (AMDGPU::isSISrcOperand(InstDesc.operands()[i]) &&
                  !isInlineConstant(Op, InstDesc.operands()[i])) {
         // The same literal may be used multiple times.
         if (!UsedLiteral)
@@ -9266,6 +9270,9 @@ Register SIInstrInfo::findUsedSGPR(const MachineInstr &MI,
 
 MachineOperand *SIInstrInfo::getNamedOperand(MachineInstr &MI,
                                              AMDGPU::OpName OperandName) const {
+  if (OperandName == AMDGPU::OpName::NUM_OPERAND_NAMES)
+    return nullptr;
+
   int Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), OperandName);
   if (Idx == -1)
     return nullptr;
@@ -9563,6 +9570,7 @@ SIInstrInfo::getSerializableMachineMemOperandTargetFlags() const {
       {
           {MONoClobber, "amdgpu-noclobber"},
           {MOLastUse, "amdgpu-last-use"},
+          {MOCooperative, "amdgpu-cooperative"},
       };
 
   return ArrayRef(TargetFlags);

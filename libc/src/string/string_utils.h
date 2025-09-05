@@ -212,28 +212,28 @@ LIBC_INLINE char *string_token(char *__restrict src,
   static_assert(CHAR_BIT == 8, "bitset of 256 assumes char is 8 bits");
   cpp::bitset<256> delims;
   for (; *delimiter_string != '\0'; ++delimiter_string)
-    delims.set(static_cast<size_t>(*delimiter_string));
+    delims.set(*reinterpret_cast<const unsigned char *>(delimiter_string));
 
-  char *tok_start = src;
+  unsigned char *tok_start = reinterpret_cast<unsigned char *>(src);
   if constexpr (SkipDelim)
-    while (*tok_start != '\0' && delims.test(static_cast<size_t>(*tok_start)))
+    while (*tok_start != '\0' && delims.test(*tok_start))
       ++tok_start;
   if (*tok_start == '\0' && SkipDelim) {
     *context = nullptr;
     return nullptr;
   }
 
-  char *tok_end = tok_start;
-  while (*tok_end != '\0' && !delims.test(static_cast<size_t>(*tok_end)))
+  unsigned char *tok_end = tok_start;
+  while (*tok_end != '\0' && !delims.test(*tok_end))
     ++tok_end;
 
   if (*tok_end == '\0') {
     *context = nullptr;
   } else {
     *tok_end = '\0';
-    *context = tok_end + 1;
+    *context = reinterpret_cast<char *>(tok_end + 1);
   }
-  return tok_start;
+  return reinterpret_cast<char *>(tok_start);
 }
 
 LIBC_INLINE size_t strlcpy(char *__restrict dst, const char *__restrict src,
