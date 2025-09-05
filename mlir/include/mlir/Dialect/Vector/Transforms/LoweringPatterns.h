@@ -313,7 +313,7 @@ void populateVectorFromElementsLoweringPatterns(RewritePatternSet &patterns,
 
 /// Populate the pattern set with the following patterns:
 ///
-/// [FlattenToElements]
+/// [UnrollToElements]
 void populateVectorToElementsLoweringPatterns(RewritePatternSet &patterns,
                                               PatternBenefit benefit = 1);
 
