@@ -371,3 +371,93 @@ define i1 @pr93017(i64 %idx) {
   %cmp = icmp ne ptr %v, null
   ret i1 %cmp
 }
+
+@g_i32_lo = internal constant [4 x i32] [i32 1, i32 2, i32 3, i32 4]
+
+; Mask is 0b10101010
+define i1 @load_vs_array_type_mismatch1(i32 %idx) {
+; CHECK-LABEL: @load_vs_array_type_mismatch1(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i16, ptr @g_i32_lo, i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep = getelementptr inbounds i16, ptr @g_i32_lo, i32 %idx
+  %load = load i16, ptr %gep
+  %cmp = icmp eq i16 %load, 0
+  ret i1 %cmp
+}
+
+@g_i32_hi = internal constant [4 x i32] [i32 u0x00010000, i32 u0x00020000, i32 u0x00030000, i32 u0x00040000]
+
+; Mask is 0b01010101
+define i1 @load_vs_array_type_mismatch2(i32 %idx) {
+; CHECK-LABEL: @load_vs_array_type_mismatch2(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i16, ptr @g_i32_hi, i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep = getelementptr inbounds i16, ptr @g_i32_hi, i32 %idx
+  %load = load i16, ptr %gep
+  %cmp = icmp eq i16 %load, 0
+  ret i1 %cmp
+}
+
+@g_i16_1 = internal constant [8 x i16] [i16 0, i16 1, i16 1, i16 0, i16 0, i16 1, i16 1, i16 0]
+
+; idx == 1 || idx == 3
+define i1 @load_vs_array_type_mismatch_offset1(i32 %idx) {
+; CHECK-LABEL: @load_vs_array_type_mismatch_offset1(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds { i16, i16 }, ptr @g_i16_1, i32 [[IDX:%.*]], i32 1
+; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep = getelementptr inbounds {i16, i16}, ptr @g_i16_1, i32 %idx, i32 1
+  %load = load i16, ptr %gep
+  %cmp = icmp eq i16 %load, 0
+  ret i1 %cmp
+}
+
+@g_i16_2 = internal constant [8 x i16] [i16 1, i16 0, i16 0, i16 1, i16 1, i16 0, i16 0, i16 1]
+
+; idx == 0 || idx == 2
+define i1 @load_vs_array_type_mismatch_offset2(i32 %idx) {
+; CHECK-LABEL: @load_vs_array_type_mismatch_offset2(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds { i16, i16 }, ptr @g_i16_2, i32 [[IDX:%.*]], i32 1
+; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep = getelementptr inbounds {i16, i16}, ptr @g_i16_2, i32 %idx, i32 1
+  %load = load i16, ptr %gep
+  %cmp = icmp eq i16 %load, 0
+  ret i1 %cmp
+}
+
+define i1 @offset_larger_than_stride(i32 %idx) {
+; CHECK-LABEL: @offset_larger_than_stride(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x i16], ptr @g_i16_1, i32 1, i32 [[TMP1:%.*]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep = getelementptr [2 x i16], ptr @g_i16_1, i64 1, i32 %idx
+  %load = load i16, ptr %gep
+  %cmp = icmp eq i16 %load, 0
+  ret i1 %cmp
+}
+
+define i1 @load_size_larger_stride(i32 %idx) {
+; CHECK-LABEL: @load_size_larger_stride(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr @g_i16_1, i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep = getelementptr i8, ptr @g_i16_1, i32 %idx
+  %load = load i16, ptr %gep
+  %cmp = icmp eq i16 %load, 0
+  ret i1 %cmp
+}
