@@ -1285,7 +1285,7 @@ void CodeGenFunction::EmitAllocTokenHint(llvm::CallBase *CB,
 
   // Format: !{<type-name>}
   auto *MDN = llvm::MDNode::get(CGM.getLLVMContext(), {TypeMDS});
-  CB->setMetadata("alloc_token_hint", MDN);
+  CB->setMetadata(llvm::LLVMContext::MD_alloc_token_hint, MDN);
 }
 
 CodeGenFunction::ComplexPairTy CodeGenFunction::
