@@ -3412,6 +3412,13 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_elementwise_fma:
     return interp__builtin_elementwise_fma(S, OpPC, Call);
 
+  case clang::X86::BI__builtin_ia32_pblendvb128:
+  case clang::X86::BI__builtin_ia32_pblendvb256:
+    return interp__builtin_elementwise_triop(
+        S, OpPC, Call, [](const APSInt &F, const APSInt &T, const APSInt &C) {
+          return ((APInt)C).isNegative() ? T : F;
+        });
+
   case X86::BI__builtin_ia32_selectb_128:
   case X86::BI__builtin_ia32_selectb_256:
   case X86::BI__builtin_ia32_selectb_512:

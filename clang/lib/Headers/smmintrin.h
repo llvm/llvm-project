@@ -493,9 +493,8 @@ static __inline__ __m128 __DEFAULT_FN_ATTRS _mm_blendv_ps(__m128 __V1,
 ///    position in the result. When a mask bit is 1, the corresponding 8-bit
 ///    element in operand \a __V2 is copied to the same position in the result.
 /// \returns A 128-bit vector of [16 x i8] containing the copied values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_blendv_epi8(__m128i __V1,
-                                                             __m128i __V2,
-                                                             __m128i __M) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_blendv_epi8(__m128i __V1, __m128i __V2, __m128i __M) {
   return (__m128i)__builtin_ia32_pblendvb128((__v16qi)__V1, (__v16qi)__V2,
                                              (__v16qi)__M);
 }
