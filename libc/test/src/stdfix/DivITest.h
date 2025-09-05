@@ -11,6 +11,8 @@
 #include "src/__support/fixed_point/fx_rep.h"
 #include "test/UnitTest/Test.h"
 
+#include <stdio.h>
+
 template <typename XType> XType get_epsilon() = delete;
 template <> fract get_epsilon() { return FRACT_EPSILON; }
 template <> unsigned fract get_epsilon() { return UFRACT_EPSILON; }
@@ -44,22 +46,27 @@ public:
   }
 
   void testSpecial(DivIFunc func) {
-    EXPECT_EQ(func(0,10), 0.r);
-    EXPECT_EQ(func(0,-10), 0.r);
-    EXPECT_EQ(func(-32768,32768), FRACT_MIN);
-    EXPECT_EQ(func(32767,32768), FRACT_MAX);  
-    EXPECT_EQ(func(INT_MAX,INT_MAX), 1.0r);
-    EXPECT_EQ(func(INT_MAX-1,INT_MAX), 0.99999999r);
-    EXPECT_EQ(func(INT_MIN,INT_MAX), FRACT_MIN);
-    /* Expecting 0 here as fract is not precise enough to 
+    XType epsilon = get_epsilon<XType>();
+    EXPECT_EQ(func(0, 10), 0.r);
+    EXPECT_EQ(func(0, -10), 0.r);
+    EXPECT_EQ(func(-(1 << FRACT_FBIT), 1 << FRACT_FBIT), FRACT_MIN);
+    EXPECT_EQ(func((1 << FRACT_FBIT) - 1, 1 << FRACT_FBIT), FRACT_MAX);
+    /* From Section 7.18a.6.1, functions returning a fixed-point value, the
+     * return value is saturated on overflow. */
+    EXPECT_EQ(func(INT_MAX, INT_MAX), FRACT_MAX);
+    EXPECT_LT(func(INT_MAX - 1, INT_MAX) - 0.99999999r, epsilon);
+    EXPECT_EQ(func(INT_MIN, INT_MAX), FRACT_MIN);
+    /* Expecting 0 here as fract is not precise enough to
      * handle 1/INT_MAX
      */
-    EXPECT_EQ(func(1, INT_MAX), 0.r);
+    EXPECT_LT(func(1, INT_MAX) - 0.r, epsilon);
+    /* This results in 1.1739, which should be saturated to FRACT_MAX */
+    EXPECT_EQ(func(27, 23), FRACT_MAX);
   }
 };
 
 #define LIST_DIVI_TESTS(Name, XType, func)                                     \
   using LlvmLibc##Name##diviTest = DivITest<XType>;                            \
   TEST_F(LlvmLibc##Name##diviTest, Basic) { testBasic(&func); }                \
-  TEST_F(LlvmLibc##Name##diviTest, Special) { testSpecial(&func); }                \
+  TEST_F(LlvmLibc##Name##diviTest, Special) { testSpecial(&func); }            \
   static_assert(true, "Require semicolon.")

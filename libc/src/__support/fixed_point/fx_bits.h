@@ -243,14 +243,10 @@ template <typename XType> LIBC_INLINE constexpr XType divi(int n, int d) {
   if (LIBC_UNLIKELY(n == 0)) {
     return FXRep<XType>::ZERO();
   }
-  bool d_is_signed = false;
-  if (d < 0) {
-    d = (d * -1);
-    d_is_signed = true;
-  }
+  bool result_is_negative = (n < 0) ^ (d < 0);
 
-  unsigned int nv = static_cast<unsigned int>(n);
-  unsigned int dv = static_cast<unsigned int>(d);
+  unsigned int nv = static_cast<unsigned int>(n < 0 ? -n : n);
+  unsigned int dv = static_cast<unsigned int>(d < 0 ? -d : d);
   unsigned int clz = cpp::countl_zero<unsigned int>(dv) - 1;
   unsigned long int scaled_val = dv << clz;
   /* Scale denominator to be in the range of [0.5,1] */
@@ -281,11 +277,25 @@ template <typename XType> LIBC_INLINE constexpr XType divi(int n, int d) {
   val = nrstep(d_scaled_val, val);
   /* E4 = 2.155e−20 */
   val = nrstep(d_scaled_val, val);
+
   long accum res = n_scaled_val * val;
-  if (d_is_signed) {
-    res *= static_cast<XType>(-1);
+
+  if (result_is_negative) {
+    res *= static_cast<long accum>(-1);
   }
-  return static_cast<XType>(res);
+
+  // Check for overflow before returning
+  long accum max_val = static_cast<long accum>(FXRep<XType>::MAX());
+  long accum min_val = static_cast<long accum>(FXRep<XType>::MIN());
+
+  /* Per clause 7.18a.6.1, saturate values on overflow */
+  if (res > max_val) {
+    return FXRep<XType>::MAX();
+  } else if (res < min_val) {
+    return FXRep<XType>::MIN();
+  } else {
+    return static_cast<XType>(res);
+  }
 }
 
 } // namespace fixed_point
