@@ -224,11 +224,13 @@ static void *MsanAllocate(BufferedStackTrace *stack, uptr size, uptr alignment,
 
   // Origins have 4-byte granularity. Set the TAG_ALLOC_PADDING origin first,
   // so the TAG_ALLOC origin will take precedence if necessary e.g.,
-  // - if we have malloc(7) that actually takes up 16 bytes, bytes 0-7 will
-  //   have TAG_ALLOC and bytes 8-15 will have TAG_ALLOC_PADDING.
-  // - with calloc, bytes 4-15 will have TAG_ALLOC_PADDING (but bytes 4-6 are
-  //   initialized, hence the origin is unused). Note that this means, unlike
-  //   with malloc, byte 7 is TAG_ALLOC_PADDING instead of TAG_ALLOC.
+  // - if we have malloc(7) that actually takes up 16 bytes:
+  //     bytes 0-7:  uninitialized, origin TAG_ALLOC
+  //     bytes 8-15: uninitialized, origin TAG_ALLOC_PADDING
+  // - with calloc(7,1):
+  //     bytes 0-6:  initialized,   origin not set (and irrelevant)
+  //     byte  7:    uninitialized, origin TAG_ALLOC_PADDING (unlike malloc)
+  //     bytes 8-15: uninitialized, origin TAG_ALLOC_PADDING
   if (__msan_get_track_origins() && ((zero && flags()->poison_in_calloc) ||
                                      (!zero && flags()->poison_in_malloc))) {
     stack->tag = STACK_TRACE_TAG_ALLOC_PADDING;
