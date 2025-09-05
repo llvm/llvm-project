@@ -20853,7 +20853,23 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
   for (Value *V : VL) {
     if (S.isNonSchedulable(V))
       continue;
-    if (!extendSchedulingRegion(V, S)) {
+    // For copybales with parent nodes, which do not need to be scheduled, the
+    // parents should not be commutative, otherwise may incorrectly handle deps
+    // because of the potential reordering of commutative operations.
+    if ((S.isCopyableElement(V) && EI.UserTE && !EI.UserTE->isGather() &&
+         EI.UserTE->hasState() && EI.UserTE->doesNotNeedToSchedule() &&
+         any_of(EI.UserTE->Scalars,
+                [&](Value *V) {
+                  if (isa<PoisonValue>(V))
+                    return false;
+                  auto *I = dyn_cast<Instruction>(V);
+                  return isCommutative(
+                      (I && EI.UserTE->isAltShuffle())
+                          ? EI.UserTE->getMatchingMainOpOrAltOp(I)
+                          : EI.UserTE->getMainOp(),
+                      V);
+                })) ||
+        !extendSchedulingRegion(V, S)) {
       // If the scheduling region got new instructions at the lower end (or it
       // is a new region for the first bundle). This makes it necessary to
       // recalculate all dependencies.
