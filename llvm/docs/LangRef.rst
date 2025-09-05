@@ -2256,9 +2256,12 @@ For example:
     behavior at runtime if the function ever does dynamically return. Annotated
     functions may still raise an exception, i.a., ``nounwind`` is not implied.
 ``norecurse``
-    This function attribute indicates that the function does not call itself
-    either directly or indirectly down any possible call path. This produces
-    undefined behavior at runtime if the function ever does recurse.
+    This function attribute indicates that the function does not participate in
+    recursion, either directly or through mutual recursion. At runtime it is
+    undefined behavior if any dynamic call stack contains this function more
+    than once at the same time. A function must not be marked ``norecurse`` if,
+    along any call path starting from its body, control may reach an external
+    function whose definition is not available.
 
 .. _langref_willreturn:
 
