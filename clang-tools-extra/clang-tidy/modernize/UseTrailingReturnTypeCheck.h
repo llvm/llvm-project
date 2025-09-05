@@ -40,6 +40,7 @@ public:
 
 private:
   Preprocessor *PP = nullptr;
+  const bool WarnOnNonTrailingVoid;
   const bool TransformFunctions;
   const TransformLambda TransformLambdas;
 
