@@ -10,10 +10,29 @@
 #define ORC_RT_UNITTEST_SIMPLEPACKEDSERIALIZATIONTESTUTILS_H
 
 #include "orc-rt/SimplePackedSerialization.h"
+#include "orc-rt/WrapperFunction.h"
 #include "gtest/gtest.h"
 
+#include <optional>
+
+template <typename SPSTraitsT, typename... ArgTs>
+static inline std::optional<orc_rt::WrapperFunctionBuffer>
+spsSerialize(const ArgTs &...Args) {
+  auto B = orc_rt::WrapperFunctionBuffer::allocate(SPSTraitsT::size(Args...));
+  orc_rt::SPSOutputBuffer OB(B.data(), B.size());
+  if (!SPSTraitsT::serialize(OB, Args...))
+    return std::nullopt;
+  return B;
+}
+
+template <typename SPSTraitsT, typename... ArgTs>
+static bool spsDeserialize(orc_rt::WrapperFunctionBuffer &B, ArgTs &...Args) {
+  orc_rt::SPSInputBuffer IB(B.data(), B.size());
+  return SPSTraitsT::deserialize(IB, Args...);
+}
+
 template <typename SPSTagT, typename T>
-static void blobSerializationRoundTrip(const T &Value) {
+static inline void blobSerializationRoundTrip(const T &Value) {
   using BST = orc_rt::SPSSerializationTraits<SPSTagT, T>;
 
   size_t Size = BST::size(Value);
