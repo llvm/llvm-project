@@ -99,6 +99,78 @@ function(declare_mlir_python_sources name)
   endif()
 endfunction()
 
+# Function: generate_type_stubs
+# Turns on automatic type stub generation (via nanobind's stubgen) for extension modules.
+# Arguments:
+#   MODULE_NAME: The fully-qualified name of the extension module (used for importing in python).
+#   DEPENDS_TARGET: The dso target corresponding to the extension module
+#     (e.g., something like StandalonePythonModules.extension._standaloneDialectsNanobind.dso)
+#   CORE_MLIR_DEPENDS_TARGET: The dso target corresponding to the main/core extension module
+#     (e.g., something like StandalonePythonModules.extension._mlir.dso)
+#   OUTPUT_DIR: The root output directory to emit the type stubs into.
+#   OUTPUTS: List of expected outputs.
+#   DEPENDS_TARGET_SRC_DEPS: List of cpp sources for extension library (for generating a DEPFILE).
+#   IMPORT_PATH:
+# Outputs:
+#   NB_STUBGEN_CUSTOM_TARGET: The target corresponding to generation which other targets can depend on.
+function(generate_type_stubs)
+  cmake_parse_arguments(ARG
+    ""
+    "MODULE_NAME;DEPENDS_TARGET;CORE_MLIR_DEPENDS_TARGET;OUTPUT_DIR;IMPORT_PATH"
+    "OUTPUTS;DEPENDS_TARGET_SRC_DEPS"
+    ${ARGN})
+  # for people doing find_package(nanobind)
+  if(EXISTS ${nanobind_DIR}/../src/stubgen.py)
+    set(NB_STUBGEN "${nanobind_DIR}/../src/stubgen.py")
+  elseif(EXISTS ${nanobind_DIR}/../stubgen.py)
+    set(NB_STUBGEN "${nanobind_DIR}/../stubgen.py")
+  # for people using FetchContent_Declare and FetchContent_MakeAvailable
+  elseif(EXISTS ${nanobind_SOURCE_DIR}/src/stubgen.py)
+    set(NB_STUBGEN "${nanobind_SOURCE_DIR}/src/stubgen.py")
+  elseif(EXISTS ${nanobind_SOURCE_DIR}/stubgen.py)
+    set(NB_STUBGEN "${nanobind_SOURCE_DIR}/stubgen.py")
+  else()
+    message(FATAL_ERROR "generate_type_stubs(): could not locate 'stubgen.py'!")
+  endif()
+
+  file(REAL_PATH "${NB_STUBGEN}" NB_STUBGEN)
+  file(REAL_PATH "${ARG_IMPORT_PATH}" _import_path)
+  set(_nb_stubgen_cmd
+      "${Python_EXECUTABLE}"
+      "${NB_STUBGEN}"
+      --module
+      "${ARG_MODULE_NAME}"
+      -i
+      "${_import_path}"
+      --recursive
+      --include-private
+      --output-dir
+      "${ARG_OUTPUT_DIR}"
+      --quiet)
+
+  list(TRANSFORM ARG_OUTPUTS PREPEND "${ARG_OUTPUT_DIR}/" OUTPUT_VARIABLE _generated_type_stubs)
+  set(_depfile "${ARG_OUTPUT_DIR}/${ARG_MODULE_NAME}.d")
+  if ((NOT EXISTS ${_depfile}) AND ARG_DEPENDS_TARGET_SRC_DEPS)
+    list(JOIN ARG_DEPENDS_TARGET_SRC_DEPS " " _depfiles)
+    list(TRANSFORM _generated_type_stubs APPEND ": ${_depfiles}" OUTPUT_VARIABLE _depfiles)
+    list(JOIN _depfiles "\n" _depfiles)
+    file(GENERATE OUTPUT "${_depfile}" CONTENT "${_depfiles}")
+  endif()
+  add_custom_command(
+    OUTPUT ${_generated_type_stubs}
+    COMMAND ${_nb_stubgen_cmd}
+    WORKING_DIRECTORY "${CMAKE_CURRENT_FUNCTION_LIST_DIR}"
+    DEPENDS
+      "${ARG_CORE_MLIR_DEPENDS_TARGET}.extension._mlir.dso"
+      "${ARG_CORE_MLIR_DEPENDS_TARGET}.sources.MLIRPythonSources.Core.Python"
+      "${ARG_DEPENDS_TARGET}"
+    DEPFILE "${_depfile}"
+  )
+  set(_name "${ARG_CORE_MLIR_DEPENDS_TARGET}.${ARG_DEPENDS_TARGET}.${ARG_MODULE_NAME}.type_stubs")
+  add_custom_target("${_name}" DEPENDS ${_generated_type_stubs})
+  set(NB_STUBGEN_CUSTOM_TARGET "${_name}" PARENT_SCOPE)
+endfunction()
+
 # Function: declare_mlir_python_extension
 # Declares a buildable python extension from C++ source files. The built
 # module is considered a python source file and included as everything else.
@@ -115,11 +187,15 @@ endfunction()
 #     on. These will be collected for all extensions and put into an
 #     aggregate dylib that is linked against.
 #   PYTHON_BINDINGS_LIBRARY: Either pybind11 or nanobind.
+#   GENERATE_TYPE_STUBS: Either
+#     1. OFF (default)
+#     2. ON if ${MODULE_NAME}.pyi is the only stub
+#     3. A list of generated type stubs expected from stubgen (relative to _mlir_libs).
 function(declare_mlir_python_extension name)
   cmake_parse_arguments(ARG
     ""
     "ROOT_DIR;MODULE_NAME;ADD_TO_PARENT;PYTHON_BINDINGS_LIBRARY"
-    "SOURCES;PRIVATE_LINK_LIBS;EMBED_CAPI_LINK_LIBS"
+    "SOURCES;PRIVATE_LINK_LIBS;EMBED_CAPI_LINK_LIBS;GENERATE_TYPE_STUBS"
     ${ARGN})
 
   if(NOT ARG_ROOT_DIR)
@@ -132,15 +208,33 @@ function(declare_mlir_python_extension name)
   endif()
 
   add_library(${name} INTERFACE)
+
+  if(NOT ARG_GENERATE_TYPE_STUBS)
+    set(ARG_GENERATE_TYPE_STUBS OFF)
+  endif()
+  if("${ARG_GENERATE_TYPE_STUBS}" STREQUAL "ON")
+    set(ARG_GENERATE_TYPE_STUBS "${ARG_MODULE_NAME}.pyi")
+  endif()
+  if(ARG_GENERATE_TYPE_STUBS)
+    list(TRANSFORM ARG_GENERATE_TYPE_STUBS PREPEND "_mlir_libs/")
+    declare_mlir_python_sources(
+      "${name}.type_stub_gen"
+      ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}/type_stubs"
+      ADD_TO_PARENT "${ARG_ADD_TO_PARENT}"
+      SOURCES "${ARG_GENERATE_TYPE_STUBS}"
+    )
+  endif()
+
   set_target_properties(${name} PROPERTIES
     # Yes: Leading-lowercase property names are load bearing and the recommended
     # way to do this: https://gitlab.kitware.com/cmake/cmake/-/issues/19261
-    EXPORT_PROPERTIES "mlir_python_SOURCES_TYPE;mlir_python_EXTENSION_MODULE_NAME;mlir_python_EMBED_CAPI_LINK_LIBS;mlir_python_DEPENDS;mlir_python_BINDINGS_LIBRARY"
+    EXPORT_PROPERTIES "mlir_python_SOURCES_TYPE;mlir_python_EXTENSION_MODULE_NAME;mlir_python_EMBED_CAPI_LINK_LIBS;mlir_python_DEPENDS;mlir_python_BINDINGS_LIBRARY;mlir_python_GENERATE_TYPE_STUBS"
     mlir_python_SOURCES_TYPE extension
     mlir_python_EXTENSION_MODULE_NAME "${ARG_MODULE_NAME}"
     mlir_python_EMBED_CAPI_LINK_LIBS "${ARG_EMBED_CAPI_LINK_LIBS}"
     mlir_python_DEPENDS ""
     mlir_python_BINDINGS_LIBRARY "${ARG_PYTHON_BINDINGS_LIBRARY}"
+    mlir_python_GENERATE_TYPE_STUBS "${ARG_GENERATE_TYPE_STUBS}"
   )
 
   # Set the interface source and link_libs properties of the target
@@ -243,6 +337,39 @@ function(add_mlir_python_modules name)
       )
       add_dependencies(${modules_target} ${_extension_target})
       mlir_python_setup_extension_rpath(${_extension_target})
+      # NOTE: `sources_target` (naturally) lists all the sources (it's the INTERFACE
+      # target defined above in declare_mlir_python_extension). It's also the name of the
+      # target that gets exported (i.e., is populated as an INTERFACE IMPORTED library in MLIRTargets.cmake).
+      # This is why all metadata is queried from `sources_target`. On the other hand
+      # `_extension_target` is the actual dylib target that's built just above with `add_mlir_python_extension`.
+      # That's why dependencies are in terms of `_extension_target`.
+      get_target_property(_generate_type_stubs ${sources_target} mlir_python_GENERATE_TYPE_STUBS)
+      if(_generate_type_stubs)
+        # TL;DR: all paths here are load bearing and annoyingly coupled. Changing paths here
+        # (or related code in declare_mlir_python_extension) will break either in-tree or out-of-tree generation.
+        #
+        # We remove _mlir_libs here because OUTPUT_DIR already includes it.
+        # Specifically OUTPUT_DIR already includes it because that's the actual directory
+        # where we want stubgen to dump the emitted sources. This is load bearing because up above
+        # (in declare_mlir_python_extension) we prefixed all the paths with _mlir_libs and
+        # we specified declare_mlir_python_sources with ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}/type_stubs".
+        #
+        # NOTE: INTERFACE_SOURCES is a genex in the build dir ($<BUILD_INTERFACE> $<INSTALL_INTERFACE>)
+        # which will be evaluated by file(GENERATE ...). In the install dir it's a conventional path
+        # (see install/lib/cmake/mlir/MLIRTargets.cmake).
+        get_target_property(_extension_srcs ${sources_target} INTERFACE_SOURCES)
+        list(TRANSFORM _generate_type_stubs REPLACE "_mlir_libs/" "")
+        generate_type_stubs(
+          MODULE_NAME "_mlir_libs.${_module_name}"
+          DEPENDS_TARGET ${_extension_target}
+          CORE_MLIR_DEPENDS_TARGET ${name}
+          OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/type_stubs/_mlir_libs"
+          OUTPUTS "${_generate_type_stubs}"
+          DEPENDS_TARGET_SRC_DEPS "${_extension_srcs}"
+          IMPORT_PATH "${ARG_ROOT_PREFIX}"
+        )
+        add_dependencies("${modules_target}" "${NB_STUBGEN_CUSTOM_TARGET}")
+      endif()
     else()
       message(SEND_ERROR "Unrecognized source type '${_source_type}' for python source target ${sources_target}")
       return()
@@ -678,26 +805,28 @@ function(add_mlir_python_extension libname extname)
       # the super project handle compile options as it wishes.
       get_property(NB_LIBRARY_TARGET_NAME TARGET ${libname} PROPERTY LINK_LIBRARIES)
       target_compile_options(${NB_LIBRARY_TARGET_NAME}
-	PRIVATE
-	  -Wall -Wextra -Wpedantic
-	  -Wno-c++98-compat-extra-semi
-	  -Wno-cast-qual
-	  -Wno-covered-switch-default
-	  -Wno-nested-anon-types
-	  -Wno-unused-parameter
-	  -Wno-zero-length-array
-	  ${eh_rtti_enable})
+        PRIVATE
+          -Wall -Wextra -Wpedantic
+          -Wno-c++98-compat-extra-semi
+          -Wno-cast-qual
+          -Wno-covered-switch-default
+          -Wno-deprecated-literal-operator
+          -Wno-nested-anon-types
+          -Wno-unused-parameter
+          -Wno-zero-length-array
+          ${eh_rtti_enable})
 
       target_compile_options(${libname}
-	PRIVATE
-	  -Wall -Wextra -Wpedantic
-	  -Wno-c++98-compat-extra-semi
-	  -Wno-cast-qual
-	  -Wno-covered-switch-default
-	  -Wno-nested-anon-types
-	  -Wno-unused-parameter
-	  -Wno-zero-length-array
-	  ${eh_rtti_enable})
+        PRIVATE
+          -Wall -Wextra -Wpedantic
+          -Wno-c++98-compat-extra-semi
+          -Wno-cast-qual
+          -Wno-covered-switch-default
+          -Wno-deprecated-literal-operator
+          -Wno-nested-anon-types
+          -Wno-unused-parameter
+          -Wno-zero-length-array
+          ${eh_rtti_enable})
     endif()
 
     if(APPLE)
