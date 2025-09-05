@@ -2290,7 +2290,6 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/AVR/AVRGenDAGISel.inc": ["-gen-dag-isel"],
             "lib/Target/AVR/AVRGenDisassemblerTables.inc": [
                 "-gen-disassembler",
-                "-ignore-non-decodable-operands",
             ],
             "lib/Target/AVR/AVRGenMCCodeEmitter.inc": ["-gen-emitter"],
             "lib/Target/AVR/AVRGenInstrInfo.inc": ["-gen-instr-info"],
@@ -2330,7 +2329,6 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/Hexagon/HexagonGenDFAPacketizer.inc": ["-gen-dfa-packetizer"],
             "lib/Target/Hexagon/HexagonGenDisassemblerTables.inc": [
                 "-gen-disassembler",
-                "-ignore-non-decodable-operands",
             ],
             "lib/Target/Hexagon/HexagonGenInstrInfo.inc": ["-gen-instr-info"],
             "lib/Target/Hexagon/HexagonGenMCCodeEmitter.inc": ["-gen-emitter"],
@@ -2453,7 +2451,6 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/RISCV/RISCVGenDisassemblerTables.inc": [
                 "-gen-disassembler",
                 "--specialize-decoders-per-bitwidth",
-                "-ignore-non-decodable-operands",
             ],
             "lib/Target/RISCV/RISCVGenInstrInfo.inc": ["-gen-instr-info"],
             "lib/Target/RISCV/RISCVGenMacroFusion.inc": ["-gen-macro-fusion-pred"],
