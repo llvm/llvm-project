@@ -806,30 +806,15 @@ struct SYCLWrapper {
   /// \returns Pair of Constants that point at entries content.
   std::pair<Constant *, Constant *>
   addOffloadEntriesToModule(StringRef Entries) {
-    if (Entries.empty()) {
-      auto *NullPtr = Constant::getNullValue(PointerType::getUnqual(C));
-      return std::pair<Constant *, Constant *>(NullPtr, NullPtr);
-    }
-
-    auto *I64Zero = ConstantInt::get(Type::getInt64Ty(C), 0);
-    auto *I32Zero = ConstantInt::get(Type::getInt32Ty(C), 0);
-    auto *NullPtr = Constant::getNullValue(PointerType::getUnqual(C));
-
     SmallVector<Constant *> EntriesInits;
     std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(Entries);
     for (line_iterator LI(*MB); !LI.is_at_eof(); ++LI) {
-      Constant *EntryData[] = {
-          ConstantExpr::getNullValue(Type::getInt64Ty(C)),
-          ConstantInt::get(Type::getInt16Ty(C), 1),
-          ConstantInt::get(Type::getInt16Ty(C), object::OffloadKind::OFK_SYCL),
-          I32Zero,
-          NullPtr,
-          addStringToModule(*LI, "__sycl_offload_entry_name"),
-          I64Zero,
-          I64Zero,
-          NullPtr};
-
-      EntriesInits.push_back(ConstantStruct::get(EntryTy, EntryData));
+      Constant *C = addStringToModule(*LI, "__sycl_offload_entry_name");
+      GlobalVariable *GV =
+          emitOffloadingEntry(M, /*Kind*/ OffloadKind::OFK_SYCL, C,
+                              /*Name*/ "__sycl_offload_entry_name", /*Size*/ 0,
+                              /*Flags*/ 0, /*Data*/ 0);
+      EntriesInits.push_back(GV);
     }
 
     auto *Arr = ConstantArray::get(ArrayType::get(EntryTy, EntriesInits.size()),
@@ -951,10 +936,10 @@ struct SYCLWrapper {
   ///
   /// \code
   /// __attribute__((visibility("hidden")))
-  /// extern __tgt_offload_entry *__start_offloading_entries0;
-  /// __attribute__((visibility("hidden")))
-  /// extern __tgt_offload_entry *__stop_offloading_entries0;
+  /// __tgt_offload_entry *__sycl_offload_entries_arr0[];
   /// ...
+  /// __attribute__((visibility("hidden")))
+  /// __tgt_offload_entry *__sycl_offload_entries_arrN[];
   ///
   /// __attribute__((visibility("hidden")))
   /// extern const char *CompileOptions = "...";
@@ -969,19 +954,18 @@ struct SYCLWrapper {
   ///
   /// static const __sycl.tgt_device_image Images[] = {
   ///   {
-  ///     Version,                      // Version
-  ///     OffloadKind,                  // OffloadKind
-  ///     Format,                       // format of the image - SPIRV, LLVMIR
-  ///                                   // bc, etc
-  //      TripleString,                 // Arch
-  ///     CompileOptions0,              // CompileOptions
-  ///     LinkOptions0,                 // LinkOptions
-  ///     Image0,                       // ImageStart
-  ///     Image0 + N,                   // ImageEnd
-  ///     __start_offloading_entries0,  // EntriesBegin
-  ///     __stop_offloading_entries0,   // EntriesEnd
-  ///     NULL,                         // PropertiesBegin
-  ///     NULL,                         // PropertiesEnd
+  ///     Version,                                      // Version
+  ///     OffloadKind,                                  // OffloadKind
+  ///     Format,                                       // Format of the image.
+  //      TripleString,                                 // Arch
+  ///     CompileOptions,                               // CompileOptions
+  ///     LinkOptions,                                  // LinkOptions
+  ///     Image0,                                       // ImageStart
+  ///     Image0 + IMAGE0_SIZE,                         // ImageEnd
+  ///     __sycl_offload_entries_arr0,                  // EntriesBegin
+  ///     __sycl_offload_entries_arr0 + ENTRIES0_SIZE,  // EntriesEnd
+  ///     NULL,                                         // PropertiesBegin
+  ///     NULL,                                         // PropertiesEnd
   ///   },
   ///   ...
   /// };

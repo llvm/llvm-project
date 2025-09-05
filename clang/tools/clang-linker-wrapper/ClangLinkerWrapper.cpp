@@ -722,7 +722,7 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
     offloading::SYCLWrappingOptions WrappingOptions;
     if (Error Err =
             offloading::wrapSYCLBinaries(M, BuffersToWrap, WrappingOptions))
-      return Err;
+      return std::move(Err);
     break;
   }
   default:
