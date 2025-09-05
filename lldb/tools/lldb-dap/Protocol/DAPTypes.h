@@ -50,29 +50,29 @@ llvm::json::Value toJSON(const SourceLLDBData &);
 
 struct Symbol {
   /// The symbol id, usually the original symbol table index.
-  uint32_t id;
+  uint32_t id = 0;
 
   /// True if this symbol is debug information in a symbol.
-  bool isDebug;
+  bool isDebug = false;
 
   /// True if this symbol is not actually in the symbol table, but synthesized
   /// from other info in the object file.
-  bool isSynthetic;
+  bool isSynthetic = false;
 
   /// True if this symbol is globally visible.
-  bool isExternal;
+  bool isExternal = false;
 
   /// The symbol type.
-  lldb::SymbolType type;
+  lldb::SymbolType type = lldb::eSymbolTypeInvalid;
 
   /// The symbol file address.
-  lldb::addr_t fileAddress;
+  lldb::addr_t fileAddress = 0;
 
   /// The symbol load address.
-  std::optional<lldb::addr_t> loadAddress;
+  std::optional<lldb::addr_t> loadAddress = std::nullopt;
 
   /// The symbol size.
-  lldb::addr_t size;
+  lldb::addr_t size = 0;
 
   /// The symbol name.
   std::string name;
