@@ -970,6 +970,30 @@ struct WgToSgVectorShapeCastOp
     VectorType newResultType =
         VectorType::get(sgShape, resultType.getElementType());
 
+    // TODO: Add check for compatible layouts in layout attr.
+    // Only support ShapeCast which expands or reduces unit dims only.
+    // That is, only allow shape casts where the non-unit dimensions are
+    // preserved, and any added or removed dimensions must be of size 1.
+    auto srcType = dyn_cast<VectorType>(adaptor.getSource()[0].getType());
+    if (!srcType)
+      return failure();
+
+    auto isUnitOrPreserved = [](ArrayRef<int64_t> src, ArrayRef<int64_t> dst) {
+      // Remove all 1s from both shapes and compare the rest.
+      SmallVector<int64_t> srcNonUnit, dstNonUnit;
+      for (int64_t d : src)
+        if (d != 1)
+          srcNonUnit.push_back(d);
+      for (int64_t d : dst)
+        if (d != 1)
+          dstNonUnit.push_back(d);
+      return srcNonUnit == dstNonUnit;
+    };
+
+    if (!isUnitOrPreserved(srcType.getShape(), sgShape) ||
+        !isUnitOrPreserved(sgShape, srcType.getShape()))
+      return failure();
+
     SmallVector<Value> newShapeCastOps;
     for (auto src : adaptor.getSource()) {
       auto newShapeCast =

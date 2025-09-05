@@ -414,8 +414,8 @@ gpu.module @test_distribution {
     %load =  xegpu.load_nd %tdesc[0, 0]
       : !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 1]>>
       -> vector<256x128xf32>
-    //CHECK: vector.shape_cast {{.*}} : vector<32x32xf32> to vector<2x16x4x8xf32>
-    %cast = vector.shape_cast %load {layout_result_0 = #xegpu.layout<sg_layout = [8, 1, 4, 1], sg_data = [2, 16, 4, 8]>} : vector<256x128xf32> to vector<16x16x16x8xf32>
+    //CHECK: vector.shape_cast {{.*}} : vector<32x32xf32> to vector<32x1x32x1xf32>
+    %cast = vector.shape_cast %load {layout_result_0 = #xegpu.layout<sg_layout = [8, 1, 4, 1], sg_data = [32, 1, 32, 1]>} : vector<256x128xf32> to vector<256x1x128x1xf32>
     gpu.return
   }
 }
