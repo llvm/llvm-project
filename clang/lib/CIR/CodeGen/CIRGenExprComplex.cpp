@@ -749,6 +749,7 @@ mlir::Value ComplexExprEmitter::emitPromoted(const Expr *e,
       HANDLE_BINOP(Add)
       HANDLE_BINOP(Sub)
       HANDLE_BINOP(Mul)
+      HANDLE_BINOP(Div)
 #undef HANDLE_BINOP
     default:
       break;
