@@ -807,3 +807,116 @@ for.body:                                         ; preds = %entry, %for.body
 for.end:                                          ; preds = %for.body
   ret void
 }
+
+;; FIXME: There is a loop-carried dependency between
+;; `A[-6*i + INT64_MAX]` and `A[3*i - 2]`. For example,
+;;
+;; * 1                   = -6*max_i              + INT64_MAX = 3*1     - 2
+;; * 4611686018427387901 = -6*768614336404564651 + INT64_MAX = 3*max_i - 2
+;;
+;; max_i = INT64_MAX/6  // 1537228672809129301
+;; for (long long i = 0; i <= max_i; i++) {
+;;   A[-6*i + INT64_MAX] = 0;
+;;   if (i)
+;;     A[3*i - 2] = 1;
+;; }
+
+define void @exact14(ptr %A) {
+; CHECK-LABEL: 'exact14'
+; CHECK-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
+; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
+; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:  Src: store i8 1, ptr %idx.1, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
+; CHECK-NEXT:    da analyze - none!
+;
+; CHECK-SIV-ONLY-LABEL: 'exact14'
+; CHECK-SIV-ONLY-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
+; CHECK-SIV-ONLY-NEXT:    da analyze - none!
+; CHECK-SIV-ONLY-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
+; CHECK-SIV-ONLY-NEXT:    da analyze - none!
+; CHECK-SIV-ONLY-NEXT:  Src: store i8 1, ptr %idx.1, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
+; CHECK-SIV-ONLY-NEXT:    da analyze - none!
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %i = phi i64 [ 0, %entry ], [ %i.inc, %loop.latch ]
+  %subscript.0 = phi i64 [ 9223372036854775807, %entry ], [ %subscript.0.next, %loop.latch ]
+  %subscript.1 = phi i64 [ -2, %entry ], [ %subscript.1.next, %loop.latch ]
+  %idx.0 = getelementptr inbounds i8, ptr %A, i64 %subscript.0
+  store i8 0, ptr %idx.0
+  %cond.store = icmp ne i64 %i, 0
+  br i1 %cond.store, label %if.store, label %loop.latch
+
+if.store:
+  %idx.1 = getelementptr inbounds i8, ptr %A, i64 %subscript.1
+  store i8 1, ptr %idx.1
+  br label %loop.latch
+
+loop.latch:
+  %i.inc = add nuw nsw i64 %i, 1
+  %subscript.0.next = add nuw nsw i64 %subscript.0, -6
+  %subscript.1.next = add nuw nsw i64 %subscript.1, 3
+  %exitcond = icmp sgt i64 %i.inc, 1537228672809129301
+  br i1 %exitcond, label %exit, label %loop.header
+
+exit:
+  ret void
+}
+
+;; A generalized version of @exact14.
+;;
+;; for (long long i = 0; i <= n / 6; i++) {
+;;   A[-6*i + n] = 0;
+;;   if (i)
+;;     A[3*i - 2] = 1;
+;; }
+
+define void @exact15(ptr %A, i64 %n) {
+; CHECK-LABEL: 'exact15'
+; CHECK-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
+; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
+; CHECK-NEXT:    da analyze - output [*|<]!
+; CHECK-NEXT:  Src: store i8 1, ptr %idx.1, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
+; CHECK-NEXT:    da analyze - none!
+;
+; CHECK-SIV-ONLY-LABEL: 'exact15'
+; CHECK-SIV-ONLY-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
+; CHECK-SIV-ONLY-NEXT:    da analyze - none!
+; CHECK-SIV-ONLY-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
+; CHECK-SIV-ONLY-NEXT:    da analyze - output [*|<]!
+; CHECK-SIV-ONLY-NEXT:  Src: store i8 1, ptr %idx.1, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
+; CHECK-SIV-ONLY-NEXT:    da analyze - none!
+;
+entry:
+  %bound = sdiv i64 %n, 6
+  %guard = icmp sgt i64 %n, 0
+  br i1 %guard, label %loop.header, label %exit
+
+loop.header:
+  %i = phi i64 [ 0, %entry ], [ %i.inc, %loop.latch ]
+  %subscript.0 = phi i64 [ %n, %entry ], [ %subscript.0.next, %loop.latch ]
+  %subscript.1 = phi i64 [ -2, %entry ], [ %subscript.1.next, %loop.latch ]
+  %idx.0 = getelementptr inbounds i8, ptr %A, i64 %subscript.0
+  store i8 0, ptr %idx.0
+  %cond.store = icmp ne i64 %i, 0
+  br i1 %cond.store, label %if.store, label %loop.latch
+
+if.store:
+  %idx.1 = getelementptr inbounds i8, ptr %A, i64 %subscript.1
+  store i8 1, ptr %idx.1
+  br label %loop.latch
+
+loop.latch:
+  %i.inc = add nuw nsw i64 %i, 1
+  %subscript.0.next = add nuw nsw i64 %subscript.0, -6
+  %subscript.1.next = add nuw nsw i64 %subscript.1, 3
+  %exitcond = icmp sgt i64 %i.inc, %bound
+  br i1 %exitcond, label %exit, label %loop.header
+
+exit:
+  ret void
+}
