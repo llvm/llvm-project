@@ -3154,6 +3154,11 @@ def : GCNPat<
   (i32 (zext (i16 (bitconvert fp16_zeros_high_16bits:$src)))),
   (COPY VSrc_b16:$src)
 >;
+
+def : GCNPat <
+  (i1 (DivergentUnaryFrag<trunc> i16:$a)),
+  (V_CMP_EQ_U32_e64 (V_AND_B32_e64 (i32 1), $a), (i32 1))
+>;
 }
 
 let True16Predicate = UseRealTrue16Insts in {
@@ -3170,6 +3175,11 @@ def : GCNPat<
 def : GCNPat<
   (i32 (zext (i16 (bitconvert fp16_zeros_high_16bits:$src)))),
   (REG_SEQUENCE VGPR_32, VGPR_16:$src, lo16, (V_MOV_B16_t16_e64 0, (i16 0), 0), hi16)
+>;
+
+def : GCNPat <
+  (i1 (DivergentUnaryFrag<trunc> i16:$a)),
+  (V_CMP_EQ_U16_t16_e64 (V_AND_B16_t16_e64 (i32 0), (i16 1), (i32 0), $a), (i16 1))
 >;
 }
 
@@ -3196,11 +3206,6 @@ def : GCNPat <
 
 def : GCNPat <
   (i1 (DivergentUnaryFrag<trunc> i32:$a)),
-  (V_CMP_EQ_U32_e64 (V_AND_B32_e64 (i32 1), $a), (i32 1))
->;
-
-def : GCNPat <
-  (i1 (DivergentUnaryFrag<trunc> i16:$a)),
   (V_CMP_EQ_U32_e64 (V_AND_B32_e64 (i32 1), $a), (i32 1))
 >;
 
@@ -3807,7 +3812,8 @@ def : GCNPat <
   (v2i16 (S_PACK_HL_B32_B16 SReg_32:$src0, SReg_32:$src1))
 >;
 
-
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in {
 def : GCNPat <
   (v2f16 (scalar_to_vector f16:$src0)),
   (COPY $src0)
@@ -3827,6 +3833,29 @@ def : GCNPat <
   (v4f16 (scalar_to_vector f16:$src0)),
   (INSERT_SUBREG (IMPLICIT_DEF), $src0, sub0)
 >;
+}
+
+let True16Predicate = UseRealTrue16Insts in {
+def : GCNPat <
+  (v2f16 (scalar_to_vector f16:$src0)),
+  (REG_SEQUENCE VGPR_32, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16)
+>;
+
+def : GCNPat <
+  (v2i16 (scalar_to_vector i16:$src0)),
+  (REG_SEQUENCE VGPR_32, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16)
+>;
+
+def : GCNPat <
+  (v4i16 (scalar_to_vector i16:$src0)),
+  (REG_SEQUENCE VGPR_32, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16, (i32 (IMPLICIT_DEF)), sub1)
+>;
+
+def : GCNPat <
+  (v4f16 (scalar_to_vector f16:$src0)),
+  (REG_SEQUENCE VGPR_32, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16, (i32 (IMPLICIT_DEF)), sub1)
+>;
+}
 
 def : GCNPat <
   (i64 (int_amdgcn_mov_dpp i64:$src, timm:$dpp_ctrl, timm:$row_mask,

@@ -689,9 +689,10 @@ define amdgpu_kernel void @vload2_private(ptr addrspace(1) nocapture readonly %i
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    scratch_store_b16 off, v0, off offset:4 dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-TRUE16-NEXT:    scratch_load_d16_hi_b16 v0, off, off offset:2
+; GFX11-TRUE16-NEXT:    scratch_load_d16_b16 v3, off, off offset:2
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.h
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, v3
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v3.l
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    scratch_load_d16_b16 v0, off, off
 ; GFX11-TRUE16-NEXT:    scratch_load_d16_hi_b16 v1, off, off offset:4
