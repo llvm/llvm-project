@@ -1,19 +1,19 @@
-// For CTemplate we check in case of:
-// - Implicitly instantiate whole class by up-casting:
-//   * The vtable is generated with comdat
+// For the `CTemplate` templated class below, check the following cases:
+// - Implicitly instantiate whole class by up-casting (`NOCAST` not defined):
+//   * The vtable is generated with a COMDAT specifier
 //   * Its '_vtable$' is generated
-// - Implicitly instantiate member function only:
-//   * The vtable is generated with comdat
+// - Implicitly instantiate member function only (`NOCAST` defined):
+//   * The vtable is generated with a COMDAT specifier
 //   * Its '_vtable$' is generated
-// - Define explicitly instantiation:
-//   * The vtable is generated with comdat
+// - Define explicitly instantiation (`EXPLICIT` defined):
+//   * The vtable is generated with a COMDAT specifier
 //   * Its '_vtable$' is generated
-// - Declare explicitly instantiation as extern:
-//  # when non-optimized
+// - Declare explicitly instantiation as `extern` (`EXTERN` defined):
+//  # when non-optimized:
 //   * The vtable is declared
 //   * Its '_vtable$' is NOT generated
 //  # when optimized even if no LLVM passes
-//   * The vtable is declared as available_externally (which is potentially turned into 'external' by LLVM passes)
+//   * The vtable is declared as `available_externally` (which is potentially turned into `external` by LLVM passes)
 //   * Its '_vtable$' is generated
 
 struct CBase {

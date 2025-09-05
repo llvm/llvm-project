@@ -1,23 +1,23 @@
-// For CInlined (member functions are inlined), we check in case of:
-// - The definition of its destructor is visible:
-//   * The vtable is generated with comdat
+// For the `CInlined` struct, where all member functions are inlined, we check the following cases:
+// - If the definition of its destructor is visible:
+//   * The vtable is generated with a COMDAT specifier
 //   * Its '_vtable$' is generated
 // - Otherwise:
 //   * The vtable is declared
 //   * Its '_vtable$' is NOT generated
 //
-// For CNoInline (member functions are defined as non-inline), we check in case of:
+// For the `CNoInline` strcut, where member functions are defined as non-inline, we check the following:
 // - Regardless of whether the definition of its destructor is visible or not:
 //   * The vtable is generated
 //   * Its '_vtable$' is generated
 //
-// For CNoFnDef (member functions are declared only), we check in case of:
+// For the `CNoFnDef` struct, where member functions are declared only, we check the following:
 // - Regardless of whether the definition of its destructor is visible or not:
 //  # when non-optimized:
 //   * The vtable is declared
 //   * Its '_vtable$' is NOT generated
 //  # when optimized even if no LLVM passes:
-//   * The vtable is declared as available_externally (which is potentially turned into 'external' by LLVM passes)
+//   * The vtable is declared as `available_externally` (which is potentially turned into `external` by LLVM passes)
 //   * Its '_vtable$' is generated
 
 struct CInlined {
