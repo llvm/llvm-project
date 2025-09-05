@@ -741,3 +741,75 @@ uint64_t pssh1sadd_h(uint64_t rs1, uint64_t rs2) {
 uint64_t pssh1sadd_w(uint64_t rs1, uint64_t rs2) {
   return __riscv_pssh1sadd_w(rs1, rs2);
 }
+
+// RV64P-LABEL: @unzip8p(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.unzip8p.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+int64_t unzip8p(int64_t rs1, int64_t rs2) {
+  return __riscv_unzip8p(rs1, rs2);
+}
+
+// RV64P-LABEL: @unzip16p(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.unzip16p.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+int64_t unzip16p(int64_t rs1, int64_t rs2) {
+  return __riscv_unzip16p(rs1, rs2);
+}
+
+// RV64P-LABEL: @unzip8hp(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.unzip8hp.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+int64_t unzip8hp(int64_t rs1, int64_t rs2) {
+  return __riscv_unzip8hp(rs1, rs2);
+}
+
+// RV64P-LABEL: @unzip16hp(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.unzip16hp.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+int64_t unzip16hp(int64_t rs1, int64_t rs2) {
+  return __riscv_unzip16hp(rs1, rs2);
+}
+
+// RV64P-LABEL: @zip8p(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.zip8p.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+int64_t zip8p(int64_t rs1, int64_t rs2) {
+  return __riscv_zip8p(rs1, rs2);
+}
+
+// RV64P-LABEL: @zip16p(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.zip16p.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+int64_t zip16p(int64_t rs1, int64_t rs2) {
+  return __riscv_zip16p(rs1, rs2);
+}
+
+// RV64P-LABEL: @zip8hp(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.zip8hp.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+int64_t zip8hp(int64_t rs1, int64_t rs2) {
+  return __riscv_zip8hp(rs1, rs2);
+}
+
+// RV64P-LABEL: @zip16hp(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.zip16hp.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+int64_t zip16hp(int64_t rs1, int64_t rs2) {
+  return __riscv_zip16hp(rs1, rs2);
+}

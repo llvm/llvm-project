@@ -288,6 +288,14 @@ def psh1add_h_64   : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 def psh1add_w      : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 def pssh1sadd_h_64 : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 def pssh1sadd_w    : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def unzip8p        : RISCVBuiltin<"int64_t(int64_t, int64_t)">;
+def unzip16p       : RISCVBuiltin<"int64_t(int64_t, int64_t)">;
+def unzip8hp       : RISCVBuiltin<"int64_t(int64_t, int64_t)">;
+def unzip16hp      : RISCVBuiltin<"int64_t(int64_t, int64_t)">;
+def zip8p          : RISCVBuiltin<"int64_t(int64_t, int64_t)">;
+def zip16p         : RISCVBuiltin<"int64_t(int64_t, int64_t)">;
+def zip8hp         : RISCVBuiltin<"int64_t(int64_t, int64_t)">;
+def zip16hp        : RISCVBuiltin<"int64_t(int64_t, int64_t)">;
 } // Features = "experimental-p,64bit"
 } // Attributes = [Const, NoThrow]
 

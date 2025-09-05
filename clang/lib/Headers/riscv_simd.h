@@ -742,6 +742,46 @@ static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
 __riscv_pssh1sadd_w(uint64_t __x, uint64_t __y) {
   return __builtin_riscv_pssh1sadd_w(__x, __y);
 }
+
+static __inline__ int64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_unzip8p(int64_t __x, int64_t __y) {
+  return __builtin_riscv_unzip8p(__x, __y);
+}
+
+static __inline__ int64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_unzip16p(int64_t __x, int64_t __y) {
+  return __builtin_riscv_unzip16p(__x, __y);
+}
+
+static __inline__ int64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_unzip8hp(int64_t __x, int64_t __y) {
+  return __builtin_riscv_unzip8hp(__x, __y);
+}
+
+static __inline__ int64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_unzip16hp(int64_t __x, int64_t __y) {
+  return __builtin_riscv_unzip16hp(__x, __y);
+}
+
+static __inline__ int64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_zip8p(int64_t __x, int64_t __y) {
+  return __builtin_riscv_zip8p(__x, __y);
+}
+
+static __inline__ int64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_zip16p(int64_t __x, int64_t __y) {
+  return __builtin_riscv_zip16p(__x, __y);
+}
+
+static __inline__ int64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_zip8hp(int64_t __x, int64_t __y) {
+  return __builtin_riscv_zip8hp(__x, __y);
+}
+
+static __inline__ int64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_zip16hp(int64_t __x, int64_t __y) {
+  return __builtin_riscv_zip16hp(__x, __y);
+}
 #endif
 
 #endif // defined(__riscv_p)
