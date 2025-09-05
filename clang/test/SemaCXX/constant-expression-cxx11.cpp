@@ -1355,7 +1355,9 @@ struct T { int n; };
 const T t = { 42 }; // expected-note {{declared here}}
 
 constexpr int f(volatile int &&r) { // cxx11_20-error {{constexpr function never produces a constant expression}}
-  return r; // expected-note {{read of volatile-qualified type 'volatile int'}}
+  // cxx11_20-note@+2 2{{read of volatile-qualified type 'volatile int'}}
+  // cxx23-note@+1 {{read of volatile-qualified type 'volatile int'}}
+  return r;
 }
 constexpr int g(volatile int &&r) {
   return const_cast<int&>(r); // expected-note {{read of volatile temporary is not allowed in a constant expression}}

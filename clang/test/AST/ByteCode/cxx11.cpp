@@ -247,7 +247,9 @@ namespace IntToPtrCast {
 
 namespace Volatile {
   constexpr int f(volatile int &&r) { // ref-error {{constexpr function never produces a constant expression}}
-    return r; // both-note {{read of volatile-qualified type 'volatile int'}}
+    // ref-note@+2 2{{read of volatile-qualified type 'volatile int'}}
+    // expected-note@+1 {{read of volatile-qualified type 'volatile int'}}
+    return r;
   }
   struct S {
     int j : f(0); // both-error {{constant expression}} \
