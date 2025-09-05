@@ -7,16 +7,18 @@
 //   * Its '_vtable$' is NOT generated
 //
 // For CNoInline (member functions are defined as non-inline), we check in case of:
-// - The definition of its destructor is visible:
-//   * The vtable is generated
-//   * Its '_vtable$' is generated
-// - Otherwise:
+// - Regardless of whether the definition of its destructor is visible or not:
 //   * The vtable is generated
 //   * Its '_vtable$' is generated
 //
 // For CNoFnDef (member functions are declared only), we check in case of:
-//   * The vtable is NOT generated
-//   * Its '_vtable$' is generated only if optimized
+// - Regardless of whether the definition of its destructor is visible or not:
+//  # when non-optimized:
+//   * The vtable is declared
+//   * Its '_vtable$' is NOT generated
+//  # when optimized even if no LLVM passes:
+//   * The vtable is declared as available_externally (which is potentially turned into 'external' by LLVM passes)
+//   * Its '_vtable$' is generated
 
 struct CInlined {
   virtual void f1() noexcept {}
@@ -60,10 +62,10 @@ int main() {
   return 0;
 }
 
-// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O0 %s -o - | FileCheck %s -check-prefixes CHECK-HAS-DTOR,CHECK-HAS-DTOR-O0
-// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O1 %s -o - | FileCheck %s -check-prefixes CHECK-HAS-DTOR,CHECK-HAS-DTOR-O1
-// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O0 -DNO_DTOR_BODY %s -o - | FileCheck %s -check-prefixes CHECK-NO-DTOR,CHECK-NO-DTOR-O0
-// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O1 -DNO_DTOR_BODY %s -o - | FileCheck %s -check-prefixes CHECK-NO-DTOR,CHECK-NO-DTOR-O1
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O0 -disable-llvm-passes                %s -o - | FileCheck %s -check-prefixes CHECK-HAS-DTOR,CHECK-HAS-DTOR-O0
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O1 -disable-llvm-passes                %s -o - | FileCheck %s -check-prefixes CHECK-HAS-DTOR,CHECK-HAS-DTOR-O1
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O0 -disable-llvm-passes -DNO_DTOR_BODY %s -o - | FileCheck %s -check-prefixes CHECK-NO-DTOR,CHECK-NO-DTOR-O0
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O1 -disable-llvm-passes -DNO_DTOR_BODY %s -o - | FileCheck %s -check-prefixes CHECK-NO-DTOR,CHECK-NO-DTOR-O1
 
 // CHECK-HAS-DTOR: $_ZTV8CInlined = comdat any
 // CHECK-HAS-DTOR-NOT: $_ZTV9CNoInline
@@ -72,7 +74,7 @@ int main() {
 // CHECK-HAS-DTOR-DAG: @_ZTV8CInlined = linkonce_odr {{.*}}constant {{{ \[[^]]*\] } { \[[^]]*\] \[[^]]*\] }}}, comdat, align 8, !dbg [[INLINED_VTABLE_VAR:![0-9]+]]
 // CHECK-HAS-DTOR-DAG: @_ZTV9CNoInline = {{.*}}constant {{{ \[[^]]*\] } { \[[^]]*\] \[[^]]*\] }}}, align 8, !dbg [[NOINLINE_VTABLE_VAR:![0-9]+]]
 // CHECK-HAS-DTOR-O0-DAG: @_ZTV8CNoFnDef = external {{.*}}constant {{{ \[[^]]*\] }}}, align 8{{$}}
-// CHECK-HAS-DTOR-O1-DAG: @_ZTV8CNoFnDef = external {{.*}}constant {{{ \[[^]]*\] }}}, align 8, !dbg [[NOFNDEF_VTABLE_VAR:![0-9]+]]
+// CHECK-HAS-DTOR-O1-DAG: @_ZTV8CNoFnDef = available_externally {{.*}}constant {{{ \[[^]]*\] } { \[[^]]*\] \[[^]]*\] }}}, align 8, !dbg [[NOFNDEF_VTABLE_VAR:![0-9]+]]
 
 // CHECK-HAS-DTOR: !llvm.dbg.cu
 
@@ -96,7 +98,7 @@ int main() {
 // CHECK-NO-DTOR-DAG: @_ZTV8CInlined = external {{.*}}constant {{.*}}, align 8{{$}}
 // CHECK-NO-DTOR-DAG: @_ZTV9CNoInline = {{.*}}constant {{{ \[[^]]*\] } { \[[^]]*\] \[[^]]*\] }}}, align 8, !dbg [[NOINLINE_VTABLE_VAR:![0-9]+]]
 // CHECK-NO-DTOR-O0-DAG: @_ZTV8CNoFnDef = external {{.*}}constant {{{ \[[^]]*\] }}}, align 8{{$}}
-// CHECK-NO-DTOR-O1-DAG: @_ZTV8CNoFnDef = external {{.*}}constant {{{ \[[^]]*\] }}}, align 8, !dbg [[NOFNDEF_VTABLE_VAR:![0-9]+]]
+// CHECK-NO-DTOR-O1-DAG: @_ZTV8CNoFnDef = available_externally {{.*}}constant {{{ \[[^]]*\] } { \[[^]]*\] \[[^]]*\] }}}, align 8, !dbg [[NOFNDEF_VTABLE_VAR:![0-9]+]]
 
 // CHECK-NO-DTOR: !llvm.dbg.cu
 
