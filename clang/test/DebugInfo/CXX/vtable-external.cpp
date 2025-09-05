@@ -51,13 +51,10 @@ struct CNoFnDef {
 CNoFnDef::~CNoFnDef() noexcept {}
 #endif
 
-void use(void *, ...);
-
 int main() {
   CInlined Inlined;
   CNoInline NoInline;
   CNoFnDef NoFnDef;
-  use(&Inlined, &NoInline, &NoFnDef);
 
   return 0;
 }

@@ -28,12 +28,10 @@ struct CDerived : NSP_1::CBaseOne, NSP_2::CBaseTwo {
   int six() override { return 66; }
 };
 
-void use(void *, ...);
 int main() {
   NSP_1::CBaseOne BaseOne;
   NSP_2::CBaseTwo BaseTwo;
   CDerived Derived;
-  use(&BaseOne, &BaseTwo, &Derived);
 
   return 0;
 }

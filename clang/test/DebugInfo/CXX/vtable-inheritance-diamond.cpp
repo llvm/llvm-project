@@ -33,14 +33,11 @@ struct CDerived : NSP_1::CLeft, NSP_2::CRight {
   int fooDerived() { return 3; };
 };
 
-void use(void *, ...);
-
 int main() {
   NSP::CBase Base;
   NSP_1::CLeft Left;
   NSP_2::CRight Right;
   CDerived Derived;
-  use(&Base, &Left, &Right, &Derived);
 
   return 0;
 }

@@ -21,12 +21,9 @@ struct CDerived : NSP::CBase {
   int three() override { return 33; }
 };
 
-void use(void *, ...);
-
 int main() {
   NSP::CBase Base;
   CDerived Derived;
-  use(&Base, &Derived);
 
   return 0;
 }
