@@ -1,5 +1,5 @@
-; RUN: llc -mtriple aarch64-elf --relocation-model=static         -mattr=+pauth -filetype=asm -o - %s | FileCheck %s
-; RUN: llc -mtriple aarch64-elf --relocation-model=dynamic-no-pic -mattr=+pauth -filetype=asm -o - %s | FileCheck %s
+; RUN: llc -mtriple aarch64-elf --relocation-model=static         -mattr=+pauth < %s | FileCheck %s
+; RUN: llc -mtriple aarch64-elf --relocation-model=dynamic-no-pic -mattr=+pauth < %s | FileCheck %s
 
 ;; A constant value, use .rodata
 ; CHECK:         .section        .rodata,"a",@progbits
