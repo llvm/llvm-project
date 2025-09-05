@@ -3,14 +3,14 @@
 
 #include "../Analysis/Inputs/system-header-simulator-cxx.h"
 extern "C" {
-void *aligned_alloc(size_t alignment, size_t size);
-void *malloc(size_t size);
-void *calloc(size_t num, size_t size);
-void *realloc(void *ptr, size_t size);
-void *reallocarray(void *ptr, size_t nmemb, size_t size);
-void *memalign(size_t alignment, size_t size);
-void *valloc(size_t size);
-void *pvalloc(size_t size);
+void *aligned_alloc(size_t alignment, size_t size) __attribute__((malloc));
+void *malloc(size_t size) __attribute__((malloc));
+void *calloc(size_t num, size_t size) __attribute__((malloc));
+void *realloc(void *ptr, size_t size) __attribute__((malloc));
+void *reallocarray(void *ptr, size_t nmemb, size_t size) __attribute__((malloc));
+void *memalign(size_t alignment, size_t size) __attribute__((malloc));
+void *valloc(size_t size) __attribute__((malloc));
+void *pvalloc(size_t size) __attribute__((malloc));
 int posix_memalign(void **memptr, size_t alignment, size_t size);
 
 struct __sized_ptr_t {
@@ -28,42 +28,40 @@ void *sink; // prevent optimizations from removing the calls
 
 // CHECK-LABEL: @_Z16test_malloc_likev(
 void test_malloc_like() {
-  // FIXME: Should not be token ID 0! Currently fail to infer the type.
-  // CHECK: call{{.*}} ptr @__alloc_token_malloc(i64 noundef 4, i64 0)
+  // CHECK: call{{.*}} ptr @__alloc_token_malloc(i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
   sink = malloc(sizeof(int));
-  // CHECK: call{{.*}} ptr @__alloc_token_calloc(i64 noundef 3, i64 noundef 4, i64 0)
+  // CHECK: call{{.*}} ptr @__alloc_token_calloc(i64 noundef 3, i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
   sink = calloc(3, sizeof(int));
-  // CHECK: call{{.*}} ptr @__alloc_token_realloc(ptr noundef {{[^,]*}}, i64 noundef 8, i64 0)
+  // CHECK: call{{.*}} ptr @__alloc_token_realloc(ptr noundef {{[^,]*}}, i64 noundef 8, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
   sink = realloc(sink, sizeof(long));
-  // CHECK: call{{.*}} ptr @__alloc_token_reallocarray(ptr noundef {{[^,]*}}, i64 noundef 5, i64 noundef 8, i64 0)
+  // CHECK: call{{.*}} ptr @__alloc_token_reallocarray(ptr noundef {{[^,]*}}, i64 noundef 5, i64 noundef 8, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
   sink = reallocarray(sink, 5, sizeof(long));
+  // CHECK: call{{.*}} align 128{{.*}} ptr @__alloc_token_aligned_alloc(i64 noundef 128, i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
+  sink = aligned_alloc(128, sizeof(int));
+  // CHECK: call{{.*}} ptr @__alloc_token_memalign(i64 noundef 16, i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
+  sink = memalign(16, sizeof(int));
+  // CHECK: call{{.*}} ptr @__alloc_token_valloc(i64 noundef 4, i64 {{[1-9][0-9]*}}), !alloc_token_hint
+  sink = valloc(sizeof(int));
+  // CHECK: call{{.*}} ptr @__alloc_token_pvalloc(i64 noundef 4, i64 {{[1-9][0-9]*}}), !alloc_token_hint
+  sink = pvalloc(sizeof(int));
+  // FIXME: Should not be token ID 0!
   // CHECK: call{{.*}} i32 @__alloc_token_posix_memalign(ptr noundef {{[^,]*}}, i64 noundef 64, i64 noundef 4, i64 0)
   posix_memalign(&sink, 64, sizeof(int));
-  // CHECK: call align 128{{.*}} ptr @__alloc_token_aligned_alloc(i64 noundef 128, i64 noundef 1024, i64 0)
-  sink = aligned_alloc(128, 1024);
-  // CHECK: call{{.*}} ptr @__alloc_token_memalign(i64 noundef 16, i64 noundef 256, i64 0)
-  sink = memalign(16, 256);
-  // CHECK: call{{.*}} ptr @__alloc_token_valloc(i64 noundef 4096, i64 0)
-  sink = valloc(4096);
-  // CHECK: call{{.*}} ptr @__alloc_token_pvalloc(i64 noundef 8192, i64 0)
-  sink = pvalloc(8192);
 }
 
 // CHECK-LABEL: @_Z17test_operator_newv(
 void test_operator_new() {
-  // FIXME: This should not be token ID 0!
-  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 4, i64 0)
+  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
   sink = __builtin_operator_new(sizeof(int));
-  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 4, i64 0)
+  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
   sink = ::operator new(sizeof(int));
 }
 
 // CHECK-LABEL: @_Z25test_operator_new_nothrowv(
 void test_operator_new_nothrow() {
-  // FIXME: This should not be token ID 0!
-  // CHECK: call {{.*}} ptr @__alloc_token_ZnwmRKSt9nothrow_t(i64 noundef 4, ptr {{.*}} @_ZSt7nothrow, i64 0)
+  // CHECK: call {{.*}} ptr @__alloc_token_ZnwmRKSt9nothrow_t(i64 noundef 4, ptr {{.*}} @_ZSt7nothrow, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
   sink = __builtin_operator_new(sizeof(int), std::nothrow);
-  // CHECK: call {{.*}} ptr @__alloc_token_ZnwmRKSt9nothrow_t(i64 noundef 4, ptr {{.*}} @_ZSt7nothrow, i64 0)
+  // CHECK: call {{.*}} ptr @__alloc_token_ZnwmRKSt9nothrow_t(i64 noundef 4, ptr {{.*}} @_ZSt7nothrow, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
   sink = ::operator new(sizeof(int), std::nothrow);
 }
 
@@ -154,4 +152,14 @@ void test_delete_unchanged(int *x, int *y) {
   // CHECK: call void @_ZdaPv
   delete x;
   delete [] y;
+}
+
+// We should not be touching malloc-attributed non-libcall functions: there
+// might be an arbitrary number of these, and a compatible allocator will only
+// implement standard allocation functions.
+void *nonstandard_malloc(size_t size) __attribute__((malloc));
+// CHECK-LABEL: @_Z22test_nonlibcall_mallocv(
+void *test_nonlibcall_malloc() {
+  // CHECK: call{{.*}} ptr @_Z18nonstandard_mallocm(
+  return nonstandard_malloc(sizeof(int));
 }
