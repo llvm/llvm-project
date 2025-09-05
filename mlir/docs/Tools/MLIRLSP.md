@@ -389,6 +389,42 @@ LSP Language plugins are available for many popular editors, and in principle
 the language servers provided by MLIR should work with any of them, though
 feature sets and interfaces may vary. Below are a set of plugins that are known
 to work:
+### Neovim
+
+#### Setup
+Starting from v0.11, Neovim supports integration of all three language servers through its built-in LSP client, which requires
+hooking up to third party servers.
+
+The quick start guide on its [LSP help page](https://neovim.io/doc/user/lsp.html) details how to set up
+a generic LSP config.
+
+For the most up-to-date configs of all three language server, visit the 
+[lsp directory](https://github.com/neovim/nvim-lspconfig/tree/master/lsp) of nvim-lspconfig, copy and paste the config of 
+choice to your local neovim config of the LSP for further modification of LSP executable path and file types. The file names of the servers' config are:
+
+- `mlir_lsp_server.lua`: for the MLIR LSP Language Server.
+- `mlir_pdll_lsp_server.lua`: for the PDLL LSP Language Server.
+- `tblgen_lsp_server.lua`: for the TableGen LSP Language Server.
+
+Features such as find definitions, find references, hover, live diagnostics and verifiers are well supported. 
+For more information, please refer to each LSP's dedicated's section.
+
+#### External/downstream LSPs
+
+For external or downstream LSPs (for example: FlangIR) that wishes to be integrated to nvim, there are two options:
+- If nvim-lspconfig houses a config of your LSP AND your LSP server executable can be found in PATH, you can call it with `vim.lsp.enable("server_name")`.
+- If nvim-lspconfig doesn't have your LSP config in their repository OR your LSP server executable cannot be found in PATH, 
+you'll need to register it locally. The following example is with the ClangIR LSP before it is eventually registered 
+with PR [#4032](https://github.com/neovim/nvim-lspconfig/pull/4032).
+
+```lua
+vim.lsp.config['cir_lsp_server'] = {
+  cmd = { '<your_clangir_build_path>/cir-lsp-server' },
+  filetypes = { 'cir' },
+}
+
+vim.lsp.enable('cir_lsp_server')
+```
 
 ### Visual Studio Code
 
