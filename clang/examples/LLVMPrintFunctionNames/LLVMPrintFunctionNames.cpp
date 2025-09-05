@@ -20,8 +20,8 @@
 #include "clang/Sema/Sema.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Support/OptimizationLevel.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace clang;
 

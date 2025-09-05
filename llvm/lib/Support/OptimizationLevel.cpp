@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Passes/OptimizationLevel.h"
+#include "llvm/Support/OptimizationLevel.h"
 
 using namespace llvm;
 

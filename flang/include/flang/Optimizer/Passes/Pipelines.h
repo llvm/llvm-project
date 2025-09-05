@@ -26,8 +26,8 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/Frontend/Debug/Options.h"
-#include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/OptimizationLevel.h"
 
 namespace fir {
 
