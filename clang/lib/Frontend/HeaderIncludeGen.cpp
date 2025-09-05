@@ -113,9 +113,12 @@ public:
 /// the compilation showing only the direct includes and imports from that file.
 class HeaderIncludesDirectPerFileCallback : public PPCallbacks {
   struct HeaderIncludeInfo {
-    SourceLocation location;
-    FileEntryRef file;
-    const Module *importedModule;
+    SourceLocation Location;
+    FileEntryRef File;
+    const Module *ImportedModule;
+
+    HeaderIncludeInfo(SourceLocation Location, FileEntryRef File, const Module *ImportedModule)
+        : Location(Location), File(File), ImportedModule(ImportedModule) {}
   };
 
   SourceManager &SM;
@@ -399,31 +402,27 @@ void HeaderIncludesDirectPerFileCallback::EndOfMainFile() {
   JOS.object([&] {
     JOS.attribute("version", "2.0.0");
     JOS.attributeArray("dependencies", [&] {
-      for (auto S = SourceFiles.begin(), SE = SourceFiles.end(); S != SE; ++S) {
+      for (const auto &S : SourceFiles) {
         JOS.object([&] {
-          SmallVector<HeaderIncludeInfo> &Deps = Dependencies[*S];
-          JOS.attribute("source", S->getName().str());
+          SmallVector<HeaderIncludeInfo> &Deps = Dependencies[S];
+          JOS.attribute("source", S.getName().str());
           JOS.attributeArray("includes", [&] {
             for (unsigned I = 0, N = Deps.size(); I != N; ++I) {
-              if (!Deps[I].importedModule) {
+              if (!Deps[I].ImportedModule) {
                 JOS.object([&] {
-                  PresumedLoc PLoc = SM.getPresumedLoc(Deps[I].location);
-                  std::string locationStr = PLoc.isInvalid() ? "<invalid>" : std::to_string(PLoc.getLine()) + ":" + std::to_string(PLoc.getColumn());
-                  JOS.attribute("location", locationStr);
-                  JOS.attribute("file", Deps[I].file.getName());
+                  JOS.attribute("location", Deps[I].Location.printToString(SM));
+                  JOS.attribute("file", Deps[I].File.getName());
                 });
               }
             }
           });
           JOS.attributeArray("imports", [&] {
             for (unsigned I = 0, N = Deps.size(); I != N; ++I) {
-              if (Deps[I].importedModule) {
+              if (Deps[I].ImportedModule) {
                 JOS.object([&] {
-                  PresumedLoc PLoc = SM.getPresumedLoc(Deps[I].location);
-                  std::string locationStr = PLoc.isInvalid() ? "<invalid>" : std::to_string(PLoc.getLine()) + ":" + std::to_string(PLoc.getColumn());
-                  JOS.attribute("location", locationStr);
-                  JOS.attribute("module", Deps[I].importedModule->getTopLevelModuleName());
-                  JOS.attribute("file", Deps[I].file.getName());
+                  JOS.attribute("location", Deps[I].Location.printToString(SM));
+                  JOS.attribute("module", Deps[I].ImportedModule->getTopLevelModuleName());
+                  JOS.attribute("file", Deps[I].File.getName());
                 });
               }
             }
@@ -458,19 +457,16 @@ void HeaderIncludesDirectPerFileCallback::InclusionDirective(
   if (!FromFile)
     return;
 
-  FileEntryRef headerOrModule = *File;
+  FileEntryRef HeaderOrModule = *File;
   if (ModuleImported && SuggestedModule) {
     OptionalFileEntryRef ModuleMapFile = HSI.getModuleMap().getModuleMapFileForUniquing(SuggestedModule);
     if (ModuleMapFile) {
-      headerOrModule = *ModuleMapFile;
+      HeaderOrModule = *ModuleMapFile;
     }
   }
 
-  Dependencies[*FromFile].push_back({
-    .location = Loc,
-    .file = headerOrModule,
-    .importedModule = (ModuleImported ? SuggestedModule : nullptr)
-  });
+  HeaderIncludeInfo DependenciesEntry(Loc, HeaderOrModule, (ModuleImported ? SuggestedModule : nullptr));
+  Dependencies[*FromFile].push_back(DependenciesEntry);
 }
 
 void HeaderIncludesDirectPerFileCallback::moduleImport(SourceLocation ImportLoc,
@@ -491,9 +487,6 @@ void HeaderIncludesDirectPerFileCallback::moduleImport(SourceLocation ImportLoc,
   if (!ModuleMapFile)
     return;
 
-  Dependencies[*FromFile].push_back({
-    .location = Loc,
-    .file = *ModuleMapFile,
-    .importedModule = Imported
-  });
+  HeaderIncludeInfo DependenciesEntry(Loc, *ModuleMapFile, Imported);
+  Dependencies[*FromFile].push_back(DependenciesEntry);
 }
