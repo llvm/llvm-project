@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=core2 -pre-RA-sched=source -enable-misched -verify-machineinstrs | FileCheck %s
 ;
-; Verify that misched resource/latency balancy heuristics are sane.
+; Verify that misched resource/latency balancy heuristics are sound.
 
 define void @unrolled_mmult1(ptr %tmp55, ptr %tmp56, ptr %pre, ptr %pre94,
   ptr %pre95, ptr %pre96, ptr %pre97, ptr %pre98, ptr %pre99,

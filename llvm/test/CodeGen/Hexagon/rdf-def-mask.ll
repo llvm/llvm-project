@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=hexagon -O3 -verify-machineinstrs < %s | FileCheck %s
 ; REQUIRES: asserts
 
-; Check for sane output. This testcase used to crash.
+; Check for sound output. This testcase used to crash.
 ; CHECK: jumpr r31
 
 target triple = "hexagon"

@@ -349,7 +349,7 @@ bool DynamicLoaderMacOSXDYLD::NotifyBreakpointHit(
   ExecutionContext exe_ctx(context->exe_ctx_ref);
   Process *process = exe_ctx.GetProcessPtr();
 
-  // This is a sanity check just in case this dyld_instance is an old dyld
+  // This is a soundness check just in case this dyld_instance is an old dyld
   // plugin's breakpoint still lying around.
   if (process != dyld_instance->m_process)
     return false;

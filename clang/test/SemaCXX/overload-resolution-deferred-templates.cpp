@@ -22,7 +22,7 @@ struct Invalid { static_assert(false, "instantiated Invalid"); }; // #err-invali
 template <typename T>
 int f(T a, Invalid<T> = {}); // #note-f
 
-// sanity check
+// soundness check
 int e1 = f(0);
 //expected-error@#err-invalid {{static assertion failed: instantiated Invalid}}
 //expected-note@-2 {{in instantiation of default function argument expression for 'f<int>' required here}}

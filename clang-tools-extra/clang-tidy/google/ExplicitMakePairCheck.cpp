@@ -40,7 +40,7 @@ void ExplicitMakePairCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Call = Result.Nodes.getNodeAs<CallExpr>("call");
   const auto *DeclRef = Result.Nodes.getNodeAs<DeclRefExpr>("declref");
 
-  // Sanity check: The use might have overriden ::std::make_pair.
+  // Soundness check: The use might have overriden ::std::make_pair.
   if (Call->getNumArgs() != 2)
     return;
 

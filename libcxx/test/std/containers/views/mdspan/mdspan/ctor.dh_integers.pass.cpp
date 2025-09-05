@@ -62,7 +62,7 @@ constexpr void test_mdspan_types(const H& handle, const M& map, const A&, Idxs..
       }
     }
 
-    // sanity check that concept works
+    // soundness check that concept works
     static_assert(check_mdspan_ctor_implicit<MDS, H, std::array<typename MDS::index_type, MDS::rank_dynamic()>>);
     // check that the constructor from integral is explicit
     static_assert(!check_mdspan_ctor_implicit<MDS, H, Idxs...>);
@@ -105,12 +105,12 @@ constexpr void mixin_layout(const H& handle, const A& acc) {
   mixin_extents<true, ac>(handle, std::layout_right(), acc);
 
   // Use weird layout, make sure it has the properties we want to test
-  // Sanity check that this layouts mapping is constructible from extents (via its move constructor)
+  // Soundness check that this layouts mapping is constructible from extents (via its move constructor)
   static_assert(std::is_constructible_v<layout_wrapping_integral<8>::mapping<std::extents<int>>, std::extents<int>>);
   static_assert(
       !std::is_constructible_v<layout_wrapping_integral<8>::mapping<std::extents<int>>, const std::extents<int>&>);
   mixin_extents<true, ac>(handle, layout_wrapping_integral<8>(), acc);
-  // Sanity check that this layouts mapping is not constructible from extents
+  // Soundness check that this layouts mapping is not constructible from extents
   static_assert(!std::is_constructible_v<layout_wrapping_integral<4>::mapping<std::extents<int>>, std::extents<int>>);
   static_assert(
       !std::is_constructible_v<layout_wrapping_integral<4>::mapping<std::extents<int>>, const std::extents<int>&>);
@@ -141,7 +141,7 @@ constexpr bool test() {
   // test non-constructibility from wrong integer types
   constexpr size_t D = std::dynamic_extent;
   using mds_t        = std::mdspan<float, std::extents<int, 3, D, D>>;
-  // sanity check
+  // soundness check
   static_assert(std::is_constructible_v<mds_t, float*, int, int, int>);
   static_assert(std::is_constructible_v<mds_t, float*, int, int>);
   // wrong number of arguments

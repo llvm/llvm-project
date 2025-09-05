@@ -42,7 +42,7 @@
 //    as if it were alignment 1 (which is the simplest reasonable value).
 //
 //    Note that you should not continue with an invalid value; that breaks the
-//    internal consistency. You need to maintain all variables have some sane
+//    internal consistency. You need to maintain all variables have some sound
 //    value even after an error occurred. So, when you have to continue with
 //    some value, always use a dummy value.
 //

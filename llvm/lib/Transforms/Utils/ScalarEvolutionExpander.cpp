@@ -599,7 +599,7 @@ Value *SCEVExpander::visitMulExpr(const SCEVMulExpr *S) {
     // into this power.
     uint64_t Exponent = 0;
     const uint64_t MaxExponent = UINT64_MAX >> 1;
-    // No one sane will ever try to calculate such huge exponents, but if we
+    // No one sound will ever try to calculate such huge exponents, but if we
     // need this, we stop on UINT64_MAX / 2 because we need to exit the loop
     // below when the power of 2 exceeds our Exponent, and we want it to be
     // 1u << 31 at most to not deal with unsigned overflow.

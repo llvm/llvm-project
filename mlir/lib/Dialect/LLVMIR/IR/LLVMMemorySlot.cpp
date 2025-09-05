@@ -160,7 +160,7 @@ static bool areConversionCompatible(const DataLayout &layout, Type targetType,
   uint64_t targetSize = layout.getTypeSize(targetType);
   uint64_t srcSize = layout.getTypeSize(srcType);
 
-  // Pointer casts will only be sane when the bitsize of both pointer types is
+  // Pointer casts will only be sound when the bitsize of both pointer types is
   // the same.
   if (isa<LLVM::LLVMPointerType>(targetType) &&
       isa<LLVM::LLVMPointerType>(srcType))

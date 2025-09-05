@@ -1,6 +1,6 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s
 ;
-; Test that various function attributes give us sane results.
+; Test that various function attributes give us sound results.
 
 @g = external global i32
 

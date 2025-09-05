@@ -10,7 +10,7 @@
 extern void __tgt_rtl_init(void);
 extern void __tgt_rtl_deinit(void);
 
-// Sanity checks to make sure that this works and is thread safe.
+// Soundness checks to make sure that this works and is thread safe.
 int main() {
   // CHECK: Init offload library!
   // CHECK: Deinit offload library!

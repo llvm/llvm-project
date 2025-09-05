@@ -207,7 +207,7 @@ else()
   message(SEND_ERROR "Unknown host architecture ${HOST_ARCH}. Must be aarch64 (or arm64), armv7 (or arm), i686 (or x86), or x86_64 (or x64).")
 endif()
 
-# Do some sanity checking to make sure we can find a native toolchain and
+# Do some soundness checking to make sure we can find a native toolchain and
 # that the Windows SDK / MSVC STL directories look kosher.
 if(NOT EXISTS "${LLVM_NATIVE_TOOLCHAIN}/bin/clang-cl" OR
    NOT EXISTS "${LLVM_NATIVE_TOOLCHAIN}/bin/lld-link")

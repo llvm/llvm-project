@@ -5,7 +5,7 @@ namespace basic {
 
 #define authenticated(a, b, c...) [[clang::ptrauth_vtable_pointer(a, b, c)]]
 
-// Basic sanity tests
+// Basic soundness tests
 #define TEST_AUTH(name, auth...)                        \
   struct [[clang::ptrauth_vtable_pointer(auth)]] name { \
     virtual ~name() {}                                  \
@@ -90,7 +90,7 @@ UnauthedPolymorphicTemplateClass<ValidPolymorphic> test7;
 UnauthedPolymorphicTemplateClass<ValidMonomorphic> test8;
 
 // Just use a different policy from the generic macro to verify we won't complain
-// about the insanity
+// about the unsoundness
 struct authenticated(process_independent, no_address_discrimination, type_discrimination) SecondAuthenticatedPolymorphic {
   virtual ~SecondAuthenticatedPolymorphic(){};
 };

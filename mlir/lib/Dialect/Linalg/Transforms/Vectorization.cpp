@@ -2081,7 +2081,7 @@ vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op,
 ///   (1) If the input-vector-sizes are empty, then the vector sizes will be
 ///       infered. This is only possible when all shapes are static.
 ///   (2) If the input-vector-sizes are non-empty (i.e. user provided), then
-///       carry out basic sanity-checking.
+///       carry out basic soundness-checking.
 static LogicalResult
 vectorizeUnPackOpPrecondition(linalg::UnPackOp unpackOp,
                               ArrayRef<int64_t> inputVectorSizes) {

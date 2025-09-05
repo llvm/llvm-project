@@ -5336,7 +5336,7 @@ TEST(APFloatTest, PPCDoubleDoubleMultiply) {
 TEST(APFloatTest, PPCDoubleDoubleDivide) {
   using DataType = std::tuple<uint64_t, uint64_t, uint64_t, uint64_t, uint64_t,
                               uint64_t, APFloat::roundingMode>;
-  // TODO: Only a sanity check for now. Add more edge cases when the
+  // TODO: Only a soundness check for now. Add more edge cases when the
   // double-double algorithm is implemented.
   DataType Data[] = {
       // 1 / 3 = 1/3
@@ -5434,7 +5434,7 @@ TEST(APFloatTest, PPCDoubleDoubleMod) {
 }
 
 TEST(APFloatTest, PPCDoubleDoubleFMA) {
-  // Sanity check for now.
+  // Soundness check for now.
   APFloat A(APFloat::PPCDoubleDouble(), "2");
   A.fusedMultiplyAdd(APFloat(APFloat::PPCDoubleDouble(), "3"),
                      APFloat(APFloat::PPCDoubleDouble(), "4"),

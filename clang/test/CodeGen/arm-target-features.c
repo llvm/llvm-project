@@ -63,7 +63,7 @@
 // CHECK-THUMB-DIV-M3: "target-features"="+armv7-m,+hwdiv,+thumb-mode"
 
 // (The following test with no arch specified shouldn't happen; the driver
-// rewrites triples.  Just make sure it does something sane.)
+// rewrites triples.  Just make sure it does something sound.)
 // RUN: %clang_cc1 -triple arm-linux-gnueabi -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ARM-NOARCH-LINUX
 // CHECK-ARM-NOARCH-LINUX: "target-features"="-thumb-mode"
 

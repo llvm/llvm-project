@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=hexagon -verify-machineinstrs -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
 ; REQUIRES: asserts
 
-; Check for some sane output. This test used to crash.
+; Check for some sound output. This test used to crash.
 ; CHECK: jumpr r31
 
 

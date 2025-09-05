@@ -1846,7 +1846,7 @@ enum class LateAttrParseKind { Never = 0, Standard = 1, ExperimentalExt = 2 };
 static LateAttrParseKind getLateAttrParseKind(const Record *Attr) {
   // This function basically does
   // `Attr->getValueAsDef("LateParsed")->getValueAsInt("Kind")` but does a bunch
-  // of sanity checking to ensure that `LateAttrParseMode` in `Attr.td` is in
+  // of soundness checking to ensure that `LateAttrParseMode` in `Attr.td` is in
   // sync with the `LateAttrParseKind` enum in this source file.
 
   static constexpr StringRef LateParsedStr = "LateParsed";

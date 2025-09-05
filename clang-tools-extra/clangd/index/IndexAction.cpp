@@ -106,7 +106,7 @@ public:
     NodeForIncluding.first->getValue().DirectIncludes.push_back(NodeForInclude);
   }
 
-  // Sanity check to ensure we have already populated a skipped file.
+  // Soundness check to ensure we have already populated a skipped file.
   void FileSkipped(const FileEntryRef &SkippedFile, const Token &FilenameTok,
                    SrcMgr::CharacteristicKind FileType) override {
 #ifndef NDEBUG

@@ -101,7 +101,7 @@ module {
 
 
     //
-    // Sanity check on 16x32 full 2:4 input matrix A.
+    // Soundness check on 16x32 full 2:4 input matrix A.
     //
     //
     // CHECK:      ( 1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0, 8, 0, 9, 0, 10, 0, 11, 0, 12, 0, 13, 0, 14, 0, 15, 0, 16, 0 )
@@ -127,7 +127,7 @@ module {
     }
 
     //
-    // Sanity check on input matrix 32x16 B.
+    // Soundness check on input matrix 32x16 B.
     //
     // CHECK-NEXT: (   0,   1,   2,   3,   4,   5,   6,   7,   0,   1,   2,   3,   4,   5,   6,   7 )
     // CHECK-NEXT: (  -1,   0,   1,   2,   3,   4,   5,   6,  -1,   0,   1,   2,   3,   4,   5,   6 )

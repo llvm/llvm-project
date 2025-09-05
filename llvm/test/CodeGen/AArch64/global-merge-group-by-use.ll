@@ -42,8 +42,8 @@ define void @f2(i32 %a1, i32 %a2, i32 %a3) #0 {
   ret void
 }
 
-; Sanity-check (don't worry about cost models) that we pick the biggest subset
-; of all global used "together" directly or indirectly.  Here, that means
+; Soundness-check (don't worry about cost models) that we pick the biggest
+; subset of all global used "together" directly or indirectly.  Here, that means
 ; merging n3, m4, and n4 together, but ignoring m3.
 
 @m3 = internal global i32 0, align 4

@@ -93,7 +93,7 @@ const EocdRecord *FindEocdRecord(lldb::DataBufferSP zip_data) {
     auto eocd = reinterpret_cast<const EocdRecord *>(p);
     if (::memcmp(eocd->signature, EocdRecord::kSignature,
                  sizeof(EocdRecord::kSignature)) == 0) {
-      // Found the end of central directory. Sanity check the values.
+      // Found the end of central directory. Soundness check the values.
       if (eocd->cd_records * sizeof(CdRecord) > eocd->cd_size ||
           zip_data->GetBytes() + eocd->cd_offset + eocd->cd_size > p)
         return nullptr;
@@ -141,7 +141,7 @@ bool FindFile(lldb::DataBufferSP zip_data, const EocdRecord *eocd,
                  sizeof(CdRecord::kSignature)) != 0)
       return false;
 
-    // Sanity check the file name values.
+    // Soundness check the file name values.
     auto file_name = reinterpret_cast<const char *>(cd + 1);
     size_t file_name_length = cd->file_name_length;
     if (file_name + file_name_length >= reinterpret_cast<const char *>(eocd) ||
@@ -158,7 +158,7 @@ bool FindFile(lldb::DataBufferSP zip_data, const EocdRecord *eocd,
       cd = reinterpret_cast<const CdRecord *>(
           reinterpret_cast<const char *>(cd) + sizeof(CdRecord) +
           cd->file_name_length + cd->extra_field_length + cd->comment_length);
-      // Sanity check the pointer.
+      // Soundness check the pointer.
       if (reinterpret_cast<const char *>(cd) >=
           reinterpret_cast<const char *>(eocd))
         return false;

@@ -226,7 +226,7 @@ findReassociationRangesForCollapse(ArrayRef<int64_t> sourceShape,
           sourceShape, sourceDimIdx, targetSize, shouldMatchGreedily);
     }
 
-    // Run sanity checks on the returned index range.
+    // Run soundness checks on the returned index range.
     if (failed(sourceRange) || failed(sourceRange->verify()) ||
         !sourceRange->isInRange(sourceShapeAsRange))
       return failure();

@@ -1,6 +1,6 @@
 ; RUN: llc < %s | FileCheck %s
 
-; Make sure this doesn't crash (and the output is sane).
+; Make sure this doesn't crash (and the output is sound).
 ; CHECK: // %__except.ret
 ; CHECK-NEXT: $ehgcr_0_2:
 ; CHECK-NEXT: mov     x0, xzr

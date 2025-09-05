@@ -400,7 +400,7 @@ bool MCUnwindV2EpilogTargetExpr::evaluateAsRelocatableImpl(
     return false;
   }
 
-  // Sanity check that all epilogs are the same size.
+  // Soundness check that all epilogs are the same size.
   auto Size = GetOptionalAbsDifference(*Asm, EpilogEnd, UnwindV2Start);
   if (Size != (EpilogSize - 1)) {
     Asm->getContext().reportError(

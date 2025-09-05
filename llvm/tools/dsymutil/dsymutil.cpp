@@ -287,7 +287,7 @@ static Expected<DWARFVerify> getVerifyKind(opt::InputArgList &Args) {
 }
 
 /// Parses the command line options into the LinkOptions struct and performs
-/// some sanity checking. Returns an error in case the latter fails.
+/// some soundness checking. Returns an error in case the latter fails.
 static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   DsymutilOptions Options;
 

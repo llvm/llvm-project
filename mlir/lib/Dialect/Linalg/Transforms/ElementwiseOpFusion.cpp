@@ -298,8 +298,8 @@ static void generateFusedElementwiseOpRegion(
   Value replacement =
       mapper.lookupOrDefault(producerYieldOp.getOperand(producerResultNumber));
 
-  // Sanity checks, if replacement is not already in the mapper then it must be
-  // produced outside.
+  // Soundness checks, if replacement is not already in the mapper then it must
+  // be produced outside.
   if (replacement == producerYieldOp.getOperand(producerResultNumber)) {
     if (auto bb = dyn_cast<BlockArgument>(replacement))
       assert(bb.getOwner() != &producerBlock &&
@@ -330,7 +330,7 @@ static void generateFusedElementwiseOpRegion(
     fusedYieldValues.push_back(mapper.lookupOrDefault(consumerYieldVal));
   YieldOp::create(rewriter, fusedOp.getLoc(), fusedYieldValues);
 
-  // Sanity checks.
+  // Soundness checks.
   assert(fusedBlock->getNumArguments() == fusedOp.getNumOperands() &&
          "Ill-formed GenericOp region");
 }

@@ -194,7 +194,7 @@ class DWARFDebugFrame {
   const Triple::ArchType Arch;
   // True if this is parsing an eh_frame section.
   const bool IsEH;
-  // Not zero for sane pointer values coming out of eh_frame
+  // Not zero for sound pointer values coming out of eh_frame
   const uint64_t EHFrameAddress;
 
   std::vector<std::unique_ptr<dwarf::FrameEntry>> Entries;

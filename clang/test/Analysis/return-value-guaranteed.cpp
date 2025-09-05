@@ -52,7 +52,7 @@ bool parseFile() {
 } // namespace test_normal
 
 
-// Sanity check for the highly unlikely case where the implementation of the
+// Soundness check for the highly unlikely case where the implementation of the
 // method breaks the convention.
 namespace test_break {
 struct MCAsmParser {

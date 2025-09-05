@@ -197,7 +197,7 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnitWithTokenSplit) {
 
   // Make sure we got the tokens that we expected.
   ASSERT_EQ(4U, toks.size()) << "a >> b c";
-  // Sanity check their order.
+  // Soundness check their order.
   for (unsigned I = 0; I < toks.size() - 1; ++I) {
     EXPECT_TRUE(SourceMgr.isBeforeInTranslationUnit(toks[I].getLocation(),
                                                     toks[I + 1].getLocation()));

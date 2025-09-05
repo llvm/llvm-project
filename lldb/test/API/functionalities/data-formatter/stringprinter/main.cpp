@@ -81,6 +81,6 @@ int main (int argc, char const *argv[])
     //% self.expect_var_path('charwithtabs', summary='"Hello\t\tWorld\nI am here\t\tto say hello\n"')
     //% self.assertTrue(self.frame().FindVariable('longstring').GetSummary().endswith('"...'))
     //% self.assertTrue(self.frame().FindVariable('longconstcharstar').GetSummary().endswith('"...'))
-    // FIXME: make "b.data" and "c.data" work sanely
+    // FIXME: make "b.data" and "c.data" work soundly
 }
 

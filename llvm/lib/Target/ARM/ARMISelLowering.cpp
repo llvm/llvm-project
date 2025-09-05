@@ -8124,7 +8124,7 @@ SDValue ARMTargetLowering::ReconstructShuffle(SDValue Op,
     Source->MaxElt = std::max(Source->MaxElt, EltNo);
   }
 
-  // Currently only do something sane when at most two source vectors
+  // Currently only do something sound when at most two source vectors
   // are involved.
   if (Sources.size() > 2)
     return SDValue();

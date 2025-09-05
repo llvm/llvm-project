@@ -9,7 +9,7 @@ class TestSimulatorPlatformLaunching(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def check_load_commands(self, expected_load_command):
-        """sanity check the built binary for the expected number of load commands"""
+        """soundness check the built binary for the expected number of load commands"""
         load_cmds = subprocess.check_output(
             ["otool", "-l", self.getBuildArtifact()]
         ).decode("utf-8")

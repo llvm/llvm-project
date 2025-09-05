@@ -109,8 +109,8 @@ bool ThreadPlanStepOverRange::IsEquivalentContext(
             language->AreEqualForFrameComparison(context, m_addr_context))
       return *maybe_equivalent;
   // Match as much as is specified in the m_addr_context: This is a fairly
-  // loose sanity check.  Note, sometimes the target doesn't get filled in so I
-  // left out the target check.  And sometimes the module comes in as the .o
+  // loose soundness check.  Note, sometimes the target doesn't get filled in so
+  // I left out the target check.  And sometimes the module comes in as the .o
   // file from the inlined range, so I left that out too...
   if (m_addr_context.comp_unit) {
     if (m_addr_context.comp_unit != context.comp_unit)

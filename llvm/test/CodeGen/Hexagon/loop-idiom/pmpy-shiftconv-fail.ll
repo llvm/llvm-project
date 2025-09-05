@@ -2,7 +2,7 @@
 ; RUN: opt -p hexagon-loop-idiom -S < %s | FileCheck %s
 ; REQUIRES: asserts
 ;
-; Check for sane output, this used to crash.
+; Check for sound output, this used to crash.
 ; CHECK: define void @fred
 
 ; The conversion of shifts from right to left failed, but the return

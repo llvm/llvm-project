@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=hexagon -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
 ; REQUIRES: asserts
 
-; This used to crash. Check for some sane output.
+; This used to crash. Check for some sound output.
 ; CHECK: sath
 
 target triple = "hexagon"

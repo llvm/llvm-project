@@ -43,7 +43,7 @@ void test_soccc_behavior() {
     assert(ss.rdbuf()->get_allocator().count_ == 10);
     assert(copied.empty());
 
-    // sanity-check that SOCCC does in fact work
+    // soundness-check that SOCCC does in fact work
     assert(S(copied).get_allocator().count_ == 11);
 
     // [stringbuf.members]/10 doesn't specify the allocator to use,

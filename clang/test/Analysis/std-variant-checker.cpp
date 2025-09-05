@@ -45,7 +45,7 @@ using var_tt = var_t;
 using int_t = int;
 using char_t = char;
 
-// A quick sanity check to see that std::variant's std::get
+// A quick soundness check to see that std::variant's std::get
 // is not being confused with std::pairs std::get.
 void wontConfuseStdGets() {
   std::pair<int, char> p{15, '1'};

@@ -831,7 +831,7 @@ Should fold to "a".  Currently not optimized with "clang -emit-llvm-bc
 //===---------------------------------------------------------------------===//
 
 int a(int a, int b, int c) {return (a&&b) || (!a&&c);}
-Should fold to "a ? b : c", or at least something sane.  Currently not
+Should fold to "a ? b : c", or at least something sound.  Currently not
 optimized with "clang -emit-llvm-bc | opt -O3".
 
 //===---------------------------------------------------------------------===//

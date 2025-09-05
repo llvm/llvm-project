@@ -39,7 +39,7 @@ int main(int, char**)
     constexpr bool p = std::is_constant_evaluated();
     assert(p);
   }
-  // Test the return value of the builtin for basic sanity only. It's the
+  // Test the return value of the builtin for basic soundness only. It's the
   // compiler's job to test the builtin for correctness.
   {
     static_assert(std::is_constant_evaluated(), "");

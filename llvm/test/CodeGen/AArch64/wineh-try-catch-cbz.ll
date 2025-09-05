@@ -1,6 +1,6 @@
 ; RUN: llc < %s | FileCheck %s
 
-; Make sure the prologue is sane.  (Doesn't need to exactly match this,
+; Make sure the prologue is sound.  (Doesn't need to exactly match this,
 ; but the original issue only reproduced if the cbz was immediately
 ; after the frame setup.)
 

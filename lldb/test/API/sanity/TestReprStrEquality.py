@@ -1,5 +1,5 @@
 """
-This is a sanity check that verifies that `repr(sbobject)` and `str(sbobject)`
+This is a soundness check that verifies that `repr(sbobject)` and `str(sbobject)`
 produce the same string.
 """
 

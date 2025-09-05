@@ -8,7 +8,7 @@
 ; lower-buffer-fat-pointers-mem-transfer.ll to verify the IR produced by
 ; the lowering.
 ;
-; This file is a sanity check to make sure that the code generated
+; This file is a soundness check to make sure that the code generated
 ; for buffer-related memcpy() calls turns into something reasonable in
 ; the backend, despite the wide intermediate vectors
 

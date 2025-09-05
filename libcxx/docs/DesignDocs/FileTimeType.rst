@@ -82,7 +82,7 @@ and with nanosecond resolution).
 To get the same range, we would need to drop our resolution to that of seconds
 to come close to having the same range.
 
-This begs the question, is the range problem "really a problem"? Sane usages
+This begs the question, is the range problem "really a problem"? Sound usages
 of file time stamps shouldn't exceed +/- 300 years, so should we care to support it?
 
 I believe the answer is yes. We're not designing the filesystem time API, we're
@@ -110,7 +110,7 @@ to throw in cases where the user was confident the call should succeed. (See bel
     assert(result != -1);
   }
 
-  // Called elsewhere to set the file time to something insane, and way
+  // Called elsewhere to set the file time to something unsound, and way
   // out of the 300 year range we might expect.
   void some_bad_persons_code() {
     struct timespec new_times;

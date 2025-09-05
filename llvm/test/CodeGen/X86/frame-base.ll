@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=x86_64-apple-macosx -o - %s | FileCheck %s
 
 ; The issue here was a conflict between forming a %rip-relative lea and a
-; FrameIndex lea. The %rip sanity-checks didn't consider that a base register
+; FrameIndex lea. The %rip soundness-checks didn't consider that a base register
 ; had been set if we'd already matched a FrameIndex, when it has in reality.
 
 @var = global i32 0

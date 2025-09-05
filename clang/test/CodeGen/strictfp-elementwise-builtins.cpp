@@ -6,7 +6,7 @@
 
 typedef float float4 __attribute__((ext_vector_type(4)));
 
-// Sanity check we're getting constrained ops for a non-builtin.
+// Soundness check we're getting constrained ops for a non-builtin.
 // CHECK-LABEL: define dso_local noundef <4 x float> @_Z11strict_faddDv4_fS_
 // CHECK-SAME: (<4 x float> noundef [[A:%.*]], <4 x float> noundef [[B:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:

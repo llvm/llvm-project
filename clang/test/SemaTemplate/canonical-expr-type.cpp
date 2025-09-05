@@ -12,7 +12,7 @@ void f0(T x, __typeof__((f)(x)) y) { }
 template<typename U>
 void f0(U u, __typeof__(f(u))) { } // expected-error{{redefinition}}
 
-// Test insane typeof(expr) overload set canonicalization
+// Test unsound typeof(expr) overload set canonicalization
 void f(int);
 void f(double);
 

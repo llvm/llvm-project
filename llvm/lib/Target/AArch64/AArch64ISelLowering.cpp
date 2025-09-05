@@ -17848,7 +17848,7 @@ bool AArch64TargetLowering::lowerInterleavedStore(Instruction *Store,
 
   auto Mask = SVI->getShuffleMask();
 
-  // Sanity check if all the indices are NOT in range.
+  // Soundness check if all the indices are NOT in range.
   // If mask is `poison`, `Mask` may be a vector of -1s.
   // If all of them are `poison`, OOB read will happen later.
   if (llvm::all_of(Mask, [](int Idx) { return Idx == PoisonMaskElem; })) {

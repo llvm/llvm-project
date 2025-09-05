@@ -178,7 +178,7 @@
 // CHECK-CC1-OPENMPIRBUILDER-SAME: "-fopenmp"
 // CHECK-CC1-OPENMPIRBUILDER-SAME: "-fopenmp-enable-irbuilder"
 //
-// We'd like to check that the default is sane, but until we have the ability
+// We'd like to check that the default is sound, but until we have the ability
 // to *always* semantically analyze OpenMP without always generating runtime
 // calls (in the event of an unsupported runtime), we don't have a good way to
 // test the CC1 invocation. Instead, just ensure we do eventually link *some*

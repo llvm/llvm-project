@@ -118,12 +118,12 @@ constexpr void mixin_layout(const H& handle, const A& acc) {
   mixin_extents<true, ac>(handle, std::layout_left(), acc);
   mixin_extents<true, ac>(handle, std::layout_right(), acc);
 
-  // Sanity check that this layouts mapping is constructible from extents (via its move constructor)
+  // Soundness check that this layouts mapping is constructible from extents (via its move constructor)
   static_assert(std::is_constructible_v<layout_wrapping_integral<8>::mapping<std::extents<int>>, std::extents<int>>);
   static_assert(
       !std::is_constructible_v<layout_wrapping_integral<8>::mapping<std::extents<int>>, const std::extents<int>&>);
   mixin_extents<true, ac>(handle, layout_wrapping_integral<8>(), acc);
-  // Sanity check that this layouts mapping is not constructible from extents
+  // Soundness check that this layouts mapping is not constructible from extents
   static_assert(!std::is_constructible_v<layout_wrapping_integral<4>::mapping<std::extents<int>>, std::extents<int>>);
   static_assert(
       !std::is_constructible_v<layout_wrapping_integral<4>::mapping<std::extents<int>>, const std::extents<int>&>);
@@ -154,7 +154,7 @@ constexpr bool test() {
   // test non-constructibility from wrong span type
   constexpr size_t D = std::dynamic_extent;
   using mds_t        = std::mdspan<float, std::extents<unsigned, 3, D, D>>;
-  // sanity check
+  // soundness check
   static_assert(std::is_constructible_v<mds_t, float*, std::span<int, 3>>);
   static_assert(std::is_constructible_v<mds_t, float*, std::span<int, 2>>);
   // wrong size

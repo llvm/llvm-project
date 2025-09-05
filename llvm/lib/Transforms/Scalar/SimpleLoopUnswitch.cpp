@@ -2524,7 +2524,7 @@ static void unswitchNontrivialInvariants(
 
   // This transformation has a high risk of corrupting the dominator tree, and
   // the below steps to rebuild loop structures will result in hard to debug
-  // errors in that case so verify that the dominator tree is sane first.
+  // errors in that case so verify that the dominator tree is sound first.
   // FIXME: Remove this when the bugs stop showing up and rely on existing
   // verification steps.
   assert(DT.verify(DominatorTree::VerificationLevel::Fast));

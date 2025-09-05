@@ -45,7 +45,7 @@ BEGIN {
     usage()
   }
 
-  # sanity check that the path ends with "syscall.master"
+  # soundness check that the path ends with "syscall.master"
   if (ARGV[1] !~ /syscalls\.master$/) {
     usage()
   }

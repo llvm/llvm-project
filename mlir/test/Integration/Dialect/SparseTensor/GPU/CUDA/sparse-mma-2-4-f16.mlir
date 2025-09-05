@@ -293,7 +293,7 @@ module attributes {gpu.container_module} {
     }
 
     //
-    // Sanity check on **compressed** input matrix A.
+    // Soundness check on **compressed** input matrix A.
     //
     // Note that it really is a 16x32 matrix:
     //   | 1 0 2 0 3 0 ...
@@ -323,7 +323,7 @@ module attributes {gpu.container_module} {
     }
 
     //
-    // Sanity check on input matrix 32x8 B.
+    // Soundness check on input matrix 32x8 B.
     // Note that this is really shown as B^T
     //
     // CHECK-NEXT: ( 0, -1, -2, -3, -4, -5, -6, -7, -8, -9, -10, -11, -12, -13, -14, -15, -16, -17, -18, -19, -20, -21, -22, -23, -24, -25, -26, -27, -28, -29, -30, -31 )

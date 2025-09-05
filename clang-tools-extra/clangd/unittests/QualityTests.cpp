@@ -10,7 +10,7 @@
 // For interesting cases, both exact scores and "X beats Y" are too brittle to
 // make good hard assertions.
 //
-// Here we test the signal extraction and sanity-check that signals point in
+// Here we test the signal extraction and soundness-check that signals point in
 // the right direction. This should be supplemented by quality metrics which
 // we can compute from a corpus of queries and preferred rankings.
 //

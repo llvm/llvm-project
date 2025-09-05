@@ -696,7 +696,7 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectImpl(
         copy_from_offset = used_bytes;
         used_bytes += field_byte_width;
       }
-      // These two tests are just sanity checks.  If I somehow get the type
+      // These two tests are just soundness checks.  If I somehow get the type
       // calculation wrong above it is better to just return nothing than to
       // assert or crash.
       if (!copy_from_extractor) {

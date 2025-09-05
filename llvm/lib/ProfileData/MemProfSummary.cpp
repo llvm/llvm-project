@@ -39,7 +39,8 @@ void MemProfSummary::write(ProfOStream &OS) const {
   OS.write(MaxColdTotalSize);
   OS.write(MaxWarmTotalSize);
   OS.write(MaxHotTotalSize);
-  // Sanity check that the number of fields was kept in sync with actual fields.
+  // Soundness check that the number of fields was kept in sync with actual
+  // fields.
   assert((OS.tell() - StartPos) / 8 == MemProfSummary::getNumSummaryFields());
 }
 

@@ -968,7 +968,7 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
         if (Policy.UseHLSLTypes) {
           // This is a bit of a hack because we _do_ use reference types in the
           // AST for representing inout and out parameters so that code
-          // generation is sane, but when re-printing these for HLSL we need to
+          // generation is sound, but when re-printing these for HLSL we need to
           // skip the reference.
           print(T->getParamType(i).getNonReferenceType(), OS, StringRef());
           continue;

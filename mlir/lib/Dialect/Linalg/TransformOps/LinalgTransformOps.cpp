@@ -1805,7 +1805,7 @@ transform::PackTransposeOp::apply(transform::TransformRewriter &rewriter,
     return DiagnosedSilenceableFailure::success();
   }
 
-  // Step 2. Bunch of runtime sanity check and error messages.
+  // Step 2. Bunch of runtime soundness check and error messages.
   // Step 2.1. Fail on multi-op handles.
   if (!llvm::hasSingleElement(packOrUnpackOps) ||
       !llvm::hasSingleElement(linalgOps)) {

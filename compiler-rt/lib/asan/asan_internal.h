@@ -91,7 +91,7 @@ bool PlatformUnpoisonStacks();
 
 // asan_rtl.cpp
 // Unpoison a region containing a stack.
-// Performs a sanity check and warns if the bounds don't look right.
+// Performs a soundness check and warns if the bounds don't look right.
 // The warning contains the type string to identify the stack type.
 void UnpoisonStack(uptr bottom, uptr top, const char *type);
 

@@ -52,7 +52,7 @@ kmp_omp_struct_info_t __kmp_omp_debug_struct_info = {
     /* Change this only if you make a fundamental data structure change here */
     KMP_OMP_VERSION,
 
-    /* sanity check.  Only should be checked if versions are identical
+    /* soundness check.  Only should be checked if versions are identical
      * This is also used for backward compatibility to get the runtime
      * structure size if it the runtime is older than the interface */
     sizeof(kmp_omp_struct_info_t),

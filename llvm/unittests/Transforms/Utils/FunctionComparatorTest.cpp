@@ -104,7 +104,7 @@ public:
   }
 };
 
-/// A sanity check for the FunctionComparator API.
+/// A soundness check for the FunctionComparator API.
 TEST(FunctionComparatorTest, TestAPI) {
   LLVMContext C;
   Module M("test", C);

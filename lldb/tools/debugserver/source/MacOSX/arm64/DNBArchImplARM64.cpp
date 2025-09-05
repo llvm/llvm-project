@@ -1569,7 +1569,7 @@ uint32_t DNBArchMachARM64::GetHardwareWatchpointHit(nub_addr_t &addr) {
       }
 
       if (is_bas_watchpoint) {
-        // Sanity check the bas_bits
+        // Soundness check the bas_bits
         uint32_t lsb = LowestBitSet(bas_bits);
         if (lsb < 0)
           continue;

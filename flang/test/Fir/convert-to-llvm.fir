@@ -2806,7 +2806,7 @@ func.func @test_coordinate_of_tuple(%tup : !fir.ref<tuple<!fir.ref<i32>>>) {
 
 // Test `fir.coordinate_of` conversion - items inside `!fir.ptr`. This should
 // be almost identical to `!fir.ref` (i.e. it's the same code path in the code
-// gen). Instead of duplicating the tests, only one for sanity-checking is added.
+// gen). Instead of duplicating the tests, only one for soundness-checking is added.
 
 // 6.1. `fir.array`
 func.func @coordinate_array_unknown_size_1d(%arg0: !fir.ptr<!fir.array<? x i32>>, %arg1 : index) {

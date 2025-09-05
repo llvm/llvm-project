@@ -57,7 +57,7 @@ typedef struct {
   /* Change this only if you make a fundamental data structure change here */
   kmp_int32 lib_version;
 
-  /* sanity check.  Only should be checked if versions are identical
+  /* soundness check.  Only should be checked if versions are identical
    * This is also used for backward compatibility to get the runtime
    * structure size if it the runtime is older than the interface */
   kmp_int32 sizeof_this_structure;

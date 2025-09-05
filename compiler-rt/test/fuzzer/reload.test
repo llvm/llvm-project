@@ -8,6 +8,6 @@ RUN: not %run %t-ReloadTest %t.crash 2>&1 | FileCheck %s --check-prefix=ARTIFACT
 ARTIFACT: Running: {{.*}}reload.test.tmp.crash
 ARTIFACT: ERROR: libFuzzer: deadly signal
 
-# Sanity check that altered artifact is not going to crash
+# Soundness check that altered artifact is not going to crash
 RUN: echo z >> %t.crash
 RUN: %run %t-ReloadTest %t.crash

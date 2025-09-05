@@ -382,7 +382,7 @@ bool MprotectReadWrite(uptr addr, uptr size) {
 void ReleaseMemoryPagesToOS(uptr beg, uptr end) {
   uptr beg_aligned = RoundDownTo(beg, GetPageSizeCached()),
        end_aligned = RoundDownTo(end, GetPageSizeCached());
-  CHECK(beg < end);                // make sure the region is sane
+  CHECK(beg < end);                // make sure the region is sound
   if (beg_aligned == end_aligned)  // make sure we're freeing at least 1 page;
     return;
   UnmapOrDie((void *)beg, end_aligned - beg_aligned);

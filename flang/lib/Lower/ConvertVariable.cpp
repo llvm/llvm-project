@@ -351,7 +351,7 @@ static mlir::Value genComponentDefaultInit(
       // Pointer or allocatable without initialization.
       // Create deallocated/disassociated value.
       // From a standard point of view, pointer without initialization do not
-      // need to be disassociated, but for sanity and simplicity, do it in
+      // need to be disassociated, but for soundness and simplicity, do it in
       // global constructor since this has no runtime cost.
       componentValue =
           fir::factory::createUnallocatedBox(builder, loc, componentTy, {});

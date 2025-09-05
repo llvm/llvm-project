@@ -30,7 +30,7 @@ class SBDirCheckerCase(TestBase):
         self.sanity_check_executable(exe_name)
 
     def sanity_check_executable(self, exe_name):
-        """Sanity check executable compiled from the auto-generated program."""
+        """Soundness check executable compiled from the auto-generated program."""
         exe = self.getBuildArtifact(exe_name)
         self.runCmd("file %s" % exe, CURRENT_EXECUTABLE_SET)
 

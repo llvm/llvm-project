@@ -1,5 +1,5 @@
 """
-This is a sanity check that verifies that test can be skipped based on settings.
+This is a soundness check that verifies that test can be skipped based on settings.
 """
 
 import lldb

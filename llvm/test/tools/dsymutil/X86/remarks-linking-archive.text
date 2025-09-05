@@ -4,12 +4,12 @@ RUN: cat %p/../Inputs/remarks/basic.macho.remarks.archive.x86_64 > %t/basic.mach
 
 RUN: dsymutil -oso-prepend-path=%p/../Inputs -remarks-prepend-path=%p/../Inputs %t/basic.macho.remarks.archive.x86_64
 
-Check that the remark file in the bundle exists and is sane:
+Check that the remark file in the bundle exists and is sound:
 RUN: llvm-bcanalyzer -dump %t/basic.macho.remarks.archive.x86_64.dSYM/Contents/Resources/Remarks/basic.macho.remarks.archive.x86_64 | FileCheck %s
 
 RUN: dsymutil --linker parallel -oso-prepend-path=%p/../Inputs -remarks-prepend-path=%p/../Inputs %t/basic.macho.remarks.archive.x86_64
 
-Check that the remark file in the bundle exists and is sane:
+Check that the remark file in the bundle exists and is sound:
 RUN: llvm-bcanalyzer -dump %t/basic.macho.remarks.archive.x86_64.dSYM/Contents/Resources/Remarks/basic.macho.remarks.archive.x86_64 | FileCheck %s
 
 Check that we don't error if we're missing remark files from an archive, but we warn instead.

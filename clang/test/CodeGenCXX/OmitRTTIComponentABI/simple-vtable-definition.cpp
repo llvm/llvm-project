@@ -15,7 +15,7 @@
 // RELATIVE: @_ZTV1A = unnamed_addr alias { [2 x i32] }, ptr @_ZTV1A.local
 
 /// None of these supplementary symbols should be emitted with -fno-rtti, but
-/// as a sanity check lets make sure they're not emitted also.
+/// as a soundness check lets make sure they're not emitted also.
 // RTTI-NOT: @_ZTVN10__cxxabiv117__class_type_infoE
 // RTTI-NOT: @_ZTS1A
 // RTTI-NOT: @_ZTI1A

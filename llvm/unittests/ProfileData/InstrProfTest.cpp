@@ -1321,7 +1321,7 @@ TEST(ValueProfileReadWriteTest, value_prof_data_read_write) {
   InstrProfRecord Record({1ULL << 31, 2});
   VPData->deserializeTo(Record, nullptr);
 
-  // Now read data from Record and sanity check the data
+  // Now read data from Record and soundness check the data
   ASSERT_EQ(6U, Record.getNumValueSites(IPVK_IndirectCallTarget));
 
   auto Cmp = [](const InstrProfValueData &VD1, const InstrProfValueData &VD2) {
@@ -1468,7 +1468,7 @@ TEST(ValueProfileReadWriteTest, symtab_mapping) {
 
   VPData->deserializeTo(Record, &Symtab);
 
-  // Now read data from Record and sanity check the data
+  // Now read data from Record and soundness check the data
   ASSERT_EQ(Record.getNumValueSites(IPVK_IndirectCallTarget), 6U);
 
   // Look up the value correpsonding to the middle of a vtable in symtab and
@@ -1499,7 +1499,7 @@ TEST(ValueProfileReadWriteTest, symtab_mapping) {
   // callee5 does not have a mapped value -- default to 0.
   ASSERT_EQ(VD_0[4].Value, 0ULL);
 
-  // Sanity check the vtable value data
+  // Soundness check the vtable value data
   ASSERT_EQ(Record.getNumValueSites(IPVK_VTableTarget), 4U);
 
   {

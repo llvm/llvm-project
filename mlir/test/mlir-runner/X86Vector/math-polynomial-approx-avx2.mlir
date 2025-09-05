@@ -18,7 +18,7 @@
 // -------------------------------------------------------------------------- //
 
 func.func @rsqrt() {
-  // Sanity-check that the scalar rsqrt still works OK.
+  // Soundness-check that the scalar rsqrt still works OK.
   // CHECK: inf
   %0 = arith.constant 0.0 : f32
   %rsqrt_0 = math.rsqrt %0 : f32

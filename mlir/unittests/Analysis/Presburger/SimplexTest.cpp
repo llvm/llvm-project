@@ -258,7 +258,7 @@ TEST(SimplexTest, getSamplePointIfIntegral) {
                    .has_value());
 }
 
-/// Some basic sanity checks involving zero or one variables.
+/// Some basic soundness checks involving zero or one variables.
 TEST(SimplexTest, isMarkedRedundant_no_var_ge_zero) {
   Simplex simplex(0);
   addInequality(simplex, {0}); // 0 >= 0.

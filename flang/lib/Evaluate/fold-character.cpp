@@ -102,7 +102,7 @@ Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
             "NCOPIES= argument to REPEAT() should be nonnegative, but is %jd"_err_en_US,
             static_cast<std::intmax_t>(n));
       } else if (static_cast<double>(n) * str.size() >
-          (1 << 20)) { // sanity limit of 1MiB
+          (1 << 20)) { // soundness limit of 1MiB
         context.Warn(common::UsageWarning::FoldingLimit,
             "Result of REPEAT() is too large to compute at compilation time (%g characters)"_port_en_US,
             static_cast<double>(n) * str.size());

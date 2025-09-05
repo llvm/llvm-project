@@ -640,7 +640,7 @@ int main(int argc, char **argv, char * const *envp) {
 
   int Result = -1;
 
-  // Sanity check use of remote-jit: LLI currently only supports use of the
+  // Soundness check use of remote-jit: LLI currently only supports use of the
   // remote JIT on Unix platforms.
   if (RemoteMCJIT) {
 #ifndef LLVM_ON_UNIX

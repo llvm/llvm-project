@@ -275,7 +275,7 @@ function(get_compiler_rt_root_source_dir ROOT_DIR_VAR)
     message(FATAL_ERROR "Path \"${ROOT_DIR}\" doesn't exist")
   endif()
 
-  # Sanity check: Make sure we can locate the current source file via the
+  # Soundness check: Make sure we can locate the current source file via the
   # computed path.
   set(PATH_TO_CURRENT_FILE "${ROOT_DIR}/cmake/Modules/CompilerRTUtils.cmake")
   if (NOT EXISTS "${PATH_TO_CURRENT_FILE}")

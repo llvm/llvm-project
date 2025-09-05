@@ -1001,7 +1001,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
               copy_from_extractor = &f2_data;
             }
 
-            // Sanity check to avoid crash
+            // Soundness check to avoid crash
             if (!copy_from_extractor ||
                 *field_byte_width > copy_from_extractor->GetByteSize())
               return return_valobj_sp;

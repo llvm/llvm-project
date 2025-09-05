@@ -4,7 +4,7 @@
 ; CHECK-LABEL: "?a@@YAXXZ":
 ; CHECK-NOT: x19
 
-; Make sure the prologue and epilogue are sane. Make sure the
+; Make sure the prologue and epilogue are sound. Make sure the
 ; frame index is relative to the FP, since there is no base pointer.
 ; (Funclets aren't allowed to contain dynamic allocas.)
 ; CHECK-LABEL: "?catch$2@?0??a@@YAXXZ@4HA":

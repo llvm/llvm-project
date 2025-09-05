@@ -363,8 +363,8 @@ uint32_t Symbol::GetPrologueByteSize() {
                 break;
             }
 
-            // Sanity check - this may be a function in the middle of code that
-            // has debug information, but not for this symbol.  So the line
+            // Soundness check - this may be a function in the middle of code
+            // that has debug information, but not for this symbol.  So the line
             // entries surrounding us won't lie inside our function. In that
             // case, the line entry will be bigger than we are, so we do that
             // quick check and if that is true, we just return 0.

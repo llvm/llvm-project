@@ -185,7 +185,7 @@ Unordered
 ---------
 
 Unordered is the lowest level of atomicity. It essentially guarantees that races
-produce somewhat sane results instead of having undefined behavior.  It also
+produce somewhat sound results instead of having undefined behavior.  It also
 guarantees the operation to be lock-free, so it does not depend on the data
 being part of a special atomic structure or depend on a separate per-process
 global lock.  Note that code generation will fail for unsupported atomic

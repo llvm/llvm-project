@@ -919,7 +919,7 @@ int d;
   StartSecond.wait();
   Server.addDocument(FooCpp, SourceContentsWithoutErrors);
   ASSERT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for diagnostics";
-  ASSERT_EQ(DiagConsumer.Count, 2); // Sanity check - we actually ran both?
+  ASSERT_EQ(DiagConsumer.Count, 2); // Soundness check - we actually ran both?
 }
 
 TEST(ClangdServerTest, FormatCode) {

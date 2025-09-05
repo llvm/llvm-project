@@ -10,7 +10,7 @@
 ;; multiple fragments so that they can linker-relax the linetable, but x86
 ;; doesn't.
 ;;
-;; First, sanity check that the linetable output is as expected,
+;; First, soundness check that the linetable output is as expected,
 
 ; LINES:      Address            Line   Column File   ISA Discriminator OpIndex Flags
 ; LINES-NEXT: ------------------ ------ ------ ------ --- ------------- ------- -------------

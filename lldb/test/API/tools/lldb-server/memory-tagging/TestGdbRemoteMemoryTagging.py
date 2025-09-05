@@ -88,7 +88,7 @@ class TestGdbRemoteMemoryTagging(gdbremote_testcase.GdbRemoteTestCaseBase):
         """Test that qMemTags packets are parsed correctly and/or rejected."""
         buf_address, page_size = self.prep_memtags_test()
 
-        # Sanity check that address is correct
+        # Soundness check that address is correct
         self.check_tag_read("{:x},20:1".format(buf_address), "m0001")
 
         # Invalid packets
@@ -158,7 +158,7 @@ class TestGdbRemoteMemoryTagging(gdbremote_testcase.GdbRemoteTestCaseBase):
         """Test that QMemTags packets are parsed correctly and/or rejected."""
         buf_address, page_size = self.prep_memtags_test()
 
-        # Sanity check that address is correct
+        # Soundness check that address is correct
         self.check_tag_write("{:x},10:1:0e".format(buf_address), "OK")
         self.check_tag_read("{:x},10:1".format(buf_address), "m0e")
 

@@ -1090,7 +1090,7 @@ bool Decoder::dumpXDataRecord(const COFFObjectFile &COFF,
   const ulittle32_t *Data =
     reinterpret_cast<const ulittle32_t *>(Contents.data() + Offset);
 
-  // Sanity check to ensure that the .xdata header is present.
+  // Soundness check to ensure that the .xdata header is present.
   // A header is one or two words, followed by at least one word to describe
   // the unwind codes. Applicable to both ARM and AArch64.
   if (Contents.size() - Offset < 8)

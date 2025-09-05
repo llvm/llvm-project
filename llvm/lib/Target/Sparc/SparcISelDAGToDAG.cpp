@@ -159,7 +159,7 @@ bool SparcDAGToDAGISel::SelectADDRrr(SDValue Addr, SDValue &R1, SDValue &R2) {
 // Note: This function was copied from, and is essentially identical
 // to ARMISelDAGToDAG::SelectInlineAsm. It is very unfortunate that
 // such hacking-up is necessary; a rethink of how inline asm operands
-// are handled may be in order to make doing this more sane.
+// are handled may be in order to make doing this more sound.
 //
 // TODO: fix inline asm support so I can simply tell it that 'i64'
 // inputs to asm need to be allocated to the IntPair register type,

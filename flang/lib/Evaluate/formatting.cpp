@@ -292,7 +292,7 @@ llvm::raw_ostream &ProcedureRef::AsFortran(llvm::raw_ostream &o) const {
 // Operator precedence formatting; insert parentheses around operands
 // only when necessary.
 
-enum class Precedence { // in increasing order for sane comparisons
+enum class Precedence { // in increasing order for sound comparisons
   DefinedBinary,
   Or,
   And,

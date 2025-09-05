@@ -483,7 +483,7 @@ public:
                     MutableArrayRef<std::unique_ptr<Region>> regions = {});
 
 private:
-  /// Helper for sanity checking preconditions for create* methods below.
+  /// Helper for soundness checking preconditions for create* methods below.
   template <typename OpT>
   RegisteredOperationName getCheckRegisteredInfo(MLIRContext *ctx) {
     std::optional<RegisteredOperationName> opName =

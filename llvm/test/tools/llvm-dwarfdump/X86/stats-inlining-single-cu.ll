@@ -1,7 +1,7 @@
 ; RUN: llc -O0 %s -o - -filetype=obj \
 ; RUN:   | llvm-dwarfdump -statistics - | FileCheck %s
 
-; This test serves as a baseline / sanity-check for stats-inlining-multi-cu.ll
+; This test serves as a baseline / soundness-check for stats-inlining-multi-cu.ll
 ; The results for both tests should be identical.
 
 ; CHECK:      "#functions": 4,

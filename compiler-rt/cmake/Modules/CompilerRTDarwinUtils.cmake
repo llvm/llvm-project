@@ -72,7 +72,7 @@ function(find_darwin_sdk_version var sdk_name)
     message(FATAL_ERROR
       "Failed to determine SDK version for \"${sdk_name}\" SDK")
   endif()
-  # Check reported version looks sane.
+  # Check reported version looks sound.
   if (NOT "${var_internal}" MATCHES "^[0-9]+\\.[0-9]+(\\.[0-9]+)?$")
     message(FATAL_ERROR
       "Reported SDK version \"${var_internal}\" does not look like a version")

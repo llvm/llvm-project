@@ -3,7 +3,7 @@ include_directories(..)
 add_custom_target(XRayUnitTests)
 set_target_properties(XRayUnitTests PROPERTIES FOLDER "Compiler-RT/Tests")
 
-# Sanity check XRAY_ALL_SOURCE_FILES_ABS_PATHS
+# Soundness check XRAY_ALL_SOURCE_FILES_ABS_PATHS
 list(LENGTH XRAY_ALL_SOURCE_FILES_ABS_PATHS XASFAP_LENGTH)
 if (${XASFAP_LENGTH} EQUAL 0)
   message(FATAL_ERROR "XRAY_ALL_SOURCE_FILES_ABS_PATHS cannot be empty")

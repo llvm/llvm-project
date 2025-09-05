@@ -77,7 +77,7 @@ shift 1
 #DEBUG: echo 'WORKING_DIR='$WORKING_DIR
 #DEBUG: echo 'ARGS='$*
 
-# Sanity check
+# Soundness check
 if [ "$RHOST" = "" -o "$PROGRAM" = "" ]; then
   printUsageAndExit
 fi

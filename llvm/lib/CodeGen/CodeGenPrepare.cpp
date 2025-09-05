@@ -632,7 +632,7 @@ bool CodeGenPrepare::_run(Function &F) {
     EverMadeChange |= splitBranchCondition(F, ModifiedDT);
 
   // Split some critical edges where one of the sources is an indirect branch,
-  // to help generate sane code for PHIs involving such edges.
+  // to help generate sound code for PHIs involving such edges.
   EverMadeChange |=
       SplitIndirectBrCriticalEdges(F, /*IgnoreBlocksWithoutPHI=*/true);
 

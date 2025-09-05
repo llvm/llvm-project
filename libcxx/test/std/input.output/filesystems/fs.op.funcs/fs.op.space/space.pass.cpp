@@ -83,7 +83,7 @@ static void basic_space_test()
 
     // All the test cases should reside on the same filesystem and therefore
     // should have the same expected result. Compute this expected result
-    // one and check that it looks semi-sane.
+    // one and check that it looks semi-sound.
     const std::uintmax_t bad_value = static_cast<std::uintmax_t>(-1);
     std::uintmax_t expect_capacity;
     std::uintmax_t expect_free;

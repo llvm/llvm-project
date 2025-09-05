@@ -607,7 +607,7 @@ Status NativeProcessFreeBSD::GetMemoryRegionInfo(lldb::addr_t load_addr,
   for (auto it = m_mem_region_cache.begin(); it != m_mem_region_cache.end();
        ++it) {
     MemoryRegionInfo &proc_entry_info = it->first;
-    // Sanity check assumption that memory map entries are ascending.
+    // Soundness check assumption that memory map entries are ascending.
     assert((proc_entry_info.GetRange().GetRangeBase() >= prev_base_address) &&
            "descending memory map entries detected, unexpected");
     prev_base_address = proc_entry_info.GetRange().GetRangeBase();

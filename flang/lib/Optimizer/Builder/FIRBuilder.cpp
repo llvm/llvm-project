@@ -1185,7 +1185,7 @@ fir::factory::getTypeParams(mlir::Location loc, fir::FirOpBuilder &builder,
     if (box.isDerivedWithLenParameters()) {
       // This should generate code to read the type parameters from the box.
       // This requires some consideration however as MutableBoxValues need to be
-      // in a sane state to be provide the correct values.
+      // in a sound state to be provide the correct values.
       TODO(loc, "derived type with type parameters");
     }
     return {};

@@ -1,5 +1,5 @@
 // General tests that the correct versions of values-*.o are used on
-// Solaris targets sane. Note that we use sysroot to make these tests
+// Solaris targets sound. Note that we use sysroot to make these tests
 // independent of the host system.
 
 // Check sparc-sun-solaris2.11, 32bit

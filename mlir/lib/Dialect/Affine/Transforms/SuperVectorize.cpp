@@ -1537,7 +1537,7 @@ static Operation *vectorizeAffineYieldOp(AffineYieldOp yieldOp,
 // do one-off logic here; ideally it would be TableGen'd.
 static Operation *vectorizeOneOperation(Operation *op,
                                         VectorizationState &state) {
-  // Sanity checks.
+  // Soundness checks.
   assert(!isa<vector::TransferReadOp>(op) &&
          "vector.transfer_read cannot be further vectorized");
   assert(!isa<vector::TransferWriteOp>(op) &&

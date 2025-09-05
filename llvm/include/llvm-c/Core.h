@@ -334,7 +334,7 @@ typedef enum {
 typedef enum {
   LLVMAtomicOrderingNotAtomic = 0, /**< A load or store which is not atomic */
   LLVMAtomicOrderingUnordered = 1, /**< Lowest level of atomicity, guarantees
-                                     somewhat sane results, lock free. */
+                                     somewhat sound results, lock free. */
   LLVMAtomicOrderingMonotonic = 2, /**< guarantees that if you take all the
                                      operations affecting a specific address,
                                      a consistent ordering exists */

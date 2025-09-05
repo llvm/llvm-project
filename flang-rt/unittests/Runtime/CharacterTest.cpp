@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Basic sanity tests of CHARACTER API; exhaustive testing will be done
+// Basic soundness tests of CHARACTER API; exhaustive testing will be done
 // in Fortran.
 
 #include "flang/Runtime/character.h"

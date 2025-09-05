@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
-; Check for a sane output. This testcase used to cause a crash.
+; Check for a sound output. This testcase used to cause a crash.
 ; CHECK: vlut16
 
 target triple = "hexagon-unknown--elf"

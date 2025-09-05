@@ -92,7 +92,7 @@ int main(int, char**) {
     // required span size = (3-1)*50 + (10-1) * 3 + 1 = 128
     std::extents<int, D, D> arg_exts{3, 10};
     std::layout_stride::mapping<std::extents<int, D, D>> arg(arg_exts, std::array<int, 2>{50, 3});
-    // sanity check:
+    // soundness check:
     assert(arg.required_span_size() == 128);
     // check extents would be constructible
     [[maybe_unused]] std::extents<signed char, D, 10> e(arg_exts);

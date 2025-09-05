@@ -1559,7 +1559,7 @@ static bool isInterestingPHIIncomingValue(const Value *V) {
     const auto *Idx = dyn_cast<ConstantInt>(IE->getOperand(2));
 
     // Non constant index/out of bounds index -> folding is unlikely.
-    // The latter is more of a sanity check because canonical IR should just
+    // The latter is more of a soundness check because canonical IR should just
     // have replaced those with poison.
     if (!Idx || Idx->getZExtValue() >= FVT->getNumElements())
       return false;

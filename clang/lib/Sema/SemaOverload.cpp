@@ -7561,8 +7561,8 @@ bool Sema::diagnoseArgDependentDiagnoseIfAttrs(const FunctionDecl *Function,
       *this, Function, /*ArgDependent=*/true, Loc,
       [&](const DiagnoseIfAttr *DIA) {
         APValue Result;
-        // It's sane to use the same Args for any redecl of this function, since
-        // EvaluateWithSubstitution only cares about the position of each
+        // It's sound to use the same Args for any redecl of this function,
+        // since EvaluateWithSubstitution only cares about the position of each
         // argument in the arg list, not the ParmVarDecl* it maps to.
         if (!DIA->getCond()->EvaluateWithSubstitution(
                 Result, Context, cast<FunctionDecl>(DIA->getParent()), Args, ThisArg))

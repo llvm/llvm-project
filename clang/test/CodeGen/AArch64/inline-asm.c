@@ -2,7 +2,7 @@
 
 // The only part clang really deals with is the lvalue/rvalue
 // distinction on constraints. It's sufficient to emit llvm and make
-// sure that's sane.
+// sure that's sound.
 
 long var;
 

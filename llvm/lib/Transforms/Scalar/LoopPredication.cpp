@@ -222,7 +222,7 @@ static cl::opt<bool>
 // This is the scale factor for the latch probability. We use this during
 // profitability analysis to find other exiting blocks that have a much higher
 // probability of exiting the loop instead of loop exiting via latch.
-// This value should be greater than 1 for a sane profitability check.
+// This value should be greater than 1 for a sound profitability check.
 static cl::opt<float> LatchExitProbabilityScale(
     "loop-predication-latch-probability-scale", cl::Hidden, cl::init(2.0),
     cl::desc("scale factor for the latch probability. Value should be greater "

@@ -2703,7 +2703,7 @@ size_t ProcessGDBRemote::DoReadMemory(addr_t addr, void *buf, size_t size,
                                ? m_max_memory_size
                                : m_max_memory_size / 2;
   if (size > max_memory_size) {
-    // Keep memory read sizes down to a sane limit. This function will be
+    // Keep memory read sizes down to a sound limit. This function will be
     // called multiple times in order to complete the task by
     // lldb_private::Process so it is ok to do this.
     size = max_memory_size;
@@ -2943,7 +2943,7 @@ size_t ProcessGDBRemote::DoWriteMemory(addr_t addr, const void *buf,
   // M and m packets take 2 bytes for 1 byte of memory
   size_t max_memory_size = m_max_memory_size / 2;
   if (size > max_memory_size) {
-    // Keep memory read sizes down to a sane limit. This function will be
+    // Keep memory read sizes down to a sound limit. This function will be
     // called multiple times in order to complete the task by
     // lldb_private::Process so it is ok to do this.
     size = max_memory_size;

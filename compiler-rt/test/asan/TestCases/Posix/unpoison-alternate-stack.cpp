@@ -99,7 +99,7 @@ void setSignalAlternateStack(void *AltStack) {
 // We want to test reliably that __asan_handle_no_return can properly unpoison
 // the signal alternate stack.
 void *threadFun(void *AltStack) {
-  // first test on default stack (sanity check), no signal alternate stack set
+  // first test on default stack (soundness check), no signal alternate stack set
   testOnCurrentStack();
 
   setSignalAlternateStack(AltStack);

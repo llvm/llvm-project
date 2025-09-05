@@ -89,7 +89,7 @@ func.func @entry() {
   %cN = arith.constant 50 : index
 
   //
-  // Sanity check for the function under test.
+  // Soundness check for the function under test.
   //
 
   %LHS10 = memref.alloc() {alignment = 64} : memref<1x10xf32>

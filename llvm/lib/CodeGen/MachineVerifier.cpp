@@ -710,7 +710,7 @@ void MachineVerifier::visitMachineFunctionBefore() {
       report("MBB has duplicate entries in its successor list.", &MBB);
   }
 
-  // Check that the register use lists are sane.
+  // Check that the register use lists are sound.
   MRI->verifyUseLists();
 
   if (!MF->empty()) {

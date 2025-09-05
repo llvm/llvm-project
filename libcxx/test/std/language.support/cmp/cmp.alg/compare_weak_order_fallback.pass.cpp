@@ -133,7 +133,7 @@ constexpr bool test_1_3()
 
     static_assert(std::size(v) == 14);
 
-    // Sanity-check that array 'v' is indeed in the right order.
+    // Soundness-check that array 'v' is indeed in the right order.
     for (int i=0; i < 14; ++i) {
         for (int j=0; j < 14; ++j) {
             auto naturalOrder = (v[i] <=> v[j]);

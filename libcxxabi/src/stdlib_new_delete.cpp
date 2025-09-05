@@ -14,7 +14,7 @@
 #include <cstdlib>
 #include <new>
 
-// Perform a few sanity checks on libc++ and libc++abi macros to ensure that
+// Perform a few soundness checks on libc++ and libc++abi macros to ensure that
 // the code below can be an exact copy of the code in libcxx/src/new.cpp.
 #if !defined(_THROW_BAD_ALLOC)
 #  error The _THROW_BAD_ALLOC macro should be already defined by libc++

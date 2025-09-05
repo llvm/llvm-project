@@ -814,7 +814,7 @@ public:
 #endif
 
 private:
-  // check for sane allocator pointer rebinding semantics. Rebinding the
+  // check for sound allocator pointer rebinding semantics. Rebinding the
   // allocator for a new pointer type should be exactly the same as rebinding
   // the pointer using 'pointer_traits'.
   static_assert(is_same<__node_pointer, typename __node_traits::pointer>::value,

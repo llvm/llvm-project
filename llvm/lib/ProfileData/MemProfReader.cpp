@@ -347,7 +347,7 @@ bool RawMemProfReader::hasFormat(const StringRef Path) {
 bool RawMemProfReader::hasFormat(const MemoryBuffer &Buffer) {
   if (Buffer.getBufferSize() < sizeof(uint64_t))
     return false;
-  // Aligned read to sanity check that the buffer was allocated with at least 8b
+  // Aligned read to soundness check that the buffer was allocated with at least 8b
   // alignment.
   const uint64_t Magic = alignedRead(Buffer.getBufferStart());
   return Magic == MEMPROF_RAW_MAGIC_64;
@@ -405,7 +405,7 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer) {
   }
 
   // Check whether the profiled binary was built with position independent code
-  // (PIC). Perform sanity checks for assumptions we rely on to simplify
+  // (PIC). Perform soundness checks for assumptions we rely on to simplify
   // symbolization.
   auto *Elf64LEObject = llvm::cast<llvm::object::ELF64LEObjectFile>(ElfObject);
   const llvm::object::ELF64LEFile &ElfFile = Elf64LEObject->getELFFile();

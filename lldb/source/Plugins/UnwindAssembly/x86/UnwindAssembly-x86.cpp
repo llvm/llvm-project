@@ -133,8 +133,8 @@ bool UnwindAssembly_x86::AugmentUnwindPlanFromCallSite(
         if (last_row_pc_loc.IsAtCFAPlusOffset() &&
             first_row_pc_loc.GetOffset() == last_row_pc_loc.GetOffset()) {
 
-          // One last sanity check:  Is the unwind rule for getting the caller
-          // pc value "deref the CFA-4" or "deref the CFA-8"?
+          // One last soundness check:  Is the unwind rule for getting the
+          // caller pc value "deref the CFA-4" or "deref the CFA-8"?
 
           // If so, we have an UnwindPlan that already describes the epilogue
           // and we don't need to modify it at all.

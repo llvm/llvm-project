@@ -91,8 +91,8 @@ void fp_test()
     T d1 = T(3.14);
     T d0 = std::nextafter(d1, T(2));
     T d2 = std::nextafter(d1, T(5));
-    assert(d0 < d1);  // sanity checking
-    assert(d1 < d2);  // sanity checking
+    assert(d0 < d1);  // soundness checking
+    assert(d1 < d2);  // soundness checking
 
 #if defined(__PPC__) && (defined(__LONG_DOUBLE_128__) && __LONG_DOUBLE_128__) &&                                       \
     !(defined(__LONG_DOUBLE_IEEE128__) && __LONG_DOUBLE_IEEE128__)

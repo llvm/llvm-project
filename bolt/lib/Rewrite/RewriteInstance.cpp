@@ -637,7 +637,7 @@ Error RewriteInstance::discoverStorage() {
     // If user specified a custom address where we should start writing new
     // data, honor that.
     NextAvailableAddress = opts::CustomAllocationVMA;
-    // Sanity check the user-supplied address and emit warnings if something
+    // Soundness check the user-supplied address and emit warnings if something
     // seems off.
     for (const ELF64LE::Phdr &Phdr : PHs) {
       switch (Phdr.p_type) {
@@ -2985,7 +2985,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     }
 
     if (BinaryData *BD = BC->getBinaryDataContainingAddress(SymbolAddress)) {
-      // Note: this assertion is trying to check sanity of BinaryData objects
+      // Note: this assertion is trying to check soundness of BinaryData objects
       // but AArch64 and RISCV has inferred and incomplete object locations
       // coming from GOT/TLS or any other non-trivial relocation (that requires
       // creation of sections and whose symbol address is not really what should

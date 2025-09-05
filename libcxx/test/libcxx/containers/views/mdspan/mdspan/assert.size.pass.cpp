@@ -39,7 +39,7 @@ int main(int, char**) {
     layout_wrapping_integral<4>::mapping<std::dextents<signed char, 2>> map(
         std::dextents<signed char, 2>(100, 3), not_extents_constructible_tag());
     std::mdspan<float, std::dextents<signed char, 2>, layout_wrapping_integral<4>> mds(data.data(), map);
-    // sanity check
+    // soundness check
     assert(map.required_span_size() == static_cast<signed char>(12));
     // 100 x 3 exceeds 256
     {

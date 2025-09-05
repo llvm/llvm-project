@@ -122,8 +122,8 @@ public:
   // a raw binary memprof profile.
   static bool hasFormat(const StringRef Path);
 
-  // Create a RawMemProfReader after sanity checking the contents of the file at
-  // \p Path or the \p Buffer. The binary from which the profile has been
+  // Create a RawMemProfReader after soundness checking the contents of the file
+  // at \p Path or the \p Buffer. The binary from which the profile has been
   // collected is specified via a path in \p ProfiledBinary.
   static Expected<std::unique_ptr<RawMemProfReader>>
   create(const Twine &Path, StringRef ProfiledBinary, bool KeepName = false);
@@ -222,7 +222,7 @@ public:
   // buffer.
   LLVM_ABI static bool hasFormat(const StringRef Path);
 
-  // Create a YAMLMemProfReader after sanity checking the contents of the file
+  // Create a YAMLMemProfReader after soundness checking the contents of the file
   // at \p Path or the \p Buffer.
   LLVM_ABI static Expected<std::unique_ptr<YAMLMemProfReader>>
   create(const Twine &Path);

@@ -102,7 +102,7 @@ constexpr bool test() {
   using mds_t        = std::mdspan<float, std::extents<int, 3, D, D>>;
   using acc_t        = std::default_accessor<float>;
 
-  // sanity check
+  // soundness check
   static_assert(std::is_constructible_v<mds_t, float*, mapping_t<std::extents<int, 3, D, D>>, acc_t>);
 
   // test non-constructibility from wrong accessor

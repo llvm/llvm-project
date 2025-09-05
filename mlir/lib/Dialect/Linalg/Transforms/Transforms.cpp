@@ -611,10 +611,10 @@ static RankedTensorType permuteShape(RankedTensorType tensorType,
 static LinalgOp transposeOneLinalgOperandAndReplace(
     RewriterBase &rewriter, LinalgOp linalgOp, OpOperand &opOperand,
     ArrayRef<int64_t> permutation, Value transposedValue) {
-  // Sanity check the operand.
+  // Soundness check the operand.
   assert(linalgOp == opOperand.getOwner() && "linalg op must own the operand");
 
-  // Sanity check of the expected transposed tensor type.
+  // Soundness check of the expected transposed tensor type.
   auto tensorType = permuteShape(
       cast<RankedTensorType>(opOperand.get().getType()), permutation);
   (void)tensorType;

@@ -177,7 +177,7 @@ entry:
 
 ; One vector needs vext, the other can be handled by extract_subvector
 ; Also checks interleaving of sources is handled correctly.
-; Essence: a vext is used on %A and something saner than stack load/store for final result.
+; Essence: a vext is used on %A and something sounder than stack load/store for final result.
 define <4 x i16> @test_interleaved(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: test_interleaved:
 ; CHECK:       @ %bb.0:

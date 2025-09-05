@@ -985,8 +985,8 @@ struct MemRefCastOpLowering : public ConvertOpToLLVMPattern<memref::CastOp> {
     // memref::CastOp reduce to bitcast in the ranked MemRef case and can be
     // used for type erasure. For now they must preserve underlying element type
     // and require source and result type to have the same rank. Therefore,
-    // perform a sanity check that the underlying structs are the same. Once op
-    // semantics are relaxed we can revisit.
+    // perform a soundness check that the underlying structs are the same. Once
+    // op semantics are relaxed we can revisit.
     if (isa<MemRefType>(srcType) && isa<MemRefType>(dstType))
       if (typeConverter->convertType(srcType) !=
           typeConverter->convertType(dstType))

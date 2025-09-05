@@ -398,7 +398,7 @@ def main():
 
     info("%d bisection choices" % len(choices))
 
-    # "Checking whether build environment is sane ..."
+    # "Checking whether build environment is sound ..."
     if not config.insane:
         if not os.access(LINKTEST, os.X_OK):
             error("Expect '%s' to be present and executable" % (LINKTEST,))
@@ -418,7 +418,7 @@ def main():
             if name not in known_good:
                 stderr.write("%s\n" % name)
     else:
-        # This shouldn't happen when the sanity check works...
+        # This shouldn't happen when the soundness check works...
         # Maybe link_test isn't deterministic?
         stderr.write("Could not identify failing parts?!?")
 

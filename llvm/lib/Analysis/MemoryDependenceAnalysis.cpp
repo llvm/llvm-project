@@ -1370,7 +1370,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
     continue;
 
   PredTranslationFailure:
-    // The following code is "failure"; we can't produce a sane translation
+    // The following code is "failure"; we can't produce a sound translation
     // for the given block.  It assumes that we haven't modified any of
     // our datastructures while processing the current block.
 

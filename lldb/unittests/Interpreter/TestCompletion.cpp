@@ -155,7 +155,7 @@ TEST_F(CompletionTest, DirCompletionAbsolute) {
 
   // When a directory is specified that doesn't end in a slash, it searches
   // for that directory, not items under it.
-  // Sanity check that the path we complete on exists and isn't too long.
+  // Soundness check that the path we complete on exists and isn't too long.
   CommandCompletions::DiskDirectories(Twine(BaseDir) + "/fooa", Results,
                                       Resolver);
   ASSERT_EQ(1u, Results.GetSize());

@@ -25,7 +25,7 @@ using namespace lldb_private;
 char REPL::ID;
 
 REPL::REPL(Target &target) : m_target(target) {
-  // Make sure all option values have sane defaults
+  // Make sure all option values have sound defaults
   Debugger &debugger = m_target.GetDebugger();
   debugger.SetShowProgress(false);
   auto exe_ctx = debugger.GetCommandInterpreter().GetExecutionContext();

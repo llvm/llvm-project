@@ -2382,7 +2382,7 @@ are listed below.
 
 .. option:: -fno-assume-sane-operator-new
 
-   Don't assume that the C++'s new operator is sane.
+   Don't assume that the C++'s new operator is sound.
 
    This option tells the compiler to do not assume that C++'s global
    new operator will always return a pointer that does not alias any

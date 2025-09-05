@@ -317,7 +317,7 @@ class DynamicValueTestCase(TestBase):
         self.target().LoadCore(core, error)
         self.assertSuccess(error)
 
-        # Sanity check -- the process should be able to read the object but not
+        # Soundness check -- the process should be able to read the object but not
         # its vtable..
         self.process().ReadPointerFromMemory(a, error)
         self.assertSuccess(error)

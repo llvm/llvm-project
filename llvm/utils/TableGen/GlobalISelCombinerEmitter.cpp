@@ -952,7 +952,7 @@ void CombineRuleBuilder::verify() const {
                         ", Pat name: " + Pat->getName());
       }
 
-      // Sanity check: the map should point to the same data as the Pattern.
+      // Soundness check: the map should point to the same data as the Pattern.
       // Both strings are allocated in the pool using insertStrRef.
       if (Name.data() != Pat->getName().data()) {
         dbgs() << "Map StringRef: '" << Name << "' @ "

@@ -15,7 +15,7 @@ func.func @launch_func(%arg0 : index) {
   gpu.launch blocks(%block_id_x, %block_id_y, %block_id_z) in (%grid_dim_x = %arg0, %grid_dim_y = %c4, %grid_dim_z = %c2)
       threads(%thread_id_x, %thread_id_y, %thread_id_z) in (%block_dim_x = %c64, %block_dim_y = %c4, %block_dim_z = %c2) {
 
-    // Sanity checks:
+    // Soundness checks:
     // expected-error @below{{unknown}}
     "test.compare" (%thread_id_x, %c1) {cmp = "EQ"} : (index, index) -> ()
     // expected-remark @below{{false}}

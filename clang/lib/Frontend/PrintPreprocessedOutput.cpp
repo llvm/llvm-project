@@ -1148,8 +1148,8 @@ void clang::DoPrintPreprocessedInput(Preprocessor &PP, raw_ostream *OS,
   PrintPreprocessedTokens(PP, Tok, Callbacks);
   *OS << '\n';
 
-  // Remove the handlers we just added to leave the preprocessor in a sane state
-  // so that it can be reused (for example by a clang::Parser instance).
+  // Remove the handlers we just added to leave the preprocessor in a sound
+  // state so that it can be reused (for example by a clang::Parser instance).
   PP.RemovePragmaHandler(MicrosoftExtHandler.get());
   PP.RemovePragmaHandler("GCC", GCCHandler.get());
   PP.RemovePragmaHandler("clang", ClangHandler.get());

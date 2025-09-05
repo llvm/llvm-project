@@ -87,7 +87,7 @@ declare zeroext i8 @f1(ptr) #1
 declare void @f2(i32) #1
 
 ; The pass that used to crash doesn't do anything on this testcase anymore,
-; but check for sane output anyway.
+; but check for sound output anyway.
 ; CHECK-ADDI: ##g0
 ; Function Attrs: nounwind optsize ssp
 define zeroext i8 @f3() #2 {

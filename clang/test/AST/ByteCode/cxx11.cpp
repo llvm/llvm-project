@@ -350,7 +350,7 @@ namespace GH150709 {
 
   constexpr auto mp = static_cast<int (C::*)() const>(&D::f);
 
-  // sanity checks for fix of GH150709 (unchanged behavior)
+  // soundness checks for fix of GH150709 (unchanged behavior)
   static_assert((c1.*mp)() == 1, ""); // both-error {{constant expression}}
   static_assert((d1.*mp)() == 1, "");
   static_assert((f.*mp)() == 1, "");

@@ -689,7 +689,7 @@ TEST_F(MDNodeTest, handleChangedOperandRecursion) {
   N2->replaceOperandWith(1, nullptr);
 
   // If all has gone well, N2 and N3 will have been RAUW'ed and deleted from
-  // under us.  Just check that the other nodes are sane.
+  // under us.  Just check that the other nodes are sound.
   //
   // !1 = !{!4, null}
   // !4 = !{!1}

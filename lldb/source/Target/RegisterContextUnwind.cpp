@@ -450,7 +450,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
 
         ReadFrameAddress(row_register_kind, row->GetAFAValue(), m_afa);
 
-        // A couple of sanity checks..
+        // A couple of soundness checks..
         if (m_cfa == LLDB_INVALID_ADDRESS || m_cfa == 0 || m_cfa == 1) {
           UnwindLogMsg("could not find a valid cfa address");
           m_frame_type = eNotAValidFrame;

@@ -856,7 +856,7 @@ private:
   /// Owner of all ContextNode unique_ptrs.
   std::vector<std::unique_ptr<ContextNode>> NodeOwner;
 
-  /// Perform sanity checks on graph when requested.
+  /// Perform soundness checks on graph when requested.
   void check() const;
 
   /// Keeps track of the last unique context id assigned.
@@ -3948,14 +3948,14 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
     else
       Clone = moveEdgeToNewCalleeClone(CallerEdge, CallerEdgeContextsForAlloc);
 
-    // Sanity check that no alloc types on clone or its edges are None.
+    // Soundness check that no alloc types on clone or its edges are None.
     assert(Clone->AllocTypes != (uint8_t)AllocationType::None);
   }
 
   // We should still have some context ids on the original Node.
   assert(!Node->emptyContextIds());
 
-  // Sanity check that no alloc types on node or edges are None.
+  // Soundness check that no alloc types on node or edges are None.
   assert(Node->AllocTypes != (uint8_t)AllocationType::None);
 
   if (VerifyNodes)
@@ -5195,7 +5195,7 @@ bool MemProfContextDisambiguation::initializeIndirectCallPromotionInfo(
 }
 
 #ifndef NDEBUG
-// Sanity check that the MIB stack ids match between the summary and
+// Soundness check that the MIB stack ids match between the summary and
 // instruction metadata.
 static void checkAllocContextIds(
     const AllocInfo &AllocNode, const MDNode *MemProfMD,
@@ -5460,7 +5460,7 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
           // If there is only one version that means we didn't end up
           // considering this function for cloning, and in that case the alloc
           // will still be none type or should have gotten the default NotCold.
-          // Skip that after calling clone helper since that does some sanity
+          // Skip that after calling clone helper since that does some soundness
           // checks that confirm we haven't decided yet that we need cloning.
           // We might have a single version that is cold due to the
           // MinClonedColdBytePercent heuristic, make sure we don't skip in that
@@ -5538,7 +5538,7 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
             auto &StackNode = *(SI++);
 
 #ifndef NDEBUG
-            // Sanity check that the stack ids match between the summary and
+            // Soundness check that the stack ids match between the summary and
             // instruction metadata.
             auto StackIdIndexIter = StackNode.StackIdIndices.begin();
             for (auto StackId : CallsiteContext) {

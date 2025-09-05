@@ -367,7 +367,7 @@ BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToBinary() {
   // Shift our perspective on the radix (& decimal) point so that
   // it sits to the *left* of the digits: i.e., x = .D * 10.**E
   exponent_ += digits_ * log10Radix;
-  // Sanity checks for ridiculous exponents
+  // Soundness checks for ridiculous exponents
   static constexpr int crazy{2 * Real::decimalRange + log10Radix};
   if (exponent_ < -crazy) {
     enum ConversionResultFlags flags {

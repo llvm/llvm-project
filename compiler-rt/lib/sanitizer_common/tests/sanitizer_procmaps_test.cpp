@@ -47,7 +47,7 @@ TEST(MemoryMappingLayout, DumpListOfModules) {
   bool found = false;
   for (uptr i = 0; i < modules.size(); ++i) {
     if (modules[i].containsAddress((uptr)&noop)) {
-      // Verify that the module name is sane.
+      // Verify that the module name is sound.
       if (strstr(modules[i].full_name(), binary_name) != 0)
         found = true;
     }

@@ -18,7 +18,7 @@ template class Integer<80, isHostLittleEndian, 16, std::uint16_t, std::uint32_t,
     128>;
 template class Integer<128>;
 
-// Sanity checks against misconfiguration bugs
+// Soundness checks against misconfiguration bugs
 static_assert(Integer<8>::partBits == 8);
 static_assert(std::is_same_v<typename Integer<8>::Part, std::uint8_t>);
 static_assert(Integer<16>::partBits == 16);

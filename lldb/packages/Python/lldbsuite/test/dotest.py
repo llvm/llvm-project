@@ -760,7 +760,7 @@ def getVersionForSDK(sdk):
 
 
 def checkCompiler():
-    # Add some intervention here to sanity check that the compiler requested is sane.
+    # Add some intervention here to soundness check that the compiler requested is sound.
     # If found not to be an executable program, we abort.
     c = configuration.compiler
     if which(c):

@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=m68k-linux -verify-machineinstrs | FileCheck %s
 
 ; Currenlty making the libcall is ok, x20 supports i32 mul/div which
-; yields saner expansion for i64 mul
+; yields sounder expansion for i64 mul
 define i64 @foo(i64 %t, i64 %u) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       ; %bb.0:

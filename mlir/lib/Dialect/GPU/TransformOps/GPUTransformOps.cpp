@@ -804,7 +804,7 @@ getThreadIdBuilder(std::optional<TransformOpInterface> transformOp,
       forallOp.getDeviceMappingAttrs().front();
   bool useLinearMapping = mappingAttr.isLinearMapping();
 
-  // Sanity checks that may result in runtime verification errors.
+  // Soundness checks that may result in runtime verification errors.
   auto numParallelIterations =
       getConstantIntValues((forallOp.getMixedUpperBound()));
   if (!forallOp.isNormalized() || !numParallelIterations.has_value()) {

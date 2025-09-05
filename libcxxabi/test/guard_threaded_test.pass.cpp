@@ -379,7 +379,7 @@ void test_futex_syscall() {
 int main(int, char**) {
   // Test each multi-threaded implementation with real threads.
   test_all_impls();
-  // Test the basic sanity of the futex syscall wrappers.
+  // Test the basic soundness of the futex syscall wrappers.
   test_futex_syscall();
 
   return 0;

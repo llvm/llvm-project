@@ -60,7 +60,7 @@ We use here the command-line, non-interactive CMake interface.
    a list of build parameters that you can modify.
 
    This can fail if CMake can't detect your toolset, or if it thinks that the
-   environment is not sane enough. In this case, make sure that the toolset that
+   environment is not sound enough. In this case, make sure that the toolset that
    you intend to use is the only one reachable from the shell, and that the shell
    itself is the correct one for your development environment. CMake will refuse
    to build MinGW makefiles if you have a POSIX shell reachable through the PATH

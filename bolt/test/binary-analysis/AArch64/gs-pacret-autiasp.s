@@ -272,7 +272,7 @@ lr_clobbered_nocfg:
         ret
         .size lr_clobbered_nocfg, .-lr_clobbered_nocfg
 
-/// Now do a basic sanity check on every different Authentication instruction:
+/// Now do a basic soundness check on every different Authentication instruction:
 
         .globl  f_autiasp
         .type   f_autiasp,@function

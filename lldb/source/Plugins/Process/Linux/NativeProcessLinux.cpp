@@ -1230,7 +1230,7 @@ Status NativeProcessLinux::GetMemoryRegionInfo(lldb::addr_t load_addr,
        ++it) {
     MemoryRegionInfo &proc_entry_info = it->first;
 
-    // Sanity check assumption that /proc/{pid}/maps entries are ascending.
+    // Soundness check assumption that /proc/{pid}/maps entries are ascending.
     assert((proc_entry_info.GetRange().GetRangeBase() >= prev_base_address) &&
            "descending /proc/pid/maps entries detected, unexpected");
     prev_base_address = proc_entry_info.GetRange().GetRangeBase();

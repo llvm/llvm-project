@@ -62,7 +62,7 @@ class NoNlistsTestCase(TestBase):
         self.assertFalse(m_has_nlist.IsFileBacked())
         self.assertGreater(m_has_nlist.GetNumSymbols(), 0)
 
-        # And as a sanity check, get the main binary's module,
+        # And as a soundness check, get the main binary's module,
         # test that it is file backed and that it has more than
         # zero symbols.
         m_exe = target.FindModule(lldb.SBFileSpec("a.out"))

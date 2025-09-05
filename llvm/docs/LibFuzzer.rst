@@ -118,7 +118,7 @@ LibFuzzer will work without any initial seeds, but will be less
 efficient if the library under test accepts complex,
 structured inputs.
 
-The corpus can also act as a sanity/regression check, to confirm that the
+The corpus can also act as a soundness/regression check, to confirm that the
 fuzzing entrypoint still works and that all of the sample inputs run through
 the code under test without problems.
 

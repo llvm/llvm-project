@@ -238,7 +238,7 @@ public:
 
         ConstString func_name = sc.GetFunctionName(Mangled::ePreferDemangled);
         // Ensure that the function name matches the regex. This is more than
-        // a sanity check. It is possible that the demangled function name
+        // a soundness check. It is possible that the demangled function name
         // does not start with the prefix, for example when it's in an
         // anonymous namespace.
         if (!func_name.IsEmpty() && m_regex.Execute(func_name.GetStringRef()))

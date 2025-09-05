@@ -67,7 +67,7 @@ class ValueAsLinkedListTestCase(TestBase):
                 print(cvf.format(t))
             list.append(int(t.GetChildMemberWithName("id").GetValue()))
 
-        # Sanity checks that the we visited all the items (no more, no less).
+        # Soundness checks that the we visited all the items (no more, no less).
         if self.TraceOn():
             print("visited IDs:", list)
         self.assertEqual(visitedIDs, list)
@@ -98,7 +98,7 @@ class ValueAsLinkedListTestCase(TestBase):
                 print(cvf.format(t))
             list.append(int(t.GetChildMemberWithName("id").GetValue()))
 
-        # Sanity checks that the we visited all the items (no more, no less).
+        # Soundness checks that the we visited all the items (no more, no less).
         if self.TraceOn():
             print("visited IDs:", list)
         self.assertEqual(visitedIDs, list)

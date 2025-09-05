@@ -162,7 +162,7 @@ MachineLoopInfo::findLoopPreheader(MachineLoop *L, bool SpeculativePreheader,
   for (MachineBasicBlock *P : HB->predecessors()) {
     if (P == LB)
       continue;
-    // Sanity.
+    // Soundness.
     if (Preheader)
       return nullptr;
     Preheader = P;

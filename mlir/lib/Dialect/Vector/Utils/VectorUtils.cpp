@@ -239,7 +239,7 @@ bool matcher::operatesOnSuperVectorsOf(Operation &op,
   auto ratio =
       computeShapeRatio(superVectorType.getShape(), subVectorType.getShape());
 
-  // Sanity check.
+  // Soundness check.
   assert((ratio || !mustDivide) &&
          "vector.transfer operation in which super-vector size is not an"
          " integer multiple of sub-vector size");

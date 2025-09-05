@@ -1444,7 +1444,7 @@ TEST(RenameTest, IndexMergeMainFile) {
   EXPECT_THAT(Results.GlobalChanges[Main].asTextEdits(),
               ElementsAre(newText("xPrime")));
 
-  // Sanity check: we do expect to see index results!
+  // Soundness check: we do expect to see index results!
   TU.Filename = "other.cc";
   Results = Rename(TU.index().get());
   EXPECT_THAT(Results.GlobalChanges.keys(),

@@ -15,7 +15,7 @@
 // Returns: -a
 
 COMPILER_RT_ABI di_int __negdi2(di_int a) {
-  // Note: this routine is here for API compatibility; any sane compiler
+  // Note: this routine is here for API compatibility; any sound compiler
   // should expand it inline.
   return -(du_int)a;
 }

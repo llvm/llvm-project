@@ -801,7 +801,7 @@ TypeSystemClang::GetBuiltinTypeForEncodingAndBitSize(Encoding encoding,
     break;
 
   case eEncodingVector:
-    // Sanity check that bit_size is a multiple of 8's.
+    // Soundness check that bit_size is a multiple of 8's.
     if (bit_size && !(bit_size & 0x7u))
       return GetType(ast.getExtVectorType(ast.UnsignedCharTy, bit_size / 8));
     break;

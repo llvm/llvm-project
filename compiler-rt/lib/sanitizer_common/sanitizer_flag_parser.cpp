@@ -120,7 +120,7 @@ void FlagParser::parse_flags(const char *env_option_name) {
     parse_flag(env_option_name);
   }
 
-  // Do a sanity check for certain flags.
+  // Do a soundness check for certain flags.
   if (common_flags_dont_use.malloc_context_size < 1)
     common_flags_dont_use.malloc_context_size = 1;
 }

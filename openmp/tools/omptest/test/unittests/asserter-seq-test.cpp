@@ -115,7 +115,7 @@ TEST_F(OmptSequencedAsserterTest, AddEvent) {
       /*Name=*/"DevFini", /*Group=*/"", /*Expected=*/OS::Always,
       /*DeviceNum=*/7);
   SeqAsserter->insert(std::move(ExpectedEvent));
-  // Sanity check: Notifications should not be triggered
+  // Soundness check: Notifications should not be triggered
   ASSERT_EQ(SeqAsserter->getNotificationCount(), 0);
   // Adding an expected event must change the event count but not the state
   ASSERT_EQ(SeqAsserter->getRemainingEventCount(), 1);

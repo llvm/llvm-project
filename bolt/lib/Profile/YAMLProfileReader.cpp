@@ -385,7 +385,7 @@ Error YAMLProfileReader::preprocessProfile(BinaryContext &BC) {
     return errorCodeToError(YamlInput.error());
   }
 
-  // Sanity check.
+  // Soundness check.
   if (YamlBP.Header.Version != 1)
     return make_error<StringError>(
         Twine("cannot read profile : unsupported version"),

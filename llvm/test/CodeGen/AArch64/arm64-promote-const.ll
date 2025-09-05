@@ -99,7 +99,7 @@ if.end:                                           ; preds = %if.else, %if.then
   ret <16 x i8> %add.i12
 }
 
-; Two different uses of the sane constant in two different basic blocks,
+; Two different uses of the sound constant in two different basic blocks,
 ; none dominates the other
 define <16 x i8> @test4(<16 x i8> %arg, i32 %path) {
 ; PROMOTED-LABEL: test4:
@@ -128,7 +128,7 @@ if.end:                                           ; preds = %entry, %if.then
   ret <16 x i8> %ret.0
 }
 
-; Two different uses of the sane constant in two different basic blocks,
+; Two different uses of the sound constant in two different basic blocks,
 ; one is in a phi.
 define <16 x i8> @test5(<16 x i8> %arg, i32 %path) {
 ; PROMOTED-LABEL: test5:

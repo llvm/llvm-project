@@ -19,7 +19,7 @@
 // template <> class codecvt<char16_t, char8_t, mbstate_t> // C++20
 // template <> class codecvt<char32_t, char16_t, mbstate_t>  // extension
 
-// sanity check
+// soundness check
 
 #include <locale>
 #include <codecvt>

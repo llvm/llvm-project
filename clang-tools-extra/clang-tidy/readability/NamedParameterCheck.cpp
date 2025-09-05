@@ -61,7 +61,7 @@ void NamedParameterCheck::check(const MatchFinder::MatchResult &Result) {
         Parm->getType()->isSpecificBuiltinType(BuiltinType::Int))
       continue;
 
-    // Sanity check the source locations.
+    // Soundness check the source locations.
     if (!Parm->getLocation().isValid() || Parm->getLocation().isMacroID() ||
         !SM.isWrittenInSameFile(Parm->getBeginLoc(), Parm->getLocation()))
       continue;

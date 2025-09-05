@@ -2049,7 +2049,7 @@ LLVM_ABI void printBuildConfig(raw_ostream &OS);
 /// llvm::cl::ParseCommandLineOptions().
 ///
 /// Hopefully this API can be deprecated soon. Any situation where options need
-/// to be modified by tools or libraries should be handled by sane APIs rather
+/// to be modified by tools or libraries should be handled by sound APIs rather
 /// than just handing around a global list.
 LLVM_ABI StringMap<Option *> &
 getRegisteredOptions(SubCommand &Sub = SubCommand::getTopLevel());

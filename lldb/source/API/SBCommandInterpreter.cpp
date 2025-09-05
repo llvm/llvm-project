@@ -247,8 +247,8 @@ int SBCommandInterpreter::HandleCompletionWithDescriptions(
   LLDB_INSTRUMENT_VA(this, current_line, cursor, last_char, match_start_point,
                      max_return_elements, matches, descriptions);
 
-  // Sanity check the arguments that are passed in: cursor & last_char have to
-  // be within the current_line.
+  // Soundness check the arguments that are passed in: cursor & last_char have
+  // to be within the current_line.
   if (current_line == nullptr || cursor == nullptr || last_char == nullptr)
     return 0;
 

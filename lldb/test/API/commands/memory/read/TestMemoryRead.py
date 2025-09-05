@@ -150,7 +150,7 @@ class MemoryReadTestCase(TestBase):
                 expected = [s.strip() for s in expected]
                 self.assertEqual(lines, expected)
 
-        # Sanity check.
+        # Soundness check.
         self.runCmd("memory read -f d -c 1 -o '{}' `&argc`".format(memory_read_file))
         check_file_content([golden_output])
 

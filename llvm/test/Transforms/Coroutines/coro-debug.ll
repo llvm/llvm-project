@@ -1,4 +1,4 @@
-; Tests that debug information is sane after coro-split
+; Tests that debug information is sound after coro-split
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 source_filename = "simple-repro.c"

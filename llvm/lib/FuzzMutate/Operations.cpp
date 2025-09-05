@@ -340,7 +340,7 @@ static SourcePred validShuffleVectorIndex() {
     auto *FirstTy = cast<VectorType>(Cur[0]->getType());
     auto *Int32Ty = Type::getInt32Ty(Cur[0]->getContext());
     // TODO: It's straighforward to make up reasonable values, but listing them
-    // exhaustively would be insane. Come up with a couple of sensible ones.
+    // exhaustively would be unsound. Come up with a couple of sensible ones.
     return std::vector<Constant *>{
         PoisonValue::get(VectorType::get(Int32Ty, FirstTy->getElementCount()))};
   };

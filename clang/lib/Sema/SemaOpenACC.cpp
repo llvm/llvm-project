@@ -2672,7 +2672,7 @@ Expr *GenerateReductionInitRecipeExpr(ASTContext &Context,
     // discussions/designs are ongoing on how to express this behavior,
     // particularly since they probably need the 'bounds' passed to them
     // correctly.  A future patch/patch set will go through all of the pointer
-    // values for all of the recipes to make sure we have a sane behavior.
+    // values for all of the recipes to make sure we have a sound behavior.
 
     // For now, this will result in a NYI during code generation for
     // no-initializer.

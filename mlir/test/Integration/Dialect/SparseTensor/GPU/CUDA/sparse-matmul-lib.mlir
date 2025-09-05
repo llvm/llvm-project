@@ -132,7 +132,7 @@ module {
 					     tensor<8x8xf32>) -> tensor<8x8xf32>
 
     //
-    // Sanity check on results.
+    // Soundness check on results.
     //
     // CHECK:      ( 140, 168, 196, 224, 252, 280, 308, 336 )
     // CHECK-NEXT: ( 168, 204, 240, 276, 312, 348, 384, 420 )

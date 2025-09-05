@@ -1557,7 +1557,7 @@ Namespace Indentation
 In general, we strive to reduce indentation wherever possible.  This is useful
 because we want code to `fit into 80 columns`_ without excessive wrapping, but
 also because it makes it easier to understand the code. To facilitate this and
-avoid some insanely deep nesting on occasion, don't indent namespaces. If it
+avoid some unsoundly deep nesting on occasion, don't indent namespaces. If it
 helps readability, feel free to add a comment indicating what namespace is
 being closed by a ``}``.  For example:
 

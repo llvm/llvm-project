@@ -166,7 +166,7 @@ void SelectionDAG::viewGraph() {
 /// FileName expects absolute path. If provided
 /// without any path separators then the file
 /// will be created in the current directory.
-/// Error will be emitted if the path is insane.
+/// Error will be emitted if the path is unsound.
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void SelectionDAG::dumpDotGraph(const Twine &FileName,
                                                  const Twine &Title) {

@@ -4,7 +4,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 -emit-compact-unwind-non-canonical=true %t/cu.s -o %t/cu.o
 # RUN: %lld -dylib %t/cu.o %t/eh-frame.o -o %t/out
 
-## Sanity check: we want our input to contain a section (and not symbol)
+## Soundness check: we want our input to contain a section (and not symbol)
 ## relocation for the personality reference.
 # RUN: llvm-readobj --relocations %t/cu.o | FileCheck %s --check-prefix=SECT-RELOC
 # SECT-RELOC:      Section __compact_unwind {

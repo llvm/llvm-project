@@ -44,7 +44,7 @@
 # RUN: lld-link %t/main.obj %t/loadcfg-full.obj -guard:cf,longjmp,ehcont -out:%t.exe -entry:main %basename_t-exp.lib 2>&1 | FileCheck %s --check-prefix=NOWARN --allow-empty
 # NOWARN-NOT: warning
 
-# Sanity check to make sure the no-warn version has the expected data.
+# Soundness check to make sure the no-warn version has the expected data.
 # RUN: llvm-readobj --file-headers --coff-load-config %t.exe | FileCheck --check-prefix=CHECK %s
 # CHECK: ImageBase: 0x140000000
 # CHECK: LoadConfig [

@@ -141,7 +141,7 @@ module {
     %b4 = sparse_tensor.convert %sb : tensor<8x4xf64> to tensor<8x4xf64, #DCSR>
 
     //
-    // Sanity check before going into the computations.
+    // Soundness check before going into the computations.
     //
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 32

@@ -107,7 +107,7 @@ Error randomizeUnsetVariables(const LLVMState &State,
                               const BitVector &ForbiddenRegs,
                               InstructionTemplate &IT);
 
-// Sanity check generated instruction.
+// Soundness check generated instruction.
 Error validateGeneratedInstruction(const LLVMState &State, const MCInst &Inst);
 
 } // namespace exegesis

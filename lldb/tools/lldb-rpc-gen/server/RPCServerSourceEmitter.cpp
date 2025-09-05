@@ -463,7 +463,7 @@ void RPCServerSourceEmitter::EmitCallbackFunction(const Method &method) {
   IndentLevel++;
 
   // Emit Function Body
-  EmitLine("// RPC connection setup and sanity checking");
+  EmitLine("// RPC connection setup and soundness checking");
   EmitLine("CallbackInfo *callback_info = (CallbackInfo *)baton;");
   EmitLine("rpc_common::ConnectionSP connection_sp = "
            "rpc_common::Connection::GetConnectionFromID(callback_info->"

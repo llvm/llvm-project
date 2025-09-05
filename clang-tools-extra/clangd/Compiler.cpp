@@ -100,7 +100,7 @@ buildCompilerInvocation(const ParseInputs &Inputs, clang::DiagnosticConsumer &D,
   std::vector<const char *> ArgStrs;
   ArgStrs.reserve(Argv.size() + 1);
   // In asserts builds, CompilerInvocation redundantly reads/parses cc1 args as
-  // a sanity test. This is not useful to clangd, and costs 10% of test time.
+  // a soundness test. This is not useful to clangd, and costs 10% of test time.
   // To avoid mismatches between assert/production builds, disable it always.
   ArgStrs = {Argv.front().c_str(), "-Xclang", "-no-round-trip-args"};
   for (const auto &S : Argv.drop_front())

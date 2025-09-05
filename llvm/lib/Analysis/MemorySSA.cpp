@@ -2557,7 +2557,7 @@ MemoryAccess *MemorySSA::ClobberWalkerBase::getClobberingMemoryAccessBase(
   }
 
   const Instruction *I = StartingAccess->getMemoryInst();
-  // We can't sanely do anything with a fence, since they conservatively clobber
+  // We can't soundly do anything with a fence, since they conservatively clobber
   // all memory, and have no locations to get pointers from to try to
   // disambiguate.
   if (!isa<CallBase>(I) && I->isFenceLike())

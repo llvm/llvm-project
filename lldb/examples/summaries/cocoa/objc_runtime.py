@@ -143,7 +143,7 @@ class RoT_Data:
                 logger >> "Marking as invalid - name is invalid"
                 self.valid = 0
 
-    # perform sanity checks on the contents of this class_ro_t
+    # perform soundness checks on the contents of this class_ro_t
     def check_valid(self):
         self.valid = 1
         # misaligned pointers seem to be possible for this field
@@ -214,7 +214,7 @@ class RwT_Data:
             # 			self.rot = self.valobj.CreateValueFromAddress("rot",self.roPointer,self.sys_params.types_cache.addr_ptr_type).AddressOf()
             self.data = RoT_Data(self.rot, self.sys_params)
 
-    # perform sanity checks on the contents of this class_rw_t
+    # perform soundness checks on the contents of this class_rw_t
     def check_valid(self):
         logger = lldb.formatters.Logger.Logger()
         self.valid = 1
@@ -264,7 +264,7 @@ class Class_Data_V2:
             # 			self.rwt = self.valobj.CreateValueFromAddress("rwt",self.dataPointer,self.sys_params.types_cache.addr_ptr_type).AddressOf()
             self.data = RwT_Data(self.rwt, self.sys_params)
 
-    # perform sanity checks on the contents of this class_t
+    # perform soundness checks on the contents of this class_t
     # this call tries to minimize the amount of data fetched- as soon as we have "proven"
     # that we have an invalid object, we stop reading
     def check_valid(self):
@@ -441,7 +441,7 @@ class Class_Data_V1:
                 logger >> "Marking as invalid - name is not valid"
                 self.valid = 0
 
-    # perform sanity checks on the contents of this class_t
+    # perform sanisoundnessty checks on the contents of this class_t
     def check_valid(self):
         logger = lldb.formatters.Logger.Logger()
         self.valid = 1

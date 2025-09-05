@@ -289,7 +289,7 @@ int main(int, char**) {
                       TestTimeSpec<std::int32_t, std::int32_t> >::test()));
   }
   {
-    // Test that insane platforms like ppc64 linux, which use long double as time_t,
+    // Test that unsound platforms like ppc64 linux, which use long double as time_t,
     // at least compile.
     assert((test_case<TestFileTimeT<long double>, double,
                       TestTimeSpec<long double, long> >::test()));

@@ -16,7 +16,7 @@
 # RUN: llvm-objdump --macho --syms --unwind-info %t/test | FileCheck %s
 
 # CHECK:      SYMBOL TABLE:
-## Sanity check: Verify that the LSDAs are dedup'ed
+## Soundness check: Verify that the LSDAs are dedup'ed
 # CHECK-NEXT: [[#%.16x, EXC:]]       l     O __TEXT,__gcc_except_tab _exception0
 # CHECK-NEXT: [[#EXC]]               l     O __TEXT,__gcc_except_tab _exception1
 ## But that the functions themselves aren't

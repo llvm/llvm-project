@@ -1918,7 +1918,7 @@ AffineForOp mlir::affine::insertBackwardComputationSlice(
   SmallVector<AffineForOp, 4> sliceSurroundingLoops;
   getAffineForIVs(*sliceInst, &sliceSurroundingLoops);
 
-  // Sanity check.
+  // Soundness check.
   unsigned sliceSurroundingLoopsSize = sliceSurroundingLoops.size();
   (void)sliceSurroundingLoopsSize;
   assert(dstLoopDepth + numSrcLoopIVs >= sliceSurroundingLoopsSize);

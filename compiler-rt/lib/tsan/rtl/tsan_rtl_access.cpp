@@ -554,7 +554,7 @@ static void MemoryRangeSet(uptr addr, uptr size, RawShadow val) {
     return;
   DCHECK_EQ(addr % kShadowCell, 0);
   DCHECK_EQ(size % kShadowCell, 0);
-  // If a user passes some insane arguments (memset(0)),
+  // If a user passes some unsound arguments (memset(0)),
   // let it just crash as usual.
   if (!IsAppMem(addr) || !IsAppMem(addr + size - 1))
     return;
