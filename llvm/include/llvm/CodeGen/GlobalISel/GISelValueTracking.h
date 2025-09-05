@@ -70,8 +70,7 @@ public:
                                     const APInt &DemandedElts,
                                     unsigned Depth = 0);
 
-  virtual unsigned computeNumSignBitsImpl(Register R,
-                                          const APInt &DemandedElts,
+  virtual unsigned computeNumSignBitsImpl(Register R, const APInt &DemandedElts,
                                           unsigned Depth = 0);
 
   unsigned computeNumSignBits(Register R, const APInt &DemandedElts,
