@@ -150,14 +150,6 @@ static DecodeStatus decodeFRd(MCInst &Inst, unsigned Insn, uint64_t Address,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus decodeFLPMX(MCInst &Inst, unsigned Insn, uint64_t Address,
-                                const MCDisassembler *Decoder) {
-  if (decodeFRd(Inst, Insn, Address, Decoder) == MCDisassembler::Fail)
-    return MCDisassembler::Fail;
-  Inst.addOperand(MCOperand::createReg(AVR::R31R30));
-  return MCDisassembler::Success;
-}
-
 static DecodeStatus decodeFFMULRdRr(MCInst &Inst, unsigned Insn,
                                     uint64_t Address,
                                     const MCDisassembler *Decoder) {

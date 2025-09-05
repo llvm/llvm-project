@@ -201,20 +201,14 @@ class FSTLD<bit type, bits<2> mode, dag outs, dag ins, string asmstr,
 //===---------------------------------------------------------------------===//
 class FLPMX<bit e, bit p, dag outs, dag ins, string asmstr, list<dag> pattern>
     : AVRInst16<outs, ins, asmstr, pattern> {
+  bits<0> z;
   bits<5> rd;
 
-  let Inst{15 - 12} = 0b1001;
-
-  let Inst{11 - 9} = 0b000;
-  let Inst{8} = rd{4};
-
-  let Inst{7 - 4} = rd{3 - 0};
-
+  let Inst{15 - 9} = 0b1001000;
+  let Inst{8 - 4} = rd;
   let Inst{3 - 2} = 0b01;
   let Inst{1} = e;
   let Inst{0} = p;
-
-  let DecoderMethod = "decodeFLPMX";
 }
 
 //===----------------------------------------------------------------------===//
