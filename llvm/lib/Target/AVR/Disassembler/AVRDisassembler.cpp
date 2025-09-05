@@ -110,6 +110,7 @@ static DecodeStatus DecodeIWREGSRegisterClass(MCInst &Inst, unsigned RegNo,
                                               uint64_t Address,
                                               const MCDisassembler *Decoder) {
   assert(isUInt<2>(RegNo));
+  // Only AVR::R25R24, AVR::R27R26, AVR::R29R28, AVR::R31R30 are legal.
   Inst.addOperand(MCOperand::createReg(GPRPairDecoderTable[12 + RegNo]));
   return MCDisassembler::Success;
 }
