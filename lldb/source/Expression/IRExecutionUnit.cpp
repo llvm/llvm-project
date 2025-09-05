@@ -543,62 +543,7 @@ lldb::SectionType IRExecutionUnit::GetSectionTypeFromSectionName(
     else if (name.starts_with("__debug_") || name.starts_with(".debug_")) {
       const uint32_t name_idx = name[0] == '_' ? 8 : 7;
       llvm::StringRef dwarf_name(name.substr(name_idx));
-      switch (dwarf_name[0]) {
-      case 'a':
-        if (dwarf_name == "abbrev")
-          sect_type = lldb::eSectionTypeDWARFDebugAbbrev;
-        else if (dwarf_name == "aranges")
-          sect_type = lldb::eSectionTypeDWARFDebugAranges;
-        else if (dwarf_name == "addr")
-          sect_type = lldb::eSectionTypeDWARFDebugAddr;
-        break;
-
-      case 'f':
-        if (dwarf_name == "frame")
-          sect_type = lldb::eSectionTypeDWARFDebugFrame;
-        break;
-
-      case 'i':
-        if (dwarf_name == "info")
-          sect_type = lldb::eSectionTypeDWARFDebugInfo;
-        break;
-
-      case 'l':
-        if (dwarf_name == "line")
-          sect_type = lldb::eSectionTypeDWARFDebugLine;
-        else if (dwarf_name == "loc")
-          sect_type = lldb::eSectionTypeDWARFDebugLoc;
-        else if (dwarf_name == "loclists")
-          sect_type = lldb::eSectionTypeDWARFDebugLocLists;
-        break;
-
-      case 'm':
-        if (dwarf_name == "macinfo")
-          sect_type = lldb::eSectionTypeDWARFDebugMacInfo;
-        break;
-
-      case 'p':
-        if (dwarf_name == "pubnames")
-          sect_type = lldb::eSectionTypeDWARFDebugPubNames;
-        else if (dwarf_name == "pubtypes")
-          sect_type = lldb::eSectionTypeDWARFDebugPubTypes;
-        break;
-
-      case 's':
-        if (dwarf_name == "str")
-          sect_type = lldb::eSectionTypeDWARFDebugStr;
-        else if (dwarf_name == "str_offsets")
-          sect_type = lldb::eSectionTypeDWARFDebugStrOffsets;
-        break;
-
-      case 'r':
-        if (dwarf_name == "ranges")
-          sect_type = lldb::eSectionTypeDWARFDebugRanges;
-        break;
-
-      default:
-        break;
-      }
+      sect_type = ObjectFile::GetDWARFSectionTypeFromName(dwarf_name);
     } else if (name.starts_with("__apple_") || name.starts_with(".apple_"))
       sect_type = lldb::eSectionTypeInvalid;
     else if (name == "__objc_imageinfo")
