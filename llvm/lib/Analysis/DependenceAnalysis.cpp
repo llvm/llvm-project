@@ -3429,22 +3429,10 @@ SCEVSignedMonotonicityChecker::SCEVSignedMonotonicityChecker(
     // into the index type, so the GEP value would be poison and any memory
     // access using it would be immediate UB when executed.
     //
-    // TODO: We don't check if the result of the GEP is always used. Maybe we
-    // should check the reachability from the GEP to the target instruction.
-    // E.g., in the following case, no-wrap would not trigger immediate UB:
-    //
-    //  entry:
-    //    ...
-    //    %gep = getelementptr inbounds i32, ptr %ptr, i32 %addrec
-    //    br i1 %cond, label %store, label %sink
-    //
-    //   store:
-    //     store i32 42, ptr %ptr
-    //     br label %sink
-    //
-    //   sink:
-    //     ...
-    //
+    // TODO: The monotonicity check ensures that the given SCEV does not wrap
+    // in "any" iteration. Thus, inference from nusw should be valid only if
+    // the GEP is executed and its result is used in every iteration of the
+    // loop.
     auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
     if (GEP && GEP->hasNoUnsignedSignedWrap())
       NoWrapFromGEP = true;
@@ -3807,16 +3795,25 @@ bool DependenceInfo::tryDelinearizeParametricSize(
       const Loop *OutermostLoop =
           LI->getLoopFor(Src->getParent())->getOutermostLoop();
 
-      // TODO: In general, reasoning about monotonicity of a subscript from the
-      // base pointer would lead incorrect result. Probably we need to check
-      // the loops associated with this subscript are disjoint from those
-      // associated with the other subscripts. The validation would be
-      // something like:
+      // TODO: Inferring a subscript's monotonicity from the base pointer can
+      // lead to incorrect results. Consider the following code:
       //
-      //   LoopsI = collectCommonLoops(SrcSubscripts[I])
-      //   LoopsOthers = collectCommonLoops(SrcSCEV - SrcSubscripts[I])
-      //   CanUsePtr = (LoopsI intersect LoopsOthers) is empty.
+      //   %offset = ...
+      //   %gep = getelementptr nusw i8, ptr %base, i64 %offset
       //
+      // We might infer the monotonicity of %offset from nusw on the GEP (see
+      // the implementation of checkMonotonicity for details). This inference
+      // may be valid, but the same does not necessarily hold for each
+      // subscript. For example, assume %offset is {0,+,(%m * %n)}<%loop> where
+      // %m and %n are loop invariants. Delinearization can "decompose" this
+      // SCEV into something like:
+      //
+      //   Size: [UnknownSize][%m]
+      //   Subscripts: [{0,+,%n}][{0,+,1}]
+      //
+      // Here, if (%m * %n) wraps, %n can be larger than (%m * %n). Hence even
+      // if we know {0,+,(%m * %n)} doesn't wrap, we cannot conclude the same
+      // for {0,+,%n}.
       MonotonicityType SrcMonotonicity =
           SCEVSignedMonotonicityChecker::checkMonotonicity(
               SE, SrcSubscripts[I], OutermostLoop, SrcPtr);
@@ -3851,6 +3848,22 @@ bool DependenceInfo::tryDelinearizeParametricSize(
       });
       return false;
     }
+
+  // TODO: Probably we need to prove that the "offset calculation" doesn't
+  // wrap. Here the offset calculation is:
+  //
+  //   Offset =
+  //     Subscripts[0] +
+  //     Subscripts[1]*Sizes[0] +
+  //     Subscripts[2]*Sizes[0]*Sizes[1] +
+  //     ...
+  //     Subscripts[N-1]*Sizes[0]*Sizes[1]*...*Sizes[N-2]
+  //
+  // where N is the number of dimensions. The subsequent dependence tests assume
+  // that different subscript values result in different offset values. If the
+  // above calculation wraps, this assumption is violated. Note that if every
+  // element of Subscripts is positive, the situation would be simple. However,
+  // the subscript for the outermost dimension (Subscripts[0]) can be negative.
 
   return true;
 }
