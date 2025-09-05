@@ -364,6 +364,7 @@ define i16 @global_one_as_atomic_min_i16(ptr addrspace(1) %ptr, i16 %val) {
 ; GFX1250-NEXT:    v_lshlrev_b32_e32 v5, v3, v5
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_and_or_b32 v6, v7, v4, v5
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_cmpswap_b32 v5, v[0:1], v[6:7], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v5, v7
@@ -406,6 +407,7 @@ define i16 @global_one_as_atomic_umin_i16(ptr addrspace(1) %ptr, i16 %val) {
 ; GFX1250-NEXT:    v_lshlrev_b32_e32 v5, v3, v5
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_and_or_b32 v6, v7, v4, v5
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_cmpswap_b32 v5, v[0:1], v[6:7], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v5, v7
@@ -448,6 +450,7 @@ define i16 @global_one_as_atomic_max_i16(ptr addrspace(1) %ptr, i16 %val) {
 ; GFX1250-NEXT:    v_lshlrev_b32_e32 v5, v3, v5
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_and_or_b32 v6, v7, v4, v5
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_cmpswap_b32 v5, v[0:1], v[6:7], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v5, v7
@@ -490,6 +493,7 @@ define i16 @global_one_as_atomic_umax_i16(ptr addrspace(1) %ptr, i16 %val) {
 ; GFX1250-NEXT:    v_lshlrev_b32_e32 v5, v3, v5
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_and_or_b32 v6, v7, v4, v5
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_cmpswap_b32 v5, v[0:1], v[6:7], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v5, v7
@@ -1344,6 +1348,7 @@ define i16 @flat_one_as_atomic_min_i16(ptr %ptr, i16 %val) {
 ; GFX1250-NEXT:    v_lshlrev_b32_e32 v5, v3, v5
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_and_or_b32 v6, v7, v4, v5
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v5, v[0:1], v[6:7] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v5, v7
@@ -1386,6 +1391,7 @@ define i16 @flat_one_as_atomic_umin_i16(ptr %ptr, i16 %val) {
 ; GFX1250-NEXT:    v_lshlrev_b32_e32 v5, v3, v5
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_and_or_b32 v6, v7, v4, v5
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v5, v[0:1], v[6:7] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v5, v7
@@ -1428,6 +1434,7 @@ define i16 @flat_one_as_atomic_max_i16(ptr %ptr, i16 %val) {
 ; GFX1250-NEXT:    v_lshlrev_b32_e32 v5, v3, v5
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_and_or_b32 v6, v7, v4, v5
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v5, v[0:1], v[6:7] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v5, v7
@@ -1470,6 +1477,7 @@ define i16 @flat_one_as_atomic_umax_i16(ptr %ptr, i16 %val) {
 ; GFX1250-NEXT:    v_lshlrev_b32_e32 v5, v3, v5
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_and_or_b32 v6, v7, v4, v5
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v5, v[0:1], v[6:7] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v5, v7

@@ -890,7 +890,8 @@ define amdgpu_kernel void @local_volatile_workgroup_release_store(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
-; GFX1250-NEXT:    s_wait_dscnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
    i32 %in, ptr addrspace(3) %out) {
