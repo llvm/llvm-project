@@ -23,6 +23,7 @@ STATISTIC(NumPatternEmitted, "Number of patterns emitted");
 using namespace llvm;
 using namespace gi;
 
+// FIXME: Use createStringError instead.
 static Error failUnsupported(const Twine &Reason) {
   return make_error<StringError>(Reason, inconvertibleErrorCode());
 }
