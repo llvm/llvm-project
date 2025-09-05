@@ -551,7 +551,7 @@ non-Linalg operations, for example `linalg.*conv*`, `linalg.winograd*`,
 With multiple (often exchangeable) forms, and with transformation simplicity
 in mind, compilers should aim for reducing matching and replacing complexity
 as much as possible. When matching a single operation with a complex pattern,
-having all the information from a `generic` is useful to iteratively match
+having all the information in a `generic` is useful to iteratively match
 different patterns in turn. However, when assembling a DAG of operations to
 form a pattern, it's much simpler to match against named operations (like
 `max` + `div` + `reduce` + `broadcast`) than their generic counterparts.
