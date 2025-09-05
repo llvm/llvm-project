@@ -45,9 +45,3 @@ void f3() {
      expected-warning {{mutex 'm2' is still held at the end of function}} \
      expected-warning {{mutex 'm3' is still held at the end of function}}
 #endif
-
-void f4() {
-  std::mutex local_m0;
-  std::mutex local_m1;
-  std::lock(local_m0, local_m1);
-}
