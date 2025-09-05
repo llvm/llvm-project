@@ -12,6 +12,7 @@
 
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/CUF/CUFDialect.h"
+#include "flang/Runtime/allocator-registry-consts.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -50,6 +51,18 @@ bool hasDataAttr(mlir::Operation *op, cuf::DataAttribute value) {
   if (auto dataAttr = getDataAttr(op))
     return dataAttr.getValue() == value;
   return false;
+}
+
+unsigned getAllocatorIdx(cuf::DataAttribute dataAttr) {
+  if (dataAttr == cuf::DataAttribute::Pinned)
+    return kPinnedAllocatorPos;
+  if (dataAttr == cuf::DataAttribute::Device)
+    return kDeviceAllocatorPos;
+  if (dataAttr == cuf::DataAttribute::Managed)
+    return kManagedAllocatorPos;
+  if (dataAttr == cuf::DataAttribute::Unified)
+    return kUnifiedAllocatorPos;
+  return kDefaultAllocator;
 }
 
 } // namespace cuf

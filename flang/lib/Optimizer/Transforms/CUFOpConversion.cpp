@@ -106,7 +106,7 @@ static mlir::LogicalResult convertOpToCall(OpTy op,
   mlir::Value sourceLine;
   if constexpr (std::is_same_v<OpTy, cuf::AllocateOp>)
     sourceLine = fir::factory::locationToLineNo(
-        builder, loc, op.getSource() ? fTy.getInput(7) : fTy.getInput(6));
+        builder, loc, op.getSource() ? fTy.getInput(8) : fTy.getInput(7));
   else
     sourceLine = fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
 
@@ -122,6 +122,8 @@ static mlir::LogicalResult convertOpToCall(OpTy op,
   }
   llvm::SmallVector<mlir::Value> args;
   if constexpr (std::is_same_v<OpTy, cuf::AllocateOp>) {
+    mlir::Value allocIdx = builder.createIntegerConstant(
+        loc, builder.getI32Type(), cuf::getAllocatorIdx(op.getDataAttr()));
     mlir::Value pinned =
         op.getPinned()
             ? op.getPinned()
@@ -133,15 +135,15 @@ static mlir::LogicalResult convertOpToCall(OpTy op,
           op.getStream() ? op.getStream()
                          : builder.createNullConstant(loc, fTy.getInput(2));
       args = fir::runtime::createArguments(
-          builder, loc, fTy, op.getBox(), op.getSource(), stream, pinned,
-          hasStat, errmsg, sourceFile, sourceLine);
+          builder, loc, fTy, op.getBox(), op.getSource(), allocIdx, stream,
+          pinned, hasStat, errmsg, sourceFile, sourceLine);
     } else {
       mlir::Value stream =
           op.getStream() ? op.getStream()
                          : builder.createNullConstant(loc, fTy.getInput(1));
       args = fir::runtime::createArguments(builder, loc, fTy, op.getBox(),
-                                           stream, pinned, hasStat, errmsg,
-                                           sourceFile, sourceLine);
+                                           allocIdx, stream, pinned, hasStat,
+                                           errmsg, sourceFile, sourceLine);
     }
   } else {
     args =

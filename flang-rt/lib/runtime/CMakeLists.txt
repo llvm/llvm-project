@@ -180,7 +180,7 @@ if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn|^nvptx")
 elseif(FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
   # findloc.cpp has some issues with higher compute capability. Remove it
   # from CUDA build until we can lower its memory footprint.
-  list(REMOVE_ITEM supported_sources findloc.cpp)
+  
   set(sources ${supported_sources})
 else ()
   set(sources ${supported_sources} ${host_sources} ${f128_sources})

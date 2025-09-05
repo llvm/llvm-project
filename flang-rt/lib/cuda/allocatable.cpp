@@ -23,11 +23,11 @@ namespace Fortran::runtime::cuda {
 extern "C" {
 RT_EXT_API_GROUP_BEGIN
 
-int RTDEF(CUFAllocatableAllocateSync)(Descriptor &desc, int64_t *stream,
-    bool *pinned, bool hasStat, const Descriptor *errMsg,
+int RTDEF(CUFAllocatableAllocateSync)(Descriptor &desc, int32_t allocIdx,
+    int64_t *stream, bool *pinned, bool hasStat, const Descriptor *errMsg,
     const char *sourceFile, int sourceLine) {
   int stat{RTNAME(CUFAllocatableAllocate)(
-      desc, stream, pinned, hasStat, errMsg, sourceFile, sourceLine)};
+      desc, allocIdx, stream, pinned, hasStat, errMsg, sourceFile, sourceLine)};
 #ifndef RT_DEVICE_COMPILATION
   // Descriptor synchronization is only done when the allocation is done
   // from the host.
@@ -41,9 +41,12 @@ int RTDEF(CUFAllocatableAllocateSync)(Descriptor &desc, int64_t *stream,
   return stat;
 }
 
-int RTDEF(CUFAllocatableAllocate)(Descriptor &desc, int64_t *stream,
-    bool *pinned, bool hasStat, const Descriptor *errMsg,
+int RTDEF(CUFAllocatableAllocate)(Descriptor &desc, int32_t allocIdx,
+    int64_t *stream, bool *pinned, bool hasStat, const Descriptor *errMsg,
     const char *sourceFile, int sourceLine) {
+#if !defined(RT_DEVICE_COMPILATION)
+  desc.SetAllocIdx(allocIdx);
+#endif
   // Perform the standard allocation.
   int stat{RTNAME(AllocatableAllocate)(
       desc, stream, hasStat, errMsg, sourceFile, sourceLine)};
@@ -56,10 +59,10 @@ int RTDEF(CUFAllocatableAllocate)(Descriptor &desc, int64_t *stream,
 }
 
 int RTDEF(CUFAllocatableAllocateSource)(Descriptor &alloc,
-    const Descriptor &source, int64_t *stream, bool *pinned, bool hasStat,
+    const Descriptor &source, int32_t allocIdx, int64_t *stream, bool *pinned, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
-  int stat{RTNAME(CUFAllocatableAllocate)(
-      alloc, stream, pinned, hasStat, errMsg, sourceFile, sourceLine)};
+  int stat{RTNAME(CUFAllocatableAllocate)(alloc, allocIdx, stream, pinned,
+      hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
     Terminator terminator{sourceFile, sourceLine};
     Fortran::runtime::DoFromSourceAssign(
@@ -69,10 +72,10 @@ int RTDEF(CUFAllocatableAllocateSource)(Descriptor &alloc,
 }
 
 int RTDEF(CUFAllocatableAllocateSourceSync)(Descriptor &alloc,
-    const Descriptor &source, int64_t *stream, bool *pinned, bool hasStat,
+    const Descriptor &source, int32_t allocIdx, int64_t *stream, bool *pinned, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
-  int stat{RTNAME(CUFAllocatableAllocateSync)(
-      alloc, stream, pinned, hasStat, errMsg, sourceFile, sourceLine)};
+  int stat{RTNAME(CUFAllocatableAllocateSync)(alloc, allocIdx, stream, pinned,
+      hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
     Terminator terminator{sourceFile, sourceLine};
     Fortran::runtime::DoFromSourceAssign(

@@ -478,20 +478,6 @@ createGlobalInitialization(fir::FirOpBuilder &builder, fir::GlobalOp global,
   builder.restoreInsertionPoint(insertPt);
 }
 
-static unsigned getAllocatorIdxFromDataAttr(cuf::DataAttributeAttr dataAttr) {
-  if (dataAttr) {
-    if (dataAttr.getValue() == cuf::DataAttribute::Pinned)
-      return kPinnedAllocatorPos;
-    if (dataAttr.getValue() == cuf::DataAttribute::Device)
-      return kDeviceAllocatorPos;
-    if (dataAttr.getValue() == cuf::DataAttribute::Managed)
-      return kManagedAllocatorPos;
-    if (dataAttr.getValue() == cuf::DataAttribute::Unified)
-      return kUnifiedAllocatorPos;
-  }
-  return kDefaultAllocator;
-}
-
 /// Create the global op and its init if it has one
 fir::GlobalOp Fortran::lower::defineGlobal(
     Fortran::lower::AbstractConverter &converter,
@@ -554,7 +540,9 @@ fir::GlobalOp Fortran::lower::defineGlobal(
         mlir::Value box = fir::factory::createUnallocatedBox(
             b, loc, symTy,
             /*nonDeferredParams=*/{},
-            /*typeSourceBox=*/{}, getAllocatorIdxFromDataAttr(dataAttr));
+            /*typeSourceBox=*/{},
+            dataAttr ? cuf::getAllocatorIdx(dataAttr.getValue())
+                     : kDefaultAllocator);
         fir::HasValueOp::create(b, loc, box);
       });
     }
