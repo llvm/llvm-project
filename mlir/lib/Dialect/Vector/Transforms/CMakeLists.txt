@@ -3,12 +3,15 @@ add_mlir_dialect_library(MLIRVectorTransforms
   LowerVectorBitCast.cpp
   LowerVectorBroadcast.cpp
   LowerVectorContract.cpp
+  LowerVectorFromElements.cpp
   LowerVectorGather.cpp
   LowerVectorInterleave.cpp
   LowerVectorMask.cpp
   LowerVectorMultiReduction.cpp
   LowerVectorScan.cpp
   LowerVectorShapeCast.cpp
+  LowerVectorStep.cpp
+  LowerVectorToFromElementsToShuffleTree.cpp
   LowerVectorTransfer.cpp
   LowerVectorTranspose.cpp
   SubsetOpInterfaceImpl.cpp
@@ -37,6 +40,7 @@ add_mlir_dialect_library(MLIRVectorTransforms
   MLIRArithDialect
   MLIRDialectUtils
   MLIRGPUDialect
+  MLIRGPUUtils
   MLIRIR
   MLIRLinalgDialect
   MLIRMemRefDialect

@@ -60,7 +60,6 @@
 #include "llvm/Transforms/Scalar/DFAJumpThreading.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
@@ -76,7 +75,6 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/SSAUpdaterBulk.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
-#include <algorithm>
 #include <deque>
 
 #ifdef EXPENSIVE_CHECKS
@@ -110,7 +108,7 @@ static cl::opt<unsigned> MaxNumVisitiedPaths(
     "dfa-max-num-visited-paths",
     cl::desc(
         "Max number of blocks visited while enumerating paths around a switch"),
-    cl::Hidden, cl::init(2000));
+    cl::Hidden, cl::init(2500));
 
 static cl::opt<unsigned>
     MaxNumPaths("dfa-max-num-paths",
@@ -165,8 +163,7 @@ private:
       unfold(&DTU, LI, SIToUnfold, &NewSIsToUnfold, &NewBBs);
 
       // Put newly discovered select instructions into the work list.
-      for (const SelectInstToUnfold &NewSIToUnfold : NewSIsToUnfold)
-        Stack.push_back(NewSIToUnfold);
+      llvm::append_range(Stack, NewSIsToUnfold);
     }
   }
 
@@ -401,7 +398,7 @@ struct ThreadingPath {
   void push_back(BasicBlock *BB) { Path.push_back(BB); }
   void push_front(BasicBlock *BB) { Path.push_front(BB); }
   void appendExcludingFirst(const PathType &OtherPath) {
-    Path.insert(Path.end(), OtherPath.begin() + 1, OtherPath.end());
+    llvm::append_range(Path, llvm::drop_begin(OtherPath));
   }
 
   void print(raw_ostream &OS) const {
@@ -449,7 +446,7 @@ private:
   /// Also, collect select instructions to unfold.
   bool isCandidate(const SwitchInst *SI) {
     std::deque<std::pair<Value *, BasicBlock *>> Q;
-    SmallSet<Value *, 16> SeenValues;
+    SmallPtrSet<Value *, 16> SeenValues;
     SelectInsts.clear();
 
     Value *SICond = SI->getCondition();
@@ -513,7 +510,7 @@ private:
 
   void addToQueue(Value *Val, BasicBlock *BB,
                   std::deque<std::pair<Value *, BasicBlock *>> &Q,
-                  SmallSet<Value *, 16> &SeenValues) {
+                  SmallPtrSet<Value *, 16> &SeenValues) {
     if (SeenValues.insert(Val).second)
       Q.push_back({Val, BB});
   }
@@ -715,7 +712,7 @@ private:
 
     // Some blocks have multiple edges to the same successor, and this set
     // is used to prevent a duplicate path from being generated
-    SmallSet<BasicBlock *, 4> Successors;
+    SmallPtrSet<BasicBlock *, 4> Successors;
     for (BasicBlock *Succ : successors(BB)) {
       if (!Successors.insert(Succ).second)
         continue;
@@ -755,18 +752,16 @@ private:
     return Res;
   }
 
-  /// Walk the use-def chain and collect all the state-defining instructions.
-  ///
-  /// Return an empty map if unpredictable values encountered inside the basic
-  /// blocks of \p LoopPaths.
+  /// Walk the use-def chain and collect all the state-defining blocks and the
+  /// PHI nodes in those blocks that define the state.
   StateDefMap getStateDefMap() const {
     StateDefMap Res;
-    Value *FirstDef = Switch->getOperand(0);
-    assert(isa<PHINode>(FirstDef) && "The first definition must be a phi.");
+    PHINode *FirstDef = dyn_cast<PHINode>(Switch->getOperand(0));
+    assert(FirstDef && "The first definition must be a phi.");
 
     SmallVector<PHINode *, 8> Stack;
-    Stack.push_back(dyn_cast<PHINode>(FirstDef));
-    SmallSet<Value *, 16> SeenValues;
+    Stack.push_back(FirstDef);
+    SmallPtrSet<Value *, 16> SeenValues;
 
     while (!Stack.empty()) {
       PHINode *CurPhi = Stack.pop_back_val();
@@ -775,18 +770,15 @@ private:
       SeenValues.insert(CurPhi);
 
       for (BasicBlock *IncomingBB : CurPhi->blocks()) {
-        Value *Incoming = CurPhi->getIncomingValueForBlock(IncomingBB);
-        bool IsOutsideLoops = !SwitchOuterLoop->contains(IncomingBB);
-        if (Incoming == FirstDef || isa<ConstantInt>(Incoming) ||
-            SeenValues.contains(Incoming) || IsOutsideLoops) {
+        PHINode *IncomingPhi =
+            dyn_cast<PHINode>(CurPhi->getIncomingValueForBlock(IncomingBB));
+        if (!IncomingPhi)
           continue;
-        }
+        bool IsOutsideLoops = !SwitchOuterLoop->contains(IncomingBB);
+        if (SeenValues.contains(IncomingPhi) || IsOutsideLoops)
+          continue;
 
-        // Any unpredictable value inside the loops means we must bail out.
-        if (!isa<PHINode>(Incoming))
-          return StateDefMap();
-
-        Stack.push_back(cast<PHINode>(Incoming));
+        Stack.push_back(IncomingPhi);
       }
     }
 
@@ -962,9 +954,8 @@ private:
     DuplicateBlockMap DuplicateMap;
     DefMap NewDefs;
 
-    SmallSet<BasicBlock *, 16> BlocksToClean;
-    for (BasicBlock *BB : successors(SwitchBlock))
-      BlocksToClean.insert(BB);
+    SmallPtrSet<BasicBlock *, 16> BlocksToClean;
+    BlocksToClean.insert_range(successors(SwitchBlock));
 
     for (ThreadingPath &TPath : SwitchPaths->getThreadingPaths()) {
       createExitPath(NewDefs, TPath, DuplicateMap, BlocksToClean, &DTU);
@@ -992,7 +983,7 @@ private:
   /// the predecessors, and phis in the successor blocks.
   void createExitPath(DefMap &NewDefs, ThreadingPath &Path,
                       DuplicateBlockMap &DuplicateMap,
-                      SmallSet<BasicBlock *, 16> &BlocksToClean,
+                      SmallPtrSet<BasicBlock *, 16> &BlocksToClean,
                       DomTreeUpdater *DTU) {
     APInt NextState = Path.getExitValue();
     const BasicBlock *Determinator = Path.getDeterminatorBB();

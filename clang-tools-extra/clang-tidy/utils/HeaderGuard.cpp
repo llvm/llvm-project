@@ -10,7 +10,6 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
-#include "clang/Tooling/Tooling.h"
 #include "llvm/Support/Path.h"
 
 namespace clang::tidy::utils {
@@ -88,11 +87,10 @@ public:
         continue;
 
       // Look up Locations for this guard.
-      SourceLocation Ifndef =
-          Ifndefs[MacroEntry.first.getIdentifierInfo()].second;
+      const auto &Locs = Ifndefs[MacroEntry.first.getIdentifierInfo()];
+      SourceLocation Ifndef = Locs.second;
       SourceLocation Define = MacroEntry.first.getLocation();
-      SourceLocation EndIf =
-          EndIfs[Ifndefs[MacroEntry.first.getIdentifierInfo()].first];
+      SourceLocation EndIf = EndIfs[Locs.first];
 
       // If the macro Name is not equal to what we can compute, correct it in
       // the #ifndef and #define.
@@ -241,7 +239,9 @@ public:
 
       Check->diag(StartLoc, "header is missing header guard")
           << FixItHint::CreateInsertion(
-                 StartLoc, "#ifndef " + CPPVar + "\n#define " + CPPVar + "\n\n")
+                 StartLoc,
+                 (Twine("#ifndef ") + CPPVar + "\n#define " + CPPVar + "\n\n")
+                     .str())
           << FixItHint::CreateInsertion(
                  SM.getLocForEndOfFile(FID),
                  Check->shouldSuggestEndifComment(FileName)

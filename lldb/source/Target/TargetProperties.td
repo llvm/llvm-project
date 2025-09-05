@@ -4,6 +4,9 @@ let Definition = "target_experimental" in {
   def InjectLocalVars : Property<"inject-local-vars", "Boolean">,
     Global, DefaultTrue,
     Desc<"If true, inject local variables explicitly into the expression text. This will fix symbol resolution when there are name collisions between ivars and local variables. But it can make expressions run much more slowly.">;
+  def UseDIL : Property<"use-DIL", "Boolean">,
+    Global, DefaultTrue,
+    Desc<"If true, use the DIL implementation for frame variable evaluation.">;
 }
 
 let Definition = "target" in {
@@ -93,10 +96,10 @@ let Definition = "target" in {
     DefaultUnsignedValue<6>,
     Desc<"The maximum number of zeroes to insert when displaying a very small float before falling back to scientific notation.">;
   def MaxChildrenCount: Property<"max-children-count", "UInt64">,
-    DefaultUnsignedValue<256>,
+    DefaultUnsignedValue<24>,
     Desc<"Maximum number of children to expand in any level of depth.">;
   def MaxChildrenDepth: Property<"max-children-depth", "UInt64">,
-    DefaultUnsignedValue<0xFFFFFFFF>,
+    DefaultUnsignedValue<4>,
     Desc<"Maximum depth to expand children.">;
   def MaxSummaryLength: Property<"max-string-summary-length", "UInt64">,
     DefaultUnsignedValue<1024>,
@@ -157,6 +160,12 @@ let Definition = "target" in {
     DefaultEnumValue<"eX86DisFlavorDefault">,
     EnumValues<"OptionEnumValues(g_x86_dis_flavor_value_types)">,
     Desc<"The default disassembly flavor to use for x86 or x86-64 targets.">;
+  def DisassemblyCPU: Property<"disassembly-cpu", "String">,
+    DefaultStringValue<"">,
+    Desc<"Override the CPU for disassembling. Takes the same values as the -mcpu clang flag.">;
+  def DisassemblyFeatures: Property<"disassembly-features", "String">,
+    DefaultStringValue<"">,
+    Desc<"Specify additional CPU features for disassembling.">;
   def UseHexImmediates: Property<"use-hex-immediates", "Boolean">,
     DefaultTrue,
     Desc<"Show immediates in disassembly as hexadecimal.">;
@@ -201,13 +210,23 @@ let Definition = "target" in {
   def DebugUtilityExpression: Property<"debug-utility-expression", "Boolean">,
     DefaultFalse,
     Desc<"Enable debugging of LLDB-internal utility expressions.">;
+  def LaunchWorkingDir: Property<"launch-working-dir", "String">,
+    DefaultStringValue<"">,
+    Desc<"A default value for the working directory to use when launching processes. "
+         "It is ignored when empty. This setting is only used when the target is "
+         "launched. If you change this setting, the new value will only apply to "
+         "subsequent launches. Commands that take an explicit working directory "
+         "will override this setting.">;
+  def ParallelModuleLoad: Property<"parallel-module-load", "Boolean">,
+    DefaultTrue,
+    Desc<"Enable loading of modules in parallel for the dynamic loader.">;
 }
 
 let Definition = "process_experimental" in {
   def OSPluginReportsAllThreads: Property<"os-plugin-reports-all-threads", "Boolean">,
     Global,
     DefaultTrue,
-    Desc<"Set to False if your OS Plugins doesn't report all threads on each stop.">;
+    Desc<"Set to False if your Python OS Plugin doesn't report all threads on each stop.">;
 }
 
 let Definition = "process" in {
@@ -280,6 +299,9 @@ let Definition = "process" in {
     DefaultEnumValue<"eFollowParent">,
     EnumValues<"OptionEnumValues(g_follow_fork_mode_values)">,
     Desc<"Debugger's behavior upon fork or vfork.">;
+  def TrackMemoryCacheChanges: Property<"track-memory-cache-changes", "Boolean">,
+    DefaultTrue,
+    Desc<"If true, memory cache modifications (which happen often during expressions evaluation) will bump process state ID (and invalidate all synthetic children). Disabling this option helps to avoid synthetic children reevaluation when pretty printers heavily use expressions. The downside of disabled setting is that convenience variables won't reevaluate synthetic children automatically.">;
 }
 
 let Definition = "platform" in {

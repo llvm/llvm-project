@@ -1,9 +1,17 @@
-//===- HashingOutputBackends.h - Hashing output backends --------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declarations of the HashingOutputBackend class, which
+/// is the VirtualOutputBackend that only produces the hashes for the output
+/// files. This is useful for checking if the outputs are deterministic without
+/// storing output files in memory or on disk.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_SUPPORT_HASHINGOUTPUTBACKEND_H
@@ -11,11 +19,11 @@
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/HashBuilder.h"
 #include "llvm/Support/VirtualOutputBackend.h"
 #include "llvm/Support/VirtualOutputConfig.h"
 #include "llvm/Support/raw_ostream.h"
+#include <mutex>
 
 namespace llvm::vfs {
 
@@ -26,7 +34,7 @@ private:
   SmallVector<char> Buffer;
   raw_svector_ostream OS;
 
-  using HashBuilderT = HashBuilder<HasherT, support::endianness::native>;
+  using HashBuilderT = HashBuilder<HasherT, endianness::native>;
   HashBuilderT Builder;
 
   void write_impl(const char *Ptr, size_t Size) override {
@@ -55,7 +63,8 @@ template <typename HasherT> class HashingOutputBackend : public OutputBackend {
 private:
   friend class HashingOutputFile<HasherT>;
   void addOutputFile(StringRef Path, StringRef Hash) {
-    OutputHashes[Path] = std::string(Hash);
+    std::lock_guard<std::mutex> Lock(OutputHashLock);
+    OutputHashes[Path] = Hash.str();
   }
 
 protected:
@@ -70,10 +79,14 @@ protected:
 
 public:
   /// Iterator for all the output file names.
+  ///
+  /// Not thread safe. Should be queried after all outputs are written.
   auto outputFiles() const { return OutputHashes.keys(); }
 
   /// Get hash value for the output files in hex representation.
   /// Return None if the requested path is not generated.
+  ///
+  /// Not thread safe. Should be queried after all outputs are written.
   std::optional<std::string> getHashValueForFile(StringRef Path) {
     auto F = OutputHashes.find(Path);
     if (F == OutputHashes.end())
@@ -82,6 +95,7 @@ public:
   }
 
 private:
+  std::mutex OutputHashLock;
   StringMap<std::string> OutputHashes;
 };
 

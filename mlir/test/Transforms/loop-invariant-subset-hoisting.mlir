@@ -595,3 +595,21 @@ func.func @hoist_vector_transfer_write_pairs_disjoint_tensor(
   }
   return %1 : tensor<?x?xf32>
 }
+
+// -----
+
+// Ensure that cases with buffer semantics exit gracefully.
+
+// CHECK-LABEL: @hoist_buffer
+func.func @hoist_buffer(%arg0: memref<7x7xf16>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %alloc = memref.alloc() : memref<7x7xf16>
+  // CHECK: scf.for
+  // CHECK:   linalg.copy
+  %0 = scf.for %arg1 = %c0 to %c1 step %c1 iter_args(%arg2 = %alloc) -> (memref<7x7xf16>) {
+    linalg.copy ins(%arg0 : memref<7x7xf16>) outs(%arg2 : memref<7x7xf16>)
+    scf.yield %alloc : memref<7x7xf16>
+  }
+  return
+}

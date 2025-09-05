@@ -42,6 +42,14 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.mutex)
       .mutex
       libc.src.__support.CPP.mutex
   )
+elseif(NOT (LIBC_CONF_THREAD_MODE STREQUAL LIBC_THREAD_MODE_PLATFORM))
+  add_header_library(
+    mutex
+  HDRS
+    mutex.h
+  DEPENDS
+    .mutex_common
+  )
 endif()
 
 add_header_library(
@@ -49,6 +57,7 @@ add_header_library(
   HDRS
     thread.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.common
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.optional
@@ -64,6 +73,7 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.thread)
     DEPENDS
       .mutex
       .${LIBC_TARGET_OS}.thread
+      libc.hdr.stdint_proxy
       libc.src.__support.common
       libc.src.__support.fixedvector
       libc.src.__support.CPP.array

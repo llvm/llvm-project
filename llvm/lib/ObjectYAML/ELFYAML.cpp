@@ -70,6 +70,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_PT>::enumeration(
   ECase(PT_GNU_STACK);
   ECase(PT_GNU_RELRO);
   ECase(PT_GNU_PROPERTY);
+  ECase(PT_GNU_SFRAME);
 #undef ECase
   IO.enumFallback<Hex32>(Value);
 }
@@ -136,6 +137,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_NT>::enumeration(
   ECase(NT_ARM_ZA);
   ECase(NT_ARM_ZT);
   ECase(NT_ARM_FPMR);
+  ECase(NT_ARM_GCS);
   ECase(NT_FILE);
   ECase(NT_PRXFPREG);
   ECase(NT_SIGINFO);
@@ -495,6 +497,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_HEXAGON_MACH_V71, EF_HEXAGON_MACH);
     BCaseMask(EF_HEXAGON_MACH_V71T, EF_HEXAGON_MACH);
     BCaseMask(EF_HEXAGON_MACH_V73, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_MACH_V75, EF_HEXAGON_MACH);
     BCaseMask(EF_HEXAGON_ISA_V2, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V3, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V4, EF_HEXAGON_ISA);
@@ -509,6 +512,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_HEXAGON_ISA_V69, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V71, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V73, EF_HEXAGON_ISA);
+    BCaseMask(EF_HEXAGON_ISA_V75, EF_HEXAGON_ISA);
     break;
   case ELF::EM_AVR:
     BCaseMask(EF_AVR_ARCH_AVR1, EF_AVR_ARCH_MASK);
@@ -606,9 +610,8 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX909, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX90A, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX90C, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX940, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX941, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX942, EF_AMDGPU_MACH);
+    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX950, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1010, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1011, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1012, EF_AMDGPU_MACH);
@@ -627,9 +630,12 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1150, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1151, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1152, EF_AMDGPU_MACH);
+    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1153, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1200, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1201, EF_AMDGPU_MACH);
+    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1250, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, EF_AMDGPU_MACH);
+    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC, EF_AMDGPU_MACH);
@@ -715,10 +721,10 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
   ECase(SHT_LLVM_SYMPART);
   ECase(SHT_LLVM_PART_EHDR);
   ECase(SHT_LLVM_PART_PHDR);
-  ECase(SHT_LLVM_BB_ADDR_MAP_V0);
   ECase(SHT_LLVM_BB_ADDR_MAP);
   ECase(SHT_LLVM_OFFLOADING);
   ECase(SHT_LLVM_LTO);
+  ECase(SHT_GNU_SFRAME);
   ECase(SHT_GNU_ATTRIBUTES);
   ECase(SHT_GNU_HASH);
   ECase(SHT_GNU_verdef);
@@ -797,6 +803,9 @@ void ScalarBitSetTraits<ELFYAML::ELF_SHF>::bitset(IO &IO,
     break;
   }
   switch (Object->getMachine()) {
+  case ELF::EM_AARCH64:
+    BCase(SHF_AARCH64_PURECODE);
+    break;
   case ELF::EM_ARM:
     BCase(SHF_ARM_PURECODE);
     break;
@@ -946,6 +955,9 @@ void ScalarEnumerationTraits<ELFYAML::ELF_REL>::enumeration(
   case ELF::EM_PPC64:
 #include "llvm/BinaryFormat/ELFRelocs/PowerPC64.def"
     break;
+  case ELF::EM_SPARCV9:
+#include "llvm/BinaryFormat/ELFRelocs/Sparc.def"
+    break;
   case ELF::EM_68K:
 #include "llvm/BinaryFormat/ELFRelocs/M68k.def"
     break;
@@ -1021,6 +1033,13 @@ void ScalarEnumerationTraits<ELFYAML::ELF_DYNTAG>::enumeration(
 #include "llvm/BinaryFormat/DynamicTags.def"
 #undef RISCV_DYNAMIC_TAG
 #define RISCV_DYNAMIC_TAG(name, value)
+    break;
+  case ELF::EM_SPARCV9:
+#undef SPARC_DYNAMIC_TAG
+#define SPARC_DYNAMIC_TAG(name, value) DYNAMIC_TAG(name, value)
+#include "llvm/BinaryFormat/DynamicTags.def"
+#undef SPARC_DYNAMIC_TAG
+#define SPARC_DYNAMIC_TAG(name, value)
     break;
   default:
 #include "llvm/BinaryFormat/DynamicTags.def"
@@ -1141,7 +1160,7 @@ void MappingTraits<ELFYAML::FileHeader>::mapping(IO &IO,
   IO.mapOptional("ABIVersion", FileHdr.ABIVersion, Hex8(0));
   IO.mapRequired("Type", FileHdr.Type);
   IO.mapOptional("Machine", FileHdr.Machine);
-  IO.mapOptional("Flags", FileHdr.Flags, ELFYAML::ELF_EF(0));
+  IO.mapOptional("Flags", FileHdr.Flags);
   IO.mapOptional("Entry", FileHdr.Entry, Hex64(0));
   IO.mapOptional("SectionHeaderStringTable", FileHdr.SectionHeaderStringTable);
 
@@ -1582,7 +1601,7 @@ static bool isInteger(StringRef Val) {
 
 void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
     IO &IO, std::unique_ptr<ELFYAML::Chunk> &Section) {
-  ELFYAML::ELF_SHT Type;
+  ELFYAML::ELF_SHT Type = ELF::SHT_NULL;
   StringRef TypeStr;
   if (IO.outputting()) {
     if (auto *S = dyn_cast<ELFYAML::Section>(Section.get()))
@@ -1741,7 +1760,9 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
 std::string MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::validate(
     IO &io, std::unique_ptr<ELFYAML::Chunk> &C) {
   if (const auto *F = dyn_cast<ELFYAML::Fill>(C.get())) {
-    if (F->Pattern && F->Pattern->binary_size() != 0 && !F->Size)
+    // Can't check the `Size`, as it's required and may be left uninitialized by
+    // previous error.
+    if (!io.error() && F->Pattern && F->Pattern->binary_size() != 0 && !F->Size)
       return "\"Size\" can't be 0 when \"Pattern\" is not empty";
     return "";
   }
@@ -1863,6 +1884,7 @@ void MappingTraits<ELFYAML::BBAddrMapEntry::BBEntry>::mapping(
   IO.mapRequired("AddressOffset", E.AddressOffset);
   IO.mapRequired("Size", E.Size);
   IO.mapRequired("Metadata", E.Metadata);
+  IO.mapOptional("CallsiteEndOffsets", E.CallsiteEndOffsets);
 }
 
 void MappingTraits<ELFYAML::PGOAnalysisMapEntry>::mapping(
@@ -1920,6 +1942,7 @@ void MappingTraits<ELFYAML::VerdefEntry>::mapping(IO &IO,
   IO.mapOptional("Flags", E.Flags);
   IO.mapOptional("VersionNdx", E.VersionNdx);
   IO.mapOptional("Hash", E.Hash);
+  IO.mapOptional("VDAux", E.VDAux);
   IO.mapRequired("Names", E.VerNames);
 }
 

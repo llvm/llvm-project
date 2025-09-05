@@ -13,12 +13,11 @@
 #include "llvm/ExecutionEngine/JITLink/COFF.h"
 #include "llvm/ExecutionEngine/JITLink/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
+#include "llvm/ExecutionEngine/JITLink/XCOFF.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
-#include "llvm/ExecutionEngine/JITLink/i386.h"
 #include "llvm/ExecutionEngine/JITLink/loongarch.h"
+#include "llvm/ExecutionEngine/JITLink/x86.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -87,6 +86,8 @@ const char *getScopeName(Scope S) {
     return "default";
   case Scope::Hidden:
     return "hidden";
+  case Scope::SideEffectsOnly:
+    return "side-effects-only";
   case Scope::Local:
     return "local";
   }
@@ -125,7 +126,7 @@ raw_ostream &operator<<(raw_ostream &OS, const Symbol &Sym) {
      << ", linkage: " << formatv("{0:6}", getLinkageName(Sym.getLinkage()))
      << ", scope: " << formatv("{0:8}", getScopeName(Sym.getScope())) << ", "
      << (Sym.isLive() ? "live" : "dead") << "  -   "
-     << (Sym.hasName() ? Sym.getName() : "<anonymous symbol>");
+     << (Sym.hasName() ? *Sym.getName() : "<anonymous symbol>");
   return OS;
 }
 
@@ -167,6 +168,16 @@ Section::~Section() {
     B->~Block();
 }
 
+LinkGraph::~LinkGraph() {
+  for (auto *Sym : AbsoluteSymbols) {
+    Sym->~Symbol();
+  }
+  for (auto *Sym : external_symbols()) {
+    Sym->~Symbol();
+  }
+  ExternalSymbols.clear();
+}
+
 std::vector<Block *> LinkGraph::splitBlockImpl(std::vector<Block *> Blocks,
                                                SplitBlockCache *Cache) {
   assert(!Blocks.empty() && "Blocks must at least contain the original block");
@@ -204,9 +215,9 @@ std::vector<Block *> LinkGraph::splitBlockImpl(std::vector<Block *> Blocks,
 
     auto TransferSymbol = [](Symbol &Sym, Block &B) {
       Sym.setOffset(Sym.getAddress() - B.getAddress());
+      Sym.setBlock(B);
       if (Sym.getSize() > B.getSize())
         Sym.setSize(B.getSize() - Sym.getOffset());
-      Sym.setBlock(B);
     };
 
     // Transfer symbols to all blocks except the last one.
@@ -291,11 +302,18 @@ void LinkGraph::dump(raw_ostream &OS) {
       return false;
     });
 
-  for (auto &Sec : sections()) {
-    OS << "section " << Sec.getName() << ":\n\n";
+  std::vector<Section *> SortedSections;
+  for (auto &Sec : sections())
+    SortedSections.push_back(&Sec);
+  llvm::sort(SortedSections, [](const Section *LHS, const Section *RHS) {
+    return LHS->getName() < RHS->getName();
+  });
+
+  for (auto *Sec : SortedSections) {
+    OS << "section " << Sec->getName() << ":\n\n";
 
     std::vector<Block *> SortedBlocks;
-    llvm::copy(Sec.blocks(), std::back_inserter(SortedBlocks));
+    llvm::append_range(SortedBlocks, Sec->blocks());
     llvm::sort(SortedBlocks, [](const Block *LHS, const Block *RHS) {
       return LHS->getAddress() < RHS->getAddress();
     });
@@ -321,7 +339,7 @@ void LinkGraph::dump(raw_ostream &OS) {
       if (!B->edges_empty()) {
         OS << "    edges:\n";
         std::vector<Edge> SortedEdges;
-        llvm::copy(B->edges(), std::back_inserter(SortedEdges));
+        llvm::append_range(SortedEdges, B->edges());
         llvm::sort(SortedEdges, [](const Edge &LHS, const Edge &RHS) {
           return LHS.getOffset() < RHS.getOffset();
         });
@@ -403,15 +421,21 @@ Error makeTargetOutOfRangeError(const LinkGraph &G, const Block &B,
     raw_string_ostream ErrStream(ErrMsg);
     Section &Sec = B.getSection();
     ErrStream << "In graph " << G.getName() << ", section " << Sec.getName()
-              << ": relocation target ";
-    if (E.getTarget().hasName()) {
-      ErrStream << "\"" << E.getTarget().getName() << "\"";
-    } else
-      ErrStream << E.getTarget().getBlock().getSection().getName() << " + "
-                << formatv("{0:x}", E.getOffset());
-    ErrStream << " at address " << formatv("{0:x}", E.getTarget().getAddress())
-              << " is out of range of " << G.getEdgeKindName(E.getKind())
-              << " fixup at " << formatv("{0:x}", B.getFixupAddress(E)) << " (";
+              << ": relocation target "
+              << formatv("{0:x}", E.getTarget().getAddress() + E.getAddend())
+              << " (";
+    if (E.getTarget().hasName())
+      ErrStream << E.getTarget().getName();
+    else
+      ErrStream << "<anonymous symbol>";
+    if (E.getAddend()) {
+      // Target address includes non-zero added, so break down the arithmetic.
+      ErrStream << formatv(":{0:x}", E.getTarget().getAddress()) << " + "
+                << formatv("{0:x}", E.getAddend());
+    }
+    ErrStream << ") is out of range of " << G.getEdgeKindName(E.getKind())
+              << " fixup at address "
+              << formatv("{0:x}", E.getTarget().getAddress()) << " (";
 
     Symbol *BestSymbolForBlock = nullptr;
     for (auto *Sym : Sec.symbols())
@@ -448,7 +472,7 @@ AnonymousPointerCreator getAnonymousPointerCreator(const Triple &TT) {
   case Triple::x86_64:
     return x86_64::createAnonymousPointer;
   case Triple::x86:
-    return i386::createAnonymousPointer;
+    return x86::createAnonymousPointer;
   case Triple::loongarch32:
   case Triple::loongarch64:
     return loongarch::createAnonymousPointer;
@@ -464,7 +488,7 @@ PointerJumpStubCreator getPointerJumpStubCreator(const Triple &TT) {
   case Triple::x86_64:
     return x86_64::createAnonymousPointerJumpStub;
   case Triple::x86:
-    return i386::createAnonymousPointerJumpStub;
+    return x86::createAnonymousPointerJumpStub;
   case Triple::loongarch32:
   case Triple::loongarch64:
     return loongarch::createAnonymousPointerJumpStub;
@@ -474,45 +498,31 @@ PointerJumpStubCreator getPointerJumpStubCreator(const Triple &TT) {
 }
 
 Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromObject(MemoryBufferRef ObjectBuffer) {
+createLinkGraphFromObject(MemoryBufferRef ObjectBuffer,
+                          std::shared_ptr<orc::SymbolStringPool> SSP) {
   auto Magic = identify_magic(ObjectBuffer.getBuffer());
   switch (Magic) {
   case file_magic::macho_object:
-    return createLinkGraphFromMachOObject(ObjectBuffer);
+    return createLinkGraphFromMachOObject(ObjectBuffer, std::move(SSP));
   case file_magic::elf_relocatable:
-    return createLinkGraphFromELFObject(ObjectBuffer);
+    return createLinkGraphFromELFObject(ObjectBuffer, std::move(SSP));
   case file_magic::coff_object:
-    return createLinkGraphFromCOFFObject(ObjectBuffer);
+    return createLinkGraphFromCOFFObject(ObjectBuffer, std::move(SSP));
+  case file_magic::xcoff_object_64:
+    return createLinkGraphFromXCOFFObject(ObjectBuffer, std::move(SSP));
   default:
     return make_error<JITLinkError>("Unsupported file format");
   };
 }
 
-std::unique_ptr<LinkGraph> absoluteSymbolsLinkGraph(const Triple &TT,
-                                                    orc::SymbolMap Symbols) {
-  unsigned PointerSize;
-  endianness Endianness =
-      TT.isLittleEndian() ? endianness::little : endianness::big;
-  switch (TT.getArch()) {
-  case Triple::aarch64:
-  case llvm::Triple::riscv64:
-  case Triple::x86_64:
-    PointerSize = 8;
-    break;
-  case llvm::Triple::arm:
-  case llvm::Triple::riscv32:
-  case llvm::Triple::x86:
-    PointerSize = 4;
-    break;
-  default:
-    llvm::report_fatal_error("unhandled target architecture");
-  }
-
+std::unique_ptr<LinkGraph>
+absoluteSymbolsLinkGraph(Triple TT, std::shared_ptr<orc::SymbolStringPool> SSP,
+                         orc::SymbolMap Symbols) {
   static std::atomic<uint64_t> Counter = {0};
   auto Index = Counter.fetch_add(1, std::memory_order_relaxed);
   auto G = std::make_unique<LinkGraph>(
-      "<Absolute Symbols " + std::to_string(Index) + ">", TT, PointerSize,
-      Endianness, /*GetEdgeKindName=*/nullptr);
+      "<Absolute Symbols " + std::to_string(Index) + ">", std::move(SSP),
+      std::move(TT), SubtargetFeatures(), getGenericEdgeKindName);
   for (auto &[Name, Def] : Symbols) {
     auto &Sym =
         G->addAbsoluteSymbol(*Name, Def.getAddress(), /*Size=*/0,
@@ -531,6 +541,8 @@ void link(std::unique_ptr<LinkGraph> G, std::unique_ptr<JITLinkContext> Ctx) {
     return link_ELF(std::move(G), std::move(Ctx));
   case Triple::COFF:
     return link_COFF(std::move(G), std::move(Ctx));
+  case Triple::XCOFF:
+    return link_XCOFF(std::move(G), std::move(Ctx));
   default:
     Ctx->notifyFailed(make_error<JITLinkError>("Unsupported object format"));
   };

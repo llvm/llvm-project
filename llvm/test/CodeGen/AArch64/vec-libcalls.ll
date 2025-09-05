@@ -24,6 +24,7 @@ declare <3 x float> @llvm.tan.v3f32(<3 x float>)
 declare <3 x float> @llvm.asin.v3f32(<3 x float>)
 declare <3 x float> @llvm.acos.v3f32(<3 x float>)
 declare <3 x float> @llvm.atan.v3f32(<3 x float>)
+declare <3 x float> @llvm.atan2.v3f32(<3 x float>, <3 x float>)
 declare <3 x float> @llvm.sinh.v3f32(<3 x float>)
 declare <3 x float> @llvm.cosh.v3f32(<3 x float>)
 declare <3 x float> @llvm.tanh.v3f32(<3 x float>)
@@ -425,6 +426,40 @@ define <3 x float> @atan_v3f32(<3 x float> %x) nounwind {
 ; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   %r = call <3 x float> @llvm.atan.v3f32(<3 x float> %x)
+  ret <3 x float> %r
+}
+
+define <3 x float> @atan2_v3f32(<3 x float> %x, <3 x float> %y) nounwind {
+; CHECK-LABEL: atan2_v3f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #64
+; CHECK-NEXT:    stp q0, q1, [sp, #16] // 32-byte Folded Spill
+; CHECK-NEXT:    mov s0, v0.s[1]
+; CHECK-NEXT:    mov s1, v1.s[1]
+; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
+; CHECK-NEXT:    bl atan2f
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    ldp q0, q1, [sp, #16] // 32-byte Folded Reload
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-NEXT:    // kill: def $s1 killed $s1 killed $q1
+; CHECK-NEXT:    bl atan2f
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    ldp q0, q1, [sp, #16] // 32-byte Folded Reload
+; CHECK-NEXT:    mov s0, v0.s[2]
+; CHECK-NEXT:    mov s1, v1.s[2]
+; CHECK-NEXT:    bl atan2f
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
+; CHECK-NEXT:    mov v1.s[2], v0.s[0]
+; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    add sp, sp, #64
+; CHECK-NEXT:    ret
+  %r = call <3 x float> @llvm.atan2.v3f32(<3 x float> %x, <3 x float> %y)
   ret <3 x float> %r
 }
 

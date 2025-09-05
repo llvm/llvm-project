@@ -42,7 +42,7 @@ PrivateHeaders directory as well, though it does not need an additional
 "_private" suffix on its name.
 
 Clang will search for API notes files next to module maps only when passed the
-``-fapi-notes-modules`` option.
+``-fapinotes-modules`` option.
 
 
 Limitations
@@ -172,10 +172,28 @@ declaration kind), all of which are optional:
   ::
 
     Tags:
+    - Name: OwnedStorage
+      SwiftImportAs: owned
+
+:SwiftRetainOp, SwiftReleaseOp:
+
+  Controls the lifetime operations of a class which uses custom reference
+  counting. The class must be annotated as a reference type using
+  ``SwiftImportAs: reference``. The values are either names of global functions,
+  each taking a single parameter of a pointer type, or ``immortal`` for a type
+  that is considered alive for the duration of the program.
+
+  ::
+
+    Tags:
     - Name: RefCountedStorage
       SwiftImportAs: reference
       SwiftReleaseOp: RCRelease
       SwiftRetainOp: RCRetain
+    - Name: ImmortalSingleton
+      SwiftImportAs: reference
+      SwiftReleaseOp: immortal
+      SwiftRetainOp: immortal
 
 :SwiftCopyable:
 
@@ -187,6 +205,17 @@ declaration kind), all of which are optional:
     Tags:
     - Name: tzdb
       SwiftCopyable: false
+
+  A non-copyable type can have a "destroy" operation, specified with
+  `SwiftDestroyOp`, which will be invoked on the instance when it is no
+  longer in use to free up resources.
+
+  ::
+
+    Tags:
+    - Name: WGPUAdapterInfo
+      SwiftCopyable: false
+      SwiftDestroyOp: wgpuAdapterInfoFreeMembers
 
 :SwiftConformsTo:
 

@@ -10,7 +10,7 @@
 
 #include "test/UnitTest/Test.h"
 
-#include <stdlib.h>
+#include "hdr/types/size_t.h"
 
 static int int_compare_count(const void *l, const void *r, void *count_arg) {
   int li = *reinterpret_cast<const int *>(l);
@@ -62,9 +62,9 @@ TEST(LlvmLibcQsortRTest, SortedArray) {
   ASSERT_LE(array[23], 11100);
   ASSERT_LE(array[24], 12310);
 
-  // This is a sorted list, but there still have to have been at least N
+  // This is a sorted list, but there still have to have been at least N - 1
   // comparisons made.
-  ASSERT_GE(count, ARRAY_SIZE);
+  ASSERT_GE(count, ARRAY_SIZE - 1);
 }
 
 TEST(LlvmLibcQsortRTest, ReverseSortedArray) {

@@ -35,7 +35,6 @@ clang_target_link_libraries(clangTidy
   clangFrontend
   clangLex
   clangRewrite
-  clangSema
   clangSerialization
   clangTooling
   clangToolingCore

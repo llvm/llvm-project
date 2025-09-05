@@ -14,13 +14,11 @@
 #include "BPF.h"
 #include "BPFInstrInfo.h"
 #include "BPFMCInstLower.h"
-#include "BPFTargetMachine.h"
 #include "BTFDebug.h"
 #include "MCTargetDesc/BPFInstPrinter.h"
 #include "TargetInfo/BPFTargetInfo.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/Module.h"
@@ -29,6 +27,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
@@ -39,7 +38,7 @@ class BPFAsmPrinter : public AsmPrinter {
 public:
   explicit BPFAsmPrinter(TargetMachine &TM,
                          std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), BTF(nullptr) {}
+      : AsmPrinter(TM, std::move(Streamer), ID), BTF(nullptr) {}
 
   StringRef getPassName() const override { return "BPF Assembly Printer"; }
   bool doInitialization(Module &M) override;
@@ -50,6 +49,8 @@ public:
                              const char *ExtraCode, raw_ostream &O) override;
 
   void emitInstruction(const MachineInstr *MI) override;
+
+  static char ID;
 
 private:
   BTFDebug *BTF;
@@ -62,7 +63,7 @@ bool BPFAsmPrinter::doInitialization(Module &M) {
   // Only emit BTF when debuginfo available.
   if (MAI->doesSupportDebugInformation() && !M.debug_compile_units().empty()) {
     BTF = new BTFDebug(this);
-    DebugHandlers.push_back(std::unique_ptr<BTFDebug>(BTF));
+    Handlers.push_back(std::unique_ptr<BTFDebug>(BTF));
   }
 
   return false;
@@ -149,8 +150,14 @@ void BPFAsmPrinter::emitInstruction(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, TmpInst);
 }
 
+char BPFAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(BPFAsmPrinter, "bpf-asm-printer", "BPF Assembly Printer", false,
+                false)
+
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeBPFAsmPrinter() {
   RegisterAsmPrinter<BPFAsmPrinter> X(getTheBPFleTarget());
   RegisterAsmPrinter<BPFAsmPrinter> Y(getTheBPFbeTarget());
   RegisterAsmPrinter<BPFAsmPrinter> Z(getTheBPFTarget());

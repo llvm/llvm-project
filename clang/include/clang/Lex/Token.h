@@ -86,9 +86,12 @@ public:
                                 // macro stringizing or charizing operator.
     CommaAfterElided = 0x200, // The comma following this token was elided (MS).
     IsEditorPlaceholder = 0x400, // This identifier is a placeholder.
-    IsReinjected = 0x800, // A phase 4 token that was produced before and
+    IsReinjected = 0x800,        // A phase 4 token that was produced before and
                           // re-added, e.g. via EnterTokenStream. Annotation
                           // tokens are *not* reinjected.
+    HasSeenNoTrivialPPDirective =
+        0x1000, // Whether we've seen any 'no-trivial' pp-directives before
+                // current position.
   };
 
   tok::TokenKind getKind() const { return Kind; }
@@ -98,11 +101,10 @@ public:
   /// "if (Tok.is(tok::l_brace)) {...}".
   bool is(tok::TokenKind K) const { return Kind == K; }
   bool isNot(tok::TokenKind K) const { return Kind != K; }
-  bool isOneOf(tok::TokenKind K1, tok::TokenKind K2) const {
-    return is(K1) || is(K2);
-  }
-  template <typename... Ts> bool isOneOf(tok::TokenKind K1, Ts... Ks) const {
-    return is(K1) || isOneOf(Ks...);
+  template <typename... Ts> bool isOneOf(Ts... Ks) const {
+    static_assert(sizeof...(Ts) > 0,
+                  "requires at least one tok::TokenKind specified");
+    return (is(Ks) || ...);
   }
 
   /// Return true if this is a raw identifier (when lexing
@@ -318,6 +320,10 @@ public:
   /// represented as characters between '<#' and '#>' in the source code. The
   /// lexer uses identifier tokens to represent placeholders.
   bool isEditorPlaceholder() const { return getFlag(IsEditorPlaceholder); }
+
+  bool hasSeenNoTrivialPPDirective() const {
+    return getFlag(HasSeenNoTrivialPPDirective);
+  }
 };
 
 /// Information about the conditional stack (\#if directives)

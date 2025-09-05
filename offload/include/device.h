@@ -98,6 +98,10 @@ struct DeviceTy {
   int32_t dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                        int64_t Size, AsyncInfoTy &AsyncInfo);
 
+  // Insert a data fence between previous data operations and the following
+  // operations if necessary for the device.
+  int32_t dataFence(AsyncInfoTy &AsyncInfo);
+
   /// Notify the plugin about a new mapping starting at the host address
   /// \p HstPtr and \p Size bytes.
   int32_t notifyDataMapped(void *HstPtr, int64_t Size);
@@ -134,7 +138,7 @@ struct DeviceTy {
   int32_t recordEvent(void *Event, AsyncInfoTy &AsyncInfo);
 
   /// Wait for an event. This function can be blocking or non-blocking,
-  /// depending on the implmentation. It is expected to set a dependence on the
+  /// depending on the implementation. It is expected to set a dependence on the
   /// event such that corresponding operations shall only start once the event
   /// is fulfilled.
   int32_t waitEvent(void *Event, AsyncInfoTy &AsyncInfo);

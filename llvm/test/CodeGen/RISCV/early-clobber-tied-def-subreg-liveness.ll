@@ -32,7 +32,7 @@ define void @_Z3foov() {
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs1r.v v10, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs1r.v v10, (a0) # vscale x 8-byte Folded Spill
 ; CHECK-NEXT:    lui a0, %hi(.L__const._Z3foov.var_46)
 ; CHECK-NEXT:    addi a0, a0, %lo(.L__const._Z3foov.var_46)
 ; CHECK-NEXT:    vle16.v v10, (a0)
@@ -40,39 +40,23 @@ define void @_Z3foov() {
 ; CHECK-NEXT:    addi a0, a0, %lo(.L__const._Z3foov.var_45)
 ; CHECK-NEXT:    vle16.v v12, (a0)
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    vs2r.v v12, (a0) # Unknown-size Folded Spill
-; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    vs2r.v v14, (a0) # Unknown-size Folded Spill
-; CHECK-NEXT:    #APP
-; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    lui a0, %hi(.L__const._Z3foov.var_40)
 ; CHECK-NEXT:    addi a0, a0, %lo(.L__const._Z3foov.var_40)
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m2, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    lui a0, 1048572
 ; CHECK-NEXT:    addi a0, a0, 928
 ; CHECK-NEXT:    vmsbc.vx v0, v8, a0
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    vl2r.v v8, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    vl2r.v v12, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    vl2r.v v14, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl1r.v v14, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl1r.v v14, (a0) # vscale x 8-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, tu, mu
 ; CHECK-NEXT:    vsext.vf2 v8, v14, v0.t
 ; CHECK-NEXT:    lui a0, %hi(.L__const._Z3foov.var_44)
@@ -86,7 +70,9 @@ define void @_Z3foov() {
 ; CHECK-NEXT:    slli a1, a0, 3
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call <vscale x 8 x i16> @llvm.riscv.vle.nxv8i16.i64(<vscale x 8 x i16> undef, ptr nonnull @__const._Z3foov.var_49, i64 2)

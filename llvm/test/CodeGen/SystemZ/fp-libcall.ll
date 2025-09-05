@@ -212,6 +212,16 @@ define fp128 @f30(fp128 %x, fp128 %y) {
   ret fp128 %tmp
 }
 
+define half @f31_half(half %x, half %y) {
+; CHECK-LABEL: f31_half:
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: brasl %r14, fmaxf@PLT
+; CHECK: brasl %r14, __truncsfhf2@PLT
+  %tmp = call half @llvm.maxnum.f16(half %x, half %y)
+  ret half %tmp
+}
+
 define float @f31(float %x, float %y) {
 ; CHECK-LABEL: f31:
 ; CHECK: brasl %r14, fmaxf@PLT

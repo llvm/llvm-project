@@ -46,9 +46,9 @@ for.end:
 ; CHECK:     LV: Found uniform instruction: %tmp1 = getelementptr inbounds i32, ptr %a, i64 %i
 ; CHECK:     vector.body
 ; CHECK:       %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK:       %offset.idx = sub i64 %n, %index
+; CHECK:       [[OFFSET_IDX:%.+]] = sub i64 %n, %index
 ; CHECK-NOT:   getelementptr
-; CHECK:       %[[G0:.+]] = getelementptr inbounds i32, ptr %a, i64 %offset.idx
+; CHECK:       %[[G0:.+]] = getelementptr inbounds i32, ptr %a, i64 [[OFFSET_IDX]]
 ; CHECK:       getelementptr inbounds i8, ptr %[[G0]], i64 -12
 ; CHECK-NOT:   getelementptr
 ; CHECK:       br i1 {{.*}}, label %middle.block, label %vector.body
@@ -87,10 +87,10 @@ for.end:
 ; CHECK:       %[[I1:.+]] = or disjoint i64 %index, 1
 ; CHECK:       %[[I2:.+]] = or disjoint i64 %index, 2
 ; CHECK:       %[[I3:.+]] = or disjoint i64 %index, 3
-; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %index, i32 0
-; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I1]], i32 0
-; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I2]], i32 0
-; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I3]], i32 0
+; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %index
+; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I1]]
+; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I2]]
+; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I3]]
 ; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %index, i32 1
 ; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I1]], i32 1
 ; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I2]], i32 1
@@ -102,7 +102,7 @@ for.end:
 ; INTER:     vector.body
 ; INTER:       %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; INTER-NOT:   getelementptr
-; INTER:       getelementptr inbounds %pair, ptr %p, i64 %index, i32 0
+; INTER:       getelementptr inbounds %pair, ptr %p, i64 %index
 ; INTER-NOT:   getelementptr
 ; INTER:       br i1 {{.*}}, label %middle.block, label %vector.body
 ;
@@ -141,15 +141,15 @@ for.end:
 ; CHECK-NOT: LV: Found uniform instruction: %tmp2 = getelementptr inbounds %pair, ptr %p, i64 %i, i32 1
 ; CHECK:     vector.body
 ; CHECK:       %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK:       %offset.idx = sub i64 %n, %index
-; CHECK:       %[[I1:.+]] = add i64 %offset.idx, -1
-; CHECK:       %[[I2:.+]] = add i64 %offset.idx, -2
-; CHECK:       %[[I3:.+]] = add i64 %offset.idx, -3
-; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %offset.idx, i32 0
-; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I1]], i32 0
-; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I2]], i32 0
-; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I3]], i32 0
-; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %offset.idx, i32 1
+; CHECK:       [[OFFSET_IDX:%.+]] = sub i64 %n, %index
+; CHECK:       %[[I1:.+]] = add i64 [[OFFSET_IDX]], -1
+; CHECK:       %[[I2:.+]] = add i64 [[OFFSET_IDX]], -2
+; CHECK:       %[[I3:.+]] = add i64 [[OFFSET_IDX]], -3
+; CHECK:       getelementptr inbounds %pair, ptr %p, i64 [[OFFSET_IDX]]
+; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I1]]
+; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I2]]
+; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I3]]
+; CHECK:       getelementptr inbounds %pair, ptr %p, i64 [[OFFSET_IDX]], i32 1
 ; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I1]], i32 1
 ; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I2]], i32 1
 ; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I3]], i32 1
@@ -159,9 +159,9 @@ for.end:
 ; INTER:     LV: Found uniform instruction: %tmp2 = getelementptr inbounds %pair, ptr %p, i64 %i, i32 1
 ; INTER:     vector.body
 ; INTER:       %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; INTER:       %offset.idx = sub i64 %n, %index
+; INTER:       [[OFFSET_IDX:%.+]] = sub i64 %n, %index
 ; INTER-NOT:   getelementptr
-; INTER:       %[[G0:.+]] = getelementptr inbounds %pair, ptr %p, i64 %offset.idx, i32 0
+; INTER:       %[[G0:.+]] = getelementptr inbounds %pair, ptr %p, i64 [[OFFSET_IDX]]
 ; INTER:       getelementptr inbounds i8, ptr %[[G0]], i64 -24
 ; INTER-NOT:   getelementptr
 ; INTER:       br i1 {{.*}}, label %middle.block, label %vector.body
@@ -200,14 +200,14 @@ for.end:
 ; INTER-NOT: LV: Found uniform instruction: %tmp0 = getelementptr inbounds %pair, ptr %p, i64 %i, i32 0
 ; INTER:     vector.body
 ; INTER:       %index = phi i64 [ 0, %vector.ph ], [ %index.next, {{.*}} ]
-; INTER:       %[[G0:.+]] = getelementptr inbounds %pair, ptr %p, i64 %index, i32 0
+; INTER:       %[[G0:.+]] = getelementptr inbounds %pair, ptr %p, i64 %index
 ; INTER:       %wide.vec = load <8 x i32>, ptr %[[G0]], align 8
-; INTER:       %[[I1:.+]] = or disjoint i64 %index, 1
-; INTER:       getelementptr inbounds %pair, ptr %p, i64 %[[I1]], i32 0
-; INTER:       %[[I2:.+]] = or disjoint i64 %index, 2
-; INTER:       getelementptr inbounds %pair, ptr %p, i64 %[[I2]], i32 0
-; INTER:       %[[I3:.+]] = or disjoint i64 %index, 3
-; INTER:       getelementptr inbounds %pair, ptr %p, i64 %[[I3]], i32 0
+; INTER:       %[[G1:.+]] = getelementptr %pair, ptr %p, i64 %index
+; INTER:       getelementptr i8, ptr %[[G1]], i64 8
+; INTER:       %[[G2:.+]] = getelementptr %pair, ptr %p, i64 %index
+; INTER:       getelementptr i8, ptr %[[G2]], i64 16
+; INTER:       %[[G3:.+]] = getelementptr %pair, ptr %p, i64 %index
+; INTER:       getelementptr i8, ptr %[[G3]], i64 24
 ; INTER:       br i1 {{.*}}, label %middle.block, label %vector.body
 ;
 define void @predicated_store(ptr %p, i32 %x, i64 %n) {
@@ -243,13 +243,13 @@ for.end:
 ; CHECK-NOT: LV: Found uniform instruction: %tmp1 = getelementptr inbounds x86_fp80, ptr %a, i64 %i
 ; CHECK:     vector.body
 ; CHECK:       %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK:       %[[I1:.+]] = or disjoint i64 %index, 1
-; CHECK:       %[[I2:.+]] = or disjoint i64 %index, 2
-; CHECK:       %[[I3:.+]] = or disjoint i64 %index, 3
 ; CHECK:       getelementptr inbounds x86_fp80, ptr %a, i64 %index
-; CHECK:       getelementptr inbounds x86_fp80, ptr %a, i64 %[[I1]]
-; CHECK:       getelementptr inbounds x86_fp80, ptr %a, i64 %[[I2]]
-; CHECK:       getelementptr inbounds x86_fp80, ptr %a, i64 %[[I3]]
+; CHECK:       %[[G1:.+]] = getelementptr x86_fp80, ptr %a, i64 %index
+; CHECK:       getelementptr i8, ptr %[[G1]], i64 16
+; CHECK:       %[[G2:.+]] = getelementptr x86_fp80, ptr %a, i64 %index
+; CHECK:       getelementptr i8, ptr %[[G2]], i64 32
+; CHECK:       %[[G3:.+]] = getelementptr x86_fp80, ptr %a, i64 %index
+; CHECK:       getelementptr i8, ptr %[[G3]], i64 48
 ; CHECK:       br i1 {{.*}}, label %middle.block, label %vector.body
 ;
 define void @irregular_type(ptr %a, i64 %n) {
@@ -311,13 +311,13 @@ for.end:
 ; INTER:     vector.body
 ; INTER:       %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; INTER:       %[[I0:.+]] = shl i64 %index, 4
-; INTER:       %[[I1:.+]] = or disjoint i64 %[[I0]], 16
-; INTER:       %[[I2:.+]] = or disjoint i64 %[[I0]], 32
-; INTER:       %[[I3:.+]] = or disjoint i64 %[[I0]], 48
-; INTER:       %next.gep = getelementptr i8, ptr %a, i64 %[[I0]]
-; INTER:       %next.gep2 = getelementptr i8, ptr %a, i64 %[[I1]]
-; INTER:       %next.gep3 = getelementptr i8, ptr %a, i64 %[[I2]]
-; INTER:       %next.gep4 = getelementptr i8, ptr %a, i64 %[[I3]]
+; INTER-NEXT:  %next.gep = getelementptr i8, ptr %a, i64 %[[I0]]
+; INTER-NEXT:  %[[G2:.+]] = getelementptr i8, ptr %a, i64 %[[I0]]
+; INTER-NEXT:  %[[G3:.+]] = getelementptr i8, ptr %a, i64 %[[I0]]
+; INTER-NEXT:  %[[G4:.+]] = getelementptr i8, ptr %a, i64 %[[I0]]
+; INTER:       = getelementptr i8, ptr %[[G2]], i64 24
+; INTER-NEXT:  = getelementptr i8, ptr %[[G3]], i64 40
+; INTER-NEXT:  = getelementptr i8, ptr %[[G4]], i64 56
 ; INTER:       br i1 {{.*}}, label %middle.block, label %vector.body
 ;
 define void @pointer_iv_non_uniform_0(ptr %a, i64 %n) {
@@ -358,13 +358,13 @@ for.end:
 ; CHECK:     vector.body
 ; CHECK:       %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; CHECK:       [[SHL1:%.+]] = shl i64 %index, 4
-; CHECK:       %[[I1:.+]] = or disjoint i64 [[SHL1]], 16
-; CHECK:       %[[I2:.+]] = or disjoint i64 [[SHL1]], 32
-; CHECK:       %[[I3:.+]] = or disjoint i64 [[SHL1]], 48
 ; CHECK:       %next.gep = getelementptr i8, ptr %a, i64 [[SHL1]]
-; CHECK:       %next.gep2 = getelementptr i8, ptr %a, i64 %[[I1]]
-; CHECK:       %next.gep3 = getelementptr i8, ptr %a, i64 %[[I2]]
-; CHECK:       %next.gep4 = getelementptr i8, ptr %a, i64 %[[I3]]
+; CHECK:       %[[G1:.+]] = getelementptr i8, ptr %a, i64 [[SHL1]]
+; CHECK:       = getelementptr i8, ptr %[[G1]], i64 16
+; CHECK:       %[[G2:.+]] = getelementptr i8, ptr %a, i64 [[SHL1]]
+; CHECK:       = getelementptr i8, ptr %[[G2]], i64 32
+; CHECK:       %[[G3:.+]] = getelementptr i8, ptr %a, i64 [[SHL1]]
+; CHECK:       = getelementptr i8, ptr %[[G3]], i64 48
 ; CHECK:       br i1 {{.*}}, label %middle.block, label %vector.body
 ;
 define void @pointer_iv_non_uniform_1(ptr %a, i64 %n) {
@@ -395,8 +395,8 @@ for.end:
 ; CHECK-NOT: LV: Found uniform instruction: %p = phi ptr [ %tmp3, %for.body ], [ %a, %entry ]
 ; CHECK:     LV: Found uniform instruction: %q = phi ptr [ %tmp4, %for.body ], [ %b, %entry ]
 ; CHECK:     vector.body
-; CHECK:       %pointer.phi = phi ptr [ %a, %vector.ph ], [ %ptr.ind, %vector.body ]
 ; CHECK:       %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+; CHECK:       %pointer.phi = phi ptr [ %a, %vector.ph ], [ %ptr.ind, %vector.body ]
 ; CHECK:       %[[PTRVEC:.+]] = getelementptr i8, ptr %pointer.phi, <4 x i64> <i64 0, i64 4, i64 8, i64 12>
 ; CHECK:       [[SHL:%.+]] = shl i64 %index, 3
 ; CHECK:       %next.gep = getelementptr i8, ptr %b, i64 [[SHL]]

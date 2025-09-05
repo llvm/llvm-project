@@ -3347,6 +3347,11 @@ _func:
 // CHECK: mov      x2, #5299989643264             // encoding: [0x42,0x9a,0xc0,0xd2]
 // CHECK: movk     xzr, #{{4321|0x10e1}}, lsl #48 // encoding: [0x3f,0x1c,0xe2,0xf2]
 
+	.equ equvalue, 0x0001
+        movk x1, equvalue, lsl 16
+// CHECK: equvalue = 1
+// CHECK-NEXT: movk x1, #1, lsl #16 // encoding: [0x21,0x00,0xa0,0xf2]
+
         movz x2, #:abs_g0:sym
         movk w3, #:abs_g0_nc:sym
 

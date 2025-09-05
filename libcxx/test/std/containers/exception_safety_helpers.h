@@ -11,6 +11,7 @@
 
 #include <cassert>
 #include <cstddef>
+#include <forward_list>
 #include <functional>
 #include <utility>
 #include "test_macros.h"
@@ -25,9 +26,7 @@ struct ThrowingCopy {
 
   ThrowingCopy() = default;
   ThrowingCopy(int value) : x(value) {}
-  ~ThrowingCopy() {
-    ++destroyed;
-  }
+  ~ThrowingCopy() { ++destroyed; }
 
   ThrowingCopy(const ThrowingCopy& other) : x(other.x) {
     ++created_by_copying;
@@ -45,9 +44,7 @@ struct ThrowingCopy {
   friend bool operator==(const ThrowingCopy& lhs, const ThrowingCopy& rhs) { return lhs.x == rhs.x; }
   friend bool operator<(const ThrowingCopy& lhs, const ThrowingCopy& rhs) { return lhs.x < rhs.x; }
 
-  static void reset() {
-    created_by_copying = destroyed = 0;
-  }
+  static void reset() { created_by_copying = destroyed = 0; }
 };
 
 template <int N>
@@ -58,10 +55,35 @@ template <int N>
 int ThrowingCopy<N>::destroyed = 0;
 
 template <int N>
-struct std::hash<ThrowingCopy<N>> {
-  std::size_t operator()(const ThrowingCopy<N>& value) const {
-    return value.x;
+struct ThrowingDefault {
+  static bool throwing_enabled;
+  static int default_constructed;
+  static int destroyed;
+  int x = 0;
+
+  ThrowingDefault() {
+    ++default_constructed;
+    if (throwing_enabled && default_constructed == N) {
+      throw -1;
+    }
   }
+
+  ThrowingDefault(int value) : x(value) {}
+  ThrowingDefault(const ThrowingDefault& other) = default;
+  friend bool operator==(const ThrowingDefault& lhs, const ThrowingDefault& rhs) { return lhs.x == rhs.x; }
+  friend bool operator<(const ThrowingDefault& lhs, const ThrowingDefault& rhs) { return lhs.x < rhs.x; }
+
+  static void reset() { default_constructed = destroyed = 0; }
+};
+
+template <int N>
+bool ThrowingDefault<N>::throwing_enabled = true;
+template <int N>
+int ThrowingDefault<N>::default_constructed = 0;
+
+template <int N>
+struct std::hash<ThrowingCopy<N>> {
+  std::size_t operator()(const ThrowingCopy<N>& value) const { return value.x; }
 };
 
 template <int ThrowOn, int Size, class Func>
@@ -84,7 +106,7 @@ void test_exception_safety_throwing_copy(Func&& func) {
 // complicate asserting that the expected number of elements was destroyed).
 template <class Container, int ThrowOn, int Size, class Func>
 void test_exception_safety_throwing_copy_container(Func&& func) {
-  using T = ThrowingCopy<ThrowOn>;
+  using T             = ThrowingCopy<ThrowOn>;
   T::throwing_enabled = false;
   T in[Size];
   Container c(in, in + Size);
@@ -98,6 +120,29 @@ void test_exception_safety_throwing_copy_container(Func&& func) {
   } catch (int) {
     assert(T::created_by_copying == ThrowOn);
     assert(T::destroyed == ThrowOn - 1); // No destructor call for the partially-constructed element.
+  }
+}
+
+template <int ThrowOn, int Size, class Func>
+void test_strong_exception_safety_throwing_copy(Func&& func) {
+  using T             = ThrowingCopy<ThrowOn>;
+  T::throwing_enabled = false;
+
+  std::forward_list<T> c0(Size);
+  for (int i = 0; i < Size; ++i)
+    c0.emplace_front(i);
+  std::forward_list<T> c = c0;
+  T in[Size];
+  T::reset();
+  T::throwing_enabled = true;
+  try {
+    func(c, in, in + Size);
+    assert(false); // The function call above should throw.
+
+  } catch (int) {
+    assert(T::created_by_copying == ThrowOn);
+    assert(T::destroyed == ThrowOn - 1); // No destructor call for the partially-constructed element.
+    assert(c == c0);                     // Strong exception guarantee
   }
 }
 

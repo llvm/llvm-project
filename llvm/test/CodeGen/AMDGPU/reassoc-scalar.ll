@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX8 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=GCN,GFX8 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
 
 ; GCN-LABEL: reassoc_i32:
 ; GCN: s_add_i32 [[ADD1:s[0-9]+]], s{{[0-9]+}}, s{{[0-9]+}}
@@ -56,7 +56,7 @@ define amdgpu_kernel void @reassoc_v2i32(ptr addrspace(1) %arg, <2 x i32> %x, <2
 bb:
   %t1 = tail call i32 @llvm.amdgcn.workitem.id.x()
   %t2 = tail call i32 @llvm.amdgcn.workitem.id.y()
-  %v1 = insertelement <2 x i32> undef, i32 %t1, i32 0
+  %v1 = insertelement <2 x i32> poison, i32 %t1, i32 0
   %v2 = insertelement <2 x i32> %v1, i32 %t2, i32 1
   %add1 = add <2 x i32> %x, %v2
   %add2 = add <2 x i32> %add1, %y

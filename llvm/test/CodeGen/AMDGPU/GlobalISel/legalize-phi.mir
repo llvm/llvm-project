@@ -134,8 +134,7 @@ body: |
   ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
   ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[BITCAST1]], [[C2]]
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-  ; CHECK-NEXT:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY2]], [[C1]](s32)
+  ; CHECK-NEXT:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[C]], [[C1]](s32)
   ; CHECK-NEXT:   [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
   ; CHECK-NEXT:   [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
   ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[UV]](<2 x s16>), [[BITCAST2]](<2 x s16>)

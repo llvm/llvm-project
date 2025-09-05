@@ -3,7 +3,7 @@
 
 #ifndef __SYCL_DEVICE_ONLY__
 // expected-warning@+7 {{'sycl_kernel' attribute ignored}}
-// expected-warning@+8 {{'sycl_kernel' attribute ignored}}
+// expected-warning@+8 {{'clang::sycl_kernel' attribute ignored}}
 #else
 // expected-no-diagnostics
 #endif

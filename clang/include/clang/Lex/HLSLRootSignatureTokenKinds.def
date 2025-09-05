@@ -1,0 +1,246 @@
+//===--- HLSLRootSignature.def - Tokens and Enum Database -------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the TokenKinds used in the Root Signature DSL. This
+// includes keywords, enums and a small subset of punctuators. Users of this
+// file must optionally #define the TOK, KEYWORD, ENUM or specific ENUM macros
+// to make use of this file.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef TOK
+#define TOK(X, SPELLING)
+#endif
+#ifndef PUNCTUATOR
+#define PUNCTUATOR(X,Y) TOK(pu_ ## X, Y)
+#endif
+#ifndef KEYWORD
+#define KEYWORD(X) TOK(kw_ ## X, #X)
+#endif
+#ifndef ENUM
+#define ENUM(NAME, LIT) TOK(en_ ## NAME, LIT)
+#endif
+
+// Defines the various types of enum
+#ifndef ROOT_FLAG_ENUM
+#define ROOT_FLAG_ENUM(NAME, LIT) ENUM(NAME, LIT)
+#endif
+#ifndef UNBOUNDED_ENUM
+#define UNBOUNDED_ENUM(NAME, LIT) ENUM(NAME, LIT)
+#endif
+#ifndef DESCRIPTOR_RANGE_OFFSET_ENUM
+#define DESCRIPTOR_RANGE_OFFSET_ENUM(NAME, LIT) ENUM(NAME, LIT)
+#endif
+#ifndef ROOT_DESCRIPTOR_FLAG_ENUM
+#define ROOT_DESCRIPTOR_FLAG_ENUM(NAME, LIT) ENUM(NAME, LIT)
+#endif
+// Note: ON denotes that the flag is unique from the above Root Descriptor
+//  Flags. This is required to avoid token kind enum conflicts.
+#ifndef DESCRIPTOR_RANGE_FLAG_ENUM_OFF
+#define DESCRIPTOR_RANGE_FLAG_ENUM_OFF(NAME, LIT)
+#endif
+#ifndef DESCRIPTOR_RANGE_FLAG_ENUM_ON
+#define DESCRIPTOR_RANGE_FLAG_ENUM_ON(NAME, LIT) ENUM(NAME, LIT)
+#endif
+#ifndef DESCRIPTOR_RANGE_FLAG_ENUM
+#define DESCRIPTOR_RANGE_FLAG_ENUM(NAME, LIT, ON) DESCRIPTOR_RANGE_FLAG_ENUM_##ON(NAME, LIT)
+#endif
+#ifndef SHADER_VISIBILITY_ENUM
+#define SHADER_VISIBILITY_ENUM(NAME, LIT) ENUM(NAME, LIT)
+#endif
+#ifndef FILTER_ENUM
+#define FILTER_ENUM(NAME, LIT) ENUM(NAME, LIT)
+#endif
+#ifndef TEXTURE_ADDRESS_MODE_ENUM
+#define TEXTURE_ADDRESS_MODE_ENUM(NAME, LIT) ENUM(NAME, LIT)
+#endif
+#ifndef COMPARISON_FUNC_ENUM
+#define COMPARISON_FUNC_ENUM(NAME, LIT) ENUM(NAME, LIT)
+#endif
+#ifndef STATIC_BORDER_COLOR_ENUM
+#define STATIC_BORDER_COLOR_ENUM(NAME, LIT) ENUM(NAME, LIT)
+#endif
+
+// General Tokens:
+TOK(invalid, "invalid identifier")
+TOK(end_of_stream, "end of stream")
+TOK(int_literal, "integer literal")
+TOK(float_literal, "float literal")
+
+// Register Tokens:
+TOK(bReg, "b register")
+TOK(tReg, "t register")
+TOK(uReg, "u register")
+TOK(sReg, "s register")
+
+// Punctuators:
+PUNCTUATOR(l_paren, '(')
+PUNCTUATOR(r_paren, ')')
+PUNCTUATOR(comma,   ',')
+PUNCTUATOR(or,      '|')
+PUNCTUATOR(equal,   '=')
+PUNCTUATOR(plus,    '+')
+PUNCTUATOR(minus,   '-')
+
+// RootElement Keywords:
+KEYWORD(RootSignature) // used only for diagnostic messaging
+KEYWORD(RootFlags)
+KEYWORD(DescriptorTable)
+KEYWORD(RootConstants)
+KEYWORD(StaticSampler)
+
+// RootConstants Keywords:
+KEYWORD(num32BitConstants)
+
+// DescriptorTable Keywords:
+KEYWORD(CBV)
+KEYWORD(SRV)
+KEYWORD(UAV)
+KEYWORD(Sampler)
+
+// General Parameter Keywords:
+KEYWORD(space)
+KEYWORD(visibility)
+KEYWORD(flags)
+
+// View Parameter Keywords:
+KEYWORD(numDescriptors)
+KEYWORD(offset)
+
+// StaticSampler Keywords:
+KEYWORD(filter)
+KEYWORD(mipLODBias)
+KEYWORD(addressU)
+KEYWORD(addressV)
+KEYWORD(addressW)
+KEYWORD(maxAnisotropy)
+KEYWORD(comparisonFunc)
+KEYWORD(borderColor)
+KEYWORD(minLOD)
+KEYWORD(maxLOD)
+
+// Unbounded Enum:
+UNBOUNDED_ENUM(unbounded, "unbounded")
+
+// Descriptor Range Offset Enum:
+DESCRIPTOR_RANGE_OFFSET_ENUM(DescriptorRangeOffsetAppend, "DESCRIPTOR_RANGE_OFFSET_APPEND")
+
+// Root Flag Enums:
+ROOT_FLAG_ENUM(AllowInputAssemblerInputLayout, "ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT")
+ROOT_FLAG_ENUM(DenyVertexShaderRootAccess, "DENY_VERTEX_SHADER_ROOT_ACCESS")
+ROOT_FLAG_ENUM(DenyHullShaderRootAccess, "DENY_HULL_SHADER_ROOT_ACCESS")
+ROOT_FLAG_ENUM(DenyDomainShaderRootAccess, "DENY_DOMAIN_SHADER_ROOT_ACCESS")
+ROOT_FLAG_ENUM(DenyGeometryShaderRootAccess, "DENY_GEOMETRY_SHADER_ROOT_ACCESS")
+ROOT_FLAG_ENUM(DenyPixelShaderRootAccess, "DENY_PIXEL_SHADER_ROOT_ACCESS")
+ROOT_FLAG_ENUM(DenyAmplificationShaderRootAccess, "DENY_AMPLIFICATION_SHADER_ROOT_ACCESS")
+ROOT_FLAG_ENUM(DenyMeshShaderRootAccess, "DENY_MESH_SHADER_ROOT_ACCESS")
+ROOT_FLAG_ENUM(AllowStreamOutput, "ALLOW_STREAM_OUTPUT")
+ROOT_FLAG_ENUM(LocalRootSignature, "LOCAL_ROOT_SIGNATURE")
+ROOT_FLAG_ENUM(CBVSRVUAVHeapDirectlyIndexed, "CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED")
+ROOT_FLAG_ENUM(SamplerHeapDirectlyIndexed , "SAMPLER_HEAP_DIRECTLY_INDEXED")
+
+// Root Descriptor Flag Enums:
+ROOT_DESCRIPTOR_FLAG_ENUM(DataVolatile, "DATA_VOLATILE")
+ROOT_DESCRIPTOR_FLAG_ENUM(DataStaticWhileSetAtExecute, "DATA_STATIC_WHILE_SET_AT_EXECUTE")
+ROOT_DESCRIPTOR_FLAG_ENUM(DataStatic, "DATA_STATIC")
+
+// Descriptor Range Flag Enums:
+DESCRIPTOR_RANGE_FLAG_ENUM(DescriptorsVolatile, "DESCRIPTORS_VOLATILE", ON)
+DESCRIPTOR_RANGE_FLAG_ENUM(DataVolatile, "DATA_VOLATILE", OFF)
+DESCRIPTOR_RANGE_FLAG_ENUM(DataStaticWhileSetAtExecute, "DATA_STATIC_WHILE_SET_AT_EXECUTE", OFF)
+DESCRIPTOR_RANGE_FLAG_ENUM(DataStatic, "DATA_STATIC", OFF)
+DESCRIPTOR_RANGE_FLAG_ENUM(DescriptorsStaticKeepingBufferBoundsChecks, "DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS", ON)
+
+// Shader Visibiliy Enums:
+SHADER_VISIBILITY_ENUM(All, "SHADER_VISIBILITY_ALL")
+SHADER_VISIBILITY_ENUM(Vertex, "SHADER_VISIBILITY_VERTEX")
+SHADER_VISIBILITY_ENUM(Hull, "SHADER_VISIBILITY_HULL")
+SHADER_VISIBILITY_ENUM(Domain, "SHADER_VISIBILITY_DOMAIN")
+SHADER_VISIBILITY_ENUM(Geometry, "SHADER_VISIBILITY_GEOMETRY")
+SHADER_VISIBILITY_ENUM(Pixel, "SHADER_VISIBILITY_PIXEL")
+SHADER_VISIBILITY_ENUM(Amplification, "SHADER_VISIBILITY_AMPLIFICATION")
+SHADER_VISIBILITY_ENUM(Mesh, "SHADER_VISIBILITY_MESH")
+
+// Filter Enums:
+FILTER_ENUM(MinMagMipPoint, "FILTER_MIN_MAG_MIP_POINT")
+FILTER_ENUM(MinMagPointMipLinear, "FILTER_MIN_MAG_POINT_MIP_LINEAR")
+FILTER_ENUM(MinPointMagLinearMipPoint, "FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT")
+FILTER_ENUM(MinPointMagMipLinear, "FILTER_MIN_POINT_MAG_MIP_LINEAR")
+FILTER_ENUM(MinLinearMagMipPoint, "FILTER_MIN_LINEAR_MAG_MIP_POINT")
+FILTER_ENUM(MinLinearMagPointMipLinear, "FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR")
+FILTER_ENUM(MinMagLinearMipPoint, "FILTER_MIN_MAG_LINEAR_MIP_POINT")
+FILTER_ENUM(MinMagMipLinear, "FILTER_MIN_MAG_MIP_LINEAR")
+FILTER_ENUM(Anisotropic, "FILTER_ANISOTROPIC")
+FILTER_ENUM(ComparisonMinMagMipPoint, "FILTER_COMPARISON_MIN_MAG_MIP_POINT")
+FILTER_ENUM(ComparisonMinMagPointMipLinear, "FILTER_COMPARISON_MIN_MAG_POINT_MIP_LINEAR")
+FILTER_ENUM(ComparisonMinPointMagLinearMipPoint, "FILTER_COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT")
+FILTER_ENUM(ComparisonMinPointMagMipLinear, "FILTER_COMPARISON_MIN_POINT_MAG_MIP_LINEAR")
+FILTER_ENUM(ComparisonMinLinearMagMipPoint, "FILTER_COMPARISON_MIN_LINEAR_MAG_MIP_POINT")
+FILTER_ENUM(ComparisonMinLinearMagPointMipLinear, "FILTER_COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR")
+FILTER_ENUM(ComparisonMinMagLinearMipPoint, "FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT")
+FILTER_ENUM(ComparisonMinMagMipLinear, "FILTER_COMPARISON_MIN_MAG_MIP_LINEAR")
+FILTER_ENUM(ComparisonAnisotropic, "FILTER_COMPARISON_ANISOTROPIC")
+FILTER_ENUM(MinimumMinMagMipPoint, "FILTER_MINIMUM_MIN_MAG_MIP_POINT")
+FILTER_ENUM(MinimumMinMagPointMipLinear, "FILTER_MINIMUM_MIN_MAG_POINT_MIP_LINEAR")
+FILTER_ENUM(MinimumMinPointMagLinearMipPoint, "FILTER_MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT")
+FILTER_ENUM(MinimumMinPointMagMipLinear, "FILTER_MINIMUM_MIN_POINT_MAG_MIP_LINEAR")
+FILTER_ENUM(MinimumMinLinearMagMipPoint, "FILTER_MINIMUM_MIN_LINEAR_MAG_MIP_POINT")
+FILTER_ENUM(MinimumMinLinearMagPointMipLinear, "FILTER_MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR")
+FILTER_ENUM(MinimumMinMagLinearMipPoint, "FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT")
+FILTER_ENUM(MinimumMinMagMipLinear, "FILTER_MINIMUM_MIN_MAG_MIP_LINEAR")
+FILTER_ENUM(MinimumAnisotropic, "FILTER_MINIMUM_ANISOTROPIC")
+FILTER_ENUM(MaximumMinMagMipPoint, "FILTER_MAXIMUM_MIN_MAG_MIP_POINT")
+FILTER_ENUM(MaximumMinMagPointMipLinear, "FILTER_MAXIMUM_MIN_MAG_POINT_MIP_LINEAR")
+FILTER_ENUM(MaximumMinPointMagLinearMipPoint, "FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT")
+FILTER_ENUM(MaximumMinPointMagMipLinear, "FILTER_MAXIMUM_MIN_POINT_MAG_MIP_LINEAR")
+FILTER_ENUM(MaximumMinLinearMagMipPoint, "FILTER_MAXIMUM_MIN_LINEAR_MAG_MIP_POINT")
+FILTER_ENUM(MaximumMinLinearMagPointMipLinear, "FILTER_MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR")
+FILTER_ENUM(MaximumMinMagLinearMipPoint, "FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT")
+FILTER_ENUM(MaximumMinMagMipLinear, "FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR")
+FILTER_ENUM(MaximumAnisotropic, "FILTER_MAXIMUM_ANISOTROPIC")
+
+// Texture Address Mode Enums:
+TEXTURE_ADDRESS_MODE_ENUM(Wrap, "TEXTURE_ADDRESS_WRAP")
+TEXTURE_ADDRESS_MODE_ENUM(Mirror, "TEXTURE_ADDRESS_MIRROR")
+TEXTURE_ADDRESS_MODE_ENUM(Clamp, "TEXTURE_ADDRESS_CLAMP")
+TEXTURE_ADDRESS_MODE_ENUM(Border, "TEXTURE_ADDRESS_BORDER")
+TEXTURE_ADDRESS_MODE_ENUM(MirrorOnce, "TEXTURE_ADDRESS_MIRRORONCE")
+
+// Comparison Func Enums:
+COMPARISON_FUNC_ENUM(Never, "COMPARISON_NEVER")
+COMPARISON_FUNC_ENUM(Less, "COMPARISON_LESS")
+COMPARISON_FUNC_ENUM(Equal, "COMPARISON_EQUAL")
+COMPARISON_FUNC_ENUM(LessEqual, "COMPARISON_LESS_EQUAL")
+COMPARISON_FUNC_ENUM(Greater, "COMPARISON_GREATER")
+COMPARISON_FUNC_ENUM(NotEqual, "COMPARISON_NOT_EQUAL")
+COMPARISON_FUNC_ENUM(GreaterEqual, "COMPARISON_GREATER_EQUAL")
+COMPARISON_FUNC_ENUM(Always, "COMPARISON_ALWAYS")
+
+// Static Border Color Enums:
+STATIC_BORDER_COLOR_ENUM(TransparentBlack, "STATIC_BORDER_COLOR_TRANSPARENT_BLACK")
+STATIC_BORDER_COLOR_ENUM(OpaqueBlack, "STATIC_BORDER_COLOR_OPAQUE_BLACK")
+STATIC_BORDER_COLOR_ENUM(OpaqueWhite, "STATIC_BORDER_COLOR_OPAQUE_WHITE")
+STATIC_BORDER_COLOR_ENUM(OpaqueBlackUint, "STATIC_BORDER_COLOR_OPAQUE_BLACK_UINT")
+STATIC_BORDER_COLOR_ENUM(OpaqueWhiteUint, "STATIC_BORDER_COLOR_OPAQUE_WHITE_UINT")
+
+#undef STATIC_BORDER_COLOR_ENUM
+#undef COMPARISON_FUNC_ENUM
+#undef TEXTURE_ADDRESS_MODE_ENUM
+#undef FILTER_ENUM
+#undef SHADER_VISIBILITY_ENUM
+#undef DESCRIPTOR_RANGE_FLAG_ENUM
+#undef DESCRIPTOR_RANGE_FLAG_ENUM_OFF
+#undef DESCRIPTOR_RANGE_FLAG_ENUM_ON
+#undef ROOT_DESCRIPTOR_FLAG_ENUM
+#undef ROOT_FLAG_ENUM
+#undef DESCRIPTOR_RANGE_OFFSET_ENUM
+#undef UNBOUNDED_ENUM
+#undef ENUM
+#undef KEYWORD
+#undef PUNCTUATOR
+#undef TOK

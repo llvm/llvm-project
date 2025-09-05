@@ -121,9 +121,9 @@ constexpr bool test() {
   }
 
   {
-    // TODO(LLVM 20): Remove once we drop support for Clang 17
-#if defined(TEST_CLANG_VER) && TEST_CLANG_VER >= 1800
-    // https://github.com/llvm/llvm-project/issues/92676
+    // TODO: Drop this once AppleClang is upgraded
+#ifndef TEST_COMPILER_APPLE_CLANG
+    // https://llvm.org/PR92676
     std::expected<Any, int> e1;
     auto e2 = e1;
     assert(e2.has_value());

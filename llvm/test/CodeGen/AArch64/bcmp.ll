@@ -494,13 +494,14 @@ define i1 @bcmp_i128(i128 %a0, i128 %b0, i128 %a1, i128 %b1, i128 %a2, i128 %b2)
 ; CHECK-LABEL: bcmp_i128:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x2, x0
-; CHECK-NEXT:    ldp x8, x10, [sp]
+; CHECK-NEXT:    ldp x10, x8, [sp, #8]
 ; CHECK-NEXT:    ccmp x3, x1, #0, eq
-; CHECK-NEXT:    ldp x9, x11, [sp, #16]
+; CHECK-NEXT:    ldr x9, [sp]
+; CHECK-NEXT:    ldr x11, [sp, #24]
 ; CHECK-NEXT:    ccmp x6, x4, #0, eq
 ; CHECK-NEXT:    ccmp x7, x5, #0, eq
 ; CHECK-NEXT:    cset w12, ne
-; CHECK-NEXT:    cmp x9, x8
+; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    ccmp x11, x10, #0, eq
 ; CHECK-NEXT:    csinc w0, w12, wzr, eq
 ; CHECK-NEXT:    ret

@@ -183,10 +183,18 @@ static Error handleArgs(const CommonConfig &Config,
   });
 
   if (Config.OnlyKeepDebug) {
+    const data_directory *DebugDir =
+        Obj.DataDirectories.size() > DEBUG_DIRECTORY
+            ? &Obj.DataDirectories[DEBUG_DIRECTORY]
+            : nullptr;
     // For --only-keep-debug, we keep all other sections, but remove their
     // content. The VirtualSize field in the section header is kept intact.
-    Obj.truncateSections([](const Section &Sec) {
+    Obj.truncateSections([DebugDir](const Section &Sec) {
       return !isDebugSection(Sec) && Sec.Name != ".buildid" &&
+             !(DebugDir && DebugDir->Size > 0 &&
+               DebugDir->RelativeVirtualAddress >= Sec.Header.VirtualAddress &&
+               DebugDir->RelativeVirtualAddress <
+                   Sec.Header.VirtualAddress + Sec.Header.SizeOfRawData) &&
              ((Sec.Header.Characteristics &
                (IMAGE_SCN_CNT_CODE | IMAGE_SCN_CNT_INITIALIZED_DATA)) != 0);
     });

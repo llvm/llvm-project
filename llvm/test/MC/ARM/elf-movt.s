@@ -26,8 +26,8 @@ bar:
 @ ASM-NEXT:     movt    r0, :upper16:(GOT-(.LPC0_2+8))
 @ ASM:          movw    r0, :lower16:(extern_symbol+1234)
 @ ASM-NEXT:     movt    r0, :upper16:(extern_symbol+1234)
-@ ASM:          movw    r0, :lower16:((foo-bar)+1234)
-@ ASM-NEXT:     movt    r0, :upper16:((foo-bar)+1234)
+@ ASM:          movw    r0, :lower16:(foo-bar+1234)
+@ ASM-NEXT:     movt    r0, :upper16:(foo-bar+1234)
 
 @OBJ:      Disassembly of section .text:
 @OBJ-EMPTY:

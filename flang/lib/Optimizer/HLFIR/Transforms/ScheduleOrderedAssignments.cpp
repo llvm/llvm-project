@@ -137,7 +137,7 @@ private:
   // Schedule being built.
   hlfir::Schedule schedule;
   /// Leaf regions that have been saved so far.
-  llvm::SmallSet<mlir::Region *, 16> savedRegions;
+  llvm::SmallPtrSet<mlir::Region *, 16> savedRegions;
   /// Is schedule.back() a schedule that is only saving region with read
   /// effects?
   bool currentRunIsReadOnly = false;
@@ -347,12 +347,23 @@ conflict(llvm::ArrayRef<mlir::MemoryEffects::EffectInstance> effectsA,
          anyRAWorWAW(effectsB, effectsA, aliasAnalysis);
 }
 
-/// Could there be any write effects in "effects"?
+/// Could there be any write effects in "effects" affecting memory storages
+/// that are not local to the current region.
 static bool
-anyWrite(llvm::ArrayRef<mlir::MemoryEffects::EffectInstance> effects) {
+anyNonLocalWrite(llvm::ArrayRef<mlir::MemoryEffects::EffectInstance> effects,
+                 mlir::Region &region) {
   return llvm::any_of(
-      effects, [](const mlir::MemoryEffects::EffectInstance &effect) {
-        return mlir::isa<mlir::MemoryEffects::Write>(effect.getEffect());
+      effects, [&region](const mlir::MemoryEffects::EffectInstance &effect) {
+        if (mlir::isa<mlir::MemoryEffects::Write>(effect.getEffect())) {
+          if (mlir::Value v = effect.getValue()) {
+            v = getStorageSource(v);
+            if (v.getDefiningOp<fir::AllocaOp>() ||
+                v.getDefiningOp<fir::AllocMemOp>())
+              return !region.isAncestor(v.getParentRegion());
+          }
+          return true;
+        }
+        return false;
       });
 }
 
@@ -366,7 +377,7 @@ void Scheduler::startSchedulingAssignment(hlfir::RegionAssignOp assign,
   // Unconditionally collect effects of the evaluations of LHS and RHS
   // in case they need to be analyzed for any parent that might be
   // affected by conflicts of these evaluations.
-  // This collection migth be skipped, if there are no such parents,
+  // This collection might be skipped, if there are no such parents,
   // but for the time being we run it always.
   gatherAssignEvaluationEffects(assign, leafRegionsMayOnlyRead,
                                 assignEvaluateEffects);
@@ -393,9 +404,13 @@ void Scheduler::saveEvaluationIfConflict(mlir::Region &yieldRegion,
     if (entity && hlfir::isFortranVariableType(entity->get().getType()))
       effects.emplace_back(mlir::MemoryEffects::Read::get(), entity);
   }
-  if (!leafRegionsMayOnlyRead && anyWrite(effects)) {
-    // Region with write effect must be executed only once: save it the first
-    // time it is encountered.
+  if (!leafRegionsMayOnlyRead && anyNonLocalWrite(effects, yieldRegion)) {
+    // Region with write effect must be executed only once (unless all writes
+    // affect storages allocated inside the region): save it the first time it
+    // is encountered.
+    LLVM_DEBUG(llvm::dbgs()
+                   << "saving eval because write effect prevents re-evaluation"
+                   << "\n";);
     saveEvaluation(yieldRegion, effects, /*anyWrite=*/true);
   } else if (conflict(effects, assignEffects)) {
     // Region that conflicts with the current assignments must be fully
@@ -411,7 +426,8 @@ void Scheduler::saveEvaluationIfConflict(mlir::Region &yieldRegion,
     // For example, a WHERE mask might be written by the masked assignment
     // evaluations, and it has to be saved in this case:
     //   where (mask) r = f() ! function f modifies mask
-    saveEvaluation(yieldRegion, effects, anyWrite(effects));
+    saveEvaluation(yieldRegion, effects,
+                   anyNonLocalWrite(effects, yieldRegion));
   } else {
     // Can be executed while doing the assignment.
     independentEvaluationEffects.append(effects.begin(), effects.end());
@@ -581,9 +597,12 @@ hlfir::buildEvaluationSchedule(hlfir::OrderedAssignmentTreeOpInterface root,
     // Look for conflicts between the RHS/LHS evaluation and the assignments.
     // The LHS yield has no implicit read effect on the produced variable (the
     // variable is not read before the assignment).
+    // During pointer assignments, the RHS data is not read, only the address
+    // is taken.
     scheduler.startIndependentEvaluationGroup();
-    scheduler.saveEvaluationIfConflict(assign.getRhsRegion(),
-                                       leafRegionsMayOnlyRead);
+    scheduler.saveEvaluationIfConflict(
+        assign.getRhsRegion(), leafRegionsMayOnlyRead,
+        /*yieldIsImplicitRead=*/!assign.isPointerAssignment());
     // There is no point to save the LHS outside of Forall and assignment to a
     // vector subscripted LHS because the LHS is already fully evaluated and
     // saved in the resulting SSA address value (that may be a descriptor or

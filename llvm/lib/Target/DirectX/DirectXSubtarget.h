@@ -49,6 +49,10 @@ public:
   const DirectXFrameLowering *getFrameLowering() const override { return &FL; }
 
   const DirectXInstrInfo *getInstrInfo() const override { return &InstrInfo; }
+
+  const DirectXRegisterInfo *getRegisterInfo() const override {
+    return &InstrInfo.getRegisterInfo();
+  }
 };
 
 } // end namespace llvm

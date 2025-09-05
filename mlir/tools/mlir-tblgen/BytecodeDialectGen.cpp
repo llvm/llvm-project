@@ -10,6 +10,7 @@
 #include "mlir/TableGen/GenInfo.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
@@ -150,9 +151,9 @@ void Generator::emitParse(StringRef kind, const Record &x) {
   os << "\n\n";
 }
 
-void printParseConditional(mlir::raw_indented_ostream &ios,
-                           ArrayRef<const Init *> args,
-                           ArrayRef<std::string> argNames) {
+static void printParseConditional(mlir::raw_indented_ostream &ios,
+                                  ArrayRef<const Init *> args,
+                                  ArrayRef<std::string> argNames) {
   ios << "if ";
   auto parenScope = ios.scope("(", ") {");
   ios.indent();
@@ -161,13 +162,12 @@ void printParseConditional(mlir::raw_indented_ostream &ios,
     return formatv("read{0}", capitalize(name));
   };
 
-  auto parsedArgs =
-      llvm::to_vector(make_filter_range(args, [](const Init *const attr) {
-        const Record *def = cast<DefInit>(attr)->getDef();
-        if (def->isSubClassOf("Array"))
-          return true;
-        return !def->getValueAsString("cParser").empty();
-      }));
+  auto parsedArgs = llvm::filter_to_vector(args, [](const Init *const attr) {
+    const Record *def = cast<DefInit>(attr)->getDef();
+    if (def->isSubClassOf("Array"))
+      return true;
+    return !def->getValueAsString("cParser").empty();
+  });
 
   interleave(
       zip(parsedArgs, argNames),
@@ -277,8 +277,8 @@ void Generator::emitParseHelper(StringRef kind, StringRef returnType,
   printParseConditional(ios, args, argNames);
 
   // Compute args to pass to create method.
-  auto passedArgs = llvm::to_vector(make_filter_range(
-      argNames, [](StringRef str) { return !str.starts_with("_"); }));
+  auto passedArgs = llvm::filter_to_vector(
+      argNames, [](StringRef str) { return !str.starts_with("_"); });
   std::string argStr;
   raw_string_ostream argStream(argStr);
   interleaveComma(passedArgs, argStream,

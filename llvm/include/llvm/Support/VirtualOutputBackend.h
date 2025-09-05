@@ -1,9 +1,20 @@
-//===- VirtualOutputBackend.h - Output virtualization -----------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declarations of the VirtualOutputBackend class, which
+/// can be used to virtualized output files from LLVM tools.
+/// VirtualOutputBackend provides an unified interface to write outputs and a
+/// configurable interface for tools to operate on those outputs.
+/// VirtualOutputBackend contains basic implementations like writing to disk
+/// with different configurations, or advanced logics like output filtering
+/// and duplicating.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_SUPPORT_VIRTUALOUTPUTBACKEND_H

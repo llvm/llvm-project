@@ -292,7 +292,7 @@ public:
   };
 
 private:
-  const Kind K;
+  Kind K;
   QualType T;
   const char *Name = nullptr;
   bool Ptr = false;
@@ -338,6 +338,7 @@ public:
   }
 
   MatchKind matchesType(ASTContext &C, QualType argTy) const;
+  MatchKind matchesArgType(ASTContext &C, const ArgType &other) const;
 
   QualType getRepresentativeType(ASTContext &C) const;
 
@@ -488,7 +489,8 @@ public:
 
   /// For a TypedefType QT, if it is a named integer type such as size_t,
   /// assign the appropriate value to LM and return true.
-  static bool namedTypeToLengthModifier(QualType QT, LengthModifier &LM);
+  static bool namedTypeToLengthModifier(ASTContext &Ctx, QualType QT,
+                                        LengthModifier &LM);
 };
 
 } // end analyze_format_string namespace
