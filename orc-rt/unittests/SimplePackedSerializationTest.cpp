@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/SimplePackedSerialization.h"
+
 #include "SimplePackedSerializationTestUtils.h"
 #include "gtest/gtest.h"
 
@@ -181,4 +182,78 @@ TEST(SimplePackedSerializationTest, ArgListSerialization) {
   EXPECT_EQ(Arg1, ArgOut1);
   EXPECT_EQ(Arg2, ArgOut2);
   EXPECT_EQ(Arg3, ArgOut3);
+}
+
+TEST(SimplePackedSerializationTest, SerializeErrorSuccess) {
+  auto B = spsSerialize<SPSArgList<SPSError>>(
+      SPSSerializableError(Error::success()));
+  if (!B) {
+    ADD_FAILURE() << "Unexpected failure to serialize error-success value";
+    return;
+  }
+  SPSSerializableError SE;
+  if (!spsDeserialize<SPSArgList<SPSError>>(*B, SE)) {
+    ADD_FAILURE() << "Unexpected failure to deserialize error-success value";
+    return;
+  }
+
+  auto E = SE.toError();
+  EXPECT_FALSE(!!E); // Expect non-error, i.e. Error::success().
+}
+
+TEST(SimplePackedSerializationTest, SerializeErrorFailure) {
+  auto B = spsSerialize<SPSArgList<SPSError>>(
+      SPSSerializableError(make_error<StringError>("test error message")));
+  if (!B) {
+    ADD_FAILURE() << "Unexpected failure to serialize error-failure value";
+    return;
+  }
+  SPSSerializableError SE;
+  if (!spsDeserialize<SPSArgList<SPSError>>(*B, SE)) {
+    ADD_FAILURE() << "Unexpected failure to deserialize error-failure value";
+    return;
+  }
+
+  EXPECT_EQ(toString(SE.toError()), std::string("test error message"));
+}
+
+TEST(SimplePackedSerializationTest, SerializeExpectedSuccess) {
+  auto B = spsSerialize<SPSArgList<SPSExpected<uint32_t>>>(
+      toSPSSerializableExpected(Expected<uint32_t>(42U)));
+  if (!B) {
+    ADD_FAILURE() << "Unexpected failure to serialize expected-success value";
+    return;
+  }
+  SPSSerializableExpected<uint32_t> SE;
+  if (!spsDeserialize<SPSArgList<SPSExpected<uint32_t>>>(*B, SE)) {
+    ADD_FAILURE() << "Unexpected failure to deserialize expected-success value";
+    return;
+  }
+
+  auto E = SE.toExpected();
+  if (E)
+    EXPECT_EQ(*E, 42U);
+  else
+    ADD_FAILURE() << "Unexpected failure value";
+}
+
+TEST(SimplePackedSerializationTest, SerializeExpectedFailure) {
+  auto B = spsSerialize<SPSArgList<SPSExpected<uint32_t>>>(
+      toSPSSerializableExpected<uint32_t>(
+          make_error<StringError>("test error message")));
+  if (!B) {
+    ADD_FAILURE() << "Unexpected failure to serialize expected-failure value";
+    return;
+  }
+  SPSSerializableExpected<uint32_t> SE;
+  if (!spsDeserialize<SPSArgList<SPSExpected<uint32_t>>>(*B, SE)) {
+    ADD_FAILURE() << "Unexpected failure to deserialize expected-failure value";
+    return;
+  }
+
+  auto E = SE.toExpected();
+  if (E)
+    ADD_FAILURE() << "Unexpected failure value";
+  else
+    EXPECT_EQ(toString(E.takeError()), std::string("test error message"));
 }
