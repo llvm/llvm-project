@@ -549,6 +549,91 @@ static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
 __riscv_pmaxu_h(uint32_t __x, uint32_t __y) {
   return __builtin_riscv_pmaxu_h_32(__x, __y);
 }
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulh_h(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_pmulh_h_32(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulh_h_b0(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_pmulh_h_b0_32(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulh_h_b1(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_pmulh_h_b1_32(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulhu_h(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_pmulhu_h_32(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulhr_h(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_pmulhr_h_32(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulhru_h(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_pmulhru_h_32(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulhsu_h(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_pmulhsu_h_32(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulhsu_h_b0(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_pmulhsu_h_b0_32(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulhsu_h_b1(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_pmulhsu_h_b1_32(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulhrsu_h(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_pmulhrsu_h_32(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_mulh_h1(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_mulh_h1(__x, __y);
+}
+
+static __inline__ int32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_mulhr(int32_t __x, int32_t __y) {
+  return __builtin_riscv_mulhr(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_mulhru(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_mulhru(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_mulh_h0(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_mulh_h0(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_mulhsu_h0(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_mulhsu_h0(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_mulhsu_h1(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_mulhsu_h1(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_mulhrsu(uint32_t __x, int32_t __y) {
+  return __builtin_riscv_mulhrsu(__x, __y);
+}
 #endif
 
 
@@ -1301,6 +1386,106 @@ __riscv_pmaxu_h(uint64_t __x, uint64_t __y) {
 static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
 __riscv_pmaxu_w(uint64_t __x, uint64_t __y) {
   return __builtin_riscv_pmaxu_w(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulh_h(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pmulh_h_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulh_w(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pmulh_w(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulh_h_b0(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pmulh_h_b0_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulh_w_h0(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pmulh_w_h0(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulh_h_b1(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pmulh_h_b1_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulh_w_h1(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pmulh_w_h1(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulhu_h(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pmulhu_h_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulhu_w(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pmulhu_w(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulhr_h(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pmulhr_h_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulhr_w(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pmulhr_w(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulhru_h(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pmulhru_h_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulhru_w(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pmulhru_w(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulhsu_h(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pmulhsu_h_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulhsu_w(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pmulhsu_w(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulhsu_h_b0(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pmulhsu_h_b0_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulhsu_w_h0(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pmulhsu_w_h0(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulhsu_h_b1(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pmulhsu_h_b1_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulhsu_w_h1(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pmulhsu_w_h1(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulhrsu_h(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pmulhrsu_h_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_pmulhrsu_w(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_pmulhrsu_w(__x, __y);
 }
 #endif
 
