@@ -13,6 +13,7 @@
 #ifndef LLVM_TARGETPARSER_HOST_H
 #define LLVM_TARGETPARSER_HOST_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Compiler.h"
 #include <string>
 
@@ -63,6 +64,8 @@ namespace detail {
 /// Helper functions to extract HostCPUName from /proc/cpuinfo on linux.
 LLVM_ABI StringRef getHostCPUNameForPowerPC(StringRef ProcCpuinfoContent);
 LLVM_ABI StringRef getHostCPUNameForARM(StringRef ProcCpuinfoContent);
+LLVM_ABI StringRef getHostCPUNameForARM(uint64_t PrimaryCpuInfo,
+                                        ArrayRef<uint64_t> UniqueCpuInfos);
 LLVM_ABI StringRef getHostCPUNameForS390x(StringRef ProcCpuinfoContent);
 LLVM_ABI StringRef getHostCPUNameForRISCV(StringRef ProcCpuinfoContent);
 LLVM_ABI StringRef getHostCPUNameForSPARC(StringRef ProcCpuinfoContent);

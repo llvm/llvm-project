@@ -109,6 +109,7 @@ static bool isODRAttribute(uint16_t Attr) {
   case dwarf::DW_AT_specification:
   case dwarf::DW_AT_abstract_origin:
   case dwarf::DW_AT_import:
+  case dwarf::DW_AT_LLVM_alloc_type:
     return true;
   }
   llvm_unreachable("Improper attribute.");

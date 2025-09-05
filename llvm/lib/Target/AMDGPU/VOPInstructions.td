@@ -475,17 +475,24 @@ class VOP3Pe_Base {
   bits<1> index_key_32bit;
   bits<3> matrix_a_fmt;
   bits<3> matrix_b_fmt;
+  bits<1> matrix_a_scale;
+  bits<1> matrix_b_scale;
+  bits<2> matrix_a_scale_fmt;
+  bits<2> matrix_b_scale_fmt;
   bits<1> matrix_a_reuse;
   bits<1> matrix_b_reuse;
 }
 
 class VOP3Pe <VOPProfile P> : Enc64, VOP3Pe_Base {
   let Inst{7-0} = !if(P.HasDst, vdst, 0);
-  let Inst{8} = !if(P.HasSrc0Mods, src0_modifiers{1}, 0); // neg_hi src0
-  let Inst{9} = !if(P.HasSrc1Mods, src1_modifiers{1}, 0); // neg_hi src1
+  let Inst{8} = !if(P.HasSrc0Mods, src0_modifiers{1},
+                                   !if(P.HasMatrixScale, matrix_b_scale_fmt{0}, 0)); // neg_hi src0
+  let Inst{9} = !if(P.HasSrc1Mods, src1_modifiers{1},
+                                   !if(P.HasMatrixScale, matrix_b_scale_fmt{1}, 0)); // neg_hi src1
   let Inst{10} = !if(P.HasSrc2Mods, src2_modifiers{1}, 0); // neg_hi src2
 
-  let Inst{11} = !if(!and(P.HasSrc0, P.HasOpSel), src0_modifiers{2}, 0); // op_sel(0)
+  let Inst{11} = !if(!and(P.HasSrc0, P.HasOpSel), src0_modifiers{2},
+                     !if(P.HasMatrixScale, matrix_a_scale{0}, 0)); // op_sel(0)
   let Inst{12} = !if(!and(P.HasSrc1, P.HasOpSel), src1_modifiers{2}, 0); // op_sel(1)
   let Inst{13} = !if(!and(P.HasSrc2, P.HasOpSel), src2_modifiers{2},
                      !if(P.HasMatrixReuse, matrix_a_reuse, 0));    // op_sel(2)
@@ -500,10 +507,17 @@ class VOP3Pe <VOPProfile P> : Enc64, VOP3Pe_Base {
   let Inst{40-32} = !if(P.HasSrc0, src0, 0);
   let Inst{49-41} = !if(P.HasSrc1, src1, 0);
   let Inst{58-50} = !if(P.HasSrc2, src2, 0);
-  let Inst{59}    = !if(!and(P.HasSrc0, P.HasOpSel), src0_modifiers{3}, !if(P.IsDOT, 1, ?)); // op_sel_hi(0)
-  let Inst{60}    = !if(!and(P.HasSrc1, P.HasOpSel), src1_modifiers{3}, !if(P.IsDOT, 1, ?)); // op_sel_hi(1)
-  let Inst{61}    = !if(P.HasSrc0Mods, src0_modifiers{0}, 0); // neg (lo)
-  let Inst{62}    = !if(P.HasSrc1Mods, src1_modifiers{0}, 0); // neg (lo)
+  let Inst{59}    = !cond(!and(P.HasSrc0, P.HasOpSel) : src0_modifiers{3},
+                          P.IsDOT : 1,
+                          P.HasMatrixScale : matrix_b_scale{0},
+                          1: ?); // op_sel_hi(0)
+  let Inst{60}    = !if(!and(P.HasSrc1, P.HasOpSel), src1_modifiers{3},
+                        !if(P.HasMatrixScale, 0,
+                            !if(P.IsDOT, 1, ?))); // op_sel_hi(1)
+  let Inst{61}    = !if(P.HasSrc0Mods, src0_modifiers{0},
+                                       !if(P.HasMatrixScale, matrix_a_scale_fmt{0}, 0)); // neg (lo)
+  let Inst{62}    = !if(P.HasSrc1Mods, src1_modifiers{0},
+                                       !if(P.HasMatrixScale, matrix_a_scale_fmt{1}, 0)); // neg (lo)
   let Inst{63}    = !if(P.HasSrc2Mods, src2_modifiers{0}, 0); // neg (lo)
 }
 

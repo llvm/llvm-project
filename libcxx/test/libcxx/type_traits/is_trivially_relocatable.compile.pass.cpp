@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <__type_traits/is_trivially_relocatable.h>
 #include <array>
 #include <deque>
@@ -28,7 +26,7 @@
 #  include <locale>
 #endif
 
-#if __has_extension(pointer_field_protection)
+#if defined(__POINTER_FIELD_PROTECTION__)
 constexpr bool pfp_disabled = false;
 #else
 constexpr bool pfp_disabled = true;

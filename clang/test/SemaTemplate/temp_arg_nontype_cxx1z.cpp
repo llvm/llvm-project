@@ -621,3 +621,8 @@ namespace GH73460 {
   int j;
   template struct A<int&, j, j>;
 } // namespace GH73460
+
+namespace GH118190 {
+  template <auto> int x;
+  template <int i> int x<i>;
+}
