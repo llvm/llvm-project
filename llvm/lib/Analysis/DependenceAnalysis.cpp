@@ -3497,19 +3497,17 @@ SCEVSignedMonotonicityChecker::visitNAryHelper(const SCEVNAryExpr *Expr) {
     case MonotonicityType::Invariant:
       break;
     case MonotonicityType::MultiMonotonic: {
+      if (!Expr->hasNoSignedWrap())
+        return unknownMonotonicity(Expr);
       switch (Result) {
       case MonotonicityType::Unknown:
         llvm_unreachable("should have been handled above");
       case MonotonicityType::NoSignedWrap:
         break;
       case MonotonicityType::Invariant:
-        if (!Expr->hasNoSignedWrap())
-          return unknownMonotonicity(Expr);
         Result = MonotonicityType::MultiMonotonic;
         break;
       case MonotonicityType::MultiMonotonic:
-        if (!Expr->hasNoSignedWrap())
-          return unknownMonotonicity(Expr);
         if (!isa<SCEVAddExpr>(Expr))
           return unknownMonotonicity(Expr);
         // Monotonic + Monotonic might be a loop invariant, e.g., the following
