@@ -1,0 +1,23 @@
+## Tests env command for clearing the environment
+
+## Check and make sure preset environment variable were set in lit.cfg.
+#
+# RUN: env | FileCheck --check-prefix=CHECK-ENV-PRESET %s
+## Check clearing the entire environment.
+#
+# RUN: env -i | FileCheck --check-prefix=CHECK-ENV-CLEAR-1 %s
+#
+## Check setting a variable in a clear environment.
+#
+# RUN: env -i BAZ=3 | FileCheck --check-prefix=CHECK-ENV-ONE-1 %s
+#
+
+# CHECK-ENV-PRESET: BAR = 2
+# CHECK-ENV-PRESET: FOO = 1
+
+# CHECK-ENV-CLEAR-NOT: BAR
+# CHECK-ENV-CLEAR-NOT: FOO
+
+# CHECK-ENV-ONE-NOT: BAR
+# CHECK-ENV-ONE: BAZ = 3
+# CHECK-ENV-ONE-NOT: FOO

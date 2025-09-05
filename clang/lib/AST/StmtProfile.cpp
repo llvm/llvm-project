@@ -2636,8 +2636,11 @@ void OpenACCClauseProfiler::VisitPrivateClause(
     const OpenACCPrivateClause &Clause) {
   VisitClauseWithVarList(Clause);
 
-  for (auto *VD : Clause.getInitRecipes())
-    Profiler.VisitDecl(VD);
+  for (auto &Recipe : Clause.getInitRecipes()) {
+    Profiler.VisitDecl(Recipe.AllocaDecl);
+    if (Recipe.InitExpr)
+      Profiler.VisitExpr(Recipe.InitExpr);
+  }
 }
 
 void OpenACCClauseProfiler::VisitFirstPrivateClause(
@@ -2645,7 +2648,9 @@ void OpenACCClauseProfiler::VisitFirstPrivateClause(
   VisitClauseWithVarList(Clause);
 
   for (auto &Recipe : Clause.getInitRecipes()) {
-    Profiler.VisitDecl(Recipe.RecipeDecl);
+    Profiler.VisitDecl(Recipe.AllocaDecl);
+    if (Recipe.InitExpr)
+      Profiler.VisitExpr(Recipe.InitExpr);
     Profiler.VisitDecl(Recipe.InitFromTemporary);
   }
 }
@@ -2750,11 +2755,13 @@ void OpenACCClauseProfiler::VisitReductionClause(
   VisitClauseWithVarList(Clause);
 
   for (auto &Recipe : Clause.getRecipes()) {
-    Profiler.VisitDecl(Recipe.RecipeDecl);
+    Profiler.VisitDecl(Recipe.AllocaDecl);
+    if (Recipe.InitExpr)
+      Profiler.VisitExpr(Recipe.InitExpr);
     // TODO: OpenACC: Make sure we remember to update this when we figure out
     // what we're adding for the operation recipe, in the meantime, a static
     // assert will make sure we don't add something.
-    static_assert(sizeof(OpenACCReductionRecipe) == sizeof(int *));
+    static_assert(sizeof(OpenACCReductionRecipe) == 2 * sizeof(int *));
   }
 }
 

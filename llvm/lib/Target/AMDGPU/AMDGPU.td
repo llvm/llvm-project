@@ -68,13 +68,15 @@ def FeatureFlatInstOffsets : SubtargetFeature<"flat-inst-offsets",
 def FeatureFlatGlobalInsts : SubtargetFeature<"flat-global-insts",
   "FlatGlobalInsts",
   "true",
-  "Have global_* flat memory instructions"
+  "Have global_* flat memory instructions",
+  [FeatureFlatAddressSpace]
 >;
 
 def FeatureFlatScratchInsts : SubtargetFeature<"flat-scratch-insts",
   "FlatScratchInsts",
   "true",
-  "Have scratch_* flat memory instructions"
+  "Have scratch_* flat memory instructions",
+  [FeatureFlatAddressSpace]
 >;
 
 def FeatureScalarFlatScratchInsts : SubtargetFeature<"scalar-flat-scratch-insts",
@@ -92,7 +94,8 @@ def FeatureEnableFlatScratch : SubtargetFeature<"enable-flat-scratch",
 def FeatureFlatGVSMode : SubtargetFeature<"flat-gvs-mode",
   "FlatGVSMode",
   "true",
-  "Have GVS addressing mode with flat_* instructions"
+  "Have GVS addressing mode with flat_* instructions",
+  [FeatureFlatAddressSpace]
 >;
 
 def FeatureAddNoCarryInsts : SubtargetFeature<"add-no-carry-insts",
@@ -934,13 +937,15 @@ def FeatureAtomicFMinFMaxF64GlobalInsts : SubtargetFeature<"atomic-fmin-fmax-glo
 def FeatureAtomicFMinFMaxF32FlatInsts : SubtargetFeature<"atomic-fmin-fmax-flat-f32",
   "HasAtomicFMinFMaxF32FlatInsts",
   "true",
-  "Has flat memory instructions for atomicrmw fmin/fmax for float"
+  "Has flat memory instructions for atomicrmw fmin/fmax for float",
+  [FeatureFlatAddressSpace]
 >;
 
 def FeatureAtomicFMinFMaxF64FlatInsts : SubtargetFeature<"atomic-fmin-fmax-flat-f64",
   "HasAtomicFMinFMaxF64FlatInsts",
   "true",
-  "Has flat memory instructions for atomicrmw fmin/fmax for double"
+  "Has flat memory instructions for atomicrmw fmin/fmax for double",
+  [FeatureFlatAddressSpace]
 >;
 
 def FeatureAtomicFaddNoRtnInsts : SubtargetFeature<"atomic-fadd-no-rtn-insts",
@@ -992,7 +997,8 @@ def FeatureFlatAtomicFaddF32Inst
   : SubtargetFeature<"flat-atomic-fadd-f32-inst",
   "HasFlatAtomicFaddF32Inst",
   "true",
-  "Has flat_atomic_add_f32 instruction"
+  "Has flat_atomic_add_f32 instruction",
+  [FeatureFlatAddressSpace]
 >;
 
 def FeatureFlatBufferGlobalAtomicFaddF64Inst

@@ -4812,23 +4812,12 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
       SelectInst *NV = cast<SelectInst>(
           Builder.CreateSelect(PBICond, PBIV, BIV, PBIV->getName() + ".mux"));
       PN.setIncomingValue(PBBIdx, NV);
-      // Although the select has the same condition as PBI, the original branch
-      // weights for PBI do not apply to the new select because the select's
-      // 'logical' edges are incoming edges of the phi that is eliminated, not
-      // the outgoing edges of PBI.
+      // The select has the same condition as PBI, in the same BB. The
+      // probabilities don't change.
       if (HasWeights) {
-        uint64_t PredCommon = PBIOp ? PredFalseWeight : PredTrueWeight;
-        uint64_t PredOther = PBIOp ? PredTrueWeight : PredFalseWeight;
-        uint64_t SuccCommon = BIOp ? SuccFalseWeight : SuccTrueWeight;
-        uint64_t SuccOther = BIOp ? SuccTrueWeight : SuccFalseWeight;
-        // The weight to PredCommonDest should be PredCommon * SuccTotal.
-        // The weight to PredOtherDest should be PredOther * SuccCommon.
-        uint64_t NewWeights[2] = {PredCommon * (SuccCommon + SuccOther),
-                                  PredOther * SuccCommon};
-
-        fitWeights(NewWeights);
-
-        setBranchWeights(NV, NewWeights[0], NewWeights[1],
+        uint64_t TrueWeight = PBIOp ? PredFalseWeight : PredTrueWeight;
+        uint64_t FalseWeight = PBIOp ? PredTrueWeight : PredFalseWeight;
+        setBranchWeights(NV, TrueWeight, FalseWeight,
                          /*IsExpected=*/false);
       }
     }

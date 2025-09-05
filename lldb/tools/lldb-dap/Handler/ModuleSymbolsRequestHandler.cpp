@@ -60,7 +60,7 @@ ModuleSymbolsRequestHandler::Run(const ModuleSymbolsArguments &args) const {
     if (!symbol.IsValid())
       continue;
 
-    Symbol dap_symbol;
+    Symbol dap_symbol = {};
     dap_symbol.id = symbol.GetID();
     dap_symbol.type = symbol.GetType();
     dap_symbol.isDebug = symbol.IsDebug();

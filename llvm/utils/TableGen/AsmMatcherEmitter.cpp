@@ -1545,7 +1545,7 @@ void AsmMatcherInfo::buildInfo() {
 
       // If the tblgen -match-prefix option is specified (for tblgen hackers),
       // filter the set of instructions we consider.
-      if (!StringRef(CGI->TheDef->getName()).starts_with(MatchPrefix))
+      if (!StringRef(CGI->getName()).starts_with(MatchPrefix))
         continue;
 
       // Ignore "codegen only" instructions.
@@ -1578,8 +1578,7 @@ void AsmMatcherInfo::buildInfo() {
       // If the tblgen -match-prefix option is specified (for tblgen hackers),
       // filter the set of instruction aliases we consider, based on the target
       // instruction.
-      if (!StringRef(Alias->ResultInst->TheDef->getName())
-               .starts_with(MatchPrefix))
+      if (!StringRef(Alias->ResultInst->getName()).starts_with(MatchPrefix))
         continue;
 
       StringRef V = Alias->TheDef->getValueAsString("AsmVariantName");
@@ -3562,7 +3561,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
           char(MI->Mnemonic.size()) + MI->Mnemonic.lower();
       OS << "  { " << *StringTable.GetStringOffset(LenMnemonic) << " /* "
          << MI->Mnemonic << " */, " << Target.getInstNamespace()
-         << "::" << MI->getResultInst()->TheDef->getName() << ", "
+         << "::" << MI->getResultInst()->getName() << ", "
          << MI->ConversionFnKind << ", ";
 
       // Write the required features mask.

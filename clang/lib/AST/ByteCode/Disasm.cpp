@@ -44,7 +44,20 @@ inline static std::string printArg(Program &P, CodePtr &OpPC) {
     std::string Result;
     llvm::raw_string_ostream SS(Result);
     auto Arg = OpPC.read<T>();
-    SS << Arg;
+    // Make sure we print the integral value of chars.
+    if constexpr (std::is_integral_v<T>) {
+      if constexpr (sizeof(T) == 1) {
+        if constexpr (std::is_signed_v<T>)
+          SS << static_cast<int32_t>(Arg);
+        else
+          SS << static_cast<uint32_t>(Arg);
+      } else {
+        SS << Arg;
+      }
+    } else {
+      SS << Arg;
+    }
+
     return Result;
   }
 }

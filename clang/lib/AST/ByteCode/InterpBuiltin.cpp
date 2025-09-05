@@ -2829,6 +2829,65 @@ static bool interp__builtin_select(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_elementwise_fsh(InterpState &S, CodePtr OpPC,
+                                            const CallExpr *Call,
+                                            unsigned BuiltinID) {
+  assert(Call->getNumArgs() == 3);
+
+  QualType Arg0Type = Call->getArg(0)->getType();
+  QualType Arg1Type = Call->getArg(1)->getType();
+  QualType Arg2Type = Call->getArg(2)->getType();
+
+  // Non-vector integer types.
+  if (!Arg0Type->isVectorType()) {
+    const APSInt &Shift =
+        popToAPSInt(S.Stk, *S.getContext().classify(Arg2Type));
+    const APSInt &Lo = popToAPSInt(S.Stk, *S.getContext().classify(Arg1Type));
+    const APSInt &Hi = popToAPSInt(S.Stk, *S.getContext().classify(Arg0Type));
+    APSInt Result;
+    if (BuiltinID == Builtin::BI__builtin_elementwise_fshl)
+      Result = APSInt(llvm::APIntOps::fshl(Hi, Lo, Shift), Hi.isUnsigned());
+    else if (BuiltinID == Builtin::BI__builtin_elementwise_fshr)
+      Result = APSInt(llvm::APIntOps::fshr(Hi, Lo, Shift), Hi.isUnsigned());
+    else
+      llvm_unreachable("Wrong builtin ID");
+    pushInteger(S, Result, Call->getType());
+    return true;
+  }
+
+  // Vector type.
+  const auto *VecT = Arg0Type->castAs<VectorType>();
+  const PrimType &ElemT = *S.getContext().classify(VecT->getElementType());
+  unsigned NumElems = VecT->getNumElements();
+
+  const Pointer &VecShift = S.Stk.pop<Pointer>();
+  const Pointer &VecLo = S.Stk.pop<Pointer>();
+  const Pointer &VecHi = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  for (unsigned I = 0; I != NumElems; ++I) {
+    APSInt Hi;
+    APSInt Lo;
+    APSInt Shift;
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+      Hi = VecHi.elem<T>(I).toAPSInt();
+      Lo = VecLo.elem<T>(I).toAPSInt();
+      Shift = VecShift.elem<T>(I).toAPSInt();
+    });
+    APSInt Result;
+    if (BuiltinID == Builtin::BI__builtin_elementwise_fshl)
+      Result = APSInt(llvm::APIntOps::fshl(Hi, Lo, Shift), Hi.isUnsigned());
+    else if (BuiltinID == Builtin::BI__builtin_elementwise_fshr)
+      Result = APSInt(llvm::APIntOps::fshr(Hi, Lo, Shift), Hi.isUnsigned());
+    else
+      llvm_unreachable("Wrong builtin ID");
+    INT_TYPE_SWITCH_NO_BOOL(ElemT,
+                            { Dst.elem<T>(I) = static_cast<T>(Result); });
+  }
+  Dst.initializeAllElements();
+
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
@@ -3392,6 +3451,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_selectpd_256:
   case X86::BI__builtin_ia32_selectpd_512:
     return interp__builtin_select(S, OpPC, Call);
+
+  case Builtin::BI__builtin_elementwise_fshl:
+  case Builtin::BI__builtin_elementwise_fshr:
+    return interp__builtin_elementwise_fsh(S, OpPC, Call, BuiltinID);
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),

@@ -326,6 +326,10 @@ def updateEnv(env, args):
         if arg == "-u":
             unset_next_env_var = True
             continue
+        # Support for the -i flag which clears the environment
+        if arg == "-i":
+            env.env = {}
+            continue
         if unset_next_env_var:
             unset_next_env_var = False
             if arg in env.env:
@@ -890,7 +894,12 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             if os.path.isfile(exe_in_cwd):
                 executable = exe_in_cwd
         if not executable:
-            executable = lit.util.which(args[0], cmd_shenv.env["PATH"])
+            # Use the path from cmd_shenv by default, but if the environment variable
+            # is unset (like if the user is using env -i), use the standard path.
+            path = (
+                cmd_shenv.env["PATH"] if "PATH" in cmd_shenv.env else shenv.env["PATH"]
+            )
+            executable = lit.util.which(args[0], shenv.env["PATH"])
         if not executable:
             raise InternalShellError(j, "%r: command not found" % args[0])
 

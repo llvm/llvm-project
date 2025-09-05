@@ -82,6 +82,18 @@ define <vscale x 4 x i32> @diff_avl_vlmax(<vscale x 4 x i32> %passthru, <vscale 
   ret <vscale x 4 x i32> %w
 }
 
+define <vscale x 4 x i32> @diff_avl_non_uimm5(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: diff_avl_non_uimm5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 42
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
+; CHECK-NEXT:    vadd.vv v8, v10, v12
+; CHECK-NEXT:    ret
+  %v = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen 42)
+  %w = call <vscale x 4 x i32> @llvm.riscv.vmv.v.v.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %v, iXLen 123)
+  ret <vscale x 4 x i32> %w
+}
+
 define <vscale x 4 x i32> @vadd_mask_ma(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i1> %mask, iXLen %vl) {
 ; CHECK-LABEL: vadd_mask_ma:
 ; CHECK:       # %bb.0:

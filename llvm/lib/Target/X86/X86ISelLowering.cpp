@@ -44964,7 +44964,7 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
   }
   case X86ISD::VPMADD52L:
   case X86ISD::VPMADD52H: {
-    KnownBits KnownOp0, KnownOp1;
+    KnownBits KnownOp0, KnownOp1, KnownOp2;
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
     SDValue Op2 = Op.getOperand(2);
@@ -44977,6 +44977,10 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
 
     if (SimplifyDemandedBits(Op1, Low52Bits, OriginalDemandedElts, KnownOp1,
                              TLO, Depth + 1))
+      return true;
+
+    if (SimplifyDemandedBits(Op2, APInt::getAllOnes(64), OriginalDemandedElts,
+                             KnownOp2, TLO, Depth + 1))
       return true;
 
     KnownBits KnownMul;
@@ -44993,8 +44997,8 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
       return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::ADD, DL, VT, C, Op2));
     }
 
-    // TODO: Compute the known bits for VPMADD52L/VPMADD52H.
-    break;
+    Known = KnownBits::add(KnownMul, KnownOp2);
+    return false;
   }
   }
 
@@ -61008,117 +61012,6 @@ bool X86TargetLowering::IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const {
 //===----------------------------------------------------------------------===//
 //                           X86 Inline Assembly Support
 //===----------------------------------------------------------------------===//
-
-// Helper to match a string separated by whitespace.
-static bool matchAsm(StringRef S, ArrayRef<const char *> Pieces) {
-  S = S.substr(S.find_first_not_of(" \t")); // Skip leading whitespace.
-
-  for (StringRef Piece : Pieces) {
-    if (!S.starts_with(Piece)) // Check if the piece matches.
-      return false;
-
-    S = S.substr(Piece.size());
-    StringRef::size_type Pos = S.find_first_not_of(" \t");
-    if (Pos == 0) // We matched a prefix.
-      return false;
-
-    S = S.substr(Pos);
-  }
-
-  return S.empty();
-}
-
-static bool clobbersFlagRegisters(const SmallVector<StringRef, 4> &AsmPieces) {
-
-  if (AsmPieces.size() == 3 || AsmPieces.size() == 4) {
-    if (llvm::is_contained(AsmPieces, "~{cc}") &&
-        llvm::is_contained(AsmPieces, "~{flags}") &&
-        llvm::is_contained(AsmPieces, "~{fpsr}")) {
-
-      if (AsmPieces.size() == 3)
-        return true;
-      else if (llvm::is_contained(AsmPieces, "~{dirflag}"))
-        return true;
-    }
-  }
-  return false;
-}
-
-bool X86TargetLowering::ExpandInlineAsm(CallInst *CI) const {
-  InlineAsm *IA = cast<InlineAsm>(CI->getCalledOperand());
-
-  StringRef AsmStr = IA->getAsmString();
-
-  IntegerType *Ty = dyn_cast<IntegerType>(CI->getType());
-  if (!Ty || Ty->getBitWidth() % 16 != 0)
-    return false;
-
-  // TODO: should remove alternatives from the asmstring: "foo {a|b}" -> "foo a"
-  SmallVector<StringRef, 4> AsmPieces;
-  SplitString(AsmStr, AsmPieces, ";\n");
-
-  switch (AsmPieces.size()) {
-  default: return false;
-  case 1:
-    // FIXME: this should verify that we are targeting a 486 or better.  If not,
-    // we will turn this bswap into something that will be lowered to logical
-    // ops instead of emitting the bswap asm.  For now, we don't support 486 or
-    // lower so don't worry about this.
-    // bswap $0
-    if (matchAsm(AsmPieces[0], {"bswap", "$0"}) ||
-        matchAsm(AsmPieces[0], {"bswapl", "$0"}) ||
-        matchAsm(AsmPieces[0], {"bswapq", "$0"}) ||
-        matchAsm(AsmPieces[0], {"bswap", "${0:q}"}) ||
-        matchAsm(AsmPieces[0], {"bswapl", "${0:q}"}) ||
-        matchAsm(AsmPieces[0], {"bswapq", "${0:q}"})) {
-      // No need to check constraints, nothing other than the equivalent of
-      // "=r,0" would be valid here.
-      return IntrinsicLowering::LowerToByteSwap(CI);
-    }
-
-    // rorw $$8, ${0:w}  -->  llvm.bswap.i16
-    if (CI->getType()->isIntegerTy(16) &&
-        IA->getConstraintString().starts_with("=r,0,") &&
-        (matchAsm(AsmPieces[0], {"rorw", "$$8,", "${0:w}"}) ||
-         matchAsm(AsmPieces[0], {"rolw", "$$8,", "${0:w}"}))) {
-      AsmPieces.clear();
-      StringRef ConstraintsStr = IA->getConstraintString();
-      SplitString(StringRef(ConstraintsStr).substr(5), AsmPieces, ",");
-      array_pod_sort(AsmPieces.begin(), AsmPieces.end());
-      if (clobbersFlagRegisters(AsmPieces))
-        return IntrinsicLowering::LowerToByteSwap(CI);
-    }
-    break;
-  case 3:
-    if (CI->getType()->isIntegerTy(32) &&
-        IA->getConstraintString().starts_with("=r,0,") &&
-        matchAsm(AsmPieces[0], {"rorw", "$$8,", "${0:w}"}) &&
-        matchAsm(AsmPieces[1], {"rorl", "$$16,", "$0"}) &&
-        matchAsm(AsmPieces[2], {"rorw", "$$8,", "${0:w}"})) {
-      AsmPieces.clear();
-      StringRef ConstraintsStr = IA->getConstraintString();
-      SplitString(StringRef(ConstraintsStr).substr(5), AsmPieces, ",");
-      array_pod_sort(AsmPieces.begin(), AsmPieces.end());
-      if (clobbersFlagRegisters(AsmPieces))
-        return IntrinsicLowering::LowerToByteSwap(CI);
-    }
-
-    if (CI->getType()->isIntegerTy(64)) {
-      InlineAsm::ConstraintInfoVector Constraints = IA->ParseConstraints();
-      if (Constraints.size() >= 2 &&
-          Constraints[0].Codes.size() == 1 && Constraints[0].Codes[0] == "A" &&
-          Constraints[1].Codes.size() == 1 && Constraints[1].Codes[0] == "0") {
-        // bswap %eax / bswap %edx / xchgl %eax, %edx  -> llvm.bswap.i64
-        if (matchAsm(AsmPieces[0], {"bswap", "%eax"}) &&
-            matchAsm(AsmPieces[1], {"bswap", "%edx"}) &&
-            matchAsm(AsmPieces[2], {"xchgl", "%eax,", "%edx"}))
-          return IntrinsicLowering::LowerToByteSwap(CI);
-      }
-    }
-    break;
-  }
-  return false;
-}
 
 static X86::CondCode parseConstraintCode(llvm::StringRef Constraint) {
   X86::CondCode Cond = StringSwitch<X86::CondCode>(Constraint)

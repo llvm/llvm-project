@@ -688,7 +688,7 @@ static void threadPrivatizeVars(lower::AbstractConverter &converter,
       }
       symThreadprivateValue = lower::genCommonBlockMember(
           converter, currentLocation, sym->GetUltimate(),
-          commonThreadprivateValue);
+          commonThreadprivateValue, common->size());
     } else {
       symThreadprivateValue = genThreadprivateOp(*sym);
     }
@@ -1401,7 +1401,7 @@ static void genIntermediateCommonBlockAccessors(
 
     for (auto obj : details->objects()) {
       auto targetCBMemberBind = Fortran::lower::genCommonBlockMember(
-          converter, currentLocation, *obj, mapArg);
+          converter, currentLocation, *obj, mapArg, mapSym->size());
       fir::ExtendedValue sexv = converter.getSymbolExtendedValue(*obj);
       fir::ExtendedValue targetCBExv =
           getExtendedValue(sexv, targetCBMemberBind);
@@ -4086,8 +4086,9 @@ void Fortran::lower::genThreadprivateOp(lower::AbstractConverter &converter,
         firOpBuilder, currentLocation, commonValue.getType(), commonValue);
     converter.bindSymbol(*common, commonThreadprivateValue);
     // Generate the threadprivate value for the common block member.
-    symThreadprivateValue = genCommonBlockMember(converter, currentLocation,
-                                                 sym, commonThreadprivateValue);
+    symThreadprivateValue =
+        genCommonBlockMember(converter, currentLocation, sym,
+                             commonThreadprivateValue, common->size());
   } else if (!var.isGlobal()) {
     // Non-global variable which can be in threadprivate directive must be one
     // variable in main program, and it has implicit SAVE attribute. Take it as

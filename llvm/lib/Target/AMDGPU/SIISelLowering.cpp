@@ -1269,18 +1269,53 @@ static unsigned getIntrMemWidth(unsigned IntrID) {
   case Intrinsic::amdgcn_global_load_async_to_lds_b32:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
   case Intrinsic::amdgcn_global_store_async_from_lds_b32:
+  case Intrinsic::amdgcn_cooperative_atomic_load_32x4B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_32x4B:
     return 32;
   case Intrinsic::amdgcn_global_load_async_to_lds_b64:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
   case Intrinsic::amdgcn_global_store_async_from_lds_b64:
+  case Intrinsic::amdgcn_cooperative_atomic_load_16x8B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_16x8B:
     return 64;
   case Intrinsic::amdgcn_global_load_async_to_lds_b128:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b128:
   case Intrinsic::amdgcn_global_store_async_from_lds_b128:
+  case Intrinsic::amdgcn_cooperative_atomic_load_8x16B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_8x16B:
     return 128;
   default:
     llvm_unreachable("Unknown width");
   }
+}
+
+static void getCoopAtomicOperandsInfo(const CallInst &CI, bool IsLoad,
+                                      TargetLoweringBase::IntrinsicInfo &Info) {
+  Value *OrderingArg = CI.getArgOperand(IsLoad ? 1 : 2);
+  unsigned Ord = cast<ConstantInt>(OrderingArg)->getZExtValue();
+  switch (AtomicOrderingCABI(Ord)) {
+  case AtomicOrderingCABI::acquire:
+    Info.order = AtomicOrdering::Acquire;
+    break;
+  case AtomicOrderingCABI::release:
+    Info.order = AtomicOrdering::Release;
+    break;
+  case AtomicOrderingCABI::seq_cst:
+    Info.order = AtomicOrdering::SequentiallyConsistent;
+    break;
+  default:
+    Info.order = AtomicOrdering::Monotonic;
+    break;
+  }
+
+  Info.flags =
+      (IsLoad ? MachineMemOperand::MOLoad : MachineMemOperand::MOStore);
+  Info.flags |= MOCooperative;
+
+  MDNode *ScopeMD = cast<MDNode>(
+      cast<MetadataAsValue>(CI.getArgOperand(IsLoad ? 2 : 3))->getMetadata());
+  StringRef Scope = cast<MDString>(ScopeMD->getOperand(0))->getString();
+  Info.ssid = CI.getContext().getOrInsertSyncScopeID(Scope);
 }
 
 bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
@@ -1530,6 +1565,26 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.ptrVal = CI.getOperand(0);
     Info.align.reset();
     Info.flags |= MachineMemOperand::MOLoad;
+    return true;
+  }
+  case Intrinsic::amdgcn_cooperative_atomic_load_32x4B:
+  case Intrinsic::amdgcn_cooperative_atomic_load_16x8B:
+  case Intrinsic::amdgcn_cooperative_atomic_load_8x16B: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = EVT::getIntegerVT(CI.getContext(), getIntrMemWidth(IntrID));
+    Info.ptrVal = CI.getOperand(0);
+    Info.align.reset();
+    getCoopAtomicOperandsInfo(CI, /*IsLoad=*/true, Info);
+    return true;
+  }
+  case Intrinsic::amdgcn_cooperative_atomic_store_32x4B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_16x8B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_8x16B: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = EVT::getIntegerVT(CI.getContext(), getIntrMemWidth(IntrID));
+    Info.ptrVal = CI.getArgOperand(0);
+    Info.align.reset();
+    getCoopAtomicOperandsInfo(CI, /*IsLoad=*/false, Info);
     return true;
   }
   case Intrinsic::amdgcn_ds_gws_init:
@@ -4278,6 +4333,11 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       break;
     }
 
+    // If the caller is a whole wave function, we need to use a special opcode
+    // so we can patch up EXEC.
+    if (Info->isWholeWaveFunction())
+      OPC = AMDGPUISD::TC_RETURN_GFX_WholeWave;
+
     return DAG.getNode(OPC, DL, MVT::Other, Ops);
   }
 
@@ -6041,14 +6101,15 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.eraseFromParent();
     return SplitBB;
   }
+  case AMDGPU::SI_TCRETURN_GFX_WholeWave:
   case AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN: {
     assert(MFI->isWholeWaveFunction());
 
     // During ISel, it's difficult to propagate the original EXEC mask to use as
     // an input to SI_WHOLE_WAVE_FUNC_RETURN. Set it up here instead.
     MachineInstr *Setup = TII->getWholeWaveFunctionSetup(*BB->getParent());
-    Register OriginalExec = Setup->getOperand(0).getReg();
     assert(Setup && "Couldn't find SI_SETUP_WHOLE_WAVE_FUNC");
+    Register OriginalExec = Setup->getOperand(0).getReg();
     MF->getRegInfo().clearKillFlags(OriginalExec);
     MI.getOperand(0).setReg(OriginalExec);
     return BB;
@@ -10264,6 +10325,16 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     auto *NewMI = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
     return SDValue(NewMI, 0);
   }
+  case Intrinsic::amdgcn_cooperative_atomic_load_32x4B:
+  case Intrinsic::amdgcn_cooperative_atomic_load_16x8B:
+  case Intrinsic::amdgcn_cooperative_atomic_load_8x16B: {
+    MemIntrinsicSDNode *MII = cast<MemIntrinsicSDNode>(Op);
+    SDValue Chain = Op->getOperand(0);
+    SDValue Ptr = Op->getOperand(2);
+    EVT VT = Op->getValueType(0);
+    return DAG.getAtomicLoad(ISD::NON_EXTLOAD, DL, MII->getMemoryVT(), VT,
+                             Chain, Ptr, MII->getMemOperand());
+  }
   default:
 
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
@@ -10895,6 +10966,16 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return DAG.getMemIntrinsicNode(AMDGPUISD::SBUFFER_PREFETCH_DATA, DL,
                                    Op->getVTList(), Ops, M->getMemoryVT(),
                                    M->getMemOperand());
+  }
+  case Intrinsic::amdgcn_cooperative_atomic_store_32x4B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_16x8B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_8x16B: {
+    MemIntrinsicSDNode *MII = cast<MemIntrinsicSDNode>(Op);
+    SDValue Chain = Op->getOperand(0);
+    SDValue Ptr = Op->getOperand(2);
+    SDValue Val = Op->getOperand(3);
+    return DAG.getAtomic(ISD::ATOMIC_STORE, DL, MII->getMemoryVT(), Chain, Val,
+                         Ptr, MII->getMemOperand());
   }
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =

@@ -844,6 +844,44 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
   }
 }
 
+TypeSize DataLayout::getTypeAllocSize(Type *Ty) const {
+  switch (Ty->getTypeID()) {
+  case Type::ArrayTyID: {
+    // The alignment of the array is the alignment of the element, so there
+    // is no need for further adjustment.
+    auto *ATy = cast<ArrayType>(Ty);
+    return ATy->getNumElements() * getTypeAllocSize(ATy->getElementType());
+  }
+  case Type::StructTyID: {
+    const StructLayout *Layout = getStructLayout(cast<StructType>(Ty));
+    TypeSize Size = Layout->getSizeInBytes();
+
+    if (cast<StructType>(Ty)->isPacked())
+      return Size;
+
+    Align A = std::max(StructABIAlignment, Layout->getAlignment());
+    return alignTo(Size, A.value());
+  }
+  case Type::IntegerTyID: {
+    unsigned BitWidth = Ty->getIntegerBitWidth();
+    TypeSize Size = TypeSize::getFixed(divideCeil(BitWidth, 8));
+    Align A = getIntegerAlignment(BitWidth, /*ABI=*/true);
+    return alignTo(Size, A.value());
+  }
+  case Type::PointerTyID: {
+    unsigned AS = Ty->getPointerAddressSpace();
+    TypeSize Size = TypeSize::getFixed(getPointerSize(AS));
+    return alignTo(Size, getPointerABIAlignment(AS).value());
+  }
+  case Type::TargetExtTyID: {
+    Type *LayoutTy = cast<TargetExtType>(Ty)->getLayoutType();
+    return getTypeAllocSize(LayoutTy);
+  }
+  default:
+    return alignTo(getTypeStoreSize(Ty), getABITypeAlign(Ty).value());
+  }
+}
+
 Align DataLayout::getABITypeAlign(Type *Ty) const {
   return getAlignment(Ty, true);
 }

@@ -100,13 +100,18 @@ _mm512_set_ph(_Float16 __h1, _Float16 __h2, _Float16 __h3, _Float16 __h4,
                             __h4,  __h3,  __h2,  __h1};
 }
 
-#define _mm512_setr_ph(h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13, \
-                       h14, h15, h16, h17, h18, h19, h20, h21, h22, h23, h24,  \
-                       h25, h26, h27, h28, h29, h30, h31, h32)                 \
-  _mm512_set_ph((h32), (h31), (h30), (h29), (h28), (h27), (h26), (h25), (h24), \
-                (h23), (h22), (h21), (h20), (h19), (h18), (h17), (h16), (h15), \
-                (h14), (h13), (h12), (h11), (h10), (h9), (h8), (h7), (h6),     \
-                (h5), (h4), (h3), (h2), (h1))
+static __inline__ __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR _mm512_setr_ph(
+    _Float16 e0, _Float16 e1, _Float16 e2, _Float16 e3, _Float16 e4,
+    _Float16 e5, _Float16 e6, _Float16 e7, _Float16 e8, _Float16 e9,
+    _Float16 e10, _Float16 e11, _Float16 e12, _Float16 e13, _Float16 e14,
+    _Float16 e15, _Float16 e16, _Float16 e17, _Float16 e18, _Float16 e19,
+    _Float16 e20, _Float16 e21, _Float16 e22, _Float16 e23, _Float16 e24,
+    _Float16 e25, _Float16 e26, _Float16 e27, _Float16 e28, _Float16 e29,
+    _Float16 e30, _Float16 e31) {
+  return _mm512_set_ph(e31, e30, e29, e28, e27, e26, e25, e24, e23, e22, e21,
+                       e20, e19, e18, e17, e16, e15, e14, e13, e12, e11, e10,
+                       e9, e8, e7, e6, e5, e4, e3, e2, e1, e0);
+}
 
 static __inline __m512h __DEFAULT_FN_ATTRS512
 _mm512_set1_pch(_Float16 _Complex __h) {

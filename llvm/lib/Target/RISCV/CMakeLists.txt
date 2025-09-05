@@ -88,6 +88,7 @@ add_llvm_target(RISCVCodeGen
   GlobalISel
   IPO
   MC
+  Passes
   RISCVDesc
   RISCVInfo
   Scalar

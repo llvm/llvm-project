@@ -213,6 +213,9 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
     if (!Ptr.isZero() && !Ptr.isDereferencable())
       return false;
 
+    if (Ptr.pointsToStringLiteral() && Ptr.isArrayRoot())
+      return false;
+
     if (!Ptr.isZero() && !CheckFinalLoad(S, OpPC, Ptr))
       return false;
 

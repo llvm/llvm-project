@@ -9,7 +9,7 @@
 // REQUIRES: stdlib=apple-libc++
 
 // This test ensures that we retain a way to disable availability markup on Apple platforms
-// in order to work around Clang bug https://github.com/llvm/llvm-project/issues/134151.
+// in order to work around Clang bug https://llvm.org/PR134151.
 //
 // Once that bug has been fixed or once we've made changes to libc++'s use of availability
 // that render that workaround unnecessary, the macro and this test can be removed.

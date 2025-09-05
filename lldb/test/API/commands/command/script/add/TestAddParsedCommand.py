@@ -295,7 +295,7 @@ class ParsedCommandTestCase(TestBase):
 
         # no-args turns off auto-repeat
         results = self.run_one_repeat("no-args\n\n", 1)
-        self.assertIn("No auto repeat", results, "Got auto-repeat error")
+        self.assertIn("no auto repeat", results, "Got auto-repeat error")
 
         # one-args does the normal repeat
         results = self.run_one_repeat("one-arg-no-opt ONE_ARG\n\n", 0)

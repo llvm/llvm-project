@@ -1,6 +1,6 @@
 set(ORC_RT_HEADERS
     orc-rt-c/ExternC.h
-    orc-rt-c/WrapperFunctionResult.h
+    orc-rt-c/WrapperFunction.h
     orc-rt-c/orc-rt.h
     orc-rt/BitmaskEnum.h
     orc-rt/Compiler.h
@@ -10,7 +10,7 @@ set(ORC_RT_HEADERS
     orc-rt/IntervalSet.h
     orc-rt/Math.h
     orc-rt/RTTI.h
-    orc-rt/WrapperFunctionResult.h
+    orc-rt/WrapperFunction.h
     orc-rt/SimplePackedSerialization.h
     orc-rt/bind.h
     orc-rt/bit.h
