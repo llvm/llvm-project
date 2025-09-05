@@ -112,37 +112,6 @@ static int getTotalArraySize(ASTContext &AST, const clang::Type *Ty) {
   return AST.getConstantArrayElementCount(cast<ConstantArrayType>(Ty));
 }
 
-// Find constructor decl for a specific resource record type and binding
-// (implicit vs. explicit). The constructor has 5 parameters.
-// For explicit binding the signature is:
-//   void(unsigned, unsigned, int, unsigned, const char *).
-// For implicit binding the signature is:
-//   void(unsigned, int, unsigned, unsigned, const char *).
-static CXXConstructorDecl *findResourceConstructorDecl(ASTContext &AST,
-                                                       QualType ResTy,
-                                                       bool ExplicitBinding) {
-  std::array<QualType, 5> ExpParmTypes = {
-      AST.UnsignedIntTy, AST.UnsignedIntTy, AST.UnsignedIntTy,
-      AST.UnsignedIntTy, AST.getPointerType(AST.CharTy.withConst())};
-  ExpParmTypes[ExplicitBinding ? 2 : 1] = AST.IntTy;
-
-  CXXRecordDecl *ResDecl = ResTy->getAsCXXRecordDecl();
-  for (auto *Ctor : ResDecl->ctors()) {
-    if (Ctor->getNumParams() != ExpParmTypes.size())
-      continue;
-    auto *ParmIt = Ctor->param_begin();
-    auto ExpTyIt = ExpParmTypes.begin();
-    for (; ParmIt != Ctor->param_end() && ExpTyIt != ExpParmTypes.end();
-         ++ParmIt, ++ExpTyIt) {
-      if ((*ParmIt)->getType() != *ExpTyIt)
-        break;
-    }
-    if (ParmIt == Ctor->param_end())
-      return Ctor;
-  }
-  llvm_unreachable("did not find constructor for resource class");
-}
-
 static Value *buildNameForResource(llvm::StringRef BaseName,
                                    CodeGenModule &CGM) {
   llvm::SmallString<64> GlobalName = {BaseName, ".str"};
