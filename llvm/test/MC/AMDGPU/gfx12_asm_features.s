@@ -76,7 +76,7 @@ buffer_load_b32 v5, off, s[8:11], s3 offset:8388607 scope:SCOPE_DEV th:TH_LOAD_N
 // GFX12: buffer_load_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_LOAD_NT_HT scope:SCOPE_DEV ; encoding: [0x03,0x00,0x05,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
 
 tbuffer_load_d16_format_x v4, off, ttmp[4:7], s3 format:[BUF_FMT_8_UINT] offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS
-// GFX12: tbuffer_load_d16_format_x v4, off, ttmp[4:7], s3 format:[BUF_FMT_8_UINT] offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x03,0x00,0x22,0xc4,0x04,0xe0,0xbc,0x02,0x00,0xff,0xff,0x7f]
+// GFX12: tbuffer_load_d16_format_x v4, off, ttmp[4:7], s3 format:[BUF_FMT_8_UINT] offset:8388607 th:TH_LOAD_LU scope:SCOPE_SYS ; encoding: [0x03,0x00,0x22,0xc4,0x04,0xe0,0xbc,0x02,0x00,0xff,0xff,0x7f]
 
 tbuffer_load_d16_format_x v4, off, ttmp[4:7], s3 format:[BUF_FMT_8_UINT] offset:8388607 scope:SCOPE_SYS th:TH_LOAD_BYPASS
-// GFX12: tbuffer_load_d16_format_x v4, off, ttmp[4:7], s3 format:[BUF_FMT_8_UINT] offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x03,0x00,0x22,0xc4,0x04,0xe0,0xbc,0x02,0x00,0xff,0xff,0x7f]
+// GFX12: tbuffer_load_d16_format_x v4, off, ttmp[4:7], s3 format:[BUF_FMT_8_UINT] offset:8388607 th:TH_LOAD_LU scope:SCOPE_SYS ; encoding: [0x03,0x00,0x22,0xc4,0x04,0xe0,0xbc,0x02,0x00,0xff,0xff,0x7f]
