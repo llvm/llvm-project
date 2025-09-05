@@ -21,9 +21,9 @@
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstPrinter.h"
-#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -130,31 +130,35 @@ static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
                                  std::move(Emitter));
 }
 
-namespace {
+namespace llvm {
+namespace AMDGPU {
 
-class AMDGPUMCInstrAnalysis : public MCInstrAnalysis {
-public:
-  explicit AMDGPUMCInstrAnalysis(const MCInstrInfo *Info)
-      : MCInstrAnalysis(Info) {}
+bool AMDGPUMCInstrAnalysis::evaluateBranch(const MCInst &Inst, uint64_t Addr,
+                                           uint64_t Size,
+                                           uint64_t &Target) const {
+  if (Inst.getNumOperands() == 0 || !Inst.getOperand(0).isImm() ||
+      Info->get(Inst.getOpcode()).operands()[0].OperandType !=
+          MCOI::OPERAND_PCREL)
+    return false;
 
-  bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                      uint64_t &Target) const override {
-    if (Inst.getNumOperands() == 0 || !Inst.getOperand(0).isImm() ||
-        Info->get(Inst.getOpcode()).operands()[0].OperandType !=
-            MCOI::OPERAND_PCREL)
-      return false;
+  int64_t Imm = Inst.getOperand(0).getImm();
+  // Our branches take a simm16.
+  Target = SignExtend64<16>(Imm) * 4 + Addr + Size;
+  return true;
+}
 
-    int64_t Imm = Inst.getOperand(0).getImm();
-    // Our branches take a simm16.
-    Target = SignExtend64<16>(Imm) * 4 + Addr + Size;
-    return true;
-  }
-};
+void AMDGPUMCInstrAnalysis::updateState(const MCInst &Inst, uint64_t Addr) {
+  if (Inst.getOpcode() == AMDGPU::S_SET_VGPR_MSB_gfx12)
+    VgprMSBs = Inst.getOperand(0).getImm();
+  else if (isTerminator(Inst))
+    VgprMSBs = 0;
+}
 
-} // end anonymous namespace
+} // end namespace AMDGPU
+} // end namespace llvm
 
 static MCInstrAnalysis *createAMDGPUMCInstrAnalysis(const MCInstrInfo *Info) {
-  return new AMDGPUMCInstrAnalysis(Info);
+  return new AMDGPU::AMDGPUMCInstrAnalysis(Info);
 }
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void

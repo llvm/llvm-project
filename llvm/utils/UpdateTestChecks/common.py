@@ -39,6 +39,7 @@ SUPPORTED_ANALYSES = {
     "Delinearization",
     "Loop Access Analysis",
     "Scalar Evolution Analysis",
+    "Scalar Evolution Division",
 }
 
 

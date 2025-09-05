@@ -648,10 +648,8 @@ addAlignedClause(lower::AbstractConverter &converter,
 
   // The default alignment for some targets is equal to 0.
   // Do not generate alignment assumption if alignment is less than or equal to
-  // 0.
-  if (alignment > 0) {
-    // alignment value must be power of 2
-    assert((alignment & (alignment - 1)) == 0 && "alignment is not power of 2");
+  // 0 or not a power of two
+  if (alignment > 0 && ((alignment & (alignment - 1)) == 0)) {
     auto &objects = std::get<omp::ObjectList>(clause.t);
     if (!objects.empty())
       genObjectList(objects, converter, alignedVars);
@@ -847,10 +845,12 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
   }
   auto declDst = hlfir::DeclareOp::create(
       builder, loc, dst, copyFuncName + "_dst", shape, typeparams,
-      /*dummy_scope=*/nullptr, attrs);
+      /*dummy_scope=*/nullptr, /*storage=*/nullptr,
+      /*storage_offset=*/0, attrs);
   auto declSrc = hlfir::DeclareOp::create(
       builder, loc, src, copyFuncName + "_src", shape, typeparams,
-      /*dummy_scope=*/nullptr, attrs);
+      /*dummy_scope=*/nullptr, /*storage=*/nullptr,
+      /*storage_offset=*/0, attrs);
   converter.copyVar(loc, declDst.getBase(), declSrc.getBase(), varAttrs);
   mlir::func::ReturnOp::create(builder, loc);
   return funcOp;

@@ -44,11 +44,11 @@ AST_MATCHER(CXXRecordDecl, correctHandleCaptureThisLambda) {
   if (Node.hasSimpleMoveAssignment())
     return false;
 
-  for (CXXConstructorDecl const *C : Node.ctors()) {
+  for (const CXXConstructorDecl *C : Node.ctors()) {
     if (C->isCopyOrMoveConstructor() && C->isDefaulted() && !C->isDeleted())
       return false;
   }
-  for (CXXMethodDecl const *M : Node.methods()) {
+  for (const CXXMethodDecl *M : Node.methods()) {
     if (M->isCopyAssignmentOperator())
       llvm::errs() << M->isDeleted() << "\n";
     if (M->isCopyAssignmentOperator() && M->isDefaulted() && !M->isDeleted())

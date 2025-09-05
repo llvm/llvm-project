@@ -166,7 +166,8 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
           }
           return VerifyEVLUse(*R, 2);
         })
-        .Case<VPWidenLoadEVLRecipe, VPVectorEndPointerRecipe>(
+        .Case<VPWidenLoadEVLRecipe, VPVectorEndPointerRecipe,
+              VPInterleaveEVLRecipe>(
             [&](const VPRecipeBase *R) { return VerifyEVLUse(*R, 1); })
         .Case<VPInstructionWithType>(
             [&](const VPInstructionWithType *S) { return VerifyEVLUse(*S, 0); })
@@ -412,7 +413,7 @@ bool VPlanVerifier::verifyRegion(const VPRegionBlock *Region) {
   const VPBlockBase *Exiting = Region->getExiting();
 
   // Entry and Exiting shouldn't have any predecessor/successor, respectively.
-  if (Entry->getNumPredecessors() != 0) {
+  if (Entry->hasPredecessors()) {
     errs() << "region entry block has predecessors\n";
     return false;
   }
