@@ -1266,7 +1266,8 @@ ISA String: rv64i2p1_zalasr0p1
 
   StringMap<StringRef> DescMap;
   DescMap["i"] = "'I' (Base Integer Instruction Set)";
-  DescMap["experimental-zalasr"] = "'Zalasr' (Load-Acquire and Store-Release Instructions)";
+  DescMap["experimental-zalasr"] =
+      "'Zalasr' (Load-Acquire and Store-Release Instructions)";
   std::set<StringRef> EnabledExtensions = {"i", "experimental-zalasr"};
 
   outs().flush();
