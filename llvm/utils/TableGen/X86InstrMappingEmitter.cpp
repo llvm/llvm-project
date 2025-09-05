@@ -98,8 +98,8 @@ void X86InstrMappingEmitter::printTable(ArrayRef<Entry> Table, StringRef Name,
 
   // Print all entries added to the table
   for (const auto &Pair : Table)
-    OS << "  { X86::" << Pair.first->TheDef->getName()
-       << ", X86::" << Pair.second->TheDef->getName() << " },\n";
+    OS << "  { X86::" << Pair.first->getName()
+       << ", X86::" << Pair.second->getName() << " },\n";
 
   OS << "};\n\n";
 
@@ -260,7 +260,7 @@ void X86InstrMappingEmitter::emitCompressEVEXTable(
      << "  default: return true;\n";
   for (const auto &[Key, Val] : PredicateInsts) {
     for (const auto &Inst : Val)
-      OS << "  case X86::" << Inst->TheDef->getName() << ":\n";
+      OS << "  case X86::" << Inst->getName() << ":\n";
     OS << "    return " << Key << ";\n";
   }
   OS << "  }\n";
