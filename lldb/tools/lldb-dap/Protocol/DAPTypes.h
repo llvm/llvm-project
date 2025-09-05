@@ -66,10 +66,10 @@ struct Symbol {
   lldb::SymbolType type = lldb::eSymbolTypeInvalid;
 
   /// The symbol file address.
-  lldb::addr_t fileAddress = 0;
+  lldb::addr_t fileAddress = LLDB_INVALID_ADDRESS;
 
   /// The symbol load address.
-  std::optional<lldb::addr_t> loadAddress = std::nullopt;
+  std::optional<lldb::addr_t> loadAddress;
 
   /// The symbol size.
   lldb::addr_t size = 0;
