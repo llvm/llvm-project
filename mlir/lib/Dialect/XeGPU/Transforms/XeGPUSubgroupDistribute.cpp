@@ -34,6 +34,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/LogicalResult.h"
 
 namespace mlir {
 namespace xegpu {
@@ -72,27 +73,43 @@ namespace {
 /// | 32x16                 | [2, 8]      | 16x2                     |
 /// | 2x32x16               | [1, 16]     | 2x32x1                   |
 static FailureOr<VectorType>
-getDistVecTypeBasedOnLaneLayout(xegpu::LayoutAttr layout,
+getDistVecTypeBasedOnLaneLayout(xegpu::DistributeLayoutAttr layout,
                                 VectorType originalType) {
   if (!layout)
     return failure();
+  assert((isa<xegpu::LayoutAttr>(layout) || isa<xegpu::SliceAttr>(layout)) &&
+         "Expecting a valid layout.");
+  SmallVector<int64_t> effectiveLaneLayout;
+  // If the layout is a slice, we need to get effective lane layout by removing
+  // sliced dims.
+  if (auto sliceAttr = dyn_cast<xegpu::SliceAttr>(layout)) {
+    ArrayRef<int64_t> slicedDims = sliceAttr.flatten().getDims().asArrayRef();
+    llvm::DenseSet<int64_t> lookUp(slicedDims.begin(), slicedDims.end());
+    for (auto [i, dim] :
+         llvm::enumerate(sliceAttr.getParent().getLaneLayoutAsInt())) {
+      if (!lookUp.contains(i))
+        effectiveLaneLayout.push_back(dim);
+    }
+  } else {
+    effectiveLaneLayout = cast<xegpu::LayoutAttr>(layout).getLaneLayoutAsInt();
+  }
 
-  auto laneLayout = layout.getLaneLayout().asArrayRef();
-  assert(originalType.getShape().size() >= laneLayout.size() &&
+  assert(originalType.getShape().size() >= effectiveLaneLayout.size() &&
          "Rank of the original vector type should be greater or equal to the "
          "size of the lane layout to distribute the vector type.");
   SmallVector<int64_t> distributedShape(originalType.getShape());
   // Only distribute the last `laneLayout.size()` dimensions. The remaining
   // dimensions are not distributed.
-  unsigned distributionStart = originalType.getRank() - laneLayout.size();
+  unsigned distributionStart =
+      originalType.getRank() - effectiveLaneLayout.size();
   for (auto [i, dim] : llvm::enumerate(originalType.getShape())) {
     if (i < distributionStart)
       continue;
 
     // Check if the dimension can be distributed evenly.
-    if (dim % laneLayout[i - distributionStart] != 0)
+    if (dim % effectiveLaneLayout[i - distributionStart] != 0)
       return failure();
-    distributedShape[i] = dim / laneLayout[i - distributionStart];
+    distributedShape[i] = dim / effectiveLaneLayout[i - distributionStart];
   }
   return VectorType::get(distributedShape, originalType.getElementType());
 }
@@ -858,7 +875,7 @@ struct GpuBarrierDistribution final : public gpu::WarpDistributionPattern {
 ///   gpu.yield %1 : vector<2xf32>
 /// }
 struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
-  using Base::Base;
+  using gpu::WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *yieldOperand =
@@ -869,83 +886,108 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
         cast<vector::MultiDimReductionOp>(yieldOperand->get().getDefiningOp());
     unsigned operandNumber = yieldOperand->getOperandNumber();
     VectorType sourceType = reductionOp.getSourceVectorType();
-
     // Only 2D vectors are supported.
     if (sourceType.getRank() != 2)
       return rewriter.notifyMatchFailure(warpOp,
                                          "Only 2D reductions are supported.");
     ArrayRef<int64_t> reductionDims = reductionOp.getReductionDims();
-    // Only 1 reduction dimension supported. This also ensures that result is
-    // also vector type.
+    // Only 1 reduction dimension supported. This also ensures that the result
+    // is vector type.
     if (reductionDims.size() != 1)
       return rewriter.notifyMatchFailure(
           warpOp, "Only 1 reduction dimension is supported.");
     int64_t reductionDim = reductionDims[0];
-    auto resultType = cast<VectorType>(reductionOp.getType());
-    auto distributedResultType =
+    VectorType distributedResultType =
         cast<VectorType>(warpOp.getResult(operandNumber).getType());
+    VectorType resultType = cast<VectorType>(reductionOp.getType());
     Type elementType = distributedResultType.getElementType();
+    xegpu::DistributeLayoutAttr sourceLayout =
+        xegpu::getDistributeLayoutAttr(reductionOp.getSource());
 
-    // Currently we make the following assumptions.
-    // 1. The source vector is distributed in the column dimension. Each lane
-    // owns complete column(s) of the source vector.
-    // 2. If the reduction dim == 0, its a lane-local col reduction. In this
-    // case each lane owns its portion of the result (i.e. result is also
-    // distributed).
-    // 3. If reduction dim == 1, its a row reduction that require cross lanes
-    // shuffles. In this case, the reduction result is not distributed across
-    // lanes. Instead each lane owns a complete copy of the result
-    // (broadcasted).
-    // TODO: These assumptions are fairly restrictive. For example, source
-    // vector can have row distributed layout. Improve support for such cases.
-    if (sourceType.getShape()[1] % warpOp.getWarpSize() != 0)
+    FailureOr<VectorType> sourceDistTypeOrFailure =
+        getDistVecTypeBasedOnLaneLayout(sourceLayout, sourceType);
+    if (failed(sourceDistTypeOrFailure))
       return rewriter.notifyMatchFailure(
-          warpOp, "Source vector dimension must be divisible by warp size.");
-    bool isResultDistributed =
+          warpOp, "Failed to distribute the source vector type.");
+    VectorType sourceDistType = sourceDistTypeOrFailure.value();
+    // Only single dimension distribution is supported.
+    bool dim0Distributed =
+        sourceDistType.getShape()[0] != sourceType.getShape()[0];
+    bool dim1Distributed =
+        sourceDistType.getShape()[1] != sourceType.getShape()[1];
+    if (dim0Distributed && dim1Distributed)
+      return rewriter.notifyMatchFailure(
+          warpOp, "Expecting source to be distributed in a single dimension.");
+    int64_t sourceDistDim = dim0Distributed ? 0 : (dim1Distributed ? 1 : -1);
+    if (sourceDistDim == -1)
+      return rewriter.notifyMatchFailure(
+          warpOp, "Expecting a distributed source vector.");
+    bool resultDistributed =
         distributedResultType.getNumElements() < resultType.getNumElements();
-    if (reductionDim == 0 && !isResultDistributed)
+    // If the lane owns all the data required for reduction (i.e. reduction is
+    // fully parallel accross lanes), then each lane owns part of the result
+    // (i.e. result is distributed). If the reduction require cross-lane
+    // shuffling, then the result is shared among all lanes (broadcasted).
+    // Therefore we expect following cases:
+    //
+    // | Source vector        | Reduction dim  | Result vector  |
+    // |----------------------|----------------|----------------|
+    // |  dim-0 distributed   |       0        | broadcasted    |
+    // |  dim-0 distributed   |       1        | distributed    |
+    // |  dim-1 distributed   |       0        | distributed    |
+    // |  dim-1 distributed   |       1        | broadcasted    |
+
+    bool isReductionLaneLocal = (sourceDistDim == 0 && reductionDim == 1) ||
+                                (sourceDistDim == 1 && reductionDim == 0);
+    if (isReductionLaneLocal && !resultDistributed)
+      return rewriter.notifyMatchFailure(
+          warpOp, "Expecting a distributed result for lane-local reduction.");
+
+    if (!isReductionLaneLocal && resultDistributed)
       return rewriter.notifyMatchFailure(
           warpOp,
-          "Expecting result vector to be distributed in a col reduction.");
-    if (reductionDim == 1 && isResultDistributed)
-      return rewriter.notifyMatchFailure(
-          warpOp,
-          "Expecting result vector to be broadcasted in a row reduction.");
+          "Expecting a broadcasted result for non-lane-local reduction.");
 
     // Create a constant vector to store the result of the reduction per lane.
+    rewriter.setInsertionPoint(warpOp);
     TypedAttr zeroAttr =
         rewriter.getZeroAttr(distributedResultType.getElementType());
     Value result = arith::ConstantOp::create(
         rewriter, reductionOp->getLoc(), distributedResultType,
         DenseElementsAttr::get(distributedResultType, zeroAttr));
-    // Col reduction.
-    if (reductionDim == 0) {
-      // Compute source distributed type assuming each lane owns cols.
-      SmallVector<int64_t> shape(sourceType.getShape());
-      shape[1] = shape[1] / warpOp.getWarpSize();
-      auto sourceDistributedType = VectorType::get(shape, elementType);
 
+    // Handle lane-local reduction case. In this case we fully distribute the
+    // reduction.
+    if (isReductionLaneLocal) {
       // Yield the source and acc vectors from the WarpOp.
       SmallVector<size_t> newRetIndices;
       auto newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
           rewriter, warpOp, {reductionOp.getSource(), reductionOp.getAcc()},
-          {sourceDistributedType, distributedResultType}, newRetIndices);
+          {sourceDistType, distributedResultType}, newRetIndices);
       rewriter.setInsertionPointAfter(newWarpOp);
 
-      int nCols = sourceDistributedType.getShape()[1];
+      int nSlices = sourceDistType.getShape()[sourceDistDim];
       Value source = newWarpOp.getResult(newRetIndices[0]);
       Value acc = newWarpOp.getResult(newRetIndices[1]);
-      // For each column owned by a lane, extract the column (of size nRows x
-      // 1), shape cast to 1D (nRows), do a vector.reduction and, insert the
-      // result back to the result vector.
-      for (int i = 0; i < nCols; ++i) {
+      // For each slice owned by a lane, extract the slice, shape cast to 1D, do
+      // a vector.reduction and, insert the result back to the result vector.
+      for (int i = 0; i < nSlices; ++i) {
+        SmallVector<int64_t, 2> sliceOffsets, sliceSizes;
+        if (sourceDistDim == 0) {
+          sliceOffsets = {i, 0};
+          sliceSizes = {1, sourceDistType.getShape()[1]};
+        } else {
+          sliceOffsets = {0, i};
+          sliceSizes = {sourceDistType.getShape()[0], 1};
+        }
         Value col = vector::ExtractStridedSliceOp::create(
-            rewriter, reductionOp.getLoc(), source, {0, i},
-            {sourceDistributedType.getShape()[0], 1}, {1, 1});
+            rewriter, reductionOp.getLoc(), source, sliceOffsets, sliceSizes,
+            {1, 1});
+        int64_t col1DSize =
+            sourceDistType.getShape()[sourceDistDim == 1 ? 0 : 1];
         col = vector::ShapeCastOp::create(
             rewriter, reductionOp.getLoc(),
-            VectorType::get({sourceDistributedType.getShape()[0]}, elementType),
-            col);
+            VectorType::get({col1DSize}, elementType), col);
         Value accCol =
             vector::ExtractOp::create(rewriter, reductionOp.getLoc(), acc, i);
         Value colReduce = vector::ReductionOp::create(
@@ -957,26 +999,79 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
       rewriter.replaceAllUsesWith(newWarpOp.getResult(operandNumber), result);
       return success();
     }
-    // For row reductions, we simply rewrite the MultiReductionOp in terms of
-    // multiple ReductionOps. Actual distribution is done by the WarpOpReduction
-    // pattern.
+    // For non-lane-local case, we simply rewrite the MultiReductionOp in terms
+    // of multiple ReductionOps. Actual distribution is done by the
+    // WarpOpReduction pattern.
     rewriter.setInsertionPointAfter(reductionOp);
-    int nRows = sourceType.getShape()[0];
-    // For each row of the source, extract the row vector, do a reduction and,
-    // insert the result back to the result.
-    for (int i = 0; i < nRows; ++i) {
-      Value source = vector::ExtractOp::create(rewriter, reductionOp.getLoc(),
-                                               reductionOp.getSource(), i);
-      Value acc = vector::ExtractOp::create(rewriter, reductionOp.getLoc(),
-                                            reductionOp.getAcc(), i);
-      Value rowReduce = vector::ReductionOp::create(
-          rewriter, reductionOp.getLoc(), reductionOp.getKind(), source, acc);
+    int nSlices = sourceType.getShape()[sourceDistDim == 0 ? 1 : 0];
+    // For each slice of the source, extract the slice vector, do a reduction
+    // and, insert the result back to the result.
+    for (int i = 0; i < nSlices; ++i) {
+      SmallVector<int64_t, 2> sliceOffsets, sliceSizes;
+      if (sourceDistDim == 1) {
+        sliceOffsets = {i, 0};
+        sliceSizes = {1, sourceType.getShape()[1]};
+      } else {
+        sliceOffsets = {0, i};
+        sliceSizes = {sourceType.getShape()[0], 1};
+      }
+      Value col = vector::ExtractStridedSliceOp::create(
+          rewriter, reductionOp.getLoc(), reductionOp.getSource(), sliceOffsets,
+          sliceSizes, {1, 1});
+      int64_t col1DSize = sourceType.getShape()[sourceDistDim];
+      col = vector::ShapeCastOp::create(
+          rewriter, reductionOp.getLoc(),
+          VectorType::get({col1DSize}, elementType), col);
+      Value accCol = vector::ExtractOp::create(rewriter, reductionOp.getLoc(),
+                                               reductionOp.getAcc(), i);
+      Value colReduce = vector::ReductionOp::create(
+          rewriter, reductionOp.getLoc(), reductionOp.getKind(), col, accCol);
       result = vector::InsertOp::create(rewriter, reductionOp.getLoc(),
-                                        rowReduce, result, i);
+                                        colReduce, result, i);
     }
     // Replace the warp op result with the final result.
     rewriter.replaceAllUsesWith(reductionOp.getResult(), result);
+    return success();
+  }
+};
 
+struct VectorShapeCastDistribution : public gpu::WarpDistributionPattern {
+  using gpu::WarpDistributionPattern::WarpDistributionPattern;
+  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
+                                PatternRewriter &rewriter) const override {
+    OpOperand *yieldOperand =
+        getWarpResult(warpOp, llvm::IsaPred<vector::ShapeCastOp>);
+    if (!yieldOperand)
+      return failure();
+    auto shapeCastOp =
+        cast<vector::ShapeCastOp>(yieldOperand->get().getDefiningOp());
+    unsigned operandNumber = yieldOperand->getOperandNumber();
+    auto resultDistTy =
+        cast<VectorType>(warpOp.getResult(operandNumber).getType());
+    xegpu::DistributeLayoutAttr sourceLayout =
+        xegpu::getDistributeLayoutAttr(shapeCastOp.getSource());
+    if (!sourceLayout)
+      return rewriter.notifyMatchFailure(
+          warpOp, "the source of shape_cast op lacks distribution layout");
+    FailureOr<VectorType> sourceDistTypeOrFailure =
+        getDistVecTypeBasedOnLaneLayout(sourceLayout,
+                                        shapeCastOp.getSourceVectorType());
+    if (failed(sourceDistTypeOrFailure))
+      return rewriter.notifyMatchFailure(
+          warpOp, "failed to get distributed vector type for source");
+    VectorType sourceDistType = sourceDistTypeOrFailure.value();
+    // Create a new warp op that yields the source of the shape_cast op.
+    SmallVector<size_t> newRetIndices;
+    auto newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+        rewriter, warpOp, {shapeCastOp.getSource()}, {sourceDistType},
+        newRetIndices);
+    rewriter.setInsertionPointAfter(newWarpOp);
+    Value source = newWarpOp.getResult(newRetIndices[0]);
+    // Create a new shape_cast op outside the warp op.
+    Value newShapeCast = vector::ShapeCastOp::create(
+        rewriter, shapeCastOp.getLoc(), resultDistTy, source);
+    rewriter.replaceAllUsesWith(newWarpOp.getResult(operandNumber),
+                                newShapeCast);
     return success();
   }
 };
@@ -998,6 +1093,8 @@ void xegpu::populateXeGPUSubgroupDistributePatterns(
            DpasDistribution, PrefetchNdDistribution, UpdateNdOffsetDistribution,
            GpuBarrierDistribution, VectorMultiReductionDistribution>(
           patterns.getContext());
+  patterns.add<VectorShapeCastDistribution>(patterns.getContext(),
+                                            /*benefit=*/2);
 }
 
 void XeGPUSubgroupDistributePass::runOnOperation() {
@@ -1012,8 +1109,7 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
       if (!isa<VectorType>(operand.get().getType()))
         continue;
 
-      auto layout =
-          xegpu::getDistributeLayoutAttrOfType<xegpu::LayoutAttr>(operand);
+      auto layout = xegpu::getDistributeLayoutAttr(operand.get());
       if (!layout) {
         op->emitError("Could not find layout attribute for operand ")
             << operand.getOperandNumber() << " of operation " << op->getName();
@@ -1074,6 +1170,25 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
   // TODO: shuffleFn is not used.
   auto shuffleFn = [](Location loc, OpBuilder &builder, Value val, Value srcIdx,
                       int64_t warpSz) { return Value(); };
+
+  auto warpReduction = [](Location loc, OpBuilder &builder, Value input,
+                          vector::CombiningKind kind, uint32_t size) {
+    // First reduce on a single thread to get per lane reduction value.
+    Value laneVal = builder.create<vector::ReductionOp>(loc, kind, input);
+    // Parallel reduction using butterfly shuffles.
+    for (uint64_t i = 1; i < size; i <<= 1) {
+      Value shuffled =
+          builder
+              .create<gpu::ShuffleOp>(loc, laneVal, i,
+                                      /*width=*/size,
+                                      /*mode=*/gpu::ShuffleMode::XOR)
+              .getShuffleResult();
+      laneVal = makeArithReduction(builder, loc, kind, laneVal, shuffled);
+    }
+    return laneVal;
+  };
+
+  vector::populateDistributeReduction(patterns, warpReduction);
   vector::populatePropagateWarpVectorDistributionPatterns(
       patterns, distributionFn, shuffleFn);
   if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
