@@ -503,8 +503,9 @@ void CommandObjectDisassemble::DoExecute(Args &command,
         "\"disassemble\" arguments are specified as options.\n");
     const int terminal_width =
         GetCommandInterpreter().GetDebugger().GetTerminalWidth();
+    const bool use_color = GetCommandInterpreter().GetDebugger().GetUseColor();
     GetOptions()->GenerateOptionUsage(result.GetErrorStream(), *this,
-                                      terminal_width);
+                                      terminal_width, use_color);
     return;
   }
 

@@ -375,7 +375,6 @@ set(files
   __flat_set/flat_set.h
   __flat_set/ra_iterator.h
   __flat_set/utils.h
-  __force_nonstandard_layout
   __format/buffer.h
   __format/concepts.h
   __format/container_adaptor.h
@@ -448,14 +447,12 @@ set(files
   __fwd/get.h
   __fwd/ios.h
   __fwd/istream.h
-  __fwd/map.h
   __fwd/mdspan.h
   __fwd/memory.h
   __fwd/memory_resource.h
   __fwd/ostream.h
   __fwd/pair.h
   __fwd/queue.h
-  __fwd/set.h
   __fwd/span.h
   __fwd/sstream.h
   __fwd/stack.h
@@ -795,7 +792,6 @@ set(files
   __type_traits/aligned_storage.h
   __type_traits/aligned_union.h
   __type_traits/alignment_of.h
-  __type_traits/can_extract_key.h
   __type_traits/common_reference.h
   __type_traits/common_type.h
   __type_traits/conditional.h
@@ -936,6 +932,7 @@ set(files
   __utility/small_buffer.h
   __utility/swap.h
   __utility/to_underlying.h
+  __utility/try_key_extraction.h
   __utility/unreachable.h
   __variant/monostate.h
   __vector/comparison.h

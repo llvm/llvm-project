@@ -5,7 +5,7 @@
 ; RUN: opt -passes=prof-inject,prof-verify %s --disable-output
 ; RUN: opt -enable-profcheck %s -S -o - | FileCheck %s --check-prefix=INJECT
 
-define void @foo(i32 %i) {
+define void @foo(i32 %i) !prof !0 {
   %c = icmp eq i32 %i, 0
   br i1 %c, label %yes, label %no
 yes:
@@ -13,8 +13,9 @@ yes:
 no:
   ret void
 }
+!0 = !{!"function_entry_count", i32 1}
 
-; INJECT: br i1 %c, label %yes, label %no, !prof !0
-; INJECT: !0 = !{!"branch_weights", i32 3, i32 5}
+; INJECT: br i1 %c, label %yes, label %no, !prof !1
+; INJECT: !1 = !{!"branch_weights", i32 3, i32 5}
 
-; VERIFY: Profile verification failed
+; VERIFY: Profile verification failed: branch annotation missing

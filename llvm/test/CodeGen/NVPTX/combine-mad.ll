@@ -189,7 +189,7 @@ declare i32 @use(i32 %0, i32 %1)
 define i32 @test_mad_multi_use(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: test_mad_multi_use(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<8>;
+; CHECK-NEXT:    .reg .b32 %r<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_mad_multi_use_param_0];

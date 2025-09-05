@@ -18,6 +18,7 @@
 #include "Protocol.h"
 #include "Selection.h"
 #include "SourceCode.h"
+#include "SymbolDocumentation.h"
 #include "clang-include-cleaner/Analysis.h"
 #include "clang-include-cleaner/IncludeSpeller.h"
 #include "clang-include-cleaner/Types.h"
@@ -41,6 +42,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
@@ -170,13 +172,14 @@ HoverInfo::PrintedType printType(QualType QT, ASTContext &ASTCtx,
     QT = QT->castAs<DecltypeType>()->getUnderlyingType();
   HoverInfo::PrintedType Result;
   llvm::raw_string_ostream OS(Result.Type);
-  // Special case: if the outer type is a tag type without qualifiers, then
-  // include the tag for extra clarity.
-  // This isn't very idiomatic, so don't attempt it for complex cases, including
-  // pointers/references, template specializations, etc.
+  // Special case: if the outer type is a canonical tag type, then include the
+  // tag for extra clarity. This isn't very idiomatic, so don't attempt it for
+  // complex cases, including pointers/references, template specializations,
+  // etc.
   if (!QT.isNull() && !QT.hasQualifiers() && PP.SuppressTagKeyword) {
-    if (auto *TT = llvm::dyn_cast<TagType>(QT.getTypePtr()))
-      OS << TT->getDecl()->getKindName() << " ";
+    if (auto *TT = llvm::dyn_cast<TagType>(QT.getTypePtr());
+        TT && TT->isCanonicalUnqualified())
+      OS << TT->getOriginalDecl()->getKindName() << " ";
   }
   QT.print(OS, PP);
 
@@ -451,8 +454,7 @@ std::optional<std::string> printExprValue(const Expr *E,
       Constant.Val.getInt().getSignificantBits() <= 64) {
     // Compare to int64_t to avoid bit-width match requirements.
     int64_t Val = Constant.Val.getInt().getExtValue();
-    for (const EnumConstantDecl *ECD :
-         T->castAs<EnumType>()->getDecl()->enumerators())
+    for (const EnumConstantDecl *ECD : T->castAsEnumDecl()->enumerators())
       if (ECD->getInitVal() == Val)
         return llvm::formatv("{0} ({1})", ECD->getNameAsString(),
                              printHex(Constant.Val.getInt()))
@@ -627,6 +629,9 @@ HoverInfo getHoverContents(const NamedDecl *D, const PrintingPolicy &PP,
   HI.Name = printName(Ctx, *D);
   const auto *CommentD = getDeclForComment(D);
   HI.Documentation = getDeclComment(Ctx, *CommentD);
+  // save the language options to be able to create the comment::CommandTraits
+  // to parse the documentation
+  HI.CommentOpts = D->getASTContext().getLangOpts().CommentOpts;
   enhanceFromIndex(HI, *CommentD, Index);
   if (HI.Documentation.empty())
     HI.Documentation = synthesizeDocumentation(D);
@@ -826,7 +831,7 @@ std::optional<HoverInfo> getThisExprHoverContents(const CXXThisExpr *CTE,
                                                   ASTContext &ASTCtx,
                                                   const PrintingPolicy &PP) {
   QualType OriginThisType = CTE->getType()->getPointeeType();
-  QualType ClassType = declaredType(OriginThisType->getAsTagDecl());
+  QualType ClassType = declaredType(OriginThisType->castAsTagDecl());
   // For partial specialization class, origin `this` pointee type will be
   // parsed as `InjectedClassNameType`, which will ouput template arguments
   // like "type-parameter-0-0". So we retrieve user written class type in this
@@ -967,10 +972,11 @@ void addLayoutInfo(const NamedDecl &ND, HoverInfo &HI) {
 
   const auto &Ctx = ND.getASTContext();
   if (auto *RD = llvm::dyn_cast<RecordDecl>(&ND)) {
-    if (auto Size = Ctx.getTypeSizeInCharsIfKnown(RD->getTypeForDecl()))
+    CanQualType RT = Ctx.getCanonicalTagType(RD);
+    if (auto Size = Ctx.getTypeSizeInCharsIfKnown(RT))
       HI.Size = Size->getQuantity() * 8;
     if (!RD->isDependentType() && RD->isCompleteDefinition())
-      HI.Align = Ctx.getTypeAlign(RD->getTypeForDecl());
+      HI.Align = Ctx.getTypeAlign(RT);
     return;
   }
 
@@ -1267,10 +1273,10 @@ std::optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
     HoverCountMetric.record(1, "include");
     HoverInfo HI;
     HI.Name = std::string(llvm::sys::path::filename(Inc.Resolved));
-    // FIXME: We don't have a fitting value for Kind.
     HI.Definition =
         URIForFile::canonicalize(Inc.Resolved, AST.tuPath()).file().str();
     HI.DefinitionLanguage = "";
+    HI.Kind = index::SymbolKind::IncludeDirective;
     maybeAddUsedSymbols(AST, HI, Inc);
     return HI;
   }
@@ -1388,9 +1394,96 @@ static std::string formatOffset(uint64_t OffsetInBits) {
   return Offset;
 }
 
-markup::Document HoverInfo::present() const {
-  markup::Document Output;
+void HoverInfo::calleeArgInfoToMarkupParagraph(markup::Paragraph &P) const {
+  assert(CallPassType);
+  std::string Buffer;
+  llvm::raw_string_ostream OS(Buffer);
+  OS << "Passed ";
+  if (CallPassType->PassBy != HoverInfo::PassType::Value) {
+    OS << "by ";
+    if (CallPassType->PassBy == HoverInfo::PassType::ConstRef)
+      OS << "const ";
+    OS << "reference ";
+  }
+  if (CalleeArgInfo->Name)
+    OS << "as " << CalleeArgInfo->Name;
+  else if (CallPassType->PassBy == HoverInfo::PassType::Value)
+    OS << "by value";
+  if (CallPassType->Converted && CalleeArgInfo->Type)
+    OS << " (converted to " << CalleeArgInfo->Type->Type << ")";
+  P.appendText(OS.str());
+}
 
+void HoverInfo::usedSymbolNamesToMarkup(markup::Document &Output) const {
+  markup::Paragraph &P = Output.addParagraph();
+  P.appendText("provides ");
+
+  const std::vector<std::string>::size_type SymbolNamesLimit = 5;
+  auto Front = llvm::ArrayRef(UsedSymbolNames).take_front(SymbolNamesLimit);
+
+  llvm::interleave(
+      Front, [&](llvm::StringRef Sym) { P.appendCode(Sym); },
+      [&] { P.appendText(", "); });
+  if (UsedSymbolNames.size() > Front.size()) {
+    P.appendText(" and ");
+    P.appendText(std::to_string(UsedSymbolNames.size() - Front.size()));
+    P.appendText(" more");
+  }
+}
+
+void HoverInfo::providerToMarkupParagraph(markup::Document &Output) const {
+  markup::Paragraph &DI = Output.addParagraph();
+  DI.appendText("provided by");
+  DI.appendSpace();
+  DI.appendCode(Provider);
+}
+
+void HoverInfo::definitionScopeToMarkup(markup::Document &Output) const {
+  std::string Buffer;
+
+  // Append scope comment, dropping trailing "::".
+  // Note that we don't print anything for global namespace, to not annoy
+  // non-c++ projects or projects that are not making use of namespaces.
+  if (!LocalScope.empty()) {
+    // Container name, e.g. class, method, function.
+    // We might want to propagate some info about container type to print
+    // function foo, class X, method X::bar, etc.
+    Buffer += "// In " + llvm::StringRef(LocalScope).rtrim(':').str() + '\n';
+  } else if (NamespaceScope && !NamespaceScope->empty()) {
+    Buffer += "// In namespace " +
+              llvm::StringRef(*NamespaceScope).rtrim(':').str() + '\n';
+  }
+
+  if (!AccessSpecifier.empty()) {
+    Buffer += AccessSpecifier + ": ";
+  }
+
+  Buffer += Definition;
+
+  Output.addCodeBlock(Buffer, DefinitionLanguage);
+}
+
+void HoverInfo::valueToMarkupParagraph(markup::Paragraph &P) const {
+  P.appendText("Value = ");
+  P.appendCode(*Value);
+}
+
+void HoverInfo::offsetToMarkupParagraph(markup::Paragraph &P) const {
+  P.appendText("Offset: " + formatOffset(*Offset));
+}
+
+void HoverInfo::sizeToMarkupParagraph(markup::Paragraph &P) const {
+  P.appendText("Size: " + formatSize(*Size));
+  if (Padding && *Padding != 0) {
+    P.appendText(llvm::formatv(" (+{0} padding)", formatSize(*Padding)).str());
+  }
+  if (Align)
+    P.appendText(", alignment " + formatSize(*Align));
+}
+
+markup::Document HoverInfo::presentDoxygen() const {
+
+  markup::Document Output;
   // Header contains a text of the form:
   // variable `var`
   //
@@ -1404,17 +1497,159 @@ markup::Document HoverInfo::present() const {
   // level 1 and 2 headers in a huge font, see
   // https://github.com/microsoft/vscode/issues/88417 for details.
   markup::Paragraph &Header = Output.addHeading(3);
-  if (Kind != index::SymbolKind::Unknown)
+  if (Kind != index::SymbolKind::Unknown &&
+      Kind != index::SymbolKind::IncludeDirective)
+    Header.appendText(index::getSymbolKindString(Kind)).appendSpace();
+  assert(!Name.empty() && "hover triggered on a nameless symbol");
+
+  if (Kind == index::SymbolKind::IncludeDirective) {
+    Header.appendCode(Name);
+
+    if (!Definition.empty())
+      Output.addParagraph().appendCode(Definition);
+
+    if (!UsedSymbolNames.empty()) {
+      Output.addRuler();
+      usedSymbolNamesToMarkup(Output);
+    }
+
+    return Output;
+  }
+
+  if (!Definition.empty()) {
+    Output.addRuler();
+    definitionScopeToMarkup(Output);
+  } else {
+    Header.appendCode(Name);
+  }
+
+  if (!Provider.empty()) {
+    providerToMarkupParagraph(Output);
+  }
+
+  // Put a linebreak after header to increase readability.
+  Output.addRuler();
+
+  SymbolDocCommentVisitor SymbolDoc(Documentation, CommentOpts);
+
+  if (SymbolDoc.hasBriefCommand()) {
+    SymbolDoc.briefToMarkup(Output.addParagraph());
+    Output.addRuler();
+  }
+
+  // For functions we display signature in a list form, e.g.:
+  // Template Parameters:
+  // - `typename T` - description
+  // Parameters:
+  // - `bool param1` - description
+  // - `int param2 = 5` - description
+  // Returns
+  // `type` - description
+  if (TemplateParameters && !TemplateParameters->empty()) {
+    Output.addParagraph().appendBoldText("Template Parameters:");
+    markup::BulletList &L = Output.addBulletList();
+    for (const auto &Param : *TemplateParameters) {
+      markup::Paragraph &P = L.addItem().addParagraph();
+      P.appendCode(llvm::to_string(Param));
+      if (SymbolDoc.isTemplateTypeParmDocumented(llvm::to_string(Param.Name))) {
+        P.appendText(" - ");
+        SymbolDoc.templateTypeParmDocToMarkup(llvm::to_string(Param.Name), P);
+      }
+    }
+    Output.addRuler();
+  }
+
+  if (Parameters && !Parameters->empty()) {
+    Output.addParagraph().appendBoldText("Parameters:");
+    markup::BulletList &L = Output.addBulletList();
+    for (const auto &Param : *Parameters) {
+      markup::Paragraph &P = L.addItem().addParagraph();
+      P.appendCode(llvm::to_string(Param));
+
+      if (SymbolDoc.isParameterDocumented(llvm::to_string(Param.Name))) {
+        P.appendText(" - ");
+        SymbolDoc.parameterDocToMarkup(llvm::to_string(Param.Name), P);
+      }
+    }
+    Output.addRuler();
+  }
+
+  // Print Types on their own lines to reduce chances of getting line-wrapped by
+  // editor, as they might be long.
+  if (ReturnType &&
+      ((ReturnType->Type != "void" && !ReturnType->AKA.has_value()) ||
+       (ReturnType->AKA.has_value() && ReturnType->AKA != "void"))) {
+    Output.addParagraph().appendBoldText("Returns:");
+    markup::Paragraph &P = Output.addParagraph();
+    P.appendCode(llvm::to_string(*ReturnType));
+
+    if (SymbolDoc.hasReturnCommand()) {
+      P.appendText(" - ");
+      SymbolDoc.returnToMarkup(P);
+    }
+    Output.addRuler();
+  }
+
+  // add specially handled doxygen commands.
+  SymbolDoc.warningsToMarkup(Output);
+  SymbolDoc.notesToMarkup(Output);
+
+  // add any other documentation.
+  SymbolDoc.docToMarkup(Output);
+
+  Output.addRuler();
+
+  // Don't print Type after Parameters or ReturnType as this will just duplicate
+  // the information
+  if (Type && !ReturnType && !Parameters)
+    Output.addParagraph().appendText("Type: ").appendCode(
+        llvm::to_string(*Type));
+
+  if (Value) {
+    valueToMarkupParagraph(Output.addParagraph());
+  }
+
+  if (Offset)
+    offsetToMarkupParagraph(Output.addParagraph());
+  if (Size) {
+    sizeToMarkupParagraph(Output.addParagraph());
+  }
+
+  if (CalleeArgInfo) {
+    calleeArgInfoToMarkupParagraph(Output.addParagraph());
+  }
+
+  if (!UsedSymbolNames.empty()) {
+    Output.addRuler();
+    usedSymbolNamesToMarkup(Output);
+  }
+
+  return Output;
+}
+
+markup::Document HoverInfo::presentDefault() const {
+  markup::Document Output;
+  // Header contains a text of the form:
+  // variable `var`
+  //
+  // class `X`
+  //
+  // function `foo`
+  //
+  // expression
+  //
+  // Note that we are making use of a level-3 heading because VSCode renders
+  // level 1 and 2 headers in a huge font, see
+  // https://github.com/microsoft/vscode/issues/88417 for details.
+  markup::Paragraph &Header = Output.addHeading(3);
+  if (Kind != index::SymbolKind::Unknown &&
+      Kind != index::SymbolKind::IncludeDirective)
     Header.appendText(index::getSymbolKindString(Kind)).appendSpace();
   assert(!Name.empty() && "hover triggered on a nameless symbol");
   Header.appendCode(Name);
 
   if (!Provider.empty()) {
-    markup::Paragraph &DI = Output.addParagraph();
-    DI.appendText("provided by");
-    DI.appendSpace();
-    DI.appendCode(Provider);
-    Output.addRuler();
+    providerToMarkupParagraph(Output);
   }
 
   // Put a linebreak after header to increase readability.
@@ -1432,7 +1667,7 @@ markup::Document HoverInfo::present() const {
   }
 
   if (Parameters && !Parameters->empty()) {
-    Output.addParagraph().appendText("Parameters: ");
+    Output.addParagraph().appendText("Parameters:");
     markup::BulletList &L = Output.addBulletList();
     for (const auto &Param : *Parameters)
       L.addItem().addParagraph().appendCode(llvm::to_string(Param));
@@ -1445,41 +1680,17 @@ markup::Document HoverInfo::present() const {
         llvm::to_string(*Type));
 
   if (Value) {
-    markup::Paragraph &P = Output.addParagraph();
-    P.appendText("Value = ");
-    P.appendCode(*Value);
+    valueToMarkupParagraph(Output.addParagraph());
   }
 
   if (Offset)
-    Output.addParagraph().appendText("Offset: " + formatOffset(*Offset));
+    offsetToMarkupParagraph(Output.addParagraph());
   if (Size) {
-    auto &P = Output.addParagraph().appendText("Size: " + formatSize(*Size));
-    if (Padding && *Padding != 0) {
-      P.appendText(
-          llvm::formatv(" (+{0} padding)", formatSize(*Padding)).str());
-    }
-    if (Align)
-      P.appendText(", alignment " + formatSize(*Align));
+    sizeToMarkupParagraph(Output.addParagraph());
   }
 
   if (CalleeArgInfo) {
-    assert(CallPassType);
-    std::string Buffer;
-    llvm::raw_string_ostream OS(Buffer);
-    OS << "Passed ";
-    if (CallPassType->PassBy != HoverInfo::PassType::Value) {
-      OS << "by ";
-      if (CallPassType->PassBy == HoverInfo::PassType::ConstRef)
-        OS << "const ";
-      OS << "reference ";
-    }
-    if (CalleeArgInfo->Name)
-      OS << "as " << CalleeArgInfo->Name;
-    else if (CallPassType->PassBy == HoverInfo::PassType::Value)
-      OS << "by value";
-    if (CallPassType->Converted && CalleeArgInfo->Type)
-      OS << " (converted to " << CalleeArgInfo->Type->Type << ")";
-    Output.addParagraph().appendText(OS.str());
+    calleeArgInfoToMarkupParagraph(Output.addParagraph());
   }
 
   if (!Documentation.empty())
@@ -1487,49 +1698,12 @@ markup::Document HoverInfo::present() const {
 
   if (!Definition.empty()) {
     Output.addRuler();
-    std::string Buffer;
-
-    if (!Definition.empty()) {
-      // Append scope comment, dropping trailing "::".
-      // Note that we don't print anything for global namespace, to not annoy
-      // non-c++ projects or projects that are not making use of namespaces.
-      if (!LocalScope.empty()) {
-        // Container name, e.g. class, method, function.
-        // We might want to propagate some info about container type to print
-        // function foo, class X, method X::bar, etc.
-        Buffer +=
-            "// In " + llvm::StringRef(LocalScope).rtrim(':').str() + '\n';
-      } else if (NamespaceScope && !NamespaceScope->empty()) {
-        Buffer += "// In namespace " +
-                  llvm::StringRef(*NamespaceScope).rtrim(':').str() + '\n';
-      }
-
-      if (!AccessSpecifier.empty()) {
-        Buffer += AccessSpecifier + ": ";
-      }
-
-      Buffer += Definition;
-    }
-
-    Output.addCodeBlock(Buffer, DefinitionLanguage);
+    definitionScopeToMarkup(Output);
   }
 
   if (!UsedSymbolNames.empty()) {
     Output.addRuler();
-    markup::Paragraph &P = Output.addParagraph();
-    P.appendText("provides ");
-
-    const std::vector<std::string>::size_type SymbolNamesLimit = 5;
-    auto Front = llvm::ArrayRef(UsedSymbolNames).take_front(SymbolNamesLimit);
-
-    llvm::interleave(
-        Front, [&](llvm::StringRef Sym) { P.appendCode(Sym); },
-        [&] { P.appendText(", "); });
-    if (UsedSymbolNames.size() > Front.size()) {
-      P.appendText(" and ");
-      P.appendText(std::to_string(UsedSymbolNames.size() - Front.size()));
-      P.appendText(" more");
-    }
+    usedSymbolNamesToMarkup(Output);
   }
 
   return Output;
@@ -1538,21 +1712,19 @@ markup::Document HoverInfo::present() const {
 std::string HoverInfo::present(MarkupKind Kind) const {
   if (Kind == MarkupKind::Markdown) {
     const Config &Cfg = Config::current();
-    if ((Cfg.Documentation.CommentFormat ==
-         Config::CommentFormatPolicy::Markdown) ||
-        (Cfg.Documentation.CommentFormat ==
-         Config::CommentFormatPolicy::Doxygen))
-      // If the user prefers Markdown, we use the present() method to generate
-      // the Markdown output.
-      return present().asMarkdown();
+    if (Cfg.Documentation.CommentFormat ==
+        Config::CommentFormatPolicy::Markdown)
+      return presentDefault().asMarkdown();
+    if (Cfg.Documentation.CommentFormat == Config::CommentFormatPolicy::Doxygen)
+      return presentDoxygen().asMarkdown();
     if (Cfg.Documentation.CommentFormat ==
         Config::CommentFormatPolicy::PlainText)
       // If the user prefers plain text, we use the present() method to generate
       // the plain text output.
-      return present().asEscapedMarkdown();
+      return presentDefault().asEscapedMarkdown();
   }
 
-  return present().asPlainText();
+  return presentDefault().asPlainText();
 }
 
 // If the backtick at `Offset` starts a probable quoted range, return the range

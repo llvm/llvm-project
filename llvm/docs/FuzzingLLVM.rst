@@ -128,7 +128,7 @@ llvm-mc-assemble-fuzzer
 -----------------------
 
 A |generic fuzzer| that fuzzes the MC layer's assemblers by treating inputs as
-target specific assembly.
+target-specific assembly.
 
 Note that this fuzzer has an unusual command line interface which is not fully
 compatible with all of libFuzzer's features. Fuzzer arguments must be passed

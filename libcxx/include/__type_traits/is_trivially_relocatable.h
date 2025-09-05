@@ -35,7 +35,7 @@ struct __libcpp_is_trivially_relocatable : is_trivially_copyable<_Tp> {};
 #endif
 
 // __trivially_relocatable on libc++'s builtin types does not currently return the right answer with PFP.
-#if !__has_feature(pointer_field_protection)
+#if !defined(__POINTER_FIELD_PROTECTION__)
 template <class _Tp>
 struct __libcpp_is_trivially_relocatable<_Tp,
                                          __enable_if_t<is_same<_Tp, typename _Tp::__trivially_relocatable>::value> >

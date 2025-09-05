@@ -109,6 +109,35 @@ public:
   /// Return the generic pointer if this data structure is a generic type.
   lldb::SBScriptObject GetGenericValue() const;
 
+  /// Set the value corresponding to a key. If this data structure
+  /// is not a dictionary type, reset the type to be dictionary and overwrite
+  /// the previous data.
+  void SetValueForKey(const char *key, SBStructuredData &value);
+
+  /// Change the type to unsigned interger and overwrite the previous data with
+  /// the new value.
+  void SetUnsignedIntegerValue(uint64_t value);
+
+  /// Change the type to signed interger and overwrite the previous data with
+  /// the new value.
+  void SetSignedIntegerValue(int64_t value);
+
+  /// Change the type to float and overwrite the previous data with the new
+  /// value.
+  void SetFloatValue(double value);
+
+  /// Change the type to boolean and overwrite the previous data with the new
+  /// value.
+  void SetBooleanValue(bool value);
+
+  /// Change the type to string and overwrite the previous data with the new
+  /// value.
+  void SetStringValue(const char *value);
+
+  /// Change the type to generic and overwrite the previous data with the new
+  /// value.
+  void SetGenericValue(SBScriptObject value);
+
 protected:
   friend class SBAttachInfo;
   friend class SBCommandReturnObject;

@@ -69,6 +69,46 @@ unsigned llvm::ComputeLinearIndex(Type *Ty,
   return CurIndex + 1;
 }
 
+void llvm::ComputeValueTypes(const DataLayout &DL, Type *Ty,
+                             SmallVectorImpl<Type *> &Types,
+                             SmallVectorImpl<TypeSize> *Offsets,
+                             TypeSize StartingOffset) {
+  assert((Ty->isScalableTy() == StartingOffset.isScalable() ||
+          StartingOffset.isZero()) &&
+         "Offset/TypeSize mismatch!");
+  // Given a struct type, recursively traverse the elements.
+  if (StructType *STy = dyn_cast<StructType>(Ty)) {
+    // If the Offsets aren't needed, don't query the struct layout. This allows
+    // us to support structs with scalable vectors for operations that don't
+    // need offsets.
+    const StructLayout *SL = Offsets ? DL.getStructLayout(STy) : nullptr;
+    for (StructType::element_iterator EB = STy->element_begin(), EI = EB,
+                                      EE = STy->element_end();
+         EI != EE; ++EI) {
+      // Don't compute the element offset if we didn't get a StructLayout above.
+      TypeSize EltOffset =
+          SL ? SL->getElementOffset(EI - EB) : TypeSize::getZero();
+      ComputeValueTypes(DL, *EI, Types, Offsets, StartingOffset + EltOffset);
+    }
+    return;
+  }
+  // Given an array type, recursively traverse the elements.
+  if (ArrayType *ATy = dyn_cast<ArrayType>(Ty)) {
+    Type *EltTy = ATy->getElementType();
+    TypeSize EltSize = DL.getTypeAllocSize(EltTy);
+    for (unsigned i = 0, e = ATy->getNumElements(); i != e; ++i)
+      ComputeValueTypes(DL, EltTy, Types, Offsets,
+                        StartingOffset + i * EltSize);
+    return;
+  }
+  // Interpret void as zero return values.
+  if (Ty->isVoidTy())
+    return;
+  Types.push_back(Ty);
+  if (Offsets)
+    Offsets->push_back(StartingOffset);
+}
+
 /// ComputeValueVTs - Given an LLVM IR type, compute a sequence of
 /// EVTs that represent all the individual underlying
 /// non-aggregate types that comprise it.
@@ -81,45 +121,13 @@ void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
                            SmallVectorImpl<EVT> *MemVTs,
                            SmallVectorImpl<TypeSize> *Offsets,
                            TypeSize StartingOffset) {
-  assert((Ty->isScalableTy() == StartingOffset.isScalable() ||
-          StartingOffset.isZero()) &&
-         "Offset/TypeSize mismatch!");
-  // Given a struct type, recursively traverse the elements.
-  if (StructType *STy = dyn_cast<StructType>(Ty)) {
-    // If the Offsets aren't needed, don't query the struct layout. This allows
-    // us to support structs with scalable vectors for operations that don't
-    // need offsets.
-    const StructLayout *SL = Offsets ? DL.getStructLayout(STy) : nullptr;
-    for (StructType::element_iterator EB = STy->element_begin(),
-                                      EI = EB,
-                                      EE = STy->element_end();
-         EI != EE; ++EI) {
-      // Don't compute the element offset if we didn't get a StructLayout above.
-      TypeSize EltOffset =
-          SL ? SL->getElementOffset(EI - EB) : TypeSize::getZero();
-      ComputeValueVTs(TLI, DL, *EI, ValueVTs, MemVTs, Offsets,
-                      StartingOffset + EltOffset);
-    }
-    return;
+  SmallVector<Type *> Types;
+  ComputeValueTypes(DL, Ty, Types, Offsets, StartingOffset);
+  for (Type *Ty : Types) {
+    ValueVTs.push_back(TLI.getValueType(DL, Ty));
+    if (MemVTs)
+      MemVTs->push_back(TLI.getMemValueType(DL, Ty));
   }
-  // Given an array type, recursively traverse the elements.
-  if (ArrayType *ATy = dyn_cast<ArrayType>(Ty)) {
-    Type *EltTy = ATy->getElementType();
-    TypeSize EltSize = DL.getTypeAllocSize(EltTy);
-    for (unsigned i = 0, e = ATy->getNumElements(); i != e; ++i)
-      ComputeValueVTs(TLI, DL, EltTy, ValueVTs, MemVTs, Offsets,
-                      StartingOffset + i * EltSize);
-    return;
-  }
-  // Interpret void as zero return values.
-  if (Ty->isVoidTy())
-    return;
-  // Base case: we can get an EVT for this LLVM IR type.
-  ValueVTs.push_back(TLI.getValueType(DL, Ty));
-  if (MemVTs)
-    MemVTs->push_back(TLI.getMemValueType(DL, Ty));
-  if (Offsets)
-    Offsets->push_back(StartingOffset);
 }
 
 void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
