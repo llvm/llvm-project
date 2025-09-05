@@ -679,8 +679,8 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Register SrcReg = MI.getOperand(1).getReg();
     computeKnownBitsImpl(SrcReg, Known, DemandedElts, Depth + 1);
     Known = Known.abs();
-    Known.Zero.setHighBits(computeNumSignBitsImpl(SrcReg, DemandedElts, Depth + 1) -
-                           1);
+    Known.Zero.setHighBits(
+        computeNumSignBitsImpl(SrcReg, DemandedElts, Depth + 1) - 1);
     break;
   }
   }
@@ -1734,7 +1734,8 @@ unsigned GISelValueTracking::computeNumSignBitsMin(Register Src0, Register Src1,
   unsigned Src1SignBits = computeNumSignBitsImpl(Src1, DemandedElts, Depth);
   if (Src1SignBits == 1)
     return 1;
-  return std::min(computeNumSignBitsImpl(Src0, DemandedElts, Depth), Src1SignBits);
+  return std::min(computeNumSignBitsImpl(Src0, DemandedElts, Depth),
+                  Src1SignBits);
 }
 
 /// Compute the known number of sign bits with attached range metadata in the
@@ -1765,8 +1766,8 @@ static unsigned computeNumSignBitsFromRangeMetadata(const GAnyLoad *Ld,
 }
 
 unsigned GISelValueTracking::computeNumSignBitsImpl(Register R,
-                                                const APInt &DemandedElts,
-                                                unsigned Depth) {
+                                                    const APInt &DemandedElts,
+                                                    unsigned Depth) {
   MachineInstr &MI = *MRI.getVRegDef(R);
   unsigned Opcode = MI.getOpcode();
 
@@ -1920,7 +1921,8 @@ unsigned GISelValueTracking::computeNumSignBitsImpl(Register R,
     // Check if the sign bits of source go down as far as the truncated value.
     unsigned DstTyBits = DstTy.getScalarSizeInBits();
     unsigned NumSrcBits = SrcTy.getScalarSizeInBits();
-    unsigned NumSrcSignBits = computeNumSignBitsImpl(Src, DemandedElts, Depth + 1);
+    unsigned NumSrcSignBits =
+        computeNumSignBitsImpl(Src, DemandedElts, Depth + 1);
     if (NumSrcSignBits > (NumSrcBits - DstTyBits))
       return NumSrcSignBits - (NumSrcBits - DstTyBits);
     break;
@@ -2002,7 +2004,8 @@ unsigned GISelValueTracking::computeNumSignBitsImpl(Register R,
           DemandedElts.extractBits(NumSubVectorElts, I * NumSubVectorElts);
       if (!DemandedSub)
         continue;
-      unsigned Tmp2 = computeNumSignBitsImpl(MO.getReg(), DemandedSub, Depth + 1);
+      unsigned Tmp2 =
+          computeNumSignBitsImpl(MO.getReg(), DemandedSub, Depth + 1);
 
       FirstAnswer = std::min(FirstAnswer, Tmp2);
 
@@ -2028,8 +2031,8 @@ unsigned GISelValueTracking::computeNumSignBitsImpl(Register R,
     if (FirstAnswer == 1)
       break;
     if (!!DemandedRHS) {
-      unsigned Tmp2 =
-          computeNumSignBitsImpl(MI.getOperand(2).getReg(), DemandedRHS, Depth + 1);
+      unsigned Tmp2 = computeNumSignBitsImpl(MI.getOperand(2).getReg(),
+                                             DemandedRHS, Depth + 1);
       FirstAnswer = std::min(FirstAnswer, Tmp2);
     }
     break;
@@ -2037,7 +2040,8 @@ unsigned GISelValueTracking::computeNumSignBitsImpl(Register R,
   case TargetOpcode::G_SPLAT_VECTOR: {
     // Check if the sign bits of source go down as far as the truncated value.
     Register Src = MI.getOperand(1).getReg();
-    unsigned NumSrcSignBits = computeNumSignBitsImpl(Src, APInt(1, 1), Depth + 1);
+    unsigned NumSrcSignBits =
+        computeNumSignBitsImpl(Src, APInt(1, 1), Depth + 1);
     unsigned NumSrcBits = MRI.getType(Src).getSizeInBits();
     if (NumSrcSignBits > (NumSrcBits - TyBits))
       return NumSrcSignBits - (NumSrcBits - TyBits);
