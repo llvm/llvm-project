@@ -99,7 +99,7 @@ class __compressed_pair_padding<_ToPad, true> {};
       _LIBCPP_NO_UNIQUE_ADDRESS ::std::__compressed_pair_padding<T3> _LIBCPP_CONCAT3(__padding3_, __LINE__, _)
 #  else
 #    define _LIBCPP_COMPRESSED_PAIR(T1, Initializer1, T2, Initializer2)                                                \
-      struct {                                                                                                         \
+      struct _LIBCPP_PFP {                                                                                             \
         _LIBCPP_NO_UNIQUE_ADDRESS                                                                                      \
         __attribute__((__aligned__(::std::__compressed_pair_alignment<T2>))) T1 Initializer1;                          \
         _LIBCPP_NO_UNIQUE_ADDRESS ::std::__compressed_pair_padding<T1> _LIBCPP_CONCAT3(__padding1_, __LINE__, _);      \
@@ -108,7 +108,7 @@ class __compressed_pair_padding<_ToPad, true> {};
       }
 
 #    define _LIBCPP_COMPRESSED_TRIPLE(T1, Initializer1, T2, Initializer2, T3, Initializer3)                            \
-      struct {                                                                                                         \
+      struct _LIBCPP_PFP {                                                                                             \
         _LIBCPP_NO_UNIQUE_ADDRESS                                                                                      \
         __attribute__((__aligned__(::std::__compressed_pair_alignment<T2>),                                            \
                        __aligned__(::std::__compressed_pair_alignment<T3>))) T1 Initializer1;                          \
