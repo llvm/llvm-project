@@ -868,7 +868,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     TypeSize DstSize = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
     TypeSize SrcSize = getSizeInBits(MI.getOperand(1).getReg(), MRI, TRI);
-    if (((DstSize == SrcSize) || STI.hasFeature(AArch64::FeatureFPRCVT)) &
+    if (((DstSize == SrcSize) || STI.hasFeature(AArch64::FeatureFPRCVT)) &&
         all_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
                [&](const MachineInstr &UseMI) {
                  return onlyUsesFP(UseMI, MRI, TRI) ||
@@ -1172,7 +1172,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       }
       TypeSize DstSize = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
       TypeSize SrcSize = getSizeInBits(MI.getOperand(2).getReg(), MRI, TRI);
-      if (((DstSize == SrcSize) || STI.hasFeature(AArch64::FeatureFPRCVT)) &
+      if (((DstSize == SrcSize) || STI.hasFeature(AArch64::FeatureFPRCVT)) &&
           all_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
                  [&](const MachineInstr &UseMI) {
                    return onlyUsesFP(UseMI, MRI, TRI) ||
