@@ -278,9 +278,9 @@ public:
       checkDecl(TND, TTL.getNameLoc());
       return true;
     }
-    TypeSpecTypeLoc TSTL = Loc.getAs<TypeSpecTypeLoc>();
-    if (TSTL) {
-      checkDecl(Loc.getType()->getAsTagDecl(), TSTL.getNameLoc());
+    TagTypeLoc TagTL = Loc.getAs<TagTypeLoc>();
+    if (TagTL) {
+      checkDecl(Loc.getType()->getAsTagDecl(), TagTL.getNameLoc());
     }
     if (const auto *TemplateTypeParm =
             dyn_cast<TemplateTypeParmType>(Loc.getType())) {

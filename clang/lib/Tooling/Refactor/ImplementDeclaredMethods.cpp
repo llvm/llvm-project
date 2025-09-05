@@ -262,35 +262,42 @@ ImplementDeclaredCXXMethodsOperation::runInImplementationAST(
   std::string MethodString;
   llvm::raw_string_ostream OS(MethodString);
 
+  PrintingPolicy PP = Context.getPrintingPolicy();
+  PP.PolishForDeclaration = true;
+  PP.SupressStorageClassSpecifiers = true;
+  PP.SuppressStrongLifetime = true;
+  PP.SuppressLifetimeQualifiers = true;
+  PP.SuppressUnwrittenScope = true;
+
+  // Callback class for skipping namespaces.
+  class Callbacks final : public PrintingCallbacks {
+  public:
+    bool isScopeVisible(const DeclContext *DC) const override {
+      return DC->getDeclKind() == Decl::Namespace;
+    }
+  } CB;
+
   // Pick a good insertion location.
   SourceLocation InsertionLoc;
   const CXXMethodDecl *InsertAfterMethod = nullptr;
-  std::optional<NestedNameSpecifier> NamePrefix = std::nullopt;
   if (DefinedOutOfLineMethods.empty()) {
+    PP.Callbacks = &CB;
     const RecordDecl *OutermostRecord = findOutermostRecord(Class);
     InsertionLoc = SM.getExpansionRange(OutermostRecord->getEndLoc()).getEnd();
     if (SM.getFileID(InsertionLoc) == File) {
-      // We can insert right after the class. Compute the appropriate
-      // qualification.
-      NamePrefix = NestedNameSpecifier::getRequiredQualification(
-          Context, OutermostRecord->getLexicalDeclContext(),
-          Class->getLexicalDeclContext());
+      // We can insert right after the class.
     } else {
       // We can't insert after the end of the class, since the indexer told us
       // that some file should have the implementation of it, even when there
       // are no methods here. We should try to insert at the end of the file.
       InsertionLoc = SM.getLocForEndOfFile(File);
-      NamePrefix = NestedNameSpecifier::getRequiredQualification(
-          Context, Context.getTranslationUnitDecl(),
-          Class->getLexicalDeclContext());
       llvm::SmallVector<const NamespaceDecl *, 4> Namespaces;
-      std::optional<NestedNameSpecifier> Qualifier = NamePrefix;
-      while (Qualifier) {
-        auto [ND, Prefix] = Qualifier->getAsNamespaceAndPrefix();
-        if (ND)
-          Namespaces.push_back(ND->getNamespace());
-        Qualifier = Prefix;
-      }
+
+      for (const DeclContext *DC = OutermostRecord->getLexicalDeclContext(); DC;
+           DC = DC->getLookupParent())
+        if (auto *ND = dyn_cast<NamespaceDecl>(DC))
+          Namespaces.push_back(ND);
+
       // When the class is in a namespace, add a 'using' declaration if it's
       // needed and adjust the out-of-line qualification.
       if (!Namespaces.empty()) {
@@ -305,9 +312,6 @@ ImplementDeclaredCXXMethodsOperation::runInImplementationAST(
           }
           OS << "\nusing namespace " << NamespaceOS.str() << ";";
         }
-        // Re-compute the name qualifier without the namespace.
-        NamePrefix = NestedNameSpecifier::getRequiredQualification(
-            Context, InnermostNamespace, Class->getLexicalDeclContext());
       }
     }
   } else {
@@ -324,12 +328,6 @@ ImplementDeclaredCXXMethodsOperation::runInImplementationAST(
   InsertionLoc = getLastLineLocationUnlessItHasOtherTokens(
       InsertionLoc, SM, Context.getLangOpts());
 
-  PrintingPolicy PP = Context.getPrintingPolicy();
-  PP.PolishForDeclaration = true;
-  PP.SupressStorageClassSpecifiers = true;
-  PP.SuppressStrongLifetime = true;
-  PP.SuppressLifetimeQualifiers = true;
-  PP.SuppressUnwrittenScope = true;
   OS << "\n";
   for (const auto &I : SelectedMethods) {
     const CXXMethodDecl *MD = I.Decl;

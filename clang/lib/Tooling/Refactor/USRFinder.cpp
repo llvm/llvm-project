@@ -317,9 +317,9 @@ public:
       }
       return checkOccurrence(TND, TTL.getNameLoc());
     }
-    TypeSpecTypeLoc TSTL = Loc.getAs<TypeSpecTypeLoc>();
-    if (TSTL) {
-      return checkOccurrence(Loc.getType()->getAsTagDecl(), TSTL.getNameLoc());
+    TagTypeLoc TagTL = Loc.getAs<TagTypeLoc>();
+    if (TagTL) {
+      return checkOccurrence(Loc.getType()->getAsTagDecl(), TagTL.getNameLoc());
     }
     return true;
   }

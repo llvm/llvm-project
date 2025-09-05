@@ -80,8 +80,12 @@ clang::tooling::initiateFillInEnumSwitchCasesOperation(
 
   if (!ED)
     return RefactoringOperationResult("The switch doesn't operate on an enum");
-  if (!ED->isCompleteDefinition())
-    return RefactoringOperationResult("The enum type is incomplete");
+
+  if (!ED->isCompleteDefinition()) {
+    ED = ED->getDefinition();
+    if (!ED)
+      return RefactoringOperationResult("The enum type is incomplete");
+  }
 
   if (Switch->isAllEnumCasesCovered())
     return RefactoringOperationResult("All enum cases are already covered");
