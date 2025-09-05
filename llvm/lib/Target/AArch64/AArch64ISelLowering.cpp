@@ -3175,21 +3175,24 @@ MachineBasicBlock *
 AArch64TargetLowering::EmitEntryPStateSM(MachineInstr &MI,
                                          MachineBasicBlock *BB) const {
   MachineFunction *MF = BB->getParent();
-  AArch64FunctionInfo *FuncInfo = MF->getInfo<AArch64FunctionInfo>();
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+  const DebugLoc &DL = MI.getDebugLoc();
   Register ResultReg = MI.getOperand(0).getReg();
-  if (FuncInfo->isPStateSMRegUsed()) {
+  if (MF->getRegInfo().use_empty(ResultReg)) {
+    // Nothing to do. Pseudo erased below.
+  } else if (Subtarget->hasSME()) {
+    BuildMI(*BB, MI, DL, TII->get(AArch64::MRS), ResultReg)
+        .addImm(AArch64SysReg::SVCR)
+        .addReg(AArch64::VG, RegState::Implicit);
+  } else {
     RTLIB::Libcall LC = RTLIB::SMEABI_SME_STATE;
     const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
-    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::BL))
+    BuildMI(*BB, MI, DL, TII->get(AArch64::BL))
         .addExternalSymbol(getLibcallName(LC))
         .addReg(AArch64::X0, RegState::ImplicitDefine)
         .addRegMask(TRI->getCallPreservedMask(*MF, getLibcallCallingConv(LC)));
-    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY), ResultReg)
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), ResultReg)
         .addReg(AArch64::X0);
-  } else {
-    assert(MI.getMF()->getRegInfo().use_empty(ResultReg) &&
-           "Expected no users of the entry pstate.sm!");
   }
   MI.eraseFromParent();
   return BB;
@@ -8034,6 +8037,39 @@ static bool isPassedInFPR(EVT VT) {
          (VT.isFloatingPoint() && !VT.isScalableVector());
 }
 
+SDValue AArch64TargetLowering::lowerEHPadEntry(SDValue Chain, SDLoc const &DL,
+                                               SelectionDAG &DAG) const {
+  assert(Chain.getOpcode() == ISD::EntryToken && "Unexpected Chain value");
+  SDValue Glue = Chain.getValue(1);
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  SMEAttrs SMEFnAttrs = MF.getInfo<AArch64FunctionInfo>()->getSMEFnAttrs();
+
+  // The following conditions are true on entry to an exception handler:
+  // - PSTATE.SM is 0.
+  // - PSTATE.ZA is 0.
+  // - TPIDR2_EL0 is null.
+  // See:
+  // https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst#exceptions
+  //
+  // Therefore, if the function that contains this exception handler is a
+  // streaming[-compatible] function, we must re-enable streaming mode.
+  //
+  // These mode changes are usually optimized away in catch blocks as they
+  // occur before the __cxa_begin_catch (which is a non-streaming function),
+  // but are necessary in some cases (such as for cleanups).
+
+  if (SMEFnAttrs.hasStreamingInterfaceOrBody())
+    return changeStreamingMode(DAG, DL, /*Enable=*/true, Chain,
+                               /*Glue*/ Glue, AArch64SME::Always);
+
+  if (SMEFnAttrs.hasStreamingCompatibleInterface())
+    return changeStreamingMode(DAG, DL, /*Enable=*/true, Chain, Glue,
+                               AArch64SME::IfCallerIsStreaming);
+
+  return Chain;
+}
+
 SDValue AArch64TargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
@@ -9069,7 +9105,6 @@ SDValue AArch64TargetLowering::changeStreamingMode(SelectionDAG &DAG, SDLoc DL,
   SmallVector<SDValue> Ops = {Chain, MSROp};
   unsigned Opcode;
   if (Condition != AArch64SME::Always) {
-    FuncInfo->setPStateSMRegUsed(true);
     Register PStateReg = FuncInfo->getPStateSMReg();
     assert(PStateReg.isValid() && "PStateSM Register is invalid");
     SDValue PStateSM =
@@ -30957,6 +30992,27 @@ bool AArch64TargetLowering::SimplifyDemandedBitsForTargetNode(
 
   return TargetLowering::SimplifyDemandedBitsForTargetNode(
       Op, OriginalDemandedBits, OriginalDemandedElts, Known, TLO, Depth);
+}
+
+bool AArch64TargetLowering::canCreateUndefOrPoisonForTargetNode(
+    SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+    bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
+
+  // TODO: Add more target nodes.
+  switch (Op.getOpcode()) {
+  case AArch64ISD::MOVI:
+  case AArch64ISD::MOVIedit:
+  case AArch64ISD::MOVImsl:
+  case AArch64ISD::MOVIshift:
+  case AArch64ISD::MVNImsl:
+  case AArch64ISD::MVNIshift:
+  case AArch64ISD::VASHR:
+  case AArch64ISD::VLSHR:
+  case AArch64ISD::VSHL:
+    return false;
+  }
+  return TargetLowering::canCreateUndefOrPoisonForTargetNode(
+      Op, DemandedElts, DAG, PoisonOnly, ConsiderFlags, Depth);
 }
 
 bool AArch64TargetLowering::isTargetCanonicalConstantNode(SDValue Op) const {
