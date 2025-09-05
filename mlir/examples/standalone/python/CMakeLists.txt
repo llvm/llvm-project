@@ -68,8 +68,9 @@ add_mlir_python_common_capi_library(StandalonePythonCAPI
 # Instantiation of all Python modules
 ################################################################################
 
+set(StandalonePythonModules_ROOT_PREFIX "${MLIR_BINARY_DIR}/${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}")
 add_mlir_python_modules(StandalonePythonModules
-  ROOT_PREFIX "${MLIR_BINARY_DIR}/${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}"
+  ROOT_PREFIX "${StandalonePythonModules_ROOT_PREFIX}"
   INSTALL_PREFIX "${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}"
   DECLARED_SOURCES
     StandalonePythonSources
@@ -80,4 +81,30 @@ add_mlir_python_modules(StandalonePythonModules
     MLIRPythonSources.Dialects.builtin
   COMMON_CAPI_LINK_LIBS
     StandalonePythonCAPI
-  )
+)
+
+# Everything here is very tightly coupled. See the ample descriptions at the bottom of
+# mlir/python/CMakeLists.txt.
+get_target_property(_standalone_extension_srcs StandalonePythonSources.NanobindExtension INTERFACE_SOURCES)
+generate_type_stubs(
+  MODULE_NAME mlir_standalone._mlir_libs._standaloneDialectsNanobind
+  DEPENDS_TARGETS
+    StandalonePythonModules.extension._mlir.dso
+    StandalonePythonModules.extension._standaloneDialectsNanobind.dso
+  OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/type_stubs/_mlir_libs"
+  OUTPUTS
+    _standaloneDialectsNanobind/__init__.pyi
+    _standaloneDialectsNanobind/standalone.pyi
+  DEPENDS_TARGET_SRC_DEPS "${_standalone_extension_srcs}"
+  IMPORT_PATHS "${StandalonePythonModules_ROOT_PREFIX}/.."
+)
+add_dependencies(StandalonePythonModules "${NB_STUBGEN_CUSTOM_TARGET}")
+
+declare_mlir_python_sources(
+  StandalonePythonSources.type_stub_gen
+  ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}/type_stubs"
+  ADD_TO_PARENT StandalonePythonSources
+  SOURCES
+    _mlir_libs/_standaloneDialectsNanobind/__init__.pyi
+    _mlir_libs/_standaloneDialectsNanobind/standalone.pyi
+)

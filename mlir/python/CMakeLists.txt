@@ -1,5 +1,9 @@
 include(AddMLIRPython)
 
+# Specifies that all MLIR packages are co-located under the `mlir_standalone`
+# top level package (the API has been embedded in a relocatable way).
+add_compile_definitions("MLIR_PYTHON_PACKAGE_PREFIX=${MLIR_PYTHON_PACKAGE_PREFIX}.")
+
 ################################################################################
 # Structural groupings.
 ################################################################################
@@ -23,11 +27,6 @@ declare_mlir_python_sources(MLIRPythonSources.Core.Python
     passmanager.py
     rewrite.py
     dialects/_ods_common.py
-
-    # The main _mlir module has submodules: include stubs from each.
-    _mlir_libs/_mlir/__init__.pyi
-    _mlir_libs/_mlir/ir.pyi
-    _mlir_libs/_mlir/passmanager.pyi
 )
 
 declare_mlir_python_sources(MLIRPythonSources.Core.Python.Extras
@@ -686,7 +685,7 @@ if(MLIR_ENABLE_EXECUTION_ENGINE)
     MODULE_NAME _mlirExecutionEngine
     ADD_TO_PARENT MLIRPythonSources.ExecutionEngine
     ROOT_DIR "${PYTHON_SOURCE_DIR}"
-  PYTHON_BINDINGS_LIBRARY nanobind
+    PYTHON_BINDINGS_LIBRARY nanobind
     SOURCES
       ExecutionEngineModule.cpp
     PRIVATE_LINK_LIBS
@@ -837,10 +836,11 @@ endif()
 # once ready.
 ################################################################################
 
+set(MLIRPythonModules_ROOT_PREFIX "${MLIR_BINARY_DIR}/${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}")
 add_mlir_python_common_capi_library(MLIRPythonCAPI
   INSTALL_COMPONENT MLIRPythonModules
   INSTALL_DESTINATION "${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}/_mlir_libs"
-  OUTPUT_DIRECTORY "${MLIR_BINARY_DIR}/python_packages/mlir_core/mlir/_mlir_libs"
+  OUTPUT_DIRECTORY "${MLIRPythonModules_ROOT_PREFIX}/_mlir_libs"
   RELATIVE_INSTALL_ROOT "../../../.."
   DECLARED_HEADERS
     MLIRPythonCAPI.HeaderSources
@@ -869,7 +869,7 @@ endif()
 ################################################################################
 
 add_mlir_python_modules(MLIRPythonModules
-  ROOT_PREFIX "${MLIR_BINARY_DIR}/python_packages/mlir_core/mlir"
+  ROOT_PREFIX ${MLIRPythonModules_ROOT_PREFIX}
   INSTALL_PREFIX "${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}"
   DECLARED_SOURCES
     MLIRPythonSources
@@ -878,3 +878,78 @@ add_mlir_python_modules(MLIRPythonModules
   COMMON_CAPI_LINK_LIBS
     MLIRPythonCAPI
 )
+
+# _mlir stubgen
+
+set(_core_type_stub_sources
+  _mlir/__init__.pyi
+  _mlir/ir.pyi
+  _mlir/passmanager.pyi
+  _mlir/rewrite.pyi
+)
+
+# Note 1: INTERFACE_SOURCES is a genex ($<BUILD_INTERFACE> $<INSTALL_INTERFACE>)
+# which will be evaluated by file(GENERATE ...) inside generate_type_stubs. This will evaluate to the correct
+# thing in the build dir (i.e., actual source dir paths) and in the install dir (where it's a conventional path; see install/lib/cmake/mlir/MLIRTargets.cmake).
+#
+# Note 2: MLIRPythonExtension.Core is the target that is defined using target_sources(INTERFACE) **NOT** MLIRPythonModules.extension._mlir.dso.
+# So be sure to use the correct target!
+get_target_property(_core_extension_srcs MLIRPythonExtension.Core INTERFACE_SOURCES)
+
+# Why is MODULE_NAME _mlir_libs._mlir here but mlir._mlir_libs._mlirPythonTestNanobind below???
+# The _mlir extension can be imported independently of any other python code and/or extension modules.
+# I.e., you could do `cd $MLIRPythonModules_ROOT_PREFIX && python -c "import _mlir_libs._mlir"` (try it!).
+# _mlir is also (currently) the only extension for which this is possible because dialect extensions modules,
+# which generally make use of `mlir_value_subclass/mlir_type_subclass/mlir_attribute_subclass`, perform an
+# `import mlir` right when they're loaded (see the mlir_*_subclass ctors in NanobindAdaptors.h).
+# Note, this also why IMPORT_PATHS "${MLIRPythonModules_ROOT_PREFIX}" here while below
+# "${MLIRPythonModules_ROOT_PREFIX}/.." (because MLIR_BINDINGS_PYTHON_INSTALL_PREFIX, by default, ends at mlir).
+#
+# Further note: this function creates file targets like "${CMAKE_CURRENT_BINARY_DIR}/type_stubs/_mlir_libs/_mlir/__init__.pyi".
+# These must match the file targets that declare_mlir_python_sources expects, which are like "${ROOT_DIR}/${WHATEVER_SOURCE}".
+# This is why _mlir_libs is prepended below.
+generate_type_stubs(
+  MODULE_NAME _mlir_libs._mlir
+  DEPENDS_TARGETS MLIRPythonModules.extension._mlir.dso
+  OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/type_stubs/_mlir_libs"
+  OUTPUTS "${_core_type_stub_sources}"
+  DEPENDS_TARGET_SRC_DEPS "${_core_extension_srcs}"
+  IMPORT_PATHS "${MLIRPythonModules_ROOT_PREFIX}"
+)
+add_dependencies(MLIRPythonModules "${NB_STUBGEN_CUSTOM_TARGET}")
+
+list(TRANSFORM _core_type_stub_sources PREPEND "_mlir_libs/")
+declare_mlir_python_sources(
+  MLIRPythonExtension.Core.type_stub_gen
+  ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}/type_stubs"
+  ADD_TO_PARENT MLIRPythonSources.Core
+  SOURCES "${_core_type_stub_sources}"
+)
+
+# _mlirPythonTestNanobind stubgen
+
+if(MLIR_INCLUDE_TESTS)
+  get_target_property(_test_extension_srcs MLIRPythonTestSources.PythonTestExtensionNanobind INTERFACE_SOURCES)
+  generate_type_stubs(
+    # This is the FQN path because dialect modules import _mlir when loaded. See above.
+    MODULE_NAME mlir._mlir_libs._mlirPythonTestNanobind
+    DEPENDS_TARGETS
+      # You need both _mlir and _mlirPythonTestNanobind because dialect modules import _mlir when loaded
+      # (so _mlir needs to be built before calling stubgen).
+      MLIRPythonModules.extension._mlir.dso
+      MLIRPythonModules.extension._mlirPythonTestNanobind.dso
+      # You need this one so that ir.py "built" because mlir._mlir_libs.__init__.py import mlir.ir in _site_initialize.
+      MLIRPythonModules.sources.MLIRPythonSources.Core.Python
+    OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/type_stubs/_mlir_libs"
+    OUTPUTS _mlirPythonTestNanobind.pyi
+    DEPENDS_TARGET_SRC_DEPS "${_test_extension_srcs}"
+    IMPORT_PATHS "${MLIRPythonModules_ROOT_PREFIX}/.."
+  )
+  add_dependencies(MLIRPythonModules "${NB_STUBGEN_CUSTOM_TARGET}")
+  declare_mlir_python_sources(
+    MLIRPythonTestSources.PythonTestExtensionNanobind.type_stub_gen
+    ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}/type_stubs"
+    ADD_TO_PARENT MLIRPythonTestSources.Dialects
+    SOURCES _mlir_libs/_mlirPythonTestNanobind.pyi
+  )
+endif()
