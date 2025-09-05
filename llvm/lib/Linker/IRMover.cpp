@@ -8,6 +8,8 @@
 
 #include "llvm/Linker/IRMover.h"
 #include "LinkDiagnosticInfo.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/IR/AutoUpgrade.h"
@@ -289,6 +291,9 @@ typedef DenseMap<const Metadata *, TrackingMDRef> MDMapT;
 class IRLinker {
   Module &DstM;
   std::unique_ptr<Module> SrcM;
+
+  // Lookup table to optimize IRMover::linkNamedMDNodes().
+  DenseMap<StringRef, DenseSet<MDNode *>> NamedMDNodes;
 
   /// See IRMover::move().
   IRMover::LazyCallback AddLazyFor;
@@ -1132,12 +1137,20 @@ void IRLinker::linkNamedMDNodes() {
       continue;
 
     NamedMDNode *DestNMD = DstM.getOrInsertNamedMetadata(NMD.getName());
+
+    auto &Inserted = NamedMDNodes[DestNMD->getName()];
+    if (Inserted.empty()) {
+      // Must be the first module, copy everything from DestNMD.
+      Inserted.insert(DestNMD->operands().begin(), DestNMD->operands().end());
+    }
+
     // Add Src elements into Dest node.
     for (const MDNode *Op : NMD.operands()) {
       MDNode *MD = Mapper.mapMDNode(*Op);
-      if (!is_contained(DestNMD->operands(), MD))
+      if (Inserted.insert(MD).second)
         DestNMD->addOperand(MD);
     }
+    assert(Inserted.size() == DestNMD->getNumOperands());
   }
 }
 
