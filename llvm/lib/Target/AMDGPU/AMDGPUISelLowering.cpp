@@ -4075,9 +4075,9 @@ SDValue AMDGPUTargetLowering::splitBinaryBitConstantOpImpl(
 // but when v2i32 is legal the vector legaliser only partially scalarises the
 // vector operations and the and is not elided. This function
 // scalarises the AND for this optimisation case, ensuring it is elided.
-// (shiftop x, (extract_vector_element (and {y0, y1}, 
+// (shiftop x, (extract_vector_element (and {y0, y1},
 // (build_vector 0x1f, 0x1f))), index)
-// -> i32 (shiftop x, (and (extract_vector_element {yo, y1}, index), 0x1f))
+// -> (shiftop x, (and (extract_vector_element {yo, y1}, index), 0x1f))
 static SDValue getShiftForReduction(SDNode *N, SelectionDAG &DAG) {
   assert((N->getOpcode() == ISD::SRA || N->getOpcode() == ISD::SRL ||
           N->getOpcode() == ISD::SHL) &&
