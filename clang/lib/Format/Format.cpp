@@ -979,17 +979,13 @@ template <> struct MappingTraits<FormatStyle> {
       // For backward compatibility.
       BracketAlignmentStyle LocalBAS = BAS_Align;
       if (IsGoogleOrChromium) {
-        FormatStyle::LanguageKind Language =
-            ((FormatStyle *)IO.getContext())->Language;
-        if (Style.Language == FormatStyle::LK_JavaScript ||
-            (Style.Language == FormatStyle::LK_None &&
-             Language == FormatStyle::LK_JavaScript)) {
+        FormatStyle::LanguageKind Language = Style.Language;
+        if (Language == FormatStyle::LK_None)
+          Language = ((FormatStyle *)IO.getContext())->Language;
+        if (Language == FormatStyle::LK_JavaScript)
           LocalBAS = BAS_AlwaysBreak;
-        } else if (Style.Language == FormatStyle::LK_Java ||
-                   (Style.Language == FormatStyle::LK_None &&
-                    Language == FormatStyle::LK_Java)) {
+        else if (Language == FormatStyle::LK_Java)
           LocalBAS = BAS_DontAlign;
-        }
       } else if (BasedOnStyle.equals_insensitive("webkit")) {
         LocalBAS = BAS_DontAlign;
       }
