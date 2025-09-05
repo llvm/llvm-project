@@ -8885,7 +8885,15 @@ SDValue RISCVTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
     reportFatalUsageError("Unsupported code model for lowering");
   case CodeModel::Small: {
     // Generate a sequence for accessing addresses within the first 2 GiB of
-    // address space. This generates the pattern (addi (lui %hi(sym)) %lo(sym)).
+    // address space.
+    if (Subtarget.hasVendorXqcili()) {
+      // Use QC.E.LI to generate the address, as this is easier to relax than
+      // LUI/ADDI.
+      SDValue Addr = getTargetNode(N, DL, Ty, DAG, 0);
+      return DAG.getNode(RISCVISD::QC_E_LI, DL, Ty, Addr);
+    }
+
+    // This generates the pattern (addi (lui %hi(sym)) %lo(sym)).
     SDValue AddrHi = getTargetNode(N, DL, Ty, DAG, RISCVII::MO_HI);
     SDValue AddrLo = getTargetNode(N, DL, Ty, DAG, RISCVII::MO_LO);
     SDValue MNHi = DAG.getNode(RISCVISD::HI, DL, Ty, AddrHi);
@@ -9240,6 +9248,10 @@ foldBinOpIntoSelectIfProfitable(SDNode *BO, SelectionDAG &DAG,
   return DAG.getSelect(DL, VT, Sel.getOperand(0), NewT, NewF);
 }
 
+static bool isSimm12Constant(SDValue V) {
+  return isa<ConstantSDNode>(V) && V->getAsAPIntVal().isSignedIntN(12);
+}
+
 SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   SDValue CondV = Op.getOperand(0);
   SDValue TrueV = Op.getOperand(1);
@@ -9261,6 +9273,20 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   // sequence or RISCVISD::SELECT_CC node (branch-based select).
   if ((Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps()) &&
       VT.isScalarInteger()) {
+
+    // select c, simm12, 0 -> andi (sub x0, c), simm12
+    if (isSimm12Constant(TrueV) && isNullConstant(FalseV)) {
+      SDValue Mask = DAG.getNegative(CondV, DL, VT);
+      return DAG.getNode(ISD::AND, DL, VT, TrueV, Mask);
+    }
+
+    // select c, 0, simm12 -> andi (addi c, -1), simm12
+    if (isNullConstant(TrueV) && isSimm12Constant(FalseV)) {
+      SDValue Mask = DAG.getNode(ISD::ADD, DL, VT, CondV,
+                                 DAG.getSignedConstant(-1, DL, XLenVT));
+      return DAG.getNode(ISD::AND, DL, VT, FalseV, Mask);
+    }
+
     // (select c, t, 0) -> (czero_eqz t, c)
     if (isNullConstant(FalseV))
       return DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, CondV);
