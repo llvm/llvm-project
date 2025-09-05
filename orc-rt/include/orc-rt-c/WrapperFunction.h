@@ -175,4 +175,4 @@ static inline const char *orc_rt_WrapperFunctionBufferGetOutOfBandError(
 
 ORC_RT_C_EXTERN_C_END
 
-#endif /* ORC_RT_WRAPPERFUNCTION_H */
+#endif /* ORC_RT_C_WRAPPERFUNCTION_H */
