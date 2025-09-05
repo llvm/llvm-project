@@ -312,7 +312,6 @@ let Features = "ssse3", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] 
 
 let Features = "sse4.1", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
   def insertps128 : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>, _Constant char)">;
-  def pblendvb128 : X86Builtin<"_Vector<16, char>(_Vector<16, char>, _Vector<16, char>, _Vector<16, char>)">;
   def pblendw128 : X86Builtin<"_Vector<8, short>(_Vector<8, short>, _Vector<8, short>, _Constant int)">;
   def blendpd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>, _Constant int)">;
   def blendps : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>, _Constant int)">;
@@ -336,6 +335,7 @@ let Features = "sse4.1", Attributes = [NoThrow, Const, RequiredVectorWidth<128>]
 }
 
 let Features = "sse4.1", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
+  def pblendvb128 : X86Builtin<"_Vector<16, char>(_Vector<16, char>, _Vector<16, char>, _Vector<16, char>)">;
   def pmuldq128 : X86Builtin<"_Vector<2, long long int>(_Vector<4, int>, _Vector<4, int>)">;
 }
 
@@ -573,7 +573,6 @@ let Features = "avx2", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] i
   def palignr256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>, _Vector<32, char>, _Constant int)">;
   def pavgb256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>, _Vector<32, char>)">;
   def pavgw256 : X86Builtin<"_Vector<16, short>(_Vector<16, short>, _Vector<16, short>)">;
-  def pblendvb256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>, _Vector<32, char>, _Vector<32, char>)">;
   def pblendw256 : X86Builtin<"_Vector<16, short>(_Vector<16, short>, _Vector<16, short>, _Constant int)">;
   def phaddw256 : X86Builtin<"_Vector<16, short>(_Vector<16, short>, _Vector<16, short>)">;
   def phaddd256 : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Vector<8, int>)">;
@@ -615,6 +614,8 @@ let Features = "avx2", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] i
 }
 
 let Features = "avx2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
+  def pblendvb256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>, _Vector<32, char>, _Vector<32, char>)">;
+
   def pmuldq256 : X86Builtin<"_Vector<4, long long int>(_Vector<8, int>, _Vector<8, int>)">;
   def pmuludq256 : X86Builtin<"_Vector<4, long long int>(_Vector<8, int>, _Vector<8, int>)">;
 
