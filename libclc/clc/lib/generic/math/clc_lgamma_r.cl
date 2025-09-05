@@ -605,22 +605,16 @@ _CLC_OVERLOAD _CLC_DEF half __clc_lgamma_r(half x, private int *iptr) {
 #define __CLC_ADDRSPACE global
 #define __CLC_BODY <clc_lgamma_r.inc>
 #include <clc/math/gentype.inc>
-#define __CLC_BODY <clc/shared/unary_def_with_ptr_scalarize.inc>
-#include <clc/math/gentype.inc>
 #undef __CLC_ADDRSPACE
 
 #define __CLC_ADDRSPACE local
 #define __CLC_BODY <clc_lgamma_r.inc>
-#include <clc/math/gentype.inc>
-#define __CLC_BODY <clc/shared/unary_def_with_ptr_scalarize.inc>
 #include <clc/math/gentype.inc>
 #undef __CLC_ADDRSPACE
 
 #if _CLC_DISTINCT_GENERIC_AS_SUPPORTED
 #define __CLC_ADDRSPACE generic
 #define __CLC_BODY <clc_lgamma_r.inc>
-#include <clc/math/gentype.inc>
-#define __CLC_BODY <clc/shared/unary_def_with_ptr_scalarize.inc>
 #include <clc/math/gentype.inc>
 #undef __CLC_ADDRSPACE
 #endif // _CLC_DISTINCT_GENERIC_AS_SUPPORTED
