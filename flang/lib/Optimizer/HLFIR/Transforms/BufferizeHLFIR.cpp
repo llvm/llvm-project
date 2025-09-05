@@ -118,8 +118,7 @@ createArrayTemp(mlir::Location loc, fir::FirOpBuilder &builder,
          fir::FortranVariableFlagsAttr attrs) -> mlir::Value {
     auto declareOp =
         hlfir::DeclareOp::create(builder, loc, memref, name, shape, typeParams,
-                                 /*dummy_scope=*/nullptr, /*storage=*/nullptr,
-                                 /*storage_offset=*/0, attrs);
+                                 /*dummy_scope=*/nullptr, attrs);
     return declareOp.getBase();
   };
 
@@ -299,7 +298,8 @@ struct SetLengthOpConversion
     auto alloca = builder.createTemporary(loc, charType, tmpName,
                                           /*shape=*/{}, lenParams);
     auto declareOp = hlfir::DeclareOp::create(
-        builder, loc, alloca, tmpName, /*shape=*/mlir::Value{}, lenParams);
+        builder, loc, alloca, tmpName, /*shape=*/mlir::Value{}, lenParams,
+        /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
     hlfir::Entity temp{declareOp.getBase()};
     // Assign string value to the created temp.
     hlfir::AssignOp::create(builder, loc, string, temp,

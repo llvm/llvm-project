@@ -315,8 +315,9 @@ public:
       mlir::Value tempStorage = builder.createHeapTemporary(
           loc, declaredType, tempName, extents, lengths);
       mlir::Value shape = builder.genShape(loc, extents);
-      declare = hlfir::DeclareOp::create(builder, loc, tempStorage, tempName,
-                                         shape, lengths);
+      declare = hlfir::DeclareOp::create(
+          builder, loc, tempStorage, tempName, shape, lengths,
+          /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
       initialBoxValue =
           builder.createBox(loc, boxType, declare->getOriginalBase(), shape,
                             /*slice=*/mlir::Value{}, lengths, /*tdesc=*/{});

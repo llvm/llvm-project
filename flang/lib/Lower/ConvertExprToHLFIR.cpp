@@ -1813,8 +1813,10 @@ private:
     // Allocate scalar temporary that will be initialized
     // with the values specified by the constructor.
     mlir::Value storagePtr = builder.createTemporary(loc, recTy);
-    auto varOp = hlfir::EntityWithAttributes{
-        hlfir::DeclareOp::create(builder, loc, storagePtr, "ctor.temp")};
+    auto varOp = hlfir::EntityWithAttributes{hlfir::DeclareOp::create(
+        builder, loc, storagePtr, "ctor.temp", /*shape=*/nullptr,
+        /*typeparams=*/mlir::ValueRange{}, /*dummy_scope=*/nullptr,
+        fir::FortranVariableFlagsAttr{})};
 
     // Initialize any components that need initialization.
     mlir::Value box = builder.createBox(loc, fir::ExtendedValue{varOp});

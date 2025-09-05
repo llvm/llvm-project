@@ -845,12 +845,10 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
   }
   auto declDst = hlfir::DeclareOp::create(
       builder, loc, dst, copyFuncName + "_dst", shape, typeparams,
-      /*dummy_scope=*/nullptr, /*storage=*/nullptr,
-      /*storage_offset=*/0, attrs);
+      /*dummy_scope=*/nullptr, attrs);
   auto declSrc = hlfir::DeclareOp::create(
       builder, loc, src, copyFuncName + "_src", shape, typeparams,
-      /*dummy_scope=*/nullptr, /*storage=*/nullptr,
-      /*storage_offset=*/0, attrs);
+      /*dummy_scope=*/nullptr, attrs);
   converter.copyVar(loc, declDst.getBase(), declSrc.getBase(), varAttrs);
   mlir::func::ReturnOp::create(builder, loc);
   return funcOp;

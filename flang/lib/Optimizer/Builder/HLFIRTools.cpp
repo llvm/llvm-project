@@ -249,7 +249,6 @@ fir::FortranVariableOpInterface
 hlfir::genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
                   const fir::ExtendedValue &exv, llvm::StringRef name,
                   fir::FortranVariableFlagsAttr flags, mlir::Value dummyScope,
-                  mlir::Value storage, std::uint64_t storageOffset,
                   cuf::DataAttributeAttr dataAttr) {
 
   mlir::Value base = fir::getBase(exv);
@@ -279,9 +278,9 @@ hlfir::genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
                          box.nonDeferredLenParams().end());
       },
       [](const auto &) {});
-  auto declareOp = hlfir::DeclareOp::create(
-      builder, loc, base, name, shapeOrShift, lenParams, dummyScope, storage,
-      storageOffset, flags, dataAttr);
+  auto declareOp =
+      hlfir::DeclareOp::create(builder, loc, base, name, shapeOrShift,
+                               lenParams, dummyScope, flags, dataAttr);
   return mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation());
 }
 
@@ -1373,8 +1372,7 @@ hlfir::createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
          fir::FortranVariableFlagsAttr attrs) -> mlir::Value {
     auto declareOp =
         hlfir::DeclareOp::create(builder, loc, memref, name, shape, typeParams,
-                                 /*dummy_scope=*/nullptr, /*storage=*/nullptr,
-                                 /*storage_offset=*/0, attrs);
+                                 /*dummy_scope=*/nullptr, attrs);
     return declareOp.getBase();
   };
 
@@ -1411,8 +1409,7 @@ hlfir::Entity hlfir::createStackTempFromMold(mlir::Location loc,
   }
   auto declareOp =
       hlfir::DeclareOp::create(builder, loc, alloc, tmpName, shape, lenParams,
-                               /*dummy_scope=*/nullptr, /*storage=*/nullptr,
-                               /*storage_offset=*/0, declAttrs);
+                               /*dummy_scope=*/nullptr, declAttrs);
   return hlfir::Entity{declareOp.getBase()};
 }
 
@@ -1429,7 +1426,8 @@ hlfir::convertCharacterKind(mlir::Location loc, fir::FirOpBuilder &builder,
 
   return hlfir::EntityWithAttributes{hlfir::DeclareOp::create(
       builder, loc, res.getAddr(), ".temp.kindconvert", /*shape=*/nullptr,
-      /*typeparams=*/mlir::ValueRange{res.getLen()})};
+      /*typeparams=*/mlir::ValueRange{res.getLen()},
+      /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{})};
 }
 
 std::pair<hlfir::Entity, std::optional<hlfir::CleanupFunction>>
@@ -1501,7 +1499,8 @@ hlfir::genTypeAndKindConvert(mlir::Location loc, fir::FirOpBuilder &builder,
         fir::ShapeShiftOp::create(builder, loc, shapeShiftType, lbAndExtents);
     auto declareOp = hlfir::DeclareOp::create(
         builder, loc, associate.getFirBase(), *associate.getUniqName(),
-        shapeShift, associate.getTypeparams());
+        shapeShift, associate.getTypeparams(), /*dummy_scope=*/nullptr,
+        /*flags=*/fir::FortranVariableFlagsAttr{});
     hlfir::Entity castWithLbounds =
         mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation());
     fir::FirOpBuilder *bldr = &builder;
@@ -1539,8 +1538,9 @@ std::pair<hlfir::Entity, bool> hlfir::computeEvaluateOpInNewTemp(
                                                    extents, typeParams);
   mlir::Value innerMemory = evalInMem.getMemory();
   temp = builder.createConvert(loc, innerMemory.getType(), temp);
-  auto declareOp =
-      hlfir::DeclareOp::create(builder, loc, temp, tmpName, shape, typeParams);
+  auto declareOp = hlfir::DeclareOp::create(
+      builder, loc, temp, tmpName, shape, typeParams,
+      /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
   computeEvaluateOpIn(loc, builder, evalInMem, declareOp.getOriginalBase());
   return {hlfir::Entity{declareOp.getBase()}, /*heapAllocated=*/heapAllocated};
 }

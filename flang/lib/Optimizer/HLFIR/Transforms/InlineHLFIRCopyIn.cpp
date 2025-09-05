@@ -109,9 +109,7 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
 
             auto declareOp = hlfir::DeclareOp::create(builder, loc, alloc,
                                                       tmpName, shape, lenParams,
-                                                      /*dummy_scope=*/nullptr,
-                                                      /*storage=*/nullptr,
-                                                      /*storage_offset=*/0);
+                                                      /*dummy_scope=*/nullptr);
             hlfir::Entity temp{declareOp.getBase()};
             hlfir::LoopNest loopNest =
                 hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true,
