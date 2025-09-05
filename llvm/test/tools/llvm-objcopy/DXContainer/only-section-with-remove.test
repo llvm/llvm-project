@@ -1,7 +1,8 @@
-## Tests that the copied DXContainer correctly retains only the RTS0 part.
+## Tests that the copied DXContainer correctly retains only the RTS0 part even
+## when it was defined to be removed.
 
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-objcopy --only-section=RTS0 %t %t.out
+# RUN: llvm-objcopy --remove-section=RTS0 --only-section=RTS0 %t %t.out
 # RUN: obj2yaml %t.out | FileCheck %s --implicit-check-not=Name:
 
 ## The DXContainer described below was generated with:
