@@ -24,7 +24,7 @@ MSAN_FLAG(bool, poison_heap_with_zeroes, false, "")
 MSAN_FLAG(bool, poison_stack_with_zeroes, false, "")
 MSAN_FLAG(bool, poison_in_padding, true,
           "If the allocator has added padding beyond the end of the "
-          "allocation, mark that memory as uninitialized.")
+          "allocation, mark that padding as uninitialized.")
 MSAN_FLAG(bool, poison_in_malloc, true,
           "Mark the memory returned by allocation functions as uninitialized, "
           "up to the requested allocation size. Any padding added by the "
