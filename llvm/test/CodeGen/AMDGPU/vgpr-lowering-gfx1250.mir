@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -start-before=amdgpu-lower-vgpr-encoding -o - %s | FileCheck -check-prefixes=GCN,ASM %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -start-before=amdgpu-lower-vgpr-encoding -o - %s | llvm-mc -triple=amdgcn -mcpu=gfx1250 -filetype=obj -o - | llvm-objdump -d --mcpu=gfx1250 - | FileCheck -check-prefixes=GCN,DIS %s
 
 # ASM-LABEL: {{^}}high_vgprs:
 # DIS-LABEL: <high_vgprs>:

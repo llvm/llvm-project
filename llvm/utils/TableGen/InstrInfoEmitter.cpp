@@ -453,7 +453,7 @@ void InstrInfoEmitter::emitOperandTypeMappings(
   OS << "LLVM_READONLY\n";
   OS << "static int getOperandType(uint16_t Opcode, uint16_t OpIdx) {\n";
   auto getInstrName = [&](int I) -> StringRef {
-    return NumberedInstructions[I]->TheDef->getName();
+    return NumberedInstructions[I]->getName();
   };
   // TODO: Factor out duplicate operand lists to compress the tables.
   std::vector<size_t> OperandOffsets;
@@ -572,8 +572,7 @@ void InstrInfoEmitter::emitLogicalOperandSizeMappings(
     auto I =
         LogicalOpSizeMap.try_emplace(LogicalOpList, LogicalOpSizeMap.size())
             .first;
-    InstMap[I->second].push_back(
-        (Namespace + "::" + Inst->TheDef->getName()).str());
+    InstMap[I->second].push_back((Namespace + "::" + Inst->getName()).str());
   }
 
   OS << "#ifdef GET_INSTRINFO_LOGICAL_OPERAND_SIZE_MAP\n";
@@ -777,7 +776,7 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
     }
     if (!NumPredicates)
       OS << "_None";
-    OS << ", // " << Inst->TheDef->getName() << '\n';
+    OS << ", // " << Inst->getName() << '\n';
   }
   OS << "  };\n\n"
      << "  assert(Opcode < " << NumberedInstructions.size() << ");\n"
@@ -958,7 +957,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   unsigned Num = NumberedInstructions.size();
   for (const CodeGenInstruction *Inst : reverse(NumberedInstructions)) {
     // Keep a list of the instruction names.
-    InstrNames.add(Inst->TheDef->getName());
+    InstrNames.add(Inst->getName());
     // Emit the record into the table.
     emitRecord(*Inst, --Num, InstrInfo, EmittedLists, OperandInfoMap, OS);
   }
@@ -994,7 +993,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     // Newline every eight entries.
     if (Num % 8 == 0)
       OS << "\n    ";
-    OS << InstrNames.get(Inst->TheDef->getName()) << "U, ";
+    OS << InstrNames.get(Inst->getName()) << "U, ";
     ++Num;
   }
   OS << "\n};\n\n";
@@ -1274,19 +1273,15 @@ void InstrInfoEmitter::emitRecord(
   const BitsInit *TSF = Inst.TheDef->getValueAsBitsInit("TSFlags");
   if (!TSF)
     PrintFatalError(Inst.TheDef->getLoc(), "no TSFlags?");
-  uint64_t Value = 0;
-  for (unsigned i = 0, e = TSF->getNumBits(); i != e; ++i) {
-    if (const auto *Bit = dyn_cast<BitInit>(TSF->getBit(i)))
-      Value |= uint64_t(Bit->getValue()) << i;
-    else
-      PrintFatalError(Inst.TheDef->getLoc(),
-                      "Invalid TSFlags bit in " + Inst.TheDef->getName());
-  }
+  std::optional<uint64_t> Value = TSF->convertInitializerToInt();
+  if (!Value)
+    PrintFatalError(Inst.TheDef, "Invalid TSFlags bit in " + Inst.getName());
+
   OS << ", 0x";
-  OS.write_hex(Value);
+  OS.write_hex(*Value);
   OS << "ULL";
 
-  OS << " },  // " << Inst.TheDef->getName() << '\n';
+  OS << " },  // " << Inst.getName() << '\n';
 }
 
 // emitEnums - Print out enum values for all of the instructions.
@@ -1313,7 +1308,7 @@ void InstrInfoEmitter::emitEnums(
 
   OS << "  enum {\n";
   for (const CodeGenInstruction *Inst : NumberedInstructions) {
-    OS << "    " << left_justify(Inst->TheDef->getName(), MaxNameSize) << " = "
+    OS << "    " << left_justify(Inst->getName(), MaxNameSize) << " = "
        << Target.getInstrIntValue(Inst->TheDef) << ", // "
        << SrcMgr.getFormattedLocationNoOffset(Inst->TheDef->getLoc().front())
        << '\n';
