@@ -150,10 +150,6 @@ class kmp_stats_list;
 #define UNLIKELY(x) (x)
 #endif
 
-#ifndef LIKELY
-#define LIKELY(x) (x)
-#endif
-
 // Affinity format function
 #include "kmp_str.h"
 

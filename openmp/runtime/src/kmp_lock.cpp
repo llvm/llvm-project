@@ -3432,7 +3432,7 @@ void __kmp_cleanup_indirect_user_locks() {
       __kmp_free(ll->lock);
       ll->lock = NULL;
       // reset the reverse critical section pointer to 0
-      if (ll->rev_ptr_critSec && LIKELY(!__kmp_in_atexit))
+      if (ll->rev_ptr_critSec && !UNLIKELY(__kmp_in_atexit))
         memset(ll->rev_ptr_critSec, 0, sizeof(kmp_critical_name));
     }
     __kmp_indirect_lock_pool[k] = NULL;
@@ -3453,7 +3453,7 @@ void __kmp_cleanup_indirect_user_locks() {
                         l));
           __kmp_free(l->lock);
           // reset the reverse critical section pointer to 0
-          if (l->rev_ptr_critSec && LIKELY(!__kmp_in_atexit))
+          if (l->rev_ptr_critSec && !UNLIKELY(__kmp_in_atexit))
             memset(l->rev_ptr_critSec, 0, sizeof(kmp_critical_name));
         }
       }
