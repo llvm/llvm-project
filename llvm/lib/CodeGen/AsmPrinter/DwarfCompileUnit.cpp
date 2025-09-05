@@ -552,7 +552,8 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP,
           *DD->getCurrentFunction()))
     addFlag(*SPDie, dwarf::DW_AT_APPLE_omit_frame_ptr);
 
-  if (emitFuncLineTableOffsets() && LineTableSym) {
+  if (emitFuncLineTableOffsets() && LineTableSym &&
+      Asm->getInstructionCount() > 1) {
     addSectionLabel(
         *SPDie, dwarf::DW_AT_LLVM_stmt_sequence, LineTableSym,
         Asm->getObjFileLowering().getDwarfLineSection()->getBeginSymbol());
