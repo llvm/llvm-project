@@ -215,8 +215,6 @@ Derived::Derived(const void *inVoid) { squawk(); }
 
 // See above for the OGCG _ZN7DerivedC2Ev constructor.
 
-// TODO: add the Derived C1 constructors and Base
-
 // CIR: cir.func {{.*}} @_ZN4BaseC2Ev(%[[THIS_ARG:.*]]: !cir.ptr<!rec_Base> {{.*}})
 // CIR:   %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
