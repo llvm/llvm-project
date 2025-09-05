@@ -4075,6 +4075,9 @@ SDValue AMDGPUTargetLowering::splitBinaryBitConstantOpImpl(
 // but when v2i32 is legal the vector legaliser only partially scalarises the
 // vector operations and the and is not elided. This function
 // scalarises the AND for this optimisation case, ensuring it is elided.
+// (shiftop x, (extract_vector_element (and {y0, y1}, 
+// (build_vector 0x1f, 0x1f))), index)
+// -> i32 (shiftop x, (and (extract_vector_element {yo, y1}, index), 0x1f))
 static SDValue getShiftForReduction(SDNode *N, SelectionDAG &DAG) {
   assert((N->getOpcode() == ISD::SRA || N->getOpcode() == ISD::SRL ||
           N->getOpcode() == ISD::SHL) &&
@@ -4111,7 +4114,7 @@ static SDValue getShiftForReduction(SDNode *N, SelectionDAG &DAG) {
 
   // Get the non-const AND operands and produce scalar AND
   SDValue AndMask = DAG.getConstant(0x1f, SL, MVT::i32);
-  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, LHS);
+  // Determine which element of the v2i32 to apply the shift to.
   uint64_t AndIndex = RHS->getConstantOperandVal(1);
 
   if (AndIndex == 0) {
@@ -4119,8 +4122,7 @@ static SDValue getShiftForReduction(SDNode *N, SelectionDAG &DAG) {
     SDValue Lo =
         DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, LHSAND, Zero);
     SDValue LoAnd = DAG.getNode(ISD::AND, SL, MVT::i32, Lo, AndMask);
-    return DAG.getNode(N->getOpcode(), SL, MVT::i32, Trunc, LoAnd,
-                       RHS->getFlags());
+    return DAG.getNode(N->getOpcode(), SL, MVT::i32, LHS, LoAnd, N->getFlags());
   }
 
   if (AndIndex == 1) {
@@ -4128,7 +4130,7 @@ static SDValue getShiftForReduction(SDNode *N, SelectionDAG &DAG) {
     SDValue Hi =
         DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, LHSAND, One);
     SDValue HiAnd = DAG.getNode(ISD::AND, SL, MVT::i32, Hi, AndMask);
-    return DAG.getNode(N->getOpcode(), SL, MVT::i32, Trunc, HiAnd,
+    return DAG.getNode(N->getOpcode(), SL, MVT::i32, LHS, HiAnd,
                        RHS->getFlags());
   }
 
