@@ -834,7 +834,7 @@ define void @exact14(ptr %A) {
 ; CHECK-SIV-ONLY-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
 ; CHECK-SIV-ONLY-NEXT:    da analyze - none!
 ; CHECK-SIV-ONLY-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
-; CHECK-SIV-ONLY-NEXT:    da analyze - none!
+; CHECK-SIV-ONLY-NEXT:    da analyze - output [*|<]!
 ; CHECK-SIV-ONLY-NEXT:  Src: store i8 1, ptr %idx.1, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
 ; CHECK-SIV-ONLY-NEXT:    da analyze - none!
 ;
