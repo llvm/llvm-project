@@ -7624,6 +7624,15 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
           Twine("-funique-source-file-identifier=") + Input.getBaseInput()));
   }
 
+  if (!IsCudaDevice) {
+    Args.addOptInFlag(CmdArgs,
+                      options::OPT_fexperimental_pointer_field_protection,
+                      options::OPT_fno_experimental_pointer_field_protection);
+    Args.addOptInFlag(
+        CmdArgs, options::OPT_fexperimental_pointer_field_protection_tagged,
+        options::OPT_fno_experimental_pointer_field_protection_tagged);
+  }
+
   // Setup statistics file output.
   SmallString<128> StatsFile = getStatsFileName(Args, Output, Input, D);
   if (!StatsFile.empty()) {

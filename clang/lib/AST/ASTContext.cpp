@@ -15256,3 +15256,93 @@ bool ASTContext::useAbbreviatedThunkName(GlobalDecl VirtualMethodDecl,
   ThunksToBeAbbreviated[VirtualMethodDecl] = std::move(SimplifiedThunkNames);
   return Result;
 }
+
+bool ASTContext::arePFPFieldsTriviallyCopyable(const RecordDecl *RD) const {
+  bool IsPAuthSupported =
+      getTargetInfo().getTriple().getArch() == llvm::Triple::aarch64;
+  if (!IsPAuthSupported)
+    return true;
+  if (getLangOpts().PointerFieldProtectionTagged)
+    return !isa<CXXRecordDecl>(RD) ||
+           cast<CXXRecordDecl>(RD)->hasTrivialDestructor();
+  return true;
+}
+
+void ASTContext::findPFPFields(QualType Ty, CharUnits Offset,
+                               std::vector<PFPField> &Fields,
+                               bool IncludeVBases, bool IsWithinUnion) const {
+  if (auto *AT = getAsConstantArrayType(Ty)) {
+    if (auto *ElemDecl = AT->getElementType()->getAsCXXRecordDecl()) {
+      const ASTRecordLayout &ElemRL = getASTRecordLayout(ElemDecl);
+      for (unsigned i = 0; i != AT->getSize(); ++i) {
+        findPFPFields(AT->getElementType(), Offset + i * ElemRL.getSize(),
+                      Fields, true);
+      }
+    }
+  }
+  auto *Decl = Ty->getAsCXXRecordDecl();
+  // isPFPType() is inherited from bases and members (including via arrays), so
+  // we can early exit if it is false.
+  if (!Decl || !Decl->isPFPType())
+    return;
+  IsWithinUnion |= Decl->isUnion();
+  const ASTRecordLayout &RL = getASTRecordLayout(Decl);
+  for (FieldDecl *field : Decl->fields()) {
+    CharUnits fieldOffset =
+        Offset + toCharUnitsFromBits(RL.getFieldOffset(field->getFieldIndex()));
+    if (isPFPField(field))
+      Fields.push_back({fieldOffset, field, IsWithinUnion});
+    findPFPFields(field->getType(), fieldOffset, Fields, true, IsWithinUnion);
+  }
+  for (auto &Base : Decl->bases()) {
+    if (Base.isVirtual())
+      continue;
+    CharUnits BaseOffset =
+        Offset + RL.getBaseClassOffset(Base.getType()->getAsCXXRecordDecl());
+    findPFPFields(Base.getType(), BaseOffset, Fields, false, IsWithinUnion);
+  }
+  if (IncludeVBases) {
+    for (auto &Base : Decl->vbases()) {
+      CharUnits BaseOffset =
+          Offset + RL.getVBaseClassOffset(Base.getType()->getAsCXXRecordDecl());
+      findPFPFields(Base.getType(), BaseOffset, Fields, false, IsWithinUnion);
+    }
+  }
+}
+
+bool ASTContext::hasPFPFields(QualType Ty) const {
+  std::vector<PFPField> PFPFields;
+  findPFPFields(Ty, CharUnits::Zero(), PFPFields, true);
+  return !PFPFields.empty();
+}
+
+bool ASTContext::isPFPField(const FieldDecl *FD) const {
+  auto *RD = dyn_cast<CXXRecordDecl>(FD->getParent());
+  if (!RD || !RD->isPFPType())
+    return false;
+  return FD->getType()->isPointerType() &&
+         !FD->hasAttr<NoFieldProtectionAttr>();
+}
+
+void ASTContext::recordMemberDataPointerEvaluation(const ValueDecl *VD) {
+  if (!getLangOpts().PointerFieldProtection)
+    return;
+  auto *FD = dyn_cast<FieldDecl>(VD);
+  if (!FD)
+    FD = cast<FieldDecl>(cast<IndirectFieldDecl>(VD)->chain().back());
+  if (!isPFPField(FD))
+    return;
+  PFPFieldsWithEvaluatedOffset.insert(FD);
+}
+
+void ASTContext::recordOffsetOfEvaluation(const OffsetOfExpr *E) {
+  if (!getLangOpts().PointerFieldProtection || E->getNumComponents() == 0)
+    return;
+  OffsetOfNode Comp = E->getComponent(E->getNumComponents() - 1);
+  if (Comp.getKind() != OffsetOfNode::Field)
+    return;
+  FieldDecl *FD = Comp.getField();
+  if (!isPFPField(FD))
+    return;
+  PFPFieldsWithEvaluatedOffset.insert(FD);
+}
