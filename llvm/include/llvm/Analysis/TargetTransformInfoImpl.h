@@ -156,24 +156,20 @@ public:
   // Given an address space cast of the given pointer value, calculate the known
   // bits of the source pointer in the source addrspace and the destination
   // pointer in the destination addrspace.
-  // The default implementation returns an empty optional in case one of the
-  // addrspaces is not integral.
-  virtual std::optional<std::pair<KnownBits, KnownBits>>
+  virtual std::pair<KnownBits, KnownBits>
   computeKnownBitsAddrSpaceCast(unsigned FromAS, unsigned ToAS,
                                 const Value &PtrOp) const {
     if (DL.isNonIntegralAddressSpace(FromAS))
-      return std::nullopt;
+      return std::pair(KnownBits(DL.getPointerSizeInBits(FromAS)),
+                       KnownBits(DL.getPointerSizeInBits(ToAS)));
 
     KnownBits FromPtrBits;
     if (const AddrSpaceCastInst *CastI = dyn_cast<AddrSpaceCastInst>(&PtrOp)) {
-      std::optional<std::pair<KnownBits, KnownBits>> KB =
-          computeKnownBitsAddrSpaceCast(CastI->getSrcAddressSpace(),
-                                        CastI->getDestAddressSpace(),
-                                        *CastI->getPointerOperand());
-      if (!KB)
-        return std::nullopt;
-      FromPtrBits = KB->second;
-    } else if (isa<ConstantPointerNull>(PtrOp) && !FromAS) {
+      std::pair<KnownBits, KnownBits> KB = computeKnownBitsAddrSpaceCast(
+          CastI->getSrcAddressSpace(), CastI->getDestAddressSpace(),
+          *CastI->getPointerOperand());
+      FromPtrBits = KB.second;
+    } else if (isa<ConstantPointerNull>(PtrOp) && FromAS == 0) {
       // For addrspace 0, we know that a null pointer has the value 0.
       FromPtrBits = KnownBits::makeConstant(
           APInt::getZero(DL.getPointerSizeInBits(FromAS)));
@@ -181,35 +177,27 @@ public:
       FromPtrBits = computeKnownBits(&PtrOp, DL, nullptr);
     }
 
-    std::optional<KnownBits> ToPtrBits =
+    KnownBits ToPtrBits =
         computeKnownBitsAddrSpaceCast(FromAS, ToAS, FromPtrBits);
-    if (!ToPtrBits)
-      return std::nullopt;
 
-    return std::pair(FromPtrBits, *ToPtrBits);
+    return std::pair(FromPtrBits, ToPtrBits);
   }
 
   // Given an address space cast, calculate the known bits of the resulting ptr
   // in the destination addrspace using the known bits of the source pointer in
   // the source addrspace.
-  // The default implementation returns an empty optional in case the source
-  // addrspace is not an integral addrspace.
-  virtual std::optional<KnownBits>
+  virtual KnownBits
   computeKnownBitsAddrSpaceCast(unsigned FromAS, unsigned ToAS,
                                 const KnownBits &FromPtrBits) const {
-    if (DL.isNonIntegralAddressSpace(ToAS))
-      return std::nullopt;
-
     unsigned ToASBitSize = DL.getPointerSizeInBits(ToAS);
+
+    if (DL.isNonIntegralAddressSpace(FromAS))
+      return KnownBits(ToASBitSize);
+
     // By default, we assume that all valid "larger" (e.g. 64-bit) to "smaller"
     // (e.g. 32-bit) casts work by chopping off the high bits.
-    if (FromPtrBits.getBitWidth() >= ToASBitSize)
-      return FromPtrBits.trunc(ToASBitSize);
-    // By default, we do not assume that null results in null again, except for
-    // addrspace 0.
-    if (!FromAS && FromPtrBits.isZero())
-      return FromPtrBits.zext(ToASBitSize);
-    return FromPtrBits.anyext(ToASBitSize);
+    // By default, we do not assume that null results in null again.
+    return FromPtrBits.anyextOrTrunc(ToASBitSize);
   }
 
   virtual bool

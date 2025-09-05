@@ -29,7 +29,8 @@ define i8 @ptrmask_cast_local_null_to_flat(i64 %mask) {
   ret i8 %load
 }
 
-; ... exception: addrspace 0
+; ... exception: addrspace 0 casted to a smaller addrspace (by default we assume
+; that casting to a smaller addrspace = truncating)
 define i8 @ptrmask_cast_flat_null_to_local(i32 %mask) {
 ; CHECK-LABEL: @ptrmask_cast_flat_null_to_local(
 ; CHECK-NEXT:    [[MASKED:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) addrspacecast (ptr null to ptr addrspace(3)), i32 [[MASK:%.*]])
