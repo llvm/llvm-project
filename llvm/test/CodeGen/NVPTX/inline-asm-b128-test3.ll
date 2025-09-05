@@ -11,32 +11,32 @@ define void @test_b128_in_loop() {
 ; CHECK-LABEL: test_b128_in_loop(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
-; CHECK-NEXT:    .reg .b64 %rd<15>;
-; CHECK-NEXT:    .reg .b128 %rq<3>;
+; CHECK-NEXT:    .reg .b64 %rd<5>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.global.s32 %rd1, [size];
 ; CHECK-NEXT:    setp.eq.b64 %p1, %rd1, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB0_3;
 ; CHECK-NEXT:  // %bb.1: // %BB1
-; CHECK-NEXT:    ld.global.v2.b64 {%rd12, %rd13}, [x];
-; CHECK-NEXT:    mov.b64 %rd14, 0;
+; CHECK-NEXT:    ld.global.v2.b64 {%rd2, %rd3}, [x];
+; CHECK-NEXT:    mov.b64 %rd4, 0;
 ; CHECK-NEXT:  $L__BB0_2: // %BB2
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mov.b128 %rq1, {%rd12, %rd13};
+; CHECK-NEXT:    mov.b128 %rq1, {%rd2, %rd3};
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b64 lo;
 ; CHECK-NEXT:    .reg .b64 hi;
 ; CHECK-NEXT:    mov.b128 {lo, hi}, %rq1;
-; CHECK-NEXT:    add.cc.u64 lo, lo, %rd14;
+; CHECK-NEXT:    add.cc.u64 lo, lo, %rd4;
 ; CHECK-NEXT:    mov.b128 %rq1, {lo, hi};
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    mov.b128 {%rd12, %rd13}, %rq1;
-; CHECK-NEXT:    st.global.v2.b64 [x], {%rd12, %rd13};
-; CHECK-NEXT:    add.s64 %rd14, %rd14, 1;
-; CHECK-NEXT:    setp.ne.b64 %p2, %rd1, %rd14;
+; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, %rq1;
+; CHECK-NEXT:    st.global.v2.b64 [x], {%rd2, %rd3};
+; CHECK-NEXT:    add.s64 %rd4, %rd4, 1;
+; CHECK-NEXT:    setp.ne.b64 %p2, %rd1, %rd4;
 ; CHECK-NEXT:    @%p2 bra $L__BB0_2;
 ; CHECK-NEXT:  $L__BB0_3: // %BB3
 ; CHECK-NEXT:    ret;

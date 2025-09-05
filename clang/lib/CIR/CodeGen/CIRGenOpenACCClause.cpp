@@ -12,6 +12,7 @@
 
 #include <type_traits>
 
+#include "CIRGenCXXABI.h"
 #include "CIRGenFunction.h"
 
 #include "clang/AST/ExprCXX.h"
@@ -353,6 +354,183 @@ class OpenACCClauseCIREmitter final
             llvm_unreachable("Not a data operation?");
           });
     }
+  }
+
+  template <typename RecipeTy>
+  std::string getRecipeName(SourceRange loc, QualType baseType) {
+    std::string recipeName;
+    {
+      llvm::raw_string_ostream stream(recipeName);
+
+      if constexpr (std::is_same_v<RecipeTy, mlir::acc::PrivateRecipeOp>) {
+        stream << "privatization_";
+      } else if constexpr (std::is_same_v<RecipeTy,
+                                          mlir::acc::FirstprivateRecipeOp>) {
+        stream << "firstprivatization_";
+
+      } else if constexpr (std::is_same_v<RecipeTy,
+                                          mlir::acc::ReductionRecipeOp>) {
+        stream << "reduction_";
+        // TODO: OpenACC: once we have this part implemented, we can remove the
+        // SourceRange `loc` variable from this function. We don't have the
+        // reduction operation here well enough to know how to spell this
+        // correctly (+ == 'add', etc), so when we implement 'reduction' we have
+        // to do that here.
+        cgf.cgm.errorNYI(loc, "OpenACC reduction recipe name creation");
+      } else {
+        static_assert(!sizeof(RecipeTy), "Unknown Recipe op kind");
+      }
+
+      MangleContext &mc = cgf.cgm.getCXXABI().getMangleContext();
+      mc.mangleCanonicalTypeName(baseType, stream);
+    }
+    return recipeName;
+  }
+
+  void createFirstprivateRecipeCopy(
+      mlir::Location loc, mlir::Location locEnd, mlir::Value mainOp,
+      CIRGenFunction::AutoVarEmission tempDeclEmission,
+      mlir::acc::FirstprivateRecipeOp recipe, const VarDecl *varRecipe,
+      const VarDecl *temporary) {
+    mlir::Block *block = builder.createBlock(
+        &recipe.getCopyRegion(), recipe.getCopyRegion().end(),
+        {mainOp.getType(), mainOp.getType()}, {loc, loc});
+    builder.setInsertionPointToEnd(&recipe.getCopyRegion().back());
+
+    mlir::BlockArgument fromArg = block->getArgument(0);
+    mlir::BlockArgument toArg = block->getArgument(1);
+
+    mlir::Type elementTy =
+        mlir::cast<cir::PointerType>(mainOp.getType()).getPointee();
+
+    // Set the address of the emission to be the argument, so that we initialize
+    // that instead of the variable in the other block.
+    tempDeclEmission.setAllocatedAddress(
+        Address{toArg, elementTy, cgf.getContext().getDeclAlign(varRecipe)});
+    tempDeclEmission.EmittedAsOffload = true;
+
+    CIRGenFunction::DeclMapRevertingRAII declMapRAII{cgf, temporary};
+    cgf.setAddrOfLocalVar(
+        temporary,
+        Address{fromArg, elementTy, cgf.getContext().getDeclAlign(varRecipe)});
+
+    cgf.emitAutoVarInit(tempDeclEmission);
+    mlir::acc::YieldOp::create(builder, locEnd);
+  }
+
+  // Create the 'init' section of the recipe, including the 'copy' section for
+  // 'firstprivate'.
+  template <typename RecipeTy>
+  void createRecipeInitCopy(mlir::Location loc, mlir::Location locEnd,
+                            SourceRange exprRange, mlir::Value mainOp,
+                            RecipeTy recipe, const VarDecl *varRecipe,
+                            const VarDecl *temporary) {
+    assert(varRecipe && "Required recipe variable not set?");
+    if constexpr (std::is_same_v<RecipeTy, mlir::acc::ReductionRecipeOp>) {
+      // We haven't implemented the 'init' recipe for Reduction yet, so NYI
+      // it.
+      cgf.cgm.errorNYI(exprRange, "OpenACC Reduction recipe init");
+    }
+
+    CIRGenFunction::AutoVarEmission tempDeclEmission{
+        CIRGenFunction::AutoVarEmission::invalid()};
+    CIRGenFunction::DeclMapRevertingRAII declMapRAII{cgf, varRecipe};
+
+    // Do the 'init' section of the recipe IR, which does an alloca, then the
+    // initialization (except for firstprivate).
+    builder.createBlock(&recipe.getInitRegion(), recipe.getInitRegion().end(),
+                        {mainOp.getType()}, {loc});
+    builder.setInsertionPointToEnd(&recipe.getInitRegion().back());
+    tempDeclEmission =
+        cgf.emitAutoVarAlloca(*varRecipe, builder.saveInsertionPoint());
+
+    // 'firstprivate' doesn't do its initialization in the 'init' section,
+    // instead does it in the 'copy' section.  SO only do init here.
+    // 'reduction' appears to use it too (rather than a 'copy' section), so
+    // we probably have to do it here too, but we can do that when we get to
+    // reduction implementation.
+    if constexpr (std::is_same_v<RecipeTy, mlir::acc::PrivateRecipeOp>) {
+      // We are OK with no init for builtins, arrays of builtins, or pointers,
+      // else we should NYI so we know to go look for these.
+      if (cgf.getContext().getLangOpts().CPlusPlus &&
+          !varRecipe->getType()
+               ->getPointeeOrArrayElementType()
+               ->isBuiltinType() &&
+          !varRecipe->getType()->isPointerType() && !varRecipe->getInit()) {
+        // If we don't have any initialization recipe, we failed during Sema to
+        // initialize this correctly. If we disable the
+        // Sema::TentativeAnalysisScopes in SemaOpenACC::CreateInitRecipe, it'll
+        // emit an error to tell us.  However, emitting those errors during
+        // production is a violation of the standard, so we cannot do them.
+        cgf.cgm.errorNYI(exprRange, "private default-init recipe");
+      }
+      cgf.emitAutoVarInit(tempDeclEmission);
+    }
+
+    mlir::acc::YieldOp::create(builder, locEnd);
+
+    if constexpr (std::is_same_v<RecipeTy, mlir::acc::FirstprivateRecipeOp>) {
+      if (!varRecipe->getInit()) {
+        // If we don't have any initialization recipe, we failed during Sema to
+        // initialize this correctly. If we disable the
+        // Sema::TentativeAnalysisScopes in SemaOpenACC::CreateInitRecipe, it'll
+        // emit an error to tell us.  However, emitting those errors during
+        // production is a violation of the standard, so we cannot do them.
+        cgf.cgm.errorNYI(
+            exprRange, "firstprivate copy-init recipe not properly generated");
+      }
+
+      createFirstprivateRecipeCopy(loc, locEnd, mainOp, tempDeclEmission,
+                                   recipe, varRecipe, temporary);
+    }
+  }
+
+  void createRecipeDestroySection(mlir::Location loc, mlir::Location locEnd,
+                                  mlir::Value mainOp, CharUnits alignment,
+                                  QualType baseType,
+                                  mlir::Region &destroyRegion) {
+    mlir::Block *block = builder.createBlock(
+        &destroyRegion, destroyRegion.end(), {mainOp.getType()}, {loc});
+    builder.setInsertionPointToEnd(&destroyRegion.back());
+
+    mlir::Type elementTy =
+        mlir::cast<cir::PointerType>(mainOp.getType()).getPointee();
+    Address addr{block->getArgument(0), elementTy, alignment};
+    cgf.emitDestroy(addr, baseType,
+                    cgf.getDestroyer(QualType::DK_cxx_destructor));
+
+    mlir::acc::YieldOp::create(builder, locEnd);
+  }
+
+  template <typename RecipeTy>
+  RecipeTy getOrCreateRecipe(ASTContext &astCtx, const Expr *varRef,
+                             const VarDecl *varRecipe, const VarDecl *temporary,
+                             DeclContext *dc, QualType baseType,
+                             mlir::Value mainOp) {
+    mlir::ModuleOp mod = builder.getBlock()
+                             ->getParent()
+                             ->template getParentOfType<mlir::ModuleOp>();
+
+    std::string recipeName =
+        getRecipeName<RecipeTy>(varRef->getSourceRange(), baseType);
+    if (auto recipe = mod.lookupSymbol<RecipeTy>(recipeName))
+      return recipe;
+
+    mlir::Location loc = cgf.cgm.getLoc(varRef->getBeginLoc());
+    mlir::Location locEnd = cgf.cgm.getLoc(varRef->getEndLoc());
+
+    mlir::OpBuilder modBuilder(mod.getBodyRegion());
+    auto recipe =
+        RecipeTy::create(modBuilder, loc, recipeName, mainOp.getType());
+
+    createRecipeInitCopy(loc, locEnd, varRef->getSourceRange(), mainOp, recipe,
+                         varRecipe, temporary);
+
+    if (varRecipe && varRecipe->needsDestruction(cgf.getContext()))
+      createRecipeDestroySection(loc, locEnd, mainOp,
+                                 cgf.getContext().getDeclAlign(varRecipe),
+                                 baseType, recipe.getDestroyRegion());
+    return recipe;
   }
 
 public:
@@ -969,6 +1147,76 @@ public:
       applyToComputeOp(clause);
     } else {
       llvm_unreachable("Unknown construct kind in VisitAttachClause");
+    }
+  }
+
+  void VisitPrivateClause(const OpenACCPrivateClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
+                               mlir::acc::LoopOp>) {
+      for (const auto [varExpr, varRecipe] :
+           llvm::zip_equal(clause.getVarList(), clause.getInitRecipes())) {
+        CIRGenFunction::OpenACCDataOperandInfo opInfo =
+            cgf.getOpenACCDataOperandInfo(varExpr);
+        auto privateOp = mlir::acc::PrivateOp::create(
+            builder, opInfo.beginLoc, opInfo.varValue, /*structured=*/true,
+            /*implicit=*/false, opInfo.name, opInfo.bounds);
+        privateOp.setDataClause(mlir::acc::DataClause::acc_private);
+
+        {
+          mlir::OpBuilder::InsertionGuard guardCase(builder);
+          auto recipe = getOrCreateRecipe<mlir::acc::PrivateRecipeOp>(
+              cgf.getContext(), varExpr, varRecipe, /*temporary=*/nullptr,
+              Decl::castToDeclContext(cgf.curFuncDecl), opInfo.baseType,
+              privateOp.getResult());
+          // TODO: OpenACC: The dialect is going to change in the near future to
+          // have these be on a different operation, so when that changes, we
+          // probably need to change these here.
+          operation.addPrivatization(builder.getContext(), privateOp, recipe);
+        }
+      }
+    } else if constexpr (isCombinedType<OpTy>) {
+      // Despite this being valid on ParallelOp or SerialOp, combined type
+      // applies to the 'loop'.
+      applyToLoopOp(clause);
+    } else {
+      llvm_unreachable("Unknown construct kind in VisitPrivateClause");
+    }
+  }
+
+  void VisitFirstPrivateClause(const OpenACCFirstPrivateClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp,
+                               mlir::acc::SerialOp>) {
+      for (const auto [varExpr, varRecipe] :
+           llvm::zip_equal(clause.getVarList(), clause.getInitRecipes())) {
+        CIRGenFunction::OpenACCDataOperandInfo opInfo =
+            cgf.getOpenACCDataOperandInfo(varExpr);
+        auto firstPrivateOp = mlir::acc::FirstprivateOp::create(
+            builder, opInfo.beginLoc, opInfo.varValue, /*structured=*/true,
+            /*implicit=*/false, opInfo.name, opInfo.bounds);
+
+        firstPrivateOp.setDataClause(mlir::acc::DataClause::acc_firstprivate);
+
+        {
+          mlir::OpBuilder::InsertionGuard guardCase(builder);
+          auto recipe = getOrCreateRecipe<mlir::acc::FirstprivateRecipeOp>(
+              cgf.getContext(), varExpr, varRecipe.RecipeDecl,
+              varRecipe.InitFromTemporary,
+              Decl::castToDeclContext(cgf.curFuncDecl), opInfo.baseType,
+              firstPrivateOp.getResult());
+
+          // TODO: OpenACC: The dialect is going to change in the near future to
+          // have these be on a different operation, so when that changes, we
+          // probably need to change these here.
+          operation.addFirstPrivatization(builder.getContext(), firstPrivateOp,
+                                          recipe);
+        }
+      }
+    } else if constexpr (isCombinedType<OpTy>) {
+      // Unlike 'private', 'firstprivate' applies to the compute op, not the
+      // loop op.
+      applyToComputeOp(clause);
+    } else {
+      llvm_unreachable("Unknown construct kind in VisitFirstPrivateClause");
     }
   }
 };

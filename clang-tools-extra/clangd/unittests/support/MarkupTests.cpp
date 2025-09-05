@@ -463,6 +463,7 @@ TEST(Document, Separators) {
 ```cpp
 test
 ```
+
 bar)md";
   EXPECT_EQ(D.asEscapedMarkdown(), ExpectedMarkdown);
   EXPECT_EQ(D.asMarkdown(), ExpectedMarkdown);
@@ -559,6 +560,7 @@ foo
   bar
   baz
 ```
+
 ```cpp
 foo
 ```)md";
@@ -571,6 +573,12 @@ foo
 
 foo)pt";
   EXPECT_EQ(D.asPlainText(), ExpectedPlainText);
+
+  Document D2;
+  D2.addCodeBlock("");
+  EXPECT_EQ(D2.asEscapedMarkdown(), "```cpp\n```");
+  EXPECT_EQ(D2.asMarkdown(), "```cpp\n```");
+  EXPECT_EQ(D2.asPlainText(), "");
 }
 
 TEST(BulletList, Render) {

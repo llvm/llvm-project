@@ -290,8 +290,7 @@ static ConstantIntRanges inferDivURange(const ConstantIntRanges &lhs,
                                         DivisionFixupFn fixup) {
   const APInt &lhsMin = lhs.umin(), &lhsMax = lhs.umax(), &rhsMin = rhs.umin(),
               &rhsMax = rhs.umax();
-
-  if (!rhsMin.isZero()) {
+  if (!rhsMin.isZero() && !rhsMax.isZero()) {
     auto udiv = [&fixup](const APInt &a,
                          const APInt &b) -> std::optional<APInt> {
       return fixup(a, b, a.udiv(b));
