@@ -1551,13 +1551,13 @@ def ElementwiseFshr : Builtin {
 }
 
 def ElementwiseCtlz : Builtin {
-  let Spellings = ["__builtin_elementwise_ctlz"];
+  let Spellings = ["__builtin_elementwise_clzg"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def ElementwiseCttz : Builtin {
-  let Spellings = ["__builtin_elementwise_cttz"];
+  let Spellings = ["__builtin_elementwise_ctzg"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }

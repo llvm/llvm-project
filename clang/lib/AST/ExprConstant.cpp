@@ -12039,8 +12039,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
-  case Builtin::BI__builtin_elementwise_ctlz:
-  case Builtin::BI__builtin_elementwise_cttz: {
+  case Builtin::BI__builtin_elementwise_clzg:
+  case Builtin::BI__builtin_elementwise_ctzg: {
     APValue SourceLHS;
     std::optional<APValue> Fallback;
     if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS))
@@ -12064,19 +12064,19 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         if (!Fallback) {
           Info.FFDiag(E, diag::note_constexpr_countzeroes_zero)
               << /*IsTrailing=*/(E->getBuiltinCallee() ==
-                                 Builtin::BI__builtin_elementwise_cttz);
+                                 Builtin::BI__builtin_elementwise_ctzg);
           return false;
         }
         ResultElements.push_back(Fallback->getVectorElt(EltNum));
         continue;
       }
       switch (E->getBuiltinCallee()) {
-      case Builtin::BI__builtin_elementwise_ctlz:
+      case Builtin::BI__builtin_elementwise_clzg:
         ResultElements.push_back(APValue(
             APSInt(APInt(Info.Ctx.getIntWidth(DestEltTy), LHS.countl_zero()),
                    DestEltTy->isUnsignedIntegerOrEnumerationType())));
         break;
-      case Builtin::BI__builtin_elementwise_cttz:
+      case Builtin::BI__builtin_elementwise_ctzg:
         ResultElements.push_back(APValue(
             APSInt(APInt(Info.Ctx.getIntWidth(DestEltTy), LHS.countr_zero()),
                    DestEltTy->isUnsignedIntegerOrEnumerationType())));
@@ -13694,7 +13694,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_clzll:
   case Builtin::BI__builtin_clzs:
   case Builtin::BI__builtin_clzg:
-  case Builtin::BI__builtin_elementwise_ctlz:
+  case Builtin::BI__builtin_elementwise_clzg:
   case Builtin::BI__lzcnt16: // Microsoft variants of count leading-zeroes
   case Builtin::BI__lzcnt:
   case Builtin::BI__lzcnt64: {
@@ -13710,7 +13710,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
     std::optional<APSInt> Fallback;
     if ((BuiltinOp == Builtin::BI__builtin_clzg ||
-         BuiltinOp == Builtin::BI__builtin_elementwise_ctlz) &&
+         BuiltinOp == Builtin::BI__builtin_elementwise_clzg) &&
         E->getNumArgs() > 1) {
       APSInt FallbackTemp;
       if (!EvaluateInteger(E->getArg(1), FallbackTemp, Info))
@@ -13729,7 +13729,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                              BuiltinOp != Builtin::BI__lzcnt &&
                              BuiltinOp != Builtin::BI__lzcnt64;
 
-      if (BuiltinOp == Builtin::BI__builtin_elementwise_ctlz) {
+      if (BuiltinOp == Builtin::BI__builtin_elementwise_clzg) {
         Info.FFDiag(E, diag::note_constexpr_countzeroes_zero)
             << /*IsTrailing=*/false;
       }
@@ -13789,7 +13789,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_ctzll:
   case Builtin::BI__builtin_ctzs:
   case Builtin::BI__builtin_ctzg:
-  case Builtin::BI__builtin_elementwise_cttz: {
+  case Builtin::BI__builtin_elementwise_ctzg: {
     APSInt Val;
     if (E->getArg(0)->getType()->isExtVectorBoolType()) {
       APValue Vec;
@@ -13802,7 +13802,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
     std::optional<APSInt> Fallback;
     if ((BuiltinOp == Builtin::BI__builtin_ctzg ||
-         BuiltinOp == Builtin::BI__builtin_elementwise_cttz) &&
+         BuiltinOp == Builtin::BI__builtin_elementwise_ctzg) &&
         E->getNumArgs() > 1) {
       APSInt FallbackTemp;
       if (!EvaluateInteger(E->getArg(1), FallbackTemp, Info))
@@ -13814,7 +13814,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       if (Fallback)
         return Success(*Fallback, E);
 
-      if (BuiltinOp == Builtin::BI__builtin_elementwise_cttz) {
+      if (BuiltinOp == Builtin::BI__builtin_elementwise_ctzg) {
         Info.FFDiag(E, diag::note_constexpr_countzeroes_zero)
             << /*IsTrailing=*/true;
       }
