@@ -2135,20 +2135,20 @@ let TargetPrefix = "riscv" in {
     def "int_riscv_" # NAME   : RVPBinaryABCIntrinsics;
   }
 
-  defm pmulsu_h_b00      : RVPBinaryABCIntrinsics;
-  defm pmulsu_w_h00      : RVPBinaryABCIntrinsics;
-  defm pmulsu_h_b11      : RVPBinaryABCIntrinsics;
-  defm pmulsu_w_h11      : RVPBinaryABCIntrinsics;
-  defm mulsu_h00         : RVPBinaryABCIntrinsics;
-  defm mulsu_w00         : RVPBinaryABCIntrinsics;
-  defm mulsu_h11         : RVPBinaryABCIntrinsics;
-  defm mulsu_w11         : RVPBinaryABCIntrinsics;
-  defm pmulhsu_h         : RVPBinaryABCIntrinsics;
-  defm pmulhsu_w         : RVPBinaryABCIntrinsics;
-  defm pmulhsu_h_b0      : RVPBinaryABCIntrinsics;
-  defm pmulhsu_w_h0      : RVPBinaryABCIntrinsics;
-  defm pmulhsu_h_b1      : RVPBinaryABCIntrinsics;
-  defm pmulhsu_w_h1      : RVPBinaryABCIntrinsics;
+  defm pmulsu_h_b00 : RVPBinaryABCIntrinsics;
+  defm pmulsu_w_h00 : RVPBinaryABCIntrinsics;
+  defm pmulsu_h_b11 : RVPBinaryABCIntrinsics;
+  defm pmulsu_w_h11 : RVPBinaryABCIntrinsics;
+  defm mulsu_h00    : RVPBinaryABCIntrinsics;
+  defm mulsu_w00    : RVPBinaryABCIntrinsics;
+  defm mulsu_h11    : RVPBinaryABCIntrinsics;
+  defm mulsu_w11    : RVPBinaryABCIntrinsics;
+  defm pmulhsu_h    : RVPBinaryABCIntrinsics;
+  defm pmulhsu_w    : RVPBinaryABCIntrinsics;
+  defm pmulhsu_h_b0 : RVPBinaryABCIntrinsics;
+  defm pmulhsu_w_h0 : RVPBinaryABCIntrinsics;
+  defm pmulhsu_h_b1 : RVPBinaryABCIntrinsics;
+  defm pmulhsu_w_h1 : RVPBinaryABCIntrinsics;
 } // TargetPrefix = "riscv"
 
 // Vendor extensions
