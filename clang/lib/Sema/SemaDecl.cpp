@@ -16169,6 +16169,8 @@ void Sema::applyFunctionAttributesBeforeParsingBody(Decl *FD) {
 }
 
 void Sema::computeNRVO(Stmt *Body, FunctionScopeInfo *Scope) {
+  if (!getLangOpts().CPlusPlus)
+    return;
   ReturnStmt **Returns = Scope->Returns.data();
 
   for (unsigned I = 0, E = Scope->Returns.size(); I != E; ++I) {
