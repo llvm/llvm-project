@@ -29,7 +29,6 @@
 #include <tuple>
 #include <vector>
 
-#include "../../../DeviceRTL/include/EmissaryIds.h"
 #include "Emissary.h"
 
 // Headers for Host Fortran Runtime API as built in llvm/flang/runtime
