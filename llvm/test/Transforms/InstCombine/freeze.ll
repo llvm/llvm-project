@@ -1142,43 +1142,43 @@ define void @fold_phi_noundef_start_value(ptr noundef %init, i1 %cond.0, i1 %con
 ; CHECK-LABEL: define void @fold_phi_noundef_start_value(
 ; CHECK-SAME: ptr noundef [[INIT:%.*]], i1 [[COND_0:%.*]], i1 [[COND_1:%.*]], i1 [[COND_2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[LOOP_PH_0:.*]]
-; CHECK:       [[LOOP_PH_0]]:
-; CHECK-NEXT:    [[IV_0:%.*]] = phi ptr [ [[INIT]], %[[ENTRY]] ], [ [[IV_0_NEXT:%.*]], %[[LOOP:.*]] ]
-; CHECK-NEXT:    br i1 [[COND_0]], label %[[LOOP]], label %[[LOOP_PH_1:.*]]
-; CHECK:       [[LOOP_PH_1]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV_0:%.*]] = phi ptr [ [[INIT]], %[[ENTRY]] ], [ [[IV_0_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    br i1 [[COND_0]], label %[[LOOP_LATCH]], label %[[IF_ELSE:.*]]
+; CHECK:       [[IF_ELSE]]:
 ; CHECK-NEXT:    [[IV_1:%.*]] = getelementptr i8, ptr [[IV_0]], i64 -8
-; CHECK-NEXT:    br label %[[LOOP]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV_2:%.*]] = phi ptr [ [[IV_0]], %[[LOOP_PH_0]] ], [ [[IV_1]], %[[LOOP_PH_1]] ]
+; CHECK-NEXT:    br label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[IV_2:%.*]] = phi ptr [ [[IV_0]], %[[LOOP_HEADER]] ], [ [[IV_1]], %[[IF_ELSE]] ]
 ; CHECK-NEXT:    [[IV_2_FR:%.*]] = freeze ptr [[IV_2]]
 ; CHECK-NEXT:    [[IV_2_FR_INT:%.*]] = ptrtoint ptr [[IV_2_FR]] to i64
 ; CHECK-NEXT:    [[IV_0_INT:%.*]] = ptrtoint ptr [[IV_0]] to i64
 ; CHECK-NEXT:    [[IDX:%.*]] = sub i64 [[IV_0_INT]], [[IV_2_FR_INT]]
 ; CHECK-NEXT:    [[IV_0_NEXT]] = getelementptr i8, ptr [[IV_0]], i64 [[IDX]]
-; CHECK-NEXT:    br i1 [[COND_2]], label %[[EXIT:.*]], label %[[LOOP_PH_0]]
+; CHECK-NEXT:    br i1 [[COND_2]], label %[[EXIT:.*]], label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  br label %loop.ph.0
+  br label %loop.header
 
-loop.ph.0:
-  %iv.0 = phi ptr [ %init, %entry ], [ %iv.0.next, %loop ]
-  br i1 %cond.0, label %loop, label %loop.ph.1
+loop.header:
+  %iv.0 = phi ptr [ %init, %entry ], [ %iv.0.next, %loop.latch ]
+  br i1 %cond.0, label %loop.latch, label %if.else
 
-loop.ph.1:
+if.else:
   %iv.1 = getelementptr i8, ptr %iv.0, i64 -8
-  br label %loop
+  br label %loop.latch
 
-loop:
-  %iv.2 = phi ptr [ %iv.0, %loop.ph.0 ], [ %iv.1, %loop.ph.1 ]
+loop.latch:
+  %iv.2 = phi ptr [ %iv.0, %loop.header ], [ %iv.1, %if.else ]
   %iv.2.fr = freeze ptr %iv.2
   %iv.2.fr.int = ptrtoint ptr %iv.2.fr to i64
   %iv.0.int = ptrtoint ptr %iv.0 to i64
   %idx = sub i64 %iv.0.int, %iv.2.fr.int
   %iv.0.next = getelementptr i8, ptr %iv.0, i64 %idx
-  br i1 %cond.2, label %exit, label %loop.ph.0
+  br i1 %cond.2, label %exit, label %loop.header
 
 exit:
   ret void
