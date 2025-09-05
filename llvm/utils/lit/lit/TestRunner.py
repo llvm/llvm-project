@@ -1487,6 +1487,14 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
         # a leading slash.
         substitutions.append(("%:" + letter, colonNormalizePath(path)))
 
+    substitutions.extend(
+        [
+            # %t (tmpName) in tree path forms for Windows
+            ("%{t-tree}", "\\" + tmpName if kIsWindows else tmpName),
+            ("%{t-tree-/}", "/" + tmpName.replace("\\", "/") if kIsWindows else tmpName),
+        ]
+    )
+
     return substitutions
 
 

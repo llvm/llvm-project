@@ -361,6 +361,21 @@ CachingOnDiskFileSystemImpl::makeSymlinkTo(DirectoryEntry &Parent,
                              TargetStorage.Path);
 }
 
+static bool is_executable(StringRef TreePath, sys::fs::file_status Status,
+                          sys::path::Style PathStyle) {
+#ifndef _WIN32
+  return Status.permissions() & sys::fs::perms::owner_exe;
+#else
+  // This isn't the most reliable way but does better than just
+  // checking owner_exe because most owned files have all_all
+  // permission regardless of they are executable files.
+  StringRef FilePath = getFilePath(TreePath, PathStyle);
+  return (Status.permissions() & sys::fs::perms::owner_exe) &&
+      (FilePath.ends_with_insensitive(".exe") ||
+       sys::fs::exists(FilePath + ".exe"));
+#endif
+}
+
 Expected<FileSystemCache::DirectoryEntry *>
 CachingOnDiskFileSystemImpl::makeFile(DirectoryEntry &Parent,
                                       StringRef TreePath, sys::fs::file_t F,
@@ -376,8 +391,8 @@ CachingOnDiskFileSystemImpl::makeFile(DirectoryEntry &Parent,
     return Handle.takeError();
   // Do not trust Status.size() in case the file is volatile.
   return &Cache->makeFile(Parent, TreePathStorage.Path, *Node,
-                          Handle->getData().size(),
-                          Status.permissions() & sys::fs::perms::owner_exe);
+      Handle->getData().size(),
+      is_executable(TreePath, Status, Cache->getPathStyle()));
 }
 
 Expected<FileSystemCache::DirectoryEntry *>
