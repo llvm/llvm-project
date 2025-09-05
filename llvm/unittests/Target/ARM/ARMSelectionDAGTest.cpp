@@ -115,7 +115,7 @@ TEST_F(ARMSelectionDAGTest, computeKnownBits_VORRIMM) {
   SDValue Zero = DAG->getConstant(0, DL, MVT::i32);
   SDValue ZeroVec = DAG->getSplatBuildVector(VT, DL, Zero);
   Op = DAG->getNode(ARMISD::VORRIMM, DL, VT, ZeroVec, EncSD);
-  auto FrVORRIMM = DAG->getFreeze(Op);
+  SDValue FrVORRIMM = DAG->getFreeze(Op);
   Known = DAG->computeKnownBits(FrVORRIMM);
   EXPECT_EQ(Known.One, APInt(32, 0xAA));
   EXPECT_EQ(Known.Zero, APInt(32, 0xFFFFFF55));
@@ -143,7 +143,7 @@ TEST_F(ARMSelectionDAGTest, computeKnownBits_VBICIMM) {
   EXPECT_EQ(Known.One, APInt(32, 0xFFFFFF55));
   EXPECT_EQ(Known.Zero, APInt(32, 0x000000AA));
 
-  auto FrVBICIMM = DAG->getFreeze(Op);
+  SDValue FrVBICIMM = DAG->getFreeze(Op);
   Known = DAG->computeKnownBits(FrVBICIMM);
   EXPECT_EQ(Known.One, APInt(32, 0xFFFFFF55));
   EXPECT_EQ(Known.Zero, APInt(32, 0x000000AA));
