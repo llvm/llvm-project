@@ -24,6 +24,7 @@
 #define DEBUG_TYPE "amdgpu-lower-kernel-arguments"
 
 using namespace llvm;
+using namespace llvm::KernArgPreload;
 
 namespace {
 
