@@ -608,8 +608,10 @@ define void @sdiv_by_zero(ptr noalias %src, ptr noalias %dst, i32 %d) #2 {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_SDIV_CONTINUE14:%.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <8 x i32> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP44:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP44]], align 4
+; CHECK-NEXT:    [[TMP46:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <8 x i1> [[TMP46]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x i1> [[TMP1]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[PRED_SDIV_IF:%.*]], label [[PRED_SDIV_CONTINUE:%.*]]
 ; CHECK:       pred.sdiv.if:
@@ -682,14 +684,15 @@ define void @sdiv_by_zero(ptr noalias %src, ptr noalias %dst, i32 %d) #2 {
 ; CHECK-NEXT:    br label [[PRED_SDIV_CONTINUE14]]
 ; CHECK:       pred.sdiv.continue14:
 ; CHECK-NEXT:    [[TMP41:%.*]] = phi <8 x i32> [ [[TMP36]], [[PRED_SDIV_CONTINUE12]] ], [ [[TMP40]], [[PRED_SDIV_IF13]] ]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <8 x i1> [[TMP1]], <8 x i32> [[TMP41]], <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <8 x i1> [[TMP46]], <8 x i32> zeroinitializer, <8 x i32> [[TMP41]]
 ; CHECK-NEXT:    [[TMP42:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    store <8 x i32> [[PREDPHI]], ptr [[TMP42]], align 4
+; CHECK-NEXT:    [[TMP45:%.*]] = getelementptr inbounds i32, ptr [[TMP42]], i32 0
+; CHECK-NEXT:    store <8 x i32> [[PREDPHI]], ptr [[TMP45]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP43:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
-; CHECK-NEXT:    br i1 [[TMP43]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP43]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 16, [[MIDDLE_BLOCK]] ], [ 0, [[BB:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
@@ -708,7 +711,7 @@ define void @sdiv_by_zero(ptr noalias %src, ptr noalias %dst, i32 %d) #2 {
 ; CHECK-NEXT:    store i32 [[MERGE]], ptr [[GEP_DST]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ult i64 [[IV]], 16
-; CHECK-NEXT:    br i1 [[EC]], label [[LOOP_HEADER]], label [[EXIT:%.*]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label [[LOOP_HEADER]], label [[EXIT]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
