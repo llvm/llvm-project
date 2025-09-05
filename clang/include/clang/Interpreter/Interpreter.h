@@ -123,21 +123,20 @@ class Interpreter {
 public:
   struct JITConfig {
     /// Indicates whether out-of-process JIT execution is enabled.
-    bool IsOutOfProcess;
+    bool IsOutOfProcess = false;
     /// Path to the out-of-process JIT executor.
-    std::string OOPExecutor;
-    std::string OOPExecutorConnect;
+    std::string OOPExecutor = "";
+    std::string OOPExecutorConnect = "";
     /// Indicates whether to use shared memory for communication.
-    bool UseSharedMemory;
-    /// String representing the slab allocation size for memory management.
-    std::string SlabAllocateSizeString;
+    bool UseSharedMemory = false;
+    /// Representing the slab allocation size for memory management in kb.
+    unsigned SlabAllocateSize = 0;
     /// Path to the ORC runtime library.
-    std::string OrcRuntimePath;
+    std::string OrcRuntimePath = "";
 
     JITConfig()
         : IsOutOfProcess(false), OOPExecutor(""), OOPExecutorConnect(""),
-          UseSharedMemory(false), SlabAllocateSizeString(""),
-          OrcRuntimePath("") {}
+          UseSharedMemory(false), SlabAllocateSize(0), OrcRuntimePath("") {}
   };
 
 protected:

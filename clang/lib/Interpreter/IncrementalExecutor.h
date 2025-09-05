@@ -80,11 +80,11 @@ public:
   static llvm::Expected<
       std::pair<std::unique_ptr<llvm::orc::SimpleRemoteEPC>, uint32_t>>
   launchExecutor(llvm::StringRef ExecutablePath, bool UseSharedMemory,
-                 llvm::StringRef SlabAllocateSizeString);
+                 unsigned SlabAllocateSize);
 
   static llvm::Expected<std::unique_ptr<llvm::orc::SimpleRemoteEPC>>
   connectTCPSocket(llvm::StringRef NetworkAddress, bool UseSharedMemory,
-                   llvm::StringRef SlabAllocateSizeString);
+                   unsigned SlabAllocateSize);
 };
 
 } // end namespace clang

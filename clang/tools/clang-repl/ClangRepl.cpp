@@ -137,6 +137,30 @@ static llvm::Error sanitizeOopArguments(const char *ArgV0) {
   return llvm::Error::success();
 }
 
+static llvm::Expected<unsigned> getSlabAllocSize(StringRef SizeString) {
+  SizeString = SizeString.trim();
+
+  uint64_t Units = 1024;
+
+  if (SizeString.ends_with_insensitive("kb"))
+    SizeString = SizeString.drop_back(2).rtrim();
+  else if (SizeString.ends_with_insensitive("mb")) {
+    Units = 1024 * 1024;
+    SizeString = SizeString.drop_back(2).rtrim();
+  } else if (SizeString.ends_with_insensitive("gb")) {
+    Units = 1024 * 1024 * 1024;
+    SizeString = SizeString.drop_back(2).rtrim();
+  } else if (SizeString.empty())
+    return 0;
+
+  uint64_t SlabSize = 0;
+  if (SizeString.getAsInteger(10, SlabSize))
+    return llvm::make_error<llvm::StringError>(
+        "Invalid numeric format for slab size", llvm::inconvertibleErrorCode());
+
+  return SlabSize * Units;
+}
+
 static void LLVMErrorHandler(void *UserData, const char *Message,
                              bool GenCrashDiag) {
   auto &Diags = *static_cast<clang::DiagnosticsEngine *>(UserData);
@@ -278,7 +302,12 @@ int main(int argc, const char **argv) {
   clang::Interpreter::JITConfig Config;
   Config.IsOutOfProcess = !OOPExecutor.empty() || !OOPExecutorConnect.empty();
   Config.OOPExecutor = OOPExecutor;
-  Config.SlabAllocateSizeString = SlabAllocateSizeString;
+  auto SizeOrErr = getSlabAllocSize(SlabAllocateSizeString);
+  if (!SizeOrErr) {
+    llvm::logAllUnhandledErrors(SizeOrErr.takeError(), llvm::errs(), "error: ");
+    return EXIT_FAILURE;
+  }
+  Config.SlabAllocateSize = *SizeOrErr;
   Config.UseSharedMemory = UseSharedMemory;
 
   // FIXME: Investigate if we could use runToolOnCodeWithArgs from tooling. It

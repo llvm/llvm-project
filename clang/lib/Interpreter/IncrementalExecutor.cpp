@@ -150,32 +150,9 @@ IncrementalExecutor::getSymbolAddress(llvm::StringRef Name,
   return SymOrErr->getAddress();
 }
 
-Expected<uint64_t> getSlabAllocSize(StringRef SizeString) {
-  SizeString = SizeString.trim();
-
-  uint64_t Units = 1024;
-
-  if (SizeString.ends_with_insensitive("kb"))
-    SizeString = SizeString.drop_back(2).rtrim();
-  else if (SizeString.ends_with_insensitive("mb")) {
-    Units = 1024 * 1024;
-    SizeString = SizeString.drop_back(2).rtrim();
-  } else if (SizeString.ends_with_insensitive("gb")) {
-    Units = 1024 * 1024 * 1024;
-    SizeString = SizeString.drop_back(2).rtrim();
-  }
-
-  uint64_t SlabSize = 0;
-  if (SizeString.getAsInteger(10, SlabSize))
-    return llvm::make_error<llvm::StringError>(
-        "Invalid numeric format for slab size", llvm::inconvertibleErrorCode());
-
-  return SlabSize * Units;
-}
-
 Expected<std::unique_ptr<llvm::jitlink::JITLinkMemoryManager>>
 createSharedMemoryManager(llvm::orc::SimpleRemoteEPC &SREPC,
-                          StringRef SlabAllocateSizeString) {
+                          unsigned SlabAllocateSize) {
   llvm::orc::SharedMemoryMapper::SymbolAddrs SAs;
   if (auto Err = SREPC.getBootstrapSymbols(
           {{SAs.Instance,
@@ -199,12 +176,8 @@ createSharedMemoryManager(llvm::orc::SimpleRemoteEPC &SREPC,
   else
     SlabSize = 1024 * 1024 * 1024;
 
-  if (!SlabAllocateSizeString.empty()) {
-    if (Expected<uint64_t> S = getSlabAllocSize(SlabAllocateSizeString))
-      SlabSize = *S;
-    else
-      return S.takeError();
-  }
+  if (SlabAllocateSize > 0)
+    SlabSize = SlabAllocateSize;
 
   return llvm::orc::MapperJITLinkMemoryManager::CreateWithMapper<
       llvm::orc::SharedMemoryMapper>(SlabSize, SREPC, SAs);
@@ -213,7 +186,7 @@ createSharedMemoryManager(llvm::orc::SimpleRemoteEPC &SREPC,
 llvm::Expected<std::pair<std::unique_ptr<llvm::orc::SimpleRemoteEPC>, uint32_t>>
 IncrementalExecutor::launchExecutor(llvm::StringRef ExecutablePath,
                                     bool UseSharedMemory,
-                                    llvm::StringRef SlabAllocateSizeString) {
+                                    unsigned SlabAllocateSize) {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add support for Windows.
   return llvm::make_error<llvm::StringError>(
@@ -287,8 +260,8 @@ IncrementalExecutor::launchExecutor(llvm::StringRef ExecutablePath,
   llvm::orc::SimpleRemoteEPC::Setup S = llvm::orc::SimpleRemoteEPC::Setup();
   if (UseSharedMemory)
     S.CreateMemoryManager =
-        [SlabAllocateSizeString](llvm::orc::SimpleRemoteEPC &EPC) {
-          return createSharedMemoryManager(EPC, SlabAllocateSizeString);
+        [SlabAllocateSize](llvm::orc::SimpleRemoteEPC &EPC) {
+          return createSharedMemoryManager(EPC, SlabAllocateSize);
         };
 
   auto EPCOrErr =
@@ -346,7 +319,7 @@ static Expected<int> connectTCPSocketImpl(std::string Host,
 llvm::Expected<std::unique_ptr<llvm::orc::SimpleRemoteEPC>>
 IncrementalExecutor::connectTCPSocket(llvm::StringRef NetworkAddress,
                                       bool UseSharedMemory,
-                                      llvm::StringRef SlabAllocateSizeString) {
+                                      unsigned SlabAllocateSize) {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add TCP support for Windows.
   return llvm::make_error<llvm::StringError>(
@@ -385,8 +358,8 @@ IncrementalExecutor::connectTCPSocket(llvm::StringRef NetworkAddress,
   llvm::orc::SimpleRemoteEPC::Setup S = llvm::orc::SimpleRemoteEPC::Setup();
   if (UseSharedMemory)
     S.CreateMemoryManager =
-        [SlabAllocateSizeString](llvm::orc::SimpleRemoteEPC &EPC) {
-          return createSharedMemoryManager(EPC, SlabAllocateSizeString);
+        [SlabAllocateSize](llvm::orc::SimpleRemoteEPC &EPC) {
+          return createSharedMemoryManager(EPC, SlabAllocateSize);
         };
 
   return llvm::orc::SimpleRemoteEPC::Create<

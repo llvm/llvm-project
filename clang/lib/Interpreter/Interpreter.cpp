@@ -355,8 +355,7 @@ Interpreter::outOfProcessJITBuilder(JITConfig Config) {
   if (!Config.OOPExecutor.empty()) {
     // Launch an out-of-process executor locally in a child process.
     auto ResultOrErr = IncrementalExecutor::launchExecutor(
-        Config.OOPExecutor, Config.UseSharedMemory,
-        Config.SlabAllocateSizeString);
+        Config.OOPExecutor, Config.UseSharedMemory, Config.SlabAllocateSize);
     if (!ResultOrErr)
       return ResultOrErr.takeError();
     childPid = ResultOrErr->second;
@@ -365,7 +364,7 @@ Interpreter::outOfProcessJITBuilder(JITConfig Config) {
   } else if (Config.OOPExecutorConnect != "") {
     auto EPCOrErr = IncrementalExecutor::connectTCPSocket(
         Config.OOPExecutorConnect, Config.UseSharedMemory,
-        Config.SlabAllocateSizeString);
+        Config.SlabAllocateSize);
     if (!EPCOrErr)
       return EPCOrErr.takeError();
     EPC = std::move(*EPCOrErr);
@@ -423,6 +422,7 @@ Interpreter::create(std::unique_ptr<CompilerInstance> CI, JITConfig Config) {
     DiagnosticsEngine &Diags = CI->getDiagnostics();
     std::string BinaryName = llvm::sys::fs::getMainExecutable(nullptr, nullptr);
     driver::Driver Driver(BinaryName, Triple.str(), Diags);
+    // Need fake args to get the driver to create a compilation.
     std::vector<const char *> Args = {"clang", "--version"};
     std::unique_ptr<clang::driver::Compilation> C(
         Driver.BuildCompilation(Args));
@@ -618,9 +618,13 @@ llvm::Error Interpreter::CreateExecutor(JITConfig Config) {
     return llvm::make_error<llvm::StringError>("Operation failed. "
                                                "No code generator available",
                                                std::error_code());
-#ifndef _WIN32
+
+  const std::string &TT = getCompilerInstance()->getTargetOpts().Triple;
+  llvm::Triple TargetTriple(TT);
+  bool IsWindowsTarget = TargetTriple.isOSWindows();
+
   uint32_t OOPChildPid = -1;
-  if (Config.IsOutOfProcess) {
+  if (!IsWindowsTarget && Config.IsOutOfProcess) {
     if (!JITBuilder) {
       auto ResOrErr = outOfProcessJITBuilder(Config);
       if (!ResOrErr)
@@ -633,10 +637,8 @@ llvm::Error Interpreter::CreateExecutor(JITConfig Config) {
           "Operation failed. No LLJITBuilder for out-of-process JIT",
           std::error_code());
   }
-#endif
 
   if (!JITBuilder) {
-    const std::string &TT = getCompilerInstance()->getTargetOpts().Triple;
     auto JTMB = createJITTargetMachineBuilder(TT);
     if (!JTMB)
       return JTMB.takeError();
@@ -647,16 +649,19 @@ llvm::Error Interpreter::CreateExecutor(JITConfig Config) {
   }
 
   llvm::Error Err = llvm::Error::success();
+
+  // Fix: Declare Executor as the appropriate unique_ptr type
+  std::unique_ptr<IncrementalExecutor> Executor;
+
 #ifdef __EMSCRIPTEN__
-  auto Executor = std::make_unique<WasmIncrementalExecutor>(*TSCtx);
+  Executor = std::make_unique<WasmIncrementalExecutor>(*TSCtx);
 #else
-#ifndef _WIN32
-  auto Executor = std::make_unique<IncrementalExecutor>(*TSCtx, *JITBuilder,
-                                                        Err, OOPChildPid);
-#else
-  auto Executor =
-      std::make_unique<IncrementalExecutor>(*TSCtx, *JITBuilder, Err);
-#endif
+  if (IsWindowsTarget) {
+    Executor = std::make_unique<IncrementalExecutor>(*TSCtx, *JITBuilder, Err);
+  } else {
+    Executor = std::make_unique<IncrementalExecutor>(*TSCtx, *JITBuilder, Err,
+                                                     OOPChildPid);
+  }
 #endif
   if (!Err)
     IncrExecutor = std::move(Executor);
