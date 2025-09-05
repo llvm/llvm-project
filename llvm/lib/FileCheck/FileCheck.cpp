@@ -1218,6 +1218,7 @@ Pattern::MatchResult Pattern::match(StringRef Buffer,
     StringRef MatchedValue = MatchInfo[CaptureParenGroup];
     ExpressionFormat Format = DefinedNumericVariable->getImplicitFormat();
     APInt Value = Format.valueFromStringRepr(MatchedValue, SM);
+    Context->GlobalNumericVariableTable.try_emplace(NumericVariableDef.getKey(), DefinedNumericVariable);
     DefinedNumericVariable->setValue(Value, MatchedValue);
   }
 
