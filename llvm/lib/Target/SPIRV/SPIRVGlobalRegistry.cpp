@@ -2108,11 +2108,17 @@ bool SPIRVGlobalRegistry::hasBlockDecoration(SPIRVType *Type) const {
 SPIRVGlobalRegistry::FPVariant
 SPIRVGlobalRegistry::getFPVariantForVReg(Register VReg,
                                          const MachineFunction *MF) {
-  auto t = VRegFPVariantMap.find(MF ? MF : CurMF);
-  if (t != VRegFPVariantMap.end()) {
-    auto tt = t->second.find(VReg);
-    if (tt != t->second.end())
-      return tt->second;
+  const MachineFunction *Func = MF ? MF : CurMF;
+  DenseMap<const MachineFunction *,
+           DenseMap<Register, FPVariant>>::const_iterator FuncIt =
+      VRegFPVariantMap.find(Func);
+
+  if (FuncIt != VRegFPVariantMap.end()) {
+    const DenseMap<Register, FPVariant> &VRegMap = FuncIt->second;
+    DenseMap<Register, FPVariant>::const_iterator VRegIt = VRegMap.find(VReg);
+
+    if (VRegIt != VRegMap.end())
+      return VRegIt->second;
   }
   return FPVariant::NONE;
 }
