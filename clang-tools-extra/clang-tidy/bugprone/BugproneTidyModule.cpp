@@ -40,6 +40,7 @@
 #include "IntegerDivisionCheck.h"
 #include "InvalidEnumDefaultInitializationCheck.h"
 #include "LambdaFunctionNameCheck.h"
+#include "LoopVariableCopiedThenModifiedCheck.h"
 #include "MacroParenthesesCheck.h"
 #include "MacroRepeatedSideEffectsCheck.h"
 #include "MisleadingSetterOfReferenceCheck.h"
@@ -154,6 +155,8 @@ public:
         "bugprone-incorrect-enable-if");
     CheckFactories.registerCheck<IncorrectEnableSharedFromThisCheck>(
         "bugprone-incorrect-enable-shared-from-this");
+    CheckFactories.registerCheck<LoopVariableCopiedThenModifiedCheck>(
+        "bugprone-loop-variable-copied-then-modified");
     CheckFactories.registerCheck<UnintendedCharOstreamOutputCheck>(
         "bugprone-unintended-char-ostream-output");
     CheckFactories.registerCheck<ReturnConstRefFromParameterCheck>(

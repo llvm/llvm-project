@@ -142,11 +142,22 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-derived-method-shadowing-base-method
+  <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check.
+
+  Finds derived class methods that shadow a (non-virtual) base class method.
+
 - New :doc:`bugprone-invalid-enum-default-initialization
   <clang-tidy/checks/bugprone/invalid-enum-default-initialization>` check.
 
   Detects default initialization (to 0) of variables with ``enum`` type where
   the enum has no enumerator with value of 0.
+
+- New :doc:`bugprone-loop-variable-copied-then-modified
+  <clang-tidy/checks/bugprone/loop-variable-copied-then-modified>` check.
+
+  Detects when a loop variable is copied and then subsequently (possibly) modified
+  and suggests replacing with a reference or an explicit copy.
 
 - New :doc:`cppcoreguidelines-pro-bounds-avoid-unchecked-container-access
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-avoid-unchecked-container-access>`

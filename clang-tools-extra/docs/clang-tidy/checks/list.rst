@@ -108,6 +108,7 @@ Clang-Tidy Checks
    :doc:`bugprone-integer-division <bugprone/integer-division>`,
    :doc:`bugprone-invalid-enum-default-initialization <bugprone/invalid-enum-default-initialization>`,
    :doc:`bugprone-lambda-function-name <bugprone/lambda-function-name>`,
+   :doc:`bugprone-loop-variable-copied-then-modified <bugprone/loop-variable-copied-then-modified>`, "Yes"
    :doc:`bugprone-macro-parentheses <bugprone/macro-parentheses>`, "Yes"
    :doc:`bugprone-macro-repeated-side-effects <bugprone/macro-repeated-side-effects>`,
    :doc:`bugprone-misleading-setter-of-reference <bugprone/misleading-setter-of-reference>`,
