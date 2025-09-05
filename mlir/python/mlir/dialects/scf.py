@@ -5,10 +5,12 @@
 
 from ._scf_ops_gen import *
 from ._scf_ops_gen import _Dialect
-from .arith import constant
+from . import arith
+from ..extras.meta import region_op, region_adder
 
 try:
     from ..ir import *
+    from ..util import is_index_type
     from ._ods_common import (
         get_op_result_or_value as _get_op_result_or_value,
         get_op_results_or_values as _get_op_results_or_values,
@@ -237,7 +239,7 @@ def for_(
     params = [start, stop, step]
     for i, p in enumerate(params):
         if isinstance(p, int):
-            p = constant(IndexType.get(), p)
+            p = arith.constant(IndexType.get(), p)
         elif isinstance(p, float):
             raise ValueError(f"{p=} must be int.")
         params[i] = p
@@ -254,3 +256,136 @@ def for_(
             yield iv, iter_args[0], for_op.results[0]
         else:
             yield iv
+
+
+def _parfor(op_ctor):
+    def _base(
+        lower_bounds, upper_bounds=None, steps=None, *, loc=None, ip=None, **kwargs
+    ):
+        if upper_bounds is None:
+            upper_bounds = lower_bounds
+            lower_bounds = [0] * len(upper_bounds)
+        if steps is None:
+            steps = [1] * len(lower_bounds)
+
+        params = [lower_bounds, upper_bounds, steps]
+        for i, p in enumerate(params):
+            for j, pp in enumerate(p):
+                if isinstance(pp, int):
+                    pp = arith.constant(IndexType.get(), pp)
+                assert isinstance(pp, Value), f"expected ir.Value, got {type(pp)=}"
+                if not is_index_type(pp.type):
+                    pp = arith.index_cast(pp)
+                p[j] = pp
+            params[i] = p
+
+        return op_ctor(*params, loc=loc, ip=ip, **kwargs)
+
+    return _base
+
+
+def _parfor_cm(op_ctor):
+    def _base(*args, **kwargs):
+        for_op = _parfor(op_ctor)(*args, **kwargs)
+        block = for_op.regions[0].blocks[0]
+        block_args = tuple(block.arguments)
+        with InsertionPoint(block):
+            yield block_args
+
+    return _base
+
+
+forall = _parfor_cm(ForallOp)
+
+
+class ParallelOp(ParallelOp):
+    def __init__(
+        self,
+        lower_bounds: Sequence[Union[Operation, OpView, Value, int]],
+        upper_bounds: Sequence[Union[Operation, OpView, Value, int]],
+        steps: Sequence[Union[Value, int]],
+        inits: Optional[Sequence[Union[Operation, OpView, Sequence[Value]]]] = None,
+        *,
+        loc=None,
+        ip=None,
+    ):
+        assert len(lower_bounds) == len(upper_bounds) == len(steps)
+        if inits is None:
+            inits = []
+        results = [i.type for i in inits]
+        iv_types = [IndexType.get()] * len(lower_bounds)
+        super().__init__(
+            results,
+            lower_bounds,
+            upper_bounds,
+            steps,
+            inits,
+            loc=loc,
+            ip=ip,
+        )
+        self.regions[0].blocks.append(*iv_types)
+
+    @property
+    def body(self):
+        return self.regions[0].blocks[0]
+
+    @property
+    def induction_variables(self):
+        return self.body.arguments
+
+
+parallel = _parfor_cm(ParallelOp)
+
+
+class ReduceOp(ReduceOp):
+    def __init__(
+        self,
+        operands: Sequence[Union[Operation, OpView, Sequence[Value]]],
+        num_reductions: int,
+        *,
+        loc=None,
+        ip=None,
+    ):
+        operands = _get_op_results_or_values(operands)
+        super().__init__(operands, num_reductions, loc=loc, ip=ip)
+        for i in range(num_reductions):
+            self.regions[i].blocks.append(operands[i].type, operands[i].type)
+
+
+def reduce_(*operands, num_reductions=1, loc=None, ip=None):
+    return ReduceOp(operands, num_reductions, loc=loc, ip=ip)
+
+
+reduce = region_op(reduce_, terminator=lambda xs: reduce_return(*xs))
+
+
+@region_adder(terminator=lambda xs: reduce_return(*xs))
+def another_reduce(reduce_op):
+    for r in reduce_op.regions:
+        if len(r.blocks[0].operations) == 0:
+            return r
+
+
+@region_op
+def in_parallel():
+    return InParallelOp()
+
+
+def parallel_insert_slice(
+    source: Union[Operation, OpView, Value],
+    dest: Union[Operation, OpView, Value],
+    offsets: Optional[Sequence[Union[Operation, OpView, Value, int]]] = None,
+    sizes: Optional[Sequence[Union[Operation, OpView, Value, int]]] = None,
+    strides: Optional[Sequence[Union[Operation, OpView, Value, int]]] = None,
+):
+    from . import tensor
+
+    @in_parallel
+    def foo():
+        tensor.parallel_insert_slice(
+            source,
+            dest,
+            offsets,
+            sizes,
+            strides,
+        )
