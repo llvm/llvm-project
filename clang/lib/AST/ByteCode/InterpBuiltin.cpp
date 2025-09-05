@@ -2829,6 +2829,51 @@ static bool interp__builtin_select(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_elementwise_triop(
+    InterpState &S, CodePtr OpPC, const CallExpr *Call,
+    llvm::function_ref<APInt(const APSInt &, const APSInt &, const APSInt &)>
+        Fn) {
+  assert(Call->getNumArgs() == 3);
+
+  QualType Arg0Type = Call->getArg(0)->getType();
+  QualType Arg1Type = Call->getArg(1)->getType();
+  QualType Arg2Type = Call->getArg(2)->getType();
+
+  // Non-vector integer types.
+  if (!Arg0Type->isVectorType()) {
+    const APSInt &Op2 = popToAPSInt(S.Stk, *S.getContext().classify(Arg2Type));
+    const APSInt &Op1 = popToAPSInt(S.Stk, *S.getContext().classify(Arg1Type));
+    const APSInt &Op0 = popToAPSInt(S.Stk, *S.getContext().classify(Arg0Type));
+    APSInt Result = APSInt(Fn(Op0, Op1, Op2), Op0.isUnsigned());
+    pushInteger(S, Result, Call->getType());
+    return true;
+  }
+
+  // Vector type.
+  const auto *VecT = Arg0Type->castAs<VectorType>();
+  const PrimType &ElemT = *S.getContext().classify(VecT->getElementType());
+  unsigned NumElems = VecT->getNumElements();
+
+  const Pointer &Op2 = S.Stk.pop<Pointer>();
+  const Pointer &Op1 = S.Stk.pop<Pointer>();
+  const Pointer &Op0 = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  for (unsigned I = 0; I != NumElems; ++I) {
+    APSInt Val0, Val1, Val2;
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+      Val0 = Op0.elem<T>(I).toAPSInt();
+      Val1 = Op1.elem<T>(I).toAPSInt();
+      Val2 = Op2.elem<T>(I).toAPSInt();
+    });
+    APSInt Result = APSInt(Fn(Val0, Val1, Val2), Val0.isUnsigned());
+    INT_TYPE_SWITCH_NO_BOOL(ElemT,
+                            { Dst.elem<T>(I) = static_cast<T>(Result); });
+  }
+  Dst.initializeAllElements();
+
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
@@ -3392,6 +3437,13 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_selectpd_256:
   case X86::BI__builtin_ia32_selectpd_512:
     return interp__builtin_select(S, OpPC, Call);
+
+  case Builtin::BI__builtin_elementwise_fshl:
+    return interp__builtin_elementwise_triop(S, OpPC, Call,
+                                             llvm::APIntOps::fshl);
+  case Builtin::BI__builtin_elementwise_fshr:
+    return interp__builtin_elementwise_triop(S, OpPC, Call,
+                                             llvm::APIntOps::fshr);
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),

@@ -661,3 +661,41 @@ body: |
     %y:vrnov0, %vl:gprnox0 = PseudoVLE8FF_V_M1_MASK $noreg, $noreg, $noreg, 1, 3 /* e8 */, 3 /* ta, ma */
     PseudoVSE8_V_M1 %x, $noreg, %vl, 3 /* e8 */
 ...
+---
+name: insert_subreg_bitcast_no_peekthru
+body: |
+  bb.0:
+    liveins: $v8, $v9, $v10
+
+    ; We should not peekthrough an INSERT_SUBREG if any of its users is not a segmented store or another INSERT_SUBREG.
+    ; CHECK-LABEL: name: insert_subreg_bitcast_no_peekthru
+    ; CHECK: liveins: $v8, $v9, $v10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr = COPY $v9
+    ; CHECK-NEXT: [[PseudoVADD_VV_M1_:%[0-9]+]]:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 3 /* ta, ma */
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vr = COPY $v10
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrn4m1 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrn4m1 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_vrm1_0
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:vrn4m1 = INSERT_SUBREG [[INSERT_SUBREG]], [[COPY1]], %subreg.sub_vrm1_1
+    ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:vrn4m1 = INSERT_SUBREG [[INSERT_SUBREG1]], [[PseudoVADD_VV_M1_]], %subreg.sub_vrm1_2
+    ; CHECK-NEXT: [[INSERT_SUBREG3:%[0-9]+]]:vrn4m1 = INSERT_SUBREG [[INSERT_SUBREG2]], [[COPY2]], %subreg.sub_vrm1_3
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vrm4 = COPY [[INSERT_SUBREG3]]
+    ; CHECK-NEXT: PseudoVSE32_V_M4 [[COPY3]], $noreg, 1, 5 /* e32 */
+    ; CHECK-NEXT: [[PseudoVADD_VV_M1_1:%[0-9]+]]:vr = PseudoVADD_VV_M1 $noreg, [[PseudoVADD_VV_M1_]], $noreg, 10, 5 /* e32 */, 3 /* ta, ma */
+    ; CHECK-NEXT: $v10 = COPY [[PseudoVADD_VV_M1_1]]
+    ; CHECK-NEXT: PseudoRET implicit $v10
+    %0:vr = COPY $v8
+    %1:vr = COPY $v9
+    %2:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 3 /* ta, ma */
+    %3:vr = COPY $v10
+    %6:vrn4m1 = IMPLICIT_DEF
+    %5:vrn4m1 = INSERT_SUBREG %6, %0, %subreg.sub_vrm1_0
+    %7:vrn4m1 = INSERT_SUBREG %5, %1, %subreg.sub_vrm1_1
+    %8:vrn4m1 = INSERT_SUBREG %7, %2, %subreg.sub_vrm1_2
+    %9:vrn4m1 = INSERT_SUBREG %8, %3, %subreg.sub_vrm1_3
+    %10:vrm4 = COPY %9
+    PseudoVSE32_V_M4 %10:vrm4, $noreg, 1, 5 /* e32 */
+    %11:vr = PseudoVADD_VV_M1 $noreg, %2, $noreg, 10, 5 /* e32 */, 3 /* ta, ma */
+    $v10 = COPY %11
+    PseudoRET implicit $v10
