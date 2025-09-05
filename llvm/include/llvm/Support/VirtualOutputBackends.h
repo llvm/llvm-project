@@ -1,9 +1,22 @@
-//===- VirtualOutputBackends.h - Virtual output backends --------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declarations of the concrete VirtualOutputBackend
+/// classes, which are the implementation for different output style and
+/// functions. This file contains:
+/// * NullOutputBackend: discard all outputs written.
+/// * OnDiskOutputBackend: write output to disk, with support for common output
+/// types, like append, or atomic update.
+/// * FilteringOutputBackend: filer some output paths to underlying output
+/// backend.
+/// * MirrorOutputBackend: mirror output to two output backends.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_SUPPORT_VIRTUALOUTPUTBACKENDS_H
@@ -13,8 +26,7 @@
 #include "llvm/Support/VirtualOutputBackend.h"
 #include "llvm/Support/VirtualOutputConfig.h"
 
-namespace llvm {
-namespace vfs {
+namespace llvm::vfs {
 
 /// Create a backend that ignores all output.
 IntrusiveRefCntPtr<OutputBackend> makeNullOutputBackend();
@@ -27,7 +39,8 @@ IntrusiveRefCntPtr<OutputBackend> makeFilteringOutputBackend(
     std::function<bool(StringRef, std::optional<OutputConfig>)> Filter);
 
 /// Create a backend that forwards \a OutputBackend::createFile() to both \p
-/// Backend1 and \p Backend2 and sends content to both places.
+/// Backend1 and \p Backend2. Writing to such backend will create identical
+/// outputs using two different backends.
 IntrusiveRefCntPtr<OutputBackend>
 makeMirroringOutputBackend(IntrusiveRefCntPtr<OutputBackend> Backend1,
                            IntrusiveRefCntPtr<OutputBackend> Backend2);
@@ -81,12 +94,12 @@ public:
   /// On disk output settings.
   struct OutputSettings {
     /// Register output files to be deleted if a signal is received. Also
-    /// disabled for outputs with \a OutputConfig::getNoDiscardOnSignal().
-    bool DisableRemoveOnSignal = false;
+    /// enabled for outputs with \a OutputConfig::getDiscardOnSignal().
+    bool RemoveOnSignal = true;
 
-    /// Disable temporary files. Also disabled for outputs with \a
-    /// OutputConfig::getNoAtomicWrite().
-    bool DisableTemporaries = false;
+    /// Use temporary files. Also enabled for outputs with \a
+    /// OutputConfig::getAtomicWrite().
+    bool UseTemporaries = true;
 
     // Default configuration for this backend.
     OutputConfig DefaultConfig;
@@ -106,7 +119,6 @@ public:
   OutputSettings Settings;
 };
 
-} // namespace vfs
-} // namespace llvm
+} // namespace llvm::vfs
 
 #endif // LLVM_SUPPORT_VIRTUALOUTPUTBACKENDS_H

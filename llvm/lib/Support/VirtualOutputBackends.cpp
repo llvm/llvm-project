@@ -1,13 +1,18 @@
-//===- VirtualOutputBackends.cpp - Virtual output backends ----------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-//  This file implements vfs::OutputBackend.
-//
+///
+/// \file
+/// This file implements the VirtualOutputBackend types, including:
+/// * NullOutputBackend: Outputs to NullOutputBackend are discarded.
+/// * FilteringOutputBackend: Filter paths from output.
+/// * MirroringOutputBackend: Mirror the output into two different backend.
+/// * OnDiskOutputBackend: Write output files to disk.
+///
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/VirtualOutputBackends.h"
@@ -18,6 +23,8 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/VirtualOutputConfig.h"
+#include "llvm/Support/VirtualOutputError.h"
 
 using namespace llvm;
 using namespace llvm::vfs;
@@ -123,7 +130,11 @@ vfs::makeMirroringOutputBackend(IntrusiveRefCntPtr<OutputBackend> Backend1,
                     std::unique_ptr<OutputFileImpl> F2)
         : PreferredBufferSize(std::max(F1->getOS().GetBufferSize(),
                                        F1->getOS().GetBufferSize())),
-          F1(std::move(F1)), F2(std::move(F2)) {}
+          F1(std::move(F1)), F2(std::move(F2)) {
+      // Don't double buffer.
+      this->F1->getOS().SetUnbuffered();
+      this->F2->getOS().SetUnbuffered();
+    }
     size_t PreferredBufferSize;
     std::unique_ptr<OutputFileImpl> F1;
     std::unique_ptr<OutputFileImpl> F2;
@@ -182,9 +193,9 @@ applySettings(std::optional<OutputConfig> &&Config,
               const OnDiskOutputBackend::OutputSettings &Settings) {
   if (!Config)
     Config = Settings.DefaultConfig;
-  if (Settings.DisableTemporaries)
+  if (!Settings.UseTemporaries)
     Config->setNoAtomicWrite();
-  if (Settings.DisableRemoveOnSignal)
+  if (!Settings.RemoveOnSignal)
     Config->setNoDiscardOnSignal();
   return *Config;
 }
@@ -211,7 +222,7 @@ public:
   /// \post FD and \a TempPath are initialized if this is successful.
   Error tryToCreateTemporary(std::optional<int> &FD);
 
-  Error initializeFD(std::optional<int> &FD);
+  Error initializeFile(std::optional<int> &FD);
   Error initializeStream();
   Error reset();
 
@@ -271,7 +282,7 @@ Error OnDiskOutputFile::tryToCreateTemporary(std::optional<int> &FD) {
   });
 }
 
-Error OnDiskOutputFile::initializeFD(std::optional<int> &FD) {
+Error OnDiskOutputFile::initializeFile(std::optional<int> &FD) {
   assert(OutputPath != "-" && "Unexpected request for FD of stdout");
 
   // Disable temporary file for other non-regular files, and if we get a status
@@ -328,7 +339,7 @@ Error OnDiskOutputFile::initializeStream() {
       return make_error<OutputError>(OutputPath, EC);
   } else {
     std::optional<int> FD;
-    if (Error E = initializeFD(FD))
+    if (Error E = initializeFile(FD))
       return E;
     FileOS.emplace(*FD, /*shouldClose=*/true);
   }
@@ -516,7 +527,7 @@ Error OnDiskOutputFile::keep() {
 
     case FileDifference::SameContents:
       // Files are identical; remove the source file.
-      (void) sys::fs::remove(*TempPath);
+      (void)sys::fs::remove(*TempPath);
       return Error::success();
 
     case FileDifference::DifferentContents:
@@ -528,17 +539,6 @@ Error OnDiskOutputFile::keep() {
   std::error_code RenameEC = sys::fs::rename(*TempPath, OutputPath);
   if (!RenameEC)
     return Error::success();
-
-  // Rename failed. Print some information for diagnosis.
-  // FIXME: Remove the direct printing to stderr when figure out the reason for
-  // failure.
-  errs() << "Rename failed: " << *TempPath;
-  if (sys::fs::exists(*TempPath))
-    errs() << " (exists)";
-  errs() << " -> " << OutputPath;
-  if (sys::fs::exists(OutputPath))
-    errs() << " (exists)";
-  errs() << ": " << RenameEC.message() << "\n";
 
   // FIXME: TempPath should be in the same directory as OutputPath but try to
   // copy the output to see if makes any difference. If this path is used,

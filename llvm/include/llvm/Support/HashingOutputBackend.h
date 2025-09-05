@@ -1,9 +1,17 @@
-//===- HashingOutputBackends.h - Hashing output backends --------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declarations of the HashingOutputBackend class, which
+/// is the VirtualOutputBackend that only produces the hashes for the output
+/// files. This is useful for checking if the outputs are deterministic without
+/// storing output files in memory or on disk.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_SUPPORT_HASHINGOUTPUTBACKEND_H
@@ -17,8 +25,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <mutex>
 
-namespace llvm {
-namespace vfs {
+namespace llvm::vfs {
 
 /// raw_pwrite_stream that writes to a hasher.
 template <typename HasherT>
@@ -57,7 +64,7 @@ private:
   friend class HashingOutputFile<HasherT>;
   void addOutputFile(StringRef Path, StringRef Hash) {
     std::lock_guard<std::mutex> Lock(OutputHashLock);
-    OutputHashes[Path] = std::string(Hash);
+    OutputHashes[Path] = Hash.str();
   }
 
 protected:
@@ -72,10 +79,14 @@ protected:
 
 public:
   /// Iterator for all the output file names.
+  ///
+  /// Not thread safe. Should be queried after all outputs are written.
   auto outputFiles() const { return OutputHashes.keys(); }
 
   /// Get hash value for the output files in hex representation.
   /// Return None if the requested path is not generated.
+  ///
+  /// Not thread safe. Should be queried after all outputs are written.
   std::optional<std::string> getHashValueForFile(StringRef Path) {
     auto F = OutputHashes.find(Path);
     if (F == OutputHashes.end())
@@ -110,7 +121,6 @@ private:
   HashingOutputBackend<HasherT> &Backend;
 };
 
-} // namespace vfs
-} // namespace llvm
+} // namespace llvm::vfs
 
 #endif // LLVM_SUPPORT_HASHINGOUTPUTBACKEND_H

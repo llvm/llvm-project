@@ -1,4 +1,4 @@
-//===- VirtualOutputFileTest.cpp - vfs::OutputFile tests ------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -150,10 +150,10 @@ TEST(VirtualOutputFileTest, discard) {
     EXPECT_EQ(1, Data.Discarded);
 
 #if GTEST_HAS_DEATH_TEST
-    EXPECT_DEATH(
-        consumeError(F.keep()), "some/file/path: output already closed");
-    EXPECT_DEATH(
-        consumeError(F.discard()), "some/file/path: output already closed");
+    EXPECT_DEATH(consumeError(F.keep()),
+                 "some/file/path: output already closed");
+    EXPECT_DEATH(consumeError(F.discard()),
+                 "some/file/path: output already closed");
 #endif
   }
   EXPECT_EQ(0, Data.Kept);
@@ -230,10 +230,10 @@ TEST(VirtualOutputFileTest, keep) {
     EXPECT_EQ(0, Data.Discarded);
 
 #if GTEST_HAS_DEATH_TEST
-    EXPECT_DEATH(
-        consumeError(F.keep()), "some/file/path: output already closed");
-    EXPECT_DEATH(
-        consumeError(F.discard()), "some/file/path: output already closed");
+    EXPECT_DEATH(consumeError(F.keep()),
+                 "some/file/path: output already closed");
+    EXPECT_DEATH(consumeError(F.discard()),
+                 "some/file/path: output already closed");
 #endif
   }
   EXPECT_EQ(1, Data.Kept);
