@@ -2010,8 +2010,8 @@ static bool DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
 void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
   if (VarDecl *VD = dyn_cast<VarDecl>(TheDecl)) {
     QualType Ty = VD->getType();
-    if (Ty->isIncompleteArrayType())
-      Ty = cast<IncompleteArrayType>(Ty)->getElementType();
+   if (const auto *IAT = dyn_cast<IncompleteArrayType>(Ty))
+      Ty = IAT->getElementType();
     if (SemaRef.RequireCompleteType(TheDecl->getBeginLoc(), Ty,
                                     diag::err_incomplete_type))
       return;
