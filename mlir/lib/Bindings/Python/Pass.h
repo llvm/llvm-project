@@ -15,6 +15,7 @@ namespace mlir {
 namespace python {
 
 void populatePassManagerSubmodule(nanobind::module_ &m);
+void populatePassSubmodule(nanobind::module_ &m);
 
 } // namespace python
 } // namespace mlir
