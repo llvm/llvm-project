@@ -25,36 +25,80 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
+#include <plugin-api.h>
 #include <vector>
 
 namespace llvm::lto {
 class LTO;
+class SymbolResolution;
 }
 
 namespace lld::elf {
 struct Ctx;
 class BitcodeFile;
+class ELFFileBase;
 class InputFile;
+class IRFile;
+class BinaryFile;
 
-class BitcodeCompiler {
+class IRCompiler {
+protected:
+  Ctx &ctx;
+  llvm::DenseSet<StringRef> thinIndices;
+  llvm::DenseSet<StringRef> usedStartStop;
+  virtual void addObject(IRFile &f,
+                         std::vector<llvm::lto::SymbolResolution> &r) = 0;
+
+public:
+  IRCompiler(Ctx &ctx) : ctx(ctx) {}
+  void add(IRFile &f);
+  virtual SmallVector<std::unique_ptr<InputFile>, 0> compile() = 0;
+};
+
+class BitcodeCompiler : public IRCompiler {
+protected:
+  void addObject(IRFile &f,
+                 std::vector<llvm::lto::SymbolResolution> &r) override;
+
 public:
   BitcodeCompiler(Ctx &ctx);
   ~BitcodeCompiler();
 
-  void add(BitcodeFile &f);
-  SmallVector<std::unique_ptr<InputFile>, 0> compile();
+  void add(BinaryFile &f);
+  SmallVector<std::unique_ptr<InputFile>, 0> compile() override;
 
 private:
-  Ctx &ctx;
   std::unique_ptr<llvm::lto::LTO> ltoObj;
   // An array of (module name, native relocatable file content) pairs.
   SmallVector<std::pair<std::string, SmallString<0>>, 0> buf;
   std::vector<std::unique_ptr<MemoryBuffer>> files;
   SmallVector<std::string, 0> filenames;
-  llvm::DenseSet<StringRef> usedStartStop;
   std::unique_ptr<llvm::raw_fd_ostream> indexFile;
-  llvm::DenseSet<StringRef> thinIndices;
 };
+
+class GccIRCompiler : public IRCompiler {
+protected:
+  void addObject(IRFile &f,
+                 std::vector<llvm::lto::SymbolResolution> &r) override;
+
+public:
+  ~GccIRCompiler();
+  static GccIRCompiler *getInstance();
+  static GccIRCompiler *getInstance(Ctx &ctx);
+
+  SmallVector<std::unique_ptr<InputFile>, 0> compile() override;
+  static enum ld_plugin_status message(int level, const char *format, ...);
+
+private:
+  GccIRCompiler(Ctx &ctx);
+  static GccIRCompiler *singleton;
+  struct ld_plugin_tv *tv;
+  // Handle for the shared library created via dlopen().
+  void *plugin;
+
+  void initializeTv();
+};
+
 } // namespace lld::elf
 
 #endif

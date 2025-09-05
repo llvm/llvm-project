@@ -2691,7 +2691,7 @@ static void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
 }
 
 // This function is where all the optimizations of link-time
-// optimization takes place. When LTO is in use, some input files are
+// optimization takes place. When LLVM LTO is in use, some input files are
 // not in native object file format but in the LLVM bitcode format.
 // This function compiles bitcode files into a few big native files
 // using LLVM functions and replaces bitcode symbols with the results.
@@ -2738,6 +2738,15 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
       }
     ctx.objectFiles.push_back(obj);
   }
+}
+
+template <class ELFT>
+void LinkerDriver::compileGccIRFiles(bool skipLinkedOutput) {
+  llvm::TimeTraceScope timeScope("LTO");
+  // Compile files and replace symbols.
+  lto.reset(GccIRCompiler::getInstance(ctx));
+
+  return;
 }
 
 // The --wrap option is a feature to rename symbols so that you can write
@@ -3297,7 +3306,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // except a few linker-synthesized ones will be added to the symbol table.
   const size_t numObjsBeforeLTO = ctx.objectFiles.size();
   const size_t numInputFilesBeforeLTO = ctx.driver.files.size();
-  compileBitcodeFiles<ELFT>(skipLinkedOutput);
+  if (ctx.arg.plugin.empty()) {
+    compileBitcodeFiles<ELFT>(skipLinkedOutput);
+  } else {
+    compileGccIRFiles<ELFT>(skipLinkedOutput);
+  }
 
   // Symbol resolution finished. Report backward reference problems,
   // --print-archive-stats=, and --why-extract=.

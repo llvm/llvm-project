@@ -26,6 +26,8 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include <cstddef>
+#include <cstring>
+#include <dlfcn.h>
 #include <memory>
 #include <string>
 #include <system_error>
@@ -165,7 +167,7 @@ static lto::Config createConfig(Ctx &ctx) {
   return c;
 }
 
-BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
+BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : IRCompiler(ctx) {
   // Initialize indexFile.
   if (!ctx.arg.thinLTOIndexOnlyArg.empty())
     indexFile = openFile(ctx.arg.thinLTOIndexOnlyArg);
@@ -215,9 +217,7 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
   }
 }
 
-BitcodeCompiler::~BitcodeCompiler() = default;
-
-void BitcodeCompiler::add(BitcodeFile &f) {
+void IRCompiler::add(IRFile &f) {
   lto::InputFile &obj = *f.obj;
   bool isExec = !ctx.arg.shared && !ctx.arg.relocatable;
 
@@ -278,7 +278,7 @@ void BitcodeCompiler::add(BitcodeFile &f) {
     // their values are still not final.
     r.LinkerRedefined = sym->scriptDefined;
   }
-  checkError(ctx.e, ltoObj->add(std::move(f.obj), resols));
+  addObject(f, resols);
 }
 
 // If LazyObjFile has not been added to link, emit empty index files.
@@ -420,4 +420,85 @@ SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
       ret.push_back(createObjFile(ctx, MemoryBufferRef(objBuf, ltoObjName)));
   }
   return ret;
+}
+
+void BitcodeCompiler::addObject(IRFile &f,
+                                std::vector<llvm::lto::SymbolResolution> &r) {
+  checkError(ctx.e, ltoObj->add(std::move(f.obj), r));
+}
+
+GccIRCompiler *GccIRCompiler::singleton = nullptr;
+
+ GccIRCompiler *GccIRCompiler::getInstance() {
+  assert(singleton != nullptr);
+  return singleton;
+}
+
+GccIRCompiler *GccIRCompiler::getInstance(Ctx &ctx) {
+  if (singleton == nullptr) {
+    singleton = new GccIRCompiler(ctx);
+  }
+
+  return singleton;
+}
+
+GccIRCompiler::GccIRCompiler(Ctx &ctx) : IRCompiler(ctx) {
+  singleton = nullptr;
+
+  // TODO: Properly find the right size.
+  int tvsz = 100;
+  tv = new ld_plugin_tv[tvsz];
+  initializeTv();
+  plugin = dlopen(ctx.arg.plugin.data(), RTLD_NOW);
+  if (plugin == NULL) {
+    error(dlerror());
+    return;
+  }
+  void *tmp = dlsym(plugin, "onload");
+  if (tmp == NULL) {
+    error("Plugin does not provide onload()");
+    return;
+  }
+
+  ld_plugin_onload onload;
+  // Ensure source and destination types have the same size.
+  assert(sizeof(ld_plugin_onload) == sizeof(void *));
+  std::memcpy(&onload, &tmp, sizeof(ld_plugin_onload));
+
+  (*onload)(tv);
+
+}
+
+GccIRCompiler::~GccIRCompiler() {
+  delete tv;
+  singleton = nullptr;
+}
+
+void GccIRCompiler::initializeTv() {
+  int i = 0;
+
+#define TVU_SETTAG(t, f, v)                                                    \
+  {                                                                            \
+    tv[i].tv_tag = t;                                                          \
+    tv[i].tv_u.tv_##f = v;                                                     \
+    i++;                                                                       \
+  }
+
+  TVU_SETTAG(LDPT_MESSAGE, message, message);
+  TVU_SETTAG(LDPT_API_VERSION, val, LD_PLUGIN_API_VERSION);
+}
+
+SmallVector<std::unique_ptr<InputFile>, 0> GccIRCompiler::compile() {
+  SmallVector<std::unique_ptr<InputFile>, 0> ret;
+  // TODO: Implement this function.
+  return ret;
+}
+
+void GccIRCompiler::addObject(IRFile &f,
+                              std::vector<llvm::lto::SymbolResolution> &r) {}
+
+enum ld_plugin_status GccIRCompiler::message(int level, const char *format,
+                                             ...) {
+  // TODO: Implement this function.
+  return LDPS_OK;
 }

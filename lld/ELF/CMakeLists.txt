@@ -18,6 +18,11 @@ if(LLVM_ENABLE_ZSTD)
   list(APPEND imported_libs ${zstd_target})
 endif()
 
+set(GNULTO_INCLUDE_DIR "" CACHE PATH "Additional directory, where CMake should search for plugin-api.h")
+if(LLD_ENABLE_GNULTO)
+  find_package(GNULTO REQUIRED)
+endif()
+
 add_lld_library(lldELF
   AArch64ErrataFix.cpp
   Arch/AArch64.cpp
