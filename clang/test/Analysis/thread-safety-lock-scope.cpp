@@ -1,4 +1,4 @@
-// RUN: %clang_cc1  -verify -fsyntax-only -Wthread-safety %s
+// RUN: %clang_cc1 -include %s -verify -fsyntax-only -Wthread-safety %s
 
 #ifndef HEADER
 #define HEADER
