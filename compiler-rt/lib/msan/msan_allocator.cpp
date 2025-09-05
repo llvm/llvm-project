@@ -231,8 +231,7 @@ static void *MsanAllocate(BufferedStackTrace *stack, uptr size, uptr alignment,
   //     bytes 0-6:  initialized,   origin not set (and irrelevant)
   //     byte  7:    uninitialized, origin TAG_ALLOC_PADDING (unlike malloc)
   //     bytes 8-15: uninitialized, origin TAG_ALLOC_PADDING
-  if (__msan_get_track_origins() && ((zero && flags()->poison_in_calloc) ||
-                                     (!zero && flags()->poison_in_malloc))) {
+  if (__msan_get_track_origins() && flags()->poison_in_padding) {
     stack->tag = STACK_TRACE_TAG_ALLOC_PADDING;
     Origin o2 = Origin::CreateHeapOrigin(stack);
     __msan_set_origin(padding_start, padding_size, o2.raw_id());
@@ -244,10 +243,14 @@ static void *MsanAllocate(BufferedStackTrace *stack, uptr size, uptr alignment,
     else
       __msan_unpoison(allocated, size);  // Mem is already zeroed.
 
-    if (flags()->poison_in_calloc)
+    if (flags()->poison_in_padding)
       __msan_poison(padding_start, padding_size);
   } else if (flags()->poison_in_malloc) {
-    __msan_poison(allocated, actually_allocated_size);
+    if (flags()->poison_in_padding)
+      __msan_poison(allocated, actually_allocated_size);
+    else
+      __msan_poison(allocated, size);
+
     if (__msan_get_track_origins()) {
       stack->tag = StackTrace::TAG_ALLOC;
       Origin o = Origin::CreateHeapOrigin(stack);
