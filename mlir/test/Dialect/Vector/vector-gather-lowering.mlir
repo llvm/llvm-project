@@ -100,12 +100,12 @@ func.func @scalable_gather_memref_2d(%base: memref<?x?xf32>, %v: vector<2x[3]xin
  return %0 : vector<2x[3]xf32>
 }
 
-// CHECK-LABEL: @scalable_gather_with_alignment
+// CHECK-LABEL: @scalable_gather_memref_2d_with_alignment
 // CHECK:         vector.gather
 // CHECK-SAME:    {alignment = 8 : i64}
 // CHECK:         vector.gather
 // CHECK-SAME:    {alignment = 8 : i64}
-func.func @scalable_gather_with_alignment(%base: memref<?x?xf32>, %v: vector<2x[3]xindex>, %mask: vector<2x[3]xi1>, %pass_thru: vector<2x[3]xf32>) -> vector<2x[3]xf32> {
+func.func @scalable_gather_memref_2d_with_alignment(%base: memref<?x?xf32>, %v: vector<2x[3]xindex>, %mask: vector<2x[3]xi1>, %pass_thru: vector<2x[3]xf32>) -> vector<2x[3]xf32> {
  %c0 = arith.constant 0 : index
  %c1 = arith.constant 1 : index
  %0 = vector.gather %base[%c0, %c1][%v], %mask, %pass_thru {alignment = 8} : memref<?x?xf32>, vector<2x[3]xindex>, vector<2x[3]xi1>, vector<2x[3]xf32> into vector<2x[3]xf32>
