@@ -2578,8 +2578,7 @@ class getHasExt <int NumSrcArgs, ValueType DstVT = i32, ValueType Src0VT = i32,
                 getHasSDWA<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret);
 }
 
-// Return an AGPR+VGPR operand class for the given VGPR register class.
-class getLdStRegisterOperand<RegisterClass RC> {
+class getLdStRegisterOperandForSize<int Size> {
   // This type of operands is only used in pseudo instructions helping
   // code generation and thus doesn't need encoding and decoding methods.
   // It also doesn't need to support AGPRs, because GFX908/A/40 do not
@@ -2587,13 +2586,22 @@ class getLdStRegisterOperand<RegisterClass RC> {
   defvar VLdSt_16 = RegisterOperand<VGPR_16>;
 
   RegisterOperand ret =
-    !cond(!eq(RC.Size, 16)   : VLdSt_16,
-          !eq(RC.Size, 32)   : AVLdSt_32,
-          !eq(RC.Size, 64)   : AVLdSt_64,
-          !eq(RC.Size, 96)   : AVLdSt_96,
-          !eq(RC.Size, 128)  : AVLdSt_128,
-          !eq(RC.Size, 160)  : AVLdSt_160,
-          !eq(RC.Size, 1024) : AVLdSt_1024);
+    !cond(!eq(Size, 16)   : VLdSt_16,
+          !eq(Size, 32)   : AVLdSt_32,
+          !eq(Size, 64)   : AVLdSt_64,
+          !eq(Size, 96)   : AVLdSt_96,
+          !eq(Size, 128)  : AVLdSt_128,
+          !eq(Size, 160)  : AVLdSt_160,
+          !eq(Size, 1024) : AVLdSt_1024);
+}
+
+// Return an AGPR+VGPR operand class for the given VGPR register class.
+class getLdStRegisterOperand<RegisterClass RC> {
+  RegisterOperand ret = getLdStRegisterOperandForSize<RC.Size>.ret;
+}
+
+class getLdStRegisterOperandForVT<ValueType VT> {
+  RegisterOperand ret = getLdStRegisterOperandForSize<VT.Size>.ret;
 }
 
 class getEquivalentAGPRClass<RegisterClass RC> {
