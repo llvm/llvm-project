@@ -68,6 +68,10 @@
 # CHECK-ASM-NOT: str
 # CHECK-ASM-NOT: bl{{.*}}<memcpy
 
+# Negative size should NOT be inlined (invalid size parameter)
+# CHECK-ASM-LABEL: <test_negative_size>:
+# CHECK-ASM: bl{{.*}}<memcpy
+
 # 128-byte copy should NOT be inlined (too large, original call preserved)
 # CHECK-ASM-LABEL: <test_128_byte_too_large>:
 # CHECK-ASM: bl{{.*}}<memcpy
@@ -82,10 +86,6 @@
 
 # Live-in parameter should NOT be inlined (size unknown at compile time)
 # CHECK-ASM-LABEL: <test_live_in_negative>:
-# CHECK-ASM: bl{{.*}}<memcpy
-
-# Negative size should NOT be inlined (invalid size parameter)
-# CHECK-ASM-LABEL: <test_negative_size>:
 # CHECK-ASM: bl{{.*}}<memcpy
 
 # _memcpy8 should be inlined with end-pointer return (dest+size)
@@ -218,6 +218,20 @@ test_0_byte:
 	ret
 	.size	test_0_byte, .-test_0_byte
 
+	.globl	test_negative_size
+	.type	test_negative_size,@function
+test_negative_size:
+	# Negative size should not be inlined
+	stp	x29, x30, [sp, #-32]!
+	mov	x29, sp
+	add	x1, sp, #16
+	add	x0, sp, #8
+	mov	x2, #-1
+	bl	memcpy
+	ldp	x29, x30, [sp], #32
+	ret
+	.size	test_negative_size, .-test_negative_size
+
 	.globl	test_128_byte_too_large
 	.type	test_128_byte_too_large,@function
 test_128_byte_too_large:
@@ -272,20 +286,6 @@ test_live_in_negative:
 	ldp	x29, x30, [sp], #32
 	ret
 	.size	test_live_in_negative, .-test_live_in_negative
-
-	.globl	test_negative_size
-	.type	test_negative_size,@function
-test_negative_size:
-	# Negative size should not be inlined
-	stp	x29, x30, [sp, #-32]!
-	mov	x29, sp
-	add	x1, sp, #16
-	add	x0, sp, #8
-	mov	x2, #-1
-	bl	memcpy
-	ldp	x29, x30, [sp], #32
-	ret
-	.size	test_negative_size, .-test_negative_size
 
 	.globl	test_memcpy8_4_byte
 	.type	test_memcpy8_4_byte,@function
