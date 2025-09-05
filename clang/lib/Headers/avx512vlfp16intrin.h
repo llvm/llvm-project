@@ -46,7 +46,8 @@ static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_set_sh(_Float16 __h) {
   return __extension__(__m128h){__h, 0, 0, 0, 0, 0, 0, 0};
 }
 
-static __inline __m128h __DEFAULT_FN_ATTRS128 _mm_set1_ph(_Float16 __h) {
+static __inline __m128h __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_set1_ph(_Float16 __h) {
   return (__m128h)(__v8hf){__h, __h, __h, __h, __h, __h, __h, __h};
 }
 
