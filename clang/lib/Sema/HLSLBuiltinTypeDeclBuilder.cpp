@@ -445,8 +445,8 @@ BuiltinTypeMethodBuilder::getResourceHandle(T ResourceRecord) {
   ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
   FieldDecl *HandleField = DeclBuilder.getResourceHandleField();
   MemberExpr *HandleExpr = MemberExpr::CreateImplicit(
-      AST, ResourceExpr, false, HandleField, HandleField->getType(), VK_LValue,
-      OK_Ordinary);
+      AST, ResourceExpr, /*IsArrow=*/false, HandleField, HandleField->getType(),
+      VK_LValue, OK_Ordinary);
   StmtsList.push_back(HandleExpr);
   return *this;
 }
@@ -454,7 +454,8 @@ BuiltinTypeMethodBuilder::getResourceHandle(T ResourceRecord) {
 BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::returnThis() {
   ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
   CXXThisExpr *ThisExpr = CXXThisExpr::Create(
-      AST, SourceLocation(), Method->getFunctionObjectParameterType(), true);
+      AST, SourceLocation(), Method->getFunctionObjectParameterType(),
+      /*IsImplicit=*/true);
   StmtsList.push_back(ThisExpr);
   return *this;
 }
@@ -715,10 +716,11 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyConstructor() {
 
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
-  return BuiltinTypeMethodBuilder(*this, "", AST.VoidTy, false, true)
+  return BuiltinTypeMethodBuilder(*this, /*Name=*/"", AST.VoidTy,
+                                  /*IsConst=*/false, /*IsCtor=*/true)
       .addParam("other", ConstRecordRefType)
       .getResourceHandle(PH::_0)
-      .assign(PH::Handle, PH::LastStmt)
+      .assign(PH.Handle, PH.LastStmt)
       .finalize();
 }
 
@@ -734,7 +736,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyAssignmentOperator() {
 
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
   DeclarationName Name = AST.DeclarationNames.getCXXOperatorName(OO_Equal);
-  return BuiltinTypeMethodBuilder(*this, Name, RecordRefType, false, false)
+  return BuiltinTypeMethodBuilder(*this, Name, RecordRefType)
       .addParam("other", ConstRecordRefType)
       .getResourceHandle(PH::_0)
       .assign(PH::Handle, PH::LastStmt)

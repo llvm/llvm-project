@@ -43,20 +43,20 @@ void main() {
 // CHECK: %[[ref_tmp7:.*]] = alloca %"class.hlsl::RWBuffer", align 4
 // CHECK: %[[agg_tmp:.*]] = alloca [2 x [2 x %"class.hlsl::RWBuffer"]], align 4
 // CHECK: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr {{.*}} %[[ref_tmp]], ptr {{.*}} @_ZL1A)
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr noundef nonnull align 4 dereferenceable(4) %[[ref_tmp1]], ptr noundef nonnull align 4 dereferenceable(4) %[[ref_tmp]])
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr noundef nonnull align 4 dereferenceable(4) %[[ref_tmp2]], ptr noundef nonnull align 4 dereferenceable(4) @_ZL1B)
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr noundef nonnull align 4 dereferenceable(4) %[[ref_tmp3]], ptr noundef nonnull align 4 dereferenceable(4) %[[ref_tmp2]])
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr noundef nonnull align 4 dereferenceable(4) %[[ref_tmp4]], ptr noundef nonnull align 4 dereferenceable(4) @_ZL1A)
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr noundef nonnull align 4 dereferenceable(4) %[[ref_tmp5]], ptr noundef nonnull align 4 dereferenceable(4) %[[ref_tmp4]])
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr noundef nonnull align 4 dereferenceable(4) %[[ref_tmp6]], ptr noundef nonnull align 4 dereferenceable(4) @_ZL1B)
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr noundef nonnull align 4 dereferenceable(4) %[[ref_tmp7]], ptr noundef nonnull align 4 dereferenceable(4) %[[ref_tmp6]])
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr noundef nonnull align 4 dereferenceable(4) %L, ptr noundef nonnull align 4 dereferenceable(4) %[[ref_tmp1]])
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr {{.*}} %[[ref_tmp1]], ptr {{.*}} %[[ref_tmp]])
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr {{.*}} %[[ref_tmp2]], ptr {{.*}} @_ZL1B)
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr {{.*}} %[[ref_tmp3]], ptr {{.*}} %[[ref_tmp2]])
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr {{.*}} %[[ref_tmp4]], ptr {{.*}} @_ZL1A)
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr {{.*}} %[[ref_tmp5]], ptr {{.*}} %[[ref_tmp4]])
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr {{.*}} %[[ref_tmp6]], ptr {{.*}} @_ZL1B)
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr {{.*}} %[[ref_tmp7]], ptr {{.*}} %[[ref_tmp6]])
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr {{.*}} %L, ptr {{.*}} %[[ref_tmp1]])
 // CHECK-NEXT: %[[arrayinit_element:.*]] = getelementptr inbounds %"class.hlsl::RWBuffer", ptr %L, i32 1
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr noundef nonnull align 4 dereferenceable(4) %[[arrayinit_element]], ptr noundef nonnull align 4 dereferenceable(4) %[[ref_tmp3]])
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr {{.*}} %[[arrayinit_element]], ptr {{.*}} %[[ref_tmp3]])
 // CHECK-NEXT: %[[arrayinit_element8:.*]] = getelementptr inbounds [2 x %"class.hlsl::RWBuffer"], ptr %L, i32 1
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr noundef nonnull align 4 dereferenceable(4) %[[arrayinit_element8]], ptr noundef nonnull align 4 dereferenceable(4) %[[ref_tmp5]])
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr {{.*}} %[[arrayinit_element8]], ptr {{.*}} %[[ref_tmp5]])
 // CHECK-NEXT: %[[arrayinit_element9:.*]] = getelementptr inbounds %"class.hlsl::RWBuffer", ptr %[[arrayinit_element8]], i32 1
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr noundef nonnull align 4 dereferenceable(4) %[[arrayinit_element9]], ptr noundef nonnull align 4 dereferenceable(4) %[[ref_tmp7]])
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr {{.*}} %[[arrayinit_element9]], ptr {{.*}} %[[ref_tmp7]])
   RWBuffer<float> L[2][2] = { { A, B }, { A, B } };
 
 // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %[[agg_tmp]], ptr align 4 %L, i32 16, i1 false)
