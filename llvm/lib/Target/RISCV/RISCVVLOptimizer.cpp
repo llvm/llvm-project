@@ -1379,7 +1379,7 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
     assert(UserOp.getOperandNo() == UserMI.getNumExplicitDefs() &&
            RISCVII::isFirstDefTiedToFirstUse(UserMI.getDesc()));
     auto DemandedVL = DemandedVLs.lookup(&UserMI);
-    if (!DemandedVL || !RISCV::isVLKnownLE(*DemandedVL, VLOp)) {
+    if (!DemandedVL || !RISCV::isVLKnownLE(*DemandedVL, VLOp, MRI)) {
       LLVM_DEBUG(dbgs() << "  Abort because user is passthru in "
                            "instruction with demanded tail\n");
       return std::nullopt;
@@ -1397,7 +1397,7 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
   // requires.
   if (auto DemandedVL = DemandedVLs.lookup(&UserMI)) {
     assert(isCandidate(UserMI));
-    if (RISCV::isVLKnownLE(*DemandedVL, VLOp))
+    if (RISCV::isVLKnownLE(*DemandedVL, VLOp, MRI))
       return DemandedVL;
   }
 
@@ -1505,10 +1505,10 @@ RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
 
     // Use the largest VL among all the users. If we cannot determine this
     // statically, then we cannot optimize the VL.
-    if (!CommonVL || RISCV::isVLKnownLE(*CommonVL, *VLOp)) {
+    if (!CommonVL || RISCV::isVLKnownLE(*CommonVL, *VLOp, MRI)) {
       CommonVL = *VLOp;
       LLVM_DEBUG(dbgs() << "    User VL is: " << VLOp << "\n");
-    } else if (!RISCV::isVLKnownLE(*VLOp, *CommonVL)) {
+    } else if (!RISCV::isVLKnownLE(*VLOp, *CommonVL, MRI)) {
       LLVM_DEBUG(dbgs() << "    Abort because cannot determine a common VL\n");
       return std::nullopt;
     }
@@ -1570,7 +1570,7 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) const {
       CommonVL = VLMI->getOperand(RISCVII::getVLOpNum(VLMI->getDesc()));
   }
 
-  if (!RISCV::isVLKnownLE(*CommonVL, VLOp)) {
+  if (!RISCV::isVLKnownLE(*CommonVL, VLOp, MRI)) {
     LLVM_DEBUG(dbgs() << "  Abort due to CommonVL not <= VLOp.\n");
     return false;
   }
