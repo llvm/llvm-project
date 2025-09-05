@@ -45,6 +45,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/SwiftErrorValueTracking.h"
@@ -5373,6 +5374,13 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
   // Create the node.
   SDValue Result;
 
+  if (auto Bundle = I.getOperandBundle(LLVMContext::OB_deactivation_symbol)) {
+    auto *Sym = Bundle->Inputs[0].get();
+    SDValue SDSym = getValue(Sym);
+    SDSym = DAG.getDeactivationSymbol(cast<GlobalValue>(Sym));
+    Ops.push_back(SDSym);
+  }
+
   if (auto Bundle = I.getOperandBundle(LLVMContext::OB_convergencectrl)) {
     auto *Token = Bundle->Inputs[0].get();
     SDValue ConvControlToken = getValue(Token);
@@ -9012,6 +9020,11 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
     ConvControlToken = getValue(Token);
   }
 
+  GlobalValue *DeactivationSymbol = nullptr;
+  if (auto Bundle = CB.getOperandBundle(LLVMContext::OB_deactivation_symbol)) {
+    DeactivationSymbol = cast<GlobalValue>(Bundle->Inputs[0].get());
+  }
+
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(getCurSDLoc())
       .setChain(getRoot())
@@ -9021,7 +9034,8 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
       .setIsPreallocated(
           CB.countOperandBundlesOfType(LLVMContext::OB_preallocated) != 0)
       .setCFIType(CFIType)
-      .setConvergenceControlToken(ConvControlToken);
+      .setConvergenceControlToken(ConvControlToken)
+      .setDeactivationSymbol(DeactivationSymbol);
 
   // Set the pointer authentication info if we have it.
   if (PAI) {
@@ -9638,7 +9652,7 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
       {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
        LLVMContext::OB_cfguardtarget, LLVMContext::OB_preallocated,
        LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_kcfi,
-       LLVMContext::OB_convergencectrl});
+       LLVMContext::OB_convergencectrl, LLVMContext::OB_deactivation_symbol});
 
   SDValue Callee = getValue(I.getCalledOperand());
 
