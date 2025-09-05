@@ -1799,6 +1799,8 @@ __m128h test_mm_cvtepi16_ph(__m128i A) {
   return _mm_cvtepi16_ph(A);
 }
 
+TEST_CONSTEXPR(match_m128h(_mm_cvtepi16_ph((__m128i)(__v8hi){1, 1, 2, 2, 4, 4, 8, 8}), 1.0, 1.0, 2.0, 2.0, 4.0, 4.0, 8.0, 8.0));
+
 __m128h test_mm_mask_cvtepi16_ph(__m128h A, __mmask8 B, __m128i C) {
   // CHECK-LABEL: test_mm_mask_cvtepi16_ph
   // CHECK: %{{.*}} = sitofp <8 x i16> %{{.*}} to <8 x half>
