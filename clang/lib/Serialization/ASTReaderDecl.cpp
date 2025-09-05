@@ -3425,7 +3425,13 @@ NamedDecl *ASTDeclReader::getAnonymousDeclForMerging(ASTReader &Reader,
   // If this is the first time, but we have parsed a declaration of the context,
   // build the anonymous declaration list from the parsed declaration.
   auto *PrimaryDC = getPrimaryDCForAnonymousDecl(DC);
-  if (PrimaryDC && !cast<Decl>(PrimaryDC)->isFromASTFile()) {
+  auto InstantiatedLocally = [](Decl *D, SourceManager &SourceMgr) -> bool {
+    auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D);
+    return CTSD && CTSD->getPointOfInstantiation().isValid() &&
+           SourceMgr.isLocalSourceLocation(CTSD->getPointOfInstantiation());
+  };
+  if (PrimaryDC && (!cast<Decl>(PrimaryDC)->isFromASTFile() ||
+                    InstantiatedLocally(CanonDC, Reader.getSourceManager()))) {
     numberAnonymousDeclsWithin(PrimaryDC, [&](NamedDecl *ND, unsigned Number) {
       if (Previous.size() == Number)
         Previous.push_back(cast<NamedDecl>(ND->getCanonicalDecl()));
