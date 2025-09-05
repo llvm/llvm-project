@@ -304,6 +304,10 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_pdifu_b_64:
   case RISCV::BI__builtin_riscv_pdifu_h_32:
   case RISCV::BI__builtin_riscv_pdifu_h_64:
+  case RISCV::BI__builtin_riscv_mul_h01:
+  case RISCV::BI__builtin_riscv_mul_w01:
+  case RISCV::BI__builtin_riscv_mulu_h01:
+  case RISCV::BI__builtin_riscv_mulu_w01:
   case RISCV::BI__builtin_riscv_sadd: {
     switch (BuiltinID) {
     default: llvm_unreachable("unexpected builtin ID");
@@ -563,6 +567,18 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     case RISCV::BI__builtin_riscv_pdifu_h_64:
       ID = Intrinsic::riscv_pdifu_h;
       break;
+    case RISCV::BI__builtin_riscv_mul_h01:
+      ID = Intrinsic::riscv_mul_h01;
+      break;
+    case RISCV::BI__builtin_riscv_mul_w01:
+      ID = Intrinsic::riscv_mul_w01;
+      break;
+    case RISCV::BI__builtin_riscv_mulu_h01:
+      ID = Intrinsic::riscv_mulu_h01;
+      break;
+    case RISCV::BI__builtin_riscv_mulu_w01:
+      ID = Intrinsic::riscv_mulu_w01;
+      break;
     case RISCV::BI__builtin_riscv_sadd:
       ID = Intrinsic::riscv_sadd;
       break;
@@ -670,6 +686,34 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
       break;
     }
     IntrinsicTypes = {ResultType, Ops[1]->getType()};
+    break;
+  }
+
+
+  case RISCV::BI__builtin_riscv_pmul_h_b01_32:
+  case RISCV::BI__builtin_riscv_pmul_h_b01_64:
+  case RISCV::BI__builtin_riscv_pmul_w_h01:
+  case RISCV::BI__builtin_riscv_pmulu_h_b01_32:
+  case RISCV::BI__builtin_riscv_pmulu_h_b01_64:
+  case RISCV::BI__builtin_riscv_pmulu_w_h01: {
+    switch (BuiltinID) {
+    default: llvm_unreachable("unexpected builtin ID");
+    case RISCV::BI__builtin_riscv_pmul_h_b01_32:
+    case RISCV::BI__builtin_riscv_pmul_h_b01_64:
+      ID = Intrinsic::riscv_pmul_h_b01;
+      break;
+    case RISCV::BI__builtin_riscv_pmul_w_h01:
+      ID = Intrinsic::riscv_pmul_w_h01;
+      break;
+    case RISCV::BI__builtin_riscv_pmulu_h_b01_32:
+    case RISCV::BI__builtin_riscv_pmulu_h_b01_64:
+      ID = Intrinsic::riscv_pmulu_h_b01;
+      break;
+    case RISCV::BI__builtin_riscv_pmulu_w_h01:
+      ID = Intrinsic::riscv_pmulu_w_h01;
+      break;
+    }
+    IntrinsicTypes = {ResultType, Ops[0]->getType()};
     break;
   }
 

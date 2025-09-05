@@ -642,3 +642,57 @@ uint64_t pdifu_b(uint64_t rs1, uint64_t rs2) {
 uint64_t pdifu_h(uint64_t rs1, uint64_t rs2) {
   return __riscv_pdifu_h(rs1, rs2);
 }
+
+// RV64P-LABEL: @pmul_h_b01(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.pmul.h.b01.i64.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t pmul_h_b01(uint64_t rs1, uint64_t rs2) {
+  return __riscv_pmul_h_b01(rs1, rs2);
+}
+
+// RV64P-LABEL: @pmul_w_h01(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.pmul.w.h01.i64.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t pmul_w_h01(uint64_t rs1, uint64_t rs2) {
+  return __riscv_pmul_w_h01(rs1, rs2);
+}
+
+// RV64P-LABEL: @pmulu_h_b01(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.pmulu.h.b01.i64.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t pmulu_h_b01(uint64_t rs1, uint64_t rs2) {
+  return __riscv_pmulu_h_b01(rs1, rs2);
+}
+
+// RV64P-LABEL: @pmulu_w_h01(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.pmulu.w.h01.i64.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t pmulu_w_h01(uint64_t rs1, uint64_t rs2) {
+  return __riscv_pmulu_w_h01(rs1, rs2);
+}
+
+// RV64P-LABEL: @mul_w01(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.mul.w01.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t mul_w01(uint64_t rs1, uint64_t rs2) {
+  return __riscv_mul_w01(rs1, rs2);
+}
+
+// RV64P-LABEL: @mulu_w01(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.mulu.w01.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t mulu_w01(uint64_t rs1, uint64_t rs2) {
+  return __riscv_mulu_w01(rs1, rs2);
+}
