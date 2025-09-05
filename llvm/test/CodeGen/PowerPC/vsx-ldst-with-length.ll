@@ -32,7 +32,7 @@ declare <4 x i32> @llvm.ppc.vsx.lxvrll(ptr, i64)
 define void @testSTXVRL(<4 x i32> %a, ptr %b, i64 %c) {
 ; CHECK-LABEL: testSTXVRL:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    stxvrl v2, [[REG:r[0-9]+]], [[REG1:r[0-9]+]]
+; CHECK-NEXT:    stxvrl v2, r{{[0-9]+}}, r{{[0-9]+}}
 ; CHECK:         blr
 entry:
   tail call void @llvm.ppc.vsx.stxvrl(<4 x i32> %a, ptr %b, i64 %c)
@@ -43,7 +43,7 @@ declare void @llvm.ppc.vsx.stxvrl(<4 x i32>, ptr, i64)
 define void @testSTXVRLL(<4 x i32> %a, ptr %b, i64 %c) {
 ; CHECK-LABEL: testSTXVRLL:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    stxvrll v2, [[REG:r[0-9]+]], [[REG1:r[0-9]+]]
+; CHECK-NEXT:    stxvrll v2, r{{[0-9]+}}, r{{[0-9]+}}
 ; CHECK:         blr
 entry:
   tail call void @llvm.ppc.vsx.stxvrll(<4 x i32> %a, ptr %b, i64 %c)
@@ -78,7 +78,7 @@ declare <2 x i64> @llvm.ppc.vsx.lxvrll.v2i64(ptr, i64)
 define void @testSTXVRL2(<2 x i64> %a, ptr %b, i64 %c) {
 ; CHECK-LABEL: testSTXVRL2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    stxvrl v2, [[REG:r[0-9]+]], [[REG1:r[0-9]+]]
+; CHECK-NEXT:    stxvrl v2, r{{[0-9]+}}, r{{[0-9]+}}
 ; CHECK:         blr
 entry:
   tail call void @llvm.ppc.vsx.stxvrl.v2i64(<2 x i64> %a, ptr %b, i64 %c)
@@ -89,7 +89,7 @@ declare void @llvm.ppc.vsx.stxvrl.v2i64(<2 x i64>, ptr, i64)
 define void @testSTXVRLL2(<2 x i64> %a, ptr %b, i64 %c) {
 ; CHECK-LABEL: testSTXVRLL2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    stxvrll v2, [[REG:r[0-9]+]], [[REG1:r[0-9]+]]
+; CHECK-NEXT:    stxvrll v2, r{{[0-9]+}}, r{{[0-9]+}}
 ; CHECK:         blr
 entry:
   tail call void @llvm.ppc.vsx.stxvrll.v2i64(<2 x i64> %a, ptr %b, i64 %c)
