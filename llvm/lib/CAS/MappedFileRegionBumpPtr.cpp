@@ -114,9 +114,7 @@ struct FileLockRAII {
   }
 
   // Release the lock so it will not be unlocked on destruction.
-  void release() {
-    Locked = std::nullopt;
-  }
+  void release() { Locked = std::nullopt; }
 };
 
 struct FileSizeInfo {
@@ -194,9 +192,8 @@ Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
     return std::move(E);
 
   if (ConfigBuffer.size() != 2 * sizeof(uint64_t))
-    return createStringError(
-        std::make_error_code(std::errc::invalid_argument),
-        SharedLockPath + " does not have correct size");
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
+                             SharedLockPath + " does not have correct size");
 
   uint64_t ExpectedCapacity =
       support::endian::read<uint64_t, endianness::little>(ConfigBuffer.data());
