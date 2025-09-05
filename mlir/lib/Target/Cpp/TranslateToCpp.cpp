@@ -559,31 +559,6 @@ static LogicalResult printOperation(CppEmitter &emitter,
   return success();
 }
 
-static LogicalResult printOperation(CppEmitter &emitter,
-                                    emitc::WhileOp whileOp) {
-  raw_indented_ostream &os = emitter.ostream();
-
-  os << "while (";
-
-  Block &condBlock = whileOp.getConditionRegion().front();
-  auto condYield = cast<emitc::YieldOp>(condBlock.back());
-  if (failed(emitter.emitExpression(
-          cast<emitc::ExpressionOp>(condYield.getOperand(0).getDefiningOp()))))
-    return failure();
-
-  os << ") {\n";
-  os.indent();
-
-  Block &bodyBlock = whileOp.getBodyRegion().front();
-  for (Operation &op : bodyBlock) {
-    if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/true)))
-      return failure();
-  }
-
-  os.unindent() << "}";
-  return success();
-}
-
 static LogicalResult printOperation(CppEmitter &emitter, emitc::DoOp doOp) {
   raw_indented_ostream &os = emitter.ostream();
 
@@ -1769,7 +1744,7 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
                 emitc::LogicalNotOp, emitc::LogicalOrOp, emitc::MulOp,
                 emitc::RemOp, emitc::ReturnOp, emitc::SubOp, emitc::SwitchOp,
                 emitc::UnaryMinusOp, emitc::UnaryPlusOp, emitc::VariableOp,
-                emitc::VerbatimOp, emitc::WhileOp>(
+                emitc::VerbatimOp>(
 
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
@@ -1819,7 +1794,7 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
   trailingSemicolon &=
       !isa<cf::CondBranchOp, emitc::DeclareFuncOp, emitc::DoOp, emitc::FileOp,
            emitc::ForOp, emitc::IfOp, emitc::IncludeOp, emitc::SwitchOp,
-           emitc::VerbatimOp, emitc::WhileOp>(op);
+           emitc::VerbatimOp>(op);
 
   os << (trailingSemicolon ? ";\n" : "\n");
 

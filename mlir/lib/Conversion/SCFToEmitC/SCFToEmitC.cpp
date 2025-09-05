@@ -336,8 +336,9 @@ LogicalResult IndexSwitchOpLowering::matchAndRewrite(
   return success();
 }
 
-// Lower scf::while to either emitc::while or emitc::do based on argument usage
-// patterns. Uses mutable variables to maintain loop state across iterations.
+// Lower scf::while to emitc::do using mutable variables to maintain loop state
+// across iterations. The do-while structure ensures the condition is evaluated
+// after each iteration, matching SCF while semantics.
 struct WhileLowering : public OpConversionPattern<WhileOp> {
   using OpConversionPattern::OpConversionPattern;
 
@@ -453,7 +454,7 @@ private:
     return finalResults;
   }
 
-  // Lower to emitc.do when condition arguments differ from region inputs.
+  // Lower scf.while to emitc.do.
   LogicalResult lowerDoWhile(WhileOp whileOp, ArrayRef<Value> vars,
                              MLIRContext *context,
                              ConversionPatternRewriter &rewriter,
