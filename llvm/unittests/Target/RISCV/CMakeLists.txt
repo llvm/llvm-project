@@ -8,6 +8,7 @@ set(LLVM_LINK_COMPONENTS
   RISCVDesc
   RISCVInfo
   Analysis
+  AsmParser
   CodeGen
   Core
   MC
