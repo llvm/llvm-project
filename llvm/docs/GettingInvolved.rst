@@ -213,6 +213,15 @@ what to add to your calendar invite.
      - `ics <https://calendar.google.com/calendar/ical/c_fe5774fa2769c5085d6b87e8fac272e8940e7d0089bc0e0a58dc3ead7978504b%40group.calendar.google.com/public/basic.ics>`__
        `gcal <https://calendar.google.com/calendar/embed?src=c_fe5774fa2769c5085d6b87e8fac272e8940e7d0089bc0e0a58dc3ead7978504b%40group.calendar.google.com&ctz=Asia%2FTokyo>`__
      - `Minutes/docs <https://discourse.llvm.org/t/llvm-qualification-wg-sync-ups-meeting-minutes/87148>`__
+   * - MLIR C/C++ Frontend Working Group
+     - 1st Monday of the month (usually)
+     - `ics <https://calendar.google.com/calendar/ical/jvceakm3kbpku3f4jrsv1lkigo%40group.calendar.google.com/public/basic.ics>`__
+       `gcal <https://calendar.google.com/calendar/embed?src=jvceakm3kbpku3f4jrsv1lkigo%40group.calendar.google.com&ctz=America%2FLos_Angeles>`__
+     - `Minutes/docs <https://docs.google.com/document/d/1-flHK3TjQUrkSO2Fdt4webZ2zCyeXxpTLMiRQbMW7hE>`__
+   * - ClangIR Upstreaming Coordination Meeting
+     - Every 2 weeks on Mondays
+     -
+     -
 
 
 For event owners, our Discord bot also supports sending automated announcements
