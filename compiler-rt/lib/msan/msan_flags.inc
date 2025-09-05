@@ -22,13 +22,7 @@ MSAN_FLAG(int, origin_history_size, Origin::kMaxDepth, "")
 MSAN_FLAG(int, origin_history_per_stack_limit, 20000, "")
 MSAN_FLAG(bool, poison_heap_with_zeroes, false, "")
 MSAN_FLAG(bool, poison_stack_with_zeroes, false, "")
-MSAN_FLAG(bool, poison_in_padding, true,
-          "If the allocator has added padding beyond the end of the "
-          "allocation, mark that padding as uninitialized.")
-MSAN_FLAG(bool, poison_in_malloc, true,
-          "Mark the memory returned by allocation functions as uninitialized, "
-          "up to the requested allocation size. Any padding added by the "
-          "allocator will not be marked.")
+MSAN_FLAG(bool, poison_in_malloc, true, "")
 MSAN_FLAG(bool, poison_in_free, true, "")
 MSAN_FLAG(bool, poison_in_dtor, true, "")
 MSAN_FLAG(bool, report_umrs, true, "")

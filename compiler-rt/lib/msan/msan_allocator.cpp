@@ -231,7 +231,7 @@ static void *MsanAllocate(BufferedStackTrace *stack, uptr size, uptr alignment,
   //     bytes 0-6:  initialized,   origin not set (and irrelevant)
   //     byte  7:    uninitialized, origin TAG_ALLOC_PADDING (unlike malloc)
   //     bytes 8-15: uninitialized, origin TAG_ALLOC_PADDING
-  if (__msan_get_track_origins() && flags()->poison_in_padding) {
+  if (__msan_get_track_origins() && flags()->poison_in_malloc) {
     stack->tag = STACK_TRACE_TAG_ALLOC_PADDING;
     Origin o2 = Origin::CreateHeapOrigin(stack);
     __msan_set_origin(padding_start, padding_size, o2.raw_id());
@@ -243,13 +243,10 @@ static void *MsanAllocate(BufferedStackTrace *stack, uptr size, uptr alignment,
     else
       __msan_unpoison(allocated, size);  // Mem is already zeroed.
 
-    if (flags()->poison_in_padding)
+    if (flags()->poison_in_malloc)
       __msan_poison(padding_start, padding_size);
   } else if (flags()->poison_in_malloc) {
-    if (flags()->poison_in_padding)
-      __msan_poison(allocated, actually_allocated_size);
-    else
-      __msan_poison(allocated, size);
+    __msan_poison(allocated, actually_allocated_size);
 
     if (__msan_get_track_origins()) {
       stack->tag = StackTrace::TAG_ALLOC;
@@ -269,7 +266,7 @@ void __msan::MsanDeallocate(BufferedStackTrace *stack, void *p) {
   RunFreeHooks(p);
 
   Metadata *meta = reinterpret_cast<Metadata *>(allocator.GetMetaData(p));
-  uptr size = allocator.GetActuallyAllocatedSize(p);
+  uptr size = meta->requested_size;
   meta->requested_size = 0;
   // This memory will not be reused by anyone else, so we are free to keep it
   // poisoned. The secondary allocator will unmap and unpoison by
@@ -277,9 +274,10 @@ void __msan::MsanDeallocate(BufferedStackTrace *stack, void *p) {
   if (flags()->poison_in_free && allocator.FromPrimary(p)) {
     __msan_poison(p, size);
     if (__msan_get_track_origins()) {
+      uptr actually_allocated_size = allocator.GetActuallyAllocatedSize(p);
       stack->tag = StackTrace::TAG_DEALLOC;
       Origin o = Origin::CreateHeapOrigin(stack);
-      __msan_set_origin(p, size, o.raw_id());
+      __msan_set_origin(p, actually_allocated_size, o.raw_id());
     }
   }
   if (MsanThread *t = GetCurrentThread()) {
