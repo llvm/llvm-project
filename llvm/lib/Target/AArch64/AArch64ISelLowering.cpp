@@ -24646,10 +24646,9 @@ isSequentialConcatOfVectorInterleave(SDNode *N, SmallVectorImpl<SDValue> &Ops) {
       InterleaveOp->getNumOperands() != NumParts)
     return false;
 
-  for (unsigned I = 0; I < NumParts; I++) {
+  for (unsigned I = 0; I < NumParts; I++)
     if (N->getOperand(I) != SDValue(InterleaveOp, I))
       return false;
-  }
 
   Ops.append(InterleaveOp->op_begin(), InterleaveOp->op_end());
   return true;
@@ -24672,15 +24671,17 @@ static SDValue getNarrowMaskForInterleavedOps(SelectionDAG &DAG, SDLoc &DL,
       return SDValue();
 
     return MaskInterleaveOps[0];
-  } else if (WideMask->getOpcode() == ISD::SPLAT_VECTOR) {
-    ElementCount EC = WideMask.getValueType().getVectorElementCount();
-    assert(EC.isKnownMultipleOf(RequiredNumParts) &&
-           "Expected element count divisible by number of parts");
-    EC = EC.divideCoefficientBy(RequiredNumParts);
-    return DAG.getNode(ISD::SPLAT_VECTOR, DL, MVT::getVectorVT(MVT::i1, EC),
-                       WideMask->getOperand(0));
   }
-  return SDValue();
+
+  if (WideMask->getOpcode() != ISD::SPLAT_VECTOR)
+    return SDValue();
+
+  ElementCount EC = WideMask.getValueType().getVectorElementCount();
+  assert(EC.isKnownMultipleOf(RequiredNumParts) &&
+         "Expected element count divisible by number of parts");
+  EC = EC.divideCoefficientBy(RequiredNumParts);
+  return DAG.getNode(ISD::SPLAT_VECTOR, DL, MVT::getVectorVT(MVT::i1, EC),
+                     WideMask->getOperand(0));
 }
 
 static SDValue performInterleavedMaskedStoreCombine(
@@ -24692,10 +24693,10 @@ static SDValue performInterleavedMaskedStoreCombine(
   SDValue WideValue = MST->getValue();
 
   // Bail out if the stored value has an unexpected number of uses, since we'll
-  // have to peform manual interleaving and may as well just use normal masked
+  // have to perform manual interleaving and may as well just use normal masked
   // stores. Also, discard masked stores that are truncating or indexed.
   if (!WideValue.hasOneUse() || !ISD::isNormalMaskedStore(MST) ||
-      !MST->getOffset().isUndef())
+      !MST->isSimple() || !MST->getOffset().isUndef())
     return SDValue();
 
   SmallVector<SDValue, 4> ValueInterleaveOps;
