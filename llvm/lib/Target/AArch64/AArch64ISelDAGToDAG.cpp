@@ -941,7 +941,7 @@ bool AArch64DAGToDAGISel::SelectRDVLImm(SDValue N, SDValue &Imm) {
 }
 
 // Given `cntsd = (rdsvl, #1) >> 3`, attempt to return a suitable multiplier
-// for RDSVL to calculate `cntsd << N`, i.e. `rdsvl, #(N - 3)`.
+// for RDSVL to calculate `cntsd << N`, i.e. `rdsvl, #(1 << (N - 3))`.
 template <signed Low, signed High>
 bool AArch64DAGToDAGISel::SelectRDSVLShiftImm(SDValue N, SDValue &Imm) {
   if (!isa<ConstantSDNode>(N))
