@@ -7583,7 +7583,7 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(Instruction *I,
                               VPIRMetadata(*Load, LVer), Load->getDebugLoc());
     if (Reverse) {
       Builder.insert(LoadR);
-      return new VPInstruction(VPInstruction::Reverse, {LoadR},
+      return new VPInstruction(VPInstruction::Reverse, LoadR,
                                LoadR->getDebugLoc());
     }
     return LoadR;
