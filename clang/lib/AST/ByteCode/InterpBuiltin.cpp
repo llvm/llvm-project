@@ -2736,12 +2736,14 @@ static bool interp__builtin_ia32_pmul(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp__builtin_elementwise_fma(InterpState &S, CodePtr OpPC,
-                                            const CallExpr *Call) {
+static bool interp__builtin_elementwise_triop_fp(
+    InterpState &S, CodePtr OpPC, const CallExpr *Call,
+    llvm::function_ref<APFloat(const APFloat &, const APFloat &,
+                               const APFloat &, const FPOptions &)>
+        Fn) {
   assert(Call->getNumArgs() == 3);
 
   FPOptions FPO = Call->getFPFeaturesInEffect(S.Ctx.getLangOpts());
-  llvm::RoundingMode RM = getRoundingMode(FPO);
   const QualType Arg1Type = Call->getArg(0)->getType();
   const QualType Arg2Type = Call->getArg(1)->getType();
   const QualType Arg3Type = Call->getArg(2)->getType();
@@ -2756,8 +2758,7 @@ static bool interp__builtin_elementwise_fma(InterpState &S, CodePtr OpPC,
     const Floating &Z = S.Stk.pop<Floating>();
     const Floating &Y = S.Stk.pop<Floating>();
     const Floating &X = S.Stk.pop<Floating>();
-    APFloat F = X.getAPFloat();
-    F.fusedMultiplyAdd(Y.getAPFloat(), Z.getAPFloat(), RM);
+    APFloat F = Fn(X.getAPFloat(), Y.getAPFloat(), Z.getAPFloat(), FPO);
     Floating Result = S.allocFloat(X.getSemantics());
     Result.copy(F);
     S.Stk.push<Floating>(Result);
@@ -2788,8 +2789,8 @@ static bool interp__builtin_elementwise_fma(InterpState &S, CodePtr OpPC,
     APFloat X = VX.elem<T>(I).getAPFloat();
     APFloat Y = VY.elem<T>(I).getAPFloat();
     APFloat Z = VZ.elem<T>(I).getAPFloat();
-    (void)X.fusedMultiplyAdd(Y, Z, RM);
-    Dst.elem<Floating>(I) = Floating(X);
+    APFloat F = Fn(X, Y, Z, FPO);
+    Dst.elem<Floating>(I) = Floating(F);
   }
   Dst.initializeAllElements();
   return true;
@@ -3410,7 +3411,14 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_ia32_pmul(S, OpPC, Call, BuiltinID);
 
   case Builtin::BI__builtin_elementwise_fma:
-    return interp__builtin_elementwise_fma(S, OpPC, Call);
+    return interp__builtin_elementwise_triop_fp(
+        S, OpPC, Call,
+        [](const APFloat &X, const APFloat &Y, const APFloat &Z,
+           const FPOptions &FPO) {
+          APFloat F = X;
+          F.fusedMultiplyAdd(Y, Z, getRoundingMode(FPO));
+          return F;
+        });
 
   case X86::BI__builtin_ia32_selectb_128:
   case X86::BI__builtin_ia32_selectb_256:
