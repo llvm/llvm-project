@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 def NeoverseN3Model : SchedMachineModel {
-    let IssueWidth            =  10; // Micro-ops dispatched at a time.
+    let IssueWidth            =   5; // Micro-ops dispatched at a time.
     let MicroOpBufferSize     = 160; // Entries in micro-op re-order buffer. NOTE: Copied from N2.
     let LoadLatency           =   4; // Optimistic load latency.
     let MispredictPenalty     =  10; // Extra cycles for mispredicted branch. NOTE: Copied from N2.
