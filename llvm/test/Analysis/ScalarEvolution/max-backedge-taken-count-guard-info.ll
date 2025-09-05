@@ -1390,9 +1390,9 @@ define void @ptr_induction_eq_2(ptr %a, i64 %n) {
 ; CHECK-NEXT:    %b = getelementptr inbounds ptr, ptr %a, i64 %n
 ; CHECK-NEXT:    --> ((8 * %n)<nsw> + %a) U: full-set S: full-set
 ; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
-; CHECK-NEXT:    --> {%a,+,8}<nuw><%loop> U: full-set S: full-set Exits: ((8 * ((-8 + (8 * %n)<nsw>) /u 8))<nuw> + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%a,+,8}<nuw><%loop> U: full-set S: full-set Exits: (-8 + (8 * %n)<nsw> + %a) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
-; CHECK-NEXT:    --> {(8 + %a),+,8}<nuw><%loop> U: full-set S: full-set Exits: (8 + (8 * ((-8 + (8 * %n)<nsw>) /u 8))<nuw> + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(8 + %a),+,8}<nuw><%loop> U: full-set S: full-set Exits: ((8 * %n)<nsw> + %a) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_eq_2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-8 + (8 * %n)<nsw>) /u 8)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693951
