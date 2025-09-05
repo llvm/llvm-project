@@ -48,7 +48,6 @@ static const MachineMemOperand::Flags MONoClobber =
 static const MachineMemOperand::Flags MOLastUse =
     MachineMemOperand::MOTargetFlag2;
 
-
 struct V2PhysSCopyInfo {
   // Operands that need to replaced by waterfall
   SmallVector<MachineOperand *> MOs;
