@@ -84,6 +84,9 @@ C++ Specific Potentially Breaking Changes
     static_assert((b.*mp)() == 1); // newly rejected
     static_assert((c.*mp)() == 1); // accepted
 
+- ``VarTemplateSpecializationDecl::getTemplateArgsAsWritten()`` method now
+  returns ``nullptr`` for implicitly instantiated declarations.
+
 ABI Changes in This Version
 ---------------------------
 
@@ -388,6 +391,7 @@ Windows Support
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
+- Enable linker relaxation by default for loongarch64.
 
 RISC-V Support
 ^^^^^^^^^^^^^^
