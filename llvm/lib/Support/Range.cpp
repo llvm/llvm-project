@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Range.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
@@ -14,21 +15,17 @@
 
 using namespace llvm;
 
-Expected<RangeUtils::RangeList> RangeUtils::parseRanges(const StringRef Str,
-                                                        const char Separator) {
+Expected<RangeUtils::RangeList> RangeUtils::parseRanges(StringRef Str,
+                                                        char Separator) {
   RangeList Ranges;
 
   if (Str.empty())
     return std::move(Ranges);
 
-  // Split by the specified separator
-  SmallVector<StringRef, 8> Parts;
-  Str.split(Parts, Separator, -1, false);
-
   // Regex to match either single number or range "num1-num2"
   const Regex RangeRegex("^([0-9]+)(-([0-9]+))?$");
 
-  for (StringRef Part : Parts) {
+  for (StringRef Part : llvm::split(Str, Separator)) {
     Part = Part.trim();
     if (Part.empty())
       continue;
@@ -68,24 +65,10 @@ Expected<RangeUtils::RangeList> RangeUtils::parseRanges(const StringRef Str,
     Ranges.push_back(Range(Begin, End));
   }
 
-  return std::move(Ranges);
+  return Ranges;
 }
 
-bool RangeUtils::parseRanges(const StringRef Str, RangeList &Ranges,
-                             const char Separator) {
-  auto ExpectedRanges = parseRanges(Str, Separator);
-  if (!ExpectedRanges) {
-    // For backward compatibility, print error to stderr
-    handleAllErrors(ExpectedRanges.takeError(), [](const StringError &E) {
-      errs() << E.getMessage() << "\n";
-    });
-    return false;
-  }
-  Ranges = std::move(*ExpectedRanges);
-  return true;
-}
-
-bool RangeUtils::contains(const ArrayRef<Range> Ranges, const int64_t Value) {
+bool RangeUtils::contains(ArrayRef<Range> Ranges, int64_t Value) {
   for (const Range &R : Ranges) {
     if (R.contains(Value))
       return true;
@@ -93,22 +76,7 @@ bool RangeUtils::contains(const ArrayRef<Range> Ranges, const int64_t Value) {
   return false;
 }
 
-std::string RangeUtils::rangesToString(const ArrayRef<Range> Ranges,
-                                       const char Separator) {
-  std::ostringstream OS;
-  for (size_t I = 0; I < Ranges.size(); ++I) {
-    if (I > 0)
-      OS << Separator;
-    const Range &R = Ranges[I];
-    if (R.Begin == R.End)
-      OS << R.Begin;
-    else
-      OS << R.Begin << "-" << R.End;
-  }
-  return OS.str();
-}
-
-void RangeUtils::printRanges(raw_ostream &OS, const ArrayRef<Range> Ranges) {
+void RangeUtils::printRanges(raw_ostream &OS, ArrayRef<Range> Ranges) {
   if (Ranges.empty())
     OS << "empty";
   else {
@@ -128,7 +96,7 @@ void RangeUtils::printRanges(raw_ostream &OS, const ArrayRef<Range> Ranges) {
 }
 
 RangeUtils::RangeList
-RangeUtils::mergeAdjacentRanges(const ArrayRef<Range> Ranges) {
+RangeUtils::mergeAdjacentRanges(ArrayRef<Range> Ranges) {
   if (Ranges.empty())
     return {};
 

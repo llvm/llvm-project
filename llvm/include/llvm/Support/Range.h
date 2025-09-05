@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include <cassert>
 #include <cstdint>
 
 namespace llvm {
@@ -26,16 +27,18 @@ class raw_ostream;
 
 namespace llvm {
 
-/// Represents a range of integers [Begin, End] (inclusive on both ends)
+/// Represents a range of integers [Begin, End], inclusive on both ends, where Begin <= End.
 struct Range {
   int64_t Begin;
   int64_t End;
 
-  Range(const int64_t Begin, const int64_t End) : Begin(Begin), End(End) {}
-  Range(const int64_t Single) : Begin(Single), End(Single) {}
+  Range(int64_t Begin, int64_t End) : Begin(Begin), End(End) {
+    assert(Begin <= End && "Range Begin must be <= End");
+  }
+  Range(int64_t Single) : Begin(Single), End(Single) {}
 
   /// Check if the given value is within this range (inclusive)
-  bool contains(const int64_t Value) const {
+  bool contains(int64_t Value) const {
     return Value >= Begin && Value <= End;
   }
 
@@ -69,27 +72,18 @@ public:
   /// \param Separator The separator character to use (',' or ':')
   /// \returns Expected<RangeList> containing the parsed ranges on success,
   ///          or an Error on failure
-  static Expected<RangeList> parseRanges(const StringRef RangeStr,
-                                         const char Separator = ',');
-
-  /// Legacy interface for backward compatibility.
-  /// \deprecated Use the Expected<RangeList> version instead
-  static bool parseRanges(const StringRef RangeStr, RangeList &Ranges,
-                          const char Separator = ',');
+  static Expected<RangeList> parseRanges(StringRef RangeStr,
+                                         char Separator = ',');
 
   /// Check if a value is contained in any of the ranges
-  static bool contains(const ArrayRef<Range> Ranges, const int64_t Value);
-
-  /// Convert ranges back to string representation for debugging
-  static std::string rangesToString(const ArrayRef<Range> Ranges,
-                                    const char Separator = ',');
+  static bool contains(ArrayRef<Range> Ranges, int64_t Value);
 
   /// Print ranges to output stream
-  static void printRanges(raw_ostream &OS, const ArrayRef<Range> Ranges);
+  static void printRanges(raw_ostream &OS, ArrayRef<Range> Ranges);
 
   /// Merge adjacent/consecutive ranges into single ranges
   /// Example: [1-3, 4-6, 8-10] -> [1-6, 8-10]
-  static RangeList mergeAdjacentRanges(const ArrayRef<Range> Ranges);
+  static RangeList mergeAdjacentRanges(ArrayRef<Range> Ranges);
 };
 
 } // end namespace llvm
