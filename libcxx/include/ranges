@@ -363,7 +363,7 @@ namespace std::ranges {
 
   namespace views { inline constexpr unspecified chunk_by = unspecified; }  // C++23
 
-  // [range.stride.view]
+  // [range.stride.view], stride view
   template<input_range V>
     requires view<V>
   class stride_view;                                                       // C++23
