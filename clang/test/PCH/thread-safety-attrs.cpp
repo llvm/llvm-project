@@ -316,4 +316,21 @@ void sls_fun_bad_12() {
     expected-warning{{releasing mutex 'sls_mu' that was not held}}
 }
 
+
+template <class T, class... Ts>
+void LockMutexes(T &m, Ts &...ms) __attribute__((exclusive_lock_function(m, ms...)));
+
+Mutex m0, m1;
+void non_local_mutex_held() {
+  LockMutexes(m0, m1); // expected-note {{mutex acquired here}} \
+  // expected-note {{mutex acquired here}}
+} // expected-warning{{mutex 'm0' is still held at the end of function}} \
+// expected-warning{{mutex 'm1' is still held at the end of function}}
+
+void no_local_mutex_held_warning() {
+  Mutex local_m0;
+  Mutex local_m1;
+  LockMutexes(local_m0, local_m1);
+} // No warnings expected at end of function scope as the mutexes are function local.
+
 #endif
