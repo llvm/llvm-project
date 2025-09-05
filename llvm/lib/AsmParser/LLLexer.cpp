@@ -685,6 +685,9 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(graalcc);
   KEYWORD(riscv_vector_cc);
   KEYWORD(riscv_vls_cc);
+  KEYWORD(chericcallcc);
+  KEYWORD(chericcallee);
+  KEYWORD(cherilibcallcc);
 
   KEYWORD(cc);
   KEYWORD(c);
