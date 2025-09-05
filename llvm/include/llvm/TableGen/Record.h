@@ -616,6 +616,9 @@ public:
   convertInitializerBitRange(ArrayRef<unsigned> Bits) const override;
   std::optional<int64_t> convertInitializerToInt() const;
 
+  // Returns the set of known bits as a 64-bit integer.
+  uint64_t convertKnownBitsToInt() const;
+
   bool isComplete() const override;
   bool allInComplete() const;
   bool isConcrete() const override;
