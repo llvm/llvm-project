@@ -557,9 +557,8 @@ _mm256_avg_epu16(__m256i __a, __m256i __b)
 ///    is 0, the byte is copied from \a __V1; otherwise, it is copied from
 ///    \a __V2.
 /// \returns A 256-bit integer vector containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_blendv_epi8(__m256i __V1, __m256i __V2, __m256i __M)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_blendv_epi8(__m256i __V1, __m256i __V2, __m256i __M) {
   return (__m256i)__builtin_ia32_pblendvb256((__v32qi)__V1, (__v32qi)__V2,
                                               (__v32qi)__M);
 }
