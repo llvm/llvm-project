@@ -8,6 +8,7 @@
 
 #include "llvm/Support/Range.h"
 #include "gtest/gtest.h"
+#include "llvm/Testing/Support/Error.h"
 
 using namespace llvm;
 
@@ -47,7 +48,7 @@ TEST(RangeTest, RangeOverlaps) {
 
 TEST(RangeUtilsTest, ParseSingleNumber) {
   auto ER = RangeUtils::parseRanges("42");
-  ASSERT_TRUE(ER);
+  ASSERT_THAT_EXPECTED(ER, Succeeded());
   auto Ranges = std::move(*ER);
   EXPECT_EQ(Ranges.size(), 1U);
   EXPECT_EQ(Ranges[0].Begin, 42);
@@ -56,7 +57,7 @@ TEST(RangeUtilsTest, ParseSingleNumber) {
 
 TEST(RangeUtilsTest, ParseSingleRange) {
   auto ER = RangeUtils::parseRanges("10-20");
-  ASSERT_TRUE(ER);
+  ASSERT_THAT_EXPECTED(ER, Succeeded());
   auto Ranges = std::move(*ER);
   EXPECT_EQ(Ranges.size(), 1U);
   EXPECT_EQ(Ranges[0].Begin, 10);
@@ -65,7 +66,7 @@ TEST(RangeUtilsTest, ParseSingleRange) {
 
 TEST(RangeUtilsTest, ParseMultipleRanges) {
   auto ER = RangeUtils::parseRanges("1-5,10,15-20");
-  ASSERT_TRUE(ER);
+  ASSERT_THAT_EXPECTED(ER, Succeeded());
   auto Ranges = std::move(*ER);
   EXPECT_EQ(Ranges.size(), 3U);
 
@@ -80,7 +81,7 @@ TEST(RangeUtilsTest, ParseMultipleRanges) {
 
 TEST(RangeUtilsTest, ParseColonSeparated) {
   auto ER = RangeUtils::parseRanges("1-5:10:15-20", ':');
-  ASSERT_TRUE(ER);
+  ASSERT_THAT_EXPECTED(ER, Succeeded());
   auto Ranges = std::move(*ER);
   EXPECT_EQ(Ranges.size(), 3U);
   EXPECT_EQ(Ranges[0].Begin, 1);
@@ -93,7 +94,7 @@ TEST(RangeUtilsTest, ParseColonSeparated) {
 
 TEST(RangeUtilsTest, ParseEmptyString) {
   auto ER = RangeUtils::parseRanges("");
-  ASSERT_TRUE(ER);
+  ASSERT_THAT_EXPECTED(ER, Succeeded());
   auto Ranges = std::move(*ER);
   EXPECT_TRUE(Ranges.empty());
 }
@@ -101,27 +102,27 @@ TEST(RangeUtilsTest, ParseEmptyString) {
 TEST(RangeUtilsTest, ParseInvalidRanges) {
   // Invalid number.
   auto ER1 = RangeUtils::parseRanges("abc");
-  EXPECT_FALSE(ER1);
+  EXPECT_THAT_EXPECTED(ER1, Failed());
   consumeError(ER1.takeError());
 
   // Invalid range (begin > end).
   auto ER2 = RangeUtils::parseRanges("10-5");
-  EXPECT_FALSE(ER2);
+  EXPECT_THAT_EXPECTED(ER2, Failed());
   consumeError(ER2.takeError());
 
   // Out of order ranges (DebugCounter constraint and overlap).
   auto ER3 = RangeUtils::parseRanges("10,5");
-  EXPECT_FALSE(ER3);
+  EXPECT_THAT_EXPECTED(ER3, Failed());
   consumeError(ER3.takeError());
 
   auto ER4 = RangeUtils::parseRanges("1-5,3-7");
-  EXPECT_FALSE(ER4);
+  EXPECT_THAT_EXPECTED(ER4, Failed());
   consumeError(ER4.takeError());
 }
 
 TEST(RangeUtilsTest, Contains) {
   auto ER = RangeUtils::parseRanges("1-5,10,15-20");
-  ASSERT_TRUE(ER);
+  ASSERT_THAT_EXPECTED(ER, Succeeded());
   auto Ranges = std::move(*ER);
 
   EXPECT_TRUE(RangeUtils::contains(Ranges, 1));
@@ -144,11 +145,11 @@ TEST(RangeUtilsTest, SeparatorParameter) {
 
   // Test explicit separator parameters.
   auto ERC = RangeUtils::parseRanges("1-5:10:15-20", ':');
-  ASSERT_TRUE(ERC);
+  ASSERT_THAT_EXPECTED(ERC, Succeeded());
   ColonRanges = std::move(*ERC);
 
   auto ERM = RangeUtils::parseRanges("1-5,10,15-20", ',');
-  ASSERT_TRUE(ERM);
+  ASSERT_THAT_EXPECTED(ERM, Succeeded());
   CommaRanges = std::move(*ERM);
 
   EXPECT_EQ(ColonRanges.size(), CommaRanges.size());
@@ -172,7 +173,7 @@ TEST(RangeUtilsTest, SeparatorParameter) {
 TEST(RangeUtilsTest, DefaultCommaSeparator) {
   // Test that comma is the default separator.
   auto ER = RangeUtils::parseRanges("1-5,10,15-20");
-  ASSERT_TRUE(ER);
+  ASSERT_THAT_EXPECTED(ER, Succeeded());
   auto Ranges = std::move(*ER);
   EXPECT_EQ(Ranges.size(), 3U);
   EXPECT_EQ(Ranges[0].Begin, 1);
