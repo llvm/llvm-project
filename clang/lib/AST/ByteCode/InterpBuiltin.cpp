@@ -2549,7 +2549,7 @@ static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp__builtin_elementwise_int_binop(
-    InterpState &S, CodePtr OpPC, const CallExpr *Call, unsigned BuiltinID,
+    InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<APInt(const APSInt &, const APSInt &)> Fn) {
   assert(Call->getNumArgs() == 2);
 
@@ -3287,26 +3287,26 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case Builtin::BI__builtin_elementwise_add_sat:
     return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, BuiltinID, [](const APSInt &LHS, const APSInt &RHS) {
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
           return LHS.isSigned() ? LHS.sadd_sat(RHS) : LHS.uadd_sat(RHS);
         });
 
   case Builtin::BI__builtin_elementwise_sub_sat:
     return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, BuiltinID, [](const APSInt &LHS, const APSInt &RHS) {
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
           return LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
         });
 
   case clang::X86::BI__builtin_ia32_pmulhuw128:
   case clang::X86::BI__builtin_ia32_pmulhuw256:
   case clang::X86::BI__builtin_ia32_pmulhuw512:
-    return interp__builtin_elementwise_int_binop(S, OpPC, Call, BuiltinID,
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
                                                  llvm::APIntOps::mulhu);
 
   case clang::X86::BI__builtin_ia32_pmulhw128:
   case clang::X86::BI__builtin_ia32_pmulhw256:
   case clang::X86::BI__builtin_ia32_pmulhw512:
-    return interp__builtin_elementwise_int_binop(S, OpPC, Call, BuiltinID,
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
                                                  llvm::APIntOps::mulhs);
 
   case clang::X86::BI__builtin_ia32_psllv2di:
@@ -3324,7 +3324,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_psllqi256:
   case clang::X86::BI__builtin_ia32_psllqi512:
     return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, BuiltinID, [](const APSInt &LHS, const APSInt &RHS) {
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
           if (RHS.uge(LHS.getBitWidth())) {
             return APInt::getZero(LHS.getBitWidth());
           }
@@ -3344,7 +3344,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_psraqi256:
   case clang::X86::BI__builtin_ia32_psraqi512:
     return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, BuiltinID, [](const APSInt &LHS, const APSInt &RHS) {
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
           if (RHS.uge(LHS.getBitWidth())) {
             return LHS.ashr(LHS.getBitWidth() - 1);
           }
@@ -3366,7 +3366,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_psrlqi256:
   case clang::X86::BI__builtin_ia32_psrlqi512:
     return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, BuiltinID, [](const APSInt &LHS, const APSInt &RHS) {
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
           if (RHS.uge(LHS.getBitWidth())) {
             return APInt::getZero(LHS.getBitWidth());
           }
@@ -3384,7 +3384,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_prolq256:
   case clang::X86::BI__builtin_ia32_prolq512:
     return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, BuiltinID,
+        S, OpPC, Call,
         [](const APSInt &LHS, const APSInt &RHS) { return LHS.rotl(RHS); });
 
   case clang::X86::BI__builtin_ia32_prord128:
@@ -3394,7 +3394,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_prorq256:
   case clang::X86::BI__builtin_ia32_prorq512:
     return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, BuiltinID,
+        S, OpPC, Call,
         [](const APSInt &LHS, const APSInt &RHS) { return LHS.rotr(RHS); });
 
   case Builtin::BI__builtin_elementwise_max:
