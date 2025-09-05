@@ -2438,7 +2438,7 @@ define i16 @test_ctpop_i16(i16 %a) nounwind {
 ; RV64XTHEADBB-NEXT:    and a0, a0, a2
 ; RV64XTHEADBB-NEXT:    add a0, a1, a0
 ; RV64XTHEADBB-NEXT:    srli a1, a0, 4
-; RV64XTHEADBB-NEXT:    add a0, a0, a1
+; RV64XTHEADBB-NEXT:    addw a0, a0, a1
 ; RV64XTHEADBB-NEXT:    th.extu a1, a0, 11, 8
 ; RV64XTHEADBB-NEXT:    andi a0, a0, 15
 ; RV64XTHEADBB-NEXT:    add a0, a0, a1

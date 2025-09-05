@@ -3937,6 +3937,15 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
       if (Use.getOperandNo() == 0 && Bits >= 32)
         break;
       return false;
+    case RISCV::TH_EXT:
+    case RISCV::TH_EXTU: {
+      unsigned Msb = User->getConstantOperandVal(1);
+      unsigned Lsb = User->getConstantOperandVal(2);
+      // Behavior of Msb < Lsb is not well documented.
+      if (Msb >= Lsb && Bits > Msb)
+        break;
+      return false;
+    }
     }
   }
 
