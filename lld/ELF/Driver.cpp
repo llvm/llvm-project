@@ -1786,6 +1786,14 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
 
   cl::ResetAllOptionOccurrences();
 
+  // Ignore -plugin=LLVMgold.so because we don't need to load it.
+  StringRef v = args.getLastArgValue(OPT_plugin);
+  if (!v.empty() && !v.ends_with("LLVMgold.so"))
+    if (!llvm::sys::fs::exists(v))
+      ErrAlways(ctx) << "Cannot find plugin " << v;
+    else
+      ctx.arg.plugin = v;
+
   // Parse LTO options.
   if (auto *arg = args.getLastArg(OPT_plugin_opt_mcpu_eq))
     parseClangOption(ctx, ctx.saver.save("-mcpu=" + StringRef(arg->getValue())),
@@ -1796,23 +1804,26 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
                      arg->getSpelling());
 
   // GCC collect2 passes -plugin-opt=path/to/lto-wrapper with an absolute or
-  // relative path. Just ignore. If not ended with "lto-wrapper" (or
-  // "lto-wrapper.exe" for GCC cross-compiled for Windows), consider it an
-  // unsupported LLVMgold.so option and error.
+  // relative path. If not ended with "lto-wrapper" (or "lto-wrapper.exe" for
+  // GCC cross-compiled for Windows), consider it an unsupported LLVMgold.so
+  // option and error.
   for (opt::Arg *arg : args.filtered(OPT_plugin_opt_eq)) {
     StringRef v(arg->getValue());
     if (!v.ends_with("lto-wrapper") && !v.ends_with("lto-wrapper.exe"))
       ErrAlways(ctx) << arg->getSpelling() << ": unknown plugin option '"
                      << arg->getValue() << "'";
+    else if (!ctx.arg.plugin.empty())
+        ctx.arg.pluginOpt.push_back(v.str());
   }
 
-  // Ignore -plugin=LLVMgold.so because we don't need to load it.
-  StringRef v = args.getLastArgValue(OPT_plugin);
-  if (!v.empty() && !v.ends_with("LLVMgold.so"))
-    if (!llvm::sys::fs::exists(v))
-      ErrAlways(ctx) << "Cannot find plugin " << v;
-    else
-      ctx.arg.plugin = v;
+  // Parse GCC collect2 options.
+  if (!ctx.arg.plugin.empty()) {
+    StringRef v = args.getLastArgValue(OPT_plugin_opt_fresolution);
+    if (!v.empty()) {
+      ctx.arg.resolutionFile = v;
+      ctx.arg.pluginOpt.push_back(std::string("-fresolution=" + v.str()));
+    }
+  }
 
   ctx.arg.passPlugins = args::getStrings(args, OPT_load_pass_plugins);
 
@@ -2744,8 +2755,30 @@ template <class ELFT>
 void LinkerDriver::compileGccIRFiles(bool skipLinkedOutput) {
   llvm::TimeTraceScope timeScope("LTO");
   // Compile files and replace symbols.
-  lto.reset(GccIRCompiler::getInstance(ctx));
+  GccIRCompiler *c = GccIRCompiler::getInstance(ctx);
+  lto.reset(c);
 
+  for (ELFFileBase *file : ctx.objectFiles)
+    c->add(*file);
+
+  ltoObjectFiles = c->compile();
+  for (auto &file : ltoObjectFiles) {
+    auto *obj = cast<ObjFile<ELFT>>(file.get());
+    obj->parse(/*ignoreComdats=*/true);
+
+    // For defined symbols in non-relocatable output,
+    // compute isExported and parse '@'.
+    if (!ctx.arg.relocatable)
+      for (Symbol *sym : obj->getGlobalSymbols()) {
+        if (!sym->isDefined())
+          continue;
+        if (ctx.arg.exportDynamic && sym->computeBinding(ctx) != STB_LOCAL)
+          sym->isExported = true;
+        if (sym->hasVersionSuffix)
+          sym->parseSymbolVersion(ctx);
+      }
+    ctx.objectFiles.push_back(obj);
+  }
   return;
 }
 

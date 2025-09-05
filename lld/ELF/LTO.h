@@ -21,6 +21,7 @@
 #define LLD_ELF_LTO_H
 
 #include "lld/Common/LLVM.h"
+#include "lld/config.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
@@ -86,13 +87,29 @@ public:
   static GccIRCompiler *getInstance();
   static GccIRCompiler *getInstance(Ctx &ctx);
 
+  void add(ELFFileBase &f);
   SmallVector<std::unique_ptr<InputFile>, 0> compile() override;
   static enum ld_plugin_status message(int level, const char *format, ...);
+  enum ld_plugin_status registerClaimFile(ld_plugin_claim_file_handler handler);
+#if HAVE_LDPT_REGISTER_CLAIM_FILE_HOOK_V2
+  enum ld_plugin_status
+  registerClaimFileV2(ld_plugin_claim_file_handler_v2 handler);
+#endif
+  enum ld_plugin_status
+  registerAllSymbolsRead(ld_plugin_all_symbols_read_handler handler);
+  void loadPlugin();
+  bool addCompiledFile(StringRef path);
 
 private:
   GccIRCompiler(Ctx &ctx);
+  std::vector<std::unique_ptr<MemoryBuffer>> files;
   static GccIRCompiler *singleton;
   struct ld_plugin_tv *tv;
+  ld_plugin_claim_file_handler claimFileHandler;
+#if HAVE_LDPT_REGISTER_CLAIM_FILE_HOOK_V2
+  ld_plugin_claim_file_handler_v2 claimFileHandlerV2;
+#endif
+  ld_plugin_all_symbols_read_handler allSymbolsReadHandler;
   // Handle for the shared library created via dlopen().
   void *plugin;
 

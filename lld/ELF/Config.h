@@ -244,9 +244,11 @@ struct Config {
   llvm::StringRef optRemarksFormat;
   llvm::StringRef optStatsFilename;
   llvm::StringRef plugin;
+  llvm::SmallVector<std::string, 0> pluginOpt;
   llvm::StringRef progName;
   llvm::StringRef printArchiveStats;
   llvm::StringRef printSymbolOrder;
+  llvm::StringRef resolutionFile;
   llvm::StringRef soName;
   llvm::StringRef sysroot;
   llvm::StringRef thinLTOCacheDir;

@@ -799,9 +799,9 @@ def plugin_opt_eq_minus: J<"plugin-opt=-">,
   HelpText<"Specify an LLVM option for compatibility with LLVMgold.so">;
 def: J<"plugin-opt=thinlto">;
 
-// Ignore GCC collect2 LTO plugin related options. Note that we don't support
-// GCC LTO, but GCC collect2 passes these options even in non-LTO mode.
-def: J<"plugin-opt=-fresolution=">;
+// GCC collect2 LTO plugin related options.
+def plugin_opt_fresolution: J<"plugin-opt=-fresolution=">;
+// Ignore -pass-through because it is unnecessary.
 def: J<"plugin-opt=-pass-through=">;
 // This may be either an unhandled LLVMgold.so feature or GCC passed
 // -plugin-opt=path/to/{liblto_plugin.so,lto-wrapper}

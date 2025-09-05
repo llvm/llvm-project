@@ -23,6 +23,10 @@ if(LLD_ENABLE_GNULTO)
   find_package(GNULTO REQUIRED)
 endif()
 
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/../include/lld/config.h.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/../include/lld/config.h)
+
 add_lld_library(lldELF
   AArch64ErrataFix.cpp
   Arch/AArch64.cpp
