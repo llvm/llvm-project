@@ -29,10 +29,10 @@
 using namespace llvm;
 
 LoongArchAsmBackend::LoongArchAsmBackend(const MCSubtargetInfo &STI,
-                                         uint8_t OSABI, bool Is64Bit,
+                                         bool Is64Bit,
                                          const MCTargetOptions &Options)
-    : MCAsmBackend(llvm::endianness::little), STI(STI), OSABI(OSABI),
-      Is64Bit(Is64Bit), TargetOptions(Options) {}
+    : MCAsmBackend(llvm::endianness::little), STI(STI), TargetOptions(Options),
+      Is64Bit(Is64Bit) {}
 
 std::optional<MCFixupKind>
 LoongArchAsmBackend::getFixupKind(StringRef Name) const {
@@ -484,16 +484,46 @@ bool LoongArchAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
   return true;
 }
 
-std::unique_ptr<MCObjectTargetWriter>
-LoongArchAsmBackend::createObjectTargetWriter() const {
-  return createLoongArchELFObjectWriter(OSABI, Is64Bit);
-}
+namespace {
+class ELFLoongArchAsmBackend : public LoongArchAsmBackend {
+  uint8_t OSABI;
+
+public:
+  ELFLoongArchAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI,
+                         bool Is64Bit, const MCTargetOptions &Options)
+      : LoongArchAsmBackend(STI, Is64Bit, Options), OSABI(OSABI) {}
+
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createLoongArchELFObjectWriter(OSABI, Is64Bit);
+  }
+};
+} // namespace
+
+namespace {
+class COFFLoongArchAsmBackend : public LoongArchAsmBackend {
+public:
+  COFFLoongArchAsmBackend(const MCSubtargetInfo &STI, bool Is64Bit,
+                          const MCTargetOptions &Options)
+      : LoongArchAsmBackend(STI, Is64Bit, Options) {}
+
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createLoongArchWinCOFFObjectWriter(Is64Bit);
+  }
+};
+} // namespace
 
 MCAsmBackend *llvm::createLoongArchAsmBackend(const Target &T,
                                               const MCSubtargetInfo &STI,
                                               const MCRegisterInfo &MRI,
                                               const MCTargetOptions &Options) {
   const Triple &TT = STI.getTargetTriple();
+  if (TT.isOSBinFormatCOFF())
+    return new COFFLoongArchAsmBackend(STI, TT.isArch64Bit(), Options);
+
+  assert(TT.isOSBinFormatELF() && "Invalid target");
+
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
-  return new LoongArchAsmBackend(STI, OSABI, TT.isArch64Bit(), Options);
+  return new ELFLoongArchAsmBackend(STI, OSABI, TT.isArch64Bit(), Options);
 }
