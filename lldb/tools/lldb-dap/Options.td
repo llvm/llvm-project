@@ -11,6 +11,12 @@ def: Flag<["-"], "h">,
   Alias<help>,
   HelpText<"Alias for --help">;
 
+def version: F<"version">,
+  HelpText<"Prints out the lldb-dap version.">;
+def: Flag<["-"], "v">,
+  Alias<version>,
+  HelpText<"Alias for --version">;
+
 def wait_for_debugger: F<"wait-for-debugger">,
   HelpText<"Pause the program at startup.">;
 def: Flag<["-"], "g">,
@@ -22,8 +28,8 @@ def connection
       MetaVarName<"<connection>">,
       HelpText<
           "Communicate with the lldb-dap tool over the specified connection. "
-          "Connections are specified like 'tcp://[host]:port' or "
-          "'unix:///path'.">;
+          "Connections are specified like 'listen://[host]:port' or "
+          "'accept:///path'.">;
 
 def launch_target: S<"launch-target">,
   MetaVarName<"<target>">,
@@ -55,3 +61,9 @@ def pre_init_command: S<"pre-init-command">,
 def: Separate<["-"], "c">,
   Alias<pre_init_command>,
   HelpText<"Alias for --pre-init-command">;
+
+def no_lldbinit: F<"no-lldbinit">,
+  HelpText<"Do not automatically parse any '.lldbinit' files.">;
+def: Flag<["-"], "x">,
+  Alias<no_lldbinit>,
+  HelpText<"Alias for --no-lldbinit">;

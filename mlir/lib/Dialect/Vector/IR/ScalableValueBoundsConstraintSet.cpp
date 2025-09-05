@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Vector/IR/ScalableValueBoundsConstraintSet.h"
-#include "mlir/Dialect/Vector/IR/VectorOps.h"
 
 namespace mlir::vector {
 
@@ -44,7 +43,7 @@ FailureOr<ConstantOrScalableBound>
 ScalableValueBoundsConstraintSet::computeScalableBound(
     Value value, std::optional<int64_t> dim, unsigned vscaleMin,
     unsigned vscaleMax, presburger::BoundType boundType, bool closedUB,
-    StopConditionFn stopCondition) {
+    const StopConditionFn &stopCondition) {
   using namespace presburger;
   assert(vscaleMin <= vscaleMax);
 

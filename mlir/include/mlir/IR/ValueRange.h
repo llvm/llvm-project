@@ -36,6 +36,7 @@ class MutableOperandRangeRange;
 
 //===----------------------------------------------------------------------===//
 // OperandRange
+//===----------------------------------------------------------------------===//
 
 /// This class implements the operand iterators for the Operation class.
 class OperandRange final : public llvm::detail::indexed_accessor_range_base<
@@ -73,6 +74,7 @@ private:
 
 //===----------------------------------------------------------------------===//
 // OperandRangeRange
+//===----------------------------------------------------------------------===//
 
 /// This class represents a contiguous range of operand ranges, e.g. from a
 /// VariadicOfVariadic operand group.
@@ -109,6 +111,7 @@ private:
 
 //===----------------------------------------------------------------------===//
 // MutableOperandRange
+//===----------------------------------------------------------------------===//
 
 /// This class provides a mutable adaptor for a range of operands. It allows for
 /// setting, inserting, and erasing operands from the given range.
@@ -123,7 +126,7 @@ public:
   /// and range length. `operandSegments` is an optional set of operand segments
   /// to be updated when mutating the operand list.
   MutableOperandRange(Operation *owner, unsigned start, unsigned length,
-                      ArrayRef<OperandSegment> operandSegments = std::nullopt);
+                      ArrayRef<OperandSegment> operandSegments = {});
   MutableOperandRange(Operation *owner);
 
   /// Construct a new mutable range for the given OpOperand.
@@ -196,6 +199,7 @@ private:
 
 //===----------------------------------------------------------------------===//
 // MutableOperandRangeRange
+//===----------------------------------------------------------------------===//
 
 /// This class represents a contiguous range of mutable operand ranges, e.g.
 /// from a VariadicOfVariadic operand group.
@@ -235,6 +239,7 @@ private:
 
 //===----------------------------------------------------------------------===//
 // ResultRange
+//===----------------------------------------------------------------------===//
 
 /// This class implements the result iterators for the Operation class.
 class ResultRange final
@@ -368,6 +373,7 @@ private:
 
 //===----------------------------------------------------------------------===//
 // ValueRange
+//===----------------------------------------------------------------------===//
 
 /// This class provides an abstraction over the different types of ranges over
 /// Values. In many cases, this prevents the need to explicitly materialize a
@@ -403,7 +409,7 @@ public:
       : ValueRange(ResultRange(values)) {}
   ValueRange(ArrayRef<BlockArgument> values)
       : ValueRange(ArrayRef<Value>(values.data(), values.size())) {}
-  ValueRange(ArrayRef<Value> values = std::nullopt);
+  ValueRange(ArrayRef<Value> values = {});
   ValueRange(OperandRange values);
   ValueRange(ResultRange values);
 

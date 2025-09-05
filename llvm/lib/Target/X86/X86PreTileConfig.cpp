@@ -80,12 +80,12 @@ struct MIRef {
   bool operator<(const MIRef &RHS) const {
     // Comparison between different BBs happens when inserting a MIRef into set.
     // So we compare MBB first to make the insertion happy.
-    return MBB < RHS.MBB || (MBB == RHS.MBB && Pos < RHS.Pos);
+    return std::tie(MBB, Pos) < std::tie(RHS.MBB, RHS.Pos);
   }
   bool operator>(const MIRef &RHS) const {
     // Comparison between different BBs happens when inserting a MIRef into set.
     // So we compare MBB first to make the insertion happy.
-    return MBB > RHS.MBB || (MBB == RHS.MBB && Pos > RHS.Pos);
+    return std::tie(MBB, Pos) > std::tie(RHS.MBB, RHS.Pos);
   }
 };
 
@@ -100,7 +100,7 @@ struct BBInfo {
 class X86PreTileConfig : public MachineFunctionPass {
   MachineRegisterInfo *MRI = nullptr;
   const MachineLoopInfo *MLI = nullptr;
-  SmallSet<MachineInstr *, 8> DefVisited;
+  SmallPtrSet<MachineInstr *, 8> DefVisited;
   DenseMap<MachineBasicBlock *, BBInfo> BBVisitedInfo;
   DenseMap<MachineBasicBlock *, SmallVector<MIRef, 8>> ShapeBBs;
 
@@ -327,7 +327,7 @@ bool X86PreTileConfig::runOnMachineFunction(MachineFunction &MF) {
     MachineBasicBlock *MBB = CfgLiveInBBs.pop_back_val();
     for (auto *Pred : MBB->predecessors()) {
       auto &Info = BBVisitedInfo[Pred];
-      if (BBVisitedInfo[Pred].LastCall) {
+      if (Info.LastCall) {
         CfgNeedInsert.insert(Info.LastCall);
       } else if (!Info.NeedTileCfgLiveIn) {
         Info.NeedTileCfgLiveIn = true;

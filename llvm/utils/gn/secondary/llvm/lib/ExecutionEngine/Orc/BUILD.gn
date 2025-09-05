@@ -16,6 +16,7 @@ static_library("Orc") {
   ]
   sources = [
     "AbsoluteSymbols.cpp",
+    "COFF.cpp",
     "COFFPlatform.cpp",
     "COFFVCRuntimeSupport.cpp",
     "CompileOnDemandLayer.cpp",
@@ -27,7 +28,6 @@ static_library("Orc") {
     "ELFNixPlatform.cpp",
     "EPCDebugObjectRegistrar.cpp",
     "EPCDynamicLibrarySearchGenerator.cpp",
-    "EPCEHFrameRegistrar.cpp",
     "EPCGenericDylibManager.cpp",
     "EPCGenericJITLinkMemoryManager.cpp",
     "EPCGenericRTDyldMemoryManager.cpp",
@@ -38,6 +38,7 @@ static_library("Orc") {
     "IRCompileLayer.cpp",
     "IRPartitionLayer.cpp",
     "IRTransformLayer.cpp",
+    "InProcessMemoryAccess.cpp",
     "IndirectionUtils.cpp",
     "JITLinkRedirectableSymbolManager.cpp",
     "JITLinkReentryTrampolines.cpp",
@@ -64,6 +65,7 @@ static_library("Orc") {
     "ReOptimizeLayer.cpp",
     "RedirectionManager.cpp",
     "SectCreate.cpp",
+    "SelfExecutorProcessControl.cpp",
     "SimpleRemoteEPC.cpp",
     "SpeculateAnalyses.cpp",
     "Speculation.cpp",

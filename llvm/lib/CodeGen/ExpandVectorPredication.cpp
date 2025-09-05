@@ -121,8 +121,8 @@ static bool maySpeculateLanes(VPIntrinsic &VPI) {
     return false;
   // Fallback to whether the intrinsic is speculatable.
   if (auto IntrID = VPI.getFunctionalIntrinsicID())
-    return Intrinsic::getAttributes(VPI.getContext(), *IntrID)
-        .hasFnAttr(Attribute::AttrKind::Speculatable);
+    return Intrinsic::getFnAttributes(VPI.getContext(), *IntrID)
+        .hasAttribute(Attribute::AttrKind::Speculatable);
   if (auto Opc = VPI.getFunctionalOpcode())
     return isSafeToSpeculativelyExecuteWithOpcode(*Opc, &VPI);
   return false;
@@ -507,10 +507,8 @@ bool CachingVPExpander::discardEVLParameter(VPIntrinsic &VPI) {
     // TODO add caching
     IRBuilder<> Builder(VPI.getParent(), VPI.getIterator());
     Value *FactorConst = Builder.getInt32(StaticElemCount.getKnownMinValue());
-    Value *VScale = Builder.CreateIntrinsic(Intrinsic::vscale, Int32Ty, {},
-                                            /*FMFSource=*/nullptr, "vscale");
-    MaxEVL = Builder.CreateMul(VScale, FactorConst, "scalable_size",
-                               /*NUW*/ true, /*NSW*/ false);
+    Value *VScale = Builder.CreateVScale(Int32Ty, "vscale");
+    MaxEVL = Builder.CreateNUWMul(VScale, FactorConst, "scalable_size");
   } else {
     MaxEVL = ConstantInt::get(Int32Ty, StaticElemCount.getFixedValue(), false);
   }

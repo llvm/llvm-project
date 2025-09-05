@@ -46,7 +46,6 @@
 #include "llvm/DebugInfo/GSYM/LookupResult.h"
 #include "llvm/DebugInfo/GSYM/ObjectFileTransformer.h"
 #include "llvm/DebugInfo/GSYM/OutputAggregator.h"
-#include <optional>
 
 using namespace llvm;
 using namespace gsym;

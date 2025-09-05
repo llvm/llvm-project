@@ -26,6 +26,15 @@ namespace fir::runtime::cuda {
 void genSyncGlobalDescriptor(fir::FirOpBuilder &builder, mlir::Location loc,
                              mlir::Value hostPtr);
 
+/// Generate runtime call to check the section of a descriptor and raise an
+/// error if it is not contiguous.
+void genDescriptorCheckSection(fir::FirOpBuilder &builder, mlir::Location loc,
+                               mlir::Value desc);
+
+/// Generate runtime call to set the allocator index in the descriptor.
+void genSetAllocatorIndex(fir::FirOpBuilder &builder, mlir::Location loc,
+                          mlir::Value desc, mlir::Value index);
+
 } // namespace fir::runtime::cuda
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_CUDA_DESCRIPTOR_H_

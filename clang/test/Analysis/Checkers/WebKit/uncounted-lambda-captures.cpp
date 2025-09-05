@@ -2,6 +2,25 @@
 
 #include "mock-types.h"
 
+namespace std {
+
+template <typename T>
+T&& move(T& t) {
+  return static_cast<T&&>(t);
+}
+
+namespace ranges {
+
+template<typename IteratorType, typename CallbackType>
+void for_each(IteratorType first, IteratorType last, CallbackType callback) {
+  for (auto it = first; !(it == last); ++it)
+    callback(*it);
+}
+
+}
+
+}
+
 namespace WTF {
 
 namespace Detail {
@@ -128,13 +147,11 @@ void references() {
   RefCountable automatic;
   RefCountable& ref_countable_ref = automatic;
   auto foo1 = [ref_countable_ref](){ ref_countable_ref.constMethod(); };
-  // expected-warning@-1{{Captured reference 'ref_countable_ref' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
   auto foo2 = [&ref_countable_ref](){ ref_countable_ref.method(); };
   // expected-warning@-1{{Captured reference 'ref_countable_ref' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
   auto foo3 = [&](){ ref_countable_ref.method(); };
   // expected-warning@-1{{Implicitly captured reference 'ref_countable_ref' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
   auto foo4 = [=](){ ref_countable_ref.constMethod(); };
-  // expected-warning@-1{{Implicitly captured reference 'ref_countable_ref' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
 
   call(foo1);
   call(foo2);
@@ -321,7 +338,7 @@ struct RefCountableWithLambdaCapturingThis {
 
   void method_nested_lambda2() {
     callAsync([this, protectedThis = RefPtr { this }] {
-      callAsync([this, protectedThis = static_cast<const Ref<RefCountableWithLambdaCapturingThis>&&>(*protectedThis)] {
+      callAsync([this, protectedThis = std::move(*protectedThis)] {
         nonTrivial();
       });
     });
@@ -363,6 +380,17 @@ void trivial_lambda() {
   trivial_lambda();
 }
 
+bool call_lambda_var_decl() {
+  RefCountable* ref_countable = make_obj();
+  auto lambda1 = [&]() -> bool {
+    return ref_countable->next();
+  };
+  auto lambda2 = [=]() -> bool {
+    return ref_countable->next();
+  };
+  return lambda1() && lambda2();
+}
+
 void lambda_with_args(RefCountable* obj) {
   auto trivial_lambda = [&](int v) {
     obj->method();
@@ -385,5 +413,39 @@ void lambda_converted_to_function(RefCountable* obj)
   callFunctionOpaque([&]() {
     obj->method();
     // expected-warning@-1{{Implicitly captured raw-pointer 'obj' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+  });
+}
+
+void capture_copy_in_lambda(CheckedObj& checked) {
+  callFunctionOpaque([checked]() mutable {
+    checked.method();
+  });
+  auto* ptr = &checked;
+  callFunctionOpaque([ptr]() mutable {
+    // expected-warning@-1{{Captured raw-pointer 'ptr' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+    ptr->method();
+  });
+}
+
+class Iterator {
+public:
+  Iterator(void* array, unsigned long sizeOfElement, unsigned int index);
+  Iterator(const Iterator&);
+  Iterator& operator=(const Iterator&);
+  bool operator==(const Iterator&);
+
+  Iterator& operator++();
+  void* operator*();
+
+private:
+  void* current { nullptr };
+  unsigned long sizeOfElement { 0 };
+};
+
+void ranges_for_each(RefCountable* obj) {
+  int array[] = { 1, 2, 3, 4, 5 };
+  std::ranges::for_each(Iterator(array, sizeof(*array), 0), Iterator(array, sizeof(*array), 5), [&](void* item) {
+    obj->method();
+    ++(*static_cast<unsigned*>(item));
   });
 }

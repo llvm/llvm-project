@@ -190,6 +190,13 @@ enum OpenMPReductionClauseModifier {
   OMPC_REDUCTION_unknown,
 };
 
+/// OpenMP 6.0 original sharing modifiers
+enum OpenMPOriginalSharingModifier {
+#define OPENMP_ORIGINAL_SHARING_MODIFIER(Name) OMPC_ORIGINAL_SHARING_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_ORIGINAL_SHARING_unknown,
+};
+
 /// OpenMP adjust-op kinds for 'adjust_args' clause.
 enum OpenMPAdjustArgsOpKind {
 #define OPENMP_ADJUST_ARGS_KIND(Name) OMPC_ADJUST_ARGS_##Name,
@@ -214,6 +221,12 @@ enum OpenMPNumTasksClauseModifier {
 #define OPENMP_NUMTASKS_MODIFIER(Name) OMPC_NUMTASKS_##Name,
 #include "clang/Basic/OpenMPKinds.def"
   OMPC_NUMTASKS_unknown
+};
+
+enum OpenMPNumThreadsClauseModifier {
+#define OPENMP_NUMTHREADS_MODIFIER(Name) OMPC_NUMTHREADS_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_NUMTHREADS_unknown
 };
 
 /// OpenMP dependence types for 'doacross' clause.
@@ -404,9 +417,11 @@ bool isOpenMPCapturingDirective(OpenMPDirectiveKind DKind);
 /// directive that can be nested within region corresponding to construct
 /// on which order clause was specified with concurrent as ordering argument.
 /// \param DKind Specified directive.
+/// \param LangOpts Used for getting the OpenMP version.
 /// \return true - if the above condition is met for this directive
 /// otherwise - false.
-bool isOpenMPOrderConcurrentNestableDirective(OpenMPDirectiveKind DKind);
+bool isOpenMPOrderConcurrentNestableDirective(OpenMPDirectiveKind DKind,
+                                              const LangOptions &LangOpts);
 }
 
 template <>

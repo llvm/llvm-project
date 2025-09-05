@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++14-or-later %s modernize-make-unique %t -- -- -I %S/Inputs/smart-ptr
+// RUN: %check_clang_tidy --match-partial-fixes -std=c++14-or-later %s modernize-make-unique %t -- -- -I %S/Inputs/smart-ptr
 
 #include "unique_ptr.h"
 #include "initializer_list.h"
@@ -154,6 +154,8 @@ void basic() {
   }
 
   std::unique_ptr<int> R(new int());
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: use std::make_unique instead
+  // CHECK-FIXES: std::unique_ptr<int> R = std::make_unique<int>();
   std::unique_ptr<int> S(new int);
 
   // Create the unique_ptr as a parameter to a function.

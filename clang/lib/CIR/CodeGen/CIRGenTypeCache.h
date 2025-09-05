@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LIB_CIR_CIRGENTYPECACHE_H
 #define LLVM_CLANG_LIB_CIR_CIRGENTYPECACHE_H
 
+#include "clang/AST/CharUnits.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 namespace clang::CIRGen {
@@ -21,7 +22,7 @@ namespace clang::CIRGen {
 /// during IR emission. It's initialized once in CodeGenModule's
 /// constructor and then copied around into new CIRGenFunction's.
 struct CIRGenTypeCache {
-  CIRGenTypeCache() = default;
+  CIRGenTypeCache() {}
 
   // ClangIR void type
   cir::VoidType VoidTy;
@@ -47,6 +48,38 @@ struct CIRGenTypeCache {
   cir::DoubleType DoubleTy;
   cir::FP80Type FP80Ty;
   cir::FP128Type FP128Ty;
+
+  /// ClangIR char
+  mlir::Type UCharTy;
+
+  /// intptr_t, size_t, and ptrdiff_t, which we assume are the same size.
+  union {
+    mlir::Type UIntPtrTy;
+    mlir::Type SizeTy;
+  };
+
+  mlir::Type PtrDiffTy;
+
+  /// void* in address space 0
+  cir::PointerType VoidPtrTy;
+  cir::PointerType UInt8PtrTy;
+
+  /// The size and alignment of a pointer into the generic address space.
+  union {
+    unsigned char PointerAlignInBytes;
+    unsigned char PointerSizeInBytes;
+  };
+
+  /// The alignment of size_t.
+  unsigned char SizeAlignInBytes;
+
+  clang::CharUnits getSizeAlign() const {
+    return clang::CharUnits::fromQuantity(SizeAlignInBytes);
+  }
+
+  clang::CharUnits getPointerAlign() const {
+    return clang::CharUnits::fromQuantity(PointerAlignInBytes);
+  }
 };
 
 } // namespace clang::CIRGen

@@ -2,7 +2,7 @@
 
 ! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
 
-!CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "wsloop_collapse"} {
+!CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "WSLOOP_COLLAPSE"} {
 program wsloop_collapse
 !CHECK:           %[[VAL_6:.*]] = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFEa"}
 !CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -67,9 +67,9 @@ program wsloop_collapse
 !CHECK:               %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:               %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFEk"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
-!CHECK:               hlfir.assign %[[VAL_33]] to %[[VAL_5]]#1 : i32, !fir.ref<i32>
-!CHECK:               hlfir.assign %[[VAL_34]] to %[[VAL_3]]#1 : i32, !fir.ref<i32>
-!CHECK:               hlfir.assign %[[VAL_35]] to %[[VAL_1]]#1 : i32, !fir.ref<i32>
+!CHECK:               hlfir.assign %[[VAL_33]] to %[[VAL_5]]#0 : i32, !fir.ref<i32>
+!CHECK:               hlfir.assign %[[VAL_34]] to %[[VAL_3]]#0 : i32, !fir.ref<i32>
+!CHECK:               hlfir.assign %[[VAL_35]] to %[[VAL_1]]#0 : i32, !fir.ref<i32>
 !CHECK:               %[[VAL_36:.*]] = fir.load %[[VAL_19]]#0 : !fir.ref<i32>
 !CHECK:               %[[VAL_37:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
 !CHECK:               %[[VAL_38:.*]] = arith.addi %[[VAL_36]], %[[VAL_37]] : i32

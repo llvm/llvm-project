@@ -106,10 +106,10 @@ __find_bool(__bit_iterator<_Cp, _IsConst> __first, typename __size_difference_ty
   if (__first.__ctz_ != 0) {
     __storage_type __clz_f = static_cast<__storage_type>(__bits_per_word - __first.__ctz_);
     __storage_type __dn    = std::min(__clz_f, __n);
-    __storage_type __m     = (~__storage_type(0) << __first.__ctz_) & (~__storage_type(0) >> (__clz_f - __dn));
+    __storage_type __m     = std::__middle_mask<__storage_type>(__clz_f - __dn, __first.__ctz_);
     __storage_type __b     = std::__invert_if<!_ToFind>(*__first.__seg_) & __m;
     if (__b)
-      return _It(__first.__seg_, static_cast<unsigned>(std::__libcpp_ctz(__b)));
+      return _It(__first.__seg_, static_cast<unsigned>(std::__countr_zero(__b)));
     if (__n == __dn)
       return __first + __n;
     __n -= __dn;
@@ -119,14 +119,14 @@ __find_bool(__bit_iterator<_Cp, _IsConst> __first, typename __size_difference_ty
   for (; __n >= __bits_per_word; ++__first.__seg_, __n -= __bits_per_word) {
     __storage_type __b = std::__invert_if<!_ToFind>(*__first.__seg_);
     if (__b)
-      return _It(__first.__seg_, static_cast<unsigned>(std::__libcpp_ctz(__b)));
+      return _It(__first.__seg_, static_cast<unsigned>(std::__countr_zero(__b)));
   }
   // do last partial word
   if (__n > 0) {
-    __storage_type __m = ~__storage_type(0) >> (__bits_per_word - __n);
+    __storage_type __m = std::__trailing_mask<__storage_type>(__bits_per_word - __n);
     __storage_type __b = std::__invert_if<!_ToFind>(*__first.__seg_) & __m;
     if (__b)
-      return _It(__first.__seg_, static_cast<unsigned>(std::__libcpp_ctz(__b)));
+      return _It(__first.__seg_, static_cast<unsigned>(std::__countr_zero(__b)));
   }
   return _It(__first.__seg_, static_cast<unsigned>(__n));
 }
@@ -149,7 +149,7 @@ struct __find_segment;
 template <class _SegmentedIterator,
           class _Tp,
           class _Proj,
-          __enable_if_t<__is_segmented_iterator<_SegmentedIterator>::value, int> = 0>
+          __enable_if_t<__is_segmented_iterator_v<_SegmentedIterator>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _SegmentedIterator
 __find(_SegmentedIterator __first, _SegmentedIterator __last, const _Tp& __value, _Proj& __proj) {
   return std::__find_segment_if(std::move(__first), std::move(__last), __find_segment<_Tp>(__value), __proj);

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=SI %s
 
 ; SI-LABEL: {{^}}br_i1_phi:
 
@@ -26,7 +26,7 @@ bb3:                                              ; preds = %bb2, %bb
   br i1 %tmp, label %bb4, label %bb6
 
 bb4:                                              ; preds = %bb3
-  %val = load volatile i32, ptr addrspace(1) undef
+  %val = load volatile i32, ptr addrspace(1) poison
   %tmp5 = mul i32 %val, %arg
   br label %bb6
 

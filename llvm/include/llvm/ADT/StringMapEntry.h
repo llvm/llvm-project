@@ -110,7 +110,7 @@ public:
   }
 
   /// getKeyData - Return the start of the string data that is the key for this
-  /// value.  The string data is always stored immediately after the
+  /// value. The string data is always stored immediately after the
   /// StringMapEntry object.
   const char *getKeyData() const {
     return reinterpret_cast<const char *>(this + 1);

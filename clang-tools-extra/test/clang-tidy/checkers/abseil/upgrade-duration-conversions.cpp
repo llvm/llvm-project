@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s abseil-upgrade-duration-conversions %t -- -- -I%S/Inputs
+// RUN: %check_clang_tidy --match-partial-fixes -std=c++11-or-later %s abseil-upgrade-duration-conversions %t -- -- -I%S/Inputs
 
 using int64_t = long long;
 

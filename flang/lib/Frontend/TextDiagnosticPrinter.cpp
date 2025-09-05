@@ -27,7 +27,7 @@
 using namespace Fortran::frontend;
 
 TextDiagnosticPrinter::TextDiagnosticPrinter(raw_ostream &diagOs,
-                                             clang::DiagnosticOptions *diags)
+                                             clang::DiagnosticOptions &diags)
     : os(diagOs), diagOpts(diags) {}
 
 TextDiagnosticPrinter::~TextDiagnosticPrinter() {}
@@ -81,7 +81,7 @@ void TextDiagnosticPrinter::printLocForRemarks(
     llvm::sys::path::make_preferred(absPath);
 
     // Used for changing only the bold attribute
-    if (diagOpts->ShowColors)
+    if (diagOpts.ShowColors)
       os.changeColor(llvm::raw_ostream::SAVEDCOLOR, true);
 
     // Print path, file name, line and column
@@ -113,11 +113,11 @@ void TextDiagnosticPrinter::HandleDiagnostic(
   printLocForRemarks(diagMessageStream, diagMsg);
 
   Fortran::frontend::TextDiagnostic::printDiagnosticLevel(os, level,
-                                                          diagOpts->ShowColors);
+                                                          diagOpts.ShowColors);
   Fortran::frontend::TextDiagnostic::printDiagnosticMessage(
       os,
       /*IsSupplemental=*/level == clang::DiagnosticsEngine::Note, diagMsg,
-      diagOpts->ShowColors);
+      diagOpts.ShowColors);
 
   os.flush();
 }

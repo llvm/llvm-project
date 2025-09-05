@@ -10,93 +10,164 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PPCMCAsmInfo.h"
-#include "PPCMCExpr.h"
+#include "MCTargetDesc/PPCMCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
 void PPCELFMCAsmInfo::anchor() { }
 
-const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
-    {MCSymbolRefExpr::VK_DTPREL, "DTPREL"},
-    {MCSymbolRefExpr::VK_GOT, "GOT"},
-    {MCSymbolRefExpr::VK_PCREL, "PCREL"},
-    {MCSymbolRefExpr::VK_PLT, "PLT"},
-    {MCSymbolRefExpr::VK_TLSGD, "tlsgd"},
-    {MCSymbolRefExpr::VK_TLSLD, "tlsld"},
-    {MCSymbolRefExpr::VK_TPREL, "TPREL"},
-    {PPCMCExpr::VK_PPC_LO, "l"},
-    {PPCMCExpr::VK_PPC_HI, "h"},
-    {PPCMCExpr::VK_PPC_HA, "ha"},
-    {PPCMCExpr::VK_PPC_HIGH, "high"},
-    {PPCMCExpr::VK_PPC_HIGHA, "higha"},
-    {PPCMCExpr::VK_PPC_HIGHER, "higher"},
-    {PPCMCExpr::VK_PPC_HIGHERA, "highera"},
-    {PPCMCExpr::VK_PPC_HIGHEST, "highest"},
-    {PPCMCExpr::VK_PPC_HIGHESTA, "highesta"},
-    {MCSymbolRefExpr::VK_PPC_GOT_LO, "got@l"},
-    {MCSymbolRefExpr::VK_PPC_GOT_HI, "got@h"},
-    {MCSymbolRefExpr::VK_PPC_GOT_HA, "got@ha"},
-    {MCSymbolRefExpr::VK_PPC_TOCBASE, "tocbase"},
-    {MCSymbolRefExpr::VK_PPC_TOC, "toc"},
-    {MCSymbolRefExpr::VK_PPC_TOC_LO, "toc@l"},
-    {MCSymbolRefExpr::VK_PPC_TOC_HI, "toc@h"},
-    {MCSymbolRefExpr::VK_PPC_TOC_HA, "toc@ha"},
-    {MCSymbolRefExpr::VK_PPC_U, "u"},
-    {MCSymbolRefExpr::VK_PPC_L, "l"}, // FIXME: share the name with VK_PPC_LO
-    {MCSymbolRefExpr::VK_PPC_DTPMOD, "dtpmod"},
-    {MCSymbolRefExpr::VK_PPC_TPREL_LO, "tprel@l"},
-    {MCSymbolRefExpr::VK_PPC_TPREL_HI, "tprel@h"},
-    {MCSymbolRefExpr::VK_PPC_TPREL_HA, "tprel@ha"},
-    {MCSymbolRefExpr::VK_PPC_TPREL_HIGH, "tprel@high"},
-    {MCSymbolRefExpr::VK_PPC_TPREL_HIGHA, "tprel@higha"},
-    {MCSymbolRefExpr::VK_PPC_TPREL_HIGHER, "tprel@higher"},
-    {MCSymbolRefExpr::VK_PPC_TPREL_HIGHERA, "tprel@highera"},
-    {MCSymbolRefExpr::VK_PPC_TPREL_HIGHEST, "tprel@highest"},
-    {MCSymbolRefExpr::VK_PPC_TPREL_HIGHESTA, "tprel@highesta"},
-    {MCSymbolRefExpr::VK_PPC_DTPREL_LO, "dtprel@l"},
-    {MCSymbolRefExpr::VK_PPC_DTPREL_HI, "dtprel@h"},
-    {MCSymbolRefExpr::VK_PPC_DTPREL_HA, "dtprel@ha"},
-    {MCSymbolRefExpr::VK_PPC_DTPREL_HIGH, "dtprel@high"},
-    {MCSymbolRefExpr::VK_PPC_DTPREL_HIGHA, "dtprel@higha"},
-    {MCSymbolRefExpr::VK_PPC_DTPREL_HIGHER, "dtprel@higher"},
-    {MCSymbolRefExpr::VK_PPC_DTPREL_HIGHERA, "dtprel@highera"},
-    {MCSymbolRefExpr::VK_PPC_DTPREL_HIGHEST, "dtprel@highest"},
-    {MCSymbolRefExpr::VK_PPC_DTPREL_HIGHESTA, "dtprel@highesta"},
-    {MCSymbolRefExpr::VK_PPC_GOT_TPREL, "got@tprel"},
-    {MCSymbolRefExpr::VK_PPC_GOT_TPREL_LO, "got@tprel@l"},
-    {MCSymbolRefExpr::VK_PPC_GOT_TPREL_HI, "got@tprel@h"},
-    {MCSymbolRefExpr::VK_PPC_GOT_TPREL_HA, "got@tprel@ha"},
-    {MCSymbolRefExpr::VK_PPC_GOT_DTPREL, "got@dtprel"},
-    {MCSymbolRefExpr::VK_PPC_GOT_DTPREL_LO, "got@dtprel@l"},
-    {MCSymbolRefExpr::VK_PPC_GOT_DTPREL_HI, "got@dtprel@h"},
-    {MCSymbolRefExpr::VK_PPC_GOT_DTPREL_HA, "got@dtprel@ha"},
-    {MCSymbolRefExpr::VK_PPC_TLS, "tls"},
-    {MCSymbolRefExpr::VK_PPC_GOT_TLSGD, "got@tlsgd"},
-    {MCSymbolRefExpr::VK_PPC_GOT_TLSGD_LO, "got@tlsgd@l"},
-    {MCSymbolRefExpr::VK_PPC_GOT_TLSGD_HI, "got@tlsgd@h"},
-    {MCSymbolRefExpr::VK_PPC_GOT_TLSGD_HA, "got@tlsgd@ha"},
-    {MCSymbolRefExpr::VK_PPC_AIX_TLSGD, "gd"},
-    {MCSymbolRefExpr::VK_PPC_AIX_TLSGDM, "m"},
-    {MCSymbolRefExpr::VK_PPC_AIX_TLSIE, "ie"},
-    {MCSymbolRefExpr::VK_PPC_AIX_TLSLE, "le"},
-    {MCSymbolRefExpr::VK_PPC_AIX_TLSLD, "ld"},
-    {MCSymbolRefExpr::VK_PPC_AIX_TLSML, "ml"},
-    {MCSymbolRefExpr::VK_PPC_GOT_TLSLD, "got@tlsld"},
-    {MCSymbolRefExpr::VK_PPC_GOT_TLSLD_LO, "got@tlsld@l"},
-    {MCSymbolRefExpr::VK_PPC_GOT_TLSLD_HI, "got@tlsld@h"},
-    {MCSymbolRefExpr::VK_PPC_GOT_TLSLD_HA, "got@tlsld@ha"},
-    {MCSymbolRefExpr::VK_PPC_GOT_PCREL, "got@pcrel"},
-    {MCSymbolRefExpr::VK_PPC_GOT_TLSGD_PCREL, "got@tlsgd@pcrel"},
-    {MCSymbolRefExpr::VK_PPC_GOT_TLSLD_PCREL, "got@tlsld@pcrel"},
-    {MCSymbolRefExpr::VK_PPC_GOT_TPREL_PCREL, "got@tprel@pcrel"},
-    {MCSymbolRefExpr::VK_PPC_TLS_PCREL, "tls@pcrel"},
-    {MCSymbolRefExpr::VK_PPC_LOCAL, "local"},
-    {MCSymbolRefExpr::VK_PPC_NOTOC, "notoc"},
-    {MCSymbolRefExpr::VK_PPC_PCREL_OPT, "<<invalid>>"},
+const MCAsmInfo::AtSpecifier elfAtSpecifiers[] = {
+    {PPC::S_DTPREL, "DTPREL"},
+    {PPC::S_GOT, "GOT"},
+    {PPC::S_GOT_HA, "got@ha"},
+    {PPC::S_GOT_HI, "got@h"},
+    {PPC::S_GOT_LO, "got@l"},
+    {PPC::S_HA, "ha"},
+    {PPC::S_HI, "h"},
+    {PPC::S_HIGH, "high"},
+    {PPC::S_HIGHA, "higha"},
+    {PPC::S_HIGHER, "higher"},
+    {PPC::S_HIGHERA, "highera"},
+    {PPC::S_HIGHEST, "highest"},
+    {PPC::S_HIGHESTA, "highesta"},
+    {PPC::S_LO, "l"},
+    {PPC::S_PCREL, "PCREL"},
+    {PPC::S_PLT, "PLT"},
+    {PPC::S_TLSGD, "tlsgd"},
+    {PPC::S_TLSLD, "tlsld"},
+    {PPC::S_TOC, "toc"},
+    {PPC::S_TOCBASE, "tocbase"},
+    {PPC::S_TOC_HA, "toc@ha"},
+    {PPC::S_TOC_HI, "toc@h"},
+    {PPC::S_TOC_LO, "toc@l"},
+    {PPC::S_TPREL, "TPREL"},
+    {PPC::S_AIX_TLSGD, "gd"},
+    {PPC::S_AIX_TLSGDM, "m"},
+    {PPC::S_AIX_TLSIE, "ie"},
+    {PPC::S_AIX_TLSLD, "ld"},
+    {PPC::S_AIX_TLSLE, "le"},
+    {PPC::S_AIX_TLSML, "ml"},
+    {PPC::S_DTPMOD, "dtpmod"},
+    {PPC::S_DTPREL_HA, "dtprel@ha"},
+    {PPC::S_DTPREL_HI, "dtprel@h"},
+    {PPC::S_DTPREL_HIGH, "dtprel@high"},
+    {PPC::S_DTPREL_HIGHA, "dtprel@higha"},
+    {PPC::S_DTPREL_HIGHER, "dtprel@higher"},
+    {PPC::S_DTPREL_HIGHERA, "dtprel@highera"},
+    {PPC::S_DTPREL_HIGHEST, "dtprel@highest"},
+    {PPC::S_DTPREL_HIGHESTA, "dtprel@highesta"},
+    {PPC::S_DTPREL_LO, "dtprel@l"},
+    {PPC::S_GOT_DTPREL, "got@dtprel"},
+    {PPC::S_GOT_DTPREL_HA, "got@dtprel@ha"},
+    {PPC::S_GOT_DTPREL_HI, "got@dtprel@h"},
+    {PPC::S_GOT_DTPREL_LO, "got@dtprel@l"},
+    {PPC::S_GOT_PCREL, "got@pcrel"},
+    {PPC::S_GOT_TLSGD, "got@tlsgd"},
+    {PPC::S_GOT_TLSGD_HA, "got@tlsgd@ha"},
+    {PPC::S_GOT_TLSGD_HI, "got@tlsgd@h"},
+    {PPC::S_GOT_TLSGD_LO, "got@tlsgd@l"},
+    {PPC::S_GOT_TLSGD_PCREL, "got@tlsgd@pcrel"},
+    {PPC::S_GOT_TLSLD, "got@tlsld"},
+    {PPC::S_GOT_TLSLD_HA, "got@tlsld@ha"},
+    {PPC::S_GOT_TLSLD_HI, "got@tlsld@h"},
+    {PPC::S_GOT_TLSLD_LO, "got@tlsld@l"},
+    {PPC::S_GOT_TLSLD_PCREL, "got@tlsld@pcrel"},
+    {PPC::S_GOT_TPREL, "got@tprel"},
+    {PPC::S_GOT_TPREL_HA, "got@tprel@ha"},
+    {PPC::S_GOT_TPREL_HI, "got@tprel@h"},
+    {PPC::S_GOT_TPREL_LO, "got@tprel@l"},
+    {PPC::S_GOT_TPREL_PCREL, "got@tprel@pcrel"},
+    {PPC::S_LOCAL, "local"},
+    {PPC::S_NOTOC, "notoc"},
+    {PPC::S_PCREL_OPT, "<<invalid>>"},
+    {PPC::S_TLS, "tls"},
+    {PPC::S_TLS_PCREL, "tls@pcrel"},
+    {PPC::S_TPREL_HA, "tprel@ha"},
+    {PPC::S_TPREL_HI, "tprel@h"},
+    {PPC::S_TPREL_HIGH, "tprel@high"},
+    {PPC::S_TPREL_HIGHA, "tprel@higha"},
+    {PPC::S_TPREL_HIGHER, "tprel@higher"},
+    {PPC::S_TPREL_HIGHERA, "tprel@highera"},
+    {PPC::S_TPREL_HIGHEST, "tprel@highest"},
+    {PPC::S_TPREL_HIGHESTA, "tprel@highesta"},
+    {PPC::S_TPREL_LO, "tprel@l"},
 };
+
+const MCAsmInfo::AtSpecifier xcoffAtSpecifiers[] = {
+    // clang-format off
+    {PPC::S_AIX_TLSGD, "gd"},
+    {PPC::S_AIX_TLSGDM, "m"},
+    {PPC::S_AIX_TLSIE, "ie"},
+    {PPC::S_AIX_TLSLD, "ld"},
+    {PPC::S_AIX_TLSLE, "le"},
+    {PPC::S_AIX_TLSML, "ml"},
+    {PPC::S_L, "l"},
+    {PPC::S_U, "u"},
+    // clang-format on
+};
+
+static std::optional<int64_t> evaluateAsInt64(uint16_t specifier,
+                                              int64_t Value) {
+  switch (specifier) {
+  case PPC::S_LO:
+    return Value & 0xffff;
+  case PPC::S_HI:
+    return (Value >> 16) & 0xffff;
+  case PPC::S_HA:
+    return ((Value + 0x8000) >> 16) & 0xffff;
+  case PPC::S_HIGH:
+    return (Value >> 16) & 0xffff;
+  case PPC::S_HIGHA:
+    return ((Value + 0x8000) >> 16) & 0xffff;
+  case PPC::S_HIGHER:
+    return (Value >> 32) & 0xffff;
+  case PPC::S_HIGHERA:
+    return ((Value + 0x8000) >> 32) & 0xffff;
+  case PPC::S_HIGHEST:
+    return (Value >> 48) & 0xffff;
+  case PPC::S_HIGHESTA:
+    return ((Value + 0x8000) >> 48) & 0xffff;
+  default:
+    return {};
+  }
+}
+
+bool PPC::evaluateAsConstant(const MCSpecifierExpr &Expr, int64_t &Res) {
+  MCValue Value;
+
+  if (!Expr.getSubExpr()->evaluateAsRelocatable(Value, nullptr))
+    return false;
+
+  if (!Value.isAbsolute())
+    return false;
+  auto Tmp = evaluateAsInt64(Expr.getSpecifier(), Value.getConstant());
+  if (!Tmp)
+    return false;
+  Res = *Tmp;
+  return true;
+}
+
+static bool evaluateAsRelocatable(const MCSpecifierExpr &Expr, MCValue &Res,
+                                  const MCAssembler *Asm) {
+  if (!Expr.getSubExpr()->evaluateAsRelocatable(Res, Asm))
+    return false;
+
+  // The signedness of the result is dependent on the instruction operand. E.g.
+  // in addis 3,3,65535@l, 65535@l is signed. In the absence of information at
+  // parse time (!Asm), disable the folding.
+  std::optional<int64_t> MaybeInt =
+      evaluateAsInt64(Expr.getSpecifier(), Res.getConstant());
+  if (Res.isAbsolute() && MaybeInt) {
+    Res = MCValue::get(*MaybeInt);
+  } else {
+    Res.setSpecifier(Expr.getSpecifier());
+  }
+
+  return true;
+}
 
 PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple& T) {
   // FIXME: This is not always needed. For example, it is not needed in the
@@ -121,6 +192,7 @@ PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple& T) {
   SupportsDebugInformation = true;
 
   DollarIsPC = true;
+  AllowDollarAtStartOfIdentifier = false;
 
   // Set up DWARF directives
   MinInstAlignment = 4;
@@ -133,10 +205,20 @@ PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple& T) {
   AssemblerDialect = 1;           // New-Style mnemonics.
   LCOMMDirectiveAlignmentType = LCOMM::ByteAlignment;
 
-  initializeVariantKinds(variantKindDescs);
+  initializeAtSpecifiers(elfAtSpecifiers);
 }
 
-void PPCXCOFFMCAsmInfo::anchor() {}
+void PPCELFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
+                                         const MCSpecifierExpr &Expr) const {
+  printExpr(OS, *Expr.getSubExpr());
+  OS << '@' << getSpecifierName(Expr.getSpecifier());
+}
+
+bool PPCELFMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
+                                                MCValue &Res,
+                                                const MCAssembler *Asm) const {
+  return evaluateAsRelocatable(Expr, Res, Asm);
+}
 
 PPCXCOFFMCAsmInfo::PPCXCOFFMCAsmInfo(bool Is64Bit, const Triple &T) {
   if (T.getArch() == Triple::ppc64le || T.getArch() == Triple::ppcle)
@@ -154,6 +236,20 @@ PPCXCOFFMCAsmInfo::PPCXCOFFMCAsmInfo(bool Is64Bit, const Triple &T) {
 
   // Support $ as PC in inline asm
   DollarIsPC = true;
+  AllowDollarAtStartOfIdentifier = false;
 
-  initializeVariantKinds(variantKindDescs);
+  UsesSetToEquateSymbol = true;
+
+  initializeAtSpecifiers(xcoffAtSpecifiers);
+}
+
+void PPCXCOFFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
+                                           const MCSpecifierExpr &Expr) const {
+  printExpr(OS, *Expr.getSubExpr());
+  OS << '@' << getSpecifierName(Expr.getSpecifier());
+}
+
+bool PPCXCOFFMCAsmInfo::evaluateAsRelocatableImpl(
+    const MCSpecifierExpr &Expr, MCValue &Res, const MCAssembler *Asm) const {
+  return evaluateAsRelocatable(Expr, Res, Asm);
 }

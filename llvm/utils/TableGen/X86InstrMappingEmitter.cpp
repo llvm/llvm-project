@@ -98,24 +98,12 @@ void X86InstrMappingEmitter::printTable(ArrayRef<Entry> Table, StringRef Name,
 
   // Print all entries added to the table
   for (const auto &Pair : Table)
-    OS << "  { X86::" << Pair.first->TheDef->getName()
-       << ", X86::" << Pair.second->TheDef->getName() << " },\n";
+    OS << "  { X86::" << Pair.first->getName()
+       << ", X86::" << Pair.second->getName() << " },\n";
 
   OS << "};\n\n";
 
   printMacroEnd(Macro, OS);
-}
-
-static uint8_t byteFromBitsInit(const BitsInit *B) {
-  unsigned N = B->getNumBits();
-  assert(N <= 8 && "Field is too large for uint8_t!");
-
-  uint8_t Value = 0;
-  for (unsigned I = 0; I != N; ++I) {
-    const BitInit *Bit = cast<BitInit>(B->getBit(I));
-    Value |= Bit->getValue() << I;
-  }
-  return Value;
 }
 
 class IsMatch {
@@ -260,7 +248,7 @@ void X86InstrMappingEmitter::emitCompressEVEXTable(
      << "  default: return true;\n";
   for (const auto &[Key, Val] : PredicateInsts) {
     for (const auto &Inst : Val)
-      OS << "  case X86::" << Inst->TheDef->getName() << ":\n";
+      OS << "  case X86::" << Inst->getName() << ":\n";
     OS << "    return " << Key << ";\n";
   }
   OS << "  }\n";
@@ -275,26 +263,26 @@ void X86InstrMappingEmitter::emitNFTransformTable(
     const Record *Rec = Inst->TheDef;
     if (!isInteresting(Rec))
       continue;
-    std::string Name = Rec->getName().str();
-    auto Pos = Name.find("_NF");
-    if (Pos == std::string::npos)
+    StringRef Name = Rec->getName();
+    if (Name.contains("_NF"))
       continue;
 
-    if (auto *NewRec = Records.getDef(Name.erase(Pos, 3))) {
+    if (auto *NewRec = Name.consume_back("_ND")
+                           ? Records.getDef(Name.str() + "_NF_ND")
+                           : Records.getDef(Name.str() + "_NF")) {
 #ifndef NDEBUG
       auto ClobberEFLAGS = [](const Record *R) {
         return llvm::any_of(
             R->getValueAsListOfDefs("Defs"),
             [](const Record *Def) { return Def->getName() == "EFLAGS"; });
       };
-      if (ClobberEFLAGS(Rec))
+      if (ClobberEFLAGS(NewRec))
         report_fatal_error("EFLAGS should not be clobbered by " +
-                           Rec->getName());
-      if (!ClobberEFLAGS(NewRec))
-        report_fatal_error("EFLAGS should be clobbered by " +
                            NewRec->getName());
+      if (!ClobberEFLAGS(Rec))
+        report_fatal_error("EFLAGS should be clobbered by " + Rec->getName());
 #endif
-      Table.emplace_back(&Target.getInstruction(NewRec), Inst);
+      Table.emplace_back(Inst, &Target.getInstruction(NewRec));
     }
   }
   printTable(Table, "X86NFTransformTable", "GET_X86_NF_TRANSFORM_TABLE", OS);
@@ -373,8 +361,7 @@ void X86InstrMappingEmitter::emitSSE2AVXTable(
 void X86InstrMappingEmitter::run(raw_ostream &OS) {
   emitSourceFileHeader("X86 instruction mapping", OS);
 
-  ArrayRef<const CodeGenInstruction *> Insts =
-      Target.getInstructionsByEnumValue();
+  ArrayRef<const CodeGenInstruction *> Insts = Target.getInstructions();
   printClassDef(OS);
   emitCompressEVEXTable(Insts, OS);
   emitNFTransformTable(Insts, OS);

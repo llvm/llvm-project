@@ -38,4 +38,53 @@ def TestMoveOperandDeps :
   }];
 }
 
+def TestMoveValueDefns :
+    Op<Transform_Dialect, "test.move_value_defns",
+        [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+         DeclareOpInterfaceMethods<TransformOpInterface>,
+         ReportTrackingListenerFailuresOpTrait]> {
+  let description = [{
+    Moves all dependencies of on operation before another operation.
+  }];
+
+  let arguments =
+    (ins Variadic<TransformValueHandleTypeInterface>:$values,
+         TransformHandleTypeInterface:$insertion_point);
+  
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $values `before` $insertion_point attr-dict
+    `:` `(` type($values) `)` `` `,` type($insertion_point)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Test affine functionality.
+//===----------------------------------------------------------------------===//
+
+def TestMakeComposedFoldedAffineApply :
+    Op<Transform_Dialect, "test.make_composed_folded_affine_apply",
+        [FunctionalStyleTransformOpTrait, 
+         MemoryEffectsOpInterface,
+         TransformOpInterface,
+         TransformEachOpTrait,
+         ReportTrackingListenerFailuresOpTrait]> {
+  let description = [{
+    Rewrite an affine_apply by using the makeComposedFoldedAffineApply API.
+  }];
+  let arguments = (ins TransformHandleTypeInterface:$op);
+  let results = (outs TransformHandleTypeInterface:$composed);
+  let assemblyFormat = [{
+    $op attr-dict `:` functional-type(operands, results)
+  }];
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::affine::AffineApplyOp affineApplyOp,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
 #endif // TEST_TRANSFORM_OPS

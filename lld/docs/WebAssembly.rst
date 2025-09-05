@@ -83,7 +83,7 @@ WebAssembly-specific options:
 .. option:: --unresolved-symbols=<method>
 
   This is a more full featured version of ``--allow-undefined``.
-  The semanatics of the different methods are as follows:
+  The semantics of the different methods are as follows:
 
   report-all:
 

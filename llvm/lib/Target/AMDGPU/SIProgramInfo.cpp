@@ -39,6 +39,7 @@ void SIProgramInfo::reset(const MachineFunction &MF) {
   IEEEMode = 0;
   WgpMode = 0;
   MemOrdered = 0;
+  FwdProgress = 0;
   RrWgMode = 0;
   ScratchSize = ZeroExpr;
 
@@ -72,6 +73,7 @@ void SIProgramInfo::reset(const MachineFunction &MF) {
 
   NumSGPRsForWavesPerEU = ZeroExpr;
   NumVGPRsForWavesPerEU = ZeroExpr;
+  NamedBarCnt = ZeroExpr;
   Occupancy = ZeroExpr;
   DynamicCallStack = ZeroExpr;
   VCCUsed = ZeroExpr;
@@ -84,7 +86,8 @@ static uint64_t getComputePGMRSrc1Reg(const SIProgramInfo &ProgInfo,
                  S_00B848_PRIV(ProgInfo.Priv) |
                  S_00B848_DEBUG_MODE(ProgInfo.DebugMode) |
                  S_00B848_WGP_MODE(ProgInfo.WgpMode) |
-                 S_00B848_MEM_ORDERED(ProgInfo.MemOrdered);
+                 S_00B848_MEM_ORDERED(ProgInfo.MemOrdered) |
+                 S_00B848_FWD_PROGRESS(ProgInfo.FwdProgress);
 
   if (ST.hasDX10ClampMode())
     Reg |= S_00B848_DX10_CLAMP(ProgInfo.DX10Clamp);

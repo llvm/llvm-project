@@ -14,14 +14,20 @@
 #define LLVM_LIB_TARGET_AARCH64_AARCH64SELECTIONDAGINFO_H
 
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
+#include "llvm/IR/RuntimeLibcalls.h"
+
+#define GET_SDNODE_ENUM
+#include "AArch64GenSDNodeInfo.inc"
+#undef GET_SDNODE_ENUM
 
 namespace llvm {
 
-class AArch64SelectionDAGInfo : public SelectionDAGTargetInfo {
+class AArch64SelectionDAGInfo : public SelectionDAGGenTargetInfo {
 public:
-  bool isTargetMemoryOpcode(unsigned Opcode) const override;
+  AArch64SelectionDAGInfo();
 
-  bool isTargetStrictFPOpcode(unsigned Opcode) const override;
+  void verifyTargetNode(const SelectionDAG &DAG,
+                        const SDNode *N) const override;
 
   SDValue EmitMOPS(unsigned Opcode, SelectionDAG &DAG, const SDLoc &DL,
                    SDValue Chain, SDValue Dst, SDValue SrcOrValue, SDValue Size,
@@ -57,6 +63,6 @@ public:
                                             SDValue Src, SDValue Size,
                                             RTLIB::Libcall LC) const;
 };
-}
+} // namespace llvm
 
 #endif

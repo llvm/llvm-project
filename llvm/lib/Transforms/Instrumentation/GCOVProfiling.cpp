@@ -27,7 +27,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CRC.h"
@@ -81,8 +80,8 @@ GCOVOptions GCOVOptions::getDefault() {
   Options.Atomic = AtomicCounter;
 
   if (DefaultGCOVVersion.size() != 4) {
-    llvm::report_fatal_error(Twine("Invalid -default-gcov-version: ") +
-                             DefaultGCOVVersion, /*GenCrashDiag=*/false);
+    reportFatalUsageError(Twine("Invalid -default-gcov-version: ") +
+                          DefaultGCOVVersion);
   }
   memcpy(Options.Version, DefaultGCOVVersion.c_str(), 4);
   return Options;
@@ -210,12 +209,12 @@ static StringRef getFunctionName(const DISubprogram *SP) {
   return SP->getName();
 }
 
-/// Extract a filename for a DISubprogram.
+/// Extract a filename for a DIScope.
 ///
 /// Prefer relative paths in the coverage notes. Clang also may split
 /// up absolute paths into a directory and filename component. When
 /// the relative path doesn't exist, reconstruct the absolute path.
-static SmallString<128> getFilename(const DISubprogram *SP) {
+static SmallString<128> getFilename(const DIScope *SP) {
   SmallString<128> Path;
   StringRef RelPath = SP->getFilename();
   if (sys::fs::exists(RelPath))
@@ -244,7 +243,9 @@ namespace {
   // list of line numbers and a single filename, representing lines that belong
   // to the block.
   class GCOVLines : public GCOVRecord {
-   public:
+  public:
+    StringRef getFilename() { return Filename; }
+
     void addLine(uint32_t Line) {
       assert(Line != 0 && "Line zero is not a valid real line number.");
       Lines.push_back(Line);
@@ -276,7 +277,9 @@ namespace {
   class GCOVBlock : public GCOVRecord {
    public:
     GCOVLines &getFile(StringRef Filename) {
-      return LinesByFile.try_emplace(Filename, P, Filename).first->second;
+      if (Lines.empty() || Lines.back().getFilename() != Filename)
+        Lines.emplace_back(P, Filename);
+      return Lines.back();
     }
 
     void addEdge(GCOVBlock &Successor, uint32_t Flags) {
@@ -285,22 +288,16 @@ namespace {
 
     void writeOut() {
       uint32_t Len = 3;
-      SmallVector<StringMapEntry<GCOVLines> *, 32> SortedLinesByFile;
-      for (auto &I : LinesByFile) {
-        Len += I.second.length();
-        SortedLinesByFile.push_back(&I);
-      }
+
+      for (auto &L : Lines)
+        Len += L.length();
 
       write(GCOV_TAG_LINES);
       write(Len);
       write(Number);
 
-      llvm::sort(SortedLinesByFile, [](StringMapEntry<GCOVLines> *LHS,
-                                       StringMapEntry<GCOVLines> *RHS) {
-        return LHS->getKey() < RHS->getKey();
-      });
-      for (auto &I : SortedLinesByFile)
-        I->getValue().writeOut();
+      for (auto &L : Lines)
+        L.writeOut();
       write(0);
       write(0);
     }
@@ -309,7 +306,7 @@ namespace {
       // Only allow copy before edges and lines have been added. After that,
       // there are inter-block pointers (eg: edges) that won't take kindly to
       // blocks being copied or moved around.
-      assert(LinesByFile.empty());
+      assert(Lines.empty());
       assert(OutEdges.empty());
     }
 
@@ -322,7 +319,7 @@ namespace {
     GCOVBlock(GCOVProfiler *P, uint32_t Number)
         : GCOVRecord(P), Number(Number) {}
 
-    StringMap<GCOVLines> LinesByFile;
+    SmallVector<GCOVLines> Lines;
   };
 
   // A function has a unique identifier, a checksum (we leave as zero) and a
@@ -583,10 +580,6 @@ static bool functionHasLines(const Function &F, unsigned &EndLine) {
   EndLine = 0;
   for (const auto &BB : F) {
     for (const auto &I : BB) {
-      // Debug intrinsic locations correspond to the location of the
-      // declaration, not necessarily any statements or expressions.
-      if (isa<DbgInfoIntrinsic>(&I)) continue;
-
       const DebugLoc &Loc = I.getDebugLoc();
       if (!Loc)
         continue;
@@ -874,10 +867,6 @@ bool GCOVProfiler::emitProfileNotes(
         }
 
         for (const auto &I : BB) {
-          // Debug intrinsic locations correspond to the location of the
-          // declaration, not necessarily any statements or expressions.
-          if (isa<DbgInfoIntrinsic>(&I)) continue;
-
           const DebugLoc &Loc = I.getDebugLoc();
           if (!Loc)
             continue;
@@ -889,11 +878,10 @@ bool GCOVProfiler::emitProfileNotes(
           if (Line == Loc.getLine()) continue;
           Line = Loc.getLine();
           MDNode *Scope = Loc.getScope();
-          // TODO: Handle blocks from another file due to #line, #include, etc.
-          if (isa<DILexicalBlockFile>(Scope) || SP != getDISubprogram(Scope))
+          if (SP != getDISubprogram(Scope))
             continue;
 
-          GCOVLines &Lines = Block.getFile(Filename);
+          GCOVLines &Lines = Block.getFile(getFilename(Loc->getScope()));
           Lines.addLine(Loc.getLine());
         }
         Line = 0;

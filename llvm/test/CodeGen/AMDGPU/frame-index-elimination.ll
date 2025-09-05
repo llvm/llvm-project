@@ -1,7 +1,8 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI,MUBUF %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-MUBUF,MUBUF %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-promote-alloca,+enable-flat-scratch -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-FLATSCR %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck --check-prefixes=GFX11 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -mattr=-promote-alloca < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI,MUBUF %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-promote-alloca < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-MUBUF,MUBUF %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-promote-alloca,+enable-flat-scratch < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-FLATSCR %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck --check-prefixes=GFX11-TRUE16 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck --check-prefixes=GFX11-FAKE16 %s
 
 ; Test that non-entry function frame indices are expanded properly to
 ; give an index relative to the scratch wave offset register
@@ -21,7 +22,7 @@
 ; GCN: ds_write_b32 v0, v0
 define void @func_mov_fi_i32() #0 {
   %alloca = alloca i32, addrspace(5)
-  store volatile ptr addrspace(5) %alloca, ptr addrspace(3) undef
+  store volatile ptr addrspace(5) %alloca, ptr addrspace(3) poison
   ret void
 }
 
@@ -47,8 +48,8 @@ define void @func_mov_fi_i32() #0 {
 define void @func_mov_fi_i32_offset() #0 {
   %alloca0 = alloca i32, addrspace(5)
   %alloca1 = alloca i32, addrspace(5)
-  store volatile ptr addrspace(5) %alloca0, ptr addrspace(3) undef
-  store volatile ptr addrspace(5) %alloca1, ptr addrspace(3) undef
+  store volatile ptr addrspace(5) %alloca0, ptr addrspace(3) poison
+  store volatile ptr addrspace(5) %alloca1, ptr addrspace(3) poison
   ret void
 }
 
@@ -72,7 +73,7 @@ define void @func_mov_fi_i32_offset() #0 {
 define void @func_add_constant_to_fi_i32() #0 {
   %alloca = alloca [2 x i32], align 4, addrspace(5)
   %gep0 = getelementptr inbounds [2 x i32], ptr addrspace(5) %alloca, i32 0, i32 1
-  store volatile ptr addrspace(5) %gep0, ptr addrspace(3) undef
+  store volatile ptr addrspace(5) %gep0, ptr addrspace(3) poison
   ret void
 }
 
@@ -95,7 +96,7 @@ define void @func_other_fi_user_i32() #0 {
   %alloca = alloca [2 x i32], align 4, addrspace(5)
   %ptrtoint = ptrtoint ptr addrspace(5) %alloca to i32
   %mul = mul i32 %ptrtoint, 9
-  store volatile i32 %mul, ptr addrspace(3) undef
+  store volatile i32 %mul, ptr addrspace(3) poison
   ret void
 }
 
@@ -134,7 +135,7 @@ define void @void_func_byval_struct_i8_i32_ptr(ptr addrspace(5) byval({ i8, i32 
   %gep0 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %arg0, i32 0, i32 0
   %gep1 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %arg0, i32 0, i32 1
   %load1 = load i32, ptr addrspace(5) %gep1
-  store volatile ptr addrspace(5) %gep1, ptr addrspace(3) undef
+  store volatile ptr addrspace(5) %gep1, ptr addrspace(3) poison
   ret void
 }
 
@@ -149,8 +150,8 @@ define void @void_func_byval_struct_i8_i32_ptr_value(ptr addrspace(5) byval({ i8
   %gep1 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %arg0, i32 0, i32 1
   %load0 = load i8, ptr addrspace(5) %gep0
   %load1 = load i32, ptr addrspace(5) %gep1
-  store volatile i8 %load0, ptr addrspace(3) undef
-  store volatile i32 %load1, ptr addrspace(3) undef
+  store volatile i8 %load0, ptr addrspace(3) poison
+  store volatile i32 %load1, ptr addrspace(3) poison
   ret void
 }
 
@@ -179,7 +180,7 @@ bb:
   %gep0 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %arg0, i32 0, i32 0
   %gep1 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %arg0, i32 0, i32 1
   %load1 = load volatile i32, ptr addrspace(5) %gep1
-  store volatile ptr addrspace(5) %gep1, ptr addrspace(3) undef
+  store volatile ptr addrspace(5) %gep1, ptr addrspace(3) poison
   br label %ret
 
 ret:
@@ -207,7 +208,7 @@ define void @func_other_fi_user_non_inline_imm_offset_i32() #0 {
   store volatile i32 7, ptr addrspace(5) %gep0
   %ptrtoint = ptrtoint ptr addrspace(5) %alloca1 to i32
   %mul = mul i32 %ptrtoint, 9
-  store volatile i32 %mul, ptr addrspace(3) undef
+  store volatile i32 %mul, ptr addrspace(3) poison
   ret void
 }
 
@@ -232,7 +233,7 @@ define void @func_other_fi_user_non_inline_imm_offset_i32_vcc_live() #0 {
   call void asm sideeffect "; use $0", "{vcc}"(i64 %vcc)
   %ptrtoint = ptrtoint ptr addrspace(5) %alloca1 to i32
   %mul = mul i32 %ptrtoint, 9
-  store volatile i32 %mul, ptr addrspace(3) undef
+  store volatile i32 %mul, ptr addrspace(3) poison
   ret void
 }
 
@@ -254,8 +255,8 @@ declare void @func(ptr addrspace(5) nocapture) #0
 define void @undefined_stack_store_reg(float %arg, i32 %arg1) #0 {
 bb:
   %tmp = alloca <4 x float>, align 16, addrspace(5)
-  %tmp2 = insertelement <4 x float> undef, float %arg, i32 0
-  store <4 x float> %tmp2, ptr addrspace(5) undef
+  %tmp2 = insertelement <4 x float> poison, float %arg, i32 0
+  store <4 x float> %tmp2, ptr addrspace(5) poison
   %tmp3 = icmp eq i32 %arg1, 0
   br i1 %tmp3, label %bb4, label %bb5
 
@@ -292,7 +293,7 @@ bb:
   %gep0 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %alloca0, i32 0, i32 0
   %gep1 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %alloca0, i32 0, i32 1
   %load1 = load volatile i32, ptr addrspace(5) %gep1
-  store volatile ptr addrspace(5) %gep1, ptr addrspace(3) undef
+  store volatile ptr addrspace(5) %gep1, ptr addrspace(3) poison
   br label %ret
 
 ret:
@@ -303,13 +304,20 @@ ret:
 %type.i16 = type { i16 }
 @_ZZN0 = external hidden addrspace(3) global %struct0, align 8
 
-; GFX11-LABEL: tied_operand_test:
-; GFX11:       ; %bb.0: ; %entry
-; GFX11:     scratch_load_u16 [[LDRESULT:v[0-9]+]], off, off
-; GFX11:     v_dual_mov_b32 [[C:v[0-9]+]], 0x7b :: v_dual_mov_b32 v{{[0-9]+}}, s{{[0-9]+}}
-; GFX11-DAG:     ds_store_b16 v{{[0-9]+}}, [[LDRESULT]]  offset:10
-; GFX11-DAG:     ds_store_b16 v{{[0-9]+}}, [[C]]  offset:8
-; GFX11-NEXT:    s_endpgm
+; GFX11-TRUE16-LABEL: tied_operand_test:
+; GFX11-TRUE16:       ; %bb.0: ; %entry
+; GFX11-TRUE16:     scratch_load_d16_b16 [[LDRESULT:v[0-9]+]], off, off
+; GFX11-TRUE16:     v_mov_b16_e32 [[C:v[0-9]]].{{(l|h)}}, 0x7b
+; GFX11-TRUE16-DAG:     ds_store_b16 v{{[0-9]+}}, [[LDRESULT]]  offset:10
+; GFX11-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-FAKE16-LABEL: tied_operand_test:
+; GFX11-FAKE16:       ; %bb.0: ; %entry
+; GFX11-FAKE16:     scratch_load_u16 [[LDRESULT:v[0-9]+]], off, off
+; GFX11-FAKE16:     v_dual_mov_b32 [[C:v[0-9]+]], 0x7b :: v_dual_mov_b32 v{{[0-9]+}}, s{{[0-9]+}}
+; GFX11-FAKE16-DAG:     ds_store_b16 v{{[0-9]+}}, [[LDRESULT]]  offset:10
+; GFX11-FAKE16-DAG:     ds_store_b16 v{{[0-9]+}}, [[C]]  offset:8
+; GFX11-FAKE16-NEXT:    s_endpgm
 define protected amdgpu_kernel void @tied_operand_test(i1 %c1, i1 %c2, i32 %val) {
 entry:
   %scratch0 = alloca i16, align 4, addrspace(5)
@@ -352,7 +360,8 @@ entry:
 ; s_add_i32.
 
 ; GCN-LABEL: {{^}}fi_sop2_s_add_u32_literal_error:
-; GCN: s_add_u32 [[ADD_LO:s[0-9]+]], 0, 0x2010
+; GCN: s_movk_i32 [[S_MOVK_I32_:s[0-9]+]], 0x1000
+; GCN: s_add_u32 [[ADD_LO:s[0-9]+]], 0x1010, [[S_MOVK_I32_]]
 ; GCN: s_addc_u32 [[ADD_HI:s[0-9]+]], s{{[0-9]+}}, 0
 define amdgpu_kernel void @fi_sop2_s_add_u32_literal_error() #0 {
 entry:
@@ -413,6 +422,117 @@ entry:
 vector.body.i.i.i.i:                              ; preds = %.shuffle.then.i.i.i.i
   %wide.load9.i.i.i.i = load <2 x i32>, ptr addrspace(5) %.omp.reduction.element.i.i.i.i, align 4
   store <2 x i32> %wide.load9.i.i.i.i, ptr addrspace(5) null, align 4
+  ret void
+}
+
+; Check that we do not produce a verifier error after prolog
+; epilog. alloca1 and alloca2 will lower to literals.
+
+; GCN-LABEL: {{^}}s_multiple_frame_indexes_literal_offsets:
+; GCN: s_load_dword [[ARG0:s[0-9]+]]
+; GCN: s_movk_i32 [[ALLOCA1:s[0-9]+]], 0x44
+; GCN: s_cmp_eq_u32 [[ARG0]], 0
+; GCN: s_cselect_b32 [[SELECT:s[0-9]+]], [[ALLOCA1]], 0x48
+; GCN: s_mov_b32 [[ALLOCA0:s[0-9]+]], 0
+; GCN: ; use [[SELECT]], [[ALLOCA0]]
+define amdgpu_kernel void @s_multiple_frame_indexes_literal_offsets(i32 inreg %arg0) #0 {
+  %alloca0 = alloca [17 x i32], align 8, addrspace(5)
+  %alloca1 = alloca i32, align 4, addrspace(5)
+  %alloca2 = alloca i32, align 4, addrspace(5)
+  %cmp = icmp eq i32 %arg0, 0
+  %select = select i1 %cmp, ptr addrspace(5) %alloca1, ptr addrspace(5) %alloca2
+  call void asm sideeffect "; use $0, $1","s,s"(ptr addrspace(5) %select, ptr addrspace(5) %alloca0)
+  ret void
+}
+
+; %alloca1 or alloca2 will lower to an inline constant, and one will
+; be a literal, so we could fold both indexes into the instruction.
+
+; GCN-LABEL: {{^}}s_multiple_frame_indexes_one_imm_one_literal_offset:
+; GCN: s_load_dword [[ARG0:s[0-9]+]]
+; GCN: s_mov_b32 [[ALLOCA1:s[0-9]+]], 64
+; GCN: s_cmp_eq_u32 [[ARG0]], 0
+; GCN: s_cselect_b32 [[SELECT:s[0-9]+]], [[ALLOCA1]], 0x44
+; GCN: s_mov_b32 [[ALLOCA0:s[0-9]+]], 0
+; GCN: ; use [[SELECT]], [[ALLOCA0]]
+define amdgpu_kernel void @s_multiple_frame_indexes_one_imm_one_literal_offset(i32 inreg %arg0) #0 {
+  %alloca0 = alloca [16 x i32], align 8, addrspace(5)
+  %alloca1 = alloca i32, align 4, addrspace(5)
+  %alloca2 = alloca i32, align 4, addrspace(5)
+  %cmp = icmp eq i32 %arg0, 0
+  %select = select i1 %cmp, ptr addrspace(5) %alloca1, ptr addrspace(5) %alloca2
+  call void asm sideeffect "; use $0, $1","s,s"(ptr addrspace(5) %select, ptr addrspace(5) %alloca0)
+  ret void
+}
+
+; GCN-LABEL: {{^}}s_multiple_frame_indexes_imm_offsets:
+; GCN: s_load_dword [[ARG0:s[0-9]+]]
+; GCN: s_mov_b32 [[ALLOCA1:s[0-9]+]], 16
+; GCN: s_cmp_eq_u32 [[ARG0]], 0
+; GCN: s_cselect_b32 [[SELECT:s[0-9]+]], [[ALLOCA1]], 20
+; GCN: s_mov_b32 [[ALLOCA0:s[0-9]+]], 0
+; GCN: ; use [[SELECT]], [[ALLOCA0]]
+define amdgpu_kernel void @s_multiple_frame_indexes_imm_offsets(i32 inreg %arg0) #0 {
+  %alloca0 = alloca [4 x i32], align 8, addrspace(5)
+  %alloca1 = alloca i32, align 4, addrspace(5)
+  %alloca2 = alloca i32, align 4, addrspace(5)
+  %cmp = icmp eq i32 %arg0, 0
+  %select = select i1 %cmp, ptr addrspace(5) %alloca1, ptr addrspace(5) %alloca2
+  call void asm sideeffect "; use $0, $1","s,s"(ptr addrspace(5) %select, ptr addrspace(5) %alloca0)
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_multiple_frame_indexes_literal_offsets:
+; GCN: v_mov_b32_e32 [[ALLOCA1:v[0-9]+]], 0x48
+; GCN: v_mov_b32_e32 [[ALLOCA2:v[0-9]+]], 0x44
+; GCN: v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN: v_cndmask_b32_e32 [[SELECT:v[0-9]+]], [[ALLOCA1]], [[ALLOCA2]], vcc
+; GCN: v_mov_b32_e32 [[ALLOCA0:v[0-9]+]], 0{{$}}
+; GCN: ; use [[SELECT]], [[ALLOCA0]]
+define amdgpu_kernel void @v_multiple_frame_indexes_literal_offsets() #0 {
+  %vgpr = call i32 @llvm.amdgcn.workitem.id.x()
+  %alloca0 = alloca [17 x i32], align 8, addrspace(5)
+  %alloca1 = alloca i32, align 4, addrspace(5)
+  %alloca2 = alloca i32, align 4, addrspace(5)
+  %cmp = icmp eq i32 %vgpr, 0
+  %select = select i1 %cmp, ptr addrspace(5) %alloca1, ptr addrspace(5) %alloca2
+  call void asm sideeffect "; use $0, $1","v,v"(ptr addrspace(5) %select, ptr addrspace(5) %alloca0)
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_multiple_frame_indexes_one_imm_one_literal_offset:
+; GCN: v_mov_b32_e32 [[ALLOCA1:v[0-9]+]], 0x44
+; GCN: v_mov_b32_e32 [[ALLOCA2:v[0-9]+]], 64
+; GCN: v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN: v_cndmask_b32_e32 [[SELECT:v[0-9]+]], [[ALLOCA1]], [[ALLOCA2]], vcc
+; GCN: v_mov_b32_e32 [[ALLOCA0:v[0-9]+]], 0{{$}}
+; GCN: ; use [[SELECT]], [[ALLOCA0]]
+define amdgpu_kernel void @v_multiple_frame_indexes_one_imm_one_literal_offset() #0 {
+  %vgpr = call i32 @llvm.amdgcn.workitem.id.x()
+  %alloca0 = alloca [16 x i32], align 8, addrspace(5)
+  %alloca1 = alloca i32, align 4, addrspace(5)
+  %alloca2 = alloca i32, align 4, addrspace(5)
+  %cmp = icmp eq i32 %vgpr, 0
+  %select = select i1 %cmp, ptr addrspace(5) %alloca1, ptr addrspace(5) %alloca2
+  call void asm sideeffect "; use $0, $1","v,v"(ptr addrspace(5) %select, ptr addrspace(5) %alloca0)
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_multiple_frame_indexes_imm_offsets:
+; GCN: v_mov_b32_e32 [[ALLOCA1:v[0-9]+]], 12
+; GCN: v_mov_b32_e32 [[ALLOCA2:v[0-9]+]], 8
+; GCN: v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN: v_cndmask_b32_e32 [[SELECT:v[0-9]+]], [[ALLOCA1]], [[ALLOCA2]], vcc
+; GCN: v_mov_b32_e32 [[ALLOCA0:v[0-9]+]], 0{{$}}
+; GCN: ; use [[SELECT]], [[ALLOCA0]]
+define amdgpu_kernel void @v_multiple_frame_indexes_imm_offsets() #0 {
+  %vgpr = call i32 @llvm.amdgcn.workitem.id.x()
+  %alloca0 = alloca [2 x i32], align 8, addrspace(5)
+  %alloca1 = alloca i32, align 4, addrspace(5)
+  %alloca2 = alloca i32, align 4, addrspace(5)
+  %cmp = icmp eq i32 %vgpr, 0
+  %select = select i1 %cmp, ptr addrspace(5) %alloca1, ptr addrspace(5) %alloca2
+  call void asm sideeffect "; use $0, $1","v,v"(ptr addrspace(5) %select, ptr addrspace(5) %alloca0)
   ret void
 }
 

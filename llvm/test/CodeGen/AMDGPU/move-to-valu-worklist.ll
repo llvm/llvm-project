@@ -1,9 +1,9 @@
-; RUN: llc -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji < %s | FileCheck --check-prefix=GCN %s
 
 ; In moveToVALU(), move to vector ALU is performed, all instrs in
-; the use chain will be visited. We do not want the same node to be 
+; the use chain will be visited. We do not want the same node to be
 ; pushed to the visit worklist more than once.
-		
+
 ; GCN-LABEL: {{^}}in_worklist_once:
 ; GCN: buffer_load_dword
 ; GCN: BB0_1:
@@ -13,7 +13,7 @@
 ; GCN-NEXT: v_and_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 define amdgpu_kernel void @in_worklist_once() #0 {
 bb:
-	%tmp = load i64, ptr addrspace(5) undef
+	%tmp = load i64, ptr addrspace(5) poison
 br label %bb1
 
 bb1:                                              ; preds = %bb1, %bb

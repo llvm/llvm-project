@@ -8,9 +8,7 @@
 
 #include "ExceptionEscapeCheck.h"
 
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSet.h"
 
 using namespace clang::ast_matchers;
@@ -43,13 +41,11 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
       IgnoredExceptionsVec;
   StringRef(RawFunctionsThatShouldNotThrow)
       .split(FunctionsThatShouldNotThrowVec, ",", -1, false);
-  FunctionsThatShouldNotThrow.insert(FunctionsThatShouldNotThrowVec.begin(),
-                                     FunctionsThatShouldNotThrowVec.end());
+  FunctionsThatShouldNotThrow.insert_range(FunctionsThatShouldNotThrowVec);
 
   llvm::StringSet<> IgnoredExceptions;
   StringRef(RawIgnoredExceptions).split(IgnoredExceptionsVec, ",", -1, false);
-  IgnoredExceptions.insert(IgnoredExceptionsVec.begin(),
-                           IgnoredExceptionsVec.end());
+  IgnoredExceptions.insert_range(IgnoredExceptionsVec);
   Tracer.ignoreExceptions(std::move(IgnoredExceptions));
   Tracer.ignoreBadAlloc(true);
 }
@@ -82,13 +78,45 @@ void ExceptionEscapeCheck::check(const MatchFinder::MatchResult &Result) {
   if (!MatchedDecl)
     return;
 
-  if (Tracer.analyze(MatchedDecl).getBehaviour() ==
-      utils::ExceptionAnalyzer::State::Throwing)
-    // FIXME: We should provide more information about the exact location where
-    // the exception is thrown, maybe the full path the exception escapes
-    diag(MatchedDecl->getLocation(), "an exception may be thrown in function "
-                                     "%0 which should not throw exceptions")
-        << MatchedDecl;
+  const utils::ExceptionAnalyzer::ExceptionInfo Info =
+      Tracer.analyze(MatchedDecl);
+
+  if (Info.getBehaviour() != utils::ExceptionAnalyzer::State::Throwing)
+    return;
+
+  diag(MatchedDecl->getLocation(), "an exception may be thrown in function "
+                                   "%0 which should not throw exceptions")
+      << MatchedDecl;
+
+  const auto &[ThrowType, ThrowInfo] = *Info.getExceptions().begin();
+
+  if (ThrowInfo.Loc.isInvalid())
+    return;
+
+  const utils::ExceptionAnalyzer::CallStack &Stack = ThrowInfo.Stack;
+  diag(ThrowInfo.Loc,
+       "frame #0: unhandled exception of type %0 may be thrown in function %1 "
+       "here",
+       DiagnosticIDs::Note)
+      << QualType(ThrowType, 0U) << Stack.back().first;
+
+  size_t FrameNo = 1;
+  for (auto CurrIt = ++Stack.rbegin(), PrevIt = Stack.rbegin();
+       CurrIt != Stack.rend(); ++CurrIt, ++PrevIt) {
+    const FunctionDecl *CurrFunction = CurrIt->first;
+    const FunctionDecl *PrevFunction = PrevIt->first;
+    const SourceLocation PrevLocation = PrevIt->second;
+    if (PrevLocation.isValid()) {
+      diag(PrevLocation, "frame #%0: function %1 calls function %2 here",
+           DiagnosticIDs::Note)
+          << FrameNo << CurrFunction << PrevFunction;
+    } else {
+      diag(CurrFunction->getLocation(),
+           "frame #%0: function %1 calls function %2", DiagnosticIDs::Note)
+          << FrameNo << CurrFunction << PrevFunction;
+    }
+    ++FrameNo;
+  }
 }
 
 } // namespace clang::tidy::bugprone

@@ -11,6 +11,7 @@
 
 #include "bolt/Core/BinaryFunction.h"
 #include "llvm/MC/MCDisassembler/MCSymbolizer.h"
+#include <optional>
 
 namespace llvm {
 namespace bolt {
@@ -20,9 +21,19 @@ protected:
   BinaryFunction &Function;
   bool CreateNewSymbols{true};
 
+  /// Modify relocation \p Rel based on type of the relocation and the
+  /// instruction it was applied to. Return the new relocation info, or
+  /// std::nullopt if the relocation should be ignored, e.g. in the case the
+  /// instruction was modified by the linker.
+  std::optional<Relocation> adjustRelocation(const Relocation &Rel,
+                                             const MCInst &Inst) const;
+
+  /// Return true if \p PageAddress is a valid page address for .got section.
+  bool isPageAddressValidForGOT(uint64_t PageAddress) const;
+
 public:
   AArch64MCSymbolizer(BinaryFunction &Function, bool CreateNewSymbols = true)
-      : MCSymbolizer(*Function.getBinaryContext().Ctx.get(), nullptr),
+      : MCSymbolizer(*Function.getBinaryContext().Ctx, nullptr),
         Function(Function), CreateNewSymbols(CreateNewSymbols) {}
 
   AArch64MCSymbolizer(const AArch64MCSymbolizer &) = delete;

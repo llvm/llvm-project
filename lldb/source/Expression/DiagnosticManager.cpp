@@ -83,7 +83,6 @@ std::string DiagnosticManager::GetString(char separator) {
     stream << severity;
 
     llvm::StringRef message = diagnostic->GetMessage();
-    std::string searchable_message = message.lower();
     auto severity_pos = message.find(severity);
     stream << message.take_front(severity_pos);
 
