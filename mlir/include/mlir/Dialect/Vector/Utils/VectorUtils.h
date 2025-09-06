@@ -255,6 +255,9 @@ using UnrollVectorOpFn =
 LogicalResult unrollVectorOp(Operation *op, PatternRewriter &rewriter,
                              UnrollVectorOpFn unrollFn);
 
+LogicalResult unrollVectorValue(Value vector, PatternRewriter &rewriter,
+                                SmallVector<Value> &values);
+
 } // namespace vector
 
 /// Constructs a permutation map of invariant memref indices to vector
