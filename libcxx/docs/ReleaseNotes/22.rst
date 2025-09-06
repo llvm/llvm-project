@@ -38,7 +38,7 @@ What's New in Libc++ 22.0.0?
 Implemented Papers
 ------------------
 
-- P2542R8: ``views::concat`` (`Github <https://github.com/llvm/llvm-project/issues/105419>`__)
+- P2542R8: ``views::concat`` (`Github <https://llvm.org/PR105419>`__)
 - P2321R2: ``zip`` (`Github <https://github.com/llvm/llvm-project/issues/105169>`__) (The paper is partially
   implemented. ``zip_transform_view`` is implemented in this release)
 - P3168R2: Give ``std::optional`` Range Support (`Github <https://github.com/llvm/llvm-project/issues/105430>`__)
