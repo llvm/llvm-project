@@ -138,6 +138,9 @@ struct HeaderFileInfo {
   /// isModuleHeader will potentially be set, but not cleared.
   /// isTextualModuleHeader will be set or cleared based on the role update.
   void mergeModuleMembership(ModuleMap::ModuleHeaderRole Role);
+
+  /// Merge the header file info \p Other into this header file info.
+  void merge(const HeaderFileInfo &Other);
 };
 
 static_assert(sizeof(HeaderFileInfo) <= 16);
