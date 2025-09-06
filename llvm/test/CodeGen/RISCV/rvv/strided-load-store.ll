@@ -18,8 +18,7 @@ define <vscale x 1 x i64> @gather(ptr %a, i32 %len) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_FOO:%.*]], ptr [[A:%.*]], i64 [[VEC_IND_SCALAR]], i32 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 1 x i64> @llvm.experimental.vp.strided.load.nxv1i64.p0.i64(ptr [[TMP1]], i64 16, <vscale x 1 x i1> splat (i1 true), i32 [[TMP2]])
-; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 1 x i64> @llvm.vp.select.nxv1i64(<vscale x 1 x i1> splat (i1 true), <vscale x 1 x i64> [[TMP3]], <vscale x 1 x i64> undef, i32 [[TMP2]])
-; CHECK-NEXT:    [[ACCUM_NEXT]] = add <vscale x 1 x i64> [[ACCUM]], [[GATHER]]
+; CHECK-NEXT:    [[ACCUM_NEXT]] = add <vscale x 1 x i64> [[ACCUM]], [[TMP3]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP0]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR]] = add i64 [[VEC_IND_SCALAR]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[INDEX_NEXT]], [[WIDE_TRIP_COUNT]]
@@ -63,8 +62,7 @@ define <vscale x 1 x i64> @gather_disjoint_or(ptr %a, i64 %len) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[A:%.*]], i64 [[VEC_IND_SCALAR]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 1 x i64> @llvm.experimental.vp.strided.load.nxv1i64.p0.i64(ptr [[TMP0]], i64 16, <vscale x 1 x i1> splat (i1 true), i32 [[TMP1]])
-; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 1 x i64> @llvm.vp.select.nxv1i64(<vscale x 1 x i1> splat (i1 true), <vscale x 1 x i64> [[TMP2]], <vscale x 1 x i64> poison, i32 [[TMP1]])
-; CHECK-NEXT:    [[ACCUM_NEXT]] = add <vscale x 1 x i64> [[ACCUM]], [[GATHER]]
+; CHECK-NEXT:    [[ACCUM_NEXT]] = add <vscale x 1 x i64> [[ACCUM]], [[TMP2]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[VSCALE]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR]] = add i64 [[VEC_IND_SCALAR]], 2
 ; CHECK-NEXT:    [[EXIT:%.*]] = icmp ne i64 [[INDEX_NEXT]], [[LEN:%.*]]
@@ -117,8 +115,7 @@ define <vscale x 1 x i64> @gather_non_invariant_step(ptr %a, ptr %b, i32 %len) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_FOO:%.*]], ptr [[A:%.*]], i64 [[VEC_IND_SCALAR1]], i32 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 1 x i64> @llvm.experimental.vp.strided.load.nxv1i64.p0.i64(ptr [[TMP0]], i64 16, <vscale x 1 x i1> splat (i1 true), i32 [[TMP1]])
-; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 1 x i64> @llvm.vp.select.nxv1i64(<vscale x 1 x i1> splat (i1 true), <vscale x 1 x i64> [[TMP3]], <vscale x 1 x i64> undef, i32 [[TMP1]])
-; CHECK-NEXT:    [[ACCUM_NEXT]] = add <vscale x 1 x i64> [[ACCUM]], [[GATHER]]
+; CHECK-NEXT:    [[ACCUM_NEXT]] = add <vscale x 1 x i64> [[ACCUM]], [[TMP3]]
 ; CHECK-NEXT:    [[B:%.*]] = getelementptr i64, ptr [[B1:%.*]], i64 [[VEC_IND_SCALAR]]
 ; CHECK-NEXT:    [[STEP:%.*]] = load i64, ptr [[B]], align 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR]] = add nuw i64 [[VEC_IND_SCALAR]], [[STEP]]
@@ -166,8 +163,7 @@ define <vscale x 1 x i64> @gather_non_invariant_step_shl(ptr %a, ptr %b, i32 %le
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_FOO:%.*]], ptr [[A:%.*]], i64 [[VEC_IND_SCALAR1]], i32 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 1 x i64> @llvm.experimental.vp.strided.load.nxv1i64.p0.i64(ptr [[TMP0]], i64 64, <vscale x 1 x i1> splat (i1 true), i32 [[TMP1]])
-; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 1 x i64> @llvm.vp.select.nxv1i64(<vscale x 1 x i1> splat (i1 true), <vscale x 1 x i64> [[TMP3]], <vscale x 1 x i64> undef, i32 [[TMP1]])
-; CHECK-NEXT:    [[ACCUM_NEXT]] = add <vscale x 1 x i64> [[ACCUM]], [[GATHER]]
+; CHECK-NEXT:    [[ACCUM_NEXT]] = add <vscale x 1 x i64> [[ACCUM]], [[TMP3]]
 ; CHECK-NEXT:    [[B:%.*]] = getelementptr i64, ptr [[B1:%.*]], i64 [[VEC_IND_SCALAR]]
 ; CHECK-NEXT:    [[STEP:%.*]] = load i64, ptr [[B]], align 8
 ; CHECK-NEXT:    [[STEP1:%.*]] = shl i64 [[STEP]], 2
@@ -227,8 +223,7 @@ define <vscale x 1 x i64> @gather_splat_op_after_step(ptr %a, ptr %b, i32 %len) 
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_FOO:%.*]], ptr [[A:%.*]], i64 [[VEC_IND_SCALAR]], i32 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 1 x i64> @llvm.experimental.vp.strided.load.nxv1i64.p0.i64(ptr [[TMP2]], i64 [[TMP1]], <vscale x 1 x i1> splat (i1 true), i32 [[TMP3]])
-; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 1 x i64> @llvm.vp.select.nxv1i64(<vscale x 1 x i1> splat (i1 true), <vscale x 1 x i64> [[TMP4]], <vscale x 1 x i64> undef, i32 [[TMP3]])
-; CHECK-NEXT:    [[ACCUM_NEXT]] = add <vscale x 1 x i64> [[ACCUM]], [[GATHER]]
+; CHECK-NEXT:    [[ACCUM_NEXT]] = add <vscale x 1 x i64> [[ACCUM]], [[TMP4]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP0]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR]] = add i64 [[VEC_IND_SCALAR]], [[STEP]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i64 [[INDEX_NEXT]], [[WIDE_TRIP_COUNT]]
@@ -404,8 +399,7 @@ define <vscale x 1 x i64> @gather_loopless(ptr %p, i64 %stride) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[STRIDE:%.*]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 1 x i64> @llvm.experimental.vp.strided.load.nxv1i64.p0.i64(ptr [[P:%.*]], i64 [[TMP1]], <vscale x 1 x i1> splat (i1 true), i32 [[TMP2]])
-; CHECK-NEXT:    [[X:%.*]] = call <vscale x 1 x i64> @llvm.vp.select.nxv1i64(<vscale x 1 x i1> splat (i1 true), <vscale x 1 x i64> [[TMP3]], <vscale x 1 x i64> poison, i32 [[TMP2]])
-; CHECK-NEXT:    ret <vscale x 1 x i64> [[X]]
+; CHECK-NEXT:    ret <vscale x 1 x i64> [[TMP3]]
 ;
   %step = call <vscale x 1 x i64> @llvm.stepvector.nxv1i64()
   %splat.insert = insertelement <vscale x 1 x i64> poison, i64 %stride, i64 0
@@ -426,8 +420,7 @@ define <vscale x 1 x i64> @straightline_offset_add(ptr %p, i64 %offset) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[OFFSET:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 1 x i64> @llvm.experimental.vp.strided.load.nxv1i64.p0.i64(ptr [[TMP1]], i64 4, <vscale x 1 x i1> splat (i1 true), i32 [[TMP2]])
-; CHECK-NEXT:    [[X:%.*]] = call <vscale x 1 x i64> @llvm.vp.select.nxv1i64(<vscale x 1 x i1> splat (i1 true), <vscale x 1 x i64> [[TMP3]], <vscale x 1 x i64> poison, i32 [[TMP2]])
-; CHECK-NEXT:    ret <vscale x 1 x i64> [[X]]
+; CHECK-NEXT:    ret <vscale x 1 x i64> [[TMP3]]
 ;
   %step = call <vscale x 1 x i64> @llvm.stepvector.nxv1i64()
   %splat.insert = insertelement <vscale x 1 x i64> poison, i64 %offset, i64 0
@@ -448,8 +441,7 @@ define <vscale x 1 x i64> @straightline_offset_disjoint_or_1(ptr %p) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 1 x i64> @llvm.experimental.vp.strided.load.nxv1i64.p0.i64(ptr [[TMP1]], i64 8, <vscale x 1 x i1> splat (i1 true), i32 [[TMP2]])
-; CHECK-NEXT:    [[X:%.*]] = call <vscale x 1 x i64> @llvm.vp.select.nxv1i64(<vscale x 1 x i1> splat (i1 true), <vscale x 1 x i64> [[TMP3]], <vscale x 1 x i64> poison, i32 [[TMP2]])
-; CHECK-NEXT:    ret <vscale x 1 x i64> [[X]]
+; CHECK-NEXT:    ret <vscale x 1 x i64> [[TMP3]]
 ;
   %step = call <vscale x 1 x i64> @llvm.stepvector.nxv1i64()
   %step.shl = shl <vscale x 1 x i64> %step, splat (i64 1)
@@ -471,8 +463,7 @@ define <vscale x 1 x i64> @straightline_offset_disjoint_or(ptr %p, i1 %offset) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 1 x i64> @llvm.experimental.vp.strided.load.nxv1i64.p0.i64(ptr [[TMP1]], i64 8, <vscale x 1 x i1> splat (i1 true), i32 [[TMP2]])
-; CHECK-NEXT:    [[X:%.*]] = call <vscale x 1 x i64> @llvm.vp.select.nxv1i64(<vscale x 1 x i1> splat (i1 true), <vscale x 1 x i64> [[TMP3]], <vscale x 1 x i64> poison, i32 [[TMP2]])
-; CHECK-NEXT:    ret <vscale x 1 x i64> [[X]]
+; CHECK-NEXT:    ret <vscale x 1 x i64> [[TMP3]]
 ;
   %step = call <vscale x 1 x i64> @llvm.stepvector.nxv1i64()
   %step.shl = shl <vscale x 1 x i64> %step, splat (i64 1)
@@ -495,8 +486,7 @@ define <vscale x 1 x i64> @straightline_offset_shl(ptr %p) {
 ; CHECK-LABEL: @straightline_offset_shl(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 1 x i64> @llvm.experimental.vp.strided.load.nxv1i64.p0.i64(ptr [[P:%.*]], i64 32, <vscale x 1 x i1> splat (i1 true), i32 [[TMP1]])
-; CHECK-NEXT:    [[X:%.*]] = call <vscale x 1 x i64> @llvm.vp.select.nxv1i64(<vscale x 1 x i1> splat (i1 true), <vscale x 1 x i64> [[TMP2]], <vscale x 1 x i64> poison, i32 [[TMP1]])
-; CHECK-NEXT:    ret <vscale x 1 x i64> [[X]]
+; CHECK-NEXT:    ret <vscale x 1 x i64> [[TMP2]]
 ;
   %step = call <vscale x 1 x i64> @llvm.stepvector.nxv1i64()
   %offset = shl <vscale x 1 x i64> %step, splat (i64 3)
@@ -540,8 +530,7 @@ define <vscale x 1 x i64> @straightline_offset_shl_nonc(ptr %p, i64 %shift) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 1 x i64> @llvm.experimental.vp.strided.load.nxv1i64.p0.i64(ptr [[P:%.*]], i64 [[TMP2]], <vscale x 1 x i1> splat (i1 true), i32 [[TMP3]])
-; CHECK-NEXT:    [[X:%.*]] = call <vscale x 1 x i64> @llvm.vp.select.nxv1i64(<vscale x 1 x i1> splat (i1 true), <vscale x 1 x i64> [[TMP4]], <vscale x 1 x i64> poison, i32 [[TMP3]])
-; CHECK-NEXT:    ret <vscale x 1 x i64> [[X]]
+; CHECK-NEXT:    ret <vscale x 1 x i64> [[TMP4]]
 ;
   %step = call <vscale x 1 x i64> @llvm.stepvector.nxv1i64()
   %splat.insert = insertelement <vscale x 1 x i64> poison, i64 %shift, i64 0
@@ -600,8 +589,7 @@ define <vscale x 1 x i64> @vector_base_scalar_offset(ptr %p, i64 %offset) {
 ; CHECK-NEXT:    [[PTRS2OFFSET:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 [[OFFSET:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 1 x i64> @llvm.experimental.vp.strided.load.nxv1i64.p0.i64(ptr [[PTRS2OFFSET]], i64 8, <vscale x 1 x i1> splat (i1 true), i32 [[TMP1]])
-; CHECK-NEXT:    [[X:%.*]] = call <vscale x 1 x i64> @llvm.vp.select.nxv1i64(<vscale x 1 x i1> splat (i1 true), <vscale x 1 x i64> [[TMP2]], <vscale x 1 x i64> poison, i32 [[TMP1]])
-; CHECK-NEXT:    ret <vscale x 1 x i64> [[X]]
+; CHECK-NEXT:    ret <vscale x 1 x i64> [[TMP2]]
 ;
   %step = call <vscale x 1 x i64> @llvm.stepvector.nxv1i64()
   %ptrs1 = getelementptr i64, ptr %p, <vscale x 1 x i64> %step
@@ -620,8 +608,7 @@ define <vscale x 1 x i64> @splat_base_scalar_offset(ptr %p, i64 %offset) {
 ; CHECK-NEXT:    [[PTRSOFFSET:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 [[OFFSET:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 1 x i64> @llvm.experimental.vp.strided.load.nxv1i64.p0.i64(ptr [[PTRSOFFSET]], i64 0, <vscale x 1 x i1> splat (i1 true), i32 [[TMP1]])
-; CHECK-NEXT:    [[X:%.*]] = call <vscale x 1 x i64> @llvm.vp.select.nxv1i64(<vscale x 1 x i1> splat (i1 true), <vscale x 1 x i64> [[TMP2]], <vscale x 1 x i64> poison, i32 [[TMP1]])
-; CHECK-NEXT:    ret <vscale x 1 x i64> [[X]]
+; CHECK-NEXT:    ret <vscale x 1 x i64> [[TMP2]]
 ;
   %head = insertelement <vscale x 1 x ptr> poison, ptr %p, i32 0
   %splat = shufflevector <vscale x 1 x ptr> %head, <vscale x 1 x ptr> poison, <vscale x 1 x i32> zeroinitializer
