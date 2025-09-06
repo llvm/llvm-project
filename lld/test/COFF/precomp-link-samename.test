@@ -13,7 +13,7 @@ CHECK-NOT: LF_ENDPRECOMP
 SUMMARY:                                     Summary
 SUMMARY-NEXT: --------------------------------------------------------------------------------
 SUMMARY-NEXT:                    4 Input OBJ files (expanded from all cmd-line inputs)
-SUMMARY-NEXT: Size of all consumed OBJ files (non-lazy)
+SUMMARY-NEXT: Size of all consumed OBJ files (non-lazy), in bytes
 SUMMARY-NEXT:                    0 PDB type server dependencies
 SUMMARY-NEXT:                    2 Precomp OBJ dependencies
 

@@ -1255,11 +1255,12 @@ void PDBLinker::printStats() {
 
   print(ctx.objFileInstances.size(),
         "Input OBJ files (expanded from all cmd-line inputs)");
-  print(ctx.consumedInputsSize, "Size of all consumed OBJ files (non-lazy)");
+  print(ctx.consumedInputsSize,
+        "Size of all consumed OBJ files (non-lazy), in bytes");
   print(ctx.typeServerSourceMappings.size(), "PDB type server dependencies");
   print(ctx.precompSourceMappings.size(), "Precomp OBJ dependencies");
   print(nbTypeRecords, "Input type records");
-  print(nbTypeRecordsBytes, "Input type records bytes");
+  print(nbTypeRecordsBytes, "Size of all input type records, in bytes");
   print(builder.getTpiBuilder().getRecordCount(), "Merged TPI records");
   print(builder.getIpiBuilder().getRecordCount(), "Merged IPI records");
   print(pdbStrTab.size(), "Output PDB strings");
