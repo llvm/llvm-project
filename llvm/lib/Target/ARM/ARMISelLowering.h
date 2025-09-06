@@ -772,8 +772,7 @@ class VectorType;
 
     bool isDesirableToCommuteXorWithShift(const SDNode *N) const override;
 
-    bool shouldFoldConstantShiftPairToMask(const SDNode *N,
-                                           CombineLevel Level) const override;
+    bool shouldFoldConstantShiftPairToMask(const SDNode *N) const override;
 
     bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode, EVT VT,
                                               unsigned SelectOpcode, SDValue X,

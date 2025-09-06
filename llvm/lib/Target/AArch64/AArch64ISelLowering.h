@@ -297,8 +297,7 @@ public:
   bool isDesirableToCommuteXorWithShift(const SDNode *N) const override;
 
   /// Return true if it is profitable to fold a pair of shifts into a mask.
-  bool shouldFoldConstantShiftPairToMask(const SDNode *N,
-                                         CombineLevel Level) const override;
+  bool shouldFoldConstantShiftPairToMask(const SDNode *N) const override;
 
   bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode, EVT VT,
                                             unsigned SelectOpcode, SDValue X,
