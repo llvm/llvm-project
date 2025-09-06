@@ -108,6 +108,7 @@ add_llvm_target(AArch64CodeGen
   Core
   GlobalISel
   MC
+  Passes
   Scalar
   SelectionDAG
   Support
