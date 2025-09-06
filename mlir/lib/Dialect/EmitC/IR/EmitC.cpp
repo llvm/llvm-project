@@ -974,10 +974,10 @@ LogicalResult emitc::YieldOp::verify() {
   Value result = getResult();
   Operation *containingOp = getOperation()->getParentOp();
 
-  if (result && containingOp->getNumResults() != 1)
+  if (result && containingOp->getNumResults() != 1 && !isa<DoOp>(containingOp))
     return emitOpError() << "yields a value not returned by parent";
 
-  if (!result && containingOp->getNumResults() != 0)
+  if (!result && containingOp->getNumResults() != 0 && !isa<DoOp>(containingOp))
     return emitOpError() << "does not yield a value to be returned by parent";
 
   return success();
@@ -1555,6 +1555,82 @@ LogicalResult GetFieldOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
            << "' type " << fieldType;
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// DoOp
+//===----------------------------------------------------------------------===//
+
+Operation *DoOp::getRootOp() {
+  auto yieldOp =
+      cast<emitc::YieldOp>(getConditionRegion().front().getTerminator());
+  return yieldOp.getResult().getDefiningOp();
+}
+
+void DoOp::print(OpAsmPrinter &p) {
+  p << ' ';
+  p.printRegion(getBodyRegion(), /*printEntryBlockArgs=*/false);
+  p << " while ";
+  p.printRegion(getConditionRegion());
+  p.printOptionalAttrDictWithKeyword(getOperation()->getAttrs());
+}
+
+LogicalResult emitc::DoOp::verify() {
+  Block &condBlock = getConditionRegion().front();
+
+  if (condBlock.getOperations().size() != 2)
+    return emitOpError(
+               "condition region must contain exactly two operations: "
+               "'emitc.expression' followed by 'emitc.yield', but found ")
+           << condBlock.getOperations().size() << " operations";
+
+  Operation &first = condBlock.front();
+  auto exprOp = dyn_cast<emitc::ExpressionOp>(first);
+  if (!exprOp)
+    return emitOpError("expected first op in condition region to be "
+                       "'emitc.expression', but got ")
+           << first.getName();
+
+  if (!exprOp.getResult().getType().isInteger(1))
+    return emitOpError("emitc.expression in condition region must return "
+                       "'i1', but returns ")
+           << exprOp.getResult().getType();
+
+  Operation &last = condBlock.back();
+  auto condYield = dyn_cast<emitc::YieldOp>(last);
+  if (!condYield)
+    return emitOpError("expected last op in condition region to be "
+                       "'emitc.yield', but got ")
+           << last.getName();
+
+  if (condYield.getNumOperands() != 1)
+    return emitOpError("expected condition region to return 1 value, but "
+                       "it returns ")
+           << condYield.getNumOperands() << " values";
+
+  if (condYield.getOperand(0) != exprOp.getResult())
+    return emitError("'emitc.yield' must return result of "
+                     "'emitc.expression' from this condition region");
+
+  Block &bodyBlock = getBodyRegion().front();
+  if (bodyBlock.empty())
+    return emitOpError("body region cannot be empty");
+
+  if (bodyBlock.mightHaveTerminator())
+    return emitOpError("body region must not contain terminator");
+
+  return success();
+}
+
+ParseResult DoOp::parse(OpAsmParser &parser, OperationState &result) {
+  Region *bodyRegion = result.addRegion();
+  Region *condRegion = result.addRegion();
+
+  if (parser.parseRegion(*bodyRegion) || parser.parseKeyword("while") ||
+      parser.parseRegion(*condRegion))
+    return failure();
+
+  return parser.parseOptionalAttrDictWithKeyword(result.attributes);
 }
 
 //===----------------------------------------------------------------------===//
