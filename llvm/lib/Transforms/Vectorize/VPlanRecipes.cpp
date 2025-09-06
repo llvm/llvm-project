@@ -2249,7 +2249,7 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
   TTI::CastContextHint CCH = TTI::CastContextHint::None;
   // For Trunc/FPTrunc, get the context from the only user.
   if ((Opcode == Instruction::Trunc || Opcode == Instruction::FPTrunc) &&
-      !hasMoreThanOneUniqueUser() && getNumUsers() > 0) {
+      !hasMoreThanOneUniqueUser() && getNumUses() > 0) {
     if (auto *StoreRecipe = dyn_cast<VPRecipeBase>(*user_begin()))
       CCH = ComputeCCH(StoreRecipe);
   }

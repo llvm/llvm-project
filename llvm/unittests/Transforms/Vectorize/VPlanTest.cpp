@@ -137,38 +137,38 @@ TEST_F(VPInstructionTest, setOperand) {
   VPValue *VPV1 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *VPV2 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 2));
   VPInstruction *I1 = new VPInstruction(0, {VPV1, VPV2});
-  EXPECT_EQ(1u, VPV1->getNumUsers());
+  EXPECT_EQ(1u, VPV1->getNumUses());
   EXPECT_EQ(I1, *VPV1->user_begin());
-  EXPECT_EQ(1u, VPV2->getNumUsers());
+  EXPECT_EQ(1u, VPV2->getNumUses());
   EXPECT_EQ(I1, *VPV2->user_begin());
 
   // Replace operand 0 (VPV1) with VPV3.
   VPValue *VPV3 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 3));
   I1->setOperand(0, VPV3);
-  EXPECT_EQ(0u, VPV1->getNumUsers());
-  EXPECT_EQ(1u, VPV2->getNumUsers());
+  EXPECT_EQ(0u, VPV1->getNumUses());
+  EXPECT_EQ(1u, VPV2->getNumUses());
   EXPECT_EQ(I1, *VPV2->user_begin());
-  EXPECT_EQ(1u, VPV3->getNumUsers());
+  EXPECT_EQ(1u, VPV3->getNumUses());
   EXPECT_EQ(I1, *VPV3->user_begin());
 
   // Replace operand 1 (VPV2) with VPV3.
   I1->setOperand(1, VPV3);
-  EXPECT_EQ(0u, VPV1->getNumUsers());
-  EXPECT_EQ(0u, VPV2->getNumUsers());
-  EXPECT_EQ(2u, VPV3->getNumUsers());
+  EXPECT_EQ(0u, VPV1->getNumUses());
+  EXPECT_EQ(0u, VPV2->getNumUses());
+  EXPECT_EQ(2u, VPV3->getNumUses());
   EXPECT_EQ(I1, *VPV3->user_begin());
   EXPECT_EQ(I1, *std::next(VPV3->user_begin()));
 
   // Replace operand 0 (VPV3) with VPV4.
   VPValue *VPV4 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 4));
   I1->setOperand(0, VPV4);
-  EXPECT_EQ(1u, VPV3->getNumUsers());
+  EXPECT_EQ(1u, VPV3->getNumUses());
   EXPECT_EQ(I1, *VPV3->user_begin());
   EXPECT_EQ(I1, *VPV4->user_begin());
 
   // Replace operand 1 (VPV3) with VPV4.
   I1->setOperand(1, VPV4);
-  EXPECT_EQ(0u, VPV3->getNumUsers());
+  EXPECT_EQ(0u, VPV3->getNumUses());
   EXPECT_EQ(I1, *VPV4->user_begin());
   EXPECT_EQ(I1, *std::next(VPV4->user_begin()));
 
@@ -186,34 +186,34 @@ TEST_F(VPInstructionTest, replaceAllUsesWith) {
   VPV1->replaceAllUsesWith(VPV3);
   EXPECT_EQ(VPV3, I1->getOperand(0));
   EXPECT_EQ(VPV2, I1->getOperand(1));
-  EXPECT_EQ(0u, VPV1->getNumUsers());
-  EXPECT_EQ(1u, VPV2->getNumUsers());
+  EXPECT_EQ(0u, VPV1->getNumUses());
+  EXPECT_EQ(1u, VPV2->getNumUses());
   EXPECT_EQ(I1, *VPV2->user_begin());
-  EXPECT_EQ(1u, VPV3->getNumUsers());
+  EXPECT_EQ(1u, VPV3->getNumUses());
   EXPECT_EQ(I1, *VPV3->user_begin());
 
   // Replace all uses of VPV2 with VPV3.
   VPV2->replaceAllUsesWith(VPV3);
   EXPECT_EQ(VPV3, I1->getOperand(0));
   EXPECT_EQ(VPV3, I1->getOperand(1));
-  EXPECT_EQ(0u, VPV1->getNumUsers());
-  EXPECT_EQ(0u, VPV2->getNumUsers());
-  EXPECT_EQ(2u, VPV3->getNumUsers());
+  EXPECT_EQ(0u, VPV1->getNumUses());
+  EXPECT_EQ(0u, VPV2->getNumUses());
+  EXPECT_EQ(2u, VPV3->getNumUses());
   EXPECT_EQ(I1, *VPV3->user_begin());
 
   // Replace all uses of VPV3 with VPV1.
   VPV3->replaceAllUsesWith(VPV1);
   EXPECT_EQ(VPV1, I1->getOperand(0));
   EXPECT_EQ(VPV1, I1->getOperand(1));
-  EXPECT_EQ(2u, VPV1->getNumUsers());
+  EXPECT_EQ(2u, VPV1->getNumUses());
   EXPECT_EQ(I1, *VPV1->user_begin());
-  EXPECT_EQ(0u, VPV2->getNumUsers());
-  EXPECT_EQ(0u, VPV3->getNumUsers());
+  EXPECT_EQ(0u, VPV2->getNumUses());
+  EXPECT_EQ(0u, VPV3->getNumUses());
 
   VPInstruction *I2 = new VPInstruction(0, {VPV1, VPV2});
-  EXPECT_EQ(3u, VPV1->getNumUsers());
+  EXPECT_EQ(3u, VPV1->getNumUses());
   VPV1->replaceAllUsesWith(VPV3);
-  EXPECT_EQ(3u, VPV3->getNumUsers());
+  EXPECT_EQ(3u, VPV3->getNumUses());
 
   delete I1;
   delete I2;
@@ -225,15 +225,15 @@ TEST_F(VPInstructionTest, releaseOperandsAtDeletion) {
   VPValue *VPV2 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPInstruction *I1 = new VPInstruction(0, {VPV1, VPV2});
 
-  EXPECT_EQ(1u, VPV1->getNumUsers());
+  EXPECT_EQ(1u, VPV1->getNumUses());
   EXPECT_EQ(I1, *VPV1->user_begin());
-  EXPECT_EQ(1u, VPV2->getNumUsers());
+  EXPECT_EQ(1u, VPV2->getNumUses());
   EXPECT_EQ(I1, *VPV2->user_begin());
 
   delete I1;
 
-  EXPECT_EQ(0u, VPV1->getNumUsers());
-  EXPECT_EQ(0u, VPV2->getNumUsers());
+  EXPECT_EQ(0u, VPV1->getNumUses());
+  EXPECT_EQ(0u, VPV2->getNumUses());
 }
 
 using VPBasicBlockTest = VPlanTestBase;
