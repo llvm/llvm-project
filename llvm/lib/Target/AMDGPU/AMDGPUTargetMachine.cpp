@@ -34,6 +34,7 @@
 #include "AMDGPUTargetObjectFile.h"
 #include "AMDGPUTargetTransformInfo.h"
 #include "AMDGPUUnifyDivergentExitNodes.h"
+#include "AMDGPUVectorIdiom.h"
 #include "AMDGPUWaitSGPRHazards.h"
 #include "GCNDPPCombine.h"
 #include "GCNIterativeScheduler.h"
@@ -924,6 +925,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
             EnablePromoteKernelArguments)
           FPM.addPass(AMDGPUPromoteKernelArgumentsPass());
 
+        // Run vector-idiom canonicalization early (after inlining) and before
+        // infer-AS / SROA to maximize scalarization opportunities.
+        FPM.addPass(AMDGPUVectorIdiomCombinePass());
+
         // Add infer address spaces pass to the opt pipeline after inlining
         // but before SROA to increase SROA opportunities.
         FPM.addPass(InferAddressSpacesPass());
@@ -975,6 +980,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           // We only want to run this with O2 or higher since inliner and SROA
           // don't run in O1.
           if (Level != OptimizationLevel::O1) {
+            PM.addPass(createModuleToFunctionPassAdaptor(
+                AMDGPUVectorIdiomCombinePass()));
             PM.addPass(
                 createModuleToFunctionPassAdaptor(InferAddressSpacesPass()));
           }
