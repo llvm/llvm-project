@@ -916,6 +916,30 @@ DecodeGPRMM16MovePRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeGP32RegisterClass(MCInst &Inst, unsigned RegNo,
+                                            uint64_t Address,
+                                            const MCDisassembler *Decoder) {
+  llvm_unreachable("this is unused");
+}
+
+static DecodeStatus DecodeGP64RegisterClass(MCInst &Inst, unsigned RegNo,
+                                            uint64_t Address,
+                                            const MCDisassembler *Decoder) {
+  llvm_unreachable("this is unused");
+}
+
+static DecodeStatus DecodeSP32RegisterClass(MCInst &Inst, unsigned RegNo,
+                                            uint64_t Address,
+                                            const MCDisassembler *Decoder) {
+  llvm_unreachable("this is unused");
+}
+
+static DecodeStatus DecodeSP64RegisterClass(MCInst &Inst, unsigned RegNo,
+                                            uint64_t Address,
+                                            const MCDisassembler *Decoder) {
+  llvm_unreachable("this is unused");
+}
+
 static DecodeStatus DecodeGPR32RegisterClass(MCInst &Inst, unsigned RegNo,
                                              uint64_t Address,
                                              const MCDisassembler *Decoder) {
