@@ -17,10 +17,10 @@ class TestCortexMExceptionUnwind(TestBase):
 
         target = self.dbg.CreateTarget("")
         exe = "binary.json"
-        f = open(exe)
-        exe_json = json.load(f)
-        exe_uuid = exe_json["uuid"]
-        f.close()
+        with open(exe) as f:
+            exe_json = json.load(f)
+            exe_uuid = exe_json["uuid"]
+
         target.AddModule(exe, "", exe_uuid)
         self.assertTrue(target.IsValid())
 
@@ -46,6 +46,5 @@ class TestCortexMExceptionUnwind(TestBase):
             "exception_thrower",
             "main",
         ]
-        for i in range(4):
-            name = thread.GetFrameAtIndex(i).GetSymbol().GetName()
-            self.assertEqual(stackframe_names[i], name)
+        for i, name in enumerate(stackframe_names):
+            self.assertEqual(name, thread.GetFrameAtIndex(i).GetSymbol().GetName())

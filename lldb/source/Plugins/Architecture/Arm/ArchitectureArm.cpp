@@ -159,11 +159,15 @@ addr_t ArchitectureArm::GetOpcodeLoadAddress(addr_t opcode_addr,
   return opcode_addr & ~(1ull);
 }
 
-// The ARM M-Profile Armv7-M Architecture Reference Manual
-// "Exception return behavior" describes how the processor
-// saves registers to the stack, decrements the stack pointer,
-// puts a special value in $lr, and then calls a registered
-// exception handler routine.
+// The ARM M-Profile Armv7-M Architecture Reference Manual,
+// subsection "B1.5 Armv7-M exception model", see the parts
+// describing "Exception entry behavior" and "Exception
+// return behavior".
+// When an exception happens on this processor, certain registers are
+// saved below the stack pointer, the stack pointer is decremented,
+// a special value is put in the link register to indicate the
+// exception has been taken, and an exception handler function
+// is invoked.
 //
 // Detect that special value in $lr, and if present, add
 // unwind rules for the registers that were saved above this
@@ -205,29 +209,49 @@ UnwindPlanSP ArchitectureArm::GetArchitectureUnwindPlan(
       got_concrete_location = true;
   }
 
+  if (!got_concrete_location)
+    return {};
+
   addr_t callers_return_address = LLDB_INVALID_ADDRESS;
-  if (got_concrete_location) {
-    const RegisterInfo *reg_info =
-        regctx->GetRegisterInfoAtIndex(ra_regnum_lldb);
-    if (reg_info) {
-      RegisterValue reg_value;
-      if (regctx->ReadRegisterValueFromRegisterLocation(regloc, reg_info,
-                                                        reg_value)) {
-        callers_return_address = reg_value.GetAsUInt32();
-      }
+  const RegisterInfo *reg_info = regctx->GetRegisterInfoAtIndex(ra_regnum_lldb);
+  if (reg_info) {
+    RegisterValue reg_value;
+    if (regctx->ReadRegisterValueFromRegisterLocation(regloc, reg_info,
+                                                      reg_value)) {
+      callers_return_address = reg_value.GetAsUInt32();
     }
   }
 
   if (callers_return_address == LLDB_INVALID_ADDRESS)
     return {};
 
-  if (callers_return_address != 0xFFFFFFF1 &&
-      callers_return_address != 0xFFFFFFF9 &&
-      callers_return_address != 0xFFFFFFFD &&
-      callers_return_address != 0xFFFFFFE1 &&
-      callers_return_address != 0xFFFFFFE9 &&
-      callers_return_address != 0xFFFFFFED)
+  // ARMv7-M ARM says that the LR will be set to
+  // one of these values when an exception has taken
+  // place:
+  //    if HaveFPExt() then
+  //      if CurrentMode==Mode_Handler then
+  //        LR = Ones(27):NOT(CONTROL.FPCA):'0001';
+  //      else
+  //        LR = Ones(27):NOT(CONTROL.FPCA):'1':CONTROL.SPSEL:'01';
+  //    else
+  //      if CurrentMode==Mode_Handler then
+  //        LR = Ones(28):'0001';
+  //      else
+  //        LR = Ones(29):CONTROL.SPSEL:'01';
+
+  // Top 27 bits are set for an exception return.
+  const uint32_t exception_return = -1U & ~0b11111U;
+  // Bit4 is 1 if only GPRs were saved.
+  const uint32_t gprs_only = 0b10000;
+  // Bit<1:0> are '01'.
+  const uint32_t lowbits = 0b01;
+
+  if ((callers_return_address & exception_return) != exception_return)
     return {};
+  if ((callers_return_address & lowbits) != lowbits)
+    return {};
+
+  const bool fp_regs_saved = !(callers_return_address & gprs_only);
 
   const RegisterKind plan_regkind = current_unwindplan->GetRegisterKind();
   UnwindPlanSP new_plan = std::make_shared<UnwindPlan>(plan_regkind);
@@ -236,22 +260,16 @@ UnwindPlanSP ArchitectureArm::GetArchitectureUnwindPlan(
   new_plan->SetUnwindPlanValidAtAllInstructions(eLazyBoolYes);
   new_plan->SetUnwindPlanForSignalTrap(eLazyBoolYes);
 
-  // bit 4 will be 1 if only the general purpose registers were saved.
-  // bit 4 will be 0 if the GPRs + floating point registers were saved.
-  const bool fp_regs_saved = (callers_return_address & 0x10) == 0;
-
-  int stored_regs_size = 0x20;
-  if (fp_regs_saved)
-    stored_regs_size = 0x68;
+  int stored_regs_size = fp_regs_saved ? 0x68 : 0x20;
 
   uint32_t gpr_regs[] = {dwarf_r0,  dwarf_r1, dwarf_r2, dwarf_r3,
                          dwarf_r12, dwarf_lr, dwarf_pc, dwarf_cpsr};
-  const int gpr_reg_count = sizeof(gpr_regs) / sizeof(uint32_t);
+  const int gpr_reg_count = std::size(gpr_regs);
   uint32_t fpr_regs[] = {dwarf_s0,  dwarf_s1,  dwarf_s2,  dwarf_s3,
                          dwarf_s4,  dwarf_s5,  dwarf_s6,  dwarf_s7,
                          dwarf_s8,  dwarf_s9,  dwarf_s10, dwarf_s11,
                          dwarf_s12, dwarf_s13, dwarf_s14, dwarf_s15};
-  const int fpr_reg_count = sizeof(fpr_regs) / sizeof(uint32_t);
+  const int fpr_reg_count = std::size(fpr_regs);
 
   RegisterContextSP reg_ctx_sp = thread.GetRegisterContext();
   std::vector<uint32_t> saved_regs;
@@ -274,13 +292,15 @@ UnwindPlanSP ArchitectureArm::GetArchitectureUnwindPlan(
   if (!regctx->GetCFA(cfa))
     return {};
 
-  // PSR bit 9 indicates that the stack pointer was unaligned (to
+  // The CPSR value saved to stack is actually (from Armv7-M ARM)
+  //   "XPSR<31:10>:frameptralign:XPSR<8:0>"
+  // Bit 9 indicates that the stack pointer was aligned (to
   // an 8-byte alignment) when the exception happened, and we must
-  // account for that when restoring the excepted stack pointer value.
+  // account for that when restoring the original stack pointer value.
   Status error;
   uint32_t callers_xPSR =
-      process_sp->ReadUnsignedIntegerFromMemory(cfa + 0x28, 4, 0, error);
-  const bool align_stack = callers_xPSR & (1 << 9U);
+      process_sp->ReadUnsignedIntegerFromMemory(cfa + 0x1c, 4, 0, error);
+  const bool align_stack = callers_xPSR & (1U << 9);
   uint32_t callers_sp = cfa + stored_regs_size;
   if (align_stack)
     callers_sp |= 4;
