@@ -1905,7 +1905,7 @@ void ELFDumper<ELFT>::loadDynamicTable() {
   }
 
   // At this point we have tables found from the section header and from the
-  // dynamic segment. Usually they match, but we have to do sanity checks to
+  // dynamic segment. Usually they match, but we have to do soundness checks to
   // verify that.
 
   if (FromPhdr.Addr != FromSec.Addr)

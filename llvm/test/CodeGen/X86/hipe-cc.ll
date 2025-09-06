@@ -90,7 +90,7 @@ define cc 11 void @baz() nounwind {
   ret void
 }
 
-; Sanity-check the tail call sequence. Number of arguments was chosen as to
+; Soundness-check the tail call sequence. Number of arguments was chosen as to
 ; expose a bug where the tail call sequence clobbered the stack.
 define cc 11 { i32, i32, i32 } @tailcaller(i32 %hp, i32 %p) nounwind {
 ; CHECK-LABEL: tailcaller:

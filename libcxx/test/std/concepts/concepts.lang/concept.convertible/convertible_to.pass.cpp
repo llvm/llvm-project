@@ -38,7 +38,7 @@ void CheckNotConvertibleTo() {
 
 template <class T, class U>
 void CheckIsConvertibleButNotConvertibleTo() {
-  // Sanity check T is either implicitly xor explicitly convertible to U.
+  // Soundness check T is either implicitly xor explicitly convertible to U.
   static_assert(std::is_convertible_v<T, U>);
   static_assert(std::is_convertible_v<const T, U>);
   static_assert(std::is_convertible_v<T, const U>);

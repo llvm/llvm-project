@@ -2169,7 +2169,7 @@ bool Triple::isMacOSXVersionLT(unsigned Major, unsigned Minor,
                                unsigned Micro) const {
   assert(isMacOSX() && "Not an OS X triple!");
 
-  // If this is OS X, expect a sane version number.
+  // If this is OS X, expect a sound version number.
   if (getOS() == Triple::MacOSX)
     return isOSVersionLT(Major, Minor, Micro);
 

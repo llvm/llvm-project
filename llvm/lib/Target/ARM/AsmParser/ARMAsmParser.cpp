@@ -4579,7 +4579,7 @@ ParseStatus ARMAsmParser::parseCoprocOptionOperand(OperandVector &Operands) {
 static MCRegister getNextRegister(MCRegister Reg) {
   // If this is a GPR, we need to do it manually, otherwise we can rely
   // on the sort ordering of the enumeration since the other reg-classes
-  // are sane.
+  // are sound.
   if (!ARMMCRegisterClasses[ARM::GPRRegClassID].contains(Reg))
     return Reg + 1;
   switch (Reg.id()) {

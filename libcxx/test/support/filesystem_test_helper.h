@@ -641,7 +641,7 @@ inline fs::path GetWindowsInaccessibleDir() {
   for (const auto &ent : fs::directory_iterator(root, ec)) {
     if (ent != dir)
       continue;
-    // Basic sanity checks on the directory_entry
+    // Basic soundness checks on the directory_entry
     if (!ent.exists() || !ent.is_directory()) {
       std::fprintf(stderr, "The expected inaccessible directory \"%s\" was found "
                            "but doesn't behave as expected, skipping tests "

@@ -296,7 +296,7 @@ uptr internal_wcsnlen(const wchar_t *s, uptr maxlen) {
 }
 
 bool mem_is_zero(const char *beg, uptr size) {
-  CHECK_LE(size, 1ULL << FIRST_32_SECOND_64(30, 40));  // Sanity check.
+  CHECK_LE(size, 1ULL << FIRST_32_SECOND_64(30, 40));  // Soundness check.
   const char *end = beg + size;
   uptr *aligned_beg = (uptr *)RoundUpTo((uptr)beg, sizeof(uptr));
   uptr *aligned_end = (uptr *)RoundDownTo((uptr)end, sizeof(uptr));

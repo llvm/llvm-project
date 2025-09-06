@@ -416,7 +416,7 @@ TEST(OperationsTest, ExtractAndInsertValue) {
   auto EVOp = fuzzerop::extractValueDescriptor(1);
   auto IVOp = fuzzerop::insertValueDescriptor(1);
 
-  // Sanity check the source preds.
+  // Soundness check the source preds.
   Constant *SVal = PoisonValue::get(StructTy);
   Constant *OVal = PoisonValue::get(OpaqueTy);
   Constant *AVal = PoisonValue::get(ArrayTy);

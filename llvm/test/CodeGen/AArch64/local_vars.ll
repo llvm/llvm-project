@@ -1,7 +1,7 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu | FileCheck %s
 ; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -frame-pointer=all | FileCheck -check-prefix CHECK-WITHFP-ARM64 %s
 
-; Make sure a reasonably sane prologue and epilogue are
+; Make sure a reasonably sound prologue and epilogue are
 ; generated. This test is not robust in the face of an frame-handling
 ; evolving, but still has value for unrelated changes, I
 ; believe.

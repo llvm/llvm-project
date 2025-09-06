@@ -118,7 +118,7 @@ endif()
 if(APPLE)
   # Ideally we would check the SDK version for the actual platform we are
   # building for here.  To make our lifes easier we assume the host SDK setup is
-  # sane and use the macOS SDK version as a proxy for aligned SDKs.
+  # sound and use the macOS SDK version as a proxy for aligned SDKs.
   find_darwin_sdk_version(macosx_sdk_version "macosx")
   if ("${macosx_sdk_version}" VERSION_LESS 10.12)
     message(FATAL_ERROR "Building the TSan runtime requires at least macOS SDK 10.12 (or aligned SDK on other platforms)")

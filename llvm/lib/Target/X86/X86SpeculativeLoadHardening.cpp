@@ -1824,9 +1824,9 @@ MachineInstr *X86SpeculativeLoadHardeningPass::sinkPostLoadHardenedInst(
       if (UseMI.getDesc().getNumDefs() > 1)
         return {};
 
-      // If this register isn't a virtual register we can't walk uses of sanely,
-      // just bail. Also check that its register class is one of the ones we
-      // can harden.
+      // If this register isn't a virtual register we can't walk uses of
+      // soundly, just bail. Also check that its register class is one of the
+      // ones we can harden.
       Register UseDefReg = UseMI.getOperand(0).getReg();
       if (!canHardenRegister(UseDefReg))
         return {};

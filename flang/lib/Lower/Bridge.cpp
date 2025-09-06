@@ -2202,7 +2202,7 @@ private:
           *this, bridge.getSemanticsContext(), localSymbols, doConstruct, eval);
       bool success = loopOp != nullptr;
       if (success) {
-        // Sanity check that the builder insertion point is inside the newly
+        // Soundness check that the builder insertion point is inside the newly
         // generated loop.
         assert(
             loopOp->getRegion(0).isAncestor(

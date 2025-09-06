@@ -854,7 +854,7 @@ TEST(BackgroundQueueTest, Progress) {
   using testing::AnyOf;
   BackgroundQueue::Stats S;
   BackgroundQueue Q([&](BackgroundQueue::Stats New) {
-    // Verify values are sane.
+    // Verify values are sound.
     // Items are enqueued one at a time (at least in this test).
     EXPECT_THAT(New.Enqueued, AnyOf(S.Enqueued, S.Enqueued + 1));
     // Items are completed one at a time.

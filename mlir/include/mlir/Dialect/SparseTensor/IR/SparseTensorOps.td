@@ -75,7 +75,7 @@ def SparseTensor_AssembleOp : SparseTensor_Op<"assemble", [Pure]> {
     This operation can be used to assemble a sparse tensor from an
     external source; e.g., by passing numpy arrays from Python. It
     is the user's responsibility to provide input that can be correctly
-    interpreted by the sparsifier, which does not perform any sanity
+    interpreted by the sparsifier, which does not perform any soundness
     test to verify data integrity.
 
     Example:
@@ -115,7 +115,7 @@ def SparseTensor_DisassembleOp : SparseTensor_Op<"disassemble", [Pure, SameVaria
     back to Python. It is the user's responsibility to allocate large enough
     buffers of the appropriate types to hold the sparse tensor contents.
     The sparsifier simply copies all fields of the sparse tensor into the
-    user-supplied buffers without any sanity test to verify data integrity.
+    user-supplied buffers without any soundness test to verify data integrity.
 
     Example:
 

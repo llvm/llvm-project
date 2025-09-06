@@ -44,7 +44,7 @@ template <class T1, class T2>
 constexpr void test_comparison_different_rank() {
   constexpr size_t D = std::dynamic_extent;
 
-  // sanity check same rank
+  // soundness check same rank
   static_assert(layout_mapping_comparable<std::extents<T1, D>, std::extents<T2, D>>);
   static_assert(layout_mapping_comparable<std::extents<T1, 5>, std::extents<T2, D>>);
   static_assert(layout_mapping_comparable<std::extents<T1, D>, std::extents<T2, 5>>);

@@ -4536,7 +4536,7 @@ static int carries_dependences(__isl_keep isl_vec *sol, int n_edge)
 
 /* Return the lexicographically smallest rational point in "lp",
  * assuming that all variables are non-negative and performing some
- * additional sanity checks.
+ * additional soundness checks.
  * If "want_integral" is set, then compute the lexicographically smallest
  * integer point instead.
  * In particular, "lp" should not be empty by construction.

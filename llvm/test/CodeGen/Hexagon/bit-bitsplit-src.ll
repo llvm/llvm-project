@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; REQUIRES: asserts
 
-; This used to crash. Check for some sane output.
+; This used to crash. Check for some sound output.
 ; CHECK: call printf
 
 target triple = "hexagon"

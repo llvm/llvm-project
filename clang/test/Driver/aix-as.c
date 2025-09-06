@@ -1,4 +1,4 @@
-// General tests that as(1) invocations on AIX targets are sane. Note that we
+// General tests that as(1) invocations on AIX targets are sound. Note that we
 // only test assembler functionalities in this suite.
 
 // Check powerpc-ibm-aix7.1.0.0, system assembler is used for assembly files, 32-bit.

@@ -174,7 +174,7 @@ TEST_NODISCARD constexpr bool testOrderValues(Param val1, Param val2) {
 
 #endif
 
-//  Test all two comparison operations for sanity
+//  Test all two comparison operations for soundness
 template <class T, class U = T>
 TEST_NODISCARD TEST_CONSTEXPR_CXX14 bool testEquality(const T& t1, const U& t2, bool isEqual)
 {

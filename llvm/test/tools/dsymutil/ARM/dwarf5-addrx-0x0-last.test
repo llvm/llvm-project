@@ -13,7 +13,7 @@ int main (int argc, char const *argv[])
 $ clang -gdwarf-5 dwarf5-addrx-0x0-last.c -c -o dwarf5-addrx-0x0-last.o
 $ clang dwarf5-addrx-0x0-last.o -o dwarf5-addrx-0x0-last.out
 
-# Sanity check: make sure main's low PC (0x0) requires an index computation
+# Soundness check: make sure main's low PC (0x0) requires an index computation
 # into the .debug_addr section.
 RUN: llvm-dwarfdump -debug-addr %p/../Inputs/private/tmp/dwarf5/dwarf5-addrx-0x0-last.o | FileCheck %s --check-prefix DEBUGADDR
 

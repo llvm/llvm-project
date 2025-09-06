@@ -1,5 +1,5 @@
 ! RUN: %python %S/test_modfile.py %s %flang_fc1
-! Sanity check for CUDA Fortran attributes in module files
+! Soundness check for CUDA Fortran attributes in module files
 module m
   attributes(device) dd
   real, managed, allocatable :: md

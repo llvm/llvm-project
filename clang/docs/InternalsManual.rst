@@ -82,7 +82,7 @@ using it.  From this file, :program:`tblgen` generates the unique ID of the
 diagnostic, the severity of the diagnostic and the English translation + format
 string.
 
-There is little sanity with the naming of the unique ID's right now.  Some
+There is little soundness with the naming of the unique ID's right now.  Some
 start with ``err_``, ``warn_``, ``ext_`` to encode the severity into the name.
 Since the enum is referenced in the C++ code that produces the diagnostic, it
 is somewhat useful for it to be reasonably short.

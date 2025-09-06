@@ -477,7 +477,7 @@ void PthreadLockChecker::AcquireLockAux(const CallEvent &Call,
     SVal RetVal = Call.getReturnValue();
     if (auto DefinedRetVal = RetVal.getAs<DefinedSVal>()) {
       // FIXME: If the lock function was inlined and returned true,
-      // we need to behave sanely - at least generate sink.
+      // we need to behave soundly - at least generate sink.
       lockSucc = state->assume(*DefinedRetVal, false);
       assert(lockSucc);
     }

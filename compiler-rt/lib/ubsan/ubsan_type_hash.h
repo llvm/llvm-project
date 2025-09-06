@@ -52,7 +52,7 @@ bool checkDynamicType(void *Object, void *Type, HashValue Hash);
 
 const unsigned VptrTypeCacheSize = 128;
 
-/// A sanity check for Vtable. Offsets to top must be reasonably small
+/// A soundness check for Vtable. Offsets to top must be reasonably small
 /// numbers (by absolute value). It's a weak check for Vtable corruption.
 const int VptrMaxOffsetToTop = 1<<20;
 

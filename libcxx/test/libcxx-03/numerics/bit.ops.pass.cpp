@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // Test the __XXXX routines in the <bit> header.
-// These are not supposed to be exhaustive tests, just sanity checks.
+// These are not supposed to be exhaustive tests, just soundness checks.
 
 #include <__cxx03/__bit/countl.h>
 #include <__cxx03/__bit/rotate.h>

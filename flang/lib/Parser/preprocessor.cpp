@@ -177,7 +177,7 @@ static TokenSequence TokenPasting(TokenSequence &&text) {
       bool doPaste{false};
       char last{before->back()};
       char first{after.front()};
-      // Apply basic sanity checking to pasting so avoid constructing a bogus
+      // Apply basic soundness checking to pasting so avoid constructing a bogus
       // token that might cause macro replacement to fail, like "macro(".
       if (IsLegalInIdentifier(last) && IsLegalInIdentifier(first)) {
         doPaste = true;

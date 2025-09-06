@@ -98,7 +98,7 @@ def build_compile_and_run_SpMM(attr: st.EncodingAttr, compiler):
     # Built-in bufferization uses in-out buffers.
     engine.invoke("main", mem_out, mem_a, mem_b, mem_c)
 
-    # Sanity check on computed result.
+    # Soundness check on computed result.
     expected = np.matmul(a, b)
     c = rt.ranked_memref_to_numpy(mem_out[0])
     if np.allclose(c, expected):

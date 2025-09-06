@@ -1,5 +1,5 @@
 """
-This is a sanity check that verifies that the module cache path is set
+This is a soundness check that verifies that the module cache path is set
 correctly and points inside the default test build directory.
 """
 

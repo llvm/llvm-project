@@ -819,7 +819,7 @@ ProfileWriterContext readDescriptions() {
 #endif
 
 #if !defined(__APPLE__)
-/// Debug by printing overall metadata global numbers to check it is sane
+/// Debug by printing overall metadata global numbers to check it is sound
 void printStats(const ProfileWriterContext &Ctx) {
   char StatMsg[BufSize];
   char *StatPtr = StatMsg;

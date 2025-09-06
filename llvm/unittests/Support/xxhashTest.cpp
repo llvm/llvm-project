@@ -18,7 +18,7 @@ using namespace llvm;
 /*
  * Fills a test buffer with pseudorandom data.
  *
- * This is used in the sanity check - its values must not be changed.
+ * This is used in the soundness check - its values must not be changed.
  */
 static void fillTestBuffer(uint8_t *buffer, size_t len) {
   uint64_t byteGen = PRIME32;

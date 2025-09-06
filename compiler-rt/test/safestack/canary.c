@@ -18,7 +18,7 @@ __attribute__((noinline)) void f(unsigned *y) {
   char *volatile p = &x;
   char *volatile q = (char *)y;
   assert(p < q);
-  assert(q - p < 1024); // sanity
+  assert(q - p < 1024); // soundness
   // This has technically undefined behavior, but we know the actual layout of
   // the unsafe stack and this should not touch anything important.
   memset(&x, 0xab, q - p + sizeof(*y));

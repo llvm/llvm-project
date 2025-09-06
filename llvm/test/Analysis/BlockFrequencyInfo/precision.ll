@@ -1,5 +1,5 @@
 ; RUN: opt < %s -disable-output -passes="print<block-freq>" 2>&1 | FileCheck %s
-; Sanity check precision for small-ish min/max spread.
+; Soundness check precision for small-ish min/max spread.
 
 @g = global i32 0
 

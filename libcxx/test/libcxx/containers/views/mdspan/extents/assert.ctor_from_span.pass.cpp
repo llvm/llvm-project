@@ -36,7 +36,7 @@
 
 int main(int, char**) {
   constexpr size_t D = std::dynamic_extent;
-  // working case sanity check
+  // working case soundness check
   {
     std::array args{1000, 5};
     [[maybe_unused]] std::extents<int, D, 5> e1(std::span{args});

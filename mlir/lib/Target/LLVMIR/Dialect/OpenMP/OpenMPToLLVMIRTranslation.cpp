@@ -5536,7 +5536,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 
       // The MapInfoOp defining the map var isn't really needed later.
       // So, we don't store it in any datastructure. Instead, we just
-      // do some sanity checks on it right now.
+      // do some soundness checks on it right now.
       auto mapInfoOp = mappedValue.getDefiningOp<omp::MapInfoOp>();
       [[maybe_unused]] Type varType = mapInfoOp.getVarType();
 
@@ -5547,7 +5547,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
             varType == privVar.getType() &&
             "Type of private var doesn't match the type of the mapped value");
 
-      // Ok, only 1 sanity check for now.
+      // Ok, only 1 soundness check for now.
       // Record the block argument corresponding to this mapvar.
       mappedPrivateVars.insert(
           {privVar,

@@ -17,7 +17,7 @@
 // Returns: -a
 
 COMPILER_RT_ABI ti_int __negti2(ti_int a) {
-  // Note: this routine is here for API compatibility; any sane compiler
+  // Note: this routine is here for API compatibility; any sound compiler
   // should expand it inline.
   return -(tu_int)a;
 }

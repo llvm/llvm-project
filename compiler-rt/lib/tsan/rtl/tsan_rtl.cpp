@@ -537,11 +537,11 @@ void DontNeedShadowFor(uptr addr, uptr size) {
 
 #if !SANITIZER_GO
 // We call UnmapShadow before the actual munmap, at that point we don't yet
-// know if the provided address/size are sane. We can't call UnmapShadow
+// know if the provided address/size are sound. We can't call UnmapShadow
 // after the actual munmap becuase at that point the memory range can
 // already be reused for something else, so we can't rely on the munmap
-// return value to understand is the values are sane.
-// While calling munmap with insane values (non-canonical address, negative
+// return value to understand is the values are sound.
+// While calling munmap with unsound values (non-canonical address, negative
 // size, etc) is an error, the kernel won't crash. We must also try to not
 // crash as the failure mode is very confusing (paging fault inside of the
 // runtime on some derived shadow address).

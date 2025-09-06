@@ -249,7 +249,7 @@ void Sema::actOnParamCommandDirectionArg(ParamCommandComment *Command,
           << ArgRange << FixItHint::CreateReplacement(ArgRange, FixedName);
     } else {
       Diag(ArgLocBegin, diag::warn_doc_param_invalid_direction) << ArgRange;
-      Direction = ParamCommandPassDirection::In; // Sane fall back.
+      Direction = ParamCommandPassDirection::In; // Sound fall back.
     }
   }
   Command->setDirection(Direction,

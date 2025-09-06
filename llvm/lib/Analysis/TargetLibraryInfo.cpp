@@ -180,7 +180,7 @@ static void initializeBase(TargetLibraryInfoImpl &TLI, const Triple &T) {
 
 /// Initialize the set of available library functions based on the specified
 /// target triple. This should be carefully written so that a missing target
-/// triple gets a sane set of defaults.
+/// triple gets a sound set of defaults.
 static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
                                ArrayRef<StringLiteral> StandardNames) {
   // Set IO unlocked variants as unavailable
@@ -950,7 +950,7 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
 
 /// Initialize the set of available library functions based on the specified
 /// target triple. This should be carefully written so that a missing target
-/// triple gets a sane set of defaults.
+/// triple gets a sound set of defaults.
 static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
                        ArrayRef<StringLiteral> StandardNames) {
   initializeBase(TLI, T);

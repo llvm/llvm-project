@@ -2604,7 +2604,8 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
   if (getOperator()->isSubClassOf("SDNode")) {
     const SDNodeInfo &NI = CDP.getSDNodeInfo(getOperator());
 
-    // Check that the number of operands is sane.  Negative operands -> varargs.
+    // Check that the number of operands is sound.
+    // Negative operands -> varargs.
     if (NI.getNumOperands() >= 0 &&
         getNumChildren() != (unsigned)NI.getNumOperands()) {
       TP.error(getOperator()->getName() + " node requires exactly " +
@@ -2821,9 +2822,9 @@ static bool OnlyOnRHSOfCommutative(const TreePatternNode &N) {
 
 /// canPatternMatch - If it is impossible for this pattern to match on this
 /// target, fill in Reason and return false.  Otherwise, return true.  This is
-/// used as a sanity check for .td files (to prevent people from writing stuff
-/// that can never possibly work), and to prevent the pattern permuter from
-/// generating stuff that is useless.
+/// used as a soundness check for .td files (to prevent people from writing
+/// stuff that can never possibly work), and to prevent the pattern permuter
+/// from generating stuff that is useless.
 bool TreePatternNode::canPatternMatch(std::string &Reason,
                                       const CodeGenDAGPatterns &CDP) const {
   if (isLeaf())
@@ -4081,7 +4082,7 @@ static void FindNames(TreePatternNode &P,
 
 void CodeGenDAGPatterns::AddPatternToMatch(TreePattern *Pattern,
                                            PatternToMatch &&PTM) {
-  // Do some sanity checking on the pattern we're about to match.
+  // Do some soundness checking on the pattern we're about to match.
   std::string Reason;
   if (!PTM.getSrcPattern().canPatternMatch(Reason, *this)) {
     PrintWarning(Pattern->getRecord()->getLoc(),

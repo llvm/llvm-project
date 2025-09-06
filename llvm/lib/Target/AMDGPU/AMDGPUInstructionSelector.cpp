@@ -297,7 +297,7 @@ bool AMDGPUInstructionSelector::selectPHI(MachineInstr &I) const {
   if (DefTy == LLT::scalar(1))
     return false;
 
-  // TODO: Verify this doesn't have insane operands (i.e. VGPR to SGPR copy)
+  // TODO: Verify this doesn't have unsound operands (i.e. VGPR to SGPR copy)
 
   const RegClassOrRegBank &RegClassOrBank =
     MRI->getRegClassOrRegBank(DefReg);

@@ -15,7 +15,7 @@
 ;; with the output from individualized save-temps later
 ; RUN: ld.lld main.o thin1.o --save-temps -o %t/all/a.out
 ; RUN: mv a.out.lto.* *.o.*.bc %t/all
-;; Sanity check that everything got moved
+;; Soundness check that everything got moved
 ; RUN: ls | count 2
 
 ;; Check precedence if both --save-temps and --save-temps= are present

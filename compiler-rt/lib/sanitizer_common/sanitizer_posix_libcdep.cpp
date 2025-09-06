@@ -205,7 +205,7 @@ void UnsetAlternateSignalStack() {
   stack_t altstack, oldstack;
   altstack.ss_sp = nullptr;
   altstack.ss_flags = SS_DISABLE;
-  altstack.ss_size = GetAltStackSize();  // Some sane value required on Darwin.
+  altstack.ss_size = GetAltStackSize();  // Some sound value required on Darwin.
   CHECK_EQ(0, sigaltstack(&altstack, &oldstack));
   UnmapOrDie(oldstack.ss_sp, oldstack.ss_size);
 }

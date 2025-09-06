@@ -581,7 +581,7 @@ def int_arm_neon_vpminu : Neon_2Arg_Intrinsic;
 // shifts, where the constant is replicated.  For consistency with VSHL (and
 // other variable shift instructions), left shifts have positive shift counts
 // and right shifts have negative shift counts.  This convention is also used
-// for constant right shift intrinsics, and to help preserve sanity, the
+// for constant right shift intrinsics, and to help preserve soundness, the
 // intrinsic names use "shift" instead of either "shl" or "shr".  Where
 // applicable, signed and unsigned versions of the intrinsics are
 // distinguished with "s" and "u" suffixes.  A few NEON shift instructions,

@@ -283,7 +283,7 @@ _func:
 // CHECK: add      wsp, wsp, #1104            // encoding: [0xff,0x43,0x11,0x11]
 // CHECK: add      wsp, w30, #4084            // encoding: [0xdf,0xd3,0x3f,0x11]
 
-// A few checks on the sanity of 64-bit versions
+// A few checks on the soundness of 64-bit versions
         add x0, x24, #291
         add x3, x24, #4095, lsl #12
         add x8, sp, #1074
@@ -347,7 +347,7 @@ _func:
 // CHECK: mov      x11, sp                    // encoding: [0xeb,0x03,0x00,0x91]
 // CHECK: mov      w24, wsp                   // encoding: [0xf8,0x03,0x00,0x11]
 
-// A relocation check (default to lo12, which is the only sane relocation anyway really)
+// A relocation check (default to lo12, which is the only sound relocation anyway really)
         add x0, x4, #:lo12:var
 // CHECK: add x0, x4, :lo12:var       // encoding: [0x80,0bAAAAAA00,0b00AAAAAA,0x91]
 // CHECK:                             // fixup A - offset: 0, value: :lo12:var, kind: fixup_aarch64_add_imm12

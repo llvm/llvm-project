@@ -2217,7 +2217,7 @@ static bool FindCaseStatementsForValue(const SwitchStmt &S,
   // Ok, we know which case is being jumped to, try to collect all the
   // statements that follow it.  This can fail for a variety of reasons.  Also,
   // check to see that the recursive walk actually found our case statement.
-  // Insane cases like this can fail to find it in the recursive walk since we
+  // Unsound cases like this can fail to find it in the recursive walk since we
   // don't handle every stmt kind:
   // switch (4) {
   //   while (1) {

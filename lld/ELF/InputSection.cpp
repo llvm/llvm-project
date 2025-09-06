@@ -101,7 +101,7 @@ InputSectionBase::InputSectionBase(ObjFile<ELFT> &file,
                        getFlags(file.ctx, hdr.sh_flags), hdr.sh_link,
                        hdr.sh_info, hdr.sh_addralign, hdr.sh_entsize,
                        getSectionContents(file, hdr), sectionKind) {
-  // We reject object files having insanely large alignments even though
+  // We reject object files having unsoundly large alignments even though
   // they are allowed by the spec. I think 4GB is a reasonable limitation.
   // We might want to relax this in the future.
   if (hdr.sh_addralign > UINT32_MAX) {

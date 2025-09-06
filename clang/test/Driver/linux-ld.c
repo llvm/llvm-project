@@ -1,5 +1,5 @@
 // UNSUPPORTED: system-windows
-// General tests that ld invocations on Linux targets sane. Note that we use
+// General tests that ld invocations on Linux targets sound. Note that we use
 // sysroot to make these tests independent of the host system.
 //
 // RUN: %clang -### -Werror %s -no-pie 2>&1 \

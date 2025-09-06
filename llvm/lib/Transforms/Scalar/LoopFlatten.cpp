@@ -44,7 +44,7 @@
 // track of all of this in bookkeeping struct FlattenInfo.
 // We assume the loops to be canonical, i.e. starting at 0 and increment with
 // 1. This makes RHS of the compare the loop tripcount (with the right
-// predicate). We use SCEV to then sanity check that this tripcount matches
+// predicate). We use SCEV to then soundness check that this tripcount matches
 // with the tripcount as computed by SCEV.
 //
 //===----------------------------------------------------------------------===//

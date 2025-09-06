@@ -46,7 +46,7 @@ struct TrackedMutex {
 
 template <class Mutex>
 void test() {
-  // Basic sanity test
+  // Basic soundness test
   {
     Mutex mutex;
     std::vector<std::thread> threads;

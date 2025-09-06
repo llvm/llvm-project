@@ -787,7 +787,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
           } // while
           cross = right;
         }
-        /* assert sanity of computed crossover point */
+        /* assert soundness of computed crossover point */
         KMP_ASSERT(cross && __kmp_pow<UT>(x, cross - 1) > target &&
                    __kmp_pow<UT>(x, cross) <= target);
 

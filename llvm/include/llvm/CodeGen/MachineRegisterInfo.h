@@ -262,7 +262,7 @@ public:
   LLVM_ABI void moveOperands(MachineOperand *Dst, MachineOperand *Src,
                              unsigned NumOps);
 
-  /// Verify the sanity of the use list for Reg.
+  /// Verify the soundness of the use list for Reg.
   LLVM_ABI void verifyUseList(Register Reg) const;
 
   /// Verify the use list of all registers.

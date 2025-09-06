@@ -4,7 +4,8 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+zve32f,+f,+zvl64b \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK
 
-; Sanity check that type legalization kicks in for vscale x 1 types with Zve32.
+; Soundness check that type legalization kicks in for vscale x 1 types with
+; Zve32.
 
 ; NOTE: The load and store are widened by using VP_LOAD/STORE. The add/fadd are
 ; widened by using the next larger LMUL and operating on the whole vector. This

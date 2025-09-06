@@ -300,7 +300,7 @@ void ThreadPlanStepInRange::SetAvoidRegexp(const char *name) {
 }
 
 void ThreadPlanStepInRange::SetDefaultFlagValue(uint32_t new_value) {
-  // TODO: Should we test this for sanity?
+  // TODO: Should we test this for soundness?
   ThreadPlanStepInRange::s_default_flag_values = new_value;
 }
 

@@ -166,7 +166,7 @@ int main(int, char**) {
   mixin_accessor<MinimalElementType>();
   mixin_accessor<const MinimalElementType>();
 
-  // sanity checks for triviality
+  // soundness checks for triviality
   check_triviality<std::mdspan<int, std::extents<int>>, false, true, true, true, true, true>();
   check_triviality<std::mdspan<int, std::dextents<int, 1>>, false, true, true, true, true, true>();
   check_triviality<std::mdspan<int, std::dextents<int, 1>, std::layout_right, checked_accessor<int>>,

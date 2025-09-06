@@ -196,7 +196,7 @@ bool FunctionCaller::WriteFunctionArguments(
   }
 
   for (size_t i = 0; i < num_args; i++) {
-    // FIXME: We should sanity check sizes.
+    // FIXME: We should soundness check sizes.
 
     uint64_t offset = m_member_offsets[i + 1]; // Clang sizes are in bytes.
     Value *arg_value = arg_values.GetValueAtIndex(i);

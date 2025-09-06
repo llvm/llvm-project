@@ -75,7 +75,7 @@ constexpr void test_conversion() {
 
 constexpr void test_no_implicit_conversion() {
   constexpr size_t D = std::dynamic_extent;
-  // Sanity check that one static to dynamic conversion works
+  // Soundness check that one static to dynamic conversion works
   static_assert(std::is_constructible_v<std::extents<int, D>, std::extents<int, 5>>, "");
   static_assert(std::is_convertible_v<std::extents<int, 5>, std::extents<int, D>>, "");
 
@@ -83,7 +83,7 @@ constexpr void test_no_implicit_conversion() {
   static_assert(std::is_constructible_v<std::extents<int, 5>, std::extents<int, D>>, "");
   static_assert(!std::is_convertible_v<std::extents<int, D>, std::extents<int, 5>>, "");
 
-  // Sanity check that one static to dynamic conversion works
+  // Soundness check that one static to dynamic conversion works
   static_assert(std::is_constructible_v<std::extents<int, D, 7>, std::extents<int, 5, 7>>, "");
   static_assert(std::is_convertible_v<std::extents<int, 5, 7>, std::extents<int, D, 7>>, "");
 
@@ -91,7 +91,7 @@ constexpr void test_no_implicit_conversion() {
   static_assert(std::is_constructible_v<std::extents<int, 5, 7>, std::extents<int, D, 7>>, "");
   static_assert(!std::is_convertible_v<std::extents<int, D, 7>, std::extents<int, 5, 7>>, "");
 
-  // Sanity check that smaller index_type to larger index_type conversion works
+  // Soundness check that smaller index_type to larger index_type conversion works
   static_assert(std::is_constructible_v<std::extents<size_t, 5>, std::extents<int, 5>>, "");
   static_assert(std::is_convertible_v<std::extents<int, 5>, std::extents<size_t, 5>>, "");
 

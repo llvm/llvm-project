@@ -58,7 +58,7 @@ contains
     !ERROR: Actual argument for 'x=' may not be a procedure
     x = acos(f5)
   end function
-  ! Sanity test: f18 handles C1560 violation by ignoring RESULT
+  ! Soundness test: f18 handles C1560 violation by ignoring RESULT
   !WARNING: The function name should not appear in RESULT; references to 'f6' inside the function will be considered as references to the result only [-Whomonymous-result]
   function f6() result(f6)
   end function

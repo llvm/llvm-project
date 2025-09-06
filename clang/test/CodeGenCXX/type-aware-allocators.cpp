@@ -19,7 +19,7 @@ namespace std {
 
 using size_t = __SIZE_TYPE__;
 
-// Sanity check to esure the semantics of the selected compiler mode
+// Soundness check to esure the semantics of the selected compiler mode
 // will trigger the exception handlers we are expecting, before
 // involving type aware allocation.
 // We duplicate the struct definitions so we don't trigger diagnostics

@@ -9,7 +9,7 @@ define void @foo() nounwind {
 ; CHECK: foo: // @foo
 ; CHECK:     ret
 
-  ; Similarly make sure ELF output works and is vaguely sane: aarch64 target
+  ; Similarly make sure ELF output works and is vaguely sound: aarch64 target
   ; machine with correct section & symbol names.
 ; CHECK-ELF: file format elf64-littleaarch64
 

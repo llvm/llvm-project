@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=i686-- -mattr=+avx | FileCheck %s
 
-; We don't really care what this outputs; just make sure it's somewhat sane.
+; We don't really care what this outputs; just make sure it's somewhat sound.
 ; CHECK: legalize_test
 ; CHECK: vmovups
 define void @legalize_test(i32 %x, ptr %p) nounwind {

@@ -2265,7 +2265,7 @@ bool VectorLegalizer::tryExpandVecMathCall(SDNode *Node, RTLIB::Libcall LC,
   LLVM_DEBUG(dbgs() << "Found vector variant " << VD->getVectorFnName()
                     << "\n");
 
-  // Sanity check just in case OptVFInfo has unexpected parameters.
+  // Soundness check just in case OptVFInfo has unexpected parameters.
   if (OptVFInfo->Shape.Parameters.size() !=
       Node->getNumOperands() + VD->isMasked())
     return false;

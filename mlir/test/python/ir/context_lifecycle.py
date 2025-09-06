@@ -1,5 +1,5 @@
 # RUN: %PYTHON %s
-# Standalone sanity check of context life-cycle.
+# Standalone soundness check of context life-cycle.
 import gc
 import mlir.ir
 

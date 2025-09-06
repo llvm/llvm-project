@@ -9,7 +9,7 @@
 ; RUN:    llc -mtriple=x86_64-linux-unknown -regalloc=greedy -regalloc-enable-advisor=release -interactive-model-runner-echo-reply \
 ; RUN:    -regalloc-evict-interactive-channel-base=%t.channel-basename %S/Inputs/two-large-fcts.ll -o /dev/null | FileCheck %s
 
-;; Make sure we see both contexts. Also sanity-check that the advice is the
+;; Make sure we see both contexts. Also soundness-check that the advice is the
 ;; expected one - the index of the first legal register
 ; CHECK: context: SyFgets
 ; CHECK-NEXT: observation: 0

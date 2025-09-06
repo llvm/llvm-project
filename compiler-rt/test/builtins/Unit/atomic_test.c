@@ -9,7 +9,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file performs some simple testing of the support functions for the
-// atomic builtins. All tests are single-threaded, so this is only a sanity
+// atomic builtins. All tests are single-threaded, so this is only a soundness
 // check.
 //
 //===----------------------------------------------------------------------===//

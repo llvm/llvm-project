@@ -189,7 +189,7 @@ if not config.emulator:
 
 # Add features for available sources
 builtins_source_features = config.builtins_lit_source_features.split(";")
-# Sanity checks
+# Soundness checks
 if not builtins_source_features:
     lit_config.fatal("builtins_source_features cannot be empty")
 builtins_source_features_set = set()

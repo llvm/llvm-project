@@ -555,7 +555,7 @@ void ScriptParser::readSearchDir() {
 
 // This reads an overlay description. Overlays are used to describe output
 // sections that use the same virtual memory range and normally would trigger
-// linker's sections sanity check failures.
+// linker's sections soundness check failures.
 // https://sourceware.org/binutils/docs/ld/Overlay-Description.html#Overlay-Description
 SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
   Expr addrExpr;

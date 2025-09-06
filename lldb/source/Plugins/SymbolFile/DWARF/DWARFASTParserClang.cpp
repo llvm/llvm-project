@@ -2763,8 +2763,8 @@ DWARFASTParserClang::MemberAttributes::MemberAttributes(
   //  DW_AT_bit_size( 0x40 )
   //  DW_AT_bit_offset( 0xffffffffffffffc0 )
   //
-  // So check the bit offset to make sure it is sane, and if the values
-  // are not sane, remove them. If we don't do this then we will end up
+  // So check the bit offset to make sure it is sound, and if the values
+  // are not sound, remove them. If we don't do this then we will end up
   // with a crash if we try to use this type in an expression when clang
   // becomes unhappy with its recycled debug info.
   if (byte_size.value_or(0) == 0 && bit_offset < 0) {

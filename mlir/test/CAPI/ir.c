@@ -421,7 +421,7 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   fprintf(stderr, "\n");
   // CHECK: Get attr "value": 0 : index
 
-  // Get a non-existing attribute and assert that it is null (sanity).
+  // Get a non-existing attribute and assert that it is null (soundness).
   fprintf(stderr, "does_not_exist is null: %d\n",
           mlirAttributeIsNull(mlirOperationGetDiscardableAttributeByName(
               operation, mlirStringRefCreateFromCString("does_not_exist"))));

@@ -66,7 +66,7 @@ public:
 
 private:
   static void SanityTest() {
-    // sanity test
+    // soundness test
     Container C = {1, 1, 1, 1};
     ::DoNotOptimize(&C);
   }

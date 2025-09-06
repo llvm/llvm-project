@@ -701,7 +701,7 @@ Error LVCodeViewReader::traverseSymbolSection(StringRef SectionName,
 
     case DebugSubsectionKind::Lines:
       // Holds a PC to file:line table. Some data to parse this subsection
-      // is stored in the other subsections, so just check sanity and store
+      // is stored in the other subsections, so just check soundness and store
       // the pointers for deferred processing.
 
       // Collect function and ranges only if we need to print logical lines.

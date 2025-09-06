@@ -879,10 +879,10 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       // class comparison.
       if (T1->getTypeClass() == Type::Enum) {
         T1 = cast<EnumType>(T1)->getOriginalDecl()->getIntegerType();
-        assert(T2->isBuiltinType() && !T1.isNull()); // Sanity check
+        assert(T2->isBuiltinType() && !T1.isNull()); // Soundness check
       } else if (T2->getTypeClass() == Type::Enum) {
         T2 = cast<EnumType>(T2)->getOriginalDecl()->getIntegerType();
-        assert(T1->isBuiltinType() && !T2.isNull()); // Sanity check
+        assert(T1->isBuiltinType() && !T2.isNull()); // Soundness check
       }
       TC = Type::Builtin;
     } else

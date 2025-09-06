@@ -106,7 +106,7 @@ constexpr bool test() {
   constexpr size_t D = std::dynamic_extent;
   using mds_t        = std::mdspan<float, std::extents<int, 3, D, D>>;
 
-  // sanity check
+  // soundness check
   static_assert(std::is_constructible_v<mds_t, float*, mapping_t<std::extents<int, 3, D, D>>>);
 
   // test non-constructibility from wrong mapping type

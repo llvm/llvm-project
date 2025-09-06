@@ -277,7 +277,7 @@ void test() {
     }
   }
 
-  { // sanity checks: hermite polynoms need to change signs at (simple) roots. checked upto order n<=20.
+  { // soundness checks: hermite polynoms need to change signs at (simple) roots. checked upto order n<=20.
 
     // root tolerance: must be smaller than the smallest difference between adjacent roots
     Real tol = []() -> Real {

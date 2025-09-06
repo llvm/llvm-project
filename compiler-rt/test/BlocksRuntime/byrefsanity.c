@@ -17,7 +17,7 @@ main(int argc, char *argv[])
     __block int var = 0;
     void (^b)(void) = ^{ var++; };
     
-    //sanity(b);
+    //soundness(b);
     b();
     printf("%s: success!\n", argv[0]);
     return 0;

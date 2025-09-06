@@ -200,7 +200,7 @@ static_assert(std::swappable<union_swap::adl_swappable&>);
 static_assert(std::swappable<union_swap::adl_swappable&&>);
 
 // All tests for std::swappable<T> are implicitly confirmed by `check_swap`, so we only need to
-// sanity check for a few positive cases.
+// soundness check for a few positive cases.
 static_assert(std::swappable<int volatile&>);
 static_assert(std::swappable<int&&>);
 static_assert(std::swappable<int (*)()>);

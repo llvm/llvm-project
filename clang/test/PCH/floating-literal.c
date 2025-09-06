@@ -10,7 +10,7 @@
 long double foo = 1.0E4000L;
 // CHECK: long double foo = 1.00000000000000000000000000000000004E+4000L;
 
-// Just as well check the others are still sane while we're here...
+// Just as well check the others are still sound while we're here...
 
 double bar = 1.0E300;
 // CHECK: double bar = 1.0000000000000001E+300;

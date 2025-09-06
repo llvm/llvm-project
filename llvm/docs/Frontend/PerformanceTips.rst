@@ -289,7 +289,7 @@ couple specific suggestions:
 #. If your language uses range checks, consider using the IRCE pass.  It is not
    currently part of the standard pass order.
 
-#. A useful sanity check to run is to run your optimized IR back through the
+#. A useful soundness check to run is to run your optimized IR back through the
    -O2 pipeline again.  If you see noticeable improvement in the resulting IR,
    you likely need to adjust your pass order.
 

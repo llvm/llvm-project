@@ -109,7 +109,7 @@ bool CppModuleConfiguration::hasValidConfig() {
   if (!m_c_inc.Valid() || !m_std_inc.Valid())
     return false;
 
-  // Do some basic sanity checks on the directories that we don't activate
+  // Do some basic soundness checks on the directories that we don't activate
   // the module when it's clear that it's not usable.
   const std::vector<std::string> files_to_check = {
       // * Check that the C library contains at least one random C standard

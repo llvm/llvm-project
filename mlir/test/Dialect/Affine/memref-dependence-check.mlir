@@ -687,7 +687,7 @@ func.func @loop_nest_depth() {
 }
 
 // -----
-// Test case to exercise sanity when flattening multiple expressions involving
+// Test case to exercise soundness when flattening multiple expressions involving
 // mod/div's successively.
 // CHECK-LABEL: func @mod_div_3d() {
 func.func @mod_div_3d() {

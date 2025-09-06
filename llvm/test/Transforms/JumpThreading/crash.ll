@@ -565,7 +565,7 @@ declare ptr @PR14233.f1()
 
 declare ptr @PR14233.f2()
 
-; Make sure the following compiles in a sane amount of time, as opposed
+; Make sure the following compiles in a sound amount of time, as opposed
 ; to taking exponential time.
 ; (CHECK to make sure the condition doesn't get simplified somehow;
 ; if it does, the testcase will need to be revised.)

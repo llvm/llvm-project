@@ -5354,7 +5354,7 @@ bool AArch64AsmParser::parseInstruction(ParseInstructionInfo &Info,
       //
       //   '{ ZA }' or '{ <ZAt><HV>.<BHSDQ>[<Wv>, #<imm>] }'
       //
-      // It's someone else's responsibility to make sure these tokens are sane
+      // It's someone else's responsibility to make sure these tokens are sound
       // in the given context!
 
       if (parseOptionalToken(AsmToken::RBrac))

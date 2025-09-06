@@ -154,7 +154,7 @@ private:
       auto firstDims = firstLiteral->getDims();
       dims.insert(dims.end(), firstDims.begin(), firstDims.end());
 
-      // Sanity check that shape is uniform across all elements of the list.
+      // Soundness check that shape is uniform across all elements of the list.
       for (auto &expr : values) {
         auto *exprLiteral = llvm::cast<LiteralExprAST>(expr.get());
         if (!exprLiteral)

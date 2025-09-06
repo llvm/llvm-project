@@ -115,7 +115,7 @@ template <class FromL>
 constexpr void test_no_implicit_conversion() {
   constexpr size_t D = std::dynamic_extent;
 
-  // Sanity check that one static to dynamic conversion works
+  // Soundness check that one static to dynamic conversion works
   static_assert(std::is_constructible_v<ToM<int, D>, FromM<FromL, int, 5>>);
   static_assert(std::is_convertible_v<FromM<FromL, int, 5>, ToM<int, D>>);
 
@@ -123,7 +123,7 @@ constexpr void test_no_implicit_conversion() {
   static_assert(std::is_constructible_v<ToM<int, 5>, FromM<FromL, int, D>>);
   static_assert(!std::is_convertible_v<FromM<FromL, int, D>, ToM<int, 5>>);
 
-  // Sanity check that one static to dynamic conversion works
+  // Soundness check that one static to dynamic conversion works
   static_assert(std::is_constructible_v<ToM<int, D, 7>, FromM<FromL, int, 5, 7>>);
   static_assert(std::is_convertible_v<FromM<FromL, int, 5, 7>, ToM<int, D, 7>>);
 
@@ -131,7 +131,7 @@ constexpr void test_no_implicit_conversion() {
   static_assert(std::is_constructible_v<ToM<int, 5, 7>, FromM<FromL, int, D, 7>>);
   static_assert(!std::is_convertible_v<FromM<FromL, int, D, 7>, ToM<int, 5, 7>>);
 
-  // Sanity check that smaller index_type to larger index_type conversion works
+  // Soundness check that smaller index_type to larger index_type conversion works
   static_assert(std::is_constructible_v<ToM<size_t, 5>, FromM<FromL, int, 5>>);
   static_assert(std::is_convertible_v<FromM<FromL, int, 5>, ToM<size_t, 5>>);
 

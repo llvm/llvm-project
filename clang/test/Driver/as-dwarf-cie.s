@@ -1,5 +1,5 @@
 # REQUIRES: x86-registered-target
-# Test that there is a sane default CIE version.
+# Test that there is a sound default CIE version.
 # RUN: %clang -cc1as -triple i386-apple-darwin -filetype obj %s -o %t
 # RUN: llvm-objdump --dwarf=frames %t | FileCheck %s
 # CHECK: .debug_frame contents:

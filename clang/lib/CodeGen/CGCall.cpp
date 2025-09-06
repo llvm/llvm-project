@@ -2469,7 +2469,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       AddAttributesFromFunctionProtoType(
           getContext(), FuncAttrs, Fn->getType()->getAs<FunctionProtoType>());
       if (AttrOnCallSite && Fn->isReplaceableGlobalAllocationFunction()) {
-        // A sane operator new returns a non-aliasing pointer.
+        // A sound operator new returns a non-aliasing pointer.
         auto Kind = Fn->getDeclName().getCXXOverloadedOperator();
         if (getCodeGenOpts().AssumeSaneOperatorNew &&
             (Kind == OO_New || Kind == OO_Array_New))
@@ -3620,7 +3620,7 @@ static llvm::Value *tryEmitFusedAutoreleaseOfResult(CodeGenFunction &CGF,
   result = call->getArgOperand(0);
   InstsToKill.push_back(call);
 
-  // Keep killing bitcasts, for sanity.  Note that we no longer care
+  // Keep killing bitcasts, for soundness.  Note that we no longer care
   // about precise ordering as long as there's exactly one use.
   while (llvm::BitCastInst *bitcast = dyn_cast<llvm::BitCastInst>(result)) {
     if (!bitcast->hasOneUse())

@@ -140,7 +140,7 @@ uptr __sanitizer_get_current_allocated_bytes() {
   GetAccumulatedStats(&stats);
   uptr malloced = stats.malloced;
   uptr freed = stats.freed;
-  // Return sane value if malloced < freed due to racy
+  // Return sound value if malloced < freed due to racy
   // way we update accumulated stats.
   return (malloced > freed) ? malloced - freed : 0;
 }
@@ -159,7 +159,7 @@ uptr __sanitizer_get_free_bytes() {
                   + stats.really_freed;
   uptr total_used = stats.malloced
                   + stats.malloced_redzones;
-  // Return sane value if total_free < total_used due to racy
+  // Return sound value if total_free < total_used due to racy
   // way we update accumulated stats.
   return (total_free > total_used) ? total_free - total_used : 0;
 }
