@@ -128,9 +128,12 @@ public:
     return emitLoadOfLValue(me);
   }
   mlir::Value VisitOpaqueValueExpr(OpaqueValueExpr *e) {
-    cgf.cgm.errorNYI(e->getExprLoc(),
-                     "ComplexExprEmitter VisitOpaqueValueExpr");
-    return {};
+    if (e->isGLValue())
+      return emitLoadOfLValue(cgf.getOrCreateOpaqueLValueMapping(e),
+                              e->getExprLoc());
+
+    // Otherwise, assume the mapping is the scalar directly.
+    return cgf.getOrCreateOpaqueRValueMapping(e).getValue();
   }
 
   mlir::Value VisitPseudoObjectExpr(PseudoObjectExpr *e) {
