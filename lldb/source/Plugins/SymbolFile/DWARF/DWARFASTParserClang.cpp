@@ -1754,6 +1754,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   const dw_tag_t tag = die.Tag();
   SymbolFileDWARF *dwarf = die.GetDWARF();
   LanguageType cu_language = SymbolFileDWARF::GetLanguage(*die.GetCU());
+  ModuleSP module_sp = dwarf->GetObjectFile()->GetModule();
   Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
 
   ConstString unique_typename(attrs.name);
@@ -1764,7 +1765,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
     GetUniqueTypeNameAndDeclaration(die, cu_language, unique_typename,
                                     unique_decl);
     if (log) {
-      dwarf->GetObjectFile()->GetModule()->LogMessage(
+      module_sp->LogMessage(
           log, "SymbolFileDWARF({0:p}) - {1:x16}: {2} has unique name: {3} ",
           static_cast<void *>(this), die.GetID(), DW_TAG_value_to_name(tag),
           unique_typename.AsCString());
@@ -1835,7 +1836,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
 
     if (type_sp) {
       if (log) {
-        dwarf->GetObjectFile()->GetModule()->LogMessage(
+        module_sp->LogMessage(
             log,
             "SymbolFileDWARF({0:p}) - {1:x16}: {2} ({3}) type \"{4}\" is an "
             "incomplete objc type, complete type is {5:x8}",
@@ -1885,7 +1886,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
             attrs.name.GetCString(), tag_decl_kind, template_param_infos);
     if (!class_template_decl) {
       if (log) {
-        dwarf->GetObjectFile()->GetModule()->LogMessage(
+        module_sp->LogMessage(
             log,
             "SymbolFileDWARF({0:p}) - {1:x16}: {2} ({3}) type \"{4}\" "
             "clang::ClassTemplateDecl failed to return a decl.",
@@ -1901,6 +1902,22 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
             tag_decl_kind, template_param_infos);
     clang_type =
         m_ast.CreateClassTemplateSpecializationType(class_specialization_decl);
+
+    // Try to find an existing specialization with these template arguments and
+    // template parameter list.
+    void *InsertPos = nullptr;
+    if (!class_template_decl->findSpecialization(template_param_infos.GetArgs(),
+                                                 InsertPos))
+      // Add this specialization to the class template.
+      class_template_decl->AddSpecialization(class_specialization_decl,
+                                             InsertPos);
+    else {
+      module_sp->ReportError(
+          "SymbolFileDWARF({0:p}) - Specialization for "
+          "clang::ClassTemplateDecl({1:p}) already exists.",
+          static_cast<void *>(this), static_cast<void *>(class_template_decl));
+      return TypeSP();
+    }
 
     m_ast.SetMetadata(class_template_decl, metadata);
     m_ast.SetMetadata(class_specialization_decl, metadata);
