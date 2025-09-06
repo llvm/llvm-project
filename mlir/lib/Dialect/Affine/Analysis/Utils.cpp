@@ -241,7 +241,55 @@ addNodeToMDG(Operation *nodeOp, MemRefDependenceGraph &mdg,
   return &node;
 }
 
-bool MemRefDependenceGraph::init() {
+/// Returns true if there may be a dependence on `memref` from srcNode's
+/// memory ops to dstNode's memory ops, while using the affine memory
+/// dependence analysis checks. The method assumes that there is at least one
+/// memory op in srcNode's loads and stores on `memref`, and similarly for
+/// `dstNode`. `srcNode.op` and `destNode.op` are expected to be nested in the
+/// same block and so the dependences are tested at the depth of that block.
+static bool mayDependence(const Node &srcNode, const Node &dstNode,
+                          Value memref) {
+  assert(srcNode.op->getBlock() == dstNode.op->getBlock());
+  if (!isa<AffineForOp>(srcNode.op) || !isa<AffineForOp>(dstNode.op))
+    return true;
+
+  // Non-affine stores, can't check. Conservatively, return true.
+  if (!srcNode.memrefStores.empty())
+    return true;
+  if (!dstNode.memrefStores.empty())
+    return true;
+
+  // Non-affine loads with a store in the other.
+  if (!srcNode.memrefLoads.empty() && !dstNode.stores.empty())
+    return true;
+  if (!dstNode.memrefLoads.empty() && !srcNode.stores.empty())
+    return true;
+
+  // Affine load/store pairs. We don't need to check for locally allocated
+  // memrefs since the dependence analysis here is between mem ops from
+  // srcNode's for op to dstNode's for op at the depth at which those
+  // `affine.for` ops are nested, i.e., dependences at depth `d + 1` where
+  // `d` is the number of common surrounding loops.
+  for (auto *srcMemOp :
+       llvm::concat<Operation *const>(srcNode.stores, srcNode.loads)) {
+    MemRefAccess srcAcc(srcMemOp);
+    if (srcAcc.memref != memref)
+      continue;
+    for (auto *destMemOp :
+         llvm::concat<Operation *const>(dstNode.stores, dstNode.loads)) {
+      MemRefAccess destAcc(destMemOp);
+      if (destAcc.memref != memref)
+        continue;
+      // Check for a top-level dependence between srcNode and destNode's ops.
+      if (!noDependence(checkMemrefAccessDependence(
+              srcAcc, destAcc, getNestingDepth(srcNode.op) + 1)))
+        return true;
+    }
+  }
+  return false;
+}
+
+bool MemRefDependenceGraph::init(bool fullAffineDependences) {
   LDBG() << "--- Initializing MDG ---";
   // Map from a memref to the set of ids of the nodes that have ops accessing
   // the memref.
@@ -344,8 +392,12 @@ bool MemRefDependenceGraph::init() {
         Node *dstNode = getNode(dstId);
         bool dstHasStoreOrFree =
             dstNode->hasStore(srcMemRef) || dstNode->hasFree(srcMemRef);
-        if (srcHasStoreOrFree || dstHasStoreOrFree)
-          addEdge(srcId, dstId, srcMemRef);
+        if ((srcHasStoreOrFree || dstHasStoreOrFree)) {
+          // Check precise affine deps if asked for; otherwise, conservative.
+          if (!fullAffineDependences ||
+              mayDependence(*srcNode, *dstNode, srcMemRef))
+            addEdge(srcId, dstId, srcMemRef);
+        }
       }
     }
   }
@@ -562,13 +614,13 @@ MemRefDependenceGraph::getFusedLoopNestInsertionPoint(unsigned srcId,
   }
 
   // Build set of insts in range (srcId, dstId) which depend on 'srcId'.
-  SmallPtrSet<Operation *, 2> srcDepInsts;
+  llvm::SmallPtrSet<Operation *, 2> srcDepInsts;
   for (auto &outEdge : outEdges.lookup(srcId))
     if (outEdge.id != dstId)
       srcDepInsts.insert(getNode(outEdge.id)->op);
 
   // Build set of insts in range (srcId, dstId) on which 'dstId' depends.
-  SmallPtrSet<Operation *, 2> dstDepInsts;
+  llvm::SmallPtrSet<Operation *, 2> dstDepInsts;
   for (auto &inEdge : inEdges.lookup(dstId))
     if (inEdge.id != srcId)
       dstDepInsts.insert(getNode(inEdge.id)->op);
