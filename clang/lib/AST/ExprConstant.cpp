@@ -12042,13 +12042,71 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     }
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
-  case clang::X86__builtin_ia32_pslldqi128:
-  case clang::X86__builtin_ia32_psrldqi128:
-  case clang::X86__builtin_ia32_pslldqi256:
-  case clang::X86__builtin_ia32_psrldqi256: {
+  case X86::BI__builtin_ia32_pslldqi128_byteshift:
+  case X86::BI__builtin_ia32_psrldqi128_byteshift: {
+    unsigned BuiltinID = E->getBuiltinCallee();
     
-  }
+    APSInt Amt;
+    if(!EvaluateInteger(E->getArg(1),Amt, Info))
+      break;
+    unsigned Shift = (unsigned)Amt.getZExtValue();
+    
+    APValue Vec;
+    if (!Evaluate(Vec, Info, E->getArg(0)) || !Vec.isVector())
+      break;
+    
+    SmallVector<APValue, 16> ResultElements;
+    ResultElements.reserve(16);
 
+    bool isLeft = (BuiltinID == X86::BI__builtin_ia32_pslldqi128_byteshift);
+
+    for (unsigned i = 0; i < 16; i++) {
+      int SrcIdx = -1;
+      if (isLeft)
+        SrcIdx = i + Shift;
+      else if (i >= Shift)
+        SrcIdx = i - Shift;
+
+      if (SrcIdx >= 0 && (unsigned)SrcIdx < 16)
+        ResultElements.push_back(Vec.getVectorElt(SrcIdx));
+      else
+        ResultElements.push_back(APValue(0));
+    }
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  
+  case X86::BI__builtin_ia32_pslldqi256_byteshift:
+  case X86::BI__builtin_ia32_psrldqi256_byteshift: {
+    unsigned BuiltinID = E->getBuiltinCallee();
+    
+    APSInt Amt;
+    if(!EvaluateInteger(E->getArg(1),Amt, Info))
+      break;
+    unsigned Shift = (unsigned)Amt.getZExtValue();
+    
+    APValue Vec;
+    if (!Evaluate(Vec, Info, E->getArg(0)) || !Vec.isVector())
+      break;
+    
+    SmallVector<APValue, 32> ResultElements;
+    ResultElements.reserve(32);
+
+    bool isLeft = (BuiltinID == X86::BI__builtin_ia32_pslldqi256_byteshift);
+
+    for (unsigned i = 0; i < 32; i++) {
+      int SrcIdx = -1;
+      if (isLeft)
+        SrcIdx = i + Shift;
+      else if (i >= Shift)
+        SrcIdx = i - Shift;
+
+      if (SrcIdx >= 0 && (unsigned)SrcIdx < 32)
+        ResultElements.push_back(Vec.getVectorElt(SrcIdx));
+      else
+        ResultElements.push_back(APValue(0));
+    }
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
   }
 }
 
