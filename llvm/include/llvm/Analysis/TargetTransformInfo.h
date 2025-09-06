@@ -1843,6 +1843,10 @@ public:
   /// otherwise scalar epilogue loop.
   LLVM_ABI bool preferEpilogueVectorization() const;
 
+  /// \returns True if the loop vectorizer should discard any VFs that may have
+  /// too high of a register pressure as determined by getNumberOfRegisters.
+  LLVM_ABI bool shouldConsiderVectorizationRegPressure() const;
+
   /// \returns True if the target wants to expand the given reduction intrinsic
   /// into a shuffle sequence.
   LLVM_ABI bool shouldExpandReduction(const IntrinsicInst *II) const;
