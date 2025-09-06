@@ -47,7 +47,7 @@ static const char DeletedNotPublic[] = "DeletedNotPublic";
 UseEqualsDeleteCheck::UseEqualsDeleteCheck(StringRef Name,
                                            ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
+      IgnoreMacros(Options.get("IgnoreMacros", true)) {}
 
 void UseEqualsDeleteCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);

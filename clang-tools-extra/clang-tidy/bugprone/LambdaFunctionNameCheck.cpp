@@ -64,8 +64,7 @@ AST_MATCHER(CXXMethodDecl, isInLambda) { return Node.getParent()->isLambda(); }
 LambdaFunctionNameCheck::LambdaFunctionNameCheck(StringRef Name,
                                                  ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreMacros(
-          Options.getLocalOrGlobal("IgnoreMacros", DefaultIgnoreMacros)) {}
+      IgnoreMacros(Options.get("IgnoreMacros", DefaultIgnoreMacros)) {}
 
 void LambdaFunctionNameCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);

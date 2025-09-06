@@ -130,6 +130,11 @@ Improvements to clang-tidy
   field is used in a compilation database; the current working directory
   will be used instead, and an error message will be printed.
 
+- Removed :program:`clang-tidy`'s global options `IgnoreMacros` and
+  `StrictMode`, which were documented as deprecated since
+  :program:`clang-tidy-20`. Users should use the check-specific options of the
+  same name instead.
+
 New checks
 ^^^^^^^^^^
 

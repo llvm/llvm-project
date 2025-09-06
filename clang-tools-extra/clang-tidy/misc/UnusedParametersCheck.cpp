@@ -136,7 +136,7 @@ UnusedParametersCheck::~UnusedParametersCheck() = default;
 UnusedParametersCheck::UnusedParametersCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      StrictMode(Options.getLocalOrGlobal("StrictMode", false)),
+      StrictMode(Options.get("StrictMode", false)),
       IgnoreVirtual(Options.get("IgnoreVirtual", false)) {}
 
 void UnusedParametersCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
