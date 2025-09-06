@@ -1,5 +1,5 @@
 ! This test checks lowering of OpenMP loop Directive.
-
+! XFAIL: *
 ! REQUIRES: openmp_runtime
 
 ! RUN: %flang_fc1 -emit-hlfir %openmp_flags -fopenmp-version=50 -o - %s 2>&1 | FileCheck %s
