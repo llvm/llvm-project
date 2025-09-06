@@ -181,7 +181,7 @@ void buildOpMemberDecorate(Register Reg, MachineInstr &I,
 }
 
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
-                             const MDNode *GVarMD) {
+                             const MDNode *GVarMD, const SPIRVSubtarget &ST) {
   for (unsigned I = 0, E = GVarMD->getNumOperands(); I != E; ++I) {
     auto *OpMD = dyn_cast<MDNode>(GVarMD->getOperand(I));
     if (!OpMD)
@@ -193,6 +193,20 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
     if (!DecorationId)
       report_fatal_error("Expect SPIR-V <Decoration> operand to be the first "
                          "element of the decoration");
+
+    // The goal of `spirv.Decorations` metadata is to provide a way to
+    // represent SPIR-V entities that do not map to LLVM in an obvious way.
+    // FP flags do have obvious matches between LLVM IR and SPIR-V.
+    // Additionally, we have no guarantee at this point that the flags passed
+    // through the decoration are not violated already in the optimizer passes.
+    // Therefore, we simply ignore FP flags, including NoContraction, and
+    // FPFastMathMode.
+    if (DecorationId->getZExtValue() ==
+            static_cast<uint32_t>(SPIRV::Decoration::NoContraction) ||
+        DecorationId->getZExtValue() ==
+            static_cast<uint32_t>(SPIRV::Decoration::FPFastMathMode)) {
+      continue; // Ignored.
+    }
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
                    .addUse(Reg)
                    .addImm(static_cast<uint32_t>(DecorationId->getZExtValue()));
@@ -995,6 +1009,20 @@ int64_t foldImm(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
 unsigned getArrayComponentCount(const MachineRegisterInfo *MRI,
                                 const MachineInstr *ResType) {
   return foldImm(ResType->getOperand(2), MRI);
+}
+
+size_t computeFPFastMathDefaultInfoVecIndex(size_t BitWidth) {
+  switch (BitWidth) {
+  case 16: // half
+    return 0;
+  case 32: // float
+    return 1;
+  case 64: // double
+    return 2;
+  default:
+    report_fatal_error("Expected BitWidth to be 16, 32, 64", false);
+  }
+  llvm_unreachable("Unreachable code in computeFPFastMathDefaultInfoVecIndex");
 }
 
 MachineBasicBlock::iterator
