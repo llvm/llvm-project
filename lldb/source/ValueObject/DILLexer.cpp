@@ -42,7 +42,6 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "minus";
   case Kind::period:
     return "period";
-    return "l_square";
   case Kind::plus:
     return "plus";
   case Kind::r_paren:
