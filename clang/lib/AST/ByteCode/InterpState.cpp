@@ -21,6 +21,7 @@ InterpState::InterpState(State &Parent, Program &P, InterpStack &Stk,
                          Context &Ctx, SourceMapper *M)
     : Parent(Parent), M(M), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this),
       Current(&BottomFrame) {
+  InConstantContext = Parent.InConstantContext;
   CheckingPotentialConstantExpression =
       Parent.CheckingPotentialConstantExpression;
   CheckingForUndefinedBehavior = Parent.CheckingForUndefinedBehavior;
@@ -31,6 +32,7 @@ InterpState::InterpState(State &Parent, Program &P, InterpStack &Stk,
     : Parent(Parent), M(nullptr), P(P), Stk(Stk), Ctx(Ctx),
       BottomFrame(*this, Func, nullptr, CodePtr(), Func->getArgSize()),
       Current(&BottomFrame) {
+  InConstantContext = Parent.InConstantContext;
   CheckingPotentialConstantExpression =
       Parent.CheckingPotentialConstantExpression;
   CheckingForUndefinedBehavior = Parent.CheckingForUndefinedBehavior;
@@ -40,7 +42,7 @@ bool InterpState::inConstantContext() const {
   if (ConstantContextOverride)
     return *ConstantContextOverride;
 
-  return Parent.InConstantContext;
+  return InConstantContext;
 }
 
 InterpState::~InterpState() {
