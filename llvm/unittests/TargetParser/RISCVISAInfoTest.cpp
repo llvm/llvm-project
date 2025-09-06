@@ -1186,6 +1186,7 @@ Experimental extensions
     zicfilp              1.0       This is a long dummy description
     zicfiss              1.0
     zalasr               0.1
+    zvabd                0.2
     zvbc32e              0.7
     zvfbfa               0.1
     zvkgs                0.7
