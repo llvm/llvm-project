@@ -9114,8 +9114,12 @@ static std::optional<bool> matchSetCC(SDValue LHS, SDValue RHS,
   return std::nullopt;
 }
 
-static SDValue combineSelectToBinOp(SDNode *N, SelectionDAG &DAG,
-                                    const RISCVSubtarget &Subtarget) {
+static bool isSimm12Constant(SDValue V) {
+  return isa<ConstantSDNode>(V) && V->getAsAPIntVal().isSignedIntN(12);
+}
+
+static SDValue lowerSelectToBinOp(SDNode *N, SelectionDAG &DAG,
+                                  const RISCVSubtarget &Subtarget) {
   SDValue CondV = N->getOperand(0);
   SDValue TrueV = N->getOperand(1);
   SDValue FalseV = N->getOperand(2);
@@ -9135,14 +9139,18 @@ static SDValue combineSelectToBinOp(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(ISD::OR, DL, VT, Neg, DAG.getFreeze(TrueV));
     }
 
+    const bool HasCZero =
+        VT.isScalarInteger() &&
+        (Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps());
+
     // (select c, 0, y) -> (c-1) & y
-    if (isNullConstant(TrueV)) {
-      SDValue Neg = DAG.getNode(ISD::ADD, DL, VT, CondV,
-                                DAG.getAllOnesConstant(DL, VT));
+    if (isNullConstant(TrueV) && (!HasCZero || isSimm12Constant(FalseV))) {
+      SDValue Neg =
+          DAG.getNode(ISD::ADD, DL, VT, CondV, DAG.getAllOnesConstant(DL, VT));
       return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(FalseV));
     }
     // (select c, y, 0) -> -c & y
-    if (isNullConstant(FalseV)) {
+    if (isNullConstant(FalseV) && (!HasCZero || isSimm12Constant(TrueV))) {
       SDValue Neg = DAG.getNegative(CondV, DL, VT);
       return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(TrueV));
     }
@@ -9248,10 +9256,6 @@ foldBinOpIntoSelectIfProfitable(SDNode *BO, SelectionDAG &DAG,
   return DAG.getSelect(DL, VT, Sel.getOperand(0), NewT, NewF);
 }
 
-static bool isSimm12Constant(SDValue V) {
-  return isa<ConstantSDNode>(V) && V->getAsAPIntVal().isSignedIntN(12);
-}
-
 SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   SDValue CondV = Op.getOperand(0);
   SDValue TrueV = Op.getOperand(1);
@@ -9267,25 +9271,16 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::VSELECT, DL, VT, CondSplat, TrueV, FalseV);
   }
 
+  // Try some other optimizations before falling back to generic lowering.
+  if (SDValue V = lowerSelectToBinOp(Op.getNode(), DAG, Subtarget))
+    return V;
+
   // When Zicond or XVentanaCondOps is present, emit CZERO_EQZ and CZERO_NEZ
   // nodes to implement the SELECT. Performing the lowering here allows for
   // greater control over when CZERO_{EQZ/NEZ} are used vs another branchless
   // sequence or RISCVISD::SELECT_CC node (branch-based select).
   if ((Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps()) &&
       VT.isScalarInteger()) {
-
-    // select c, simm12, 0 -> andi (sub x0, c), simm12
-    if (isSimm12Constant(TrueV) && isNullConstant(FalseV)) {
-      SDValue Mask = DAG.getNegative(CondV, DL, VT);
-      return DAG.getNode(ISD::AND, DL, VT, TrueV, Mask);
-    }
-
-    // select c, 0, simm12 -> andi (addi c, -1), simm12
-    if (isNullConstant(TrueV) && isSimm12Constant(FalseV)) {
-      SDValue Mask = DAG.getNode(ISD::ADD, DL, VT, CondV,
-                                 DAG.getSignedConstant(-1, DL, XLenVT));
-      return DAG.getNode(ISD::AND, DL, VT, FalseV, Mask);
-    }
 
     // (select c, t, 0) -> (czero_eqz t, c)
     if (isNullConstant(FalseV))
@@ -9339,10 +9334,6 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
           ISD::OR, DL, VT, FalseV,
           DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, CondV));
     }
-
-    // Try some other optimizations before falling back to generic lowering.
-    if (SDValue V = combineSelectToBinOp(Op.getNode(), DAG, Subtarget))
-      return V;
 
     // (select c, c1, c2) -> (add (czero_nez c2 - c1, c), c1)
     // (select c, c1, c2) -> (add (czero_eqz c1 - c2, c), c2)
@@ -9445,9 +9436,6 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
           DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, FalseV, CondV),
           SDNodeFlags::Disjoint);
   }
-
-  if (SDValue V = combineSelectToBinOp(Op.getNode(), DAG, Subtarget))
-    return V;
 
   if (Op.hasOneUse()) {
     unsigned UseOpc = Op->user_begin()->getOpcode();
