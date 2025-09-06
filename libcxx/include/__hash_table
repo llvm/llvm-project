@@ -34,6 +34,7 @@
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_constructible.h>
+#include <__type_traits/is_integral.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_reference.h>
@@ -1833,11 +1834,16 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::find(const _Key& __k) {
     size_t __hash       = hash_function()(__k);
     size_t __chash      = std::__constrain_hash(__hash, __bc);
     __next_pointer __nd = __bucket_list_[__chash];
+
+    constexpr bool __has_cheap_comparator = is_integral<key_type>::value;
+
     if (__nd != nullptr) {
       for (__nd = __nd->__next_;
-           __nd != nullptr && (__nd->__hash() == __hash || std::__constrain_hash(__nd->__hash(), __bc) == __chash);
+           __nd != nullptr &&
+           ((__has_cheap_comparator ? key_eq()(__nd->__upcast()->__get_value(), __k) : __hash == __nd->__hash()) ||
+            std::__constrain_hash(__nd->__hash(), __bc) == __chash);
            __nd = __nd->__next_) {
-        if ((__nd->__hash() == __hash) && key_eq()(__nd->__upcast()->__get_value(), __k))
+        if ((__has_cheap_comparator || __nd->__hash() == __hash) && key_eq()(__nd->__upcast()->__get_value(), __k))
           return iterator(__nd);
       }
     }
@@ -1854,11 +1860,16 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::find(const _Key& __k) const {
     size_t __hash       = hash_function()(__k);
     size_t __chash      = std::__constrain_hash(__hash, __bc);
     __next_pointer __nd = __bucket_list_[__chash];
+
+    constexpr bool __has_cheap_comparator = is_integral<key_type>::value;
+
     if (__nd != nullptr) {
       for (__nd = __nd->__next_;
-           __nd != nullptr && (__hash == __nd->__hash() || std::__constrain_hash(__nd->__hash(), __bc) == __chash);
+           __nd != nullptr &&
+           ((__has_cheap_comparator ? key_eq()(__nd->__upcast()->__get_value(), __k) : __hash == __nd->__hash()) ||
+            std::__constrain_hash(__nd->__hash(), __bc) == __chash);
            __nd = __nd->__next_) {
-        if ((__nd->__hash() == __hash) && key_eq()(__nd->__upcast()->__get_value(), __k))
+        if ((__has_cheap_comparator || __nd->__hash() == __hash) && key_eq()(__nd->__upcast()->__get_value(), __k))
           return const_iterator(__nd);
       }
     }
