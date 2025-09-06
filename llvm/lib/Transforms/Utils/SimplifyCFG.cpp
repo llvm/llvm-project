@@ -6455,6 +6455,12 @@ public:
   /// Return the default value of the switch.
   Constant *getDefaultValue();
 
+  /// Return true if the replacement is a lookup table.
+  bool isLookupTable();
+
+  /// Return true if the replacement is a bitmap.
+  bool isBitMap();
+
 private:
   // Depending on the switch, there are different alternatives.
   enum {
@@ -6742,6 +6748,10 @@ static bool isTypeLegalForLookupTable(Type *Ty, const TargetTransformInfo &TTI,
 
 Constant *SwitchReplacement::getDefaultValue() { return DefaultValue; }
 
+bool SwitchReplacement::isLookupTable() { return Kind == LookupTableKind; }
+
+bool SwitchReplacement::isBitMap() { return Kind == BitMapKind; }
+
 static bool isSwitchDense(uint64_t NumCases, uint64_t CaseRange) {
   // 40% is the default density for building a jump table in optsize/minsize
   // mode. See also TargetLoweringBase::isSuitableForJumpTable(), which this
@@ -6907,16 +6917,12 @@ static void reuseTableCompare(
 /// lookup tables.
 static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
                                  DomTreeUpdater *DTU, const DataLayout &DL,
-                                 const TargetTransformInfo &TTI) {
+                                 const TargetTransformInfo &TTI,
+                                 bool ConvertSwitchToLookupTable) {
   assert(SI->getNumCases() > 1 && "Degenerate switch?");
 
   BasicBlock *BB = SI->getParent();
   Function *Fn = BB->getParent();
-  // Only build lookup table when we have a target that supports it or the
-  // attribute is not set.
-  if (!TTI.shouldBuildLookupTables() ||
-      (Fn->getFnAttribute("no-jump-tables").getValueAsBool()))
-    return false;
 
   // FIXME: If the switch is too sparse for a lookup table, perhaps we could
   // split off a dense part and build a lookup table for that.
@@ -7074,6 +7080,34 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
                                   ResultList, DefaultVal, DL, FuncName);
     PhiToReplacementMap.insert({PHI, Replacement});
   }
+
+  bool AnyLookupTables = any_of(
+      PhiToReplacementMap, [](auto &KV) { return KV.second.isLookupTable(); });
+
+  // A few conditions prevent the generation of lookup tables:
+  //     1. Not setting the ConvertSwitchToLookupTable option
+  //        This option prevents the LUT creation until a later stage in the
+  //        pipeline, because it would otherwise result in some
+  //        difficult-to-analyze code and make pruning branches much harder.
+  //        This is a problem if the switch expression itself can be restricted
+  //        by inlining or CVP.
+  //     2. The target does not support lookup tables.
+  //     3. The "no-jump-tables" function attribute is set.
+  // However, these objections do not apply to other switch replacements, like
+  // the bitmap, so we only stop here if any of these conditions are met and we
+  // want to create a LUT. Otherwise, continue with the switch replacement.
+  if (AnyLookupTables &&
+      (!ConvertSwitchToLookupTable || !TTI.shouldBuildLookupTables() ||
+       Fn->getFnAttribute("no-jump-tables").getValueAsBool()))
+    return false;
+
+  bool AnyBitMaps = any_of(PhiToReplacementMap,
+                           [](auto &KV) { return KV.second.isBitMap(); });
+
+  // Bitmaps can also cause missed optimizations due to difficult-to-analyze
+  // code. Delay the creation of bitmaps until later in the pipeline.
+  if (AnyBitMaps && !ConvertSwitchToLookupTable)
+    return false;
 
   Builder.SetInsertPoint(SI);
   // TableIndex is the switch condition - TableIndexOffset if we don't
@@ -7716,13 +7750,8 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   if (Options.ForwardSwitchCondToPhi && forwardSwitchConditionToPHI(SI))
     return requestResimplify();
 
-  // The conversion from switch to lookup tables results in difficult-to-analyze
-  // code and makes pruning branches much harder. This is a problem if the
-  // switch expression itself can still be restricted as a result of inlining or
-  // CVP. Therefore, only apply this transformation during late stages of the
-  // optimisation pipeline.
-  if (Options.ConvertSwitchToLookupTable &&
-      simplifySwitchLookup(SI, Builder, DTU, DL, TTI))
+  if (simplifySwitchLookup(SI, Builder, DTU, DL, TTI,
+                           Options.ConvertSwitchToLookupTable))
     return requestResimplify();
 
   if (simplifySwitchOfPowersOfTwo(SI, Builder, DL, TTI))

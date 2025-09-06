@@ -9,6 +9,7 @@ define internal i32 @table_switch(i32 %x) "branch-target-enforcement" {
 ; CHECK-NEXT:    cmp r1, #3
 ; CHECK-NEXT:    bhi .LBB0_6
 ; CHECK-NEXT:  @ %bb.1: @ %entry
+; CHECK-NEXT:    movs r0, #3
 ; CHECK-NEXT:  .LCPI0_0:
 ; CHECK-NEXT:    tbb [pc, r1]
 ; CHECK-NEXT:  @ %bb.2:
@@ -22,7 +23,7 @@ define internal i32 @table_switch(i32 %x) "branch-target-enforcement" {
 ; CHECK-NEXT:    movs r0, #2
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:  .LBB0_4: @ %bb3
-; CHECK-NEXT:    movs r0, #3
+; CHECK-NEXT:    movs r0, #1
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:  .LBB0_5: @ %bb4
 ; CHECK-NEXT:    movs r0, #4
@@ -51,7 +52,7 @@ sw.epilog:
   br label %return
 
 return:
-  %ret = phi i32 [ 0, %sw.epilog ], [ 1, %bb1 ], [ 2, %bb2 ], [ 3, %bb3 ], [ 4, %bb4 ]
+  %ret = phi i32 [ 0, %sw.epilog ], [ 3, %bb1 ], [ 2, %bb2 ], [ 1, %bb3 ], [ 4, %bb4 ]
   ret i32 %ret
 }
 
