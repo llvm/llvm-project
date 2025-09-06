@@ -11,7 +11,7 @@ define void @fn1(i32 %a, i32 %b, i32 %c) local_unnamed_addr #0 {
 ; ARM-LABEL: fn1:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    rsb r2, r2, #0
-; ARM-NEXT:    adds r0, r1, r0
+; ARM-NEXT:    cmn r1, r0
 ; ARM-NEXT:    movw r1, #65535
 ; ARM-NEXT:    sxth r2, r2
 ; ARM-NEXT:    adc r0, r2, #1
@@ -54,7 +54,7 @@ define void @fn1(i32 %a, i32 %b, i32 %c) local_unnamed_addr #0 {
 ; THUMB-LABEL: fn1:
 ; THUMB:       @ %bb.0: @ %entry
 ; THUMB-NEXT:    rsbs r2, r2, #0
-; THUMB-NEXT:    adds r0, r0, r1
+; THUMB-NEXT:    cmn r1, r0
 ; THUMB-NEXT:    sxth r2, r2
 ; THUMB-NEXT:    adc r0, r2, #1
 ; THUMB-NEXT:    lsls r0, r0, #16
