@@ -44,9 +44,9 @@
 static int __attribute__((target_clones("sse4.2, default"))) internal(void) { return 0; }
 int use(void) { return internal(); }
 /// Internal linkage resolvers do not use comdat.
-// LINUX: define internal ptr @internal.resolver() {
+// LINUX: define internal ptr @internal.resolver() comdat {
 // DARWIN: define internal ptr @internal.resolver() {
-// WINDOWS: define internal i32 @internal() {
+// WINDOWS: define internal i32 @internal() comdat {
 
 int __attribute__((target_clones("sse4.2, default"))) foo(void) { return 0; }
 // LINUX: define {{.*}}i32 @foo.sse4.2.0()
