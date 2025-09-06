@@ -128,22 +128,22 @@ define void @computeNumSignBits_shl_zext_vec_3(<2 x i8> %x, ptr %p) nounwind {
 ; X64-NEXT:    movdqa {{.*#+}} xmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
 ; X64-NEXT:    pxor %xmm1, %xmm0
 ; X64-NEXT:    psubb %xmm1, %xmm0
-; X64-NEXT:    pxor %xmm1, %xmm1
-; X64-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
-; X64-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [16384,4096,u,u,u,u,u,u]
-; X64-NEXT:    movdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; X64-NEXT:    pand %xmm0, %xmm2
-; X64-NEXT:    pcmpgtw %xmm0, %xmm1
-; X64-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; X64-NEXT:    por %xmm2, %xmm1
-; X64-NEXT:    movdqa %xmm0, %xmm2
-; X64-NEXT:    paddw %xmm0, %xmm2
-; X64-NEXT:    movdqa %xmm2, %xmm3
+; X64-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; X64-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [16384,4096,0,0,0,0,0,0]
+; X64-NEXT:    movdqa {{.*#+}} xmm1 = [32768,32768,32768,32768,32768,32768,32768,32768]
+; X64-NEXT:    pand %xmm0, %xmm1
+; X64-NEXT:    pxor %xmm2, %xmm2
+; X64-NEXT:    pcmpgtw %xmm0, %xmm2
+; X64-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; X64-NEXT:    por %xmm1, %xmm2
+; X64-NEXT:    movdqa %xmm0, %xmm1
+; X64-NEXT:    paddw %xmm0, %xmm1
+; X64-NEXT:    movdqa %xmm1, %xmm3
 ; X64-NEXT:    psraw $1, %xmm3
 ; X64-NEXT:    pcmpeqw %xmm0, %xmm3
 ; X64-NEXT:    movdqa %xmm3, %xmm0
-; X64-NEXT:    pandn %xmm1, %xmm0
-; X64-NEXT:    pand %xmm2, %xmm3
+; X64-NEXT:    pandn %xmm2, %xmm0
+; X64-NEXT:    pand %xmm1, %xmm3
 ; X64-NEXT:    por %xmm0, %xmm3
 ; X64-NEXT:    movd %xmm3, (%rdi)
 ; X64-NEXT:    retq

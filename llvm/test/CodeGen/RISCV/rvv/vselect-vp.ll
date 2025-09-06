@@ -431,28 +431,30 @@ define <vscale x 32 x i32> @select_evl_nxv32i32(<vscale x 32 x i1> %a, <vscale x
 ; RV64-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
 ; RV64-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; RV64-NEXT:    vmv1r.v v7, v0
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    slli a3, a1, 3
-; RV64-NEXT:    slli a2, a1, 1
-; RV64-NEXT:    srli a4, a1, 2
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    slli a3, a2, 3
+; RV64-NEXT:    slli a1, a2, 1
+; RV64-NEXT:    slli a4, a2, 32
+; RV64-NEXT:    srli a5, a2, 2
 ; RV64-NEXT:    add a3, a0, a3
-; RV64-NEXT:    sub a5, a1, a2
+; RV64-NEXT:    srli a2, a4, 32
 ; RV64-NEXT:    vl8re32.v v24, (a3)
-; RV64-NEXT:    sltu a3, a1, a5
-; RV64-NEXT:    addi a3, a3, -1
+; RV64-NEXT:    sub a3, a2, a1
+; RV64-NEXT:    sltu a4, a2, a3
+; RV64-NEXT:    addi a4, a4, -1
 ; RV64-NEXT:    vl8re32.v v8, (a0)
-; RV64-NEXT:    vslidedown.vx v0, v0, a4
-; RV64-NEXT:    and a3, a3, a5
+; RV64-NEXT:    vslidedown.vx v0, v0, a5
+; RV64-NEXT:    and a3, a4, a3
 ; RV64-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
 ; RV64-NEXT:    vmerge.vvm v16, v24, v16, v0
-; RV64-NEXT:    bltu a1, a2, .LBB28_2
+; RV64-NEXT:    bltu a2, a1, .LBB28_2
 ; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a1, a2
+; RV64-NEXT:    mv a2, a1
 ; RV64-NEXT:  .LBB28_2:
 ; RV64-NEXT:    vmv1r.v v0, v7
 ; RV64-NEXT:    addi a0, sp, 16
 ; RV64-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
-; RV64-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; RV64-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; RV64-NEXT:    vmerge.vvm v8, v8, v24, v0
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 3
