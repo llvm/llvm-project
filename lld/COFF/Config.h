@@ -312,6 +312,10 @@ struct Configuration {
   bool dynamicBase = true;
   bool allowBind = true;
   bool cetCompat = false;
+  bool cetCompatStrict = false;
+  bool cetCompatIpValidationRelaxed = false;
+  bool cetCompatDynamicApisInProcOnly = false;
+  bool hotpatchCompat = false;
   bool nxCompat = true;
   bool allowIsolation = true;
   bool terminalServerAware = true;
