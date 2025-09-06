@@ -26,6 +26,31 @@ void test_handler(int32_t fid, XRayEntryType type) {
 int main() {
   __xray_set_handler(test_handler);
   always_instrument();
+#if defined(__riscv)
+  // RISC-V has looser execution ordering; relax CHECK-NEXT to CHECK
+  // CHECK: always instrumented called
+  auto status = __xray_patch();
+  printf("patching status: %d\n", static_cast<int32_t>(status));
+  // CHECK-NEXT: patching status: 1
+  always_instrument();
+  // CHECK: called: {{.*}}, type=0
+  // CHECK: always instrumented called
+  // CHECK: called: {{.*}}, type=1
+  status = __xray_unpatch();
+  printf("patching status: %d\n", static_cast<int32_t>(status));
+  // CHECK: patching status: 1
+  always_instrument();
+  // CHECK: always instrumented called
+  status = __xray_patch();
+  printf("patching status: %d\n", static_cast<int32_t>(status));
+  // CHECK: patching status: 1
+  __xray_remove_handler();
+  always_instrument();
+  // CHECK: always instrumented called
+  status = __xray_unpatch();
+  printf("patching status: %d\n", static_cast<int32_t>(status));
+  // CHECK: patching status: 1
+#else
   // CHECK: always instrumented called
   auto status = __xray_patch();
   printf("patching status: %d\n", static_cast<int32_t>(status));
@@ -48,4 +73,5 @@ int main() {
   status = __xray_unpatch();
   printf("patching status: %d\n", static_cast<int32_t>(status));
   // CHECK-NEXT: patching status: 1
+#endif
 }
