@@ -615,14 +615,6 @@ declare void @use.i32(i32, i1)
 
 define void @umul_extractvalue(ptr %P, i32 %x) {
 ; CHECK-LABEL: @umul_extractvalue(
-; CHECK-NEXT:    [[UMUL_1:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[X:%.*]], i32 1)
-; CHECK-NEXT:    [[R_1:%.*]] = extractvalue { i32, i1 } [[UMUL_1]], 0
-; CHECK-NEXT:    [[OV_1:%.*]] = extractvalue { i32, i1 } [[UMUL_1]], 1
-; CHECK-NEXT:    call void @use.i32(i32 [[R_1]], i1 [[OV_1]])
-; CHECK-NEXT:    [[UMUL_2:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 1, i32 [[X]])
-; CHECK-NEXT:    [[R_2:%.*]] = extractvalue { i32, i1 } [[UMUL_2]], 0
-; CHECK-NEXT:    [[OV_2:%.*]] = extractvalue { i32, i1 } [[UMUL_2]], 1
-; CHECK-NEXT:    call void @use.i32(i32 [[R_2]], i1 [[OV_2]])
 ; CHECK-NEXT:    [[UMUL_3:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 2, i32 [[X]])
 ; CHECK-NEXT:    [[R_3:%.*]] = extractvalue { i32, i1 } [[UMUL_3]], 0
 ; CHECK-NEXT:    [[OV_3:%.*]] = extractvalue { i32, i1 } [[UMUL_3]], 1
