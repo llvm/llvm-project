@@ -30,6 +30,7 @@
 #include <__ranges/empty_view.h>
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/size.h>
+#include <__ranges/tuple_helpers.h>
 #include <__ranges/view_interface.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/make_unsigned.h>
@@ -57,15 +58,6 @@ concept __zip_is_common =
     (sizeof...(_Ranges) == 1 && (common_range<_Ranges> && ...)) ||
     (!(bidirectional_range<_Ranges> && ...) && (common_range<_Ranges> && ...)) ||
     ((random_access_range<_Ranges> && ...) && (sized_range<_Ranges> && ...));
-
-template <class _Fun, class _Tuple>
-_LIBCPP_HIDE_FROM_ABI constexpr auto __tuple_transform(_Fun&& __f, _Tuple&& __tuple) {
-  return std::apply(
-      [&]<class... _Types>(_Types&&... __elements) {
-        return tuple<invoke_result_t<_Fun&, _Types>...>(std::invoke(__f, std::forward<_Types>(__elements))...);
-      },
-      std::forward<_Tuple>(__tuple));
-}
 
 template <class _Fun, class _Tuple>
 _LIBCPP_HIDE_FROM_ABI constexpr void __tuple_for_each(_Fun&& __f, _Tuple&& __tuple) {

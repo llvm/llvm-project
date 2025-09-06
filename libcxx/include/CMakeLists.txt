@@ -699,6 +699,7 @@ set(files
   __ranges/as_rvalue_view.h
   __ranges/chunk_by_view.h
   __ranges/common_view.h
+  __ranges/concat_view.h
   __ranges/concepts.h
   __ranges/container_compatible_range.h
   __ranges/counted.h
@@ -735,6 +736,7 @@ set(files
   __ranges/take_while_view.h
   __ranges/to.h
   __ranges/transform_view.h
+  __ranges/tuple_helpers.h
   __ranges/view_interface.h
   __ranges/views.h
   __ranges/zip_transform_view.h
