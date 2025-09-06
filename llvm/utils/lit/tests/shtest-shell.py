@@ -1,17 +1,11 @@
 # Check the internal shell handling component of the ShTest format.
 
 # RUN: not %{lit} -v %{inputs}/shtest-shell > %t.out
-# FIXME: Temporarily dump test output so we can debug failing tests on
-# buildbots.
-# RUN: cat %t.out
 # RUN: FileCheck --input-file %t.out %s
 #
 # Test again in non-UTF shell to catch potential errors with python 2 seen
 # on stdout-encoding.txt
 # RUN: env PYTHONIOENCODING=ascii not %{lit} -a %{inputs}/shtest-shell > %t.ascii.out
-# FIXME: Temporarily dump test output so we can debug failing tests on
-# buildbots.
-# RUN: cat %t.ascii.out
 # RUN: FileCheck --input-file %t.ascii.out %s
 #
 # END.
