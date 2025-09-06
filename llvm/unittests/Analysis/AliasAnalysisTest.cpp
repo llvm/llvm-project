@@ -26,9 +26,9 @@ using namespace llvm;
 
 // Set up some test passes.
 namespace llvm {
-void initializeAATestPassPass(PassRegistry&);
-void initializeTestCustomAAWrapperPassPass(PassRegistry&);
-}
+void initializeAATestPassPass(PassRegistry &);
+void initializeTestCustomAAWrapperPassPass(PassRegistry &);
+} // namespace llvm
 
 namespace {
 struct AATestPass : FunctionPass {
@@ -61,7 +61,7 @@ struct AATestPass : FunctionPass {
     return false;
   }
 };
-}
+} // namespace
 
 char AATestPass::ID = 0;
 INITIALIZE_PASS_BEGIN(AATestPass, "aa-test-pas", "Alias Analysis Test Pass",
@@ -90,7 +90,7 @@ struct TestCustomAAResult : AAResultBase {
     return AliasResult::MayAlias;
   }
 };
-}
+} // namespace
 
 namespace {
 /// A wrapper pass for the legacy pass manager to use with the above custom AA
@@ -126,14 +126,14 @@ public:
   TestCustomAAResult &getResult() { return *Result; }
   const TestCustomAAResult &getResult() const { return *Result; }
 };
-}
+} // namespace
 
 char TestCustomAAWrapperPass::ID = 0;
 INITIALIZE_PASS_BEGIN(TestCustomAAWrapperPass, "test-custom-aa",
-                "Test Custom AA Wrapper Pass", false, true)
+                      "Test Custom AA Wrapper Pass", false, true)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(TestCustomAAWrapperPass, "test-custom-aa",
-                "Test Custom AA Wrapper Pass", false, true)
+                    "Test Custom AA Wrapper Pass", false, true)
 
 namespace {
 
@@ -246,7 +246,8 @@ TEST_F(AliasAnalysisTest, BatchAAPhiCycles) {
       %s2 = select i1 %c, i8* %a2, i8* %a1
       br label %loop
     }
-  )", Err, C);
+  )",
+                                                  Err, C);
 
   Function *F = M->getFunction("f");
   Instruction *Phi = getInstructionByName(*F, "phi");
@@ -291,7 +292,8 @@ TEST_F(AliasAnalysisTest, BatchAAPhiAssumption) {
       %b.next = getelementptr i8, i8* %b, i64 1
       br label %loop
     }
-  )", Err, C);
+  )",
+                                                  Err, C);
 
   Function *F = M->getFunction("f");
   Instruction *A = getInstructionByName(*F, "a");
@@ -425,4 +427,79 @@ TEST_F(AAPassInfraTest, injectExternalAA) {
   EXPECT_TRUE(IsCustomAAQueried);
 }
 
-} // end anonymous namspace
+// Test that a monotonic atomic load is treated as ModRef ONLY against a
+// MustAlias locations, and as Ref against a MayAlias location.
+TEST_F(AliasAnalysisTest, MonotonicAtomicLoadIsModRefOnlyForMustAlias) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(R"(
+    define void @atomic_load_modref_test(i8* %p1, i8* %p2) {
+    entry:
+      %val = load atomic i8, i8* %p1 monotonic, align 1
+      ret void
+    }
+  )",
+                                                  Err, C);
+
+  ASSERT_TRUE(M);
+
+  Function *F = M->getFunction("atomic_load_modref_test");
+  const Instruction *AtomicLoad = &F->getEntryBlock().front();
+  const Value *Ptr1 = F->getArg(0);
+  const Value *Ptr2 = F->getArg(1);
+
+  MemoryLocation Ptr1Loc = MemoryLocation(Ptr1, LocationSize::precise(1));
+  MemoryLocation Ptr2Loc = MemoryLocation(Ptr2, LocationSize::precise(1));
+
+  auto &AA = getAAResults(*F);
+
+  // 1. MustAlias Case: The atomic load on %p1 against a location on %p1.
+  //    This should trigger the new logic and return ModRef.
+  EXPECT_EQ(ModRefInfo::ModRef, AA.getModRefInfo(AtomicLoad, Ptr1Loc));
+
+  // 2. MayAlias Case: The atomic load on %p1 against a location on %p2.
+  //    This should NOT trigger the new logic and should fall back to returning
+  //    Ref.
+  EXPECT_EQ(ModRefInfo::Ref, AA.getModRefInfo(AtomicLoad, Ptr2Loc));
+}
+
+// Test that a monotonic atomic store is no longer considered "strong" and
+// falls through to the alias checking logic, while stroner orderings do not.
+TEST_F(AliasAnalysisTest, MonotonicAtomicStoreAliasBehavior) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(R"(
+    define void @atomic_store_test(i8* noalias %p1, i8* noalias %p2) {
+    entry:
+      store atomic i8 0, i8* %p1 monotonic, align 1
+      store atomic i8 0, i8* %p1 release, align 1
+      ret void
+    }
+  )",
+                                                  Err, C);
+
+  ASSERT_TRUE(M);
+
+  Function *F = M->getFunction("atomic_store_test");
+  auto It = F->getEntryBlock().begin();
+  const Instruction *MonotonicStore = &*It++;
+  const Instruction *ReleaseStore = &*It;
+
+  const Value *Ptr2 = F->getArg(1);
+  MemoryLocation Ptr2Loc = MemoryLocation(Ptr2, LocationSize::precise(1));
+
+  auto &AA = getAAResults(*F);
+
+  // 1. Test the Monotonic store.
+  // With the change, the Monotonic store should go through the
+  // isStrongerThan() check. Since %p1 and %p2 are noalias, the alias check
+  // should return NoAlias, resulting in NoModRef.
+  EXPECT_EQ(ModRefInfo::NoModRef, AA.getModRefInfo(MonotonicStore, Ptr2Loc));
+
+  // 2. Test the Relase (stronger) store.
+  // The release atomic store should be caught by the isStrongerThan() check.
+  // return ModRef without performing an alias check.
+  EXPECT_EQ(ModRefInfo::ModRef, AA.getModRefInfo(ReleaseStore, Ptr2Loc));
+}
+
+} // namespace
