@@ -610,3 +610,33 @@ define void @umul_fix_sat_poison(ptr %P) {
 
   ret void
 }
+
+declare void @use(i32, i1)
+
+define void @umul_extractvalue(ptr %P, i32 %x) {
+; CHECK-LABEL: @umul_extractvalue(
+; CHECK-NEXT:    call void @use(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    call void @use(i32 [[X]], i1 false)
+; CHECK-NEXT:    [[UMUL_3:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 2, i32 [[X]])
+; CHECK-NEXT:    [[R_3:%.*]] = extractvalue { i32, i1 } [[UMUL_3]], 0
+; CHECK-NEXT:    [[OV_3:%.*]] = extractvalue { i32, i1 } [[UMUL_3]], 1
+; CHECK-NEXT:    call void @use(i32 [[R_3]], i1 [[OV_3]])
+; CHECK-NEXT:    ret void
+;
+  %umul.1 = call {i32, i1} @llvm.umul.with.overflow(i32 %x, i32 1)
+  %r.1 = extractvalue {i32, i1} %umul.1, 0
+  %ov.1 = extractvalue {i32, i1} %umul.1, 1
+  call void @use(i32 %r.1, i1 %ov.1)
+
+  %umul.2 = call {i32, i1} @llvm.umul.with.overflow(i32 1, i32 %x)
+  %r.2 = extractvalue {i32, i1} %umul.2, 0
+  %ov.2 = extractvalue {i32, i1} %umul.2, 1
+  call void @use(i32 %r.2, i1 %ov.2)
+
+  %umul.3 = call {i32, i1} @llvm.umul.with.overflow(i32 2, i32 %x)
+  %r.3 = extractvalue {i32, i1} %umul.3, 0
+  %ov.3 = extractvalue {i32, i1} %umul.3, 1
+  call void @use(i32 %r.3, i1 %ov.3)
+
+  ret void
+}
