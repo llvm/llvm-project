@@ -93,6 +93,8 @@ let hasSideEffects = 1, isMeta = 1 in {
   def RequiresZASavePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
 }
 
+def SMEStateAllocPseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
+
 def CommitZASavePseudo
   : Pseudo<(outs),
            (ins GPR64:$tpidr2_el0, i1imm:$zero_za, i64imm:$commit_routine, variable_ops), []>,
@@ -107,6 +109,11 @@ def AArch64_requires_za_save
   : SDNode<"AArch64ISD::REQUIRES_ZA_SAVE", SDTypeProfile<0, 0,[]>,
            [SDNPHasChain, SDNPInGlue]>;
 def : Pat<(AArch64_requires_za_save), (RequiresZASavePseudo)>;
+
+def AArch64_sme_state_alloc
+  : SDNode<"AArch64ISD::SME_STATE_ALLOC", SDTypeProfile<0, 0,[]>,
+           [SDNPHasChain]>;
+def : Pat<(AArch64_sme_state_alloc), (SMEStateAllocPseudo)>;
 
 //===----------------------------------------------------------------------===//
 // Instruction naming conventions.
