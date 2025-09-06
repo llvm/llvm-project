@@ -844,7 +844,6 @@ static std::optional<OperandInfo> getOperandInfo(const MachineOperand &MO) {
   const MachineInstr &MI = *MO.getParent();
   const RISCVVPseudosTable::PseudoInfo *RVV =
       RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
-  MI.dump();
   assert(RVV && "Could not find MI in PseudoTable");
 
   std::optional<unsigned> Log2EEW = getOperandLog2EEW(MO);
