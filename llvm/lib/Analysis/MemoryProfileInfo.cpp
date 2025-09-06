@@ -122,10 +122,10 @@ bool llvm::memprof::hasSingleAllocType(uint8_t AllocTypes) {
 }
 
 void llvm::memprof::removeAnyExistingAmbiguousAttribute(CallBase *CB) {
-  if (CB->hasFnAttr("memprof")) {
-    assert(CB->getFnAttr("memprof").getValueAsString() == "ambiguous");
-    CB->removeFnAttr("memprof");
-  }
+  if (!CB->hasFnAttr("memprof"))
+    return;
+  assert(CB->getFnAttr("memprof").getValueAsString() == "ambiguous");
+  CB->removeFnAttr("memprof");
 }
 
 void llvm::memprof::addAmbiguousAttribute(CallBase *CB) {
