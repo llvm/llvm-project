@@ -1108,8 +1108,8 @@ ChildListIoStatementState<DIR>::ChildListIoStatementState(
 template <Direction DIR>
 bool ChildListIoStatementState<DIR>::AdvanceRecord(int n) {
 #if !defined(RT_DEVICE_AVOID_RECURSION)
-  // Allow child NAMELIST input to advance
-  if (DIR == Direction::Input && this->mutableModes().inNamelist) {
+  // Allow child list directed input to advance
+  if constexpr (DIR == Direction::Input) {
     return this->child().parent().AdvanceRecord(n);
   } else {
     return false;
