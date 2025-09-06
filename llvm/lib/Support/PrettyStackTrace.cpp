@@ -39,7 +39,7 @@ using namespace llvm;
 
 static const char *BugReportMsg =
     "PLEASE submit a bug report to " BUG_REPORT_URL
-    " and include the crash backtrace.\n";
+    " and include the crash backtrace and instructions to reproduce the bug.\n";
 
 // If backtrace support is not enabled, compile out support for pretty stack
 // traces.  This has the secondary effect of not requiring thread local storage
