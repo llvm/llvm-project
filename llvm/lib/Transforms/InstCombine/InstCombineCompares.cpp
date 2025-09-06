@@ -12,6 +12,7 @@
 
 #include "InstCombineInternal.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -21,6 +22,7 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Utils/Local.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/CmpPredicate.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -31,6 +33,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <bitset>
+#include <utility>
 
 using namespace llvm;
 using namespace PatternMatch;
@@ -7611,6 +7614,117 @@ Instruction *InstCombinerImpl::foldICmpCommutative(CmpPredicate Pred,
   return nullptr;
 }
 
+enum class SignType {
+  Positive,
+  NonPositive,
+  Negative,
+  NonNegative,
+};
+
+/// Check signess of a constant integer or vector of integers
+///
+/// \param C constant to check for signedness
+/// \param SignType the sign type to check against
+///
+/// \return whether constant is signess corresponds with the requesed requested
+/// sign
+static bool checkConstantSignType(const Constant *C, SignType Sign) {
+  auto CheckSign = [Sign](const APInt &Value) {
+    switch (Sign) {
+    case SignType::Positive:
+      return Value.isStrictlyPositive();
+    case SignType::NonPositive:
+      return Value.isNonPositive();
+    case SignType::Negative:
+      return Value.isNegative();
+    case SignType::NonNegative:
+      return Value.isNonNegative();
+    default:
+      llvm_unreachable("Unknown sign type");
+    }
+  };
+
+  return match(C, m_CheckedInt(CheckSign));
+}
+
+/// Cast integral constant (either scalar or vector) to an appropriate vector
+/// one
+///
+/// \param C integral contsant to cast
+/// \param FPType floating point type to cast to
+/// \param Addend addend to add before casting
+/// \param DL target data layout
+///
+/// \return result constant
+static Constant *castIntegralConstantToFloat(Constant *C, Type *FPType,
+                                             int Addend, const DataLayout &DL) {
+  if (!FPType->isFPOrFPVectorTy())
+    return nullptr;
+
+  Constant *CWithAddend{ConstantFoldBinaryOpOperands(
+      Instruction::Add, C, ConstantInt::getSigned(C->getType(), Addend), DL)};
+  return ConstantFoldCastOperand(Instruction::SIToFP, CWithAddend, FPType, DL);
+}
+
+/// Fold icmp (fptosi %arg) C -> fcmp $arg
+/// Folds:
+///  - icmp sgt %arg <negative> -> fcmp ogt %arg <negative>
+///  - icmp sgt %arg <non-negative> -> fcmp oge %arg (<non-negative> + 1)
+///  - icmp slt %arg <positive> -> fcmp olt %arg <positive>
+///  - icmp slt %arg <non-positive> -> fcmp ole %arg (<non-positive> - 1)
+///
+/// \param ICmp icmp instruction
+/// \param IC InstCombiner isntance
+/// \param DL target data layout
+///
+/// \return folded instruction or nullptr, if failed to combine instructions
+static Instruction *foldICmpFToSIToFCmp(ICmpInst &ICmp, InstCombiner &IC,
+                                        const DataLayout &DL) {
+  // Expect that canonical form: first argument is fptosi, second is constant
+  CmpPredicate Pred;
+  Value *FloatOp;
+  Constant *C;
+  if (!match(&ICmp, m_ICmp(Pred, m_FPToSI(m_Value(FloatOp)), m_ImmConstant(C))))
+    return nullptr;
+
+  if (Pred != ICmpInst::ICMP_SGT && Pred != ICmpInst::ICMP_SLT)
+    return nullptr;
+  
+  FCmpInst::Predicate FCmpPredicate;
+  Constant *FCmpConstant{};
+
+  switch (ICmp.getPredicate()) {
+  case ICmpInst::ICMP_SGT:
+    if (checkConstantSignType(C, SignType::Negative)) {
+      // icmp sgt %arg <negative> -> fcmp ogt %arg <negative>
+      FCmpPredicate = FCmpInst::FCMP_OGT;
+      FCmpConstant = castIntegralConstantToFloat(C, FloatOp->getType(), 0, DL);
+    } else if (checkConstantSignType(C, SignType::NonNegative)) {
+      // icmp sgt %arg <non-negative> -> fcmp oge %arg (<non-negative> + 1)
+      FCmpPredicate = FCmpInst::FCMP_OGE;
+      FCmpConstant = castIntegralConstantToFloat(C, FloatOp->getType(), 1, DL);
+    }
+    break;
+  case ICmpInst::ICMP_SLT:
+    if (checkConstantSignType(C, SignType::Positive)) {
+      // icmp slt %arg <positive> -> fcmp olt %arg <positive>
+      FCmpPredicate = FCmpInst::FCMP_OLE;
+      FCmpConstant = castIntegralConstantToFloat(C, FloatOp->getType(), 0, DL);
+    } else if (checkConstantSignType(C, SignType::NonPositive)) {
+      // icmp slt %arg <non-positive> -> fcmp ole %arg (<non-positive> - 1)
+      FCmpPredicate = FCmpInst::FCMP_OLT;
+      FCmpConstant = castIntegralConstantToFloat(C, FloatOp->getType(), -1, DL);
+    }
+    break;
+  default:
+    llvm_unreachable("Unknown icmp comparator");
+  }
+  if (!FCmpConstant)
+    return nullptr;
+
+  return new FCmpInst(FCmpPredicate, FloatOp, FCmpConstant);
+}
+
 Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   bool Changed = false;
   const SimplifyQuery Q = SQ.getWithInstruction(&I);
@@ -7747,6 +7861,8 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     return Res;
   if (Instruction *Res =
           foldICmpCommutative(I.getSwappedCmpPredicate(), Op1, Op0, I))
+    return Res;
+  if (Instruction *Res = foldICmpFToSIToFCmp(I, *this, DL))
     return Res;
 
   if (I.isCommutative()) {
