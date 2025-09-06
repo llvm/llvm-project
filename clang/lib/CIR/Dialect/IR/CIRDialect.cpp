@@ -2731,6 +2731,20 @@ mlir::LogicalResult cir::ThrowOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// AtomicCmpXchg
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::AtomicCmpXchg::verify() {
+  auto pointeeType = getPtr().getType().getPointee();
+
+  if (pointeeType != getExpected().getType() or
+      pointeeType != getDesired().getType())
+    return emitOpError("ptr, expected and desired types must match");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
