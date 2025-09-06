@@ -110,7 +110,7 @@ Expected<bool> isThinArchive(const StringRef ArchivePath) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> MemBufferOrError =
       MemoryBuffer::getFileSlice(ArchivePath, THIN_ARCHIVE_MAGIC.size(), 0);
 
-  if (EC = MemBufferOrError.getError())
+  if ((EC = MemBufferOrError.getError()))
     return createStringError(inconvertibleErrorCode(),
                              "Failed to read from archive %s: %s",
                              ArchivePath.data(), EC.message().c_str());
