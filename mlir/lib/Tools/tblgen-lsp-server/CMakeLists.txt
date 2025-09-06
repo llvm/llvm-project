@@ -17,4 +17,5 @@ llvm_add_library(TableGenLspServerLib
   LINK_LIBS PUBLIC
   MLIRLspServerSupportLib
   MLIRSupport
+  LLVMSupportLSP
   )

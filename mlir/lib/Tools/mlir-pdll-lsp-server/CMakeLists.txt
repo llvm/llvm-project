@@ -11,4 +11,5 @@ llvm_add_library(MLIRPdllLspServerLib
   MLIRPDLLCodeGen
   MLIRPDLLParser
   MLIRLspServerSupportLib
+  LLVMSupportLSP
   )
