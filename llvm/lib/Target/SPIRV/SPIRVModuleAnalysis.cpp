@@ -1261,12 +1261,35 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::Int8);
     break;
   }
+  case SPIRV::OpDot: {
+    const MachineFunction *MF = MI.getMF();
+    SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
+    SPIRVGlobalRegistry::FPVariant FPV =
+        GR->getFPVariantForVReg(MI.getOperand(1).getReg(), MF);
+    if (FPV == SPIRVGlobalRegistry::FPVariant::BRAIN_FLOAT) {
+      Reqs.addCapability(SPIRV::Capability::BFloat16DotProductKHR);
+    }
+    break;
+  }
   case SPIRV::OpTypeFloat: {
     unsigned BitWidth = MI.getOperand(1).getImm();
     if (BitWidth == 64)
       Reqs.addCapability(SPIRV::Capability::Float64);
-    else if (BitWidth == 16)
+    else if (BitWidth == 16) {
+      SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
+      const MachineFunction *MF = MI.getMF();
+      SPIRVGlobalRegistry::FPVariant FPV =
+          GR->getFPVariantForVReg(MI.getOperand(0).getReg(), MF);
+      if (FPV == SPIRVGlobalRegistry::FPVariant::BRAIN_FLOAT) {
+        if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_bfloat16))
+          report_fatal_error("OpTypeFloat type with bfloat requires the "
+                             "following SPIR-V extension: SPV_KHR_bfloat16",
+                             false);
+        Reqs.addExtension(SPIRV::Extension::SPV_KHR_bfloat16);
+        Reqs.addCapability(SPIRV::Capability::BFloat16TypeKHR);
+      }
       Reqs.addCapability(SPIRV::Capability::Float16);
+    }
     break;
   }
   case SPIRV::OpTypeVector: {
@@ -1593,15 +1616,24 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::AsmINTEL);
     }
     break;
-  case SPIRV::OpTypeCooperativeMatrixKHR:
+  case SPIRV::OpTypeCooperativeMatrixKHR: {
     if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_cooperative_matrix))
       report_fatal_error(
           "OpTypeCooperativeMatrixKHR type requires the "
           "following SPIR-V extension: SPV_KHR_cooperative_matrix",
           false);
     Reqs.addExtension(SPIRV::Extension::SPV_KHR_cooperative_matrix);
-    Reqs.addCapability(SPIRV::Capability::CooperativeMatrixKHR);
+    const MachineFunction *MF = MI.getMF();
+    SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
+    SPIRVGlobalRegistry::FPVariant FPV =
+        GR->getFPVariantForVReg(MI.getOperand(1).getReg(), MF);
+    if (FPV == SPIRVGlobalRegistry::FPVariant::BRAIN_FLOAT) {
+      Reqs.addCapability(SPIRV::Capability::BFloat16CooperativeMatrixKHR);
+    } else {
+      Reqs.addCapability(SPIRV::Capability::CooperativeMatrixKHR);
+    }
     break;
+  }
   case SPIRV::OpArithmeticFenceEXT:
     if (!ST.canUseExtension(SPIRV::Extension::SPV_EXT_arithmetic_fence))
       report_fatal_error("OpArithmeticFenceEXT requires the "
