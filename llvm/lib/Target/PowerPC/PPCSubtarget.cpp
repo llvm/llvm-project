@@ -55,10 +55,8 @@ PPCSubtarget &PPCSubtarget::initializeSubtargetDependencies(StringRef CPU,
 PPCSubtarget::PPCSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &TuneCPU, const std::string &FS,
                            const PPCTargetMachine &TM)
-    : PPCGenSubtargetInfo(TT, CPU, TuneCPU, FS), TargetTriple(TT),
-      IsPPC64(TargetTriple.getArch() == Triple::ppc64 ||
-              TargetTriple.getArch() == Triple::ppc64le),
-      TM(TM), FrameLowering(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
+    : PPCGenSubtargetInfo(TT, CPU, TuneCPU, FS), TargetTriple(TT), TM(TM),
+      FrameLowering(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
       InstrInfo(*this), TLInfo(TM, *this) {
   TSInfo = std::make_unique<PPCSelectionDAGInfo>();
 
@@ -248,7 +246,6 @@ CodeModel::Model PPCSubtarget::getCodeModel(const TargetMachine &TM,
 }
 
 bool PPCSubtarget::isELFv2ABI() const { return TM.isELFv2ABI(); }
-bool PPCSubtarget::isPPC64() const { return TM.isPPC64(); }
 
 bool PPCSubtarget::isUsingPCRelativeCalls() const {
   return isPPC64() && hasPCRelativeMemops() && isELFv2ABI() &&
