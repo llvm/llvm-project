@@ -50,7 +50,7 @@ namespace clang::clangd {
 namespace {
 
 MATCHER_P(moduleName, Name, "") { return arg.getName() == Name; }
-MATCHER_P(tweakID, ID, "") { return arg->id() == ID; }
+MATCHER_P(tweakID, ID, "") { return arg->id() == llvm::StringRef(ID); }
 
 TEST(FeatureModulesRegistryTest, DummyModule) {
   EXPECT_THAT(FeatureModuleRegistry::entries(),
