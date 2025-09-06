@@ -1,7 +1,7 @@
 .. title:: clang-tidy - bugprone-unchecked-string-to-number-conversion
 
 bugprone-unchecked-string-to-number-conversion
-=========================================
+==============================================
 
 This check flags calls to string-to-number conversion functions that do not
 verify the validity of the conversion, such as ``atoi()`` or ``scanf()``. It
