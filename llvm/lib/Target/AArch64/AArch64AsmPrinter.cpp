@@ -168,13 +168,14 @@ public:
   // Check authenticated LR before tail calling.
   void emitPtrauthTailCallHardening(const MachineInstr *TC);
 
-  // Emit the sequence for AUT or AUTPAC.
+  // Emit the sequence for AUT or AUTPAC. Addend if AUTRELLOADPAC
   void emitPtrauthAuthResign(Register AUTVal, AArch64PACKey::ID AUTKey,
                              uint64_t AUTDisc,
                              const MachineOperand *AUTAddrDisc,
                              Register Scratch,
                              std::optional<AArch64PACKey::ID> PACKey,
-                             uint64_t PACDisc, Register PACAddrDisc);
+                             uint64_t PACDisc, Register PACAddrDisc,
+                             std::optional<uint64_t> Addend);
 
   // Emit the sequence for PAC.
   void emitPtrauthSign(const MachineInstr *MI);
@@ -2078,9 +2079,9 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
     Register AUTVal, AArch64PACKey::ID AUTKey, uint64_t AUTDisc,
     const MachineOperand *AUTAddrDisc, Register Scratch,
     std::optional<AArch64PACKey::ID> PACKey, uint64_t PACDisc,
-    Register PACAddrDisc) {
+    Register PACAddrDisc, std::optional<uint64_t> OptAddend) {
   const bool IsAUTPAC = PACKey.has_value();
-
+  const bool HasLoad = OptAddend.has_value();
   // We expand AUT/AUTPAC into a sequence of the form
   //
   //      ; authenticate x16
@@ -2151,12 +2152,76 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
   }
 
   // We already emitted unchecked and checked-but-non-trapping AUTs.
-  // That left us with trapping AUTs, and AUTPACs.
+  // That left us with trapping AUTs, and AUTPA/AUTRELLOADPACs.
   // Trapping AUTs don't need PAC: we're done.
   if (!IsAUTPAC)
     return;
 
-  // Compute pac discriminator
+  if (HasLoad) {
+    int64_t Addend = *OptAddend;
+    // incoming rawpointer in X16, X17 is not live at this point.
+    //   LDSRWpre x17, x16, simm9  ; note: x16+simm9 used later.
+    if (isInt<9>(Addend)) {
+      EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::LDRSWpre)
+                                       .addReg(AArch64::X16)
+                                       .addReg(AArch64::X17)
+                                       .addReg(AArch64::X16)
+                                       .addImm(/*simm9:*/ Addend));
+    } else {
+      //   x16 = x16 + Addend computation has 2 variants
+      if (isUInt<24>(Addend)) {
+        // variant 1: add x16, x16, Addend >> shift12 ls shift12
+        // This can take upto 2 instructions.
+        for (int BitPos = 0; BitPos != 24 && (Addend >> BitPos); BitPos += 12) {
+          EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::ADDXri)
+                                           .addReg(AArch64::X16)
+                                           .addReg(AArch64::X16)
+                                           .addImm((Addend >> BitPos) & 0xfff)
+                                           .addImm(AArch64_AM::getShifterImm(
+                                               AArch64_AM::LSL, BitPos)));
+        }
+      } else {
+        // variant 2: accumulate constant in X17 16 bits at a time, and add to
+        // X16 This can take 2-5 instructions.
+        EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::MOVZXi)
+                                         .addReg(AArch64::X17)
+                                         .addImm(Addend & 0xffff)
+                                         .addImm(AArch64_AM::getShifterImm(
+                                             AArch64_AM::LSL, 0)));
+
+        for (int Offset = 16; Offset < 64; Offset += 16) {
+          uint16_t Fragment = static_cast<uint16_t>(Addend >> Offset);
+          if (!Fragment)
+            continue;
+          EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::MOVKXi)
+                                           .addReg(AArch64::X17)
+                                           .addReg(AArch64::X17)
+                                           .addImm(Fragment)
+                                           .addImm(/*shift:*/ Offset));
+        }
+        // addx x16, x16, x17
+        EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::ADDXrs)
+                                         .addReg(AArch64::X16)
+                                         .addReg(AArch64::X16)
+                                         .addReg(AArch64::X17)
+                                         .addImm(0));
+      }
+      // ldrsw x17,x16(0)
+      EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::LDRSWui)
+                                       .addReg(AArch64::X17)
+                                       .addReg(AArch64::X16)
+                                       .addImm(0));
+    }
+    // addx x16, x16, x17
+    EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::ADDXrs)
+                                     .addReg(AArch64::X16)
+                                     .addReg(AArch64::X16)
+                                     .addReg(AArch64::X17)
+                                     .addImm(0));
+
+  } /* HasLoad == true */
+
+  // Compute pac discriminator into x17
   assert(isUInt<16>(PACDisc));
   Register PACDiscReg =
       emitPtrauthDiscriminator(PACDisc, PACAddrDisc, Scratch);
@@ -2917,22 +2982,31 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     emitPtrauthAuthResign(AArch64::X16,
                           (AArch64PACKey::ID)MI->getOperand(0).getImm(),
                           MI->getOperand(1).getImm(), &MI->getOperand(2),
-                          AArch64::X17, std::nullopt, 0, 0);
+                          AArch64::X17, std::nullopt, 0, 0, std::nullopt);
     return;
 
   case AArch64::AUTxMxN:
     emitPtrauthAuthResign(MI->getOperand(0).getReg(),
                           (AArch64PACKey::ID)MI->getOperand(3).getImm(),
                           MI->getOperand(4).getImm(), &MI->getOperand(5),
-                          MI->getOperand(1).getReg(), std::nullopt, 0, 0);
+                          MI->getOperand(1).getReg(), std::nullopt, 0, 0,
+                          std::nullopt);
     return;
 
+  case AArch64::AUTRELLOADPAC:
+    emitPtrauthAuthResign(
+        AArch64::X16, (AArch64PACKey::ID)MI->getOperand(0).getImm(),
+        MI->getOperand(1).getImm(), &MI->getOperand(2), AArch64::X17,
+        (AArch64PACKey::ID)MI->getOperand(3).getImm(),
+        MI->getOperand(4).getImm(), MI->getOperand(5).getReg(),
+        MI->getOperand(6).getImm());
+    return;
   case AArch64::AUTPAC:
     emitPtrauthAuthResign(
         AArch64::X16, (AArch64PACKey::ID)MI->getOperand(0).getImm(),
         MI->getOperand(1).getImm(), &MI->getOperand(2), AArch64::X17,
         (AArch64PACKey::ID)MI->getOperand(3).getImm(),
-        MI->getOperand(4).getImm(), MI->getOperand(5).getReg());
+        MI->getOperand(4).getImm(), MI->getOperand(5).getReg(), std::nullopt);
     return;
 
   case AArch64::PAC:
