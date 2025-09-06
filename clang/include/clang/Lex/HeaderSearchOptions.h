@@ -35,8 +35,18 @@ enum IncludeDirGroup {
   /// Paths for '\#include <>' added by '-I'.
   Angled,
 
+  /// Like Angled, but marks the directory as an external directory prefix.
+  /// This group is intended to match the semantics of the MSVC /external:I
+  /// option.
+  External,
+
   /// Like Angled, but marks system directories.
   System,
+
+  /// Like System, but marks the directory as an external directory prefix.
+  /// This group is intended to match the semantics of the MSVC
+  /// /external:env option.
+  ExternalSystem,
 
   /// Like System, but headers are implicitly wrapped in extern "C".
   ExternCSystem,
@@ -58,6 +68,11 @@ enum IncludeDirGroup {
 };
 
 } // namespace frontend
+
+/// HeaderSearchMode - The method used to resolve included headers to files.
+/// This controls the order in which include paths are searched and how
+/// duplicate search paths are handled.
+enum class HeaderSearchMode { GCC, Microsoft };
 
 /// HeaderSearchOptions - Helper class for storing options related to the
 /// initialization of the HeaderSearch object.
@@ -92,6 +107,9 @@ public:
     SystemHeaderPrefix(StringRef Prefix, bool IsSystemHeader)
         : Prefix(Prefix), IsSystemHeader(IsSystemHeader) {}
   };
+
+  /// The header search mode to use.
+  HeaderSearchMode Mode = HeaderSearchMode::GCC;
 
   /// If non-empty, the directory to use as a "virtual system root" for include
   /// paths.
@@ -207,6 +225,11 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned Verbose : 1;
 
+  /// Whether header files specified in angle brackets should be treated as
+  /// system headers.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned AngleBracketsImpliesSystemHeader : 1;
+
   /// If true, skip verifying input files used by modules if the
   /// module was already verified during this build session (see
   /// \c BuildSessionTimestamp).
@@ -289,6 +312,7 @@ public:
         ModuleFileHomeIsCwd(false), EnablePrebuiltImplicitModules(false),
         UseBuiltinIncludes(true), UseStandardSystemIncludes(true),
         UseStandardCXXIncludes(true), UseLibcxx(false), Verbose(false),
+        AngleBracketsImpliesSystemHeader(false),
         ModulesValidateOncePerBuildSession(false),
         ModulesValidateSystemHeaders(false),
         ModulesForceValidateUserHeaders(true),
