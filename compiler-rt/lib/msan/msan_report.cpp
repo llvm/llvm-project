@@ -90,6 +90,11 @@ static void DescribeOrigin(u32 id) {
         Printf("  %sVirtual table ptr was destroyed%s\n", d.Origin(),
                d.Default());
         break;
+      case STACK_TRACE_TAG_ALLOC_PADDING:
+        Printf(
+            "  %sUninitialized value was created by heap allocator padding%s\n",
+            d.Origin(), d.Default());
+        break;
       default:
         Printf("  %sUninitialized value was created%s\n", d.Origin(),
                d.Default());

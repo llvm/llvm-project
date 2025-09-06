@@ -1,4 +1,7 @@
-// RUN: %clang_msan -Wno-alloc-size -fsanitize-recover=memory %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clang_msan -Wno-alloc-size -fsanitize-recover=memory %s -o %t && not %run %t 2>&1 \
+// RUN:     | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_msan -Wno-alloc-size -fsanitize-recover=memory -fsanitize-memory-track-origins=2 %s -o %t && not %run %t 2>&1 \
+// RUN:     | FileCheck %s --check-prefixes=CHECK,ORIGINS
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,6 +13,7 @@ int main(int argc, char **argv) {
     printf("Content of p1 is: %d\n", *p1);
     // CHECK: WARNING: MemorySanitizer: use-of-uninitialized-value
     // CHECK: {{#0 0x.* in main .*zero_alloc.cpp:}}[[@LINE-2]]
+    // ORIGINS: Uninitialized value was created by heap allocator padding
     free(p1);
   }
 
@@ -19,6 +23,7 @@ int main(int argc, char **argv) {
     printf("Content of p2 is: %d\n", *p2);
     // CHECK: WARNING: MemorySanitizer: use-of-uninitialized-value
     // CHECK: {{#0 0x.* in main .*zero_alloc.cpp:}}[[@LINE-2]]
+    // ORIGINS: Uninitialized value was created by heap allocator padding
     free(p2);
   }
 
@@ -28,6 +33,7 @@ int main(int argc, char **argv) {
     printf("Content of p2 is: %d\n", *p3);
     // CHECK: WARNING: MemorySanitizer: use-of-uninitialized-value
     // CHECK: {{#0 0x.* in main .*zero_alloc.cpp:}}[[@LINE-2]]
+    // ORIGINS: Uninitialized value was created by heap allocator padding
     free(p3);
   }
 
