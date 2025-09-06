@@ -15,7 +15,7 @@
 namespace clang {
 namespace clangd {
 
-TEST(SymbolDocumentation, UnhandledDocs) {
+TEST(SymbolDocumentation, DocToMarkup) {
 
   CommentOptions CommentOpts;
 
@@ -63,15 +63,15 @@ TEST(SymbolDocumentation, UnhandledDocs) {
       },
       {
           "foo \\ref bar baz",
-          "foo \\*\\*\\\\ref\\*\\* \\*bar\\* baz",
-          "foo **\\ref** *bar* baz",
-          "foo **\\ref** *bar* baz",
+          "foo \\*\\*\\\\ref\\*\\* `bar` baz",
+          "foo **\\ref** `bar` baz",
+          "foo **\\ref** bar baz",
       },
       {
           "foo @ref bar baz",
-          "foo \\*\\*@ref\\*\\* \\*bar\\* baz",
-          "foo **@ref** *bar* baz",
-          "foo **@ref** *bar* baz",
+          "foo \\*\\*@ref\\*\\* `bar` baz",
+          "foo **@ref** `bar` baz",
+          "foo **@ref** bar baz",
       },
       {
           "\\brief this is a \\n\nbrief description",
@@ -81,9 +81,9 @@ TEST(SymbolDocumentation, UnhandledDocs) {
       },
       {
           "\\throw exception foo",
-          "\\*\\*\\\\throw\\*\\* \\*exception\\* foo",
-          "**\\throw** *exception* foo",
-          "**\\throw** *exception* foo",
+          "\\*\\*\\\\throw\\*\\* `exception` foo",
+          "**\\throw** `exception` foo",
+          "**\\throw** exception foo",
       },
       {
           R"(\brief this is a brief description
@@ -198,12 +198,118 @@ normal text\<i>this is an italic text\</i>
           "<b>this is a bold text</b> normal text<i>this is an italic text</i> "
           "<code>this is a code block</code>",
       },
+      {"@note This is a note",
+       R"(\*\*Note:\*\*  
+This is a note)",
+       R"(**Note:**  
+This is a note)",
+       R"(**Note:**
+This is a note)"},
+      {R"(Paragraph 1
+@note This is a note
+
+Paragraph 2)",
+       R"(Paragraph 1
+
+---
+\*\*Note:\*\*  
+This is a note
+
+---
+Paragraph 2)",
+       R"(Paragraph 1
+
+---
+**Note:**  
+This is a note
+
+---
+Paragraph 2)",
+       R"(Paragraph 1
+
+**Note:**
+This is a note
+
+Paragraph 2)"},
+      {"@warning This is a warning",
+       R"(\*\*Warning:\*\*  
+This is a warning)",
+       R"(**Warning:**  
+This is a warning)",
+       R"(**Warning:**
+This is a warning)"},
+      {R"(Paragraph 1
+@warning This is a warning
+
+Paragraph 2)",
+       R"(Paragraph 1
+
+---
+\*\*Warning:\*\*  
+This is a warning
+
+---
+Paragraph 2)",
+       R"(Paragraph 1
+
+---
+**Warning:**  
+This is a warning
+
+---
+Paragraph 2)",
+       R"(Paragraph 1
+
+**Warning:**
+This is a warning
+
+Paragraph 2)"},
   };
   for (const auto &C : Cases) {
     markup::Document Doc;
     SymbolDocCommentVisitor SymbolDoc(C.Documentation, CommentOpts);
 
     SymbolDoc.docToMarkup(Doc);
+
+    EXPECT_EQ(Doc.asPlainText(), C.ExpectedRenderPlainText);
+    EXPECT_EQ(Doc.asMarkdown(), C.ExpectedRenderMarkdown);
+    EXPECT_EQ(Doc.asEscapedMarkdown(), C.ExpectedRenderEscapedMarkdown);
+  }
+}
+
+TEST(SymbolDocumentation, RetvalCommand) {
+
+  CommentOptions CommentOpts;
+
+  struct Case {
+    llvm::StringRef Documentation;
+    llvm::StringRef ExpectedRenderEscapedMarkdown;
+    llvm::StringRef ExpectedRenderMarkdown;
+    llvm::StringRef ExpectedRenderPlainText;
+  } Cases[] = {
+      {"@retval", "", "", ""},
+      {R"(@retval MyReturnVal
+@retval MyOtherReturnVal)",
+       R"(- `MyReturnVal`
+- `MyOtherReturnVal`)",
+       R"(- `MyReturnVal`
+- `MyOtherReturnVal`)",
+       R"(- MyReturnVal
+- MyOtherReturnVal)"},
+      {R"(@retval MyReturnVal if foo
+@retval MyOtherReturnVal if bar)",
+       R"(- `MyReturnVal` - if foo
+- `MyOtherReturnVal` - if bar)",
+       R"(- `MyReturnVal` - if foo
+- `MyOtherReturnVal` - if bar)",
+       R"(- MyReturnVal - if foo
+- MyOtherReturnVal - if bar)"},
+  };
+  for (const auto &C : Cases) {
+    markup::Document Doc;
+    SymbolDocCommentVisitor SymbolDoc(C.Documentation, CommentOpts);
+
+    SymbolDoc.retvalsToMarkup(Doc);
 
     EXPECT_EQ(Doc.asPlainText(), C.ExpectedRenderPlainText);
     EXPECT_EQ(Doc.asMarkdown(), C.ExpectedRenderMarkdown);

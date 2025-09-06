@@ -1589,12 +1589,10 @@ markup::Document HoverInfo::presentDoxygen() const {
       P.appendText(" - ");
       SymbolDoc.returnToMarkup(P);
     }
+
+    SymbolDoc.retvalsToMarkup(Output);
     Output.addRuler();
   }
-
-  // add specially handled doxygen commands.
-  SymbolDoc.warningsToMarkup(Output);
-  SymbolDoc.notesToMarkup(Output);
 
   // add any other documentation.
   SymbolDoc.docToMarkup(Output);

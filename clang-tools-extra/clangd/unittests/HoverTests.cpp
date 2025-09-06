@@ -4045,9 +4045,19 @@ brief doc
 longer doc)"},
       {[](HoverInfo &HI) {
          HI.Kind = index::SymbolKind::Function;
-         HI.Documentation = "@brief brief doc\n\n"
-                            "longer doc\n@param a this is a param\n@return it "
-                            "returns something";
+         HI.Documentation = R"(@brief brief doc
+
+longer doc
+@note this is a note
+
+As you see, notes are "inlined".
+@warning this is a warning
+
+As well as warnings
+@param a this is a param
+@return it returns something
+@retval 0 if successful
+@retval 1 if failed)";
          HI.Definition = "int foo(int a)";
          HI.ReturnType = "int";
          HI.Name = "foo";
@@ -4068,8 +4078,16 @@ Parameters:
 @brief brief doc
 
 longer doc
+@note this is a note
+
+As you see, notes are "inlined".
+@warning this is a warning
+
+As well as warnings
 @param a this is a param
 @return it returns something
+@retval 0 if successful
+@retval 1 if failed
 
 ---
 ```cpp
@@ -4095,8 +4113,25 @@ brief doc
 
 `int` - it returns something
 
+- `0` - if successful
+- `1` - if failed
+
 ---
-longer doc)"},
+longer doc
+
+---
+**Note:**  
+this is a note
+
+---
+As you see, notes are "inlined".
+
+---
+**Warning:**  
+this is a warning
+
+---
+As well as warnings)"},
       {[](HoverInfo &HI) {
          HI.Kind = index::SymbolKind::Function;
          HI.Documentation = "@brief brief doc\n\n"

@@ -34,10 +34,20 @@ void commandToMarkup(markup::Paragraph &Out, StringRef Command,
                      StringRef Args) {
   Out.appendBoldText(commandMarkerAsString(CommandMarker) + Command.str());
   Out.appendSpace();
-  if (!Args.empty()) {
-    Out.appendEmphasizedText(Args.str());
-  }
+  if (!Args.empty())
+    Out.appendCode(Args.str());
 }
+
+template <typename T> std::string getArgText(const T *Command) {
+  std::string ArgText;
+  for (unsigned I = 0; I < Command->getNumArgs(); ++I) {
+    if (!ArgText.empty())
+      ArgText += " ";
+    ArgText += Command->getArgText(I);
+  }
+  return ArgText;
+}
+
 } // namespace
 
 class ParagraphToMarkupDocument
@@ -70,12 +80,7 @@ public:
   void visitInlineCommandComment(const comments::InlineCommandComment *C) {
 
     if (C->getNumArgs() > 0) {
-      std::string ArgText;
-      for (unsigned I = 0; I < C->getNumArgs(); ++I) {
-        if (!ArgText.empty())
-          ArgText += " ";
-        ArgText += C->getArgText(I);
-      }
+      std::string ArgText = getArgText(C);
 
       switch (C->getRenderKind()) {
       case comments::InlineCommandRenderKind::Monospaced:
@@ -158,10 +163,9 @@ public:
   void visitInlineCommandComment(const comments::InlineCommandComment *C) {
     Out << commandMarkerAsString(C->getCommandMarker());
     Out << C->getCommandName(Traits);
-    if (C->getNumArgs() > 0) {
-      for (unsigned I = 0; I < C->getNumArgs(); ++I)
-        Out << " " << C->getArgText(I);
-    }
+    std::string ArgText = getArgText(C);
+    if (!ArgText.empty())
+      Out << " " << ArgText;
     Out << " ";
   }
 
@@ -210,16 +214,27 @@ public:
                                 Traits)
           .visit(B->getParagraph());
       break;
+    case comments::CommandTraits::KCI_note:
+    case comments::CommandTraits::KCI_warning:
+      commandToHeadedParagraph(B);
+      break;
+    case comments::CommandTraits::KCI_retval: {
+      // The \retval command describes the return value given as its single
+      // argument in the corresponding paragraph.
+      // Note: We know that we have exactly one argument but not if it has an
+      // associated paragraph.
+      auto &P = Out.addParagraph().appendCode(getArgText(B));
+      if (B->getParagraph() && !B->getParagraph()->isWhitespace()) {
+        P.appendText(" - ");
+        ParagraphToMarkupDocument(P, Traits).visit(B->getParagraph());
+      }
+      return;
+    }
     default: {
       // Some commands have arguments, like \throws.
       // The arguments are not part of the paragraph.
       // We need reconstruct them here.
-      std::string ArgText;
-      for (unsigned I = 0; I < B->getNumArgs(); ++I) {
-        if (!ArgText.empty())
-          ArgText += " ";
-        ArgText += B->getArgText(I);
-      }
+      std::string ArgText = getArgText(B);
       auto &P = Out.addParagraph();
       commandToMarkup(P, B->getCommandName(Traits), B->getCommandMarker(),
                       ArgText);
@@ -262,6 +277,19 @@ private:
   markup::Document &Out;
   const comments::CommandTraits &Traits;
   StringRef CommentEscapeMarker;
+
+  /// Emphasize the given command in a paragraph.
+  /// Uses the command name with the first letter capitalized as the heading.
+  void commandToHeadedParagraph(const comments::BlockCommandComment *B) {
+    Out.addRuler();
+    auto &P = Out.addParagraph();
+    std::string Heading = B->getCommandName(Traits).slice(0, 1).upper() +
+                          B->getCommandName(Traits).drop_front().str();
+    P.appendBoldText(Heading + ":");
+    P.appendText("  \n");
+    ParagraphToMarkupDocument(P, Traits).visit(B->getParagraph());
+    Out.addRuler();
+  }
 };
 
 void SymbolDocCommentVisitor::visitBlockCommandComment(
@@ -282,34 +310,20 @@ void SymbolDocCommentVisitor::visitBlockCommandComment(
     }
     break;
   case comments::CommandTraits::KCI_retval:
-    RetvalParagraphs.push_back(B->getParagraph());
-    return;
-  case comments::CommandTraits::KCI_warning:
-    WarningParagraphs.push_back(B->getParagraph());
-    return;
-  case comments::CommandTraits::KCI_note:
-    NoteParagraphs.push_back(B->getParagraph());
+    // Only consider retval commands having an argument.
+    // The argument contains the described return value which is needed to
+    // convert it to markup.
+    if (B->getNumArgs() == 1)
+      RetvalCommands.push_back(B);
     return;
   default:
     break;
   }
 
-  // For all other commands, we store them in the UnhandledCommands map.
+  // For all other commands, we store them in the BlockCommands map.
   // This allows us to keep the order of the comments.
-  UnhandledCommands[CommentPartIndex] = B;
+  BlockCommands[CommentPartIndex] = B;
   CommentPartIndex++;
-}
-
-void SymbolDocCommentVisitor::paragraphsToMarkup(
-    markup::Document &Out,
-    const llvm::SmallVectorImpl<const comments::ParagraphComment *> &Paragraphs)
-    const {
-  if (Paragraphs.empty())
-    return;
-
-  for (const auto *P : Paragraphs) {
-    ParagraphToMarkupDocument(Out.addParagraph(), Traits).visit(P);
-  }
 }
 
 void SymbolDocCommentVisitor::briefToMarkup(markup::Paragraph &Out) const {
@@ -322,14 +336,6 @@ void SymbolDocCommentVisitor::returnToMarkup(markup::Paragraph &Out) const {
   if (!ReturnParagraph)
     return;
   ParagraphToMarkupDocument(Out, Traits).visit(ReturnParagraph);
-}
-
-void SymbolDocCommentVisitor::notesToMarkup(markup::Document &Out) const {
-  paragraphsToMarkup(Out, NoteParagraphs);
-}
-
-void SymbolDocCommentVisitor::warningsToMarkup(markup::Document &Out) const {
-  paragraphsToMarkup(Out, WarningParagraphs);
 }
 
 void SymbolDocCommentVisitor::parameterDocToMarkup(
@@ -354,7 +360,7 @@ void SymbolDocCommentVisitor::parameterDocToString(
 
 void SymbolDocCommentVisitor::docToMarkup(markup::Document &Out) const {
   for (unsigned I = 0; I < CommentPartIndex; ++I) {
-    if (const auto *BC = UnhandledCommands.lookup(I)) {
+    if (const auto *BC = BlockCommands.lookup(I)) {
       BlockCommentToMarkupDocument(Out, Traits).visit(BC);
     } else if (const auto *P = FreeParagraphs.lookup(I)) {
       ParagraphToMarkupDocument(Out.addParagraph(), Traits).visit(P);
@@ -379,6 +385,15 @@ void SymbolDocCommentVisitor::templateTypeParmDocToString(
 
   if (const auto *P = TemplateParameters.lookup(TemplateParamName)) {
     ParagraphToString(Out, Traits).visit(P->getParagraph());
+  }
+}
+
+void SymbolDocCommentVisitor::retvalsToMarkup(markup::Document &Out) const {
+  if (RetvalCommands.empty())
+    return;
+  markup::BulletList &BL = Out.addBulletList();
+  for (const auto *P : RetvalCommands) {
+    BlockCommentToMarkupDocument(BL.addItem(), Traits).visit(P);
   }
 }
 

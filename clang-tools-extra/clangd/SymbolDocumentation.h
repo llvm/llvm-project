@@ -114,22 +114,14 @@ public:
 
   bool hasReturnCommand() const { return ReturnParagraph; }
 
-  bool hasRetvalCommands() const { return !RetvalParagraphs.empty(); }
-
-  bool hasNoteCommands() const { return !NoteParagraphs.empty(); }
-
-  bool hasWarningCommands() const { return !WarningParagraphs.empty(); }
-
   /// Converts all unhandled comment commands to a markup document.
   void docToMarkup(markup::Document &Out) const;
   /// Converts the "brief" command(s) to a markup document.
   void briefToMarkup(markup::Paragraph &Out) const;
   /// Converts the "return" command(s) to a markup document.
   void returnToMarkup(markup::Paragraph &Out) const;
-  /// Converts the "note" command(s) to a markup document.
-  void notesToMarkup(markup::Document &Out) const;
-  /// Converts the "warning" command(s) to a markup document.
-  void warningsToMarkup(markup::Document &Out) const;
+  /// Converts the "retval" command(s) to a markup document.
+  void retvalsToMarkup(markup::Document &Out) const;
 
   void visitBlockCommandComment(const comments::BlockCommandComment *B);
 
@@ -173,19 +165,13 @@ private:
   /// Paragraph of the "return" command.
   const comments::ParagraphComment *ReturnParagraph = nullptr;
 
-  /// Paragraph(s) of the "note" command(s)
-  llvm::SmallVector<const comments::ParagraphComment *> RetvalParagraphs;
+  /// All the "retval" command(s)
+  llvm::SmallVector<const comments::BlockCommandComment *> RetvalCommands;
 
-  /// Paragraph(s) of the "note" command(s)
-  llvm::SmallVector<const comments::ParagraphComment *> NoteParagraphs;
-
-  /// Paragraph(s) of the "warning" command(s)
-  llvm::SmallVector<const comments::ParagraphComment *> WarningParagraphs;
-
-  /// All the paragraphs we don't have any special handling for,
-  /// e.g. "details".
+  /// All the parsed doxygen block commands.
+  /// They might have special handling internally like \\note or \\warning
   llvm::SmallDenseMap<unsigned, const comments::BlockCommandComment *>
-      UnhandledCommands;
+      BlockCommands;
 
   /// Parsed paragaph(s) of the "param" comamnd(s)
   llvm::SmallDenseMap<StringRef, const comments::ParamCommandComment *>
@@ -198,11 +184,6 @@ private:
   /// All "free" text paragraphs.
   llvm::SmallDenseMap<unsigned, const comments::ParagraphComment *>
       FreeParagraphs;
-
-  void paragraphsToMarkup(
-      markup::Document &Out,
-      const llvm::SmallVectorImpl<const comments::ParagraphComment *>
-          &Paragraphs) const;
 };
 
 } // namespace clangd
