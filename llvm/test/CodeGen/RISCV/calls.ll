@@ -11,7 +11,7 @@
 ; RUN:   | FileCheck -check-prefix=RV64I-MEDIUM %s
 ; RUN: llc -code-model=large -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I-LARGE %s
-; RUN: llc -code-model=large -mtriple=riscv64 -mattr=experimental-zicfilp -verify-machineinstrs < %s \
+; RUN: llc -code-model=large -mtriple=riscv64 -mattr=zicfilp -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I-LARGE-ZICFILP %s
 
 declare i32 @external_function(i32)

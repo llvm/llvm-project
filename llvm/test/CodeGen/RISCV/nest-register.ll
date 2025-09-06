@@ -3,9 +3,9 @@
 ; RUN:   | FileCheck -check-prefix=RV32I %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-zicfilp -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+zicfilp -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I-ZICFILP %s
-; RUN: not llc -mtriple=riscv64 -target-abi=lp64e -mattr=+experimental-zicfilp \
+; RUN: not llc -mtriple=riscv64 -target-abi=lp64e -mattr=+zicfilp \
 ; RUN:   -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=LP64E-ZICFILP %s
 
 ; Tests that the 'nest' parameter attribute causes the relevant parameter to be

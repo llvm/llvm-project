@@ -24,6 +24,8 @@
 // CHECK-NEXT:     ziccif               1.0       'Ziccif' (Main Memory Supports Instruction Fetch with Atomicity Requirement)
 // CHECK-NEXT:     zicclsm              1.0       'Zicclsm' (Main Memory Supports Misaligned Loads/Stores)
 // CHECK-NEXT:     ziccrse              1.0       'Ziccrse' (Main Memory Supports Forward Progress on LR/SC Sequences)
+// CHECK-NEXT:     zicfilp              1.0       'Zicfilp' (Landing pad)
+// CHECK-NEXT:     zicfiss              1.0       'Zicfiss' (Shadow stack)
 // CHECK-NEXT:     zicntr               2.0       'Zicntr' (Base Counters and Timers)
 // CHECK-NEXT:     zicond               1.0       'Zicond' (Integer Conditional Operations)
 // CHECK-NEXT:     zicsr                2.0       'Zicsr' (CSRs)
@@ -212,8 +214,6 @@
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental extensions
 // CHECK-NEXT:     p                    0.15      'P' ('Base P' (Packed SIMD))
-// CHECK-NEXT:     zicfilp              1.0       'Zicfilp' (Landing pad)
-// CHECK-NEXT:     zicfiss              1.0       'Zicfiss' (Shadow stack)
 // CHECK-NEXT:     zalasr               0.1       'Zalasr' (Load-Acquire and Store-Release Instructions)
 // CHECK-NEXT:     zvbc32e              0.7       'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements)
 // CHECK-NEXT:     zvfbfa               0.1       'Zvfbfa' (Additional BF16 vector compute support)
