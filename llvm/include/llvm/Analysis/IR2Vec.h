@@ -211,7 +211,7 @@ public:
   Vocabulary() = default;
   LLVM_ABI Vocabulary(VocabVector &&Vocab) : Vocab(std::move(Vocab)) {}
 
-  LLVM_ABI bool isValid() const { return !Vocab.empty(); };
+  LLVM_ABI bool isValid() const { return Vocab.size() == NumCanonicalEntries; };
   LLVM_ABI unsigned getDimension() const;
   /// Total number of entries (opcodes + canonicalized types + operand kinds)
   static constexpr size_t getCanonicalSize() { return NumCanonicalEntries; }
