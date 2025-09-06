@@ -412,11 +412,11 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
         // And back.
         llvm::APSInt ConvertedValue = *IntConstantValue;
         bool ignored;
-        llvm::APFloat::opStatus fs = Result.convertToInteger(
+        llvm::APFloat::opStatus Status = Result.convertToInteger(
             ConvertedValue, llvm::APFloat::rmTowardZero, &ignored);
         // If the converted-back integer has unspecified value, or if the
         // resulting value is different, this was a narrowing conversion.
-        if (fs == llvm::APFloat::opInvalidOp ||
+        if (Status == llvm::APFloat::opInvalidOp ||
             *IntConstantValue != ConvertedValue) {
           ConstantValue = APValue(*IntConstantValue);
           ConstantType = Initializer->getType();

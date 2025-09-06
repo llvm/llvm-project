@@ -309,7 +309,7 @@ Bug Fixes in This Version
   qualifiers on their elements. For example, vector of 4 ``const float`` values
   and vector of 4 ``float`` values. (#GH155405)
 - Fix the check for narrowing int-to-float conversions, so that they are detected in
-  cases where converting the float back to an integer is undefined behaviour.
+  cases where converting the float back to an integer is undefined behaviour (#GH157067).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
