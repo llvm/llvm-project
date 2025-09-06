@@ -2549,7 +2549,7 @@ static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp__builtin_elementwise_int_binop(
-    InterpState &S, CodePtr OpPC, const CallExpr *Call, unsigned BuiltinID,
+    InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<APInt(const APSInt &, const APSInt &)> Fn) {
   assert(Call->getNumArgs() == 2);
 
@@ -2736,8 +2736,11 @@ static bool interp__builtin_ia32_pmul(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp__builtin_elementwise_fma(InterpState &S, CodePtr OpPC,
-                                            const CallExpr *Call) {
+static bool interp__builtin_elementwise_triop_fp(
+    InterpState &S, CodePtr OpPC, const CallExpr *Call,
+    llvm::function_ref<APFloat(const APFloat &, const APFloat &,
+                               const APFloat &, llvm::RoundingMode)>
+        Fn) {
   assert(Call->getNumArgs() == 3);
 
   FPOptions FPO = Call->getFPFeaturesInEffect(S.Ctx.getLangOpts());
@@ -2756,8 +2759,7 @@ static bool interp__builtin_elementwise_fma(InterpState &S, CodePtr OpPC,
     const Floating &Z = S.Stk.pop<Floating>();
     const Floating &Y = S.Stk.pop<Floating>();
     const Floating &X = S.Stk.pop<Floating>();
-    APFloat F = X.getAPFloat();
-    F.fusedMultiplyAdd(Y.getAPFloat(), Z.getAPFloat(), RM);
+    APFloat F = Fn(X.getAPFloat(), Y.getAPFloat(), Z.getAPFloat(), RM);
     Floating Result = S.allocFloat(X.getSemantics());
     Result.copy(F);
     S.Stk.push<Floating>(Result);
@@ -2788,8 +2790,8 @@ static bool interp__builtin_elementwise_fma(InterpState &S, CodePtr OpPC,
     APFloat X = VX.elem<T>(I).getAPFloat();
     APFloat Y = VY.elem<T>(I).getAPFloat();
     APFloat Z = VZ.elem<T>(I).getAPFloat();
-    (void)X.fusedMultiplyAdd(Y, Z, RM);
-    Dst.elem<Floating>(I) = Floating(X);
+    APFloat F = Fn(X, Y, Z, RM);
+    Dst.elem<Floating>(I) = Floating(F);
   }
   Dst.initializeAllElements();
   return true;
@@ -3287,26 +3289,26 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case Builtin::BI__builtin_elementwise_add_sat:
     return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, BuiltinID, [](const APSInt &LHS, const APSInt &RHS) {
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
           return LHS.isSigned() ? LHS.sadd_sat(RHS) : LHS.uadd_sat(RHS);
         });
 
   case Builtin::BI__builtin_elementwise_sub_sat:
     return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, BuiltinID, [](const APSInt &LHS, const APSInt &RHS) {
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
           return LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
         });
 
   case clang::X86::BI__builtin_ia32_pmulhuw128:
   case clang::X86::BI__builtin_ia32_pmulhuw256:
   case clang::X86::BI__builtin_ia32_pmulhuw512:
-    return interp__builtin_elementwise_int_binop(S, OpPC, Call, BuiltinID,
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
                                                  llvm::APIntOps::mulhu);
 
   case clang::X86::BI__builtin_ia32_pmulhw128:
   case clang::X86::BI__builtin_ia32_pmulhw256:
   case clang::X86::BI__builtin_ia32_pmulhw512:
-    return interp__builtin_elementwise_int_binop(S, OpPC, Call, BuiltinID,
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
                                                  llvm::APIntOps::mulhs);
 
   case clang::X86::BI__builtin_ia32_psllv2di:
@@ -3324,7 +3326,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_psllqi256:
   case clang::X86::BI__builtin_ia32_psllqi512:
     return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, BuiltinID, [](const APSInt &LHS, const APSInt &RHS) {
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
           if (RHS.uge(LHS.getBitWidth())) {
             return APInt::getZero(LHS.getBitWidth());
           }
@@ -3344,7 +3346,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_psraqi256:
   case clang::X86::BI__builtin_ia32_psraqi512:
     return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, BuiltinID, [](const APSInt &LHS, const APSInt &RHS) {
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
           if (RHS.uge(LHS.getBitWidth())) {
             return LHS.ashr(LHS.getBitWidth() - 1);
           }
@@ -3366,7 +3368,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_psrlqi256:
   case clang::X86::BI__builtin_ia32_psrlqi512:
     return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, BuiltinID, [](const APSInt &LHS, const APSInt &RHS) {
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
           if (RHS.uge(LHS.getBitWidth())) {
             return APInt::getZero(LHS.getBitWidth());
           }
@@ -3384,7 +3386,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_prolq256:
   case clang::X86::BI__builtin_ia32_prolq512:
     return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, BuiltinID,
+        S, OpPC, Call,
         [](const APSInt &LHS, const APSInt &RHS) { return LHS.rotl(RHS); });
 
   case clang::X86::BI__builtin_ia32_prord128:
@@ -3394,7 +3396,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_prorq256:
   case clang::X86::BI__builtin_ia32_prorq512:
     return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, BuiltinID,
+        S, OpPC, Call,
         [](const APSInt &LHS, const APSInt &RHS) { return LHS.rotr(RHS); });
 
   case Builtin::BI__builtin_elementwise_max:
@@ -3410,7 +3412,21 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_ia32_pmul(S, OpPC, Call, BuiltinID);
 
   case Builtin::BI__builtin_elementwise_fma:
-    return interp__builtin_elementwise_fma(S, OpPC, Call);
+    return interp__builtin_elementwise_triop_fp(
+        S, OpPC, Call,
+        [](const APFloat &X, const APFloat &Y, const APFloat &Z,
+           llvm::RoundingMode RM) {
+          APFloat F = X;
+          F.fusedMultiplyAdd(Y, Z, RM);
+          return F;
+        });
+
+  case clang::X86::BI__builtin_ia32_pblendvb128:
+  case clang::X86::BI__builtin_ia32_pblendvb256:
+    return interp__builtin_elementwise_triop(
+        S, OpPC, Call, [](const APSInt &F, const APSInt &T, const APSInt &C) {
+          return ((APInt)C).isNegative() ? T : F;
+        });
 
   case X86::BI__builtin_ia32_selectb_128:
   case X86::BI__builtin_ia32_selectb_256:
