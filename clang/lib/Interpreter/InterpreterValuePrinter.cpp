@@ -100,15 +100,10 @@ static std::string EnumToString(ASTContext &Ctx, QualType QT, uint64_t Data) {
   std::string Str;
   llvm::raw_string_ostream SS(Str);
 
-  QualType DesugaredTy = QT.getDesugaredType(Ctx);
-  const EnumType *EnumTy = DesugaredTy.getNonReferenceType()->getAs<EnumType>();
-  assert(EnumTy && "Fail to cast to enum type");
-
-  EnumDecl *ED = EnumTy->getDecl();
   bool IsFirst = true;
-  llvm::APSInt AP = Ctx.MakeIntValue(Data, V.getType());
+  llvm::APSInt AP = Ctx.MakeIntValue(Data, QT);
 
-  auto *ED = V.getType()->castAsEnumDecl();
+  auto *ED = QT->castAsEnumDecl();
   for (auto I = ED->enumerator_begin(), E = ED->enumerator_end(); I != E; ++I) {
     if (I->getInitVal() == AP) {
       if (!IsFirst)
