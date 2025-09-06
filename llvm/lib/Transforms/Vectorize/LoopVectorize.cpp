@@ -4416,9 +4416,7 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
   // 'vscale'.
   // If TC is multiple of vscale, try to get estimated value:
   if (match(TC, m_scev_Mul(m_SCEV(), m_SCEVVScale()))) {
-    std::optional<ElementCount> BestKnownTC =
-        getSmallBestKnownTC(PSE, OrigLoop);
-    if (BestKnownTC) {
+    if (std::optional<ElementCount> BestKnownTC = getSmallBestKnownTC(PSE, OrigLoop)) {
       unsigned EstimatedRuntimeTC =
           estimateElementCount(*BestKnownTC, CM.getVScaleForTuning());
       TC = SE.getConstant(TCType, EstimatedRuntimeTC);
