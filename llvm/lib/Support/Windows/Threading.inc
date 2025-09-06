@@ -42,6 +42,9 @@ void llvm_thread_join_impl(HANDLE hThread) {
   if (::WaitForSingleObject(hThread, INFINITE) == WAIT_FAILED) {
     ReportLastErrorFatal("WaitForSingleObject failed");
   }
+  if (::CloseHandle(hThread) == FALSE) {
+    ReportLastErrorFatal("CloseHandle failed");
+  }
 }
 
 void llvm_thread_detach_impl(HANDLE hThread) {
