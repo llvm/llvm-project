@@ -195,6 +195,9 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     VGPRForAGPRCopy =
         AMDGPU::VGPR_32RegClass.getRegister(ST.getMaxNumVGPRs(F) - 1);
   }
+
+  if (F.hasFnAttribute("amdgpu-disable-tbuffer-combine"))
+    setDisableTBufferCombine(true);
 }
 
 MachineFunctionInfo *SIMachineFunctionInfo::clone(
