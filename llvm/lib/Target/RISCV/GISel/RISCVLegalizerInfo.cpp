@@ -714,6 +714,11 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                            MachineInstr &MI) const {
   Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
+
+  if (RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IntrinsicID)) {
+    return true;
+  }
+
   switch (IntrinsicID) {
   default:
     return false;
