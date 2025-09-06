@@ -19,11 +19,13 @@
 #include "bolt/Passes/IdenticalCodeFolding.h"
 #include "bolt/Passes/IndirectCallPromotion.h"
 #include "bolt/Passes/Inliner.h"
+#include "bolt/Passes/InsertNegateRAStatePass.h"
 #include "bolt/Passes/Instrumentation.h"
 #include "bolt/Passes/JTFootprintReduction.h"
 #include "bolt/Passes/LongJmp.h"
 #include "bolt/Passes/LoopInversionPass.h"
 #include "bolt/Passes/MCF.h"
+#include "bolt/Passes/MarkRAStates.h"
 #include "bolt/Passes/PLTCall.h"
 #include "bolt/Passes/PatchEntries.h"
 #include "bolt/Passes/ProfileQualityStats.h"
@@ -274,6 +276,15 @@ static cl::opt<bool> ShortenInstructions("shorten-instructions",
                                          cl::desc("shorten instructions"),
                                          cl::init(true),
                                          cl::cat(BoltOptCategory));
+
+// This flag is used to "gate" the negate-ra-state CFI handling.
+// Sometimes, binaries use pac-ret but not contain negate-ra-state CFIs. That
+// should cause no issues for BOLT.
+cl::opt<bool> DisallowPacret(
+    "disallow-pacret",
+    cl::desc("Disable processing binaries containing negate-ra-state DWARF "
+             "CFIs (e.g. binaries using pac-ret hardening)"),
+    cl::cat(BoltOptCategory));
 } // namespace opts
 
 namespace llvm {
@@ -350,6 +361,9 @@ Error BinaryFunctionPassManager::runPasses() {
 
 Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   BinaryFunctionPassManager Manager(BC);
+
+  if (BC.isAArch64())
+    Manager.registerPass(std::make_unique<MarkRAStates>());
 
   Manager.registerPass(
       std::make_unique<EstimateEdgeCounts>(PrintEstimateEdgeCounts));
@@ -510,6 +524,8 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
     // targets. No extra instructions after this pass, otherwise we may have
     // relocations out of range and crash during linking.
     Manager.registerPass(std::make_unique<LongJmpPass>(PrintLongJmp));
+
+    Manager.registerPass(std::make_unique<InsertNegateRAState>());
   }
 
   // This pass should always run last.*
