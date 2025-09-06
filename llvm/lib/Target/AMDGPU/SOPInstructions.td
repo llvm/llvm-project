@@ -1844,6 +1844,13 @@ let SubtargetPredicate = HasWaitXcnt, hasSideEffects = 1 in {
     SOPP_Pseudo<"s_wait_xcnt", (ins s16imm:$simm16), "$simm16">;
 } // End SubtargetPredicate = hasWaitXcnt, hasSideEffects = 1
 
+let SubtargetPredicate = Has1024AddressableVGPRs in {
+  def S_SET_VGPR_MSB : SOPP_Pseudo<"s_set_vgpr_msb" , (ins i16imm:$simm16), "$simm16"> {
+    let hasSideEffects = 1;
+    let Defs = [MODE];
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // SOP1 Patterns
 //===----------------------------------------------------------------------===//
@@ -2691,6 +2698,7 @@ defm S_WAIT_STORECNT_DSCNT  : SOPP_Real_32_gfx12<0x049>;
 //===----------------------------------------------------------------------===//
 // SOPP - GFX1250 only.
 //===----------------------------------------------------------------------===//
+defm S_SET_VGPR_MSB   : SOPP_Real_32_gfx12<0x006>;
 defm S_SETPRIO_INC_WG : SOPP_Real_32_gfx12<0x03e>;
 defm S_WAIT_XCNT      : SOPP_Real_32_gfx12<0x045>;
 defm S_WAIT_ASYNCCNT  : SOPP_Real_32_gfx12<0x04a>;

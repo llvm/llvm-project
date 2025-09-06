@@ -358,10 +358,9 @@ define signext i32 @bit_10_z_select_i32(i32 signext %a, i32 signext %b, i32 sign
 define signext i32 @bit_10_nz_select_i32(i32 signext %a, i32 signext %b, i32 signext %c) {
 ; LA32-LABEL: bit_10_nz_select_i32:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    andi $a0, $a0, 1024
-; LA32-NEXT:    srli.w $a3, $a0, 10
+; LA32-NEXT:    slli.w $a3, $a0, 21
 ; LA32-NEXT:    move $a0, $a1
-; LA32-NEXT:    bne $a3, $zero, .LBB16_2
+; LA32-NEXT:    bltz $a3, .LBB16_2
 ; LA32-NEXT:  # %bb.1:
 ; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:  .LBB16_2:
@@ -408,10 +407,9 @@ define signext i32 @bit_11_z_select_i32(i32 signext %a, i32 signext %b, i32 sign
 define signext i32 @bit_11_nz_select_i32(i32 signext %a, i32 signext %b, i32 signext %c) {
 ; LA32-LABEL: bit_11_nz_select_i32:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    andi $a0, $a0, 2048
-; LA32-NEXT:    srli.w $a3, $a0, 11
+; LA32-NEXT:    slli.w $a3, $a0, 20
 ; LA32-NEXT:    move $a0, $a1
-; LA32-NEXT:    bne $a3, $zero, .LBB18_2
+; LA32-NEXT:    bltz $a3, .LBB18_2
 ; LA32-NEXT:  # %bb.1:
 ; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:  .LBB18_2:
@@ -459,11 +457,9 @@ define signext i32 @bit_20_z_select_i32(i32 signext %a, i32 signext %b, i32 sign
 define signext i32 @bit_20_nz_select_i32(i32 signext %a, i32 signext %b, i32 signext %c) {
 ; LA32-LABEL: bit_20_nz_select_i32:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    lu12i.w $a3, 256
-; LA32-NEXT:    and $a0, $a0, $a3
-; LA32-NEXT:    srli.w $a3, $a0, 20
+; LA32-NEXT:    slli.w $a3, $a0, 11
 ; LA32-NEXT:    move $a0, $a1
-; LA32-NEXT:    bne $a3, $zero, .LBB20_2
+; LA32-NEXT:    bltz $a3, .LBB20_2
 ; LA32-NEXT:  # %bb.1:
 ; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:  .LBB20_2:

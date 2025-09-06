@@ -446,6 +446,7 @@ def AEABI_MEMCLR8 : RuntimeLibcall;
 
 // Hexagon calls
 def HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES : RuntimeLibcall;
+def HEXAGON_VOLATILE_MEMCPY : RuntimeLibcall;
 
 // XCore calls
 def MEMCPY_ALIGN_4 : RuntimeLibcall;
@@ -1875,6 +1876,8 @@ def __hexagon_fast2_sqrtdf2 : RuntimeLibcallImpl<FAST_SQRT_F64>;
 
 def __hexagon_memcpy_likely_aligned_min32bytes_mult8bytes
     : RuntimeLibcallImpl<HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES>;
+
+def hexagon_memcpy_forward_vp4cp4n2 : RuntimeLibcallImpl<HEXAGON_VOLATILE_MEMCPY>;
 }
 
 def isHexagon : RuntimeLibcallPredicate<"TT.getArch() == Triple::hexagon">;

@@ -404,7 +404,11 @@ def CIR_LoadOp : CIR_Op<"load", [
     `cir.load` reads a value (lvalue to rvalue conversion) given an address
     backed up by a `cir.ptr` type. A unit attribute `deref` can be used to
     mark the resulting value as used by another operation to dereference
-    a pointer.
+    a pointer. A unit attribute `volatile` can be used to indicate a volatile
+    loading. Load can be marked atomic by using `atomic(<mem_order>)`.
+
+    `alignment` can be used to specify an alignment that's different from the
+    default, which is computed from `result`'s type ABI data layout.
 
     Example:
 
@@ -416,18 +420,26 @@ def CIR_LoadOp : CIR_Op<"load", [
     // Load address from memory at address %0. %3 is used by at least one
     // operation that dereferences a pointer.
     %3 = cir.load deref %0 : !cir.ptr<!cir.ptr<i32>>
+
+    // Perform a volatile load from address in %0.
+    %4 = cir.load volatile %0 : !cir.ptr<i32>, i32
+
+    // Others
+    %x = cir.load align(16) atomic(seq_cst) %0 : !cir.ptr<i32>, i32
     ```
   }];
 
   let arguments = (ins Arg<CIR_PointerType, "the address to load from",
                            [MemRead]>:$addr,
                        UnitAttr:$isDeref,
+                       UnitAttr:$is_volatile,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<CIR_MemOrder>:$mem_order);
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
     (`deref` $isDeref^)?
+    (`volatile` $is_volatile^)?
     (`align` `(` $alignment^ `)`)?
     (`atomic` `(` $mem_order^ `)`)?
     $addr `:` qualified(type($addr)) `,` type($result) attr-dict
@@ -452,7 +464,7 @@ def CIR_StoreOp : CIR_Op<"store", [
     a volatile store. Store's can be marked atomic by using
     `atomic(<mem_order>)`.
 
-    `align` can be used to specify an alignment that's different from the
+    `alignment` can be used to specify an alignment that's different from the
     default, which is computed from `result`'s type ABI data layout.
 
     Example:
@@ -460,16 +472,24 @@ def CIR_StoreOp : CIR_Op<"store", [
     ```mlir
     // Store a function argument to local storage, address in %0.
     cir.store %arg0, %0 : i32, !cir.ptr<i32>
+
+    // Perform a volatile store into memory location at the address in %0.
+    cir.store volatile %arg0, %0 : i32, !cir.ptr<i32>
+
+    // Others
+    cir.store align(16) atomic(seq_cst) %x, %addr : i32, !cir.ptr<i32>
     ```
   }];
 
   let arguments = (ins CIR_AnyType:$value,
                        Arg<CIR_PointerType, "the address to store the value",
                            [MemWrite]>:$addr,
+                       UnitAttr:$is_volatile,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<CIR_MemOrder>:$mem_order);
 
   let assemblyFormat = [{
+    (`volatile` $is_volatile^)?
     (`align` `(` $alignment^ `)`)?
     (`atomic` `(` $mem_order^ `)`)?
     $value `,` $addr attr-dict `:` type($value) `,` qualified(type($addr))
@@ -2432,6 +2452,52 @@ def CIR_CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
 }
 
 //===----------------------------------------------------------------------===//
+// CopyOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CopyOp : CIR_Op<"copy",[
+  SameTypeOperands,
+  DeclareOpInterfaceMethods<PromotableMemOpInterface>
+]> {
+  let summary = "Copies contents from a CIR pointer to another";
+  let description = [{
+    Given two CIR pointers, `src` and `dst`, `cir.copy` will copy the memory
+    pointed by `src` to the memory pointed by `dst`.
+
+    The number of bytes copied is inferred from the pointee type. The pointee
+    type of `src` and `dst` must match and both must implement the
+    `DataLayoutTypeInterface`.
+
+    Examples:
+
+    ```mlir
+      // Copying contents from one record to another:
+      cir.copy %0 to %1 : !cir.ptr<!record_ty>
+    ```
+  }];
+
+  let arguments = (ins
+      Arg<CIR_PointerType, "", [MemWrite]>:$dst,
+      Arg<CIR_PointerType, "", [MemRead]>:$src
+  );
+
+  let assemblyFormat = [{$src `to` $dst
+                        attr-dict `:` qualified(type($dst))
+  }];
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    /// Returns the pointer type being copied.
+    cir::PointerType getType() { return getSrc().getType(); }
+
+    /// Returns the number of bytes to be copied.
+    unsigned getLength(const mlir::DataLayout &dt) {
+      return dt.getTypeSize(getType().getPointee());
+    }    
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // ReturnAddrOp and FrameAddrOp
 //===----------------------------------------------------------------------===//
 
@@ -3732,12 +3798,23 @@ class CIR_UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   let llvmOp = llvmOpName;
 }
 
+def CIR_ACosOp : CIR_UnaryFPToFPBuiltinOp<"acos", "ACosOp"> {
+  let summary = "Computes the arcus cosine of the specified value";
+  let description = [{
+    `cir.acos`computes the arcus cosine of a given value and
+    returns a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
 def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp"> {
   let summary = "Computes the floating-point absolute value";
   let description = [{
     `cir.fabs` computes the absolute value of a floating-point operand
-    and returns a result of the same type, ignoring floating-point
-    exceptions. It does not set `errno`.
+    and returns a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
   }];
 }
 
