@@ -1,27 +1,27 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn--amdhsa < %s | FileCheck -check-prefix=GCN -check-prefix=HSA-TRAP %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn--amdhsa < %s | FileCheck -check-prefix=GCN -check-prefix=HSA-TRAP %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn--amdhsa < %s | FileCheck -check-prefix=GCN -check-prefix=HSA-TRAP %s
 
 ; RUN: llc -global-isel=0 -mtriple=amdgcn--amdhsa -mattr=+trap-handler < %s | FileCheck -check-prefix=GCN -check-prefix=HSA-TRAP %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn--amdhsa -mattr=+trap-handler < %s | FileCheck -check-prefix=GCN -check-prefix=HSA-TRAP %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn--amdhsa -mattr=+trap-handler < %s | FileCheck -check-prefix=GCN -check-prefix=HSA-TRAP %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn--amdhsa -mattr=-trap-handler < %s | FileCheck -check-prefix=GCN -check-prefix=NO-HSA-TRAP %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn--amdhsa -mattr=-trap-handler < %s | FileCheck -check-prefix=GCN -check-prefix=NO-HSA-TRAP %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn--amdhsa -mattr=-trap-handler < %s | FileCheck -check-prefix=GCN -check-prefix=NO-HSA-TRAP %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn--amdhsa -mattr=-trap-handler < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn--amdhsa -mattr=-trap-handler < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn--amdhsa -mattr=-trap-handler < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
 
 ; enable trap handler feature
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-unknown-mesa3d -mattr=+trap-handler < %s | FileCheck -check-prefix=GCN -check-prefix=NO-MESA-TRAP -check-prefix=TRAP-BIT -check-prefix=MESA-TRAP %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-unknown-mesa3d -mattr=+trap-handler < %s | FileCheck -check-prefix=GCN -check-prefix=NO-MESA-TRAP -check-prefix=TRAP-BIT -check-prefix=MESA-TRAP %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-unknown-mesa3d -mattr=+trap-handler < %s | FileCheck -check-prefix=GCN -check-prefix=NO-MESA-TRAP -check-prefix=TRAP-BIT -check-prefix=MESA-TRAP %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-unknown-mesa3d -mattr=+trap-handler < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=TRAP-BIT %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-unknown-mesa3d -mattr=+trap-handler < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=TRAP-BIT %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-unknown-mesa3d -mattr=+trap-handler < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=TRAP-BIT %s
 
 ; disable trap handler feature
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-unknown-mesa3d -mattr=-trap-handler < %s | FileCheck -check-prefix=GCN -check-prefix=NO-MESA-TRAP -check-prefix=NO-TRAP-BIT -check-prefix=NOMESA-TRAP %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-unknown-mesa3d -mattr=-trap-handler < %s | FileCheck -check-prefix=GCN -check-prefix=NO-MESA-TRAP -check-prefix=NO-TRAP-BIT -check-prefix=NOMESA-TRAP %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-unknown-mesa3d -mattr=-trap-handler < %s | FileCheck -check-prefix=GCN -check-prefix=NO-MESA-TRAP -check-prefix=NO-TRAP-BIT -check-prefix=NOMESA-TRAP %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-unknown-mesa3d -mattr=-trap-handler < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=NO-TRAP-BIT %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-unknown-mesa3d -mattr=-trap-handler < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=NO-TRAP-BIT %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-unknown-mesa3d -mattr=-trap-handler < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=NO-TRAP-BIT %s
 
 ; RUN: llc -global-isel=0 -mtriple=amdgcn < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
 
 ; GCN-WARNING: warning: <unknown>:0:0: in function hsa_debugtrap void (ptr addrspace(1)): debugtrap handler not supported
 
