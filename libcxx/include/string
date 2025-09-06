@@ -639,13 +639,12 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__type_traits/remove_cvref.h>
 #  include <__type_traits/void_t.h>
 #  include <__utility/auto_cast.h>
-#  include <__utility/declval.h>
+#  include <__utility/default_three_way_comparator.h>
 #  include <__utility/forward.h>
 #  include <__utility/is_pointer_in_range.h>
 #  include <__utility/move.h>
 #  include <__utility/scope_guard.h>
 #  include <__utility/swap.h>
-#  include <__utility/unreachable.h>
 #  include <climits>
 #  include <cstdio> // EOF
 #  include <cstring>
@@ -966,7 +965,7 @@ private:
         std::__wrap_iter<const_pointer>(__get_pointer() + size()));
 #  else
     return const_iterator(__p);
-#  endif // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING
+#  endif                    // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING
   }
 
 public:
@@ -2521,6 +2520,19 @@ _LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_DECLARE, wchar_t)
 #    endif
 #  endif
 #  undef _LIBCPP_DECLARE
+
+template <class _CharT, class _Traits, class _Alloc>
+struct __default_three_way_comparator<basic_string<_CharT, _Traits, _Alloc>, basic_string<_CharT, _Traits, _Alloc> > {
+  using __string_t _LIBCPP_NODEBUG = basic_string<_CharT, _Traits, _Alloc>;
+
+  _LIBCPP_HIDE_FROM_ABI static int operator()(const __string_t& __lhs, const __string_t& __rhs) {
+    auto __min_len = std::min(__lhs.size(), __rhs.size());
+    auto __ret     = _Traits::compare(__lhs.data(), __rhs.data(), __min_len);
+    if (__ret == 0)
+      return __lhs.size() == __rhs.size() ? 0 : __lhs.size() < __rhs.size() ? -1 : 1;
+    return __ret;
+  }
+};
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,
