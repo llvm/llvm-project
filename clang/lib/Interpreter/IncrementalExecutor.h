@@ -82,9 +82,11 @@ public:
   launchExecutor(llvm::StringRef ExecutablePath, bool UseSharedMemory,
                  unsigned SlabAllocateSize);
 
+#if LLVM_ON_UNIX && LLVM_ENABLE_THREADS
   static llvm::Expected<std::unique_ptr<llvm::orc::SimpleRemoteEPC>>
   connectTCPSocket(llvm::StringRef NetworkAddress, bool UseSharedMemory,
                    unsigned SlabAllocateSize);
+#endif
 };
 
 } // end namespace clang

@@ -362,12 +362,18 @@ Interpreter::outOfProcessJITBuilder(JITConfig Config) {
     auto EPCOrErr = std::move(ResultOrErr->first);
     EPC = std::move(EPCOrErr);
   } else if (Config.OOPExecutorConnect != "") {
+#if LLVM_ON_UNIX && LLVM_ENABLE_THREADS
     auto EPCOrErr = IncrementalExecutor::connectTCPSocket(
         Config.OOPExecutorConnect, Config.UseSharedMemory,
         Config.SlabAllocateSize);
     if (!EPCOrErr)
       return EPCOrErr.takeError();
     EPC = std::move(*EPCOrErr);
+#else
+    return llvm::make_error<llvm::StringError>(
+        "Out-of-process JIT over TCP is not supported on this platform",
+        std::error_code());
+#endif
   }
 
   std::unique_ptr<llvm::orc::LLJITBuilder> JB;
