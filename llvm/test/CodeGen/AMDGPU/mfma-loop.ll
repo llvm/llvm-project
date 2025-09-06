@@ -506,8 +506,8 @@ define amdgpu_kernel void @test_mfma_loop_non_splat(ptr addrspace(1) %arg) #0 {
 ; GFX908-NEXT:    v_accvgpr_write_b32 a3, 0
 ; GFX908-NEXT:    v_accvgpr_write_b32 a2, 0
 ; GFX908-NEXT:    v_accvgpr_write_b32 a0, 0
-; GFX908-NEXT:    v_mov_b32_e32 v0, 1.0
 ; GFX908-NEXT:    s_mov_b32 s0, 16
+; GFX908-NEXT:    v_mov_b32_e32 v0, 1.0
 ; GFX908-NEXT:    v_mov_b32_e32 v1, 2.0
 ; GFX908-NEXT:  .LBB2_1: ; %for.cond.preheader
 ; GFX908-NEXT:    ; =>This Inner Loop Header: Depth=1
