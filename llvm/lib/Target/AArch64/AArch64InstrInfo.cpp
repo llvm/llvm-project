@@ -1612,6 +1612,15 @@ bool AArch64InstrInfo::optimizePTestInstr(
     const MachineRegisterInfo *MRI) const {
   auto *Mask = MRI->getUniqueVRegDef(MaskReg);
   auto *Pred = MRI->getUniqueVRegDef(PredReg);
+
+  if (Pred->isCopy()) {
+    // Instructions which return a multi-vector (e.g. WHILECC_x2) require copies
+    // before the branch to extract each subregister.
+    auto Op = Pred->getOperand(1);
+    if (Op.isReg() && Op.getSubReg() == AArch64::psub0)
+      Pred = MRI->getUniqueVRegDef(Op.getReg());
+  }
+
   unsigned PredOpcode = Pred->getOpcode();
   auto NewOp = canRemovePTestInstr(PTest, Mask, Pred, MRI);
   if (!NewOp)
