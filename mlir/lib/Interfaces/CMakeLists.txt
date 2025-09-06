@@ -85,7 +85,21 @@ add_mlir_interface_library(MemorySlotInterfaces)
 add_mlir_interface_library(ParallelCombiningOpInterface)
 add_mlir_interface_library(RuntimeVerifiableOpInterface)
 add_mlir_interface_library(ShapedOpInterfaces)
-add_mlir_interface_library(SideEffectInterfaces)
+
+add_mlir_library(MLIRSideEffectInterfaces
+  SideEffectInterfaces.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
+
+  DEPENDS
+  MLIRSideEffectInterfacesIncGen
+
+  LINK_LIBS PUBLIC
+  MLIRIR
+  MLIRDialectUtils
+  MLIRLoopLikeInterface
+)
 
 add_mlir_library(MLIRSubsetOpInterface
   SubsetOpInterface.cpp

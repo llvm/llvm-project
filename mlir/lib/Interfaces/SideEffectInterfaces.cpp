@@ -8,7 +8,9 @@
 
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/SymbolTable.h"
+#include <optional>
 #include <utility>
 
 using namespace mlir;
@@ -317,14 +319,45 @@ bool mlir::wouldOpBeTriviallyDead(Operation *op) {
   return wouldOpBeTriviallyDeadImpl(op);
 }
 
+llvm::SmallVector<MemoryEffects::EffectInstance>
+mlir::MemoryEffects::getMemoryEffectsSorted(Operation *op) {
+  llvm::SmallVector<MemoryEffects::EffectInstance> effectsSorted;
+
+  auto memInterface = dyn_cast<MemoryEffectOpInterface>(op);
+
+  if (!memInterface)
+    return effectsSorted; // return empty vec
+
+  memInterface.getEffects(effectsSorted);
+
+  auto sortEffects = 
+    [](llvm::SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+    llvm::stable_sort(effects, [](const MemoryEffects::EffectInstance &a,
+                                  const MemoryEffects::EffectInstance &b) {
+      if (a.getStage() < b.getStage())
+        return true;
+      
+      if (a.getStage() == b.getStage())
+        return a.getEffect()->getPriority() < b.getEffect()->getPriority();
+
+      return false; // b before a
+    });
+  };
+  sortEffects(effectsSorted);
+
+  return effectsSorted;
+}
+
 bool mlir::isMemoryEffectFree(Operation *op) {
   if (auto memInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
     if (!memInterface.hasNoEffect())
       return false;
+    
     // If the op does not have recursive side effects, then it is memory effect
     // free.
     if (!op->hasTrait<OpTrait::HasRecursiveMemoryEffects>())
       return true;
+    
   } else if (!op->hasTrait<OpTrait::HasRecursiveMemoryEffects>()) {
     // Otherwise, if the op does not implement the memory effect interface and
     // it does not have recursive side effects, then it cannot be known that the
@@ -338,6 +371,7 @@ bool mlir::isMemoryEffectFree(Operation *op) {
     for (Operation &op : region.getOps())
       if (!isMemoryEffectFree(&op))
         return false;
+
   return true;
 }
 
