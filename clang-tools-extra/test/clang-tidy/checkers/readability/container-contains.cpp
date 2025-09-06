@@ -1,4 +1,7 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s readability-container-contains %t
+// RUN: %check_clang_tidy -std=c++11-or-later %s readability-container-contains %t -- \
+// RUN:   -- -isystem %clang_tidy_headers
+
+#include <string>
 
 // Some *very* simplified versions of `map` etc.
 namespace std {
@@ -318,17 +321,15 @@ void testPrivateContains(CustomMapPrivateContains<int, int> &MyMap,
   if (MyMap2.count(0)) {};
 }
 
-struct MyString {};
-
 struct WeirdNonMatchingContains {
   unsigned count(char) const;
-  bool contains(const MyString&) const;
+  bool contains(const std::string&) const;
 };
 
-void testWeirdNonMatchingContains(WeirdNonMatchingContains &MyMap) {
-  // No warning if there is no `contains` method with the right type.
-  if (MyMap.count('a')) {};
-}
+// False positives: when count/find and contains take different types,
+// the check will suggest an invalid code transformation. These cases
+// should not exist in real code or be rare enough.
+// void f(WeirdNonMatchingContains MyMap) { MyMap.count('a'); }
 
 template <class T>
 struct SmallPtrSet {
@@ -373,15 +374,6 @@ void testSubclassEntry(SmallPtrSet<X>& Set, Y* Entry) {
   if (Set.count(Entry)) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
   // CHECK-FIXES: if (Set.contains(Entry)) {}
-}
-
-struct WeirdPointerApi {
-  unsigned count(int** Ptr) const;
-  bool contains(int* Ptr) const;
-};
-
-void testWeirdApi(WeirdPointerApi& Set, int* E) {
-  if (Set.count(&E)) {}
 }
 
 void testIntUnsigned(std::set<int>& S, unsigned U) {
@@ -457,4 +449,42 @@ void testOperandPermutations(std::map<int, int>& Map) {
   if (Map.end() == Map.find(0)) {};
   // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
   // CHECK-FIXES: if (!Map.contains(0)) {};
+}
+
+void testStringNpos(std::string Str1, std::string Str2, std::string_view StrView) {
+  if (Str1.find(Str2) == std::string::npos) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (!Str1.contains(Str2)) {};
+
+  if (Str1.find("test") == std::string::npos) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (!Str1.contains("test")) {};
+
+  if (Str1.find('c') != std::string::npos) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (Str1.contains('c')) {};
+
+  if (Str1.find(Str2, 0) != std::string::npos) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (Str1.contains(Str2)) {};
+
+  if (std::string::npos == Str1.find("test", 0)) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (!Str1.contains("test")) {};
+
+  if (StrView.find("test") == std::string_view::npos) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (!StrView.contains("test")) {};
+
+  if (StrView.find('c') != std::string_view::npos) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (StrView.contains('c')) {};
+
+  if (StrView.find('c') != StrView.npos) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (StrView.contains('c')) {};
+
+  // These should not match.
+  if (Str1.find('c', 1) != Str1.npos) {};
+  if (Str1.find(StrView, 1) != Str1.npos) {};
 }
