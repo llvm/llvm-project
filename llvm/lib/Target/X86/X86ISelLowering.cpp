@@ -48624,6 +48624,45 @@ static SDValue combineCarryThroughADD(SDValue EFLAGS, SelectionDAG &DAG) {
   return SDValue();
 }
 
+static SDValue canFoldToTESTP(SDValue Val, const SDLoc &DL, const EVT PTestVT,
+                              SelectionDAG &DAG,
+                              const X86Subtarget &Subtarget) {
+  if (!Subtarget.hasAVX())
+    return SDValue();
+
+  EVT VT = Val.getValueType();
+  unsigned EltBits = VT.getScalarSizeInBits();
+
+  if (EltBits != 32 && EltBits != 64)
+    return SDValue();
+
+  SDValue Op0 = Val.getOperand(0);
+  SDValue Op1 = Val.getOperand(1);
+
+  MVT FloatSVT = MVT::getFloatingPointVT(EltBits);
+  MVT FloatVT = MVT::getVectorVT(FloatSVT, VT.getVectorNumElements());
+
+  // (ptest (and Op0, splat(minSignedVal)), (and Op0, splat(minSignedVal))) ->
+  // (testp Op0, Op0)
+  APInt Splat;
+  if (ISD::isConstantSplatVector(Op1.getNode(), Splat) &&
+      Splat.getBitWidth() == EltBits && Splat.isMinSignedValue()) {
+    SDValue FpOp0 = DAG.getBitcast(FloatVT, Op0);
+    return DAG.getNode(X86ISD::TESTP, DL, PTestVT, FpOp0, FpOp0);
+  }
+
+  // (ptest (and (and Op0, splat(minSignedVal), Op1), ...)) -> (testp Op0, Op1)
+  if (Op0.getOpcode() == ISD::AND &&
+      ISD::isConstantSplatVector(Op0.getOperand(1).getNode(), Splat) &&
+      Splat.getBitWidth() == EltBits && Splat.isMinSignedValue()) {
+    SDValue FpOp0 = DAG.getBitcast(FloatVT, Op0.getOperand(0));
+    SDValue FpOp1 = DAG.getBitcast(FloatVT, Op1);
+    return DAG.getNode(X86ISD::TESTP, DL, PTestVT, FpOp0, FpOp1);
+  }
+
+  return SDValue();
+}
+
 /// If we are inverting an PTEST/TESTP operand, attempt to adjust the CC
 /// to avoid the inversion.
 static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
@@ -48717,6 +48756,10 @@ static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
     if (Op0 == Op1) {
       SDValue BC = peekThroughBitcasts(Op0);
       EVT BCVT = BC.getValueType();
+
+      if (EFLAGS.getOpcode() == X86ISD::PTEST && BC.getOpcode() == ISD::AND)
+        if (SDValue V = canFoldToTESTP(BC, SDLoc(EFLAGS), VT, DAG, Subtarget))
+          return V;
 
       // TESTZ(AND(X,Y),AND(X,Y)) == TESTZ(X,Y)
       if (BC.getOpcode() == ISD::AND || BC.getOpcode() == X86ISD::FAND) {
