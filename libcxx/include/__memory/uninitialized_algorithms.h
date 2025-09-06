@@ -20,6 +20,7 @@
 #include <__iterator/iterator_traits.h>
 #include <__iterator/reverse_iterator.h>
 #include <__memory/addressof.h>
+#include <__memory/allocator_relocation.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/construct_at.h>
 #include <__memory/destroy.h>
@@ -596,7 +597,7 @@ inline const bool __allocator_has_trivial_destroy_v = !__has_destroy_v<_Alloc, _
 template <class _Tp, class _Up>
 inline const bool __allocator_has_trivial_destroy_v<allocator<_Tp>, _Up> = true;
 
-// __uninitialized_allocator_relocate relocates the objects in [__first, __last) into __result.
+// __uninitialized_allocator_relocate_strong relocates the objects in [__first, __last) into __result.
 // Relocation means that the objects in [__first, __last) are placed into __result as-if by move-construct and destroy,
 // except that the move constructor and destructor may never be called if they are known to be equivalent to a memcpy.
 //
@@ -608,8 +609,12 @@ inline const bool __allocator_has_trivial_destroy_v<allocator<_Tp>, _Up> = true;
 // - is_nothrow_move_constructible<_ValueType>
 // - is_copy_constructible<_ValueType>
 // - __libcpp_is_trivially_relocatable<_ValueType>
+//
+// TODO: Replace this function by appropriate uses of __uninitialized_allocator_relocate from std::vector by
+//       handling the strong exception safety guarantee from outside the algorithm. The strong exception safety
+//       is a property of the data structure operation, not of this algorithm, so it doesn't belong here.
 template <class _Alloc, class _ContiguousIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __uninitialized_allocator_relocate(
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __uninitialized_allocator_relocate_strong(
     _Alloc& __alloc, _ContiguousIterator __first, _ContiguousIterator __last, _ContiguousIterator __result) {
   static_assert(__libcpp_is_contiguous_iterator<_ContiguousIterator>::value, "");
   using _ValueType = typename iterator_traits<_ContiguousIterator>::value_type;
