@@ -81,6 +81,10 @@ public:
   BuiltinTypeDeclBuilder &addHandleConstructorFromBinding();
   BuiltinTypeDeclBuilder &addHandleConstructorFromImplicitBinding();
 
+  // Static create methods
+  BuiltinTypeDeclBuilder &addCreateFromBinding();
+  BuiltinTypeDeclBuilder &addCreateFromImplicitBinding();
+
   // Builtin types methods
   BuiltinTypeDeclBuilder &addLoadMethods();
   BuiltinTypeDeclBuilder &addIncrementCounterMethod();

@@ -19,6 +19,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/Specifiers.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaHLSL.h"
@@ -110,8 +111,11 @@ private:
   CXXMethodDecl *Method;
   bool IsConst;
   bool IsCtor;
+  AccessSpecifier Access;
+  StorageClass SC;
   llvm::SmallVector<Param> Params;
   llvm::SmallVector<Stmt *> StmtsList;
+  llvm::SmallVector<VarDecl *> LocalVars;
 
   // Argument placeholders, inspired by std::placeholder. These are the indices
   // of arguments to forward to `callBuiltin` and other method builder methods.
@@ -120,7 +124,16 @@ private:
   //   LastStmt - refers to the last statement in the method body; referencing
   //              LastStmt will remove the statement from the method body since
   //              it will be linked from the new expression being constructed.
-  enum class PlaceHolder { _0, _1, _2, _3, _4, Handle = 128, LastStmt };
+  enum class PlaceHolder {
+    _0,
+    _1,
+    _2,
+    _3,
+    _4,
+    LocalVar_0 = 64,
+    Handle = 128,
+    LastStmt
+  };
 
   Expr *convertPlaceholder(PlaceHolder PH);
   Expr *convertPlaceholder(Expr *E) { return E; }
@@ -130,13 +143,17 @@ public:
 
   BuiltinTypeMethodBuilder(BuiltinTypeDeclBuilder &DB, DeclarationName &Name,
                            QualType ReturnTy, bool IsConst = false,
-                           bool IsCtor = false)
+                           bool IsCtor = false,
+                           AccessSpecifier Access = AS_public,
+                           StorageClass SC = SC_None)
       : DeclBuilder(DB), Name(Name), ReturnTy(ReturnTy), Method(nullptr),
-        IsConst(IsConst), IsCtor(IsCtor) {}
+        IsConst(IsConst), IsCtor(IsCtor), Access(Access), SC(SC) {}
 
   BuiltinTypeMethodBuilder(BuiltinTypeDeclBuilder &DB, StringRef NameStr,
                            QualType ReturnTy, bool IsConst = false,
-                           bool IsCtor = false);
+                           bool IsCtor = false,
+                           AccessSpecifier Access = AS_public,
+                           StorageClass SC = SC_None);
   BuiltinTypeMethodBuilder(const BuiltinTypeMethodBuilder &Other) = delete;
 
   ~BuiltinTypeMethodBuilder() { finalize(); }
@@ -147,12 +164,19 @@ public:
   BuiltinTypeMethodBuilder &addParam(StringRef Name, QualType Ty,
                                      HLSLParamModifierAttr::Spelling Modifier =
                                          HLSLParamModifierAttr::Keyword_in);
+  BuiltinTypeMethodBuilder &createLocalVar(StringRef Name, QualType Ty);
   template <typename... Ts>
   BuiltinTypeMethodBuilder &callBuiltin(StringRef BuiltinName,
                                         QualType ReturnType, Ts... ArgSpecs);
   template <typename TLHS, typename TRHS>
   BuiltinTypeMethodBuilder &assign(TLHS LHS, TRHS RHS);
   template <typename T> BuiltinTypeMethodBuilder &dereference(T Ptr);
+  template <typename T>
+  BuiltinTypeMethodBuilder &getResourceHandle(T ResourceRecord);
+  template <typename TResource, typename TValue>
+  BuiltinTypeMethodBuilder &setHandleFieldOnResource(TResource ResourceRecord,
+                                                     TValue HandleValue);
+  template <typename T> BuiltinTypeMethodBuilder &returnValue(T ReturnValue);
   BuiltinTypeDeclBuilder &finalize();
   Expr *getResourceHandleExpr();
 
@@ -328,6 +352,17 @@ Expr *BuiltinTypeMethodBuilder::convertPlaceholder(PlaceHolder PH) {
   }
 
   ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
+  if (PH >= PlaceHolder::LocalVar_0) {
+    unsigned Index = static_cast<unsigned>(PH) -
+                     static_cast<unsigned>(PlaceHolder::LocalVar_0);
+    assert(Index < LocalVars.size() && "local var index out of range");
+    VarDecl *VD = LocalVars[Index];
+    return DeclRefExpr::Create(
+        AST, NestedNameSpecifierLoc(), SourceLocation(), VD, false,
+        DeclarationNameInfo(VD->getDeclName(), SourceLocation()), VD->getType(),
+        VK_LValue);
+  }
+
   ParmVarDecl *ParamDecl = Method->getParamDecl(static_cast<unsigned>(PH));
   return DeclRefExpr::Create(
       AST, NestedNameSpecifierLoc(), SourceLocation(), ParamDecl, false,
@@ -335,12 +370,11 @@ Expr *BuiltinTypeMethodBuilder::convertPlaceholder(PlaceHolder PH) {
       ParamDecl->getType(), VK_PRValue);
 }
 
-BuiltinTypeMethodBuilder::BuiltinTypeMethodBuilder(BuiltinTypeDeclBuilder &DB,
-                                                   StringRef NameStr,
-                                                   QualType ReturnTy,
-                                                   bool IsConst, bool IsCtor)
+BuiltinTypeMethodBuilder::BuiltinTypeMethodBuilder(
+    BuiltinTypeDeclBuilder &DB, StringRef NameStr, QualType ReturnTy,
+    bool IsConst, bool IsCtor, AccessSpecifier Access, StorageClass SC)
     : DeclBuilder(DB), ReturnTy(ReturnTy), Method(nullptr), IsConst(IsConst),
-      IsCtor(IsCtor) {
+      IsCtor(IsCtor), Access(Access), SC(SC) {
 
   assert((!NameStr.empty() || IsCtor) && "method needs a name");
   assert(((IsCtor && !IsConst) || !IsCtor) && "constructor cannot be const");
@@ -390,10 +424,9 @@ void BuiltinTypeMethodBuilder::createDecl() {
         ExplicitSpecifier(), false, true, false,
         ConstexprSpecKind::Unspecified);
   else
-    Method =
-        CXXMethodDecl::Create(AST, DeclBuilder.Record, SourceLocation(),
-                              NameInfo, FuncTy, TSInfo, SC_None, false, false,
-                              ConstexprSpecKind::Unspecified, SourceLocation());
+    Method = CXXMethodDecl::Create(
+        AST, DeclBuilder.Record, SourceLocation(), NameInfo, FuncTy, TSInfo, SC,
+        false, false, ConstexprSpecKind::Unspecified, SourceLocation());
 
   // create params & set them to the function prototype
   SmallVector<ParmVarDecl *> ParmDecls;
@@ -431,14 +464,30 @@ Expr *BuiltinTypeMethodBuilder::getResourceHandleExpr() {
                                     OK_Ordinary);
 }
 
+BuiltinTypeMethodBuilder &
+BuiltinTypeMethodBuilder::createLocalVar(StringRef Name, QualType Ty) {
+  ensureCompleteDecl();
+
+  ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
+  VarDecl *VD =
+      VarDecl::Create(AST, Method, SourceLocation(), SourceLocation(),
+                      &AST.Idents.get(Name, tok::TokenKind::identifier), Ty,
+                      AST.getTrivialTypeSourceInfo(Ty), SC_None);
+  LocalVars.push_back(VD);
+  DeclStmt *DS = new (AST)
+      clang::DeclStmt(DeclGroupRef(VD), SourceLocation(), SourceLocation());
+  StmtsList.push_back(DS);
+  return *this;
+}
+
 template <typename... Ts>
 BuiltinTypeMethodBuilder &
 BuiltinTypeMethodBuilder::callBuiltin(StringRef BuiltinName,
                                       QualType ReturnType, Ts... ArgSpecs) {
+  ensureCompleteDecl();
+
   std::array<Expr *, sizeof...(ArgSpecs)> Args{
       convertPlaceholder(std::forward<Ts>(ArgSpecs))...};
-
-  ensureCompleteDecl();
 
   ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
   FunctionDecl *FD = lookupBuiltinFunction(DeclBuilder.SemaRef, BuiltinName);
@@ -483,6 +532,55 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::dereference(T Ptr) {
   return *this;
 }
 
+template <typename T>
+BuiltinTypeMethodBuilder &
+BuiltinTypeMethodBuilder::getResourceHandle(T ResourceRecord) {
+  ensureCompleteDecl();
+
+  Expr *ResourceExpr = convertPlaceholder(ResourceRecord);
+
+  ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
+  FieldDecl *HandleField = DeclBuilder.getResourceHandleField();
+  MemberExpr *HandleExpr = MemberExpr::CreateImplicit(
+      AST, ResourceExpr, false, HandleField, HandleField->getType(), VK_LValue,
+      OK_Ordinary);
+  StmtsList.push_back(HandleExpr);
+  return *this;
+}
+
+template <typename TResource, typename TValue>
+BuiltinTypeMethodBuilder &
+BuiltinTypeMethodBuilder::setHandleFieldOnResource(TResource ResourceRecord,
+                                                   TValue HandleValue) {
+  ensureCompleteDecl();
+
+  Expr *ResourceExpr = convertPlaceholder(ResourceRecord);
+  Expr *HandleValueExpr = convertPlaceholder(HandleValue);
+
+  ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
+  FieldDecl *HandleField = DeclBuilder.getResourceHandleField();
+  MemberExpr *HandleMemberExpr = MemberExpr::CreateImplicit(
+      AST, ResourceExpr, false, HandleField, HandleField->getType(), VK_LValue,
+      OK_Ordinary);
+  Stmt *AssignStmt = BinaryOperator::Create(
+      DeclBuilder.SemaRef.getASTContext(), HandleMemberExpr, HandleValueExpr,
+      BO_Assign, HandleMemberExpr->getType(), ExprValueKind::VK_PRValue,
+      ExprObjectKind::OK_Ordinary, SourceLocation(), FPOptionsOverride());
+  StmtsList.push_back(AssignStmt);
+  return *this;
+}
+
+template <typename T>
+BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::returnValue(T ReturnValue) {
+  ensureCompleteDecl();
+
+  Expr *ReturnValueExpr = convertPlaceholder(ReturnValue);
+  ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
+  StmtsList.push_back(
+      ReturnStmt::Create(AST, SourceLocation(), ReturnValueExpr, nullptr));
+  return *this;
+}
+
 BuiltinTypeDeclBuilder &BuiltinTypeMethodBuilder::finalize() {
   assert(!DeclBuilder.Record->isCompleteDefinition() &&
          "record is already complete");
@@ -510,7 +608,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeMethodBuilder::finalize() {
     Method->setBody(CompoundStmt::Create(AST, StmtsList, FPOptionsOverride(),
                                          SourceLocation(), SourceLocation()));
     Method->setLexicalDeclContext(DeclBuilder.Record);
-    Method->setAccess(AccessSpecifier::AS_public);
+    Method->setAccess(Access);
     Method->addAttr(AlwaysInlineAttr::CreateImplicit(
         AST, SourceRange(), AlwaysInlineAttr::CXX11_clang_always_inline));
     DeclBuilder.Record->addDecl(Method);
@@ -673,6 +771,58 @@ BuiltinTypeDeclBuilder::addHandleConstructorFromImplicitBinding() {
                    HandleType, PH::Handle, PH::_3, PH::_0, PH::_1, PH::_2,
                    PH::_4)
       .assign(PH::Handle, PH::LastStmt)
+      .finalize();
+}
+
+BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCreateFromBinding() {
+  if (Record->isCompleteDefinition())
+    return *this;
+
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+  ASTContext &AST = SemaRef.getASTContext();
+  QualType HandleType = getResourceHandleField()->getType();
+  QualType RecordType = AST.getTypeDeclType(cast<TypeDecl>(Record));
+
+  return BuiltinTypeMethodBuilder(*this, "__createFromBinding", RecordType,
+                                  false, false, AS_public, SC_Static)
+      .addParam("registerNo", AST.UnsignedIntTy)
+      .addParam("spaceNo", AST.UnsignedIntTy)
+      .addParam("range", AST.IntTy)
+      .addParam("index", AST.UnsignedIntTy)
+      .addParam("name", AST.getPointerType(AST.CharTy.withConst()))
+      .createLocalVar("tmp", RecordType)
+      .getResourceHandle(PH::LocalVar_0)
+      .callBuiltin("__builtin_hlsl_resource_handlefrombinding", HandleType,
+                   PH::LastStmt, PH::_0, PH::_1, PH::_2, PH::_3, PH::_4)
+      .setHandleFieldOnResource(PH::LocalVar_0, PH::LastStmt)
+      .returnValue(PH::LocalVar_0)
+      .finalize();
+}
+
+BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCreateFromImplicitBinding() {
+  if (Record->isCompleteDefinition())
+    return *this;
+
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+  ASTContext &AST = SemaRef.getASTContext();
+  QualType HandleType = getResourceHandleField()->getType();
+  QualType RecordType = AST.getTypeDeclType(cast<TypeDecl>(Record));
+
+  return BuiltinTypeMethodBuilder(*this, "__createFromImplicitBinding",
+                                  RecordType, false, false, AS_public,
+                                  SC_Static)
+      .addParam("orderId", AST.UnsignedIntTy)
+      .addParam("spaceNo", AST.UnsignedIntTy)
+      .addParam("range", AST.IntTy)
+      .addParam("index", AST.UnsignedIntTy)
+      .addParam("name", AST.getPointerType(AST.CharTy.withConst()))
+      .createLocalVar("tmp", RecordType)
+      .getResourceHandle(PH::LocalVar_0)
+      .callBuiltin("__builtin_hlsl_resource_handlefromimplicitbinding",
+                   HandleType, PH::LastStmt, PH::_0, PH::_1, PH::_2, PH::_3,
+                   PH::_4)
+      .setHandleFieldOnResource(PH::LocalVar_0, PH::LastStmt)
+      .returnValue(PH::LocalVar_0)
       .finalize();
 }
 
