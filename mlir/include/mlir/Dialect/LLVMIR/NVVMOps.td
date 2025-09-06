@@ -538,6 +538,26 @@ def NVVM_PMEventOp : NVVM_PTXBuilder_Op<"pmevent">,
 /// mbarrier.init instruction with generic pointer type
 def NVVM_MBarrierInitOp : NVVM_PTXBuilder_Op<"mbarrier.init">,
   Arguments<(ins LLVM_AnyPointer:$addr, I32:$count, PtxPredicate:$predicate)> {
+  let summary = "MBarrier Initialization Op";
+  let description = [{
+    The `nvvm.mbarrier.init` operation initializes an *mbarrier object* at the specified 
+    memory location. 
+
+    This operation initializes the *mbarrier object* with the following state:
+    - Current phase: 0
+    - Expected arrival count: `count`
+    - Pending arrival count: `count`  
+    - Transaction count (tx-count): 0
+
+    The operation takes the following operands:
+    - `addr`: A pointer to the memory location of the *mbarrier object*. Uses generic 
+      addressing, but the address must still be in the shared memory space.
+    - `count`: Integer specifying the number of threads that will participate in barrier
+      synchronization. Must be in the range [1, 2²⁰ - 1].
+    - `predicate`: Optional predicate for conditional execution.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-init)
+  }];
   string llvmBuilder = [{
       createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_init, {$addr, $count});
   }];
@@ -553,6 +573,13 @@ def NVVM_MBarrierInitOp : NVVM_PTXBuilder_Op<"mbarrier.init">,
 /// mbarrier.init instruction with shared pointer type
 def NVVM_MBarrierInitSharedOp : NVVM_PTXBuilder_Op<"mbarrier.init.shared", [NVVMRequiresSM<80>, DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,
   Arguments<(ins LLVM_PointerShared:$addr, I32:$count, PtxPredicate:$predicate)> {
+  let summary = "Shared MBarrier Initialization Op";
+  let description = [{
+    This Op is the same as `nvvm.mbarrier.init` except that the *mbarrier object*
+    should be accessed using a shared-memory pointer instead of a generic-memory pointer.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-init)
+  }];
   string llvmBuilder = [{
       createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_init_shared, {$addr, $count});
   }];
@@ -565,6 +592,21 @@ def NVVM_MBarrierInitSharedOp : NVVM_PTXBuilder_Op<"mbarrier.init.shared", [NVVM
 
 def NVVM_MBarrierInvalOp : NVVM_Op<"mbarrier.inval">,
   Arguments<(ins LLVM_AnyPointer:$addr)> {
+  let summary = "MBarrier Invalidation Operation";
+  let description = [{
+    The `nvvm.mbarrier.inval` operation invalidates an *mbarrier object* at the 
+    specified memory location. 
+
+    This operation marks the *mbarrier object* as invalid, making it safe to repurpose 
+    the memory location for other uses or to reinitialize it as a new *mbarrier object*.
+    It is undefined behavior if the *mbarrier object* is already invalid.
+    
+    The operation takes the following operand:
+    - `addr`: A pointer to the memory location of the *mbarrier object*. Uses generic 
+      addressing, but the address must still be in the shared memory space.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-inval)
+  }];
   string llvmBuilder = [{
       createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_inval, {$addr});
   }];
@@ -573,6 +615,13 @@ def NVVM_MBarrierInvalOp : NVVM_Op<"mbarrier.inval">,
 
 def NVVM_MBarrierInvalSharedOp : NVVM_Op<"mbarrier.inval.shared">,
   Arguments<(ins LLVM_PointerShared:$addr)> {
+  let summary = "Shared MBarrier Invalidation Operation";
+  let description = [{
+    This Op is the same as `nvvm.mbarrier.inval` except that the *mbarrier object*
+    should be accessed using a shared-memory pointer instead of a generic-memory pointer.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-inval)
+  }];
   string llvmBuilder = [{
       createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_inval_shared, {$addr});
   }];
@@ -582,6 +631,27 @@ def NVVM_MBarrierInvalSharedOp : NVVM_Op<"mbarrier.inval.shared">,
 def NVVM_MBarrierArriveOp : NVVM_Op<"mbarrier.arrive">,
   Results<(outs LLVM_Type:$res)>,
   Arguments<(ins LLVM_AnyPointer:$addr)> {
+  let summary = "MBarrier Arrive Operation";
+  let description = [{
+    The `nvvm.mbarrier.arrive` operation performs an arrive-on operation on the 
+    *mbarrier object* at the specified address. Uses the default `.release.cta` semantics. 
+    This release pattern establishes memory ordering for operations occurring in program 
+    order before this arrive instruction by making operations from the current thread 
+    visible to subsequent operations in other threads within the CTA. When other threads 
+    perform corresponding acquire operations (like 'mbarrier.test.wait'), they synchronize 
+    with this release pattern.
+
+    This operation causes the executing thread to signal its arrival at the barrier.
+    The operation returns an opaque value that captures the phase of the 
+    *mbarrier object* prior to the arrive-on operation. The contents of this state 
+    value are implementation-specific.
+
+    The operation takes the following operand:
+    - `addr`: A pointer to the memory location of the *mbarrier object*. Uses generic 
+      addressing, but the address must still be in the shared memory space.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive)
+  }];
   string llvmBuilder = [{
       $res = createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_arrive, {$addr});
   }];
@@ -591,6 +661,13 @@ def NVVM_MBarrierArriveOp : NVVM_Op<"mbarrier.arrive">,
 def NVVM_MBarrierArriveSharedOp : NVVM_Op<"mbarrier.arrive.shared">,
   Results<(outs LLVM_Type:$res)>,
   Arguments<(ins LLVM_PointerShared:$addr)> {
+  let summary = "Shared MBarrier Arrive Operation";
+  let description = [{
+    This Op is the same as `nvvm.mbarrier.arrive` except that the *mbarrier object*
+    should be accessed using a shared-memory pointer instead of a generic-memory pointer.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive)
+  }];
   string llvmBuilder = [{
       $res = createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_arrive_shared, {$addr});
   }];
@@ -600,6 +677,30 @@ def NVVM_MBarrierArriveSharedOp : NVVM_Op<"mbarrier.arrive.shared">,
 def NVVM_MBarrierArriveNocompleteOp : NVVM_Op<"mbarrier.arrive.nocomplete">,
   Results<(outs LLVM_Type:$res)>,
   Arguments<(ins LLVM_AnyPointer:$addr, I32:$count)> {
+  let summary = "MBarrier Arrive No-Complete Operation";
+  let description = [{
+    The `nvvm.mbarrier.arrive.nocomplete` operation performs an arrive-on operation 
+    on the *mbarrier object* with the guarantee that it will not cause the barrier to 
+    complete its current phase. Uses the default `.release.cta` semantics. This release 
+    pattern establishes memory ordering for operations occurring in program order before 
+    this arrive instruction by making operations from the current thread visible to 
+    subsequent operations in other threads within the CTA. When other threads perform 
+    corresponding acquire operations (like 'mbarrier.test.wait'), they synchronize with 
+    this release pattern.
+
+    This operation causes the executing thread to signal its arrival at the barrier 
+    with a specified count, but ensures that the barrier phase will not complete as 
+    a result of this operation. The operation returns an opaque value that 
+    captures the phase of the *mbarrier object* prior to the arrive-on operation.
+
+    The operation takes the following operands:
+    - `addr`: A pointer to the memory location of the *mbarrier object*. Uses generic 
+      addressing, but the address must still be in the shared memory space.
+    - `count`: Integer specifying the count argument to the arrive-on operation. 
+      Must be in the valid range as specified in the *mbarrier object* contents.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive)
+  }];
   string llvmBuilder = [{
       $res = createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_arrive_noComplete, {$addr, $count});
   }];
@@ -609,6 +710,13 @@ def NVVM_MBarrierArriveNocompleteOp : NVVM_Op<"mbarrier.arrive.nocomplete">,
 def NVVM_MBarrierArriveNocompleteSharedOp : NVVM_Op<"mbarrier.arrive.nocomplete.shared">,
   Results<(outs LLVM_Type:$res)>,
   Arguments<(ins LLVM_PointerShared:$addr, I32:$count)> {
+  let summary = "Shared MBarrier Arrive No-Complete Operation";
+  let description = [{
+    This Op is the same as `nvvm.mbarrier.arrive.nocomplete` except that the *mbarrier object*
+    should be accessed using a shared-memory pointer instead of a generic-memory pointer.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive)
+  }];
   string llvmBuilder = [{
       $res = createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_arrive_noComplete_shared, {$addr, $count});
   }];
@@ -617,6 +725,32 @@ def NVVM_MBarrierArriveNocompleteSharedOp : NVVM_Op<"mbarrier.arrive.nocomplete.
 
 def NVVM_MBarrierArriveExpectTxOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_tx">,  
   Arguments<(ins LLVM_AnyPointer:$addr, I32:$txcount, PtxPredicate:$predicate)> {
+  let summary = "MBarrier Arrive with Expected Transaction Count";
+  let description = [{
+    The `nvvm.mbarrier.arrive.expect_tx` operation performs an expect-tx operation 
+    followed by an arrive-on operation on the *mbarrier object*. Uses the default 
+    `.release.cta` semantics. This release pattern establishes memory ordering for 
+    operations occurring in program order before this arrive instruction by making 
+    operations from the current thread visible to subsequent operations in other 
+    threads within the CTA. When other threads perform corresponding acquire operations 
+    (like 'mbarrier.test.wait'), they synchronize with this release pattern.
+
+    This operation first performs an expect-tx operation with the specified transaction 
+    count, then performs an arrive-on operation with an implicit count of 1. The 
+    expect-tx operation increases the tx-count of the *mbarrier object* by the specified 
+    expectCount value, setting the current phase to expect and tracks the completion 
+    of additional asynchronous transactions.
+
+    The operation takes the following operands:
+    - `addr`: A pointer to the memory location of the *mbarrier object*. Uses generic 
+      addressing, but the address must still be in the shared memory space.
+    - `txcount`: An unsigned integer specifying the expected transaction count 
+      for the expect-tx operation. This represents the number of asynchronous transactions 
+      expected to complete before the barrier phase completes.
+    - `predicate`: Optional predicate for conditional execution.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive)
+  }];
   let assemblyFormat = "$addr `,` $txcount (`,` `predicate` `=` $predicate^)? attr-dict `:` type(operands)";
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() { return std::string("mbarrier.arrive.expect_tx.b64 _, [%0], %1;"); }
@@ -624,7 +758,14 @@ def NVVM_MBarrierArriveExpectTxOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_t
 }
 
 def NVVM_MBarrierArriveExpectTxSharedOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_tx.shared">,  
-  Arguments<(ins LLVM_PointerShared:$addr, I32:$txcount, PtxPredicate:$predicate)> {    
+  Arguments<(ins LLVM_PointerShared:$addr, I32:$txcount, PtxPredicate:$predicate)> {
+  let summary = "Shared MBarrier Arrive with Expected Transaction Count";
+  let description = [{
+    This Op is the same as `nvvm.mbarrier.arrive.expect_tx` except that the *mbarrier object*
+    should be accessed using a shared-memory pointer instead of a generic-memory pointer.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive)
+  }];    
   let assemblyFormat = "$addr `,` $txcount (`,` `predicate` `=` $predicate^)? attr-dict `:` type(operands)";
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() { return std::string("mbarrier.arrive.expect_tx.shared.b64 _, [%0], %1;"); }
@@ -632,7 +773,58 @@ def NVVM_MBarrierArriveExpectTxSharedOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.ex
 }
 
 def NVVM_MBarrierTryWaitParityOp : NVVM_PTXBuilder_Op<"mbarrier.try_wait.parity">,  
-  Arguments<(ins LLVM_AnyPointer:$addr, I32:$phase, I32:$ticks)> {  
+  Arguments<(ins LLVM_AnyPointer:$addr, I32:$phase, I32:$ticks)> {
+  let summary = "MBarrier Potentially-Blocking Try Wait with Phase Parity";
+  let description = [{
+    The `nvvm.mbarrier.try_wait.parity` operation performs a potentially-blocking 
+    test for the completion of a specific phase of an *mbarrier object* using phase 
+    parity. It uses the default `.acquire.cta` semantics. This acquire pattern 
+    establishes memory ordering for operations occurring in program order after this 
+    wait instruction by making operations from other threads in the CTA visible to subsequent 
+    operations in the current thread. When this wait completes, it synchronizes with 
+    the corresponding release pattern from the `mbarrier.arrive` operation, establishing 
+    memory ordering within the CTA.
+
+    This operation waits for the completion of the mbarrier phase indicated by the 
+    phase parity. While it uses the underlying PTX `mbarrier.try_wait.parity` 
+    instruction, this MLIR operation generates a loop that enforces the test to 
+    complete before continuing execution, ensuring the barrier phase is actually 
+    completed rather than potentially timing out.
+
+    The operation takes the following operands:
+    - `addr`: A pointer to the memory location of the *mbarrier object*. Uses generic 
+      addressing, but the address must still be in the shared memory space.
+    - `phase`: An integer specifying the phase parity (0 or 1). Even phases 
+      have parity 0, odd phases have parity 1.
+    - `ticks`: An unsigned integer specifying the suspend time hint in 
+      nanoseconds. This may be used instead of the system-dependent time limit.
+
+    **Memory ordering guarantees**: When this wait returns true, the following 
+    ordering guarantees hold:
+
+    1. All memory accesses (except async operations) requested prior to
+       `mbarrier.arrive` having release semantics by participating CTA threads
+       are visible to the executing thread.
+    2. All `cp.async` operations requested prior to `cp.async.mbarrier.arrive`
+       by participating CTA threads are visible to the executing thread.
+    3. All `cp.async.bulk` operations using the same *mbarrier object* requested
+       prior to `mbarrier.arrive` having release semantics by participating CTA
+       threads are visible to the executing thread.
+    4. Memory accesses requested after this wait are not visible to memory
+       accesses performed prior to `mbarrier.arrive` by other participating
+       threads.
+    5. No ordering guarantee exists for memory accesses by the same thread
+       between `mbarrier.arrive` and this wait.
+
+    **Implementation behavior**:
+    This operation generates a PTX loop that repeatedly calls the underlying 
+    `mbarrier.try_wait.parity` instruction until the barrier phase completes. 
+    Unlike the raw PTX instruction which may return without completion after a 
+    timeout, this MLIR operation guarantees completion by continuing to loop until 
+    the specified phase is reached.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-mbarrier-test-wait-try-wait)
+  }];  
   let assemblyFormat = "$addr `,` $phase `,` $ticks attr-dict `:` type(operands)";
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() {
@@ -651,7 +843,14 @@ def NVVM_MBarrierTryWaitParityOp : NVVM_PTXBuilder_Op<"mbarrier.try_wait.parity"
 }
 
 def NVVM_MBarrierTryWaitParitySharedOp : NVVM_PTXBuilder_Op<"mbarrier.try_wait.parity.shared">,  
-  Arguments<(ins LLVM_PointerShared:$addr, I32:$phase, I32:$ticks)> {  
+  Arguments<(ins LLVM_PointerShared:$addr, I32:$phase, I32:$ticks)> {
+  let summary = "Shared MBarrier Potentially-Blocking Try Wait with Phase Parity";
+  let description = [{
+    This Op is the same as `nvvm.mbarrier.try_wait.parity` except that the *mbarrier object*
+    should be accessed using a shared-memory pointer instead of a generic-memory pointer.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-mbarrier-test-wait-try-wait)
+  }];  
   let assemblyFormat = "$addr `,` $phase `,` $ticks attr-dict `:` type(operands)";
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() {
@@ -672,6 +871,52 @@ def NVVM_MBarrierTryWaitParitySharedOp : NVVM_PTXBuilder_Op<"mbarrier.try_wait.p
 def NVVM_MBarrierTestWaitOp : NVVM_Op<"mbarrier.test.wait">,
   Results<(outs LLVM_Type:$res)>,
   Arguments<(ins LLVM_AnyPointer:$addr, LLVM_Type:$state)> {
+  let summary = "MBarrier Non-Blocking Test Wait Operation";
+  let description = [{
+    The `nvvm.mbarrier.test.wait` operation performs a non-blocking test for the 
+    completion of a specific phase of an *mbarrier object*. It uses the default
+    `.acquire.cta` semantics. This acquire pattern establishes memory ordering for 
+    operations occurring in program order after this wait instruction by making 
+    operations from other threads in the CTA visible to subsequent operations in the current 
+    thread. When this wait completes, it synchronizes with the corresponding release 
+    pattern from the `mbarrier.arrive` operation, establishing memory ordering within 
+    the CTA.
+
+    This operation tests whether the mbarrier phase specified by the state operand 
+    has completed. It is a non-blocking instruction that immediately returns the 
+    completion status without suspending the executing thread.
+
+    The operation takes the following operands:
+    - `addr`: A pointer to the memory location of the *mbarrier object*. Uses generic 
+      addressing, but the address must still be in the shared memory space.
+    - `state`: An opaque value returned by a previous `mbarrier.arrive` 
+      operation on the same *mbarrier object* during the current or immediately 
+      preceding phase.
+
+    The operation returns a boolean value indicating whether the specified phase 
+    has completed:
+    - `true`: The immediately preceding phase has completed
+    - `false`: The phase is still incomplete (current phase)
+
+    **Memory ordering guarantees**: When this wait returns true, the following 
+    ordering guarantees hold:
+
+    1. All memory accesses (except async operations) requested prior to
+       `mbarrier.arrive` having release semantics by participating CTA threads
+       are visible to the executing thread.
+    2. All `cp.async` operations requested prior to `cp.async.mbarrier.arrive`
+       by participating CTA threads are visible to the executing thread.
+    3. All `cp.async.bulk` operations using the same *mbarrier object* requested
+       prior to `mbarrier.arrive` having release semantics by participating CTA
+       threads are visible to the executing thread.
+    4. Memory accesses requested after this wait are not visible to memory
+       accesses performed prior to `mbarrier.arrive` by other participating
+       threads.
+    5. No ordering guarantee exists for memory accesses by the same thread
+       between `mbarrier.arrive` and this wait.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-mbarrier-test-wait-try-wait)
+  }];
   string llvmBuilder = [{
       $res = createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_test_wait, {$addr, $state});
   }];
@@ -681,6 +926,13 @@ def NVVM_MBarrierTestWaitOp : NVVM_Op<"mbarrier.test.wait">,
 def NVVM_MBarrierTestWaitSharedOp : NVVM_Op<"mbarrier.test.wait.shared">,
   Results<(outs LLVM_Type:$res)>,
   Arguments<(ins LLVM_PointerShared:$addr, LLVM_Type:$state)> {
+  let summary = "Shared MBarrier Non-Blocking Test Wait Operation";
+  let description = [{
+    This Op is the same as `nvvm.mbarrier.test.wait` except that the *mbarrier object*
+    should be accessed using a shared-memory pointer instead of a generic-memory pointer.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-mbarrier-test-wait-try-wait)
+  }];
   string llvmBuilder = [{
       $res = createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_test_wait_shared, {$addr, $state});
   }];
@@ -692,6 +944,15 @@ def NVVM_MBarrierTestWaitSharedOp : NVVM_Op<"mbarrier.test.wait.shared">,
 //===----------------------------------------------------------------------===//
 
 def NVVM_Barrier0Op : NVVM_Op<"barrier0"> {
+  let summary = "CTA Barrier Synchronization Op (Barrier ID 0)";
+  let description = [{
+    The `nvvm.barrier0` operation is a convenience operation that performs barrier 
+    synchronization and communication within a CTA (Cooperative Thread Array) using 
+    barrier ID 0. It is functionally equivalent to `nvvm.barrier` or `nvvm.barrier id=0`. 
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar)
+  }];
+
   let assemblyFormat = "attr-dict";
   string llvmBuilder = [{
       createIntrinsicCall(
@@ -701,6 +962,35 @@ def NVVM_Barrier0Op : NVVM_Op<"barrier0"> {
 }
 
 def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
+  let summary = "CTA Barrier Synchronization Op";
+  let description = [{
+    The `nvvm.barrier` operation performs barrier synchronization and communication 
+    within a CTA (Cooperative Thread Array). It causes executing threads to wait for 
+    all non-exited threads participating in the barrier to arrive.
+
+    The operation takes two optional operands:
+
+    - `barrierId`: Specifies a logical barrier resource with value 0 through 15. 
+      Each CTA instance has sixteen barriers numbered 0..15. Defaults to 0 if not specified.
+    - `numberOfThreads`: Specifies the number of threads participating in the barrier. 
+      When specified, the value must be a multiple of the warp size. If not specified, 
+      all threads in the CTA participate in the barrier.
+
+    The barrier operation guarantees that when the barrier completes, prior memory 
+    accesses requested by participating threads are performed relative to all threads 
+    participating in the barrier. It also ensures that no new memory access is 
+    requested by participating threads before the barrier completes.
+
+    When a barrier completes, the waiting threads are restarted without delay, and 
+    the barrier is reinitialized so that it can be immediately reused.
+
+    This operation generates an aligned barrier, indicating that all threads in the CTA 
+    will execute the same barrier instruction. Behavior is undefined if all threads in the 
+    CTA do not reach this instruction.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar)
+  }];
+
   let arguments = (ins     
     Optional<I32>:$barrierId,
     Optional<I32>:$numberOfThreads);
@@ -1090,6 +1380,33 @@ def NVVM_VoteSyncOp
 def NVVM_SyncWarpOp :
   NVVM_Op<"bar.warp.sync">,
   Arguments<(ins LLVM_Type:$mask)> {
+  let summary = "Warp Barrier Synchronization Op";
+  let description = [{
+    The `nvvm.bar.warp.sync` operation performs barrier synchronization for threads 
+    within a warp. 
+
+    This operation causes the executing thread to wait until all threads corresponding 
+    to the `mask` operand have executed a `bar.warp.sync` with the same mask value 
+    before resuming execution.
+
+    The `mask` operand specifies the threads participating in the barrier, where each 
+    bit position corresponds to the thread's lane ID within the warp. Only threads with 
+    their corresponding bit set in the mask participate in the barrier synchronization.
+
+    **Important constraints**:
+    - The behavior is undefined if the executing thread is not included in the mask 
+      (i.e., the bit corresponding to the thread's lane ID is not set)
+    - For compute capability sm_6x or below, all threads in the mask must execute 
+      the same `bar.warp.sync` instruction in convergence
+
+    This operation also guarantees memory ordering among participating threads. 
+    Threads within the warp that wish to communicate via memory can store to memory, 
+    execute `bar.warp.sync`, and then safely read values stored by other threads 
+    in the warp.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar-warp-sync)
+  }];
+
   string llvmBuilder = [{
       createIntrinsicCall(builder, llvm::Intrinsic::nvvm_bar_warp_sync, {$mask});
   }];
@@ -1187,9 +1504,9 @@ def NVVM_CpAsyncWaitGroupOp : NVVM_Op<"cp.async.wait.group">,
 def NVVM_CpAsyncMBarrierArriveOp : NVVM_Op<"cp.async.mbarrier.arrive"> {
   let summary = "NVVM Dialect Op for cp.async.mbarrier.arrive";
   let description = [{
-    The `cp.async.mbarrier.arrive` Op makes the mbarrier object track
+    The `cp.async.mbarrier.arrive` Op makes the *mbarrier object* track
     all prior cp.async operations initiated by the executing thread.
-    The `addr` operand specifies the address of the mbarrier object
+    The `addr` operand specifies the address of the *mbarrier object*
     in generic address space. The `noinc` attr impacts how the
     mbarrier's state is updated.
     
@@ -1212,9 +1529,9 @@ def NVVM_CpAsyncMBarrierArriveOp : NVVM_Op<"cp.async.mbarrier.arrive"> {
 def NVVM_CpAsyncMBarrierArriveSharedOp : NVVM_Op<"cp.async.mbarrier.arrive.shared"> {
   let summary = "NVVM Dialect Op for cp.async.mbarrier.arrive.shared";
   let description = [{
-    The `cp.async.mbarrier.arrive.shared` Op makes the mbarrier object
+    The `cp.async.mbarrier.arrive.shared` Op makes the *mbarrier object*
     track all prior cp.async operations initiated by the executing thread.
-    The `addr` operand specifies the address of the mbarrier object in
+    The `addr` operand specifies the address of the *mbarrier object* in
     shared memory. The `noinc` attr impacts how the mbarrier's state
     is updated. 
     
@@ -3546,10 +3863,10 @@ def NVVM_Tcgen05WaitOp : NVVM_Op<"tcgen05.wait", [NVVMRequiresSMa<[100, 101]>]> 
 def NVVM_Tcgen05CommitOp : NVVM_Op<"tcgen05.commit", [NVVMRequiresSMa<[100, 101]>]> {
   let summary = "Tcgen05 commit operations";
   let description = [{
-    The `tcgen05.commit` makes the mbarrier object, specified by
+    The `tcgen05.commit` makes the *mbarrier object*, specified by
     the operand `addr`, track the completion of all the prior
     async-tcgen05 operations initiated by the executing thread.
-    The multicast variants allow signaling on the mbarrier objects
+    The multicast variants allow signaling on the *mbarrier objects*
     of multiple CTAs within the cluster. Operand `multicastMask`,
     when present, specifies the destination CTAs in the cluster such
     that each bit position in the 16-bit `multicastMask` operand
