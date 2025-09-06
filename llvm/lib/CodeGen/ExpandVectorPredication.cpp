@@ -527,6 +527,12 @@ std::pair<Value *, bool> CachingVPExpander::foldEVLIntoMask(VPIntrinsic &VPI) {
 
   // Only VP intrinsics can have an %evl parameter.
   Value *OldMaskParam = VPI.getMaskParam();
+  if (!OldMaskParam) {
+    assert(VPI.getIntrinsicID() == Intrinsic::vp_merge &&
+           "Unexpected VP intrinsic without mask operand");
+    OldMaskParam = VPI.getArgOperand(0);
+  }
+
   Value *OldEVLParam = VPI.getVectorLengthParam();
   assert(OldMaskParam && "no mask param to fold the vl param into");
   assert(OldEVLParam && "no EVL param to fold away");
@@ -538,7 +544,10 @@ std::pair<Value *, bool> CachingVPExpander::foldEVLIntoMask(VPIntrinsic &VPI) {
   ElementCount ElemCount = VPI.getStaticVectorLength();
   Value *VLMask = convertEVLToMask(Builder, OldEVLParam, ElemCount);
   Value *NewMaskParam = Builder.CreateAnd(VLMask, OldMaskParam);
-  VPI.setMaskParam(NewMaskParam);
+  if (VPI.getIntrinsicID() == Intrinsic::vp_merge)
+    VPI.setArgOperand(0, NewMaskParam);
+  else
+    VPI.setMaskParam(NewMaskParam);
 
   // Drop the %evl parameter.
   discardEVLParameter(VPI);
