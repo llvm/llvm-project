@@ -5070,6 +5070,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                      KnownRHS.isKnownNeverPosZero()) &&
                     (KnownLHS.isKnownNeverPosZero() ||
                      KnownRHS.isKnownNeverNegZero()))) {
+          // Don't take sign bit from NaN operands.
+          if (!KnownLHS.isKnownNeverNaN())
+            KnownLHS.SignBit = std::nullopt;
+          if (!KnownRHS.isKnownNeverNaN())
+            KnownRHS.SignBit = std::nullopt;
           if ((IID == Intrinsic::maximum || IID == Intrinsic::maximumnum ||
                IID == Intrinsic::maxnum) &&
               (KnownLHS.SignBit == false || KnownRHS.SignBit == false))
