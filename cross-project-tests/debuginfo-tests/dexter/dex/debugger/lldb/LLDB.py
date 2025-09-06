@@ -11,6 +11,7 @@ import os
 import shlex
 from subprocess import CalledProcessError, check_output, STDOUT
 import sys
+import time
 
 from dex.debugger.DebuggerBase import DebuggerBase, watch_is_active
 from dex.debugger.DAP import DAP
@@ -419,20 +420,39 @@ class LLDBDAP(DAP):
             "_start",
         ]
 
+    def _get_current_path_and_addr(self):
+        trace_req_id = self.send_message(
+            self.make_request(
+                "stackTrace", {"threadId": self._debugger_state.thread, "levels": 1}
+            )
+        )
+        trace_response = self._await_response(trace_req_id)
+        if not trace_response["success"]:
+            raise DebuggerException("failed to get stack frames")
+        stackframes = trace_response["body"]["stackFrames"]
+        path = stackframes[0]["source"]["path"]
+        addr = stackframes[0]["instructionPointerReference"]
+        return (path, addr)
+
     def _post_step_hook(self):
         """Hook to be executed after completing a step request."""
         if self._debugger_state.stopped_reason == "step":
-            trace_req_id = self.send_message(
-                self.make_request(
-                    "stackTrace", {"threadId": self._debugger_state.thread, "levels": 1}
-                )
-            )
-            trace_response = self._await_response(trace_req_id)
-            if not trace_response["success"]:
-                raise DebuggerException("failed to get stack frames")
-            stackframes = trace_response["body"]["stackFrames"]
-            path = stackframes[0]["source"]["path"]
-            addr = stackframes[0]["instructionPointerReference"]
+            # Buildbot cross-project-tests-sie-ubuntu sees sporadic test
+            # failures due to missing stackFrames[0].source.path. The "path"
+            # field is optional for "source" according to DAP, so it's not
+            # ill-formed. But it works most of the time, and doesn't
+            # consistently fail for any one test. Attempt to get the stack
+            # frames with source paths 3 times before giving up.
+            # FIXME: It would be ideal if we didn't need to do any of this.
+            # This entire function could be removed if gh#156650 gets resolved.
+            for attempt in range(1, 3):
+                try:
+                    path, addr = self._get_current_path_and_addr()
+                except KeyError as e:
+                    if attempt == 3:
+                        raise e
+                    time.sleep(0.1)
+
             if any(
                 self._debugger_state.bp_addr_map.get(self.dex_id_to_dap_id[dex_bp_id])
                 == addr
