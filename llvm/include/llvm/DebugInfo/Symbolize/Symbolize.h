@@ -196,13 +196,13 @@ private:
   Expected<ObjectPair> getOrCreateObjectPair(const std::string &Path,
                                              const std::string &ArchName);
 
-  /// Return a pointer to the object file with the specified name, for a 
+  /// Return a pointer to the object file with the specified name, for a
   /// specified architecture (e.g. if path refers to a Mach-O universal 
   /// binary, only one object file from it will be returned).
   Expected<ObjectFile *> getOrCreateObject(const std::string &InputPath,
                                            const std::string &DefaultArchName);
 
-  /// Return a pointer to the object file with the specified name, for a 
+  /// Return a pointer to the object file with the specified name, for a
   /// specified architecture that is present inside an archive file.
   Expected<ObjectFile *> getOrCreateObjectFromArchive(StringRef ArchivePath,
                                                       StringRef MemberName,
