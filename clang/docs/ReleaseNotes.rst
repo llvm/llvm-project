@@ -280,6 +280,8 @@ Improvements to Clang's diagnostics
   ``ACQUIRED_AFTER(...)`` have been moved to the stable feature set and no
   longer require ``-Wthread-safety-beta`` to be used.
 
+- Improved diagnostic location for templates declared inside local classes.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
