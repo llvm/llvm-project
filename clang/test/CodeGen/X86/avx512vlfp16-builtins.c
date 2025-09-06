@@ -1843,6 +1843,8 @@ __m256h test_mm256_maskz_cvtepi16_ph(__mmask16 A, __m256i B) {
   return _mm256_maskz_cvtepi16_ph(A, B);
 }
 
+TEST_CONSTEXPR(match_m256h(_mm256_maskz_cvtepi16_ph(/*1101 0101 1101 1100=*/0xd5dc, (__m256i)(__v16hi){-1, -1, 2, 2, -4, -4, 8, 8, -16, -16, 32, 32, -64, -64, 128, 128}), 0.0, 0.0, 2.0, 2.0, -4.0, 0.0, 8.0, 8.0, -16.0, 0.0, 32.0, 0.0, -64.0, 0.0, 128.0, 128.0));
+
 __m128i test_mm_cvtph_epu16(__m128h A) {
   // CHECK-LABEL: test_mm_cvtph_epu16
   // CHECK: @llvm.x86.avx512fp16.mask.vcvtph2uw.128
