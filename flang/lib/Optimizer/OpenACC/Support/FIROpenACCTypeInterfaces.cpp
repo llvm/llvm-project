@@ -550,10 +550,7 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
 
   auto getDeclareOpForType = [&](mlir::Type ty) -> hlfir::DeclareOp {
     auto alloca = fir::AllocaOp::create(firBuilder, loc, ty);
-    return hlfir::DeclareOp::create(
-        firBuilder, loc, alloca, varName, /*shape=*/nullptr,
-        llvm::ArrayRef<mlir::Value>{},
-        /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
+    return hlfir::DeclareOp::create(firBuilder, loc, alloca, varName);
   };
 
   if (fir::isa_trivial(unwrappedTy)) {
@@ -574,10 +571,8 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
       }
       auto alloca = fir::AllocaOp::create(
           firBuilder, loc, seqTy, /*typeparams=*/mlir::ValueRange{}, extents);
-      auto declareOp = hlfir::DeclareOp::create(
-          firBuilder, loc, alloca, varName, shape,
-          llvm::ArrayRef<mlir::Value>{},
-          /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
+      auto declareOp =
+          hlfir::DeclareOp::create(firBuilder, loc, alloca, varName, shape);
 
       if (initVal) {
         mlir::Type idxTy = firBuilder.getIndexType();

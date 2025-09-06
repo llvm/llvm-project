@@ -1046,8 +1046,7 @@ public:
                                static_cast<__node_base_pointer>(__nd.get()));
               __max_node = __nd.release();
             } else {
-              __end_node_pointer __parent;
-              __node_base_pointer& __child = __find_equal(__parent, __key);
+              auto [__parent, __child] = __find_equal(__key);
               if (__child == nullptr) {
                 __node_holder __nd = __construct_node(std::forward<__reference>(__val));
                 __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__nd.release()));
@@ -1062,8 +1061,7 @@ public:
                                static_cast<__node_base_pointer>(__nd.get()));
               __max_node = __nd.release();
             } else {
-              __end_node_pointer __parent;
-              __node_base_pointer& __child = __find_equal(__parent, __nd->__get_value());
+              auto [__parent, __child] = __find_equal(__nd->__get_value());
               if (__child == nullptr) {
                 __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__nd.release()));
               }
