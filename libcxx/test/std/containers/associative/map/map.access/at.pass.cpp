@@ -103,22 +103,6 @@ TEST_CONSTEXPR_CXX26 bool test() {
         V(8, 8.5),
     };
 
-    // std::__tree_node<std::__value_type<int,double>, min_pointer<void>> d;
-    // std::__tree_node_base<min_pointer<void>> b  = d;
-    using Base = std::__tree_node_base<min_pointer<void>>;
-
-    using Derived = std::__tree_node<std::__value_type<int, double>, min_pointer<void>>;
-    static_assert(std::is_base_of_v<Base, Derived>);
-
-    // using BaseP = min_pointer<Base>;
-    // using DerivedP = min_pointer<Derived>;
-    // static_assert(std::is_base_of_v<BaseP, DerivedP>);
-    // DerivedP dp(nullptr);
-    // (void)dp;
-
-    // BaseP bp =static_cast<BaseP>(dp);
-    // (void)bp;
-
     std::map<int, double, std::less<int>, min_allocator<V>> m(ar, ar + sizeof(ar) / sizeof(ar[0]));
     assert(m.size() == 7);
     assert(m.at(1) == 1.5);
