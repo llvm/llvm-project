@@ -71,7 +71,7 @@ exit:
   ret void
 }
 
-; FIXME: !llvm.loop.unroll.runtime.disable metadata should be added to the
+; !llvm.loop.unroll.runtime.disable metadata should be added to the
 ; scalar loop, as there are no runtime checks needed (or they can be proven
 ; false).
 define void @diff_memcheck_known_false_for_vf_4(ptr %B, ptr %A, ptr %end) {
@@ -151,5 +151,5 @@ exit:
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]]}
+; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
 ;.
