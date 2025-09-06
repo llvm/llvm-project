@@ -176,6 +176,10 @@ New checks
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
+- New alias :doc:`bugprone-unchecked-string-to-number-conversion
+  <clang-tidy/checks/bugprone/unchecked-string-to-number-conversion>` to
+  :doc:`cert-err34-c <clang-tidy/checks/cert/err34-c>` was added.
+
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
