@@ -196,7 +196,7 @@ Error saveInputArchiveMember(lto::LTO &LtoObj, lto::InputFile *Input) {
 
 // Iterates through all ThinLTO-enabled input files and saves their content
 // to separate files if they are regular archive members.
-Error saveInputArchiveMembers(lto::LTO& LtoObj) {
+Error saveInputArchiveMembers(lto::LTO &LtoObj) {
   for (auto &Input : LtoObj.InputFiles) {
     if (!Input->isThinLTO())
       continue;

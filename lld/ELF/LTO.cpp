@@ -202,8 +202,8 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
                                       ctx.arg.ltoPartitions,
                                       ltoModes[ctx.arg.ltoKind]);
 
-  if(!ctx.arg.dtltoDistributor.empty())
-      ltoObj->Dtlto = true;
+  if (!ctx.arg.dtltoDistributor.empty())
+    ltoObj->Dtlto = true;
 
   // Initialize usedStartStop.
   if (ctx.bitcodeFiles.empty())

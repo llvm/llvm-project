@@ -227,9 +227,12 @@ public:
   bool isThinLTO() const { return IsThinLTO; }
 
   // Store an archive path and a member name.
-  void setArchivePathAndName(StringRef Path, StringRef Name) { ArchivePath = Path; MemberName = Name; }
-  StringRef getArchivePath() const  { return ArchivePath; }
-  StringRef getMemberName() const  { return MemberName; }
+  void setArchivePathAndName(StringRef Path, StringRef Name) {
+    ArchivePath = Path;
+    MemberName = Name;
+  }
+  StringRef getArchivePath() const { return ArchivePath; }
+  StringRef getMemberName() const { return MemberName; }
 
 private:
   ArrayRef<Symbol> module_symbols(unsigned I) const {

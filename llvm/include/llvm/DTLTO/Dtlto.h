@@ -14,8 +14,8 @@
 
 namespace dtlto {
 
-llvm::Expected<llvm::lto::InputFile*> addInput(llvm::lto::LTO *LtoObj,
-                               std::unique_ptr<llvm::lto::InputFile> Input);
+llvm::Expected<llvm::lto::InputFile *>
+addInput(llvm::lto::LTO *LtoObj, std::unique_ptr<llvm::lto::InputFile> Input);
 
 llvm::Error process(llvm::lto::LTO &LtoObj);
 } // namespace dtlto
