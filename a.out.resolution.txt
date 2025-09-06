@@ -1,0 +1,7 @@
+/tmp/c-57d011.o
+-r=/tmp/c-57d011.o,main,plx
+-r=/tmp/c-57d011.o,f,l
+-r=/tmp/c-57d011.o,getsockname,
+/tmp/a-ac7e8d.o
+-r=/tmp/a-ac7e8d.o,f,pl
+-r=/tmp/a-ac7e8d.o,socket,
