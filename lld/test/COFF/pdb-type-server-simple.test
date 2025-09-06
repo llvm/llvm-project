@@ -106,18 +106,17 @@ CHECK-LABEL:   Mod 0002 | `* Linker *`:
 
 SUMMARY:                                     Summary
 SUMMARY-NEXT: --------------------------------------------------------------------------------
-SUMMARY-NEXT:                    2 Input OBJ files (expanded from all cmd-line inputs)
-SUMMARY-NEXT: Size of all consumed OBJ files (non-lazy), in bytes
-SUMMARY-NEXT:                    1 PDB type server dependencies
-SUMMARY-NEXT:                    0 Precomp OBJ dependencies
-SUMMARY-NEXT:                   25 Input type records
-SUMMARY-NEXT:                  868 Size of all input type records, in bytes
-SUMMARY-NEXT:                    9 Merged TPI records
-SUMMARY-NEXT:                   16 Merged IPI records
-SUMMARY-NEXT:                    3 Output PDB strings
-SUMMARY-NEXT:                    4 Global symbol records
-SUMMARY-NEXT:                   14 Module symbol records
-SUMMARY-NEXT:                    2 Public symbol records
+SUMMARY-NEXT:               2 Input OBJ files (expanded from all cmd-line inputs)
+SUMMARY-NEXT:               1 PDB type server dependencies
+SUMMARY-NEXT:               0 Precomp OBJ dependencies
+SUMMARY-NEXT:              25 Input type records
+SUMMARY-NEXT:             868 Input type records bytes
+SUMMARY-NEXT:               9 Merged TPI records
+SUMMARY-NEXT:              16 Merged IPI records
+SUMMARY-NEXT:               3 Output PDB strings
+SUMMARY-NEXT:               4 Global symbol records
+SUMMARY-NEXT:              14 Module symbol records
+SUMMARY-NEXT:               2 Public symbol records
 
 SUMMARY:      Top 10 types responsible for the most TPI input:
 SUMMARY-NEXT:        index     total bytes   count     size
