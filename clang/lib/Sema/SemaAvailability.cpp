@@ -187,7 +187,9 @@ static bool ShouldDiagnoseAvailabilityInContext(
   // For libraries the availability will be checked later in
   // DiagnoseHLSLAvailability class once where the specific environment/shader
   // stage of the caller is known.
-  if (S.getLangOpts().HLSL) {
+  // We only do this for APIs that are not explicitly deprecated. Any API that
+  // is explicitly deprecated we always issue a diagnostic on.
+  if (S.getLangOpts().HLSL && K != AR_Deprecated) {
     if (!S.getLangOpts().HLSLStrictAvailability ||
         (DeclEnv != nullptr &&
          S.getASTContext().getTargetInfo().getTriple().getEnvironment() ==
