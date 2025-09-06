@@ -258,3 +258,13 @@ void trap2() {
 // LLVM:       {{.+}}:
 // LLVM-NEXT:    call void @_Z2f1v()
 // LLVM:       }
+
+void *test_alloca(unsigned long n) {
+  return __builtin_alloca(n);
+}
+
+// CIR-LABEL: @_Z11test_allocam(
+// CIR:         %{{.+}} = cir.alloca !u8i, !cir.ptr<!u8i>, %{{.+}} : !u64i, ["bi_alloca"]
+
+// LLVM-LABEL: @_Z11test_allocam(
+// LLVM:         alloca i8, i64 %{{.+}}
