@@ -6969,7 +6969,17 @@ const ConstantRange &ScalarEvolution::getRangeRef(
         ConstantRange RangeFromOps(BitWidth, /*isFullSet=*/false);
 
         for (const auto &Op : Phi->operands()) {
-          auto OpRange = getRangeRef(getSCEV(Op), SignHint, Depth + 1);
+          ConstantRange OpRange = RangeFromOps;
+          if (auto *S = getExistingSCEV(Op)) {
+            OpRange = getRangeRef(S, SignHint, Depth + 1);
+          } else {
+            if (!Op->getType()->isIntOrIntVectorTy())
+              break;
+            SimplifyQuery SQ(DL, &DT, &AC,
+                             Phi->getIncomingBlock(Op)->getTerminator(), true);
+            OpRange = computeConstantRangeIncludingKnownBits(
+                Op.get(), SignHint == HINT_RANGE_SIGNED, SQ);
+          }
           RangeFromOps = RangeFromOps.unionWith(OpRange);
           // No point to continue if we already have a full set.
           if (RangeFromOps.isFullSet())

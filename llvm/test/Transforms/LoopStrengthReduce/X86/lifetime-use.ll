@@ -14,7 +14,7 @@ define void @test(ptr %p, i64 %idx) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ], [ -8, %[[ENTRY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[LSR_IV]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[LSR_IV]], 2
 ; CHECK-NEXT:    [[SCEVGEP8:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[SCEVGEP9:%.*]] = getelementptr i8, ptr [[SCEVGEP8]], i64 32
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[SCEVGEP9]], align 4
