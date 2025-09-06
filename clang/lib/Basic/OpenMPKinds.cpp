@@ -37,7 +37,7 @@ const char *clang::getOpenMPDefaultVariableCategoryName(unsigned VC) {
     return #Name;
 #include "clang/Basic/OpenMPKinds.def"
   }
-  return "unknown";
+  llvm_unreachable("Invalid Variable Category in the default clause");
 }
 
 unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
