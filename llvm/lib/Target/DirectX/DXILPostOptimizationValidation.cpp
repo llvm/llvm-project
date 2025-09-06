@@ -205,7 +205,7 @@ static void validateRootSignature(Module &M,
       const mcdxbc::DescriptorTable &Table =
           RSD.ParametersContainer.getDescriptorTable(ParamInfo.Location);
 
-      for (const dxbc::RTS0::v2::DescriptorRange &Range : Table.Ranges) {
+      for (const mcdxbc::DescriptorRange &Range : Table.Ranges) {
         uint32_t UpperBound =
             Range.NumDescriptors == ~0U
                 ? Range.BaseShaderRegister
