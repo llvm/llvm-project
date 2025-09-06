@@ -3200,21 +3200,6 @@ void PadOp::getAsmResultNames(function_ref<void(Value, StringRef)> setNameFn) {
   setNameFn(getResult(), "padded");
 }
 
-// TODO: Replace custom<InferType> directive with AllTypesMatch as soon as it
-// supports optional types.
-static void printInferType(OpAsmPrinter &printer, Operation *op,
-                           Value optOperand, Type typeToInfer,
-                           Type typeToInferFrom) {}
-
-static ParseResult
-parseInferType(OpAsmParser &parser,
-               std::optional<OpAsmParser::UnresolvedOperand> optOperand,
-               Type &typeToInfer, Type typeToInferFrom) {
-  if (optOperand)
-    typeToInfer = typeToInferFrom;
-  return success();
-}
-
 LogicalResult PadOp::verify() {
   auto sourceType = llvm::cast<RankedTensorType>(getSource().getType());
   auto resultType = llvm::cast<RankedTensorType>(getResult().getType());
