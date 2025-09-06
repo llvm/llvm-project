@@ -149,10 +149,7 @@ BUILTINS_BF16_SRCS_PATTERNS = [
 # Source files for the 16-bit Brain floating-point number builtins.
 filegroup(
     name = "builtins_bf16_srcs",
-    srcs = glob(
-        BUILTINS_BF16_SRCS_PATTERNS,
-        allow_empty = True,
-    ),
+    srcs = glob(BUILTINS_BF16_SRCS_PATTERNS),
 )
 
 BUILTINS_X86_FP80_SRCS_PATTERNS = [
@@ -168,7 +165,6 @@ filegroup(
     name = "builtins_x86_fp80_srcs",
     srcs = glob(
         BUILTINS_X86_FP80_SRCS_PATTERNS,
-        allow_empty = True,
         exclude = BUILTINS_BF16_SRCS_PATTERNS,
     ),
 )
@@ -192,9 +188,15 @@ filegroup(
     name = "builtins_tf_srcs",
     srcs = glob(
         BUILTINS_TF_SRCS_PATTERNS,
-        allow_empty = True,
         exclude = BUILTINS_TF_EXCLUDES,
     ),
+)
+
+BUILTNS_ATOMICS_SRCS = ["lib/builtins/atomic.c"]
+
+filegroup(
+    name = "builtins_atomics_srcs",
+    srcs = BUILTNS_ATOMICS_SRCS + ["lib/builtins/assembly.h"],
 )
 
 BUILTINS_MACOS_ATOMIC_SRCS_PATTERNS = [
@@ -204,10 +206,25 @@ BUILTINS_MACOS_ATOMIC_SRCS_PATTERNS = [
 # Source files for macOS atomic builtins.
 filegroup(
     name = "builtins_macos_atomic_srcs",
-    srcs = glob(
-        BUILTINS_MACOS_ATOMIC_SRCS_PATTERNS,
-        allow_empty = True,
-    ),
+    srcs = glob(BUILTINS_MACOS_ATOMIC_SRCS_PATTERNS),
+)
+
+# Apple-platform specific SME source file.
+filegroup(
+    name = "builtins_aarch64_apple_sme_srcs",
+    srcs = ["lib/builtins/aarch64/arm_apple_sme_abi.s"],
+)
+
+# Non-Apple platform SME sources. These sources assume function
+# multi-versioning, `-fno-builtin`, `__ARM_UNALIGNED` feature support, and FP
+# availability. Other configurations will need to add a new filegroup if
+# desired.
+filegroup(
+    name = "builtins_aarch64_sme_srcs",
+    srcs = [
+        "lib/builtins/aarch64/sme-abi.S",
+        "lib/builtins/aarch64/sme-abi-assert.c",
+    ] + glob(["lib/builtins/aarch64/sme-libc-opt-*.S"]),
 )
 
 # A list of (pat, size, model) tuples for AArch64's outline atomics.
@@ -237,7 +254,7 @@ AARCH64_OUTLINE_ATOMICS = [
     if pat == "cas" or size != "16"
 ]
 
-AARCH64_OUTLINE_ATOMICS_FMT = "lib/builtins/aarch64/outline_atomic_{0}_{1}_{2}.S"
+AARCH64_OUTLINE_ATOMICS_FMT = "lib/builtins/aarch64/outline_atomic_{0}{1}_{2}.S"
 
 # lse.S is compiled multiple times with different macros as the input. Model
 # this as a genrule producing individual files with the macros at the start.
@@ -275,6 +292,8 @@ filegroup(
             # This file isn't intended to directly compile, and instead is used
             # above to generate a collection of outline atomic helpers.
             "lib/builtins/aarch64/lse.S",
+            # These files are provided by SME-specific file groups above.
+            "lib/builtins/aarch64/*sme*",
         ],
     ),
 )
@@ -349,9 +368,9 @@ filegroup(
     name = "builtins_x86_64_srcs",
     srcs = glob(
         [
+            "lib/builtins/x86_64/*.S",
             "lib/builtins/x86_64/*.c",
             "lib/builtins/x86_64/*.cpp",
-            "lib/builtins/x86_64/*.S",
         ],
         allow_empty = True,
     ),
@@ -391,6 +410,7 @@ filegroup(
             BUILTINS_CRTEND_SRCS +
             BUILTINS_TF_EXCLUDES +
             BUILTINS_TF_SRCS_PATTERNS +
+            BUILTNS_ATOMICS_SRCS +
             BUILTINS_MACOS_ATOMIC_SRCS_PATTERNS
         ),
     ),
