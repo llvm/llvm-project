@@ -2914,10 +2914,15 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     }
 
     if (OpFlags & AArch64II::MO_GOT) {
-      I.setDesc(TII.get(MF.getInfo<AArch64FunctionInfo>()->hasELFSignedGOT()
-                            ? AArch64::LOADgotAUTH
-                            : AArch64::LOADgot));
+      bool GOTIsSigned = MF.getInfo<AArch64FunctionInfo>()->hasELFSignedGOT();
+      I.setDesc(TII.get(GOTIsSigned ? AArch64::LOADgotAUTH : AArch64::LOADgot));
       I.getOperand(1).setTargetFlags(OpFlags);
+      if (GOTIsSigned) {
+        MachineInstrBuilder MIB(MF, I);
+        MIB.addDef(AArch64::X16, RegState::Implicit);
+        MIB.addDef(AArch64::X17, RegState::Implicit);
+        MIB.addDef(AArch64::NZCV, RegState::Implicit);
+      }
     } else if (TM.getCodeModel() == CodeModel::Large &&
                !TM.isPositionIndependent()) {
       // Materialize the global using movz/movk instructions.
