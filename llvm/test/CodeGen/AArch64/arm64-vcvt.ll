@@ -1,7 +1,7 @@
-; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -mtriple=arm64-eabi -pass-remarks-missed=gisel-* \
 ; RUN: -aarch64-neon-syntax=apple -global-isel -global-isel-abort=2 2>&1 | \
-; RUN: FileCheck %s --check-prefixes=FALLBACK,CHECK
+; RUN: FileCheck %s --check-prefixes=FALLBACK,CHECK,CHECK-GI
 
 ; FALLBACK-NOT: remark{{.*}}fcvtas_2s
 define <2 x i32> @fcvtas_2s(<2 x float> %A) nounwind {
@@ -365,9 +365,12 @@ define <2 x i64> @fcvtzs_2d(<2 x double> %A) nounwind {
 define <1 x i64> @fcvtzs_1d(<1 x double> %A) nounwind {
 ;CHECK-LABEL: fcvtzs_1d:
 ;CHECK-NOT: ld1
-;CHECK: fcvtzs x8, d0
-;CHECK-NEXT: mov d0, x8
-;CHECK-NEXT: ret
+;CHECK-SD: fcvtzs x8, d0
+;CHECK-SD-NEXT: mov d0, x8
+;CHECK-SD-NEXT: ret
+
+;CHECK-GI: fcvtzs d0, d0
+;CHECK-GI-NEXT: ret
 	%tmp3 = fptosi <1 x double> %A to <1 x i64>
 	ret <1 x i64> %tmp3
 }
@@ -444,9 +447,12 @@ define <2 x i64> @fcvtzu_2d(<2 x double> %A) nounwind {
 define <1 x i64> @fcvtzu_1d(<1 x double> %A) nounwind {
 ;CHECK-LABEL: fcvtzu_1d:
 ;CHECK-NOT: ld1
-;CHECK: fcvtzu x8, d0
-;CHECK-NEXT: mov d0, x8
-;CHECK-NEXT: ret
+;CHECK-SD: fcvtzu x8, d0
+;CHECK-SD-NEXT: mov d0, x8
+;CHECK-SD-NEXT: ret
+
+;CHECK-GI: fcvtzu d0, d0
+;CHECK-GI-NEXT: ret
 	%tmp3 = fptoui <1 x double> %A to <1 x i64>
 	ret <1 x i64> %tmp3
 }
