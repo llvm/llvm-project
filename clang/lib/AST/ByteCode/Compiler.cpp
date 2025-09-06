@@ -6284,26 +6284,21 @@ bool Compiler<Emitter>::compileDestructor(const CXXDestructorDecl *Dtor) {
     // First, destroy all fields.
     for (const Record::Field &Field : llvm::reverse(R->fields())) {
       const Descriptor *D = Field.Desc;
-      if (!D->isPrimitive() && !D->isPrimitiveArray()) {
-        if (!this->emitGetPtrField(Field.Offset, SourceInfo{}))
-          return false;
-        if (!this->emitDestruction(D, SourceInfo{}))
-          return false;
-        if (!this->emitPopPtr(SourceInfo{}))
-          return false;
-      }
+      if (D->hasTrivialDtor())
+        continue;
+      if (!this->emitGetPtrField(Field.Offset, SourceInfo{}))
+        return false;
+      if (!this->emitDestructionPop(D, SourceInfo{}))
+        return false;
     }
   }
 
   for (const Record::Base &Base : llvm::reverse(R->bases())) {
-    if (Base.R->isAnonymousUnion())
+    if (Base.R->hasTrivialDtor())
       continue;
-
     if (!this->emitGetPtrBase(Base.Offset, SourceInfo{}))
       return false;
-    if (!this->emitRecordDestruction(Base.R, {}))
-      return false;
-    if (!this->emitPopPtr(SourceInfo{}))
+    if (!this->emitRecordDestructionPop(Base.R, {}))
       return false;
   }
 
@@ -7200,71 +7195,56 @@ bool Compiler<Emitter>::emitComplexComparison(const Expr *LHS, const Expr *RHS,
 /// on the stack.
 /// Emit destruction of record types (or arrays of record types).
 template <class Emitter>
-bool Compiler<Emitter>::emitRecordDestruction(const Record *R, SourceInfo Loc) {
+bool Compiler<Emitter>::emitRecordDestructionPop(const Record *R,
+                                                 SourceInfo Loc) {
   assert(R);
-  assert(!R->isAnonymousUnion());
+  assert(!R->hasTrivialDtor());
   const CXXDestructorDecl *Dtor = R->getDestructor();
-  if (!Dtor || Dtor->isTrivial())
-    return true;
-
   assert(Dtor);
   const Function *DtorFunc = getFunction(Dtor);
   if (!DtorFunc)
     return false;
   assert(DtorFunc->hasThisPointer());
   assert(DtorFunc->getNumParams() == 1);
-  if (!this->emitDupPtr(Loc))
-    return false;
   return this->emitCall(DtorFunc, 0, Loc);
 }
 /// When calling this, we have a pointer of the local-to-destroy
 /// on the stack.
 /// Emit destruction of record types (or arrays of record types).
 template <class Emitter>
-bool Compiler<Emitter>::emitDestruction(const Descriptor *Desc,
-                                        SourceInfo Loc) {
+bool Compiler<Emitter>::emitDestructionPop(const Descriptor *Desc,
+                                           SourceInfo Loc) {
   assert(Desc);
-  assert(!Desc->isPrimitive());
-  assert(!Desc->isPrimitiveArray());
+  assert(!Desc->hasTrivialDtor());
 
   // Arrays.
   if (Desc->isArray()) {
     const Descriptor *ElemDesc = Desc->ElemDesc;
     assert(ElemDesc);
 
-    // Don't need to do anything for these.
-    if (ElemDesc->isPrimitiveArray())
-      return true;
+    unsigned N = Desc->getNumElems();
+    if (N == 0)
+      return this->emitPopPtr(Loc);
 
-    // If this is an array of record types, check if we need
-    // to call the element destructors at all. If not, try
-    // to save the work.
-    if (const Record *ElemRecord = ElemDesc->ElemRecord) {
-      if (const CXXDestructorDecl *Dtor = ElemRecord->getDestructor();
-          !Dtor || Dtor->isTrivial())
-        return true;
+    for (ssize_t I = N - 1; I >= 1; --I) {
+      if (!this->emitConstUint64(I, Loc))
+        return false;
+      if (!this->emitArrayElemPtrUint64(Loc))
+        return false;
+      if (!this->emitDestructionPop(ElemDesc, Loc))
+        return false;
     }
-
-    if (unsigned N = Desc->getNumElems()) {
-      for (ssize_t I = N - 1; I >= 0; --I) {
-        if (!this->emitConstUint64(I, Loc))
-          return false;
-        if (!this->emitArrayElemPtrUint64(Loc))
-          return false;
-        if (!this->emitDestruction(ElemDesc, Loc))
-          return false;
-        if (!this->emitPopPtr(Loc))
-          return false;
-      }
-    }
-    return true;
+    // Last iteration, removes the instance pointer from the stack.
+    if (!this->emitConstUint64(0, Loc))
+      return false;
+    if (!this->emitArrayElemPtrPopUint64(Loc))
+      return false;
+    return this->emitDestructionPop(ElemDesc, Loc);
   }
 
   assert(Desc->ElemRecord);
-  if (Desc->ElemRecord->isAnonymousUnion())
-    return true;
-
-  return this->emitRecordDestruction(Desc->ElemRecord, Loc);
+  assert(!Desc->ElemRecord->hasTrivialDtor());
+  return this->emitRecordDestructionPop(Desc->ElemRecord, Loc);
 }
 
 /// Create a dummy pointer for the given decl (or expr) and

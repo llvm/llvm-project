@@ -167,13 +167,14 @@ typedef enum
 } _MM_MANTISSA_SIGN_ENUM;
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS512 __attribute__((__always_inline__, __nodebug__, __target__("avx512f,evex512"), __min_vector_width__(512)))
+#define __DEFAULT_FN_ATTRS512                                                  \
+  __attribute__((__always_inline__, __nodebug__, __target__("avx512f"),        \
+                 __min_vector_width__(512)))
 #define __DEFAULT_FN_ATTRS128                                                  \
-  __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("avx512f,no-evex512"), __min_vector_width__(128)))
+  __attribute__((__always_inline__, __nodebug__, __target__("avx512f"),        \
+                 __min_vector_width__(128)))
 #define __DEFAULT_FN_ATTRS                                                     \
-  __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("avx512f,no-evex512")))
+  __attribute__((__always_inline__, __nodebug__, __target__("avx512f")))
 
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 #define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr

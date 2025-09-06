@@ -1413,6 +1413,7 @@ static void instantiateAlias(Fortran::lower::AbstractConverter &converter,
   mlir::Value bytePtr = fir::CoordinateOp::create(
       builder, loc, i8Ptr, storeAddr, mlir::ValueRange{offset});
   mlir::Value typedPtr = castAliasToPointer(builder, loc, symType, bytePtr);
+  converter.bindSymbolStorage(sym, {storeAddr, off});
   Fortran::lower::StatementContext stmtCtx;
   mapSymbolAttributes(converter, var, symMap, stmtCtx, typedPtr);
   // Default initialization is possible for equivalence members: see
@@ -1655,13 +1656,15 @@ void Fortran::lower::defineCommonBlocks(
 
 mlir::Value Fortran::lower::genCommonBlockMember(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
-    const Fortran::semantics::Symbol &sym, mlir::Value commonValue) {
+    const Fortran::semantics::Symbol &sym, mlir::Value commonValue,
+    std::size_t commonSize) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
   std::size_t byteOffset = sym.GetUltimate().offset();
   mlir::IntegerType i8Ty = builder.getIntegerType(8);
   mlir::Type i8Ptr = builder.getRefType(i8Ty);
-  mlir::Type seqTy = builder.getRefType(builder.getVarLenSeqTy(i8Ty));
+  fir::SequenceType::Shape shape(1, commonSize);
+  mlir::Type seqTy = builder.getRefType(fir::SequenceType::get(shape, i8Ty));
   mlir::Value base = builder.createConvert(loc, seqTy, commonValue);
 
   mlir::Value offs =
@@ -1669,6 +1672,8 @@ mlir::Value Fortran::lower::genCommonBlockMember(
   mlir::Value varAddr = fir::CoordinateOp::create(builder, loc, i8Ptr, base,
                                                   mlir::ValueRange{offs});
   mlir::Type symType = converter.genType(sym);
+
+  converter.bindSymbolStorage(sym, {base, byteOffset});
 
   return Fortran::semantics::FindEquivalenceSet(sym) != nullptr
              ? castAliasToPointer(builder, loc, symType, varAddr)
@@ -1698,7 +1703,8 @@ static void instantiateCommon(Fortran::lower::AbstractConverter &converter,
     symMap.addSymbol(common, commonAddr);
   }
 
-  mlir::Value local = genCommonBlockMember(converter, loc, varSym, commonAddr);
+  mlir::Value local =
+      genCommonBlockMember(converter, loc, varSym, commonAddr, common.size());
   Fortran::lower::StatementContext stmtCtx;
   mapSymbolAttributes(converter, var, symMap, stmtCtx, local);
 }
@@ -1970,7 +1976,8 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
       // Declare a local pointer variable.
       auto newBase = hlfir::DeclareOp::create(
           builder, loc, boxAlloc, name, /*shape=*/nullptr, lenParams,
-          /*dummy_scope=*/nullptr, attributes);
+          /*dummy_scope=*/nullptr, /*storage=*/nullptr,
+          /*storage_offset=*/0, attributes);
       mlir::Value nullAddr = builder.createNullConstant(
           loc, llvm::cast<fir::BaseBoxType>(ptrBoxType).getEleTy());
 
@@ -2000,9 +2007,10 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
     mlir::Value dummyScope;
     if (converter.isRegisteredDummySymbol(sym))
       dummyScope = converter.dummyArgsScopeValue();
-    auto newBase =
-        hlfir::DeclareOp::create(builder, loc, base, name, shapeOrShift,
-                                 lenParams, dummyScope, attributes, dataAttr);
+    auto [storage, storageOffset] = converter.getSymbolStorage(sym);
+    auto newBase = hlfir::DeclareOp::create(
+        builder, loc, base, name, shapeOrShift, lenParams, dummyScope, storage,
+        storageOffset, attributes, dataAttr);
     symMap.addVariableDefinition(sym, newBase, force);
     return;
   }
@@ -2060,8 +2068,10 @@ void Fortran::lower::genDeclareSymbol(
       base = genPackArray(converter, sym, exv);
       dummyScope = converter.dummyArgsScopeValue();
     }
-    hlfir::EntityWithAttributes declare = hlfir::genDeclare(
-        loc, builder, base, name, attributes, dummyScope, dataAttr);
+    auto [storage, storageOffset] = converter.getSymbolStorage(sym);
+    hlfir::EntityWithAttributes declare =
+        hlfir::genDeclare(loc, builder, base, name, attributes, dummyScope,
+                          storage, storageOffset, dataAttr);
     symMap.addVariableDefinition(sym, declare.getIfVariableInterface(), force);
     return;
   }
