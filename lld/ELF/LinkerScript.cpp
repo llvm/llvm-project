@@ -27,6 +27,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <algorithm>
 #include <cassert>
@@ -411,7 +412,8 @@ void LinkerScript::assignSymbol(SymbolAssignment *cmd, bool inSec) {
   cmd->sym->type = v.type;
 }
 
-bool InputSectionDescription::matchesFile(const InputFile &file) const {
+bool InputSectionDescription::matchesFile(const InputFile &file,
+                                          bool ExtractFlag) const {
   if (filePat.isTrivialMatchAll())
     return true;
 
@@ -419,10 +421,17 @@ bool InputSectionDescription::matchesFile(const InputFile &file) const {
     if (matchType == MatchType::WholeArchive) {
       matchesFileCache.emplace(&file, filePat.match(file.archiveName));
     } else {
-      if (matchType == MatchType::ArchivesExcluded && !file.archiveName.empty())
+      if (matchType == MatchType::ArchivesExcluded &&
+          !file.archiveName.empty()) {
         matchesFileCache.emplace(&file, false);
-      else
-        matchesFileCache.emplace(&file, filePat.match(file.getNameForScript()));
+      } else {
+        bool MatchFilename = filePat.match(file.getNameForScript());
+        StringRef Filename = llvm::sys::path::filename(file.getNameForScript());
+        // only use for computeInputSections
+        if (ExtractFlag)
+          MatchFilename = MatchFilename || filePat.match(Filename);
+        matchesFileCache.emplace(&file, MatchFilename);
+      }
     }
   }
 
@@ -442,7 +451,7 @@ bool SectionPattern::excludesFile(const InputFile &file) const {
 
 bool LinkerScript::shouldKeep(InputSectionBase *s) {
   for (InputSectionDescription *id : keptSections)
-    if (id->matchesFile(*s->file))
+    if (id->matchesFile(*s->file, false))
       for (SectionPattern &p : id->sectionPatterns)
         if (p.sectionPat.match(s->name) &&
             (s->flags & id->withFlags) == id->withFlags &&
@@ -571,8 +580,8 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
         if (!pat.sectionPat.match(sec->name))
           continue;
 
-        if (!cmd->matchesFile(*sec->file) || pat.excludesFile(*sec->file) ||
-            !flagsMatch(sec))
+        if (!cmd->matchesFile(*sec->file, true) ||
+            pat.excludesFile(*sec->file) || !flagsMatch(sec))
           continue;
 
         if (sec->parent) {
