@@ -3937,6 +3937,23 @@ entry:
   ret i1 %test
 }
 
+define i1 @minnum_qnan_commuted(i32 %x, float nofpclass(nnorm nsub nzero ninf nan) %y) {
+; CHECK-LABEL: @minnum_qnan_commuted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[QNAN_BITS:%.*]] = or i32 [[X:%.*]], -5938
+; CHECK-NEXT:    [[QNAN:%.*]] = bitcast i32 [[QNAN_BITS]] to float
+; CHECK-NEXT:    [[MIN:%.*]] = call float @llvm.minnum.f32(float [[Y:%.*]], float [[QNAN]])
+; CHECK-NEXT:    [[TEST:%.*]] = call i1 @llvm.is.fpclass.f32(float [[MIN]], i32 64)
+; CHECK-NEXT:    ret i1 [[TEST]]
+;
+entry:
+  %qnan_bits = or i32 %x, -5938
+  %qnan = bitcast i32 %qnan_bits to float
+  %min = call float @llvm.minnum.f32(float %y, float %qnan)
+  %test = call i1 @llvm.is.fpclass.f32(float %min, i32 64)
+  ret i1 %test
+}
+
 declare i1 @llvm.is.fpclass.f32(float, i32 immarg)
 declare i1 @llvm.is.fpclass.f64(double, i32 immarg)
 declare <2 x i1> @llvm.is.fpclass.v2f32(<2 x float>, i32 immarg)
