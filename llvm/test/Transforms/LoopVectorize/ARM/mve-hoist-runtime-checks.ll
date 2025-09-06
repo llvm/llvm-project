@@ -79,10 +79,9 @@ define void @diff_checks(ptr nocapture noundef writeonly %dst, ptr nocapture nou
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[INNER_LOOP_EXIT]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[OUTER_LOOP]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label [[INNER_LOOP:%.*]]
 ; CHECK:       inner.loop:
-; CHECK-NEXT:    [[J_021_US:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC_US:%.*]], [[INNER_LOOP]] ]
+; CHECK-NEXT:    [[J_021_US:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[INC_US:%.*]], [[INNER_LOOP]] ]
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr i32, ptr [[TMP7]], i32 [[J_021_US]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[ARRAYIDX_US]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX8_US:%.*]] = getelementptr i32, ptr [[TMP8]], i32 [[J_021_US]]

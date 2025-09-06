@@ -111,6 +111,10 @@ public:
 #endif
 
   unsigned getNumUsers() const { return Users.size(); }
+  bool hasOneUser() const { return Users.size() == 1; }
+  VPUser *getUniqueUser() const {
+    return hasOneUser() ? Users.front() : nullptr;
+  }
   void addUser(VPUser &User) { Users.push_back(&User); }
 
   /// Remove a single \p User from the list of users.

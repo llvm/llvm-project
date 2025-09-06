@@ -664,7 +664,7 @@ exit:
 define void @dead_load_in_block(ptr %dst, ptr %src, i8 %N, i64 %x) #0 {
 ; CHECK-LABEL: define void @dead_load_in_block(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i8 [[N:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[N_EXT:%.*]] = zext i8 [[N]] to i64
 ; CHECK-NEXT:    [[UMIN7:%.*]] = call i64 @llvm.umin.i64(i64 [[N_EXT]], i64 1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[N_EXT]], [[UMIN7]]
@@ -716,10 +716,9 @@ define void @dead_load_in_block(ptr %dst, ptr %src, i8 %N, i64 %x) #0 {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[L_0:%.*]] = load i32, ptr [[SRC]], align 4
 ; CHECK-NEXT:    [[C_0:%.*]] = icmp eq i32 [[L_0]], 0
 ; CHECK-NEXT:    br i1 [[C_0]], label %[[LOOP_LATCH]], label %[[THEN:.*]]

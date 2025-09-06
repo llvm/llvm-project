@@ -8,7 +8,7 @@ target triple = "riscv64-unknown-linux-gnu"
 define void @skip_free_iv_truncate(i16 %x, ptr %A) #0 {
 ; CHECK-LABEL: define void @skip_free_iv_truncate(
 ; CHECK-SAME: i16 [[X:%.*]], ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[X_I32:%.*]] = sext i16 [[X]] to i32
 ; CHECK-NEXT:    [[X_I64:%.*]] = sext i16 [[X]] to i64
 ; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 -8
@@ -77,12 +77,10 @@ define void @skip_free_iv_truncate(i16 %x, ptr %A) #0 {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[X_I64]], %[[ENTRY]] ], [ [[X_I64]], %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL13:%.*]] = phi i32 [ [[X_I32]], %[[ENTRY]] ], [ [[X_I32]], %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV_CONV:%.*]] = phi i32 [ [[BC_RESUME_VAL13]], %[[SCALAR_PH]] ], [ [[TMP64:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[X_I64]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_CONV:%.*]] = phi i32 [ [[X_I32]], %[[SCALAR_PH]] ], [ [[TMP64:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_I64:%.*]] = getelementptr i64, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP61:%.*]] = load i64, ptr [[GEP_I64]], align 8
 ; CHECK-NEXT:    [[TMP62:%.*]] = sext i32 [[IV_CONV]] to i64
