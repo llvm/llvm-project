@@ -2517,21 +2517,17 @@ public:
   createInstrIncMemory(const MCSymbol *Target, MCContext *Ctx, bool IsLeaf,
                        unsigned CodePointerSize) const override {
     unsigned int I = 0;
-    InstructionListType Instrs(10);
+    InstructionListType Instrs(6);
 
     createPushRegisters(Instrs[I++], AArch64::X0, AArch64::X1);
-    getSystemFlag(Instrs[I++], AArch64::X1);
     InstructionListType Addr = materializeAddress(Target, Ctx, AArch64::X0);
     assert(Addr.size() == 2 && "Invalid Addr size");
     std::copy(Addr.begin(), Addr.end(), Instrs.begin() + I);
     I += Addr.size();
-    storeReg(Instrs[I++], AArch64::X2, AArch64::SP);
-    InstructionListType Insts = createIncMemory(AArch64::X0, AArch64::X2);
+    InstructionListType Insts = createIncMemory(AArch64::X0, AArch64::X1);
     assert(Insts.size() == 2 && "Invalid Insts size");
     std::copy(Insts.begin(), Insts.end(), Instrs.begin() + I);
     I += Insts.size();
-    loadReg(Instrs[I++], AArch64::X2, AArch64::SP);
-    setSystemFlag(Instrs[I++], AArch64::X1);
     createPopRegisters(Instrs[I++], AArch64::X0, AArch64::X1);
     return Instrs;
   }
