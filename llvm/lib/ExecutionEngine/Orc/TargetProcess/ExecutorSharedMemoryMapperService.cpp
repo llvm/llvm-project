@@ -12,8 +12,8 @@
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/WindowsError.h"
-#include <future>
 #include <sstream>
+#include <variant>
 
 #if defined(LLVM_ON_UNIX)
 #include <errno.h>
@@ -182,16 +182,22 @@ Expected<ExecutorAddr> ExecutorSharedMemoryMapperService::initialize(
                                               Segment.Size);
   }
 
-  // Run finalization actions and get deinitlization action list.
+  // Run finalization actions and get deinitialization action list.
   std::vector<shared::WrapperFunctionCall> DeinitializeActions;
   {
-    std::promise<MSVCPExpected<std::vector<shared::WrapperFunctionCall>>> P;
-    auto F = P.get_future();
+    std::variant<std::monostate,
+                 Expected<std::vector<shared::WrapperFunctionCall>>>
+        Result;
     shared::runFinalizeActions(
         FR.Actions, [&](Expected<std::vector<shared::WrapperFunctionCall>> R) {
-          P.set_value(std::move(R));
+          Result = std::move(R);
         });
-    if (auto DeinitializeActionsOrErr = F.get())
+    assert(!std::holds_alternative<std::monostate>(Result) &&
+           "ExecutorSharedMemoryMapperService should run finalize actions "
+           "synchronously");
+    if (auto DeinitializeActionsOrErr = std::move(
+            std::get<Expected<std::vector<shared::WrapperFunctionCall>>>(
+                Result)))
       DeinitializeActions = std::move(*DeinitializeActionsOrErr);
     else
       return DeinitializeActionsOrErr.takeError();
