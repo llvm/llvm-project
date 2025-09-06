@@ -660,6 +660,15 @@ template <> struct ScalarEnumerationTraits<FormatStyle::ShortLambdaStyle> {
   }
 };
 
+template <> struct ScalarEnumerationTraits<FormatStyle::ShortRecordStyle> {
+  static void enumeration(IO &IO, FormatStyle::ShortRecordStyle &Value) {
+    IO.enumCase(Value, "Never", FormatStyle::SRS_Never);
+    IO.enumCase(Value, "EmptyIfAttached", FormatStyle::SRS_EmptyIfAttached);
+    IO.enumCase(Value, "Empty", FormatStyle::SRS_Empty);
+    IO.enumCase(Value, "Always", FormatStyle::SRS_Always);
+  }
+};
+
 template <> struct MappingTraits<FormatStyle::SortIncludesOptions> {
   static void enumInput(IO &IO, FormatStyle::SortIncludesOptions &Value) {
     IO.enumCase(Value, "Never", FormatStyle::SortIncludesOptions({}));
@@ -1027,6 +1036,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.AllowShortLoopsOnASingleLine);
     IO.mapOptional("AllowShortNamespacesOnASingleLine",
                    Style.AllowShortNamespacesOnASingleLine);
+    IO.mapOptional("AllowShortRecordOnASingleLine",
+                   Style.AllowShortRecordOnASingleLine);
     IO.mapOptional("AlwaysBreakAfterDefinitionReturnType",
                    Style.AlwaysBreakAfterDefinitionReturnType);
     IO.mapOptional("AlwaysBreakBeforeMultilineStrings",
@@ -1553,6 +1564,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_All;
   LLVMStyle.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
   LLVMStyle.AllowShortLambdasOnASingleLine = FormatStyle::SLS_All;
+  LLVMStyle.AllowShortRecordOnASingleLine = FormatStyle::SRS_EmptyIfAttached;
   LLVMStyle.AllowShortLoopsOnASingleLine = false;
   LLVMStyle.AllowShortNamespacesOnASingleLine = false;
   LLVMStyle.AlwaysBreakAfterDefinitionReturnType = FormatStyle::DRTBS_None;
