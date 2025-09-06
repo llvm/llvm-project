@@ -548,9 +548,14 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
 }
 
 std::string CompilerInstance::getSpecificModuleCachePath(StringRef ModuleHash) {
+  if (getHeaderSearchOpts().ModuleCachePath.empty())
+    return "";
+
   // Set up the module path, including the hash for the module-creation options.
   SmallString<256> SpecificModuleCache(getHeaderSearchOpts().ModuleCachePath);
-  if (!SpecificModuleCache.empty() && !getHeaderSearchOpts().DisableModuleHash)
+  FileMgr->makeAbsolutePath(SpecificModuleCache);
+  llvm::sys::path::remove_dots(SpecificModuleCache);
+  if (!getHeaderSearchOpts().DisableModuleHash)
     llvm::sys::path::append(SpecificModuleCache, ModuleHash);
   return std::string(SpecificModuleCache);
 }
