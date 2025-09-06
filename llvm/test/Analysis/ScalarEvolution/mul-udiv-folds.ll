@@ -19,7 +19,7 @@ define void @udiv4_and_udiv2_mul_4(i1 %c, ptr %A) {
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.start, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {((zext i32 %start to i64) /u 4),+,1}<%loop> U: full-set S: full-set Exits: ((zext i32 %start to i64) /u 2) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %gep = getelementptr i32, ptr %A, i64 %iv
-; CHECK-NEXT:    --> {((zext i32 %start to i64) + %A),+,4}<%loop> U: full-set S: full-set Exits: ((zext i32 %start to i64) + (4 * ((zext i32 %start to i64) /u 2))<nuw><nsw> + (-4 * ((zext i32 %start to i64) /u 4))<nsw> + %A) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {((zext i32 %start to i64) + %A),+,4}<%loop> U: full-set S: full-set Exits: ((3 * (zext i32 %start to i64))<nuw><nsw> + (-4 * ((zext i32 %start to i64) /u 4))<nsw> + %A) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
 ; CHECK-NEXT:    --> {(1 + ((zext i32 %start to i64) /u 4))<nuw><nsw>,+,1}<%loop> U: full-set S: full-set Exits: (1 + ((zext i32 %start to i64) /u 2))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @udiv4_and_udiv2_mul_4
@@ -47,6 +47,52 @@ loop:
 exit:
   ret void
 }
+
+define void @udiv4_and_udiv2_mul_6(i1 %c, ptr %A) {
+; CHECK-LABEL: 'udiv4_and_udiv2_mul_6'
+; CHECK-NEXT:  Classifying expressions for: @udiv4_and_udiv2_mul_6
+; CHECK-NEXT:    %start = select i1 %c, i32 512, i32 0
+; CHECK-NEXT:    --> %start U: [0,513) S: [0,513)
+; CHECK-NEXT:    %div.2 = lshr i32 %start, 1
+; CHECK-NEXT:    --> (%start /u 2) U: [0,257) S: [0,257)
+; CHECK-NEXT:    %div.4 = lshr i32 %start, 2
+; CHECK-NEXT:    --> (%start /u 4) U: [0,129) S: [0,129)
+; CHECK-NEXT:    %iv.start = zext i32 %div.4 to i64
+; CHECK-NEXT:    --> ((zext i32 %start to i64) /u 4) U: [0,129) S: [0,129)
+; CHECK-NEXT:    %wide.trip.count = zext i32 %div.2 to i64
+; CHECK-NEXT:    --> ((zext i32 %start to i64) /u 2) U: [0,257) S: [0,257)
+; CHECK-NEXT:    %iv = phi i64 [ %iv.start, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {((zext i32 %start to i64) /u 4),+,1}<%loop> U: full-set S: full-set Exits: ((zext i32 %start to i64) /u 2) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %gep = getelementptr <{ i32, i16 }>, ptr %A, i64 %iv
+; CHECK-NEXT:    --> {((6 * ((zext i32 %start to i64) /u 4))<nuw><nsw> + %A),+,6}<%loop> U: full-set S: full-set Exits: ((6 * ((zext i32 %start to i64) /u 2))<nuw><nsw> + %A) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add i64 %iv, 1
+; CHECK-NEXT:    --> {(1 + ((zext i32 %start to i64) /u 4))<nuw><nsw>,+,1}<%loop> U: full-set S: full-set Exits: (1 + ((zext i32 %start to i64) /u 2))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @udiv4_and_udiv2_mul_6
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * ((zext i32 %start to i64) /u 4))<nsw> + ((zext i32 %start to i64) /u 2))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * ((zext i32 %start to i64) /u 4))<nsw> + ((zext i32 %start to i64) /u 2))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %start = select i1 %c, i32 512, i32 0
+  %div.2 = lshr i32 %start, 1
+  %div.4 = lshr i32 %start, 2
+  %iv.start = zext i32 %div.4 to i64
+  %wide.trip.count = zext i32 %div.2 to i64
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %iv.start, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr <{i32, i16}>, ptr %A, i64 %iv
+  call void @use(ptr %gep)
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv, %wide.trip.count
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 
 define void @udiv4_and_udiv2_mul_1(i1 %c, ptr %A) {
 ; CHECK-LABEL: 'udiv4_and_udiv2_mul_1'
