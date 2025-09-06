@@ -122,11 +122,6 @@ bool verifyDescriptorRangeFlag(uint32_t Version, dxbc::DescriptorRangeType Type,
   }
   return (Flags & ~Mask) == FlagT::None;
 }
-bool verifyDescriptorRangeFlag(uint32_t Version, dxbc::DescriptorRangeType Type,
-                               uint32_t Flags) {
-  return verifyDescriptorRangeFlag(Version, Type,
-                                   dxbc::DescriptorRangeFlags(Flags));
-}
 
 bool verifyNumDescriptors(uint32_t NumDescriptors) {
   return NumDescriptors > 0;

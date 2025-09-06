@@ -569,7 +569,6 @@ Error MetadataParser::validateRootSignature(
       const mcdxbc::DescriptorTable &Table =
           RSD.ParametersContainer.getDescriptorTable(Info.Location);
       for (const mcdxbc::DescriptorRange &Range : Table) {
-
         if (!hlsl::rootsig::verifyRegisterSpace(Range.RegisterSpace))
           DeferredErrs =
               joinErrors(std::move(DeferredErrs),
@@ -583,7 +582,8 @@ Error MetadataParser::validateRootSignature(
                              "NumDescriptors", Range.NumDescriptors));
 
         if (!hlsl::rootsig::verifyDescriptorRangeFlag(
-                RSD.Version, Range.RangeType, Range.Flags))
+                RSD.Version, Range.RangeType,
+                dxbc::DescriptorRangeFlags(Range.Flags)))
           DeferredErrs =
               joinErrors(std::move(DeferredErrs),
                          make_error<RootSignatureValidationError<uint32_t>>(
