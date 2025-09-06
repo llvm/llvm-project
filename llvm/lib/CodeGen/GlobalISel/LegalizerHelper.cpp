@@ -4447,6 +4447,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case TargetOpcode::G_SADDO:
   case TargetOpcode::G_SSUBO:
     return lowerSADDO_SSUBO(MI);
+  case TargetOpcode::G_SADDE:
+    return lowerSADDE(MI);
   case TargetOpcode::G_UMULH:
   case TargetOpcode::G_SMULH:
     return lowerSMULH_UMULH(MI);
@@ -9295,6 +9297,35 @@ LegalizerHelper::lowerSADDO_SSUBO(MachineInstr &MI) {
   MIRBuilder.buildCopy(Dst0, NewDst0);
   MI.eraseFromParent();
 
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerSADDE(MachineInstr &MI) {
+  auto [Res, OvOut, LHS, RHS, CarryIn] = MI.getFirst5Regs();
+  const LLT Ty = MRI.getType(Res);
+  const LLT BoolTy = MRI.getType(OvOut);
+
+  // Step 1: tmp = LHS + RHS
+  auto Tmp = MIRBuilder.buildAdd(Ty, LHS, RHS);
+
+  // ov0 = (tmp < lhs) XOR (rhs < 0)
+  auto TmpLtLHS = MIRBuilder.buildICmp(CmpInst::ICMP_SLT, BoolTy, Tmp, LHS);
+  auto Zero = MIRBuilder.buildConstant(Ty, 0);
+  auto RHSLt0 = MIRBuilder.buildICmp(CmpInst::ICMP_SLT, BoolTy, RHS, Zero);
+  auto Ov0 = MIRBuilder.buildXor(BoolTy, TmpLtLHS, RHSLt0);
+
+  // Step 2: sum = tmp + zext(CarryIn)
+  auto CarryInZ = MIRBuilder.buildZExt(Ty, CarryIn);
+  MIRBuilder.buildAdd(Res, Tmp, CarryInZ);
+
+  // ov1 = CarryIn & (sum < tmp)
+  auto SumLtTmp = MIRBuilder.buildICmp(CmpInst::ICMP_SLT, BoolTy, Res, Tmp);
+  auto Ov1 = MIRBuilder.buildAnd(BoolTy, SumLtTmp, CarryIn);
+
+  // ov = ov0 | ov1
+  MIRBuilder.buildOr(OvOut, Ov0, Ov1);
+
+  MI.eraseFromParent();
   return Legalized;
 }
 
