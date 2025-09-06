@@ -663,17 +663,15 @@ SANITIZER_WEAK_IMPORT void *aligned_alloc(__sanitizer::usize __alignment,
 #define SANITIZER_INTERCEPT_GETSERVBYNAME_R SI_GLIBC
 #define SANITIZER_INTERCEPT_GETSERVBYPORT_R SI_GLIBC
 
-// Until free_sized, free_aligned_sized and memset_explicit are more generally available,
+// Until free_sized and free_aligned_sized are more generally available,
 // we can only unconditionally intercept on ELF-based platforms where it
 // is okay to have undefined weak symbols.
 #ifdef __ELF__
 #  define SANITIZER_INTERCEPT_FREE_SIZED 1
 #  define SANITIZER_INTERCEPT_FREE_ALIGNED_SIZED 1
-#  define SANITIZER_INTERCEPT_MEMSET_EXPLICIT 1
 #else
 #  define SANITIZER_INTERCEPT_FREE_SIZED 0
 #  define SANITIZER_INTERCEPT_FREE_ALIGNED_SIZED 0
-#  define SANITIZER_INTERCEPT_MEMSET_EXPLICIT 0
 #endif
 
 // This macro gives a way for downstream users to override the above
