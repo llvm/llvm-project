@@ -23,7 +23,7 @@
 #include "mlir/Pass/PassRegistry.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/Debug/Options.h"
-#include "llvm/Passes/OptimizationLevel.h"
+#include "llvm/Support/OptimizationLevel.h"
 
 // Flang Extension Point Callbacks
 class FlangEPCallBacks {

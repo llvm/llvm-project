@@ -13,8 +13,8 @@
 #define FORTRAN_OPTIMIZER_PASSES_COMMANDLINEOPTS_H
 
 #include "llvm/Frontend/Debug/Options.h"
-#include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/OptimizationLevel.h"
 
 /// Shared option in tools to control whether dynamically sized array
 /// allocations should always be on the heap.
