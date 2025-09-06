@@ -1,4 +1,6 @@
-// REQUIRES: shell
+// Needs symlinks
+// UNSUPPORTED: system-windows
+
 // RUN: rm -rf %t.mcp %t
 // RUN: mkdir -p %t
 // RUN: ln -s %S/Inputs/NameInDir2.framework %t/NameInImport.framework

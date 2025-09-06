@@ -3,7 +3,8 @@
 // module below does not transitively import Mod via a symlink, so it should not
 // see the symlinked path.
 
-// REQUIRES: shell
+// Needs symlinks
+// UNSUPPORTED: system-windows
 
 // RUN: rm -rf %t
 // RUN: split-file %s %t

@@ -1,4 +1,5 @@
-// REQUIRES: shell
+// Needs symlinks
+// UNSUPPORTED: system-windows
 
 // Basic test
 // RUN: rm -rf %t.dir
