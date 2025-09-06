@@ -4,7 +4,9 @@
 define i32 @test1() #0 {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    tail OUTLINED_FUNCTION_0
+; CHECK-NEXT:    lpad 0
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
 entry:
   ret i32 0
 }
@@ -12,7 +14,9 @@ entry:
 define i32 @test2() #0 {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    tail OUTLINED_FUNCTION_0
+; CHECK-NEXT:    lpad 0
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
 entry:
   ret i32 0
 }
@@ -20,7 +24,9 @@ entry:
 define i32 @test3() #0 {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    tail OUTLINED_FUNCTION_0
+; CHECK-NEXT:    lpad 0
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
 entry:
   ret i32 0
 }
@@ -28,7 +34,9 @@ entry:
 define i32 @test4() #0 {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    tail OUTLINED_FUNCTION_0
+; CHECK-NEXT:    lpad 0
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
 entry:
   ret i32 0
 }
@@ -36,7 +44,9 @@ entry:
 define i32 @main() #0 {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    tail OUTLINED_FUNCTION_0
+; CHECK-NEXT:    lpad 0
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
 entry:
   ret i32 0
 }
