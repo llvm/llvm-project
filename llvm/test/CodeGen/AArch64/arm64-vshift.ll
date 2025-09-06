@@ -102,7 +102,10 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sli2d
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshlu_zero_shift_amount
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for lshr_trunc_v2i64_v2i8
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for lshr_trunc_v4i64_v4i16
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ashr_trunc_v2i64_v2i8
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ashr_trunc_v4i64_v4i16
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for shl_trunc_v4i64_v4i16
 
 define <8 x i8> @sqshl8b(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: sqshl8b:
@@ -4387,6 +4390,20 @@ define <2 x i8> @lshr_trunc_v2i64_v2i8(<2 x i64> %a) {
   ret <2 x i8> %c
 }
 
+define <4 x i16> @lshr_trunc_v4i64_v4i16(<4 x i64> %a) {
+; CHECK-LABEL: lshr_trunc_v4i64_v4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    xtn v1.2s, v1.2d
+; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    ushr v1.2s, v1.2s, #8
+; CHECK-NEXT:    ushr v0.2s, v0.2s, #8
+; CHECK-NEXT:    uzp1 v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    ret
+  %b = lshr <4 x i64> %a, <i64 8, i64 8, i64 8, i64 8>
+  %c = trunc <4 x i64> %b to <4 x i16>
+  ret <4 x i16> %c
+}
+
 define <2 x i8> @ashr_trunc_v2i64_v2i8(<2 x i64> %a) {
 ; CHECK-LABEL: ashr_trunc_v2i64_v2i8:
 ; CHECK:       // %bb.0:
@@ -4395,6 +4412,20 @@ define <2 x i8> @ashr_trunc_v2i64_v2i8(<2 x i64> %a) {
   %b = ashr <2 x i64> %a, <i64 16, i64 16>
   %c = trunc <2 x i64> %b to <2 x i8>
   ret <2 x i8> %c
+}
+
+define <4 x i16> @ashr_trunc_v4i64_v4i16(<4 x i64> %a) {
+; CHECK-LABEL: ashr_trunc_v4i64_v4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    xtn v1.2s, v1.2d
+; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    ushr v1.2s, v1.2s, #8
+; CHECK-NEXT:    ushr v0.2s, v0.2s, #8
+; CHECK-NEXT:    uzp1 v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    ret
+  %b = ashr <4 x i64> %a, <i64 8, i64 8, i64 8, i64 8>
+  %c = trunc <4 x i64> %b to <4 x i16>
+  ret <4 x i16> %c
 }
 
 define <2 x i8> @shl_trunc_v2i64_v2i8(<2 x i64> %a) {
@@ -4412,6 +4443,18 @@ define <2 x i8> @shl_trunc_v2i64_v2i8(<2 x i64> %a) {
   %b = shl <2 x i64> %a, <i64 16, i64 16>
   %c = trunc <2 x i64> %b to <2 x i8>
   ret <2 x i8> %c
+}
+
+define <4 x i16> @shl_trunc_v4i64_v4i16(<4 x i64> %a) {
+; CHECK-LABEL: shl_trunc_v4i64_v4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    shl v0.4h, v0.4h, #8
+; CHECK-NEXT:    ret
+  %b = shl <4 x i64> %a, <i64 8, i64 8, i64 8, i64 8>
+  %c = trunc <4 x i64> %b to <4 x i16>
+  ret <4 x i16> %c
 }
 
 declare <2 x i64> @llvm.aarch64.neon.addp.v2i64(<2 x i64>, <2 x i64>)
