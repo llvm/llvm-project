@@ -3773,6 +3773,8 @@ MCSymbol *BinaryFunction::addEntryPointAtOffset(uint64_t Offset) {
   assert(Offset && "cannot add primary entry point");
 
   const uint64_t EntryPointAddress = getAddress() + Offset;
+  assert(!isInConstantIsland(EntryPointAddress) &&
+         "cannot add entry point that points to constant data");
   MCSymbol *LocalSymbol = getOrCreateLocalLabel(EntryPointAddress);
 
   MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(LocalSymbol);

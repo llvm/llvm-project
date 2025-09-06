@@ -90,6 +90,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GlobPattern.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
@@ -572,8 +573,8 @@ void VTableSlotInfo::addCallSite(Value *VTable, CallBase &CB,
 
 struct DevirtModule {
   Module &M;
-  function_ref<AAResults &(Function &)> AARGetter;
-  function_ref<DominatorTree &(Function &)> LookupDomTree;
+  ModuleAnalysisManager &MAM;
+  FunctionAnalysisManager &FAM;
 
   ModuleSummaryIndex *const ExportSummary;
   const ModuleSummaryIndex *const ImportSummary;
@@ -589,7 +590,7 @@ struct DevirtModule {
   ArrayType *const Int8Arr0Ty;
 
   const bool RemarksEnabled;
-  function_ref<OptimizationRemarkEmitter &(Function &)> OREGetter;
+  std::function<OptimizationRemarkEmitter &(Function &)> OREGetter;
   MapVector<VTableSlot, VTableSlotInfo> CallSlots;
 
   // Calls that have already been optimized. We may add a call to multiple
@@ -612,12 +613,11 @@ struct DevirtModule {
   std::map<CallInst *, unsigned> NumUnsafeUsesForTypeTest;
   PatternList FunctionsToSkip;
 
-  DevirtModule(Module &M, function_ref<AAResults &(Function &)> AARGetter,
-               function_ref<OptimizationRemarkEmitter &(Function &)> OREGetter,
-               function_ref<DominatorTree &(Function &)> LookupDomTree,
+  DevirtModule(Module &M, ModuleAnalysisManager &MAM,
                ModuleSummaryIndex *ExportSummary,
                const ModuleSummaryIndex *ImportSummary)
-      : M(M), AARGetter(AARGetter), LookupDomTree(LookupDomTree),
+      : M(M), MAM(MAM),
+        FAM(MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
         ExportSummary(ExportSummary), ImportSummary(ImportSummary),
         Int8Ty(Type::getInt8Ty(M.getContext())),
         Int8PtrTy(PointerType::getUnqual(M.getContext())),
@@ -625,7 +625,10 @@ struct DevirtModule {
         Int64Ty(Type::getInt64Ty(M.getContext())),
         IntPtrTy(M.getDataLayout().getIntPtrType(M.getContext(), 0)),
         Int8Arr0Ty(ArrayType::get(Type::getInt8Ty(M.getContext()), 0)),
-        RemarksEnabled(areRemarksEnabled()), OREGetter(OREGetter) {
+        RemarksEnabled(areRemarksEnabled()),
+        OREGetter([&](Function &F) -> OptimizationRemarkEmitter & {
+          return FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+        }) {
     assert(!(ExportSummary && ImportSummary));
     FunctionsToSkip.init(SkipFunctionNames);
   }
@@ -739,10 +742,7 @@ struct DevirtModule {
 
   // Lower the module using the action and summary passed as command line
   // arguments. For testing purposes only.
-  static bool
-  runForTesting(Module &M, function_ref<AAResults &(Function &)> AARGetter,
-                function_ref<OptimizationRemarkEmitter &(Function &)> OREGetter,
-                function_ref<DominatorTree &(Function &)> LookupDomTree);
+  static bool runForTesting(Module &M, ModuleAnalysisManager &MAM);
 };
 
 struct DevirtIndex {
@@ -783,25 +783,13 @@ struct DevirtIndex {
 } // end anonymous namespace
 
 PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
-                                              ModuleAnalysisManager &AM) {
-  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  auto AARGetter = [&](Function &F) -> AAResults & {
-    return FAM.getResult<AAManager>(F);
-  };
-  auto OREGetter = [&](Function &F) -> OptimizationRemarkEmitter & {
-    return FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  };
-  auto LookupDomTree = [&FAM](Function &F) -> DominatorTree & {
-    return FAM.getResult<DominatorTreeAnalysis>(F);
-  };
+                                              ModuleAnalysisManager &MAM) {
   if (UseCommandLine) {
-    if (!DevirtModule::runForTesting(M, AARGetter, OREGetter, LookupDomTree))
+    if (!DevirtModule::runForTesting(M, MAM))
       return PreservedAnalyses::all();
     return PreservedAnalyses::none();
   }
-  if (!DevirtModule(M, AARGetter, OREGetter, LookupDomTree, ExportSummary,
-                    ImportSummary)
-           .run())
+  if (!DevirtModule(M, MAM, ExportSummary, ImportSummary).run())
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
 }
@@ -882,6 +870,7 @@ void llvm::updateVCallVisibilityInModule(
 
 void llvm::updatePublicTypeTestCalls(Module &M,
                                      bool WholeProgramVisibilityEnabledInLTO) {
+  llvm::TimeTraceScope timeScope("Update public type test calls");
   Function *PublicTypeTestFunc =
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
   if (!PublicTypeTestFunc)
@@ -996,10 +985,7 @@ static Error checkCombinedSummaryForTesting(ModuleSummaryIndex *Summary) {
   return ErrorSuccess();
 }
 
-bool DevirtModule::runForTesting(
-    Module &M, function_ref<AAResults &(Function &)> AARGetter,
-    function_ref<OptimizationRemarkEmitter &(Function &)> OREGetter,
-    function_ref<DominatorTree &(Function &)> LookupDomTree) {
+bool DevirtModule::runForTesting(Module &M, ModuleAnalysisManager &MAM) {
   std::unique_ptr<ModuleSummaryIndex> Summary =
       std::make_unique<ModuleSummaryIndex>(/*HaveGVs=*/false);
 
@@ -1024,7 +1010,7 @@ bool DevirtModule::runForTesting(
   }
 
   bool Changed =
-      DevirtModule(M, AARGetter, OREGetter, LookupDomTree,
+      DevirtModule(M, MAM,
                    ClSummaryAction == PassSummaryAction::Export ? Summary.get()
                                                                 : nullptr,
                    ClSummaryAction == PassSummaryAction::Import ? Summary.get()
@@ -1877,7 +1863,7 @@ bool DevirtModule::tryVirtualConstProp(
       return false;
 
     if (Fn->isDeclaration() ||
-        !computeFunctionBodyMemoryAccess(*Fn, AARGetter(*Fn))
+        !computeFunctionBodyMemoryAccess(*Fn, FAM.getResult<AAManager>(*Fn))
              .doesNotAccessMemory() ||
         Fn->arg_empty() || !Fn->arg_begin()->use_empty() ||
         Fn->getReturnType() != RetType)
@@ -2051,7 +2037,7 @@ void DevirtModule::scanTypeTestUsers(
     // Search for virtual calls based on %p and add them to DevirtCalls.
     SmallVector<DevirtCallSite, 1> DevirtCalls;
     SmallVector<CallInst *, 1> Assumes;
-    auto &DT = LookupDomTree(*CI->getFunction());
+    auto &DT = FAM.getResult<DominatorTreeAnalysis>(*CI->getFunction());
     findDevirtualizableCallsForTypeTest(DevirtCalls, Assumes, CI, DT);
 
     Metadata *TypeId =
@@ -2128,7 +2114,7 @@ void DevirtModule::scanTypeCheckedLoadUsers(Function *TypeCheckedLoadFunc) {
     SmallVector<Instruction *, 1> LoadedPtrs;
     SmallVector<Instruction *, 1> Preds;
     bool HasNonCallUses = false;
-    auto &DT = LookupDomTree(*CI->getFunction());
+    auto &DT = FAM.getResult<DominatorTreeAnalysis>(*CI->getFunction());
     findDevirtualizableCallsForTypeCheckedLoad(DevirtCalls, LoadedPtrs, Preds,
                                                HasNonCallUses, CI, DT);
 

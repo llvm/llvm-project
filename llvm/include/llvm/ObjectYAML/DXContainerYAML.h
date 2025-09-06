@@ -187,9 +187,9 @@ struct RootSignatureYamlDesc {
 
   uint32_t Version;
   uint32_t NumRootParameters;
-  uint32_t RootParametersOffset;
+  std::optional<uint32_t> RootParametersOffset;
   uint32_t NumStaticSamplers;
-  uint32_t StaticSamplersOffset;
+  std::optional<uint32_t> StaticSamplersOffset;
 
   RootParameterYamlDesc Parameters;
   SmallVector<StaticSamplerYamlDesc> StaticSamplers;

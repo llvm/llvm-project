@@ -37,7 +37,7 @@ struct transparent_less_not_referenceable
 };
 
 // Prevent regression when empty base class optimization is not suitable.
-// See https://github.com/llvm/llvm-project/issues/152543.
+// See llvm.org/PR152543.
 struct transparent_less_nonempty {
   template <class T, class U>
   constexpr bool operator()(T&& t, U&& u) const {

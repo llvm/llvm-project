@@ -350,8 +350,8 @@ getResourceArrayHandleType(VarDecl *VD) {
   assert(VD->getType()->isHLSLResourceRecordArray() &&
          "expected array of resource records");
   const Type *Ty = VD->getType()->getUnqualifiedDesugaredType();
-  while (const ConstantArrayType *CAT = dyn_cast<ConstantArrayType>(Ty))
-    Ty = CAT->getArrayElementTypeNoTypeQual()->getUnqualifiedDesugaredType();
+  while (const ArrayType *AT = dyn_cast<ArrayType>(Ty))
+    Ty = AT->getArrayElementTypeNoTypeQual()->getUnqualifiedDesugaredType();
   return HLSLAttributedResourceType::findHandleTypeOnResource(Ty);
 }
 
@@ -1159,15 +1159,14 @@ struct PerVisibilityBindingChecker {
     bool HadOverlap = false;
 
     using llvm::hlsl::BindingInfoBuilder;
-    auto ReportOverlap = [this, &HadOverlap](
-                             const BindingInfoBuilder &Builder,
-                             const BindingInfoBuilder::Binding &Reported) {
+    auto ReportOverlap = [this,
+                          &HadOverlap](const BindingInfoBuilder &Builder,
+                                       const llvm::hlsl::Binding &Reported) {
       HadOverlap = true;
 
       const auto *Elem =
           static_cast<const hlsl::RootSignatureElement *>(Reported.Cookie);
-      const BindingInfoBuilder::Binding &Previous =
-          Builder.findOverlapping(Reported);
+      const llvm::hlsl::Binding &Previous = Builder.findOverlapping(Reported);
       const auto *PrevElem =
           static_cast<const hlsl::RootSignatureElement *>(Previous.Cookie);
 
@@ -2023,9 +2022,11 @@ static bool DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
 }
 
 void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
-  if (isa<VarDecl>(TheDecl)) {
-    if (SemaRef.RequireCompleteType(TheDecl->getBeginLoc(),
-                                    cast<ValueDecl>(TheDecl)->getType(),
+  if (VarDecl *VD = dyn_cast<VarDecl>(TheDecl)) {
+    QualType Ty = VD->getType();
+    if (const auto *IAT = dyn_cast<IncompleteArrayType>(Ty))
+      Ty = IAT->getElementType();
+    if (SemaRef.RequireCompleteType(TheDecl->getBeginLoc(), Ty,
                                     diag::err_incomplete_type))
       return;
   }
@@ -2853,8 +2854,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (SemaRef.checkArgCount(TheCall, 6) ||
         CheckResourceHandle(&SemaRef, TheCall, 0) ||
         CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), AST.UnsignedIntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), AST.IntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(3), AST.UnsignedIntTy) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), AST.UnsignedIntTy) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(3), AST.IntTy) ||
         CheckArgTypeMatches(&SemaRef, TheCall->getArg(4), AST.UnsignedIntTy) ||
         CheckArgTypeMatches(&SemaRef, TheCall->getArg(5),
                             AST.getPointerType(AST.CharTy.withConst())))
@@ -3832,9 +3833,9 @@ void SemaHLSL::collectResourceBindingsOnVarDecl(VarDecl *VD) {
   // Unwrap arrays
   // FIXME: Calculate array size while unwrapping
   const Type *Ty = VD->getType()->getUnqualifiedDesugaredType();
-  while (Ty->isConstantArrayType()) {
-    const ConstantArrayType *CAT = cast<ConstantArrayType>(Ty);
-    Ty = CAT->getElementType()->getUnqualifiedDesugaredType();
+  while (Ty->isArrayType()) {
+    const ArrayType *AT = cast<ArrayType>(Ty);
+    Ty = AT->getElementType()->getUnqualifiedDesugaredType();
   }
 
   // Resource (or array of resources)

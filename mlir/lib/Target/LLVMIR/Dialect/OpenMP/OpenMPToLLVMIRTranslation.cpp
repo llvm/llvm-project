@@ -2559,7 +2559,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
 
   // Initialize linear variables and linear step
   LinearClauseProcessor linearClauseProcessor;
-  if (wsloopOp.getLinearVars().size()) {
+  if (!wsloopOp.getLinearVars().empty()) {
     for (mlir::Value linearVar : wsloopOp.getLinearVars())
       linearClauseProcessor.createLinearVar(builder, moduleTranslation,
                                             linearVar);
@@ -2576,7 +2576,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::CanonicalLoopInfo *loopInfo = findCurrentLoopInfo(moduleTranslation);
 
   // Emit Initialization and Update IR for linear variables
-  if (wsloopOp.getLinearVars().size()) {
+  if (!wsloopOp.getLinearVars().empty()) {
     llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterBarrierIP =
         linearClauseProcessor.initLinearVar(builder, moduleTranslation,
                                             loopInfo->getPreheader());
@@ -2602,7 +2602,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
     return failure();
 
   // Emit finalization and in-place rewrites for linear vars.
-  if (wsloopOp.getLinearVars().size()) {
+  if (!wsloopOp.getLinearVars().empty()) {
     llvm::OpenMPIRBuilder::InsertPointTy oldIP = builder.saveIP();
     assert(loopInfo->getLastIter() &&
            "`lastiter` in CanonicalLoopInfo is nullptr");
@@ -2893,6 +2893,12 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
     alignment = builder.getInt64(intAttr.getInt());
     assert(ty->isPointerTy() && "Invalid type for aligned variable");
     assert(alignment && "Invalid alignment value");
+
+    // Check if the alignment value is not a power of 2. If so, skip emitting
+    // alignment.
+    if (!intAttr.getValue().isPowerOf2())
+      continue;
+
     auto curInsert = builder.saveIP();
     builder.SetInsertPoint(sourceBlock);
     llvmVal = builder.CreateLoad(ty, llvmVal);
@@ -6378,9 +6384,8 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
   if (ompBuilder->Config.isTargetDevice()) {
     if (isTargetDeviceOp(op)) {
       return convertTargetDeviceOp(op, builder, moduleTranslation);
-    } else {
-      return convertTargetOpsInNest(op, builder, moduleTranslation);
     }
+    return convertTargetOpsInNest(op, builder, moduleTranslation);
   }
   return convertHostOrTargetOperation(op, builder, moduleTranslation);
 }

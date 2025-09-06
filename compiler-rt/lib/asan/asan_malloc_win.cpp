@@ -322,6 +322,22 @@ void *SharedReAlloc(ReAllocFunction reallocFunc, SizeFunction heapSizeFunc,
       }
     }
 
+    if (dwFlags & HEAP_REALLOC_IN_PLACE_ONLY) {
+      size_t old_usable_size = asan_malloc_usable_size(lpMem, pc, bp);
+      if (dwBytes == old_usable_size) {
+        // Nothing to change, return the current pointer.
+        return lpMem;
+      } else if (dwBytes >= old_usable_size) {
+        // Growing with HEAP_REALLOC_IN_PLACE_ONLY is not supported.
+        return nullptr;
+      } else {
+        // Shrinking with HEAP_REALLOC_IN_PLACE_ONLY is not yet supported.
+        // For now return the current pointer and
+        // leave the allocation size as it is.
+        return lpMem;
+      }
+    }
+
     if (ownershipState == ASAN && !only_asan_supported_flags) {
       // Conversion to unsupported flags allocation,
       // transfer this allocation back to the original allocator.

@@ -16317,7 +16317,15 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
       if (VT.isScalarInteger() || TLI.isOperationLegal(N0.getOpcode(), VT)) {
         SDValue NarrowL = DAG.getNode(ISD::TRUNCATE, DL, VT, N0.getOperand(0));
         SDValue NarrowR = DAG.getNode(ISD::TRUNCATE, DL, VT, N0.getOperand(1));
-        return DAG.getNode(N0.getOpcode(), DL, VT, NarrowL, NarrowR);
+        SDNodeFlags Flags;
+        // Propagate nuw for sub.
+        if (N0->getOpcode() == ISD::SUB && N0->getFlags().hasNoUnsignedWrap() &&
+            DAG.MaskedValueIsZero(
+                N0->getOperand(0),
+                APInt::getBitsSetFrom(SrcVT.getScalarSizeInBits(),
+                                      VT.getScalarSizeInBits())))
+          Flags.setNoUnsignedWrap(true);
+        return DAG.getNode(N0.getOpcode(), DL, VT, NarrowL, NarrowR, Flags);
       }
     }
     break;
@@ -16796,6 +16804,8 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   // If we have frozen and unfrozen users of N0, update so everything uses N.
   if (!N0.isUndef() && !N0.hasOneUse()) {
     SDValue FrozenN0(N, 0);
+    // Unfreeze all uses of N to avoid double deleting N from the CSE map.
+    DAG.ReplaceAllUsesOfValueWith(FrozenN0, N0);
     DAG.ReplaceAllUsesOfValueWith(N0, FrozenN0);
     // ReplaceAllUsesOfValueWith will have also updated the use in N, thus
     // creating a cycle in a DAG. Let's undo that by mutating the freeze.
@@ -19354,13 +19364,13 @@ SDValue DAGCombiner::visitBRCOND(SDNode *N) {
   // MachineBasicBlock CFG, which is awkward.
 
   // fold a brcond with a setcc condition into a BR_CC node if BR_CC is legal
-  // on the target.
+  // on the target, also copy fast math flags.
   if (N1.getOpcode() == ISD::SETCC &&
       TLI.isOperationLegalOrCustom(ISD::BR_CC,
                                    N1.getOperand(0).getValueType())) {
-    return DAG.getNode(ISD::BR_CC, SDLoc(N), MVT::Other,
-                       Chain, N1.getOperand(2),
-                       N1.getOperand(0), N1.getOperand(1), N2);
+    return DAG.getNode(ISD::BR_CC, SDLoc(N), MVT::Other, Chain,
+                       N1.getOperand(2), N1.getOperand(0), N1.getOperand(1), N2,
+                       N1->getFlags());
   }
 
   if (N1.hasOneUse()) {

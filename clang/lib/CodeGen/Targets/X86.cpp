@@ -752,7 +752,7 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty, CCState &State,
   TypeInfo TI = getContext().getTypeInfo(Ty);
 
   // Check with the C++ ABI first.
-  const RecordType *RT = Ty->getAs<RecordType>();
+  const RecordType *RT = Ty->getAsCanonical<RecordType>();
   if (RT) {
     CGCXXABI::RecordArgABI RAA = getRecordArgABI(RT, getCXXABI());
     if (RAA == CGCXXABI::RAA_Indirect) {
@@ -1533,24 +1533,6 @@ static bool checkAVXParamFeature(DiagnosticsEngine &Diag,
   return false;
 }
 
-static bool checkAVX512ParamFeature(DiagnosticsEngine &Diag,
-                                    SourceLocation CallLoc,
-                                    const llvm::StringMap<bool> &CallerMap,
-                                    const llvm::StringMap<bool> &CalleeMap,
-                                    QualType Ty, bool IsArgument) {
-  bool Caller256 = CallerMap.lookup("avx512f") && !CallerMap.lookup("evex512");
-  bool Callee256 = CalleeMap.lookup("avx512f") && !CalleeMap.lookup("evex512");
-
-  // Forbid 512-bit or larger vector pass or return when we disabled ZMM
-  // instructions.
-  if (Caller256 || Callee256)
-    return Diag.Report(CallLoc, diag::err_avx_calling_convention)
-           << IsArgument << Ty << "evex512";
-
-  return checkAVXParamFeature(Diag, CallLoc, CallerMap, CalleeMap, Ty,
-                              "avx512f", IsArgument);
-}
-
 static bool checkAVXParam(DiagnosticsEngine &Diag, ASTContext &Ctx,
                           SourceLocation CallLoc,
                           const llvm::StringMap<bool> &CallerMap,
@@ -1558,8 +1540,8 @@ static bool checkAVXParam(DiagnosticsEngine &Diag, ASTContext &Ctx,
                           bool IsArgument) {
   uint64_t Size = Ctx.getTypeSize(Ty);
   if (Size > 256)
-    return checkAVX512ParamFeature(Diag, CallLoc, CallerMap, CalleeMap, Ty,
-                                   IsArgument);
+    return checkAVXParamFeature(Diag, CallLoc, CallerMap, CalleeMap, Ty,
+                                "avx512f", IsArgument);
 
   if (Size > 128)
     return checkAVXParamFeature(Diag, CallLoc, CallerMap, CalleeMap, Ty, "avx",
@@ -2039,7 +2021,7 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
     return;
   }
 
-  if (const RecordType *RT = Ty->getAs<RecordType>()) {
+  if (const RecordType *RT = Ty->getAsCanonical<RecordType>()) {
     uint64_t Size = getContext().getTypeSize(Ty);
 
     // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger
@@ -3309,14 +3291,14 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
   if (Ty->isVoidType())
     return ABIArgInfo::getIgnore();
 
-  if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+  if (const auto *ED = Ty->getAsEnumDecl())
+    Ty = ED->getIntegerType();
 
   TypeInfo Info = getContext().getTypeInfo(Ty);
   uint64_t Width = Info.Width;
   CharUnits Align = getContext().toCharUnitsFromBits(Info.Align);
 
-  const RecordType *RT = Ty->getAs<RecordType>();
+  const RecordType *RT = Ty->getAsCanonical<RecordType>();
   if (RT) {
     if (!IsReturnType) {
       if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(RT, getCXXABI()))

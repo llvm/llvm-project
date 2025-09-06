@@ -3200,20 +3200,6 @@ void PadOp::getAsmResultNames(function_ref<void(Value, StringRef)> setNameFn) {
   setNameFn(getResult(), "padded");
 }
 
-// TODO: Replace custom<InferType> directive with AllTypesMatch as soon as it
-// supports optional types.
-void printInferType(OpAsmPrinter &printer, Operation *op, Value optOperand,
-                    Type typeToInfer, Type typeToInferFrom) {}
-
-ParseResult
-parseInferType(OpAsmParser &parser,
-               std::optional<OpAsmParser::UnresolvedOperand> optOperand,
-               Type &typeToInfer, Type typeToInferFrom) {
-  if (optOperand)
-    typeToInfer = typeToInferFrom;
-  return success();
-}
-
 LogicalResult PadOp::verify() {
   auto sourceType = llvm::cast<RankedTensorType>(getSource().getType());
   auto resultType = llvm::cast<RankedTensorType>(getResult().getType());
@@ -4059,7 +4045,7 @@ OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 // Common Canonicalizers and Folders.
 //===----------------------------------------------------------------------===//
-bool foldTensorCastPrecondition(DestinationStyleOpInterface op) {
+static bool foldTensorCastPrecondition(DestinationStyleOpInterface op) {
   // 1. InsertSliceOp has its own logic about folding tensor.cast ops.
   // 2. Exclude DPS ops that are also LoopLike from this interface as they
   // might need special handling of attached regions.

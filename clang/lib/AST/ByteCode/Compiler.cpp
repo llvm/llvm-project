@@ -942,7 +942,7 @@ bool Compiler<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
     if (!Result)
       return false;
     if (DiscardResult)
-      return this->emitPop(*T, BO);
+      return this->emitPopBool(BO);
     if (T != PT_Bool)
       return this->emitCast(PT_Bool, *T, BO);
     return true;
@@ -1376,14 +1376,20 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
+  const Expr *LHS = E->getLHS();
+  const Expr *RHS = E->getRHS();
   assert(!E->isCommaOp() &&
          "Comma op should be handled in VisitBinaryOperator");
   assert(E->getType()->isVectorType());
-  assert(E->getLHS()->getType()->isVectorType());
-  assert(E->getRHS()->getType()->isVectorType());
+  assert(LHS->getType()->isVectorType());
+  assert(RHS->getType()->isVectorType());
+
+  // We can only handle vectors with primitive element types.
+  if (!canClassify(LHS->getType()->castAs<VectorType>()->getElementType()))
+    return false;
 
   // Prepare storage for result.
-  if (!Initializing && !E->isCompoundAssignmentOp()) {
+  if (!Initializing && !E->isCompoundAssignmentOp() && !E->isAssignmentOp()) {
     UnsignedOrNone LocalIndex = allocateTemporary(E);
     if (!LocalIndex)
       return false;
@@ -1391,8 +1397,6 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
       return false;
   }
 
-  const Expr *LHS = E->getLHS();
-  const Expr *RHS = E->getRHS();
   const auto *VecTy = E->getType()->getAs<VectorType>();
   auto Op = E->isCompoundAssignmentOp()
                 ? BinaryOperator::getOpForCompoundAssignment(E->getOpcode())
@@ -1401,6 +1405,21 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
   PrimType ElemT = this->classifyVectorElementType(LHS->getType());
   PrimType RHSElemT = this->classifyVectorElementType(RHS->getType());
   PrimType ResultElemT = this->classifyVectorElementType(E->getType());
+
+  if (E->getOpcode() == BO_Assign) {
+    assert(Ctx.getASTContext().hasSameUnqualifiedType(
+        LHS->getType()->castAs<VectorType>()->getElementType(),
+        RHS->getType()->castAs<VectorType>()->getElementType()));
+    if (!this->visit(LHS))
+      return false;
+    if (!this->visit(RHS))
+      return false;
+    if (!this->emitCopyArray(ElemT, 0, 0, VecTy->getNumElements(), E))
+      return false;
+    if (DiscardResult)
+      return this->emitPopPtr(E);
+    return true;
+  }
 
   // Evaluate LHS and save value to LHSOffset.
   unsigned LHSOffset =
@@ -3880,6 +3899,8 @@ bool Compiler<Emitter>::VisitCXXUuidofExpr(const CXXUuidofExpr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::VisitRequiresExpr(const RequiresExpr *E) {
   assert(classifyPrim(E->getType()) == PT_Bool);
+  if (E->isValueDependent())
+    return false;
   if (DiscardResult)
     return true;
   return this->emitConstBool(E->isSatisfied(), E);
@@ -4170,6 +4191,31 @@ template <class Emitter> bool Compiler<Emitter>::delegate(const Expr *E) {
   return this->Visit(E);
 }
 
+static const Expr *stripCheckedDerivedToBaseCasts(const Expr *E) {
+  if (const auto *PE = dyn_cast<ParenExpr>(E))
+    return stripCheckedDerivedToBaseCasts(PE->getSubExpr());
+
+  if (const auto *CE = dyn_cast<CastExpr>(E);
+      CE &&
+      (CE->getCastKind() == CK_DerivedToBase || CE->getCastKind() == CK_NoOp))
+    return stripCheckedDerivedToBaseCasts(CE->getSubExpr());
+
+  return E;
+}
+
+static const Expr *stripDerivedToBaseCasts(const Expr *E) {
+  if (const auto *PE = dyn_cast<ParenExpr>(E))
+    return stripDerivedToBaseCasts(PE->getSubExpr());
+
+  if (const auto *CE = dyn_cast<CastExpr>(E);
+      CE && (CE->getCastKind() == CK_DerivedToBase ||
+             CE->getCastKind() == CK_UncheckedDerivedToBase ||
+             CE->getCastKind() == CK_NoOp))
+    return stripDerivedToBaseCasts(CE->getSubExpr());
+
+  return E;
+}
+
 template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
   if (E->getType().isNull())
     return false;
@@ -4178,9 +4224,8 @@ template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
     return this->discard(E);
 
   // Create local variable to hold the return value.
-  if (!E->isGLValue() && !E->getType()->isAnyComplexType() &&
-      !canClassify(E->getType())) {
-    UnsignedOrNone LocalIndex = allocateLocal(E);
+  if (!E->isGLValue() && !canClassify(E->getType())) {
+    UnsignedOrNone LocalIndex = allocateLocal(stripDerivedToBaseCasts(E));
     if (!LocalIndex)
       return false;
 
@@ -4609,8 +4654,8 @@ UnsignedOrNone Compiler<Emitter>::allocateTemporary(const Expr *E) {
 template <class Emitter>
 const RecordType *Compiler<Emitter>::getRecordTy(QualType Ty) {
   if (const PointerType *PT = dyn_cast<PointerType>(Ty))
-    return PT->getPointeeType()->getAs<RecordType>();
-  return Ty->getAs<RecordType>();
+    return PT->getPointeeType()->getAsCanonical<RecordType>();
+  return Ty->getAsCanonical<RecordType>();
 }
 
 template <class Emitter> Record *Compiler<Emitter>::getRecord(QualType Ty) {
@@ -5058,18 +5103,6 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
   return true;
 }
 
-static const Expr *stripDerivedToBaseCasts(const Expr *E) {
-  if (const auto *PE = dyn_cast<ParenExpr>(E))
-    return stripDerivedToBaseCasts(PE->getSubExpr());
-
-  if (const auto *CE = dyn_cast<CastExpr>(E);
-      CE &&
-      (CE->getCastKind() == CK_DerivedToBase || CE->getCastKind() == CK_NoOp))
-    return stripDerivedToBaseCasts(CE->getSubExpr());
-
-  return E;
-}
-
 template <class Emitter>
 bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
   const FunctionDecl *FuncDecl = E->getDirectCallee();
@@ -5174,7 +5207,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
       const auto *InstancePtr = MC->getImplicitObjectArgument();
       if (isa_and_nonnull<CXXDestructorDecl>(CompilingFunction) ||
           isa_and_nonnull<CXXConstructorDecl>(CompilingFunction)) {
-        const auto *Stripped = stripDerivedToBaseCasts(InstancePtr);
+        const auto *Stripped = stripCheckedDerivedToBaseCasts(InstancePtr);
         if (isa<CXXThisExpr>(Stripped)) {
           FuncDecl =
               cast<CXXMethodDecl>(FuncDecl)->getCorrespondingMethodInClass(
@@ -6251,26 +6284,21 @@ bool Compiler<Emitter>::compileDestructor(const CXXDestructorDecl *Dtor) {
     // First, destroy all fields.
     for (const Record::Field &Field : llvm::reverse(R->fields())) {
       const Descriptor *D = Field.Desc;
-      if (!D->isPrimitive() && !D->isPrimitiveArray()) {
-        if (!this->emitGetPtrField(Field.Offset, SourceInfo{}))
-          return false;
-        if (!this->emitDestruction(D, SourceInfo{}))
-          return false;
-        if (!this->emitPopPtr(SourceInfo{}))
-          return false;
-      }
+      if (D->hasTrivialDtor())
+        continue;
+      if (!this->emitGetPtrField(Field.Offset, SourceInfo{}))
+        return false;
+      if (!this->emitDestructionPop(D, SourceInfo{}))
+        return false;
     }
   }
 
   for (const Record::Base &Base : llvm::reverse(R->bases())) {
-    if (Base.R->isAnonymousUnion())
+    if (Base.R->hasTrivialDtor())
       continue;
-
     if (!this->emitGetPtrBase(Base.Offset, SourceInfo{}))
       return false;
-    if (!this->emitRecordDestruction(Base.R, {}))
-      return false;
-    if (!this->emitPopPtr(SourceInfo{}))
+    if (!this->emitRecordDestructionPop(Base.R, {}))
       return false;
   }
 
@@ -7167,71 +7195,56 @@ bool Compiler<Emitter>::emitComplexComparison(const Expr *LHS, const Expr *RHS,
 /// on the stack.
 /// Emit destruction of record types (or arrays of record types).
 template <class Emitter>
-bool Compiler<Emitter>::emitRecordDestruction(const Record *R, SourceInfo Loc) {
+bool Compiler<Emitter>::emitRecordDestructionPop(const Record *R,
+                                                 SourceInfo Loc) {
   assert(R);
-  assert(!R->isAnonymousUnion());
+  assert(!R->hasTrivialDtor());
   const CXXDestructorDecl *Dtor = R->getDestructor();
-  if (!Dtor || Dtor->isTrivial())
-    return true;
-
   assert(Dtor);
   const Function *DtorFunc = getFunction(Dtor);
   if (!DtorFunc)
     return false;
   assert(DtorFunc->hasThisPointer());
   assert(DtorFunc->getNumParams() == 1);
-  if (!this->emitDupPtr(Loc))
-    return false;
   return this->emitCall(DtorFunc, 0, Loc);
 }
 /// When calling this, we have a pointer of the local-to-destroy
 /// on the stack.
 /// Emit destruction of record types (or arrays of record types).
 template <class Emitter>
-bool Compiler<Emitter>::emitDestruction(const Descriptor *Desc,
-                                        SourceInfo Loc) {
+bool Compiler<Emitter>::emitDestructionPop(const Descriptor *Desc,
+                                           SourceInfo Loc) {
   assert(Desc);
-  assert(!Desc->isPrimitive());
-  assert(!Desc->isPrimitiveArray());
+  assert(!Desc->hasTrivialDtor());
 
   // Arrays.
   if (Desc->isArray()) {
     const Descriptor *ElemDesc = Desc->ElemDesc;
     assert(ElemDesc);
 
-    // Don't need to do anything for these.
-    if (ElemDesc->isPrimitiveArray())
-      return true;
+    unsigned N = Desc->getNumElems();
+    if (N == 0)
+      return this->emitPopPtr(Loc);
 
-    // If this is an array of record types, check if we need
-    // to call the element destructors at all. If not, try
-    // to save the work.
-    if (const Record *ElemRecord = ElemDesc->ElemRecord) {
-      if (const CXXDestructorDecl *Dtor = ElemRecord->getDestructor();
-          !Dtor || Dtor->isTrivial())
-        return true;
+    for (ssize_t I = N - 1; I >= 1; --I) {
+      if (!this->emitConstUint64(I, Loc))
+        return false;
+      if (!this->emitArrayElemPtrUint64(Loc))
+        return false;
+      if (!this->emitDestructionPop(ElemDesc, Loc))
+        return false;
     }
-
-    if (unsigned N = Desc->getNumElems()) {
-      for (ssize_t I = N - 1; I >= 0; --I) {
-        if (!this->emitConstUint64(I, Loc))
-          return false;
-        if (!this->emitArrayElemPtrUint64(Loc))
-          return false;
-        if (!this->emitDestruction(ElemDesc, Loc))
-          return false;
-        if (!this->emitPopPtr(Loc))
-          return false;
-      }
-    }
-    return true;
+    // Last iteration, removes the instance pointer from the stack.
+    if (!this->emitConstUint64(0, Loc))
+      return false;
+    if (!this->emitArrayElemPtrPopUint64(Loc))
+      return false;
+    return this->emitDestructionPop(ElemDesc, Loc);
   }
 
   assert(Desc->ElemRecord);
-  if (Desc->ElemRecord->isAnonymousUnion())
-    return true;
-
-  return this->emitRecordDestruction(Desc->ElemRecord, Loc);
+  assert(!Desc->ElemRecord->hasTrivialDtor());
+  return this->emitRecordDestructionPop(Desc->ElemRecord, Loc);
 }
 
 /// Create a dummy pointer for the given decl (or expr) and

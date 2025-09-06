@@ -268,6 +268,7 @@ public:
     CmpArithIntrinsic, // Use a target-specific intrinsic for special compare
                        // operations; used by X86.
     Expand,            // Generic expansion in terms of other atomic operations.
+    CustomExpand,      // Custom target-specific expansion using TLI hooks.
 
     // Rewrite to a non-atomic form for use in a known non-preemptible
     // environment.
@@ -472,6 +473,8 @@ public:
                                                    const DataLayout &DL) const;
   MachineMemOperand::Flags getAtomicMemOperandFlags(const Instruction &AI,
                                                     const DataLayout &DL) const;
+  MachineMemOperand::Flags
+  getVPIntrinsicMemOperandFlags(const VPIntrinsic &VPIntrin) const;
 
   virtual bool isSelectSupported(SelectSupportKind /*kind*/) const {
     return true;
@@ -2273,6 +2276,18 @@ public:
         "Generic atomicrmw expansion unimplemented on this target");
   }
 
+  /// Perform a atomic store using a target-specific way.
+  virtual void emitExpandAtomicStore(StoreInst *SI) const {
+    llvm_unreachable(
+        "Generic atomic store expansion unimplemented on this target");
+  }
+
+  /// Perform a atomic load using a target-specific way.
+  virtual void emitExpandAtomicLoad(LoadInst *LI) const {
+    llvm_unreachable(
+        "Generic atomic load expansion unimplemented on this target");
+  }
+
   /// Perform a cmpxchg expansion using a target-specific method.
   virtual void emitExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) const {
     llvm_unreachable("Generic cmpxchg expansion unimplemented on this target");
@@ -2377,8 +2392,8 @@ public:
   }
 
   /// Returns how the given (atomic) store should be expanded by the IR-level
-  /// AtomicExpand pass into. For instance AtomicExpansionKind::Expand will try
-  /// to use an atomicrmw xchg.
+  /// AtomicExpand pass into. For instance AtomicExpansionKind::CustomExpand
+  /// will try to use an atomicrmw xchg.
   virtual AtomicExpansionKind shouldExpandAtomicStoreInIR(StoreInst *SI) const {
     return AtomicExpansionKind::None;
   }
@@ -4671,6 +4686,13 @@ public:
     llvm_unreachable("Not Implemented");
   }
 
+  /// Optional target hook to add target-specific actions when entering EH pad
+  /// blocks. The implementation should return the resulting token chain value.
+  virtual SDValue lowerEHPadEntry(SDValue Chain, const SDLoc &DL,
+                                  SelectionDAG &DAG) const {
+    return SDValue();
+  }
+
   virtual void markLibCallAttributes(MachineFunction *MF, unsigned CC,
                                      ArgListTy &Args) const {}
 
@@ -5109,14 +5131,6 @@ public:
   //===--------------------------------------------------------------------===//
   // Inline Asm Support hooks
   //
-
-  /// This hook allows the target to expand an inline asm call to be explicit
-  /// llvm code if it wants to.  This is useful for turning simple inline asms
-  /// into LLVM intrinsics, which gives the compiler more information about the
-  /// behavior of the code.
-  virtual bool ExpandInlineAsm(CallInst *) const {
-    return false;
-  }
 
   enum ConstraintType {
     C_Register,            // Constraint represents specific register(s).

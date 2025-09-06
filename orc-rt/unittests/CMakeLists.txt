@@ -13,14 +13,19 @@ endfunction()
 
 add_orc_rt_unittest(CoreTests
   BitmaskEnumTest.cpp
+  CommonTestUtils.cpp
   ErrorTest.cpp
   ExecutorAddressTest.cpp
   IntervalMapTest.cpp
   IntervalSetTest.cpp
   MathTest.cpp
+  MemoryFlagsTest.cpp
   RTTITest.cpp
+  ScopeExitTest.cpp
   SimplePackedSerializationTest.cpp
-  WrapperFunctionResultTest.cpp
+  SPSWrapperFunctionTest.cpp
+  WrapperFunctionBufferTest.cpp
+  bind-test.cpp
   bit-test.cpp
   move_only_function-test.cpp
   span-test.cpp

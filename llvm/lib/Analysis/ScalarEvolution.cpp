@@ -3215,6 +3215,15 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
           return getZeroExtendExpr(Res, Ops[1]->getType(), Depth + 1);
         };
       }
+
+      // Try to fold (C * D /u C) -> D, if C is a power-of-2 and D is a multiple
+      //  of C.
+      const SCEV *D;
+      if (match(Ops[1], m_scev_UDiv(m_SCEV(D), m_scev_Specific(LHSC))) &&
+          LHSC->getAPInt().isPowerOf2() &&
+          LHSC->getAPInt().logBase2() <= getMinTrailingZeros(D)) {
+        return D;
+      }
     }
   }
 
@@ -16001,6 +16010,16 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
     }
 
     const SCEV *visitAddExpr(const SCEVAddExpr *Expr) {
+      // Trip count expressions sometimes consist of adding 3 operands, i.e.
+      // (Const + A + B). There may be guard info for A + B, and if so, apply
+      // it.
+      // TODO: Could more generally apply guards to Add sub-expressions.
+      if (isa<SCEVConstant>(Expr->getOperand(0)) &&
+          Expr->getNumOperands() == 3) {
+        if (const SCEV *S = Map.lookup(
+                SE.getAddExpr(Expr->getOperand(1), Expr->getOperand(2))))
+          return SE.getAddExpr(Expr->getOperand(0), S);
+      }
       SmallVector<const SCEV *, 2> Operands;
       bool Changed = false;
       for (const auto *Op : Expr->operands()) {

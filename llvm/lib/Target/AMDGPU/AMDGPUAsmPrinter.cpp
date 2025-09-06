@@ -1143,9 +1143,13 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     const MCExpr *SubGPR = MCBinaryExpr::createSub(DivGPR, OneConst, Ctx);
     return SubGPR;
   };
-
-  ProgInfo.SGPRBlocks = GetNumGPRBlocks(ProgInfo.NumSGPRsForWavesPerEU,
-                                        IsaInfo::getSGPREncodingGranule(&STM));
+  // GFX10+ will always allocate 128 SGPRs and this field must be 0
+  if (STM.getGeneration() >= AMDGPUSubtarget::GFX10) {
+    ProgInfo.SGPRBlocks = CreateExpr(0ul);
+  } else {
+    ProgInfo.SGPRBlocks = GetNumGPRBlocks(
+        ProgInfo.NumSGPRsForWavesPerEU, IsaInfo::getSGPREncodingGranule(&STM));
+  }
   ProgInfo.VGPRBlocks = GetNumGPRBlocks(ProgInfo.NumVGPRsForWavesPerEU,
                                         IsaInfo::getVGPREncodingGranule(&STM));
 
@@ -1440,9 +1444,10 @@ static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
       MD->setComputeRegisters(".dynamic_vgpr_en", true);
   }
 
-  MD->setHwStage(CC, ".lds_size",
-                 (unsigned)(CurrentProgramInfo.LdsSize *
-                            getLdsDwGranularity(ST) * sizeof(uint32_t)));
+  MD->updateHwStageMaximum(
+      CC, ".lds_size",
+      (unsigned)(CurrentProgramInfo.LdsSize * getLdsDwGranularity(ST) *
+                 sizeof(uint32_t)));
 }
 
 // This is the equivalent of EmitProgramInfoSI above, but for when the OS type
