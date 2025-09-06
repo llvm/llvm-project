@@ -279,7 +279,7 @@ enum PPCMachineCombinerPattern : unsigned {
 
 class PPCSubtarget;
 class PPCInstrInfo : public PPCGenInstrInfo {
-  PPCSubtarget &Subtarget;
+  const PPCSubtarget &Subtarget;
   const PPCRegisterInfo RI;
   const unsigned StoreSpillOpcodesArray[4][SOK_LastOpcodeSpill] =
       StoreOpcodesForSpill;
@@ -369,7 +369,7 @@ protected:
                                        unsigned OpIdx2) const override;
 
 public:
-  explicit PPCInstrInfo(PPCSubtarget &STI);
+  explicit PPCInstrInfo(const PPCSubtarget &STI);
 
   bool isLoadFromConstantPool(MachineInstr *I) const;
   const Constant *getConstantFromConstantPool(MachineInstr *I) const;
