@@ -920,7 +920,7 @@ Expected<LibraryDepsInfo> LibraryScanner::extractDeps(StringRef filePath) {
     return parseMachODeps(*macho);
   }
 
-  if (auto *coff = dyn_cast<object::COFFObjectFile>(Obj)) {
+  if (Obj->isCOFF()) {
     // TODO: COFF support
     return LibraryDepsInfo();
   }
