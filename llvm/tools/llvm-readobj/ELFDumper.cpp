@@ -619,6 +619,7 @@ public:
   void printVersionDefinitionSection(const Elf_Shdr *Sec) override;
   void printVersionDependencySection(const Elf_Shdr *Sec) override;
   void printCGProfile() override;
+  void printCallGraphInfo() override;
   void printBBAddrMaps(bool PrettyPGOAnalysis) override;
   void printAddrsig() override;
   void printNotes() override;
@@ -730,6 +731,7 @@ public:
   void printVersionDefinitionSection(const Elf_Shdr *Sec) override;
   void printVersionDependencySection(const Elf_Shdr *Sec) override;
   void printCGProfile() override;
+  void printCallGraphInfo() override;
   void printBBAddrMaps(bool PrettyPGOAnalysis) override;
   void printAddrsig() override;
   void printNotes() override;
@@ -5260,6 +5262,11 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCGProfile() {
   OS << "GNUStyle::printCGProfile not implemented\n";
 }
 
+template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
+  OS << "GNUStyle::printCallGraphInfo not implemented\n";
+}
+
+
 template <class ELFT>
 void GNUELFDumper<ELFT>::printBBAddrMaps(bool /*PrettyPGOAnalysis*/) {
   OS << "GNUStyle::printBBAddrMaps not implemented\n";
@@ -8090,6 +8097,129 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
     }
   }
 }
+
+enum class FunctionKind : uint64_t {
+  // Function cannot be target to indirect calls.
+  NOT_INDIRECT_TARGET = 0,
+  // Function may be target to indirect calls but its type id is unknown.
+  INDIRECT_TARGET_UNKNOWN_TID = 1,
+  // Function may be target to indirect calls and its type id is known.
+  INDIRECT_TARGET_KNOWN_TID = 2,
+
+  // Available in the binary but not listed in the call graph section.
+  NOT_LISTED = 3,
+};
+
+struct FunctionInfo {
+  FunctionKind Kind;
+  struct DirectCallSite {
+    uint64_t CallSite;
+    uint64_t Callee;
+    DirectCallSite(uint64_t CallSite, uint64_t Callee)
+        : CallSite(CallSite), Callee(Callee) {}
+  };
+  SmallVector<DirectCallSite> DirectCallSites;
+  SmallVector<uint64_t> IndirectCallSites;
+};
+
+template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
+  // Get the .callgraph section.
+  StringRef CallGraphSectionName(".callgraph");
+  std::optional<object::SectionRef> CallGraphSection;
+  for (auto Sec : this->ObjF.sections()) {
+    StringRef Name;
+    if (Expected<StringRef> NameOrErr = Sec.getName())
+      Name = *NameOrErr;
+    else
+      consumeError(NameOrErr.takeError());
+
+    if (Name == CallGraphSectionName) {
+      CallGraphSection = Sec;
+      break;
+    }
+  }
+  if (!CallGraphSection) {
+    this->reportUniqueWarning("there is no .callgraph section");
+    return;
+  }
+
+  // Map type id to indirect call sites.
+  MapVector<uint64_t, SmallVector<uint64_t>> TypeIdToIndirCallSites;
+  // Map type id to indirect targets.
+  MapVector<uint64_t, SmallVector<uint64_t>> TypeIdToIndirTargets;
+  // Map function entry pc to function info.
+  MapVector<uint64_t, FunctionInfo> FuncInfo;
+  // Instructions that are not indirect calls but have a type id are ignored.
+  // uint64_t IgnoredICallIdCount = 0;
+  // Number of valid indirect calls with type ids.
+  // uint64_t ICallWithTypeIdCount = 0;
+  if (CallGraphSection) {
+    StringRef CGSecContents = cantFail(CallGraphSection.value().getContents());
+    // TODO: some entries are written in pointer size. are they always 64-bit?
+    if (CGSecContents.size() % sizeof(uint64_t))
+      this->reportUniqueWarning(
+                  "Malformed .callgraph section. Unexpected size.");
+
+    size_t Size = CGSecContents.size() / sizeof(uint64_t);
+    auto *It = reinterpret_cast<const uint64_t *>(CGSecContents.data());
+    const auto *const End = It + Size;
+
+    auto CGHasNext = [&]() { return It < End; };
+    auto CGNext = [&]() -> uint64_t {
+      if (!CGHasNext())
+        this->reportUniqueWarning(
+                    "Malformed .callgraph section. Parsing error.");
+      return *It++;
+    };
+
+    // Parse the content
+    while (CGHasNext()) {
+      // Format version number.
+      uint64_t FormatVersionNumber = CGNext();
+      if (FormatVersionNumber != 0)
+        this->reportUniqueWarning(
+                    "Unknown format version in .callgraph section.");
+      // Function entry pc.
+      uint64_t FuncEntryPc = CGNext();
+      // Function kind.
+      uint64_t Kind = CGNext();
+      switch (Kind) {
+      case 0: // not an indirect target
+        FuncInfo[FuncEntryPc].Kind = FunctionKind::NOT_INDIRECT_TARGET;
+        break;
+      case 1: // indirect target with unknown type id
+        FuncInfo[FuncEntryPc].Kind = FunctionKind::INDIRECT_TARGET_UNKNOWN_TID;
+        break;
+      case 2: // indirect target with known type id
+        FuncInfo[FuncEntryPc].Kind = FunctionKind::INDIRECT_TARGET_KNOWN_TID;
+        TypeIdToIndirTargets[CGNext()].push_back(FuncEntryPc);
+        break;
+      default:
+        this->reportUniqueWarning(
+                    "Unknown function kind in .callgraph section.");
+      }
+
+      // Read indirect call sites info.
+      uint64_t IndirectCallSiteCount = CGNext();
+      for (unsigned long I = 0; I < IndirectCallSiteCount; I++) {
+        uint64_t TypeId = CGNext();
+        uint64_t CallSitePc = CGNext();
+        TypeIdToIndirCallSites[TypeId].push_back(CallSitePc);
+        FuncInfo[FuncEntryPc].IndirectCallSites.push_back(CallSitePc);
+      }
+
+      // Read direct call sites info.
+      uint64_t DirectCallSiteCount = CGNext();
+      for (unsigned long I = 0; I < DirectCallSiteCount; I++) {
+        uint64_t CallSitePc = CGNext();
+        uint64_t CalleePc = CGNext();
+        FuncInfo[FuncEntryPc].DirectCallSites.emplace_back(CallSitePc,
+                                                           CalleePc);
+      }
+    }
+  }
+}
+
 
 template <class ELFT>
 void LLVMELFDumper<ELFT>::printBBAddrMaps(bool PrettyPGOAnalysis) {
