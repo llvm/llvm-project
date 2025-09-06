@@ -1278,7 +1278,16 @@ bool ModuleList::RemoveSharedModule(lldb::ModuleSP &module_sp) {
   return GetSharedModuleList().Remove(module_sp);
 }
 
-bool ModuleList::RemoveSharedModuleIfOrphaned(const Module *module_ptr) {
+bool ModuleList::RemoveSharedModuleIfOrphaned(const ModuleWP module_wp) {
+  // Get the module pointer if the shared pointer is still valid,
+  // but be careful to call RemoveIfOrphaned after the shared pointer
+  // is out of scope, otherwise the use count would be incremented by one and
+  // RemoveIfOrphaned would never identify the module as an orphan.
+  Module *module_ptr = nullptr;
+  if (ModuleSP module_sp = module_wp.lock())
+    module_ptr = module_sp.get();
+  else
+    return false;
   return GetSharedModuleList().RemoveIfOrphaned(module_ptr);
 }
 
