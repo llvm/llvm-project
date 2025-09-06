@@ -180,3 +180,63 @@ body:             |
     %5:_(<4 x s16>) = G_BUILD_VECTOR %3, %4, %4, %3
     %6:_(<4 x s16>) = G_SHL %2, %5
 ...
+---
+name:            SHLless
+body:             |
+  bb.1:
+  ; CHECK-LABEL: name: @SHLless
+  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1
+  ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:9
+  ; CHECK-NEXT: %2:_ KnownBits:0000000000000011 SignBits:14
+  ; CHECK-NEXT: %3:_ KnownBits:?????????????000 SignBits:6
+    %0:_(s8) = COPY $b0
+    %1:_(s16) = G_SEXT %0(s8)
+    %2:_(s16) = G_CONSTANT i16 3
+    %3:_(s16) = G_SHL %1, %2
+...
+---
+name:            SHLeq
+body:             |
+  bb.1:
+  ; CHECK-LABEL: name: @SHLeq
+  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1
+  ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:9
+  ; CHECK-NEXT: %2:_ KnownBits:0000000000001000 SignBits:12
+  ; CHECK-NEXT: %3:_ KnownBits:????????00000000 SignBits:1
+    %0:_(s8) = COPY $b0
+    %1:_(s16) = G_SEXT %0(s8)
+    %2:_(s16) = G_CONSTANT i16 8
+    %3:_(s16) = G_SHL %1, %2
+...
+---
+name:            SHLmore
+body:             |
+  bb.1:
+  ; CHECK-LABEL: name: @SHLmore
+  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1
+  ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:9
+  ; CHECK-NEXT: %2:_ KnownBits:0000000000001101 SignBits:12
+  ; CHECK-NEXT: %3:_ KnownBits:???0000000000000 SignBits:1
+    %0:_(s8) = COPY $b0
+    %1:_(s16) = G_SEXT %0(s8)
+    %2:_(s16) = G_CONSTANT i16 13
+    %3:_(s16) = G_SHL %1, %2
+...
+---
+name:            SignBitsThroughZext
+body:             |
+  bb.1:
+  ; CHECK-LABEL: name: @SignBitsThroughZext
+  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1
+  ; CHECK-NEXT: %1:_ KnownBits:0000000000000011 SignBits:14
+  ; CHECK-NEXT: %2:_ KnownBits:???????? SignBits:4
+  ; CHECK-NEXT: %3:_ KnownBits:00000000???????? SignBits:8
+  ; CHECK-NEXT: %4:_ KnownBits:0000000000001000 SignBits:12
+  ; CHECK-NEXT: %5:_ KnownBits:????????00000000 SignBits:4
+    %0:_(s8) = COPY $b0
+    %1:_(s16) = G_CONSTANT i16 3
+    %2:_(s8) = G_ASHR %0, %1
+    %3:_(s16) = G_ZEXT %2
+    %4:_(s16) = G_CONSTANT i16 8
+    %5:_(s16) = G_SHL %3, %4
+...
