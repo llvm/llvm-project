@@ -2277,6 +2277,39 @@ static Instruction::BinaryOps intrinsicIDToBinOpCode(unsigned Intrinsic) {
   }
 }
 
+static std::optional<Instruction *> instCombineSVEVectorMul(InstCombiner &IC,
+                                                            IntrinsicInst &II) {
+  Value *PG = II.getOperand(0);
+  Value *Op1 = II.getOperand(1);
+  Value *Op2 = II.getOperand(2);
+
+  // Return true if a given instruction is a negative unit splat value, false
+  // otherwise.
+  auto IsNegUnitSplat = [](auto *I) {
+    auto *SplatValue = getSplatValue(I);
+    ConstantInt *SplatConstantInt = dyn_cast_or_null<ConstantInt>(SplatValue);
+    if (!SplatConstantInt)
+      return false;
+    APInt SCIV = SplatConstantInt->getValue();
+    const int64_t IntValue = SCIV.getSExtValue();
+    return IntValue == -1;
+  };
+
+  if (IsNegUnitSplat(Op1)) {
+    auto *NEG = IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_neg,
+                                           {II.getType()}, {Op2, PG, Op2});
+    return IC.replaceInstUsesWith(II, NEG);
+  }
+
+  if (IsNegUnitSplat(Op2)) {
+    auto *NEG = IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_neg,
+                                           {II.getType()}, {Op1, PG, Op1});
+    return IC.replaceInstUsesWith(II, NEG);
+  }
+
+  return std::nullopt;
+}
+
 static std::optional<Instruction *>
 instCombineSVEVectorBinOp(InstCombiner &IC, IntrinsicInst &II) {
   // Bail due to missing support for ISD::STRICT_ scalable vector operations.
@@ -2852,6 +2885,9 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_mul_u,
                                              Intrinsic::aarch64_sve_mla_u>(
         IC, II, true);
+  case Intrinsic::aarch64_sve_mul:
+  case Intrinsic::aarch64_sve_mul_u:
+    return instCombineSVEVectorMul(IC, II);
   case Intrinsic::aarch64_sve_sub:
     return instCombineSVEVectorSub(IC, II);
   case Intrinsic::aarch64_sve_sub_u:
