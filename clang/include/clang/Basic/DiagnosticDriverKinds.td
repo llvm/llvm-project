@@ -485,6 +485,9 @@ def warn_drv_overriding_option : Warning<
 def warn_drv_overriding_deployment_version
     : Warning<"overriding deployment version from '%0' to '%1'">,
       InGroup<DiagGroup<"overriding-deployment-version">>;
+def warn_drv_overriding_complex_range : Warning<
+  "'%1' sets complex range to \"%3\" overriding the setting of \"%2\" that was implied by '%0'">,
+  InGroup<DiagGroup<"overriding-complex-range">>;
 def warn_drv_treating_input_as_cxx : Warning<
   "treating '%0' input as '%1' when in C++ mode, this behavior is deprecated">,
   InGroup<Deprecated>;
