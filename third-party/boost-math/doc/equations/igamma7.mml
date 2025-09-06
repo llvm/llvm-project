@@ -1,0 +1,70 @@
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <mi>Q</mi>
+    <mfenced>
+      <mrow>
+        <mi>a</mi>
+        <mo>,</mo>
+        <mi>z</mi>
+      </mrow>
+    </mfenced>
+    <mspace width="1em"/>
+    <mo>=</mo>
+    <mspace width="1em"/>
+    <mfrac>
+      <mrow>
+        <mi>&#x0393;</mi>
+        <mfenced>
+          <mrow>
+            <mi>a</mi>
+            <mo>,</mo>
+            <mi>z</mi>
+          </mrow>
+        </mfenced>
+      </mrow>
+      <mrow>
+        <mi>&#x0393;</mi>
+        <mfenced>
+          <mrow>
+            <mi>a</mi>
+          </mrow>
+        </mfenced>
+      </mrow>
+    </mfrac>
+    <mspace width="1em"/>
+    <mo>,</mo>
+    <mspace width="1em"/>
+    <mi>P</mi>
+    <mfenced>
+      <mrow>
+        <mi>a</mi>
+        <mo>,</mo>
+        <mi>z</mi>
+      </mrow>
+    </mfenced>
+    <mspace width="1em"/>
+    <mo>=</mo>
+    <mspace width="1em"/>
+    <mfrac>
+      <mrow>
+        <mi>&#x03B3;</mi>
+        <mfenced>
+          <mrow>
+            <mi>a</mi>
+            <mo>,</mo>
+            <mi>z</mi>
+          </mrow>
+        </mfenced>
+      </mrow>
+      <mrow>
+        <mi>&#x0393;</mi>
+        <mfenced>
+          <mrow>
+            <mi>a</mi>
+          </mrow>
+        </mfenced>
+      </mrow>
+    </mfrac>
+  </mrow>
+</math>
+

@@ -1,0 +1,240 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Calculating Confidence Limits on the Frequency of Occurrence for a Binomial Distribution</title>
+<link rel="stylesheet" href="../../../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../binom_eg.html" title="Binomial Distribution Examples">
+<link rel="prev" href="binomial_quiz_example.html" title="Binomial Quiz Example">
+<link rel="next" href="binom_size_eg.html" title="Estimating Sample Sizes for a Binomial Distribution.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="binomial_quiz_example.html"><img src="../../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../binom_eg.html"><img src="../../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../../index.html"><img src="../../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="binom_size_eg.html"><img src="../../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="math_toolkit.stat_tut.weg.binom_eg.binom_conf"></a><a class="link" href="binom_conf.html" title="Calculating Confidence Limits on the Frequency of Occurrence for a Binomial Distribution">Calculating
+          Confidence Limits on the Frequency of Occurrence for a Binomial Distribution</a>
+</h5></div></div></div>
+<p>
+            Imagine you have a process that follows a binomial distribution: for
+            each trial conducted, an event either occurs or does it does not, referred
+            to as "successes" and "failures". If, by experiment,
+            you want to measure the frequency with which successes occur, the best
+            estimate is given simply by <span class="emphasis"><em>k</em></span> / <span class="emphasis"><em>N</em></span>,
+            for <span class="emphasis"><em>k</em></span> successes out of <span class="emphasis"><em>N</em></span> trials.
+            However our confidence in that estimate will be shaped by how many trials
+            were conducted, and how many successes were observed. The static member
+            functions <code class="computeroutput"><span class="identifier">binomial_distribution</span><span class="special">&lt;&gt;::</span><span class="identifier">find_lower_bound_on_p</span></code>
+            and <code class="computeroutput"><span class="identifier">binomial_distribution</span><span class="special">&lt;&gt;::</span><span class="identifier">find_upper_bound_on_p</span></code>
+            allow you to calculate the confidence intervals for your estimate of
+            the occurrence frequency.
+          </p>
+<p>
+            The sample program <a href="../../../../../../example/binomial_confidence_limits.cpp" target="_top">binomial_confidence_limits.cpp</a>
+            illustrates their use. It begins by defining a procedure that will print
+            a table of confidence limits for various degrees of certainty:
+          </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">iostream</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">iomanip</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">binomial</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">void</span> <span class="identifier">confidence_limits_on_frequency</span><span class="special">(</span><span class="keyword">unsigned</span> <span class="identifier">trials</span><span class="special">,</span> <span class="keyword">unsigned</span> <span class="identifier">successes</span><span class="special">)</span>
+<span class="special">{</span>
+   <span class="comment">//</span>
+   <span class="comment">// trials = Total number of trials.</span>
+   <span class="comment">// successes = Total number of observed successes.</span>
+   <span class="comment">//</span>
+   <span class="comment">// Calculate confidence limits for an observed</span>
+   <span class="comment">// frequency of occurrence that follows a binomial</span>
+   <span class="comment">// distribution.</span>
+   <span class="comment">//</span>
+   <span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">std</span><span class="special">;</span>
+   <span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">;</span>
+
+   <span class="comment">// Print out general info:</span>
+   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span>
+      <span class="string">"___________________________________________\n"</span>
+      <span class="string">"2-Sided Confidence Limits For Success Ratio\n"</span>
+      <span class="string">"___________________________________________\n\n"</span><span class="special">;</span>
+   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">7</span><span class="special">);</span>
+   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">40</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">left</span> <span class="special">&lt;&lt;</span> <span class="string">"Number of Observations"</span> <span class="special">&lt;&lt;</span> <span class="string">"=  "</span> <span class="special">&lt;&lt;</span> <span class="identifier">trials</span> <span class="special">&lt;&lt;</span> <span class="string">"\n"</span><span class="special">;</span>
+   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">40</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">left</span> <span class="special">&lt;&lt;</span> <span class="string">"Number of successes"</span> <span class="special">&lt;&lt;</span> <span class="string">"=  "</span> <span class="special">&lt;&lt;</span> <span class="identifier">successes</span> <span class="special">&lt;&lt;</span> <span class="string">"\n"</span><span class="special">;</span>
+   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">40</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">left</span> <span class="special">&lt;&lt;</span> <span class="string">"Sample frequency of occurrence"</span> <span class="special">&lt;&lt;</span> <span class="string">"=  "</span> <span class="special">&lt;&lt;</span> <span class="keyword">double</span><span class="special">(</span><span class="identifier">successes</span><span class="special">)</span> <span class="special">/</span> <span class="identifier">trials</span> <span class="special">&lt;&lt;</span> <span class="string">"\n"</span><span class="special">;</span>
+</pre>
+<p>
+            The procedure now defines a table of significance levels: these are the
+            probabilities that the true occurrence frequency lies outside the calculated
+            interval:
+          </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">alpha</span><span class="special">[]</span> <span class="special">=</span> <span class="special">{</span> <span class="number">0.5</span><span class="special">,</span> <span class="number">0.25</span><span class="special">,</span> <span class="number">0.1</span><span class="special">,</span> <span class="number">0.05</span><span class="special">,</span> <span class="number">0.01</span><span class="special">,</span> <span class="number">0.001</span><span class="special">,</span> <span class="number">0.0001</span><span class="special">,</span> <span class="number">0.00001</span> <span class="special">};</span>
+</pre>
+<p>
+            Some pretty printing of the table header follows:
+          </p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"\n\n"</span>
+        <span class="string">"_______________________________________________________________________\n"</span>
+        <span class="string">"Confidence        Lower CP       Upper CP       Lower JP       Upper JP\n"</span>
+        <span class="string">" Value (%)        Limit          Limit          Limit          Limit\n"</span>
+        <span class="string">"_______________________________________________________________________\n"</span><span class="special">;</span>
+</pre>
+<p>
+            And now for the important part - the intervals themselves - for each
+            value of <span class="emphasis"><em>alpha</em></span>, we call <code class="computeroutput"><span class="identifier">find_lower_bound_on_p</span></code>
+            and <code class="computeroutput"><span class="identifier">find_lower_upper_on_p</span></code>
+            to obtain lower and upper bounds respectively. Note that since we are
+            calculating a two-sided interval, we must divide the value of alpha in
+            two.
+          </p>
+<p>
+            Please note that calculating two separate <span class="emphasis"><em>single sided bounds</em></span>,
+            each with risk level α is not the same thing as calculating a two sided
+            interval. Had we calculate two single-sided intervals each with a risk
+            that the true value is outside the interval of α, then:
+          </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+                The risk that it is less than the lower bound is α.
+              </li></ul></div>
+<p>
+            and
+          </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+                The risk that it is greater than the upper bound is also α.
+              </li></ul></div>
+<p>
+            So the risk it is outside <span class="bold"><strong>upper or lower bound</strong></span>,
+            is <span class="bold"><strong>twice</strong></span> alpha, and the probability
+            that it is inside the bounds is therefore not nearly as high as one might
+            have thought. This is why α/2 must be used in the calculations below.
+          </p>
+<p>
+            In contrast, had we been calculating a single-sided interval, for example:
+            <span class="emphasis"><em>"Calculate a lower bound so that we are P% sure that the
+            true occurrence frequency is greater than some value"</em></span>
+            then we would <span class="bold"><strong>not</strong></span> have divided by two.
+          </p>
+<p>
+            Finally note that <code class="computeroutput"><span class="identifier">binomial_distribution</span></code>
+            provides a choice of two methods for the calculation, we print out the
+            results from both methods in this example:
+          </p>
+<pre class="programlisting">   <span class="keyword">for</span><span class="special">(</span><span class="keyword">unsigned</span> <span class="identifier">i</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span> <span class="identifier">i</span> <span class="special">&lt;</span> <span class="keyword">sizeof</span><span class="special">(</span><span class="identifier">alpha</span><span class="special">)/</span><span class="keyword">sizeof</span><span class="special">(</span><span class="identifier">alpha</span><span class="special">[</span><span class="number">0</span><span class="special">]);</span> <span class="special">++</span><span class="identifier">i</span><span class="special">)</span>
+   <span class="special">{</span>
+      <span class="comment">// Confidence value:</span>
+      <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">fixed</span> <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">3</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">10</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">right</span> <span class="special">&lt;&lt;</span> <span class="number">100</span> <span class="special">*</span> <span class="special">(</span><span class="number">1</span><span class="special">-</span><span class="identifier">alpha</span><span class="special">[</span><span class="identifier">i</span><span class="special">]);</span>
+      <span class="comment">// Calculate Clopper Pearson bounds:</span>
+      <span class="keyword">double</span> <span class="identifier">l</span> <span class="special">=</span> <span class="identifier">binomial_distribution</span><span class="special">&lt;&gt;::</span><span class="identifier">find_lower_bound_on_p</span><span class="special">(</span>
+                     <span class="identifier">trials</span><span class="special">,</span> <span class="identifier">successes</span><span class="special">,</span> <span class="identifier">alpha</span><span class="special">[</span><span class="identifier">i</span><span class="special">]/</span><span class="number">2</span><span class="special">);</span>
+      <span class="keyword">double</span> <span class="identifier">u</span> <span class="special">=</span> <span class="identifier">binomial_distribution</span><span class="special">&lt;&gt;::</span><span class="identifier">find_upper_bound_on_p</span><span class="special">(</span>
+                     <span class="identifier">trials</span><span class="special">,</span> <span class="identifier">successes</span><span class="special">,</span> <span class="identifier">alpha</span><span class="special">[</span><span class="identifier">i</span><span class="special">]/</span><span class="number">2</span><span class="special">);</span>
+      <span class="comment">// Print Clopper Pearson Limits:</span>
+      <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">fixed</span> <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">5</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">15</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">right</span> <span class="special">&lt;&lt;</span> <span class="identifier">l</span><span class="special">;</span>
+      <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">fixed</span> <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">5</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">15</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">right</span> <span class="special">&lt;&lt;</span> <span class="identifier">u</span><span class="special">;</span>
+      <span class="comment">// Calculate Jeffreys Prior Bounds:</span>
+      <span class="identifier">l</span> <span class="special">=</span> <span class="identifier">binomial_distribution</span><span class="special">&lt;&gt;::</span><span class="identifier">find_lower_bound_on_p</span><span class="special">(</span>
+            <span class="identifier">trials</span><span class="special">,</span> <span class="identifier">successes</span><span class="special">,</span> <span class="identifier">alpha</span><span class="special">[</span><span class="identifier">i</span><span class="special">]/</span><span class="number">2</span><span class="special">,</span>
+            <span class="identifier">binomial_distribution</span><span class="special">&lt;&gt;::</span><span class="identifier">jeffreys_prior_interval</span><span class="special">);</span>
+      <span class="identifier">u</span> <span class="special">=</span> <span class="identifier">binomial_distribution</span><span class="special">&lt;&gt;::</span><span class="identifier">find_upper_bound_on_p</span><span class="special">(</span>
+            <span class="identifier">trials</span><span class="special">,</span> <span class="identifier">successes</span><span class="special">,</span> <span class="identifier">alpha</span><span class="special">[</span><span class="identifier">i</span><span class="special">]/</span><span class="number">2</span><span class="special">,</span>
+            <span class="identifier">binomial_distribution</span><span class="special">&lt;&gt;::</span><span class="identifier">jeffreys_prior_interval</span><span class="special">);</span>
+      <span class="comment">// Print Jeffreys Prior Limits:</span>
+      <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">fixed</span> <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">5</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">15</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">right</span> <span class="special">&lt;&lt;</span> <span class="identifier">l</span><span class="special">;</span>
+      <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">fixed</span> <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">5</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">15</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">right</span> <span class="special">&lt;&lt;</span> <span class="identifier">u</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+   <span class="special">}</span>
+   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="special">}</span>
+</pre>
+<p>
+            And that's all there is to it. Let's see some sample output for a 2 in
+            10 success ratio, first for 20 trials:
+          </p>
+<pre class="programlisting">___________________________________________
+2-Sided Confidence Limits For Success Ratio
+___________________________________________
+
+Number of Observations                  =  20
+Number of successes                     =  4
+Sample frequency of occurrence          =  0.2
+
+
+_______________________________________________________________________
+Confidence        Lower CP       Upper CP       Lower JP       Upper JP
+ Value (%)        Limit          Limit          Limit          Limit
+_______________________________________________________________________
+    50.000        0.12840        0.29588        0.14974        0.26916
+    75.000        0.09775        0.34633        0.11653        0.31861
+    90.000        0.07135        0.40103        0.08734        0.37274
+    95.000        0.05733        0.43661        0.07152        0.40823
+    99.000        0.03576        0.50661        0.04655        0.47859
+    99.900        0.01905        0.58632        0.02634        0.55960
+    99.990        0.01042        0.64997        0.01530        0.62495
+    99.999        0.00577        0.70216        0.00901        0.67897
+</pre>
+<p>
+            As you can see, even at the 95% confidence level the bounds are really
+            quite wide (this example is chosen to be easily compared to the one in
+            the <a href="http://www.itl.nist.gov/div898/handbook/" target="_top">NIST/SEMATECH
+            e-Handbook of Statistical Methods.</a> <a href="http://www.itl.nist.gov/div898/handbook/prc/section2/prc241.htm" target="_top">here</a>).
+            Note also that the Clopper-Pearson calculation method (CP above) produces
+            quite noticeably more pessimistic estimates than the Jeffreys Prior method
+            (JP above).
+          </p>
+<p>
+            Compare that with the program output for 2000 trials:
+          </p>
+<pre class="programlisting">___________________________________________
+2-Sided Confidence Limits For Success Ratio
+___________________________________________
+
+Number of Observations                  =  2000
+Number of successes                     =  400
+Sample frequency of occurrence          =  0.2000000
+
+
+_______________________________________________________________________
+Confidence        Lower CP       Upper CP       Lower JP       Upper JP
+ Value (%)        Limit          Limit          Limit          Limit
+_______________________________________________________________________
+    50.000        0.19382        0.20638        0.19406        0.20613
+    75.000        0.18965        0.21072        0.18990        0.21047
+    90.000        0.18537        0.21528        0.18561        0.21503
+    95.000        0.18267        0.21821        0.18291        0.21796
+    99.000        0.17745        0.22400        0.17769        0.22374
+    99.900        0.17150        0.23079        0.17173        0.23053
+    99.990        0.16658        0.23657        0.16681        0.23631
+    99.999        0.16233        0.24169        0.16256        0.24143
+</pre>
+<p>
+            Now even when the confidence level is very high, the limits are really
+            quite close to the experimentally calculated value of 0.2. Furthermore
+            the difference between the two calculation methods is now really quite
+            small.
+          </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="binomial_quiz_example.html"><img src="../../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../binom_eg.html"><img src="../../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../../index.html"><img src="../../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="binom_size_eg.html"><img src="../../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

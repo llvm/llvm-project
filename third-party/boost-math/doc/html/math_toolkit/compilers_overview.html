@@ -1,0 +1,682 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Compilers</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../overview.html" title="Chapter 1. Overview">
+<link rel="prev" href="error_handling.html" title="Error Handling">
+<link rel="next" href="config_macros.html" title="Configuration Macros">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="error_handling.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../overview.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="config_macros.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.compilers_overview"></a><a class="link" href="compilers_overview.html" title="Compilers">Compilers</a>
+</h2></div></div></div>
+<p>
+      This section contains some information about how various compilers work with
+      this library. It is not comprehensive and updated experiences are always welcome.
+      Some effort has been made to suppress unhelpful warnings but it is difficult
+      to achieve this on all systems.
+    </p>
+<div class="table">
+<a name="math_toolkit.compilers_overview.supported_tested_compilers"></a><p class="title"><b>Table 1.9. Supported/Tested Compilers</b></p>
+<div class="table-contents"><table class="table" summary="Supported/Tested Compilers">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              <p>
+                Platform
+              </p>
+            </th>
+<th>
+              <p>
+                Compiler
+              </p>
+            </th>
+<th>
+              <p>
+                Has long double support
+              </p>
+            </th>
+<th>
+              <p>
+                Notes
+              </p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+              <p>
+                Windows
+              </p>
+            </td>
+<td>
+              <p>
+                MSVC 7.1 and later
+              </p>
+            </td>
+<td>
+              <p>
+                Yes
+              </p>
+            </td>
+<td>
+              <p>
+                All tests OK.
+              </p>
+              <p>
+                We aim to keep our headers warning free at level 4 with this compiler.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Windows
+              </p>
+            </td>
+<td>
+              <p>
+                Intel 8.1 and later
+              </p>
+            </td>
+<td>
+              <p>
+                Yes
+              </p>
+            </td>
+<td>
+              <p>
+                All tests OK.
+              </p>
+              <p>
+                We aim to keep our headers warning free at level 4 with this compiler.
+                However, The tests cases tend to generate a lot of warnings relating
+                to numeric underflow of the test data: these are harmless.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Windows
+              </p>
+            </td>
+<td>
+              <p>
+                GNU Mingw32 C++
+              </p>
+            </td>
+<td>
+              <p>
+                Yes
+              </p>
+            </td>
+<td>
+              <p>
+                All tests OK.
+              </p>
+              <p>
+                We aim to keep our headers warning free with -Wall with this compiler.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Windows
+              </p>
+            </td>
+<td>
+              <p>
+                GNU Cygwin C++
+              </p>
+            </td>
+<td>
+              <p>
+                No
+              </p>
+            </td>
+<td>
+              <p>
+                All tests OK.
+              </p>
+              <p>
+                We aim to keep our headers warning free with -Wall with this compiler.
+              </p>
+              <p>
+                Long double support has been disabled because there are no native
+                long double C std library functions available.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Windows
+              </p>
+            </td>
+<td>
+              <p>
+                Borland C++ 5.8.2 (Developer studio 2006)
+              </p>
+            </td>
+<td>
+              <p>
+                No
+              </p>
+            </td>
+<td>
+              <p>
+                We have only partial compatibility with this compiler:
+              </p>
+              <p>
+                Long double support has been disabled because the native long double
+                C standard library functions really only forward to the double versions.
+                This can result in unpredictable behaviour when using the long double
+                overloads: for example <code class="computeroutput"><span class="identifier">sqrtl</span></code>
+                applied to a finite value, can result in an infinite result.
+              </p>
+              <p>
+                Some functions still fail to compile, there are no known workarounds
+                at present.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Windows 7/Netbeans 7.2
+              </p>
+            </td>
+<td>
+              <p>
+                Clang 3.1
+              </p>
+            </td>
+<td>
+              <p>
+                Yes
+              </p>
+            </td>
+<td>
+              <p>
+                Spot examples OK. Expect all tests to compile and run OK.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Linux
+              </p>
+            </td>
+<td>
+              <p>
+                GNU C++ 3.4 and later
+              </p>
+            </td>
+<td>
+              <p>
+                Yes
+              </p>
+            </td>
+<td>
+              <p>
+                All tests OK.
+              </p>
+              <p>
+                We aim to keep our headers warning free with -Wall with this compiler.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Linux
+              </p>
+            </td>
+<td>
+              <p>
+                Clang 3.2
+              </p>
+            </td>
+<td>
+              <p>
+                Yes
+              </p>
+            </td>
+<td>
+              <p>
+                All tests OK.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Linux
+              </p>
+            </td>
+<td>
+              <p>
+                Intel C++ 10.0 and later
+              </p>
+            </td>
+<td>
+              <p>
+                Yes
+              </p>
+            </td>
+<td>
+              <p>
+                All tests OK.
+              </p>
+              <p>
+                We aim to keep our headers warning free with -Wall with this compiler.
+                However, The tests cases tend to generate a lot of warnings relating
+                to numeric underflow of the test data: these are harmless.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Linux
+              </p>
+            </td>
+<td>
+              <p>
+                Intel C++ 8.1 and 9.1
+              </p>
+            </td>
+<td>
+              <p>
+                No
+              </p>
+            </td>
+<td>
+              <p>
+                All tests OK.
+              </p>
+              <p>
+                Long double support has been disabled with these compiler releases
+                because calling the standard library long double math functions can
+                result in a segfault. The issue is Linux distribution and glibc version
+                specific and is Intel bug report #409291. Fully up to date releases
+                of Intel 9.1 (post version l_cc_c_9.1.046) shouldn't have this problem.
+                If you need long double support with this compiler, then comment
+                out the define of BOOST_MATH_NO_LONG_DOUBLE_MATH_FUNCTIONS at line
+                55 of <a href="../../../../../boost/math/tools/config.hpp" target="_top">boost/math/tools/config.hpp</a>.
+              </p>
+              <p>
+                We aim to keep our headers warning free with -Wall with this compiler.
+                However, The tests cases tend to generate a lot of warnings relating
+                to numeric underflow of the test data: these are harmless.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Linux
+              </p>
+            </td>
+<td>
+              <p>
+                QLogic PathScale 3.0
+              </p>
+            </td>
+<td>
+              <p>
+                Yes
+              </p>
+            </td>
+<td>
+              <p>
+                Some tests involving conceptual checks fail to build, otherwise there
+                appear to be no issues.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Linux
+              </p>
+            </td>
+<td>
+              <p>
+                Sun Studio 12
+              </p>
+            </td>
+<td>
+              <p>
+                Yes
+              </p>
+            </td>
+<td>
+              <p>
+                Some tests involving function overload resolution fail to build,
+                these issues should be rarely encountered in practice.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Solaris
+              </p>
+            </td>
+<td>
+              <p>
+                Sun Studio 12
+              </p>
+            </td>
+<td>
+              <p>
+                Yes
+              </p>
+            </td>
+<td>
+              <p>
+                Some tests involving function overload resolution fail to build,
+                these issues should be rarely encountered in practice.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Solaris
+              </p>
+            </td>
+<td>
+              <p>
+                GNU C++ 4.x
+              </p>
+            </td>
+<td>
+              <p>
+                Yes
+              </p>
+            </td>
+<td>
+              <p>
+                All tests OK.
+              </p>
+              <p>
+                We aim to keep our headers warning free with -Wall with this compiler.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                HP Tru64
+              </p>
+            </td>
+<td>
+              <p>
+                Compaq C++ 7.1
+              </p>
+            </td>
+<td>
+              <p>
+                Yes
+              </p>
+            </td>
+<td>
+              <p>
+                All tests OK.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                HP-UX Itanium
+              </p>
+            </td>
+<td>
+              <p>
+                HP aCC 6.x
+              </p>
+            </td>
+<td>
+              <p>
+                Yes
+              </p>
+            </td>
+<td>
+              <p>
+                All tests OK.
+              </p>
+              <p>
+                Unfortunately this compiler emits quite a few warnings from libraries
+                upon which we depend (TR1, Array etc).
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                HP-UX PA-RISC
+              </p>
+            </td>
+<td>
+              <p>
+                GNU C++ 3.4
+              </p>
+            </td>
+<td>
+              <p>
+                No
+              </p>
+            </td>
+<td>
+              <p>
+                All tests OK.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Apple Mac OS X, Intel
+              </p>
+            </td>
+<td>
+              <p>
+                Darwin/GNU C++ 4.x
+              </p>
+            </td>
+<td>
+              <p>
+                Yes
+              </p>
+            </td>
+<td>
+              <p>
+                All tests OK.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Apple Mac OS X, PowerPC
+              </p>
+            </td>
+<td>
+              <p>
+                Darwin/GNU C++ 4.x
+              </p>
+            </td>
+<td>
+              <p>
+                No
+              </p>
+            </td>
+<td>
+              <p>
+                All tests OK.
+              </p>
+              <p>
+                Long double support has been disabled on this platform due to the
+                rather strange nature of Darwin's 106-bit long double implementation.
+                It should be possible to make this work if someone is prepared to
+                offer assistance.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Apple Mac OS X,
+              </p>
+            </td>
+<td>
+              <p>
+                Clang 3.2
+              </p>
+            </td>
+<td>
+              <p>
+                Yes
+              </p>
+            </td>
+<td>
+              <p>
+                All tests expected to be OK.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                IBM AIX
+              </p>
+            </td>
+<td>
+              <p>
+                IBM xlc 5.3
+              </p>
+            </td>
+<td>
+              <p>
+                Yes
+              </p>
+            </td>
+<td>
+              <p>
+                All tests pass except for our fpclassify tests which fail due to
+                a bug in <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span></code>, the bug effects
+                the test code, not fpclassify itself. The IBM compiler group are
+                aware of the problem.
+              </p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="table">
+<a name="math_toolkit.compilers_overview.unsupported_compilers"></a><p class="title"><b>Table 1.10. Unsupported Compilers</b></p>
+<div class="table-contents"><table class="table" summary="Unsupported Compilers">
+<colgroup>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              <p>
+                Platform
+              </p>
+            </th>
+<th>
+              <p>
+                Compiler
+              </p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+              <p>
+                Windows
+              </p>
+            </td>
+<td>
+              <p>
+                Borland C++ 5.9.2 (Borland Developer Studio 2007)
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Windows
+              </p>
+            </td>
+<td>
+              <p>
+                MSVC 6 and 7
+              </p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><p>
+      If your compiler or platform is not listed above, please try running the regression
+      tests: cd into boost-root/libs/math/test and do a:
+    </p>
+<pre class="programlisting"><span class="identifier">bjam</span> <span class="identifier">mytoolset</span>
+</pre>
+<p>
+      where "mytoolset" is the name of the <a href="http://www.boost.org/doc/html/bbv2.html" target="_top">Boost.Build</a>
+      toolset used for your compiler. The chances are that <span class="bold"><strong>many
+      of the accuracy tests will fail at this stage</strong></span> - don't panic - the
+      default acceptable error tolerances are quite tight, especially for long double
+      types with an extended exponent range (these cause more extreme test cases
+      to be executed for some functions). You will need to cast an eye over the output
+      from the failing tests and make a judgement as to whether the error rates are
+      acceptable or not.
+    </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="error_handling.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../overview.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="config_macros.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

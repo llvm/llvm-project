@@ -1,0 +1,142 @@
+[/
+  Copyright Nick Thompson, John Maddock, 2020
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+
+[section:ulps_plots ULPs Plots]
+
+[h4 Synopsis]
+
+    #include <boost/math/tools/ulps_plot.hpp>
+
+    namespace boost::math::tools {
+
+    template<class F, typename PreciseReal, typename CoarseReal>
+    class ulps_plot {
+    public:
+        ulps_plot(F hi_acc_impl, CoarseReal a, CoarseReal b,
+                  size_t samples = 10000, bool perturb_abscissas = false, int random_seed = -1);
+        //
+        // Set a clip value to restrict the range of ULP's shown, values outside [-clip,clip]
+        // will be shown at the clip boundary and in a different color (red by default):
+        //
+        ulps_plot& clip(PreciseReal clip);
+        //
+        // The width of the SVG:
+        //
+        ulps_plot& width(int width);
+        //
+        // The color of the condition number envelope:
+        //
+        ulps_plot& envelope_color(std::string const & color);
+        //
+        // Title:
+        //
+        ulps_plot& title(std::string const & title);
+        //
+        // Background color:
+        //
+        ulps_plot& background_color(std::string const & background_color);
+        //
+        // Font color:
+        //
+        ulps_plot& font_color(std::string const & font_color);
+        //
+        // Sets the color of points which are cropped, or set to an empty
+        // string to hide them completely (default is "red"):
+        //
+        ulps_plot& crop_color(std::string const & font_color);
+        //
+        // Set's the color of points where one of the functions returned a NaN,
+        // or set to an empty string to hide completely (the default):
+        //
+        ulps_plot& nan_color(std::string const & font_color);
+        //
+        // Show ULP envelope true/false:
+        //
+        ulps_plot& ulp_envelope(bool write_ulp);
+        //
+        // The number of horizontal/vertical lines to draw:
+        //
+        ulps_plot& horizontal_lines(int horizontal_lines);
+        ulps_plot& vertical_lines(int vertical_lines);
+        //
+        // Add a function, and plot color:
+        //
+        template<class G>
+        ulps_plot& add_fn(G g, std::string const & color = "steelblue");
+        //
+        // Write to stream or file:
+        //
+        friend std::ostream& operator<<(std::ostream& fs, ulps_plot const & plot)
+        void write(std::string const & filename) const;
+    };
+    
+    } // namespaces
+
+
+An ULPs plot measures the accuracy of an implementation of a function implemented in floating point arithmetic.
+ULP stands for /unit in the last place/; i.e., we create a unit system that normalizes the distance between one representable and the next greater representable to 1.
+
+So for example, the ULP distance between `1.0` and `1.0 + std::numeric_limits<double>::epsilon()` is 1, the ulp distance between `1.0` and `1.0 + 2*std::numeric_limits<double>::epsilon()` is 2.
+A key concept of this measurement is /semi-scale invariance/: The ULP distance between `2.0` and `2.0 + 2*std::numeric_limits<double>::epsilon()` is 1, not 2.
+
+An ULPs plot gives us an idea of how efficiently we are using the floating point number system we have chosen.
+To compute a ULP plot, we need a higher precision implementation; for example we can test a 32 bit floating point implementation against an 80-bit long double implementation.
+The higher precision value is computed in the template type `PreciseReal`, and the lower precision value is computed in type `CoarseReal`.
+For simplicity, we will refer to the result of the higher precision implementation the exact value, which we will denote by /y/,
+and the value computed in lower precision we will denote by ŷ.
+The ULP distance between /y/ and ŷ is then
+
+[$../graphs/ulp_distance.svg]
+
+where μ is the unit roundoff of the `CoarseReal` type.
+
+If every sample in an ULPs plot is bounded by ±½, then we have good evidence that we have used our floating point number as efficiently as we can possibly expect:
+We are getting the correctly rounded result.
+However, the converse is not true: If there exists samples that are well above the unit roundoff, we do not have evidence that the function is poorly implemented.
+Considering the /y/=0 case makes this obvious, but another more subtle issue is at play.
+Consider that when we evaluate a function /f/, it is rare that we want to evaluate /f/ at a representable x̂,
+instead we have an infinite precision value /x/ which must be rounded into x̂ using the floating point rounding model x̂ = x(1+ε), where |ε|<μ.
+
+We can use a first order Taylor series to determine the best accuracy we can hope for under the assumption that the only source of error is rounding the abscissa to the nearest to nearest representable:
+
+[$../graphs/ulps_and_condition_number.svg]
+
+Hence the condition number of function evaluation provides a natural scale for evaluating the quality of an implementation of a special function.
+Since, in addition, we cannot expect better than half-ULP accuracy, we can create a /ulp envelope/ by taking the maximum of 0.5 and half the condition number of function evaluation at each point.
+
+[$../graphs/airy_ai_float.svg]
+
+The graph shows the ULP accuracy of Boost's implementation of the Airy Ai function.
+We see only a few evaluations outside the ULP envelope.
+Note how the condition number of function evaluation becomes unbounded at the roots.
+
+
+A minimal working example which reproduces the plot above is given [@../../example/airy_ulps_plot.cpp here].
+
+Note that you can compare two different implementations of a single function by calling `add_fn` multiple times.
+This will give you a graphical answer to which one is more accurate.
+For example:
+
+    auto plot = ulps_plot<decltype(f), long double, float>(f, 1.0f, 2.0f);
+    plot.add_fn(impl1, "steelblue");
+    plot.add_fn(impl2, "orange");
+
+
+Note that the graph is written as an SVG. We use `firefox foo.svg` or `open -a Firefox foo.svg` to display these files.
+
+There is a subtle issue about the "correct" value.
+Note that if the function evaluated in `PreciseReal` is not accurate, the plot is worthless.
+But just how accurate it needs to be is more difficult to determine.
+We recommend starting with at least `long double` to test `float` precision, and `boost::multiprecision::float128` to test `double` precision values.
+
+[heading References]
+
+* Cleve Moler. ['Ulps Plots Reveal Math Function Accuracy], https://blogs.mathworks.com/cleve/2017/01/23/ulps-plots-reveal-math-function-accurary/
+
+
+
+[endsect]

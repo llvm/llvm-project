@@ -1,0 +1,78 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Setting the Maximum Interval Halvings and Memory Requirements</title>
+<link rel="stylesheet" href="../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../double_exponential.html" title="Double-exponential quadrature">
+<link rel="prev" href="de_tol.html" title="Setting the Termination Condition for Integration">
+<link rel="next" href="de_thread.html" title="Thread Safety">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="de_tol.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../double_exponential.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="de_thread.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="math_toolkit.double_exponential.de_levels"></a><a class="link" href="de_levels.html" title="Setting the Maximum Interval Halvings and Memory Requirements">Setting the
+      Maximum Interval Halvings and Memory Requirements</a>
+</h3></div></div></div>
+<p>
+        The max interval halvings is the maximum number of times the interval can
+        be cut in half before giving up. If the accuracy is not met at that time,
+        the routine returns its best estimate, along with the <code class="computeroutput"><span class="identifier">error</span></code>
+        and <code class="computeroutput"><span class="identifier">L1</span></code>, which allows the
+        user to decide if another quadrature routine should be employed.
+      </p>
+<p>
+        An example of this is
+      </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">tol</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">sqrt</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;::</span><span class="identifier">epsilon</span><span class="special">());</span>
+<span class="identifier">size_t</span> <span class="identifier">max_halvings</span> <span class="special">=</span> <span class="number">12</span><span class="special">;</span>
+<span class="identifier">tanh_sinh</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">integrator</span><span class="special">(</span><span class="identifier">max_halvings</span><span class="special">);</span>
+<span class="keyword">auto</span> <span class="identifier">f</span> <span class="special">=</span> <span class="special">[](</span><span class="keyword">double</span> <span class="identifier">x</span><span class="special">)</span> <span class="special">{</span> <span class="keyword">return</span> <span class="number">5</span><span class="special">*</span><span class="identifier">x</span> <span class="special">+</span> <span class="number">7</span><span class="special">;</span> <span class="special">};</span>
+<span class="keyword">double</span> <span class="identifier">error</span><span class="special">,</span> <span class="identifier">L1</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">Q</span> <span class="special">=</span> <span class="identifier">integrator</span><span class="special">.</span><span class="identifier">integrate</span><span class="special">(</span><span class="identifier">f</span><span class="special">,</span> <span class="special">(</span><span class="keyword">double</span><span class="special">)</span> <span class="number">0</span><span class="special">,</span> <span class="special">(</span><span class="keyword">double</span><span class="special">)</span> <span class="number">1</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">error</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">L1</span><span class="special">);</span>
+<span class="keyword">if</span> <span class="special">(</span><span class="identifier">error</span><span class="special">*</span><span class="identifier">L1</span> <span class="special">&gt;</span> <span class="number">0.01</span><span class="special">)</span>
+<span class="special">{</span>
+    <span class="identifier">Q</span> <span class="special">=</span> <span class="identifier">some_other_quadrature_method</span><span class="special">(</span><span class="identifier">f</span><span class="special">,</span> <span class="special">(</span><span class="keyword">double</span><span class="special">)</span> <span class="number">0</span><span class="special">,</span> <span class="special">(</span><span class="keyword">double</span><span class="special">)</span> <span class="number">1</span><span class="special">);</span>
+<span class="special">}</span>
+</pre>
+<p>
+        It's important to remember that the number of sample points doubles with
+        each new level, as does the memory footprint of the integrator object. Further,
+        if the integral is smooth, then the precision will be doubling with each
+        new level, so that for example, many integrals can achieve 100 decimal digit
+        precision after just 7 levels. That said, abscissa-weight pairs for new levels
+        are computed only when a new level is actually required (see thread safety),
+        none the less, you should avoid setting the maximum arbitrarily high "just
+        in case" as the time and space requirements for a large number of levels
+        can quickly grow out of control.
+      </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="de_tol.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../double_exponential.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="de_thread.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

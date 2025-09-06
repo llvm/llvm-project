@@ -1,0 +1,134 @@
+[section:inverse_gamma_dist Inverse Gamma Distribution]
+
+``#include <boost/math/distributions/inverse_gamma.hpp>``
+
+   namespace boost{ namespace math{ 
+      
+   template <class RealType = double, 
+             class ``__Policy``   = ``__policy_class`` >
+   class inverse_gamma_distribution
+   {
+   public:
+      typedef RealType value_type;
+      typedef Policy   policy_type;
+
+      BOOST_MATH_GPU_ENABLED inverse_gamma_distribution(RealType shape, RealType scale = 1)
+
+      BOOST_MATH_GPU_ENABLED RealType shape()const;
+      BOOST_MATH_GPU_ENABLED RealType scale()const;
+   };
+   
+   }} // namespaces
+   
+The inverse_gamma distribution is a continuous probability distribution
+of the reciprocal of a variable distributed according to the gamma distribution.
+
+The inverse_gamma distribution is used in Bayesian statistics.
+
+See [@http://en.wikipedia.org/wiki/Inverse-gamma_distribution inverse gamma distribution].
+
+[@http://rss.acs.unt.edu/Rdoc/library/pscl/html/igamma.html R inverse gamma distribution functions].
+
+[@http://reference.wolfram.com/mathematica/ref/InverseGammaDistribution.html Wolfram inverse gamma distribution].
+
+See also __gamma_distrib.
+
+[note
+In spite of potential confusion with the inverse gamma function, this
+distribution *does* provide the typedef:
+
+``typedef inverse_gamma_distribution<double> gamma;`` 
+
+If you want a `double` precision gamma distribution you can use 
+
+``boost::math::inverse_gamma_distribution<>``
+
+or you can write `inverse_gamma my_ig(2, 3);`]
+
+For shape parameter [alpha] and scale parameter [beta], it is defined 
+by the probability density function (PDF):
+
+[expression f(x;[alpha], [beta]) = [beta][super [alpha]] * (1/x) [super [alpha]+1] exp(-[beta]/x) / [Gamma]([alpha])]
+
+and cumulative density function (CDF)
+
+[expression F(x;[alpha], [beta]) = [Gamma]([alpha], [beta]/x) / [Gamma]([alpha])]
+
+The following graphs illustrate how the PDF and CDF of the inverse gamma distribution
+varies as the parameters vary:
+
+[graph inverse_gamma_pdf]  [/png or svg]
+
+[graph inverse_gamma_cdf]
+
+[h4 Member Functions]
+
+   BOOST_MATH_GPU_ENABLED inverse_gamma_distribution(RealType shape = 1, RealType scale = 1);
+   
+Constructs an inverse gamma distribution with shape [alpha] and scale [beta].
+
+Requires that the shape and scale parameters are greater than zero, otherwise calls
+__domain_error.
+
+   BOOST_MATH_GPU_ENABLED RealType shape()const;
+   
+Returns the [alpha] shape parameter of this inverse gamma distribution.
+   
+   BOOST_MATH_GPU_ENABLED RealType scale()const;
+      
+Returns the [beta] scale parameter of this inverse gamma distribution.
+
+[h4 Non-member Accessors]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions] that are generic to all
+distributions are supported: __usual_accessors.
+For this distribution all non-member accessor functions are marked with `BOOST_MATH_GPU_ENABLED` and can
+be run on both host and device.
+
+The domain of the random variate is \[0,+[infin]\].
+[note Unlike some definitions, this implementation supports a random variate 
+equal to zero as a special case, returning zero for pdf and cdf.]
+
+In this distribution the implementation of `logpdf` is specialized
+to improve numerical accuracy.
+
+[h4 Accuracy]
+
+The inverse gamma distribution is implemented in terms of the 
+incomplete gamma functions __gamma_p and __gamma_q and their
+inverses __gamma_p_inv and __gamma_q_inv: refer to the accuracy
+data for those functions for more information.
+But in general, inverse_gamma results are accurate to a few epsilon,
+>14 decimal digits accuracy for 64-bit double.
+
+[h4 Implementation]
+
+In the following table [alpha] is the shape parameter of the distribution, 
+[beta] is its scale parameter, /x/ is the random variate, /p/ is the probability
+and /q = 1-p/.
+
+[table
+[[Function][Implementation Notes]]
+[[pdf][Using the relation: pdf = __gamma_p_derivative([alpha], [beta]/ x, [beta]) / x * x ]]
+[[logpdf][log(pdf) = [alpha] * log([beta]) + (-[alpha]-1)*log(x) - lgamma([alpha]) - ([beta]/x) ]]
+[[cdf][Using the relation: p = __gamma_q([alpha], [beta] / x) ]]
+[[cdf complement][Using the relation: q = __gamma_p([alpha], [beta] / x) ]]
+[[quantile][Using the relation: x = [beta]/ __gamma_q_inv([alpha], p) ]]
+[[quantile from the complement][Using the relation: x = [alpha]/ __gamma_p_inv([alpha], q) ]]
+[[mode][[beta] / ([alpha] + 1) ]]
+[[median][no analytic equation is known, but is evaluated as quantile(0.5)]]
+[[mean][[beta] / ([alpha] - 1) for [alpha] > 1, else a __domain_error]]
+[[variance][([beta] * [beta]) / (([alpha] - 1) * ([alpha] - 1) * ([alpha] - 2)) for [alpha] >2, else a __domain_error]]
+[[skewness][4 * sqrt ([alpha] -2) / ([alpha] -3) for [alpha] >3, else a __domain_error]]
+[[kurtosis_excess][(30 * [alpha] - 66) / (([alpha]-3)*([alpha] - 4)) for [alpha] >4, else a __domain_error]]
+] [/table]
+
+[endsect] [/section:inverse_gamma_dist Inverse Gamma Distribution]
+
+[/ 
+  Copyright 2010 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+
