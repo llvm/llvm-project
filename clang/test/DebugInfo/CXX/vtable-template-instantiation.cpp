@@ -1,8 +1,6 @@
 // For the `CTemplate` templated class below, check the following cases:
-// - Implicitly instantiate whole class by up-casting (`NOCAST` not defined):
-//   * The vtable is generated with a COMDAT specifier
-//   * Its '_vtable$' is generated
-// - Implicitly instantiate member function only (`NOCAST` defined):
+// - Implicitly instantiated whole class by up-casting (`NOCAST` not defined)
+//   or implicitly instantiated member functions only (`NOCAST` defined):
 //   * The vtable is generated with a COMDAT specifier
 //   * Its '_vtable$' is generated
 // - Define explicitly instantiation (`EXPLICIT` defined):
@@ -52,8 +50,8 @@ int main() {
 
 // RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O0 -disable-llvm-passes %s -o -             | FileCheck %s -check-prefixes IMPLICIT
 // RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O1 -disable-llvm-passes %s -o -             | FileCheck %s -check-prefixes IMPLICIT
-// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O0 -disable-llvm-passes %s -o - -DNOCAST    | FileCheck %s -check-prefixes NOCAST
-// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O1 -disable-llvm-passes %s -o - -DNOCAST    | FileCheck %s -check-prefixes NOCAST
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O0 -disable-llvm-passes %s -o - -DNOCAST    | FileCheck %s -check-prefixes IMPLICIT
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O1 -disable-llvm-passes %s -o - -DNOCAST    | FileCheck %s -check-prefixes IMPLICIT
 // RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O0 -disable-llvm-passes %s -o - -DEXPLICIT  | FileCheck %s -check-prefixes EXPLICIT
 // RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O1 -disable-llvm-passes %s -o - -DEXPLICIT  | FileCheck %s -check-prefixes EXPLICIT
 // RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O0 -disable-llvm-passes %s -o - -DEXTERN    | FileCheck %s -check-prefixes EXTERN,EXTERN-O0
@@ -66,14 +64,6 @@ int main() {
 // IMPLICIT-DAG: [[TYPE:![0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "CTemplate<void>"
 // IMPLICIT-DAG: !DIDerivedType(tag: DW_TAG_variable, name: "_vtable$", scope: [[TYPE]], file: {{.*}}, baseType: [[PVOID:![0-9]+]], flags: DIFlagPrivate | DIFlagArtificial | DIFlagStaticMember)
 // IMPLICIT-DAG: [[PVOID]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: null, size: 64)
-
-// NOCAST: $_ZTV9CTemplateIvE = comdat any
-// NOCAST: @_ZTV9CTemplateIvE = linkonce_odr {{.*}}unnamed_addr constant {{{ \[[^]]*\] } { \[[^]]*\] \[[^]]*\] }}}, comdat, align 8, !dbg [[VTABLE_VAR:![0-9]*]]
-// NOCAST-DAG: [[VTABLE:![0-9]+]] = distinct !DIGlobalVariable(name: "_vtable$", linkageName: "_ZTV9CTemplateIvE"
-// NOCAST-DAG: !DIGlobalVariableExpression(var: [[VTABLE]], expr: !DIExpression())
-// NOCAST-DAG: [[TYPE:![0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "CTemplate<void>"
-// NOCAST-DAG: !DIDerivedType(tag: DW_TAG_variable, name: "_vtable$", scope: [[TYPE]], file: {{.*}}, baseType: [[PVOID:![0-9]+]], flags: DIFlagPrivate | DIFlagArtificial | DIFlagStaticMember)
-// NOCAST-DAG: [[PVOID]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: null, size: 64)
 
 // EXPLICIT: $_ZTV9CTemplateIvE = comdat any
 // EXPLICIT: @_ZTV9CTemplateIvE = weak_odr {{.*}}unnamed_addr constant {{{ \[[^]]*\] } { \[[^]]*\] \[[^]]*\] }}}, comdat, align 8, !dbg [[VTABLE_VAR:![0-9]*]]
