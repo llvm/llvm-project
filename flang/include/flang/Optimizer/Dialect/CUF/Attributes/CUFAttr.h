@@ -112,6 +112,8 @@ cuf::DataAttributeAttr getDataAttr(mlir::Operation *op);
 /// Returns true if the operation has a data attribute with the given value.
 bool hasDataAttr(mlir::Operation *op, cuf::DataAttribute value);
 
+unsigned getAllocatorIdx(cuf::DataAttribute dataAttr);
+
 } // namespace cuf
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_CUF_CUFATTR_H
