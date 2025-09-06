@@ -3927,7 +3927,7 @@ define i1 @test_class_is_not_psub_pnorm_pinf__dynamic(float %arg) #3 {
 define i1 @minnum_qnan(i32 %x) {
 ; CHECK-LABEL: @minnum_qnan(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %qnan_bits = or i32 %x, -5938
