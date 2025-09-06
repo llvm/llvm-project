@@ -73,12 +73,6 @@ void InterpState::cleanup() {
 
 Frame *InterpState::getCurrentFrame() { return Current; }
 
-bool InterpState::reportOverflow(const Expr *E, const llvm::APSInt &Value) {
-  QualType Type = E->getType();
-  CCEDiag(E, diag::note_constexpr_overflow) << Value << Type;
-  return noteUndefinedBehavior();
-}
-
 void InterpState::deallocate(Block *B) {
   assert(B);
   assert(!B->isDynamic());
