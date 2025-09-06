@@ -3523,8 +3523,26 @@ bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
     PatchedName = Name;
 
   // Hacks to handle 'data16' and 'data32'
-  if (PatchedName == "data16" && is16BitMode()) {
-    return Error(NameLoc, "redundant data16 prefix");
+  if (PatchedName == "data16") {
+    if (is16BitMode())
+      return Error(NameLoc, "redundant data16 prefix");
+    if (is64BitMode())
+      return Error(NameLoc, "'data16' is not supported in 64-bit mode");
+    if (getLexer().isNot(AsmToken::EndOfStatement)) {
+      StringRef Next = Parser.getTok().getString();
+      getLexer().Lex();
+      // data16 effectively changes the instruction suffix.
+      // TODO Generalize.
+      if (Next == "call")
+        Next = "callw";
+      if (Next == "ljmp")
+        Next = "ljmpw";
+
+      Name = Next;
+      PatchedName = Name;
+      ForcedDataPrefix = X86::Is16Bit;
+      IsPrefix = false;
+    }
   }
   if (PatchedName == "data32") {
     if (is32BitMode())
@@ -4538,14 +4556,26 @@ bool X86AsmParser::matchAndEmitIntelInstruction(
     if (X86Op->isImm()) {
       // If it's not a constant fall through and let remainder take care of it.
       const auto *CE = dyn_cast<MCConstantExpr>(X86Op->getImm());
-      unsigned Size = getPointerWidth();
+      // Determine the size. Prioritize the ForcedDataPrefix flag if it was set
+      // by a 'data32' prefix. Otherwise, fall back to the pointer width of the
+      // current mode.
+      unsigned Size = (ForcedDataPrefix == X86::Is32Bit)   ? 32
+                      : (ForcedDataPrefix == X86::Is16Bit) ? 16
+                                                           : getPointerWidth();
+      ForcedDataPrefix = 0;
       if (CE &&
           (isIntN(Size, CE->getValue()) || isUIntN(Size, CE->getValue()))) {
         SmallString<16> Tmp;
         Tmp += Base;
-        Tmp += (is64BitMode())
-                   ? "q"
-                   : (is32BitMode()) ? "l" : (is16BitMode()) ? "w" : " ";
+        // Append the suffix corresponding to the determined size.
+        if (Size == 64)
+          Tmp += "q";
+        else if (Size == 32)
+          Tmp += "l";
+        else if (Size == 16)
+          Tmp += "w";
+        else
+          Tmp += " ";
         Op.setTokenValue(Tmp);
         // Do match in ATT mode to allow explicit suffix usage.
         Match.push_back(MatchInstruction(Operands, Inst, ErrorInfo,
