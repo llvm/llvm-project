@@ -293,7 +293,7 @@ class IRLinker {
   std::unique_ptr<Module> SrcM;
 
   // Lookup table to optimize IRMover::linkNamedMDNodes().
-  DenseMap<StringRef, DenseSet<MDNode *>> NamedMDNodes;
+  IRMover::NamedMDNodesT &NamedMDNodes;
 
   /// See IRMover::move().
   IRMover::LazyCallback AddLazyFor;
@@ -440,10 +440,12 @@ public:
   IRLinker(Module &DstM, MDMapT &SharedMDs,
            IRMover::IdentifiedStructTypeSet &Set, std::unique_ptr<Module> SrcM,
            ArrayRef<GlobalValue *> ValuesToLink,
-           IRMover::LazyCallback AddLazyFor, bool IsPerformingImport)
-      : DstM(DstM), SrcM(std::move(SrcM)), AddLazyFor(std::move(AddLazyFor)),
-        TypeMap(Set), GValMaterializer(*this), LValMaterializer(*this),
-        SharedMDs(SharedMDs), IsPerformingImport(IsPerformingImport),
+           IRMover::LazyCallback AddLazyFor, bool IsPerformingImport,
+           IRMover::NamedMDNodesT &NamedMDNodes)
+      : DstM(DstM), SrcM(std::move(SrcM)), NamedMDNodes(NamedMDNodes),
+        AddLazyFor(std::move(AddLazyFor)), TypeMap(Set),
+        GValMaterializer(*this), LValMaterializer(*this), SharedMDs(SharedMDs),
+        IsPerformingImport(IsPerformingImport),
         Mapper(ValueMap, RF_ReuseAndMutateDistinctMDs | RF_IgnoreMissingLocals,
                &TypeMap, &GValMaterializer),
         IndirectSymbolMCID(Mapper.registerAlternateMappingContext(
@@ -1138,7 +1140,7 @@ void IRLinker::linkNamedMDNodes() {
 
     NamedMDNode *DestNMD = DstM.getOrInsertNamedMetadata(NMD.getName());
 
-    auto &Inserted = NamedMDNodes[DestNMD->getName()];
+    auto &Inserted = NamedMDNodes[DestNMD];
     if (Inserted.empty()) {
       // Must be the first module, copy everything from DestNMD.
       Inserted.insert(DestNMD->operands().begin(), DestNMD->operands().end());
@@ -1683,6 +1685,6 @@ Error IRMover::move(std::unique_ptr<Module> Src,
                     LazyCallback AddLazyFor, bool IsPerformingImport) {
   IRLinker TheIRLinker(Composite, SharedMDs, IdentifiedStructTypes,
                        std::move(Src), ValuesToLink, std::move(AddLazyFor),
-                       IsPerformingImport);
+                       IsPerformingImport, NamedMDNodes);
   return TheIRLinker.run();
 }

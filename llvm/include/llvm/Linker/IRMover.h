@@ -10,6 +10,7 @@
 #define LLVM_LINKER_IRMOVER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/Support/Compiler.h"
@@ -19,6 +20,8 @@ namespace llvm {
 class Error;
 class GlobalValue;
 class Metadata;
+class MDNode;
+class NamedMDNode;
 class Module;
 class StructType;
 class TrackingMDRef;
@@ -67,6 +70,8 @@ public:
   using LazyCallback =
       llvm::unique_function<void(GlobalValue &GV, ValueAdder Add)>;
 
+  using NamedMDNodesT = DenseMap<const NamedMDNode *, DenseSet<const MDNode *>>;
+
   /// Move in the provide values in \p ValuesToLink from \p Src.
   ///
   /// - \p AddLazyFor is a call back that the IRMover will call when a global
@@ -86,6 +91,7 @@ private:
   Module &Composite;
   IdentifiedStructTypeSet IdentifiedStructTypes;
   MDMapT SharedMDs; ///< A Metadata map to use for all calls to \a move().
+  NamedMDNodesT NamedMDNodes; ///< Cache for IRMover::linkNamedMDNodes().
 };
 
 } // End llvm namespace
