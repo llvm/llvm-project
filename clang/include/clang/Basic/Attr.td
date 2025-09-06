@@ -3646,6 +3646,13 @@ def Unavailable : InheritableAttr {
   let MeaningfulToClassTemplateDefinition = 1;
 }
 
+def CanDiscard : InheritableAttr {
+  let Spellings = [Clang<"candiscard">];
+  let Subjects = SubjectList<[ObjCMethod, FunctionLike, TypedefName]>;
+  let Documentation = [CanDiscardDocs];
+  let SimpleHandler = 1;
+}
+
 def DiagnoseIf : InheritableAttr {
   // Does not have a [[]] spelling because this attribute requires the ability
   // to parse function arguments but the attribute is not written in the type
