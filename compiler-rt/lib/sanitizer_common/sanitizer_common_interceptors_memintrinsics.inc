@@ -233,6 +233,16 @@ INTERCEPTOR(void *, bzero, void *block, usize size) {
 #define INIT_BZERO
 #endif  // SANITIZER_INTERCEPT_BZERO
 
+#if SANITIZER_INTERCEPT_MEMSET_EXPLICIT
+INTERCEPTOR(void *, memset_explicit, void *block, int c, usize size) {
+  void *ctx;
+  COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, block, c, size);
+}
+#define INIT_MEMSET_EXPLICIT COMMON_INTERCEPT_FUNCTION(memset_explicit)
+#else
+#define INIT_MEMSET_EXPLICIT
+#endif
+
 namespace __sanitizer {
 // This does not need to be called if InitializeCommonInterceptors() is called.
 void InitializeMemintrinsicInterceptors() {
@@ -242,5 +252,6 @@ void InitializeMemintrinsicInterceptors() {
   INIT_AEABI_MEM;
   INIT___BZERO;
   INIT_BZERO;
+  INIT_MEMSET_EXPLICIT;
 }
 }  // namespace __sanitizer
