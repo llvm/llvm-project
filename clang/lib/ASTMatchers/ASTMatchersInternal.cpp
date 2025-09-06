@@ -1124,8 +1124,12 @@ AST_TYPELOC_TRAVERSE_MATCHER_DEF(
 
 const internal::VariadicDynCastAllOfMatcher<Stmt, OMPExecutableDirective>
     ompExecutableDirective;
+const internal::VariadicDynCastAllOfMatcher<Stmt, OMPTargetUpdateDirective>
+    ompTargetUpdateDirective;
 const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPDefaultClause>
     ompDefaultClause;
+const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPFromClause>
+    ompFromClause;
 const internal::VariadicDynCastAllOfMatcher<Decl, CXXDeductionGuideDecl>
     cxxDeductionGuideDecl;
 
