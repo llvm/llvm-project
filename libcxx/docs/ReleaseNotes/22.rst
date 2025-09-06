@@ -63,6 +63,8 @@ Improvements and New Features
 - ``ofstream::write`` has been optimized to pass through large strings to system calls directly instead of copying them
   in chunks into a buffer.
 
+- The ``num_get::do_get`` integral overloads have been optimized, resulting in a performance improvement of up to 2.8x.
+
 Deprecations and Removals
 -------------------------
 
