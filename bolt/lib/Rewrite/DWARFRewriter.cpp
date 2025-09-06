@@ -551,6 +551,9 @@ static CUPartitionVector partitionCUs(DWARFContext &DwCtx) {
   unsigned Counter = 0;
   const DWARFDebugAbbrev *Abbr = DwCtx.getDebugAbbrev();
   for (std::unique_ptr<DWARFUnit> &CU : DwCtx.compile_units()) {
+    std::optional<uint64_t> DWOId = CU->getDWOId();
+    if (DWOId && *DWOId == 0)
+      continue;
     Expected<const DWARFAbbreviationDeclarationSet *> AbbrDeclSet =
         Abbr->getAbbreviationDeclarationSet(CU->getAbbreviationsOffset());
     if (!AbbrDeclSet) {
@@ -732,7 +735,7 @@ void DWARFRewriter::updateDebugInfo() {
       createRangeLocListAddressWriters(*CU);
       std::optional<DWARFUnit *> SplitCU;
       std::optional<uint64_t> DWOId = CU->getDWOId();
-      if (DWOId)
+      if (DWOId && *DWOId != 0)
         SplitCU = BC.getDWOCU(*DWOId);
       if (!SplitCU)
         continue;

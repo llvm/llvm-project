@@ -1,0 +1,6 @@
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: %clang -O3 -g -gdwarf-5 -gsplit-dwarf -Wl,-q %p/Inputs/thinlto-split-dwarf-inlining.s -o %t/main.exe
+# RUN: llvm-bolt %t/main.exe -o %t/main.exe.bolt -update-debug-sections -comp-dir-override="%t" 2>&1 | FileCheck %s
+
+# CHECK-NOT: Assertion `RangeListsWritersByCU.count(*DWOId) == 0 && "RangeLists writer for DWO unit already exists."'
+# CHECK: BOLT-WARNING: Found DWO file of ID 0:

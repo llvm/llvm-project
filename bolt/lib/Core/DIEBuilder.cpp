@@ -583,6 +583,9 @@ DWARFDie DIEBuilder::resolveDIEReference(
   uint64_t TmpRefOffset = RefOffset;
   if ((RefCU =
            getUnitForOffset(*this, *DwarfContext, TmpRefOffset, AttrSpec))) {
+    std::optional<uint64_t> DWOId = RefCU->getDWOId();
+    if (DWOId && *DWOId == 0)
+      return DWARFDie();
     /// Trying to add to current working set in case it's cross CU reference.
     registerUnit(*RefCU, true);
     DWARFDataExtractor DebugInfoData = RefCU->getDebugInfoExtractor();

@@ -1632,6 +1632,11 @@ void BinaryContext::preprocessDWODebugInfo() {
           DwarfUnit->getUnitDIE().find(
               {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
           "");
+      if (*DWOId == 0) {
+        this->outs() << "BOLT-WARNING: Found DWO file of ID 0: '" << DWOName
+                     << "', it will not be processed.\n";
+        continue;
+      }
       SmallString<16> AbsolutePath;
       if (!opts::CompDirOverride.empty()) {
         sys::path::append(AbsolutePath, opts::CompDirOverride);
@@ -1722,11 +1727,12 @@ void BinaryContext::preprocessDebugInfo() {
   StringRef GlobalPrefix = AsmInfo->getPrivateGlobalPrefix();
   for (const std::unique_ptr<DWARFUnit> &CU : DwCtx->compile_units()) {
     const uint64_t CUID = CU->getOffset();
+    std::optional<uint64_t> DWOID = CU->getDWOId();
     DwarfLineTable &BinaryLineTable = getDwarfLineTable(CUID);
     BinaryLineTable.setLabel(Ctx->getOrCreateSymbol(
         GlobalPrefix + "line_table_start" + Twine(CUID)));
 
-    if (!ProcessedCUs.count(CU.get()))
+    if (!ProcessedCUs.count(CU.get()) || (DWOID && *DWOID == 0))
       continue;
 
     const DWARFDebugLine::LineTable *LineTable =
@@ -1741,7 +1747,7 @@ void BinaryContext::preprocessDebugInfo() {
         Checksum = LineTable->Prologue.FileNames[0].Checksum;
       std::optional<const char *> Name =
           dwarf::toString(CU->getUnitDIE().find(dwarf::DW_AT_name), nullptr);
-      if (std::optional<uint64_t> DWOID = CU->getDWOId()) {
+      if (DWOID) {
         auto Iter = DWOCUs.find(*DWOID);
         if (Iter == DWOCUs.end()) {
           this->errs() << "BOLT-ERROR: DWO CU was not found for " << Name
