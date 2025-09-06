@@ -2247,7 +2247,7 @@ CleanupAndExit:
 
       // FIXME: This should check if the call is supported
       StringRef HexagonVolatileMemcpyName =
-          RuntimeLibcallsInfo::getLibcallImplName(
+          RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
               RTLIB::impl_hexagon_memcpy_forward_vp4cp4n2);
       FunctionCallee Fn = M->getOrInsertFunction(
           HexagonVolatileMemcpyName, VoidTy, PtrTy, PtrTy, Int32Ty);
