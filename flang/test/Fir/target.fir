@@ -97,10 +97,6 @@ func.func @call8() {
 // X64-LABEL: define i64 @char1lensum(ptr {{[^%]*}}%0, ptr {{[^%]*}}%1, i64 %2, i64 %3)
 // PPC-LABEL: define i64 @char1lensum(ptr {{[^%]*}}%0, ptr {{[^%]*}}%1, i64 %2, i64 %3)
 func.func @char1lensum(%arg0 : !fir.boxchar<1>, %arg1 : !fir.boxchar<1>) -> i64 {
-  // X64-DAG: %[[p0:.*]] = insertvalue { ptr, i64 } undef, ptr %1, 0
-  // X64-DAG: = insertvalue { ptr, i64 } %[[p0]], i64 %3, 1
-  // X64-DAG: %[[p1:.*]] = insertvalue { ptr, i64 } undef, ptr %0, 0
-  // X64-DAG: = insertvalue { ptr, i64 } %[[p1]], i64 %2, 1
   %1:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1>>, i64)
   %2:2 = fir.unboxchar %arg1 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1>>, i64)
   // I32: %[[add:.*]] = add i64 %
