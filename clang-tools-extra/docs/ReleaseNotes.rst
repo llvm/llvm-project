@@ -157,6 +157,12 @@ New checks
   Checks for uses of MLIR's old/to be deprecated ``OpBuilder::create<T>`` form
   and suggests using ``T::create`` instead.
 
+- New :doc:`llvm-use-ranges
+  <clang-tidy/checks/llvm/use-ranges>` check.
+
+  Finds calls to STL library iterator algorithms that could be replaced with
+  LLVM range-based algorithms from ``llvm/ADT/STLExtras.h``.
+
 - New :doc:`misc-override-with-different-visibility
   <clang-tidy/checks/misc/override-with-different-visibility>` check.
 
