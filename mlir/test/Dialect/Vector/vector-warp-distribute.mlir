@@ -1499,8 +1499,8 @@ func.func @vector_insert_strided_slice_2d_to_2d(%laneid: index) -> (vector<64x1x
 //   CHECK-PROP-DAG:   %[[THREADID:.*]] = gpu.thread_id  x
 //       CHECK-PROP:   %[[W:.*]] = gpu.warp_execute_on_lane_0(%[[THREADID]])[32] args(%[[IN2]]
 //       CHECK-PROP:     %[[GATHER:.*]] = vector.gather %[[AR1]][{{.*}}]
-//       CHECK-PROP:     %[[EXTRACT:.*]] = vector.extract %[[GATHER]][0] : vector<64xi32> from vector<1x64xi32>
-//       CHECK-PROP:     %[[CAST:.*]] = arith.index_cast %[[EXTRACT]] : vector<64xi32> to vector<64xindex>
+//       CHECK-PROP:     %[[SHAPE_CAST:.*]] = vector.shape_cast %[[GATHER]] :  vector<1x64xi32> to vector<64xi32>
+//       CHECK-PROP:     %[[CAST:.*]] = arith.index_cast %[[SHAPE_CAST]] : vector<64xi32> to vector<64xindex>
 //       CHECK-PROP:     %[[EXTRACTELT:.*]] = vector.extract %[[CAST]][{{.*}}] : index from vector<64xindex>
 //       CHECK-PROP:     gpu.yield %[[EXTRACTELT]] : index
 //       CHECK-PROP:   %[[APPLY:.*]] = affine.apply #[[$MAP]]()[%[[THREADID]]]
@@ -1536,8 +1536,8 @@ func.func @transfer_read_prop_operands(%in2: vector<1x2xindex>, %ar1 :  memref<1
 // CHECK-PROP-LABEL: func @dont_fold_vector_broadcast(
 //       CHECK-PROP:   %[[r:.*]] = gpu.warp_execute_on_lane_0{{.*}} -> (vector<1x2xf32>)
 //       CHECK-PROP:     %[[some_def:.*]] = "some_def"
-//       CHECK-PROP:     %[[broadcast:.*]] = vector.broadcast %[[some_def]] : vector<64xf32> to vector<1x64xf32>
-//       CHECK-PROP:     gpu.yield %[[broadcast]] : vector<1x64xf32>
+//       CHECK-PROP:     %[[shape_cast:.*]] = vector.shape_cast %[[some_def]] : vector<64xf32> to vector<1x64xf32>
+//       CHECK-PROP:     gpu.yield %[[shape_cast]] : vector<1x64xf32>
 //       CHECK-PROP:   vector.print %[[r]] : vector<1x2xf32>
 func.func @dont_fold_vector_broadcast(%laneid: index) {
   %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<1x2xf32>) {
