@@ -393,25 +393,29 @@ class MUBUF_Invalidate <string opName, SDPatternOperator node = null_frag> :
   let sccb_value  = 0;
 }
 
-class getLdStVDataRegisterOperand<int Size, bit isTFE> {
-  RegisterOperand tfeVDataOp =
+class getBUFVDataRegisterOperand<int Size, bit isTFE> {
+  defvar tfeVDataOp =
     !cond(!eq(Size, 16)  : AVLdSt_64,
           !eq(Size, 32)  : AVLdSt_64,
           !eq(Size, 64)  : AVLdSt_96,
           !eq(Size, 96)  : AVLdSt_128,
           !eq(Size, 128) : AVLdSt_160);
 
-  RegisterOperand ret = !if(isTFE,
-                          tfeVDataOp,
-                          !if(!eq(Size, 16), AVLdSt_32,
-                                             getLdStRegisterOperandForSize<Size>.ret));
+  defvar VDataOp =
+    !cond(!eq(Size, 16)   : AVLdSt_32,
+          !eq(Size, 32)   : AVLdSt_32,
+          !eq(Size, 64)   : AVLdSt_64,
+          !eq(Size, 96)   : AVLdSt_96,
+          !eq(Size, 128)  : AVLdSt_128);
+
+  RegisterOperand ret = !if(isTFE, tfeVDataOp, VDataOp);
 }
 
 class getMUBUFInsDA<list<RegisterOperand> vdataList,
                     list<RegisterClass> vaddrList, bit isTFE, bit hasRestrictedSOffset> {
   RegisterOperand vdataClass = !if(!empty(vdataList), ?, !head(vdataList));
   RegisterClass vaddrClass = !if(!empty(vaddrList), ?, !head(vaddrList));
-  RegisterOperand vdata_op = getLdStVDataRegisterOperand<vdataClass.RegClass.Size, isTFE>.ret;
+  RegisterOperand vdata_op = getBUFVDataRegisterOperand<vdataClass.RegClass.Size, isTFE>.ret;
 
   dag SOffset = !if(hasRestrictedSOffset, (ins SReg_32:$soffset), (ins SCSrc_b32:$soffset));
   dag NonVaddrInputs = !con((ins SReg_128_XNULL:$srsrc), SOffset, (ins Offset:$offset, CPol_0:$cpol, i1imm_0:$swz));
@@ -487,7 +491,7 @@ class MUBUF_Load_Pseudo <string opName,
                          bit isTFE = 0,
                          bit hasRestrictedSOffset = 0,
                          list<dag> pattern=[],
-                         RegisterOperand vdata_op = getLdStVDataRegisterOperand<vdata_vt.Size, isTFE>.ret>
+                         RegisterOperand vdata_op = getBUFVDataRegisterOperand<vdata_vt.Size, isTFE>.ret>
   : MUBUF_Pseudo<opName,
                  !if(!or(isLds, isLdsOpc), (outs), (outs vdata_op:$vdata)),
                  !con(getMUBUFIns<addrKind, [], isTFE, hasRestrictedSOffset>.ret,
