@@ -304,6 +304,12 @@ public:
     return false;
   }
 
+  bool Pre(const parser::AccClause::Reduction &x) {
+    const auto &objectList{std::get<parser::AccObjectList>(x.v.t)};
+    ResolveAccObjectList(objectList, Symbol::Flag::AccReduction);
+    return false;
+  }
+
   void Post(const parser::Name &);
 
 private:

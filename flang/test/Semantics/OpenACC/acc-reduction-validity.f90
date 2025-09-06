@@ -177,13 +177,23 @@ program openacc_reduction_validity
 end program
 
 subroutine sum()
-  ! ERROR: 'sum' is already declared in this scoping unit
+  !ERROR: 'sum' is already declared in this scoping unit
   integer :: i,sum 
   sum = 0
-  !$acc parallel 
+  !$acc parallel
+  !ERROR: Only variables are allowed in data clauses on the LOOP directive
   !$acc loop independent gang reduction(+:sum)
   do i=1,10
      sum = sum + i
   enddo
+  !$acc end parallel
+end subroutine
+
+subroutine reduce()
+  integer :: red = 0, ii
+  !$acc parallel loop default(none) reduction(+:red)
+  do ii = 1, 10
+    red = red + ii
+  end do
   !$acc end parallel
 end subroutine
