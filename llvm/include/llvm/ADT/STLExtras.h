@@ -133,15 +133,6 @@ using is_one_of = std::disjunction<std::is_same<T, Ts>...>;
 template <typename T, typename... Ts>
 using are_base_of = std::conjunction<std::is_base_of<T, Ts>...>;
 
-namespace detail {
-template <typename T, typename... Us> struct TypesAreDistinct;
-template <typename T, typename... Us>
-struct TypesAreDistinct
-    : std::integral_constant<bool, !is_one_of<T, Us...>::value &&
-                                       TypesAreDistinct<Us...>::value> {};
-template <typename T> struct TypesAreDistinct<T> : std::true_type {};
-} // namespace detail
-
 /// Determine if all types in Ts are distinct.
 ///
 /// Useful to statically assert when Ts is intended to describe a non-multi set
@@ -151,9 +142,10 @@ template <typename T> struct TypesAreDistinct<T> : std::true_type {};
 /// asserted once per instantiation of a type which requires it.
 template <typename... Ts> struct TypesAreDistinct;
 template <> struct TypesAreDistinct<> : std::true_type {};
-template <typename... Ts>
-struct TypesAreDistinct
-    : std::integral_constant<bool, detail::TypesAreDistinct<Ts...>::value> {};
+template <typename T, typename... Us>
+struct TypesAreDistinct<T, Us...>
+    : std::conjunction<std::negation<is_one_of<T, Us...>>,
+                       TypesAreDistinct<Us...>> {};
 
 /// Find the first index where a type appears in a list of types.
 ///

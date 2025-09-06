@@ -2001,7 +2001,7 @@ public:
 
   /// Retrieves the SCEVCheckCond and SCEVCheckBlock that were generated as IR
   /// outside VPlan.
-  std::pair<Value *, BasicBlock *> getSCEVChecks() {
+  std::pair<Value *, BasicBlock *> getSCEVChecks() const {
     using namespace llvm::PatternMatch;
     if (!SCEVCheckCond || match(SCEVCheckCond, m_ZeroInt()))
       return {nullptr, nullptr};
@@ -2011,7 +2011,7 @@ public:
 
   /// Retrieves the MemCheckCond and MemCheckBlock that were generated as IR
   /// outside VPlan.
-  std::pair<Value *, BasicBlock *> getMemRuntimeChecks() {
+  std::pair<Value *, BasicBlock *> getMemRuntimeChecks() const {
     using namespace llvm::PatternMatch;
     if (MemRuntimeCheckCond && match(MemRuntimeCheckCond, m_ZeroInt()))
       return {nullptr, nullptr};
@@ -2020,9 +2020,7 @@ public:
 
   /// Return true if any runtime checks have been added
   bool hasChecks() const {
-    using namespace llvm::PatternMatch;
-    return (SCEVCheckCond && !match(SCEVCheckCond, m_ZeroInt())) ||
-           MemRuntimeCheckCond;
+    return getSCEVChecks().first || getMemRuntimeChecks().first;
   }
 };
 } // namespace
@@ -2910,19 +2908,12 @@ LoopVectorizationCostModel::getDivRemSpeculationCost(Instruction *I,
                              toVectorTy(Type::getInt1Ty(I->getContext()), VF),
                              CmpInst::BAD_ICMP_PREDICATE, CostKind);
 
-  // Certain instructions can be cheaper to vectorize if they have a constant
-  // second vector operand. One example of this are shifts on x86.
-  Value *Op2 = I->getOperand(1);
-  auto Op2Info = TTI.getOperandInfo(Op2);
-  if (Op2Info.Kind == TargetTransformInfo::OK_AnyValue &&
-      Legal->isInvariant(Op2))
-    Op2Info.Kind = TargetTransformInfo::OK_UniformValue;
-
   SmallVector<const Value *, 4> Operands(I->operand_values());
   SafeDivisorCost += TTI.getArithmeticInstrCost(
-    I->getOpcode(), VecTy, CostKind,
-    {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
-    Op2Info, Operands, I);
+      I->getOpcode(), VecTy, CostKind,
+      {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
+      {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
+      Operands, I);
   return {ScalarizationCost, SafeDivisorCost};
 }
 
