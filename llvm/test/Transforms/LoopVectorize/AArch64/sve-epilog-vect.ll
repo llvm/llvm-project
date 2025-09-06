@@ -59,7 +59,7 @@ define void @main_vf_vscale_x_16(ptr %A) #0 {
 ; CHECK-NEXT:    store <8 x i8> splat (i8 1), ptr [[TMP9]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT2]] = add nuw i64 [[INDEX1]], 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 1024
-; CHECK-NEXT:    br i1 [[TMP10]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP10]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    br i1 true, label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
@@ -107,7 +107,7 @@ define void @main_vf_vscale_x_16(ptr %A) #0 {
 ; CHECK-VF8-NEXT:    store <8 x i8> splat (i8 1), ptr [[TMP9]], align 1
 ; CHECK-VF8-NEXT:    [[INDEX_NEXT2]] = add nuw i64 [[INDEX1]], 8
 ; CHECK-VF8-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 1024
-; CHECK-VF8-NEXT:    br i1 [[TMP10]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-VF8-NEXT:    br i1 [[TMP10]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-VF8:       vec.epilog.middle.block:
 ; CHECK-VF8-NEXT:    br i1 true, label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-VF8:       vec.epilog.scalar.ph:
@@ -150,7 +150,7 @@ define void @main_vf_vscale_x_2_no_epi_iteration(ptr %A) #0 vscale_range(8, 8) {
 ; CHECK-NEXT:    store <vscale x 2 x i64> splat (i64 1), ptr [[TMP5]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH:%.*]]
@@ -182,7 +182,7 @@ define void @main_vf_vscale_x_2_no_epi_iteration(ptr %A) #0 vscale_range(8, 8) {
 ; CHECK-VF8-NEXT:    store <vscale x 2 x i64> splat (i64 1), ptr [[TMP7]], align 1
 ; CHECK-VF8-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-VF8-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-VF8-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-VF8-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK-VF8:       middle.block:
 ; CHECK-VF8-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
 ; CHECK-VF8-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
@@ -198,7 +198,7 @@ define void @main_vf_vscale_x_2_no_epi_iteration(ptr %A) #0 vscale_range(8, 8) {
 ; CHECK-VF8-NEXT:    store <8 x i64> splat (i64 1), ptr [[TMP9]], align 1
 ; CHECK-VF8-NEXT:    [[INDEX_NEXT2]] = add nuw i64 [[INDEX1]], 8
 ; CHECK-VF8-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 1024
-; CHECK-VF8-NEXT:    br i1 [[TMP10]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-VF8-NEXT:    br i1 [[TMP10]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK-VF8:       vec.epilog.middle.block:
 ; CHECK-VF8-NEXT:    br i1 true, label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-VF8:       vec.epilog.scalar.ph:
@@ -261,7 +261,7 @@ define void @main_vf_vscale_x_2(ptr %A, i64 %n) #0 vscale_range(8, 8) {
 ; CHECK-NEXT:    store <vscale x 2 x i64> splat (i64 1), ptr [[TMP7]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
@@ -279,7 +279,7 @@ define void @main_vf_vscale_x_2(ptr %A, i64 %n) #0 vscale_range(8, 8) {
 ; CHECK-NEXT:    store <8 x i64> splat (i64 1), ptr [[TMP9]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT5]] = add nuw i64 [[INDEX4]], 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT5]], [[N_VEC3]]
-; CHECK-NEXT:    br i1 [[TMP10]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP10]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    [[CMP_N6:%.*]] = icmp eq i64 [[N]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[CMP_N6]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
@@ -313,7 +313,7 @@ define void @main_vf_vscale_x_2(ptr %A, i64 %n) #0 vscale_range(8, 8) {
 ; CHECK-VF8-NEXT:    store <vscale x 2 x i64> splat (i64 1), ptr [[TMP7]], align 1
 ; CHECK-VF8-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-VF8-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-VF8-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-VF8-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK-VF8:       middle.block:
 ; CHECK-VF8-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-VF8-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
@@ -331,7 +331,7 @@ define void @main_vf_vscale_x_2(ptr %A, i64 %n) #0 vscale_range(8, 8) {
 ; CHECK-VF8-NEXT:    store <8 x i64> splat (i64 1), ptr [[TMP9]], align 1
 ; CHECK-VF8-NEXT:    [[INDEX_NEXT5]] = add nuw i64 [[INDEX4]], 8
 ; CHECK-VF8-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT5]], [[N_VEC3]]
-; CHECK-VF8-NEXT:    br i1 [[TMP10]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-VF8-NEXT:    br i1 [[TMP10]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK-VF8:       vec.epilog.middle.block:
 ; CHECK-VF8-NEXT:    [[CMP_N6:%.*]] = icmp eq i64 [[N]], [[N_VEC3]]
 ; CHECK-VF8-NEXT:    br i1 [[CMP_N6]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
@@ -382,7 +382,7 @@ define void @test_pr57912_pointer_induction(ptr %start) #0 {
 ; CHECK-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[TMP6]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 10000, [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
@@ -400,7 +400,7 @@ define void @test_pr57912_pointer_induction(ptr %start) #0 {
 ; CHECK-NEXT:    store <8 x i8> zeroinitializer, ptr [[NEXT_GEP2]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT3]] = add nuw i64 [[INDEX1]], 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT3]], 10000
-; CHECK-NEXT:    br i1 [[TMP9]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP9]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    br i1 true, label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
@@ -433,7 +433,7 @@ define void @test_pr57912_pointer_induction(ptr %start) #0 {
 ; CHECK-VF8-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[TMP6]], align 1
 ; CHECK-VF8-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-VF8-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-VF8-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-VF8-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK-VF8:       middle.block:
 ; CHECK-VF8-NEXT:    [[CMP_N:%.*]] = icmp eq i64 10000, [[N_VEC]]
 ; CHECK-VF8-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
@@ -451,7 +451,7 @@ define void @test_pr57912_pointer_induction(ptr %start) #0 {
 ; CHECK-VF8-NEXT:    store <8 x i8> zeroinitializer, ptr [[NEXT_GEP2]], align 1
 ; CHECK-VF8-NEXT:    [[INDEX_NEXT3]] = add nuw i64 [[INDEX1]], 8
 ; CHECK-VF8-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT3]], 10000
-; CHECK-VF8-NEXT:    br i1 [[TMP9]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-VF8-NEXT:    br i1 [[TMP9]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK-VF8:       vec.epilog.middle.block:
 ; CHECK-VF8-NEXT:    br i1 true, label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-VF8:       vec.epilog.scalar.ph:
@@ -514,7 +514,7 @@ define void @trip_count_vscale(ptr noalias %a, ptr noalias %b) vscale_range(1, 1
 ; CHECK-NEXT:    store <vscale x 4 x float> [[TMP13]], ptr [[TMP11]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
@@ -536,7 +536,7 @@ define void @trip_count_vscale(ptr noalias %a, ptr noalias %b) vscale_range(1, 1
 ; CHECK-NEXT:    store <2 x float> [[TMP20]], ptr [[TMP19]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX6]], 2
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT9]], [[N_VEC5]]
-; CHECK-NEXT:    br i1 [[TMP21]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP21]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    [[CMP_N10:%.*]] = icmp eq i64 [[N]], [[N_VEC5]]
 ; CHECK-NEXT:    br i1 [[CMP_N10]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
@@ -576,7 +576,7 @@ define void @trip_count_vscale(ptr noalias %a, ptr noalias %b) vscale_range(1, 1
 ; CHECK-VF8-NEXT:    store <vscale x 4 x float> [[TMP11]], ptr [[TMP9]], align 4
 ; CHECK-VF8-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-VF8-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-VF8-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-VF8-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK-VF8:       middle.block:
 ; CHECK-VF8-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-VF8-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH:%.*]]
@@ -644,7 +644,7 @@ define void @trip_count_vscale_no_epilogue_iterations(ptr noalias %a, ptr noalia
 ; CHECK-NEXT:    store <vscale x 4 x float> [[TMP13]], ptr [[TMP11]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
@@ -664,7 +664,7 @@ define void @trip_count_vscale_no_epilogue_iterations(ptr noalias %a, ptr noalia
 ; CHECK-NEXT:    store <2 x float> [[TMP20]], ptr [[TMP19]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT7]] = add nuw i64 [[INDEX4]], 2
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT7]], [[N]]
-; CHECK-NEXT:    br i1 [[TMP21]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP21]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    br i1 true, label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
@@ -703,7 +703,7 @@ define void @trip_count_vscale_no_epilogue_iterations(ptr noalias %a, ptr noalia
 ; CHECK-VF8-NEXT:    store <vscale x 4 x float> [[TMP11]], ptr [[TMP9]], align 4
 ; CHECK-VF8-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-VF8-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-VF8-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-VF8-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK-VF8:       middle.block:
 ; CHECK-VF8-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-VF8-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH:%.*]]
