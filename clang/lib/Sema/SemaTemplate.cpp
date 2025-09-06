@@ -1716,79 +1716,98 @@ NamedDecl *Sema::ActOnTemplateTemplateParameter(
 
 namespace {
 class ConstraintRefersToContainingTemplateChecker
-    : public TreeTransform<ConstraintRefersToContainingTemplateChecker> {
+    : public ConstDynamicRecursiveASTVisitor {
+  using inherited = ConstDynamicRecursiveASTVisitor;
   bool Result = false;
   const FunctionDecl *Friend = nullptr;
   unsigned TemplateDepth = 0;
 
   // Check a record-decl that we've seen to see if it is a lexical parent of the
   // Friend, likely because it was referred to without its template arguments.
-  void CheckIfContainingRecord(const CXXRecordDecl *CheckingRD) {
+  bool CheckIfContainingRecord(const CXXRecordDecl *CheckingRD) {
     CheckingRD = CheckingRD->getMostRecentDecl();
     if (!CheckingRD->isTemplated())
-      return;
+      return true;
 
     for (const DeclContext *DC = Friend->getLexicalDeclContext();
          DC && !DC->isFileContext(); DC = DC->getParent())
       if (const auto *RD = dyn_cast<CXXRecordDecl>(DC))
-        if (CheckingRD == RD->getMostRecentDecl())
+        if (CheckingRD == RD->getMostRecentDecl()) {
           Result = true;
+          return false;
+        }
+
+    return true;
   }
 
-  void CheckNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
+  bool CheckNonTypeTemplateParmDecl(const NonTypeTemplateParmDecl *D) {
     if (D->getDepth() < TemplateDepth)
       Result = true;
 
     // Necessary because the type of the NTTP might be what refers to the parent
     // constriant.
-    TransformType(D->getType());
+    return TraverseType(D->getType());
   }
 
 public:
-  using inherited = TreeTransform<ConstraintRefersToContainingTemplateChecker>;
-
-  ConstraintRefersToContainingTemplateChecker(Sema &SemaRef,
-                                              const FunctionDecl *Friend,
+  ConstraintRefersToContainingTemplateChecker(const FunctionDecl *Friend,
                                               unsigned TemplateDepth)
-      : inherited(SemaRef), Friend(Friend), TemplateDepth(TemplateDepth) {}
+      : Friend(Friend), TemplateDepth(TemplateDepth) {}
+
   bool getResult() const { return Result; }
 
   // This should be the only template parm type that we have to deal with.
-  // SubstTempalteTypeParmPack, SubstNonTypeTemplateParmPack, and
+  // SubstTemplateTypeParmPack, SubstNonTypeTemplateParmPack, and
   // FunctionParmPackExpr are all partially substituted, which cannot happen
   // with concepts at this point in translation.
-  using inherited::TransformTemplateTypeParmType;
-  QualType TransformTemplateTypeParmType(TypeLocBuilder &TLB,
-                                         TemplateTypeParmTypeLoc TL, bool) {
-    if (TL.getDecl()->getDepth() < TemplateDepth)
+  bool VisitTemplateTypeParmType(const TemplateTypeParmType *Type) override {
+    if (Type->getDecl()->getDepth() < TemplateDepth) {
       Result = true;
-    return inherited::TransformTemplateTypeParmType(
-        TLB, TL,
-        /*SuppressObjCLifetime=*/false);
+      return false;
+    }
+    return true;
   }
 
-  Decl *TransformDecl(SourceLocation Loc, Decl *D) {
-    if (!D)
-      return D;
+  bool TraverseDeclRefExpr(const DeclRefExpr *E) override {
+    return TraverseDecl(E->getDecl());
+  }
+
+  bool TraverseTypedefType(const TypedefType *TT,
+                           bool /*TraverseQualifier*/) override {
+    return TraverseType(TT->desugar());
+  }
+
+  bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier) override {
+    // We don't care about TypeLocs. So traverse Types instead.
+    return TraverseType(TL.getType(), TraverseQualifier);
+  }
+
+  bool VisitTagType(const TagType *T) override {
+    return TraverseDecl(T->getOriginalDecl());
+  }
+
+  bool TraverseDecl(const Decl *D) override {
+    assert(D);
     // FIXME : This is possibly an incomplete list, but it is unclear what other
     // Decl kinds could be used to refer to the template parameters.  This is a
     // best guess so far based on examples currently available, but the
     // unreachable should catch future instances/cases.
     if (auto *TD = dyn_cast<TypedefNameDecl>(D))
-      TransformType(TD->getUnderlyingType());
-    else if (auto *NTTPD = dyn_cast<NonTypeTemplateParmDecl>(D))
-      CheckNonTypeTemplateParmDecl(NTTPD);
-    else if (auto *VD = dyn_cast<ValueDecl>(D))
-      TransformType(VD->getType());
-    else if (auto *TD = dyn_cast<TemplateDecl>(D))
-      TransformTemplateParameterList(TD->getTemplateParameters());
-    else if (auto *RD = dyn_cast<CXXRecordDecl>(D))
-      CheckIfContainingRecord(RD);
-    else if (isa<NamedDecl>(D)) {
+      return TraverseType(TD->getUnderlyingType());
+    if (auto *NTTPD = dyn_cast<NonTypeTemplateParmDecl>(D))
+      return CheckNonTypeTemplateParmDecl(NTTPD);
+    if (auto *VD = dyn_cast<ValueDecl>(D))
+      return TraverseType(VD->getType());
+    if (isa<TemplateDecl>(D))
+      return true;
+    if (auto *RD = dyn_cast<CXXRecordDecl>(D))
+      return CheckIfContainingRecord(RD);
+
+    if (isa<NamedDecl, RequiresExprBodyDecl>(D)) {
       // No direct types to visit here I believe.
     } else
       llvm_unreachable("Don't know how to handle this declaration type yet");
-    return D;
+    return true;
   }
 };
 } // namespace
@@ -1797,9 +1816,8 @@ bool Sema::ConstraintExpressionDependsOnEnclosingTemplate(
     const FunctionDecl *Friend, unsigned TemplateDepth,
     const Expr *Constraint) {
   assert(Friend->getFriendObjectKind() && "Only works on a friend");
-  ConstraintRefersToContainingTemplateChecker Checker(*this, Friend,
-                                                      TemplateDepth);
-  Checker.TransformExpr(const_cast<Expr *>(Constraint));
+  ConstraintRefersToContainingTemplateChecker Checker(Friend, TemplateDepth);
+  Checker.TraverseStmt(Constraint);
   return Checker.getResult();
 }
 

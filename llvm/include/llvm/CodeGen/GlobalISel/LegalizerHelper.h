@@ -522,6 +522,8 @@ public:
   LLVM_ABI LegalizeResult lowerAbsToAddXor(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerAbsToMaxNeg(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerAbsToCNeg(MachineInstr &MI);
+  LLVM_ABI LegalizeResult lowerAbsDiffToSelect(MachineInstr &MI);
+  LLVM_ABI LegalizeResult lowerAbsDiffToMinMax(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFAbs(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerVectorReduction(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerMemcpyInline(MachineInstr &MI);

@@ -155,10 +155,9 @@ define void @test_lazy_save_and_conditional_smstart() nounwind "aarch64_inout_za
 ; CHECK-NEXT:    add x29, sp, #64
 ; CHECK-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    bl __arm_sme_state
 ; CHECK-NEXT:    rdsvl x8, #1
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    mov x20, x0
+; CHECK-NEXT:    mrs x20, SVCR
 ; CHECK-NEXT:    msub x9, x8, x8, x9
 ; CHECK-NEXT:    mov sp, x9
 ; CHECK-NEXT:    sub x10, x29, #80
@@ -205,8 +204,7 @@ define void @test_lazy_save_and_conditional_smstart() nounwind "aarch64_inout_za
 ; CHECK-NEWLOWERING-NEXT:    msub x9, x8, x8, x9
 ; CHECK-NEWLOWERING-NEXT:    mov sp, x9
 ; CHECK-NEWLOWERING-NEXT:    stp x9, x8, [x29, #-80]
-; CHECK-NEWLOWERING-NEXT:    bl __arm_sme_state
-; CHECK-NEWLOWERING-NEXT:    mov x20, x0
+; CHECK-NEWLOWERING-NEXT:    mrs x20, SVCR
 ; CHECK-NEWLOWERING-NEXT:    sub x8, x29, #80
 ; CHECK-NEWLOWERING-NEXT:    msr TPIDR2_EL0, x8
 ; CHECK-NEWLOWERING-NEXT:    tbz w20, #0, .LBB3_2

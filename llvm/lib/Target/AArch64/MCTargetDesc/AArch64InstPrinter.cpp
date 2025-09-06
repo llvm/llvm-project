@@ -365,13 +365,6 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
     return;
   }
 
-  // Instruction TSB is specified as a one operand instruction, but 'csync' is
-  // not encoded, so for printing it is treated as a special case here:
-  if (Opcode == AArch64::TSB) {
-    O << "\ttsb\tcsync";
-    return;
-  }
-
   if (!PrintAliases || !printAliasInstr(MI, Address, STI, O))
     printInstruction(MI, Address, STI, O);
 

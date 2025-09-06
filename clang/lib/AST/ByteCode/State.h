@@ -59,8 +59,6 @@ class State {
 public:
   virtual ~State();
 
-  virtual bool checkingForUndefinedBehavior() const = 0;
-  virtual bool checkingPotentialConstantExpression() const = 0;
   virtual bool noteUndefinedBehavior() = 0;
   virtual bool keepEvaluatingAfterFailure() const = 0;
   virtual bool keepEvaluatingAfterSideEffect() const = 0;
@@ -74,6 +72,16 @@ public:
   virtual bool hasPriorDiagnostic() = 0;
   virtual unsigned getCallStackDepth() = 0;
   virtual bool noteSideEffect() = 0;
+
+  /// Are we checking whether the expression is a potential constant
+  /// expression?
+  bool checkingPotentialConstantExpression() const {
+    return CheckingPotentialConstantExpression;
+  }
+  /// Are we checking an expression for overflow?
+  bool checkingForUndefinedBehavior() const {
+    return CheckingForUndefinedBehavior;
+  }
 
 public:
   State() = default;
@@ -127,6 +135,19 @@ public:
   /// Whether or not we're in a context where the front end requires a
   /// constant value.
   bool InConstantContext = false;
+
+  /// Whether we're checking that an expression is a potential constant
+  /// expression. If so, do not fail on constructs that could become constant
+  /// later on (such as a use of an undefined global).
+  bool CheckingPotentialConstantExpression = false;
+
+  /// Whether we're checking for an expression that has undefined behavior.
+  /// If so, we will produce warnings if we encounter an operation that is
+  /// always undefined.
+  ///
+  /// Note that we still need to evaluate the expression normally when this
+  /// is set; this is used when evaluating ICEs in C.
+  bool CheckingForUndefinedBehavior = false;
 
 private:
   void addCallStack(unsigned Limit);

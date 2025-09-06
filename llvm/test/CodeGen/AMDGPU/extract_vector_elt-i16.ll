@@ -349,8 +349,8 @@ define amdgpu_kernel void @v_extractelement_v8i16_2(ptr addrspace(1) %out, ptr a
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 4, v0
-; GCN-NEXT:    s_mov_b32 s6, 0
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
+; GCN-NEXT:    s_mov_b32 s6, 0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -379,8 +379,8 @@ define amdgpu_kernel void @v_extractelement_v8i16_6(ptr addrspace(1) %out, ptr a
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 4, v0
-; GCN-NEXT:    s_mov_b32 s6, 0
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
+; GCN-NEXT:    s_mov_b32 s6, 0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -465,8 +465,8 @@ define amdgpu_kernel void @v_extractelement_v16i16_2(ptr addrspace(1) %out, ptr 
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 5, v0
-; GCN-NEXT:    s_mov_b32 s6, 0
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
+; GCN-NEXT:    s_mov_b32 s6, 0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -495,8 +495,8 @@ define amdgpu_kernel void @v_extractelement_v16i16_6(ptr addrspace(1) %out, ptr 
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 5, v0
-; GCN-NEXT:    s_mov_b32 s6, 0
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
+; GCN-NEXT:    s_mov_b32 s6, 0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)

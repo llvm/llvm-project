@@ -3554,12 +3554,11 @@ static unsigned getNewFMAMKInst(const GCNSubtarget &ST, unsigned Opc) {
 
 bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
                                 Register Reg, MachineRegisterInfo *MRI) const {
-  if (!MRI->hasOneNonDBGUse(Reg))
-    return false;
-
   int64_t Imm;
   if (!getConstValDefinedInReg(DefMI, Reg, Imm))
     return false;
+
+  const bool HasMultipleUses = !MRI->hasOneNonDBGUse(Reg);
 
   assert(!DefMI.getOperand(0).getSubReg() && "Expected SSA form");
 
@@ -3571,6 +3570,25 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
     Register UseSubReg = UseMI.getOperand(1).getSubReg();
 
     const TargetRegisterClass *DstRC = RI.getRegClassForReg(*MRI, DstReg);
+
+    if (HasMultipleUses) {
+      // TODO: This should fold in more cases with multiple use, but we need to
+      // more carefully consider what those uses are.
+      unsigned ImmDefSize = RI.getRegSizeInBits(*MRI->getRegClass(Reg));
+
+      // Avoid breaking up a 64-bit inline immediate into a subregister extract.
+      if (UseSubReg != AMDGPU::NoSubRegister && ImmDefSize == 64)
+        return false;
+
+      // Most of the time folding a 32-bit inline constant is free (though this
+      // might not be true if we can't later fold it into a real user).
+      //
+      // FIXME: This isInlineConstant check is imprecise if
+      // getConstValDefinedInReg handled the tricky non-mov cases.
+      if (ImmDefSize == 32 &&
+          !isInlineConstant(Imm, AMDGPU::OPERAND_REG_IMM_INT32))
+        return false;
+    }
 
     bool Is16Bit = UseSubReg != AMDGPU::NoSubRegister &&
                    RI.getSubRegIdxSize(UseSubReg) == 16;
@@ -3658,6 +3676,9 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
     UseMI.addImplicitDefUseOperands(*MF);
     return true;
   }
+
+  if (HasMultipleUses)
+    return false;
 
   if (Opc == AMDGPU::V_MAD_F32_e64 || Opc == AMDGPU::V_MAC_F32_e64 ||
       Opc == AMDGPU::V_MAD_F16_e64 || Opc == AMDGPU::V_MAC_F16_e64 ||
@@ -5994,25 +6015,12 @@ const TargetRegisterClass *SIInstrInfo::getRegClass(const MCInstrDesc &TID,
   if (OpNum >= TID.getNumOperands())
     return nullptr;
   auto RegClass = TID.operands()[OpNum].RegClass;
-  bool IsAllocatable = false;
-  if (TID.TSFlags & SIInstrFlags::FLAT) {
-    // vdst and vdata should be both VGPR or AGPR, same for the DS instructions
-    // with two data operands. Request register class constrained to VGPR only
-    // of both operands present as Machine Copy Propagation can not check this
-    // constraint and possibly other passes too.
-    //
-    // The check is limited to FLAT because atomics in non-flat encoding have
-    // their vdst and vdata tied to be the same register, and DS instructions
-    // have separate instruction definitions with AGPR and VGPR operand lists.
-    IsAllocatable =
-        AMDGPU::hasNamedOperand(TID.Opcode, AMDGPU::OpName::vdata) &&
-        AMDGPU::hasNamedOperand(TID.Opcode, AMDGPU::OpName::vdst);
-  } else if (TID.getOpcode() == AMDGPU::AV_MOV_B64_IMM_PSEUDO) {
+  if (TID.getOpcode() == AMDGPU::AV_MOV_B64_IMM_PSEUDO) {
     // Special pseudos have no alignment requirement
     return RI.getRegClass(RegClass);
   }
 
-  return adjustAllocatableRegClass(ST, RI, TID, RegClass, IsAllocatable);
+  return adjustAllocatableRegClass(ST, RI, TID, RegClass, false);
 }
 
 const TargetRegisterClass *SIInstrInfo::getOpRegClass(const MachineInstr &MI,

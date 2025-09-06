@@ -2019,7 +2019,7 @@ PyOpView::PyOpView(const nb::object &operationObject)
 // PyInsertionPoint.
 //------------------------------------------------------------------------------
 
-PyInsertionPoint::PyInsertionPoint(PyBlock &block) : block(block) {}
+PyInsertionPoint::PyInsertionPoint(const PyBlock &block) : block(block) {}
 
 PyInsertionPoint::PyInsertionPoint(PyOperationBase &beforeOperationBase)
     : refOperation(beforeOperationBase.getOperation().getRef()),
@@ -2071,6 +2071,17 @@ PyInsertionPoint PyInsertionPoint::atBlockTerminator(PyBlock &block) {
   PyOperationRef terminatorOpRef = PyOperation::forOperation(
       block.getParentOperation()->getContext(), terminator);
   return PyInsertionPoint{block, std::move(terminatorOpRef)};
+}
+
+PyInsertionPoint PyInsertionPoint::after(PyOperationBase &op) {
+  PyOperation &operation = op.getOperation();
+  PyBlock block = operation.getBlock();
+  MlirOperation nextOperation = mlirOperationGetNextInBlock(operation);
+  if (mlirOperationIsNull(nextOperation))
+    return PyInsertionPoint(block);
+  PyOperationRef nextOpRef = PyOperation::forOperation(
+      block.getParentOperation()->getContext(), nextOperation);
+  return PyInsertionPoint{block, std::move(nextOpRef)};
 }
 
 nb::object PyInsertionPoint::contextEnter(nb::object insertPoint) {
@@ -3861,6 +3872,8 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                   nb::arg("block"), "Inserts at the beginning of the block.")
       .def_static("at_block_terminator", &PyInsertionPoint::atBlockTerminator,
                   nb::arg("block"), "Inserts before the block terminator.")
+      .def_static("after", &PyInsertionPoint::after, nb::arg("operation"),
+                  "Inserts after the operation.")
       .def("insert", &PyInsertionPoint::insert, nb::arg("operation"),
            "Inserts an operation.")
       .def_prop_ro(

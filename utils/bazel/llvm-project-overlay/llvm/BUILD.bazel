@@ -2223,7 +2223,6 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/AArch64/AArch64GenDisassemblerTables.inc": [
                 "-gen-disassembler",
                 "-ignore-non-decodable-operands",
-                "-ignore-fully-defined-operands",
             ],
             "lib/Target/AArch64/AArch64GenSystemOperands.inc": ["-gen-searchable-tables"],
             "lib/Target/AArch64/AArch64GenExegesis.inc": ["-gen-exegesis"],

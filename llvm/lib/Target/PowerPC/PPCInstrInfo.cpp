@@ -88,7 +88,7 @@ static cl::opt<bool> EnableFMARegPressureReduction(
 // Pin the vtable to this file.
 void PPCInstrInfo::anchor() {}
 
-PPCInstrInfo::PPCInstrInfo(PPCSubtarget &STI)
+PPCInstrInfo::PPCInstrInfo(const PPCSubtarget &STI)
     : PPCGenInstrInfo(PPC::ADJCALLSTACKDOWN, PPC::ADJCALLSTACKUP,
                       /* CatchRetOpcode */ -1,
                       STI.isPPC64() ? PPC::BLR8 : PPC::BLR),

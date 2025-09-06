@@ -19,12 +19,12 @@
 namespace orc_rt {
 
 /// Test whether the given value is a power of 2.
-template <typename T> constexpr bool isPowerOf2(T Val) noexcept {
+template <typename T> [[nodiscard]] constexpr bool isPowerOf2(T Val) noexcept {
   return Val != 0 && (Val & (Val - 1)) == 0;
 }
 
 /// Calculates the next power of 2.
-template <typename T> constexpr T nextPowerOf2(T Val) noexcept {
+template <typename T> [[nodiscard]] constexpr T nextPowerOf2(T Val) noexcept {
   for (std::size_t I = 1; I < std::numeric_limits<T>::digits; I <<= 1)
     Val |= (Val >> I);
   return Val + 1;

@@ -834,7 +834,7 @@ defm : vextract_for_size_lowering<"VEXTRACTF64X4Z", v32bf16_info, v16bf16x_info,
 
 // A 128-bit extract from bits [255:128] of a 512-bit vector should use a
 // smaller extract to enable EVEX->VEX.
-let Predicates = [NoVLX, HasEVEX512] in {
+let Predicates = [NoVLX] in {
 def : Pat<(v2i64 (extract_subvector (v8i64 VR512:$src), (iPTR 2))),
           (v2i64 (VEXTRACTI128rri
                   (v4i64 (EXTRACT_SUBREG (v8i64 VR512:$src), sub_ymm)),
@@ -3088,7 +3088,7 @@ def : Pat<(Narrow.KVT (and Narrow.KRC:$mask,
            addr:$src2, (X86cmpm_imm_commute timm:$cc)), Narrow.KRC)>;
 }
 
-let Predicates = [HasAVX512, NoVLX, HasEVEX512] in {
+let Predicates = [HasAVX512, NoVLX] in {
   defm : axv512_icmp_packed_cc_no_vlx_lowering<X86pcmpm, X86pcmpm_su, "VPCMPD", v8i32x_info, v16i32_info>;
   defm : axv512_icmp_packed_cc_no_vlx_lowering<X86pcmpum, X86pcmpum_su, "VPCMPUD", v8i32x_info, v16i32_info>;
 
@@ -3119,7 +3119,7 @@ let Predicates = [HasAVX512, NoVLX, HasEVEX512] in {
   defm : axv512_cmp_packed_cc_no_vlx_lowering<"VCMPPD", v2f64x_info, v8f64_info>;
 }
 
-let Predicates = [HasBWI, NoVLX, HasEVEX512] in {
+let Predicates = [HasBWI, NoVLX] in {
   defm : axv512_icmp_packed_cc_no_vlx_lowering<X86pcmpm, X86pcmpm_su, "VPCMPB", v32i8x_info, v64i8_info>;
   defm : axv512_icmp_packed_cc_no_vlx_lowering<X86pcmpum, X86pcmpum_su, "VPCMPUB", v32i8x_info, v64i8_info>;
 
@@ -3513,7 +3513,7 @@ multiclass mask_move_lowering<string InstrStr, X86VectorVTInfo Narrow,
 
 // Patterns for handling v8i1 selects of 256-bit vectors when VLX isn't
 // available. Use a 512-bit operation and extract.
-let Predicates = [HasAVX512, NoVLX, HasEVEX512] in {
+let Predicates = [HasAVX512, NoVLX] in {
   defm : mask_move_lowering<"VMOVAPSZ", v4f32x_info, v16f32_info>;
   defm : mask_move_lowering<"VMOVDQA32Z", v4i32x_info, v16i32_info>;
   defm : mask_move_lowering<"VMOVAPSZ", v8f32x_info, v16f32_info>;
@@ -3525,7 +3525,7 @@ let Predicates = [HasAVX512, NoVLX, HasEVEX512] in {
   defm : mask_move_lowering<"VMOVDQA64Z", v4i64x_info, v8i64_info>;
 }
 
-let Predicates = [HasBWI, NoVLX, HasEVEX512] in {
+let Predicates = [HasBWI, NoVLX] in {
   defm : mask_move_lowering<"VMOVDQU8Z", v16i8x_info, v64i8_info>;
   defm : mask_move_lowering<"VMOVDQU8Z", v32i8x_info, v64i8_info>;
 
@@ -5021,8 +5021,8 @@ defm VPMINUD : avx512_binop_rm_vl_d<0x3B, "vpminud", umin,
 defm VPMINUQ : avx512_binop_rm_vl_q<0x3B, "vpminuq", umin,
                                     SchedWriteVecALU, HasAVX512, 1>, T8;
 
-// PMULLQ: Use 512bit version to implement 128/256 bit in case NoVLX, HasEVEX512.
-let Predicates = [HasDQI, NoVLX, HasEVEX512] in {
+// PMULLQ: Use 512bit version to implement 128/256 bit in case NoVLX.
+let Predicates = [HasDQI, NoVLX] in {
   def : Pat<(v4i64 (mul (v4i64 VR256X:$src1), (v4i64 VR256X:$src2))),
             (EXTRACT_SUBREG
                 (VPMULLQZrr
@@ -5078,7 +5078,7 @@ multiclass avx512_min_max_lowering<string Instr, SDNode OpNode> {
              sub_xmm)>;
 }
 
-let Predicates = [HasAVX512, NoVLX, HasEVEX512] in {
+let Predicates = [HasAVX512, NoVLX] in {
   defm : avx512_min_max_lowering<"VPMAXUQZ", umax>;
   defm : avx512_min_max_lowering<"VPMINUQZ", umin>;
   defm : avx512_min_max_lowering<"VPMAXSQZ", smax>;
@@ -6055,7 +6055,7 @@ defm VPSRL : avx512_shift_types<0xD2, 0xD3, 0xD1, "vpsrl", X86vsrl,
                                 SchedWriteVecShift>;
 
 // Use 512bit VPSRA/VPSRAI version to implement v2i64/v4i64 in case NoVLX.
-let Predicates = [HasAVX512, NoVLX, HasEVEX512] in {
+let Predicates = [HasAVX512, NoVLX] in {
   def : Pat<(v4i64 (X86vsra (v4i64 VR256X:$src1), (v2i64 VR128X:$src2))),
             (EXTRACT_SUBREG (v8i64
               (VPSRAQZrr
@@ -6184,14 +6184,14 @@ defm VPSRLV : avx512_var_shift_types<0x45, "vpsrlv", X86vsrlv, SchedWriteVarVecS
 defm VPRORV : avx512_var_shift_types<0x14, "vprorv", rotr, SchedWriteVarVecShift>;
 defm VPROLV : avx512_var_shift_types<0x15, "vprolv", rotl, SchedWriteVarVecShift>;
 
-defm : avx512_var_shift_lowering<avx512vl_i64_info, "VPSRAVQ", X86vsrav, [HasAVX512, NoVLX, HasEVEX512]>;
-defm : avx512_var_shift_lowering<avx512vl_i16_info, "VPSLLVW", X86vshlv, [HasBWI, NoVLX, HasEVEX512]>;
-defm : avx512_var_shift_lowering<avx512vl_i16_info, "VPSRAVW", X86vsrav, [HasBWI, NoVLX, HasEVEX512]>;
-defm : avx512_var_shift_lowering<avx512vl_i16_info, "VPSRLVW", X86vsrlv, [HasBWI, NoVLX, HasEVEX512]>;
+defm : avx512_var_shift_lowering<avx512vl_i64_info, "VPSRAVQ", X86vsrav, [HasAVX512, NoVLX]>;
+defm : avx512_var_shift_lowering<avx512vl_i16_info, "VPSLLVW", X86vshlv, [HasBWI, NoVLX]>;
+defm : avx512_var_shift_lowering<avx512vl_i16_info, "VPSRAVW", X86vsrav, [HasBWI, NoVLX]>;
+defm : avx512_var_shift_lowering<avx512vl_i16_info, "VPSRLVW", X86vsrlv, [HasBWI, NoVLX]>;
 
 
 // Use 512bit VPROL/VPROLI version to implement v2i64/v4i64 + v4i32/v8i32 in case NoVLX.
-let Predicates = [HasAVX512, NoVLX, HasEVEX512] in {
+let Predicates = [HasAVX512, NoVLX] in {
   def : Pat<(v2i64 (rotl (v2i64 VR128X:$src1), (v2i64 VR128X:$src2))),
             (EXTRACT_SUBREG (v8i64
               (VPROLVQZrr
@@ -6242,7 +6242,7 @@ let Predicates = [HasAVX512, NoVLX, HasEVEX512] in {
 }
 
 // Use 512bit VPROR/VPRORI version to implement v2i64/v4i64 + v4i32/v8i32 in case NoVLX.
-let Predicates = [HasAVX512, NoVLX, HasEVEX512] in {
+let Predicates = [HasAVX512, NoVLX] in {
   def : Pat<(v2i64 (rotr (v2i64 VR128X:$src1), (v2i64 VR128X:$src2))),
             (EXTRACT_SUBREG (v8i64
               (VPRORVQZrr
@@ -9933,7 +9933,7 @@ defm VPMOVUSWB  : avx512_trunc_wb<0x10, "vpmovuswb", X86vtruncus,
                                   truncstore_us_vi8, masked_truncstore_us_vi8,
                                   X86vtruncus, X86vmtruncus>;
 
-let Predicates = [HasAVX512, NoVLX, HasEVEX512] in {
+let Predicates = [HasAVX512, NoVLX] in {
 def: Pat<(v8i16 (trunc (v8i32 VR256X:$src))),
          (v8i16 (EXTRACT_SUBREG
                  (v16i16 (VPMOVDWZrr (v16i32 (INSERT_SUBREG (IMPLICIT_DEF),
@@ -9944,7 +9944,7 @@ def: Pat<(v4i32 (trunc (v4i64 VR256X:$src))),
                                            VR256X:$src, sub_ymm)))), sub_xmm))>;
 }
 
-let Predicates = [HasBWI, NoVLX, HasEVEX512] in {
+let Predicates = [HasBWI, NoVLX] in {
 def: Pat<(v16i8 (trunc (v16i16 VR256X:$src))),
          (v16i8 (EXTRACT_SUBREG (VPMOVWBZrr (v32i16 (INSERT_SUBREG (IMPLICIT_DEF),
                                             VR256X:$src, sub_ymm))), sub_xmm))>;
@@ -10487,7 +10487,7 @@ multiclass avx512_convert_vector_to_mask<bits<8> opc, string OpcodeStr,
     defm Z128 : convert_vector_to_mask_common<opc, VTInfo.info128, OpcodeStr>,
                                                EVEX_V128;
   }
-  let Predicates = [prd, NoVLX, HasEVEX512] in {
+  let Predicates = [prd, NoVLX] in {
     defm Z256_Alt : convert_vector_to_mask_lowering<VTInfo.info512, VTInfo.info256, NAME>;
     defm Z128_Alt : convert_vector_to_mask_lowering<VTInfo.info512, VTInfo.info128, NAME>;
   }
@@ -11283,7 +11283,7 @@ defm VPABS : avx512_unary_rm_vl_all<0x1C, 0x1D, 0x1E, 0x1F, "vpabs", abs,
                                     SchedWriteVecALU>;
 
 // VPABS: Use 512bit version to implement 128/256 bit in case NoVLX.
-let Predicates = [HasAVX512, NoVLX, HasEVEX512] in {
+let Predicates = [HasAVX512, NoVLX] in {
   def : Pat<(v4i64 (abs VR256X:$src)),
             (EXTRACT_SUBREG
                 (VPABSQZrr
@@ -11299,7 +11299,7 @@ let Predicates = [HasAVX512, NoVLX, HasEVEX512] in {
 // Use 512bit version to implement 128/256 bit.
 multiclass avx512_unary_lowering<string InstrStr, SDNode OpNode,
                                  AVX512VLVectorVTInfo _, Predicate prd> {
-  let Predicates = [prd, NoVLX, HasEVEX512] in {
+  let Predicates = [prd, NoVLX] in {
     def : Pat<(_.info256.VT (OpNode (_.info256.VT _.info256.RC:$src1))),
               (EXTRACT_SUBREG
                 (!cast<Instruction>(InstrStr # "Zrr")
@@ -11918,7 +11918,7 @@ let Predicates = [HasAVX512] in {
             (VPTERNLOGQZrri VR512:$src, VR512:$src, VR512:$src, (i8 15))>;
 }
 
-let Predicates = [HasAVX512, NoVLX, HasEVEX512] in {
+let Predicates = [HasAVX512, NoVLX] in {
   def : Pat<(v16i8 (vnot VR128X:$src)),
             (EXTRACT_SUBREG
              (VPTERNLOGQZrri

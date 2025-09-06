@@ -79,6 +79,7 @@ CodeGen/Hexagon/loop-idiom/hexagon-memmove2.ll
 CodeGen/Hexagon/loop-idiom/memmove-rt-check.ll
 CodeGen/NVPTX/lower-ctor-dtor.ll
 CodeGen/PowerPC/P10-stack-alignment.ll
+CodeGen/RISCV/zmmul.ll
 CodeGen/WebAssembly/memory-interleave.ll
 CodeGen/X86/masked_gather_scatter.ll
 CodeGen/X86/nocfivalue.ll
@@ -216,6 +217,7 @@ Instrumentation/BoundsChecking/opt.ll
 Instrumentation/BoundsChecking/phi.ll
 Instrumentation/BoundsChecking/runtimes.ll
 Instrumentation/BoundsChecking/simple.ll
+Instrumentation/BoundsChecking/ubsan-unique-traps.ll
 Instrumentation/DataFlowSanitizer/abilist_aggregate.ll
 Instrumentation/DataFlowSanitizer/abilist.ll
 Instrumentation/DataFlowSanitizer/atomics.ll
@@ -526,10 +528,13 @@ Instrumentation/TypeSanitizer/memintrinsics.ll
 Instrumentation/TypeSanitizer/nosanitize.ll
 Instrumentation/TypeSanitizer/sanitize-no-tbaa.ll
 Instrumentation/TypeSanitizer/swifterror.ll
+LTO/X86/diagnostic-handler-remarks-with-hotness.ll
 Other/ChangePrinters/DotCfg/print-changed-dot-cfg.ll
 Other/opt-bisect-print-ir-path.ll
+Other/optimization-remarks-auto.ll
 Other/printer.ll
 Other/X86/debugcounter-partiallyinlinelibcalls.ll
+tools/llvm-objcopy/ELF/auto-remove-add-symtab-shndx.test
 tools/not/disable-symbolization.test
 tools/UpdateTestChecks/update_analyze_test_checks/loop-access-analysis.test
 tools/UpdateTestChecks/update_analyze_test_checks/loop-distribute.test
@@ -579,6 +584,7 @@ Transforms/AtomicExpand/AMDGPU/expand-atomic-i64-agent.ll
 Transforms/AtomicExpand/AMDGPU/expand-atomic-i64-system.ll
 Transforms/AtomicExpand/AMDGPU/expand-atomic-i8.ll
 Transforms/AtomicExpand/AMDGPU/expand-atomic-i8-system.ll
+Transforms/AtomicExpand/AMDGPU/expand-atomic-private-gas.ll
 Transforms/AtomicExpand/AMDGPU/expand-atomic-rmw-fadd-flat-specialization.ll
 Transforms/AtomicExpand/AMDGPU/expand-atomic-rmw-fadd-flat-specialization-preserve-name.ll
 Transforms/AtomicExpand/AMDGPU/expand-atomic-rmw-fadd.ll
@@ -727,6 +733,8 @@ Transforms/DFAJumpThreading/dfa-jump-threading-transform.ll
 Transforms/DFAJumpThreading/dfa-unfold-select.ll
 Transforms/DFAJumpThreading/max-path-length.ll
 Transforms/DFAJumpThreading/negative.ll
+Transforms/ExpandFp/AMDGPU/frem-inf.ll
+Transforms/ExpandFp/AMDGPU/frem.ll
 Transforms/ExpandLargeDivRem/X86/sdiv129.ll
 Transforms/ExpandLargeDivRem/X86/srem129.ll
 Transforms/ExpandLargeDivRem/X86/udiv129.ll
@@ -1169,6 +1177,7 @@ Transforms/LoopVectorize/AArch64/extend-vectorization-factor-for-unprofitable-me
 Transforms/LoopVectorize/AArch64/f128-fmuladd-reduction.ll
 Transforms/LoopVectorize/AArch64/first-order-recurrence-fold-tail.ll
 Transforms/LoopVectorize/AArch64/first-order-recurrence.ll
+Transforms/LoopVectorize/AArch64/fixed-wide-lane-mask.ll
 Transforms/LoopVectorize/AArch64/fmax-without-fast-math-flags.ll
 Transforms/LoopVectorize/AArch64/fmin-without-fast-math-flags.ll
 Transforms/LoopVectorize/AArch64/force-target-instruction-cost.ll
@@ -1230,6 +1239,7 @@ Transforms/LoopVectorize/AArch64/sve-epilog-vect.ll
 Transforms/LoopVectorize/AArch64/sve-epilog-vect-reductions.ll
 Transforms/LoopVectorize/AArch64/sve-epilog-vect-strict-reductions.ll
 Transforms/LoopVectorize/AArch64/sve-epilog-vect-vscale-tune.ll
+Transforms/LoopVectorize/AArch64/sve-epilog-vscale-fixed.ll
 Transforms/LoopVectorize/AArch64/sve-gather-scatter-cost.ll
 Transforms/LoopVectorize/AArch64/sve-gather-scatter.ll
 Transforms/LoopVectorize/AArch64/sve-interleaved-accesses.ll
@@ -1243,6 +1253,7 @@ Transforms/LoopVectorize/AArch64/sve-tail-folding.ll
 Transforms/LoopVectorize/AArch64/sve-tail-folding-option.ll
 Transforms/LoopVectorize/AArch64/sve-tail-folding-reductions.ll
 Transforms/LoopVectorize/AArch64/sve-tail-folding-unroll.ll
+Transforms/LoopVectorize/AArch64/sve-wide-lane-mask.ll
 Transforms/LoopVectorize/AArch64/tail-folding-styles.ll
 Transforms/LoopVectorize/AArch64/tail-fold-uniform-memops.ll
 Transforms/LoopVectorize/AArch64/transform-narrow-interleave-to-widen-memory-cost.ll
@@ -1278,6 +1289,7 @@ Transforms/LoopVectorize/consecutive-ptr-uniforms.ll
 Transforms/LoopVectorize/dbg-outer-loop-vect.ll
 Transforms/LoopVectorize/debugloc.ll
 Transforms/LoopVectorize/dereferenceable-info-from-assumption-constant-size.ll
+Transforms/LoopVectorize/dereferenceable-info-from-assumption-constant-size-needs-loop-guards.ll
 Transforms/LoopVectorize/dereferenceable-info-from-assumption-variable-size.ll
 Transforms/LoopVectorize/diag-with-hotness-info.ll
 Transforms/LoopVectorize/dont-fold-tail-for-divisible-TC.ll
@@ -1318,6 +1330,7 @@ Transforms/LoopVectorize/interleaved-accesses-different-insert-position.ll
 Transforms/LoopVectorize/interleaved-accesses.ll
 Transforms/LoopVectorize/interleaved-accesses-masked-group.ll
 Transforms/LoopVectorize/interleaved-accesses-pred-stores.ll
+Transforms/LoopVectorize/interleaved-accesses-requiring-scev-predicates.ll
 Transforms/LoopVectorize/interleaved-accesses-uniform-load.ll
 Transforms/LoopVectorize/invariant-store-vectorization-2.ll
 Transforms/LoopVectorize/invariant-store-vectorization.ll
@@ -1388,6 +1401,7 @@ Transforms/LoopVectorize/reuse-lcssa-phi-scev-expansion.ll
 Transforms/LoopVectorize/RISCV/blocks-with-dead-instructions.ll
 Transforms/LoopVectorize/RISCV/dead-ops-cost.ll
 Transforms/LoopVectorize/RISCV/divrem.ll
+Transforms/LoopVectorize/RISCV/gather-scatter-cost.ll
 Transforms/LoopVectorize/RISCV/inloop-reduction.ll
 Transforms/LoopVectorize/RISCV/interleaved-masked-access.ll
 Transforms/LoopVectorize/RISCV/mask-index-type.ll
@@ -1762,6 +1776,7 @@ Transforms/SampleProfile/pseudo-probe-dangle.ll
 Transforms/SampleProfile/pseudo-probe-emit.ll
 Transforms/SampleProfile/pseudo-probe-profile.ll
 Transforms/SampleProfile/pseudo-probe-profile-mismatch-thinlto.ll
+Transforms/SampleProfile/remarks-hotness.ll
 Transforms/SampleProfile/remarks.ll
 Transforms/SandboxVectorizer/special_opcodes.ll
 Transforms/ScalarizeMaskedMemIntrin/AArch64/expand-masked-load.ll
@@ -1799,6 +1814,7 @@ Transforms/SimpleLoopUnswitch/partial-unswitch.ll
 Transforms/SimpleLoopUnswitch/partial-unswitch-loop-and-block-dispositions.ll
 Transforms/SimpleLoopUnswitch/partial-unswitch-mssa-threshold.ll
 Transforms/SimpleLoopUnswitch/partial-unswitch-update-memoryssa.ll
+Transforms/SimpleLoopUnswitch/pr138509.ll
 Transforms/SimpleLoopUnswitch/pr59546.ll
 Transforms/SimpleLoopUnswitch/pr60736.ll
 Transforms/SimpleLoopUnswitch/trivial-unswitch-freeze-individual-conditions.ll

@@ -1,5 +1,5 @@
 // UNSUPPORTED: system-windows
 
-// RUN: not --crash clang-tidy -p %S/Inputs/empty-database %s 2>&1 | FileCheck %s
+// RUN: clang-tidy -p %S/Inputs/empty-database %s 2>&1 | FileCheck %s
 
-// CHECK: LLVM ERROR: Cannot chdir into ""!
+// CHECK: 'directory' field of compilation database is empty; using the current working directory instead.

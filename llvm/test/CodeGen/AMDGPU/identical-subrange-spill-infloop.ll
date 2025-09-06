@@ -41,15 +41,14 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    v_writelane_b32 v5, s69, 19
 ; CHECK-NEXT:    v_writelane_b32 v5, s70, 20
 ; CHECK-NEXT:    s_mov_b32 s68, 0
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    v_writelane_b32 v5, s71, 21
-; CHECK-NEXT:    v_mov_b32_e32 v2, s4
-; CHECK-NEXT:    v_mov_b32_e32 v3, v1
+; CHECK-NEXT:    v_mov_b32_e32 v1, s4
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    s_mov_b32 s69, s68
 ; CHECK-NEXT:    s_mov_b32 s70, s68
 ; CHECK-NEXT:    s_mov_b32 s71, s68
-; CHECK-NEXT:    image_sample_lz v3, v[2:3], s[16:23], s[68:71] dmask:0x1
-; CHECK-NEXT:    v_mov_b32_e32 v2, v1
+; CHECK-NEXT:    image_sample_lz v3, v[1:2], s[16:23], s[68:71] dmask:0x1
+; CHECK-NEXT:    v_mov_b32_e32 v1, v2
 ; CHECK-NEXT:    ; implicit-def: $vgpr6 : SGPR spill to VGPR lane
 ; CHECK-NEXT:    s_mov_b32 s6, 48
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
@@ -86,7 +85,7 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_3
 ; CHECK-NEXT:  ; %bb.1: ; %bb48
 ; CHECK-NEXT:    image_sample_lz v3, v[1:2], s[16:23], s[68:71] dmask:0x1
-; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    v_mov_b32_e32 v1, v2
 ; CHECK-NEXT:    s_and_b64 vcc, exec, -1
 ; CHECK-NEXT:  .LBB0_2: ; %bb50
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1

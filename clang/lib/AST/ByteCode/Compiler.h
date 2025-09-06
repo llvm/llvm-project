@@ -391,8 +391,8 @@ private:
   bool emitComplexBoolCast(const Expr *E);
   bool emitComplexComparison(const Expr *LHS, const Expr *RHS,
                              const BinaryOperator *E);
-  bool emitRecordDestruction(const Record *R, SourceInfo Loc);
-  bool emitDestruction(const Descriptor *Desc, SourceInfo Loc);
+  bool emitRecordDestructionPop(const Record *R, SourceInfo Loc);
+  bool emitDestructionPop(const Descriptor *Desc, SourceInfo Loc);
   bool emitDummyPtr(const DeclTy &D, const Expr *E);
   bool emitFloat(const APFloat &F, const Expr *E);
   unsigned collectBaseOffset(const QualType BaseType,
@@ -587,11 +587,9 @@ public:
       if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))
         return false;
 
-      if (!this->Ctx->emitDestruction(Local.Desc, Local.Desc->getLoc()))
+      if (!this->Ctx->emitDestructionPop(Local.Desc, Local.Desc->getLoc()))
         return false;
 
-      if (!this->Ctx->emitPopPtr(E))
-        return false;
       removeIfStoredOpaqueValue(Local);
     }
     return true;

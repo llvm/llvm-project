@@ -5234,7 +5234,7 @@ bool AMDGPUAsmParser::validateAGPRLdSt(const MCInst &Inst) const {
 
 bool AMDGPUAsmParser::validateVGPRAlign(const MCInst &Inst) const {
   auto FB = getFeatureBits();
-  if (!FB[AMDGPU::FeatureGFX90AInsts] && !FB[AMDGPU::FeatureGFX1250Insts])
+  if (!FB[AMDGPU::FeatureRequiresAlignedVGPRs])
     return true;
 
   unsigned Opc = Inst.getOpcode();

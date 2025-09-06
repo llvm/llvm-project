@@ -1,5 +1,9 @@
 // Needs symlinks
 // UNSUPPORTED: system-windows
+// env -u is not supported on AIX.
+// TODO(boomanaiden154): Remove this once we have switched over to lit's
+// internal shell which does support env -u.
+// UNSUPPORTED: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
 // REQUIRES: x86-registered-target
 
 // RUN: rm -rf %t && mkdir %t

@@ -14,6 +14,7 @@
 #ifndef ORC_RT_C_WRAPPERFUNCTION_H
 #define ORC_RT_C_WRAPPERFUNCTION_H
 
+#include "orc-rt-c/CoreTypes.h"
 #include "orc-rt-c/ExternC.h"
 
 #include <assert.h>
@@ -48,6 +49,25 @@ typedef struct {
   orc_rt_WrapperFunctionBufferDataUnion Data;
   size_t Size;
 } orc_rt_WrapperFunctionBuffer;
+
+/**
+ * Asynchronous return function for an orc-rt wrapper function.
+ */
+typedef void (*orc_rt_WrapperFunctionReturn)(
+    orc_rt_SessionRef Session, void *CallCtx,
+    orc_rt_WrapperFunctionBuffer ResultBytes);
+
+/**
+ * orc-rt wrapper function prototype.
+ *
+ * ArgBytes contains the serialized arguments for the wrapper function.
+ * Session holds a reference to the session object.
+ * CallCtx holds a pointer to the context object for this particular call.
+ * Return holds a pointer to the return function.
+ */
+typedef void (*orc_rt_WrapperFunction)(orc_rt_SessionRef Session, void *CallCtx,
+                                       orc_rt_WrapperFunctionReturn Return,
+                                       orc_rt_WrapperFunctionBuffer ArgBytes);
 
 /**
  * Zero-initialize an orc_rt_WrapperFunctionBuffer.

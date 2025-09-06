@@ -51,6 +51,41 @@ static bool resourceAccessNeeds64BitExpansion(Module *M, Type *OverloadTy,
   return ScalarTy->isDoubleTy() || ScalarTy->isIntegerTy(64);
 }
 
+static Value *expand16BitIsInf(CallInst *Orig) {
+  Module *M = Orig->getModule();
+  if (M->getTargetTriple().getDXILVersion() >= VersionTuple(1, 9))
+    return nullptr;
+
+  Value *Val = Orig->getOperand(0);
+  Type *ValTy = Val->getType();
+  if (!ValTy->getScalarType()->isHalfTy())
+    return nullptr;
+
+  IRBuilder<> Builder(Orig);
+  Type *IType = Type::getInt16Ty(M->getContext());
+  Constant *PosInf =
+      ValTy->isVectorTy()
+          ? ConstantVector::getSplat(
+                ElementCount::getFixed(
+                    cast<FixedVectorType>(ValTy)->getNumElements()),
+                ConstantInt::get(IType, 0x7c00))
+          : ConstantInt::get(IType, 0x7c00);
+
+  Constant *NegInf =
+      ValTy->isVectorTy()
+          ? ConstantVector::getSplat(
+                ElementCount::getFixed(
+                    cast<FixedVectorType>(ValTy)->getNumElements()),
+                ConstantInt::get(IType, 0xfc00))
+          : ConstantInt::get(IType, 0xfc00);
+
+  Value *IVal = Builder.CreateBitCast(Val, PosInf->getType());
+  Value *B1 = Builder.CreateICmpEQ(IVal, PosInf);
+  Value *B2 = Builder.CreateICmpEQ(IVal, NegInf);
+  Value *B3 = Builder.CreateOr(B1, B2);
+  return B3;
+}
+
 static bool isIntrinsicExpansion(Function &F) {
   switch (F.getIntrinsicID()) {
   case Intrinsic::abs:
@@ -68,6 +103,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_sclamp:
   case Intrinsic::dx_nclamp:
   case Intrinsic::dx_degrees:
+  case Intrinsic::dx_isinf:
   case Intrinsic::dx_lerp:
   case Intrinsic::dx_normalize:
   case Intrinsic::dx_fdot:
@@ -301,9 +337,10 @@ static Value *expandIsFPClass(CallInst *Orig) {
   auto *TCI = dyn_cast<ConstantInt>(T);
 
   // These FPClassTest cases have DXIL opcodes, so they will be handled in
-  // DXIL Op Lowering instead.
+  // DXIL Op Lowering instead for all non f16 cases.
   switch (TCI->getZExtValue()) {
   case FPClassTest::fcInf:
+    return expand16BitIsInf(Orig);
   case FPClassTest::fcNan:
   case FPClassTest::fcNormal:
   case FPClassTest::fcFinite:
@@ -872,6 +909,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::dx_degrees:
     Result = expandDegreesIntrinsic(Orig);
+    break;
+  case Intrinsic::dx_isinf:
+    Result = expand16BitIsInf(Orig);
     break;
   case Intrinsic::dx_lerp:
     Result = expandLerpIntrinsic(Orig);

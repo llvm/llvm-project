@@ -409,6 +409,16 @@ static bool isSignExtendingOpW(const MachineInstr &MI, unsigned OpNo) {
     assert(Log2SEW >= 3 && Log2SEW <= 6 && "Unexpected Log2SEW");
     return Log2SEW <= 5;
   }
+  case RISCV::TH_EXT: {
+    unsigned Msb = MI.getOperand(2).getImm();
+    unsigned Lsb = MI.getOperand(3).getImm();
+    return Msb >= Lsb && (Msb - Lsb + 1) <= 32;
+  }
+  case RISCV::TH_EXTU: {
+    unsigned Msb = MI.getOperand(2).getImm();
+    unsigned Lsb = MI.getOperand(3).getImm();
+    return Msb >= Lsb && (Msb - Lsb + 1) < 32;
+  }
   }
 
   return false;
@@ -519,9 +529,11 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
     case RISCV::ANDI:
     case RISCV::ORI:
     case RISCV::XORI:
+    case RISCV::SRAI:
       // |Remainder| is always <= |Dividend|. If D is 32-bit, then so is R.
       // DIV doesn't work because of the edge case 0xf..f 8000 0000 / (long)-1
       // Logical operations use a sign extended 12-bit immediate.
+      // Arithmetic shift right can only increase the number of sign bits.
       if (!AddRegToWorkList(MI->getOperand(1).getReg()))
         return false;
 
@@ -556,6 +568,9 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
     case RISCV::PseudoCCAND:
     case RISCV::PseudoCCOR:
     case RISCV::PseudoCCXOR:
+    case RISCV::PseudoCCANDN:
+    case RISCV::PseudoCCORN:
+    case RISCV::PseudoCCXNOR:
     case RISCV::PHI: {
       // If all incoming values are sign-extended, the output of AND, OR, XOR,
       // MIN, MAX, or PHI is also sign-extended.
@@ -578,6 +593,9 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
       case RISCV::PseudoCCAND:
       case RISCV::PseudoCCOR:
       case RISCV::PseudoCCXOR:
+      case RISCV::PseudoCCANDN:
+      case RISCV::PseudoCCORN:
+      case RISCV::PseudoCCXNOR:
         B = 4;
         E = 7;
         break;

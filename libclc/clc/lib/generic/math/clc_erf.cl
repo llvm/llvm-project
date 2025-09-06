@@ -507,5 +507,5 @@ _CLC_OVERLOAD _CLC_DEF half __clc_erf(half x) {
 #endif
 
 #define __CLC_FUNCTION __clc_erf
-#define __CLC_BODY <clc/shared/unary_def_scalarize.inc>
+#define __CLC_BODY <clc/shared/unary_def_scalarize_loop.inc>
 #include <clc/math/gentype.inc>

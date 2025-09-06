@@ -106,6 +106,19 @@ TEST_F(ARMSelectionDAGTest, computeKnownBits_VORRIMM) {
   KnownBits Known = DAG->computeKnownBits(Op, DemandedElts);
   EXPECT_EQ(Known.One, APInt(32, 0xAA));
   EXPECT_EQ(Known.Zero, APInt(32, 0x0));
+
+  // LHS(per-lane)     = 00000000 00000000 00000000 00000000  (0x00000000)
+  // Encoded(per-lane) = 00000000 00000000 00000000 10101010  (0x000000AA)
+  //  =>
+  // Known.One  = 00000000 00000000 00000000 10101010  (0x000000AA)
+  // Known.Zero = 11111111 11111111 11111111 01010101  (0x00000000)
+  SDValue Zero = DAG->getConstant(0, DL, MVT::i32);
+  SDValue ZeroVec = DAG->getSplatBuildVector(VT, DL, Zero);
+  Op = DAG->getNode(ARMISD::VORRIMM, DL, VT, ZeroVec, EncSD);
+  SDValue FrVORRIMM = DAG->getFreeze(Op);
+  Known = DAG->computeKnownBits(FrVORRIMM);
+  EXPECT_EQ(Known.One, APInt(32, 0xAA));
+  EXPECT_EQ(Known.Zero, APInt(32, 0xFFFFFF55));
 }
 
 /// VBIC (immediate): x & ~imm with 32-bit elements.
@@ -127,6 +140,11 @@ TEST_F(ARMSelectionDAGTest, computeKnownBits_VBICIMM) {
   // Known.Zero = 00000000 00000000 00000000 10101010  (0x000000AA)
   APInt DemandedElts = APInt::getAllOnes(4);
   KnownBits Known = DAG->computeKnownBits(Op, DemandedElts);
+  EXPECT_EQ(Known.One, APInt(32, 0xFFFFFF55));
+  EXPECT_EQ(Known.Zero, APInt(32, 0x000000AA));
+
+  SDValue FrVBICIMM = DAG->getFreeze(Op);
+  Known = DAG->computeKnownBits(FrVBICIMM);
   EXPECT_EQ(Known.One, APInt(32, 0xFFFFFF55));
   EXPECT_EQ(Known.Zero, APInt(32, 0x000000AA));
 }

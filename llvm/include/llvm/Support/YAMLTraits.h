@@ -406,9 +406,9 @@ template <class T> struct has_MappingValidateTraits<T, EmptyContext> {
 
 // Test if MappingContextTraits<T>::enumInput() is defined on type T.
 template <class T, class Context> struct has_MappingEnumInputTraits {
-  using Signature_validate = void (*)(class IO &, T &);
+  using Signature_enumInput = void (*)(class IO &, T &);
 
-  template <class U> using check = SameType<Signature_validate, &U::enumInput>;
+  template <class U> using check = SameType<Signature_enumInput, &U::enumInput>;
 
   static constexpr bool value =
       is_detected<check, MappingContextTraits<T, Context>>::value;
@@ -416,9 +416,9 @@ template <class T, class Context> struct has_MappingEnumInputTraits {
 
 // Test if MappingTraits<T>::enumInput() is defined on type T.
 template <class T> struct has_MappingEnumInputTraits<T, EmptyContext> {
-  using Signature_validate = void (*)(class IO &, T &);
+  using Signature_enumInput = void (*)(class IO &, T &);
 
-  template <class U> using check = SameType<Signature_validate, &U::enumInput>;
+  template <class U> using check = SameType<Signature_enumInput, &U::enumInput>;
 
   static constexpr bool value = is_detected<check, MappingTraits<T>>::value;
 };

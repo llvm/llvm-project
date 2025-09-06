@@ -17,7 +17,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 #include <cassert>
 
@@ -153,11 +152,6 @@ public:
     return {SyntheticFields.begin(), SyntheticFields.end()};
   }
 
-  /// Add a synthetic field, if none by that name is already present.
-  void addSyntheticField(llvm::StringRef Name, StorageLocation &Loc) {
-    SyntheticFields.insert({Name, &Loc});
-  }
-
   /// Changes the child storage location for a field `D` of reference type.
   /// All other fields cannot change their storage location and always retain
   /// the storage location passed to the `RecordStorageLocation` constructor.
@@ -168,11 +162,6 @@ public:
   void setChild(const ValueDecl &D, StorageLocation *Loc) {
     assert(D.getType()->isReferenceType());
     Children[&D] = Loc;
-  }
-
-  /// Add a child storage location for a field `D`, if not already present.
-  void addChild(const ValueDecl &D, StorageLocation *Loc) {
-    Children.insert({&D, Loc});
   }
 
   llvm::iterator_range<FieldToLoc::const_iterator> children() const {

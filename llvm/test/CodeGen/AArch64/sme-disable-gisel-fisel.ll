@@ -409,8 +409,7 @@ define float @frem_call_sm_compat(float %a, float %b) "aarch64_pstate_sm_compati
 ; CHECK-COMMON-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
 ; CHECK-COMMON-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-COMMON-NEXT:    stp s0, s1, [sp, #8] // 8-byte Folded Spill
-; CHECK-COMMON-NEXT:    bl __arm_sme_state
-; CHECK-COMMON-NEXT:    mov x19, x0
+; CHECK-COMMON-NEXT:    mrs x19, SVCR
 ; CHECK-COMMON-NEXT:    tbz w19, #0, .LBB12_2
 ; CHECK-COMMON-NEXT:  // %bb.1:
 ; CHECK-COMMON-NEXT:    smstop sm

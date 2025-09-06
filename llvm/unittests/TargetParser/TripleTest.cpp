@@ -553,6 +553,13 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(VersionTuple(1, 8), T.getDXILVersion());
 
+  T = Triple("dxilv1.9-unknown-shadermodel6.15-library");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::DXILSubArch_v1_9, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(VersionTuple(1, 9), T.getDXILVersion());
+
   T = Triple("x86_64-unknown-fuchsia");
   EXPECT_EQ(Triple::x86_64, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
@@ -1267,6 +1274,12 @@ TEST(TripleTest, ParsedIDs) {
   T = Triple("dxilv1.8-unknown-unknown");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::DXILSubArch_v1_8, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+
+  T = Triple("dxilv1.9-unknown-unknown");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::DXILSubArch_v1_9, T.getSubArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
 
@@ -3226,9 +3239,9 @@ TEST(TripleTest, DXILNormaizeWithVersion) {
             Triple::normalize("dxil--shadermodel6.0"));
   EXPECT_EQ("dxilv1.1-unknown-shadermodel6.1-library",
             Triple::normalize("dxil-shadermodel6.1-unknown-library"));
-  EXPECT_EQ("dxilv1.8-unknown-shadermodel6.x-unknown",
+  EXPECT_EQ("dxilv1.9-unknown-shadermodel6.x-unknown",
             Triple::normalize("dxil-unknown-shadermodel6.x-unknown"));
-  EXPECT_EQ("dxilv1.8-unknown-shadermodel6.x-unknown",
+  EXPECT_EQ("dxilv1.9-unknown-shadermodel6.x-unknown",
             Triple::normalize("dxil-unknown-shadermodel6.x-unknown"));
   EXPECT_EQ("dxil-unknown-unknown-unknown", Triple::normalize("dxil---"));
   EXPECT_EQ("dxilv1.0-pc-shadermodel5.0-compute",

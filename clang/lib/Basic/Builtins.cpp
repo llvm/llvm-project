@@ -165,7 +165,7 @@ static bool builtinIsSupported(const llvm::StringTable &Strings,
   /* OpenCLC Unsupported */
   if (!LangOpts.OpenCL && (BuiltinInfo.Langs & ALL_OCL_LANGUAGES))
     return false;
-  /* OopenCL GAS Unsupported */
+  /* OpenCL GAS Unsupported */
   if (!LangOpts.OpenCLGenericAddressSpace && (BuiltinInfo.Langs & OCL_GAS))
     return false;
   /* OpenCL Pipe Unsupported */

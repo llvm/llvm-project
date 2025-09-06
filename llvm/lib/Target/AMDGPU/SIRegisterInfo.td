@@ -1432,16 +1432,15 @@ def AVDst_512 : AVDstOperand<AV_512>;
 class AVLdStOperand<RegisterClass regClass>
   : AVOperand<regClass, "decodeAVLdSt">;
 
-// TODO: These cases should use target align variant
 def AVLdSt_32 : AVLdStOperand<AV_32>;
-def AVLdSt_64 : AVLdStOperand<AV_64>;
-def AVLdSt_96 : AVLdStOperand<AV_96>;
-def AVLdSt_128 : AVLdStOperand<AV_128>;
-def AVLdSt_160 : AVLdStOperand<AV_160>;
-def AVLdSt_1024 : AVLdStOperand<AV_1024>;
 
-def AVLdSt_96_Align1 : AVLdStOperand<AV_96>;
-def AVLdSt_96_Align2 : AVLdStOperand<AV_96_Align2>;
+foreach size = ["64", "96", "128", "160", "256", "1024" ] in {
+  // TODO: These cases should use target align variant
+  def AVLdSt_#size : AVLdStOperand<!cast<RegisterClass>("AV_"#size)>;
+
+  def AVLdSt_#size#_Align1 : AVLdStOperand<!cast<RegisterClass>("AV_"#size)>;
+  def AVLdSt_#size#_Align2 : AVLdStOperand<!cast<RegisterClass>("AV_"#size#_Align2)>;
+}
 
 //===----------------------------------------------------------------------===//
 //  ACSrc_* Operands with an AGPR or an inline constant

@@ -362,7 +362,7 @@ def lookupTSBByName : SearchIndex {
   let Key = ["Name"];
 }
 
-def : TSB<"csync", 0>;
+def : TSB<"csync", 2>;
 
 //===----------------------------------------------------------------------===//
 // PRFM (prefetch) instruction options.

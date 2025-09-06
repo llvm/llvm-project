@@ -33,13 +33,6 @@ filegroup(
 )
 
 filegroup(
-    name = "ExecutionEnginePyIFiles",
-    srcs = [
-        "mlir/_mlir_libs/_mlirExecutionEngine.pyi",
-    ],
-)
-
-filegroup(
     name = "IRPyFiles",
     srcs = [
         "mlir/ir.py",
@@ -54,14 +47,6 @@ filegroup(
 )
 
 filegroup(
-    name = "IRPyIFiles",
-    srcs = [
-        "mlir/_mlir_libs/_mlir/__init__.pyi",
-        "mlir/_mlir_libs/_mlir/ir.pyi",
-    ],
-)
-
-filegroup(
     name = "MlirLibsPyFiles",
     srcs = [
         "mlir/_mlir_libs/__init__.py",
@@ -72,13 +57,6 @@ filegroup(
     name = "PassManagerPyFiles",
     srcs = [
         "mlir/passmanager.py",
-    ],
-)
-
-filegroup(
-    name = "PassManagerPyIFiles",
-    srcs = [
-        "mlir/_mlir_libs/_mlir/passmanager.pyi",
     ],
 )
 
@@ -660,13 +638,6 @@ gentbl_filegroup(
 )
 
 filegroup(
-    name = "PDLPyIFiles",
-    srcs = [
-        "mlir/_mlir_libs/_mlir/dialects/pdl.pyi",
-    ],
-)
-
-filegroup(
     name = "PDLPyFiles",
     srcs = [
         "mlir/dialects/pdl.py",
@@ -755,13 +726,6 @@ filegroup(
 ##---------------------------------------------------------------------------##
 # Quant dialect.
 ##---------------------------------------------------------------------------##
-
-filegroup(
-    name = "QuantPyIFiles",
-    srcs = [
-        "mlir/_mlir_libs/_mlir/dialects/quant.pyi",
-    ],
-)
 
 filegroup(
     name = "QuantPyFiles",

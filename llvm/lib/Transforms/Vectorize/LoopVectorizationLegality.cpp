@@ -1530,7 +1530,8 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
             if (!isGuaranteedNotToBePoison(CurrV, AC,
                                            TheLoop->getLoopPredecessor()
                                                ->getTerminator()
-                                               ->getIterator()))
+                                               ->getIterator(),
+                                           DT))
               return false;
             continue;
           }
