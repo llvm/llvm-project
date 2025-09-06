@@ -720,7 +720,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyConstructor() {
                                   /*IsConst=*/false, /*IsCtor=*/true)
       .addParam("other", ConstRecordRefType)
       .getResourceHandle(PH::_0)
-      .assign(PH.Handle, PH.LastStmt)
+      .assign(PH::Handle, PH::LastStmt)
       .finalize();
 }
 
