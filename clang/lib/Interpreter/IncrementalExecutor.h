@@ -15,10 +15,16 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/ExecutionEngine/Orc/Layer.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
+#include "llvm/Support/Error.h"
 
+#include <cstdint>
 #include <memory>
+#include <string>
 
 namespace llvm {
 class Error;
@@ -39,6 +45,7 @@ class IncrementalExecutor {
   using CtorDtorIterator = llvm::orc::CtorDtorIterator;
   std::unique_ptr<llvm::orc::LLJIT> Jit;
   llvm::orc::ThreadSafeContext &TSCtx;
+  uint32_t OutOfProcessChildPid = -1;
 
   llvm::DenseMap<const PartialTranslationUnit *, llvm::orc::ResourceTrackerSP>
       ResourceTrackers;
@@ -51,6 +58,9 @@ public:
 
   IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
                       llvm::orc::LLJITBuilder &JITBuilder, llvm::Error &Err);
+  IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
+                      llvm::orc::LLJITBuilder &JITBuilder, llvm::Error &Err,
+                      uint32_t ChildPid);
   virtual ~IncrementalExecutor();
 
   virtual llvm::Error addModule(PartialTranslationUnit &PTU);
@@ -62,8 +72,21 @@ public:
 
   llvm::orc::LLJIT &GetExecutionEngine() { return *Jit; }
 
+  uint32_t getOutOfProcessChildPid() const { return OutOfProcessChildPid; }
+
   static llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
   createDefaultJITBuilder(llvm::orc::JITTargetMachineBuilder JTMB);
+
+  static llvm::Expected<
+      std::pair<std::unique_ptr<llvm::orc::SimpleRemoteEPC>, uint32_t>>
+  launchExecutor(llvm::StringRef ExecutablePath, bool UseSharedMemory,
+                 unsigned SlabAllocateSize);
+
+#if LLVM_ON_UNIX && LLVM_ENABLE_THREADS
+  static llvm::Expected<std::unique_ptr<llvm::orc::SimpleRemoteEPC>>
+  connectTCPSocket(llvm::StringRef NetworkAddress, bool UseSharedMemory,
+                   unsigned SlabAllocateSize);
+#endif
 };
 
 } // end namespace clang
