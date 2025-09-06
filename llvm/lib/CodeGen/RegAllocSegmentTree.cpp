@@ -28,12 +28,29 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Timer.h"
 #include "llvm/ADT/STLExtras.h"
 #include <limits>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "regallocsegtre"
+
+const char RegAllocSegmentTree::TimerGroupName[] = "segtre";
+const char RegAllocSegmentTree::TimerGroupDescription[] = "Segment Tree Register Allocator";
+
+INITIALIZE_PASS_BEGIN(RegAllocSegmentTree, "regallocsegtre",
+                      "Segment Tree Register Allocator", false, false)
+INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LiveStacksWrapperLegacy)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
+INITIALIZE_PASS_DEPENDENCY(LiveRegMatrixWrapperLegacy)
+INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
+INITIALIZE_PASS_END(RegAllocSegmentTree, "regallocsegtre",
+                    "Segment Tree Register Allocator", false, false)
 
 char RegAllocSegmentTree::ID = 0;
 
@@ -71,7 +88,7 @@ bool RegAllocSegmentTree::runOnMachineFunction(MachineFunction &MF) {
   Spiller::RequiredAnalyses RA{ *LIS, LiveStks, MDT, MBFI };
 
   // 再建立 Spiller
-  VRegSpiller = std::unique_ptr<Spiller>(
+  SpillerInstance = std::unique_ptr<Spiller>(
     createInlineSpiller(RA, MF, *VRM, VRAI));
 
   MF.getRegInfo().freezeReservedRegs();
@@ -85,7 +102,7 @@ bool RegAllocSegmentTree::runOnMachineFunction(MachineFunction &MF) {
   // 防呆：此時 MRI 已在 init() 裡設為成員指標
   assert(this->MF && LIS && VRM && MRI &&
        "RA pointers must be initialized before allocation");
-  assert(VRegSpiller && "Spiller must be created before allocation");
+  assert(SpillerInstance && "Spiller must be created before allocation");
 
   // 找到需要分配的虚拟寄存器区间
   std::vector<LiveInterval*> VRegsToAlloc;
@@ -102,7 +119,7 @@ bool RegAllocSegmentTree::runOnMachineFunction(MachineFunction &MF) {
   // 如果没有需要分配的虚拟寄存器，直接返回
   if (VRegsToAlloc.empty()) {
     finalizeAlloc(MF, *LIS, *VRM);
-    postOptimization(*VRegSpiller, *LIS);
+    postOptimization(*SpillerInstance, *LIS);
     return true;
   }
 
@@ -115,78 +132,84 @@ bool RegAllocSegmentTree::runOnMachineFunction(MachineFunction &MF) {
   // 主要的分配循环
   bool AllocComplete = false;
   unsigned Round = 0;
-  const unsigned MaxRounds = 100; // 防止无限循环
+  const unsigned MaxRounds = 500; // 防止无限循环
 
   while (!AllocComplete && Round < MaxRounds) {
     LLVM_DEBUG(dbgs() << "  Segment Tree Regalloc round " << Round << ":\n");
-    (void) Round;
-
-    // 重置分配状态（如果需要）
-    // 例如，清除之前的分配结果
-
-    // 尝试分配所有虚拟寄存器
+  
     bool HasSpills = false;
     bool HasUnAllocated = false;
-    
-    for (LiveInterval *LI : VRegsToAlloc) {
+    std::vector<LiveInterval*> UnallocatedRegs; // 暫存無法分配的寄存器
+  
+    // 處理當前輪次的寄存器（固定大小，避免迭代中修改）
+    size_t CurrentRoundSize = VRegsToAlloc.size();
+    for (size_t i = 0; i < CurrentRoundSize; ++i) {
+      LiveInterval *LI = VRegsToAlloc[i];
       unsigned VirtReg = LI->reg();
-      if (VRM->hasPhys(VirtReg)) // 可能已经通过合并分配了
+    
+      if (VRM->hasPhys(VirtReg)) // 可能已經分配了
         continue;
 
-      // 尝试分配物理寄存器
       unsigned PhysReg = tryAllocateRegister(*LI);
-
       if (PhysReg) {
-        // 分配成功，更新线段树和映射
         VRM->assignVirt2Phys(VirtReg, PhysReg);
         updateSegmentTreeForInterval(*LI, PhysReg);
       } else {
-        // 尝试溢出
         if (LI->isSpillable()) {
           HasSpills = true;
-          spillVirtReg(*LI);
+          spillVirtReg(*LI); // 新產生的寄存器會通過 enqueue 加到 VRegsToAlloc 末尾
         } else {
           HasUnAllocated = true;
+          UnallocatedRegs.push_back(LI); // 暫存，稍後重新加入
           LLVM_DEBUG(dbgs() << "Virtual register " << VirtReg 
-                          << " cannot be spilled or allocated\n");
+                        << " cannot be spilled or allocated\n");
         }
       }
     }
-
-    // 检查是否完成分配
-    AllocComplete = !HasSpills && !HasUnAllocated;
-
-    if (!AllocComplete) {
-      // 重新收集需要分配的虚拟寄存器
-      VRegsToAlloc.clear();
-      for (unsigned i = 0, e = MF.getRegInfo().getNumVirtRegs(); i != e; ++i) {
-        unsigned Reg = Register::index2VirtReg(i);
-        if (MF.getRegInfo().reg_nodbg_empty(Reg))
-          continue;
-        LiveInterval *LI = &LIS->getInterval(Reg);
-        if (LI->empty())
-          continue;
-        // 只收集尚未分配的寄存器
-        if (!VRM->hasPhys(Reg)) {
-          VRegsToAlloc.push_back(LI);
-        }
-      }
-    
-      // 如果没有需要处理的寄存器，但AllocComplete为false，这是一个错误
-      if (VRegsToAlloc.empty() && !AllocComplete) {
-        LLVM_DEBUG(dbgs() << "Warning: No registers to process but allocation not complete\n");
-        AllocComplete = true; // 强制完成
-      }
-    }
-
+  
+    // 移除已分配的寄存器
+    VRegsToAlloc.erase(
+      std::remove_if(VRegsToAlloc.begin(), VRegsToAlloc.end(),
+        [&](LiveInterval *LI) { return VRM->hasPhys(LI->reg()); }),
+      VRegsToAlloc.end());
+  
+    // 將無法分配的寄存器保留到下一輪
+    // 重新加入無法分配的寄存器到下一輪
+    VRegsToAlloc.insert(VRegsToAlloc.end(), 
+                     UnallocatedRegs.begin(), UnallocatedRegs.end());
+  
+    AllocComplete = VRegsToAlloc.empty();
     ++Round;
   }
 
+  // 如果達到最大輪數仍未完成，輸出警告
+    if (!AllocComplete) {
+    LLVM_DEBUG(dbgs() << "Warning: Reached max rounds (" << MaxRounds 
+                    << ") with " << VRegsToAlloc.size() 
+                    << " registers remaining\n");
+    }
+
   // 最终化分配，分配空范围
   finalizeAlloc(MF, *LIS, *VRM);
-  postOptimization(*VRegSpiller, *LIS);
+#ifndef NDEBUG
+  if (!verifyAllocation(MF, *LIS, *VRM)) {
+    llvm_unreachable("寄存器分配驗證失敗!");
+  }
+#endif
+  postOptimization(*SpillerInstance, *LIS);
 
   LLVM_DEBUG(dbgs() << "Post alloc VirtRegMap:\n" << VRM << "\n");
+
+//   if (TimePassesIsEnabled) {
+//     errs() << "=== Segment Tree Allocator Statistics ===\n";
+//     errs() << "  Function: " << MF.getName() << "\n";
+//     errs() << "  Allocation attempts: " << NumAllocAttempts << "\n";
+//     errs() << "  Interference checks: " << NumInterferenceChecks << "\n";
+//     errs() << "  Segment tree updates: " << NumSegTreeUpdates << "\n";
+//     errs() << "  Coordinate rebuilds: " << NumCoordRebuilds << "\n";
+//     errs() << "  Spills: " << NumSpills << "\n";
+//     errs() << "==========================================\n";
+//   }
 
   return true;
 }
@@ -196,10 +219,6 @@ void RegAllocSegmentTree::updateSegmentTreeForInterval(const LiveInterval &LI, u
   for (const auto &Seg : LI) {
     updateSegmentTreeForPhysReg(PhysReg, Seg.start, Seg.end);
   }
-}
-
-Spiller &RegAllocSegmentTree::spiller() {
-  return *VRegSpiller;  // Use your member variable
 }
 
 void RegAllocSegmentTree::enqueueImpl(const LiveInterval *LI) {
@@ -212,22 +231,74 @@ void RegAllocSegmentTree::enqueueImpl(const LiveInterval *LI) {
 
   // 只有第一次進佇列會插入成功
   if (InQ.insert(V).second) {
-    WorkQ.push_back(LI);
-    LLVM_DEBUG(dbgs() << "  enqueue vreg " << V << " (queue size=" << WorkQ.size() << ")\n");
+    CurQueue.push_back(LI);
+    LLVM_DEBUG(dbgs() << "  enqueue vreg " << V << " (queue size=" << CurQueue.size() << ")\n");
   }
 }
 
 const LiveInterval *RegAllocSegmentTree::dequeue() {
-  if (WorkQ.empty()) return nullptr;
-  const LiveInterval *LI = WorkQ.back();
-  WorkQ.pop_back();
+  if (CurQueue.empty()) return nullptr;
+  const LiveInterval *LI = CurQueue.back();
+  CurQueue.pop_back();
   if (LI) InQ.erase(LI->reg());
   return LI;
 }
 
 MCRegister RegAllocSegmentTree::selectOrSplit(const LiveInterval &VirtReg,
                          SmallVectorImpl<Register> &splitLVRs) {
-  // 实现你的selectOrSplit逻辑
+  LLVM_DEBUG(dbgs() << "selectOrSplit called for vreg " << VirtReg.reg() << "\n");
+  
+  // 首先嘗試分配物理寄存器
+  unsigned PhysReg = tryAllocateRegister(const_cast<LiveInterval&>(VirtReg));
+  
+  if (PhysReg) {
+    LLVM_DEBUG(dbgs() << "  Successfully allocated physreg " << PhysReg << " for vreg " << VirtReg.reg() << "\n");
+    return PhysReg;
+  }
+  
+  LLVM_DEBUG(dbgs() << "  Cannot allocate physreg for vreg " << VirtReg.reg() << ", trying to spill\n");
+  
+  // 如果無法分配，使用 spiller 進行處理
+  // 這會自動處理拆分和溢出
+  LiveInterval &LI = const_cast<LiveInterval&>(VirtReg);
+  
+  // 檢查是否可以溢出
+  if (!LI.isSpillable()) {
+    LLVM_DEBUG(dbgs() << "  Vreg " << VirtReg.reg() << " is not spillable\n");
+    
+    // 嘗試強制分配第一個可用的物理寄存器
+    const TargetRegisterClass *RC = MRI->getRegClass(VirtReg.reg());
+    if (RC && RC->getNumRegs() > 0) {
+      for (MCRegister CandidateReg : *RC) {
+        if (CandidateReg != 0 && !MRI->isReserved(CandidateReg)) {
+          LLVM_DEBUG(dbgs() << "  Force-assigning physreg " << CandidateReg << " to unspillable vreg " << VirtReg.reg() << "\n");
+          return CandidateReg;
+        }
+      }
+    }
+    return 0;
+  }
+  
+  // 使用 LiveRangeEdit 和 Spiller 進行拆分/溢出
+  SmallVector<Register, 4> NewVRegs;
+  LiveRangeEdit LRE(&LI, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
+  
+  // 執行溢出，這會自動處理拆分
+  spiller().spill(LRE);
+  
+  // 將新產生的虛擬寄存器加入結果列表
+  for (Register NewVReg : NewVRegs) {
+    if (LIS->hasInterval(NewVReg)) {
+      splitLVRs.push_back(NewVReg);
+      LLVM_DEBUG(dbgs() << "  Created new vreg " << NewVReg << " from spill/split\n");
+      
+      // 將新的區間加入工作佇列
+      LiveInterval &NewLI = LIS->getInterval(NewVReg);
+      enqueue(&NewLI);
+    }
+  }
+  
+  // 返回0表示已經進行了溢出/拆分，需要進一步處理新產生的虛擬寄存器
   return 0;
 }
 
@@ -242,13 +313,11 @@ void RegAllocSegmentTree::init(VirtRegMap &vrm, LiveIntervals &lis,
   
   // 在这里初始化我们自己的数据结构
   // 1. 获取目标机器的物理寄存器信息
-  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+  TRI = MF->getSubtarget().getRegisterInfo();
   
   // 初始化线段树数据结构
   // 为所有物理寄存器分配线段树空间
   unsigned NumPhysRegs = TRI->getNumRegs();
-  PhysRegSegmentTrees.clear();
-  PhysRegSegmentTrees.resize(NumPhysRegs);
 
   PhysRegIntervals.clear();
   PhysRegIntervals.assign(NumPhysRegs, {});
@@ -264,45 +333,46 @@ void RegAllocSegmentTree::init(VirtRegMap &vrm, LiveIntervals &lis,
   // 确保保留寄存器信息已冻结
   MRI->freezeReservedRegs();
 
+  // 预先收集所有可能的坐标点
+  precomputeAllCoordinates();
+
   LLVM_DEBUG(dbgs() << "Initializing Segment Tree Register Allocator with " 
                     << NumPhysRegs << " physical registers\n");
 }
 
-void RegAllocSegmentTree::allocatePhysRegs() {
-  // 主要的分配循環
-  // 1. 我們需要對虛擬暫存器進行排序（例如，按生命期長度、權重等）
-  //    這對Segment Tree分配器的效能至關重要
-  std::vector<LiveInterval*> VirtRegs;
-  for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
+void RegAllocSegmentTree::precomputeAllCoordinates() {
+  // 收集所有虚拟寄存器的所有区间端点
+  std::set<SlotIndex> allTimePoints;
+  
+  for (unsigned i = 0, e = MF->getRegInfo().getNumVirtRegs(); i != e; ++i) {
     unsigned Reg = Register::index2VirtReg(i);
-    if (MRI->reg_nodbg_empty(Reg))
+    if (MF->getRegInfo().reg_nodbg_empty(Reg))
       continue;
+    
     LiveInterval *LI = &LIS->getInterval(Reg);
-    assert(!LI->empty() && "Empty live interval?");
-    VirtRegs.push_back(LI);
+    if (LI->empty())
+      continue;
+    
+    for (const auto &Seg : *LI) {
+      allTimePoints.insert(Seg.start);
+      allTimePoints.insert(Seg.end);
+    }
   }
 
-  // 按某種策略排序，例如：開始時間、生命期長度、溢出成本等
-  // 這是一個重要的設計決策點！
-  // llvm::sort(VirtRegs, [](const LiveInterval *A, const LiveInterval *B) { ... });
-
-  // 2. 按順序處理每個虛擬暫存器
-  for (LiveInterval *LI : VirtRegs) {
-    unsigned VirtReg = LI->reg();
-    if (VRM->hasPhys(VirtReg)) // 可能已經通過合併分配了
-      continue;
-
-    // 嘗試分配物理暫存器
-    unsigned PhysReg = tryAllocateRegister(*LI);
-
-    if (PhysReg) {
-      // 分配成功，更新線段樹和映射
-      VRM->assignVirt2Phys(VirtReg, PhysReg);
-      updateSegmentTreeForInterval(*LI, PhysReg);
-    } else {
-      // 分配失敗，需要溢出
-      spillVirtReg(*LI);
+  // 添加所有物理寄存器的区间端点（如果有的话）
+  for (unsigned PhysReg = 0; PhysReg < TRI->getNumRegs(); ++PhysReg) {
+    for (const auto &Interval : PhysRegIntervals[PhysReg]) {
+      allTimePoints.insert(Interval.first);
+      allTimePoints.insert(Interval.second);
     }
+  }
+  
+  // 为每个物理寄存器设置相同的坐标点
+  for (unsigned PhysReg = 0; PhysReg < PRCoords.size(); ++PhysReg) {
+    if (PhysReg >= TRI->getNumRegs()) continue;
+    
+    PRCoords[PhysReg].assign(allTimePoints.begin(), allTimePoints.end());
+    segtreeBuild(PhysReg);
   }
 }
 
@@ -311,7 +381,9 @@ unsigned RegAllocSegmentTree::tryAllocateRegister(LiveInterval &VirtReg) {
          "RA pointers must be initialized before allocation (tryAllocateRegister)");
   
   LLVM_DEBUG(dbgs() << "Trying to allocate register for virtreg " << VirtReg.reg() << "\n");
-  
+
+  ++NumAllocAttempts;  // 加入這行
+
   // 1. 獲取此虛擬暫存器的暫存器類別
   const TargetRegisterClass *RC = MRI->getRegClass(VirtReg.reg());
   if (!RC) {
@@ -320,7 +392,7 @@ unsigned RegAllocSegmentTree::tryAllocateRegister(LiveInterval &VirtReg) {
   }
 
   // 获取目标寄存器信息
-  const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
+  TRI = MRI->getTargetRegisterInfo();
   if (TRI) {
     LLVM_DEBUG(dbgs() << "Register class: " << TRI->getRegClassName(RC) << "\n");
   } else {
@@ -361,13 +433,15 @@ unsigned RegAllocSegmentTree::tryAllocateRegister(LiveInterval &VirtReg) {
 bool RegAllocSegmentTree::isPhysRegAvailable(unsigned PhysReg,
                                              const LiveInterval &LI) {
   if (PhysReg == 0) return false;
-  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+  
+  ++NumInterferenceChecks;  // 加入這行
+  
+  TRI = MF->getSubtarget().getRegisterInfo();
 
   for (MCRegAliasIterator AI(PhysReg, TRI, /*IncludeSelf=*/true); AI.isValid(); ++AI) {
     unsigned A = *AI;
     // 對每個待查 segment 先確保座標，避免端點不在 coords 造成誤判
     for (const auto &Seg : LI) {
-      ensureCoordsAndTree(A, Seg.start, Seg.end);
       const auto &coords = PRCoords[A];
       const auto &tree   = PRTree[A];
       if (coords.size() < 2 || tree.empty()) continue;
@@ -423,36 +497,6 @@ int RegAllocSegmentTree::segtreeQueryMax(unsigned PhysReg, unsigned idx,
   return std::max(leftMax, rightMax);
 }
 
-void RegAllocSegmentTree::buildSegmentTreeForPhysReg(unsigned PhysReg, const std::vector<SlotIndex>& intervals) {
-  if (intervals.empty()) return;
-  
-  // 计算线段树大小
-  unsigned n = intervals.size();
-  unsigned size = 1;
-  while (size < n) size <<= 1;
-  size <<= 1;
-  
-  // 初始化线段树
-  std::vector<SegmentTreeNode> tree(size);
-  
-  // 构建线段树
-  // 这里需要实现实际的构建逻辑，可能需要递归构建
-  buildSegmentTree(tree.data(), 1, 0, n-1, intervals);
-  
-  PhysRegSegmentTrees[PhysReg] = std::move(tree);
-}
-
-bool RegAllocSegmentTree::querySegmentTreeForRange(unsigned PhysReg, SlotIndex Start, SlotIndex End) const {
-  if (PhysReg >= PhysRegSegmentTrees.size() || PhysRegSegmentTrees[PhysReg].empty()) {
-    return true; // 该物理寄存器尚未分配任何区间，可用
-  }
-  
-  // 使用线段树查询物理寄存器在[Start, End)区间是否已被占用
-  const auto &tree = PhysRegSegmentTrees[PhysReg];
-  unsigned n = tree.size() / 4; // 估计原始区间数量
-  return querySegmentTree(tree.data(), 1, 0, n-1, Start, End);
-}
-
 void RegAllocSegmentTree::updateSegmentTreeForPhysReg(unsigned PhysReg, SlotIndex Start, SlotIndex End) {
   
   assert(Register::isPhysicalRegister(PhysReg) && "expected physreg");
@@ -460,17 +504,26 @@ void RegAllocSegmentTree::updateSegmentTreeForPhysReg(unsigned PhysReg, SlotInde
          "physreg index out of range");
   assert(Start.isValid() && End.isValid() && Start < End && "invalid segment");
   
-  // 确保物理寄存器的坐标包含这个区间
-  ensureCoordsAndTree(PhysReg, Start, End);
+  ++NumSegTreeUpdates;  // 加入這行
   
   // 获取坐标索引
-  unsigned startIdx = coordIndex(PhysReg, Start);
-  unsigned endIdx = coordIndex(PhysReg, End);
+  auto startIt = std::lower_bound(PRCoords[PhysReg].begin(), PRCoords[PhysReg].end(), Start);
+  auto endIt = std::lower_bound(PRCoords[PhysReg].begin(), PRCoords[PhysReg].end(), End);
+  
+  // 确保坐标点存在
+  if (startIt == PRCoords[PhysReg].end() || *startIt != Start ||
+      endIt == PRCoords[PhysReg].end() || *endIt != End) {
+    LLVM_DEBUG(dbgs() << "警告: 物理寄存器 " << PhysReg 
+                      << " 的區間端點不在坐標點中: [" << Start << ", " << End << ")\n");
+    return;
+  }
+  
+  unsigned startIdx = startIt - PRCoords[PhysReg].begin();
+  unsigned endIdx = endIt - PRCoords[PhysReg].begin();
   
   // 更新线段树
-  const unsigned pts = PRCoords[PhysReg].size();
-  if (pts >= 2 && startIdx < endIdx) {
-    const unsigned segN = pts - 1;              // 段數
+  if (startIdx < endIdx) {
+    const unsigned segN = PRCoords[PhysReg].size() - 1;
     segtreeUpdate(PhysReg, 1, 0, segN - 1, startIdx, endIdx - 1, +1);
   }
   
@@ -481,47 +534,42 @@ void RegAllocSegmentTree::updateSegmentTreeForPhysReg(unsigned PhysReg, SlotInde
                     << " with interval [" << Start << ", " << End << ")\n");
 }
 
-void RegAllocSegmentTree::ensureCoordsAndTree(unsigned PhysReg, SlotIndex S, SlotIndex E) {
-  auto &Coords = PRCoords[PhysReg];
-  auto &Tree = PRTree[PhysReg];
+// void RegAllocSegmentTree::ensureCoordsAndTree(unsigned PhysReg, SlotIndex S, SlotIndex E) {
+//   auto &Coords = PRCoords[PhysReg];
+//   auto &Tree = PRTree[PhysReg];
   
-  // 检查是否需要添加新的坐标点
-  bool changed = false;
+//   // 检查是否需要添加新的坐标点
+//   bool changed = false;
   
-  // 检查起点 S
-  auto it = std::lower_bound(Coords.begin(), Coords.end(), S);
-  if (it == Coords.end() || *it != S) {
-    Coords.insert(it, S);
-    changed = true;
-  }
+//   // 检查起点 S
+//   auto it = std::lower_bound(Coords.begin(), Coords.end(), S);
+//   if (it == Coords.end() || *it != S) {
+//     Coords.insert(it, S);
+//     changed = true;
+//   }
   
-  // 检查终点 E
-  it = std::lower_bound(Coords.begin(), Coords.end(), E);
-  if (it == Coords.end() || *it != E) {
-    Coords.insert(it, E);
-    changed = true;
-  }
+//   // 检查终点 E
+//   it = std::lower_bound(Coords.begin(), Coords.end(), E);
+//   if (it == Coords.end() || *it != E) {
+//     Coords.insert(it, E);
+//     changed = true;
+//   }
   
-  // 如果坐标发生了变化，需要重建线段树
-  if (changed) {
-    // 重建线段树
-    segtreeBuild(PhysReg);
-    
-    // 重新应用所有已记录的区间
-    const auto &Intervals = PhysRegIntervals[PhysReg];
-    for (const auto &Interval : Intervals) {
-      SlotIndex Start = Interval.first;
-      SlotIndex End = Interval.second;
+//   // 如果坐标发生了变化，需要重建线段树
+//   if (changed) {
+//     for (const auto &Interval : Intervals) {
+//       SlotIndex Start = Interval.first;
+//       SlotIndex End = Interval.second;
       
-      // 获取坐标索引
-      unsigned l = coordIndex(PhysReg, Start);
-      unsigned r = coordIndex(PhysReg, End) - 1; // 线段树区间是 [l, r-1]
+//       // 获取坐标索引
+//       unsigned l = coordIndex(PhysReg, Start);
+//       unsigned r = coordIndex(PhysReg, End) - 1; // 线段树区间是 [l, r-1]
       
-      // 更新线段树
-      segtreeUpdate(PhysReg, 1, 0, Coords.size() - 2, l, r, 1);
-    }
-  }
-}
+//       // 更新线段树
+//       segtreeUpdate(PhysReg, 1, 0, Coords.size() - 2, l, r, 1);
+//     }
+//   }
+// }
 
 unsigned RegAllocSegmentTree::coordIndex(unsigned PhysReg, SlotIndex X) const {
   const auto &Coords = PRCoords[PhysReg];
@@ -588,6 +636,8 @@ void RegAllocSegmentTree::segtreeBuild(unsigned PhysReg) {
 void RegAllocSegmentTree::spillVirtReg(LiveInterval &VirtReg) {
   assert(MF && LIS && VRM);
   LLVM_DEBUG(dbgs() << "Spilling vreg " << VirtReg.reg() << '\n');
+
+  ++NumSpills;  // 加入這行
 
   SmallVector<Register, 4> NewVRegs;
   LiveRangeEdit LRE(&VirtReg, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
@@ -672,14 +722,13 @@ void RegAllocSegmentTree::finalizeAlloc(MachineFunction &MF,
 
 void RegAllocSegmentTree::resetAllocatorState() {
   // 重置分配器状态，为下一个函数做准备
-  PhysRegSegmentTrees.clear();
   PhysRegIntervals.clear();
   PRCoords.clear();
   PRTree.clear();
   DeadRemats.clear();
   FailedVRegs.clear();
 
-  WorkQ.clear();
+  CurQueue.clear();
   InQ.clear();
 }
 
@@ -727,6 +776,290 @@ void RegAllocSegmentTree::postOptimization(Spiller &VRegSpiller, LiveIntervals &
   LLVM_DEBUG(dbgs() << "Post-optimization completed for Segment Tree allocator\n");
 }
 
+void RegAllocSegmentTree::cleanupFailedVReg(Register FailedVReg, unsigned Depth,
+                                            SmallVectorImpl<Register> &SplitRegs) {
+  // 防止無限遞歸
+  if (Depth > 10) {
+    LLVM_DEBUG(dbgs() << "  Max depth reached, giving up on vreg " << FailedVReg << "\n");
+    return;
+  }
+  
+  LLVM_DEBUG(dbgs() << "  Cleaning up failed vreg " << FailedVReg << " at depth " << Depth << "\n");
+  
+  // 檢查虛擬寄存器是否仍然存在
+  if (!LIS->hasInterval(FailedVReg) || MRI->reg_nodbg_empty(FailedVReg)) {
+    LLVM_DEBUG(dbgs() << "  Vreg " << FailedVReg << " no longer exists, skipping\n");
+    return;
+  }
+  
+  LiveInterval &LI = LIS->getInterval(FailedVReg);
+  
+  // 如果區間為空，直接返回
+  if (LI.empty()) {
+    LLVM_DEBUG(dbgs() << "  Vreg " << FailedVReg << " has empty interval, skipping\n");
+    return;
+  }
+  
+  // 如果已經分配了物理寄存器，就不需要清理
+  if (VRM->hasPhys(FailedVReg)) {
+    LLVM_DEBUG(dbgs() << "  Vreg " << FailedVReg << " already has physical register, skipping\n");
+    return;
+  }
+  
+  // 如果可以溢出，使用 spiller 處理
+  if (LI.isSpillable()) {
+    LLVM_DEBUG(dbgs() << "  Spilling failed vreg " << FailedVReg << "\n");
+    
+    // 使用 LiveRangeEdit 和 Spiller
+    SmallVector<Register, 4> NewVRegs;
+    LiveRangeEdit LRE(&LI, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
+    
+    // 執行溢出
+    spiller().spill(LRE);
+    
+    // 將新產生的虛擬寄存器加入結果列表
+    for (Register NewVReg : NewVRegs) {
+      if (LIS->hasInterval(NewVReg)) {
+        SplitRegs.push_back(NewVReg);
+        LLVM_DEBUG(dbgs() << "  Created new vreg " << NewVReg << " from cleanup spill\n");
+      }
+    }
+  } else {
+    // 不可溢出的寄存器，嘗試其他策略
+    LLVM_DEBUG(dbgs() << "  Vreg " << FailedVReg << " is not spillable, trying alternative strategies\n");
+    
+    // 策略1：嘗試找到一個衝突較少的物理寄存器強制分配
+    const TargetRegisterClass *RC = MRI->getRegClass(FailedVReg);
+    if (RC) {
+      MCRegister BestPhysReg = 0;
+      int MinConflicts = INT_MAX;
+      
+      // 遍歷該寄存器類別中的所有物理寄存器
+      for (MCRegister PhysReg : *RC) {
+        if (PhysReg == 0 || MRI->isReserved(PhysReg)) {
+          continue;
+        }
+        
+        // 計算與此物理寄存器的衝突數量
+        int Conflicts = 0;
+        for (MCRegAliasIterator AI(PhysReg, TRI, /*IncludeSelf=*/true); AI.isValid(); ++AI) {
+          unsigned A = *AI;
+          if (A >= PRCoords.size()) continue;
+          
+          const auto &coords = PRCoords[A];
+          if (coords.size() < 2) continue;
+          
+          for (const auto &Seg : LI) {
+            // 確保座標存在
+            auto it_start = std::lower_bound(coords.begin(), coords.end(), Seg.start);
+            auto it_end = std::lower_bound(coords.begin(), coords.end(), Seg.end);
+            
+            if (it_start != coords.end() && it_end != coords.end() && 
+                *it_start == Seg.start && *it_end == Seg.end) {
+              unsigned l = it_start - coords.begin();
+              unsigned r = it_end - coords.begin();
+              
+              if (l < r && PRTree[A].size() > 0) {
+                int mx = segtreeQueryMax(A, 1, 0, (unsigned)coords.size()-2, l, r-1);
+                Conflicts += mx;
+              }
+            }
+          }
+        }
+        
+        // 記錄衝突最少的物理寄存器
+        if (Conflicts < MinConflicts) {
+          MinConflicts = Conflicts;
+          BestPhysReg = PhysReg;
+        }
+      }
+      
+      // 如果找到了一個相對較好的物理寄存器，強制分配
+      if (BestPhysReg != 0) {
+        LLVM_DEBUG(dbgs() << "  Force-assigning vreg " << FailedVReg 
+                          << " to physreg " << BestPhysReg 
+                          << " with " << MinConflicts << " conflicts\n");
+        
+        VRM->assignVirt2Phys(FailedVReg, BestPhysReg);
+        updateSegmentTreeForInterval(LI, BestPhysReg);
+        return;
+      }
+    }
+    
+    // 策略2：如果沒有找到合適的物理寄存器，嘗試分割生命期
+    if (LI.getNumValNums() > 1) {
+      LLVM_DEBUG(dbgs() << "  Trying to split multi-value vreg " << FailedVReg << "\n");
+      
+      // 對於有多個值的區間，嘗試按值分割
+      // 這裡使用簡單的策略：如果有多個段，嘗試從中間分割
+      if (LI.size() > 1) {
+        // 找到中間的分割點
+        auto MidSegIt = LI.begin();
+        std::advance(MidSegIt, LI.size() / 2);
+        SlotIndex SplitPoint = MidSegIt->start;
+        
+        if (SplitPoint.isValid() && SplitPoint > LI.beginIndex() && SplitPoint < LI.endIndex()) {
+          // 使用手動分割方式
+          // 創建新的虛擬寄存器
+          Register NewVReg = MRI->createVirtualRegister(RC);
+          LiveInterval &NewLI = LIS->getOrCreateEmptyInterval(NewVReg);
+          
+          // 將分割點之後的段移動到新區間
+          auto SplitIt = LI.begin();
+          while (SplitIt != LI.end() && SplitIt->start < SplitPoint) {
+            ++SplitIt;
+          }
+          
+          if (SplitIt != LI.end()) {
+            // 將後半部分移動到新區間
+            while (SplitIt != LI.end()) {
+              NewLI.segments.push_back(*SplitIt);
+              SplitIt = LI.segments.erase(SplitIt);
+            }
+            
+            // 更新區間的結束點
+            LI.verify();
+            NewLI.verify();
+            
+            SplitRegs.push_back(NewVReg);
+            LLVM_DEBUG(dbgs() << "  Manual split created vreg " << NewVReg << "\n");
+          }
+        }
+      }
+    }
+    
+    // 策略3：最後手段，選擇第一個可用的物理寄存器強制分配
+    if (!VRM->hasPhys(FailedVReg) && RC && RC->getNumRegs() > 0) {
+      MCRegister FirstPhysReg = *RC->begin();
+      if (FirstPhysReg != 0) {
+        LLVM_DEBUG(dbgs() << "  Last resort: force-assigning vreg " << FailedVReg 
+                          << " to first physreg " << FirstPhysReg << "\n");
+        
+        VRM->assignVirt2Phys(FailedVReg, FirstPhysReg);
+        updateSegmentTreeForInterval(LI, FirstPhysReg);
+      }
+    }
+  }
+  
+  // 遞歸清理新產生的分割寄存器（如果有的話）
+  SmallVector<Register, 4> NewSplitRegs;
+  for (Register SplitReg : SplitRegs) {
+    if (!VRM->hasPhys(SplitReg)) {
+      cleanupFailedVReg(SplitReg, Depth + 1, NewSplitRegs);
+    }
+  }
+  
+  // 將遞歸產生的新寄存器也加入結果
+  SplitRegs.append(NewSplitRegs.begin(), NewSplitRegs.end());
+}
+
+void RegAllocSegmentTree::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.setPreservesCFG();
+  AU.addRequired<SlotIndexesWrapperPass>();
+  AU.addPreserved<SlotIndexesWrapperPass>();
+  AU.addRequired<LiveIntervalsWrapperPass>();
+  AU.addPreserved<LiveIntervalsWrapperPass>();
+  AU.addRequired<LiveStacksWrapperLegacy>();
+  AU.addPreserved<LiveStacksWrapperLegacy>();
+  AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+  AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
+  AU.addPreserved<MachineDominatorTreeWrapperPass>();
+  AU.addRequired<MachineLoopInfoWrapperPass>();
+  AU.addPreserved<MachineLoopInfoWrapperPass>();
+  AU.addRequired<VirtRegMapWrapperLegacy>();
+  AU.addPreserved<VirtRegMapWrapperLegacy>();
+  AU.addRequired<LiveRegMatrixWrapperLegacy>();
+  AU.addPreserved<LiveRegMatrixWrapperLegacy>();
+  MachineFunctionPass::getAnalysisUsage(AU);
+}
+
+SlotIndex RegAllocSegmentTree::findSplitPoint(const LiveInterval &LI) {
+  if (LI.empty()) return SlotIndex();
+  
+  // 策略1：如果有多個段，在段之間分割
+  if (LI.size() > 1) {
+    auto MidIt = LI.begin();
+    std::advance(MidIt, LI.size() / 2);
+    LLVM_DEBUG(dbgs() << "    Split point found between segments at " << MidIt->start << "\n");
+    return MidIt->start;
+  }
+  
+  // 策略2：對於單段，嘗試在段內找到中點
+  if (LI.size() == 1) {
+    const LiveRange::Segment &Seg = *LI.begin();
+    SlotIndex SegStart = Seg.start;
+    SlotIndex SegEnd = Seg.end;
+    
+    if (!SegStart.isValid() || !SegEnd.isValid() || SegStart >= SegEnd) {
+      LLVM_DEBUG(dbgs() << "    Invalid segment bounds\n");
+      return SlotIndex();
+    }
+    
+    // 使用迭代方式找到中點
+    SlotIndex Current = SegStart;
+    SlotIndex Target = SegEnd;
+    
+    // 先計算總步數
+    unsigned TotalSteps = 0;
+    SlotIndex Counter = Current;
+    while (Counter.isValid() && Counter < Target && TotalSteps < 1000) {
+      Counter = Counter.getNextIndex();
+      TotalSteps++;
+    }
+    
+    // 如果段太小（步數少於4），不適合分割
+    if (TotalSteps < 4) {
+      LLVM_DEBUG(dbgs() << "    Segment too small to split (steps: " << TotalSteps << ")\n");
+      return SlotIndex();
+    }
+    
+    // 移動到中間位置
+    SlotIndex Middle = Current;
+    unsigned TargetSteps = TotalSteps / 2;
+    
+    for (unsigned Step = 0; Step < TargetSteps; ++Step) {
+      SlotIndex Next = Middle.getNextIndex();
+      if (!Next.isValid() || Next >= Target) {
+        LLVM_DEBUG(dbgs() << "    Cannot advance to middle position\n");
+        break;
+      }
+      Middle = Next;
+    }
+    
+    // 驗證分割點的有效性
+    if (Middle.isValid() && Middle > SegStart && Middle < SegEnd) {
+      LLVM_DEBUG(dbgs() << "    Split point found at " << Middle 
+                        << " (step " << TargetSteps << "/" << TotalSteps << ")\n");
+      return Middle;
+    } else {
+      LLVM_DEBUG(dbgs() << "    Middle position not valid for splitting\n");
+    }
+  }
+  
+  // 策略3：如果無法在段內分割，但有多個定義點，嘗試基於值分割
+  if (LI.getNumValNums() > 1) {
+    LLVM_DEBUG(dbgs() << "    Attempting value-based split for " << LI.getNumValNums() << " values\n");
+    
+    // 遍歷所有段，找到不同值之間的邊界
+    for (auto it = LI.begin(); it != LI.end(); ++it) {
+      auto nextIt = it;
+      ++nextIt;
+      
+      if (nextIt != LI.end() && it->valno != nextIt->valno) {
+        // 在不同值之間分割
+        SlotIndex SplitPoint = nextIt->start;
+        LLVM_DEBUG(dbgs() << "    Value-based split point found at " << SplitPoint << "\n");
+        return SplitPoint;
+      }
+    }
+  }
+  
+  // 所有策略都失敗
+  LLVM_DEBUG(dbgs() << "    No suitable split point found\n");
+  return SlotIndex();
+}
+
 void RegAllocSegmentTree::performSegmentTreeSpecificOptimizations(LiveIntervals &LIS) {
   // 执行线段树特定的后优化
   // 这里可以添加任何与线段树相关的优化逻辑
@@ -739,51 +1072,94 @@ void RegAllocSegmentTree::validatePostOptimizationState(LiveIntervals &LIS) {
   LLVM_DEBUG(dbgs() << "Validating post-optimization state\n");
 }
 
-// 線段樹的構建、查詢、更新函數的具體實現
-void RegAllocSegmentTree::buildSegmentTree(SegmentTreeNode *tree, unsigned idx,
-                                                    unsigned l, unsigned r,
-                                                    const std::vector<SlotIndex> &ends) {
-  // 標準的線段樹構建算法
-  if (l == r) {
-    tree[idx].MaxEnd = ends[l];
-    return;
-  }
-  unsigned mid = (l + r) / 2;
-  buildSegmentTree(tree, 2*idx, l, mid, ends);
-  buildSegmentTree(tree, 2*idx+1, mid+1, r, ends);
-  tree[idx].MaxEnd = std::max(tree[2*idx].MaxEnd, tree[2*idx+1].MaxEnd);
-}
-
-bool RegAllocSegmentTree::querySegmentTree(const SegmentTreeNode *tree, unsigned idx,
-                                           unsigned tree_l, unsigned tree_r,
-                                           SlotIndex query_start, SlotIndex query_end) const {
-  if (tree_r < tree_l) return true;
-  
-  // 如果当前节点区间与查询区间无重叠，返回 true（可用）
-  if (query_end < tree[tree_l].MaxEnd || query_start > tree[tree_r].MaxEnd)
-    return true;
-  
-  // 如果当前节点区间完全在查询区间内，检查是否冲突
-  if (query_start <= tree[tree_l].MaxEnd && query_end >= tree[tree_r].MaxEnd) {
-    return tree[idx].MaxEnd < query_start;
-  }
-  
-  // 递归检查左右子树
-  unsigned mid = (tree_l + tree_r) / 2;
-  bool left_available = querySegmentTree(tree, 2*idx, tree_l, mid, query_start, query_end);
-  bool right_available = querySegmentTree(tree, 2*idx+1, mid+1, tree_r, query_start, query_end);
-  
-  return left_available && right_available;
-}
-
 // 創建Pass實例的函數
 llvm::FunctionPass *llvm::createRegAllocSegmentTree() {
   return new RegAllocSegmentTree();
 }
 
-// 注册SegmentTreeRegisterAllocator
-// static llvm::RegisterRegAlloc segTreeRegAlloc("segtre", "segment tree register allocator",
-//                                        []() -> FunctionPass* { 
-//                                          LLVM_DEBUG(dbgs() << "Creating SegmentTreeRegisterAllocator\n");
-//                                          return createRegAllocSegmentTree(); 
-//                                        });
+#ifndef NDEBUG
+bool RegAllocSegmentTree::verifyAllocation(MachineFunction &MF,
+                                          LiveIntervals &LIS,
+                                          VirtRegMap &VRM) {
+  bool Verified = true;
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+
+  // 檢查1: 驗證每個物理寄存器上的區間不重疊
+  for (unsigned PhysReg = 0; PhysReg < TRI->getNumRegs(); ++PhysReg) {
+    // 跳过未使用的物理寄存器
+    if (PRCoords[PhysReg].size() < 2) continue;
+
+    auto Intervals = PhysRegIntervals[PhysReg];
+    std::sort(Intervals.begin(), Intervals.end(),
+              [](const auto &A, const auto &B) {
+                return A.first < B.first;
+              });
+
+    for (unsigned i = 1; i < Intervals.size(); ++i) {
+      if (Intervals[i-1].second > Intervals[i].first) {
+        errs() << "錯誤: 物理寄存器 " << printReg(PhysReg, TRI)
+               << " 上的區間重疊!\n"
+               << "區間1: [" << Intervals[i-1].first << ", "
+               << Intervals[i-1].second << ")\n"
+               << "區間2: [" << Intervals[i].first << ", "
+               << Intervals[i].second << ")\n";
+        Verified = false;
+      }
+    }
+  }
+
+  // 檢查2: 驗證每個活躍的虛擬寄存器都有物理寄存器映射
+  for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
+    Register Reg = Register::index2VirtReg(i);
+    if (MRI->reg_nodbg_empty(Reg))
+      continue;
+    
+    if (!VRM.hasPhys(Reg)) {
+      errs() << "錯誤: 虛擬寄存器 " << Reg
+             << " 沒有分配物理寄存器!\n";
+      Verified = false;
+    }
+  }
+
+  // 檢查3: 驗證線段樹狀態與實際分配一致
+  for (unsigned PhysReg = 0; PhysReg < TRI->getNumRegs(); ++PhysReg) {
+    // 跳过没有坐标点的物理寄存器
+    if (PRCoords[PhysReg].size() < 2) continue;
+
+    for (const auto &Interval : PhysRegIntervals[PhysReg]) {
+      SlotIndex Start = Interval.first;
+      SlotIndex End = Interval.second;
+      
+      // 确保坐标点存在
+      auto startIt = std::lower_bound(PRCoords[PhysReg].begin(), PRCoords[PhysReg].end(), Start);
+      auto endIt = std::lower_bound(PRCoords[PhysReg].begin(), PRCoords[PhysReg].end(), End);
+      
+      if (startIt == PRCoords[PhysReg].end() || *startIt != Start ||
+          endIt == PRCoords[PhysReg].end() || *endIt != End) {
+        errs() << "警告: 物理寄存器 " << printReg(PhysReg, TRI)
+               << " 的區間端點不在坐標點中: [" << Start << ", " << End << ")\n";
+        continue;
+      }
+      
+      // 獲取坐標索引
+      unsigned startIdx = startIt - PRCoords[PhysReg].begin();
+      unsigned endIdx = endIt - PRCoords[PhysReg].begin();
+      
+      // 只查询有效的区间
+      if (startIdx >= endIdx) continue;
+      
+      // 查詢線段樹中該區間的最大值
+      int MaxCover = segtreeQueryMax(PhysReg, 1, 0, PRCoords[PhysReg].size()-2, startIdx, endIdx-1);
+      
+      if (MaxCover <= 0) {
+        errs() << "錯誤: 線段樹記錄與物理寄存器 " << printReg(PhysReg, TRI)
+               << " 的分配不一致! 區間: [" << Start << ", " << End
+               << "), 查詢結果: " << MaxCover << "\n";
+        Verified = false;
+      }
+    }
+  }
+
+  return Verified;
+}
+#endif
