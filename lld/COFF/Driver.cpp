@@ -2143,6 +2143,14 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   config->integrityCheck =
       args.hasFlag(OPT_integritycheck, OPT_integritycheck_no, false);
   config->cetCompat = args.hasFlag(OPT_cetcompat, OPT_cetcompat_no, false);
+  config->cetCompatStrict =
+      args.hasFlag(OPT_cetcompatstrict, OPT_cetcompatstrict_no, false);
+  config->cetCompatIpValidationRelaxed = args.hasFlag(
+      OPT_cetipvalidationrelaxed, OPT_cetipvalidationrelaxed_no, false);
+  config->cetCompatDynamicApisInProcOnly = args.hasFlag(
+      OPT_cetdynamicapisinproc, OPT_cetdynamicapisinproc_no, false);
+  config->hotpatchCompat =
+      args.hasFlag(OPT_hotpatchcompatible, OPT_hotpatchcompatible_no, false);
   config->nxCompat = args.hasFlag(OPT_nxcompat, OPT_nxcompat_no, true);
   for (auto *arg : args.filtered(OPT_swaprun))
     parseSwaprun(arg->getValue());
@@ -2295,6 +2303,12 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Handle /functionpadmin
   for (auto *arg : args.filtered(OPT_functionpadmin, OPT_functionpadmin_opt))
     parseFunctionPadMin(arg);
+
+  // MS link.exe compatibility, at least 6 bytes of function padding is
+  // required if hotpatchable
+  if (config->hotpatchCompat && config->functionPadMin < 6)
+    Err(ctx)
+        << "/hotpatchcompatible: requires at least 6 bytes of /functionpadmin";
 
   // Handle /dependentloadflag
   for (auto *arg :
