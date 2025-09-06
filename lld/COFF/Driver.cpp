@@ -2049,6 +2049,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Handle /section
   for (auto *arg : args.filtered(OPT_section))
     parseSection(arg->getValue());
+  // Handle /sectionlayout
+  if (auto *arg = args.getLastArg(OPT_sectionlayout))
+    parseSectionLayout(arg->getValue());
 
   // Handle /align
   if (auto *arg = args.getLastArg(OPT_align)) {

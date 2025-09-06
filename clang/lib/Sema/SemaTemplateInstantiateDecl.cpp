@@ -133,8 +133,9 @@ static void instantiateDependentAlignedAttr(
   // FIXME: Use the actual location of the ellipsis.
   SourceLocation EllipsisLoc = Aligned->getLocation();
   if (S.CheckParameterPacksForExpansion(EllipsisLoc, Aligned->getRange(),
-                                        Unexpanded, TemplateArgs, Expand,
-                                        RetainExpansion, NumExpansions))
+                                        Unexpanded, TemplateArgs,
+                                        /*FailOnPackProducingTemplates=*/true,
+                                        Expand, RetainExpansion, NumExpansions))
     return;
 
   if (!Expand) {
@@ -1914,7 +1915,8 @@ Decl *TemplateDeclInstantiator::VisitFriendDecl(FriendDecl *D) {
         UnsignedOrNone NumExpansions = std::nullopt;
         if (SemaRef.CheckParameterPacksForExpansion(
                 D->getEllipsisLoc(), D->getSourceRange(), Unexpanded,
-                TemplateArgs, ShouldExpand, RetainExpansion, NumExpansions))
+                TemplateArgs, /*FailOnPackProducingTemplates=*/true,
+                ShouldExpand, RetainExpansion, NumExpansions))
           return nullptr;
 
         assert(!RetainExpansion &&
@@ -3464,10 +3466,11 @@ Decl *TemplateDeclInstantiator::VisitTemplateTypeParmDecl(
               cast<CXXFoldExpr>(TC->getImmediatelyDeclaredConstraint())
                   ->getEllipsisLoc(),
               SourceRange(TC->getConceptNameLoc(),
-                          TC->hasExplicitTemplateArgs() ?
-                          TC->getTemplateArgsAsWritten()->getRAngleLoc() :
-                          TC->getConceptNameInfo().getEndLoc()),
-              Unexpanded, TemplateArgs, Expand, RetainExpansion, NumExpanded))
+                          TC->hasExplicitTemplateArgs()
+                              ? TC->getTemplateArgsAsWritten()->getRAngleLoc()
+                              : TC->getConceptNameInfo().getEndLoc()),
+              Unexpanded, TemplateArgs, /*FailOnPackProducingTemplates=*/true,
+              Expand, RetainExpansion, NumExpanded))
         return nullptr;
     }
   }
@@ -3555,12 +3558,10 @@ Decl *TemplateDeclInstantiator::VisitNonTypeTemplateParmDecl(
     UnsignedOrNone OrigNumExpansions =
         Expansion.getTypePtr()->getNumExpansions();
     UnsignedOrNone NumExpansions = OrigNumExpansions;
-    if (SemaRef.CheckParameterPacksForExpansion(Expansion.getEllipsisLoc(),
-                                                Pattern.getSourceRange(),
-                                                Unexpanded,
-                                                TemplateArgs,
-                                                Expand, RetainExpansion,
-                                                NumExpansions))
+    if (SemaRef.CheckParameterPacksForExpansion(
+            Expansion.getEllipsisLoc(), Pattern.getSourceRange(), Unexpanded,
+            TemplateArgs, /*FailOnPackProducingTemplates=*/true, Expand,
+            RetainExpansion, NumExpansions))
       return nullptr;
 
     if (Expand) {
@@ -3726,12 +3727,10 @@ TemplateDeclInstantiator::VisitTemplateTemplateParmDecl(
     bool Expand = true;
     bool RetainExpansion = false;
     UnsignedOrNone NumExpansions = std::nullopt;
-    if (SemaRef.CheckParameterPacksForExpansion(D->getLocation(),
-                                                TempParams->getSourceRange(),
-                                                Unexpanded,
-                                                TemplateArgs,
-                                                Expand, RetainExpansion,
-                                                NumExpansions))
+    if (SemaRef.CheckParameterPacksForExpansion(
+            D->getLocation(), TempParams->getSourceRange(), Unexpanded,
+            TemplateArgs, /*FailOnPackProducingTemplates=*/true, Expand,
+            RetainExpansion, NumExpansions))
       return nullptr;
 
     if (Expand) {
@@ -4003,8 +4002,9 @@ Decl *TemplateDeclInstantiator::instantiateUnresolvedUsingDecl(
     bool RetainExpansion = false;
     UnsignedOrNone NumExpansions = std::nullopt;
     if (SemaRef.CheckParameterPacksForExpansion(
-          D->getEllipsisLoc(), D->getSourceRange(), Unexpanded, TemplateArgs,
-            Expand, RetainExpansion, NumExpansions))
+            D->getEllipsisLoc(), D->getSourceRange(), Unexpanded, TemplateArgs,
+            /*FailOnPackProducingTemplates=*/true, Expand, RetainExpansion,
+            NumExpansions))
       return nullptr;
 
     // This declaration cannot appear within a function template signature,
@@ -4542,14 +4542,17 @@ Decl *TemplateDeclInstantiator::VisitVarTemplateSpecializationDecl(
                       PrevDecl->getPointOfInstantiation(), Ignored))
     return nullptr;
 
-  return VisitVarTemplateSpecializationDecl(InstVarTemplate, D,
-                                            VarTemplateArgsInfo,
-                                            CTAI.CanonicalConverted, PrevDecl);
+  if (VarTemplateSpecializationDecl *VTSD = VisitVarTemplateSpecializationDecl(
+          InstVarTemplate, D, CTAI.CanonicalConverted, PrevDecl)) {
+    VTSD->setTemplateArgsAsWritten(VarTemplateArgsInfo);
+    return VTSD;
+  }
+  return nullptr;
 }
 
-Decl *TemplateDeclInstantiator::VisitVarTemplateSpecializationDecl(
+VarTemplateSpecializationDecl *
+TemplateDeclInstantiator::VisitVarTemplateSpecializationDecl(
     VarTemplateDecl *VarTemplate, VarDecl *D,
-    const TemplateArgumentListInfo &TemplateArgsInfo,
     ArrayRef<TemplateArgument> Converted,
     VarTemplateSpecializationDecl *PrevDecl) {
 
@@ -4570,7 +4573,6 @@ Decl *TemplateDeclInstantiator::VisitVarTemplateSpecializationDecl(
   VarTemplateSpecializationDecl *Var = VarTemplateSpecializationDecl::Create(
       SemaRef.Context, Owner, D->getInnerLocStart(), D->getLocation(),
       VarTemplate, DI->getType(), DI, D->getStorageClass(), Converted);
-  Var->setTemplateArgsAsWritten(TemplateArgsInfo);
   if (!PrevDecl) {
     void *InsertPos = nullptr;
     VarTemplate->findSpecialization(Converted, InsertPos);
@@ -5880,7 +5882,6 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
 VarTemplateSpecializationDecl *Sema::BuildVarTemplateInstantiation(
     VarTemplateDecl *VarTemplate, VarDecl *FromVar,
     const TemplateArgumentList *PartialSpecArgs,
-    const TemplateArgumentListInfo &TemplateArgsInfo,
     SmallVectorImpl<TemplateArgument> &Converted,
     SourceLocation PointOfInstantiation, LateInstantiatedAttrVec *LateAttrs,
     LocalInstantiationScope *StartingScope) {
@@ -5922,9 +5923,8 @@ VarTemplateSpecializationDecl *Sema::BuildVarTemplateInstantiation(
 
   // TODO: Set LateAttrs and StartingScope ...
 
-  return cast_or_null<VarTemplateSpecializationDecl>(
-      Instantiator.VisitVarTemplateSpecializationDecl(
-          VarTemplate, FromVar, TemplateArgsInfo, Converted));
+  return Instantiator.VisitVarTemplateSpecializationDecl(VarTemplate, FromVar,
+                                                         Converted);
 }
 
 VarTemplateSpecializationDecl *Sema::CompleteVarTemplateSpecializationDecl(
@@ -6340,10 +6340,15 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
         TemplateArgInfo.addArgument(Arg);
     }
 
-    Var = cast_or_null<VarDecl>(Instantiator.VisitVarTemplateSpecializationDecl(
-        VarSpec->getSpecializedTemplate(), Def, TemplateArgInfo,
-        VarSpec->getTemplateArgs().asArray(), VarSpec));
+    VarTemplateSpecializationDecl *VTSD =
+        Instantiator.VisitVarTemplateSpecializationDecl(
+            VarSpec->getSpecializedTemplate(), Def,
+            VarSpec->getTemplateArgs().asArray(), VarSpec);
+    Var = VTSD;
+
     if (Var) {
+      VTSD->setTemplateArgsAsWritten(TemplateArgInfo);
+
       llvm::PointerUnion<VarTemplateDecl *,
                          VarTemplatePartialSpecializationDecl *> PatternPtr =
           VarSpec->getSpecializedTemplateOrPartial();
@@ -6401,12 +6406,10 @@ Sema::InstantiateMemInitializers(CXXConstructorDecl *New,
       bool ShouldExpand = false;
       bool RetainExpansion = false;
       UnsignedOrNone NumExpansions = std::nullopt;
-      if (CheckParameterPacksForExpansion(Init->getEllipsisLoc(),
-                                          BaseTL.getSourceRange(),
-                                          Unexpanded,
-                                          TemplateArgs, ShouldExpand,
-                                          RetainExpansion,
-                                          NumExpansions)) {
+      if (CheckParameterPacksForExpansion(
+              Init->getEllipsisLoc(), BaseTL.getSourceRange(), Unexpanded,
+              TemplateArgs, /*FailOnPackProducingTemplates=*/true, ShouldExpand,
+              RetainExpansion, NumExpansions)) {
         AnyErrors = true;
         New->setInvalidDecl();
         continue;
@@ -6975,19 +6978,15 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
     // If our context used to be dependent, we may need to instantiate
     // it before performing lookup into that context.
     bool IsBeingInstantiated = false;
-    if (CXXRecordDecl *Spec = dyn_cast<CXXRecordDecl>(ParentDC)) {
+    if (auto *Spec = dyn_cast<CXXRecordDecl>(ParentDC)) {
       if (!Spec->isDependentContext()) {
-        CanQualType T = Context.getCanonicalTagType(Spec);
-        const RecordType *Tag = T->getAs<RecordType>();
-        assert(Tag && "type of non-dependent record is not a RecordType");
-        auto *TagDecl =
-            cast<CXXRecordDecl>(Tag->getOriginalDecl())->getDefinitionOrSelf();
-        if (TagDecl->isBeingDefined())
+        if (Spec->isEntityBeingDefined())
           IsBeingInstantiated = true;
-        else if (RequireCompleteType(Loc, T, diag::err_incomplete_type))
+        else if (RequireCompleteType(Loc, Context.getCanonicalTagType(Spec),
+                                     diag::err_incomplete_type))
           return nullptr;
 
-        ParentDC = TagDecl;
+        ParentDC = Spec->getDefinitionOrSelf();
       }
     }
 

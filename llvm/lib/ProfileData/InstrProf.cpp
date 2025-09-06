@@ -1607,7 +1607,7 @@ void OverlapStats::dump(raw_fd_ostream &OS) const {
   const char *EntryName =
       (Level == ProgramLevel ? "functions" : "edge counters");
   if (Level == ProgramLevel) {
-    OS << "Profile overlap infomation for base_profile: " << *BaseFilename
+    OS << "Profile overlap information for base_profile: " << *BaseFilename
        << " and test_profile: " << *TestFilename << "\nProgram level:\n";
   } else {
     OS << "Function level:\n"

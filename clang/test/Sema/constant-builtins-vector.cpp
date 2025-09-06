@@ -936,3 +936,76 @@ constexpr vector4char ctz1 = __builtin_elementwise_cttz((vector4char){1, 0, 3, 4
 // expected-note@-1 {{evaluation of __builtin_elementwise_cttz with a zero value is undefined}}
 static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_cttz((vector4char){8, 0, 127, 0}, (vector4char){9, -1, 9, -2})) == (LITTLE_END ? 0xFE00FF03 : 0x03FF00FE));
 static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_cttz((vector4char){0, 0, 0, 0}, (vector4char){0, 0, 0, 0})) == 0);
+
+// Non-vector floating point types.
+static_assert(__builtin_elementwise_fma(2.0, 3.0, 4.0) == 10.0);
+static_assert(__builtin_elementwise_fma(200.0, 300.0, 400.0) == 60400.0);
+// Vector type.
+constexpr vector4float fmaFloat1 =
+  __builtin_elementwise_fma((vector4float){1.0, 2.0, 3.0, 4.0},
+                            (vector4float){2.0, 3.0, 4.0, 5.0},
+                            (vector4float){3.0, 4.0, 5.0, 6.0});
+static_assert(fmaFloat1[0] == 5.0);
+static_assert(fmaFloat1[1] == 10.0);
+static_assert(fmaFloat1[2] == 17.0);
+static_assert(fmaFloat1[3] == 26.0);
+constexpr vector4double fmaDouble1 =
+  __builtin_elementwise_fma((vector4double){1.0, 2.0, 3.0, 4.0},
+                            (vector4double){2.0, 3.0, 4.0, 5.0},
+                            (vector4double){3.0, 4.0, 5.0, 6.0});
+static_assert(fmaDouble1[0] == 5.0);
+static_assert(fmaDouble1[1] == 10.0);
+static_assert(fmaDouble1[2] == 17.0);
+static_assert(fmaDouble1[3] == 26.0);
+
+constexpr float fmaArray[] = {2.0f, 2.0f, 2.0f, 2.0f};
+constexpr float fmaResult = __builtin_elementwise_fma(fmaArray[1], fmaArray[2], fmaArray[3]);
+static_assert(fmaResult == 6.0f, "");
+
+static_assert(__builtin_elementwise_fshl((unsigned char)255, (unsigned char)0, (unsigned char)8) == (unsigned char)255);
+static_assert(__builtin_elementwise_fshl((char)127, (char)0, (char)8) == (char)127);
+static_assert(__builtin_elementwise_fshl((unsigned char)0, (unsigned char)255, (unsigned char)8) == (unsigned char)0);
+static_assert(__builtin_elementwise_fshl((char)0, (char)127, (char)8) == (char)0);
+static_assert(__builtin_elementwise_fshr((unsigned char)255, (unsigned char)0, (unsigned char)8) == (unsigned char)0);
+static_assert(__builtin_elementwise_fshr((char)127, (char)0, (char)8) == (char)0);
+static_assert(__builtin_elementwise_fshr((unsigned char)0, (unsigned char)255, (unsigned char)8) == (unsigned char)255);
+static_assert(__builtin_elementwise_fshr((char)0, (char)127, (char)8) == (char)127);
+static_assert(__builtin_elementwise_fshl((unsigned int)4294967295, (unsigned int)0, (unsigned int)32) == (unsigned int)4294967295);
+static_assert(__builtin_elementwise_fshl((int)2147483647, (int)0, (int)32) == (int)2147483647);
+static_assert(__builtin_elementwise_fshl((unsigned int)0, (unsigned int)4294967295, (unsigned int)32) == (unsigned int)0);
+static_assert(__builtin_elementwise_fshl((int)0, (int)2147483647, (int)32) == (int)0);
+static_assert(__builtin_elementwise_fshr((unsigned int)4294967295, (unsigned int)0, (unsigned int)32) == (unsigned int)0);
+static_assert(__builtin_elementwise_fshr((int)2147483647, (int)0, (int)32) == (int)0);
+static_assert(__builtin_elementwise_fshr((unsigned int)0, (unsigned int)4294967295, (unsigned int)32) == (unsigned int)4294967295);
+static_assert(__builtin_elementwise_fshr((int)0, (int)2147483647, (int)32) == (int)2147483647);
+static_assert(__builtin_elementwise_fshl((unsigned long long)18446744073709551615ULL, (unsigned long long)0, (unsigned long long)64) == (unsigned long long)18446744073709551615ULL);
+static_assert(__builtin_elementwise_fshl((long long)9223372036854775807, (long long)0, (long long)64) == (long long)9223372036854775807);
+static_assert(__builtin_elementwise_fshl((unsigned long long)0, (unsigned long long)18446744073709551615ULL, (unsigned long long)64) == (unsigned long long)0);
+static_assert(__builtin_elementwise_fshl((long long)0, (long long)9223372036854775807, (long long)64) == (long long)0);
+static_assert(__builtin_elementwise_fshr((unsigned long long)18446744073709551615ULL, (unsigned long long)0, (unsigned long long)64) == (unsigned long long)0);
+static_assert(__builtin_elementwise_fshr((long long)9223372036854775807, (long long)0, (long long)64) == (long long)0);
+static_assert(__builtin_elementwise_fshr((unsigned long long)0, (unsigned long long)18446744073709551615ULL, (unsigned long long)64) == (unsigned long long)18446744073709551615ULL);
+static_assert(__builtin_elementwise_fshr((long long)0, (long long)9223372036854775807, (long long)64) == (long long)9223372036854775807);
+static_assert(__builtin_elementwise_fshl((short) 1, (short) 2, (short) 3) == (short)8);
+static_assert(__builtin_elementwise_fshl((short) 2, (short) 1, (short) 3) == (short)16);
+static_assert(__builtin_elementwise_fshl(1, 2 , 2) == 4);
+static_assert(__builtin_elementwise_fshl(2L, 1L , 2L) == 8L);
+static_assert(__builtin_elementwise_fshr((unsigned char)1, (unsigned char)2, (unsigned char)3) == (unsigned char)32);
+constexpr vector4uchar v4s_fshl_var =
+  __builtin_elementwise_fshl((vector4uchar){255, 15, 0, 2},
+                             (vector4uchar){0, 15, 255, 1},
+                             (vector4uchar){15, 11, 8, 3});
+static_assert(v4s_fshl_var[0] == 128);
+static_assert(v4s_fshl_var[1] == 120);
+static_assert(v4s_fshl_var[2] == 0);
+static_assert(v4s_fshl_var[3] == 16);
+constexpr vector4uchar v4s_fshr_var =
+  __builtin_elementwise_fshr((vector4uchar){255, 15, 0, 1},
+                             (vector4uchar){0, 15, 255, 2},
+                             (vector4uchar){15, 11, 8, 3});
+static_assert(v4s_fshr_var[0] == 254);
+static_assert(v4s_fshr_var[1] == 225);
+static_assert(v4s_fshr_var[2] == 255);
+static_assert(v4s_fshr_var[3] == 32);
+static_assert(__builtin_elementwise_fshl(v4s_fshl_var[0], v4s_fshl_var[1], v4s_fshl_var[2]) == 128);
+static_assert(__builtin_elementwise_fshr(v4s_fshr_var[0], v4s_fshr_var[1], v4s_fshr_var[2]) == 253);

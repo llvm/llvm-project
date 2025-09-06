@@ -157,7 +157,10 @@ if(MLIR_ENABLE_CUDA_RUNNER)
 endif()
 
 if(MLIR_ENABLE_EXECUTION_ENGINE)
-  list(APPEND MLIR_TEST_DEPENDS mlir-capi-execution-engine-test)
+  list(APPEND MLIR_TEST_DEPENDS
+    mlir-capi-execution-engine-test
+    mlir-capi-global-constructors-test
+  )
 endif()
 
 if(MLIR_ENABLE_ROCM_RUNNER)
@@ -244,4 +247,5 @@ add_lit_testsuite(check-mlir "Running the MLIR regression tests"
 
 add_lit_testsuites(MLIR ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${MLIR_TEST_DEPENDS}
+  SKIP "^python*"
 )

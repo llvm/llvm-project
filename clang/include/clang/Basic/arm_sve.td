@@ -1828,29 +1828,29 @@ let SVETargetGuard = "sve2,lut", SMETargetGuard = "sme2,lut" in {
 ////////////////////////////////////////////////////////////////////////////////
 // SVE2 - Optional
 
-let SVETargetGuard = "sve2,sve-aes", SMETargetGuard = InvalidMode in {
-def SVAESD   : SInst<"svaesd[_{d}]",   "ddd", "Uc", MergeNone, "aarch64_sve_aesd", [IsOverloadNone]>;
-def SVAESIMC : SInst<"svaesimc[_{d}]", "dd",  "Uc", MergeNone, "aarch64_sve_aesimc", [IsOverloadNone]>;
-def SVAESE   : SInst<"svaese[_{d}]",   "ddd", "Uc", MergeNone, "aarch64_sve_aese", [IsOverloadNone]>;
-def SVAESMC  : SInst<"svaesmc[_{d}]",  "dd",  "Uc", MergeNone, "aarch64_sve_aesmc", [IsOverloadNone]>;
+let SVETargetGuard = "sve-aes", SMETargetGuard = "ssve-aes" in {
+def SVAESD   : SInst<"svaesd[_{d}]",   "ddd", "Uc", MergeNone, "aarch64_sve_aesd", [IsOverloadNone, VerifyRuntimeMode]>;
+def SVAESIMC : SInst<"svaesimc[_{d}]", "dd",  "Uc", MergeNone, "aarch64_sve_aesimc", [IsOverloadNone, VerifyRuntimeMode]>;
+def SVAESE   : SInst<"svaese[_{d}]",   "ddd", "Uc", MergeNone, "aarch64_sve_aese", [IsOverloadNone, VerifyRuntimeMode]>;
+def SVAESMC  : SInst<"svaesmc[_{d}]",  "dd",  "Uc", MergeNone, "aarch64_sve_aesmc", [IsOverloadNone, VerifyRuntimeMode]>;
 
-def SVPMULLB_PAIR_U64   : SInst<"svpmullb_pair[_{d}]",   "ddd", "Ul", MergeNone, "aarch64_sve_pmullb_pair">;
-def SVPMULLB_PAIR_N_U64 : SInst<"svpmullb_pair[_n_{d}]", "dda", "Ul", MergeNone, "aarch64_sve_pmullb_pair">;
+def SVPMULLB_PAIR_U64   : SInst<"svpmullb_pair[_{d}]",   "ddd", "Ul", MergeNone, "aarch64_sve_pmullb_pair", [VerifyRuntimeMode]>;
+def SVPMULLB_PAIR_N_U64 : SInst<"svpmullb_pair[_n_{d}]", "dda", "Ul", MergeNone, "aarch64_sve_pmullb_pair", [VerifyRuntimeMode]>;
 
-def SVPMULLT_PAIR_U64   : SInst<"svpmullt_pair[_{d}]",   "ddd", "Ul", MergeNone, "aarch64_sve_pmullt_pair">;
-def SVPMULLT_PAIR_N_U64 : SInst<"svpmullt_pair[_n_{d}]", "dda", "Ul", MergeNone, "aarch64_sve_pmullt_pair">;
+def SVPMULLT_PAIR_U64   : SInst<"svpmullt_pair[_{d}]",   "ddd", "Ul", MergeNone, "aarch64_sve_pmullt_pair", [VerifyRuntimeMode]>;
+def SVPMULLT_PAIR_N_U64 : SInst<"svpmullt_pair[_n_{d}]", "dda", "Ul", MergeNone, "aarch64_sve_pmullt_pair", [VerifyRuntimeMode]>;
 }
 
 let SVETargetGuard = "sve-sha3", SMETargetGuard = "sve-sha3,sme2p1" in {
 def SVRAX1 : SInst<"svrax1[_{d}]",   "ddd", "lUl", MergeNone, "aarch64_sve_rax1", [IsOverloadNone, VerifyRuntimeMode]>;
 }
 
-let SVETargetGuard = "sve2-sm4", SMETargetGuard = InvalidMode in {
+let SVETargetGuard = "sve-sm4", SMETargetGuard = InvalidMode in {
 def SVSM4E    : SInst<"svsm4e[_{d}]",    "ddd", "Ui", MergeNone, "aarch64_sve_sm4e", [IsOverloadNone]>;
 def SVSM4EKEY : SInst<"svsm4ekey[_{d}]", "ddd", "Ui", MergeNone, "aarch64_sve_sm4ekey", [IsOverloadNone]>;
 }
 
-let SVETargetGuard = "sve2,sve-bitperm", SMETargetGuard = "ssve-bitperm" in {
+let SVETargetGuard = "sve-bitperm", SMETargetGuard = "ssve-bitperm" in {
 def SVBDEP   : SInst<"svbdep[_{d}]",   "ddd", "UcUsUiUl", MergeNone, "aarch64_sve_bdep_x", [VerifyRuntimeMode]>;
 def SVBDEP_N : SInst<"svbdep[_n_{d}]", "dda", "UcUsUiUl", MergeNone, "aarch64_sve_bdep_x", [VerifyRuntimeMode]>;
 def SVBEXT   : SInst<"svbext[_{d}]",   "ddd", "UcUsUiUl", MergeNone, "aarch64_sve_bext_x", [VerifyRuntimeMode]>;
@@ -1979,7 +1979,7 @@ let SVETargetGuard = "sve2p1", SMETargetGuard = "sme2" in {
   def SVPFALSE_COUNT_ALIAS : SInst<"svpfalse_c", "}v", "", MergeNone, "", [IsOverloadNone, VerifyRuntimeMode]>;
 }
 
-let SVETargetGuard = "sve2,sve-b16b16", SMETargetGuard = "sme2,sve-b16b16" in {
+let SVETargetGuard = "sve-b16b16", SMETargetGuard = "sme2,sve-b16b16" in {
 defm SVMUL_BF   : SInstZPZZ<"svmul",   "b", "aarch64_sve_fmul",   "aarch64_sve_fmul_u", [VerifyRuntimeMode]>;
 defm SVADD_BF   : SInstZPZZ<"svadd",   "b", "aarch64_sve_fadd",   "aarch64_sve_fadd_u", [VerifyRuntimeMode]>;
 defm SVSUB_BF   : SInstZPZZ<"svsub",   "b", "aarch64_sve_fsub",   "aarch64_sve_fsub_u", [VerifyRuntimeMode]>;

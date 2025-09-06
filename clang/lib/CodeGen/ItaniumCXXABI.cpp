@@ -1397,9 +1397,7 @@ void ItaniumCXXABI::emitVirtualObjectDelete(CodeGenFunction &CGF,
     // to pass to the deallocation function.
 
     // Grab the vtable pointer as an intptr_t*.
-    auto *ClassDecl = cast<CXXRecordDecl>(
-                          ElementType->castAs<RecordType>()->getOriginalDecl())
-                          ->getDefinitionOrSelf();
+    auto *ClassDecl = ElementType->castAsCXXRecordDecl();
     llvm::Value *VTable = CGF.GetVTablePtr(Ptr, CGF.UnqualPtrTy, ClassDecl);
 
     // Track back to entry -2 and pull out the offset there.
@@ -1484,21 +1482,18 @@ void ItaniumCXXABI::emitThrow(CodeGenFunction &CGF, const CXXThrowExpr *E) {
   // The address of the destructor.  If the exception type has a
   // trivial destructor (or isn't a record), we just pass null.
   llvm::Constant *Dtor = nullptr;
-  if (const RecordType *RecordTy = ThrowType->getAs<RecordType>()) {
-    CXXRecordDecl *Record =
-        cast<CXXRecordDecl>(RecordTy->getOriginalDecl())->getDefinitionOrSelf();
-    if (!Record->hasTrivialDestructor()) {
-      // __cxa_throw is declared to take its destructor as void (*)(void *). We
-      // must match that if function pointers can be authenticated with a
-      // discriminator based on their type.
-      const ASTContext &Ctx = getContext();
-      QualType DtorTy = Ctx.getFunctionType(Ctx.VoidTy, {Ctx.VoidPtrTy},
-                                            FunctionProtoType::ExtProtoInfo());
+  if (const auto *Record = ThrowType->getAsCXXRecordDecl();
+      Record && !Record->hasTrivialDestructor()) {
+    // __cxa_throw is declared to take its destructor as void (*)(void *). We
+    // must match that if function pointers can be authenticated with a
+    // discriminator based on their type.
+    const ASTContext &Ctx = getContext();
+    QualType DtorTy = Ctx.getFunctionType(Ctx.VoidTy, {Ctx.VoidPtrTy},
+                                          FunctionProtoType::ExtProtoInfo());
 
-      CXXDestructorDecl *DtorD = Record->getDestructor();
-      Dtor = CGM.getAddrOfCXXStructor(GlobalDecl(DtorD, Dtor_Complete));
-      Dtor = CGM.getFunctionPointer(Dtor, DtorTy);
-    }
+    CXXDestructorDecl *DtorD = Record->getDestructor();
+    Dtor = CGM.getAddrOfCXXStructor(GlobalDecl(DtorD, Dtor_Complete));
+    Dtor = CGM.getFunctionPointer(Dtor, DtorTy);
   }
   if (!Dtor) Dtor = llvm::Constant::getNullValue(CGM.Int8PtrTy);
 
@@ -1612,9 +1607,7 @@ llvm::Value *ItaniumCXXABI::EmitTypeid(CodeGenFunction &CGF,
                                        QualType SrcRecordTy,
                                        Address ThisPtr,
                                        llvm::Type *StdTypeInfoPtrTy) {
-  auto *ClassDecl =
-      cast<CXXRecordDecl>(SrcRecordTy->castAs<RecordType>()->getOriginalDecl())
-          ->getDefinitionOrSelf();
+  auto *ClassDecl = SrcRecordTy->castAsCXXRecordDecl();
   llvm::Value *Value = CGF.GetVTablePtr(ThisPtr, CGM.GlobalsInt8PtrTy,
                                         ClassDecl);
 
@@ -1786,9 +1779,7 @@ llvm::Value *ItaniumCXXABI::emitExactDynamicCast(
 llvm::Value *ItaniumCXXABI::emitDynamicCastToVoid(CodeGenFunction &CGF,
                                                   Address ThisAddr,
                                                   QualType SrcRecordTy) {
-  auto *ClassDecl =
-      cast<CXXRecordDecl>(SrcRecordTy->castAs<RecordType>()->getOriginalDecl())
-          ->getDefinitionOrSelf();
+  auto *ClassDecl = SrcRecordTy->castAsCXXRecordDecl();
   llvm::Value *OffsetToTop;
   if (CGM.getItaniumVTableContext().isRelativeLayout()) {
     // Get the vtable pointer.
@@ -3872,9 +3863,7 @@ static bool CanUseSingleInheritance(const CXXRecordDecl *RD) {
     return false;
 
   // Check that the class is dynamic iff the base is.
-  auto *BaseDecl = cast<CXXRecordDecl>(
-                       Base->getType()->castAs<RecordType>()->getOriginalDecl())
-                       ->getDefinitionOrSelf();
+  auto *BaseDecl = Base->getType()->castAsCXXRecordDecl();
   if (!BaseDecl->isEmpty() &&
       BaseDecl->isDynamicClass() != RD->isDynamicClass())
     return false;
@@ -4394,10 +4383,7 @@ static unsigned ComputeVMIClassTypeInfoFlags(const CXXBaseSpecifier *Base,
 
   unsigned Flags = 0;
 
-  auto *BaseDecl = cast<CXXRecordDecl>(
-                       Base->getType()->castAs<RecordType>()->getOriginalDecl())
-                       ->getDefinitionOrSelf();
-
+  auto *BaseDecl = Base->getType()->castAsCXXRecordDecl();
   if (Base->isVirtual()) {
     // Mark the virtual base as seen.
     if (!Bases.VirtualBases.insert(BaseDecl).second) {
@@ -4495,11 +4481,7 @@ void ItaniumRTTIBuilder::BuildVMIClassTypeInfo(const CXXRecordDecl *RD) {
     // The __base_type member points to the RTTI for the base type.
     Fields.push_back(ItaniumRTTIBuilder(CXXABI).BuildTypeInfo(Base.getType()));
 
-    auto *BaseDecl =
-        cast<CXXRecordDecl>(
-            Base.getType()->castAs<RecordType>()->getOriginalDecl())
-            ->getDefinitionOrSelf();
-
+    auto *BaseDecl = Base.getType()->castAsCXXRecordDecl();
     int64_t OffsetFlags = 0;
 
     // All but the lower 8 bits of __offset_flags are a signed offset.

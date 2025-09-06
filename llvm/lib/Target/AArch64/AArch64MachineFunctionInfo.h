@@ -228,16 +228,9 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   // on function entry to record the initial pstate of a function.
   Register PStateSMReg = MCRegister::NoRegister;
 
-  // true if PStateSMReg is used.
-  bool PStateSMRegUsed = false;
-
   // Has the PNReg used to build PTRUE instruction.
   // The PTRUE is used for the LD/ST of ZReg pairs in save and restore.
   unsigned PredicateRegForFillSpill = 0;
-
-  // The stack slots where VG values are stored to.
-  int64_t VGIdx = std::numeric_limits<int>::max();
-  int64_t StreamingVGIdx = std::numeric_limits<int>::max();
 
   // Holds the SME function attributes (streaming mode, ZA/ZT0 state).
   SMEAttrs SMEFnAttrs;
@@ -276,15 +269,6 @@ public:
 
   Register getPStateSMReg() const { return PStateSMReg; };
   void setPStateSMReg(Register Reg) { PStateSMReg = Reg; };
-
-  unsigned isPStateSMRegUsed() const { return PStateSMRegUsed; };
-  void setPStateSMRegUsed(bool Used = true) { PStateSMRegUsed = Used; };
-
-  int64_t getVGIdx() const { return VGIdx; };
-  void setVGIdx(unsigned Idx) { VGIdx = Idx; };
-
-  int64_t getStreamingVGIdx() const { return StreamingVGIdx; };
-  void setStreamingVGIdx(unsigned FrameIdx) { StreamingVGIdx = FrameIdx; };
 
   bool isSVECC() const { return IsSVECC; };
   void setIsSVECC(bool s) { IsSVECC = s; };

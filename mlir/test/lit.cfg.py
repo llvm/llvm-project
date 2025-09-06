@@ -29,6 +29,7 @@ lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
 if lit_shell_env:
     use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
 
+# Set the test format based on shell configuration
 config.test_format = lit.formats.ShTest(execute_external=not use_lit_shell)
 
 # suffixes: A list of file extensions to treat as test files.
@@ -181,10 +182,10 @@ config.excludes = [
 ]
 
 # Tweak the PATH to include the tools dir.
-llvm_config.with_environment("PATH", config.mlir_tools_dir, append_path=True)
-llvm_config.with_environment("PATH", config.llvm_tools_dir, append_path=True)
+tool_dirs = [config.mlir_tools_dir, config.llvm_tools_dir, config.lit_tools_dir]
+for dirs in tool_dirs:
+    llvm_config.with_environment("PATH", dirs, append_path=True)
 
-tool_dirs = [config.mlir_tools_dir, config.llvm_tools_dir]
 tools = [
     "mlir-tblgen",
     "mlir-translate",

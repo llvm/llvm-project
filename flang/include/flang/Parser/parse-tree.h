@@ -4835,28 +4835,14 @@ struct OpenMPDeclarativeAssumes {
   CharBlock source;
 };
 
-struct OmpAssumeDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpAssumeDirective);
-  std::tuple<Verbatim, OmpClauseList> t;
-  CharBlock source;
-};
-
-struct OmpEndAssumeDirective {
-  WRAPPER_CLASS_BOILERPLATE(OmpEndAssumeDirective, Verbatim);
-  CharBlock source;
-};
-
-// Ref: [5.2: 213-216]
+// Ref: [5.1:86-89], [5.2:215], [6.0:369]
 //
-// assume-construct ->
-//   ASSUME absent-clause | contains-clause | holds_clause | no-openmp-clause
-//          no-openmp-routines-clause | no-parallelism-clause
-//       block
+// assume-directive ->                              // since 5.1
+//   ASSUME assumption-clause...
+//     block
 //   [END ASSUME]
-struct OpenMPAssumeConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPAssumeConstruct);
-  std::tuple<OmpAssumeDirective, Block, std::optional<OmpEndAssumeDirective>> t;
-  CharBlock source;
+struct OpenMPAssumeConstruct : public OmpBlockConstruct {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(OpenMPAssumeConstruct, OmpBlockConstruct);
 };
 
 // 2.7.2 SECTIONS
@@ -4893,8 +4879,11 @@ struct OpenMPSectionsConstruct {
   CharBlock source;
   // Each of the OpenMPConstructs in the list below contains an
   // OpenMPSectionConstruct. This is guaranteed by the parser.
+  // The end sections directive is optional here because it is difficult to
+  // generate helpful error messages for a missing end directive within the
+  // parser. Semantics will generate an error if this is absent.
   std::tuple<OmpBeginSectionsDirective, std::list<OpenMPConstruct>,
-      OmpEndSectionsDirective>
+      std::optional<OmpEndSectionsDirective>>
       t;
 };
 
@@ -4995,18 +4984,6 @@ struct OpenMPDeclarativeConstruct {
       OpenMPRequiresConstruct, OpenMPUtilityConstruct,
       OmpMetadirectiveDirective>
       u;
-};
-
-// 2.13.2 CRITICAL [Name] <block> END CRITICAL [Name]
-struct OmpCriticalDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpCriticalDirective);
-  CharBlock source;
-  std::tuple<Verbatim, std::optional<Name>, OmpClauseList> t;
-};
-struct OmpEndCriticalDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpEndCriticalDirective);
-  CharBlock source;
-  std::tuple<Verbatim, std::optional<Name>> t;
 };
 
 struct OpenMPCriticalConstruct : public OmpBlockConstruct {
@@ -5161,10 +5138,6 @@ struct OmpEndLoopDirective {
   CharBlock source;
 };
 
-struct OpenMPBlockConstruct : public OmpBlockConstruct {
-  INHERITED_TUPLE_CLASS_BOILERPLATE(OpenMPBlockConstruct, OmpBlockConstruct);
-};
-
 // OpenMP directives enclosing do loop
 using NestedConstruct =
     std::variant<DoConstruct, common::Indirection<OpenMPLoopConstruct>>;
@@ -5187,7 +5160,7 @@ struct OpenMPExecDirective {
 struct OpenMPConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPConstruct);
   std::variant<OpenMPStandaloneConstruct, OpenMPSectionsConstruct,
-      OpenMPSectionConstruct, OpenMPLoopConstruct, OpenMPBlockConstruct,
+      OpenMPSectionConstruct, OpenMPLoopConstruct, OmpBlockConstruct,
       OpenMPAtomicConstruct, OpenMPDeclarativeAllocate, OpenMPDispatchConstruct,
       OpenMPUtilityConstruct, OpenMPExecutableAllocate,
       OpenMPAllocatorsConstruct, OpenMPAssumeConstruct, OpenMPCriticalConstruct>
