@@ -2476,6 +2476,20 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     return SelectInst::Create(Cmp, ConstantInt::getNullValue(Ty), Y);
   }
 
+  // (x + y) & (2^C) -> x & 2^C when y % 2^(C+1) == 0
+  if (match(Op0, m_Add(m_Value(X), m_Value(Y)))) {
+    const APInt *PowerC;
+    if (match(Op1, m_Power2(PowerC)) && !PowerC->isOne()) {
+      KnownBits YKnown = computeKnownBits(Y, &I);
+      unsigned ShiftAmount = PowerC->logBase2() + 1;
+
+      APInt YMod = YKnown.Zero;
+      if (YMod.getLoBits(ShiftAmount).isZero()) {
+        return BinaryOperator::CreateAnd(X, Op1);
+      }
+    }
+  }
+
   // Canonicalize:
   // (X +/- Y) & Y --> ~X & Y when Y is a power of 2.
   if (match(&I, m_c_And(m_Value(Y), m_OneUse(m_CombineOr(
