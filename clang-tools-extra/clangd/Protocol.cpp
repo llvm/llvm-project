@@ -13,6 +13,7 @@
 #include "Protocol.h"
 #include "URI.h"
 #include "support/Logger.h"
+#include "clang/AST/ASTTypeTraits.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/StringExtras.h"
@@ -1651,6 +1652,18 @@ bool fromJSON(const llvm::json::Value &Params, SelectionRangeParams &S,
   llvm::json::ObjectMapper O(Params, P);
   return O && O.map("textDocument", S.textDocument) &&
          O.map("positions", S.positions);
+}
+
+bool fromJSON(const llvm::json::Value &Params, SearchASTArgs &Args,
+              llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Params, P);
+  return O && O.map("query", Args.searchQuery) &&
+         O.map("textDocument", Args.textDocument)
+      // && O.map("bindRoot", Args.bindRoot); TODO: add bindRoot to extend this
+      // feature
+      // && O.map("traversalKind", Args.tk); TODO: add traversalKind to extend
+      // this feature
+      ;
 }
 
 llvm::json::Value toJSON(const SelectionRange &Out) {
