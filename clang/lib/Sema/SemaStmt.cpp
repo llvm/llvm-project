@@ -971,6 +971,35 @@ StmtResult Sema::ActOnIfStmt(SourceLocation IfLoc,
   if (!ConstevalOrNegatedConsteval && !elseStmt)
     DiagnoseEmptyStmtBody(RParenLoc, thenStmt, diag::warn_empty_if_body);
 
+  // Checks for if condition variable usage in else scope
+  if (elseStmt) {
+    if (auto* CondVar = dyn_cast_or_null<VarDecl>(Cond.get().first)) {
+      bool usedInElse = false;
+      std::function<bool(Stmt*)> checkForUsage = [&](Stmt *S) -> bool {
+	if (!S) return false;
+	if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(S)) {
+	  if (DRE->getDecl() == CondVar) {
+	    return true;
+	  }
+	}
+
+	for (Stmt *Child: S->children()) {
+	  if (checkForUsage(Child)) {
+	    return true;
+	  }
+	}
+
+	return false;
+      };
+      usedInElse = checkForUsage(elseStmt);
+
+      if (usedInElse) {
+	Diag(elseStmt->getBeginLoc(), diag::warn_out_of_scope_var_usage)
+	  << CondVar->getName();
+      }
+    }
+  }
+
   if (ConstevalOrNegatedConsteval ||
       StatementKind == IfStatementKind::Constexpr) {
     auto DiagnoseLikelihood = [&](const Stmt *S) {
