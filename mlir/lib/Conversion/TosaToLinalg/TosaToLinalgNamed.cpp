@@ -803,7 +803,7 @@ public:
         dilationAttr);
 
     rewriter.setInsertionPointAfter(op);
-    StringRef nanMode = op.getNanMode();
+    NanPropagationMode nanMode = op.getNanMode();
     rewriter.replaceOp(op, resultOp);
 
     // NaN propagation has no meaning for non floating point types.
@@ -817,7 +817,7 @@ public:
     // we've already produced a named op we will just take its body and modify
     // it to include the appropriate checks. If the current value is NaN the
     // old value of pool will be taken otherwise we use the result.
-    if (nanMode == "IGNORE") {
+    if (nanMode == NanPropagationMode::IGNORE) {
       auto genericOp = linalg::GenericOp::create(
           rewriter, loc, resultOp.getType(0), resultOp.getInputs(),
           resultOp.getOutputs(), resultOp.getIndexingMapsArray(),
@@ -1040,11 +1040,13 @@ public:
                 rewriter, loc, rewriter.getI8IntegerAttr(30));
             Value shift = arith::AddIOp::create(rewriter, loc, k8, thirty8);
 
-            auto scaled =
-                tosa::ApplyScaleOp::create(
-                    rewriter, loc, rewriter.getI32Type(), poolVal, multiplier,
-                    shift, rewriter.getStringAttr("SINGLE_ROUND"))
-                    .getResult();
+            auto roundingAttr = RoundingModeAttr::get(
+                rewriter.getContext(), RoundingMode::SINGLE_ROUND);
+
+            auto scaled = tosa::ApplyScaleOp::create(
+                              rewriter, loc, rewriter.getI32Type(), poolVal,
+                              multiplier, shift, roundingAttr)
+                              .getResult();
 
             // If we have quantization information we need to apply output
             // zeropoint.
