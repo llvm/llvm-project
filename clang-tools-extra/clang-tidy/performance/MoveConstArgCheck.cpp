@@ -19,7 +19,7 @@ static void replaceCallWithArg(const CallExpr *Call, DiagnosticBuilder &Diag,
                                const LangOptions &LangOpts) {
   const Expr *Arg = Call->getArg(0);
 
-  CharSourceRange BeforeArgumentsRange = Lexer::makeFileCharRange(
+  CharSourceRange beforeArgumentsRange = Lexer::makeFileCharRange(
       CharSourceRange::getCharRange(Call->getBeginLoc(), Arg->getBeginLoc()),
       SM, LangOpts);
   CharSourceRange AfterArgumentsRange = Lexer::makeFileCharRange(
@@ -27,8 +27,8 @@ static void replaceCallWithArg(const CallExpr *Call, DiagnosticBuilder &Diag,
                                     Call->getEndLoc().getLocWithOffset(1)),
       SM, LangOpts);
 
-  if (BeforeArgumentsRange.isValid() && AfterArgumentsRange.isValid()) {
-    Diag << FixItHint::CreateRemoval(BeforeArgumentsRange)
+  if (beforeArgumentsRange.isValid() && AfterArgumentsRange.isValid()) {
+    Diag << FixItHint::CreateRemoval(beforeArgumentsRange)
          << FixItHint::CreateRemoval(AfterArgumentsRange);
   }
 }
