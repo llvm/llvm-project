@@ -1404,13 +1404,15 @@ static void __kmp_atfork_child(void) {
 }
 
 void __kmp_register_atfork(void) {
-  if (__kmp_need_register_atfork) {
+  // NOTE: we will not double register our fork handlers! It will cause deadlock
+  if (!__kmp_already_registered_atfork && __kmp_need_register_atfork) {
 #if !KMP_OS_WASI
     int status = pthread_atfork(__kmp_atfork_prepare, __kmp_atfork_parent,
                                 __kmp_atfork_child);
     KMP_CHECK_SYSFAIL("pthread_atfork", status);
 #endif
     __kmp_need_register_atfork = FALSE;
+    __kmp_already_registered_atfork = TRUE;
   }
 }
 
