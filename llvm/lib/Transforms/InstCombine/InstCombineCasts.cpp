@@ -11,11 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <optional>
@@ -967,6 +969,27 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
                         &Trunc)) {
     Trunc.setHasNoUnsignedWrap(true);
     Changed = true;
+  }
+
+  const APInt *C1;
+  Value *V1;
+  // trunc (lshr i8 C1, V1) to i1 -> icmp eq V1, sqrt(C1) iff C1 is power of 2
+  if (DestWidth == 1 &&
+      match(Src, m_OneUse(m_Shr(m_Power2(C1), m_Value(V1))))) {
+    const APInt Sqrt = C1->sqrt();
+    Value *Right = ConstantInt::get(V1->getType(), Sqrt);
+    Value *Icmp = Builder.CreateICmpEQ(V1, Right);
+    return replaceInstUsesWith(Trunc, Icmp);
+  }
+
+  // trunc (lshr i8 C1, V1) to i1 -> icmp ult V1, sqrt(C1 + 1) iff (C1 + 1) is
+  // power of 2
+  if (DestWidth == 1 && match(Src, m_OneUse(m_Shr(m_APInt(C1), m_Value(V1)))) &&
+      (*C1 + 1).isPowerOf2()) {
+    const APInt Sqrt = (*C1 + 1).sqrt();
+    Value *Right = ConstantInt::get(V1->getType(), Sqrt);
+    Value *Icmp = Builder.CreateICmpULT(V1, Right);
+    return replaceInstUsesWith(Trunc, Icmp);
   }
 
   return Changed ? &Trunc : nullptr;
