@@ -647,6 +647,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   if (!Subtarget->hasV8_1MMainlineOps())
     setOperationAction(ISD::UCMP, MVT::i32, Custom);
 
+  setOperationAction(ISD::ABS, MVT::i32, Custom);
+  setOperationAction(ISD::ABDS, MVT::i32, Custom);
+  setOperationAction(ISD::ABDU, MVT::i32, Custom);
+
   setOperationAction(ISD::ConstantFP, MVT::f32, Custom);
   setOperationAction(ISD::ConstantFP, MVT::f64, Custom);
 
@@ -5619,6 +5623,79 @@ ARMTargetLowering::OptimizeVFPBrcond(SDValue Op, SelectionDAG &DAG) const {
   }
 
   return SDValue();
+}
+
+// Generate SUBS and CSEL for integer abs.
+SDValue ARMTargetLowering::LowerABS(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  // Thumb1-only sequence:
+  // asrs r1, r0, #31; eors r0, r1; subs r0, r0, r1
+  if (Subtarget->isThumb1Only()) {
+    SDValue X = Op.getOperand(0);
+    SDValue ShiftAmt = DAG.getConstant(31, DL, MVT::i32);
+    SDValue S = DAG.getNode(ISD::SRA, DL, MVT::i32, X, ShiftAmt);
+    SDValue T = DAG.getNode(ISD::XOR, DL, MVT::i32, X, S);
+    return DAG.getNode(ISD::SUB, DL, MVT::i32, T, S);
+  }
+  SDValue Neg = DAG.getNode(ISD::SUB, DL, MVT::i32,
+                            DAG.getConstant(0, DL, MVT::i32), Op.getOperand(0));
+  // Generate SUBS & CMOV.
+  SDValue Cmp = DAG.getNode(ARMISD::CMP, DL, FlagsVT, Op.getOperand(0),
+                            DAG.getConstant(0, DL, MVT::i32));
+  return DAG.getNode(ARMISD::CMOV, DL, MVT::i32, Op.getOperand(0), Neg,
+                     DAG.getConstant(ARMCC::MI, DL, MVT::i32), Cmp);
+}
+
+// Generate SUBS and CNEG for absolute difference.
+SDValue ARMTargetLowering::LowerABD(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+
+  // Thumb1-only custom sequences for i32
+  if (Subtarget->isThumb1Only()) {
+    if (Op.getOpcode() == ISD::ABDS) {
+      // subs r0, r0, r1; asrs r1, r0, #31; eors r0, r1; subs r0, r0, r1
+      SDValue D = DAG.getNode(ISD::SUB, DL, MVT::i32, LHS, RHS);
+      SDValue ShiftAmt = DAG.getConstant(31, DL, MVT::i32);
+      SDValue S = DAG.getNode(ISD::SRA, DL, MVT::i32, D, ShiftAmt);
+      SDValue T = DAG.getNode(ISD::XOR, DL, MVT::i32, D, S);
+      return DAG.getNode(ISD::SUB, DL, MVT::i32, T, S);
+    } else {
+      // abdu: subs; sbcs r1,r1,r1(mask from borrow); eors; subs
+      // First subtraction: LHS - RHS
+      SDValue Sub1WithFlags = DAG.getNode(
+          ARMISD::SUBC, DL, DAG.getVTList(MVT::i32, FlagsVT), LHS, RHS);
+      SDValue Sub1Result = Sub1WithFlags.getValue(0);
+      SDValue Flags1 = Sub1WithFlags.getValue(1);
+
+      SDValue Sbc1 = DAG.getNode(
+          ARMISD::SUBE, DL, DAG.getVTList(MVT::i32, FlagsVT), RHS, RHS, Flags1);
+
+      SDValue Xor =
+          DAG.getNode(ISD::XOR, DL, MVT::i32, Sub1Result, Sbc1.getValue(0));
+
+      return DAG.getNode(ISD::SUB, DL, MVT::i32, Xor, Sbc1.getValue(0));
+    }
+  }
+
+  // Generate SUBS and CMOV for absolute difference (like LowerABS)
+  // Compute a - b with flags
+  SDValue Cmp =
+      DAG.getNode(ARMISD::SUBC, DL, DAG.getVTList(MVT::i32, FlagsVT), LHS, RHS);
+
+  // Compute b - a (negative of a - b)
+  SDValue Neg = DAG.getNode(ISD::SUB, DL, MVT::i32,
+                            DAG.getConstant(0, DL, MVT::i32), Cmp.getValue(0));
+
+  // For unsigned: use LO (a < b) to select -(a-b), which is the same as b-a in
+  // twos complement, otherwise a-b For signed: use MI (a - b < 0) to select
+  // -(a-b), otherwise a-b
+  ARMCC::CondCodes CC = (Op.getOpcode() == ISD::ABDS) ? ARMCC::MI : ARMCC::LO;
+
+  // CMOV: if a > b, select a-b, otherwise negare
+  return DAG.getNode(ARMISD::CMOV, DL, MVT::i32, Cmp.getValue(0), Neg,
+                     DAG.getConstant(CC, DL, MVT::i32), Cmp.getValue(1));
 }
 
 SDValue ARMTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
@@ -10662,6 +10739,11 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerSTORE(Op, DAG, Subtarget);
   case ISD::MLOAD:
     return LowerMLOAD(Op, DAG);
+  case ISD::ABS:
+    return LowerABS(Op, DAG);
+  case ISD::ABDS:
+  case ISD::ABDU:
+    return LowerABD(Op, DAG);
   case ISD::VECREDUCE_MUL:
   case ISD::VECREDUCE_AND:
   case ISD::VECREDUCE_OR:
@@ -14079,6 +14161,48 @@ static SDValue PerformSubCSINCCombine(SDNode *N, SelectionDAG &DAG) {
                      CSINC.getOperand(3));
 }
 
+static bool isNegatedInteger(SDValue Op) {
+  return Op.getOpcode() == ISD::SUB && isNullConstant(Op.getOperand(0));
+}
+
+static SDValue getNegatedInteger(SDValue Op, SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+  SDValue Zero = DAG.getConstant(0, DL, VT);
+  return DAG.getNode(ISD::SUB, DL, VT, Zero, Op);
+}
+
+// Try to fold
+//
+// (neg (cmov X, Y)) -> (cmov (neg X), (neg Y))
+//
+// The folding helps cmov to be matched with csneg without generating
+// redundant neg instruction.
+static SDValue performNegCMovCombine(SDNode *N, SelectionDAG &DAG) {
+  if (!isNegatedInteger(SDValue(N, 0)))
+    return SDValue();
+
+  SDValue CSel = N->getOperand(1);
+  if (CSel.getOpcode() != ARMISD::CMOV || !CSel->hasOneUse())
+    return SDValue();
+
+  SDValue N0 = CSel.getOperand(0);
+  SDValue N1 = CSel.getOperand(1);
+
+  // If both of them is not negations, it's not worth the folding as it
+  // introduces two additional negations while reducing one negation.
+  if (!isNegatedInteger(N0) && !isNegatedInteger(N1))
+    return SDValue();
+
+  SDValue N0N = getNegatedInteger(N0, DAG);
+  SDValue N1N = getNegatedInteger(N1, DAG);
+
+  SDLoc DL(N);
+  EVT VT = CSel.getValueType();
+  return DAG.getNode(ARMISD::CMOV, DL, VT, N0N, N1N, CSel.getOperand(2),
+                     CSel.getOperand(3));
+}
+
 /// PerformSUBCombine - Target-specific dag combine xforms for ISD::SUB.
 ///
 static SDValue PerformSUBCombine(SDNode *N,
@@ -14094,6 +14218,9 @@ static SDValue PerformSUBCombine(SDNode *N,
 
   if (SDValue R = PerformSubCSINCCombine(N, DCI.DAG))
     return R;
+
+  if (SDValue Val = performNegCMovCombine(N, DCI.DAG))
+    return Val;
 
   if (!Subtarget->hasMVEIntegerOps() || !N->getValueType(0).isVector())
     return SDValue();
