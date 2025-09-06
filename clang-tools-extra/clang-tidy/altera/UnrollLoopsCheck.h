@@ -44,8 +44,8 @@ private:
   /// Attempts to extract an integer value from either side of the
   /// BinaryOperator. Returns true and saves the result to &value if successful,
   /// returns false otherwise.
-  bool extractValue(int &Value, const BinaryOperator *Op,
-                    const ASTContext *Context);
+  static bool extractValue(int &Value, const BinaryOperator *Op,
+                           const ASTContext *Context);
   /// Returns true if the given loop statement has a large number of iterations,
   /// as determined by the integer value in the loop's condition expression,
   /// if one exists.
@@ -59,13 +59,14 @@ private:
                                  const ASTContext *Context) const;
   /// Returns the type of unrolling, if any, associated with the given
   /// statement.
-  enum UnrollType unrollType(const Stmt *Statement, ASTContext *Context);
+  static enum UnrollType unrollType(const Stmt *Statement, ASTContext *Context);
   /// Returns the condition expression within a given for statement. If there is
   /// none, or if the Statement is not a loop, then returns a NULL pointer.
-  const Expr *getCondExpr(const Stmt *Statement);
+  static const Expr *getCondExpr(const Stmt *Statement);
   /// Returns True if the loop statement has known bounds.
-  bool hasKnownBounds(const Stmt *Statement, const IntegerLiteral *CXXLoopBound,
-                      const ASTContext *Context);
+  static bool hasKnownBounds(const Stmt *Statement,
+                             const IntegerLiteral *CXXLoopBound,
+                             const ASTContext *Context);
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 };
 

@@ -38,8 +38,8 @@ private:
                         const FloatingLiteral *) const {
     return false;
   }
-  bool isSyntheticValue(const clang::SourceManager *SourceManager,
-                        const IntegerLiteral *Literal) const;
+  static bool isSyntheticValue(const clang::SourceManager *SourceManager,
+                               const IntegerLiteral *Literal);
 
   bool isBitFieldWidth(const clang::ast_matchers::MatchFinder::MatchResult &,
                        const FloatingLiteral &) const {
@@ -50,9 +50,9 @@ private:
   isBitFieldWidth(const clang::ast_matchers::MatchFinder::MatchResult &Result,
                   const IntegerLiteral &Literal) const;
 
-  bool isUserDefinedLiteral(
+  static bool isUserDefinedLiteral(
       const clang::ast_matchers::MatchFinder::MatchResult &Result,
-      const clang::Expr &Literal) const;
+      const clang::Expr &Literal);
 
   template <typename L>
   void checkBoundMatch(const ast_matchers::MatchFinder::MatchResult &Result,

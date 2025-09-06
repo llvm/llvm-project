@@ -56,7 +56,8 @@ private:
                                   const VarDecl *ObjectArg);
   void handleCopyFromLocalVar(const CheckContext &Ctx, const VarDecl &OldVar);
 
-  void maybeIssueFixes(const CheckContext &Ctx, DiagnosticBuilder &Diagnostic);
+  static void maybeIssueFixes(const CheckContext &Ctx,
+                              DiagnosticBuilder &Diagnostic);
 
   const std::vector<StringRef> AllowedTypes;
   const std::vector<StringRef> ExcludedContainerTypes;

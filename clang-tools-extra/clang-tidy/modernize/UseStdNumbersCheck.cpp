@@ -80,12 +80,13 @@ AST_MATCHER_P(clang::Expr, anyOfExhaustive, std::vector<Matcher<clang::Stmt>>,
 // the literal of every constant and for formulas' subexpressions that look at
 // literals.
 struct MatchBuilder {
-  auto
-  ignoreParenAndArithmeticCasting(const Matcher<clang::Expr> Matcher) const {
+  static auto
+  ignoreParenAndArithmeticCasting(const Matcher<clang::Expr> Matcher) {
     return expr(hasType(qualType(isArithmetic())), ignoringParenCasts(Matcher));
   }
 
-  auto ignoreParenAndFloatingCasting(const Matcher<clang::Expr> Matcher) const {
+  static auto
+  ignoreParenAndFloatingCasting(const Matcher<clang::Expr> Matcher) {
     return expr(hasType(qualType(isFloating())), ignoringParenCasts(Matcher));
   }
 

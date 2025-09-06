@@ -65,7 +65,7 @@ private:
                                    const MemberExpr *MemExpr,
                                    const FieldDecl *PotentialField);
   /// Returns the loop type.
-  LoopType getLoopType(const Stmt *Loop);
+  static LoopType getLoopType(const Stmt *Loop);
 
 public:
   IdDependentBackwardBranchCheck(StringRef Name, ClangTidyContext *Context)

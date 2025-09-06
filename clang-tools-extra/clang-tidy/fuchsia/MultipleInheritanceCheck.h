@@ -32,7 +32,7 @@ public:
 private:
   void addNodeToInterfaceMap(const CXXRecordDecl *Node, bool IsInterface);
   bool getInterfaceStatus(const CXXRecordDecl *Node, bool &IsInterface) const;
-  bool isCurrentClassInterface(const CXXRecordDecl *Node) const;
+  static bool isCurrentClassInterface(const CXXRecordDecl *Node);
   bool isInterface(const CXXRecordDecl *Node);
 
   // Contains the identity of each named CXXRecord as an interface.  This is

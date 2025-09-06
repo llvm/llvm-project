@@ -89,11 +89,13 @@ private:
   // puts the width and preicision first.
   std::vector<std::tuple<unsigned, unsigned>> ArgRotates;
 
-  void emitAlignment(const PrintfSpecifier &FS, std::string &FormatSpec);
-  void emitSign(const PrintfSpecifier &FS, std::string &FormatSpec);
-  void emitAlternativeForm(const PrintfSpecifier &FS, std::string &FormatSpec);
-  void emitFieldWidth(const PrintfSpecifier &FS, std::string &FormatSpec);
-  void emitPrecision(const PrintfSpecifier &FS, std::string &FormatSpec);
+  static void emitAlignment(const PrintfSpecifier &FS, std::string &FormatSpec);
+  static void emitSign(const PrintfSpecifier &FS, std::string &FormatSpec);
+  static void emitAlternativeForm(const PrintfSpecifier &FS,
+                                  std::string &FormatSpec);
+  static void emitFieldWidth(const PrintfSpecifier &FS,
+                             std::string &FormatSpec);
+  static void emitPrecision(const PrintfSpecifier &FS, std::string &FormatSpec);
   void emitStringArgument(unsigned ArgIndex, const Expr *Arg);
   bool emitIntegerArgument(ConversionSpecifier::Kind ArgKind, const Expr *Arg,
                            unsigned ArgIndex, std::string &FormatSpec);

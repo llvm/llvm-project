@@ -37,7 +37,7 @@ public:
 private:
   /// Returns true if the name of the file with path FileName is 'kernel.cl',
   /// 'verilog.cl', or 'vhdl.cl'. The file name check is case insensitive.
-  bool fileNameIsRestricted(StringRef FileName);
+  static bool fileNameIsRestricted(StringRef FileName);
 
   struct IncludeDirective {
     SourceLocation Loc; // Location in the include directive.

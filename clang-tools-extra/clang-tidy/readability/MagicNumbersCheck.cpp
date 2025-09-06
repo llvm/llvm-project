@@ -223,7 +223,7 @@ bool MagicNumbersCheck::isIgnoredValue(const FloatingLiteral *Literal) const {
 }
 
 bool MagicNumbersCheck::isSyntheticValue(const SourceManager *SourceManager,
-                                         const IntegerLiteral *Literal) const {
+                                         const IntegerLiteral *Literal) {
   const std::pair<FileID, unsigned> FileOffset =
       SourceManager->getDecomposedLoc(Literal->getLocation());
   if (FileOffset.first.isInvalid())
@@ -247,7 +247,7 @@ bool MagicNumbersCheck::isBitFieldWidth(
 
 bool MagicNumbersCheck::isUserDefinedLiteral(
     const clang::ast_matchers::MatchFinder::MatchResult &Result,
-    const clang::Expr &Literal) const {
+    const clang::Expr &Literal) {
   DynTypedNodeList Parents = Result.Context->getParents(Literal);
   if (Parents.empty())
     return false;

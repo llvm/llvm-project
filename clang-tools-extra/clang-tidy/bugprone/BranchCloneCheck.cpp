@@ -50,28 +50,32 @@ static bool isFallthroughSwitchBranch(const SwitchBranch &Branch) {
   struct SwitchCaseVisitor : RecursiveASTVisitor<SwitchCaseVisitor> {
     using RecursiveASTVisitor<SwitchCaseVisitor>::DataRecursionQueue;
 
-    bool TraverseLambdaExpr(LambdaExpr *, DataRecursionQueue * = nullptr) {
+    static bool TraverseLambdaExpr(LambdaExpr *,
+                                   DataRecursionQueue * = nullptr) {
       return true; // Ignore lambdas
     }
 
-    bool TraverseDecl(Decl *) {
+    static bool TraverseDecl(Decl *) {
       return true; // No need to check declarations
     }
 
-    bool TraverseSwitchStmt(SwitchStmt *, DataRecursionQueue * = nullptr) {
+    static bool TraverseSwitchStmt(SwitchStmt *,
+                                   DataRecursionQueue * = nullptr) {
       return true; // Ignore sub-switches
     }
 
     // NOLINTNEXTLINE(readability-identifier-naming) - FIXME
-    bool TraverseSwitchCase(SwitchCase *, DataRecursionQueue * = nullptr) {
+    static bool TraverseSwitchCase(SwitchCase *,
+                                   DataRecursionQueue * = nullptr) {
       return true; // Ignore cases
     }
 
-    bool TraverseDefaultStmt(DefaultStmt *, DataRecursionQueue * = nullptr) {
+    static bool TraverseDefaultStmt(DefaultStmt *,
+                                    DataRecursionQueue * = nullptr) {
       return true; // Ignore defaults
     }
 
-    bool TraverseAttributedStmt(AttributedStmt *S) {
+    static bool TraverseAttributedStmt(AttributedStmt *S) {
       if (!S)
         return true;
 
