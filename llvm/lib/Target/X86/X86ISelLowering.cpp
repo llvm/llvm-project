@@ -3659,11 +3659,8 @@ bool X86TargetLowering::shouldFoldMaskToVariableShiftPair(SDValue Y) const {
   if (VT.isVector())
     return false;
 
-  // 64-bit shifts on 32-bit targets produce really bad bloated code.
-  if (VT == MVT::i64 && !Subtarget.is64Bit())
-    return false;
-
-  return true;
+  unsigned MaxWidth = Subtarget.is64Bit() ? 64 : 32;
+  return VT.getScalarSizeInBits() <= MaxWidth;
 }
 
 TargetLowering::ShiftLegalizationStrategy
