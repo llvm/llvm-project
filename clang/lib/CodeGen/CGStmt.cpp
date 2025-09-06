@@ -1421,6 +1421,9 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
 
   ForScope.ForceCleanup();
 
+  // Process deferred function cleanups before checking for regular cleanups
+  processDeferredFunctionCleanups();
+
   LoopStack.pop();
 
   // Emit the fall-through block.
