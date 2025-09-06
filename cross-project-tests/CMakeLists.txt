@@ -20,6 +20,7 @@ set(CROSS_PROJECT_TEST_DEPS
   check-gdb-llvm-support
   count
   llvm-ar
+  llvm-ar
   llvm-config
   llvm-dwarfdump
   llvm-objdump
