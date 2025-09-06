@@ -1241,11 +1241,6 @@ public:
   /// \p VF is the vectorization factor that will be used to vectorize \p I.
   bool isScalarWithPredication(Instruction *I, ElementCount VF) const;
 
-  /// Returns true if \p I is an instruction that needs to be predicated
-  /// at runtime.  The result is independent of the predication mechanism.
-  /// Superset of instructions that return true for isScalarWithPredication.
-  bool isPredicatedInst(Instruction *I) const;
-
   /// Return the costs for our two available strategies for lowering a
   /// div/rem operation which requires speculating at least one lane.
   /// First result is for scalarization (will be invalid for scalable
@@ -2769,7 +2764,7 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
 
 bool LoopVectorizationCostModel::isScalarWithPredication(
     Instruction *I, ElementCount VF) const {
-  if (!isPredicatedInst(I))
+  if (!Legal->isMaskRequired(I, foldTailByMasking()))
     return false;
 
   // Do we have a non-scalar lowering for this predicated
@@ -2805,59 +2800,6 @@ bool LoopVectorizationCostModel::isScalarWithPredication(
     const auto [ScalarCost, SafeDivisorCost] = getDivRemSpeculationCost(I, VF);
     return isDivRemScalarWithPredication(ScalarCost, SafeDivisorCost);
   }
-  }
-}
-
-// TODO: Fold into LoopVectorizationLegality::isMaskRequired.
-bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
-  // TODO: We can use the loop-preheader as context point here and get
-  // context sensitive reasoning for isSafeToSpeculativelyExecute.
-  if (isSafeToSpeculativelyExecute(I) ||
-      (isa<LoadInst, StoreInst, CallInst>(I) && !Legal->isMaskRequired(I)) ||
-      isa<BranchInst, SwitchInst, PHINode, AllocaInst>(I))
-    return false;
-
-  // If the instruction was executed conditionally in the original scalar loop,
-  // predication is needed with a mask whose lanes are all possibly inactive.
-  if (Legal->blockNeedsPredication(I->getParent()))
-    return true;
-
-  // If we're not folding the tail by masking, predication is unnecessary.
-  if (!foldTailByMasking())
-    return false;
-
-  // All that remain are instructions with side-effects originally executed in
-  // the loop unconditionally, but now execute under a tail-fold mask (only)
-  // having at least one active lane (the first). If the side-effects of the
-  // instruction are invariant, executing it w/o (the tail-folding) mask is safe
-  // - it will cause the same side-effects as when masked.
-  switch(I->getOpcode()) {
-  default:
-    llvm_unreachable(
-        "instruction should have been considered by earlier checks");
-  case Instruction::Call:
-    // Side-effects of a Call are assumed to be non-invariant, needing a
-    // (fold-tail) mask.
-    assert(Legal->isMaskRequired(I) &&
-           "should have returned earlier for calls not needing a mask");
-    return true;
-  case Instruction::Load:
-    // If the address is loop invariant no predication is needed.
-    return !Legal->isInvariant(getLoadStorePointerOperand(I));
-  case Instruction::Store: {
-    // For stores, we need to prove both speculation safety (which follows from
-    // the same argument as loads), but also must prove the value being stored
-    // is correct.  The easiest form of the later is to require that all values
-    // stored are the same.
-    return !(Legal->isInvariant(getLoadStorePointerOperand(I)) &&
-             TheLoop->isLoopInvariant(cast<StoreInst>(I)->getValueOperand()));
-  }
-  case Instruction::UDiv:
-  case Instruction::SDiv:
-  case Instruction::SRem:
-  case Instruction::URem:
-    // If the divisor is loop-invariant no predication is needed.
-    return !Legal->isInvariant(I->getOperand(1));
   }
 }
 
@@ -2972,8 +2914,7 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
   // (either a gap at the end of a load-access that may result in a speculative
   // load, or any gaps in a store-access).
   bool PredicatedAccessRequiresMasking =
-      blockNeedsPredicationForAnyReason(I->getParent()) &&
-      Legal->isMaskRequired(I);
+      blockNeedsPredicationForAnyReason(I->getParent()) && Legal->isMasked(I);
   bool LoadAccessWithGapsRequiresEpilogMasking =
       isa<LoadInst>(I) && Group->requiresScalarEpilogue() &&
       !isScalarEpilogueAllowed();
@@ -3069,7 +3010,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
                         << *I << "\n");
       return;
     }
-    if (isPredicatedInst(I)) {
+    if (Legal->isMaskRequired(I, foldTailByMasking())) {
       LLVM_DEBUG(
           dbgs() << "LV: Found not uniform due to requiring predication: " << *I
                  << "\n");
@@ -4855,7 +4796,7 @@ bool LoopVectorizationCostModel::useEmulatedMaskMemRefHack(Instruction *I,
   // from moving "masked load/store" check from legality to cost model.
   // Masked Load/Gather emulation was previously never allowed.
   // Limited number of Masked Store/Scatter emulation was allowed.
-  assert((isPredicatedInst(I)) &&
+  assert((Legal->isMaskRequired(I, foldTailByMasking())) &&
          "Expecting a scalar emulated instruction");
   return isa<LoadInst>(I) ||
          (isa<StoreInst>(I) &&
@@ -5158,7 +5099,7 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
   // If we have a predicated load/store, it will need extra i1 extracts and
   // conditional branches, but may not be executed for each vector lane. Scale
   // the cost by the probability of executing the predicated block.
-  if (isPredicatedInst(I)) {
+  if (Legal->isMaskRequired(I, foldTailByMasking())) {
     Cost /= getPredBlockCostDivisor(CostKind);
 
     // Add the cost of an i1 extract and a branch
@@ -5191,7 +5132,7 @@ LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
          "Stride should be 1 or -1 for consecutive memory access");
   const Align Alignment = getLoadStoreAlignment(I);
   InstructionCost Cost = 0;
-  if (Legal->isMaskRequired(I)) {
+  if (Legal->isMasked(I)) {
     Cost += TTI.getMaskedMemoryOpCost(I->getOpcode(), VectorTy, Alignment, AS,
                                       CostKind);
   } else {
@@ -5254,8 +5195,7 @@ LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
 
   return TTI.getAddressComputationCost(PtrTy, nullptr, nullptr, CostKind) +
          TTI.getGatherScatterOpCost(I->getOpcode(), VectorTy, Ptr,
-                                    Legal->isMaskRequired(I), Alignment,
-                                    CostKind, I);
+                                    Legal->isMasked(I), Alignment, CostKind, I);
 }
 
 InstructionCost
@@ -5284,12 +5224,11 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
       (isa<StoreInst>(I) && !Group->isFull());
   InstructionCost Cost = TTI.getInterleavedMemoryOpCost(
       InsertPos->getOpcode(), WideVecTy, Group->getFactor(), Indices,
-      Group->getAlign(), AS, CostKind, Legal->isMaskRequired(I),
-      UseMaskForGaps);
+      Group->getAlign(), AS, CostKind, Legal->isMasked(I), UseMaskForGaps);
 
   if (Group->isReverse()) {
     // TODO: Add support for reversed masked interleaved access.
-    assert(!Legal->isMaskRequired(I) &&
+    assert(!Legal->isMasked(I) &&
            "Reverse masked interleaved access not supported.");
     Cost += Group->getNumMembers() *
             TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy,
@@ -5793,7 +5732,7 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
         continue;
       }
 
-      bool MaskRequired = Legal->isMaskRequired(CI);
+      bool MaskRequired = Legal->isMasked(CI);
       // Compute corresponding vector type for return value and arguments.
       Type *RetTy = toVectorizedTy(ScalarRetTy, VF);
       for (Type *ScalarTy : ScalarTys)
@@ -5903,7 +5842,7 @@ bool LoopVectorizationCostModel::shouldConsiderInvariant(Value *Op) {
   // instruction in the loop. In that case, it is not trivially hoistable.
   auto *OpI = dyn_cast<Instruction>(Op);
   return !OpI || !TheLoop->contains(OpI) ||
-         (!isPredicatedInst(OpI) &&
+         (!Legal->isMaskRequired(OpI, foldTailByMasking()) &&
           (!isa<PHINode>(OpI) || OpI->getParent() != TheLoop->getHeader()) &&
           all_of(OpI->operands(),
                  [this](Value *Op) { return shouldConsiderInvariant(Op); }));
@@ -6086,7 +6025,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
   case Instruction::SDiv:
   case Instruction::URem:
   case Instruction::SRem:
-    if (VF.isVector() && isPredicatedInst(I)) {
+    if (VF.isVector() && Legal->isMaskRequired(I, foldTailByMasking())) {
       const auto [ScalarCost, SafeDivisorCost] = getDivRemSpeculationCost(I, VF);
       return isDivRemScalarWithPredication(ScalarCost, SafeDivisorCost) ?
         ScalarCost : SafeDivisorCost;
@@ -6269,8 +6208,9 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
         return TTI::CastContextHint::Interleave;
       case LoopVectorizationCostModel::CM_Scalarize:
       case LoopVectorizationCostModel::CM_Widen:
-        return isPredicatedInst(I) ? TTI::CastContextHint::Masked
-                                   : TTI::CastContextHint::Normal;
+        return Legal->isMaskRequired(I, foldTailByMasking())
+                   ? TTI::CastContextHint::Masked
+                   : TTI::CastContextHint::Normal;
       case LoopVectorizationCostModel::CM_Widen_Reverse:
         return TTI::CastContextHint::Reversed;
       case LoopVectorizationCostModel::CM_Unknown:
@@ -7523,7 +7463,7 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
     return nullptr;
 
   VPValue *Mask = nullptr;
-  if (Legal->isMaskRequired(I))
+  if (Legal->isMasked(I))
     Mask = getBlockInMask(Builder.getInsertBlock());
 
   // Determine if the pointer operand of the access is either consecutive or
@@ -7718,7 +7658,7 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
       //      vector variant at this VF requires a mask, so we synthesize an
       //      all-true mask.
       VPValue *Mask = nullptr;
-      if (Legal->isMaskRequired(CI))
+      if (Legal->isMasked(CI))
         Mask = getBlockInMask(Builder.getInsertBlock());
       else
         Mask = Plan.getOrAddLiveIn(
@@ -7759,7 +7699,7 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
   case Instruction::URem: {
     // If not provably safe, use a select to form a safe divisor before widening the
     // div/rem operation itself.  Otherwise fall through to general handling below.
-    if (CM.isPredicatedInst(I)) {
+    if (Legal->isMaskRequired(I, CM.foldTailByMasking())) {
       SmallVector<VPValue *> Ops(Operands);
       VPValue *Mask = getBlockInMask(Builder.getInsertBlock());
       VPValue *One =
@@ -7842,7 +7782,7 @@ VPRecipeBuilder::tryToWidenHistogram(const HistogramInfo *HI,
 
   // In case of predicated execution (due to tail-folding, or conditional
   // execution, or both), pass the relevant mask.
-  if (Legal->isMaskRequired(HI->Store))
+  if (Legal->isMasked(HI->Store))
     HGramOps.push_back(getBlockInMask(Builder.getInsertBlock()));
 
   return new VPHistogramRecipe(Opcode, HGramOps, HI->Store->getDebugLoc());
@@ -7855,7 +7795,7 @@ VPRecipeBuilder::handleReplication(Instruction *I, ArrayRef<VPValue *> Operands,
       [&](ElementCount VF) { return CM.isUniformAfterVectorization(I, VF); },
       Range);
 
-  bool IsPredicated = CM.isPredicatedInst(I);
+  bool IsPredicated = Legal->isMaskRequired(I, CM.foldTailByMasking());
 
   // Even if the instruction is not marked as uniform, there are certain
   // intrinsic calls that can be effectively treated as such, so we check for
