@@ -31,9 +31,11 @@ class RegisterBank;
 struct SGPRSpillBuilder;
 
 /// Register allocation hint types. Helps eliminate unneeded COPY with True16
+/// HasRegisterAvoidanceList helps with minimizing usage of conflicting physical
+/// registers
 namespace AMDGPURI {
 
-enum { Size16 = 1, Size32 = 2 };
+enum { Size16 = 1, Size32 = 2, HasRegisterAvoidanceList = 3 };
 
 } // end namespace AMDGPURI
 
