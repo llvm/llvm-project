@@ -1144,6 +1144,10 @@ public:
     return APInt::getZero(32);
   }
 
+  virtual APInt getPriorityMask(const Function &F) const {
+    return APInt::getZero(32);
+  }
+
   virtual bool isMultiversionedFunction(const Function &F) const {
     return false;
   }
