@@ -13027,6 +13027,14 @@ def warn_cuda_maxclusterrank_sm_90 : Warning<
   "maxclusterrank requires sm_90 or higher, CUDA arch provided: %0, ignoring "
   "%1 attribute">, InGroup<IgnoredAttributes>;
 
+def err_cuda_cluster_attr_not_supported : Error<
+  "%select{__cluster_dims__|__no_cluster__}0 is not supported for this GPU architecture"
+>;
+
+def err_cuda_cluster_dims_too_large : Error<
+  "only a maximum of %0 thread blocks in a cluster is supported"
+>;
+
 // VTable pointer authentication errors
 def err_non_polymorphic_vtable_pointer_auth : Error<
   "cannot set vtable pointer authentication on monomorphic type %0">;
