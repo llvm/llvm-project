@@ -11995,6 +11995,10 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
+  case X86::BI__builtin_ia32_blendvpd:
+  case X86::BI__builtin_ia32_blendvpd256:
+  case X86::BI__builtin_ia32_blendvps:
+  case X86::BI__builtin_ia32_blendvps256:
   case X86::BI__builtin_ia32_pblendvb128:
   case X86::BI__builtin_ia32_pblendvb256: {
     // SSE blendv by mask signbit: "Result = C[] < 0 ? T[] : F[]".
@@ -12011,8 +12015,9 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
       const APValue &F = SourceF.getVectorElt(EltNum);
       const APValue &T = SourceT.getVectorElt(EltNum);
-      APInt C = SourceC.getVectorElt(EltNum).getInt();
-      ResultElements.push_back(C.isNegative() ? T : F);
+      const APValue &C = SourceC.getVectorElt(EltNum);
+      APInt M = C.isInt() ? (APInt)C.getInt() : C.getFloat().bitcastToAPInt();
+      ResultElements.push_back(M.isNegative() ? T : F);
     }
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
