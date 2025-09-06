@@ -2604,21 +2604,28 @@ class getLdStRegisterOperandForVT<ValueType VT> {
   RegisterOperand ret = getLdStRegisterOperandForSize<VT.Size>.ret;
 }
 
-class getLdStRegisterOperandAlign2<RegisterClass RC> {
-  // This type of operands is only used in pseudo instructions helping
-  // code generation and thus doesn't need encoding and decoding methods.
-  // It also doesn't need to support AGPRs, because GFX908/A/40 do not
-  // support True16.
-  defvar VLdSt_16 = RegisterOperand<VGPR_16>;
-
+class getAlign2RegOp<RegisterOperand RC> {
   RegisterOperand ret =
-    !cond(!eq(RC.Size, 16)   : VLdSt_16,
-          !eq(RC.Size, 32)   : AVLdSt_32,
-          !eq(RC.Size, 64)   : AVLdSt_64_Align2,
-          !eq(RC.Size, 96)   : AVLdSt_96_Align2,
-          !eq(RC.Size, 128)  : AVLdSt_128_Align2,
-          !eq(RC.Size, 160)  : AVLdSt_160_Align2,
-          !eq(RC.Size, 1024) : AVLdSt_1024_Align2);
+    !cond(!eq(RC, VGPROp_16) : VGPROp_16,
+          !eq(RC, VGPROp_32) : VGPROp_32,
+          !eq(RC, VGPROp_64) : VGPROp_64_Align2,
+          !eq(RC, VGPROp_64_Align1) : VGPROp_64_Align2,
+          !eq(RC, VGPROp_96) : VGPROp_96_Align2,
+          !eq(RC, VGPROp_96_Align1) : VGPROp_96_Align2,
+          !eq(RC, VGPROp_128) : VGPROp_128_Align2,
+          !eq(RC, VGPROp_128_Align1) : VGPROp_128_Align2,
+          !eq(RC, VGPROp_160) : VGPROp_160_Align2,
+          !eq(RC, VGPROp_160_Align1) : VGPROp_160_Align2,
+          !eq(RC, VGPROp_1024) : VGPROp_1024_Align2,
+          !eq(RC, VGPROp_1024_Align1) : VGPROp_1024_Align2,
+          !eq(RC, AVLdSt_32) : AVLdSt_32,
+          !eq(RC, AVLdSt_64) : AVLdSt_64_Align2,
+          !eq(RC, AVLdSt_96) : AVLdSt_96_Align2,
+          !eq(RC, AVLdSt_96_Align1) : AVLdSt_96_Align2,
+          !eq(RC, AVLdSt_128) : AVLdSt_128_Align2,
+          !eq(RC, AVLdSt_128_Align1) : AVLdSt_128_Align2,
+          !eq(RC, AVLdSt_160) : AVLdSt_160_Align2,
+          !eq(RC, AVLdSt_160_Align1) : AVLdSt_160_Align2);
 }
 
 class getEquivalentAGPRClass<RegisterClass RC> {
