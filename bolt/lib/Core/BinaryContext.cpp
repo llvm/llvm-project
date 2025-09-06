@@ -1640,8 +1640,10 @@ void BinaryContext::preprocessDWODebugInfo() {
       } else if (!sys::fs::exists(DWOCompDir) && sys::fs::exists(DWOName)) {
         DWOCompDir = ".";
         this->outs()
-            << "BOLT-WARNING: Debug Fission: Debug Compilation Dir wrong for "
-            << DWOName << ". Relative path will be used for retrieving.\n";
+            << "BOLT-WARNING: Debug Fission: Debug Compilation Directory of "
+            << DWOName
+            << " does not exist. Relative path will be used to process .dwo "
+               "files.\n";
       }
       // Prevent failures when DWOName is already an absolute path.
       sys::fs::make_absolute(DWOCompDir, AbsolutePath);
