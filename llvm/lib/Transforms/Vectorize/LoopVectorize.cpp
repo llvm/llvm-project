@@ -2001,7 +2001,7 @@ public:
 
   /// Retrieves the SCEVCheckCond and SCEVCheckBlock that were generated as IR
   /// outside VPlan.
-  std::pair<Value *, BasicBlock *> getSCEVChecks() {
+  std::pair<Value *, BasicBlock *> getSCEVChecks() const {
     using namespace llvm::PatternMatch;
     if (!SCEVCheckCond || match(SCEVCheckCond, m_ZeroInt()))
       return {nullptr, nullptr};
@@ -2011,7 +2011,7 @@ public:
 
   /// Retrieves the MemCheckCond and MemCheckBlock that were generated as IR
   /// outside VPlan.
-  std::pair<Value *, BasicBlock *> getMemRuntimeChecks() {
+  std::pair<Value *, BasicBlock *> getMemRuntimeChecks() const {
     using namespace llvm::PatternMatch;
     if (MemRuntimeCheckCond && match(MemRuntimeCheckCond, m_ZeroInt()))
       return {nullptr, nullptr};
@@ -2020,9 +2020,7 @@ public:
 
   /// Return true if any runtime checks have been added
   bool hasChecks() const {
-    using namespace llvm::PatternMatch;
-    return (SCEVCheckCond && !match(SCEVCheckCond, m_ZeroInt())) ||
-           MemRuntimeCheckCond;
+    return getSCEVChecks().first || getMemRuntimeChecks().first;
   }
 };
 } // namespace
