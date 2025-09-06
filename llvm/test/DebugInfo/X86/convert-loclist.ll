@@ -1,8 +1,8 @@
-; RUN: llc -mtriple=x86_64-linux -filetype=obj < %s \
+; RUN: llc -mtriple=x86_64 -filetype=obj < %s \
 ; RUN:   | llvm-dwarfdump -debug-info -debug-loclists - | FileCheck %s
-; RUN: llc -mtriple=x86_64-linux -split-dwarf-file=foo.dwo -filetype=obj -dwarf-op-convert=Enable < %s \
+; RUN: llc -mtriple=x86_64 -split-dwarf-file=foo.dwo -filetype=obj -dwarf-op-convert=Enable < %s \
 ; RUN:   | llvm-dwarfdump -debug-info -debug-loclists - | FileCheck --check-prefix=SPLIT --check-prefix=CHECK %s
-; RUN: llc -mtriple=x86_64-linux -split-dwarf-file=foo.dwo -filetype=asm -dwarf-op-convert=Enable < %s \
+; RUN: llc -mtriple=x86_64 -split-dwarf-file=foo.dwo -filetype=asm -dwarf-op-convert=Enable < %s \
 ; RUN:   | FileCheck --check-prefix=ASM %s
 
 ; RUN: llc -mtriple=x86_64-mingw -filetype=obj < %s \
