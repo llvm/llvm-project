@@ -53,6 +53,7 @@ public:
   static const uptr CompactPtrScale = Config::getCompactPtrScale();
   static const uptr RegionSizeLog = Config::getRegionSizeLog();
   static const uptr GroupSizeLog = Config::getGroupSizeLog();
+  static const bool ZeroOnDealloc = Config::getZeroOnDealloc();
   static_assert(RegionSizeLog >= GroupSizeLog,
                 "Group size shouldn't be greater than the region size");
   static const uptr GroupScale = GroupSizeLog - CompactPtrScale;
