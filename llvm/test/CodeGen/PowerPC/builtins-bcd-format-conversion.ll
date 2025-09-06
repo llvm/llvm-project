@@ -36,5 +36,106 @@ entry:
   ret <16 x i8> %0
 }
 
+define dso_local <16 x i8> @test_bcdshift_imm0(<16 x i8> noundef %a, i32 %b) {
+; CHECK-LABEL: test_bcdshift_imm0:
+; CHECK:         # %bb.0: # %entry
+; CHECK-NEXT:    mtvsrws vs35, [[REG:r[0-9]+]]
+; CHECK-NEXT:    bcds. v2, v3, v2, 0
+; CHECK-NEXT:    blr
+
+entry:
+  %0 = tail call <16 x i8> @llvm.ppc.bcdshift(<16 x i8> %a, i32 %b, i32 0)
+  ret <16 x i8> %0
+}
+
+define dso_local <16 x i8> @test_bcdshift_imm1(<16 x i8> noundef %a, i32 %b) {
+; CHECK-LABEL: test_bcdshift_imm1:
+; CHECK:         # %bb.0: # %entry
+; CHECK-NEXT:    mtvsrws vs35, [[REG:r[0-9]+]]
+; CHECK-NEXT:    bcds. v2, v3, v2, 1
+; CHECK-NEXT:    blr
+
+entry:
+  %0 = tail call <16 x i8> @llvm.ppc.bcdshift(<16 x i8> %a, i32 %b, i32 1)
+  ret <16 x i8> %0
+}
+
+define dso_local <16 x i8> @test_bcdshiftround_imm0(<16 x i8> noundef %a, i32 %b) {
+; CHECK-LABEL: test_bcdshiftround_imm0:
+; CHECK:         # %bb.0: # %entry
+; CHECK-NEXT:    mtvsrws vs35, [[REG:r[0-9]+]]
+; CHECK-NEXT:    bcdsr. v2, v3, v2, 0
+; CHECK-NEXT:    blr
+
+entry:
+  %0 = tail call <16 x i8> @llvm.ppc.bcdshiftround(<16 x i8> %a, i32 %b, i32 0)
+  ret <16 x i8> %0
+}
+
+define dso_local <16 x i8> @test_bcdshiftround_imm1(<16 x i8> noundef %a, i32 %b) {
+; CHECK-LABEL: test_bcdshiftround_imm1:
+; CHECK:         # %bb.0: # %entry
+; CHECK-NEXT:    mtvsrws vs35, [[REG:r[0-9]+]]
+; CHECK-NEXT:    bcdsr. v2, v3, v2, 1
+; CHECK-NEXT:    blr
+
+entry:
+  %0 = tail call <16 x i8> @llvm.ppc.bcdshiftround(<16 x i8> %a, i32 %b, i32 1)
+  ret <16 x i8> %0
+}
+
+define dso_local <16 x i8> @test_bcdtruncate_imm0(<16 x i8> noundef %a, i32 %b) {
+; CHECK-LABEL: test_bcdtruncate_imm0:
+; CHECK:         # %bb.0: # %entry
+; CHECK-NEXT:    mtvsrws vs35, [[REG:r[0-9]+]]
+; CHECK-NEXT:    bcdtrunc. v2, v3, v2, 0
+; CHECK-NEXT:    blr
+
+entry:
+  %0 = tail call <16 x i8> @llvm.ppc.bcdtruncate(<16 x i8> %a, i32 %b, i32 0)
+  ret <16 x i8> %0
+}
+
+define dso_local <16 x i8> @test_bcdtruncate_imm1(<16 x i8> noundef %a, i32 %b) {
+; CHECK-LABEL: test_bcdtruncate_imm1:
+; CHECK:         # %bb.0: # %entry
+; CHECK-NEXT:    mtvsrws vs35, [[REG:r[0-9]+]]
+; CHECK-NEXT:    bcdtrunc. v2, v3, v2, 1
+; CHECK-NEXT:    blr
+
+entry:
+  %0 = tail call <16 x i8> @llvm.ppc.bcdtruncate(<16 x i8> %a, i32 %b, i32 1)
+  ret <16 x i8> %0
+}
+
+define dso_local <16 x i8> @test_bcdunsignedtruncate(<16 x i8> noundef %a, i32 %b) {
+; CHECK-LABEL: test_bcdunsignedtruncate:
+; CHECK:         # %bb.0: # %entry
+; CHECK-NEXT:    mtvsrws vs35, [[REG:r[0-9]+]]
+; CHECK-NEXT:    bcdutrunc. v2, v3, v2
+; CHECK-NEXT:    blr
+
+entry:
+  %0 = tail call <16 x i8> @llvm.ppc.bcdunsignedtruncate(<16 x i8> %a, i32 %b)
+  ret <16 x i8> %0
+}
+
+define dso_local <16 x i8> @test_bcdunsignedshift(<16 x i8> noundef %a, i32 %b) {
+; CHECK-LABEL: test_bcdunsignedshift:
+; CHECK:         # %bb.0: # %entry
+; CHECK-NEXT:    mtvsrws vs35, [[REG:r[0-9]+]]
+; CHECK-NEXT:    bcdus. v2, v3, v2
+; CHECK-NEXT:    blr
+
+entry:
+  %0 = tail call <16 x i8> @llvm.ppc.bcdunsignedshift(<16 x i8> %a, i32 %b)
+  ret <16 x i8> %0
+}
+
 declare <16 x i8> @llvm.ppc.bcdcopysign(<16 x i8>, <16 x i8>)
 declare <16 x i8> @llvm.ppc.bcdsetsign(<16 x i8>, i32)
+declare <16 x i8> @llvm.ppc.bcdshift(<16 x i8>, i32, i32)
+declare <16 x i8> @llvm.ppc.bcdshiftround(<16 x i8>, i32, i32)
+declare <16 x i8> @llvm.ppc.bcdtruncate(<16 x i8>, i32, i32)
+declare <16 x i8> @llvm.ppc.bcdunsignedtruncate(<16 x i8>, i32)
+declare <16 x i8> @llvm.ppc.bcdunsignedshift(<16 x i8>, i32)

@@ -97,6 +97,26 @@ namespace llvm {
     ///
     XXSPLT,
 
+    /// BCDSHIFT - The PPC bcdshift instruction
+    ///
+    BCDSHIFT,
+
+    /// BCDSHIFTROUND - The PPC bcdshiftround instruction
+    ///
+    BCDSHIFTROUND,
+
+    /// BCDTRUNC - The PPC bcdtruncate instruction
+    ///
+    BCDTRUNC,
+
+    /// BCDUTRUNC - The PPC bcdunsigned truncate instruction
+    ///
+    BCDUTRUNC,
+
+    /// BCDUSHIFT - The PPC bcdunsigned shift instruction
+    ///
+    BCDUSHIFT,
+
     /// XXSPLTI_SP_TO_DP - The PPC VSX splat instructions for immediates for
     /// converting immediate single precision numbers to double precision
     /// vector or scalar.
