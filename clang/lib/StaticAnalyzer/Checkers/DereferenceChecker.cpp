@@ -39,9 +39,10 @@ public:
 
 class DereferenceChecker
     : public CheckerFamily<check::Location, check::Bind,
+                           check::PreStmt<BinaryOperator>,
                            EventDispatcher<ImplicitNullDerefEvent>> {
-  void reportBug(const DerefBugType &BT, ProgramStateRef State, const Stmt *S,
-                 CheckerContext &C) const;
+  void reportDerefBug(const DerefBugType &BT, ProgramStateRef State,
+                      const Stmt *S, CheckerContext &C) const;
 
   bool suppressReport(CheckerContext &C, const Expr *E) const;
 
@@ -50,6 +51,7 @@ public:
                      CheckerContext &C) const;
   void checkBind(SVal L, SVal V, const Stmt *S, bool AtDeclInit,
                  CheckerContext &C) const;
+  void checkPreStmt(const BinaryOperator *Op, CheckerContext &C) const;
 
   static void AddDerefSource(raw_ostream &os,
                              SmallVectorImpl<SourceRange> &Ranges,
@@ -57,7 +59,7 @@ public:
                              const LocationContext *LCtx,
                              bool loadedFrom = false);
 
-  CheckerFrontend NullDerefChecker, FixedDerefChecker;
+  CheckerFrontend NullDerefChecker, FixedDerefChecker, NullPointerArithmChecker;
   const DerefBugType NullBug{&NullDerefChecker, "Dereference of null pointer",
                              "a null pointer dereference",
                              "a dereference of a null pointer"};
@@ -72,6 +74,9 @@ public:
   const DerefBugType FixedAddressBug{&FixedDerefChecker,
                                      "Dereference of a fixed address",
                                      "a dereference of a fixed address"};
+  const BugType NullPointerArithmBug{
+      &NullPointerArithmChecker,
+      "Possible undefined arithmetic operation involving a null pointer"};
 
   StringRef getDebugTag() const override { return "DereferenceChecker"; }
 };
@@ -173,9 +178,11 @@ static bool isDeclRefExprToReference(const Expr *E) {
   return false;
 }
 
-void DereferenceChecker::reportBug(const DerefBugType &BT,
-                                   ProgramStateRef State, const Stmt *S,
-                                   CheckerContext &C) const {
+void DereferenceChecker::reportDerefBug(const DerefBugType &BT,
+                                        ProgramStateRef State, const Stmt *S,
+                                        CheckerContext &C) const {
+  assert(&BT != &NullPointerArithmBug && "Invalid use of function");
+
   if (&BT == &FixedAddressBug) {
     if (!FixedDerefChecker.isEnabled())
       // Deliberately don't add a sink node if check is disabled.
@@ -262,7 +269,7 @@ void DereferenceChecker::checkLocation(SVal l, bool isLoad, const Stmt* S,
   if (l.isUndef()) {
     const Expr *DerefExpr = getDereferenceExpr(S);
     if (!suppressReport(C, DerefExpr))
-      reportBug(UndefBug, C.getState(), DerefExpr, C);
+      reportDerefBug(UndefBug, C.getState(), DerefExpr, C);
     return;
   }
 
@@ -283,7 +290,7 @@ void DereferenceChecker::checkLocation(SVal l, bool isLoad, const Stmt* S,
       // we call an "explicit" null dereference.
       const Expr *expr = getDereferenceExpr(S);
       if (!suppressReport(C, expr)) {
-        reportBug(NullBug, nullState, expr, C);
+        reportDerefBug(NullBug, nullState, expr, C);
         return;
       }
     }
@@ -301,7 +308,7 @@ void DereferenceChecker::checkLocation(SVal l, bool isLoad, const Stmt* S,
   if (location.isConstant()) {
     const Expr *DerefExpr = getDereferenceExpr(S, isLoad);
     if (!suppressReport(C, DerefExpr))
-      reportBug(FixedAddressBug, notNullState, DerefExpr, C);
+      reportDerefBug(FixedAddressBug, notNullState, DerefExpr, C);
     return;
   }
 
@@ -317,7 +324,7 @@ void DereferenceChecker::checkBind(SVal L, SVal V, const Stmt *S,
 
   // One should never write to label addresses.
   if (auto Label = L.getAs<loc::GotoLabel>()) {
-    reportBug(LabelBug, C.getState(), S, C);
+    reportDerefBug(LabelBug, C.getState(), S, C);
     return;
   }
 
@@ -338,7 +345,7 @@ void DereferenceChecker::checkBind(SVal L, SVal V, const Stmt *S,
     if (!StNonNull) {
       const Expr *expr = getDereferenceExpr(S, /*IsBind=*/true);
       if (!suppressReport(C, expr)) {
-        reportBug(NullBug, StNull, expr, C);
+        reportDerefBug(NullBug, StNull, expr, C);
         return;
       }
     }
@@ -356,7 +363,7 @@ void DereferenceChecker::checkBind(SVal L, SVal V, const Stmt *S,
   if (V.isConstant()) {
     const Expr *DerefExpr = getDereferenceExpr(S, true);
     if (!suppressReport(C, DerefExpr))
-      reportBug(FixedAddressBug, State, DerefExpr, C);
+      reportDerefBug(FixedAddressBug, State, DerefExpr, C);
     return;
   }
 
@@ -379,6 +386,111 @@ void DereferenceChecker::checkBind(SVal L, SVal V, const Stmt *S,
   C.addTransition(State, this);
 }
 
+void DereferenceChecker::checkPreStmt(const BinaryOperator *Op,
+                                      CheckerContext &C) const {
+  if (!Op->isAdditiveOp())
+    return;
+  const Expr *E1 = Op->getLHS();
+  const Expr *E2 = Op->getRHS();
+  QualType T1 = E1->getType().getCanonicalType();
+  QualType T2 = E2->getType().getCanonicalType();
+  if (T1->isIntegerType() && T2->isIntegerType())
+    return;
+  if (!T1->isPointerType() && !T1->isIntegerType() && !T2->isPointerType() &&
+      !T2->isIntegerType())
+    return;
+
+  ProgramStateRef State = C.getState();
+  SVal V1 = State->getSVal(E1, C.getLocationContext());
+  SVal V2 = State->getSVal(E2, C.getLocationContext());
+  if (V1.isUndef() || V2.isUndef())
+    return;
+
+  ConditionTruthVal V1IsNull = State->isNull(V1);
+  ConditionTruthVal V2IsNull = State->isNull(V2);
+  bool IsConstrained = true;
+
+  // Check cases 'NULL + x' and 'NULL - x'
+  if (T1->isPointerType() && T2->isIntegerType()) {
+    if (!V1IsNull.isConstrainedTrue() || V2IsNull.isConstrainedTrue())
+      return;
+    IsConstrained = V2IsNull.isConstrainedFalse();
+  }
+
+  // Check case 'x + NULL'
+  if (T1->isIntegerType() && T2->isPointerType()) {
+    if (V1IsNull.isConstrainedTrue() || !V2IsNull.isConstrainedTrue())
+      return;
+    IsConstrained = V1IsNull.isConstrainedFalse();
+  }
+
+  // Check case 'NULL - p' or 'p - NULL'
+  if (T1->isPointerType() && T2->isPointerType()) {
+    if (!V1IsNull.isConstrainedTrue() && !V2IsNull.isConstrainedTrue())
+      return;
+    if (V1IsNull.isConstrainedTrue() && V2IsNull.isConstrainedTrue())
+      return;
+    IsConstrained =
+        V1IsNull.isConstrainedFalse() || V2IsNull.isConstrainedFalse();
+  }
+
+  SmallString<100> Buf;
+  llvm::raw_svector_ostream Out(Buf);
+  SmallVector<SourceRange, 2> Ranges;
+
+  auto AddSubExprStr = [&](const Expr *E, bool IsPointer,
+                           ConditionTruthVal IsNull) {
+    if (IsNull.isConstrainedTrue()) {
+      if (IsPointer)
+        Out << "null pointer";
+      else
+        Out << "zero";
+    } else {
+      if (!IsNull.isConstrainedFalse())
+        Out << "probably ";
+      if (IsPointer)
+        Out << "non-null pointer";
+      else
+        Out << "nonzero integer value";
+    }
+    if (IsPointer)
+      AddDerefSource(Out, Ranges, E, State.get(), C.getLocationContext(),
+                     false);
+  };
+
+  if (Op->getOpcode() == BO_Add)
+    Out << "Addition of a ";
+  else
+    Out << "Subtraction of a ";
+  AddSubExprStr(E1, T1->isPointerType(), V1IsNull);
+  Out << " and a ";
+  AddSubExprStr(E2, T2->isPointerType(), V2IsNull);
+
+  if (IsConstrained)
+    Out << " results ";
+  else
+    Out << " may result ";
+  Out << "in undefined behavior";
+
+  ExplodedNode *N = C.generateErrorNode(State);
+  if (!N)
+    return;
+  auto BR = std::make_unique<PathSensitiveBugReport>(NullPointerArithmBug,
+                                                     Buf.str(), N);
+
+  if (T1->isPointerType())
+    bugreporter::trackExpressionValue(N, E1, *BR);
+  if (T2->isPointerType())
+    bugreporter::trackExpressionValue(N, E2, *BR);
+
+  for (SmallVectorImpl<SourceRange>::iterator I = Ranges.begin(),
+                                              E = Ranges.end();
+       I != E; ++I)
+    BR->addRange(*I);
+
+  C.emitReport(std::move(BR));
+}
+
 void ento::registerNullDereferenceChecker(CheckerManager &Mgr) {
   Mgr.getChecker<DereferenceChecker>()->NullDerefChecker.enable(Mgr);
 }
@@ -393,5 +505,13 @@ void ento::registerFixedAddressDereferenceChecker(CheckerManager &Mgr) {
 
 bool ento::shouldRegisterFixedAddressDereferenceChecker(
     const CheckerManager &) {
+  return true;
+}
+
+void ento::registerNullPointerArithmChecker(CheckerManager &Mgr) {
+  Mgr.getChecker<DereferenceChecker>()->NullPointerArithmChecker.enable(Mgr);
+}
+
+bool ento::shouldRegisterNullPointerArithmChecker(const CheckerManager &) {
   return true;
 }
