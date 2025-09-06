@@ -44,7 +44,6 @@
 #include "llvm/Object/CVDebugRecord.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -1248,19 +1247,15 @@ void PDBLinker::printStats() {
          << std::string(80, '-') << '\n';
 
   auto print = [&](uint64_t v, StringRef s) {
-    stream << formatv("{0}",
-                      fmt_align(formatv("{0:N}", v), AlignStyle::Right, 20))
-           << " " << s << '\n';
+    stream << format_decimal(v, 15) << " " << s << '\n';
   };
 
   print(ctx.objFileInstances.size(),
         "Input OBJ files (expanded from all cmd-line inputs)");
-  print(ctx.consumedInputsSize,
-        "Size of all consumed OBJ files (non-lazy), in bytes");
   print(ctx.typeServerSourceMappings.size(), "PDB type server dependencies");
   print(ctx.precompSourceMappings.size(), "Precomp OBJ dependencies");
   print(nbTypeRecords, "Input type records");
-  print(nbTypeRecordsBytes, "Size of all input type records, in bytes");
+  print(nbTypeRecordsBytes, "Input type records bytes");
   print(builder.getTpiBuilder().getRecordCount(), "Merged TPI records");
   print(builder.getIpiBuilder().getRecordCount(), "Merged IPI records");
   print(pdbStrTab.size(), "Output PDB strings");
