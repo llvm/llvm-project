@@ -46,8 +46,6 @@ public:
   RuntimeLibType GetDefaultRuntimeLibType() const override;
   unsigned GetDefaultDwarfVersion() const override;
   CXXStdlibType GetDefaultCXXStdlibType() const override;
-  bool
-  IsAArch64OutlineAtomicsDefault(const llvm::opt::ArgList &Args) const override;
   bool isPIEDefault(const llvm::opt::ArgList &Args) const override;
   bool IsMathErrnoDefault() const override;
   SanitizerMask getSupportedSanitizers() const override;
