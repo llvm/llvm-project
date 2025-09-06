@@ -1843,6 +1843,11 @@ public:
   /// otherwise scalar epilogue loop.
   LLVM_ABI bool preferEpilogueVectorization() const;
 
+  /// Return true if the loop vectorizer can generate control flow (conditional
+  /// block) inside the vector region. Otherwise lv will generate a single block
+  /// for vector region and the control flow will be handled by mask.
+  bool preferControlFlow() const;
+
   /// \returns True if the target wants to expand the given reduction intrinsic
   /// into a shuffle sequence.
   LLVM_ABI bool shouldExpandReduction(const IntrinsicInst *II) const;
