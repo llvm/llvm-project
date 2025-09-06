@@ -298,9 +298,9 @@ void state::TeamStateTy::assertEqual(TeamStateTy &Other) const {
   ASSERT(HasThreadState == Other.HasThreadState, nullptr);
 }
 
-[[clang::loader_uninitialized]] Local<state::TeamStateTy>
+[[clang::loader_uninitialized, gnu::used, gnu::retain]] Local<state::TeamStateTy>
     ompx::state::TeamState;
-[[clang::loader_uninitialized]] Local<state::ThreadStateTy **>
+[[clang::loader_uninitialized, gnu::used, gnu::retain]] Local<state::ThreadStateTy **>
     ompx::state::ThreadStates;
 
 namespace {
