@@ -436,7 +436,7 @@ class MIMG_NoSampler_Helper_gfx90a <mimgopc op, string asm,
                                     RegisterClass dst_rc,
                                     RegisterClass addr_rc,
                                     string dns="">
-  : MIMG_gfx90a <op.GFX10M, (outs getLdStRegisterOperand<dst_rc>.ret:$vdata), dns> {
+  : MIMG_gfx90a <op.GFX10M, (outs getLdStRegisterOperandAlign2<dst_rc>.ret:$vdata), dns> {
   let InOperandList = !con((ins addr_rc:$vaddr, SReg_256_XNULL:$srsrc,
                                 DMask:$dmask, UNorm:$unorm, CPol:$cpol,
                                 R128A16:$r128, LWE:$lwe, DA:$da),
@@ -578,7 +578,7 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
       if op.HAS_GFX10M then {
         def _V2 : MIMG_NoSampler_Helper <op, asm, dst_rc, VReg_64>;
         if !not(ExtendedImageInst) then
-        def _V2_gfx90a : MIMG_NoSampler_Helper_gfx90a <op, asm, dst_rc, VReg_64>;
+        def _V2_gfx90a : MIMG_NoSampler_Helper_gfx90a <op, asm, dst_rc, VReg_64_Align2>;
         def _V2_gfx10 : MIMG_NoSampler_gfx10<op, asm, dst_rc, VReg_64>;
         def _V2_nsa_gfx10 : MIMG_NoSampler_nsa_gfx10<op, asm, dst_rc, 2>;
       }
@@ -602,7 +602,7 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
       if op.HAS_GFX10M then {
         def _V3 : MIMG_NoSampler_Helper <op, asm, dst_rc, VReg_96>;
         if !not(ExtendedImageInst) then
-        def _V3_gfx90a : MIMG_NoSampler_Helper_gfx90a <op, asm, dst_rc, VReg_96>;
+        def _V3_gfx90a : MIMG_NoSampler_Helper_gfx90a <op, asm, dst_rc, VReg_96_Align2>;
         def _V3_gfx10 : MIMG_NoSampler_gfx10<op, asm, dst_rc, VReg_96>;
         def _V3_nsa_gfx10 : MIMG_NoSampler_nsa_gfx10<op, asm, dst_rc, 3>;
       }
@@ -626,7 +626,7 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
       if op.HAS_GFX10M then {
         def _V4 : MIMG_NoSampler_Helper <op, asm, dst_rc, VReg_128>;
         if !not(ExtendedImageInst) then
-        def _V4_gfx90a : MIMG_NoSampler_Helper_gfx90a <op, asm, dst_rc, VReg_128>;
+        def _V4_gfx90a : MIMG_NoSampler_Helper_gfx90a <op, asm, dst_rc, VReg_128_Align2>;
         def _V4_gfx10 : MIMG_NoSampler_gfx10<op, asm, dst_rc, VReg_128>;
         def _V4_nsa_gfx10 : MIMG_NoSampler_nsa_gfx10<op, asm, dst_rc, 4,
                                                      !if(enableDisasm, "GFX10", "")>;
@@ -694,7 +694,7 @@ class MIMG_Store_Helper_gfx90a <mimgopc op, string asm,
                                 RegisterClass addr_rc,
                                 string dns = "">
   : MIMG_gfx90a<op.GFX10M, (outs), dns> {
-  let InOperandList = !con((ins getLdStRegisterOperand<data_rc>.ret:$vdata,
+  let InOperandList = !con((ins getLdStRegisterOperandAlign2<data_rc>.ret:$vdata,
                                 addr_rc:$vaddr, SReg_256_XNULL:$srsrc,
                                 DMask:$dmask, UNorm:$unorm, CPol:$cpol,
                                 R128A16:$r128, LWE:$lwe, DA:$da),
@@ -797,7 +797,7 @@ multiclass MIMG_Store_Addr_Helper <mimgopc op, string asm,
       let ssamp = 0 in {
         if op.HAS_GFX10M then {
           def _V2 : MIMG_Store_Helper <op, asm, data_rc, VReg_64>;
-          def _V2_gfx90a : MIMG_Store_Helper_gfx90a <op, asm, data_rc, VReg_64>;
+          def _V2_gfx90a : MIMG_Store_Helper_gfx90a <op, asm, data_rc, VReg_64_Align2>;
           def _V2_gfx10 : MIMG_Store_gfx10 <op, asm, data_rc, VReg_64>;
           def _V2_nsa_gfx10 : MIMG_Store_nsa_gfx10 <op, asm, data_rc, 2>;
         }
@@ -814,7 +814,7 @@ multiclass MIMG_Store_Addr_Helper <mimgopc op, string asm,
       let ssamp = 0 in {
         if op.HAS_GFX10M then {
           def _V3 : MIMG_Store_Helper <op, asm, data_rc, VReg_96>;
-          def _V3_gfx90a : MIMG_Store_Helper_gfx90a <op, asm, data_rc, VReg_96>;
+          def _V3_gfx90a : MIMG_Store_Helper_gfx90a <op, asm, data_rc, VReg_96_Align2>;
           def _V3_gfx10 : MIMG_Store_gfx10 <op, asm, data_rc, VReg_96>;
           def _V3_nsa_gfx10 : MIMG_Store_nsa_gfx10 <op, asm, data_rc, 3>;
         }
@@ -831,7 +831,7 @@ multiclass MIMG_Store_Addr_Helper <mimgopc op, string asm,
       let ssamp = 0 in {
         if op.HAS_GFX10M then {
           def _V4 : MIMG_Store_Helper <op, asm, data_rc, VReg_128>;
-          def _V4_gfx90a : MIMG_Store_Helper_gfx90a <op, asm, data_rc, VReg_128>;
+          def _V4_gfx90a : MIMG_Store_Helper_gfx90a <op, asm, data_rc, VReg_128_Align2>;
           def _V4_gfx10 : MIMG_Store_gfx10 <op, asm, data_rc, VReg_128>;
           def _V4_nsa_gfx10 : MIMG_Store_nsa_gfx10 <op, asm, data_rc, 4,
                                                           !if(enableDisasm, "GFX10", "")>;
@@ -885,10 +885,10 @@ class MIMG_Atomic_gfx6789_base <bits<8> op, string asm, RegisterClass data_rc,
 
 class MIMG_Atomic_gfx90a_base <bits<8> op, string asm, RegisterClass data_rc,
                                RegisterClass addr_rc, string dns="">
-  : MIMG_gfx90a <op, (outs getLdStRegisterOperand<data_rc>.ret:$vdst), dns> {
+  : MIMG_gfx90a <op, (outs getLdStRegisterOperandAlign2<data_rc>.ret:$vdst), dns> {
   let Constraints = "$vdst = $vdata";
 
-  let InOperandList = (ins getLdStRegisterOperand<data_rc>.ret:$vdata,
+  let InOperandList = (ins getLdStRegisterOperandAlign2<data_rc>.ret:$vdata,
                            addr_rc:$vaddr, SReg_256_XNULL:$srsrc,
                            DMask:$dmask, UNorm:$unorm, CPol:$cpol,
                            R128A16:$r128, LWE:$lwe, DA:$da);
@@ -1022,7 +1022,7 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
         }
         if op.HAS_VI then {
           def _V2_vi : MIMG_Atomic_vi <op, asm, data_rc, VReg_64, 0>;
-          def _V2_gfx90a : MIMG_Atomic_gfx90a <op, asm, data_rc, VReg_64, 0>;
+          def _V2_gfx90a : MIMG_Atomic_gfx90a <op, asm, data_rc, VReg_64_Align2, 0>;
         }
         if op.HAS_GFX10M then {
           def _V2_gfx10 : MIMG_Atomic_gfx10 <op, asm, data_rc, VReg_64, 0>;
@@ -1044,7 +1044,7 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
         }
         if op.HAS_VI then {
           def _V3_vi : MIMG_Atomic_vi <op, asm, data_rc, VReg_96, 0>;
-          def _V3_gfx90a : MIMG_Atomic_gfx90a <op, asm, data_rc, VReg_96, 0>;
+          def _V3_gfx90a : MIMG_Atomic_gfx90a <op, asm, data_rc, VReg_96_Align2, 0>;
         }
         if op.HAS_GFX10M then {
           def _V3_gfx10 : MIMG_Atomic_gfx10 <op, asm, data_rc, VReg_96, 0>;
@@ -1066,7 +1066,7 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
         }
         if op.HAS_VI then {
           def _V4_vi : MIMG_Atomic_vi <op, asm, data_rc, VReg_128, 0>;
-          def _V4_gfx90a : MIMG_Atomic_gfx90a <op, asm, data_rc, VReg_128, 0>;
+          def _V4_gfx90a : MIMG_Atomic_gfx90a <op, asm, data_rc, VReg_128_Align2, 0>;
         }
         if op.HAS_GFX10M then {
           def _V4_gfx10 : MIMG_Atomic_gfx10 <op, asm, data_rc, VReg_128, 0>;
@@ -1140,7 +1140,7 @@ class MIMG_Sampler_Helper <mimgopc op, string asm, RegisterClass dst_rc,
 
 class MIMG_Sampler_gfx90a<mimgopc op, string asm, RegisterClass dst_rc,
                           RegisterClass src_rc, string dns="">
-  : MIMG_gfx90a<op.GFX10M, (outs getLdStRegisterOperand<dst_rc>.ret:$vdata), dns> {
+  : MIMG_gfx90a<op.GFX10M, (outs getLdStRegisterOperandAlign2<dst_rc>.ret:$vdata), dns> {
   let InOperandList = !con((ins src_rc:$vaddr, SReg_256_XNULL:$srsrc, SReg_128_XNULL:$ssamp,
                                 DMask:$dmask, UNorm:$unorm, CPol:$cpol,
                                 R128A16:$r128, LWE:$lwe, DA:$da),

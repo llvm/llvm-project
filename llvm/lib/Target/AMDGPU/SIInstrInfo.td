@@ -2604,6 +2604,23 @@ class getLdStRegisterOperandForVT<ValueType VT> {
   RegisterOperand ret = getLdStRegisterOperandForSize<VT.Size>.ret;
 }
 
+class getLdStRegisterOperandAlign2<RegisterClass RC> {
+  // This type of operands is only used in pseudo instructions helping
+  // code generation and thus doesn't need encoding and decoding methods.
+  // It also doesn't need to support AGPRs, because GFX908/A/40 do not
+  // support True16.
+  defvar VLdSt_16 = RegisterOperand<VGPR_16>;
+
+  RegisterOperand ret =
+    !cond(!eq(RC.Size, 16)   : VLdSt_16,
+          !eq(RC.Size, 32)   : AVLdSt_32,
+          !eq(RC.Size, 64)   : AVLdSt_64_Align2,
+          !eq(RC.Size, 96)   : AVLdSt_96_Align2,
+          !eq(RC.Size, 128)  : AVLdSt_128_Align2,
+          !eq(RC.Size, 160)  : AVLdSt_160_Align2,
+          !eq(RC.Size, 1024) : AVLdSt_1024_Align2);
+}
+
 class getEquivalentAGPRClass<RegisterClass RC> {
   RegisterClass ret =
     !cond(!eq(RC.Size, 32)   : AGPR_32,
