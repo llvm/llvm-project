@@ -1762,6 +1762,14 @@ public:
   /// Clang backwards compatibility rather than GCC/Itanium ABI compatibility.
   virtual bool areDefaultedSMFStillPOD(const LangOptions&) const;
 
+  /// Controls whether global operator delete is called by the deleting
+  /// destructor or at the point where ::delete was called. Historically Clang
+  /// called global operator delete outside of the deleting destructor for both
+  /// Microsoft and Itanium ABI. In Clang 21 support for ::delete was aligned
+  /// with Microsoft ABI, so it will call global operator delete in the deleting
+  /// destructor body.
+  virtual bool callGlobalDeleteInDeletingDtor(const LangOptions &) const;
+
   /// Controls if __builtin_longjmp / __builtin_setjmp can be lowered to
   /// llvm.eh.sjlj.longjmp / llvm.eh.sjlj.setjmp.
   virtual bool hasSjLjLowering() const {

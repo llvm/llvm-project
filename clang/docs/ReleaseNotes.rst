@@ -52,6 +52,23 @@ Potentially Breaking Changes
   ``--gcc-install-dir`` command line argument. This will silence the
   warning. It can also be disabled using the
   ``-Wno-gcc-install-dir-libstdcxx`` command line flag.
+- Scalar deleting destructor support has been aligned with MSVC when
+  targeting the MSVC ABI. Clang previously implemented support for
+  ``::delete`` by calling the complete object destructor and then the
+  appropriate global delete operator (as is done for the Itanium ABI).
+  The scalar deleting destructor is now called to destroy the object
+  and deallocate its storage. This is an ABI change that can result in
+  memory corruption when a program built for the MSVC ABI has
+  portions compiled with clang 21 or earlier and portions compiled
+  with a version of clang 22 (or MSVC). Consider a class ``X`` that
+  declares a virtual destructor and an ``operator delete`` member
+  with the destructor defined in library ``A`` and a call to `::delete`` in
+  library ``B``. If library ``A`` is compiled with clang 21 and library ``B``
+  is compiled with clang 22, the ``::delete`` call might dispatch to the
+  scalar deleting destructor emitted in library ``A`` which will erroneously
+  call the member ``operator delete`` instead of the expected global
+  delete operator. The old behavior is retained under ``-fclang-abi-compat=21``
+  flag.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
