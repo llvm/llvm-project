@@ -79,8 +79,15 @@ bool test_upper() {
 
 int main(int, char**) {
   assert(test_upper());
+
 #if TEST_STD_VER >= 26
+  #ifndef TEST_COMPILER_GCC
+  // TODO: Fails with g++-15 with:
+  // clang-format off
+  // __tree:116:23: error: ‘‘result_decl’ not supported by dump_expr<expression error>’ is not a constant expression
+  // clang-format on
   static_assert(test_upper());
+  #endif
 #endif
 
   return 0;
