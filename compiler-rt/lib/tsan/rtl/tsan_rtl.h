@@ -563,7 +563,7 @@ Tid ThreadCreate(ThreadState *thr, uptr pc, uptr uid, bool detached);
 void ThreadStart(ThreadState *thr, Tid tid, ThreadID os_id,
                  ThreadType thread_type);
 void ThreadFinish(ThreadState *thr);
-Tid ThreadConsumeTid(ThreadState *thr, uptr pc, uptr uid);
+bool ThreadConsumeTid(ThreadState *thr, uptr pc, uptr uid, Tid *tid_out);
 void ThreadJoin(ThreadState *thr, uptr pc, Tid tid);
 void ThreadDetach(ThreadState *thr, uptr pc, Tid tid);
 void ThreadFinalize(ThreadState *thr);
