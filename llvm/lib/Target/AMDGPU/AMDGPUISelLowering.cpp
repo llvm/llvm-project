@@ -4069,6 +4069,74 @@ SDValue AMDGPUTargetLowering::splitBinaryBitConstantOpImpl(
   return DAG.getNode(ISD::BITCAST, SL, MVT::i64, Vec);
 }
 
+// Each shift has an optimisation to transform a 64-bit shift into a 32-bit
+// shift coupled with an AND if the shift amount is within certain bounds. The
+// vector code for this was being completely scalarised by the vector legalizer,
+// but when v2i32 is legal the vector legaliser only partially scalarises the
+// vector operations and the and is not elided. This function
+// scalarises the AND for this optimisation case, ensuring it is elided.
+// (shiftop x, (extract_vector_element (and {y0, y1},
+// (build_vector 0x1f, 0x1f))), index)
+// -> (shiftop x, (and (extract_vector_element {yo, y1}, index), 0x1f))
+static SDValue getShiftForReduction(SDNode *N, SelectionDAG &DAG) {
+  assert((N->getOpcode() == ISD::SRA || N->getOpcode() == ISD::SRL ||
+          N->getOpcode() == ISD::SHL) &&
+         "Expected shift Opcode.");
+
+  if (N->getValueType(0) != MVT::i32)
+    return SDValue();
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  SDLoc SL = SDLoc(N);
+  if (RHS->getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+    return SDValue();
+
+  SDValue VAND = RHS.getOperand(0);
+  if (VAND->getOpcode() != ISD::AND)
+    return SDValue();
+
+  ConstantSDNode *CRHS = dyn_cast<ConstantSDNode>(RHS->getOperand(1));
+  if (!CRHS)
+    return SDValue();
+
+  SDValue LHSAND = VAND.getOperand(0);
+  SDValue RHSAND = VAND.getOperand(1);
+  if (RHSAND->getOpcode() != ISD::BUILD_VECTOR)
+    return SDValue();
+
+  ConstantSDNode *CANDL = dyn_cast<ConstantSDNode>(RHSAND->getOperand(0));
+  ConstantSDNode *CANDR = dyn_cast<ConstantSDNode>(RHSAND->getOperand(1));
+  if (!CANDL || !CANDR || RHSAND->getConstantOperandVal(0) != 0x1f ||
+      RHSAND->getConstantOperandVal(1) != 0x1f)
+    return SDValue();
+
+  // Get the non-const AND operands and produce scalar AND
+  SDValue AndMask = DAG.getConstant(0x1f, SL, MVT::i32);
+  // Determine which element of the v2i32 to apply the shift to.
+  uint64_t AndIndex = RHS->getConstantOperandVal(1);
+
+  if (AndIndex == 0) {
+    const SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
+    SDValue Lo =
+        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, LHSAND, Zero);
+    SDValue LoAnd = DAG.getNode(ISD::AND, SL, MVT::i32, Lo, AndMask);
+    return DAG.getNode(N->getOpcode(), SL, MVT::i32, LHS, LoAnd, N->getFlags());
+  }
+
+  if (AndIndex == 1) {
+    const SDValue One = DAG.getConstant(1, SL, MVT::i32);
+    SDValue Hi =
+        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, LHSAND, One);
+    SDValue HiAnd = DAG.getNode(ISD::AND, SL, MVT::i32, Hi, AndMask);
+    return DAG.getNode(N->getOpcode(), SL, MVT::i32, LHS, HiAnd,
+                       RHS->getFlags());
+  }
+
+  return SDValue();
+}
+
 SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
                                                 DAGCombinerInfo &DCI) const {
   EVT VT = N->getValueType(0);
@@ -4077,6 +4145,9 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
   ConstantSDNode *CRHS = dyn_cast<ConstantSDNode>(RHS);
   SDLoc SL(N);
   SelectionDAG &DAG = DCI.DAG;
+
+  if (SDValue R = getShiftForReduction(N, DAG))
+    return R;
 
   unsigned RHSVal;
   if (CRHS) {
@@ -4118,8 +4189,6 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
 
   if (VT.getScalarType() != MVT::i64)
     return SDValue();
-
-  // i64 (shl x, C) -> (build_pair 0, (shl x, C - 32))
 
   // On some subtargets, 64-bit shift is a quarter rate instruction. In the
   // common case, splitting this into a move and a 32-bit shift is faster and
@@ -4180,6 +4249,9 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   SDLoc SL(N);
 
+  if (SDValue R = getShiftForReduction(N, DAG))
+    return R;
+
   if (VT.getScalarType() != MVT::i64)
     return SDValue();
 
@@ -4210,12 +4282,12 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
              (ElementType.getSizeInBits() - 1)) {
     ShiftAmt = ShiftFullAmt;
   } else {
-    SDValue truncShiftAmt = DAG.getNode(ISD::TRUNCATE, SL, TargetType, RHS);
+    SDValue TruncShiftAmt = DAG.getNode(ISD::TRUNCATE, SL, TargetType, RHS);
     const SDValue ShiftMask =
         DAG.getConstant(TargetScalarType.getSizeInBits() - 1, SL, TargetType);
     // This AND instruction will clamp out of bounds shift values.
     // It will also be removed during later instruction selection.
-    ShiftAmt = DAG.getNode(ISD::AND, SL, TargetType, truncShiftAmt, ShiftMask);
+    ShiftAmt = DAG.getNode(ISD::AND, SL, TargetType, TruncShiftAmt, ShiftMask);
   }
 
   EVT ConcatType;
@@ -4281,6 +4353,9 @@ SDValue AMDGPUTargetLowering::performSrlCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   SDLoc SL(N);
   unsigned RHSVal;
+
+  if (SDValue R = getShiftForReduction(N, DAG))
+    return R;
 
   if (CRHS) {
     RHSVal = CRHS->getZExtValue();
