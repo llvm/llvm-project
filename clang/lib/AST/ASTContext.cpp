@@ -7927,27 +7927,24 @@ ASTContext::getCanonicalTemplateArgument(const TemplateArgument &Arg) const {
       return Arg;
 
     case TemplateArgument::Expression:
-      return TemplateArgument(Arg.getAsExpr(), /*IsCanonical=*/true,
-                              Arg.getIsDefaulted());
+      return TemplateArgument(Arg.getAsExpr(), /*IsCanonical=*/true);
 
     case TemplateArgument::Declaration: {
       auto *D = cast<ValueDecl>(Arg.getAsDecl()->getCanonicalDecl());
-      return TemplateArgument(D, getCanonicalType(Arg.getParamTypeForDecl()),
-                              Arg.getIsDefaulted());
+      return TemplateArgument(D, getCanonicalType(Arg.getParamTypeForDecl()));
     }
 
     case TemplateArgument::NullPtr:
       return TemplateArgument(getCanonicalType(Arg.getNullPtrType()),
-                              /*isNullPtr*/ true, Arg.getIsDefaulted());
+                              /*isNullPtr=*/true);
 
     case TemplateArgument::Template:
-      return TemplateArgument(getCanonicalTemplateName(Arg.getAsTemplate()),
-                              Arg.getIsDefaulted());
+      return TemplateArgument(getCanonicalTemplateName(Arg.getAsTemplate()));
 
     case TemplateArgument::TemplateExpansion:
       return TemplateArgument(
           getCanonicalTemplateName(Arg.getAsTemplateOrTemplatePattern()),
-          Arg.getNumTemplateExpansions(), Arg.getIsDefaulted());
+          Arg.getNumTemplateExpansions());
 
     case TemplateArgument::Integral:
       return TemplateArgument(Arg, getCanonicalType(Arg.getIntegralType()));
@@ -7955,11 +7952,11 @@ ASTContext::getCanonicalTemplateArgument(const TemplateArgument &Arg) const {
     case TemplateArgument::StructuralValue:
       return TemplateArgument(*this,
                               getCanonicalType(Arg.getStructuralValueType()),
-                              Arg.getAsStructuralValue(), Arg.getIsDefaulted());
+                              Arg.getAsStructuralValue());
 
     case TemplateArgument::Type:
       return TemplateArgument(getCanonicalType(Arg.getAsType()),
-                              /*isNullPtr*/ false, Arg.getIsDefaulted());
+                              /*isNullPtr=*/false);
 
     case TemplateArgument::Pack: {
       bool AnyNonCanonArgs = false;
@@ -7969,7 +7966,6 @@ ASTContext::getCanonicalTemplateArgument(const TemplateArgument &Arg) const {
         return Arg;
       auto NewArg = TemplateArgument::CreatePackCopy(
           const_cast<ASTContext &>(*this), CanonArgs);
-      NewArg.setIsDefaulted(Arg.getIsDefaulted());
       return NewArg;
     }
   }
