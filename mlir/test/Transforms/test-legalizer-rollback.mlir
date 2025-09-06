@@ -49,14 +49,16 @@ func.func @create_illegal_block() {
 // expected-remark@+1{{applyPartialConversion failed}}
 module {
 func.func @undo_block_arg_replace() {
-  // expected-error@+1{{failed to legalize operation 'test.block_arg_replace' that was explicitly marked illegal}}
-  "test.block_arg_replace"() ({
+  "test.legal_op"() ({
   ^bb0(%arg0: i32, %arg1: i16):
     // CHECK: ^bb0(%[[ARG0:.*]]: i32, %[[ARG1:.*]]: i16):
+    // CHECK-NEXT: "test.value_replace"(%[[ARG0]], %[[ARG1]]) {trigger_rollback}
     // CHECK-NEXT: "test.return"(%[[ARG0]]) : (i32)
 
+    // expected-error@+1{{failed to legalize operation 'test.value_replace' that was explicitly marked illegal}}
+    "test.value_replace"(%arg0, %arg1) {trigger_rollback} : (i32, i16) -> ()
     "test.return"(%arg0) : (i32) -> ()
-  }) {trigger_rollback} : () -> ()
+  }) : () -> ()
   return
 }
 }

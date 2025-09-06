@@ -269,15 +269,33 @@ builtin.module {
 
 // CHECK-LABEL: @replace_block_arg_1_to_n
 func.func @replace_block_arg_1_to_n() {
-  // CHECK: "test.block_arg_replace"
-  "test.block_arg_replace"() ({
+  // CHECK: "test.legal_op"
+  "test.legal_op"() ({
   ^bb0(%arg0: i32, %arg1: i16):
-    // CHECK: ^bb0(%[[ARG0:.*]]: i32, %[[ARG1:.*]]: i16):
-    // CHECK: %[[cast:.*]] = "test.cast"(%[[ARG1]], %[[ARG1]]) : (i16, i16) -> i32
+    // CHECK-NEXT: ^bb0(%[[ARG0:.*]]: i32, %[[ARG1:.*]]: i16):
+    // CHECK-NEXT: %[[cast:.*]] = "test.cast"(%[[ARG1]], %[[ARG1]]) : (i16, i16) -> i32
+    // CHECK-NEXT: "test.value_replace"(%[[cast]], %[[ARG1]]) {is_legal} : (i32, i16) -> ()
     // CHECK-NEXT: "test.return"(%[[cast]]) : (i32)
+    "test.value_replace"(%arg0, %arg1) : (i32, i16) -> ()
     "test.return"(%arg0) : (i32) -> ()
   }) : () -> ()
   "test.return"() : () -> ()
+}
+
+// -----
+
+// CHECK-LABEL: @replace_op_result_1_to_n
+func.func @replace_op_result_1_to_n() {
+  // CHECK: %[[orig:.*]] = "test.legal_op"() : () -> i32
+  // CHECK: %[[repl:.*]] = "test.legal_op"() : () -> i16
+  %0 = "test.legal_op"() : () -> i32
+  %1 = "test.legal_op"() : () -> i16
+
+  // CHECK-NEXT: %[[cast:.*]] = "test.cast"(%[[repl]], %[[repl]]) : (i16, i16) -> i32
+  // CHECK-NEXT: "test.value_replace"(%[[cast]], %[[repl]]) {is_legal} : (i32, i16) -> ()
+  // CHECK-NEXT: "test.return"(%[[cast]]) : (i32)
+  "test.value_replace"(%0, %1) : (i32, i16) -> ()
+  "test.return"(%0) : (i32) -> ()
 }
 
 // -----

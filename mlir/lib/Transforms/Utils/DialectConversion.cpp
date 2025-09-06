@@ -277,13 +277,14 @@ public:
     InlineBlock,
     MoveBlock,
     BlockTypeConversion,
-    ReplaceBlockArg,
     // Operation rewrites
     MoveOperation,
     ModifyOperation,
     ReplaceOperation,
     CreateOperation,
-    UnresolvedMaterialization
+    UnresolvedMaterialization,
+    // Value rewrites
+    ReplaceValue
   };
 
   virtual ~IRRewrite() = default;
@@ -330,7 +331,7 @@ public:
 
   static bool classof(const IRRewrite *rewrite) {
     return rewrite->getKind() >= Kind::CreateBlock &&
-           rewrite->getKind() <= Kind::ReplaceBlockArg;
+           rewrite->getKind() <= Kind::BlockTypeConversion;
   }
 
 protected:
@@ -340,6 +341,25 @@ protected:
 
   // The block that this rewrite operates on.
   Block *block;
+};
+
+/// A value rewrite.
+class ValueRewrite : public IRRewrite {
+public:
+  /// Return the value that this rewrite operates on.
+  Value getValue() const { return value; }
+
+  static bool classof(const IRRewrite *rewrite) {
+    return rewrite->getKind() == Kind::ReplaceValue;
+  }
+
+protected:
+  ValueRewrite(Kind kind, ConversionPatternRewriterImpl &rewriterImpl,
+               Value value)
+      : IRRewrite(kind, rewriterImpl), value(value) {}
+
+  // The value that this rewrite operates on.
+  Value value;
 };
 
 /// Creation of a block. Block creations are immediately reflected in the IR.
@@ -548,19 +568,18 @@ private:
   Block *newBlock;
 };
 
-/// Replacing a block argument. This rewrite is not immediately reflected in the
+/// Replacing a value. This rewrite is not immediately reflected in the
 /// IR. An internal IR mapping is updated, but the actual replacement is delayed
 /// until the rewrite is committed.
-class ReplaceBlockArgRewrite : public BlockRewrite {
+class ReplaceValueRewrite : public ValueRewrite {
 public:
-  ReplaceBlockArgRewrite(ConversionPatternRewriterImpl &rewriterImpl,
-                         Block *block, BlockArgument arg,
-                         const TypeConverter *converter)
-      : BlockRewrite(Kind::ReplaceBlockArg, rewriterImpl, block), arg(arg),
+  ReplaceValueRewrite(ConversionPatternRewriterImpl &rewriterImpl, Value value,
+                      const TypeConverter *converter)
+      : ValueRewrite(Kind::ReplaceValue, rewriterImpl, value),
         converter(converter) {}
 
   static bool classof(const IRRewrite *rewrite) {
-    return rewrite->getKind() == Kind::ReplaceBlockArg;
+    return rewrite->getKind() == Kind::ReplaceValue;
   }
 
   void commit(RewriterBase &rewriter) override;
@@ -568,9 +587,7 @@ public:
   void rollback() override;
 
 private:
-  BlockArgument arg;
-
-  /// The current type converter when the block argument was replaced.
+  /// The current type converter when the value was replaced.
   const TypeConverter *converter;
 };
 
@@ -940,10 +957,10 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   /// uses.
   void replaceOp(Operation *op, SmallVector<SmallVector<Value>> &&newValues);
 
-  /// Replace the given block argument with the given values. The specified
+  /// Replace the uses of the given value with the given values. The specified
   /// converter is used to build materializations (if necessary).
-  void replaceUsesOfBlockArgument(BlockArgument from, ValueRange to,
-                                  const TypeConverter *converter);
+  void replaceAllUsesWith(Value from, ValueRange to,
+                          const TypeConverter *converter);
 
   /// Erase the given block and its contents.
   void eraseBlock(Block *block);
@@ -1129,10 +1146,9 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   IRRewriter notifyingRewriter;
 
 #ifndef NDEBUG
-  /// A set of replaced block arguments. This set is for debugging purposes
-  /// only and it is maintained only if `allowPatternRollback` is set to
-  /// "true".
-  DenseSet<BlockArgument> replacedArgs;
+  /// A set of replaced values. This set is for debugging purposes only and it
+  /// is maintained only if `allowPatternRollback` is set to "true".
+  DenseSet<Value> replacedValues;
 
   /// A set of operations that have pending updates. This tracking isn't
   /// strictly necessary, and is thus only active during debug builds for extra
@@ -1169,32 +1185,59 @@ void BlockTypeConversionRewrite::rollback() {
   getNewBlock()->replaceAllUsesWith(getOrigBlock());
 }
 
-static void performReplaceBlockArg(RewriterBase &rewriter, BlockArgument arg,
-                                   Value repl) {
+/// Replace all uses of `from` with `repl`.
+static void performReplaceValue(RewriterBase &rewriter, Value from,
+                                Value repl) {
   if (isa<BlockArgument>(repl)) {
-    rewriter.replaceAllUsesWith(arg, repl);
+    // `repl` is a block argument. Directly replace all uses.
+    rewriter.replaceAllUsesWith(from, repl);
     return;
   }
 
-  // If the replacement value is an operation, we check to make sure that we
-  // don't replace uses that are within the parent operation of the
-  // replacement value.
-  Operation *replOp = cast<OpResult>(repl).getOwner();
+  // If the replacement value is an operation, only replace those uses that:
+  // - are in a different block than the replacement operation, or
+  // - are in the same block but after the replacement operation.
+  //
+  // Example:
+  // ^bb0(%arg0: i32):
+  // %0 = "consumer"(%arg0) : (i32) -> (i32)
+  // "another_consumer"(%arg0) : (i32) -> ()
+  //
+  // In the above example, replaceAllUsesWith(%arg0, %0) will replace the
+  // use in "another_consumer" but not the use in "consumer". When using the
+  // normal RewriterBase API, this would typically be done with
+  // `replaceUsesWithIf` / `replaceAllUsesExcept`. However, that API is not
+  // supported by the `ConversionPatternRewriter`. Due to the mapping mechanism
+  // it cannot be supported efficiently with `allowPatternRollback` set to
+  // "true". Therefore, the conversion driver is trying to be smart and replaces
+  // only those uses that do not lead to a dominance violation. E.g., the
+  // FuncToLLVM lowering (`restoreByValRefArgumentType`) relies on this
+  // behavior.
+  //
+  // TODO: As we move more and more towards `allowPatternRollback` set to
+  // "false", we should remove this special handling, in order to align the
+  // `ConversionPatternRewriter` API with the normal `RewriterBase` API.
+  Operation *replOp = repl.getDefiningOp();
   Block *replBlock = replOp->getBlock();
-  rewriter.replaceUsesWithIf(arg, repl, [&](OpOperand &operand) {
+  rewriter.replaceUsesWithIf(from, repl, [&](OpOperand &operand) {
     Operation *user = operand.getOwner();
     return user->getBlock() != replBlock || replOp->isBeforeInBlock(user);
   });
 }
 
-void ReplaceBlockArgRewrite::commit(RewriterBase &rewriter) {
-  Value repl = rewriterImpl.findOrBuildReplacementValue(arg, converter);
+void ReplaceValueRewrite::commit(RewriterBase &rewriter) {
+  Value repl = rewriterImpl.findOrBuildReplacementValue(value, converter);
   if (!repl)
     return;
-  performReplaceBlockArg(rewriter, arg, repl);
+  performReplaceValue(rewriter, value, repl);
 }
 
-void ReplaceBlockArgRewrite::rollback() { rewriterImpl.mapping.erase({arg}); }
+void ReplaceValueRewrite::rollback() {
+  rewriterImpl.mapping.erase({value});
+#ifndef NDEBUG
+  rewriterImpl.replacedValues.erase(value);
+#endif // NDEBUG
+}
 
 void ReplaceOperationRewrite::commit(RewriterBase &rewriter) {
   auto *listener =
@@ -1584,7 +1627,7 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
               /*outputTypes=*/origArgType, /*originalType=*/Type(), converter,
               /*isPureTypeConversion=*/false)
               .front();
-      replaceUsesOfBlockArgument(origArg, mat, converter);
+      replaceAllUsesWith(origArg, mat, converter);
       continue;
     }
 
@@ -1593,15 +1636,14 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
       assert(inputMap->size == 0 &&
              "invalid to provide a replacement value when the argument isn't "
              "dropped");
-      replaceUsesOfBlockArgument(origArg, inputMap->replacementValues,
-                                 converter);
+      replaceAllUsesWith(origArg, inputMap->replacementValues, converter);
       continue;
     }
 
     // This is a 1->1+ mapping.
     auto replArgs =
         newBlock->getArguments().slice(inputMap->inputNo, inputMap->size);
-    replaceUsesOfBlockArgument(origArg, replArgs, converter);
+    replaceAllUsesWith(origArg, replArgs, converter);
   }
 
   if (config.allowPatternRollback)
@@ -1838,6 +1880,11 @@ void ConversionPatternRewriterImpl::replaceOp(
   }
 
   assert(!ignoredOps.contains(op) && "operation was already replaced");
+#ifndef NDEBUG
+  for (Value v : op->getResults())
+    assert(!replacedValues.contains(v) &&
+           "attempting to replace a value that was already replaced");
+#endif // NDEBUG
 
   // Check if replaced op is an unresolved materialization, i.e., an
   // unrealized_conversion_cast op that was created by the conversion driver.
@@ -1873,8 +1920,8 @@ void ConversionPatternRewriterImpl::replaceOp(
   op->walk([&](Operation *op) { replacedOps.insert(op); });
 }
 
-void ConversionPatternRewriterImpl::replaceUsesOfBlockArgument(
-    BlockArgument from, ValueRange to, const TypeConverter *converter) {
+void ConversionPatternRewriterImpl::replaceAllUsesWith(
+    Value from, ValueRange to, const TypeConverter *converter) {
   if (!config.allowPatternRollback) {
     SmallVector<Value> toConv = llvm::to_vector(to);
     SmallVector<Value> repls =
@@ -1884,25 +1931,27 @@ void ConversionPatternRewriterImpl::replaceUsesOfBlockArgument(
     if (!repl)
       return;
 
-    performReplaceBlockArg(r, from, repl);
+    performReplaceValue(r, from, repl);
     return;
   }
 
 #ifndef NDEBUG
-  // Make sure that a block argument is not replaced multiple times. In
-  // rollback mode, `replaceUsesOfBlockArgument` replaces not only all current
-  // uses of the given block argument, but also all future uses that may be
-  // introduced by future pattern applications. Therefore, it does not make
-  // sense to call `replaceUsesOfBlockArgument` multiple times with the same
-  // block argument. Doing so would overwrite the mapping and mess with the
-  // internal state of the dialect conversion driver.
-  assert(!replacedArgs.contains(from) &&
-         "attempting to replace a block argument that was already replaced");
-  replacedArgs.insert(from);
+  // Make sure that a value is not replaced multiple times. In rollback mode,
+  // `replaceAllUsesWith` replaces not only all current uses of the given value,
+  // but also all future uses that may be introduced by future pattern
+  // applications. Therefore, it does not make sense to call
+  // `replaceAllUsesWith` multiple times with the same value. Doing so would
+  // overwrite the mapping and mess with the internal state of the dialect
+  // conversion driver.
+  assert(!replacedValues.contains(from) &&
+         "attempting to replace a value that was already replaced");
+  assert(!wasOpReplaced(from.getDefiningOp()) &&
+         "attempting to replace a op result that was already replaced");
+  replacedValues.insert(from);
 #endif // NDEBUG
 
-  appendRewrite<ReplaceBlockArgRewrite>(from.getOwner(), from, converter);
   mapping.map(from, to);
+  appendRewrite<ReplaceValueRewrite>(from, converter);
 }
 
 void ConversionPatternRewriterImpl::eraseBlock(Block *block) {
@@ -2107,18 +2156,19 @@ FailureOr<Block *> ConversionPatternRewriter::convertRegionTypes(
   return impl->convertRegionTypes(region, converter, entryConversion);
 }
 
-void ConversionPatternRewriter::replaceUsesOfBlockArgument(BlockArgument from,
-                                                           ValueRange to) {
+void ConversionPatternRewriter::replaceAllUsesWith(Value from, ValueRange to) {
   LLVM_DEBUG({
-    impl->logger.startLine() << "** Replace Argument : '" << from << "'";
-    if (Operation *parentOp = from.getOwner()->getParentOp()) {
-      impl->logger.getOStream() << " (in region of '" << parentOp->getName()
-                                << "' (" << parentOp << ")\n";
-    } else {
-      impl->logger.getOStream() << " (unlinked block)\n";
+    impl->logger.startLine() << "** Replace Value : '" << from << "'";
+    if (auto blockArg = dyn_cast<BlockArgument>(from)) {
+      if (Operation *parentOp = blockArg.getOwner()->getParentOp()) {
+        impl->logger.getOStream() << " (in region of '" << parentOp->getName()
+                                  << "' (" << parentOp << ")\n";
+      } else {
+        impl->logger.getOStream() << " (unlinked block)\n";
+      }
     }
   });
-  impl->replaceUsesOfBlockArgument(from, to, impl->currentTypeConverter);
+  impl->replaceAllUsesWith(from, to, impl->currentTypeConverter);
 }
 
 Value ConversionPatternRewriter::getRemappedValue(Value key) {
@@ -2176,7 +2226,7 @@ void ConversionPatternRewriter::inlineBlockBefore(Block *source, Block *dest,
 
   // Replace all uses of block arguments.
   for (auto it : llvm::zip(source->getArguments(), argValues))
-    replaceUsesOfBlockArgument(std::get<0>(it), std::get<1>(it));
+    replaceAllUsesWith(std::get<0>(it), std::get<1>(it));
 
   if (fastPath) {
     // Move all ops at once.

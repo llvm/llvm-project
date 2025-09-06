@@ -952,19 +952,19 @@ struct TestCreateIllegalBlock : public RewritePattern {
   }
 };
 
-/// A simple pattern that tests the "replaceUsesOfBlockArgument" API.
-struct TestBlockArgReplace : public ConversionPattern {
-  TestBlockArgReplace(MLIRContext *ctx, const TypeConverter &converter)
-      : ConversionPattern(converter, "test.block_arg_replace", /*benefit=*/1,
-                          ctx) {}
+/// A simple pattern that tests the "replaceAllUsesWith" API.
+struct TestValueReplace : public ConversionPattern {
+  TestValueReplace(MLIRContext *ctx, const TypeConverter &converter)
+      : ConversionPattern(converter, "test.value_replace", /*benefit=*/1, ctx) {
+  }
 
   LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+  matchAndRewrite(Operation *op, ArrayRef<ValueRange> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    // Replace the first block argument with 2x the second block argument.
-    Value repl = op->getRegion(0).getArgument(1);
-    rewriter.replaceUsesOfBlockArgument(op->getRegion(0).getArgument(0),
-                                        {repl, repl});
+    // Replace the first operand with 2x the second operand.
+    Value from = op->getOperand(0);
+    Value repl = op->getOperand(1);
+    rewriter.replaceAllUsesWith(from, {repl, repl});
     rewriter.modifyOpInPlace(op, [&] {
       // If the "trigger_rollback" attribute is set, keep the op illegal, so
       // that a rollback is triggered.
@@ -1515,7 +1515,7 @@ struct TestLegalizePatternDriver
         TestRepetitive1ToNConsumer>(&getContext());
     patterns.add<TestDropOpSignatureConversion, TestDropAndReplaceInvalidOp,
                  TestPassthroughInvalidOp, TestMultiple1ToNReplacement,
-                 TestBlockArgReplace, TestReplaceWithValidConsumer,
+                 TestValueReplace, TestReplaceWithValidConsumer,
                  TestTypeConsumerOpPattern>(&getContext(), converter);
     patterns.add<TestConvertBlockArgs>(converter, &getContext());
     mlir::populateAnyFunctionOpInterfaceTypeConversionPattern(patterns,
@@ -1543,7 +1543,7 @@ struct TestLegalizePatternDriver
     target.addDynamicallyLegalOp<func::CallOp>(
         [&](func::CallOp op) { return converter.isLegal(op); });
     target.addDynamicallyLegalOp(
-        OperationName("test.block_arg_replace", &getContext()),
+        OperationName("test.value_replace", &getContext()),
         [](Operation *op) { return op->hasAttr("is_legal"); });
 
     // TestCreateUnregisteredOp creates `arith.constant` operation,
