@@ -460,9 +460,9 @@ define i16 @xor_bitcast_i16_to_i16_constant(i16 %a) {
 ; Test bitwise operations with integer vector to integer bitcast
 define <16 x i1> @xor_bitcast_i16_to_v16i1_constant(i16 %a) {
 ; CHECK-LABEL: @xor_bitcast_i16_to_v16i1_constant(
-; CHECK-NEXT:    [[BC2:%.*]] = bitcast i16 [[B:%.*]] to <16 x i1>
-; CHECK-NEXT:    [[OR:%.*]] = xor <16 x i1> [[BC2]], splat (i1 true)
-; CHECK-NEXT:    ret <16 x i1> [[OR]]
+; CHECK-NEXT:    [[B:%.*]] = xor i16 [[A:%.*]], -1
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast i16 [[B]] to <16 x i1>
+; CHECK-NEXT:    ret <16 x i1> [[BC2]]
 ;
   %bc = bitcast i16 %a to <16 x i1>
   %or = xor <16 x i1> %bc, splat (i1 true)
