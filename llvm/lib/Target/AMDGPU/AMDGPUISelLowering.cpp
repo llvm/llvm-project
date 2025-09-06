@@ -5289,6 +5289,13 @@ SDValue AMDGPUTargetLowering::performRcpCombine(SDNode *N,
   return DCI.DAG.getConstantFP(One / Val, SDLoc(N), N->getValueType(0));
 }
 
+bool AMDGPUTargetLowering::canMov64bImm(uint64_t Val, SelectionDAG &DAG) const {
+  if (!Subtarget->isGCN())
+    return false;
+  auto &ST = DAG.getSubtarget<GCNSubtarget>();
+  return ST.hasMovB64() && (ST.has64BitLiterals() || isUInt<32>(Val));
+}
+
 SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
                                                 DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -5339,6 +5346,8 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Src)) {
       SDLoc SL(N);
       uint64_t CVal = C->getZExtValue();
+      if (canMov64bImm(CVal, DAG))
+        break;
       SDValue BV = DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32,
                                DAG.getConstant(Lo_32(CVal), SL, MVT::i32),
                                DAG.getConstant(Hi_32(CVal), SL, MVT::i32));
@@ -5349,6 +5358,8 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
       const APInt &Val = C->getValueAPF().bitcastToAPInt();
       SDLoc SL(N);
       uint64_t CVal = Val.getZExtValue();
+      if (canMov64bImm(CVal, DAG))
+        break;
       SDValue Vec = DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32,
                                 DAG.getConstant(Lo_32(CVal), SL, MVT::i32),
                                 DAG.getConstant(Hi_32(CVal), SL, MVT::i32));
