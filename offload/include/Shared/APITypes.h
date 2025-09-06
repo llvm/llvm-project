@@ -119,7 +119,7 @@ static_assert(sizeof(KernelArgsTy) ==
 
 /// Flat array of kernel launch parameters and their total size.
 struct KernelLaunchParamsTy {
-  /// Size of the Data array.
+  /// Size of the Data array without the tail padding.
   size_t Size = 0;
   /// Flat array of kernel parameters.
   void *Data = nullptr;
