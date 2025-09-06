@@ -70,7 +70,7 @@ public:
   using LazyCallback =
       llvm::unique_function<void(GlobalValue &GV, ValueAdder Add)>;
 
-  typedef DenseMap<const NamedMDNode *, DenseSet<const MDNode *>> NamedMDNodesT;
+  using NamedMDNodesT = DenseMap<const NamedMDNode *, DenseSet<const MDNode *>>;
 
   /// Move in the provide values in \p ValuesToLink from \p Src.
   ///
