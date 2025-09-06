@@ -91,7 +91,7 @@ void SwappedArgumentsCheck::check(const MatchFinder::MatchResult &Result) {
 
     // Only need to check RHS, as LHS has already been covered. We don't want to
     // emit two warnings for a single argument.
-    if (UsedArgs.count(RHS))
+    if (UsedArgs.contains(RHS))
       continue;
 
     const auto *LHSCast = dyn_cast<ImplicitCastExpr>(ignoreNoOpCasts(LHS));

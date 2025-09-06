@@ -34,7 +34,7 @@ NamespaceAliaser::createAlias(ASTContext &Context, const Stmt &Statement,
   if (!Function || !Function->hasBody())
     return std::nullopt;
 
-  if (AddedAliases[Function].count(Namespace.str()) != 0)
+  if (AddedAliases[Function].contains(Namespace.str()))
     return std::nullopt;
 
   // FIXME: Doesn't consider the order of declarations.
@@ -84,7 +84,7 @@ std::string NamespaceAliaser::getNamespaceName(ASTContext &Context,
   const auto *Function = getSurroundingFunction(Context, Statement);
   auto FunctionAliases = AddedAliases.find(Function);
   if (FunctionAliases != AddedAliases.end()) {
-    if (FunctionAliases->second.count(Namespace) != 0) {
+    if (FunctionAliases->second.contains(Namespace)) {
       return FunctionAliases->second.find(Namespace)->getValue();
     }
   }

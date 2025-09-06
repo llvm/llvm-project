@@ -22,7 +22,6 @@ Checks: >
   readability-*,
   -readability-avoid-nested-conditional-operator,
   -readability-braces-around-statements,
-  -readability-container-contains,
   -readability-convert-member-functions-to-static,
   -readability-else-after-return,
   -readability-function-cognitive-complexity,
