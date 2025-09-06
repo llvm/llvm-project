@@ -275,18 +275,31 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
   LangAS AS = GetGlobalVarAddressSpace(&D);
   unsigned TargetAS = getContext().getTargetAddressSpace(AS);
 
+  Expr::EvalResult EvalResult;
+  llvm::Constant *Init = nullptr;
+  std::optional<ConstantEmitter> Emitter;
   // OpenCL variables in local address space and CUDA shared
   // variables cannot have an initializer.
-  llvm::Constant *Init = nullptr;
   if (Ty.getAddressSpace() == LangAS::opencl_local ||
-      D.hasAttr<CUDASharedAttr>() || D.hasAttr<LoaderUninitializedAttr>())
+      D.hasAttr<CUDASharedAttr>() || D.hasAttr<LoaderUninitializedAttr>()) {
     Init = llvm::UndefValue::get(LTy);
-  else
+  } else if (D.isUsableInConstantExpressions(getContext())) {
+    const Expr *InitExpr = D.getInit();
+    assert(InitExpr && "Usable in constant expressions without initializer?");
+    Emitter.emplace(*this);
+    llvm::Constant *Initializer = Emitter->tryEmitForInitializer(D);
+    Init = Initializer;
+  } else {
     Init = EmitNullConstant(Ty);
+  }
 
   llvm::GlobalVariable *GV = new llvm::GlobalVariable(
-      getModule(), LTy, Ty.isConstant(getContext()), Linkage, Init, Name,
+      getModule(), Init->getType(), Ty.isConstant(getContext()), Linkage, Init, Name,
       nullptr, llvm::GlobalVariable::NotThreadLocal, TargetAS);
+
+  if (Emitter)
+    Emitter->finalize(GV);
+
   GV->setAlignment(getContext().getDeclAlign(&D).getAsAlign());
 
   if (supportsCOMDAT() && GV->isWeakForLinker())

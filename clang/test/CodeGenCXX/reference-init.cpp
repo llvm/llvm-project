@@ -4,8 +4,8 @@
 // expected-no-diagnostics
 
 #if __cplusplus >= 201103L
-// CHECK-CXX11: @_ZZ15InitRefWithListvE1r = internal constant ptr @_ZGRZ15InitRefWithListvE1r_
 // CHECK-CXX11: @_ZGRZ15InitRefWithListvE1r_ = internal constant i32 123
+// CHECK-CXX11: @_ZZ15InitRefWithListvE1r = internal constant ptr @_ZGRZ15InitRefWithListvE1r_
 int InitRefWithList() { static const int &r = {123}; return r; }
 #endif
 
