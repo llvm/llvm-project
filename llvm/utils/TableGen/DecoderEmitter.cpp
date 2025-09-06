@@ -578,12 +578,6 @@ private:
   // decoded bits in order to verify that the instruction matches the Opcode.
   std::vector<Island> getIslands(const KnownBits &EncodingBits) const;
 
-  // reportRegion is a helper function for filterProcessor to mark a region as
-  // eligible for use as a filter region.
-  void reportRegion(std::vector<std::unique_ptr<Filter>> &Filters, bitAttr_t RA,
-                    unsigned StartBit, unsigned BitIndex,
-                    bool AllowMixed) const;
-
   /// Scans the well-known encoding bits of the encodings and, builds up a list
   /// of candidate filters, and then returns the best one, if any.
   std::unique_ptr<Filter> findBestFilter(ArrayRef<bitAttr_t> BitAttrs,
@@ -1343,16 +1337,6 @@ void DecoderTableBuilder::emitSingletonTableEntry(
   TableInfo.Table.insertULEB128(DIdx);
 }
 
-// reportRegion is a helper function for filterProcessor to mark a region as
-// eligible for use as a filter region.
-void FilterChooser::reportRegion(std::vector<std::unique_ptr<Filter>> &Filters,
-                                 bitAttr_t RA, unsigned StartBit,
-                                 unsigned BitIndex, bool AllowMixed) const {
-  if (AllowMixed ? RA == ATTR_MIXED : RA == ATTR_ALL_SET)
-    Filters.push_back(std::make_unique<Filter>(Encodings, EncodingIDs, StartBit,
-                                               BitIndex - StartBit));
-}
-
 std::unique_ptr<Filter>
 FilterChooser::findBestFilter(ArrayRef<bitAttr_t> BitAttrs, bool AllowMixed,
                               bool Greedy) const {
@@ -1401,6 +1385,12 @@ FilterChooser::findBestFilter(ArrayRef<bitAttr_t> BitAttrs, bool AllowMixed,
   unsigned StartBit = 0;
 
   std::vector<std::unique_ptr<Filter>> Filters;
+
+  auto addCandidateFilter = [&](unsigned StartBit, unsigned EndBit) {
+    Filters.push_back(std::make_unique<Filter>(Encodings, EncodingIDs, StartBit,
+                                               EndBit - StartBit));
+  };
+
   unsigned FilterWidth = FilterBits.getBitWidth();
   for (unsigned BitIndex = 0; BitIndex != FilterWidth; ++BitIndex) {
     bitAttr_t bitAttr = BitAttrs[BitIndex];
@@ -1427,19 +1417,18 @@ FilterChooser::findBestFilter(ArrayRef<bitAttr_t> BitAttrs, bool AllowMixed,
       }
       break;
     case ATTR_ALL_SET:
+      if (!AllowMixed && bitAttr != ATTR_ALL_SET)
+        addCandidateFilter(StartBit, BitIndex);
       switch (bitAttr) {
       case ATTR_FILTERED:
-        reportRegion(Filters, RA, StartBit, BitIndex, AllowMixed);
         RA = ATTR_NONE;
         break;
       case ATTR_ALL_SET:
         break;
       case ATTR_ALL_UNSET:
-        reportRegion(Filters, RA, StartBit, BitIndex, AllowMixed);
         RA = ATTR_NONE;
         break;
       case ATTR_MIXED:
-        reportRegion(Filters, RA, StartBit, BitIndex, AllowMixed);
         StartBit = BitIndex;
         RA = ATTR_MIXED;
         break;
@@ -1448,19 +1437,18 @@ FilterChooser::findBestFilter(ArrayRef<bitAttr_t> BitAttrs, bool AllowMixed,
       }
       break;
     case ATTR_MIXED:
+      if (AllowMixed && bitAttr != ATTR_MIXED)
+        addCandidateFilter(StartBit, BitIndex);
       switch (bitAttr) {
       case ATTR_FILTERED:
-        reportRegion(Filters, RA, StartBit, BitIndex, AllowMixed);
         StartBit = BitIndex;
         RA = ATTR_NONE;
         break;
       case ATTR_ALL_SET:
-        reportRegion(Filters, RA, StartBit, BitIndex, AllowMixed);
         StartBit = BitIndex;
         RA = ATTR_ALL_SET;
         break;
       case ATTR_ALL_UNSET:
-        reportRegion(Filters, RA, StartBit, BitIndex, AllowMixed);
         RA = ATTR_NONE;
         break;
       case ATTR_MIXED:
@@ -1483,12 +1471,14 @@ FilterChooser::findBestFilter(ArrayRef<bitAttr_t> BitAttrs, bool AllowMixed,
   case ATTR_FILTERED:
     break;
   case ATTR_ALL_SET:
-    reportRegion(Filters, RA, StartBit, FilterWidth, AllowMixed);
+    if (!AllowMixed)
+      addCandidateFilter(StartBit, FilterWidth);
     break;
   case ATTR_ALL_UNSET:
     break;
   case ATTR_MIXED:
-    reportRegion(Filters, RA, StartBit, FilterWidth, AllowMixed);
+    if (AllowMixed)
+      addCandidateFilter(StartBit, FilterWidth);
     break;
   }
 
