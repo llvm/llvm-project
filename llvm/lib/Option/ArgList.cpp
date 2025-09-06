@@ -14,12 +14,15 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/OptSpecifier.h"
+#include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <utility>
@@ -201,6 +204,42 @@ void ArgList::print(raw_ostream &O) const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void ArgList::dump() const { print(dbgs()); }
 #endif
+
+StringRef ArgList::getSubcommand(
+    const ArrayRef<OptTable::Command> Commands,
+    std::function<void(ArrayRef<StringRef>)> HandleMultipleSubcommands,
+    std::function<void(ArrayRef<StringRef>)> HandleOtherPositionals) const {
+
+  StringRef SubCommand = {};
+  SmallVector<StringRef, 4> SubCommands;
+  SmallVector<StringRef, 4> OtherPositionals;
+  for (const Arg *A : *this) {
+    bool IsSubCommand = false;
+    if (A->getOption().getKind() == Option::InputClass) {
+      for (const OptTable::Command CMD : Commands) {
+        if (StringRef(CMD.Name) == "TopLevelCommand")
+          continue;
+        if (StringRef(CMD.Name) == A->getValue()) {
+          SubCommands.push_back(A->getValue());
+          IsSubCommand = true;
+        }
+      }
+      if (!IsSubCommand) {
+        OtherPositionals.push_back(A->getValue());
+        IsSubCommand = false;
+      }
+    }
+  }
+  if (SubCommands.size() > 1) {
+    HandleMultipleSubcommands(SubCommands);
+  }
+  if (!OtherPositionals.empty()) {
+    HandleOtherPositionals(OtherPositionals);
+  }
+  if (SubCommands.size() == 1)
+    return SubCommands.front();
+  return SubCommand;
+}
 
 void InputArgList::releaseMemory() {
   // An InputArgList always owns its arguments.
