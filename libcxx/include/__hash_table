@@ -1899,8 +1899,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__construct_node_hash(size_t __hash, _
   static_assert(!__is_hash_value_type<_Args...>::value, "Construct cannot be called with a hash value type");
   __node_allocator& __na = __node_alloc();
   __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-  std::__construct_at(
-      std::addressof(*__h), /* hash = */ __hash, __na, std::forward<_Args>(__args)...);
+  std::__construct_at(std::addressof(*__h), /* hash = */ __hash, __na, std::forward<_Args>(__args)...);
   __h.get_deleter().__value_constructed = true;
   return __h;
 }
