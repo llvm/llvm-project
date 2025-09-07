@@ -501,7 +501,7 @@ private:
                  : 0;
     }
 
-    auto TryMergeShortRecord = [&]() {
+    auto TryMergeShortRecord = [&] {
       switch (Style.AllowShortRecordOnASingleLine) {
       case FormatStyle::SRS_Never:
         return false;
@@ -528,7 +528,7 @@ private:
           // correctly elsewhere.
           ShouldMerge =
               !Style.BraceWrapping.AfterClass ||
-              (TryMergeShortRecord() && !Style.BraceWrapping.SplitEmptyRecord);
+              (!Style.BraceWrapping.SplitEmptyRecord && TryMergeShortRecord());
         }
       } else if (TheLine->InPPDirective ||
                  TheLine->First->isNoneOf(tok::kw_class, tok::kw_enum,
@@ -907,7 +907,11 @@ private:
       } else if (Limit != 0 && !Line.startsWithNamespace() &&
                  !startsExternCBlock(Line)) {
         // Merge short records only when requested.
-        if (isRecordLBrace(*Line.Last) &&
+        if (Line.Last->isOneOf(TT_EnumLBrace, TT_RecordLBrace))
+          return 0;
+
+        if (Line.Last->isOneOf(TT_ClassLBrace, TT_StructLBrace,
+                               TT_UnionLBrace) &&
             Style.AllowShortRecordOnASingleLine != FormatStyle::SRS_Always) {
           return 0;
         }
@@ -964,14 +968,16 @@ private:
       Limit -= 2;
       unsigned MergedLines = 0;
 
-      const bool TryMergeBlock =
-          Style.AllowShortBlocksOnASingleLine != FormatStyle::SBS_Never;
-      const bool TryMergeRecord =
-          Style.AllowShortRecordOnASingleLine == FormatStyle::SRS_Always;
-      const bool NextIsEmptyBlock = I[1]->First == I[1]->Last && I + 2 != E &&
-                                    I[2]->First->is(tok::r_brace);
+      auto TryMergeBlock = [&] {
+        if (Style.AllowShortBlocksOnASingleLine != FormatStyle::SBS_Never ||
+            Style.AllowShortRecordOnASingleLine == FormatStyle::SRS_Always) {
+          return true;
+        }
+        return I[1]->First == I[1]->Last && I + 2 != E &&
+               I[2]->First->is(tok::r_brace);
+      };
 
-      if (TryMergeBlock || TryMergeRecord || NextIsEmptyBlock) {
+      if (TryMergeBlock()) {
         MergedLines = tryMergeSimpleBlock(I + 1, E, Limit);
         // If we managed to merge the block, count the statement header, which
         // is on a separate line.
