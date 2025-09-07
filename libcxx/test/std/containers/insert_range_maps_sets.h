@@ -292,7 +292,6 @@ void test_set_insert_range_exception_safety_throwing_copy() {
 
 template <template <class...> class Container>
 TEST_CONSTEXPR_CXX26 void test_map_insert_range_exception_safety_throwing_copy() {
-
 #if !defined(TEST_HAS_NO_EXCEPTIONS) && !defined(TEST_IS_CONSTANT_EVALUATED)
   using K = int;
   using V = ThrowingCopy<3>;

@@ -984,8 +984,8 @@ public:
 
 #  if _LIBCPP_STD_VER >= 14
   template <class _InputIterator>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
-  map(_InputIterator __f, _InputIterator __l, const allocator_type& __a)
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 map(_InputIterator __f, _InputIterator __l, const allocator_type& __a)
       : map(__f, __l, key_compare(), __a) {}
 #  endif
 
@@ -1154,13 +1154,15 @@ public:
 #  if _LIBCPP_STD_VER >= 17
 
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool> try_emplace(const key_type& __k, _Args&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool>
+  try_emplace(const key_type& __k, _Args&&... __args) {
     return __tree_.__emplace_unique(
         std::piecewise_construct, std::forward_as_tuple(__k), std::forward_as_tuple(std::forward<_Args>(__args)...));
   }
 
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool> try_emplace(key_type&& __k, _Args&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool>
+  try_emplace(key_type&& __k, _Args&&... __args) {
     return __tree_.__emplace_unique(
         std::piecewise_construct,
         std::forward_as_tuple(std::move(__k)),
@@ -1192,7 +1194,8 @@ public:
   }
 
   template <class _Vp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool> insert_or_assign(const key_type& __k, _Vp&& __v) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool>
+  insert_or_assign(const key_type& __k, _Vp&& __v) {
     auto __result              = __tree_.__emplace_unique(__k, std::forward<_Vp>(__v));
     auto& [__iter, __inserted] = __result;
     if (!__inserted)
@@ -1210,7 +1213,8 @@ public:
   }
 
   template <class _Vp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator insert_or_assign(const_iterator __h, const key_type& __k, _Vp&& __v) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator
+  insert_or_assign(const_iterator __h, const key_type& __k, _Vp&& __v) {
     auto [__r, __inserted] = __tree_.__emplace_hint_unique(__h.__i_, __k, std::forward<_Vp>(__v));
 
     if (!__inserted)
@@ -1220,7 +1224,8 @@ public:
   }
 
   template <class _Vp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator insert_or_assign(const_iterator __h, key_type&& __k, _Vp&& __v) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator
+  insert_or_assign(const_iterator __h, key_type&& __k, _Vp&& __v) {
     auto [__r, __inserted] = __tree_.__emplace_hint_unique(__h.__i_, std::move(__k), std::forward<_Vp>(__v));
 
     if (!__inserted)
