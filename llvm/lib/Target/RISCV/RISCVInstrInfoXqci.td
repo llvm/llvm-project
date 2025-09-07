@@ -29,6 +29,8 @@ def qc_insb : RVSDNode<"QC_INSB", SDTypeProfile<1, 4, [SDTCisSameAs<0, 1>,
                                                        SDTCisInt<4>]>,
                        []>;
 
+def qc_e_li : RVSDNode<"QC_E_LI", SDTIntUnaryOp>;
+
 def uimm5nonzero : RISCVOp<XLenVT>,
                    ImmLeaf<XLenVT, [{return (Imm != 0) && isUInt<5>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<5, "NonZero">;
@@ -1616,6 +1618,13 @@ let Predicates = [HasVendorXqcilsm, IsRV32] in {
 def : Pat<(qc_setwmi GPR:$rs3, GPR:$rs1, tuimm5nonzero:$uimm5, tuimm7_lsb00:$uimm7),
           (QC_SETWMI GPR:$rs3, GPR:$rs1, tuimm5nonzero:$uimm5, tuimm7_lsb00:$uimm7)>;
 } // Predicates = [HasVendorXqcilsm, IsRV32]
+
+let Predicates = [HasVendorXqcili, IsRV32] in {
+def: Pat<(qc_e_li tglobaladdr:$A), (QC_E_LI bare_simm32:$A)>;
+def: Pat<(qc_e_li tblockaddress:$A), (QC_E_LI bare_simm32:$A)>;
+def: Pat<(qc_e_li tjumptable:$A), (QC_E_LI bare_simm32:$A)>;
+def: Pat<(qc_e_li tconstpool:$A), (QC_E_LI bare_simm32:$A)>;
+} // Predicates = [HasVendorXqcili, IsRV32]
 
 //===----------------------------------------------------------------------===/i
 // Compress Instruction tablegen backend.
