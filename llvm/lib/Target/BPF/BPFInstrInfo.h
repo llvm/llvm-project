@@ -26,7 +26,7 @@ class BPFInstrInfo : public BPFGenInstrInfo {
   const BPFRegisterInfo RI;
 
 public:
-  BPFInstrInfo(const BPFSubtarget &STI);
+  explicit BPFInstrInfo(const BPFSubtarget &STI);
 
   const BPFRegisterInfo &getRegisterInfo() const { return RI; }
 
