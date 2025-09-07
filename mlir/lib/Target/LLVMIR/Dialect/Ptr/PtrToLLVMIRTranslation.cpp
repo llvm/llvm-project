@@ -300,6 +300,55 @@ convertScatterOp(ScatterOp scatterOp, llvm::IRBuilderBase &builder,
   return success();
 }
 
+/// Convert ptr.constant operation
+static LogicalResult
+convertConstantOp(ConstantOp constantOp, llvm::IRBuilderBase &builder,
+                  LLVM::ModuleTranslation &moduleTranslation) {
+  // Convert result type to LLVM type
+  llvm::PointerType *resultType = dyn_cast_or_null<llvm::PointerType>(
+      moduleTranslation.convertType(constantOp.getResult().getType()));
+  if (!resultType)
+    return constantOp.emitError("Expected a valid pointer type");
+
+  llvm::Value *result = nullptr;
+
+  TypedAttr value = constantOp.getValue();
+  if (auto nullAttr = dyn_cast<ptr::NullAttr>(value)) {
+    // Create a null pointer constant
+    result = llvm::ConstantPointerNull::get(resultType);
+  } else if (auto addressAttr = dyn_cast<ptr::AddressAttr>(value)) {
+    // Create an integer constant and convert it to pointer
+    llvm::APInt addressValue = addressAttr.getValue();
+
+    // Determine the integer type width based on the target's pointer size
+    llvm::DataLayout dataLayout =
+        moduleTranslation.getLLVMModule()->getDataLayout();
+    unsigned pointerSizeInBits =
+        dataLayout.getPointerSizeInBits(resultType->getAddressSpace());
+
+    // Extend or truncate the address value to match pointer size if needed
+    if (addressValue.getBitWidth() != pointerSizeInBits) {
+      if (addressValue.getBitWidth() > pointerSizeInBits) {
+        constantOp.emitWarning()
+            << "Truncating address value to fit pointer size";
+      }
+      addressValue = addressValue.getBitWidth() < pointerSizeInBits
+                         ? addressValue.zext(pointerSizeInBits)
+                         : addressValue.trunc(pointerSizeInBits);
+    }
+
+    // Create integer constant and convert to pointer
+    llvm::Type *intType = builder.getIntNTy(pointerSizeInBits);
+    llvm::Value *intValue = llvm::ConstantInt::get(intType, addressValue);
+    result = builder.CreateIntToPtr(intValue, resultType);
+  } else {
+    return constantOp.emitError("Unsupported constant attribute type");
+  }
+
+  moduleTranslation.mapValue(constantOp.getResult(), result);
+  return success();
+}
+
 /// Implementation of the dialect interface that converts operations belonging
 /// to the `ptr` dialect to LLVM IR.
 class PtrDialectLLVMIRTranslationInterface
@@ -314,6 +363,9 @@ public:
                    LLVM::ModuleTranslation &moduleTranslation) const final {
 
     return llvm::TypeSwitch<Operation *, LogicalResult>(op)
+        .Case([&](ConstantOp constantOp) {
+          return convertConstantOp(constantOp, builder, moduleTranslation);
+        })
         .Case([&](PtrAddOp ptrAddOp) {
           return convertPtrAddOp(ptrAddOp, builder, moduleTranslation);
         })
