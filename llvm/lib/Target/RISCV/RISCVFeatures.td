@@ -170,8 +170,6 @@ def FeatureStdExtZicfilp
 def HasStdExtZicfilp : Predicate<"Subtarget->hasStdExtZicfilp()">,
                        AssemblerPredicate<(all_of FeatureStdExtZicfilp),
                                           "'Zicfilp' (Landing pad)">;
-def NoStdExtZicfilp : Predicate<"!Subtarget->hasStdExtZicfilp()">,
-                      AssemblerPredicate<(all_of (not FeatureStdExtZicfilp))>;
 
 def FeatureStdExtZicfiss
     : RISCVExperimentalExtension<1, 0, "Shadow stack",
@@ -1836,3 +1834,15 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "AllowTaggedGlobals",
     "true", "Use an instruction sequence for taking the address of a global "
     "that allows a memory tag in the upper address bits">;
+
+// Zicfilp-based CFI
+def FeatureZicfilpUnlabeled
+    : SubtargetFeature<
+          "zicfilp-unlabeled", "RISCVZicfilpCFIScheme", "ZicfilpUnlabeled",
+          "Enforce forward-edge control-flow integrity with ZICFILP-unlabeled">;
+def FeatureZicfilpFuncSig
+    : SubtargetFeature<
+          "zicfilp-func-sig", "RISCVZicfilpCFIScheme", "ZicfilpFuncSig",
+          "Enforce forward-edge control-flow integrity with ZICFILP-func-sig">;
+def HasZicfilpCFI : Predicate<"Subtarget->hasZicfilpCFI()">;
+def NoZicfilpCFI : Predicate<"!Subtarget->hasZicfilpCFI()">;
