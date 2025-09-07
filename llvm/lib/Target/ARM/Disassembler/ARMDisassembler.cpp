@@ -152,7 +152,7 @@ private:
   void AddThumb1SBit(MCInst &MI, bool InITBlock) const;
   bool isVectorPredicable(const MCInst &MI) const;
   DecodeStatus AddThumbPredicate(MCInst&) const;
-  void UpdateThumbVFPPredicate(DecodeStatus &, MCInst&) const;
+  void UpdateThumbPredicate(DecodeStatus &S, MCInst &MI) const;
 
   llvm::endianness InstructionEndianness;
 };
@@ -6308,13 +6308,12 @@ ARMDisassembler::AddThumbPredicate(MCInst &MI) const {
   return S;
 }
 
-// Thumb VFP instructions are a special case.  Because we share their
-// encodings between ARM and Thumb modes, and they are predicable in ARM
+// Thumb VFP and some NEON instructions are a special case. Because we share
+// their encodings between ARM and Thumb modes, and they are predicable in ARM
 // mode, the auto-generated decoder will give them an (incorrect)
 // predicate operand.  We need to rewrite these operands based on the IT
 // context as a post-pass.
-void ARMDisassembler::UpdateThumbVFPPredicate(
-  DecodeStatus &S, MCInst &MI) const {
+void ARMDisassembler::UpdateThumbPredicate(DecodeStatus &S, MCInst &MI) const {
   unsigned CC;
   CC = ITBlock.getITCC();
   if (CC == 0xF)
@@ -6461,7 +6460,7 @@ DecodeStatus ARMDisassembler::getThumbInstruction(MCInst &MI, uint64_t &Size,
         decodeInstruction(DecoderTableVFP32, MI, Insn32, Address, this, STI);
     if (Result != MCDisassembler::Fail) {
       Size = 4;
-      UpdateThumbVFPPredicate(Result, MI);
+      UpdateThumbPredicate(Result, MI);
       return Result;
     }
   }
@@ -6478,6 +6477,7 @@ DecodeStatus ARMDisassembler::getThumbInstruction(MCInst &MI, uint64_t &Size,
                                STI);
     if (Result != MCDisassembler::Fail) {
       Size = 4;
+      UpdateThumbPredicate(Result, MI);
       return Result;
     }
   }
