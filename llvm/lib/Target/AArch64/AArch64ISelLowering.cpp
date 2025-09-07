@@ -21060,13 +21060,6 @@ static bool isNegatedInteger(SDValue Op) {
   return Op.getOpcode() == ISD::SUB && isNullConstant(Op.getOperand(0));
 }
 
-static SDValue getNegatedInteger(SDValue Op, SelectionDAG &DAG) {
-  SDLoc DL(Op);
-  EVT VT = Op.getValueType();
-  SDValue Zero = DAG.getConstant(0, DL, VT);
-  return DAG.getNode(ISD::SUB, DL, VT, Zero, Op);
-}
-
 // Try to fold
 //
 // (neg (csel X, Y)) -> (csel (neg X), (neg Y))
@@ -21085,16 +21078,17 @@ static SDValue performNegCSelCombine(SDNode *N, SelectionDAG &DAG) {
   SDValue N0 = CSel.getOperand(0);
   SDValue N1 = CSel.getOperand(1);
 
-  // If both of them is not negations, it's not worth the folding as it
+  // If neither of them are negations, it's not worth the folding as it
   // introduces two additional negations while reducing one negation.
   if (!isNegatedInteger(N0) && !isNegatedInteger(N1))
     return SDValue();
 
-  SDValue N0N = getNegatedInteger(N0, DAG);
-  SDValue N1N = getNegatedInteger(N1, DAG);
-
   SDLoc DL(N);
   EVT VT = CSel.getValueType();
+
+  SDValue N0N = DAG.getNegative(N0, DL, VT);
+  SDValue N1N = DAG.getNegative(N1, DL, VT);
+
   return DAG.getNode(AArch64ISD::CSEL, DL, VT, N0N, N1N, CSel.getOperand(2),
                      CSel.getOperand(3));
 }
