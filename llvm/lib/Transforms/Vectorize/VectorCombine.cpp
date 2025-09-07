@@ -1013,16 +1013,19 @@ bool VectorCombine::foldBitOpOfCastConstant(Instruction &I) {
 
   Value *LHSSrc = LHSCast->getOperand(0);
 
-  // Only handle vector types with integer elements if the cast is not bitcast
   auto *SrcTy = LHSSrc->getType();
   auto *DstTy = I.getType();
+  // Bitcasts can handle scalar/vector mixes, such as i16 -> <16 x i1>.
+  // Other casts only handle vector types with integer elements.
   if (CastOpcode != Instruction::BitCast &&
-      (!isa<FixedVectorType>(SrcTy) || !!isa<FixedVectorType>(DstTy)))
+      (!isa<FixedVectorType>(SrcTy) || !isa<FixedVectorType>(DstTy)))
     return false;
 
+  // Only integer scalar/vector values are legal for bitwise logic operations.
   if (!SrcTy->getScalarType()->isIntegerTy() ||
       !DstTy->getScalarType()->isIntegerTy())
     return false;
+
 
   // Find the constant InvC, such that castop(InvC) equals to C.
   PreservedCastFlags RHSFlags;
