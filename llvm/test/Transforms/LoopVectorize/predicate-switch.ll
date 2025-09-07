@@ -573,7 +573,6 @@ exit:
   ret void
 }
 
-
 ;.
 ; IC1: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; IC1: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
