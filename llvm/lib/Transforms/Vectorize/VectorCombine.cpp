@@ -1026,7 +1026,6 @@ bool VectorCombine::foldBitOpOfCastConstant(Instruction &I) {
       !DstTy->getScalarType()->isIntegerTy())
     return false;
 
-
   // Find the constant InvC, such that castop(InvC) equals to C.
   PreservedCastFlags RHSFlags;
   Constant *InvC = getLosslessInvCast(C, SrcTy, CastOpcode, *DL, RHSFlags);
