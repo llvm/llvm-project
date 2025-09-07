@@ -16,7 +16,6 @@
 #include <cassert>
 #include <map>
 #include <stdexcept>
-#include <type_traits>
 
 #include "min_allocator.h"
 #include "test_macros.h"
