@@ -43,7 +43,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(m.at(5) == 5.5);
 #ifndef TEST_HAS_NO_EXCEPTIONS
 
-// throwing is not allowed in constexpr
+// throwing is not allowed during constant evaluation
 #  if TEST_STD_VER >= 26
   if (!std::is_constant_evaluated()) {
 #  endif
@@ -81,7 +81,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(m.at(5) == 5.5);
 #ifndef TEST_HAS_NO_EXCEPTIONS
 #  if TEST_STD_VER >= 26
-// throwing is not allowed in constexpr
+// throwing is not allowed during constant evaluation
   if (!std::is_constant_evaluated()) {
 #  endif
     try {
@@ -121,7 +121,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(m.at(5) == 5.5);
 #  ifndef TEST_HAS_NO_EXCEPTIONS
 
-// throwing is not allowed in constexpr
+// throwing is not allowed during constant evaluation
 #  if TEST_STD_VER >= 26
   if (!std::is_constant_evaluated()) {
 #  endif
@@ -157,7 +157,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(m.at(4) == 4.5);
     assert(m.at(5) == 5.5);
 #  ifndef TEST_HAS_NO_EXCEPTIONS
-// throwing is not allowed in constexpr
+// throwing is not allowed during constant evaluation
 #  if TEST_STD_VER >= 26
   if (!std::is_constant_evaluated()) {
 #  endif
