@@ -98,16 +98,12 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
       hasType(referenceType(pointee(hasCanonicalType(templateTypeParmType())))),
       hasType(referenceType(pointee(substTemplateTypeParmType()))));
 
-  auto AllowedTypeDecl = namedDecl(
+  const auto AllowedTypeDecl = namedDecl(
       anyOf(matchers::matchesAnyListedName(AllowedTypes), usingShadowDecl()));
 
   const auto AllowedType = hasType(qualType(
       anyOf(hasDeclaration(AllowedTypeDecl), references(AllowedTypeDecl),
             pointerType(pointee(hasDeclaration(AllowedTypeDecl))))));
-
-  const auto AutoTemplateType = varDecl(
-      anyOf(hasType(autoType()), hasType(referenceType(pointee(autoType()))),
-            hasType(pointerType(pointee(autoType())))));
 
   const auto FunctionPointerRef =
       hasType(hasCanonicalType(referenceType(pointee(functionType()))));
@@ -117,10 +113,8 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   const auto LocalValDecl = varDecl(
       isLocal(), hasInitializer(anything()),
       unless(anyOf(ConstType, ConstReference, TemplateType,
-                   hasInitializer(isInstantiationDependent()), AutoTemplateType,
-                   RValueReference, FunctionPointerRef,
-                   hasType(cxxRecordDecl(isLambda())), isImplicit(),
-                   AllowedType)));
+                   hasInitializer(isInstantiationDependent()), RValueReference,
+                   FunctionPointerRef, isImplicit(), AllowedType)));
 
   // Match the function scope for which the analysis of all local variables
   // shall be run.
