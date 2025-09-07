@@ -17,6 +17,7 @@ include "mlir/IR/EnumAttr.td"
 include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.td"
+include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
@@ -190,6 +191,40 @@ def CacheEvictionPriority : I32Enum<"CacheEvictionPriority",
 def CacheEvictionPriorityAttr : EnumAttr<NVVM_Dialect, CacheEvictionPriority, 
                                          "cache_eviction_priority"> {
   let assemblyFormat = "$value";
+}
+
+// Memory Space enum definitions
+/// Generic memory space identifier.
+def MemSpaceGeneric : I32EnumCase<"Generic", 0, "generic">;
+/// Global memory space identifier.
+def MemSpaceGlobal : I32EnumCase<"Global", 1, "global">;
+/// Shared memory space identifier.
+def MemSpaceShared : I32EnumCase<"Shared", 3, "shared">;
+/// Constant memory space identifier.
+def MemSpaceConstant : I32EnumCase<"Constant", 4, "constant">;
+/// Local memory space identifier.
+def MemSpaceLocal : I32EnumCase<"Local", 5, "local">;
+/// Tensor memory space identifier.
+/// Tensor memory is available only in arch-accelerated
+/// variants from sm100 onwards.
+def MemSpaceTensor : I32EnumCase<"Tensor", 6, "tensor">;
+/// Distributed shared memory space identifier.
+/// Distributed shared memory is available only in sm90+.
+def MemSpaceSharedCluster : I32EnumCase<"SharedCluster", 7, "shared_cluster">;
+
+def NVVMMemorySpace : I32Enum<"NVVMMemorySpace", "NVVM Memory Space",
+                  [MemSpaceGeneric, MemSpaceGlobal, MemSpaceShared,   
+                   MemSpaceConstant, MemSpaceLocal, MemSpaceTensor, 
+                   MemSpaceSharedCluster]> {
+  let cppNamespace = "::mlir::NVVM";
+}
+
+def NVVMMemorySpaceAttr : 
+  EnumAttr<NVVM_Dialect, NVVMMemorySpace, "memory_space", [
+    DeclareAttrInterfaceMethods<LLVM_LLVMAddrSpaceAttrInterface>,
+    DeclareAttrInterfaceMethods<MemorySpaceAttrInterface>
+  ]> {
+  let assemblyFormat = "`<` $value `>`";
 }
 
 //===----------------------------------------------------------------------===//
@@ -3592,7 +3627,7 @@ def NVVM_MapaOp: NVVM_Op<"mapa",
   string llvmBuilder = [{
     int addrSpace = llvm::cast<LLVMPointerType>(op.getA().getType()).getAddressSpace();
     
-    bool isSharedMemory = addrSpace == NVVM::NVVMMemorySpace::kSharedMemorySpace;
+    bool isSharedMemory = addrSpace == static_cast<int> (NVVM::NVVMMemorySpace::Shared);
 
     auto intId = isSharedMemory? llvm::Intrinsic::nvvm_mapa_shared_cluster : llvm::Intrinsic::nvvm_mapa;
     $res = createIntrinsicCall(builder, intId, {$a, $b});
