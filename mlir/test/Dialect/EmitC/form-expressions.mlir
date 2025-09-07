@@ -192,7 +192,6 @@ func.func @opaque_type_expression(%arg0: i32,  %arg1: !emitc.opaque<"T0">, %arg2
   %c = emitc.cmp lt, %b, %arg2 :(i32, i32) -> i1
   return %c : i1
 }
-<<<<<<< HEAD
 
 // CHECK-LABEL:   func.func @expression_with_constant(
 // CHECK-SAME:                                        %[[VAL_0:.*]]: i32) -> i32 {
@@ -209,25 +208,3 @@ func.func @expression_with_constant(%arg0: i32) -> i32 {
   %a = emitc.mul %arg0, %c42 : (i32, i32) -> i32
   return %a : i32
 }
-
-// CHECK-LABEL:   func.func @expression_with_literal(
-// CHECK-SAME:      %[[ARG0:.*]]: i32) -> i1 {
-// CHECK:           %[[VAL_0:.*]] = emitc.expression : i1 {
-// CHECK:             %[[VAL_1:.*]] = literal "1" : i32
-// CHECK:             %[[VAL_2:.*]] = literal "2" : i32
-// CHECK:             %[[VAL_3:.*]] = add %[[VAL_1]], %[[VAL_2]] : (i32, i32) -> i32
-// CHECK:             %[[VAL_4:.*]] = cmp lt, %[[VAL_3]], %[[ARG0]] : (i32, i32) -> i1
-// CHECK:             yield %[[VAL_4]] : i1
-// CHECK:           }
-// CHECK:           return %[[VAL_0]] : i1
-// CHECK:         }
-
-func.func @expression_with_literal(%arg0: i32) -> i1 {
-  %literal1 = emitc.literal "1" : i32
-  %literal2 = emitc.literal "2" : i32
-  %b = emitc.add %literal1, %literal2 : (i32, i32) -> i32
-  %c = emitc.cmp lt, %b, %arg0 :(i32, i32) -> i1
-  return %c : i1
-}
-=======
->>>>>>> 6a27d24c62dd ([mlir][emitc] Ignore literal in form-expression)

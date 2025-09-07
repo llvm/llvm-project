@@ -478,10 +478,9 @@ func.func @expression_with_literal(%arg0 : i32) -> i1 {
     %add = add %literal1, %arg0 : (i32, i32) -> i32
     %div = div %add, %literal2 : (i32, i32) -> i32
     %literal3 = emitc.literal "3" : i32
-    %f = emitc.cmp lt, %div, %literal3 :(i32, i32) -> i1
-    emitc.yield %f : i1
+    %cmp = emitc.cmp lt, %div, %literal3 : (i32, i32) -> i1
+    emitc.yield %cmp : i1
   }
-
   return %ret : i1
 }
 
