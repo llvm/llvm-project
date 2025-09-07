@@ -6608,45 +6608,6 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
   switch (IntrinID) {
   default:
     break;
-  case Intrinsic::aarch64_crypto_sha1h: {
-    Register DstReg = I.getOperand(0).getReg();
-    Register SrcReg = I.getOperand(2).getReg();
-
-    // FIXME: Should this be an assert?
-    if (MRI.getType(DstReg).getSizeInBits() != 32 ||
-        MRI.getType(SrcReg).getSizeInBits() != 32)
-      return false;
-
-    // The operation has to happen on FPRs. Set up some new FPR registers for
-    // the source and destination if they are on GPRs.
-    if (RBI.getRegBank(SrcReg, MRI, TRI)->getID() != AArch64::FPRRegBankID) {
-      SrcReg = MRI.createVirtualRegister(&AArch64::FPR32RegClass);
-      MIB.buildCopy({SrcReg}, {I.getOperand(2)});
-
-      // Make sure the copy ends up getting constrained properly.
-      RBI.constrainGenericRegister(I.getOperand(2).getReg(),
-                                   AArch64::GPR32RegClass, MRI);
-    }
-
-    if (RBI.getRegBank(DstReg, MRI, TRI)->getID() != AArch64::FPRRegBankID)
-      DstReg = MRI.createVirtualRegister(&AArch64::FPR32RegClass);
-
-    // Actually insert the instruction.
-    auto SHA1Inst = MIB.buildInstr(AArch64::SHA1Hrr, {DstReg}, {SrcReg});
-    constrainSelectedInstRegOperands(*SHA1Inst, TII, TRI, RBI);
-
-    // Did we create a new register for the destination?
-    if (DstReg != I.getOperand(0).getReg()) {
-      // Yep. Copy the result of the instruction back into the original
-      // destination.
-      MIB.buildCopy({I.getOperand(0)}, {DstReg});
-      RBI.constrainGenericRegister(I.getOperand(0).getReg(),
-                                   AArch64::GPR32RegClass, MRI);
-    }
-
-    I.eraseFromParent();
-    return true;
-  }
   case Intrinsic::ptrauth_resign: {
     Register DstReg = I.getOperand(0).getReg();
     Register ValReg = I.getOperand(2).getReg();
