@@ -12,6 +12,7 @@ function(add_orc_rt_unittest test_dirname)
 endfunction()
 
 add_orc_rt_unittest(CoreTests
+  AllocActionTest.cpp
   BitmaskEnumTest.cpp
   CommonTestUtils.cpp
   ErrorTest.cpp
