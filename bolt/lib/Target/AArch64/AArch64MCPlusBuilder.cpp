@@ -2620,6 +2620,16 @@ public:
   getInstructionSize(const MCInst &Inst) const override {
     return 4;
   }
+
+  bool hasUseOrDefofSPOrFP(const MCInst &Inst) const override {
+    if (isPseudo(Inst) || isNoop(Inst) || isCFI(Inst)) {
+      return false;
+    }
+    return hasDefOfPhysReg(Inst, AArch64::SP) ||
+           hasUseOfPhysReg(Inst, AArch64::SP) ||
+           hasDefOfPhysReg(Inst, AArch64::FP) ||
+           hasUseOfPhysReg(Inst, AArch64::FP);
+  }
 };
 
 } // end anonymous namespace

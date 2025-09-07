@@ -2150,6 +2150,44 @@ bool BinaryFunction::postProcessIndirectBranches(
       bool IsEpilogue = llvm::any_of(BB, [&](const MCInst &Instr) {
         return BC.MIB->isLeave(Instr) || BC.MIB->isPop(Instr);
       });
+      if (BC.isAArch64()) {
+        // Any ADR instruction of AArch64 will generate a new entry,
+        // ADR instruction cannot afford to do any optimizations. Because ADR
+        // computes a PC-relative address within a limited range tied to the
+        // current program counter, optimizing transformations (like code
+        // rearrangements) can change address distances and potentially exceed
+        // ADR’s range.
+        if (!IsEpilogue && !isMultiEntry()) {
+          BinaryBasicBlock::iterator LastDefCFAOffsetInstIter = BB.end();
+          // Find the last OpDefCfaOffset 0 instruction.
+          for (BinaryBasicBlock::iterator Iter = BB.begin(); Iter != BB.end();
+               ++Iter) {
+            if (&*Iter == &Instr)
+              break;
+            if (BC.MIB->isCFI(*Iter)) {
+              const MCCFIInstruction *CFIInst =
+                  BB.getParent()->getCFIFor(*Iter);
+              if ((CFIInst->getOperation() ==
+                   MCCFIInstruction::OpDefCfaOffset) &&
+                  (CFIInst->getOffset() == 0)) {
+                LastDefCFAOffsetInstIter = Iter;
+                IsEpilogue = true;
+                // Make sure there is no instruction manipulating sp between the
+                // two instructions.
+                BinaryBasicBlock::iterator Iter = LastDefCFAOffsetInstIter;
+                while (&*Iter != &Instr) {
+                  if (BC.MIB->hasUseOrDefofSPOrFP(*Iter)) {
+                    IsEpilogue = false;
+                    break;
+                  }
+                  ++Iter;
+                }
+                break;
+              }
+            }
+          }
+        }
+      }
       if (IsEpilogue) {
         BC.MIB->convertJmpToTailCall(Instr);
         BB.removeAllSuccessors();
