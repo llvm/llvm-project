@@ -1103,6 +1103,15 @@ mlir::LogicalResult CIRToLLVMBaseClassAddrOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMATanOpLowering::matchAndRewrite(
+    cir::ATanOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::ATanOp>(op, resTy,
+                                                  adaptor.getOperands()[0]);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMAllocaOpLowering::matchAndRewrite(
     cir::AllocaOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -2468,6 +2477,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMAssumeSepStorageOpLowering,
                CIRToLLVMAtomicCmpXchgLowering,
                CIRToLLVMBaseClassAddrOpLowering,
+               CIRToLLVMATanOpLowering,
                CIRToLLVMBinOpLowering,
                CIRToLLVMBitClrsbOpLowering,
                CIRToLLVMBitClzOpLowering,

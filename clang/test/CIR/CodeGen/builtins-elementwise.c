@@ -62,3 +62,30 @@ void test_builtin_elementwise_asin(float f, double d, vfloat4 vf4,
   // OGCG: %{{.*}} = call <4 x double> @llvm.asin.v4f64(<4 x double> %{{.*}})
   vd4 = __builtin_elementwise_asin(vd4);
 }
+
+void test_builtin_elementwise_atan(float f, double d, vfloat4 vf4,
+  vdouble4  vd4) {
+  // CIR-LABEL: test_builtin_elementwise_atan
+  // LLVM-LABEL: test_builtin_elementwise_atan
+  // OGCG-LABEL: test_builtin_elementwise_atan
+
+  // CIR: %{{.*}} = cir.atan %{{.*}} : !cir.float
+  // LLVM: %{{.*}} = call float @llvm.atan.f32(float %{{.*}})
+  // OGCG: %{{.*}} = call float @llvm.atan.f32(float %{{.*}})
+  f = __builtin_elementwise_atan(f);
+
+  // CIR: %{{.*}} = cir.atan %{{.*}} : !cir.double
+  // LLVM: %{{.*}} = call double @llvm.atan.f64(double %{{.*}})
+  // OGCG: %{{.*}} = call double @llvm.atan.f64(double %{{.*}})
+  d = __builtin_elementwise_atan(d);
+
+  // CIR: %{{.*}} = cir.atan %{{.*}} : !cir.vector<4 x !cir.float>
+  // LLVM: %{{.*}} = call <4 x float> @llvm.atan.v4f32(<4 x float> %{{.*}})
+  // OGCG: %{{.*}} = call <4 x float> @llvm.atan.v4f32(<4 x float> %{{.*}})
+  vf4 = __builtin_elementwise_atan(vf4);
+
+  // CIR: %{{.*}} = cir.atan %{{.*}} : !cir.vector<4 x !cir.double>
+  // LLVM: %{{.*}} = call <4 x double> @llvm.atan.v4f64(<4 x double> %{{.*}})
+  // OGCG: %{{.*}} = call <4 x double> @llvm.atan.v4f64(<4 x double> %{{.*}})
+  vd4 = __builtin_elementwise_atan(vd4);
+}
