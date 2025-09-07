@@ -10,6 +10,12 @@ template <typename T>
 void type_dependent_variables() {
   T value = 42;
   auto &ref = value;
+  // CHECK-MESSAGES:[[@LINE-1]]:3: warning: variable 'ref' of type 'int &' can be declared 'const'
+  // CHECK-FIXES: auto  const&ref = value;
+  //
+  // FIXME: This is a false positive, the reference points to a template type
+  // and needs to be excluded from analysis. See the 'more_template_locals()'
+  // test in 'const-correctness-values.cpp' for more examples of the problem.
   T &templateRef = value;
 
   int value_int = 42;

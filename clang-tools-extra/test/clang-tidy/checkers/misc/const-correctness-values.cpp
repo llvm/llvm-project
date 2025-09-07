@@ -27,10 +27,19 @@ int np_anonymous_global;
 int p_anonymous_global = 43;
 } // namespace
 
-// Lambdas should be ignored, because they do not follow the normal variable
-// semantic (e.g. the type is only known to the compiler).
 void lambdas() {
   auto Lambda = [](int i) { return i < 0; };
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'Lambda' of type '{{.*}}' can be declared 'const'
+  // CHECK-FIXES: auto const Lambda
+
+  auto LambdaWithMutableCallOperator = []() mutable {};
+  LambdaWithMutableCallOperator();
+
+  int x = 0;
+  auto LambdaModifyingCapture = [&x] { ++x; };
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'LambdaModifyingCapture' of type '{{.*}}' can be declared 'const'
+  // CHECK-FIXES: auto const LambdaModifyingCapture
+  LambdaModifyingCapture();
 }
 
 void some_function(double, wchar_t);
@@ -965,14 +974,23 @@ template <typename T>
 T *return_ptr() { return &return_ref<T>(); }
 
 void auto_usage_variants() {
+  auto auto_int = int{};
+  // CHECK-MESSAGES:[[@LINE-1]]:3: warning: variable 'auto_int' of type 'int' can be declared 'const'
+  // CHECK-FIXES: auto const auto_int
+
   auto auto_val0 = int{};
   // CHECK-FIXES-NOT: auto const auto_val0
   auto &auto_val1 = auto_val0;
+  // CHECK-MESSAGES:[[@LINE-1]]:3: warning: variable 'auto_val1' of type 'int &' can be declared 'const'
+  // CHECK-FIXES: auto  const&auto_val1
   auto *auto_val2 = &auto_val0;
 
   auto auto_ref0 = return_ref<int>();
-  // CHECK-FIXES-NOT: auto const auto_ref0
-  auto &auto_ref1 = return_ref<int>(); // Bad
+  // CHECK-MESSAGES:[[@LINE-1]]:3: warning: variable 'auto_ref0' of type 'int' can be declared 'const'
+  // CHECK-FIXES: auto const auto_ref0
+  auto &auto_ref1 = return_ref<int>();
+  // CHECK-MESSAGES:[[@LINE-1]]:3: warning: variable 'auto_ref1' of type 'int &' can be declared 'const'
+  // CHECK-FIXES: auto  const&auto_ref1
   auto *auto_ref2 = return_ptr<int>();
 
   auto auto_ptr0 = return_ptr<int>();
@@ -984,6 +1002,8 @@ void auto_usage_variants() {
   auto auto_td0 = MyTypedef{};
   // CHECK-FIXES-NOT: auto const auto_td0
   auto &auto_td1 = auto_td0;
+  // CHECK-MESSAGES:[[@LINE-1]]:3: warning: variable 'auto_td1' of type 'MyTypedef &' (aka 'int &') can be declared 'const'
+  // CHECK-FIXES: auto  const&auto_td1
   auto *auto_td2 = &auto_td0;
 }
 
