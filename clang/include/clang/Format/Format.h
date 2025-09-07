@@ -5492,6 +5492,7 @@ struct FormatStyle {
            AllowShortLoopsOnASingleLine == R.AllowShortLoopsOnASingleLine &&
            AllowShortNamespacesOnASingleLine ==
                R.AllowShortNamespacesOnASingleLine &&
+           AllowShortRecordOnASingleLine == R.AllowShortRecordOnASingleLine &&
            AlwaysBreakBeforeMultilineStrings ==
                R.AlwaysBreakBeforeMultilineStrings &&
            AttributeMacros == R.AttributeMacros &&
