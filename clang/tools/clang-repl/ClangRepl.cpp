@@ -20,6 +20,8 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Sema.h"
 
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/LineEditor/LineEditor.h"
 #include "llvm/Support/CommandLine.h"
@@ -38,8 +40,6 @@
 #include <vector>
 
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupport.h"
-
-using namespace clang;
 
 // Disable LSan for this test.
 // FIXME: Re-enable once we can assume GCC 13.2 or higher.
@@ -137,7 +137,7 @@ static llvm::Error sanitizeOopArguments(const char *ArgV0) {
   return llvm::Error::success();
 }
 
-static llvm::Expected<unsigned> getSlabAllocSize(StringRef SizeString) {
+static llvm::Expected<unsigned> getSlabAllocSize(llvm::StringRef SizeString) {
   SizeString = SizeString.trim();
 
   uint64_t Units = 1024;
@@ -289,10 +289,10 @@ int main(int argc, const char **argv) {
     if (!CudaPath.empty())
       CB.SetCudaSDK(CudaPath);
 
-    if (::OffloadArch.empty()) {
-      ::OffloadArch = "sm_35";
+    if (OffloadArch.empty()) {
+      OffloadArch = "sm_35";
     }
-    CB.SetOffloadArch(::OffloadArch);
+    CB.SetOffloadArch(OffloadArch);
 
     DeviceCI = ExitOnErr(CB.CreateCudaDevice());
   }

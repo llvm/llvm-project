@@ -29,18 +29,13 @@ set(CLANG_LIBS_TO_LINK
   )
 endif()
 
-set(CLANG_REPL_TEST_SOURCES
+add_distinct_clang_unittest(ClangReplInterpreterTests
   IncrementalCompilerBuilderTest.cpp
   IncrementalProcessingTest.cpp
   InterpreterTest.cpp
   InterpreterExtensionsTest.cpp
   CodeCompletionTest.cpp
-)
 
-add_distinct_clang_unittest(ClangReplInterpreterTests
-  ${CLANG_REPL_TEST_SOURCES}
-
-  PARTIAL_SOURCES_INTENDED
   EXPORT_SYMBOLS
 
   CLANG_LIBS
@@ -52,14 +47,6 @@ add_distinct_clang_unittest(ClangReplInterpreterTests
   LLVM_COMPONENTS
   ${LLVM_COMPONENTS_TO_LINK}
   )
-
-if(TARGET compiler-rt)
-  add_dependencies(ClangReplInterpreterTests 
-    llvm-jitlink-executor 
-    compiler-rt
-  )
-  message(STATUS "Adding dependency on compiler-rt for out of process JIT tests")
-endif()
 
 if(EMSCRIPTEN)
 # Without the above you try to link to LLVMSupport twice, and end
@@ -82,14 +69,6 @@ target_link_options(ClangReplInterpreterTests
 set_target_properties(ClangReplInterpreterTests PROPERTIES
   SUFFIX ".html"
 )
-endif()
-
-if(TARGET compiler-rt)
-  add_dependencies(ClangReplInterpreterTests 
-    llvm-jitlink-executor 
-    compiler-rt
-  )
-  message(STATUS "Adding dependency on compiler-rt for out of process JIT tests")
 endif()
 
 # Exceptions on Windows are not yet supported.

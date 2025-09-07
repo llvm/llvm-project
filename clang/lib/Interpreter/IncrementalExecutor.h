@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LIB_INTERPRETER_INCREMENTALEXECUTOR_H
 #define LLVM_CLANG_LIB_INTERPRETER_INCREMENTALEXECUTOR_H
 
+#include "clang/Interpreter/Interpreter.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
@@ -57,10 +58,7 @@ public:
   enum SymbolNameKind { IRName, LinkerName };
 
   IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
-                      llvm::orc::LLJITBuilder &JITBuilder, llvm::Error &Err);
-  IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
-                      llvm::orc::LLJITBuilder &JITBuilder, llvm::Error &Err,
-                      uint32_t ChildPid);
+                      llvm::orc::LLJITBuilder &JITBuilder, Interpreter::JITConfig Config, llvm::Error &Err);
   virtual ~IncrementalExecutor();
 
   virtual llvm::Error addModule(PartialTranslationUnit &PTU);

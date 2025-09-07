@@ -133,10 +133,13 @@ public:
     unsigned SlabAllocateSize = 0;
     /// Path to the ORC runtime library.
     std::string OrcRuntimePath = "";
+    /// PID of the out-of-process JIT executor.
+    uint32_t ExecutorPID = 0;
 
     JITConfig()
         : IsOutOfProcess(false), OOPExecutor(""), OOPExecutorConnect(""),
-          UseSharedMemory(false), SlabAllocateSize(0), OrcRuntimePath("") {}
+          UseSharedMemory(false), SlabAllocateSize(0), OrcRuntimePath(""),
+          ExecutorPID(0) {}
   };
 
 protected:

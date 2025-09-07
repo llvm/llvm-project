@@ -450,7 +450,7 @@ Interpreter::create(std::unique_ptr<CompilerInstance> CI, JITConfig Config) {
   }
 
   auto Interp = std::unique_ptr<Interpreter>(new Interpreter(
-      std::move(CI), Err, JB ? std::move(JB) : nullptr, nullptr, Config));
+      std::move(CI), Err, std::move(JB), /*Consumer=*/nullptr, Config));
   if (auto E = std::move(Err))
     return std::move(E);
 
@@ -629,14 +629,13 @@ llvm::Error Interpreter::CreateExecutor(JITConfig Config) {
   llvm::Triple TargetTriple(TT);
   bool IsWindowsTarget = TargetTriple.isOSWindows();
 
-  uint32_t OOPChildPid = -1;
   if (!IsWindowsTarget && Config.IsOutOfProcess) {
     if (!JITBuilder) {
       auto ResOrErr = outOfProcessJITBuilder(Config);
       if (!ResOrErr)
         return ResOrErr.takeError();
       JITBuilder = std::move(ResOrErr->first);
-      OOPChildPid = ResOrErr->second;
+      Config.ExecutorPID = ResOrErr->second;
     }
     if (!JITBuilder)
       return llvm::make_error<llvm::StringError>(
@@ -662,12 +661,8 @@ llvm::Error Interpreter::CreateExecutor(JITConfig Config) {
 #ifdef __EMSCRIPTEN__
   Executor = std::make_unique<WasmIncrementalExecutor>(*TSCtx);
 #else
-  if (IsWindowsTarget) {
-    Executor = std::make_unique<IncrementalExecutor>(*TSCtx, *JITBuilder, Err);
-  } else {
-    Executor = std::make_unique<IncrementalExecutor>(*TSCtx, *JITBuilder, Err,
-                                                     OOPChildPid);
-  }
+  Executor =
+      std::make_unique<IncrementalExecutor>(*TSCtx, *JITBuilder, Config, Err);
 #endif
   if (!Err)
     IncrExecutor = std::move(Executor);

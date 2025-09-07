@@ -72,23 +72,8 @@ IncrementalExecutor::createDefaultJITBuilder(
 
 IncrementalExecutor::IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
                                          llvm::orc::LLJITBuilder &JITBuilder,
-                                         llvm::Error &Err)
-    : TSCtx(TSC) {
-  using namespace llvm::orc;
-  llvm::ErrorAsOutParameter EAO(&Err);
-
-  if (auto JitOrErr = JITBuilder.create())
-    Jit = std::move(*JitOrErr);
-  else {
-    Err = JitOrErr.takeError();
-    return;
-  }
-}
-
-IncrementalExecutor::IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
-                                         llvm::orc::LLJITBuilder &JITBuilder,
-                                         llvm::Error &Err, uint32_t ChildPid)
-    : TSCtx(TSC), OutOfProcessChildPid(ChildPid) {
+                                         Interpreter::JITConfig Config, llvm::Error &Err)
+    : TSCtx(TSC), OutOfProcessChildPid(Config.ExecutorPID) {
   using namespace llvm::orc;
   llvm::ErrorAsOutParameter EAO(&Err);
 
