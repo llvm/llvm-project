@@ -25,6 +25,7 @@
 #include "min_allocator.h"
 
 TEST_CONSTEXPR_CXX26 bool test() {
+  // DefaultOnly::count is static
   if (!TEST_IS_CONSTANT_EVALUATED) {
     {
       typedef std::map<int, DefaultOnly> M;
