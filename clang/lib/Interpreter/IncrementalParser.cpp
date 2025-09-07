@@ -38,7 +38,7 @@ IncrementalParser::IncrementalParser(CompilerInstance &Instance,
   Consumer = &S.getASTConsumer();
   P.reset(new Parser(S.getPreprocessor(), S, /*SkipBodies=*/false));
 
-  if (ExternalASTSource *External = S->getASTContext().getExternalSource())
+  if (ExternalASTSource *External = S.getASTContext().getExternalSource())
     External->StartTranslationUnit(Consumer);
 
   P->Initialize();

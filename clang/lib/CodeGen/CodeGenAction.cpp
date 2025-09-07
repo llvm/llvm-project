@@ -238,8 +238,6 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
 
     Gen->HandleTranslationUnit(C);
 
-    IRGenFinished = true;
-
     if (TimerIsEnabled) {
       LLVMIRGenerationRefCount -= 1;
       if (LLVMIRGenerationRefCount == 0)
