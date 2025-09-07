@@ -349,7 +349,7 @@ const unsigned char _str2[] = {S[0], S[1], S[2], S[3], S[4], S[5], S[6], S[7]};
 const int compared = strcmp(_str, (const char *)_str2); // all-error {{initializer element is not a compile-time constant}}
 
 
-const int compared2 = strcmp(strcmp, _str); // all-warning {{incompatible pointer types}} \
+const int compared2 = strcmp(strcmp, _str); // all-error {{incompatible pointer types}} \
                                             // all-error {{initializer element is not a compile-time constant}}
 
 int foo(x) // all-warning {{a function definition without a prototype is deprecated in all versions of C}}

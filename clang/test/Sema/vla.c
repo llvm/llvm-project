@@ -82,9 +82,9 @@ void VLAPtrAssign(int size) {
   // This is well formed
   int (*p)[2][3][size][4][5] = array;
   // Last array dimension too large
-  int (*p2)[2][3][size][4][6] = array; // expected-warning {{incompatible pointer types}}
+  int (*p2)[2][3][size][4][6] = array; // expected-error {{incompatible pointer types}}
   // Second array dimension too large
-  int (*p3)[20][3][size][4][5] = array; // expected-warning {{incompatible pointer types}}
+  int (*p3)[20][3][size][4][5] = array; // expected-error {{incompatible pointer types}}
 
   // Not illegal in C, program _might_ be well formed if size == 3.
   int (*p4)[2][size][3][4][5] = array;

@@ -206,7 +206,7 @@ void myprintf(const char *f, ...) {
     vmyprintf(f, ap);
     ap = 0;
   } else {
-    __va_start(ap, f); // expected-warning {{incompatible pointer types passing 'my_va_list'}}
+    __va_start(ap, f); // expected-error {{incompatible pointer types passing 'my_va_list'}}
   }
 }
 
