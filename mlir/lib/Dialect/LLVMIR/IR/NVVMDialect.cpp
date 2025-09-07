@@ -951,7 +951,7 @@ LogicalResult NVVM::StMatrixOp::verify() {
   return success();
 }
 
-FailureOr<int> getAllowedSizeK(NVVM::WGMMATypes typeA) {
+static FailureOr<int> getAllowedSizeK(NVVM::WGMMATypes typeA) {
   if (typeA == NVVM::WGMMATypes::tf32)
     return 8;
   if (typeA == NVVM::WGMMATypes::f16 || typeA == NVVM::WGMMATypes::bf16)
@@ -965,9 +965,9 @@ FailureOr<int> getAllowedSizeK(NVVM::WGMMATypes typeA) {
   return failure();
 }
 
-LogicalResult isAllowedWGMMADataType(NVVM::WGMMATypes typeD,
-                                     NVVM::WGMMATypes typeA,
-                                     NVVM::WGMMATypes typeB) {
+static LogicalResult isAllowedWGMMADataType(NVVM::WGMMATypes typeD,
+                                            NVVM::WGMMATypes typeA,
+                                            NVVM::WGMMATypes typeB) {
   switch (typeA) {
   case NVVM::WGMMATypes::f16:
     if ((typeD == NVVM::WGMMATypes::f32 || typeD == NVVM::WGMMATypes::f16) &&
@@ -1007,7 +1007,7 @@ LogicalResult isAllowedWGMMADataType(NVVM::WGMMATypes typeD,
   return failure();
 }
 
-LogicalResult isAllowedSizeN(int sizeN, NVVM::WGMMATypes typeA) {
+static LogicalResult isAllowedSizeN(int sizeN, NVVM::WGMMATypes typeA) {
   SmallVector<int> allowedN = {8,   16,  24,  32,  40,  48,  56,  64,
                                72,  80,  88,  96,  104, 112, 120, 128,
                                136, 144, 152, 160, 168, 176, 184, 192,
