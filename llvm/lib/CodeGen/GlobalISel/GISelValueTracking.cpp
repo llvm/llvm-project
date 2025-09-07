@@ -2139,7 +2139,8 @@ std::optional<ConstantRange> GISelValueTracking::getValidShiftAmountRange(
 
   // Use computeKnownBits to find a hidden constant/knownbits (usually type
   // legalized). e.g. Hidden behind multiple bitcasts/build_vector/casts etc.
-  KnownBits KnownAmt = getKnownBits(R, DemandedElts, Depth);
+  KnownBits KnownAmt;
+  computeKnownBitsImpl(R, KnownAmt, DemandedElts, Depth);
   if (KnownAmt.getMaxValue().ult(BitWidth))
     return ConstantRange::fromKnownBits(KnownAmt, /*IsSigned=*/false);
 
