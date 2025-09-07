@@ -87,11 +87,6 @@ TEST_CONSTEXPR_CXX26 bool test() {
   test_alloc<std::allocator>();
   test_alloc<min_allocator>(); // Make sure that fancy pointers work
 
-#if TEST_STD_VER >= 26
-  static_assert(test_alloc<std::allocator>());
-  static_assert(test_alloc<min_allocator>()); // Make sure that fancy pointers work
-#endif
-
   { // Ensure that the comparator is copied
     using V   = std::pair<const int, int>;
     using Map = std::map<int, int, test_less<int> >;
