@@ -14674,8 +14674,8 @@ SITargetLowering::performExtractVectorEltCombine(SDNode *N,
     return DAG.getNode(Vec.getOpcode(), SL, ResVT, Elt);
   }
 
-   // (extract_vector_element (and {y0, y1}, (build_vector 0x1f, 0x1f)), index)
-  // -> (and (extract_vector_element {yo, y1}, index), 0x1f)
+  // (extract_vector_element (and {y0, y1}, (build_vector 0x1f, 0x1f)), index)
+  // -> (and (extract_vector_element {y0, y1}, index), 0x1f)
   // There are optimisations to transform 64-bit shifts into 32-bit shifts
   // depending on the shift operand. See e.g. performSraCombine().
   // This combine ensures that the optimisation is compatible with v2i32
