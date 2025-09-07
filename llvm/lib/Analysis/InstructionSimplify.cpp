@@ -5242,6 +5242,19 @@ static Value *simplifyExtractValueInst(Value *Agg, ArrayRef<unsigned> Idxs,
     }
   }
 
+  // Simplify umul_with_overflow where one operand is 1.
+  Value *V;
+  if (Idxs.size() == 1 &&
+      (match(Agg,
+             m_Intrinsic<Intrinsic::umul_with_overflow>(m_Value(V), m_One())) ||
+       match(Agg, m_Intrinsic<Intrinsic::umul_with_overflow>(m_One(),
+                                                             m_Value(V))))) {
+    if (Idxs[0] == 0)
+      return V;
+    assert(Idxs[0] == 1 && "invalid index");
+    return getFalse(CmpInst::makeCmpResultType(V->getType()));
+  }
+
   return nullptr;
 }
 
