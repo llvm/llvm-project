@@ -22,9 +22,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Native/PublicsStream.h"
+#include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
+#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
+#include "llvm/DebugInfo/PDB/Native/SymbolStream.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
@@ -95,4 +98,92 @@ Error PublicsStream::reload() {
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Corrupted publics stream.");
   return Error::success();
+}
+
+static uint32_t compareSegmentOffset(uint16_t LhsSegment, uint32_t LhsOffset,
+                                     uint16_t RhsSegment, uint32_t RhsOffset) {
+  if (LhsSegment == RhsSegment)
+    return LhsOffset - RhsOffset;
+  return LhsSegment - RhsSegment;
+}
+
+static uint32_t compareSegmentOffset(uint16_t LhsSegment, uint32_t LhsOffst,
+                                     const codeview::PublicSym32 &Rhs) {
+  return compareSegmentOffset(LhsSegment, LhsOffst, Rhs.Segment, Rhs.Offset);
+}
+
+// This is a reimplementation of NearestSym:
+// https://github.com/microsoft/microsoft-pdb/blob/805655a28bd8198004be2ac27e6e0290121a5e89/PDB/dbi/gsi.cpp#L1492-L1581
+std::optional<std::pair<codeview::PublicSym32, size_t>>
+PublicsStream::findByAddress(const SymbolStream &Symbols, uint16_t Segment,
+                             uint32_t Offset) const {
+  // The address map is sorted by address, so we do binary search.
+  // Each element is an offset into the symbols for a public symbol.
+  auto Lo = AddressMap.begin();
+  auto Hi = AddressMap.end();
+  Hi -= 1;
+
+  while (Lo < Hi) {
+    auto Cur = Lo + ((Hi - Lo + 1) / 2);
+    auto Sym = Symbols.readRecord(Cur->value());
+    if (Sym.kind() != codeview::S_PUB32)
+      return std::nullopt; // this is most likely corrupted debug info
+
+    auto Psym =
+        codeview::SymbolDeserializer::deserializeAs<codeview::PublicSym32>(Sym);
+    if (!Psym) {
+      consumeError(Psym.takeError());
+      return std::nullopt;
+    }
+
+    uint32_t Cmp = compareSegmentOffset(Segment, Offset, *Psym);
+    if (Cmp < 0) {
+      Cur -= 1;
+      Hi = Cur;
+    } else if (Cmp == 0)
+      Lo = Hi = Cur;
+    else
+      Lo = Cur;
+  }
+
+  auto Sym = Symbols.readRecord(Lo->value());
+  if (Sym.kind() != codeview::S_PUB32)
+    return std::nullopt; // this is most likely corrupted debug info
+
+  auto MaybePsym =
+      codeview::SymbolDeserializer::deserializeAs<codeview::PublicSym32>(Sym);
+  if (!MaybePsym) {
+    consumeError(MaybePsym.takeError());
+    return std::nullopt;
+  }
+  codeview::PublicSym32 Psym = std::move(*MaybePsym);
+
+  uint32_t Cmp = compareSegmentOffset(Segment, Offset, Psym);
+  if (Cmp != 0)
+    return std::nullopt;
+
+  // We found a symbol. Due to ICF, multiple symbols can have the same
+  // address, so return the first one
+  while (Lo != AddressMap.begin()) {
+    --Lo;
+    Sym = Symbols.readRecord(Lo->value());
+    if (Sym.kind() != codeview::S_PUB32)
+      return std::nullopt;
+    MaybePsym =
+        codeview::SymbolDeserializer::deserializeAs<codeview::PublicSym32>(Sym);
+    if (!MaybePsym) {
+      consumeError(MaybePsym.takeError());
+      return std::nullopt;
+    }
+
+    if (MaybePsym->Segment != Segment || MaybePsym->Offset != Offset) {
+      ++Lo;
+      break;
+    }
+
+    Psym = std::move(*MaybePsym);
+  }
+
+  std::ptrdiff_t IterOffset = Lo - AddressMap.begin();
+  return std::pair{Psym, static_cast<size_t>(IterOffset)};
 }
