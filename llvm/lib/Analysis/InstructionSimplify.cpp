@@ -5252,7 +5252,7 @@ static Value *simplifyExtractValueInst(Value *Agg, ArrayRef<unsigned> Idxs,
     if (Idxs[0] == 0)
       return V;
     assert(Idxs[0] == 1 && "invalid index");
-    return getFalse(IntegerType::get(V->getContext(), 1));
+    return getFalse(CmpInst::makeCmpResultType(V->getType()));
   }
 
   return nullptr;
