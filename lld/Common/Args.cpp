@@ -90,3 +90,13 @@ StringRef lld::args::getFilenameWithoutExe(StringRef path) {
     return sys::path::stem(path);
   return sys::path::filename(path);
 }
+
+StringRef lld::args::getOptionSpellingLikeArg(llvm::opt::OptTable &optTable,
+                                              llvm::opt::OptSpecifier opt,
+                                              llvm::opt::Arg *arg,
+                                              llvm::StringSaver &saver) {
+  StringRef prefix = arg->getSpelling();
+  prefix.consume_back(arg->getOption().getName());
+  auto option = optTable.getOption(opt);
+  return saver.save((prefix + option.getName()).str());
+}
