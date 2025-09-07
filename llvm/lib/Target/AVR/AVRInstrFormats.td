@@ -213,18 +213,16 @@ class FLPMX<bit e, bit p, dag outs, dag ins, string asmstr, list<dag> pattern>
 // MOVWRdRr special encoding: <|0000|0001|dddd|rrrr|>
 // d = destination = 4 bits
 // r = source = 4 bits
-// (Only accepts even registers)
+// (Only accepts register pairs)
 //===----------------------------------------------------------------------===//
 class FMOVWRdRr<dag outs, dag ins, string asmstr, list<dag> pattern>
     : AVRInst16<outs, ins, asmstr, pattern> {
-  bits<5> rd;
-  bits<5> rr;
+  bits<4> rd;
+  bits<4> rr;
 
   let Inst{15 - 8} = 0b00000001;
-  let Inst{7 - 4} = rd{4 - 1};
-  let Inst{3 - 0} = rr{4 - 1};
-
-  let DecoderMethod = "decodeFMOVWRdRr";
+  let Inst{7 - 4} = rd;
+  let Inst{3 - 0} = rr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -292,16 +290,14 @@ class FFMULRdRr<bits<2> f, dag outs, dag ins, string asmstr, list<dag> pattern>
 //===----------------------------------------------------------------------===//
 class FWRdK<bit f, dag outs, dag ins, string asmstr, list<dag> pattern>
     : AVRInst16<outs, ins, asmstr, pattern> {
-  bits<5> rd; // accept 5 bits but only encode bits 1 and 2
+  bits<2> rd;
   bits<6> k;
 
   let Inst{15 - 9} = 0b1001011;
   let Inst{8} = f;
   let Inst{7 - 6} = k{5 - 4};
-  let Inst{5 - 4} = rd{2 - 1};
+  let Inst{5 - 4} = rd;
   let Inst{3 - 0} = k{3 - 0};
-
-  let DecoderMethod = "decodeFWRdK";
 }
 
 //===----------------------------------------------------------------------===//

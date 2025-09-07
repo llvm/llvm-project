@@ -17,7 +17,7 @@ namespace clang::tidy::cppcoreguidelines {
 ProTypeStaticCastDowncastCheck::ProTypeStaticCastDowncastCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      StrictMode(Options.getLocalOrGlobal("StrictMode", true)) {}
+      StrictMode(Options.get("StrictMode", true)) {}
 
 void ProTypeStaticCastDowncastCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
