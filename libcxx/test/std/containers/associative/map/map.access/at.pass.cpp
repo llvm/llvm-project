@@ -80,8 +80,9 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(m.at(3) == 3.5);
     assert(m.at(4) == 4.5);
     assert(m.at(5) == 5.5);
-// throwing is not allowed in constexpr
+#ifndef TEST_HAS_NO_EXCEPTIONS
 #  if TEST_STD_VER >= 26
+// throwing is not allowed in constexpr
   if (!std::is_constant_evaluated()) {
 #  endif
     try {
@@ -92,6 +93,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
 #  if TEST_STD_VER >= 26
   }
 #  endif
+#endif
 
     assert(m.at(7) == 7.5);
     assert(m.at(8) == 8.5);
@@ -109,7 +111,6 @@ TEST_CONSTEXPR_CXX26 bool test() {
         V(7, 7.5),
         V(8, 8.5),
     };
-
     std::map<int, double, std::less<int>, min_allocator<V>> m(ar, ar + sizeof(ar) / sizeof(ar[0]));
     assert(m.size() == 7);
     assert(m.at(1) == 1.5);
@@ -133,7 +134,6 @@ TEST_CONSTEXPR_CXX26 bool test() {
 #  if TEST_STD_VER >= 26
   }
 #  endif
-
 #  endif
     assert(m.at(7) == 7.5);
     assert(m.at(8) == 8.5);
