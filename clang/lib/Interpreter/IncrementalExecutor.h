@@ -58,7 +58,8 @@ public:
   enum SymbolNameKind { IRName, LinkerName };
 
   IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
-                      llvm::orc::LLJITBuilder &JITBuilder, Interpreter::JITConfig Config, llvm::Error &Err);
+                      llvm::orc::LLJITBuilder &JITBuilder,
+                      Interpreter::JITConfig Config, llvm::Error &Err);
   virtual ~IncrementalExecutor();
 
   virtual llvm::Error addModule(PartialTranslationUnit &PTU);
