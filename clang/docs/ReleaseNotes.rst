@@ -347,6 +347,8 @@ Bug Fixes to C++ Support
   unknown bound during constant evaluation. (#GH151716)
 - Support the dynamic_cast to final class optimization with pointer
   authentication enabled. (#GH152601)
+- Fix the check for narrowing int-to-float conversions, so that they are detected in
+  cases where converting the float back to an integer is undefined behaviour (#GH157067).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
