@@ -71,7 +71,7 @@ convertCastingOp(ConversionPatternRewriter &rewriter,
   }
 
   SmallVector<int64_t> size;
-  if (sizes.size())
+  if (!sizes.empty())
     size.push_back(llvm::divideCeilSigned(sizes[0], elementsPerByte));
   offset = offset / elementsPerByte;
 

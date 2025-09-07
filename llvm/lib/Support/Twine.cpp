@@ -56,11 +56,12 @@ StringRef Twine::toNullTerminatedStringRef(SmallVectorImpl<char> &Out) const {
   return StringRef(Out.data(), Out.size());
 }
 
-void Twine::printOneChild(raw_ostream &OS, Child Ptr,
-                          NodeKind Kind) const {
+void Twine::printOneChild(raw_ostream &OS, Child Ptr, NodeKind Kind) const {
   switch (Kind) {
-  case Twine::NullKind: break;
-  case Twine::EmptyKind: break;
+  case Twine::NullKind:
+    break;
+  case Twine::EmptyKind:
+    break;
   case Twine::TwineKind:
     Ptr.twine->print(OS);
     break;
@@ -104,24 +105,23 @@ void Twine::printOneChild(raw_ostream &OS, Child Ptr,
   }
 }
 
-void Twine::printOneChildRepr(raw_ostream &OS, Child Ptr,
-                              NodeKind Kind) const {
+void Twine::printOneChildRepr(raw_ostream &OS, Child Ptr, NodeKind Kind) const {
   switch (Kind) {
   case Twine::NullKind:
-    OS << "null"; break;
+    OS << "null";
+    break;
   case Twine::EmptyKind:
-    OS << "empty"; break;
+    OS << "empty";
+    break;
   case Twine::TwineKind:
     OS << "rope:";
     Ptr.twine->printRepr(OS);
     break;
   case Twine::CStringKind:
-    OS << "cstring:\""
-       << Ptr.cString << "\"";
+    OS << "cstring:\"" << Ptr.cString << "\"";
     break;
   case Twine::StdStringKind:
-    OS << "std::string:\""
-       << Ptr.stdString << "\"";
+    OS << "std::string:\"" << Ptr.stdString << "\"";
     break;
   case Twine::PtrAndLengthKind:
     OS << "ptrAndLength:\""
@@ -175,11 +175,7 @@ void Twine::printRepr(raw_ostream &OS) const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void Twine::dump() const {
-  print(dbgs());
-}
+LLVM_DUMP_METHOD void Twine::dump() const { print(dbgs()); }
 
-LLVM_DUMP_METHOD void Twine::dumpRepr() const {
-  printRepr(dbgs());
-}
+LLVM_DUMP_METHOD void Twine::dumpRepr() const { printRepr(dbgs()); }
 #endif

@@ -10,3 +10,12 @@ mlir_tablegen(lib/PythonTestTypes.cpp.inc -gen-typedef-defs)
 add_public_tablegen_target(MLIRPythonTestIncGen)
 
 add_subdirectory(lib)
+
+set(MLIR_PYTHON_TEST_DEPENDS MLIRPythonModules)
+if(NOT MLIR_STANDALONE_BUILD)
+  list(APPEND MLIR_PYTHON_TEST_DEPENDS FileCheck count)
+endif()
+add_lit_testsuite(check-mlir-python "Running the MLIR Python regression tests"
+  ${CMAKE_CURRENT_BINARY_DIR}
+  DEPENDS ${MLIR_PYTHON_TEST_DEPENDS}
+)

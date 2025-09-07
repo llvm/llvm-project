@@ -1224,7 +1224,9 @@ void Writer::createMiscChunks() {
   // Create Debug Information Chunks
   debugInfoSec = config->mingw ? buildidSec : rdataSec;
   if (config->buildIDHash != BuildIDHash::None || config->debug ||
-      config->repro || config->cetCompat) {
+      config->repro || config->cetCompat || config->cetCompatStrict ||
+      config->cetCompatIpValidationRelaxed ||
+      config->cetCompatDynamicApisInProcOnly || config->hotpatchCompat) {
     debugDirectory =
         make<DebugDirectoryChunk>(ctx, debugRecords, config->repro);
     debugDirectory->setAlignment(4);
@@ -1245,10 +1247,26 @@ void Writer::createMiscChunks() {
     });
   }
 
-  if (config->cetCompat) {
-    debugRecords.emplace_back(COFF::IMAGE_DEBUG_TYPE_EX_DLLCHARACTERISTICS,
-                              make<ExtendedDllCharacteristicsChunk>(
-                                  IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT));
+  uint16_t ex_characteristics_flags = 0;
+  if (config->cetCompat)
+    ex_characteristics_flags |= IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT;
+  if (config->cetCompatStrict)
+    ex_characteristics_flags |=
+        IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT_STRICT_MODE;
+  if (config->cetCompatIpValidationRelaxed)
+    ex_characteristics_flags |=
+        IMAGE_DLL_CHARACTERISTICS_EX_CET_SET_CONTEXT_IP_VALIDATION_RELAXED_MODE;
+  if (config->cetCompatDynamicApisInProcOnly)
+    ex_characteristics_flags |=
+        IMAGE_DLL_CHARACTERISTICS_EX_CET_DYNAMIC_APIS_ALLOW_IN_PROC_ONLY;
+  if (config->hotpatchCompat)
+    ex_characteristics_flags |=
+        IMAGE_DLL_CHARACTERISTICS_EX_HOTPATCH_COMPATIBLE;
+
+  if (ex_characteristics_flags) {
+    debugRecords.emplace_back(
+        COFF::IMAGE_DEBUG_TYPE_EX_DLLCHARACTERISTICS,
+        make<ExtendedDllCharacteristicsChunk>(ex_characteristics_flags));
   }
 
   // Align and add each chunk referenced by the debug data directory.

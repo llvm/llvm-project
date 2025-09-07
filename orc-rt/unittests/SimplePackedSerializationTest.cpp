@@ -108,6 +108,12 @@ TEST(SimplePackedSerializationTest, SequenceSerialization) {
   blobSerializationRoundTrip<SPSSequence<int32_t>, std::vector<int32_t>>(V);
 }
 
+TEST(SimplePackedSerializationTest, ExecutorAddr) {
+  int X = 42;
+  auto A = ExecutorAddr::fromPtr(&X);
+  blobSerializationRoundTrip<SPSExecutorAddr>(A);
+}
+
 TEST(SimplePackedSerializationTest, StringViewCharSequenceSerialization) {
   const char *HW = "Hello, world!";
   blobSerializationRoundTrip<SPSString, std::string_view>(std::string_view(HW));

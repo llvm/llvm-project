@@ -1242,13 +1242,7 @@ public:
       return Ptr[-1];
     return *Ptr;
   }
-  pointer operator->() const {
-    assert(isHandleInSync() && "invalid iterator access!");
-    assert(Ptr != End && "dereferencing end() iterator");
-    if (shouldReverseIterate<KeyT>())
-      return &(Ptr[-1]);
-    return Ptr;
-  }
+  pointer operator->() const { return &operator*(); }
 
   friend bool operator==(const DenseMapIterator &LHS,
                          const DenseMapIterator &RHS) {

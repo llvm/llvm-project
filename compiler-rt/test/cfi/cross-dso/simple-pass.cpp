@@ -1,3 +1,4 @@
+// RUN: mkdir -p %t.dir && cd %t.dir
 // RUN: %clangxx_cfi_dso -DSHARED_LIB %s -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
 // RUN: %clangxx_cfi_dso -g %s -o %t %ld_flags_rpath_exe
 // RUN: %t 2>&1 | FileCheck --check-prefix=CFI %s

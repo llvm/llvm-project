@@ -35,6 +35,7 @@
 #define ORC_RT_SIMPLEPACKEDSERIALIZATION_H
 
 #include "orc-rt/Error.h"
+#include "orc-rt/ExecutorAddress.h"
 #include "orc-rt/bit.h"
 #include "orc-rt/span.h"
 
@@ -173,9 +174,6 @@ public:
 
 /// Any empty placeholder suitable as a substitute for void when deserializing
 class SPSEmpty {};
-
-/// Represents an address in the executor.
-class SPSExecutorAddr {};
 
 /// SPS tag type for tuples.
 ///
@@ -511,8 +509,30 @@ public:
   }
 };
 
+/// Represents an address in the executor.
+class SPSExecutorAddr {};
+
 /// SPS tag type for errors.
 class SPSError;
+
+template <> class SPSSerializationTraits<SPSExecutorAddr, ExecutorAddr> {
+public:
+  static size_t size(const ExecutorAddr &A) {
+    return SPSArgList<uint64_t>::size(A.getValue());
+  }
+
+  static bool serialize(SPSOutputBuffer &OB, const ExecutorAddr &A) {
+    return SPSArgList<uint64_t>::serialize(OB, A.getValue());
+  }
+
+  static bool deserialize(SPSInputBuffer &IB, ExecutorAddr &A) {
+    uint64_t Value;
+    if (!SPSArgList<uint64_t>::deserialize(IB, Value))
+      return false;
+    A = ExecutorAddr(Value);
+    return true;
+  }
+};
 
 /// Helper type for serializing Errors.
 ///

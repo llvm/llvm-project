@@ -14,7 +14,9 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
 
@@ -462,12 +464,34 @@ LogicalResult ExpressionOp::verify() {
     return emitOpError("requires yielded type to match return type");
 
   for (Operation &op : region.front().without_terminator()) {
-    if (!isa<emitc::CExpressionInterface>(op))
+    auto expressionInterface = dyn_cast<emitc::CExpressionInterface>(op);
+    if (!expressionInterface)
       return emitOpError("contains an unsupported operation");
     if (op.getNumResults() != 1)
       return emitOpError("requires exactly one result for each operation");
-    if (!op.getResult(0).hasOneUse())
-      return emitOpError("requires exactly one use for each operation");
+    Value result = op.getResult(0);
+    if (result.use_empty())
+      return emitOpError("contains an unused operation");
+  }
+
+  // Make sure any operation with side effect is only reachable once from
+  // the root op, otherwise emission will be replicating side effects.
+  SmallPtrSet<Operation *, 16> visited;
+  SmallVector<Operation *> worklist;
+  worklist.push_back(rootOp);
+  while (!worklist.empty()) {
+    Operation *op = worklist.back();
+    worklist.pop_back();
+    if (visited.contains(op)) {
+      if (cast<CExpressionInterface>(op).hasSideEffects())
+        return emitOpError(
+            "requires exactly one use for operations with side effects");
+    }
+    visited.insert(op);
+    for (Value operand : op->getOperands())
+      if (Operation *def = operand.getDefiningOp()) {
+        worklist.push_back(def);
+      }
   }
 
   return success();

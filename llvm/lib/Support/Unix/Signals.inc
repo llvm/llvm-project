@@ -883,8 +883,7 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS, int Depth) {
     } else {
       const char *name = strrchr(dlinfo.dli_fname, '/');
       if (!name)
-        OS << format(" %-*s", width,
-                     static_cast<const char *>(dlinfo.dli_fname));
+        OS << format(" %-*s", width, dlinfo.dli_fname);
       else
         OS << format(" %-*s", width, name + 1);
     }

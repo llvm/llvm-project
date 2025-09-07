@@ -274,6 +274,10 @@ template void explain_unary_operation_single_output_error(Operation op,
                                                           double, RoundingMode);
 #endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 
+template void explain_unary_operation_single_output_error(Operation op,
+                                                          bfloat16, bfloat16,
+                                                          double, RoundingMode);
+
 template <typename T>
 void explain_unary_operation_two_outputs_error(
     Operation op, T input, const BinaryOutput<T> &libc_result,
@@ -561,6 +565,9 @@ template bool compare_unary_operation_single_output(Operation, float128,
                                                     long double, double,
                                                     RoundingMode);
 #endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
+template bool compare_unary_operation_single_output(Operation, bfloat16,
+                                                    bfloat16, double,
+                                                    RoundingMode);
 
 template <typename T>
 bool compare_unary_operation_two_outputs(Operation op, T input,

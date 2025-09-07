@@ -23,9 +23,8 @@ static const bool StrictModeDefault = true;
 AvoidReturnWithVoidValueCheck::AvoidReturnWithVoidValueCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreMacros(
-          Options.getLocalOrGlobal(IgnoreMacrosName, IgnoreMacrosDefault)),
-      StrictMode(Options.getLocalOrGlobal(StrictModeName, StrictModeDefault)) {}
+      IgnoreMacros(Options.get(IgnoreMacrosName, IgnoreMacrosDefault)),
+      StrictMode(Options.get(StrictModeName, StrictModeDefault)) {}
 
 void AvoidReturnWithVoidValueCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(

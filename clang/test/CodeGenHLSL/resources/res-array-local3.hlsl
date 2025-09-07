@@ -20,7 +20,7 @@ RWBuffer<int> Y : register(u1);
 void SomeFn(RWBuffer<int> B[2], uint Idx, int Val0) {
 
 // CHECK-NEXT: %[[B_0_Ptr:.*]] = getelementptr inbounds [2 x %"class.hlsl::RWBuffer"], ptr %B, i32 0, i32 0
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %[[B_0_Ptr]], ptr align 4 @_ZL1Y, i32 4, i1 false)
+// CHECK-NEXT: call {{.*}} @_ZN4hlsl8RWBufferIiEaSERKS1_(ptr {{.*}} %[[B_0_Ptr]], ptr {{.*}} @_ZL1Y)
   B[0] = Y;
 
 // NOTE: _ZN4hlsl8RWBufferIiEixEj is the subscript operator for RWBuffer<int>
@@ -43,9 +43,9 @@ void main(uint GI : SV_GroupIndex) {
 // CHECK-NEXT: store i32 %GI, ptr %GI.addr, align 4
 
 // Initialization of array A with resources X and Y
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %A, ptr align 4 @_ZL1X, i32 4, i1 false)
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIiEC1ERKS1_(ptr {{.*}} %A, ptr {{.*}} @_ZL1X)
 // CHECK-NEXT: %[[A_1_Ptr:.*]] = getelementptr inbounds %"class.hlsl::RWBuffer", ptr %A, i32 1
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %[[A_1_Ptr]], ptr align 4 @_ZL1Y, i32 4, i1 false)
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIiEC1ERKS1_(ptr {{.*}} %[[A_1_Ptr]], ptr {{.*}} @_ZL1Y)
   RWBuffer<int> A[2] = {X, Y};
 
 // Verify that SomeFn is called with a local copy of the array A

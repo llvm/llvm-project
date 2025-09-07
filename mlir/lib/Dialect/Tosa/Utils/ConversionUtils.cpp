@@ -162,8 +162,8 @@ Value mlir::tosa::getTosaConstShape(ImplicitLocOpBuilder &builder,
                                     llvm::ArrayRef<int64_t> shape) {
   auto attr = builder.getIndexTensorAttr(convertFromMlirShape(shape));
   auto type = mlir::tosa::shapeType::get(builder.getContext(), shape.size());
-  mlir::Operation *mlir_op = tosa::ConstShapeOp::create(builder, type, attr);
-  return mlir_op->getResult(0);
+  mlir::Operation *mlirOp = tosa::ConstShapeOp::create(builder, type, attr);
+  return mlirOp->getResult(0);
 }
 
 Value mlir::tosa::getTosaConstShape(PatternRewriter &rewriter, Location loc,
@@ -179,7 +179,7 @@ SmallVector<int64_t> mlir::tosa::convertFromMlirShape(ArrayRef<int64_t> shape) {
 }
 
 bool mlir::tosa::getConstShapeValues(Operation *op,
-                                     llvm::SmallVector<int64_t> &result_shape) {
+                                     llvm::SmallVector<int64_t> &resultShape) {
   if (!op) {
     return false;
   }
@@ -188,7 +188,7 @@ bool mlir::tosa::getConstShapeValues(Operation *op,
     DenseElementsAttr elementsAttr = cast<DenseElementsAttr>(constOpAttr);
     for (int i = 0; i < elementsAttr.size(); i++) {
       int64_t val = elementsAttr.getValues<int64_t>()[i];
-      result_shape.push_back(val);
+      resultShape.push_back(val);
     }
     return true;
   }
@@ -204,9 +204,9 @@ mlir::tosa::convertFromIntAttr(const DenseElementsAttr &attr, const int rank) {
     return SmallVector<int64_t>(rank, v);
   }
 
-  if (auto int_array_attr = llvm::dyn_cast<DenseIntElementsAttr>(attr)) {
+  if (auto intArrayAttr = llvm::dyn_cast<DenseIntElementsAttr>(attr)) {
     SmallVector<int64_t> vec;
-    for (APInt val : int_array_attr.getValues<APInt>()) {
+    for (APInt val : intArrayAttr.getValues<APInt>()) {
       vec.push_back(val.getSExtValue());
     }
     return vec;
