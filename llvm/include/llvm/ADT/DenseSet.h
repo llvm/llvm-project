@@ -66,7 +66,8 @@ public:
   using value_type = ValueT;
   using size_type = unsigned;
 
-  explicit DenseSetImpl(unsigned InitialReserve = 0) : TheMap(InitialReserve) {}
+  DenseSetImpl() = default;
+  explicit DenseSetImpl(unsigned InitialReserve) : TheMap(InitialReserve) {}
 
   template <typename InputIt>
   DenseSetImpl(const InputIt &I, const InputIt &E)
@@ -254,40 +255,21 @@ bool operator!=(const DenseSetImpl<ValueT, MapTy, ValueInfoT> &LHS,
 
 /// Implements a dense probed hash-table based set.
 template <typename ValueT, typename ValueInfoT = DenseMapInfo<ValueT>>
-class DenseSet : public detail::DenseSetImpl<
-                     ValueT,
-                     DenseMap<ValueT, detail::DenseSetEmpty, ValueInfoT,
-                              detail::DenseSetPair<ValueT>>,
-                     ValueInfoT> {
-  using BaseT =
-      detail::DenseSetImpl<ValueT,
-                           DenseMap<ValueT, detail::DenseSetEmpty, ValueInfoT,
-                                    detail::DenseSetPair<ValueT>>,
-                           ValueInfoT>;
-
-public:
-  using BaseT::BaseT;
-};
+using DenseSet =
+    detail::DenseSetImpl<ValueT,
+                         DenseMap<ValueT, detail::DenseSetEmpty, ValueInfoT,
+                                  detail::DenseSetPair<ValueT>>,
+                         ValueInfoT>;
 
 /// Implements a dense probed hash-table based set with some number of buckets
 /// stored inline.
 template <typename ValueT, unsigned InlineBuckets = 4,
           typename ValueInfoT = DenseMapInfo<ValueT>>
-class SmallDenseSet
-    : public detail::DenseSetImpl<
-          ValueT,
-          SmallDenseMap<ValueT, detail::DenseSetEmpty, InlineBuckets,
-                        ValueInfoT, detail::DenseSetPair<ValueT>>,
-          ValueInfoT> {
-  using BaseT = detail::DenseSetImpl<
-      ValueT,
-      SmallDenseMap<ValueT, detail::DenseSetEmpty, InlineBuckets, ValueInfoT,
-                    detail::DenseSetPair<ValueT>>,
-      ValueInfoT>;
-
-public:
-  using BaseT::BaseT;
-};
+using SmallDenseSet = detail::DenseSetImpl<
+    ValueT,
+    SmallDenseMap<ValueT, detail::DenseSetEmpty, InlineBuckets, ValueInfoT,
+                  detail::DenseSetPair<ValueT>>,
+    ValueInfoT>;
 
 } // end namespace llvm
 
