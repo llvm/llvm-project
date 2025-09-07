@@ -157,7 +157,8 @@ struct ReassocRewriter : public evaluate::rewrite::Identity {
     // inside of the visitor function in common::visit.
     // Since this works with clang, MSVC and at least GCC 8.5, I'm assuming
     // that this is some kind of a GCC issue.
-    using MatchTypes = std::tuple<evaluate::Add<T>, evaluate::Multiply<T>>;
+    using MatchTypes = std::tuple<evaluate::Add<T>, evaluate::Multiply<T>,
+        evaluate::LogicalOperation<T::kind>>;
 #else
     using MatchTypes = typename decltype(outer1)::MatchTypes;
 #endif
