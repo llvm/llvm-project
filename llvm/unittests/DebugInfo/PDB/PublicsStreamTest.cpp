@@ -50,7 +50,7 @@ TEST(PublicsStreamTest, FindByAddress) {
   // both derived and derived2 have their vftables there - but derived2 is first
   // (due to ICF)
   ASSERT_EQ(VTableDerived->first.Name, "??_7Derived2@@6B@");
-  ASSERT_EQ(VTableDerived->second, 26);
+  ASSERT_EQ(VTableDerived->second, 26u);
 
   ASSERT_FALSE(Publics->findByAddress(*Symbols, 2, 7).has_value());
   ASSERT_FALSE(Publics->findByAddress(*Symbols, 2, 9).has_value());
@@ -58,5 +58,5 @@ TEST(PublicsStreamTest, FindByAddress) {
   auto GlobalSym = Publics->findByAddress(*Symbols, 3, 0);
   ASSERT_TRUE(GlobalSym.has_value());
   ASSERT_EQ(GlobalSym->first.Name, "?AGlobal@@3HA");
-  ASSERT_EQ(GlobalSym->second, 30);
+  ASSERT_EQ(GlobalSym->second, 30u);
 }
