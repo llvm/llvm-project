@@ -13,6 +13,8 @@
 #ifndef POLLY_REGISTER_PASSES_H
 #define POLLY_REGISTER_PASSES_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 class PassRegistry;
 class PassBuilder;
@@ -27,6 +29,6 @@ void initializePollyPasses(llvm::PassRegistry &Registry);
 void registerPollyPasses(llvm::PassBuilder &PB);
 } // namespace polly
 
-llvm::PassPluginLibraryInfo getPollyPluginInfo();
+LLVM_ALWAYS_EXPORT llvm::PassPluginLibraryInfo getPollyPluginInfo();
 
 #endif

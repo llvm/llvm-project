@@ -93,7 +93,7 @@ public:
 }
 
 #define HANDLE_EXTENSION(Ext)                                                  \
-  llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
+  LLVM_ABI llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
 #include "llvm/Support/Extension.def"
 
 int main(int argc, char **argv) {

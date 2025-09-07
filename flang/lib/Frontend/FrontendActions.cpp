@@ -87,7 +87,7 @@ constexpr llvm::StringLiteral timingIdBackend =
 
 // Declare plugin extension function declarations.
 #define HANDLE_EXTENSION(Ext)                                                  \
-  llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
+  LLVM_ABI llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
 #include "llvm/Support/Extension.def"
 
 /// Save the given \c mlirModule to a temporary .mlir file, in a location
