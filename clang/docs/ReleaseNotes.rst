@@ -124,6 +124,12 @@ ABI Changes in This Version
 ---------------------------
 - Fix AArch64 argument passing for C++ empty classes with large explicitly specified alignment.
 
+- Fixed Microsoft calling convention to match how MSVC returns vector types from
+  C++ member functions on x86/x86-64. This change resolves incompatibilities with
+  code compiled by MSVC but will introduce incompatibilities with code compiled
+  by Clang 21 and earlier versions, unless the ``-fclang-abi-compat=21`` option
+  is used. (#GH104)
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 - How nested name specifiers are dumped and printed changes, keeping track of clang AST changes.
