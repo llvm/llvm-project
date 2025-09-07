@@ -149,7 +149,6 @@ define i32 @foo2(i16 zeroext %N, ptr nocapture readnone %A, ptr nocapture readon
 ; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i32, i1 } [[MUL1]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL1]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[J]], [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[J]], [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[TMP1]], [[J]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP3]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]

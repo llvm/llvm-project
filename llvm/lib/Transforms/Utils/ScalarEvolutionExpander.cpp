@@ -177,9 +177,14 @@ SCEVExpander::findInsertPointAfter(Instruction *I,
 }
 
 void SCEVExpander::eraseDeadInstructions(Value *Root) {
-  for (Instruction *I : getAllInsertedInstructions()) {
-    if (I == Root || !isInstructionTriviallyDead(I))
+  SmallVector<Value *> WorkList;
+  append_range(WorkList, getAllInsertedInstructions());
+  while (!WorkList.empty()) {
+    Instruction *I = dyn_cast<Instruction>(WorkList.pop_back_val());
+    if (!I || I == Root || !isInsertedInstruction(I) ||
+        !isInstructionTriviallyDead(I))
       continue;
+    append_range(WorkList, I->operands());
     InsertedValues.erase(I);
     InsertedPostIncValues.erase(I);
     I->eraseFromParent();
