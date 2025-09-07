@@ -53,8 +53,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(m[6] == 6.5);
     assert(m.size() == 2);
   }
-// #ifndef FAKE_MACRO_NOOOOOO
 #ifndef TEST_IS_CONSTANT_EVALUATED
+  // static can't be constexpr
   {
     // Use "container_test_types.h" to check what arguments get passed
     // to the allocator for operator[]
