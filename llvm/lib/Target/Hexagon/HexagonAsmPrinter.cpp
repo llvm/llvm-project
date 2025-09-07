@@ -263,7 +263,7 @@ static MCInst ScaleVectorOffset(MCInst &Inst, unsigned OpNo,
 
 void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
                                                   const MachineInstr &MI) {
-  MCInst &MappedInst = static_cast <MCInst &>(Inst);
+  MCInst &MappedInst = Inst;
   const MCRegisterInfo *RI = OutStreamer->getContext().getRegisterInfo();
   const MachineFunction &MF = *MI.getParent()->getParent();
   auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
