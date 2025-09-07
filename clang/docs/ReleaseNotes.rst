@@ -90,6 +90,9 @@ C++ Specific Potentially Breaking Changes
 ABI Changes in This Version
 ---------------------------
 
+- Fixed Microsoft calling convention for returning vector types from C++ member
+  functions. Such vector types should be returned indirectly. (GH#104)
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 - How nested name specifiers are dumped and printed changes, keeping track of clang AST changes.
