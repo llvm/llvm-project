@@ -2250,10 +2250,7 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/ARM/ARMGenGlobalISel.inc": ["-gen-global-isel"],
             "lib/Target/ARM/ARMGenCallingConv.inc": ["-gen-callingconv"],
             "lib/Target/ARM/ARMGenSubtargetInfo.inc": ["-gen-subtarget"],
-            "lib/Target/ARM/ARMGenDisassemblerTables.inc": [
-                "-gen-disassembler",
-                "-ignore-non-decodable-operands",
-            ],
+            "lib/Target/ARM/ARMGenDisassemblerTables.inc": ["-gen-disassembler"],
         },
     },
     {
