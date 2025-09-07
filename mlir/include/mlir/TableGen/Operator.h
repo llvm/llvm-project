@@ -325,12 +325,12 @@ public:
 
   /// Pair consisting kind of argument and index into operands or attributes.
   struct OperandOrAttribute {
-    enum class Kind { Operand, Attribute };
+    enum class Kind { Operand = 0x0, Attribute = 0x1, Property = 0x2 };
     OperandOrAttribute(Kind kind, int index) {
-      packed = (index << 1) | (kind == Kind::Attribute);
+      packed = (index << 2) | static_cast<int>(kind);
     }
-    int operandOrAttributeIndex() const { return (packed >> 1); }
-    Kind kind() { return (packed & 0x1) ? Kind::Attribute : Kind::Operand; }
+    int operandOrAttributeIndex() const { return (packed >> 2); }
+    Kind kind() const { return static_cast<Kind>(packed & 0x3); }
 
   private:
     int packed;

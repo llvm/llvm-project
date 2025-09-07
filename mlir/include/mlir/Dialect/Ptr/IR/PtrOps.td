@@ -58,6 +58,106 @@ def Ptr_Ptr1DType :
   Ptr_ShapedValueType<[Ptr_PtrType], [HasAnyRankOfPred<[1]>]>;
 
 //===----------------------------------------------------------------------===//
+// AtomicRMWOp
+//===----------------------------------------------------------------------===//
+
+def Ptr_AtomicRMWOp : Pointer_Op<"atomic_rmw", [
+    AllTypesMatch<["value", "result"]>
+  ]> {
+  let summary = "Atomic read-modify-write operation";
+  let description = [{
+    The `atomic_rmw` operation performs an atomic read-modify-write operation
+    on a memory location specified by a pointer. The operation is defined by
+    the provided binary operator.
+
+    Example:
+
+    ```mlir
+    %result = ptr.atomic_rmw add %ptr, %value monotonic :
+      !ptr.ptr<#ptr.generic_space>, i32
+    ```
+
+    See the following link for more details on the meaning of `alignment`,
+    `volatile_`, `ordering`, and `syncscope`:
+    https://llvm.org/docs/LangRef.html#atomicrmw-instruction
+  }];
+  let arguments = (ins AtomicBinOpProp:$bin_op,
+                       Ptr_PtrType:$ptr,
+                       AnyType:$value,
+                       AtomicOrderingProp:$ordering,
+                       OptionalAttr<StrAttr>:$syncscope,
+                       AlignmentProp:$alignment,
+                       UnitProp:$volatile_);
+  let results = (outs AnyType:$result);
+  let assemblyFormat = [{
+    (`volatile` $volatile_^)? $bin_op $ptr `,` $value
+    (`syncscope` `(` $syncscope^ `)`)? $ordering
+    (`alignment` `=` $alignment^)?
+    attr-dict `:` qualified(type($ptr)) `->` type($value)
+  }];
+  let builders = [
+    OpBuilder<(ins "AtomicBinOp":$binOp, "Value":$ptr, "Value":$value,
+      "AtomicOrdering":$ordering, CArg<"StringRef", "StringRef()">:$syncscope,
+      CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile)>
+  ];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// AtomicCmpXchgOp
+//===----------------------------------------------------------------------===//
+
+def Ptr_AtomicCmpXchgOp : Pointer_Op<"cmpxchg", [
+    AllTypesMatch<["compare", "result", "value"]>,
+  ]> {
+  let summary = "Atomic compare-and-exchange operation";
+  let description = [{
+    The `cmpxchg` operation performs an atomic compare-and-exchange operation
+    on a memory location specified by a pointer. The op atomically compares the
+    value at the memory location with a given compare value, and if they are
+    equal, it tries to store a new value into the memory.
+    The operation returns the original value at the memory location and a
+    boolean status indicating whether the exchange was successful.
+
+    Example:
+
+    ```mlir
+    %result, %status = ptr.cmpxchg %ptr, %compare, %value monotonic monotonic :
+      !ptr.ptr<#ptr.generic_space>, i32
+    ```
+
+    See the following link for more details on the meaning of `alignment`,
+    `volatile_`, `weak`, `success_ordering`, `failure_ordering`, and
+    `syncscope`:
+    https://llvm.org/docs/LangRef.html#atomicrmw-instruction
+  }];
+  let arguments = (ins Ptr_PtrType:$ptr,
+                       AnyType:$compare,
+                       AnyType:$value,
+                       AtomicOrderingProp:$success_ordering,
+                       AtomicOrderingProp:$failure_ordering,
+                       OptionalAttr<StrAttr>:$syncscope,
+                       AlignmentProp:$alignment,
+                       UnitProp:$weak,
+                       UnitProp:$volatile_);
+  let results = (outs AnyType:$result, I1:$status);
+  let assemblyFormat = [{
+    (`weak` $weak^)? (`volatile` $volatile_^)? $ptr `,` $compare `,` $value
+    (`syncscope` `(` $syncscope^ `)`)? $success_ordering $failure_ordering
+    (`alignment` `=` $alignment^)? attr-dict `:` type($ptr) `,` type($value)
+  }];
+  let builders = [
+    OpBuilder<(ins "Value":$ptr, "Value":$compare, "Value":$value,
+      "AtomicOrdering":$successOrdering,
+      "AtomicOrdering":$failureOrdering,
+      CArg<"StringRef", "StringRef()">:$syncscope,
+      CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isWeak,
+      CArg<"bool", "false">:$isVolatile)>
+  ];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // ConstantOp
 //===----------------------------------------------------------------------===//
 

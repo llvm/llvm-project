@@ -57,6 +57,69 @@ verifyAlignment(std::optional<int64_t> alignment,
 }
 
 //===----------------------------------------------------------------------===//
+// AtomicRMWOp
+//===----------------------------------------------------------------------===//
+
+void AtomicRMWOp::build(OpBuilder &builder, OperationState &state,
+                        AtomicBinOp binOp, Value ptr, Value val,
+                        AtomicOrdering ordering, StringRef syncscope,
+                        unsigned alignment, bool isVolatile) {
+  build(builder, state, val.getType(), binOp, ptr, val, ordering,
+        !syncscope.empty() ? builder.getStringAttr(syncscope) : nullptr,
+        alignment ? std::optional<int64_t>(alignment) : std::nullopt,
+        isVolatile);
+}
+
+LogicalResult AtomicRMWOp::verify() {
+  auto emitDiag = [&]() -> InFlightDiagnostic { return emitError(); };
+  MemorySpaceAttrInterface ms = getPtr().getType().getMemorySpace();
+  DataLayout dataLayout = DataLayout::closest(*this);
+  if (!ms.isValidAtomicOp(getBinOp(), getValue().getType(), getOrdering(),
+                          getAlignment(), &dataLayout, emitDiag))
+    return failure();
+  if (getOrdering() < AtomicOrdering::monotonic) {
+    return emitError() << "expected at least '"
+                       << stringifyAtomicOrdering(AtomicOrdering::monotonic)
+                       << "' ordering";
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// AtomicCmpXchgOp
+//===----------------------------------------------------------------------===//
+
+void AtomicCmpXchgOp::build(OpBuilder &builder, OperationState &state,
+                            Value ptr, Value cmp, Value val,
+                            AtomicOrdering successOrdering,
+                            AtomicOrdering failureOrdering, StringRef syncscope,
+                            unsigned alignment, bool isWeak, bool isVolatile) {
+  build(builder, state, ptr, cmp, val, successOrdering, failureOrdering,
+        !syncscope.empty() ? builder.getStringAttr(syncscope) : nullptr,
+        alignment ? std::optional<int64_t>(alignment) : std::nullopt, isWeak,
+        isVolatile);
+}
+
+LogicalResult AtomicCmpXchgOp::verify() {
+  auto emitDiag = [&]() -> InFlightDiagnostic { return emitError(); };
+  MemorySpaceAttrInterface ms = getPtr().getType().getMemorySpace();
+  DataLayout dataLayout = DataLayout::closest(*this);
+  if (!ms.isValidAtomicXchg(getResult().getType(), getSuccessOrdering(),
+                            getFailureOrdering(), getAlignment(), &dataLayout,
+                            emitDiag))
+    return failure();
+  if (failed(verifyAlignment(getAlignment(), emitDiag)))
+    return failure();
+  if (getSuccessOrdering() < AtomicOrdering::monotonic ||
+      getFailureOrdering() < AtomicOrdering::monotonic)
+    return emitError("ordering must be at least 'monotonic'");
+  if (getFailureOrdering() == AtomicOrdering::release ||
+      getFailureOrdering() == AtomicOrdering::acq_rel)
+    return emitError("failure ordering cannot be 'release' or 'acq_rel'");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
