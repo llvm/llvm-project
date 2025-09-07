@@ -270,7 +270,8 @@ private:
     if (NextLine.First->isOneOf(TT_ClassLBrace, TT_StructLBrace,
                                 TT_UnionLBrace) &&
         NextLine.First == NextLine.Last && I + 2 != E &&
-        !I[2]->First->is(tok::r_brace)) {
+        !I[2]->First->is(tok::r_brace) &&
+        Style.AllowShortRecordOnASingleLine != FormatStyle::SRS_Never) {
       if (unsigned MergedLines = tryMergeSimpleBlock(I, E, Limit))
         return MergedLines;
     }
@@ -279,7 +280,7 @@ private:
     // Handle empty record blocks where the brace has already been wrapped.
     if (PreviousLine && TheLine->Last->is(tok::l_brace) &&
         TheLine->First == TheLine->Last) {
-      bool EmptyBlock = NextLine.First->is(tok::r_brace);
+      const bool EmptyBlock = NextLine.First->is(tok::r_brace);
 
       const FormatToken *Tok = PreviousLine->First;
       if (Tok && Tok->is(tok::comment))
@@ -295,7 +296,9 @@ private:
         Tok = Tok->getNextNonComment();
       if (Tok && Tok->isOneOf(tok::kw_class, tok::kw_struct, tok::kw_union,
                               tok::kw_extern, Keywords.kw_interface)) {
-        return !Style.BraceWrapping.SplitEmptyRecord && EmptyBlock
+        return (EmptyBlock && !Style.BraceWrapping.SplitEmptyRecord) ||
+                       (!EmptyBlock && Style.AllowShortBlocksOnASingleLine ==
+                                           FormatStyle::SBS_Always)
                    ? tryMergeSimpleBlock(I, E, Limit)
                    : 0;
       }
@@ -909,6 +912,7 @@ private:
 
         if (Line.Last->isOneOf(TT_ClassLBrace, TT_StructLBrace,
                                TT_UnionLBrace) &&
+            Line.Last != Line.First &&
             Style.AllowShortRecordOnASingleLine != FormatStyle::SRS_Always) {
           return 0;
         }
