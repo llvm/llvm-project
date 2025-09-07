@@ -29,6 +29,7 @@ TEST_CONSTEXPR_CXX26 void test(Container& c, KeyTypeIter first, KeyTypeIter last
     assert(!t.empty());
     --sz;
     if (!TEST_IS_CONSTANT_EVALUATED) {
+      // CWG1514: key() is not `constexpr`
       assert(t.key() == *copy);
       t.key() = *first; // We should be able to mutate key.
       assert(t.key() == *first);
