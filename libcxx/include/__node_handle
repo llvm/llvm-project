@@ -180,8 +180,16 @@ struct __map_node_handle_specifics {
   using key_type    = __remove_const_t<typename _NodeType::__node_value_type::first_type>;
   using mapped_type = typename _NodeType::__node_value_type::second_type;
 
-  // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3372r3.html#node-handle-key
-  // https://cplusplus.github.io/CWG/issues/2514.html
+  /*
+  As this method this->key() returns a non-const reference
+  to the `key_type` which is const inside `node_type`.
+  This means that we can't make this member method constexpr until CWG2514 is resolved.
+  This disallows making the member function constexpr.
+
+  More here:
+  * https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3372r3.html#node-handle-key
+  * https://cplusplus.github.io/CWG/issues/2514.html
+  */
   _LIBCPP_HIDE_FROM_ABI key_type& key() const {
     return const_cast<key_type&>(static_cast<_Derived const*>(this)->__ptr_->__get_value().first);
   }
