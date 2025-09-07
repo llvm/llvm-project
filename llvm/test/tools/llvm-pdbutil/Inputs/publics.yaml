@@ -1,0 +1,22 @@
+---
+PublicsStream:
+  Records:
+    - Kind:            S_PUB32
+      PublicSym32:
+        Flags:           [ Function ]
+        Offset:          480
+        Segment:         1
+        Name:            '?AMethod@AClass@@QEAAXHPEAD@Z'
+    - Kind:            S_PUB32
+      PublicSym32:
+        Flags:           [  ]
+        Offset:          0
+        Segment:         2
+        Name:            '??_7Base@@6B@'
+    - Kind:            S_PUB32
+      PublicSym32:
+        Flags:           [ Function ]
+        Offset:          0
+        Segment:         1
+        Name:            '??0Base@@QEAA@XZ'
+...
