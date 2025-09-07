@@ -1097,7 +1097,7 @@ ChildListIoStatementState<DIR>::ChildListIoStatementState(
   if constexpr (DIR == Direction::Input) {
     if (auto *listInput{child.parent()
                 .get_if<ListDirectedStatementState<Direction::Input>>()}) {
-      this->namelistGroup_ = listInput->namelistGroup();
+      this->inNamelistSequence_ = listInput->inNamelistSequence();
     }
   }
 #else

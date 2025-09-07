@@ -432,9 +432,7 @@ template <>
 class ListDirectedStatementState<Direction::Input>
     : public FormattedIoStatementState<Direction::Input> {
 public:
-  RT_API_ATTRS const NamelistGroup *namelistGroup() const {
-    return namelistGroup_;
-  }
+  RT_API_ATTRS bool inNamelistSequence() const { return inNamelistSequence_; }
   RT_API_ATTRS int EndIoStatement();
 
   // Skips value separators, handles repetition and null values.
@@ -447,19 +445,18 @@ public:
   // input statement.  This member function resets some state so that
   // repetition and null values work correctly for each successive
   // NAMELIST input item.
-  RT_API_ATTRS void ResetForNextNamelistItem(
-      const NamelistGroup *namelistGroup) {
+  RT_API_ATTRS void ResetForNextNamelistItem(bool inNamelistSequence) {
     remaining_ = 0;
     if (repeatPosition_) {
       repeatPosition_->Cancel();
     }
     eatComma_ = false;
     realPart_ = imaginaryPart_ = false;
-    namelistGroup_ = namelistGroup;
+    inNamelistSequence_ = inNamelistSequence;
   }
 
 protected:
-  const NamelistGroup *namelistGroup_{nullptr};
+  bool inNamelistSequence_{false};
 
 private:
   int remaining_{0}; // for "r*" repetition
