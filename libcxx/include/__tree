@@ -584,7 +584,8 @@ public:
   using __node_value_type _LIBCPP_NODEBUG = __get_node_value_type_t<_Tp>;
 
 // We use a union to avoid initialization during member initialization, which allows us
-// to use the allocator from the container to allocate the node itself
+// to use the allocator from the container to construct the `__node_value_type` in the
+// memory provided by the union member
 #ifndef _LIBCPP_CXX03_LANG
 
 private:
