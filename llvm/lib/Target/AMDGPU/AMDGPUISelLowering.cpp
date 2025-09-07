@@ -4146,9 +4146,6 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
   SDLoc SL(N);
   SelectionDAG &DAG = DCI.DAG;
 
-  if (SDValue R = getShiftForReduction(N, DAG))
-    return R;
-
   unsigned RHSVal;
   if (CRHS) {
     RHSVal = CRHS->getZExtValue();
@@ -4248,9 +4245,6 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
   SDValue LHS = N->getOperand(0);
   SelectionDAG &DAG = DCI.DAG;
   SDLoc SL(N);
-
-  if (SDValue R = getShiftForReduction(N, DAG))
-    return R;
 
   if (VT.getScalarType() != MVT::i64)
     return SDValue();
@@ -4353,9 +4347,6 @@ SDValue AMDGPUTargetLowering::performSrlCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   SDLoc SL(N);
   unsigned RHSVal;
-
-  if (SDValue R = getShiftForReduction(N, DAG))
-    return R;
 
   if (CRHS) {
     RHSVal = CRHS->getZExtValue();

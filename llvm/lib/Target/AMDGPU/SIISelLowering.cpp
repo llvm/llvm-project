@@ -14674,6 +14674,35 @@ SITargetLowering::performExtractVectorEltCombine(SDNode *N,
     return DAG.getNode(Vec.getOpcode(), SL, ResVT, Elt);
   }
 
+   // (extract_vector_element (and {y0, y1}, (build_vector 0x1f, 0x1f)), index)
+  // -> (and (extract_vector_element {yo, y1}, index), 0x1f)
+  // There are optimisations to transform 64-bit shifts into 32-bit shifts
+  // depending on the shift operand. See e.g. performSraCombine().
+  // This combine ensures that the optimisation is compatible with v2i32
+  // legalised AND.
+  if (VecVT == MVT::v2i32 && Vec->getOpcode() == ISD::AND &&
+      Vec->getOperand(1)->getOpcode() == ISD::BUILD_VECTOR) {
+    SDValue BV = Vec->getOperand(1);
+
+    ConstantSDNode *BV0 = dyn_cast<ConstantSDNode>(BV->getOperand(0));
+    ConstantSDNode *BV1 = dyn_cast<ConstantSDNode>(BV->getOperand(1));
+
+    if (!BV0 || !BV1 || BV->getConstantOperandVal(0) != 0x1f ||
+        BV->getConstantOperandVal(1) != 0x1f)
+      return SDValue();
+
+    SDLoc SL(N);
+    SDValue AndMask = DAG.getConstant(0x1f, SL, MVT::i32);
+    ConstantSDNode *Index = dyn_cast<ConstantSDNode>(N->getOperand(1));
+    uint64_t I = Index->getZExtValue();
+    const SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
+    const SDValue One = DAG.getConstant(1, SL, MVT::i32);
+    SDValue EVE = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32,
+                              Vec->getOperand(0), I == 0 ? Zero : One);
+    SDValue A = DAG.getNode(ISD::AND, SL, MVT::i32, EVE, AndMask);
+    DAG.ReplaceAllUsesWith(N, A.getNode());
+  }
+
   // ScalarRes = EXTRACT_VECTOR_ELT ((vector-BINOP Vec1, Vec2), Idx)
   //    =>
   // Vec1Elt = EXTRACT_VECTOR_ELT(Vec1, Idx)
