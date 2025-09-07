@@ -10112,6 +10112,11 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
           return SDValue();
       }
 
+      // Avoid the fold if the minmax operation is legal and select is expensive
+      if (TLI.isOperationLegal(N0.getOpcode(), VT) &&
+          TLI.isPredictableSelectExpensive())
+        return SDValue();
+
       EVT CCVT = getSetCCResultType(VT);
       ISD::CondCode CC;
       switch (N0.getOpcode()) {
