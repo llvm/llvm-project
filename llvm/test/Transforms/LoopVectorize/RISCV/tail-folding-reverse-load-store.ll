@@ -29,13 +29,13 @@ define void @reverse_load_store(i64 %startval, ptr noalias %ptr, ptr noalias %pt
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP12]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP5]])
 ; IF-EVL-NEXT:    [[VP_REVERSE:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vp.reverse.nxv4i32(<vscale x 4 x i32> [[VP_OP_LOAD]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP5]])
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[PTR2:%.*]], i64 [[TMP7]]
+; IF-EVL-NEXT:    [[VP_REVERSE3:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vp.reverse.nxv4i32(<vscale x 4 x i32> [[VP_REVERSE]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP5]])
 ; IF-EVL-NEXT:    [[TMP19:%.*]] = zext i32 [[TMP5]] to i64
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = mul i64 0, [[TMP19]]
 ; IF-EVL-NEXT:    [[TMP23:%.*]] = sub i64 [[TMP19]], 1
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = mul i64 -1, [[TMP23]]
 ; IF-EVL-NEXT:    [[TMP22:%.*]] = getelementptr i32, ptr [[TMP13]], i64 [[TMP14]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr i32, ptr [[TMP22]], i64 [[TMP15]]
-; IF-EVL-NEXT:    [[VP_REVERSE3:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vp.reverse.nxv4i32(<vscale x 4 x i32> [[VP_REVERSE]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP5]])
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[VP_REVERSE3]], ptr align 4 [[TMP17]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP5]])
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = zext i32 [[TMP5]] to i64
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP20]], [[EVL_BASED_IV]]
@@ -154,24 +154,24 @@ define void @reverse_load_store_masked(i64 %startval, ptr noalias %ptr, ptr noal
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP12]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP5]])
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = icmp slt <vscale x 4 x i32> [[VP_OP_LOAD]], splat (i32 100)
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr i32, ptr [[PTR1:%.*]], i64 [[TMP11]]
+; IF-EVL-NEXT:    [[VP_REVERSE_MASK:%.*]] = call <vscale x 4 x i1> @llvm.experimental.vp.reverse.nxv4i1(<vscale x 4 x i1> [[TMP14]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP5]])
 ; IF-EVL-NEXT:    [[TMP26:%.*]] = zext i32 [[TMP5]] to i64
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = mul i64 0, [[TMP26]]
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = sub i64 [[TMP26]], 1
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = mul i64 -1, [[TMP15]]
 ; IF-EVL-NEXT:    [[TMP19:%.*]] = getelementptr i32, ptr [[TMP16]], i64 [[TMP17]]
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[TMP19]], i64 [[TMP18]]
-; IF-EVL-NEXT:    [[VP_REVERSE_MASK:%.*]] = call <vscale x 4 x i1> @llvm.experimental.vp.reverse.nxv4i1(<vscale x 4 x i1> [[TMP14]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP5]])
 ; IF-EVL-NEXT:    [[VP_OP_LOAD4:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP20]], <vscale x 4 x i1> [[VP_REVERSE_MASK]], i32 [[TMP5]])
 ; IF-EVL-NEXT:    [[VP_REVERSE:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vp.reverse.nxv4i32(<vscale x 4 x i32> [[VP_OP_LOAD4]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP5]])
 ; IF-EVL-NEXT:    [[TMP21:%.*]] = getelementptr i32, ptr [[PTR2:%.*]], i64 [[TMP11]]
+; IF-EVL-NEXT:    [[VP_REVERSE_MASK6:%.*]] = call <vscale x 4 x i1> @llvm.experimental.vp.reverse.nxv4i1(<vscale x 4 x i1> [[TMP14]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP5]])
+; IF-EVL-NEXT:    [[VP_REVERSE5:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vp.reverse.nxv4i32(<vscale x 4 x i32> [[VP_REVERSE]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP5]])
 ; IF-EVL-NEXT:    [[TMP27:%.*]] = zext i32 [[TMP5]] to i64
 ; IF-EVL-NEXT:    [[TMP22:%.*]] = mul i64 0, [[TMP27]]
 ; IF-EVL-NEXT:    [[TMP30:%.*]] = sub i64 [[TMP27]], 1
 ; IF-EVL-NEXT:    [[TMP23:%.*]] = mul i64 -1, [[TMP30]]
 ; IF-EVL-NEXT:    [[TMP24:%.*]] = getelementptr i32, ptr [[TMP21]], i64 [[TMP22]]
 ; IF-EVL-NEXT:    [[TMP25:%.*]] = getelementptr i32, ptr [[TMP24]], i64 [[TMP23]]
-; IF-EVL-NEXT:    [[VP_REVERSE5:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vp.reverse.nxv4i32(<vscale x 4 x i32> [[VP_REVERSE]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP5]])
-; IF-EVL-NEXT:    [[VP_REVERSE_MASK6:%.*]] = call <vscale x 4 x i1> @llvm.experimental.vp.reverse.nxv4i1(<vscale x 4 x i1> [[TMP14]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP5]])
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[VP_REVERSE5]], ptr align 4 [[TMP25]], <vscale x 4 x i1> [[VP_REVERSE_MASK6]], i32 [[TMP5]])
 ; IF-EVL-NEXT:    [[TMP28:%.*]] = zext i32 [[TMP5]] to i64
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP28]], [[EVL_BASED_IV]]
@@ -205,57 +205,38 @@ define void @reverse_load_store_masked(i64 %startval, ptr noalias %ptr, ptr noal
 ;
 ; NO-VP-LABEL: @reverse_load_store_masked(
 ; NO-VP-NEXT:  entry:
-; NO-VP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
-; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[ENTRY:%.*]], label [[VECTOR_PH:%.*]]
+; NO-VP-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:
-; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
-; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
-; NO-VP-NEXT:    [[TMP6:%.*]] = sub i64 [[STARTVAL1:%.*]], [[N_VEC]]
-; NO-VP-NEXT:    [[TMP7:%.*]] = trunc i64 [[N_VEC]] to i32
 ; NO-VP-NEXT:    br label [[FOR_BODY:%.*]]
 ; NO-VP:       vector.body:
 ; NO-VP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[FOR_BODY]] ]
-; NO-VP-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[STARTVAL1]], [[INDEX]]
+; NO-VP-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[STARTVAL1:%.*]], [[INDEX]]
 ; NO-VP-NEXT:    [[OFFSET_IDX1:%.*]] = trunc i64 [[INDEX]] to i32
 ; NO-VP-NEXT:    [[TMP8:%.*]] = add i64 [[OFFSET_IDX]], -1
 ; NO-VP-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[PTR:%.*]], i32 [[OFFSET_IDX1]]
-; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP9]], align 4
-; NO-VP-NEXT:    [[TMP10:%.*]] = icmp slt <vscale x 4 x i32> [[WIDE_LOAD]], splat (i32 100)
+; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP9]], align 4
+; NO-VP-NEXT:    [[TMP2:%.*]] = icmp slt <8 x i32> [[WIDE_LOAD]], splat (i32 100)
 ; NO-VP-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[PTR1:%.*]], i64 [[TMP8]]
-; NO-VP-NEXT:    [[TMP12:%.*]] = mul i64 0, [[TMP3]]
-; NO-VP-NEXT:    [[TMP13:%.*]] = sub i64 [[TMP3]], 1
-; NO-VP-NEXT:    [[TMP14:%.*]] = mul i64 -1, [[TMP13]]
-; NO-VP-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr [[TMP11]], i64 [[TMP12]]
-; NO-VP-NEXT:    [[TMP16:%.*]] = getelementptr i32, ptr [[TMP15]], i64 [[TMP14]]
-; NO-VP-NEXT:    [[REVERSE:%.*]] = call <vscale x 4 x i1> @llvm.vector.reverse.nxv4i1(<vscale x 4 x i1> [[TMP10]])
-; NO-VP-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr [[TMP16]], i32 4, <vscale x 4 x i1> [[REVERSE]], <vscale x 4 x i32> poison)
-; NO-VP-NEXT:    [[REVERSE2:%.*]] = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[WIDE_MASKED_LOAD]])
+; NO-VP-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[TMP11]], i32 0
+; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[TMP4]], i32 -7
+; NO-VP-NEXT:    [[REVERSE:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; NO-VP-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr [[TMP5]], i32 4, <8 x i1> [[REVERSE]], <8 x i32> poison)
+; NO-VP-NEXT:    [[REVERSE2:%.*]] = shufflevector <8 x i32> [[WIDE_MASKED_LOAD]], <8 x i32> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; NO-VP-NEXT:    [[TMP17:%.*]] = getelementptr i32, ptr [[PTR2:%.*]], i64 [[TMP8]]
-; NO-VP-NEXT:    [[TMP18:%.*]] = mul i64 0, [[TMP3]]
-; NO-VP-NEXT:    [[TMP19:%.*]] = sub i64 [[TMP3]], 1
-; NO-VP-NEXT:    [[TMP20:%.*]] = mul i64 -1, [[TMP19]]
-; NO-VP-NEXT:    [[TMP21:%.*]] = getelementptr i32, ptr [[TMP17]], i64 [[TMP18]]
-; NO-VP-NEXT:    [[TMP22:%.*]] = getelementptr i32, ptr [[TMP21]], i64 [[TMP20]]
-; NO-VP-NEXT:    [[REVERSE3:%.*]] = call <vscale x 4 x i1> @llvm.vector.reverse.nxv4i1(<vscale x 4 x i1> [[TMP10]])
-; NO-VP-NEXT:    [[REVERSE4:%.*]] = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[REVERSE2]])
-; NO-VP-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[REVERSE4]], ptr [[TMP22]], i32 4, <vscale x 4 x i1> [[REVERSE3]])
-; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
-; NO-VP-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; NO-VP-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[TMP17]], i32 0
+; NO-VP-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[TMP7]], i32 -7
+; NO-VP-NEXT:    [[REVERSE4:%.*]] = shufflevector <8 x i32> [[REVERSE2]], <8 x i32> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; NO-VP-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> [[REVERSE4]], ptr [[TMP10]], i32 4, <8 x i1> [[REVERSE]])
+; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; NO-VP-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; NO-VP-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; NO-VP:       middle.block:
-; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
-; NO-VP-NEXT:    br i1 [[CMP_N]], label [[LOOPEND:%.*]], label [[ENTRY]]
+; NO-VP-NEXT:    br label [[LOOPEND:%.*]]
 ; NO-VP:       scalar.ph:
-; NO-VP-NEXT:    [[STARTVAL:%.*]] = phi i64 [ [[TMP6]], [[MIDDLE_BLOCK]] ], [ [[STARTVAL1]], [[ENTRY1:%.*]] ]
-; NO-VP-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i32 [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY1]] ]
 ; NO-VP-NEXT:    br label [[FOR_BODY1:%.*]]
 ; NO-VP:       for.body:
-; NO-VP-NEXT:    [[ADD_PHI:%.*]] = phi i64 [ [[STARTVAL]], [[ENTRY]] ], [ [[ADD:%.*]], [[FOR_INC:%.*]] ]
-; NO-VP-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL5]], [[ENTRY]] ], [ [[INC:%.*]], [[FOR_INC]] ]
+; NO-VP-NEXT:    [[ADD_PHI:%.*]] = phi i64 [ [[STARTVAL1]], [[SCALAR_PH]] ], [ [[ADD:%.*]], [[FOR_INC:%.*]] ]
+; NO-VP-NEXT:    [[I:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_INC]] ]
 ; NO-VP-NEXT:    [[ADD]] = add i64 [[ADD_PHI]], -1
 ; NO-VP-NEXT:    [[GEPL:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i32 [[I]]
 ; NO-VP-NEXT:    [[TMP:%.*]] = load i32, ptr [[GEPL]], align 4
@@ -328,22 +309,22 @@ define void @multiple_reverse_vector_pointer(ptr noalias %a, ptr noalias %b, ptr
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[B:%.*]], <vscale x 16 x i8> [[VP_REVERSE]]
 ; IF-EVL-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 16 x i8> @llvm.vp.gather.nxv16i8.nxv16p0(<vscale x 16 x ptr> align 1 [[TMP14]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP6]])
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 [[OFFSET_IDX]]
+; IF-EVL-NEXT:    [[VP_REVERSE1:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vp.reverse.nxv16i8(<vscale x 16 x i8> [[WIDE_MASKED_GATHER]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP6]])
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP6]] to i64
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = mul i64 0, [[TMP16]]
 ; IF-EVL-NEXT:    [[TMP30:%.*]] = sub i64 [[TMP16]], 1
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = mul i64 -1, [[TMP30]]
 ; IF-EVL-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[TMP15]], i64 [[TMP17]]
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[TMP19]], i64 [[TMP18]]
-; IF-EVL-NEXT:    [[VP_REVERSE1:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vp.reverse.nxv16i8(<vscale x 16 x i8> [[WIDE_MASKED_GATHER]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP6]])
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv16i8.p0(<vscale x 16 x i8> [[VP_REVERSE1]], ptr align 1 [[TMP20]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP6]])
 ; IF-EVL-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[D:%.*]], i64 [[OFFSET_IDX]]
+; IF-EVL-NEXT:    [[VP_REVERSE2:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vp.reverse.nxv16i8(<vscale x 16 x i8> [[WIDE_MASKED_GATHER]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP6]])
 ; IF-EVL-NEXT:    [[TMP22:%.*]] = zext i32 [[TMP6]] to i64
 ; IF-EVL-NEXT:    [[TMP23:%.*]] = mul i64 0, [[TMP22]]
 ; IF-EVL-NEXT:    [[TMP31:%.*]] = sub i64 [[TMP22]], 1
 ; IF-EVL-NEXT:    [[TMP24:%.*]] = mul i64 -1, [[TMP31]]
 ; IF-EVL-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[TMP21]], i64 [[TMP23]]
 ; IF-EVL-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[TMP25]], i64 [[TMP24]]
-; IF-EVL-NEXT:    [[VP_REVERSE2:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vp.reverse.nxv16i8(<vscale x 16 x i8> [[WIDE_MASKED_GATHER]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP6]])
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv16i8.p0(<vscale x 16 x i8> [[VP_REVERSE2]], ptr align 1 [[TMP26]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP6]])
 ; IF-EVL-NEXT:    [[TMP27:%.*]] = zext i32 [[TMP6]] to i64
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP27]], [[EVL_BASED_IV]]
