@@ -236,6 +236,8 @@ LLVM_ABI FunctionPass *createGreedyRegisterAllocator(RegAllocFilterFunc F);
 ///
 LLVM_ABI FunctionPass *createDefaultPBQPRegisterAllocator();
 
+LLVM_ABI FunctionPass *createRegAllocIntervals();
+
 // 在 Passes.h 中找到其他寄存器分配器的声明，并在附近添加：
 LLVM_ABI FunctionPass *createRegAllocSegmentTree();
 

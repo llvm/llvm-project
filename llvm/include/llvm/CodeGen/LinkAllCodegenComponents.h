@@ -34,7 +34,7 @@ namespace {
       (void) llvm::createBasicRegisterAllocator();
       (void) llvm::createGreedyRegisterAllocator();
       (void) llvm::createDefaultPBQPRegisterAllocator();
-      // 強制把你的 TU 拉進來（引用工廠函式即可）
+      (void) llvm::createRegAllocIntervals();
       (void) llvm::createRegAllocSegmentTree();
       
       (void)llvm::createBURRListDAGScheduler(nullptr,

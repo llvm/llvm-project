@@ -21,7 +21,9 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegAllocPriorityAdvisor.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/CodeGen/Spiller.h"
 #include "llvm/InitializePasses.h"
@@ -30,11 +32,24 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Statistic.h"
 #include <limits>
 
 using namespace llvm;
 
+// [NEW] 旗標：是否開啟座標預先計算
+static cl::opt<bool> SegTreePrecompute(
+    "segtree-precompute",
+    cl::desc("Enable precomputing of coordinate compression and segment trees "
+             "for the Segment-Tree register allocator"),
+    cl::init(true));
+
 #define DEBUG_TYPE "regallocsegtre"
+
+STATISTIC(NumGlobalSplits, "Number of split global live ranges");
+STATISTIC(NumLocalSplits,  "Number of split local live ranges");
+STATISTIC(NumEvicted,      "Number of interferences evicted");
+STATISTIC(NumSegTreeUpdatesReal, "Number of actual successful segtree updates");
 
 const char RegAllocSegmentTree::TimerGroupName[] = "segtre";
 const char RegAllocSegmentTree::TimerGroupDescription[] = "Segment Tree Register Allocator";
@@ -62,6 +77,26 @@ static llvm::RegisterRegAlloc
 
 RegAllocSegmentTree::RegAllocSegmentTree()
   : MachineFunctionPass(ID) {
+    // [NEW] 根據命令列旗標設定是否啟用 precompute
+    UsePrecompute = SegTreePrecompute;
+
+    if (TimePassesIsEnabled) {
+      // 创建TimerGroup
+      TimerGroupObj = std::make_unique<TimerGroup>("segtre", "Segment Tree Register Allocator");
+      // 使用TimerGroup创建各个Timer
+      PrecomputeTimer = std::make_unique<Timer>("Precompute", "Precompute Coordinates", *TimerGroupObj);
+      AllocationTimer = std::make_unique<Timer>("Allocation", "Register Allocation", *TimerGroupObj);
+      SpillTimer = std::make_unique<Timer>("Spill", "Spill Processing", *TimerGroupObj);
+      CleanupTimer = std::make_unique<Timer>("Cleanup", "Cleanup Failed VRegs", *TimerGroupObj);
+      PostOptTimer = std::make_unique<Timer>("PostOpt", "Post Optimization", *TimerGroupObj);
+      SegTreeUpdateTimer = std::make_unique<Timer>("SegTreeUpdate", "Segment Tree Updates", *TimerGroupObj);
+      SegTreeQueryTimer = std::make_unique<Timer>("SegTreeQuery", "Segment Tree Queries", *TimerGroupObj);
+      GlobalSplitTimer = std::make_unique<Timer>("GlobalSplit", "Global Splitting", *TimerGroupObj);
+      LocalSplitTimer = std::make_unique<Timer>("LocalSplit", "Local Splitting", *TimerGroupObj);
+      RegionSplitTimer = std::make_unique<Timer>("RegionSplit", "Region Splitting", *TimerGroupObj);
+      BlockSplitTimer = std::make_unique<Timer>("BlockSplit", "Block Splitting", *TimerGroupObj);
+    }
+
     initializeSlotIndexesWrapperPassPass(*PassRegistry::getPassRegistry());
     initializeLiveIntervalsWrapperPassPass(*PassRegistry::getPassRegistry());
     initializeLiveStacksWrapperLegacyPass(*PassRegistry::getPassRegistry());
@@ -69,6 +104,19 @@ RegAllocSegmentTree::RegAllocSegmentTree()
   }
 
 bool RegAllocSegmentTree::runOnMachineFunction(MachineFunction &MF) {
+  // 在函數開始時重置計時器
+  if (TimePassesIsEnabled) {
+    PrecomputeTimer->clear();
+    AllocationTimer->clear();
+    SpillTimer->clear();
+    CleanupTimer->clear();
+    PostOptTimer->clear();
+    SegTreeUpdateTimer->clear();
+    SegTreeQueryTimer->clear();
+  }
+  // 每個函式開始時，將本函式的成功更新次數清零
+  NumSegTreeUpdatesRealLocal = 0;
+
   // 获取必要的分析结果
   LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   MachineBlockFrequencyInfo &MBFI =
@@ -104,93 +152,57 @@ bool RegAllocSegmentTree::runOnMachineFunction(MachineFunction &MF) {
        "RA pointers must be initialized before allocation");
   assert(SpillerInstance && "Spiller must be created before allocation");
 
-  // 找到需要分配的虚拟寄存器区间
-  std::vector<LiveInterval*> VRegsToAlloc;
-  for (unsigned i = 0, e = MF.getRegInfo().getNumVirtRegs(); i != e; ++i) {
-    unsigned Reg = Register::index2VirtReg(i);
-    if (MF.getRegInfo().reg_nodbg_empty(Reg))
-      continue;
-    LiveInterval *LI = &LIS->getInterval(Reg);
-    if (LI->empty())
-      continue;
-    VRegsToAlloc.push_back(LI);
+  // === Greedy 風格：建立佇列並用 PriorityAdvisor 排程 ===
+  {
+    while (!Queue.empty()) Queue.pop();
+    InQ.clear();
+    MachineRegisterInfo &MRI_ = MF.getRegInfo();
+    for (unsigned i = 0, e = MRI_.getNumVirtRegs(); i != e; ++i) {
+      Register Reg = Register::index2VirtReg(i);
+      if (MRI_.reg_nodbg_empty(Reg)) continue;
+      LiveInterval *LI = &LIS->getInterval(Reg);
+      if (LI->empty()) continue;
+      enqueueImpl(LI);
+    }
   }
 
-  // 如果没有需要分配的虚拟寄存器，直接返回
-  if (VRegsToAlloc.empty()) {
+  if (Queue.empty()) {
     finalizeAlloc(MF, *LIS, *VRM);
     postOptimization(*SpillerInstance, *LIS);
     return true;
   }
 
-  // 对虚拟寄存器进行排序（例如，按生命期长度、权重等）
-  // 这是一个重要的设计决策点！
-  llvm::sort(VRegsToAlloc, [](const LiveInterval *A, const LiveInterval *B) {
-    return A->getSize() > B->getSize();
-  });
-
-  // 主要的分配循环
-  bool AllocComplete = false;
-  unsigned Round = 0;
-  const unsigned MaxRounds = 500; // 防止无限循环
-
-  while (!AllocComplete && Round < MaxRounds) {
-    LLVM_DEBUG(dbgs() << "  Segment Tree Regalloc round " << Round << ":\n");
-  
-    bool HasSpills = false;
-    bool HasUnAllocated = false;
-    std::vector<LiveInterval*> UnallocatedRegs; // 暫存無法分配的寄存器
-  
-    // 處理當前輪次的寄存器（固定大小，避免迭代中修改）
-    size_t CurrentRoundSize = VRegsToAlloc.size();
-    for (size_t i = 0; i < CurrentRoundSize; ++i) {
-      LiveInterval *LI = VRegsToAlloc[i];
-      unsigned VirtReg = LI->reg();
-    
-      if (VRM->hasPhys(VirtReg)) // 可能已經分配了
-        continue;
-
-      unsigned PhysReg = tryAllocateRegister(*LI);
-      if (PhysReg) {
-        VRM->assignVirt2Phys(VirtReg, PhysReg);
-        updateSegmentTreeForInterval(*LI, PhysReg);
-      } else {
-        if (LI->isSpillable()) {
-          HasSpills = true;
-          spillVirtReg(*LI); // 新產生的寄存器會通過 enqueue 加到 VRegsToAlloc 末尾
-        } else {
-          HasUnAllocated = true;
-          UnallocatedRegs.push_back(LI); // 暫存，稍後重新加入
-          LLVM_DEBUG(dbgs() << "Virtual register " << VirtReg 
-                        << " cannot be spilled or allocated\n");
-        }
-      }
-    }
-  
-    // 移除已分配的寄存器
-    VRegsToAlloc.erase(
-      std::remove_if(VRegsToAlloc.begin(), VRegsToAlloc.end(),
-        [&](LiveInterval *LI) { return VRM->hasPhys(LI->reg()); }),
-      VRegsToAlloc.end());
-  
-    // 將無法分配的寄存器保留到下一輪
-    // 重新加入無法分配的寄存器到下一輪
-    VRegsToAlloc.insert(VRegsToAlloc.end(), 
-                     UnallocatedRegs.begin(), UnallocatedRegs.end());
-  
-    AllocComplete = VRegsToAlloc.empty();
-    ++Round;
+  if (TimePassesIsEnabled) {
+    AllocationTimer->startTimer();
   }
 
-  // 如果達到最大輪數仍未完成，輸出警告
-    if (!AllocComplete) {
-    LLVM_DEBUG(dbgs() << "Warning: Reached max rounds (" << MaxRounds 
-                    << ") with " << VRegsToAlloc.size() 
-                    << " registers remaining\n");
+  unsigned Iter = 0;
+  const unsigned MaxIters = 10000000;
+  while (const LiveInterval *LIc = dequeue()) {
+    if (++Iter > MaxIters) {
+      LLVM_DEBUG(dbgs() << "Warning: MaxIters reached in allocation loop\n");
+      break;
     }
+    LiveInterval &LI = *const_cast<LiveInterval*>(LIc);
+    unsigned VirtReg = LI.reg();
+    if (VRM->hasPhys(VirtReg)) continue;
+    if (unsigned PhysReg = tryAllocateRegister(LI)) {
+      VRM->assignVirt2Phys(VirtReg, PhysReg);
+      updateSegmentTreeForInterval(LI, PhysReg);
+      continue;
+    }
+    if (LI.isSpillable()) {
+      spillVirtReg(LI); // 產生的新 vreg 會被 enqueue
+    } else {
+      FailedVRegs.insert(VirtReg);
+      LLVM_DEBUG(dbgs() << "Virtual register " << VirtReg
+                        << " cannot be spilled or allocated; defer\n");
+    }
+  }
 
-  // 最终化分配，分配空范围
-  finalizeAlloc(MF, *LIS, *VRM);
+  if (TimePassesIsEnabled) {
+    AllocationTimer->stopTimer();
+  }
 #ifndef NDEBUG
   if (!verifyAllocation(MF, *LIS, *VRM)) {
     llvm_unreachable("寄存器分配驗證失敗!");
@@ -200,16 +212,52 @@ bool RegAllocSegmentTree::runOnMachineFunction(MachineFunction &MF) {
 
   LLVM_DEBUG(dbgs() << "Post alloc VirtRegMap:\n" << VRM << "\n");
 
-//   if (TimePassesIsEnabled) {
-//     errs() << "=== Segment Tree Allocator Statistics ===\n";
-//     errs() << "  Function: " << MF.getName() << "\n";
-//     errs() << "  Allocation attempts: " << NumAllocAttempts << "\n";
-//     errs() << "  Interference checks: " << NumInterferenceChecks << "\n";
-//     errs() << "  Segment tree updates: " << NumSegTreeUpdates << "\n";
-//     errs() << "  Coordinate rebuilds: " << NumCoordRebuilds << "\n";
-//     errs() << "  Spills: " << NumSpills << "\n";
-//     errs() << "==========================================\n";
-//   }
+  if (TimePassesIsEnabled) {
+    // 累加当前函数的数据到总和中
+    TotalPrecomputeTime += PrecomputeTimer->getTotalTime().getWallTime();
+    TotalAllocationTime += AllocationTimer->getTotalTime().getWallTime();
+    TotalSpillTime += SpillTimer->getTotalTime().getWallTime();
+    TotalCleanupTime += CleanupTimer->getTotalTime().getWallTime();
+    TotalPostOptTime += PostOptTimer->getTotalTime().getWallTime();
+    TotalSegTreeUpdateTime += SegTreeUpdateTimer->getTotalTime().getWallTime();
+    TotalSegTreeQueryTime += SegTreeQueryTimer->getTotalTime().getWallTime();
+    
+    TotalAllocAttempts += NumAllocAttempts;
+    TotalInterferenceChecks += NumInterferenceChecks;
+    TotalSegTreeUpdates += NumSegTreeUpdates;
+    TotalCoordRebuilds += NumCoordRebuilds;
+    TotalSpills += NumSpills;
+    TotalSegTreeUpdatesReal += NumSegTreeUpdatesRealLocal;
+    
+    // 输出总表
+    errs() << "\n=== Segment Tree Allocator Cumulative Statistics ===\n";
+    errs() << "  Total Precompute Time: " << TotalPrecomputeTime << " seconds\n";
+    errs() << "  Total Allocation Time: " << TotalAllocationTime << " seconds\n";
+    errs() << "  Total Spill Time: " << TotalSpillTime << " seconds\n";
+    errs() << "  Total Cleanup Time: " << TotalCleanupTime << " seconds\n";
+    errs() << "  Total PostOpt Time: " << TotalPostOptTime << " seconds\n";
+    errs() << "  Total SegTree Update Time: " << TotalSegTreeUpdateTime << " seconds\n";
+    errs() << "  Total SegTree Query Time: " << TotalSegTreeQueryTime << " seconds\n";
+    
+    double TotalTime = TotalPrecomputeTime + TotalAllocationTime + TotalSpillTime +
+                        TotalCleanupTime + TotalPostOptTime + TotalSegTreeUpdateTime +
+                        TotalSegTreeQueryTime;
+    errs() << "  Total Time: " << TotalTime << " seconds\n";
+    
+    errs() << "\n  Total Allocation Attempts: " << TotalAllocAttempts << "\n";
+    errs() << "  Total Interference Checks: " << TotalInterferenceChecks << "\n";
+    errs() << "  Total Segment Tree Updates: " << TotalSegTreeUpdates << "\n";
+    errs() << "  Total Actual SegTree Updates: " << TotalSegTreeUpdatesReal << "\n";
+    errs() << "  Total Coordinate Rebuilds: " << TotalCoordRebuilds << "\n";
+    errs() << "  Total Spills: " << TotalSpills << "\n";
+    errs() << "=====================================================\n";
+  }
+
+  // 输出时间信息
+  errs() << "  Time breakdown:\n";
+  TimerGroupObj->print(errs());  // 输出整个组的时间
+  
+  errs() << "==========================================\n";
 
   return true;
 }
@@ -221,26 +269,43 @@ void RegAllocSegmentTree::updateSegmentTreeForInterval(const LiveInterval &LI, u
   }
 }
 
-void RegAllocSegmentTree::enqueueImpl(const LiveInterval *LI) {
-  
-  if (!LI) return;
-  unsigned V = LI->reg();
-  if (!V) return;
-  // 不處理已經空掉或僅 debug 定義的 vreg
-  if (MF && MF->getRegInfo().reg_nodbg_empty(V)) return;
+void RegAllocSegmentTree::enqueueImpl(const LiveInterval *LI) { enqueue(Queue, LI); }
 
-  // 只有第一次進佇列會插入成功
-  if (InQ.insert(V).second) {
-    CurQueue.push_back(LI);
-    LLVM_DEBUG(dbgs() << "  enqueue vreg " << V << " (queue size=" << CurQueue.size() << ")\n");
+void RegAllocSegmentTree::enqueue(PQueue &CurQueue, const LiveInterval *LI) {
+  // Prioritize live ranges by size, assigning larger ranges first.
+  // The queue holds (size, reg) pairs.
+  const Register Reg = LI->reg();
+  assert(Reg.isVirtual() && "Can only enqueue virtual registers");
+
+
+  // 可選：只有在 ExtraInfo 有被 emplace/reset 時才操作 stage
+  if (ExtraInfo) {
+    auto Stage = ExtraInfo->getOrInitStage(Reg);
+    if (Stage == RS_New) {
+      ExtraInfo->setStage(Reg, RS_Assign);
+    }
   }
+
+  // 取得優先度：若無 PriorityAdvisor，退化為簡單規則
+  unsigned Pri = 0;
+  if (PriorityAdvisor) {
+    Pri = PriorityAdvisor->getPriority(*LI);
+  } else {
+    // 備援：用生命期大小或 spill weight
+    Pri = static_cast<unsigned>(LI->getSize()); // 或 (unsigned)calcSpillWeight(*LI, *LIS, ...);
+  }
+
+  // 以 vreg 編號做 tie-breaker：~id() 讓較小的 vreg 有較高優先權
+  CurQueue.push(std::make_pair(Pri, ~Reg.id()));
 }
 
-const LiveInterval *RegAllocSegmentTree::dequeue() {
-  if (CurQueue.empty()) return nullptr;
-  const LiveInterval *LI = CurQueue.back();
-  CurQueue.pop_back();
-  if (LI) InQ.erase(LI->reg());
+const LiveInterval *RegAllocSegmentTree::dequeue() { return dequeue(Queue); }
+
+const LiveInterval *RegAllocSegmentTree::dequeue(PQueue &CurQueue) {
+  if (CurQueue.empty())
+    return nullptr;
+  LiveInterval *LI = &LIS->getInterval(~CurQueue.top().second);
+  CurQueue.pop();
   return LI;
 }
 
@@ -294,7 +359,7 @@ MCRegister RegAllocSegmentTree::selectOrSplit(const LiveInterval &VirtReg,
       
       // 將新的區間加入工作佇列
       LiveInterval &NewLI = LIS->getInterval(NewVReg);
-      enqueue(&NewLI);
+      enqueueImpl(&NewLI);
     }
   }
   
@@ -302,10 +367,35 @@ MCRegister RegAllocSegmentTree::selectOrSplit(const LiveInterval &VirtReg,
   return 0;
 }
 
+// MCRegister RegAllocSegmentTree::selectOrSplitAdvanced(const LiveInterval &VirtReg,
+//                                                      SmallVectorImpl<Register> &splitLVRs) {
+//   // 首先嘗試直接分配
+//   unsigned PhysReg = tryAllocateRegister(const_cast<LiveInterval&>(VirtReg));
+//   if (PhysReg) return PhysReg;
+  
+//   // 根據生命期特性選擇分割策略
+//   if (LIS->intervalIsInOneMBB(VirtReg)) {
+//     // 局部區間：使用本地分割策略
+//     TimeRegion TR(*LocalSplitTimer);
+//     return tryLocalSplit(VirtReg, splitLVRs);
+//   } else {
+//     // 全域區間：先嘗試區域分割，再嘗試塊分割
+//     TimeRegion TR(*GlobalSplitTimer);
+//     MCRegister Result = tryRegionSplit(VirtReg, splitLVRs);
+//     if (Result) return Result;
+    
+//     TimeRegion TR2(*BlockSplitTimer);
+//     return tryBlockSplit(VirtReg, splitLVRs);
+//   }
+// }
+
 void RegAllocSegmentTree::init(VirtRegMap &vrm, LiveIntervals &lis,
                                         LiveRegMatrix &mat) {
   // 首先调用基类的init方法
   RegAllocBase::init(vrm, lis, mat);
+
+  // === 這兩行是關鍵：把 optional / unique_ptr 建起來 ===
+  ExtraInfo.emplace();  // 只要預設建構即可，之後才能 ExtraInfo->getOrInitStage(...)
 
   // 然后获取需要的其他信息
   // 通过vrm获取MachineFunction
@@ -334,13 +424,49 @@ void RegAllocSegmentTree::init(VirtRegMap &vrm, LiveIntervals &lis,
   MRI->freezeReservedRegs();
 
   // 预先收集所有可能的坐标点
-  precomputeAllCoordinates();
+  if (UsePrecompute) {
+    precomputeAllCoordinates();
+  }
 
   LLVM_DEBUG(dbgs() << "Initializing Segment Tree Register Allocator with " 
                     << NumPhysRegs << " physical registers\n");
 }
 
+// ===== 線段樹分割策略群組 =====
+MCRegister RegAllocSegmentTree::trySegmentTreeSplit(const LiveInterval &VirtReg,
+                                                    SmallVectorImpl<Register> &NewVRegs) {
+  // 使用線段樹分析找到最佳分割點
+  SlotIndex BestSplitPoint = findOptimalSplitPoint(VirtReg);
+  
+  if (!BestSplitPoint.isValid()) {
+    return MCRegister();
+  }
+  
+  // 執行分割
+  return performSplitAtPoint(VirtReg, BestSplitPoint, NewVRegs);
+}
+
+SlotIndex RegAllocSegmentTree::findOptimalSplitPoint(const LiveInterval &VirtReg) {
+  // 基於線段樹分析找到最佳分割點的實作
+  // 這裡可以分析干擾密度來決定分割點
+  return findSplitPoint(VirtReg); // 暫時使用現有方法
+}
+
+MCRegister RegAllocSegmentTree::performSplitAtPoint(const LiveInterval &VirtReg, 
+                                                    SlotIndex SplitPoint,
+                                                    SmallVectorImpl<Register> &NewVRegs) {
+  // 在指定點執行分割的實作
+  // 使用 LiveRangeEdit 進行分割
+  LiveInterval &LI = const_cast<LiveInterval&>(VirtReg);
+  LiveRangeEdit LRE(&LI, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
+  
+  // TODO: 實作實際的分割邏輯
+  
+  return MCRegister(); // 表示已執行分割，需要處理新產生的寄存器
+}
+
 void RegAllocSegmentTree::precomputeAllCoordinates() {
+  TimeRegion TR(*PrecomputeTimer);
   // 收集所有虚拟寄存器的所有区间端点
   std::set<SlotIndex> allTimePoints;
   
@@ -359,21 +485,45 @@ void RegAllocSegmentTree::precomputeAllCoordinates() {
     }
   }
 
-  // 添加所有物理寄存器的区间端点（如果有的话）
-  for (unsigned PhysReg = 0; PhysReg < TRI->getNumRegs(); ++PhysReg) {
-    for (const auto &Interval : PhysRegIntervals[PhysReg]) {
-      allTimePoints.insert(Interval.first);
-      allTimePoints.insert(Interval.second);
+  GlobalCoords.assign(allTimePoints.begin(), allTimePoints.end());
+
+  // 每個物理暫存器共用同一組座標
+  for (unsigned P = 0; P < TRI->getNumRegs(); ++P) {
+    PRCoords[P] = GlobalCoords;
+    segtreeBuild(P);
+  }
+
+// 添加所有物理寄存器的区间端点（如果有的话）
+//   for (unsigned PhysReg = 0; PhysReg < TRI->getNumRegs(); ++PhysReg) {
+//     for (const auto &Interval : PhysRegIntervals[PhysReg]) {
+//       allTimePoints.insert(Interval.first);
+//       allTimePoints.insert(Interval.second);
+//     }
+//   }
+  
+//   // 为每个物理寄存器设置相同的坐标点
+//   for (unsigned PhysReg = 0; PhysReg < PRCoords.size(); ++PhysReg) {
+//     if (PhysReg >= TRI->getNumRegs()) continue;
+    
+//     PRCoords[PhysReg].assign(allTimePoints.begin(), allTimePoints.end());
+//     segtreeBuild(PhysReg);
+//   }
+}
+
+void RegAllocSegmentTree::precomputeGlobalCoords() {
+  std::set<SlotIndex> allPoints;
+  // 收集所有虛擬寄存器的端點
+  for (unsigned i = 0, e = MF->getRegInfo().getNumVirtRegs(); i != e; ++i) {
+    unsigned Reg = Register::index2VirtReg(i);
+    if (!MF->getRegInfo().reg_nodbg_empty(Reg)) {
+      LiveInterval *LI = &LIS->getInterval(Reg);
+      for (const auto &Seg : *LI) {
+        allPoints.insert(Seg.start);
+        allPoints.insert(Seg.end);
+      }
     }
   }
-  
-  // 为每个物理寄存器设置相同的坐标点
-  for (unsigned PhysReg = 0; PhysReg < PRCoords.size(); ++PhysReg) {
-    if (PhysReg >= TRI->getNumRegs()) continue;
-    
-    PRCoords[PhysReg].assign(allTimePoints.begin(), allTimePoints.end());
-    segtreeBuild(PhysReg);
-  }
+  GlobalCoords.assign(allPoints.begin(), allPoints.end());
 }
 
 unsigned RegAllocSegmentTree::tryAllocateRegister(LiveInterval &VirtReg) {
@@ -432,16 +582,18 @@ unsigned RegAllocSegmentTree::tryAllocateRegister(LiveInterval &VirtReg) {
 
 bool RegAllocSegmentTree::isPhysRegAvailable(unsigned PhysReg,
                                              const LiveInterval &LI) {
-  if (PhysReg == 0) return false;
+  TimeRegion TR(*SegTreeQueryTimer);
   
-  ++NumInterferenceChecks;  // 加入這行
+  if (PhysReg == 0) return false;
   
   TRI = MF->getSubtarget().getRegisterInfo();
 
   for (MCRegAliasIterator AI(PhysReg, TRI, /*IncludeSelf=*/true); AI.isValid(); ++AI) {
     unsigned A = *AI;
     // 對每個待查 segment 先確保座標，避免端點不在 coords 造成誤判
-    for (const auto &Seg : LI) {
+    for (const auto &Seg : LI) {  
+      ++NumInterferenceChecks;  // 加入這行
+      
       const auto &coords = PRCoords[A];
       const auto &tree   = PRTree[A];
       if (coords.size() < 2 || tree.empty()) continue;
@@ -497,33 +649,52 @@ int RegAllocSegmentTree::segtreeQueryMax(unsigned PhysReg, unsigned idx,
   return std::max(leftMax, rightMax);
 }
 
+int RegAllocSegmentTree::segtreeQueryMaxIter(unsigned PhysReg, unsigned l, unsigned r) {
+  int res = 0;
+  unsigned n = PRCoords[PhysReg].size() - 1;
+  l += n, r += n;
+  while (l <= r) {
+    if (l % 2 == 1) res = std::max(res, PRTree[PhysReg][l++].maxCover);
+    if (r % 2 == 0) res = std::max(res, PRTree[PhysReg][r--].maxCover);
+    l /= 2, r /= 2;
+  }
+  return res;
+}
+
 void RegAllocSegmentTree::updateSegmentTreeForPhysReg(unsigned PhysReg, SlotIndex Start, SlotIndex End) {
-  
+  TimeRegion TR(*SegTreeUpdateTimer);
+
   assert(Register::isPhysicalRegister(PhysReg) && "expected physreg");
   assert(PhysReg < PRCoords.size() && PhysReg < PRTree.size() &&
          "physreg index out of range");
   assert(Start.isValid() && End.isValid() && Start < End && "invalid segment");
   
   ++NumSegTreeUpdates;  // 加入這行
+
+    // 确保坐标存在
+//   ensureCoordsForPhysReg(PhysReg);
   
   // 获取坐标索引
-  auto startIt = std::lower_bound(PRCoords[PhysReg].begin(), PRCoords[PhysReg].end(), Start);
-  auto endIt = std::lower_bound(PRCoords[PhysReg].begin(), PRCoords[PhysReg].end(), End);
+  auto &Coords = PRCoords[PhysReg];
+  auto startIt = std::lower_bound(Coords.begin(), Coords.end(), Start);
+  auto endIt   = std::lower_bound(Coords.begin(), Coords.end(), End);
   
   // 确保坐标点存在
   if (startIt == PRCoords[PhysReg].end() || *startIt != Start ||
       endIt == PRCoords[PhysReg].end() || *endIt != End) {
-    LLVM_DEBUG(dbgs() << "警告: 物理寄存器 " << PhysReg 
-                      << " 的區間端點不在坐標點中: [" << Start << ", " << End << ")\n");
+    // errs() << "[segtre][ERROR] Missing coordinate in PRCoords for PhysReg "
+    //        << PhysReg << " interval [" << Start << ", " << End << ")\n";
+    // dbgs() << "  Did you forget to call precomputeAllCoordinates() after spill?\n";
+    llvm_unreachable("updateSegmentTreeForPhysReg: coordinate not found!");
     return;
   }
   
-  unsigned startIdx = startIt - PRCoords[PhysReg].begin();
-  unsigned endIdx = endIt - PRCoords[PhysReg].begin();
+  unsigned startIdx = startIt - Coords.begin();
+  unsigned endIdx = endIt - Coords.begin();
   
   // 更新线段树
   if (startIdx < endIdx) {
-    const unsigned segN = PRCoords[PhysReg].size() - 1;
+    const unsigned segN = Coords.size() - 1;
     segtreeUpdate(PhysReg, 1, 0, segN - 1, startIdx, endIdx - 1, +1);
   }
   
@@ -571,6 +742,49 @@ void RegAllocSegmentTree::updateSegmentTreeForPhysReg(unsigned PhysReg, SlotInde
 //   }
 // }
 
+void RegAllocSegmentTree::ensureCoordsForPhysReg(unsigned PhysReg) {
+  if (!PRCoords[PhysReg].empty()) return;
+  
+  // 只收集與此物理寄存器相關的虛擬寄存器端點
+  std::set<SlotIndex> points;
+  for (const auto &Interval : PhysRegIntervals[PhysReg]) {
+    points.insert(Interval.first);
+    points.insert(Interval.second);
+  }
+
+//   // 添加所有虛擬寄存器的端點（這部分可以進一步優化）
+//   for (unsigned i = 0, e = MF->getRegInfo().getNumVirtRegs(); i != e; ++i) {
+//     unsigned Reg = Register::index2VirtReg(i);
+//     if (MF->getRegInfo().reg_nodbg_empty(Reg))
+//       continue;
+    
+//     LiveInterval *LI = &LIS->getInterval(Reg);
+//     if (LI->empty())
+//       continue;
+    
+//     for (const auto &Seg : *LI) {
+//       points.insert(Seg.start);
+//       points.insert(Seg.end);
+//     }
+//   }
+  
+  PRCoords[PhysReg].assign(points.begin(), points.end());
+  segtreeBuild(PhysReg);
+
+  // DEBUG：看看到底有哪些座標
+//   dumpCoords(PhysReg);
+}
+
+void RegAllocSegmentTree::dumpCoords(unsigned PhysReg) const {
+  const auto &Coords = PRCoords[PhysReg];
+  dbgs() << "[segtre] PhysReg " << PhysReg
+         << " coords size=" << Coords.size() << " :";
+  for (unsigned i = 0; i < Coords.size(); ++i) {
+    dbgs() << " [" << i << "]" << Coords[i];
+  }
+  dbgs() << "\n";
+}
+
 unsigned RegAllocSegmentTree::coordIndex(unsigned PhysReg, SlotIndex X) const {
   const auto &Coords = PRCoords[PhysReg];
   auto It = std::lower_bound(Coords.begin(), Coords.end(), X);
@@ -582,12 +796,28 @@ void RegAllocSegmentTree::segtreeUpdate(unsigned PhysReg, unsigned idx,
                                         unsigned L, unsigned R,
                                         unsigned ql, unsigned qr, int add) {
   auto &Tree = PRTree[PhysReg];
+
+  LLVM_DEBUG(dbgs() << "[segtre][before] PhysReg=" << PhysReg
+                    << " node=" << idx
+                    << " range=[" << L << "," << R << "]"
+                    << " q=[" << ql << "," << qr << "]"
+                    << " add=" << add
+                    << " maxCover=" << Tree[idx].maxCover
+                    << " lazy=" << Tree[idx].lazyAdd << "\n");
+  
   if (ql > R || qr < L)
     return;
 
   if (ql <= L && R <= qr) {
     Tree[idx].maxCover += add;
     Tree[idx].lazyAdd += add;
+    ++NumSegTreeUpdatesReal;
+    ++NumSegTreeUpdatesRealLocal;
+
+    LLVM_DEBUG(dbgs() << "[segtre][after-full] PhysReg=" << PhysReg
+                    << " node=" << idx
+                    << " new maxCover=" << Tree[idx].maxCover
+                    << " lazy=" << Tree[idx].lazyAdd << "\n");
     return;
   }
 
@@ -607,7 +837,14 @@ void RegAllocSegmentTree::segtreeUpdate(unsigned PhysReg, unsigned idx,
   segtreeUpdate(PhysReg, LeftChild, L, Mid, ql, qr, add);
   segtreeUpdate(PhysReg, RightChild, Mid + 1, R, ql, qr, add);
 
+  int oldMax = Tree[idx].maxCover;
   Tree[idx].maxCover = std::max(Tree[LeftChild].maxCover, Tree[RightChild].maxCover);
+
+  LLVM_DEBUG(dbgs() << "[segtre][after-recalc] PhysReg=" << PhysReg
+                    << " node=" << idx
+                    << " oldMax=" << oldMax
+                    << " newMax=" << Tree[idx].maxCover
+                    << " lazy=" << Tree[idx].lazyAdd << "\n");
 }
 
 void RegAllocSegmentTree::segtreeBuild(unsigned PhysReg) {
@@ -634,6 +871,7 @@ void RegAllocSegmentTree::segtreeBuild(unsigned PhysReg) {
 }
 
 void RegAllocSegmentTree::spillVirtReg(LiveInterval &VirtReg) {
+  TimeRegion TR(*SpillTimer);
   assert(MF && LIS && VRM);
   LLVM_DEBUG(dbgs() << "Spilling vreg " << VirtReg.reg() << '\n');
 
@@ -647,7 +885,7 @@ void RegAllocSegmentTree::spillVirtReg(LiveInterval &VirtReg) {
   for (Register NV : NewVRegs) {
     if (!LIS->hasInterval(NV)) continue;
     LiveInterval &NewLI = LIS->getInterval(NV);
-    enqueue(&NewLI);
+    enqueueImpl(&NewLI);
   }
 }
 
@@ -735,7 +973,8 @@ void RegAllocSegmentTree::resetAllocatorState() {
 void RegAllocSegmentTree::postOptimization(Spiller &VRegSpiller, LiveIntervals &LIS) {
   // 调用基类的 postOptimization 方法（如果存在）
   // RegAllocBase::postOptimization();
-  
+  TimeRegion TR(*PostOptTimer);
+
   // 执行 Spiller 的后优化
   VRegSpiller.postOptimization();
   
@@ -761,7 +1000,7 @@ void RegAllocSegmentTree::postOptimization(Spiller &VRegSpiller, LiveIntervals &
     for (Register SplitReg : SplitRegs) {
       if (LIS.hasInterval(SplitReg)) {
         LiveInterval &SplitLI = LIS.getInterval(SplitReg);
-        enqueue(&SplitLI);
+        enqueueImpl(&SplitLI);
       }
     }
   }
@@ -778,6 +1017,8 @@ void RegAllocSegmentTree::postOptimization(Spiller &VRegSpiller, LiveIntervals &
 
 void RegAllocSegmentTree::cleanupFailedVReg(Register FailedVReg, unsigned Depth,
                                             SmallVectorImpl<Register> &SplitRegs) {
+  TimeRegion TR(*CleanupTimer);
+  
   // 防止無限遞歸
   if (Depth > 10) {
     LLVM_DEBUG(dbgs() << "  Max depth reached, giving up on vreg " << FailedVReg << "\n");
@@ -1097,7 +1338,7 @@ bool RegAllocSegmentTree::verifyAllocation(MachineFunction &MF,
 
     for (unsigned i = 1; i < Intervals.size(); ++i) {
       if (Intervals[i-1].second > Intervals[i].first) {
-        errs() << "錯誤: 物理寄存器 " << printReg(PhysReg, TRI)
+        dbgs() << "錯誤: 物理寄存器 " << printReg(PhysReg, TRI)
                << " 上的區間重疊!\n"
                << "區間1: [" << Intervals[i-1].first << ", "
                << Intervals[i-1].second << ")\n"
@@ -1115,7 +1356,7 @@ bool RegAllocSegmentTree::verifyAllocation(MachineFunction &MF,
       continue;
     
     if (!VRM.hasPhys(Reg)) {
-      errs() << "錯誤: 虛擬寄存器 " << Reg
+      dbgs() << "錯誤: 虛擬寄存器 " << Reg
              << " 沒有分配物理寄存器!\n";
       Verified = false;
     }
@@ -1136,7 +1377,7 @@ bool RegAllocSegmentTree::verifyAllocation(MachineFunction &MF,
       
       if (startIt == PRCoords[PhysReg].end() || *startIt != Start ||
           endIt == PRCoords[PhysReg].end() || *endIt != End) {
-        errs() << "警告: 物理寄存器 " << printReg(PhysReg, TRI)
+        dbgs() << "警告: 物理寄存器 " << printReg(PhysReg, TRI)
                << " 的區間端點不在坐標點中: [" << Start << ", " << End << ")\n";
         continue;
       }
@@ -1152,7 +1393,7 @@ bool RegAllocSegmentTree::verifyAllocation(MachineFunction &MF,
       int MaxCover = segtreeQueryMax(PhysReg, 1, 0, PRCoords[PhysReg].size()-2, startIdx, endIdx-1);
       
       if (MaxCover <= 0) {
-        errs() << "錯誤: 線段樹記錄與物理寄存器 " << printReg(PhysReg, TRI)
+        dbgs() << "錯誤: 線段樹記錄與物理寄存器 " << printReg(PhysReg, TRI)
                << " 的分配不一致! 區間: [" << Start << ", " << End
                << "), 查詢結果: " << MaxCover << "\n";
         Verified = false;
@@ -1163,3 +1404,18 @@ bool RegAllocSegmentTree::verifyAllocation(MachineFunction &MF,
   return Verified;
 }
 #endif
+
+RegAllocSegmentTree::~RegAllocSegmentTree() {
+if (TimePassesIsEnabled) {
+errs() << "=== Segment Tree Allocator Total Time (across all functions) ===\n";
+errs() << " Precompute Coordinates: " << TotalPrecomputeTime << " seconds\n";
+errs() << " Register Allocation: " << TotalAllocationTime << " seconds\n";
+errs() << " Spill Processing: " << TotalSpillTime << " seconds\n";
+errs() << " Cleanup Failed VRegs: " << TotalCleanupTime << " seconds\n";
+errs() << " Post Optimization: " << TotalPostOptTime << " seconds\n";
+errs() << " Segment Tree Updates: " << TotalSegTreeUpdateTime << " seconds\n";
+errs() << " Segment Tree Queries: " << TotalSegTreeQueryTime << " seconds\n";
+errs() << " Total Actual SegTree Updates: " << TotalSegTreeUpdatesReal << "\n";
+errs() << "==========================================\n";
+}
+}

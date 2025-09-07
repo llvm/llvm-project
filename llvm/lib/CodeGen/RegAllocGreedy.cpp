@@ -78,9 +78,20 @@ using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
 
+// 定義靜態變數
+double RAGreedy::TotalPrecomputeTime = 0.0;
+double RAGreedy::TotalAllocationTime = 0.0;
+double RAGreedy::TotalSpillTime = 0.0;
+double RAGreedy::TotalCleanupTime = 0.0;
+double RAGreedy::TotalPostOptTime = 0.0;
+double RAGreedy::TotalGreedyTime = 0.0;
+
 STATISTIC(NumGlobalSplits, "Number of split global live ranges");
 STATISTIC(NumLocalSplits,  "Number of split local live ranges");
 STATISTIC(NumEvicted,      "Number of interferences evicted");
+
+const char llvm::RAGreedy::TimerGroupName[] = "RAGreedy";
+const char llvm::RAGreedy::TimerGroupDescription[] = "RAGreedy Register Allocator";
 
 static cl::opt<SplitEditor::ComplementSpillMode> SplitSpillMode(
     "split-spill-mode", cl::Hidden,
@@ -213,6 +224,15 @@ RAGreedy::RAGreedy(RequiredAnalyses &Analyses, const RegAllocFilterFunc F)
   LSS = Analyses.LSS;
   EvictProvider = Analyses.EvictProvider;
   PriorityProvider = Analyses.PriorityProvider;
+
+  if (TimePassesIsEnabled) {
+    TimerGroupObj = std::make_unique<TimerGroup>(TimerGroupName, TimerGroupDescription);
+    PrecomputeTimer = std::make_unique<Timer>("Precompute", "Precompute Coordinates", *TimerGroupObj);
+    AllocationTimer = std::make_unique<Timer>("Allocation", "Register Allocation", *TimerGroupObj);
+    SpillTimer = std::make_unique<Timer>("Spill", "Spill Processing", *TimerGroupObj);
+    CleanupTimer = std::make_unique<Timer>("Cleanup", "Cleanup Failed VRegs", *TimerGroupObj);
+    PostOptTimer = std::make_unique<Timer>("PostOpt", "Post Optimization", *TimerGroupObj);
+  }
 }
 
 void RAGreedyPass::printPipeline(
@@ -410,8 +430,16 @@ void RAGreedy::ExtraRegInfo::LRE_DidCloneVirtReg(Register New, Register Old) {
 }
 
 void RAGreedy::releaseMemory() {
+  if (TimePassesIsEnabled) {
+    CleanupTimer->startTimer();
+  }
+
   SpillerInstance.reset();
   GlobalCand.clear();
+
+  if (TimePassesIsEnabled) {
+    CleanupTimer->stopTimer();
+  }
 }
 
 void RAGreedy::enqueueImpl(const LiveInterval *LI) { enqueue(Queue, LI); }
@@ -2632,11 +2660,20 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
   }
 
   // Finally spill VirtReg itself.
+  if (TimePassesIsEnabled) {
+    SpillTimer->startTimer();  // 添加這行
+  }
+
+  // Finally spill VirtReg itself.
   NamedRegionTimer T("spill", "Spiller", TimerGroupName,
                      TimerGroupDescription, TimePassesIsEnabled);
   LiveRangeEdit LRE(&VirtReg, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
   spiller().spill(LRE, &Order);
   ExtraInfo->setStage(NewVRegs.begin(), NewVRegs.end(), RS_Done);
+
+  if (TimePassesIsEnabled) {
+    SpillTimer->stopTimer();  // 添加這行
+  }
 
   // Tell LiveDebugVariables about the new ranges. Ranges not being covered by
   // the new regs are kept in LDV (still mapping to the old register), until
@@ -2877,6 +2914,10 @@ bool RAGreedy::run(MachineFunction &mf) {
   EvictAdvisor = EvictProvider->getAdvisor(*MF, *this, MBFI, Loops);
   PriorityAdvisor = PriorityProvider->getAdvisor(*MF, *this, *Indexes);
 
+  if (TimePassesIsEnabled) {
+    PrecomputeTimer->startTimer();
+  }
+
   VRAI = std::make_unique<VirtRegAuxInfo>(*MF, *LIS, *VRM, *Loops, *MBFI);
   SpillerInstance.reset(createInlineSpiller({*LIS, *LSS, *DomTree, *MBFI}, *MF,
                                             *VRM, *VRAI, Matrix));
@@ -2892,14 +2933,59 @@ bool RAGreedy::run(MachineFunction &mf) {
   GlobalCand.resize(32);  // This will grow as needed.
   SetOfBrokenHints.clear();
 
+  if (TimePassesIsEnabled) {
+    PrecomputeTimer->stopTimer();
+    AllocationTimer->startTimer();
+  }
+
   allocatePhysRegs();
   tryHintsRecoloring();
 
   if (VerifyEnabled)
     MF->verify(LIS, Indexes, "Before post optimization", &errs());
+
+  if (TimePassesIsEnabled) {
+    AllocationTimer->stopTimer();
+    TotalAllocationTime += AllocationTimer->getTotalTime().getWallTime();
+  }
+
+  if (TimePassesIsEnabled) {
+    PostOptTimer->startTimer();
+  }
   postOptimization();
+  if (TimePassesIsEnabled) {
+    PostOptTimer->stopTimer();
+    TotalPostOptTime += PostOptTimer->getTotalTime().getWallTime();
+  }
   reportStats();
 
   releaseMemory();
+
+  if (TimePassesIsEnabled) {
+    TotalPrecomputeTime += PrecomputeTimer->getTotalTime().getWallTime();
+    TotalAllocationTime += AllocationTimer->getTotalTime().getWallTime();
+    TotalSpillTime += SpillTimer->getTotalTime().getWallTime();
+    TotalCleanupTime += CleanupTimer->getTotalTime().getWallTime();
+    TotalPostOptTime += PostOptTimer->getTotalTime().getWallTime();
+  }
+
   return true;
+}
+
+RAGreedy::~RAGreedy() {
+if (TimePassesIsEnabled) {
+errs() << "=== Greedy Allocator Total Time (across all functions) ===\n";
+errs() << " Precompute Coordinates: " << TotalPrecomputeTime << " seconds\n";
+errs() << " Register Allocation: " << TotalAllocationTime << " seconds\n";
+errs() << " Spill Processing: " << TotalSpillTime << " seconds\n";
+errs() << " Cleanup Failed VRegs: " << TotalCleanupTime << " seconds\n";
+errs() << " Post Optimization: " << TotalPostOptTime << " seconds\n";
+
+double TotalGreedyTime =
+    TotalPrecomputeTime + TotalAllocationTime + TotalSpillTime +
+    TotalCleanupTime + TotalPostOptTime;
+
+errs() << " Total Greedy Time: " << TotalGreedyTime << " seconds\n";
+errs() << "==========================================\n";
+}
 }

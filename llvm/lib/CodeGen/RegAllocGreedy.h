@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/SpillPlacement.h"
 #include "llvm/CodeGen/Spiller.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/Support/Timer.h"
 #include <algorithm>
 #include <cstdint>
 #include <memory>
@@ -288,6 +289,7 @@ private:
 
 public:
   RAGreedy(RequiredAnalyses &Analyses, const RegAllocFilterFunc F = nullptr);
+  ~RAGreedy() override;
 
   Spiller &spiller() override { return *SpillerInstance; }
   void enqueueImpl(const LiveInterval *LI) override;
@@ -302,6 +304,26 @@ public:
   void releaseMemory();
 
 private:
+  // Timer group constants
+  static const char TimerGroupName[];
+  static const char TimerGroupDescription[];
+
+  // Timer group
+  std::unique_ptr<TimerGroup> TimerGroupObj;
+  // Timers for different phases
+  std::unique_ptr<Timer> PrecomputeTimer;
+  std::unique_ptr<Timer> AllocationTimer;
+  std::unique_ptr<Timer> SpillTimer;
+  std::unique_ptr<Timer> CleanupTimer;
+  std::unique_ptr<Timer> PostOptTimer;
+
+  static double TotalPrecomputeTime;
+  static double TotalAllocationTime;
+  static double TotalSpillTime;
+  static double TotalCleanupTime;
+  static double TotalPostOptTime;
+  static double TotalGreedyTime;
+
   MCRegister selectOrSplitImpl(const LiveInterval &,
                                SmallVectorImpl<Register> &, SmallVirtRegSet &,
                                RecoloringStack &, unsigned = 0);
