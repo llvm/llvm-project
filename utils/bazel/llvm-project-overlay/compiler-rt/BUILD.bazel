@@ -113,3 +113,305 @@ cc_library(
         ":orc_rt_common_headers",
     ],
 )
+
+BUILTINS_CRTBEGIN_SRCS = ["lib/builtins/crtbegin.c"]
+
+filegroup(
+    name = "builtins_crtbegin_src",
+    srcs = BUILTINS_CRTBEGIN_SRCS,
+)
+
+BUILTINS_CRTEND_SRCS = ["lib/builtins/crtend.c"]
+
+filegroup(
+    name = "builtins_crtend_src",
+    srcs = BUILTINS_CRTEND_SRCS,
+)
+
+BUILTINS_HOSTED_SRCS = [
+    "lib/builtins/clear_cache.c",
+    "lib/builtins/emutls.c",
+    "lib/builtins/enable_execute_stack.c",
+    "lib/builtins/eprintf.c",
+]
+
+# Source files in the builtins library that build on top of libc and are only
+# appropriate in hosted environments.
+filegroup(
+    name = "builtins_hosted_srcs",
+    srcs = BUILTINS_HOSTED_SRCS,
+)
+
+BUILTINS_BF16_SRCS_PATTERNS = [
+    "lib/builtins/*bf*.c",
+]
+
+# Source files for the 16-bit Brain floating-point number builtins.
+filegroup(
+    name = "builtins_bf16_srcs",
+    srcs = glob(BUILTINS_BF16_SRCS_PATTERNS),
+)
+
+BUILTINS_X86_FP80_SRCS_PATTERNS = [
+    # `xc` marks 80-bit complex number builtins.
+    "lib/builtins/*xc*.c",
+
+    # `xf` marks 80-bit floating-point builtins.
+    "lib/builtins/*xf*.c",
+]
+
+# Source files for the 80-bit floating-point and complex number builtins.
+filegroup(
+    name = "builtins_x86_fp80_srcs",
+    srcs = glob(
+        BUILTINS_X86_FP80_SRCS_PATTERNS,
+        exclude = BUILTINS_BF16_SRCS_PATTERNS,
+    ),
+)
+
+BUILTINS_TF_SRCS_PATTERNS = [
+    # `tc` marks 128-bit complex number builtins.
+    "lib/builtins/*tc*.c",
+
+    # `tf` marks 128-bit floating-point builtins.
+    "lib/builtins/*tf*.c",
+]
+
+BUILTINS_TF_EXCLUDES = (
+    BUILTINS_HOSTED_SRCS +
+    BUILTINS_BF16_SRCS_PATTERNS +
+    BUILTINS_X86_FP80_SRCS_PATTERNS
+)
+
+# Source files for the 128-bit floating-point and complex number builtins.
+filegroup(
+    name = "builtins_tf_srcs",
+    srcs = glob(
+        BUILTINS_TF_SRCS_PATTERNS,
+        exclude = BUILTINS_TF_EXCLUDES,
+    ),
+)
+
+BUILTNS_ATOMICS_SRCS = ["lib/builtins/atomic.c"]
+
+filegroup(
+    name = "builtins_atomics_srcs",
+    srcs = BUILTNS_ATOMICS_SRCS + ["lib/builtins/assembly.h"],
+)
+
+BUILTINS_MACOS_ATOMIC_SRCS_PATTERNS = [
+    "lib/builtins/atomic_*.c",
+]
+
+# Source files for macOS atomic builtins.
+filegroup(
+    name = "builtins_macos_atomic_srcs",
+    srcs = glob(BUILTINS_MACOS_ATOMIC_SRCS_PATTERNS),
+)
+
+# Apple-platform specific SME source file.
+filegroup(
+    name = "builtins_aarch64_apple_sme_srcs",
+    srcs = ["lib/builtins/aarch64/arm_apple_sme_abi.s"],
+)
+
+# Non-Apple platform SME sources. These sources assume function
+# multi-versioning, `-fno-builtin`, `__ARM_UNALIGNED` feature support, and FP
+# availability. Other configurations will need to add a new filegroup if
+# desired.
+filegroup(
+    name = "builtins_aarch64_sme_srcs",
+    srcs = [
+        "lib/builtins/aarch64/sme-abi.S",
+        "lib/builtins/aarch64/sme-abi-assert.c",
+    ] + glob(["lib/builtins/aarch64/sme-libc-opt-*.S"]),
+)
+
+# A list of (pat, size, model) tuples for AArch64's outline atomics.
+AARCH64_OUTLINE_ATOMICS = [
+    (pat, size, model)
+    for pat in [
+        "cas",
+        "swp",
+        "ldadd",
+        "ldclr",
+        "ldeor",
+        "ldset",
+    ]
+    for size in [
+        "1",
+        "2",
+        "4",
+        "8",
+        "16",
+    ]
+    for model in [
+        "1",
+        "2",
+        "3",
+        "4",
+    ]
+    if pat == "cas" or size != "16"
+]
+
+AARCH64_OUTLINE_ATOMICS_FMT = "lib/builtins/aarch64/outline_atomic_{0}{1}_{2}.S"
+
+# lse.S is compiled multiple times with different macros as the input. Model
+# this as a genrule producing individual files with the macros at the start.
+[[genrule(
+    name = "builtins_aarch64_outline_atomic_" + pat + size + "_" + model,
+    srcs = ["lib/builtins/aarch64/lse.S"],
+    outs = [AARCH64_OUTLINE_ATOMICS_FMT.format(pat, size, model)],
+    cmd = (
+        "echo '#define L_" + pat + "' >> $(OUTS) && " +
+        "echo '#define SIZE " + size + "' >> $(OUTS) && " +
+        "echo '#define MODEL " + model + "' >> $(OUTS) && " +
+        "cat $(SRCS) >> $(OUTS)"
+    ),
+)] for (pat, size, model) in AARCH64_OUTLINE_ATOMICS]
+
+# Source files for the AArch64 architecture-specific builtins.
+filegroup(
+    name = "builtins_aarch64_srcs",
+    srcs = [
+        "lib/builtins/cpu_model/aarch64.c",
+        "lib/builtins/cpu_model/aarch64.h",
+    ] + [
+        AARCH64_OUTLINE_ATOMICS_FMT.format(pat, size, model)
+        for (pat, size, model) in AARCH64_OUTLINE_ATOMICS
+    ] + glob(
+        [
+            "lib/builtins/cpu_model/AArch64*.inc",
+            "lib/builtins/cpu_model/aarch64/**/*.inc",
+            "lib/builtins/aarch64/*.S",
+            "lib/builtins/aarch64/*.c",
+            "lib/builtins/aarch64/*.cpp",
+        ],
+        allow_empty = True,
+        exclude = [
+            # This file isn't intended to directly compile, and instead is used
+            # above to generate a collection of outline atomic helpers.
+            "lib/builtins/aarch64/lse.S",
+            # These files are provided by SME-specific file groups above.
+            "lib/builtins/aarch64/*sme*",
+        ],
+    ),
+)
+
+BUILTINS_ARM_VFP_SRCS_PATTERNS = [
+    "lib/builtins/arm/*vfp*.S",
+    "lib/builtins/arm/*vfp*.c",
+    "lib/builtins/arm/*vfp*.cpp",
+]
+
+# Source files for the ARM VFP-specific builtins.
+filegroup(
+    name = "builtins_arm_vfp_srcs",
+    srcs = glob(
+        BUILTINS_ARM_VFP_SRCS_PATTERNS,
+        allow_empty = True,
+    ),
+)
+
+# Source files for the ARM architecture-specific builtins.
+filegroup(
+    name = "builtins_arm_srcs",
+    srcs = glob(
+        [
+            "lib/builtins/arm/*.S",
+            "lib/builtins/arm/*.c",
+            "lib/builtins/arm/*.cpp",
+        ],
+        allow_empty = True,
+        exclude = BUILTINS_ARM_VFP_SRCS_PATTERNS,
+    ),
+)
+
+# Source files for the PPC architecture-specific builtins.
+filegroup(
+    name = "builtins_ppc_srcs",
+    srcs = glob(
+        [
+            "lib/builtins/ppc/*.S",
+            "lib/builtins/ppc/*.c",
+            "lib/builtins/ppc/*.cpp",
+        ],
+        allow_empty = True,
+    ),
+)
+
+# Source files for the RISC-V architecture-specific builtins.
+filegroup(
+    name = "builtins_riscv_srcs",
+    srcs = glob(
+        [
+            "lib/builtins/riscv/*.S",
+            "lib/builtins/riscv/*.c",
+            "lib/builtins/riscv/*.cpp",
+        ],
+        allow_empty = True,
+    ),
+)
+
+# Source files for the x86 architecture specific builtins (both 32-bit and
+# 64-bit).
+filegroup(
+    name = "builtins_x86_arch_srcs",
+    srcs = [
+        "lib/builtins/cpu_model/x86.c",
+        "lib/builtins/i386/fp_mode.c",
+    ],
+)
+
+# Source files for the x86-64 architecture specific builtins.
+filegroup(
+    name = "builtins_x86_64_srcs",
+    srcs = glob(
+        [
+            "lib/builtins/x86_64/*.S",
+            "lib/builtins/x86_64/*.c",
+            "lib/builtins/x86_64/*.cpp",
+        ],
+        allow_empty = True,
+    ),
+)
+
+# Source files for the 32-bit-specific x86 architecture specific builtins.
+filegroup(
+    name = "builtins_i386_srcs",
+    srcs = glob(
+        [
+            "lib/builtins/i386/*.S",
+            "lib/builtins/i386/*.c",
+            "lib/builtins/i386/*.cpp",
+        ],
+        allow_empty = True,
+        exclude = [
+            # This file is used for both i386 and x86_64 and so included in the
+            # broader x86 sources.
+            "lib/builtins/i386/fp_mode.c",
+        ],
+    ),
+)
+
+# Source files for portable components of the compiler builtins library.
+filegroup(
+    name = "builtins_generic_srcs",
+    srcs = ["lib/builtins/cpu_model/cpu_model.h"] + glob(
+        [
+            "lib/builtins/*.c",
+            "lib/builtins/*.cpp",
+            "lib/builtins/*.h",
+            "lib/builtins/*.inc",
+        ],
+        allow_empty = True,
+        exclude = (
+            BUILTINS_CRTBEGIN_SRCS +
+            BUILTINS_CRTEND_SRCS +
+            BUILTINS_TF_EXCLUDES +
+            BUILTINS_TF_SRCS_PATTERNS +
+            BUILTNS_ATOMICS_SRCS +
+            BUILTINS_MACOS_ATOMIC_SRCS_PATTERNS
+        ),
+    ),
+)
