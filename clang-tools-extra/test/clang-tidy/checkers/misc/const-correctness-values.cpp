@@ -94,6 +94,11 @@ void ignore_reference_to_pointers() {
   int *&np_local1 = np_local0;
 }
 
+void ignore_rvalue_references() {
+  int &&np_local0 = 42;
+  auto &&np_local1 = 42;
+}
+
 void some_lambda_environment_capture_all_by_reference(double np_arg0) {
   int np_local0 = 0;
   int p_local0 = 1;
