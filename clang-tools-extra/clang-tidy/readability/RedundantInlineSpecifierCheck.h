@@ -22,7 +22,7 @@ class RedundantInlineSpecifierCheck : public ClangTidyCheck {
 public:
   RedundantInlineSpecifierCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
-        StrictMode(Options.getLocalOrGlobal("StrictMode", false)) {}
+        StrictMode(Options.get("StrictMode", false)) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   std::optional<TraversalKind> getCheckTraversalKind() const override {
