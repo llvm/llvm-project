@@ -2918,19 +2918,13 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
 
     const LifetimeExtendedTemporaryDecl *TempDecl =
         E->getLifetimeExtendedTemporaryDecl();
-    if (IsStatic)
-      assert(TempDecl);
+    assert(TempDecl);
 
     if (SubExprT) {
       if (!this->visit(SubExpr))
         return false;
-      if (IsStatic) {
-        if (!this->emitInitGlobalTemp(*SubExprT, *GlobalIndex, TempDecl, E))
-          return false;
-      } else {
-        if (!this->emitInitGlobal(*SubExprT, *GlobalIndex, E))
-          return false;
-      }
+      if (!this->emitInitGlobalTemp(*SubExprT, *GlobalIndex, TempDecl, E))
+        return false;
       return this->emitGetPtrGlobal(*GlobalIndex, E);
     }
 
@@ -2941,9 +2935,7 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
       return false;
     if (!this->visitInitializer(SubExpr))
       return false;
-    if (IsStatic)
-      return this->emitInitGlobalTempComp(TempDecl, E);
-    return true;
+    return this->emitInitGlobalTempComp(TempDecl, E);
   }
 
   // For everyhing else, use local variables.
