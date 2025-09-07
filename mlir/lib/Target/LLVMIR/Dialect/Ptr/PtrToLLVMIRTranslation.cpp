@@ -349,6 +349,40 @@ convertConstantOp(ConstantOp constantOp, llvm::IRBuilderBase &builder,
   return success();
 }
 
+/// Convert ptr.ptr_diff operation
+static LogicalResult
+convertPtrDiffOp(PtrDiffOp ptrDiffOp, llvm::IRBuilderBase &builder,
+                 LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Value *lhs = moduleTranslation.lookupValue(ptrDiffOp.getLhs());
+  llvm::Value *rhs = moduleTranslation.lookupValue(ptrDiffOp.getRhs());
+
+  if (!lhs || !rhs)
+    return ptrDiffOp.emitError("Failed to lookup operands");
+
+  // Convert result type to LLVM type
+  llvm::Type *resultType =
+      moduleTranslation.convertType(ptrDiffOp.getResult().getType());
+  if (!resultType)
+    return ptrDiffOp.emitError("Failed to convert result type");
+
+  PtrDiffFlags flags = ptrDiffOp.getFlags();
+
+  // Convert both pointers to integers using ptrtoaddr, and compute the
+  // difference: lhs - rhs
+  llvm::Value *result = builder.CreateSub(
+      builder.CreatePtrToAddr(lhs), builder.CreatePtrToAddr(rhs), /*Name=*/"",
+      /*HasNUW=*/(flags & PtrDiffFlags::nuw) == PtrDiffFlags::nuw,
+      /*HasNSW=*/(flags & PtrDiffFlags::nsw) == PtrDiffFlags::nsw);
+
+  // Convert the difference to the expected result type by truncating or
+  // extending.
+  if (result->getType() != resultType)
+    result = builder.CreateIntCast(result, resultType, /*isSigned=*/true);
+
+  moduleTranslation.mapValue(ptrDiffOp.getResult(), result);
+  return success();
+}
+
 /// Implementation of the dialect interface that converts operations belonging
 /// to the `ptr` dialect to LLVM IR.
 class PtrDialectLLVMIRTranslationInterface
@@ -368,6 +402,9 @@ public:
         })
         .Case([&](PtrAddOp ptrAddOp) {
           return convertPtrAddOp(ptrAddOp, builder, moduleTranslation);
+        })
+        .Case([&](PtrDiffOp ptrDiffOp) {
+          return convertPtrDiffOp(ptrDiffOp, builder, moduleTranslation);
         })
         .Case([&](LoadOp loadOp) {
           return convertLoadOp(loadOp, builder, moduleTranslation);
