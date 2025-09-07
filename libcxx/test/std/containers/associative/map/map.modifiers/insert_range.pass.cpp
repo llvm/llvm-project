@@ -34,10 +34,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
 
   test_map_insert_range_move_only<std::map>();
 
-#ifndef TEST_IS_CONSTANT_EVALUATED
   test_map_insert_range_exception_safety_throwing_copy<std::map>();
   test_assoc_map_insert_range_exception_safety_throwing_allocator<std::map, int, int>();
-#endif
   return true;
 }
 
