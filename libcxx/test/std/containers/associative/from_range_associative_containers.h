@@ -123,8 +123,8 @@ TEST_CONSTEXPR_CXX26 void test_associative_map_move_only() {
 }
 
 template <template <class...> class Container>
-void test_map_exception_safety_throwing_copy() {
-#if !defined(TEST_HAS_NO_EXCEPTIONS)
+TEST_CONSTEXPR_CXX26 void test_map_exception_safety_throwing_copy() {
+#if !defined(TEST_HAS_NO_EXCEPTIONS) && !defined(TEST_IS_CONSTANT_EVALUATED)
   using K = int;
   using V = ThrowingCopy<3>;
 
@@ -145,8 +145,8 @@ void test_map_exception_safety_throwing_copy() {
 }
 
 template <template <class...> class Container, class K, class V>
-void test_map_exception_safety_throwing_allocator() {
-#if !defined(TEST_HAS_NO_EXCEPTIONS)
+TEST_CONSTEXPR_CXX26 void test_map_exception_safety_throwing_allocator() {
+#if !defined(TEST_HAS_NO_EXCEPTIONS) && !defined(TEST_IS_CONSTANT_EVALUATED)
   using ValueType = std::pair<const K, V>;
   ValueType in[]  = {ValueType{K{1}, V{1}}};
 

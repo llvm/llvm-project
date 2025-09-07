@@ -40,10 +40,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
 
   static_assert(test_map_constraints<std::map, int, int, double, double>());
 
-  if (!TEST_IS_CONSTANT_EVALUATED) {
-    test_map_exception_safety_throwing_copy<std::map>();
-    test_map_exception_safety_throwing_allocator<std::map, int, int>();
-  }
+  test_map_exception_safety_throwing_copy<std::map>();
+  test_map_exception_safety_throwing_allocator<std::map, int, int>();
   return true;
 }
 
