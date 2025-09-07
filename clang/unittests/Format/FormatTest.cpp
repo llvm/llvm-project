@@ -15383,6 +15383,9 @@ TEST_F(FormatTest, AllowShortRecordOnASingleLine) {
   verifyFormat("class foo\n"
                "{};",
                Style);
+  Style.BraceWrapping.SplitEmptyRecord = true;
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Always;
+  verifyFormat("class foo\n{ int i; };", Style);
 
   Style = getLLVMStyle();
   Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Empty;
