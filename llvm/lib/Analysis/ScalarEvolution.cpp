@@ -15169,6 +15169,32 @@ void SCEVUnionPredicate::add(const SCEVPredicate *N, ScalarEvolution &SE) {
     return;
   }
 
+  if (auto *WrapPred = dyn_cast<SCEVWrapPredicate>(N)) {
+    const SCEVAddRecExpr *AddRecToCheck = WrapPred->getExpr();
+    const SCEV *ExitCount =
+        SE.getSymbolicMaxBackedgeTakenCount(AddRecToCheck->getLoop());
+    if (!isa<SCEVCouldNotCompute>(ExitCount) &&
+        WrapPred->getFlags() == SCEVWrapPredicate::IncrementNUSW) {
+      const SCEV *Step = AddRecToCheck->getStepRecurrence(SE);
+      unsigned SrcBits = SE.getTypeSizeInBits(ExitCount->getType());
+      unsigned DstBits = SE.getTypeSizeInBits(AddRecToCheck->getType());
+
+      // AddRecs starting at zero with positive steps won't wrap if (Step *
+      // trunc ExitCount) does not wrap.
+      if (AddRecToCheck->getStart()->isZero() && SE.isKnownPositive(Step) &&
+          DstBits < SrcBits &&
+          ExitCount ==
+              SE.getZeroExtendExpr(
+                  SE.getTruncateExpr(ExitCount, AddRecToCheck->getType()),
+                  ExitCount->getType()) &&
+          SE.willNotOverflow(
+              Instruction::Mul, /*Signed=*/false, Step,
+              SE.getTruncateExpr(ExitCount, AddRecToCheck->getType()))) {
+        return;
+      }
+    }
+  }
+
   // Only add predicate if it is not already implied by this union predicate.
   if (implies(N, SE))
     return;
