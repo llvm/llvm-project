@@ -5574,7 +5574,22 @@ private:
       if (auto *SD = dyn_cast<ScheduleData>(Data)) {
         SD->setScheduled(/*Scheduled=*/true);
         LLVM_DEBUG(dbgs() << "SLP:   schedule " << *SD << "\n");
-        ProcessBundleMember(SD, {});
+        SmallVector<ScheduleBundle> PseudoBundles;
+        SmallVector<ScheduleBundle *> Bundles;
+        Instruction *In = SD->getInst();
+        if (R.isVectorized(In)) {
+          ArrayRef<TreeEntry *> Entries = R.getTreeEntries(In);
+          for (TreeEntry *TE : Entries) {
+            if (!isa<ExtractValueInst, ExtractElementInst, CallBase>(In) &&
+                In->getNumOperands() != TE->getNumOperands())
+              continue;
+            ScheduleBundle &Bundle = PseudoBundles.emplace_back();
+            Bundle.setTreeEntry(TE);
+            Bundle.add(SD);
+            Bundles.push_back(&Bundle);
+          }
+        }
+        ProcessBundleMember(SD, Bundles);
       } else {
         ScheduleBundle &Bundle = *cast<ScheduleBundle>(Data);
         Bundle.setScheduled(/*Scheduled=*/true);
@@ -20853,23 +20868,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
   for (Value *V : VL) {
     if (S.isNonSchedulable(V))
       continue;
-    // For copybales with parent nodes, which do not need to be scheduled, the
-    // parents should not be commutative, otherwise may incorrectly handle deps
-    // because of the potential reordering of commutative operations.
-    if ((S.isCopyableElement(V) && EI.UserTE && !EI.UserTE->isGather() &&
-         EI.UserTE->hasState() && EI.UserTE->doesNotNeedToSchedule() &&
-         any_of(EI.UserTE->Scalars,
-                [&](Value *V) {
-                  if (isa<PoisonValue>(V))
-                    return false;
-                  auto *I = dyn_cast<Instruction>(V);
-                  return isCommutative(
-                      (I && EI.UserTE->isAltShuffle())
-                          ? EI.UserTE->getMatchingMainOpOrAltOp(I)
-                          : EI.UserTE->getMainOp(),
-                      V);
-                })) ||
-        !extendSchedulingRegion(V, S)) {
+    if (!extendSchedulingRegion(V, S)) {
       // If the scheduling region got new instructions at the lower end (or it
       // is a new region for the first bundle). This makes it necessary to
       // recalculate all dependencies.
