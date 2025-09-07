@@ -26,7 +26,7 @@ class SPIRVInstrInfo : public SPIRVGenInstrInfo {
   const SPIRVRegisterInfo RI;
 
 public:
-  SPIRVInstrInfo(const SPIRVSubtarget &STI);
+  explicit SPIRVInstrInfo(const SPIRVSubtarget &STI);
 
   const SPIRVRegisterInfo &getRegisterInfo() const { return RI; }
   bool isHeaderInstr(const MachineInstr &MI) const;
