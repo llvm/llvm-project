@@ -1884,10 +1884,11 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__construct_node(_Args&&... __args) {
   // We don't use the allocator's construct() method to construct the node itself since the
   // Cpp17FooInsertable named requirements don't require the allocator's construct() method
   // to work on anything other than the value_type.
-  std::__construct_at(std::addressof(*__h), /* hash = */ hash_function()(__h->__get_value()), __na, std::forward<_Args>(__args)...);
+  std::__construct_at(std::addressof(*__h), /* hash = */ 0, __na, std::forward<_Args>(__args)...);
 
   __h.get_deleter().__value_constructed = true;
 
+  __h->__hash_ = hash_function()(__h->__get_value());
   return __h;
 }
 
