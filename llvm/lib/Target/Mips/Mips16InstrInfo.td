@@ -374,8 +374,8 @@ class FRR16_JALRC_RA_only_ins<bits<1> nd_, bits<1> l_,
 
 class FRR16_JALRC_ins<bits<1> nd, bits<1> l, bits<1> ra,
                       string asmstr, InstrItinClass itin>:
-  FRR16_JALRC<nd, l, ra, (outs), (ins CPU16Regs:$rs),
-              !strconcat(asmstr, "\t$rs"), [], itin> ;
+  FRR16_JALRC<nd, l, ra, (outs), (ins CPU16Regs:$rx),
+              !strconcat(asmstr, "\t$rx"), [], itin> ;
 
 class FRR_SF16_ins
   <bits<5> _funct, bits<3> _subfunc,
@@ -776,7 +776,6 @@ def JrcRa16: FRR16_JALRC_RA_only_ins<1, 1, "jrc", IIM16Alu> {
 }
 
 def JrcRx16: FRR16_JALRC_ins<1, 1, 0, "jrc", IIM16Alu> {
-  let rx = 0b000;
   let isBranch = 1;
   let isIndirectBranch = 1;
   let isTerminator=1;
