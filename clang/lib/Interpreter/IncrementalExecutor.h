@@ -79,7 +79,8 @@ public:
   static llvm::Expected<
       std::pair<std::unique_ptr<llvm::orc::SimpleRemoteEPC>, uint32_t>>
   launchExecutor(llvm::StringRef ExecutablePath, bool UseSharedMemory,
-                 unsigned SlabAllocateSize);
+                 unsigned SlabAllocateSize,
+                 std::function<void()> CustomizeFork = nullptr);
 
 #if LLVM_ON_UNIX && LLVM_ENABLE_THREADS
   static llvm::Expected<std::unique_ptr<llvm::orc::SimpleRemoteEPC>>

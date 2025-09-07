@@ -138,7 +138,8 @@ IncrementalExecutor::getSymbolAddress(llvm::StringRef Name,
 
 Expected<std::unique_ptr<llvm::jitlink::JITLinkMemoryManager>>
 createSharedMemoryManager(llvm::orc::SimpleRemoteEPC &SREPC,
-                          unsigned SlabAllocateSize) {
+                          unsigned SlabAllocateSize,
+                                    std::function<void()> CustomizeFork) {
   llvm::orc::SharedMemoryMapper::SymbolAddrs SAs;
   if (auto Err = SREPC.getBootstrapSymbols(
           {{SAs.Instance,
@@ -214,6 +215,9 @@ IncrementalExecutor::launchExecutor(llvm::StringRef ExecutablePath,
     // Close the parent ends of the pipes
     close(ToExecutor[WriteEnd]);
     close(FromExecutor[ReadEnd]);
+
+    if (CustomizeFork)
+      CustomizeFork();
 
     // Execute the child process.
     std::unique_ptr<char[]> ExecutorPath, FDSpecifier;
