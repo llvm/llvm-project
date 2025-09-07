@@ -139,7 +139,7 @@ IncrementalExecutor::getSymbolAddress(llvm::StringRef Name,
 Expected<std::unique_ptr<llvm::jitlink::JITLinkMemoryManager>>
 createSharedMemoryManager(llvm::orc::SimpleRemoteEPC &SREPC,
                           unsigned SlabAllocateSize,
-                                    std::function<void()> CustomizeFork) {
+                          std::function<void()> CustomizeFork) {
   llvm::orc::SharedMemoryMapper::SymbolAddrs SAs;
   if (auto Err = SREPC.getBootstrapSymbols(
           {{SAs.Instance,
