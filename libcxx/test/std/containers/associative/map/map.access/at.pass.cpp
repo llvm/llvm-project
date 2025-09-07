@@ -172,11 +172,11 @@ TEST_CONSTEXPR_CXX26 bool test() {
 #  endif
 
 #    endif
-#  endif
     assert(m.at(7) == 7.5);
     assert(m.at(8) == 8.5);
     assert(m.size() == 7);
   }
+#  endif
   return true;
 }
 
