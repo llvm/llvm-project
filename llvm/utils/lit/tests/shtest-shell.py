@@ -1,7 +1,6 @@
 # Check the internal shell handling component of the ShTest format.
 
 # RUN: not %{lit} -v %{inputs}/shtest-shell > %t.out
-# RUN: cat %t.out > /tmp/test
 # RUN: FileCheck --input-file %t.out %s
 #
 # Test again in non-UTF shell to catch potential errors with python 2 seen
