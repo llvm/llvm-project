@@ -647,8 +647,8 @@ llvm::Error Interpreter::CreateExecutor(JITConfig Config) {
     auto JTMB = createJITTargetMachineBuilder(TT);
     if (!JTMB)
       return JTMB.takeError();
-    if (CM)
-      JTMB->setCodeModel(CM);
+    if (Config.CM)
+      JTMB->setCodeModel(Config.CM);
     auto JB = IncrementalExecutor::createDefaultJITBuilder(std::move(*JTMB));
     if (!JB)
       return JB.takeError();

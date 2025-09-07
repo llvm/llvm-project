@@ -120,9 +120,6 @@ class Interpreter {
   /// An optional compiler instance for CUDA offloading
   std::unique_ptr<CompilerInstance> DeviceCI;
 
-  /// An optional code model to provide to the JITTargetMachineBuilder
-  std::optional<llvm::CodeModel::Model> CM;
-
 public:
   struct JITConfig {
     /// Indicates whether out-of-process JIT execution is enabled.
@@ -139,12 +136,12 @@ public:
     /// PID of the out-of-process JIT executor.
     uint32_t ExecutorPID = 0;
     /// An optional code model to provide to the JITTargetMachineBuilder
-    std::optional<llvm::CodeModel::Model> CM;
+    std::optional<llvm::CodeModel::Model> CM = std::nullopt;
 
     JITConfig()
         : IsOutOfProcess(false), OOPExecutor(""), OOPExecutorConnect(""),
           UseSharedMemory(false), SlabAllocateSize(0), OrcRuntimePath(""),
-          ExecutorPID(0) {}
+          ExecutorPID(0), CM(std::nullopt) {}
   };
 
 protected:
