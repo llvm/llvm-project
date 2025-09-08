@@ -278,10 +278,12 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
         rewriter, loc, tdesc, static_cast<int>(NdTdescOffset::BaseShapeH));
     // Offsets are provided by the op.
     // convert them to i32.
-    Value offsetW = getValueOrCreateConstantIntOp(rewriter, loc, mixedOffsets[1]);
+    Value offsetW =
+        getValueOrCreateConstantIntOp(rewriter, loc, mixedOffsets[1]);
     offsetW = getValueOrCreateCastToIndexLike(rewriter, loc,
-                                             rewriter.getI32Type(), offsetW);
-    Value offsetH = getValueOrCreateConstantIntOp(rewriter, loc, mixedOffsets[0]);
+                                              rewriter.getI32Type(), offsetW);
+    Value offsetH =
+        getValueOrCreateConstantIntOp(rewriter, loc, mixedOffsets[0]);
     offsetH = getValueOrCreateCastToIndexLike(rewriter, loc,
                                               rewriter.getI32Type(), offsetH);
     // Get address space from tensor descriptor memory space.
@@ -379,7 +381,8 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
                   ConversionPatternRewriter &rewriter) const override {
     Value offsets = adaptor.getOffsets();
     if (!offsets)
-      return rewriter.notifyMatchFailure(op, "Expected offsets to be provided.");
+      return rewriter.notifyMatchFailure(op,
+                                         "Expected offsets to be provided.");
     auto loc = op.getLoc();
     auto ctxt = rewriter.getContext();
     auto tdescTy = op.getTensorDescType();
@@ -439,8 +442,7 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
       // If offsets are provided, we add them to the base pointer.
       // Offsets are in number of elements, we need to multiply by
       // element byte size.
-      basePtrI64 =
-          addOffset(rewriter, loc, basePtrI64, offsets, elemByteSize);
+      basePtrI64 = addOffset(rewriter, loc, basePtrI64, offsets, elemByteSize);
     }
     // Convert base pointer (i64) to LLVM pointer type.
     Value basePtrLLVM =
