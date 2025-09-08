@@ -124,8 +124,9 @@ protected:
     LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber,
                           bool UseRegex);
     // Returns the line number in the source file that this query matches to.
-    // Returns zero if no match is found.
-    LLVM_ABI unsigned match(StringRef Query) const;
+    // On windows, treat '/' as also matching '\' in filenames when using globs.
+    // Returns zero if no match is found
+    LLVM_ABI unsigned match(StringRef Query, bool IsFilename) const;
 
     struct Glob {
       std::string Name;

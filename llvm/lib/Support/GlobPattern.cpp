@@ -132,9 +132,8 @@ parseBraceExpansions(StringRef S, std::optional<size_t> MaxSubPatterns) {
   return std::move(SubPatterns);
 }
 
-Expected<GlobPattern> GlobPattern::create(StringRef S,
-                                          std::optional<size_t> MaxSubPatterns,
-                                          bool IsSlashAgnostic) {
+Expected<GlobPattern>
+GlobPattern::create(StringRef S, std::optional<size_t> MaxSubPatterns) {
   GlobPattern Pat;
 
   // Store the prefix that does not contain any metacharacter.
@@ -148,7 +147,7 @@ Expected<GlobPattern> GlobPattern::create(StringRef S,
   if (auto Err = parseBraceExpansions(S, MaxSubPatterns).moveInto(SubPats))
     return std::move(Err);
   for (StringRef SubPat : SubPats) {
-    auto SubGlobOrErr = SubGlobPattern::create(SubPat, IsSlashAgnostic);
+    auto SubGlobOrErr = SubGlobPattern::create(SubPat);
     if (!SubGlobOrErr)
       return SubGlobOrErr.takeError();
     Pat.SubGlobs.push_back(*SubGlobOrErr);
@@ -158,9 +157,8 @@ Expected<GlobPattern> GlobPattern::create(StringRef S,
 }
 
 Expected<GlobPattern::SubGlobPattern>
-GlobPattern::SubGlobPattern::create(StringRef S, bool SlashAgnostic) {
+GlobPattern::SubGlobPattern::create(StringRef S) {
   SubGlobPattern Pat;
-  Pat.IsSlashAgnostic = SlashAgnostic;
 
   // Parse brackets.
   Pat.Pat.assign(S.begin(), S.end());
@@ -192,21 +190,22 @@ GlobPattern::SubGlobPattern::create(StringRef S, bool SlashAgnostic) {
   return Pat;
 }
 
-bool GlobPattern::match(StringRef S) const {
+bool GlobPattern::match(StringRef S, bool IsSlashAgnostic) const {
   if (!S.consume_front(Prefix))
     return false;
   if (SubGlobs.empty() && S.empty())
     return true;
   for (auto &Glob : SubGlobs)
-    if (Glob.match(S))
+    if (Glob.match(S, IsSlashAgnostic))
       return true;
   return false;
 }
 
 // Factor the pattern into segments split by '*'. The segment is matched
-// sequentianlly by finding the first occurrence past the end of the previous
+// sequentially by finding the first occurrence past the end of the previous
 // match.
-bool GlobPattern::SubGlobPattern::match(StringRef Str) const {
+bool GlobPattern::SubGlobPattern::match(StringRef Str,
+                                        bool IsSlashAgnostic) const {
   const char *P = Pat.data(), *SegmentBegin = nullptr, *S = Str.data(),
              *SavedS = S;
   const char *const PEnd = P + Pat.size(), *const End = S + Str.size();
@@ -233,7 +232,7 @@ bool GlobPattern::SubGlobPattern::match(StringRef Str) const {
         ++S;
         continue;
       }
-    } else if (IsSlashAgnostic && *P == '/' && (*S == '/' || *S == '\\')) {
+    } else if (IsSlashAgnostic && *P == '/' && *S == '\\') {
       ++P;
       ++S;
       continue;
