@@ -18838,7 +18838,7 @@ static SDValue tryFoldSelectIntoOp(SDNode *N, SelectionDAG &DAG,
     break;
   }
 
-  if (!TrueVal.hasOneUse() || isa<ConstantSDNode>(FalseVal))
+  if (!TrueVal.hasOneUse())
     return SDValue();
 
   unsigned OpToFold;
