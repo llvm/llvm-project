@@ -204,6 +204,17 @@ protected:
             mlir::Type stmtResultType) override;
 };
 
+class HlfirIndexLowering : public HlfirTransformationalIntrinsic {
+public:
+  using HlfirTransformationalIntrinsic::HlfirTransformationalIntrinsic;
+
+protected:
+  mlir::Value
+  lowerImpl(const Fortran::lower::PreparedActualArguments &loweredActuals,
+            const fir::IntrinsicArgumentLoweringRules *argLowering,
+            mlir::Type stmtResultType) override;
+};
+
 } // namespace
 
 mlir::Value HlfirTransformationalIntrinsic::loadBoxAddress(
@@ -513,6 +524,36 @@ mlir::Value HlfirReshapeLowering::lowerImpl(
                                     operands[2], operands[3]);
 }
 
+mlir::Value HlfirIndexLowering::lowerImpl(
+    const Fortran::lower::PreparedActualArguments &loweredActuals,
+    const fir::IntrinsicArgumentLoweringRules *argLowering,
+    mlir::Type stmtResultType) {
+  auto operands = getOperandVector(loweredActuals, argLowering);
+  assert(operands.size() == 4);
+  mlir::Value substr = operands[1];
+  mlir::Value str = operands[0];
+  mlir::Value back = operands[2];
+  mlir::Value kind = operands[3];
+
+  mlir::Type resultType;
+  if (kind) {
+    auto kindCst = fir::getIntIfConstant(kind);
+    assert(kindCst &&
+           "kind argument of index must be an integer constant expression");
+    unsigned bits = builder.getKindMap().getIntegerBitsize(*kindCst);
+    assert(bits != 0 && "failed to convert kind to integer bitsize");
+    resultType = builder.getIntegerType(bits);
+  } else {
+    resultType = builder.getDefaultIntegerType();
+  }
+  mlir::Value result =
+      createOp<hlfir::IndexOp>(resultType, substr, str, back);
+
+  if (resultType != stmtResultType)
+    return builder.createConvert(loc, stmtResultType, result);
+  return result;
+}
+
 std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
     fir::FirOpBuilder &builder, mlir::Location loc, const std::string &name,
     const Fortran::lower::PreparedActualArguments &loweredActuals,
@@ -567,6 +608,10 @@ std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
   if (name == "reshape")
     return HlfirReshapeLowering{builder, loc}.lower(loweredActuals, argLowering,
                                                     stmtResultType);
+  if (name == "index")
+    return HlfirIndexLowering{builder, loc}.lower(loweredActuals, argLowering,
+                                                  stmtResultType);
+
   if (mlir::isa<fir::CharacterType>(stmtResultType)) {
     if (name == "min")
       return HlfirCharExtremumLowering{builder, loc,
