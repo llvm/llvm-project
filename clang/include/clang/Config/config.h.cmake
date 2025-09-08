@@ -85,4 +85,7 @@
 /* Whether CIR is built into Clang */
 #cmakedefine01 CLANG_ENABLE_CIR
 
+/* Define if there is a custom bug report message */
+#cmakedefine CLANG_CUSTOM_BUG_REPORT_MSG "${CLANG_CUSTOM_BUG_REPORT_MSG}"
+
 #endif
