@@ -384,12 +384,12 @@ static Metadata *updateLoopMetadataDebugLocationsRecursive(
     return nullptr;
 
   bool Updated = false;
-  SmallVector<Metadata *, 4> MDs {M->getOperand(0)};
+  SmallVector<Metadata *, 4> MDs{M->getOperand(0)};
   for (Metadata *MD : llvm::drop_begin(M->operands())) {
     if (!MD) {
       MDs.push_back(nullptr);
-    } else if (Metadata *NewMD = updateLoopMetadataDebugLocationsRecursive(
-                   MD, Updater)) {
+    } else if (Metadata *NewMD =
+                   updateLoopMetadataDebugLocationsRecursive(MD, Updater)) {
       MDs.push_back(NewMD);
       Updated = true;
     } else if (Metadata *NewMD = Updater(MD)) {
@@ -414,8 +414,8 @@ static MDNode *updateLoopMetadataDebugLocationsImpl(
   for (Metadata *MD : llvm::drop_begin(OrigLoopID->operands())) {
     if (!MD)
       MDs.push_back(nullptr);
-    else if (Metadata *NewMD = updateLoopMetadataDebugLocationsRecursive(
-                 MD, Updater))
+    else if (Metadata *NewMD =
+                 updateLoopMetadataDebugLocationsRecursive(MD, Updater))
       MDs.push_back(NewMD);
     else if (Metadata *NewMD = Updater(MD))
       MDs.push_back(NewMD);
