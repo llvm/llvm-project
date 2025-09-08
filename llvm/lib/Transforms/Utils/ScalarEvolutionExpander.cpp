@@ -26,7 +26,6 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -174,21 +173,6 @@ SCEVExpander::findInsertPointAfter(Instruction *I,
     ++IP;
 
   return IP;
-}
-
-void SCEVExpander::eraseDeadInstructions(Value *Root) {
-  SmallVector<Value *> WorkList;
-  append_range(WorkList, getAllInsertedInstructions());
-  while (!WorkList.empty()) {
-    Instruction *I = dyn_cast<Instruction>(WorkList.pop_back_val());
-    if (!I || I == Root || !isInsertedInstruction(I) ||
-        !isInstructionTriviallyDead(I))
-      continue;
-    append_range(WorkList, I->operands());
-    InsertedValues.erase(I);
-    InsertedPostIncValues.erase(I);
-    I->eraseFromParent();
-  }
 }
 
 BasicBlock::iterator
