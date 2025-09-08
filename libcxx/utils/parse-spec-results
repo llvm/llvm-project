@@ -45,7 +45,7 @@ def main(argv):
         description='Parse SPEC result files (in CSV format) and extract the selected result table, in the selected format.')
     parser.add_argument('filename', type=argparse.FileType('r'), nargs='+',
         help='One of more CSV files to extract the results from. The results parsed from each file are concatenated '
-             'together, creating a single CSV table.')
+             'together.')
     parser.add_argument('--table', type=str, choices=['full', 'selected'], default='full',
         help='The name of the table to extract from SPEC results. `full` means extracting the Full Results Table '
              'and `selected` means extracting the Selected Results Table. Default is `full`.')
