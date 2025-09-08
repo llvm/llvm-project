@@ -1,4 +1,5 @@
 # RUN: env MLIR_RUNNER_UTILS=%mlir_runner_utils MLIR_C_RUNNER_UTILS=%mlir_c_runner_utils %PYTHON %s 2>&1 | FileCheck %s
+# RUN: %PYTHON -m mypy %s --config-file %mlir_src_root/test/python/mypy.ini
 # REQUIRES: host-supports-jit
 import gc, sys, os, tempfile
 from mlir.ir import *

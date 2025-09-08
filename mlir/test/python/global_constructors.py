@@ -1,5 +1,6 @@
 # UNSUPPORTED: target=aarch64{{.*}}, target=arm64{{.*}}
 # RUN: %PYTHON %s 2>&1 | FileCheck %s
+# RUN: %PYTHON -m mypy %s --config-file %mlir_src_root/test/python/mypy.ini
 # REQUIRES: host-supports-jit
 import gc, sys, os, tempfile
 from mlir.ir import *

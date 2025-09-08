@@ -1,5 +1,6 @@
 # REQUIRES: host-supports-nvptx
 # RUN: %PYTHON %s | FileCheck %s
+# RUN: %PYTHON -m mypy %s --config-file %mlir_src_root/test/python/mypy.ini
 
 from mlir.ir import *
 import mlir.dialects.gpu as gpu
