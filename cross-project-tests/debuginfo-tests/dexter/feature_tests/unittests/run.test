@@ -2,7 +2,7 @@ Purpose:
     Run DExTer unit tests.
 
 # Dexter returns 1 when no subtools are specified.
-RUN: not %dexter_base --unittest=show-all 2>&1 | FileCheck %s
+RUN: not %dexter_base --unittest=show-all 2>&1 | FileCheck --dump-input-context=999999999 %s
 
 CHECK: Ran {{[0-9]+}} tests
 CHECK-EMPTY:

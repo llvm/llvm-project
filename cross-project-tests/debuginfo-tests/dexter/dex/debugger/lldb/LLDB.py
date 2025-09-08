@@ -437,7 +437,7 @@ class LLDBDAP(DAP):
             except KeyError as e:
                 # Temporarily print the DAP log if this fails to aid debugging
                 # a buildbot failure that doesn't reproduce easily.
-                print(self.message_logger.text.getvalue())
+                print(self.message_logger.text.getvalue(), file=sys.stderr)
                 raise e
 
             if any(
