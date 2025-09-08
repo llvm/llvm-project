@@ -603,6 +603,7 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #  include <__type_traits/remove_const.h>
 #  include <__type_traits/type_identity.h>
 #  include <__utility/forward.h>
+#  include <__utility/lazy_synth_three_way_comparator.h>
 #  include <__utility/pair.h>
 #  include <__utility/piecewise_construct.h>
 #  include <__utility/swap.h>
@@ -701,6 +702,50 @@ public:
   }
 #  endif
 };
+
+#  if _LIBCPP_STD_VER >= 14
+template <class _MapValueT, class _Key, class _Compare>
+struct __lazy_synth_three_way_comparator<__map_value_compare<_Key, _MapValueT, _Compare>, _MapValueT, _MapValueT> {
+  __lazy_synth_three_way_comparator<_Compare, _Key, _Key> __comp_;
+
+  __lazy_synth_three_way_comparator(
+      _LIBCPP_CTOR_LIFETIMEBOUND const __map_value_compare<_Key, _MapValueT, _Compare>& __comp)
+      : __comp_(__comp.key_comp()) {}
+
+  _LIBCPP_HIDE_FROM_ABI auto
+  operator()(_LIBCPP_LIFETIMEBOUND const _MapValueT& __lhs, _LIBCPP_LIFETIMEBOUND const _MapValueT& __rhs) const {
+    return __comp_(__lhs.first, __rhs.first);
+  }
+};
+
+template <class _MapValueT, class _Key, class _TransparentKey, class _Compare>
+struct __lazy_synth_three_way_comparator<__map_value_compare<_Key, _MapValueT, _Compare>, _TransparentKey, _MapValueT> {
+  __lazy_synth_three_way_comparator<_Compare, _TransparentKey, _Key> __comp_;
+
+  __lazy_synth_three_way_comparator(
+      _LIBCPP_CTOR_LIFETIMEBOUND const __map_value_compare<_Key, _MapValueT, _Compare>& __comp)
+      : __comp_(__comp.key_comp()) {}
+
+  _LIBCPP_HIDE_FROM_ABI auto
+  operator()(_LIBCPP_LIFETIMEBOUND const _TransparentKey& __lhs, _LIBCPP_LIFETIMEBOUND const _MapValueT& __rhs) const {
+    return __comp_(__lhs, __rhs.first);
+  }
+};
+
+template <class _MapValueT, class _Key, class _TransparentKey, class _Compare>
+struct __lazy_synth_three_way_comparator<__map_value_compare<_Key, _MapValueT, _Compare>, _MapValueT, _TransparentKey> {
+  __lazy_synth_three_way_comparator<_Compare, _Key, _TransparentKey> __comp_;
+
+  __lazy_synth_three_way_comparator(
+      _LIBCPP_CTOR_LIFETIMEBOUND const __map_value_compare<_Key, _MapValueT, _Compare>& __comp)
+      : __comp_(__comp.key_comp()) {}
+
+  _LIBCPP_HIDE_FROM_ABI auto
+  operator()(_LIBCPP_LIFETIMEBOUND const _MapValueT& __lhs, _LIBCPP_LIFETIMEBOUND const _TransparentKey& __rhs) const {
+    return __comp_(__lhs.first, __rhs);
+  }
+};
+#  endif // _LIBCPP_STD_VER >= 14
 
 template <class _Key, class _CP, class _Compare, bool __b>
 inline _LIBCPP_HIDE_FROM_ABI void
