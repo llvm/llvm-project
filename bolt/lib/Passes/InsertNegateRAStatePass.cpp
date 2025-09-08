@@ -114,20 +114,23 @@ void InsertNegateRAState::inferUnknownStates(BinaryFunction &BF) {
 }
 
 Error InsertNegateRAState::runOnFunctions(BinaryContext &BC) {
+  std::atomic<uint64_t> FunctionsModified{0};
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
-    if (BF.containedNegateRAState() && !BF.isIgnored()) {
-      // We can skip functions which did not include negate-ra-state CFIs. This
-      // includes code using pac-ret hardening as well, if the binary is
-      // compiled with `-fno-exceptions -fno-unwind-tables
-      // -fno-asynchronous-unwind-tables`
-      FunctionsModified++;
-      runOnFunction(BF);
-    }
+    FunctionsModified++;
+    runOnFunction(BF);
+  };
+
+  ParallelUtilities::PredicateTy SkipPredicate = [&](const BinaryFunction &BF) {
+    // We can skip functions which did not include negate-ra-state CFIs. This
+    // includes code using pac-ret hardening as well, if the binary is
+    // compiled with `-fno-exceptions -fno-unwind-tables
+    // -fno-asynchronous-unwind-tables`
+    return !BF.containedNegateRAState() || BF.isIgnored();
   };
 
   ParallelUtilities::runOnEachFunction(
-      BC, ParallelUtilities::SchedulingPolicy::SP_TRIVIAL, WorkFun, nullptr,
-      "InsertNegateRAStatePass");
+      BC, ParallelUtilities::SchedulingPolicy::SP_TRIVIAL, WorkFun,
+      SkipPredicate, "InsertNegateRAStatePass");
 
   BC.outs() << "BOLT-INFO: rewritten pac-ret DWARF info in "
             << FunctionsModified << " out of " << BC.getBinaryFunctions().size()

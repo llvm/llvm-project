@@ -149,7 +149,7 @@ public:
   };
 
   void setContainedNegateRAState() { HadNegateRAState = true; }
-  bool containedNegateRAState() { return HadNegateRAState; }
+  bool containedNegateRAState() const { return HadNegateRAState; }
   void setInitialRAState(bool State) { InitialRAState = State; }
   bool getInitialRAState() { return InitialRAState; }
 

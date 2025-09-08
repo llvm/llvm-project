@@ -119,21 +119,24 @@ bool MarkRAStates::runOnFunction(BinaryFunction &BF) {
 }
 
 Error MarkRAStates::runOnFunctions(BinaryContext &BC) {
+  std::atomic<uint64_t> FunctionsIgnored{0};
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
-    if (BF.containedNegateRAState() && !BF.isIgnored()) {
-      // We can skip functions which did not include negate-ra-state CFIs. This
-      // includes code using pac-ret hardening as well, if the binary is
-      // compiled with `-fno-exceptions -fno-unwind-tables
-      // -fno-asynchronous-unwind-tables`
-      if (!runOnFunction(BF)) {
-        FunctionsIgnored++;
-      }
+    if (!runOnFunction(BF)) {
+      FunctionsIgnored++;
     }
   };
 
+  ParallelUtilities::PredicateTy SkipPredicate = [&](const BinaryFunction &BF) {
+    // We can skip functions which did not include negate-ra-state CFIs. This
+    // includes code using pac-ret hardening as well, if the binary is
+    // compiled with `-fno-exceptions -fno-unwind-tables
+    // -fno-asynchronous-unwind-tables`
+    return !BF.containedNegateRAState() || BF.isIgnored();
+  };
+
   ParallelUtilities::runOnEachFunction(
-      BC, ParallelUtilities::SchedulingPolicy::SP_TRIVIAL, WorkFun, nullptr,
-      "MarkRAStates");
+      BC, ParallelUtilities::SchedulingPolicy::SP_TRIVIAL, WorkFun,
+      SkipPredicate, "MarkRAStates");
 
   int Total = llvm::count_if(
       BC.getBinaryFunctions(),
