@@ -287,6 +287,16 @@ static void remapActualToDummyDescriptors(
   }
 }
 
+static void
+getResultLengthFromElementalOp(fir::FirOpBuilder &builder,
+                               llvm::SmallVectorImpl<mlir::Value> &lengths) {
+  auto elemental = llvm::dyn_cast_or_null<hlfir::ElementalOp>(
+      builder.getInsertionBlock()->getParentOp());
+  if (elemental)
+    for (mlir::Value len : elemental.getTypeparams())
+      lengths.push_back(len);
+}
+
 std::pair<Fortran::lower::LoweredResult, bool>
 Fortran::lower::genCallOpAndResult(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
@@ -296,7 +306,13 @@ Fortran::lower::genCallOpAndResult(
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   using PassBy = Fortran::lower::CallerInterface::PassEntityBy;
   bool mustPopSymMap = false;
-  if (caller.mustMapInterfaceSymbolsForResult()) {
+
+  llvm::SmallVector<mlir::Value> resultLengths;
+  if (isElemental)
+    getResultLengthFromElementalOp(builder, resultLengths);
+  if (caller.mustMapInterfaceSymbolsForResult() && resultLengths.empty()) {
+    // Do not map the dummy symbols again inside the loop to compute elemental
+    // function result whose length was already computed outside of the loop.
     symMap.pushScope();
     mustPopSymMap = true;
     Fortran::lower::mapCallInterfaceSymbolsForResult(converter, caller, symMap);
@@ -340,7 +356,6 @@ Fortran::lower::genCallOpAndResult(
         loc, idxTy, fir::getBase(converter.genExprValue(expr, stmtCtx)));
     return fir::factory::genMaxWithZero(builder, loc, convertExpr);
   };
-  llvm::SmallVector<mlir::Value> resultLengths;
   mlir::Value arrayResultShape;
   hlfir::EvaluateInMemoryOp evaluateInMemory;
   auto allocatedResult = [&]() -> std::optional<fir::ExtendedValue> {
@@ -355,11 +370,16 @@ Fortran::lower::genCallOpAndResult(
             assert(!isAssumedSizeExtent && "result cannot be assumed-size");
             extents.emplace_back(lowerSpecExpr(e));
           });
-    caller.walkResultLengths(
-        [&](const Fortran::lower::SomeExpr &e, bool isAssumedSizeExtent) {
-          assert(!isAssumedSizeExtent && "result cannot be assumed-size");
-          lengths.emplace_back(lowerSpecExpr(e));
-        });
+    if (resultLengths.empty()) {
+      caller.walkResultLengths(
+          [&](const Fortran::lower::SomeExpr &e, bool isAssumedSizeExtent) {
+            assert(!isAssumedSizeExtent && "result cannot be assumed-size");
+            lengths.emplace_back(lowerSpecExpr(e));
+          });
+    } else {
+      // Use lengths precomputed before elemental loops.
+      lengths = resultLengths;
+    }
 
     // Result length parameters should not be provided to box storage
     // allocation and save_results, but they are still useful information to
@@ -2330,6 +2350,47 @@ private:
   }
 };
 
+/// Helper for computing elemental function result specification
+/// expressions that depends on dummy symbols. See
+/// computeDynamicCharacterResultLength below.
+static mlir::Value genMockDummyForElementalResultSpecifications(
+    fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type dummyType,
+    Fortran::lower::PreparedActualArgument &preparedActual) {
+  // One is used as the mock address instead of NULL so that PRESENT inquires
+  // work (this is the only valid thing that specification can do with the
+  // address thanks to Fortran 2023 C15121).
+  mlir::Value one =
+      builder.createIntegerConstant(loc, builder.getIntPtrType(), 1);
+  if (auto boxCharType = llvm::dyn_cast<fir::BoxCharType>(dummyType)) {
+    mlir::Value addr = builder.createConvert(
+        loc, fir::ReferenceType::get(boxCharType.getEleTy()), one);
+    mlir::Value len = preparedActual.genCharLength(loc, builder);
+    return fir::EmboxCharOp::create(builder, loc, boxCharType, addr, len);
+  }
+  if (auto box = llvm::dyn_cast<fir::BaseBoxType>(dummyType)) {
+    mlir::Value addr =
+        builder.createConvert(loc, box.getBaseAddressType(), one);
+    llvm::SmallVector<mlir::Value> lenParams;
+    preparedActual.genLengthParameters(loc, builder, lenParams);
+    mlir::Value mold;
+    if (fir::isPolymorphicType(box))
+      mold = preparedActual.getPolymorphicMold(loc);
+    return fir::EmboxOp::create(builder, loc, box, addr,
+                                /*shape=*/mlir::Value{},
+                                /*slice=*/mlir::Value{}, lenParams, mold);
+  }
+  // Values of arguments should not be used in elemental procedure specification
+  // expressions as per C15121, so it makes no sense to have a specification
+  // expression requiring a symbol that is passed by value (there is no good
+  // value to create here).
+  assert(fir::isa_ref_type(dummyType) &&
+         (fir::isa_trivial(fir::unwrapRefType(dummyType)) ||
+          fir::isa_char(fir::unwrapRefType(dummyType))) &&
+         "Only expect symbols inquired in elemental procedure result "
+         "specifications to be passed in memory");
+  return builder.createConvert(loc, dummyType, one);
+}
+
 class ElementalUserCallBuilder
     : public ElementalCallBuilder<ElementalUserCallBuilder> {
 public:
@@ -2362,29 +2423,97 @@ public:
   mlir::Value computeDynamicCharacterResultLength(
       Fortran::lower::PreparedActualArguments &loweredActuals,
       CallContext &callContext) {
+
     fir::FirOpBuilder &builder = callContext.getBuilder();
     mlir::Location loc = callContext.loc;
     auto &converter = callContext.converter;
-    mlir::Type idxTy = builder.getIndexType();
-    llvm::SmallVector<CallCleanUp> callCleanUps;
 
-    prepareUserCallArguments(loweredActuals, caller, callSiteType, callContext,
-                             callCleanUps);
+    // Gather the dummy argument symbols required directly or indirectly to
+    // evaluate the result symbol specification expressions.
+    llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 4>
+        requiredDummySymbols;
+    const Fortran::semantics::Symbol &result = caller.getResultSymbol();
+    for (Fortran::lower::pft::Variable var :
+         Fortran::lower::pft::getDependentVariableList(result))
+      if (var.hasSymbol()) {
+        const Fortran::semantics::Symbol &sym = var.getSymbol();
+        if (Fortran::semantics::IsDummy(sym) && sym.owner() == result.owner())
+          requiredDummySymbols.insert(&sym);
+      }
 
-    callContext.symMap.pushScope();
+    // Prepare mock FIR arguments for each dummy arguments required in the
+    // result specifications. These mock arguments will have the same properties
+    // (dynamic type and type parameters) as the actual arguments, except for
+    // the address. Such mock argument are needed because this evaluation is
+    // happening before the loop for the elemental call (the array result
+    // storage must be allocated before the loops if any is needed, so the
+    // result properties must be known before the loops). So it is not possible
+    // to just pick an element (like the first one) and use that because the
+    // normal argument preparation have effects (vector subscripted actual
+    // argument will require reading the vector subscript and VALUE arguments
+    // preparation involve copies of the data. This could cause segfaults in
+    // case of zero size arrays and is in general pointless extra computation
+    // since the data cannot be used in the specification expression as per
+    // C15121).
+    if (!requiredDummySymbols.empty()) {
+      const Fortran::semantics::SubprogramDetails *iface =
+          caller.getInterfaceDetails();
+      assert(iface && "interface must be explicit when result specification "
+                      "depends upon dummy symbols");
+      for (auto [maybePreparedActual, arg, sym] : llvm::zip(
+               loweredActuals, caller.getPassedArguments(), iface->dummyArgs()))
+        if (requiredDummySymbols.contains(sym)) {
+          mlir::Type dummyType = callSiteType.getInput(arg.firArgument);
 
-    // Map prepared argument to dummy symbol to be able to lower spec expr.
-    for (const auto &arg : caller.getPassedArguments()) {
-      const Fortran::semantics::Symbol *sym = caller.getDummySymbol(arg);
-      assert(sym && "expect symbol for dummy argument");
-      auto input = caller.getInput(arg);
-      fir::ExtendedValue exv = Fortran::lower::translateToExtendedValue(
-          loc, builder, hlfir::Entity{input}, callContext.stmtCtx);
-      fir::FortranVariableOpInterface variableIface = hlfir::genDeclare(
-          loc, builder, exv, "dummy.tmp", fir::FortranVariableFlagsAttr{});
-      callContext.symMap.addVariableDefinition(*sym, variableIface);
+          if (!maybePreparedActual.has_value()) {
+            mlir::Value mockArgValue =
+                fir::AbsentOp::create(builder, loc, dummyType);
+            caller.placeInput(arg, mockArgValue);
+            continue;
+          }
+
+          Fortran::lower::PreparedActualArgument &preparedActual =
+              maybePreparedActual.value();
+
+          if (preparedActual.handleDynamicOptional()) {
+            mlir::Value isPresent = preparedActual.getIsPresent();
+            mlir::Value mockArgValue =
+                builder
+                    .genIfOp(loc, {dummyType}, isPresent,
+                             /*withElseRegion=*/true)
+                    .genThen([&]() {
+                      mlir::Value mockArgValue =
+                          genMockDummyForElementalResultSpecifications(
+                              builder, loc, dummyType, preparedActual);
+                      fir::ResultOp::create(builder, loc, mockArgValue);
+                    })
+                    .genElse([&]() {
+                      mlir::Value absent =
+                          fir::AbsentOp::create(builder, loc, dummyType);
+                      fir::ResultOp::create(builder, loc, absent);
+                    })
+                    .getResults()[0];
+            caller.placeInput(arg, mockArgValue);
+          } else {
+            mlir::Value mockArgValue =
+                genMockDummyForElementalResultSpecifications(
+                    builder, loc, dummyType, preparedActual);
+            caller.placeInput(arg, mockArgValue);
+          }
+        }
     }
 
+    // Map symbols required by the result specification expressions to SSA
+    // values. This will both finish mapping the mock value created above if
+    // any, and deal with any module/common block variables accessed in the
+    // specification expressions.
+    // Map prepared argument to dummy symbol to be able to lower spec expr.
+    callContext.symMap.pushScope();
+    Fortran::lower::mapCallInterfaceSymbolsForResult(converter, caller,
+                                                     callContext.symMap);
+
+    // Evaluate the result length expression.
+    mlir::Type idxTy = builder.getIndexType();
     auto lowerSpecExpr = [&](const auto &expr) -> mlir::Value {
       mlir::Value convertExpr = builder.createConvert(
           loc, idxTy,
