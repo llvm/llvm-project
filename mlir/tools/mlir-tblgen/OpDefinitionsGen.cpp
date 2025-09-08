@@ -3907,7 +3907,8 @@ void OpEmitter::genTypeInterfaceMethods() {
               ("odsInferredTypeAttr" + Twine(inferredTypeIdx) + ".getType()")
                   .str();
         } else {
-          llvm_unreachable("Properties cannot be used for type inference");
+          llvm::PrintFatalError(&op.getDef(),
+                                "Properties cannot be used for type inference");
         }
       } else if (std::optional<StringRef> builder =
                      op.getResult(infer.getResultIndex())
