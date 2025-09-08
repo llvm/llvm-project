@@ -117,36 +117,32 @@ static uint32_t compareSegmentOffset(uint16_t LhsSegment, uint32_t LhsOffst,
 std::optional<std::pair<codeview::PublicSym32, size_t>>
 PublicsStream::findByAddress(const SymbolStream &Symbols, uint16_t Segment,
                              uint32_t Offset) const {
-  // The address map is sorted by address, so we do binary search.
-  // Each element is an offset into the symbols for a public symbol.
-  auto Lo = AddressMap.begin();
-  auto Hi = AddressMap.end();
-  Hi -= 1;
+  // The address map is sorted by address, so we can use lower_bound to find the
+  // position. Each element is an offset into the symbols for a public symbol.
+  auto It = llvm::lower_bound(
+      AddressMap, std::pair(Segment, Offset),
+      [&](support::ulittle32_t Cur, auto Addr) {
+        auto Sym = Symbols.readRecord(Cur.value());
+        if (Sym.kind() != codeview::S_PUB32)
+          return false; // stop here, this is most likely corrupted debug info
 
-  while (Lo < Hi) {
-    auto Cur = Lo + ((Hi - Lo + 1) / 2);
-    auto Sym = Symbols.readRecord(Cur->value());
-    if (Sym.kind() != codeview::S_PUB32)
-      return std::nullopt; // this is most likely corrupted debug info
+        auto Psym =
+            codeview::SymbolDeserializer::deserializeAs<codeview::PublicSym32>(
+                Sym);
+        if (!Psym) {
+          consumeError(Psym.takeError());
+          return false;
+        }
 
-    auto Psym =
-        codeview::SymbolDeserializer::deserializeAs<codeview::PublicSym32>(Sym);
-    if (!Psym) {
-      consumeError(Psym.takeError());
-      return std::nullopt;
-    }
+        if (Psym->Segment == Addr.first)
+          return Psym->Offset < Addr.second;
+        return Psym->Segment < Addr.first;
+      });
 
-    uint32_t Cmp = compareSegmentOffset(Segment, Offset, *Psym);
-    if (Cmp < 0) {
-      Cur -= 1;
-      Hi = Cur;
-    } else if (Cmp == 0)
-      Lo = Hi = Cur;
-    else
-      Lo = Cur;
-  }
+  if (It == AddressMap.end())
+    return std::nullopt;
 
-  auto Sym = Symbols.readRecord(Lo->value());
+  auto Sym = Symbols.readRecord(It->value());
   if (Sym.kind() != codeview::S_PUB32)
     return std::nullopt; // this is most likely corrupted debug info
 
@@ -162,28 +158,6 @@ PublicsStream::findByAddress(const SymbolStream &Symbols, uint16_t Segment,
   if (Cmp != 0)
     return std::nullopt;
 
-  // We found a symbol. Due to ICF, multiple symbols can have the same
-  // address, so return the first one
-  while (Lo != AddressMap.begin()) {
-    --Lo;
-    Sym = Symbols.readRecord(Lo->value());
-    if (Sym.kind() != codeview::S_PUB32)
-      return std::nullopt;
-    MaybePsym =
-        codeview::SymbolDeserializer::deserializeAs<codeview::PublicSym32>(Sym);
-    if (!MaybePsym) {
-      consumeError(MaybePsym.takeError());
-      return std::nullopt;
-    }
-
-    if (MaybePsym->Segment != Segment || MaybePsym->Offset != Offset) {
-      ++Lo;
-      break;
-    }
-
-    Psym = std::move(*MaybePsym);
-  }
-
-  std::ptrdiff_t IterOffset = Lo - AddressMap.begin();
+  std::ptrdiff_t IterOffset = It - AddressMap.begin();
   return std::pair{Psym, static_cast<size_t>(IterOffset)};
 }
