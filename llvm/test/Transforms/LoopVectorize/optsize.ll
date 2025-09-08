@@ -461,7 +461,7 @@ define void @pr43371_pgso() !prof !14 {
 ;
 ; NPGSO-LABEL: define void @pr43371_pgso(
 ; NPGSO-SAME: ) !prof [[PROF14]] {
-; NPGSO-NEXT:  [[ENTRY:.*]]:
+; NPGSO-NEXT:  [[ENTRY:.*:]]
 ; NPGSO-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; NPGSO:       [[VECTOR_SCEVCHECK]]:
 ; NPGSO-NEXT:    br i1 undef, label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
@@ -480,12 +480,11 @@ define void @pr43371_pgso() !prof !14 {
 ; NPGSO:       [[MIDDLE_BLOCK]]:
 ; NPGSO-NEXT:    br label %[[FOR_COND_CLEANUP28:.*]]
 ; NPGSO:       [[SCALAR_PH]]:
-; NPGSO-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
 ; NPGSO-NEXT:    br label %[[FOR_BODY29:.*]]
 ; NPGSO:       [[FOR_COND_CLEANUP28]]:
 ; NPGSO-NEXT:    unreachable
 ; NPGSO:       [[FOR_BODY29]]:
-; NPGSO-NEXT:    [[I24_0170:%.*]] = phi i16 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC37:%.*]], %[[FOR_BODY29]] ]
+; NPGSO-NEXT:    [[I24_0170:%.*]] = phi i16 [ 0, %[[SCALAR_PH]] ], [ [[INC37:%.*]], %[[FOR_BODY29]] ]
 ; NPGSO-NEXT:    [[ADD33:%.*]] = add i16 undef, [[I24_0170]]
 ; NPGSO-NEXT:    [[IDXPROM34:%.*]] = zext i16 [[ADD33]] to i32
 ; NPGSO-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[IDXPROM34]]
