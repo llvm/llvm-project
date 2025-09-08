@@ -542,6 +542,29 @@ generic-optimized-speed)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-optimized-speed.cmake"
     check-runtimes
 ;;
+benchmark-comparison)
+    clean
+    LIT_ARGS="-sv -j1 --param optimization=speed libcxx/test/benchmarks/hash.bench.cpp libcxx/test/benchmarks/join_view.bench.cpp"
+
+    if [[ "${GITHUB_BASE_REF}" != "" ]]; then # triggered from a PR
+        baseline_commit=$(git merge-base refs/remotes/origin/${GITHUB_BASE_REF} ${GITHUB_SHA})
+    else
+        baseline_commit=$(git merge-base main HEAD)
+    fi
+
+    step "Building and running the baseline at ${baseline_commit}"
+    rm -rf "${BUILD_DIR}-baseline"
+    ./libcxx/utils/test-at-commit --commit ${baseline_commit} -B "${BUILD_DIR}-baseline" -- ${LIT_ARGS}
+
+    # Build and run the candidate
+    step "Building and running the candidate"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-optimized-speed.cmake"
+    ./libcxx/utils/libcxx-lit "${BUILD_DIR}" ${LIT_ARGS}
+
+    step "Comparison of the baseline and the candidate"
+    ./libcxx/utils/compare-benchmarks <(./libcxx/utils/consolidate-benchmarks "${BUILD_DIR}-baseline") \
+                                      <(./libcxx/utils/consolidate-benchmarks "${BUILD_DIR}")
+;;
 apple-configuration)
     clean
 
