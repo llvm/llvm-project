@@ -5027,9 +5027,17 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
   //   Op1.fr = Freeze(Op1)
   //   ... = Inst(Op1.fr, NonPoisonOps...)
 
-  auto CanPushFreeze = [](Value *V) {
-    if (!isa<Instruction>(V) || isa<PHINode>(V))
+  auto CanPushFreeze = [this](Value *V) {
+    if (!isa<Instruction>(V))
       return false;
+
+    if (auto *PN = dyn_cast<PHINode>(V)) {
+      if (llvm::any_of(PN->incoming_values(), [this, &PN](Use &U) {
+            return DT.dominates(PN->getParent(), PN->getIncomingBlock(U)) ||
+                   match(U.get(), m_Undef());
+          }))
+        return false;
+    }
 
     // We can't push the freeze through an instruction which can itself create
     // poison.  If the only source of new poison is flags, we can simply
@@ -5055,7 +5063,10 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
         return nullptr;
 
       auto *UserI = cast<Instruction>(U->getUser());
-      Builder.SetInsertPoint(UserI);
+      if (auto *PN = dyn_cast<PHINode>(UserI))
+        Builder.SetInsertPoint(PN->getIncomingBlock(*U)->getTerminator());
+      else
+        Builder.SetInsertPoint(UserI);
       Value *Frozen = Builder.CreateFreeze(V, V->getName() + ".fr");
       U->set(Frozen);
       continue;

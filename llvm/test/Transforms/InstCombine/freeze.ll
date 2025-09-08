@@ -269,15 +269,15 @@ define void @freeze_dominated_uses_catchswitch(i1 %c, i32 %x) personality ptr @_
 ; CHECK-NEXT:    invoke void @use_i32(i32 0)
 ; CHECK-NEXT:            to label %[[CLEANUP:.*]] unwind label %[[CATCH_DISPATCH:.*]]
 ; CHECK:       [[IF_ELSE]]:
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X]]
 ; CHECK-NEXT:    invoke void @use_i32(i32 1)
 ; CHECK-NEXT:            to label %[[CLEANUP]] unwind label %[[CATCH_DISPATCH]]
 ; CHECK:       [[CATCH_DISPATCH]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, %[[IF_THEN]] ], [ [[X]], %[[IF_ELSE]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, %[[IF_THEN]] ], [ [[X_FR]], %[[IF_ELSE]] ]
 ; CHECK-NEXT:    [[CS:%.*]] = catchswitch within none [label %[[CATCH:.*]], label %catch2] unwind to caller
 ; CHECK:       [[CATCH]]:
 ; CHECK-NEXT:    [[CP:%.*]] = catchpad within [[CS]] [ptr null, i32 64, ptr null]
-; CHECK-NEXT:    [[PHI_FREEZE:%.*]] = freeze i32 [[PHI]]
-; CHECK-NEXT:    call void @use_i32(i32 [[PHI_FREEZE]]) [ "funclet"(token [[CP]]) ]
+; CHECK-NEXT:    call void @use_i32(i32 [[PHI]]) [ "funclet"(token [[CP]]) ]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[CATCH2:.*:]]
 ; CHECK-NEXT:    [[CP2:%.*]] = catchpad within [[CS]] [ptr null, i32 64, ptr null]
@@ -384,15 +384,16 @@ define i32 @freeze_phi_followed_by_phi(i1 %c, i32 %y, i32 %z) {
 ; CHECK-LABEL: define i32 @freeze_phi_followed_by_phi(
 ; CHECK-SAME: i1 [[C:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[Z_FR:%.*]] = freeze i32 [[Z]]
+; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i32 [[Y]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[JOIN:.*]]
 ; CHECK:       [[IF]]:
 ; CHECK-NEXT:    br label %[[JOIN]]
 ; CHECK:       [[JOIN]]:
-; CHECK-NEXT:    [[X:%.*]] = phi i32 [ [[Y]], %[[IF]] ], [ [[Z]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[Z]], %[[IF]] ], [ [[Y]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[FR:%.*]] = freeze i32 [[X]]
-; CHECK-NEXT:    call void @use_i32(i32 [[FR]])
-; CHECK-NEXT:    call void @use_i32(i32 [[FR]])
+; CHECK-NEXT:    [[X:%.*]] = phi i32 [ [[Y_FR]], %[[IF]] ], [ [[Z_FR]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[Z_FR]], %[[IF]] ], [ [[Y_FR]], %[[ENTRY]] ]
+; CHECK-NEXT:    call void @use_i32(i32 [[X]])
+; CHECK-NEXT:    call void @use_i32(i32 [[X]])
 ; CHECK-NEXT:    ret i32 [[PHI]]
 ;
 entry:
@@ -1141,8 +1142,7 @@ exit:
 }
 
 ; We can remove this freeze as the incoming values to the PHI have the same
-; well-defined start value and the GEP can't produce poison, but this is
-; currently unsupported.
+; well-defined start value and the GEP can't produce poison.
 define void @fold_phi_noundef_start_value(ptr noundef %init, i1 %cond.0, i1 %cond.1, i1 %cond.2) {
 ; CHECK-LABEL: define void @fold_phi_noundef_start_value(
 ; CHECK-SAME: ptr noundef [[INIT:%.*]], i1 [[COND_0:%.*]], i1 [[COND_1:%.*]], i1 [[COND_2:%.*]]) {
@@ -1156,8 +1156,7 @@ define void @fold_phi_noundef_start_value(ptr noundef %init, i1 %cond.0, i1 %con
 ; CHECK-NEXT:    br label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[IV_2:%.*]] = phi ptr [ [[IV_0]], %[[LOOP]] ], [ [[IV_1]], %[[IF_ELSE]] ]
-; CHECK-NEXT:    [[IV_2_FR:%.*]] = freeze ptr [[IV_2]]
-; CHECK-NEXT:    [[IV_2_FR_INT:%.*]] = ptrtoint ptr [[IV_2_FR]] to i64
+; CHECK-NEXT:    [[IV_2_FR_INT:%.*]] = ptrtoint ptr [[IV_2]] to i64
 ; CHECK-NEXT:    [[IV_0_INT:%.*]] = ptrtoint ptr [[IV_0]] to i64
 ; CHECK-NEXT:    [[IDX:%.*]] = sub i64 [[IV_0_INT]], [[IV_2_FR_INT]]
 ; CHECK-NEXT:    [[IV_0_NEXT]] = getelementptr i8, ptr [[IV_0]], i64 [[IDX]]
