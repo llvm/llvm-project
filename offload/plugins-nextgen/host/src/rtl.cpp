@@ -517,6 +517,11 @@ struct GenELF64PluginTy final : public GenericPluginTy {
 #endif
   }
 
+  Expected<MemoryInfoTy> get_memory_info(const void *TgtPtr) override {
+    return Plugin::error(ErrorCode::UNIMPLEMENTED,
+                         "get_memory_info not implemented for host device");
+  }
+
   const char *getName() const override { return GETNAME(TARGET_NAME); }
 };
 

@@ -1271,6 +1271,15 @@ private:
   DeviceMemoryPoolTrackingTy DeviceMemoryPoolTracking = {0, 0, ~0U, 0};
 };
 
+struct MemoryInfoTy {
+  void *Base;
+  size_t Size;
+  TargetAllocTy Type;
+  GenericDeviceTy *Device;
+
+  void *limit() const { return reinterpret_cast<char *>(Base) + Size; }
+};
+
 /// Class implementing common functionalities of offload plugins. Each plugin
 /// should define the specific plugin class, derive from this generic one, and
 /// implement the necessary virtual function members.
@@ -1566,6 +1575,10 @@ public:
   /// Queue an asynchronous barrier in the queue associated with the interop
   /// object and return immediately.
   int32_t async_barrier(omp_interop_val_t *Interop);
+
+  /// Given a pointer previously allocated by GenericDeviceTy::Allocate, return
+  /// information about that allocation
+  virtual Expected<MemoryInfoTy> get_memory_info(const void *TgtPtr) = 0;
 
 private:
   /// Indicates if the platform runtime has been fully initialized.

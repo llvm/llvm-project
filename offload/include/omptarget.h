@@ -96,6 +96,8 @@ enum OpenMPOffloadingDeclareTargetFlags {
   OMP_REGISTER_REQUIRES = 0x10,
 };
 
+// Note: This type should be no larger than 3 bits, as the amdgpu platform uses
+// the lower 3 bits of a pointer to store it
 enum TargetAllocTy : int32_t {
   TARGET_ALLOC_DEVICE = 0,
   TARGET_ALLOC_HOST,

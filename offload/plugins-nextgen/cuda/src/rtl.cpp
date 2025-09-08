@@ -566,89 +566,10 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
 
   /// Allocate memory on the device or related to the device.
-  void *allocate(size_t Size, void *, TargetAllocTy Kind) override {
-    if (Size == 0)
-      return nullptr;
-
-    if (auto Err = setContext()) {
-      REPORT("Failure to alloc memory: %s\n", toString(std::move(Err)).data());
-      return nullptr;
-    }
-
-    void *MemAlloc = nullptr;
-    CUdeviceptr DevicePtr;
-    CUresult Res;
-
-    switch (Kind) {
-    case TARGET_ALLOC_DEFAULT:
-    case TARGET_ALLOC_DEVICE:
-      Res = cuMemAlloc(&DevicePtr, Size);
-      MemAlloc = (void *)DevicePtr;
-      break;
-    case TARGET_ALLOC_HOST:
-      Res = cuMemAllocHost(&MemAlloc, Size);
-      break;
-    case TARGET_ALLOC_SHARED:
-      Res = cuMemAllocManaged(&DevicePtr, Size, CU_MEM_ATTACH_GLOBAL);
-      MemAlloc = (void *)DevicePtr;
-      break;
-    case TARGET_ALLOC_DEVICE_NON_BLOCKING: {
-      CUstream Stream;
-      if ((Res = cuStreamCreate(&Stream, CU_STREAM_NON_BLOCKING)))
-        break;
-      if ((Res = cuMemAllocAsync(&DevicePtr, Size, Stream)))
-        break;
-      cuStreamSynchronize(Stream);
-      Res = cuStreamDestroy(Stream);
-      MemAlloc = (void *)DevicePtr;
-    }
-    }
-
-    if (auto Err =
-            Plugin::check(Res, "error in cuMemAlloc[Host|Managed]: %s")) {
-      REPORT("Failure to alloc memory: %s\n", toString(std::move(Err)).data());
-      return nullptr;
-    }
-    return MemAlloc;
-  }
+  void *allocate(size_t Size, void *, TargetAllocTy Kind) override;
 
   /// Deallocate memory on the device or related to the device.
-  int free(void *TgtPtr, TargetAllocTy Kind) override {
-    if (TgtPtr == nullptr)
-      return OFFLOAD_SUCCESS;
-
-    if (auto Err = setContext()) {
-      REPORT("Failure to free memory: %s\n", toString(std::move(Err)).data());
-      return OFFLOAD_FAIL;
-    }
-
-    CUresult Res;
-    switch (Kind) {
-    case TARGET_ALLOC_DEFAULT:
-    case TARGET_ALLOC_DEVICE:
-    case TARGET_ALLOC_SHARED:
-      Res = cuMemFree((CUdeviceptr)TgtPtr);
-      break;
-    case TARGET_ALLOC_HOST:
-      Res = cuMemFreeHost(TgtPtr);
-      break;
-    case TARGET_ALLOC_DEVICE_NON_BLOCKING: {
-      CUstream Stream;
-      if ((Res = cuStreamCreate(&Stream, CU_STREAM_NON_BLOCKING)))
-        break;
-      cuMemFreeAsync(reinterpret_cast<CUdeviceptr>(TgtPtr), Stream);
-      cuStreamSynchronize(Stream);
-      if ((Res = cuStreamDestroy(Stream)))
-        break;
-    }
-    }
-
-    if (auto Err = Plugin::check(Res, "error in cuMemFree[Host]: %s")) {
-      REPORT("Failure to free memory: %s\n", toString(std::move(Err)).data());
-      return OFFLOAD_FAIL;
-    }
-    return OFFLOAD_SUCCESS;
-  }
+  int free(void *TgtPtr, TargetAllocTy Kind) override;
 
   /// Synchronize current thread with the pending operations on the async info.
   Error synchronizeImpl(__tgt_async_info &AsyncInfo,
@@ -1612,7 +1533,140 @@ struct CUDAPluginTy final : public GenericPluginTy {
     // revision.
     return Major == ImageMajor && Minor >= ImageMinor;
   }
+
+  Expected<MemoryInfoTy> get_memory_info(const void *TgtPtr) override {
+    std::lock_guard<std::mutex> Lock(MemoryInfoMutex);
+
+    // TODO: Is it possible to query this information using CUDA directly?
+
+    // Fast case, we have been given the base pointer directly
+    if (MemoryInfo.contains(TgtPtr))
+      return MemoryInfo[TgtPtr];
+
+    // Slower case, we need to look up the base pointer first
+    auto Loc = std::lower_bound(MemoryBases.begin(), MemoryBases.end(), TgtPtr,
+                                [&](const void *Iter, const void *Val) {
+                                  return MemoryInfo[Iter].limit() < Val;
+                                });
+    if (Loc == MemoryBases.end() || TgtPtr > MemoryInfo[*Loc].limit())
+      return Plugin::error(ErrorCode::NOT_FOUND,
+                           "allocated memory information not found");
+    return MemoryInfo[*Loc];
+  }
+
+private:
+  friend CUDADeviceTy;
+
+  std::mutex MemoryInfoMutex;
+  llvm::SmallVector<const void *> MemoryBases;
+  llvm::DenseMap<const void *, MemoryInfoTy> MemoryInfo;
 };
+
+void *CUDADeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
+  if (Size == 0)
+    return nullptr;
+
+  if (auto Err = setContext()) {
+    REPORT("Failure to alloc memory: %s\n", toString(std::move(Err)).data());
+    return nullptr;
+  }
+
+  void *MemAlloc = nullptr;
+  CUdeviceptr DevicePtr;
+  CUresult Res;
+
+  switch (Kind) {
+  case TARGET_ALLOC_DEFAULT:
+  case TARGET_ALLOC_DEVICE:
+    Res = cuMemAlloc(&DevicePtr, Size);
+    MemAlloc = (void *)DevicePtr;
+    break;
+  case TARGET_ALLOC_HOST:
+    Res = cuMemAllocHost(&MemAlloc, Size);
+    break;
+  case TARGET_ALLOC_SHARED:
+    Res = cuMemAllocManaged(&DevicePtr, Size, CU_MEM_ATTACH_GLOBAL);
+    MemAlloc = (void *)DevicePtr;
+    break;
+  case TARGET_ALLOC_DEVICE_NON_BLOCKING: {
+    CUstream Stream;
+    if ((Res = cuStreamCreate(&Stream, CU_STREAM_NON_BLOCKING)))
+      break;
+    if ((Res = cuMemAllocAsync(&DevicePtr, Size, Stream)))
+      break;
+    cuStreamSynchronize(Stream);
+    Res = cuStreamDestroy(Stream);
+    MemAlloc = (void *)DevicePtr;
+  }
+  }
+
+  if (auto Err = Plugin::check(Res, "error in cuMemAlloc[Host|Managed]: %s")) {
+    REPORT("Failure to alloc memory: %s\n", toString(std::move(Err)).data());
+    return nullptr;
+  }
+
+  auto CudaPlugin = reinterpret_cast<CUDAPluginTy *>(&Plugin);
+  {
+    std::lock_guard<std::mutex> Lock(CudaPlugin->MemoryInfoMutex);
+    CudaPlugin->MemoryBases.insert(
+        std::lower_bound(CudaPlugin->MemoryBases.begin(),
+                         CudaPlugin->MemoryBases.end(), MemAlloc),
+        MemAlloc);
+    CudaPlugin->MemoryInfo[MemAlloc] = MemoryInfoTy{
+        /*Base=*/MemAlloc,
+        /*Size=*/Size,
+        /*Type=*/Kind,
+        /*Device=*/this,
+    };
+  }
+  return MemAlloc;
+}
+
+int CUDADeviceTy::free(void *TgtPtr, TargetAllocTy Kind) {
+  if (TgtPtr == nullptr)
+    return OFFLOAD_SUCCESS;
+
+  if (auto Err = setContext()) {
+    REPORT("Failure to free memory: %s\n", toString(std::move(Err)).data());
+    return OFFLOAD_FAIL;
+  }
+
+  CUresult Res;
+  switch (Kind) {
+  case TARGET_ALLOC_DEFAULT:
+  case TARGET_ALLOC_DEVICE:
+  case TARGET_ALLOC_SHARED:
+    Res = cuMemFree((CUdeviceptr)TgtPtr);
+    break;
+  case TARGET_ALLOC_HOST:
+    Res = cuMemFreeHost(TgtPtr);
+    break;
+  case TARGET_ALLOC_DEVICE_NON_BLOCKING: {
+    CUstream Stream;
+    if ((Res = cuStreamCreate(&Stream, CU_STREAM_NON_BLOCKING)))
+      break;
+    cuMemFreeAsync(reinterpret_cast<CUdeviceptr>(TgtPtr), Stream);
+    cuStreamSynchronize(Stream);
+    if ((Res = cuStreamDestroy(Stream)))
+      break;
+  }
+  }
+
+  if (auto Err = Plugin::check(Res, "error in cuMemFree[Host]: %s")) {
+    REPORT("Failure to free memory: %s\n", toString(std::move(Err)).data());
+    return OFFLOAD_FAIL;
+  }
+
+  auto CudaPlugin = reinterpret_cast<CUDAPluginTy *>(&Plugin);
+  {
+    std::lock_guard<std::mutex> Lock(CudaPlugin->MemoryInfoMutex);
+    CudaPlugin->MemoryBases.erase(std::find(CudaPlugin->MemoryBases.begin(),
+                                            CudaPlugin->MemoryBases.end(),
+                                            TgtPtr));
+    assert(CudaPlugin->MemoryInfo.erase(TgtPtr));
+  }
+  return OFFLOAD_SUCCESS;
+}
 
 Error CUDADeviceTy::dataExchangeImpl(const void *SrcPtr,
                                      GenericDeviceTy &DstGenericDevice,

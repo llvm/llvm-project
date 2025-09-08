@@ -201,8 +201,6 @@ struct OffloadContext {
 
   bool TracingEnabled = false;
   bool ValidationEnabled = true;
-  DenseMap<void *, AllocInfo> AllocInfoMap{};
-  std::mutex AllocInfoMapMutex{};
   SmallVector<ol_platform_impl_t, 4> Platforms{};
   size_t RefCount;
 
@@ -624,32 +622,15 @@ Error olMemAlloc_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
     return Alloc.takeError();
 
   *AllocationOut = *Alloc;
-  {
-    std::lock_guard<std::mutex> Lock(OffloadContext::get().AllocInfoMapMutex);
-    OffloadContext::get().AllocInfoMap.insert_or_assign(
-        *Alloc, AllocInfo{Device, Type});
-  }
   return Error::success();
 }
 
 Error olMemFree_impl(ol_platform_handle_t Platform, void *Address) {
-  ol_device_handle_t Device;
-  ol_alloc_type_t Type;
-  {
-    std::lock_guard<std::mutex> Lock(OffloadContext::get().AllocInfoMapMutex);
-    if (!OffloadContext::get().AllocInfoMap.contains(Address))
-      return createOffloadError(ErrorCode::INVALID_ARGUMENT,
-                                "address is not a known allocation");
+  auto MemInfo = Platform->Plugin->get_memory_info(Address);
+  if (auto Err = MemInfo.takeError())
+    return Err;
 
-    auto AllocInfo = OffloadContext::get().AllocInfoMap.at(Address);
-    Device = AllocInfo.Device;
-    Type = AllocInfo.Type;
-    OffloadContext::get().AllocInfoMap.erase(Address);
-  }
-  assert(Platform == Device->Platform);
-
-  if (auto Res =
-          Device->Device->dataDelete(Address, convertOlToPluginAllocTy(Type)))
+  if (auto Res = MemInfo->Device->dataDelete(Address, MemInfo->Type))
     return Res;
 
   return Error::success();

@@ -160,6 +160,7 @@ typedef struct hsa_amd_pointer_info_s {
   void* agentBaseAddress;
   void* hostBaseAddress;
   size_t sizeInBytes;
+  void *userData;
 } hsa_amd_pointer_info_t;
 
 hsa_status_t hsa_amd_pointer_info(const void* ptr,
@@ -167,6 +168,8 @@ hsa_status_t hsa_amd_pointer_info(const void* ptr,
                                           void* (*alloc)(size_t),
                                           uint32_t* num_agents_accessible,
                                           hsa_agent_t** accessible);
+
+hsa_status_t hsa_amd_pointer_info_set_userdata(const void *ptr, void *userdata);
 
 #ifdef __cplusplus
 }
