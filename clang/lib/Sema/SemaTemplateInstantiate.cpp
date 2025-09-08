@@ -2124,9 +2124,11 @@ TemplateName TemplateInstantiator::TransformTemplateName(
     NestedNameSpecifierLoc &QualifierLoc, SourceLocation TemplateKWLoc,
     TemplateName Name, SourceLocation NameLoc, QualType ObjectType,
     NamedDecl *FirstQualifierInScope, bool AllowInjectedClassName) {
-  if (TemplateTemplateParmDecl *TTP
-       = dyn_cast_or_null<TemplateTemplateParmDecl>(Name.getAsTemplateDecl())) {
-    if (TTP->getDepth() < TemplateArgs.getNumLevels()) {
+  if (Name.getKind() == TemplateName::Template) {
+    assert(!QualifierLoc && "Unexpected qualifier");
+    if (auto *TTP =
+            dyn_cast<TemplateTemplateParmDecl>(Name.getAsTemplateDecl());
+        TTP && TTP->getDepth() < TemplateArgs.getNumLevels()) {
       // If the corresponding template argument is NULL or non-existent, it's
       // because we are performing instantiation from explicitly-specified
       // template arguments in a function template, but there were some
@@ -2169,13 +2171,6 @@ TemplateName TemplateInstantiator::TransformTemplateName(
 
       TemplateName Template = Arg.getAsTemplate();
       assert(!Template.isNull() && "Null template template argument");
-
-      if (NestedNameSpecifier Qualifier = Template.getQualifier()) {
-        NestedNameSpecifierLocBuilder Builder;
-        Builder.MakeTrivial(SemaRef.Context, Qualifier, NameLoc);
-        QualifierLoc = Builder.getWithLocInContext(SemaRef.Context);
-      }
-
       return getSema().Context.getSubstTemplateTemplateParm(
           Template, AssociatedDecl, TTP->getIndex(), PackIndex, Final);
     }

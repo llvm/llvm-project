@@ -26,6 +26,7 @@ package(default_visibility = ["//visibility:public"])
             "//mlir:include/mlir/Dialect/OpenMP/OpenMPOpBase.td",
             "//mlir:include/mlir/Dialect/OpenMP/OpenMPOpsInterfaces.td",
             "//mlir:include/mlir/Dialect/OpenMP/OpenMPTypeInterfaces.td",
+            "//mlir:include/mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td",
             "//mlir:include/mlir/IR/BuiltinAttributeInterfaces.td",
             "//mlir:include/mlir/IR/BuiltinAttributes.td",
             "//mlir:include/mlir/IR/BuiltinDialect.td",

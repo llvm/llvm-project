@@ -1239,10 +1239,13 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
     if (!isa<SCEVAddRecExpr>(ExitSCEV))
       continue;
     Type *PhiTy = PN.getType();
-    if (STy->isIntegerTy() && PhiTy->isPointerTy())
+    if (STy->isIntegerTy() && PhiTy->isPointerTy()) {
       ExitSCEV = SE.getPtrToIntExpr(ExitSCEV, STy);
-    else if (S->getType() != PN.getType())
+      if (isa<SCEVCouldNotCompute>(ExitSCEV))
+        continue;
+    } else if (S->getType() != PN.getType()) {
       continue;
+    }
 
     // Check if we can re-use the existing PN, by adjusting it with an expanded
     // offset, if the offset is simpler.
@@ -2184,8 +2187,15 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
   // negative. If Step is known to be positive or negative, only create
   // either 1. or 2.
   auto ComputeEndCheck = [&]() -> Value * {
-    // Checking <u 0 is always false.
-    if (!Signed && Start->isZero() && SE.isKnownPositive(Step))
+    // Checking <u 0 is always false, if (Step * trunc ExitCount) does not wrap.
+    // TODO: Predicates that can be proven true/false should be discarded when
+    // the predicates are created, not late during expansion.
+    if (!Signed && Start->isZero() && SE.isKnownPositive(Step) &&
+        DstBits < SrcBits &&
+        ExitCount == SE.getZeroExtendExpr(SE.getTruncateExpr(ExitCount, ARTy),
+                                          ExitCount->getType()) &&
+        SE.willNotOverflow(Instruction::Mul, Signed, Step,
+                           SE.getTruncateExpr(ExitCount, ARTy)))
       return ConstantInt::getFalse(Loc->getContext());
 
     // Get the backedge taken count and truncate or extended to the AR type.

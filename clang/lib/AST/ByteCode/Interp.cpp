@@ -792,6 +792,7 @@ bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
 
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                AccessKinds AK) {
+  // Block pointers are the only ones we can actually read from.
   if (!Ptr.isBlockPointer()) {
     if (Ptr.isZero()) {
       const auto &Src = S.Current->getSource(OpPC);
@@ -804,7 +805,6 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
   }
 
-  // Block pointers are the only ones we can actually read from.
   if (!Ptr.block()->isAccessible()) {
     if (!CheckLive(S, OpPC, Ptr, AK))
       return false;
@@ -812,8 +812,7 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
       return false;
     if (!CheckDummy(S, OpPC, Ptr.block(), AK))
       return false;
-    if (!CheckWeak(S, OpPC, Ptr.block()))
-      return false;
+    return CheckWeak(S, OpPC, Ptr.block());
   }
 
   if (!CheckConstant(S, OpPC, Ptr))
@@ -870,7 +869,7 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 }
 
 bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  if (!Ptr.isBlockPointer())
+  if (!Ptr.isBlockPointer() || Ptr.isZero())
     return false;
 
   if (!Ptr.block()->isAccessible()) {
@@ -1207,17 +1206,15 @@ static bool runRecordDestructor(InterpState &S, CodePtr OpPC,
   }
 
   // Destructor of this record.
-  if (const CXXDestructorDecl *Dtor = R->getDestructor();
-      Dtor && !Dtor->isTrivial()) {
-    const Function *DtorFunc = S.getContext().getOrCreateFunction(Dtor);
-    if (!DtorFunc)
-      return false;
+  const CXXDestructorDecl *Dtor = R->getDestructor();
+  assert(Dtor);
+  assert(!Dtor->isTrivial());
+  const Function *DtorFunc = S.getContext().getOrCreateFunction(Dtor);
+  if (!DtorFunc)
+    return false;
 
-    S.Stk.push<Pointer>(BasePtr);
-    if (!Call(S, OpPC, DtorFunc, 0))
-      return false;
-  }
-  return true;
+  S.Stk.push<Pointer>(BasePtr);
+  return Call(S, OpPC, DtorFunc, 0);
 }
 
 static bool RunDestructors(InterpState &S, CodePtr OpPC, const Block *B) {
@@ -1228,6 +1225,9 @@ static bool RunDestructors(InterpState &S, CodePtr OpPC, const Block *B) {
     return true;
 
   assert(Desc->isRecord() || Desc->isCompositeArray());
+
+  if (Desc->hasTrivialDtor())
+    return true;
 
   if (Desc->isCompositeArray()) {
     unsigned N = Desc->getNumElems();
@@ -2117,8 +2117,8 @@ bool DiagTypeid(InterpState &S, CodePtr OpPC) {
 
 bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
                                              const Pointer &RHS) {
-  unsigned LHSOffset = LHS.getIndex();
-  unsigned RHSOffset = RHS.getIndex();
+  unsigned LHSOffset = LHS.isOnePastEnd() ? LHS.getNumElems() : LHS.getIndex();
+  unsigned RHSOffset = RHS.isOnePastEnd() ? RHS.getNumElems() : RHS.getIndex();
   unsigned LHSLength = (LHS.getNumElems() - 1) * LHS.elemSize();
   unsigned RHSLength = (RHS.getNumElems() - 1) * RHS.elemSize();
 
