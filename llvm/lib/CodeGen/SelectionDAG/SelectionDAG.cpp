@@ -9014,12 +9014,12 @@ static void checkAddrSpaceIsValidForLibcall(const TargetLowering *TLI,
 
 static bool isInTailCallPositionWrapper(const CallInst *CI,
                                         const SelectionDAG *SelDAG,
-                                        bool IsLowerToLibCall) {
+                                        bool AllowReturnsFirstArg) {
 
   return CI && CI->isTailCall() &&
          isInTailCallPosition(*CI, SelDAG->getTarget(),
-                              funcReturnsFirstArgOfCall(*CI) &&
-                                  IsLowerToLibCall);
+                              AllowReturnsFirstArg &&
+                                  funcReturnsFirstArgOfCall(*CI));
 }
 
 std::pair<SDValue, SDValue>
