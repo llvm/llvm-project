@@ -104,6 +104,7 @@
 // CHECK-NEXT:     sve2p1              FEAT_SVE2p1                                            Enable Scalable Vector Extension 2.1 instructions
 // CHECK-NEXT:     sve2p2              FEAT_SVE2p2                                            Enable Armv9.6-A Scalable Vector Extension 2.2 instructions
 // CHECK-NEXT:     the                 FEAT_THE                                               Enable Armv8.9-A Translation Hardening Extension
+// CHECK-NEXT:     tlbid               FEAT_TLBID                                             Enable Armv9.7-A TLBI Domains extension
 // CHECK-NEXT:     tlbiw               FEAT_TLBIW                                             Enable Armv9.5-A TLBI VMALL for Dirty State
 // CHECK-NEXT:     tme                 FEAT_TME                                               Enable Transactional Memory Extension
 // CHECK-NEXT:     wfxt                FEAT_WFxT                                              Enable Armv8.7-A WFET and WFIT instruction
