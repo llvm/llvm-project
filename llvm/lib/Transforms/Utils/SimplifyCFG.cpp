@@ -612,6 +612,9 @@ private:
   /// If CompValue is already set, the function is expected to fail if a match
   /// is found but the value compared to is different.
   bool matchInstruction(Instruction *I, bool isEQ) {
+    if (match(I, m_Not(m_Instruction(I))))
+      isEQ = !isEQ;
+
     Value *Val;
     if (match(I, m_NUWTrunc(m_Value(Val)))) {
       // If we already have a value for the switch, it has to match!
