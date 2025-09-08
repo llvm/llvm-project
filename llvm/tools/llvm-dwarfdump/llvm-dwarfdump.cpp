@@ -676,7 +676,6 @@ static bool collectObjectSources(ObjectFile &Obj, DWARFContext &DICtx,
 
 static TargetCallbacks getCallbacks(ObjectFile &Obj, const Twine &Filename) {
   Triple TT = Obj.makeTriple();
-  const std::string &TripleStr = TT.str();
 
   std::string TargetLookupError;
   const Target *TheTarget = TargetRegistry::lookupTarget(TT, TargetLookupError);
@@ -688,7 +687,7 @@ static TargetCallbacks getCallbacks(ObjectFile &Obj, const Twine &Filename) {
     return {};
   }
 
-  const MCRegisterInfo *MCRI = TheTarget->createMCRegInfo(TripleStr);
+  const MCRegisterInfo *MCRI = TheTarget->createMCRegInfo(TT);
   if (!MCRI) {
     logAllUnhandledErrors(createStringError(inconvertibleErrorCode(),
                                             "Error in creating MCRegisterInfo"),
