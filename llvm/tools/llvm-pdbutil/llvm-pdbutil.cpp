@@ -820,7 +820,6 @@ static void yamlToPdb(StringRef Path) {
   pdb::yaml::PdbDbiStream DefaultDbiStream;
   pdb::yaml::PdbTpiStream DefaultTpiStream;
   pdb::yaml::PdbTpiStream DefaultIpiStream;
-  pdb::yaml::PdbPublicsStream DefaultPublicsStream;
 
   const auto &Info = YamlObj.PdbStream.value_or(DefaultInfoStream);
 
@@ -883,22 +882,23 @@ static void yamlToPdb(StringRef Path) {
     IpiBuilder.addTypeRecord(Type.RecordData, std::nullopt);
   }
 
-  auto &GsiBuilder = Builder.getGsiBuilder();
-  const auto &Publics = YamlObj.PublicsStream.value_or(DefaultPublicsStream);
-  std::vector<BulkPublic> BulkPublics;
-  for (const auto &P : Publics.PubSyms) {
-    CVSymbol CV = P.toCodeViewSymbol(Allocator, CodeViewContainer::Pdb);
-    auto PS = cantFail(SymbolDeserializer::deserializeAs<PublicSym32>(CV));
+  if (YamlObj.PublicsStream) {
+    auto &GsiBuilder = Builder.getGsiBuilder();
+    std::vector<BulkPublic> BulkPublics;
+    for (const auto &P : YamlObj.PublicsStream->PubSyms) {
+      CVSymbol CV = P.toCodeViewSymbol(Allocator, CodeViewContainer::Pdb);
+      auto PS = cantFail(SymbolDeserializer::deserializeAs<PublicSym32>(CV));
 
-    BulkPublic BP;
-    BP.Name = PS.Name.data();
-    BP.NameLen = PS.Name.size();
-    BP.setFlags(PS.Flags);
-    BP.Offset = PS.Offset;
-    BP.Segment = PS.Segment;
-    BulkPublics.emplace_back(BP);
+      BulkPublic BP;
+      BP.Name = PS.Name.data();
+      BP.NameLen = PS.Name.size();
+      BP.setFlags(PS.Flags);
+      BP.Offset = PS.Offset;
+      BP.Segment = PS.Segment;
+      BulkPublics.emplace_back(BP);
+    }
+    GsiBuilder.addPublicSymbols(std::move(BulkPublics));
   }
-  GsiBuilder.addPublicSymbols(std::move(BulkPublics));
 
   Builder.getStringTableBuilder().setStrings(*Strings.strings());
 
