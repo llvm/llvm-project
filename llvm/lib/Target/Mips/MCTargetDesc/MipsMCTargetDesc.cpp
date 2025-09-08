@@ -45,10 +45,6 @@ using namespace llvm;
 #define GET_REGINFO_MC_DESC
 #include "MipsGenRegisterInfo.inc"
 
-std::string MIPS_MC::ParseMIPSTriple(const Triple &TT) {
-  return TT.isMIPS64() ? "+ptr64" : "";
-}
-
 void MIPS_MC::initLLVMToCVRegMapping(MCRegisterInfo *MRI) {
   // Mapping from CodeView to MC register id.
   static const struct {
@@ -169,12 +165,7 @@ static MCRegisterInfo *createMipsMCRegisterInfo(const Triple &TT) {
 static MCSubtargetInfo *createMipsMCSubtargetInfo(const Triple &TT,
                                                   StringRef CPU, StringRef FS) {
   CPU = MIPS_MC::selectMipsCPU(TT, CPU);
-
-  std::string ArchFS = MIPS_MC::ParseMIPSTriple(TT);
-  if (!FS.empty())
-    ArchFS = (Twine(ArchFS) + "," + FS).str();
-
-  return createMipsMCSubtargetInfoImpl(TT, CPU, /*TuneCPU=*/CPU, ArchFS);
+  return createMipsMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
 }
 
 static MCAsmInfo *createMipsMCAsmInfo(const MCRegisterInfo &MRI,
