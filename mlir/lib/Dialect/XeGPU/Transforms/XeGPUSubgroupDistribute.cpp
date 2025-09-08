@@ -33,6 +33,7 @@
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/LogicalResult.h"
 
@@ -62,7 +63,8 @@ namespace {
 /// In certain cases, we may need to favor XeGPU specific distribution patterns
 /// over generic vector distribution patterns. In such cases, we can assign
 /// priorities to patterns.
-enum class PatternPriority : int { Regular = 1, High = 2 };
+static constexpr unsigned regularPatternBenefit = 1;
+static constexpr unsigned highPatternBenefit = 2;
 
 /// Helper function to compute the effective lane layout from a
 /// DistributeLayoutAttr which can be either a LayoutAttr or a SliceAttr.
@@ -1300,9 +1302,12 @@ void xegpu::populateXeGPUSubgroupDistributePatterns(
       .add<CreateNdDescDistribution, StoreNdDistribution, LoadNdDistribution,
            DpasDistribution, PrefetchNdDistribution, UpdateNdOffsetDistribution,
            GpuBarrierDistribution, VectorMultiReductionDistribution,
-           LoadDistribution, StoreDistribution>(patterns.getContext());
-  patterns.add<VectorShapeCastDistribution>(patterns.getContext(),
-                                            /*benefit=*/PatternPriority::High);
+           LoadDistribution, StoreDistribution>(
+          patterns.getContext(),
+          /*pattern benefit=*/regularPatternBenefit);
+  patterns.add<VectorShapeCastDistribution>(
+      patterns.getContext(),
+      /*pattern benefit=*/highPatternBenefit);
 }
 
 void XeGPUSubgroupDistributePass::runOnOperation() {
@@ -1396,10 +1401,13 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
   };
 
   if (enableSGReductions)
-    vector::populateDistributeReduction(patterns, warpReduction);
+    vector::populateDistributeReduction(
+        patterns, warpReduction,
+        /*pattern benefit=*/regularPatternBenefit);
 
   vector::populatePropagateWarpVectorDistributionPatterns(
-      patterns, distributionFn, shuffleFn);
+      patterns, distributionFn, shuffleFn,
+      /*pattern benefit=*/regularPatternBenefit);
   if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
     signalPassFailure();
     return;
