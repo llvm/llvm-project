@@ -3346,6 +3346,14 @@ namespace ISD {
            Ld->getAddressingMode() == ISD::UNINDEXED;
   }
 
+  /// Returns true if the specified node is a non-extending and unindexed
+  /// masked store.
+  inline bool isNormalMaskedStore(const SDNode *N) {
+    auto *St = dyn_cast<MaskedStoreSDNode>(N);
+    return St && !St->isTruncatingStore() &&
+           St->getAddressingMode() == ISD::UNINDEXED;
+  }
+
   /// Attempt to match a unary predicate against a scalar/splat constant or
   /// every element of a constant BUILD_VECTOR.
   /// If AllowUndef is true, then UNDEF elements will pass nullptr to Match.
