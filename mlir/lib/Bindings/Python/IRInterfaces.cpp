@@ -195,7 +195,7 @@ public:
   static void bind(nb::module_ &m) {
     nb::class_<ConcreteIface> cls(m, ConcreteIface::pyClassName);
     cls.def(nb::init<nb::object, DefaultingPyMlirContext>(), nb::arg("object"),
-            nb::arg("context").none() = nb::none(), constructorDoc)
+            nb::arg("context") = nb::none(), constructorDoc)
         .def_prop_ro("operation", &PyConcreteOpInterface::getOperationObject,
                      operationDoc)
         .def_prop_ro("opview", &PyConcreteOpInterface::getOpView, opviewDoc);
@@ -303,12 +303,11 @@ public:
 
   static void bindDerived(ClassTy &cls) {
     cls.def("inferReturnTypes", &PyInferTypeOpInterface::inferReturnTypes,
-            nb::arg("operands").none() = nb::none(),
-            nb::arg("attributes").none() = nb::none(),
-            nb::arg("properties").none() = nb::none(),
-            nb::arg("regions").none() = nb::none(),
-            nb::arg("context").none() = nb::none(),
-            nb::arg("loc").none() = nb::none(), inferReturnTypesDoc);
+            nb::arg("operands") = nb::none(),
+            nb::arg("attributes") = nb::none(),
+            nb::arg("properties") = nb::none(), nb::arg("regions") = nb::none(),
+            nb::arg("context") = nb::none(), nb::arg("loc") = nb::none(),
+            inferReturnTypesDoc);
   }
 };
 
@@ -463,12 +462,10 @@ public:
   static void bindDerived(ClassTy &cls) {
     cls.def("inferReturnTypeComponents",
             &PyInferShapedTypeOpInterface::inferReturnTypeComponents,
-            nb::arg("operands").none() = nb::none(),
-            nb::arg("attributes").none() = nb::none(),
-            nb::arg("regions").none() = nb::none(),
-            nb::arg("properties").none() = nb::none(),
-            nb::arg("context").none() = nb::none(),
-            nb::arg("loc").none() = nb::none(), inferReturnTypeComponentsDoc);
+            nb::arg("operands") = nb::none(),
+            nb::arg("attributes") = nb::none(), nb::arg("regions") = nb::none(),
+            nb::arg("properties") = nb::none(), nb::arg("context") = nb::none(),
+            nb::arg("loc") = nb::none(), inferReturnTypeComponentsDoc);
   }
 };
 
