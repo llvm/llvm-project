@@ -1,4 +1,4 @@
-// shell is required for the "dirname" command
+// UNSUPPORTED: system-windows
 // RUN: pushd %S
 // RUN: cd ..
 // RUN: clang-tidy -checks=-*,google-explicit-constructor %s -- -I "." 2>&1 | FileCheck %s
