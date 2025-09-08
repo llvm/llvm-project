@@ -22,6 +22,7 @@
 
 #include "Protocol/ProtocolTypes.h"
 #include "llvm/Support/JSON.h"
+#include <vector>
 
 namespace lldb_dap::protocol {
 
@@ -55,6 +56,14 @@ struct ModuleEventBody {
 };
 llvm::json::Value toJSON(const ModuleEventBody::Reason &);
 llvm::json::Value toJSON(const ModuleEventBody &);
+
+struct InvalidatedEventBody {
+  enum Area : unsigned { eAreaAll, eAreaStacks, eAreaThreads, eAreaVariables };
+
+  std::vector<Area> areas;
+};
+llvm::json::Value toJSON(const InvalidatedEventBody::Area &);
+llvm::json::Value toJSON(const InvalidatedEventBody &);
 
 } // end namespace lldb_dap::protocol
 

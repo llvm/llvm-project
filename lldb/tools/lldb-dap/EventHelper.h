@@ -10,7 +10,9 @@
 #define LLDB_TOOLS_LLDB_DAP_EVENTHELPER_H
 
 #include "DAPForward.h"
+#include "Protocol/ProtocolEvents.h"
 #include "llvm/Support/Error.h"
+#include <vector>
 
 namespace lldb_dap {
 struct DAP;
@@ -31,6 +33,9 @@ void SendStdOutStdErr(DAP &dap, lldb::SBProcess &process);
 void SendContinuedEvent(DAP &dap);
 
 void SendProcessExitedEvent(DAP &dap, lldb::SBProcess &process);
+
+void SendInvalidatedEvent(
+    DAP &dap, std::vector<protocol::InvalidatedEventBody::Area> &&areas);
 
 } // namespace lldb_dap
 

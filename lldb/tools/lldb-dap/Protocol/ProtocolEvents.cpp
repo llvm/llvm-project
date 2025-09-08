@@ -33,4 +33,22 @@ json::Value toJSON(const ModuleEventBody &MEB) {
   return json::Object{{"reason", MEB.reason}, {"module", MEB.module}};
 }
 
+llvm::json::Value toJSON(const InvalidatedEventBody::Area &IEBA) {
+  switch (IEBA) {
+  case InvalidatedEventBody::eAreaAll:
+    return "all";
+  case InvalidatedEventBody::eAreaStacks:
+    return "stacks";
+  case InvalidatedEventBody::eAreaThreads:
+    return "threads";
+  case InvalidatedEventBody::eAreaVariables:
+    return "variables";
+  }
+  llvm_unreachable("unhandled invalidated event area!.");
+}
+
+llvm::json::Value toJSON(const InvalidatedEventBody &IEB) {
+  return json::Object{{"areas", IEB.areas}};
+}
+
 } // namespace lldb_dap::protocol
