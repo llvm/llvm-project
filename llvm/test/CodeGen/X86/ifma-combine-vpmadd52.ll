@@ -351,3 +351,209 @@ define <16 x i64> @test_1024_combine_split(<16 x i64> %x, <16 x i64> %y, <16 x i
   %res = add <16 x i64> %z, %mul
   ret <16 x i64> %res
 }
+
+define <1 x i64> @test_not_i1(<1 x i64> %x, <1 x i64> %y, <1 x i64> %z) {
+; X64-LABEL: test_not_i1:
+; X64:       # %bb.0:
+; X64-NEXT:    andl $67108863, %edi # imm = 0x3FFFFFF
+; X64-NEXT:    imulq %rdi, %rdi
+; X64-NEXT:    leaq (%rdi,%rdx), %rax
+; X64-NEXT:    retq
+  %x_masked = and <1 x i64> %x, splat (i64 67108863)
+  %y_masked = and <1 x i64> %x, splat (i64 67108863)
+  %mul = mul <1 x i64> %x_masked, %y_masked
+  %res = add <1 x i64> %mul, %z
+  ret <1 x i64> %res
+}
+
+define <3 x i64> @test_i3(<3 x i64> %x, <3 x i64> %y, <3 x i64> %z) {
+; AVX-LABEL: test_i3:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [67108863,67108863,67108863,67108863]
+; AVX-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX-NEXT:    vpmuludq %ymm0, %ymm0, %ymm0
+; AVX-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
+; AVX-NEXT:    retq
+;
+; AVX512-NOVL-LABEL: test_i3:
+; AVX512-NOVL:       # %bb.0:
+; AVX512-NOVL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [67108863,67108863,67108863,67108863]
+; AVX512-NOVL-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX512-NOVL-NEXT:    vpmuludq %ymm0, %ymm0, %ymm0
+; AVX512-NOVL-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
+; AVX512-NOVL-NEXT:    retq
+;
+; AVX512VL-LABEL: test_i3:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpmuludq %ymm0, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
+; AVX512VL-NEXT:    retq
+  %x_masked = and <3 x i64> %x, splat (i64 67108863)
+  %y_masked = and <3 x i64> %x, splat (i64 67108863)
+  %mul = mul <3 x i64> %x_masked, %y_masked
+  %res = add <3 x i64> %mul, %z
+  ret <3 x i64> %res
+}
+
+define <5 x i64> @test_i5(<5 x i64> %x, <5 x i64> %y, <5 x i64> %z) {
+; AVX-LABEL: test_i5:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movq %rdi, %rax
+; AVX-NEXT:    vmovq %r8, %xmm0
+; AVX-NEXT:    vmovq %rcx, %xmm1
+; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX-NEXT:    vmovq %rdx, %xmm1
+; AVX-NEXT:    vmovq %rsi, %xmm2
+; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vmovdqu {{[0-9]+}}(%rsp), %ymm2
+; AVX-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [67108863,67108863,67108863,67108863]
+; AVX-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; AVX-NEXT:    movl $67108863, %ecx # imm = 0x3FFFFFF
+; AVX-NEXT:    vmovq %rcx, %xmm3
+; AVX-NEXT:    vmovq %r9, %xmm4
+; AVX-NEXT:    vpand %xmm3, %xmm4, %xmm3
+; AVX-NEXT:    vpsrlq $32, %xmm3, %xmm4
+; AVX-NEXT:    vpmuludq %xmm4, %xmm3, %xmm4
+; AVX-NEXT:    vpsllq $33, %xmm4, %xmm4
+; AVX-NEXT:    vpmuludq %xmm3, %xmm3, %xmm3
+; AVX-NEXT:    vpaddq %xmm1, %xmm3, %xmm1
+; AVX-NEXT:    vpaddq %xmm4, %xmm1, %xmm1
+; AVX-NEXT:    {vex} vpmadd52luq %ymm0, %ymm0, %ymm2
+; AVX-NEXT:    vmovdqa %ymm2, (%rdi)
+; AVX-NEXT:    vmovq %xmm1, 32(%rdi)
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: test_i5:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; AVX512-NEXT:    vpmuludq %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpaddq %zmm2, %zmm0, %zmm0
+; AVX512-NEXT:    retq
+  %x_masked = and <5 x i64> %x, splat (i64 67108863)
+  %y_masked = and <5 x i64> %x, splat (i64 67108863)
+  %mul = mul <5 x i64> %x_masked, %y_masked
+  %res = add <5 x i64> %mul, %z
+  ret <5 x i64> %res
+}
+
+define <6 x i64> @test_i6(<6 x i64> %x, <6 x i64> %y, <6 x i64> %z) {
+; AVX-LABEL: test_i6:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movq %rdi, %rax
+; AVX-NEXT:    vmovq %r8, %xmm0
+; AVX-NEXT:    vmovq %rcx, %xmm1
+; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX-NEXT:    vmovq %rdx, %xmm1
+; AVX-NEXT:    vmovq %rsi, %xmm2
+; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX-NEXT:    vmovdqu {{[0-9]+}}(%rsp), %ymm1
+; AVX-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [67108863,67108863,67108863,67108863]
+; AVX-NEXT:    vpand %ymm2, %ymm0, %ymm0
+; AVX-NEXT:    {vex} vpmadd52luq %ymm0, %ymm0, %ymm1
+; AVX-NEXT:    vmovq %r9, %xmm0
+; AVX-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
+; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm3[0]
+; AVX-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpmuldq %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpaddq {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; AVX-NEXT:    vmovdqa %xmm0, 32(%rdi)
+; AVX-NEXT:    vmovdqa %ymm1, (%rdi)
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: test_i6:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; AVX512-NEXT:    vpmuludq %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpaddq %zmm2, %zmm0, %zmm0
+; AVX512-NEXT:    retq
+  %x_masked = and <6 x i64> %x, splat (i64 67108863)
+  %y_masked = and <6 x i64> %x, splat (i64 67108863)
+  %mul = mul <6 x i64> %x_masked, %y_masked
+  %res = add <6 x i64> %mul, %z
+  ret <6 x i64> %res
+}
+
+define <9 x i64> @test_i9(<9 x i64> %x, <9 x i64> %y, <9 x i64> %z) {
+; AVX-LABEL: test_i9:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movq %rdi, %rax
+; AVX-NEXT:    vmovq %r8, %xmm0
+; AVX-NEXT:    vmovq %rcx, %xmm1
+; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX-NEXT:    vmovq %rdx, %xmm1
+; AVX-NEXT:    vmovq %rsi, %xmm2
+; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX-NEXT:    vmovq %r9, %xmm1
+; AVX-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; AVX-NEXT:    vinserti128 $1, {{[0-9]+}}(%rsp), %ymm1, %ymm1
+; AVX-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; AVX-NEXT:    vmovdqu {{[0-9]+}}(%rsp), %ymm3
+; AVX-NEXT:    vmovdqu {{[0-9]+}}(%rsp), %ymm4
+; AVX-NEXT:    vpbroadcastq {{.*#+}} ymm5 = [67108863,67108863,67108863,67108863]
+; AVX-NEXT:    vpand %ymm5, %ymm0, %ymm0
+; AVX-NEXT:    vpand %ymm5, %ymm1, %ymm1
+; AVX-NEXT:    movl $67108863, %ecx # imm = 0x3FFFFFF
+; AVX-NEXT:    vmovq %rcx, %xmm5
+; AVX-NEXT:    vmovq {{.*#+}} xmm6 = mem[0],zero
+; AVX-NEXT:    vpand %xmm5, %xmm6, %xmm5
+; AVX-NEXT:    vpsrlq $32, %xmm5, %xmm6
+; AVX-NEXT:    vpmuludq %xmm6, %xmm5, %xmm6
+; AVX-NEXT:    vpsllq $33, %xmm6, %xmm6
+; AVX-NEXT:    vpmuludq %xmm5, %xmm5, %xmm5
+; AVX-NEXT:    vpaddq %xmm2, %xmm5, %xmm2
+; AVX-NEXT:    vpaddq %xmm6, %xmm2, %xmm2
+; AVX-NEXT:    {vex} vpmadd52luq %ymm0, %ymm0, %ymm4
+; AVX-NEXT:    {vex} vpmadd52luq %ymm1, %ymm1, %ymm3
+; AVX-NEXT:    vmovdqa %ymm3, 32(%rdi)
+; AVX-NEXT:    vmovdqa %ymm4, (%rdi)
+; AVX-NEXT:    vmovq %xmm2, 64(%rdi)
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: test_i9:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    movq %rdi, %rax
+; AVX512-NEXT:    vmovq %r8, %xmm0
+; AVX512-NEXT:    vmovq %rcx, %xmm1
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512-NEXT:    vmovq %rdx, %xmm1
+; AVX512-NEXT:    vmovq %rsi, %xmm2
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX512-NEXT:    vmovq %r9, %xmm1
+; AVX512-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; AVX512-NEXT:    vinserti128 $1, {{[0-9]+}}(%rsp), %ymm1, %ymm1
+; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX512-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
+; AVX512-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; AVX512-NEXT:    movl $67108863, %ecx # imm = 0x3FFFFFF
+; AVX512-NEXT:    vmovq %rcx, %xmm3
+; AVX512-NEXT:    vmovq {{.*#+}} xmm4 = mem[0],zero
+; AVX512-NEXT:    vpand %xmm3, %xmm4, %xmm3
+; AVX512-NEXT:    vpsrlq $32, %xmm3, %xmm4
+; AVX512-NEXT:    vpmuludq %xmm4, %xmm3, %xmm4
+; AVX512-NEXT:    vpsllq $33, %xmm4, %xmm4
+; AVX512-NEXT:    vpmuludq %xmm3, %xmm3, %xmm3
+; AVX512-NEXT:    vpaddq %xmm1, %xmm3, %xmm1
+; AVX512-NEXT:    vpaddq %xmm4, %xmm1, %xmm1
+; AVX512-NEXT:    vpmadd52luq %zmm0, %zmm0, %zmm2
+; AVX512-NEXT:    vmovq %xmm1, 64(%rdi)
+; AVX512-NEXT:    vmovdqa64 %zmm2, (%rdi)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %x_masked = and <9 x i64> %x, splat (i64 67108863)
+  %y_masked = and <9 x i64> %x, splat (i64 67108863)
+  %mul = mul <9 x i64> %x_masked, %y_masked
+  %res = add <9 x i64> %mul, %z
+  ret <9 x i64> %res
+}
