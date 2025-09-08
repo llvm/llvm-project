@@ -223,7 +223,6 @@ Deprecated Compiler Flags
 Modified Compiler Flags
 -----------------------
 - The `-gkey-instructions` compiler flag is now enabled by default when DWARF is emitted for plain C/C++ and optimizations are enabled. (#GH149509)
-- The `-Wnrvo` compiler flag will not apply for C language.
 
 Removed Compiler Flags
 -------------------------
@@ -279,6 +278,8 @@ Improvements to Clang's diagnostics
 - The :doc:`ThreadSafetyAnalysis` attributes ``ACQUIRED_BEFORE(...)`` and
   ``ACQUIRED_AFTER(...)`` have been moved to the stable feature set and no
   longer require ``-Wthread-safety-beta`` to be used.
+
+- The `-Wnrvo` compiler flag is now ignored in C mode.
 
 Improvements to Clang's time-trace
 ----------------------------------
