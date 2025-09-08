@@ -11555,10 +11555,7 @@ static bool handleVectorElementCast(EvalInfo &Info, const FPOptions FPO,
       << SourceTy << DestTy;
   return false;
 }
-// i should emplement SLLDQ, SRLDQ shift (intrinsics) in constant expression
-// handling inside this function
-// avx2intrin.h -> _mm256_slli_si256
-// emmintrin.h -> _mm_slli_si128
+
 bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (!IsConstantEvaluatedBuiltinCall(E))
     return ExprEvaluatorBaseTy::VisitCallExpr(E);
@@ -12045,16 +12042,16 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_pslldqi128_byteshift:
   case X86::BI__builtin_ia32_psrldqi128_byteshift: {
     unsigned BuiltinID = E->getBuiltinCallee();
-    
+
     APSInt Amt;
-    if(!EvaluateInteger(E->getArg(1),Amt, Info))
+    if (!EvaluateInteger(E->getArg(1), Amt, Info))
       break;
     unsigned Shift = (unsigned)Amt.getZExtValue();
-    
+
     APValue Vec;
     if (!Evaluate(Vec, Info, E->getArg(0)) || !Vec.isVector())
       break;
-    
+
     SmallVector<APValue, 16> ResultElements;
     ResultElements.reserve(16);
 
@@ -12074,20 +12071,20 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     }
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
-  
+
   case X86::BI__builtin_ia32_pslldqi256_byteshift:
   case X86::BI__builtin_ia32_psrldqi256_byteshift: {
     unsigned BuiltinID = E->getBuiltinCallee();
-    
+
     APSInt Amt;
-    if(!EvaluateInteger(E->getArg(1),Amt, Info))
+    if (!EvaluateInteger(E->getArg(1), Amt, Info))
       break;
     unsigned Shift = (unsigned)Amt.getZExtValue();
-    
+
     APValue Vec;
     if (!Evaluate(Vec, Info, E->getArg(0)) || !Vec.isVector())
       break;
-    
+
     SmallVector<APValue, 32> ResultElements;
     ResultElements.reserve(32);
 
