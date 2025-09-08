@@ -534,8 +534,7 @@ mlir::Value HlfirIndexLowering::lowerImpl(
   } else {
     resultType = builder.getDefaultIntegerType();
   }
-  mlir::Value result =
-      createOp<hlfir::IndexOp>(resultType, substr, str, back);
+  mlir::Value result = createOp<hlfir::IndexOp>(resultType, substr, str, back);
 
   if (resultType != stmtResultType)
     return builder.createConvert(loc, stmtResultType, result);
