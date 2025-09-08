@@ -56,6 +56,13 @@ bool PhysicalRegisterUsageInfo::doFinalization(Module &M) {
   return false;
 }
 
+PhysicalRegisterUsageInfo::~PhysicalRegisterUsageInfo() {
+    if (DumpRegUsage)
+      print(errs());
+    
+    RegMasks.shrink_and_clear();
+}
+
 void PhysicalRegisterUsageInfo::storeUpdateRegUsageInfo(
     const Function &FP, ArrayRef<uint32_t> RegMask) {
   RegMasks[&FP] = RegMask;
