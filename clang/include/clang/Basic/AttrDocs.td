@@ -3752,33 +3752,33 @@ functions intended for different purposes have distinct CFI identities.
 
   // Header file - define convenience macros
   #define __cfi_salt(s) __attribute__((cfi_salt(s)))
-  
+
   // Typedef for regular function pointers
   typedef int (*fptr_t)(void);
-  
-  // Typedef for salted function pointers  
+
+  // Typedef for salted function pointers
   typedef int (*fptr_salted_t)(void) __cfi_salt("pepper");
-  
+
   struct widget_ops {
     fptr_t init;          // Regular CFI
     fptr_salted_t exec;   // Salted CFI
     fptr_t cleanup;       // Regular CFI
   };
-  
+
   // Function implementations
   static int widget_init(void) { return 0; }
   static int widget_exec(void) __cfi_salt("pepper") { return 1; }
   static int widget_cleanup(void) { return 0; }
-  
+
   static struct widget_ops ops = {
     .init = widget_init,      // OK - compatible types
     .exec = widget_exec,      // OK - both use "pepper" salt
     .cleanup = widget_cleanup // OK - compatible types
   };
-  
+
   // Using C++11 attribute syntax
   void secure_callback(void) [[clang::cfi_salt("secure")]];
-  
+
   // This would cause a compilation error:
   // fptr_t bad_ptr = widget_exec;  // Error: incompatible types
 
@@ -3786,11 +3786,11 @@ functions intended for different purposes have distinct CFI identities.
 
 * The salt string can contain non-NULL ASCII characters, including spaces and
   quotes
-* This attribute only applies to function types; using it on non-function 
+* This attribute only applies to function types; using it on non-function
   types will generate a warning
-* All declarations and definitions of the same function must use identical 
+* All declarations and definitions of the same function must use identical
   salt values
-* The attribute affects type compatibility during compilation and CFI hash 
+* The attribute affects type compatibility during compilation and CFI hash
   generation during code generation
   }];
 }

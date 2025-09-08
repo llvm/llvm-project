@@ -1,8 +1,6 @@
-import glob
 import json
 import os
 import re
-import shutil
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -181,7 +179,6 @@ class TestCase(TestBase):
             "totalDebugInfoParseTime",
             "totalDwoFileCount",
             "totalLoadedDwoFileCount",
-            "totalDwoErrorCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
         if self.getPlatform() != "windows":
@@ -294,7 +291,6 @@ class TestCase(TestBase):
             "totalDebugInfoParseTime",
             "totalDwoFileCount",
             "totalLoadedDwoFileCount",
-            "totalDwoErrorCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
         stats = debug_stats["targets"][0]
@@ -335,7 +331,6 @@ class TestCase(TestBase):
             "totalDebugInfoByteSize",
             "totalDwoFileCount",
             "totalLoadedDwoFileCount",
-            "totalDwoErrorCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
 
@@ -390,7 +385,6 @@ class TestCase(TestBase):
             "totalDebugInfoByteSize",
             "totalDwoFileCount",
             "totalLoadedDwoFileCount",
-            "totalDwoErrorCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
         stats = debug_stats["targets"][0]
@@ -413,7 +407,6 @@ class TestCase(TestBase):
             "symbolTableSavedToCache",
             "dwoFileCount",
             "loadedDwoFileCount",
-            "dwoErrorCount",
             "triple",
             "uuid",
         ]
@@ -504,7 +497,6 @@ class TestCase(TestBase):
             "totalDebugInfoByteSize",
             "totalDwoFileCount",
             "totalLoadedDwoFileCount",
-            "totalDwoErrorCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
         target_stats = debug_stats["targets"][0]
@@ -662,113 +654,6 @@ class TestCase(TestBase):
         debug_stats = self.get_stats()
         self.assertEqual(debug_stats["totalDwoFileCount"], 2)
         self.assertEqual(debug_stats["totalLoadedDwoFileCount"], 2)
-
-    @add_test_categories(["dwo"])
-    def test_dwo_missing_error_stats(self):
-        """
-        Test that DWO missing errors are reported correctly in statistics.
-        This test:
-        1) Builds a program with split DWARF (.dwo files)
-        2) Delete all two .dwo files
-        3) Verify that 2 DWO errors are reported in statistics
-        """
-        da = {
-            "CXX_SOURCES": "dwo_error_main.cpp dwo_error_foo.cpp",
-            "EXE": self.getBuildArtifact("a.out"),
-        }
-        # -gsplit-dwarf creates separate .dwo files,
-        # Expected output: dwo_error_main.dwo (contains main) and dwo_error_foo.dwo (contains foo struct/function)
-        self.build(dictionary=da, debug_info="dwo")
-        self.addTearDownCleanup(dictionary=da)
-        exe = self.getBuildArtifact("a.out")
-
-        # Remove the two .dwo files to trigger a DWO load error
-        dwo_files = glob.glob(self.getBuildArtifact("*.dwo"))
-        for dwo_file in dwo_files:
-            os.rename(dwo_file, dwo_file + ".bak")
-
-        target = self.createTestTarget(file_path=exe)
-        debug_stats = self.get_stats()
-
-        # Check DWO load error statistics are reported
-        self.assertIn("totalDwoErrorCount", debug_stats)
-        self.assertEqual(debug_stats["totalDwoErrorCount"], 2)
-
-        # Since there's only one module, module stats should have the same count as total count
-        self.assertIn("dwoErrorCount", debug_stats["modules"][0])
-        self.assertEqual(debug_stats["modules"][0]["dwoErrorCount"], 2)
-
-        # Restore the original .dwo file
-        for dwo_file in dwo_files:
-            os.rename(dwo_file + ".bak", dwo_file)
-
-    @add_test_categories(["dwo"])
-    def test_dwo_id_mismatch_error_stats(self):
-        """
-        Test that DWO ID mismatch errors are reported correctly in statistics.
-        This test:
-        1) Builds a program with split DWARF (.dwo files)
-        2) Change one of the source file content and rebuild
-        3) Replace the new .dwo file with the original one to create a DWO ID mismatch
-        4) Verifies that a DWO error is reported in statistics
-        5) Restores the original source file
-        """
-        da = {
-            "CXX_SOURCES": "dwo_error_main.cpp dwo_error_foo.cpp",
-            "EXE": self.getBuildArtifact("a.out"),
-        }
-        # -gsplit-dwarf creates separate .dwo files,
-        # Expected output: dwo_error_main.dwo (contains main) and dwo_error_foo.dwo (contains foo struct/function)
-        self.build(dictionary=da, debug_info="dwo")
-        self.addTearDownCleanup(dictionary=da)
-        exe = self.getBuildArtifact("a.out")
-
-        # Find and make a backup of the original .dwo file
-        dwo_files = glob.glob(self.getBuildArtifact("*.dwo"))
-
-        original_dwo_file = dwo_files[1]
-        original_dwo_backup = original_dwo_file + ".bak"
-        shutil.copy2(original_dwo_file, original_dwo_backup)
-
-        target = self.createTestTarget(file_path=exe)
-        initial_stats = self.get_stats()
-        self.assertIn("totalDwoErrorCount", initial_stats)
-        self.assertEqual(initial_stats["totalDwoErrorCount"], 0)
-        self.dbg.DeleteTarget(target)
-
-        # Get the original file size before modification
-        source_file_path = self.getSourcePath("dwo_error_foo.cpp")
-        original_size = os.path.getsize(source_file_path)
-
-        try:
-            # Modify the source code  and rebuild
-            with open(source_file_path, "a") as f:
-                f.write("\n void additional_foo(){}\n")
-
-            # Rebuild and replace the new .dwo file with the original one
-            self.build(dictionary=da, debug_info="dwo")
-            shutil.copy2(original_dwo_backup, original_dwo_file)
-
-            # Create a new target and run to a breakpoint to force DWO file loading
-            target = self.createTestTarget(file_path=exe)
-            debug_stats = self.get_stats()
-
-            # Check that DWO load error statistics are reported
-            self.assertIn("totalDwoErrorCount", debug_stats)
-            self.assertEqual(debug_stats["totalDwoErrorCount"], 1)
-
-            # Since there's only one module, module stats should have the same count as total count
-            self.assertIn("dwoErrorCount", debug_stats["modules"][0])
-            self.assertEqual(debug_stats["modules"][0]["dwoErrorCount"], 1)
-
-        finally:
-            # Remove the appended content
-            with open(source_file_path, "a") as f:
-                f.truncate(original_size)
-
-            # Restore the original .dwo file
-            if os.path.exists(original_dwo_backup):
-                os.unlink(original_dwo_backup)
 
     @skipUnlessDarwin
     @no_debug_info_test

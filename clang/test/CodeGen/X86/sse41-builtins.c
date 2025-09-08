@@ -45,18 +45,21 @@ __m128i test_mm_blendv_epi8(__m128i V1, __m128i V2, __m128i V3) {
   // CHECK: call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   return _mm_blendv_epi8(V1, V2, V3);
 }
+TEST_CONSTEXPR(match_v16qi(_mm_blendv_epi8((__m128i)(__v16qs){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15},(__m128i)(__v16qs){-99,-98,97,-96,-95,-94,-93,-92,-91,-90,-89,-88,-87,-86,-85,-84},(__m128i)(__v16qs){-1,-1,0,-1,0,0,0,0,0,-1,-1,-1,0,0,-1,0}), -99, -98, 2, -96, 4, 5, 6, 7, 8, -90, -89, -88, 12, 13, -85, 15));
 
 __m128d test_mm_blendv_pd(__m128d V1, __m128d V2, __m128d V3) {
   // CHECK-LABEL: test_mm_blendv_pd
   // CHECK: call {{.*}}<2 x double> @llvm.x86.sse41.blendvpd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_blendv_pd(V1, V2, V3);
 }
+TEST_CONSTEXPR(match_m128d(_mm_blendv_pd((__m128d)(__v2df){2.0, -4.0},(__m128d)(__v2df){-111.0, +222.0},(__m128d)(__v2df){2.0, -2.0}), 2.0, 222.0));
 
 __m128 test_mm_blendv_ps(__m128 V1, __m128 V2, __m128 V3) {
   // CHECK-LABEL: test_mm_blendv_ps
   // CHECK: call {{.*}}<4 x float> @llvm.x86.sse41.blendvps(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_blendv_ps(V1, V2, V3);
 }
+TEST_CONSTEXPR(match_m128(_mm_blendv_ps((__m128)(__v4sf){0.0f, 1.0f, 2.0f, 3.0f},(__m128)(__v4sf){-100.0f, -101.0f, -102.0f, -103.0f},(__m128)(__v4sf){-1.0f, 2.0f, -3.0f, 0.0f}), -100.0f, 1.0f, -102.0f, 3.0f));
 
 __m128d test_mm_ceil_pd(__m128d x) {
   // CHECK-LABEL: test_mm_ceil_pd

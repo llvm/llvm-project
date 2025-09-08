@@ -342,10 +342,10 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   }
   case Builtin::BI__builtin_hlsl_resource_handlefromimplicitbinding: {
     llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
-    Value *SpaceOp = EmitScalarExpr(E->getArg(1));
-    Value *RangeOp = EmitScalarExpr(E->getArg(2));
-    Value *IndexOp = EmitScalarExpr(E->getArg(3));
-    Value *OrderID = EmitScalarExpr(E->getArg(4));
+    Value *OrderID = EmitScalarExpr(E->getArg(1));
+    Value *SpaceOp = EmitScalarExpr(E->getArg(2));
+    Value *RangeOp = EmitScalarExpr(E->getArg(3));
+    Value *IndexOp = EmitScalarExpr(E->getArg(4));
     Value *Name = EmitScalarExpr(E->getArg(5));
     llvm::Intrinsic::ID IntrinsicID =
         CGM.getHLSLRuntime().getCreateHandleFromImplicitBindingIntrinsic();
