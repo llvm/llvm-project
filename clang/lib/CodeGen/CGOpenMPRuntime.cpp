@@ -7136,11 +7136,9 @@ public:
       if (AttachEntry.second) {
         // Check if the attach pointer expression is a DeclRefExpr that
         // references the captured variable
-        if (const auto *DRE = dyn_cast<DeclRefExpr>(AttachEntry.second)) {
-          if (DRE->getDecl() == VD) {
+        if (const auto *DRE = dyn_cast<DeclRefExpr>(AttachEntry.second))
+          if (DRE->getDecl() == VD)
             return true;
-          }
-        }
       }
     }
     return false;
@@ -7151,9 +7149,8 @@ public:
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components)
       const {
     auto It = AttachPtrExprMap.find(Components);
-    if (It != AttachPtrExprMap.end()) {
+    if (It != AttachPtrExprMap.end())
       return It->second;
-    }
 
     return nullptr;
   }
