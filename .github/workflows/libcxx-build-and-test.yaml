@@ -284,3 +284,25 @@ jobs:
       - name: Build and test
         run: |
           bash libcxx/utils/ci/run-buildbot ${{ matrix.config }}
+
+  benchmarks:
+    runs-on: llvm-premerge-libcxx-next-runners # TODO: This should run on a dedicated set of machines
+    # needs: [ stage3 ] # TODO: Run this at the end of the pipeline once we're done testing the job
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: benchmarks
+        run: libcxx/utils/ci/run-buildbot benchmark-comparison
+        env:
+          CC: clang-22
+          CXX: clang++-22
+      - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
+        if: always()
+        with:
+          name: benchmarks-results
+          path: |
+            **/test-results.xml
+            **/*.abilist
+            **/CMakeConfigureLog.yaml
+            **/CMakeError.log
+            **/CMakeOutput.log
+            **/crash_diagnostics/*
