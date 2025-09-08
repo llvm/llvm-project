@@ -3219,8 +3219,7 @@ def GPU_BroadcastType : I32EnumAttr<"BroadcastType",
     "a lane to broadcast from",
     [
       I32EnumAttrCase<"first_active_lane", 0>,
-      I32EnumAttrCase<"any_lane", 1>,
-      I32EnumAttrCase<"specific_lane", 2>
+      I32EnumAttrCase<"specific_lane", 1>
     ]>{
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::gpu";
@@ -3248,13 +3247,6 @@ def GPU_SubgroupBroadcastOp : GPU_Op<"subgroup_broadcast",
       must be uniform and within the subgroup size. The result is poison if the
       lane index is invalid, non subgroup-uniform, or if the source lane is not
       active.
-      * `any_lane` - broadcasts the value from any lane of the subgroup,
-      assuming the input is already subgroup uniform. The result is poison if
-      the input is not uniform. This is useful to convey uniformity to the
-      compiler to enable more optimizations. Also, it allows more speculation
-      opportunities than `first_active_lane` since `first_active_lane` results
-      can depend on active lanes which may change during speculation across
-      control flow.
   }];
   let results = (outs AnyType:$result);
   let assemblyFormat = [{

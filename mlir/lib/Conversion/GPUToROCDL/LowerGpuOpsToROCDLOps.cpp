@@ -193,9 +193,7 @@ struct GPUSubgroupBroadcastOpToROCDL
     if (adaptor.getBroadcastType() == gpu::BroadcastType::specific_lane) {
       rewriter.replaceOpWithNewOp<ROCDL::ReadlaneOp>(op, src.getType(), src,
                                                      adaptor.getLane());
-    } else { // first_active_lane or any_lane
-      // any_lane is lowered to readfirstlane too, to force value into scalar
-      // register.
+    } else { // first_active_lane
       rewriter.replaceOpWithNewOp<ROCDL::ReadfirstlaneOp>(op, src.getType(),
                                                           src);
     }

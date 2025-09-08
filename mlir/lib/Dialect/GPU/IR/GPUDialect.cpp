@@ -2529,8 +2529,6 @@ Speculation::Speculatability gpu::SubgroupBroadcastOp::getSpeculatability() {
     // Cannot speculate first_lane broadcast, because speculating it across
     // control flow can change the active lanes.
     return Speculation::NotSpeculatable;
-  case BroadcastType::any_lane:
-    LLVM_FALLTHROUGH;
   case BroadcastType::specific_lane:
     // Speculation should be safe as long as we inside structured control flow.
     return Speculation::Speculatable;
@@ -2540,8 +2538,6 @@ Speculation::Speculatability gpu::SubgroupBroadcastOp::getSpeculatability() {
 LogicalResult gpu::SubgroupBroadcastOp::verify() {
   switch (getBroadcastType()) {
   case BroadcastType::first_active_lane:
-    LLVM_FALLTHROUGH;
-  case BroadcastType::any_lane:
     if (getLane())
       return emitOpError()
              << "lane can only be specified for `specific_lane` broadcast";
