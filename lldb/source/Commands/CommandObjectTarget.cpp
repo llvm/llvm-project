@@ -2420,7 +2420,7 @@ protected:
     result.GetErrorStream().SetAddressByteSize(addr_byte_size);
 
     if (command.GetArgumentCount() == 0) {
-      result.AppendError("file option must be specified.");
+      result.AppendError("file option must be specified");
       return;
     } else {
       // Dump specified images (by basename or fullpath)
@@ -3565,13 +3565,13 @@ protected:
 
     ThreadList threads(process->GetThreadList());
     if (threads.GetSize() == 0) {
-      result.AppendError("The process must be paused to use this command.");
+      result.AppendError("the process must be paused to use this command");
       return;
     }
 
     ThreadSP thread(threads.GetThreadAtIndex(0));
     if (!thread) {
-      result.AppendError("The process must be paused to use this command.");
+      result.AppendError("the process must be paused to use this command");
       return;
     }
 

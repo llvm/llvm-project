@@ -237,15 +237,15 @@ enum OperandType : unsigned {
   OPERAND_REG_INLINE_AC_FP32,
   OPERAND_REG_INLINE_AC_FP64,
 
+  // Operand for AV_MOV_B64_IMM_PSEUDO, which is a pair of 32-bit inline
+  // constants. Does not accept registers.
+  OPERAND_INLINE_C_AV64_PSEUDO,
+
   // Operand for source modifiers for VOP instructions
   OPERAND_INPUT_MODS,
 
   // Operand for SDWA instructions
   OPERAND_SDWA_VOPC_DST,
-
-  // Operand for AV_MOV_B64_IMM_PSEUDO, which is a pair of 32-bit inline
-  // constants.
-  OPERAND_INLINE_C_AV64_PSEUDO,
 
   OPERAND_REG_IMM_FIRST = OPERAND_REG_IMM_INT32,
   OPERAND_REG_IMM_LAST = OPERAND_REG_IMM_V2FP32,
@@ -254,7 +254,7 @@ enum OperandType : unsigned {
   OPERAND_REG_INLINE_C_LAST = OPERAND_REG_INLINE_AC_FP64,
 
   OPERAND_REG_INLINE_AC_FIRST = OPERAND_REG_INLINE_AC_INT32,
-  OPERAND_REG_INLINE_AC_LAST = OPERAND_REG_INLINE_AC_FP64,
+  OPERAND_REG_INLINE_AC_LAST = OPERAND_INLINE_C_AV64_PSEUDO,
 
   OPERAND_SRC_FIRST = OPERAND_REG_IMM_INT32,
   OPERAND_SRC_LAST = OPERAND_REG_INLINE_C_LAST,
@@ -354,10 +354,11 @@ enum : unsigned {
 // Register codes as defined in the TableGen's HWEncoding field.
 namespace HWEncoding {
 enum : unsigned {
-  REG_IDX_MASK = 0xff,
-  IS_VGPR = 1 << 8,
-  IS_AGPR = 1 << 9,
-  IS_HI16 = 1 << 10,
+  REG_IDX_MASK = 0x3ff,
+  LO256_REG_IDX_MASK = 0xff,
+  IS_VGPR = 1 << 10,
+  IS_AGPR = 1 << 11,
+  IS_HI16 = 1 << 12,
 };
 } // namespace HWEncoding
 

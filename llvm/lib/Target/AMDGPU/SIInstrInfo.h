@@ -48,6 +48,10 @@ static const MachineMemOperand::Flags MONoClobber =
 static const MachineMemOperand::Flags MOLastUse =
     MachineMemOperand::MOTargetFlag2;
 
+/// Mark the MMO of cooperative load/store atomics.
+static const MachineMemOperand::Flags MOCooperative =
+    MachineMemOperand::MOTargetFlag3;
+
 /// Utility to store machine instructions worklist.
 struct SIInstrWorklist {
   SIInstrWorklist() = default;
@@ -1182,6 +1186,12 @@ public:
 
   bool isImmOperandLegal(const MCInstrDesc &InstDesc, unsigned OpNo,
                          const MachineOperand &MO) const;
+
+  bool isLiteralOperandLegal(const MCInstrDesc &InstDesc,
+                             const MCOperandInfo &OpInfo) const;
+
+  bool isImmOperandLegal(const MCInstrDesc &InstDesc, unsigned OpNo,
+                         int64_t ImmVal) const;
 
   bool isImmOperandLegal(const MachineInstr &MI, unsigned OpNo,
                          const MachineOperand &MO) const {

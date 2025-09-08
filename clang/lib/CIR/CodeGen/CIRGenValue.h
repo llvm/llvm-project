@@ -379,6 +379,8 @@ public:
 
   mlir::Value getPointer() const { return addr.getPointer(); }
 
+  Overlap_t mayOverlap() const { return Overlap_t(overlapFlag); }
+
   IsZeroed_t isZeroed() const { return IsZeroed_t(zeroedFlag); }
 
   RValue asRValue() const {
