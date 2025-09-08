@@ -26,7 +26,7 @@
 #include "llvm/CGData/CodeGenData.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/DTLTO/Dtlto.h"
+#include "llvm/DTLTO/DTLTO.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Intrinsics.h"
