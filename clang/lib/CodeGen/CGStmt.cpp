@@ -1424,9 +1424,6 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
   if (ForScope)
     ForScope->ForceCleanup();
 
-  // Process deferred function cleanups before checking for regular cleanups
-  processDeferredFunctionCleanups();
-
   LoopStack.pop();
 
   // Emit the fall-through block.
@@ -1478,7 +1475,7 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
   // If there are any cleanups between here and the loop-exit scope,
   // create a block to stage a loop exit along.
   llvm::BasicBlock *ExitBlock = LoopExit.getBlock();
-  if (ForScope && ForScope->requiresCleanups())
+  if (ForScope.requiresCleanups())
     ExitBlock = createBasicBlock("for.cond.cleanup");
 
   // The loop body, consisting of the specified body and the loop variable.
@@ -1537,8 +1534,7 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
 
   EmitBranch(CondBlock);
 
-  if (ForScope)
-    ForScope->ForceCleanup();
+  ForScope.ForceCleanup();
 
   LoopStack.pop();
 
