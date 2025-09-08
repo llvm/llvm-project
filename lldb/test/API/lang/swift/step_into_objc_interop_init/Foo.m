@@ -3,6 +3,7 @@
 @implementation Foo
 
 - (id)init {
+  return self;
 }
 
 - (id)initWithString:(nonnull NSString *)value {
