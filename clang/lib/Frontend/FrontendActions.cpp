@@ -796,9 +796,10 @@ namespace {
     /// Indicates that the AST file contains particular input file.
     ///
     /// \returns true to continue receiving the next input file, false to stop.
-    bool visitInputFile(StringRef FilenameAsRequested, StringRef Filename,
-                        bool isSystem, bool isOverridden,
-                        bool isExplicitModule) override {
+    bool visitInputFileAsRequested(StringRef FilenameAsRequested,
+                                   StringRef Filename, bool isSystem,
+                                   bool isOverridden,
+                                   bool isExplicitModule) override {
 
       Out.indent(2) << "Input file: " << FilenameAsRequested;
 
