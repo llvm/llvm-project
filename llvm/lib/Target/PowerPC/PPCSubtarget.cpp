@@ -55,9 +55,9 @@ PPCSubtarget &PPCSubtarget::initializeSubtargetDependencies(StringRef CPU,
 PPCSubtarget::PPCSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &TuneCPU, const std::string &FS,
                            const PPCTargetMachine &TM)
-    : PPCGenSubtargetInfo(TT, CPU, TuneCPU, FS), TargetTriple(TT),
-      IsPPC64(TargetTriple.getArch() == Triple::ppc64 ||
-              TargetTriple.getArch() == Triple::ppc64le),
+    : PPCGenSubtargetInfo(TT, CPU, TuneCPU, FS),
+      IsPPC64(getTargetTriple().getArch() == Triple::ppc64 ||
+              getTargetTriple().getArch() == Triple::ppc64le),
       TM(TM), FrameLowering(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
       InstrInfo(*this), TLInfo(TM, *this) {
   TSInfo = std::make_unique<PPCSelectionDAGInfo>();
@@ -87,10 +87,10 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   // Determine default and user specified characteristics
   std::string CPUName = std::string(CPU);
   if (CPUName.empty() || CPU == "generic") {
-    if (TargetTriple.getSubArch() == Triple::PPCSubArch_spe)
+    if (getTargetTriple().getSubArch() == Triple::PPCSubArch_spe)
       CPUName = "e500";
     else
-      CPUName = std::string(PPC::getNormalizedPPCTargetCPU(TargetTriple));
+      CPUName = std::string(PPC::getNormalizedPPCTargetCPU(getTargetTriple()));
   }
 
   // Determine the CPU to schedule for.
@@ -107,7 +107,7 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   if (IsPPC64 && has64BitSupport())
     Use64BitRegs = true;
 
-  if (TargetTriple.isPPC32SecurePlt())
+  if (getTargetTriple().isPPC32SecurePlt())
     IsSecurePlt = true;
 
   if (HasSPE && IsPPC64)
@@ -126,7 +126,7 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   IsLittleEndian = TM.isLittleEndian();
 
   if (HasAIXSmallLocalExecTLS || HasAIXSmallLocalDynamicTLS) {
-    if (!TargetTriple.isOSAIX() || !IsPPC64)
+    if (!getTargetTriple().isOSAIX() || !IsPPC64)
       report_fatal_error("The aix-small-local-[exec|dynamic]-tls attribute is "
                          "only supported on AIX in "
                          "64-bit mode.\n",
@@ -143,7 +143,7 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
                          false);
   }
 
-  if (HasAIXShLibTLSModelOpt && (!TargetTriple.isOSAIX() || !IsPPC64))
+  if (HasAIXShLibTLSModelOpt && (!getTargetTriple().isOSAIX() || !IsPPC64))
     report_fatal_error("The aix-shared-lib-tls-model-opt attribute "
                        "is only supported on AIX in 64-bit mode.\n",
                        false);
