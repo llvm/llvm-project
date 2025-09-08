@@ -23,14 +23,15 @@ using namespace llvm;
 namespace {
 
 struct Context {
-  const char *TripleName = "systemz-unknown";
+  static constexpr char TripleName[] = "systemz-unknown";
+  Triple TT;
   std::unique_ptr<MCRegisterInfo> MRI;
   std::unique_ptr<MCAsmInfo> MAI;
   std::unique_ptr<MCContext> Ctx;
   std::unique_ptr<MCSubtargetInfo> STI;
   std::unique_ptr<MCDisassembler> DisAsm;
 
-  Context() {
+  Context() : TT(TripleName) {
     LLVMInitializeSystemZTargetInfo();
     LLVMInitializeSystemZTargetMC();
     LLVMInitializeSystemZDisassembler();
@@ -41,11 +42,10 @@ struct Context {
     if (!TheTarget)
       return;
 
-    MRI.reset(TheTarget->createMCRegInfo(TripleName));
-    MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCTargetOptions()));
-    STI.reset(TheTarget->createMCSubtargetInfo(TripleName, "", ""));
-    Ctx = std::make_unique<MCContext>(Triple(TripleName), MAI.get(), MRI.get(),
-                                      STI.get());
+    MRI.reset(TheTarget->createMCRegInfo(TT));
+    MAI.reset(TheTarget->createMCAsmInfo(*MRI, TT, MCTargetOptions()));
+    STI.reset(TheTarget->createMCSubtargetInfo(TT, "", ""));
+    Ctx = std::make_unique<MCContext>(TT, MAI.get(), MRI.get(), STI.get());
 
     DisAsm.reset(TheTarget->createMCDisassembler(*STI, *Ctx));
   }

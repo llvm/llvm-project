@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++20 %s modernize-use-constraints %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++20-or-later %s modernize-use-constraints %t -- -- -fno-delayed-template-parsing
 
 // NOLINTBEGIN
 namespace std {
@@ -756,3 +756,69 @@ abs(const number<T, ExpressionTemplates> &v) {
 }
 
 }
+
+template <typename T>
+struct some_type_trait {
+  static constexpr bool value = true;
+};
+
+// Fix-its are offered even for a non-standard enable_if.
+namespace nonstd {
+
+template <bool Condition, typename T = void>
+struct enable_if : std::enable_if<Condition, T> {};
+
+template <bool Condition, typename T = void>
+using enable_if_t = typename enable_if<Condition, T>::type;
+
+}
+
+template <typename T>
+typename nonstd::enable_if<some_type_trait<T>::value, void>::type nonstd_enable_if() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use C++20 requires constraints instead of enable_if [modernize-use-constraints]
+// CHECK-FIXES: {{^}}void nonstd_enable_if() requires some_type_trait<T>::value {}{{$}}
+
+template <typename T>
+nonstd::enable_if_t<some_type_trait<T>::value, void> nonstd_enable_if_t() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use C++20 requires constraints instead of enable_if [modernize-use-constraints]
+// CHECK-FIXES: {{^}}void nonstd_enable_if_t() requires some_type_trait<T>::value {}{{$}}
+
+template <>
+nonstd::enable_if_t<some_type_trait<int>::value, void> nonstd_enable_if_t<int>() {}
+// FIXME - Support non-dependent enable_ifs.
+
+template <typename T>
+typename nonstd::enable_if<some_type_trait<T>::value>::type nonstd_enable_if_one_param() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use C++20 requires constraints instead of enable_if [modernize-use-constraints]
+// CHECK-FIXES: {{^}}void nonstd_enable_if_one_param() requires some_type_trait<T>::value {}{{$}}
+
+template <typename T>
+nonstd::enable_if_t<some_type_trait<T>::value> nonstd_enable_if_t_one_param() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use C++20 requires constraints instead of enable_if [modernize-use-constraints]
+// CHECK-FIXES: {{^}}void nonstd_enable_if_t_one_param() requires some_type_trait<T>::value {}{{$}}
+
+// No fix-its are offered for an enable_if with a different signature from the standard one.
+namespace boost {
+
+template <typename Condition, typename T = void>
+struct enable_if : std::enable_if<Condition::value, T> {};
+
+template <typename Condition, typename T = void>
+using enable_if_t = typename enable_if<Condition, T>::type;
+
+}
+
+template <typename T>
+typename boost::enable_if<some_type_trait<T>, void>::type boost_enable_if() {}
+
+template <typename T>
+boost::enable_if_t<some_type_trait<T>, void> boost_enable_if_t() {}
+
+template <>
+boost::enable_if_t<some_type_trait<int>, void> boost_enable_if_t<int>() {}
+
+template <typename T>
+typename boost::enable_if<some_type_trait<T>>::type boost_enable_if_one_param() {}
+
+template <typename T>
+boost::enable_if_t<some_type_trait<T>> boost_enable_if_t_one_param() {}

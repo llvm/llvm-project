@@ -190,6 +190,7 @@ public:
   bool isSimple() const { return lvType == Simple; }
   bool isVectorElt() const { return lvType == VectorElt; }
   bool isBitField() const { return lvType == BitField; }
+  bool isGlobalReg() const { return lvType == GlobalReg; }
   bool isVolatile() const { return quals.hasVolatile(); }
 
   bool isVolatileQualified() const { return quals.hasVolatile(); }
@@ -209,6 +210,14 @@ public:
 
   Address getAddress() const {
     return Address(getPointer(), elementType, getAlignment());
+  }
+
+  void setAddress(Address address) {
+    assert(isSimple());
+    v = address.getPointer();
+    elementType = address.getElementType();
+    alignment = address.getAlignment().getQuantity();
+    assert(!cir::MissingFeatures::addressIsKnownNonNull());
   }
 
   const clang::Qualifiers &getQuals() const { return quals; }
@@ -369,6 +378,8 @@ public:
   bool isIgnored() const { return !addr.isValid(); }
 
   mlir::Value getPointer() const { return addr.getPointer(); }
+
+  Overlap_t mayOverlap() const { return Overlap_t(overlapFlag); }
 
   IsZeroed_t isZeroed() const { return IsZeroed_t(zeroedFlag); }
 

@@ -1,3 +1,5 @@
+// RUN: not %clang_cc1 -triple powerpc64le-unknown-linux-gnu -target-cpu pwr10 \
+// RUN:   %s -emit-llvm-only 2>&1 | FileCheck %s
 // RUN: not %clang_cc1 -triple powerpc64le-unknown-linux-gnu -target-cpu future \
 // RUN:   %s -emit-llvm-only 2>&1 | FileCheck %s
 
@@ -14,6 +16,8 @@ void test_mma(unsigned char *vdmrp, unsigned char *vpp, vector unsigned char vc)
   __builtin_mma_dmsetdmrz(&vdmr);
   __builtin_mma_dmmr(&vdmr, (__dmr1024*)vpp);
   __builtin_mma_dmxor(&vdmr, (__dmr1024*)vpp);
+  __builtin_mma_build_dmr(&vdmr, vc, vc, vc, vc, vc, vc, vc, vc);
+  __builtin_mma_disassemble_dmr(vdmrp, &vdmr);
 
 // CHECK: error: '__builtin_mma_dmxvi8gerx4' needs target feature mma,paired-vector-memops
 // CHECK: error: '__builtin_mma_pmdmxvi8gerx4' needs target feature mma,paired-vector-memops
@@ -24,4 +28,6 @@ void test_mma(unsigned char *vdmrp, unsigned char *vpp, vector unsigned char vc)
 // CHECK: error: '__builtin_mma_dmsetdmrz' needs target feature mma,isa-future-instructions
 // CHECK: error: '__builtin_mma_dmmr' needs target feature mma,isa-future-instructions
 // CHECK: error: '__builtin_mma_dmxor' needs target feature mma,isa-future-instructions
+// CHECK: error: '__builtin_mma_build_dmr' needs target feature mma,isa-future-instructions
+// CHECK: error: '__builtin_mma_disassemble_dmr' needs target feature mma,isa-future-instructions
 }

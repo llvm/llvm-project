@@ -48,6 +48,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstdint>
 #include <cstring>
@@ -1310,6 +1311,19 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       return true;
     }
     break;
+  case 'l':
+    if ((Name.starts_with("lifetime.start") ||
+         Name.starts_with("lifetime.end")) &&
+        F->arg_size() == 2) {
+      Intrinsic::ID IID = Name.starts_with("lifetime.start")
+                              ? Intrinsic::lifetime_start
+                              : Intrinsic::lifetime_end;
+      rename(F);
+      NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
+                                                F->getArg(0)->getType());
+      return true;
+    }
+    break;
   case 'm': {
     // Updating the memory intrinsics (memcpy/memmove/memset) that have an
     // alignment parameter to embedding the alignment as an attribute of
@@ -1438,6 +1452,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
                      .Case("popc.ll", true)
                      .Case("h2f", true)
                      .Case("swap.lo.hi.b64", true)
+                     .Case("tanh.approx.f32", true)
                      .Default(false);
 
       if (Expand) {
@@ -1629,7 +1644,6 @@ bool llvm::UpgradeIntrinsicFunction(Function *F, Function *&NewFn,
   NewFn = nullptr;
   bool Upgraded =
       upgradeIntrinsicFunction1(F, NewFn, CanUpgradeDebugIntrinsicsToRecords);
-  assert(F != NewFn && "Intrinsic function upgraded to the same function");
 
   // Upgrade intrinsic attributes.  This does not change the function.
   if (NewFn)
@@ -2532,6 +2546,12 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     MDNode *MD = MDNode::get(Builder.getContext(), {});
     LD->setMetadata(LLVMContext::MD_invariant_load, MD);
     return LD;
+  } else if (Name == "tanh.approx.f32") {
+    // nvvm.tanh.approx.f32 -> afn llvm.tanh.f32
+    FastMathFlags FMF;
+    FMF.setApproxFunc();
+    Rep = Builder.CreateUnaryIntrinsic(Intrinsic::tanh, CI->getArgOperand(0),
+                                       FMF);
   } else if (Name == "barrier0" || Name == "barrier.n" || Name == "bar.sync") {
     Value *Arg =
         Name.ends_with('0') ? Builder.getInt32(0) : CI->getArgOperand(0);
@@ -4570,6 +4590,9 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   }
 
   const auto &DefaultCase = [&]() -> void {
+    if (F == NewFn)
+      return;
+
     if (CI->getFunctionType() == NewFn->getFunctionType()) {
       // Handle generic mangling change.
       assert(
@@ -5109,6 +5132,30 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       MTI->setSourceAlignment(Align->getMaybeAlignValue());
     break;
   }
+
+  case Intrinsic::lifetime_start:
+  case Intrinsic::lifetime_end: {
+    if (CI->arg_size() != 2) {
+      DefaultCase();
+      return;
+    }
+
+    Value *Ptr = CI->getArgOperand(1);
+    // Try to strip pointer casts, such that the lifetime works on an alloca.
+    Ptr = Ptr->stripPointerCasts();
+    if (isa<AllocaInst>(Ptr)) {
+      // Don't use NewFn, as we might have looked through an addrspacecast.
+      if (NewFn->getIntrinsicID() == Intrinsic::lifetime_start)
+        NewCall = Builder.CreateLifetimeStart(Ptr);
+      else
+        NewCall = Builder.CreateLifetimeEnd(Ptr);
+      break;
+    }
+
+    // Otherwise remove the lifetime marker.
+    CI->eraseFromParent();
+    return;
+  }
   }
   assert(NewCall && "Should have either set this variable or returned through "
                     "the default case");
@@ -5131,7 +5178,8 @@ void llvm::UpgradeCallsToIntrinsic(Function *F) {
         UpgradeIntrinsicCall(CB, NewFn);
 
     // Remove old function, no longer used, from the module.
-    F->eraseFromParent();
+    if (F != NewFn)
+      F->eraseFromParent();
   }
 }
 
@@ -5209,6 +5257,7 @@ bool llvm::UpgradeDebugInfo(Module &M) {
   if (DisableAutoUpgradeDebugInfo)
     return false;
 
+  llvm::TimeTraceScope timeScope("Upgrade debug info");
   // We need to get metadata before the module is verified (i.e., getModuleFlag
   // makes assumptions that we haven't verified yet). Carefully extract the flag
   // from the metadata.
@@ -5334,6 +5383,16 @@ bool static upgradeSingleNVVMAnnotation(GlobalValue *GV, StringRef K,
     upgradeNVVMFnVectorAttr("nvvm.cluster_dim", K[0], GV, V);
     return true;
   }
+  if (K == "grid_constant") {
+    const auto Attr = Attribute::get(GV->getContext(), "nvvm.grid_constant");
+    for (const auto &Op : cast<MDNode>(V)->operands()) {
+      // For some reason, the index is 1-based in the metadata. Good thing we're
+      // able to auto-upgrade it!
+      const auto Index = mdconst::extract<ConstantInt>(Op)->getZExtValue() - 1;
+      cast<Function>(GV)->addParamAttr(Index, Attr);
+    }
+    return true;
+  }
 
   return false;
 }
@@ -5344,7 +5403,7 @@ void llvm::UpgradeNVVMAnnotations(Module &M) {
     return;
 
   SmallVector<MDNode *, 8> NewNodes;
-  SmallSet<const MDNode *, 8> SeenNodes;
+  SmallPtrSet<const MDNode *, 8> SeenNodes;
   for (MDNode *MD : NamedMD->operands()) {
     if (!SeenNodes.insert(MD).second)
       continue;

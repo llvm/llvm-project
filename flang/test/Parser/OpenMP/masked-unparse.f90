@@ -6,14 +6,14 @@
 
 subroutine test_masked()
   integer :: c = 1
-  !PARSE-TREE: OmpBeginBlockDirective
-  !PARSE-TREE-NEXT: OmpBlockDirective -> llvm::omp::Directive = masked
+  !PARSE-TREE: OmpBeginDirective
+  !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = masked
   !CHECK: !$omp masked
   !$omp masked 
   c = c + 1
   !$omp end masked
-  !PARSE-TREE: OmpBeginBlockDirective
-  !PARSE-TREE-NEXT: OmpBlockDirective -> llvm::omp::Directive = masked
+  !PARSE-TREE: OmpBeginDirective
+  !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = masked
   !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Filter -> Scalar -> Integer -> Expr = '1_4'
   !PARSE-TREE-NEXT: LiteralConstant -> IntLiteralConstant = '1'
   !CHECK: !$omp masked filter(1_4)
@@ -51,8 +51,8 @@ end subroutine
 subroutine test_parallel_masked
   integer, parameter :: i = 1, j = 1
   integer :: c = 2
-  !PARSE-TREE: OmpBeginBlockDirective
-  !PARSE-TREE-NEXT: OmpBlockDirective -> llvm::omp::Directive = parallel masked
+  !PARSE-TREE: OmpBeginDirective
+  !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = parallel masked
   !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Filter -> Scalar -> Integer -> Expr = '2_4'
   !PARSE-TREE-NEXT: Add
   !PARSE-TREE-NEXT: Expr = '1_4'

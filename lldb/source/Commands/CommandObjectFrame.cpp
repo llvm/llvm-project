@@ -140,7 +140,7 @@ protected:
     } else {
       StopInfoSP stop_info_sp = thread->GetStopInfo();
       if (!stop_info_sp) {
-        result.AppendError("No arguments provided, and no stop info.");
+        result.AppendError("no arguments provided, and no stop info");
         return;
       }
 
@@ -148,7 +148,7 @@ protected:
     }
 
     if (!valobj_sp) {
-      result.AppendError("No diagnosis available.");
+      result.AppendError("no diagnosis available");
       return;
     }
 
@@ -310,7 +310,7 @@ protected:
           if (frame_idx == 0) {
             // If you are already at the bottom of the stack, then just warn
             // and don't reset the frame.
-            result.AppendError("Already at the bottom of the stack.");
+            result.AppendError("already at the bottom of the stack");
             return;
           } else
             frame_idx = 0;
@@ -335,7 +335,7 @@ protected:
             if (frame_idx == num_frames - 1) {
               // If we are already at the top of the stack, just warn and don't
               // reset the frame.
-              result.AppendError("Already at the top of the stack.");
+              result.AppendError("already at the top of the stack");
               return;
             } else
               frame_idx = num_frames - 1;
@@ -349,7 +349,8 @@ protected:
             command[0].c_str());
         m_options.GenerateOptionUsage(
             result.GetErrorStream(), *this,
-            GetCommandInterpreter().GetDebugger().GetTerminalWidth());
+            GetCommandInterpreter().GetDebugger().GetTerminalWidth(),
+            GetCommandInterpreter().GetDebugger().GetUseColor());
         return;
       }
 
@@ -901,10 +902,9 @@ void CommandObjectFrameRecognizerAdd::DoExecute(Args &command,
       StackFrameRecognizerSP(new ScriptedStackFrameRecognizer(
           interpreter, m_options.m_class_name.c_str()));
   if (m_options.m_regex) {
-    auto module =
-        RegularExpressionSP(new RegularExpression(m_options.m_module));
+    auto module = std::make_shared<RegularExpression>(m_options.m_module);
     auto func =
-        RegularExpressionSP(new RegularExpression(m_options.m_symbols.front()));
+        std::make_shared<RegularExpression>(m_options.m_symbols.front());
     GetTarget().GetFrameRecognizerManager().AddRecognizer(
         recognizer_sp, module, func, Mangled::NamePreference::ePreferDemangled,
         m_options.m_first_instruction_only);

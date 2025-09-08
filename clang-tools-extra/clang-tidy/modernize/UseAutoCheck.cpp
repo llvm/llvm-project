@@ -186,16 +186,14 @@ TypeMatcher nestedIterator() {
 /// declarations and which name standard iterators for standard containers.
 TypeMatcher iteratorFromUsingDeclaration() {
   auto HasIteratorDecl = hasDeclaration(namedDecl(hasStdIteratorName()));
-  // Types resulting from using declarations are represented by elaboratedType.
-  return elaboratedType(
-      // Unwrap the nested name specifier to test for one of the standard
-      // containers.
-      hasQualifier(specifiesType(templateSpecializationType(hasDeclaration(
-          namedDecl(hasStdContainerName(), isInStdNamespace()))))),
-      // the named type is what comes after the final '::' in the type. It
-      // should name one of the standard iterator names.
-      namesType(
-          anyOf(typedefType(HasIteratorDecl), recordType(HasIteratorDecl))));
+  // Unwrap the nested name specifier to test for one of the standard
+  // containers.
+  auto Qualifier = hasQualifier(specifiesType(templateSpecializationType(
+      hasDeclaration(namedDecl(hasStdContainerName(), isInStdNamespace())))));
+  // the named type is what comes after the final '::' in the type. It should
+  // name one of the standard iterator names.
+  return anyOf(typedefType(HasIteratorDecl, Qualifier),
+               recordType(HasIteratorDecl, Qualifier));
 }
 
 /// This matcher returns declaration statements that contain variable
@@ -336,14 +334,14 @@ void UseAutoCheck::replaceIterators(const DeclStmt *D, ASTContext *Context) {
 
 static void ignoreTypeLocClasses(
     TypeLoc &Loc,
-    std::initializer_list<TypeLoc::TypeLocClass> const &LocClasses) {
+    const std::initializer_list<TypeLoc::TypeLocClass> &LocClasses) {
   while (llvm::is_contained(LocClasses, Loc.getTypeLocClass()))
     Loc = Loc.getNextTypeLoc();
 }
 
 static bool isMultiLevelPointerToTypeLocClasses(
     TypeLoc Loc,
-    std::initializer_list<TypeLoc::TypeLocClass> const &LocClasses) {
+    const std::initializer_list<TypeLoc::TypeLocClass> &LocClasses) {
   ignoreTypeLocClasses(Loc, {TypeLoc::Paren, TypeLoc::Qualified});
   TypeLoc::TypeLocClass TLC = Loc.getTypeLocClass();
   if (TLC != TypeLoc::Pointer && TLC != TypeLoc::MemberPointer)

@@ -13,7 +13,7 @@ define i32 @foo(i32 %x) #0 section ".tcm_text" {
 ; ENABLE-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[X:%.*]], 6
 ; ENABLE-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
 ; ENABLE:       switch.lookup:
-; ENABLE-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds nuw [6 x i32], ptr @switch.table.foo, i32 0, i32 [[X]]
+; ENABLE-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds nuw i32, ptr @switch.table.foo, i32 [[X]]
 ; ENABLE-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; ENABLE-NEXT:    br label [[RETURN]]
 ; ENABLE:       return:

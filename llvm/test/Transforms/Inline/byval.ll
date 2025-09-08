@@ -35,12 +35,12 @@ define i32 @test1() nounwind  {
 ; CHECK-NEXT:    store i32 1, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], ptr [[S]], i32 0, i32 1
 ; CHECK-NEXT:    store i64 2, ptr [[TMP4]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 12, ptr [[S1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[S1]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[S1]], ptr [[S]], i64 12, i1 false)
 ; CHECK-NEXT:    [[TMP1_I:%.*]] = load i32, ptr [[S1]], align 4
 ; CHECK-NEXT:    [[TMP2_I:%.*]] = add i32 [[TMP1_I]], 1
 ; CHECK-NEXT:    store i32 [[TMP2_I]], ptr [[S1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 12, ptr [[S1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[S1]])
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
@@ -104,10 +104,10 @@ define void @test3() nounwind  {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S1:%.*]] = alloca [[STRUCT_SS:%.*]], align 64
 ; CHECK-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS]], align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 12, ptr [[S1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[S1]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 64 [[S1]], ptr align 64 [[S]], i64 12, i1 false)
 ; CHECK-NEXT:    call void @g3(ptr align 64 [[S1]]) #[[ATTR0]]
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 12, ptr [[S1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[S1]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -157,12 +157,12 @@ define i32 @test5() {
 ; CHECK-LABEL: define i32 @test5() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B:%.*]] = alloca [[STRUCT_S0:%.*]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[B]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[B]], ptr align 4 @b, i64 4, i1 false)
 ; CHECK-NEXT:    store i32 0, ptr @b, align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B]], align 4
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr @a, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[B]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @a, align 4
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;

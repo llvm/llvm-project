@@ -107,6 +107,7 @@ public:
   }
 
   bool addInstSelector() override;
+  void addIRPasses() override;
   void addPreEmitPass() override;
 };
 } // end anonymous namespace
@@ -114,6 +115,11 @@ public:
 bool XtensaPassConfig::addInstSelector() {
   addPass(createXtensaISelDag(getXtensaTargetMachine(), getOptLevel()));
   return false;
+}
+
+void XtensaPassConfig::addIRPasses() {
+  addPass(createAtomicExpandLegacyPass());
+  TargetPassConfig::addIRPasses();
 }
 
 void XtensaPassConfig::addPreEmitPass() { addPass(&BranchRelaxationPassID); }

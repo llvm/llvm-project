@@ -442,6 +442,7 @@ public:
   // or parenthesized constant expression that produces this value.
   llvm::raw_ostream &AsFortran(
       llvm::raw_ostream &, int kind, bool minimal = false) const;
+  std::string AsFortran(int kind, bool minimal = false) const;
 
 private:
   using Significand = Integer<significandBits>; // no implicit bit
@@ -490,7 +491,10 @@ private:
       bool isNegative, int exponent, const Fraction &, Rounding, RoundingBits,
       bool multiply = false);
 
-  Word word_{}; // an Integer<>
+  // Require alignment, in case code generation on x86_64 decides that our
+  // Real object is suitable for SSE2 instructions and then gets surprised
+  // by unaligned address.
+  alignas(Word::alignment / 8) Word word_{}; // an Integer<>
 };
 
 extern template class Real<Integer<16>, 11>; // IEEE half format

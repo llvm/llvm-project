@@ -773,9 +773,10 @@ class OptionalProp<Property p, bit canDelegateParsing = 1>
   }];
   let writeToMlirBytecode = [{
     $_writer.writeOwnedBool($_storage.has_value());
-    if (!$_storage.has_value())
-      return;
-  }] # !subst("$_storage", "(*($_storage))", p.writeToMlirBytecode);
+    if ($_storage.has_value()) {
+      }] # !subst("$_storage", "(*($_storage))", p.writeToMlirBytecode) # [{
+    }
+  }];
 
   let hashProperty = !if(!empty(p.hashProperty), p.hashProperty,
     [{ hash_value($_storage.has_value() ? std::optional<::llvm::hash_code>{}] #

@@ -22,7 +22,6 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/Pass.h"
@@ -255,7 +254,6 @@ bool llvm::applyDebugifyMetadata(
     }
     if (ApplyToMF)
       ApplyToMF(DIB, F);
-    DIB.finalizeSubprogram(SP);
   }
   DIB.finalize();
 
@@ -706,6 +704,15 @@ bool llvm::checkDebugInfoMetadata(Module &M,
   bool ResultForInsts = checkInstructions(
       DILocsBefore, DILocsAfter, InstToDelete, NameOfWrappedPass,
       FileNameFromCU, ShouldWriteIntoJSON, Bugs);
+
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
+  // If we are tracking DebugLoc coverage, replace each empty DebugLoc with an
+  // annotated location now so that it does not show up in future passes even if
+  // it is propagated to other instructions.
+  for (auto &L : DILocsAfter)
+    if (!L.second)
+      const_cast<Instruction *>(L.first)->setDebugLoc(DebugLoc::getUnknown());
+#endif
 
   bool ResultForVars = checkVars(DIVarsBefore, DIVarsAfter, NameOfWrappedPass,
                                  FileNameFromCU, ShouldWriteIntoJSON, Bugs);

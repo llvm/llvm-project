@@ -429,11 +429,7 @@ SDValue XCoreTargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   // Lower to a call to __misaligned_load(BasePtr).
   Type *IntPtrTy = DAG.getDataLayout().getIntPtrType(Context);
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
-
-  Entry.Ty = IntPtrTy;
-  Entry.Node = BasePtr;
-  Args.push_back(Entry);
+  Args.emplace_back(BasePtr, IntPtrTy);
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
@@ -480,14 +476,8 @@ SDValue XCoreTargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   // Lower to a call to __misaligned_store(BasePtr, Value).
   Type *IntPtrTy = DAG.getDataLayout().getIntPtrType(Context);
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
-
-  Entry.Ty = IntPtrTy;
-  Entry.Node = BasePtr;
-  Args.push_back(Entry);
-
-  Entry.Node = Value;
-  Args.push_back(Entry);
+  Args.emplace_back(BasePtr, IntPtrTy);
+  Args.emplace_back(Value, IntPtrTy);
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl).setChain(Chain).setCallee(

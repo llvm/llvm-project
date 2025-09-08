@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/clc_as_type.h>
-#include <clc/clcmacro.h>
 #include <clc/float/definitions.h>
 #include <clc/integer/clc_abs.h>
 #include <clc/integer/clc_clz.h>
@@ -160,7 +159,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_sw_fma(float a, float b, float c) {
                         ((uint)st_fma.mantissa & 0x7fffff));
 }
 
-#define __FLOAT_ONLY
-#define FUNCTION __clc_sw_fma
+#define __CLC_FLOAT_ONLY
+#define __CLC_FUNCTION __clc_sw_fma
 #define __CLC_BODY <clc/shared/ternary_def_scalarize.inc>
 #include <clc/math/gentype.inc>

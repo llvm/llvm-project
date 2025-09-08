@@ -1,6 +1,7 @@
 function(_get_common_test_compile_options output_var c_test flags)
   _get_compile_options_from_flags(compile_flags ${flags})
   _get_compile_options_from_config(config_flags)
+  _get_compile_options_from_arch(arch_flags)
 
   # Remove -fno-math-errno if it was added.
   if(LIBC_ADD_FNO_MATH_ERRNO)
@@ -16,7 +17,8 @@ function(_get_common_test_compile_options output_var c_test flags)
       ${LIBC_COMPILE_OPTIONS_DEFAULT}
       ${LIBC_TEST_COMPILE_OPTIONS_DEFAULT}
       ${compile_flags}
-      ${config_flags})
+      ${config_flags}
+      ${arch_flags})
 
   if(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")
@@ -71,6 +73,7 @@ endfunction()
 
 function(_get_hermetic_test_compile_options output_var)
   _get_common_test_compile_options(compile_options "" "")
+  list(APPEND compile_options "-DLIBC_TEST=HERMETIC")
 
   # null check tests are death tests, remove from hermetic tests for now.
   if(LIBC_ADD_NULL_CHECKS)
@@ -232,6 +235,7 @@ function(create_libc_unittest fq_target_name)
 
   _get_common_test_compile_options(compile_options "${LIBC_UNITTEST_C_TEST}"
                                    "${LIBC_UNITTEST_FLAGS}")
+  list(APPEND compile_options "-DLIBC_TEST=UNIT")
   # TODO: Ideally we would have a separate function for link options.
   set(link_options
     ${compile_options}
@@ -834,7 +838,7 @@ function(add_libc_hermetic test_name)
                    ${fq_deps_list})
   # TODO: currently the dependency chain is broken such that getauxval cannot properly
   # propagate to hermetic tests. This is a temporary workaround.
-  if (LIBC_TARGET_ARCHITECTURE_IS_AARCH64)
+  if (LIBC_TARGET_ARCHITECTURE_IS_AARCH64 AND NOT(LIBC_TARGET_OS_IS_BAREMETAL))
     target_link_libraries(
       ${fq_build_target_name}
       PRIVATE

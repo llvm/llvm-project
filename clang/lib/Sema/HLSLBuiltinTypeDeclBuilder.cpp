@@ -156,6 +156,10 @@ public:
   BuiltinTypeDeclBuilder &finalize();
   Expr *getResourceHandleExpr();
 
+  template <typename T>
+  BuiltinTypeMethodBuilder &getResourceHandle(T ResourceRecord);
+  BuiltinTypeMethodBuilder &returnThis();
+
 private:
   void createDecl();
 
@@ -313,9 +317,6 @@ TemplateParameterListBuilder::finalizeTemplateArgs(ConceptDecl *CD) {
   Builder.Record->getDeclContext()->addDecl(Builder.Template);
   Params.clear();
 
-  QualType T = Builder.Template->getInjectedClassNameSpecialization();
-  T = AST.getInjectedClassNameType(Builder.Record, T);
-
   return Builder;
 }
 
@@ -335,7 +336,7 @@ Expr *BuiltinTypeMethodBuilder::convertPlaceholder(PlaceHolder PH) {
   return DeclRefExpr::Create(
       AST, NestedNameSpecifierLoc(), SourceLocation(), ParamDecl, false,
       DeclarationNameInfo(ParamDecl->getDeclName(), SourceLocation()),
-      ParamDecl->getType(), VK_PRValue);
+      ParamDecl->getType().getNonReferenceType(), VK_PRValue);
 }
 
 BuiltinTypeMethodBuilder::BuiltinTypeMethodBuilder(BuiltinTypeDeclBuilder &DB,
@@ -351,7 +352,7 @@ BuiltinTypeMethodBuilder::BuiltinTypeMethodBuilder(BuiltinTypeDeclBuilder &DB,
   ASTContext &AST = DB.SemaRef.getASTContext();
   if (IsCtor) {
     Name = AST.DeclarationNames.getCXXConstructorName(
-        DB.Record->getTypeForDecl()->getCanonicalTypeUnqualified());
+        AST.getCanonicalTagType(DB.Record));
   } else {
     const IdentifierInfo &II =
         AST.Idents.get(NameStr, tok::TokenKind::identifier);
@@ -432,6 +433,31 @@ Expr *BuiltinTypeMethodBuilder::getResourceHandleExpr() {
   return MemberExpr::CreateImplicit(AST, This, false, HandleField,
                                     HandleField->getType(), VK_LValue,
                                     OK_Ordinary);
+}
+
+template <typename T>
+BuiltinTypeMethodBuilder &
+BuiltinTypeMethodBuilder::getResourceHandle(T ResourceRecord) {
+  ensureCompleteDecl();
+
+  Expr *ResourceExpr = convertPlaceholder(ResourceRecord);
+
+  ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
+  FieldDecl *HandleField = DeclBuilder.getResourceHandleField();
+  MemberExpr *HandleExpr = MemberExpr::CreateImplicit(
+      AST, ResourceExpr, /*IsArrow=*/false, HandleField, HandleField->getType(),
+      VK_LValue, OK_Ordinary);
+  StmtsList.push_back(HandleExpr);
+  return *this;
+}
+
+BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::returnThis() {
+  ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
+  CXXThisExpr *ThisExpr = CXXThisExpr::Create(
+      AST, SourceLocation(), Method->getFunctionObjectParameterType(),
+      /*IsImplicit=*/true);
+  StmtsList.push_back(ThisExpr);
+  return *this;
 }
 
 template <typename... Ts>
@@ -553,9 +579,9 @@ BuiltinTypeDeclBuilder::BuiltinTypeDeclBuilder(Sema &SemaRef,
     return;
   }
 
-  Record = CXXRecordDecl::Create(AST, TagDecl::TagKind::Class, HLSLNamespace,
-                                 SourceLocation(), SourceLocation(), &II,
-                                 PrevDecl, true);
+  Record =
+      CXXRecordDecl::Create(AST, TagDecl::TagKind::Class, HLSLNamespace,
+                            SourceLocation(), SourceLocation(), &II, PrevDecl);
   Record->setImplicit(true);
   Record->setLexicalDeclContext(HLSLNamespace);
   Record->setHasExternalLexicalStorage();
@@ -568,18 +594,6 @@ BuiltinTypeDeclBuilder::BuiltinTypeDeclBuilder(Sema &SemaRef,
 BuiltinTypeDeclBuilder::~BuiltinTypeDeclBuilder() {
   if (HLSLNamespace && !Template && Record->getDeclContext() == HLSLNamespace)
     HLSLNamespace->addDecl(Record);
-}
-
-CXXRecordDecl *BuiltinTypeDeclBuilder::finalizeForwardDeclaration() {
-  // Force the QualType to be generated for the record declaration. In most
-  // cases this will happen naturally when something uses the type the
-  // QualType gets lazily created. Unfortunately, with our injected types if a
-  // type isn't used in a translation unit the QualType may not get
-  // automatically generated before a PCH is generated. To resolve this we
-  // just force that the QualType is generated after we create a forward
-  // declaration.
-  (void)Record->getASTContext().getRecordType(Record);
-  return Record;
 }
 
 BuiltinTypeDeclBuilder &
@@ -685,9 +699,48 @@ BuiltinTypeDeclBuilder::addHandleConstructorFromImplicitBinding() {
       .addParam("orderId", AST.UnsignedIntTy)
       .addParam("name", AST.getPointerType(AST.CharTy.withConst()))
       .callBuiltin("__builtin_hlsl_resource_handlefromimplicitbinding",
-                   HandleType, PH::Handle, PH::_0, PH::_1, PH::_2, PH::_3,
+                   HandleType, PH::Handle, PH::_3, PH::_0, PH::_1, PH::_2,
                    PH::_4)
       .assign(PH::Handle, PH::LastStmt)
+      .finalize();
+}
+
+BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyConstructor() {
+  if (Record->isCompleteDefinition())
+    return *this;
+
+  ASTContext &AST = SemaRef.getASTContext();
+  QualType RecordType = AST.getCanonicalTagType(Record);
+  QualType ConstRecordType = RecordType.withConst();
+  QualType ConstRecordRefType = AST.getLValueReferenceType(ConstRecordType);
+
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  return BuiltinTypeMethodBuilder(*this, /*Name=*/"", AST.VoidTy,
+                                  /*IsConst=*/false, /*IsCtor=*/true)
+      .addParam("other", ConstRecordRefType)
+      .getResourceHandle(PH::_0)
+      .assign(PH::Handle, PH::LastStmt)
+      .finalize();
+}
+
+BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyAssignmentOperator() {
+  if (Record->isCompleteDefinition())
+    return *this;
+
+  ASTContext &AST = SemaRef.getASTContext();
+  QualType RecordType = AST.getCanonicalTagType(Record);
+  QualType ConstRecordType = RecordType.withConst();
+  QualType ConstRecordRefType = AST.getLValueReferenceType(ConstRecordType);
+  QualType RecordRefType = AST.getLValueReferenceType(RecordType);
+
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+  DeclarationName Name = AST.DeclarationNames.getCXXOperatorName(OO_Equal);
+  return BuiltinTypeMethodBuilder(*this, Name, RecordRefType)
+      .addParam("other", ConstRecordRefType)
+      .getResourceHandle(PH::_0)
+      .assign(PH::Handle, PH::LastStmt)
+      .returnThis()
       .finalize();
 }
 

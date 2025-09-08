@@ -88,6 +88,8 @@
 
 using namespace llvm;
 
+// See https://llvm.org/docs/DebuggingLLVM.html for why these flags are useful.
+
 static cl::opt<bool>
     PrintInstAddrs("print-inst-addrs", cl::Hidden,
                    cl::desc("Print addresses of instructions when dumping"));
@@ -1163,7 +1165,7 @@ int SlotTracker::processIndex() {
   std::vector<StringRef> ModulePaths;
   for (auto &[ModPath, _] : TheIndex->modulePaths())
     ModulePaths.push_back(ModPath);
-  llvm::sort(ModulePaths.begin(), ModulePaths.end());
+  llvm::sort(ModulePaths);
   for (auto &ModPath : ModulePaths)
     CreateModulePathSlot(ModPath);
 
@@ -2401,8 +2403,9 @@ static void writeDIFile(raw_ostream &Out, const DIFile *N, AsmWriterContext &) {
   // Print all values for checksum together, or not at all.
   if (N->getChecksum())
     Printer.printChecksum(*N->getChecksum());
-  Printer.printString("source", N->getSource().value_or(StringRef()),
-                      /* ShouldSkipEmpty */ true);
+  if (N->getSource())
+    Printer.printString("source", *N->getSource(),
+                        /* ShouldSkipEmpty */ false);
   Out << ")";
 }
 

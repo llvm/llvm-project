@@ -10,7 +10,7 @@
 // RUN: clang-tidy -checks='-*,google-explicit-constructor' -header-filter='header_alias\.h' %s -- -I %t 2>&1 | FileCheck --check-prefix=CHECK_HEADER_ALIAS %s
 // RUN: clang-tidy -checks='-*,google-explicit-constructor' -header-filter='header_alias\.h' -quiet %s -- -I %t 2>&1 | FileCheck --check-prefix=CHECK_HEADER_ALIAS %s
 // RUN: clang-tidy -checks='-*,google-explicit-constructor' -header-filter='header\.h' %s -- -I %t 2>&1 | FileCheck --check-prefix=CHECK_HEADER %s
-// RUN: clang-tidy -checks='-*,google-explicit-constructor' -header-filter='header\.h' -quiet %s -- -I %t 2>&1 | FileCheck --check-prefix=CHECK_HEADER %s
+// RUN: clang-tidy -checks='-*,google-explicit-constructor' -header-filter='header\.h' -quiet %s -- -I %t 2>&1 | FileCheck --check-prefix=CHECK_HEADER --allow-empty %s
 
 // Check that `-header-filter` operates on the same file paths as paths in
 // diagnostics printed by ClangTidy.

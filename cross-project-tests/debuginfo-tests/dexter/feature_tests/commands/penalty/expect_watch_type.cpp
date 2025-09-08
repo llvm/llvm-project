@@ -10,7 +10,7 @@
 // expected behaviour.
 //
 // RUN: %dexter_regression_test_cxx_build %s -o %t
-// RUN: not %dexter_regression_test_run --binary %t -- %s | FileCheck %s
+// RUN: not %dexter_regression_test_run --binary %t -- %s | FileCheck --dump-input-context=999999999 %s
 // CHECK: expect_watch_type.cpp:
 
 template<class T>

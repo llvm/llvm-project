@@ -263,8 +263,13 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   // merge the byte offsets. Otherwise, this GEP is itself the root of a GEP
   // chain and we need to deterine the root array type
   if (auto *PtrOpGEP = dyn_cast<GEPOperator>(PtrOperand)) {
-    assert(GEPChainInfoMap.contains(PtrOpGEP) &&
-           "Expected parent GEP to be visited before this GEP");
+
+    // If the parent GEP was not processed, then we do not want to process its
+    // descendants. This can happen if the GEP chain is for an unsupported type
+    // such as a struct -- we do not flatten structs nor GEP chains for structs
+    if (!GEPChainInfoMap.contains(PtrOpGEP))
+      return false;
+
     GEPInfo &PGEPInfo = GEPChainInfoMap[PtrOpGEP];
     Info.RootFlattenedArrayType = PGEPInfo.RootFlattenedArrayType;
     Info.RootPointerOperand = PGEPInfo.RootPointerOperand;

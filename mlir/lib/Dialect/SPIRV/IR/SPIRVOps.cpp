@@ -651,26 +651,26 @@ spirv::ConstantOp spirv::ConstantOp::getZero(Type type, Location loc,
   if (auto intType = llvm::dyn_cast<IntegerType>(type)) {
     unsigned width = intType.getWidth();
     if (width == 1)
-      return builder.create<spirv::ConstantOp>(loc, type,
-                                               builder.getBoolAttr(false));
-    return builder.create<spirv::ConstantOp>(
-        loc, type, builder.getIntegerAttr(type, APInt(width, 0)));
+      return spirv::ConstantOp::create(builder, loc, type,
+                                       builder.getBoolAttr(false));
+    return spirv::ConstantOp::create(
+        builder, loc, type, builder.getIntegerAttr(type, APInt(width, 0)));
   }
   if (auto floatType = llvm::dyn_cast<FloatType>(type)) {
-    return builder.create<spirv::ConstantOp>(
-        loc, type, builder.getFloatAttr(floatType, 0.0));
+    return spirv::ConstantOp::create(builder, loc, type,
+                                     builder.getFloatAttr(floatType, 0.0));
   }
   if (auto vectorType = llvm::dyn_cast<VectorType>(type)) {
     Type elemType = vectorType.getElementType();
     if (llvm::isa<IntegerType>(elemType)) {
-      return builder.create<spirv::ConstantOp>(
-          loc, type,
+      return spirv::ConstantOp::create(
+          builder, loc, type,
           DenseElementsAttr::get(vectorType,
                                  IntegerAttr::get(elemType, 0).getValue()));
     }
     if (llvm::isa<FloatType>(elemType)) {
-      return builder.create<spirv::ConstantOp>(
-          loc, type,
+      return spirv::ConstantOp::create(
+          builder, loc, type,
           DenseFPElementsAttr::get(vectorType,
                                    FloatAttr::get(elemType, 0.0).getValue()));
     }
@@ -684,26 +684,26 @@ spirv::ConstantOp spirv::ConstantOp::getOne(Type type, Location loc,
   if (auto intType = llvm::dyn_cast<IntegerType>(type)) {
     unsigned width = intType.getWidth();
     if (width == 1)
-      return builder.create<spirv::ConstantOp>(loc, type,
-                                               builder.getBoolAttr(true));
-    return builder.create<spirv::ConstantOp>(
-        loc, type, builder.getIntegerAttr(type, APInt(width, 1)));
+      return spirv::ConstantOp::create(builder, loc, type,
+                                       builder.getBoolAttr(true));
+    return spirv::ConstantOp::create(
+        builder, loc, type, builder.getIntegerAttr(type, APInt(width, 1)));
   }
   if (auto floatType = llvm::dyn_cast<FloatType>(type)) {
-    return builder.create<spirv::ConstantOp>(
-        loc, type, builder.getFloatAttr(floatType, 1.0));
+    return spirv::ConstantOp::create(builder, loc, type,
+                                     builder.getFloatAttr(floatType, 1.0));
   }
   if (auto vectorType = llvm::dyn_cast<VectorType>(type)) {
     Type elemType = vectorType.getElementType();
     if (llvm::isa<IntegerType>(elemType)) {
-      return builder.create<spirv::ConstantOp>(
-          loc, type,
+      return spirv::ConstantOp::create(
+          builder, loc, type,
           DenseElementsAttr::get(vectorType,
                                  IntegerAttr::get(elemType, 1).getValue()));
     }
     if (llvm::isa<FloatType>(elemType)) {
-      return builder.create<spirv::ConstantOp>(
-          loc, type,
+      return spirv::ConstantOp::create(
+          builder, loc, type,
           DenseFPElementsAttr::get(vectorType,
                                    FloatAttr::get(elemType, 1.0).getValue()));
     }
@@ -767,19 +767,25 @@ void mlir::spirv::AddressOfOp::getAsmResultNames(
 // spirv.EXTConstantCompositeReplicate
 //===----------------------------------------------------------------------===//
 
-LogicalResult spirv::EXTConstantCompositeReplicateOp::verify() {
-  Type valueType;
-  if (auto typedAttr = dyn_cast<TypedAttr>(getValue())) {
-    valueType = typedAttr.getType();
-  } else if (auto arrayAttr = dyn_cast<ArrayAttr>(getValue())) {
-    auto typedElemAttr = dyn_cast<TypedAttr>(arrayAttr[0]);
-    if (!typedElemAttr)
-      return emitError("value attribute is not typed");
-    valueType =
-        spirv::ArrayType::get(typedElemAttr.getType(), arrayAttr.size());
-  } else {
-    return emitError("unknown value attribute type");
+// Returns type of attribute. In case of a TypedAttr this will simply return
+// the type. But for an ArrayAttr which is untyped and can be multidimensional
+// it creates the ArrayType recursively.
+static Type getValueType(Attribute attr) {
+  if (auto typedAttr = dyn_cast<TypedAttr>(attr)) {
+    return typedAttr.getType();
   }
+
+  if (auto arrayAttr = dyn_cast<ArrayAttr>(attr)) {
+    return spirv::ArrayType::get(getValueType(arrayAttr[0]), arrayAttr.size());
+  }
+
+  return nullptr;
+}
+
+LogicalResult spirv::EXTConstantCompositeReplicateOp::verify() {
+  Type valueType = getValueType(getValue());
+  if (!valueType)
+    return emitError("unknown value attribute type");
 
   auto compositeType = dyn_cast<spirv::CompositeType>(getType());
   if (!compositeType)
@@ -1985,7 +1991,7 @@ ParseResult spirv::SpecConstantOperationOp::parse(OpAsmParser &parser,
 
   OpBuilder builder(parser.getContext());
   builder.setInsertionPointToEnd(&block);
-  builder.create<spirv::YieldOp>(wrappedOp->getLoc(), wrappedOp->getResult(0));
+  spirv::YieldOp::create(builder, wrappedOp->getLoc(), wrappedOp->getResult(0));
   result.location = wrappedOp->getLoc();
 
   result.addTypes(wrappedOp->getResult(0).getType());

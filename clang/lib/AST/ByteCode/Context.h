@@ -17,9 +17,9 @@
 #define LLVM_CLANG_AST_INTERP_CONTEXT_H
 
 #include "InterpStack.h"
+#include "clang/AST/ASTContext.h"
 
 namespace clang {
-class ASTContext;
 class LangOptions;
 class FunctionDecl;
 class VarDecl;
@@ -30,7 +30,7 @@ namespace interp {
 class Function;
 class Program;
 class State;
-enum PrimType : unsigned;
+enum PrimType : uint8_t;
 
 struct ParamOffset {
   unsigned Offset;
@@ -82,15 +82,34 @@ public:
   uint32_t getBitWidth(QualType T) const { return Ctx.getIntWidth(T); }
 
   /// Classifies a type.
-  std::optional<PrimType> classify(QualType T) const;
+  OptPrimType classify(QualType T) const;
 
   /// Classifies an expression.
-  std::optional<PrimType> classify(const Expr *E) const {
+  OptPrimType classify(const Expr *E) const {
     assert(E);
     if (E->isGLValue())
       return PT_Ptr;
 
     return classify(E->getType());
+  }
+
+  bool canClassify(QualType T) {
+    if (const auto *BT = dyn_cast<BuiltinType>(T)) {
+      if (BT->isInteger() || BT->isFloatingPoint())
+        return true;
+      if (BT->getKind() == BuiltinType::Bool)
+        return true;
+    }
+
+    if (T->isArrayType() || T->isRecordType() || T->isAnyComplexType() ||
+        T->isVectorType())
+      return false;
+    return classify(T) != std::nullopt;
+  }
+  bool canClassify(const Expr *E) {
+    if (E->isGLValue())
+      return true;
+    return canClassify(E->getType());
   }
 
   const CXXMethodDecl *

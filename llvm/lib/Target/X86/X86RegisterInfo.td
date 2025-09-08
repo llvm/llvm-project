@@ -716,10 +716,7 @@ def GR64_NOREX2_NOSP : RegisterClass<"X86", [i64], 64,
 // which we do not have right now.
 def LOW32_ADDR_ACCESS : RegisterClass<"X86", [i32], 32, (add GR32, RIP)>;
 
-// When RBP is used as a base pointer in a 32-bit addresses environment,
-// this is also safe to use the full register to access addresses.
-// Since RBP will never be spilled, stick to a 32 alignment to save
-// on memory consumption.
+// FIXME: This is unused, but deleting it results in codegen changes
 def LOW32_ADDR_ACCESS_RBP : RegisterClass<"X86", [i32], 32,
                                           (add LOW32_ADDR_ACCESS, RBP)>;
 

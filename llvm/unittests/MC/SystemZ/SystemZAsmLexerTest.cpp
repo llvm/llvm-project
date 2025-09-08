@@ -46,34 +46,33 @@ protected:
   std::unique_ptr<MCTargetAsmParser> TargetAsmParser;
 
   SourceMgr SrcMgr;
-  std::string TripleName;
-  llvm::Triple Triple;
+  StringRef TripleName;
+  const llvm::Triple Triple;
   const Target *TheTarget;
 
   const MCTargetOptions MCOptions;
 
   SystemZAsmLexerTest() = delete;
 
-  SystemZAsmLexerTest(std::string SystemZTriple) {
+  SystemZAsmLexerTest(StringRef SystemZTriple)
+      : TripleName(SystemZTriple), Triple(SystemZTriple) {
     // We will use the SystemZ triple, because of missing
     // Object File and Streamer support for the z/OS target.
-    TripleName = SystemZTriple;
-    Triple = llvm::Triple(TripleName);
 
     std::string Error;
     TheTarget = TargetRegistry::lookupTarget(TripleName, Error);
     EXPECT_NE(TheTarget, nullptr);
 
-    MRI.reset(TheTarget->createMCRegInfo(TripleName));
+    MRI.reset(TheTarget->createMCRegInfo(Triple));
     EXPECT_NE(MRI, nullptr);
 
     MII.reset(TheTarget->createMCInstrInfo());
     EXPECT_NE(MII, nullptr);
 
-    STI.reset(TheTarget->createMCSubtargetInfo(TripleName, "z10", ""));
+    STI.reset(TheTarget->createMCSubtargetInfo(Triple, "z10", ""));
     EXPECT_NE(STI, nullptr);
 
-    MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+    MAI.reset(TheTarget->createMCAsmInfo(*MRI, Triple, MCOptions));
     EXPECT_NE(MAI, nullptr);
   }
 

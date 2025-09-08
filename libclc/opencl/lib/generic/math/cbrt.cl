@@ -9,7 +9,7 @@
 #include <clc/math/clc_cbrt.inc>
 #include <clc/opencl/math/cbrt.h>
 
-#define FUNCTION cbrt
+#define __CLC_FUNCTION cbrt
 #define __CLC_BODY <clc/shared/unary_def.inc>
 
 #include <clc/math/gentype.inc>

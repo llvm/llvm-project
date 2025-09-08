@@ -109,7 +109,6 @@ end program
 ! O2-NEXT:    OptimizeArrayRepacking
 ! ALL-NEXT: LowerRepackArraysPass
 ! ALL-NEXT: SimplifyFIROperations
-! O2-NEXT:  AddAliasTags
 
 ! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
 ! ALL-NEXT:    'fir.global' Pipeline
@@ -134,6 +133,7 @@ end program
 ! O2-NEXT:  'func.func' Pipeline
 ! O2-NEXT:    SetRuntimeCallAttributes
 ! ALL-NEXT: BoxedProcedurePass
+! O2-NEXT:  AddAliasTags
 
 ! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'gpu.module', 'omp.declare_reduction', 'omp.private']
 ! ALL-NEXT:   'fir.global' Pipeline

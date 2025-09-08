@@ -14,73 +14,73 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
 
-static bool isCopyConstructible(CXXRecordDecl const &Node) {
+static bool isCopyConstructible(const CXXRecordDecl &Node) {
   if (Node.needsOverloadResolutionForCopyConstructor() &&
       Node.needsImplicitCopyConstructor()) {
     // unresolved
-    for (CXXBaseSpecifier const &BS : Node.bases()) {
-      CXXRecordDecl const *BRD = BS.getType()->getAsCXXRecordDecl();
+    for (const CXXBaseSpecifier &BS : Node.bases()) {
+      const CXXRecordDecl *BRD = BS.getType()->getAsCXXRecordDecl();
       if (BRD != nullptr && !isCopyConstructible(*BRD))
         return false;
     }
   }
   if (Node.hasSimpleCopyConstructor())
     return true;
-  for (CXXConstructorDecl const *Ctor : Node.ctors())
+  for (const CXXConstructorDecl *Ctor : Node.ctors())
     if (Ctor->isCopyConstructor())
       return !Ctor->isDeleted();
   return false;
 }
 
-static bool isMoveConstructible(CXXRecordDecl const &Node) {
+static bool isMoveConstructible(const CXXRecordDecl &Node) {
   if (Node.needsOverloadResolutionForMoveConstructor() &&
       Node.needsImplicitMoveConstructor()) {
     // unresolved
-    for (CXXBaseSpecifier const &BS : Node.bases()) {
-      CXXRecordDecl const *BRD = BS.getType()->getAsCXXRecordDecl();
+    for (const CXXBaseSpecifier &BS : Node.bases()) {
+      const CXXRecordDecl *BRD = BS.getType()->getAsCXXRecordDecl();
       if (BRD != nullptr && !isMoveConstructible(*BRD))
         return false;
     }
   }
   if (Node.hasSimpleMoveConstructor())
     return true;
-  for (CXXConstructorDecl const *Ctor : Node.ctors())
+  for (const CXXConstructorDecl *Ctor : Node.ctors())
     if (Ctor->isMoveConstructor())
       return !Ctor->isDeleted();
   return false;
 }
 
-static bool isCopyAssignable(CXXRecordDecl const &Node) {
+static bool isCopyAssignable(const CXXRecordDecl &Node) {
   if (Node.needsOverloadResolutionForCopyAssignment() &&
       Node.needsImplicitCopyAssignment()) {
     // unresolved
-    for (CXXBaseSpecifier const &BS : Node.bases()) {
-      CXXRecordDecl const *BRD = BS.getType()->getAsCXXRecordDecl();
+    for (const CXXBaseSpecifier &BS : Node.bases()) {
+      const CXXRecordDecl *BRD = BS.getType()->getAsCXXRecordDecl();
       if (BRD != nullptr && !isCopyAssignable(*BRD))
         return false;
     }
   }
   if (Node.hasSimpleCopyAssignment())
     return true;
-  for (CXXMethodDecl const *Method : Node.methods())
+  for (const CXXMethodDecl *Method : Node.methods())
     if (Method->isCopyAssignmentOperator())
       return !Method->isDeleted();
   return false;
 }
 
-static bool isMoveAssignable(CXXRecordDecl const &Node) {
+static bool isMoveAssignable(const CXXRecordDecl &Node) {
   if (Node.needsOverloadResolutionForMoveAssignment() &&
       Node.needsImplicitMoveAssignment()) {
     // unresolved
-    for (CXXBaseSpecifier const &BS : Node.bases()) {
-      CXXRecordDecl const *BRD = BS.getType()->getAsCXXRecordDecl();
+    for (const CXXBaseSpecifier &BS : Node.bases()) {
+      const CXXRecordDecl *BRD = BS.getType()->getAsCXXRecordDecl();
       if (BRD != nullptr && !isMoveAssignable(*BRD))
         return false;
     }
   }
   if (Node.hasSimpleMoveAssignment())
     return true;
-  for (CXXMethodDecl const *Method : Node.methods())
+  for (const CXXMethodDecl *Method : Node.methods())
     if (Method->isMoveAssignmentOperator())
       return !Method->isDeleted();
   return false;

@@ -2,7 +2,7 @@
 // UNSUPPORTED: system-windows
 //
 // RUN: %dexter_regression_test_c_build %s -o %t
-// RUN: %dexter_regression_test_run --binary %t --target-run-args "a b 'c d'" -- %s | FileCheck %s
+// RUN: %dexter_regression_test_run --binary %t --target-run-args "a b 'c d'" -- %s | FileCheck --dump-input-context=999999999 %s
 // CHECK: target_run_args_with_command.c:
 
 int main(int argc, const char **argv) {

@@ -69,25 +69,25 @@ struct MathCosToVCIX final : OpRewritePattern<math::CosOp> {
     if (legalType.isScalable())
       // Use arbitrary runtime vector length when vector type is scalable.
       // Proper conversion pass should take it from the IR.
-      rvl = rewriter.create<arith::ConstantOp>(loc,
-                                               rewriter.getI64IntegerAttr(9));
+      rvl = arith::ConstantOp::create(rewriter, loc,
+                                      rewriter.getI64IntegerAttr(9));
     Value res;
     if (n == 1) {
-      res = rewriter.create<vcix::BinaryImmOp>(loc, legalType, opcodeAttr, vec,
-                                               immAttr, rvl);
+      res = vcix::BinaryImmOp::create(rewriter, loc, legalType, opcodeAttr, vec,
+                                      immAttr, rvl);
     } else {
       const unsigned eltCount = legalType.getShape()[0];
       Type eltTy = legalType.getElementType();
-      Value zero = rewriter.create<arith::ConstantOp>(
-          loc, eltTy, rewriter.getZeroAttr(eltTy));
-      res = rewriter.create<vector::BroadcastOp>(loc, opType, zero /*dummy*/);
+      Value zero = arith::ConstantOp::create(rewriter, loc, eltTy,
+                                             rewriter.getZeroAttr(eltTy));
+      res = vector::BroadcastOp::create(rewriter, loc, opType, zero /*dummy*/);
       for (unsigned i = 0; i < n; ++i) {
-        Value extracted = rewriter.create<vector::ScalableExtractOp>(
-            loc, legalType, vec, i * eltCount);
-        Value v = rewriter.create<vcix::BinaryImmOp>(loc, legalType, opcodeAttr,
-                                                     extracted, immAttr, rvl);
-        res = rewriter.create<vector::ScalableInsertOp>(loc, v, res,
-                                                        i * eltCount);
+        Value extracted = vector::ScalableExtractOp::create(
+            rewriter, loc, legalType, vec, i * eltCount);
+        Value v = vcix::BinaryImmOp::create(
+            rewriter, loc, legalType, opcodeAttr, extracted, immAttr, rvl);
+        res = vector::ScalableInsertOp::create(rewriter, loc, v, res,
+                                               i * eltCount);
       }
     }
     rewriter.replaceOp(op, res);
@@ -112,25 +112,25 @@ struct MathSinToVCIX final : OpRewritePattern<math::SinOp> {
     if (legalType.isScalable())
       // Use arbitrary runtime vector length when vector type is scalable.
       // Proper conversion pass should take it from the IR.
-      rvl = rewriter.create<arith::ConstantOp>(loc,
-                                               rewriter.getI64IntegerAttr(9));
+      rvl = arith::ConstantOp::create(rewriter, loc,
+                                      rewriter.getI64IntegerAttr(9));
     Value res;
     if (n == 1) {
-      res = rewriter.create<vcix::BinaryOp>(loc, legalType, opcodeAttr, vec,
-                                            vec, rvl);
+      res = vcix::BinaryOp::create(rewriter, loc, legalType, opcodeAttr, vec,
+                                   vec, rvl);
     } else {
       const unsigned eltCount = legalType.getShape()[0];
       Type eltTy = legalType.getElementType();
-      Value zero = rewriter.create<arith::ConstantOp>(
-          loc, eltTy, rewriter.getZeroAttr(eltTy));
-      res = rewriter.create<vector::BroadcastOp>(loc, opType, zero /*dummy*/);
+      Value zero = arith::ConstantOp::create(rewriter, loc, eltTy,
+                                             rewriter.getZeroAttr(eltTy));
+      res = vector::BroadcastOp::create(rewriter, loc, opType, zero /*dummy*/);
       for (unsigned i = 0; i < n; ++i) {
-        Value extracted = rewriter.create<vector::ScalableExtractOp>(
-            loc, legalType, vec, i * eltCount);
-        Value v = rewriter.create<vcix::BinaryOp>(loc, legalType, opcodeAttr,
-                                                  extracted, extracted, rvl);
-        res = rewriter.create<vector::ScalableInsertOp>(loc, v, res,
-                                                        i * eltCount);
+        Value extracted = vector::ScalableExtractOp::create(
+            rewriter, loc, legalType, vec, i * eltCount);
+        Value v = vcix::BinaryOp::create(rewriter, loc, legalType, opcodeAttr,
+                                         extracted, extracted, rvl);
+        res = vector::ScalableInsertOp::create(rewriter, loc, v, res,
+                                               i * eltCount);
       }
     }
     rewriter.replaceOp(op, res);
@@ -152,28 +152,28 @@ struct MathTanToVCIX final : OpRewritePattern<math::TanOp> {
     Location loc = op.getLoc();
     Value vec = op.getOperand();
     Attribute opcodeAttr = rewriter.getI64IntegerAttr(0);
-    Value zero = rewriter.create<arith::ConstantOp>(
-        loc, eltTy, rewriter.getZeroAttr(eltTy));
+    Value zero = arith::ConstantOp::create(rewriter, loc, eltTy,
+                                           rewriter.getZeroAttr(eltTy));
     Value rvl = nullptr;
     if (legalType.isScalable())
       // Use arbitrary runtime vector length when vector type is scalable.
       // Proper conversion pass should take it from the IR.
-      rvl = rewriter.create<arith::ConstantOp>(loc,
-                                               rewriter.getI64IntegerAttr(9));
+      rvl = arith::ConstantOp::create(rewriter, loc,
+                                      rewriter.getI64IntegerAttr(9));
     Value res;
     if (n == 1) {
-      res = rewriter.create<vcix::BinaryOp>(loc, legalType, opcodeAttr, vec,
-                                            zero, rvl);
+      res = vcix::BinaryOp::create(rewriter, loc, legalType, opcodeAttr, vec,
+                                   zero, rvl);
     } else {
       const unsigned eltCount = legalType.getShape()[0];
-      res = rewriter.create<vector::BroadcastOp>(loc, opType, zero /*dummy*/);
+      res = vector::BroadcastOp::create(rewriter, loc, opType, zero /*dummy*/);
       for (unsigned i = 0; i < n; ++i) {
-        Value extracted = rewriter.create<vector::ScalableExtractOp>(
-            loc, legalType, vec, i * eltCount);
-        Value v = rewriter.create<vcix::BinaryOp>(loc, legalType, opcodeAttr,
-                                                  extracted, zero, rvl);
-        res = rewriter.create<vector::ScalableInsertOp>(loc, v, res,
-                                                        i * eltCount);
+        Value extracted = vector::ScalableExtractOp::create(
+            rewriter, loc, legalType, vec, i * eltCount);
+        Value v = vcix::BinaryOp::create(rewriter, loc, legalType, opcodeAttr,
+                                         extracted, zero, rvl);
+        res = vector::ScalableInsertOp::create(rewriter, loc, v, res,
+                                               i * eltCount);
       }
     }
     rewriter.replaceOp(op, res);
@@ -195,30 +195,30 @@ struct MathLogToVCIX final : OpRewritePattern<math::LogOp> {
     Value vec = op.getOperand();
     Attribute opcodeAttr = rewriter.getI64IntegerAttr(0);
     Value rvl = nullptr;
-    Value zeroInt = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(0));
+    Value zeroInt = arith::ConstantOp::create(
+        rewriter, loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(0));
     if (legalType.isScalable())
       // Use arbitrary runtime vector length when vector type is scalable.
       // Proper conversion pass should take it from the IR.
-      rvl = rewriter.create<arith::ConstantOp>(loc,
-                                               rewriter.getI64IntegerAttr(9));
+      rvl = arith::ConstantOp::create(rewriter, loc,
+                                      rewriter.getI64IntegerAttr(9));
     Value res;
     if (n == 1) {
-      res = rewriter.create<vcix::BinaryOp>(loc, legalType, opcodeAttr, vec,
-                                            zeroInt, rvl);
+      res = vcix::BinaryOp::create(rewriter, loc, legalType, opcodeAttr, vec,
+                                   zeroInt, rvl);
     } else {
       const unsigned eltCount = legalType.getShape()[0];
       Type eltTy = legalType.getElementType();
-      Value zero = rewriter.create<arith::ConstantOp>(
-          loc, eltTy, rewriter.getZeroAttr(eltTy));
-      res = rewriter.create<vector::BroadcastOp>(loc, opType, zero /*dummy*/);
+      Value zero = arith::ConstantOp::create(rewriter, loc, eltTy,
+                                             rewriter.getZeroAttr(eltTy));
+      res = vector::BroadcastOp::create(rewriter, loc, opType, zero /*dummy*/);
       for (unsigned i = 0; i < n; ++i) {
-        Value extracted = rewriter.create<vector::ScalableExtractOp>(
-            loc, legalType, vec, i * eltCount);
-        Value v = rewriter.create<vcix::BinaryOp>(loc, legalType, opcodeAttr,
-                                                  extracted, zeroInt, rvl);
-        res = rewriter.create<vector::ScalableInsertOp>(loc, v, res,
-                                                        i * eltCount);
+        Value extracted = vector::ScalableExtractOp::create(
+            rewriter, loc, legalType, vec, i * eltCount);
+        Value v = vcix::BinaryOp::create(rewriter, loc, legalType, opcodeAttr,
+                                         extracted, zeroInt, rvl);
+        res = vector::ScalableInsertOp::create(rewriter, loc, v, res,
+                                               i * eltCount);
       }
     }
     rewriter.replaceOp(op, res);

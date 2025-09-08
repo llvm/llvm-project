@@ -25,6 +25,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -223,17 +225,104 @@ void InstrInfoEmitter::EmitOperandInfo(raw_ostream &OS,
   }
 }
 
+static void emitGetInstructionIndexForOpLookup(
+    raw_ostream &OS, const MapVector<SmallVector<int>, unsigned> &OperandMap,
+    ArrayRef<unsigned> InstructionIndex) {
+  StringRef Type = OperandMap.size() <= UINT8_MAX + 1 ? "uint8_t" : "uint16_t";
+  OS << "LLVM_READONLY static " << Type
+     << " getInstructionIndexForOpLookup(uint16_t Opcode) {\n"
+        "  static constexpr "
+     << Type << " InstructionIndex[] = {";
+  for (auto [TableIndex, Entry] : enumerate(InstructionIndex))
+    OS << (TableIndex % 16 == 0 ? "\n    " : " ") << Entry << ',';
+  OS << "\n  };\n"
+        "  return InstructionIndex[Opcode];\n"
+        "}\n";
+}
+
+static void
+emitGetNamedOperandIdx(raw_ostream &OS,
+                       const MapVector<SmallVector<int>, unsigned> &OperandMap,
+                       unsigned MaxOperandNo, unsigned NumOperandNames) {
+  OS << "LLVM_READONLY int16_t getNamedOperandIdx(uint16_t Opcode, OpName "
+        "Name) {\n";
+  OS << "  assert(Name != OpName::NUM_OPERAND_NAMES);\n";
+  if (!NumOperandNames) {
+    // There are no operands, so no need to emit anything
+    OS << "  return -1;\n}\n";
+    return;
+  }
+  assert(MaxOperandNo <= INT16_MAX &&
+         "Too many operands for the operand name -> index table");
+  StringRef Type = MaxOperandNo <= INT8_MAX ? "int8_t" : "int16_t";
+  OS << "  static constexpr " << Type << " OperandMap[][" << NumOperandNames
+     << "] = {\n";
+  for (const auto &[OpList, _] : OperandMap) {
+    // Emit a row of the OperandMap table.
+    OS << "    {";
+    for (unsigned ID = 0; ID < NumOperandNames; ++ID)
+      OS << (ID < OpList.size() ? OpList[ID] : -1) << ", ";
+    OS << "},\n";
+  }
+  OS << "  };\n";
+
+  OS << "  unsigned InstrIdx = getInstructionIndexForOpLookup(Opcode);\n"
+        "  return OperandMap[InstrIdx][(unsigned)Name];\n"
+        "}\n";
+}
+
+static void
+emitGetOperandIdxName(raw_ostream &OS,
+                      MapVector<StringRef, unsigned> OperandNameToID,
+                      const MapVector<SmallVector<int>, unsigned> &OperandMap,
+                      unsigned MaxNumOperands, unsigned NumOperandNames) {
+  OS << "LLVM_READONLY OpName getOperandIdxName(uint16_t Opcode, int16_t Idx) "
+        "{\n";
+  OS << "  assert(Idx >= 0 && Idx < " << MaxNumOperands << ");\n";
+  if (!MaxNumOperands) {
+    // There are no operands, so no need to emit anything
+    OS << "  return -1;\n}\n";
+    return;
+  }
+  OS << "  static constexpr OpName OperandMap[][" << MaxNumOperands
+     << "] = {\n";
+  for (const auto &[OpList, _] : OperandMap) {
+    SmallVector<unsigned> IDs(MaxNumOperands, NumOperandNames);
+    for (const auto &[ID, Idx] : enumerate(OpList)) {
+      if (Idx >= 0)
+        IDs[Idx] = ID;
+    }
+    // Emit a row of the OperandMap table. Map operand indices to enum values.
+    OS << "    {";
+    for (unsigned ID : IDs) {
+      if (ID == NumOperandNames)
+        OS << "OpName::NUM_OPERAND_NAMES, ";
+      else
+        OS << "OpName::" << OperandNameToID.getArrayRef()[ID].first << ", ";
+    }
+    OS << "},\n";
+  }
+  OS << "  };\n";
+
+  OS << "  unsigned InstrIdx = getInstructionIndexForOpLookup(Opcode);\n"
+        "  return OperandMap[InstrIdx][(unsigned)Idx];\n"
+        "}\n";
+}
+
 /// Generate a table and function for looking up the indices of operands by
 /// name.
 ///
 /// This code generates:
 /// - An enum in the llvm::TargetNamespace::OpName namespace, with one entry
 ///   for each operand name.
-/// - A 2-dimensional table called OperandMap for mapping OpName enum values to
-///   operand indices.
-/// - A function called getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIdx)
+/// - A 2-dimensional table for mapping OpName enum values to operand indices.
+/// - A function called getNamedOperandIdx(uint16_t Opcode, OpName Name)
 ///   for looking up the operand index for an instruction, given a value from
 ///   OpName enum
+/// - A 2-dimensional table for mapping operand indices to OpName enum values.
+/// - A function called getOperandIdxName(uint16_t Opcode, int16_t Idx)
+///   for looking up the OpName enum for an instruction, given the operand
+///   index. This is the inverse of getNamedOperandIdx().
 ///
 /// Fixed/Predefined instructions do not have UseNamedOperandTable enabled, so
 /// we can just skip them. Hence accept just the TargetInstructions.
@@ -242,98 +331,76 @@ void InstrInfoEmitter::emitOperandNameMappings(
     ArrayRef<const CodeGenInstruction *> TargetInstructions) {
   StringRef Namespace = Target.getInstNamespace();
 
-  /// To facilitate assigning OpName enum values in the sorted alphabetical
-  /// order, we go through an indirection from OpName -> ID, and Enum -> ID.
-  /// This allows us to build the OpList and assign IDs to OpNames in a single
-  /// scan of the instructions below.
-
   // Map of operand names to their ID.
-  std::map<StringRef, unsigned> OperandNameToID;
-  // Map from operand name enum value -> ID.
-  std::vector<unsigned> OperandEnumToID;
+  MapVector<StringRef, unsigned> OperandNameToID;
 
-  /// The keys of this map is a map which have OpName ID values as their keys
-  /// and instruction operand indices as their values. The values of this map
-  /// are lists of instruction names. This map helps to unique entries among
+  /// A key in this map is a vector mapping OpName ID values to instruction
+  /// operand indices or -1 (but without any trailing -1 values which will be
+  /// added later). The corresponding value in this map is the index of that row
+  /// in the emitted OperandMap table. This map helps to unique entries among
   /// instructions that have identical OpName -> Operand index mapping.
-  std::map<std::map<unsigned, unsigned>, std::vector<StringRef>> OperandMap;
+  MapVector<SmallVector<int>, unsigned> OperandMap;
 
   // Max operand index seen.
   unsigned MaxOperandNo = 0;
 
   // Fixed/Predefined instructions do not have UseNamedOperandTable enabled, so
-  // we can just skip them.
+  // add a dummy map entry for them.
+  OperandMap.try_emplace({}, 0);
+  unsigned FirstTargetVal = TargetInstructions.front()->EnumVal;
+  SmallVector<unsigned> InstructionIndex(FirstTargetVal, 0);
   for (const CodeGenInstruction *Inst : TargetInstructions) {
-    if (!Inst->TheDef->getValueAsBit("UseNamedOperandTable"))
+    if (!Inst->TheDef->getValueAsBit("UseNamedOperandTable")) {
+      InstructionIndex.push_back(0);
       continue;
-    std::map<unsigned, unsigned> OpList;
+    }
+    SmallVector<int> OpList;
     for (const auto &Info : Inst->Operands) {
       unsigned ID =
           OperandNameToID.try_emplace(Info.Name, OperandNameToID.size())
               .first->second;
+      OpList.resize(std::max((unsigned)OpList.size(), ID + 1), -1);
       OpList[ID] = Info.MIOperandNo;
       MaxOperandNo = std::max(MaxOperandNo, Info.MIOperandNo);
     }
-    OperandMap[OpList].push_back(Inst->TheDef->getName());
+    auto [It, Inserted] =
+        OperandMap.try_emplace(std::move(OpList), OperandMap.size());
+    InstructionIndex.push_back(It->second);
   }
 
   const size_t NumOperandNames = OperandNameToID.size();
-  OperandEnumToID.reserve(NumOperandNames);
-  for (const auto &Op : OperandNameToID)
-    OperandEnumToID.push_back(Op.second);
+  const unsigned MaxNumOperands = MaxOperandNo + 1;
 
   OS << "#ifdef GET_INSTRINFO_OPERAND_ENUM\n";
   OS << "#undef GET_INSTRINFO_OPERAND_ENUM\n";
   OS << "namespace llvm::" << Namespace << " {\n";
-  OS << "enum class OpName {\n";
-  for (const auto &[I, Op] : enumerate(OperandNameToID))
-    OS << "  " << Op.first << " = " << I << ",\n";
+
+  assert(NumOperandNames <= UINT16_MAX &&
+         "Too many operands for the operand index -> name table");
+  StringRef EnumType = getMinimalTypeForRange(NumOperandNames);
+  OS << "enum class OpName : " << EnumType << " {\n";
+  for (const auto &[Op, I] : OperandNameToID)
+    OS << "  " << Op << " = " << I << ",\n";
   OS << "  NUM_OPERAND_NAMES = " << NumOperandNames << ",\n";
   OS << "}; // enum class OpName\n\n";
-  OS << "LLVM_READONLY\n";
-  OS << "int16_t getNamedOperandIdx(uint16_t Opcode, OpName Name);\n";
+
+  OS << "LLVM_READONLY int16_t getNamedOperandIdx(uint16_t Opcode, OpName "
+        "Name);\n";
+  OS << "LLVM_READONLY OpName getOperandIdxName(uint16_t Opcode, int16_t "
+        "Idx);\n";
   OS << "} // end namespace llvm::" << Namespace << '\n';
   OS << "#endif //GET_INSTRINFO_OPERAND_ENUM\n\n";
 
   OS << "#ifdef GET_INSTRINFO_NAMED_OPS\n";
   OS << "#undef GET_INSTRINFO_NAMED_OPS\n";
   OS << "namespace llvm::" << Namespace << " {\n";
-  OS << "LLVM_READONLY\n";
-  OS << "int16_t getNamedOperandIdx(uint16_t Opcode, OpName Name) {\n";
-  OS << "  assert(Name != OpName::NUM_OPERAND_NAMES);\n";
-  if (NumOperandNames != 0) {
-    assert(MaxOperandNo <= INT16_MAX &&
-           "Too many operands for the operand name -> index table");
-    StringRef Type = MaxOperandNo <= INT8_MAX ? "int8_t" : "int16_t";
-    OS << "  static constexpr " << Type << " OperandMap[][" << NumOperandNames
-       << "] = {\n";
-    for (const auto &Entry : OperandMap) {
-      const std::map<unsigned, unsigned> &OpList = Entry.first;
 
-      // Emit a row of the OperandMap table.
-      OS << "    {";
-      for (unsigned ID : OperandEnumToID) {
-        auto Iter = OpList.find(ID);
-        OS << (Iter != OpList.end() ? (int)Iter->second : -1) << ", ";
-      }
-      OS << "},\n";
-    }
-    OS << "  };\n";
+  emitGetInstructionIndexForOpLookup(OS, OperandMap, InstructionIndex);
 
-    OS << "  switch(Opcode) {\n";
-    for (const auto &[TableIndex, Entry] : enumerate(OperandMap)) {
-      for (StringRef Name : Entry.second)
-        OS << "  case " << Namespace << "::" << Name << ":\n";
-      OS << "    return OperandMap[" << TableIndex
-         << "][static_cast<unsigned>(Name)];\n";
-    }
-    OS << "  default: return -1;\n";
-    OS << "  }\n";
-  } else {
-    // There are no operands, so no need to emit anything
-    OS << "  return -1;\n";
-  }
-  OS << "}\n";
+  emitGetNamedOperandIdx(OS, OperandMap, MaxOperandNo, NumOperandNames);
+  emitGetOperandIdxName(OS, OperandNameToID, OperandMap, MaxNumOperands,
+                        NumOperandNames);
+
   OS << "} // end namespace llvm::" << Namespace << '\n';
   OS << "#endif //GET_INSTRINFO_NAMED_OPS\n\n";
 }
@@ -386,7 +453,7 @@ void InstrInfoEmitter::emitOperandTypeMappings(
   OS << "LLVM_READONLY\n";
   OS << "static int getOperandType(uint16_t Opcode, uint16_t OpIdx) {\n";
   auto getInstrName = [&](int I) -> StringRef {
-    return NumberedInstructions[I]->TheDef->getName();
+    return NumberedInstructions[I]->getName();
   };
   // TODO: Factor out duplicate operand lists to compress the tables.
   std::vector<size_t> OperandOffsets;
@@ -505,8 +572,7 @@ void InstrInfoEmitter::emitLogicalOperandSizeMappings(
     auto I =
         LogicalOpSizeMap.try_emplace(LogicalOpList, LogicalOpSizeMap.size())
             .first;
-    InstMap[I->second].push_back(
-        (Namespace + "::" + Inst->TheDef->getName()).str());
+    InstMap[I->second].push_back((Namespace + "::" + Inst->getName()).str());
   }
 
   OS << "#ifdef GET_INSTRINFO_LOGICAL_OPERAND_SIZE_MAP\n";
@@ -695,8 +761,9 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
   OS << "  };\n"
      << "  static constexpr " << getMinimalTypeForRange(FeatureBitsets.size())
      << " RequiredFeaturesRefs[] = {\n";
-  unsigned InstIdx = 0;
-  for (const CodeGenInstruction *Inst : Target.getInstructions()) {
+  ArrayRef<const CodeGenInstruction *> NumberedInstructions =
+      Target.getInstructions();
+  for (const CodeGenInstruction *Inst : NumberedInstructions) {
     OS << "    CEFBS";
     unsigned NumPredicates = 0;
     for (const Record *Predicate :
@@ -709,11 +776,10 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
     }
     if (!NumPredicates)
       OS << "_None";
-    OS << ", // " << Inst->TheDef->getName() << " = " << InstIdx << '\n';
-    InstIdx++;
+    OS << ", // " << Inst->getName() << '\n';
   }
   OS << "  };\n\n"
-     << "  assert(Opcode < " << InstIdx << ");\n"
+     << "  assert(Opcode < " << NumberedInstructions.size() << ");\n"
      << "  return FeatureBitsets[RequiredFeaturesRefs[Opcode]];\n"
      << "}\n\n";
 
@@ -891,7 +957,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   unsigned Num = NumberedInstructions.size();
   for (const CodeGenInstruction *Inst : reverse(NumberedInstructions)) {
     // Keep a list of the instruction names.
-    InstrNames.add(Inst->TheDef->getName());
+    InstrNames.add(Inst->getName());
     // Emit the record into the table.
     emitRecord(*Inst, --Num, InstrInfo, EmittedLists, OperandInfoMap, OS);
   }
@@ -927,7 +993,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     // Newline every eight entries.
     if (Num % 8 == 0)
       OS << "\n    ";
-    OS << InstrNames.get(Inst->TheDef->getName()) << "U, ";
+    OS << InstrNames.get(Inst->getName()) << "U, ";
     ++Num;
   }
   OS << "\n};\n\n";
@@ -1004,7 +1070,8 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   OS << "namespace llvm {\n";
   OS << "struct " << ClassName << " : public TargetInstrInfo {\n"
      << "  explicit " << ClassName
-     << "(unsigned CFSetupOpcode = ~0u, unsigned CFDestroyOpcode = ~0u, "
+     << "(const TargetSubtargetInfo &STI, unsigned CFSetupOpcode = ~0u, "
+        "unsigned CFDestroyOpcode = ~0u, "
         "unsigned CatchRetOpcode = ~0u, unsigned ReturnOpcode = ~0u);\n"
      << "  ~" << ClassName << "() override = default;\n";
 
@@ -1038,8 +1105,8 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     OS << "extern const MCInstrInfo::ComplexDeprecationPredicate " << TargetName
        << "InstrComplexDeprecationInfos[];\n";
   OS << ClassName << "::" << ClassName
-     << "(unsigned CFSetupOpcode, unsigned CFDestroyOpcode, unsigned "
-        "CatchRetOpcode, unsigned ReturnOpcode)\n"
+     << "(const TargetSubtargetInfo &STI, unsigned CFSetupOpcode, unsigned "
+        "CFDestroyOpcode, unsigned CatchRetOpcode, unsigned ReturnOpcode)\n"
      << "  : TargetInstrInfo(CFSetupOpcode, CFDestroyOpcode, CatchRetOpcode, "
         "ReturnOpcode) {\n"
      << "  InitMCInstrInfo(" << TargetName << "Descs.Insts, " << TargetName
@@ -1207,19 +1274,15 @@ void InstrInfoEmitter::emitRecord(
   const BitsInit *TSF = Inst.TheDef->getValueAsBitsInit("TSFlags");
   if (!TSF)
     PrintFatalError(Inst.TheDef->getLoc(), "no TSFlags?");
-  uint64_t Value = 0;
-  for (unsigned i = 0, e = TSF->getNumBits(); i != e; ++i) {
-    if (const auto *Bit = dyn_cast<BitInit>(TSF->getBit(i)))
-      Value |= uint64_t(Bit->getValue()) << i;
-    else
-      PrintFatalError(Inst.TheDef->getLoc(),
-                      "Invalid TSFlags bit in " + Inst.TheDef->getName());
-  }
+  std::optional<uint64_t> Value = TSF->convertInitializerToInt();
+  if (!Value)
+    PrintFatalError(Inst.TheDef, "Invalid TSFlags bit in " + Inst.getName());
+
   OS << ", 0x";
-  OS.write_hex(Value);
+  OS.write_hex(*Value);
   OS << "ULL";
 
-  OS << " },  // Inst #" << Num << " = " << Inst.TheDef->getName() << '\n';
+  OS << " },  // " << Inst.getName() << '\n';
 }
 
 // emitEnums - Print out enum values for all of the instructions.
@@ -1237,18 +1300,28 @@ void InstrInfoEmitter::emitEnums(
 
   OS << "namespace llvm::" << Namespace << " {\n";
 
+  auto II = llvm::max_element(
+      NumberedInstructions,
+      [](const CodeGenInstruction *InstA, const CodeGenInstruction *InstB) {
+        return InstA->getName().size() < InstB->getName().size();
+      });
+  size_t MaxNameSize = (*II)->getName().size();
+
   OS << "  enum {\n";
-  for (const CodeGenInstruction *Inst : NumberedInstructions)
-    OS << "    " << Inst->TheDef->getName()
-       << "\t= " << Target.getInstrIntValue(Inst->TheDef) << ",\n";
+  for (const CodeGenInstruction *Inst : NumberedInstructions) {
+    OS << "    " << left_justify(Inst->getName(), MaxNameSize) << " = "
+       << Target.getInstrIntValue(Inst->TheDef) << ", // "
+       << SrcMgr.getFormattedLocationNoOffset(Inst->TheDef->getLoc().front())
+       << '\n';
+  }
   OS << "    INSTRUCTION_LIST_END = " << NumberedInstructions.size() << '\n';
-  OS << "  };\n\n";
+  OS << "  };\n";
   OS << "} // end namespace llvm::" << Namespace << '\n';
   OS << "#endif // GET_INSTRINFO_ENUM\n\n";
 
   OS << "#ifdef GET_INSTRINFO_SCHED_ENUM\n";
   OS << "#undef GET_INSTRINFO_SCHED_ENUM\n";
-  OS << "namespace llvm::" << Namespace << "::Sched {\n\n";
+  OS << "namespace llvm::" << Namespace << "::Sched {\n";
   OS << "  enum {\n";
   auto ExplictClasses = SchedModels.explicitSchedClasses();
   for (const auto &[Idx, Class] : enumerate(ExplictClasses))

@@ -90,11 +90,6 @@ public:
   /// spilling is needed.
   MCRegister reservedPrivateSegmentBufferReg(const MachineFunction &MF) const;
 
-  /// Return a pair of maximum numbers of VGPRs and AGPRs that meet the number
-  /// of waves per execution unit required for the function \p MF.
-  std::pair<unsigned, unsigned>
-  getMaxNumVectorRegs(const MachineFunction &MF) const;
-
   BitVector getReservedRegs(const MachineFunction &MF) const override;
   bool isAsmClobberable(const MachineFunction &MF,
                         MCRegister PhysReg) const override;
@@ -205,12 +200,13 @@ public:
   StringRef getRegAsmName(MCRegister Reg) const override;
 
   // Pseudo regs are not allowed
-  unsigned getHWRegIndex(MCRegister Reg) const {
-    return getEncodingValue(Reg) & 0xff;
-  }
+  unsigned getHWRegIndex(MCRegister Reg) const;
 
   LLVM_READONLY
   const TargetRegisterClass *getVGPRClassForBitWidth(unsigned BitWidth) const;
+
+  LLVM_READONLY const TargetRegisterClass *
+  getAlignedLo256VGPRClassForBitWidth(unsigned BitWidth) const;
 
   LLVM_READONLY
   const TargetRegisterClass *getAGPRClassForBitWidth(unsigned BitWidth) const;

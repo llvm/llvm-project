@@ -267,6 +267,18 @@ multiclass sse12_move_rm<RegisterClass RC, ValueType vt, X86MemOperand x86memop,
   }
 }
 
+// pseudo instruction for fp16 spilling.
+let isPseudo = 1, Predicates = [HasSSE2] in {
+  let mayStore = 1 in
+  def MOVSHPmr : I<0, Pseudo, (outs), (ins f32mem:$dst, FR16X:$src), "",
+                   [], SSEPackedSingle>,
+                   Sched<[WriteFStore]>;
+  let  mayLoad = 1 in
+  def MOVSHPrm : I<0, Pseudo, (outs FR16X:$dst), (ins f32mem:$src), "",
+                   [], SSEPackedSingle>,
+                   Sched<[WriteFLoad]>;
+}
+
 defm MOVSS : sse12_move<FR32, X86Movss, v4f32, f32mem, "movss",
                         SSEPackedSingle, UseSSE1>, TB, XS;
 defm MOVSD : sse12_move<FR64, X86Movsd, v2f64, f64mem, "movsd",

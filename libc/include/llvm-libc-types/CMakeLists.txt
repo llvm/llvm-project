@@ -10,6 +10,7 @@ add_header(__exec_envp_t HDR __exec_envp_t.h)
 add_header(__futex_word HDR __futex_word.h)
 add_header(pid_t HDR pid_t.h)
 add_header(__mutex_type HDR __mutex_type.h DEPENDS .__futex_word .pid_t)
+add_header(__barrier_type HDR __barrier_type.h)
 add_header(__pthread_once_func_t HDR __pthread_once_func_t.h)
 add_header(__pthread_start_t HDR __pthread_start_t.h)
 add_header(__pthread_tss_dtor_t HDR __pthread_tss_dtor_t.h)
@@ -53,6 +54,8 @@ add_header(pthread_condattr_t HDR pthread_condattr_t.h DEPENDS .clockid_t)
 add_header(pthread_key_t HDR pthread_key_t.h)
 add_header(pthread_mutex_t HDR pthread_mutex_t.h DEPENDS .__futex_word .__mutex_type)
 add_header(pthread_mutexattr_t HDR pthread_mutexattr_t.h)
+add_header(pthread_barrier_t HDR pthread_barrier_t.h DEPENDS .__barrier_type)
+add_header(pthread_barrierattr_t HDR pthread_barrierattr_t.h)
 add_header(pthread_once_t HDR pthread_once_t.h DEPENDS .__futex_word)
 add_header(pthread_rwlock_t HDR pthread_rwlock_t.h DEPENDS .__futex_word .pid_t)
 add_header(pthread_rwlockattr_t HDR pthread_rwlockattr_t.h)
@@ -69,6 +72,7 @@ add_header(stack_t HDR stack_t.h DEPENDS .size_t)
 add_header(suseconds_t HDR suseconds_t.h)
 add_header(struct_dirent HDR struct_dirent.h DEPENDS .ino_t .off_t)
 add_header(struct_dl_phdr_info HDR struct_dl_phdr_info.h DEPENDS .size_t libc.include.llvm-libc-macros.link_macros)
+add_header(dl_info HDR Dl_info.h)
 add_header(struct_f_owner_ex HDR struct_f_owner_ex.h DEPENDS .pid_t)
 add_header(struct_flock HDR struct_flock.h DEPENDS .off_t .pid_t)
 add_header(struct_flock64 HDR struct_flock64.h DEPENDS .off64_t .pid_t)
@@ -82,7 +86,9 @@ add_header(union_sigval HDR union_sigval.h)
 add_header(siginfo_t HDR siginfo_t.h DEPENDS .union_sigval .pid_t .uid_t .clock_t)
 add_header(sig_atomic_t HDR sig_atomic_t.h)
 add_header(sigset_t HDR sigset_t.h DEPENDS libc.include.llvm-libc-macros.signal_macros)
-add_header(jmp_buf HDR jmp_buf.h DEPENDS .sigset_t)
+add_header(__jmp_buf HDR __jmp_buf.h DEPENDS .sigset_t)
+add_header(jmp_buf HDR jmp_buf.h DEPENDS .__jmp_buf)
+add_header(sigjmp_buf HDR sigjmp_buf.h DEPENDS .__jmp_buf)
 add_header(struct_sigaction HDR struct_sigaction.h DEPENDS .sigset_t .siginfo_t)
 add_header(struct_timespec HDR struct_timespec.h DEPENDS .time_t)
 add_header(
@@ -144,9 +150,15 @@ add_header(
   HDR
     cfloat128.h
   DEPENDS
-    libc.include.llvm-libc-macros.float_macros
+    libc.include.llvm-libc-macros.cfloat128_macros
 )
-add_header(cfloat16 HDR cfloat16.h)
+add_header(
+  cfloat16
+  HDR
+    cfloat16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.cfloat16_macros
+)
 add_header(fsblkcnt_t HDR fsblkcnt_t.h)
 add_header(fsfilcnt_t HDR fsfilcnt_t.h)
 add_header(

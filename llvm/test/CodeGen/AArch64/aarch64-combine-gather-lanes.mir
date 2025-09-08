@@ -13,12 +13,12 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr64common = COPY $x2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr64common = COPY $x3
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:gpr64common = COPY $x4
-    ; CHECK-NEXT: [[LD_i32:%[0-9]+]]:fpr32 = LDRSroX [[COPY]], killed [[COPY1]], 0, 1
-    ; CHECK-NEXT: [[FIRST_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG 0, killed [[LD_i32]], %subreg.ssub
-    ; CHECK-NEXT: [[LD0_1:%[0-9]+]]:fpr128 = LD1i32 [[FIRST_REG]], 1, killed [[COPY2]] 
+    ; CHECK-NEXT: [[LD_i32:%[0-9]+]]:fpr32 = LDRSroX [[COPY]], [[COPY1]], 0, 1
+    ; CHECK-NEXT: [[FIRST_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG 0, [[LD_i32]], %subreg.ssub
+    ; CHECK-NEXT: [[LD0_1:%[0-9]+]]:fpr128 = LD1i32 [[FIRST_REG]], 1, [[COPY2]] 
     ; CHECK-NEXT: [[LD1_0:%[0-9]+]]:fpr32 = LDRSui [[COPY3]], 0
     ; CHECK-NEXT: [[SECOND_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG 0, killed [[LD1_0]], %subreg.ssub
-    ; CHECK-NEXT: [[LD1_1:%[0-9]+]]:fpr128 = LD1i32 [[SECOND_REG]], 1, killed [[COPY4]]
+    ; CHECK-NEXT: [[LD1_1:%[0-9]+]]:fpr128 = LD1i32 [[SECOND_REG]], 1, [[COPY4]]
     ; CHECK-NEXT: [[ZIP:%[0-9]+]]:fpr128 = ZIP1v2i64 [[LD0_1]], [[LD1_1]]
     ; CHECK-NEXT: $q0 = COPY [[ZIP]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
@@ -27,11 +27,11 @@ body:             |
     %2:gpr64common = COPY $x2
     %3:gpr64common = COPY $x3
     %4:gpr64common = COPY $x4
-    %5:fpr32 = LDRSroX %0, killed %1, 0, 1
-    %6:fpr128 = SUBREG_TO_REG 0, killed %5, %subreg.ssub
-    %7:fpr128 = LD1i32 %6, 1, killed %2
-    %8:fpr128 = LD1i32 %7, 2, killed %3
-    %9:fpr128 = LD1i32 %8, 3, killed %4
+    %5:fpr32 = LDRSroX %0, %1, 0, 1
+    %6:fpr128 = SUBREG_TO_REG 0, %5, %subreg.ssub
+    %7:fpr128 = LD1i32 %6, 1, %2
+    %8:fpr128 = LD1i32 %7, 2, %3
+    %9:fpr128 = LD1i32 %8, 3, %4
     $q0 = COPY %9
     RET_ReallyLR implicit $q0
 
@@ -362,3 +362,39 @@ body:             |
     $q0 = COPY %9
     $q1 = COPY %8
     RET_ReallyLR implicit $q0, implicit $q1
+
+---
+name:            aliasing_store_between_vector_loads
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1, $x2, $x3
+
+    ; CHECK-LABEL: name: aliasing_store_between_vector_loads
+    ; CHECK: [[BASE_PTR:%[0-9]+]]:gpr64common = COPY $x0
+    ; CHECK-NEXT: [[OFFSET_PTR:%[0-9]+]]:gpr64common = COPY $x1
+    ; CHECK-NEXT: [[ALIAS_ADDR:%[0-9]+]]:gpr64common = COPY $x2
+    ; CHECK-NEXT: [[OTHER_ADDR:%[0-9]+]]:gpr64common = COPY $x3
+    ; CHECK-NEXT: [[LOAD0:%[0-9]+]]:fpr32 = LDRSroX [[BASE_PTR]], killed [[OFFSET_PTR]], 0, 1
+    ; CHECK-NEXT: [[VEC0:%[0-9]+]]:fpr128 = SUBREG_TO_REG 0, killed [[LOAD0]], %subreg.ssub
+    ; CHECK-NEXT: [[VEC1:%[0-9]+]]:fpr128 = LD1i32 [[VEC0]], 1, [[ALIAS_ADDR]]
+    ; CHECK-NEXT: [[CONST:%[0-9]+]]:gpr32 = MOVi32imm 99
+    ; CHECK-NEXT: STRWui [[CONST]], [[ALIAS_ADDR]], 0
+    ; CHECK-NEXT: [[VEC2:%[0-9]+]]:fpr128 = LD1i32 [[VEC1]], 2, killed [[ALIAS_ADDR]]
+    ; CHECK-NEXT: [[VEC3:%[0-9]+]]:fpr128 = LD1i32 [[VEC2]], 3, killed [[OTHER_ADDR]]
+    ; CHECK-NEXT: $q0 = COPY [[VEC3]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %0:gpr64common = COPY $x0
+    %1:gpr64common = COPY $x1
+    %2:gpr64common = COPY $x2
+    %3:gpr64common = COPY $x3
+    %5:fpr32 = LDRSroX %0, killed %1, 0, 1
+    %6:fpr128 = SUBREG_TO_REG 0, killed %5, %subreg.ssub
+    %7:fpr128 = LD1i32 %6, 1, %2
+    %10:gpr32 = MOVi32imm 99
+    STRWui %10, %2, 0
+    %8:fpr128 = LD1i32 %7, 2, killed %2
+    %9:fpr128 = LD1i32 %8, 3, killed %3
+    $q0 = COPY %9
+    RET_ReallyLR implicit $q0

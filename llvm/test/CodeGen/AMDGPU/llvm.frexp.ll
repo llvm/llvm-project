@@ -1939,40 +1939,40 @@ define { <2 x double>, <2 x i32> } @test_frexp_v2f64_v2i32(<2 x double> %a) {
 ; GFX6-GISEL-LABEL: test_frexp_v2f64_v2i32:
 ; GFX6-GISEL:       ; %bb.0:
 ; GFX6-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-GISEL-NEXT:    s_mov_b32 s4, 0
-; GFX6-GISEL-NEXT:    s_mov_b32 s5, 0x7ff00000
+; GFX6-GISEL-NEXT:    v_mov_b32_e32 v7, 0
+; GFX6-GISEL-NEXT:    v_mov_b32_e32 v8, 0x7ff00000
 ; GFX6-GISEL-NEXT:    v_frexp_mant_f64_e32 v[5:6], v[0:1]
 ; GFX6-GISEL-NEXT:    v_frexp_exp_i32_f64_e32 v4, v[0:1]
-; GFX6-GISEL-NEXT:    v_cmp_lt_f64_e64 vcc, |v[0:1]|, s[4:5]
+; GFX6-GISEL-NEXT:    v_cmp_lt_f64_e64 vcc, |v[0:1]|, v[7:8]
+; GFX6-GISEL-NEXT:    v_frexp_mant_f64_e32 v[9:10], v[2:3]
 ; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
 ; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v0, v0, v5, vcc
 ; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v1, v1, v6, vcc
-; GFX6-GISEL-NEXT:    v_frexp_mant_f64_e32 v[6:7], v[2:3]
 ; GFX6-GISEL-NEXT:    v_frexp_exp_i32_f64_e32 v5, v[2:3]
-; GFX6-GISEL-NEXT:    v_cmp_lt_f64_e64 vcc, |v[2:3]|, s[4:5]
+; GFX6-GISEL-NEXT:    v_cmp_lt_f64_e64 vcc, |v[2:3]|, v[7:8]
 ; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
-; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v2, v2, v6, vcc
-; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v3, v3, v7, vcc
+; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v2, v2, v9, vcc
+; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v3, v3, v10, vcc
 ; GFX6-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %result = call { <2 x double>, <2 x i32> } @llvm.frexp.v2f64.v2i32(<2 x double> %a)
   ret { <2 x double>, <2 x i32> } %result
 }
 
 define <2 x double> @test_frexp_v2f64_v2i32_only_use_fract(<2 x double> %a) {
-; GFX6-LABEL: test_frexp_v2f64_v2i32_only_use_fract:
-; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    s_mov_b32 s4, 0
-; GFX6-NEXT:    s_mov_b32 s5, 0x7ff00000
-; GFX6-NEXT:    v_frexp_mant_f64_e32 v[4:5], v[0:1]
-; GFX6-NEXT:    v_cmp_lt_f64_e64 vcc, |v[0:1]|, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v0, v0, v4, vcc
-; GFX6-NEXT:    v_cndmask_b32_e32 v1, v1, v5, vcc
-; GFX6-NEXT:    v_frexp_mant_f64_e32 v[4:5], v[2:3]
-; GFX6-NEXT:    v_cmp_lt_f64_e64 vcc, |v[2:3]|, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
-; GFX6-NEXT:    v_cndmask_b32_e32 v3, v3, v5, vcc
-; GFX6-NEXT:    s_setpc_b64 s[30:31]
+; GFX6-SDAG-LABEL: test_frexp_v2f64_v2i32_only_use_fract:
+; GFX6-SDAG:       ; %bb.0:
+; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-SDAG-NEXT:    s_mov_b32 s4, 0
+; GFX6-SDAG-NEXT:    s_mov_b32 s5, 0x7ff00000
+; GFX6-SDAG-NEXT:    v_frexp_mant_f64_e32 v[4:5], v[0:1]
+; GFX6-SDAG-NEXT:    v_cmp_lt_f64_e64 vcc, |v[0:1]|, s[4:5]
+; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v4, vcc
+; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v1, v1, v5, vcc
+; GFX6-SDAG-NEXT:    v_frexp_mant_f64_e32 v[4:5], v[2:3]
+; GFX6-SDAG-NEXT:    v_cmp_lt_f64_e64 vcc, |v[2:3]|, s[4:5]
+; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
+; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v3, v3, v5, vcc
+; GFX6-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: test_frexp_v2f64_v2i32_only_use_fract:
 ; GFX8:       ; %bb.0:
@@ -2005,24 +2005,39 @@ define <2 x double> @test_frexp_v2f64_v2i32_only_use_fract(<2 x double> %a) {
 ; GFX12-NEXT:    v_frexp_mant_f64_e32 v[0:1], v[0:1]
 ; GFX12-NEXT:    v_frexp_mant_f64_e32 v[2:3], v[2:3]
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX6-GISEL-LABEL: test_frexp_v2f64_v2i32_only_use_fract:
+; GFX6-GISEL:       ; %bb.0:
+; GFX6-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-GISEL-NEXT:    v_mov_b32_e32 v4, 0
+; GFX6-GISEL-NEXT:    v_mov_b32_e32 v5, 0x7ff00000
+; GFX6-GISEL-NEXT:    v_frexp_mant_f64_e32 v[6:7], v[0:1]
+; GFX6-GISEL-NEXT:    v_cmp_lt_f64_e64 vcc, |v[0:1]|, v[4:5]
+; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v0, v0, v6, vcc
+; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v1, v1, v7, vcc
+; GFX6-GISEL-NEXT:    v_frexp_mant_f64_e32 v[6:7], v[2:3]
+; GFX6-GISEL-NEXT:    v_cmp_lt_f64_e64 vcc, |v[2:3]|, v[4:5]
+; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v2, v2, v6, vcc
+; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v3, v3, v7, vcc
+; GFX6-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %result = call { <2 x double>, <2 x i32> } @llvm.frexp.v2f64.v2i32(<2 x double> %a)
   %result.0 = extractvalue { <2 x double>, <2 x i32> } %result, 0
   ret <2 x double> %result.0
 }
 
 define <2 x i32> @test_frexp_v2f64_v2i32_only_use_exp(<2 x double> %a) {
-; GFX6-LABEL: test_frexp_v2f64_v2i32_only_use_exp:
-; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    s_mov_b32 s4, 0
-; GFX6-NEXT:    s_mov_b32 s5, 0x7ff00000
-; GFX6-NEXT:    v_frexp_exp_i32_f64_e32 v4, v[0:1]
-; GFX6-NEXT:    v_cmp_lt_f64_e64 vcc, |v[0:1]|, s[4:5]
-; GFX6-NEXT:    v_frexp_exp_i32_f64_e32 v1, v[2:3]
-; GFX6-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc
-; GFX6-NEXT:    v_cmp_lt_f64_e64 vcc, |v[2:3]|, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX6-NEXT:    s_setpc_b64 s[30:31]
+; GFX6-SDAG-LABEL: test_frexp_v2f64_v2i32_only_use_exp:
+; GFX6-SDAG:       ; %bb.0:
+; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-SDAG-NEXT:    s_mov_b32 s4, 0
+; GFX6-SDAG-NEXT:    s_mov_b32 s5, 0x7ff00000
+; GFX6-SDAG-NEXT:    v_frexp_exp_i32_f64_e32 v4, v[0:1]
+; GFX6-SDAG-NEXT:    v_cmp_lt_f64_e64 vcc, |v[0:1]|, s[4:5]
+; GFX6-SDAG-NEXT:    v_frexp_exp_i32_f64_e32 v1, v[2:3]
+; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc
+; GFX6-SDAG-NEXT:    v_cmp_lt_f64_e64 vcc, |v[2:3]|, s[4:5]
+; GFX6-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX6-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: test_frexp_v2f64_v2i32_only_use_exp:
 ; GFX8:       ; %bb.0:
@@ -2055,6 +2070,19 @@ define <2 x i32> @test_frexp_v2f64_v2i32_only_use_exp(<2 x double> %a) {
 ; GFX12-NEXT:    v_frexp_exp_i32_f64_e32 v0, v[0:1]
 ; GFX12-NEXT:    v_frexp_exp_i32_f64_e32 v1, v[2:3]
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX6-GISEL-LABEL: test_frexp_v2f64_v2i32_only_use_exp:
+; GFX6-GISEL:       ; %bb.0:
+; GFX6-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-GISEL-NEXT:    v_mov_b32_e32 v4, 0
+; GFX6-GISEL-NEXT:    v_mov_b32_e32 v5, 0x7ff00000
+; GFX6-GISEL-NEXT:    v_frexp_exp_i32_f64_e32 v6, v[0:1]
+; GFX6-GISEL-NEXT:    v_cmp_lt_f64_e64 vcc, |v[0:1]|, v[4:5]
+; GFX6-GISEL-NEXT:    v_frexp_exp_i32_f64_e32 v1, v[2:3]
+; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v0, 0, v6, vcc
+; GFX6-GISEL-NEXT:    v_cmp_lt_f64_e64 vcc, |v[2:3]|, v[4:5]
+; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX6-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %result = call { <2 x double>, <2 x i32> } @llvm.frexp.v2f64.v2i32(<2 x double> %a)
   %result.1 = extractvalue { <2 x double>, <2 x i32> } %result, 1
   ret <2 x i32> %result.1
@@ -2079,3 +2107,4 @@ attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memo
 ; GFX11-SDAG: {{.*}}
 ; GFX12-GISEL: {{.*}}
 ; GFX12-SDAG: {{.*}}
+; GFX6: {{.*}}

@@ -1380,6 +1380,9 @@ class Base(unittest.TestCase):
     def isAArch64MTE(self):
         return self.isAArch64() and "mte" in self.getCPUInfo()
 
+    def isAArch64MTEStoreOnly(self):
+        return self.isAArch64() and "mtestoreonly" in self.getCPUInfo()
+
     def isAArch64GCS(self):
         return self.isAArch64() and "gcs" in self.getCPUInfo()
 
@@ -1514,7 +1517,7 @@ class Base(unittest.TestCase):
         testname = self.getBuildDirBasename()
 
         module = builder_module()
-        command = builder_module().getBuildCommand(
+        command = module.getBuildCommand(
             debug_info,
             architecture,
             compiler,
@@ -1699,6 +1702,29 @@ class Base(unittest.TestCase):
             command += ["--max-size=%d" % max_size]
         self.runBuildCommand(command)
 
+    def yaml2macho_core(self, yaml_path, obj_path, uuids=None):
+        """
+        Create a Mach-O corefile at the given path from a yaml file.
+
+        Throws subprocess.CalledProcessError if the object could not be created.
+        """
+        yaml2macho_core_bin = configuration.get_yaml2macho_core_path()
+        if not yaml2macho_core_bin:
+            self.assertTrue(False, "No valid yaml2macho-core executable specified")
+        if uuids != None:
+            command = [
+                yaml2macho_core_bin,
+                "-i",
+                yaml_path,
+                "-o",
+                obj_path,
+                "-u",
+                uuids,
+            ]
+        else:
+            command = [yaml2macho_core_bin, "-i", yaml_path, "-o", obj_path]
+        self.runBuildCommand(command)
+
     def cleanup(self, dictionary=None):
         """Platform specific way to do cleanup after build."""
         module = builder_module()
@@ -1775,16 +1801,15 @@ class LLDBTestCaseFactory(type):
                 attrvalue, "__no_debug_info_test__", False
             ):
                 # If any debug info categories were explicitly tagged, assume that list to be
-                # authoritative.  If none were specified, try with all debug
-                # info formats.
+                # authoritative.  If none were specified, try with all debug info formats.
+                test_method_categories = set(getattr(attrvalue, "categories", []))
                 all_dbginfo_categories = set(
                     test_categories.debug_info_categories.keys()
                 )
-                categories = (
-                    set(getattr(attrvalue, "categories", [])) & all_dbginfo_categories
-                )
-                if not categories:
-                    categories = [
+                dbginfo_categories = test_method_categories & all_dbginfo_categories
+                other_categories = list(test_method_categories - all_dbginfo_categories)
+                if not dbginfo_categories:
+                    dbginfo_categories = [
                         category
                         for category, can_replicate in test_categories.debug_info_categories.items()
                         if can_replicate
@@ -1796,9 +1821,8 @@ class LLDBTestCaseFactory(type):
                 skip_for_debug_info_cat_fn = getattr(
                     attrvalue, "__skip_for_debug_info_cat_fn__", no_reason
                 )
-                for cat in categories:
+                for cat in dbginfo_categories:
 
-                    @decorators.add_test_categories([cat])
                     @wraps(attrvalue)
                     def test_method(self, attrvalue=attrvalue):
                         return attrvalue(self)
@@ -1806,6 +1830,7 @@ class LLDBTestCaseFactory(type):
                     method_name = attrname + "_" + cat
                     test_method.__name__ = method_name
                     test_method.debug_info = cat
+                    test_method.categories = other_categories + [cat]
 
                     xfail_reason = xfail_for_debug_info_cat_fn(cat)
                     if xfail_reason:
@@ -2262,7 +2287,9 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
         given list of completions"""
         interp = self.dbg.GetCommandInterpreter()
         match_strings = lldb.SBStringList()
-        interp.HandleCompletion(command, len(command), 0, max_completions, match_strings)
+        interp.HandleCompletion(
+            command, len(command), 0, max_completions, match_strings
+        )
         # match_strings is a 1-indexed list, so we have to slice...
         self.assertCountEqual(
             completions, list(match_strings)[1:], "List of returned completion is wrong"

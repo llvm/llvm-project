@@ -60,6 +60,10 @@ only for the linker wrapper will be forwarded to the wrapped linker job.
     --v                    Display the version number and exit
     --                     The separator for the wrapped linker arguments
 
+The linker wrapper will generate the appropriate runtime calls to register the
+generated device binary with the offloading runtime. To do this step manually we
+provide the ``llvm-offload-wrapper`` utility.
+
 Relocatable Linking
 ===================
 

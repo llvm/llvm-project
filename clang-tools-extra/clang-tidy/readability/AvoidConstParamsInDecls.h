@@ -19,7 +19,7 @@ class AvoidConstParamsInDecls : public ClangTidyCheck {
 public:
   AvoidConstParamsInDecls(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
-        IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
+        IgnoreMacros(Options.get("IgnoreMacros", true)) {}
 
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;

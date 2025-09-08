@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/libc_errno.h"
 #include "src/math/cospif.h"
 #include "test/UnitTest/FPMatcher.h"
-
-#include <stdint.h>
 
 using LlvmLibcCospifTest = LIBC_NAMESPACE::testing::FPTest<float>;
 

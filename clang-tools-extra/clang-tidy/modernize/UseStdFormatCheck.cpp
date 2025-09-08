@@ -23,7 +23,7 @@ AST_MATCHER(StringLiteral, isOrdinary) { return Node.isOrdinary(); }
 
 UseStdFormatCheck::UseStdFormatCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      StrictMode(Options.getLocalOrGlobal("StrictMode", false)),
+      StrictMode(Options.get("StrictMode", false)),
       StrFormatLikeFunctions(utils::options::parseStringList(
           Options.get("StrFormatLikeFunctions", ""))),
       ReplacementFormatFunction(

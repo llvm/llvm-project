@@ -1,15 +1,12 @@
-// FIXME: Instead of %T/crmdir, it would be nice to just use %t, but the
-// filename ran into path length limits for the rm command on some Windows
-// bots.
-// RUN: rm -rf %T/crmdir
-// RUN: mkdir -p %T/crmdir/i %T/crmdir/m
+// RUN: rm -rf %t/crmdir
+// RUN: mkdir -p %t/crmdir/i %t/crmdir/m
 
-// RUN: env FORCE_CLANG_DIAGNOSTICS_CRASH= TMPDIR=%T/crmdir TEMP=%T/crmdir TMP=%T/crmdir \
+// RUN: env FORCE_CLANG_DIAGNOSTICS_CRASH= TMPDIR=%t/crmdir TEMP=%t/crmdir TMP=%t/crmdir \
 // RUN: not %clang -fsyntax-only %s -I %S/Inputs/module -isysroot %/t/i/                 \
-// RUN: -fmodules -fmodules-cache-path=%T/crmdir/m/ -DFOO=BAR 2>&1 | FileCheck %s
+// RUN: -fmodules -fmodules-cache-path=%t/crmdir/m/ -DFOO=BAR 2>&1 | FileCheck %s
 
-// RUN: FileCheck --check-prefix=CHECKSRC %s -input-file %T/crmdir/crash-report-*.m
-// RUN: FileCheck --check-prefix=CHECKSH %s -input-file %T/crmdir/crash-report-*.sh
+// RUN: FileCheck --check-prefix=CHECKSRC %s -input-file %t/crmdir/crash-report-*.m
+// RUN: FileCheck --check-prefix=CHECKSH %s -input-file %t/crmdir/crash-report-*.sh
 // REQUIRES: crash-recovery
 
 // FIXME: This test creates excessively deep directory hierarchies that cause

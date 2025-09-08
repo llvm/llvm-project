@@ -32,12 +32,12 @@ __kernel void use_of_local_var()
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[X:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    call void @llvm.lifetime.start.p5(i64 4, ptr addrspace(5) [[X]]) #[[ATTR5:[0-9]+]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[X]]) #[[ATTR5:[0-9]+]]
 // CHECK-NEXT:    store i32 0, ptr addrspace(5) [[X]], align 4, !tbaa [[TBAA4:![0-9]+]]
 // CHECK-NEXT:    call void @private_ptr(ptr addrspace(5) noundef [[X]]) #[[ATTR6:[0-9]+]]
 // CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X]] to ptr
 // CHECK-NEXT:    call void @generic_ptr(ptr noundef [[X_ASCAST]]) #[[ATTR6]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p5(i64 4, ptr addrspace(5) [[X]]) #[[ATTR5]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[X]]) #[[ATTR5]]
 // CHECK-NEXT:    ret void
 //
 //

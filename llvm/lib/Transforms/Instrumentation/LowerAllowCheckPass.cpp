@@ -72,7 +72,7 @@ static void emitRemark(IntrinsicInst *II, OptimizationRemarkEmitter &ORE,
   }
 }
 
-static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
+static bool lowerAllowChecks(Function &F, const BlockFrequencyInfo &BFI,
                              const ProfileSummaryInfo *PSI,
                              OptimizationRemarkEmitter &ORE,
                              const LowerAllowCheckPass::Options &Opts) {
@@ -160,7 +160,7 @@ PreservedAnalyses LowerAllowCheckPass::run(Function &F,
   OptimizationRemarkEmitter &ORE =
       AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
-  return removeUbsanTraps(F, BFI, PSI, ORE, Opts)
+  return lowerAllowChecks(F, BFI, PSI, ORE, Opts)
              // We do not change the CFG, we only replace the intrinsics with
              // true or false.
              ? PreservedAnalyses::none().preserveSet<CFGAnalyses>()

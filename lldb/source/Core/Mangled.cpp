@@ -172,8 +172,6 @@ GetItaniumDemangledStr(const char *M) {
 
     TrackingOutputBuffer OB(demangled_cstr, demangled_size);
     demangled_cstr = ipd.finishDemangle(&OB);
-    OB.NameInfo.SuffixRange.first = OB.NameInfo.QualifiersRange.second;
-    OB.NameInfo.SuffixRange.second = std::string_view(OB).size();
     info = std::move(OB.NameInfo);
 
     assert(demangled_cstr &&
@@ -557,4 +555,19 @@ void Mangled::Encode(DataEncoder &file, ConstStringTable &strtab) const {
       file.AppendU32(strtab.Add(m_demangled));
       break;
   }
+}
+
+ConstString Mangled::GetBaseName() const {
+  const auto &demangled_info = GetDemangledInfo();
+  if (!demangled_info.has_value())
+    return {};
+
+  ConstString demangled_name = GetDemangledName();
+  if (!demangled_name)
+    return {};
+
+  const char *name_str = demangled_name.AsCString();
+  const auto &range = demangled_info->BasenameRange;
+  return ConstString(
+      llvm::StringRef(name_str + range.first, range.second - range.first));
 }

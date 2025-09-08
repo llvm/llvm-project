@@ -17,8 +17,10 @@ add_header_library(
   DEPENDS
     libc.hdr.types.size_t
     libc.hdr.limits_macros
+    libc.hdr.stdint_proxy
     libc.src.__support.CPP.bitset
     libc.src.__support.CPP.type_traits
+    libc.src.__support.CPP.simd
     libc.src.__support.common
   ${string_config_options}
 )

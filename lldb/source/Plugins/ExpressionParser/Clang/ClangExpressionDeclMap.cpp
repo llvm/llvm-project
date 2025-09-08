@@ -839,7 +839,7 @@ void ClangExpressionDeclMap::LookUpLldbClass(NameSearchContext &context) {
 
     clang::CXXRecordDecl *class_decl = method_decl->getParent();
 
-    QualType class_qual_type(class_decl->getTypeForDecl(), 0);
+    QualType class_qual_type = m_ast_context->getCanonicalTagType(class_decl);
 
     TypeFromUser class_user_type(
         class_qual_type.getAsOpaquePtr(),
@@ -1561,7 +1561,7 @@ ClangExpressionDeclMap::AddExpressionVariable(NameSearchContext &context,
 
   if (const clang::Type *parser_type = parser_opaque_type.getTypePtr()) {
     if (const TagType *tag_type = dyn_cast<TagType>(parser_type))
-      CompleteType(tag_type->getDecl());
+      CompleteType(tag_type->getOriginalDecl()->getDefinitionOrSelf());
     if (const ObjCObjectPointerType *objc_object_ptr_type =
             dyn_cast<ObjCObjectPointerType>(parser_type))
       CompleteType(objc_object_ptr_type->getInterfaceDecl());
@@ -1991,7 +1991,7 @@ void ClangExpressionDeclMap::AddContextClassType(NameSearchContext &context,
     const bool is_artificial = false;
 
     CXXMethodDecl *method_decl = m_clang_ast_context->AddMethodToCXXRecordType(
-        copied_clang_type.GetOpaqueQualType(), "$__lldb_expr", nullptr,
+        copied_clang_type.GetOpaqueQualType(), "$__lldb_expr", /*asm_label=*/{},
         method_type, lldb::eAccessPublic, is_virtual, is_static, is_inline,
         is_explicit, is_attr_used, is_artificial);
 

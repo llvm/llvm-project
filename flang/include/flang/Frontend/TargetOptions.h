@@ -53,6 +53,11 @@ public:
 
   /// Print verbose assembly
   bool asmVerbose = false;
+
+  /// Atomic control options
+  bool atomicIgnoreDenormalMode = false;
+  bool atomicRemoteMemory = false;
+  bool atomicFineGrainedMemory = false;
 };
 
 } // end namespace Fortran::frontend

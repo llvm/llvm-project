@@ -80,6 +80,8 @@ TEST_F(MainLoopTest, ReadSocketObject) {
   ASSERT_EQ(1u, callback_count);
 }
 
+// Flakey, see https://github.com/llvm/llvm-project/issues/152677.
+#ifndef _WIN32
 TEST_F(MainLoopTest, ReadPipeObject) {
   Pipe pipe;
 
@@ -142,6 +144,7 @@ TEST_F(MainLoopTest, MultipleReadsPipeObject) {
   ASSERT_EQ(5u, callback_count);
   async_writer.wait();
 }
+#endif
 
 TEST_F(MainLoopTest, PipeDelayBetweenRegisterAndRun) {
   Pipe pipe;

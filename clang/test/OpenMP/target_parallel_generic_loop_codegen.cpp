@@ -10,6 +10,15 @@
 // RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -fopenmp -emit-pch -o %t %s
 // RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -fopenmp -include-pch %t -emit-llvm %s -o - | FileCheck %s --check-prefix=IR-PCH
 
+// RUN: %clang_cc1 -DOMP60 -fopenmp-version=60 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm-bc %s -o %t-ppc-host.bc
+// RUN: %clang_cc1 -DOMP60 -fopenmp-version=60 -fopenmp -x c++ -std=c++11 -triple amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefixes=IR-GPU-OMP60
+
+// RUN: %clang_cc1 -DOMP60 -fopenmp-version=60 -verify -triple x86_64-pc-linux-gnu -fopenmp -emit-llvm %s -o - | FileCheck %s --check-prefixes=IR-OMP60
+
+// Check same results after serialization round-trip
+// RUN: %clang_cc1 -DOMP60 -fopenmp-version=60 -verify -triple x86_64-pc-linux-gnu -fopenmp -emit-pch -o %t %s
+// RUN: %clang_cc1 -DOMP60 -fopenmp-version=60 -verify -triple x86_64-pc-linux-gnu -fopenmp -include-pch %t -emit-llvm %s -o - | FileCheck %s --check-prefixes=IR-PCH-OMP60
+
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -34,14 +43,22 @@ int main() {
   int x = 0;
   int device_result[N] = {0};
 
+  #ifdef OMP60
+  #pragma omp target parallel loop num_threads(strict: N) severity(warning) message("msg") uses_allocators(omp_pteam_mem_alloc) allocate(omp_pteam_mem_alloc: x) private(x) map(from: device_result)
+  for (int i = 0; i < N; i++) {
+    x = omp_get_thread_num();
+    device_result[i] = i + x;
+  }
+  #else
   #pragma omp target parallel loop num_threads(N) uses_allocators(omp_pteam_mem_alloc) allocate(omp_pteam_mem_alloc: x) private(x) map(from: device_result)
   for (int i = 0; i < N; i++) {
     x = omp_get_thread_num();
     device_result[i] = i + x;
   }
+  #endif
 }
 #endif
-// IR-GPU-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37
+// IR-GPU-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l53
 // IR-GPU-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(256) [[DEVICE_RESULT:%.*]], ptr noundef [[OMP_PTEAM_MEM_ALLOC:%.*]]) #[[ATTR0:[0-9]+]] {
 // IR-GPU-NEXT:  entry:
 // IR-GPU-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -55,8 +72,8 @@ int main() {
 // IR-GPU-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    store ptr [[DEVICE_RESULT]], ptr [[DEVICE_RESULT_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    store ptr [[OMP_PTEAM_MEM_ALLOC]], ptr [[OMP_PTEAM_MEM_ALLOC_ADDR_ASCAST]], align 8
-// IR-GPU-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DEVICE_RESULT_ADDR_ASCAST]], align 8
-// IR-GPU-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37_kernel_environment to ptr), ptr [[DYN_PTR]])
+// IR-GPU-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DEVICE_RESULT_ADDR_ASCAST]], align 8, !nonnull [[META6:![0-9]+]], !align [[META7:![0-9]+]]
+// IR-GPU-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l53_kernel_environment to ptr), ptr [[DYN_PTR]])
 // IR-GPU-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // IR-GPU-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // IR-GPU:       user_code.entry:
@@ -66,14 +83,14 @@ int main() {
 // IR-GPU-NEXT:    store ptr [[TMP0]], ptr [[TMP4]], align 8
 // IR-GPU-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[CAPTURED_VARS_ADDRS_ASCAST]], i64 0, i64 1
 // IR-GPU-NEXT:    store ptr [[TMP3]], ptr [[TMP5]], align 8
-// IR-GPU-NEXT:    call void @__kmpc_parallel_51(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i32 [[TMP2]], i32 1, i32 64, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS_ASCAST]], i64 2)
+// IR-GPU-NEXT:    call void @__kmpc_parallel_51(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i32 [[TMP2]], i32 1, i32 64, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l53_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS_ASCAST]], i64 2)
 // IR-GPU-NEXT:    call void @__kmpc_target_deinit()
 // IR-GPU-NEXT:    ret void
 // IR-GPU:       worker.exit:
 // IR-GPU-NEXT:    ret void
 //
 //
-// IR-GPU-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37_omp_outlined
+// IR-GPU-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l53_omp_outlined
 // IR-GPU-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(256) [[DEVICE_RESULT:%.*]], ptr noundef [[OMP_PTEAM_MEM_ALLOC:%.*]]) #[[ATTR1:[0-9]+]] {
 // IR-GPU-NEXT:  entry:
 // IR-GPU-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -102,7 +119,7 @@ int main() {
 // IR-GPU-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    store ptr [[DEVICE_RESULT]], ptr [[DEVICE_RESULT_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    store ptr [[OMP_PTEAM_MEM_ALLOC]], ptr [[OMP_PTEAM_MEM_ALLOC_ADDR_ASCAST]], align 8
-// IR-GPU-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DEVICE_RESULT_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DEVICE_RESULT_ADDR_ASCAST]], align 8, !nonnull [[META6]], !align [[META7]]
 // IR-GPU-NEXT:    store i32 0, ptr [[DOTOMP_LB_ASCAST]], align 4
 // IR-GPU-NEXT:    store i32 63, ptr [[DOTOMP_UB_ASCAST]], align 4
 // IR-GPU-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE_ASCAST]], align 4
@@ -183,11 +200,11 @@ int main() {
 // IR-NEXT:    store i32 0, ptr [[X]], align 4
 // IR-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[DEVICE_RESULT]], i8 0, i64 256, i1 false)
 // IR-NEXT:    [[TMP0:%.*]] = load ptr, ptr @omp_pteam_mem_alloc, align 8
-// IR-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37(ptr [[DEVICE_RESULT]], ptr [[TMP0]]) #[[ATTR3:[0-9]+]]
+// IR-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l53(ptr [[DEVICE_RESULT]], ptr [[TMP0]]) #[[ATTR3:[0-9]+]]
 // IR-NEXT:    ret i32 0
 //
 //
-// IR-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37
+// IR-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l53
 // IR-SAME: (ptr noundef nonnull align 4 dereferenceable(256) [[DEVICE_RESULT:%.*]], ptr noundef [[OMP_PTEAM_MEM_ALLOC:%.*]]) #[[ATTR2:[0-9]+]] {
 // IR-NEXT:  entry:
 // IR-NEXT:    [[DEVICE_RESULT_ADDR:%.*]] = alloca ptr, align 8
@@ -195,14 +212,14 @@ int main() {
 // IR-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2:[0-9]+]])
 // IR-NEXT:    store ptr [[DEVICE_RESULT]], ptr [[DEVICE_RESULT_ADDR]], align 8
 // IR-NEXT:    store ptr [[OMP_PTEAM_MEM_ALLOC]], ptr [[OMP_PTEAM_MEM_ALLOC_ADDR]], align 8
-// IR-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DEVICE_RESULT_ADDR]], align 8
+// IR-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DEVICE_RESULT_ADDR]], align 8, !nonnull [[META3:![0-9]+]], !align [[META4:![0-9]+]]
 // IR-NEXT:    call void @__kmpc_push_num_threads(ptr @[[GLOB2]], i32 [[TMP0]], i32 64)
 // IR-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[OMP_PTEAM_MEM_ALLOC_ADDR]], align 8
-// IR-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37.omp_outlined, ptr [[TMP1]], ptr [[TMP2]])
+// IR-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l53.omp_outlined, ptr [[TMP1]], ptr [[TMP2]])
 // IR-NEXT:    ret void
 //
 //
-// IR-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37.omp_outlined
+// IR-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l53.omp_outlined
 // IR-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(256) [[DEVICE_RESULT:%.*]], ptr noundef [[OMP_PTEAM_MEM_ALLOC:%.*]]) #[[ATTR2]] {
 // IR-NEXT:  entry:
 // IR-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -220,7 +237,7 @@ int main() {
 // IR-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
 // IR-NEXT:    store ptr [[DEVICE_RESULT]], ptr [[DEVICE_RESULT_ADDR]], align 8
 // IR-NEXT:    store ptr [[OMP_PTEAM_MEM_ALLOC]], ptr [[OMP_PTEAM_MEM_ALLOC_ADDR]], align 8
-// IR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DEVICE_RESULT_ADDR]], align 8
+// IR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DEVICE_RESULT_ADDR]], align 8, !nonnull [[META3]], !align [[META4]]
 // IR-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
 // IR-NEXT:    store i32 63, ptr [[DOTOMP_UB]], align 4
 // IR-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
@@ -290,11 +307,11 @@ int main() {
 // IR-PCH-NEXT:    store i32 0, ptr [[X]], align 4
 // IR-PCH-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[DEVICE_RESULT]], i8 0, i64 256, i1 false)
 // IR-PCH-NEXT:    [[TMP0:%.*]] = load ptr, ptr @omp_pteam_mem_alloc, align 8
-// IR-PCH-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37(ptr [[DEVICE_RESULT]], ptr [[TMP0]]) #[[ATTR3:[0-9]+]]
+// IR-PCH-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l53(ptr [[DEVICE_RESULT]], ptr [[TMP0]]) #[[ATTR3:[0-9]+]]
 // IR-PCH-NEXT:    ret i32 0
 //
 //
-// IR-PCH-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37
+// IR-PCH-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l53
 // IR-PCH-SAME: (ptr noundef nonnull align 4 dereferenceable(256) [[DEVICE_RESULT:%.*]], ptr noundef [[OMP_PTEAM_MEM_ALLOC:%.*]]) #[[ATTR2:[0-9]+]] {
 // IR-PCH-NEXT:  entry:
 // IR-PCH-NEXT:    [[DEVICE_RESULT_ADDR:%.*]] = alloca ptr, align 8
@@ -302,14 +319,14 @@ int main() {
 // IR-PCH-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2:[0-9]+]])
 // IR-PCH-NEXT:    store ptr [[DEVICE_RESULT]], ptr [[DEVICE_RESULT_ADDR]], align 8
 // IR-PCH-NEXT:    store ptr [[OMP_PTEAM_MEM_ALLOC]], ptr [[OMP_PTEAM_MEM_ALLOC_ADDR]], align 8
-// IR-PCH-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DEVICE_RESULT_ADDR]], align 8
+// IR-PCH-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DEVICE_RESULT_ADDR]], align 8, !nonnull [[META3:![0-9]+]], !align [[META4:![0-9]+]]
 // IR-PCH-NEXT:    call void @__kmpc_push_num_threads(ptr @[[GLOB2]], i32 [[TMP0]], i32 64)
 // IR-PCH-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[OMP_PTEAM_MEM_ALLOC_ADDR]], align 8
-// IR-PCH-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37.omp_outlined, ptr [[TMP1]], ptr [[TMP2]])
+// IR-PCH-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l53.omp_outlined, ptr [[TMP1]], ptr [[TMP2]])
 // IR-PCH-NEXT:    ret void
 //
 //
-// IR-PCH-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37.omp_outlined
+// IR-PCH-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l53.omp_outlined
 // IR-PCH-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(256) [[DEVICE_RESULT:%.*]], ptr noundef [[OMP_PTEAM_MEM_ALLOC:%.*]]) #[[ATTR2]] {
 // IR-PCH-NEXT:  entry:
 // IR-PCH-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -327,7 +344,7 @@ int main() {
 // IR-PCH-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
 // IR-PCH-NEXT:    store ptr [[DEVICE_RESULT]], ptr [[DEVICE_RESULT_ADDR]], align 8
 // IR-PCH-NEXT:    store ptr [[OMP_PTEAM_MEM_ALLOC]], ptr [[OMP_PTEAM_MEM_ALLOC_ADDR]], align 8
-// IR-PCH-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DEVICE_RESULT_ADDR]], align 8
+// IR-PCH-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DEVICE_RESULT_ADDR]], align 8, !nonnull [[META3]], !align [[META4]]
 // IR-PCH-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
 // IR-PCH-NEXT:    store i32 63, ptr [[DOTOMP_UB]], align 4
 // IR-PCH-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
@@ -387,4 +404,387 @@ int main() {
 // IR-PCH-NEXT:    [[TMP14:%.*]] = load ptr, ptr @omp_pteam_mem_alloc, align 8
 // IR-PCH-NEXT:    call void @__kmpc_free(i32 [[TMP2]], ptr [[DOTX__VOID_ADDR]], ptr [[TMP14]])
 // IR-PCH-NEXT:    ret void
+//
+//
+// IR-GPU-OMP60-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l47
+// IR-GPU-OMP60-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(256) [[DEVICE_RESULT:%.*]], ptr noundef [[OMP_PTEAM_MEM_ALLOC:%.*]], ptr noundef nonnull align 1 dereferenceable(4) [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR0:[0-9]+]] {
+// IR-GPU-OMP60-NEXT:  entry:
+// IR-GPU-OMP60-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// IR-GPU-OMP60-NEXT:    [[DEVICE_RESULT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// IR-GPU-OMP60-NEXT:    [[OMP_PTEAM_MEM_ALLOC_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// IR-GPU-OMP60-NEXT:    [[DOTCAPTURE_EXPR__ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// IR-GPU-OMP60-NEXT:    [[TMP:%.*]] = alloca ptr, align 8, addrspace(5)
+// IR-GPU-OMP60-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x ptr], align 8, addrspace(5)
+// IR-GPU-OMP60-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
+// IR-GPU-OMP60-NEXT:    [[DEVICE_RESULT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DEVICE_RESULT_ADDR]] to ptr
+// IR-GPU-OMP60-NEXT:    [[OMP_PTEAM_MEM_ALLOC_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OMP_PTEAM_MEM_ALLOC_ADDR]] to ptr
+// IR-GPU-OMP60-NEXT:    [[DOTCAPTURE_EXPR__ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCAPTURE_EXPR__ADDR]] to ptr
+// IR-GPU-OMP60-NEXT:    [[TMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[TMP]] to ptr
+// IR-GPU-OMP60-NEXT:    [[CAPTURED_VARS_ADDRS_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CAPTURED_VARS_ADDRS]] to ptr
+// IR-GPU-OMP60-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
+// IR-GPU-OMP60-NEXT:    store ptr [[DEVICE_RESULT]], ptr [[DEVICE_RESULT_ADDR_ASCAST]], align 8
+// IR-GPU-OMP60-NEXT:    store ptr [[OMP_PTEAM_MEM_ALLOC]], ptr [[OMP_PTEAM_MEM_ALLOC_ADDR_ASCAST]], align 8
+// IR-GPU-OMP60-NEXT:    store ptr [[DOTCAPTURE_EXPR_]], ptr [[DOTCAPTURE_EXPR__ADDR_ASCAST]], align 8
+// IR-GPU-OMP60-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DEVICE_RESULT_ADDR_ASCAST]], align 8, !nonnull [[META6:![0-9]+]], !align [[META7:![0-9]+]]
+// IR-GPU-OMP60-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR__ADDR_ASCAST]], align 8, !nonnull [[META6]]
+// IR-GPU-OMP60-NEXT:    store ptr [[TMP1]], ptr [[TMP_ASCAST]], align 8
+// IR-GPU-OMP60-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l47_kernel_environment to ptr), ptr [[DYN_PTR]])
+// IR-GPU-OMP60-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP2]], -1
+// IR-GPU-OMP60-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
+// IR-GPU-OMP60:       user_code.entry:
+// IR-GPU-OMP60-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_global_thread_num(ptr addrspacecast (ptr addrspace(1) @[[GLOB1:[0-9]+]] to ptr))
+// IR-GPU-OMP60-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[OMP_PTEAM_MEM_ALLOC_ADDR_ASCAST]], align 8
+// IR-GPU-OMP60-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[CAPTURED_VARS_ADDRS_ASCAST]], i64 0, i64 0
+// IR-GPU-OMP60-NEXT:    store ptr [[TMP0]], ptr [[TMP5]], align 8
+// IR-GPU-OMP60-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[CAPTURED_VARS_ADDRS_ASCAST]], i64 0, i64 1
+// IR-GPU-OMP60-NEXT:    store ptr [[TMP4]], ptr [[TMP6]], align 8
+// IR-GPU-OMP60-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP_ASCAST]], align 8, !nonnull [[META6]]
+// IR-GPU-OMP60-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP7]], i64 0, i64 0
+// IR-GPU-OMP60-NEXT:    call void @__kmpc_parallel_60(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i32 [[TMP3]], i32 1, i32 64, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l47_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS_ASCAST]], i64 2, i32 1, i32 1, ptr [[ARRAYDECAY]])
+// IR-GPU-OMP60-NEXT:    call void @__kmpc_target_deinit()
+// IR-GPU-OMP60-NEXT:    ret void
+// IR-GPU-OMP60:       worker.exit:
+// IR-GPU-OMP60-NEXT:    ret void
+//
+//
+// IR-GPU-OMP60-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l47_omp_outlined
+// IR-GPU-OMP60-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(256) [[DEVICE_RESULT:%.*]], ptr noundef [[OMP_PTEAM_MEM_ALLOC:%.*]]) #[[ATTR1:[0-9]+]] {
+// IR-GPU-OMP60-NEXT:  entry:
+// IR-GPU-OMP60-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// IR-GPU-OMP60-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// IR-GPU-OMP60-NEXT:    [[DEVICE_RESULT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// IR-GPU-OMP60-NEXT:    [[OMP_PTEAM_MEM_ALLOC_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// IR-GPU-OMP60-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4, addrspace(5)
+// IR-GPU-OMP60-NEXT:    [[TMP:%.*]] = alloca i32, align 4, addrspace(5)
+// IR-GPU-OMP60-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4, addrspace(5)
+// IR-GPU-OMP60-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4, addrspace(5)
+// IR-GPU-OMP60-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4, addrspace(5)
+// IR-GPU-OMP60-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4, addrspace(5)
+// IR-GPU-OMP60-NEXT:    [[I:%.*]] = alloca i32, align 4, addrspace(5)
+// IR-GPU-OMP60-NEXT:    [[DOTGLOBAL_TID__ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTGLOBAL_TID__ADDR]] to ptr
+// IR-GPU-OMP60-NEXT:    [[DOTBOUND_TID__ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTBOUND_TID__ADDR]] to ptr
+// IR-GPU-OMP60-NEXT:    [[DEVICE_RESULT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DEVICE_RESULT_ADDR]] to ptr
+// IR-GPU-OMP60-NEXT:    [[OMP_PTEAM_MEM_ALLOC_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OMP_PTEAM_MEM_ALLOC_ADDR]] to ptr
+// IR-GPU-OMP60-NEXT:    [[DOTOMP_IV_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_IV]] to ptr
+// IR-GPU-OMP60-NEXT:    [[TMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[TMP]] to ptr
+// IR-GPU-OMP60-NEXT:    [[DOTOMP_LB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_LB]] to ptr
+// IR-GPU-OMP60-NEXT:    [[DOTOMP_UB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_UB]] to ptr
+// IR-GPU-OMP60-NEXT:    [[DOTOMP_STRIDE_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_STRIDE]] to ptr
+// IR-GPU-OMP60-NEXT:    [[DOTOMP_IS_LAST_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_IS_LAST]] to ptr
+// IR-GPU-OMP60-NEXT:    [[I_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I]] to ptr
+// IR-GPU-OMP60-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR_ASCAST]], align 8
+// IR-GPU-OMP60-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR_ASCAST]], align 8
+// IR-GPU-OMP60-NEXT:    store ptr [[DEVICE_RESULT]], ptr [[DEVICE_RESULT_ADDR_ASCAST]], align 8
+// IR-GPU-OMP60-NEXT:    store ptr [[OMP_PTEAM_MEM_ALLOC]], ptr [[OMP_PTEAM_MEM_ALLOC_ADDR_ASCAST]], align 8
+// IR-GPU-OMP60-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DEVICE_RESULT_ADDR_ASCAST]], align 8, !nonnull [[META6]], !align [[META7]]
+// IR-GPU-OMP60-NEXT:    store i32 0, ptr [[DOTOMP_LB_ASCAST]], align 4
+// IR-GPU-OMP60-NEXT:    store i32 63, ptr [[DOTOMP_UB_ASCAST]], align 4
+// IR-GPU-OMP60-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE_ASCAST]], align 4
+// IR-GPU-OMP60-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST_ASCAST]], align 4
+// IR-GPU-OMP60-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR_ASCAST]], align 8
+// IR-GPU-OMP60-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
+// IR-GPU-OMP60-NEXT:    call void @__kmpc_for_static_init_4(ptr addrspacecast (ptr addrspace(1) @[[GLOB2:[0-9]+]] to ptr), i32 [[TMP2]], i32 33, ptr [[DOTOMP_IS_LAST_ASCAST]], ptr [[DOTOMP_LB_ASCAST]], ptr [[DOTOMP_UB_ASCAST]], ptr [[DOTOMP_STRIDE_ASCAST]], i32 1, i32 1)
+// IR-GPU-OMP60-NEXT:    br label [[OMP_DISPATCH_COND:%.*]]
+// IR-GPU-OMP60:       omp.dispatch.cond:
+// IR-GPU-OMP60-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTOMP_UB_ASCAST]], align 4
+// IR-GPU-OMP60-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP3]], 63
+// IR-GPU-OMP60-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+// IR-GPU-OMP60:       cond.true:
+// IR-GPU-OMP60-NEXT:    br label [[COND_END:%.*]]
+// IR-GPU-OMP60:       cond.false:
+// IR-GPU-OMP60-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTOMP_UB_ASCAST]], align 4
+// IR-GPU-OMP60-NEXT:    br label [[COND_END]]
+// IR-GPU-OMP60:       cond.end:
+// IR-GPU-OMP60-NEXT:    [[COND:%.*]] = phi i32 [ 63, [[COND_TRUE]] ], [ [[TMP4]], [[COND_FALSE]] ]
+// IR-GPU-OMP60-NEXT:    store i32 [[COND]], ptr [[DOTOMP_UB_ASCAST]], align 4
+// IR-GPU-OMP60-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_LB_ASCAST]], align 4
+// IR-GPU-OMP60-NEXT:    store i32 [[TMP5]], ptr [[DOTOMP_IV_ASCAST]], align 4
+// IR-GPU-OMP60-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
+// IR-GPU-OMP60-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_UB_ASCAST]], align 4
+// IR-GPU-OMP60-NEXT:    [[CMP1:%.*]] = icmp sle i32 [[TMP6]], [[TMP7]]
+// IR-GPU-OMP60-NEXT:    br i1 [[CMP1]], label [[OMP_DISPATCH_BODY:%.*]], label [[OMP_DISPATCH_END:%.*]]
+// IR-GPU-OMP60:       omp.dispatch.body:
+// IR-GPU-OMP60-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
+// IR-GPU-OMP60:       omp.inner.for.cond:
+// IR-GPU-OMP60-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
+// IR-GPU-OMP60-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_UB_ASCAST]], align 4
+// IR-GPU-OMP60-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[TMP8]], [[TMP9]]
+// IR-GPU-OMP60-NEXT:    br i1 [[CMP2]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
+// IR-GPU-OMP60:       omp.inner.for.body:
+// IR-GPU-OMP60-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
+// IR-GPU-OMP60-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP10]], 1
+// IR-GPU-OMP60-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
+// IR-GPU-OMP60-NEXT:    store i32 [[ADD]], ptr [[I_ASCAST]], align 4
+// IR-GPU-OMP60-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z18omp_get_thread_numv() #[[ATTR5:[0-9]+]]
+// IR-GPU-OMP60-NEXT:    store i32 [[CALL]], ptr addrspacecast (ptr addrspace(3) @x to ptr), align 4
+// IR-GPU-OMP60-NEXT:    [[TMP11:%.*]] = load i32, ptr [[I_ASCAST]], align 4
+// IR-GPU-OMP60-NEXT:    [[TMP12:%.*]] = load i32, ptr addrspacecast (ptr addrspace(3) @x to ptr), align 4
+// IR-GPU-OMP60-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP11]], [[TMP12]]
+// IR-GPU-OMP60-NEXT:    [[TMP13:%.*]] = load i32, ptr [[I_ASCAST]], align 4
+// IR-GPU-OMP60-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP13]] to i64
+// IR-GPU-OMP60-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [64 x i32], ptr [[TMP0]], i64 0, i64 [[IDXPROM]]
+// IR-GPU-OMP60-NEXT:    store i32 [[ADD3]], ptr [[ARRAYIDX]], align 4
+// IR-GPU-OMP60-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
+// IR-GPU-OMP60:       omp.body.continue:
+// IR-GPU-OMP60-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
+// IR-GPU-OMP60:       omp.inner.for.inc:
+// IR-GPU-OMP60-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
+// IR-GPU-OMP60-NEXT:    [[ADD4:%.*]] = add nsw i32 [[TMP14]], 1
+// IR-GPU-OMP60-NEXT:    store i32 [[ADD4]], ptr [[DOTOMP_IV_ASCAST]], align 4
+// IR-GPU-OMP60-NEXT:    br label [[OMP_INNER_FOR_COND]]
+// IR-GPU-OMP60:       omp.inner.for.end:
+// IR-GPU-OMP60-NEXT:    br label [[OMP_DISPATCH_INC:%.*]]
+// IR-GPU-OMP60:       omp.dispatch.inc:
+// IR-GPU-OMP60-NEXT:    [[TMP15:%.*]] = load i32, ptr [[DOTOMP_LB_ASCAST]], align 4
+// IR-GPU-OMP60-NEXT:    [[TMP16:%.*]] = load i32, ptr [[DOTOMP_STRIDE_ASCAST]], align 4
+// IR-GPU-OMP60-NEXT:    [[ADD5:%.*]] = add nsw i32 [[TMP15]], [[TMP16]]
+// IR-GPU-OMP60-NEXT:    store i32 [[ADD5]], ptr [[DOTOMP_LB_ASCAST]], align 4
+// IR-GPU-OMP60-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_UB_ASCAST]], align 4
+// IR-GPU-OMP60-NEXT:    [[TMP18:%.*]] = load i32, ptr [[DOTOMP_STRIDE_ASCAST]], align 4
+// IR-GPU-OMP60-NEXT:    [[ADD6:%.*]] = add nsw i32 [[TMP17]], [[TMP18]]
+// IR-GPU-OMP60-NEXT:    store i32 [[ADD6]], ptr [[DOTOMP_UB_ASCAST]], align 4
+// IR-GPU-OMP60-NEXT:    br label [[OMP_DISPATCH_COND]]
+// IR-GPU-OMP60:       omp.dispatch.end:
+// IR-GPU-OMP60-NEXT:    call void @__kmpc_for_static_fini(ptr addrspacecast (ptr addrspace(1) @[[GLOB2]] to ptr), i32 [[TMP2]])
+// IR-GPU-OMP60-NEXT:    ret void
+//
+//
+// IR-OMP60-LABEL: define {{[^@]+}}@main
+// IR-OMP60-SAME: () #[[ATTR0:[0-9]+]] {
+// IR-OMP60-NEXT:  entry:
+// IR-OMP60-NEXT:    [[X:%.*]] = alloca i32, align 4
+// IR-OMP60-NEXT:    [[DEVICE_RESULT:%.*]] = alloca [64 x i32], align 16
+// IR-OMP60-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca ptr, align 8
+// IR-OMP60-NEXT:    [[TMP:%.*]] = alloca ptr, align 8
+// IR-OMP60-NEXT:    store i32 0, ptr [[X]], align 4
+// IR-OMP60-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[DEVICE_RESULT]], i8 0, i64 256, i1 false)
+// IR-OMP60-NEXT:    store ptr @.str, ptr [[DOTCAPTURE_EXPR_]], align 8
+// IR-OMP60-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8, !nonnull [[META3:![0-9]+]]
+// IR-OMP60-NEXT:    store ptr [[TMP0]], ptr [[TMP]], align 8
+// IR-OMP60-NEXT:    [[TMP1:%.*]] = load ptr, ptr @omp_pteam_mem_alloc, align 8
+// IR-OMP60-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META3]]
+// IR-OMP60-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l47(ptr [[DEVICE_RESULT]], ptr [[TMP1]], ptr [[TMP2]]) #[[ATTR3:[0-9]+]]
+// IR-OMP60-NEXT:    ret i32 0
+//
+//
+// IR-OMP60-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l47
+// IR-OMP60-SAME: (ptr noundef nonnull align 4 dereferenceable(256) [[DEVICE_RESULT:%.*]], ptr noundef [[OMP_PTEAM_MEM_ALLOC:%.*]], ptr noundef nonnull align 1 dereferenceable(4) [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2:[0-9]+]] {
+// IR-OMP60-NEXT:  entry:
+// IR-OMP60-NEXT:    [[DEVICE_RESULT_ADDR:%.*]] = alloca ptr, align 8
+// IR-OMP60-NEXT:    [[OMP_PTEAM_MEM_ALLOC_ADDR:%.*]] = alloca ptr, align 8
+// IR-OMP60-NEXT:    [[DOTCAPTURE_EXPR__ADDR:%.*]] = alloca ptr, align 8
+// IR-OMP60-NEXT:    [[TMP:%.*]] = alloca ptr, align 8
+// IR-OMP60-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2:[0-9]+]])
+// IR-OMP60-NEXT:    store ptr [[DEVICE_RESULT]], ptr [[DEVICE_RESULT_ADDR]], align 8
+// IR-OMP60-NEXT:    store ptr [[OMP_PTEAM_MEM_ALLOC]], ptr [[OMP_PTEAM_MEM_ALLOC_ADDR]], align 8
+// IR-OMP60-NEXT:    store ptr [[DOTCAPTURE_EXPR_]], ptr [[DOTCAPTURE_EXPR__ADDR]], align 8
+// IR-OMP60-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DEVICE_RESULT_ADDR]], align 8, !nonnull [[META3]], !align [[META4:![0-9]+]]
+// IR-OMP60-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR__ADDR]], align 8, !nonnull [[META3]]
+// IR-OMP60-NEXT:    store ptr [[TMP2]], ptr [[TMP]], align 8
+// IR-OMP60-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META3]]
+// IR-OMP60-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP3]], i64 0, i64 0
+// IR-OMP60-NEXT:    call void @__kmpc_push_num_threads_strict(ptr @[[GLOB2]], i32 [[TMP0]], i32 64, i32 1, ptr [[ARRAYDECAY]])
+// IR-OMP60-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[OMP_PTEAM_MEM_ALLOC_ADDR]], align 8
+// IR-OMP60-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l47.omp_outlined, ptr [[TMP1]], ptr [[TMP4]])
+// IR-OMP60-NEXT:    ret void
+//
+//
+// IR-OMP60-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l47.omp_outlined
+// IR-OMP60-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(256) [[DEVICE_RESULT:%.*]], ptr noundef [[OMP_PTEAM_MEM_ALLOC:%.*]]) #[[ATTR2]] {
+// IR-OMP60-NEXT:  entry:
+// IR-OMP60-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
+// IR-OMP60-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
+// IR-OMP60-NEXT:    [[DEVICE_RESULT_ADDR:%.*]] = alloca ptr, align 8
+// IR-OMP60-NEXT:    [[OMP_PTEAM_MEM_ALLOC_ADDR:%.*]] = alloca ptr, align 8
+// IR-OMP60-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
+// IR-OMP60-NEXT:    [[TMP:%.*]] = alloca i32, align 4
+// IR-OMP60-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
+// IR-OMP60-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
+// IR-OMP60-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
+// IR-OMP60-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
+// IR-OMP60-NEXT:    [[I:%.*]] = alloca i32, align 4
+// IR-OMP60-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
+// IR-OMP60-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
+// IR-OMP60-NEXT:    store ptr [[DEVICE_RESULT]], ptr [[DEVICE_RESULT_ADDR]], align 8
+// IR-OMP60-NEXT:    store ptr [[OMP_PTEAM_MEM_ALLOC]], ptr [[OMP_PTEAM_MEM_ALLOC_ADDR]], align 8
+// IR-OMP60-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DEVICE_RESULT_ADDR]], align 8, !nonnull [[META3]], !align [[META4]]
+// IR-OMP60-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
+// IR-OMP60-NEXT:    store i32 63, ptr [[DOTOMP_UB]], align 4
+// IR-OMP60-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
+// IR-OMP60-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
+// IR-OMP60-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
+// IR-OMP60-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
+// IR-OMP60-NEXT:    [[TMP3:%.*]] = load ptr, ptr @omp_pteam_mem_alloc, align 8
+// IR-OMP60-NEXT:    [[DOTX__VOID_ADDR:%.*]] = call ptr @__kmpc_alloc(i32 [[TMP2]], i64 4, ptr [[TMP3]])
+// IR-OMP60-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB1:[0-9]+]], i32 [[TMP2]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// IR-OMP60-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// IR-OMP60-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP4]], 63
+// IR-OMP60-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+// IR-OMP60:       cond.true:
+// IR-OMP60-NEXT:    br label [[COND_END:%.*]]
+// IR-OMP60:       cond.false:
+// IR-OMP60-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// IR-OMP60-NEXT:    br label [[COND_END]]
+// IR-OMP60:       cond.end:
+// IR-OMP60-NEXT:    [[COND:%.*]] = phi i32 [ 63, [[COND_TRUE]] ], [ [[TMP5]], [[COND_FALSE]] ]
+// IR-OMP60-NEXT:    store i32 [[COND]], ptr [[DOTOMP_UB]], align 4
+// IR-OMP60-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
+// IR-OMP60-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_IV]], align 4
+// IR-OMP60-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
+// IR-OMP60:       omp.inner.for.cond:
+// IR-OMP60-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// IR-OMP60-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// IR-OMP60-NEXT:    [[CMP1:%.*]] = icmp sle i32 [[TMP7]], [[TMP8]]
+// IR-OMP60-NEXT:    br i1 [[CMP1]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
+// IR-OMP60:       omp.inner.for.cond.cleanup:
+// IR-OMP60-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
+// IR-OMP60:       omp.inner.for.body:
+// IR-OMP60-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// IR-OMP60-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP9]], 1
+// IR-OMP60-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
+// IR-OMP60-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
+// IR-OMP60-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z18omp_get_thread_numv()
+// IR-OMP60-NEXT:    store i32 [[CALL]], ptr [[DOTX__VOID_ADDR]], align 4
+// IR-OMP60-NEXT:    [[TMP10:%.*]] = load i32, ptr [[I]], align 4
+// IR-OMP60-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTX__VOID_ADDR]], align 4
+// IR-OMP60-NEXT:    [[ADD2:%.*]] = add nsw i32 [[TMP10]], [[TMP11]]
+// IR-OMP60-NEXT:    [[TMP12:%.*]] = load i32, ptr [[I]], align 4
+// IR-OMP60-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP12]] to i64
+// IR-OMP60-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [64 x i32], ptr [[TMP0]], i64 0, i64 [[IDXPROM]]
+// IR-OMP60-NEXT:    store i32 [[ADD2]], ptr [[ARRAYIDX]], align 4
+// IR-OMP60-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
+// IR-OMP60:       omp.body.continue:
+// IR-OMP60-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
+// IR-OMP60:       omp.inner.for.inc:
+// IR-OMP60-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// IR-OMP60-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP13]], 1
+// IR-OMP60-NEXT:    store i32 [[ADD3]], ptr [[DOTOMP_IV]], align 4
+// IR-OMP60-NEXT:    br label [[OMP_INNER_FOR_COND]]
+// IR-OMP60:       omp.inner.for.end:
+// IR-OMP60-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
+// IR-OMP60:       omp.loop.exit:
+// IR-OMP60-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP2]])
+// IR-OMP60-NEXT:    [[TMP14:%.*]] = load ptr, ptr @omp_pteam_mem_alloc, align 8
+// IR-OMP60-NEXT:    call void @__kmpc_free(i32 [[TMP2]], ptr [[DOTX__VOID_ADDR]], ptr [[TMP14]])
+// IR-OMP60-NEXT:    ret void
+//
+//
+// IR-PCH-OMP60-LABEL: define {{[^@]+}}@main
+// IR-PCH-OMP60-SAME: () #[[ATTR0:[0-9]+]] {
+// IR-PCH-OMP60-NEXT:  entry:
+// IR-PCH-OMP60-NEXT:    [[X:%.*]] = alloca i32, align 4
+// IR-PCH-OMP60-NEXT:    [[DEVICE_RESULT:%.*]] = alloca [64 x i32], align 16
+// IR-PCH-OMP60-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca ptr, align 8
+// IR-PCH-OMP60-NEXT:    [[TMP:%.*]] = alloca ptr, align 8
+// IR-PCH-OMP60-NEXT:    store i32 0, ptr [[X]], align 4
+// IR-PCH-OMP60-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[DEVICE_RESULT]], i8 0, i64 256, i1 false)
+// IR-PCH-OMP60-NEXT:    store ptr @.str, ptr [[DOTCAPTURE_EXPR_]], align 8
+// IR-PCH-OMP60-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8, !nonnull [[META3:![0-9]+]]
+// IR-PCH-OMP60-NEXT:    store ptr [[TMP0]], ptr [[TMP]], align 8
+// IR-PCH-OMP60-NEXT:    [[TMP1:%.*]] = load ptr, ptr @omp_pteam_mem_alloc, align 8
+// IR-PCH-OMP60-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META3]]
+// IR-PCH-OMP60-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l47(ptr [[DEVICE_RESULT]], ptr [[TMP1]], ptr [[TMP2]]) #[[ATTR3:[0-9]+]]
+// IR-PCH-OMP60-NEXT:    ret i32 0
+//
+//
+// IR-PCH-OMP60-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l47
+// IR-PCH-OMP60-SAME: (ptr noundef nonnull align 4 dereferenceable(256) [[DEVICE_RESULT:%.*]], ptr noundef [[OMP_PTEAM_MEM_ALLOC:%.*]], ptr noundef nonnull align 1 dereferenceable(4) [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2:[0-9]+]] {
+// IR-PCH-OMP60-NEXT:  entry:
+// IR-PCH-OMP60-NEXT:    [[DEVICE_RESULT_ADDR:%.*]] = alloca ptr, align 8
+// IR-PCH-OMP60-NEXT:    [[OMP_PTEAM_MEM_ALLOC_ADDR:%.*]] = alloca ptr, align 8
+// IR-PCH-OMP60-NEXT:    [[DOTCAPTURE_EXPR__ADDR:%.*]] = alloca ptr, align 8
+// IR-PCH-OMP60-NEXT:    [[TMP:%.*]] = alloca ptr, align 8
+// IR-PCH-OMP60-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2:[0-9]+]])
+// IR-PCH-OMP60-NEXT:    store ptr [[DEVICE_RESULT]], ptr [[DEVICE_RESULT_ADDR]], align 8
+// IR-PCH-OMP60-NEXT:    store ptr [[OMP_PTEAM_MEM_ALLOC]], ptr [[OMP_PTEAM_MEM_ALLOC_ADDR]], align 8
+// IR-PCH-OMP60-NEXT:    store ptr [[DOTCAPTURE_EXPR_]], ptr [[DOTCAPTURE_EXPR__ADDR]], align 8
+// IR-PCH-OMP60-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DEVICE_RESULT_ADDR]], align 8, !nonnull [[META3]], !align [[META4:![0-9]+]]
+// IR-PCH-OMP60-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR__ADDR]], align 8, !nonnull [[META3]]
+// IR-PCH-OMP60-NEXT:    store ptr [[TMP2]], ptr [[TMP]], align 8
+// IR-PCH-OMP60-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META3]]
+// IR-PCH-OMP60-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP3]], i64 0, i64 0
+// IR-PCH-OMP60-NEXT:    call void @__kmpc_push_num_threads_strict(ptr @[[GLOB2]], i32 [[TMP0]], i32 64, i32 1, ptr [[ARRAYDECAY]])
+// IR-PCH-OMP60-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[OMP_PTEAM_MEM_ALLOC_ADDR]], align 8
+// IR-PCH-OMP60-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l47.omp_outlined, ptr [[TMP1]], ptr [[TMP4]])
+// IR-PCH-OMP60-NEXT:    ret void
+//
+//
+// IR-PCH-OMP60-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l47.omp_outlined
+// IR-PCH-OMP60-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(256) [[DEVICE_RESULT:%.*]], ptr noundef [[OMP_PTEAM_MEM_ALLOC:%.*]]) #[[ATTR2]] {
+// IR-PCH-OMP60-NEXT:  entry:
+// IR-PCH-OMP60-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
+// IR-PCH-OMP60-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
+// IR-PCH-OMP60-NEXT:    [[DEVICE_RESULT_ADDR:%.*]] = alloca ptr, align 8
+// IR-PCH-OMP60-NEXT:    [[OMP_PTEAM_MEM_ALLOC_ADDR:%.*]] = alloca ptr, align 8
+// IR-PCH-OMP60-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
+// IR-PCH-OMP60-NEXT:    [[TMP:%.*]] = alloca i32, align 4
+// IR-PCH-OMP60-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
+// IR-PCH-OMP60-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
+// IR-PCH-OMP60-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
+// IR-PCH-OMP60-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
+// IR-PCH-OMP60-NEXT:    [[I:%.*]] = alloca i32, align 4
+// IR-PCH-OMP60-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
+// IR-PCH-OMP60-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
+// IR-PCH-OMP60-NEXT:    store ptr [[DEVICE_RESULT]], ptr [[DEVICE_RESULT_ADDR]], align 8
+// IR-PCH-OMP60-NEXT:    store ptr [[OMP_PTEAM_MEM_ALLOC]], ptr [[OMP_PTEAM_MEM_ALLOC_ADDR]], align 8
+// IR-PCH-OMP60-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DEVICE_RESULT_ADDR]], align 8, !nonnull [[META3]], !align [[META4]]
+// IR-PCH-OMP60-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
+// IR-PCH-OMP60-NEXT:    store i32 63, ptr [[DOTOMP_UB]], align 4
+// IR-PCH-OMP60-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
+// IR-PCH-OMP60-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
+// IR-PCH-OMP60-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
+// IR-PCH-OMP60-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
+// IR-PCH-OMP60-NEXT:    [[TMP3:%.*]] = load ptr, ptr @omp_pteam_mem_alloc, align 8
+// IR-PCH-OMP60-NEXT:    [[DOTX__VOID_ADDR:%.*]] = call ptr @__kmpc_alloc(i32 [[TMP2]], i64 4, ptr [[TMP3]])
+// IR-PCH-OMP60-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB1:[0-9]+]], i32 [[TMP2]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// IR-PCH-OMP60-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// IR-PCH-OMP60-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP4]], 63
+// IR-PCH-OMP60-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+// IR-PCH-OMP60:       cond.true:
+// IR-PCH-OMP60-NEXT:    br label [[COND_END:%.*]]
+// IR-PCH-OMP60:       cond.false:
+// IR-PCH-OMP60-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// IR-PCH-OMP60-NEXT:    br label [[COND_END]]
+// IR-PCH-OMP60:       cond.end:
+// IR-PCH-OMP60-NEXT:    [[COND:%.*]] = phi i32 [ 63, [[COND_TRUE]] ], [ [[TMP5]], [[COND_FALSE]] ]
+// IR-PCH-OMP60-NEXT:    store i32 [[COND]], ptr [[DOTOMP_UB]], align 4
+// IR-PCH-OMP60-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
+// IR-PCH-OMP60-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_IV]], align 4
+// IR-PCH-OMP60-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
+// IR-PCH-OMP60:       omp.inner.for.cond:
+// IR-PCH-OMP60-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// IR-PCH-OMP60-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// IR-PCH-OMP60-NEXT:    [[CMP1:%.*]] = icmp sle i32 [[TMP7]], [[TMP8]]
+// IR-PCH-OMP60-NEXT:    br i1 [[CMP1]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
+// IR-PCH-OMP60:       omp.inner.for.cond.cleanup:
+// IR-PCH-OMP60-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
+// IR-PCH-OMP60:       omp.inner.for.body:
+// IR-PCH-OMP60-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// IR-PCH-OMP60-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP9]], 1
+// IR-PCH-OMP60-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
+// IR-PCH-OMP60-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
+// IR-PCH-OMP60-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z18omp_get_thread_numv()
+// IR-PCH-OMP60-NEXT:    store i32 [[CALL]], ptr [[DOTX__VOID_ADDR]], align 4
+// IR-PCH-OMP60-NEXT:    [[TMP10:%.*]] = load i32, ptr [[I]], align 4
+// IR-PCH-OMP60-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTX__VOID_ADDR]], align 4
+// IR-PCH-OMP60-NEXT:    [[ADD2:%.*]] = add nsw i32 [[TMP10]], [[TMP11]]
+// IR-PCH-OMP60-NEXT:    [[TMP12:%.*]] = load i32, ptr [[I]], align 4
+// IR-PCH-OMP60-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP12]] to i64
+// IR-PCH-OMP60-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [64 x i32], ptr [[TMP0]], i64 0, i64 [[IDXPROM]]
+// IR-PCH-OMP60-NEXT:    store i32 [[ADD2]], ptr [[ARRAYIDX]], align 4
+// IR-PCH-OMP60-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
+// IR-PCH-OMP60:       omp.body.continue:
+// IR-PCH-OMP60-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
+// IR-PCH-OMP60:       omp.inner.for.inc:
+// IR-PCH-OMP60-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// IR-PCH-OMP60-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP13]], 1
+// IR-PCH-OMP60-NEXT:    store i32 [[ADD3]], ptr [[DOTOMP_IV]], align 4
+// IR-PCH-OMP60-NEXT:    br label [[OMP_INNER_FOR_COND]]
+// IR-PCH-OMP60:       omp.inner.for.end:
+// IR-PCH-OMP60-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
+// IR-PCH-OMP60:       omp.loop.exit:
+// IR-PCH-OMP60-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP2]])
+// IR-PCH-OMP60-NEXT:    [[TMP14:%.*]] = load ptr, ptr @omp_pteam_mem_alloc, align 8
+// IR-PCH-OMP60-NEXT:    call void @__kmpc_free(i32 [[TMP2]], ptr [[DOTX__VOID_ADDR]], ptr [[TMP14]])
+// IR-PCH-OMP60-NEXT:    ret void
 //
