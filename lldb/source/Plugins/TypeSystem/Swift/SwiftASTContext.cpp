@@ -1033,6 +1033,9 @@ void SwiftASTContext::SetCompilerInvocationLLDBOverrides() {
       m_compiler_invocation_ap->getIRGenOptions();
   ir_gen_opts.OutputKind = swift::IRGenOutputKind::Module;
   ir_gen_opts.UseJIT = true;
+  // In the JIT we don't benefit from the indexed indirections in DWARF 5.
+  ir_gen_opts.DWARFVersion = 4;
+  ir_gen_opts.DebugInfoFormat = swift::IRGenDebugInfoFormat::DWARF;
   // Allow deserializing @_implementationOnly dependencies
   // to avoid crashing due to module recovery issues.
   swift::LangOptions &lang_opts = m_compiler_invocation_ap->getLangOptions();
