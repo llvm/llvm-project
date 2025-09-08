@@ -148,6 +148,15 @@ def isNonZeroLoadImmediate
                      CheckNot<CheckImmOperand<2, 0>>
                    ]>>>;
 
+// Returns true if this is LPAD (auipc with rd = x0)
+def isLPAD
+    : TIIPredicate<"isLPAD",
+                   MCReturnStatement<CheckAll<[
+                     CheckOpcode<[AUIPC]>,
+                     CheckIsRegOperand<0>,
+                     CheckRegOperand<0, X0>,
+                   ]>>>;
+
 def ignoresVXRM
     : TIIPredicate<"ignoresVXRM",
                    MCOpcodeSwitchStatement<

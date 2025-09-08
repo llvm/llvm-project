@@ -3512,7 +3512,7 @@ RISCVInstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
   }
 
   // LPADs should not be outlined too
-  if (MI.getOpcode() == RISCV::AUIPC && MI.getOperand(0).getReg() == RISCV::X0)
+  if (isLPAD(MI))
     return outliner::InstrType::Illegal;
 
   return outliner::InstrType::Legal;
