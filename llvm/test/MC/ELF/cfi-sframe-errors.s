@@ -4,27 +4,27 @@
 // RUN: llvm-readelf --sframe %t.o | FileCheck --check-prefix=CHECK-NOFDES %s
 
 
-	.cfi_sections .sframe
+        .cfi_sections .sframe
 f1:
-	.cfi_startproc simple
-// CHECK: Non-default RA register {{.*}}
+        .cfi_startproc simple
+// CHECK: non-default RA register {{.*}}
         .cfi_return_column 0
-	nop
-// CHECK: {{.*}} Adjusting CFA offset without a base register.{{.*}}
+        nop
+// CHECK: {{.*}} adjusting CFA offset without a base register.{{.*}}
         .cfi_def_cfa_offset 16 // no line number reported here.
-	nop
-// CHECK: [[@LINE+1]]:{{.*}} Adjusting CFA offset without a base register.{{.*}}
+        nop
+// CHECK: [[@LINE+1]]:{{.*}} adjusting CFA offset without a base register.{{.*}}
         .cfi_adjust_cfa_offset 16
-	nop
+        nop
         .cfi_endproc
 
-f2:	
+f2:
         .cfi_startproc
-	nop
-// CHECK: Canonical Frame Address not in stack- or frame-pointer. {{.*}}
+        nop
+// CHECK: canonical Frame Address not in stack- or frame-pointer. {{.*}}
         .cfi_def_cfa 0, 4
-	nop
-	
+        nop
+
         .cfi_endproc
 
 // CHECK-NOFDES:    Num FDEs: 0

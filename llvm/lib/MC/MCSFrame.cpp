@@ -119,16 +119,16 @@ class SFrameEmitterImpl {
       return true;
     }
     Streamer.getContext().reportWarning(
-        I.getLoc(), "Canonical Frame Address not in stack- or frame-pointer. "
-                    "Omitting SFrame unwind info for this function.");
+        I.getLoc(), "canonical Frame Address not in stack- or frame-pointer. "
+                    "Omitting SFrame unwind info for this function");
     return false;
   }
 
   bool setCFAOffset(SFrameFRE &FRE, const SMLoc &Loc, size_t Offset) {
     if (!FRE.CFARegSet) {
       Streamer.getContext().reportWarning(
-          Loc, "Adjusting CFA offset without a base register. "
-               "Omitting SFrame unwind info for this function.");
+          Loc, "adjusting CFA offset without a base register. "
+               "Omitting SFrame unwind info for this function");
       return false;
     }
     FRE.CFAOffset = Offset;
@@ -233,9 +233,9 @@ public:
     // hand-written assembly.
     if (DF.RAReg != RAReg) {
       Streamer.getContext().reportWarning(
-          SMLoc(), "Non-default RA register in .cfi_return_column " +
+          SMLoc(), "non-default RA register in .cfi_return_column " +
                        Twine(DF.RAReg) +
-                       ". Omitting SFrame unwind info for this function.");
+                       ". Omitting SFrame unwind info for this function");
       Valid = false;
     }
     MCSymbol *LastLabel = DF.Begin;
