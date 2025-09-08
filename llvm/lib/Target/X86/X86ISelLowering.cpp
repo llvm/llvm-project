@@ -39017,7 +39017,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
                              ? KnownBits::mul(K0, K1)
                              : KnownBits::mulhu(K0, K1);
     KnownMul = KnownMul.zext(64);
-    Known = KnownBits::computeForAddSub(true, false, false, KAcc, KnownMul);
+    Known = KnownBits::add(KAcc, KnownMul);
     return;
   }
   }
