@@ -195,6 +195,14 @@ function (add_flangrt_library name)
       # Use same stem name for .a and .so. Common in UNIX environments.
       # Not possible in Windows environments.
       set_target_properties(${tgtname} PROPERTIES OUTPUT_NAME "${name}")
+
+      # Must use minimum optimization level of -O2 to prevent dependency on libstdc++
+      string(REPLACE "-O0" "-O2" CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS)
+      string(REPLACE "-O1" "-O2" CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS)
+      string(FIND "-O" CMAKE_CXX_FLAGS opt_idx)
+      if (opt_idx EQUAL -1)
+        target_compile_options(${tgtname} PRIVATE -O2)
+      endif ()
     endif ()
 
     if (ARG_INSTALL_WITH_TOOLCHAIN)

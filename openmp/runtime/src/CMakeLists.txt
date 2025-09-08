@@ -170,7 +170,7 @@ endif()
 # avoid an unwanted dependency on libstdc++.so.
 add_compile_definitions(_GLIBCXX_NO_ASSERTIONS)
 if(NOT WIN32)
-  add_definitions(-U_GLIBCXX_ASSERTIONS)
+  add_definitions(-U_GLIBCXX_ASSERTIONS -D_GLIBCXX_NO_ASSERTIONS)
 endif()
 
 # Add the OpenMP library
