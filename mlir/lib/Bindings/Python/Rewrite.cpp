@@ -9,9 +9,9 @@
 #include "Rewrite.h"
 
 #include "IRModule.h"
+#include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
 #include "mlir-c/Rewrite.h"
 #include "mlir/Bindings/Python/Nanobind.h"
-#include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
 #include "mlir/Config/mlir-config.h"
 
 namespace nb = nanobind;
@@ -103,8 +103,7 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
        [](MlirModule module, MlirFrozenRewritePatternSet set) {
          auto status = mlirApplyPatternsAndFoldGreedily(module, set, {});
          if (mlirLogicalResultIsFailure(status))
-           // FIXME: Not sure this is the right error to throw here.
-           throw nb::value_error("pattern application failed to converge");
+           throw std::runtime_error("pattern application failed to converge");
        },
        "module"_a, "set"_a,
        "Applys the given patterns to the given module greedily while folding "
@@ -114,8 +113,8 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
           [](MlirOperation op, MlirFrozenRewritePatternSet set) {
             auto status = mlirApplyPatternsAndFoldGreedilyWithOp(op, set, {});
             if (mlirLogicalResultIsFailure(status))
-              // FIXME: Not sure this is the right error to throw here.
-              throw nb::value_error("pattern application failed to converge");
+              throw std::runtime_error(
+                  "pattern application failed to converge");
           },
           "op"_a, "set"_a,
           "Applys the given patterns to the given op greedily while folding "
