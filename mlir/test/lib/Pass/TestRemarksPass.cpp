@@ -15,6 +15,7 @@
 #include "mlir/IR/Remarks.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Support/WalkResult.h"
 
 using namespace mlir;
 
@@ -34,10 +35,11 @@ public:
   void runOnOperation() override {
 
     getOperation()->walk([](Operation *op) {
+      if (isa<ModuleOp>(op))
+        return WalkResult::advance();
       Location loc = op->getLoc();
-      mlir::remark::missed(
-          loc,
-          remark::RemarkOpts::name("test-remark").category("category-1-missed"))
+      mlir::remark::missed(loc, remark::RemarkOpts::name("test-remark")
+                                    .category("a-category-1-missed"))
           << remark::add("This is a test missed remark")
           << remark::reason("because we are testing the remark pipeline")
           << remark::suggest("try using the remark pipeline feature");
@@ -59,6 +61,7 @@ public:
       mlir::remark::analysis(loc, remark::RemarkOpts::name("test-remark")
                                       .category("category-2-analysis"))
           << remark::add("This is a test analysis remark");
+      return WalkResult::advance();
     });
   }
 };

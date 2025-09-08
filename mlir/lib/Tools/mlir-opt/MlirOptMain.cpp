@@ -517,51 +517,39 @@ performActions(raw_ostream &os,
 
   context->enableMultithreading(wasThreadingEnabled);
 
-  // Set up optimization remarks.
-  if (config.shouldEmitRemarks()) {
-    auto combine = [](const std::string &a, const std::string &b) {
-      if (a.empty())
-        return b;
-      if (b.empty())
-        return a;
-      return a + "|" + b;
-    };
+  remark::RemarkCategories cats{
+      config.getRemarksAllFilter(), config.getRemarksPassedFilter(),
+      config.getRemarksMissedFilter(), config.getRemarksAnalyseFilter(),
+      config.getRemarksFailedFilter()};
 
-    remark::RemarkCategories cats{
-        combine(config.getRemarksAllFilter(), config.getRemarksPassedFilter()),
-        combine(config.getRemarksAllFilter(), config.getRemarksMissedFilter()),
-        combine(config.getRemarksAllFilter(), config.getRemarksAnalyseFilter()),
-        combine(config.getRemarksAllFilter(), config.getRemarksFailedFilter())};
+  mlir::MLIRContext &ctx = *context;
 
-    mlir::MLIRContext &ctx = *context;
+  switch (config.getRemarkFormat()) {
+  case REMARK_FORMAT_STDOUT:
+    if (failed(mlir::remark::enableOptimizationRemarks(
+            ctx, nullptr, cats, true /*printAsEmitRemarks*/)))
+      return failure();
+    break;
 
-    switch (config.getRemarkFormat()) {
-    case REMARK_FORMAT_STDOUT:
-      if (failed(mlir::remark::enableOptimizationRemarks(
-              ctx, nullptr, cats, true /*printAsEmitRemarks*/)))
-        return failure();
-      break;
+  case REMARK_FORMAT_YAML: {
+    std::string file = config.getRemarksOutputFile().empty()
+                           ? "mlir-remarks.yaml"
+                           : config.getRemarksOutputFile();
+    if (failed(mlir::remark::enableOptimizationRemarksWithLLVMStreamer(
+            ctx, file, llvm::remarks::Format::YAML, cats)))
+      return failure();
+    break;
+  }
 
-    case REMARK_FORMAT_YAML: {
-      std::string file = config.getRemarksOutputFile().empty()
-                             ? "mlir-remarks.yaml"
-                             : config.getRemarksOutputFile();
-      if (failed(mlir::remark::enableOptimizationRemarksWithLLVMStreamer(
-              ctx, file, llvm::remarks::Format::YAML, cats)))
-        return failure();
-      break;
-    }
-
-    case REMARK_FORMAT_BITSTREAM: {
-      std::string file = config.getRemarksOutputFile().empty()
-                             ? "mlir-remarks.bitstream"
-                             : config.getRemarksOutputFile();
-      if (failed(mlir::remark::enableOptimizationRemarksWithLLVMStreamer(
-              ctx, file, llvm::remarks::Format::Bitstream, cats)))
-        return failure();
-      break;
-    }
-    }
+  case REMARK_FORMAT_BITSTREAM: {
+    std::string file = config.getRemarksOutputFile().empty()
+                           ? "mlir-remarks.bitstream"
+                           : config.getRemarksOutputFile();
+    if (failed(mlir::remark::enableOptimizationRemarksWithLLVMStreamer(
+            ctx, file, llvm::remarks::Format::Bitstream, cats)))
+      return failure();
+    break;
+  }
   }
 
   // Prepare the pass manager, applying command-line and reproducer options.
