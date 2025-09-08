@@ -1500,7 +1500,7 @@ Expected<CodeGenOptLevel> parseExpandFpOptions(StringRef Param) {
   // Parse a CodeGenOptLevel, e.g. "O1", "O2", "O3".
   auto [Prefix, Digit] = Param.split('O');
 
-  int8_t N;
+  uint8_t N;
   if (!Prefix.empty() || Digit.getAsInteger(10, N))
     return createStringError("invalid expand-fp pass parameter '%s'",
                              Param.str().c_str());
