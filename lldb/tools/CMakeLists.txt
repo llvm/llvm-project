@@ -22,6 +22,8 @@ if (LLDB_CAN_USE_LLDB_SERVER)
   add_lldb_tool_subdirectory(lldb-server)
 endif()
 
+add_lldb_tool_subdirectory(yaml2macho-core)
+
 # BEGIN Swift Mods
 if (LLDB_ENABLE_SWIFT_SUPPORT)
   add_subdirectory(repl/swift)
