@@ -516,7 +516,7 @@ the more special forms should not be converted to the more generic ones
 unnecessarily, in the same way that they should not be broken down into
 loops + arithmetic if they can still be represented as a Linalg op.
 
-#### Generic, Category, Named<a name="generic_category_named"></a>
+#### The Linalg Forms
 
 The core Linalg operation tree has three forms:
 * **Generic:** Represented by `linalg.generic` and can encode all perfectly-nested
@@ -528,7 +528,7 @@ _generic_ forms. For example, `linalg.matmul`, `linalg.add`, etc.
 
 Unlike lowering to loops, the different Linalg forms that are derived from
 `linalg.generic` are *equivalent*. It should always be possible to convert
-a named operation into a generic and back to named, if the semantics is
+a named operation into a generic and back to named, if the semantics are
 preserved. The various forms in the Linalg dialect are meant to facilitate
 pattern matching (single operations or DAGs) and to be able to consider
 different forms as *canonical* for different transforms.
