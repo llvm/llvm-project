@@ -9,8 +9,10 @@
 typedef __UINTPTR_TYPE__ uintptr_t;
 
 extern "C" {
-void *malloc(size_t size);
+void *malloc(size_t size) __attribute__((malloc));
 }
+
+void *sink; // prevent optimizations from removing the calls
 
 // CHECK-LABEL: @_Z15test_malloc_intv(
 void *test_malloc_int() {
@@ -22,8 +24,7 @@ void *test_malloc_int() {
 
 // CHECK-LABEL: @_Z15test_malloc_ptrv(
 int **test_malloc_ptr() {
-  // FIXME: This should not be token ID 0!
-  // CHECK: call{{.*}} ptr @__alloc_token_malloc(i64 noundef 8, i64 0)
+  // CHECK: call{{.*}} ptr @__alloc_token_malloc(i64 noundef 8, i64 1)
   int **a = (int **)malloc(sizeof(int*));
   *a = nullptr;
   return a;
@@ -59,50 +60,64 @@ struct ContainsPtr {
 };
 
 // CHECK-LABEL: @_Z27test_malloc_struct_with_ptrv(
-ContainsPtr *test_malloc_struct_with_ptr() {
-  // FIXME: This should not be token ID 0!
-  // CHECK: call{{.*}} ptr @__alloc_token_malloc(i64 noundef 16, i64 0)
-  ContainsPtr *c = (ContainsPtr *)malloc(sizeof(ContainsPtr));
-  return c;
+void *test_malloc_struct_with_ptr() {
+  // CHECK: call{{.*}} ptr @__alloc_token_malloc(i64 noundef 16, i64 1){{.*}} !alloc_token_hint
+  return malloc(sizeof(ContainsPtr));
 }
 
 // CHECK-LABEL: @_Z33test_malloc_struct_array_with_ptrv(
-ContainsPtr *test_malloc_struct_array_with_ptr() {
-  // FIXME: This should not be token ID 0!
-  // CHECK: call{{.*}} ptr @__alloc_token_malloc(i64 noundef 160, i64 0)
-  ContainsPtr *c = (ContainsPtr *)malloc(10 * sizeof(ContainsPtr));
-  return c;
+void *test_malloc_struct_array_with_ptr() {
+  // CHECK: call{{.*}} ptr @__alloc_token_malloc(i64 noundef 160, i64 1){{.*}} !alloc_token_hint
+  return malloc(10 * sizeof(ContainsPtr));
+}
+
+// CHECK-LABEL: @_Z31test_malloc_with_ptr_sizeof_vari(
+void *test_malloc_with_ptr_sizeof_var(int x) {
+  unsigned long size = sizeof(ContainsPtr);
+  size *= x;
+  // CHECK: call{{.*}} ptr @__alloc_token_malloc(i64 noundef %{{.*}}, i64 1){{.*}} !alloc_token_hint
+  return malloc(size);
+}
+
+// CHECK-LABEL: @_Z29test_malloc_with_ptr_castonlyv(
+ContainsPtr *test_malloc_with_ptr_castonly() {
+  // CHECK: call{{.*}} ptr @__alloc_token_malloc(i64 noundef 4096, i64 1){{.*}} !alloc_token_hint
+  return (ContainsPtr *)malloc(4096);
 }
 
 // CHECK-LABEL: @_Z32test_operatornew_struct_with_ptrv(
 ContainsPtr *test_operatornew_struct_with_ptr() {
-  // FIXME: This should not be token ID 0!
-  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 16, i64 0)
+  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 16, i64 1){{.*}} !alloc_token_hint
   ContainsPtr *c = (ContainsPtr *)__builtin_operator_new(sizeof(ContainsPtr));
+  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 16, i64 1){{.*}} !alloc_token_hint
+  sink = ::operator new(sizeof(ContainsPtr));
   return c;
 }
 
 // CHECK-LABEL: @_Z38test_operatornew_struct_array_with_ptrv(
 ContainsPtr *test_operatornew_struct_array_with_ptr() {
-  // FIXME: This should not be token ID 0!
-  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 160, i64 0)
+  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 160, i64 1){{.*}} !alloc_token_hint
   ContainsPtr *c = (ContainsPtr *)__builtin_operator_new(10 * sizeof(ContainsPtr));
+  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 160, i64 1){{.*}} !alloc_token_hint
+  sink = ::operator new(10 * sizeof(ContainsPtr));
   return c;
 }
 
 // CHECK-LABEL: @_Z33test_operatornew_struct_with_ptr2v(
 ContainsPtr *test_operatornew_struct_with_ptr2() {
-  // FIXME: This should not be token ID 0!
-  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 16, i64 0)
+  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 16, i64 1){{.*}} !alloc_token_hint
   ContainsPtr *c = (ContainsPtr *)__builtin_operator_new(sizeof(*c));
+  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 16, i64 1){{.*}} !alloc_token_hint
+  sink = ::operator new(sizeof(*c));
   return c;
 }
 
 // CHECK-LABEL: @_Z39test_operatornew_struct_array_with_ptr2v(
 ContainsPtr *test_operatornew_struct_array_with_ptr2() {
-  // FIXME: This should not be token ID 0!
-  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 160, i64 0)
+  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 160, i64 1){{.*}} !alloc_token_hint
   ContainsPtr *c = (ContainsPtr *)__builtin_operator_new(10 * sizeof(*c));
+  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 160, i64 1){{.*}} !alloc_token_hint
+  sink = ::operator new(10 * sizeof(*c));
   return c;
 }
 
