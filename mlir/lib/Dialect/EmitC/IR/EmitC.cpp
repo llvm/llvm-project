@@ -974,10 +974,10 @@ LogicalResult emitc::YieldOp::verify() {
   Value result = getResult();
   Operation *containingOp = getOperation()->getParentOp();
 
-  if (result && containingOp->getNumResults() != 1 && !isa<DoOp>(containingOp))
+  if (!isa<DoOp>(containingOp) && result && containingOp->getNumResults() != 1)
     return emitOpError() << "yields a value not returned by parent";
 
-  if (!result && containingOp->getNumResults() != 0 && !isa<DoOp>(containingOp))
+  if (!isa<DoOp>(containingOp) && !result && containingOp->getNumResults() != 0)
     return emitOpError() << "does not yield a value to be returned by parent";
 
   return success();
