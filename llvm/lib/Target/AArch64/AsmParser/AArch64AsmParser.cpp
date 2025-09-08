@@ -3886,6 +3886,7 @@ static const struct Extension {
     {"cmh", {AArch64::FeatureCMH}},
     {"lscp", {AArch64::FeatureLSCP}},
     {"tlbid", {AArch64::FeatureTLBID}},
+    {"mpamv2", {AArch64::FeatureMPAMv2}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
@@ -3958,8 +3959,9 @@ void AArch64AsmParser::createSysAlias(uint16_t Encoding, OperandVector &Operands
       AArch64Operand::CreateImm(Expr, S, getLoc(), getContext()));
 }
 
-/// parseSysAlias - The IC, DC, AT, and TLBI instructions are simple aliases for
-/// the SYS instruction. Parse them specially so that we create a SYS MCInst.
+/// parseSysAlias - The IC, DC, AT, TLBI, and MLBI instructions
+/// are simple aliases for the SYS instruction. Parse them specially so that
+/// we create a SYS MCInst.
 bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
                                    OperandVector &Operands) {
   if (Name.contains('.'))
@@ -4021,7 +4023,19 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
       OptionalRegister = TLBI->OptionalReg;
     }
     createSysAlias(TLBI->Encoding, Operands, S);
-  } else if (Mnemonic == "cfp" || Mnemonic == "dvp" || Mnemonic == "cpp" || Mnemonic == "cosp") {
+  } else if (Mnemonic == "mlbi") {
+    const AArch64MLBI::MLBI *MLBI = AArch64MLBI::lookupMLBIByName(Op);
+    if (!MLBI)
+      return TokError("invalid operand for MLBI instruction");
+    else if (!MLBI->haveFeatures(getSTI().getFeatureBits())) {
+      std::string Str("MLBI " + std::string(MLBI->Name) + " requires: ");
+      setRequiredFeatureString(MLBI->getRequiredFeatures(), Str);
+      return TokError(Str);
+    }
+    ExpectRegister = MLBI->NeedsReg;
+    createSysAlias(MLBI->Encoding, Operands, S);
+  } else if (Mnemonic == "cfp" || Mnemonic == "dvp" || Mnemonic == "cpp" ||
+             Mnemonic == "cosp") {
 
     if (Op.lower() != "rctx")
       return TokError("invalid operand for prediction restriction instruction");
@@ -5338,10 +5352,11 @@ bool AArch64AsmParser::parseInstruction(ParseInstructionInfo &Info,
   size_t Start = 0, Next = Name.find('.');
   StringRef Head = Name.slice(Start, Next);
 
-  // IC, DC, AT, TLBI and Prediction invalidation instructions are aliases for
-  // the SYS instruction.
+  // IC, DC, AT, TLBI, MLBI and Prediction invalidation instructions are aliases
+  // for the SYS instruction.
   if (Head == "ic" || Head == "dc" || Head == "at" || Head == "tlbi" ||
-      Head == "cfp" || Head == "dvp" || Head == "cpp" || Head == "cosp")
+      Head == "cfp" || Head == "dvp" || Head == "cpp" || Head == "cosp" ||
+      Head == "mlbi")
     return parseSysAlias(Head, NameLoc, Operands);
 
   // TLBIP instructions are aliases for the SYSP instruction.
