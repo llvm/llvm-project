@@ -1966,15 +1966,23 @@ void CIRGenFunction::emitCXXConstructExpr(const CXXConstructExpr *e,
   // constructor, emit the zero initialization now, unless destination is
   // already zeroed.
   if (e->requiresZeroInitialization() && !dest.isZeroed()) {
-    cgm.errorNYI(e->getSourceRange(),
-                 "emitCXXConstructExpr: requires initialization");
-    return;
+    switch (e->getConstructionKind()) {
+    case CXXConstructionKind::Delegating:
+    case CXXConstructionKind::Complete:
+      emitNullInitialization(getLoc(e->getSourceRange()), dest.getAddress(),
+                             e->getType());
+      break;
+    case CXXConstructionKind::VirtualBase:
+    case CXXConstructionKind::NonVirtualBase:
+      cgm.errorNYI(e->getSourceRange(),
+                   "emitCXXConstructExpr: base requires initialization");
+      break;
+    }
   }
 
-  // If this is a call to a trivial default constructor:
-  // In LLVM: do nothing.
-  // In CIR: emit as a regular call, other later passes should lower the
-  // ctor call into trivial initialization.
+  // If this is a call to a trivial default constructor, do nothing.
+  if (cd->isTrivial() && cd->isDefaultConstructor())
+    return;
 
   // Elide the constructor if we're constructing from a temporary
   if (getLangOpts().ElideConstructors && e->isElidable()) {

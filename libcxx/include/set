@@ -742,18 +742,14 @@ public:
   }
 
   template <class _InputIterator>
-  _LIBCPP_HIDE_FROM_ABI void insert(_InputIterator __f, _InputIterator __l) {
-    for (const_iterator __e = cend(); __f != __l; ++__f)
-      __tree_.__emplace_hint_unique(__e, *__f);
+  _LIBCPP_HIDE_FROM_ABI void insert(_InputIterator __first, _InputIterator __last) {
+    __tree_.__insert_range_unique(__first, __last);
   }
 
 #  if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<value_type> _Range>
   _LIBCPP_HIDE_FROM_ABI void insert_range(_Range&& __range) {
-    const_iterator __end = cend();
-    for (auto&& __element : __range) {
-      __tree_.__emplace_hint_unique(__end, std::forward<decltype(__element)>(__element));
-    }
+    __tree_.__insert_range_unique(ranges::begin(__range), ranges::end(__range));
   }
 #  endif
 

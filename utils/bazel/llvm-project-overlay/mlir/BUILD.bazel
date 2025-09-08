@@ -3892,6 +3892,7 @@ cc_library(
         ":FunctionInterfaces",
         ":IR",
         ":SideEffectInterfaces",
+        ":Support",
         "//llvm:Support",
     ],
 )
@@ -6552,6 +6553,7 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Ptr/IR/PtrOps.td",
     deps = [
+        ":InferTypeOpInterfaceTdFiles",
         ":PtrTdFiles",
     ],
 )
@@ -6584,6 +6586,7 @@ cc_library(
         ":BytecodeOpInterface",
         ":DataLayoutInterfaces",
         ":IR",
+        ":InferTypeOpInterface",
         ":InliningUtils",
         ":PtrAttrsIncGen",
         ":PtrDialectIncGen",
@@ -8871,6 +8874,8 @@ cc_library(
         ":IR",
         ":PtrDialect",
         ":ToLLVMIRTranslation",
+        "//llvm:Core",
+        "//llvm:Support",
     ],
 )
 
