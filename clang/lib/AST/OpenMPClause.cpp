@@ -1023,6 +1023,26 @@ OMPPartialClause *OMPPartialClause::CreateEmpty(const ASTContext &C) {
   return new (C) OMPPartialClause();
 }
 
+OMPLoopRangeClause *
+OMPLoopRangeClause::Create(const ASTContext &C, SourceLocation StartLoc,
+                           SourceLocation LParenLoc, SourceLocation FirstLoc,
+                           SourceLocation CountLoc, SourceLocation EndLoc,
+                           Expr *First, Expr *Count) {
+  OMPLoopRangeClause *Clause = CreateEmpty(C);
+  Clause->setLocStart(StartLoc);
+  Clause->setLParenLoc(LParenLoc);
+  Clause->setFirstLoc(FirstLoc);
+  Clause->setCountLoc(CountLoc);
+  Clause->setLocEnd(EndLoc);
+  Clause->setFirst(First);
+  Clause->setCount(Count);
+  return Clause;
+}
+
+OMPLoopRangeClause *OMPLoopRangeClause::CreateEmpty(const ASTContext &C) {
+  return new (C) OMPLoopRangeClause();
+}
+
 OMPAllocateClause *OMPAllocateClause::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
     Expr *Allocator, Expr *Alignment, SourceLocation ColonLoc,
@@ -1889,6 +1909,21 @@ void OMPClausePrinter::VisitOMPPartialClause(OMPPartialClause *Node) {
     OS << '(';
     Factor->printPretty(OS, nullptr, Policy, 0);
     OS << ')';
+  }
+}
+
+void OMPClausePrinter::VisitOMPLoopRangeClause(OMPLoopRangeClause *Node) {
+  OS << "looprange";
+
+  Expr *First = Node->getFirst();
+  Expr *Count = Node->getCount();
+
+  if (First && Count) {
+    OS << "(";
+    First->printPretty(OS, nullptr, Policy, 0);
+    OS << ",";
+    Count->printPretty(OS, nullptr, Policy, 0);
+    OS << ")";
   }
 }
 

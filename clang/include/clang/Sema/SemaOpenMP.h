@@ -463,6 +463,13 @@ public:
                                              Stmt *AStmt,
                                              SourceLocation StartLoc,
                                              SourceLocation EndLoc);
+
+  /// Called on well-formed '#pragma omp fuse' after parsing of its
+  /// clauses and the associated statement.
+  StmtResult ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
+                                      Stmt *AStmt, SourceLocation StartLoc,
+                                      SourceLocation EndLoc);
+
   /// Called on well-formed '\#pragma omp for' after parsing
   /// of the associated statement.
   StmtResult
@@ -921,6 +928,12 @@ public:
                                        SourceLocation StartLoc,
                                        SourceLocation LParenLoc,
                                        SourceLocation EndLoc);
+
+  /// Called on well-form 'looprange' clause after parsing its arguments.
+  OMPClause *
+  ActOnOpenMPLoopRangeClause(Expr *First, Expr *Count, SourceLocation StartLoc,
+                             SourceLocation LParenLoc, SourceLocation FirstLoc,
+                             SourceLocation CountLoc, SourceLocation EndLoc);
   /// Called on well-formed 'ordered' clause.
   OMPClause *
   ActOnOpenMPOrderedClause(SourceLocation StartLoc, SourceLocation EndLoc,
@@ -1485,7 +1498,83 @@ private:
   bool checkTransformableLoopNest(
       OpenMPDirectiveKind Kind, Stmt *AStmt, int NumLoops,
       SmallVectorImpl<OMPLoopBasedDirective::HelperExprs> &LoopHelpers,
-      Stmt *&Body, SmallVectorImpl<SmallVector<Stmt *, 0>> &OriginalInits);
+      Stmt *&Body, SmallVectorImpl<SmallVector<Stmt *>> &OriginalInits);
+
+  /// Categories of loops encountered during semantic OpenMP loop
+  /// analysis.
+  ///
+  /// This enumeration identifies the structural category of a loop or sequence
+  /// of loops analyzed in the context of OpenMP transformations and directives.
+  /// This categorization helps differentiate between original source loops
+  /// and the structures resulting from applying OpenMP loop transformations.
+  enum class OMPLoopCategory {
+    /// @var OMPLoopCategory::RegularLoop
+    /// Represents a standard canonical loop nest found in the
+    /// original source code or an intact loop after transformations
+    /// (i.e Post/Pre loops of a loopranged fusion).
+    RegularLoop,
+
+    /// @var OMPLoopCategory::TransformSingleLoop
+    /// Represents the resulting loop structure when an OpenMP loop
+    /// transformation, generates a single, top-level loop.
+    TransformSingleLoop,
+  };
+
+  /// Holds the result of the analysis of a (possibly canonical) loop.
+  struct LoopAnalysis {
+    /// Category of the analyzed loop.
+    OMPLoopCategory Category;
+    /// Loop analyses results.
+    OMPLoopBasedDirective::HelperExprs HelperExprs;
+    /// The for-statement of the loop.
+    Stmt *ForStmt;
+    /// Initialization statements before transformations.
+    SmallVector<Stmt *> OriginalInits;
+    /// Initialization statements required after transformation of this loop.
+    SmallVector<Stmt *> TransformsPreInits;
+
+    explicit LoopAnalysis(OMPLoopCategory Category) : Category(Category) {}
+  };
+
+  /// Holds the result of the analysis of a (possibly canonical) loop sequence.
+  struct LoopSequenceAnalysis {
+    /// Number of top level canonical loops.
+    unsigned LoopSeqSize = 0;
+    /// For each loop results of the analysis.
+    SmallVector<LoopAnalysis, 2> Loops;
+    /// Additional code required before entering the transformed loop sequence.
+    SmallVector<Stmt *> LoopSequencePreInits;
+  };
+
+  /// The main recursive process of `checkTransformableLoopSequence` that
+  /// performs grammatical parsing of a canonical loop sequence. It extracts
+  /// key information, such as the number of top-level loops, loop statements,
+  /// helper expressions, and other relevant loop-related data, all in a single
+  /// execution to avoid redundant traversals. This analysis flattens inner
+  /// Loop Sequences
+  ///
+  /// \param LoopSeqStmt    The AST of the original statement.
+  /// \param SeqAnalysis    [out] Result of the analysis of \p LoopSeqStmt
+  /// \param Context
+  /// \param Kind           The loop transformation directive kind.
+  /// \return Whether the original statement is both syntactically and
+  /// semantically correct according to OpenMP 6.0 canonical loop
+  /// sequence definition.
+  bool analyzeLoopSequence(Stmt *LoopSeqStmt, LoopSequenceAnalysis &SeqAnalysis,
+                           ASTContext &Context, OpenMPDirectiveKind Kind);
+
+  /// Validates and checks whether a loop sequence can be transformed according
+  /// to the given directive, providing necessary setup and initialization
+  /// (Driver function) before recursion using `analyzeLoopSequence`.
+  ///
+  /// \param Kind           The loop transformation directive kind.
+  /// \param AStmt          The AST of the original statement
+  /// \param SeqAnalysis    [out] Result of the analysis of \p LoopSeqStmt
+  /// \param Context
+  /// \return Whether there was an absence of errors or not
+  bool checkTransformableLoopSequence(OpenMPDirectiveKind Kind, Stmt *AStmt,
+                                      LoopSequenceAnalysis &SeqAnalysis,
+                                      ASTContext &Context);
 
   /// Helper to keep information about the current `omp begin/end declare
   /// variant` nesting.
