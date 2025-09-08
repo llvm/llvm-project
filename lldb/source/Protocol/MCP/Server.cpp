@@ -7,23 +7,87 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Protocol/MCP/Server.h"
+#include "lldb/Host/File.h"
+#include "lldb/Host/FileSystem.h"
+#include "lldb/Host/HostInfo.h"
+#include "lldb/Host/JSONTransport.h"
 #include "lldb/Protocol/MCP/MCPError.h"
 #include "lldb/Protocol/MCP/Protocol.h"
 #include "llvm/Support/JSON.h"
 
-using namespace lldb_protocol::mcp;
 using namespace llvm;
+using namespace lldb_private;
+using namespace lldb_protocol::mcp;
 
-llvm::json::Value lldb_protocol::mcp::toJSON(const ServerInfo &SM) {
-  return llvm::json::Object{{"connection_uri", SM.connection_uri},
-                            {"pid", SM.pid}};
+json::Value lldb_protocol::mcp::toJSON(const ServerInfo &SM) {
+  return json::Object{{"connection_uri", SM.connection_uri}, {"pid", SM.pid}};
 }
 
-bool lldb_protocol::mcp::fromJSON(const llvm::json::Value &V, ServerInfo &SM,
-                                  llvm::json::Path P) {
-  llvm::json::ObjectMapper O(V, P);
+bool lldb_protocol::mcp::fromJSON(const json::Value &V, ServerInfo &SM,
+                                  json::Path P) {
+  json::ObjectMapper O(V, P);
   return O && O.map("connection_uri", SM.connection_uri) &&
          O.map("pid", SM.pid);
+}
+
+llvm::Error ServerInfo::Write(const ServerInfo &info) {
+  std::string buf = formatv("{0}", toJSON(info)).str();
+  size_t num_bytes = buf.size();
+
+  FileSpec user_lldb_dir = HostInfo::GetUserLLDBDir();
+
+  Status error(llvm::sys::fs::create_directory(user_lldb_dir.GetPath()));
+  if (error.Fail())
+    return error.takeError();
+
+  FileSpec mcp_registry_entry_path = user_lldb_dir.CopyByAppendingPathComponent(
+      formatv("lldb-mcp-{0}.json", getpid()).str());
+
+  const File::OpenOptions flags = File::eOpenOptionWriteOnly |
+                                  File::eOpenOptionCanCreate |
+                                  File::eOpenOptionTruncate;
+  llvm::Expected<lldb::FileUP> file = FileSystem::Instance().Open(
+      mcp_registry_entry_path, flags, lldb::eFilePermissionsFileDefault, false);
+  if (!file)
+    return file.takeError();
+  if (llvm::Error error = (*file)->Write(buf.data(), num_bytes).takeError())
+    return error;
+  return llvm::Error::success();
+}
+
+llvm::Expected<std::vector<ServerInfo>> ServerInfo::Load() {
+  FileSpec user_lldb_dir = HostInfo::GetUserLLDBDir();
+  namespace path = llvm::sys::path;
+  FileSystem &fs = FileSystem::Instance();
+  std::error_code EC;
+  llvm::vfs::directory_iterator it = fs.DirBegin(user_lldb_dir, EC);
+  llvm::vfs::directory_iterator end;
+  std::vector<ServerInfo> infos;
+  for (; it != end && !EC; it.increment(EC)) {
+    auto &entry = *it;
+    auto name = path::filename(entry.path());
+    if (!name.starts_with("lldb-mcp-") || !name.ends_with(".json")) {
+      continue;
+    }
+
+    llvm::Expected<std::unique_ptr<File>> file =
+        fs.Open(FileSpec(entry.path()), File::eOpenOptionReadOnly);
+    if (!file)
+      return file.takeError();
+
+    char buf[1024] = {0};
+    size_t bytes_read = sizeof(buf);
+    if (llvm::Error error = (*file)->Read(buf, bytes_read).takeError())
+      return std::move(error);
+
+    auto info = json::parse<ServerInfo>(StringRef(buf, bytes_read));
+    if (!info)
+      return info.takeError();
+
+    infos.emplace_back(std::move(*info));
+  }
+
+  return infos;
 }
 
 Server::Server(std::string name, std::string version,

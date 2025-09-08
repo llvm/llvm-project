@@ -30,6 +30,11 @@ namespace lldb_protocol::mcp {
 struct ServerInfo {
   std::string connection_uri;
   lldb::pid_t pid;
+
+  /// Writes the server info into a unique file in `~/.lldb`.
+  static llvm::Error Write(const ServerInfo &);
+  /// Loads any server info saved in `~/.lldb`.
+  static llvm::Expected<std::vector<ServerInfo>> Load();
 };
 llvm::json::Value toJSON(const ServerInfo &);
 bool fromJSON(const llvm::json::Value &, ServerInfo &, llvm::json::Path);
