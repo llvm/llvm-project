@@ -58,6 +58,14 @@ namespace {
 //===----------------------------------------------------------------------===//
 // SIMT Distribution Patterns
 //===----------------------------------------------------------------------===//
+
+/// In certain cases, we may need to favor XeGPU specific distribution patterns
+/// over generic vector distribution patterns. In such cases, we can assign
+/// priorities to patterns.
+enum class PatternPriority : int { Regular = 1, High = 2 };
+
+/// Helper function to compute the effective lane layout from a
+/// DistributeLayoutAttr which can be either a LayoutAttr or a SliceAttr.
 static SmallVector<int64_t>
 computeEffectiveLaneLayout(const xegpu::DistributeLayoutAttr layout) {
   SmallVector<int64_t> effectiveLaneLayout;
@@ -1034,6 +1042,8 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
   }
 };
 
+/// Distribute a `vector.shape_cast` op feeding into yield op of an enclosing
+/// `gpu.warp_execute_on_lane_0` region.
 struct VectorShapeCastDistribution : public gpu::WarpDistributionPattern {
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
@@ -1098,7 +1108,7 @@ void xegpu::populateXeGPUSubgroupDistributePatterns(
            GpuBarrierDistribution, VectorMultiReductionDistribution>(
           patterns.getContext());
   patterns.add<VectorShapeCastDistribution>(patterns.getContext(),
-                                            /*benefit=*/2);
+                                            /*benefit=*/PatternPriority::High);
 }
 
 void XeGPUSubgroupDistributePass::runOnOperation() {
