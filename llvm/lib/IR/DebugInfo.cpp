@@ -375,6 +375,32 @@ bool DebugInfoFinder::addScope(DIScope *Scope) {
   return true;
 }
 
+// Recursively handle DILocations in followup metadata etc.
+static Metadata *updateLoopMetadataDebugLocationsRecursive(
+    Metadata *MetadataIn, function_ref<Metadata *(Metadata *)> Updater) {
+  const MDNode *M = dyn_cast_or_null<MDNode>(MetadataIn);
+  // The loop metadata options should start with a MDString.
+  if (!M || M->getNumOperands() < 1 || !isa<MDString>(M->getOperand(0)))
+    return nullptr;
+
+  bool Updated = false;
+  SmallVector<Metadata *, 4> MDs {M->getOperand(0)};
+  for (Metadata *MD : llvm::drop_begin(M->operands())) {
+    if (!MD) {
+      MDs.push_back(nullptr);
+    } else if (Metadata *NewMD = updateLoopMetadataDebugLocationsRecursive(
+                   MD, Updater)) {
+      MDs.push_back(NewMD);
+      Updated = true;
+    } else if (Metadata *NewMD = Updater(MD)) {
+      MDs.push_back(NewMD);
+      Updated |= NewMD != MD;
+    }
+  }
+
+  return Updated ? MDNode::get(M->getContext(), MDs) : nullptr;
+}
+
 static MDNode *updateLoopMetadataDebugLocationsImpl(
     MDNode *OrigLoopID, function_ref<Metadata *(Metadata *)> Updater) {
   assert(OrigLoopID && OrigLoopID->getNumOperands() > 0 &&
@@ -385,10 +411,12 @@ static MDNode *updateLoopMetadataDebugLocationsImpl(
   // Save space for the self-referential LoopID.
   SmallVector<Metadata *, 4> MDs = {nullptr};
 
-  for (unsigned i = 1; i < OrigLoopID->getNumOperands(); ++i) {
-    Metadata *MD = OrigLoopID->getOperand(i);
+  for (Metadata *MD : llvm::drop_begin(OrigLoopID->operands())) {
     if (!MD)
       MDs.push_back(nullptr);
+    else if (Metadata *NewMD = updateLoopMetadataDebugLocationsRecursive(
+                 MD, Updater))
+      MDs.push_back(NewMD);
     else if (Metadata *NewMD = Updater(MD))
       MDs.push_back(NewMD);
   }
