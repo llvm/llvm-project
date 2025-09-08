@@ -202,7 +202,7 @@ void IncludeModernizePPCallbacks::InclusionDirective(
       It != CStyledHeaderToCxx.end()) {
     IncludesToBeProcessed.emplace_back(IncludeMarker{
         It->second, FileName, FilenameRange.getAsRange(), DiagLoc});
-  } else if (DeleteHeaders.count(FileName) != 0) {
+  } else if (DeleteHeaders.contains(FileName)) {
     IncludesToBeProcessed.emplace_back(
         // NOLINTNEXTLINE(modernize-use-emplace) - false-positive
         IncludeMarker{std::string{}, FileName,

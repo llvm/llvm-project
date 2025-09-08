@@ -126,7 +126,7 @@ void UpgradeDurationConversionsCheck::check(
 
   if (!match(isInTemplateInstantiation(), *OuterExpr, *Result.Context)
            .empty()) {
-    if (MatchedTemplateLocations.count(Loc) == 0) {
+    if (!MatchedTemplateLocations.contains(Loc)) {
       // For each location matched in a template instantiation, we check if the
       // location can also be found in `MatchedTemplateLocations`. If it is not
       // found, that means the expression did not create a match without the

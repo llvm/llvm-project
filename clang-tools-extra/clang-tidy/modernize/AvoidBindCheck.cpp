@@ -585,7 +585,7 @@ static bool emitCapture(llvm::StringSet<> &CaptureSet, StringRef Delimiter,
     return false;
 
   // This capture has already been emitted.
-  if (CaptureSet.count(Identifier) != 0)
+  if (CaptureSet.contains(Identifier))
     return false;
 
   Stream << Delimiter;

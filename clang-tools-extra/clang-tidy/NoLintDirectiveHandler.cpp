@@ -349,7 +349,7 @@ bool NoLintDirectiveHandler::Impl::diagHasNoLint(
     return false;
 
   // Do we have cached NOLINT block locations for this file?
-  if (Cache.count(*FileName) == 0)
+  if (!Cache.contains(*FileName))
     // Warning: heavy operation - need to read entire file.
     generateCache(SrcMgr, *FileName, File, *Buffer, NoLintErrors);
 
