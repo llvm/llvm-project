@@ -2247,8 +2247,8 @@ _mm_adds_epu16(__m128i __a, __m128i __b) {
 ///    A 128-bit unsigned [16 x i8] vector.
 /// \returns A 128-bit unsigned [16 x i8] vector containing the rounded
 ///    averages of both parameters.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_avg_epu8(__m128i __a,
-                                                          __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_avg_epu8(__m128i __a, __m128i __b) {
   return (__m128i)__builtin_ia32_pavgb128((__v16qi)__a, (__v16qi)__b);
 }
 
@@ -2266,8 +2266,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_avg_epu8(__m128i __a,
 ///    A 128-bit unsigned [8 x i16] vector.
 /// \returns A 128-bit unsigned [8 x i16] vector containing the rounded
 ///    averages of both parameters.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_avg_epu16(__m128i __a,
-                                                           __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_avg_epu16(__m128i __a, __m128i __b) {
   return (__m128i)__builtin_ia32_pavgw128((__v8hi)__a, (__v8hi)__b);
 }
 
