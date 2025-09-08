@@ -67,6 +67,10 @@ class AsanTestReportDataCase(TestBase):
             lldb.eStopReasonInstrumentation,
         )
 
+        # Make sure we're not stopped in the sanitizer library but instead at the
+        # point of failure in the user-code.
+        self.assertEqual(self.frame().GetFunctionName(), "main")
+
         self.expect(
             "bt",
             "The backtrace should show the crashing line",
