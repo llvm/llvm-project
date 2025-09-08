@@ -78,10 +78,10 @@ def testCustomPass():
 
         # CHECK: hello from pass 1!!!
         # CHECK-LABEL: Dump After custom_pass_1
-        pm.add_python_pass(custom_pass_1)
+        pm.add(custom_pass_1)
         # CHECK-LABEL: Dump After CustomPass2
         # CHECK: arith.muli
-        pm.add_python_pass(custom_pass_2, "CustomPass2")
+        pm.add(custom_pass_2, "CustomPass2")
         # CHECK-LABEL: Dump After ArithToLLVMConversionPass
         # CHECK: llvm.mul
         pm.add("convert-arith-to-llvm")

@@ -160,7 +160,7 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
           "Add textual pipeline elements to the pass manager. Throws a "
           "ValueError if the pipeline can't be parsed.")
       .def(
-          "add_python_pass",
+          "add",
           [](PyPassManager &passManager, const nb::callable &run,
              std::optional<std::string> &name, const std::string &argument,
              const std::string &description, const std::string &opName) {
