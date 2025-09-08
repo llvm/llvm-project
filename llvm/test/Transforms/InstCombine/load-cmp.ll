@@ -459,3 +459,98 @@ define i1 @load_size_larger_stride(i32 %idx) {
   %cmp = icmp eq i16 %load, 0
   ret i1 %cmp
 }
+
+@CG_MESSY = constant [9 x i32] [i32 1, i32 7, i32 -1, i32 5, i32 4, i32 1, i32 1, i32 5, i32 4]
+
+define i1 @cmp_load_constant_array_messy(i32 %x){
+; CHECK-LABEL: @cmp_load_constant_array_messy(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0:%.*]], 1073741823
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i32 1, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 373
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    ret i1 [[COND]]
+;
+
+entry:
+  %isOK_ptr = getelementptr i32, ptr @CG_MESSY, i32 %x
+  %isOK = load i32, ptr %isOK_ptr
+  %cond = icmp slt i32 %isOK, 5
+  ret i1 %cond
+}
+
+define i1 @cmp_diff_load_constant_array_messy0(i32 %x){
+; CHECK-LABEL: @cmp_diff_load_constant_array_messy0(
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1:%.*]], 1073741823
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i32 1, [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], 373
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[TMP4]], 0
+; CHECK-NEXT:    ret i1 [[COND]]
+;
+  %isOK_ptr = getelementptr i32, ptr @CG_MESSY, i32 %x
+  %isOK = load i16, ptr %isOK_ptr
+  %cond = icmp slt i16 %isOK, 5
+  ret i1 %cond
+}
+
+; Load size larger than store size currently not supported.
+define i1 @cmp_diff_load_constant_array_messy1(i32 %x){
+; CHECK-LABEL: @cmp_diff_load_constant_array_messy1(
+; CHECK-NEXT:    [[ISOK_PTR:%.*]] = getelementptr i6, ptr @CG_MESSY, i32 [[TMP1:%.*]]
+; CHECK-NEXT:    [[ISOK:%.*]] = load i16, ptr [[ISOK_PTR]], align 2
+; CHECK-NEXT:    [[COND:%.*]] = icmp slt i16 [[ISOK]], 5
+; CHECK-NEXT:    ret i1 [[COND]]
+;
+  %isOK_ptr = getelementptr i6, ptr @CG_MESSY, i32 %x
+  %isOK = load i16, ptr %isOK_ptr
+  %cond = icmp slt i16 %isOK, 5
+  ret i1 %cond
+}
+
+define i1 @cmp_load_constant_array_variable_icmp(i32 %x, i32 %y) {
+; CHECK-LABEL: @cmp_load_constant_array_variable_icmp(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ISOK_PTR:%.*]] = getelementptr inbounds i32, ptr @CG_MESSY, i32 [[X:%.*]]
+; CHECK-NEXT:    [[ISOK:%.*]] = load i32, ptr [[ISOK_PTR]], align 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[ISOK]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[COND]]
+;
+entry:
+  %isOK_ptr = getelementptr inbounds i32, ptr @CG_MESSY, i32 %x
+  %isOK = load i32, ptr %isOK_ptr
+  %cond = icmp ult i32 %isOK, %y
+  ret i1 %cond
+}
+
+@CG_CLEAR = constant [10 x i32] [i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9]
+
+; Offsets not supported if negative or larger than stride.
+define i1 @cmp_load_constant_additional_positive_offset(i32 %x) {
+; CHECK-LABEL: @cmp_load_constant_additional_positive_offset(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ISOK_PTR:%.*]] = getelementptr inbounds [1 x i32], ptr @CG_CLEAR, i32 5, i32 [[X:%.*]]
+; CHECK-NEXT:    [[ISOK:%.*]] = load i32, ptr [[ISOK_PTR]], align 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[ISOK]], 5
+; CHECK-NEXT:    ret i1 [[COND]]
+;
+entry:
+  %isOK_ptr = getelementptr inbounds [1 x i32], ptr @CG_CLEAR, i32 5, i32 %x
+  %isOK = load i32, ptr %isOK_ptr
+  %cond = icmp ult i32 %isOK, 5
+  ret i1 %cond
+}
+
+define i1 @cmp_load_constant_additional_negative_offset(i32 %x) {
+; CHECK-LABEL: @cmp_load_constant_additional_negative_offset(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ISOK_PTR:%.*]] = getelementptr inbounds [1 x i32], ptr @CG_CLEAR, i32 [[X:%.*]], i32 -5
+; CHECK-NEXT:    [[ISOK:%.*]] = load i32, ptr [[ISOK_PTR]], align 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[ISOK]], 5
+; CHECK-NEXT:    ret i1 [[COND]]
+;
+entry:
+  %isOK_ptr = getelementptr inbounds [1 x i32], ptr @CG_CLEAR, i32 %x, i32 -5
+  %isOK = load i32, ptr %isOK_ptr
+  %cond = icmp ult i32 %isOK, 5
+  ret i1 %cond
+}
