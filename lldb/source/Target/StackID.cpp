@@ -63,16 +63,7 @@ bool lldb_private::operator==(const StackID &lhs, const StackID &rhs) {
 }
 
 bool lldb_private::operator!=(const StackID &lhs, const StackID &rhs) {
-  if (lhs.GetCallFrameAddress() != rhs.GetCallFrameAddress())
-    return true;
-
-  SymbolContextScope *lhs_scope = lhs.GetSymbolContextScope();
-  SymbolContextScope *rhs_scope = rhs.GetSymbolContextScope();
-
-  if (lhs_scope == nullptr && rhs_scope == nullptr)
-    return lhs.GetPC() != rhs.GetPC();
-
-  return lhs_scope != rhs_scope;
+  return !(lhs == rhs);
 }
 
 bool lldb_private::operator<(const StackID &lhs, const StackID &rhs) {
