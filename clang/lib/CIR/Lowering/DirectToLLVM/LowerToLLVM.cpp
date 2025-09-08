@@ -1054,11 +1054,11 @@ mlir::LogicalResult CIRToLLVMAllocaOpLowering::matchAndRewrite(
     cir::AllocaOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Value size =
-      op.isDynamic() ? adaptor.getDynAllocSize()
-                     : rewriter.create<mlir::LLVM::ConstantOp>(
-                           op.getLoc(),
-                           typeConverter->convertType(rewriter.getIndexType()),
-                           rewriter.getIntegerAttr(rewriter.getIndexType(), 1));
+      op.isDynamic()
+          ? adaptor.getDynAllocSize()
+          : rewriter.create<mlir::LLVM::ConstantOp>(
+                op.getLoc(),
+                typeConverter->convertType(rewriter.getIndexType()), 1);
   mlir::Type elementTy =
       convertTypeForMemory(*getTypeConverter(), dataLayout, op.getAllocaType());
   mlir::Type resultTy =

@@ -157,9 +157,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value size = emitScalarExpr(e->getArg(0));
 
     // The alignment of the alloca should correspond to __BIGGEST_ALIGNMENT__.
-    const TargetInfo &TI = getContext().getTargetInfo();
-    const CharUnits SuitableAlignmentInBytes =
-        getContext().toCharUnitsFromBits(TI.getSuitableAlign());
+    const TargetInfo &ti = getContext().getTargetInfo();
+    const CharUnits suitableAlignmentInBytes =
+        getContext().toCharUnitsFromBits(ti.getSuitableAlign());
 
     // Emit the alloca op with type `u8 *` to match the semantics of
     // `llvm.alloca`. We later bitcast the type to `void *` to match the
@@ -167,9 +167,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     // FIXME(cir): It may make sense to allow AllocaOp of type `u8` to return a
     // pointer of type `void *`. This will require a change to the allocaOp
     // verifier.
-    auto allocaAddr = builder.createAlloca(
+    mlir::Value allocaAddr = builder.createAlloca(
         getLoc(e->getSourceRange()), builder.getUInt8PtrTy(),
-        builder.getUInt8Ty(), "bi_alloca", SuitableAlignmentInBytes, size);
+        builder.getUInt8Ty(), "bi_alloca", suitableAlignmentInBytes, size);
 
     // Initialize the allocated buffer if required.
     if (builtinID != Builtin::BI__builtin_alloca_uninitialized) {
