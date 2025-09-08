@@ -1,5 +1,5 @@
 add_llvm_component_library(LLVMDTLTO
-  Dtlto.cpp
+  DTLTO.cpp
 
   LINK_COMPONENTS
   Core

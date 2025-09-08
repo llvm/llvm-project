@@ -735,7 +735,7 @@ static void writeToResolutionFile(raw_ostream &OS, InputFile *Input,
 
 Error LTO::add(std::unique_ptr<InputFile> InputPtr,
                ArrayRef<SymbolResolution> Res) {
-  llvm::TimeTraceScope timeScope("LTO add input", Input->getName());
+  llvm::TimeTraceScope timeScope("LTO add input", InputPtr->getName());
   assert(!CalledGetMaxTasks);
 
   Expected<InputFile *> InputOrErr = dtlto::addInput(this, std::move(InputPtr));
