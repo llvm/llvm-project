@@ -9015,9 +9015,11 @@ static void checkAddrSpaceIsValidForLibcall(const TargetLowering *TLI,
 static bool isInTailCallPositionWrapper(const CallInst *CI,
                                         const SelectionDAG *SelDAG,
                                         bool AllowReturnsFirstArg) {
-
-  return CI && CI->isTailCall() &&
-         isInTailCallPosition(*CI, SelDAG->getTarget(),
+  if (!CI || !CI->isTailCall())
+    return false;
+  // TODO: Fix "returns-first-arg" determination so it doesn't depend on which
+  // helper symbol we lower to.
+  return isInTailCallPosition(*CI, SelDAG->getTarget(),
                               AllowReturnsFirstArg &&
                                   funcReturnsFirstArgOfCall(*CI));
 }
