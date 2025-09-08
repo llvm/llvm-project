@@ -21,6 +21,7 @@
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Utils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Path.h"
@@ -246,15 +247,13 @@ DenseMap<const InputSection *, int> CallGraphSort::run() {
 }
 
 std::optional<int>
-macho::PriorityBuilder::getSymbolPriority(const Defined *sym) {
-  if (sym->isAbsolute())
-    return std::nullopt;
+macho::PriorityBuilder::getSymbolOrCStringPriority(const StringRef key,
+                                                   InputFile *f) {
 
-  auto it = priorities.find(sym->getName());
+  auto it = priorities.find(key);
   if (it == priorities.end())
     return std::nullopt;
   const SymbolPriorityEntry &entry = it->second;
-  const InputFile *f = sym->isec()->getFile();
   if (!f)
     return entry.anyObjectFile;
   // We don't use toString(InputFile *) here because it returns the full path
@@ -266,6 +265,14 @@ macho::PriorityBuilder::getSymbolPriority(const Defined *sym) {
     filename = saver().save(path::filename(f->archiveName) + "(" +
                             path::filename(f->getName()) + ")");
   return std::min(entry.objectFiles.lookup(filename), entry.anyObjectFile);
+}
+
+std::optional<int>
+macho::PriorityBuilder::getSymbolPriority(const Defined *sym) {
+  if (sym->isAbsolute())
+    return std::nullopt;
+  return getSymbolOrCStringPriority(utils::getRootSymbol(sym->getName()),
+                                    sym->isec()->getFile());
 }
 
 void macho::PriorityBuilder::extractCallGraphProfile() {
@@ -300,7 +307,7 @@ void macho::PriorityBuilder::parseOrderFile(StringRef path) {
   int prio = std::numeric_limits<int>::min();
   MemoryBufferRef mbref = *buffer;
   for (StringRef line : args::getLines(mbref)) {
-    StringRef objectFile, symbol;
+    StringRef objectFile, symbolOrCStrHash;
     line = line.take_until([](char c) { return c == '#'; }); // ignore comments
     line = line.ltrim();
 
@@ -315,7 +322,6 @@ void macho::PriorityBuilder::parseOrderFile(StringRef path) {
 
     if (cpuType != CPU_TYPE_ANY && cpuType != target->cpuType)
       continue;
-
     // Drop the CPU type as well as the colon
     if (cpuType != CPU_TYPE_ANY)
       line = line.drop_until([](char c) { return c == ':'; }).drop_front();
@@ -330,10 +336,20 @@ void macho::PriorityBuilder::parseOrderFile(StringRef path) {
         break;
       }
     }
-    symbol = line.trim();
 
-    if (!symbol.empty()) {
-      SymbolPriorityEntry &entry = priorities[symbol];
+    // The rest of the line is either <symbol name> or
+    // CStringEntryPrefix<cstring hash>
+    line = line.trim();
+    if (line.starts_with(CStringEntryPrefix)) {
+      StringRef possibleHash = line.drop_front(CStringEntryPrefix.size());
+      uint32_t hash = 0;
+      if (to_integer(possibleHash, hash))
+        symbolOrCStrHash = possibleHash;
+    } else
+      symbolOrCStrHash = utils::getRootSymbol(line);
+
+    if (!symbolOrCStrHash.empty()) {
+      SymbolPriorityEntry &entry = priorities[symbolOrCStrHash];
       if (!objectFile.empty())
         entry.objectFiles.insert(std::make_pair(objectFile, prio));
       else
@@ -387,4 +403,42 @@ macho::PriorityBuilder::buildInputSectionPriorities() {
   }
 
   return sectionPriorities;
+}
+
+std::vector<StringPiecePair> macho::PriorityBuilder::buildCStringPriorities(
+    ArrayRef<CStringInputSection *> inputs) {
+  // Split the input strings into hold and cold sets.
+  // Order hot set based on -order_file_cstring for performance improvement;
+  // TODO: Order cold set of cstrings for compression via BP.
+  std::vector<std::pair<int, StringPiecePair>>
+      hotStringPrioritiesAndStringPieces;
+  std::vector<StringPiecePair> coldStringPieces;
+  std::vector<StringPiecePair> orderedStringPieces;
+
+  for (CStringInputSection *isec : inputs) {
+    for (const auto &[stringPieceIdx, piece] : llvm::enumerate(isec->pieces)) {
+      if (!piece.live)
+        continue;
+
+      std::optional<int> priority = getSymbolOrCStringPriority(
+          std::to_string(piece.hash), isec->getFile());
+      if (!priority)
+        coldStringPieces.emplace_back(isec, stringPieceIdx);
+      else
+        hotStringPrioritiesAndStringPieces.emplace_back(
+            *priority, std::make_pair(isec, stringPieceIdx));
+    }
+  }
+
+  // Order hot set for perf
+  llvm::stable_sort(hotStringPrioritiesAndStringPieces);
+  for (auto &[priority, stringPiecePair] : hotStringPrioritiesAndStringPieces)
+    orderedStringPieces.push_back(stringPiecePair);
+
+  // TODO: Order cold set for compression
+
+  orderedStringPieces.insert(orderedStringPieces.end(),
+                             coldStringPieces.begin(), coldStringPieces.end());
+
+  return orderedStringPieces;
 }

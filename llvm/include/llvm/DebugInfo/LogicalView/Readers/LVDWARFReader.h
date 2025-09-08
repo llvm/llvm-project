@@ -39,21 +39,12 @@ class LVDWARFReader final : public LVBinaryReader {
   LVAddress CUBaseAddress = 0;
   LVAddress CUHighAddress = 0;
 
-  // Current elements during the processing of a DIE.
-  LVElement *CurrentElement = nullptr;
-  LVScope *CurrentScope = nullptr;
-  LVSymbol *CurrentSymbol = nullptr;
-  LVType *CurrentType = nullptr;
-  LVOffset CurrentOffset = 0;
   LVOffset CurrentEndOffset = 0;
 
   // In DWARF v4, the files are 1-indexed.
   // In DWARF v5, the files are 0-indexed.
   // The DWARF reader expects the indexes as 1-indexed.
   bool IncrementFileIndex = false;
-
-  // Address ranges collected for current DIE.
-  std::vector<LVAddressRange> CurrentRanges;
 
   // Symbols with locations for current compile unit.
   LVSymbols SymbolsWithLocations;
@@ -66,6 +57,9 @@ class LVDWARFReader final : public LVBinaryReader {
   LVAddress CurrentHighPC = 0;
   bool FoundLowPC = false;
   bool FoundHighPC = false;
+
+  // The value is updated for each Compile Unit that is processed.
+  std::optional<LVAddress> TombstoneAddress;
 
   // Cross references (Elements).
   using LVElementSet = std::unordered_set<LVElement *>;
@@ -82,7 +76,6 @@ class LVDWARFReader final : public LVBinaryReader {
 
   void mapRangeAddress(const object::ObjectFile &Obj) override;
 
-  LVElement *createElement(dwarf::Tag Tag);
   void traverseDieAndChildren(DWARFDie &DIE, LVScope *Parent,
                               DWARFDie &SkeletonDie);
   // Process the attributes for the given DIE.
@@ -102,11 +95,7 @@ class LVDWARFReader final : public LVBinaryReader {
   }
 
   // Remove offset from global map.
-  void removeGlobalOffset(LVOffset Offset) {
-    LVOffsetElementMap::iterator Iter = GlobalOffsets.find(Offset);
-    if (Iter != GlobalOffsets.end())
-      GlobalOffsets.erase(Iter);
-  }
+  void removeGlobalOffset(LVOffset Offset) { GlobalOffsets.erase(Offset); }
 
   // Get the location information for DW_AT_data_member_location.
   void processLocationMember(dwarf::Attribute Attr,
@@ -140,6 +129,12 @@ public:
   void setCUBaseAddress(LVAddress Address) { CUBaseAddress = Address; }
   LVAddress getCUHighAddress() const { return CUHighAddress; }
   void setCUHighAddress(LVAddress Address) { CUHighAddress = Address; }
+
+  void setTombstoneAddress(LVAddress Address) { TombstoneAddress = Address; }
+  LVAddress getTombstoneAddress() const {
+    assert(TombstoneAddress && "Unset tombstone value");
+    return TombstoneAddress.value();
+  }
 
   const LVSymbols &GetSymbolsWithLocations() const {
     return SymbolsWithLocations;

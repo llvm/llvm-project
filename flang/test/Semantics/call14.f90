@@ -9,7 +9,7 @@ module m
   !ERROR: VALUE attribute may apply only to a dummy data object
   subroutine C863(notData,assumedSize,coarray,coarrayComponent,assumedRank,assumedLen)
     external :: notData
-    !WARNING: Only a dummy argument should have an INTENT, VALUE, or OPTIONAL attribute
+    !WARNING: Only a dummy argument should have an INTENT, VALUE, or OPTIONAL attribute [-Wignore-irrelevant-attributes]
     real, value :: notADummy
     value :: notData
     !ERROR: VALUE attribute may not apply to an assumed-size array
@@ -20,7 +20,7 @@ module m
     type(hasCoarray), value :: coarrayComponent
     !ERROR: VALUE attribute may not apply to an assumed-rank array
     real, value :: assumedRank(..)
-    !PORTABILITY: VALUE attribute on assumed-length CHARACTER may not be portable
+    !PORTABILITY: VALUE attribute on assumed-length CHARACTER may not be portable [-Wportability]
     character(*), value :: assumedLen
   end subroutine
   subroutine C864(allocatable, inout, out, pointer, volatile)

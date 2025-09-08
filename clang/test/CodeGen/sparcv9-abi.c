@@ -80,7 +80,7 @@ struct medium {
   int *c, *d;
 };
 
-// CHECK-LABEL: define{{.*}} %struct.medium @f_medium(ptr noundef %x)
+// CHECK-LABEL: define{{.*}} %struct.medium @f_medium(ptr dead_on_return noundef %x)
 struct medium f_medium(struct medium x) {
   x.a += *x.b;
   x.b = 0;
@@ -94,7 +94,7 @@ struct large {
   int x;
 };
 
-// CHECK-LABEL: define{{.*}} void @f_large(ptr dead_on_unwind noalias writable sret(%struct.large) align 8 %agg.result, ptr noundef %x)
+// CHECK-LABEL: define{{.*}} void @f_large(ptr dead_on_unwind noalias writable sret(%struct.large) align 8 %agg.result, ptr dead_on_return noundef %x)
 struct large f_large(struct large x) {
   x.a += *x.b;
   x.b = 0;

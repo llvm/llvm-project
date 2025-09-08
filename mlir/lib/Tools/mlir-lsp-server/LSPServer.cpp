@@ -11,8 +11,6 @@
 #include "Protocol.h"
 #include "mlir/Tools/lsp-server-support/Logging.h"
 #include "mlir/Tools/lsp-server-support/Transport.h"
-#include "llvm/ADT/FunctionExtras.h"
-#include "llvm/ADT/StringMap.h"
 #include <optional>
 
 #define DEBUG_TYPE "mlir-lsp-server"
@@ -101,6 +99,7 @@ struct LSPServer {
 
 //===----------------------------------------------------------------------===//
 // Initialization
+//===----------------------------------------------------------------------===//
 
 void LSPServer::onInitialize(const InitializeParams &params,
                              Callback<llvm::json::Value> reply) {
@@ -160,6 +159,7 @@ void LSPServer::onShutdown(const NoParams &, Callback<std::nullptr_t> reply) {
 
 //===----------------------------------------------------------------------===//
 // Document Change
+//===----------------------------------------------------------------------===//
 
 void LSPServer::onDocumentDidOpen(const DidOpenTextDocumentParams &params) {
   PublishDiagnosticsParams diagParams(params.textDocument.uri,
@@ -200,6 +200,7 @@ void LSPServer::onDocumentDidChange(const DidChangeTextDocumentParams &params) {
 
 //===----------------------------------------------------------------------===//
 // Definitions and References
+//===----------------------------------------------------------------------===//
 
 void LSPServer::onGoToDefinition(const TextDocumentPositionParams &params,
                                  Callback<std::vector<Location>> reply) {
@@ -217,6 +218,7 @@ void LSPServer::onReference(const ReferenceParams &params,
 
 //===----------------------------------------------------------------------===//
 // Hover
+//===----------------------------------------------------------------------===//
 
 void LSPServer::onHover(const TextDocumentPositionParams &params,
                         Callback<std::optional<Hover>> reply) {
@@ -225,6 +227,7 @@ void LSPServer::onHover(const TextDocumentPositionParams &params,
 
 //===----------------------------------------------------------------------===//
 // Document Symbols
+//===----------------------------------------------------------------------===//
 
 void LSPServer::onDocumentSymbol(const DocumentSymbolParams &params,
                                  Callback<std::vector<DocumentSymbol>> reply) {
@@ -235,6 +238,7 @@ void LSPServer::onDocumentSymbol(const DocumentSymbolParams &params,
 
 //===----------------------------------------------------------------------===//
 // Code Completion
+//===----------------------------------------------------------------------===//
 
 void LSPServer::onCompletion(const CompletionParams &params,
                              Callback<CompletionList> reply) {
@@ -243,6 +247,7 @@ void LSPServer::onCompletion(const CompletionParams &params,
 
 //===----------------------------------------------------------------------===//
 // Code Action
+//===----------------------------------------------------------------------===//
 
 void LSPServer::onCodeAction(const CodeActionParams &params,
                              Callback<llvm::json::Value> reply) {
@@ -267,6 +272,7 @@ void LSPServer::onCodeAction(const CodeActionParams &params,
 
 //===----------------------------------------------------------------------===//
 // Bytecode
+//===----------------------------------------------------------------------===//
 
 void LSPServer::onConvertFromBytecode(
     const MLIRConvertBytecodeParams &params,

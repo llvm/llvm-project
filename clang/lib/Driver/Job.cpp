@@ -67,14 +67,15 @@ static bool skipArgs(const char *Flag, bool HaveCrashVFS, int &SkipNum,
     return true;
 
   // Some include flags shouldn't be skipped if we have a crash VFS
-  IsInclude = llvm::StringSwitch<bool>(Flag)
-    .Cases("-include", "-header-include-file", true)
-    .Cases("-idirafter", "-internal-isystem", "-iwithprefix", true)
-    .Cases("-internal-externc-isystem", "-iprefix", true)
-    .Cases("-iwithprefixbefore", "-isystem", "-iquote", true)
-    .Cases("-isysroot", "-I", "-F", "-resource-dir", true)
-    .Cases("-iframework", "-include-pch", true)
-    .Default(false);
+  IsInclude =
+      llvm::StringSwitch<bool>(Flag)
+          .Cases("-include", "-header-include-file", true)
+          .Cases("-idirafter", "-internal-isystem", "-iwithprefix", true)
+          .Cases("-internal-externc-isystem", "-iprefix", true)
+          .Cases("-iwithprefixbefore", "-isystem", "-iquote", true)
+          .Cases("-isysroot", "-I", "-F", "-resource-dir", true)
+          .Cases("-internal-iframework", "-iframework", "-include-pch", true)
+          .Default(false);
   if (IsInclude)
     return !HaveCrashVFS;
 
@@ -140,9 +141,7 @@ void Command::buildArgvForResponseFile(
     return;
   }
 
-  llvm::StringSet<> Inputs;
-  for (const auto *InputName : InputFileList)
-    Inputs.insert(InputName);
+  llvm::StringSet<> Inputs(llvm::from_range, InputFileList);
   Out.push_back(Executable);
 
   if (PrependArg)
@@ -185,7 +184,7 @@ rewriteIncludes(const llvm::ArrayRef<const char *> &Args, size_t Idx,
     StringRef FlagRef(Args[Idx + NumArgs - 1]);
     assert((FlagRef.starts_with("-F") || FlagRef.starts_with("-I")) &&
            "Expecting -I or -F");
-    StringRef Inc = FlagRef.slice(2, StringRef::npos);
+    StringRef Inc = FlagRef.substr(2);
     if (getAbsPath(Inc, NewInc)) {
       SmallString<128> NewArg(FlagRef.slice(0, 2));
       NewArg += NewInc;

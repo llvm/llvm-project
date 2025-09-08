@@ -35,6 +35,7 @@ add_header_library(
     core_structs.h
   DEPENDS
     .scanf_config
+    libc.include.inttypes
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.bitset
     libc.src.__support.FPUtil.fp_bits
@@ -54,13 +55,6 @@ add_header_library(
     libc.src.__support.CPP.string_view
 )
 
-if(NOT(TARGET libc.src.__support.File.file) AND LLVM_LIBC_FULL_BUILD AND
-  (NOT LIBC_TARGET_OS_IS_GPU))
-  # Not all platforms have a file implementation. If file is unvailable, and a
-  # full build is requested, then we must skip all file based scanf sections.
-  return()
-endif()
-
 add_header_library(
   scanf_main
   HDRS
@@ -71,7 +65,6 @@ add_header_library(
     .converter
     .core_structs
     libc.src.__support.arg_list
-    ${file_deps}
   ${use_system_file}
 )
 
@@ -105,6 +98,7 @@ add_header_library(
   DEPENDS
     .reader
     .core_structs
+    libc.include.inttypes
     libc.src.__support.common
     libc.src.__support.ctype_utils
     libc.src.__support.CPP.bitset
@@ -112,7 +106,6 @@ add_header_library(
     libc.src.__support.CPP.limits
     libc.src.__support.char_vector
     libc.src.__support.str_to_float
-    ${file_deps}
   ${use_system_file}
 )
 

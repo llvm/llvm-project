@@ -28,9 +28,12 @@ protected:
   std::optional<Relocation> adjustRelocation(const Relocation &Rel,
                                              const MCInst &Inst) const;
 
+  /// Return true if \p PageAddress is a valid page address for .got section.
+  bool isPageAddressValidForGOT(uint64_t PageAddress) const;
+
 public:
   AArch64MCSymbolizer(BinaryFunction &Function, bool CreateNewSymbols = true)
-      : MCSymbolizer(*Function.getBinaryContext().Ctx.get(), nullptr),
+      : MCSymbolizer(*Function.getBinaryContext().Ctx, nullptr),
         Function(Function), CreateNewSymbols(CreateNewSymbols) {}
 
   AArch64MCSymbolizer(const AArch64MCSymbolizer &) = delete;

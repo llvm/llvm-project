@@ -14,7 +14,6 @@
 #include "llvm/BinaryFormat/MsgPackReader.h"
 #include "llvm/BinaryFormat/MsgPack.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
 using namespace llvm::support;

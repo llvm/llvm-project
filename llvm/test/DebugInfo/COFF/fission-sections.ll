@@ -27,13 +27,14 @@ source_filename = "test/DebugInfo/X86/fission-cu.ll"
 ; OBJ-NEXT:  0 .text
 ; OBJ-NEXT:  1 .data
 ; OBJ-NEXT:  2 .bss
-; OBJ-NEXT:  3 .debug_abbrev
-; OBJ-NEXT:  4 .debug_info
-; OBJ-NEXT:  5 .debug_str
-; OBJ-NEXT:  6 .debug_addr
-; OBJ-NEXT:  7 .debug_pubnames
-; OBJ-NEXT:  8 .debug_pubtypes
-; OBJ-NEXT:  9 .debug_line
+; OBJ-NEXT:  3 .debug$S
+; OBJ-NEXT:  4 .debug_abbrev
+; OBJ-NEXT:  5 .debug_info
+; OBJ-NEXT:  6 .debug_str
+; OBJ-NEXT:  7 .debug_addr
+; OBJ-NEXT:  8 .debug_pubnames
+; OBJ-NEXT:  9 .debug_pubtypes
+; OBJ-NEXT: 10 .debug_line
 
 ; OBJ:     .debug_abbrev
 ; OBJ:     .debug_info

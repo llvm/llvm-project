@@ -119,9 +119,9 @@ define <4 x double> @test_mul2x2_f64(<4 x double> %a0, <4 x double> %a1) nounwin
 ;
 ; AVX1-LABEL: test_mul2x2_f64:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vshufpd {{.*#+}} ymm2 = ymm1[1,1,3,3]
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm3 = ymm0[2,3,2,3]
-; AVX1-NEXT:    vmulpd %ymm2, %ymm3, %ymm2
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3,2,3]
+; AVX1-NEXT:    vshufpd {{.*#+}} ymm3 = ymm1[1,1,3,3]
+; AVX1-NEXT:    vmulpd %ymm3, %ymm2, %ymm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    vmovddup {{.*#+}} ymm1 = ymm1[0,0,2,2]
 ; AVX1-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
@@ -131,7 +131,7 @@ define <4 x double> @test_mul2x2_f64(<4 x double> %a0, <4 x double> %a1) nounwin
 ; AVX2-LABEL: test_mul2x2_f64:
 ; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vshufpd {{.*#+}} ymm2 = ymm1[1,1,3,3]
-; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm3 = ymm0[2,3,2,3]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm3 = ymm0[2,3,2,3]
 ; AVX2-NEXT:    vmulpd %ymm2, %ymm3, %ymm2
 ; AVX2-NEXT:    vmovddup {{.*#+}} ymm1 = ymm1[0,0,2,2]
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,0,1]
@@ -142,7 +142,7 @@ define <4 x double> @test_mul2x2_f64(<4 x double> %a0, <4 x double> %a1) nounwin
 ; AVX512-LABEL: test_mul2x2_f64:
 ; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vshufpd {{.*#+}} ymm2 = ymm1[1,1,3,3]
-; AVX512-NEXT:    vperm2f128 {{.*#+}} ymm3 = ymm0[2,3,2,3]
+; AVX512-NEXT:    vpermpd {{.*#+}} ymm3 = ymm0[2,3,2,3]
 ; AVX512-NEXT:    vmulpd %ymm2, %ymm3, %ymm2
 ; AVX512-NEXT:    vmovddup {{.*#+}} ymm1 = ymm1[0,0,2,2]
 ; AVX512-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,0,1]
@@ -281,20 +281,16 @@ define <9 x float> @test_mul3x3_f32(<9 x float> %a0, <9 x float> %a1) nounwind {
 ; AVX1-NEXT:    vbroadcastss {{[0-9]+}}(%rsp), %xmm3
 ; AVX1-NEXT:    vmulps %xmm3, %xmm6, %xmm6
 ; AVX1-NEXT:    vaddps %xmm6, %xmm0, %xmm0
+; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm4[1,2],xmm0[0,1]
 ; AVX1-NEXT:    vmulss %xmm2, %xmm9, %xmm2
-; AVX1-NEXT:    vmulss %xmm5, %xmm10, %xmm5
-; AVX1-NEXT:    vaddss %xmm5, %xmm2, %xmm2
+; AVX1-NEXT:    vmulss %xmm5, %xmm10, %xmm4
+; AVX1-NEXT:    vaddss %xmm4, %xmm2, %xmm2
 ; AVX1-NEXT:    vmulss %xmm3, %xmm8, %xmm3
 ; AVX1-NEXT:    vaddss %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm7[0]
-; AVX1-NEXT:    vshufps {{.*#+}} xmm3 = xmm4[1,2,2,3]
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
 ; AVX1-NEXT:    vmovss %xmm2, 32(%rdi)
-; AVX1-NEXT:    vmovaps %ymm0, (%rdi)
-; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    vmovaps %xmm0, 16(%rdi)
+; AVX1-NEXT:    vmovaps %xmm1, (%rdi)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_mul3x3_f32:
@@ -1036,10 +1032,6 @@ define <16 x float> @test_mul4x4_f32(<16 x float> %a0, <16 x float> %a1) nounwin
 ;
 ; AVX512-LABEL: test_mul4x4_f32:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vextractf32x4 $2, %zmm1, %xmm2
-; AVX512-NEXT:    vextractf32x4 $3, %zmm1, %xmm3
-; AVX512-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; AVX512-NEXT:    vinsertf64x4 $1, %ymm2, %zmm1, %zmm1
 ; AVX512-NEXT:    vshufps {{.*#+}} zmm2 = zmm1[1,1,1,1,5,5,5,5,9,9,9,9,13,13,13,13]
 ; AVX512-NEXT:    vshuff64x2 {{.*#+}} zmm3 = zmm0[2,3,2,3,2,3,2,3]
 ; AVX512-NEXT:    vmulps %zmm2, %zmm3, %zmm2

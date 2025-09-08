@@ -21,18 +21,12 @@
 #include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
-#include "llvm/DebugInfo/CodeView/GlobalTypeTableBuilder.h"
-#include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
-#include "llvm/DebugInfo/CodeView/MergingTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/RecordName.h"
-#include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecordHelpers.h"
 #include "llvm/DebugInfo/CodeView/SymbolSerializer.h"
 #include "llvm/DebugInfo/CodeView/TypeIndexDiscovery.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
-#include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/DebugInfo/MSF/MSFError.h"
-#include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptorBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStreamBuilder.h"
@@ -46,13 +40,10 @@
 #include "llvm/DebugInfo/PDB/Native/TpiHashing.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStreamBuilder.h"
-#include "llvm/DebugInfo/PDB/PDB.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/CVDebugRecord.h"
-#include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/Errc.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
@@ -1145,9 +1136,12 @@ static pdb::BulkPublic createPublic(COFFLinkerContext &ctx, Defined *def) {
   pub.setFlags(flags);
 
   OutputSection *os = ctx.getOutputSection(def->getChunk());
-  assert(os && "all publics should be in final image");
-  pub.Offset = def->getRVA() - os->getRVA();
-  pub.Segment = os->sectionIndex;
+  assert((os || !def->getChunk()->getSize()) &&
+         "all publics should be in final image");
+  if (os) {
+    pub.Offset = def->getRVA() - os->getRVA();
+    pub.Segment = os->sectionIndex;
+  }
   return pub;
 }
 
@@ -1254,15 +1248,19 @@ void PDBLinker::printStats() {
          << std::string(80, '-') << '\n';
 
   auto print = [&](uint64_t v, StringRef s) {
-    stream << format_decimal(v, 15) << " " << s << '\n';
+    stream << formatv("{0}",
+                      fmt_align(formatv("{0:N}", v), AlignStyle::Right, 20))
+           << " " << s << '\n';
   };
 
   print(ctx.objFileInstances.size(),
         "Input OBJ files (expanded from all cmd-line inputs)");
+  print(ctx.consumedInputsSize,
+        "Size of all consumed OBJ files (non-lazy), in bytes");
   print(ctx.typeServerSourceMappings.size(), "PDB type server dependencies");
   print(ctx.precompSourceMappings.size(), "Precomp OBJ dependencies");
   print(nbTypeRecords, "Input type records");
-  print(nbTypeRecordsBytes, "Input type records bytes");
+  print(nbTypeRecordsBytes, "Size of all input type records, in bytes");
   print(builder.getTpiBuilder().getRecordCount(), "Merged TPI records");
   print(builder.getIpiBuilder().getRecordCount(), "Merged IPI records");
   print(pdbStrTab.size(), "Output PDB strings");

@@ -15,7 +15,7 @@ namespace Fortran::runtime::typeInfo {
 
 RT_OFFLOAD_API_GROUP_BEGIN
 
-RT_API_ATTRS Fortran::common::optional<TypeParameterValue> Value::GetValue(
+RT_API_ATTRS common::optional<TypeParameterValue> Value::GetValue(
     const Descriptor *descriptor) const {
   switch (genre_) {
   case Genre::Explicit:
@@ -26,9 +26,9 @@ RT_API_ATTRS Fortran::common::optional<TypeParameterValue> Value::GetValue(
         return addendum->LenParameterValue(value_);
       }
     }
-    return Fortran::common::nullopt;
+    return common::nullopt;
   default:
-    return Fortran::common::nullopt;
+    return common::nullopt;
   }
 }
 
@@ -140,11 +140,11 @@ RT_API_ATTRS void Component::CreatePointerDescriptor(Descriptor &descriptor,
     const SubscriptValue *subscripts) const {
   RUNTIME_CHECK(terminator, genre_ == Genre::Data);
   EstablishDescriptor(descriptor, container, terminator);
+  std::size_t offset{static_cast<std::size_t>(offset_)};
   if (subscripts) {
-    descriptor.set_base_addr(container.Element<char>(subscripts) + offset_);
-  } else {
-    descriptor.set_base_addr(container.OffsetElement<char>() + offset_);
+    offset += container.SubscriptsToByteOffset(subscripts);
   }
+  descriptor.set_base_addr(container.OffsetElement<char>() + offset);
   descriptor.raw().attribute = CFI_attribute_pointer;
 }
 
@@ -279,6 +279,10 @@ FILE *Component::Dump(FILE *f) const {
   }
   std::fprintf(f, " category %d  kind %d  rank %d  offset 0x%zx\n", category_,
       kind_, rank_, static_cast<std::size_t>(offset_));
+  const auto &dtDesc{derivedType_.descriptor()};
+  if (dtDesc.raw().base_addr) {
+    std::fprintf(f, " derivedType_ %p\n", dtDesc.raw().base_addr);
+  }
   if (initialization_) {
     std::fprintf(f, " initialization @ %p:\n",
         reinterpret_cast<const void *>(initialization_));
@@ -325,8 +329,8 @@ FILE *SpecialBinding::Dump(FILE *f) const {
     break;
   }
   std::fprintf(f, "    isArgDescriptorSet: 0x%x\n", isArgDescriptorSet_);
-  std::fprintf(f, "    isTypeBound: 0x%x\n", isTypeBound_);
-  std::fprintf(f, "    isArgContiguousSet: 0x%x\n", isArgContiguousSet_);
+  std::fprintf(f, "    isTypeBound: %d\n", isTypeBound_);
+  std::fprintf(f, "    specialCaseFlag 0x%x\n", specialCaseFlag_);
   std::fprintf(f, "    proc: %p\n", reinterpret_cast<void *>(proc_));
   return f;
 }

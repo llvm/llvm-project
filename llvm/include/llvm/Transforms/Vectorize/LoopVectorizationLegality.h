@@ -301,6 +301,14 @@ public:
   /// Returns the reduction variables found in the loop.
   const ReductionList &getReductionVars() const { return Reductions; }
 
+  /// Returns the recurrence descriptor associated with a given phi node \p PN,
+  /// expecting one to exist.
+  const RecurrenceDescriptor &getRecurrenceDescriptor(PHINode *PN) const {
+    assert(isReductionVariable(PN) &&
+           "only reductions have recurrence descriptors");
+    return Reductions.find(PN)->second;
+  }
+
   /// Returns the induction variables found in the loop.
   const InductionList &getInductionVars() const { return Inductions; }
 
@@ -382,7 +390,8 @@ public:
   const LoopAccessInfo *getLAI() const { return LAI; }
 
   bool isSafeForAnyVectorWidth() const {
-    return LAI->getDepChecker().isSafeForAnyVectorWidth();
+    return LAI->getDepChecker().isSafeForAnyVectorWidth() &&
+           LAI->getDepChecker().isSafeForAnyStoreLoadForwardDistances();
   }
 
   uint64_t getMaxSafeVectorWidthInBits() const {
@@ -391,19 +400,22 @@ public:
 
   /// Returns true if the loop has exactly one uncountable early exit, i.e. an
   /// uncountable exit that isn't the latch block.
-  bool hasUncountableEarlyExit() const {
-    return getUncountableEdge().has_value();
-  }
+  bool hasUncountableEarlyExit() const { return UncountableExitingBB; }
 
   /// Returns the uncountable early exiting block, if there is exactly one.
   BasicBlock *getUncountableEarlyExitingBlock() const {
-    return hasUncountableEarlyExit() ? getUncountableEdge()->first : nullptr;
+    return UncountableExitingBB;
   }
 
-  /// Returns the destination of the uncountable early exiting block, if there
-  /// is exactly one.
-  BasicBlock *getUncountableEarlyExitBlock() const {
-    return hasUncountableEarlyExit() ? getUncountableEdge()->second : nullptr;
+  /// Return true if there is store-load forwarding dependencies.
+  bool isSafeForAnyStoreLoadForwardDistances() const {
+    return LAI->getDepChecker().isSafeForAnyStoreLoadForwardDistances();
+  }
+
+  /// Return safe power-of-2 number of elements, which do not prevent store-load
+  /// forwarding and safe to operate simultaneously.
+  uint64_t getMaxStoreLoadForwardSafeDistanceInBits() const {
+    return LAI->getDepChecker().getStoreLoadForwardSafeDistanceInBits();
   }
 
   /// Returns true if vector representation of the instruction \p I
@@ -433,6 +445,12 @@ public:
   /// Returns a list of all known histogram operations in the loop.
   bool hasHistograms() const { return !Histograms.empty(); }
 
+  /// Returns potentially faulting loads.
+  const SmallPtrSetImpl<const Instruction *> &
+  getPotentiallyFaultingLoads() const {
+    return PotentiallyFaultingLoads;
+  }
+
   PredicatedScalarEvolution *getPredicatedScalarEvolution() const {
     return &PSE;
   }
@@ -451,13 +469,6 @@ public:
   /// exit-not-taken count is known exactly at compile time.
   const SmallVector<BasicBlock *, 4> &getCountableExitingBlocks() const {
     return CountableExitingBlocks;
-  }
-
-  /// Returns the loop edge to an uncountable exit, or std::nullopt if there
-  /// isn't a single such edge.
-  std::optional<std::pair<BasicBlock *, BasicBlock *>>
-  getUncountableEdge() const {
-    return UncountableEdge;
   }
 
 private:
@@ -487,6 +498,9 @@ private:
   /// At this point we know that this is a loop with a constant trip count
   /// and we only need to check individual instructions.
   bool canVectorizeInstrs();
+
+  /// Check if an individual instruction is vectorizable.
+  bool canVectorizeInstr(Instruction &I);
 
   /// When we vectorize loops we may change the order in which
   /// we read and write from memory. This method checks if it is
@@ -625,6 +639,9 @@ private:
   /// may work on the same memory location.
   SmallVector<HistogramInfo, 1> Histograms;
 
+  /// Hold potentially faulting loads.
+  SmallPtrSet<const Instruction *, 4> PotentiallyFaultingLoads;
+
   /// BFI and PSI are used to check for profile guided size optimizations.
   BlockFrequencyInfo *BFI;
   ProfileSummaryInfo *PSI;
@@ -639,9 +656,9 @@ private:
   /// the exact backedge taken count is not computable.
   SmallVector<BasicBlock *, 4> CountableExitingBlocks;
 
-  /// Keep track of the loop edge to an uncountable exit, comprising a pair
-  /// of (Exiting, Exit) blocks, if there is exactly one early exit.
-  std::optional<std::pair<BasicBlock *, BasicBlock *>> UncountableEdge;
+  /// Keep track of an uncountable exiting block, if there is exactly one early
+  /// exit.
+  BasicBlock *UncountableExitingBB = nullptr;
 };
 
 } // namespace llvm

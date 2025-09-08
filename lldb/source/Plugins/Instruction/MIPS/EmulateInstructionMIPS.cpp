@@ -147,17 +147,15 @@ EmulateInstructionMIPS::EmulateInstructionMIPS(
   if (arch_flags & ArchSpec::eMIPSAse_dspr2)
     features += "+dspr2,";
 
-  m_reg_info.reset(target->createMCRegInfo(triple.getTriple()));
+  m_reg_info.reset(target->createMCRegInfo(triple));
   assert(m_reg_info.get());
 
   m_insn_info.reset(target->createMCInstrInfo());
   assert(m_insn_info.get());
 
   llvm::MCTargetOptions MCOptions;
-  m_asm_info.reset(
-      target->createMCAsmInfo(*m_reg_info, triple.getTriple(), MCOptions));
-  m_subtype_info.reset(
-      target->createMCSubtargetInfo(triple.getTriple(), cpu, features));
+  m_asm_info.reset(target->createMCAsmInfo(*m_reg_info, triple, MCOptions));
+  m_subtype_info.reset(target->createMCSubtargetInfo(triple, cpu, features));
   assert(m_asm_info.get() && m_subtype_info.get());
 
   m_context = std::make_unique<llvm::MCContext>(
@@ -174,7 +172,7 @@ EmulateInstructionMIPS::EmulateInstructionMIPS(
     features += "+micromips,";
 
   m_alt_subtype_info.reset(
-      target->createMCSubtargetInfo(triple.getTriple(), cpu, features));
+      target->createMCSubtargetInfo(triple, cpu, features));
   assert(m_alt_subtype_info.get());
 
   m_alt_disasm.reset(
@@ -1005,11 +1003,10 @@ bool EmulateInstructionMIPS::SetInstruction(const Opcode &insn_opcode,
       uint64_t next_inst_addr = (m_addr & (~1ull)) + current_inst_size;
       Address next_addr(next_inst_addr);
 
-      const size_t bytes_read =
-          target->ReadMemory(next_addr, /* Address of next instruction */
-                             buf, sizeof(uint32_t), error, 
-                             false,  /* force_live_memory */
-                             &load_addr);
+      const size_t bytes_read = target->ReadMemory(
+          next_addr,                           /* Address of next instruction */
+          buf, sizeof(uint32_t), error, false, /* force_live_memory */
+          &load_addr);
 
       if (bytes_read == 0)
         return true;
@@ -1128,16 +1125,16 @@ bool EmulateInstructionMIPS::CreateFunctionEntryUnwind(
   unwind_plan.Clear();
   unwind_plan.SetRegisterKind(eRegisterKindDWARF);
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
   const bool can_replace = false;
 
   // Our previous Call Frame Address is the stack pointer
-  row->GetCFAValue().SetIsRegisterPlusOffset(dwarf_sp_mips, 0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_sp_mips, 0);
 
   // Our previous PC is in the RA
-  row->SetRegisterLocationToRegister(dwarf_pc_mips, dwarf_ra_mips, can_replace);
+  row.SetRegisterLocationToRegister(dwarf_pc_mips, dwarf_ra_mips, can_replace);
 
-  unwind_plan.AppendRow(row);
+  unwind_plan.AppendRow(std::move(row));
 
   // All other registers are the same.
   unwind_plan.SetSourceName("EmulateInstructionMIPS");

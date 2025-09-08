@@ -18,13 +18,13 @@ namespace NS {
 #pragma acc routine(NS::foo) seq
 
 // expected-error@+2{{use of undeclared identifier 'templ'; did you mean 'NS::templ'?}}
-// expected-error@+1{{OpenACC routine name 'NS::templ' names a set of overloads}}
+// expected-error@+1{{OpenACC routine name 'templ' names a set of overloads}}
 #pragma acc routine(templ) seq
 // expected-error@+1{{OpenACC routine name 'NS::templ' names a set of overloads}}
 #pragma acc routine(NS::templ) seq
 
 // expected-error@+2{{use of undeclared identifier 'templ'; did you mean 'NS::templ'?}}
-// expected-error@+1{{OpenACC routine name 'NS::templ' names a set of overloads}}
+// expected-error@+1{{OpenACC routine name 'templ<int>' names a set of overloads}}
 #pragma acc routine(templ<int>) seq
 // expected-error@+1{{OpenACC routine name 'NS::templ<int>' names a set of overloads}}
 #pragma acc routine(NS::templ<int>) seq
@@ -51,3 +51,10 @@ namespace NS {
 // expected-note@#PrivateMemFunc{{implicitly declared private here}}
 #pragma acc routine (NS::C::private_mem_func) seq
 #pragma acc routine (NS::C::public_mem_func) seq
+
+void foo() {
+  auto x = [](){};
+#pragma acc routine seq
+  auto y = [](){};
+#pragma acc routine (x) seq
+}

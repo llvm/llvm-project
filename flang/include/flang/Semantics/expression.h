@@ -257,17 +257,18 @@ public:
 
   // Builds a typed Designator from an untyped DataRef
   MaybeExpr Designate(DataRef &&);
+  void CheckForWholeAssumedSizeArray(parser::CharBlock, const Symbol *);
+
+  // Allows a whole assumed-size array to appear for the lifetime of
+  // the returned value.
+  common::Restorer<bool> AllowWholeAssumedSizeArray(bool yes = true) {
+    return common::ScopedSet(isWholeAssumedSizeArrayOk_, yes);
+  }
 
 protected:
   int IntegerTypeSpecKind(const parser::IntegerTypeSpec &);
 
 private:
-  // Allows a whole assumed-size array to appear for the lifetime of
-  // the returned value.
-  common::Restorer<bool> AllowWholeAssumedSizeArray() {
-    return common::ScopedSet(isWholeAssumedSizeArrayOk_, true);
-  }
-
   // Allows an Expr to be a null pointer.
   common::Restorer<bool> AllowNullPointer() {
     return common::ScopedSet(isNullPointerOk_, true);
@@ -392,6 +393,19 @@ private:
   bool CheckIsValidForwardReference(const semantics::DerivedTypeSpec &);
   MaybeExpr AnalyzeComplex(MaybeExpr &&re, MaybeExpr &&im, const char *what);
   std::optional<Chevrons> AnalyzeChevrons(const parser::CallStmt &);
+
+  // CheckStructureConstructor() is used for parsed structure constructors
+  // as well as for generic function references.
+  struct ComponentSpec {
+    ComponentSpec() = default;
+    ComponentSpec(ComponentSpec &&) = default;
+    parser::CharBlock source, exprSource;
+    bool hasKeyword{false};
+    const Symbol *keywordSymbol{nullptr};
+    MaybeExpr expr;
+  };
+  MaybeExpr CheckStructureConstructor(parser::CharBlock typeName,
+      const semantics::DerivedTypeSpec &, std::list<ComponentSpec> &&);
 
   MaybeExpr IterativelyAnalyzeSubexpressions(const parser::Expr &);
 

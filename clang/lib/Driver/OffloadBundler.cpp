@@ -29,6 +29,7 @@
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/EndianStream.h"
@@ -144,11 +145,11 @@ bool OffloadTargetInfo::operator==(const OffloadTargetInfo &Target) const {
 
 std::string OffloadTargetInfo::str() const {
   std::string NormalizedTriple;
-  // Unfortunately we need some special sauce for AMDGPU because all the runtime
-  // assumes the triple to be "amdgcn-amd-amdhsa-" (empty environment) instead
-  // of "amdgcn-amd-amdhsa-unknown". It's gonna be very tricky to patch
-  // different layers of runtime.
-  if (Triple.isAMDGPU()) {
+  // Unfortunately we need some special sauce for AMDHSA because all the runtime
+  // assumes the triple to be "amdgcn/spirv64-amd-amdhsa-" (empty environment)
+  // instead of "amdgcn/spirv64-amd-amdhsa-unknown". It's gonna be very tricky
+  // to patch different layers of runtime.
+  if (Triple.getOS() == Triple::OSType::AMDHSA) {
     NormalizedTriple = Triple.normalize(Triple::CanonicalForm::THREE_IDENT);
     NormalizedTriple.push_back('-');
   } else {
@@ -743,8 +744,7 @@ private:
     // Input is the same as the content of the original input file, therefore
     // temporary file is not needed.
     if (StringRef(BundlerConfig.FilesType).starts_with("a")) {
-      auto InputFileOrErr =
-          TempFiles.Create(ArrayRef<char>(Input.data(), Input.size()));
+      auto InputFileOrErr = TempFiles.Create(ArrayRef<char>(Input));
       if (!InputFileOrErr)
         return InputFileOrErr.takeError();
       ObjcopyInputFileName = *InputFileOrErr;
@@ -1127,13 +1127,116 @@ CompressedOffloadBundle::compress(llvm::compression::Params P,
       llvm::StringRef(FinalBuffer.data(), FinalBuffer.size()));
 }
 
+// Use packed structs to avoid padding, such that the structs map the serialized
+// format.
+LLVM_PACKED_START
+union RawCompressedBundleHeader {
+  struct CommonFields {
+    uint32_t Magic;
+    uint16_t Version;
+    uint16_t Method;
+  };
+
+  struct V1Header {
+    CommonFields Common;
+    uint32_t UncompressedFileSize;
+    uint64_t Hash;
+  };
+
+  struct V2Header {
+    CommonFields Common;
+    uint32_t FileSize;
+    uint32_t UncompressedFileSize;
+    uint64_t Hash;
+  };
+
+  struct V3Header {
+    CommonFields Common;
+    uint64_t FileSize;
+    uint64_t UncompressedFileSize;
+    uint64_t Hash;
+  };
+
+  CommonFields Common;
+  V1Header V1;
+  V2Header V2;
+  V3Header V3;
+};
+LLVM_PACKED_END
+
+// Helper method to get header size based on version
+static size_t getHeaderSize(uint16_t Version) {
+  switch (Version) {
+  case 1:
+    return sizeof(RawCompressedBundleHeader::V1Header);
+  case 2:
+    return sizeof(RawCompressedBundleHeader::V2Header);
+  case 3:
+    return sizeof(RawCompressedBundleHeader::V3Header);
+  default:
+    llvm_unreachable("Unsupported version");
+  }
+}
+
+Expected<CompressedOffloadBundle::CompressedBundleHeader>
+CompressedOffloadBundle::CompressedBundleHeader::tryParse(StringRef Blob) {
+  assert(Blob.size() >= sizeof(RawCompressedBundleHeader::CommonFields));
+  assert(llvm::identify_magic(Blob) ==
+         llvm::file_magic::offload_bundle_compressed);
+
+  RawCompressedBundleHeader Header;
+  memcpy(&Header, Blob.data(), std::min(Blob.size(), sizeof(Header)));
+
+  CompressedBundleHeader Normalized;
+  Normalized.Version = Header.Common.Version;
+
+  size_t RequiredSize = getHeaderSize(Normalized.Version);
+  if (Blob.size() < RequiredSize)
+    return createStringError(inconvertibleErrorCode(),
+                             "Compressed bundle header size too small");
+
+  switch (Normalized.Version) {
+  case 1:
+    Normalized.UncompressedFileSize = Header.V1.UncompressedFileSize;
+    Normalized.Hash = Header.V1.Hash;
+    break;
+  case 2:
+    Normalized.FileSize = Header.V2.FileSize;
+    Normalized.UncompressedFileSize = Header.V2.UncompressedFileSize;
+    Normalized.Hash = Header.V2.Hash;
+    break;
+  case 3:
+    Normalized.FileSize = Header.V3.FileSize;
+    Normalized.UncompressedFileSize = Header.V3.UncompressedFileSize;
+    Normalized.Hash = Header.V3.Hash;
+    break;
+  default:
+    return createStringError(inconvertibleErrorCode(),
+                             "Unknown compressed bundle version");
+  }
+
+  // Determine compression format
+  switch (Header.Common.Method) {
+  case static_cast<uint16_t>(compression::Format::Zlib):
+  case static_cast<uint16_t>(compression::Format::Zstd):
+    Normalized.CompressionFormat =
+        static_cast<compression::Format>(Header.Common.Method);
+    break;
+  default:
+    return createStringError(inconvertibleErrorCode(),
+                             "Unknown compressing method");
+  }
+
+  return Normalized;
+}
+
 llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
 CompressedOffloadBundle::decompress(const llvm::MemoryBuffer &Input,
                                     bool Verbose) {
   StringRef Blob = Input.getBuffer();
 
   // Check minimum header size (using V1 as it's the smallest)
-  if (Blob.size() < V1HeaderSize)
+  if (Blob.size() < sizeof(RawCompressedBundleHeader::CommonFields))
     return llvm::MemoryBuffer::getMemBufferCopy(Blob);
 
   if (llvm::identify_magic(Blob) !=
@@ -1143,68 +1246,20 @@ CompressedOffloadBundle::decompress(const llvm::MemoryBuffer &Input,
     return llvm::MemoryBuffer::getMemBufferCopy(Blob);
   }
 
-  size_t CurrentOffset = MagicSize;
+  Expected<CompressedBundleHeader> HeaderOrErr =
+      CompressedBundleHeader::tryParse(Blob);
+  if (!HeaderOrErr)
+    return HeaderOrErr.takeError();
 
-  // Read version
-  uint16_t ThisVersion;
-  memcpy(&ThisVersion, Blob.data() + CurrentOffset, sizeof(uint16_t));
-  CurrentOffset += VersionFieldSize;
+  const CompressedBundleHeader &Normalized = *HeaderOrErr;
+  unsigned ThisVersion = Normalized.Version;
+  size_t HeaderSize = getHeaderSize(ThisVersion);
 
-  // Verify header size based on version
-  if (ThisVersion >= 2 && ThisVersion <= 3) {
-    size_t RequiredSize = (ThisVersion == 2) ? V2HeaderSize : V3HeaderSize;
-    if (Blob.size() < RequiredSize)
-      return createStringError(inconvertibleErrorCode(),
-                               "Compressed bundle header size too small");
-  }
+  llvm::compression::Format CompressionFormat = Normalized.CompressionFormat;
 
-  // Read compression method
-  uint16_t CompressionMethod;
-  memcpy(&CompressionMethod, Blob.data() + CurrentOffset, sizeof(uint16_t));
-  CurrentOffset += MethodFieldSize;
-
-  // Read total file size (version 2+)
-  uint64_t TotalFileSize = 0;
-  if (ThisVersion >= 2) {
-    if (ThisVersion == 2) {
-      uint32_t TotalFileSize32;
-      memcpy(&TotalFileSize32, Blob.data() + CurrentOffset, sizeof(uint32_t));
-      TotalFileSize = TotalFileSize32;
-      CurrentOffset += FileSizeFieldSizeV2;
-    } else { // Version 3
-      memcpy(&TotalFileSize, Blob.data() + CurrentOffset, sizeof(uint64_t));
-      CurrentOffset += FileSizeFieldSizeV3;
-    }
-  }
-
-  // Read uncompressed size
-  uint64_t UncompressedSize = 0;
-  if (ThisVersion <= 2) {
-    uint32_t UncompressedSize32;
-    memcpy(&UncompressedSize32, Blob.data() + CurrentOffset, sizeof(uint32_t));
-    UncompressedSize = UncompressedSize32;
-    CurrentOffset += UncompressedSizeFieldSizeV2;
-  } else { // Version 3
-    memcpy(&UncompressedSize, Blob.data() + CurrentOffset, sizeof(uint64_t));
-    CurrentOffset += UncompressedSizeFieldSizeV3;
-  }
-
-  // Read hash
-  uint64_t StoredHash;
-  memcpy(&StoredHash, Blob.data() + CurrentOffset, sizeof(uint64_t));
-  CurrentOffset += HashFieldSize;
-
-  // Determine compression format
-  llvm::compression::Format CompressionFormat;
-  if (CompressionMethod ==
-      static_cast<uint16_t>(llvm::compression::Format::Zlib))
-    CompressionFormat = llvm::compression::Format::Zlib;
-  else if (CompressionMethod ==
-           static_cast<uint16_t>(llvm::compression::Format::Zstd))
-    CompressionFormat = llvm::compression::Format::Zstd;
-  else
-    return createStringError(inconvertibleErrorCode(),
-                             "Unknown compressing method");
+  size_t TotalFileSize = Normalized.FileSize.value_or(0);
+  size_t UncompressedSize = Normalized.UncompressedFileSize;
+  auto StoredHash = Normalized.Hash;
 
   llvm::Timer DecompressTimer("Decompression Timer", "Decompression time",
                               *ClangOffloadBundlerTimerGroup);
@@ -1212,7 +1267,7 @@ CompressedOffloadBundle::decompress(const llvm::MemoryBuffer &Input,
     DecompressTimer.startTimer();
 
   SmallVector<uint8_t, 0> DecompressedData;
-  StringRef CompressedData = Blob.substr(CurrentOffset);
+  StringRef CompressedData = Blob.substr(HeaderSize);
   if (llvm::Error DecompressionError = llvm::compression::decompress(
           CompressionFormat, llvm::arrayRefFromStringRef(CompressedData),
           DecompressedData, UncompressedSize))
@@ -1233,8 +1288,7 @@ CompressedOffloadBundle::decompress(const llvm::MemoryBuffer &Input,
     HashRecalcTimer.startTimer();
     llvm::MD5 Hash;
     llvm::MD5::MD5Result Result;
-    Hash.update(llvm::ArrayRef<uint8_t>(DecompressedData.data(),
-                                        DecompressedData.size()));
+    Hash.update(llvm::ArrayRef<uint8_t>(DecompressedData));
     Hash.final(Result);
     uint64_t RecalculatedHash = Result.low();
     HashRecalcTimer.stopTimer();
@@ -1850,8 +1904,7 @@ Error OffloadBundler::UnbundleArchive() {
                   .str();
           // Replace ':' in optional target feature list with '_' to ensure
           // cross-platform validity.
-          std::replace(OutputBundleName.begin(), OutputBundleName.end(), ':',
-                       '_');
+          llvm::replace(OutputBundleName, ':', '_');
 
           std::unique_ptr<MemoryBuffer> MemBuf = MemoryBuffer::getMemBufferCopy(
               DataStream.str(), OutputBundleName);
@@ -1883,8 +1936,7 @@ Error OffloadBundler::UnbundleArchive() {
   /// Write out an archive for each target
   for (auto &Target : BundlerConfig.TargetNames) {
     StringRef FileName = TargetOutputFileNameMap[Target];
-    StringMapIterator<std::vector<llvm::NewArchiveMember>> CurArchiveMembers =
-        OutputArchivesMap.find(Target);
+    auto CurArchiveMembers = OutputArchivesMap.find(Target);
     if (CurArchiveMembers != OutputArchivesMap.end()) {
       if (Error WriteErr = writeArchive(FileName, CurArchiveMembers->getValue(),
                                         SymtabWritingMode::NormalSymtab,

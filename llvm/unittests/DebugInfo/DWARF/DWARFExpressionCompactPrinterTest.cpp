@@ -10,7 +10,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -41,7 +42,7 @@ public:
     if (!TheTarget)
       return;
 
-    MRI.reset(TheTarget->createMCRegInfo(TripleName));
+    MRI.reset(TheTarget->createMCRegInfo(Triple(TripleName)));
   }
 
   void TestExprPrinter(ArrayRef<uint8_t> ExprData, StringRef Expected);
@@ -70,7 +71,7 @@ void DWARFExpressionCompactPrinterTest::TestExprPrinter(
     return {};
   };
 
-  Expr.printCompact(OS, GetRegName);
+  printDwarfExpressionCompact(&Expr, OS, GetRegName);
   EXPECT_EQ(OS.str(), Expected);
 }
 

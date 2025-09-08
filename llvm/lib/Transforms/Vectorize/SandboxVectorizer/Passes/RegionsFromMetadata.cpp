@@ -20,10 +20,11 @@ RegionsFromMetadata::RegionsFromMetadata(StringRef Pipeline)
 bool RegionsFromMetadata::runOnFunction(Function &F, const Analyses &A) {
   SmallVector<std::unique_ptr<sandboxir::Region>> Regions =
       sandboxir::Region::createRegionsFromMD(F, A.getTTI());
+  bool Change = false;
   for (auto &R : Regions) {
-    RPM.runOnRegion(*R, A);
+    Change |= RPM.runOnRegion(*R, A);
   }
-  return false;
+  return Change;
 }
 
 } // namespace llvm::sandboxir

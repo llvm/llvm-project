@@ -11,8 +11,8 @@ program main
   real a, b
   integer, parameter :: ak = kind(a)
   integer, parameter :: br = rank(b)
-  !WARNING: 'a' appeared earlier as a scalar actual argument to a specification function
+  !WARNING: 'a' appeared earlier as a scalar actual argument to a specification function [-Wprevious-scalar-use]
   dimension a(1)
-  !WARNING: 'b' appeared earlier as a scalar actual argument to a specification function
+  !WARNING: 'b' appeared earlier as a scalar actual argument to a specification function [-Wprevious-scalar-use]
   dimension b(1)
 end

@@ -4,10 +4,10 @@
 
 double test_double_builtin(double p0, double p1) {
     return TEST_FUNC(p0, p1);
-  // expected-error@-1 {{passing 'double' to parameter of incompatible type 'float'}}
+  // expected-error@-1 {{1st argument must be a scalar or vector of 16 or 32 bit floating-point types (was 'double')}}
 }
 
 double2 test_vec_double_builtin(double2 p0, double2 p1) {
     return TEST_FUNC(p0, p1);
-  // expected-error@-1 {{passing 'double2' (aka 'vector<double, 2>') to parameter of incompatible type '__attribute__((__vector_size__(2 * sizeof(float)))) float' (vector of 2 'float' values)}}
+  // expected-error@-1 {{1st argument must be a scalar or vector of 16 or 32 bit floating-point types (was 'double2' (aka 'vector<double, 2>'))}}
 }

@@ -69,8 +69,10 @@ class A { A(int); };
 // CHECK: Use -header-filter=.* to display errors from all non-system headers.
 // CHECK-QUIET-NOT: Suppressed
 // CHECK2-QUIET-NOT: Suppressed
+// CHECK3: Use -header-filter=.* {{.*}}
 // CHECK3-QUIET-NOT: Suppressed
 // CHECK4-NOT: Suppressed {{.*}} warnings
+// CHECK4-NOT: Use -header-filter=.* {{.*}}
 // CHECK4-QUIET-NOT: Suppressed
 // CHECK6: Use -header-filter=.* {{.*}}
 

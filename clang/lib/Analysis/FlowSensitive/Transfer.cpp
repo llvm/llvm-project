@@ -30,7 +30,6 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/Debug.h"
 #include <assert.h>
 #include <cassert>
 
@@ -60,7 +59,14 @@ static BoolValue &evaluateBooleanEquality(const Expr &LHS, const Expr &RHS,
   Value *LHSValue = Env.getValue(LHS);
   Value *RHSValue = Env.getValue(RHS);
 
-  if (LHSValue == RHSValue)
+  // When two unsupported values are compared, both are nullptr. Only supported
+  // values should evaluate to equal.
+  if (LHSValue == RHSValue && LHSValue)
+    return Env.getBoolLiteralValue(true);
+
+  // Special case: `NullPtrLiteralExpr == itself`. When both sides are untyped
+  // nullptr, they do not have an assigned Value, but they compare equal.
+  if (LHS.getType()->isNullPtrType() && RHS.getType()->isNullPtrType())
     return Env.getBoolLiteralValue(true);
 
   if (auto *LHSBool = dyn_cast_or_null<BoolValue>(LHSValue))

@@ -14,9 +14,9 @@ set(LLVM_LINK_COMPONENTS
 add_clang_library(clangDaemonTweaks OBJECT
   AddUsing.cpp
   AnnotateHighlightings.cpp
-  DumpAST.cpp
   DefineInline.cpp
   DefineOutline.cpp
+  DumpAST.cpp
   ExpandDeducedType.cpp
   ExpandMacro.cpp
   ExtractFunction.cpp
@@ -24,6 +24,7 @@ add_clang_library(clangDaemonTweaks OBJECT
   MemberwiseConstructor.cpp
   ObjCLocalizeStringLiteral.cpp
   ObjCMemberwiseInitializer.cpp
+  OverridePureVirtuals.cpp
   PopulateSwitch.cpp
   RawStringLiteral.cpp
   RemoveUsingNamespace.cpp

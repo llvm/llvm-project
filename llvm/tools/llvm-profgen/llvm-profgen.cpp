@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ErrorHandling.h"
+#include "Options.h"
 #include "PerfReader.h"
 #include "ProfileGenerator.h"
 #include "ProfiledBinary.h"
@@ -21,7 +22,12 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
-static cl::OptionCategory ProfGenCategory("ProfGen Options");
+using namespace llvm;
+using namespace sampleprof;
+
+namespace llvm {
+
+cl::OptionCategory ProfGenCategory("ProfGen Options");
 
 static cl::opt<std::string> PerfScriptFilename(
     "perfscript", cl::value_desc("perfscript"),
@@ -66,13 +72,6 @@ static cl::opt<std::string> DebugBinPath(
     cl::desc("Path of debug info binary, llvm-profgen will load the DWARF info "
              "from it instead of the executable binary."),
     cl::cat(ProfGenCategory));
-
-extern cl::opt<bool> ShowDisassemblyOnly;
-extern cl::opt<bool> ShowSourceLocations;
-extern cl::opt<bool> SkipSymbolization;
-
-using namespace llvm;
-using namespace sampleprof;
 
 // Validate the command line input.
 static void validateCommandLine() {
@@ -137,6 +136,8 @@ static PerfInputFile getPerfInputFile() {
   }
   return File;
 }
+
+} // end namespace llvm
 
 int main(int argc, const char *argv[]) {
   InitLLVM X(argc, argv);

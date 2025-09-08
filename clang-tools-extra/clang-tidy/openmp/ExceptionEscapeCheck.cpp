@@ -7,13 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "ExceptionEscapeCheck.h"
-#include "clang/AST/ASTContext.h"
-#include "clang/AST/OpenMPClause.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
-#include "clang/ASTMatchers/ASTMatchersMacros.h"
 
 using namespace clang::ast_matchers;
 
@@ -23,15 +20,13 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
                                            ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       RawIgnoredExceptions(Options.get("IgnoredExceptions", "")) {
-  llvm::SmallVector<StringRef, 8> FunctionsThatShouldNotThrowVec,
-      IgnoredExceptionsVec;
+  llvm::SmallVector<StringRef, 8> IgnoredExceptionsVec;
 
   llvm::StringSet<> IgnoredExceptions;
   StringRef(RawIgnoredExceptions).split(IgnoredExceptionsVec, ",", -1, false);
   llvm::transform(IgnoredExceptionsVec, IgnoredExceptionsVec.begin(),
                   [](StringRef S) { return S.trim(); });
-  IgnoredExceptions.insert(IgnoredExceptionsVec.begin(),
-                           IgnoredExceptionsVec.end());
+  IgnoredExceptions.insert_range(IgnoredExceptionsVec);
   Tracer.ignoreExceptions(std::move(IgnoredExceptions));
   Tracer.ignoreBadAlloc(true);
 }

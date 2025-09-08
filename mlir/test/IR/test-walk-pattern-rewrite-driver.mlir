@@ -40,12 +40,12 @@ func.func @move_before(%cond : i1) {
 }
 
 // Check that the driver handles rewriter.moveAfter. In this case, we expect
-// the moved op to be visited only once since walk uses `make_early_inc_range`.
+// the moved op to be visited twice.
 // CHECK-LABEL: func.func @move_after(
 // CHECK: scf.if
 // CHECK: }
 // CHECK: "test.move_after_parent_op"
-// CHECK: "test.any_attr_of_i32_str"() <{attr = 1 : i32}> : () -> ()
+// CHECK: "test.any_attr_of_i32_str"() <{attr = 2 : i32}> : () -> ()
 // CHECK: return
 func.func @move_after(%cond : i1) {
   scf.if %cond {
@@ -119,3 +119,23 @@ func.func @erase_nested_block() -> i32 {
   }): () -> (i32)
   return %a : i32
 }
+
+
+// CHECK-LABEL: func.func @unreachable_replace_with_new_op
+// CHECK: "test.new_op"
+// CHECK: "test.replace_with_new_op"
+// CHECK-SAME: unreachable
+// CHECK: "test.new_op"
+func.func @unreachable_replace_with_new_op() {
+  "test.br"()[^bb1] : () -> ()
+^bb1:
+  %a = "test.replace_with_new_op"() : () -> (i32)
+  "test.br"()[^end] : () -> () // Test jumping over the unreachable block is visited as well.
+^unreachable:
+  %b = "test.replace_with_new_op"() {test.unreachable} : () -> (i32)
+  return
+^end:
+  %c = "test.replace_with_new_op"() : () -> (i32)
+  return
+}
+

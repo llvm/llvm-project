@@ -2,8 +2,8 @@
 //      Test that a \DexDeclareAddress value can be used to compare two equal
 //      pointer variables.
 //
-// RUN: %dexter_regression_test_build %s -o %t
-// RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck %s
+// RUN: %dexter_regression_test_cxx_build %s -o %t
+// RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck --dump-input-context=999999999 %s
 // CHECK: identical_address.cpp
 
 int main() {

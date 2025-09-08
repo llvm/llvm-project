@@ -8,6 +8,7 @@
 
 // ADDITIONAL_COMPILE_FLAGS(gcc): -Wno-bool-compare
 // ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-sign-compare
+// ADDITIONAL_COMPILE_FLAGS(character-conversion-warnings): -Wno-character-conversion
 // MSVC warning C4245: conversion from 'int' to 'wchar_t', signed/unsigned mismatch
 // MSVC warning C4305: truncation from 'int' to 'bool'
 // MSVC warning C4310: cast truncates constant value
@@ -243,7 +244,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     }
 
     // Verify that the std::vector<bool>::iterator optimization works properly for allocators with custom size types
-    // Fix https://github.com/llvm/llvm-project/issues/122528
+    // Fix https://llvm.org/PR122528
     {
       using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
       std::vector<bool, Alloc> in(100, false, Alloc(1));

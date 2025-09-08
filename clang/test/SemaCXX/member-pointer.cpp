@@ -48,7 +48,7 @@ void f() {
 
   // Conversion to member of base.
   pdi1 = pdid; // expected-error {{assigning to 'int A::*' from incompatible type 'int D::*'}}
-  
+
   // Comparisons
   int (A::*pf2)(int, int);
   int (D::*pf3)(int, int) = 0;
@@ -107,7 +107,7 @@ void h() {
   int i = phm->*pi;
   (void)&(hm.*pi);
   (void)&(phm->*pi);
-  (void)&((&hm)->*pi); 
+  (void)&((&hm)->*pi);
 
   void (HasMembers::*pf)() = &HasMembers::f;
   (hm.*pf)();
@@ -205,7 +205,7 @@ namespace rdar8358512 {
 
     static void stat();
     static void stat(int);
-    
+
     template <typename T> struct Test0 {
       void test() {
         bind(&nonstat); // expected-error {{no matching function for call}}
@@ -296,7 +296,7 @@ namespace PR9973 {
     { call(u); } // expected-note{{in instantiation of}}
   };
 
-  template<class R, class T> 
+  template<class R, class T>
   dm<R, T> mem_fn(R T::*) ;
 
   struct test
@@ -324,3 +324,109 @@ namespace test8 {
              .**(int A::**) 0; // expected-warning {{indirection of non-volatile null pointer will be deleted}} expected-note {{consider}}
   }
 }
+
+namespace test9 {
+  struct FOO BAR;
+  // expected-error@-1 {{variable has incomplete type 'struct FOO'}}
+  // expected-note@-2 {{forward declaration of 'test9::FOO'}}
+  // expected-note@-3 {{'BAR' declared here}}
+  struct C { int BAR::*mp; };
+  // expected-error@-1 {{'BAR' is not a class, namespace, or enumeration}}
+} // namespace test9
+
+namespace GH132494 {
+  enum E {};
+
+  void f(int E::*); // expected-error {{member pointer does not point into a class}}
+
+  template <class T> struct A {
+    int T::*foo; // expected-error {{'foo' does not point into a class}}
+  };
+  template struct A<E>; // expected-note {{requested here}}
+} // namespace GH132494
+
+namespace GH132401 {
+  template <typename Func> struct CallableHelper {
+    static auto Resolve() -> Func;
+  };
+  struct QIODevice {
+    void d_func() { (void)d_ptr; }
+    int d_ptr;
+  };
+  template struct CallableHelper<void (QIODevice::*)()>;
+} // namespace GH132401
+
+namespace adl_dependent_class {
+  struct A {
+    template <class T> A(T);
+  };
+  struct C;
+  template <class T> void d(void (T::*)());
+  void f(A);
+  void g() { f(d<C>); }
+} // namespace adl_dependent_class
+
+namespace deduction1 {
+  template <typename> struct RunCallImpl;
+
+  template <typename Derived>
+  struct RunCallImpl<int (Derived::Info::*)(Derived *)> {};
+
+  template <typename d>
+  void RunCall(d) {
+    RunCallImpl<d>();
+  }
+
+  struct Filter {
+    virtual void MakeCall();
+    virtual ~Filter() = default;
+  };
+
+  template <typename Derived>
+  struct ImplementFilter : Filter {
+    void MakeCall() { RunCall(&Derived::Info::OnStuffHandler); }
+  };
+
+  struct FoobarFilter : ImplementFilter<FoobarFilter> {
+    struct Info {
+      int OnStuffHandler(FoobarFilter *);
+    };
+  };
+} // namespace deduction1
+
+namespace deduction2 {
+  template <typename> struct A;
+  template <typename T>
+  struct A<void (T::C::*)(int &, T *)> {};
+  template <typename T> void e(T) {
+    A<T> f;
+  }
+  struct S {
+    struct C {
+      void h(int &, S *);
+    };
+    void i() { e(&C::h); }
+  };
+} // namespace deduction2
+
+namespace deduction_qualifiers {
+  struct A {
+    int v;
+  };
+  using CA = const A;
+
+  template <class T> void g(const T&, int T::*);
+  template <class T> void h(const T&, int CA::*);
+
+  void test(const A a, A b) {
+    g(a, &A::v);
+    g(a, &CA::v);
+    h(a, &A::v);
+    h(a, &CA::v);
+
+    g(b, &A::v);
+    g(b, &CA::v);
+    h(b, &A::v);
+    h(b, &CA::v);
+  }
+} // namespace deduction_qualifiers

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SparcSubtarget.h"
+#include "SparcSelectionDAGInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/MathExtras.h"
@@ -30,7 +31,7 @@ SparcSubtarget &SparcSubtarget::initializeSubtargetDependencies(
   // Determine default and user specified characteristics
   std::string CPUName = std::string(CPU);
   if (CPUName.empty())
-    CPUName = (Is64Bit) ? "v9" : "v8";
+    CPUName = getTargetTriple().isSPARC64() ? "v9" : "v8";
 
   if (TuneCPU.empty())
     TuneCPU = CPUName;
@@ -46,13 +47,20 @@ SparcSubtarget &SparcSubtarget::initializeSubtargetDependencies(
 }
 
 SparcSubtarget::SparcSubtarget(const StringRef &CPU, const StringRef &TuneCPU,
-                               const StringRef &FS, const TargetMachine &TM,
-                               bool is64Bit)
+                               const StringRef &FS, const TargetMachine &TM)
     : SparcGenSubtargetInfo(TM.getTargetTriple(), CPU, TuneCPU, FS),
       ReserveRegister(TM.getMCRegisterInfo()->getNumRegs()),
-      TargetTriple(TM.getTargetTriple()), Is64Bit(is64Bit),
+      Is64Bit(TM.getTargetTriple().isSPARC64()),
       InstrInfo(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
-      TLInfo(TM, *this), FrameLowering(*this) {}
+      TLInfo(TM, *this), FrameLowering(*this) {
+  TSInfo = std::make_unique<SparcSelectionDAGInfo>();
+}
+
+SparcSubtarget::~SparcSubtarget() = default;
+
+const SelectionDAGTargetInfo *SparcSubtarget::getSelectionDAGInfo() const {
+  return TSInfo.get();
+}
 
 int SparcSubtarget::getAdjustedFrameSize(int frameSize) const {
 

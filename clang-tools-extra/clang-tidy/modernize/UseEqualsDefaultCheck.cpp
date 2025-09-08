@@ -48,8 +48,8 @@ static std::set<const Type *> getAllDirectBases(const CXXRecordDecl *Record) {
 /// Returns a matcher that matches member expressions where the base is
 /// the variable declared as \p Var and the accessed member is the one declared
 /// as \p Field.
-internal::Matcher<Expr> accessToFieldInVar(const FieldDecl *Field,
-                                           const ValueDecl *Var) {
+static internal::Matcher<Expr> accessToFieldInVar(const FieldDecl *Field,
+                                                  const ValueDecl *Var) {
   return ignoringImpCasts(
       memberExpr(hasObjectExpression(declRefExpr(to(varDecl(equalsNode(Var))))),
                  member(fieldDecl(equalsNode(Field)))));
@@ -210,7 +210,7 @@ static bool bodyEmpty(const ASTContext *Context, const CompoundStmt *Body) {
 UseEqualsDefaultCheck::UseEqualsDefaultCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
+      IgnoreMacros(Options.get("IgnoreMacros", true)) {}
 
 void UseEqualsDefaultCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);

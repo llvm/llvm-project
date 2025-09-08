@@ -12,7 +12,6 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
-#include "clang/Tooling/FixIt.h"
 
 using namespace clang::ast_matchers;
 
@@ -24,7 +23,7 @@ AST_MATCHER(StringLiteral, isOrdinary) { return Node.isOrdinary(); }
 
 UseStdPrintCheck::UseStdPrintCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), PP(nullptr),
-      StrictMode(Options.getLocalOrGlobal("StrictMode", false)),
+      StrictMode(Options.get("StrictMode", false)),
       PrintfLikeFunctions(utils::options::parseStringList(
           Options.get("PrintfLikeFunctions", ""))),
       FprintfLikeFunctions(utils::options::parseStringList(

@@ -19,7 +19,7 @@ namespace clang::tidy::darwin {
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/darwin/avoid-spinlock.html
 class AvoidSpinlockCheck : public ClangTidyCheck {
- public:
+public:
   AvoidSpinlockCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
@@ -28,4 +28,4 @@ class AvoidSpinlockCheck : public ClangTidyCheck {
 
 } // namespace clang::tidy::darwin
 
-#endif  // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_DARWIN_AVOIDSPINLOCKCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_DARWIN_AVOIDSPINLOCKCHECK_H

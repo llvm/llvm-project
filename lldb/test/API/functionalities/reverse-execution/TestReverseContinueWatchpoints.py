@@ -10,10 +10,14 @@ from lldbsuite.test import lldbutil
 
 class TestReverseContinueWatchpoints(ReverseTestBase):
     @skipIfRemote
+    # Watchpoints don't work in single-step mode
+    @skipIf(macos_version=["<", "15.0"], archs=["arm64"])
     def test_reverse_continue_watchpoint(self):
         self.reverse_continue_watchpoint_internal(async_mode=False)
 
     @skipIfRemote
+    # Watchpoints don't work in single-step mode
+    @skipIf(macos_version=["<", "15.0"], archs=["arm64"])
     def test_reverse_continue_watchpoint_async(self):
         self.reverse_continue_watchpoint_internal(async_mode=True)
 
@@ -58,10 +62,24 @@ class TestReverseContinueWatchpoints(ReverseTestBase):
         )
 
     @skipIfRemote
+    # Watchpoints don't work in single-step mode
+    @skipIf(macos_version=["<", "15.0"], archs=["arm64"])
+    @skipIf(
+        oslist=["windows"],
+        archs=["x86_64"],
+        bugnumber="github.com/llvm/llvm-project/issues/138084",
+    )
     def test_reverse_continue_skip_watchpoint(self):
         self.reverse_continue_skip_watchpoint_internal(async_mode=False)
 
     @skipIfRemote
+    # Watchpoints don't work in single-step mode
+    @skipIf(macos_version=["<", "15.0"], archs=["arm64"])
+    @skipIf(
+        oslist=["windows"],
+        archs=["x86_64"],
+        bugnumber="github.com/llvm/llvm-project/issues/138084",
+    )
     def test_reverse_continue_skip_watchpoint_async(self):
         self.reverse_continue_skip_watchpoint_internal(async_mode=True)
 

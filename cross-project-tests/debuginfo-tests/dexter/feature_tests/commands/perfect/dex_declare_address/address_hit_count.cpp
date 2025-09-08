@@ -4,8 +4,8 @@
 //      expression after the target line has been stepped on a given number of
 //      times.
 //
-// RUN: %dexter_regression_test_build %s -o %t
-// RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck %s
+// RUN: %dexter_regression_test_cxx_build %s -o %t
+// RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck --dump-input-context=999999999 %s
 // CHECK: address_hit_count.cpp
 
 int main() {

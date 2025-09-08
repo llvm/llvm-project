@@ -250,6 +250,7 @@ class RegisterWithSubRegs<string n, list<Register> subregs> : Register<n> {
 class DAGOperand {
   string OperandNamespace = "MCOI";
   string DecoderMethod = "";
+  bit hasCompleteDecoder = true;
 }
 
 // RegisterClass - Now that all of the registers are defined, and aliases
@@ -314,7 +315,7 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   // to use in a given machine function. The code will be inserted in a
   // function like this:
   //
-  //   static inline unsigned f(const MachineFunction &MF) { ... }
+  //   static inline unsigned f(const MachineFunction &MF, bool Rev) { ... }
   //
   // The function should return 0 to select the default order defined by
   // MemberList, 1 to select the first AltOrders entry and so on.
@@ -538,11 +539,11 @@ include "llvm/Target/TargetInstrPredicate.td"
 include "llvm/Target/TargetSchedule.td"
 
 class InstructionEncoding {
-  // Size of encoded instruction.
+  // Size of encoded instruction in bytes.
   int Size;
 
-  // The "namespace" in which this instruction exists, on targets like ARM
-  // which multiple ISA namespaces exist.
+  // The "namespace" in which this instruction exists (on targets like ARM
+  // where multiple ISA namespaces exist).
   string DecoderNamespace = "";
 
   // List of predicates which will be turned into isel matching code.
@@ -733,10 +734,6 @@ class Instruction : InstructionEncoding {
   /// - The LLVM IR specification: Section `Output constraints` in the
   ///   discussion of inline assembly constraint strings.
   string Constraints = "";
-
-  /// DisableEncoding - List of operand names (e.g. "$op1,$op2") that should not
-  /// be encoded into the output machineinstr.
-  string DisableEncoding = "";
 
   string PostEncoderMethod = "";
 
@@ -1003,7 +1000,6 @@ class Operand<ValueType ty> : DAGOperand {
   ValueType Type = ty;
   string PrintMethod = "printOperand";
   string EncoderMethod = "";
-  bit hasCompleteDecoder = true;
   string OperandType = "OPERAND_UNKNOWN";
   dag MIOperandInfo = (ops);
 

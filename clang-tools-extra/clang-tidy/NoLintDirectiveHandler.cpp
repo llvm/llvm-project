@@ -18,7 +18,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Core/Diagnostic.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -30,7 +29,6 @@
 #include <optional>
 #include <string>
 #include <tuple>
-#include <type_traits>
 #include <utility>
 
 namespace clang::tidy {
@@ -351,7 +349,7 @@ bool NoLintDirectiveHandler::Impl::diagHasNoLint(
     return false;
 
   // Do we have cached NOLINT block locations for this file?
-  if (Cache.count(*FileName) == 0)
+  if (!Cache.contains(*FileName))
     // Warning: heavy operation - need to read entire file.
     generateCache(SrcMgr, *FileName, File, *Buffer, NoLintErrors);
 

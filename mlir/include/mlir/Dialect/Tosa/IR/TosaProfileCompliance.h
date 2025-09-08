@@ -29,11 +29,11 @@ typedef struct {
 } TypeInfo;
 
 enum CheckCondition {
+  invalid,
   // Valid when any of the profile (extension) requirement is meet.
   anyOf,
   // Valid when all of the profile (extension) requirement are meet.
-  allOf,
-  invalid
+  allOf
 };
 
 template <typename T>
@@ -76,20 +76,21 @@ private:
 
   LogicalResult populatationDispatch(Operation *op);
 
-  void populateProfileInfo(ValueRange operands, Value output);
+  LogicalResult populateProfileInfo(ValueRange operands, Value output);
 
   // Base
   template <typename T>
-  void populateProfileInfo(T op) {
-    op->emitOpError() << "profile requirement for this op has not been defined";
+  LogicalResult populateProfileInfo(T op) {
+    return op->emitOpError()
+           << "profile requirement for this op has not been defined";
   }
   // For conv2d, conv3d, transpose_conv2d, and depthwise_conv2d.
   template <typename T>
-  void populateProfileInfoConv(T op);
+  LogicalResult populateProfileInfoConv(T op);
 
-  // For pad, reshape, slice, tile, and transpose.
+  // For reshape, slice, tile, and transpose.
   template <typename T>
-  void populateProfileInfoDataLayout(T op);
+  LogicalResult populateProfileInfoDataLayout(T op);
 
 private:
   SmallVector<TypeInfo> tyInfo;
@@ -115,6 +116,7 @@ public:
   // environment.
   LogicalResult checkProfile(Operation *op, const tosa::TargetEnv &targetEnv);
   LogicalResult checkExtension(Operation *op, const tosa::TargetEnv &targetEnv);
+  LogicalResult checkInvalid(Operation *op);
 
   template <typename T>
   LogicalResult checkProfileOrExtension(
@@ -162,7 +164,13 @@ public:
   SmallVector<StringRef>
   stringifyProfile(const SmallVector<ArrayRef<T>> &profileSet);
 
+  static llvm::SmallString<7> stringifyTypeInfo(const TypeInfo &typeInfo);
+
 private:
+  template <typename T>
+  FailureOr<SmallVector<T>> getOperatorDefinition(Operation *op,
+                                                  CheckCondition &condition);
+
   OperationProfileComplianceMap profileComplianceMap;
   OperationExtensionComplianceMap extensionComplianceMap;
 };

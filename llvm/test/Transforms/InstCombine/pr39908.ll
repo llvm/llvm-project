@@ -7,9 +7,7 @@ target datalayout = "p:32:32"
 
 define i1 @test(ptr %p, i32 %n) {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:    [[END:%.*]] = getelementptr inbounds [0 x %S], ptr [[P:%.*]], i32 0, i32 [[N:%.*]], i32 0, i32 0
-; CHECK-NEXT:    [[LAST:%.*]] = getelementptr inbounds i8, ptr [[END]], i32 -8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[LAST]], [[P]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[N:%.*]], 1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %end = getelementptr inbounds [0 x %S], ptr %p, i32 0, i32 %n, i32 0, i32 0
@@ -21,10 +19,8 @@ define i1 @test(ptr %p, i32 %n) {
 ; Same test using 64-bit indices.
 define i1 @test64(ptr %p, i64 %n) {
 ; CHECK-LABEL: @test64(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[N:%.*]] to i32
-; CHECK-NEXT:    [[END:%.*]] = getelementptr inbounds [0 x %S], ptr [[P:%.*]], i32 0, i32 [[TMP1]], i32 0, i32 0
-; CHECK-NEXT:    [[LAST:%.*]] = getelementptr inbounds i8, ptr [[END]], i32 -8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[LAST]], [[P]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nsw i64 [[N:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %end = getelementptr inbounds [0 x %S], ptr %p, i64 0, i64 %n, i32 0, i64 0
@@ -36,10 +32,8 @@ define i1 @test64(ptr %p, i64 %n) {
 ; Here the offset overflows and is treated modulo 2^32. This is UB.
 define i1 @test64_overflow(ptr %p, i64 %n) {
 ; CHECK-LABEL: @test64_overflow(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[N:%.*]] to i32
-; CHECK-NEXT:    [[END:%.*]] = getelementptr inbounds [0 x %S], ptr [[P:%.*]], i32 0, i32 [[TMP1]], i32 0, i32 0
-; CHECK-NEXT:    [[LAST:%.*]] = getelementptr inbounds i8, ptr [[END]], i32 -8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[LAST]], [[P]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nsw i64 [[N:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %end = getelementptr inbounds [0 x %S], ptr %p, i64 0, i64 %n, i32 0, i64 8589934592

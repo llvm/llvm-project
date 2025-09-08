@@ -3713,30 +3713,26 @@ entry:
 define <2 x i64> @spltConst1ll() {
 ; P9BE-LABEL: spltConst1ll:
 ; P9BE:       # %bb.0: # %entry
-; P9BE-NEXT:    addis r3, r2, .LCPI65_0@toc@ha
-; P9BE-NEXT:    addi r3, r3, .LCPI65_0@toc@l
-; P9BE-NEXT:    lxv v2, 0(r3)
+; P9BE-NEXT:    vspltisw v2, 1
+; P9BE-NEXT:    vupklsw v2, v2
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: spltConst1ll:
 ; P9LE:       # %bb.0: # %entry
-; P9LE-NEXT:    addis r3, r2, .LCPI65_0@toc@ha
-; P9LE-NEXT:    addi r3, r3, .LCPI65_0@toc@l
-; P9LE-NEXT:    lxv v2, 0(r3)
+; P9LE-NEXT:    vspltisw v2, 1
+; P9LE-NEXT:    vupklsw v2, v2
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: spltConst1ll:
 ; P8BE:       # %bb.0: # %entry
-; P8BE-NEXT:    addis r3, r2, .LCPI65_0@toc@ha
-; P8BE-NEXT:    addi r3, r3, .LCPI65_0@toc@l
-; P8BE-NEXT:    lxvd2x v2, 0, r3
+; P8BE-NEXT:    vspltisw v2, 1
+; P8BE-NEXT:    vupklsw v2, v2
 ; P8BE-NEXT:    blr
 ;
 ; P8LE-LABEL: spltConst1ll:
 ; P8LE:       # %bb.0: # %entry
-; P8LE-NEXT:    addis r3, r2, .LCPI65_0@toc@ha
-; P8LE-NEXT:    addi r3, r3, .LCPI65_0@toc@l
-; P8LE-NEXT:    lxvd2x v2, 0, r3
+; P8LE-NEXT:    vspltisw v2, 1
+; P8LE-NEXT:    vupklsw v2, v2
 ; P8LE-NEXT:    blr
 entry:
   ret <2 x i64> <i64 1, i64 1>
@@ -4173,30 +4169,26 @@ entry:
 define <2 x i64> @spltCnstConvftoll() {
 ; P9BE-LABEL: spltCnstConvftoll:
 ; P9BE:       # %bb.0: # %entry
-; P9BE-NEXT:    addis r3, r2, .LCPI78_0@toc@ha
-; P9BE-NEXT:    addi r3, r3, .LCPI78_0@toc@l
-; P9BE-NEXT:    lxv v2, 0(r3)
+; P9BE-NEXT:    vspltisw v2, 4
+; P9BE-NEXT:    vupklsw v2, v2
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: spltCnstConvftoll:
 ; P9LE:       # %bb.0: # %entry
-; P9LE-NEXT:    addis r3, r2, .LCPI78_0@toc@ha
-; P9LE-NEXT:    addi r3, r3, .LCPI78_0@toc@l
-; P9LE-NEXT:    lxv v2, 0(r3)
+; P9LE-NEXT:    vspltisw v2, 4
+; P9LE-NEXT:    vupklsw v2, v2
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: spltCnstConvftoll:
 ; P8BE:       # %bb.0: # %entry
-; P8BE-NEXT:    addis r3, r2, .LCPI78_0@toc@ha
-; P8BE-NEXT:    addi r3, r3, .LCPI78_0@toc@l
-; P8BE-NEXT:    lxvd2x v2, 0, r3
+; P8BE-NEXT:    vspltisw v2, 4
+; P8BE-NEXT:    vupklsw v2, v2
 ; P8BE-NEXT:    blr
 ;
 ; P8LE-LABEL: spltCnstConvftoll:
 ; P8LE:       # %bb.0: # %entry
-; P8LE-NEXT:    addis r3, r2, .LCPI78_0@toc@ha
-; P8LE-NEXT:    addi r3, r3, .LCPI78_0@toc@l
-; P8LE-NEXT:    lxvd2x v2, 0, r3
+; P8LE-NEXT:    vspltisw v2, 4
+; P8LE-NEXT:    vupklsw v2, v2
 ; P8LE-NEXT:    blr
 entry:
   ret <2 x i64> <i64 4, i64 4>
@@ -4526,30 +4518,26 @@ entry:
 define <2 x i64> @spltCnstConvdtoll() {
 ; P9BE-LABEL: spltCnstConvdtoll:
 ; P9BE:       # %bb.0: # %entry
-; P9BE-NEXT:    addis r3, r2, .LCPI87_0@toc@ha
-; P9BE-NEXT:    addi r3, r3, .LCPI87_0@toc@l
-; P9BE-NEXT:    lxv v2, 0(r3)
+; P9BE-NEXT:    vspltisw v2, 4
+; P9BE-NEXT:    vupklsw v2, v2
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: spltCnstConvdtoll:
 ; P9LE:       # %bb.0: # %entry
-; P9LE-NEXT:    addis r3, r2, .LCPI87_0@toc@ha
-; P9LE-NEXT:    addi r3, r3, .LCPI87_0@toc@l
-; P9LE-NEXT:    lxv v2, 0(r3)
+; P9LE-NEXT:    vspltisw v2, 4
+; P9LE-NEXT:    vupklsw v2, v2
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: spltCnstConvdtoll:
 ; P8BE:       # %bb.0: # %entry
-; P8BE-NEXT:    addis r3, r2, .LCPI87_0@toc@ha
-; P8BE-NEXT:    addi r3, r3, .LCPI87_0@toc@l
-; P8BE-NEXT:    lxvd2x v2, 0, r3
+; P8BE-NEXT:    vspltisw v2, 4
+; P8BE-NEXT:    vupklsw v2, v2
 ; P8BE-NEXT:    blr
 ;
 ; P8LE-LABEL: spltCnstConvdtoll:
 ; P8LE:       # %bb.0: # %entry
-; P8LE-NEXT:    addis r3, r2, .LCPI87_0@toc@ha
-; P8LE-NEXT:    addi r3, r3, .LCPI87_0@toc@l
-; P8LE-NEXT:    lxvd2x v2, 0, r3
+; P8LE-NEXT:    vspltisw v2, 4
+; P8LE-NEXT:    vupklsw v2, v2
 ; P8LE-NEXT:    blr
 entry:
   ret <2 x i64> <i64 4, i64 4>
@@ -4879,30 +4867,26 @@ entry:
 define <2 x i64> @spltConst1ull() {
 ; P9BE-LABEL: spltConst1ull:
 ; P9BE:       # %bb.0: # %entry
-; P9BE-NEXT:    addis r3, r2, .LCPI97_0@toc@ha
-; P9BE-NEXT:    addi r3, r3, .LCPI97_0@toc@l
-; P9BE-NEXT:    lxv v2, 0(r3)
+; P9BE-NEXT:    vspltisw v2, 1
+; P9BE-NEXT:    vupklsw v2, v2
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: spltConst1ull:
 ; P9LE:       # %bb.0: # %entry
-; P9LE-NEXT:    addis r3, r2, .LCPI97_0@toc@ha
-; P9LE-NEXT:    addi r3, r3, .LCPI97_0@toc@l
-; P9LE-NEXT:    lxv v2, 0(r3)
+; P9LE-NEXT:    vspltisw v2, 1
+; P9LE-NEXT:    vupklsw v2, v2
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: spltConst1ull:
 ; P8BE:       # %bb.0: # %entry
-; P8BE-NEXT:    addis r3, r2, .LCPI97_0@toc@ha
-; P8BE-NEXT:    addi r3, r3, .LCPI97_0@toc@l
-; P8BE-NEXT:    lxvd2x v2, 0, r3
+; P8BE-NEXT:    vspltisw v2, 1
+; P8BE-NEXT:    vupklsw v2, v2
 ; P8BE-NEXT:    blr
 ;
 ; P8LE-LABEL: spltConst1ull:
 ; P8LE:       # %bb.0: # %entry
-; P8LE-NEXT:    addis r3, r2, .LCPI97_0@toc@ha
-; P8LE-NEXT:    addi r3, r3, .LCPI97_0@toc@l
-; P8LE-NEXT:    lxvd2x v2, 0, r3
+; P8LE-NEXT:    vspltisw v2, 1
+; P8LE-NEXT:    vupklsw v2, v2
 ; P8LE-NEXT:    blr
 entry:
   ret <2 x i64> <i64 1, i64 1>
@@ -5339,30 +5323,26 @@ entry:
 define <2 x i64> @spltCnstConvftoull() {
 ; P9BE-LABEL: spltCnstConvftoull:
 ; P9BE:       # %bb.0: # %entry
-; P9BE-NEXT:    addis r3, r2, .LCPI110_0@toc@ha
-; P9BE-NEXT:    addi r3, r3, .LCPI110_0@toc@l
-; P9BE-NEXT:    lxv v2, 0(r3)
+; P9BE-NEXT:    vspltisw v2, 4
+; P9BE-NEXT:    vupklsw v2, v2
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: spltCnstConvftoull:
 ; P9LE:       # %bb.0: # %entry
-; P9LE-NEXT:    addis r3, r2, .LCPI110_0@toc@ha
-; P9LE-NEXT:    addi r3, r3, .LCPI110_0@toc@l
-; P9LE-NEXT:    lxv v2, 0(r3)
+; P9LE-NEXT:    vspltisw v2, 4
+; P9LE-NEXT:    vupklsw v2, v2
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: spltCnstConvftoull:
 ; P8BE:       # %bb.0: # %entry
-; P8BE-NEXT:    addis r3, r2, .LCPI110_0@toc@ha
-; P8BE-NEXT:    addi r3, r3, .LCPI110_0@toc@l
-; P8BE-NEXT:    lxvd2x v2, 0, r3
+; P8BE-NEXT:    vspltisw v2, 4
+; P8BE-NEXT:    vupklsw v2, v2
 ; P8BE-NEXT:    blr
 ;
 ; P8LE-LABEL: spltCnstConvftoull:
 ; P8LE:       # %bb.0: # %entry
-; P8LE-NEXT:    addis r3, r2, .LCPI110_0@toc@ha
-; P8LE-NEXT:    addi r3, r3, .LCPI110_0@toc@l
-; P8LE-NEXT:    lxvd2x v2, 0, r3
+; P8LE-NEXT:    vspltisw v2, 4
+; P8LE-NEXT:    vupklsw v2, v2
 ; P8LE-NEXT:    blr
 entry:
   ret <2 x i64> <i64 4, i64 4>
@@ -5692,30 +5672,26 @@ entry:
 define <2 x i64> @spltCnstConvdtoull() {
 ; P9BE-LABEL: spltCnstConvdtoull:
 ; P9BE:       # %bb.0: # %entry
-; P9BE-NEXT:    addis r3, r2, .LCPI119_0@toc@ha
-; P9BE-NEXT:    addi r3, r3, .LCPI119_0@toc@l
-; P9BE-NEXT:    lxv v2, 0(r3)
+; P9BE-NEXT:    vspltisw v2, 4
+; P9BE-NEXT:    vupklsw v2, v2
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: spltCnstConvdtoull:
 ; P9LE:       # %bb.0: # %entry
-; P9LE-NEXT:    addis r3, r2, .LCPI119_0@toc@ha
-; P9LE-NEXT:    addi r3, r3, .LCPI119_0@toc@l
-; P9LE-NEXT:    lxv v2, 0(r3)
+; P9LE-NEXT:    vspltisw v2, 4
+; P9LE-NEXT:    vupklsw v2, v2
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: spltCnstConvdtoull:
 ; P8BE:       # %bb.0: # %entry
-; P8BE-NEXT:    addis r3, r2, .LCPI119_0@toc@ha
-; P8BE-NEXT:    addi r3, r3, .LCPI119_0@toc@l
-; P8BE-NEXT:    lxvd2x v2, 0, r3
+; P8BE-NEXT:    vspltisw v2, 4
+; P8BE-NEXT:    vupklsw v2, v2
 ; P8BE-NEXT:    blr
 ;
 ; P8LE-LABEL: spltCnstConvdtoull:
 ; P8LE:       # %bb.0: # %entry
-; P8LE-NEXT:    addis r3, r2, .LCPI119_0@toc@ha
-; P8LE-NEXT:    addi r3, r3, .LCPI119_0@toc@l
-; P8LE-NEXT:    lxvd2x v2, 0, r3
+; P8LE-NEXT:    vspltisw v2, 4
+; P8LE-NEXT:    vupklsw v2, v2
 ; P8LE-NEXT:    blr
 entry:
   ret <2 x i64> <i64 4, i64 4>

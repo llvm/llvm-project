@@ -19,6 +19,10 @@ class TargetInfo;
 
 /// Return the version number associated with the attribute if we
 /// recognize and implement the attribute specified by the given information.
+int hasAttribute(AttributeCommonInfo::Syntax Syntax, llvm::StringRef ScopeName,
+                 llvm::StringRef AttrName, const TargetInfo &Target,
+                 const LangOptions &LangOpts, bool CheckPlugins);
+
 int hasAttribute(AttributeCommonInfo::Syntax Syntax,
                  const IdentifierInfo *Scope, const IdentifierInfo *Attr,
                  const TargetInfo &Target, const LangOptions &LangOpts);
