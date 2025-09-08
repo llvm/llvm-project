@@ -1123,6 +1123,13 @@ UNALIASED_CUSTOM_MMA_BUILTIN(mma_xvbf16ger2, "vW512*VV",
 UNALIASED_CUSTOM_MMA_BUILTIN(mma_pmxvbf16ger2, "vW512*VVi15i15i3",
                              "mma,paired-vector-memops")
 
+UNALIASED_CUSTOM_BUILTIN(mma_dmsha2hash, "vW1024*W1024*Ii", true,
+                         "mma,isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(mma_dmsha3hash, "vW2048*Ii", true,
+                         "mma,isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(mma_dmxxshapad, "vW1024*VIiIiIi", true,
+                         "mma,isa-future-instructions")
+
 // FIXME: Obviously incomplete.
 
 #undef BUILTIN

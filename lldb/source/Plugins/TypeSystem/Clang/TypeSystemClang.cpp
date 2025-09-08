@@ -5036,6 +5036,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::VectorPair:
     case clang::BuiltinType::VectorQuad:
     case clang::BuiltinType::DMR1024:
+    case clang::BuiltinType::DMR2048:
       break;
 
     // ARM -- Scalable Vector Extension
