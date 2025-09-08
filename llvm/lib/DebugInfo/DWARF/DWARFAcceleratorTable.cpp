@@ -248,8 +248,8 @@ LLVM_DUMP_METHOD void AppleAcceleratorTable::dump(raw_ostream &OS) const {
     }
 
     for (unsigned HashIdx = Index; HashIdx < Hdr.HashCount; ++HashIdx) {
-      uint64_t HashOffset = HashesBase + HashIdx*4;
-      uint64_t OffsetsOffset = OffsetsBase + HashIdx*4;
+      uint64_t HashOffset = HashesBase + HashIdx * 4;
+      uint64_t OffsetsOffset = OffsetsBase + HashIdx * 4;
       uint32_t Hash = AccelSection.getU32(&HashOffset);
 
       if (Hash % Hdr.BucketCount != Bucket)
@@ -443,7 +443,7 @@ void DWARFDebugNames::Header::dump(ScopedPrinter &W) const {
 }
 
 Error DWARFDebugNames::Header::extract(const DWARFDataExtractor &AS,
-                                             uint64_t *Offset) {
+                                       uint64_t *Offset) {
   auto HeaderError = [Offset = *Offset](Error E) {
     return createStringError(errc::illegal_byte_sequence,
                              "parsing .debug_names header at 0x%" PRIx64 ": %s",
@@ -830,8 +830,9 @@ bool DWARFDebugNames::NameIndex::dumpEntry(ScopedPrinter &W,
   uint64_t EntryId = *Offset;
   auto EntryOr = getEntry(Offset);
   if (!EntryOr) {
-    handleAllErrors(EntryOr.takeError(), [](const SentinelError &) {},
-                    [&W](const ErrorInfoBase &EI) { EI.log(W.startLine()); });
+    handleAllErrors(
+        EntryOr.takeError(), [](const SentinelError &) {},
+        [&W](const ErrorInfoBase &EI) { EI.log(W.startLine()); });
     return false;
   }
 
@@ -1117,7 +1118,8 @@ std::optional<StringRef> llvm::StripTemplateParameters(StringRef Name) {
   //
   // We look for > at the end but if it does not contain any < then we
   // have something like operator>>. We check for the operator<=> case.
-  if (!Name.ends_with(">") || Name.count("<") == 0 || Name.ends_with("<=>"))
+  if (Name.starts_with("<") || !Name.ends_with(">") || Name.count("<") == 0 ||
+      Name.ends_with("<=>"))
     return {};
 
   // How many < until we have the start of the template parameters.
