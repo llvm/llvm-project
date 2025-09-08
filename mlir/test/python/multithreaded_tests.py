@@ -1,4 +1,5 @@
 # RUN: %PYTHON %s
+# RUN: %PYTHON -m mypy %s --config-file %mlir_src_root/test/python/mypy.ini
 """
 This script generates multi-threaded tests to check free-threading mode using CPython compiled with TSAN.
 Tests can be run using pytest:

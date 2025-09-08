@@ -1,4 +1,5 @@
 # RUN: %PYTHON %s | FileCheck %s
+# RUN: %PYTHON -m mypy %s --config-file %mlir_src_root/test/python/mypy.ini
 # Note that this is separate from ir_attributes.py since it depends on numpy,
 # and we may want to disable if not available.
 

@@ -1,5 +1,7 @@
 # RUN: %PYTHON %s pybind11 | FileCheck %s
 # RUN: %PYTHON %s nanobind | FileCheck %s
+# RUN: %PYTHON -m mypy %s --config-file %mlir_src_root/test/python/mypy.ini
+
 import sys
 import typing
 from typing import Union, Optional

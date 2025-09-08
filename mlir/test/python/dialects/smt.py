@@ -1,4 +1,5 @@
 # RUN: %PYTHON %s | FileCheck %s
+# RUN: %PYTHON -m mypy %s --config-file %mlir_src_root/test/python/mypy.ini
 
 from mlir.dialects import smt, arith
 from mlir.ir import Context, Location, Module, InsertionPoint, F32Type
