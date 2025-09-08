@@ -10,8 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+def SDT_LoongArchXVPERM : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0, 1>,
+                                               SDTCisVec<2>, SDTCisInt<2>]>;
+
 // Target nodes.
 def loongarch_xvpermi: SDNode<"LoongArchISD::XVPERMI", SDT_LoongArchV1RUimm>;
+def loongarch_xvperm: SDNode<"LoongArchISD::XVPERM", SDT_LoongArchXVPERM>;
 def loongarch_xvmskltz: SDNode<"LoongArchISD::XVMSKLTZ", SDT_LoongArchVMSKCOND>;
 def loongarch_xvmskgez: SDNode<"LoongArchISD::XVMSKGEZ", SDT_LoongArchVMSKCOND>;
 def loongarch_xvmskeqz: SDNode<"LoongArchISD::XVMSKEQZ", SDT_LoongArchVMSKCOND>;
@@ -1865,6 +1869,12 @@ def : Pat<(loongarch_xvpermi v4i64:$xj, immZExt8: $ui8),
           (XVPERMI_D v4i64:$xj, immZExt8: $ui8)>;
 def : Pat<(loongarch_xvpermi v4f64:$xj, immZExt8: $ui8),
           (XVPERMI_D v4f64:$xj, immZExt8: $ui8)>;
+
+// XVPERM_W
+def : Pat<(loongarch_xvperm v8i32:$xj, v8i32:$xk),
+          (XVPERM_W v8i32:$xj, v8i32:$xk)>;
+def : Pat<(loongarch_xvperm v8f32:$xj, v8i32:$xk),
+          (XVPERM_W v8f32:$xj, v8i32:$xk)>;
 
 // XVREPLVE0_{W/D}
 def : Pat<(lasxsplatf32 FPR32:$fj),

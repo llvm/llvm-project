@@ -230,12 +230,14 @@ def OMPLoopBasedDirective : StmtNode<OMPExecutableDirective, 1>;
 def OMPLoopDirective : StmtNode<OMPLoopBasedDirective, 1>;
 def OMPParallelDirective : StmtNode<OMPExecutableDirective>;
 def OMPSimdDirective : StmtNode<OMPLoopDirective>;
-def OMPLoopTransformationDirective : StmtNode<OMPLoopBasedDirective, 1>;
-def OMPTileDirective : StmtNode<OMPLoopTransformationDirective>;
-def OMPStripeDirective : StmtNode<OMPLoopTransformationDirective>;
-def OMPUnrollDirective : StmtNode<OMPLoopTransformationDirective>;
-def OMPReverseDirective : StmtNode<OMPLoopTransformationDirective>;
-def OMPInterchangeDirective : StmtNode<OMPLoopTransformationDirective>;
+def OMPCanonicalLoopNestTransformationDirective
+    : StmtNode<OMPLoopBasedDirective, 1>;
+def OMPTileDirective : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
+def OMPStripeDirective : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
+def OMPUnrollDirective : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
+def OMPReverseDirective : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
+def OMPInterchangeDirective
+    : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
 def OMPForDirective : StmtNode<OMPLoopDirective>;
 def OMPForSimdDirective : StmtNode<OMPLoopDirective>;
 def OMPSectionsDirective : StmtNode<OMPExecutableDirective>;

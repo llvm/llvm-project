@@ -1355,8 +1355,7 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     } else {
       const mlir::Value initVal =
           lowerCirAttrAsValue(op, op.getValue(), rewriter, typeConverter);
-      rewriter.replaceAllUsesWith(op, initVal);
-      rewriter.eraseOp(op);
+      rewriter.replaceOp(op, initVal);
       return mlir::success();
     }
   } else if (const auto recordAttr =
@@ -1368,6 +1367,15 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     rewriter.replaceOp(op, lowerCirAttrAsValue(op, op.getValue(), rewriter,
                                                getTypeConverter()));
     return mlir::success();
+  } else if (auto recTy = mlir::dyn_cast<cir::RecordType>(op.getType())) {
+    if (mlir::isa<cir::ZeroAttr, cir::UndefAttr>(attr)) {
+      mlir::Value initVal =
+          lowerCirAttrAsValue(op, attr, rewriter, typeConverter);
+      rewriter.replaceOp(op, initVal);
+      return mlir::success();
+    }
+    return op.emitError() << "unsupported lowering for record constant type "
+                          << op.getType();
   } else if (auto complexTy = mlir::dyn_cast<cir::ComplexType>(op.getType())) {
     mlir::Type complexElemTy = complexTy.getElementType();
     mlir::Type complexElemLLVMTy = typeConverter->convertType(complexElemTy);
@@ -2644,8 +2652,7 @@ mlir::LogicalResult CIRToLLVMVTableGetVPtrOpLowering::matchAndRewrite(
   // pointer to the vptr type. Since the LLVM dialect uses opaque pointers
   // we can just replace uses of this operation with the original pointer.
   mlir::Value srcVal = adaptor.getSrc();
-  rewriter.replaceAllUsesWith(op, srcVal);
-  rewriter.eraseOp(op);
+  rewriter.replaceOp(op, srcVal);
   return mlir::success();
 }
 
@@ -2677,8 +2684,7 @@ mlir::LogicalResult CIRToLLVMVTTAddrPointOpLowering::matchAndRewrite(
     }
 
     offsets.push_back(adaptor.getOffset());
-    eltType = mlir::IntegerType::get(resultType.getContext(), 8,
-                                     mlir::IntegerType::Signless);
+    eltType = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
   } else {
     llvmAddr = getValueForVTableSymbol(op, rewriter, getTypeConverter(),
                                        op.getNameAttr(), eltType);

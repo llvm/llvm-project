@@ -2187,8 +2187,15 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
   // negative. If Step is known to be positive or negative, only create
   // either 1. or 2.
   auto ComputeEndCheck = [&]() -> Value * {
-    // Checking <u 0 is always false.
-    if (!Signed && Start->isZero() && SE.isKnownPositive(Step))
+    // Checking <u 0 is always false, if (Step * trunc ExitCount) does not wrap.
+    // TODO: Predicates that can be proven true/false should be discarded when
+    // the predicates are created, not late during expansion.
+    if (!Signed && Start->isZero() && SE.isKnownPositive(Step) &&
+        DstBits < SrcBits &&
+        ExitCount == SE.getZeroExtendExpr(SE.getTruncateExpr(ExitCount, ARTy),
+                                          ExitCount->getType()) &&
+        SE.willNotOverflow(Instruction::Mul, Signed, Step,
+                           SE.getTruncateExpr(ExitCount, ARTy)))
       return ConstantInt::getFalse(Loc->getContext());
 
     // Get the backedge taken count and truncate or extended to the AR type.
