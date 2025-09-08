@@ -2344,23 +2344,36 @@ def fsymbol_partition_EQ : Joined<["-"], "fsymbol-partition=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoString<CodeGenOpts<"SymbolPartition">>;
 
-defm atomic_remote_memory : BoolFOption<"atomic-remote-memory",
-  LangOpts<"AtomicRemoteMemory">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option], "May have">,
-  NegFlag<SetFalse, [], [ClangOption, FlangOption], "Assume no">,
-  BothFlags<[], [ClangOption, FlangOption], " atomic operations on remote memory">>;
+defm atomic_remote_memory
+    : BoolFOption<
+          "atomic-remote-memory", LangOpts<"AtomicRemoteMemory">, DefaultFalse,
+          PosFlag<SetTrue, [], [ClangOption, CC1Option], "May have">,
+          NegFlag<SetFalse, [], [ClangOption, CC1Option], "Assume no">,
+          BothFlags<[], [ClangOption], " atomic operations on remote memory">>;
 
-defm atomic_fine_grained_memory : BoolFOption<"atomic-fine-grained-memory",
-  LangOpts<"AtomicFineGrainedMemory">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option], "May have">,
-  NegFlag<SetFalse, [], [ClangOption, FlangOption], "Assume no">,
-  BothFlags<[], [ClangOption, FlangOption], " atomic operations on fine-grained memory">>;
+defm atomic_fine_grained_memory
+    : BoolFOption<"atomic-fine-grained-memory",
+                  LangOpts<"AtomicFineGrainedMemory">, DefaultFalse,
+                  PosFlag<SetTrue, [], [ClangOption, CC1Option], "May have">,
+                  NegFlag<SetFalse, [], [ClangOption, CC1Option], "Assume no">,
+                  BothFlags<[], [ClangOption],
+                            " atomic operations on fine-grained memory">>;
 
-defm atomic_ignore_denormal_mode : BoolFOption<"atomic-ignore-denormal-mode",
-  LangOpts<"AtomicIgnoreDenormalMode">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option], "Allow">,
-  NegFlag<SetFalse, [], [ClangOption, FlangOption], "Disallow">,
-  BothFlags<[], [ClangOption, FlangOption], " atomic operations to ignore denormal mode">>;
+defm atomic_ignore_denormal_mode
+    : BoolFOption<"atomic-ignore-denormal-mode",
+                  LangOpts<"AtomicIgnoreDenormalMode">, DefaultFalse,
+                  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Allow">,
+                  NegFlag<SetFalse, [], [ClangOption, CC1Option], "Disallow">,
+                  BothFlags<[], [ClangOption],
+                            " atomic operations to ignore denormal mode">>;
+
+defm atomic_backward_compatible
+    : BoolFOption<"atomic-backward-compatible",
+                  LangOpts<"AtomicBackwardCompatible">, DefaultTrue,
+                  PosFlag<SetTrue, [], [ClangOption], "Enable">,
+                  NegFlag<SetFalse, [], [ClangOption, CC1Option], "Disable">,
+                  BothFlags<[], [ClangOption],
+                            " backward compatibility for atomic operations">>;
 
 defm memory_profile : OptInCC1FFlag<"memory-profile", "Enable", "Disable", " heap memory profiling">;
 def fmemory_profile_EQ : Joined<["-"], "fmemory-profile=">,

@@ -4633,6 +4633,13 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     }
   }
 
+  Opts.AtomicRemoteMemorySpecified =
+      Args.hasArg(OPT_fatomic_remote_memory, OPT_fno_atomic_remote_memory);
+  Opts.AtomicFineGrainedMemorySpecified = Args.hasArg(
+      OPT_fatomic_fine_grained_memory, OPT_fno_atomic_fine_grained_memory);
+  Opts.AtomicIgnoreDenormalModeSpecified = Args.hasArg(
+      OPT_fatomic_ignore_denormal_mode, OPT_fno_atomic_ignore_denormal_mode);
+
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 

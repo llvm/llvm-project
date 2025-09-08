@@ -5865,12 +5865,15 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   RenderFloatingPointOptions(TC, D, OFastEnabled, Args, CmdArgs, JA);
 
-  Args.addOptInFlag(CmdArgs, options::OPT_fatomic_remote_memory,
-                    options::OPT_fno_atomic_remote_memory);
-  Args.addOptInFlag(CmdArgs, options::OPT_fatomic_fine_grained_memory,
-                    options::OPT_fno_atomic_fine_grained_memory);
-  Args.addOptInFlag(CmdArgs, options::OPT_fatomic_ignore_denormal_mode,
-                    options::OPT_fno_atomic_ignore_denormal_mode);
+  Args.addLastArg(CmdArgs, options::OPT_fatomic_remote_memory,
+                  options::OPT_fno_atomic_remote_memory);
+  Args.addLastArg(CmdArgs, options::OPT_fatomic_fine_grained_memory,
+                  options::OPT_fno_atomic_fine_grained_memory);
+  Args.addLastArg(CmdArgs, options::OPT_fatomic_ignore_denormal_mode,
+                  options::OPT_fno_atomic_ignore_denormal_mode);
+
+  Args.addOptOutFlag(CmdArgs, options::OPT_fatomic_backward_compatible,
+                     options::OPT_fno_atomic_backward_compatible);
 
   if (Arg *A = Args.getLastArg(options::OPT_fextend_args_EQ)) {
     const llvm::Triple::ArchType Arch = TC.getArch();

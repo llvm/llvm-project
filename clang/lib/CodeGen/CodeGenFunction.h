@@ -818,7 +818,7 @@ public:
 
   class CGAtomicOptionsRAII {
   public:
-    CGAtomicOptionsRAII(CodeGenModule &CGM_, AtomicOptions AO)
+    CGAtomicOptionsRAII(CodeGenModule &CGM_, std::optional<AtomicOptions> AO)
         : CGM(CGM_), SavedAtomicOpts(CGM.getAtomicOpts()) {
       CGM.setAtomicOpts(AO);
     }
@@ -826,7 +826,7 @@ public:
         : CGM(CGM_), SavedAtomicOpts(CGM.getAtomicOpts()) {
       if (!AA)
         return;
-      AtomicOptions AO = SavedAtomicOpts;
+      AtomicOptions AO = SavedAtomicOpts.value_or(AtomicOptions());
       for (auto Option : AA->atomicOptions()) {
         switch (Option) {
         case AtomicAttr::remote_memory:
@@ -849,7 +849,7 @@ public:
           break;
         }
       }
-      CGM.setAtomicOpts(AO);
+      CGM.setAtomicOpts(std::make_optional(AO));
     }
 
     CGAtomicOptionsRAII(const CGAtomicOptionsRAII &) = delete;
@@ -858,7 +858,7 @@ public:
 
   private:
     CodeGenModule &CGM;
-    AtomicOptions SavedAtomicOpts;
+    std::optional<AtomicOptions> SavedAtomicOpts;
   };
 
 public:
