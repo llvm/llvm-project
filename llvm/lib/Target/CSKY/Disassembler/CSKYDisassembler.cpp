@@ -36,8 +36,6 @@ class CSKYDisassembler : public MCDisassembler {
   std::unique_ptr<MCInstrInfo const> const MCII;
   mutable StringRef symbolName;
 
-  DecodeStatus handleCROperand(MCInst &Instr) const;
-
 public:
   CSKYDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
                    MCInstrInfo const *MCII);
@@ -198,15 +196,9 @@ static DecodeStatus DecodemGPRRegisterClass(MCInst &Inst, uint64_t RegNo,
   return MCDisassembler::Success;
 }
 
-// TODO
-LLVM_ATTRIBUTE_UNUSED
-static DecodeStatus DecodeGPRSPRegisterClass(MCInst &Inst, uint64_t RegNo,
-                                             uint64_t Address,
+static DecodeStatus DecodeGPRSPRegisterClass(MCInst &Inst,
                                              const MCDisassembler *Decoder) {
-  if (RegNo != 14)
-    return MCDisassembler::Fail;
-
-  Inst.addOperand(MCOperand::createReg(GPRDecoderTable[RegNo]));
+  Inst.addOperand(MCOperand::createReg(CSKY::R14));
   return MCDisassembler::Success;
 }
 
@@ -221,6 +213,12 @@ static DecodeStatus DecodeGPRPairRegisterClass(MCInst &Inst, uint64_t RegNo,
     return MCDisassembler::Fail;
 
   Inst.addOperand(MCOperand::createReg(GPRPairDecoderTable[RegNo]));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeCARRYRegisterClass(MCInst &Inst,
+                                             const MCDisassembler *Decoder) {
+  Inst.addOperand(MCOperand::createReg(CSKY::C));
   return MCDisassembler::Success;
 }
 
@@ -378,121 +376,6 @@ static DecodeStatus decodeSImmOperand(MCInst &Inst, uint64_t Imm,
 
 #include "CSKYGenDisassemblerTables.inc"
 
-DecodeStatus CSKYDisassembler::handleCROperand(MCInst &MI) const {
-
-  // FIXME: To query instruction info from td file or a table inc file
-  switch (MI.getOpcode()) {
-  default:
-    return MCDisassembler::Success;
-  case CSKY::LD16WSP:
-  case CSKY::ST16WSP:
-  case CSKY::ADDI16ZSP:
-    MI.insert(std::next(MI.begin()), MCOperand::createReg(CSKY::R14));
-    return MCDisassembler::Success;
-  case CSKY::ADDI16SPSP:
-  case CSKY::SUBI16SPSP:
-    MI.insert(MI.begin(), MCOperand::createReg(CSKY::R14));
-    MI.insert(MI.begin(), MCOperand::createReg(CSKY::R14));
-    return MCDisassembler::Success;
-  case CSKY::FCMPHS_S:
-  case CSKY::FCMPHS_D:
-  case CSKY::FCMPLT_S:
-  case CSKY::FCMPLT_D:
-  case CSKY::FCMPNE_S:
-  case CSKY::FCMPNE_D:
-  case CSKY::FCMPUO_S:
-  case CSKY::FCMPUO_D:
-  case CSKY::FCMPZHS_S:
-  case CSKY::FCMPZHS_D:
-  case CSKY::FCMPZLS_S:
-  case CSKY::FCMPZLS_D:
-  case CSKY::FCMPZNE_S:
-  case CSKY::FCMPZNE_D:
-  case CSKY::FCMPZUO_S:
-  case CSKY::FCMPZUO_D:
-  case CSKY::f2FCMPHS_S:
-  case CSKY::f2FCMPHS_D:
-  case CSKY::f2FCMPLT_S:
-  case CSKY::f2FCMPLT_D:
-  case CSKY::f2FCMPNE_S:
-  case CSKY::f2FCMPNE_D:
-  case CSKY::f2FCMPUO_S:
-  case CSKY::f2FCMPUO_D:
-  case CSKY::f2FCMPHSZ_S:
-  case CSKY::f2FCMPHSZ_D:
-  case CSKY::f2FCMPHZ_S:
-  case CSKY::f2FCMPHZ_D:
-  case CSKY::f2FCMPLSZ_S:
-  case CSKY::f2FCMPLSZ_D:
-  case CSKY::f2FCMPLTZ_S:
-  case CSKY::f2FCMPLTZ_D:
-  case CSKY::f2FCMPNEZ_S:
-  case CSKY::f2FCMPNEZ_D:
-  case CSKY::f2FCMPUOZ_S:
-  case CSKY::f2FCMPUOZ_D:
-
-  case CSKY::BT32:
-  case CSKY::BF32:
-  case CSKY::BT16:
-  case CSKY::BF16:
-  case CSKY::CMPNEI32:
-  case CSKY::CMPNEI16:
-  case CSKY::CMPNE32:
-  case CSKY::CMPNE16:
-  case CSKY::CMPHSI32:
-  case CSKY::CMPHSI16:
-  case CSKY::CMPHS32:
-  case CSKY::CMPHS16:
-  case CSKY::CMPLTI32:
-  case CSKY::CMPLTI16:
-  case CSKY::CMPLT32:
-  case CSKY::CMPLT16:
-  case CSKY::BTSTI32:
-  case CSKY::BTSTI16:
-  case CSKY::TSTNBZ32:
-  case CSKY::TSTNBZ16:
-  case CSKY::TST32:
-  case CSKY::TST16:
-    MI.insert(MI.begin(), MCOperand::createReg(CSKY::C));
-    return MCDisassembler::Success;
-  case CSKY::LSLC32:
-  case CSKY::LSRC32:
-  case CSKY::ASRC32:
-    MI.insert(std::next(MI.begin()), MCOperand::createReg(CSKY::C));
-    return MCDisassembler::Success;
-  case CSKY::MOVF32:
-  case CSKY::MOVT32:
-  case CSKY::MVC32:
-  case CSKY::MVCV32:
-  case CSKY::MVCV16:
-  case CSKY::INCT32:
-  case CSKY::INCF32:
-  case CSKY::DECT32:
-  case CSKY::DECF32:
-  case CSKY::DECGT32:
-  case CSKY::DECLT32:
-  case CSKY::DECNE32:
-  case CSKY::CLRF32:
-  case CSKY::CLRT32:
-  case CSKY::f2FSEL_S:
-  case CSKY::f2FSEL_D:
-    MI.insert(std::next(MI.begin()), MCOperand::createReg(CSKY::C));
-    return MCDisassembler::Success;
-  case CSKY::ADDC32:
-  case CSKY::ADDC16:
-  case CSKY::SUBC32:
-  case CSKY::SUBC16:
-  case CSKY::XSR32:
-    MI.insert(std::next(MI.begin()), MCOperand::createReg(CSKY::C));
-    MI.insert(MI.end(), MCOperand::createReg(CSKY::C));
-    return MCDisassembler::Success;
-  case CSKY::INS32:
-    MI.getOperand(3).setImm(MI.getOperand(3).getImm() +
-                            MI.getOperand(4).getImm());
-    return MCDisassembler::Success;
-  }
-}
-
 static bool decodeFPUV3Instruction(MCInst &MI, uint32_t insn, uint64_t Address,
                                    const MCDisassembler *DisAsm,
                                    const MCSubtargetInfo &STI) {
@@ -548,7 +431,10 @@ DecodeStatus CSKYDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     Size = 2;
   }
 
-  handleCROperand(MI);
+  if (MI.getOpcode() == CSKY::INS32) {
+    MI.getOperand(3).setImm(MI.getOperand(3).getImm() +
+                            MI.getOperand(4).getImm());
+  }
 
   return Result;
 }
