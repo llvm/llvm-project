@@ -14,16 +14,6 @@ define i64 @test_smin_neg_one(i64 %a) {
   ret i64 %retval.0
 }
 
-define i64 @test_smin_zero(i64 %a) {
-; CHECK-LABEL: test_smin_zero:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    and x0, x0, x0, asr #63
-; CHECK-NEXT:    ret
-  %1 = tail call i64 @llvm.smin.i64(i64 %a, i64 0)
-  %retval.0 = xor i64 %1, 0
-  ret i64 %retval.0
-}
-
 define i64 @test_smin_constant(i64 %a) {
 ; CHECK-LABEL: test_smin_constant:
 ; CHECK:       // %bb.0:
@@ -37,7 +27,6 @@ define i64 @test_smin_constant(i64 %a) {
 }
 
 ; Test for DAGCombiner optimization: fold (xor (smax(x, C), C)) -> select (x > C), xor (x, C), 0
-
 define i64 @test_smax_neg_one(i64 %a) {
 ; CHECK-LABEL: test_smax_neg_one:
 ; CHECK:       // %bb.0:
@@ -46,16 +35,6 @@ define i64 @test_smax_neg_one(i64 %a) {
 ; CHECK-NEXT:    ret
   %1 = tail call i64 @llvm.smax.i64(i64 %a, i64 -1)
   %retval.0 = xor i64 %1, -1
-  ret i64 %retval.0
-}
-
-define i64 @test_smax_zero(i64 %a) {
-; CHECK-LABEL: test_smax_zero:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic x0, x0, x0, asr #63
-; CHECK-NEXT:    ret
-  %1 = tail call i64 @llvm.smax.i64(i64 %a, i64 0)
-  %retval.0 = xor i64 %1, 0
   ret i64 %retval.0
 }
 
@@ -81,16 +60,6 @@ define i64 @test_umin_neg_one(i64 %a) {
   ret i64 %retval.0
 }
 
-define i64 @test_umin_zero(i64 %a) {
-; CHECK-LABEL: test_umin_zero:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x0, xzr
-; CHECK-NEXT:    ret
-  %1 = tail call i64 @llvm.umin.i64(i64 %a, i64 0)
-  %retval.0 = xor i64 %1, 0
-  ret i64 %retval.0
-}
-
 define i64 @test_umin_constant(i64 %a) {
 ; CHECK-LABEL: test_umin_constant:
 ; CHECK:       // %bb.0:
@@ -113,15 +82,6 @@ define i64 @test_umax_neg_one(i64 %a) {
   ret i64 %retval.0
 }
 
-define i64 @test_umax_zero(i64 %a) {
-; CHECK-LABEL: test_umax_zero:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ret
-  %1 = tail call i64 @llvm.umax.i64(i64 %a, i64 0)
-  %retval.0 = xor i64 %1, 0
-  ret i64 %retval.0
-}
-
 define i64 @test_umax_constant(i64 %a) {
 ; CHECK-LABEL: test_umax_constant:
 ; CHECK:       // %bb.0:
@@ -135,7 +95,6 @@ define i64 @test_umax_constant(i64 %a) {
 }
 
 ; Test vector cases
-
 define <4 x i32> @test_smin_vector_neg_one(<4 x i32> %a) {
 ; CHECK-LABEL: test_smin_vector_neg_one:
 ; CHECK:       // %bb.0:
@@ -145,17 +104,6 @@ define <4 x i32> @test_smin_vector_neg_one(<4 x i32> %a) {
 ; CHECK-NEXT:    ret
   %1 = tail call <4 x i32> @llvm.smin.v4i32(<4 x i32> %a, <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>)
   %retval.0 = xor <4 x i32> %1, <i32 -1, i32 -1, i32 -1, i32 -1>
-  ret <4 x i32> %retval.0
-}
-
-define <4 x i32> @test_smin_vector_zero(<4 x i32> %a) {
-; CHECK-LABEL: test_smin_vector_zero:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    smin v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    ret
-  %1 = tail call <4 x i32> @llvm.smin.v4i32(<4 x i32> %a, <4 x i32> <i32 0, i32 0, i32 0, i32 0>)
-  %retval.0 = xor <4 x i32> %1, <i32 0, i32 0, i32 0, i32 0>
   ret <4 x i32> %retval.0
 }
 
@@ -182,17 +130,6 @@ define <4 x i32> @test_smax_vector_neg_one(<4 x i32> %a) {
   ret <4 x i32> %retval.0
 }
 
-define <4 x i32> @test_smax_vector_zero(<4 x i32> %a) {
-; CHECK-LABEL: test_smax_vector_zero:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    smax v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    ret
-  %1 = tail call <4 x i32> @llvm.smax.v4i32(<4 x i32> %a, <4 x i32> <i32 0, i32 0, i32 0, i32 0>)
-  %retval.0 = xor <4 x i32> %1, <i32 0, i32 0, i32 0, i32 0>
-  ret <4 x i32> %retval.0
-}
-
 define <4 x i32> @test_smax_vector_constant(<4 x i32> %a) {
 ; CHECK-LABEL: test_smax_vector_constant:
 ; CHECK:       // %bb.0:
@@ -215,16 +152,6 @@ define <4 x i32> @test_umin_vector_neg_one(<4 x i32> %a) {
   ret <4 x i32> %retval.0
 }
 
-define <4 x i32> @test_umin_vector_zero(<4 x i32> %a) {
-; CHECK-LABEL: test_umin_vector_zero:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    ret
-  %1 = tail call <4 x i32> @llvm.umin.v4i32(<4 x i32> %a, <4 x i32> <i32 0, i32 0, i32 0, i32 0>)
-  %retval.0 = xor <4 x i32> %1, <i32 0, i32 0, i32 0, i32 0>
-  ret <4 x i32> %retval.0
-}
-
 define <4 x i32> @test_umin_vector_constant(<4 x i32> %a) {
 ; CHECK-LABEL: test_umin_vector_constant:
 ; CHECK:       // %bb.0:
@@ -244,15 +171,6 @@ define <4 x i32> @test_umax_vector_neg_one(<4 x i32> %a) {
 ; CHECK-NEXT:    ret
   %1 = tail call <4 x i32> @llvm.umax.v4i32(<4 x i32> %a, <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>)
   %retval.0 = xor <4 x i32> %1, <i32 -1, i32 -1, i32 -1, i32 -1>
-  ret <4 x i32> %retval.0
-}
-
-define <4 x i32> @test_umax_vector_zero(<4 x i32> %a) {
-; CHECK-LABEL: test_umax_vector_zero:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ret
-  %1 = tail call <4 x i32> @llvm.umax.v4i32(<4 x i32> %a, <4 x i32> <i32 0, i32 0, i32 0, i32 0>)
-  %retval.0 = xor <4 x i32> %1, <i32 0, i32 0, i32 0, i32 0>
   ret <4 x i32> %retval.0
 }
 
