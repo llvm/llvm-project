@@ -17,7 +17,7 @@ define void @test() {
   ret void
 }
 
-declare void @writeonly_void() memory(write)
+declare void @writeonly_void() memory(write, errnomem: none)
 
 ; Can CSE writeonly calls, including non-nounwind/willreturn.
 define void @writeonly_cse() {
