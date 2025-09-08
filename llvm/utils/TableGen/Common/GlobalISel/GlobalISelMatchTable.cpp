@@ -24,10 +24,10 @@ STATISTIC(NumPatternEmitted, "Number of patterns emitted");
 using namespace llvm;
 using namespace gi;
 
-static llvm::cl::opt<bool> AllowExtendedLLT(
-    "gisel-extended-llt",
-    llvm::cl::desc("Generate an extended llt names in match tables"),
-    llvm::cl::init(false));
+static cl::opt<bool>
+    AllowExtendedLLT("gisel-extended-llt",
+                     cl::desc("Generate an extended llt names in match tables"),
+                     cl::init(false));
 
 // FIXME: Use createStringError instead.
 static Error failUnsupported(const Twine &Reason) {
