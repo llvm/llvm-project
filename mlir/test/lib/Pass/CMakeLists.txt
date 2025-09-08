@@ -4,7 +4,7 @@ add_mlir_library(MLIRTestPass
   TestConvertToSPIRVPass.cpp
   TestDynamicPipeline.cpp
   TestPassManager.cpp
-  TestRemarksPipeline.cpp
+  TestRemarksPass.cpp
   TestSPIRVCPURunnerPipeline.cpp
   TestVulkanRunnerPipeline.cpp
 
