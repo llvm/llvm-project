@@ -194,6 +194,12 @@ public:
   /// description on failure.
   LLVM_ABI static Expected<DataLayout> parse(StringRef LayoutString);
 
+  /// Given an LLVM target triple, compute the well-known datalayout string.
+  /// TODO: Create a static factor helper version of this method and refactor
+  /// the TargetMachine callers to use it.
+  LLVM_ABI static std::string computeStringForTriple(const Triple &T,
+                                                     StringRef ABIName = "");
+
   /// Layout endianness...
   bool isLittleEndian() const { return !BigEndian; }
   bool isBigEndian() const { return BigEndian; }

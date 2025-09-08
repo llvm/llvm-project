@@ -59,12 +59,6 @@ static cl::opt<bool> DisableRequireStructuredCFG(
              "unexpected regressions happen."),
     cl::init(false), cl::Hidden);
 
-static cl::opt<bool> UseShortPointersOpt(
-    "nvptx-short-ptr",
-    cl::desc(
-        "Use 32-bit pointers for accessing const/local/shared address spaces."),
-    cl::init(false), cl::Hidden);
-
 // byval arguments in NVPTX are special. We're only allowed to read from them
 // using a special instruction, and if we ever need to write to them or take an
 // address, we must make a local copy and use it, instead.
@@ -118,24 +112,6 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXPrologEpilogPassPass(PR);
 }
 
-static std::string computeDataLayout(bool is64Bit, bool UseShortPointers) {
-  std::string Ret = "e";
-
-  // Tensor Memory (addrspace:6) is always 32-bits.
-  // Distributed Shared Memory (addrspace:7) follows shared memory
-  // (addrspace:3).
-  if (!is64Bit)
-    Ret += "-p:32:32-p6:32:32-p7:32:32";
-  else if (UseShortPointers)
-    Ret += "-p3:32:32-p4:32:32-p5:32:32-p6:32:32-p7:32:32";
-  else
-    Ret += "-p6:32:32";
-
-  Ret += "-i64:64-i128:128-i256:256-v16:16-v32:32-n16:32:64";
-
-  return Ret;
-}
-
 NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
                                        const TargetOptions &Options,
@@ -144,9 +120,8 @@ NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
                                        CodeGenOptLevel OL, bool is64bit)
     // The pic relocation model is used regardless of what the client has
     // specified, as it is the only relocation model currently supported.
-    : CodeGenTargetMachineImpl(T,
-                               computeDataLayout(is64bit, UseShortPointersOpt),
-                               TT, CPU, FS, Options, Reloc::PIC_,
+    : CodeGenTargetMachineImpl(T, DataLayout::computeStringForTriple(TT), TT,
+                               CPU, FS, Options, Reloc::PIC_,
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
       is64bit(is64bit), TLOF(std::make_unique<NVPTXTargetObjectFile>()),
       Subtarget(TT, std::string(CPU), std::string(FS), *this),
