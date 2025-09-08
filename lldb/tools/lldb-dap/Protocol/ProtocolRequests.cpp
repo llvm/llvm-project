@@ -219,7 +219,7 @@ bool fromJSON(const json::Value &Params, InitializeRequestArguments &IRA,
          OM.map("clientName", IRA.clientName) && OM.map("locale", IRA.locale) &&
          OM.map("linesStartAt1", IRA.linesStartAt1) &&
          OM.map("columnsStartAt1", IRA.columnsStartAt1) &&
-         OM.map("pathFormat", IRA.pathFormat) &&
+         OM.mapOptional("pathFormat", IRA.pathFormat) &&
          OM.map("$__lldb_sourceInitFile", IRA.lldbExtSourceInitFile);
 }
 
@@ -327,6 +327,17 @@ bool fromJSON(const json::Value &Params, ContinueArguments &CA, json::Path P) {
 json::Value toJSON(const ContinueResponseBody &CRB) {
   json::Object Body{{"allThreadsContinued", CRB.allThreadsContinued}};
   return std::move(Body);
+}
+
+bool fromJSON(const json::Value &Params, CompletionsArguments &CA,
+              json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("text", CA.text) && O.map("column", CA.column) &&
+         O.mapOptional("frameId", CA.frameId) && O.mapOptional("line", CA.line);
+}
+
+json::Value toJSON(const CompletionsResponseBody &CRB) {
+  return json::Object{{"targets", CRB.targets}};
 }
 
 bool fromJSON(const json::Value &Params, SetVariableArguments &SVA,

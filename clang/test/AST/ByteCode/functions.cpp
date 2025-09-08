@@ -732,3 +732,8 @@ namespace LocalVarForParmVarDecl {
   }
   static_assert(foo(), "");
 }
+
+namespace PtrPtrCast {
+  void foo() { ; }
+  void bar(int *a) { a = (int *)(void *)(foo); }
+}

@@ -1059,7 +1059,8 @@ protected:
   Error initSections();
 
 public:
-  BasicELFBuilder() : Obj(std::make_unique<Object>()) {}
+  BasicELFBuilder();
+  ~BasicELFBuilder();
 };
 
 class BinaryELFBuilder : public BasicELFBuilder {

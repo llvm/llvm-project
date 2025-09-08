@@ -3965,6 +3965,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
 void ModuleCallsiteContextGraph::updateAllocationCall(
     CallInfo &Call, AllocationType AllocType) {
   std::string AllocTypeString = getAllocTypeAttributeString(AllocType);
+  removeAnyExistingAmbiguousAttribute(cast<CallBase>(Call.call()));
   auto A = llvm::Attribute::get(Call.call()->getFunction()->getContext(),
                                 "memprof", AllocTypeString);
   cast<CallBase>(Call.call())->addFnAttr(A);
@@ -5501,6 +5502,7 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
               // clone J-1 (J==0 is the original clone and does not have a VMaps
               // entry).
               CBClone = cast<CallBase>((*VMaps[J - 1])[CB]);
+            removeAnyExistingAmbiguousAttribute(CBClone);
             CBClone->addFnAttr(A);
             ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemprofAttribute", CBClone)
                      << ore::NV("AllocationCall", CBClone) << " in clone "

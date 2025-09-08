@@ -17,7 +17,6 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -7975,12 +7974,19 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   }
   case Intrinsic::amdgcn_call_whole_wave: {
     TargetLowering::ArgListTy Args;
+    bool isTailCall = I.isTailCall();
 
     // The first argument is the callee. Skip it when assembling the call args.
     for (unsigned Idx = 1; Idx < I.arg_size(); ++Idx) {
       TargetLowering::ArgListEntry Arg(getValue(I.getArgOperand(Idx)),
                                        I.getArgOperand(Idx)->getType());
       Arg.setAttributes(&I, Idx);
+
+      // If we have an explicit sret argument that is an Instruction, (i.e., it
+      // might point to function-local memory), we can't meaningfully tail-call.
+      if (Arg.IsSRet && isa<Instruction>(I.getArgOperand(Idx)))
+        isTailCall = false;
+
       Args.push_back(Arg);
     }
 
@@ -7995,7 +8001,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
         .setChain(getRoot())
         .setCallee(CallingConv::AMDGPU_Gfx_WholeWave, I.getType(),
                    getValue(I.getArgOperand(0)), std::move(Args))
-        .setTailCall(false)
+        .setTailCall(isTailCall && canTailCall(I))
         .setIsPreallocated(
             I.countOperandBundlesOfType(LLVMContext::OB_preallocated) != 0)
         .setConvergent(I.isConvergent())
@@ -8296,6 +8302,18 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     visitVectorExtractLastActive(I, Intrinsic);
     return;
   }
+  case Intrinsic::loop_dependence_war_mask:
+    setValue(&I,
+             DAG.getNode(ISD::LOOP_DEPENDENCE_WAR_MASK, sdl,
+                         EVT::getEVT(I.getType()), getValue(I.getOperand(0)),
+                         getValue(I.getOperand(1)), getValue(I.getOperand(2))));
+    return;
+  case Intrinsic::loop_dependence_raw_mask:
+    setValue(&I,
+             DAG.getNode(ISD::LOOP_DEPENDENCE_RAW_MASK, sdl,
+                         EVT::getEVT(I.getType()), getValue(I.getOperand(0)),
+                         getValue(I.getOperand(1)), getValue(I.getOperand(2))));
+    return;
   }
 }
 
@@ -8457,8 +8475,11 @@ void SelectionDAGBuilder::visitVPLoad(
   MemoryLocation ML = MemoryLocation::getAfter(PtrOperand, AAInfo);
   bool AddToChain = !BatchAA || !BatchAA->pointsToConstantMemory(ML);
   SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  MachineMemOperand::Flags MMOFlags =
+      TLI.getVPIntrinsicMemOperandFlags(VPIntrin);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(PtrOperand), MachineMemOperand::MOLoad,
+      MachinePointerInfo(PtrOperand), MMOFlags,
       LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo, Ranges);
   LD = DAG.getLoadVP(VT, DL, InChain, OpValues[0], OpValues[1], OpValues[2],
                      MMO, false /*IsExpanding */);
@@ -8509,9 +8530,11 @@ void SelectionDAGBuilder::visitVPGather(
     Alignment = DAG.getEVTAlign(VT.getScalarType());
   unsigned AS =
     PtrOperand->getType()->getScalarType()->getPointerAddressSpace();
+  MachineMemOperand::Flags MMOFlags =
+      TLI.getVPIntrinsicMemOperandFlags(VPIntrin);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(AS), MachineMemOperand::MOLoad,
-      LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo, Ranges);
+      MachinePointerInfo(AS), MMOFlags, LocationSize::beforeOrAfterPointer(),
+      *Alignment, AAInfo, Ranges);
   SDValue Base, Index, Scale;
   bool UniformBase =
       getUniformBase(PtrOperand, Base, Index, Scale, this, VPIntrin.getParent(),
@@ -8547,8 +8570,11 @@ void SelectionDAGBuilder::visitVPStore(
     Alignment = DAG.getEVTAlign(VT);
   SDValue Ptr = OpValues[1];
   SDValue Offset = DAG.getUNDEF(Ptr.getValueType());
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  MachineMemOperand::Flags MMOFlags =
+      TLI.getVPIntrinsicMemOperandFlags(VPIntrin);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(PtrOperand), MachineMemOperand::MOStore,
+      MachinePointerInfo(PtrOperand), MMOFlags,
       LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo);
   ST = DAG.getStoreVP(getMemoryRoot(), DL, OpValues[0], Ptr, Offset,
                       OpValues[2], OpValues[3], VT, MMO, ISD::UNINDEXED,
@@ -8570,9 +8596,11 @@ void SelectionDAGBuilder::visitVPScatter(
     Alignment = DAG.getEVTAlign(VT.getScalarType());
   unsigned AS =
       PtrOperand->getType()->getScalarType()->getPointerAddressSpace();
+  MachineMemOperand::Flags MMOFlags =
+      TLI.getVPIntrinsicMemOperandFlags(VPIntrin);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(AS), MachineMemOperand::MOStore,
-      LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo);
+      MachinePointerInfo(AS), MMOFlags, LocationSize::beforeOrAfterPointer(),
+      *Alignment, AAInfo);
   SDValue Base, Index, Scale;
   bool UniformBase =
       getUniformBase(PtrOperand, Base, Index, Scale, this, VPIntrin.getParent(),
@@ -8610,9 +8638,12 @@ void SelectionDAGBuilder::visitVPStridedLoad(
   bool AddToChain = !BatchAA || !BatchAA->pointsToConstantMemory(ML);
   SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
   unsigned AS = PtrOperand->getType()->getPointerAddressSpace();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  MachineMemOperand::Flags MMOFlags =
+      TLI.getVPIntrinsicMemOperandFlags(VPIntrin);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(AS), MachineMemOperand::MOLoad,
-      LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo, Ranges);
+      MachinePointerInfo(AS), MMOFlags, LocationSize::beforeOrAfterPointer(),
+      *Alignment, AAInfo, Ranges);
 
   SDValue LD = DAG.getStridedLoadVP(VT, DL, InChain, OpValues[0], OpValues[1],
                                     OpValues[2], OpValues[3], MMO,
@@ -8633,9 +8664,12 @@ void SelectionDAGBuilder::visitVPStridedStore(
     Alignment = DAG.getEVTAlign(VT.getScalarType());
   AAMDNodes AAInfo = VPIntrin.getAAMetadata();
   unsigned AS = PtrOperand->getType()->getPointerAddressSpace();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  MachineMemOperand::Flags MMOFlags =
+      TLI.getVPIntrinsicMemOperandFlags(VPIntrin);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(AS), MachineMemOperand::MOStore,
-      LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo);
+      MachinePointerInfo(AS), MMOFlags, LocationSize::beforeOrAfterPointer(),
+      *Alignment, AAInfo);
 
   SDValue ST = DAG.getStridedStoreVP(
       getMemoryRoot(), DL, OpValues[0], OpValues[1],
@@ -8902,6 +8936,29 @@ SelectionDAGBuilder::lowerInvokable(TargetLowering::CallLoweringInfo &CLI,
   return Result;
 }
 
+bool SelectionDAGBuilder::canTailCall(const CallBase &CB) const {
+  bool isMustTailCall = CB.isMustTailCall();
+
+  // Avoid emitting tail calls in functions with the disable-tail-calls
+  // attribute.
+  const Function *Caller = CB.getParent()->getParent();
+  if (Caller->getFnAttribute("disable-tail-calls").getValueAsString() ==
+          "true" &&
+      !isMustTailCall)
+    return false;
+
+  // We can't tail call inside a function with a swifterror argument. Lowering
+  // does not support this yet. It would have to move into the swifterror
+  // register before the call.
+  if (DAG.getTargetLoweringInfo().supportSwiftError() &&
+      Caller->getAttributes().hasAttrSomewhere(Attribute::SwiftError))
+    return false;
+
+  // Check if target-independent constraints permit a tail call here.
+  // Target-dependent constraints are checked within TLI->LowerCallTo.
+  return isInTailCallPosition(CB, DAG.getTarget());
+}
+
 void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
                                       bool isTailCall, bool isMustTailCall,
                                       const BasicBlock *EHPadBB,
@@ -8916,21 +8973,8 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
   const Value *SwiftErrorVal = nullptr;
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
-  if (isTailCall) {
-    // Avoid emitting tail calls in functions with the disable-tail-calls
-    // attribute.
-    auto *Caller = CB.getParent()->getParent();
-    if (Caller->getFnAttribute("disable-tail-calls").getValueAsString() ==
-        "true" && !isMustTailCall)
-      isTailCall = false;
-
-    // We can't tail call inside a function with a swifterror argument. Lowering
-    // does not support this yet. It would have to move into the swifterror
-    // register before the call.
-    if (TLI.supportSwiftError() &&
-        Caller->getAttributes().hasAttrSomewhere(Attribute::SwiftError))
-      isTailCall = false;
-  }
+  if (isTailCall)
+    isTailCall = canTailCall(CB);
 
   for (auto I = CB.arg_begin(), E = CB.arg_end(); I != E; ++I) {
     const Value *V = *I;
@@ -8969,11 +9013,6 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
     Entry.IsCFGuardTarget = true;
     Args.push_back(Entry);
   }
-
-  // Check if target-independent constraints permit a tail call here.
-  // Target-dependent constraints are checked within TLI->LowerCallTo.
-  if (isTailCall && !isInTailCallPosition(CB, DAG.getTarget()))
-    isTailCall = false;
 
   // Disable tail calls if there is an swifterror argument. Targets have not
   // been updated to support tail calls.

@@ -19,6 +19,7 @@
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/DebugLog.h"
 
 #define DEBUG_TYPE "sroa"
 
@@ -734,9 +735,8 @@ static std::optional<uint64_t> gepToByteOffset(const DataLayout &dataLayout,
               return false;
             })
             .Default([&](Type type) {
-              LLVM_DEBUG(llvm::dbgs()
-                         << "[sroa] Unsupported type for offset computations"
-                         << type << "\n");
+              LDBG() << "[sroa] Unsupported type for offset computations"
+                     << type;
               return true;
             });
 

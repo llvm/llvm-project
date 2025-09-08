@@ -60,7 +60,7 @@ struct RemarkOpts {
   StringRef categoryName;    // Category name (subject to regex filtering)
   StringRef subCategoryName; // Subcategory name
   StringRef functionName;    // Function name if available
-  RemarkOpts() = delete;
+
   // Construct RemarkOpts from a remark name.
   static constexpr RemarkOpts name(StringRef n) {
     return RemarkOpts{n, {}, {}, {}};
