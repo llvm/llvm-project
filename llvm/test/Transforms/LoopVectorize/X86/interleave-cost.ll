@@ -119,6 +119,7 @@ define void @geps_feeding_interleave_groups_with_reuse(ptr %arg, i64 %arg1, ptr 
 ; CHECK-NEXT:    [[MUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 32, i64 [[ARG1]])
 ; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i64, i1 } [[MUL]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 0, [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult ptr [[TMP2]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP3]], [[MUL_OVERFLOW]]
@@ -272,13 +273,14 @@ define void @geps_feeding_interleave_groups_with_reuse2(ptr %A, ptr %B, i64 %N) 
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr i64 [[N]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[TMP0]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP1]], 56
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP1]], 64
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[N]], 3
 ; CHECK-NEXT:    [[MUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 32, i64 [[TMP2]])
 ; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i64, i1 } [[MUL]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 0, [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr i8, ptr [[A]], i64 [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP41:%.*]] = icmp ult ptr [[TMP32]], [[A]]
 ; CHECK-NEXT:    [[TMP44:%.*]] = or i1 [[TMP41]], [[MUL_OVERFLOW]]
@@ -286,6 +288,7 @@ define void @geps_feeding_interleave_groups_with_reuse2(ptr %A, ptr %B, i64 %N) 
 ; CHECK-NEXT:    [[MUL1:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 32, i64 [[TMP2]])
 ; CHECK-NEXT:    [[MUL_RESULT2:%.*]] = extractvalue { i64, i1 } [[MUL1]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW3:%.*]] = extractvalue { i64, i1 } [[MUL1]], 1
+; CHECK-NEXT:    [[TMP55:%.*]] = sub i64 0, [[MUL_RESULT2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[MUL_RESULT2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult ptr [[TMP4]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[TMP57:%.*]] = or i1 [[TMP5]], [[MUL_OVERFLOW3]]
@@ -293,6 +296,7 @@ define void @geps_feeding_interleave_groups_with_reuse2(ptr %A, ptr %B, i64 %N) 
 ; CHECK-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 32, i64 [[TMP2]])
 ; CHECK-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 0, [[MUL_RESULT3]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[SCEVGEP1]], i64 [[MUL_RESULT3]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult ptr [[TMP8]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP9]], [[MUL_OVERFLOW4]]
@@ -300,6 +304,7 @@ define void @geps_feeding_interleave_groups_with_reuse2(ptr %A, ptr %B, i64 %N) 
 ; CHECK-NEXT:    [[MUL6:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 32, i64 [[TMP2]])
 ; CHECK-NEXT:    [[MUL_RESULT7:%.*]] = extractvalue { i64, i1 } [[MUL6]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW8:%.*]] = extractvalue { i64, i1 } [[MUL6]], 1
+; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 0, [[MUL_RESULT7]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[SCEVGEP5]], i64 [[MUL_RESULT7]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp ult ptr [[TMP12]], [[SCEVGEP5]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP13]], [[MUL_OVERFLOW8]]
@@ -307,6 +312,7 @@ define void @geps_feeding_interleave_groups_with_reuse2(ptr %A, ptr %B, i64 %N) 
 ; CHECK-NEXT:    [[MUL10:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 32, i64 [[TMP2]])
 ; CHECK-NEXT:    [[MUL_RESULT11:%.*]] = extractvalue { i64, i1 } [[MUL10]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW12:%.*]] = extractvalue { i64, i1 } [[MUL10]], 1
+; CHECK-NEXT:    [[TMP15:%.*]] = sub i64 0, [[MUL_RESULT11]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[SCEVGEP9]], i64 [[MUL_RESULT11]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp ult ptr [[TMP16]], [[SCEVGEP9]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP17]], [[MUL_OVERFLOW12]]
@@ -314,6 +320,7 @@ define void @geps_feeding_interleave_groups_with_reuse2(ptr %A, ptr %B, i64 %N) 
 ; CHECK-NEXT:    [[MUL14:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 32, i64 [[TMP2]])
 ; CHECK-NEXT:    [[MUL_RESULT15:%.*]] = extractvalue { i64, i1 } [[MUL14]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW16:%.*]] = extractvalue { i64, i1 } [[MUL14]], 1
+; CHECK-NEXT:    [[TMP19:%.*]] = sub i64 0, [[MUL_RESULT15]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[SCEVGEP13]], i64 [[MUL_RESULT15]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp ult ptr [[TMP20]], [[SCEVGEP13]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = or i1 [[TMP21]], [[MUL_OVERFLOW16]]
@@ -321,6 +328,7 @@ define void @geps_feeding_interleave_groups_with_reuse2(ptr %A, ptr %B, i64 %N) 
 ; CHECK-NEXT:    [[MUL18:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 32, i64 [[TMP2]])
 ; CHECK-NEXT:    [[MUL_RESULT19:%.*]] = extractvalue { i64, i1 } [[MUL18]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW20:%.*]] = extractvalue { i64, i1 } [[MUL18]], 1
+; CHECK-NEXT:    [[TMP23:%.*]] = sub i64 0, [[MUL_RESULT19]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[SCEVGEP17]], i64 [[MUL_RESULT19]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = icmp ult ptr [[TMP24]], [[SCEVGEP17]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = or i1 [[TMP25]], [[MUL_OVERFLOW20]]
@@ -328,6 +336,7 @@ define void @geps_feeding_interleave_groups_with_reuse2(ptr %A, ptr %B, i64 %N) 
 ; CHECK-NEXT:    [[MUL22:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 32, i64 [[TMP2]])
 ; CHECK-NEXT:    [[MUL_RESULT23:%.*]] = extractvalue { i64, i1 } [[MUL22]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW24:%.*]] = extractvalue { i64, i1 } [[MUL22]], 1
+; CHECK-NEXT:    [[TMP27:%.*]] = sub i64 0, [[MUL_RESULT23]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i8, ptr [[SCEVGEP21]], i64 [[MUL_RESULT23]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = icmp ult ptr [[TMP28]], [[SCEVGEP21]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = or i1 [[TMP29]], [[MUL_OVERFLOW24]]
@@ -335,12 +344,14 @@ define void @geps_feeding_interleave_groups_with_reuse2(ptr %A, ptr %B, i64 %N) 
 ; CHECK-NEXT:    [[MUL29:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[TMP2]])
 ; CHECK-NEXT:    [[MUL_RESULT30:%.*]] = extractvalue { i64, i1 } [[MUL29]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW31:%.*]] = extractvalue { i64, i1 } [[MUL29]], 1
+; CHECK-NEXT:    [[TMP67:%.*]] = sub i64 0, [[MUL_RESULT30]]
 ; CHECK-NEXT:    [[TMP68:%.*]] = getelementptr i8, ptr [[SCEVGEP31]], i64 [[MUL_RESULT30]]
 ; CHECK-NEXT:    [[TMP69:%.*]] = icmp ult ptr [[TMP68]], [[SCEVGEP31]]
 ; CHECK-NEXT:    [[TMP70:%.*]] = or i1 [[TMP69]], [[MUL_OVERFLOW31]]
 ; CHECK-NEXT:    [[MUL25:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 32, i64 [[TMP2]])
 ; CHECK-NEXT:    [[MUL_RESULT26:%.*]] = extractvalue { i64, i1 } [[MUL25]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW27:%.*]] = extractvalue { i64, i1 } [[MUL25]], 1
+; CHECK-NEXT:    [[TMP31:%.*]] = sub i64 0, [[MUL_RESULT26]]
 ; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr i8, ptr [[B]], i64 [[MUL_RESULT26]]
 ; CHECK-NEXT:    [[TMP33:%.*]] = icmp ult ptr [[TMP71]], [[B]]
 ; CHECK-NEXT:    [[TMP34:%.*]] = or i1 [[TMP33]], [[MUL_OVERFLOW27]]

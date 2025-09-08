@@ -153,6 +153,7 @@ define void @test_interleave_store_one_constant(ptr noalias %src, ptr noalias %d
 ; CHECK-NEXT:    [[MUL1:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[N]])
 ; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i64, i1 } [[MUL1]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL1]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 0, [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[DST]], i64 [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult ptr [[TMP2]], [[DST]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP3]], [[MUL_OVERFLOW]]
@@ -160,6 +161,7 @@ define void @test_interleave_store_one_constant(ptr noalias %src, ptr noalias %d
 ; CHECK-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[N]])
 ; CHECK-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 0, [[MUL_RESULT3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[MUL_RESULT3]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult ptr [[TMP6]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW4]]
@@ -285,12 +287,14 @@ define void @single_fmul_used_by_each_member(ptr noalias %A, ptr noalias %B, ptr
 ; CHECK-NEXT:    [[MUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[N]])
 ; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i64, i1 } [[MUL]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 0, [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult ptr [[TMP2]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP3]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    [[MUL1:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[N]])
 ; CHECK-NEXT:    [[MUL_RESULT2:%.*]] = extractvalue { i64, i1 } [[MUL1]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW3:%.*]] = extractvalue { i64, i1 } [[MUL1]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 0, [[MUL_RESULT2]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[B]], i64 [[MUL_RESULT2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult ptr [[TMP6]], [[B]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW3]]
@@ -298,12 +302,14 @@ define void @single_fmul_used_by_each_member(ptr noalias %A, ptr noalias %B, ptr
 ; CHECK-NEXT:    [[MUL5:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[N]])
 ; CHECK-NEXT:    [[MUL_RESULT6:%.*]] = extractvalue { i64, i1 } [[MUL5]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW7:%.*]] = extractvalue { i64, i1 } [[MUL5]], 1
+; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 0, [[MUL_RESULT6]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[SCEVGEP4]], i64 [[MUL_RESULT6]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult ptr [[TMP10]], [[SCEVGEP4]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP11]], [[MUL_OVERFLOW7]]
 ; CHECK-NEXT:    [[MUL8:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[N]])
 ; CHECK-NEXT:    [[MUL_RESULT9:%.*]] = extractvalue { i64, i1 } [[MUL8]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW10:%.*]] = extractvalue { i64, i1 } [[MUL8]], 1
+; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 0, [[MUL_RESULT9]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[C]], i64 [[MUL_RESULT9]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult ptr [[TMP14]], [[C]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = or i1 [[TMP15]], [[MUL_OVERFLOW10]]

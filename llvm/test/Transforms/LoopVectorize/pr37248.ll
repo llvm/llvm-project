@@ -26,6 +26,7 @@ define void @f1(ptr noalias %b, i1 %c, i32 %start) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[START]], [[SMIN]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[START]] to i16
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP2]] to i16
+; CHECK-NEXT:    [[MUL:%.*]] = call { i16, i1 } @llvm.umul.with.overflow.i16(i16 1, i16 [[TMP4]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i16 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt i16 [[TMP5]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i32 [[TMP2]], 65535
@@ -104,6 +105,7 @@ define void @f2(ptr noalias %b, i1 %c, i32 %start) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[START]], [[SMIN]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[START]] to i16
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP2]] to i16
+; CHECK-NEXT:    [[MUL:%.*]] = call { i16, i1 } @llvm.umul.with.overflow.i16(i16 1, i16 [[TMP4]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i16 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt i16 [[TMP5]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i32 [[TMP2]], 65535

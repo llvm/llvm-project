@@ -38,7 +38,7 @@ define i32 @main(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], 1
 ; CHECK-NEXT:    [[UMIN1:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 [[TMP2]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP3]], [[UMIN1]]
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP4]], 24
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP4]], 36
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i8 [[CONV3]], -1
@@ -46,6 +46,7 @@ define i32 @main(ptr %ptr) {
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 [[TMP6]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 [[TMP6]], [[UMIN]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc i32 [[TMP7]] to i8
+; CHECK-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 1, i8 [[TMP8]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = sub i8 [[TMP5]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt i8 [[TMP9]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp ugt i32 [[TMP7]], 255
