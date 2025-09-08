@@ -28,7 +28,7 @@ static bool isLockGuardDecl(const NamedDecl *Decl) {
 }
 
 static bool isLockGuard(const QualType &Type) {
-  if (const auto *Record = Type->getAs<RecordType>())
+  if (const auto *Record = Type->getAsCanonical<RecordType>())
     if (const RecordDecl *Decl = Record->getOriginalDecl())
       return isLockGuardDecl(Decl);
 

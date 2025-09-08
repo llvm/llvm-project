@@ -85,6 +85,14 @@ static RValue emitUnaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
   return RValue::get(call->getResult(0));
 }
 
+template <class Operation>
+static RValue emitUnaryFPBuiltin(CIRGenFunction &cgf, const CallExpr &e) {
+  mlir::Value arg = cgf.emitScalarExpr(e.getArg(0));
+  auto call =
+      Operation::create(cgf.getBuilder(), arg.getLoc(), arg.getType(), arg);
+  return RValue::get(call->getResult(0));
+}
+
 RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                                        const CallExpr *e,
                                        ReturnValueSlot returnValue) {
@@ -349,6 +357,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_unreachable:
     emitUnreachable(e->getExprLoc(), /*createNewBlock=*/true);
     return RValue::get(nullptr);
+
+  case Builtin::BI__builtin_elementwise_acos:
+    return emitUnaryFPBuiltin<cir::ACosOp>(*this, *e);
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
@@ -400,4 +411,16 @@ void CIRGenFunction::emitVAStart(mlir::Value vaList, mlir::Value count) {
 
 void CIRGenFunction::emitVAEnd(mlir::Value vaList) {
   cir::VAEndOp::create(builder, vaList.getLoc(), vaList);
+}
+
+// FIXME(cir): This completely abstracts away the ABI with a generic CIR Op. By
+// default this lowers to llvm.va_arg which is incomplete and not ABI-compliant
+// on most targets so cir.va_arg will need some ABI handling in LoweringPrepare
+mlir::Value CIRGenFunction::emitVAArg(VAArgExpr *ve) {
+  assert(!cir::MissingFeatures::msabi());
+  assert(!cir::MissingFeatures::vlas());
+  mlir::Location loc = cgm.getLoc(ve->getExprLoc());
+  mlir::Type type = convertType(ve->getType());
+  mlir::Value vaList = emitVAListRef(ve->getSubExpr()).getPointer();
+  return cir::VAArgOp::create(builder, loc, type, vaList);
 }

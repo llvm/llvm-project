@@ -201,6 +201,7 @@ Clang-Tidy Checks
    :doc:`cppcoreguidelines-owning-memory <cppcoreguidelines/owning-memory>`,
    :doc:`cppcoreguidelines-prefer-member-initializer <cppcoreguidelines/prefer-member-initializer>`, "Yes"
    :doc:`cppcoreguidelines-pro-bounds-array-to-pointer-decay <cppcoreguidelines/pro-bounds-array-to-pointer-decay>`,
+   :doc:`cppcoreguidelines-pro-bounds-avoid-unchecked-container-access <cppcoreguidelines/pro-bounds-avoid-unchecked-container-access>`, "Yes"
    :doc:`cppcoreguidelines-pro-bounds-constant-array-index <cppcoreguidelines/pro-bounds-constant-array-index>`, "Yes"
    :doc:`cppcoreguidelines-pro-bounds-pointer-arithmetic <cppcoreguidelines/pro-bounds-pointer-arithmetic>`,
    :doc:`cppcoreguidelines-pro-type-const-cast <cppcoreguidelines/pro-type-const-cast>`,
@@ -248,12 +249,13 @@ Clang-Tidy Checks
    :doc:`linuxkernel-must-check-errs <linuxkernel/must-check-errs>`,
    :doc:`llvm-header-guard <llvm/header-guard>`,
    :doc:`llvm-include-order <llvm/include-order>`, "Yes"
-   :doc:`llvm-use-new-mlir-op-builder <llvm/use-new-mlir-op-builder>`, "Yes"
    :doc:`llvm-namespace-comment <llvm/namespace-comment>`,
    :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals <llvm/prefer-isa-or-dyn-cast-in-conditionals>`, "Yes"
    :doc:`llvm-prefer-register-over-unsigned <llvm/prefer-register-over-unsigned>`, "Yes"
    :doc:`llvm-prefer-static-over-anonymous-namespace <llvm/prefer-static-over-anonymous-namespace>`,
    :doc:`llvm-twine-local <llvm/twine-local>`, "Yes"
+   :doc:`llvm-use-new-mlir-op-builder <llvm/use-new-mlir-op-builder>`, "Yes"
+   :doc:`llvm-use-ranges <llvm/use-ranges>`, "Yes"
    :doc:`llvmlibc-callee-namespace <llvmlibc/callee-namespace>`,
    :doc:`llvmlibc-implementation-in-namespace <llvmlibc/implementation-in-namespace>`,
    :doc:`llvmlibc-inline-function-decl <llvmlibc/inline-function-decl>`, "Yes"

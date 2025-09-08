@@ -417,6 +417,7 @@ struct GenericKernelTy {
     case OMP_TGT_EXEC_MODE_SPMD:
     case OMP_TGT_EXEC_MODE_GENERIC:
     case OMP_TGT_EXEC_MODE_GENERIC_SPMD:
+    case OMP_TGT_EXEC_MODE_SPMD_NO_LOOP:
       return true;
     }
     return false;
@@ -434,6 +435,8 @@ protected:
       return "Generic";
     case OMP_TGT_EXEC_MODE_GENERIC_SPMD:
       return "Generic-SPMD";
+    case OMP_TGT_EXEC_MODE_SPMD_NO_LOOP:
+      return "SPMD-No-Loop";
     }
     llvm_unreachable("Unknown execution mode!");
   }
@@ -471,7 +474,8 @@ private:
                         uint32_t BlockLimitClause[3], uint64_t LoopTripCount,
                         uint32_t &NumThreads, bool IsNumThreadsFromUser) const;
 
-  /// Indicate if the kernel works in Generic SPMD, Generic or SPMD mode.
+  /// Indicate if the kernel works in Generic SPMD, Generic, No-Loop
+  /// or SPMD mode.
   bool isGenericSPMDMode() const {
     return KernelEnvironment.Configuration.ExecMode ==
            OMP_TGT_EXEC_MODE_GENERIC_SPMD;
@@ -485,6 +489,10 @@ private:
   }
   bool isBareMode() const {
     return KernelEnvironment.Configuration.ExecMode == OMP_TGT_EXEC_MODE_BARE;
+  }
+  bool isNoLoopMode() const {
+    return KernelEnvironment.Configuration.ExecMode ==
+           OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
   }
 
   /// The kernel name.
@@ -960,6 +968,13 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
                                  void *DstPtr, int64_t Size,
                                  AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
 
+  /// Fill data on the device with a pattern from the host
+  Error dataFill(void *TgtPtr, const void *PatternPtr, int64_t PatternSize,
+                 int64_t Size, __tgt_async_info *AsyncInfo);
+  virtual Error dataFillImpl(void *TgtPtr, const void *PatternPtr,
+                             int64_t PatternSize, int64_t Size,
+                             AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
+
   /// Run the kernel associated with \p EntryPtr
   Error launchKernel(void *EntryPtr, void **ArgPtrs, ptrdiff_t *ArgOffsets,
                      KernelArgsTy &KernelArgs, __tgt_async_info *AsyncInfo);
@@ -996,6 +1011,11 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Error waitEvent(void *Event, __tgt_async_info *AsyncInfo);
   virtual Error waitEventImpl(void *EventPtr,
                               AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
+
+  /// Check if the event enqueued to AsyncInfo is complete
+  Expected<bool> isEventComplete(void *Event, __tgt_async_info *AsyncInfo);
+  virtual Expected<bool>
+  isEventCompleteImpl(void *EventPtr, AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
 
   /// Synchronize the current thread with the event.
   Error syncEvent(void *EventPtr);

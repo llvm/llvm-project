@@ -26,7 +26,7 @@ class RedundantSmartptrGetCheck : public ClangTidyCheck {
 public:
   RedundantSmartptrGetCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
-        IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
+        IgnoreMacros(Options.get("IgnoreMacros", true)) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
