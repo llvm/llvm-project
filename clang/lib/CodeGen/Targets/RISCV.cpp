@@ -694,9 +694,8 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
     }
 
     // All integral types are promoted to XLen width
-    if (Size < XLen && Ty->isIntegralOrEnumerationType()) {
+    if (Size < XLen && Ty->isIntegralOrEnumerationType())
       return extendType(Ty, CGT.ConvertType(Ty));
-    }
 
     return ABIArgInfo::getDirect();
   }
