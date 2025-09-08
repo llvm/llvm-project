@@ -3892,6 +3892,7 @@ cc_library(
         ":FunctionInterfaces",
         ":IR",
         ":SideEffectInterfaces",
+        ":Support",
         "//llvm:Support",
     ],
 )
@@ -5216,6 +5217,7 @@ cc_library(
         ":LLVMTypesIncGen",
         ":MemorySlotInterfaces",
         ":MemorySlotInterfacesIncGen",
+        ":PtrDialect",
         ":SideEffectInterfaces",
         ":Support",
         ":ViewLikeInterface",
@@ -5655,6 +5657,7 @@ td_library(
         ":InferTypeOpInterfaceTdFiles",
         ":MemorySlotInterfacesTdFiles",
         ":OpBaseTdFiles",
+        ":PtrTdFiles",
         ":SideEffectInterfacesTdFiles",
         ":ViewLikeInterfaceTdFiles",
     ],
@@ -6550,6 +6553,7 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Ptr/IR/PtrOps.td",
     deps = [
+        ":InferTypeOpInterfaceTdFiles",
         ":PtrTdFiles",
     ],
 )
@@ -6582,6 +6586,7 @@ cc_library(
         ":BytecodeOpInterface",
         ":DataLayoutInterfaces",
         ":IR",
+        ":InferTypeOpInterface",
         ":InliningUtils",
         ":PtrAttrsIncGen",
         ":PtrDialectIncGen",
@@ -8861,6 +8866,20 @@ cc_library(
 )
 
 cc_library(
+    name = "PtrToLLVMIRTranslation",
+    srcs = glob(["lib/Target/LLVMIR/Dialect/Ptr/*.cpp"]),
+    hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/Ptr/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":PtrDialect",
+        ":ToLLVMIRTranslation",
+        "//llvm:Core",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "XeVMToLLVMIRTranslation",
     srcs = glob(["lib/Target/LLVMIR/Dialect/XeVM/*.cpp"]),
     hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/XeVM/*.h"]),
@@ -8893,6 +8912,7 @@ cc_library(
         ":NVVMToLLVMIRTranslation",
         ":OpenACCToLLVMIRTranslation",
         ":OpenMPToLLVMIRTranslation",
+        ":PtrToLLVMIRTranslation",
         ":ROCDLToLLVMIRTranslation",
         ":SPIRVToLLVMIRTranslation",
         ":VCIXToLLVMIRTranslation",
