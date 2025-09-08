@@ -1,0 +1,6 @@
+# RUN: mkdir %t
+# RUN: touch %S/empty.txt
+# RUN: cp %S/1.in %t/1.txt
+
+# RUN: diff %t/1.txt %S/empty.txt
+
