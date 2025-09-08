@@ -622,6 +622,8 @@ bool WarningsSpecialCaseList::isDiagSuppressed(diag::kind DiagId,
 bool WarningsSpecialCaseList::globsMatches(
     const llvm::StringMap<Matcher> &CategoriesToMatchers,
     StringRef FilePath) const {
+  static bool HaveWindowsPathStyle =
+      llvm::sys::path::is_style_windows(llvm::sys::path::Style::native);
   StringRef LongestMatch;
   bool LongestIsPositive = false;
   for (const auto &Entry : CategoriesToMatchers) {
@@ -631,7 +633,8 @@ bool WarningsSpecialCaseList::globsMatches(
     for (const auto &Glob : Matcher.Globs) {
       if (Glob->Name.size() < LongestMatch.size())
         continue;
-      if (!Glob->Pattern.match(FilePath))
+      if (!Glob->Pattern.match(FilePath,
+                               /*IsSlashAgnostic=*/HaveWindowsPathStyle))
         continue;
       LongestMatch = Glob->Name;
       LongestIsPositive = IsPositive;
