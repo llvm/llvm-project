@@ -206,8 +206,7 @@ exit:
   ret void
 }
 
-; `step` can be zero, so `step*j` can be either Invariant or Monotonic. This
-; propagates to `i + step*j`.
+; FIXME?: What if `step` is zero?
 ;
 ; for (int i = 0; i < n; i++)
 ;   for (int j = 0; j < m; j++)
@@ -218,7 +217,7 @@ define void @nested_loop_step(ptr %a, i64 %n, i64 %m, i64 %step) {
 ; CHECK-NEXT:  Monotonicity check:
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:      Expr: {{\{\{}}0,+,1}<nuw><nsw><%loop.i.header>,+,%step}<nsw><%loop.j>
-; CHECK-NEXT:      Monotonicity: NoSignedWrap
+; CHECK-NEXT:      Monotonicity: MultiMonotonic
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:    da analyze - output [* *]!
@@ -255,7 +254,7 @@ exit:
   ret void
 }
 
-; `offset` can be loop-invariant since `step` can be zero.
+; FIXME?: What if `step` is zero?
 ;
 ; int8_t offset = start;
 ; for (int i = 0; i < 100; i++, offset += step)
@@ -266,7 +265,7 @@ define void @sext_nsw(ptr %a, i8 %start, i8 %step) {
 ; CHECK-NEXT:  Monotonicity check:
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:      Expr: {(sext i8 %start to i64),+,(sext i8 %step to i64)}<nsw><%loop>
-; CHECK-NEXT:      Monotonicity: NoSignedWrap
+; CHECK-NEXT:      Monotonicity: MultiMonotonic
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:    da analyze - none!

@@ -128,8 +128,7 @@ static cl::opt<bool> DumpMonotonicityReport(
 namespace {
 
 /// The type of signed monotonicity of a SCEV expression. This property is
-/// defined with respect to the outermost loop that DA is analyzing. Invariant
-/// and MultiMonotonic mutually exclusive, and both imply NoSignedWrap.
+/// defined with respect to the outermost loop that DA is analyzing.
 ///
 /// This is designed to classify the behavior of AddRec expressions, and does
 /// not care about other SCEVs. For example, given the two loop invariants `A`
@@ -137,20 +136,20 @@ namespace {
 /// the other hand, if either `A` or `B` is an AddRec and we cannot prove the
 /// addition doesn't wrap, the result is classified as Unknown.
 enum class SignedMonotonicityType {
-  Unknown, ///< The expression contains some non loop-invariant SCEVUnknown or
-           ///< arithmetic operation that has some AddRec as its subexpression
-           ///< and may cause signed wrap.
-  NoSignedWrap, ///< The expression doesn't contain any AddRecs that may wrap.
-                ///< This is a weaker property than Invariant or MultiMonotonic.
-                ///< Invariant and MultiMonotonic imply NoSignedWrap.
-  Invariant,    ///< The expression is a loop-invariant.
+  Unknown,   ///< The expression contains some non loop-invariant SCEVUnknown or
+             ///< arithmetic operation that has some AddRec as its subexpression
+             ///< and may cause signed wrap.
+  Invariant, ///< The expression is a loop-invariant.
   MultiMonotonic, ///< The expression is monotonically increasing or decreasing
-                  ///< with respect to each loop. This is exclusive of
-                  ///< Invariant. That is, we say an SCEV is MultiMonotonic only
-                  ///< if it contains at least one AddRec where its step
-                  ///< reccurence value is non-zero. Monotonicity is checked
+                  ///< with respect to each loop. Monotonicity is checked
                   ///< independently for each loop. It is allowed to contain
-                  ///< both increasing and decreasing AddRecs.
+                  ///< both increasing and decreasing AddRecs. For example,
+                  ///< `{{0,+,1}<%L0>,+,-1}<%L1>` is classified as
+                  ///< MultiMonotonic if it doesn't wrap.
+                  ///< Currently we don't check whether the expression is
+                  ///< "strictly" increasing or decreasing. An AddRec whose step
+                  ///< reccurence can be zero, like {0,+,%mayzero}, would
+                  ///< classified as MultiMonotonic.
 };
 
 struct SignedMonotonicity {
@@ -3473,9 +3472,6 @@ void SignedMonotonicity::print(raw_ostream &OS, unsigned Depth) const {
     if (FailurePoint)
       OS.indent(Depth) << "Reason: " << *FailurePoint << "\n";
     break;
-  case SignedMonotonicityType::NoSignedWrap:
-    OS << "NoSignedWrap\n";
-    break;
   case SignedMonotonicityType::Invariant:
     OS << "Invariant\n";
     break;
@@ -3535,14 +3531,8 @@ SCEVSignedMonotonicityChecker::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
   const SCEV *Step = Expr->getStepRecurrence(*SE);
 
   SignedMonotonicity StartRes = visit(Start);
-  switch (StartRes.getType()) {
-  case SignedMonotonicityType::Unknown:
-  case SignedMonotonicityType::NoSignedWrap:
+  if (StartRes.getType() == SignedMonotonicityType::Unknown)
     return StartRes;
-  case SignedMonotonicityType::Invariant:
-  case SignedMonotonicityType::MultiMonotonic:
-    break;
-  }
 
   SignedMonotonicity StepRes = visit(Step);
   if (StepRes.getType() != SignedMonotonicityType::Invariant)
@@ -3563,24 +3553,16 @@ SCEVSignedMonotonicityChecker::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
         return SignedMonotonicity(SignedMonotonicityType::Unknown, Expr);
   }
 
-  bool IsKnownNonZero = SE->isKnownNonZero(Step);
-  SignedMonotonicityType SMT = [&] {
     switch (StartRes.getType()) {
     case SignedMonotonicityType::Unknown:
       llvm_unreachable("should have been handled above");
-    case SignedMonotonicityType::NoSignedWrap:
-      return SignedMonotonicityType::NoSignedWrap;
     case SignedMonotonicityType::Invariant:
-      return IsKnownNonZero ? SignedMonotonicityType::MultiMonotonic
-                            : SignedMonotonicityType::NoSignedWrap;
     case SignedMonotonicityType::MultiMonotonic:
       // TODO: Should handle SCEV like `{{0,+,-1}<%loop>,+,1}<%loop>`?
-      return IsKnownNonZero ? SignedMonotonicityType::MultiMonotonic
-                            : SignedMonotonicityType::NoSignedWrap;
+      // TODO: Should we prove here that the Step is non-zero?
+      return SignedMonotonicity(SignedMonotonicityType::MultiMonotonic);
     }
     llvm_unreachable("unhandled MonotonicityType");
-  }();
-  return SignedMonotonicity(SMT);
 }
 
 SignedMonotonicity SCEVSignedMonotonicityChecker::visitZeroExtendExpr(
@@ -3604,7 +3586,6 @@ SignedMonotonicity SCEVSignedMonotonicityChecker::visitZeroExtendExpr(
   //   255, 0, 1, 2, ...
   //
   // which is not monotonic.
-  case SignedMonotonicityType::NoSignedWrap:
   case SignedMonotonicityType::MultiMonotonic:
     if (SE->isKnownNonNegative(Op) || SE->isKnownNonPositive(Op))
       return OpRes;
@@ -4059,23 +4040,27 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   Pair[0].Src = SrcSCEV;
   Pair[0].Dst = DstSCEV;
 
-  const Loop *OutermostLoop = SrcLoop ? SrcLoop->getOutermostLoop() : nullptr;
-  if (checkSignedMonotonicity(SE, SrcEv, OutermostLoop, SrcPtr).getType() ==
-      SignedMonotonicityType::Unknown)
-    return std::make_unique<Dependence>(Src, Dst,
-                                        SCEVUnionPredicate(Assume, *SE));
-  if (checkSignedMonotonicity(SE, DstEv, OutermostLoop, DstPtr).getType() ==
-      SignedMonotonicityType::Unknown)
-    return std::make_unique<Dependence>(Src, Dst,
-                                        SCEVUnionPredicate(Assume, *SE));
-
+  bool Delinearized = false;
   if (Delinearize) {
     if (tryDelinearize(Src, Dst, Pair)) {
       LLVM_DEBUG(dbgs() << "    delinearized\n");
       Pairs = Pair.size();
+      Delinearized = true;
     }
-    // TODO: Check that the original offsets are monotonic when delinearization
-    // fails.
+  }
+
+  // If delinearization was not done, check the monotonicity of the original
+  // offsets.
+  if (!Delinearized) {
+    const Loop *OutermostLoop = SrcLoop ? SrcLoop->getOutermostLoop() : nullptr;
+    if (checkSignedMonotonicity(SE, SrcEv, OutermostLoop, SrcPtr).getType() ==
+        SignedMonotonicityType::Unknown)
+      return std::make_unique<Dependence>(Src, Dst,
+                                          SCEVUnionPredicate(Assume, *SE));
+    if (checkSignedMonotonicity(SE, DstEv, OutermostLoop, DstPtr).getType() ==
+        SignedMonotonicityType::Unknown)
+      return std::make_unique<Dependence>(Src, Dst,
+                                          SCEVUnionPredicate(Assume, *SE));
   }
 
   for (unsigned P = 0; P < Pairs; ++P) {
