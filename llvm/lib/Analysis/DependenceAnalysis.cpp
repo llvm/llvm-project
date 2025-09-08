@@ -121,6 +121,136 @@ static cl::opt<unsigned> MIVMaxLevelThreshold(
     cl::desc("Maximum depth allowed for the recursive algorithm used to "
              "explore MIV direction vectors."));
 
+static cl::opt<bool> DumpMonotonicityReport(
+    "da-dump-monotonicity-report", cl::init(false), cl::Hidden,
+    cl::desc("When printing analysis, dump a report of monotonicity checks."));
+
+namespace {
+
+/// The type of signed monotonicity of a SCEV expression. This property is
+/// defined with respect to the outermost loop that DA is analyzing. Invariant
+/// and MultiMonotonic mutually exclusive, and both imply NoSignedWrap.
+///
+/// This is designed to classify the behavior of AddRec expressions, and does
+/// not care about other SCEVs. For example, given the two loop invariants `A`
+/// and `B`, `A + B` is treated as Invariant even if the addition may wrap. On
+/// the other hand, if either `A` or `B` is an AddRec and we cannot prove the
+/// addition doesn't wrap, the result is classified as Unknown.
+enum class SignedMonotonicityType {
+  Unknown, ///< The expression contains some non loop-invariant SCEVUnknown or
+           ///< arithmetic operation that has some AddRec as its subexpression
+           ///< and may cause signed wrap.
+  NoSignedWrap, ///< The expression doesn't contain any AddRecs that may wrap.
+                ///< This is a weaker property than Invariant or MultiMonotonic.
+                ///< Invariant and MultiMonotonic imply NoSignedWrap.
+  Invariant,    ///< The expression is a loop-invariant.
+  MultiMonotonic, ///< The expression is monotonically increasing or decreasing
+                  ///< with respect to each loop. This is exclusive of
+                  ///< Invariant. That is, we say an SCEV is MultiMonotonic only
+                  ///< if it contains at least one AddRec where its step
+                  ///< reccurence value is non-zero. Monotonicity is checked
+                  ///< independently for each loop. It is allowed to contain
+                  ///< both increasing and decreasing AddRecs.
+};
+
+struct SignedMonotonicity {
+  explicit SignedMonotonicity(SignedMonotonicityType Type,
+                              const SCEV *FailurePoint = nullptr);
+
+  SignedMonotonicityType getType() const { return Type; }
+
+  const SCEV *getFailurePoint() const { return FailurePoint; }
+
+  void print(raw_ostream &OS, unsigned Depth) const;
+
+private:
+  SignedMonotonicityType Type;
+
+  /// The subexpression that caused Unknown.
+  const SCEV *FailurePoint;
+};
+
+/// A visitor that checks the signed monotonicity of SCEVs.
+struct SCEVSignedMonotonicityChecker
+    : public SCEVVisitor<SCEVSignedMonotonicityChecker, SignedMonotonicity> {
+
+  /// \p Ptr is the pointer that the SCEV is associated with, if any. It may be
+  /// used for the inferrence.
+  SCEVSignedMonotonicityChecker(ScalarEvolution *SE, const Loop *L,
+                                const Value *Ptr = nullptr);
+
+  SignedMonotonicity visitAddRecExpr(const SCEVAddRecExpr *Expr);
+  SignedMonotonicity visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr);
+  SignedMonotonicity visitSignExtendExpr(const SCEVSignExtendExpr *Expr);
+
+  SignedMonotonicity visitConstant(const SCEVConstant *) {
+    return SignedMonotonicity(SignedMonotonicityType::Invariant);
+  }
+  SignedMonotonicity visitVScale(const SCEVVScale *) {
+    return SignedMonotonicity(SignedMonotonicityType::Invariant);
+  }
+
+  // TODO: Handle more cases.
+  SignedMonotonicity visitAddExpr(const SCEVAddExpr *Expr) {
+    return checkInvarianceOnly(Expr);
+  }
+  SignedMonotonicity visitMulExpr(const SCEVMulExpr *Expr) {
+    return checkInvarianceOnly(Expr);
+  }
+  SignedMonotonicity visitPtrToIntExpr(const SCEVPtrToIntExpr *Expr) {
+    return checkInvarianceOnly(Expr);
+  }
+  SignedMonotonicity visitTruncateExpr(const SCEVTruncateExpr *Expr) {
+    return checkInvarianceOnly(Expr);
+  }
+  SignedMonotonicity visitUDivExpr(const SCEVUDivExpr *Expr) {
+    return checkInvarianceOnly(Expr);
+  }
+  SignedMonotonicity visitSMaxExpr(const SCEVSMaxExpr *Expr) {
+    return checkInvarianceOnly(Expr);
+  }
+  SignedMonotonicity visitUMaxExpr(const SCEVUMaxExpr *Expr) {
+    return checkInvarianceOnly(Expr);
+  }
+  SignedMonotonicity visitSMinExpr(const SCEVSMinExpr *Expr) {
+    return checkInvarianceOnly(Expr);
+  }
+  SignedMonotonicity visitUMinExpr(const SCEVUMinExpr *Expr) {
+    return checkInvarianceOnly(Expr);
+  }
+  SignedMonotonicity
+  visitSequentialUMinExpr(const SCEVSequentialUMinExpr *Expr) {
+    return checkInvarianceOnly(Expr);
+  }
+  SignedMonotonicity visitUnknown(const SCEVUnknown *Expr) {
+    return checkInvarianceOnly(Expr);
+  }
+  SignedMonotonicity visitCouldNotCompute(const SCEVCouldNotCompute *Expr) {
+    return checkInvarianceOnly(Expr);
+  }
+
+private:
+  ScalarEvolution *SE;
+  const Loop *OutermostLoop;
+  bool NoWrapFromGEP = false;
+
+  /// A helper to classify \p Expr as either Invariant or Unknown.
+  SignedMonotonicity checkInvarianceOnly(const SCEV *Expr);
+
+  /// Return true if \p Expr is loop-invariant with respect to the outermost
+  /// loop.
+  bool isLoopInvariant(const SCEV *Expr) const;
+};
+
+} // anonymous namespace
+
+static SignedMonotonicity checkSignedMonotonicity(ScalarEvolution *SE,
+                                                  const SCEV *Expr,
+                                                  const Loop *L,
+                                                  const Value *Ptr) {
+  return SCEVSignedMonotonicityChecker(SE, L, Ptr).visit(Expr);
+}
+
 //===----------------------------------------------------------------------===//
 // basics
 
@@ -175,8 +305,27 @@ void DependenceAnalysisWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
 // Calls depends() on every possible pair and prints out the result.
 // Ignores all other instructions.
 static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
-                                  ScalarEvolution &SE, bool NormalizeResults) {
+                                  ScalarEvolution &SE, LoopInfo &LI,
+                                  bool NormalizeResults) {
   auto *F = DA->getFunction();
+
+  if (DumpMonotonicityReport) {
+    OS << "Monotonicity check:\n";
+    for (Instruction &Inst : instructions(F)) {
+      if (!isa<LoadInst>(Inst) && !isa<StoreInst>(Inst))
+        continue;
+      Value *Ptr = getLoadStorePointerOperand(&Inst);
+      const Loop *L = LI.getLoopFor(Inst.getParent());
+      const SCEV *PtrSCEV = SE.getSCEVAtScope(Ptr, L);
+      const SCEV *AccessFn = SE.removePointerBase(PtrSCEV);
+      SignedMonotonicity SM = checkSignedMonotonicity(&SE, AccessFn, L, Ptr);
+      OS.indent(2) << "Inst: " << Inst << "\n";
+      OS.indent(4) << "Expr: " << *AccessFn << "\n";
+      SM.print(OS, 4);
+    }
+    OS << "\n";
+  }
+
   for (inst_iterator SrcI = inst_begin(F), SrcE = inst_end(F); SrcI != SrcE;
        ++SrcI) {
     if (SrcI->mayReadOrWriteMemory()) {
@@ -228,7 +377,8 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
 void DependenceAnalysisWrapperPass::print(raw_ostream &OS,
                                           const Module *) const {
   dumpExampleDependence(
-      OS, info.get(), getAnalysis<ScalarEvolutionWrapperPass>().getSE(), false);
+      OS, info.get(), getAnalysis<ScalarEvolutionWrapperPass>().getSE(),
+      getAnalysis<LoopInfoWrapperPass>().getLoopInfo(), false);
 }
 
 PreservedAnalyses
@@ -237,7 +387,7 @@ DependenceAnalysisPrinterPass::run(Function &F, FunctionAnalysisManager &FAM) {
      << "':\n";
   dumpExampleDependence(OS, &FAM.getResult<DependenceAnalysis>(F),
                         FAM.getResult<ScalarEvolutionAnalysis>(F),
-                        NormalizeResults);
+                        FAM.getResult<LoopAnalysis>(F), NormalizeResults);
   return PreservedAnalyses::all();
 }
 
@@ -3308,113 +3458,37 @@ void DependenceInfo::updateDirection(Dependence::DVEntry &Level,
     llvm_unreachable("constraint has unexpected kind");
 }
 
-namespace {
+SignedMonotonicity::SignedMonotonicity(SignedMonotonicityType Type,
+                                       const SCEV *FailurePoint)
+    : Type(Type), FailurePoint(FailurePoint) {
+  assert((Type != SignedMonotonicityType::Unknown || FailurePoint) &&
+         "Failure point must be provided iff Unknown type");
+}
 
-/// The type of signed monotonicity of a SCEV expression. This property is
-/// defined with respect to the outermost loop that DA is analyzing. Invariant
-/// and MultiMonotonic mutually exclusive, and both imply NoSignedWrap.
-///
-/// This is designed to classify the behavior of AddRec expressions, and does
-/// not care about other SCEVs. For example, given the two loop invariants `A`
-/// and `B`, `A + B` is treated as Invariant even if the addition may wrap. On
-/// the other hand, if either `A` or `B` is an AddRec and we cannot prove the
-/// addition doesn't wrap, the result is classified as Unknown.
-enum class MonotonicityType {
-  Unknown, ///< The expression contains some non loop-invariant SCEVUnknown or
-           ///< arithmetic operation that has some AddRec as its subexpression
-           ///< and may cause signed wrap.
-  NoSignedWrap, ///< The expression doesn't contain any AddRecs that may wrap.
-                ///< This is a weaker property than Invariant or MultiMonotonic.
-                ///< Invariant and MultiMonotonic imply NoSignedWrap.
-  Invariant,    ///< The expression is a loop-invariant.
-  MultiMonotonic, ///< The expression is monotonically increasing or decreasing
-                  ///< with respect to each loop. This is exclusive of
-                  ///< Invariant. That is, we say an SCEV is MultiMonotonic only
-                  ///< if it contains at least one AddRec where its step
-                  ///< reccurence value is non-zero. Monotonicity is checked
-                  ///< independently for each loop. It is allowed to contain
-                  ///< both increasing and decreasing AddRecs.
-};
-
-/// A visitor that checks the signed monotonicity of SCEVs.
-struct SCEVSignedMonotonicityChecker
-    : public SCEVVisitor<SCEVSignedMonotonicityChecker, MonotonicityType> {
-
-  /// \p Ptr is the pointer that the SCEV is associated with, if any. It may be
-  /// used for the inferrence.
-  static MonotonicityType checkMonotonicity(ScalarEvolution *SE,
-                                            const SCEV *Expr,
-                                            const Loop *OutermostLoop,
-                                            const Value *Ptr = nullptr);
-
-  MonotonicityType visitAddRecExpr(const SCEVAddRecExpr *Expr);
-  MonotonicityType visitUnknown(const SCEVUnknown *Expr);
-  MonotonicityType visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr);
-  MonotonicityType visitSignExtendExpr(const SCEVSignExtendExpr *Expr);
-
-  MonotonicityType visitConstant(const SCEVConstant *) {
-    return MonotonicityType::Invariant;
+void SignedMonotonicity::print(raw_ostream &OS, unsigned Depth) const {
+  OS.indent(Depth) << "Monotonicity: ";
+  switch (Type) {
+  case SignedMonotonicityType::Unknown:
+    OS << "Unknown\n";
+    if (FailurePoint)
+      OS.indent(Depth) << "Reason: " << *FailurePoint << "\n";
+    break;
+  case SignedMonotonicityType::NoSignedWrap:
+    OS << "NoSignedWrap\n";
+    break;
+  case SignedMonotonicityType::Invariant:
+    OS << "Invariant\n";
+    break;
+  case SignedMonotonicityType::MultiMonotonic:
+    OS << "MultiMonotonic\n";
+    break;
   }
-  MonotonicityType visitVScale(const SCEVVScale *) {
-    return MonotonicityType::Invariant;
-  }
-
-  // TODO: Handle more cases.
-  MonotonicityType visitAddExpr(const SCEVAddExpr *Expr) {
-    return checkInvarianceOnly(Expr);
-  }
-  MonotonicityType visitMulExpr(const SCEVMulExpr *Expr) {
-    return checkInvarianceOnly(Expr);
-  }
-  MonotonicityType visitPtrToIntExpr(const SCEVPtrToIntExpr *Expr) {
-    return checkInvarianceOnly(Expr);
-  }
-  MonotonicityType visitTruncateExpr(const SCEVTruncateExpr *Expr) {
-    return checkInvarianceOnly(Expr);
-  }
-  MonotonicityType visitUDivExpr(const SCEVUDivExpr *Expr) {
-    return checkInvarianceOnly(Expr);
-  }
-  MonotonicityType visitSMaxExpr(const SCEVSMaxExpr *Expr) {
-    return checkInvarianceOnly(Expr);
-  }
-  MonotonicityType visitUMaxExpr(const SCEVUMaxExpr *Expr) {
-    return checkInvarianceOnly(Expr);
-  }
-  MonotonicityType visitSMinExpr(const SCEVSMinExpr *Expr) {
-    return checkInvarianceOnly(Expr);
-  }
-  MonotonicityType visitUMinExpr(const SCEVUMinExpr *Expr) {
-    return checkInvarianceOnly(Expr);
-  }
-  MonotonicityType visitSequentialUMinExpr(const SCEVSequentialUMinExpr *Expr) {
-    return checkInvarianceOnly(Expr);
-  }
-  MonotonicityType visitCouldNotCompute(const SCEVCouldNotCompute *Expr) {
-    return checkInvarianceOnly(Expr);
-  }
-
-private:
-  ScalarEvolution *SE;
-  const Loop *OutermostLoop;
-  bool NoWrapFromGEP = false;
-
-  SCEVSignedMonotonicityChecker(ScalarEvolution *SE, const Loop *OutermostLoop,
-                                const Value *Ptr);
-
-  /// A helper to classify \p Expr as either Invariant or Unknown.
-  MonotonicityType checkInvarianceOnly(const SCEV *Expr);
-
-  /// Return true if \p Expr is loop-invariant with respect to the outermost
-  /// loop.
-  bool isLoopInvariant(const SCEV *Expr) const;
-};
-
-} // anonymous namespace
+}
 
 SCEVSignedMonotonicityChecker::SCEVSignedMonotonicityChecker(
-    ScalarEvolution *SE, const Loop *OutermostLoop, const Value *Ptr)
-    : SE(SE), OutermostLoop(OutermostLoop) {
+    ScalarEvolution *SE, const Loop *L, const Value *Ptr)
+    : SE(SE), OutermostLoop(L ? L->getOutermostLoop() : nullptr),
+      NoWrapFromGEP(false) {
   if (Ptr) {
     // Perform reasoning similar to LoopAccessAnalysis. If an AddRec would wrap
     // and the GEP would have nusw, the wrapped memory location would become
@@ -3441,59 +3515,38 @@ SCEVSignedMonotonicityChecker::SCEVSignedMonotonicityChecker(
   }
 }
 
-MonotonicityType SCEVSignedMonotonicityChecker::checkMonotonicity(
-    ScalarEvolution *SE, const SCEV *Expr, const Loop *OutermostLoop,
-    const Value *Ptr) {
-  SCEVSignedMonotonicityChecker Checker(SE, OutermostLoop, Ptr);
-  MonotonicityType MT = Checker.visit(Expr);
-
-#ifndef NDEBUG
-  switch (MT) {
-  case MonotonicityType::Unknown:
-    LLVM_DEBUG(dbgs() << "Monotonicity: Unknown expr: " << *Expr << "\n");
-    break;
-  case MonotonicityType::NoSignedWrap:
-    LLVM_DEBUG(dbgs() << "Monotonicity: No signed wrap expr: " << *Expr
-                      << "\n");
-    break;
-  case MonotonicityType::Invariant:
-    LLVM_DEBUG(dbgs() << "Monotonicity: Invariant expr: " << *Expr << "\n");
-    break;
-  case MonotonicityType::MultiMonotonic:
-    LLVM_DEBUG(dbgs() << "Monotonicity: Monotonic expr: " << *Expr << "\n");
-    break;
-  }
-#endif
-  return MT;
-}
-
-MonotonicityType
+SignedMonotonicity
 SCEVSignedMonotonicityChecker::checkInvarianceOnly(const SCEV *Expr) {
   if (isLoopInvariant(Expr))
-    return MonotonicityType::Invariant;
-  LLVM_DEBUG(dbgs() << "Failed to prove monotonicity for: " << *Expr << "\n");
-  return MonotonicityType::Unknown;
+    return SignedMonotonicity(SignedMonotonicityType::Invariant);
+  return SignedMonotonicity(SignedMonotonicityType::Unknown, Expr);
 }
 
 bool SCEVSignedMonotonicityChecker::isLoopInvariant(const SCEV *Expr) const {
   return !OutermostLoop || SE->isLoopInvariant(Expr, OutermostLoop);
 }
 
-MonotonicityType
+SignedMonotonicity
 SCEVSignedMonotonicityChecker::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
   if (!Expr->isAffine())
-    return checkInvarianceOnly(Expr);
+    return SignedMonotonicity(SignedMonotonicityType::Unknown, Expr);
 
   const SCEV *Start = Expr->getStart();
   const SCEV *Step = Expr->getStepRecurrence(*SE);
 
-  MonotonicityType StartRes = visit(Start);
-  if (StartRes == MonotonicityType::Unknown)
-    return checkInvarianceOnly(Expr);
+  SignedMonotonicity StartRes = visit(Start);
+  switch (StartRes.getType()) {
+  case SignedMonotonicityType::Unknown:
+  case SignedMonotonicityType::NoSignedWrap:
+    return StartRes;
+  case SignedMonotonicityType::Invariant:
+  case SignedMonotonicityType::MultiMonotonic:
+    break;
+  }
 
-  MonotonicityType StepRes = visit(Step);
-  if (StepRes != MonotonicityType::Invariant)
-    return checkInvarianceOnly(Expr);
+  SignedMonotonicity StepRes = visit(Step);
+  if (StepRes.getType() != SignedMonotonicityType::Invariant)
+    return SignedMonotonicity(SignedMonotonicityType::Unknown, Expr);
 
   // TODO: Enhance the inference here.
   if (!Expr->hasNoSignedWrap() && !NoWrapFromGEP) {
@@ -3501,47 +3554,43 @@ SCEVSignedMonotonicityChecker::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
       // If the coefficient can be positive value, ensure that the AddRec is
       // monotonically increasing.
       if (!SE->isKnownOnEveryIteration(ICmpInst::ICMP_SGE, Expr, Start))
-        return checkInvarianceOnly(Expr);
+        return SignedMonotonicity(SignedMonotonicityType::Unknown, Expr);
 
     if (!SE->isKnownPositive(Step))
       // If the coefficient can be positive value, ensure that the AddRec is
       // monotonically decreasing.
       if (!SE->isKnownOnEveryIteration(ICmpInst::ICMP_SLE, Expr, Start))
-        return checkInvarianceOnly(Expr);
+        return SignedMonotonicity(SignedMonotonicityType::Unknown, Expr);
   }
 
   bool IsKnownNonZero = SE->isKnownNonZero(Step);
-  switch (StartRes) {
-  case MonotonicityType::Unknown:
-    llvm_unreachable("should have been handled above");
-  case MonotonicityType::NoSignedWrap:
-    return MonotonicityType::NoSignedWrap;
-  case MonotonicityType::Invariant:
-    return IsKnownNonZero ? MonotonicityType::MultiMonotonic
-                          : MonotonicityType::NoSignedWrap;
-  case MonotonicityType::MultiMonotonic:
-    // TODO: Should handle SCEV like `{{0,+,-1}<%loop>,+,1}<%loop>`?
-    return IsKnownNonZero ? MonotonicityType::MultiMonotonic
-                          : MonotonicityType::NoSignedWrap;
-  }
-  llvm_unreachable("unhandled MonotonicityType");
+  SignedMonotonicityType SMT = [&] {
+    switch (StartRes.getType()) {
+    case SignedMonotonicityType::Unknown:
+      llvm_unreachable("should have been handled above");
+    case SignedMonotonicityType::NoSignedWrap:
+      return SignedMonotonicityType::NoSignedWrap;
+    case SignedMonotonicityType::Invariant:
+      return IsKnownNonZero ? SignedMonotonicityType::MultiMonotonic
+                            : SignedMonotonicityType::NoSignedWrap;
+    case SignedMonotonicityType::MultiMonotonic:
+      // TODO: Should handle SCEV like `{{0,+,-1}<%loop>,+,1}<%loop>`?
+      return IsKnownNonZero ? SignedMonotonicityType::MultiMonotonic
+                            : SignedMonotonicityType::NoSignedWrap;
+    }
+    llvm_unreachable("unhandled MonotonicityType");
+  }();
+  return SignedMonotonicity(SMT);
 }
 
-MonotonicityType SCEVSignedMonotonicityChecker::visitZeroExtendExpr(
+SignedMonotonicity SCEVSignedMonotonicityChecker::visitZeroExtendExpr(
     const SCEVZeroExtendExpr *Expr) {
   return visit(Expr->getOperand());
 }
 
-MonotonicityType SCEVSignedMonotonicityChecker::visitSignExtendExpr(
+SignedMonotonicity SCEVSignedMonotonicityChecker::visitSignExtendExpr(
     const SCEVSignExtendExpr *Expr) {
   return visit(Expr->getOperand());
-}
-
-MonotonicityType
-SCEVSignedMonotonicityChecker::visitUnknown(const SCEVUnknown *Expr) {
-  if (!isLoopInvariant(Expr))
-    return checkInvarianceOnly(Expr);
-  return MonotonicityType::Invariant;
 }
 
 /// Check if we can delinearize the subscripts. If the SCEVs representing the
@@ -3770,16 +3819,14 @@ bool DependenceInfo::tryDelinearizeParametricSize(
       // Here, if (%m * %n) wraps, %n can be larger than (%m * %n). Hence even
       // if we know {0,+,(%m * %n)} doesn't wrap, we cannot conclude the same
       // for {0,+,%n}.
-      MonotonicityType SrcMonotonicity =
-          SCEVSignedMonotonicityChecker::checkMonotonicity(
-              SE, SrcSubscripts[I], OutermostLoop, SrcPtr);
-      if (SrcMonotonicity == MonotonicityType::Unknown)
+      SignedMonotonicity SrcMonotonicity =
+          checkSignedMonotonicity(SE, SrcSubscripts[I], OutermostLoop, SrcPtr);
+      if (SrcMonotonicity.getType() == SignedMonotonicityType::Unknown)
         return false;
 
-      MonotonicityType DstMonotonicity =
-          SCEVSignedMonotonicityChecker::checkMonotonicity(
-              SE, DstSubscripts[I], OutermostLoop, DstPtr);
-      if (DstMonotonicity == MonotonicityType::Unknown)
+      SignedMonotonicity DstMonotonicity =
+          checkSignedMonotonicity(SE, DstSubscripts[I], OutermostLoop, DstPtr);
+      if (DstMonotonicity.getType() == SignedMonotonicityType::Unknown)
         return false;
 
       bool SNN = isKnownNonNegative(SrcSubscripts[I], SrcPtr);
@@ -3988,12 +4035,12 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   Pair[0].Dst = DstSCEV;
 
   const Loop *OutermostLoop = SrcLoop ? SrcLoop->getOutermostLoop() : nullptr;
-  if (SCEVSignedMonotonicityChecker::checkMonotonicity(
-          SE, SrcEv, OutermostLoop, SrcPtr) == MonotonicityType::Unknown)
+  if (checkSignedMonotonicity(SE, SrcEv, OutermostLoop, SrcPtr).getType() ==
+      SignedMonotonicityType::Unknown)
     return std::make_unique<Dependence>(Src, Dst,
                                         SCEVUnionPredicate(Assume, *SE));
-  if (SCEVSignedMonotonicityChecker::checkMonotonicity(
-          SE, DstEv, OutermostLoop, DstPtr) == MonotonicityType::Unknown)
+  if (checkSignedMonotonicity(SE, DstEv, OutermostLoop, DstPtr).getType() ==
+      SignedMonotonicityType::Unknown)
     return std::make_unique<Dependence>(Src, Dst,
                                         SCEVUnionPredicate(Assume, *SE));
 
