@@ -20,17 +20,16 @@
 
 STATISTIC(NumPatternEmitted, "Number of patterns emitted");
 
-namespace llvm {
-namespace gi {
+using namespace llvm;
+using namespace gi;
 
-namespace {
-
-Error failUnsupported(const Twine &Reason) {
+// FIXME: Use createStringError instead.
+static Error failUnsupported(const Twine &Reason) {
   return make_error<StringError>(Reason, inconvertibleErrorCode());
 }
 
 /// Get the name of the enum value used to number the predicate function.
-std::string getEnumNameForPredicate(const TreePredicateFn &Predicate) {
+static std::string getEnumNameForPredicate(const TreePredicateFn &Predicate) {
   if (Predicate.hasGISelPredicateCode())
     return "GICXXPred_MI_" + Predicate.getFnName();
   if (Predicate.hasGISelLeafPredicateCode())
@@ -39,18 +38,17 @@ std::string getEnumNameForPredicate(const TreePredicateFn &Predicate) {
          Predicate.getFnName();
 }
 
-std::string getMatchOpcodeForImmPredicate(const TreePredicateFn &Predicate) {
+static std::string
+getMatchOpcodeForImmPredicate(const TreePredicateFn &Predicate) {
   return "GIM_Check" + Predicate.getImmTypeIdentifier().str() + "ImmPredicate";
 }
 
 // GIMT_Encode2/4/8
 constexpr StringLiteral EncodeMacroName = "GIMT_Encode";
 
-} // namespace
-
 //===- Helpers ------------------------------------------------------------===//
 
-void emitEncodingMacrosDef(raw_ostream &OS) {
+void llvm::gi::emitEncodingMacrosDef(raw_ostream &OS) {
   OS << "#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__\n"
      << "#define " << EncodeMacroName << "2(Val)"
      << " uint8_t(Val), uint8_t((Val) >> 8)\n"
@@ -76,14 +74,15 @@ void emitEncodingMacrosDef(raw_ostream &OS) {
      << "#endif\n";
 }
 
-void emitEncodingMacrosUndef(raw_ostream &OS) {
+void llvm::gi::emitEncodingMacrosUndef(raw_ostream &OS) {
   OS << "#undef " << EncodeMacroName << "2\n"
      << "#undef " << EncodeMacroName << "4\n"
      << "#undef " << EncodeMacroName << "8\n";
 }
 
-std::string getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset,
-                                    int HwModeIdx) {
+std::string
+llvm::gi::getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset,
+                                  int HwModeIdx) {
   std::string Name = "GIFBS";
   for (const Record *Feature : FeatureBitset)
     Name += ("_" + Feature->getName()).str();
@@ -94,8 +93,8 @@ std::string getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset,
 
 template <class GroupT>
 std::vector<Matcher *>
-optimizeRules(ArrayRef<Matcher *> Rules,
-              std::vector<std::unique_ptr<Matcher>> &MatcherStorage) {
+llvm::gi::optimizeRules(ArrayRef<Matcher *> Rules,
+                        std::vector<std::unique_ptr<Matcher>> &MatcherStorage) {
 
   std::vector<Matcher *> OptRules;
   std::unique_ptr<GroupT> CurrentGroup = std::make_unique<GroupT>();
@@ -142,11 +141,11 @@ optimizeRules(ArrayRef<Matcher *> Rules,
   return OptRules;
 }
 
-template std::vector<Matcher *> optimizeRules<GroupMatcher>(
+template std::vector<Matcher *> llvm::gi::optimizeRules<GroupMatcher>(
     ArrayRef<Matcher *> Rules,
     std::vector<std::unique_ptr<Matcher>> &MatcherStorage);
 
-template std::vector<Matcher *> optimizeRules<SwitchMatcher>(
+template std::vector<Matcher *> llvm::gi::optimizeRules<SwitchMatcher>(
     ArrayRef<Matcher *> Rules,
     std::vector<std::unique_ptr<Matcher>> &MatcherStorage);
 
@@ -158,7 +157,7 @@ static std::string getEncodedEmitStr(StringRef NamedValue, unsigned NumBytes) {
 
 //===- Global Data --------------------------------------------------------===//
 
-std::set<LLTCodeGen> KnownTypes;
+std::set<LLTCodeGen> llvm::gi::KnownTypes;
 
 //===- MatchTableRecord ---------------------------------------------------===//
 
@@ -437,7 +436,7 @@ bool LLTCodeGen::operator<(const LLTCodeGen &Other) const {
 
 //===- LLTCodeGen Helpers -------------------------------------------------===//
 
-std::optional<LLTCodeGen> MVTToLLT(MVT::SimpleValueType SVT) {
+std::optional<LLTCodeGen> llvm::gi::MVTToLLT(MVT::SimpleValueType SVT) {
   MVT VT(SVT);
 
   if (VT.isVector() && !VT.getVectorElementCount().isScalar())
@@ -2434,6 +2433,3 @@ void MakeTempRegisterAction::emitActionOpcodes(MatchTable &Table,
         << MatchTable::ULEB128Value(TempRegID) << MatchTable::Comment("TypeID")
         << Ty << MatchTable::LineBreak;
 }
-
-} // namespace gi
-} // namespace llvm

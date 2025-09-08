@@ -430,16 +430,13 @@ define <8 x i16> @freeze_abds(<8 x i16> %a, <8 x i16> %b) {
   ret <8 x i16> %r
 }
 
-; TODO: Unnecessary final and
 define <8 x i16> @freeze_uhadd(<8 x i16> %a0, <8 x i16> %a1) {
 ; CHECK-LABEL: freeze_uhadd:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v2.8h, #15
 ; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    movi v2.8h, #31
 ; CHECK-NEXT:    uhadd v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %m0 = and <8 x i16> %a0, splat (i16 15)
   %m1 = and <8 x i16> %a1, splat (i16 15)
@@ -449,16 +446,13 @@ define <8 x i16> @freeze_uhadd(<8 x i16> %a0, <8 x i16> %a1) {
   ret <8 x i16> %masked
 }
 
-; TODO: Unnecessary final and
 define <8 x i16> @freeze_urhadd(<8 x i16> %a0, <8 x i16> %a1) {
 ; CHECK-LABEL: freeze_urhadd:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v2.8h, #15
 ; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    movi v2.8h, #31
 ; CHECK-NEXT:    urhadd v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %m0 = and <8 x i16> %a0, splat (i16 15)
   %m1 = and <8 x i16> %a1, splat (i16 15)
