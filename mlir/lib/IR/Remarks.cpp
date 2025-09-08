@@ -225,7 +225,13 @@ InFlightRemark RemarkEngine::emitOptimizationRemarkAnalysis(Location loc,
 // RemarkEngine
 //===----------------------------------------------------------------------===//
 
-void RemarkEngine::report(const Remark &&remark) {
+void RemarkEngine::report(const Remark &remark, bool ignorePostpone) {
+  // Postponed remarks are shown at the end of pipeline, unless overridden.
+  if (remark.isPostponed() && !ignorePostpone) {
+    postponedRemarks.push_back(remark);
+    return;
+  }
+
   // Stream the remark
   if (remarkStreamer)
     remarkStreamer->streamOptimizationRemark(remark);
@@ -235,7 +241,15 @@ void RemarkEngine::report(const Remark &&remark) {
     emitRemark(remark.getLocation(), remark.getMsg());
 }
 
+void RemarkEngine::emitPostponedRemarks() {
+  for (auto &remark : postponedRemarks)
+    report(remark, /*ignorePostpone=*/true);
+  postponedRemarks.clear();
+}
+
 RemarkEngine::~RemarkEngine() {
+  emitPostponedRemarks();
+
   if (remarkStreamer)
     remarkStreamer->finalize();
 }

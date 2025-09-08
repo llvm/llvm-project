@@ -315,4 +315,91 @@ TEST(Remark, TestCustomOptimizationRemarkDiagnostic) {
   EXPECT_NE(errOut.find(pass2Msg), std::string::npos); // printed
   EXPECT_EQ(errOut.find(pass3Msg), std::string::npos); // filtered out
 }
+
+TEST(Remark, TestCustomOptimizationRemarkPostponeDiagnostic) {
+  testing::internal::CaptureStderr();
+  const auto *pass1Msg = "My message";
+  const auto *pass2Msg = "My another message";
+  const auto *pass3Msg = "Do not show this message";
+
+  std::string categoryLoopunroll("LoopUnroll");
+  std::string categoryInline("Inliner");
+  std::string myPassname1("myPass1");
+  std::string myPassname2("myPass2");
+  std::string funcName("myFunc");
+
+  std::string seenMsg = "";
+
+  {
+    MLIRContext context;
+    Location loc = UnknownLoc::get(&context);
+
+    // Setup the remark engine
+    mlir::remark::RemarkCategories cats{/*passed=*/categoryLoopunroll,
+                                        /*missed=*/std::nullopt,
+                                        /*analysis=*/std::nullopt,
+                                        /*failed=*/categoryLoopunroll};
+
+    LogicalResult isEnabled = remark::enableOptimizationRemarks(
+        context, std::make_unique<MyCustomStreamer>(), cats, true);
+    ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
+
+    // Remark 1: pass, category LoopUnroll
+    remark::passed(loc, remark::RemarkOpts::name("")
+                            .category(categoryLoopunroll)
+                            .subCategory(myPassname2)
+                            .postpone())
+        << pass1Msg;
+
+    // Postponed remark should not be printed yet.
+    testing::internal::CaptureStderr();
+    llvm::errs().flush();
+    std::string errOut1 = testing::internal::GetCapturedStderr();
+    // Ensure no remark has been printed yet.
+    EXPECT_TRUE(errOut1.empty())
+        << "Expected no stderr output before postponed remarks are flushed";
+
+    // Remark 2: failure, category LoopUnroll
+    remark::failed(loc, remark::RemarkOpts::name("")
+                            .category(categoryLoopunroll)
+                            .subCategory(myPassname2)
+                            .postpone())
+        << remark::reason(pass2Msg);
+
+    // Postponed remark should not be printed yet.
+    testing::internal::CaptureStderr();
+    llvm::errs().flush();
+    std::string errOut2 = testing::internal::GetCapturedStderr();
+    // Ensure no remark has been printed yet.
+    EXPECT_TRUE(errOut2.empty())
+        << "Expected no stderr output before postponed remarks are flushed";
+
+    // Remark 3: pass, category Inline (should not be printed)
+    remark::passed(loc, remark::RemarkOpts::name("")
+                            .category(categoryInline)
+                            .subCategory(myPassname1))
+        << pass3Msg;
+
+    testing::internal::CaptureStderr();
+    llvm::errs().flush();
+    std::string errOut = testing::internal::GetCapturedStderr();
+    auto third = errOut.find("Custom remark:");
+    EXPECT_EQ(third, std::string::npos);
+  }
+  testing::internal::CaptureStderr();
+  llvm::errs().flush();
+  std::string errOut = ::testing::internal::GetCapturedStderr();
+
+  // Expect exactly two "Custom remark:" lines.
+  auto first = errOut.find("Custom remark:");
+  EXPECT_NE(first, std::string::npos);
+  auto second = errOut.find("Custom remark:", first + 1);
+  EXPECT_NE(second, std::string::npos);
+
+  // Containment checks for messages.
+  EXPECT_NE(errOut.find(pass1Msg), std::string::npos); // printed
+  EXPECT_NE(errOut.find(pass2Msg), std::string::npos); // printed
+  EXPECT_EQ(errOut.find(pass3Msg), std::string::npos); // filtered out
+}
+
 } // namespace
