@@ -103,6 +103,13 @@ private:
         : NameII(NameII), Ty(Ty), Modifier(Modifier) {}
   };
 
+  struct LocalVar {
+    StringRef Name;
+    QualType Ty;
+    VarDecl *Decl;
+    LocalVar(StringRef Name, QualType Ty) : Name(Name), Ty(Ty), Decl(nullptr) {}
+  };
+
   BuiltinTypeDeclBuilder &DeclBuilder;
   DeclarationName Name;
   QualType ReturnTy;
@@ -114,7 +121,6 @@ private:
   StorageClass SC;
   llvm::SmallVector<Param> Params;
   llvm::SmallVector<Stmt *> StmtsList;
-  llvm::SmallVector<VarDecl *> LocalVars;
 
   // Argument placeholders, inspired by std::placeholder. These are the indices
   // of arguments to forward to `callBuiltin` and other method builder methods.
@@ -123,19 +129,10 @@ private:
   //   LastStmt - refers to the last statement in the method body; referencing
   //              LastStmt will remove the statement from the method body since
   //              it will be linked from the new expression being constructed.
-  // LocalVar_0 - refers to the first local variable declared in the method
-  enum class PlaceHolder {
-    _0,
-    _1,
-    _2,
-    _3,
-    _4,
-    LocalVar_0 = 64,
-    Handle = 128,
-    LastStmt
-  };
+  enum class PlaceHolder { _0, _1, _2, _3, _4, Handle = 128, LastStmt };
 
   Expr *convertPlaceholder(PlaceHolder PH);
+  Expr *convertPlaceholder(LocalVar &Var);
   Expr *convertPlaceholder(Expr *E) { return E; }
 
 public:
@@ -160,7 +157,7 @@ public:
   BuiltinTypeMethodBuilder &addParam(StringRef Name, QualType Ty,
                                      HLSLParamModifierAttr::Spelling Modifier =
                                          HLSLParamModifierAttr::Keyword_in);
-  BuiltinTypeMethodBuilder &createLocalVar(StringRef Name, QualType Ty);
+  BuiltinTypeMethodBuilder &declareLocalVar(LocalVar &Var);
   template <typename... Ts>
   BuiltinTypeMethodBuilder &callBuiltin(StringRef BuiltinName,
                                         QualType ReturnType, Ts... ArgSpecs);
@@ -349,22 +346,20 @@ Expr *BuiltinTypeMethodBuilder::convertPlaceholder(PlaceHolder PH) {
   }
 
   ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
-  if (PH >= PlaceHolder::LocalVar_0) {
-    unsigned Index = static_cast<unsigned>(PH) -
-                     static_cast<unsigned>(PlaceHolder::LocalVar_0);
-    assert(Index < LocalVars.size() && "local var index out of range");
-    VarDecl *VD = LocalVars[Index];
-    return DeclRefExpr::Create(
-        AST, NestedNameSpecifierLoc(), SourceLocation(), VD, false,
-        DeclarationNameInfo(VD->getDeclName(), SourceLocation()), VD->getType(),
-        VK_LValue);
-  }
-
   ParmVarDecl *ParamDecl = Method->getParamDecl(static_cast<unsigned>(PH));
   return DeclRefExpr::Create(
       AST, NestedNameSpecifierLoc(), SourceLocation(), ParamDecl, false,
       DeclarationNameInfo(ParamDecl->getDeclName(), SourceLocation()),
       ParamDecl->getType().getNonReferenceType(), VK_PRValue);
+}
+
+Expr *BuiltinTypeMethodBuilder::convertPlaceholder(LocalVar &Var) {
+  VarDecl *VD = Var.Decl;
+  assert(VD && "local variable is not declared");
+  return DeclRefExpr::Create(
+      VD->getASTContext(), NestedNameSpecifierLoc(), SourceLocation(), VD,
+      false, DeclarationNameInfo(VD->getDeclName(), SourceLocation()),
+      VD->getType(), VK_LValue);
 }
 
 BuiltinTypeMethodBuilder::BuiltinTypeMethodBuilder(BuiltinTypeDeclBuilder &DB,
@@ -464,19 +459,18 @@ Expr *BuiltinTypeMethodBuilder::getResourceHandleExpr() {
 }
 
 BuiltinTypeMethodBuilder &
-BuiltinTypeMethodBuilder::createLocalVar(StringRef Name, QualType Ty) {
+BuiltinTypeMethodBuilder::declareLocalVar(LocalVar &Var) {
   ensureCompleteDecl();
 
-  assert(LocalVars.size() <= 64 && "too many local variables");
+  assert(Var.Decl == nullptr && "local variable is already declared");
 
   ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
-  VarDecl *VD =
-      VarDecl::Create(AST, Method, SourceLocation(), SourceLocation(),
-                      &AST.Idents.get(Name, tok::TokenKind::identifier), Ty,
-                      AST.getTrivialTypeSourceInfo(Ty), SC_None);
-  LocalVars.push_back(VD);
-  DeclStmt *DS = new (AST)
-      clang::DeclStmt(DeclGroupRef(VD), SourceLocation(), SourceLocation());
+  Var.Decl = VarDecl::Create(
+      AST, Method, SourceLocation(), SourceLocation(),
+      &AST.Idents.get(Var.Name, tok::TokenKind::identifier), Var.Ty,
+      AST.getTrivialTypeSourceInfo(Var.Ty, SourceLocation()), SC_None);
+  DeclStmt *DS = new (AST) clang::DeclStmt(DeclGroupRef(Var.Decl),
+                                           SourceLocation(), SourceLocation());
   StmtsList.push_back(DS);
   return *this;
 }
@@ -803,6 +797,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCreateFromBinding() {
   ASTContext &AST = SemaRef.getASTContext();
   QualType HandleType = getResourceHandleField()->getType();
   QualType RecordType = AST.getTypeDeclType(cast<TypeDecl>(Record));
+  BuiltinTypeMethodBuilder::LocalVar TmpVar("tmp", RecordType);
 
   return BuiltinTypeMethodBuilder(*this, "__createFromBinding", RecordType,
                                   false, false, SC_Static)
@@ -811,12 +806,12 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCreateFromBinding() {
       .addParam("range", AST.IntTy)
       .addParam("index", AST.UnsignedIntTy)
       .addParam("name", AST.getPointerType(AST.CharTy.withConst()))
-      .createLocalVar("tmp", RecordType)
-      .accessHandleFieldOnResource(PH::LocalVar_0)
+      .declareLocalVar(TmpVar)
+      .accessHandleFieldOnResource(TmpVar)
       .callBuiltin("__builtin_hlsl_resource_handlefrombinding", HandleType,
                    PH::LastStmt, PH::_0, PH::_1, PH::_2, PH::_3, PH::_4)
-      .setHandleFieldOnResource(PH::LocalVar_0, PH::LastStmt)
-      .returnValue(PH::LocalVar_0)
+      .setHandleFieldOnResource(TmpVar, PH::LastStmt)
+      .returnValue(TmpVar)
       .finalize();
 }
 
@@ -840,6 +835,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCreateFromImplicitBinding() {
   ASTContext &AST = SemaRef.getASTContext();
   QualType HandleType = getResourceHandleField()->getType();
   QualType RecordType = AST.getTypeDeclType(cast<TypeDecl>(Record));
+  BuiltinTypeMethodBuilder::LocalVar TmpVar("tmp", RecordType);
 
   return BuiltinTypeMethodBuilder(*this, "__createFromImplicitBinding",
                                   RecordType, false, false, SC_Static)
@@ -848,13 +844,13 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCreateFromImplicitBinding() {
       .addParam("range", AST.IntTy)
       .addParam("index", AST.UnsignedIntTy)
       .addParam("name", AST.getPointerType(AST.CharTy.withConst()))
-      .createLocalVar("tmp", RecordType)
-      .accessHandleFieldOnResource(PH::LocalVar_0)
+      .declareLocalVar(TmpVar)
+      .accessHandleFieldOnResource(TmpVar)
       .callBuiltin("__builtin_hlsl_resource_handlefromimplicitbinding",
                    HandleType, PH::LastStmt, PH::_0, PH::_1, PH::_2, PH::_3,
                    PH::_4)
-      .setHandleFieldOnResource(PH::LocalVar_0, PH::LastStmt)
-      .returnValue(PH::LocalVar_0)
+      .setHandleFieldOnResource(TmpVar, PH::LastStmt)
+      .returnValue(TmpVar)
       .finalize();
 }
 
