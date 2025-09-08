@@ -381,13 +381,16 @@ void IndexRecordHasher::hashDeclName(DeclarationName name) {
 void IndexRecordHasher::hashNameSpec(NestedNameSpecifier nameSpec) {
   assert(nameSpec);
 
-  if (auto prefix = nameSpec.getAsNamespaceAndPrefix().Prefix) {
-    hashNameSpec(prefix);
+  auto kind = nameSpec.getKind();
+  if (kind != NestedNameSpecifier::Kind::Type) {
+    if (auto prefix = nameSpec.getAsNamespaceAndPrefix().Prefix) {
+      hashNameSpec(prefix);
+    }
   }
 
-  HashBuilder.add(nameSpec.getKind());
+  HashBuilder.add(kind);
 
-  switch (nameSpec.getKind()) {
+  switch (kind) {
   case NestedNameSpecifier::Kind::Namespace:
     hashDecl(nameSpec.getAsNamespaceAndPrefix().Namespace->getCanonicalDecl());
     break;
