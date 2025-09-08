@@ -1,5 +1,11 @@
-// RUN: %clang_cc1 -ffreestanding -emit-llvm %s -o - -triple=i686-pc-windows-msvc | FileCheck %s
-// RUN: %clang_cc1 -ffreestanding -emit-llvm %s -o - -triple=x86_64-pc-windows-msvc | FileCheck %s
+// RUN: %clang_cc1 -ffreestanding -emit-llvm %s -o - -triple=i686-pc-windows-msvc \
+// RUN:   | FileCheck %s
+// RUN: %clang_cc1 -ffreestanding -emit-llvm %s -o - -triple=x86_64-pc-windows-msvc \
+// RUN:   | FileCheck %s
+// RUN: %clang_cc1 -ffreestanding -emit-llvm %s -o - -triple=i686-pc-windows-msvc \
+// RUN:   -fclang-abi-compat=21 | FileCheck --check-prefixes=CLANG21 %s
+// RUN: %clang_cc1 -ffreestanding -emit-llvm %s -o - -triple=x86_64-pc-windows-msvc \
+// RUN:   -fclang-abi-compat=21 | FileCheck --check-prefixes=CLANG21 %s
 
 // To match the MSVC ABI, vector types must be returned indirectly from member
 // functions (as long as they do not use the vectorcall calling convention),
@@ -17,6 +23,7 @@ __m128 Foo::method_m128() {
 // GH104
 // CHECK: store <4 x float>
 // CHECK: ret void
+// CLANG21: ret <4 x float>
 }
 
 __m128 __vectorcall Foo::vectorcall_method_m128() {

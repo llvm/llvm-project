@@ -1180,7 +1180,10 @@ bool MicrosoftCXXABI::classifyReturnType(CGFunctionInfo &FI) const {
     // vectorcall C++ instance methods.
     isIndirectReturn =
         CGM.getTarget().getTriple().isX86() && FI.isInstanceMethod() &&
-        FI.getCallingConvention() != llvm::CallingConv::X86_VectorCall;
+        FI.getCallingConvention() != llvm::CallingConv::X86_VectorCall &&
+        // Clang <= 21.0 did not do this.
+        getContext().getLangOpts().getClangABICompat() >
+            LangOptions::ClangABI::Ver21;
   }
 
   if (isIndirectReturn) {
