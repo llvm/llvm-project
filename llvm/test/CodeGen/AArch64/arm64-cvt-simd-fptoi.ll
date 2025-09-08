@@ -20,50 +20,50 @@
 ;
 
 define float @test_fptosi_f16_i32_simd(half %a)  {
-; CHECK-SD-LABEL: test_fptosi_f16_i32_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzs s0, h0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: test_fptosi_f16_i32_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs s0, h0
+; CHECK-NEXT:    ret
   %r = fptosi half %a to i32
   %bc = bitcast i32 %r to float
   ret float %bc
 }
 
 define double @test_fptosi_f16_i64_simd(half %a)  {
-; CHECK-SD-LABEL: test_fptosi_f16_i64_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzs d0, h0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: test_fptosi_f16_i64_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, h0
+; CHECK-NEXT:    ret
   %r = fptosi half %a to i64
   %bc = bitcast i64 %r to double
   ret double %bc
 }
 
 define float @test_fptosi_f64_i32_simd(double %a)  {
-; CHECK-SD-LABEL: test_fptosi_f64_i32_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzs s0, d0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: test_fptosi_f64_i32_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs s0, d0
+; CHECK-NEXT:    ret
   %r = fptosi double %a to i32
   %bc = bitcast i32 %r to float
   ret float %bc
 }
 
 define double @test_fptosi_f32_i64_simd(float %a)  {
-; CHECK-SD-LABEL: test_fptosi_f32_i64_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzs d0, s0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: test_fptosi_f32_i64_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, s0
+; CHECK-NEXT:    ret
   %r = fptosi float %a to i64
   %bc = bitcast i64 %r to double
   ret double %bc
 }
 
 define double @test_fptosi_f64_i64_simd(double %a)  {
-; CHECK-SD-LABEL: test_fptosi_f64_i64_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzs d0, d0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: test_fptosi_f64_i64_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, d0
+; CHECK-NEXT:    ret
   %r = fptosi double %a to i64
   %bc = bitcast i64 %r to double
   ret double %bc
@@ -71,60 +71,60 @@ define double @test_fptosi_f64_i64_simd(double %a)  {
 
 
 define float @test_fptosi_f32_i32_simd(float %a)  {
-; CHECK-SD-LABEL: test_fptosi_f32_i32_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzs s0, s0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: test_fptosi_f32_i32_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs s0, s0
+; CHECK-NEXT:    ret
   %r = fptosi float %a to i32
   %bc = bitcast i32 %r to float
   ret float %bc
 }
 
 define float @test_fptoui_f16_i32_simd(half %a)  {
-; CHECK-SD-LABEL: test_fptoui_f16_i32_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzu s0, h0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: test_fptoui_f16_i32_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu s0, h0
+; CHECK-NEXT:    ret
   %r = fptoui half %a to i32
   %bc = bitcast i32 %r to float
   ret float %bc
 }
 
 define double @test_fptoui_f16_i64_simd(half %a)  {
-; CHECK-SD-LABEL: test_fptoui_f16_i64_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzu d0, h0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: test_fptoui_f16_i64_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu d0, h0
+; CHECK-NEXT:    ret
   %r = fptoui half %a to i64
   %bc = bitcast i64 %r to double
   ret double %bc
 }
 
 define float @test_fptoui_f64_i32_simd(double %a)  {
-; CHECK-SD-LABEL: test_fptoui_f64_i32_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzu s0, d0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: test_fptoui_f64_i32_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu s0, d0
+; CHECK-NEXT:    ret
   %r = fptoui double %a to i32
   %bc = bitcast i32 %r to float
   ret float %bc
 }
 
 define double @test_fptoui_f32_i64_simd(float %a)  {
-; CHECK-SD-LABEL: test_fptoui_f32_i64_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzu d0, s0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: test_fptoui_f32_i64_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu d0, s0
+; CHECK-NEXT:    ret
   %r = fptoui float %a to i64
   %bc = bitcast i64 %r to double
   ret double %bc
 }
 
 define double @test_fptoui_f64_i64_simd(double %a)  {
-; CHECK-SD-LABEL: test_fptoui_f64_i64_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzu d0, d0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: test_fptoui_f64_i64_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu d0, d0
+; CHECK-NEXT:    ret
   %r = fptoui double %a to i64
   %bc = bitcast i64 %r to double
   ret double %bc
@@ -132,10 +132,10 @@ define double @test_fptoui_f64_i64_simd(double %a)  {
 
 
 define float @test_fptoui_f32_i32_simd(float %a)  {
-; CHECK-SD-LABEL: test_fptoui_f32_i32_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzu s0, s0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: test_fptoui_f32_i32_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu s0, s0
+; CHECK-NEXT:    ret
   %r = fptoui float %a to i32
   %bc = bitcast i32 %r to float
   ret float %bc
@@ -147,60 +147,60 @@ define float @test_fptoui_f32_i32_simd(float %a)  {
 ;
 
 define float @fptosi_i32_f16_simd(half %x)  {
-; CHECK-SD-LABEL: fptosi_i32_f16_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzs s0, h0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: fptosi_i32_f16_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs s0, h0
+; CHECK-NEXT:    ret
   %val = call i32 @llvm.experimental.constrained.fptosi.i32.f16(half %x, metadata !"fpexcept.strict")
   %sum = bitcast i32 %val to float
   ret float %sum
 }
 
 define double @fptosi_i64_f16_simd(half %x)  {
-; CHECK-SD-LABEL: fptosi_i64_f16_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzs d0, h0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: fptosi_i64_f16_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, h0
+; CHECK-NEXT:    ret
   %val = call i64 @llvm.experimental.constrained.fptosi.i64.f16(half %x, metadata !"fpexcept.strict")
   %sum = bitcast i64 %val to double
   ret double %sum
 }
 
 define double @fptosi_i64_f32_simd(float %x)  {
-; CHECK-SD-LABEL: fptosi_i64_f32_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzs d0, s0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: fptosi_i64_f32_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, s0
+; CHECK-NEXT:    ret
   %val = call i64 @llvm.experimental.constrained.fptosi.i64.f32(float %x, metadata !"fpexcept.strict")
   %bc = bitcast i64 %val to double
   ret double %bc
 }
 
 define float @fptosi_i32_f64_simd(double %x)  {
-; CHECK-SD-LABEL: fptosi_i32_f64_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzs s0, d0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: fptosi_i32_f64_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs s0, d0
+; CHECK-NEXT:    ret
   %val = call i32 @llvm.experimental.constrained.fptosi.i32.f64(double %x, metadata !"fpexcept.strict")
   %bc = bitcast i32 %val to float
   ret float %bc
 }
 
 define double @fptosi_i64_f64_simd(double %x)  {
-; CHECK-SD-LABEL: fptosi_i64_f64_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzs d0, d0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: fptosi_i64_f64_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, d0
+; CHECK-NEXT:    ret
   %val = call i64 @llvm.experimental.constrained.fptosi.i64.f64(double %x, metadata !"fpexcept.strict")
   %bc = bitcast i64 %val to double
   ret double %bc
 }
 
 define float @fptosi_i32_f32_simd(float %x)  {
-; CHECK-SD-LABEL: fptosi_i32_f32_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzs s0, s0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: fptosi_i32_f32_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs s0, s0
+; CHECK-NEXT:    ret
   %val = call i32 @llvm.experimental.constrained.fptosi.i32.f32(float %x, metadata !"fpexcept.strict")
   %bc = bitcast i32 %val to float
   ret float %bc
@@ -209,60 +209,60 @@ define float @fptosi_i32_f32_simd(float %x)  {
 
 
 define float @fptoui_i32_f16_simd(half %x)  {
-; CHECK-SD-LABEL: fptoui_i32_f16_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzu s0, h0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: fptoui_i32_f16_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu s0, h0
+; CHECK-NEXT:    ret
   %val = call i32 @llvm.experimental.constrained.fptoui.i32.f16(half %x, metadata !"fpexcept.strict")
   %sum = bitcast i32 %val to float
   ret float %sum
 }
 
 define double @fptoui_i64_f16_simd(half %x)  {
-; CHECK-SD-LABEL: fptoui_i64_f16_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzu d0, h0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: fptoui_i64_f16_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu d0, h0
+; CHECK-NEXT:    ret
   %val = call i64 @llvm.experimental.constrained.fptoui.i64.f16(half %x, metadata !"fpexcept.strict")
   %sum = bitcast i64 %val to double
   ret double %sum
 }
 
 define double @fptoui_i64_f32_simd(float %x)  {
-; CHECK-SD-LABEL: fptoui_i64_f32_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzu d0, s0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: fptoui_i64_f32_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu d0, s0
+; CHECK-NEXT:    ret
   %val = call i64 @llvm.experimental.constrained.fptoui.i64.f32(float %x, metadata !"fpexcept.strict")
   %bc = bitcast i64 %val to double
   ret double %bc
 }
 
 define float @fptoui_i32_f64_simd(double %x)  {
-; CHECK-SD-LABEL: fptoui_i32_f64_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzu s0, d0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: fptoui_i32_f64_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu s0, d0
+; CHECK-NEXT:    ret
   %val = call i32 @llvm.experimental.constrained.fptoui.i32.f64(double %x, metadata !"fpexcept.strict")
   %bc = bitcast i32 %val to float
   ret float %bc
 }
 
 define double @fptoui_i64_f64_simd(double %x)  {
-; CHECK-SD-LABEL: fptoui_i64_f64_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzu d0, d0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: fptoui_i64_f64_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu d0, d0
+; CHECK-NEXT:    ret
   %val = call i64 @llvm.experimental.constrained.fptoui.i64.f64(double %x, metadata !"fpexcept.strict")
   %bc = bitcast i64 %val to double
   ret double %bc
 }
 
 define float @fptoui_i32_f32_simd(float %x)  {
-; CHECK-SD-LABEL: fptoui_i32_f32_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzu s0, s0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: fptoui_i32_f32_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu s0, s0
+; CHECK-NEXT:    ret
   %val = call i32 @llvm.experimental.constrained.fptoui.i32.f32(float %x, metadata !"fpexcept.strict")
   %bc = bitcast i32 %val to float
   ret float %bc
@@ -278,6 +278,16 @@ define double @fcvtas_ds_round_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtas d0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtas_ds_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl roundf
+; CHECK-GI-NEXT:    fcvtzs d0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @roundf(float %a) nounwind readnone
   %i = fptosi float %r to i64
   %bc = bitcast i64 %i to double
@@ -289,6 +299,16 @@ define float @fcvtas_sd_round_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtas s0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtas_sd_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl round
+; CHECK-GI-NEXT:    fcvtzs s0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @round(double %a) nounwind readnone
   %i = fptosi double %r to i32
   %bc = bitcast i32 %i to float
@@ -300,6 +320,16 @@ define float @fcvtas_ss_round_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtas s0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtas_ss_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl roundf
+; CHECK-GI-NEXT:    fcvtzs s0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @roundf(float %a) nounwind readnone
   %i = fptosi float %r to i32
   %bc = bitcast i32 %i to float
@@ -311,6 +341,16 @@ define double @fcvtas_dd_round_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtas d0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtas_dd_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl round
+; CHECK-GI-NEXT:    fcvtzs d0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @round(double %a) nounwind readnone
   %i = fptosi double %r to i64
   %bc = bitcast i64 %i to double
@@ -323,6 +363,16 @@ define double @fcvtau_ds_round_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtau d0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtau_ds_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl roundf
+; CHECK-GI-NEXT:    fcvtzu d0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @roundf(float %a) nounwind readnone
   %i = fptoui float %r to i64
   %bc = bitcast i64 %i to double
@@ -334,6 +384,16 @@ define float @fcvtau_sd_round_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtau s0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtau_sd_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl round
+; CHECK-GI-NEXT:    fcvtzu s0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @round(double %a) nounwind readnone
   %i = fptoui double %r to i32
   %bc = bitcast i32 %i to float
@@ -345,6 +405,16 @@ define float @fcvtau_ss_round_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtas s0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtau_ss_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl roundf
+; CHECK-GI-NEXT:    fcvtzs s0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @roundf(float %a) nounwind readnone
   %i = fptosi float %r to i32
   %bc = bitcast i32 %i to float
@@ -356,6 +426,16 @@ define double @fcvtau_dd_round_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtas d0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtau_dd_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl round
+; CHECK-GI-NEXT:    fcvtzs d0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @round(double %a) nounwind readnone
   %i = fptosi double %r to i64
   %bc = bitcast i64 %i to double
@@ -368,6 +448,16 @@ define double @fcvtms_ds_round_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtms d0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtms_ds_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl floorf
+; CHECK-GI-NEXT:    fcvtzs d0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @floorf(float %a) nounwind readnone
   %i = fptosi float %r to i64
   %bc = bitcast i64 %i to double
@@ -379,6 +469,16 @@ define float @fcvtms_sd_round_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtms s0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtms_sd_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl floor
+; CHECK-GI-NEXT:    fcvtzs s0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @floor(double %a) nounwind readnone
   %i = fptosi double %r to i32
   %bc = bitcast i32 %i to float
@@ -390,6 +490,16 @@ define float @fcvtms_ss_round_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtms s0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtms_ss_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl floorf
+; CHECK-GI-NEXT:    fcvtzs s0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @floorf(float %a) nounwind readnone
   %i = fptosi float %r to i32
   %bc = bitcast i32 %i to float
@@ -401,6 +511,16 @@ define double @fcvtms_dd_round_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtms d0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtms_dd_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl floor
+; CHECK-GI-NEXT:    fcvtzs d0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @floor(double %a) nounwind readnone
   %i = fptosi double %r to i64
   %bc = bitcast i64 %i to double
@@ -414,6 +534,16 @@ define double @fcvtmu_ds_round_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtmu d0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtmu_ds_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl floorf
+; CHECK-GI-NEXT:    fcvtzu d0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @floorf(float %a) nounwind readnone
   %i = fptoui float %r to i64
   %bc = bitcast i64 %i to double
@@ -425,6 +555,16 @@ define float @fcvtmu_sd_round_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtmu s0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtmu_sd_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl floor
+; CHECK-GI-NEXT:    fcvtzu s0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @floor(double %a) nounwind readnone
   %i = fptoui double %r to i32
   %bc = bitcast i32 %i to float
@@ -436,6 +576,16 @@ define float @fcvtmu_ss_round_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtms s0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtmu_ss_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl floorf
+; CHECK-GI-NEXT:    fcvtzs s0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @floorf(float %a) nounwind readnone
   %i = fptosi float %r to i32
   %bc = bitcast i32 %i to float
@@ -447,6 +597,16 @@ define double @fcvtmu_dd_round_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtms d0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtmu_dd_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl floor
+; CHECK-GI-NEXT:    fcvtzs d0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @floor(double %a) nounwind readnone
   %i = fptosi double %r to i64
   %bc = bitcast i64 %i to double
@@ -459,6 +619,16 @@ define double @fcvtps_ds_round_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtps d0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtps_ds_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl ceilf
+; CHECK-GI-NEXT:    fcvtzs d0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @ceilf(float %a) nounwind readnone
   %i = fptosi float %r to i64
   %bc = bitcast i64 %i to double
@@ -470,6 +640,16 @@ define float @fcvtps_sd_round_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtps s0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtps_sd_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl ceil
+; CHECK-GI-NEXT:    fcvtzs s0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @ceil(double %a) nounwind readnone
   %i = fptosi double %r to i32
   %bc = bitcast i32 %i to float
@@ -481,6 +661,16 @@ define float @fcvtps_ss_round_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtps s0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtps_ss_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl ceilf
+; CHECK-GI-NEXT:    fcvtzs s0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @ceilf(float %a) nounwind readnone
   %i = fptosi float %r to i32
   %bc = bitcast i32 %i to float
@@ -492,6 +682,16 @@ define double @fcvtps_dd_round_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtps d0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtps_dd_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl ceil
+; CHECK-GI-NEXT:    fcvtzs d0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @ceil(double %a) nounwind readnone
   %i = fptosi double %r to i64
   %bc = bitcast i64 %i to double
@@ -504,6 +704,16 @@ define double @fcvtpu_ds_round_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtpu d0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtpu_ds_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl ceilf
+; CHECK-GI-NEXT:    fcvtzu d0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @ceilf(float %a) nounwind readnone
   %i = fptoui float %r to i64
   %bc = bitcast i64 %i to double
@@ -515,6 +725,16 @@ define float @fcvtpu_sd_round_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtpu s0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtpu_sd_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl ceil
+; CHECK-GI-NEXT:    fcvtzu s0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @ceil(double %a) nounwind readnone
   %i = fptoui double %r to i32
   %bc = bitcast i32 %i to float
@@ -526,6 +746,16 @@ define float @fcvtpu_ss_round_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtps s0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtpu_ss_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl ceilf
+; CHECK-GI-NEXT:    fcvtzs s0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @ceilf(float %a) nounwind readnone
   %i = fptosi float %r to i32
   %bc = bitcast i32 %i to float
@@ -537,6 +767,16 @@ define double @fcvtpu_dd_round_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtps d0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtpu_dd_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl ceil
+; CHECK-GI-NEXT:    fcvtzs d0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @ceil(double %a) nounwind readnone
   %i = fptosi double %r to i64
   %bc = bitcast i64 %i to double
@@ -549,6 +789,16 @@ define double @fcvtzs_ds_round_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzs d0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtzs_ds_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl truncf
+; CHECK-GI-NEXT:    fcvtzs d0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @truncf(float %a) nounwind readnone
   %i = fptosi float %r to i64
   %bc = bitcast i64 %i to double
@@ -560,6 +810,16 @@ define float @fcvtzs_sd_round_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzs s0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtzs_sd_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl trunc
+; CHECK-GI-NEXT:    fcvtzs s0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @trunc(double %a) nounwind readnone
   %i = fptosi double %r to i32
   %bc = bitcast i32 %i to float
@@ -571,6 +831,16 @@ define float @fcvtzs_ss_round_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzs s0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtzs_ss_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl truncf
+; CHECK-GI-NEXT:    fcvtzs s0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @truncf(float %a) nounwind readnone
   %i = fptosi float %r to i32
   %bc = bitcast i32 %i to float
@@ -582,6 +852,16 @@ define double @fcvtzs_dd_round_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzs d0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtzs_dd_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl trunc
+; CHECK-GI-NEXT:    fcvtzs d0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @trunc(double %a) nounwind readnone
   %i = fptosi double %r to i64
   %bc = bitcast i64 %i to double
@@ -593,6 +873,16 @@ define double @fcvtzu_ds_round_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzu d0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtzu_ds_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl truncf
+; CHECK-GI-NEXT:    fcvtzu d0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @truncf(float %a) nounwind readnone
   %i = fptoui float %r to i64
   %bc = bitcast i64 %i to double
@@ -604,6 +894,16 @@ define float @fcvtzu_sd_round_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzu s0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtzu_sd_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl trunc
+; CHECK-GI-NEXT:    fcvtzu s0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @trunc(double %a) nounwind readnone
   %i = fptoui double %r to i32
   %bc = bitcast i32 %i to float
@@ -615,6 +915,16 @@ define float @fcvtzu_ss_round_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzs s0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtzu_ss_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl truncf
+; CHECK-GI-NEXT:    fcvtzs s0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @truncf(float %a) nounwind readnone
   %i = fptosi float %r to i32
   %bc = bitcast i32 %i to float
@@ -626,6 +936,16 @@ define double @fcvtzu_dd_round_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzs d0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtzu_dd_round_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl trunc
+; CHECK-GI-NEXT:    fcvtzs d0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @trunc(double %a) nounwind readnone
   %i = fptosi double %r to i64
   %bc = bitcast i64 %i to double
@@ -638,120 +958,120 @@ define double @fcvtzu_dd_round_simd(double %a) {
 ;
 
 define float @fcvtzs_sh_sat_simd(half %a) {
-; CHECK-SD-LABEL: fcvtzs_sh_sat_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzs s0, h0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: fcvtzs_sh_sat_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs s0, h0
+; CHECK-NEXT:    ret
   %i = call i32 @llvm.fptosi.sat.i32.f16(half %a)
   %bc = bitcast i32 %i to float
   ret float %bc
 }
 
 define double @fcvtzs_dh_sat_simd(half %a) {
-; CHECK-SD-LABEL: fcvtzs_dh_sat_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzs d0, h0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: fcvtzs_dh_sat_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, h0
+; CHECK-NEXT:    ret
   %i = call i64 @llvm.fptosi.sat.i64.f16(half %a)
   %bc = bitcast i64 %i to double
   ret double %bc
 }
 
 define double @fcvtzs_ds_sat_simd(float %a) {
-; CHECK-SD-LABEL: fcvtzs_ds_sat_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzs d0, s0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: fcvtzs_ds_sat_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, s0
+; CHECK-NEXT:    ret
   %i = call i64 @llvm.fptosi.sat.i64.f32(float %a)
   %bc = bitcast i64 %i to double
   ret double %bc
 }
 
 define float @fcvtzs_sd_sat_simd(double %a) {
-; CHECK-SD-LABEL: fcvtzs_sd_sat_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzs s0, d0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: fcvtzs_sd_sat_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs s0, d0
+; CHECK-NEXT:    ret
   %i = call i32 @llvm.fptosi.sat.i32.f64(double %a)
   %bc = bitcast i32 %i to float
   ret float %bc
 }
 
 define float @fcvtzs_ss_sat_simd(float %a) {
-; CHECK-SD-LABEL: fcvtzs_ss_sat_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzs s0, s0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: fcvtzs_ss_sat_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs s0, s0
+; CHECK-NEXT:    ret
   %i = call i32 @llvm.fptosi.sat.i32.f32(float %a)
   %bc = bitcast i32 %i to float
   ret float %bc
 }
 
 define double @fcvtzs_dd_sat_simd(double %a) {
-; CHECK-SD-LABEL: fcvtzs_dd_sat_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzs d0, d0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: fcvtzs_dd_sat_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, d0
+; CHECK-NEXT:    ret
   %i = call i64 @llvm.fptosi.sat.i64.f64(double %a)
   %bc = bitcast i64 %i to double
   ret double %bc
 }
 
 define float @fcvtzu_sh_sat_simd(half %a) {
-; CHECK-SD-LABEL: fcvtzu_sh_sat_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzu s0, h0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: fcvtzu_sh_sat_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu s0, h0
+; CHECK-NEXT:    ret
   %i = call i32 @llvm.fptoui.sat.i32.f16(half %a)
   %bc = bitcast i32 %i to float
   ret float %bc
 }
 
 define double @fcvtzu_dh_sat_simd(half %a) {
-; CHECK-SD-LABEL: fcvtzu_dh_sat_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzu d0, h0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: fcvtzu_dh_sat_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu d0, h0
+; CHECK-NEXT:    ret
   %i = call i64 @llvm.fptoui.sat.i64.f16(half %a)
   %bc = bitcast i64 %i to double
   ret double %bc
 }
 
 define double @fcvtzu_ds_sat_simd(float %a) {
-; CHECK-SD-LABEL: fcvtzu_ds_sat_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzu d0, s0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: fcvtzu_ds_sat_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu d0, s0
+; CHECK-NEXT:    ret
   %i = call i64 @llvm.fptoui.sat.i64.f32(float %a)
   %bc = bitcast i64 %i to double
   ret double %bc
 }
 
 define float @fcvtzu_sd_sat_simd(double %a) {
-; CHECK-SD-LABEL: fcvtzu_sd_sat_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzu s0, d0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: fcvtzu_sd_sat_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu s0, d0
+; CHECK-NEXT:    ret
   %i = call i32 @llvm.fptoui.sat.i32.f64(double %a)
   %bc = bitcast i32 %i to float
   ret float %bc
 }
 
 define float @fcvtzu_ss_sat_simd(float %a) {
-; CHECK-SD-LABEL: fcvtzu_ss_sat_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzs s0, s0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: fcvtzu_ss_sat_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs s0, s0
+; CHECK-NEXT:    ret
   %i = call i32 @llvm.fptosi.sat.i32.f32(float %a)
   %bc = bitcast i32 %i to float
   ret float %bc
 }
 
 define double @fcvtzu_dd_sat_simd(double %a) {
-; CHECK-SD-LABEL: fcvtzu_dd_sat_simd:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzs d0, d0
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: fcvtzu_dd_sat_simd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, d0
+; CHECK-NEXT:    ret
   %i = call i64 @llvm.fptosi.sat.i64.f64(double %a)
   %bc = bitcast i64 %i to double
   ret double %bc
@@ -766,6 +1086,12 @@ define float @fcvtas_sh_simd(half %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtas s0, h0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtas_sh_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    frinta h0, h0
+; CHECK-GI-NEXT:    fcvtzs s0, h0
+; CHECK-GI-NEXT:    ret
   %r = call half @llvm.round.f16(half %a) nounwind readnone
   %i = call i32 @llvm.fptosi.sat.i32.f16(half %r)
   %bc = bitcast i32 %i to float
@@ -777,6 +1103,12 @@ define double @fcvtas_dh_simd(half %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtas d0, h0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtas_dh_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    frinta h0, h0
+; CHECK-GI-NEXT:    fcvtzs d0, h0
+; CHECK-GI-NEXT:    ret
   %r = call half @llvm.round.f16(half %a) nounwind readnone
   %i = call i64 @llvm.fptosi.sat.i64.f16(half %r)
   %bc = bitcast i64 %i to double
@@ -788,6 +1120,16 @@ define double @fcvtas_ds_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtas d0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtas_ds_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl roundf
+; CHECK-GI-NEXT:    fcvtzs d0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @roundf(float %a) nounwind readnone
   %i = call i64 @llvm.fptosi.sat.i64.f32(float %r)
   %bc = bitcast i64 %i to double
@@ -799,6 +1141,16 @@ define float @fcvtas_sd_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtas s0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtas_sd_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl round
+; CHECK-GI-NEXT:    fcvtzs s0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @round(double %a) nounwind readnone
   %i = call i32 @llvm.fptosi.sat.i32.f64(double %r)
   %bc = bitcast i32 %i to float
@@ -810,6 +1162,16 @@ define float @fcvtas_ss_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtas s0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtas_ss_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl roundf
+; CHECK-GI-NEXT:    fcvtzs s0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @roundf(float %a) nounwind readnone
   %i = call i32 @llvm.fptosi.sat.i32.f32(float %r)
   %bc = bitcast i32 %i to float
@@ -821,6 +1183,16 @@ define double @fcvtas_dd_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtas d0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtas_dd_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl round
+; CHECK-GI-NEXT:    fcvtzs d0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @round(double %a) nounwind readnone
   %i = call i64 @llvm.fptosi.sat.i64.f64(double %r)
   %bc = bitcast i64 %i to double
@@ -832,6 +1204,12 @@ define float @fcvtau_sh_simd(half %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtau s0, h0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtau_sh_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    frinta h0, h0
+; CHECK-GI-NEXT:    fcvtzu s0, h0
+; CHECK-GI-NEXT:    ret
   %r = call half @llvm.round.f16(half %a) nounwind readnone
   %i = call i32 @llvm.fptoui.sat.i32.f16(half %r)
   %bc = bitcast i32 %i to float
@@ -843,6 +1221,12 @@ define double @fcvtau_dh_simd(half %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtau d0, h0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtau_dh_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    frinta h0, h0
+; CHECK-GI-NEXT:    fcvtzu d0, h0
+; CHECK-GI-NEXT:    ret
   %r = call half @llvm.round.f16(half %a) nounwind readnone
   %i = call i64 @llvm.fptoui.sat.i64.f16(half %r)
   %bc = bitcast i64 %i to double
@@ -854,6 +1238,16 @@ define double @fcvtau_ds_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtau d0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtau_ds_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl roundf
+; CHECK-GI-NEXT:    fcvtzu d0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @roundf(float %a) nounwind readnone
   %i = call i64 @llvm.fptoui.sat.i64.f32(float %r)
   %bc = bitcast i64 %i to double
@@ -865,6 +1259,16 @@ define float @fcvtau_sd_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtau s0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtau_sd_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl round
+; CHECK-GI-NEXT:    fcvtzu s0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @round(double %a) nounwind readnone
   %i = call i32 @llvm.fptoui.sat.i32.f64(double %r)
   %bc = bitcast i32 %i to float
@@ -876,6 +1280,16 @@ define float @fcvtau_ss_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtas s0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtau_ss_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl roundf
+; CHECK-GI-NEXT:    fcvtzs s0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @roundf(float %a) nounwind readnone
   %i = call i32 @llvm.fptosi.sat.i32.f32(float %r)
   %bc = bitcast i32 %i to float
@@ -887,6 +1301,16 @@ define double @fcvtau_dd_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtas d0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtau_dd_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl round
+; CHECK-GI-NEXT:    fcvtzs d0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @round(double %a) nounwind readnone
   %i = call i64 @llvm.fptosi.sat.i64.f64(double %r)
   %bc = bitcast i64 %i to double
@@ -898,6 +1322,12 @@ define float @fcvtms_sh_simd(half %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtms s0, h0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtms_sh_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    frintm h0, h0
+; CHECK-GI-NEXT:    fcvtzs s0, h0
+; CHECK-GI-NEXT:    ret
   %r = call half @llvm.floor.f16(half %a) nounwind readnone
   %i = call i32 @llvm.fptosi.sat.i32.f16(half %r)
   %bc = bitcast i32 %i to float
@@ -909,6 +1339,12 @@ define double @fcvtms_dh_simd(half %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtms d0, h0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtms_dh_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    frintm h0, h0
+; CHECK-GI-NEXT:    fcvtzs d0, h0
+; CHECK-GI-NEXT:    ret
   %r = call half @llvm.floor.f16(half %a) nounwind readnone
   %i = call i64 @llvm.fptosi.sat.i64.f16(half %r)
   %bc = bitcast i64 %i to double
@@ -920,6 +1356,16 @@ define double @fcvtms_ds_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtms d0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtms_ds_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl floorf
+; CHECK-GI-NEXT:    fcvtzs d0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @floorf(float %a) nounwind readnone
   %i = call i64 @llvm.fptosi.sat.i64.f32(float %r)
   %bc = bitcast i64 %i to double
@@ -931,6 +1377,16 @@ define float @fcvtms_sd_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtms s0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtms_sd_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl floor
+; CHECK-GI-NEXT:    fcvtzs s0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @floor(double %a) nounwind readnone
   %i = call i32 @llvm.fptosi.sat.i32.f64(double %r)
   %bc = bitcast i32 %i to float
@@ -942,6 +1398,16 @@ define float @fcvtms_ss_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtms s0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtms_ss_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl floorf
+; CHECK-GI-NEXT:    fcvtzs s0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @floorf(float %a) nounwind readnone
   %i = call i32 @llvm.fptosi.sat.i32.f32(float %r)
   %bc = bitcast i32 %i to float
@@ -953,6 +1419,16 @@ define double @fcvtms_dd_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtms d0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtms_dd_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl floor
+; CHECK-GI-NEXT:    fcvtzs d0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @floor(double %a) nounwind readnone
   %i = call i64 @llvm.fptosi.sat.i64.f64(double %r)
   %bc = bitcast i64 %i to double
@@ -964,6 +1440,12 @@ define float @fcvtmu_sh_simd(half %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtmu s0, h0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtmu_sh_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    frintm h0, h0
+; CHECK-GI-NEXT:    fcvtzu s0, h0
+; CHECK-GI-NEXT:    ret
   %r = call half @llvm.floor.f16(half %a) nounwind readnone
   %i = call i32 @llvm.fptoui.sat.i32.f16(half %r)
   %bc = bitcast i32 %i to float
@@ -975,6 +1457,12 @@ define double @fcvtmu_dh_simd(half %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtmu d0, h0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtmu_dh_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    frintm h0, h0
+; CHECK-GI-NEXT:    fcvtzu d0, h0
+; CHECK-GI-NEXT:    ret
   %r = call half @llvm.floor.f16(half %a) nounwind readnone
   %i = call i64 @llvm.fptoui.sat.i64.f16(half %r)
   %bc = bitcast i64 %i to double
@@ -986,6 +1474,16 @@ define double @fcvtmu_ds_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtmu d0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtmu_ds_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl floorf
+; CHECK-GI-NEXT:    fcvtzu d0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @floorf(float %a) nounwind readnone
   %i = call i64 @llvm.fptoui.sat.i64.f32(float %r)
   %bc = bitcast i64 %i to double
@@ -997,6 +1495,16 @@ define float @fcvtmu_sd_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtmu s0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtmu_sd_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl floor
+; CHECK-GI-NEXT:    fcvtzu s0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @floor(double %a) nounwind readnone
   %i = call i32 @llvm.fptoui.sat.i32.f64(double %r)
   %bc = bitcast i32 %i to float
@@ -1008,6 +1516,16 @@ define float @fcvtmu_ss_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtms s0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtmu_ss_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl floorf
+; CHECK-GI-NEXT:    fcvtzs s0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @floorf(float %a) nounwind readnone
   %i = call i32 @llvm.fptosi.sat.i32.f32(float %r)
   %bc = bitcast i32 %i to float
@@ -1019,6 +1537,16 @@ define double @fcvtmu_dd_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtms d0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtmu_dd_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl floor
+; CHECK-GI-NEXT:    fcvtzs d0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @floor(double %a) nounwind readnone
   %i = call i64 @llvm.fptosi.sat.i64.f64(double %r)
   %bc = bitcast i64 %i to double
@@ -1030,6 +1558,12 @@ define float @fcvtps_sh_simd(half %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtps s0, h0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtps_sh_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    frintp h0, h0
+; CHECK-GI-NEXT:    fcvtzs s0, h0
+; CHECK-GI-NEXT:    ret
   %r = call half @llvm.ceil.f16(half %a) nounwind readnone
   %i = call i32 @llvm.fptosi.sat.i32.f16(half %r)
   %bc = bitcast i32 %i to float
@@ -1041,6 +1575,12 @@ define double @fcvtps_dh_simd(half %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtps d0, h0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtps_dh_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    frintp h0, h0
+; CHECK-GI-NEXT:    fcvtzs d0, h0
+; CHECK-GI-NEXT:    ret
   %r = call half @llvm.ceil.f16(half %a) nounwind readnone
   %i = call i64 @llvm.fptosi.sat.i64.f16(half %r)
   %bc = bitcast i64 %i to double
@@ -1052,6 +1592,16 @@ define double @fcvtps_ds_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtps d0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtps_ds_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl ceilf
+; CHECK-GI-NEXT:    fcvtzs d0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @ceilf(float %a) nounwind readnone
   %i = call i64 @llvm.fptosi.sat.i64.f32(float %r)
   %bc = bitcast i64 %i to double
@@ -1063,6 +1613,16 @@ define float @fcvtps_sd_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtps s0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtps_sd_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl ceil
+; CHECK-GI-NEXT:    fcvtzs s0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @ceil(double %a) nounwind readnone
   %i = call i32 @llvm.fptosi.sat.i32.f64(double %r)
   %bc = bitcast i32 %i to float
@@ -1074,6 +1634,16 @@ define float @fcvtps_ss_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtps s0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtps_ss_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl ceilf
+; CHECK-GI-NEXT:    fcvtzs s0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @ceilf(float %a) nounwind readnone
   %i = call i32 @llvm.fptosi.sat.i32.f32(float %r)
   %bc = bitcast i32 %i to float
@@ -1085,6 +1655,16 @@ define double @fcvtps_dd_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtps d0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtps_dd_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl ceil
+; CHECK-GI-NEXT:    fcvtzs d0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @ceil(double %a) nounwind readnone
   %i = call i64 @llvm.fptosi.sat.i64.f64(double %r)
   %bc = bitcast i64 %i to double
@@ -1096,6 +1676,12 @@ define float @fcvtpu_sh_simd(half %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtpu s0, h0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtpu_sh_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    frintp h0, h0
+; CHECK-GI-NEXT:    fcvtzu s0, h0
+; CHECK-GI-NEXT:    ret
   %r = call half @llvm.ceil.f16(half %a) nounwind readnone
   %i = call i32 @llvm.fptoui.sat.i32.f16(half %r)
   %bc = bitcast i32 %i to float
@@ -1107,6 +1693,12 @@ define double @fcvtpu_dh_simd(half %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtpu d0, h0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtpu_dh_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    frintp h0, h0
+; CHECK-GI-NEXT:    fcvtzu d0, h0
+; CHECK-GI-NEXT:    ret
   %r = call half @llvm.ceil.f16(half %a) nounwind readnone
   %i = call i64 @llvm.fptoui.sat.i64.f16(half %r)
   %bc = bitcast i64 %i to double
@@ -1118,6 +1710,16 @@ define double @fcvtpu_ds_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtpu d0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtpu_ds_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl ceilf
+; CHECK-GI-NEXT:    fcvtzu d0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @ceilf(float %a) nounwind readnone
   %i = call i64 @llvm.fptoui.sat.i64.f32(float %r)
   %bc = bitcast i64 %i to double
@@ -1129,6 +1731,16 @@ define float @fcvtpu_sd_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtpu s0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtpu_sd_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl ceil
+; CHECK-GI-NEXT:    fcvtzu s0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @ceil(double %a) nounwind readnone
   %i = call i32 @llvm.fptoui.sat.i32.f64(double %r)
   %bc = bitcast i32 %i to float
@@ -1140,6 +1752,16 @@ define float @fcvtpu_ss_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtps s0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtpu_ss_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl ceilf
+; CHECK-GI-NEXT:    fcvtzs s0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @ceilf(float %a) nounwind readnone
   %i = call i32 @llvm.fptosi.sat.i32.f32(float %r)
   %bc = bitcast i32 %i to float
@@ -1151,6 +1773,16 @@ define double @fcvtpu_dd_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtps d0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtpu_dd_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl ceil
+; CHECK-GI-NEXT:    fcvtzs d0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @ceil(double %a) nounwind readnone
   %i = call i64 @llvm.fptosi.sat.i64.f64(double %r)
   %bc = bitcast i64 %i to double
@@ -1162,6 +1794,12 @@ define float @fcvtzs_sh_simd(half %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzs s0, h0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtzs_sh_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    frintz h0, h0
+; CHECK-GI-NEXT:    fcvtzs s0, h0
+; CHECK-GI-NEXT:    ret
   %r = call half @llvm.trunc.f16(half %a) nounwind readnone
   %i = call i32 @llvm.fptosi.sat.i32.f16(half %r)
   %bc = bitcast i32 %i to float
@@ -1173,6 +1811,12 @@ define double @fcvtzs_dh_simd(half %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzs d0, h0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtzs_dh_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    frintz h0, h0
+; CHECK-GI-NEXT:    fcvtzs d0, h0
+; CHECK-GI-NEXT:    ret
   %r = call half @llvm.trunc.f16(half %a) nounwind readnone
   %i = call i64 @llvm.fptosi.sat.i64.f16(half %r)
   %bc = bitcast i64 %i to double
@@ -1184,6 +1828,16 @@ define double @fcvtzs_ds_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzs d0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtzs_ds_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl truncf
+; CHECK-GI-NEXT:    fcvtzs d0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @truncf(float %a) nounwind readnone
   %i = call i64 @llvm.fptosi.sat.i64.f32(float %r)
   %bc = bitcast i64 %i to double
@@ -1195,6 +1849,16 @@ define float @fcvtzs_sd_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzs s0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtzs_sd_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl trunc
+; CHECK-GI-NEXT:    fcvtzs s0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @trunc(double %a) nounwind readnone
   %i = call i32 @llvm.fptosi.sat.i32.f64(double %r)
   %bc = bitcast i32 %i to float
@@ -1206,6 +1870,16 @@ define float @fcvtzs_ss_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzs s0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtzs_ss_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl truncf
+; CHECK-GI-NEXT:    fcvtzs s0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @truncf(float %a) nounwind readnone
   %i = call i32 @llvm.fptosi.sat.i32.f32(float %r)
   %bc = bitcast i32 %i to float
@@ -1217,6 +1891,16 @@ define double @fcvtzs_dd_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzs d0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtzs_dd_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl trunc
+; CHECK-GI-NEXT:    fcvtzs d0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @trunc(double %a) nounwind readnone
   %i = call i64 @llvm.fptosi.sat.i64.f64(double %r)
   %bc = bitcast i64 %i to double
@@ -1228,6 +1912,12 @@ define float @fcvtzu_sh_simd(half %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzu s0, h0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtzu_sh_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    frintz h0, h0
+; CHECK-GI-NEXT:    fcvtzu s0, h0
+; CHECK-GI-NEXT:    ret
   %r = call half @llvm.trunc.f16(half %a) nounwind readnone
   %i = call i32 @llvm.fptoui.sat.i32.f16(half %r)
   %bc = bitcast i32 %i to float
@@ -1239,6 +1929,12 @@ define double @fcvtzu_dh_simd(half %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzu d0, h0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtzu_dh_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    frintz h0, h0
+; CHECK-GI-NEXT:    fcvtzu d0, h0
+; CHECK-GI-NEXT:    ret
   %r = call half @llvm.trunc.f16(half %a) nounwind readnone
   %i = call i64 @llvm.fptoui.sat.i64.f16(half %r)
   %bc = bitcast i64 %i to double
@@ -1250,6 +1946,16 @@ define double @fcvtzu_ds_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzu d0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtzu_ds_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl truncf
+; CHECK-GI-NEXT:    fcvtzu d0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @truncf(float %a) nounwind readnone
   %i = call i64 @llvm.fptoui.sat.i64.f32(float %r)
   %bc = bitcast i64 %i to double
@@ -1261,6 +1967,16 @@ define float @fcvtzu_sd_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzu s0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtzu_sd_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl trunc
+; CHECK-GI-NEXT:    fcvtzu s0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @trunc(double %a) nounwind readnone
   %i = call i32 @llvm.fptoui.sat.i32.f64(double %r)
   %bc = bitcast i32 %i to float
@@ -1272,6 +1988,16 @@ define float @fcvtzu_ss_simd(float %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzu s0, s0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtzu_ss_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl truncf
+; CHECK-GI-NEXT:    fcvtzu s0, s0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call float @truncf(float %a) nounwind readnone
   %i = call i32 @llvm.fptoui.sat.i32.f32(float %r)
   %bc = bitcast i32 %i to float
@@ -1283,6 +2009,16 @@ define double @fcvtzu_dd_simd(double %a) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzu d0, d0
 ; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtzu_dd_simd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl trunc
+; CHECK-GI-NEXT:    fcvtzu d0, d0
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
   %r = call double @trunc(double %a) nounwind readnone
   %i = call i64 @llvm.fptoui.sat.i64.f64(double %r)
   %bc = bitcast i64 %i to double
@@ -1301,6 +2037,3 @@ declare double @floor(double) nounwind readnone
 declare double @ceil(double) nounwind readnone
 declare double @trunc(double) nounwind readnone
 declare double @round(double) nounwind readnone
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK: {{.*}}
-; CHECK-GI: {{.*}}

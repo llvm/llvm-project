@@ -847,17 +847,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     break;
   }
   case TargetOpcode::G_FPTOSI_SAT:
-  case TargetOpcode::G_FPTOUI_SAT: {
-    LLT DstType = MRI.getType(MI.getOperand(0).getReg());
-    if (DstType.isVector())
-      break;
-    if (DstType == LLT::scalar(16)) {
-      OpRegBankIdx = {PMI_FirstFPR, PMI_FirstFPR};
-      break;
-    }
-    OpRegBankIdx = {PMI_FirstGPR, PMI_FirstFPR};
-    break;
-  }
+  case TargetOpcode::G_FPTOUI_SAT:
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
   case TargetOpcode::G_INTRINSIC_LRINT:
