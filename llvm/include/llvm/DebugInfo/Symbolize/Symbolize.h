@@ -197,7 +197,7 @@ private:
                                              const std::string &ArchName);
 
   /// Return a pointer to the object file with the specified name, for a
-  /// specified architecture (e.g. if path refers to a Mach-O universal 
+  /// specified architecture (e.g. if path refers to a Mach-O universal
   /// binary, only one object file from it will be returned).
   Expected<ObjectFile *> getOrCreateObject(const std::string &InputPath,
                                            const std::string &DefaultArchName);
