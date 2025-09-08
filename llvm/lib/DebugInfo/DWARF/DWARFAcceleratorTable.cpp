@@ -248,8 +248,8 @@ LLVM_DUMP_METHOD void AppleAcceleratorTable::dump(raw_ostream &OS) const {
     }
 
     for (unsigned HashIdx = Index; HashIdx < Hdr.HashCount; ++HashIdx) {
-      uint64_t HashOffset = HashesBase + HashIdx*4;
-      uint64_t OffsetsOffset = OffsetsBase + HashIdx*4;
+      uint64_t HashOffset = HashesBase + HashIdx * 4;
+      uint64_t OffsetsOffset = OffsetsBase + HashIdx * 4;
       uint32_t Hash = AccelSection.getU32(&HashOffset);
 
       if (Hash % Hdr.BucketCount != Bucket)
@@ -321,7 +321,14 @@ void AppleAcceleratorTable::Iterator::prepareNextEntryOrEnd() {
 }
 
 void AppleAcceleratorTable::Iterator::prepareNextStringOrEnd() {
-  std::optional<uint32_t> StrOffset = getTable().readStringOffsetAt(Offset);
+  const AppleAcceleratorTable &Table = getTable();
+  // Always start looking for strings using a valid offset from the Offsets
+  // table. Entries are not always consecutive.
+  std::optional<uint64_t> OptOffset = Table.readIthOffset(OffsetIdx++);
+  if (!OptOffset)
+    return setToEnd();
+  Offset = *OptOffset;
+  std::optional<uint32_t> StrOffset = Table.readStringOffsetAt(Offset);
   if (!StrOffset)
     return setToEnd();
 
@@ -331,7 +338,7 @@ void AppleAcceleratorTable::Iterator::prepareNextStringOrEnd() {
     return prepareNextStringOrEnd();
   Current.StrOffset = *StrOffset;
 
-  std::optional<uint32_t> MaybeNumEntries = getTable().readU32FromAccel(Offset);
+  std::optional<uint32_t> MaybeNumEntries = Table.readU32FromAccel(Offset);
   if (!MaybeNumEntries || *MaybeNumEntries == 0)
     return setToEnd();
   NumEntriesToCome = *MaybeNumEntries;
@@ -339,7 +346,7 @@ void AppleAcceleratorTable::Iterator::prepareNextStringOrEnd() {
 
 AppleAcceleratorTable::Iterator::Iterator(const AppleAcceleratorTable &Table,
                                           bool SetEnd)
-    : Current(Table), Offset(Table.getEntriesBase()), NumEntriesToCome(0) {
+    : Current(Table), Offset(0), NumEntriesToCome(0) {
   if (SetEnd)
     setToEnd();
   else
@@ -443,7 +450,7 @@ void DWARFDebugNames::Header::dump(ScopedPrinter &W) const {
 }
 
 Error DWARFDebugNames::Header::extract(const DWARFDataExtractor &AS,
-                                             uint64_t *Offset) {
+                                       uint64_t *Offset) {
   auto HeaderError = [Offset = *Offset](Error E) {
     return createStringError(errc::illegal_byte_sequence,
                              "parsing .debug_names header at 0x%" PRIx64 ": %s",
@@ -830,8 +837,9 @@ bool DWARFDebugNames::NameIndex::dumpEntry(ScopedPrinter &W,
   uint64_t EntryId = *Offset;
   auto EntryOr = getEntry(Offset);
   if (!EntryOr) {
-    handleAllErrors(EntryOr.takeError(), [](const SentinelError &) {},
-                    [&W](const ErrorInfoBase &EI) { EI.log(W.startLine()); });
+    handleAllErrors(
+        EntryOr.takeError(), [](const SentinelError &) {},
+        [&W](const ErrorInfoBase &EI) { EI.log(W.startLine()); });
     return false;
   }
 
