@@ -36,7 +36,7 @@ class SparcSubtarget : public SparcGenSubtargetInfo {
 
   virtual void anchor();
 
-  bool Is64Bit;
+  const bool Is64Bit;
 
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool ATTRIBUTE = DEFAULT;
@@ -49,7 +49,7 @@ class SparcSubtarget : public SparcGenSubtargetInfo {
 
 public:
   SparcSubtarget(const StringRef &CPU, const StringRef &TuneCPU,
-                 const StringRef &FS, const TargetMachine &TM, bool is64bit);
+                 const StringRef &FS, const TargetMachine &TM);
 
   ~SparcSubtarget() override;
 
