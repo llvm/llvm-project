@@ -150,8 +150,8 @@ static Value createLinalgBodyCalculationForElementwiseOp(
       if (shift > 0 || !shiftIsConstant) {
         Value shiftConst;
         if (shiftIsConstant)
-          shiftConst =
-              rewriter.create<arith::ConstantIntOp>(loc, shift, /*bitwidth=*/8);
+          shiftConst = arith::ConstantIntOp::create(rewriter, loc, shift,
+                                                    /*bitwidth=*/8);
 
         if (!a.getType().isInteger(32))
           a = arith::ExtSIOp::create(rewriter, loc, rewriter.getI32Type(), a);

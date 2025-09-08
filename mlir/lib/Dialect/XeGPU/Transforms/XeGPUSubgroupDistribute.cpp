@@ -991,8 +991,8 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
         newRetIndices, [&](size_t idx) { return newWarpOp.getResult(idx); });
 
     rewriter.setInsertionPointAfter(newWarpOp);
-    xegpu::LoadGatherOp newOp = rewriter.create<xegpu::LoadGatherOp>(
-        newWarpOp.getLoc(), loadVecTy, newLoadGatherOperands,
+    xegpu::LoadGatherOp newOp = xegpu::LoadGatherOp::create(
+        rewriter, newWarpOp.getLoc(), loadVecTy, newLoadGatherOperands,
         loadGatherOp->getAttrs());
     xegpu::removeLayoutAttrs(newOp);
     Value distributedVal = newWarpOp.getResult(operandIdx);
