@@ -490,6 +490,98 @@ loop.latch:
 exit:
   ret void
 }
+
+define void @switch_unconditional(ptr %start) {
+; IC1-LABEL: define void @switch_unconditional(
+; IC1-SAME: ptr [[START:%.*]]) {
+; IC1-NEXT:  [[ENTRY:.*:]]
+; IC1-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; IC1:       [[VECTOR_PH]]:
+; IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
+; IC1:       [[VECTOR_BODY]]:
+; IC1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; IC1-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[START]], i64 [[INDEX]]
+; IC1-NEXT:    store <2 x i32> zeroinitializer, ptr [[TMP1]], align 4
+; IC1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; IC1-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; IC1-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; IC1:       [[MIDDLE_BLOCK]]:
+; IC1-NEXT:    br label %[[EXIT:.*]]
+; IC1:       [[SCALAR_PH]]:
+; IC1-NEXT:    br label %[[LOOP:.*]]
+; IC1:       [[LOOP]]:
+; IC1-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; IC1-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[START]], i64 [[IV]]
+; IC1-NEXT:    [[X:%.*]] = load i32, ptr [[GEP]], align 4
+; IC1-NEXT:    switch i32 [[X]], label %[[FOO:.*]] [
+; IC1-NEXT:    ]
+; IC1:       [[FOO]]:
+; IC1-NEXT:    br label %[[LATCH]]
+; IC1:       [[LATCH]]:
+; IC1-NEXT:    store i32 0, ptr [[GEP]], align 4
+; IC1-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; IC1-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 100
+; IC1-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
+; IC1:       [[EXIT]]:
+; IC1-NEXT:    ret void
+;
+; IC2-LABEL: define void @switch_unconditional(
+; IC2-SAME: ptr [[START:%.*]]) {
+; IC2-NEXT:  [[ENTRY:.*:]]
+; IC2-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; IC2:       [[VECTOR_PH]]:
+; IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; IC2:       [[VECTOR_BODY]]:
+; IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; IC2-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[START]], i64 [[INDEX]]
+; IC2-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[TMP2]], i32 2
+; IC2-NEXT:    store <2 x i32> zeroinitializer, ptr [[TMP2]], align 4
+; IC2-NEXT:    store <2 x i32> zeroinitializer, ptr [[TMP1]], align 4
+; IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; IC2-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; IC2-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; IC2:       [[MIDDLE_BLOCK]]:
+; IC2-NEXT:    br label %[[EXIT:.*]]
+; IC2:       [[SCALAR_PH]]:
+; IC2-NEXT:    br label %[[LOOP:.*]]
+; IC2:       [[LOOP]]:
+; IC2-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; IC2-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[START]], i64 [[IV]]
+; IC2-NEXT:    [[X:%.*]] = load i32, ptr [[GEP]], align 4
+; IC2-NEXT:    switch i32 [[X]], label %[[FOO:.*]] [
+; IC2-NEXT:    ]
+; IC2:       [[FOO]]:
+; IC2-NEXT:    br label %[[LATCH]]
+; IC2:       [[LATCH]]:
+; IC2-NEXT:    store i32 0, ptr [[GEP]], align 4
+; IC2-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; IC2-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 100
+; IC2-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
+; IC2:       [[EXIT]]:
+; IC2-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %gep = getelementptr i32, ptr %start, i64 %iv
+  %x = load i32, ptr %gep
+  switch i32 %x, label %foo []
+
+foo:
+  br label %latch
+
+latch:
+  store i32 0, ptr %gep
+  %iv.next = add i64 %iv, 1
+  %cmp = icmp eq i64 %iv.next, 100
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 ;.
 ; IC1: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; IC1: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
@@ -497,6 +589,8 @@ exit:
 ; IC1: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ; IC1: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
 ; IC1: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
+; IC1: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
+; IC1: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META1]]}
 ;.
 ; IC2: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; IC2: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
@@ -504,4 +598,6 @@ exit:
 ; IC2: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ; IC2: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
 ; IC2: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
+; IC2: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
+; IC2: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META1]]}
 ;.
