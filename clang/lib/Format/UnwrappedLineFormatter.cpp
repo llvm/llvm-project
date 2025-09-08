@@ -271,7 +271,7 @@ private:
                                 TT_UnionLBrace) &&
         NextLine.First == NextLine.Last && I + 2 != E &&
         !I[2]->First->is(tok::r_brace) &&
-        Style.AllowShortRecordOnASingleLine != FormatStyle::SRS_Never) {
+        Style.AllowShortRecordOnASingleLine == FormatStyle::SRS_Always) {
       if (unsigned MergedLines = tryMergeSimpleBlock(I, E, Limit))
         return MergedLines;
     }
@@ -282,9 +282,7 @@ private:
         TheLine->First == TheLine->Last) {
       const bool EmptyBlock = NextLine.First->is(tok::r_brace);
 
-      const FormatToken *Tok = PreviousLine->First;
-      if (Tok && Tok->is(tok::comment))
-        Tok = Tok->getNextNonComment();
+      const FormatToken *Tok = PreviousLine->getFirstNonComment();
 
       if (Tok && Tok->getNamespaceToken()) {
         return !Style.BraceWrapping.SplitEmptyNamespace && EmptyBlock
@@ -294,6 +292,7 @@ private:
 
       if (Tok && Tok->is(tok::kw_typedef))
         Tok = Tok->getNextNonComment();
+
       if (Tok && Tok->isOneOf(tok::kw_class, tok::kw_struct, tok::kw_union,
                               tok::kw_extern, Keywords.kw_interface)) {
         return (EmptyBlock && !Style.BraceWrapping.SplitEmptyRecord) ||

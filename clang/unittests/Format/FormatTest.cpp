@@ -15383,9 +15383,6 @@ TEST_F(FormatTest, AllowShortRecordOnASingleLine) {
   verifyFormat("class foo\n"
                "{};",
                Style);
-  Style.BraceWrapping.SplitEmptyRecord = true;
-  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Always;
-  verifyFormat("class foo\n{ int i; };", Style);
 
   Style = getLLVMStyle();
   Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Empty;
@@ -15421,6 +15418,22 @@ TEST_F(FormatTest, AllowShortRecordOnASingleLine) {
                Style);
   Style.BraceWrapping.SplitEmptyRecord = false;
   verifyFormat("class foo {};", Style);
+
+  Style = getLLVMStyle();
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Always;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterClass = true;
+
+  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Never;
+  verifyFormat("class foo\n"
+               "{ int i; };",
+               Style);
+  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Empty;
+  verifyFormat("class foo\n"
+               "{ int i; };",
+               Style);
+  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Always;
+  verifyFormat("class foo { int i; };", Style);
 }
 
 TEST_F(FormatTest, UnderstandContextOfRecordTypeKeywords) {
