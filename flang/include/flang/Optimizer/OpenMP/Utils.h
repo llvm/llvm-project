@@ -43,8 +43,8 @@ inline bool needsBoundsOps(mlir::Value var) {
   return fir::hasDynamicSize(t);
 }
 
-/// Generate MapBoundsOp operations for the variable if required and append them
-/// to `boundsOps`.
+/// Generate MapBoundsOp operations for the variable and append them to
+/// `boundsOps`.
 inline llvm::SmallVector<mlir::Value> genBoundsOps(fir::FirOpBuilder &builder,
                                                    mlir::Value var,
                                                    bool isAssumedSize = false,
