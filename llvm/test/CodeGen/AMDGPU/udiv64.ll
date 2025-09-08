@@ -1207,14 +1207,14 @@ define i64 @v_test_udiv_pow2_k_den_i64(i64 %x) {
 ; GCN-IR-NEXT:    s_xor_b64 s[4:5], exec, s[8:9]
 ; GCN-IR-NEXT:    s_cbranch_execz .LBB10_5
 ; GCN-IR-NEXT:  ; %bb.2: ; %udiv-preheader
-; GCN-IR-NEXT:    v_lshr_b64 v[6:7], v[0:1], v8
-; GCN-IR-NEXT:    v_add_i32_e32 v0, vcc, 0xffffffcf, v10
-; GCN-IR-NEXT:    v_mov_b32_e32 v8, 0
-; GCN-IR-NEXT:    v_addc_u32_e64 v1, s[4:5], 0, -1, vcc
-; GCN-IR-NEXT:    s_mov_b64 s[10:11], 0
-; GCN-IR-NEXT:    v_mov_b32_e32 v9, 0
+; GCN-IR-NEXT:    v_add_i32_e32 v8, vcc, 0xffffffcf, v6
+; GCN-IR-NEXT:    v_lshr_b64 v[0:1], v[0:1], v7
+; GCN-IR-NEXT:    v_addc_u32_e64 v9, s[8:9], 0, -1, vcc
+; GCN-IR-NEXT:    v_mov_b32_e32 v6, 0
+; GCN-IR-NEXT:    s_mov_b64 s[8:9], 0
+; GCN-IR-NEXT:    v_mov_b32_e32 v7, 0
 ; GCN-IR-NEXT:    v_mov_b32_e32 v5, 0
-; GCN-IR-NEXT:    s_movk_i32 s12, 0x7fff
+; GCN-IR-NEXT:    s_movk_i32 s10, 0x7fff
 ; GCN-IR-NEXT:  .LBB10_3: ; %udiv-do-while
 ; GCN-IR-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-IR-NEXT:    v_lshl_b64 v[0:1], v[0:1], 1
