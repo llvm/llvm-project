@@ -207,9 +207,7 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
 
         for (const mcdxbc::DescriptorRange &Range : Table) {
           OS << "  - Range Type: "
-             << enumToStringRef(Range.RangeType,
-                                dxbc::getDescriptorRangeTypes())
-             << "\n"
+             << dxil::getResourceClassName(Range.RangeType) << "\n"
              << "    Register Space: " << Range.RegisterSpace << "\n"
              << "    Base Shader Register: " << Range.BaseShaderRegister << "\n"
              << "    Num Descriptors: " << Range.NumDescriptors << "\n"

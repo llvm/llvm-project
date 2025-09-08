@@ -331,13 +331,13 @@ Error MetadataParser::parseDescriptorRange(mcdxbc::DescriptorTable &Table,
     return make_error<InvalidRSMetadataFormat>("Descriptor Range");
 
   if (*ElementText == "CBV")
-    Range.RangeType = dxbc::DescriptorRangeType::CBV;
+    Range.RangeType = dxil::ResourceClass::CBuffer;
   else if (*ElementText == "SRV")
-    Range.RangeType = dxbc::DescriptorRangeType::SRV;
+    Range.RangeType = dxil::ResourceClass::SRV;
   else if (*ElementText == "UAV")
-    Range.RangeType = dxbc::DescriptorRangeType::UAV;
+    Range.RangeType = dxil::ResourceClass::UAV;
   else if (*ElementText == "Sampler")
-    Range.RangeType = dxbc::DescriptorRangeType::Sampler;
+    Range.RangeType = dxil::ResourceClass::Sampler;
   else
     return make_error<GenericRSMetadataError>("Invalid Descriptor Range type.",
                                               RangeDescriptorNode);

@@ -209,14 +209,8 @@ inline bool isValidParameterType(uint32_t V) {
   return false;
 }
 
-#define DESCRIPTOR_RANGE(Val, Enum)                                            \
-  case Val:                                                                    \
-    return true;
 inline bool isValidRangeType(uint32_t V) {
-  switch (V) {
-#include "DXContainerConstants.def"
-  }
-  return false;
+  return V <= llvm::to_underlying(dxil::ResourceClass::Sampler);
 }
 
 #define SHADER_VISIBILITY(Val, Enum) Enum = Val,

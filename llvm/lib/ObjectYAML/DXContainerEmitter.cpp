@@ -316,7 +316,7 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
             assert(dxbc::isValidRangeType(R.RangeType) &&
                    "Invalid Descriptor Range Type");
             mcdxbc::DescriptorRange Range;
-            Range.RangeType = dxbc::DescriptorRangeType(R.RangeType);
+            Range.RangeType = dxil::ResourceClass(R.RangeType);
             Range.NumDescriptors = R.NumDescriptors;
             Range.BaseShaderRegister = R.BaseShaderRegister;
             Range.RegisterSpace = R.RegisterSpace;

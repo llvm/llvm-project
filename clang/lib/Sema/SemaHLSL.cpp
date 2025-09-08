@@ -1241,20 +1241,6 @@ bool SemaHLSL::handleRootSignatureElements(
         << /*version minor*/ VersionEnum;
   };
 
-  auto toDescriptorRangeType = [](llvm::dxil::ResourceClass Type) {
-    switch (Type) {
-    case llvm::dxil::ResourceClass::SRV:
-      return llvm::dxbc::DescriptorRangeType::SRV;
-    case llvm::dxil::ResourceClass::UAV:
-      return llvm::dxbc::DescriptorRangeType::UAV;
-    case llvm::dxil::ResourceClass::CBuffer:
-      return llvm::dxbc::DescriptorRangeType::CBV;
-    case llvm::dxil::ResourceClass::Sampler:
-      return llvm::dxbc::DescriptorRangeType::Sampler;
-    }
-    llvm_unreachable("Unhandled Resource Class");
-  };
-
   // Iterate through the elements and do basic validations
   for (const hlsl::RootSignatureElement &RootSigElem : Elements) {
     SourceLocation Loc = RootSigElem.getLocation();
@@ -1297,8 +1283,8 @@ bool SemaHLSL::handleRootSignatureElements(
         ReportError(Loc, 1, 0xfffffffe);
       }
 
-      if (!llvm::hlsl::rootsig::verifyDescriptorRangeFlag(
-              Version, toDescriptorRangeType(Clause->Type), Clause->Flags))
+      if (!llvm::hlsl::rootsig::verifyDescriptorRangeFlag(Version, Clause->Type,
+                                                          Clause->Flags))
         ReportFlagError(Loc);
     }
   }

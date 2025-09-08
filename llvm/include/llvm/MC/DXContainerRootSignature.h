@@ -32,7 +32,7 @@ struct RootDescriptor {
 };
 
 struct DescriptorRange {
-  dxbc::DescriptorRangeType RangeType;
+  dxil::ResourceClass RangeType;
   uint32_t NumDescriptors;
   uint32_t BaseShaderRegister;
   uint32_t RegisterSpace;
