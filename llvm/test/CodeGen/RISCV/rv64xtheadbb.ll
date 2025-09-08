@@ -1122,3 +1122,101 @@ define i64 @bswap_i64(i64 %a) {
   %1 = call i64 @llvm.bswap.i64(i64 %a)
   ret i64 %1
 }
+
+define void @sextw_removal_ext(i32 signext %arg, i32 signext %arg1) nounwind {
+; RV64I-LABEL: sextw_removal_ext:
+; RV64I:       # %bb.0: # %bb
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sraw a0, a0, a1
+; RV64I-NEXT:  .LBB36_1: # %bb2
+; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64I-NEXT:    call foo
+; RV64I-NEXT:    slli a0, a0, 16
+; RV64I-NEXT:    srai a0, a0, 32
+; RV64I-NEXT:    bnez a0, .LBB36_1
+; RV64I-NEXT:  # %bb.2: # %bb7
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBB-LABEL: sextw_removal_ext:
+; RV64XTHEADBB:       # %bb.0: # %bb
+; RV64XTHEADBB-NEXT:    addi sp, sp, -16
+; RV64XTHEADBB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64XTHEADBB-NEXT:    sraw a0, a0, a1
+; RV64XTHEADBB-NEXT:  .LBB36_1: # %bb2
+; RV64XTHEADBB-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64XTHEADBB-NEXT:    call foo
+; RV64XTHEADBB-NEXT:    th.ext a0, a0, 47, 16
+; RV64XTHEADBB-NEXT:    bnez a0, .LBB36_1
+; RV64XTHEADBB-NEXT:  # %bb.2: # %bb7
+; RV64XTHEADBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64XTHEADBB-NEXT:    addi sp, sp, 16
+; RV64XTHEADBB-NEXT:    ret
+bb:
+  %i = ashr i32 %arg, %arg1
+  br label %bb2
+
+bb2:                                              ; preds = %bb2, %bb
+  %i3 = phi i32 [ %i, %bb ], [ %i7, %bb2 ]
+  %i4 = tail call i64 @foo(i32 signext %i3)
+  %i5 = shl i64 %i4, 16
+  %i6 = ashr i64 %i5, 32
+  %i7 = trunc i64 %i6 to i32
+  %i8 = icmp eq i32 %i7, 0
+  br i1 %i8, label %bb7, label %bb2
+
+bb7:                                              ; preds = %bb2
+  ret void
+}
+
+declare i64 @foo(i32 signext)
+
+define void @sextw_removal_extu(i32 signext %arg, i32 signext %arg1) nounwind {
+; RV64I-LABEL: sextw_removal_extu:
+; RV64I:       # %bb.0: # %bb
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sraw a0, a0, a1
+; RV64I-NEXT:  .LBB37_1: # %bb2
+; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64I-NEXT:    call foo
+; RV64I-NEXT:    slli a0, a0, 16
+; RV64I-NEXT:    srli a0, a0, 33
+; RV64I-NEXT:    bnez a0, .LBB37_1
+; RV64I-NEXT:  # %bb.2: # %bb7
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBB-LABEL: sextw_removal_extu:
+; RV64XTHEADBB:       # %bb.0: # %bb
+; RV64XTHEADBB-NEXT:    addi sp, sp, -16
+; RV64XTHEADBB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64XTHEADBB-NEXT:    sraw a0, a0, a1
+; RV64XTHEADBB-NEXT:  .LBB37_1: # %bb2
+; RV64XTHEADBB-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64XTHEADBB-NEXT:    call foo
+; RV64XTHEADBB-NEXT:    th.extu a0, a0, 47, 17
+; RV64XTHEADBB-NEXT:    bnez a0, .LBB37_1
+; RV64XTHEADBB-NEXT:  # %bb.2: # %bb7
+; RV64XTHEADBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64XTHEADBB-NEXT:    addi sp, sp, 16
+; RV64XTHEADBB-NEXT:    ret
+bb:
+  %i = ashr i32 %arg, %arg1
+  br label %bb2
+
+bb2:                                              ; preds = %bb2, %bb
+  %i3 = phi i32 [ %i, %bb ], [ %i7, %bb2 ]
+  %i4 = tail call i64 @foo(i32 signext %i3)
+  %i5 = shl i64 %i4, 16
+  %i6 = lshr i64 %i5, 33
+  %i7 = trunc i64 %i6 to i32
+  %i8 = icmp eq i32 %i7, 0
+  br i1 %i8, label %bb7, label %bb2
+
+bb7:                                              ; preds = %bb2
+  ret void
+}

@@ -182,6 +182,7 @@ static void createResourceCtorArgs(CodeGenModule &CGM, CXXConstructorDecl *CD,
 
   } else {
     // implicit binding
+    assert(RBA && "missing implicit binding attribute");
     auto *OrderID =
         llvm::ConstantInt::get(CGM.IntTy, RBA->getImplicitBindingOrderID());
     Args.add(RValue::get(Space), AST.UnsignedIntTy);

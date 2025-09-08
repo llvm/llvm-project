@@ -392,9 +392,11 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   Instruction *HeaderFirstNonPHI = &*L->getHeader()->getFirstNonPHIIt();
   return isDereferenceableAndAlignedPointerViaAssumption(
              Base, Alignment,
-             [&SE, AccessSizeSCEV](const RetainedKnowledge &RK) {
-               return SE.isKnownPredicate(CmpInst::ICMP_ULE, AccessSizeSCEV,
-                                          SE.getSCEV(RK.IRArgValue));
+             [&SE, AccessSizeSCEV, &LoopGuards](const RetainedKnowledge &RK) {
+               return SE.isKnownPredicate(
+                   CmpInst::ICMP_ULE,
+                   SE.applyLoopGuards(AccessSizeSCEV, *LoopGuards),
+                   SE.applyLoopGuards(SE.getSCEV(RK.IRArgValue), *LoopGuards));
              },
              DL, HeaderFirstNonPHI, AC, &DT) ||
          isDereferenceableAndAlignedPointer(Base, Alignment, AccessSize, DL,
@@ -857,16 +859,19 @@ bool llvm::canReplacePointersIfEqual(const Value *From, const Value *To,
   return isPointerAlwaysReplaceable(From, To, DL);
 }
 
-bool llvm::isDereferenceableReadOnlyLoop(
+bool llvm::isReadOnlyLoop(
     Loop *L, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
+    SmallVectorImpl<LoadInst *> &NonDereferenceableAndAlignedLoads,
     SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   for (BasicBlock *BB : L->blocks()) {
     for (Instruction &I : *BB) {
       if (auto *LI = dyn_cast<LoadInst>(&I)) {
         if (!isDereferenceableAndAlignedInLoop(LI, L, *SE, *DT, AC, Predicates))
-          return false;
-      } else if (I.mayReadFromMemory() || I.mayWriteToMemory() || I.mayThrow())
+          NonDereferenceableAndAlignedLoads.push_back(LI);
+      } else if (I.mayReadFromMemory() || I.mayWriteToMemory() ||
+                 I.mayThrow()) {
         return false;
+      }
     }
   }
   return true;

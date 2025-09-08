@@ -951,7 +951,7 @@ LogicalResult NVVM::StMatrixOp::verify() {
   return success();
 }
 
-FailureOr<int> getAllowedSizeK(NVVM::WGMMATypes typeA) {
+static FailureOr<int> getAllowedSizeK(NVVM::WGMMATypes typeA) {
   if (typeA == NVVM::WGMMATypes::tf32)
     return 8;
   if (typeA == NVVM::WGMMATypes::f16 || typeA == NVVM::WGMMATypes::bf16)
@@ -965,9 +965,9 @@ FailureOr<int> getAllowedSizeK(NVVM::WGMMATypes typeA) {
   return failure();
 }
 
-LogicalResult isAllowedWGMMADataType(NVVM::WGMMATypes typeD,
-                                     NVVM::WGMMATypes typeA,
-                                     NVVM::WGMMATypes typeB) {
+static LogicalResult isAllowedWGMMADataType(NVVM::WGMMATypes typeD,
+                                            NVVM::WGMMATypes typeA,
+                                            NVVM::WGMMATypes typeB) {
   switch (typeA) {
   case NVVM::WGMMATypes::f16:
     if ((typeD == NVVM::WGMMATypes::f32 || typeD == NVVM::WGMMATypes::f16) &&
@@ -1007,7 +1007,7 @@ LogicalResult isAllowedWGMMADataType(NVVM::WGMMATypes typeD,
   return failure();
 }
 
-LogicalResult isAllowedSizeN(int sizeN, NVVM::WGMMATypes typeA) {
+static LogicalResult isAllowedSizeN(int sizeN, NVVM::WGMMATypes typeA) {
   SmallVector<int> allowedN = {8,   16,  24,  32,  40,  48,  56,  64,
                                72,  80,  88,  96,  104, 112, 120, 128,
                                136, 144, 152, 160, 168, 176, 184, 192,
@@ -1797,7 +1797,7 @@ Tcgen05AllocOp::getIntrinsicIDAndArgs(Operation &op,
   unsigned as = llvm::cast<LLVM::LLVMPointerType>(curOp.getAddr().getType())
                     .getAddressSpace();
   bool isShared = as == NVVMMemorySpace::kSharedMemorySpace;
-  bool is2CTAMode = curOp.getGroup() == Tcgen05GroupKind::CTA_2;
+  bool is2CTAMode = curOp.getGroup() == CTAGroupKind::CTA_2;
 
   llvm::Intrinsic::ID id;
   if (isShared) {
@@ -1819,7 +1819,7 @@ llvm::Intrinsic::ID Tcgen05DeallocOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt,
     llvm::SmallVector<llvm::Value *> &args) {
   auto curOp = cast<NVVM::Tcgen05DeallocOp>(op);
-  auto id = (curOp.getGroup() == Tcgen05GroupKind::CTA_1)
+  auto id = (curOp.getGroup() == CTAGroupKind::CTA_1)
                 ? llvm::Intrinsic::nvvm_tcgen05_dealloc_cg1
                 : llvm::Intrinsic::nvvm_tcgen05_dealloc_cg2;
 
@@ -1847,7 +1847,7 @@ Tcgen05CommitOp::getIntrinsicIDAndArgs(Operation &op,
                     .getAddressSpace();
   bool isShared = as == NVVMMemorySpace::kSharedMemorySpace;
   bool hasMulticast = static_cast<bool>(curOp.getMulticastMask());
-  bool is2CTAMode = curOp.getGroup() == Tcgen05GroupKind::CTA_2;
+  bool is2CTAMode = curOp.getGroup() == CTAGroupKind::CTA_2;
 
   llvm::Intrinsic::ID id =
       is2CTAMode ? GET_TCGEN05_COMMIT_ID(cg2, isShared, hasMulticast)
@@ -1879,7 +1879,7 @@ Tcgen05CommitOp::getIntrinsicIDAndArgs(Operation &op,
 
 llvm::Intrinsic::ID Tcgen05CpOp::getIntrinsicID(Operation &op) {
   auto curOp = cast<NVVM::Tcgen05CpOp>(op);
-  bool is2CTA = curOp.getGroup() == Tcgen05GroupKind::CTA_2;
+  bool is2CTA = curOp.getGroup() == CTAGroupKind::CTA_2;
   auto srcFmt = curOp.getSrcFormat();
   auto mc = curOp.getMulticast();
 

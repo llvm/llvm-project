@@ -238,8 +238,8 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
         StartPtrV, {Attribute::Dereferenceable}, *AC,
         L->getLoopPredecessor()->getTerminator(), DT);
     if (DerefRK) {
-      DerefBytesSCEV = SE.getUMaxExpr(
-          DerefBytesSCEV, SE.getConstant(WiderTy, DerefRK.ArgValue));
+      DerefBytesSCEV =
+          SE.getUMaxExpr(DerefBytesSCEV, SE.getSCEV(DerefRK.IRArgValue));
     }
   }
 
@@ -259,13 +259,20 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   const SCEV *StartOffset = SE.getNoopOrZeroExtend(
       SE.getMinusSCEV(AR->getStart(), StartPtr), WiderTy);
 
+  if (!LoopGuards)
+    LoopGuards.emplace(ScalarEvolution::LoopGuards::collect(AR->getLoop(), SE));
+  MaxBTC = SE.applyLoopGuards(MaxBTC, *LoopGuards);
+
   const SCEV *OffsetAtLastIter =
       mulSCEVOverflow(MaxBTC, SE.getAbsExpr(Step, /*IsNSW=*/false), SE);
   if (!OffsetAtLastIter) {
     // Re-try with constant max backedge-taken count if using the symbolic one
     // failed.
+    MaxBTC = SE.getConstantMaxBackedgeTakenCount(AR->getLoop());
+    if (isa<SCEVCouldNotCompute>(MaxBTC))
+      return false;
     MaxBTC = SE.getNoopOrZeroExtend(
-        SE.getConstantMaxBackedgeTakenCount(AR->getLoop()), WiderTy);
+        MaxBTC, WiderTy);
     OffsetAtLastIter =
         mulSCEVOverflow(MaxBTC, SE.getAbsExpr(Step, /*IsNSW=*/false), SE);
     if (!OffsetAtLastIter)
@@ -285,11 +292,7 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     if (!EndBytes)
       return false;
 
-    if (!LoopGuards)
-      LoopGuards.emplace(
-          ScalarEvolution::LoopGuards::collect(AR->getLoop(), SE));
-
-    EndBytes = SE.applyLoopGuards(EndBytes, *LoopGuards);
+    DerefBytesSCEV = SE.applyLoopGuards(DerefBytesSCEV, *LoopGuards);
     return SE.isKnownPredicate(CmpInst::ICMP_ULE, EndBytes, DerefBytesSCEV);
   }
 

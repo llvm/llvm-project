@@ -1,0 +1,46 @@
+cpu: riscv
+threads:
+  # (lldb) reg read
+  # % pbpaste | grep = | sed 's, ,,g' | awk -F= '{print "{name: " $1 ", value: " $2 "},"}'
+  - regsets:
+      - flavor: gpr
+        registers: [
+          {name: zero, value: 0x00000000}, {name: ra, value: 0x01010101},
+          {name: sp, value: 0x02020202}, {name: gp, value: 0x03030303},
+          {name: tp, value: 0x04040404}, {name: t0, value: 0x05050505},
+          {name: t1, value: 0x06060606}, {name: t2, value: 0x07070707},
+          {name: fp, value: 0x08080808}, {name: s1, value: 0x09090909},
+          {name: a0, value: 0x0a0a0a0a}, {name: a1, value: 0x0b0b0b0b},
+          {name: a2, value: 0x0c0c0c0c}, {name: a3, value: 0x0d0d0d0d},
+          {name: a4, value: 0x0e0e0e0e}, {name: a5, value: 0x0f0f0f0f},
+          {name: a6, value: 0x10101010}, {name: a7, value: 0x11111111},
+          {name: s2, value: 0x12121212}, {name: s3, value: 0x13131313},
+          {name: s4, value: 0x14141414}, {name: s5, value: 0x15151515},
+          {name: s6, value: 0x16161616}, {name: s7, value: 0x17171717},
+          {name: s8, value: 0x18181818}, {name: s9, value: 0x19191919},
+          {name: s10, value: 0x1a1a1a1a}, {name: s11, value: 0x1b1b1b1b},
+          {name: t3, value: 0x1c1c1c1c}, {name: t4, value: 0x1d1d1d1d},
+          {name: t5, value: 0x1e1e1e1e}, {name: t6, value: 0x1f1f1f1f},
+          {name: pc, value: 0x20202020}
+        ]
+  - regsets:
+      - flavor: gpr
+        registers: [
+          {name: zero, value: 0x90000000}, {name: ra, value: 0x91010101},
+          {name: sp, value: 0x92020202}, {name: gp, value: 0x93030303},
+          {name: tp, value: 0x94040404}, {name: t0, value: 0x95050505},
+          {name: t1, value: 0x96060606}, {name: t2, value: 0x97070707},
+          {name: fp, value: 0x98080808}, {name: s1, value: 0x99090909},
+          {name: a0, value: 0x9a0a0a0a}, {name: a1, value: 0x9b0b0b0b},
+          {name: a2, value: 0x9c0c0c0c}, {name: a3, value: 0x9d0d0d0d},
+          {name: a4, value: 0x9e0e0e0e}, {name: a5, value: 0x9f0f0f0f},
+          {name: a6, value: 0x90101010}, {name: a7, value: 0x91111111},
+          {name: s2, value: 0x92121212}, {name: s3, value: 0x93131313},
+          {name: s4, value: 0x94141414}, {name: s5, value: 0x95151515},
+          {name: s6, value: 0x96161616}, {name: s7, value: 0x97171717},
+          {name: s8, value: 0x98181818}, {name: s9, value: 0x19191919},
+          {name: s10, value: 0x9a1a1a1a}, {name: s11, value: 0x9b1b1b1b},
+          {name: t3, value: 0x9c1c1c1c}, {name: t4, value: 0x9d1d1d1d},
+          {name: t5, value: 0x9e1e1e1e}, {name: t6, value: 0x9f1f1f1f},
+          {name: pc, value: 0x90202020}
+        ]
