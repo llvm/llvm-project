@@ -36,8 +36,6 @@ class SparcSubtarget : public SparcGenSubtargetInfo {
 
   virtual void anchor();
 
-  const bool Is64Bit;
-
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool ATTRIBUTE = DEFAULT;
 #include "SparcGenSubtargetInfo.inc"
@@ -78,8 +76,6 @@ public:
   SparcSubtarget &initializeSubtargetDependencies(StringRef CPU,
                                                   StringRef TuneCPU,
                                                   StringRef FS);
-
-  bool is64Bit() const { return Is64Bit; }
 
   /// The 64-bit ABI uses biased stack and frame pointers, so the stack frame
   /// of the current function is the area from [%sp+BIAS] to [%fp+BIAS].
