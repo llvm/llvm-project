@@ -27,28 +27,21 @@ REGISTER_SET_WITH_PROGRAMSTATE(InitializedVALists, const MemRegion *)
 namespace {
 typedef SmallVector<const MemRegion *, 2> RegionVector;
 
-class ValistChecker : public Checker<check::PreCall, check::PreStmt<VAArgExpr>,
+class VAListChecker : public Checker<check::PreCall, check::PreStmt<VAArgExpr>,
                                      check::DeadSymbols> {
-  mutable std::unique_ptr<BugType> BT_leakedvalist, BT_uninitaccess;
+  const BugType LeakBug{this, "Leaked va_list", categories::MemoryError,
+                        /*SuppressOnSink=*/true};
+  const BugType UninitAccessBug{this, "Uninitialized va_list",
+                                categories::MemoryError};
 
   struct VAListAccepter {
     CallDescription Func;
-    int VAListPos;
+    int ParamIndex;
   };
   static const SmallVector<VAListAccepter, 15> VAListAccepters;
   static const CallDescription VaStart, VaEnd, VaCopy;
 
 public:
-  enum CheckKind {
-    CK_Uninitialized,
-    CK_Unterminated,
-    CK_CopyToSelf,
-    CK_NumCheckKinds
-  };
-
-  bool ChecksEnabled[CK_NumCheckKinds] = {false};
-  CheckerNameRef CheckNames[CK_NumCheckKinds];
-
   void checkPreStmt(const VAArgExpr *VAA, CheckerContext &C) const;
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkDeadSymbols(SymbolReaper &SR, CheckerContext &C) const;
@@ -61,17 +54,16 @@ private:
 
   void reportUninitializedAccess(const MemRegion *VAList, StringRef Msg,
                                  CheckerContext &C) const;
-  void reportLeakedVALists(const RegionVector &LeakedVALists, StringRef Msg1,
-                           StringRef Msg2, CheckerContext &C, ExplodedNode *N,
-                           bool ReportUninit = false) const;
+  void reportLeaked(const RegionVector &Leaked, StringRef Msg1, StringRef Msg2,
+                    CheckerContext &C, ExplodedNode *N) const;
 
   void checkVAListStartCall(const CallEvent &Call, CheckerContext &C,
                             bool IsCopy) const;
   void checkVAListEndCall(const CallEvent &Call, CheckerContext &C) const;
 
-  class ValistBugVisitor : public BugReporterVisitor {
+  class VAListBugVisitor : public BugReporterVisitor {
   public:
-    ValistBugVisitor(const MemRegion *Reg, bool IsLeak = false)
+    VAListBugVisitor(const MemRegion *Reg, bool IsLeak = false)
         : Reg(Reg), IsLeak(IsLeak) {}
     void Profile(llvm::FoldingSetNodeID &ID) const override {
       static int X = 0;
@@ -99,8 +91,8 @@ private:
   };
 };
 
-const SmallVector<ValistChecker::VAListAccepter, 15>
-    ValistChecker::VAListAccepters = {{{CDM::CLibrary, {"vfprintf"}, 3}, 2},
+const SmallVector<VAListChecker::VAListAccepter, 15>
+    VAListChecker::VAListAccepters = {{{CDM::CLibrary, {"vfprintf"}, 3}, 2},
                                       {{CDM::CLibrary, {"vfscanf"}, 3}, 2},
                                       {{CDM::CLibrary, {"vprintf"}, 2}, 1},
                                       {{CDM::CLibrary, {"vscanf"}, 2}, 1},
@@ -116,14 +108,14 @@ const SmallVector<ValistChecker::VAListAccepter, 15>
                                       // vsnprintf, vsprintf has no wide version
                                       {{CDM::CLibrary, {"vswscanf"}, 3}, 2}};
 
-const CallDescription ValistChecker::VaStart(CDM::CLibrary,
+const CallDescription VAListChecker::VaStart(CDM::CLibrary,
                                              {"__builtin_va_start"}, /*Args=*/2,
                                              /*Params=*/1),
-    ValistChecker::VaCopy(CDM::CLibrary, {"__builtin_va_copy"}, 2),
-    ValistChecker::VaEnd(CDM::CLibrary, {"__builtin_va_end"}, 1);
+    VAListChecker::VaCopy(CDM::CLibrary, {"__builtin_va_copy"}, 2),
+    VAListChecker::VaEnd(CDM::CLibrary, {"__builtin_va_end"}, 1);
 } // end anonymous namespace
 
-void ValistChecker::checkPreCall(const CallEvent &Call,
+void VAListChecker::checkPreCall(const CallEvent &Call,
                                  CheckerContext &C) const {
   if (VaStart.matches(Call))
     checkVAListStartCall(Call, C, false);
@@ -137,8 +129,8 @@ void ValistChecker::checkPreCall(const CallEvent &Call,
         continue;
       bool Symbolic;
       const MemRegion *VAList =
-          getVAListAsRegion(Call.getArgSVal(FuncInfo.VAListPos),
-                            Call.getArgExpr(FuncInfo.VAListPos), Symbolic, C);
+          getVAListAsRegion(Call.getArgSVal(FuncInfo.ParamIndex),
+                            Call.getArgExpr(FuncInfo.ParamIndex), Symbolic, C);
       if (!VAList)
         return;
 
@@ -159,17 +151,17 @@ void ValistChecker::checkPreCall(const CallEvent &Call,
   }
 }
 
-const MemRegion *ValistChecker::getVAListAsRegion(SVal SV, const Expr *E,
+const MemRegion *VAListChecker::getVAListAsRegion(SVal SV, const Expr *E,
                                                   bool &IsSymbolic,
                                                   CheckerContext &C) const {
   const MemRegion *Reg = SV.getAsRegion();
   if (!Reg)
     return nullptr;
   // TODO: In the future this should be abstracted away by the analyzer.
-  bool VaListModelledAsArray = false;
+  bool VAListModelledAsArray = false;
   if (const auto *Cast = dyn_cast<CastExpr>(E)) {
     QualType Ty = Cast->getType();
-    VaListModelledAsArray =
+    VAListModelledAsArray =
         Ty->isPointerType() && Ty->getPointeeType()->isRecordType();
   }
   if (const auto *DeclReg = Reg->getAs<DeclRegion>()) {
@@ -179,17 +171,16 @@ const MemRegion *ValistChecker::getVAListAsRegion(SVal SV, const Expr *E,
   IsSymbolic = Reg && Reg->getBaseRegion()->getAs<SymbolicRegion>();
   // Some VarRegion based VA lists reach here as ElementRegions.
   const auto *EReg = dyn_cast_or_null<ElementRegion>(Reg);
-  return (EReg && VaListModelledAsArray) ? EReg->getSuperRegion() : Reg;
+  return (EReg && VAListModelledAsArray) ? EReg->getSuperRegion() : Reg;
 }
 
-void ValistChecker::checkPreStmt(const VAArgExpr *VAA,
+void VAListChecker::checkPreStmt(const VAArgExpr *VAA,
                                  CheckerContext &C) const {
   ProgramStateRef State = C.getState();
-  const Expr *VASubExpr = VAA->getSubExpr();
-  SVal VAListSVal = C.getSVal(VASubExpr);
+  const Expr *ArgExpr = VAA->getSubExpr();
+  SVal VAListSVal = C.getSVal(ArgExpr);
   bool Symbolic;
-  const MemRegion *VAList =
-      getVAListAsRegion(VAListSVal, VASubExpr, Symbolic, C);
+  const MemRegion *VAList = getVAListAsRegion(VAListSVal, ArgExpr, Symbolic, C);
   if (!VAList)
     return;
   if (Symbolic)
@@ -199,20 +190,19 @@ void ValistChecker::checkPreStmt(const VAArgExpr *VAA,
         VAList, "va_arg() is called on an uninitialized va_list", C);
 }
 
-void ValistChecker::checkDeadSymbols(SymbolReaper &SR,
+void VAListChecker::checkDeadSymbols(SymbolReaper &SR,
                                      CheckerContext &C) const {
   ProgramStateRef State = C.getState();
-  InitializedVAListsTy TrackedVALists = State->get<InitializedVALists>();
-  RegionVector LeakedVALists;
-  for (auto Reg : TrackedVALists) {
+  InitializedVAListsTy Tracked = State->get<InitializedVALists>();
+  RegionVector Leaked;
+  for (const MemRegion *Reg : Tracked) {
     if (SR.isLiveRegion(Reg))
       continue;
-    LeakedVALists.push_back(Reg);
+    Leaked.push_back(Reg);
     State = State->remove<InitializedVALists>(Reg);
   }
   if (ExplodedNode *N = C.addTransition(State))
-    reportLeakedVALists(LeakedVALists, "Initialized va_list", " is leaked", C,
-                        N);
+    reportLeaked(Leaked, "Initialized va_list", " is leaked", C, N);
 }
 
 // This function traverses the exploded graph backwards and finds the node where
@@ -220,7 +210,7 @@ void ValistChecker::checkDeadSymbols(SymbolReaper &SR,
 // It is not likely that there are several different va_lists that belongs to
 // different stack frames, so that case is not yet handled.
 const ExplodedNode *
-ValistChecker::getStartCallSite(const ExplodedNode *N,
+VAListChecker::getStartCallSite(const ExplodedNode *N,
                                 const MemRegion *Reg) const {
   const LocationContext *LeakContext = N->getLocationContext();
   const ExplodedNode *StartCallNode = N;
@@ -244,42 +234,21 @@ ValistChecker::getStartCallSite(const ExplodedNode *N,
   return StartCallNode;
 }
 
-void ValistChecker::reportUninitializedAccess(const MemRegion *VAList,
+void VAListChecker::reportUninitializedAccess(const MemRegion *VAList,
                                               StringRef Msg,
                                               CheckerContext &C) const {
-  if (!ChecksEnabled[CK_Uninitialized])
-    return;
   if (ExplodedNode *N = C.generateErrorNode()) {
-    if (!BT_uninitaccess)
-      BT_uninitaccess.reset(new BugType(CheckNames[CK_Uninitialized],
-                                        "Uninitialized va_list",
-                                        categories::MemoryError));
-    auto R = std::make_unique<PathSensitiveBugReport>(*BT_uninitaccess, Msg, N);
+    auto R = std::make_unique<PathSensitiveBugReport>(UninitAccessBug, Msg, N);
     R->markInteresting(VAList);
-    R->addVisitor(std::make_unique<ValistBugVisitor>(VAList));
+    R->addVisitor(std::make_unique<VAListBugVisitor>(VAList));
     C.emitReport(std::move(R));
   }
 }
 
-void ValistChecker::reportLeakedVALists(const RegionVector &LeakedVALists,
-                                        StringRef Msg1, StringRef Msg2,
-                                        CheckerContext &C, ExplodedNode *N,
-                                        bool ReportUninit) const {
-  if (!(ChecksEnabled[CK_Unterminated] ||
-        (ChecksEnabled[CK_Uninitialized] && ReportUninit)))
-    return;
-  for (auto Reg : LeakedVALists) {
-    if (!BT_leakedvalist) {
-      // FIXME: maybe creating a new check name for this type of bug is a better
-      // solution.
-      BT_leakedvalist.reset(new BugType(
-          static_cast<StringRef>(CheckNames[CK_Unterminated]).empty()
-              ? CheckNames[CK_Uninitialized]
-              : CheckNames[CK_Unterminated],
-          "Leaked va_list", categories::MemoryError,
-          /*SuppressOnSink=*/true));
-    }
-
+void VAListChecker::reportLeaked(const RegionVector &Leaked, StringRef Msg1,
+                                 StringRef Msg2, CheckerContext &C,
+                                 ExplodedNode *N) const {
+  for (const MemRegion *Reg : Leaked) {
     const ExplodedNode *StartNode = getStartCallSite(N, Reg);
     PathDiagnosticLocation LocUsedForUniqueing;
 
@@ -296,15 +265,15 @@ void ValistChecker::reportLeakedVALists(const RegionVector &LeakedVALists,
     OS << Msg2;
 
     auto R = std::make_unique<PathSensitiveBugReport>(
-        *BT_leakedvalist, OS.str(), N, LocUsedForUniqueing,
+        LeakBug, OS.str(), N, LocUsedForUniqueing,
         StartNode->getLocationContext()->getDecl());
     R->markInteresting(Reg);
-    R->addVisitor(std::make_unique<ValistBugVisitor>(Reg, true));
+    R->addVisitor(std::make_unique<VAListBugVisitor>(Reg, true));
     C.emitReport(std::move(R));
   }
 }
 
-void ValistChecker::checkVAListStartCall(const CallEvent &Call,
+void VAListChecker::checkVAListStartCall(const CallEvent &Call,
                                          CheckerContext &C, bool IsCopy) const {
   bool Symbolic;
   const MemRegion *VAList =
@@ -318,20 +287,19 @@ void ValistChecker::checkVAListStartCall(const CallEvent &Call,
     const MemRegion *Arg2 =
         getVAListAsRegion(Call.getArgSVal(1), Call.getArgExpr(1), Symbolic, C);
     if (Arg2) {
-      if (ChecksEnabled[CK_CopyToSelf] && VAList == Arg2) {
-        RegionVector LeakedVALists{VAList};
+      if (VAList == Arg2) {
+        RegionVector Leaked{VAList};
         if (ExplodedNode *N = C.addTransition(State))
-          reportLeakedVALists(LeakedVALists, "va_list",
-                              " is copied onto itself", C, N, true);
+          reportLeaked(Leaked, "va_list", " is copied onto itself", C, N);
         return;
-      } else if (!State->contains<InitializedVALists>(Arg2) && !Symbolic) {
+      }
+      if (!State->contains<InitializedVALists>(Arg2) && !Symbolic) {
         if (State->contains<InitializedVALists>(VAList)) {
           State = State->remove<InitializedVALists>(VAList);
-          RegionVector LeakedVALists{VAList};
+          RegionVector Leaked{VAList};
           if (ExplodedNode *N = C.addTransition(State))
-            reportLeakedVALists(LeakedVALists, "Initialized va_list",
-                                " is overwritten by an uninitialized one", C, N,
-                                true);
+            reportLeaked(Leaked, "Initialized va_list",
+                         " is overwritten by an uninitialized one", C, N);
         } else {
           reportUninitializedAccess(Arg2, "Uninitialized va_list is copied", C);
         }
@@ -340,10 +308,10 @@ void ValistChecker::checkVAListStartCall(const CallEvent &Call,
     }
   }
   if (State->contains<InitializedVALists>(VAList)) {
-    RegionVector LeakedVALists{VAList};
+    RegionVector Leaked{VAList};
     if (ExplodedNode *N = C.addTransition(State))
-      reportLeakedVALists(LeakedVALists, "Initialized va_list",
-                          " is initialized again", C, N);
+      reportLeaked(Leaked, "Initialized va_list", " is initialized again", C,
+                   N);
     return;
   }
 
@@ -351,7 +319,7 @@ void ValistChecker::checkVAListStartCall(const CallEvent &Call,
   C.addTransition(State);
 }
 
-void ValistChecker::checkVAListEndCall(const CallEvent &Call,
+void VAListChecker::checkVAListEndCall(const CallEvent &Call,
                                        CheckerContext &C) const {
   bool Symbolic;
   const MemRegion *VAList =
@@ -374,7 +342,7 @@ void ValistChecker::checkVAListEndCall(const CallEvent &Call,
   C.addTransition(State);
 }
 
-PathDiagnosticPieceRef ValistChecker::ValistBugVisitor::VisitNode(
+PathDiagnosticPieceRef VAListChecker::VAListBugVisitor::VisitNode(
     const ExplodedNode *N, BugReporterContext &BRC, PathSensitiveBugReport &) {
   ProgramStateRef State = N->getState();
   ProgramStateRef StatePrev = N->getFirstPred()->getState();
@@ -399,26 +367,8 @@ PathDiagnosticPieceRef ValistChecker::ValistBugVisitor::VisitNode(
   return std::make_shared<PathDiagnosticEventPiece>(Pos, Msg, true);
 }
 
-void ento::registerValistBase(CheckerManager &mgr) {
-  mgr.registerChecker<ValistChecker>();
+void ento::registerVAListChecker(CheckerManager &Mgr) {
+  Mgr.registerChecker<VAListChecker>();
 }
 
-bool ento::shouldRegisterValistBase(const CheckerManager &mgr) {
-  return true;
-}
-
-#define REGISTER_CHECKER(name)                                                 \
-  void ento::register##name##Checker(CheckerManager &mgr) {                    \
-    ValistChecker *checker = mgr.getChecker<ValistChecker>();                  \
-    checker->ChecksEnabled[ValistChecker::CK_##name] = true;                   \
-    checker->CheckNames[ValistChecker::CK_##name] =                            \
-        mgr.getCurrentCheckerName();                                           \
-  }                                                                            \
-                                                                               \
-  bool ento::shouldRegister##name##Checker(const CheckerManager &mgr) {            \
-    return true;                                                               \
-  }
-
-REGISTER_CHECKER(Uninitialized)
-REGISTER_CHECKER(Unterminated)
-REGISTER_CHECKER(CopyToSelf)
+bool ento::shouldRegisterVAListChecker(const CheckerManager &) { return true; }

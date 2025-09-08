@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -triple hexagon-unknown-linux -analyzer-checker=core,valist.Unterminated,valist.CopyToSelf -analyzer-output=text -verify %s
-// RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -analyzer-checker=core,valist.Unterminated,valist.CopyToSelf -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -triple hexagon-unknown-linux -analyzer-checker=core,security.VAList -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -analyzer-checker=core,security.VAList -analyzer-output=text -verify %s
 
 #include "Inputs/system-header-simulator-for-valist.h"
 
@@ -96,12 +96,6 @@ void copyOverwrite(int fst, ...) {
   va_copy(va, va2); // expected-warning{{Initialized va_list 'va' is overwritten by an uninitialized one}}
   // expected-note@-1{{Initialized va_list 'va' is overwritten by an uninitialized one}}
 }
-
-//This only generates a warning for the valist.Uninitialized checker
-void copyUnint(int fst, ...) {
-  va_list va, va2;
-  va_copy(va, va2);
-} // no-warning
 
 void recopy(int fst, ...) {
   va_list va, va2;
