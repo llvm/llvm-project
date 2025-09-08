@@ -17,9 +17,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
-#include "llvm/TargetParser/Host.h"
-#include "llvm/TargetParser/Triple.h"
 #include <stdio.h>
 #include <string>
 #include <system_error>
@@ -59,21 +58,22 @@ Error SpecialCaseList::Matcher::insert(StringRef Pattern, unsigned LineNumber,
   auto Glob = std::make_unique<Matcher::Glob>();
   Glob->Name = Pattern.str();
   Glob->LineNo = LineNumber;
-  // Backslashes are valid in posix-style filenames.
-  bool IsSlashAgnostic = Triple(sys::getDefaultTargetTriple()).isOSWindows();
   // We must be sure to use the string in `Glob` rather than the provided
   // reference which could be destroyed before match() is called
-  if (auto Err = GlobPattern::create(Glob->Name, /*MaxSubPatterns=*/1024,
-                                     /*IsSlashAgnostic=*/IsSlashAgnostic)
+  if (auto Err = GlobPattern::create(Glob->Name, /*MaxSubPatterns=*/1024)
                      .moveInto(Glob->Pattern))
     return Err;
   Globs.push_back(std::move(Glob));
   return Error::success();
 }
 
-unsigned SpecialCaseList::Matcher::match(StringRef Query) const {
+unsigned SpecialCaseList::Matcher::match(StringRef Query,
+                                         bool IsFilename) const {
+  static bool HaveWindowsPathStyle =
+      llvm::sys::path::is_style_windows(llvm::sys::path::Style::native);
   for (const auto &Glob : reverse(Globs))
-    if (Glob->Pattern.match(Query))
+    if (Glob->Pattern.match(
+            Query, /*IsSlashAgnostic=*/(HaveWindowsPathStyle && IsFilename)))
       return Glob->LineNo;
   for (const auto &[Regex, LineNumber] : reverse(RegExes))
     if (Regex->match(Query))
@@ -223,7 +223,8 @@ std::pair<unsigned, unsigned>
 SpecialCaseList::inSectionBlame(StringRef Section, StringRef Prefix,
                                 StringRef Query, StringRef Category) const {
   for (const auto &S : reverse(Sections)) {
-    if (S.SectionMatcher->match(Section)) {
+    bool IsFilename = Prefix == "src" || Prefix == "mainfile";
+    if (S.SectionMatcher->match(Section, IsFilename)) {
       unsigned Blame = inSectionBlame(S.Entries, Prefix, Query, Category);
       if (Blame)
         return {S.FileIdx, Blame};
@@ -242,7 +243,8 @@ unsigned SpecialCaseList::inSectionBlame(const SectionEntries &Entries,
   if (II == I->second.end())
     return 0;
 
-  return II->getValue().match(Query);
+  bool IsFilename = Prefix == "src" || Prefix == "mainfile";
+  return II->getValue().match(Query, IsFilename);
 }
 
 } // namespace llvm

@@ -363,12 +363,13 @@ TEST_F(SuppressionMappingTest, ParsingRespectsOtherWarningOpts) {
 
 #ifdef _WIN32
 // We're only slash-agnostic on windows hosts
-TEST_F(SuppressionMappingTest, ForwardSlashMatchesBothDirections) {
+TEST_F(SuppressionMappingTest, TreatsFilesAsSlashAgnosticOnWindows) {
   llvm::StringLiteral SuppressionMappingFile = R"(
   [unused]
   src:*clang/*
   src:*clang/lib/Sema/*=emit
-  src:*clang/lib\\Sema/foo*)";
+  src:*clang/lib\\Sema/foo*
+  fun:suppress/me)";
   Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";
   FS->addFile("foo.txt", /*ModificationTime=*/{},
               llvm::MemoryBuffer::getMemBuffer(SuppressionMappingFile));
@@ -376,12 +377,13 @@ TEST_F(SuppressionMappingTest, ForwardSlashMatchesBothDirections) {
   EXPECT_THAT(diags(), IsEmpty());
 
   EXPECT_TRUE(Diags.isSuppressedViaMapping(
-      diag::warn_unused_function, locForFile(R"(clang/lib/Basic/foo.h)")));
+      diag::warn_unused_function, locForFile(R"(clang/lib/Basic/bar.h)")));
   EXPECT_FALSE(Diags.isSuppressedViaMapping(
-      diag::warn_unused_function, locForFile(R"(clang/lib/Sema\bar.h)")));
+      diag::warn_unused_function, locForFile(R"(clang/lib/Sema\baz.h)")));
+
+  // We require a literal backslash before "Sema"
   EXPECT_TRUE(Diags.isSuppressedViaMapping(
       diag::warn_unused_function, locForFile(R"(clang\lib\Sema/foo.h)")));
-  // The third pattern requires a literal backslash before Sema
   EXPECT_FALSE(Diags.isSuppressedViaMapping(
       diag::warn_unused_function, locForFile(R"(clang/lib/Sema/foo.h)")));
 }

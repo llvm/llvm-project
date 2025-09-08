@@ -175,8 +175,8 @@ Changes to Sanitizers
 ---------------------
 
 * On windows hosts, the [sanitizer special case list format](https://clang.llvm.org/docs/SanitizerSpecialCaseList.html#format)
-  now treats forward slashes as either a forward or a backslash, to handle
-  paths with mixed unix and windows styles.
+  now treats forward slashes in filenames as matching either a forward or a
+  backslash, to accommodate paths with mixed unix and windows styles.
 
 Other Changes
 -------------
