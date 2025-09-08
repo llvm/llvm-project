@@ -237,6 +237,9 @@ public:
   /// This needs to be called last to commit any pending changes.
   void finalize();
 
+  /// Emit a boolean constant.
+  void addBooleanConstant(int64_t Value);
+
   /// Emit a signed constant.
   void addSignedConstant(int64_t Value);
 

@@ -3903,6 +3903,8 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
   unsigned MaxVectorSize =
       TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector);
   unsigned MaxElementsInVector = MaxVectorSize / ElementSize;
+  if (MaxElementsInVector == 0)
+    return false;
   // When there are multiple shufflevector operations on the same input,
   // especially when the vector length is larger than the register size,
   // identical shuffle patterns may occur across different groups of elements.
