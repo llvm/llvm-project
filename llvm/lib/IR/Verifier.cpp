@@ -3188,7 +3188,7 @@ void Verifier::visitFunction(const Function &F) {
     if (SP && ((Scope != SP) && !Seen.insert(SP).second))
       return;
 
-    CheckDI(SP->describes(&F),
+    CheckDI(SP && SP->describes(&F),
             "!dbg attachment points at wrong subprogram for function", N, &F,
             &I, DL, Scope, SP);
   };
