@@ -116,8 +116,7 @@ public:
   /// This constructor initializes the data members to match that
   /// of the specified triple.
   ///
-  PPCSubtarget(const Triple &TT, const std::string &CPU,
-               const std::string &TuneCPU, const std::string &FS,
+  PPCSubtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU, StringRef FS,
                const PPCTargetMachine &TM);
 
   ~PPCSubtarget() override;
