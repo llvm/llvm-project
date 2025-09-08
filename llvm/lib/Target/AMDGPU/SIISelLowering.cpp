@@ -16616,9 +16616,8 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
     SDValue ResultLo = NodeLo.getValue(0);
     SDValue ResultHi = NodeHi.getValue(0);
 
-    EVT ConcatType = EVT::getVectorVT(*DAG.getContext(), TargetType, 2);
     SDValue JoinedResult =
-        DAG.getBuildVector(ConcatType, SL, {ResultLo, ResultHi});
+        DAG.getBuildVector(MVT::v2i32, SL, {ResultLo, ResultHi});
 
     SDValue Result = DAG.getNode(ISD::BITCAST, SL, VT, JoinedResult);
     SDValue Overflow = NodeHi.getValue(1);
