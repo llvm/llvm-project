@@ -974,7 +974,9 @@ struct ParallelInsertSliceOpInterface
         parallelInsertSliceOp.getParallelCombiningParent();
 
     // Bufferize the op outside of the parallel combining terminator.
-    rewriter.setInsertionPoint(parallelCombiningParent);
+    if (parallelCombiningParent) {
+      rewriter.setInsertionPoint(parallelCombiningParent);
+    }
 
     // Get source and destination buffers.
     FailureOr<Value> destBuffer =

@@ -2978,7 +2978,7 @@ public:
       // The only difference between InsertSliceOp and ParallelInsertSliceOp
       // is that the insertion point is just before the ParallelCombiningOp in
       // the parallel case.
-      if (std::is_same<InsertOpTy, ParallelInsertSliceOp>::value)
+      if (isa<ParallelCombiningOpInterface>(insertSliceOp->getParentOp()))
         rewriter.setInsertionPoint(insertSliceOp->getParentOp());
       toInsert = tensor::CastOp::create(rewriter, insertSliceOp.getLoc(),
                                         sourceType, toInsert);
@@ -3155,7 +3155,7 @@ struct InsertSliceOpSourceCastInserter final
     // The only difference between InsertSliceOp and ParallelInsertSliceOp is
     // that the insertion point is just before the ParallelCombiningOp in the
     // parallel case.
-    if (std::is_same<InsertOpTy, ParallelInsertSliceOp>::value)
+    if (isa<ParallelCombiningOpInterface>(insertSliceOp->getParentOp()))
       rewriter.setInsertionPoint(insertSliceOp->getParentOp());
     Value cast = tensor::CastOp::create(rewriter, insertSliceOp.getLoc(),
                                         newSrcType, insertSliceOp.getSource());
@@ -3901,10 +3901,6 @@ void ParallelInsertSliceOp::build(OpBuilder &b, OperationState &result,
 }
 
 LogicalResult ParallelInsertSliceOp::verify() {
-  if (!isa<ParallelCombiningOpInterface>(getOperation()->getParentOp()))
-    return this->emitError("expected ParallelCombiningOpInterface parent, got:")
-           << *(getOperation()->getParentOp());
-
   // Verify result type against inferred type.
   RankedTensorType expectedType;
   SliceVerificationResult result =
@@ -3933,6 +3929,20 @@ void ParallelInsertSliceOp::getCanonicalizationPatterns(
 
 llvm::SmallBitVector ParallelInsertSliceOp::getDroppedDims() {
   return ::getDroppedDims(getSourceType().getShape(), getMixedSizes());
+}
+
+// InParallelOpInterface implementation
+MutableOperandRange ParallelInsertSliceOp::getUpdatedDestinations() {
+  return getDestMutable();
+}
+
+Operation *ParallelInsertSliceOp::getIteratingParent() {
+  // Return the parent ParallelCombiningOpInterface's parent
+  if (auto combiningOp = dyn_cast<ParallelCombiningOpInterface>(
+          getOperation()->getParentOp())) {
+    return combiningOp->getParentOp();
+  }
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//

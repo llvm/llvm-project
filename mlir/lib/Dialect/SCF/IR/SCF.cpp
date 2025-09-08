@@ -680,8 +680,11 @@ void mlir::scf::promote(RewriterBase &rewriter, scf::ForallOp forallOp) {
   SmallVector<Value> results;
   results.reserve(forallOp.getResults().size());
   for (auto &yieldingOp : terminator.getYieldingOps()) {
+    // Skip non-ParallelInsertSliceOp operations
     auto parallelInsertSliceOp =
-        cast<tensor::ParallelInsertSliceOp>(yieldingOp);
+        dyn_cast<tensor::ParallelInsertSliceOp>(yieldingOp);
+    if (!parallelInsertSliceOp)
+      continue;
 
     Value dst = parallelInsertSliceOp.getDest();
     Value src = parallelInsertSliceOp.getSource();
@@ -1437,14 +1440,12 @@ InParallelOp ForallOp::getTerminator() {
   return cast<InParallelOp>(getBody()->getTerminator());
 }
 
+
 SmallVector<Operation *> ForallOp::getCombiningOps(BlockArgument bbArg) {
   SmallVector<Operation *> storeOps;
-  InParallelOp inParallelOp = getTerminator();
-  for (Operation &yieldOp : inParallelOp.getYieldingOps()) {
-    if (auto parallelInsertSliceOp =
-            dyn_cast<tensor::ParallelInsertSliceOp>(yieldOp);
-        parallelInsertSliceOp && parallelInsertSliceOp.getDest() == bbArg) {
-      storeOps.push_back(parallelInsertSliceOp);
+  for (Operation *user : bbArg.getUsers()) {
+    if (auto parallelOp = dyn_cast<InParallelOpInterface>(user)) {
+      storeOps.push_back(parallelOp);
     }
   }
   return storeOps;
@@ -1673,7 +1674,12 @@ struct ForallOpIterArgsFolder : public OpRewritePattern<ForallOp> {
     for (OpResult result : forallOp.getResults()) {
       OpOperand *opOperand = forallOp.getTiedOpOperand(result);
       BlockArgument blockArg = forallOp.getTiedBlockArgument(opOperand);
-      if (result.use_empty() || forallOp.getCombiningOps(blockArg).empty()) {
+      SmallVector<Operation *> combiningOps =
+          forallOp.getCombiningOps(blockArg);
+      if ((result.use_empty() &&
+           llvm::all_of(combiningOps,
+                        [](Operation *op) { return op->use_empty(); })) ||
+          combiningOps.empty()) {
         resultToDelete.insert(result);
       } else {
         resultToReplace.push_back(result);
@@ -1911,8 +1917,9 @@ struct FoldTensorCastOfOutputIntoForallOp
     auto terminator = newForallOp.getTerminator();
     for (auto [yieldingOp, outputBlockArg] : llvm::zip(
              terminator.getYieldingOps(), newForallOp.getRegionIterArgs())) {
-      auto insertSliceOp = cast<tensor::ParallelInsertSliceOp>(yieldingOp);
-      insertSliceOp.getDestMutable().assign(outputBlockArg);
+      auto insertSliceOp = dyn_cast<tensor::ParallelInsertSliceOp>(yieldingOp);
+      if (insertSliceOp)
+        insertSliceOp.getDestMutable().assign(outputBlockArg);
     }
 
     // Cast results back to the original types.
@@ -1971,19 +1978,6 @@ LogicalResult InParallelOp::verify() {
   if (!forallOp)
     return this->emitOpError("expected forall op parent");
 
-  // TODO: InParallelOpInterface.
-  for (Operation &op : getRegion().front().getOperations()) {
-    if (!isa<tensor::ParallelInsertSliceOp>(op)) {
-      return this->emitOpError("expected only ")
-             << tensor::ParallelInsertSliceOp::getOperationName() << " ops";
-    }
-
-    // Verify that inserts are into out block arguments.
-    Value dest = cast<tensor::ParallelInsertSliceOp>(op).getDest();
-    ArrayRef<BlockArgument> regionOutArgs = forallOp.getRegionOutArgs();
-    if (!llvm::is_contained(regionOutArgs, dest))
-      return op.emitOpError("may only insert into an output block argument");
-  }
   return success();
 }
 
@@ -2018,12 +2012,15 @@ OpResult InParallelOp::getParentResult(int64_t idx) {
 }
 
 SmallVector<BlockArgument> InParallelOp::getDests() {
-  return llvm::to_vector<4>(
-      llvm::map_range(getYieldingOps(), [](Operation &op) {
-        // Add new ops here as needed.
-        auto insertSliceOp = cast<tensor::ParallelInsertSliceOp>(&op);
-        return llvm::cast<BlockArgument>(insertSliceOp.getDest());
-      }));
+  SmallVector<BlockArgument> updatedDests;
+  for (auto &yieldingOp : getYieldingOps()) {
+    auto inParallelOp = dyn_cast<InParallelOpInterface>(&yieldingOp);
+    if (!inParallelOp)
+      continue;
+    for (auto &updatedOperand : inParallelOp.getUpdatedDestinations())
+      updatedDests.push_back(cast<BlockArgument>(updatedOperand.get()));
+  }
+  return updatedDests;
 }
 
 llvm::iterator_range<Block::iterator> InParallelOp::getYieldingOps() {

@@ -56,4 +56,33 @@ def ParallelCombiningOpInterface : OpInterface<"ParallelCombiningOpInterface"> {
   }];
 }
 
+def InParallelOpInterface : OpInterface<"InParallelOpInterface"> {
+  let description = [{
+    An in_parallel op is an operation that inserts into a shared tensor in
+    conjunction with a parent combining and iterating op.
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    InterfaceMethod<[{
+        Returns the list of values updated by this op.
+      }],
+      /*retTy=*/"::mlir::MutableOperandRange",
+      /*methodName=*/"getUpdatedDestinations",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns the iterating parent for this op.
+      }],
+      /*retTy=*/"::mlir::Operation*",
+      /*methodName=*/"getIteratingParent",
+      /*args=*/(ins)
+    >,
+  ];
+  let verify = [{
+    return ::mlir::detail::verifyInParallelOpInterface($_op);
+  }];
+}
+
 #endif // MLIR_INTERFACES_PARALLELCOMBININGOPINTERFACE

@@ -219,8 +219,10 @@ struct InsertSliceOfInsertSliceFolder : public OpRewritePattern<OpTy> {
     // point outside: only tensor.parallel_insert_slice ops are allowed in
     // there.
     if (std::is_same_v<OpTy, tensor::ParallelInsertSliceOp>) {
-      rewriter.setInsertionPoint(
-          insertSliceOp->template getParentOfType<scf::InParallelOp>());
+      if (auto combiningParent = dyn_cast<ParallelCombiningOpInterface>(
+              insertSliceOp->getParentOp())) {
+        rewriter.setInsertionPoint(insertSliceOp->getParentOp());
+      }  
     }
 
     // Resolve offsets according to source offsets and strides.
