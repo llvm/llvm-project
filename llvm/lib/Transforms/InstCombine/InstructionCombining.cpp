@@ -2568,7 +2568,7 @@ Instruction *InstCombinerImpl::narrowMathIfNoOverflow(BinaryOperator &BO) {
     Constant *WideC;
     if (!Op0->hasOneUse() || !match(Op1, m_Constant(WideC)))
       return nullptr;
-    Constant *NarrowC = getLosslessTrunc(WideC, X->getType(), CastOpc);
+    Constant *NarrowC = getLosslessInvCast(WideC, X->getType(), CastOpc, DL);
     if (!NarrowC)
       return nullptr;
     Y = NarrowC;
