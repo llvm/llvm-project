@@ -45,11 +45,12 @@ mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
 ///
 /// \returns The loaded mapped value inside the target region.
 mlir::Value mapTemporaryValue(fir::FirOpBuilder &firOpBuilder,
-    mlir::omp::TargetOp targetOp, mlir::Value val, llvm::StringRef name);
+    mlir::omp::TargetOp targetOp, mlir::Value val,
+    llvm::StringRef name = "tmp.map");
 
 /// For values used inside a target region but defined outside, either clone
 /// these value inside the target region or map them to the region. This
-/// function tries firts to clone values (if they are defined by
+/// function first tries to clone values (if they are defined by
 /// memory-effect-free ops, otherwise, the values are mapped.
 ///
 /// \param firOpBuilder - Operation builder.
