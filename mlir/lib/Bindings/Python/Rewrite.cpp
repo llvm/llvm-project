@@ -100,8 +100,8 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
            &PyFrozenRewritePatternSet::createFromCapsule);
   m.def(
        "apply_patterns_and_fold_greedily",
-       [](MlirModule module, MlirFrozenRewritePatternSet set) {
-         auto status = mlirApplyPatternsAndFoldGreedily(module, set, {});
+       [](PyModule &module, MlirFrozenRewritePatternSet set) {
+         auto status = mlirApplyPatternsAndFoldGreedily(module.get(), set, {});
          if (mlirLogicalResultIsFailure(status))
            throw std::runtime_error("pattern application failed to converge");
        },
@@ -109,9 +109,10 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
        "Applys the given patterns to the given module greedily while folding "
        "results.")
       .def(
-          "apply_patterns_and_fold_greedily_with_op",
-          [](MlirOperation op, MlirFrozenRewritePatternSet set) {
-            auto status = mlirApplyPatternsAndFoldGreedilyWithOp(op, set, {});
+          "apply_patterns_and_fold_greedily",
+          [](PyOperationBase &op, MlirFrozenRewritePatternSet set) {
+            auto status = mlirApplyPatternsAndFoldGreedilyWithOp(
+                op.getOperation(), set, {});
             if (mlirLogicalResultIsFailure(status))
               throw std::runtime_error(
                   "pattern application failed to converge");

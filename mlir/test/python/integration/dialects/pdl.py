@@ -84,5 +84,5 @@ def test_add_to_mul_with_op(module_):
             return arith.addi(a, b)
 
     frozen = get_pdl_patterns()
-    apply_patterns_and_fold_greedily_with_op(module_.operation, frozen)
+    apply_patterns_and_fold_greedily(module_.operation, frozen)
     return module_
