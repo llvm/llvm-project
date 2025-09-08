@@ -235,13 +235,13 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
 
 int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   noteBottomOfStack();
-  #ifdef CLANG_CUSTOM_BUG_REPORT_MSG
+#ifdef CLANG_CUSTOM_BUG_REPORT_MSG
   llvm::setBugReportMsg(CLANG_CUSTOM_BUG_REPORT_MSG);
-  #else
+#else
   llvm::setBugReportMsg("PLEASE submit a bug report to " BUG_REPORT_URL
                         " and include the crash backtrace, preprocessed "
                         "source, and associated run script.\n");
-  #endif
+#endif
   SmallVector<const char *, 256> Args(Argv, Argv + Argc);
 
   if (llvm::sys::Process::FixupStandardFileDescriptors())
