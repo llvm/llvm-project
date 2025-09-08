@@ -16608,20 +16608,20 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
         DAG.getNode(IsAdd ? ISD::UADDO : ISD::USUBO, SL,
                     DAG.getVTList(TargetType, CarryVT), {Op0Lo, Op1Lo});
 
-    SDValue CarryInHi = SDValue(NodeLo.getNode(), 1);
+    SDValue CarryInHi = NodeLo.getValue(1);
     SDValue NodeHi = DAG.getNode(IsAdd ? ISD::UADDO_CARRY : ISD::USUBO_CARRY,
                                  SL, DAG.getVTList(TargetType, CarryVT),
                                  {Op0Hi, Op1Hi, CarryInHi});
 
-    SDValue ResultLo = SDValue(NodeLo.getNode(), 0);
-    SDValue ResultHi = SDValue(NodeHi.getNode(), 0);
+    SDValue ResultLo = NodeLo.getValue(0);
+    SDValue ResultHi = NodeHi.getValue(0);
 
     EVT ConcatType = EVT::getVectorVT(*DAG.getContext(), TargetType, 2);
     SDValue JoinedResult =
         DAG.getBuildVector(ConcatType, SL, {ResultLo, ResultHi});
 
     SDValue Result = DAG.getNode(ISD::BITCAST, SL, VT, JoinedResult);
-    SDValue Overflow = SDValue(NodeHi.getNode(), 1);
+    SDValue Overflow = NodeHi.getValue(1);
     DCI.CombineTo(LHS.getNode(), Result);
     return Overflow;
   }
