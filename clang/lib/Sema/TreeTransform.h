@@ -1783,6 +1783,14 @@ public:
                                                        LParenLoc, EndLoc);
   }
 
+  OMPClause *
+  RebuildOMPLoopRangeClause(Expr *First, Expr *Count, SourceLocation StartLoc,
+                            SourceLocation LParenLoc, SourceLocation FirstLoc,
+                            SourceLocation CountLoc, SourceLocation EndLoc) {
+    return getSema().OpenMP().ActOnOpenMPLoopRangeClause(
+        First, Count, StartLoc, LParenLoc, FirstLoc, CountLoc, EndLoc);
+  }
+
   /// Build a new OpenMP 'allocator' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
@@ -9609,6 +9617,17 @@ StmtResult TreeTransform<Derived>::TransformOMPInterchangeDirective(
 
 template <typename Derived>
 StmtResult
+TreeTransform<Derived>::TransformOMPFuseDirective(OMPFuseDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      D->getDirectiveKind(), DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult
 TreeTransform<Derived>::TransformOMPForDirective(OMPForDirective *D) {
   DeclarationNameInfo DirName;
   getDerived().getSema().OpenMP().StartOpenMPDSABlock(
@@ -10498,6 +10517,31 @@ TreeTransform<Derived>::TransformOMPPartialClause(OMPPartialClause *C) {
     return C;
   return RebuildOMPPartialClause(Factor, C->getBeginLoc(), C->getLParenLoc(),
                                  C->getEndLoc());
+}
+
+template <typename Derived>
+OMPClause *
+TreeTransform<Derived>::TransformOMPLoopRangeClause(OMPLoopRangeClause *C) {
+  ExprResult F = getDerived().TransformExpr(C->getFirst());
+  if (F.isInvalid())
+    return nullptr;
+
+  ExprResult Cn = getDerived().TransformExpr(C->getCount());
+  if (Cn.isInvalid())
+    return nullptr;
+
+  Expr *First = F.get();
+  Expr *Count = Cn.get();
+
+  bool Changed = (First != C->getFirst()) || (Count != C->getCount());
+
+  // If no changes and AlwaysRebuild() is false, return the original clause
+  if (!Changed && !getDerived().AlwaysRebuild())
+    return C;
+
+  return RebuildOMPLoopRangeClause(First, Count, C->getBeginLoc(),
+                                   C->getLParenLoc(), C->getFirstLoc(),
+                                   C->getCountLoc(), C->getEndLoc());
 }
 
 template <typename Derived>
