@@ -2351,7 +2351,7 @@ LdMatrixOp::getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
 
   llvm::SmallVector<llvm::Type *> types = {args[0]->getType()};
 
-  llvm::Intrinsic::ID id;
+  llvm::Intrinsic::ID id = llvm::Intrinsic::not_intrinsic;
 
   NVVM::MMALayout layout = thisOp.getLayout();
   int32_t num = thisOp.getNum();
@@ -2441,6 +2441,8 @@ LdMatrixOp::getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
         break;
       }
     }
+  } else {
+    llvm_unreachable("unknown ldmatrix kind");
   }
 
   return {id, std::move(args), types};
@@ -2458,7 +2460,7 @@ StMatrixOp::getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
 
   llvm::SmallVector<llvm::Type *> types = {args[0]->getType()};
 
-  llvm::Intrinsic::ID id;
+  llvm::Intrinsic::ID id = llvm::Intrinsic::not_intrinsic;
 
   NVVM::MMALayout layout = thisOp.getLayout();
   int32_t num = thisOp.getSources().size();
@@ -2494,6 +2496,8 @@ StMatrixOp::getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
       id = llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m16n8_x4_trans_b8;
       break;
     }
+  } else {
+    llvm_unreachable("unknown stmatrix kind");
   }
 
   return {id, std::move(args), types};
@@ -2528,7 +2532,7 @@ NVVM::IIDArgsWithTypes FenceProxyAcquireOp::getIIDAndArgsWithTypes(
   args.push_back(mt.lookupValue(thisOp.getAddr()));
   args.push_back(mt.lookupValue(thisOp.getSize()));
 
-  llvm::Intrinsic::ID id;
+  llvm::Intrinsic::ID id = llvm::Intrinsic::not_intrinsic;
 
   NVVM::ProxyKind fromProxy = thisOp.getFromProxy();
   NVVM::ProxyKind toProxy = thisOp.getToProxy();
@@ -2550,6 +2554,8 @@ NVVM::IIDArgsWithTypes FenceProxyAcquireOp::getIIDAndArgsWithTypes(
       id = llvm::Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_sys;
       break;
     }
+  } else {
+    llvm_unreachable("unsupported proxy kinds");
   }
 
   return {id, std::move(args), {}};
@@ -2559,7 +2565,7 @@ NVVM::IIDArgsWithTypes FenceProxyReleaseOp::getIIDAndArgsWithTypes(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::FenceProxyReleaseOp>(op);
 
-  llvm::Intrinsic::ID id;
+  llvm::Intrinsic::ID id = llvm::Intrinsic::not_intrinsic;
 
   NVVM::ProxyKind fromProxy = thisOp.getFromProxy();
   NVVM::ProxyKind toProxy = thisOp.getToProxy();
@@ -2581,6 +2587,8 @@ NVVM::IIDArgsWithTypes FenceProxyReleaseOp::getIIDAndArgsWithTypes(
       id = llvm::Intrinsic::nvvm_fence_proxy_tensormap_generic_release_sys;
       break;
     }
+  } else {
+    llvm_unreachable("unsupported proxy kinds");
   }
 
   return {id, {}, {}};

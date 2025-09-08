@@ -416,7 +416,7 @@ def NVVM_ReduxOp :
       LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
   }];
   string llvmBuilder = [{
-      auto [id, args, _] = 
+      auto [id, args, types] = 
       NVVM::ReduxOp::getIIDAndArgsWithTypes(
                         *op, moduleTranslation, builder);
       $res = createIntrinsicCall(builder, id, args);
@@ -890,7 +890,7 @@ def NVVM_FenceProxyAcquireOp : NVVM_Op<"fence.proxy.acquire">,
       LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
   }];
   let llvmBuilder = [{
-    auto [intId, args, _] = 
+    auto [intId, args, types] = 
     NVVM::FenceProxyAcquireOp::getIIDAndArgsWithTypes(
       *op, moduleTranslation, builder);
     createIntrinsicCall(builder, intId, args);
@@ -924,10 +924,9 @@ def NVVM_FenceProxyReleaseOp : NVVM_Op<"fence.proxy.release">,
       LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
   }];
   let llvmBuilder = [{
-    auto [intId, _, _] =
-    NVVM::FenceProxyReleaseOp::getIIDAndArgsWithTypes(
+    auto [intId, args, types] = NVVM::FenceProxyReleaseOp::getIIDAndArgsWithTypes(
       *op, moduleTranslation, builder);
-    createIntrinsicCall(builder, intId);
+    createIntrinsicCall(builder, intId, args);
   }];
 
   let hasVerifier = 1;
@@ -1012,7 +1011,7 @@ def NVVM_ShflOp :
       LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
   }];
   string llvmBuilder = [{
-      auto [intId, args, _] = NVVM::ShflOp::getIIDAndArgsWithTypes(
+      auto [intId, args, types] = NVVM::ShflOp::getIIDAndArgsWithTypes(
           *op, moduleTranslation, builder);
       $res = createIntrinsicCall(builder, intId, args);
   }];
@@ -1066,7 +1065,7 @@ def NVVM_VoteSyncOp
         LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
   }];
   string llvmBuilder = [{
-    auto [intId, args, _] = 
+    auto [intId, args, types] = 
     NVVM::VoteSyncOp::getIIDAndArgsWithTypes(
       *op, moduleTranslation, builder);
     $res = createIntrinsicCall(builder, intId, args);
@@ -1145,7 +1144,7 @@ def NVVM_CpAsyncOp : NVVM_Op<"cp.async.shared.global">,
                             llvm::IRBuilderBase &builder);
   }];
   string llvmBuilder = [{
-    auto [id, args, _] = NVVM::CpAsyncOp::getIIDAndArgsWithTypes(
+    auto [id, args, types] = NVVM::CpAsyncOp::getIIDAndArgsWithTypes(
       *op, moduleTranslation, builder);
     createIntrinsicCall(builder, id, args);
   }];
@@ -2608,7 +2607,7 @@ def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOp :
   let hasVerifier = 1;
 
   string llvmBuilder = [{
-    auto [id, args, _] = NVVM::CpAsyncBulkTensorSharedCTAToGlobalOp::getIIDAndArgsWithTypes(
+    auto [id, args, types] = NVVM::CpAsyncBulkTensorSharedCTAToGlobalOp::getIIDAndArgsWithTypes(
                       *op, moduleTranslation, builder);
     createIntrinsicCall(builder, id, args);
   }];
@@ -2686,7 +2685,7 @@ def NVVM_PrefetchOp : NVVM_Op<"prefetch",
     }
   }];
   let llvmBuilder = [{
-    auto [id, args, _] = NVVM::PrefetchOp::getIIDAndArgsWithTypes(*op,
+    auto [id, args, types] = NVVM::PrefetchOp::getIIDAndArgsWithTypes(*op,
                                           moduleTranslation, builder);
 
     if(op.getTensormap())
@@ -2734,7 +2733,7 @@ def NVVM_CpAsyncBulkPrefetchOp : NVVM_Op<"cp.async.bulk.prefetch"> {
   }];
 
   string llvmBuilder = [{
-    auto [id, args, _] = NVVM::CpAsyncBulkPrefetchOp::getIIDAndArgsWithTypes(
+    auto [id, args, types] = NVVM::CpAsyncBulkPrefetchOp::getIIDAndArgsWithTypes(
                       *op, moduleTranslation, builder);
     createIntrinsicCall(builder, id, args);
   }];
@@ -2777,7 +2776,7 @@ def NVVM_CpAsyncBulkTensorPrefetchOp :
   let hasVerifier = 1;
 
   string llvmBuilder = [{
-    auto [id, args, _] = NVVM::CpAsyncBulkTensorPrefetchOp::getIIDAndArgsWithTypes(
+    auto [id, args, types] = NVVM::CpAsyncBulkTensorPrefetchOp::getIIDAndArgsWithTypes(
                       *op, moduleTranslation, builder);
     createIntrinsicCall(builder, id, args);
   }];
@@ -2846,7 +2845,7 @@ def NVVM_CpAsyncBulkTensorReduceOp :
   let hasVerifier = 1;
 
   string llvmBuilder = [{
-    auto [id, args, _] = NVVM::CpAsyncBulkTensorReduceOp::getIIDAndArgsWithTypes(
+    auto [id, args, types] = NVVM::CpAsyncBulkTensorReduceOp::getIIDAndArgsWithTypes(
                       *op, moduleTranslation, builder);
     createIntrinsicCall(builder, id, args);
   }];
@@ -2893,7 +2892,7 @@ def NVVM_CpAsyncBulkGlobalToSharedClusterOp :
   }];
 
   string llvmBuilder = [{
-    auto [id, args, _] = NVVM::CpAsyncBulkGlobalToSharedClusterOp::getIIDAndArgsWithTypes(
+    auto [id, args, types] = NVVM::CpAsyncBulkGlobalToSharedClusterOp::getIIDAndArgsWithTypes(
                       *op, moduleTranslation, builder);
     createIntrinsicCall(builder, id, args);
   }];
@@ -2982,7 +2981,7 @@ def NVVM_CpAsyncBulkSharedCTAToGlobalOp :
                           llvm::IRBuilderBase& builder);
   }];
   string llvmBuilder = [{
-    auto [id, args, _] = NVVM::CpAsyncBulkSharedCTAToGlobalOp::getIIDAndArgsWithTypes(
+    auto [id, args, types] = NVVM::CpAsyncBulkSharedCTAToGlobalOp::getIIDAndArgsWithTypes(
                       *op, moduleTranslation, builder);
     createIntrinsicCall(builder, id, args);
   }];
@@ -3288,7 +3287,7 @@ def NVVM_MatchSyncOp : NVVM_Op<"match.sync">,
       LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
   }];
   string llvmBuilder = [{
-    auto [intId, args, _] = 
+    auto [intId, args, types] = 
     NVVM::MatchSyncOp::getIIDAndArgsWithTypes(
       *op, moduleTranslation, builder);
     $res = createIntrinsicCall(builder, intId, args);
@@ -3321,7 +3320,7 @@ def NVVM_BulkStoreOp: NVVM_Op<"st.bulk"> {
       LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
   }];
   string llvmBuilder = [{
-    auto [intId, args, _] = 
+    auto [intId, args, types] = 
     NVVM::BulkStoreOp::getIIDAndArgsWithTypes(
       *op, moduleTranslation, builder);
     createIntrinsicCall(builder, intId, args);
@@ -3413,7 +3412,7 @@ def NVVM_Tcgen05AllocOp : NVVM_Op<"tcgen05.alloc", [NVVMRequiresSMa<[100, 101]>]
                             llvm::IRBuilderBase &builder);
   }];
   string llvmBuilder = [{
-    auto [id, args, _] = NVVM::Tcgen05AllocOp::getIIDAndArgsWithTypes(
+    auto [id, args, types] = NVVM::Tcgen05AllocOp::getIIDAndArgsWithTypes(
       *op, moduleTranslation, builder);
     createIntrinsicCall(builder, id, args);
   }];
@@ -3440,7 +3439,7 @@ def NVVM_Tcgen05DeallocOp : NVVM_Op<"tcgen05.dealloc", [NVVMRequiresSMa<[100, 10
                             llvm::IRBuilderBase &builder);
   }];
   string llvmBuilder = [{
-    auto [id, args, _] = NVVM::Tcgen05DeallocOp::getIIDAndArgsWithTypes(
+    auto [id, args, types] = NVVM::Tcgen05DeallocOp::getIIDAndArgsWithTypes(
       *op, moduleTranslation, builder);
     createIntrinsicCall(builder, id, args);
   }];
@@ -3544,7 +3543,7 @@ def NVVM_Tcgen05CommitOp : NVVM_Op<"tcgen05.commit", [NVVMRequiresSMa<[100, 101]
   }];
 
   string llvmBuilder = [{
-    auto [id, args, _] = NVVM::Tcgen05CommitOp::getIIDAndArgsWithTypes(
+    auto [id, args, types] = NVVM::Tcgen05CommitOp::getIIDAndArgsWithTypes(
       *op, moduleTranslation, builder);
     createIntrinsicCall(builder, id, args);
   }];
@@ -3654,7 +3653,7 @@ def NVVM_Tcgen05CpOp : NVVM_Op<"tcgen05.cp", [NVVMRequiresSMa<[100, 101]>]> {
   }];
 
   string llvmBuilder = [{
-    auto [id, args, _] = NVVM::Tcgen05CpOp::getIIDAndArgsWithTypes(*op,
+    auto [id, args, types] = NVVM::Tcgen05CpOp::getIIDAndArgsWithTypes(*op,
       moduleTranslation, builder);
     createIntrinsicCall(builder, id, args);
   }];
@@ -3827,7 +3826,7 @@ def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMa<[100, 101]>]> {
       LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
   }];
   string llvmBuilder = [{
-    auto [id, args, _] = 
+    auto [id, args, types] = 
     NVVM::Tcgen05LdOp::getIIDAndArgsWithTypes(*op,
       moduleTranslation, builder);
     $res = createIntrinsicCall(builder, id, args);
@@ -3907,7 +3906,7 @@ def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st", [NVVMRequiresSMa<[100, 101]>]> {
       LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
   }];
   string llvmBuilder = [{
-    auto [id, args, _] = 
+    auto [id, args, types] = 
     NVVM::Tcgen05StOp::getIIDAndArgsWithTypes(*op,
       moduleTranslation, builder);
     createIntrinsicCall(builder, id, args);
@@ -3974,7 +3973,7 @@ def NVVM_DotAccumulate4WayOp : NVVM_Op<"dot.accumulate.4way"> {
   }];
 
   string llvmBuilder = [{
-    auto [id, args, _] = NVVM::DotAccumulate4WayOp::getIIDAndArgsWithTypes(
+    auto [id, args, types] = NVVM::DotAccumulate4WayOp::getIIDAndArgsWithTypes(
                         *op, moduleTranslation, builder);
     $res = createIntrinsicCall(builder, id, args);
   }];
@@ -4028,7 +4027,7 @@ def NVVM_DotAccumulate2WayOp : NVVM_Op<"dot.accumulate.2way"> {
   }];
   
   string llvmBuilder = [{
-    auto [id, args, _] = NVVM::DotAccumulate2WayOp::getIIDAndArgsWithTypes(
+    auto [id, args, types] = NVVM::DotAccumulate2WayOp::getIIDAndArgsWithTypes(
                         *op, moduleTranslation, builder);
     $res = createIntrinsicCall(builder, id, args);
   }];
