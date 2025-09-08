@@ -223,31 +223,30 @@ static int DuplicateFileDescriptor(int fd) {
 #endif
 }
 
-static void ResetTimeToLive(std::mutex &ttl_mutex,
-                            MainLoopBase::TimePoint &ttl_time_point) {
-  std::scoped_lock<std::mutex> lock(ttl_mutex);
-  ttl_time_point = MainLoopBase::TimePoint();
+static void
+ResetConnectionTimeout(std::mutex &connection_timeout_mutex,
+                       MainLoopBase::TimePoint &conncetion_timeout_time_point) {
+  std::scoped_lock<std::mutex> lock(connection_timeout_mutex);
+  conncetion_timeout_time_point = MainLoopBase::TimePoint();
 }
 
-static void TrackTimeToLive(MainLoop &loop, std::mutex &ttl_mutex,
-                            MainLoopBase::TimePoint &ttl_time_point,
-                            std::chrono::seconds ttl_seconds) {
+static void
+TrackConnectionTimeout(MainLoop &loop, std::mutex &connection_timeout_mutex,
+                       MainLoopBase::TimePoint &conncetion_timeout_time_point,
+                       std::chrono::seconds ttl_seconds) {
   MainLoopBase::TimePoint next_checkpoint =
       std::chrono::steady_clock::now() + std::chrono::seconds(ttl_seconds);
   {
-    std::scoped_lock<std::mutex> lock(ttl_mutex);
+    std::scoped_lock<std::mutex> lock(connection_timeout_mutex);
     // We don't need to take the max of `ttl_time_point` and `next_checkpoint`,
     // because `next_checkpoint` must be the latest.
-    ttl_time_point = next_checkpoint;
+    conncetion_timeout_time_point = next_checkpoint;
   }
   loop.AddCallback(
-      [&ttl_mutex, &ttl_time_point, next_checkpoint](MainLoopBase &loop) {
-        bool should_request_terimation;
-        {
-          std::scoped_lock<std::mutex> lock(ttl_mutex);
-          should_request_terimation = ttl_time_point == next_checkpoint;
-        }
-        if (should_request_terimation)
+      [&connection_timeout_mutex, &conncetion_timeout_time_point,
+       next_checkpoint](MainLoopBase &loop) {
+        std::scoped_lock<std::mutex> lock(connection_timeout_mutex);
+        if (conncetion_timeout_time_point == next_checkpoint)
           loop.RequestTermination();
       },
       next_checkpoint);
@@ -285,11 +284,11 @@ validateConnection(llvm::StringRef conn) {
   return make_error();
 }
 
-static llvm::Error
-serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
-                Log *log, const ReplMode default_repl_mode,
-                const std::vector<std::string> &pre_init_commands,
-                std::optional<std::chrono::seconds> ttl_seconds) {
+static llvm::Error serveConnection(
+    const Socket::SocketProtocol &protocol, const std::string &name, Log *log,
+    const ReplMode default_repl_mode,
+    const std::vector<std::string> &pre_init_commands,
+    std::optional<std::chrono::seconds> connection_timeout_seconds) {
   Status status;
   static std::unique_ptr<Socket> listener = Socket::Create(protocol, status);
   if (status.Fail()) {
@@ -314,10 +313,12 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
     g_loop.AddPendingCallback(
         [](MainLoopBase &loop) { loop.RequestTermination(); });
   });
-  static MainLoopBase::TimePoint g_ttl_time_point;
-  static std::mutex g_ttl_mutex;
-  if (ttl_seconds)
-    TrackTimeToLive(g_loop, g_ttl_mutex, g_ttl_time_point, ttl_seconds.value());
+  static MainLoopBase::TimePoint g_connection_timeout_time_point;
+  static std::mutex g_connection_timeout_mutex;
+  if (connection_timeout_seconds)
+    TrackConnectionTimeout(g_loop, g_connection_timeout_mutex,
+                           g_connection_timeout_time_point,
+                           connection_timeout_seconds.value());
   std::condition_variable dap_sessions_condition;
   std::mutex dap_sessions_mutex;
   std::map<MainLoop *, DAP *> dap_sessions;
@@ -328,8 +329,9 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
                                              std::unique_ptr<Socket> sock) {
     // Reset the keep alive timer, because we won't be killing the server
     // while this connection is being served.
-    if (ttl_seconds)
-      ResetTimeToLive(g_ttl_mutex, g_ttl_time_point);
+    if (connection_timeout_seconds)
+      ResetConnectionTimeout(g_connection_timeout_mutex,
+                             g_connection_timeout_time_point);
     std::string client_name = llvm::formatv("client_{0}", clientCount++).str();
     DAP_LOG(log, "({0}) client connected", client_name);
 
@@ -368,9 +370,10 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
       std::notify_all_at_thread_exit(dap_sessions_condition, std::move(lock));
 
       // Start the countdown to kill the server at the end of each connection.
-      if (ttl_seconds)
-        TrackTimeToLive(g_loop, g_ttl_mutex, g_ttl_time_point,
-                        ttl_seconds.value());
+      if (connection_timeout_seconds)
+        TrackConnectionTimeout(g_loop, g_connection_timeout_mutex,
+                               g_connection_timeout_time_point,
+                               connection_timeout_seconds.value());
     });
     client.detach();
   });
@@ -500,6 +503,31 @@ int main(int argc, char *argv[]) {
     connection.assign(path);
   }
 
+  std::optional<std::chrono::seconds> connection_timeout_seconds;
+  if (llvm::opt::Arg *connection_timeout_arg =
+          input_args.getLastArg(OPT_connection_timeout)) {
+    if (!connection.empty()) {
+      llvm::StringRef connection_timeout_string_value =
+          connection_timeout_arg->getValue();
+      int connection_timeout_int_value;
+      if (connection_timeout_string_value.getAsInteger(
+              10, connection_timeout_int_value)) {
+        llvm::errs() << "'" << connection_timeout_string_value
+                     << "' is not a valid connection timeout value\n";
+        return EXIT_FAILURE;
+      }
+      // Ignore non-positive values.
+      if (connection_timeout_int_value > 0)
+        connection_timeout_seconds =
+            std::chrono::seconds(connection_timeout_int_value);
+    } else {
+      llvm::errs()
+          << "\"--connection-timeout\" requires \"--connection\" to be "
+             "specified\n";
+      return EXIT_FAILURE;
+    }
+  }
+
 #if !defined(_WIN32)
   if (input_args.hasArg(OPT_wait_for_debugger)) {
     printf("Paused waiting for debugger to attach (pid = %i)...\n", getpid());
@@ -553,21 +581,6 @@ int main(int argc, char *argv[]) {
   }
 
   if (!connection.empty()) {
-    std::optional<std::chrono::seconds> ttl_seconds;
-    llvm::opt::Arg *time_to_live = input_args.getLastArg(OPT_time_to_live);
-    if (time_to_live) {
-      llvm::StringRef time_to_live_string_value = time_to_live->getValue();
-      int time_to_live_int_value;
-      if (time_to_live_string_value.getAsInteger(10, time_to_live_int_value)) {
-        llvm::errs() << "'" << time_to_live_string_value
-                     << "' is not a valid time-to-live value\n";
-        return EXIT_FAILURE;
-      }
-      // Ignore non-positive values.
-      if (time_to_live_int_value > 0)
-        ttl_seconds = std::chrono::seconds(time_to_live_int_value);
-    }
-
     auto maybeProtoclAndName = validateConnection(connection);
     if (auto Err = maybeProtoclAndName.takeError()) {
       llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
@@ -578,8 +591,9 @@ int main(int argc, char *argv[]) {
     Socket::SocketProtocol protocol;
     std::string name;
     std::tie(protocol, name) = *maybeProtoclAndName;
-    if (auto Err = serveConnection(protocol, name, log.get(), default_repl_mode,
-                                   pre_init_commands, ttl_seconds)) {
+    if (auto Err =
+            serveConnection(protocol, name, log.get(), default_repl_mode,
+                            pre_init_commands, connection_timeout_seconds)) {
       llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
                                   "Connection failed: ");
       return EXIT_FAILURE;
