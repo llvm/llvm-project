@@ -504,10 +504,7 @@ class LowerTypeTestsModule {
   void importTypeTest(CallInst *CI);
   void importFunction(Function *F, bool isJumpTableCanonical);
 
-  BitSetInfo
-  buildBitSet(Metadata *TypeId,
-              const DenseMap<GlobalTypeMember *, uint64_t> &GlobalLayout);
-  ByteArrayInfo *createByteArray(BitSetInfo &BSI);
+  ByteArrayInfo *createByteArray(const BitSetInfo &BSI);
   void allocateByteArrays();
   Value *createBitSetTest(IRBuilder<> &B, const TypeIdLowering &TIL,
                           Value *BitOffset);
@@ -578,9 +575,9 @@ public:
 
 /// Build a bit set for TypeId using the object layouts in
 /// GlobalLayout.
-BitSetInfo LowerTypeTestsModule::buildBitSet(
-    Metadata *TypeId,
-    const DenseMap<GlobalTypeMember *, uint64_t> &GlobalLayout) {
+static BitSetInfo
+buildBitSet(Metadata *TypeId,
+            const DenseMap<GlobalTypeMember *, uint64_t> &GlobalLayout) {
   BitSetBuilder BSB;
 
   // Compute the byte offset of each address associated with this type
@@ -615,7 +612,7 @@ static Value *createMaskedBitTest(IRBuilder<> &B, Value *Bits,
   return B.CreateICmpNE(MaskedBits, ConstantInt::get(BitsType, 0));
 }
 
-ByteArrayInfo *LowerTypeTestsModule::createByteArray(BitSetInfo &BSI) {
+ByteArrayInfo *LowerTypeTestsModule::createByteArray(const BitSetInfo &BSI) {
   // Create globals to stand in for byte arrays and masks. These never actually
   // get initialized, we RAUW and erase them later in allocateByteArrays() once
   // we know the offset and mask to use.
