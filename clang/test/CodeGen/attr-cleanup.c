@@ -17,17 +17,14 @@ void test_nested_for_loop_cleanup(void) {
   for (int i = 10; 0;) {
     for (__attribute__((cleanup(cleaner))) int j = 20; 0;)
       ;
-    
-#ifndef __STDC_VERSION__
-    if (j > 15) {
-      // do something with inner variable
-    }
-#endif
+    i = 5; // Some operation after inner loop
   }
 }
 
-// C89: if.end:
+// C89: for.end:
+// C89-NEXT: store i32 5, ptr %i, align 4
 // C89-NEXT: call void @cleaner(ptr noundef %j)
 
-// C99: for.cond.cleanup{{[0-9]*}}:
+// C99: for.cond.cleanup:
 // C99-NEXT: call void @cleaner(ptr noundef %j)
+// C99-NEXT: br label %for.end
