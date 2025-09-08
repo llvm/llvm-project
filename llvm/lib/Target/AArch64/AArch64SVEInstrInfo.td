@@ -4615,6 +4615,24 @@ let Predicates = [HasSVE2p2_or_SME2p2] in {
   defm REVD_ZPzZ : sve_int_perm_rev_revd_z<"revd", AArch64revd_mt>;
 } // End HasSME2p2orSVE2p2
 
+
+//===----------------------------------------------------------------------===//
+// SME2.3 or SVE2.3 instructions
+//===----------------------------------------------------------------------===//
+let Predicates = [HasSVE2p3_or_SME2p3] in {
+  // SVE2 Add pairwise within quadword vector segments (unpredicated)
+  defm ADDQP_ZZZ     : sve2_int_mul<0b110, "addqp",   null_frag>;
+
+  // SVE2 Add subtract/subtract pairwise
+  defm ADDSUBP_ZZZ   : sve2_int_mul<0b111, "addsubp", null_frag>;
+  defm SUBP_ZPmZ     : sve2_int_arith_pred<0b100001, "subp", null_frag>;
+
+  // SVE2 integer absolute difference and accumulate long
+  defm SABAL_ZZZ : sve2_int_two_way_absdiff_accum_long<0b0, "sabal">;
+  defm UABAL_ZZZ : sve2_int_two_way_absdiff_accum_long<0b1, "uabal">;
+
+} // End HasSME2p2orSVE2p2
+
 //===----------------------------------------------------------------------===//
 // SME2.2 or SVE2.2 instructions - Legal in streaming mode iff target has SME2p2
 //===----------------------------------------------------------------------===//

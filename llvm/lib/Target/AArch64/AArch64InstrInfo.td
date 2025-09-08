@@ -315,6 +315,10 @@ def HasSVE2p2_or_SME2p2
     : Predicate<"Subtarget->isSVEorStreamingSVEAvailable() && (Subtarget->hasSVE2p2() || Subtarget->hasSME2p2())">,
                 AssemblerPredicateWithAll<(any_of FeatureSME2p2, FeatureSVE2p2),
                 "sme2p2 or sve2p2">;
+def HasSVE2p3_or_SME2p3
+    : Predicate<"Subtarget->isSVEorStreamingSVEAvailable() && (Subtarget->hasSVE2p3() || Subtarget->hasSME2p3())">,
+                AssemblerPredicateWithAll<(any_of FeatureSME2p3, FeatureSVE2p3),
+                "sme2p3 or sve2p3">;
 def HasNonStreamingSVE2p2_or_SME2p2
     : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE2p2()) ||"
                 "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2())">,
