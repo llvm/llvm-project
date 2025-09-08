@@ -53,7 +53,7 @@ AST_MATCHER(CXXMethodDecl, nameCollidesWithMethodInBase) {
           clang::AccessSpecifier::AS_private)
         continue;
 
-      const auto *CurrentRecord =
+      const CXXRecordDecl *CurrentRecord =
           CurrentBaseSpec->getType()->getAsCXXRecordDecl();
       if (!CurrentRecord)
         continue;
@@ -117,7 +117,8 @@ void DerivedMethodShadowingBaseMethodCheck::check(
   if (!ShadowingMethod || !DerivedClass || !BaseMethod)
     llvm_unreachable("Required binding not found");
 
-  diag(ShadowingMethod->getBeginLoc(), "'%0' shadows method with the same name in class %1")
+  diag(ShadowingMethod->getBeginLoc(),
+       "'%0' shadows method with the same name in class %1")
       << ShadowingMethod->getQualifiedNameAsString() << BaseMethod->getParent();
   diag(BaseMethod->getBeginLoc(), "previous definition of %0 is here",
        DiagnosticIDs::Note)
