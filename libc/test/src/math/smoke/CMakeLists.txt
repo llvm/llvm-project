@@ -633,7 +633,7 @@ add_fp_unittest(
   HDRS
     SubTest.h
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.math.dsubl
     libc.src.__support.macros.properties.os
@@ -5043,7 +5043,6 @@ add_fp_unittest(
   SRCS
     pow_test.cpp
   DEPENDS
-    libc.src.errno.errno
     libc.hdr.fenv_macros
     libc.src.math.pow
 )
