@@ -420,3 +420,63 @@ define <4 x i32> @or_zext_nneg_multiconstant(<4 x i8> %a) {
   %or = or <4 x i32> %z1, <i32 240, i32 1, i32 242, i32 3>
   ret <4 x i32> %or
 }
+
+; Negative test: bitcast from scalar float to vector int (optimization should not apply)
+define <2 x i16> @and_bitcast_f32_to_v2i16_constant(float %a) {
+; CHECK-LABEL: @and_bitcast_f32_to_v2i16_constant(
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast float [[B:%.*]] to <2 x i16>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i16> <i16 0, i16 1>, [[BC2]]
+; CHECK-NEXT:    ret <2 x i16> [[AND]]
+;
+  %bc = bitcast float %a to <2 x i16>
+  %and = and <2 x i16> <i16 0, i16 1>, %bc
+  ret <2 x i16> %and
+}
+
+; Negative test: bitcast from vector float to scalar int (optimization should not apply)
+define i64 @and_bitcast_v2f32_to_i64_constant(<2 x float> %a) {
+; CHECK-LABEL: @and_bitcast_v2f32_to_i64_constant(
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast <2 x float> [[B:%.*]] to i64
+; CHECK-NEXT:    [[AND:%.*]] = and i64 123, [[BC2]]
+; CHECK-NEXT:    ret i64 [[AND]]
+;
+  %bc = bitcast <2 x float> %a to i64
+  %and = and i64 123, %bc
+  ret i64 %and
+}
+
+; Test no-op bitcast
+define i16 @xor_bitcast_i16_to_i16_constant(i16 %a) {
+; CHECK-LABEL: @xor_bitcast_i16_to_i16_constant(
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast i16 [[B:%.*]] to i16
+; CHECK-NEXT:    [[OR:%.*]] = xor i16 123, [[BC2]]
+; CHECK-NEXT:    ret i16 [[OR]]
+;
+  %bc = bitcast i16 %a to i16
+  %or = xor i16 123, %bc
+  ret i16 %or
+}
+
+; Test bitwise operations with integer vector to integer bitcast
+define <16 x i1> @xor_bitcast_i16_to_v16i1_constant(i16 %a) {
+; CHECK-LABEL: @xor_bitcast_i16_to_v16i1_constant(
+; CHECK-NEXT:    [[B:%.*]] = xor i16 [[A:%.*]], -1
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast i16 [[B]] to <16 x i1>
+; CHECK-NEXT:    ret <16 x i1> [[BC2]]
+;
+  %bc = bitcast i16 %a to <16 x i1>
+  %or = xor <16 x i1> %bc, splat (i1 true)
+  ret <16 x i1> %or
+}
+
+; Test bitwise operations with integer vector to integer bitcast
+define i16 @or_bitcast_v16i1_to_i16_constant(<16 x i1> %a) {
+; CHECK-LABEL: @or_bitcast_v16i1_to_i16_constant(
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast <16 x i1> [[B:%.*]] to i16
+; CHECK-NEXT:    [[OR:%.*]] = or i16 [[BC2]], 3
+; CHECK-NEXT:    ret i16 [[OR]]
+;
+  %bc = bitcast <16 x i1> %a to i16
+  %or = or i16 %bc, 3
+  ret i16 %or
+}
