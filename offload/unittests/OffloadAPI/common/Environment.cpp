@@ -129,7 +129,7 @@ const std::vector<TestEnvironment::Device> &TestEnvironment::getDevices() {
     }
   }
 
-  if (Devices.size() <= 1)
+  if (Devices.size() == 0)
     errs() << "Warning: No devices found for OffloadAPI tests.\n";
 
   return Devices;
