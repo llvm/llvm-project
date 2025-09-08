@@ -205,6 +205,7 @@ void ARMTargetLowering::addTypeForNEON(MVT VT, MVT PromotedLdStVT) {
   setOperationAction(ISD::SELECT,            VT, Expand);
   setOperationAction(ISD::SELECT_CC,         VT, Expand);
   setOperationAction(ISD::VSELECT,           VT, Expand);
+  setOperationAction(ISD::CTSELECT,          VT, Custom);
   setOperationAction(ISD::SIGN_EXTEND_INREG, VT, Expand);
   if (VT.isInteger()) {
     setOperationAction(ISD::SHL, VT, Custom);
@@ -306,6 +307,7 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
     setOperationAction(ISD::CTPOP, VT, Expand);
     setOperationAction(ISD::SELECT, VT, Expand);
     setOperationAction(ISD::SELECT_CC, VT, Expand);
+    setOperationAction(ISD::CTSELECT, VT, Custom);
 
     // Vector reductions
     setOperationAction(ISD::VECREDUCE_ADD, VT, Legal);
@@ -357,6 +359,7 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
     setOperationAction(ISD::MSTORE, VT, Legal);
     setOperationAction(ISD::SELECT, VT, Expand);
     setOperationAction(ISD::SELECT_CC, VT, Expand);
+    setOperationAction(ISD::CTSELECT, VT, Custom);
 
     // Pre and Post inc are supported on loads and stores
     for (unsigned im = (unsigned)ISD::PRE_INC;
@@ -405,6 +408,28 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
   setOperationAction(ISD::VECREDUCE_FMIN, MVT::v2f16, Custom);
   setOperationAction(ISD::VECREDUCE_FMAX, MVT::v2f16, Custom);
 
+  if (Subtarget->hasFullFP16()) {
+    setOperationAction(ISD::CTSELECT, MVT::v4f16, Custom);
+    setOperationAction(ISD::CTSELECT, MVT::v8f16, Custom);
+  }
+
+  if (Subtarget->hasBF16()) {
+    setOperationAction(ISD::CTSELECT, MVT::v4bf16, Custom);
+    setOperationAction(ISD::CTSELECT, MVT::v8bf16, Custom);
+  }
+
+  // small exotic vectors get scalarised for ctselect
+  setOperationAction(ISD::CTSELECT, MVT::v1i8,  Expand);
+  setOperationAction(ISD::CTSELECT, MVT::v1i16, Expand);
+  setOperationAction(ISD::CTSELECT, MVT::v1i32, Expand);
+  setOperationAction(ISD::CTSELECT, MVT::v1f32, Expand);
+  setOperationAction(ISD::CTSELECT, MVT::v2i8,  Expand);
+  
+  setOperationAction(ISD::CTSELECT, MVT::v2i16, Promote);
+  setOperationPromotedToType(ISD::CTSELECT, MVT::v2i16, MVT::v4i16);
+  setOperationAction(ISD::CTSELECT, MVT::v4i8, Promote);
+  setOperationPromotedToType(ISD::CTSELECT, MVT::v4i8, MVT::v8i8);
+
   // We 'support' these types up to bitcast/load/store level, regardless of
   // MVE integer-only / float support. Only doing FP data processing on the FP
   // vector types is inhibited at integer-only level.
@@ -416,6 +441,7 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
     setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
     setOperationAction(ISD::VSELECT, VT, Legal);
+    setOperationAction(ISD::CTSELECT, VT, Custom);
     setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
   }
   setOperationAction(ISD::SCALAR_TO_VECTOR, MVT::v2f64, Legal);
@@ -471,6 +497,7 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
     setOperationAction(ISD::VSELECT, VT, Expand);
     setOperationAction(ISD::SELECT, VT, Expand);
     setOperationAction(ISD::SELECT_CC, VT, Expand);
+    setOperationAction(ISD::CTSELECT, VT, Custom);
 
     if (!HasMVEFP) {
       setOperationAction(ISD::SINT_TO_FP, VT, Expand);
@@ -1452,10 +1479,27 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::f32, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::f64, Custom);
+  setOperationAction(ISD::CTSELECT,  MVT::i8,  Promote);
+  setOperationAction(ISD::CTSELECT,  MVT::i16, Promote);
+  setOperationPromotedToType(ISD::CTSELECT, MVT::i16, MVT::i32);
+
+  setOperationAction(ISD::CTSELECT,  MVT::i32, Custom);
+  setOperationAction(ISD::CTSELECT,  MVT::i64, Expand);
+  setOperationAction(ISD::CTSELECT,  MVT::f32, Custom);
+  setOperationAction(ISD::CTSELECT,  MVT::f64, Custom);
+  
+  // Handle f16 and bf16 without falling back to select from ctselect.
+  setTargetDAGCombine({ISD::CTSELECT});
+
   if (Subtarget->hasFullFP16()) {
     setOperationAction(ISD::SETCC,     MVT::f16, Expand);
     setOperationAction(ISD::SELECT,    MVT::f16, Custom);
     setOperationAction(ISD::SELECT_CC, MVT::f16, Custom);
+    setOperationAction(ISD::CTSELECT,  MVT::f16, Custom);
+  }
+
+  if (Subtarget->hasBF16()) {
+    setOperationAction(ISD::CTSELECT, MVT::bf16, Custom);
   }
 
   setOperationAction(ISD::SETCCCARRY, MVT::i32, Custom);
@@ -1741,6 +1785,7 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(ARMISD::BCC_i64)
     MAKE_CASE(ARMISD::FMSTAT)
     MAKE_CASE(ARMISD::CMOV)
+    MAKE_CASE(ARMISD::CTSELECT)
     MAKE_CASE(ARMISD::SSAT)
     MAKE_CASE(ARMISD::USAT)
     MAKE_CASE(ARMISD::ASRL)
@@ -5262,6 +5307,20 @@ SDValue ARMTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getSelectCC(dl, Cond,
                          DAG.getConstant(0, dl, Cond.getValueType()),
                          SelectTrue, SelectFalse, ISD::SETNE);
+}
+
+SDValue ARMTargetLowering::LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+
+  SDValue Cond = Op.getOperand(0);
+  SDValue TrueVal = Op.getOperand(1);
+  SDValue FalseVal = Op.getOperand(2);
+  EVT VT = Op.getValueType();
+
+  // Normalise the condition to 0 or 1.
+  SDValue One = DAG.getConstant(1, DL, MVT::i32);
+  SDValue CondNode = DAG.getNode(ISD::AND, DL, MVT::i32, Cond, One);
+  return DAG.getNode(ARMISD::CTSELECT, DL, VT, TrueVal, FalseVal, CondNode);
 }
 
 static void checkVSELConstraints(ISD::CondCode CC, ARMCC::CondCodes &CondCode,
@@ -10626,6 +10685,7 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::GlobalTLSAddress: return LowerGlobalTLSAddress(Op, DAG);
   case ISD::SELECT:        return LowerSELECT(Op, DAG);
   case ISD::SELECT_CC:     return LowerSELECT_CC(Op, DAG);
+  case ISD::CTSELECT:      return LowerCTSELECT(Op, DAG);
   case ISD::BRCOND:        return LowerBRCOND(Op, DAG);
   case ISD::BR_CC:         return LowerBR_CC(Op, DAG);
   case ISD::BR_JT:         return LowerBR_JT(Op, DAG);
@@ -10837,6 +10897,36 @@ void ARMTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::FP_TO_UINT_SAT:
     Res = LowerFP_TO_INT_SAT(SDValue(N, 0), DAG, Subtarget);
     break;
+  case ISD::CTSELECT: {
+      EVT VT = N->getValueType(0);
+    
+      // Handle f16/bf16 type promotion while preserving ctselect
+      if (VT == MVT::f16 || VT == MVT::bf16) {
+        SDLoc DL(N);
+        SDValue Cond = N->getOperand(0);
+        SDValue TrueVal = N->getOperand(1);
+        SDValue FalseVal = N->getOperand(2);
+        
+        // Bitcast to i16, then promote to i32
+        SDValue TrueInt = DAG.getBitcast(MVT::i16, TrueVal);
+        SDValue FalseInt = DAG.getBitcast(MVT::i16, FalseVal);
+        
+        TrueInt = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, TrueInt);
+        FalseInt = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, FalseInt);
+        
+        // Normalize condition
+        SDValue One = DAG.getConstant(1, DL, MVT::i32);
+        SDValue CondNorm = DAG.getNode(ISD::AND, DL, MVT::i32, Cond, One);
+        
+        // Create i32 ctselect that will go through normal lowering
+        Res = DAG.getNode(ISD::CTSELECT, DL, MVT::i32,
+                          CondNorm, TrueInt, FalseInt);
+      } else {
+        // For other types, use existing lowering
+        Res = LowerCTSELECT(SDValue(N, 0), DAG);
+      }
+      break;
+    }
   }
   if (Res.getNode())
     Results.push_back(Res);
@@ -13475,6 +13565,63 @@ static SDValue PerformVQDMULHCombine(SDNode *N, SelectionDAG &DAG) {
   }
   return DAG.getNode(ISD::SIGN_EXTEND, DL, VT,
                      DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT, Parts));
+}
+
+static SDValue PerformCTSELECTCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                                     const ARMSubtarget *Subtarget) {
+  if (!DCI.isBeforeLegalize()) {
+      return SDValue();
+  }
+      
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc DL(N);
+  
+  EVT VT = N->getValueType(0);
+  if (VT == MVT::f16 || VT == MVT::bf16) {
+    SDValue Cond = N->getOperand(0);
+    SDValue TrueVal = N->getOperand(1);
+    SDValue FalseVal = N->getOperand(2);
+    
+    SDValue TrueInt = DAG.getBitcast(MVT::i16, TrueVal);
+    SDValue FalseInt = DAG.getBitcast(MVT::i16, FalseVal);
+    
+    // Create i16 ctselect - this will be promoted to i32 ctselect naturally
+    SDValue Result = DAG.getNode(ISD::CTSELECT, DL, MVT::i16,
+                                  Cond, TrueInt, FalseInt);
+    
+    return DAG.getBitcast(VT, Result);
+  } else if (VT.isVector()) {
+    EVT EltVT = VT.getVectorElementType();
+    if (EltVT == MVT::f16 || EltVT == MVT::bf16) {
+      SDValue Cond = N->getOperand(0);
+      SDValue TrueVal = N->getOperand(1);
+      SDValue FalseVal = N->getOperand(2);
+      
+      EVT IntVT;
+      switch (VT.getSimpleVT().SimpleTy) {
+      case MVT::v4f16:
+      case MVT::v4bf16:
+        IntVT = MVT::v4i16;
+        break;
+      case MVT::v8f16:
+      case MVT::v8bf16:
+        IntVT = MVT::v8i16;
+        break;
+      default:
+        return SDValue(); // Unsupported vector type
+      }
+      
+      SDValue TrueInt = DAG.getBitcast(IntVT, TrueVal);
+      SDValue FalseInt = DAG.getBitcast(IntVT, FalseVal);
+      
+      SDValue Result = DAG.getNode(ISD::CTSELECT, DL, IntVT,
+                                  Cond, TrueInt, FalseInt);
+      
+      return DAG.getBitcast(VT, Result);
+    }
+  }
+
+  return SDValue();
 }
 
 static SDValue PerformVSELECTCombine(SDNode *N,
@@ -18940,6 +19087,7 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SELECT_CC:
   case ISD::SELECT:     return PerformSELECTCombine(N, DCI, Subtarget);
   case ISD::VSELECT:    return PerformVSELECTCombine(N, DCI, Subtarget);
+  case ISD::CTSELECT:   return PerformCTSELECTCombine(N, DCI, Subtarget);
   case ISD::SETCC:      return PerformVSetCCToVCTPCombine(N, DCI, Subtarget);
   case ARMISD::ADDE:    return PerformADDECombine(N, DCI, Subtarget);
   case ARMISD::UMLAL:   return PerformUMLALCombine(N, DCI.DAG, Subtarget);

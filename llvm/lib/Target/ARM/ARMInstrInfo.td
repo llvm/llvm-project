@@ -32,6 +32,13 @@ def SDT_ARMSaveCallPC : SDTypeProfile<0, 1, []>;
 
 def SDT_ARMcall    : SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>;
 
+def SDT_ARMCtSelect : SDTypeProfile<1, 3, [
+  /* any */                // result
+  SDTCisSameAs<1, 0>,      // value on false
+  SDTCisSameAs<2, 0>,      // value on true
+  SDTCisVT<3, i32>         // cond
+]>;
+
 def SDT_ARMCMov : SDTypeProfile<1, 4, [
   /* any */                // result
   SDTCisSameAs<1, 0>,      // value on false
@@ -189,6 +196,7 @@ def ARMseretglue     : SDNode<"ARMISD::SERET_GLUE", SDTNone,
                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def ARMintretglue    : SDNode<"ARMISD::INTRET_GLUE", SDT_ARMcall,
                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+def ARMctselect      : SDNode<"ARMISD::CTSELECT", SDT_ARMCtSelect>;
 def ARMcmov          : SDNode<"ARMISD::CMOV", SDT_ARMCMov>;
 
 def ARMssat   : SDNode<"ARMISD::SSAT", SDTIntSatNoShOp, []>;
@@ -5134,6 +5142,226 @@ def : ARMPat<(ARMcmov i32:$false, mod_imm_not:$imm, imm:$cc, CPSR),
 
 def : ARMV6T2Pat<(ARMcmov i32:$false, imm:$src, imm:$cc, CPSR),
                  (MOVCCi32imm $false, imm:$src, imm:$cc, CPSR)>;
+
+//===----------------------------------------------------------------------===//
+// Constant-time selection pseudoinstructions. 
+// We use a machine pass to lower these pseudos as applicable by subtarget,
+// in order to avoid backend optimizations that could invalidate constant-time
+// guarantees to the source programmer by node merging or other operations that
+// would result in machine code that does not run in constant time.
+let isNotDuplicable = 1, 
+    isPseudo = 1,  
+    hasNoSchedulingInfo = 1 in {  
+
+  // i1, i8, i16, i32, i64
+  def CTSELECTint  : ARMPseudoInst<
+        (outs GPR:$dst, GPR:$tmp_mask),
+        (ins  GPR:$src1, GPR:$src2, GPR:$cond),
+        4,
+        NoItinerary,
+        []
+      > {
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmp_mask";
+  }
+
+  def CTSELECTf16  : ARMPseudoInst<
+      (outs HPR:$dst, GPR:$tmp_mask, GPR:$scratch1, GPR:$scratch2),
+      (ins  HPR:$src1, HPR:$src2, GPR:$cond),
+      4,
+      NoItinerary,
+      []
+  > {
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmp_mask,@earlyclobber $scratch1,@earlyclobber $scratch2";
+  }
+
+  def CTSELECTbf16  : ARMPseudoInst<
+      (outs HPR:$dst, GPR:$tmp_mask, GPR:$scratch1, GPR:$scratch2),
+      (ins  HPR:$src1, HPR:$src2, GPR:$cond),
+      4,
+      NoItinerary,
+      []
+  > {
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmp_mask,@earlyclobber $scratch1,@earlyclobber $scratch2";
+  }
+
+  def CTSELECTf32  : ARMPseudoInst<
+      (outs SPR:$dst, GPR:$tmp_mask, GPR:$scratch1, GPR:$scratch2),
+      (ins  SPR:$src1, SPR:$src2, GPR:$cond),
+      4,
+      NoItinerary,
+      []
+    > {
+      let Constraints = "@earlyclobber $dst,@earlyclobber $tmp_mask,@earlyclobber $scratch1,@earlyclobber $scratch2";
+    }
+
+  let Predicates = [HasDPVFP] in {
+    def CTSELECTf64  : ARMPseudoInst<
+        (outs DPR:$dst, GPR:$tmp_mask, DPR:$bcast_mask),
+        (ins  DPR:$src1, DPR:$src2, GPR:$cond),
+        4,
+        NoItinerary,
+        []
+      > {
+      let Constraints = "@earlyclobber $dst,@earlyclobber $tmp_mask,@earlyclobber $bcast_mask";
+    }
+  }
+
+  let Predicates = [HasNEON] in {
+    // DPR
+    def CTSELECTv8i8  : ARMPseudoInst<
+        (outs DPR:$dst, GPR:$tmp_mask, DPR:$bcast_mask),
+        (ins  DPR:$src1, DPR:$src2, GPR:$cond),
+        4,
+        NoItinerary,
+        []
+      > {
+      let Constraints = "@earlyclobber $dst,@earlyclobber $tmp_mask,@earlyclobber $bcast_mask";
+    }
+
+    def CTSELECTv4i16  : ARMPseudoInst<
+        (outs DPR:$dst, GPR:$tmp_mask, DPR:$bcast_mask),
+        (ins  DPR:$src1, DPR:$src2, GPR:$cond),
+        4,
+        NoItinerary,
+        []
+      > {
+      let Constraints = "@earlyclobber $dst,@earlyclobber $tmp_mask,@earlyclobber $bcast_mask";
+    }
+
+    def CTSELECTv2i32  : ARMPseudoInst<
+        (outs DPR:$dst, GPR:$tmp_mask, DPR:$bcast_mask),
+        (ins  DPR:$src1, DPR:$src2, GPR:$cond),
+        4,
+        NoItinerary,
+        []
+      > {
+      let Constraints = "@earlyclobber $dst,@earlyclobber $tmp_mask,@earlyclobber $bcast_mask";
+    }
+
+    def CTSELECTv1i64  : ARMPseudoInst<
+        (outs DPR:$dst, GPR:$tmp_mask, DPR:$bcast_mask),
+        (ins  DPR:$src1, DPR:$src2, GPR:$cond),
+        4,
+        NoItinerary,
+        []
+      > {
+      let Constraints = "@earlyclobber $dst,@earlyclobber $tmp_mask,@earlyclobber $bcast_mask";
+    }
+
+    def CTSELECTv2f32  : ARMPseudoInst<
+        (outs DPR:$dst, GPR:$tmp_mask, DPR:$bcast_mask),
+        (ins  DPR:$src1, DPR:$src2, GPR:$cond),
+        4,
+        NoItinerary,
+        []
+      > {
+      let Constraints = "@earlyclobber $dst,@earlyclobber $tmp_mask,@earlyclobber $bcast_mask";
+    }
+
+    def CTSELECTv4f16  : ARMPseudoInst<
+        (outs DPR:$dst, GPR:$tmp_mask, DPR:$bcast_mask),
+        (ins  DPR:$src1, DPR:$src2, GPR:$cond),
+        4,
+        NoItinerary,
+        []
+    > {
+      let Constraints = "@earlyclobber $dst,@earlyclobber $tmp_mask,@earlyclobber $bcast_mask";
+    }
+
+    def CTSELECTv4bf16  : ARMPseudoInst<
+        (outs DPR:$dst, GPR:$tmp_mask, DPR:$bcast_mask),
+        (ins  DPR:$src1, DPR:$src2, GPR:$cond),
+        4,
+        NoItinerary,
+        []
+    > {
+      let Constraints = "@earlyclobber $dst,@earlyclobber $tmp_mask,@earlyclobber $bcast_mask";
+    }
+
+
+    // QPR
+    def CTSELECTv16i8  : ARMPseudoInst<
+      (outs QPR:$dst, GPR:$tmp_mask, QPR:$bcast_mask),
+      (ins  QPR:$src1, QPR:$src2, GPR:$cond),
+      4,
+      NoItinerary,
+      []
+    > {
+      let Constraints = "@earlyclobber $dst,@earlyclobber $tmp_mask,@earlyclobber $bcast_mask";
+    }
+
+    def CTSELECTv8i16  : ARMPseudoInst<
+      (outs QPR:$dst, GPR:$tmp_mask, QPR:$bcast_mask),
+      (ins  QPR:$src1, QPR:$src2, GPR:$cond),
+      4,
+      NoItinerary,
+      []
+    > {
+      let Constraints = "@earlyclobber $dst,@earlyclobber $tmp_mask,@earlyclobber $bcast_mask";
+    }
+
+    def CTSELECTv4i32  : ARMPseudoInst<
+      (outs QPR:$dst, GPR:$tmp_mask, QPR:$bcast_mask),
+      (ins  QPR:$src1, QPR:$src2, GPR:$cond),
+      4,
+      NoItinerary,
+      []
+    > {
+      let Constraints = "@earlyclobber $dst,@earlyclobber $tmp_mask,@earlyclobber $bcast_mask";
+    }
+
+    def CTSELECTv2i64  : ARMPseudoInst<
+      (outs QPR:$dst, GPR:$tmp_mask, QPR:$bcast_mask),
+      (ins  QPR:$src1, QPR:$src2, GPR:$cond),
+      4,
+      NoItinerary,
+      []
+    > {
+      let Constraints = "@earlyclobber $dst,@earlyclobber $tmp_mask,@earlyclobber $bcast_mask";
+    }
+
+    def CTSELECTv4f32  : ARMPseudoInst<
+      (outs QPR:$dst, GPR:$tmp_mask, QPR:$bcast_mask),
+      (ins  QPR:$src1, QPR:$src2, GPR:$cond),
+      4,
+      NoItinerary,
+      []
+    > {
+      let Constraints = "@earlyclobber $dst,@earlyclobber $tmp_mask,@earlyclobber $bcast_mask";
+    }
+
+    def CTSELECTv2f64  : ARMPseudoInst<
+      (outs QPR:$dst, GPR:$tmp_mask, QPR:$bcast_mask),
+      (ins  QPR:$src1, QPR:$src2, GPR:$cond),
+      4,
+      NoItinerary,
+      []
+    > {
+      let Constraints = "@earlyclobber $dst,@earlyclobber $tmp_mask,@earlyclobber $bcast_mask";
+    }
+
+    def CTSELECTv8f16  : ARMPseudoInst<
+      (outs QPR:$dst, GPR:$tmp_mask, QPR:$bcast_mask),
+      (ins  QPR:$src1, QPR:$src2, GPR:$cond),
+      4,
+      NoItinerary,
+      []
+    > {
+      let Constraints = "@earlyclobber $dst,@earlyclobber $tmp_mask,@earlyclobber $bcast_mask";
+    }
+
+    def CTSELECTv8bf16  : ARMPseudoInst<
+      (outs QPR:$dst, GPR:$tmp_mask, QPR:$bcast_mask),
+      (ins  QPR:$src1, QPR:$src2, GPR:$cond),
+      4,
+      NoItinerary,
+      []
+    > {
+      let Constraints = "@earlyclobber $dst,@earlyclobber $tmp_mask,@earlyclobber $bcast_mask";
+    }
+
+  }
+}
 
 //===----------------------------------------------------------------------===//
 // Atomic operations intrinsics

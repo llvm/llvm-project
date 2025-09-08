@@ -3971,10 +3971,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     } else {
       assert(VT.isInteger());
       EVT HalfVT = VT.getHalfSizedIntegerVT(*DAG.getContext());
-      SDValue Tmp2Lo, Tmp2Hi;
-      SDValue Tmp3Lo, Tmp3Hi;
-      std::tie(Tmp2Lo, Tmp2Hi) = DAG.SplitScalar(Tmp2, dl, HalfVT, HalfVT);
-      std::tie(Tmp3Lo, Tmp3Hi) = DAG.SplitScalar(Tmp3, dl, HalfVT, HalfVT);
+      auto [Tmp2Lo, Tmp2Hi] = DAG.SplitScalar(Tmp2, dl, HalfVT, HalfVT);
+      auto [Tmp3Lo, Tmp3Hi] = DAG.SplitScalar(Tmp3, dl, HalfVT, HalfVT);
       SDValue ResLo = DAG.getCTSelect(dl, HalfVT, Tmp1, Tmp2Lo, Tmp3Lo, Node->getFlags());
       SDValue ResHi = DAG.getCTSelect(dl, HalfVT, Tmp1, Tmp2Hi, Tmp3Hi, Node->getFlags());
       Tmp1 = DAG.getNode(ISD::BUILD_PAIR, dl, VT, ResLo, ResHi);
