@@ -131,8 +131,12 @@ DebugNamesDWARFIndex::GetNonSkeletonUnit(const DebugNames::Entry &entry) const {
     unit_offset = entry.getLocalTUOffset();
   if (unit_offset) {
     if (DWARFUnit *cu = m_debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo,
-                                                     *unit_offset))
-      return &cu->GetNonSkeletonUnit();
+                                                     *unit_offset)) {
+      DWARFUnit &ret = cu->GetNonSkeletonUnit();
+      if (ret.IsSkeletonUnit())
+        return nullptr;
+      return &ret;
+    }
   }
   return nullptr;
 }
