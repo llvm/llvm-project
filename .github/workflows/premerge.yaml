@@ -76,12 +76,6 @@ jobs:
           export CC=/opt/llvm/bin/clang
           export CXX=/opt/llvm/bin/clang++
 
-          if [ "$RUNNER_ARCH" = "ARM64" ]; then
-            # XFAIL lldb test: https://github.com/llvm/llvm-project/issues/155895
-            export LIT_XFAIL="functionalities/gdb_remote_client/TestqOffsets.py"
-            export LIT_FILTER_OUT=TestqOffsets.py
-          fi
-
           if [[ "${{ matrix.runs-on }}" = "llvm-premerge-linux-runners" ]]; then
             # This environment variable is passes into the container through the
             # runner pod definition. This differs between our two clusters which
