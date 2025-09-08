@@ -253,8 +253,9 @@ MipsSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
     FullFS = "+ptr64";
     if (!FS.empty())
       FullFS = (Twine(FullFS) + "," + FS).str();
-  } else
+  } else {
     FullFS = FS.str();
+  }
 
   // Parse features string.
   ParseSubtargetFeatures(CPUName, /*TuneCPU=*/CPUName, FullFS);
