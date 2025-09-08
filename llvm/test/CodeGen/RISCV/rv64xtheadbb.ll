@@ -1244,10 +1244,9 @@ define signext i32 @hasAllNBitUsers_extu(i64 %arg1, i64 %arg2, i64 %arg3)  {
 ; RV64XTHEADBB-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64XTHEADBB-NEXT:    th.extu a0, a0, 16, 15
 ; RV64XTHEADBB-NEXT:    addi a2, a2, 1
-; RV64XTHEADBB-NEXT:    add a0, a0, a1
+; RV64XTHEADBB-NEXT:    addw a0, a0, a1
 ; RV64XTHEADBB-NEXT:    bltu a2, a3, .LBB38_1
 ; RV64XTHEADBB-NEXT:  # %bb.2: # %bb7
-; RV64XTHEADBB-NEXT:    sext.w a0, a0
 ; RV64XTHEADBB-NEXT:    ret
 entry:
   br label %bb2
@@ -1290,10 +1289,9 @@ define signext i32 @hasAllNBitUsers_ext(i64 %arg1, i64 %arg2, i64 %arg3)  {
 ; RV64XTHEADBB-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64XTHEADBB-NEXT:    th.extu a0, a0, 16, 15
 ; RV64XTHEADBB-NEXT:    addi a2, a2, 1
-; RV64XTHEADBB-NEXT:    add a0, a0, a1
+; RV64XTHEADBB-NEXT:    addw a0, a0, a1
 ; RV64XTHEADBB-NEXT:    bltu a2, a3, .LBB39_1
 ; RV64XTHEADBB-NEXT:  # %bb.2: # %bb7
-; RV64XTHEADBB-NEXT:    sext.w a0, a0
 ; RV64XTHEADBB-NEXT:    ret
 entry:
   br label %bb2
