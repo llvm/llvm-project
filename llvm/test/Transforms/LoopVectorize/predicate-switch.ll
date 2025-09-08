@@ -500,6 +500,8 @@ define void @switch_unconditional(ptr %start) {
 ; IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC1:       [[VECTOR_BODY]]:
 ; IC1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; IC1-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[START]], i64 [[INDEX]]
+; IC1-NEXT:    store <2 x i32> zeroinitializer, ptr [[TMP1]], align 4
 ; IC1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; IC1-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; IC1-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -516,6 +518,7 @@ define void @switch_unconditional(ptr %start) {
 ; IC1:       [[FOO]]:
 ; IC1-NEXT:    br label %[[LATCH]]
 ; IC1:       [[LATCH]]:
+; IC1-NEXT:    store i32 0, ptr [[GEP]], align 4
 ; IC1-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; IC1-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 100
 ; IC1-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
@@ -530,6 +533,10 @@ define void @switch_unconditional(ptr %start) {
 ; IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC2:       [[VECTOR_BODY]]:
 ; IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; IC2-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[START]], i64 [[INDEX]]
+; IC2-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[TMP2]], i32 2
+; IC2-NEXT:    store <2 x i32> zeroinitializer, ptr [[TMP2]], align 4
+; IC2-NEXT:    store <2 x i32> zeroinitializer, ptr [[TMP1]], align 4
 ; IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; IC2-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; IC2-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -546,6 +553,7 @@ define void @switch_unconditional(ptr %start) {
 ; IC2:       [[FOO]]:
 ; IC2-NEXT:    br label %[[LATCH]]
 ; IC2:       [[LATCH]]:
+; IC2-NEXT:    store i32 0, ptr [[GEP]], align 4
 ; IC2-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; IC2-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 100
 ; IC2-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
@@ -565,6 +573,7 @@ foo:
   br label %latch
 
 latch:
+  store i32 0, ptr %gep
   %iv.next = add i64 %iv, 1
   %cmp = icmp eq i64 %iv.next, 100
   br i1 %cmp, label %exit, label %loop
