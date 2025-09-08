@@ -2348,13 +2348,13 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i32 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[INDEX]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B:%.*]], i64 0, i64 [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_E:%.*]], ptr [[B:%.*]], i64 [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B]], i64 0, i64 [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_E]], ptr [[B]], i64 [[TMP5]], i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = sext i32 [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B]], i64 0, i64 [[TMP7]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT_E]], ptr [[B]], i64 [[TMP7]], i32 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = sext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B]], i64 0, i64 [[TMP9]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT_E]], ptr [[B]], i64 [[TMP9]], i32 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP8]], align 4
@@ -2368,7 +2368,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK:       pred.load.if:
 ; CHECK-NEXT:    [[TMP21:%.*]] = sext i32 [[INDEX]] to i64
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B]], i64 0, i64 [[TMP21]]
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_E]], ptr [[B]], i64 [[TMP21]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP22]], align 4
 ; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x i32> poison, i32 [[TMP23]], i64 0
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
@@ -2378,7 +2378,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-NEXT:    br i1 [[TMP26]], label [[PRED_LOAD_IF1:%.*]], label [[PRED_LOAD_CONTINUE2:%.*]]
 ; CHECK:       pred.load.if1:
 ; CHECK-NEXT:    [[TMP27:%.*]] = sext i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B]], i64 0, i64 [[TMP27]]
+; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds [[STRUCT_E]], ptr [[B]], i64 [[TMP27]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = load i32, ptr [[TMP28]], align 4
 ; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x i32> [[TMP25]], i32 [[TMP29]], i64 1
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE2]]
@@ -2388,7 +2388,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-NEXT:    br i1 [[TMP32]], label [[PRED_LOAD_IF3:%.*]], label [[PRED_LOAD_CONTINUE4:%.*]]
 ; CHECK:       pred.load.if3:
 ; CHECK-NEXT:    [[TMP33:%.*]] = sext i32 [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B]], i64 0, i64 [[TMP33]]
+; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr inbounds [[STRUCT_E]], ptr [[B]], i64 [[TMP33]]
 ; CHECK-NEXT:    [[TMP35:%.*]] = load i32, ptr [[TMP34]], align 4
 ; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <4 x i32> [[TMP31]], i32 [[TMP35]], i64 2
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE4]]
@@ -2398,7 +2398,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-NEXT:    br i1 [[TMP38]], label [[PRED_LOAD_IF5:%.*]], label [[PRED_LOAD_CONTINUE6]]
 ; CHECK:       pred.load.if5:
 ; CHECK-NEXT:    [[TMP39:%.*]] = sext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B]], i64 0, i64 [[TMP39]]
+; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr inbounds [[STRUCT_E]], ptr [[B]], i64 [[TMP39]]
 ; CHECK-NEXT:    [[TMP41:%.*]] = load i32, ptr [[TMP40]], align 4
 ; CHECK-NEXT:    [[TMP42:%.*]] = insertelement <4 x i32> [[TMP37]], i32 [[TMP41]], i64 3
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE6]]
@@ -2447,21 +2447,21 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP5:%.*]] = or disjoint i32 [[INDEX]], 6
 ; CHECK-INTERLEAVED-NEXT:    [[TMP6:%.*]] = or disjoint i32 [[INDEX]], 7
 ; CHECK-INTERLEAVED-NEXT:    [[TMP7:%.*]] = sext i32 [[INDEX]] to i64
-; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B:%.*]], i64 0, i64 [[TMP7]], i32 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT_E:%.*]], ptr [[B:%.*]], i64 [[TMP7]], i32 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP9:%.*]] = sext i32 [[TMP0]] to i64
-; CHECK-INTERLEAVED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B]], i64 0, i64 [[TMP9]], i32 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT_E]], ptr [[B]], i64 [[TMP9]], i32 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP11:%.*]] = sext i32 [[TMP1]] to i64
-; CHECK-INTERLEAVED-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B]], i64 0, i64 [[TMP11]], i32 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT_E]], ptr [[B]], i64 [[TMP11]], i32 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP13:%.*]] = sext i32 [[TMP2]] to i64
-; CHECK-INTERLEAVED-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B]], i64 0, i64 [[TMP13]], i32 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT_E]], ptr [[B]], i64 [[TMP13]], i32 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP15:%.*]] = sext i32 [[TMP3]] to i64
-; CHECK-INTERLEAVED-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B]], i64 0, i64 [[TMP15]], i32 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[STRUCT_E]], ptr [[B]], i64 [[TMP15]], i32 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP17:%.*]] = sext i32 [[TMP4]] to i64
-; CHECK-INTERLEAVED-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B]], i64 0, i64 [[TMP17]], i32 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT_E]], ptr [[B]], i64 [[TMP17]], i32 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP19:%.*]] = sext i32 [[TMP5]] to i64
-; CHECK-INTERLEAVED-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B]], i64 0, i64 [[TMP19]], i32 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT_E]], ptr [[B]], i64 [[TMP19]], i32 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP21:%.*]] = sext i32 [[TMP6]] to i64
-; CHECK-INTERLEAVED-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B]], i64 0, i64 [[TMP21]], i32 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_E]], ptr [[B]], i64 [[TMP21]], i32 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP8]], align 4
 ; CHECK-INTERLEAVED-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP10]], align 4
 ; CHECK-INTERLEAVED-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP12]], align 4
@@ -2484,7 +2484,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP41]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK-INTERLEAVED:       pred.load.if:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP42:%.*]] = sext i32 [[INDEX]] to i64
-; CHECK-INTERLEAVED-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B]], i64 0, i64 [[TMP42]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [[STRUCT_E]], ptr [[B]], i64 [[TMP42]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP44:%.*]] = load i32, ptr [[TMP43]], align 4
 ; CHECK-INTERLEAVED-NEXT:    [[TMP45:%.*]] = insertelement <4 x i32> poison, i32 [[TMP44]], i64 0
 ; CHECK-INTERLEAVED-NEXT:    br label [[PRED_LOAD_CONTINUE]]
@@ -2494,7 +2494,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP47]], label [[PRED_LOAD_IF2:%.*]], label [[PRED_LOAD_CONTINUE3:%.*]]
 ; CHECK-INTERLEAVED:       pred.load.if2:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP48:%.*]] = sext i32 [[TMP0]] to i64
-; CHECK-INTERLEAVED-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B]], i64 0, i64 [[TMP48]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [[STRUCT_E]], ptr [[B]], i64 [[TMP48]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP50:%.*]] = load i32, ptr [[TMP49]], align 4
 ; CHECK-INTERLEAVED-NEXT:    [[TMP51:%.*]] = insertelement <4 x i32> [[TMP46]], i32 [[TMP50]], i64 1
 ; CHECK-INTERLEAVED-NEXT:    br label [[PRED_LOAD_CONTINUE3]]
@@ -2504,7 +2504,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP53]], label [[PRED_LOAD_IF4:%.*]], label [[PRED_LOAD_CONTINUE5:%.*]]
 ; CHECK-INTERLEAVED:       pred.load.if4:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP54:%.*]] = sext i32 [[TMP1]] to i64
-; CHECK-INTERLEAVED-NEXT:    [[TMP55:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B]], i64 0, i64 [[TMP54]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP55:%.*]] = getelementptr inbounds [[STRUCT_E]], ptr [[B]], i64 [[TMP54]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP56:%.*]] = load i32, ptr [[TMP55]], align 4
 ; CHECK-INTERLEAVED-NEXT:    [[TMP57:%.*]] = insertelement <4 x i32> [[TMP52]], i32 [[TMP56]], i64 2
 ; CHECK-INTERLEAVED-NEXT:    br label [[PRED_LOAD_CONTINUE5]]
@@ -2514,7 +2514,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP59]], label [[PRED_LOAD_IF6:%.*]], label [[PRED_LOAD_CONTINUE7:%.*]]
 ; CHECK-INTERLEAVED:       pred.load.if6:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP60:%.*]] = sext i32 [[TMP2]] to i64
-; CHECK-INTERLEAVED-NEXT:    [[TMP61:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B]], i64 0, i64 [[TMP60]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP61:%.*]] = getelementptr inbounds [[STRUCT_E]], ptr [[B]], i64 [[TMP60]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP62:%.*]] = load i32, ptr [[TMP61]], align 4
 ; CHECK-INTERLEAVED-NEXT:    [[TMP63:%.*]] = insertelement <4 x i32> [[TMP58]], i32 [[TMP62]], i64 3
 ; CHECK-INTERLEAVED-NEXT:    br label [[PRED_LOAD_CONTINUE7]]
@@ -2524,7 +2524,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP65]], label [[PRED_LOAD_IF8:%.*]], label [[PRED_LOAD_CONTINUE9:%.*]]
 ; CHECK-INTERLEAVED:       pred.load.if8:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP66:%.*]] = sext i32 [[TMP3]] to i64
-; CHECK-INTERLEAVED-NEXT:    [[TMP67:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B]], i64 0, i64 [[TMP66]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP67:%.*]] = getelementptr inbounds [[STRUCT_E]], ptr [[B]], i64 [[TMP66]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP68:%.*]] = load i32, ptr [[TMP67]], align 4
 ; CHECK-INTERLEAVED-NEXT:    [[TMP69:%.*]] = insertelement <4 x i32> poison, i32 [[TMP68]], i64 0
 ; CHECK-INTERLEAVED-NEXT:    br label [[PRED_LOAD_CONTINUE9]]
@@ -2534,7 +2534,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP71]], label [[PRED_LOAD_IF10:%.*]], label [[PRED_LOAD_CONTINUE11:%.*]]
 ; CHECK-INTERLEAVED:       pred.load.if10:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP72:%.*]] = sext i32 [[TMP4]] to i64
-; CHECK-INTERLEAVED-NEXT:    [[TMP73:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B]], i64 0, i64 [[TMP72]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP73:%.*]] = getelementptr inbounds [[STRUCT_E]], ptr [[B]], i64 [[TMP72]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP74:%.*]] = load i32, ptr [[TMP73]], align 4
 ; CHECK-INTERLEAVED-NEXT:    [[TMP75:%.*]] = insertelement <4 x i32> [[TMP70]], i32 [[TMP74]], i64 1
 ; CHECK-INTERLEAVED-NEXT:    br label [[PRED_LOAD_CONTINUE11]]
@@ -2544,7 +2544,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP77]], label [[PRED_LOAD_IF12:%.*]], label [[PRED_LOAD_CONTINUE13:%.*]]
 ; CHECK-INTERLEAVED:       pred.load.if12:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP78:%.*]] = sext i32 [[TMP5]] to i64
-; CHECK-INTERLEAVED-NEXT:    [[TMP79:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B]], i64 0, i64 [[TMP78]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP79:%.*]] = getelementptr inbounds [[STRUCT_E]], ptr [[B]], i64 [[TMP78]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP80:%.*]] = load i32, ptr [[TMP79]], align 4
 ; CHECK-INTERLEAVED-NEXT:    [[TMP81:%.*]] = insertelement <4 x i32> [[TMP76]], i32 [[TMP80]], i64 2
 ; CHECK-INTERLEAVED-NEXT:    br label [[PRED_LOAD_CONTINUE13]]
@@ -2554,7 +2554,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP83]], label [[PRED_LOAD_IF14:%.*]], label [[PRED_LOAD_CONTINUE15]]
 ; CHECK-INTERLEAVED:       pred.load.if14:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP84:%.*]] = sext i32 [[TMP6]] to i64
-; CHECK-INTERLEAVED-NEXT:    [[TMP85:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B]], i64 0, i64 [[TMP84]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP85:%.*]] = getelementptr inbounds [[STRUCT_E]], ptr [[B]], i64 [[TMP84]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP86:%.*]] = load i32, ptr [[TMP85]], align 4
 ; CHECK-INTERLEAVED-NEXT:    [[TMP87:%.*]] = insertelement <4 x i32> [[TMP82]], i32 [[TMP86]], i64 3
 ; CHECK-INTERLEAVED-NEXT:    br label [[PRED_LOAD_CONTINUE15]]

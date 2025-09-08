@@ -128,7 +128,7 @@ precedence. Here are a few examples.
   type:T
 
   $ cat ignorelist4.txt
-  # Function `bad_bar`` will be instrumented.
+  # Function `bad_bar` will be instrumented.
   # Function `good_bar` will not be instrumented.
   fun:*
   fun:*bar
