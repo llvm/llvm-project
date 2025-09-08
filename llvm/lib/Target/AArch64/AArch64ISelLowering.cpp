@@ -6266,6 +6266,16 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_sve_clz:
     return DAG.getNode(AArch64ISD::CTLZ_MERGE_PASSTHRU, DL, Op.getValueType(),
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
+  case Intrinsic::aarch64_sme_cntsd: {
+    auto Flags = SDNodeFlags();
+    Flags.setNoUnsignedWrap(true);
+    Flags.setNoSignedWrap(true);
+    Flags.setExact(true);
+    SDValue Bytes = DAG.getNode(AArch64ISD::RDSVL, DL, Op.getValueType(),
+                                DAG.getConstant(1, DL, MVT::i32));
+    return DAG.getNode(ISD::SRL, DL, Op.getValueType(), Bytes,
+                       DAG.getConstant(3, DL, MVT::i32), Flags);
+  }
   case Intrinsic::aarch64_sve_cnt: {
     SDValue Data = Op.getOperand(3);
     // CTPOP only supports integer operands.
@@ -19179,9 +19189,6 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
       (IsSVECntIntrinsic(N0->getOperand(0)))))
        if (ConstValue.sge(1) && ConstValue.sle(16))
          return SDValue();
-
-  if (getIntrinsicID(N0.getNode()) == Intrinsic::aarch64_sme_cntsd)
-    return SDValue();
 
   // Multiplication of a power of two plus/minus one can be done more
   // cheaply as shift+add/sub. For now, this is true unilaterally. If

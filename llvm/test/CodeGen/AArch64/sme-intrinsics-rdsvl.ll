@@ -46,46 +46,43 @@ define i64 @cntsd() {
 define i64 @sme_cntsb_mul() {
 ; CHECK-LABEL: sme_cntsb_mul:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    rdsvl x0, #2
+; CHECK-NEXT:    rdsvl x0, #4
 ; CHECK-NEXT:    ret
   %v = call i64 @llvm.aarch64.sme.cntsd()
   %shl = shl nuw nsw i64 %v, 3
-  %res = mul i64 %shl, 2
+  %res = mul nuw nsw i64 %shl, 4
   ret i64 %res
 }
 
 define i64 @sme_cntsh_mul() {
 ; CHECK-LABEL: sme_cntsh_mul:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    rdsvl x8, #5
-; CHECK-NEXT:    lsr x0, x8, #1
+; CHECK-NEXT:    rdsvl x0, #4
 ; CHECK-NEXT:    ret
   %v = call i64 @llvm.aarch64.sme.cntsd()
   %shl = shl nuw nsw i64 %v, 2
-  %res = mul i64 %shl, 5
+  %res = mul nuw nsw i64 %shl, 8
   ret i64 %res
 }
 
 define i64 @sme_cntsw_mul() {
 ; CHECK-LABEL: sme_cntsw_mul:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    rdsvl x8, #7
-; CHECK-NEXT:    lsr x0, x8, #2
+; CHECK-NEXT:    rdsvl x0, #4
 ; CHECK-NEXT:    ret
   %v = call i64 @llvm.aarch64.sme.cntsd()
   %shl = shl nuw nsw i64 %v, 1
-  %res = mul i64 %shl, 7
+  %res = mul nuw nsw i64 %shl, 16
   ret i64 %res
 }
 
 define i64 @sme_cntsd_mul() {
 ; CHECK-LABEL: sme_cntsd_mul:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    rdsvl x8, #3
-; CHECK-NEXT:    lsr x0, x8, #1
+; CHECK-NEXT:    rdsvl x0, #4
 ; CHECK-NEXT:    ret
   %v = call i64 @llvm.aarch64.sme.cntsd()
-  %res = mul i64 %v, 12
+  %res = mul nuw nsw i64 %v, 32
   ret i64 %res
 }
 

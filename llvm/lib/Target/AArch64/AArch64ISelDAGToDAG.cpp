@@ -940,20 +940,16 @@ bool AArch64DAGToDAGISel::SelectRDVLImm(SDValue N, SDValue &Imm) {
   return false;
 }
 
-// Given `cntsd = (rdsvl, #1) >> 3`, attempt to return a suitable multiplier
-// for RDSVL to calculate `cntsd << N`, i.e. `rdsvl, #(1 << (N - 3))`.
+// Returns a suitable RDSVL multiplier from a left shift.
 template <signed Low, signed High>
 bool AArch64DAGToDAGISel::SelectRDSVLShiftImm(SDValue N, SDValue &Imm) {
   if (!isa<ConstantSDNode>(N))
     return false;
 
-  int64_t ShlImm = cast<ConstantSDNode>(N)->getSExtValue();
-  if (ShlImm >= 3) {
-    int64_t MulImm = 1 << (ShlImm - 3);
-    if (MulImm >= Low && MulImm <= High) {
-      Imm = CurDAG->getSignedTargetConstant(MulImm, SDLoc(N), MVT::i32);
-      return true;
-    }
+  int64_t MulImm = 1 << cast<ConstantSDNode>(N)->getSExtValue();
+  if (MulImm >= Low && MulImm <= High) {
+    Imm = CurDAG->getSignedTargetConstant(MulImm, SDLoc(N), MVT::i32);
+    return true;
   }
 
   return false;
