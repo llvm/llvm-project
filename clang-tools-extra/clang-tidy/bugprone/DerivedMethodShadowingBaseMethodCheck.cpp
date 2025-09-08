@@ -14,9 +14,7 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-namespace {
-
-bool sameBasicType(const ParmVarDecl *Lhs, const ParmVarDecl *Rhs) {
+static bool sameBasicType(const ParmVarDecl *Lhs, const ParmVarDecl *Rhs) {
   return Lhs && Rhs &&
          Lhs->getType()
                  .getCanonicalType()
@@ -27,7 +25,7 @@ bool sameBasicType(const ParmVarDecl *Lhs, const ParmVarDecl *Rhs) {
                                               .getUnqualifiedType();
 }
 
-bool namesCollide(const CXXMethodDecl &Lhs, const CXXMethodDecl &Rhs) {
+static bool namesCollide(const CXXMethodDecl &Lhs, const CXXMethodDecl &Rhs) {
   if (Lhs.getNameAsString() != Rhs.getNameAsString())
     return false;
   if (Lhs.isConst() != Rhs.isConst())
@@ -39,6 +37,8 @@ bool namesCollide(const CXXMethodDecl &Lhs, const CXXMethodDecl &Rhs) {
       return false;
   return true;
 }
+
+namespace {
 
 AST_MATCHER(CXXMethodDecl, nameCollidesWithMethodInBase) {
   const CXXRecordDecl *DerivedClass = Node.getParent();
