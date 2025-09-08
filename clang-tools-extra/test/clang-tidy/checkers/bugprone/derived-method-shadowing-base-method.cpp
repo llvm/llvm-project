@@ -13,6 +13,7 @@ class A : public Base
 public:
     void method();
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'A::method' shadows method with the same name in class 'Base' [bugprone-derived-method-shadowing-base-method]
+// CHECK-MESSAGES: :5:5: note: previous definition of 'method' is here
 };
 
 // only declaration should be checked
