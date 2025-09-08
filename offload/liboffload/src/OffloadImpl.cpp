@@ -632,7 +632,7 @@ Error olMemAlloc_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
   return Error::success();
 }
 
-Error olMemFree_impl(void *Address) {
+Error olMemFree_impl(ol_platform_handle_t Platform, void *Address) {
   ol_device_handle_t Device;
   ol_alloc_type_t Type;
   {
@@ -646,6 +646,7 @@ Error olMemFree_impl(void *Address) {
     Type = AllocInfo.Type;
     OffloadContext::get().AllocInfoMap.erase(Address);
   }
+  assert(Platform == Device->Platform);
 
   if (auto Res =
           Device->Device->dataDelete(Address, convertOlToPluginAllocTy(Type)))

@@ -286,6 +286,29 @@ DeviceContext::getKernelHandle(ol_program_handle_t ProgramHandle,
   return Handle;
 }
 
+llvm::Expected<ol_platform_handle_t>
+DeviceContext::getPlatformHandle() noexcept {
+  if (!PlatformHandle) {
+    const ol_result_t OlResult =
+        olGetDeviceInfo(DeviceHandle, OL_DEVICE_INFO_PLATFORM,
+                        sizeof(PlatformHandle), &PlatformHandle);
+
+    if (OlResult != OL_SUCCESS) {
+      PlatformHandle = nullptr;
+      llvm::StringRef Details =
+          OlResult->Details ? OlResult->Details : "No details provided";
+
+      // clang-format off
+      return llvm::createStringError(
+        llvm::Twine(Details) +
+        " (code " + llvm::Twine(OlResult->Code) + ")");
+      // clang-format on
+    }
+  }
+
+  return PlatformHandle;
+}
+
 void DeviceContext::launchKernelImpl(
     ol_symbol_handle_t KernelHandle, uint32_t NumGroups, uint32_t GroupSize,
     const void *KernelArgs, std::size_t KernelArgsSize) const noexcept {

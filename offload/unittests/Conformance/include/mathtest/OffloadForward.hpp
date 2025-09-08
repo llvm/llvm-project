@@ -32,6 +32,9 @@ typedef struct ol_program_impl_t *ol_program_handle_t;
 struct ol_symbol_impl_t;
 typedef struct ol_symbol_impl_t *ol_symbol_handle_t;
 
+struct ol_platform_impl_t;
+typedef struct ol_platform_impl_t *ol_platform_handle_t;
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

@@ -37,9 +37,12 @@ def olMemAlloc : Function {
 def olMemFree : Function {
   let desc = "Frees a memory allocation previously made by olMemAlloc.";
   let params = [
+    Param<"ol_platform_handle_t", "Platform", "handle of the platform that allocated this memory", PARAM_IN>,
     Param<"void*", "Address", "address of the allocation to free", PARAM_IN>,
   ];
-  let returns = [];
+  let returns = [
+    Return<"OL_ERRC_NOT_FOUND", ["memory was not allocated by this platform"]>
+  ];
 }
 
 def olMemcpy : Function {
