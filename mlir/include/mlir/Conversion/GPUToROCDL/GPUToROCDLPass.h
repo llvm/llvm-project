@@ -10,6 +10,7 @@
 
 #include "mlir/Conversion/GPUToROCDL/Runtimes.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
+#include "mlir/Pass/Pass.h"
 #include "llvm/ADT/DenseSet.h"
 #include <cstddef>
 #include <memory>
@@ -43,18 +44,6 @@ void populateGpuToROCDLConversionPatterns(const LLVMTypeConverter &converter,
 
 /// Configure target to convert from the GPU dialect to ROCDL.
 void configureGpuToROCDLConversionLegality(ConversionTarget &target);
-
-/// Creates a pass that lowers GPU dialect operations to ROCDL counterparts. The
-/// index bitwidth used for the lowering of the device side index computations
-/// is configurable.
-std::unique_ptr<OperationPass<gpu::GPUModuleOp>>
-createLowerGpuOpsToROCDLOpsPass(
-    const std::string &chipset = "gfx900",
-    unsigned indexBitwidth = kDeriveIndexBitwidthFromDataLayout,
-    bool useBarePtrCallConv = false,
-    gpu::amd::Runtime runtime = gpu::amd::Runtime::Unknown,
-    const std::optional<llvm::SmallDenseSet<llvm::StringRef>> &allowedDialects =
-        std::nullopt);
 
 } // namespace mlir
 

@@ -36,7 +36,6 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -288,6 +287,8 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
 struct LowerGpuOpsToROCDLOpsPass final
     : public impl::ConvertGpuOpsToROCDLOpsBase<LowerGpuOpsToROCDLOpsPass> {
   LowerGpuOpsToROCDLOpsPass() = default;
+  LowerGpuOpsToROCDLOpsPass(ConvertGpuOpsToROCDLOpsOptions options)
+      : ConvertGpuOpsToROCDLOpsBase(options) {}
   LowerGpuOpsToROCDLOpsPass(
       const std::string &chipset, unsigned indexBitwidth,
       bool useBarePtrCallConv, gpu::amd::Runtime runtime,
@@ -505,13 +506,4 @@ void mlir::populateGpuToROCDLConversionPatterns(
   patterns.add<GPUSubgroupSizeOpToROCDL>(converter, chipset);
 
   populateMathToROCDLConversionPatterns(converter, patterns);
-}
-
-std::unique_ptr<OperationPass<gpu::GPUModuleOp>>
-mlir::createLowerGpuOpsToROCDLOpsPass(
-    const std::string &chipset, unsigned indexBitwidth, bool useBarePtrCallConv,
-    gpu::amd::Runtime runtime,
-    const std::optional<llvm::SmallDenseSet<StringRef>> &allowedDialects) {
-  return std::make_unique<LowerGpuOpsToROCDLOpsPass>(
-      chipset, indexBitwidth, useBarePtrCallConv, runtime, allowedDialects);
 }
