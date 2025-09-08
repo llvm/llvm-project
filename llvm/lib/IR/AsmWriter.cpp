@@ -430,14 +430,14 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
     CC_VLS_CASE(32768)
     CC_VLS_CASE(65536)
 #undef CC_VLS_CASE
-  case CallingConv::CHERI_CCall:
-    Out << "chericcallcc";
+  case CallingConv::CHERIoT_CompartmentCall:
+    Out << "cheriot_compartmentcallcc";
     break;
-  case CallingConv::CHERI_CCallee:
-    Out << "chericcallee";
+  case CallingConv::CHERIoT_CompartmentCallee:
+    Out << "cheriot_compartmentcalleecc";
     break;
-  case CallingConv::CHERI_LibCall:
-    Out << "cherilibcallcc";
+  case CallingConv::CHERIoT_LibraryCall:
+    Out << "cheriot_librarycallcc";
     break;
   }
 }

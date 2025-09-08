@@ -287,16 +287,17 @@ namespace CallingConv {
     // Calling convention for AMDGPU whole wave functions.
     AMDGPU_Gfx_WholeWave = 124,
 
-    /// CHERI_CCall - Calling convention used for CHERI when crossing a
+    /// CHERIoT_CompartmentCall - Calling convention used for CHERI when
+    /// crossing a
     /// protection boundary.
-    CHERI_CCall = 125,
+    CHERIoT_CompartmentCall = 125,
     /// CHERI_CCallee - Calling convention used for the callee of CHERI_CCall.
     /// Ignores the first two capability arguments and the first integer
     /// argument, zeroes all unused return registers on return.
-    CHERI_CCallee = 126,
+    CHERIoT_CompartmentCallee = 126,
     /// CHERI_LibCall - Calling convention used for cross-library calls to a
     /// stateless compartment.
-    CHERI_LibCall = 127,
+    CHERIoT_LibraryCall = 127,
 
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023
