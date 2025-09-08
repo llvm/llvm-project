@@ -172,7 +172,7 @@ EmulateInstructionMIPS::EmulateInstructionMIPS(
     features += "+micromips,";
 
   m_alt_subtype_info.reset(
-      target->createMCSubtargetInfo(triple.getTriple(), cpu, features));
+      target->createMCSubtargetInfo(triple, cpu, features));
   assert(m_alt_subtype_info.get());
 
   m_alt_disasm.reset(
