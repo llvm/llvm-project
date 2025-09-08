@@ -1276,6 +1276,7 @@ void addInstrRequirements(const MachineInstr &MI,
     if (BitWidth == 64)
       Reqs.addCapability(SPIRV::Capability::Float64);
     else if (BitWidth == 16) {
+      Reqs.addCapability(SPIRV::Capability::Float16);
       SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
       const MachineFunction *MF = MI.getMF();
       SPIRVGlobalRegistry::FPVariant FPV =
@@ -1288,7 +1289,6 @@ void addInstrRequirements(const MachineInstr &MI,
         Reqs.addExtension(SPIRV::Extension::SPV_KHR_bfloat16);
         Reqs.addCapability(SPIRV::Capability::BFloat16TypeKHR);
       }
-      Reqs.addCapability(SPIRV::Capability::Float16);
     }
     break;
   }

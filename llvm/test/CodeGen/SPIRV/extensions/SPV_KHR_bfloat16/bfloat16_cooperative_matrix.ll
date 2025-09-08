@@ -1,9 +1,9 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_bfloat16,+SPV_KHR_cooperative_matrix %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_bfloat16,+SPV_KHR_cooperative_matrix %s -o - -filetype=obj | spirv-val %}
 
+; CHECK-DAG: OpExtension "SPV_KHR_bfloat16"
 ; CHECK-DAG: OpCapability BFloat16TypeKHR
 ; CHECK-DAG: OpCapability BFloat16CooperativeMatrixKHR
-; CHECK-DAG: OpExtension "SPV_KHR_bfloat16"
 ; CHECK: %[[#BFLOAT:]] = OpTypeFloat 16
 ; CHECK: %[[#MatTy:]] = OpTypeCooperativeMatrixKHR %[[#BFLOAT]]  %[[#]] %[[#]] %[[#]] %[[#]]
 ; CHECK: OpCompositeConstruct %[[#MatTy]] %[[#]]
