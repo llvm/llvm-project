@@ -2105,14 +2105,10 @@ SPIRVGlobalRegistry::FPVariant
 SPIRVGlobalRegistry::getFPVariantForVReg(Register VReg,
                                          const MachineFunction *MF) {
   const MachineFunction *Func = MF ? MF : CurMF;
-  DenseMap<const MachineFunction *,
-           DenseMap<Register, FPVariant>>::const_iterator FuncIt =
-      VRegFPVariantMap.find(Func);
-
+  auto FuncIt = VRegFPVariantMap.find(Func);
   if (FuncIt != VRegFPVariantMap.end()) {
     const DenseMap<Register, FPVariant> &VRegMap = FuncIt->second;
-    DenseMap<Register, FPVariant>::const_iterator VRegIt = VRegMap.find(VReg);
-
+    auto VRegIt = VRegMap.find(VReg);
     if (VRegIt != VRegMap.end())
       return VRegIt->second;
   }
