@@ -81,6 +81,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -5936,6 +5937,15 @@ static bool combineInstructionsOverFunction(
     MadeChangeInThisIteration |= IC.run();
     if (!MadeChangeInThisIteration)
       break;
+
+    // Issue #147390: InstCombine emits `select` as rewrites of instructions
+    // without metadata. It may be possible to synthesize some more meaningful
+    // profiles in some cases (based on operands or based on the pattern)
+    if (auto EC = F.getEntryCount(); EC.has_value() && EC->getCount() > 0)
+      for (auto &BB : F)
+        for (auto &I : BB)
+          if (isa<SelectInst>(I) && !I.getMetadata(LLVMContext::MD_prof))
+            setExplicitlyUnknownBranchWeights(I, DEBUG_TYPE);
 
     MadeIRChange = true;
     if (Iteration > Opts.MaxIterations) {
