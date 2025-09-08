@@ -96,6 +96,10 @@ class MemoryHistoryTestCase(TestBase):
         )
         self.check_traces(skip_line_numbers=True)
 
+        # Make sure we're not stopped in the sanitizer library but instead at the
+        # point of failure in the user-code.
+        self.assertEqual(self.frame().GetFunctionName(), "main")
+
         # do the same using SB API
         process = self.dbg.GetSelectedTarget().process
         val = (
@@ -219,6 +223,10 @@ class MemoryHistoryTestCase(TestBase):
         )
 
         self.check_traces()
+
+        # Make sure we're not stopped in the sanitizer library but instead at the
+        # point of failure in the user-code.
+        self.assertEqual(self.frame().GetFunctionName(), "main")
 
         # make sure the 'memory history' command still works even when we're
         # generating a report now
