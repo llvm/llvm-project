@@ -78,7 +78,7 @@ struct RemarkOpts {
   constexpr RemarkOpts function(StringRef v) const {
     return {remarkName, categoryName, subCategoryName, v, postponed};
   }
-  /// Return a copy with the function name set.
+  /// Return a copy with the postponed flag set.
   constexpr RemarkOpts postpone() const {
     return {remarkName, categoryName, subCategoryName, functionName, true};
   }
@@ -103,7 +103,6 @@ public:
           .toStringRef(fullCategoryName);
     }
   }
-  ~Remark() = default;
 
   // Remark argument that is a key-value pair that can be printed as machine
   // parsable args.
