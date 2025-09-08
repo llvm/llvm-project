@@ -117,7 +117,7 @@ add_fp_unittest(
   SRCS
     tanf_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.tanf
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
@@ -130,7 +130,7 @@ add_fp_unittest(
   SRCS
     tanf16_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.tanf16
 )
 
@@ -141,7 +141,7 @@ add_fp_unittest(
   SRCS
     tanpif_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.tanpif
 )
 
@@ -152,7 +152,7 @@ add_fp_unittest(
   SRCS
     tanpif16_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.tanpif16
 )
 
@@ -4590,6 +4590,7 @@ add_fp_unittest(
   SRCS
     tanhf_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.src.math.tanhf
     libc.src.__support.FPUtil.fp_bits
 )
@@ -4601,8 +4602,8 @@ add_fp_unittest(
   SRCS
     tanhf16_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.tanhf16
     libc.src.__support.FPUtil.cast
 )
