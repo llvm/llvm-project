@@ -59,7 +59,7 @@ C/C++ Language Potentially Breaking Changes
 - The ``__has_builtin`` function now only considers the currently active target when being used with target offloading.
 
 - The ``-Wincompatible-pointer-types`` diagnostic now defaults to an error;
-  it can still be downgraded to a warning by passing ``-Wno-error=incompatible-pointer-types``.
+  it can still be downgraded to a warning by passing ``-Wno-error=incompatible-pointer-types``. (#GH74605)
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
