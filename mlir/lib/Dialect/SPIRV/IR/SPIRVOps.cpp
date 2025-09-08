@@ -727,9 +727,9 @@ void mlir::spirv::ConstantOp::getAsmResultNames(
       return setNameFn(getResult(), (intCst.getInt() ? "true" : "false"));
     }
 
-    if (intTy.isSignless()) {
+    if (intTy && intTy.isSignless()) {
       specialName << intCst.getInt();
-    } else if (intTy.isUnsigned()) {
+    } else if (intTy && intTy.isUnsigned()) {
       specialName << intCst.getUInt();
     } else {
       specialName << intCst.getSInt();
