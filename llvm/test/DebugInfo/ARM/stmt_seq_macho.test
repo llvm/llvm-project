@@ -1,0 +1,238 @@
+// RUN: split-file %s %t
+
+// RUN: clang++ --target=arm64-apple-macos11 \
+// RUN:   -x c++ %t/stmt_seq_macho.cpp \
+// RUN:   -o %t/stmt_seq_macho.o \
+// RUN:   -g -Oz -gdwarf-4 -c \
+// RUN:   -mllvm -emit-func-debug-line-table-offsets \
+// RUN:   -fdebug-compilation-dir=/private/tmp/stmt_seq \
+// RUN:   -fno-unwind-tables -fno-exceptions \
+// RUN:   -mno-outline
+
+// RUN: llvm-dwarfdump -all -v %t/stmt_seq_macho.o | FileCheck %s
+
+// CHECK: .debug_info
+// CHECK: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]    ([[EMPTY1:0x[0-9a-fA-F]{8}]])
+// CHECK: DW_AT_name [DW_FORM_strp]  ({{.*}} = "function_empty_1")
+
+// CHECK: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]    ([[EMPTY2:0x[0-9a-fA-F]{8}]])
+// CHECK: DW_AT_name [DW_FORM_strp]  ({{.*}} = "function_empty_2")
+
+// CHECK: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]    ([[EMPTY3:0x[0-9a-fA-F]{8}]])
+// CHECK: DW_AT_name [DW_FORM_strp]  ({{.*}} = "function_empty_3")
+
+// CHECK: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]    ([[F1CPY1:0x[0-9a-fA-F]{8}]])
+// CHECK: DW_AT_name [DW_FORM_strp]  ({{.*}} = "function1_copy1")
+
+// CHECK: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]    ([[F3CPY1:0x[0-9a-fA-F]{8}]])
+// CHECK: DW_AT_name [DW_FORM_strp]  ({{.*}} = "function3_copy1")
+
+// CHECK: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]    ([[F2CPY1:0x[0-9a-fA-F]{8}]])
+// CHECK: DW_AT_name [DW_FORM_strp]  ({{.*}} = "function2_copy1")
+
+// CHECK: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]    ([[F3CPY2:0x[0-9a-fA-F]{8}]])
+// CHECK: DW_AT_name [DW_FORM_strp]  ({{.*}} = "function3_copy2")
+
+// CHECK: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]    ([[F2CPY2:0x[0-9a-fA-F]{8}]])
+// CHECK: DW_AT_name [DW_FORM_strp]  ({{.*}} = "function2_copy2")
+
+// CHECK: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]    ([[FNMAIN:0x[0-9a-fA-F]{8}]])
+// CHECK: DW_AT_name [DW_FORM_strp]  ({{.*}} = "main")
+
+// CHECK: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]    ([[ERRLOG:0x[0-9a-fA-F]{8}]])
+// CHECK: DW_AT_linkage_name [DW_FORM_strp]  ({{.*}} = "_ZN12length_errorC1EPKc")
+
+// CHECK: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]    ([[ERRLEN:0x[0-9a-fA-F]{8}]])
+// CHECK: DW_AT_linkage_name [DW_FORM_strp]  ({{.*}} = "_ZN12length_errorC2EPKc")
+
+// CHECK:                  Address            Line   Column File   ISA Discriminator OpIndex Flags
+// CHECK-NEXT:             ------------------ ------ ------ ------ --- ------------- ------- -------------
+// CHECK-NEXT: [[EMPTY1]]: 05 DW_LNS_set_column (33)
+// CHECK-NEXT: 0x00000091: 0a DW_LNS_set_prologue_end
+// CHECK-NEXT: 0x00000092: 00 DW_LNE_set_address (0x0000000000000000)
+// CHECK-NEXT: 0x0000009d: 13 address += 0,  line += 1,  op-index += 0
+// CHECK-NEXT:             0x0000000000000000      2     33      1   0             0       0  is_stmt prologue_end
+// CHECK-NEXT: 0x0000009e: 02 DW_LNS_advance_pc (addr += 4, op-index += 0)
+// CHECK-NEXT: 0x000000a0: 00 DW_LNE_end_sequence
+// CHECK-NEXT:             0x0000000000000004      2     33      1   0             0       0  is_stmt end_sequence
+// CHECK-NEXT: [[EMPTY2]]: 05 DW_LNS_set_column (33)
+// CHECK-NEXT: 0x000000a5: 0a DW_LNS_set_prologue_end
+// CHECK-NEXT: 0x000000a6: 00 DW_LNE_set_address (0x0000000000000004)
+// CHECK-NEXT: 0x000000b1: 14 address += 0,  line += 2,  op-index += 0
+// CHECK-NEXT:             0x0000000000000004      3     33      1   0             0       0  is_stmt prologue_end
+// CHECK-NEXT: 0x000000b2: 02 DW_LNS_advance_pc (addr += 4, op-index += 0)
+// CHECK-NEXT: 0x000000b4: 00 DW_LNE_end_sequence
+// CHECK-NEXT:             0x0000000000000008      3     33      1   0             0       0  is_stmt end_sequence
+// CHECK-NEXT: [[EMPTY3]]: 05 DW_LNS_set_column (33)
+// CHECK-NEXT: 0x000000b9: 0a DW_LNS_set_prologue_end
+// CHECK-NEXT: 0x000000ba: 00 DW_LNE_set_address (0x0000000000000008)
+// CHECK-NEXT: 0x000000c5: 15 address += 0,  line += 3,  op-index += 0
+// CHECK-NEXT:             0x0000000000000008      4     33      1   0             0       0  is_stmt prologue_end
+// CHECK-NEXT: 0x000000c6: 02 DW_LNS_advance_pc (addr += 4, op-index += 0)
+// CHECK-NEXT: 0x000000c8: 00 DW_LNE_end_sequence
+// CHECK-NEXT:             0x000000000000000c      4     33      1   0             0       0  is_stmt end_sequence
+// CHECK-NEXT: [[F1CPY1]]: 05 DW_LNS_set_column (10)
+// CHECK-NEXT: 0x000000cd: 0a DW_LNS_set_prologue_end
+// CHECK-NEXT: 0x000000ce: 00 DW_LNE_set_address (0x000000000000000c)
+// CHECK-NEXT: 0x000000d9: 18 address += 0,  line += 6,  op-index += 0
+// CHECK-NEXT:             0x000000000000000c      7     10      1   0             0       0  is_stmt prologue_end
+// CHECK-NEXT: 0x000000da: 05 DW_LNS_set_column (3)
+// CHECK-NEXT: 0x000000dc: 06 DW_LNS_negate_stmt
+// CHECK-NEXT: 0x000000dd: 4a address += 4,  line += 0,  op-index += 0
+// CHECK-NEXT:             0x0000000000000010      7      3      1   0             0       0
+// CHECK-NEXT: 0x000000de: 02 DW_LNS_advance_pc (addr += 4, op-index += 0)
+// CHECK-NEXT: 0x000000e0: 00 DW_LNE_end_sequence
+// CHECK-NEXT:             0x0000000000000014      7      3      1   0             0       0  end_sequence
+// CHECK-NEXT: [[F3CPY1]]: 05 DW_LNS_set_column (14)
+// CHECK-NEXT: 0x000000e5: 0a DW_LNS_set_prologue_end
+// CHECK-NEXT: 0x000000e6: 00 DW_LNE_set_address (0x0000000000000014)
+// CHECK-NEXT: 0x000000f1: 03 DW_LNS_advance_line (12)
+// CHECK-NEXT: 0x000000f3: 01 DW_LNS_copy
+// CHECK-NEXT:             0x0000000000000014     12     14      1   0             0       0  is_stmt prologue_end
+// CHECK-NEXT: 0x000000f4: 05 DW_LNS_set_column (5)
+// CHECK-NEXT: 0x000000f6: 06 DW_LNS_negate_stmt
+// CHECK-NEXT: 0x000000f7: 4a address += 4,  line += 0,  op-index += 0
+// CHECK-NEXT:             0x0000000000000018     12      5      1   0             0       0
+// CHECK-NEXT: 0x000000f8: 02 DW_LNS_advance_pc (addr += 4, op-index += 0)
+// CHECK-NEXT: 0x000000fa: 00 DW_LNE_end_sequence
+// CHECK-NEXT:             0x000000000000001c     12      5      1   0             0       0  end_sequence
+// CHECK-NEXT: [[F2CPY1]]: 05 DW_LNS_set_column (14)
+// CHECK-NEXT: 0x000000ff: 0a DW_LNS_set_prologue_end
+// CHECK-NEXT: 0x00000100: 00 DW_LNE_set_address (0x000000000000001c)
+// CHECK-NEXT: 0x0000010b: 03 DW_LNS_advance_line (16)
+// CHECK-NEXT: 0x0000010d: 01 DW_LNS_copy
+// CHECK-NEXT:             0x000000000000001c     16     14      1   0             0       0  is_stmt prologue_end
+// CHECK-NEXT: 0x0000010e: 05 DW_LNS_set_column (5)
+// CHECK-NEXT: 0x00000110: 06 DW_LNS_negate_stmt
+// CHECK-NEXT: 0x00000111: 4a address += 4,  line += 0,  op-index += 0
+// CHECK-NEXT:             0x0000000000000020     16      5      1   0             0       0
+// CHECK-NEXT: 0x00000112: 02 DW_LNS_advance_pc (addr += 4, op-index += 0)
+// CHECK-NEXT: 0x00000114: 00 DW_LNE_end_sequence
+// CHECK-NEXT:             0x0000000000000024     16      5      1   0             0       0  end_sequence
+// CHECK-NEXT: [[F3CPY2]]: 05 DW_LNS_set_column (14)
+// CHECK-NEXT: 0x00000119: 0a DW_LNS_set_prologue_end
+// CHECK-NEXT: 0x0000011a: 00 DW_LNE_set_address (0x0000000000000024)
+// CHECK-NEXT: 0x00000125: 03 DW_LNS_advance_line (21)
+// CHECK-NEXT: 0x00000127: 01 DW_LNS_copy
+// CHECK-NEXT:             0x0000000000000024     21     14      1   0             0       0  is_stmt prologue_end
+// CHECK-NEXT: 0x00000128: 05 DW_LNS_set_column (5)
+// CHECK-NEXT: 0x0000012a: 06 DW_LNS_negate_stmt
+// CHECK-NEXT: 0x0000012b: 4a address += 4,  line += 0,  op-index += 0
+// CHECK-NEXT:             0x0000000000000028     21      5      1   0             0       0
+// CHECK-NEXT: 0x0000012c: 02 DW_LNS_advance_pc (addr += 4, op-index += 0)
+// CHECK-NEXT: 0x0000012e: 00 DW_LNE_end_sequence
+// CHECK-NEXT:             0x000000000000002c     21      5      1   0             0       0  end_sequence
+// CHECK-NEXT: [[F2CPY2]]: 05 DW_LNS_set_column (20)
+// CHECK-NEXT: 0x00000133: 0a DW_LNS_set_prologue_end
+// CHECK-NEXT: 0x00000134: 00 DW_LNE_set_address (0x000000000000002c)
+// CHECK-NEXT: 0x0000013f: 03 DW_LNS_advance_line (25)
+// CHECK-NEXT: 0x00000141: 01 DW_LNS_copy
+// CHECK-NEXT:             0x000000000000002c     25     20      1   0             0       0  is_stmt prologue_end
+// CHECK-NEXT: 0x00000142: 05 DW_LNS_set_column (5)
+// CHECK-NEXT: 0x00000144: 4b address += 4,  line += 1,  op-index += 0
+// CHECK-NEXT:             0x0000000000000030     26      5      1   0             0       0  is_stmt
+// CHECK-NEXT: 0x00000145: 02 DW_LNS_advance_pc (addr += 4, op-index += 0)
+// CHECK-NEXT: 0x00000147: 00 DW_LNE_end_sequence
+// CHECK-NEXT:             0x0000000000000034     26      5      1   0             0       0  is_stmt end_sequence
+// CHECK-NEXT: [[FNMAIN]]: 00 DW_LNE_set_address (0x0000000000000034)
+// CHECK-NEXT: 0x00000155: 03 DW_LNS_advance_line (37)
+// CHECK-NEXT: 0x00000157: 01 DW_LNS_copy
+// CHECK-NEXT:             0x0000000000000034     37      0      1   0             0       0  is_stmt
+// CHECK-NEXT: 0x00000158: 05 DW_LNS_set_column (12)
+// CHECK-NEXT: 0x0000015a: 0a DW_LNS_set_prologue_end
+// CHECK-NEXT: 0x0000015b: f4 address += 16,  line += 2,  op-index += 0
+// CHECK-NEXT:             0x0000000000000044     39     12      1   0             0       0  is_stmt prologue_end
+// CHECK-NEXT: 0x0000015c: bb address += 12,  line += 1,  op-index += 0
+// CHECK-NEXT:             0x0000000000000050     40     12      1   0             0       0  is_stmt
+// CHECK-NEXT: 0x0000015d: 05 DW_LNS_set_column (9)
+// CHECK-NEXT: 0x0000015f: 82 address += 8,  line += 0,  op-index += 0
+// CHECK-NEXT:             0x0000000000000058     40      9      1   0             0       0  is_stmt
+// CHECK-NEXT: 0x00000160: 05 DW_LNS_set_column (12)
+// CHECK-NEXT: 0x00000162: 4b address += 4,  line += 1,  op-index += 0
+// CHECK-NEXT:             0x000000000000005c     41     12      1   0             0       0  is_stmt
+// CHECK-NEXT: 0x00000163: bb address += 12,  line += 1,  op-index += 0
+// CHECK-NEXT:             0x0000000000000068     42     12      1   0             0       0  is_stmt
+// CHECK-NEXT: 0x00000164: 05 DW_LNS_set_column (9)
+// CHECK-NEXT: 0x00000166: 81 address += 8,  line += -1,  op-index += 0
+// CHECK-NEXT:             0x0000000000000070     41      9      1   0             0       0  is_stmt
+// CHECK-NEXT: 0x00000167: 05 DW_LNS_set_column (18)
+// CHECK-NEXT: 0x00000169: 4f address += 4,  line += 5,  op-index += 0
+// CHECK-NEXT:             0x0000000000000074     46     18      1   0             0       0  is_stmt
+// CHECK-NEXT: 0x0000016a: 05 DW_LNS_set_column (9)
+// CHECK-NEXT: 0x0000016c: ee address += 16,  line += -4,  op-index += 0
+// CHECK-NEXT:             0x0000000000000084     42      9      1   0             0       0  is_stmt
+// CHECK-NEXT: 0x0000016d: 05 DW_LNS_set_column (5)
+// CHECK-NEXT: 0x0000016f: 0b DW_LNS_set_epilogue_begin
+// CHECK-NEXT: 0x00000170: 4f address += 4,  line += 5,  op-index += 0
+// CHECK-NEXT:             0x0000000000000088     47      5      1   0             0       0  is_stmt epilogue_begin
+// CHECK-NEXT: 0x00000171: 02 DW_LNS_advance_pc (addr += 16, op-index += 0)
+// CHECK-NEXT: 0x00000173: 00 DW_LNE_end_sequence
+// CHECK-NEXT:             0x0000000000000098     47      5      1   0             0       0  is_stmt end_sequence
+// CHECK-NEXT: [[ERRLOG]]: 05 DW_LNS_set_column (85)
+// CHECK-NEXT: 0x00000178: 0a DW_LNS_set_prologue_end
+// CHECK-NEXT: 0x00000179: 00 DW_LNE_set_address (0x0000000000000098)
+// CHECK-NEXT: 0x00000184: 03 DW_LNS_advance_line (34)
+// CHECK-NEXT: 0x00000186: 01 DW_LNS_copy
+// CHECK-NEXT:             0x0000000000000098     34     85      1   0             0       0  is_stmt prologue_end
+// CHECK-NEXT: 0x00000187: 02 DW_LNS_advance_pc (addr += 4, op-index += 0)
+// CHECK-NEXT: 0x00000189: 00 DW_LNE_end_sequence
+// CHECK-NEXT:             0x000000000000009c     34     85      1   0             0       0  is_stmt end_sequence
+// CHECK-NEXT: [[ERRLEN]]: 05 DW_LNS_set_column (86)
+// CHECK-NEXT: 0x0000018e: 0a DW_LNS_set_prologue_end
+// CHECK-NEXT: 0x0000018f: 00 DW_LNE_set_address (0x000000000000009c)
+// CHECK-NEXT: 0x0000019a: 03 DW_LNS_advance_line (34)
+// CHECK-NEXT: 0x0000019c: 01 DW_LNS_copy
+// CHECK-NEXT:             0x000000000000009c     34     86      1   0             0       0  is_stmt prologue_end
+// CHECK-NEXT: 0x0000019d: 02 DW_LNS_advance_pc (addr += 4, op-index += 0)
+// CHECK-NEXT: 0x0000019f: 00 DW_LNE_end_sequence
+// CHECK-NEXT: 0x00000000000000a0     34     86      1   0             0       0  is_stmt end_sequence
+
+#--- stmt_seq_macho.cpp
+#define ATTRIB extern "C" __attribute__((noinline))
+ATTRIB void function_empty_1() {}
+ATTRIB void function_empty_2() {}
+ATTRIB void function_empty_3() {}
+
+ATTRIB int function1_copy1(int a) {
+  return ++a;
+}
+
+ATTRIB int function3_copy1(int a) {
+    int b = a + 3;
+    return b + 1;
+}
+
+ATTRIB int function2_copy1(int a) {
+    return a - 22;
+}
+
+ATTRIB int function3_copy2(int a) {
+    int b = a + 3;
+    return b + 1;
+}
+
+ATTRIB int function2_copy2(int a) {
+    int result = a - 22;
+    return result;
+}
+
+struct logic_error {
+    logic_error(const char* s) {}
+};
+
+struct length_error : public logic_error {
+    __attribute__((noinline)) explicit length_error(const char* s) : logic_error(s) {}
+};
+
+int main() {
+    int sum = 0;
+    sum += function2_copy2(3);
+    sum += function3_copy2(41);
+    sum += function2_copy1(11);
+    sum += function1_copy1(42);
+    function_empty_1();
+    function_empty_2();
+    function_empty_3();
+    length_error e("test");
+    return sum;
+}
