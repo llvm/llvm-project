@@ -36,16 +36,17 @@
 foo:
 .cfi_startproc
 .entry_bb:
+# FDATA: 1 foo #.entry_bb# 10
      paciasp
     .cfi_negate_ra_state     // indicating that paciasp changed the RA state to signed
-# FDATA: 1 foo #.entry_bb# 10
     cmp x0, #0
     b.eq .Lcold_bb1
+.Lfallthrough:
     autiasp
     .cfi_negate_ra_state     // indicating that autiasp changed the RA state to unsigned
     ret
     .cfi_negate_ra_state     // ret has unsigned RA state, but the next inst (autiasp) has signed RA state
-.Lcold_bb1:
+.Lcold_bb1:                  // split point
     autiasp
     .cfi_negate_ra_state     // indicating that autiasp changed the RA state to unsigned
     ret

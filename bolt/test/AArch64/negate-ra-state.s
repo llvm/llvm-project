@@ -1,11 +1,16 @@
 # Checking that .cfi-negate_ra_state directives are emitted in the same location as in the input in the case of no optimizations.
 
+# The foo and bar functions are a pair, with the first signing the return address,
+# and the second authenticating it. We have a tailcall between the two.
+# This is testing that BOLT can handle functions starting in signed RA state.
+
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o
 # RUN: %clang %cflags  %t.o -o %t.exe -Wl,-q
 # RUN: llvm-bolt %t.exe -o %t.exe.bolt --no-threads --print-all | FileCheck %s --check-prefix=CHECK-BOLT
 
 # Check that the negate-ra-state at the start of bar is not discarded.
 # If it was discarded, MarkRAState would report bar as having inconsistent RAStates.
+# This is testing the handling of initialRAState on the BinaryFunction.
 # CHECK-BOLT-NOT: BOLT-INFO: inconsistent RAStates in function foo
 # CHECK-BOLT-NOT: BOLT-INFO: inconsistent RAStates in function bar
 
@@ -69,8 +74,3 @@ bar:
   ret
   .cfi_endproc
   .size   bar, .-bar
-
-  .global _start
-  .type _start, %function
-_start:
-  b foo

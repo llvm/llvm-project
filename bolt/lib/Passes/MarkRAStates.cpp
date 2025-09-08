@@ -73,7 +73,7 @@ bool MarkRAStates::runOnFunction(BinaryFunction &BF) {
           BF.setIgnored();
           return false;
         }
-        // The signing instruction itself is unsinged, but the next will be
+        // The signing instruction itself is unsigned, the next will be
         // signed.
         BC.MIB->setRAUnsigned(Inst);
       } else if (BC.MIB->isPAuthOnLR(Inst)) {
