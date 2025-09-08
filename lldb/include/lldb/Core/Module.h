@@ -476,7 +476,7 @@ public:
 
   const FileSpec &GetSymbolFileFileSpec() const { return m_symfile_spec; }
 
-  FileSpecList GetSeparateDebugInfoFiles();
+  ModuleSpecList GetSeparateDebugInfoFiles();
 
   void PreloadSymbols();
 

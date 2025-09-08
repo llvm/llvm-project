@@ -1664,7 +1664,7 @@ DataFileCache *Module::GetIndexCache() {
   return g_data_file_cache;
 }
 
-lldb_private::FileSpecList Module::GetSeparateDebugInfoFiles() {
+lldb_private::ModuleSpecList Module::GetSeparateDebugInfoFiles() {
   SymbolFile *symfile = GetSymbolFile(false);
   if (!symfile)
     return {};
