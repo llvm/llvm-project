@@ -24,6 +24,7 @@ typedef float __m128_u __attribute__((__vector_size__(16), __aligned__(1)));
 /* Unsigned types */
 typedef unsigned int __v4su __attribute__((__vector_size__(16)));
 typedef unsigned short __v8hu __attribute__((__vector_size__(16)));
+typedef unsigned char __v16qu __attribute__((__vector_size__(16)));
 
 /* This header should only be included in a hosted environment as it depends on
  * a standard library to provide allocation routines. */
