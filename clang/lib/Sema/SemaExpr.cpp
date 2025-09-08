@@ -6318,7 +6318,7 @@ static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
     // don't actually occur.
     EnterExpressionEvaluationContext Unevaluated(
         *Sema, Sema::ExpressionEvaluationContext::Unevaluated);
-    Sema::SFINAETrap Trap(*Sema);
+    Sema::SFINAETrap Trap(*Sema, /*ForValidityCheck=*/true);
 
     for (QualType ParamType : FT->param_types()) {
 
