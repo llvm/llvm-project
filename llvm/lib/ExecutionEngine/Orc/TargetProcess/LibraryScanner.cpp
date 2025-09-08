@@ -233,7 +233,7 @@ bool DylibPathValidator::isSharedLibrary(StringRef Path) {
   if (MagicCode == file_magic::archive)
     return false;
 
-    // Universal binary handling.
+  // Universal binary handling.
 #if defined(__APPLE__)
   if (MagicCode == file_magic::macho_universal_binary) {
     ObjectFileLoader ObjLoader(Path);
@@ -430,7 +430,7 @@ mode_t PathResolver::lstatCached(StringRef path) {
     return *cache;
 
   // Not cached: perform lstat and store
-  struct stat buf {};
+  struct stat buf{};
   mode_t st_mode = (lstat(path.str().c_str(), &buf) == -1) ? 0 : buf.st_mode;
 
   m_cache->insert_lstat(path, st_mode);

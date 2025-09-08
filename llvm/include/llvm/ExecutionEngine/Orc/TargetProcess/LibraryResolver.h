@@ -96,12 +96,10 @@ public:
     mutable std::shared_mutex mutex;
   };
 
-  /**
-   * @brief A read-only view of libraries filtered by state and kind.
-   *
-   * Lets you loop over only the libraries in a map that match a given State
-   * and PathType.
-   */
+  /// A read-only view of libraries filtered by state and kind.
+  ///
+  /// Lets you loop over only the libraries in a map that match a given State
+  /// and PathType.
   class FilteredView {
   public:
     using Map = StringMap<std::shared_ptr<LibraryInfo>>;
