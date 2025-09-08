@@ -84,6 +84,7 @@ class TestDAP_step(lldbdap_testcase.DAPTestCaseBase):
                     # only step one thread that is at the breakpoint and stop
                     break
 
+    @skipIfWindows
     def test_step_over_inlined_function(self):
         """
         Test stepping over when the program counter is in another file.
