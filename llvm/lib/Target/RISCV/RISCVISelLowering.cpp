@@ -20250,6 +20250,17 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return V;
     break;
   case ISD::FMUL: {
+    using namespace SDPatternMatch;
+    SDLoc DL(N);
+    EVT VT = N->getValueType(0);
+    SDValue X, Y;
+    // InstCombine canonicalizes fneg (fmul x, y) -> fmul x, (fneg y), see
+    // hoistFNegAboveFMulFDiv.
+    // Undo this and sink the fneg so we match more fmsub/fnmadd patterns.
+    if (sd_match(N, m_FMul(m_Value(X), m_OneUse(m_FNeg(m_Value(Y))))))
+      return DAG.getNode(ISD::FNEG, DL, VT,
+                         DAG.getNode(ISD::FMUL, DL, VT, X, Y));
+
     // fmul X, (copysign 1.0, Y) -> fsgnjx X, Y
     SDValue N0 = N->getOperand(0);
     SDValue N1 = N->getOperand(1);
@@ -20260,7 +20271,6 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(N0->getOperand(0));
     if (!C || !C->getValueAPF().isExactlyValue(+1.0))
       return SDValue();
-    EVT VT = N->getValueType(0);
     if (VT.isVector() || !isOperationLegal(ISD::FCOPYSIGN, VT))
       return SDValue();
     SDValue Sign = N0->getOperand(1);

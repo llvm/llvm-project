@@ -613,23 +613,20 @@ define double @fmsub_d(double %a, double %b, double %c) nounwind {
 define double @fmsub_d_fmul_fneg(double %a, double %b, double %c, double %d) nounwind {
 ; CHECKIFD-LABEL: fmsub_d_fmul_fneg:
 ; CHECKIFD:       # %bb.0:
-; CHECKIFD-NEXT:    fneg.d fa5, fa3
-; CHECKIFD-NEXT:    fmul.d fa5, fa2, fa5
-; CHECKIFD-NEXT:    fmadd.d fa0, fa0, fa1, fa5
+; CHECKIFD-NEXT:    fmul.d fa5, fa2, fa3
+; CHECKIFD-NEXT:    fmsub.d fa0, fa0, fa1, fa5
 ; CHECKIFD-NEXT:    ret
 ;
 ; RV32IZFINXZDINX-LABEL: fmsub_d_fmul_fneg:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    fneg.d a6, a6
 ; RV32IZFINXZDINX-NEXT:    fmul.d a4, a4, a6
-; RV32IZFINXZDINX-NEXT:    fmadd.d a0, a0, a2, a4
+; RV32IZFINXZDINX-NEXT:    fmsub.d a0, a0, a2, a4
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fmsub_d_fmul_fneg:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    fneg.d a3, a3
 ; RV64IZFINXZDINX-NEXT:    fmul.d a2, a2, a3
-; RV64IZFINXZDINX-NEXT:    fmadd.d a0, a0, a1, a2
+; RV64IZFINXZDINX-NEXT:    fmsub.d a0, a0, a1, a2
 ; RV64IZFINXZDINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fmsub_d_fmul_fneg:
@@ -963,23 +960,20 @@ define double @fnmadd_d_3(double %a, double %b, double %c) nounwind {
 define double @fnmadd_d_fmul_fneg(double %a, double %b, double %c, double %d) nounwind {
 ; CHECKIFD-LABEL: fnmadd_d_fmul_fneg:
 ; CHECKIFD:       # %bb.0:
-; CHECKIFD-NEXT:    fneg.d fa5, fa0
-; CHECKIFD-NEXT:    fmul.d fa5, fa1, fa5
-; CHECKIFD-NEXT:    fmadd.d fa0, fa2, fa3, fa5
+; CHECKIFD-NEXT:    fmul.d fa5, fa1, fa0
+; CHECKIFD-NEXT:    fmsub.d fa0, fa2, fa3, fa5
 ; CHECKIFD-NEXT:    ret
 ;
 ; RV32IZFINXZDINX-LABEL: fnmadd_d_fmul_fneg:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    fneg.d a0, a0
 ; RV32IZFINXZDINX-NEXT:    fmul.d a0, a2, a0
-; RV32IZFINXZDINX-NEXT:    fmadd.d a0, a4, a6, a0
+; RV32IZFINXZDINX-NEXT:    fmsub.d a0, a4, a6, a0
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fnmadd_d_fmul_fneg:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    fneg.d a0, a0
 ; RV64IZFINXZDINX-NEXT:    fmul.d a0, a1, a0
-; RV64IZFINXZDINX-NEXT:    fmadd.d a0, a2, a3, a0
+; RV64IZFINXZDINX-NEXT:    fmsub.d a0, a2, a3, a0
 ; RV64IZFINXZDINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmadd_d_fmul_fneg:

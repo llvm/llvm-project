@@ -553,16 +553,14 @@ define float @fmsub_s_fmul_fneg(float %a, float %b, float %c, float %d) nounwind
 ;
 ; CHECKIF-LABEL: fmsub_s_fmul_fneg:
 ; CHECKIF:       # %bb.0:
-; CHECKIF-NEXT:    fneg.s fa5, fa3
-; CHECKIF-NEXT:    fmul.s fa5, fa2, fa5
-; CHECKIF-NEXT:    fmadd.s fa0, fa0, fa1, fa5
+; CHECKIF-NEXT:    fmul.s fa5, fa2, fa3
+; CHECKIF-NEXT:    fmsub.s fa0, fa0, fa1, fa5
 ; CHECKIF-NEXT:    ret
 ;
 ; CHECKIZFINX-LABEL: fmsub_s_fmul_fneg:
 ; CHECKIZFINX:       # %bb.0:
-; CHECKIZFINX-NEXT:    fneg.s a3, a3
 ; CHECKIZFINX-NEXT:    fmul.s a2, a2, a3
-; CHECKIZFINX-NEXT:    fmadd.s a0, a0, a1, a2
+; CHECKIZFINX-NEXT:    fmsub.s a0, a0, a1, a2
 ; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fmsub_s_fmul_fneg:
@@ -847,16 +845,14 @@ define float @fnmadd_s_fmul_fneg(float %a, float %b, float %c, float %d) nounwin
 ;
 ; CHECKIF-LABEL: fnmadd_s_fmul_fneg:
 ; CHECKIF:       # %bb.0:
-; CHECKIF-NEXT:    fneg.s fa5, fa0
-; CHECKIF-NEXT:    fmul.s fa5, fa1, fa5
-; CHECKIF-NEXT:    fmadd.s fa0, fa2, fa3, fa5
+; CHECKIF-NEXT:    fmul.s fa5, fa1, fa0
+; CHECKIF-NEXT:    fmsub.s fa0, fa2, fa3, fa5
 ; CHECKIF-NEXT:    ret
 ;
 ; CHECKIZFINX-LABEL: fnmadd_s_fmul_fneg:
 ; CHECKIZFINX:       # %bb.0:
-; CHECKIZFINX-NEXT:    fneg.s a0, a0
 ; CHECKIZFINX-NEXT:    fmul.s a0, a1, a0
-; CHECKIZFINX-NEXT:    fmadd.s a0, a2, a3, a0
+; CHECKIZFINX-NEXT:    fmsub.s a0, a2, a3, a0
 ; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmadd_s_fmul_fneg:
