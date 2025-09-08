@@ -9046,7 +9046,7 @@ SelectionDAG::getMemcmp(SDValue Chain, const SDLoc &dl, SDValue Mem0,
 
   TargetLowering::CallLoweringInfo CLI(*this);
   bool IsTailCall =
-      isInTailCallPositionWrapper(CI, this, /*LowerToLibCall*/ true);
+      isInTailCallPositionWrapper(CI, this, /*AllowReturnsFirstArg*/ true);
 
   CLI.setDebugLoc(dl)
       .setChain(Chain)
