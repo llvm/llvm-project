@@ -34,7 +34,6 @@ class SparcSubtarget : public SparcGenSubtargetInfo {
   // register.
   BitVector ReserveRegister;
 
-  Triple TargetTriple;
   virtual void anchor();
 
   bool Is64Bit;
@@ -96,8 +95,6 @@ public:
   /// returns adjusted framesize which includes space for register window
   /// spills and arguments.
   int getAdjustedFrameSize(int stackSize) const;
-
-  bool isTargetLinux() const { return TargetTriple.isOSLinux(); }
 };
 
 } // end namespace llvm

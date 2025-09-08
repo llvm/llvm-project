@@ -50,8 +50,7 @@ SparcSubtarget::SparcSubtarget(const StringRef &CPU, const StringRef &TuneCPU,
                                const StringRef &FS, const TargetMachine &TM,
                                bool is64Bit)
     : SparcGenSubtargetInfo(TM.getTargetTriple(), CPU, TuneCPU, FS),
-      ReserveRegister(TM.getMCRegisterInfo()->getNumRegs()),
-      TargetTriple(TM.getTargetTriple()), Is64Bit(is64Bit),
+      ReserveRegister(TM.getMCRegisterInfo()->getNumRegs()), Is64Bit(is64Bit),
       InstrInfo(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
       TLInfo(TM, *this), FrameLowering(*this) {
   TSInfo = std::make_unique<SparcSelectionDAGInfo>();
