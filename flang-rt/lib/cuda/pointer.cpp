@@ -26,7 +26,9 @@ int RTDEF(CUFPointerAllocate)(Descriptor &desc, int32_t allocIdx,
     int64_t *stream, bool *pinned, bool hasStat, const Descriptor *errMsg,
     const char *sourceFile, int sourceLine) {
 #if !defined(RT_DEVICE_COMPILATION)
-  desc.SetAllocIdx(allocIdx);
+  if (desc.GetAllocIdx() == kDefaultAllocator) {
+    desc.SetAllocIdx(allocIdx);
+  }
 #endif
   // Perform the standard allocation.
   int stat{
