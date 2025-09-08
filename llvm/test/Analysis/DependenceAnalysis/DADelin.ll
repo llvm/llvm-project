@@ -547,9 +547,9 @@ define double @test_sizes(i16 %h, i16 %N, ptr nocapture %array) {
 ; CHECK-NEXT:  Src: %2 = load i16, ptr %arrayidx, align 4 --> Dst: %2 = load i16, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - consistent input [0 S]!
 ; CHECK-NEXT:  Src: %2 = load i16, ptr %arrayidx, align 4 --> Dst: store i16 %add6, ptr %arrayidx8, align 4
-; CHECK-NEXT:    da analyze - anti [* *|<]!
+; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i16 %add6, ptr %arrayidx8, align 4 --> Dst: store i16 %add6, ptr %arrayidx8, align 4
-; CHECK-NEXT:    da analyze - output [* *]!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   %cmp28 = icmp sgt i16 %N, 1

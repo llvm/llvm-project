@@ -8,7 +8,7 @@
 define void @barney(ptr nocapture %arg, i32 %arg1) {
 ; CHECK-LABEL: 'barney'
 ; CHECK-NEXT:  Src: store i32 7, ptr %getelementptr, align 4 --> Dst: store i32 7, ptr %getelementptr, align 4
-; CHECK-NEXT:    da analyze - output [* * * *]!
+; CHECK-NEXT:    da analyze - confused!
 ;
 bb:
   %icmp = icmp sgt i32 %arg1, 0

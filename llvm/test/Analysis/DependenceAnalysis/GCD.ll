@@ -556,13 +556,13 @@ for.end15:                                        ; preds = %for.end15.loopexit,
 define void @gcd8(i32 %n, ptr %A, ptr %B) nounwind uwtable ssp {
 ; CHECK-LABEL: 'gcd8'
 ; CHECK-NEXT:  Src: store i32 %i.06, ptr %arrayidx, align 4 --> Dst: store i32 %i.06, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - output [* *]!
+; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %i.06, ptr %arrayidx, align 4 --> Dst: %5 = load i32, ptr %arrayidx12, align 4
-; CHECK-NEXT:    da analyze - flow [* *|<]!
+; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %i.06, ptr %arrayidx, align 4 --> Dst: store i32 %5, ptr %B.addr.12, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %5 = load i32, ptr %arrayidx12, align 4 --> Dst: %5 = load i32, ptr %arrayidx12, align 4
-; CHECK-NEXT:    da analyze - input [* *]!
+; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %5 = load i32, ptr %arrayidx12, align 4 --> Dst: store i32 %5, ptr %B.addr.12, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %5, ptr %B.addr.12, align 4 --> Dst: store i32 %5, ptr %B.addr.12, align 4

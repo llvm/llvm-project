@@ -3352,13 +3352,6 @@ struct SCEVSignedMonotonicityChecker
   MonotonicityType visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr);
   MonotonicityType visitSignExtendExpr(const SCEVSignExtendExpr *Expr);
 
-  MonotonicityType visitAddExpr(const SCEVAddExpr *Expr) {
-    return visitNAryHelper(Expr);
-  }
-  MonotonicityType visitMulExpr(const SCEVMulExpr *Expr) {
-    return visitNAryHelper(Expr);
-  }
-
   MonotonicityType visitConstant(const SCEVConstant *) {
     return MonotonicityType::Invariant;
   }
@@ -3367,6 +3360,12 @@ struct SCEVSignedMonotonicityChecker
   }
 
   // TODO: Handle more cases.
+  MonotonicityType visitAddExpr(const SCEVAddExpr *Expr) {
+    return unknownMonotonicity(Expr);
+  }
+  MonotonicityType visitMulExpr(const SCEVMulExpr *Expr) {
+    return unknownMonotonicity(Expr);
+  }
   MonotonicityType visitPtrToIntExpr(const SCEVPtrToIntExpr *Expr) {
     return unknownMonotonicity(Expr);
   }
@@ -3403,7 +3402,6 @@ private:
   SCEVSignedMonotonicityChecker(ScalarEvolution *SE, const Loop *OutermostLoop,
                                 const Value *Ptr);
 
-  MonotonicityType visitNAryHelper(const SCEVNAryExpr *Expr);
   MonotonicityType unknownMonotonicity(const SCEV *Expr);
   bool isLoopInvariant(const SCEV *Expr) const;
 };
@@ -3466,55 +3464,9 @@ MonotonicityType SCEVSignedMonotonicityChecker::checkMonotonicity(
 }
 
 MonotonicityType
-SCEVSignedMonotonicityChecker::visitNAryHelper(const SCEVNAryExpr *Expr) {
-  assert((isa<SCEVAddExpr>(Expr) || isa<SCEVMulExpr>(Expr)) &&
-         "Unexpected SCEV");
-
+SCEVSignedMonotonicityChecker::unknownMonotonicity(const SCEV *Expr) {
   if (isLoopInvariant(Expr))
     return MonotonicityType::Invariant;
-
-  MonotonicityType Result = MonotonicityType::Invariant;
-  for (const SCEV *Op : Expr->operands()) {
-    assert(Result != MonotonicityType::Unknown && "Unexpected state");
-    switch (visit(Op)) {
-    case MonotonicityType::Unknown:
-      return unknownMonotonicity(Expr);
-    case MonotonicityType::NoSignedWrap:
-      Result = MonotonicityType::NoSignedWrap;
-      break;
-    case MonotonicityType::Invariant:
-      break;
-    case MonotonicityType::MultiMonotonic: {
-      if (!Expr->hasNoSignedWrap())
-        return unknownMonotonicity(Expr);
-      switch (Result) {
-      case MonotonicityType::Unknown:
-        llvm_unreachable("should have been handled above");
-      case MonotonicityType::NoSignedWrap:
-        break;
-      case MonotonicityType::Invariant:
-        Result = MonotonicityType::MultiMonotonic;
-        break;
-      case MonotonicityType::MultiMonotonic:
-        if (!isa<SCEVAddExpr>(Expr))
-          return unknownMonotonicity(Expr);
-        // Monotonic + Monotonic might be a loop invariant, e.g., the following
-        // SCEV:
-        //
-        //   {0,+,1}<%loop> + {0,+,-1}<%loop>
-        //
-        // In that case, relax the property to NoSignedWrap.
-        Result = MonotonicityType::NoSignedWrap;
-        break;
-      }
-    } break;
-    }
-  }
-  return Result;
-}
-
-MonotonicityType
-SCEVSignedMonotonicityChecker::unknownMonotonicity(const SCEV *Expr) {
   LLVM_DEBUG(dbgs() << "Failed to prove monotonicity for: " << *Expr << "\n");
   return MonotonicityType::Unknown;
 }

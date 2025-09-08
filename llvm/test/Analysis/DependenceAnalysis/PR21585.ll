@@ -47,7 +47,7 @@ define void @t(ptr noalias %a, i32 %n) nounwind {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr @g, align 4 --> Dst: store i32 %0, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - output [*]!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   %cmp1 = icmp eq i32 %n, 0
