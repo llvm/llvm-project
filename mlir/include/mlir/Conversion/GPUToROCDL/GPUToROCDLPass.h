@@ -10,6 +10,8 @@
 
 #include "mlir/Conversion/GPUToROCDL/Runtimes.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
+#include "llvm/ADT/DenseSet.h"
+#include <cstddef>
 #include <memory>
 
 namespace mlir {
@@ -50,7 +52,9 @@ createLowerGpuOpsToROCDLOpsPass(
     const std::string &chipset = "gfx900",
     unsigned indexBitwidth = kDeriveIndexBitwidthFromDataLayout,
     bool useBarePtrCallConv = false,
-    gpu::amd::Runtime runtime = gpu::amd::Runtime::Unknown);
+    gpu::amd::Runtime runtime = gpu::amd::Runtime::Unknown,
+    const std::optional<llvm::SmallDenseSet<llvm::StringRef>> &allowedDialects =
+        std::nullopt);
 
 } // namespace mlir
 
