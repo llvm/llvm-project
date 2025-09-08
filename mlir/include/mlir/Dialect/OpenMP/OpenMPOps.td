@@ -1479,8 +1479,8 @@ def TargetOp : OpenMP_Op<"target", traits = [
     `map` operands. For `private` operands that require a map, the value of the
     corresponding element in the attribute is the index of the `map` operand
     (relative to other `map` operands not the whole operands of the operation). For
-    `private` operands that do not require a map, this value is -1 (which is omitted
-    from the assembly format printing).
+    `private` opernads that do not require a map, this value is -1 (which is omitted
+    from the assembly foramt printing).
   }] # clausesDescription;
 
   let arguments = !con(clausesArgs,
