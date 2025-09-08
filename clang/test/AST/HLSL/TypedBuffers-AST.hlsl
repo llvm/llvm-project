@@ -78,6 +78,32 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: AlwaysInlineAttr
 
+// Copy constructor
+
+// CHECK: CXXConstructorDecl {{.*}} [[RESOURCE]]<element_type> 'void (const hlsl::[[RESOURCE]]<element_type> &)' inline
+// CHECK-NEXT: ParmVarDecl {{.*}} other 'const hlsl::[[RESOURCE]]<element_type> &'
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: BinaryOperator {{.*}} '='
+// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
+// CHECK-NEXT: DeclRefExpr {{.*}} 'const hlsl::[[RESOURCE]]<element_type>' ParmVar {{.*}} 'other' 'const hlsl::[[RESOURCE]]<element_type> &'
+// CHECK-NEXT: AlwaysInlineAttr
+
+// operator=
+
+// CHECK: CXXMethodDecl {{.*}} operator= 'hlsl::[[RESOURCE]]<element_type> &(const hlsl::[[RESOURCE]]<element_type> &)'
+// CHECK-NEXT: ParmVarDecl {{.*}} other 'const hlsl::[[RESOURCE]]<element_type> &'
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: BinaryOperator {{.*}} '='
+// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
+// CHECK-NEXT: DeclRefExpr {{.*}} 'const hlsl::[[RESOURCE]]<element_type>' ParmVar {{.*}} 'other' 'const hlsl::[[RESOURCE]]<element_type> &'
+// CHECK-NEXT: ReturnStmt
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK-NEXT: AlwaysInlineAttr
+
 // Static __createFromBinding method
 
 // CHECK: CXXMethodDecl {{.*}} __createFromBinding 'hlsl::[[RESOURCE]]<element_type> (unsigned int, unsigned int, int, unsigned int, const char *)' static

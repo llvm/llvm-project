@@ -4,7 +4,7 @@
 // REQUIRES: system-darwin
 // RUN: %clang_host %s -g -c -o %t.o
 // RUN: env ZERO_AR_DATE=1 %clang_host %t.o -g -o %t
-// RUN: %lldb %t -o "breakpoint set -f %s -l 11" -o run -o exit | FileCheck %s
+// RUN: %lldb %t -o "breakpoint set -f %s -l 10" -o run -o exit | FileCheck %s
 // CHECK: stop reason = breakpoint
 
 int main() { return 0; }
