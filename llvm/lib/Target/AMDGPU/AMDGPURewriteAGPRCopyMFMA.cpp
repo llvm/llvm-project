@@ -659,7 +659,10 @@ AMDGPURewriteAGPRCopyMFMAPass::run(MachineFunction &MF,
   if (!Impl.run(MF))
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserveSet<CFGAnalyses>();
-  PA.preserve<LiveStacksAnalysis>();
+  PA.preserveSet<CFGAnalyses>()
+    .preserve<LiveStacksAnalysis>()
+    .preserve<VirtRegMapAnalysis>()
+    .preserve<LiveIntervalsAnalysis>()
+    .preserve<LiveRegMatrixAnalysis>();
   return PA;
 }
