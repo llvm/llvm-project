@@ -1561,10 +1561,6 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   if (auto noNansFpMath = func.getNoNansFpMath())
     llvmFunc->addFnAttr("no-nans-fp-math", llvm::toStringRef(*noNansFpMath));
 
-  if (auto approxFuncFpMath = func.getApproxFuncFpMath())
-    llvmFunc->addFnAttr("approx-func-fp-math",
-                        llvm::toStringRef(*approxFuncFpMath));
-
   if (auto noSignedZerosFpMath = func.getNoSignedZerosFpMath())
     llvmFunc->addFnAttr("no-signed-zeros-fp-math",
                         llvm::toStringRef(*noSignedZerosFpMath));
@@ -2406,11 +2402,6 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   // constants to point to the correct blocks.
   if (failed(translator.convertUnresolvedBlockAddress()))
     return nullptr;
-
-  // Once we've finished constructing elements in the module, we should convert
-  // it to use the debug info format desired by LLVM.
-  // See https://llvm.org/docs/RemoveDIsDebugInfo.html
-  translator.llvmModule->convertToNewDbgValues();
 
   // Add the necessary debug info module flags, if they were not encoded in MLIR
   // beforehand.

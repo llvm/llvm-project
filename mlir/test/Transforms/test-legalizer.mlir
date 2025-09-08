@@ -1,6 +1,7 @@
 // RUN: mlir-opt -allow-unregistered-dialect -split-input-file -test-legalize-patterns="allow-pattern-rollback=1" -verify-diagnostics %s | FileCheck %s
 // RUN: mlir-opt -allow-unregistered-dialect -split-input-file -test-legalize-patterns="allow-pattern-rollback=1" -verify-diagnostics -profile-actions-to=- %s | FileCheck %s --check-prefix=CHECK-PROFILER
 // RUN: mlir-opt -allow-unregistered-dialect -split-input-file -test-legalize-patterns="allow-pattern-rollback=0" -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -test-legalize-patterns="allow-pattern-rollback=0 build-materializations=0 attach-debug-materialization-kind=1" -verify-diagnostics %s | FileCheck %s --check-prefix=CHECK-KIND
 
 // CHECK-PROFILER: "name": "pass-execution", "cat": "PERF", "ph": "B"
 // CHECK-PROFILER: "name": "apply-conversion", "cat": "PERF", "ph": "B"
@@ -190,9 +191,12 @@ func.func @remap_drop_region() {
 // -----
 
 // CHECK-LABEL: func @dropped_input_in_use
+// CHECK-KIND-LABEL: func @dropped_input_in_use
 func.func @dropped_input_in_use(%arg: i16, %arg2: i64) {
-  // CHECK-NEXT: "test.cast"{{.*}} : () -> i16
-  // CHECK-NEXT: "work"{{.*}} : (i16)
+  // CHECK-NEXT: %[[cast:.*]] = "test.cast"() : () -> i16
+  // CHECK-NEXT: "work"(%[[cast]]) : (i16)
+  // CHECK-KIND-NEXT: %[[cast:.*]] = builtin.unrealized_conversion_cast to i16 {__kind__ = "source"}
+  // CHECK-KIND-NEXT: "work"(%[[cast]]) : (i16)
   // expected-remark@+1 {{op 'work' is not legalizable}}
   "work"(%arg) : (i16) -> ()
 }
@@ -430,6 +434,11 @@ func.func @test_multiple_1_to_n_replacement() {
 //       CHECK:   %[[cast:.*]] = "test.cast"(%[[producer]]) : (i16) -> f64
 //       CHECK:   "test.valid_consumer"(%[[cast]]) : (f64) -> ()
 //       CHECK:   "test.valid_consumer"(%[[producer]]) : (i16) -> ()
+// CHECK-KIND-LABEL: func @test_lookup_without_converter
+//       CHECK-KIND:   %[[producer:.*]] = "test.valid_producer"() : () -> i16
+//       CHECK-KIND:   %[[cast:.*]] = builtin.unrealized_conversion_cast %[[producer]] : i16 to f64 {__kind__ = "target"}
+//       CHECK-KIND:   "test.valid_consumer"(%[[cast]]) : (f64) -> ()
+//       CHECK-KIND:   "test.valid_consumer"(%[[producer]]) : (i16) -> ()
 func.func @test_lookup_without_converter() {
   %0 = "test.replace_with_valid_producer"() {type = i16} : () -> (i64)
   "test.replace_with_valid_consumer"(%0) {with_converter} : (i64) -> ()

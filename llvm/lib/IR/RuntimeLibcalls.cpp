@@ -31,10 +31,8 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
                                        ExceptionHandling ExceptionModel,
                                        FloatABI::ABIType FloatABI,
                                        EABI EABIVersion, StringRef ABIName) {
-  setTargetRuntimeLibcallSets(TT, FloatABI, EABIVersion, ABIName);
-
-  if (ExceptionModel == ExceptionHandling::SjLj)
-    setLibcallImpl(RTLIB::UNWIND_RESUME, RTLIB::_Unwind_SjLj_Resume);
+  setTargetRuntimeLibcallSets(TT, ExceptionModel, FloatABI, EABIVersion,
+                              ABIName);
 
   if (TT.isARM() || TT.isThumb()) {
     // The half <-> float conversion functions are always soft-float on
@@ -53,11 +51,6 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
     }
 
     return;
-  }
-
-  if (TT.getArch() == Triple::ArchType::msp430) {
-    setLibcallImplCallingConv(RTLIB::__mspabi_mpyll,
-                              CallingConv::MSP430_BUILTIN);
   }
 }
 

@@ -16,7 +16,6 @@
 #include "mlir/Target/LLVMIR/Import.h"
 
 #include "AttrKindDetail.h"
-#include "DataLayoutImporter.h"
 #include "DebugImporter.h"
 #include "LoopAnnotationImporter.h"
 
@@ -25,6 +24,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "mlir/Target/LLVMIR/DataLayoutImporter.h"
 #include "mlir/Tools/mlir-translate/Translation.h"
 
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -1045,8 +1045,9 @@ LogicalResult ModuleImport::convertIFuncs() {
 
 LogicalResult ModuleImport::convertDataLayout() {
   Location loc = mlirModule.getLoc();
-  DataLayoutImporter dataLayoutImporter(context, llvmModule->getDataLayout());
-  if (!dataLayoutImporter.getDataLayout())
+  DataLayoutImporter dataLayoutImporter(
+      context, llvmModule->getDataLayout().getStringRepresentation());
+  if (!dataLayoutImporter.getDataLayoutSpec())
     return emitError(loc, "cannot translate data layout: ")
            << dataLayoutImporter.getLastToken();
 
@@ -1054,7 +1055,7 @@ LogicalResult ModuleImport::convertDataLayout() {
     emitWarning(loc, "unhandled data layout token: ") << token;
 
   mlirModule->setAttr(DLTIDialect::kDataLayoutAttrName,
-                      dataLayoutImporter.getDataLayout());
+                      dataLayoutImporter.getDataLayoutSpec());
   return success();
 }
 
@@ -2535,7 +2536,6 @@ static constexpr std::array kExplicitAttributes{
     StringLiteral("aarch64_pstate_sm_compatible"),
     StringLiteral("aarch64_pstate_sm_enabled"),
     StringLiteral("alwaysinline"),
-    StringLiteral("approx-func-fp-math"),
     StringLiteral("convergent"),
     StringLiteral("denormal-fp-math"),
     StringLiteral("denormal-fp-math-f32"),
@@ -2702,10 +2702,6 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
   if (llvm::Attribute attr = func->getFnAttribute("no-nans-fp-math");
       attr.isStringAttribute())
     funcOp.setNoNansFpMath(attr.getValueAsBool());
-
-  if (llvm::Attribute attr = func->getFnAttribute("approx-func-fp-math");
-      attr.isStringAttribute())
-    funcOp.setApproxFuncFpMath(attr.getValueAsBool());
 
   if (llvm::Attribute attr = func->getFnAttribute("instrument-function-entry");
       attr.isStringAttribute())

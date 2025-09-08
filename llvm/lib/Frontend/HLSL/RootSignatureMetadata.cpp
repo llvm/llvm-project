@@ -15,6 +15,7 @@
 #include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 using namespace llvm;
@@ -130,9 +131,7 @@ MDNode *MetadataBuilder::BuildRootConstants(const RootConstants &Constants) {
 
 MDNode *MetadataBuilder::BuildRootDescriptor(const RootDescriptor &Descriptor) {
   IRBuilder<> Builder(Ctx);
-  StringRef ResName =
-      enumToStringRef(dxil::ResourceClass(to_underlying(Descriptor.Type)),
-                      dxil::getResourceClasses());
+  StringRef ResName = dxil::getResourceClassName(Descriptor.Type);
   assert(!ResName.empty() && "Provided an invalid Resource Class");
   SmallString<7> Name({"Root", ResName});
   Metadata *Operands[] = {
@@ -172,9 +171,7 @@ MDNode *MetadataBuilder::BuildDescriptorTable(const DescriptorTable &Table) {
 MDNode *MetadataBuilder::BuildDescriptorTableClause(
     const DescriptorTableClause &Clause) {
   IRBuilder<> Builder(Ctx);
-  StringRef ResName =
-      enumToStringRef(dxil::ResourceClass(to_underlying(Clause.Type)),
-                      dxil::getResourceClasses());
+  StringRef ResName = dxil::getResourceClassName(Clause.Type);
   assert(!ResName.empty() && "Provided an invalid Resource Class");
   Metadata *Operands[] = {
       MDString::get(Ctx, ResName),
@@ -337,11 +334,17 @@ Error MetadataParser::parseDescriptorRange(mcdxbc::DescriptorTable &Table,
   if (!ElementText.has_value())
     return make_error<InvalidRSMetadataFormat>("Descriptor Range");
 
-  Range.RangeType = StringSwitch<dxbc::DescriptorRangeType>(*ElementText)
-                        .Case("CBV", dxbc::DescriptorRangeType::CBV)
-                        .Case("SRV", dxbc::DescriptorRangeType::SRV)
-                        .Case("UAV", dxbc::DescriptorRangeType::UAV)
-                        .Case("Sampler", dxbc::DescriptorRangeType::Sampler);
+  if (*ElementText == "CBV")
+    Range.RangeType = dxil::ResourceClass::CBuffer;
+  else if (*ElementText == "SRV")
+    Range.RangeType = dxil::ResourceClass::SRV;
+  else if (*ElementText == "UAV")
+    Range.RangeType = dxil::ResourceClass::UAV;
+  else if (*ElementText == "Sampler")
+    Range.RangeType = dxil::ResourceClass::Sampler;
+  else
+    return make_error<GenericRSMetadataError>("Invalid Descriptor Range type.",
+                                              RangeDescriptorNode);
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RangeDescriptorNode, 1))
     Range.NumDescriptors = *Val;
@@ -587,7 +590,6 @@ Error MetadataParser::validateRootSignature(
       const mcdxbc::DescriptorTable &Table =
           RSD.ParametersContainer.getDescriptorTable(Info.Location);
       for (const mcdxbc::DescriptorRange &Range : Table) {
-
         if (!hlsl::rootsig::verifyRegisterSpace(Range.RegisterSpace))
           DeferredErrs =
               joinErrors(std::move(DeferredErrs),
@@ -601,7 +603,8 @@ Error MetadataParser::validateRootSignature(
                              "NumDescriptors", Range.NumDescriptors));
 
         if (!hlsl::rootsig::verifyDescriptorRangeFlag(
-                RSD.Version, Range.RangeType, Range.Flags))
+                RSD.Version, Range.RangeType,
+                dxbc::DescriptorRangeFlags(Range.Flags)))
           DeferredErrs =
               joinErrors(std::move(DeferredErrs),
                          make_error<RootSignatureValidationError<uint32_t>>(

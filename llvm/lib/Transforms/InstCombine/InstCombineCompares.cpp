@@ -1550,11 +1550,11 @@ Instruction *InstCombinerImpl::foldICmpTruncConstant(ICmpInst &Cmp,
   // trunc iN (ShOp >> ShAmtC) to i[N - ShAmtC] < 0  --> ShOp <  0
   // trunc iN (ShOp >> ShAmtC) to i[N - ShAmtC] > -1 --> ShOp > -1
   Value *ShOp;
-  const APInt *ShAmtC;
+  uint64_t ShAmt;
   bool TrueIfSigned;
   if (isSignBitCheck(Pred, C, TrueIfSigned) &&
-      match(X, m_Shr(m_Value(ShOp), m_APInt(ShAmtC))) &&
-      DstBits == SrcBits - ShAmtC->getZExtValue()) {
+      match(X, m_Shr(m_Value(ShOp), m_ConstantInt(ShAmt))) &&
+      DstBits == SrcBits - ShAmt) {
     return TrueIfSigned ? new ICmpInst(ICmpInst::ICMP_SLT, ShOp,
                                        ConstantInt::getNullValue(SrcTy))
                         : new ICmpInst(ICmpInst::ICMP_SGT, ShOp,
@@ -3320,20 +3320,18 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
     Type *NewCmpTy = V->getType();
     unsigned NewCmpBW = NewCmpTy->getScalarSizeInBits();
     if (shouldChangeType(Ty, NewCmpTy)) {
-      if (CR.getActiveBits() <= NewCmpBW) {
-        ConstantRange SrcCR = CR.truncate(NewCmpBW);
-        CmpInst::Predicate EquivPred;
-        APInt EquivInt;
-        APInt EquivOffset;
+      ConstantRange SrcCR = CR.truncate(NewCmpBW, TruncInst::NoUnsignedWrap);
+      CmpInst::Predicate EquivPred;
+      APInt EquivInt;
+      APInt EquivOffset;
 
-        SrcCR.getEquivalentICmp(EquivPred, EquivInt, EquivOffset);
-        return new ICmpInst(
-            EquivPred,
-            EquivOffset.isZero()
-                ? V
-                : Builder.CreateAdd(V, ConstantInt::get(NewCmpTy, EquivOffset)),
-            ConstantInt::get(NewCmpTy, EquivInt));
-      }
+      SrcCR.getEquivalentICmp(EquivPred, EquivInt, EquivOffset);
+      return new ICmpInst(
+          EquivPred,
+          EquivOffset.isZero()
+              ? V
+              : Builder.CreateAdd(V, ConstantInt::get(NewCmpTy, EquivOffset)),
+          ConstantInt::get(NewCmpTy, EquivInt));
     }
   }
 

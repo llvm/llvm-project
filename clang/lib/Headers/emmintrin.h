@@ -62,6 +62,9 @@ typedef __bf16 __m128bh __attribute__((__vector_size__(16), __aligned__(16)));
 
 #define __trunc64(x)                                                           \
   (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
+#define __zext128(x)                                                           \
+  (__m128i) __builtin_shufflevector((__v2si)(x), __extension__(__v2si){}, 0,   \
+                                    1, 2, 3)
 #define __anyext128(x)                                                         \
   (__m128i) __builtin_shufflevector((__v2si)(x), __extension__(__v2si){}, 0,   \
                                     1, -1, -1)
@@ -2445,9 +2448,10 @@ _mm_mullo_epi16(__m128i __a, __m128i __b) {
 /// \param __b
 ///    A 64-bit integer containing one of the source operands.
 /// \returns A 64-bit integer vector containing the product of both operands.
-static __inline__ __m64 __DEFAULT_FN_ATTRS _mm_mul_su32(__m64 __a, __m64 __b) {
-  return __trunc64(__builtin_ia32_pmuludq128((__v4si)__anyext128(__a),
-                                             (__v4si)__anyext128(__b)));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_mul_su32(__m64 __a,
+                                                                  __m64 __b) {
+  return __trunc64(__builtin_ia32_pmuludq128((__v4si)__zext128(__a),
+                                             (__v4si)__zext128(__b)));
 }
 
 /// Multiplies 32-bit unsigned integer values contained in the lower
@@ -2463,8 +2467,8 @@ static __inline__ __m64 __DEFAULT_FN_ATTRS _mm_mul_su32(__m64 __a, __m64 __b) {
 /// \param __b
 ///    A [2 x i64] vector containing one of the source operands.
 /// \returns A [2 x i64] vector containing the product of both operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_mul_epu32(__m128i __a,
-                                                           __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_mul_epu32(__m128i __a, __m128i __b) {
   return __builtin_ia32_pmuludq128((__v4si)__a, (__v4si)__b);
 }
 
@@ -2768,8 +2772,8 @@ _mm_xor_si128(__m128i __a, __m128i __b) {
 ///    An integer value specifying the number of bits to left-shift each value
 ///    in operand \a __a.
 /// \returns A 128-bit integer vector containing the left-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_slli_epi16(__m128i __a,
-                                                            int __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_slli_epi16(__m128i __a, int __count) {
   return (__m128i)__builtin_ia32_psllwi128((__v8hi)__a, __count);
 }
 
@@ -2804,8 +2808,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sll_epi16(__m128i __a,
 ///    An integer value specifying the number of bits to left-shift each value
 ///    in operand \a __a.
 /// \returns A 128-bit integer vector containing the left-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_slli_epi32(__m128i __a,
-                                                            int __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_slli_epi32(__m128i __a, int __count) {
   return (__m128i)__builtin_ia32_pslldi128((__v4si)__a, __count);
 }
 
@@ -2840,8 +2844,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sll_epi32(__m128i __a,
 ///    An integer value specifying the number of bits to left-shift each value
 ///    in operand \a __a.
 /// \returns A 128-bit integer vector containing the left-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_slli_epi64(__m128i __a,
-                                                            int __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_slli_epi64(__m128i __a, int __count) {
   return __builtin_ia32_psllqi128((__v2di)__a, __count);
 }
 
@@ -2877,8 +2881,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sll_epi64(__m128i __a,
 ///    An integer value specifying the number of bits to right-shift each value
 ///    in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_srai_epi16(__m128i __a,
-                                                            int __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_srai_epi16(__m128i __a, int __count) {
   return (__m128i)__builtin_ia32_psrawi128((__v8hi)__a, __count);
 }
 
@@ -2915,8 +2919,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sra_epi16(__m128i __a,
 ///    An integer value specifying the number of bits to right-shift each value
 ///    in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_srai_epi32(__m128i __a,
-                                                            int __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_srai_epi32(__m128i __a, int __count) {
   return (__m128i)__builtin_ia32_psradi128((__v4si)__a, __count);
 }
 
@@ -2977,8 +2981,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sra_epi32(__m128i __a,
 ///    An integer value specifying the number of bits to right-shift each value
 ///    in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_srli_epi16(__m128i __a,
-                                                            int __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_srli_epi16(__m128i __a, int __count) {
   return (__m128i)__builtin_ia32_psrlwi128((__v8hi)__a, __count);
 }
 
@@ -3013,8 +3017,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_srl_epi16(__m128i __a,
 ///    An integer value specifying the number of bits to right-shift each value
 ///    in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_srli_epi32(__m128i __a,
-                                                            int __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_srli_epi32(__m128i __a, int __count) {
   return (__m128i)__builtin_ia32_psrldi128((__v4si)__a, __count);
 }
 
@@ -3049,8 +3053,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_srl_epi32(__m128i __a,
 ///    An integer value specifying the number of bits to right-shift each value
 ///    in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_srli_epi64(__m128i __a,
-                                                            int __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_srli_epi64(__m128i __a, int __count) {
   return __builtin_ia32_psrlqi128((__v2di)__a, __count);
 }
 
@@ -3086,8 +3090,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_srl_epi64(__m128i __a,
 /// \param __b
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpeq_epi8(__m128i __a,
-                                                            __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpeq_epi8(__m128i __a, __m128i __b) {
   return (__m128i)((__v16qi)__a == (__v16qi)__b);
 }
 
@@ -3105,8 +3109,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpeq_epi8(__m128i __a,
 /// \param __b
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpeq_epi16(__m128i __a,
-                                                             __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpeq_epi16(__m128i __a, __m128i __b) {
   return (__m128i)((__v8hi)__a == (__v8hi)__b);
 }
 
@@ -3124,8 +3128,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpeq_epi16(__m128i __a,
 /// \param __b
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpeq_epi32(__m128i __a,
-                                                             __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpeq_epi32(__m128i __a, __m128i __b) {
   return (__m128i)((__v4si)__a == (__v4si)__b);
 }
 
@@ -3144,8 +3148,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpeq_epi32(__m128i __a,
 /// \param __b
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpgt_epi8(__m128i __a,
-                                                            __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpgt_epi8(__m128i __a, __m128i __b) {
   /* This function always performs a signed comparison, but __v16qi is a char
      which may be signed or unsigned, so use __v16qs. */
   return (__m128i)((__v16qs)__a > (__v16qs)__b);
@@ -3166,8 +3170,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpgt_epi8(__m128i __a,
 /// \param __b
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpgt_epi16(__m128i __a,
-                                                             __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpgt_epi16(__m128i __a, __m128i __b) {
   return (__m128i)((__v8hi)__a > (__v8hi)__b);
 }
 
@@ -3186,8 +3190,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpgt_epi16(__m128i __a,
 /// \param __b
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpgt_epi32(__m128i __a,
-                                                             __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpgt_epi32(__m128i __a, __m128i __b) {
   return (__m128i)((__v4si)__a > (__v4si)__b);
 }
 
@@ -3206,8 +3210,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpgt_epi32(__m128i __a,
 /// \param __b
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmplt_epi8(__m128i __a,
-                                                            __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmplt_epi8(__m128i __a, __m128i __b) {
   return _mm_cmpgt_epi8(__b, __a);
 }
 
@@ -3226,8 +3230,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmplt_epi8(__m128i __a,
 /// \param __b
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmplt_epi16(__m128i __a,
-                                                             __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmplt_epi16(__m128i __a, __m128i __b) {
   return _mm_cmpgt_epi16(__b, __a);
 }
 
@@ -3246,8 +3250,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmplt_epi16(__m128i __a,
 /// \param __b
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmplt_epi32(__m128i __a,
-                                                             __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmplt_epi32(__m128i __a, __m128i __b) {
   return _mm_cmpgt_epi32(__b, __a);
 }
 
