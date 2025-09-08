@@ -1671,6 +1671,13 @@ void JSONNodeDumper::VisitLabelStmt(const LabelStmt *LS) {
   JOS.attribute("declId", createPointerRepresentation(LS->getDecl()));
   attributeOnlyIfTrue("sideEntry", LS->isSideEntry());
 }
+
+void JSONNodeDumper::VisitLoopControlStmt(const LoopControlStmt *LS) {
+  if (LS->hasLabelTarget())
+    JOS.attribute("targetLabelDeclId",
+                  createPointerRepresentation(LS->getLabelDecl()));
+}
+
 void JSONNodeDumper::VisitGotoStmt(const GotoStmt *GS) {
   JOS.attribute("targetLabelDeclId",
                 createPointerRepresentation(GS->getLabel()));

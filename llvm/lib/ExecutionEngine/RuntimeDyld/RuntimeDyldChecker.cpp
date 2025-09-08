@@ -767,13 +767,13 @@ private:
                                      inconvertibleErrorCode());
 
     std::unique_ptr<MCSubtargetInfo> STI(
-        TheTarget->createMCSubtargetInfo(TripleName, CPU, TF.getString()));
+        TheTarget->createMCSubtargetInfo(TT, CPU, TF.getString()));
     if (!STI)
       return make_error<StringError>("Unable to create subtarget for " +
                                          TripleName,
                                      inconvertibleErrorCode());
 
-    std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
+    std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TT));
     if (!MRI)
       return make_error<StringError>("Unable to create target register info "
                                      "for " +
@@ -782,7 +782,7 @@ private:
 
     MCTargetOptions MCOptions;
     std::unique_ptr<MCAsmInfo> MAI(
-        TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+        TheTarget->createMCAsmInfo(*MRI, TT, MCOptions));
     if (!MAI)
       return make_error<StringError>("Unable to create target asm info " +
                                          TripleName,
