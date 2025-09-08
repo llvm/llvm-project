@@ -169,7 +169,7 @@ LogicalResult FromPtrOpConversion::matchAndRewrite(
   // Set the allocated and aligned pointers.
   desc.setAllocatedPtr(
       rewriter, loc,
-      rewriter.create<LLVM::ExtractValueOp>(loc, adaptor.getMetadata(), 0));
+      LLVM::ExtractValueOp::create(rewriter, loc, adaptor.getMetadata(), 0));
   desc.setAlignedPtr(rewriter, loc, adaptor.getPtr());
 
   // Extract metadata from the passed struct.
@@ -177,8 +177,8 @@ LogicalResult FromPtrOpConversion::matchAndRewrite(
 
   // Set dynamic offset if needed.
   if (offset == ShapedType::kDynamic) {
-    Value offsetValue = rewriter.create<LLVM::ExtractValueOp>(
-        loc, adaptor.getMetadata(), fieldIdx++);
+    Value offsetValue = LLVM::ExtractValueOp::create(
+        rewriter, loc, adaptor.getMetadata(), fieldIdx++);
     desc.setOffset(rewriter, loc, offsetValue);
   } else {
     desc.setConstantOffset(rewriter, loc, offset);
@@ -187,8 +187,8 @@ LogicalResult FromPtrOpConversion::matchAndRewrite(
   // Set dynamic sizes if needed.
   for (auto [i, dim] : llvm::enumerate(shape)) {
     if (dim == ShapedType::kDynamic) {
-      Value sizeValue = rewriter.create<LLVM::ExtractValueOp>(
-          loc, adaptor.getMetadata(), fieldIdx++);
+      Value sizeValue = LLVM::ExtractValueOp::create(
+          rewriter, loc, adaptor.getMetadata(), fieldIdx++);
       desc.setSize(rewriter, loc, i, sizeValue);
     } else {
       desc.setConstantSize(rewriter, loc, i, dim);
@@ -198,8 +198,8 @@ LogicalResult FromPtrOpConversion::matchAndRewrite(
   // Set dynamic strides if needed.
   for (auto [i, stride] : llvm::enumerate(strides)) {
     if (stride == ShapedType::kDynamic) {
-      Value strideValue = rewriter.create<LLVM::ExtractValueOp>(
-          loc, adaptor.getMetadata(), fieldIdx++);
+      Value strideValue = LLVM::ExtractValueOp::create(
+          rewriter, loc, adaptor.getMetadata(), fieldIdx++);
       desc.setStride(rewriter, loc, i, strideValue);
     } else {
       desc.setConstantStride(rewriter, loc, i, stride);
@@ -243,35 +243,35 @@ LogicalResult GetMetadataOpConversion::matchAndRewrite(
 
   // Create a new LLVM struct to hold the metadata
   Location loc = op.getLoc();
-  Value sV = rewriter.create<LLVM::UndefOp>(loc, *mdTy);
+  Value sV = LLVM::UndefOp::create(rewriter, loc, *mdTy);
 
   // First element is the allocated pointer.
-  sV = rewriter.create<LLVM::InsertValueOp>(
-      loc, sV, descriptor.allocatedPtr(rewriter, loc), 0);
+  sV = LLVM::InsertValueOp::create(
+      rewriter, loc, sV, descriptor.allocatedPtr(rewriter, loc), int64_t{0});
 
   // Track the current field index.
   unsigned fieldIdx = 1;
 
   // Add dynamic offset if needed.
   if (offset == ShapedType::kDynamic) {
-    sV = rewriter.create<LLVM::InsertValueOp>(
-        loc, sV, descriptor.offset(rewriter, loc), fieldIdx++);
+    sV = LLVM::InsertValueOp::create(
+        rewriter, loc, sV, descriptor.offset(rewriter, loc), fieldIdx++);
   }
 
   // Add dynamic sizes if needed.
   for (auto [i, dim] : llvm::enumerate(shape)) {
     if (dim != ShapedType::kDynamic)
       continue;
-    sV = rewriter.create<LLVM::InsertValueOp>(
-        loc, sV, descriptor.size(rewriter, loc, i), fieldIdx++);
+    sV = LLVM::InsertValueOp::create(
+        rewriter, loc, sV, descriptor.size(rewriter, loc, i), fieldIdx++);
   }
 
   // Add dynamic strides if needed
   for (auto [i, stride] : llvm::enumerate(strides)) {
     if (stride != ShapedType::kDynamic)
       continue;
-    sV = rewriter.create<LLVM::InsertValueOp>(
-        loc, sV, descriptor.stride(rewriter, loc, i), fieldIdx++);
+    sV = LLVM::InsertValueOp::create(
+        rewriter, loc, sV, descriptor.stride(rewriter, loc, i), fieldIdx++);
   }
   rewriter.replaceOp(op, sV);
   return success();
