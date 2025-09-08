@@ -43,7 +43,7 @@ using Edge = std::pair<BasicBlock *, BasicBlock *>;
 static void partialOrderVisit(BasicBlock &Start,
                               std::function<bool(BasicBlock *)> Op) {
   PartialOrderingVisitor V(*Start.getParent());
-  V.partialOrderVisit(Start, Op);
+  V.partialOrderVisit(Start, std::move(Op));
 }
 
 // Returns the exact convergence region in the tree defined by `Node` for which
