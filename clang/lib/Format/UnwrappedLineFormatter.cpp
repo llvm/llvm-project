@@ -270,7 +270,7 @@ private:
     if (NextLine.First->isOneOf(TT_ClassLBrace, TT_StructLBrace,
                                 TT_UnionLBrace) &&
         NextLine.First == NextLine.Last && I + 2 != E &&
-        !I[2]->First->is(tok::r_brace) &&
+        I[2]->First->isNot(tok::r_brace) &&
         Style.AllowShortRecordOnASingleLine == FormatStyle::SRS_Always) {
       if (unsigned MergedLines = tryMergeSimpleBlock(I, E, Limit))
         return MergedLines;
