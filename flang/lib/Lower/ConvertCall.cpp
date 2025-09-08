@@ -497,13 +497,12 @@ Fortran::lower::genCallOpAndResult(
 
     // Special handling for %VAL arguments: internal procedures expect
     // reference parameters. When %VAL is used, the argument should be
-    // passed by value. So we need to create a temporary variable and
-    // pass its address to avoid a type conversion error.
+    // passed by value. Pass the originally loaded value.
     if (fir::isa_ref_type(snd) && !fir::isa_ref_type(fst.getType()) &&
         fir::dyn_cast_ptrEleTy(snd) == fst.getType()) {
-      mlir::Value temp = builder.createTemporary(loc, fst.getType());
-      builder.create<fir::StoreOp>(loc, fst, temp);
-      cast = temp;
+      auto loadOp = mlir::cast<fir::LoadOp>(fst.getDefiningOp());
+      mlir::Value originalStorage = loadOp.getMemref();
+      cast = originalStorage;
     } else if (mlir::isa<fir::BoxProcType>(snd) &&
                mlir::isa<mlir::FunctionType>(fst.getType())) {
       mlir::FunctionType funcTy = mlir::FunctionType::get(context, {}, {});
@@ -1654,10 +1653,9 @@ void prepareUserCallArguments(
         caller.placeInput(arg, value);
       else if (fir::isa_ref_type(argTy) &&
                fir::dyn_cast_ptrEleTy(argTy) == value.getType()) {
-        // We're trying to convert value to reference - create temporary
-        mlir::Value temp = builder.createTemporary(loc, value.getType());
-        builder.create<fir::StoreOp>(loc, value, temp);
-        caller.placeInput(arg, temp);
+        auto loadOp = mlir::cast<fir::LoadOp>(value.getDefiningOp());
+        mlir::Value originalStorage = loadOp.getMemref();
+        caller.placeInput(arg, originalStorage);
       } else
         caller.placeInput(arg, builder.createConvert(loc, argTy, value));
 
