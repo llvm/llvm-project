@@ -26,7 +26,6 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
-#include <plugin-api.h>
 #include <vector>
 
 namespace llvm::lto {
@@ -78,6 +77,8 @@ private:
 };
 
 #if LLD_ENABLE_GNU_LTO
+#include <plugin-api.h>
+
 class GccIRCompiler : public IRCompiler {
 protected:
   void addObject(IRFile &f,
