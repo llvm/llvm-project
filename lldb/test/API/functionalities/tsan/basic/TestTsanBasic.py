@@ -63,11 +63,14 @@ class TsanBasicTestCase(TestBase):
             substrs=["1 match found"],
         )
 
-        # We should not be stopped in the sanitizer library.
         process = self.dbg.GetSelectedTarget().process
         thread = process.GetSelectedThread()
         frame = thread.GetSelectedFrame()
-        self.assertIn("f2", frame.GetFunctionName())
+        if self.platformIsDarwin():
+            # We should not be stopped in the sanitizer library.
+            self.assertIn("f2", frame.GetFunctionName())
+        else:
+            self.assertIn("__tsan_on_report", frame.GetFunctionName())
 
         # The stopped thread backtrace should contain either line1 or line2
         # from main.c.
