@@ -1,13 +1,7 @@
-..
-   This work is licensed under a Creative Commons Attribution 3.0 Unported License.
-   SPDX-License-Identifier: CC-BY-3.0
-
-.. _LLVM Qualification Group:
-
 .. CHANGE TRACKER for reference
 .. Purpose: Fixed document location and added Current Topics & Backlog
 .. Author: Carlos Andres Ramirez
-.. Last updated: 2025-08-30 by Carlos Ramirez
+.. Last updated: 2025-09-08 by Carlos Ramirez
 
 ========================
 LLVM Qualification Group
