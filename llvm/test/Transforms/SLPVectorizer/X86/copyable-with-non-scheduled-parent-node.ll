@@ -4,20 +4,15 @@
 define i64 @test(ptr %a) {
 ; CHECK-LABEL: define i64 @test(
 ; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 0, 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 1, [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = ashr i64 0, 1
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr i64 0, 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i64> <i64 poison, i64 0, i64 0, i64 0>, i64 [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i64> zeroinitializer, [[TMP7]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> <i64 0, i64 0, i64 0, i64 1>, [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <6 x i64> [[TMP5]], <6 x i64> <i64 0, i64 0, i64 undef, i64 undef, i64 undef, i64 undef>, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 6, i32 7>
 ; CHECK-NEXT:    br label %[[BB7:.*]]
 ; CHECK:       [[BB7]]:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i64 [ [[TMP3]], [[TMP0:%.*]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = phi i64 [ 0, [[TMP0]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = phi i64 [ [[TMP6]], [[TMP0]] ]
-; CHECK-NEXT:    [[TMP11:%.*]] = phi i64 [ [[TMP5]], [[TMP0]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = phi i64 [ 0, [[TMP0]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = phi i64 [ [[TMP4]], [[TMP0]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <6 x i64> [ [[TMP6]], [[TMP0:%.*]] ]
 ; CHECK-NEXT:    ret i64 0
 ;
   %1 = add i64 0, 0
