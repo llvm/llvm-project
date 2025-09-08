@@ -92,7 +92,7 @@ static void DescribeOrigin(u32 id) {
         break;
       case STACK_TRACE_TAG_ALLOC_PADDING:
         Printf(
-            "  %sUninitialized value was created by heap allocator padding%s\n",
+            "  %sUninitialized value is outside of heap allocation%s\n",
             d.Origin(), d.Default());
         break;
       default:

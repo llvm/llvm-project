@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
     // CHECK: WARNING: MemorySanitizer: use-of-uninitialized-value
     // CHECK: {{#0 0x.* in main .*allocator_padding.cpp:}}[[@LINE-2]]
     // ORIGIN-ALLOC: Uninitialized value was created by a heap allocation
-    // ORIGIN-ALLOC-PADDING: Uninitialized value was created by heap allocator padding
+    // ORIGIN-ALLOC-PADDING: Uninitialized value is outside of heap allocation
     free(p);
   }
 
