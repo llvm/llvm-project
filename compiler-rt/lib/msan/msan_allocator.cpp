@@ -222,16 +222,22 @@ static void *MsanAllocate(BufferedStackTrace *stack, uptr size, uptr alignment,
       reinterpret_cast<void*>(reinterpret_cast<uptr>(allocated) + size);
   uptr padding_size = actually_allocated_size - size;
 
-  // Origins have 4-byte granularity. Set the TAG_ALLOC_PADDING origin first,
-  // so the TAG_ALLOC origin will take precedence if necessary e.g.,
-  // - if we have malloc(7) that actually takes up 16 bytes:
-  //     bytes 0-7:  uninitialized, origin TAG_ALLOC
-  //     bytes 8-15: uninitialized, origin TAG_ALLOC_PADDING
-  // - with calloc(7,1):
+  // - With calloc(7,1), we can set the ideal tagging:
   //     bytes 0-6:  initialized,   origin not set (and irrelevant)
-  //     byte  7:    uninitialized, origin TAG_ALLOC_PADDING (unlike malloc)
+  //     byte  7:    uninitialized, origin TAG_ALLOC_PADDING
   //     bytes 8-15: uninitialized, origin TAG_ALLOC_PADDING
-  if (__msan_get_track_origins() && flags()->poison_in_malloc) {
+  // - If we have malloc(7) and __msan_get_track_origins() > 1, the 4-byte
+  //   origin granularity only allows the slightly suboptimal tagging:
+  //     bytes 0-6:  uninitialized, origin TAG_ALLOC
+  //     byte  7:    uninitialized, origin TAG_ALLOC (suboptimal)
+  //     bytes 8-15: uninitialized, origin TAG_ALLOC_PADDING
+  // - If we have malloc(7) and __msan_get_track_origins() == 1, we use a
+  //   single origin bean to reduce overhead:
+  //     bytes 0-6:  uninitialized, origin TAG_ALLOC
+  //     byte  7:    uninitialized, origin TAG_ALLOC (suboptimal)
+  //     bytes 8-15: uninitialized, origin TAG_ALLOC (suboptimal)
+  if (__msan_get_track_origins() && flags()->poison_in_malloc &&
+      (zero || (__msan_get_track_origins() > 1))) {
     stack->tag = STACK_TRACE_TAG_ALLOC_PADDING;
     Origin o2 = Origin::CreateHeapOrigin(stack);
     __msan_set_origin(padding_start, padding_size, o2.raw_id());
@@ -251,7 +257,10 @@ static void *MsanAllocate(BufferedStackTrace *stack, uptr size, uptr alignment,
     if (__msan_get_track_origins()) {
       stack->tag = StackTrace::TAG_ALLOC;
       Origin o = Origin::CreateHeapOrigin(stack);
-      __msan_set_origin(allocated, size, o.raw_id());
+      __msan_set_origin(
+          allocated,
+          __msan_get_track_origins() == 1 ? actually_allocated_size : size,
+          o.raw_id());
     }
   }
 
