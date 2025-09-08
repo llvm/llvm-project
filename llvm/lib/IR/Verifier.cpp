@@ -2938,10 +2938,16 @@ void Verifier::visitFunction(const Function &F) {
           "Calling convention parameter requires byval", &F);
     break;
   }
-  case CallingConv::AMDGPU_KERNEL:
-  case CallingConv::SPIR_KERNEL:
   case CallingConv::AMDGPU_CS_Chain:
   case CallingConv::AMDGPU_CS_ChainPreserve:
+  {
+    auto TT = M.getTargetTriple().str();
+    if (TT.find("gfx1200") || TT.find("gfx942"))
+      Check(false, "Chain calling convention is invalid on this target", &F);
+  }
+    [[fallthrough]];
+  case CallingConv::AMDGPU_KERNEL:
+  case CallingConv::SPIR_KERNEL:
     Check(F.getReturnType()->isVoidTy(),
           "Calling convention requires void return type", &F);
     [[fallthrough]];
