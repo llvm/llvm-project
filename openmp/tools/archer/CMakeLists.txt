@@ -34,5 +34,7 @@ if(LIBOMP_OMPT_SUPPORT AND LIBOMP_ARCHER_SUPPORT)
     LIBRARY DESTINATION ${OPENMP_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${OPENMP_INSTALL_LIBDIR})
 
-  add_subdirectory(tests)
+  if(OPENMP_INCLUDE_TESTS)
+    add_subdirectory(tests)
+  endif()
 endif()
