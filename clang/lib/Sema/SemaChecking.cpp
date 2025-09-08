@@ -2638,6 +2638,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       builtinAllocaAddrSpace(*this, TheCall);
     }
     break;
+  case Builtin::BI__builtin_alloc_token_infer:
+    if (BuiltinAllocTokenInfer(TheCall))
+      return ExprError();
+    break;
   case Builtin::BI__arithmetic_fence:
     if (BuiltinArithmeticFence(TheCall))
       return ExprError();
@@ -5757,6 +5761,24 @@ bool Sema::BuiltinAllocaWithAlign(CallExpr *TheCall) {
              << std::numeric_limits<int32_t>::max() << Arg->getSourceRange();
   }
 
+  return false;
+}
+
+bool Sema::BuiltinAllocTokenInfer(CallExpr *TheCall) {
+  if (checkArgCountAtLeast(TheCall, 1))
+    return true;
+
+  for (Expr *Arg : TheCall->arguments()) {
+    // If argument is dependent on a template parameter, we can't resolve now.
+    if (Arg->isTypeDependent() || Arg->isValueDependent())
+      continue;
+    // Reject void types.
+    QualType ArgTy = Arg->IgnoreParenImpCasts()->getType();
+    if (ArgTy->isVoidType())
+      return Diag(Arg->getBeginLoc(), diag::err_param_with_void_type);
+  }
+
+  TheCall->setType(Context.UnsignedLongLongTy);
   return false;
 }
 

@@ -1274,6 +1274,12 @@ def AllocaWithAlignUninitialized : Builtin {
   let Prototype = "void*(size_t, _Constant size_t)";
 }
 
+def AllocTokenInfer : Builtin {
+  let Spellings = ["__builtin_alloc_token_infer"];
+  let Attributes = [NoThrow, Const, Pure, CustomTypeChecking, UnevaluatedArguments];
+  let Prototype = "unsigned long long int(...)";
+}
+
 def CallWithStaticChain : Builtin {
   let Spellings = ["__builtin_call_with_static_chain"];
   let Attributes = [NoThrow, CustomTypeChecking];

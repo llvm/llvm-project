@@ -49,6 +49,39 @@ change or removal. These may (experimentally) be selected with ``-mllvm
 * *Increment* (mode=0): This mode assigns a simple, incrementally increasing
   token ID to each allocation site.
 
+The following command-line options affect generated token IDs:
+
+* ``-falloc-token-max=<N>``
+    Configures the maximum number of tokens. No max by default (tokens bounded
+    by ``UINT64_MAX``).
+
+Querying Token IDs with ``__builtin_alloc_token_infer``
+=======================================================
+
+For use cases where the token ID must be known at compile time, Clang provides
+a builtin function:
+
+.. code-block:: c
+
+    uint64_t __builtin_alloc_token_infer(<args>, ...);
+
+This builtin returns the token ID inferred from its argument expressions, which
+mirror arguments normally passed to any allocation function. The argument
+expressions are **unevaluated**, so it can be used with expressions that would
+have side effects without any runtime impact.
+
+For example, it can be used as follows:
+
+.. code-block:: c
+
+    struct MyType { ... };
+    void *__partition_alloc(size_t size, uint64_t partition);
+    #define partition_alloc(...) __partition_alloc(__VA_ARGS__, __builtin_alloc_token_infer(__VA_ARGS__))
+
+    void foo(void) {
+        MyType *x = partition_alloc(sizeof(*x));
+    }
+
 Allocation Token Instrumentation
 ================================
 
@@ -69,16 +102,6 @@ example:
 
     // Instrumented:
     ptr = __alloc_token_malloc(size, token_id);
-
-In addition, it is typically recommended to configure the following:
-
-* ``-falloc-token-max=<N>``
-    Configures the maximum number of tokens. No max by default (tokens bounded
-    by ``UINT64_MAX``).
-
-    .. code-block:: console
-
-        % clang++ -fsanitize=alloc-token -falloc-token-max=512 example.cc
 
 Runtime Interface
 -----------------
