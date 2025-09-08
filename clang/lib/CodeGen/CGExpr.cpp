@@ -1339,7 +1339,7 @@ void CodeGenFunction::EmitAllocTokenHint(llvm::CallBase *CB,
   };
   const bool ContainsPtr = TypeContainsPtr(TypeContainsPtr, AllocType);
   if (!ContainsPtr && IncompleteType)
-    return nullptr;
+    return;
   auto *ContainsPtrC = Builder.getInt1(ContainsPtr);
   auto *ContainsPtrMD = MDB.createConstant(ContainsPtrC);
 
