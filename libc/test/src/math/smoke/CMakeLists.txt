@@ -4639,7 +4639,7 @@ add_fp_unittest(
   SRCS
     asinhf_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.asinhf
     libc.src.__support.FPUtil.fp_bits
 )
@@ -4651,7 +4651,7 @@ add_fp_unittest(
   SRCS
     asinhf16_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.asinhf16
 )
 
@@ -4663,8 +4663,8 @@ add_fp_unittest(
   SRCS
     asinpif16_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.src.math.asinpif16
-    libc.src.errno.errno
 )
 
 add_fp_unittest(
@@ -4674,7 +4674,7 @@ add_fp_unittest(
   SRCS
     acoshf_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.acoshf
     libc.src.__support.FPUtil.fp_bits
 )
@@ -4686,7 +4686,7 @@ add_fp_unittest(
   SRCS
     acoshf16_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.acoshf16
     libc.src.__support.FPUtil.cast
 )
@@ -4698,7 +4698,7 @@ add_fp_unittest(
   SRCS
     asinf_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.asinf
     libc.src.__support.FPUtil.fp_bits
 )
@@ -4720,8 +4720,8 @@ add_fp_unittest(
   SRCS
     asinf16_test.cpp
   DEPENDS
-    libc.src.errno.errno
-    libc.src.math.asinf16  
+    libc.hdr.errno_macros
+    libc.src.math.asinf16
 )
 
 add_fp_unittest(
@@ -4731,7 +4731,7 @@ add_fp_unittest(
   SRCS
     acosf_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.acosf
     libc.src.__support.FPUtil.fp_bits
 )
@@ -4743,8 +4743,8 @@ add_fp_unittest(
   SRCS
     acos_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.acos
 )
 
@@ -4755,8 +4755,8 @@ add_fp_unittest(
   SRCS
     acosf16_test.cpp
   DEPENDS
-    libc.src.errno.errno
-    libc.src.math.acosf16  
+    libc.hdr.errno_macros
+    libc.src.math.acosf16
 )
 
 add_fp_unittest(
@@ -4766,8 +4766,8 @@ add_fp_unittest(
   SRCS
     acospif16_test.cpp
   DEPENDS
-    libc.src.errno.errno
-    libc.src.math.acospif16  
+    libc.hdr.errno_macros
+    libc.src.math.acospif16
 )
 
 add_fp_unittest(
