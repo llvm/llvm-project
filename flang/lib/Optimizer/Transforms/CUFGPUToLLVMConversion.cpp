@@ -221,7 +221,8 @@ static mlir::Value createAddressOfOp(mlir::ConversionPatternRewriter &rewriter,
                                      gpu::GPUModuleOp gpuMod,
                                      std::string &sharedGlobalName) {
   auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(
-      rewriter.getContext(), mlir::NVVM::NVVMMemorySpace::kSharedMemorySpace);
+      rewriter.getContext(),
+      static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Shared));
   if (auto g = gpuMod.lookupSymbol<fir::GlobalOp>(sharedGlobalName))
     return mlir::LLVM::AddressOfOp::create(rewriter, loc, llvmPtrTy,
                                            g.getSymName());

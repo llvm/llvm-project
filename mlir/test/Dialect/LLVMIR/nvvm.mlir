@@ -620,7 +620,7 @@ func.func @prefetch_tensormap(%gen_ptr: !llvm.ptr, %const_ptr: !llvm.ptr<4>) {
   return
 }
 
-// CHECK-LABEL: @nvvm_ptr_address_space
+// CHECK-LABEL: @nvvm_address_space
 func.func private @nvvm_address_space(
     !ptr.ptr<#nvvm.memory_space<global>>,
     !ptr.ptr<#nvvm.memory_space<shared>>,
