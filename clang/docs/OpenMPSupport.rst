@@ -478,6 +478,7 @@ implementation.
 | Local clause on declare target                              | :part:`In Progress`       | :none:`unclaimed`         |                                                                          |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | groupprivate directive                                      | :part:`In Progress`       | :part:`partial`           | Flang: kparzysz, mjklemm                                                 |
+|                                                             |                           |                           |                                                                          |
 |                                                             |                           |                           | Flang parser: https://github.com/llvm/llvm-project/pull/153807           |
 |                                                             |                           |                           | Flang sema: https://github.com/llvm/llvm-project/pull/154779             |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
