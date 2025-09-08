@@ -20276,7 +20276,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     SDValue Sign = N0->getOperand(1);
     if (Sign.getValueType() != VT)
       return SDValue();
-    return DAG.getNode(RISCVISD::FSGNJX, SDLoc(N), VT, N1, N0->getOperand(1));
+    return DAG.getNode(RISCVISD::FSGNJX, DL, VT, N1, N0->getOperand(1));
   }
   case ISD::FADD:
   case ISD::UMAX:
