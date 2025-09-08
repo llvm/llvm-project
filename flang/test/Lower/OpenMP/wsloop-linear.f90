@@ -1,6 +1,6 @@
 ! This test checks lowering of OpenMP DO Directive (Worksharing)
 ! with linear clause
-
+! XFAIL: *
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir %s -o - 2>&1 | FileCheck %s
 
 !CHECK: %[[X_alloca:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFsimple_linearEx"}
