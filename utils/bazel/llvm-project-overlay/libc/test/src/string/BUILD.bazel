@@ -60,6 +60,14 @@ libc_test(
 )
 
 libc_test(
+    name = "strpbrk_test",
+    srcs = ["strpbrk_test.cpp"],
+    deps = [
+        "//libc:strpbrk",
+    ],
+)
+
+libc_test(
     name = "strsep_test",
     srcs = ["strsep_test.cpp"],
     deps = [
@@ -124,6 +132,14 @@ libc_test(
     srcs = ["strtok_test.cpp"],
     deps = [
         "//libc:strtok",
+    ],
+)
+
+libc_test(
+    name = "strtok_r_test",
+    srcs = ["strtok_r_test.cpp"],
+    deps = [
+        "//libc:strtok_r",
     ],
 )
 

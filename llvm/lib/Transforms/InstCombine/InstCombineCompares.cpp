@@ -112,73 +112,42 @@ static bool isSignTest(ICmpInst::Predicate &Pred, const APInt &C) {
 Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     LoadInst *LI, GetElementPtrInst *GEP, GlobalVariable *GV, CmpInst &ICI,
     ConstantInt *AndCst) {
-  if (LI->isVolatile() || LI->getType() != GEP->getResultElementType() ||
-      !GV->getValueType()->isArrayTy() || !GV->isConstant() ||
-      !GV->hasDefinitiveInitializer())
-    return nullptr;
-
-  Type *GEPSrcEltTy = GEP->getSourceElementType();
-  if (GEPSrcEltTy->isArrayTy())
-    GEPSrcEltTy = GEPSrcEltTy->getArrayElementType();
-  if (GV->getValueType()->getArrayElementType() != GEPSrcEltTy)
+  if (LI->isVolatile() || !GV->isConstant() || !GV->hasDefinitiveInitializer())
     return nullptr;
 
   Constant *Init = GV->getInitializer();
-  if (!isa<ConstantArray>(Init) && !isa<ConstantDataArray>(Init))
+  TypeSize GlobalSize = DL.getTypeAllocSize(Init->getType());
+  Type *EltTy = LI->getType();
+  TypeSize EltSize = DL.getTypeStoreSize(EltTy);
+  if (EltSize.isScalable())
     return nullptr;
 
-  uint64_t ArrayElementCount = Init->getType()->getArrayNumElements();
-  // Don't blow up on huge arrays.
-  if (ArrayElementCount > MaxArraySizeForCombine)
+  unsigned IndexBW = DL.getIndexTypeSizeInBits(GEP->getType());
+  SmallMapVector<Value *, APInt, 4> VarOffsets;
+  APInt ConstOffset(IndexBW, 0);
+  if (!GEP->collectOffset(DL, IndexBW, VarOffsets, ConstOffset) ||
+      VarOffsets.size() != 1 || IndexBW > 64)
     return nullptr;
 
-  // There are many forms of this optimization we can handle, for now, just do
-  // the simple index into a single-dimensional array or elements of equal size.
-  //
-  // Require: GEP [n x i8] GV, 0, Idx {{, constant indices}}
-  //      Or: GEP i8 GV, Idx
-
-  unsigned GEPIdxOp = 1;
-  if (GEP->getSourceElementType()->isArrayTy()) {
-    GEPIdxOp = 2;
-    if (!match(GEP->getOperand(1), m_ZeroInt()))
-      return nullptr;
-  }
-  if (GEP->getNumOperands() < GEPIdxOp + 1 ||
-      isa<Constant>(GEP->getOperand(GEPIdxOp)))
-    return nullptr;
-
-  // Check that indices after the variable are constants and in-range for the
-  // type they index.  Collect the indices.  This is typically for arrays of
-  // structs.
-  SmallVector<unsigned, 4> LaterIndices;
-
-  Type *EltTy = Init->getType()->getArrayElementType();
-  for (unsigned i = GEPIdxOp + 1, e = GEP->getNumOperands(); i != e; ++i) {
-    ConstantInt *Idx = dyn_cast<ConstantInt>(GEP->getOperand(i));
-    if (!Idx)
-      return nullptr; // Variable index.
-
-    uint64_t IdxVal = Idx->getZExtValue();
-    if ((unsigned)IdxVal != IdxVal)
-      return nullptr; // Too large array index.
-
-    if (StructType *STy = dyn_cast<StructType>(EltTy))
-      EltTy = STy->getElementType(IdxVal);
-    else if (ArrayType *ATy = dyn_cast<ArrayType>(EltTy)) {
-      if (IdxVal >= ATy->getNumElements())
-        return nullptr;
-      EltTy = ATy->getElementType();
-    } else {
-      return nullptr; // Unknown type.
-    }
-
-    LaterIndices.push_back(IdxVal);
-  }
-
-  Value *Idx = GEP->getOperand(GEPIdxOp);
+  Value *Idx = VarOffsets.front().first;
+  const APInt &Stride = VarOffsets.front().second;
   // If the index type is non-canonical, wait for it to be canonicalized.
-  if (Idx->getType() != DL.getIndexType(GEP->getType()))
+  if (Idx->getType()->getScalarSizeInBits() != IndexBW)
+    return nullptr;
+
+  // Allow an additional context offset, but only within the stride.
+  if (!ConstOffset.ult(Stride))
+    return nullptr;
+
+  // Don't handle overlapping loads for now.
+  if (!Stride.uge(EltSize.getFixedValue()))
+    return nullptr;
+
+  // Don't blow up on huge arrays.
+  uint64_t ArrayElementCount =
+      divideCeil((GlobalSize.getFixedValue() - ConstOffset.getZExtValue()),
+                 Stride.getZExtValue());
+  if (ArrayElementCount > MaxArraySizeForCombine)
     return nullptr;
 
   enum { Overdefined = -3, Undefined = -2 };
@@ -211,17 +180,11 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
 
   // Scan the array and see if one of our patterns matches.
   Constant *CompareRHS = cast<Constant>(ICI.getOperand(1));
-  for (unsigned i = 0, e = ArrayElementCount; i != e; ++i) {
-    Constant *Elt = Init->getAggregateElement(i);
+  APInt Offset = ConstOffset;
+  for (unsigned i = 0, e = ArrayElementCount; i != e; ++i, Offset += Stride) {
+    Constant *Elt = ConstantFoldLoadFromConst(Init, EltTy, Offset, DL);
     if (!Elt)
       return nullptr;
-
-    // If this is indexing an array of structures, get the structure element.
-    if (!LaterIndices.empty()) {
-      Elt = ConstantFoldExtractValueInstruction(Elt, LaterIndices);
-      if (!Elt)
-        return nullptr;
-    }
 
     // If the element is masked, handle it.
     if (AndCst) {
@@ -309,19 +272,17 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   // Now that we've scanned the entire array, emit our new comparison(s).  We
   // order the state machines in complexity of the generated code.
 
-  // If inbounds keyword is not present, Idx * ElementSize can overflow.
-  // Let's assume that ElementSize is 2 and the wanted value is at offset 0.
+  // If inbounds keyword is not present, Idx * Stride can overflow.
+  // Let's assume that Stride is 2 and the wanted value is at offset 0.
   // Then, there are two possible values for Idx to match offset 0:
   // 0x00..00, 0x80..00.
   // Emitting 'icmp eq Idx, 0' isn't correct in this case because the
   // comparison is false if Idx was 0x80..00.
   // We need to erase the highest countTrailingZeros(ElementSize) bits of Idx.
-  unsigned ElementSize =
-      DL.getTypeAllocSize(Init->getType()->getArrayElementType());
   auto MaskIdx = [&](Value *Idx) {
-    if (!GEP->isInBounds() && llvm::countr_zero(ElementSize) != 0) {
+    if (!GEP->isInBounds() && Stride.countr_zero() != 0) {
       Value *Mask = Constant::getAllOnesValue(Idx->getType());
-      Mask = Builder.CreateLShr(Mask, llvm::countr_zero(ElementSize));
+      Mask = Builder.CreateLShr(Mask, Stride.countr_zero());
       Idx = Builder.CreateAnd(Idx, Mask);
     }
     return Idx;
