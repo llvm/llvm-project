@@ -351,7 +351,7 @@ public:
             }
             return getAttribute(values, ctx->getRef());
           },
-          nb::arg("values"), nb::arg("context").none() = nb::none(),
+          nb::arg("values"), nb::arg("context") = nb::none(),
           "Gets a uniqued dense array attribute");
     } else {
       c.def_static(
@@ -359,7 +359,7 @@ public:
           [](const std::vector<EltTy> &values, DefaultingPyMlirContext ctx) {
             return getAttribute(values, ctx->getRef());
           },
-          nb::arg("values"), nb::arg("context").none() = nb::none(),
+          nb::arg("values"), nb::arg("context") = nb::none(),
           "Gets a uniqued dense array attribute");
     }
     // Bind the array methods.
@@ -515,7 +515,7 @@ public:
               context->get(), mlirAttributes.size(), mlirAttributes.data());
           return PyArrayAttribute(context->getRef(), attr);
         },
-        nb::arg("attributes"), nb::arg("context").none() = nb::none(),
+        nb::arg("attributes"), nb::arg("context") = nb::none(),
         "Gets a uniqued Array attribute");
     c.def("__getitem__",
           [](PyArrayAttribute &arr, intptr_t i) {
@@ -564,7 +564,7 @@ public:
             throw MLIRError("Invalid attribute", errors.take());
           return PyFloatAttribute(type.getContext(), attr);
         },
-        nb::arg("type"), nb::arg("value"), nb::arg("loc").none() = nb::none(),
+        nb::arg("type"), nb::arg("value"), nb::arg("loc") = nb::none(),
         "Gets an uniqued float point attribute associated to a type");
     c.def_static(
         "get_f32",
@@ -573,7 +573,7 @@ public:
               context->get(), mlirF32TypeGet(context->get()), value);
           return PyFloatAttribute(context->getRef(), attr);
         },
-        nb::arg("value"), nb::arg("context").none() = nb::none(),
+        nb::arg("value"), nb::arg("context") = nb::none(),
         "Gets an uniqued float point attribute associated to a f32 type");
     c.def_static(
         "get_f64",
@@ -582,7 +582,7 @@ public:
               context->get(), mlirF64TypeGet(context->get()), value);
           return PyFloatAttribute(context->getRef(), attr);
         },
-        nb::arg("value"), nb::arg("context").none() = nb::none(),
+        nb::arg("value"), nb::arg("context") = nb::none(),
         "Gets an uniqued float point attribute associated to a f64 type");
     c.def_prop_ro("value", mlirFloatAttrGetValueDouble,
                   "Returns the value of the float attribute");
@@ -642,7 +642,7 @@ public:
           MlirAttribute attr = mlirBoolAttrGet(context->get(), value);
           return PyBoolAttribute(context->getRef(), attr);
         },
-        nb::arg("value"), nb::arg("context").none() = nb::none(),
+        nb::arg("value"), nb::arg("context") = nb::none(),
         "Gets an uniqued bool attribute");
     c.def_prop_ro("value", mlirBoolAttrGetValue,
                   "Returns the value of the bool attribute");
@@ -679,7 +679,7 @@ public:
            DefaultingPyMlirContext context) {
           return PySymbolRefAttribute::fromList(symbols, context.resolve());
         },
-        nb::arg("symbols"), nb::arg("context").none() = nb::none(),
+        nb::arg("symbols"), nb::arg("context") = nb::none(),
         "Gets a uniqued SymbolRef attribute from a list of symbol names");
     c.def_prop_ro(
         "value",
@@ -713,7 +713,7 @@ public:
               mlirFlatSymbolRefAttrGet(context->get(), toMlirStringRef(value));
           return PyFlatSymbolRefAttribute(context->getRef(), attr);
         },
-        nb::arg("value"), nb::arg("context").none() = nb::none(),
+        nb::arg("value"), nb::arg("context") = nb::none(),
         "Gets a uniqued FlatSymbolRef attribute");
     c.def_prop_ro(
         "value",
@@ -746,7 +746,7 @@ public:
           return PyOpaqueAttribute(context->getRef(), attr);
         },
         nb::arg("dialect_namespace"), nb::arg("buffer"), nb::arg("type"),
-        nb::arg("context").none() = nb::none(), "Gets an Opaque attribute.");
+        nb::arg("context") = nb::none(), "Gets an Opaque attribute.");
     c.def_prop_ro(
         "dialect_namespace",
         [](PyOpaqueAttribute &self) {
@@ -780,7 +780,7 @@ public:
               mlirStringAttrGet(context->get(), toMlirStringRef(value));
           return PyStringAttribute(context->getRef(), attr);
         },
-        nb::arg("value"), nb::arg("context").none() = nb::none(),
+        nb::arg("value"), nb::arg("context") = nb::none(),
         "Gets a uniqued string attribute");
     c.def_static(
         "get",
@@ -789,7 +789,7 @@ public:
               mlirStringAttrGet(context->get(), toMlirStringRef(value));
           return PyStringAttribute(context->getRef(), attr);
         },
-        nb::arg("value"), nb::arg("context").none() = nb::none(),
+        nb::arg("value"), nb::arg("context") = nb::none(),
         "Gets a uniqued string attribute");
     c.def_static(
         "get_typed",
@@ -1030,13 +1030,12 @@ public:
     c.def("__len__", &PyDenseElementsAttribute::dunderLen)
         .def_static("get", PyDenseElementsAttribute::getFromBuffer,
                     nb::arg("array"), nb::arg("signless") = true,
-                    nb::arg("type").none() = nb::none(),
-                    nb::arg("shape").none() = nb::none(),
-                    nb::arg("context").none() = nb::none(),
+                    nb::arg("type") = nb::none(), nb::arg("shape") = nb::none(),
+                    nb::arg("context") = nb::none(),
                     kDenseElementsAttrGetDocstring)
         .def_static("get", PyDenseElementsAttribute::getFromList,
-                    nb::arg("attrs"), nb::arg("type").none() = nb::none(),
-                    nb::arg("context").none() = nb::none(),
+                    nb::arg("attrs"), nb::arg("type") = nb::none(),
+                    nb::arg("context") = nb::none(),
                     kDenseElementsAttrGetFromListDocstring)
         .def_static("get_splat", PyDenseElementsAttribute::getSplat,
                     nb::arg("shaped_type"), nb::arg("element_attr"),
@@ -1505,12 +1504,12 @@ public:
   }
 
   static void bindDerived(ClassTy &c) {
-    c.def_static(
-        "get_from_buffer", PyDenseResourceElementsAttribute::getFromBuffer,
-        nb::arg("array"), nb::arg("name"), nb::arg("type"),
-        nb::arg("alignment").none() = nb::none(), nb::arg("is_mutable") = false,
-        nb::arg("context").none() = nb::none(),
-        kDenseResourceElementsAttrGetFromBufferDocstring);
+    c.def_static("get_from_buffer",
+                 PyDenseResourceElementsAttribute::getFromBuffer,
+                 nb::arg("array"), nb::arg("name"), nb::arg("type"),
+                 nb::arg("alignment") = nb::none(),
+                 nb::arg("is_mutable") = false, nb::arg("context") = nb::none(),
+                 kDenseResourceElementsAttrGetFromBufferDocstring);
   }
 };
 
@@ -1550,7 +1549,7 @@ public:
                                     mlirNamedAttributes.data());
           return PyDictAttribute(context->getRef(), attr);
         },
-        nb::arg("value") = nb::dict(), nb::arg("context").none() = nb::none(),
+        nb::arg("value") = nb::dict(), nb::arg("context") = nb::none(),
         "Gets an uniqued dict attribute");
     c.def("__getitem__", [](PyDictAttribute &self, const std::string &name) {
       MlirAttribute attr =
@@ -1622,7 +1621,7 @@ public:
           MlirAttribute attr = mlirTypeAttrGet(value.get());
           return PyTypeAttribute(context->getRef(), attr);
         },
-        nb::arg("value"), nb::arg("context").none() = nb::none(),
+        nb::arg("value"), nb::arg("context") = nb::none(),
         "Gets a uniqued Type attribute");
     c.def_prop_ro("value", [](PyTypeAttribute &self) {
       return mlirTypeAttrGetValue(self.get());
@@ -1646,7 +1645,7 @@ public:
           return PyUnitAttribute(context->getRef(),
                                  mlirUnitAttrGet(context->get()));
         },
-        nb::arg("context").none() = nb::none(), "Create a Unit attribute.");
+        nb::arg("context") = nb::none(), "Create a Unit attribute.");
   }
 };
 
@@ -1669,8 +1668,7 @@ public:
               ctx->get(), offset, strides.size(), strides.data());
           return PyStridedLayoutAttribute(ctx->getRef(), attr);
         },
-        nb::arg("offset"), nb::arg("strides"),
-        nb::arg("context").none() = nb::none(),
+        nb::arg("offset"), nb::arg("strides"), nb::arg("context") = nb::none(),
         "Gets a strided layout attribute.");
     c.def_static(
         "get_fully_dynamic",
@@ -1682,7 +1680,7 @@ public:
               ctx->get(), dynamic, strides.size(), strides.data());
           return PyStridedLayoutAttribute(ctx->getRef(), attr);
         },
-        nb::arg("rank"), nb::arg("context").none() = nb::none(),
+        nb::arg("rank"), nb::arg("context") = nb::none(),
         "Gets a strided layout attribute with dynamic offset and strides of "
         "a "
         "given rank.");

@@ -67,7 +67,7 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
                 mlirStringRefCreate(anchorOp.data(), anchorOp.size()));
             new (&self) PyPassManager(passManager);
           },
-          "anchor_op"_a = nb::str("any"), "context"_a.none() = nb::none(),
+          "anchor_op"_a = nb::str("any"), "context"_a = nb::none(),
           "Create a new PassManager for the current (or provided) Context.")
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR, &PyPassManager::getCapsule)
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyPassManager::createFromCapsule)
@@ -109,10 +109,10 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
           "print_before_all"_a = false, "print_after_all"_a = true,
           "print_module_scope"_a = false, "print_after_change"_a = false,
           "print_after_failure"_a = false,
-          "large_elements_limit"_a.none() = nb::none(),
-          "large_resource_limit"_a.none() = nb::none(),
-          "enable_debug_info"_a = false, "print_generic_op_form"_a = false,
-          "tree_printing_dir_path"_a.none() = nb::none(),
+          "large_elements_limit"_a = nb::none(),
+          "large_resource_limit"_a = nb::none(), "enable_debug_info"_a = false,
+          "print_generic_op_form"_a = false,
+          "tree_printing_dir_path"_a = nb::none(),
           "Enable IR printing, default as mlir-print-ir-after-all.")
       .def(
           "enable_verifier",
@@ -139,7 +139,7 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
               throw nb::value_error(errorMsg.join().c_str());
             return new PyPassManager(passManager);
           },
-          "pipeline"_a, "context"_a.none() = nb::none(),
+          "pipeline"_a, "context"_a = nb::none(),
           "Parse a textual pass-pipeline and return a top-level PassManager "
           "that can be applied on a Module. Throw a ValueError if the pipeline "
           "can't be parsed")
