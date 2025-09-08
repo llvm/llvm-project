@@ -50960,15 +50960,13 @@ static SDValue PromoteMaskArithmetic(SDValue N, const SDLoc &DL, EVT VT,
           PromoteMaskArithmetic(N0, DL, VT, DAG, Subtarget, Depth + 1))
     N0 = NN0;
   else {
-    // The left side has to be a trunc.
-    if (N0.getOpcode() != ISD::TRUNCATE)
+    // The left side has to be a 'trunc'.
+    bool LHSTrunc = N0.getOpcode() == ISD::TRUNCATE &&
+                    N0.getOperand(0).getValueType() == VT;
+    if (LHSTrunc)
+      N0 = N0.getOperand(0);
+    else
       return SDValue();
-
-    // The type of the truncated inputs.
-    if (N0.getOperand(0).getValueType() != VT)
-      return SDValue();
-
-    N0 = N0.getOperand(0);
   }
 
   if (SDValue NN1 =
