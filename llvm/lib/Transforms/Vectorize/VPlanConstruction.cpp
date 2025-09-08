@@ -91,17 +91,15 @@ void PlainCFGBuilder::fixHeaderPhis() {
   for (auto *Phi : PhisToFix) {
     assert(IRDef2VPValue.count(Phi) && "Missing VPInstruction for PHINode.");
     VPValue *VPVal = IRDef2VPValue[Phi];
-    assert(isa<VPWidenPHIRecipe>(VPVal) &&
-           "Expected WidenPHIRecipe for phi node.");
-    auto *VPPhi = cast<VPWidenPHIRecipe>(VPVal);
-    assert(VPPhi->getNumOperands() == 0 &&
-           "Expected VPInstruction with no operands.");
+    assert(isa<VPPhi>(VPVal) && "Expected VPPhi for phi node.");
+    auto *PhiR = cast<VPPhi>(VPVal);
+    assert(PhiR->getNumOperands() == 0 && "Expected VPPhi with no operands.");
     assert(isHeaderBB(Phi->getParent(), LI->getLoopFor(Phi->getParent())) &&
            "Expected Phi in header block.");
     assert(Phi->getNumOperands() == 2 &&
            "header phi must have exactly 2 operands");
     for (BasicBlock *Pred : predecessors(Phi->getParent()))
-      VPPhi->addOperand(
+      PhiR->addOperand(
           getOrCreateVPOperand(Phi->getIncomingValueForBlock(Pred)));
   }
 }
@@ -204,11 +202,11 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
 
     VPSingleDefRecipe *NewR;
     if (auto *Phi = dyn_cast<PHINode>(Inst)) {
-      // Phi node's operands may have not been visited at this point. We create
+      // Phi node's operands may not have been visited at this point. We create
       // an empty VPInstruction that we will fix once the whole plain CFG has
       // been built.
-      NewR = new VPWidenPHIRecipe(Phi, nullptr, Phi->getDebugLoc(), "vec.phi");
-      VPBB->appendRecipe(NewR);
+      NewR = VPIRBuilder.createScalarPhi({}, Phi->getDebugLoc(), "vec.phi");
+      NewR->setUnderlyingValue(Phi);
       if (isHeaderBB(Phi->getParent(), LI->getLoopFor(Phi->getParent()))) {
         // Header phis need to be fixed after the VPBB for the latch has been
         // created.
@@ -338,12 +336,6 @@ std::unique_ptr<VPlan> PlainCFGBuilder::buildPlainCFG() {
   return std::move(Plan);
 }
 
-std::unique_ptr<VPlan> VPlanTransforms::buildPlainCFG(Loop *TheLoop,
-                                                      LoopInfo &LI) {
-  PlainCFGBuilder Builder(TheLoop, &LI);
-  return Builder.buildPlainCFG();
-}
-
 /// Checks if \p HeaderVPB is a loop header block in the plain CFG; that is, it
 /// has exactly 2 predecessors (preheader and latch), where the block
 /// dominates the latch and the preheader dominates the block. If it is a
@@ -459,10 +451,32 @@ static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
                        LatchDL);
 }
 
-void VPlanTransforms::prepareForVectorization(
-    VPlan &Plan, Type *InductionTy, PredicatedScalarEvolution &PSE,
-    bool RequiresScalarEpilogueCheck, bool TailFolded, Loop *TheLoop,
-    DebugLoc IVDL, bool HasUncountableEarlyExit, VFRange &Range) {
+/// Creates extracts for values in \p Plan defined in a loop region and used
+/// outside a loop region.
+static void createExtractsForLiveOuts(VPlan &Plan, VPBasicBlock *MiddleVPBB) {
+  VPBuilder B(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
+  for (VPBasicBlock *EB : Plan.getExitBlocks()) {
+    if (EB->getSinglePredecessor() != MiddleVPBB)
+      continue;
+
+    for (VPRecipeBase &R : EB->phis()) {
+      auto *ExitIRI = cast<VPIRPhi>(&R);
+      for (unsigned Idx = 0; Idx != ExitIRI->getNumIncoming(); ++Idx) {
+        VPRecipeBase *Inc = ExitIRI->getIncomingValue(Idx)->getDefiningRecipe();
+        if (!Inc)
+          continue;
+        assert(ExitIRI->getNumOperands() == 1 &&
+               ExitIRI->getParent()->getSinglePredecessor() == MiddleVPBB &&
+               "exit values from early exits must be fixed when branch to "
+               "early-exit is added");
+        ExitIRI->extractLastLaneOfFirstOperand(B);
+      }
+    }
+  }
+}
+
+static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
+                               PredicatedScalarEvolution &PSE, Loop *TheLoop) {
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
 
@@ -488,45 +502,16 @@ void VPlanTransforms::prepareForVectorization(
 
   addCanonicalIVRecipes(Plan, HeaderVPBB, LatchVPBB, InductionTy, IVDL);
 
-  [[maybe_unused]] bool HandledUncountableEarlyExit = false;
-  // Disconnect all early exits from the loop leaving it with a single exit from
-  // the latch. Early exits that are countable are left for a scalar epilog. The
-  // condition of uncountable early exits (currently at most one is supported)
-  // is fused into the latch exit, and used to branch from middle block to the
-  // early exit destination.
-  for (VPIRBasicBlock *EB : Plan.getExitBlocks()) {
-    for (VPBlockBase *Pred : to_vector(EB->getPredecessors())) {
-      if (Pred == MiddleVPBB)
-        continue;
-      if (HasUncountableEarlyExit) {
-        assert(!HandledUncountableEarlyExit &&
-               "can handle exactly one uncountable early exit");
-        handleUncountableEarlyExit(cast<VPBasicBlock>(Pred), EB, Plan,
-                                   HeaderVPBB, LatchVPBB, Range);
-        HandledUncountableEarlyExit = true;
-      } else {
-        for (VPRecipeBase &R : EB->phis())
-          cast<VPIRPhi>(&R)->removeIncomingValueFor(Pred);
-      }
-      cast<VPBasicBlock>(Pred)->getTerminator()->eraseFromParent();
-      VPBlockUtils::disconnectBlocks(Pred, EB);
-    }
-  }
-
-  assert((!HasUncountableEarlyExit || HandledUncountableEarlyExit) &&
-         "missed an uncountable exit that must be handled");
-
   // Create SCEV and VPValue for the trip count.
   // We use the symbolic max backedge-taken-count, which works also when
   // vectorizing loops with uncountable early exits.
   const SCEV *BackedgeTakenCountSCEV = PSE.getSymbolicMaxBackedgeTakenCount();
   assert(!isa<SCEVCouldNotCompute>(BackedgeTakenCountSCEV) &&
-         "Invalid loop count");
+         "Invalid backedge-taken count");
   ScalarEvolution &SE = *PSE.getSE();
   const SCEV *TripCount = SE.getTripCountFromExitCount(BackedgeTakenCountSCEV,
                                                        InductionTy, TheLoop);
-  Plan.setTripCount(
-      vputils::getOrCreateVPValueForSCEVExpr(Plan, TripCount, SE));
+  Plan.setTripCount(vputils::getOrCreateVPValueForSCEVExpr(Plan, TripCount));
 
   VPBasicBlock *ScalarPH = Plan.createVPBasicBlock("scalar.ph");
   VPBlockUtils::connectBlocks(ScalarPH, Plan.getScalarHeader());
@@ -540,11 +525,64 @@ void VPlanTransforms::prepareForVectorization(
   VPBlockUtils::connectBlocks(Plan.getEntry(), ScalarPH);
   Plan.getEntry()->swapSuccessors();
 
+  createExtractsForLiveOuts(Plan, MiddleVPBB);
+}
+
+std::unique_ptr<VPlan>
+VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
+                             DebugLoc IVDL, PredicatedScalarEvolution &PSE) {
+  PlainCFGBuilder Builder(TheLoop, &LI);
+  std::unique_ptr<VPlan> VPlan0 = Builder.buildPlainCFG();
+  addInitialSkeleton(*VPlan0, InductionTy, IVDL, PSE, TheLoop);
+  return VPlan0;
+}
+
+void VPlanTransforms::handleEarlyExits(VPlan &Plan,
+                                       bool HasUncountableEarlyExit) {
+  auto *MiddleVPBB = cast<VPBasicBlock>(
+      Plan.getScalarHeader()->getSinglePredecessor()->getPredecessors()[0]);
+  auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
+  VPBlockBase *HeaderVPB = cast<VPBasicBlock>(LatchVPBB->getSuccessors()[1]);
+
+  // Disconnect all early exits from the loop leaving it with a single exit from
+  // the latch. Early exits that are countable are left for a scalar epilog. The
+  // condition of uncountable early exits (currently at most one is supported)
+  // is fused into the latch exit, and used to branch from middle block to the
+  // early exit destination.
+  [[maybe_unused]] bool HandledUncountableEarlyExit = false;
+  for (VPIRBasicBlock *EB : Plan.getExitBlocks()) {
+    for (VPBlockBase *Pred : to_vector(EB->getPredecessors())) {
+      if (Pred == MiddleVPBB)
+        continue;
+      if (HasUncountableEarlyExit) {
+        assert(!HandledUncountableEarlyExit &&
+               "can handle exactly one uncountable early exit");
+        handleUncountableEarlyExit(cast<VPBasicBlock>(Pred), EB, Plan,
+                                   cast<VPBasicBlock>(HeaderVPB), LatchVPBB);
+        HandledUncountableEarlyExit = true;
+      } else {
+        for (VPRecipeBase &R : EB->phis())
+          cast<VPIRPhi>(&R)->removeIncomingValueFor(Pred);
+      }
+      cast<VPBasicBlock>(Pred)->getTerminator()->eraseFromParent();
+      VPBlockUtils::disconnectBlocks(Pred, EB);
+    }
+  }
+
+  assert((!HasUncountableEarlyExit || HandledUncountableEarlyExit) &&
+         "missed an uncountable exit that must be handled");
+}
+
+void VPlanTransforms::addMiddleCheck(VPlan &Plan,
+                                     bool RequiresScalarEpilogueCheck,
+                                     bool TailFolded) {
+  auto *MiddleVPBB = cast<VPBasicBlock>(
+      Plan.getScalarHeader()->getSinglePredecessor()->getPredecessors()[0]);
   // If MiddleVPBB has a single successor then the original loop does not exit
   // via the latch and the single successor must be the scalar preheader.
   // There's no need to add a runtime check to MiddleVPBB.
   if (MiddleVPBB->getNumSuccessors() == 1) {
-    assert(MiddleVPBB->getSingleSuccessor() == ScalarPH &&
+    assert(MiddleVPBB->getSingleSuccessor() == Plan.getScalarPreheader() &&
            "must have ScalarPH as single successor");
     return;
   }
@@ -566,12 +604,12 @@ void VPlanTransforms::prepareForVectorization(
   // the corresponding compare because they may have ended up with different
   // line numbers and we want to avoid awkward line stepping while debugging.
   // E.g., if the compare has got a line number inside the loop.
+  auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
   DebugLoc LatchDL = LatchVPBB->getTerminator()->getDebugLoc();
   VPBuilder Builder(MiddleVPBB);
   VPValue *Cmp;
   if (!RequiresScalarEpilogueCheck)
-    Cmp = Plan.getOrAddLiveIn(
-        ConstantInt::getFalse(IntegerType::getInt1Ty(Plan.getContext())));
+    Cmp = Plan.getFalse();
   else if (TailFolded)
     Cmp = Plan.getOrAddLiveIn(
         ConstantInt::getTrue(IntegerType::getInt1Ty(Plan.getContext())));
@@ -591,30 +629,6 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan) {
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
   TopRegion->setName("vector loop");
   TopRegion->getEntryBasicBlock()->setName("vector.body");
-}
-
-void VPlanTransforms::createExtractsForLiveOuts(VPlan &Plan) {
-  for (VPBasicBlock *EB : Plan.getExitBlocks()) {
-    VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
-    VPBuilder B(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
-
-    if (EB->getSinglePredecessor() != Plan.getMiddleBlock())
-      continue;
-
-    for (VPRecipeBase &R : EB->phis()) {
-      auto *ExitIRI = cast<VPIRPhi>(&R);
-      for (unsigned Idx = 0; Idx != ExitIRI->getNumIncoming(); ++Idx) {
-        VPRecipeBase *Inc = ExitIRI->getIncomingValue(Idx)->getDefiningRecipe();
-        if (!Inc || !Inc->getParent()->getParent())
-          continue;
-        assert(ExitIRI->getNumOperands() == 1 &&
-               ExitIRI->getParent()->getSinglePredecessor() == MiddleVPBB &&
-               "exit values from early exits must be fixed when branch to "
-               "early-exit is added");
-        ExitIRI->extractLastLaneOfFirstOperand(B);
-      }
-    }
-  }
 }
 
 // Likelyhood of bypassing the vectorized loop due to a runtime check block,
@@ -651,6 +665,90 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
     MDBuilder MDB(Plan.getContext());
     MDNode *BranchWeights =
         MDB.createBranchWeights(CheckBypassWeights, /*IsExpected=*/false);
+    Term->addMetadata(LLVMContext::MD_prof, BranchWeights);
+  }
+}
+
+void VPlanTransforms::addMinimumIterationCheck(
+    VPlan &Plan, ElementCount VF, unsigned UF,
+    ElementCount MinProfitableTripCount, bool RequiresScalarEpilogue,
+    bool TailFolded, bool CheckNeededWithTailFolding, Loop *OrigLoop,
+    const uint32_t *MinItersBypassWeights, DebugLoc DL, ScalarEvolution &SE) {
+  // Generate code to check if the loop's trip count is less than VF * UF, or
+  // equal to it in case a scalar epilogue is required; this implies that the
+  // vector trip count is zero. This check also covers the case where adding one
+  // to the backedge-taken count overflowed leading to an incorrect trip count
+  // of zero. In this case we will also jump to the scalar loop.
+  CmpInst::Predicate CmpPred =
+      RequiresScalarEpilogue ? ICmpInst::ICMP_ULE : ICmpInst::ICMP_ULT;
+  // If tail is to be folded, vector loop takes care of all iterations.
+  VPValue *TripCountVPV = Plan.getTripCount();
+  const SCEV *TripCount = vputils::getSCEVExprForVPValue(TripCountVPV, SE);
+  Type *TripCountTy = TripCount->getType();
+  auto GetMinTripCount = [&]() -> const SCEV * {
+    // Compute max(MinProfitableTripCount, UF * VF) and return it.
+    const SCEV *VFxUF =
+        SE.getElementCount(TripCountTy, (VF * UF), SCEV::FlagNUW);
+    if (UF * VF.getKnownMinValue() >=
+        MinProfitableTripCount.getKnownMinValue()) {
+      // TODO: SCEV should be able to simplify test.
+      return VFxUF;
+    }
+    const SCEV *MinProfitableTripCountSCEV =
+        SE.getElementCount(TripCountTy, MinProfitableTripCount, SCEV::FlagNUW);
+    return SE.getUMaxExpr(MinProfitableTripCountSCEV, VFxUF);
+  };
+
+  VPBasicBlock *EntryVPBB = Plan.getEntry();
+  VPBuilder Builder(EntryVPBB);
+  VPValue *TripCountCheck = Plan.getFalse();
+  const SCEV *Step = GetMinTripCount();
+  if (TailFolded) {
+    if (CheckNeededWithTailFolding) {
+      // vscale is not necessarily a power-of-2, which means we cannot guarantee
+      // an overflow to zero when updating induction variables and so an
+      // additional overflow check is required before entering the vector loop.
+
+      // Get the maximum unsigned value for the type.
+      VPValue *MaxUIntTripCount = Plan.getOrAddLiveIn(ConstantInt::get(
+          TripCountTy, cast<IntegerType>(TripCountTy)->getMask()));
+      VPValue *DistanceToMax = Builder.createNaryOp(
+          Instruction::Sub, {MaxUIntTripCount, TripCountVPV},
+          DebugLoc::getUnknown());
+
+      // Don't execute the vector loop if (UMax - n) < (VF * UF).
+      // FIXME: Should only check VF * UF, but currently checks Step=max(VF*UF,
+      // minProfitableTripCount).
+      TripCountCheck = Builder.createICmp(ICmpInst::ICMP_ULT, DistanceToMax,
+                                          Builder.createExpandSCEV(Step), DL);
+    } else {
+      // TripCountCheck = false, folding tail implies positive vector trip
+      // count.
+    }
+  } else {
+    // TODO: Emit unconditional branch to vector preheader instead of
+    // conditional branch with known condition.
+    TripCount = SE.applyLoopGuards(TripCount, OrigLoop);
+    // Check if the trip count is < the step.
+    if (SE.isKnownPredicate(CmpPred, TripCount, Step)) {
+      // TODO: Ensure step is at most the trip count when determining max VF and
+      // UF, w/o tail folding.
+      TripCountCheck = Plan.getTrue();
+    } else if (!SE.isKnownPredicate(CmpInst::getInversePredicate(CmpPred),
+                                    TripCount, Step)) {
+      // Generate the minimum iteration check only if we cannot prove the
+      // check is known to be true, or known to be false.
+      VPValue *MinTripCountVPV = Builder.createExpandSCEV(Step);
+      TripCountCheck = Builder.createICmp(
+          CmpPred, TripCountVPV, MinTripCountVPV, DL, "min.iters.check");
+    } // else step known to be < trip count, use TripCountCheck preset to false.
+  }
+  VPInstruction *Term =
+      Builder.createNaryOp(VPInstruction::BranchOnCond, {TripCountCheck}, DL);
+  if (MinItersBypassWeights) {
+    MDBuilder MDB(Plan.getContext());
+    MDNode *BranchWeights = MDB.createBranchWeights(
+        ArrayRef(MinItersBypassWeights, 2), /*IsExpected=*/false);
     Term->addMetadata(LLVMContext::MD_prof, BranchWeights);
   }
 }

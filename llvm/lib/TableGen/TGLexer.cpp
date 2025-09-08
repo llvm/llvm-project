@@ -93,9 +93,7 @@ TGLexer::TGLexer(SourceMgr &SM, ArrayRef<std::string> Macros) : SrcMgr(SM) {
   }
 }
 
-SMLoc TGLexer::getLoc() const {
-  return SMLoc::getFromPointer(TokStart);
-}
+SMLoc TGLexer::getLoc() const { return SMLoc::getFromPointer(TokStart); }
 
 SMRange TGLexer::getLocRange() const {
   return {getLoc(), SMLoc::getFromPointer(CurPtr)};
@@ -162,16 +160,13 @@ int TGLexer::getNextChar() {
     // Handle the newline character by ignoring it and incrementing the line
     // count. However, be careful about 'dos style' files with \n\r in them.
     // Only treat a \n\r or \r\n as a single line.
-    if ((*CurPtr == '\n' || (*CurPtr == '\r')) &&
-        *CurPtr != CurChar)
-      ++CurPtr;  // Eat the two char newline sequence.
+    if ((*CurPtr == '\n' || (*CurPtr == '\r')) && *CurPtr != CurChar)
+      ++CurPtr; // Eat the two char newline sequence.
     return '\n';
   }
 }
 
-int TGLexer::peekNextChar(int Index) const {
-  return *(CurPtr + Index);
-}
+int TGLexer::peekNextChar(int Index) const { return *(CurPtr + Index); }
 
 tgtok::TokKind TGLexer::LexToken(bool FileOrLineStart) {
   while (true) {
@@ -367,7 +362,9 @@ tgtok::TokKind TGLexer::LexString() {
     ++CurPtr;
 
     switch (*CurPtr) {
-    case '\\': case '\'': case '"':
+    case '\\':
+    case '\'':
+    case '"':
       // These turn into their literal character.
       CurStrVal += *CurPtr++;
       break;
@@ -421,7 +418,7 @@ tgtok::TokKind TGLexer::LexIdentifier() {
     ++CurPtr;
 
   // Check to see if this identifier is a reserved keyword.
-  StringRef Str(IdentStart, CurPtr-IdentStart);
+  StringRef Str(IdentStart, CurPtr - IdentStart);
 
   tgtok::TokKind Kind = StringSwitch<tgtok::TokKind>(Str)
                             .Case("int", tgtok::Int)
@@ -454,14 +451,15 @@ tgtok::TokKind TGLexer::LexIdentifier() {
 
   // A couple of tokens require special processing.
   switch (Kind) {
-    case tgtok::Include:
-      if (LexInclude()) return tgtok::Error;
-      return Lex();
-    case tgtok::Id:
-      CurStrVal.assign(Str.begin(), Str.end());
-      break;
-    default:
-      break;
+  case tgtok::Include:
+    if (LexInclude())
+      return tgtok::Error;
+    return Lex();
+  case tgtok::Id:
+    CurStrVal.assign(Str.begin(), Str.end());
+    break;
+  default:
+    break;
   }
 
   return Kind;
@@ -472,7 +470,8 @@ tgtok::TokKind TGLexer::LexIdentifier() {
 bool TGLexer::LexInclude() {
   // The token after the include must be a string.
   tgtok::TokKind Tok = LexToken();
-  if (Tok == tgtok::Error) return true;
+  if (Tok == tgtok::Error)
+    return true;
   if (Tok != tgtok::StrVal) {
     PrintError(getLoc(), "expected filename after include");
     return true;
@@ -501,7 +500,7 @@ bool TGLexer::LexInclude() {
 /// SkipBCPLComment - Skip over the comment by finding the next CR or LF.
 /// Or we may end up at the end of the buffer.
 void TGLexer::SkipBCPLComment() {
-  ++CurPtr;  // skip the second slash.
+  ++CurPtr; // Skip the second slash.
   auto EOLPos = CurBuf.find_first_of("\r\n", CurPtr - CurBuf.data());
   CurPtr = (EOLPos == StringRef::npos) ? CurBuf.end() : CurBuf.data() + EOLPos;
 }
@@ -509,7 +508,7 @@ void TGLexer::SkipBCPLComment() {
 /// SkipCComment - This skips C-style /**/ comments. The only difference from C
 /// is that we allow nesting.
 bool TGLexer::SkipCComment() {
-  ++CurPtr;  // skip the star.
+  ++CurPtr; // Skip the star.
   unsigned CommentDepth = 1;
 
   while (true) {
@@ -520,15 +519,17 @@ bool TGLexer::SkipCComment() {
       return true;
     case '*':
       // End of the comment?
-      if (CurPtr[0] != '/') break;
+      if (CurPtr[0] != '/')
+        break;
 
-      ++CurPtr;   // End the */.
+      ++CurPtr; // End the */.
       if (--CommentDepth == 0)
         return false;
       break;
     case '/':
       // Start of a nested comment?
-      if (CurPtr[0] != '*') break;
+      if (CurPtr[0] != '*')
+        break;
       ++CurPtr;
       ++CommentDepth;
       break;
@@ -608,14 +609,17 @@ tgtok::TokKind TGLexer::LexBracket() {
   const char *CodeStart = CurPtr;
   while (true) {
     int Char = getNextChar();
-    if (Char == EOF) break;
+    if (Char == EOF)
+      break;
 
-    if (Char != '}') continue;
+    if (Char != '}')
+      continue;
 
     Char = getNextChar();
-    if (Char == EOF) break;
+    if (Char == EOF)
+      break;
     if (Char == ']') {
-      CurStrVal.assign(CodeStart, CurPtr-2);
+      CurStrVal.assign(CodeStart, CurPtr - 2);
       return tgtok::CodeFragment;
     }
   }

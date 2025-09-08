@@ -1909,6 +1909,15 @@ class Cursor(Structure):
 
     @property
     @cursor_null_guard
+    def language(self) -> LanguageKind:
+        """Determine the "language" of the entity referred to by a given cursor."""
+        if not hasattr(self, "_language"):
+            self._language = conf.lib.clang_getCursorLanguage(self)
+
+        return LanguageKind.from_id(self._language)
+
+    @property
+    @cursor_null_guard
     def tls_kind(self) -> TLSKind:
         """Return the thread-local storage (TLS) kind of this cursor."""
         if not hasattr(self, "_tls_kind"):
@@ -2582,6 +2591,17 @@ class LinkageKind(BaseEnumeration):
     INTERNAL = 2
     UNIQUE_EXTERNAL = 3
     EXTERNAL = 4
+
+
+class LanguageKind(BaseEnumeration):
+    """
+    Describe the "language" of the entity referred to by a cursor.
+    """
+
+    INVALID = 0
+    C = 1
+    OBJ_C = 2
+    C_PLUS_PLUS = 3
 
 
 class TLSKind(BaseEnumeration):
@@ -4084,6 +4104,7 @@ FUNCTION_LIST: list[LibFunc] = [
     ("clang_getCursorDisplayName", [Cursor], _CXString),
     ("clang_getCursorExceptionSpecificationType", [Cursor], c_int),
     ("clang_getCursorExtent", [Cursor], SourceRange),
+    ("clang_getCursorLanguage", [Cursor], c_int),
     ("clang_getCursorLexicalParent", [Cursor], Cursor),
     ("clang_getCursorLinkage", [Cursor], c_int),
     ("clang_getCursorLocation", [Cursor], SourceLocation),

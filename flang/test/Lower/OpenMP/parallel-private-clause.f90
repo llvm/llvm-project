@@ -1,7 +1,6 @@
 ! This test checks lowering of OpenMP parallel Directive with
 ! `PRIVATE` clause present.
 
-! REQUIRES: shell
 ! RUN: bbc --use-desc-for-alloc=false -fopenmp -emit-hlfir %s -o - \
 ! RUN: | FileCheck %s --check-prefix=FIRDialect
 

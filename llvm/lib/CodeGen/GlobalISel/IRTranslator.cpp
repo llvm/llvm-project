@@ -13,7 +13,6 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -1592,9 +1591,19 @@ bool IRTranslator::translateGetElementPtr(const User &U,
   Type *OffsetIRTy = DL->getIndexType(PtrIRTy);
   LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
 
-  uint32_t Flags = 0;
+  uint32_t PtrAddFlags = 0;
+  // Each PtrAdd generated to implement the GEP inherits its nuw, nusw, inbounds
+  // flags.
   if (const Instruction *I = dyn_cast<Instruction>(&U))
-    Flags = MachineInstr::copyFlagsFromInstruction(*I);
+    PtrAddFlags = MachineInstr::copyFlagsFromInstruction(*I);
+
+  auto PtrAddFlagsWithConst = [&](int64_t Offset) {
+    // For nusw/inbounds GEP with an offset that is nonnegative when interpreted
+    // as signed, assume there is no unsigned overflow.
+    if (Offset >= 0 && (PtrAddFlags & MachineInstr::MIFlag::NoUSWrap))
+      return PtrAddFlags | MachineInstr::MIFlag::NoUWrap;
+    return PtrAddFlags;
+  };
 
   // Normalize Vector GEP - all scalar operands should be converted to the
   // splat vector.
@@ -1644,7 +1653,9 @@ bool IRTranslator::translateGetElementPtr(const User &U,
 
       if (Offset != 0) {
         auto OffsetMIB = MIRBuilder.buildConstant({OffsetTy}, Offset);
-        BaseReg = MIRBuilder.buildPtrAdd(PtrTy, BaseReg, OffsetMIB.getReg(0))
+        BaseReg = MIRBuilder
+                      .buildPtrAdd(PtrTy, BaseReg, OffsetMIB.getReg(0),
+                                   PtrAddFlagsWithConst(Offset))
                       .getReg(0);
         Offset = 0;
       }
@@ -1668,12 +1679,23 @@ bool IRTranslator::translateGetElementPtr(const User &U,
       if (ElementSize != 1) {
         auto ElementSizeMIB = MIRBuilder.buildConstant(
             getLLTForType(*OffsetIRTy, *DL), ElementSize);
-        GepOffsetReg =
-            MIRBuilder.buildMul(OffsetTy, IdxReg, ElementSizeMIB).getReg(0);
-      } else
-        GepOffsetReg = IdxReg;
 
-      BaseReg = MIRBuilder.buildPtrAdd(PtrTy, BaseReg, GepOffsetReg).getReg(0);
+        // The multiplication is NUW if the GEP is NUW and NSW if the GEP is
+        // NUSW.
+        uint32_t ScaleFlags = PtrAddFlags & MachineInstr::MIFlag::NoUWrap;
+        if (PtrAddFlags & MachineInstr::MIFlag::NoUSWrap)
+          ScaleFlags |= MachineInstr::MIFlag::NoSWrap;
+
+        GepOffsetReg =
+            MIRBuilder.buildMul(OffsetTy, IdxReg, ElementSizeMIB, ScaleFlags)
+                .getReg(0);
+      } else {
+        GepOffsetReg = IdxReg;
+      }
+
+      BaseReg =
+          MIRBuilder.buildPtrAdd(PtrTy, BaseReg, GepOffsetReg, PtrAddFlags)
+              .getReg(0);
     }
   }
 
@@ -1681,11 +1703,8 @@ bool IRTranslator::translateGetElementPtr(const User &U,
     auto OffsetMIB =
         MIRBuilder.buildConstant(OffsetTy, Offset);
 
-    if (Offset >= 0 && cast<GEPOperator>(U).isInBounds())
-      Flags |= MachineInstr::MIFlag::NoUWrap;
-
     MIRBuilder.buildPtrAdd(getOrCreateVReg(U), BaseReg, OffsetMIB.getReg(0),
-                           Flags);
+                           PtrAddFlagsWithConst(Offset));
     return true;
   }
 
@@ -2189,8 +2208,8 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     unsigned Op = ID == Intrinsic::lifetime_start ? TargetOpcode::LIFETIME_START
                                                   : TargetOpcode::LIFETIME_END;
 
-    const AllocaInst *AI = cast<AllocaInst>(CI.getArgOperand(1));
-    if (!AI->isStaticAlloca())
+    const AllocaInst *AI = dyn_cast<AllocaInst>(CI.getArgOperand(0));
+    if (!AI || !AI->isStaticAlloca())
       return true;
 
     MIRBuilder.buildInstr(Op).addFrameIndex(getOrCreateFrameIndex(*AI));
@@ -2502,6 +2521,9 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
       Opc = ID == Intrinsic::vector_reduce_fadd
                 ? TargetOpcode::G_VECREDUCE_SEQ_FADD
                 : TargetOpcode::G_VECREDUCE_SEQ_FMUL;
+      if (!MRI->getType(VecSrc).isVector())
+        Opc = ID == Intrinsic::vector_reduce_fadd ? TargetOpcode::G_FADD
+                                                  : TargetOpcode::G_FMUL;
       MIRBuilder.buildInstr(Opc, {Dst}, {ScalarSrc, VecSrc},
                             MachineInstr::copyFlagsFromInstruction(CI));
       return true;
@@ -2536,6 +2558,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                          getOrCreateVReg(*ConstantInt::getTrue(CI.getType())));
     return true;
   case Intrinsic::amdgcn_cs_chain:
+  case Intrinsic::amdgcn_call_whole_wave:
     return translateCallBase(CI, MIRBuilder);
   case Intrinsic::fptrunc_round: {
     uint32_t Flags = MachineInstr::copyFlagsFromInstruction(CI);
@@ -2766,11 +2789,14 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   if (CI.isInlineAsm())
     return translateInlineAsm(CI, MIRBuilder);
 
-  diagnoseDontCall(CI);
-
   Intrinsic::ID ID = F ? F->getIntrinsicID() : Intrinsic::not_intrinsic;
-  if (!F || ID == Intrinsic::not_intrinsic)
-    return translateCallBase(CI, MIRBuilder);
+  if (!F || ID == Intrinsic::not_intrinsic) {
+    if (translateCallBase(CI, MIRBuilder)) {
+      diagnoseDontCall(CI);
+      return true;
+    }
+    return false;
+  }
 
   assert(ID != Intrinsic::not_intrinsic && "unknown intrinsic");
 
@@ -3493,7 +3519,7 @@ void IRTranslator::finishPendingPhis() {
     Verifier.setCurrentInst(PI);
 #endif // ifndef NDEBUG
 
-    SmallSet<const MachineBasicBlock *, 16> SeenPreds;
+    SmallPtrSet<const MachineBasicBlock *, 16> SeenPreds;
     for (unsigned i = 0; i < PI->getNumIncomingValues(); ++i) {
       auto IRPred = PI->getIncomingBlock(i);
       ArrayRef<Register> ValRegs = getOrCreateVRegs(*PI->getIncomingValue(i));

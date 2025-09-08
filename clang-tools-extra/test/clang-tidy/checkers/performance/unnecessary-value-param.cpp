@@ -83,14 +83,14 @@ struct ExpensiveMovableType {
 void positiveExpensiveConstValue(const ExpensiveToCopyType Obj);
 // CHECK-FIXES: void positiveExpensiveConstValue(const ExpensiveToCopyType& Obj);
 void positiveExpensiveConstValue(const ExpensiveToCopyType Obj) {
-  // CHECK-MESSAGES: [[@LINE-1]]:60: warning: the const qualified parameter 'Obj' is copied for each invocation; consider making it a reference [performance-unnecessary-value-param]
+  // CHECK-MESSAGES: [[@LINE-1]]:60: warning: the const qualified parameter 'Obj' of type 'const ExpensiveToCopyType' is copied for each invocation; consider making it a reference [performance-unnecessary-value-param]
   // CHECK-FIXES: void positiveExpensiveConstValue(const ExpensiveToCopyType& Obj) {
 }
 
 void positiveExpensiveValue(ExpensiveToCopyType Obj);
 // CHECK-FIXES: void positiveExpensiveValue(const ExpensiveToCopyType& Obj);
 void positiveExpensiveValue(ExpensiveToCopyType Obj) {
-  // CHECK-MESSAGES: [[@LINE-1]]:49: warning: the parameter 'Obj' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  // CHECK-MESSAGES: [[@LINE-1]]:49: warning: the parameter 'Obj' of type 'ExpensiveToCopyType'  is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   // CHECK-FIXES: void positiveExpensiveValue(const ExpensiveToCopyType& Obj) {
   Obj.constReference();
   useAsConstReference(Obj);
@@ -99,7 +99,7 @@ void positiveExpensiveValue(ExpensiveToCopyType Obj) {
 }
 
 void positiveVector(Vector<ExpensiveToCopyType> V) {
-  // CHECK-MESSAGES: [[@LINE-1]]:49: warning: the parameter 'V' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  // CHECK-MESSAGES: [[@LINE-1]]:49: warning: the parameter 'V' of type 'Vector<ExpensiveToCopyType>' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   // CHECK-FIXES: void positiveVector(const Vector<ExpensiveToCopyType>& V) {
   for (const auto& Obj : V) {
     useByValue(Obj);
@@ -240,14 +240,14 @@ struct NegativeOverriddenMethod : public VirtualMethod {
 
 struct VirtualMethodWarningOnly {
   virtual void methodWithExpensiveValueParam(ExpensiveToCopyType T) {}
-  // CHECK-MESSAGES: [[@LINE-1]]:66: warning: the parameter 'T' is copied
+  // CHECK-MESSAGES: [[@LINE-1]]:66: warning: the parameter 'T' of type 'ExpensiveToCopyType' is copied
   // CHECK-FIXES: virtual void methodWithExpensiveValueParam(ExpensiveToCopyType T) {}
   virtual ~VirtualMethodWarningOnly() {}
 };
 
 struct PositiveNonVirualMethod {
   void method(const ExpensiveToCopyType T) {}
-  // CHECK-MESSAGES: [[@LINE-1]]:41: warning: the const qualified parameter 'T' is copied
+  // CHECK-MESSAGES: [[@LINE-1]]:41: warning: the const qualified parameter 'T' of type 'const ExpensiveToCopyType' is copied
   // CHECK-FIXES: void method(const ExpensiveToCopyType& T) {}
 };
 
@@ -263,12 +263,12 @@ void NegativeMoveOnlyTypePassedByValue(MoveOnlyType M) {
 
 void PositiveMoveOnCopyConstruction(ExpensiveMovableType E) {
   auto F = E;
-  // CHECK-MESSAGES: [[@LINE-1]]:12: warning: parameter 'E' is passed by value and only copied once; consider moving it to avoid unnecessary copies [performance-unnecessary-value-param]
+  // CHECK-MESSAGES: [[@LINE-1]]:12: warning: parameter 'E' of type 'ExpensiveMovableType' is passed by value and only copied once; consider moving it to avoid unnecessary copies [performance-unnecessary-value-param]
   // CHECK-FIXES: auto F = std::move(E);
 }
 
 void PositiveConstRefNotMoveSinceReferencedMultipleTimes(ExpensiveMovableType E) {
-  // CHECK-MESSAGES: [[@LINE-1]]:79: warning: the parameter 'E' is copied
+  // CHECK-MESSAGES: [[@LINE-1]]:79: warning: the parameter 'E' of type 'ExpensiveMovableType' is copied
   // CHECK-FIXES: void PositiveConstRefNotMoveSinceReferencedMultipleTimes(const ExpensiveMovableType& E) {
   auto F = E;
   auto G = E;
@@ -277,7 +277,7 @@ void PositiveConstRefNotMoveSinceReferencedMultipleTimes(ExpensiveMovableType E)
 void PositiveMoveOnCopyAssignment(ExpensiveMovableType E) {
   ExpensiveMovableType F;
   F = E;
-  // CHECK-MESSAGES: [[@LINE-1]]:7: warning: parameter 'E' is passed by value
+  // CHECK-MESSAGES: [[@LINE-1]]:7: warning: parameter 'E' of type 'ExpensiveMovableType' is passed by value
   // CHECK-FIXES: F = std::move(E);
 }
 
@@ -286,7 +286,7 @@ struct NotCopyAssigned {
 };
 
 void PositiveNoMoveForNonCopyAssignmentOperator(ExpensiveMovableType E) {
-  // CHECK-MESSAGES: [[@LINE-1]]:70: warning: the parameter 'E' is copied
+  // CHECK-MESSAGES: [[@LINE-1]]:70: warning: the parameter 'E' of type 'ExpensiveMovableType' is copied
   // CHECK-FIXES: void PositiveNoMoveForNonCopyAssignmentOperator(const ExpensiveMovableType& E) {
   NotCopyAssigned N;
   N = E;
@@ -294,7 +294,7 @@ void PositiveNoMoveForNonCopyAssignmentOperator(ExpensiveMovableType E) {
 
 // The argument could be moved but is not since copy statement is inside a loop.
 void PositiveNoMoveInsideLoop(ExpensiveMovableType E) {
-  // CHECK-MESSAGES: [[@LINE-1]]:52: warning: the parameter 'E' is copied
+  // CHECK-MESSAGES: [[@LINE-1]]:52: warning: the parameter 'E' of type 'ExpensiveMovableType' is copied
   // CHECK-FIXES: void PositiveNoMoveInsideLoop(const ExpensiveMovableType& E) {
   for (;;) {
     auto F = E;
@@ -302,13 +302,13 @@ void PositiveNoMoveInsideLoop(ExpensiveMovableType E) {
 }
 
 void PositiveConstRefNotMoveConstructible(ExpensiveToCopyType T) {
-  // CHECK-MESSAGES: [[@LINE-1]]:63: warning: the parameter 'T' is copied
+  // CHECK-MESSAGES: [[@LINE-1]]:63: warning: the parameter 'T' of type 'ExpensiveToCopyType' is copied
   // CHECK-FIXES: void PositiveConstRefNotMoveConstructible(const ExpensiveToCopyType& T) {
   auto U = T;
 }
 
 void PositiveConstRefNotMoveAssignable(ExpensiveToCopyType A) {
-  // CHECK-MESSAGES: [[@LINE-1]]:60: warning: the parameter 'A' is copied
+  // CHECK-MESSAGES: [[@LINE-1]]:60: warning: the parameter 'A' of type 'ExpensiveToCopyType' is copied
   // CHECK-FIXES: void PositiveConstRefNotMoveAssignable(const ExpensiveToCopyType& A) {
   ExpensiveToCopyType B;
   B = A;
@@ -319,24 +319,24 @@ void PositiveConstRefNotMoveAssignable(ExpensiveToCopyType A) {
 void PositiveConstDeclaration(const ExpensiveToCopyType A);
 // CHECK-FIXES: void PositiveConstDeclaration(const ExpensiveToCopyType& A);
 void PositiveConstDeclaration(ExpensiveToCopyType A) {
-  // CHECK-MESSAGES: [[@LINE-1]]:51: warning: the parameter 'A' is copied
+  // CHECK-MESSAGES: [[@LINE-1]]:51: warning: the parameter 'A' of type 'ExpensiveToCopyType' is copied
   // CHECK-FIXES: void PositiveConstDeclaration(const ExpensiveToCopyType& A) {
 }
 
 void PositiveNonConstDeclaration(ExpensiveToCopyType A);
 // CHECK-FIXES: void PositiveNonConstDeclaration(const ExpensiveToCopyType& A);
 void PositiveNonConstDeclaration(const ExpensiveToCopyType A) {
-  // CHECK-MESSAGES: [[@LINE-1]]:60: warning: the const qualified parameter 'A'
+  // CHECK-MESSAGES: [[@LINE-1]]:60: warning: the const qualified parameter 'A' of type 'const ExpensiveToCopyType'
   // CHECK-FIXES: void PositiveNonConstDeclaration(const ExpensiveToCopyType& A) {
 }
 
 void PositiveOnlyMessageAsReferencedInCompilationUnit(ExpensiveToCopyType A) {
-  // CHECK-MESSAGES: [[@LINE-1]]:75: warning: the parameter 'A' is copied
+  // CHECK-MESSAGES: [[@LINE-1]]:75: warning: the parameter 'A' of type 'ExpensiveToCopyType' is copied
   // CHECK-FIXES: void PositiveOnlyMessageAsReferencedInCompilationUnit(const ExpensiveToCopyType& A) {
 }
 
 void PositiveMessageAndFixAsFunctionIsCalled(ExpensiveToCopyType A) {
-  // CHECK-MESSAGES: [[@LINE-1]]:66: warning: the parameter 'A' is copied
+  // CHECK-MESSAGES: [[@LINE-1]]:66: warning: the parameter 'A' of type 'ExpensiveToCopyType' is copied
   // CHECK-FIXES: void PositiveMessageAndFixAsFunctionIsCalled(const ExpensiveToCopyType& A) {
 }
 
@@ -364,7 +364,7 @@ struct NegativeFinalImpl : public NegativeDependentTypeInterface<T> {
 
 struct PositiveConstructor {
   PositiveConstructor(ExpensiveToCopyType E) : E(E) {}
-  // CHECK-MESSAGES: [[@LINE-1]]:43: warning: the parameter 'E' is copied
+  // CHECK-MESSAGES: [[@LINE-1]]:43: warning: the parameter 'E' of type 'ExpensiveToCopyType' is copied
   // CHECK-FIXES: PositiveConstructor(const ExpensiveToCopyType& E) : E(E) {}
 
   ExpensiveToCopyType E;

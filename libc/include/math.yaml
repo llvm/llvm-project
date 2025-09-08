@@ -79,6 +79,13 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: asinpif16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: atan
     standards:
       - stdc
@@ -363,6 +370,13 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: exp10f16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: exp10m1f
     standards:
       - stdc
@@ -388,6 +402,13 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: exp2f16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: exp2m1f
     standards:
       - stdc
@@ -407,6 +428,13 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: expf16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: expm1
     standards:
       - stdc
@@ -419,6 +447,13 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: expm1f16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: f16add
     standards:
       - llvm_libc_ext
@@ -2425,14 +2460,6 @@ functions:
     return_type: double
     arguments:
       - type: double
-  - name: sincosf
-    standards:
-      - gnu
-    return_type: void
-    arguments:
-      - type: float
-      - type: float *
-      - type: float *
   - name: sinf
     standards:
       - stdc
@@ -2446,6 +2473,22 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: sincos
+    standards:
+      - gnu
+    return_type: void
+    arguments:
+      - type: double
+      - type: double *
+      - type: double *
+  - name: sincosf
+    standards:
+      - gnu
+    return_type: void
+    arguments:
+      - type: float
+      - type: float *
+      - type: float *
   - name: sinhf
     standards:
       - stdc

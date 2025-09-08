@@ -82,7 +82,7 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     return checkMovDPPFunctionCall(TheCall, 5, 1);
   case AMDGPU::BI__builtin_amdgcn_mov_dpp8:
     return checkMovDPPFunctionCall(TheCall, 2, 1);
-  case AMDGPU::BI__builtin_amdgcn_update_dpp: {
+  case AMDGPU::BI__builtin_amdgcn_update_dpp:
     return checkMovDPPFunctionCall(TheCall, 6, 2);
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f16_fp8:
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_bf16_fp8:
@@ -100,7 +100,6 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f32_fp6:
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f32_bf6:
     return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 7);
-  }
   default:
     return false;
   }
