@@ -38994,7 +38994,6 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       computeKnownBitsForPSADBW(LHS, RHS, Known, DemandedElts, DAG, Depth);
       break;
     }
-    
     }
     break;
   }
