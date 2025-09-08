@@ -5,8 +5,8 @@
 ;       cannot be expressed reliably by the generated checks.
 
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck %s -check-prefix=ISA
-; RUN: opt --amdgpu-annotate-uniform -S %s |  FileCheck %s -check-prefix=UNIFORM
-; RUN: opt --amdgpu-annotate-uniform --si-annotate-control-flow -S %s |  FileCheck %s -check-prefix=CONTROLFLOW
+; RUN: opt --amdgpu-late-codegenprepare -S %s |  FileCheck %s -check-prefix=UNIFORM
+; RUN: opt --amdgpu-late-codegenprepare --si-annotate-control-flow -S %s |  FileCheck %s -check-prefix=CONTROLFLOW
 
 ; This module creates a divergent branch in block Flow2. The branch is
 ; marked as divergent by the divergence analysis but the condition is

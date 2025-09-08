@@ -57,7 +57,7 @@ FunctionPass *createSIPostRABundlerPass();
 FunctionPass *createAMDGPUImageIntrinsicOptimizerPass(const TargetMachine *);
 ModulePass *createAMDGPURemoveIncompatibleFunctionsPass(const TargetMachine *);
 FunctionPass *createAMDGPUCodeGenPreparePass();
-FunctionPass *createAMDGPULateCodeGenPrepareLegacyPass();
+FunctionPass *createAMDGPULateCodeGenPrepareLegacyPass(bool IsOptNone);
 FunctionPass *createAMDGPUReserveWWMRegsPass();
 FunctionPass *createAMDGPURewriteOutArgumentsPass();
 ModulePass *
@@ -324,9 +324,12 @@ class AMDGPULateCodeGenPreparePass
     : public PassInfoMixin<AMDGPULateCodeGenPreparePass> {
 private:
   const GCNTargetMachine &TM;
+  bool isOptNone;
 
 public:
-  AMDGPULateCodeGenPreparePass(const GCNTargetMachine &TM) : TM(TM) {};
+  AMDGPULateCodeGenPreparePass(const GCNTargetMachine &TM,
+                               bool isOptNone = false)
+      : TM(TM), isOptNone(isOptNone){};
   PreservedAnalyses run(Function &, FunctionAnalysisManager &);
 };
 
@@ -367,13 +370,6 @@ public:
   explicit AMDGPUPreloadKernelArgumentsPass(const TargetMachine &TM) : TM(TM) {}
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-};
-
-class AMDGPUAnnotateUniformValuesPass
-    : public PassInfoMixin<AMDGPUAnnotateUniformValuesPass> {
-public:
-  AMDGPUAnnotateUniformValuesPass() {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 class SIModeRegisterPass : public PassInfoMixin<SIModeRegisterPass> {
@@ -437,8 +433,6 @@ public:
                         MachineFunctionAnalysisManager &MFAM);
 };
 
-FunctionPass *createAMDGPUAnnotateUniformValuesLegacy();
-
 ModulePass *createAMDGPUPrintfRuntimeBinding();
 void initializeAMDGPUPrintfRuntimeBindingPass(PassRegistry&);
 extern char &AMDGPUPrintfRuntimeBindingID;
@@ -465,9 +459,6 @@ extern char &SIOptimizeExecMaskingPreRAID;
 
 void initializeSIOptimizeVGPRLiveRangeLegacyPass(PassRegistry &);
 extern char &SIOptimizeVGPRLiveRangeLegacyID;
-
-void initializeAMDGPUAnnotateUniformValuesLegacyPass(PassRegistry &);
-extern char &AMDGPUAnnotateUniformValuesLegacyPassID;
 
 void initializeAMDGPUCodeGenPreparePass(PassRegistry&);
 extern char &AMDGPUCodeGenPrepareID;

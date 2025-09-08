@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck --check-prefixes=GCN,W32 --enable-var-scope %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,W64 --enable-var-scope %s
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -S -amdgpu-annotate-uniform < %s | FileCheck --check-prefixes=OPT,OPT-W32 --enable-var-scope %s
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+wavefrontsize64 -S -amdgpu-annotate-uniform < %s | FileCheck --check-prefixes=OPT,OPT-W64 --enable-var-scope %s
+; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -S -amdgpu-late-codegenprepare < %s | FileCheck --check-prefixes=OPT,OPT-W32 --enable-var-scope %s
+; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+wavefrontsize64 -S -amdgpu-late-codegenprepare < %s | FileCheck --check-prefixes=OPT,OPT-W64 --enable-var-scope %s
 
 ; GCN-LABEL: {{^}}lshr_threadid:
 ; W64: global_load_dword

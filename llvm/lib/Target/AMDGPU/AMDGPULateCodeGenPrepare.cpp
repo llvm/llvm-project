@@ -13,8 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUMemoryUtils.h"
 #include "AMDGPUTargetMachine.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -50,13 +53,30 @@ class AMDGPULateCodeGenPrepare
 
   AssumptionCache *const AC;
   UniformityInfo &UA;
+  MemorySSA *MSSA;
+  AliasAnalysis *AA;
+  bool IsOptNone;
+
+  bool isEntryFunc;
+  bool HasScalarSubwordLoads;
 
   SmallVector<WeakTrackingVH, 8> DeadInsts;
 
+  void setUniformMetadata(Instruction *I) {
+    I->setMetadata("amdgpu.uniform", MDNode::get(I->getContext(), {}));
+  }
+
+  void setNoClobberMetadata(Instruction *I) {
+    I->setMetadata("amdgpu.noclobber", MDNode::get(I->getContext(), {}));
+  }
+
 public:
   AMDGPULateCodeGenPrepare(Function &F, const GCNSubtarget &ST,
-                           AssumptionCache *AC, UniformityInfo &UA)
-      : F(F), DL(F.getDataLayout()), ST(ST), AC(AC), UA(UA) {}
+                           AssumptionCache *AC, UniformityInfo &UA,
+                           MemorySSA &MSSA, AliasAnalysis &AA, bool IsOptNone)
+      : F(F), DL(F.getDataLayout()), ST(ST), AC(AC), UA(UA), MSSA(&MSSA),
+        AA(&AA), IsOptNone(IsOptNone),
+        isEntryFunc(AMDGPU::isEntryFunctionCC(F.getCallingConv())) {}
   bool run();
   bool visitInstruction(Instruction &) { return false; }
 
@@ -183,11 +203,11 @@ bool AMDGPULateCodeGenPrepare::run() {
 
   bool Changed = false;
 
-  bool HasScalarSubwordLoads = ST.hasScalarSubwordLoads();
+  HasScalarSubwordLoads = ST.hasScalarSubwordLoads();
 
   for (auto &BB : reverse(F))
     for (Instruction &I : make_early_inc_range(reverse(BB))) {
-      Changed |= !HasScalarSubwordLoads && visit(I);
+      Changed |= visit(I);
       Changed |= LRO.optimizeLiveType(&I, DeadInsts);
     }
 
@@ -463,16 +483,41 @@ bool AMDGPULateCodeGenPrepare::canWidenScalarExtLoad(LoadInst &LI) const {
 }
 
 bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
-  if (!WidenLoads)
-    return false;
+  bool Changed = false;
+
+  // Annotate the instruction with appropriate IR metadata,
+  // that can be used later during instruction selection.
+  Value *Ptr = LI.getPointerOperand();
+  if (UA.isUniform(Ptr)) {
+    if (Instruction *PtrI = dyn_cast<Instruction>(Ptr)) {
+      setUniformMetadata(PtrI);
+      Changed |= true;
+    }
+
+    if (isEntryFunc) {
+      bool GlobalLoad = LI.getPointerAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;
+      if (GlobalLoad && !AMDGPU::isClobberedInFunction(&LI, MSSA, AA)) {
+        setNoClobberMetadata(&LI);
+        Changed |= true;
+      }
+    }
+  }
+
+  // Perform rest of the optimizations only for CodeGenOptLevel greater than
+  // the -O0 level.
+  if (IsOptNone)
+    return Changed;
+
+  if (HasScalarSubwordLoads || !WidenLoads)
+    return Changed;
 
   // Skip if that load is already aligned on DWORD at least as it's handled in
   // SDAG.
   if (LI.getAlign() >= 4)
-    return false;
+    return Changed;
 
   if (!canWidenScalarExtLoad(LI))
-    return false;
+    return Changed;
 
   int64_t Offset = 0;
   auto *Base =
@@ -480,14 +525,14 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
   // If that base is not DWORD aligned, it's not safe to perform the following
   // transforms.
   if (!isDWORDAligned(Base))
-    return false;
+    return Changed;
 
   int64_t Adjust = Offset & 0x3;
   if (Adjust == 0) {
     // With a zero adjust, the original alignment could be promoted with a
     // better one.
     LI.setAlignment(Align(4));
-    return true;
+    return Changed |= true;
   }
 
   IRBuilder<> IRB(&LI);
@@ -514,7 +559,7 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
   LI.replaceAllUsesWith(NewVal);
   DeadInsts.emplace_back(&LI);
 
-  return true;
+  return Changed |= true;
 }
 
 PreservedAnalyses
@@ -522,8 +567,11 @@ AMDGPULateCodeGenPreparePass::run(Function &F, FunctionAnalysisManager &FAM) {
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
   AssumptionCache &AC = FAM.getResult<AssumptionAnalysis>(F);
   UniformityInfo &UI = FAM.getResult<UniformityInfoAnalysis>(F);
+  MemorySSA &MSSA = FAM.getResult<MemorySSAAnalysis>(F).getMSSA();
+  AAResults &AA = FAM.getResult<AAManager>(F);
 
-  bool Changed = AMDGPULateCodeGenPrepare(F, ST, &AC, UI).run();
+  bool Changed =
+      AMDGPULateCodeGenPrepare(F, ST, &AC, UI, MSSA, AA, isOptNone).run();
 
   if (!Changed)
     return PreservedAnalyses::all();
@@ -536,7 +584,8 @@ class AMDGPULateCodeGenPrepareLegacy : public FunctionPass {
 public:
   static char ID;
 
-  AMDGPULateCodeGenPrepareLegacy() : FunctionPass(ID) {}
+  AMDGPULateCodeGenPrepareLegacy(bool IsOptNone = false)
+      : IsOptNone(IsOptNone), FunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "AMDGPU IR late optimizations";
@@ -546,11 +595,16 @@ public:
     AU.addRequired<TargetPassConfig>();
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<UniformityInfoWrapperPass>();
+    AU.addRequired<MemorySSAWrapperPass>();
+    AU.addRequired<AAResultsWrapperPass>();
     // Invalidates UniformityInfo
     AU.setPreservesCFG();
   }
 
   bool runOnFunction(Function &F) override;
+
+private:
+  bool IsOptNone;
 };
 
 bool AMDGPULateCodeGenPrepareLegacy::runOnFunction(Function &F) {
@@ -565,8 +619,10 @@ bool AMDGPULateCodeGenPrepareLegacy::runOnFunction(Function &F) {
       getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   UniformityInfo &UI =
       getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
+  MemorySSA &MSSA = getAnalysis<MemorySSAWrapperPass>().getMSSA();
+  AliasAnalysis &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
 
-  return AMDGPULateCodeGenPrepare(F, ST, &AC, UI).run();
+  return AMDGPULateCodeGenPrepare(F, ST, &AC, UI, MSSA, AA, IsOptNone).run();
 }
 
 INITIALIZE_PASS_BEGIN(AMDGPULateCodeGenPrepareLegacy, DEBUG_TYPE,
@@ -574,11 +630,13 @@ INITIALIZE_PASS_BEGIN(AMDGPULateCodeGenPrepareLegacy, DEBUG_TYPE,
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(AMDGPULateCodeGenPrepareLegacy, DEBUG_TYPE,
                     "AMDGPU IR late optimizations", false, false)
 
 char AMDGPULateCodeGenPrepareLegacy::ID = 0;
 
-FunctionPass *llvm::createAMDGPULateCodeGenPrepareLegacyPass() {
-  return new AMDGPULateCodeGenPrepareLegacy();
+FunctionPass *llvm::createAMDGPULateCodeGenPrepareLegacyPass(bool IsOptNone) {
+  return new AMDGPULateCodeGenPrepareLegacy(IsOptNone);
 }

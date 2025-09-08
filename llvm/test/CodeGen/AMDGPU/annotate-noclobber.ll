@@ -1,5 +1,5 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa --amdgpu-annotate-uniform < %s | FileCheck -check-prefix=OPT %s
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-annotate-uniform < %s | FileCheck -check-prefix=OPT %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa --amdgpu-late-codegenprepare < %s | FileCheck -check-prefix=OPT %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-late-codegenprepare < %s | FileCheck -check-prefix=OPT %s
 
 
 ; OPT-LABEL: @amdgpu_noclobber_global(

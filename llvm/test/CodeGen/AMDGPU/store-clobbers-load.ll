@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa --amdgpu-annotate-uniform < %s | FileCheck -check-prefix=OPT %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa --amdgpu-late-codegenprepare < %s | FileCheck -check-prefix=OPT %s
 
 ; "load vaddr" depends on the store, so we should not mark vaddr as amdgpu.noclobber.
 

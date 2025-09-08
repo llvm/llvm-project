@@ -569,7 +569,6 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUCtorDtorLoweringLegacyPass(*PR);
   initializeAMDGPUAlwaysInlinePass(*PR);
   initializeAMDGPUSwLowerLDSLegacyPass(*PR);
-  initializeAMDGPUAnnotateUniformValuesLegacyPass(*PR);
   initializeAMDGPUArgumentUsageInfoPass(*PR);
   initializeAMDGPUAtomicOptimizerPass(*PR);
   initializeAMDGPULowerKernelArgumentsPass(*PR);
@@ -1504,11 +1503,11 @@ bool AMDGPUPassConfig::addGCPasses() {
 bool GCNPassConfig::addPreISel() {
   AMDGPUPassConfig::addPreISel();
 
-  if (TM->getOptLevel() > CodeGenOptLevel::None)
+  bool IsOptNone = TM->getOptLevel() == CodeGenOptLevel::None;
+  if (!IsOptNone)
     addPass(createSinkingPass());
 
-  if (TM->getOptLevel() > CodeGenOptLevel::None)
-    addPass(createAMDGPULateCodeGenPrepareLegacyPass());
+  addPass(createAMDGPULateCodeGenPrepareLegacyPass(IsOptNone));
 
   // Merge divergent exit nodes. StructurizeCFG won't recognize the multi-exit
   // regions formed by them.
@@ -1524,8 +1523,6 @@ bool GCNPassConfig::addPreISel() {
   addPass(createUnifyLoopExitsPass());
   if (!WaveTransformCF)
     addPass(createStructurizeCFGPass(false)); // true -> SkipUniformRegions
-
-  addPass(createAMDGPUAnnotateUniformValuesLegacy());
 
   if (!WaveTransformCF) {
     addPass(createSIAnnotateControlFlowLegacyPass());
@@ -2331,11 +2328,12 @@ void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(AddIRPass &addPass) const {
 
 void AMDGPUCodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
 
-  if (TM.getOptLevel() > CodeGenOptLevel::None) {
+  bool IsOptNone = TM.getOptLevel() == CodeGenOptLevel::None;
+  if (!IsOptNone) {
     addPass(FlattenCFGPass());
     addPass(SinkingPass());
-    addPass(AMDGPULateCodeGenPreparePass(TM));
   }
+  addPass(AMDGPULateCodeGenPreparePass(TM, IsOptNone));
 
   // Merge divergent exit nodes. StructurizeCFG won't recognize the multi-exit
   // regions formed by them.
@@ -2344,8 +2342,6 @@ void AMDGPUCodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
   addPass(FixIrreduciblePass());
   addPass(UnifyLoopExitsPass());
   addPass(StructurizeCFGPass(/*SkipUniformRegions=*/false));
-
-  addPass(AMDGPUAnnotateUniformValuesPass());
 
   addPass(SIAnnotateControlFlowPass(TM));
 
