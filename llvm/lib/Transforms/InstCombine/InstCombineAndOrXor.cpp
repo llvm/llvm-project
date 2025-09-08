@@ -1799,8 +1799,9 @@ static Instruction *foldLogicCastConstant(BinaryOperator &Logic, CastInst *Cast,
   // type may provide more information to later folds, and the smaller logic
   // instruction may be cheaper (particularly in the case of vectors).
   Value *X;
+  auto &DL = IC.getDataLayout();
   if (match(Cast, m_OneUse(m_ZExt(m_Value(X))))) {
-    if (Constant *TruncC = IC.getLosslessUnsignedTrunc(C, SrcTy)) {
+    if (Constant *TruncC = getLosslessUnsignedTrunc(C, SrcTy, DL)) {
       // LogicOpc (zext X), C --> zext (LogicOpc X, C)
       Value *NewOp = IC.Builder.CreateBinOp(LogicOpc, X, TruncC);
       return new ZExtInst(NewOp, DestTy);
@@ -1808,7 +1809,7 @@ static Instruction *foldLogicCastConstant(BinaryOperator &Logic, CastInst *Cast,
   }
 
   if (match(Cast, m_OneUse(m_SExtLike(m_Value(X))))) {
-    if (Constant *TruncC = IC.getLosslessSignedTrunc(C, SrcTy)) {
+    if (Constant *TruncC = getLosslessSignedTrunc(C, SrcTy, DL)) {
       // LogicOpc (sext X), C --> sext (LogicOpc X, C)
       Value *NewOp = IC.Builder.CreateBinOp(LogicOpc, X, TruncC);
       return new SExtInst(NewOp, DestTy);

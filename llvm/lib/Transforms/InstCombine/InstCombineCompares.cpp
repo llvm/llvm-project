@@ -6336,7 +6336,7 @@ Instruction *InstCombinerImpl::foldICmpWithZextOrSext(ICmpInst &ICmp) {
 
   // If a lossless truncate is possible...
   Type *SrcTy = CastOp0->getSrcTy();
-  Constant *Res = getLosslessTrunc(C, SrcTy, CastOp0->getOpcode());
+  Constant *Res = getLosslessInvCast(C, SrcTy, CastOp0->getOpcode(), DL);
   if (Res) {
     if (ICmp.isEquality())
       return new ICmpInst(ICmp.getPredicate(), X, Res);

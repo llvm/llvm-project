@@ -939,51 +939,6 @@ bool VectorCombine::foldBitOpOfCastops(Instruction &I) {
   return true;
 }
 
-struct PreservedCastFlags {
-  bool NNeg = false;
-  bool NUW = false;
-  bool NSW = false;
-};
-
-// Try to cast C to InvC losslessly, satisfying CastOp(InvC) == C.
-// Will try best to preserve the flags.
-static Constant *getLosslessInvCast(Constant *C, Type *InvCastTo,
-                                    Instruction::CastOps CastOp,
-                                    const DataLayout &DL,
-                                    PreservedCastFlags &Flags) {
-  switch (CastOp) {
-  case Instruction::BitCast:
-    // Bitcast is always lossless.
-    return ConstantFoldCastOperand(Instruction::BitCast, C, InvCastTo, DL);
-  case Instruction::Trunc: {
-    auto *ZExtC = ConstantFoldCastOperand(Instruction::ZExt, C, InvCastTo, DL);
-    auto *SExtC = ConstantFoldCastOperand(Instruction::SExt, C, InvCastTo, DL);
-    // Truncation back on ZExt value is always NUW.
-    Flags.NUW = true;
-    // Test positivity of C.
-    Flags.NSW = ZExtC == SExtC;
-    return ZExtC;
-  }
-  case Instruction::SExt:
-  case Instruction::ZExt: {
-    auto *InvC = ConstantExpr::getTrunc(C, InvCastTo);
-    auto *CastInvC = ConstantFoldCastOperand(CastOp, InvC, C->getType(), DL);
-    // Must satisfy CastOp(InvC) == C.
-    if (!CastInvC || CastInvC != C)
-      return nullptr;
-    if (CastOp == Instruction::ZExt) {
-      auto *SExtInvC =
-          ConstantFoldCastOperand(Instruction::SExt, InvC, C->getType(), DL);
-      // Test positivity of InvC.
-      Flags.NNeg = CastInvC == SExtInvC;
-    }
-    return InvC;
-  }
-  default:
-    return nullptr;
-  }
-}
-
 /// Match:
 // bitop(castop(x), C) ->
 // bitop(castop(x), castop(InvC)) ->
@@ -1029,7 +984,7 @@ bool VectorCombine::foldBitOpOfCastConstant(Instruction &I) {
 
   // Find the constant InvC, such that castop(InvC) equals to C.
   PreservedCastFlags RHSFlags;
-  Constant *InvC = getLosslessInvCast(C, SrcTy, CastOpcode, *DL, RHSFlags);
+  Constant *InvC = getLosslessInvCast(C, SrcTy, CastOpcode, *DL, &RHSFlags);
   if (!InvC)
     return false;
 
