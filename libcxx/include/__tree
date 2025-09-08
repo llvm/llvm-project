@@ -119,7 +119,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool __tree_is_left_c
 //    __x is a proper subtree, returns the black height (null counts as 1).  If
 //    __x is an improper subtree, returns 0.
 template <class _NodePtr>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 unsigned __tree_sub_invariant(_NodePtr __x) {
+_LIBCPP_CONSTEXPR_SINCE_CXX26 unsigned __tree_sub_invariant(_NodePtr __x) {
   if (__x == nullptr)
     return 1;
   // parent consistency checked by caller
