@@ -3684,14 +3684,13 @@ void IntrinsicLibrary::genCoBroadcast(llvm::ArrayRef<fir::ExtendedValue> args) {
   mlir::Value sourceImage = fir::getBase(args[1]);
   mlir::Value status =
       isStaticallyAbsent(args[2])
-          ? builder
-                .create<fir::AbsentOp>(loc,
-                                       builder.getRefType(builder.getI32Type()))
+          ? fir::AbsentOp::create(builder, loc,
+                                  builder.getRefType(builder.getI32Type()))
                 .getResult()
           : fir::getBase(args[2]);
   mlir::Value errmsg =
       isStaticallyAbsent(args[3])
-          ? builder.create<fir::AbsentOp>(loc, PRIF_ERRMSG_TYPE).getResult()
+          ? fir::AbsentOp::create(builder, loc, PRIF_ERRMSG_TYPE).getResult()
           : fir::getBase(args[3]);
   fir::runtime::genCoBroadcast(builder, loc, fir::getBase(args[0]), sourceImage,
                                status, errmsg);
@@ -3702,8 +3701,8 @@ void IntrinsicLibrary::genCoMax(llvm::ArrayRef<fir::ExtendedValue> args) {
   checkCoarrayEnabled();
   assert(args.size() == 4);
   mlir::Value refNone =
-      builder
-          .create<fir::AbsentOp>(loc, builder.getRefType(builder.getI32Type()))
+      fir::AbsentOp::create(builder, loc,
+                            builder.getRefType(builder.getI32Type()))
           .getResult();
   mlir::Value resultImage =
       isStaticallyAbsent(args[1]) ? refNone : fir::getBase(args[1]);
@@ -3711,7 +3710,7 @@ void IntrinsicLibrary::genCoMax(llvm::ArrayRef<fir::ExtendedValue> args) {
       isStaticallyAbsent(args[2]) ? refNone : fir::getBase(args[2]);
   mlir::Value errmsg =
       isStaticallyAbsent(args[3])
-          ? builder.create<fir::AbsentOp>(loc, PRIF_ERRMSG_TYPE).getResult()
+          ? fir::AbsentOp::create(builder, loc, PRIF_ERRMSG_TYPE).getResult()
           : fir::getBase(args[3]);
   fir::runtime::genCoMax(builder, loc, fir::getBase(args[0]), resultImage,
                          status, errmsg);
@@ -3722,8 +3721,8 @@ void IntrinsicLibrary::genCoMin(llvm::ArrayRef<fir::ExtendedValue> args) {
   checkCoarrayEnabled();
   assert(args.size() == 4);
   mlir::Value refNone =
-      builder
-          .create<fir::AbsentOp>(loc, builder.getRefType(builder.getI32Type()))
+      fir::AbsentOp::create(builder, loc,
+                            builder.getRefType(builder.getI32Type()))
           .getResult();
   mlir::Value resultImage =
       isStaticallyAbsent(args[1]) ? refNone : fir::getBase(args[1]);
@@ -3731,7 +3730,7 @@ void IntrinsicLibrary::genCoMin(llvm::ArrayRef<fir::ExtendedValue> args) {
       isStaticallyAbsent(args[2]) ? refNone : fir::getBase(args[2]);
   mlir::Value errmsg =
       isStaticallyAbsent(args[3])
-          ? builder.create<fir::AbsentOp>(loc, PRIF_ERRMSG_TYPE).getResult()
+          ? fir::AbsentOp::create(builder, loc, PRIF_ERRMSG_TYPE).getResult()
           : fir::getBase(args[3]);
   fir::runtime::genCoMin(builder, loc, fir::getBase(args[0]), resultImage,
                          status, errmsg);
@@ -3742,8 +3741,8 @@ void IntrinsicLibrary::genCoSum(llvm::ArrayRef<fir::ExtendedValue> args) {
   checkCoarrayEnabled();
   assert(args.size() == 4);
   mlir::Value absentInt =
-      builder
-          .create<fir::AbsentOp>(loc, builder.getRefType(builder.getI32Type()))
+      fir::AbsentOp::create(builder, loc,
+                            builder.getRefType(builder.getI32Type()))
           .getResult();
   mlir::Value resultImage =
       isStaticallyAbsent(args[1]) ? absentInt : fir::getBase(args[1]);
@@ -3751,7 +3750,7 @@ void IntrinsicLibrary::genCoSum(llvm::ArrayRef<fir::ExtendedValue> args) {
       isStaticallyAbsent(args[2]) ? absentInt : fir::getBase(args[2]);
   mlir::Value errmsg =
       isStaticallyAbsent(args[3])
-          ? builder.create<fir::AbsentOp>(loc, PRIF_ERRMSG_TYPE).getResult()
+          ? fir::AbsentOp::create(builder, loc, PRIF_ERRMSG_TYPE).getResult()
           : fir::getBase(args[3]);
   fir::runtime::genCoSum(builder, loc, fir::getBase(args[0]), resultImage,
                          status, errmsg);
