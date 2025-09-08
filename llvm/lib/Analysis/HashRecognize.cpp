@@ -24,9 +24,8 @@
 //
 //    c_m * x^m + c_(m-1) * x^(m-1) + ... + c_0 * x^0
 //
-// where each coefficient c is can take values in GF(2^n), where 2^n is termed
-// the order of the Galois field. For GF(2), each coefficient can take values
-// either 0 or 1, and the polynomial is simply represented by m+1 bits,
+// where each coefficient c is can take values 0 or 1, and 2^n is termed the
+// order of the Galois field. The polynomial is simply represented by m+1 bits,
 // corresponding to the coefficients. The different variants of CRC are named by
 // degree of generating polynomial used: so CRC-32 would use a polynomial of
 // degree 32.
