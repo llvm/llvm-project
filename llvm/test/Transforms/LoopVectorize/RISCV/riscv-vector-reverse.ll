@@ -194,14 +194,11 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-NEXT:    [[TMP4:%.*]] = add i32 [[N]], -1
 ; RV64-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP3]] to i32
 ; RV64-NEXT:    [[MUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 1, i32 [[TMP5]])
-; RV64-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i32, i1 } [[MUL]], 0
-; RV64-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL]], 1
-; RV64-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP4]], [[MUL_RESULT]]
+; RV64-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP4]], [[TMP5]]
 ; RV64-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP6]], [[TMP4]]
-; RV64-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW]]
 ; RV64-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP3]], 4294967295
-; RV64-NEXT:    [[TMP10:%.*]] = or i1 [[TMP8]], [[TMP9]]
-; RV64-NEXT:    br i1 [[TMP10]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
+; RV64-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[TMP9]]
+; RV64-NEXT:    br i1 [[TMP8]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; RV64:       [[VECTOR_MEMCHECK]]:
 ; RV64-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
 ; RV64-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 4
@@ -334,13 +331,10 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-NEXT:    [[TMP4:%.*]] = add i32 [[N]], -1
 ; RV64-UF2-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP3]] to i32
 ; RV64-UF2-NEXT:    [[MUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 1, i32 [[TMP5]])
-; RV64-UF2-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i32, i1 } [[MUL]], 0
-; RV64-UF2-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL]], 1
-; RV64-UF2-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP4]], [[MUL_RESULT]]
+; RV64-UF2-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP4]], [[TMP5]]
 ; RV64-UF2-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP6]], [[TMP4]]
-; RV64-UF2-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW]]
 ; RV64-UF2-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP3]], 4294967295
-; RV64-UF2-NEXT:    [[TMP10:%.*]] = or i1 [[TMP8]], [[TMP9]]
+; RV64-UF2-NEXT:    [[TMP10:%.*]] = or i1 [[TMP7]], [[TMP9]]
 ; RV64-UF2-NEXT:    br i1 [[TMP10]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; RV64-UF2:       [[VECTOR_MEMCHECK]]:
 ; RV64-UF2-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
@@ -455,14 +449,11 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-NEXT:    [[TMP4:%.*]] = add i32 [[N]], -1
 ; RV64-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP3]] to i32
 ; RV64-NEXT:    [[MUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 1, i32 [[TMP5]])
-; RV64-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i32, i1 } [[MUL]], 0
-; RV64-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL]], 1
-; RV64-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP4]], [[MUL_RESULT]]
+; RV64-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP4]], [[TMP5]]
 ; RV64-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP6]], [[TMP4]]
-; RV64-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW]]
 ; RV64-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP3]], 4294967295
-; RV64-NEXT:    [[TMP10:%.*]] = or i1 [[TMP8]], [[TMP9]]
-; RV64-NEXT:    br i1 [[TMP10]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
+; RV64-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[TMP9]]
+; RV64-NEXT:    br i1 [[TMP8]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; RV64:       [[VECTOR_MEMCHECK]]:
 ; RV64-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
 ; RV64-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 4
@@ -595,13 +586,10 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-NEXT:    [[TMP4:%.*]] = add i32 [[N]], -1
 ; RV64-UF2-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP3]] to i32
 ; RV64-UF2-NEXT:    [[MUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 1, i32 [[TMP5]])
-; RV64-UF2-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i32, i1 } [[MUL]], 0
-; RV64-UF2-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL]], 1
-; RV64-UF2-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP4]], [[MUL_RESULT]]
+; RV64-UF2-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP4]], [[TMP5]]
 ; RV64-UF2-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP6]], [[TMP4]]
-; RV64-UF2-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW]]
 ; RV64-UF2-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP3]], 4294967295
-; RV64-UF2-NEXT:    [[TMP10:%.*]] = or i1 [[TMP8]], [[TMP9]]
+; RV64-UF2-NEXT:    [[TMP10:%.*]] = or i1 [[TMP7]], [[TMP9]]
 ; RV64-UF2-NEXT:    br i1 [[TMP10]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; RV64-UF2:       [[VECTOR_MEMCHECK]]:
 ; RV64-UF2-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
