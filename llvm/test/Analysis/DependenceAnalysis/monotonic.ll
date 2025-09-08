@@ -324,29 +324,99 @@ exit:
   ret void
 }
 
-; `offset` can be loop-invariant since `step` can be zero.
+; for (int8_t i = 0; i < 100; i++)
+;   a[zext(offset)] = 0;
 ;
-; int8_t offset = start;
+define void @zext_pos(ptr %a) {
+; CHECK-LABEL: 'zext_pos'
+; CHECK-NEXT:  Monotonicity check:
+; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
+; CHECK-NEXT:      Expr: {0,+,1}<nuw><nsw><%loop>
+; CHECK-NEXT:      Monotonicity: MultiMonotonic
+; CHECK-EMPTY:
+; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
+; CHECK-NEXT:    da analyze - none!
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i8 [ 0, %entry ], [ %i.inc, %loop ]
+  %offset.zext = zext nneg i8 %i to i64
+  %idx = getelementptr i8, ptr %a, i64 %offset.zext
+  store i8 0, ptr %idx
+  %i.inc = add nsw i8 %i, 1
+  %exitcond = icmp eq i8 %i.inc, 100
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; The zero-extened value of `offset` is no longer monotonic. In fact, the
+; values of `offset` in each iteration are:
+;
+;    iteration |   0 | 1 | 2 | ...
+; -------------|-----|---|---|---------
+;       offset |  -1 | 0 | 1 | ...
+; zext(offset) | 255 | 0 | 1 | ...
+;
+;
+; for (int8_t i = -1; i < 100; i++)
+;   a[zext(offset)] = 0;
+;
+define void @zext_cross_zero(ptr %a) {
+; CHECK-LABEL: 'zext_cross_zero'
+; CHECK-NEXT:  Monotonicity check:
+; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
+; CHECK-NEXT:      Expr: (zext i8 {-1,+,1}<nsw><%loop> to i64)
+; CHECK-NEXT:      Monotonicity: Unknown
+; CHECK-NEXT:      Reason: (zext i8 {-1,+,1}<nsw><%loop> to i64)
+; CHECK-EMPTY:
+; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
+; CHECK-NEXT:    da analyze - confused!
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i8 [ -1, %entry ], [ %i.inc, %loop ]
+  %offset.zext = zext nneg i8 %i to i64
+  %idx = getelementptr i8, ptr %a, i64 %offset.zext
+  store i8 0, ptr %idx
+  %i.inc = add nsw i8 %i, 1
+  %exitcond = icmp eq i8 %i.inc, 100
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; `offset` can be loop-invariant since `step` can be zero.
+; FIXME: The result should be NoSignedWrap?
+;
+; int8_t offset = 0;
 ; for (int i = 0; i < 100; i++, offset += step)
 ;   a[zext(offset)] = 0;
 ;
-define void @zext_nsw(ptr %a, i8 %start, i8 %step) {
-; CHECK-LABEL: 'zext_nsw'
+define void @zext_nneg_nsw(ptr %a, i8 %step) {
+; CHECK-LABEL: 'zext_nneg_nsw'
 ; CHECK-NEXT:  Monotonicity check:
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:      Expr: (zext i8 {%start,+,%step}<nsw><%loop> to i64)
-; CHECK-NEXT:      Monotonicity: NoSignedWrap
+; CHECK-NEXT:      Expr: (zext i8 {0,+,%step}<nsw><%loop> to i64)
+; CHECK-NEXT:      Monotonicity: Unknown
+; CHECK-NEXT:      Reason: (zext i8 {0,+,%step}<nsw><%loop> to i64)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:    da analyze - output [*]!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   br label %loop
 
 loop:
   %i = phi i64 [ 0, %entry ], [ %i.inc, %loop ]
-  %offset = phi i8 [ %start, %entry ], [ %offset.next, %loop ]
-  %offset.zext = zext i8 %offset to i64
+  %offset = phi i8 [ 0, %entry ], [ %offset.next, %loop ]
+  %offset.zext = zext nneg i8 %offset to i64
   %idx = getelementptr i8, ptr %a, i64 %offset.zext
   store i8 0, ptr %idx
   %i.inc = add nsw i64 %i, 1

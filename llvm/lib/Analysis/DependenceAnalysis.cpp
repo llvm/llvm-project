@@ -3585,7 +3585,32 @@ SCEVSignedMonotonicityChecker::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
 
 SignedMonotonicity SCEVSignedMonotonicityChecker::visitZeroExtendExpr(
     const SCEVZeroExtendExpr *Expr) {
-  return visit(Expr->getOperand());
+  const SCEV *Op = Expr->getOperand();
+  SignedMonotonicity OpRes = visit(Op);
+  switch (OpRes.getType()) {
+  case SignedMonotonicityType::Unknown:
+  case SignedMonotonicityType::Invariant:
+    return OpRes;
+
+  // If the operand can be Monotonic, check if it is preserved after ZExt. If
+  // the value can cross zero, it's no longer monotonic. For example, consider
+  // `(zext i8 {-1,+,1}<%loop> to i32)`. The values of the operand {-1,+,1}
+  // are:
+  //
+  //   -1, 0, 1, 2, ...
+  //
+  // However, those of the zero-extened expression are:
+  //
+  //   255, 0, 1, 2, ...
+  //
+  // which is not monotonic.
+  case SignedMonotonicityType::NoSignedWrap:
+  case SignedMonotonicityType::MultiMonotonic:
+    if (SE->isKnownNonNegative(Op) || SE->isKnownNonPositive(Op))
+      return OpRes;
+    return SignedMonotonicity(SignedMonotonicityType::Unknown, Expr);
+  }
+  llvm_unreachable("unhandled MonotonicityType");
 }
 
 SignedMonotonicity SCEVSignedMonotonicityChecker::visitSignExtendExpr(
