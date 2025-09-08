@@ -6907,12 +6907,14 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
 
       // The VPlan-based cost model can analysis if recipes is scalar
       // recursively, but legacy cost model cannot.
-      if (auto *WidenMemR = dyn_cast<VPWidenMemoryRecipe>(&R);
-          WidenMemR &&
-          vputils::isSingleScalar(WidenMemR->getAddr()) !=
-              CostCtx.CM.Legal->isUniform(
-                  getLoadStorePointerOperand(&WidenMemR->getIngredient()), VF))
-        return true;
+      if (auto *WidenMemR = dyn_cast<VPWidenMemoryRecipe>(&R)) {
+        if (WidenMemR &&
+            vputils::isSingleScalar(WidenMemR->getAddr()) !=
+                CostCtx.CM.Legal->isUniform(
+                    getLoadStorePointerOperand(&WidenMemR->getIngredient()),
+                    VF))
+          return true;
+      }
 
       /// If a VPlan transform folded a recipe to one producing a single-scalar,
       /// but the original instruction wasn't uniform-after-vectorization in the
