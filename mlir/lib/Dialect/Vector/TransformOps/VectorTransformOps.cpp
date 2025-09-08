@@ -88,6 +88,11 @@ void transform::ApplyDropUnitDimWithShapeCastPatternsOp::populatePatterns(
   vector::populateDropUnitDimWithShapeCastPatterns(patterns);
 }
 
+void transform::ApplyDropInnerMostUnitDimsFromXferOpsPatternsOp::
+    populatePatterns(RewritePatternSet &patterns) {
+  vector::populateDropInnerMostUnitDimsXferOpPatterns(patterns);
+}
+
 void transform::ApplyLowerBitCastPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorBitCastLoweringPatterns(patterns);
