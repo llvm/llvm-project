@@ -111,7 +111,6 @@ private:
   CXXMethodDecl *Method;
   bool IsConst;
   bool IsCtor;
-  AccessSpecifier Access;
   StorageClass SC;
   llvm::SmallVector<Param> Params;
   llvm::SmallVector<Stmt *> StmtsList;
@@ -124,6 +123,7 @@ private:
   //   LastStmt - refers to the last statement in the method body; referencing
   //              LastStmt will remove the statement from the method body since
   //              it will be linked from the new expression being constructed.
+  // LocalVar_0 - refers to the first local variable declared in the method
   enum class PlaceHolder {
     _0,
     _1,
@@ -143,17 +143,13 @@ public:
 
   BuiltinTypeMethodBuilder(BuiltinTypeDeclBuilder &DB, DeclarationName &Name,
                            QualType ReturnTy, bool IsConst = false,
-                           bool IsCtor = false,
-                           AccessSpecifier Access = AS_public,
-                           StorageClass SC = SC_None)
+                           bool IsCtor = false, StorageClass SC = SC_None)
       : DeclBuilder(DB), Name(Name), ReturnTy(ReturnTy), Method(nullptr),
-        IsConst(IsConst), IsCtor(IsCtor), Access(Access), SC(SC) {}
+        IsConst(IsConst), IsCtor(IsCtor), SC(SC) {}
 
   BuiltinTypeMethodBuilder(BuiltinTypeDeclBuilder &DB, StringRef NameStr,
                            QualType ReturnTy, bool IsConst = false,
-                           bool IsCtor = false,
-                           AccessSpecifier Access = AS_public,
-                           StorageClass SC = SC_None);
+                           bool IsCtor = false, StorageClass SC = SC_None);
   BuiltinTypeMethodBuilder(const BuiltinTypeMethodBuilder &Other) = delete;
 
   ~BuiltinTypeMethodBuilder() { finalize(); }
@@ -172,7 +168,7 @@ public:
   BuiltinTypeMethodBuilder &assign(TLHS LHS, TRHS RHS);
   template <typename T> BuiltinTypeMethodBuilder &dereference(T Ptr);
   template <typename T>
-  BuiltinTypeMethodBuilder &getResourceHandle(T ResourceRecord);
+  BuiltinTypeMethodBuilder &accessHandleFieldOnResource(T ResourceRecord);
   template <typename TResource, typename TValue>
   BuiltinTypeMethodBuilder &setHandleFieldOnResource(TResource ResourceRecord,
                                                      TValue HandleValue);
@@ -370,11 +366,13 @@ Expr *BuiltinTypeMethodBuilder::convertPlaceholder(PlaceHolder PH) {
       ParamDecl->getType(), VK_PRValue);
 }
 
-BuiltinTypeMethodBuilder::BuiltinTypeMethodBuilder(
-    BuiltinTypeDeclBuilder &DB, StringRef NameStr, QualType ReturnTy,
-    bool IsConst, bool IsCtor, AccessSpecifier Access, StorageClass SC)
+BuiltinTypeMethodBuilder::BuiltinTypeMethodBuilder(BuiltinTypeDeclBuilder &DB,
+                                                   StringRef NameStr,
+                                                   QualType ReturnTy,
+                                                   bool IsConst, bool IsCtor,
+                                                   StorageClass SC)
     : DeclBuilder(DB), ReturnTy(ReturnTy), Method(nullptr), IsConst(IsConst),
-      IsCtor(IsCtor), Access(Access), SC(SC) {
+      IsCtor(IsCtor), SC(SC) {
 
   assert((!NameStr.empty() || IsCtor) && "method needs a name");
   assert(((IsCtor && !IsConst) || !IsCtor) && "constructor cannot be const");
@@ -468,6 +466,8 @@ BuiltinTypeMethodBuilder &
 BuiltinTypeMethodBuilder::createLocalVar(StringRef Name, QualType Ty) {
   ensureCompleteDecl();
 
+  assert(LocalVars.size() <= 64 && "too many local variables");
+
   ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
   VarDecl *VD =
       VarDecl::Create(AST, Method, SourceLocation(), SourceLocation(),
@@ -534,7 +534,7 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::dereference(T Ptr) {
 
 template <typename T>
 BuiltinTypeMethodBuilder &
-BuiltinTypeMethodBuilder::getResourceHandle(T ResourceRecord) {
+BuiltinTypeMethodBuilder::accessHandleFieldOnResource(T ResourceRecord) {
   ensureCompleteDecl();
 
   Expr *ResourceExpr = convertPlaceholder(ResourceRecord);
@@ -608,7 +608,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeMethodBuilder::finalize() {
     Method->setBody(CompoundStmt::Create(AST, StmtsList, FPOptionsOverride(),
                                          SourceLocation(), SourceLocation()));
     Method->setLexicalDeclContext(DeclBuilder.Record);
-    Method->setAccess(Access);
+    Method->setAccess(AS_public);
     Method->addAttr(AlwaysInlineAttr::CreateImplicit(
         AST, SourceRange(), AlwaysInlineAttr::CXX11_clang_always_inline));
     DeclBuilder.Record->addDecl(Method);
@@ -774,6 +774,17 @@ BuiltinTypeDeclBuilder::addHandleConstructorFromImplicitBinding() {
       .finalize();
 }
 
+// Adds static method that initializes resource from binding:
+//
+// static Resource<T> __createFromBinding(unsigned registerNo,
+//                                       unsigned spaceNo, int range,
+//                                       unsigned index, const char *name) {
+//   Resource<T> tmp;
+//   tmp.__handle = __builtin_hlsl_resource_handlefrombinding(
+//                                       tmp.__handle, registerNo, spaceNo,
+//                                       range, index, name);
+//   return tmp;
+// }
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCreateFromBinding() {
   if (Record->isCompleteDefinition())
     return *this;
@@ -784,14 +795,14 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCreateFromBinding() {
   QualType RecordType = AST.getTypeDeclType(cast<TypeDecl>(Record));
 
   return BuiltinTypeMethodBuilder(*this, "__createFromBinding", RecordType,
-                                  false, false, AS_public, SC_Static)
+                                  false, false, SC_Static)
       .addParam("registerNo", AST.UnsignedIntTy)
       .addParam("spaceNo", AST.UnsignedIntTy)
       .addParam("range", AST.IntTy)
       .addParam("index", AST.UnsignedIntTy)
       .addParam("name", AST.getPointerType(AST.CharTy.withConst()))
       .createLocalVar("tmp", RecordType)
-      .getResourceHandle(PH::LocalVar_0)
+      .accessHandleFieldOnResource(PH::LocalVar_0)
       .callBuiltin("__builtin_hlsl_resource_handlefrombinding", HandleType,
                    PH::LastStmt, PH::_0, PH::_1, PH::_2, PH::_3, PH::_4)
       .setHandleFieldOnResource(PH::LocalVar_0, PH::LastStmt)
@@ -799,6 +810,18 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCreateFromBinding() {
       .finalize();
 }
 
+// Adds static method that initializes resource from binding:
+//
+// static Resource<T> __createFromImplicitBinding(unsigned orderId,
+//                                                unsigned spaceNo, int range,
+//                                                unsigned index,
+//                                                const char *name) {
+//   Resource<T> tmp;
+//   tmp.__handle = __builtin_hlsl_resource_handlefromimplicitbinding(
+//                                                tmp.__handle, spaceNo,
+//                                                range, index, orderId, name);
+//   return tmp;
+// }
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCreateFromImplicitBinding() {
   if (Record->isCompleteDefinition())
     return *this;
@@ -809,15 +832,14 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCreateFromImplicitBinding() {
   QualType RecordType = AST.getTypeDeclType(cast<TypeDecl>(Record));
 
   return BuiltinTypeMethodBuilder(*this, "__createFromImplicitBinding",
-                                  RecordType, false, false, AS_public,
-                                  SC_Static)
+                                  RecordType, false, false, SC_Static)
       .addParam("orderId", AST.UnsignedIntTy)
       .addParam("spaceNo", AST.UnsignedIntTy)
       .addParam("range", AST.IntTy)
       .addParam("index", AST.UnsignedIntTy)
       .addParam("name", AST.getPointerType(AST.CharTy.withConst()))
       .createLocalVar("tmp", RecordType)
-      .getResourceHandle(PH::LocalVar_0)
+      .accessHandleFieldOnResource(PH::LocalVar_0)
       .callBuiltin("__builtin_hlsl_resource_handlefromimplicitbinding",
                    HandleType, PH::LastStmt, PH::_0, PH::_1, PH::_2, PH::_3,
                    PH::_4)
