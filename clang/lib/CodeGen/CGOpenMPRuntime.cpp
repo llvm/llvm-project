@@ -8341,10 +8341,12 @@ private:
           ElementType = CAT->getElementType().getTypePtr();
         else if (VAT)
           ElementType = VAT->getElementType().getTypePtr();
-        else
-          assert(&Component == &*Components.begin() &&
-                 "Only expect pointer (non CAT or VAT) when this is the "
-                 "first Component");
+        else if (&Component == &*Components.begin()) {
+          // Handle pointer-based array sections like data[a:b:c]
+          if (const auto *PtrType = Ty->getAs<PointerType>()) {
+            ElementType = PtrType->getPointeeType().getTypePtr();
+          }
+        }
         // If ElementType is null, then it means the base is a pointer
         // (neither CAT nor VAT) and we'll attempt to get ElementType again
         // for next iteration.
