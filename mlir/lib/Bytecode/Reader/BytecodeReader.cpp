@@ -294,23 +294,38 @@ public:
       if (failed(parseVarInt(alignment)))
         return failure();
 
-      // Check that the requested alignment is less than or equal to the
-      // alignment of the root buffer. If it is not, we cannot safely guarantee
-      // that the specified alignment is globally correct.
+      // Check that the requested alignment must not exceed the alignment of
+      // the root buffer itself. Otherwise we cannot guarantee that pointers
+      // derived from this buffer will actually satisfy the requested alignment
+      // globally.
       //
-      // E.g. if the buffer is 8k aligned and the section is marked to be 16k
-      // aligned:
-      // - (a) the alignTo call early returns when the pointer is 16k
-      // aligned but given the original 8k alignment we could offset into the
-      // padding by ~8k giving us 16k pointer alignment leaving another ~8k of
-      // padding in the bytecode file that will inadvertently be read when we
-      // attempt to parse the next section.
-      // - (b) we update alignTo to align relative to the start of the buffer,
-      // but given an 8k aligned buffer and section alignment of 16k, we could
-      // end up with a pointer that is 24k aligned (8k start alignment + 16k
-      // offset) instead of globally 16k aligned (versus 16k start alignment +
-      // 16k offset). This would result in incorrectly stated alignment for
-      // resources that reference data inside of the bytecode buffer.
+      // Consider a bytecode buffer that is guaranteed to be 8k aligned, but not
+      // 16k aligned (e.g. absolute address 40960. If a section inside this
+      // buffer declares a 16k alignment requirement, two problems can arise:
+      //
+      //   (a) If we "align forward" the current pointer to the next
+      //       16k boundary, the amount of padding we skip depends on the
+      //       buffer's starting address. For example:
+      //
+      //         buffer_start = 40960
+      //         next 16k boundary = 49152
+      //         bytes skipped = 49152 - 40960 = 8192
+      //
+      //       This leaves behind variable padding that could be misinterpreted
+      //       as part of the next section.
+      //
+      //   (b) If we align relative to the buffer start, we may
+      //       obtain addresses that are multiples of "buffer_start +
+      //       section_alignment" rather than truly globally aligned
+      //       addresses. For example:
+      //
+      //         buffer_start = 40960 (5×8k, 8k aligned but not 16k)
+      //         offset       = 16384  (first multiple of 16k)
+      //         section_ptr  = 40960 + 16384 = 57344
+      //
+      //       57344 is 8k aligned but not 16k aligned.
+      //       Any consumer expecting true 16k alignment would see this as a
+      //       violation.
       if (failed(alignmentValidator(alignment)))
         return emitError("failed to align section ID: ", unsigned(sectionID));
 
