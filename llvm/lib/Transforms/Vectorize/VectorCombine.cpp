@@ -984,7 +984,7 @@ bool VectorCombine::foldBitOpOfCastConstant(Instruction &I) {
 
   // Find the constant InvC, such that castop(InvC) equals to C.
   PreservedCastFlags RHSFlags;
-  Constant *InvC = getLosslessInvCast(C, SrcVecTy, CastOpcode, *DL, &RHSFlags);
+  Constant *InvC = getLosslessInvCast(C, SrcTy, CastOpcode, *DL, &RHSFlags);
   if (!InvC)
     return false;
 
