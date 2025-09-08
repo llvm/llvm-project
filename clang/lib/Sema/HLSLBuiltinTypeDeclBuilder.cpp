@@ -173,12 +173,9 @@ public:
   BuiltinTypeMethodBuilder &setHandleFieldOnResource(TResource ResourceRecord,
                                                      TValue HandleValue);
   template <typename T> BuiltinTypeMethodBuilder &returnValue(T ReturnValue);
+  BuiltinTypeMethodBuilder &returnThis();
   BuiltinTypeDeclBuilder &finalize();
   Expr *getResourceHandleExpr();
-
-  template <typename T>
-  BuiltinTypeMethodBuilder &getResourceHandle(T ResourceRecord);
-  BuiltinTypeMethodBuilder &returnThis();
 
 private:
   void createDecl();
@@ -481,22 +478,6 @@ BuiltinTypeMethodBuilder::createLocalVar(StringRef Name, QualType Ty) {
   DeclStmt *DS = new (AST)
       clang::DeclStmt(DeclGroupRef(VD), SourceLocation(), SourceLocation());
   StmtsList.push_back(DS);
-  return *this;
-}
-
-template <typename T>
-BuiltinTypeMethodBuilder &
-BuiltinTypeMethodBuilder::getResourceHandle(T ResourceRecord) {
-  ensureCompleteDecl();
-
-  Expr *ResourceExpr = convertPlaceholder(ResourceRecord);
-
-  ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
-  FieldDecl *HandleField = DeclBuilder.getResourceHandleField();
-  MemberExpr *HandleExpr = MemberExpr::CreateImplicit(
-      AST, ResourceExpr, /*IsArrow=*/false, HandleField, HandleField->getType(),
-      VK_LValue, OK_Ordinary);
-  StmtsList.push_back(HandleExpr);
   return *this;
 }
 
@@ -891,7 +872,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyConstructor() {
   return BuiltinTypeMethodBuilder(*this, /*Name=*/"", AST.VoidTy,
                                   /*IsConst=*/false, /*IsCtor=*/true)
       .addParam("other", ConstRecordRefType)
-      .getResourceHandle(PH::_0)
+      .accessHandleFieldOnResource(PH::_0)
       .assign(PH::Handle, PH::LastStmt)
       .finalize();
 }
@@ -910,7 +891,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyAssignmentOperator() {
   DeclarationName Name = AST.DeclarationNames.getCXXOperatorName(OO_Equal);
   return BuiltinTypeMethodBuilder(*this, Name, RecordRefType)
       .addParam("other", ConstRecordRefType)
-      .getResourceHandle(PH::_0)
+      .accessHandleFieldOnResource(PH::_0)
       .assign(PH::Handle, PH::LastStmt)
       .returnThis()
       .finalize();

@@ -56,6 +56,32 @@ RESOURCE Buffer;
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
 // CHECK-NEXT: AlwaysInlineAttr
 
+// Copy constructor
+
+// CHECK: CXXConstructorDecl {{.*}} [[RESOURCE]] 'void (const hlsl::[[RESOURCE]] &)' inline
+// CHECK-NEXT: ParmVarDecl {{.*}} other 'const hlsl::[[RESOURCE]] &'
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: BinaryOperator {{.*}} '='
+// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
+// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
+// CHECK-NEXT: DeclRefExpr {{.*}} 'const hlsl::[[RESOURCE]]' ParmVar {{.*}} 'other' 'const hlsl::[[RESOURCE]] &'
+// CHECK-NEXT: AlwaysInlineAttr
+
+// operator=
+
+// CHECK: CXXMethodDecl {{.*}} operator= 'hlsl::[[RESOURCE]] &(const hlsl::[[RESOURCE]] &)'
+// CHECK-NEXT: ParmVarDecl {{.*}} other 'const hlsl::[[RESOURCE]] &'
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: BinaryOperator {{.*}} '='
+// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
+// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
+// CHECK-NEXT: DeclRefExpr {{.*}} 'const hlsl::[[RESOURCE]]' ParmVar {{.*}} 'other' 'const hlsl::[[RESOURCE]] &'
+// CHECK-NEXT: ReturnStmt
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
+// CHECK-NEXT: AlwaysInlineAttr
+
 // Static __createFromBinding method
 
 // CHECK: CXXMethodDecl {{.*}} __createFromBinding 'hlsl::[[RESOURCE]] (unsigned int, unsigned int, int, unsigned int, const char *)' static
@@ -111,31 +137,6 @@ RESOURCE Buffer;
 // CHECK-NEXT: ReturnStmt
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]'
 // CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
-// Copy constructor
-
-// CHECK: CXXConstructorDecl {{.*}} [[RESOURCE]] 'void (const hlsl::[[RESOURCE]] &)' inline
-// CHECK-NEXT: ParmVarDecl {{.*}} other 'const hlsl::[[RESOURCE]] &'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: BinaryOperator {{.*}} '='
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'const hlsl::[[RESOURCE]]' ParmVar {{.*}} 'other' 'const hlsl::[[RESOURCE]] &'
-// CHECK-NEXT: AlwaysInlineAttr
-
-// operator=
-
-// CHECK: CXXMethodDecl {{.*}} operator= 'hlsl::[[RESOURCE]] &(const hlsl::[[RESOURCE]] &)'
-// CHECK-NEXT: ParmVarDecl {{.*}} other 'const hlsl::[[RESOURCE]] &'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: BinaryOperator {{.*}} '='
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'const hlsl::[[RESOURCE]]' ParmVar {{.*}} 'other' 'const hlsl::[[RESOURCE]] &'
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
-// CHECK-NEXT: AlwaysInlineAttr
 
 // Constructor from binding
 
