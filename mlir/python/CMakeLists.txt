@@ -20,7 +20,6 @@ declare_mlir_python_sources(MLIRPythonSources.Core.Python
   SOURCES
     _mlir_libs/__init__.py
     ir.py
-    passes.py
     passmanager.py
     rewrite.py
     dialects/_ods_common.py

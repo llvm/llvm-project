@@ -3,7 +3,6 @@
 import gc, sys
 from mlir.ir import *
 from mlir.passmanager import *
-from mlir.passes import *
 from mlir.dialects.builtin import ModuleOp
 from mlir.dialects import pdl
 from mlir.rewrite import *
@@ -54,13 +53,6 @@ def testCustomPass():
         pdl_module = make_pdl_module()
         frozen = PDLModule(pdl_module).freeze()
 
-        class CustomPass(Pass):
-            def __init__(self):
-                super().__init__("CustomPass", op_name="builtin.module")
-
-            def run(self, m):
-                apply_patterns_and_fold_greedily_with_op(m, frozen)
-
         module = ModuleOp.parse(
             r"""
             module {
@@ -72,12 +64,24 @@ def testCustomPass():
         """
         )
 
+        def custom_pass_1(op):
+            print("hello from pass 1!!!", file=sys.stderr)
+
+        class CustomPass2:
+            def __call__(self, m):
+                apply_patterns_and_fold_greedily_with_op(m, frozen)
+
+        custom_pass_2 = CustomPass2()
+
         pm = PassManager("any")
         pm.enable_ir_printing()
 
-        # CHECK-LABEL: Dump After CustomPass
+        # CHECK: hello from pass 1!!!
+        # CHECK-LABEL: Dump After custom_pass_1
+        pm.add_python_pass(custom_pass_1)
+        # CHECK-LABEL: Dump After CustomPass2
         # CHECK: arith.muli
-        pm.add(CustomPass())
+        pm.add_python_pass(custom_pass_2, "CustomPass2")
         # CHECK-LABEL: Dump After ArithToLLVMConversionPass
         # CHECK: llvm.mul
         pm.add("convert-arith-to-llvm")
