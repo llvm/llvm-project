@@ -1369,7 +1369,7 @@ define <8 x half> @PR153570(ptr %p) {
 ; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; CHECK-NEXT:    vmulsh {rn-sae}, %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; CHECK-NEXT:    vmovsh %xmm2, %xmm1, %xmm1
+; CHECK-NEXT:    vmovsh {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3,4,5,6,7]
 ; CHECK-NEXT:    vmovaps %xmm1, (%rdi)
 ; CHECK-NEXT:    retq
   %r = tail call <8 x half> @llvm.x86.avx512fp16.mask.mul.sh.round(<8 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, <8 x half> <half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000>, <8 x half> <half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000>, i8 0, i32 8)
