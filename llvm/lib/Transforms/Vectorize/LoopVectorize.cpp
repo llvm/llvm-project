@@ -9611,7 +9611,7 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
       using namespace llvm::PatternMatch;
       PHINode *EPResumeVal = &*L->getLoopPreheader()->phis().begin();
       for (Value *Inc : EPResumeVal->incoming_values()) {
-        if (match(Inc, m_SpecificInt(0)))
+        if (match(Inc, m_Zero()))
           continue;
         assert(!EPI.VectorTripCount &&
                "Must only have a single non-zero incoming value");
