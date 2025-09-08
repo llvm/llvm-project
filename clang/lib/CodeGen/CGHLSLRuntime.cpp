@@ -453,8 +453,7 @@ void CGHLSLRuntime::addRootSignature(
   llvm::Module &M = CGM.getModule();
   Triple T(M.getTargetTriple());
 
-  // If we are not targeting a root signature enviornment then this decl will
-  // be generated when the function decl it is attached is handled
+  // Generated later with the function decl if not targeting root signature
   if (T.getEnvironment() != Triple::EnvironmentType::RootSignature)
     return;
 
