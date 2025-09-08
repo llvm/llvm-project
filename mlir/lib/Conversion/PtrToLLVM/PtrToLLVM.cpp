@@ -246,8 +246,9 @@ LogicalResult GetMetadataOpConversion::matchAndRewrite(
   Value sV = LLVM::UndefOp::create(rewriter, loc, *mdTy);
 
   // First element is the allocated pointer.
-  sV = LLVM::InsertValueOp::create(
-      rewriter, loc, sV, descriptor.allocatedPtr(rewriter, loc), int64_t{0});
+  SmallVector<int64_t> pos{0};
+  sV = LLVM::InsertValueOp::create(rewriter, loc, sV,
+                                   descriptor.allocatedPtr(rewriter, loc), pos);
 
   // Track the current field index.
   unsigned fieldIdx = 1;
