@@ -1365,7 +1365,7 @@ add_fp_unittest(
   SRCS
     exp_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.exp
     libc.src.__support.FPUtil.fp_bits
 )
@@ -1377,7 +1377,7 @@ add_fp_unittest(
   SRCS
     expf_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.expf
     libc.src.__support.FPUtil.fp_bits
 )
@@ -1391,7 +1391,6 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.expf16
     libc.src.__support.FPUtil.cast
 )
@@ -1403,7 +1402,7 @@ add_fp_unittest(
   SRCS
     exp2_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.exp2
     libc.src.__support.FPUtil.fp_bits
 )
@@ -1415,7 +1414,7 @@ add_fp_unittest(
   SRCS
     exp2f_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.exp2f
     libc.src.__support.FPUtil.fp_bits
 )
@@ -1427,8 +1426,8 @@ add_fp_unittest(
   SRCS
     exp2f16_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.exp2f16
     libc.src.__support.FPUtil.cast
 )
@@ -1440,7 +1439,7 @@ add_fp_unittest(
   SRCS
     exp2m1f_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.exp2m1f
 )
 
@@ -1451,8 +1450,8 @@ add_fp_unittest(
   SRCS
     exp2m1f16_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.exp2m1f16
     libc.src.__support.FPUtil.cast
 )
@@ -1464,7 +1463,7 @@ add_fp_unittest(
   SRCS
     exp10_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.exp10
     libc.src.__support.FPUtil.fp_bits
 )
@@ -1476,7 +1475,7 @@ add_fp_unittest(
   SRCS
     exp10f_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.exp10f
     libc.src.__support.FPUtil.fp_bits
 )
@@ -1488,8 +1487,8 @@ add_fp_unittest(
   SRCS
     exp10f16_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.exp10f16
     libc.src.__support.FPUtil.cast
 )
@@ -1501,8 +1500,8 @@ add_fp_unittest(
   SRCS
     exp10m1f16_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.exp10m1f16
     libc.src.__support.FPUtil.cast
 )
@@ -1514,7 +1513,7 @@ add_fp_unittest(
   SRCS
     exp10m1f_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.exp10m1f
 )
 
@@ -4265,7 +4264,7 @@ add_fp_unittest(
   SRCS
     expm1_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.expm1
     libc.src.__support.FPUtil.fp_bits
 )
@@ -4277,7 +4276,7 @@ add_fp_unittest(
   SRCS
     expm1f_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.expm1f
     libc.src.__support.FPUtil.fp_bits
 )
@@ -4291,7 +4290,6 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.expm1f16
     libc.src.__support.FPUtil.cast
 )
