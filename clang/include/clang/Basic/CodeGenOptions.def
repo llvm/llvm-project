@@ -58,7 +58,7 @@ ENUM_CODEGENOPT(FramePointer, FramePointerKind, 2, FramePointerKind::None, Benig
 
 ENUM_CODEGENOPT(ExceptionHandling, ExceptionHandlingKind, 3, ExceptionHandlingKind::None, NotCompatible)
 
-CODEGENOPT(ClearASTBeforeBackend , 1, 0, Benign) ///< Free the AST before running backend code generation. Only works with -disable-free.
+CODEGENOPT(ClearASTBeforeBackend , 1, 0, Benign) ///< Free the AST before running backend code generation.
 CODEGENOPT(DisableFree       , 1, 0, Benign) ///< Don't free memory.
 CODEGENOPT(DiscardValueNames , 1, 0, Benign) ///< Discard Value Names from the IR (LLVMContext flag)
 CODEGENOPT(DisableLLVMPasses , 1, 0, Benign) ///< Don't run any LLVM IR passes to get
@@ -307,7 +307,7 @@ CODEGENOPT(SanitizeBinaryMetadataAtomics, 1, 0, Benign) ///< Emit PCs for atomic
 CODEGENOPT(SanitizeBinaryMetadataUAR, 1, 0, Benign) ///< Emit PCs for start of functions
                                                     ///< that are subject for use-after-return checking.
 CODEGENOPT(SanitizeStats     , 1, 0, Benign) ///< Collect statistics for sanitizers.
-CODEGENOPT(SanitizeDebugTrapReasons, 1, 1 , Benign) ///< Enable UBSan trapping messages
+ENUM_CODEGENOPT(SanitizeDebugTrapReasons, SanitizeDebugTrapReasonKind, 2, SanitizeDebugTrapReasonKind::Detailed, Benign) ///< Control how "trap reasons" are emitted in debug info
 CODEGENOPT(SimplifyLibCalls  , 1, 1, Benign) ///< Set when -fbuiltin is enabled.
 CODEGENOPT(SoftFloat         , 1, 0, Benign) ///< -soft-float.
 CODEGENOPT(SpeculativeLoadHardening, 1, 0, Benign) ///< Enable speculative load hardening.

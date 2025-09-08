@@ -224,6 +224,7 @@ add_lldb_test_dependency(
   llvm-pdbutil
   llvm-readobj
   llvm-ar
+  yaml2macho-core
   )
 
 if(TARGET lld)

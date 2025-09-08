@@ -111,6 +111,38 @@ void assume(bool arg) {
 // OGCG:   call void @llvm.assume(i1 %{{.+}})
 // OGCG: }
 
+void *assume_aligned(void *ptr) {
+  return __builtin_assume_aligned(ptr, 16);
+}
+
+// CIR: @_Z14assume_alignedPv
+// CIR:   %{{.+}} = cir.assume_aligned %{{.+}} alignment 16 : !cir.ptr<!void>
+// CIR: }
+
+// LLVM: @_Z14assume_alignedPv
+// LLVM:   call void @llvm.assume(i1 true) [ "align"(ptr %{{.+}}, i64 16) ]
+// LLVM: }
+
+// OGCG: @_Z14assume_alignedPv
+// OGCG:   call void @llvm.assume(i1 true) [ "align"(ptr %{{.+}}, i64 16) ]
+// OGCG: }
+
+void *assume_aligned_misalignment(void *ptr, unsigned misalignment) {
+  return __builtin_assume_aligned(ptr, 16, misalignment);
+}
+
+// CIR: @_Z27assume_aligned_misalignmentPvj
+// CIR:   %{{.+}} = cir.assume_aligned %{{.+}} alignment 16[offset %{{.+}} : !u64i] : !cir.ptr<!void>
+// CIR: }
+
+// LLVM: @_Z27assume_aligned_misalignmentPvj
+// LLVM:   call void @llvm.assume(i1 true) [ "align"(ptr %{{.+}}, i64 16, i64 %{{.+}}) ]
+// LLVM: }
+
+// OGCG: @_Z27assume_aligned_misalignmentPvj
+// OGCG:   call void @llvm.assume(i1 true) [ "align"(ptr %{{.+}}, i64 16, i64 %{{.+}}) ]
+// OGCG: }
+
 void assume_separate_storage(void *p1, void *p2) {
   __builtin_assume_separate_storage(p1, p2);
 }

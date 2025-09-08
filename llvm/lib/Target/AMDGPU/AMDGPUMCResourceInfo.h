@@ -31,6 +31,7 @@ public:
     RIK_NumVGPR,
     RIK_NumAGPR,
     RIK_NumSGPR,
+    RIK_NumNamedBarrier,
     RIK_PrivateSegSize,
     RIK_UsesVCC,
     RIK_UsesFlatScratch,
@@ -43,6 +44,7 @@ private:
   int32_t MaxVGPR = 0;
   int32_t MaxAGPR = 0;
   int32_t MaxSGPR = 0;
+  int32_t MaxNamedBarrier = 0;
 
   // Whether the MCResourceInfo has been finalized through finalize(MCContext
   // &). Should only be called once, at the end of AsmPrinting to assign MaxXGPR
@@ -75,6 +77,9 @@ public:
   void addMaxSGPRCandidate(int32_t candidate) {
     MaxSGPR = std::max(MaxSGPR, candidate);
   }
+  void addMaxNamedBarrierCandidate(int32_t candidate) {
+    MaxNamedBarrier = std::max(MaxNamedBarrier, candidate);
+  }
 
   MCSymbol *getSymbol(StringRef FuncName, ResourceInfoKind RIK,
                       MCContext &OutContext, bool IsLocal);
@@ -90,6 +95,7 @@ public:
   MCSymbol *getMaxVGPRSymbol(MCContext &OutContext);
   MCSymbol *getMaxAGPRSymbol(MCContext &OutContext);
   MCSymbol *getMaxSGPRSymbol(MCContext &OutContext);
+  MCSymbol *getMaxNamedBarrierSymbol(MCContext &OutContext);
 
   /// AMDGPUResourceUsageAnalysis gathers resource usage on a per-function
   /// granularity. However, some resource info has to be assigned the call

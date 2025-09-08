@@ -2132,6 +2132,18 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
   return std::make_tuple(RelocM, 0U, false);
 }
 
+bool tools::getStaticPIE(const ArgList &Args, const ToolChain &TC) {
+  bool HasStaticPIE = Args.hasArg(options::OPT_static_pie);
+  if (HasStaticPIE && Args.hasArg(options::OPT_no_pie)) {
+    const Driver &D = TC.getDriver();
+    const llvm::opt::OptTable &Opts = D.getOpts();
+    StringRef StaticPIEName = Opts.getOptionName(options::OPT_static_pie);
+    StringRef NoPIEName = Opts.getOptionName(options::OPT_nopie);
+    D.Diag(diag::err_drv_cannot_mix_options) << StaticPIEName << NoPIEName;
+  }
+  return HasStaticPIE;
+}
+
 // `-falign-functions` indicates that the functions should be aligned to the
 // backend's preferred alignment.
 //
@@ -2974,7 +2986,8 @@ void tools::addHIPRuntimeLibArgs(const ToolChain &TC, Compilation &C,
                                  const llvm::opt::ArgList &Args,
                                  llvm::opt::ArgStringList &CmdArgs) {
   if ((C.getActiveOffloadKinds() & Action::OFK_HIP) &&
-      !Args.hasArg(options::OPT_nostdlib) &&
+      (!Args.hasArg(options::OPT_nostdlib) ||
+       TC.getTriple().isKnownWindowsMSVCEnvironment()) &&
       !Args.hasArg(options::OPT_no_hip_rt) && !Args.hasArg(options::OPT_r)) {
     TC.AddHIPRuntimeLibArgs(Args, CmdArgs);
   } else {
@@ -3113,6 +3126,8 @@ void tools::addMCModel(const Driver &D, const llvm::opt::ArgList &Args,
       else if (CM == "medany")
         CM = "large";
       Ok = CM == "small" || CM == "medium" || CM == "large";
+    } else if (Triple.getArch() == llvm::Triple::lanai) {
+      Ok = llvm::is_contained({"small", "medium", "large"}, CM);
     }
     if (Ok) {
       CmdArgs.push_back(Args.MakeArgString("-mcmodel=" + CM));
@@ -3316,14 +3331,8 @@ void tools::handleVectorizeSLPArgs(const ArgList &Args,
 
 void tools::handleInterchangeLoopsArgs(const ArgList &Args,
                                        ArgStringList &CmdArgs) {
-  // FIXME: instead of relying on shouldEnableVectorizerAtOLevel, we may want to
-  // implement a separate function to infer loop interchange from opt level.
-  // For now, enable loop-interchange at the same opt levels as loop-vectorize.
-  bool EnableInterchange = shouldEnableVectorizerAtOLevel(Args, false);
-  OptSpecifier InterchangeAliasOption =
-      EnableInterchange ? options::OPT_O_Group : options::OPT_floop_interchange;
-  if (Args.hasFlag(options::OPT_floop_interchange, InterchangeAliasOption,
-                   options::OPT_fno_loop_interchange, EnableInterchange))
+  if (Args.hasFlag(options::OPT_floop_interchange,
+                   options::OPT_fno_loop_interchange, false))
     CmdArgs.push_back("-floop-interchange");
 }
 

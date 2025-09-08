@@ -198,7 +198,7 @@ public:
                            CCValAssign::LocInfo LocInfo, const ArgInfo &Info,
                            ISD::ArgFlagsTy Flags, CCState &State) {
       if (getAssignFn(State.isVarArg())(ValNo, ValVT, LocVT, LocInfo, Flags,
-                                        State))
+                                        Info.Ty, State))
         return true;
       StackSize = State.getStackSize();
       return false;

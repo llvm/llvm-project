@@ -759,20 +759,20 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
   StringRef CPU;
 
   switch (Family) {
-  case 3:
+  case 0x3:
     CPU = "i386";
     break;
-  case 4:
+  case 0x4:
     CPU = "i486";
     break;
-  case 5:
+  case 0x5:
     if (testFeature(X86::FEATURE_MMX)) {
       CPU = "pentium-mmx";
       break;
     }
     CPU = "pentium";
     break;
-  case 6:
+  case 0x6:
     switch (Model) {
     case 0x0f: // Intel Core 2 Duo processor, Intel Core 2 Duo mobile
                // processor, Intel Core 2 Quad processor, Intel Core 2 Quad
@@ -1120,7 +1120,7 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
       break;
     }
     break;
-  case 15: {
+  case 0xf: {
     if (testFeature(X86::FEATURE_64BIT)) {
       CPU = "nocona";
       break;
@@ -1132,7 +1132,7 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
     CPU = "pentium4";
     break;
   }
-  case 19:
+  case 0x13:
     switch (Model) {
     // Diamond Rapids:
     case 0x01:
@@ -1396,7 +1396,6 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(X86::FEATURE_BMI2);
   if (HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save) {
     setFeature(X86::FEATURE_AVX512F);
-    setFeature(X86::FEATURE_EVEX512);
   }
   if (HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save)
     setFeature(X86::FEATURE_AVX512DQ);
@@ -2063,8 +2062,6 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["rtm"]        = HasLeaf7 && ((EBX >> 11) & 1);
   // AVX512 is only supported if the OS supports the context save for it.
   Features["avx512f"]    = HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save;
-  if (Features["avx512f"])
-    Features["evex512"]  = true;
   Features["avx512dq"]   = HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save;
   Features["rdseed"]     = HasLeaf7 && ((EBX >> 18) & 1);
   Features["adx"]        = HasLeaf7 && ((EBX >> 19) & 1);
@@ -2176,11 +2173,8 @@ StringMap<bool> sys::getHostCPUFeatures() {
       MaxLevel >= 0x24 && !getX86CpuIDAndInfo(0x24, &EAX, &EBX, &ECX, &EDX);
 
   int AVX10Ver = HasLeaf24 && (EBX & 0xff);
-  int Has512Len = HasLeaf24 && ((EBX >> 18) & 1);
-  Features["avx10.1-256"] = HasAVX10 && AVX10Ver >= 1;
-  Features["avx10.1-512"] = HasAVX10 && AVX10Ver >= 1 && Has512Len;
-  Features["avx10.2-256"] = HasAVX10 && AVX10Ver >= 2;
-  Features["avx10.2-512"] = HasAVX10 && AVX10Ver >= 2 && Has512Len;
+  Features["avx10.1"] = HasAVX10 && AVX10Ver >= 1;
+  Features["avx10.2"] = HasAVX10 && AVX10Ver >= 2;
 
   return Features;
 }
