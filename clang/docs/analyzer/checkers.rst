@@ -1866,11 +1866,6 @@ security.VAList (C, C++)
 Reports use of uninitialized (or already released) ``va_list`` objects and
 situations where a ``va_start`` call is not followed by ``va_end``.
 
-Report out of bounds access to memory that is before the start or after the end
-of the accessed region (array, heap-allocated region, string literal etc.).
-This usually means incorrect indexing, but the checker also detects access via
-the operators ``*`` and ``->``.
-
 .. code-block:: c
 
  int test_use_after_release(int x, ...) {
