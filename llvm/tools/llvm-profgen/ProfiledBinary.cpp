@@ -628,43 +628,43 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
 
 void ProfiledBinary::setUpDisassembler(const ObjectFile *Obj) {
   const Target *TheTarget = getTarget(Obj);
-  std::string TripleName = TheTriple.getTriple();
   StringRef FileName = Obj->getFileName();
 
-  MRI.reset(TheTarget->createMCRegInfo(TripleName));
+  MRI.reset(TheTarget->createMCRegInfo(TheTriple));
   if (!MRI)
-    exitWithError("no register info for target " + TripleName, FileName);
+    exitWithError("no register info for target " + TheTriple.str(), FileName);
 
   MCTargetOptions MCOptions;
-  AsmInfo.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+  AsmInfo.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!AsmInfo)
-    exitWithError("no assembly info for target " + TripleName, FileName);
+    exitWithError("no assembly info for target " + TheTriple.str(), FileName);
 
   Expected<SubtargetFeatures> Features = Obj->getFeatures();
   if (!Features)
     exitWithError(Features.takeError(), FileName);
   STI.reset(
-      TheTarget->createMCSubtargetInfo(TripleName, "", Features->getString()));
+      TheTarget->createMCSubtargetInfo(TheTriple, "", Features->getString()));
   if (!STI)
-    exitWithError("no subtarget info for target " + TripleName, FileName);
+    exitWithError("no subtarget info for target " + TheTriple.str(), FileName);
 
   MII.reset(TheTarget->createMCInstrInfo());
   if (!MII)
-    exitWithError("no instruction info for target " + TripleName, FileName);
+    exitWithError("no instruction info for target " + TheTriple.str(),
+                  FileName);
 
-  MCContext Ctx(Triple(TripleName), AsmInfo.get(), MRI.get(), STI.get());
+  MCContext Ctx(TheTriple, AsmInfo.get(), MRI.get(), STI.get());
   std::unique_ptr<MCObjectFileInfo> MOFI(
       TheTarget->createMCObjectFileInfo(Ctx, /*PIC=*/false));
   Ctx.setObjectFileInfo(MOFI.get());
   DisAsm.reset(TheTarget->createMCDisassembler(*STI, Ctx));
   if (!DisAsm)
-    exitWithError("no disassembler for target " + TripleName, FileName);
+    exitWithError("no disassembler for target " + TheTriple.str(), FileName);
 
   MIA.reset(TheTarget->createMCInstrAnalysis(MII.get()));
 
   int AsmPrinterVariant = AsmInfo->getAssemblerDialect();
-  IPrinter.reset(TheTarget->createMCInstPrinter(
-      Triple(TripleName), AsmPrinterVariant, *AsmInfo, *MII, *MRI));
+  IPrinter.reset(TheTarget->createMCInstPrinter(TheTriple, AsmPrinterVariant,
+                                                *AsmInfo, *MII, *MRI));
   IPrinter->setPrintBranchImmAsAddress(true);
 }
 
