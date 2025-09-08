@@ -6,6 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+
+class CCIfBothVarArgAndArgVarArg<CCAction A>
+  : CCIf<"State.isVarArg() && ArgFlags.isVarArg()", A>;
+
 def CC_HexagonStack: CallingConv<[
   CCIfType<[i32,v2i16,v4i8],
     CCAssignToStack<4,4>>,
@@ -23,7 +27,7 @@ def CC_Hexagon_Legacy: CallingConv<[
 
   CCIfByVal<
     CCPassByVal<8,8>>,
-  CCIfArgVarArg<
+  CCIfBothVarArgAndArgVarArg<
     CCDelegateTo<CC_HexagonStack>>,
 
   // Pass split values in pairs, allocate odd register if necessary.
@@ -53,7 +57,7 @@ def CC_Hexagon: CallingConv<[
 
   CCIfByVal<
     CCPassByVal<8,1>>,
-  CCIfArgVarArg<
+  CCIfBothVarArgAndArgVarArg<
     CCDelegateTo<CC_HexagonStack>>,
 
   // Pass split values in pairs, allocate odd register if necessary.
