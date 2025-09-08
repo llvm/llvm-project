@@ -104,7 +104,7 @@ A handful of `LLDB data formatters
 provided for some of the core LLVM libraries. To use them, execute the
 following (or add it to your ``~/.lldbinit``)::
 
-  command script import llvm/utils/lldbDataFormatters.py
+  command script import /path/to/llvm/utils/lldbDataFormatters.py
 
 GDB pretty printers
 ===================
@@ -114,7 +114,7 @@ A handful of `GDB pretty printers
 provided for some of the core LLVM libraries. To use them, execute the
 following (or add it to your ``~/.gdbinit``)::
 
-  source llvm/utils/gdb-scripts/prettyprinters.py
+  source /path/to/llvm/utils/gdb-scripts/prettyprinters.py
 
 It also might be handy to enable the `print pretty
 <https://sourceware.org/gdb/current/onlinedocs/gdb.html/Print-Settings.html>`__
