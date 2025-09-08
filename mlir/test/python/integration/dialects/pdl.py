@@ -50,6 +50,7 @@ def get_pdl_patterns():
     # FIXME: This should be made more robust.
     return PDLModule(m).freeze()
 
+
 # CHECK-LABEL: TEST: test_add_to_mul
 # CHECK: arith.muli
 @construct_and_print_in_module
@@ -67,6 +68,7 @@ def test_add_to_mul(module_):
     # Could apply frozen pattern set multiple times.
     apply_patterns_and_fold_greedily(module_, frozen)
     return module_
+
 
 # CHECK-LABEL: TEST: test_add_to_mul_with_op
 # CHECK: arith.muli
