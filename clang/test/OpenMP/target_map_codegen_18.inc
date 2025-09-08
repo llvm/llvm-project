@@ -534,7 +534,7 @@ void explicit_maps_single (int ii){
   // Region 10
 
   //  &pa[0], &pa[20], 60 * sizeof(pa[0]), TO | FROM [| PARAM]
-  //  &pa, &pa[20], sizeof(pa), ATTACH
+  //  &pa,    &pa[20], sizeof(void*),      ATTACH
 
   // CK19-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 [[DEVICE:.+]], i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
   // CK19-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
@@ -572,7 +572,7 @@ void explicit_maps_single (int ii){
   // Region 11
 
   //  &pa[0], &pa[/*lb=*/0], 60 * sizeof(pa[0]), ALLOC [| PARAM]
-  //  &pa, &pa[/*lb=*/0], sizeof(pa), ATTACH
+  //  &pa,    &pa[/*lb=*/0], sizeof(void*),      ATTACH
 
   // CK19-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 [[DEVICE:.+]], i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
   // CK19-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
@@ -610,7 +610,7 @@ void explicit_maps_single (int ii){
   // Region 12
 
   //  &pa[0], &pa[15], 1 * sizeof(pa[0]), TO [| PARAM]
-  //  &pa, &pa[15], sizeof(pa), ATTACH
+  //  &pa,    &pa[15], sizeof(void*),     ATTACH
 
   // CK19-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 [[DEVICE:.+]], i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
   // CK19-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
@@ -648,7 +648,7 @@ void explicit_maps_single (int ii){
   // Region 13
 
   //  &pa[0], &pa[ii-23], ii * sizeof(pa[0]), ALLOC [| PARAM]
-  //  &pa, &pa[ii-23], sizeof(pa), ATTACH
+  //  &pa,    &pa[ii-23], sizeof(void*),      ATTACH
 
   // CK19-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 [[DEVICE:.+]], i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
   // CK19-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
@@ -692,7 +692,7 @@ void explicit_maps_single (int ii){
   // Region 14
 
   //  &pa[0], &pa[/*lb=*/0], ii * sizeof(pa[0]), ALLOC [| PARAM]
-  //  &pa, &pa[/*lb=*/0], sizeof(pa), ATTACH
+  //  &pa,    &pa[/*lb=*/0], sizeof(void*),      ATTACH
 
   // CK19-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 [[DEVICE:.+]], i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
   // CK19-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
@@ -736,7 +736,7 @@ void explicit_maps_single (int ii){
   // Region 15
 
   //  &pa[0], &pa[ii + 12], 1 * sizeof(pa[0]), TO [| PARAM]
-  //  &pa, &pa[ii + 12], sizeof(pa), ATTACH
+  //  &pa,    &pa[ii + 12], sizeof(void*),     ATTACH
 
   // CK19-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 [[DEVICE:.+]], i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
   // CK19-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
@@ -1175,9 +1175,9 @@ void explicit_maps_single (int ii){
 
   // Region 28
 
-  // [ &mptr[0], &mptr[0], 0, IMPLICIT | PARAM ]
+  // [ &mptr[0],     &mptr[0],       0,                       IMPLICIT | PARAM ]
   // &mptr[1][2][0], &mptr[1][2][2], sizeof(mptr[1][2][2:4]), TO | FROM
-  // &mptr[1][2], &mptr[1][2][2], sizeof(void*), ATTACH
+  // &mptr[1][2],    &mptr[1][2][2], sizeof(void*),           ATTACH
 
   // CK19-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 [[DEVICE:.+]], i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
   // CK19-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
@@ -1229,9 +1229,9 @@ void explicit_maps_single (int ii){
 
   // Region 29
 
-  // [ &mptr[0], &mptr[0], 0, IMPLICIT | PARAM ]
+  // [ &mptr[0],     &mptr[0],       0,                     IMPLICIT | PARAM ]
   // &mptr[1][2][0], &mptr[1][2][3], sizeof(mptr[1][2][3]), TO | FROM
-  // &mptr[1][2], &mptr[1][2][3], sizeof(void*), ATTACH
+  // &mptr[1][2],    &mptr[1][2][3], sizeof(void*),         ATTACH
 
   // CK19-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 [[DEVICE:.+]], i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
   // CK19-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
@@ -1774,9 +1774,9 @@ void explicit_maps_single (int ii){
 
   // Region 42
 
-  // [ &mptras[0], &mptras[0], 0, IMPLICIT | PARAM ]
+  // [ &mptras[0],     &mptras[0],       0,                          IMPLICIT | PARAM ]
   // &mptras[0][2][0], &mptras[0][2][0], sizeof(mptras[:1][2][:13]), TO | FROM
-  // &mptr[0][2], &mptr[0][2][0], sizeof(void*), ATTACH
+  // &mptr[0][2],      &mptr[0][2][0],   sizeof(void*),              ATTACH
 
   // CK19-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 [[DEVICE:.+]], i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
   // CK19-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2

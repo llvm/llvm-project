@@ -194,7 +194,7 @@ int explicit_maps_globals(void){
 // Region 04
 
 //  &d[0], &d[2], 5 * sizeof(d[0]), TO | FROM | PARAM
-//  &d, &d[2], sizeof(d), ATTACH
+//  &d,    &d[2], sizeof(d),        ATTACH
 
 // CK22-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK22-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
@@ -298,7 +298,7 @@ int explicit_maps_globals(void){
 // Region 09
 
 //  &sd[0], &sd[2], 5 * sizeof(sd[0]), TO | FROM | ATTACH
-//  &sd, &sd[2], sizeof(sd), ATTACH
+//  &sd,    &sd[2], sizeof(sd),        ATTACH
 
 // CK22-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK22-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
@@ -402,7 +402,7 @@ int explicit_maps_globals(void){
 // Region 14
 
 //  &std[0], &std[2], 5 * sizeof(std[0]), TO | FROM | ATTACH
-//  &std, &std[2], sizeof(std), ATTACH
+//  &std,    &std[2], sizeof(std),        ATTACH
 
 // CK22-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK22-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2

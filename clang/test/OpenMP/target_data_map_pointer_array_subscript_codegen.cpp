@@ -41,7 +41,7 @@ MyObject *objects;
 int main(void) {
 
 //  &objects[0], &objects[1], 1 * sizeof(objects[0]), TO
-//  &objects, &objects[1], sizeof(objects), ATTACH
+//  &objects,    &objects[1], sizeof(objects),        ATTACH
 
 // CHECK-DAG: call void @__tgt_target_data_begin_mapper(ptr @{{.+}}, i64 -1, i32 2, ptr [[BPGEP:%.+]], ptr [[PGEP:%.+]], ptr [[SIZES0]], ptr [[MAPS0]], ptr null, ptr null)
 // CHECK-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
@@ -62,8 +62,8 @@ int main(void) {
 
 #pragma omp target enter data map(to : objects [1:1])
 
-//  &objects[1].arr[0], &objects[1].arr[/*lb=*/0], 1 * sizeof(objects[1],arr[0:1]), TO
-//  &objects[1].arr, &objects[1].arr[/*lb=*/0], sizeof(objects[1].arr), ATTACH
+//  &objects[1].arr[0], &objects[1].arr[/*lb=*/0], 1 * sizeof(objects[1],  arr[0:1]), TO
+//  &objects[1].arr,    &objects[1].arr[/*lb=*/0], sizeof(objects[1].arr), ATTACH
 
 // CHECK-DAG: call void @__tgt_target_data_begin_mapper(ptr @{{.+}}, i64 -1, i32 2, ptr [[BPGEP:%.+]], ptr [[PGEP:%.+]], ptr [[SIZES1]], ptr [[MAPS1]], ptr null, ptr null)
 // CHECK-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]

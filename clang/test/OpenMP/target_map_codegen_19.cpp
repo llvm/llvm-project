@@ -128,7 +128,7 @@ void explicit_maps_references_and_function_args (int a, float b, int (&c)[10], f
 // Region 03
 
 //  &d[0], &d[2], 3 * sizeof(d[0]), FROM | PARAM
-//  &d, &d[2], sizeof(d), ATTACH
+//  &d,    &d[2], sizeof(d),        ATTACH
 
 // CK20-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK20-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2

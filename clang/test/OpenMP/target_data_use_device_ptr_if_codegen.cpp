@@ -26,7 +26,7 @@
 void add_one(float *b, int dm)
 {
   // &B[0], &B[0], 1 * sizeof(B[0]), PARAM | TO | FROM
-  // &B, &B[0], sizeof(B), ATTACH
+  // &B,    &B[0], sizeof(B),        ATTACH
 
   // CK1:     [[RB_1:%.*]] = load ptr, ptr [[B:%b.addr]]
   // CK1:     [[RB_2:%.*]] = load ptr, ptr [[B]]

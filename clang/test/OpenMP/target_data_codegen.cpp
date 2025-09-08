@@ -134,7 +134,7 @@ void foo(int arg) {
   // Region 04
   //
   // &gb.b[0], &gb.b[/*lb=*/0], 3 * sizeof(gb.b[0]), TO
-  // &gb.b, &gb.b[/*lb=*/0], sizeof(gb.b), ATTACH
+  // &gb.b,    &gb.b[/*lb=*/0], sizeof(gb.b),        ATTACH
   //
   // CK1-DAG: call void @__tgt_target_data_begin_mapper(ptr @{{.+}}, i64 -1, i32 2, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[SIZE04]], ptr [[MTYPE04]], ptr null, ptr null)
   // CK1-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
@@ -354,7 +354,7 @@ int bar(int arg){
 // Region 00
 //
 // &b[0], &b[1], 3 * sizeof(b[0]), ALWAYS | TO
-// &b, &b[1], sizeof(b), ATTACH
+// &b,    &b[1], sizeof(b),        ATTACH
 //
 // CK2-DAG: [[DEV:%[^,]+]] = sext i32 [[DEVi32:%[^,]+]] to i64
 // CK2-DAG: [[DEVi32]] = load i32, ptr %{{[^,]+}},
@@ -466,7 +466,7 @@ int bar(int arg){
 // Region 00
 //
 // &b[0], &b[1], 3 * sizeof(b[0]), CLOSE | ALWAYS | TO
-// &b, &b[1], sizeof(b), ATTACH
+// &b,    &b[1], sizeof(b),        ATTACH
 //
 // CK4-DAG: [[DEV:%[^,]+]] = sext i32 [[DEVi32:%[^,]+]] to i64
 // CK4-DAG: [[DEVi32]] = load i32, ptr %{{[^,]+}},
@@ -536,9 +536,9 @@ void test_close_modifier(int arg) {
   S2 *ps;
 // CK5: private unnamed_addr constant [3 x i64] [i64 1027, i64 1027, i64 16384]
 //
-// &arg, &arg, sizeof(arg), CLOSE | TOFROM
+// &arg,               &arg,                 sizeof(arg),                 CLOSE | TOFROM
 // &ps->ps->ps->ps[0], &ps->ps->ps->ps[0].s, sizeof(ps->ps->ps->ps[0].s), CLOSE | TOFROM
-// &ps->ps->ps->ps, &ps->ps->ps->ps[0].s, sizeof(struct S2 *), ATTACH
+// &ps->ps->ps->ps,    &ps->ps->ps->ps[0].s, sizeof(struct S2 *),         ATTACH
 //
 #pragma omp target data map(close, tofrom \
                             : arg, ps->ps->ps->ps->s)
@@ -637,12 +637,12 @@ void test_present_modifier(int arg) {
 // ps1
 //
 // &ps1[0], &ps1->s, sizeof(ps1->s), FROM | TO
-// &ps1, &ps1->s, sizeof(ps1), ATTACH
+// &ps1,    &ps1->s, sizeof(ps1),    ATTACH
 //
 // CK8-SAME: {{^}} [i64 3, i64 [[#0x4000]],
 //
 // &ps1->ps->ps->ps[0], &ps1->ps->ps->ps[0].s, sizeof(ps1->ps->ps->ps[0].s), PRESENT | FROM | TO
-// &ps1->ps->ps->ps, &ps1->ps->ps->ps[0].s, sizeof(struct S2 *), ATTACH
+// &ps1->ps->ps->ps,    &ps1->ps->ps->ps[0].s, sizeof(struct S2 *),          ATTACH
 //
 // CK8-SAME: {{^}} i64 [[#0x1003]], i64 [[#0x4000]],
 
@@ -655,12 +655,12 @@ void test_present_modifier(int arg) {
 // ps2
 //
 // &ps2[0], &ps2->s, sizeof(ps2->s), PRESENT | FROM | TO
-// &ps2, &ps2->s, sizeof(ps2), ATTACH
+// &ps2,    &ps2->s, sizeof(ps2),    ATTACH
 //
 // CK8-SAME: {{^}} i64 [[#0x1003]], i64 [[#0x4000]],
 //
 // &ps2->ps->ps->ps[0], &ps2->ps->ps->ps[0].s, sizeof(ps2->ps->ps->ps[0].s), FROM | TO
-// &ps2->ps->ps->ps, &ps2->ps->ps->ps[0].s, sizeof(struct S2 *), ATTACH
+// &ps2->ps->ps->ps,    &ps2->ps->ps->ps[0].s, sizeof(struct S2 *),          ATTACH
 //
 // CK8-SAME: {{^}} i64 3, i64 [[#0x4000]]]
 

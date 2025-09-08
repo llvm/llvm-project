@@ -177,7 +177,7 @@ int explicit_maps_inside_captured(int a){
 // Region 05
 
 //  &d[0], &d[2], 4 * sizeof(d[0]), TO | FROM
-//  &d, &d[2], sizeof(d), ATTACH
+//  &d,    &d[2], sizeof(d),        ATTACH
 
 // CK23-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK23-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2

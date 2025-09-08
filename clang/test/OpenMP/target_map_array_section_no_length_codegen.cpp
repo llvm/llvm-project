@@ -11,21 +11,35 @@
 void array_section_no_length_map_clause(float *d, int index) {
   float **f;
 
+  // &d[0], &d[0], sizeof(d[0]),  TO | FROM | PARAM
+  // &d,    &d[0], sizeof(void*), ATTACH
   #pragma omp target map(tofrom : d[:])
   {
     d[3] += 2;
   }
 
+  // &d[0], &d[2], 0,             TO | PARAM
+  // &d,    &d[2], sizeof(void*), ATTACH
   #pragma omp target map(to : d[2:])
   {
     d[3] += 3;
   }
 
+  // &f[0],         &f[0],         0,                   PARAM | IMPLICIT
+  // &f[index][0],  &f[index][0],  sizeof(f[index][0]), ALLOC
+  // &f[index],     &f[index][0],  sizeof(void*),       ATTACH
+  // (void*) index, (void*) index, sizeof(void*),       LITERAL
   #pragma omp target map(alloc : f[index][:])
   {
     f[index][2] += 4;
   }
 
+  // &f[0],         &f[0],              0,               PARAM | IMPLICIT
+  // &f[index][0],  &f[index][index+1], (index+1)*4 < 4?
+  //                                    4 - (index+1)*4:
+  //                                    0,               TO | FROM
+  // &f[index],     &f[index][index+1], sizeof(void*),   ATTACH
+  // (void*) index, (void*) index,      sizeof(void*),   IMPLICIT | LITERAL | PARAM
   #pragma omp target map(tofrom : f[index][index+1:])
   {
     f[index][index] += 5;
@@ -113,11 +127,11 @@ void array_section_no_length_map_clause(float *d, int index) {
 // CHECK-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP22]], align 4
 // CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
 // CHECK-NEXT:    store i32 0, ptr [[TMP23]], align 4
-// CHECK-NEXT:    [[TMP24:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1:[0-9]+]], i64 -1, i32 -1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z34array_section_no_length_map_clausePfi_l14.region_id, ptr [[KERNEL_ARGS]])
+// CHECK-NEXT:    [[TMP24:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1:[0-9]+]], i64 -1, i32 -1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z34array_section_no_length_map_clausePfi_l16.region_id, ptr [[KERNEL_ARGS]])
 // CHECK-NEXT:    [[TMP25:%.*]] = icmp ne i32 [[TMP24]], 0
 // CHECK-NEXT:    br i1 [[TMP25]], label %[[OMP_OFFLOAD_FAILED:.*]], label %[[OMP_OFFLOAD_CONT:.*]]
 // CHECK:       [[OMP_OFFLOAD_FAILED]]:
-// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z34array_section_no_length_map_clausePfi_l14(ptr [[TMP0]]) #[[ATTR2:[0-9]+]]
+// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z34array_section_no_length_map_clausePfi_l16(ptr [[TMP0]]) #[[ATTR2:[0-9]+]]
 // CHECK-NEXT:    br label %[[OMP_OFFLOAD_CONT]]
 // CHECK:       [[OMP_OFFLOAD_CONT]]:
 // CHECK-NEXT:    [[TMP26:%.*]] = load ptr, ptr [[D_ADDR]], align 4
@@ -164,11 +178,11 @@ void array_section_no_length_map_clause(float *d, int index) {
 // CHECK-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP48]], align 4
 // CHECK-NEXT:    [[TMP49:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 12
 // CHECK-NEXT:    store i32 0, ptr [[TMP49]], align 4
-// CHECK-NEXT:    [[TMP50:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 -1, i32 -1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z34array_section_no_length_map_clausePfi_l19.region_id, ptr [[KERNEL_ARGS5]])
+// CHECK-NEXT:    [[TMP50:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 -1, i32 -1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z34array_section_no_length_map_clausePfi_l23.region_id, ptr [[KERNEL_ARGS5]])
 // CHECK-NEXT:    [[TMP51:%.*]] = icmp ne i32 [[TMP50]], 0
 // CHECK-NEXT:    br i1 [[TMP51]], label %[[OMP_OFFLOAD_FAILED6:.*]], label %[[OMP_OFFLOAD_CONT7:.*]]
 // CHECK:       [[OMP_OFFLOAD_FAILED6]]:
-// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z34array_section_no_length_map_clausePfi_l19(ptr [[TMP26]]) #[[ATTR2]]
+// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z34array_section_no_length_map_clausePfi_l23(ptr [[TMP26]]) #[[ATTR2]]
 // CHECK-NEXT:    br label %[[OMP_OFFLOAD_CONT7]]
 // CHECK:       [[OMP_OFFLOAD_CONT7]]:
 // CHECK-NEXT:    [[TMP52:%.*]] = load ptr, ptr [[F]], align 4
@@ -237,11 +251,11 @@ void array_section_no_length_map_clause(float *d, int index) {
 // CHECK-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP87]], align 4
 // CHECK-NEXT:    [[TMP88:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS14]], i32 0, i32 12
 // CHECK-NEXT:    store i32 0, ptr [[TMP88]], align 4
-// CHECK-NEXT:    [[TMP89:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 -1, i32 -1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z34array_section_no_length_map_clausePfi_l24.region_id, ptr [[KERNEL_ARGS14]])
+// CHECK-NEXT:    [[TMP89:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 -1, i32 -1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z34array_section_no_length_map_clausePfi_l32.region_id, ptr [[KERNEL_ARGS14]])
 // CHECK-NEXT:    [[TMP90:%.*]] = icmp ne i32 [[TMP89]], 0
 // CHECK-NEXT:    br i1 [[TMP90]], label %[[OMP_OFFLOAD_FAILED15:.*]], label %[[OMP_OFFLOAD_CONT16:.*]]
 // CHECK:       [[OMP_OFFLOAD_FAILED15]]:
-// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z34array_section_no_length_map_clausePfi_l24(ptr [[TMP52]], i32 [[TMP54]]) #[[ATTR2]]
+// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z34array_section_no_length_map_clausePfi_l32(ptr [[TMP52]], i32 [[TMP54]]) #[[ATTR2]]
 // CHECK-NEXT:    br label %[[OMP_OFFLOAD_CONT16]]
 // CHECK:       [[OMP_OFFLOAD_CONT16]]:
 // CHECK-NEXT:    [[TMP91:%.*]] = load ptr, ptr [[F]], align 4
@@ -323,17 +337,17 @@ void array_section_no_length_map_clause(float *d, int index) {
 // CHECK-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP135]], align 4
 // CHECK-NEXT:    [[TMP136:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS25]], i32 0, i32 12
 // CHECK-NEXT:    store i32 0, ptr [[TMP136]], align 4
-// CHECK-NEXT:    [[TMP137:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 -1, i32 -1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z34array_section_no_length_map_clausePfi_l29.region_id, ptr [[KERNEL_ARGS25]])
+// CHECK-NEXT:    [[TMP137:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 -1, i32 -1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z34array_section_no_length_map_clausePfi_l43.region_id, ptr [[KERNEL_ARGS25]])
 // CHECK-NEXT:    [[TMP138:%.*]] = icmp ne i32 [[TMP137]], 0
 // CHECK-NEXT:    br i1 [[TMP138]], label %[[OMP_OFFLOAD_FAILED26:.*]], label %[[OMP_OFFLOAD_CONT27:.*]]
 // CHECK:       [[OMP_OFFLOAD_FAILED26]]:
-// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z34array_section_no_length_map_clausePfi_l29(ptr [[TMP91]], i32 [[TMP93]]) #[[ATTR2]]
+// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z34array_section_no_length_map_clausePfi_l43(ptr [[TMP91]], i32 [[TMP93]]) #[[ATTR2]]
 // CHECK-NEXT:    br label %[[OMP_OFFLOAD_CONT27]]
 // CHECK:       [[OMP_OFFLOAD_CONT27]]:
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z34array_section_no_length_map_clausePfi_l14(
+// CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z34array_section_no_length_map_clausePfi_l16(
 // CHECK-SAME: ptr noundef [[D:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 4
@@ -346,7 +360,7 @@ void array_section_no_length_map_clause(float *d, int index) {
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z34array_section_no_length_map_clausePfi_l19(
+// CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z34array_section_no_length_map_clausePfi_l23(
 // CHECK-SAME: ptr noundef [[D:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 4
@@ -359,7 +373,7 @@ void array_section_no_length_map_clause(float *d, int index) {
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z34array_section_no_length_map_clausePfi_l24(
+// CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z34array_section_no_length_map_clausePfi_l32(
 // CHECK-SAME: ptr noundef [[F:%.*]], i32 noundef [[INDEX:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[F_ADDR:%.*]] = alloca ptr, align 4
@@ -377,7 +391,7 @@ void array_section_no_length_map_clause(float *d, int index) {
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z34array_section_no_length_map_clausePfi_l29(
+// CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z34array_section_no_length_map_clausePfi_l43(
 // CHECK-SAME: ptr noundef [[F:%.*]], i32 noundef [[INDEX:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[F_ADDR:%.*]] = alloca ptr, align 4

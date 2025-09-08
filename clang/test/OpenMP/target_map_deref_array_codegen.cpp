@@ -28,8 +28,8 @@ void foo(int **t1d)
   // &t1d[0],    &t1d[0],    0,                 IMPLICIT | PARAM
   // &t1d[a][0], &t1d[a][b], sizeof(t1d[a][b]), TO | FROM
   // &t1d[a],    &t1d[a][b], sizeof(void*),     ATTACH
-  // a,          a,          sizeof(a),         LITERAL | PARAM
-  // b,          b,          sizeof(b),         LITERAL | PARAM
+  // (void*)a,   (void*)a,   sizeof(void*),     LITERAL | PARAM
+  // (void*)b,   (void*)b,   sizeof(void*),     LITERAL | PARAM
   #pragma omp target map(tofrom : (*(*(t1d+a)+b)))
     *(*(t1d+a)+b) = 4;
 }

@@ -17,47 +17,47 @@ void f1() {
 
 void f2() {
   // &ptr[0], &ptr[2], sizeof(ptr[2]), TO | FROM | PARAM
-  // &ptr, &ptr[2], sizeof(ptr), ATTACH
+  // &ptr,    &ptr[2], sizeof(ptr),    ATTACH
   #pragma omp target map(ptr[2])
     ptr[1] = 6;
 }
 
 void f3() {
-  // &ptr, &ptr, sizeof(ptr), TO | FROM | PARAM
+  // &ptr,    &ptr,    sizeof(ptr),        TO | FROM | PARAM
   // &ptr[0], &ptr[0], 2 * sizeof(ptr[0]), TO | FROM
-  // &ptr, &ptr[0], sizeof(ptr), ATTACH
+  // &ptr,    &ptr[0], sizeof(ptr),        ATTACH
   #pragma omp target map(ptr, ptr[0:2])
     ptr[1] = 7;
 }
 
 void f4() {
-  // &ptr, &ptr, sizeof(ptr), TO | FROM | PARAM
+  // &ptr,    &ptr,    sizeof(ptr),    TO | FROM | PARAM
   // &ptr[0], &ptr[2], sizeof(ptr[2]), TO | FROM
-  // &ptr, &ptr[2], sizeof(ptr), ATTACH
+  // &ptr,    &ptr[2], sizeof(ptr),    ATTACH
   #pragma omp target map(ptr, ptr[2])
     ptr[2] = 8;
 }
 
 void f5() {
-  // &ptr, &ptr, sizeof(ptr), TO | FROM | PARAM
+  // &ptr,    &ptr,    sizeof(ptr),    TO | FROM | PARAM
   // &ptr[0], &ptr[2], sizeof(ptr[2]), TO | FROM
-  // &ptr, &ptr[2], sizeof(ptr), ATTACH
+  // &ptr,    &ptr[2], sizeof(ptr),    ATTACH
   #pragma omp target map(ptr[2], ptr)
     ptr[2] = 9;
 }
 
 void f6() {
-  // &ptr, &ptr, sizeof(ptr), TO | FROM | PARAM
+  // &ptr,    &ptr,    sizeof(ptr),    TO | FROM | PARAM
   // &ptr[0], &ptr[2], sizeof(ptr[2]), TO | FROM
-  // &ptr, &ptr[2], sizeof(ptr), ATTACH
+  // &ptr,    &ptr[2], sizeof(ptr),    ATTACH
   #pragma omp target data map(ptr, ptr[2])
     ptr[2] = 10;
 }
 
 void f7() {
-  // &ptr, &ptr, sizeof(ptr), TO | FROM | PARAM
+  // &ptr,    &ptr,    sizeof(ptr),    TO | FROM | PARAM
   // &ptr[0], &ptr[2], sizeof(ptr[2]), TO | FROM
-  // &ptr, &ptr[2], sizeof(ptr), ATTACH
+  // &ptr,    &ptr[2], sizeof(ptr),    ATTACH
   #pragma omp target data map(ptr[2], ptr)
     ptr[2] = 11;
 }

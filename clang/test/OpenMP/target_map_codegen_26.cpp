@@ -100,9 +100,6 @@ void zero_size_section_and_private_maps (int ii){
 
 //  &(pa[0]), &pa[/*lb=*/0], /*size=*/0, TO | FROM | PARAM
 //  &pa, &pa[/*lb=*/0], sizeof(pa), ATTACH
-//
-// Can be optimized to:
-//  &pa[0], &pa[0], /*size=*/0, TO | FROM | PARAM
 
 // CK27-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK27-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
@@ -137,9 +134,6 @@ void zero_size_section_and_private_maps (int ii){
 
 //  &(pa[0]), &pa[/*lb=*/0], /*size=*/0, TO | FROM | PARAM
 //  &pa, &pa[/*lb=*/0], sizeof(pa), ATTACH
-//
-// Can be optimized to:
-//  &pa[0], &pa[0], /*size=*/0, TO | FROM | PARAM
 
 // CK27-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK27-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
@@ -174,9 +168,6 @@ void zero_size_section_and_private_maps (int ii){
 
 //  &pa[0], &pa[ii], /*size=*/0, TO | FROM | PARAM
 //  &pa, &pa[ii], sizeof(pa), ATTACH
-//
-// Can be optimized to:
-//  &pa[ii], &pa[ii], /*size=*/0, TO | FROM | PARAM
 
 // CK27-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK27-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2

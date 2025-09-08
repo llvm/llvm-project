@@ -23,36 +23,36 @@ void f1() {
 void f2() {
   S s, *ps;
   // &ps[0], &ps->y, sizeof(ps->y), TO | PARAM
-  // &ps, &ps->y, sizeof(ps), ATTACH
+  // &ps,    &ps->y, sizeof(ps),    ATTACH
   #pragma omp target map(to: ps->y)
     ps->y = 6;
 }
 
 void f3() {
   S s, *ps;
-  // &ps, &ps, sizeof(ps), TO | PARAM
+  // &ps,    &ps,    sizeof(ps),    TO | PARAM
   // &ps[0], &ps->y, sizeof(ps->y), TO
-  // &ps, &ps->y, sizeof(ps), ATTACH
+  // &ps,    &ps->y, sizeof(ps),    ATTACH
   #pragma omp target map(to: ps, ps->y)
     ps->y = 7;
 }
 
 void f4() {
   S s, *ps;
-  // &ps, &ps, sizeof(ps), TO | PARAM
+  // &ps,    &ps,    sizeof(ps),    TO | PARAM
   // &ps[0], &ps->y, sizeof(ps->y), TO
-  // &ps, &ps->y, sizeof(ps), ATTACH
+  // &ps,    &ps->y, sizeof(ps),    ATTACH
   #pragma omp target map(to: ps->y, ps)
     ps->y = 8;
 }
 
 void f5() {
   S s, *ps;
-  // &ps, &ps, sizeof(ps), TO | PARAM
+  // &ps,    &ps,      sizeof(ps),                    TO | PARAM
   // &ps[0], &ps[0].x, ((&ps[0].y + 1) - &ps[0].x)/8, ALLOC
-  // &ps[0], &ps->y, sizeof(ps->y), TO | MEMBER_OF(2)
-  // &ps[0], &ps->x, sizeof(ps->x), TO | MEMBER_OF(2)
-  // &ps, &ps[0].x, sizeof(ps), ATTACH
+  // &ps[0], &ps->y,   sizeof(ps->y),                 TO | MEMBER_OF(2)
+  // &ps[0], &ps->x,   sizeof(ps->x),                 TO | MEMBER_OF(2)
+  // &ps,    &ps[0].x, sizeof(ps),                    ATTACH
   #pragma omp target map(to: ps->y, ps, ps->x)
     ps->y = 9;
 }

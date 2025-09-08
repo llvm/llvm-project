@@ -492,7 +492,7 @@ int bar(int arg){
 // Region 00
 
 // &b[0], &b[1], 3 * sizeof(b[0]), TO | ALWAYS | CLOSE
-// &b, &b[1], sizeof(void*), ATTACH
+// &b,    &b[1], sizeof(void*),    ATTACH
 
 // CK5: br i1 %{{[^,]+}}, label %[[IFTHEN:[^,]+]], label %[[IFELSE:[^,]+]]
 // CK5: [[IFTHEN]]
