@@ -3361,37 +3361,37 @@ struct SCEVSignedMonotonicityChecker
 
   // TODO: Handle more cases.
   MonotonicityType visitAddExpr(const SCEVAddExpr *Expr) {
-    return unknownMonotonicity(Expr);
+    return checkInvarianceOnly(Expr);
   }
   MonotonicityType visitMulExpr(const SCEVMulExpr *Expr) {
-    return unknownMonotonicity(Expr);
+    return checkInvarianceOnly(Expr);
   }
   MonotonicityType visitPtrToIntExpr(const SCEVPtrToIntExpr *Expr) {
-    return unknownMonotonicity(Expr);
+    return checkInvarianceOnly(Expr);
   }
   MonotonicityType visitTruncateExpr(const SCEVTruncateExpr *Expr) {
-    return unknownMonotonicity(Expr);
+    return checkInvarianceOnly(Expr);
   }
   MonotonicityType visitUDivExpr(const SCEVUDivExpr *Expr) {
-    return unknownMonotonicity(Expr);
+    return checkInvarianceOnly(Expr);
   }
   MonotonicityType visitSMaxExpr(const SCEVSMaxExpr *Expr) {
-    return unknownMonotonicity(Expr);
+    return checkInvarianceOnly(Expr);
   }
   MonotonicityType visitUMaxExpr(const SCEVUMaxExpr *Expr) {
-    return unknownMonotonicity(Expr);
+    return checkInvarianceOnly(Expr);
   }
   MonotonicityType visitSMinExpr(const SCEVSMinExpr *Expr) {
-    return unknownMonotonicity(Expr);
+    return checkInvarianceOnly(Expr);
   }
   MonotonicityType visitUMinExpr(const SCEVUMinExpr *Expr) {
-    return unknownMonotonicity(Expr);
+    return checkInvarianceOnly(Expr);
   }
   MonotonicityType visitSequentialUMinExpr(const SCEVSequentialUMinExpr *Expr) {
-    return unknownMonotonicity(Expr);
+    return checkInvarianceOnly(Expr);
   }
   MonotonicityType visitCouldNotCompute(const SCEVCouldNotCompute *Expr) {
-    return unknownMonotonicity(Expr);
+    return checkInvarianceOnly(Expr);
   }
 
 private:
@@ -3402,7 +3402,11 @@ private:
   SCEVSignedMonotonicityChecker(ScalarEvolution *SE, const Loop *OutermostLoop,
                                 const Value *Ptr);
 
-  MonotonicityType unknownMonotonicity(const SCEV *Expr);
+  /// A helper to classify \p Expr as either Invariant or Unknown.
+  MonotonicityType checkInvarianceOnly(const SCEV *Expr);
+
+  /// Return true if \p Expr is loop-invariant with respect to the outermost
+  /// loop.
   bool isLoopInvariant(const SCEV *Expr) const;
 };
 
@@ -3464,7 +3468,7 @@ MonotonicityType SCEVSignedMonotonicityChecker::checkMonotonicity(
 }
 
 MonotonicityType
-SCEVSignedMonotonicityChecker::unknownMonotonicity(const SCEV *Expr) {
+SCEVSignedMonotonicityChecker::checkInvarianceOnly(const SCEV *Expr) {
   if (isLoopInvariant(Expr))
     return MonotonicityType::Invariant;
   LLVM_DEBUG(dbgs() << "Failed to prove monotonicity for: " << *Expr << "\n");
@@ -3478,18 +3482,18 @@ bool SCEVSignedMonotonicityChecker::isLoopInvariant(const SCEV *Expr) const {
 MonotonicityType
 SCEVSignedMonotonicityChecker::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
   if (!Expr->isAffine())
-    return unknownMonotonicity(Expr);
+    return checkInvarianceOnly(Expr);
 
   const SCEV *Start = Expr->getStart();
   const SCEV *Step = Expr->getStepRecurrence(*SE);
 
   MonotonicityType StartRes = visit(Start);
   if (StartRes == MonotonicityType::Unknown)
-    return unknownMonotonicity(Expr);
+    return checkInvarianceOnly(Expr);
 
   MonotonicityType StepRes = visit(Step);
   if (StepRes != MonotonicityType::Invariant)
-    return unknownMonotonicity(Expr);
+    return checkInvarianceOnly(Expr);
 
   // TODO: Enhance the inference here.
   if (!Expr->hasNoSignedWrap() && !NoWrapFromGEP) {
@@ -3497,13 +3501,13 @@ SCEVSignedMonotonicityChecker::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
       // If the coefficient can be positive value, ensure that the AddRec is
       // monotonically increasing.
       if (!SE->isKnownOnEveryIteration(ICmpInst::ICMP_SGE, Expr, Start))
-        return unknownMonotonicity(Expr);
+        return checkInvarianceOnly(Expr);
 
     if (!SE->isKnownPositive(Step))
       // If the coefficient can be positive value, ensure that the AddRec is
       // monotonically decreasing.
       if (!SE->isKnownOnEveryIteration(ICmpInst::ICMP_SLE, Expr, Start))
-        return unknownMonotonicity(Expr);
+        return checkInvarianceOnly(Expr);
   }
 
   bool IsKnownNonZero = SE->isKnownNonZero(Step);
@@ -3536,7 +3540,7 @@ MonotonicityType SCEVSignedMonotonicityChecker::visitSignExtendExpr(
 MonotonicityType
 SCEVSignedMonotonicityChecker::visitUnknown(const SCEVUnknown *Expr) {
   if (!isLoopInvariant(Expr))
-    return unknownMonotonicity(Expr);
+    return checkInvarianceOnly(Expr);
   return MonotonicityType::Invariant;
 }
 
