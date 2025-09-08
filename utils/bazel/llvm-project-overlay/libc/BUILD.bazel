@@ -122,6 +122,16 @@ libc_support_library(
 ################################# Include Files ################################
 
 libc_support_library(
+    name = "llvm_libc_macros_complex_macros",
+    hdrs = [
+        "include/llvm-libc-macros/cfloat128-macros.h",
+        "include/llvm-libc-macros/cfloat16-macros.h",
+        "include/llvm-libc-macros/complex-macros.h",
+    ],
+    deps = [":llvm_libc_macros_float_macros"],
+)
+
+libc_support_library(
     name = "llvm_libc_macros_math_macros",
     hdrs = ["include/llvm-libc-macros/math-macros.h"],
     deps = [":llvm_libc_macros_limits_macros"],
@@ -168,12 +178,16 @@ libc_support_library(
 libc_support_library(
     name = "llvm_libc_types_cfloat128",
     hdrs = ["include/llvm-libc-types/cfloat128.h"],
-    deps = [":llvm_libc_macros_float_macros"],
+    deps = [
+        ":llvm_libc_macros_complex_macros",
+        ":llvm_libc_macros_float_macros",
+    ],
 )
 
 libc_support_library(
     name = "llvm_libc_types_cfloat16",
     hdrs = ["include/llvm-libc-types/cfloat16.h"],
+    deps = [":llvm_libc_macros_complex_macros"],
 )
 
 libc_support_library(
@@ -3735,6 +3749,14 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "fmodbf16",
+    additional_deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_generic_fmod",
+    ],
+)
+
+libc_math_function(
     name = "fmodf",
     additional_deps = [
         ":__support_fputil_generic_fmod",
@@ -5245,6 +5267,16 @@ libc_function(
     name = "strtok",
     srcs = ["src/string/strtok.cpp"],
     hdrs = ["src/string/strtok.h"],
+    deps = [
+        ":__support_common",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strtok_r",
+    srcs = ["src/string/strtok_r.cpp"],
+    hdrs = ["src/string/strtok_r.h"],
     deps = [
         ":__support_common",
         ":string_utils",
