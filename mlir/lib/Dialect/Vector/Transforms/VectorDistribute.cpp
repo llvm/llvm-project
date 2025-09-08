@@ -1794,14 +1794,18 @@ struct WarpOpScfIfOp : public WarpDistributionPattern {
       return failure();
 
     // The new `WarpOp` groups yields values in following order:
-    // 1. Escaping values then branch
-    // 2. Escaping values else branch
-    // 3. All non-`ifOp` yielded values.
-    SmallVector<Value> newWarpOpYieldValues{escapingValuesThen.begin(),
-                                            escapingValuesThen.end()};
+    // 1. Branch condition
+    // 2. Escaping values then branch
+    // 3. Escaping values else branch
+    // 4. All non-`ifOp` yielded values.
+    SmallVector<Value> newWarpOpYieldValues{ifOp.getCondition()};
+    newWarpOpYieldValues.append(escapingValuesThen.begin(),
+                                escapingValuesThen.end());
     newWarpOpYieldValues.append(escapingValuesElse.begin(),
                                 escapingValuesElse.end());
-    SmallVector<Type> newWarpOpDistTypes = escapingValueDistTypesThen;
+    SmallVector<Type> newWarpOpDistTypes{ifOp.getCondition().getType()};
+    newWarpOpDistTypes.append(escapingValueDistTypesThen.begin(),
+                              escapingValueDistTypesThen.end());
     newWarpOpDistTypes.append(escapingValueDistTypesElse.begin(),
                               escapingValueDistTypesElse.end());
 
@@ -1815,7 +1819,6 @@ struct WarpOpScfIfOp : public WarpDistributionPattern {
     // Create the new `WarpOp` with the updated yield values and types.
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndReplaceReturns(
         rewriter, warpOp, newWarpOpYieldValues, newWarpOpDistTypes);
-
     // `ifOp` returns the result of the inner warp op.
     SmallVector<Type> newIfOpDistResTypes;
     for (auto [i, res] : llvm::enumerate(ifOp.getResults())) {
@@ -1831,14 +1834,15 @@ struct WarpOpScfIfOp : public WarpDistributionPattern {
     // Create a new `IfOp` outside the new `WarpOp` region.
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPointAfter(newWarpOp);
-    auto newIfOp = scf::IfOp::create(rewriter, ifOp.getLoc(),
-                                     newIfOpDistResTypes, ifOp.getCondition(),
-                                     static_cast<bool>(ifOp.thenBlock()),
-                                     static_cast<bool>(ifOp.elseBlock()));
+    auto newIfOp = scf::IfOp::create(
+        rewriter, ifOp.getLoc(), newIfOpDistResTypes, newWarpOp.getResult(0),
+        static_cast<bool>(ifOp.thenBlock()),
+        static_cast<bool>(ifOp.elseBlock()));
 
     auto processBranch = [&](Block *oldIfBranch, Block *newIfBranch,
                              llvm::SmallSetVector<Value, 32> &escapingValues,
-                             SmallVector<Type> &escapingValueInputTypes) {
+                             SmallVector<Type> &escapingValueInputTypes,
+                             size_t warpResRangeStart) {
       OpBuilder::InsertionGuard g(rewriter);
       if (!newIfBranch)
         return;
@@ -1846,8 +1850,8 @@ struct WarpOpScfIfOp : public WarpDistributionPattern {
       llvm::SmallDenseMap<Value, int64_t> escapeValToBlockArgIndex;
       SmallVector<Value> innerWarpInputVals;
       SmallVector<Type> innerWarpInputTypes;
-      for (size_t i = 0; i < escapingValues.size(); ++i) {
-        innerWarpInputVals.push_back(newWarpOp.getResult(i));
+      for (size_t i = 0; i < escapingValues.size(); ++i, ++warpResRangeStart) {
+        innerWarpInputVals.push_back(newWarpOp.getResult(warpResRangeStart));
         escapeValToBlockArgIndex[escapingValues[i]] =
             innerWarpInputTypes.size();
         innerWarpInputTypes.push_back(escapingValueInputTypes[i]);
@@ -1886,11 +1890,11 @@ struct WarpOpScfIfOp : public WarpDistributionPattern {
     };
     processBranch(&ifOp.getThenRegion().front(),
                   &newIfOp.getThenRegion().front(), escapingValuesThen,
-                  escapingValueInputTypesThen);
+                  escapingValueInputTypesThen, 1);
     if (!ifOp.getElseRegion().empty())
       processBranch(&ifOp.getElseRegion().front(),
                     &newIfOp.getElseRegion().front(), escapingValuesElse,
-                    escapingValueInputTypesElse);
+                    escapingValueInputTypesElse, 1 + escapingValuesThen.size());
     // Update the users of `<- WarpOp.yield <- IfOp.yield` to use the new `IfOp`
     // result.
     for (auto [origIdx, newIdx] : ifResultMapping)
