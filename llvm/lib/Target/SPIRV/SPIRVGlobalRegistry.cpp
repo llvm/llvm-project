@@ -195,11 +195,15 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeInt(unsigned Width,
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOpTypeFloat(uint32_t Width,
-                                               MachineIRBuilder &MIRBuilder) {
+                                               MachineIRBuilder &MIRBuilder, bool isBfloatTy) {
   return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-    return MIRBuilder.buildInstr(SPIRV::OpTypeFloat)
+    auto MIB = MIRBuilder.buildInstr(SPIRV::OpTypeFloat)
         .addDef(createTypeVReg(MIRBuilder))
         .addImm(Width);
+    if(isBfloatTy){
+      MIB.addImm(0);
+    }
+    return MIB;
   });
 }
 
@@ -1042,7 +1046,7 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
                       : getOpTypeInt(Width, MIRBuilder, false);
   }
   if (Ty->isFloatingPointTy())
-    return getOpTypeFloat(Ty->getPrimitiveSizeInBits(), MIRBuilder);
+    return getOpTypeFloat(Ty->getPrimitiveSizeInBits(), MIRBuilder, Ty->isBFloatTy());
   if (Ty->isVoidTy())
     return getOpTypeVoid(MIRBuilder);
   if (Ty->isVectorTy()) {
@@ -1122,19 +1126,7 @@ SPIRVType *SPIRVGlobalRegistry::restOfCreateSPIRVType(
   SPIRVType *SpirvType = createSPIRVType(Ty, MIRBuilder, AccessQual,
                                          ExplicitLayoutRequired, EmitIR);
   TypesInProcessing.erase(Ty);
-
-  // Record the FPVariant of the floating-point registers in the
-  // VRegFPVariantMap.
-  MachineFunction *MF = &MIRBuilder.getMF();
-  Register TypeReg = getSPIRVTypeID(SpirvType);
-  if (Ty->isFloatingPointTy()) {
-    if (Ty->isBFloatTy()) {
-      VRegFPVariantMap[MF][TypeReg] = FPVariant::BRAIN_FLOAT;
-    } else {
-      VRegFPVariantMap[MF][TypeReg] = FPVariant::IEEE_FLOAT;
-    }
-  }
-  VRegToTypeMap[MF][TypeReg] = SpirvType;
+  VRegToTypeMap[&MIRBuilder.getMF()][getSPIRVTypeID(SpirvType)] = SpirvType;
 
   // TODO: We could end up with two SPIR-V types pointing to the same llvm type.
   // Is that a problem?
@@ -1691,15 +1683,11 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVType(unsigned BitWidth,
   MachineIRBuilder MIRBuilder(DepMBB, DepMBB.getFirstNonPHI());
   const MachineInstr *NewMI =
       createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-        auto MIB = BuildMI(MIRBuilder.getMBB(), *MIRBuilder.getInsertPt(),
-                           MIRBuilder.getDL(), TII.get(SPIRVOPcode))
-                       .addDef(createTypeVReg(CurMF->getRegInfo()))
-                       .addImm(BitWidth);
-
-        if (SPIRVOPcode != SPIRV::OpTypeFloat)
-          MIB.addImm(0);
-
-        return MIB;
+        return BuildMI(MIRBuilder.getMBB(), *MIRBuilder.getInsertPt(),
+                       MIRBuilder.getDL(), TII.get(SPIRVOPcode))
+            .addDef(createTypeVReg(CurMF->getRegInfo()))
+            .addImm(BitWidth)
+            .addImm(0);
       });
   add(Ty, false, NewMI);
   return finishCreatingSPIRVType(Ty, NewMI);
@@ -2103,18 +2091,4 @@ bool SPIRVGlobalRegistry::hasBlockDecoration(SPIRVType *Type) const {
       return true;
   }
   return false;
-}
-
-SPIRVGlobalRegistry::FPVariant
-SPIRVGlobalRegistry::getFPVariantForVReg(Register VReg,
-                                         const MachineFunction *MF) {
-  const MachineFunction *Func = MF ? MF : CurMF;
-  auto FuncIt = VRegFPVariantMap.find(Func);
-  if (FuncIt != VRegFPVariantMap.end()) {
-    const DenseMap<Register, FPVariant> &VRegMap = FuncIt->second;
-    auto VRegIt = VRegMap.find(VReg);
-    if (VRegIt != VRegMap.end())
-      return VRegIt->second;
-  }
-  return FPVariant::NONE;
 }

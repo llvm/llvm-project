@@ -1262,11 +1262,10 @@ void addInstrRequirements(const MachineInstr &MI,
     break;
   }
   case SPIRV::OpDot: {
-    const MachineFunction *MF = MI.getMF();
     SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
-    SPIRVGlobalRegistry::FPVariant FPV =
-        GR->getFPVariantForVReg(MI.getOperand(1).getReg(), MF);
-    if (FPV == SPIRVGlobalRegistry::FPVariant::BRAIN_FLOAT) {
+    const MachineFunction *MF = MI.getMF();
+    SPIRVType *RegType = GR->getSPIRVTypeForVReg(MI.getOperand(0).getReg(), MF);
+    if (RegType->getNumOperands() == 3) {
       Reqs.addCapability(SPIRV::Capability::BFloat16DotProductKHR);
     }
     break;
@@ -1277,11 +1276,7 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::Float64);
     else if (BitWidth == 16) {
       Reqs.addCapability(SPIRV::Capability::Float16);
-      SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
-      const MachineFunction *MF = MI.getMF();
-      SPIRVGlobalRegistry::FPVariant FPV =
-          GR->getFPVariantForVReg(MI.getOperand(0).getReg(), MF);
-      if (FPV == SPIRVGlobalRegistry::FPVariant::BRAIN_FLOAT) {
+      if (MI.getNumOperands() == 3) {
         if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_bfloat16))
           report_fatal_error("OpTypeFloat type with bfloat requires the "
                              "following SPIR-V extension: SPV_KHR_bfloat16",
@@ -1623,11 +1618,10 @@ void addInstrRequirements(const MachineInstr &MI,
           "following SPIR-V extension: SPV_KHR_cooperative_matrix",
           false);
     Reqs.addExtension(SPIRV::Extension::SPV_KHR_cooperative_matrix);
-    const MachineFunction *MF = MI.getMF();
     SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
-    SPIRVGlobalRegistry::FPVariant FPV =
-        GR->getFPVariantForVReg(MI.getOperand(1).getReg(), MF);
-    if (FPV == SPIRVGlobalRegistry::FPVariant::BRAIN_FLOAT) {
+    const MachineFunction *MF = MI.getMF();
+    SPIRVType *RegType = GR->getSPIRVTypeForVReg(MI.getOperand(0).getReg(), MF);
+    if (RegType->getNumOperands() == 3) {
       Reqs.addCapability(SPIRV::Capability::BFloat16CooperativeMatrixKHR);
     } else {
       Reqs.addCapability(SPIRV::Capability::CooperativeMatrixKHR);

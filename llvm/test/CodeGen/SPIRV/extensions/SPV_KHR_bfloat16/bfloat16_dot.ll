@@ -4,7 +4,7 @@
 ; CHECK-DAG: OpExtension "SPV_KHR_bfloat16"
 ; CHECK-DAG: OpCapability BFloat16TypeKHR
 ; CHECK-DAG: OpCapability BFloat16DotProductKHR
-; CHECK: %[[#BFLOAT:]] = OpTypeFloat 16
+; CHECK: %[[#BFLOAT:]] = OpTypeFloat 16 0
 ; CHECK: %[[#]] = OpTypeVector %[[#BFLOAT]] 2
 ; CHECK: OpDot
 

@@ -4,7 +4,7 @@
 ; CHECK-DAG: OpExtension "SPV_KHR_bfloat16"
 ; CHECK-DAG: OpCapability BFloat16TypeKHR
 ; CHECK-DAG: OpCapability BFloat16CooperativeMatrixKHR
-; CHECK: %[[#BFLOAT:]] = OpTypeFloat 16
+; CHECK: %[[#BFLOAT:]] = OpTypeFloat 16 0
 ; CHECK: %[[#MatTy:]] = OpTypeCooperativeMatrixKHR %[[#BFLOAT]]  %[[#]] %[[#]] %[[#]] %[[#]]
 ; CHECK: OpCompositeConstruct %[[#MatTy]] %[[#]]
 
