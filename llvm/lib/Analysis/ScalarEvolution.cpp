@@ -3220,11 +3220,12 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
       // D is a multiple of C2, and C1 is a multiple of C1.
       const SCEV *D;
       const SCEVConstant *C2;
-      if (LHSC->getAPInt().isPowerOf2() &&
+      APInt LHSV = LHSC->getAPInt();
+      if (LHSV.isPowerOf2() &&
           match(Ops[1], m_scev_UDiv(m_SCEV(D), m_SCEVConstant(C2))) &&
           C2->getAPInt().isPowerOf2() &&
-          getMinTrailingZeros(LHSC) >= getMinTrailingZeros(C2) &&
-          getMinTrailingZeros(LHSC) <= getMinTrailingZeros(D)) {
+          LHSV.logBase2() >= C2->getAPInt().logBase2() &&
+          LHSV.logBase2() <= getMinTrailingZeros(D)) {
         return getMulExpr(getUDivExpr(LHSC, C2), D);
       }
     }
