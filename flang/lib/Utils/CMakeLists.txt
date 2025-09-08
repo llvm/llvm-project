@@ -14,7 +14,12 @@ add_flang_library(FortranUtils
 
   LINK_LIBS
   FIRDialect
+  FIRBuilder
+  HLFIRDialect
 
   MLIR_LIBS
+  MLIRSupport
   MLIROpenMPDialect
+  MLIRTransformUtils
+  MLIRArithDialect
 )
