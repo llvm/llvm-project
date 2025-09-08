@@ -915,7 +915,7 @@ void CachingOnDiskFileSystemImpl::TreeBuilder::pushEntry(
 }
 
 Error CachingOnDiskFileSystemImpl::TreeBuilder::push(const Twine &Path) {
-  Storage = PathStorage(Path);
+  Storage.assign(Path);
   StringRef PathRef = Storage.Path;
 
   // Look for Path without following symlinks. Failure here indicates that Path
