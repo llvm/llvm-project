@@ -4438,8 +4438,8 @@ add_fp_unittest(
   HDRS
     FModTest.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.fmodf
     libc.src.__support.FPUtil.fenv_impl
   # FIXME: Currently fails on the GPU build.
@@ -4455,8 +4455,8 @@ add_fp_unittest(
   HDRS
     FModTest.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.fmod
     libc.src.__support.FPUtil.fenv_impl
   # FIXME: Currently fails on the GPU build.
@@ -4472,8 +4472,8 @@ add_fp_unittest(
   HDRS
     FModTest.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.fmodl
     libc.src.__support.FPUtil.fenv_impl
   # FIXME: Currently fails on the GPU build.
@@ -4489,8 +4489,8 @@ add_fp_unittest(
   HDRS
     FModTest.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.fmodf16
     libc.src.__support.FPUtil.fenv_impl
   # FIXME: Currently fails on the GPU build.
@@ -4506,8 +4506,8 @@ add_fp_unittest(
   HDRS
     FModTest.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.fmodf128
     libc.src.__support.FPUtil.fenv_impl
   # FIXME: Currently fails on the GPU build.
@@ -4523,8 +4523,8 @@ add_fp_unittest(
   HDRS
     FModTest.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.fmodbf16
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.fenv_impl
