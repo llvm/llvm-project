@@ -94,13 +94,14 @@ define i32 @two(i1 %cond, i32 %x, i32 %x2) {
 ; CHECK-LABEL: @two(
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
 ; CHECK:       A:
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X:%.*]]
 ; CHECK-NEXT:    br label [[C:%.*]]
 ; CHECK:       B:
+; CHECK-NEXT:    [[X2_FR:%.*]] = freeze i32 [[X2:%.*]]
 ; CHECK-NEXT:    br label [[C]]
 ; CHECK:       C:
-; CHECK-NEXT:    [[Y:%.*]] = phi i32 [ [[X:%.*]], [[A]] ], [ [[X2:%.*]], [[B]] ]
-; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i32 [[Y]]
-; CHECK-NEXT:    ret i32 [[Y_FR]]
+; CHECK-NEXT:    [[Y:%.*]] = phi i32 [ [[X_FR]], [[A]] ], [ [[X2_FR]], [[B]] ]
+; CHECK-NEXT:    ret i32 [[Y]]
 ;
   br i1 %cond, label %A, label %B
 A:
