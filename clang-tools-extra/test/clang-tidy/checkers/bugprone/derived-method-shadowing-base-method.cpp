@@ -12,7 +12,7 @@ class A : public Base
 {
 public:
     void method();
-// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'A::method' hides same method in 'Base' [bugprone-derived-method-shadowing-base-method]
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'A::method' shadows method with the same name in class 'Base' [bugprone-derived-method-shadowing-base-method]
 };
 
 // only declaration should be checked
@@ -36,7 +36,7 @@ class E : public D
 {
 public:
     void method();
-// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'E::method' hides same method in 'Base' [bugprone-derived-method-shadowing-base-method]
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'E::method' shadows method with the same name in class 'Base' [bugprone-derived-method-shadowing-base-method]
 };
 
 class H : public Base
@@ -51,7 +51,7 @@ class I : public Base
 public:
     // test with inline implementation
     void method()
-// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'I::method' hides same method in 'Base' [bugprone-derived-method-shadowing-base-method]
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'I::method' shadows method with the same name in class 'Base' [bugprone-derived-method-shadowing-base-method]
     {
 
     }
@@ -82,10 +82,10 @@ class L : public Base
 public:
 // not same signature (take const ref) but still ambiguous
     void methodWithArg(int const& I);
-// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'L::methodWithArg' hides same method in 'Base' [bugprone-derived-method-shadowing-base-method]
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'L::methodWithArg' shadows method with the same name in class 'Base' [bugprone-derived-method-shadowing-base-method]
 
     void methodWithArg(int const I);
-// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'L::methodWithArg' hides same method in 'Base' [bugprone-derived-method-shadowing-base-method]
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'L::methodWithArg' shadows method with the same name in class 'Base' [bugprone-derived-method-shadowing-base-method]
 
     void methodWithArg(int *I);
     void methodWithArg(int const* I);
@@ -119,6 +119,6 @@ struct O: public std::thread{
 struct P: public std::thread, Base{
     void join();
     void method();
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'P::method' hides same method in 'Base' [bugprone-derived-method-shadowing-base-method]
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'P::method' shadows method with the same name in class 'Base' [bugprone-derived-method-shadowing-base-method]
 
 };
