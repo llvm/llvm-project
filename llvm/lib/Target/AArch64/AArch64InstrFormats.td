@@ -1894,6 +1894,21 @@ def btihint_op : Operand<i32> {
   }];
 }
 
+def CMHPriorityHintOperand : AsmOperandClass {
+  let Name = "CMHPriorityHint";
+  let ParserMethod = "tryParseCMHPriorityHint";
+}
+
+def CMHPriorityHint_op : Operand<i32> {
+  let ParserMatchClass = CMHPriorityHintOperand;
+  let PrintMethod = "printCMHPriorityHintOp";
+  let MCOperandPredicate = [{
+    if (!MCOp.isImm())
+      return false;
+    return AArch64CMHPriorityHint::lookupCMHPriorityHintByEncoding(MCOp.getImm()) != nullptr;
+  }];
+}
+
 class MRSI : RtSystemI<1, (outs GPR64:$Rt), (ins mrs_sysreg_op:$systemreg),
                        "mrs", "\t$Rt, $systemreg"> {
   bits<16> systemreg;
@@ -4634,6 +4649,48 @@ multiclass StorePairOffset<bits<2> opc, bit V, RegisterOperand regtype,
   def : InstAlias<asm # "\t$Rt, $Rt2, [$Rn]",
                   (!cast<Instruction>(NAME # "i") regtype:$Rt, regtype:$Rt2,
                                                   GPR64sp:$Rn, 0)>;
+}
+
+class BaseLoadStoreAcquirePairOffset<bits<4> opc, bit L, dag oops, dag iops,
+                              string asm>
+    : I<oops, iops, asm, "\t$Rt, $Rt2, [$Rn, #0]", "", []> {
+  bits<5> Rt;
+  bits<5> Rt2;
+  bits<5> Rn;
+  let Inst{31-23} = 0b110110010;
+  let Inst{22}    = L;
+  let Inst{21}    = 0b0;
+  let Inst{20-16} = Rt2;
+  let Inst{15-12} = opc;
+  let Inst{11-10} = 0b10;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Rt;
+}
+
+multiclass LoadAcquirePairOffset<bits<4> opc, string asm> {
+  let hasSideEffects = 0, mayStore = 0, mayLoad = 1 in
+  def i : BaseLoadStoreAcquirePairOffset<opc, 0b1,
+                                  (outs GPR64:$Rt, GPR64:$Rt2),
+                                  (ins GPR64sp:$Rn), asm>,
+          Sched<[WriteAtomic, WriteLDHi]>;
+
+  def : InstAlias<asm # "\t$Rt, $Rt2, [$Rn]",
+                  (!cast<Instruction>(NAME # "i") GPR64:$Rt, GPR64:$Rt2,
+                                                  GPR64sp:$Rn)>;
+}
+
+
+multiclass StoreAcquirePairOffset<bits<4> opc, string asm> {
+  let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
+  def i : BaseLoadStoreAcquirePairOffset<opc, 0b0, (outs),
+                                  (ins GPR64:$Rt, GPR64:$Rt2,
+                                       GPR64sp:$Rn),
+                                  asm>,
+          Sched<[WriteSTP]>;
+
+  def : InstAlias<asm # "\t$Rt, $Rt2, [$Rn]",
+                  (!cast<Instruction>(NAME # "i") GPR64:$Rt, GPR64:$Rt2,
+                                                  GPR64sp:$Rn)>;
 }
 
 // (pre-indexed)
@@ -13226,4 +13283,25 @@ multiclass SIMDThreeSameVectorFP8MatrixMul<string asm>{
     def v4f32: BaseSIMDThreeSameVectorFP8MatrixMul<asm, 0b10, ".4s">{
       let Predicates = [HasNEON, HasF8F32MM];
     }
+}
+
+//----------------------------------------------------------------------------
+// Contention Management Hints - FEAT_CMH
+//----------------------------------------------------------------------------
+
+class SHUHInst<string asm> : I<
+    (outs),
+    (ins CMHPriorityHint_op:$priority),
+    asm, "\t$priority", "", []>, Sched<[]> {
+  bits<1> priority;
+  let Inst{31-12} = 0b11010101000000110010;
+  let Inst{11-8}  = 0b0110;
+  let Inst{7-6}   = 0b01;
+  let Inst{5}     = priority;
+  let Inst{4-0}   = 0b11111;
+}
+
+multiclass SHUH<string asm> {
+  def NAME : SHUHInst<asm>;
+  def      : InstAlias<asm, (!cast<Instruction>(NAME) 0), 1>;
 }

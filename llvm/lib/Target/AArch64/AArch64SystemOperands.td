@@ -813,6 +813,21 @@ def : BTI<"j",  0b100>;
 def : BTI<"jc", 0b110>;
 
 //===----------------------------------------------------------------------===//
+// CMHPriority instruction options.
+//===----------------------------------------------------------------------===//
+
+class CMHPriorityHint<string name, bits<1> encoding> : SearchableTable {
+  let SearchableFields = ["Name", "Encoding"];
+  let EnumValueField = "Encoding";
+
+  string Name = name;
+  bits<1> Encoding;
+  let Encoding = encoding;
+}
+
+def : CMHPriorityHint<"ph", 0b1>;
+
+//===----------------------------------------------------------------------===//
 // TLBI (translation lookaside buffer invalidate) instruction options.
 //===----------------------------------------------------------------------===//
 

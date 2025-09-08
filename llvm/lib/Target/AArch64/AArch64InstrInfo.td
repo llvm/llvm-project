@@ -242,6 +242,11 @@ def HasLSUI          : Predicate<"Subtarget->hasLSUI()">,
 def HasOCCMO         : Predicate<"Subtarget->hasOCCMO()">,
                        AssemblerPredicateWithAll<(all_of FeatureOCCMO), "occmo">;
 
+def HasCMH          : Predicate<"Subtarget->hasCMH()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureCMH), "cmh">;
+def HasLSCP         : Predicate<"Subtarget->hasLSCP()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureLSCP), "lscp">;
+
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
 def HasSVE_or_SME
@@ -3691,6 +3696,12 @@ def UDF : UDFType<0, "udf">;
 //===----------------------------------------------------------------------===//
 // Load instructions.
 //===----------------------------------------------------------------------===//
+
+let Predicates = [HasLSCP] in {
+defm LDAP  : LoadAcquirePairOffset<0b0101, "ldap">;
+defm LDAPP : LoadAcquirePairOffset<0b0111, "ldapp">;
+defm STLP  : StoreAcquirePairOffset<0b0101, "stlp">;
+}
 
 // Pair (indexed, offset)
 defm LDPW : LoadPairOffset<0b00, 0, GPR32z, simm7s4, "ldp">;
@@ -11246,6 +11257,14 @@ let Predicates = [HasLSFE] in {
 
 let Uses = [FPMR, FPCR] in
 defm FMMLA : SIMDThreeSameVectorFP8MatrixMul<"fmmla">;
+
+//===----------------------------------------------------------------------===//
+// Contention Management Hints (FEAT_CMH)
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasCMH] in {
+  defm SHUH  : SHUH<"shuh">;      // Shared Update Hint instruction
+}
 
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"
