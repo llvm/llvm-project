@@ -723,13 +723,15 @@ void mlir::spirv::ConstantOp::getAsmResultNames(
   IntegerType intTy = llvm::dyn_cast<IntegerType>(type);
 
   if (IntegerAttr intCst = llvm::dyn_cast<IntegerAttr>(getValue())) {
-    if (intTy && intTy.getWidth() == 1) {
+    assert(intTy);
+
+    if (intTy.getWidth() == 1) {
       return setNameFn(getResult(), (intCst.getInt() ? "true" : "false"));
     }
 
-    if (intTy && intTy.isSignless()) {
+    if (intTy.isSignless()) {
       specialName << intCst.getInt();
-    } else if (intTy && intTy.isUnsigned()) {
+    } else if (intTy.isUnsigned()) {
       specialName << intCst.getUInt();
     } else {
       specialName << intCst.getSInt();
