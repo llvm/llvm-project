@@ -5574,7 +5574,7 @@ private:
       if (auto *SD = dyn_cast<ScheduleData>(Data)) {
         SD->setScheduled(/*Scheduled=*/true);
         LLVM_DEBUG(dbgs() << "SLP:   schedule " << *SD << "\n");
-        SmallVector<ScheduleBundle> PseudoBundles;
+        SmallVector<std::unique_ptr<ScheduleBundle>> PseudoBundles;
         SmallVector<ScheduleBundle *> Bundles;
         Instruction *In = SD->getInst();
         if (R.isVectorized(In)) {
@@ -5583,10 +5583,11 @@ private:
             if (!isa<ExtractValueInst, ExtractElementInst, CallBase>(In) &&
                 In->getNumOperands() != TE->getNumOperands())
               continue;
-            ScheduleBundle &Bundle = PseudoBundles.emplace_back();
-            Bundle.setTreeEntry(TE);
-            Bundle.add(SD);
-            Bundles.push_back(&Bundle);
+            auto &BundlePtr =
+                PseudoBundles.emplace_back(std::make_unique<ScheduleBundle>());
+            BundlePtr->setTreeEntry(TE);
+            BundlePtr->add(SD);
+            Bundles.push_back(BundlePtr.get());
           }
         }
         ProcessBundleMember(SD, Bundles);
