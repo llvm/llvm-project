@@ -577,7 +577,10 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
       getCIRGenModule().errorNYI(bodyRange, "CUDA kernel");
     } else if (isa<CXXMethodDecl>(funcDecl) &&
                cast<CXXMethodDecl>(funcDecl)->isLambdaStaticInvoker()) {
-      getCIRGenModule().errorNYI(bodyRange, "Lambda static invoker");
+      // The lambda static invoker function is special, because it forwards or
+      // clones the body of the function call operator (but is actually
+      // static).
+      emitLambdaStaticInvokeBody(cast<CXXMethodDecl>(funcDecl));
     } else if (funcDecl->isDefaulted() && isa<CXXMethodDecl>(funcDecl) &&
                (cast<CXXMethodDecl>(funcDecl)->isCopyAssignmentOperator() ||
                 cast<CXXMethodDecl>(funcDecl)->isMoveAssignmentOperator())) {
