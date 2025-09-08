@@ -1367,6 +1367,12 @@ def PROBED_STACKALLOC_DYN : Pseudo<(outs),
 } // Defs = [SP, NZCV], Uses = [SP] in
 } // hasSideEffects = 1, isCodeGenOnly = 1
 
+// Pseudo-instruction that compares the current SVE vector length (VL) with the
+// streaming vector length (SVL). If the two lengths do not match, the check
+// lowers to a `brk`, causing a trap.
+let hasSideEffects = 1, isCodeGenOnly = 1, usesCustomInserter = 1 in
+def CHECK_MATCHING_VL : Pseudo<(outs), (ins), []>, Sched<[]>;
+
 let isReMaterializable = 1, isCodeGenOnly = 1 in {
 // FIXME: The following pseudo instructions are only needed because remat
 // cannot handle multiple instructions.  When that changes, they can be
