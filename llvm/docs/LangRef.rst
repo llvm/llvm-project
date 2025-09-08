@@ -8705,7 +8705,7 @@ Each library specifier will be handled independently by the consuming linker.
 The effect of the library specifiers are defined by the consuming linker.
 
 '``llvm.errno.tbaa``' Named Metadata
-=============================
+====================================
 
 The module-level ``!llvm.errno.tbaa`` metadata specifies the TBAA nodes used
 for accessing ``errno``. These nodes are guaranteed to represent int-compatible
