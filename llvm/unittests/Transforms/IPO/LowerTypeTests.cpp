@@ -51,10 +51,7 @@ TEST(LowerTypeTests, BitSetBuilder) {
   };
 
   for (auto &&T : BSBTests) {
-    BitSetBuilder BSB;
-    for (auto Offset : T.Offsets)
-      BSB.addOffset(Offset);
-
+    BitSetBuilder BSB(T.Offsets);
     BitSetInfo BSI = BSB.build();
 
     EXPECT_EQ(T.Bits, BSI.Bits);
