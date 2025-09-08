@@ -399,7 +399,7 @@ define amdgpu_kernel void @v_fneg_fabs_bf16(ptr addrspace(1) %out, ptr addrspace
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[2:3]
+; GFX11-TRUE16-NEXT:    global_load_u16 v0, v1, s[2:3]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_or_b32_e32 v0, 0x8000, v0
 ; GFX11-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]

@@ -6,7 +6,7 @@ define void @spill_i16_alu() {
 ; GCN-TRUE16-LABEL: spill_i16_alu:
 ; GCN-TRUE16:       ; %bb.0: ; %entry
 ; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-TRUE16-NEXT:    scratch_load_d16_b16 v0, off, s32 glc dlc
+; GCN-TRUE16-NEXT:    scratch_load_u16 v0, off, s32 glc dlc
 ; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-TRUE16-NEXT:    v_add_nc_u16 v0.l, 0x7b, v0.l
 ; GCN-TRUE16-NEXT:    scratch_store_b16 off, v0, s32 offset:2 ; 2-byte Folded Spill
@@ -52,13 +52,13 @@ define void @spill_i16_alu_two_vals() {
 ; GCN-TRUE16-LABEL: spill_i16_alu_two_vals:
 ; GCN-TRUE16:       ; %bb.0: ; %entry
 ; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-TRUE16-NEXT:    scratch_load_d16_b16 v0, off, s32 glc dlc
+; GCN-TRUE16-NEXT:    scratch_load_u16 v0, off, s32 glc dlc
 ; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-TRUE16-NEXT:    v_add_nc_u16 v0.l, 0x7b, v0.l
 ; GCN-TRUE16-NEXT:    scratch_store_b16 off, v0, s32 offset:6 ; 2-byte Folded Spill
 ; GCN-TRUE16-NEXT:    ;;#ASMSTART
 ; GCN-TRUE16-NEXT:    ;;#ASMEND
-; GCN-TRUE16-NEXT:    scratch_load_d16_b16 v0, off, s32 offset:4 glc dlc
+; GCN-TRUE16-NEXT:    scratch_load_u16 v0, off, s32 offset:4 glc dlc
 ; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-TRUE16-NEXT:    scratch_load_d16_hi_b16 v0, off, s32 offset:6 ; 2-byte Folded Reload
 ; GCN-TRUE16-NEXT:    v_add_nc_u16 v0.l, 0x7b, v0.l
@@ -113,33 +113,19 @@ entry:
 ; Tests after this do not actually test 16 bit spills because there is no use of VGPR_16. They could demonstrate 16 bit spills if we update the instructions to use VGPR_16 instead of VGPR_32
 
 define void @spill_i16() {
-; GCN-TRUE16-LABEL: spill_i16:
-; GCN-TRUE16:       ; %bb.0: ; %entry
-; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-TRUE16-NEXT:    scratch_load_d16_b16 v0, off, s32 glc dlc
-; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GCN-TRUE16-NEXT:    scratch_store_b16 off, v0, s32 offset:2 ; 2-byte Folded Spill
-; GCN-TRUE16-NEXT:    ;;#ASMSTART
-; GCN-TRUE16-NEXT:    ;;#ASMEND
-; GCN-TRUE16-NEXT:    scratch_load_d16_b16 v0, off, s32 offset:2 ; 2-byte Folded Reload
-; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GCN-TRUE16-NEXT:    scratch_store_b16 off, v0, s32 dlc
-; GCN-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GCN-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GCN-FAKE16-LABEL: spill_i16:
-; GCN-FAKE16:       ; %bb.0: ; %entry
-; GCN-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-FAKE16-NEXT:    scratch_load_u16 v0, off, s32 glc dlc
-; GCN-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GCN-FAKE16-NEXT:    scratch_store_b32 off, v0, s32 offset:4 ; 4-byte Folded Spill
-; GCN-FAKE16-NEXT:    ;;#ASMSTART
-; GCN-FAKE16-NEXT:    ;;#ASMEND
-; GCN-FAKE16-NEXT:    scratch_load_b32 v0, off, s32 offset:4 ; 4-byte Folded Reload
-; GCN-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GCN-FAKE16-NEXT:    scratch_store_b16 off, v0, s32 dlc
-; GCN-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GCN-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GCN-LABEL: spill_i16:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    scratch_load_u16 v0, off, s32 glc dlc
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    scratch_store_b32 off, v0, s32 offset:4 ; 4-byte Folded Spill
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    scratch_load_b32 v0, off, s32 offset:4 ; 4-byte Folded Reload
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    scratch_store_b16 off, v0, s32 dlc
+; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %alloca = alloca i16, i32 1, align 4, addrspace(5)
 
@@ -156,33 +142,19 @@ entry:
 }
 
 define void @spill_half() {
-; GCN-TRUE16-LABEL: spill_half:
-; GCN-TRUE16:       ; %bb.0: ; %entry
-; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-TRUE16-NEXT:    scratch_load_d16_b16 v0, off, s32 glc dlc
-; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GCN-TRUE16-NEXT:    scratch_store_b16 off, v0, s32 offset:2 ; 2-byte Folded Spill
-; GCN-TRUE16-NEXT:    ;;#ASMSTART
-; GCN-TRUE16-NEXT:    ;;#ASMEND
-; GCN-TRUE16-NEXT:    scratch_load_d16_b16 v0, off, s32 offset:2 ; 2-byte Folded Reload
-; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GCN-TRUE16-NEXT:    scratch_store_b16 off, v0, s32 dlc
-; GCN-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GCN-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GCN-FAKE16-LABEL: spill_half:
-; GCN-FAKE16:       ; %bb.0: ; %entry
-; GCN-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-FAKE16-NEXT:    scratch_load_u16 v0, off, s32 glc dlc
-; GCN-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GCN-FAKE16-NEXT:    scratch_store_b32 off, v0, s32 offset:4 ; 4-byte Folded Spill
-; GCN-FAKE16-NEXT:    ;;#ASMSTART
-; GCN-FAKE16-NEXT:    ;;#ASMEND
-; GCN-FAKE16-NEXT:    scratch_load_b32 v0, off, s32 offset:4 ; 4-byte Folded Reload
-; GCN-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GCN-FAKE16-NEXT:    scratch_store_b16 off, v0, s32 dlc
-; GCN-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GCN-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GCN-LABEL: spill_half:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    scratch_load_u16 v0, off, s32 glc dlc
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    scratch_store_b32 off, v0, s32 offset:4 ; 4-byte Folded Spill
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    scratch_load_b32 v0, off, s32 offset:4 ; 4-byte Folded Reload
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    scratch_store_b16 off, v0, s32 dlc
+; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %alloca = alloca half, i32 1, align 4, addrspace(5)
 
@@ -199,33 +171,19 @@ entry:
 }
 
 define void @spill_i16_from_v2i16() {
-; GCN-TRUE16-LABEL: spill_i16_from_v2i16:
-; GCN-TRUE16:       ; %bb.0: ; %entry
-; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-TRUE16-NEXT:    scratch_load_d16_b16 v0, off, s32 offset:2 glc dlc
-; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GCN-TRUE16-NEXT:    scratch_store_b16 off, v0, s32 offset:8 ; 2-byte Folded Spill
-; GCN-TRUE16-NEXT:    ;;#ASMSTART
-; GCN-TRUE16-NEXT:    ;;#ASMEND
-; GCN-TRUE16-NEXT:    scratch_load_d16_b16 v0, off, s32 offset:8 ; 2-byte Folded Reload
-; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GCN-TRUE16-NEXT:    scratch_store_b16 off, v0, s32 offset:2 dlc
-; GCN-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GCN-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GCN-FAKE16-LABEL: spill_i16_from_v2i16:
-; GCN-FAKE16:       ; %bb.0: ; %entry
-; GCN-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-FAKE16-NEXT:    scratch_load_u16 v0, off, s32 offset:2 glc dlc
-; GCN-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GCN-FAKE16-NEXT:    scratch_store_b32 off, v0, s32 offset:8 ; 4-byte Folded Spill
-; GCN-FAKE16-NEXT:    ;;#ASMSTART
-; GCN-FAKE16-NEXT:    ;;#ASMEND
-; GCN-FAKE16-NEXT:    scratch_load_b32 v0, off, s32 offset:8 ; 4-byte Folded Reload
-; GCN-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GCN-FAKE16-NEXT:    scratch_store_b16 off, v0, s32 offset:2 dlc
-; GCN-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GCN-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GCN-LABEL: spill_i16_from_v2i16:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    scratch_load_u16 v0, off, s32 offset:2 glc dlc
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    scratch_store_b32 off, v0, s32 offset:8 ; 4-byte Folded Spill
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    scratch_load_b32 v0, off, s32 offset:8 ; 4-byte Folded Reload
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    scratch_store_b16 off, v0, s32 offset:2 dlc
+; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %alloca = alloca <2 x i16>, i32 2, align 1, addrspace(5)
 
@@ -245,19 +203,19 @@ define void @spill_2xi16_from_v2i16() {
 ; GCN-TRUE16-LABEL: spill_2xi16_from_v2i16:
 ; GCN-TRUE16:       ; %bb.0: ; %entry
 ; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-TRUE16-NEXT:    scratch_load_d16_b16 v0, off, s32 offset:2 glc dlc
+; GCN-TRUE16-NEXT:    scratch_load_u16 v0, off, s32 offset:2 glc dlc
 ; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GCN-TRUE16-NEXT:    scratch_store_b16 off, v0, s32 offset:8 ; 2-byte Folded Spill
-; GCN-TRUE16-NEXT:    scratch_load_d16_b16 v0, off, s32 glc dlc
+; GCN-TRUE16-NEXT:    scratch_store_b32 off, v0, s32 offset:12 ; 4-byte Folded Spill
+; GCN-TRUE16-NEXT:    scratch_load_u16 v0, off, s32 glc dlc
 ; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GCN-TRUE16-NEXT:    scratch_store_b16 off, v0, s32 offset:10 ; 2-byte Folded Spill
+; GCN-TRUE16-NEXT:    scratch_store_b32 off, v0, s32 offset:8 ; 4-byte Folded Spill
 ; GCN-TRUE16-NEXT:    ;;#ASMSTART
 ; GCN-TRUE16-NEXT:    ;;#ASMEND
-; GCN-TRUE16-NEXT:    scratch_load_d16_b16 v0, off, s32 offset:8 ; 2-byte Folded Reload
+; GCN-TRUE16-NEXT:    scratch_load_b32 v0, off, s32 offset:12 ; 4-byte Folded Reload
 ; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-TRUE16-NEXT:    scratch_store_b16 off, v0, s32 offset:2 dlc
 ; GCN-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GCN-TRUE16-NEXT:    scratch_load_d16_b16 v0, off, s32 offset:10 ; 2-byte Folded Reload
+; GCN-TRUE16-NEXT:    scratch_load_b32 v0, off, s32 offset:8 ; 4-byte Folded Reload
 ; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-TRUE16-NEXT:    scratch_store_b16 off, v0, s32 dlc
 ; GCN-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -306,19 +264,17 @@ define void @spill_2xi16_from_v2i16_one_free_reg() {
 ; GCN-TRUE16-LABEL: spill_2xi16_from_v2i16_one_free_reg:
 ; GCN-TRUE16:       ; %bb.0: ; %entry
 ; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-TRUE16-NEXT:    scratch_load_d16_b16 v0, off, s32 offset:2 glc dlc
+; GCN-TRUE16-NEXT:    scratch_load_u16 v7, off, s32 offset:2 glc dlc
 ; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GCN-TRUE16-NEXT:    scratch_store_b16 off, v0, s32 offset:8 ; 2-byte Folded Spill
-; GCN-TRUE16-NEXT:    scratch_load_d16_b16 v0, off, s32 glc dlc
+; GCN-TRUE16-NEXT:    scratch_load_u16 v0, off, s32 glc dlc
 ; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GCN-TRUE16-NEXT:    scratch_store_b16 off, v0, s32 offset:10 ; 2-byte Folded Spill
+; GCN-TRUE16-NEXT:    scratch_store_b32 off, v0, s32 offset:8 ; 4-byte Folded Spill
 ; GCN-TRUE16-NEXT:    ;;#ASMSTART
 ; GCN-TRUE16-NEXT:    ;;#ASMEND
-; GCN-TRUE16-NEXT:    scratch_load_d16_b16 v0, off, s32 offset:8 ; 2-byte Folded Reload
-; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GCN-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v7.l
 ; GCN-TRUE16-NEXT:    scratch_store_b16 off, v0, s32 offset:2 dlc
 ; GCN-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GCN-TRUE16-NEXT:    scratch_load_d16_b16 v0, off, s32 offset:10 ; 2-byte Folded Reload
+; GCN-TRUE16-NEXT:    scratch_load_b32 v0, off, s32 offset:8 ; 4-byte Folded Reload
 ; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-TRUE16-NEXT:    scratch_store_b16 off, v0, s32 dlc
 ; GCN-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0

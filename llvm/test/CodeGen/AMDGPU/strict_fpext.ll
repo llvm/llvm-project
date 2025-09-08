@@ -506,7 +506,7 @@ define float @v_constrained_fpext_f16_to_f32_noabi(ptr addrspace(1) %ptr) #0 {
 ; GFX11-TRUE16-LABEL: v_constrained_fpext_f16_to_f32_noabi:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v[0:1], off
+; GFX11-TRUE16-NEXT:    global_load_u16 v0, v[0:1], off
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]

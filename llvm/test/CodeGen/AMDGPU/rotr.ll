@@ -331,15 +331,15 @@ define void @test_rotr_i16(ptr addrspace(1) nocapture readonly %sourceA, ptr add
 ; GFX11-TRUE16-LABEL: test_rotr_i16:
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v2, v[2:3], off offset:48
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v[0:1], off offset:32
+; GFX11-TRUE16-NEXT:    global_load_u16 v2, v[2:3], off offset:48
+; GFX11-TRUE16-NEXT:    global_load_u16 v1, v[0:1], off offset:32
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-TRUE16-NEXT:    v_sub_nc_u16 v0.h, 0, v2.l
+; GFX11-TRUE16-NEXT:    v_sub_nc_u16 v0.l, 0, v2.l
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_lshrrev_b16 v1.l, v2.l, v0.l
+; GFX11-TRUE16-NEXT:    v_lshrrev_b16 v0.h, v2.l, v1.l
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.l, v0.h, v0.l
-; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v1.l, v0.l
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.l, v0.l, v1.l
+; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.h, v0.l
 ; GFX11-TRUE16-NEXT:    global_store_b16 v[4:5], v0, off offset:8
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;

@@ -586,6 +586,12 @@ def FeatureRealTrue16Insts : SubtargetFeature<"real-true16",
   "Use true 16-bit registers"
 >;
 
+def Feature16bitD16HWBug : SubtargetFeature<"d16-hw-bug",
+  "Enable16bitD16HWBug",
+  "true",
+  "Disable D16 for 16 bit data type for true16 mode"
+>;
+
 def FeatureBF16TransInsts : SubtargetFeature<"bf16-trans-insts",
   "HasBF16TransInsts",
   "true",
@@ -1934,7 +1940,9 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
    FeatureMemoryAtomicFAddF32DenormalSupport,
-   FeatureRealTrue16Insts]>;
+   FeatureRealTrue16Insts,
+   Feature16bitD16HWBug,
+]>;
 
 // There are few workarounds that need to be
 // added to all targets. This pessimizes codegen
@@ -2569,6 +2577,13 @@ def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() &&
   AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;
   // FIXME When we default to RealTrue16 instead of Fake, change the line as follows.
   // AssemblerPredicate<(all_of FeatureTrue16BitInsts, (not FeatureRealTrue16Insts))>;
+
+// Do not use D16 inst for 16bit data type
+def Has16bitD16HWBug: Predicate<"Subtarget->has16bitD16HWBug()">,
+  AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts, Feature16bitD16HWBug)>;
+def NotHas16bitD16HWBug: Predicate<"Subtarget->useRealTrue16Insts() && "
+                                               "!Subtarget->has16bitD16HWBug()">,
+  AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts, (not Feature16bitD16HWBug))>;
 
 def HasBF16TransInsts : Predicate<"Subtarget->hasBF16TransInsts()">,
   AssemblerPredicate<(all_of FeatureBF16TransInsts)>;
