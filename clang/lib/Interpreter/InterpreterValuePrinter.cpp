@@ -136,7 +136,8 @@ static std::string FunctionToString(ASTContext &Ctx, QualType QT,
   // *OpaqueType, void *Val);
   const FunctionDecl *FD = nullptr;
   if (auto *InterfaceCall = llvm::dyn_cast<CallExpr>(TLSD->getStmt())) {
-    const auto *Arg = InterfaceCall->getArg(/*Val*/ 3);
+    const auto *Arg = InterfaceCall->getArg(InterfaceCall->getNumArgs() - 1);
+
     // Get rid of cast nodes.
     while (const CastExpr *CastE = llvm::dyn_cast<CastExpr>(Arg))
       Arg = CastE->getSubExpr();
@@ -156,32 +157,32 @@ static std::string FunctionToString(ASTContext &Ctx, QualType QT,
 static std::string escapeString(const std::vector<uint8_t> &Raw) {
   std::string Out;
   for (char c : Raw) {
-    switch (c) {
-    case '\n':
-      Out += "\\n";
-      break;
-    case '\t':
-      Out += "\\t";
-      break;
-    case '\r':
-      Out += "\\r";
-      break;
-    case '\"':
-      Out += "\\\"";
-      break;
-    case '\\':
-      Out += "\\\\";
-      break;
-    default:
-      if (std::isprint(static_cast<unsigned char>(c)))
-        Out.push_back(c);
-      else {
-        char buf[5];
-        snprintf(buf, sizeof(buf), "\\x%02X", static_cast<unsigned char>(c));
-        Out += buf;
-      }
-      break;
+    // switch (c) {
+    // case '\n':
+    //   Out += "\\n";
+    //   break;
+    // case '\t':
+    //   Out += "\\t";
+    //   break;
+    // case '\r':
+    //   Out += "\\r";
+    //   break;
+    // case '\"':
+    //   Out += "\\\"";
+    //   break;
+    // case '\\':
+    //   Out += "\\\\";
+    //   break;
+    // default:
+    if (std::isprint(static_cast<unsigned char>(c)))
+      Out.push_back(c);
+    else {
+      char buf[5];
+      snprintf(buf, sizeof(buf), "\\x%02X", static_cast<unsigned char>(c));
+      Out += buf;
     }
+    // break;
+    // }
   }
   return Out;
 }
@@ -212,16 +213,16 @@ std::string ValueToString::BuiltinToString(const BuiltinValueBuffer &B) {
   if (NonRefTy->isCharType()) {
     unsigned char c = B.as<unsigned char>();
     switch (c) {
-    case '\n':
-      return "'\\n'";
-    case '\t':
-      return "'\\t'";
-    case '\r':
-      return "'\\r'";
-    case '\'':
-      return "'\\''";
-    case '\\':
-      return "'\\'";
+    // case '\n':
+    //   return "'\\n'";
+    // case '\t':
+    //   return "'\\t'";
+    // case '\r':
+    //   return "'\\r'";
+    // case '\'':
+    //   return "'\\''";
+    // case '\\':
+    //   return "'\\'";
     case '\0':
       return "";
     default:
@@ -312,16 +313,19 @@ std::string ValueToString::PointerToString(const PointerValueBuffer &P) {
   QualType DesugaredTy = QT.getDesugaredType(Ctx);
   QualType NonRefTy = DesugaredTy.getNonReferenceType();
 
-  auto PtrTy = dyn_cast<PointerType>(QT.getTypePtr());
-  if (!PtrTy)
-    return "";
+  if (auto PtrTy = dyn_cast<PointerType>(QT.getTypePtr())) {
+    if (!PtrTy)
+      return "";
 
-  auto PointeeTy = PtrTy->getPointeeType();
+    auto PointeeTy = PtrTy->getPointeeType();
 
-  // char* -> print string literal
-  if (PointeeTy->isCharType() && P.Pointee) {
-    if (auto *BE = static_cast<BuiltinValueBuffer *>(P.Pointee.get()))
-      return "\"" + escapeString(BE->raw) + "\"";
+    // char* -> print string literal
+    if (PointeeTy->isCharType() && P.Pointee) {
+      if (auto *BE = static_cast<BuiltinValueBuffer *>(P.Pointee.get()))
+        return "\"" + escapeString(BE->raw) + "\"";
+    }
+
+    return std::to_string(P.Address);
   }
 
   if (P.Address == 0)
@@ -334,6 +338,9 @@ std::string ValueToString::PointerToString(const PointerValueBuffer &P) {
   if (NonRefTy->isFunctionType())
     return FunctionToString(Ctx, QT, (void *)P.Address);
 
+  if (NonRefTy->isNullPtrType())
+    return "nullptr\n";
+
   std::ostringstream OS;
   OS << "@0x" << std::hex << P.Address;
   return OS.str();
@@ -342,24 +349,26 @@ std::string ValueToString::PointerToString(const PointerValueBuffer &P) {
 std::string ValueToString::ArrayToString(const ArrayValueBuffer &A) {
   if (const ConstantArrayType *CAT = Ctx.getAsConstantArrayType(A.Ty)) {
     QualType ElemTy = CAT->getElementType();
-    std::ostringstream OS;
     // Treat null terminated char arrays as strings basically.
     if (ElemTy->isCharType() && !A.Elements.empty()) {
       if (const auto *B =
               llvm::dyn_cast<BuiltinValueBuffer>(A.Elements.back().get())) {
-        char last = (char)B->raw.back();
+        char last = (char)B->raw.front();
         if (last != '\0')
           goto not_a_string;
       }
-      OS << "\"";
+      std::string Res;
+      Res += "\"";
       for (size_t i = 0; i < A.Elements.size(); ++i) {
         if (const auto *B =
                 llvm::dyn_cast<BuiltinValueBuffer>(A.Elements[i].get())) {
-          OS << static_cast<char>(B->raw.back());
+          char c = static_cast<char>(B->raw.back());
+          if (c != '\0')
+            Res += c;
         }
       }
-      OS << "\"";
-      return OS.str();
+      Res += "\"";
+      return Res;
     }
   }
 not_a_string:
@@ -436,73 +445,90 @@ Interpreter::CompileDtorCall(CXXRecordDecl *CXXRD) const {
 }
 
 class ExprConverter {
+  Sema &S;
   ASTContext &Ctx;
 
 public:
-  ExprConverter(ASTContext &Ctx) : Ctx(Ctx) {}
+  ExprConverter(Sema &S, ASTContext &Ctx) : S(S), Ctx(Ctx) {}
 
   /// Create (&E) as a void*
-  ExprResult CreateAddressOfVoidPtrExpr(QualType Ty, Expr *ForCast) {
+  ExprResult CreateAddressOfVoidPtrExpr(QualType Ty, Expr *ForCast,
+                                        bool takeAddr = false) {
     QualType VoidPtrTy = Ctx.getPointerType(Ctx.VoidTy);
 
     // &E
-    Expr *AddrOf = UnaryOperator::Create(
-        Ctx, ForCast, UO_AddrOf, Ctx.getPointerType(Ty), VK_PRValue,
-        OK_Ordinary, SourceLocation(), false, FPOptionsOverride());
+    Expr *AddrOf = ForCast;
+    if (takeAddr) {
+      AddrOf = UnaryOperator::Create(
+          Ctx, ForCast, UO_AddrOf, Ctx.getPointerType(Ty), VK_PRValue,
+          OK_Ordinary, SourceLocation(), false, FPOptionsOverride());
+    }
 
+    TypeSourceInfo *TSI = Ctx.getTrivialTypeSourceInfo(Ctx.VoidPtrTy);
+    ExprResult CastedExpr =
+        S.BuildCStyleCastExpr(SourceLocation(), TSI, SourceLocation(), AddrOf);
+    assert(!CastedExpr.isInvalid() && "Can not create cstyle cast expression");
+    return CastedExpr.get();
     // static_cast<void*>(&E)
-    return CXXStaticCastExpr::Create(
-        Ctx, VoidPtrTy, VK_PRValue, CK_BitCast, AddrOf, nullptr,
-        Ctx.getTrivialTypeSourceInfo(VoidPtrTy), FPOptionsOverride(),
-        SourceLocation(), SourceLocation(), SourceRange());
-  }
-
-  /// Create a temporary VarDecl with initializer.
-  VarDecl *createTempVarDecl(QualType Ty, llvm::StringRef BaseName,
-                             Expr *Init) {
-    static unsigned Counter = 0;
-    IdentifierInfo &Id = Ctx.Idents.get((BaseName + Twine(++Counter)).str());
-
-    VarDecl *VD = VarDecl::Create(Ctx, Ctx.getTranslationUnitDecl(),
-                                  SourceLocation(), SourceLocation(), &Id, Ty,
-                                  Ctx.getTrivialTypeSourceInfo(Ty), SC_Auto);
-
-    VD->setInit(Init);
-    VD->setInitStyle(VarDecl::CInit);
-    VD->markUsed(Ctx);
-
-    return VD;
+    // return CXXStaticCastExpr::Create(
+    //     Ctx, VoidPtrTy, VK_PRValue, CK_BitCast, AddrOf, nullptr,
+    //     Ctx.getTrivialTypeSourceInfo(VoidPtrTy), FPOptionsOverride(),
+    //     SourceLocation(), SourceLocation(), SourceRange());
   }
 
   /// Wrap rvalues in a temporary (var) so they become addressable.
   Expr *CreateMaterializeTemporaryExpr(Expr *E) {
-    return new (Ctx) MaterializeTemporaryExpr(E->getType(), E,
-                                              /*BoundToLvalueReference=*/true);
+    return S.CreateMaterializeTemporaryExpr(E->getType(), E,
+                                            /*BoundToLvalueReference=*/true);
   }
 
-  /// Generic helper: materialize if needed, then &expr as void*.
-  ExprResult makeAddressable(QualType QTy, Expr *E) {
+  ExprResult makeScalarAddressable(QualType Ty, Expr *E) {
     if (E->isLValue() || E->isXValue())
-      return CreateAddressOfVoidPtrExpr(QTy, E);
-
-    if (E->isPRValue())
-      return CreateAddressOfVoidPtrExpr(QTy, CreateMaterializeTemporaryExpr(E));
-
-    return ExprError();
+      return CreateAddressOfVoidPtrExpr(Ty, E, /*takeAddr=*/true);
+    return CreateAddressOfVoidPtrExpr(Ty, CreateMaterializeTemporaryExpr(E),
+                                      /*takeAddr=*/true);
   }
 
   ExprResult handleBuiltinTypeExpr(const BuiltinType *, QualType QTy, Expr *E) {
-    return makeAddressable(QTy, E);
+    return makeScalarAddressable(QTy, E);
   }
+
+  ExprResult handleEnumTypeExpr(const EnumType *, QualType QTy, Expr *E) {
+    return makeScalarAddressable(QTy, E);
+  }
+
   ExprResult handlePointerTypeExpr(const PointerType *, QualType QTy, Expr *E) {
-    return makeAddressable(QTy, E);
+    // Pointer expressions always evaluate to a pointer value.
+    // No need to take address or materialize.
+    return CreateAddressOfVoidPtrExpr(QTy, E, /*takeAddr=*/false);
   }
+
   ExprResult handleArrayTypeExpr(const ConstantArrayType *, QualType QTy,
                                  Expr *E) {
-    return makeAddressable(QTy, E);
+    if (isa<StringLiteral>(E)) {
+      if (Ctx.getLangOpts().CPlusPlus)
+        return CreateAddressOfVoidPtrExpr(QTy, E, /*takeAddr=*/true);
+      return CreateAddressOfVoidPtrExpr(QTy, E, /*takeAddr=*/false);
+    }
+
+    if (E->isLValue() || E->isXValue())
+      return CreateAddressOfVoidPtrExpr(QTy, E, /*takeAddr=*/true);
+    return CreateAddressOfVoidPtrExpr(QTy, E,
+                                      /*takeAddr=*/false);
   }
-  ExprResult handleEnumTypeExpr(const EnumType *, QualType QTy, Expr *E) {
-    return makeAddressable(QTy, E);
+
+  ExprResult handleFunctionTypeExpr(const FunctionType *, QualType QTy,
+                                    Expr *E) {
+    if (Ctx.getLangOpts().CPlusPlus)
+      return CreateAddressOfVoidPtrExpr(QTy, E, /*takeAddr=*/true);
+    return CreateAddressOfVoidPtrExpr(QTy, E, /*takeAddr=*/false);
+  }
+
+  ExprResult handleAnyObjectExpr(const Type *, QualType QTy, Expr *E) {
+    if (E->isLValue() || E->isXValue())
+      return CreateAddressOfVoidPtrExpr(QTy, E, /*takeAddr=*/true);
+    return CreateAddressOfVoidPtrExpr(QTy, CreateMaterializeTemporaryExpr(E),
+                                      /*takeAddr=*/true);
   }
 };
 
@@ -514,9 +540,14 @@ class InterfaceKindVisitor : public TypeVisitor<InterfaceKindVisitor, bool> {
 
 public:
   InterfaceKindVisitor(Sema &S, Expr *E, llvm::SmallVectorImpl<Expr *> &Args)
-      : S(S), E(E), Args(Args), Converter(S.getASTContext()) {}
+      : S(S), E(E), Args(Args), Converter(S, S.getASTContext()) {}
 
   bool transformExpr(QualType Ty) { return Visit(Ty.getTypePtr()); }
+
+  bool VisitType(const Type *T) {
+    Args.push_back(Converter.handleAnyObjectExpr(T, QualType(T, 0), E).get());
+    return true;
+  }
 
   bool VisitBuiltinType(const BuiltinType *Ty) {
     if (Ty->isNullPtrType()) {
@@ -548,14 +579,16 @@ public:
     return true;
   }
 
+  bool VisitFunctionType(const FunctionType *Ty) {
+    Args.push_back(
+        Converter.handleFunctionTypeExpr(Ty, QualType(Ty, 0), E).get());
+    return true;
+  }
+
   bool VisitEnumType(const EnumType *Ty) {
     Args.push_back(Converter.handleEnumTypeExpr(Ty, QualType(Ty, 0), E).get());
     return true;
   }
-
-  bool VisitRecordType(const RecordType *) { return true; }
-  bool VisitMemberPointerType(const MemberPointerType *) { return true; }
-  bool VisitFunctionType(const FunctionType *) { return true; }
 };
 
 enum RunTimeFnTag { OrcSendResult, ClangSendResult };
