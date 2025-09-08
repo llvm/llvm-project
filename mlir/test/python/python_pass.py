@@ -69,7 +69,7 @@ def testCustomPass():
 
         class CustomPass2:
             def __call__(self, m):
-                apply_patterns_and_fold_greedily_with_op(m, frozen)
+                apply_patterns_and_fold_greedily(m, frozen)
 
         custom_pass_2 = CustomPass2()
 
