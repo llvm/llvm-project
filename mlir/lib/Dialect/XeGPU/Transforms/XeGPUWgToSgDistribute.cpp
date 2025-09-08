@@ -997,8 +997,7 @@ struct WgToSgVectorShapeCastOp
       return srcNonUnit == dstNonUnit;
     };
 
-    if (!onlyUnitDims(srcType.getShape(), sgShape) ||
-        !onlyUnitDims(sgShape, srcType.getShape()))
+    if (!onlyUnitDims(srcType.getShape(), sgShape))
       return failure();
 
     SmallVector<Value> newShapeCastOps;
