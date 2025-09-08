@@ -456,7 +456,6 @@ static Value *expandIsFPClass(CallInst *Orig) {
     return expand16BitIsNormal(Orig);
   case FPClassTest::fcFinite:
     return expand16BitIsFinite(Orig);
-    return nullptr;
   }
 
   IRBuilder<> Builder(Orig);
