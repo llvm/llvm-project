@@ -27,6 +27,13 @@ def _parse_ninja_log(ninja_log: list[str]) -> list[tuple[str, str]]:
             # We hit the end of the log without finding a build failure, go to
             # the next log.
             return failures
+        # If we are doing a build with LLVM_ENABLE_RUNTIMES, we can have nested
+        # ninja invocations. The sub-ninja will print that a subcommand failed,
+        # and then the outer ninja will list the command that failed. We should
+        # ignore the outer failure.
+        if ninja_log[index - 1].startswith("ninja: build stopped:"):
+            index += 1
+            continue
         # We are trying to parse cases like the following:
         #
         # [4/5] test/4.stamp

@@ -1299,6 +1299,25 @@ class DebugCommunication(object):
             {"command": "modules", "type": "request", "arguments": args_dict}
         )
 
+    def request_moduleSymbols(
+        self,
+        moduleId: str = "",
+        moduleName: str = "",
+        startIndex: int = 0,
+        count: int = 0,
+    ):
+        command_dict = {
+            "command": "__lldb_moduleSymbols",
+            "type": "request",
+            "arguments": {
+                "moduleId": moduleId,
+                "moduleName": moduleName,
+                "startIndex": startIndex,
+                "count": count,
+            },
+        }
+        return self._send_recv(command_dict)
+
     def request_stackTrace(
         self, threadId=None, startFrame=None, levels=None, format=None, dump=False
     ):
@@ -1471,12 +1490,17 @@ class DebugAdapterServer(DebugCommunication):
         init_commands: list[str] = [],
         log_file: Optional[TextIO] = None,
         env: Optional[dict[str, str]] = None,
+        additional_args: list[str] = [],
     ):
         self.process = None
         self.connection = None
         if executable is not None:
             process, connection = DebugAdapterServer.launch(
-                executable=executable, connection=connection, env=env, log_file=log_file
+                executable=executable,
+                connection=connection,
+                env=env,
+                log_file=log_file,
+                additional_args=additional_args,
             )
             self.process = process
             self.connection = connection
@@ -1509,6 +1533,7 @@ class DebugAdapterServer(DebugCommunication):
         env: Optional[dict[str, str]] = None,
         log_file: Optional[TextIO] = None,
         connection: Optional[str] = None,
+        additional_args: list[str] = [],
     ) -> tuple[subprocess.Popen, Optional[str]]:
         adapter_env = os.environ.copy()
         if env is not None:
@@ -1517,6 +1542,9 @@ class DebugAdapterServer(DebugCommunication):
         if log_file:
             adapter_env["LLDBDAP_LOG"] = log_file
         args = [executable]
+
+        # Add additional arguments first (like --no-lldbinit)
+        args.extend(additional_args)
 
         if connection is not None:
             args.append("--connection")

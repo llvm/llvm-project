@@ -25,13 +25,6 @@ RT_EXT_API_GROUP_BEGIN
 int RTDEF(CUFPointerAllocate)(Descriptor &desc, int64_t *stream, bool *pinned,
     bool hasStat, const Descriptor *errMsg, const char *sourceFile,
     int sourceLine) {
-  if (desc.HasAddendum()) {
-    Terminator terminator{sourceFile, sourceLine};
-    // TODO: This require a bit more work to set the correct type descriptor
-    // address
-    terminator.Crash(
-        "not yet implemented: CUDA descriptor allocation with addendum");
-  }
   // Perform the standard allocation.
   int stat{
       RTNAME(PointerAllocate)(desc, hasStat, errMsg, sourceFile, sourceLine)};

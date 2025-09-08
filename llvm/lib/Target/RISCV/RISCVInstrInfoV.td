@@ -475,8 +475,8 @@ class VALUmVV<bits<6> funct6, RISCVVFormat opv, string opcodestr>
                 opcodestr, "$vd, $vs2, $vs1, $vm">;
 
 // op vd, vs1, vs2, vm (reverse the order of vs1 and vs2)
-class VALUrVV<bits<6> funct6, RISCVVFormat opv, string opcodestr,
-              bit EarlyClobber = 0>
+class VMACVV<bits<6> funct6, RISCVVFormat opv, string opcodestr,
+             bit EarlyClobber = 0>
     : RVInstVV<funct6, opv, (outs VR:$vd_wb),
                 (ins VR:$vd, VR:$vs1, VR:$vs2, VMaskOp:$vm),
                 opcodestr, "$vd, $vs1, $vs2$vm"> {
@@ -505,8 +505,8 @@ class VALUmVX<bits<6> funct6, RISCVVFormat opv, string opcodestr>
                 opcodestr, "$vd, $vs2, $rs1, $vm">;
 
 // op vd, rs1, vs2, vm (reverse the order of rs1 and vs2)
-class VALUrVX<bits<6> funct6, RISCVVFormat opv, string opcodestr,
-              bit EarlyClobber = 0>
+class VMACVX<bits<6> funct6, RISCVVFormat opv, string opcodestr,
+             bit EarlyClobber = 0>
     : RVInstVX<funct6, opv, (outs VR:$vd_wb),
                 (ins VR:$vd, GPR:$rs1, VR:$vs2, VMaskOp:$vm),
                 opcodestr, "$vd, $rs1, $vs2$vm"> {
@@ -549,8 +549,8 @@ class VALUVF<bits<6> funct6, RISCVVFormat opv, string opcodestr>
                 opcodestr, "$vd, $vs2, $rs1$vm">;
 
 // op vd, rs1, vs2, vm (Float) (with mask, reverse the order of rs1 and vs2)
-class VALUrVF<bits<6> funct6, RISCVVFormat opv, string opcodestr,
-              bit EarlyClobber = 0>
+class VMACVF<bits<6> funct6, RISCVVFormat opv, string opcodestr,
+             bit EarlyClobber = 0>
     : RVInstVX<funct6, opv, (outs VR:$vd_wb),
                 (ins VR:$vd, FPR32:$rs1, VR:$vs2, VMaskOp:$vm),
                 opcodestr, "$vd, $rs1, $vs2$vm"> {
@@ -628,17 +628,17 @@ multiclass VALU_MV_V_X<string opcodestr, bits<6> funct6, string vw> {
 }
 
 multiclass VMAC_MV_V_X<string opcodestr, bits<6> funct6> {
-  def V : VALUrVV<funct6, OPMVV, opcodestr # ".vv">,
+  def V : VMACVV<funct6, OPMVV, opcodestr # ".vv">,
           SchedTernaryMC<"WriteVIMulAddV", "ReadVIMulAddV", "ReadVIMulAddV",
                          "ReadVIMulAddV">;
-  def X : VALUrVX<funct6, OPMVX, opcodestr # ".vx">,
+  def X : VMACVX<funct6, OPMVX, opcodestr # ".vx">,
           SchedTernaryMC<"WriteVIMulAddX", "ReadVIMulAddV", "ReadVIMulAddX",
                          "ReadVIMulAddV">;
 }
 
 multiclass VWMAC_MV_X<string opcodestr, bits<6> funct6> {
   let RVVConstraint = WidenV in
-  def X : VALUrVX<funct6, OPMVX, opcodestr # ".vx">,
+  def X : VMACVX<funct6, OPMVX, opcodestr # ".vx", EarlyClobber=1>,
           SchedTernaryMC<"WriteVIWMulAddX", "ReadVIWMulAddV", "ReadVIWMulAddX",
                          "ReadVIWMulAddV">;
 }
@@ -646,7 +646,7 @@ multiclass VWMAC_MV_X<string opcodestr, bits<6> funct6> {
 multiclass VWMAC_MV_V_X<string opcodestr, bits<6> funct6>
    : VWMAC_MV_X<opcodestr, funct6> {
   let RVVConstraint = WidenV in
-  def V : VALUrVV<funct6, OPMVV, opcodestr # ".vv", EarlyClobber=1>,
+  def V : VMACVV<funct6, OPMVV, opcodestr # ".vv", EarlyClobber=1>,
           SchedTernaryMC<"WriteVIWMulAddV", "ReadVIWMulAddV", "ReadVIWMulAddV",
                          "ReadVIWMulAddV">;
 }
@@ -743,20 +743,20 @@ multiclass VWMUL_FV_V_F<string opcodestr, bits<6> funct6> {
 }
 
 multiclass VMAC_FV_V_F<string opcodestr, bits<6> funct6> {
-  def V : VALUrVV<funct6, OPFVV, opcodestr # ".vv">,
+  def V : VMACVV<funct6, OPFVV, opcodestr # ".vv">,
           SchedTernaryMC<"WriteVFMulAddV", "ReadVFMulAddV", "ReadVFMulAddV",
                          "ReadVFMulAddV">;
-  def F : VALUrVF<funct6, OPFVF, opcodestr # ".vf">,
+  def F : VMACVF<funct6, OPFVF, opcodestr # ".vf">,
           SchedTernaryMC<"WriteVFMulAddF", "ReadVFMulAddV", "ReadVFMulAddF",
                          "ReadVFMulAddV">;
 }
 
 multiclass VWMAC_FV_V_F<string opcodestr, bits<6> funct6> {
   let RVVConstraint = WidenV in {
-  def V : VALUrVV<funct6, OPFVV, opcodestr # ".vv", EarlyClobber=1>,
+  def V : VMACVV<funct6, OPFVV, opcodestr # ".vv", EarlyClobber=1>,
           SchedTernaryMC<"WriteVFWMulAddV", "ReadVFWMulAddV", "ReadVFWMulAddV",
                          "ReadVFWMulAddV">;
-  def F : VALUrVF<funct6, OPFVF, opcodestr # ".vf", EarlyClobber=1>,
+  def F : VMACVF<funct6, OPFVF, opcodestr # ".vf", EarlyClobber=1>,
           SchedTernaryMC<"WriteVFWMulAddF", "ReadVFWMulAddV", "ReadVFWMulAddF",
                          "ReadVFWMulAddV">;
   }

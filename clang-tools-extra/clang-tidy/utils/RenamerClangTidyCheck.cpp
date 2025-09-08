@@ -194,6 +194,8 @@ public:
       return;
     if (SM.isWrittenInCommandLineFile(MacroNameTok.getLocation()))
       return;
+    if (SM.isInSystemHeader(MacroNameTok.getLocation()))
+      return;
     Check->checkMacro(MacroNameTok, Info, SM);
   }
 
