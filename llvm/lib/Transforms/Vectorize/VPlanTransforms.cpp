@@ -1311,7 +1311,11 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       // scalar results used. In the latter case, we would introduce extra
       // broadcasts.
       if (!vputils::isSingleScalar(RepOrWidenR) ||
-          !vputils::onlyScalarValuesUsed(RepOrWidenR))
+          !all_of(RepOrWidenR->users(), [RepOrWidenR](const VPUser *U) {
+            return U->usesScalars(RepOrWidenR) ||
+                   match(cast<VPRecipeBase>(U),
+                         m_ExtractLastElement(m_VPValue()));
+          }))
         continue;
 
       auto *Clone = new VPReplicateRecipe(RepOrWidenR->getUnderlyingInstr(),
