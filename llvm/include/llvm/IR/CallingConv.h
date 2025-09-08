@@ -291,11 +291,13 @@ namespace CallingConv {
     /// crossing a
     /// protection boundary.
     CHERIoT_CompartmentCall = 125,
-    /// CHERI_CCallee - Calling convention used for the callee of CHERI_CCall.
+    /// CHERIoT_CompartmentCallee - Calling convention used for the callee of
+    /// CHERI_CCall.
     /// Ignores the first two capability arguments and the first integer
     /// argument, zeroes all unused return registers on return.
     CHERIoT_CompartmentCallee = 126,
-    /// CHERI_LibCall - Calling convention used for cross-library calls to a
+    /// CHERIoT_LibraryCall - Calling convention used for cross-library calls to
+    /// a
     /// stateless compartment.
     CHERIoT_LibraryCall = 127,
 
