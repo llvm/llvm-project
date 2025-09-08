@@ -52,8 +52,8 @@ class UbsanBasicTestCase(TestBase):
             substrs=["1 match found"],
         )
 
-        # We should be stopped in __ubsan_on_report
-        self.assertIn("__ubsan_on_report", frame.GetFunctionName())
+        # We should not be stopped in the sanitizer library.
+        self.assertIn("main", frame.GetFunctionName())
 
         # The stopped thread backtrace should contain either 'align line'
         found = False
