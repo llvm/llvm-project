@@ -106,6 +106,13 @@
             "markdownDescription": "Run lldb-dap in server mode.\n\nWhen enabled, lldb-dap will start a background server that will be reused between debug sessions. This allows caching of debug symbols between sessions and improves launch performance.",
             "default": false
           },
+          "lldb-dap.connectionTimeout": {
+            "order": 0,
+            "scope": "resource",
+            "type": "number",
+            "markdownDescription": "When running lldb-dap in server mode, the time in seconds to wait for new connections after the server has started and after all clients have disconnected. Each new connection will reset the timeout. When the timeout is reached, the server will be closed and the process will exit. Specifying non-positive values will cause the server to wait for new connections indefinitely.",
+            "default": 0
+          },
           "lldb-dap.arguments": {
             "scope": "resource",
             "type": "array",
