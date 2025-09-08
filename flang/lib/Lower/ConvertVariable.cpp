@@ -2159,15 +2159,19 @@ void Fortran::lower::mapSymbolAttributes(
   if (Fortran::semantics::IsProcedure(sym)) {
     if (isUnusedEntryDummy) {
       // Additional discussion below.
-      mlir::Type dummyProcType =
-          Fortran::lower::getDummyProcedureType(sym, converter);
-      mlir::Value undefOp = fir::UndefOp::create(builder, loc, dummyProcType);
-
-      Fortran::lower::genDeclareSymbol(converter, symMap, sym, undefOp);
-    }
-
-    // Procedure pointer.
-    if (Fortran::semantics::IsPointer(sym)) {
+      if (Fortran::semantics::IsPointer(sym)) {
+        mlir::Type procPtrType =
+            Fortran::lower::getDummyProcedurePointerType(sym, converter);
+        mlir::Value undefOp = fir::UndefOp::create(builder, loc, procPtrType);
+        genProcPointer(converter, symMap, sym, undefOp, replace);
+      } else {
+        mlir::Type dummyProcType =
+            Fortran::lower::getDummyProcedureType(sym, converter);
+        mlir::Value undefOp = fir::UndefOp::create(builder, loc, dummyProcType);
+        Fortran::lower::genDeclareSymbol(converter, symMap, sym, undefOp);
+      }
+    } else if (Fortran::semantics::IsPointer(sym)) {
+      // Used procedure pointer.
       // global
       mlir::Value boxAlloc = preAlloc;
       // dummy or passed result
