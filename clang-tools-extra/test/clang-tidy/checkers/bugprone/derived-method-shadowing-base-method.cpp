@@ -120,5 +120,19 @@ struct P: public std::thread, Base{
     void join();
     void method();
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'P::method' shadows method with the same name in class 'Base' [bugprone-derived-method-shadowing-base-method]
+};
 
+class Q : public Base
+{
+public:
+    typedef int MyInt;
+// not same signature (take const ref) but still ambiguous
+    void methodWithArg(MyInt const& I);
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'Q::methodWithArg' shadows method with the same name in class 'Base' [bugprone-derived-method-shadowing-base-method]
+
+    void methodWithArg(MyInt const I);
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'Q::methodWithArg' shadows method with the same name in class 'Base' [bugprone-derived-method-shadowing-base-method]
+
+    void methodWithArg(MyInt *I);
+    void methodWithArg(MyInt const* I);
 };
