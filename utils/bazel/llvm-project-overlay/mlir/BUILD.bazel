@@ -3892,6 +3892,7 @@ cc_library(
         ":FunctionInterfaces",
         ":IR",
         ":SideEffectInterfaces",
+        ":Support",
         "//llvm:Support",
     ],
 )

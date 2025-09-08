@@ -568,9 +568,6 @@ protected:
 
   // --- Vectorization state ---
 
-  /// The vector-loop preheader.
-  BasicBlock *LoopVectorPreHeader = nullptr;
-
   /// Trip count of the original loop.
   Value *TripCount = nullptr;
 
@@ -675,12 +672,14 @@ protected:
   void introduceCheckBlockInVPlan(BasicBlock *CheckIRBB);
 
   // Create a check to see if the main vector loop should be executed
-  Value *createIterationCountCheck(ElementCount VF, unsigned UF) const;
+  Value *createIterationCountCheck(BasicBlock *VectorPH, ElementCount VF,
+                                   unsigned UF) const;
 
   /// Emits an iteration count bypass check once for the main loop (when \p
   /// ForEpilogue is false) and once for the epilogue loop (when \p
   /// ForEpilogue is true).
-  BasicBlock *emitIterationCountCheck(BasicBlock *Bypass, bool ForEpilogue);
+  BasicBlock *emitIterationCountCheck(BasicBlock *VectorPH, BasicBlock *Bypass,
+                                      bool ForEpilogue);
   void printDebugTracesAtStart() override;
   void printDebugTracesAtEnd() override;
 };
@@ -722,7 +721,7 @@ protected:
   /// Emits an iteration count bypass check after the main vector loop has
   /// finished to see if there are any iterations left to execute by either
   /// the vector epilogue or the scalar epilogue.
-  BasicBlock *emitMinimumVectorEpilogueIterCountCheck(
+  BasicBlock *emitMinimumVectorEpilogueIterCountCheck(BasicBlock *VectorPH,
                                                       BasicBlock *Bypass,
                                                       BasicBlock *Insert);
   void printDebugTracesAtStart() override;
@@ -2270,9 +2269,8 @@ void EpilogueVectorizerMainLoop::introduceCheckBlockInVPlan(
   }
 }
 
-Value *
-EpilogueVectorizerMainLoop::createIterationCountCheck(ElementCount VF,
-                                                      unsigned UF) const {
+Value *EpilogueVectorizerMainLoop::createIterationCountCheck(
+    BasicBlock *VectorPH, ElementCount VF, unsigned UF) const {
   // Generate code to check if the loop's trip count is less than VF * UF, or
   // equal to it in case a scalar epilogue is required; this implies that the
   // vector trip count is zero. This check also covers the case where adding one
@@ -2283,7 +2281,7 @@ EpilogueVectorizerMainLoop::createIterationCountCheck(ElementCount VF,
 
   // Reuse existing vector loop preheader for TC checks.
   // Note that new preheader block is generated for vector loop.
-  BasicBlock *const TCCheckBlock = LoopVectorPreHeader;
+  BasicBlock *const TCCheckBlock = VectorPH;
   IRBuilder<InstSimplifyFolder> Builder(
       TCCheckBlock->getContext(),
       InstSimplifyFolder(TCCheckBlock->getDataLayout()));
@@ -2363,8 +2361,8 @@ static VPIRBasicBlock *replaceVPBBWithIRVPBB(VPBasicBlock *VPBB,
 }
 
 BasicBlock *InnerLoopVectorizer::createScalarPreheader(StringRef Prefix) {
-  LoopVectorPreHeader = OrigLoop->getLoopPreheader();
-  assert(LoopVectorPreHeader && "Invalid loop structure");
+  BasicBlock *VectorPH = OrigLoop->getLoopPreheader();
+  assert(VectorPH && "Invalid loop structure");
   assert((OrigLoop->getUniqueLatchExitBlock() ||
           Cost->requiresScalarEpilogue(VF.isVector())) &&
          "loops not exiting via the latch without required epilogue?");
@@ -2373,8 +2371,8 @@ BasicBlock *InnerLoopVectorizer::createScalarPreheader(StringRef Prefix) {
   // wrapping the newly created scalar preheader here at the moment, because the
   // Plan's scalar preheader may be unreachable at this point. Instead it is
   // replaced in executePlan.
-  return SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->getTerminator(),
-                    DT, LI, nullptr, Twine(Prefix) + "scalar.ph");
+  return SplitBlock(VectorPH, VectorPH->getTerminator(), DT, LI, nullptr,
+                    Twine(Prefix) + "scalar.ph");
 }
 
 /// Return the expanded step for \p ID using \p ExpandedSCEVs to look up SCEV
@@ -7276,21 +7274,27 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 /// depicted in https://llvm.org/docs/Vectorizers.html#epilogue-vectorization.
 BasicBlock *EpilogueVectorizerMainLoop::createVectorizedLoopSkeleton() {
   BasicBlock *ScalarPH = createScalarPreheader("");
+  BasicBlock *VectorPH = ScalarPH->getSinglePredecessor();
 
   // Generate the code to check the minimum iteration count of the vector
   // epilogue (see below).
-  EPI.EpilogueIterationCountCheck = emitIterationCountCheck(ScalarPH, true);
+  EPI.EpilogueIterationCountCheck =
+      emitIterationCountCheck(VectorPH, ScalarPH, true);
   EPI.EpilogueIterationCountCheck->setName("iter.check");
 
+  VectorPH = cast<BranchInst>(EPI.EpilogueIterationCountCheck->getTerminator())
+                 ->getSuccessor(1);
   // Generate the iteration count check for the main loop, *after* the check
   // for the epilogue loop, so that the path-length is shorter for the case
   // that goes directly through the vector epilogue. The longer-path length for
   // the main loop is compensated for, by the gain from vectorizing the larger
   // trip count. Note: the branch will get updated later on when we vectorize
   // the epilogue.
-  EPI.MainLoopIterationCountCheck = emitIterationCountCheck(ScalarPH, false);
+  EPI.MainLoopIterationCountCheck =
+      emitIterationCountCheck(VectorPH, ScalarPH, false);
 
-  return LoopVectorPreHeader;
+  return cast<BranchInst>(EPI.MainLoopIterationCountCheck->getTerminator())
+      ->getSuccessor(1);
 }
 
 void EpilogueVectorizerMainLoop::printDebugTracesAtStart() {
@@ -7310,35 +7314,33 @@ void EpilogueVectorizerMainLoop::printDebugTracesAtEnd() {
   });
 }
 
-BasicBlock *
-EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
-                                                    bool ForEpilogue) {
+BasicBlock *EpilogueVectorizerMainLoop::emitIterationCountCheck(
+    BasicBlock *VectorPH, BasicBlock *Bypass, bool ForEpilogue) {
   assert(Bypass && "Expected valid bypass basic block.");
   Value *Count = getTripCount();
   MinProfitableTripCount = ElementCount::getFixed(0);
-  Value *CheckMinIters =
-      createIterationCountCheck(ForEpilogue ? EPI.EpilogueVF : EPI.MainLoopVF,
-                                ForEpilogue ? EPI.EpilogueUF : EPI.MainLoopUF);
+  Value *CheckMinIters = createIterationCountCheck(
+      VectorPH, ForEpilogue ? EPI.EpilogueVF : EPI.MainLoopVF,
+      ForEpilogue ? EPI.EpilogueUF : EPI.MainLoopUF);
 
-  BasicBlock *const TCCheckBlock = LoopVectorPreHeader;
+  BasicBlock *const TCCheckBlock = VectorPH;
   if (!ForEpilogue)
     TCCheckBlock->setName("vector.main.loop.iter.check");
 
   // Create new preheader for vector loop.
-  LoopVectorPreHeader = SplitBlock(TCCheckBlock, TCCheckBlock->getTerminator(),
-                                   static_cast<DominatorTree *>(nullptr), LI,
-                                   nullptr, "vector.ph");
+  VectorPH = SplitBlock(TCCheckBlock, TCCheckBlock->getTerminator(),
+                        static_cast<DominatorTree *>(nullptr), LI, nullptr,
+                        "vector.ph");
   if (ForEpilogue) {
     // Save the trip count so we don't have to regenerate it in the
     // vec.epilog.iter.check. This is safe to do because the trip count
     // generated here dominates the vector epilog iter check.
     EPI.TripCount = Count;
   } else {
-    VectorPHVPBB = replaceVPBBWithIRVPBB(VectorPHVPBB, LoopVectorPreHeader);
+    VectorPHVPBB = replaceVPBBWithIRVPBB(VectorPHVPBB, VectorPH);
   }
 
-  BranchInst &BI =
-      *BranchInst::Create(Bypass, LoopVectorPreHeader, CheckMinIters);
+  BranchInst &BI = *BranchInst::Create(Bypass, VectorPH, CheckMinIters);
   if (hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator()))
     setBranchWeights(BI, MinItersBypassWeights, /*IsExpected=*/false);
   ReplaceInstWithInst(TCCheckBlock->getTerminator(), &BI);
@@ -7360,16 +7362,16 @@ EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
 /// depicted in https://llvm.org/docs/Vectorizers.html#epilogue-vectorization.
 BasicBlock *EpilogueVectorizerEpilogueLoop::createVectorizedLoopSkeleton() {
   BasicBlock *ScalarPH = createScalarPreheader("vec.epilog.");
-
+  BasicBlock *VectorPH = ScalarPH->getSinglePredecessor();
   // Now, compare the remaining count and if there aren't enough iterations to
   // execute the vectorized epilogue skip to the scalar part.
-  LoopVectorPreHeader->setName("vec.epilog.ph");
+  VectorPH->setName("vec.epilog.ph");
   BasicBlock *VecEpilogueIterationCountCheck =
-      SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->begin(), DT, LI,
-                 nullptr, "vec.epilog.iter.check", true);
-  VectorPHVPBB = replaceVPBBWithIRVPBB(VectorPHVPBB, LoopVectorPreHeader);
+      SplitBlock(VectorPH, VectorPH->begin(), DT, LI, nullptr,
+                 "vec.epilog.iter.check", true);
+  VectorPHVPBB = replaceVPBBWithIRVPBB(VectorPHVPBB, VectorPH);
 
-  emitMinimumVectorEpilogueIterCountCheck(ScalarPH,
+  emitMinimumVectorEpilogueIterCountCheck(VectorPH, ScalarPH,
                                           VecEpilogueIterationCountCheck);
   AdditionalBypassBlock = VecEpilogueIterationCountCheck;
 
@@ -7378,7 +7380,7 @@ BasicBlock *EpilogueVectorizerEpilogueLoop::createVectorizedLoopSkeleton() {
   assert(EPI.MainLoopIterationCountCheck && EPI.EpilogueIterationCountCheck &&
          "expected this to be saved from the previous pass.");
   EPI.MainLoopIterationCountCheck->getTerminator()->replaceUsesOfWith(
-      VecEpilogueIterationCountCheck, LoopVectorPreHeader);
+      VecEpilogueIterationCountCheck, VectorPH);
 
   EPI.EpilogueIterationCountCheck->getTerminator()->replaceUsesOfWith(
       VecEpilogueIterationCountCheck, ScalarPH);
@@ -7402,7 +7404,7 @@ BasicBlock *EpilogueVectorizerEpilogueLoop::createVectorizedLoopSkeleton() {
       llvm::make_pointer_range(VecEpilogueIterationCountCheck->phis()));
 
   for (PHINode *Phi : PhisInBlock) {
-    Phi->moveBefore(LoopVectorPreHeader->getFirstNonPHIIt());
+    Phi->moveBefore(VectorPH->getFirstNonPHIIt());
     Phi->replaceIncomingBlockWith(
         VecEpilogueIterationCountCheck->getSinglePredecessor(),
         VecEpilogueIterationCountCheck);
@@ -7422,12 +7424,12 @@ BasicBlock *EpilogueVectorizerEpilogueLoop::createVectorizedLoopSkeleton() {
       Phi->removeIncomingValue(MemCheckBlock);
   }
 
-  return LoopVectorPreHeader;
+  return VectorPH;
 }
 
 BasicBlock *
 EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
-    BasicBlock *Bypass, BasicBlock *Insert) {
+    BasicBlock *VectorPH, BasicBlock *Bypass, BasicBlock *Insert) {
 
   assert(EPI.TripCount &&
          "Expected trip count to have been saved in the first pass.");
@@ -7447,8 +7449,7 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
                                          EPI.EpilogueVF, EPI.EpilogueUF),
                          "min.epilog.iters.check");
 
-  BranchInst &BI =
-      *BranchInst::Create(Bypass, LoopVectorPreHeader, CheckMinIters);
+  BranchInst &BI = *BranchInst::Create(Bypass, VectorPH, CheckMinIters);
   auto VScale = Cost->getVScaleForTuning();
   unsigned MainLoopStep =
       estimateElementCount(EPI.MainLoopVF * EPI.MainLoopUF, VScale);

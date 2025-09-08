@@ -127,7 +127,8 @@ void objdump::parseMachOOptions(const llvm::opt::InputArgList &InputArgs) {
 
 static const Target *GetTarget(const MachOObjectFile *MachOObj,
                                const char **McpuDefault,
-                               const Target **ThumbTarget) {
+                               const Target **ThumbTarget,
+                               Triple &ThumbTriple) {
   // Figure out the target triple.
   Triple TT(TripleName);
   if (TripleName.empty()) {
@@ -138,8 +139,8 @@ static const Target *GetTarget(const MachOObjectFile *MachOObj,
   if (TT.getArch() == Triple::arm) {
     // We've inferred a 32-bit ARM target from the object file. All MachO CPUs
     // that support ARM are also capable of Thumb mode.
-    Triple ThumbTriple = TT;
     std::string ThumbName = (Twine("thumb") + TT.getArchName().substr(3)).str();
+    ThumbTriple = TT;
     ThumbTriple.setArchName(ThumbName);
     ThumbTripleName = ThumbTriple.str();
   }
@@ -7238,7 +7239,9 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
                              StringRef DisSegName, StringRef DisSectName) {
   const char *McpuDefault = nullptr;
   const Target *ThumbTarget = nullptr;
-  const Target *TheTarget = GetTarget(MachOOF, &McpuDefault, &ThumbTarget);
+  Triple ThumbTriple;
+  const Target *TheTarget =
+      GetTarget(MachOOF, &McpuDefault, &ThumbTarget, ThumbTriple);
   if (!TheTarget) {
     // GetTarget prints out stuff.
     return;
@@ -7285,34 +7288,36 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
     FeaturesStr = Features.getString();
   }
 
+  Triple TheTriple(TripleName);
+
   MCTargetOptions MCOptions;
   // Set up disassembler.
   std::unique_ptr<const MCRegisterInfo> MRI(
-      TheTarget->createMCRegInfo(TripleName));
+      TheTarget->createMCRegInfo(TheTriple));
   CHECK_TARGET_INFO_CREATION(MRI);
   std::unique_ptr<const MCAsmInfo> AsmInfo(
-      TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+      TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   CHECK_TARGET_INFO_CREATION(AsmInfo);
   std::unique_ptr<const MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TripleName, MachOMCPU, FeaturesStr));
+      TheTarget->createMCSubtargetInfo(TheTriple, MachOMCPU, FeaturesStr));
   CHECK_TARGET_INFO_CREATION(STI);
-  MCContext Ctx(Triple(TripleName), AsmInfo.get(), MRI.get(), STI.get());
+  MCContext Ctx(TheTriple, AsmInfo.get(), MRI.get(), STI.get());
   std::unique_ptr<MCDisassembler> DisAsm(
       TheTarget->createMCDisassembler(*STI, Ctx));
   CHECK_TARGET_INFO_CREATION(DisAsm);
   std::unique_ptr<MCSymbolizer> Symbolizer;
   struct DisassembleInfo SymbolizerInfo(nullptr, nullptr, nullptr, false);
   std::unique_ptr<MCRelocationInfo> RelInfo(
-      TheTarget->createMCRelocationInfo(TripleName, Ctx));
+      TheTarget->createMCRelocationInfo(TheTriple, Ctx));
   if (RelInfo) {
     Symbolizer.reset(TheTarget->createMCSymbolizer(
-        TripleName, SymbolizerGetOpInfo, SymbolizerSymbolLookUp,
-        &SymbolizerInfo, &Ctx, std::move(RelInfo)));
+        TheTriple, SymbolizerGetOpInfo, SymbolizerSymbolLookUp, &SymbolizerInfo,
+        &Ctx, std::move(RelInfo)));
     DisAsm->setSymbolizer(std::move(Symbolizer));
   }
   int AsmPrinterVariant = AsmInfo->getAssemblerDialect();
   std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
-      Triple(TripleName), AsmPrinterVariant, *AsmInfo, *InstrInfo, *MRI));
+      TheTriple, AsmPrinterVariant, *AsmInfo, *InstrInfo, *MRI));
   CHECK_TARGET_INFO_CREATION(IP);
   // Set the display preference for hex vs. decimal immediates.
   IP->setPrintImmHex(PrintImmHex);
@@ -7341,32 +7346,31 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
   struct DisassembleInfo ThumbSymbolizerInfo(nullptr, nullptr, nullptr, false);
   std::unique_ptr<MCRelocationInfo> ThumbRelInfo;
   if (ThumbTarget) {
-    ThumbMRI.reset(ThumbTarget->createMCRegInfo(ThumbTripleName));
+    ThumbMRI.reset(ThumbTarget->createMCRegInfo(ThumbTriple));
     CHECK_THUMB_TARGET_INFO_CREATION(ThumbMRI);
     ThumbAsmInfo.reset(
-        ThumbTarget->createMCAsmInfo(*ThumbMRI, ThumbTripleName, MCOptions));
+        ThumbTarget->createMCAsmInfo(*ThumbMRI, ThumbTriple, MCOptions));
     CHECK_THUMB_TARGET_INFO_CREATION(ThumbAsmInfo);
-    ThumbSTI.reset(
-        ThumbTarget->createMCSubtargetInfo(ThumbTripleName, MachOMCPU,
-                                           FeaturesStr));
+    ThumbSTI.reset(ThumbTarget->createMCSubtargetInfo(ThumbTriple, MachOMCPU,
+                                                      FeaturesStr));
     CHECK_THUMB_TARGET_INFO_CREATION(ThumbSTI);
-    ThumbCtx.reset(new MCContext(Triple(ThumbTripleName), ThumbAsmInfo.get(),
+    ThumbCtx.reset(new MCContext(ThumbTriple, ThumbAsmInfo.get(),
                                  ThumbMRI.get(), ThumbSTI.get()));
     ThumbDisAsm.reset(ThumbTarget->createMCDisassembler(*ThumbSTI, *ThumbCtx));
     CHECK_THUMB_TARGET_INFO_CREATION(ThumbDisAsm);
     MCContext *PtrThumbCtx = ThumbCtx.get();
     ThumbRelInfo.reset(
-        ThumbTarget->createMCRelocationInfo(ThumbTripleName, *PtrThumbCtx));
+        ThumbTarget->createMCRelocationInfo(ThumbTriple, *PtrThumbCtx));
     if (ThumbRelInfo) {
       ThumbSymbolizer.reset(ThumbTarget->createMCSymbolizer(
-          ThumbTripleName, SymbolizerGetOpInfo, SymbolizerSymbolLookUp,
+          ThumbTriple, SymbolizerGetOpInfo, SymbolizerSymbolLookUp,
           &ThumbSymbolizerInfo, PtrThumbCtx, std::move(ThumbRelInfo)));
       ThumbDisAsm->setSymbolizer(std::move(ThumbSymbolizer));
     }
     int ThumbAsmPrinterVariant = ThumbAsmInfo->getAssemblerDialect();
     ThumbIP.reset(ThumbTarget->createMCInstPrinter(
-        Triple(ThumbTripleName), ThumbAsmPrinterVariant, *ThumbAsmInfo,
-        *ThumbInstrInfo, *ThumbMRI));
+        ThumbTriple, ThumbAsmPrinterVariant, *ThumbAsmInfo, *ThumbInstrInfo,
+        *ThumbMRI));
     CHECK_THUMB_TARGET_INFO_CREATION(ThumbIP);
     // Set the display preference for hex vs. decimal immediates.
     ThumbIP->setPrintImmHex(PrintImmHex);

@@ -27,13 +27,10 @@ define void @f1(ptr noalias %b, i1 %c, i32 %start) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[START]] to i16
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP2]] to i16
 ; CHECK-NEXT:    [[MUL:%.*]] = call { i16, i1 } @llvm.umul.with.overflow.i16(i16 1, i16 [[TMP4]])
-; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i16, i1 } [[MUL]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i16, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i16 [[TMP3]], [[MUL_RESULT]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i16 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt i16 [[TMP5]], [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP6]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i32 [[TMP2]], 65535
-; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], 2
@@ -109,13 +106,10 @@ define void @f2(ptr noalias %b, i1 %c, i32 %start) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[START]] to i16
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP2]] to i16
 ; CHECK-NEXT:    [[MUL:%.*]] = call { i16, i1 } @llvm.umul.with.overflow.i16(i16 1, i16 [[TMP4]])
-; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i16, i1 } [[MUL]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i16, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i16 [[TMP3]], [[MUL_RESULT]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i16 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt i16 [[TMP5]], [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP6]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i32 [[TMP2]], 65535
-; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], 2

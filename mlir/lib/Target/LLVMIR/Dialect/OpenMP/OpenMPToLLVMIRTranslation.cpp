@@ -3197,7 +3197,7 @@ convertOmpAtomicWrite(Operation &opInst, llvm::IRBuilderBase &builder,
 
 /// Converts an LLVM dialect binary operation to the corresponding enum value
 /// for `atomicrmw` supported binary operation.
-llvm::AtomicRMWInst::BinOp convertBinOpToAtomic(Operation &op) {
+static llvm::AtomicRMWInst::BinOp convertBinOpToAtomic(Operation &op) {
   return llvm::TypeSwitch<Operation *, llvm::AtomicRMWInst::BinOp>(&op)
       .Case([&](LLVM::AddOp) { return llvm::AtomicRMWInst::BinOp::Add; })
       .Case([&](LLVM::SubOp) { return llvm::AtomicRMWInst::BinOp::Sub; })
@@ -3211,10 +3211,10 @@ llvm::AtomicRMWInst::BinOp convertBinOpToAtomic(Operation &op) {
       .Default(llvm::AtomicRMWInst::BinOp::BAD_BINOP);
 }
 
-void extractAtomicControlFlags(omp::AtomicUpdateOp atomicUpdateOp,
-                               bool &isIgnoreDenormalMode,
-                               bool &isFineGrainedMemory,
-                               bool &isRemoteMemory) {
+static void extractAtomicControlFlags(omp::AtomicUpdateOp atomicUpdateOp,
+                                      bool &isIgnoreDenormalMode,
+                                      bool &isFineGrainedMemory,
+                                      bool &isRemoteMemory) {
   isIgnoreDenormalMode = false;
   isFineGrainedMemory = false;
   isRemoteMemory = false;
@@ -3672,7 +3672,8 @@ struct MapInfoData : MapInfosTy {
 };
 } // namespace
 
-uint64_t getArrayElementSizeInBits(LLVM::LLVMArrayType arrTy, DataLayout &dl) {
+static uint64_t getArrayElementSizeInBits(LLVM::LLVMArrayType arrTy,
+                                          DataLayout &dl) {
   if (auto nestedArrTy = llvm::dyn_cast_if_present<LLVM::LLVMArrayType>(
           arrTy.getElementType()))
     return getArrayElementSizeInBits(nestedArrTy, dl);
@@ -3689,10 +3690,12 @@ uint64_t getArrayElementSizeInBits(LLVM::LLVMArrayType arrTy, DataLayout &dl) {
 // structures.
 // This function is somewhat equivalent to Clang's getExprTypeSize inside of
 // CGOpenMPRuntime.cpp.
-llvm::Value *getSizeInBytes(DataLayout &dl, const mlir::Type &type,
-                            Operation *clauseOp, llvm::Value *basePointer,
-                            llvm::Type *baseType, llvm::IRBuilderBase &builder,
-                            LLVM::ModuleTranslation &moduleTranslation) {
+static llvm::Value *getSizeInBytes(DataLayout &dl, const mlir::Type &type,
+                                   Operation *clauseOp,
+                                   llvm::Value *basePointer,
+                                   llvm::Type *baseType,
+                                   llvm::IRBuilderBase &builder,
+                                   LLVM::ModuleTranslation &moduleTranslation) {
   if (auto memberClause =
           mlir::dyn_cast_if_present<mlir::omp::MapInfoOp>(clauseOp)) {
     // This calculates the size to transfer based on bounds and the underlying
@@ -3959,7 +3962,7 @@ static omp::MapInfoOp getFirstOrLastMappedMemberPtr(omp::MapInfoOp mapInfo,
 /// ordering of generated bounds operations (one may have to flip them) to
 /// make the below lowering frontend agnostic. The offload size
 /// calcualtion may also have to be adjusted for C++.
-std::vector<llvm::Value *>
+static std::vector<llvm::Value *>
 calculateBoundsOffset(LLVM::ModuleTranslation &moduleTranslation,
                       llvm::IRBuilderBase &builder, bool isArrayTy,
                       OperandRange bounds) {
@@ -4899,8 +4902,9 @@ convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
 /// Lowers the FlagsAttr which is applied to the module on the device
 /// pass when offloading, this attribute contains OpenMP RTL globals that can
 /// be passed as flags to the frontend, otherwise they are set to default
-LogicalResult convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
-                               LLVM::ModuleTranslation &moduleTranslation) {
+static LogicalResult
+convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
+                 LLVM::ModuleTranslation &moduleTranslation) {
   if (!cast<mlir::ModuleOp>(op))
     return failure();
 

@@ -20,12 +20,13 @@
 #include "SPIRVGenInstrInfo.inc"
 
 namespace llvm {
+class SPIRVSubtarget;
 
 class SPIRVInstrInfo : public SPIRVGenInstrInfo {
   const SPIRVRegisterInfo RI;
 
 public:
-  SPIRVInstrInfo();
+  explicit SPIRVInstrInfo(const SPIRVSubtarget &STI);
 
   const SPIRVRegisterInfo &getRegisterInfo() const { return RI; }
   bool isHeaderInstr(const MachineInstr &MI) const;

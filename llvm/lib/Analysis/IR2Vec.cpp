@@ -260,15 +260,8 @@ void FlowAwareEmbedder::computeEmbeddings(const BasicBlock &BB) const {
 // Vocabulary
 //===----------------------------------------------------------------------===//
 
-Vocabulary::Vocabulary(VocabVector &&Vocab)
-    : Vocab(std::move(Vocab)), Valid(true) {}
-
-bool Vocabulary::isValid() const {
-  return Vocab.size() == NumCanonicalEntries && Valid;
-}
-
 unsigned Vocabulary::getDimension() const {
-  assert(Valid && "IR2Vec Vocabulary is invalid");
+  assert(isValid() && "IR2Vec Vocabulary is invalid");
   return Vocab[0].size();
 }
 

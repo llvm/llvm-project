@@ -23,6 +23,7 @@
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/Support/Error.h"
+#include <cstdint>
 #include <memory>
 #include <vector>
 
@@ -35,6 +36,10 @@ class ThreadSafeContext;
 } // namespace llvm
 
 namespace clang {
+
+namespace driver {
+class ToolChain;
+} // namespace driver
 
 class CompilerInstance;
 class CXXRecordDecl;
@@ -115,15 +120,38 @@ class Interpreter {
   /// An optional compiler instance for CUDA offloading
   std::unique_ptr<CompilerInstance> DeviceCI;
 
+public:
+  struct JITConfig {
+    /// Indicates whether out-of-process JIT execution is enabled.
+    bool IsOutOfProcess = false;
+    /// Path to the out-of-process JIT executor.
+    std::string OOPExecutor = "";
+    std::string OOPExecutorConnect = "";
+    /// Indicates whether to use shared memory for communication.
+    bool UseSharedMemory = false;
+    /// Representing the slab allocation size for memory management in kb.
+    unsigned SlabAllocateSize = 0;
+    /// Path to the ORC runtime library.
+    std::string OrcRuntimePath = "";
+    /// PID of the out-of-process JIT executor.
+    uint32_t ExecutorPID = 0;
+
+    JITConfig()
+        : IsOutOfProcess(false), OOPExecutor(""), OOPExecutorConnect(""),
+          UseSharedMemory(false), SlabAllocateSize(0), OrcRuntimePath(""),
+          ExecutorPID(0) {}
+  };
+
 protected:
   // Derived classes can use an extended interface of the Interpreter.
   Interpreter(std::unique_ptr<CompilerInstance> Instance, llvm::Error &Err,
               std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder = nullptr,
-              std::unique_ptr<clang::ASTConsumer> Consumer = nullptr);
+              std::unique_ptr<clang::ASTConsumer> Consumer = nullptr,
+              JITConfig Config = JITConfig());
 
   // Create the internal IncrementalExecutor, or re-create it after calling
   // ResetExecutor().
-  llvm::Error CreateExecutor();
+  llvm::Error CreateExecutor(JITConfig Config = JITConfig());
 
   // Delete the internal IncrementalExecutor. This causes a hard shutdown of the
   // JIT engine. In particular, it doesn't run cleanup or destructors.
@@ -132,14 +160,19 @@ protected:
 public:
   virtual ~Interpreter();
   static llvm::Expected<std::unique_ptr<Interpreter>>
-  create(std::unique_ptr<CompilerInstance> CI,
-         std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder = nullptr);
+  create(std::unique_ptr<CompilerInstance> CI, JITConfig Config = {});
   static llvm::Expected<std::unique_ptr<Interpreter>>
   createWithCUDA(std::unique_ptr<CompilerInstance> CI,
                  std::unique_ptr<CompilerInstance> DCI);
   static llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
   createLLJITBuilder(std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC,
                      llvm::StringRef OrcRuntimePath);
+  static llvm::Expected<
+      std::pair<std::unique_ptr<llvm::orc::LLJITBuilder>, uint32_t>>
+  outOfProcessJITBuilder(JITConfig Config);
+  static llvm::Expected<std::string>
+  getOrcRuntimePath(const driver::ToolChain &TC);
+
   const ASTContext &getASTContext() const;
   ASTContext &getASTContext();
   const CompilerInstance *getCompilerInstance() const;
@@ -169,6 +202,8 @@ public:
   /// file.
   llvm::Expected<llvm::orc::ExecutorAddr>
   getSymbolAddressFromLinkerName(llvm::StringRef LinkerName) const;
+
+  uint32_t getOutOfProcessExecutorPID() const;
 
 private:
   size_t getEffectivePTUSize() const;

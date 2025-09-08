@@ -1249,11 +1249,14 @@ private:
 };
 
 std::unique_ptr<DisassemblerLLVMC::MCDisasmInstance>
-DisassemblerLLVMC::MCDisasmInstance::Create(const char *triple, const char *cpu,
+DisassemblerLLVMC::MCDisasmInstance::Create(const char *triple_name,
+                                            const char *cpu,
                                             const char *features_str,
                                             unsigned flavor,
                                             DisassemblerLLVMC &owner) {
   using Instance = std::unique_ptr<DisassemblerLLVMC::MCDisasmInstance>;
+
+  llvm::Triple triple(triple_name);
 
   std::string Status;
   const llvm::Target *curr_target =

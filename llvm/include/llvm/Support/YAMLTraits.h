@@ -1850,39 +1850,29 @@ template <> struct IsFlowSequenceBase<true> {
   static const bool flow = true;
 };
 
-template <typename T, typename U = void>
-struct IsResizable : std::false_type {};
-
 template <typename T>
-struct IsResizable<T, std::void_t<decltype(std::declval<T>().resize(0))>>
-    : public std::true_type {};
+using check_resize_t = decltype(std::declval<T>().resize(0));
 
-template <typename T, bool B> struct IsResizableBase {
+template <typename T> struct IsResizableBase {
   using type = typename T::value_type;
 
   static type &element(IO &io, T &seq, size_t index) {
-    if (index >= seq.size())
-      seq.resize(index + 1);
-    return seq[index];
-  }
-};
-
-template <typename T> struct IsResizableBase<T, false> {
-  using type = typename T::value_type;
-
-  static type &element(IO &io, T &seq, size_t index) {
-    if (index >= seq.size()) {
-      io.setError(Twine("value sequence extends beyond static size (") +
-                  Twine(seq.size()) + ")");
-      return seq[0];
+    if constexpr (is_detected<check_resize_t, T>::value) {
+      if (index >= seq.size())
+        seq.resize(index + 1);
+    } else {
+      if (index >= seq.size()) {
+        io.setError(Twine("value sequence extends beyond static size (") +
+                    Twine(seq.size()) + ")");
+        return seq[0];
+      }
     }
     return seq[index];
   }
 };
 
 template <typename T, bool Flow>
-struct SequenceTraitsImpl : IsFlowSequenceBase<Flow>,
-                            IsResizableBase<T, IsResizable<T>::value> {
+struct SequenceTraitsImpl : IsFlowSequenceBase<Flow>, IsResizableBase<T> {
   static size_t size(IO &io, T &seq) { return seq.size(); }
 };
 

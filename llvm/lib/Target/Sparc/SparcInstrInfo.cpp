@@ -37,8 +37,8 @@ static cl::opt<unsigned>
 // Pin the vtable to this file.
 void SparcInstrInfo::anchor() {}
 
-SparcInstrInfo::SparcInstrInfo(SparcSubtarget &ST)
-    : SparcGenInstrInfo(SP::ADJCALLSTACKDOWN, SP::ADJCALLSTACKUP), RI(),
+SparcInstrInfo::SparcInstrInfo(const SparcSubtarget &ST)
+    : SparcGenInstrInfo(ST, SP::ADJCALLSTACKDOWN, SP::ADJCALLSTACKUP), RI(),
       Subtarget(ST) {}
 
 /// isLoadFromStackSlot - If the specified machine instruction is a direct

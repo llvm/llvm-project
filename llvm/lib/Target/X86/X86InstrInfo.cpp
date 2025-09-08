@@ -83,8 +83,9 @@ static cl::opt<unsigned> UndefRegClearance(
 // Pin the vtable to this file.
 void X86InstrInfo::anchor() {}
 
-X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
-    : X86GenInstrInfo((STI.isTarget64BitLP64() ? X86::ADJCALLSTACKDOWN64
+X86InstrInfo::X86InstrInfo(const X86Subtarget &STI)
+    : X86GenInstrInfo(STI,
+                      (STI.isTarget64BitLP64() ? X86::ADJCALLSTACKDOWN64
                                                : X86::ADJCALLSTACKDOWN32),
                       (STI.isTarget64BitLP64() ? X86::ADJCALLSTACKUP64
                                                : X86::ADJCALLSTACKUP32),

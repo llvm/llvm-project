@@ -65,7 +65,7 @@ enum TOF {
 /// Utilities related to the AVR instruction set.
 class AVRInstrInfo : public AVRGenInstrInfo {
 public:
-  explicit AVRInstrInfo(AVRSubtarget &STI);
+  explicit AVRInstrInfo(const AVRSubtarget &STI);
 
   const AVRRegisterInfo &getRegisterInfo() const { return RI; }
   const MCInstrDesc &getBrCond(AVRCC::CondCodes CC) const;

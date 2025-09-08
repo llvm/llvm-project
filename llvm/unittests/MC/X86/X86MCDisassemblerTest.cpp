@@ -23,14 +23,15 @@ using namespace llvm;
 namespace {
 
 struct Context {
-  const char *TripleName = "x86_64-unknown-elf";
+  static constexpr char TripleName[] = "x86_64-unknown-elf";
+  const Triple TheTriple;
   std::unique_ptr<MCRegisterInfo> MRI;
   std::unique_ptr<MCAsmInfo> MAI;
   std::unique_ptr<MCContext> Ctx;
   std::unique_ptr<MCSubtargetInfo> STI;
   std::unique_ptr<MCDisassembler> DisAsm;
 
-  Context() {
+  Context() : TheTriple(TripleName) {
     LLVMInitializeX86TargetInfo();
     LLVMInitializeX86TargetMC();
     LLVMInitializeX86Disassembler();
@@ -41,11 +42,11 @@ struct Context {
     if (!TheTarget)
       return;
 
-    MRI.reset(TheTarget->createMCRegInfo(TripleName));
-    MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCTargetOptions()));
-    STI.reset(TheTarget->createMCSubtargetInfo(TripleName, "", ""));
-    Ctx = std::make_unique<MCContext>(Triple(TripleName), MAI.get(), MRI.get(),
-                                      STI.get());
+    MRI.reset(TheTarget->createMCRegInfo(TheTriple));
+    MAI.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCTargetOptions()));
+    STI.reset(TheTarget->createMCSubtargetInfo(TheTriple, "", ""));
+    Ctx =
+        std::make_unique<MCContext>(TheTriple, MAI.get(), MRI.get(), STI.get());
 
     DisAsm.reset(TheTarget->createMCDisassembler(*STI, *Ctx));
   }

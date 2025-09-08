@@ -13,6 +13,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Compiler.h"
 #include <functional>
 
@@ -70,7 +71,8 @@ public:
   using LazyCallback =
       llvm::unique_function<void(GlobalValue &GV, ValueAdder Add)>;
 
-  using NamedMDNodesT = DenseMap<const NamedMDNode *, DenseSet<const MDNode *>>;
+  using NamedMDNodesT =
+      DenseMap<const NamedMDNode *, SmallPtrSet<const MDNode *, 8>>;
 
   /// Move in the provide values in \p ValuesToLink from \p Src.
   ///

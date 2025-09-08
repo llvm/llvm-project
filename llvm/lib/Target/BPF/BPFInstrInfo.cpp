@@ -12,6 +12,7 @@
 
 #include "BPFInstrInfo.h"
 #include "BPF.h"
+#include "BPFSubtarget.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -25,8 +26,8 @@
 
 using namespace llvm;
 
-BPFInstrInfo::BPFInstrInfo()
-    : BPFGenInstrInfo(BPF::ADJCALLSTACKDOWN, BPF::ADJCALLSTACKUP) {}
+BPFInstrInfo::BPFInstrInfo(const BPFSubtarget &STI)
+    : BPFGenInstrInfo(STI, BPF::ADJCALLSTACKDOWN, BPF::ADJCALLSTACKUP) {}
 
 void BPFInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator I,

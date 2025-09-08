@@ -299,12 +299,11 @@ SerializeGPUModuleBase::assembleIsa(StringRef isa) {
   srcMgr.AddNewSourceBuffer(llvm::MemoryBuffer::getMemBuffer(isa), SMLoc());
 
   const llvm::MCTargetOptions mcOptions;
-  std::unique_ptr<llvm::MCRegisterInfo> mri(
-      target->createMCRegInfo(targetTriple));
+  std::unique_ptr<llvm::MCRegisterInfo> mri(target->createMCRegInfo(triple));
   std::unique_ptr<llvm::MCAsmInfo> mai(
-      target->createMCAsmInfo(*mri, targetTriple, mcOptions));
+      target->createMCAsmInfo(*mri, triple, mcOptions));
   std::unique_ptr<llvm::MCSubtargetInfo> sti(
-      target->createMCSubtargetInfo(targetTriple, chip, features));
+      target->createMCSubtargetInfo(triple, chip, features));
 
   llvm::MCContext ctx(triple, mai.get(), mri.get(), sti.get(), &srcMgr,
                       &mcOptions);
