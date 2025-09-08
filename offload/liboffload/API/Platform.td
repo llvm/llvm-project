@@ -38,7 +38,7 @@ def olGetPlatformInfo : Function {
     "required for the given query."
   ];
   let params = [
-    Param<"ol_platform_handle_t", "Platform", "handle of the platform", PARAM_IN>,
+    Param<"const ol_platform_handle_t", "Platform", "handle of the platform", PARAM_IN>,
     Param<"ol_platform_info_t", "PropName", "type of the info to retrieve", PARAM_IN>,
     Param<"size_t", "PropSize", "the number of bytes pointed to by pPlatformInfo.", PARAM_IN>,
     TypeTaggedParam<"void*", "PropValue", "array of bytes holding the info. "
@@ -62,7 +62,7 @@ def olGetPlatformInfoSize : Function {
   let desc = "Returns the storage size of the given platform query.";
   let details = [];
   let params = [
-    Param<"ol_platform_handle_t", "Platform", "handle of the platform", PARAM_IN>,
+    Param<"const ol_platform_handle_t", "Platform", "handle of the platform", PARAM_IN>,
     Param<"ol_platform_info_t", "PropName", "type of the info to query", PARAM_IN>,
     Param<"size_t*", "PropSizeRet", "pointer to the number of bytes required to store the query", PARAM_OUT>
   ];

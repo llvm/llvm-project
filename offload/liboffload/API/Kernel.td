@@ -47,7 +47,7 @@ def olCalculateOptimalOccupancy : Function {
         "For most devices, this will be the largest workgroup size that will result in all work items fitting on the device at once.",
     ];
     let params = [
-        Param<"ol_device_handle_t", "Device", "device intended to run the kernel", PARAM_IN>,
+        Param<"const ol_device_handle_t", "Device", "device intended to run the kernel", PARAM_IN>,
         Param<"ol_symbol_handle_t", "Kernel", "handle of the kernel", PARAM_IN>,
         Param<"size_t", "SharedMemory", "dynamic shared memory required per work item in bytes", PARAM_IN>,
         Param<"size_t*", "GroupSize", "optimal block size", PARAM_OUT>
