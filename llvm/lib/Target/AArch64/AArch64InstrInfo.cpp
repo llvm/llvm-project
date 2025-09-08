@@ -1614,7 +1614,7 @@ bool AArch64InstrInfo::optimizePTestInstr(
   auto *Mask = MRI->getUniqueVRegDef(MaskReg);
   auto *Pred = MRI->getUniqueVRegDef(PredReg);
 
-  if (Pred->isCopy()) {
+  if (Pred->isCopy() && PTest->getOpcode() == AArch64::PTEST_PP_FIRST) {
     // Instructions which return a multi-vector (e.g. WHILECC_x2) require copies
     // before the branch to extract each subregister.
     auto Op = Pred->getOperand(1);
