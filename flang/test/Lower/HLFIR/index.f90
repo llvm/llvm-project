@@ -118,3 +118,45 @@ end subroutine t4
 ! CHECK:             hlfir.yield_element %[[VAL_19]] : i8
 ! CHECK:           }
 ! CHECK:           hlfir.assign %[[VAL_15]] to %[[VAL_14]]#0 : !hlfir.expr<3xi8>, !fir.ref<!fir.array<3xi8>>
+
+! index is called as elemental with the 3d argument optional for 'sub' (^bb0 block)
+! Make sure that the argument is actually accessed (hlfir.designate) only
+! under fir.if that depends on fir.is_present check.
+program test
+  call sub('abcdefgc',(/'c','c'/))
+contains
+  subroutine sub(a,b,c)
+    character(*) a,b(:)
+    logical,optional :: c(:)
+    print *,index(a,b,c)
+  end subroutine
+end program test
+! CHECK-LABEL:   func.func private @_QFPsub(
+! CHECK-SAME:      %[[ARG0:.*]]: !fir.boxchar<1> {fir.bindc_name = "a"},
+! CHECK-SAME:      %[[ARG1:.*]]: !fir.box<!fir.array<?x!fir.char<1,?>>> {fir.bindc_name = "b"},
+! CHECK-SAME:      %[[ARG2:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.bindc_name = "c", fir.optional}) attributes {fir.host_symbol = @_QQmain, llvm.linkage = #llvm.linkage<internal>} {
+! CHECK:           %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
+! CHECK:           %[[VAL_1:.*]]:2 = fir.unboxchar %[[ARG0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]]#0 typeparams %[[VAL_1]]#1 dummy_scope %[[VAL_0]] {uniq_name = "_QFFsubEa"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %[[VAL_0]] {uniq_name = "_QFFsubEb"} : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.box<!fir.array<?x!fir.char<1,?>>>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %[[VAL_0]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFFsubEc"} : (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
+! CHECK:           %[[VAL_10:.*]] = fir.is_present %[[VAL_4]]#0 : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> i1
+! CHECK:           %[[VAL_11:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_12:.*]]:3 = fir.box_dims %[[VAL_3]]#0, %[[VAL_11]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>, index) -> (index, index, index)
+! CHECK:           %[[VAL_13:.*]] = fir.shape %[[VAL_12]]#1 : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_14:.*]] = hlfir.elemental %[[VAL_13]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
+! CHECK:           ^bb0(%[[VAL_15:.*]]: index):
+! CHECK:             %[[VAL_16:.*]] = fir.box_elesize %[[VAL_3]]#1 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index
+! CHECK:             %[[VAL_17:.*]] = hlfir.designate %[[VAL_3]]#0 (%[[VAL_15]])  typeparams %[[VAL_16]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
+! CHECK:             %[[VAL_18:.*]] = fir.if %[[VAL_10]] -> (!fir.logical<4>) {
+! CHECK:               %[[VAL_19:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_15]])  : (!fir.box<!fir.array<?x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
+! CHECK:               %[[VAL_20:.*]] = fir.load %[[VAL_19]] : !fir.ref<!fir.logical<4>>
+! CHECK:               fir.result %[[VAL_20]] : !fir.logical<4>
+! CHECK:             } else {
+! CHECK:               %[[VAL_21:.*]] = arith.constant false
+! CHECK:               %[[VAL_22:.*]] = fir.convert %[[VAL_21]] : (i1) -> !fir.logical<4>
+! CHECK:               fir.result %[[VAL_22]] : !fir.logical<4>
+! CHECK:             }
+! CHECK:             %[[VAL_23:.*]] = hlfir.index %[[VAL_17]] in %[[VAL_2]]#0 back %[[VAL_18]] : (!fir.boxchar<1>, !fir.boxchar<1>, !fir.logical<4>) -> i32
+! CHECK:             hlfir.yield_element %[[VAL_23]] : i32
+! CHECK:           }

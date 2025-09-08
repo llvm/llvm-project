@@ -69,6 +69,9 @@ protected:
   mlir::Value loadBoxAddress(
       const std::optional<Fortran::lower::PreparedActualArgument> &arg);
 
+  mlir::Value loadTrivialScalar(
+      const std::optional<Fortran::lower::PreparedActualArgument> &arg);
+
   void addCleanup(std::optional<hlfir::CleanupFunction> cleanup) {
     if (cleanup)
       cleanupFns.emplace_back(std::move(*cleanup));
@@ -250,29 +253,10 @@ mlir::Value HlfirTransformationalIntrinsic::loadBoxAddress(
   return boxOrAbsent;
 }
 
-static mlir::Value loadOptionalValue(
-    mlir::Location loc, fir::FirOpBuilder &builder,
-    const std::optional<Fortran::lower::PreparedActualArgument> &arg,
-    hlfir::Entity actual) {
-  if (!arg->handleDynamicOptional())
-    return hlfir::loadTrivialScalar(loc, builder, actual);
-
-  mlir::Value isPresent = arg->getIsPresent();
-  mlir::Type eleType = hlfir::getFortranElementType(actual.getType());
-  return builder
-      .genIfOp(loc, {eleType}, isPresent,
-               /*withElseRegion=*/true)
-      .genThen([&]() {
-        assert(actual.isScalar() && fir::isa_trivial(eleType) &&
-               "must be a numerical or logical scalar");
-        hlfir::Entity val = hlfir::loadTrivialScalar(loc, builder, actual);
-        fir::ResultOp::create(builder, loc, val);
-      })
-      .genElse([&]() {
-        mlir::Value zero = fir::factory::createZeroValue(builder, loc, eleType);
-        fir::ResultOp::create(builder, loc, zero);
-      })
-      .getResults()[0];
+mlir::Value HlfirTransformationalIntrinsic::loadTrivialScalar(
+    const std::optional<Fortran::lower::PreparedActualArgument> &arg) {
+  hlfir::Entity actual = arg->getActual(loc, builder);
+  return hlfir::loadTrivialScalar(loc, builder, actual);
 }
 
 llvm::SmallVector<mlir::Value> HlfirTransformationalIntrinsic::getOperandVector(
@@ -288,29 +272,33 @@ llvm::SmallVector<mlir::Value> HlfirTransformationalIntrinsic::getOperandVector(
       operands.emplace_back();
       continue;
     }
-    hlfir::Entity actual = arg->getActual(loc, builder);
     mlir::Value valArg;
-
     if (!argLowering) {
-      valArg = hlfir::loadTrivialScalar(loc, builder, actual);
-    } else {
-      fir::ArgLoweringRule argRules =
-          fir::lowerIntrinsicArgumentAs(*argLowering, i);
-      if (argRules.lowerAs == fir::LowerIntrinsicArgAs::Box)
-        valArg = loadBoxAddress(arg);
-      else if (!argRules.handleDynamicOptional &&
-               argRules.lowerAs != fir::LowerIntrinsicArgAs::Inquired)
-        valArg = hlfir::derefPointersAndAllocatables(loc, builder, actual);
-      else if (argRules.handleDynamicOptional &&
-               argRules.lowerAs == fir::LowerIntrinsicArgAs::Value)
-        valArg = loadOptionalValue(loc, builder, arg, actual);
-      else if (argRules.handleDynamicOptional)
+      valArg = loadTrivialScalar(arg);
+      operands.emplace_back(valArg);
+      continue;
+    }
+    fir::ArgLoweringRule argRules =
+        fir::lowerIntrinsicArgumentAs(*argLowering, i);
+    if (argRules.lowerAs == fir::LowerIntrinsicArgAs::Box) {
+      valArg = loadBoxAddress(arg);
+    } else if (argRules.handleDynamicOptional) {
+      if (argRules.lowerAs == fir::LowerIntrinsicArgAs::Value) {
+        if (arg->handleDynamicOptional())
+          valArg = arg->getOptionalValue(loc, builder);
+        else
+          valArg = loadTrivialScalar(arg);
+      } else {
         TODO(loc, "hlfir transformational intrinsic dynamically optional "
                   "argument without box lowering");
+      }
+    } else {
+      hlfir::Entity actual = arg->getActual(loc, builder);
+      if (argRules.lowerAs != fir::LowerIntrinsicArgAs::Inquired)
+        valArg = hlfir::derefPointersAndAllocatables(loc, builder, actual);
       else
         valArg = actual.getBase();
     }
-
     operands.emplace_back(valArg);
   }
   return operands;
