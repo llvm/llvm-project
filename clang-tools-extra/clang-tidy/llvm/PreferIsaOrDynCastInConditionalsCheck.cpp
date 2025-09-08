@@ -99,8 +99,8 @@ void PreferIsaOrDynCastInConditionalsCheck::check(
                                   *Result.SourceManager, getLangOpts());
     };
 
-    StringRef LHSString = GetText(LHS->getSourceRange());
-    StringRef ArgString = GetText(Arg->getSourceRange());
+    const StringRef LHSString = GetText(LHS->getSourceRange());
+    const StringRef ArgString = GetText(Arg->getSourceRange());
 
     if (ArgString != LHSString)
       return;

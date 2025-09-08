@@ -199,7 +199,7 @@ Changes in existing checks
 - Improved :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals
   <clang-tidy/checks/llvm/prefer-isa-or-dyn-cast-in-conditionals>` check:
 
-  - Fix-it handles Callees with nested-name-specifier correctly.
+  - Fix-it handles callees with nested-name-specifier correctly.
 
   - ``if`` statements with init-statement (``if (auto X = ...; ...)``) are
     handled correctly.
