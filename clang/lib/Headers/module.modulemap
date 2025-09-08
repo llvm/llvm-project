@@ -340,25 +340,25 @@ module ptrauth [system] {
   export *
 }
 
-module feature_availability {
+module feature_availability [system] {
   header "feature-availability.h"
   export *
 }
 
-module availability_domain {
+module availability_domain [system] {
   header "availability_domain.h"
   export *
 }
 
 /* TO_UPSTREAM(BoundsSafety) ON */
-module ptrcheck {
+module ptrcheck [system] {
   header "ptrcheck.h"
   export *
 }
 /* TO_UPSTREAM(BoundsSafety) OFF */
 
 /* TO_UPSTREAM(Lifetimebound) ON */
-module lifetimebound {
+module lifetimebound [system] {
   header "lifetimebound.h"
   export *
 }
