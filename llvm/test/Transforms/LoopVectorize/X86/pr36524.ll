@@ -35,12 +35,10 @@ define void @foo(ptr %ptr, ptr %ptr.2) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i64 [ 2, [[ENTRY]] ], [ 2, [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[CAN_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[CAN_IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = phi i64 [ [[BC_RESUME_VAL2]], [[SCALAR_PH]] ], [ [[TMP12:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CAN_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[CAN_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi i64 [ 2, [[SCALAR_PH]] ], [ [[TMP12:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = and i64 [[TMP9]], 4294967295
 ; CHECK-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP9]] to i32
 ; CHECK-NEXT:    store i32 [[TMP11]], ptr [[PTR_2]], align 4

@@ -260,12 +260,11 @@ define void @test(ptr nocapture %asd, ptr nocapture %aud,
 ; UNROLL-NO-VF:       middle.block:
 ; UNROLL-NO-VF-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
 ; UNROLL-NO-VF:       scalar.ph:
-; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL-NO-VF:       for.cond.cleanup:
 ; UNROLL-NO-VF-NEXT:    ret void
 ; UNROLL-NO-VF:       for.body:
-; UNROLL-NO-VF-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[IF_END:%.*]] ]
+; UNROLL-NO-VF-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[IF_END:%.*]] ]
 ; UNROLL-NO-VF-NEXT:    [[ISD:%.*]] = getelementptr inbounds i32, ptr [[ASD]], i64 [[INDVARS_IV]]
 ; UNROLL-NO-VF-NEXT:    [[IUD:%.*]] = getelementptr inbounds i32, ptr [[AUD]], i64 [[INDVARS_IV]]
 ; UNROLL-NO-VF-NEXT:    [[ISR:%.*]] = getelementptr inbounds i32, ptr [[ASR]], i64 [[INDVARS_IV]]
@@ -463,12 +462,11 @@ define void @test_scalar2scalar(ptr nocapture %asd, ptr nocapture %bsd) {
 ; UNROLL-NO-VF:       middle.block:
 ; UNROLL-NO-VF-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
 ; UNROLL-NO-VF:       scalar.ph:
-; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL-NO-VF:       for.cond.cleanup:
 ; UNROLL-NO-VF-NEXT:    ret void
 ; UNROLL-NO-VF:       for.body:
-; UNROLL-NO-VF-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[IF_END:%.*]] ]
+; UNROLL-NO-VF-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[IF_END:%.*]] ]
 ; UNROLL-NO-VF-NEXT:    [[ISD:%.*]] = getelementptr inbounds i32, ptr [[ASD]], i64 [[INDVARS_IV]]
 ; UNROLL-NO-VF-NEXT:    [[LSD:%.*]] = load i32, ptr [[ISD]], align 4
 ; UNROLL-NO-VF-NEXT:    [[ISD_B:%.*]] = getelementptr inbounds i32, ptr [[BSD]], i64 [[INDVARS_IV]]
@@ -650,12 +648,11 @@ define void @pr30172(ptr nocapture %asd, ptr nocapture %bsd) !dbg !5 {;
 ; UNROLL-NO-VF:       middle.block:
 ; UNROLL-NO-VF-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
 ; UNROLL-NO-VF:       scalar.ph:
-; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL-NO-VF:       for.cond.cleanup:
 ; UNROLL-NO-VF-NEXT:    ret void
 ; UNROLL-NO-VF:       for.body:
-; UNROLL-NO-VF-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[IF_END:%.*]] ]
+; UNROLL-NO-VF-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[IF_END:%.*]] ]
 ; UNROLL-NO-VF-NEXT:    [[ISD:%.*]] = getelementptr inbounds i32, ptr [[ASD]], i64 [[INDVARS_IV]]
 ; UNROLL-NO-VF-NEXT:    [[LSD:%.*]] = load i32, ptr [[ISD]], align 4
 ; UNROLL-NO-VF-NEXT:    [[ISD_B:%.*]] = getelementptr inbounds i32, ptr [[BSD]], i64 [[INDVARS_IV]]

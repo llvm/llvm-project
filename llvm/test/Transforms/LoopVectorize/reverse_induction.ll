@@ -145,7 +145,7 @@ loopend:
 define i32 @reverse_induction_i16(i16 %startval, ptr %ptr) {
 ; CHECK-LABEL: define i32 @reverse_induction_i16(
 ; CHECK-SAME: i16 [[STARTVAL:%.*]], ptr [[PTR:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i16 [[STARTVAL]], -1
@@ -180,13 +180,11 @@ define i32 @reverse_induction_i16(i16 %startval, ptr %ptr) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
 ; CHECK-NEXT:    br label %[[LOOPEND:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ [[STARTVAL]], %[[ENTRY]] ], [ [[STARTVAL]], %[[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[ADD_I7:%.*]] = phi i16 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[ADD_I:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ [[BC_RESUME_VAL4]], %[[SCALAR_PH]] ], [ [[INC4:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[REDUX5:%.*]] = phi i32 [ [[BC_RESUME_VAL4]], %[[SCALAR_PH]] ], [ [[INC_REDUX:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[ADD_I7:%.*]] = phi i16 [ [[STARTVAL]], %[[SCALAR_PH]] ], [ [[ADD_I:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[INC4:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[REDUX5:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[INC_REDUX:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ADD_I]] = add i16 [[ADD_I7]], -1
 ; CHECK-NEXT:    [[KIND__I:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i16 [[ADD_I]]
 ; CHECK-NEXT:    [[TMP_I1:%.*]] = load i32, ptr [[KIND__I]], align 4
