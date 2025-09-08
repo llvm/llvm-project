@@ -57,14 +57,11 @@ public:
   bool diagnosing() const { return getEvalStatus().Diag != nullptr; }
 
   // Stack frame accessors.
-  Frame *getSplitFrame() { return Parent.getCurrentFrame(); }
   Frame *getCurrentFrame() override;
   unsigned getCallStackDepth() override {
     return Current ? (Current->getDepth() + 1) : 1;
   }
-  const Frame *getBottomFrame() const override {
-    return Parent.getBottomFrame();
-  }
+  const Frame *getBottomFrame() const override { return &BottomFrame; }
 
   // Access objects from the walker context.
   Expr::EvalStatus &getEvalStatus() const override {

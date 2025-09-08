@@ -11,7 +11,7 @@
 #include <clc/integer/clc_bitfield_insert.h>
 #include <clc/opencl/integer/bitfield_insert.h>
 
-#define FUNCTION bitfield_insert
+#define __CLC_FUNCTION bitfield_insert
 #define __CLC_BODY <clc/integer/clc_bitfield_insert.inc>
 #include <clc/integer/gentype.inc>
 

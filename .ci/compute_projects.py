@@ -26,6 +26,7 @@ PROJECT_DEPENDENCIES = {
     "libc": {"clang", "lld"},
     "openmp": {"clang", "lld"},
     "flang": {"llvm", "clang"},
+    "flang-rt": {"flang"},
     "lldb": {"llvm", "clang"},
     "libclc": {"llvm", "clang"},
     "lld": {"llvm"},
@@ -49,8 +50,7 @@ DEPENDENTS_TO_TEST = {
         "flang",
     },
     "lld": {"bolt", "cross-project-tests"},
-    # TODO(issues/132795): LLDB should be enabled on clang changes.
-    "clang": {"clang-tools-extra", "cross-project-tests"},
+    "clang": {"clang-tools-extra", "cross-project-tests", "lldb"},
     "mlir": {"flang"},
     # Test everything if ci scripts are changed.
     ".ci": {
@@ -81,7 +81,9 @@ DEPENDENT_RUNTIMES_TO_TEST = {
     "clang-tools-extra": {"libc"},
     "libc": {"libc"},
     "compiler-rt": {"compiler-rt"},
-    ".ci": {"compiler-rt", "libc"},
+    "flang": {"flang-rt"},
+    "flang-rt": {"flang-rt"},
+    ".ci": {"compiler-rt", "libc", "flang-rt"},
 }
 DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {
     "llvm": {"libcxx", "libcxxabi", "libunwind"},
@@ -104,6 +106,7 @@ EXCLUDE_WINDOWS = {
     "libcxx",
     "libcxxabi",
     "libunwind",
+    "flang-rt",
 }
 
 # These are projects that we should test if the project itself is changed but
@@ -141,6 +144,7 @@ PROJECT_CHECK_TARGETS = {
     "bolt": "check-bolt",
     "lld": "check-lld",
     "flang": "check-flang",
+    "flang-rt": "check-flang-rt",
     "libc": "check-libc",
     "lld": "check-lld",
     "lldb": "check-lldb",
@@ -149,7 +153,7 @@ PROJECT_CHECK_TARGETS = {
     "polly": "check-polly",
 }
 
-RUNTIMES = {"libcxx", "libcxxabi", "libunwind", "compiler-rt", "libc"}
+RUNTIMES = {"libcxx", "libcxxabi", "libunwind", "compiler-rt", "libc", "flang-rt"}
 
 # Meta projects are projects that need explicit handling but do not reside
 # in their own top level folder. To add a meta project, the start of the path
@@ -334,6 +338,7 @@ if __name__ == "__main__":
     current_platform = platform.system()
     if len(sys.argv) == 2:
         current_platform = sys.argv[1]
-    env_variables = get_env_variables(sys.stdin.readlines(), current_platform)
+    changed_files = [line.strip() for line in sys.stdin.readlines()]
+    env_variables = get_env_variables(changed_files, current_platform)
     for env_variable in env_variables:
         print(f"{env_variable}='{env_variables[env_variable]}'")

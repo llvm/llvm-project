@@ -11,7 +11,7 @@ declare %struct.double2 @add(ptr align(16) byval(%struct.double2), ptr align(16)
 define void @call_byval(ptr %out, ptr %in1, ptr %in2) {
 ; CHECK-LABEL: call_byval(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<12>;
+; CHECK-NEXT:    .reg .b64 %rd<10>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [call_byval_param_0];

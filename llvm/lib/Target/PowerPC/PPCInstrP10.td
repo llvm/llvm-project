@@ -117,7 +117,6 @@ def PPClxvrzx : SDNode<"PPCISD::LXVRZX", SDT_PPCLXVRZX,
 class PI<bits<6> pref, bits<6> opcode, dag OOL, dag IOL, string asmstr,
          InstrItinClass itin> : Instruction {
   field bits<64> Inst;
-  field bits<64> SoftFail = 0;
   bit PCRel = 0; // Default value, set by isPCRel.
   let Size = 8;
 

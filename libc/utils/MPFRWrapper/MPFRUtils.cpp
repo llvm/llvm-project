@@ -39,6 +39,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.asin();
   case Operation::Asinh:
     return mpfrInput.asinh();
+  case Operation::Asinpi:
+    return mpfrInput.asinpi();
   case Operation::Atan:
     return mpfrInput.atan();
   case Operation::Atanh:
@@ -789,6 +791,8 @@ template bool round_to_long<float16>(float16, long &);
 template bool round_to_long<float128>(float128, long &);
 #endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 
+template bool round_to_long<bfloat16>(bfloat16, long &);
+
 template <typename T> bool round_to_long(T x, RoundingMode mode, long &result) {
   MPFRNumber mpfr(x);
   return mpfr.round_to_long(get_mpfr_rounding_mode(mode), result);
@@ -805,6 +809,8 @@ template bool round_to_long<float16>(float16, RoundingMode, long &);
 #ifdef LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 template bool round_to_long<float128>(float128, RoundingMode, long &);
 #endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
+
+template bool round_to_long<bfloat16>(bfloat16, RoundingMode, long &);
 
 template <typename T> T round(T x, RoundingMode mode) {
   MPFRNumber mpfr(x);
@@ -823,6 +829,8 @@ template float16 round<float16>(float16, RoundingMode);
 #ifdef LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 template float128 round<float128>(float128, RoundingMode);
 #endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
+
+template bfloat16 round<bfloat16>(bfloat16, RoundingMode);
 
 } // namespace mpfr
 } // namespace testing

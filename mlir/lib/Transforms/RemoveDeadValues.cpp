@@ -258,18 +258,17 @@ static SmallVector<OpOperand *> operandsToOpOperands(OperandRange operands) {
 static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
                             DenseSet<Value> &nonLiveSet,
                             RDVFinalCleanupList &cl) {
-  LDBG() << "Processing simple op: " << *op;
   if (!isMemoryEffectFree(op) || hasLive(op->getResults(), nonLiveSet, la)) {
-    LDBG()
-        << "Simple op is not memory effect free or has live results, skipping: "
-        << *op;
+    LDBG() << "Simple op is not memory effect free or has live results, "
+              "preserving it: "
+           << OpWithFlags(op, OpPrintingFlags().skipRegions());
     return;
   }
 
   LDBG()
       << "Simple op has all dead results and is memory effect free, scheduling "
          "for removal: "
-      << *op;
+      << OpWithFlags(op, OpPrintingFlags().skipRegions());
   cl.operations.push_back(op);
   collectNonLiveValues(nonLiveSet, op->getResults(),
                        BitVector(op->getNumResults(), true));
@@ -728,19 +727,31 @@ static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
 /// Removes dead values collected in RDVFinalCleanupList.
 /// To be run once when all dead values have been collected.
 static void cleanUpDeadVals(RDVFinalCleanupList &list) {
+  LDBG() << "Starting cleanup of dead values...";
+
   // 1. Operations
+  LDBG() << "Cleaning up " << list.operations.size() << " operations";
   for (auto &op : list.operations) {
+    LDBG() << "Erasing operation: "
+           << OpWithFlags(op, OpPrintingFlags().skipRegions());
     op->dropAllUses();
     op->erase();
   }
 
   // 2. Values
+  LDBG() << "Cleaning up " << list.values.size() << " values";
   for (auto &v : list.values) {
+    LDBG() << "Dropping all uses of value: " << v;
     v.dropAllUses();
   }
 
   // 3. Functions
+  LDBG() << "Cleaning up " << list.functions.size() << " functions";
   for (auto &f : list.functions) {
+    LDBG() << "Cleaning up function: " << f.funcOp.getOperation()->getName();
+    LDBG() << "  Erasing " << f.nonLiveArgs.count() << " non-live arguments";
+    LDBG() << "  Erasing " << f.nonLiveRets.count()
+           << " non-live return values";
     // Some functions may not allow erasing arguments or results. These calls
     // return failure in such cases without modifying the function, so it's okay
     // to proceed.
@@ -749,44 +760,67 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
   }
 
   // 4. Operands
+  LDBG() << "Cleaning up " << list.operands.size() << " operand lists";
   for (OperationToCleanup &o : list.operands) {
-    if (o.op->getNumOperands() > 0)
+    if (o.op->getNumOperands() > 0) {
+      LDBG() << "Erasing " << o.nonLive.count()
+             << " non-live operands from operation: "
+             << OpWithFlags(o.op, OpPrintingFlags().skipRegions());
       o.op->eraseOperands(o.nonLive);
+    }
   }
 
   // 5. Results
+  LDBG() << "Cleaning up " << list.results.size() << " result lists";
   for (auto &r : list.results) {
+    LDBG() << "Erasing " << r.nonLive.count()
+           << " non-live results from operation: "
+           << OpWithFlags(r.op, OpPrintingFlags().skipRegions());
     dropUsesAndEraseResults(r.op, r.nonLive);
   }
 
   // 6. Blocks
+  LDBG() << "Cleaning up " << list.blocks.size() << " block argument lists";
   for (auto &b : list.blocks) {
     // blocks that are accessed via multiple codepaths processed once
     if (b.b->getNumArguments() != b.nonLiveArgs.size())
       continue;
+    LDBG() << "Erasing " << b.nonLiveArgs.count()
+           << " non-live arguments from block: " << b.b;
     // it iterates backwards because erase invalidates all successor indexes
     for (int i = b.nonLiveArgs.size() - 1; i >= 0; --i) {
       if (!b.nonLiveArgs[i])
         continue;
+      LDBG() << "  Erasing block argument " << i << ": " << b.b->getArgument(i);
       b.b->getArgument(i).dropAllUses();
       b.b->eraseArgument(i);
     }
   }
 
   // 7. Successor Operands
+  LDBG() << "Cleaning up " << list.successorOperands.size()
+         << " successor operand lists";
   for (auto &op : list.successorOperands) {
     SuccessorOperands successorOperands =
         op.branch.getSuccessorOperands(op.successorIndex);
     // blocks that are accessed via multiple codepaths processed once
     if (successorOperands.size() != op.nonLiveOperands.size())
       continue;
+    LDBG() << "Erasing " << op.nonLiveOperands.count()
+           << " non-live successor operands from successor "
+           << op.successorIndex << " of branch: "
+           << OpWithFlags(op.branch, OpPrintingFlags().skipRegions());
     // it iterates backwards because erase invalidates all successor indexes
     for (int i = successorOperands.size() - 1; i >= 0; --i) {
       if (!op.nonLiveOperands[i])
         continue;
+      LDBG() << "  Erasing successor operand " << i << ": "
+             << successorOperands[i];
       successorOperands.erase(i);
     }
   }
+
+  LDBG() << "Finished cleanup of dead values";
 }
 
 struct RemoveDeadValues : public impl::RemoveDeadValuesBase<RemoveDeadValues> {

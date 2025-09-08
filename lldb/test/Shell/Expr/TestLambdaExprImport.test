@@ -1,0 +1,26 @@
+# Test that we can successfully ASTImport clang::LambdaExpr nodes.
+# Currently this is not supported in MinimalImport mode (which LLDB
+# uses always).
+
+# RUN: split-file %s %t
+# RUN: %clang_host -g -gdwarf %t/main.cpp -o %t.out
+# RUN: %lldb -o "settings set interpreter.stop-command-source-on-error false" \
+# RUN:       -x -b -s %t/commands.input %t.out 2>&1 \
+# RUN:       | FileCheck %s
+
+#--- main.cpp
+
+int main() {
+  __builtin_debugtrap();
+}
+
+#--- commands.input
+
+run
+expression --top-level -- void method(int x) { [x=x] { ; }; }
+target dump typesystem
+
+# CHECK:      expression
+# CHECK:      target dump typesystem
+# CHECK-NOT:  FunctionDecl
+# CHECK-NOT:  LambdaExpr

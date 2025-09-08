@@ -31,8 +31,8 @@ LLVM_ABI bool verifyRegisterSpace(uint32_t RegisterSpace);
 LLVM_ABI bool verifyRootDescriptorFlag(uint32_t Version, uint32_t FlagsVal);
 LLVM_ABI bool verifyRangeType(uint32_t Type);
 LLVM_ABI bool verifyDescriptorRangeFlag(uint32_t Version,
-                                        dxbc::DescriptorRangeType Type,
-                                        uint32_t FlagsVal);
+                                        dxil::ResourceClass Type,
+                                        dxbc::DescriptorRangeFlags FlagsVal);
 LLVM_ABI bool verifyNumDescriptors(uint32_t NumDescriptors);
 LLVM_ABI bool verifyMipLODBias(float MipLODBias);
 LLVM_ABI bool verifyMaxAnisotropy(uint32_t MaxAnisotropy);

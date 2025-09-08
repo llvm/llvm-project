@@ -351,3 +351,58 @@ body:             |
     $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
     KILL killed $vgpr3_vgpr4, killed $vgpr5_vgpr6
 ...
+
+# Avoid bundling if a MBB has SCHED_BARRIER
+---
+name: no_sched_barrier_within_bundle
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; GCN-LABLE: name: no_sched_barrier_within_bundle
+    ; GCN: renamable $sgpr0_sgpr1 = IMPLICIT_DEF
+    ; GCN-NEXT: renamable $vgpr0 = IMPLICIT_DEF
+    ; GCN-NEXT: BUNDLE implicit-def $vgpr1, implicit-def $vgpr1_lo16, implicit-def $vgpr1_hi16, implicit-def $vgpr2, implicit-def $vgpr2_lo16, implicit-def $vgpr2_hi16, implicit $sgpr0_sgpr1, implicit $vgpr0, implicit $exec {
+    ; GCN-NEXT:   renamable $vgpr1 = GLOBAL_LOAD_DWORD_SADDR renamable $sgpr0_sgpr1, renamable $vgpr0, 0, 0, implicit $exec, implicit-def $vgpr1, implicit-def $vgpr1_lo16, implicit-def $vgpr1_hi16, implicit-def $vgpr2
+    ; GCN-NEXT:   renamable $vgpr2 = GLOBAL_LOAD_DWORD_SADDR renamable $sgpr0_sgpr1, renamable $vgpr0, 512, 0, implicit $exec, implicit-def $vgpr2_lo16, implicit-def $vgpr2_hi16, implicit $sgpr0_sgpr1, implicit $vgpr0
+    ; GCN-NEXT: }
+    ; GCN-NEXT: renamable $sgpr2_sgpr3 = IMPLICIT_DEF
+    ; GCN-NEXT: renamable $vgpr10 = IMPLICIT_DEF
+    ; GCN-NEXT: renamable $vgpr1 = nsw V_MUL_LO_U32_e64 killed $vgpr1, $vgpr1, implicit $exec
+    ; GCN-NEXT: renamable $vgpr2 = nsw V_MUL_LO_U32_e64 killed $vgpr2, $vgpr2, implicit $exec
+    ; GCN-NEXT: SCHED_BARRIER 1924
+    ; GCN-NEXT: renamable $vgpr11 = GLOBAL_LOAD_DWORD_SADDR renamable $sgpr2_sgpr3, renamable $vgpr10, 0, 0, implicit $exec, implicit-def $vgpr11, implicit-def $vgpr11_lo16, implicit-def $vgpr11_hi16, implicit $sgpr2_sgpr3, implicit $vgpr10
+    ; GCN-NEXT: SCHED_BARRIER 1924
+    ; GCN-NEXT: renamable $vgpr12 = GLOBAL_LOAD_DWORD_SADDR renamable $sgpr2_sgpr3, renamable $vgpr10, 512, 0, implicit $exec, implicit-def $vgpr12, implicit-def $vgpr12_lo16, implicit-def $vgpr12_hi16, implicit $sgpr2_sgpr3, implicit $vgpr10
+    ; GCN-NEXT: renamable $sgpr4_sgpr5 = IMPLICIT_DEF
+    ; GCN-NEXT: renamable $vgpr0 = IMPLICIT_DEF
+    ; GCN-NEXT: renamable $vgpr11 = nsw V_MUL_LO_U32_e64 killed $vgpr11, $vgpr11, implicit $exec
+    ; GCN-NEXT: renamable $vgpr12 = nsw V_MUL_LO_U32_e64 killed $vgpr12, $vgpr12, implicit $exec
+    ; GCN-NEXT: BUNDLE implicit killed $vgpr10, implicit killed $vgpr11, implicit killed $sgpr2_sgpr3, implicit $exec, implicit killed $vgpr12, implicit killed $vgpr0, implicit killed $vgpr1, implicit killed $sgpr4_sgpr5, implicit killed $vgpr2 {
+    ; GCN-NEXT:   GLOBAL_STORE_DWORD_SADDR renamable $vgpr10, killed renamable $vgpr11, renamable $sgpr2_sgpr3, 0, 0, implicit $exec, implicit killed $vgpr11
+    ; GCN-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr10, killed renamable $vgpr12, killed renamable $sgpr2_sgpr3, 512, 0, implicit $exec
+    ; GCN-NEXT:   GLOBAL_STORE_DWORD_SADDR renamable $vgpr0, killed renamable $vgpr1, renamable $sgpr4_sgpr5, 0, 0, implicit $exec
+    ; GCN-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr2, killed renamable $sgpr4_sgpr5, 512, 0, implicit $exec
+    ; GCN-NEXT: }
+    ; GCN-NEXT: S_ENDPGM 0
+    renamable $sgpr0_sgpr1 = IMPLICIT_DEF
+    renamable $vgpr0 = IMPLICIT_DEF
+    renamable $vgpr1 = GLOBAL_LOAD_DWORD_SADDR renamable $sgpr0_sgpr1, renamable $vgpr0, 0, 0, implicit $exec, implicit-def $vgpr1, implicit-def $vgpr1_lo16, implicit-def $vgpr1_hi16, implicit-def $vgpr2
+    renamable $vgpr2 = GLOBAL_LOAD_DWORD_SADDR renamable $sgpr0_sgpr1, renamable $vgpr0, 512, 0, implicit $exec, implicit-def $vgpr2_lo16, implicit-def $vgpr2_hi16, implicit $sgpr0_sgpr1, implicit $vgpr0
+    renamable $sgpr2_sgpr3 = IMPLICIT_DEF
+    renamable $vgpr10 = IMPLICIT_DEF
+    renamable $vgpr1 = nsw V_MUL_LO_U32_e64 killed $vgpr1, $vgpr1, implicit $exec
+    renamable $vgpr2 = nsw V_MUL_LO_U32_e64 killed $vgpr2, $vgpr2, implicit $exec
+    SCHED_BARRIER 1924
+    renamable $vgpr11 = GLOBAL_LOAD_DWORD_SADDR renamable $sgpr2_sgpr3, renamable $vgpr10, 0, 0, implicit $exec, implicit-def $vgpr11, implicit-def $vgpr11_lo16, implicit-def $vgpr11_hi16, implicit $sgpr2_sgpr3, implicit $vgpr10
+    SCHED_BARRIER 1924
+    renamable $vgpr12 = GLOBAL_LOAD_DWORD_SADDR renamable $sgpr2_sgpr3, renamable $vgpr10, 512, 0, implicit $exec, implicit-def $vgpr12, implicit-def $vgpr12_lo16, implicit-def $vgpr12_hi16, implicit $sgpr2_sgpr3, implicit $vgpr10
+    renamable $sgpr4_sgpr5 = IMPLICIT_DEF
+    renamable $vgpr0 = IMPLICIT_DEF
+    renamable $vgpr11 = nsw V_MUL_LO_U32_e64 killed $vgpr11, $vgpr11, implicit $exec
+    renamable $vgpr12 = nsw V_MUL_LO_U32_e64 killed $vgpr12, $vgpr12, implicit $exec
+    GLOBAL_STORE_DWORD_SADDR renamable $vgpr10, killed renamable $vgpr11, renamable $sgpr2_sgpr3, 0, 0, implicit $exec, implicit killed $vgpr11
+    GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr10, killed renamable $vgpr12, killed renamable $sgpr2_sgpr3, 512, 0, implicit $exec
+    GLOBAL_STORE_DWORD_SADDR renamable $vgpr0, killed renamable $vgpr1, renamable $sgpr4_sgpr5, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr2, killed renamable $sgpr4_sgpr5, 512, 0, implicit $exec
+    S_ENDPGM 0
+...

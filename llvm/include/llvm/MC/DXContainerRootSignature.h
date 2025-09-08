@@ -32,7 +32,7 @@ struct RootDescriptor {
 };
 
 struct DescriptorRange {
-  dxbc::DescriptorRangeType RangeType;
+  dxil::ResourceClass RangeType;
   uint32_t NumDescriptors;
   uint32_t BaseShaderRegister;
   uint32_t RegisterSpace;
@@ -146,6 +146,8 @@ struct RootSignatureDesc {
   LLVM_ABI void write(raw_ostream &OS) const;
 
   LLVM_ABI size_t getSize() const;
+  LLVM_ABI uint32_t computeRootParametersOffset() const;
+  LLVM_ABI uint32_t computeStaticSamplersOffset() const;
 };
 } // namespace mcdxbc
 } // namespace llvm

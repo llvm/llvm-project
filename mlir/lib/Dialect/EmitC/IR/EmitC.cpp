@@ -1395,6 +1395,7 @@ void FileOp::build(OpBuilder &builder, OperationState &state, StringRef id) {
 //===----------------------------------------------------------------------===//
 // FieldOp
 //===----------------------------------------------------------------------===//
+
 static void printEmitCFieldOpTypeAndInitialValue(OpAsmPrinter &p, FieldOp op,
                                                  TypeAttr type,
                                                  Attribute initialValue) {
@@ -1452,6 +1453,15 @@ LogicalResult FieldOp::verify() {
 //===----------------------------------------------------------------------===//
 // GetFieldOp
 //===----------------------------------------------------------------------===//
+
+LogicalResult GetFieldOp::verify() {
+  auto parentClassOp = getOperation()->getParentOfType<emitc::ClassOp>();
+  if (!parentClassOp.getOperation())
+    return emitOpError(" must be nested within an emitc.class operation");
+
+  return success();
+}
+
 LogicalResult GetFieldOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   mlir::FlatSymbolRefAttr fieldNameAttr = getFieldNameAttr();
   FieldOp fieldOp =

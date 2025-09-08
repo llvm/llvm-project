@@ -396,11 +396,6 @@ struct ConvertNVGPUToNVVMPass
     : public impl::ConvertNVGPUToNVVMPassBase<ConvertNVGPUToNVVMPass> {
   using Base::Base;
 
-  void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<memref::MemRefDialect, LLVM::LLVMDialect, NVVM::NVVMDialect,
-                    arith::ArithDialect>();
-  }
-
   void runOnOperation() override {
     LowerToLLVMOptions options(&getContext());
     RewritePatternSet patterns(&getContext());
@@ -1031,8 +1026,10 @@ struct NVGPUTmaAsyncStoreOpLowering
       coords[index] = truncToI32(b, value);
     }
 
+    // TODO: Enhance the NVGPU Op for other modes too
     rewriter.replaceOpWithNewOp<NVVM::CpAsyncBulkTensorSharedCTAToGlobalOp>(
-        op, adaptor.getTensorMapDescriptor(), dest, coords,
+        op, adaptor.getTensorMapDescriptor(), dest, coords, Value{},
+        NVVM::TMAStoreMode::TILE, // default is TILE mode
         adaptor.getPredicate());
     return success();
   }
@@ -1106,12 +1103,10 @@ struct NVGPUGenerateWarpgroupDescriptorLowering
     // // [0,14)   start_address
     dsc = insertBit(dsc, basePtr14bit, startBaseAddrBit);
 
-    LDBG() << "Generating warpgroup.descriptor: "
-           << "leading_off:" << leadDimVal << "\t"
-           << "stride_off :" << strideDimVal << "\t"
-           << "base_offset:" << offsetVal << "\t"
-           << "layout_type:" << swizzle << " ("
-           << nvgpu::stringifyTensorMapSwizzleKind(swizzleKind)
+    LDBG() << "Generating warpgroup.descriptor: " << "leading_off:"
+           << leadDimVal << "\t" << "stride_off :" << strideDimVal << "\t"
+           << "base_offset:" << offsetVal << "\t" << "layout_type:" << swizzle
+           << " (" << nvgpu::stringifyTensorMapSwizzleKind(swizzleKind)
            << ")\n start_addr :  " << baseAddr;
 
     rewriter.replaceOp(op, dsc);
@@ -1401,14 +1396,12 @@ struct NVGPUWarpgroupMmaOpLowering
     /// This function generates a WgmmaMmaAsyncOp using provided GMMA matrix
     /// descriptors and arranges them based on induction variables: i, j, and k.
     Value generateWgmma(int i, int j, int k, Value matrixC) {
-      LDBG() << "\t wgmma."
-             << "m" << wgmmaM << "n" << wgmmaN << "k" << wgmmaK << "(A["
-             << (iterationM * wgmmaM) << ":" << (iterationM * wgmmaM) + wgmmaM
-             << "][" << (iterationK * wgmmaK) << ":"
-             << (iterationK * wgmmaK + wgmmaK) << "] * "
-             << " B[" << (iterationK * wgmmaK) << ":"
-             << (iterationK * wgmmaK + wgmmaK) << "][" << 0 << ":" << wgmmaN
-             << "])";
+      LDBG() << "\t wgmma." << "m" << wgmmaM << "n" << wgmmaN << "k" << wgmmaK
+             << "(A[" << (iterationM * wgmmaM) << ":"
+             << (iterationM * wgmmaM) + wgmmaM << "][" << (iterationK * wgmmaK)
+             << ":" << (iterationK * wgmmaK + wgmmaK) << "] * " << " B["
+             << (iterationK * wgmmaK) << ":" << (iterationK * wgmmaK + wgmmaK)
+             << "][" << 0 << ":" << wgmmaN << "])";
 
       Value descriptorA = iterateDescriptorA(adaptor.getDescriptorA(), i, j, k);
       Value descriptorB = iterateDescriptorB(adaptor.getDescriptorB(), i, j, k);
