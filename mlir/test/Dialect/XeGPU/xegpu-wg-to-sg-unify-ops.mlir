@@ -418,4 +418,13 @@ gpu.module @test_distribution {
     %cast = vector.shape_cast %load {layout_result_0 = #xegpu.layout<sg_layout = [8, 1, 4, 1], sg_data = [32, 1, 32, 1]>} : vector<256x128xf32> to vector<256x1x128x1xf32>
     gpu.return
   }
+
+  // CHECK-LABEL: broadcast
+  // CHECK-SAME: %[[ARG_0:.*]]: index, %[[ARG_1:.*]]: index
+  gpu.func @broadcast(%arg0: index, %arg1: index) {
+      %muli = arith.muli %arg0, %arg1 : index
+      // CHECK: vector.broadcast {{.*}} : index to vector<1x1x1x32xindex>
+      %broadcast = vector.broadcast %muli {layout_result_0 = #xegpu.layout<sg_layout = [4, 2, 6, 1], sg_data = [1, 1, 1, 32]>} : index to vector<4x2x6x32xindex>
+      gpu.return
+   }
 }

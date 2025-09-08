@@ -931,14 +931,23 @@ struct WgToSgVectorStepOp : public OpConversionPattern<vector::StepOp> {
       return failure();
 
     VectorType newTy = type.cloneWith(*sgShape, type.getElementType());
-    Value steps = vector::StepOp::create(rewriter, loc, newTy);
+    auto steps = vector::StepOp::create(rewriter, loc, newTy);
     SmallVector<Value> newOps;
     for (auto offsets : *sgOffsets) {
       // Broadcast the offset scalar to a vector & add to the base steps
-      Value bcastOffset =
+      auto bcastOffset =
           vector::BroadcastOp::create(rewriter, loc, newTy, offsets[0]);
-      Value finalSteps =
+      auto finalSteps =
           arith::AddIOp::create(rewriter, loc, steps, bcastOffset);
+      if (!layout.getLaneLayoutAsInt().empty() ||
+          !layout.getLaneDataAsInt().empty()) {
+        xegpu::setDistributeLayoutAttr(steps->getResult(0),
+                                       layout.dropSgLayoutAndData());
+        xegpu::setDistributeLayoutAttr(bcastOffset->getResult(0),
+                                       layout.dropSgLayoutAndData());
+        xegpu::setDistributeLayoutAttr(finalSteps->getResult(0),
+                                       layout.dropSgLayoutAndData());
+      }
       newOps.push_back(finalSteps);
     }
 
@@ -971,14 +980,12 @@ struct WgToSgVectorShapeCastOp
         VectorType::get(sgShape, resultType.getElementType());
 
     // TODO: Add check for compatible layouts in layout attr.
-    // Only support ShapeCast which expands or reduces unit dims only.
-    // That is, only allow shape casts where the non-unit dimensions are
-    // preserved, and any added or removed dimensions must be of size 1.
     auto srcType = dyn_cast<VectorType>(adaptor.getSource()[0].getType());
     if (!srcType)
       return failure();
 
-    auto isUnitOrPreserved = [](ArrayRef<int64_t> src, ArrayRef<int64_t> dst) {
+    // Check that shape_cast only adds/removes unit dimensions,
+    auto onlyUnitDims = [](ArrayRef<int64_t> src, ArrayRef<int64_t> dst) {
       // Remove all 1s from both shapes and compare the rest.
       SmallVector<int64_t> srcNonUnit, dstNonUnit;
       for (int64_t d : src)
@@ -990,8 +997,8 @@ struct WgToSgVectorShapeCastOp
       return srcNonUnit == dstNonUnit;
     };
 
-    if (!isUnitOrPreserved(srcType.getShape(), sgShape) ||
-        !isUnitOrPreserved(sgShape, srcType.getShape()))
+    if (!onlyUnitDims(srcType.getShape(), sgShape) ||
+        !onlyUnitDims(sgShape, srcType.getShape()))
       return failure();
 
     SmallVector<Value> newShapeCastOps;
