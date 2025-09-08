@@ -7,7 +7,7 @@
 ; RUN:     -force-target-instruction-cost=1 -passes=loop-vectorize -S -debug-only=loop-vectorize --disable-output < %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=VSCALEFORTUNING1
 
-; RUN: opt -mtriple=aarch64 -mattr=+sve -mcpu=generic -force-vscale-for-tuning=2 \
+; RUN: opt -mtriple=aarch64 -mattr=+sve -mcpu=generic -sve-vscale-for-tuning=2 \
 ; RUN:     -force-target-instruction-cost=1 -passes=loop-vectorize -S -debug-only=loop-vectorize --disable-output < %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=VSCALEFORTUNING2
 
