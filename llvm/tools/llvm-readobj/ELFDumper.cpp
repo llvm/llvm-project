@@ -5266,7 +5266,6 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
   OS << "GNUStyle::printCallGraphInfo not implemented\n";
 }
 
-
 template <class ELFT>
 void GNUELFDumper<ELFT>::printBBAddrMaps(bool /*PrettyPGOAnalysis*/) {
   OS << "GNUStyle::printBBAddrMaps not implemented\n";
@@ -8158,7 +8157,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
     // TODO: some entries are written in pointer size. are they always 64-bit?
     if (CGSecContents.size() % sizeof(uint64_t))
       this->reportUniqueWarning(
-                  "Malformed .callgraph section. Unexpected size.");
+          "Malformed .callgraph section. Unexpected size.");
 
     size_t Size = CGSecContents.size() / sizeof(uint64_t);
     auto *It = reinterpret_cast<const uint64_t *>(CGSecContents.data());
@@ -8168,7 +8167,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
     auto CGNext = [&]() -> uint64_t {
       if (!CGHasNext())
         this->reportUniqueWarning(
-                    "Malformed .callgraph section. Parsing error.");
+            "Malformed .callgraph section. Parsing error.");
       return *It++;
     };
 
@@ -8178,7 +8177,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
       uint64_t FormatVersionNumber = CGNext();
       if (FormatVersionNumber != 0)
         this->reportUniqueWarning(
-                    "Unknown format version in .callgraph section.");
+            "Unknown format version in .callgraph section.");
       // Function entry pc.
       uint64_t FuncEntryPc = CGNext();
       // Function kind.
@@ -8196,7 +8195,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
         break;
       default:
         this->reportUniqueWarning(
-                    "Unknown function kind in .callgraph section.");
+            "Unknown function kind in .callgraph section.");
       }
 
       // Read indirect call sites info.
@@ -8219,7 +8218,6 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
     }
   }
 }
-
 
 template <class ELFT>
 void LLVMELFDumper<ELFT>::printBBAddrMaps(bool PrettyPGOAnalysis) {
