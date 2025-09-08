@@ -1,5 +1,7 @@
 // RUN: %clang_msan -Wno-alloc-size -fsanitize-recover=memory %s -o %t && not %run %t 2>&1 \
 // RUN:     | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_msan -Wno-alloc-size -fsanitize-recover=memory -fsanitize-memory-track-origins=1 %s -o %t && not %run %t 2>&1 \
+// RUN:     | FileCheck %s --check-prefixes=CHECK,DISCOUNT
 // RUN: %clang_msan -Wno-alloc-size -fsanitize-recover=memory -fsanitize-memory-track-origins=2 %s -o %t && not %run %t 2>&1 \
 // RUN:     | FileCheck %s --check-prefixes=CHECK,ORIGINS
 
@@ -13,7 +15,7 @@ int main(int argc, char **argv) {
     printf("Content of p1 is: %d\n", *p1);
     // CHECK: WARNING: MemorySanitizer: use-of-uninitialized-value
     // CHECK: {{#0 0x.* in main .*zero_alloc.cpp:}}[[@LINE-2]]
-    // ORIGINS: Uninitialized value is outside of heap allocation
+    // DISCOUNT,ORIGINS: Uninitialized value is outside of heap allocation
     free(p1);
   }
 
@@ -23,7 +25,7 @@ int main(int argc, char **argv) {
     printf("Content of p2 is: %d\n", *p2);
     // CHECK: WARNING: MemorySanitizer: use-of-uninitialized-value
     // CHECK: {{#0 0x.* in main .*zero_alloc.cpp:}}[[@LINE-2]]
-    // ORIGINS: Uninitialized value is outside of heap allocation
+    // DISCOUNT,ORIGINS: Uninitialized value is outside of heap allocation
     free(p2);
   }
 
@@ -33,6 +35,7 @@ int main(int argc, char **argv) {
     printf("Content of p2 is: %d\n", *p3);
     // CHECK: WARNING: MemorySanitizer: use-of-uninitialized-value
     // CHECK: {{#0 0x.* in main .*zero_alloc.cpp:}}[[@LINE-2]]
+    // DISCOUNT: Uninitialized value was created by a heap allocation
     // ORIGINS: Uninitialized value is outside of heap allocation
     free(p3);
   }
