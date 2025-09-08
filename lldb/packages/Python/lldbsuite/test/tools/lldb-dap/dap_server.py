@@ -1528,6 +1528,7 @@ class DebugAdapterServer(DebugCommunication):
         env: Optional[dict[str, str]] = None,
         log_file: Optional[TextIO] = None,
         connection: Optional[str] = None,
+        connection_timeout: Optional[int] = None,
     ) -> tuple[subprocess.Popen, Optional[str]]:
         adapter_env = os.environ.copy()
         if env is not None:
@@ -1540,6 +1541,10 @@ class DebugAdapterServer(DebugCommunication):
         if connection is not None:
             args.append("--connection")
             args.append(connection)
+
+        if connection_timeout is not None:
+            args.append("--connection-timeout")
+            args.append(str(connection_timeout))
 
         process = subprocess.Popen(
             args,
