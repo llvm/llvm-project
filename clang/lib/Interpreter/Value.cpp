@@ -315,6 +315,9 @@ public:
   llvm::Expected<std::unique_ptr<ValueBuffer>>
   readArray(QualType Ty, llvm::orc::ExecutorAddr Addr);
 
+  llvm::Expected<std::unique_ptr<ValueBuffer>>
+  readOtherObject(QualType Ty, llvm::orc::ExecutorAddr Addr);
+
   // TODO: record, function, etc.
 };
 
@@ -329,8 +332,7 @@ public:
       : Dispatcher(D), Addr(A) {}
 
   llvm::Expected<std::unique_ptr<ValueBuffer>> VisitType(const Type *T) {
-    return llvm::make_error<llvm::StringError>(
-        "Unsupported type in ReaderDispatcher", llvm::inconvertibleErrorCode());
+    return Dispatcher.readOtherObject(QualType(T, 0), Addr);
   }
 
   llvm::Expected<std::unique_ptr<ValueBuffer>>
@@ -351,13 +353,6 @@ public:
   llvm::Expected<std::unique_ptr<ValueBuffer>>
   VisitEnumType(const EnumType *ET) {
     return Dispatcher.readBuiltin(QualType(ET, 0), Addr);
-  }
-
-  llvm::Expected<std::unique_ptr<ValueBuffer>>
-  VisitRecordType(const RecordType *RT) {
-    return llvm::make_error<llvm::StringError>(
-        "RecordType reading not yet implemented",
-        llvm::inconvertibleErrorCode());
   }
 };
 
@@ -412,20 +407,20 @@ ReaderDispatcher::ReaderDispatcher::readPointer(QualType Ty,
   if (!PtrTy)
     return llvm::make_error<llvm::StringError>("Not a PointerType",
                                                llvm::inconvertibleErrorCode());
-  unsigned PtrWidth = Ctx.getTypeSizeInChars(Ty).getQuantity();
-  uint64_t PtrValAddr = 0;
-  if (PtrWidth == 32) {
-    auto AddrOrErr = MA.readUInt32s({Addr});
-    if (!AddrOrErr)
-      return AddrOrErr.takeError();
-    PtrValAddr = AddrOrErr->back();
-  } else {
-    auto AddrOrErr = MA.readUInt64s({Addr});
-    if (!AddrOrErr)
-      return AddrOrErr.takeError();
-    PtrValAddr = AddrOrErr->back();
-  }
-
+  // unsigned PtrWidth = Ctx.getTypeSizeInChars(Ty).getQuantity();
+  // uint64_t PtrValAddr = 0;
+  // if (PtrWidth == 32) {
+  //   auto AddrOrErr = MA.readUInt32s({Addr});
+  //   if (!AddrOrErr)
+  //     return AddrOrErr.takeError();
+  //   PtrValAddr = AddrOrErr->back();
+  // } else {
+  //   auto AddrOrErr = MA.readUInt64s({Addr});
+  //   if (!AddrOrErr)
+  //     return AddrOrErr.takeError();
+  //   PtrValAddr = AddrOrErr->back();
+  // }
+  uint64_t PtrValAddr = Addr.getValue();
   if (PtrValAddr == 0)
     return std::make_unique<PointerValueBuffer>(Ty); // null pointer
 
@@ -457,6 +452,16 @@ ReaderDispatcher::ReaderDispatcher::readPointer(QualType Ty,
   //   PtrBuf->Pointee = std::move(*BufOrErr);
   // }
   return std::move(PtrBuf);
+}
+
+llvm::Expected<std::unique_ptr<ValueBuffer>>
+ReaderDispatcher::readOtherObject(QualType Ty, llvm::orc::ExecutorAddr Addr) {
+  unsigned PtrWidth = Ctx.getTypeSizeInChars(Ty).getQuantity();
+  uint64_t PtrValAddr = Addr.getValue();
+  if (PtrValAddr == 0)
+    return std::make_unique<PointerValueBuffer>(Ty); // null pointer
+
+  return std::make_unique<PointerValueBuffer>(Ty, PtrValAddr);
 }
 
 ValueResultManager::ValueResultManager(ASTContext &Ctx,
@@ -502,7 +507,7 @@ void ValueResultManager::deliverResult(SendResultFn SendResult, ValueId ID,
       SendResult(llvm::make_error<llvm::StringError>(
           "Unknown ValueId in deliverResult", llvm::inconvertibleErrorCode()));
     }
-    Ty = It->second;
+    Ty = It->second.getCanonicalType();
     IdToType.erase(It);
   }
 
