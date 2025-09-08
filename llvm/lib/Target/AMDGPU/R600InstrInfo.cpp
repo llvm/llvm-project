@@ -29,7 +29,7 @@ using namespace llvm;
 #include "R600GenInstrInfo.inc"
 
 R600InstrInfo::R600InstrInfo(const R600Subtarget &ST)
-  : R600GenInstrInfo(-1, -1), RI(), ST(ST) {}
+    : R600GenInstrInfo(ST, -1, -1), RI(), ST(ST) {}
 
 bool R600InstrInfo::isVector(const MachineInstr &MI) const {
   return get(MI.getOpcode()).TSFlags & R600_InstFlag::VECTOR;
