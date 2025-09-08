@@ -97,14 +97,14 @@ number of the instruction according to the debug information. Note that
 this requires debug information to be enabled (e.g. pass ``-g`` to Clang).
 
 LLDB Data Formatters
-===================
+====================
 
 A handful of `LLDB data formatters
 <https://lldb.llvm.org/resources/dataformatters.html>`__ are
 provided for some of the core LLVM libraries. To use them, execute the
 following (or add it to your ``~/.lldbinit``)::
 
-  command script import /path/to/lldbDataFormatters.py
+  command script import /path/to/llvm/src/utils/lldbDataFormatters.py
 
 GDB pretty printers
 ===================
