@@ -870,14 +870,17 @@ bool VectorCombine::foldBitOpOfCastops(Instruction &I) {
   if (LHSSrc->getType() != RHSSrc->getType())
     return false;
 
-  // Only handle vector types with integer elements
-  auto *SrcVecTy = dyn_cast<FixedVectorType>(LHSSrc->getType());
-  auto *DstVecTy = dyn_cast<FixedVectorType>(I.getType());
-  if (!SrcVecTy || !DstVecTy)
+  auto *SrcTy = LHSSrc->getType();
+  auto *DstTy = I.getType();
+  // Bitcasts can handle scalar/vector mixes, such as i16 -> <16 x i1>.
+  // Other casts only handle vector types with integer elements.
+  if (CastOpcode != Instruction::BitCast &&
+      (!isa<FixedVectorType>(SrcTy) || !isa<FixedVectorType>(DstTy)))
     return false;
 
-  if (!SrcVecTy->getScalarType()->isIntegerTy() ||
-      !DstVecTy->getScalarType()->isIntegerTy())
+  // Only integer scalar/vector values are legal for bitwise logic operations.
+  if (!SrcTy->getScalarType()->isIntegerTy() ||
+      !DstTy->getScalarType()->isIntegerTy())
     return false;
 
   // Cost Check :
@@ -885,23 +888,21 @@ bool VectorCombine::foldBitOpOfCastops(Instruction &I) {
   // NewCost = bitlogic + cast
 
   // Calculate specific costs for each cast with instruction context
-  InstructionCost LHSCastCost =
-      TTI.getCastInstrCost(CastOpcode, DstVecTy, SrcVecTy,
-                           TTI::CastContextHint::None, CostKind, LHSCast);
-  InstructionCost RHSCastCost =
-      TTI.getCastInstrCost(CastOpcode, DstVecTy, SrcVecTy,
-                           TTI::CastContextHint::None, CostKind, RHSCast);
+  InstructionCost LHSCastCost = TTI.getCastInstrCost(
+      CastOpcode, DstTy, SrcTy, TTI::CastContextHint::None, CostKind, LHSCast);
+  InstructionCost RHSCastCost = TTI.getCastInstrCost(
+      CastOpcode, DstTy, SrcTy, TTI::CastContextHint::None, CostKind, RHSCast);
 
   InstructionCost OldCost =
-      TTI.getArithmeticInstrCost(BinOp->getOpcode(), DstVecTy, CostKind) +
+      TTI.getArithmeticInstrCost(BinOp->getOpcode(), DstTy, CostKind) +
       LHSCastCost + RHSCastCost;
 
   // For new cost, we can't provide an instruction (it doesn't exist yet)
   InstructionCost GenericCastCost = TTI.getCastInstrCost(
-      CastOpcode, DstVecTy, SrcVecTy, TTI::CastContextHint::None, CostKind);
+      CastOpcode, DstTy, SrcTy, TTI::CastContextHint::None, CostKind);
 
   InstructionCost NewCost =
-      TTI.getArithmeticInstrCost(BinOp->getOpcode(), SrcVecTy, CostKind) +
+      TTI.getArithmeticInstrCost(BinOp->getOpcode(), SrcTy, CostKind) +
       GenericCastCost;
 
   // Account for multi-use casts using specific costs
