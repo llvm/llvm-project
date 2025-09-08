@@ -2,6 +2,14 @@
 ; RUN: opt -passes=vector-combine -S %s | FileCheck %s
 
 define <2 x double> @PR157335() {
+; CHECK-LABEL: @PR157335(
+; CHECK-NEXT:    [[V0:%.*]] = fmul <2 x double> zeroinitializer, zeroinitializer
+; CHECK-NEXT:    [[V1:%.*]] = fmul <2 x double> zeroinitializer, zeroinitializer
+; CHECK-NEXT:    [[V2:%.*]] = fsub <2 x double> [[V0]], [[V1]]
+; CHECK-NEXT:    [[V3:%.*]] = fadd <2 x double> [[V0]], [[V1]]
+; CHECK-NEXT:    [[V4:%.*]] = shufflevector <2 x double> [[V2]], <2 x double> [[V3]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    ret <2 x double> [[V4]]
+;
   %v0 = fmul <2 x double> zeroinitializer, zeroinitializer
   %v1 = fmul <2 x double> zeroinitializer, zeroinitializer
   %v2 = fsub <2 x double> %v0, %v1
