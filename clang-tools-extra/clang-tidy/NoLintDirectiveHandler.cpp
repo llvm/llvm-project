@@ -25,10 +25,9 @@
 #include "llvm/ADT/StringSwitch.h"
 #include <cassert>
 #include <cstddef>
-#include <iterator>
+#include <memory>
 #include <optional>
 #include <string>
-#include <tuple>
 #include <utility>
 
 namespace clang::tidy {
@@ -79,7 +78,7 @@ public:
   // - An empty string means nothing is suppressed - equivalent to NOLINT().
   // - Negative globs ignored (which would effectively disable the suppression).
   NoLintToken(NoLintType Type, size_t Pos,
-              const std::optional<std::string> &Checks)
+              const std::optional<StringRef> &Checks)
       : Type(Type), Pos(Pos), ChecksGlob(std::make_unique<CachedGlobList>(
                                   Checks.value_or("*"),
                                   /*KeepNegativeGlobs=*/false)) {
@@ -93,15 +92,17 @@ public:
   // The location of the first character, "N", in "NOLINT".
   size_t Pos;
 
+  // A glob of the checks this NOLINT token disables.
+  std::unique_ptr<CachedGlobList> ChecksGlob;
+
   // If this NOLINT specifies checks, return the checks.
-  std::optional<std::string> checks() const { return Checks; }
+  const std::optional<std::string> &checks() const { return Checks; }
 
   // Whether this NOLINT applies to the provided check.
   bool suppresses(StringRef Check) const { return ChecksGlob->contains(Check); }
 
 private:
   std::optional<std::string> Checks;
-  std::unique_ptr<CachedGlobList> ChecksGlob;
 };
 
 } // namespace
@@ -131,11 +132,11 @@ static SmallVector<NoLintToken> getNoLints(StringRef Buffer) {
       continue;
 
     // Get checks, if specified.
-    std::optional<std::string> Checks;
+    std::optional<StringRef> Checks;
     if (Pos < Buffer.size() && Buffer[Pos] == '(') {
       size_t ClosingBracket = Buffer.find_first_of("\n)", ++Pos);
       if (ClosingBracket != StringRef::npos && Buffer[ClosingBracket] == ')') {
-        Checks = Buffer.slice(Pos, ClosingBracket).str();
+        Checks = Buffer.slice(Pos, ClosingBracket);
         Pos = ClosingBracket + 1;
       }
     }
@@ -155,34 +156,51 @@ namespace {
 // Represents a source range within a pair of NOLINT(BEGIN/END) comments.
 class NoLintBlockToken {
 public:
-  NoLintBlockToken(NoLintToken Begin, const NoLintToken &End)
-      : Begin(std::move(Begin)), EndPos(End.Pos) {
-    assert(this->Begin.Type == NoLintType::NoLintBegin);
-    assert(End.Type == NoLintType::NoLintEnd);
-    assert(this->Begin.Pos < End.Pos);
-    assert(this->Begin.checks() == End.checks());
-  }
+  NoLintBlockToken(size_t BeginPos, size_t EndPos,
+                   std::unique_ptr<CachedGlobList> ChecksGlob)
+      : BeginPos(BeginPos), EndPos(EndPos), ChecksGlob(std::move(ChecksGlob)) {}
 
   // Whether the provided diagnostic is within and is suppressible by this block
   // of NOLINT(BEGIN/END) comments.
   bool suppresses(size_t DiagPos, StringRef DiagName) const {
-    return (Begin.Pos < DiagPos) && (DiagPos < EndPos) &&
-           Begin.suppresses(DiagName);
+    return (BeginPos < DiagPos) && (DiagPos < EndPos) &&
+           ChecksGlob->contains(DiagName);
   }
 
 private:
-  NoLintToken Begin;
+  size_t BeginPos;
   size_t EndPos;
+  std::unique_ptr<CachedGlobList> ChecksGlob;
 };
 
 } // namespace
 
+// Construct a [clang-tidy-nolint] diagnostic to do with the unmatched
+// NOLINT(BEGIN/END) pair.
+static tooling::Diagnostic makeNoLintError(const SourceManager &SrcMgr,
+                                           FileID File,
+                                           const NoLintToken &NoLint) {
+  tooling::Diagnostic Error;
+  Error.DiagLevel = tooling::Diagnostic::Error;
+  Error.DiagnosticName = "clang-tidy-nolint";
+  StringRef Message =
+      (NoLint.Type == NoLintType::NoLintBegin)
+          ? ("unmatched 'NOLINTBEGIN' comment without a subsequent 'NOLINT"
+             "END' comment")
+          : ("unmatched 'NOLINTEND' comment without a previous 'NOLINT"
+             "BEGIN' comment");
+  SourceLocation Loc = SrcMgr.getComposedLoc(File, NoLint.Pos);
+  Error.Message = tooling::DiagnosticMessage(Message, SrcMgr, Loc);
+  return Error;
+}
+
 // Match NOLINTBEGINs with their corresponding NOLINTENDs and move them into
-// `NoLintBlockToken`s. If any BEGINs or ENDs are left over, they are moved to
-// `UnmatchedTokens`.
+// `NoLintBlockToken`s. If any BEGINs or ENDs are left over, a diagnostic is
+// written to `NoLintErrors`.
 static SmallVector<NoLintBlockToken>
-formNoLintBlocks(SmallVector<NoLintToken> NoLints,
-                 SmallVectorImpl<NoLintToken> &UnmatchedTokens) {
+formNoLintBlocks(SmallVector<NoLintToken> NoLints, const SourceManager &SrcMgr,
+                 FileID File,
+                 SmallVectorImpl<tooling::Diagnostic> &NoLintErrors) {
   SmallVector<NoLintBlockToken> CompletedBlocks;
   SmallVector<NoLintToken> Stack;
 
@@ -196,16 +214,20 @@ formNoLintBlocks(SmallVector<NoLintToken> NoLints,
       // A new block is being started. Add it to the stack.
       Stack.emplace_back(std::move(NoLint));
     else if (NoLint.Type == NoLintType::NoLintEnd) {
-      if (!Stack.empty() && Stack.back().checks() == NoLint.checks())
+      if (!Stack.empty() && Stack.back().checks() == NoLint.checks()) {
         // The previous block is being closed. Pop one element off the stack.
-        CompletedBlocks.emplace_back(Stack.pop_back_val(), NoLint);
-      else
+        CompletedBlocks.emplace_back(Stack.back().Pos, NoLint.Pos,
+                                     std::move(Stack.back().ChecksGlob));
+        Stack.pop_back();
+      } else
         // Trying to close the wrong block.
-        UnmatchedTokens.emplace_back(std::move(NoLint));
+        NoLintErrors.emplace_back(makeNoLintError(SrcMgr, File, NoLint));
     }
   }
 
-  llvm::move(Stack, std::back_inserter(UnmatchedTokens));
+  for (const NoLintToken &NoLint : Stack)
+    NoLintErrors.emplace_back(makeNoLintError(SrcMgr, File, NoLint));
+
   return CompletedBlocks;
 }
 
@@ -274,7 +296,7 @@ static std::pair<size_t, size_t> getLineStartAndEnd(StringRef Buffer,
                                                     size_t From) {
   size_t StartPos = Buffer.find_last_of('\n', From) + 1;
   size_t EndPos = std::min(Buffer.find('\n', From), Buffer.size());
-  return std::make_pair(StartPos, EndPos);
+  return {StartPos, EndPos};
 }
 
 // Whether the line has a NOLINT of type = `Type` that can suppress the
@@ -317,9 +339,7 @@ bool NoLintDirectiveHandler::Impl::diagHasNoLint(
     SmallVectorImpl<tooling::Diagnostic> &NoLintErrors, bool AllowIO,
     bool EnableNoLintBlocks) {
   // Translate the diagnostic's SourceLocation to a raw file + offset pair.
-  FileID File;
-  unsigned int Pos = 0;
-  std::tie(File, Pos) = SrcMgr.getDecomposedSpellingLoc(DiagLoc);
+  const auto [File, Pos] = SrcMgr.getDecomposedSpellingLoc(DiagLoc);
 
   // We will only see NOLINTs in user-authored sources. No point reading the
   // file if it is a <built-in>.
@@ -356,39 +376,14 @@ bool NoLintDirectiveHandler::Impl::diagHasNoLint(
   return withinNoLintBlock(Cache[*FileName], Pos, DiagName);
 }
 
-// Construct a [clang-tidy-nolint] diagnostic to do with the unmatched
-// NOLINT(BEGIN/END) pair.
-static tooling::Diagnostic makeNoLintError(const SourceManager &SrcMgr,
-                                           FileID File,
-                                           const NoLintToken &NoLint) {
-  tooling::Diagnostic Error;
-  Error.DiagLevel = tooling::Diagnostic::Error;
-  Error.DiagnosticName = "clang-tidy-nolint";
-  StringRef Message =
-      (NoLint.Type == NoLintType::NoLintBegin)
-          ? ("unmatched 'NOLINTBEGIN' comment without a subsequent 'NOLINT"
-             "END' comment")
-          : ("unmatched 'NOLINTEND' comment without a previous 'NOLINT"
-             "BEGIN' comment");
-  SourceLocation Loc = SrcMgr.getComposedLoc(File, NoLint.Pos);
-  Error.Message = tooling::DiagnosticMessage(Message, SrcMgr, Loc);
-  return Error;
-}
-
 // Find all NOLINT(BEGIN/END) blocks in a file and store in the cache.
 void NoLintDirectiveHandler::Impl::generateCache(
     const SourceManager &SrcMgr, StringRef FileName, FileID File,
     StringRef Buffer, SmallVectorImpl<tooling::Diagnostic> &NoLintErrors) {
-  // Read entire file to get all NOLINTs.
-  SmallVector<NoLintToken> NoLints = getNoLints(Buffer);
-
-  // Match each BEGIN with its corresponding END.
-  SmallVector<NoLintToken> UnmatchedTokens;
-  Cache[FileName] = formNoLintBlocks(std::move(NoLints), UnmatchedTokens);
-
-  // Raise error for any BEGIN/END left over.
-  for (const NoLintToken &NoLint : UnmatchedTokens)
-    NoLintErrors.emplace_back(makeNoLintError(SrcMgr, File, NoLint));
+  // Read entire file to get all NOLINTs and match each BEGIN with its
+  // corresponding END, raising errors for any BEGIN or END that is unmatched.
+  Cache.try_emplace(FileName, formNoLintBlocks(getNoLints(Buffer), SrcMgr, File,
+                                               NoLintErrors));
 }
 
 //===----------------------------------------------------------------------===//
