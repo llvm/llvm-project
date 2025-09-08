@@ -47,6 +47,7 @@
 #include <__utility/swap.h>
 #include <__utility/try_key_extraction.h>
 #include <limits>
+#include <stdexcept>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -72,7 +73,28 @@ struct __is_hash_value_type : false_type {};
 template <class _One>
 struct __is_hash_value_type<_One> : __is_hash_value_type_imp<__remove_cvref_t<_One> > {};
 
-_LIBCPP_EXPORTED_FROM_ABI size_t __next_prime(size_t __n);
+_LIBCPP_HIDE_FROM_ABI inline void __check_for_overflow(size_t __n) {
+  if _LIBCPP_CONSTEXPR (sizeof(size_t) == 4) {
+    if (__n > 0xFFFFFFFB)
+      std::__throw_overflow_error("__next_prime overflow");
+  } else {
+    if (__n > 0xFFFFFFFFFFFFFFC5ull)
+      std::__throw_overflow_error("__next_prime overflow");
+  }
+}
+
+#if _LIBCPP_AVAILABILITY_HAS_NEXT_PRIME_IMPL
+[[__gnu__::__const__]] _LIBCPP_EXPORTED_FROM_ABI size_t __next_prime_impl(size_t) _NOEXCEPT;
+
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI inline size_t __get_next_prime(size_t __n) {
+  __check_for_overflow(__n);
+  return __next_prime_impl(__n);
+}
+#else
+_LIBCPP_EXPORTED_FROM_ABI size_t __next_prime(size_t);
+
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI inline size_t __get_next_prime(size_t __n) { return __next_prime(__n); }
+#endif
 
 template <class _NodePtr>
 struct __hash_node_base {
@@ -1764,7 +1786,7 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__rehash(size_type __n) _LIBCPP_D
   if (__n == 1)
     __n = 2;
   else if (__n & (__n - 1))
-    __n = std::__next_prime(__n);
+    __n = std::__get_next_prime(__n);
   size_type __bc = bucket_count();
   if (__n > __bc)
     __do_rehash<_UniqueKeys>(__n);
@@ -1772,7 +1794,7 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__rehash(size_type __n) _LIBCPP_D
     __n = std::max<size_type>(
         __n,
         std::__is_hash_power2(__bc) ? std::__next_hash_pow2(size_t(__math::ceil(float(size()) / max_load_factor())))
-                                    : std::__next_prime(size_t(__math::ceil(float(size()) / max_load_factor()))));
+                                    : std::__get_next_prime(size_t(__math::ceil(float(size()) / max_load_factor()))));
     if (__n < __bc)
       __do_rehash<_UniqueKeys>(__n);
   }

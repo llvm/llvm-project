@@ -1147,6 +1147,7 @@
 {'is_defined': True, 'name': '_ZNSt3__117__assoc_sub_state4waitEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__117__assoc_sub_state9__executeEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__117__assoc_sub_state9set_valueEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__117__next_prime_implEm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__117__widen_from_utf8ILm16EED0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__117__widen_from_utf8ILm16EED1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__117__widen_from_utf8ILm16EED2Ev', 'type': 'FUNC'}
