@@ -49,6 +49,20 @@ void test_malloc_like() {
   posix_memalign(&sink, 64, sizeof(int));
 }
 
+class ForwardDecl;
+
+// CHECK-LABEL: @_Z21test_malloc_like_castv(
+void test_malloc_like_cast() {
+  // CHECK: call{{.*}} ptr @__alloc_token_malloc(i64 noundef 64, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
+  sink = (int *)malloc(64);
+  // CHECK: call{{.*}} ptr @__alloc_token_malloc(i64 noundef 64, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
+  sink = reinterpret_cast<int *>(malloc(64));
+
+  // Always fails to assign token ID for incomplete types.
+  // CHECK: call{{.*}} ptr @__alloc_token_malloc(i64 noundef 64, i64 0)
+  sink = reinterpret_cast<ForwardDecl *>(malloc(64));
+}
+
 // CHECK-LABEL: @_Z17test_operator_newv(
 void test_operator_new() {
   // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
