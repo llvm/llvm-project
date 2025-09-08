@@ -210,6 +210,9 @@ inline bool isValidParameterType(uint32_t V) {
 }
 
 inline bool isValidRangeType(uint32_t V) {
+  static_assert(llvm::to_underlying(dxil::ResourceClass::Sampler) == 3,
+                "dxil::ResourceClass numeric values must match the Root "
+                "Signature values associated to each class.");
   return V <= llvm::to_underlying(dxil::ResourceClass::Sampler);
 }
 
