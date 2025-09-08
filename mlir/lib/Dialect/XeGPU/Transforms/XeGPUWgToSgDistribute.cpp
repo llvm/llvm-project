@@ -757,8 +757,10 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
     auto sgAttr = DenseElementsAttr::get(newType, singleVal);
     auto cstOp =
         arith::ConstantOp::create(rewriter, op.getLoc(), newType, sgAttr);
-    if (auto newLayout = layout.dropSgLayoutAndData())
-      xegpu::setDistributeLayoutAttr(cstOp->getResult(0), newLayout);
+    if (!layout.getLaneLayoutAsInt().empty() ||
+        !layout.getLaneDataAsInt().empty())
+      xegpu::setDistributeLayoutAttr(cstOp->getResult(0),
+                                     layout.dropSgLayoutAndData());
     SmallVector<Value> newConsts(count, cstOp);
 
     rewriter.replaceOpWithMultiple(op, {newConsts});
@@ -919,6 +921,59 @@ struct WgToSgStoreMatrixOp : public OpConversionPattern<xegpu::StoreMatrixOp> {
   }
 };
 
+// Pattern for lowering vector.multi_reduction op to subgroup level.
+struct WgToSgMultiDimReductionOp
+    : public OpConversionPattern<vector::MultiDimReductionOp> {
+  using OpConversionPattern<vector::MultiDimReductionOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::MultiDimReductionOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    VectorType srcType = dyn_cast<VectorType>(op.getSource().getType());
+    VectorType dstType = dyn_cast<VectorType>(op.getResult().getType());
+    if (!srcType || !dstType)
+      return failure();
+
+    // Only handle [m,1]->[m] or [1,m]->[m]
+    // TODO: generalize it
+    auto srcShape = srcType.getShape();
+    auto dstShape = dstType.getShape();
+    if (srcShape.size() != 2 || dstShape.size() != 1)
+      return failure();
+
+    if (!((srcShape[1] == 1 && srcShape[0] == dstShape[0]) ||
+          (srcShape[0] == 1 && srcShape[1] == dstShape[0])))
+      return failure();
+
+    xegpu::DistributeLayoutAttr layout =
+        xegpu::getDistributeLayoutAttr(op.getSource());
+    if (!layout || !layout.isForWorkgroup())
+      return failure();
+
+    SmallVector<int64_t> sgShape = getSgShapeAndCount(srcShape, layout).first;
+    VectorType newDstType;
+    if (op.getReductionDims() == ArrayRef<int64_t>({0}))
+      newDstType = VectorType::get({sgShape[1]}, dstType.getElementType());
+    else
+      newDstType = VectorType::get({sgShape[0]}, dstType.getElementType());
+
+    SmallVector<Value> newReductions;
+    for (auto [sgSrc, sgAcc] :
+         llvm::zip(adaptor.getSource(), adaptor.getAcc())) {
+      auto newOp = rewriter.create<vector::MultiDimReductionOp>(
+          op.getLoc(), newDstType, op.getKind(), sgSrc, sgAcc,
+          op.getReductionDims());
+      if (!layout.getLaneLayoutAsInt().empty() ||
+          !layout.getLaneDataAsInt().empty())
+        xegpu::setDistributeLayoutAttr(newOp->getResult(0),
+                                       layout.dropSgLayoutAndData());
+      newReductions.push_back(newOp.getResult());
+    }
+    rewriter.replaceOpWithMultiple(op, {newReductions});
+    return success();
+  }
+};
+
 } // namespace
 
 namespace mlir {
@@ -932,7 +987,8 @@ void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
            WgToSgElementwiseOp, WgToSgVectorBroadcastOp, WgToSgConvertLayoutOp,
            WgToSgArithConstantOp, WgToSgLoadGatherOpWithOffset,
            WgToSgStoreScatterOpWithOffset, WgToSgLoadMatrixOp,
-           WgToSgStoreMatrixOp>(patterns.getContext());
+           WgToSgStoreMatrixOp, WgToSgMultiDimReductionOp>(
+          patterns.getContext());
 }
 } // namespace xegpu
 } // namespace mlir
@@ -1074,6 +1130,11 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
 
   target.addDynamicallyLegalOp<vector::BroadcastOp>(
       [=](vector::BroadcastOp op) -> bool {
+        return isLegal(xegpu::getDistributeLayoutAttr(op.getResult()));
+      });
+
+  target.addDynamicallyLegalOp<vector::MultiDimReductionOp>(
+      [=](vector::MultiDimReductionOp op) -> bool {
         return isLegal(xegpu::getDistributeLayoutAttr(op.getResult()));
       });
 
