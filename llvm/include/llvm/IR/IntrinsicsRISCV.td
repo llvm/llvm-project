@@ -1943,6 +1943,259 @@ let TargetPrefix = "riscv" in {
 let TargetPrefix = "riscv" in
 def int_riscv_pause : DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
 
+//===----------------------------------------------------------------------===//
+// Packed SIMD
+
+let TargetPrefix = "riscv" in {
+  class RVPBinaryIntrinsics
+      : Intrinsic<[llvm_any_ty],
+                  [LLVMMatchType<0>, LLVMMatchType<0>],
+                  [IntrNoMem]>;
+
+  multiclass RVPBinaryIntrinsics {
+    def "int_riscv_" # NAME   : RVPBinaryIntrinsics;
+  }
+  defm psll_bs     : RVPBinaryIntrinsics;
+  defm psll_hs     : RVPBinaryIntrinsics;
+  defm psll_ws     : RVPBinaryIntrinsics;
+  defm padd_bs     : RVPBinaryIntrinsics;
+  defm padd_hs     : RVPBinaryIntrinsics;
+  defm padd_ws     : RVPBinaryIntrinsics;
+  defm pssha_hs    : RVPBinaryIntrinsics;
+  defm pssha_ws    : RVPBinaryIntrinsics;
+  defm sha         : RVPBinaryIntrinsics;
+  defm ssha        : RVPBinaryIntrinsics;
+  defm psshar_hs   : RVPBinaryIntrinsics;
+  defm psshar_ws   : RVPBinaryIntrinsics;
+  defm shar        : RVPBinaryIntrinsics;
+  defm sshar       : RVPBinaryIntrinsics;
+  defm psrl_bs     : RVPBinaryIntrinsics;
+  defm psrl_hs     : RVPBinaryIntrinsics;
+  defm psrl_ws     : RVPBinaryIntrinsics;
+  defm predsum_bs  : RVPBinaryIntrinsics;
+  defm predsum_hs  : RVPBinaryIntrinsics;
+  defm predsum_ws  : RVPBinaryIntrinsics;
+  defm predsumu_bs : RVPBinaryIntrinsics;
+  defm predsumu_hs : RVPBinaryIntrinsics;
+  defm predsumu_ws : RVPBinaryIntrinsics;
+  defm psra_bs     : RVPBinaryIntrinsics;
+  defm psra_hs     : RVPBinaryIntrinsics;
+  defm psra_ws     : RVPBinaryIntrinsics;
+  defm padd_b      : RVPBinaryIntrinsics;
+  defm padd_h      : RVPBinaryIntrinsics;
+  defm padd_w      : RVPBinaryIntrinsics;
+  defm sadd        : RVPBinaryIntrinsics;
+  defm psadd_b     : RVPBinaryIntrinsics;
+  defm psadd_h     : RVPBinaryIntrinsics;
+  defm psadd_w     : RVPBinaryIntrinsics;
+  defm aadd        : RVPBinaryIntrinsics;
+  defm paadd_b     : RVPBinaryIntrinsics;
+  defm paadd_h     : RVPBinaryIntrinsics;
+  defm paadd_w     : RVPBinaryIntrinsics;
+  defm saddu       : RVPBinaryIntrinsics;
+  defm psaddu_b    : RVPBinaryIntrinsics;
+  defm psaddu_h    : RVPBinaryIntrinsics;
+  defm psaddu_w    : RVPBinaryIntrinsics;
+  defm aaddu       : RVPBinaryIntrinsics;
+  defm paaddu_b    : RVPBinaryIntrinsics;
+  defm paaddu_h    : RVPBinaryIntrinsics;
+  defm paaddu_w    : RVPBinaryIntrinsics;
+  defm psub_b      : RVPBinaryIntrinsics;
+  defm psub_h      : RVPBinaryIntrinsics;
+  defm psub_w      : RVPBinaryIntrinsics;
+  defm ssub        : RVPBinaryIntrinsics;
+  defm pssub_b     : RVPBinaryIntrinsics;
+  defm pssub_h     : RVPBinaryIntrinsics;
+  defm pssub_w     : RVPBinaryIntrinsics;
+  defm asub        : RVPBinaryIntrinsics;
+  defm pasub_b     : RVPBinaryIntrinsics;
+  defm pasub_h     : RVPBinaryIntrinsics;
+  defm pasub_w     : RVPBinaryIntrinsics;
+  defm ssubu       : RVPBinaryIntrinsics;
+  defm pssubu_b    : RVPBinaryIntrinsics;
+  defm pssubu_h    : RVPBinaryIntrinsics;
+  defm pssubu_w    : RVPBinaryIntrinsics;
+  defm asubu       : RVPBinaryIntrinsics;
+  defm pasubu_b    : RVPBinaryIntrinsics;
+  defm pasubu_h    : RVPBinaryIntrinsics;
+  defm pasubu_w    : RVPBinaryIntrinsics;
+  defm pdif_b      : RVPBinaryIntrinsics;
+  defm pdif_h      : RVPBinaryIntrinsics;
+  defm pdifu_b     : RVPBinaryIntrinsics;
+  defm pdifu_h     : RVPBinaryIntrinsics;
+  defm slx         : RVPBinaryIntrinsics;
+  defm mul_h01     : RVPBinaryIntrinsics;
+  defm mul_w01     : RVPBinaryIntrinsics;
+  defm mulu_h01    : RVPBinaryIntrinsics;
+  defm mulu_w01    : RVPBinaryIntrinsics;
+  defm psh1add_h   : RVPBinaryIntrinsics;
+  defm psh1add_w   : RVPBinaryIntrinsics;
+  defm ssh1sadd    : RVPBinaryIntrinsics;
+  defm pssh1sadd_h : RVPBinaryIntrinsics;
+  defm pssh1sadd_w : RVPBinaryIntrinsics;
+  defm unzip8p     : RVPBinaryIntrinsics;
+  defm unzip16p    : RVPBinaryIntrinsics;
+  defm unzip8hp    : RVPBinaryIntrinsics;
+  defm unzip16hp   : RVPBinaryIntrinsics;
+  defm zip8p       : RVPBinaryIntrinsics;
+  defm zip16p      : RVPBinaryIntrinsics;
+  defm zip8hp      : RVPBinaryIntrinsics;
+  defm zip16hp     : RVPBinaryIntrinsics;
+  defm ppack_h     : RVPBinaryIntrinsics;
+  defm ppack_w     : RVPBinaryIntrinsics;
+  defm ppackbt_h   : RVPBinaryIntrinsics;
+  defm ppackbt_w   : RVPBinaryIntrinsics;
+  defm packbt      : RVPBinaryIntrinsics;
+  defm ppacktb_h   : RVPBinaryIntrinsics;
+  defm ppacktb_w   : RVPBinaryIntrinsics;
+  defm packtb      : RVPBinaryIntrinsics;
+  defm ppackt_h    : RVPBinaryIntrinsics;
+  defm ppackt_w    : RVPBinaryIntrinsics;
+  defm packt       : RVPBinaryIntrinsics;
+  defm pas_hx      : RVPBinaryIntrinsics;
+  defm pas_wx      : RVPBinaryIntrinsics;
+  defm psa_hx      : RVPBinaryIntrinsics;
+  defm psa_wx      : RVPBinaryIntrinsics;
+  defm psas_hx     : RVPBinaryIntrinsics;
+  defm psas_wx     : RVPBinaryIntrinsics;
+  defm pssa_hx     : RVPBinaryIntrinsics;
+  defm pssa_wx     : RVPBinaryIntrinsics;
+  defm paas_hx     : RVPBinaryIntrinsics;
+  defm paas_wx     : RVPBinaryIntrinsics;
+  defm pasa_hx     : RVPBinaryIntrinsics;
+  defm pasa_wx     : RVPBinaryIntrinsics;
+  defm mseq        : RVPBinaryIntrinsics;
+  defm pmseq_b     : RVPBinaryIntrinsics;
+  defm pmseq_h     : RVPBinaryIntrinsics;
+  defm pmseq_w     : RVPBinaryIntrinsics;
+  defm mslt        : RVPBinaryIntrinsics;
+  defm pmslt_b     : RVPBinaryIntrinsics;
+  defm pmslt_h     : RVPBinaryIntrinsics;
+  defm pmslt_w     : RVPBinaryIntrinsics;
+  defm msltu       : RVPBinaryIntrinsics;
+  defm pmsltu_b    : RVPBinaryIntrinsics;
+  defm pmsltu_h    : RVPBinaryIntrinsics;
+  defm pmsltu_w    : RVPBinaryIntrinsics;
+  defm pmin_b      : RVPBinaryIntrinsics;
+  defm pmin_h      : RVPBinaryIntrinsics;
+  defm pmin_w      : RVPBinaryIntrinsics;
+  defm pminu_b     : RVPBinaryIntrinsics;
+  defm pminu_h     : RVPBinaryIntrinsics;
+  defm pminu_w     : RVPBinaryIntrinsics;
+  defm pmax_b      : RVPBinaryIntrinsics;
+  defm pmax_h      : RVPBinaryIntrinsics;
+  defm pmax_w      : RVPBinaryIntrinsics;
+  defm pmaxu_b     : RVPBinaryIntrinsics;
+  defm pmaxu_h     : RVPBinaryIntrinsics;
+  defm pmaxu_w     : RVPBinaryIntrinsics;
+  defm pmulh_h     : RVPBinaryIntrinsics;
+  defm pmulh_w     : RVPBinaryIntrinsics;
+  defm pmulhu_h    : RVPBinaryIntrinsics;
+  defm pmulhu_w    : RVPBinaryIntrinsics;
+  defm pmulhr_h    : RVPBinaryIntrinsics;
+  defm pmulhr_w    : RVPBinaryIntrinsics;
+  defm pmulhru_h   : RVPBinaryIntrinsics;
+  defm pmulhru_w   : RVPBinaryIntrinsics;
+  defm mulh_h1     : RVPBinaryIntrinsics;
+  defm mulhr       : RVPBinaryIntrinsics;
+  defm mulhru      : RVPBinaryIntrinsics;
+  defm mulh_h0     : RVPBinaryIntrinsics;
+
+  class RVPBinaryAABIntrinsics
+      : Intrinsic<[llvm_any_ty],
+                  [LLVMMatchType<0>, llvm_any_ty],
+                  [IntrNoMem]>;
+
+  multiclass RVPBinaryAABIntrinsics {
+    def "int_riscv_" # NAME   : RVPBinaryAABIntrinsics;
+  }
+
+  defm pslli_b    : RVPBinaryAABIntrinsics;
+  defm pslli_h    : RVPBinaryAABIntrinsics;
+  defm pslli_w    : RVPBinaryAABIntrinsics;
+  defm psslai_h   : RVPBinaryAABIntrinsics;
+  defm psslai_w   : RVPBinaryAABIntrinsics;
+  defm sslai      : RVPBinaryAABIntrinsics;
+  defm psrli_b    : RVPBinaryAABIntrinsics;
+  defm psrli_h    : RVPBinaryAABIntrinsics;
+  defm psrli_w    : RVPBinaryAABIntrinsics;
+  defm pusati_h   : RVPBinaryAABIntrinsics;
+  defm pusati_w   : RVPBinaryAABIntrinsics;
+  defm usati      : RVPBinaryAABIntrinsics;
+  defm psrai_b    : RVPBinaryAABIntrinsics;
+  defm psrai_h    : RVPBinaryAABIntrinsics;
+  defm psrai_w    : RVPBinaryAABIntrinsics;
+  defm psrari_h   : RVPBinaryAABIntrinsics;
+  defm psrari_w   : RVPBinaryAABIntrinsics;
+  defm srari      : RVPBinaryAABIntrinsics;
+  defm psati_h    : RVPBinaryAABIntrinsics;
+  defm psati_w    : RVPBinaryAABIntrinsics;
+  defm sati       : RVPBinaryAABIntrinsics;
+  defm pmulhrsu_h : RVPBinaryAABIntrinsics;
+  defm pmulhrsu_w : RVPBinaryAABIntrinsics;
+  defm mulhsu_h0  : RVPBinaryAABIntrinsics;
+  defm mulhsu_h1  : RVPBinaryAABIntrinsics;
+  defm mulhrsu    : RVPBinaryAABIntrinsics;
+
+  class RVPBinaryABBIntrinsics
+      : Intrinsic<[llvm_any_ty],
+                  [LLVMMatchType<0>, llvm_any_ty],
+                  [IntrNoMem]>;
+
+  multiclass RVPBinaryABBIntrinsics {
+    def "int_riscv_" # NAME   : RVPBinaryABBIntrinsics;
+  }
+
+  defm pmul_h_b01  : RVPBinaryABBIntrinsics;
+  defm pmul_w_h01  : RVPBinaryABBIntrinsics;
+  defm pmulu_h_b01 : RVPBinaryABBIntrinsics;
+  defm pmulu_w_h01 : RVPBinaryABBIntrinsics;
+  defm pmul_h_b00  : RVPBinaryABBIntrinsics;
+  defm pmul_w_h00  : RVPBinaryABBIntrinsics;
+  defm pmul_h_b11  : RVPBinaryABBIntrinsics;
+  defm pmul_w_h11  : RVPBinaryABBIntrinsics;
+  defm pmulu_h_b00 : RVPBinaryABBIntrinsics;
+  defm pmulu_w_h00 : RVPBinaryABBIntrinsics;
+  defm pmulu_h_b11 : RVPBinaryABBIntrinsics;
+  defm pmulu_w_h11 : RVPBinaryABBIntrinsics;
+  defm mul_h00     : RVPBinaryABBIntrinsics;
+  defm mul_w00     : RVPBinaryABBIntrinsics;
+  defm mul_h11     : RVPBinaryABBIntrinsics;
+  defm mul_w11     : RVPBinaryABBIntrinsics;
+  defm mulu_h00    : RVPBinaryABBIntrinsics;
+  defm mulu_w00    : RVPBinaryABBIntrinsics;
+  defm mulu_h11    : RVPBinaryABBIntrinsics;
+  defm mulu_w11    : RVPBinaryABBIntrinsics;
+  defm pmulh_h_b0  : RVPBinaryABBIntrinsics;
+  defm pmulh_w_h0  : RVPBinaryABBIntrinsics;
+  defm pmulh_h_b1  : RVPBinaryABBIntrinsics;
+  defm pmulh_w_h1  : RVPBinaryABBIntrinsics;
+
+  class RVPBinaryABCIntrinsics
+      : Intrinsic<[llvm_any_ty],
+                  [llvm_any_ty, llvm_any_ty],
+                  [IntrNoMem]>;
+
+  multiclass RVPBinaryABCIntrinsics {
+    def "int_riscv_" # NAME   : RVPBinaryABCIntrinsics;
+  }
+
+  defm pmulsu_h_b00 : RVPBinaryABCIntrinsics;
+  defm pmulsu_w_h00 : RVPBinaryABCIntrinsics;
+  defm pmulsu_h_b11 : RVPBinaryABCIntrinsics;
+  defm pmulsu_w_h11 : RVPBinaryABCIntrinsics;
+  defm mulsu_h00    : RVPBinaryABCIntrinsics;
+  defm mulsu_w00    : RVPBinaryABCIntrinsics;
+  defm mulsu_h11    : RVPBinaryABCIntrinsics;
+  defm mulsu_w11    : RVPBinaryABCIntrinsics;
+  defm pmulhsu_h    : RVPBinaryABCIntrinsics;
+  defm pmulhsu_w    : RVPBinaryABCIntrinsics;
+  defm pmulhsu_h_b0 : RVPBinaryABCIntrinsics;
+  defm pmulhsu_w_h0 : RVPBinaryABCIntrinsics;
+  defm pmulhsu_h_b1 : RVPBinaryABCIntrinsics;
+  defm pmulhsu_w_h1 : RVPBinaryABCIntrinsics;
+} // TargetPrefix = "riscv"
+
 // Vendor extensions
 //===----------------------------------------------------------------------===//
 include "llvm/IR/IntrinsicsRISCVXTHead.td"
