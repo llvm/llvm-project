@@ -31,11 +31,6 @@ SBFileSpecList::SBFileSpecList(const SBFileSpecList &rhs) {
   m_opaque_up = clone(rhs.m_opaque_up);
 }
 
-SBFileSpecList::SBFileSpecList(FileSpecList &&list)
-    : m_opaque_up(new FileSpecList(std::move(list))) {
-  LLDB_INSTRUMENT_VA(this);
-}
-
 SBFileSpecList::~SBFileSpecList() = default;
 
 const SBFileSpecList &SBFileSpecList::operator=(const SBFileSpecList &rhs) {

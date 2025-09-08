@@ -293,7 +293,7 @@ public:
   /// \return
   ///     A list of filespecs associated with all the separate symbol files
   ///     associated with this module.
-  lldb::SBFileSpecList GetSeparateDebugInfoFiles();
+  lldb::SBModuleSpecList GetSeparateDebugInfoFiles();
 
   lldb::SBAddress GetObjectFileHeaderAddress() const;
   lldb::SBAddress GetObjectFileEntryPointAddress() const;

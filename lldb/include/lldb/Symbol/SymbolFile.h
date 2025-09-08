@@ -28,7 +28,6 @@
 #include "lldb/lldb-private.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Errc.h"
 
 #include <mutex>
@@ -505,7 +504,9 @@ public:
   ///
   /// \return
   ///     A unique list of all the filespecs, or an empty list.
-  virtual lldb_private::FileSpecList GetSeparateDebugInfoFiles() { return {}; }
+  virtual lldb_private::ModuleSpecList GetSeparateDebugInfoFiles() {
+    return {};
+  }
 
   virtual lldb::TypeSP
   MakeType(lldb::user_id_t uid, ConstString name,

@@ -183,6 +183,11 @@ SBModuleSpecList::SBModuleSpecList(const SBModuleSpecList &rhs)
   LLDB_INSTRUMENT_VA(this, rhs);
 }
 
+SBModuleSpecList::SBModuleSpecList(lldb_private::ModuleSpecList &&module_spec)
+    : m_opaque_up(new ModuleSpecList(std::move(module_spec))) {
+  LLDB_INSTRUMENT_VA(this);
+}
+
 SBModuleSpecList &SBModuleSpecList::operator=(const SBModuleSpecList &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 

@@ -27,7 +27,7 @@ class SBModuleSeparateDebugInfoCase(TestBase):
         main_module = target.GetModuleAtIndex(0)
         file_specs = main_module.GetSeparateDebugInfoFiles()
         self.assertEqual(len(file_specs), 1)
-        self.assertTrue(file_specs[0].GetFilename().endswith(".dwo"))
+        self.assertTrue(file_specs[0].GetFileSpec().GetFilename().endswith(".dwo"))
 
     @skipUnlessDarwin
     @skipIf(debug_info=no_match("dwarf"))
@@ -41,4 +41,4 @@ class SBModuleSeparateDebugInfoCase(TestBase):
         main_module = target.GetModuleAtIndex(0)
         file_specs = main_module.GetSeparateDebugInfoFiles()
         self.assertEqual(len(file_specs), 1)
-        self.assertTrue(file_specs[0].GetFilename().endswith(".o"))
+        self.assertTrue(file_specs[0].GetFileSpec().GetFilename().endswith(".o"))

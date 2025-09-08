@@ -229,7 +229,7 @@ public:
                                                  load_all_debug_info);
   }
 
-  lldb_private::FileSpecList GetSeparateDebugInfoFiles() override {
+  lldb_private::ModuleSpecList GetSeparateDebugInfoFiles() override {
     return m_sym_file_impl->GetSeparateDebugInfoFiles();
   }
 
