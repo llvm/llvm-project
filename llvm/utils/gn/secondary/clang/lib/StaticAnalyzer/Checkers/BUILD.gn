@@ -135,7 +135,7 @@ static_library("Checkers") {
     "UnixAPIChecker.cpp",
     "UnreachableCodeChecker.cpp",
     "VLASizeChecker.cpp",
-    "ValistChecker.cpp",
+    "VAListChecker.cpp",
     "VforkChecker.cpp",
     "VirtualCallChecker.cpp",
     "WebKit/ASTUtils.cpp",
