@@ -8,7 +8,7 @@ add_fp_unittest(
   SRCS
     cosf_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.cosf
 )
 
@@ -19,7 +19,7 @@ add_fp_unittest(
   SRCS
     cosf16_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.cosf16
 )
 
@@ -30,7 +30,7 @@ add_fp_unittest(
   SRCS
     cospif_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.cospif
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
@@ -43,7 +43,7 @@ add_fp_unittest(
   SRCS
     cospif16_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.cospif16
     libc.src.__support.FPUtil.cast
 )
@@ -4540,7 +4540,7 @@ add_fp_unittest(
   SRCS
     coshf_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.coshf
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
@@ -4553,8 +4553,8 @@ add_fp_unittest(
   SRCS
     coshf16_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.coshf16
     libc.src.__support.FPUtil.cast
 )
@@ -4616,7 +4616,7 @@ add_fp_unittest(
   SRCS
     atanhf_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.atanhf
     libc.src.__support.FPUtil.fp_bits
 )
@@ -4628,7 +4628,7 @@ add_fp_unittest(
   SRCS
     atanhf16_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.atanhf16
     libc.src.__support.FPUtil.cast
 )
@@ -4642,7 +4642,6 @@ add_fp_unittest(
     atanpif16_test.cpp
   DEPENDS
     libc.src.math.atanpif16
-    libc.src.errno.errno
 )
 
 add_fp_unittest(
@@ -4790,7 +4789,6 @@ add_fp_unittest(
   SRCS
     atanf_test.cpp
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.atanf
     libc.src.__support.FPUtil.fp_bits
 )
@@ -4812,7 +4810,6 @@ add_fp_unittest(
   SRCS
     atanf16_test.cpp
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.atanf16
 )
 
@@ -4823,7 +4820,6 @@ add_fp_unittest(
   SRCS
     atan2f_test.cpp
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.atan2f
     libc.src.__support.FPUtil.fp_bits
 )
