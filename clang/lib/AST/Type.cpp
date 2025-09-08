@@ -1917,55 +1917,6 @@ const CXXRecordDecl *Type::getPointeeCXXRecordDecl() const {
   return PointeeType->getAsCXXRecordDecl();
 }
 
-CXXRecordDecl *Type::getAsCXXRecordDecl() const {
-  const auto *TT = dyn_cast<TagType>(CanonicalType);
-  if (!isa_and_present<RecordType, InjectedClassNameType>(TT))
-    return nullptr;
-  auto *TD = TT->getOriginalDecl();
-  if (!isa<InjectedClassNameType>(TT) && !isa<CXXRecordDecl>(TD))
-    return nullptr;
-  return cast<CXXRecordDecl>(TD)->getDefinitionOrSelf();
-}
-
-CXXRecordDecl *Type::castAsCXXRecordDecl() const {
-  const auto *TT = cast<TagType>(CanonicalType);
-  return cast<CXXRecordDecl>(TT->getOriginalDecl())->getDefinitionOrSelf();
-}
-
-RecordDecl *Type::getAsRecordDecl() const {
-  const auto *TT = dyn_cast<TagType>(CanonicalType);
-  if (!isa_and_present<RecordType, InjectedClassNameType>(TT))
-    return nullptr;
-  return cast<RecordDecl>(TT->getOriginalDecl())->getDefinitionOrSelf();
-}
-
-RecordDecl *Type::castAsRecordDecl() const {
-  const auto *TT = cast<TagType>(CanonicalType);
-  return cast<RecordDecl>(TT->getOriginalDecl())->getDefinitionOrSelf();
-}
-
-EnumDecl *Type::getAsEnumDecl() const {
-  if (const auto *TT = dyn_cast<EnumType>(CanonicalType))
-    return TT->getOriginalDecl()->getDefinitionOrSelf();
-  return nullptr;
-}
-
-EnumDecl *Type::castAsEnumDecl() const {
-  return cast<EnumType>(CanonicalType)
-      ->getOriginalDecl()
-      ->getDefinitionOrSelf();
-}
-
-TagDecl *Type::getAsTagDecl() const {
-  if (const auto *TT = dyn_cast<TagType>(CanonicalType))
-    return TT->getOriginalDecl()->getDefinitionOrSelf();
-  return nullptr;
-}
-
-TagDecl *Type::castAsTagDecl() const {
-  return cast<TagType>(CanonicalType)->getOriginalDecl()->getDefinitionOrSelf();
-}
-
 const TemplateSpecializationType *
 Type::getAsNonAliasTemplateSpecializationType() const {
   const auto *TST = getAs<TemplateSpecializationType>();
@@ -5469,7 +5420,7 @@ bool Type::isHLSLResourceRecordArray() const {
   const Type *Ty = getUnqualifiedDesugaredType();
   if (!Ty->isArrayType())
     return false;
-  while (isa<ConstantArrayType>(Ty))
+  while (isa<ArrayType>(Ty))
     Ty = Ty->getArrayElementTypeNoTypeQual();
   return Ty->isHLSLResourceRecord();
 }
@@ -5482,7 +5433,7 @@ bool Type::isHLSLIntangibleType() const {
     return Ty->isHLSLBuiltinIntangibleType();
 
   // unwrap arrays
-  while (isa<ConstantArrayType>(Ty))
+  while (isa<ArrayType>(Ty))
     Ty = Ty->getArrayElementTypeNoTypeQual();
 
   const RecordType *RT =

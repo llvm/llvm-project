@@ -21,22 +21,21 @@
 
 STATISTIC(NumPatternEmitted, "Number of patterns emitted");
 
+using namespace llvm;
+using namespace gi;
+
 static llvm::cl::opt<bool> AllowExtendedLLT(
     "gisel-extended-llt",
     llvm::cl::desc("Generate an extended llt names in match tables"),
     llvm::cl::init(false));
 
-namespace llvm {
-namespace gi {
-
-namespace {
-
-Error failUnsupported(const Twine &Reason) {
+// FIXME: Use createStringError instead.
+static Error failUnsupported(const Twine &Reason) {
   return make_error<StringError>(Reason, inconvertibleErrorCode());
 }
 
 /// Get the name of the enum value used to number the predicate function.
-std::string getEnumNameForPredicate(const TreePredicateFn &Predicate) {
+static std::string getEnumNameForPredicate(const TreePredicateFn &Predicate) {
   if (Predicate.hasGISelPredicateCode())
     return "GICXXPred_MI_" + Predicate.getFnName();
   if (Predicate.hasGISelLeafPredicateCode())
@@ -45,18 +44,17 @@ std::string getEnumNameForPredicate(const TreePredicateFn &Predicate) {
          Predicate.getFnName();
 }
 
-std::string getMatchOpcodeForImmPredicate(const TreePredicateFn &Predicate) {
+static std::string
+getMatchOpcodeForImmPredicate(const TreePredicateFn &Predicate) {
   return "GIM_Check" + Predicate.getImmTypeIdentifier().str() + "ImmPredicate";
 }
 
 // GIMT_Encode2/4/8
 constexpr StringLiteral EncodeMacroName = "GIMT_Encode";
 
-} // namespace
-
 //===- Helpers ------------------------------------------------------------===//
 
-void emitEncodingMacrosDef(raw_ostream &OS) {
+void llvm::gi::emitEncodingMacrosDef(raw_ostream &OS) {
   OS << "#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__\n"
      << "#define " << EncodeMacroName << "2(Val)"
      << " uint8_t(Val), uint8_t((Val) >> 8)\n"
@@ -82,14 +80,15 @@ void emitEncodingMacrosDef(raw_ostream &OS) {
      << "#endif\n";
 }
 
-void emitEncodingMacrosUndef(raw_ostream &OS) {
+void llvm::gi::emitEncodingMacrosUndef(raw_ostream &OS) {
   OS << "#undef " << EncodeMacroName << "2\n"
      << "#undef " << EncodeMacroName << "4\n"
      << "#undef " << EncodeMacroName << "8\n";
 }
 
-std::string getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset,
-                                    int HwModeIdx) {
+std::string
+llvm::gi::getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset,
+                                  int HwModeIdx) {
   std::string Name = "GIFBS";
   for (const Record *Feature : FeatureBitset)
     Name += ("_" + Feature->getName()).str();
@@ -100,8 +99,8 @@ std::string getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset,
 
 template <class GroupT>
 std::vector<Matcher *>
-optimizeRules(ArrayRef<Matcher *> Rules,
-              std::vector<std::unique_ptr<Matcher>> &MatcherStorage) {
+llvm::gi::optimizeRules(ArrayRef<Matcher *> Rules,
+                        std::vector<std::unique_ptr<Matcher>> &MatcherStorage) {
 
   std::vector<Matcher *> OptRules;
   std::unique_ptr<GroupT> CurrentGroup = std::make_unique<GroupT>();
@@ -148,11 +147,11 @@ optimizeRules(ArrayRef<Matcher *> Rules,
   return OptRules;
 }
 
-template std::vector<Matcher *> optimizeRules<GroupMatcher>(
+template std::vector<Matcher *> llvm::gi::optimizeRules<GroupMatcher>(
     ArrayRef<Matcher *> Rules,
     std::vector<std::unique_ptr<Matcher>> &MatcherStorage);
 
-template std::vector<Matcher *> optimizeRules<SwitchMatcher>(
+template std::vector<Matcher *> llvm::gi::optimizeRules<SwitchMatcher>(
     ArrayRef<Matcher *> Rules,
     std::vector<std::unique_ptr<Matcher>> &MatcherStorage);
 
@@ -164,7 +163,7 @@ static std::string getEncodedEmitStr(StringRef NamedValue, unsigned NumBytes) {
 
 //===- Global Data --------------------------------------------------------===//
 
-std::set<LLTCodeGen> KnownTypes;
+std::set<LLTCodeGen> llvm::gi::KnownTypes;
 
 //===- MatchTableRecord ---------------------------------------------------===//
 
@@ -499,7 +498,7 @@ bool LLTCodeGen::operator<(const LLTCodeGen &Other) const {
 
 //===- LLTCodeGen Helpers -------------------------------------------------===//
 
-std::optional<LLTCodeGen> MVTToLLT(MVT::SimpleValueType SVT) {
+std::optional<LLTCodeGen> llvm::gi::MVTToLLT(MVT::SimpleValueType SVT) {
   MVT VT(SVT);
 
   if (VT.isVector() && !VT.getVectorElementCount().isScalar())
@@ -538,6 +537,14 @@ bool GroupMatcher::candidateConditionMatches(
   // ... if not empty, the group can only accomodate matchers with the exact
   // same first condition:
   return Predicate.isIdentical(RepresentativeCondition);
+}
+
+std::unique_ptr<PredicateMatcher> GroupMatcher::popFirstCondition() {
+  assert(!Conditions.empty() &&
+         "Trying to pop a condition from a condition-less group");
+  std::unique_ptr<PredicateMatcher> P = std::move(Conditions.front());
+  Conditions.erase(Conditions.begin());
+  return P;
 }
 
 bool GroupMatcher::addMatcher(Matcher &Candidate) {
@@ -753,6 +760,9 @@ void SwitchMatcher::emit(MatchTable &Table) {
 }
 
 //===- RuleMatcher --------------------------------------------------------===//
+
+RuleMatcher::RuleMatcher(ArrayRef<SMLoc> SrcLoc)
+    : SrcLoc(SrcLoc), RuleID(NextRuleID++) {}
 
 uint64_t RuleMatcher::NextRuleID = 0;
 
@@ -1160,6 +1170,8 @@ unsigned RuleMatcher::countRendererFns() const {
       });
 }
 
+void RuleMatcher::insnmatchers_pop_front() { Matchers.erase(Matchers.begin()); }
+
 //===- PredicateMatcher ---------------------------------------------------===//
 
 PredicateMatcher::~PredicateMatcher() {}
@@ -1503,9 +1515,8 @@ RecordAndValue
 InstructionOpcodeMatcher::getInstValue(const CodeGenInstruction *I) const {
   const auto VI = OpcodeValues.find(I);
   if (VI != OpcodeValues.end())
-    return {MatchTable::NamedValue(2, I->Namespace, I->TheDef->getName()),
-            VI->second};
-  return MatchTable::NamedValue(2, I->Namespace, I->TheDef->getName());
+    return {MatchTable::NamedValue(2, I->Namespace, I->getName()), VI->second};
+  return MatchTable::NamedValue(2, I->Namespace, I->getName());
 }
 
 void InstructionOpcodeMatcher::initOpcodeValuesMap(
@@ -1522,9 +1533,8 @@ RecordAndValue InstructionOpcodeMatcher::getValue() const {
   const CodeGenInstruction *I = Insts[0];
   const auto VI = OpcodeValues.find(I);
   if (VI != OpcodeValues.end())
-    return {MatchTable::NamedValue(2, I->Namespace, I->TheDef->getName()),
-            VI->second};
-  return MatchTable::NamedValue(2, I->Namespace, I->TheDef->getName());
+    return {MatchTable::NamedValue(2, I->Namespace, I->getName()), VI->second};
+  return MatchTable::NamedValue(2, I->Namespace, I->getName());
 }
 
 void InstructionOpcodeMatcher::emitPredicateOpcodes(MatchTable &Table,
@@ -1551,17 +1561,17 @@ bool InstructionOpcodeMatcher::isHigherPriorityThan(
   // using instruction frequency information to improve compile time.
   if (const InstructionOpcodeMatcher *BO =
           dyn_cast<InstructionOpcodeMatcher>(&B))
-    return Insts[0]->TheDef->getName() < BO->Insts[0]->TheDef->getName();
+    return Insts[0]->getName() < BO->Insts[0]->getName();
 
   return false;
 }
 
 bool InstructionOpcodeMatcher::isConstantInstruction() const {
-  return Insts.size() == 1 && Insts[0]->TheDef->getName() == "G_CONSTANT";
+  return Insts.size() == 1 && Insts[0]->getName() == "G_CONSTANT";
 }
 
 StringRef InstructionOpcodeMatcher::getOpcode() const {
-  return Insts[0]->TheDef->getName();
+  return Insts[0]->getName();
 }
 
 bool InstructionOpcodeMatcher::isVariadicNumOperands() const {
@@ -2293,7 +2303,7 @@ void BuildMIAction::emitActionOpcodes(MatchTable &Table,
           << MatchTable::Comment("RecycleInsnID")
           << MatchTable::ULEB128Value(RecycleInsnID)
           << MatchTable::Comment("Opcode")
-          << MatchTable::NamedValue(2, I->Namespace, I->TheDef->getName())
+          << MatchTable::NamedValue(2, I->Namespace, I->getName())
           << MatchTable::LineBreak;
 
     if (!I->ImplicitDefs.empty() || !I->ImplicitUses.empty()) {
@@ -2340,7 +2350,7 @@ void BuildMIAction::emitActionOpcodes(MatchTable &Table,
   }
 
   Table << MatchTable::Comment("Opcode")
-        << MatchTable::NamedValue(2, I->Namespace, I->TheDef->getName())
+        << MatchTable::NamedValue(2, I->Namespace, I->getName())
         << MatchTable::LineBreak;
 
   for (const auto &Renderer : OperandRenderers)
@@ -2484,6 +2494,3 @@ void MakeTempRegisterAction::emitActionOpcodes(MatchTable &Table,
         << MatchTable::ULEB128Value(TempRegID) << MatchTable::Comment("TypeID")
         << Ty << MatchTable::LineBreak;
 }
-
-} // namespace gi
-} // namespace llvm

@@ -296,7 +296,7 @@ public:
   /// vector types.
   constexpr uint16_t getNumElements() const {
     if (isScalable())
-      llvm::reportInvalidSizeRequest(
+      llvm::reportFatalInternalError(
           "Possible incorrect use of LLT::getNumElements() for "
           "scalable vector. Scalable flag may be dropped, use "
           "LLT::getElementCount() instead");
