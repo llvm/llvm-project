@@ -36,7 +36,8 @@ namespace {
 
 class DwarfLineTableHeaders : public ::testing::Test {
 public:
-  const char *TripleName = "x86_64-pc-linux";
+  static constexpr char TripleName[] = "x86_64-pc-linux";
+  Triple TT;
   std::unique_ptr<MCRegisterInfo> MRI;
   std::unique_ptr<MCAsmInfo> MAI;
   std::unique_ptr<const MCSubtargetInfo> STI;
@@ -49,7 +50,7 @@ public:
     std::unique_ptr<MCStreamer> Streamer;
   };
 
-  DwarfLineTableHeaders() {
+  DwarfLineTableHeaders() : TT(TripleName) {
     llvm::InitializeAllTargetInfos();
     llvm::InitializeAllTargetMCs();
     llvm::InitializeAllDisassemblers();
@@ -60,18 +61,17 @@ public:
     if (!TheTarget)
       return;
 
-    MRI.reset(TheTarget->createMCRegInfo(TripleName));
+    MRI.reset(TheTarget->createMCRegInfo(TT));
     MCTargetOptions MCOptions;
-    MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
-    STI.reset(TheTarget->createMCSubtargetInfo(TripleName, "", ""));
+    MAI.reset(TheTarget->createMCAsmInfo(*MRI, TT, MCOptions));
+    STI.reset(TheTarget->createMCSubtargetInfo(TT, "", ""));
   }
 
   /// Create all data structures necessary to operate an assembler
   StreamerContext createStreamer(raw_pwrite_stream &OS) {
     StreamerContext Res;
-    Res.Ctx =
-        std::make_unique<MCContext>(Triple(TripleName), MAI.get(), MRI.get(),
-                                    /*MSTI=*/nullptr);
+    Res.Ctx = std::make_unique<MCContext>(TT, MAI.get(), MRI.get(),
+                                          /*MSTI=*/nullptr);
     Res.MOFI.reset(TheTarget->createMCObjectFileInfo(*Res.Ctx,
                                                      /*PIC=*/false));
     Res.Ctx->setObjectFileInfo(Res.MOFI.get());
@@ -82,8 +82,8 @@ public:
         TheTarget->createMCAsmBackend(*STI, *MRI, MCTargetOptions());
     std::unique_ptr<MCObjectWriter> OW = MAB->createObjectWriter(OS);
     Res.Streamer.reset(TheTarget->createMCObjectStreamer(
-        Triple(TripleName), *Res.Ctx, std::unique_ptr<MCAsmBackend>(MAB),
-        std::move(OW), std::unique_ptr<MCCodeEmitter>(MCE), *STI));
+        TT, *Res.Ctx, std::unique_ptr<MCAsmBackend>(MAB), std::move(OW),
+        std::unique_ptr<MCCodeEmitter>(MCE), *STI));
     return Res;
   }
 

@@ -678,7 +678,7 @@ createRegInfo(const object::ObjectFile &Obj) {
   const Target *TheTarget = TargetRegistry::lookupTarget(TT, TargetLookupError);
   if (!TargetLookupError.empty())
     return nullptr;
-  MCRegInfo.reset(TheTarget->createMCRegInfo(TT.str()));
+  MCRegInfo.reset(TheTarget->createMCRegInfo(TT));
   return MCRegInfo;
 }
 
