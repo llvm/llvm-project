@@ -1,22 +1,22 @@
-// Test big archive recognition and error handling in llvm-symbolizer
+// Test big archive recognition and error handling in llvm-symbolizer.
 
-// Generate object files
+// Generate object files.
 // RUN: yaml2obj -o %t-32.o %S/Inputs/big-archive-32.yaml
 // RUN: yaml2obj -o %t-64.o %S/Inputs/big-archive-64.yaml
 
-// Create archive with same-named members using different modes
+// Create archive with same-named members using different modes.
 // RUN: rm -f %t.a
 // RUN: cp %t-32.o %t.o
 // RUN: llvm-ar %if system-aix %{-X32%} crv %t.a %t.o
 // RUN: cp %t-64.o %t.o
 // RUN: llvm-ar %if system-aix %{-X64 rv%} %else %{qv%} %t.a %t.o
 
-// Verify archive contains two members with same name
+// Verify archive contains two members with same name.
 // RUN: llvm-ar tv %if system-aix %{-X32_64%} %t.a | FileCheck %s --check-prefix=CHECK-ARCHIVE
 // CHECK-ARCHIVE: {{.*}}symbolize-big-archive-xcoff.test.tmp.o{{$}}
 // CHECK-ARCHIVE: {{.*}}symbolize-big-archive-xcoff.test.tmp.o{{$}}
 
-// Test successful symbolization
+// Test successful symbolization.
 // RUN: llvm-symbolizer --default-arch=ppc --obj="%t.a(%{t:stem}.tmp.o)" 0x0 | FileCheck %s --check-prefix=CHECK-32
 // RUN: llvm-symbolizer --default-arch=ppc64 --obj="%t.a(%{t:stem}.tmp.o)" 0x0 | FileCheck %s --check-prefix=CHECK-64
 // RUN: llvm-symbolizer --obj="%t.a(%{t:stem}.tmp.o):ppc" 0x0 | FileCheck %s --check-prefix=CHECK-32
@@ -24,7 +24,7 @@
 // CHECK-32: foo
 // CHECK-64: foo
 
-// Test error cases
+// Test error cases.
 // RUN: not llvm-symbolizer --obj="%t.a(nonexistent.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 // CHECK-ERROR: error: {{.*}}no matching member{{.*}}
 // RUN: not llvm-symbolizer --obj="%t.o(%{t:stem}.tmp.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOTARCHIVE

@@ -1,14 +1,14 @@
-// Test archive member recognition by name (ELF format)
+// Test archive member recognition by name (ELF format).
 
-// Generate object files from YAML
+// Generate object files from YAML.
 // RUN: yaml2obj -o %t-1.o %S/Inputs/big-archive-elf-1.yaml
 // RUN: yaml2obj -o %t-2.o %S/Inputs/big-archive-elf-2.yaml
 
-// Create archive with differently named members
+// Create archive with differently named members.
 // RUN: rm -f %t.a
 // RUN: llvm-ar crv %t.a %t-1.o %t-2.o
 
-// Test symbolization by member name (using just base names)
+// Test symbolization by member name (using just base names).
 // RUN: llvm-symbolizer --default-arch=ppc64le --obj="%t.a(%{t:stem}.tmp-1.o)" 0x0 | FileCheck %s --check-prefix=CHECK-1
 // RUN: llvm-symbolizer --obj="%t.a(%{t:stem}.tmp-1.o):ppc64le" 0x0 | FileCheck %s --check-prefix=CHECK-1
 // RUN: llvm-symbolizer --default-arch=ppc64le --obj="%t.a(%{t:stem}.tmp-2.o)" 0x0 | FileCheck %s --check-prefix=CHECK-2
@@ -16,7 +16,7 @@
 // CHECK-1: foo1
 // CHECK-2: foo2
 
-// Test error cases
+// Test error cases.
 // RUN: not llvm-symbolizer --obj="%t.a(nonexistent.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 // CHECK-ERROR: error: {{.*}}no matching member{{.*}}
 // RUN: not llvm-symbolizer --obj="%t-1.o(%{t:stem}.tmp-1.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOTARCHIVE
