@@ -1225,8 +1225,8 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   }
 
   if (auto *Phi = dyn_cast<VPPhi>(Def)) {
-    if (Phi->getNumOperands() == 1)
-      Phi->replaceAllUsesWith(Phi->getOperand(0));
+    if (all_equal(Phi->incoming_values()))
+      Phi->replaceAllUsesWith(Phi->getIncomingValue(0));
     return;
   }
 
