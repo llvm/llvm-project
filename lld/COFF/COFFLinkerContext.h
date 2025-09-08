@@ -61,6 +61,7 @@ public:
   std::vector<ObjFile *> objFileInstances;
   std::map<std::string, PDBInputFile *> pdbInputFileInstances;
   std::vector<ImportFile *> importFileInstances;
+  std::int64_t consumedInputsSize = 0;
 
   MergeChunk *mergeChunkInstances[Log2MaxSectionAlignment + 1] = {};
 
