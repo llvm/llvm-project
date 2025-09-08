@@ -5,8 +5,6 @@
 ! RUN:   | FileCheck %s
 ! RUN: bbc -emit-hlfir -fopenmp -fdo-concurrent-to-openmp=device %s -o - \
 ! RUN:   | FileCheck %s
-! XFAIL: *
-! CHECK-LABEL: do_concurrent_basic
 program do_concurrent_basic
     implicit none
     integer :: a(10)
