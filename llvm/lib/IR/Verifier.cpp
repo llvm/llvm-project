@@ -3185,10 +3185,10 @@ void Verifier::visitFunction(const Function &F) {
 
     // Scope and SP could be the same MDNode and we don't want to skip
     // validation in that case
-    if (SP && ((Scope != SP) && !Seen.insert(SP).second))
+    if ((Scope != SP) && !Seen.insert(SP).second)
       return;
 
-    CheckDI(SP && SP->describes(&F),
+    CheckDI(SP->describes(&F),
             "!dbg attachment points at wrong subprogram for function", N, &F,
             &I, DL, Scope, SP);
   };
