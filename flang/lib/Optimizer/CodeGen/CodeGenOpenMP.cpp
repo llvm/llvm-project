@@ -95,29 +95,49 @@ struct MapInfoOpConversion
                        fir::unwrapPassByRefType(typeAttr.getValue()))) &&
                    !characterWithDynamicLen(
                        fir::unwrapPassByRefType(typeAttr.getValue()))) {
-          // Characters with a LEN param are represented as char
-          // arrays/strings, the initial lowering doesn't generate
-          // bounds for these, however, we require them to map the
-          // data appropriately in the later lowering stages. This
-          // is to prevent the need for unecessary caveats
-          // specific to Flang. We also strip the array from the
-          // type so that all variations of strings are treated
-          // identically and there's no caveats or specialisations
-          // required in the later stages. As an example, Boxed
-          // char strings will emit a single char array no matter
-          // the number of dimensions caused by additional array
-          // dimensions which needs specialised for, as it differs
-          // from the non-box variation which will emit each array
-          // wrapping the character array, e.g. given a type of
-          // the same dimensions, if one is boxed, the types would
-          // end up:
+          // Characters with a LEN param are represented as strings
+          // (array of characters), the lowering to LLVM dialect
+          // doesn't generate bounds for these (and this is not
+          // done at the initial lowering either) and there is
+          // minor inconsistencies in the variable types we
+          // create for the map without this step when converting
+          // to the LLVM dialect.
           //
-          //     array<i8 x 16>
-          //  vs
-          //     array<10 x array< 10 x array<i8 x 16>>>
+          // For example, given the types:
           //
-          // This means we have to treat one specially in the
-          // lowering. So we try to "canonicalize" it here.
+          //  1) CHARACTER(LEN=16), dimension(:,:), allocatable :: char_arr
+          //  2) CHARACTER(LEN=16), dimension(10,10) :: char_arr
+          //
+          // We get the FIR types (note for 1: we already peeled off the
+          // dynamic extents from the type at this stage, but the conversion
+          // to llvm dialect does that in any case, so the final result
+          // is the same):
+          //
+          //  1) !fir.char<1,16>
+          //  2) !fir.array<10x10x!fir.char<1,16>>
+          //
+          // Which are converted to the LLVM dialect types:
+          //
+          // 1) !llvm.array<16 x i8>
+          // 2) llvm.array<10 x array<10 x array<16 x i8>>
+          //
+          // And in both cases, we are missing the innermost bounds for
+          // the !fir.char<1,16> which is expanded into a 16 x i8 array
+          // in the conversion to LLVM dialect.
+          //
+          // The problem with this is that we would like to treat these
+          // cases identically and not have to create specialised
+          // lowerings for either of these in the lowering to LLVM-IR
+          // and treat them like any other array that passes through.
+          //
+          // To do so below, we generate an extra bound for the
+          // innermost array (the char type/string) using the LEN
+          // parameter of the character type. And we "canonicalize"
+          // the type, stripping it down to the base element type,
+          // which in this case is an i8. This effectively allows
+          // the lowering to treat this as a 1-D array with multiple
+          // bounds which it is capable of handling without any special
+          // casing.
           // TODO: Handle dynamic LEN characters.
           if (auto ct = mlir::dyn_cast_or_null<fir::CharacterType>(
                   fir::unwrapSequenceType(typeAttr.getValue()))) {
@@ -125,8 +145,9 @@ struct MapInfoOpConversion
                 fir::unwrapSequenceType(typeAttr.getValue()));
             if (auto type = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(newAttr))
               newAttr = type.getElementType();
-            // We do not generate for device, as MapBoundsOps are
-            // unsupported, as they're currently unused.
+            // We do not generate MapBoundsOps for the device pass, as
+            // MapBoundsOps are not generated for the device pass, as
+            // they're unused in the device lowering.
             auto offloadMod =
                 llvm::dyn_cast_or_null<mlir::omp::OffloadModuleInterface>(
                     *curOp->getParentOfType<mlir::ModuleOp>());

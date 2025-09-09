@@ -5321,7 +5321,8 @@ ASTContext::getTypedefType(ElaboratedTypeKeyword Keyword,
   }
 
   llvm::FoldingSetNodeID ID;
-  TypedefType::Profile(ID, Keyword, Qualifier, Decl, UnderlyingType);
+  TypedefType::Profile(ID, Keyword, Qualifier, Decl,
+                       *TypeMatchesDeclOrNone ? QualType() : UnderlyingType);
 
   void *InsertPos = nullptr;
   if (FoldingSetPlaceholder<TypedefType> *Placeholder =
