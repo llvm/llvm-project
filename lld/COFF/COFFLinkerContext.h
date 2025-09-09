@@ -14,6 +14,7 @@
 #include "DebugTypes.h"
 #include "Driver.h"
 #include "InputFiles.h"
+#include "PDB.h"
 #include "SymbolTable.h"
 #include "Writer.h"
 #include "lld/Common/CommonLinkerContext.h"
@@ -112,6 +113,8 @@ public:
   Timer publicsLayoutTimer;
   Timer tpiStreamLayoutTimer;
   Timer diskCommitTimer;
+
+  std::optional<PDBStats> pdbStats;
 
   Configuration config;
 
