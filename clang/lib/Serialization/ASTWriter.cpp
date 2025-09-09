@@ -1185,36 +1185,51 @@ static bool cleanPathForOutput(FileManager &FileMgr,
   return Changed | llvm::sys::path::remove_dots(Path);
 }
 
-/// Adjusts the given filename to only write out the portion of the filename
-/// that is not part of the base directory.
+/// Adjusts the given filename to only write out the portion of the
+/// filename that is not part of the system root directory.
 ///
 /// \param Filename the file name to adjust.
 ///
-/// \param BasePath When not empty, the AST file is relocatable and the returned
-/// filename will be adjusted to be relative to this path.
+/// \param BaseDir When non-NULL, the PCH file is a relocatable AST file and
+/// the returned filename will be adjusted by this root directory.
 ///
-/// \returns true when \c Filename was adjusted, false otherwise.
-static bool adjustFilenameForRelocatableAST(SmallVectorImpl<char> &Filename,
-                                            StringRef BasePath) {
-  auto FileIt = llvm::sys::path::begin({Filename.begin(), Filename.size()});
-  auto FileEnd = llvm::sys::path::end({Filename.begin(), Filename.size()});
+/// \returns either the original filename (if it needs no adjustment) or the
+/// adjusted filename (which points into the @p Filename parameter).
+static const char *
+adjustFilenameForRelocatableAST(const char *Filename, StringRef BaseDir) {
+  assert(Filename && "No file name to adjust?");
 
-  auto BaseIt = llvm::sys::path::begin(BasePath);
-  auto BaseEnd = llvm::sys::path::end(BasePath);
+  if (BaseDir.empty())
+    return Filename;
 
-  for (; FileIt != FileEnd && BaseIt != BaseEnd; ++FileIt, ++BaseIt)
-    if (*FileIt != *BaseIt)
-      return false;
+  // Verify that the filename and the system root have the same prefix.
+  unsigned Pos = 0;
+  for (; Filename[Pos] && Pos < BaseDir.size(); ++Pos)
+    if (Filename[Pos] != BaseDir[Pos])
+      return Filename; // Prefixes don't match.
 
-  if (FileIt == FileEnd)
-    return false;
+  // We hit the end of the filename before we hit the end of the system root.
+  if (!Filename[Pos])
+    return Filename;
 
-  SmallString<128> Clean;
-  for (; FileIt != FileEnd; ++FileIt)
-    llvm::sys::path::append(Clean, *FileIt);
+  // If there's not a path separator at the end of the base directory nor
+  // immediately after it, then this isn't within the base directory.
+  if (!llvm::sys::path::is_separator(Filename[Pos])) {
+    if (!llvm::sys::path::is_separator(BaseDir.back()))
+      return Filename;
+  } else {
+    // If the file name has a '/' at the current position, skip over the '/'.
+    // We distinguish relative paths from absolute paths by the
+    // absence of '/' at the beginning of relative paths.
+    //
+    // FIXME: This is wrong. We distinguish them by asking if the path is
+    // absolute, which isn't the same thing. And there might be multiple '/'s
+    // in a row. Use a better mechanism to indicate whether we have emitted an
+    // absolute or relative path.
+    ++Pos;
+  }
 
-  Filename.assign(Clean.begin(), Clean.end());
-  return true;
+  return Filename + Pos;
 }
 
 std::pair<ASTFileSignature, ASTFileSignature>
@@ -1697,7 +1712,11 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
 
   AddString(HSOpts.Sysroot, Record);
   AddString(HSOpts.ResourceDir, Record);
-  AddPath(HSOpts.ModuleCachePath, Record);
+
+  SmallString<256> ModuleCachePath(HSOpts.ModuleCachePath);
+  (void)cleanPathForOutput(PP.getFileManager(), ModuleCachePath);
+  AddString(ModuleCachePath, Record);
+
   AddString(HSOpts.ModuleUserBuildPath, Record);
   Record.push_back(HSOpts.DisableModuleHash);
   Record.push_back(HSOpts.ImplicitModuleMaps);
@@ -5327,8 +5346,16 @@ bool ASTWriter::PreparePathForOutput(SmallVectorImpl<char> &Path) {
     return false;
 
   bool Changed = cleanPathForOutput(PP->getFileManager(), Path);
-  if (adjustFilenameForRelocatableAST(Path, BaseDirectory))
+
+  // Remove a prefix to make the path relative, if relevant.
+  const char *PathBegin = Path.data();
+  const char *PathPtr =
+      adjustFilenameForRelocatableAST(PathBegin, BaseDirectory);
+  if (PathPtr != PathBegin) {
+    Path.erase(Path.begin(), Path.begin() + (PathPtr - PathBegin));
     Changed = true;
+  }
+
   return Changed;
 }
 
