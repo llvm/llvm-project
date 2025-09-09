@@ -33,7 +33,7 @@ RT_API_ATTRS Descriptor &Descriptor::operator=(const Descriptor &that) {
 
 RT_API_ATTRS void Descriptor::Establish(TypeCode t, std::size_t elementBytes,
     void *p, int rank, const SubscriptValue *extent,
-    ISO::CFI_attribute_t attribute, bool addendum, unsigned allocatorIdx) {
+    ISO::CFI_attribute_t attribute, bool addendum, int allocatorIdx) {
   Terminator terminator{__FILE__, __LINE__};
   int cfiStatus{ISO::VerifyEstablishParameters(&raw_, p, attribute, t.raw(),
       elementBytes, rank, extent, /*external=*/false)};
@@ -72,14 +72,14 @@ RT_API_ATTRS std::size_t Descriptor::BytesFor(TypeCategory category, int kind) {
 
 RT_API_ATTRS void Descriptor::Establish(TypeCategory c, int kind, void *p,
     int rank, const SubscriptValue *extent, ISO::CFI_attribute_t attribute,
-    bool addendum, unsigned allocatorIdx) {
+    bool addendum, int allocatorIdx) {
   Establish(TypeCode(c, kind), BytesFor(c, kind), p, rank, extent, attribute,
       addendum, allocatorIdx);
 }
 
 RT_API_ATTRS void Descriptor::Establish(int characterKind,
     std::size_t characters, void *p, int rank, const SubscriptValue *extent,
-    ISO::CFI_attribute_t attribute, bool addendum, unsigned allocatorIdx) {
+    ISO::CFI_attribute_t attribute, bool addendum, int allocatorIdx) {
   Establish(TypeCode{TypeCategory::Character, characterKind},
       characterKind * characters, p, rank, extent, attribute, addendum,
       allocatorIdx);
@@ -87,7 +87,7 @@ RT_API_ATTRS void Descriptor::Establish(int characterKind,
 
 RT_API_ATTRS void Descriptor::Establish(const typeInfo::DerivedType &dt,
     void *p, int rank, const SubscriptValue *extent,
-    ISO::CFI_attribute_t attribute, unsigned allocatorIdx) {
+    ISO::CFI_attribute_t attribute, int allocatorIdx) {
   auto elementBytes{static_cast<std::size_t>(dt.sizeInBytes())};
   ISO::EstablishDescriptor(
       &raw_, p, attribute, CFI_type_struct, elementBytes, rank, extent);

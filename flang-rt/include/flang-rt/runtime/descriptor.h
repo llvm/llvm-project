@@ -171,21 +171,21 @@ public:
       void *p = nullptr, int rank = maxRank,
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other,
-      bool addendum = false, unsigned allocatorIdx = kDefaultAllocator);
+      bool addendum = false, int allocatorIdx = kDefaultAllocator);
   RT_API_ATTRS void Establish(TypeCategory, int kind, void *p = nullptr,
       int rank = maxRank, const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other,
-      bool addendum = false, unsigned allocatorIdx = kDefaultAllocator);
+      bool addendum = false, int allocatorIdx = kDefaultAllocator);
   RT_API_ATTRS void Establish(int characterKind, std::size_t characters,
       void *p = nullptr, int rank = maxRank,
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other,
-      bool addendum = false, unsigned allocatorIdx = kDefaultAllocator);
+      bool addendum = false, int allocatorIdx = kDefaultAllocator);
   RT_API_ATTRS void Establish(const typeInfo::DerivedType &dt,
       void *p = nullptr, int rank = maxRank,
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other,
-      unsigned allocatorIdx = kDefaultAllocator);
+      int allocatorIdx = kDefaultAllocator);
 
   RT_API_ATTRS void UncheckedScalarEstablish(
       const typeInfo::DerivedType &, void *);
