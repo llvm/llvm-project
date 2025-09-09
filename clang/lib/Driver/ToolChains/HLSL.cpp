@@ -530,8 +530,7 @@ bool HLSLToolChain::requiresBinaryTranslation(DerivedArgList &Args) const {
 bool HLSLToolChain::requiresObjcopy(DerivedArgList &Args) const {
   return Args.hasArg(options::OPT_dxc_Fo) &&
          (Args.hasArg(options::OPT_dxc_strip_rootsignature) ||
-          Args.hasArg(options::OPT_dxc_Frs) ||
-          isRootSignatureTarget(Args));
+          Args.hasArg(options::OPT_dxc_Frs) || isRootSignatureTarget(Args));
 }
 
 bool HLSLToolChain::isLastJob(DerivedArgList &Args,
