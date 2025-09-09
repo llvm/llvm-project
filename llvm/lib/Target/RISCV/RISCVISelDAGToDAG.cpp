@@ -677,7 +677,6 @@ bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
   return false;
 }
 
-
 bool RISCVDAGToDAGISel::trySignedBitfieldInsertInSign(SDNode *Node) {
   // Only supported with XAndesPerf at the moment.
   if (!Subtarget->hasVendorXAndesPerf())
