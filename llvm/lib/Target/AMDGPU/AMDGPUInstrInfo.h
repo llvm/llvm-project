@@ -50,6 +50,7 @@ const D16ImageDimIntrinsic *lookupD16ImageDimIntrinsic(unsigned Intr);
 struct ImageDimIntrinsicInfo {
   unsigned Intr;
   unsigned BaseOpcode;
+  unsigned NoRetBaseOpcode;
   MIMGDim Dim;
 
   uint8_t NumOffsetArgs;
