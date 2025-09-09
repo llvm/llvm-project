@@ -1331,17 +1331,17 @@ bool SemaHLSL::handleRootSignatureElements(
                    std::get_if<llvm::hlsl::rootsig::DescriptorTable>(&Elem)) {
       assert(UnboundClauses.size() == Table->NumClauses &&
              "Number of unbound elements must match the number of clauses");
-      bool HasSampler = false;
-      bool HasNonSampler = false;
+      bool HasAnySampler = false;
+      bool HasAnyNonSampler = false;
       uint32_t Offset = 0;
       for (const auto &[Clause, ClauseElem] : UnboundClauses) {
         SourceLocation Loc = ClauseElem->getLocation();
         if (Clause->Type == llvm::dxil::ResourceClass::Sampler)
-          HasSampler = true;
+          HasAnySampler = true;
         else
-          HasNonSampler = true;
+          HasAnyNonSampler = true;
 
-        if (HasSampler && HasNonSampler)
+        if (HasAnySampler && HasAnyNonSampler)
           Diag(Loc, diag::err_hlsl_invalid_mixed_resources);
 
         // Relevant error will have already been reported above and needs to be
