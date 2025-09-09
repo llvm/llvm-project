@@ -10,8 +10,10 @@
 
 #include "IRModule.h"
 #include "mlir-c/Pass.h"
+// clang-format off
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
+// clang-format on
 
 namespace nb = nanobind;
 using namespace nb::literals;
@@ -157,6 +159,45 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
           "pipeline"_a,
           "Add textual pipeline elements to the pass manager. Throws a "
           "ValueError if the pipeline can't be parsed.")
+      .def(
+          "add",
+          [](PyPassManager &passManager, const nb::callable &run,
+             std::optional<std::string> &name, const std::string &argument,
+             const std::string &description, const std::string &opName) {
+            if (!name.has_value()) {
+              name = nb::cast<std::string>(
+                  nb::borrow<nb::str>(run.attr("__name__")));
+            }
+            MlirTypeIDAllocator typeIDAllocator = mlirTypeIDAllocatorCreate();
+            MlirTypeID passID =
+                mlirTypeIDAllocatorAllocateTypeID(typeIDAllocator);
+            MlirExternalPassCallbacks callbacks;
+            callbacks.construct = [](void *obj) {
+              (void)nb::handle(static_cast<PyObject *>(obj)).inc_ref();
+            };
+            callbacks.destruct = [](void *obj) {
+              (void)nb::handle(static_cast<PyObject *>(obj)).dec_ref();
+            };
+            callbacks.initialize = nullptr;
+            callbacks.clone = [](void *) -> void * {
+              throw std::runtime_error("Cloning Python passes not supported");
+            };
+            callbacks.run = [](MlirOperation op, MlirExternalPass,
+                               void *userData) {
+              nb::borrow<nb::callable>(static_cast<PyObject *>(userData))(op);
+            };
+            auto externalPass = mlirCreateExternalPass(
+                passID, mlirStringRefCreate(name->data(), name->length()),
+                mlirStringRefCreate(argument.data(), argument.length()),
+                mlirStringRefCreate(description.data(), description.length()),
+                mlirStringRefCreate(opName.data(), opName.size()),
+                /*nDependentDialects*/ 0, /*dependentDialects*/ nullptr,
+                callbacks, /*userData*/ run.ptr());
+            mlirPassManagerAddOwnedPass(passManager.get(), externalPass);
+          },
+          "run"_a, "name"_a.none() = nb::none(), "argument"_a.none() = "",
+          "description"_a.none() = "", "op_name"_a.none() = "",
+          "Add a python-defined pass to the pass manager.")
       .def(
           "run",
           [](PyPassManager &passManager, PyOperationBase &op) {
