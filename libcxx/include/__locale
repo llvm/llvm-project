@@ -31,6 +31,11 @@
 #  include <cstddef>
 #  include <cstring>
 
+#  if _LIBCPP_STD_VER >= 26
+#    include <__bit/bit_cast.h>
+#    include <text_encoding>
+#  endif
+
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
 #    include <cwchar>
 #  else
@@ -98,6 +103,21 @@ public:
 
   // locale operations:
   string name() const;
+
+#  if _LIBCPP_STD_VER >= 26
+  _LIBCPP_HIDE_FROM_ABI text_encoding encoding() const {
+    std::string __name = this->name();
+    if (__name.size() == 1) {
+      if (__name[0] == 'C')
+        return std::text_encoding(text_encoding::id::ASCII);
+      if (__name[0] == '*')
+        return std::text_encoding();
+    }
+
+    return std::bit_cast<std::text_encoding>(std::__text_encoding_rep::__get_locale_encoding(__name.c_str()));
+  }
+#  endif // _LIBCPP_STD_VER >= 26
+
   bool operator==(const locale&) const;
 #  if _LIBCPP_STD_VER <= 17
   _LIBCPP_HIDE_FROM_ABI bool operator!=(const locale& __y) const { return !(*this == __y); }
