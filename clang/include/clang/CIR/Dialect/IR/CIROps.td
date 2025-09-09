@@ -4000,4 +4000,77 @@ def CIR_ThrowOp : CIR_Op<"throw"> {
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// Atomic operations
+//===----------------------------------------------------------------------===//
+
+def CIR_AtomicCmpXchg : CIR_Op<"atomic.cmpxchg", [
+  AllTypesMatch<["old", "expected", "desired"]>
+]> {
+  let summary = "Atomic compare and exchange";
+  let description = [{
+    C/C++ atomic compare and exchange operation. Implements builtins like
+    `__atomic_compare_exchange_n` and `__atomic_compare_exchange`.
+
+    This operation takes three arguments: a pointer `ptr` and two values
+    `expected` and `desired`. This operation compares the value of the object
+    pointed-to by `ptr` with `expected`, and if they are equal, it sets the
+    value of the object to `desired`.
+
+    The `succ_order` attribute gives the memory order of this atomic operation
+    when the exchange takes place. The `fail_order` attribute gives the memory
+    order of this atomic operation when the exchange does not take place.
+
+    The `weak` attribute is a boolean flag that indicates whether this is a
+    "weak" compare-and-exchange operation. A weak compare-and-exchange operation
+    allows "spurious failures", meaning that be treated as if the comparison
+    failed and not exchange values even if `*ptr` and `expected` indeed compare
+    equal.
+    
+    The type of `expected` and `desired` must be the same. The pointee type of
+    `ptr` must be the same as the type of `expected` and `desired`.
+
+    This operation has two results. The first result `old` gives the old value
+    of the object pointed-to by `ptr`, regardless of whether the exchange
+    actually took place. The second result `success` is a boolean flag
+    indicating whether the exchange actually took place.
+
+    Example:
+
+    ```mlir
+    %old, %success = cir.atomic.cmpxchg(%ptr : !cir.ptr<!u64i>,
+                                        %expected : !u64i,
+                                        %desired : !u64i,
+                                        success = seq_cst,
+                                        failure = seq_cst) weak
+                                        : (!u64i, !cir.bool)
+    ```
+  }];
+  let results = (outs CIR_AnyType:$old, CIR_BoolType:$success);
+  let arguments = (ins Arg<CIR_PointerType, "", [MemRead, MemWrite]>:$ptr,
+                       CIR_AnyType:$expected,
+                       CIR_AnyType:$desired,
+                       Arg<CIR_MemOrder, "success memory order">:$succ_order,
+                       Arg<CIR_MemOrder, "failure memory order">:$fail_order,
+                       OptionalAttr<I64Attr>:$alignment,
+                       UnitAttr:$weak,
+                       UnitAttr:$is_volatile);
+
+  let assemblyFormat = [{
+    `(`
+      $ptr `:` qualified(type($ptr)) `,`
+      $expected `:` type($expected) `,`
+      $desired `:` type($desired) `,`
+      `success` `=`  $succ_order `,`
+      `failure` `=`  $fail_order
+    `)`
+    (`align` `(` $alignment^ `)`)?
+    (`weak` $weak^)?
+    (`volatile` $is_volatile^)?
+    `:` `(` type($old) `,` type($success) `)` attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD

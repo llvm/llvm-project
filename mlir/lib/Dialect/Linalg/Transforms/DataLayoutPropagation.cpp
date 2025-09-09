@@ -1399,6 +1399,10 @@ pushDownExtractSliceOpThroughGenericOp(RewriterBase &rewriter,
       continue;
     }
     AffineMap IndexingMap = genericOp.getMatchingIndexingMap(operand);
+    if (IndexingMap.getNumResults() == 0) {
+      paddedInputs.push_back(operand->get());
+      continue;
+    }
     SmallVector<OpFoldResult> operandLowPads(IndexingMap.getNumResults(),
                                              getAsIndexOpFoldResult(ctx, 0));
     SmallVector<OpFoldResult> operandHighPads(IndexingMap.getNumResults(),

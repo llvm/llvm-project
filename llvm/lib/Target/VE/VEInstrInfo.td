@@ -39,6 +39,8 @@ include "VEInstrFormats.td"
 //     e.g. 0.0 (0x00000000) or -2.0 (0xC0000000=(2)1).
 //===----------------------------------------------------------------------===//
 
+defvar ve_ptr_rc = I64;
+
 def ULO7 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getZExtValue() & 0x7f,
                                    SDLoc(N), MVT::i32);
@@ -325,17 +327,17 @@ def VEMEMziiAsmOperand : AsmOperandClass {
 // ASX format uses single assembly instruction format.
 def MEMrri : Operand<iPTR> {
   let PrintMethod = "printMemASXOperand";
-  let MIOperandInfo = (ops ptr_rc, ptr_rc, i64imm);
+  let MIOperandInfo = (ops ve_ptr_rc, ve_ptr_rc, i64imm);
   let ParserMatchClass = VEMEMrriAsmOperand;
 }
 def MEMrii : Operand<iPTR> {
   let PrintMethod = "printMemASXOperand";
-  let MIOperandInfo = (ops ptr_rc, i32imm, i64imm);
+  let MIOperandInfo = (ops ve_ptr_rc, i32imm, i64imm);
   let ParserMatchClass = VEMEMriiAsmOperand;
 }
 def MEMzri : Operand<iPTR> {
   let PrintMethod = "printMemASXOperand";
-  let MIOperandInfo = (ops i32imm /* = 0 */, ptr_rc, i64imm);
+  let MIOperandInfo = (ops i32imm /* = 0 */, ve_ptr_rc, i64imm);
   let ParserMatchClass = VEMEMzriAsmOperand;
 }
 def MEMzii : Operand<iPTR> {
@@ -358,7 +360,7 @@ def VEMEMziAsmOperand : AsmOperandClass {
 //   1. AS generic assembly instruction format:
 def MEMriASX : Operand<iPTR> {
   let PrintMethod = "printMemASOperandASX";
-  let MIOperandInfo = (ops ptr_rc, i32imm);
+  let MIOperandInfo = (ops ve_ptr_rc, i32imm);
   let ParserMatchClass = VEMEMriAsmOperand;
 }
 def MEMziASX : Operand<iPTR> {
@@ -370,7 +372,7 @@ def MEMziASX : Operand<iPTR> {
 //   2. AS RRM style assembly instruction format:
 def MEMriRRM : Operand<iPTR> {
   let PrintMethod = "printMemASOperandRRM";
-  let MIOperandInfo = (ops ptr_rc, i32imm);
+  let MIOperandInfo = (ops ve_ptr_rc, i32imm);
   let ParserMatchClass = VEMEMriAsmOperand;
 }
 def MEMziRRM : Operand<iPTR> {
@@ -382,7 +384,7 @@ def MEMziRRM : Operand<iPTR> {
 //   3. AS HM style assembly instruction format:
 def MEMriHM : Operand<iPTR> {
   let PrintMethod = "printMemASOperandHM";
-  let MIOperandInfo = (ops ptr_rc, i32imm);
+  let MIOperandInfo = (ops ve_ptr_rc, i32imm);
   let ParserMatchClass = VEMEMriAsmOperand;
 }
 def MEMziHM : Operand<iPTR> {

@@ -4269,6 +4269,14 @@ bool Process::ProcessEventData::ShouldStop(Event *event_ptr,
         // appropriately. We also need to stop processing actions, since they
         // aren't expecting the target to be running.
 
+        // Clear the selected frame which may have been set as part of utility
+        // expressions that have been run as part of this stop. If we didn't
+        // clear this, then StopInfo::GetSuggestedStackFrameIndex would not
+        // take affect when we next called SelectMostRelevantFrame.
+        // PerformAction should not be the one setting a selected frame, instead
+        // this should be done via GetSuggestedStackFrameIndex.
+        thread_sp->ClearSelectedFrameIndex();
+
         // FIXME: we might have run.
         if (stop_info_sp->HasTargetRunSinceMe()) {
           SetRestarted(true);

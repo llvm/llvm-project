@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "src/__support/FPUtil/cast.h"
-#include "src/__support/libc_errno.h"
 #include "src/math/acoshf16.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -15,7 +15,6 @@
 using LlvmLibcAcoshf16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 
 TEST_F(LlvmLibcAcoshf16Test, SpecialNumbers) {
-  libc_errno = 0;
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::acoshf16(aNaN));
   EXPECT_MATH_ERRNO(0);
 

@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+
+import argparse
+import csv
+import json
+import sys
+
+def main(argv):
+    parser = argparse.ArgumentParser(
+        prog='parse-google-benchmark-results',
+        description='Parse Google Benchmark result files (in JSON format) into CSV or LNT compatible output.')
+    parser.add_argument('filename', type=argparse.FileType('r'), nargs='+',
+        help='One of more JSON files to extract the results from. The results parsed from each '
+             'file are concatenated together.')
+    parser.add_argument('--timing', type=str, choices=['real_time', 'cpu_time'], default='real_time',
+        help='The timing to extract from the Google Benchmark results. This can either be the '
+             '"real time" or the "CPU time". Default is "real time".')
+    parser.add_argument('--output-format', type=str, choices=['csv', 'lnt'], default='csv',
+        help='The desired output format for the data. `csv` is CSV format and `lnt` is a format compatible with '
+             '`lnt importreport` (see https://llvm.org/docs/lnt/importing_data.html#importing-data-in-a-text-file).')
+    args = parser.parse_args(argv)
+
+    # Parse the data from all files, aggregating the results
+    headers = ['Benchmark', args.timing]
+    rows = []
+    for file in args.filename:
+        js = json.load(file)
+        for bm in js['benchmarks']:
+            row = [bm['name'], bm[args.timing]]
+            rows.append(row)
+
+    # Print the results in the right format
+    if args.output_format == 'csv':
+        writer = csv.writer(sys.stdout)
+        writer.writerow(headers)
+        for row in rows:
+            writer.writerow(row)
+    elif args.output_format == 'lnt':
+        benchmark = headers.index('Benchmark')
+        time = headers.index(args.timing)
+        for row in rows:
+            print(f'{row[benchmark].replace(".", "_")}.execution_time {row[time]}')
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

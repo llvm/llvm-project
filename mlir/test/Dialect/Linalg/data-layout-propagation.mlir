@@ -1559,4 +1559,21 @@ func.func @nopush_rankreducingextract(%arg0: tensor<128x128x128xf32>, %arg1: ten
 
 // CHECK-LABEL: func.func @nopush_rankreducingextract
 // CHECK:         %[[GENERIC:.+]] = linalg.generic
-// CHECK:         return %[[GENERIC]]   
+// CHECK:         return %[[GENERIC]]
+
+// -----
+
+func.func @push_extract_through_generic_rank0_operand(%arg0: tensor<128x128xf32>, %arg1: tensor<?x?xbf16>, %arg2: index, %arg3 : f32) -> tensor<?x?xbf16> {
+  %extracted_slice = tensor.extract_slice %arg0[%arg2, %arg2] [%arg2, %arg2] [1, 1] : tensor<128x128xf32> to tensor<?x?xf32>
+  %0 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,affine_map<(d0, d1) -> ()> ,affine_map<(d0, d1) -> (d0, d1)>], iterator_types = ["parallel", "parallel"]} ins(%extracted_slice,  %arg3 : tensor<?x?xf32>, f32) outs(%arg1 : tensor<?x?xbf16>) {
+  ^bb0(%in: f32, %in_1 : f32, %out: bf16):
+    %1 = arith.truncf %in : f32 to bf16
+    linalg.yield %1 : bf16
+  } -> tensor<?x?xbf16>
+  return %0 : tensor<?x?xbf16>
+}
+
+// CHECK-LABEL: func.func @push_extract_through_generic_rank0_operand
+// CHECK:         %[[GENERIC:.+]] = linalg.generic
+// CHECK:         %[[EXTRACT:.+]] = tensor.extract_slice %[[GENERIC]]         
+// CHECK:         return %[[EXTRACT]]

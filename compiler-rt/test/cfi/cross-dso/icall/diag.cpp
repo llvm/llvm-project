@@ -6,7 +6,6 @@
 // * otherwise, the callee decides between trap/recover/norecover.
 
 // Full-recover.
-// RUN: mkdir -p %t.dir && cd %t.dir
 // RUN: %clangxx_cfi_dso_diag -g -DSHARED_LIB %s -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
 // RUN: %clangxx_cfi_dso_diag -g %s -o %t %ld_flags_rpath_exe
 

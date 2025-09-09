@@ -1206,6 +1206,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::MUL,     MVT::v4i32,   {  2,  5,  1,  3 } }, // pmulld
     { ISD::MUL,     MVT::v4i64,   { 12, 15, 19, 20 } },
 
+    { X86ISD::PMULUDQ, MVT::v4i64, { 3,  5, 5, 6 } }, // pmuludq + split
+
     { ISD::AND,     MVT::v32i8,   {  1,  1, 1, 2 } }, // vandps
     { ISD::AND,     MVT::v16i16,  {  1,  1, 1, 2 } }, // vandps
     { ISD::AND,     MVT::v8i32,   {  1,  1, 1, 2 } }, // vandps

@@ -211,7 +211,7 @@ public:
     if (bytes != nullptr && length > 0) {
       m_type = type;
       m_data.inst.length = length;
-      assert(length < sizeof(m_data.inst.bytes));
+      assert(length <= sizeof(m_data.inst.bytes));
       memcpy(m_data.inst.bytes, bytes, length);
       m_byte_order = order;
     } else {

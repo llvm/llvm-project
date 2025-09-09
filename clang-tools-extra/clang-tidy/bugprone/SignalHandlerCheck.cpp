@@ -525,7 +525,7 @@ bool SignalHandlerCheck::isStandardFunctionAsyncSafe(
   if (!FD->isInStdNamespace() && !FD->isGlobal())
     return false;
 
-  if (ConformingFunctions.count(II->getName()))
+  if (ConformingFunctions.contains(II->getName()))
     return true;
 
   return false;

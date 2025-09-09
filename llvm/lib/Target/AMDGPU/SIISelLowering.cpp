@@ -17000,7 +17000,9 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
                                              : &AMDGPU::VGPR_32_Lo256RegClass;
         break;
       default:
-        RC = TRI->getVGPRClassForBitWidth(BitWidth);
+        RC = Subtarget->has1024AddressableVGPRs()
+                 ? TRI->getAlignedLo256VGPRClassForBitWidth(BitWidth)
+                 : TRI->getVGPRClassForBitWidth(BitWidth);
         if (!RC)
           return std::pair(0U, nullptr);
         break;

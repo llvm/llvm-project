@@ -102,6 +102,7 @@ class TestDAP_stepInTargets(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_exit()
 
     @skipIf(archs=["x86", "x86_64"])
+    @skipIfWindows
     def test_supported_capability_other_archs(self):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)

@@ -3,7 +3,7 @@
 //      addresses can be used within a single \DexExpectWatchValue.
 //
 // RUN: %dexter_regression_test_cxx_build %s -o %t
-// RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck %s
+// RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck --dump-input-context=999999999 %s
 // CHECK: multiple_address.cpp
 
 int main() {

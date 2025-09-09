@@ -193,6 +193,9 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
     }
 
     if (auto *SI = dyn_cast<SwitchInst>(Inst)) {
+      // Don't emit recipes for unconditional switch instructions.
+      if (SI->getNumCases() == 0)
+        continue;
       SmallVector<VPValue *> Ops = {getOrCreateVPOperand(SI->getCondition())};
       for (auto Case : SI->cases())
         Ops.push_back(getOrCreateVPOperand(Case.getCaseValue()));

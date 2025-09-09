@@ -4,7 +4,7 @@
 // RUN: %dexter_regression_test_cxx_build %s -o %t
 // RUN: %dexter_regression_test_run --binary %t --results %t.results -- %s
 //
-// RUN: %dexter_base view %t.results/view.cpp.dextIR | FileCheck %s
+// RUN: %dexter_base view %t.results/view.cpp.dextIR | FileCheck --dump-input-context=999999999 %s
 // CHECK: ## BEGIN
 // CHECK: ## END
 //

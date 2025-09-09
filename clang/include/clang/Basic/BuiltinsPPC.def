@@ -1122,6 +1122,14 @@ UNALIASED_CUSTOM_MMA_BUILTIN(mma_xvbf16ger2, "vW512*VV",
                              "mma,paired-vector-memops")
 UNALIASED_CUSTOM_MMA_BUILTIN(mma_pmxvbf16ger2, "vW512*VVi15i15i3",
                              "mma,paired-vector-memops")
+UNALIASED_CUSTOM_MMA_BUILTIN(mma_dmxvbf16gerx2, "vW1024*W256V",
+                             "mma,isa-future-instructions")
+UNALIASED_CUSTOM_MMA_BUILTIN(mma_pmdmxvbf16gerx2, "vW1024*W256Vi255i15i3",
+                             "mma,isa-future-instructions")
+UNALIASED_CUSTOM_MMA_BUILTIN(mma_dmxvf16gerx2, "vW1024*W256V",
+                             "mma,isa-future-instructions")
+UNALIASED_CUSTOM_MMA_BUILTIN(mma_pmdmxvf16gerx2, "vW1024*W256Vi255i15i3",
+                             "mma,isa-future-instructions")
 
 // FIXME: Obviously incomplete.
 

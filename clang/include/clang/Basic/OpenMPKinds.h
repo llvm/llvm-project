@@ -365,6 +365,13 @@ bool isOpenMPTaskingDirective(OpenMPDirectiveKind Kind);
 /// functions
 bool isOpenMPLoopBoundSharingDirective(OpenMPDirectiveKind Kind);
 
+/// Checks if the specified directive is a loop transformation directive that
+/// applies to a canonical loop nest.
+/// \param DKind Specified directive.
+/// \return True iff the directive is a loop transformation.
+bool isOpenMPCanonicalLoopNestTransformationDirective(
+    OpenMPDirectiveKind DKind);
+
 /// Checks if the specified directive is a loop transformation directive.
 /// \param DKind Specified directive.
 /// \return True iff the directive is a loop transformation.

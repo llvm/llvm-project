@@ -33,7 +33,7 @@ static void populateDialectTransformSubmodule(const nb::module_ &m) {
         return cls(mlirTransformAnyOpTypeGet(ctx));
       },
       "Get an instance of AnyOpType in the given context.", nb::arg("cls"),
-      nb::arg("context").none() = nb::none());
+      nb::arg("context") = nb::none());
 
   //===-------------------------------------------------------------------===//
   // AnyParamType
@@ -48,7 +48,7 @@ static void populateDialectTransformSubmodule(const nb::module_ &m) {
         return cls(mlirTransformAnyParamTypeGet(ctx));
       },
       "Get an instance of AnyParamType in the given context.", nb::arg("cls"),
-      nb::arg("context").none() = nb::none());
+      nb::arg("context") = nb::none());
 
   //===-------------------------------------------------------------------===//
   // AnyValueType
@@ -63,7 +63,7 @@ static void populateDialectTransformSubmodule(const nb::module_ &m) {
         return cls(mlirTransformAnyValueTypeGet(ctx));
       },
       "Get an instance of AnyValueType in the given context.", nb::arg("cls"),
-      nb::arg("context").none() = nb::none());
+      nb::arg("context") = nb::none());
 
   //===-------------------------------------------------------------------===//
   // OperationType
@@ -83,7 +83,7 @@ static void populateDialectTransformSubmodule(const nb::module_ &m) {
       "Get an instance of OperationType for the given kind in the given "
       "context",
       nb::arg("cls"), nb::arg("operation_name"),
-      nb::arg("context").none() = nb::none());
+      nb::arg("context") = nb::none());
   operationType.def_property_readonly(
       "operation_name",
       [](MlirType type) {
@@ -106,7 +106,7 @@ static void populateDialectTransformSubmodule(const nb::module_ &m) {
         return cls(mlirTransformParamTypeGet(ctx, type));
       },
       "Get an instance of ParamType for the given type in the given context.",
-      nb::arg("cls"), nb::arg("type"), nb::arg("context").none() = nb::none());
+      nb::arg("cls"), nb::arg("type"), nb::arg("context") = nb::none());
   paramType.def_property_readonly(
       "type",
       [](MlirType type) {

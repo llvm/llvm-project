@@ -1,15 +1,15 @@
 // RUN: %clang_analyze_cc1 -triple hexagon-unknown-linux -verify %s \
-// RUN:   -analyzer-checker=core,valist.Uninitialized,valist.CopyToSelf \
+// RUN:   -analyzer-checker=core,security.VAList \
 // RUN:   -analyzer-disable-checker=core.CallAndMessage \
 // RUN:   -analyzer-output=text
 //
 // RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -verify %s \
-// RUN:   -analyzer-checker=core,valist.Uninitialized,valist.CopyToSelf \
+// RUN:   -analyzer-checker=core,security.VAList \
 // RUN:   -analyzer-disable-checker=core.CallAndMessage \
 // RUN:   -analyzer-output=text
 //
 // RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu %s \
-// RUN:   -analyzer-checker=core,valist.Uninitialized
+// RUN:   -analyzer-checker=core,security.VAList
 
 #include "Inputs/system-header-simulator-for-valist.h"
 
@@ -47,12 +47,6 @@ void f4(int cond, ...) {
   // expected-note@-1{{va_end() is called on an uninitialized va_list}}
 }
 
-void f5(va_list fst, ...) {
-  va_start(fst, fst);
-  (void)va_arg(fst, int);
-  va_end(fst);
-} // no-warning
-
 void f7(int *fst, ...) {
   va_list x;
   va_list *y = &x;
@@ -69,14 +63,6 @@ void f8(int *fst, ...) {
   (void)va_arg(*y, int); //expected-warning{{va_arg() is called on an uninitialized va_list}}
   // expected-note@-1{{va_arg() is called on an uninitialized va_list}}
 }
-
-// This only contains problems which are handled by varargs.Unterminated.
-void reinit(int *fst, ...) {
-  va_list va;
-  va_start(va, fst);
-  va_start(va, fst);
-  (void)va_arg(va, int);
-} // no-warning
 
 void reinitOk(int *fst, ...) {
   va_list va;
@@ -98,27 +84,6 @@ void reinit3(int *fst, ...) {
   va_end(va); // expected-note{{Ended va_list}}
   (void)va_arg(va, int); //expected-warning{{va_arg() is called on an uninitialized va_list}}
   // expected-note@-1{{va_arg() is called on an uninitialized va_list}}
-}
-
-void copyself(int fst, ...) {
-  va_list va;
-  va_start(va, fst); // expected-note{{Initialized va_list}}
-  va_copy(va, va); // expected-warning{{va_list 'va' is copied onto itself}}
-  // expected-note@-1{{va_list 'va' is copied onto itself}}
-  va_end(va);
-}
-
-void copyselfUninit(int fst, ...) {
-  va_list va;
-  va_copy(va, va); // expected-warning{{va_list 'va' is copied onto itself}}
-  // expected-note@-1{{va_list 'va' is copied onto itself}}
-}
-
-void copyOverwrite(int fst, ...) {
-  va_list va, va2;
-  va_start(va, fst); // expected-note{{Initialized va_list}}
-  va_copy(va, va2); // expected-warning{{Initialized va_list 'va' is overwritten by an uninitialized one}}
-  // expected-note@-1{{Initialized va_list 'va' is overwritten by an uninitialized one}}
 }
 
 void copyUnint(int fst, ...) {

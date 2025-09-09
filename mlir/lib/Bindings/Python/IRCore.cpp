@@ -3104,7 +3104,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             return PyLocation(context->getRef(),
                               mlirLocationUnknownGet(context->get()));
           },
-          nb::arg("context").none() = nb::none(),
+          nb::arg("context") = nb::none(),
           "Gets a Location representing an unknown location")
       .def_static(
           "callsite",
@@ -3119,8 +3119,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             return PyLocation(context->getRef(),
                               mlirLocationCallSiteGet(callee.get(), caller));
           },
-          nb::arg("callee"), nb::arg("frames"),
-          nb::arg("context").none() = nb::none(),
+          nb::arg("callee"), nb::arg("frames"), nb::arg("context") = nb::none(),
           kContextGetCallSiteLocationDocstring)
       .def("is_a_callsite", mlirLocationIsACallSite)
       .def_prop_ro("callee", mlirLocationCallSiteGetCallee)
@@ -3135,8 +3134,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                     context->get(), toMlirStringRef(filename), line, col));
           },
           nb::arg("filename"), nb::arg("line"), nb::arg("col"),
-          nb::arg("context").none() = nb::none(),
-          kContextGetFileLocationDocstring)
+          nb::arg("context") = nb::none(), kContextGetFileLocationDocstring)
       .def_static(
           "file",
           [](std::string filename, int startLine, int startCol, int endLine,
@@ -3148,7 +3146,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           },
           nb::arg("filename"), nb::arg("start_line"), nb::arg("start_col"),
           nb::arg("end_line"), nb::arg("end_col"),
-          nb::arg("context").none() = nb::none(), kContextGetFileRangeDocstring)
+          nb::arg("context") = nb::none(), kContextGetFileRangeDocstring)
       .def("is_a_file", mlirLocationIsAFileLineColRange)
       .def_prop_ro("filename",
                    [](MlirLocation loc) {
@@ -3173,9 +3171,8 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                 metadata ? metadata->get() : MlirAttribute{0});
             return PyLocation(context->getRef(), location);
           },
-          nb::arg("locations"), nb::arg("metadata").none() = nb::none(),
-          nb::arg("context").none() = nb::none(),
-          kContextGetFusedLocationDocstring)
+          nb::arg("locations"), nb::arg("metadata") = nb::none(),
+          nb::arg("context") = nb::none(), kContextGetFusedLocationDocstring)
       .def("is_a_fused", mlirLocationIsAFused)
       .def_prop_ro("locations",
                    [](MlirLocation loc) {
@@ -3197,9 +3194,8 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                     childLoc ? childLoc->get()
                              : mlirLocationUnknownGet(context->get())));
           },
-          nb::arg("name"), nb::arg("childLoc").none() = nb::none(),
-          nb::arg("context").none() = nb::none(),
-          kContextGetNameLocationDocString)
+          nb::arg("name"), nb::arg("childLoc") = nb::none(),
+          nb::arg("context") = nb::none(), kContextGetNameLocationDocString)
       .def("is_a_name", mlirLocationIsAName)
       .def_prop_ro("name_str",
                    [](MlirLocation loc) {
@@ -3212,7 +3208,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             return PyLocation(context->getRef(),
                               mlirLocationFromAttribute(attribute));
           },
-          nb::arg("attribute"), nb::arg("context").none() = nb::none(),
+          nb::arg("attribute"), nb::arg("context") = nb::none(),
           "Gets a Location from a LocationAttr")
       .def_prop_ro(
           "context",
@@ -3253,7 +3249,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
               throw MLIRError("Unable to parse module assembly", errors.take());
             return PyModule::forModule(module).releaseObject();
           },
-          nb::arg("asm"), nb::arg("context").none() = nb::none(),
+          nb::arg("asm"), nb::arg("context") = nb::none(),
           kModuleParseDocstring)
       .def_static(
           "parse",
@@ -3265,7 +3261,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
               throw MLIRError("Unable to parse module assembly", errors.take());
             return PyModule::forModule(module).releaseObject();
           },
-          nb::arg("asm"), nb::arg("context").none() = nb::none(),
+          nb::arg("asm"), nb::arg("context") = nb::none(),
           kModuleParseDocstring)
       .def_static(
           "parseFile",
@@ -3277,7 +3273,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
               throw MLIRError("Unable to parse module assembly", errors.take());
             return PyModule::forModule(module).releaseObject();
           },
-          nb::arg("path"), nb::arg("context").none() = nb::none(),
+          nb::arg("path"), nb::arg("context") = nb::none(),
           kModuleParseDocstring)
       .def_static(
           "create",
@@ -3286,7 +3282,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             MlirModule module = mlirModuleCreateEmpty(pyLoc.get());
             return PyModule::forModule(module).releaseObject();
           },
-          nb::arg("loc").none() = nb::none(), "Creates an empty module")
+          nb::arg("loc") = nb::none(), "Creates an empty module")
       .def_prop_ro(
           "context",
           [](PyModule &self) { return self.getContext().getObject(); },
@@ -3427,31 +3423,31 @@ void mlir::python::populateIRCore(nb::module_ &m) {
       .def("print",
            nb::overload_cast<PyAsmState &, nb::object, bool>(
                &PyOperationBase::print),
-           nb::arg("state"), nb::arg("file").none() = nb::none(),
+           nb::arg("state"), nb::arg("file") = nb::none(),
            nb::arg("binary") = false, kOperationPrintStateDocstring)
       .def("print",
            nb::overload_cast<std::optional<int64_t>, std::optional<int64_t>,
                              bool, bool, bool, bool, bool, bool, nb::object,
                              bool, bool>(&PyOperationBase::print),
            // Careful: Lots of arguments must match up with print method.
-           nb::arg("large_elements_limit").none() = nb::none(),
-           nb::arg("large_resource_limit").none() = nb::none(),
+           nb::arg("large_elements_limit") = nb::none(),
+           nb::arg("large_resource_limit") = nb::none(),
            nb::arg("enable_debug_info") = false,
            nb::arg("pretty_debug_info") = false,
            nb::arg("print_generic_op_form") = false,
            nb::arg("use_local_scope") = false,
            nb::arg("use_name_loc_as_prefix") = false,
-           nb::arg("assume_verified") = false,
-           nb::arg("file").none() = nb::none(), nb::arg("binary") = false,
-           nb::arg("skip_regions") = false, kOperationPrintDocstring)
+           nb::arg("assume_verified") = false, nb::arg("file") = nb::none(),
+           nb::arg("binary") = false, nb::arg("skip_regions") = false,
+           kOperationPrintDocstring)
       .def("write_bytecode", &PyOperationBase::writeBytecode, nb::arg("file"),
-           nb::arg("desired_version").none() = nb::none(),
+           nb::arg("desired_version") = nb::none(),
            kOperationPrintBytecodeDocstring)
       .def("get_asm", &PyOperationBase::getAsm,
            // Careful: Lots of arguments must match up with get_asm method.
            nb::arg("binary") = false,
-           nb::arg("large_elements_limit").none() = nb::none(),
-           nb::arg("large_resource_limit").none() = nb::none(),
+           nb::arg("large_elements_limit") = nb::none(),
+           nb::arg("large_resource_limit") = nb::none(),
            nb::arg("enable_debug_info") = false,
            nb::arg("pretty_debug_info") = false,
            nb::arg("print_generic_op_form") = false,
@@ -3480,7 +3476,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           [](PyOperationBase &self, nb::object ip) {
             return self.getOperation().clone(ip);
           },
-          nb::arg("ip").none() = nb::none())
+          nb::arg("ip") = nb::none())
       .def(
           "detach_from_parent",
           [](PyOperationBase &self) {
@@ -3531,11 +3527,10 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                                        successors, regions, pyLoc, maybeIp,
                                        inferType);
           },
-          nb::arg("name"), nb::arg("results").none() = nb::none(),
-          nb::arg("operands").none() = nb::none(),
-          nb::arg("attributes").none() = nb::none(),
-          nb::arg("successors").none() = nb::none(), nb::arg("regions") = 0,
-          nb::arg("loc").none() = nb::none(), nb::arg("ip").none() = nb::none(),
+          nb::arg("name"), nb::arg("results") = nb::none(),
+          nb::arg("operands") = nb::none(), nb::arg("attributes") = nb::none(),
+          nb::arg("successors") = nb::none(), nb::arg("regions") = 0,
+          nb::arg("loc") = nb::none(), nb::arg("ip") = nb::none(),
           nb::arg("infer_type") = false, kOperationCreateDocstring)
       .def_static(
           "parse",
@@ -3545,7 +3540,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                 ->createOpView();
           },
           nb::arg("source"), nb::kw_only(), nb::arg("source_name") = "",
-          nb::arg("context").none() = nb::none(),
+          nb::arg("context") = nb::none(),
           "Parses an operation. Supports both text assembly format and binary "
           "bytecode format.")
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR, &PyOperation::getCapsule)
@@ -3584,15 +3579,13 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                     attributes, successors, regions, pyLoc, maybeIp));
               },
               nb::arg("name"), nb::arg("opRegionSpec"),
-              nb::arg("operandSegmentSpecObj").none() = nb::none(),
-              nb::arg("resultSegmentSpecObj").none() = nb::none(),
-              nb::arg("results").none() = nb::none(),
-              nb::arg("operands").none() = nb::none(),
-              nb::arg("attributes").none() = nb::none(),
-              nb::arg("successors").none() = nb::none(),
-              nb::arg("regions").none() = nb::none(),
-              nb::arg("loc").none() = nb::none(),
-              nb::arg("ip").none() = nb::none())
+              nb::arg("operandSegmentSpecObj") = nb::none(),
+              nb::arg("resultSegmentSpecObj") = nb::none(),
+              nb::arg("results") = nb::none(), nb::arg("operands") = nb::none(),
+              nb::arg("attributes") = nb::none(),
+              nb::arg("successors") = nb::none(),
+              nb::arg("regions") = nb::none(), nb::arg("loc") = nb::none(),
+              nb::arg("ip") = nb::none())
 
           .def_prop_ro("operation", &PyOpView::getOperationObject)
           .def_prop_ro("opview", [](nb::object self) { return self; })
@@ -3632,12 +3625,10 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                                       operandList, attributes, successors,
                                       regions, pyLoc, maybeIp);
       },
-      nb::arg("cls"), nb::arg("results").none() = nb::none(),
-      nb::arg("operands").none() = nb::none(),
-      nb::arg("attributes").none() = nb::none(),
-      nb::arg("successors").none() = nb::none(),
-      nb::arg("regions").none() = nb::none(),
-      nb::arg("loc").none() = nb::none(), nb::arg("ip").none() = nb::none(),
+      nb::arg("cls"), nb::arg("results") = nb::none(),
+      nb::arg("operands") = nb::none(), nb::arg("attributes") = nb::none(),
+      nb::arg("successors") = nb::none(), nb::arg("regions") = nb::none(),
+      nb::arg("loc") = nb::none(), nb::arg("ip") = nb::none(),
       "Builds a specific, generated OpView based on class level attributes.");
   opViewClass.attr("parse") = classmethod(
       [](const nb::object &cls, const std::string &sourceStr,
@@ -3661,7 +3652,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
         return PyOpView::constructDerived(cls, parsed.getObject());
       },
       nb::arg("cls"), nb::arg("source"), nb::kw_only(),
-      nb::arg("source_name") = "", nb::arg("context").none() = nb::none(),
+      nb::arg("source_name") = "", nb::arg("context") = nb::none(),
       "Parses a specific, generated OpView based on class level attributes");
 
   //----------------------------------------------------------------------------
@@ -3911,7 +3902,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
               throw MLIRError("Unable to parse attribute", errors.take());
             return attr;
           },
-          nb::arg("asm"), nb::arg("context").none() = nb::none(),
+          nb::arg("asm"), nb::arg("context") = nb::none(),
           "Parses an attribute from an assembly form. Raises an MLIRError on "
           "failure.")
       .def_prop_ro(
@@ -4028,7 +4019,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
               throw MLIRError("Unable to parse type", errors.take());
             return type;
           },
-          nb::arg("asm"), nb::arg("context").none() = nb::none(),
+          nb::arg("asm"), nb::arg("context") = nb::none(),
           kContextParseTypeDocstring)
       .def_prop_ro(
           "context", [](PyType &self) { return self.getContext().getObject(); },
