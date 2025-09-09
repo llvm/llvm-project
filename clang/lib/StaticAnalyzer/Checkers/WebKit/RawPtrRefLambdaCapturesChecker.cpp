@@ -236,15 +236,7 @@ public:
           updateIgnoreList();
           return Lambda;
         }
-        TempExpr = dyn_cast<CXXBindTemporaryExpr>(Init->IgnoreParenCasts());
-        if (!TempExpr)
-          return nullptr;
-        auto *Lambda = dyn_cast_or_null<LambdaExpr>(TempExpr->getSubExpr());
-        if (!Lambda)
-          return nullptr;
-        DeclRefExprsToIgnore.insert(DRE);
-        updateIgnoreList();
-        return Lambda;
+        return nullptr;
       }
 
       void checkCalleeLambda(CallExpr *CE) {
