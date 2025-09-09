@@ -640,12 +640,12 @@ LLVM_ABI std::error_code is_other(const Twine &path, bool &result);
 LLVM_ABI std::error_code status(const Twine &path, file_status &result,
                                 bool follow = true);
 
-/// A version for when a file descriptor is already available.
-LLVM_ABI std::error_code status(int FD, file_status &Result);
+/// A version for when a file handle is already available.
+LLVM_ABI std::error_code status(file_t FD, file_status &Result);
 
 #ifdef _WIN32
 /// A version for when a file descriptor is already available.
-LLVM_ABI std::error_code status(file_t FD, file_status &Result);
+LLVM_ABI std::error_code status(int FD, file_status &Result);
 #endif
 
 /// Get file creation mode mask of the process.
