@@ -32,7 +32,7 @@ static void populateDialectSMTSubmodule(nanobind::module_ &m) {
                              [](const nb::object &, MlirContext context) {
                                return mlirSMTTypeGetBool(context);
                              },
-                             "cls"_a, "context"_a.none() = nb::none());
+                             "cls"_a, "context"_a = nb::none());
   auto smtBitVectorType =
       mlir_type_subclass(m, "BitVectorType", mlirSMTTypeIsABitVector)
           .def_classmethod(
@@ -40,7 +40,7 @@ static void populateDialectSMTSubmodule(nanobind::module_ &m) {
               [](const nb::object &, int32_t width, MlirContext context) {
                 return mlirSMTTypeGetBitVector(context, width);
               },
-              "cls"_a, "width"_a, "context"_a.none() = nb::none());
+              "cls"_a, "width"_a, "context"_a = nb::none());
 
   auto exportSMTLIB = [](MlirOperation module, bool inlineSingleUseValues,
                          bool indentLetBody) {

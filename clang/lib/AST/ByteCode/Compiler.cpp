@@ -2912,25 +2912,20 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
   OptPrimType SubExprT = classify(SubExpr);
   bool IsStatic = E->getStorageDuration() == SD_Static;
   if (IsStatic) {
-    std::optional<unsigned> GlobalIndex = P.createGlobal(E);
+
+    UnsignedOrNone GlobalIndex = P.createGlobal(E);
     if (!GlobalIndex)
       return false;
 
     const LifetimeExtendedTemporaryDecl *TempDecl =
         E->getLifetimeExtendedTemporaryDecl();
-    if (IsStatic)
-      assert(TempDecl);
+    assert(TempDecl);
 
     if (SubExprT) {
       if (!this->visit(SubExpr))
         return false;
-      if (IsStatic) {
-        if (!this->emitInitGlobalTemp(*SubExprT, *GlobalIndex, TempDecl, E))
-          return false;
-      } else {
-        if (!this->emitInitGlobal(*SubExprT, *GlobalIndex, E))
-          return false;
-      }
+      if (!this->emitInitGlobalTemp(*SubExprT, *GlobalIndex, TempDecl, E))
+        return false;
       return this->emitGetPtrGlobal(*GlobalIndex, E);
     }
 
@@ -2941,9 +2936,7 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
       return false;
     if (!this->visitInitializer(SubExpr))
       return false;
-    if (IsStatic)
-      return this->emitInitGlobalTempComp(TempDecl, E);
-    return true;
+    return this->emitInitGlobalTempComp(TempDecl, E);
   }
 
   // For everyhing else, use local variables.
@@ -3009,7 +3002,7 @@ bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
     if (T && !E->isLValue())
       return this->delegate(Init);
 
-    std::optional<unsigned> GlobalIndex = P.createGlobal(E);
+    UnsignedOrNone GlobalIndex = P.createGlobal(E);
     if (!GlobalIndex)
       return false;
 
@@ -3353,7 +3346,7 @@ bool Compiler<Emitter>::VisitSourceLocExpr(const SourceLocExpr *E) {
 
   auto *UGCD = cast<UnnamedGlobalConstantDecl>(BaseDecl);
 
-  std::optional<unsigned> GlobalIndex = P.getOrCreateGlobal(UGCD);
+  UnsignedOrNone GlobalIndex = P.getOrCreateGlobal(UGCD);
   if (!GlobalIndex)
     return false;
 
@@ -3876,7 +3869,7 @@ bool Compiler<Emitter>::VisitCXXUuidofExpr(const CXXUuidofExpr *E) {
   if (!RD->isCompleteDefinition())
     return this->emitDummyPtr(GuidDecl, E);
 
-  std::optional<unsigned> GlobalIndex = P.getOrCreateGlobal(GuidDecl);
+  UnsignedOrNone GlobalIndex = P.getOrCreateGlobal(GuidDecl);
   if (!GlobalIndex)
     return false;
   if (!this->emitGetPtrGlobal(*GlobalIndex, E))
@@ -4868,7 +4861,7 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
     DeclScope<Emitter> LocalScope(this, VD);
 
     // We've already seen and initialized this global.
-    if (std::optional<unsigned> GlobalIndex = P.getGlobal(VD)) {
+    if (UnsignedOrNone GlobalIndex = P.getGlobal(VD)) {
       if (P.getPtrGlobal(*GlobalIndex).isInitialized())
         return checkDecl();
 
@@ -4877,7 +4870,7 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
       return Init && checkDecl() && initGlobal(*GlobalIndex);
     }
 
-    std::optional<unsigned> GlobalIndex = P.createGlobal(VD, Init);
+    UnsignedOrNone GlobalIndex = P.createGlobal(VD, Init);
 
     if (!GlobalIndex)
       return false;
@@ -6810,7 +6803,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     return F && this->emitGetFnPtr(F, E);
   }
   if (const auto *TPOD = dyn_cast<TemplateParamObjectDecl>(D)) {
-    if (std::optional<unsigned> Index = P.getOrCreateGlobal(D)) {
+    if (UnsignedOrNone Index = P.getOrCreateGlobal(D)) {
       if (!this->emitGetPtrGlobal(*Index, E))
         return false;
       if (OptPrimType T = classify(E->getType())) {
