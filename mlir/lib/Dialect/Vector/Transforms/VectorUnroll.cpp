@@ -809,6 +809,54 @@ private:
   vector::UnrollVectorOptions options;
 };
 
+struct UnrollStepPattern : public OpRewritePattern<vector::StepOp> {
+  UnrollStepPattern(MLIRContext *context,
+                    const vector::UnrollVectorOptions &options,
+                    PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::StepOp>(context, benefit), options(options) {}
+
+  LogicalResult matchAndRewrite(vector::StepOp stepOp,
+                                PatternRewriter &rewriter) const override {
+    auto targetShape = getTargetShape(options, stepOp);
+    if (!targetShape)
+      return failure();
+
+    VectorType vecType = stepOp.getType();
+    if (vecType.isScalable()) {
+      // Scalable vectors are not supported by this pattern.
+      return failure();
+    }
+    int64_t originalSize = vecType.getShape()[0];
+    Location loc = stepOp.getLoc();
+    SmallVector<int64_t> strides(1, 1);
+
+    Value result = arith::ConstantOp::create(rewriter, loc, vecType,
+                                             rewriter.getZeroAttr(vecType));
+
+    for (SmallVector<int64_t> offsets :
+         StaticTileOffsetRange({originalSize}, *targetShape)) {
+      int64_t tileOffset = offsets[0];
+      auto targetVecType =
+          VectorType::get(*targetShape, vecType.getElementType());
+      Value baseStep = rewriter.create<vector::StepOp>(loc, targetVecType);
+      Value offsetVal =
+          rewriter.create<arith::ConstantIndexOp>(loc, tileOffset);
+      Value bcastOffset =
+          rewriter.create<vector::BroadcastOp>(loc, targetVecType, offsetVal);
+      Value tileStep =
+          rewriter.create<arith::AddIOp>(loc, baseStep, bcastOffset);
+
+      result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
+          loc, tileStep, result, offsets, strides);
+    }
+    rewriter.replaceOp(stepOp, result);
+    return success();
+  }
+
+private:
+  vector::UnrollVectorOptions options;
+};
+
 } // namespace
 
 void mlir::vector::populateVectorUnrollPatterns(
@@ -818,6 +866,6 @@ void mlir::vector::populateVectorUnrollPatterns(
                UnrollContractionPattern, UnrollElementwisePattern,
                UnrollReductionPattern, UnrollMultiReductionPattern,
                UnrollTransposePattern, UnrollGatherPattern, UnrollLoadPattern,
-               UnrollStorePattern, UnrollBroadcastPattern>(
+               UnrollStorePattern, UnrollBroadcastPattern, UnrollStepPattern>(
       patterns.getContext(), options, benefit);
 }
