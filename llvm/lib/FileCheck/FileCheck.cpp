@@ -1218,6 +1218,14 @@ Pattern::MatchResult Pattern::match(StringRef Buffer,
     StringRef MatchedValue = MatchInfo[CaptureParenGroup];
     ExpressionFormat Format = DefinedNumericVariable->getImplicitFormat();
     APInt Value = Format.valueFromStringRepr(MatchedValue, SM);
+    // Numeric variables are already inserted into GlobalNumericVariableTable
+    // during parsing, but clearLocalVars might remove them, so we must
+    // reinsert them. Numeric-variable resolution does not access
+    // GlobalNumericVariableTable; it directly uses a pointer to the variable.
+    // However, other functions (such as clearLocalVars) may require active
+    // variables to be in the table.
+    Context->GlobalNumericVariableTable.try_emplace(NumericVariableDef.getKey(),
+                                                    DefinedNumericVariable);
     DefinedNumericVariable->setValue(Value, MatchedValue);
   }
 

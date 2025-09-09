@@ -11,6 +11,7 @@ add_clang_library(clangTidyGoogleModule STATIC
   DefaultArgumentsCheck.cpp
   ExplicitConstructorCheck.cpp
   ExplicitMakePairCheck.cpp
+  FloatTypesCheck.cpp
   FunctionNamingCheck.cpp
   GlobalNamesInHeadersCheck.cpp
   GlobalVariableDeclarationCheck.cpp

@@ -155,6 +155,12 @@ New checks
   Finds calls to ``operator[]`` in STL containers and suggests replacing them
   with safe alternatives.
 
+- New :doc:`google-runtime-float
+  <clang-tidy/checks/google/runtime-float>` check.
+
+  Finds uses of ``long double`` and suggests against their use due to lack of
+  portability.
+
 - New :doc:`llvm-mlir-op-builder
   <clang-tidy/checks/llvm/use-new-mlir-op-builder>` check.
 

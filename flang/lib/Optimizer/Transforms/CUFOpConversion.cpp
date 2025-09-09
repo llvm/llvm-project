@@ -928,34 +928,6 @@ struct CUFSyncDescriptorOpConversion
   }
 };
 
-struct CUFSetAllocatorIndexOpConversion
-    : public mlir::OpRewritePattern<cuf::SetAllocatorIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cuf::SetAllocatorIndexOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    auto mod = op->getParentOfType<mlir::ModuleOp>();
-    fir::FirOpBuilder builder(rewriter, mod);
-    mlir::Location loc = op.getLoc();
-    int idx = kDefaultAllocator;
-    if (op.getDataAttr() == cuf::DataAttribute::Device) {
-      idx = kDeviceAllocatorPos;
-    } else if (op.getDataAttr() == cuf::DataAttribute::Managed) {
-      idx = kManagedAllocatorPos;
-    } else if (op.getDataAttr() == cuf::DataAttribute::Unified) {
-      idx = kUnifiedAllocatorPos;
-    } else if (op.getDataAttr() == cuf::DataAttribute::Pinned) {
-      idx = kPinnedAllocatorPos;
-    }
-    mlir::Value index =
-        builder.createIntegerConstant(loc, builder.getI32Type(), idx);
-    fir::runtime::cuda::genSetAllocatorIndex(builder, loc, op.getBox(), index);
-    op.erase();
-    return mlir::success();
-  }
-};
-
 class CUFOpConversion : public fir::impl::CUFOpConversionBase<CUFOpConversion> {
 public:
   void runOnOperation() override {
@@ -1017,8 +989,8 @@ void cuf::populateCUFToFIRConversionPatterns(
     const mlir::SymbolTable &symtab, mlir::RewritePatternSet &patterns) {
   patterns.insert<CUFAllocOpConversion>(patterns.getContext(), &dl, &converter);
   patterns.insert<CUFAllocateOpConversion, CUFDeallocateOpConversion,
-                  CUFFreeOpConversion, CUFSyncDescriptorOpConversion,
-                  CUFSetAllocatorIndexOpConversion>(patterns.getContext());
+                  CUFFreeOpConversion, CUFSyncDescriptorOpConversion>(
+      patterns.getContext());
   patterns.insert<CUFDataTransferOpConversion>(patterns.getContext(), symtab,
                                                &dl, &converter);
   patterns.insert<CUFLaunchOpConversion, CUFDeviceAddressOpConversion>(
