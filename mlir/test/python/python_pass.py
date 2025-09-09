@@ -86,3 +86,20 @@ def testCustomPass():
         # CHECK: llvm.mul
         pm.add("convert-arith-to-llvm")
         pm.run(module)
+
+        # test signal_pass_failure
+        class CustomPassThatFails:
+            def __call__(self, m):
+                print("hello from pass that fails")
+                self.signal_pass_failure()
+
+        custom_pass_that_fails = CustomPassThatFails()
+
+        pm = PassManager("any")
+        pm.add(custom_pass_that_fails, "CustomPassThatFails")
+        # CHECK: hello from pass that fails
+        # CHECK: caught exception: Failure while executing pass pipeline
+        try:
+            pm.run(module)
+        except Exception as e:
+            print(f"caught exception: {e}")

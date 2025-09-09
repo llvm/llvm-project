@@ -56,6 +56,8 @@ private:
 
 /// Create the `mlir.passmanager` here.
 void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
+  constexpr const char *mlirExternalPassAttr = "__mlir_external_pass__";
+
   //----------------------------------------------------------------------------
   // Mapping of the top-level PassManager
   //----------------------------------------------------------------------------
@@ -182,10 +184,22 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
             callbacks.clone = [](void *) -> void * {
               throw std::runtime_error("Cloning Python passes not supported");
             };
-            callbacks.run = [](MlirOperation op, MlirExternalPass,
+            callbacks.run = [](MlirOperation op, MlirExternalPass pass,
                                void *userData) {
-              nb::borrow<nb::callable>(static_cast<PyObject *>(userData))(op);
+              auto callable =
+                  nb::borrow<nb::callable>(static_cast<PyObject *>(userData));
+              nb::setattr(callable, mlirExternalPassAttr,
+                          nb::capsule(pass.ptr));
+              callable(op);
+              // delete it to avoid that it is used after
+              // the external pass is freed by the pass manager
+              nb::delattr(callable, mlirExternalPassAttr);
             };
+            nb::setattr(run, "signal_pass_failure", nb::cpp_function([run]() {
+                          nb::capsule cap = run.attr(mlirExternalPassAttr);
+                          mlirExternalPassSignalFailure(
+                              MlirExternalPass{cap.data()});
+                        }));
             auto externalPass = mlirCreateExternalPass(
                 passID, mlirStringRefCreate(name->data(), name->length()),
                 mlirStringRefCreate(argument.data(), argument.length()),
