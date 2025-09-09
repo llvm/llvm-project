@@ -34,7 +34,7 @@ public:
     llvm::ImmutableSet<const VarDecl *> liveDecls;
     llvm::ImmutableSet<const BindingDecl *> liveBindings;
 
-    bool equals(const LivenessValues &V) const;
+    bool operator==(const LivenessValues &V) const;
 
     LivenessValues()
       : liveExprs(nullptr), liveDecls(nullptr), liveBindings(nullptr) {}
