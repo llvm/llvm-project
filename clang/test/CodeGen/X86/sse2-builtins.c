@@ -134,12 +134,14 @@ __m128i test_mm_avg_epu8(__m128i A, __m128i B) {
   // CHECK: call <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   return _mm_avg_epu8(A, B);
 }
+TEST_CONSTEXPR(match_v16qu(_mm_avg_epu8((__m128i)(__v16qu){0, 1, 2, 3, 180, 150, 120, 200, 255, 254, 253, 252, 100, 50, 25, 0}, (__m128i)(__v16qu){0, 1, 2, 3, 160, 30, 200, 10, 0, 1, 2, 3, 200, 150, 100, 50}), 0, 1, 2, 3, 170, 90, 160, 105, 128, 128, 128, 128, 150, 100, 62, 25));
 
 __m128i test_mm_avg_epu16(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_avg_epu16
   // CHECK: call <8 x i16> @llvm.x86.sse2.pavg.w(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   return _mm_avg_epu16(A, B);
 }
+TEST_CONSTEXPR(match_v8hu(_mm_avg_epu16((__m128i)(__v8hu){0, 1, 2, 3, 180, 150, 120, 200}, (__m128i)(__v8hu){0, 1, 2, 3, 160, 30, 200, 10}), 0, 1, 2, 3, 170, 90, 160, 105));
 
 __m128i test_mm_bslli_si128(__m128i A) {
   // CHECK-LABEL: test_mm_bslli_si128
