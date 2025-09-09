@@ -7,9 +7,6 @@ llvm_add_library(MLIRPdllLspServerLib
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Tools/mlir-pdll-lsp-server
 
-  LINK_COMPONENTS
-  SupportLSP
-
   LINK_LIBS PUBLIC
   MLIRPDLLCodeGen
   MLIRPDLLParser
