@@ -3570,6 +3570,8 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
             hsa_amd_pointer_info(TgtPtr, &Info, nullptr, nullptr, nullptr),
             "error in hsa_amd_pointer_info: %s"))
       return Err;
+    if (Info.type == HSA_EXT_POINTER_TYPE_UNKNOWN)
+      return Plugin::error(ErrorCode::NOT_FOUND, "could not find allocation");
 
     // The pointer info struct contains an "agent" field, but that doesn't
     // necessarily map to the device that created it
