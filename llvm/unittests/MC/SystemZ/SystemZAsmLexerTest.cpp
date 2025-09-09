@@ -60,7 +60,7 @@ protected:
     // Object File and Streamer support for the z/OS target.
 
     std::string Error;
-    TheTarget = TargetRegistry::lookupTarget(TripleName, Error);
+    TheTarget = TargetRegistry::lookupTarget(Triple, Error);
     EXPECT_NE(TheTarget, nullptr);
 
     MRI.reset(TheTarget->createMCRegInfo(Triple));
