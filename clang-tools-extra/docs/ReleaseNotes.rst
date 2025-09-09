@@ -176,6 +176,11 @@ New checks
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
+- Renamed :doc:`cert-err34-c <clang-tidy/checks/cert/err34-c>` to
+  :doc:`bugprone-unchecked-string-to-number-conversion
+  <clang-tidy/checks/bugprone/unchecked-string-to-number-conversion>`
+  keeping initial check as an alias to the new one.
+
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -201,6 +206,11 @@ Changes in existing checks
   namespace are treated as the tag or the data part of a user-defined
   tagged union respectively.
 
+- Improved :doc:`bugprone-unchecked-optional-access
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` check by supporting 
+  ``NullableValue::makeValue`` and ``NullableValue::makeValueInplace`` to 
+  prevent false-positives for ``BloombergLP::bdlb::NullableValue`` type.
+
 - Improved :doc:`bugprone-unhandled-self-assignment
   <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
   an additional matcher that generalizes the copy-and-swap idiom pattern
@@ -215,8 +225,22 @@ Changes in existing checks
   adding an option to allow pointer arithmetic via prefix/postfix increment or
   decrement operators.
 
+- Improved :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals
+  <clang-tidy/checks/llvm/prefer-isa-or-dyn-cast-in-conditionals>` check:
+
+  - Fix-it handles callees with nested-name-specifier correctly.
+
+  - ``if`` statements with init-statement (``if (auto X = ...; ...)``) are
+    handled correctly.
+
+  - ``for`` loops are supported.
+
 - Improved :doc:`misc-header-include-cycle
   <clang-tidy/checks/misc/header-include-cycle>` check performance.
+
+- Improved :doc:`modernize-avoid-c-arrays
+  <clang-tidy/checks/modernize/avoid-c-arrays>` to not diagnose array types
+  which are part of an implicit instantiation of a template.
 
 - Improved :doc:`modernize-use-constraints
   <clang-tidy/checks/modernize/use-constraints>` check by fixing a crash on
