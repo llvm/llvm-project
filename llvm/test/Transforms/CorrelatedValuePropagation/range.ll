@@ -1236,7 +1236,7 @@ define i1 @neg_icmp_eq_range_call() {
 }
 
 define i16 @return_range_for_edge_value_zext(i8 %a) {
-; CHECK-LABEL: define range(i16 0, 256) i16 @return_range_for_edge_value_zext(
+; CHECK-LABEL: define range(i16 0, 98) i16 @return_range_for_edge_value_zext(
 ; CHECK-SAME: i8 [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[B:%.*]] = zext i8 [[A]] to i16
@@ -1260,7 +1260,7 @@ target:
 }
 
 define i16 @return_range_for_edge_value_sext(i8 %a) {
-; CHECK-LABEL: define range(i16 -128, 128) i16 @return_range_for_edge_value_sext(
+; CHECK-LABEL: define range(i16 0, 98) i16 @return_range_for_edge_value_sext(
 ; CHECK-SAME: i8 [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[B:%.*]] = sext i8 [[A]] to i16
@@ -1284,7 +1284,7 @@ target:
 }
 
 define i8 @return_range_for_edge_value_trunc(i16 %a) {
-; CHECK-LABEL: define i8 @return_range_for_edge_value_trunc(
+; CHECK-LABEL: define range(i8 0, 98) i8 @return_range_for_edge_value_trunc(
 ; CHECK-SAME: i16 [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[B:%.*]] = trunc i16 [[A]] to i8
@@ -1332,7 +1332,7 @@ target:
 }
 
 define i8 @return_range_for_edge_value_trunc_nuw(i16 %a) {
-; CHECK-LABEL: define i8 @return_range_for_edge_value_trunc_nuw(
+; CHECK-LABEL: define range(i8 -55, 0) i8 @return_range_for_edge_value_trunc_nuw(
 ; CHECK-SAME: i16 [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[B:%.*]] = trunc nuw i16 [[A]] to i8
@@ -1356,7 +1356,7 @@ target:
 }
 
 define i8 @return_range_for_edge_value_freeze(i8 %a) {
-; CHECK-LABEL: define i8 @return_range_for_edge_value_freeze(
+; CHECK-LABEL: define range(i8 0, 98) i8 @return_range_for_edge_value_freeze(
 ; CHECK-SAME: i8 [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[B:%.*]] = freeze i8 [[A]]
