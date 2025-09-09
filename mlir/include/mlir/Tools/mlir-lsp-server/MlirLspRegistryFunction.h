@@ -16,16 +16,14 @@
 namespace llvm {
 template <typename Fn>
 class function_ref;
-namespace lsp {
-class URIForFile;
-} // namespace lsp
 } // namespace llvm
 
 namespace mlir {
 class DialectRegistry;
 namespace lsp {
+class URIForFile;
 using DialectRegistryFn =
-    llvm::function_ref<DialectRegistry &(const llvm::lsp::URIForFile &uri)>;
+    llvm::function_ref<DialectRegistry &(const URIForFile &uri)>;
 } // namespace lsp
 } // namespace mlir
 
