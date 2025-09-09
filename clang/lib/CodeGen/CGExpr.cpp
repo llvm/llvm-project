@@ -99,11 +99,17 @@ static llvm::StringRef GetUBSanTrapForHandler(SanitizerHandler ID) {
 
 /// CreateTempAlloca - This creates a alloca and inserts it into the entry
 /// block.
-RawAddress
-CodeGenFunction::CreateTempAllocaWithoutCast(llvm::Type *Ty, CharUnits Align,
-                                             const Twine &Name,
-                                             llvm::Value *ArraySize) {
+RawAddress CodeGenFunction::CreateTempAllocaWithoutCast(llvm::Type *Ty,
+                                                        CharUnits Align,
+                                                        const Twine &Name,
+                                                        llvm::Value *ArraySize,
+                                                        bool IsReadOnly) {
   auto Alloca = CreateTempAlloca(Ty, Name, ArraySize);
+  if (IsReadOnly) {
+    llvm::MDNode *Node = llvm::MDNode::get(
+        getLLVMContext(), llvm::ConstantAsMetadata::get(Builder.getInt32(1)));
+    Alloca->setMetadata(llvm::LLVMContext::MD_immutable, Node);
+  }
   Alloca->setAlignment(Align.getAsAlign());
   return RawAddress(Alloca, Ty, Align, KnownNonNull);
 }
@@ -138,8 +144,10 @@ RawAddress CodeGenFunction::MaybeCastStackAddressSpace(RawAddress Alloca,
 RawAddress CodeGenFunction::CreateTempAlloca(llvm::Type *Ty, LangAS DestLangAS,
                                              CharUnits Align, const Twine &Name,
                                              llvm::Value *ArraySize,
-                                             RawAddress *AllocaAddr) {
-  RawAddress Alloca = CreateTempAllocaWithoutCast(Ty, Align, Name, ArraySize);
+                                             RawAddress *AllocaAddr,
+                                             bool IsReadOnly) {
+  RawAddress Alloca =
+      CreateTempAllocaWithoutCast(Ty, Align, Name, ArraySize, IsReadOnly);
   if (AllocaAddr)
     *AllocaAddr = Alloca;
   return MaybeCastStackAddressSpace(Alloca, DestLangAS, ArraySize);

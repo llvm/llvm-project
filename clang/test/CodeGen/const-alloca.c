@@ -4,7 +4,7 @@
 // CHECK-LABEL: define dso_local i32 @test(
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[X:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[X:%.*]] = alloca i32, align 4, !immutable [[META2:![0-9]+]]
 // CHECK-NEXT:    store i32 1, ptr [[X]], align 4
 // CHECK-NEXT:    ret i32 1
 //
@@ -12,3 +12,6 @@ int test() {
   const int x = 1;
   return x;
 }
+//.
+// CHECK: [[META2]] = !{i32 1}
+//.

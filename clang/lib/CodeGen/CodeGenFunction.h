@@ -2848,7 +2848,8 @@ public:
   RawAddress CreateTempAlloca(llvm::Type *Ty, LangAS UseAddrSpace,
                               CharUnits align, const Twine &Name = "tmp",
                               llvm::Value *ArraySize = nullptr,
-                              RawAddress *Alloca = nullptr);
+                              RawAddress *Alloca = nullptr,
+                              bool IsReadOnly = false);
 
   /// CreateTempAlloca - This creates a alloca and inserts it into the entry
   /// block. The alloca is casted to default address space if necessary.
@@ -2865,7 +2866,8 @@ public:
 
   RawAddress CreateTempAllocaWithoutCast(llvm::Type *Ty, CharUnits align,
                                          const Twine &Name = "tmp",
-                                         llvm::Value *ArraySize = nullptr);
+                                         llvm::Value *ArraySize = nullptr,
+                                         bool IsReadOnly = false);
 
   /// CreateDefaultAlignedTempAlloca - This creates an alloca with the
   /// default ABI alignment of the given LLVM type.

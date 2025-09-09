@@ -102,6 +102,7 @@ using namespace llvm;
 #define DEBUG_TYPE "sroa"
 
 STATISTIC(NumAllocasAnalyzed, "Number of allocas analyzed for replacement");
+STATISTIC(NumConstAllocasPropagated, "Number of immutable allocas propageted");
 STATISTIC(NumAllocaPartitions, "Number of alloca partitions formed");
 STATISTIC(MaxPartitionsPerAlloca, "Maximum number of partitions per alloca");
 STATISTIC(NumAllocaPartitionUses, "Number of alloca partition uses rewritten");
@@ -248,6 +249,7 @@ private:
   bool presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS);
   AllocaInst *rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P);
   bool splitAlloca(AllocaInst &AI, AllocaSlices &AS);
+  bool tryToPropagateImmutableAllocaInitValue(AllocaInst &AI, AllocaSlices &AS);
   bool propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS);
   std::pair<bool /*Changed*/, bool /*CFGChanged*/> runOnAlloca(AllocaInst &AI);
   void clobberUse(Use &U);
@@ -5452,6 +5454,47 @@ private:
   Type *ZeroType;
 };
 
+bool SROA::tryToPropagateImmutableAllocaInitValue(AllocaInst &AI,
+                                                  AllocaSlices &AS) {
+  // If an alloca of a scalar type is marked with the immutable metadata, it
+  // means that it cannot be reinitialized. Therefore, we can propagate its
+  // initial value quite early throughout, even if the alloca is escaped.
+  bool Changed = false;
+  SmallVector<User *> AIStoreUsers;
+
+  copy_if(AI.users(), std::back_inserter(AIStoreUsers), [&AI](auto *U) {
+    auto *SI = dyn_cast<StoreInst>(U);
+    return (SI && SI->getPointerOperand() == &AI);
+  });
+
+  if (range_size(AIStoreUsers) != 1)
+    return Changed;
+
+  SmallVector<User *> AILoadUsers;
+
+  copy_if(AI.users(), std::back_inserter(AILoadUsers), [&AI](auto *U) {
+    auto *LI = dyn_cast<LoadInst>(U);
+    return (LI && LI->getPointerOperand() == &AI);
+  });
+
+  auto *StoreInitValInst = dyn_cast<StoreInst>(AIStoreUsers.front());
+
+  assert(StoreInitValInst);
+  auto *InitVal = StoreInitValInst->getValueOperand();
+
+  for (User *U : AILoadUsers) {
+    auto *LI = dyn_cast<LoadInst>(U);
+    assert(LI);
+    assert(DTU->getDomTree().dominates(InitVal, LI));
+    assert(InitVal->getType() == LI->getType());
+    ++NumConstAllocasPropagated;
+    LI->replaceAllUsesWith(InitVal);
+    Changed |= true;
+  }
+
+  return Changed;
+}
+
 bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
   // Look through each "partition", looking for slices with the same start/end
   // that do not overlap with any before them. The slices are sorted by
@@ -5564,8 +5607,11 @@ SROA::runOnAlloca(AllocaInst &AI) {
   // Build the slices using a recursive instruction-visiting builder.
   AllocaSlices AS(DL, AI);
   LLVM_DEBUG(AS.print(dbgs()));
-  if (AS.isEscaped())
+  if (AS.isEscaped()) {
+    if (AI.hasMetadata(LLVMContext::MD_immutable))
+      Changed |= tryToPropagateImmutableAllocaInitValue(AI, AS);
     return {Changed, CFGChanged};
+  }
 
   if (AS.isEscapedReadOnly()) {
     Changed |= propagateStoredValuesToLoads(AI, AS);

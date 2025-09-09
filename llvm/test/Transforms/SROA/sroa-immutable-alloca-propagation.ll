@@ -6,13 +6,13 @@ define dso_local i32 @test2(i16 noundef signext %p1) {
 ; CHECK-LABEL: define dso_local i32 @test2(
 ; CHECK-SAME: i16 noundef signext [[P1:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[P2:%.*]] = alloca i16, align 2
+; CHECK-NEXT:    [[P2:%.*]] = alloca i16, align 2, !immutable [[META0:![0-9]+]]
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[P2]])
 ; CHECK-NEXT:    store i16 [[P1]], ptr [[P2]], align 2
 ; CHECK-NEXT:    call void @foo(ptr noundef [[P2]])
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[P1]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[P2]], align 2
-; CHECK-NEXT:    [[CONV1:%.*]] = sext i16 [[TMP0]] to i32
+; CHECK-NEXT:    [[CONV1:%.*]] = sext i16 [[P1]] to i32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CONV]], [[CONV1]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 ; CHECK:       [[IF_THEN]]:
@@ -27,7 +27,7 @@ define dso_local i32 @test2(i16 noundef signext %p1) {
 entry:
   %retval = alloca i32, align 4
   %p1.addr = alloca i16, align 2
-  %p2 = alloca i16, align 2
+  %p2 = alloca i16, align 2, !immutable !1
   %cleanup.dest.slot = alloca i32, align 4
   store i16 %p1, ptr %p1.addr, align 2
   call void @llvm.lifetime.start.p0(ptr %p2)
@@ -64,3 +64,8 @@ declare void @foo(ptr noundef)
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.end.p0(ptr captures(none))
+
+!1 = !{i32 1}
+;.
+; CHECK: [[META0]] = !{i32 1}
+;.
