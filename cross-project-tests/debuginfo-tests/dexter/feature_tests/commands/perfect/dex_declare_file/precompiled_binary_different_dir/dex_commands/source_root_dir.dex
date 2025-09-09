@@ -6,7 +6,7 @@
 
 # RUN: %clang %S/../source/test.cpp -O0 -g -o %t
 # RUN: %dexter_regression_base --binary %t \
-# RUN:   --source-root-dir="%S/../source" -- %s | FileCheck --dump-input-context=999999999 %s
+# RUN:   --source-root-dir="%S/../source" -- %s | FileCheck %s
 # RUN: rm %t
 
 # CHECK: source_root_dir.dex: (1.0000)
