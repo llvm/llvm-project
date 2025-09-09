@@ -1271,10 +1271,7 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
 
   const CXXRecordDecl *ClassDecl = CD->getParent();
 
-  CXXConstructorDecl::init_const_iterator B = CD->init_begin(),
-                                          E = CD->init_end();
-
-  // Virtual base initializers first, if any. They aren't needed if:
+  // Virtual base initializers aren't needed if:
   // - This is a base ctor variant
   // - There are no vbases
   // - The class is abstract, so a complete object of it cannot be constructed
@@ -1296,15 +1293,36 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
     assert(BaseCtorContinueBB);
   }
 
-  for (; B != E && (*B)->isBaseInitializer() && (*B)->isBaseVirtual(); B++) {
-    if (!ConstructVBases)
-      continue;
-    SaveAndRestore ThisRAII(CXXThisValue);
-    if (CGM.getCodeGenOpts().StrictVTablePointers &&
-        CGM.getCodeGenOpts().OptimizationLevel > 0 &&
-        isInitializerOfDynamicClass(*B))
-      CXXThisValue = Builder.CreateLaunderInvariantGroup(LoadCXXThis());
-    EmitBaseInitializer(*this, ClassDecl, *B);
+  // Create three separate ranges for the different types of initializers.
+  auto AllInits = CD->inits();
+
+  // Find the boundaries between the three groups.
+  auto VirtualBaseEnd = std::find_if(
+      AllInits.begin(), AllInits.end(), [](const CXXCtorInitializer *Init) {
+        return !(Init->isBaseInitializer() && Init->isBaseVirtual());
+      });
+
+  auto NonVirtualBaseEnd = std::find_if(VirtualBaseEnd, AllInits.end(),
+                                        [](const CXXCtorInitializer *Init) {
+                                          return !Init->isBaseInitializer();
+                                        });
+
+  // Create the three ranges.
+  auto VirtualBaseInits = llvm::make_range(AllInits.begin(), VirtualBaseEnd);
+  auto NonVirtualBaseInits =
+      llvm::make_range(VirtualBaseEnd, NonVirtualBaseEnd);
+  auto MemberInits = llvm::make_range(NonVirtualBaseEnd, AllInits.end());
+
+  // Process virtual base initializers, if necessary.
+  if (ConstructVBases) {
+    for (CXXCtorInitializer *Initializer : VirtualBaseInits) {
+      SaveAndRestore ThisRAII(CXXThisValue);
+      if (CGM.getCodeGenOpts().StrictVTablePointers &&
+          CGM.getCodeGenOpts().OptimizationLevel > 0 &&
+          isInitializerOfDynamicClass(Initializer))
+        CXXThisValue = Builder.CreateLaunderInvariantGroup(LoadCXXThis());
+      EmitBaseInitializer(*this, ClassDecl, Initializer);
+    }
   }
 
   if (BaseCtorContinueBB) {
@@ -1314,14 +1332,14 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
   }
 
   // Then, non-virtual base initializers.
-  for (; B != E && (*B)->isBaseInitializer(); B++) {
-    assert(!(*B)->isBaseVirtual());
+  for (CXXCtorInitializer *Initializer : NonVirtualBaseInits) {
+    assert(!Initializer->isBaseVirtual());
     SaveAndRestore ThisRAII(CXXThisValue);
     if (CGM.getCodeGenOpts().StrictVTablePointers &&
         CGM.getCodeGenOpts().OptimizationLevel > 0 &&
-        isInitializerOfDynamicClass(*B))
+        isInitializerOfDynamicClass(Initializer))
       CXXThisValue = Builder.CreateLaunderInvariantGroup(LoadCXXThis());
-    EmitBaseInitializer(*this, ClassDecl, *B);
+    EmitBaseInitializer(*this, ClassDecl, Initializer);
   }
 
   InitializeVTablePointers(ClassDecl);
@@ -1329,8 +1347,7 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
   // And finally, initialize class members.
   FieldConstructionScope FCS(*this, LoadCXXThisAddress());
   ConstructorMemcpyizer CM(*this, CD, Args);
-  for (; B != E; B++) {
-    CXXCtorInitializer *Member = (*B);
+  for (CXXCtorInitializer *Member : MemberInits) {
     assert(!Member->isBaseInitializer());
     assert(Member->isAnyMemberInitializer() &&
            "Delegating initializer on non-delegating constructor");
