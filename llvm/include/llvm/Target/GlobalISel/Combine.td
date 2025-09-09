@@ -398,18 +398,12 @@ def commute_shift : GICombineRule<
 
 // Fold (lshr (trunc (lshr x, C1)), C2) -> trunc (lshr x, (C1 + C2))
 def lshr_of_trunc_of_lshr_matchdata : GIDefMatchData<"LshrOfTruncOfLshr">;
-//def lshr_of_trunc_of_lshr : GICombineRule<
-//  (defs root:$root, lshr_of_trunc_of_lshr_matchdata:$matchinfo),
-//  (match (G_LSHR $dst, $x, $y):$root,
-//         [{ return Helper.matchLshrOfTruncOfLshr(*${root}, ${matchinfo}); }]),
-//  (apply [{ Helper.applyLshrOfTruncOfLshr(*${root}, ${matchinfo}); }])>;
-
 def lshr_of_trunc_of_lshr : GICombineRule<
   (defs root:$root, lshr_of_trunc_of_lshr_matchdata:$matchinfo),
   (match (G_LSHR $d1, $x, $y):$Shift,
-         (G_TRUNC $d2, $d1):$Trunc,
+         (G_TRUNC $d2, $d1),
          (G_LSHR $dst, $d2, $z):$root,
-         [{ return Helper.matchLshrOfTruncOfLshr(*${root}, ${matchinfo}, *${Shift}, *${Trunc}); }]),
+         [{ return Helper.matchLshrOfTruncOfLshr(*${root}, ${matchinfo}, *${Shift}); }]),
   (apply [{ Helper.applyLshrOfTruncOfLshr(*${root}, ${matchinfo}); }])>;
 
 def narrow_binop_feeding_and : GICombineRule<

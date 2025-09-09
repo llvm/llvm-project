@@ -2096,8 +2096,7 @@ bool CombinerHelper::matchCommuteShift(MachineInstr &MI,
 
 bool CombinerHelper::matchLshrOfTruncOfLshr(MachineInstr &MI,
                                             LshrOfTruncOfLshr &MatchInfo,
-                                            MachineInstr &ShiftMI,
-                                            MachineInstr &TruncMI) const {
+                                            MachineInstr &ShiftMI) const {
   unsigned ShiftOpcode = MI.getOpcode();
   assert(ShiftOpcode == TargetOpcode::G_LSHR);
 

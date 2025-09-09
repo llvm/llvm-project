@@ -349,8 +349,7 @@ public:
 
   /// Fold (lshr (trunc (lshr x, C1)), C2) -> trunc (shift x, (C1 + C2))
   bool matchLshrOfTruncOfLshr(MachineInstr &MI, LshrOfTruncOfLshr &MatchInfo,
-                              MachineInstr &ShiftMI,
-                              MachineInstr &TruncMI) const;
+                              MachineInstr &ShiftMI) const;
   void applyLshrOfTruncOfLshr(MachineInstr &MI,
                               LshrOfTruncOfLshr &MatchInfo) const;
 
