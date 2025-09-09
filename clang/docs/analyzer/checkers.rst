@@ -213,14 +213,17 @@ Check for undefined arithmetic operations with null pointers.
 
 The checker can detect the following cases:
 
-  - `p + x` and `x + p` where `p` is a null pointer and `x` is a nonzero integer
+  - ``p + x`` and ``x + p`` where ``p`` is a null pointer and ``x`` is a nonzero
+    integer value.
+  - ``p - x`` where ``p`` is a null pointer and ``x`` is a nonzero integer
     value.
-  - `p - x` where `p` is a null pointer and `x` is a nonzero integer
-    value.
-  - `p1` - `p2` where one of `p1` and `p2` is null and the other a non-null
-    pointer.
+  - ``p1`` - ``p2`` where one of ``p1`` and ``p2`` is null and the other a
+    non-null pointer.
 
 Result of these operations is undefined according to the standard.
+In the above listed cases, the checker will warn even if the expression
+described to be "nonzero" or "non-null" has unknown value, because it is likely
+that it can have non-zero value during the program execution.
 
 .. code-block:: c
 
@@ -228,15 +231,15 @@ Result of these operations is undefined according to the standard.
    if (p)
      return;
 
-   int *p1 = p + offset; // warn: 'p' is null, 'offset' can be likely non-zero
+   int *p1 = p + offset; // warn: 'p' is null, 'offset' is unknown but likely non-zero
  }
 
  void test2(int *p, int offset) {
-   if (p) { ... }
+   if (p) { } // this indicates that it is possible for 'p' to be null
    if (offset == 0)
      return;
 
-   int *p1 = p - offset; // warn: 'p' can be null, 'offset' is non-zero
+   int *p1 = p - offset; // warn: 'p' is null, 'offset' is known to be non-zero
  }
 
  void test3(char *p1, char *p2) {

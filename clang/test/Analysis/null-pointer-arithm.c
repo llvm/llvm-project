@@ -6,14 +6,14 @@ extern int *get_pointer();
 int *test_add1(int offset) {
   int *p = get_pointer();
   if (p) {}
-  return p + offset; // expected-warning{{Addition of a null pointer (from variable 'p') and a probably nonzero integer value may result in undefined behavior}}
+  return p + offset; // expected-warning{{Addition of a null pointer (from variable 'p') and a probably nonzero integer value (from variable 'offset') may result in undefined behavior}}
 }
 
 int *test_add2(int offset) {
   int *p = get_pointer();
   if (p) {}
   if (offset) {}
-  return p + offset; // expected-warning{{Addition of a null pointer (from variable 'p') and a nonzero integer value results in undefined behavior}}
+  return p + offset; // expected-warning{{Addition of a null pointer (from variable 'p') and a nonzero integer value (from variable 'offset') results in undefined behavior}}
 }
 
 int *test_add3(int offset) {
@@ -27,19 +27,19 @@ int *test_add4(int offset) {
   int *p = get_pointer();
   if (p) {}
   if (offset == 0) return 0;
-  return p + offset; // expected-warning{{Addition of a null pointer (from variable 'p') and a nonzero integer value results in undefined behavior}}
+  return p + offset; // expected-warning{{Addition of a null pointer (from variable 'p') and a nonzero integer value (from variable 'offset') results in undefined behavior}}
 }
 
 int *test_add5(int offset) {
   int *p = get_pointer();
   if (p) {}
-  return offset + p; // expected-warning{{Addition of a probably nonzero integer value and a null pointer (from variable 'p') may result in undefined behavior}}
+  return offset + p; // expected-warning{{Addition of a probably nonzero integer value (from variable 'offset') and a null pointer (from variable 'p') may result in undefined behavior}}
 }
 
 int *test_sub1(int offset) {
   int *p = get_pointer();
   if (p) {}
-  return p - offset; // expected-warning{{Subtraction of a null pointer (from variable 'p') and a probably nonzero integer value may result in undefined behavior}}
+  return p - offset; // expected-warning{{Subtraction of a null pointer (from variable 'p') and a probably nonzero integer value (from variable 'offset') may result in undefined behavior}}
 }
 
 int test_sub_p1() {
@@ -72,5 +72,5 @@ struct S {
 
 char *test_struct(struct S s) {
   if (s.p) {}
-  return s.p + s.offset; // expected-warning{{Addition of a null pointer (via field 'p') and a probably nonzero integer value may result in undefined behavior}}
+  return s.p + s.offset; // expected-warning{{Addition of a null pointer (via field 'p') and a probably nonzero integer value (via field 'offset') may result in undefined behavior}}
 }
