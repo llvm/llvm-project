@@ -84,7 +84,8 @@ void copyRecord(RecordStorageLocation &Src, RecordStorageLocation &Dst,
     for (const auto &[Name, DstFieldLoc] : Dst.synthetic_fields())
       copySyntheticField(DstFieldLoc->getType(), Src.getSyntheticField(Name),
                          *DstFieldLoc, Env);
-  } else if (DstDecl->isDerivedFrom(SrcDecl)) {
+  } else if (SrcDecl != nullptr && DstDecl != nullptr &&
+             DstDecl->isDerivedFrom(SrcDecl)) {
     for (auto [Field, SrcFieldLoc] : Src.children())
       copyField(*Field, SrcFieldLoc, Dst.getChild(*Field), Dst, Env);
     for (const auto &[Name, SrcFieldLoc] : Src.synthetic_fields())
