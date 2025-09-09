@@ -770,8 +770,10 @@ struct CompatibleCountExprVisitor
   }
 
   bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *SelfDAE,
-                              const Expr *Other, bool hasBeenSubstituted) {
-    return Visit(SelfDAE->getExpr(), Other, hasBeenSubstituted);
+                              const Expr *Other, bool hasSelfBeenSubstituted,
+                              bool hasOtherBeenSubstituted) {
+    return Visit(SelfDAE->getExpr(), Other, hasSelfBeenSubstituted,
+                 hasOtherBeenSubstituted);
   }
 };
 
