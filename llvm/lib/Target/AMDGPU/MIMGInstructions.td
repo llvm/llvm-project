@@ -887,6 +887,17 @@ class MIMG_Atomic_gfx6789_base <bits<8> op, string asm, RegisterOperand data_rc,
   let AsmString = asm#" $vdst, $vaddr, $srsrc$dmask$unorm$cpol$r128$tfe$lwe$da";
 }
 
+class MIMG_Atomic_NoReturn_gfx6789_base <bits<8> op, string asm, RegisterOperand data_rc,
+                                         RegisterClass addr_rc, string dns="">
+  : MIMG_gfx6789 <op, (outs), dns> {
+  let isCodeGenOnly = 1;
+  let InOperandList = (ins data_rc:$vdata, addr_rc:$vaddr, SReg_256_XNULL:$srsrc,
+                           DMask:$dmask, UNorm:$unorm, CPol_0:$cpol,
+                           R128A16:$r128, TFE:$tfe, LWE:$lwe, DA:$da);
+  
+  let AsmString = asm#" $vdata, $vaddr, $srsrc$dmask$unorm$cpol$r128$tfe$lwe$da";
+}
+
 class MIMG_Atomic_gfx90a_base <bits<8> op, string asm, RegisterOperand data_rc,
                                RegisterClass addr_rc, string dns="">
   : MIMG_gfx90a <op, (outs getAlign2RegOp<data_rc>.ret:$vdst), dns> {
@@ -899,10 +910,29 @@ class MIMG_Atomic_gfx90a_base <bits<8> op, string asm, RegisterOperand data_rc,
   let AsmString = asm#" $vdst, $vaddr, $srsrc$dmask$unorm$cpol$r128$lwe$da";
 }
 
+class MIMG_Atomic_NoReturn_gfx90a_base <bits<8> op, string asm, RegisterOperand data_rc,
+                                        RegisterClass addr_rc, string dns="">
+  : MIMG_gfx90a <op, (outs), dns> {
+  let isCodeGenOnly = 1;
+  let InOperandList = (ins getAlign2RegOp<data_rc>.ret:$vdata,
+                           addr_rc:$vaddr, SReg_256_XNULL:$srsrc,
+                           DMask:$dmask, UNorm:$unorm, CPol_0:$cpol,
+                           R128A16:$r128, LWE:$lwe, DA:$da);
+                          
+  let AsmString = asm#" $vdata, $vaddr, $srsrc$dmask$unorm$cpol$r128$lwe$da";
+}
+
 class MIMG_Atomic_si<mimgopc op, string asm, RegisterOperand data_rc,
                      RegisterClass addr_rc, bit enableDasm = 0>
   : MIMG_Atomic_gfx6789_base<op.SI, asm, data_rc, addr_rc,
                              !if(enableDasm, "GFX6GFX7", "")> {
+  let AssemblerPredicate = isGFX6GFX7;
+}
+
+class MIMG_Atomic_NoReturn_si<mimgopc op, string asm, RegisterOperand data_rc,
+                              RegisterClass addr_rc, bit enableDasm = 0>
+  : MIMG_Atomic_NoReturn_gfx6789_base<op.SI, asm, data_rc, addr_rc,
+                                     !if(enableDasm, "GFX6GFX7", "")> {
   let AssemblerPredicate = isGFX6GFX7;
 }
 
@@ -913,9 +943,23 @@ class MIMG_Atomic_vi<mimgopc op, string asm, RegisterOperand data_rc,
   let MIMGEncoding = MIMGEncGfx8;
 }
 
+class MIMG_Atomic_NoReturn_vi<mimgopc op, string asm, RegisterOperand data_rc,
+                              RegisterClass addr_rc, bit enableDasm = 0>
+  : MIMG_Atomic_NoReturn_gfx6789_base<op.VI, asm, data_rc, addr_rc, !if(enableDasm, "GFX8", "")> {
+  let AssemblerPredicate = isGFX8GFX9NotGFX90A;
+  let MIMGEncoding = MIMGEncGfx8;
+}
+
 class MIMG_Atomic_gfx90a<mimgopc op, string asm, RegisterOperand data_rc,
                          RegisterClass addr_rc, bit enableDasm = 0>
   : MIMG_Atomic_gfx90a_base<op.VI, asm, data_rc, addr_rc, !if(enableDasm, "GFX90A", "")> {
+  let AssemblerPredicate = isGFX90APlus;
+  let MIMGEncoding = MIMGEncGfx90a;
+}
+
+class MIMG_Atomic_NoReturn_gfx90a<mimgopc op, string asm, RegisterOperand data_rc,
+                                  RegisterClass addr_rc, bit enableDasm = 0>
+  : MIMG_Atomic_NoReturn_gfx90a_base<op.VI, asm, data_rc, addr_rc, !if(enableDasm, "GFX90A", "")> {
   let AssemblerPredicate = isGFX90APlus;
   let MIMGEncoding = MIMGEncGfx90a;
 }
@@ -933,6 +977,17 @@ class MIMG_Atomic_gfx10<mimgopc op, string opcode,
   let AsmString = opcode#" $vdst, $vaddr0, $srsrc$dmask$dim$unorm$cpol$r128$a16$tfe$lwe";
 }
 
+class MIMG_Atomic_NoReturn_gfx10<mimgopc op, string opcode,
+                                 RegisterOperand DataRC, RegisterClass AddrRC,
+                                 bit enableDisasm = 0>
+  : MIMG_gfx10<op.GFX10M, (outs), !if(enableDisasm, "GFX10", "")> {
+  let isCodeGenOnly = 1;
+  let InOperandList = (ins DataRC:$vdata, AddrRC:$vaddr0, SReg_256_XNULL:$srsrc,
+                           DMask:$dmask, Dim:$dim, UNorm:$unorm, CPol_0:$cpol,
+                           R128A16:$r128, A16:$a16, TFE:$tfe, LWE:$lwe);
+  let AsmString = opcode#" $vdata, $vaddr0, $srsrc$dmask$dim$unorm$cpol$r128$a16$tfe$lwe";
+}
+
 class MIMG_Atomic_nsa_gfx10<mimgopc op, string opcode,
                             RegisterOperand DataRC, int num_addrs,
                             bit enableDisasm = 0>
@@ -944,6 +999,19 @@ class MIMG_Atomic_nsa_gfx10<mimgopc op, string opcode,
                            AddrIns,
                            (ins SReg_256_XNULL:$srsrc, DMask:$dmask,
                                 Dim:$dim, UNorm:$unorm, CPol:$cpol,
+                                R128A16:$r128, A16:$a16, TFE:$tfe, LWE:$lwe));
+  let AsmString = opcode#" $vdata, "#AddrAsm#", $srsrc$dmask$dim$unorm$cpol$r128$a16$tfe$lwe";
+}
+
+class MIMG_Atomic_NoReturn_nsa_gfx10<mimgopc op, string opcode,
+                                     RegisterOperand DataRC, int num_addrs,
+                                     bit enableDisasm = 0>
+  : MIMG_nsa_gfx10<op.GFX10M, (outs), num_addrs, !if(enableDisasm, "GFX10", "")> {
+  let isCodeGenOnly = 1;
+  let InOperandList = !con((ins DataRC:$vdata),
+                           AddrIns,
+                           (ins SReg_256_XNULL:$srsrc, DMask:$dmask,
+                                Dim:$dim, UNorm:$unorm, CPol_0:$cpol,
                                 R128A16:$r128, A16:$a16, TFE:$tfe, LWE:$lwe));
   let AsmString = opcode#" $vdata, "#AddrAsm#", $srsrc$dmask$dim$unorm$cpol$r128$a16$tfe$lwe";
 }
@@ -961,6 +1029,17 @@ class MIMG_Atomic_gfx11<mimgopc op, string opcode,
   let AsmString = opcode#" $vdst, $vaddr0, $srsrc$dmask$dim$unorm$cpol$r128$a16$tfe$lwe";
 }
 
+class MIMG_Atomic_NoReturn_gfx11<mimgopc op, string opcode,
+                                 RegisterOperand DataRC, RegisterClass AddrRC,
+                                 bit enableDisasm = 0>
+  : MIMG_gfx11<op.GFX11, (outs), !if(enableDisasm, "GFX11", "")> {
+  let isCodeGenOnly = 1;
+  let InOperandList = (ins DataRC:$vdata, AddrRC:$vaddr0, SReg_256_XNULL:$srsrc,
+                           DMask:$dmask, Dim:$dim, UNorm:$unorm, CPol_0:$cpol,
+                           R128A16:$r128, A16:$a16, TFE:$tfe, LWE:$lwe);
+  let AsmString = opcode#" $vdata, $vaddr0, $srsrc$dmask$dim$unorm$cpol$r128$a16$tfe$lwe";
+}
+
 class MIMG_Atomic_nsa_gfx11<mimgopc op, string opcode,
                             RegisterOperand DataRC, int num_addrs,
                             bit enableDisasm = 0>
@@ -976,6 +1055,19 @@ class MIMG_Atomic_nsa_gfx11<mimgopc op, string opcode,
   let AsmString = opcode#" $vdata, "#AddrAsm#", $srsrc$dmask$dim$unorm$cpol$r128$a16$tfe$lwe";
 }
 
+class MIMG_Atomic_NoReturn_nsa_gfx11<mimgopc op, string opcode,
+                                     RegisterOperand DataRC, int num_addrs,
+                                     bit enableDisasm = 0>
+  : MIMG_nsa_gfx11<op.GFX11, (outs), num_addrs, !if(enableDisasm, "GFX11", "")> {
+  let isCodeGenOnly = 1;
+  let InOperandList = !con((ins DataRC:$vdata),
+                           AddrIns,
+                           (ins SReg_256_XNULL:$srsrc, DMask:$dmask,
+                                Dim:$dim, UNorm:$unorm, CPol_0:$cpol,
+                                R128A16:$r128, A16:$a16, TFE:$tfe, LWE:$lwe));
+  let AsmString = opcode#" $vdata, "#AddrAsm#", $srsrc$dmask$dim$unorm$cpol$r128$a16$tfe$lwe";
+}
+
 class VIMAGE_Atomic_gfx12<mimgopc op, string opcode, RegisterOperand DataRC,
                           int num_addrs, string renamed, bit enableDisasm = 0>
   : VIMAGE_gfx12<op.GFX12, (outs DataRC:$vdst), num_addrs,
@@ -986,6 +1078,18 @@ class VIMAGE_Atomic_gfx12<mimgopc op, string opcode, RegisterOperand DataRC,
                            AddrIns,
                            (ins SReg_256_XNULL:$rsrc, DMask:$dmask, Dim:$dim,
                                  CPol:$cpol, R128A16:$r128, A16:$a16, TFE:$tfe));
+  let AsmString = !if(!empty(renamed), opcode, renamed)#" $vdata, "#AddrAsm#
+                  ", $rsrc$dmask$dim$cpol$r128$a16$tfe";
+}
+
+class VIMAGE_Atomic_NoReturn_gfx12<mimgopc op, string opcode, RegisterOperand DataRC,
+                                   int num_addrs, string renamed, bit enableDisasm = 0>
+  : VIMAGE_gfx12<op.GFX12, (outs), num_addrs, !if(enableDisasm, "GFX12", "")> {
+  let isCodeGenOnly = 1;
+  let InOperandList = !con((ins DataRC:$vdata),
+                           AddrIns,
+                           (ins SReg_256_XNULL:$rsrc, DMask:$dmask, Dim:$dim,
+                                 CPol_0:$cpol, R128A16:$r128, A16:$a16, TFE:$tfe));
   let AsmString = !if(!empty(renamed), opcode, renamed)#" $vdata, "#AddrAsm#
                   ", $rsrc$dmask$dim$cpol$r128$a16$tfe";
 }
@@ -1095,6 +1199,136 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
     }
 }
 
+multiclass MIMG_Atomic_NoReturn_Addr_Helper_m <mimgopc op, string asm,
+                                               RegisterOperand data_rc,
+                                               bit enableDasm = 0,
+                                               bit isFP = 0,
+                                               string renamed = ""> {
+  let hasSideEffects = 1,
+      mayLoad = 1, mayStore = 1, hasPostISelHook = 0, DisableWQM = 1,
+      FPAtomic = isFP in {
+    let VAddrDwords = 1 in {
+      let ssamp = 0 in {
+        if op.HAS_SI then {
+          def _V1_si : MIMG_Atomic_NoReturn_si <op, asm, data_rc, VGPR_32, enableDasm>;
+        }
+        if op.HAS_VI then {
+          def _V1_vi : MIMG_Atomic_NoReturn_vi <op, asm, data_rc, VGPR_32, enableDasm>;
+          let hasPostISelHook = 1 in
+          def _V1_gfx90a : MIMG_Atomic_NoReturn_gfx90a <op, asm, data_rc, VGPR_32, enableDasm>;
+        }
+        if op.HAS_GFX10M then {
+          def _V1_gfx10 : MIMG_Atomic_NoReturn_gfx10 <op, asm, data_rc, VGPR_32, enableDasm>;
+        }
+        if op.HAS_GFX11 then {
+          def _V1_gfx11 : MIMG_Atomic_NoReturn_gfx11 <op, asm, data_rc, VGPR_32, enableDasm>;
+        }
+      }
+      if op.HAS_GFX12 then {
+        def _V1_gfx12 : VIMAGE_Atomic_NoReturn_gfx12 <op, asm, data_rc, 1, renamed>;
+      }
+    }
+    let VAddrDwords = 2 in {
+      let ssamp = 0 in {
+        if op.HAS_SI then {
+          def _V2_si : MIMG_Atomic_NoReturn_si <op, asm, data_rc, VReg_64, 0>;
+        }
+        if op.HAS_VI then {
+          def _V2_vi : MIMG_Atomic_NoReturn_vi <op, asm, data_rc, VReg_64, 0>;
+          def _V2_gfx90a : MIMG_Atomic_NoReturn_gfx90a <op, asm, data_rc, VReg_64, 0>;
+        }
+        if op.HAS_GFX10M then {
+          def _V2_gfx10 : MIMG_Atomic_NoReturn_gfx10 <op, asm, data_rc, VReg_64, 0>;
+          def _V2_nsa_gfx10 : MIMG_Atomic_NoReturn_nsa_gfx10 <op, asm, data_rc, 2, 0>;
+        }
+        if op.HAS_GFX11 then {
+          def _V2_gfx11 : MIMG_Atomic_NoReturn_gfx11 <op, asm, data_rc, VReg_64, 0>;
+          def _V2_nsa_gfx11 : MIMG_Atomic_NoReturn_nsa_gfx11 <op, asm, data_rc, 2, 0>;
+        }
+      }
+      if op.HAS_GFX12 then {
+        def _V2_gfx12 : VIMAGE_Atomic_NoReturn_gfx12 <op, asm, data_rc, 2, renamed>;
+      }
+    }
+    let VAddrDwords = 3 in {
+      let ssamp = 0 in {
+        if op.HAS_SI then {
+          def _V3_si : MIMG_Atomic_NoReturn_si <op, asm, data_rc, VReg_96, 0>;
+        }
+        if op.HAS_VI then {
+          def _V3_vi : MIMG_Atomic_NoReturn_vi <op, asm, data_rc, VReg_96, 0>;
+          def _V3_gfx90a : MIMG_Atomic_NoReturn_gfx90a <op, asm, data_rc, VReg_96, 0>;
+        }
+        if op.HAS_GFX10M then {
+          def _V3_gfx10 : MIMG_Atomic_NoReturn_gfx10 <op, asm, data_rc, VReg_96, 0>;
+          def _V3_nsa_gfx10 : MIMG_Atomic_NoReturn_nsa_gfx10 <op, asm, data_rc, 3, 0>;
+        }
+        if op.HAS_GFX11 then {
+          def _V3_gfx11 : MIMG_Atomic_NoReturn_gfx11 <op, asm, data_rc, VReg_96, 0>;
+          def _V3_nsa_gfx11 : MIMG_Atomic_NoReturn_nsa_gfx11 <op, asm, data_rc, 3, 0>;
+        }
+      }
+      if op.HAS_GFX12 then {
+        def _V3_gfx12 : VIMAGE_Atomic_NoReturn_gfx12 <op, asm, data_rc, 3, renamed>;
+      }
+    }
+    let VAddrDwords = 4 in {
+      let ssamp = 0 in {
+        if op.HAS_SI then {
+          def _V4_si : MIMG_Atomic_NoReturn_si <op, asm, data_rc, VReg_128, 0>;
+        }
+        if op.HAS_VI then {
+          def _V4_vi : MIMG_Atomic_NoReturn_vi <op, asm, data_rc, VReg_128, 0>;
+          def _V4_gfx90a : MIMG_Atomic_NoReturn_gfx90a <op, asm, data_rc, VReg_128, 0>;
+        }
+        if op.HAS_GFX10M then {
+          def _V4_gfx10 : MIMG_Atomic_NoReturn_gfx10 <op, asm, data_rc, VReg_128, 0>;
+          def _V4_nsa_gfx10 : MIMG_Atomic_NoReturn_nsa_gfx10 <op, asm, data_rc, 4, enableDasm>;
+        }
+        if op.HAS_GFX11 then {
+          def _V4_gfx11 : MIMG_Atomic_NoReturn_gfx11 <op, asm, data_rc, VReg_128, 0>;
+          def _V4_nsa_gfx11 : MIMG_Atomic_NoReturn_nsa_gfx11 <op, asm, data_rc, 4, enableDasm>;
+        }
+      }
+      if op.HAS_GFX12 then {
+        def _V4_gfx12 : VIMAGE_Atomic_NoReturn_gfx12 <op, asm, data_rc, 4, renamed, enableDasm>;
+      }
+    }
+  }
+}
+
+multiclass MIMG_Atomic_NoReturn <mimgopc op, string asm, bit isCmpSwap = 0, bit isFP = 0,
+                                 string renamed = ""> {
+  def "" : MIMGBaseOpcode {
+    let Atomic = 1;
+    let AtomicX2 = isCmpSwap;
+    let IsAtomicRet = 0;
+    let NoReturn = 1;
+  }
+
+  let BaseOpcode = !cast<MIMGBaseOpcode>(NAME) in {
+    // _V* variants have different vdata size, but the size is encoded implicitly,
+    // using dmask and tfe. Only 32-bit variant is registered with disassembler.
+    // Other variants are reconstructed by disassembler using dmask and tfe.
+    if !not(isCmpSwap) then {
+      let VDataDwords = 1 in
+      defm _V1 : MIMG_Atomic_NoReturn_Addr_Helper_m <op, asm, AVLdSt_32, 1, isFP, renamed>;
+    }
+
+    let VDataDwords = 2 in
+    defm _V2 : MIMG_Atomic_NoReturn_Addr_Helper_m <op, asm, AVLdSt_64, isCmpSwap, isFP, renamed>;
+    let VDataDwords = 3 in
+    defm _V3 : MIMG_Atomic_NoReturn_Addr_Helper_m <op, asm, AVLdSt_96, 0, isFP, renamed>;
+
+    if isCmpSwap then {
+      let VDataDwords = 4 in
+      defm _V4 : MIMG_Atomic_NoReturn_Addr_Helper_m <op, asm, AVLdSt_128, 0, isFP, renamed>;
+      let VDataDwords = 5 in
+      defm _V5 : MIMG_Atomic_NoReturn_Addr_Helper_m <op, asm, AVLdSt_128, 0, isFP, renamed>;
+    }
+  }
+}
+
 multiclass MIMG_Atomic <mimgopc op, string asm, bit isCmpSwap = 0, bit isFP = 0,
                         string renamed = ""> { // 64-bit atomics
   let IsAtomicRet = 1 in {
@@ -1125,6 +1359,8 @@ multiclass MIMG_Atomic <mimgopc op, string asm, bit isCmpSwap = 0, bit isFP = 0,
       }
     }
   } // End IsAtomicRet = 1
+
+  defm "_NORTN" : MIMG_Atomic_NoReturn <op, asm, isCmpSwap, isFP, renamed>;
 }
 
 multiclass MIMG_Atomic_Renamed <mimgopc op, string asm, string renamed,
@@ -1820,6 +2056,7 @@ let SubtargetPredicate = isGFX12Plus in {
 class ImageDimIntrinsicInfo<AMDGPUImageDimIntrinsic I> {
   Intrinsic Intr = I;
   MIMGBaseOpcode BaseOpcode = !cast<MIMGBaseOpcode>(!strconcat("IMAGE_", I.P.OpMod));
+  MIMGBaseOpcode NoRetBaseOpcode = BaseOpcode;
   AMDGPUDimProps Dim = I.P.Dim;
   AMDGPUImageDimIntrinsicEval DimEval = AMDGPUImageDimIntrinsicEval<I.P>;
 
@@ -1855,13 +2092,20 @@ class ImageDimIntrinsicInfo<AMDGPUImageDimIntrinsic I> {
   bits<8> CoordTyArg = !add(GradientTyArg, !if(I.P.Gradients, 1, 0));
 }
 
+class ImageDimAtomicIntrinsicInfo<AMDGPUImageDimIntrinsic I>
+  : ImageDimIntrinsicInfo<I> {
+  MIMGBaseOpcode NoRetBaseOpcode =
+    !cast<MIMGBaseOpcode>(!strconcat("IMAGE_", I.P.OpMod, "_NORTN"));
+}
+
 def ImageDimIntrinsicTable : GenericTable {
   let FilterClass = "ImageDimIntrinsicInfo";
-  let Fields = ["Intr", "BaseOpcode", "Dim", "NumOffsetArgs", "NumBiasArgs", "NumZCompareArgs", "NumGradients", "NumDmask", "NumData", "NumVAddrs", "NumArgs",
-    "DMaskIndex", "VAddrStart", "OffsetIndex", "BiasIndex", "ZCompareIndex", "GradientStart", "CoordStart", "LodIndex", "MipIndex", "VAddrEnd",
-    "RsrcIndex", "SampIndex", "UnormIndex", "TexFailCtrlIndex", "CachePolicyIndex",
+  let Fields = ["Intr", "BaseOpcode", "NoRetBaseOpcode", "Dim", "NumOffsetArgs", "NumBiasArgs", "NumZCompareArgs", "NumGradients", "NumDmask", "NumData",
+    "NumVAddrs", "NumArgs", "DMaskIndex", "VAddrStart", "OffsetIndex", "BiasIndex", "ZCompareIndex", "GradientStart", "CoordStart", "LodIndex", "MipIndex",
+    "VAddrEnd", "RsrcIndex", "SampIndex", "UnormIndex", "TexFailCtrlIndex", "CachePolicyIndex",
     "BiasTyArg", "GradientTyArg", "CoordTyArg"];
   string TypeOf_BaseOpcode = "MIMGBaseOpcode";
+  string TypeOf_NoRetBaseOpcode = "MIMGBaseOpcode";
   string TypeOf_Dim = "MIMGDim";
 
   let PrimaryKey = ["Intr"];
@@ -1874,9 +2118,12 @@ def getImageDimIntrinsicByBaseOpcode : SearchIndex {
   let Key = ["BaseOpcode", "Dim"];
 }
 
-foreach intr = !listconcat(AMDGPUImageDimIntrinsics,
-                           AMDGPUImageDimAtomicIntrinsics) in {
+foreach intr = AMDGPUImageDimIntrinsics in {
   def : ImageDimIntrinsicInfo<intr>;
+}
+
+foreach intr = AMDGPUImageDimAtomicIntrinsics in {
+  def : ImageDimAtomicIntrinsicInfo<intr>;
 }
 
 // L to LZ Optimization Mapping
