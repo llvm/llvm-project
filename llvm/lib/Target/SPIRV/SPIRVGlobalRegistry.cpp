@@ -196,17 +196,21 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeInt(unsigned Width,
 
 SPIRVType *SPIRVGlobalRegistry::getOpTypeFloat(uint32_t Width,
                                                MachineIRBuilder &MIRBuilder) {
-  return MIRBuilder.buildInstr(SPIRV::OpTypeFloat)
+  return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+    return MIRBuilder.buildInstr(SPIRV::OpTypeFloat)
         .addDef(createTypeVReg(MIRBuilder))
         .addImm(Width);
+  });
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOpTypeFloat(uint32_t Width,
                                                MachineIRBuilder &MIRBuilder, SPIRV::FPEncoding::FPEncoding FPEncode) {
-  return MIRBuilder.buildInstr(SPIRV::OpTypeFloat)
+  return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+    return MIRBuilder.buildInstr(SPIRV::OpTypeFloat)
         .addDef(createTypeVReg(MIRBuilder))
         .addImm(Width)
         .addImm(FPEncode);
+  });
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOpTypeVoid(MachineIRBuilder &MIRBuilder) {

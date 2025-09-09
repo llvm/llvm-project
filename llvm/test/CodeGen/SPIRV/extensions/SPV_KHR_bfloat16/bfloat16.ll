@@ -4,8 +4,8 @@
 
 ; CHECK-ERROR: LLVM ERROR: OpTypeFloat type with bfloat requires the following SPIR-V extension: SPV_KHR_bfloat16
 
-; CHECK-DAG: OpExtension "SPV_KHR_bfloat16"
 ; CHECK-DAG: OpCapability BFloat16TypeKHR
+; CHECK-DAG: OpExtension "SPV_KHR_bfloat16"
 ; CHECK: %[[#BFLOAT:]] = OpTypeFloat 16 0
 ; CHECK: %[[#]] = OpTypeVector %[[#BFLOAT]] 2
 

@@ -2004,7 +2004,7 @@ defm MatrixBPackedBFloat16INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x200
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define FPEncoding enum values and at the
-// same time SymbolicOperand entries extensions.
+// same time SymbolicOperand entries with extensions.
 //===----------------------------------------------------------------------===//
 def FPEncoding : GenericEnum, Operand<i32> {
   let FilterClass = "FPEncoding";
