@@ -107,18 +107,12 @@ static std::string computeBPFDataLayout(const Triple &TT) {
 }
 
 static std::string computeCSKYDataLayout(const Triple &TT) {
-  std::string Ret;
-
-  // Only support little endian for now.
-  // TODO: Add support for big endian.
-  Ret += "e";
-
   // CSKY is always 32-bit target with the CSKYv2 ABI as prefer now.
   // It's a 4-byte aligned stack with ELF mangling only.
-  Ret += "-m:e-S32-p:32:32-i32:32:32-i64:32:32-f32:32:32-f64:32:32-v64:32:32"
+  // Only support little endian for now.
+  // TODO: Add support for big endian.
+  return "e-m:e-S32-p:32:32-i32:32:32-i64:32:32-f32:32:32-f64:32:32-v64:32:32"
          "-v128:32:32-a:0:32-Fi32-n32";
-
-  return Ret;
 }
 
 static std::string computeLoongArchDataLayout(const Triple &TT) {
@@ -320,7 +314,7 @@ static std::string computeSparcDataLayout(const Triple &T) {
   Ret += "-m:e";
 
   // Some ABIs have 32bit pointers.
-  if (!is64Bit)
+  if (!Is64Bit)
     Ret += "-p:32:32";
 
   // Alignments for 64 bit integers.
@@ -332,12 +326,12 @@ static std::string computeSparcDataLayout(const Triple &T) {
 
   // On SparcV9 128 floats are aligned to 128 bits, on others only to 64.
   // On SparcV9 registers can hold 64 or 32 bits, on others only 32.
-  if (is64Bit)
+  if (Is64Bit)
     Ret += "-n32:64";
   else
     Ret += "-f128:64-n32";
 
-  if (is64Bit)
+  if (Is64Bit)
     Ret += "-S128";
   else
     Ret += "-S64";
@@ -356,10 +350,8 @@ static std::string computeSystemZDataLayout(const Triple &TT) {
 
   // Special features for z/OS.
   if (TT.isOSzOS()) {
-    if (TT.isArch64Bit()) {
-      // Custom address space for ptr32.
-      Ret += "-p1:32:32";
-    }
+    // Custom address space for ptr32.
+    Ret += "-p1:32:32";
   }
 
   // Make sure that global data has at least 16 bits of alignment by
@@ -387,12 +379,14 @@ static std::string computeSystemZDataLayout(const Triple &TT) {
 }
 
 static std::string computeX86DataLayout(const Triple &TT) {
+  bool Is64Bit = TT.getArch() == Triple::x86_64;
+
   // X86 is little endian
   std::string Ret = "e";
 
   Ret += getManglingComponent(TT);
   // X86 and x32 have 32 bit pointers.
-  if (!TT.isArch64Bit() || TT.isX32())
+  if (!Is64Bit || TT.isX32())
     Ret += "-p:32:32";
 
   // Address spaces for 32 bit signed, 32 bit unsigned, and 64 bit pointers.
@@ -401,7 +395,7 @@ static std::string computeX86DataLayout(const Triple &TT) {
   // Some ABIs align 64 bit integers and doubles to 64 bits, others to 32.
   // 128 bit integers are not specified in the 32-bit ABIs but are used
   // internally for lowering f128, so we match the alignment to that.
-  if (TT.isArch64Bit() || TT.isOSWindows())
+  if (Is64Bit || TT.isOSWindows())
     Ret += "-i64:64-i128:128";
   else if (TT.isOSIAMCU())
     Ret += "-i64:32-f64:32";
@@ -411,7 +405,7 @@ static std::string computeX86DataLayout(const Triple &TT) {
   // Some ABIs align long double to 128 bits, others to 32.
   if (TT.isOSIAMCU())
     ; // No f80
-  else if (TT.isArch64Bit() || TT.isOSDarwin() || TT.isWindowsMSVCEnvironment())
+  else if (Is64Bit || TT.isOSDarwin() || TT.isWindowsMSVCEnvironment())
     Ret += "-f80:128";
   else
     Ret += "-f80:32";
@@ -420,13 +414,13 @@ static std::string computeX86DataLayout(const Triple &TT) {
     Ret += "-f128:32";
 
   // The registers can hold 8, 16, 32 or, in x86-64, 64 bits.
-  if (TT.isArch64Bit())
+  if (Is64Bit)
     Ret += "-n8:16:32:64";
   else
     Ret += "-n8:16:32";
 
   // The stack is aligned to 32 bits on some ABIs and 128 bits on others.
-  if ((!TT.isArch64Bit() && TT.isOSWindows()) || TT.isOSIAMCU())
+  if ((!Is64Bit && TT.isOSWindows()) || TT.isOSIAMCU())
     Ret += "-a:0:32-S32";
   else
     Ret += "-S128";
@@ -435,12 +429,13 @@ static std::string computeX86DataLayout(const Triple &TT) {
 }
 
 static std::string computeNVPTXDataLayout(const Triple &T, StringRef ABIName) {
+  bool Is64Bit = T.getArch() == Triple::nvptx64;
   std::string Ret = "e";
 
   // Tensor Memory (addrspace:6) is always 32-bits.
   // Distributed Shared Memory (addrspace:7) follows shared memory
   // (addrspace:3).
-  if (!T.isArch64Bit())
+  if (!Is64Bit)
     Ret += "-p:32:32-p6:32:32-p7:32:32";
   else if (ABIName == "shortptr")
     Ret += "-p3:32:32-p4:32:32-p5:32:32-p6:32:32-p7:32:32";
@@ -485,7 +480,7 @@ static std::string computeLanaiDataLayout() {
 }
 
 static std::string computeWebAssemblyDataLayout(const Triple &TT) {
-  return TT.isArch64Bit()
+  return TT.getArch() == Triple::wasm64
              ? (TT.isOSEmscripten() ? "e-m:e-p:64:64-p10:8:8-p20:8:8-i64:64-"
                                       "i128:128-f128:64-n32:64-S128-ni:1:10:20"
                                     : "e-m:e-p:64:64-p10:8:8-p20:8:8-i64:64-"
