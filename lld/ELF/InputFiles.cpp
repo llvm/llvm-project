@@ -1821,12 +1821,12 @@ BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
   if (ctx.arg.thinLTOIndexOnly)
     path = replaceThinLTOSuffix(ctx, mb.getBufferIdentifier());
 
- // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
- // name. If two archives define two members with the same name, this
- // causes a collision which result in only one of the objects being taken
- // into consideration at LTO time (which very likely causes undefined
- // symbols later in the link stage). So we append file offset to make
- // filename unique.
+  // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
+  // name. If two archives define two members with the same name, this
+  // causes a collision which result in only one of the objects being taken
+  // into consideration at LTO time (which very likely causes undefined
+  // symbols later in the link stage). So we append file offset to make
+  // filename unique.
   StringSaver &ss = ctx.saver;
   StringRef name = archiveName.empty()
                        ? ss.save(path)
