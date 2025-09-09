@@ -62,11 +62,15 @@ bool isLegalShaderModel(Triple &T) {
     VersionTuple MinVer(6, 5);
     return MinVer <= Version;
   } break;
+  case Triple::EnvironmentType::RootSignature:
+    VersionTuple MinVer(1, 0);
+    VersionTuple MaxVer(1, 1);
+    return MinVer <= Version && Version <= MaxVer;
   }
   return false;
 }
 
-std::optional<std::string> tryParseProfile(StringRef Profile) {
+std::optional<llvm::Triple> tryParseTriple(StringRef Profile) {
   // [ps|vs|gs|hs|ds|cs|ms|as]_[major]_[minor]
   SmallVector<StringRef, 3> Parts;
   Profile.split(Parts, "_");
@@ -84,6 +88,7 @@ std::optional<std::string> tryParseProfile(StringRef Profile) {
           .Case("lib", Triple::EnvironmentType::Library)
           .Case("ms", Triple::EnvironmentType::Mesh)
           .Case("as", Triple::EnvironmentType::Amplification)
+          .Case("rootsig", Triple::EnvironmentType::RootSignature)
           .Default(Triple::EnvironmentType::UnknownEnvironment);
   if (Kind == Triple::EnvironmentType::UnknownEnvironment)
     return std::nullopt;
@@ -147,8 +152,14 @@ std::optional<std::string> tryParseProfile(StringRef Profile) {
   T.setOSName(Triple::getOSTypeName(Triple::OSType::ShaderModel).str() +
               VersionTuple(Major, Minor).getAsString());
   T.setEnvironment(Kind);
-  if (isLegalShaderModel(T))
-    return T.getTriple();
+
+  return T;
+}
+
+std::optional<std::string> tryParseProfile(StringRef Profile) {
+  std::optional<llvm::Triple> MaybeT = tryParseTriple(Profile);
+  if (MaybeT && isLegalShaderModel(*MaybeT))
+    return MaybeT->getTriple();
   else
     return std::nullopt;
 }
@@ -258,6 +269,19 @@ bool checkExtensionArgsAreValid(ArrayRef<std::string> SpvExtensionArgs,
   }
   return AllValid;
 }
+
+bool isRootSignatureTarget(StringRef Profile) {
+  if (std::optional<llvm::Triple> T = tryParseTriple(Profile))
+    return T->getEnvironment() == Triple::EnvironmentType::RootSignature;
+  return false;
+}
+
+bool isRootSignatureTarget(DerivedArgList &Args) {
+  if (const Arg *A = Args.getLastArg(options::OPT_target_profile))
+    return isRootSignatureTarget(A->getValue());
+  return false;
+}
+
 } // namespace
 
 void tools::hlsl::Validator::ConstructJob(Compilation &C, const JobAction &JA,
@@ -316,6 +340,12 @@ void tools::hlsl::LLVMObjcopy::ConstructJob(Compilation &C, const JobAction &JA,
     const char *Frs = Args.MakeArgString("--remove-section=RTS0");
     CmdArgs.push_back(Frs);
   }
+
+  if (const Arg *A = Args.getLastArg(options::OPT_target_profile))
+    if (isRootSignatureTarget(A->getValue())) {
+      const char *Fos = Args.MakeArgString("--only-section=RTS0");
+      CmdArgs.push_back(Fos);
+    }
 
   assert(CmdArgs.size() > 2 && "Unnecessary invocation of objcopy.");
 
@@ -493,7 +523,8 @@ bool HLSLToolChain::requiresBinaryTranslation(DerivedArgList &Args) const {
 
 bool HLSLToolChain::requiresObjcopy(DerivedArgList &Args) const {
   return Args.hasArg(options::OPT_dxc_Fo) &&
-         Args.hasArg(options::OPT_dxc_strip_rootsignature);
+         (Args.hasArg(options::OPT_dxc_strip_rootsignature) ||
+          isRootSignatureTarget(Args));
 }
 
 bool HLSLToolChain::isLastJob(DerivedArgList &Args,
