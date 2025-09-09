@@ -176,6 +176,11 @@ New checks
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
+- Renamed :doc:`cert-err34-c <clang-tidy/checks/cert/err34-c>` to
+  :doc:`bugprone-unchecked-string-to-number-conversion
+  <clang-tidy/checks/bugprone/unchecked-string-to-number-conversion>`
+  keeping initial check as an alias to the new one.
+
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -200,6 +205,11 @@ Changes in existing checks
   positive when enums or unions from system header files or the ``std``
   namespace are treated as the tag or the data part of a user-defined
   tagged union respectively.
+
+- Improved :doc:`bugprone-unchecked-optional-access
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` check by supporting 
+  ``NullableValue::makeValue`` and ``NullableValue::makeValueInplace`` to 
+  prevent false-positives for ``BloombergLP::bdlb::NullableValue`` type.
 
 - Improved :doc:`bugprone-unhandled-self-assignment
   <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
