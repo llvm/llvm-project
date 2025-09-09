@@ -105,7 +105,7 @@ protected:
 protected:
   /// Check whether value Val can be supported by v_mov_b64, for the current
   /// target.
-  bool canMov64bImm(uint64_t Val, SelectionDAG &DAG) const;
+  bool isInt64ImmLegal(SDNode *Val, SelectionDAG &DAG) const;
   bool shouldCombineMemoryType(EVT VT) const;
   SDValue performLoadCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performStoreCombine(SDNode *N, DAGCombinerInfo &DCI) const;

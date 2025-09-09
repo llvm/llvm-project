@@ -5296,11 +5296,32 @@ SDValue AMDGPUTargetLowering::performRcpCombine(SDNode *N,
   return DCI.DAG.getConstantFP(One / Val, SDLoc(N), N->getValueType(0));
 }
 
-bool AMDGPUTargetLowering::canMov64bImm(uint64_t Val, SelectionDAG &DAG) const {
+bool AMDGPUTargetLowering::isInt64ImmLegal(SDNode *N, SelectionDAG &DAG) const {
   if (!Subtarget->isGCN())
     return false;
+
+  ConstantSDNode *SDConstant = dyn_cast<ConstantSDNode>(N);
+  ConstantFPSDNode *SDFPConstant = dyn_cast<ConstantFPSDNode>(N);
   auto &ST = DAG.getSubtarget<GCNSubtarget>();
-  return ST.hasMovB64() && (ST.has64BitLiterals() || isUInt<32>(Val));
+  bool isInlineable = false;
+  const auto *TII = ST.getInstrInfo();
+
+  if (!SDConstant && !SDFPConstant)
+    return false;
+
+  uint64_t Val = 0;
+  if (SDConstant) {
+    const APInt &APVal = SDConstant->getAPIntValue();
+    isInlineable = TII->isInlineConstant(APVal);
+    Val = APVal.getZExtValue();
+  } else if (SDFPConstant) {
+    const APFloat &APVal = SDFPConstant->getValueAPF();
+    isInlineable = TII->isInlineConstant(APVal);
+    Val = APVal.bitcastToAPInt().getZExtValue();
+  }
+
+  return ST.hasMovB64() &&
+         (ST.has64BitLiterals() || isUInt<32>(Val) || isInlineable);
 }
 
 SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
@@ -5352,9 +5373,9 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
     SDValue Src = N->getOperand(0);
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Src)) {
       SDLoc SL(N);
-      uint64_t CVal = C->getZExtValue();
-      if (canMov64bImm(CVal, DAG))
+      if (isInt64ImmLegal(C, DAG))
         break;
+      uint64_t CVal = C->getZExtValue();
       SDValue BV = DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32,
                                DAG.getConstant(Lo_32(CVal), SL, MVT::i32),
                                DAG.getConstant(Hi_32(CVal), SL, MVT::i32));
@@ -5364,9 +5385,9 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
     if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Src)) {
       const APInt &Val = C->getValueAPF().bitcastToAPInt();
       SDLoc SL(N);
-      uint64_t CVal = Val.getZExtValue();
-      if (canMov64bImm(CVal, DAG))
+      if (isInt64ImmLegal(C, DAG))
         break;
+      uint64_t CVal = Val.getZExtValue();
       SDValue Vec = DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32,
                                 DAG.getConstant(Lo_32(CVal), SL, MVT::i32),
                                 DAG.getConstant(Hi_32(CVal), SL, MVT::i32));

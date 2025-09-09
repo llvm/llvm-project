@@ -14591,23 +14591,20 @@ SITargetLowering::performExtractVectorEltCombine(SDNode *N,
   auto *Idx = dyn_cast<ConstantSDNode>(N->getOperand(1));
   if (Vec.getOpcode() == ISD::BITCAST && VecVT == MVT::v2i32 && Idx) {
     SDLoc SL(N);
-    SDValue PeekThrough = peekThroughBitcasts(Vec);
+    SDValue PeekThrough = Vec.getOperand(0);
     auto *KImm = dyn_cast<ConstantSDNode>(PeekThrough);
     if (KImm && KImm->getValueType(0).getSizeInBits() == 64) {
       uint64_t KImmValue = KImm->getZExtValue();
-      if (Idx->getZExtValue() == 0)
-        return DAG.getConstant(Lo_32(KImmValue), SL, MVT::i32);
-      else
-        return DAG.getConstant(Hi_32(KImmValue), SL, MVT::i32);
+      return DAG.getConstant(
+          (KImmValue >> (32 * Idx->getZExtValue())) & 0xffffffff, SL, MVT::i32);
     }
     auto *KFPImm = dyn_cast<ConstantFPSDNode>(PeekThrough);
     if (KFPImm && KFPImm->getValueType(0).getSizeInBits() == 64) {
       uint64_t KFPImmValue =
           KFPImm->getValueAPF().bitcastToAPInt().getZExtValue();
-      if (Idx->getZExtValue() == 0)
-        return DAG.getConstant(Lo_32(KFPImmValue), SL, MVT::i32);
-      else
-        return DAG.getConstant(Hi_32(KFPImmValue), SL, MVT::i32);
+      return DAG.getConstant((KFPImmValue >> (32 * Idx->getZExtValue())) &
+                                 0xffffffff,
+                             SL, MVT::i32);
     }
   }
 
