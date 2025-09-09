@@ -162,6 +162,15 @@ SmallVector<OpFoldResult> addElementwise(OpBuilder &builder, Location loc,
 SmallVector<OpFoldResult> addWithRightAligned(OpBuilder &builder, Location loc,
                                               ArrayRef<OpFoldResult> lhs,
                                               ArrayRef<OpFoldResult> rhs);
+
+/// Helper function to compute the effective lane layout from a
+/// DistributeLayoutAttr which can be either a LayoutAttr or a SliceAttr. For
+/// LayoutAttr, this will simply return the lane layout. For SliceAttr, it will
+/// compute the effective lane layout by removing the sliced dimensions from the
+/// parent lane layout.
+SmallVector<int64_t>
+computeEffectiveLaneLayout(xegpu::DistributeLayoutAttr layout);
+
 } // namespace xegpu
 
 } // namespace mlir

@@ -64,27 +64,6 @@ namespace {
 static constexpr unsigned regularPatternBenefit = 1;
 static constexpr unsigned highPatternBenefit = 2;
 
-/// Helper function to compute the effective lane layout from a
-/// DistributeLayoutAttr which can be either a LayoutAttr or a SliceAttr.
-static SmallVector<int64_t>
-computeEffectiveLaneLayout(const xegpu::DistributeLayoutAttr layout) {
-  SmallVector<int64_t> effectiveLaneLayout;
-  // If the layout is a slice, we need to get effective lane layout by removing
-  // sliced dims.
-  if (auto sliceAttr = dyn_cast<xegpu::SliceAttr>(layout)) {
-    ArrayRef<int64_t> slicedDims = sliceAttr.flatten().getDims().asArrayRef();
-    llvm::DenseSet<int64_t> lookUp(slicedDims.begin(), slicedDims.end());
-    for (auto [i, dim] :
-         llvm::enumerate(sliceAttr.getParent().getLaneLayoutAsInt())) {
-      if (!lookUp.contains(i))
-        effectiveLaneLayout.push_back(dim);
-    }
-  } else {
-    effectiveLaneLayout = cast<xegpu::LayoutAttr>(layout).getLaneLayoutAsInt();
-  }
-  return effectiveLaneLayout;
-}
-
 /// Helper function to get  distributed vector type for a source vector type
 /// according to the lane_layout. We simply divide each dimension of tensor
 /// descriptor shape by corresponding lane_layout dimension. If
@@ -105,9 +84,11 @@ getDistVecTypeBasedOnLaneLayout(xegpu::DistributeLayoutAttr layout,
     return failure();
   assert((isa<xegpu::LayoutAttr>(layout) || isa<xegpu::SliceAttr>(layout)) &&
          "Expecting a valid layout.");
-  SmallVector<int64_t> effectiveLaneLayout = computeEffectiveLaneLayout(layout);
+  SmallVector<int64_t> effectiveLaneLayout =
+      xegpu::computeEffectiveLaneLayout(layout);
 
-  assert(originalType.getShape().size() >= effectiveLaneLayout.size() &&
+  assert(static_cast<size_t>(originalType.getRank()) >=
+             effectiveLaneLayout.size() &&
          "Rank of the original vector type should be greater or equal to the "
          "size of the lane layout to distribute the vector type.");
   SmallVector<int64_t> distributedShape(originalType.getShape());
@@ -1369,7 +1350,7 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
           vecRank, {static_cast<unsigned int>(vecRank - 1)}, val.getContext());
     SmallVector<unsigned int> distributedDims;
     // Get the distributed dimensions based on the layout.
-    SmallVector<int64_t> laneLayout = computeEffectiveLaneLayout(layout);
+    SmallVector<int64_t> laneLayout = xegpu::computeEffectiveLaneLayout(layout);
     for (unsigned i = 0; i < laneLayout.size(); ++i) {
       if (laneLayout[i] > 1)
         distributedDims.push_back(i);

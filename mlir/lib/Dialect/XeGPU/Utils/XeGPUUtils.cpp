@@ -484,3 +484,24 @@ xegpu::addWithRightAligned(OpBuilder &builder, Location loc,
   results.append(addElementwise(builder, loc, a, b));
   return results;
 }
+
+SmallVector<int64_t>
+xegpu::computeEffectiveLaneLayout(const xegpu::DistributeLayoutAttr layout) {
+  if (!layout)
+    return {};
+  SmallVector<int64_t> effectiveLaneLayout;
+  // If the layout is a slice, we need to get effective lane layout by removing
+  // sliced dims.
+  if (auto sliceAttr = dyn_cast<xegpu::SliceAttr>(layout)) {
+    ArrayRef<int64_t> slicedDims = sliceAttr.flatten().getDims().asArrayRef();
+    llvm::DenseSet<int64_t> lookUp(slicedDims.begin(), slicedDims.end());
+    for (auto [i, dim] :
+         llvm::enumerate(sliceAttr.getParent().getLaneLayoutAsInt())) {
+      if (!lookUp.contains(i))
+        effectiveLaneLayout.push_back(dim);
+    }
+  } else {
+    effectiveLaneLayout = cast<xegpu::LayoutAttr>(layout).getLaneLayoutAsInt();
+  }
+  return effectiveLaneLayout;
+}
