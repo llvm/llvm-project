@@ -1,1 +1,2 @@
-*.txt
+; diff-tmp-dir.test clobbers this file
+empty.txt
