@@ -8489,13 +8489,22 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   if (Subtarget->hasCustomCallingConv())
     Subtarget->getRegisterInfo()->UpdateCustomCalleeSavedRegs(MF);
 
-  if (getTM().useNewSMEABILowering() && !Attrs.hasAgnosticZAInterface()) {
+  if (getTM().useNewSMEABILowering()) {
     if (Subtarget->isTargetWindows() || hasInlineStackProbe(MF)) {
       SDValue Size;
       if (Attrs.hasZAState()) {
         SDValue SVL = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
                                   DAG.getConstant(1, DL, MVT::i32));
         Size = DAG.getNode(ISD::MUL, DL, MVT::i64, SVL, SVL);
+      } else if (Attrs.hasAgnosticZAInterface()) {
+        RTLIB::Libcall LC = RTLIB::SMEABI_SME_STATE_SIZE;
+        SDValue Callee = DAG.getExternalSymbol(
+            getLibcallName(LC), getPointerTy(DAG.getDataLayout()));
+        auto *RetTy = EVT(MVT::i64).getTypeForEVT(*DAG.getContext());
+        TargetLowering::CallLoweringInfo CLI(DAG);
+        CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
+            getLibcallCallingConv(LC), RetTy, Callee, {});
+        std::tie(Size, Chain) = LowerCallTo(CLI);
       }
       if (Size) {
         SDValue Buffer = DAG.getNode(
@@ -8561,7 +8570,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
       Register BufferPtr =
           MF.getRegInfo().createVirtualRegister(&AArch64::GPR64RegClass);
       FuncInfo->setSMESaveBufferAddr(BufferPtr);
-      Chain = DAG.getCopyToReg(Chain, DL, BufferPtr, Buffer);
+      Chain = DAG.getCopyToReg(Buffer.getValue(1), DL, BufferPtr, Buffer);
     }
   }
 
@@ -9300,17 +9309,17 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Determine whether we need any streaming mode changes.
   SMECallAttrs CallAttrs = getSMECallAttrs(MF.getFunction(), *this, CLI);
+
+  std::optional<unsigned> ZAMarkerNode;
   bool UseNewSMEABILowering = getTM().useNewSMEABILowering();
-  bool IsAgnosticZAFunction = CallAttrs.caller().hasAgnosticZAInterface();
-  auto ZAMarkerNode = [&]() -> std::optional<unsigned> {
-    // TODO: Handle agnostic ZA functions.
-    if (!UseNewSMEABILowering || IsAgnosticZAFunction)
-      return std::nullopt;
-    if (!CallAttrs.caller().hasZAState() && !CallAttrs.caller().hasZT0State())
-      return std::nullopt;
-    return CallAttrs.requiresLazySave() ? AArch64ISD::REQUIRES_ZA_SAVE
-                                        : AArch64ISD::INOUT_ZA_USE;
-  }();
+  if (UseNewSMEABILowering) {
+    if (CallAttrs.requiresLazySave() ||
+        CallAttrs.requiresPreservingAllZAState())
+      ZAMarkerNode = AArch64ISD::REQUIRES_ZA_SAVE;
+    else if (CallAttrs.caller().hasZAState() ||
+             CallAttrs.caller().hasZT0State())
+      ZAMarkerNode = AArch64ISD::INOUT_ZA_USE;
+  }
 
   if (IsTailCall) {
     // Check if it's really possible to do a tail call.
@@ -9385,7 +9394,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   };
 
   bool RequiresLazySave = !UseNewSMEABILowering && CallAttrs.requiresLazySave();
-  bool RequiresSaveAllZA = CallAttrs.requiresPreservingAllZAState();
+  bool RequiresSaveAllZA =
+      !UseNewSMEABILowering && CallAttrs.requiresPreservingAllZAState();
   if (RequiresLazySave) {
     TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
     SDValue TPIDR2ObjAddr = DAG.getFrameIndex(
