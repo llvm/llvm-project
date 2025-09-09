@@ -16,7 +16,7 @@ _CLC_DEF bool __clc_fp16_subnormals_supported() {
   // SPIR-V doesn't support llvm.canonicalize for now.
   return false;
 #else
-  return !__builtin_isfpclass(__builtin_canonicalizef(0x1p-24h),
+  return !__builtin_isfpclass(__builtin_canonicalizef((float)0x1p-24h),
                               __FPCLASS_POSZERO);
 #endif
 }
@@ -39,7 +39,7 @@ _CLC_DEF bool __clc_fp64_subnormals_supported() {
   // SPIR-V doesn't support llvm.canonicalize for now.
   return false;
 #else
-  return !__builtin_isfpclass(__builtin_canonicalizef(0x1p-1074),
+  return !__builtin_isfpclass(__builtin_canonicalize(0x1p-1074),
                               __FPCLASS_POSZERO);
 #endif
 }
