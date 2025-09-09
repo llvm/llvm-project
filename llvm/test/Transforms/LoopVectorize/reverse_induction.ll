@@ -149,6 +149,7 @@ define i32 @reverse_induction_i16(i16 %startval, ptr %ptr) {
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i16 [[STARTVAL]], -1
+; CHECK-NEXT:    [[MUL:%.*]] = call { i16, i1 } @llvm.umul.with.overflow.i16(i16 1, i16 1023)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i16 [[TMP0]], 1023
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i16 [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
