@@ -556,9 +556,8 @@ LiveVariables::computeLiveness(AnalysisDeclContext &AC, bool killAtAssign) {
 
     // Merge the values of all successor blocks.
     LivenessValues val;
-    for (CFGBlock::const_succ_iterator it = block->succ_begin(),
-                                       ei = block->succ_end(); it != ei; ++it) {
-      if (const CFGBlock *succ = *it) {
+    for (const CFGBlock *succ : block->succs()) {
+      if (succ) {
         val = LV->merge(val, LV->blocksBeginToLiveness[succ]);
       }
     }
