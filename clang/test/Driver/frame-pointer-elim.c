@@ -207,20 +207,14 @@
 // RUN: %clang -### --target=arm-apple-none-macho -S -O1 -fno-omit-frame-pointer %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
 
-// When targeting Mach-O on Arm, the frame pointer is "none" if
-// -fomit-frame-pointer is specified.
 // RUN: %clang --target=armv7-apple-macho -### -S %s 2>&1	\
 // RUN:         -fomit-frame-pointer \
 // RUN:         | FileCheck -check-prefix=KEEP-NONE %s
 
-// When targeting Mach-O on Arm, -fno-omit-frame-pointer +
-// -mno-omit-leaf-frame-pointer give frame-pointer=all
 // RUN: %clang --target=armv7-apple-macho -### -S %s 2>&1 \
 // RUN:        -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer \
 // RUN:        | FileCheck -check-prefix=KEEP-ALL %s
 
-// When targeting Mach-O on Arm, -fomit-frame-pointer wins over
-// -mno-omit-leaf-frame-pointer
 // RUN: %clang --target=armv7-apple-macho -### -S %s 2>&1 \
 // RUN:        -fomit-frame-pointer -mno-omit-leaf-frame-pointer \
 // RUN:        | FileCheck -check-prefix=KEEP-NONE %s
