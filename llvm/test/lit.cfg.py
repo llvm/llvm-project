@@ -37,9 +37,7 @@ extra_substitutions = extra_substitutions = (
     if config.enable_profcheck
     else []
 )
-config.test_format = lit.formats.ShTest(
-    not use_lit_shell, extra_substitutions
-)
+config.test_format = lit.formats.ShTest(not use_lit_shell, extra_substitutions)
 
 # suffixes: A list of file extensions to treat as test files. This is overriden
 # by individual lit.local.cfg files in the test subdirectories.
