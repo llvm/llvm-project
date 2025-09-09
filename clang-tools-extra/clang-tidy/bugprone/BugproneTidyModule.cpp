@@ -89,6 +89,7 @@
 #include "ThrowKeywordMissingCheck.h"
 #include "TooSmallLoopVariableCheck.h"
 #include "UncheckedOptionalAccessCheck.h"
+#include "UncheckedStringToNumberConversionCheck.h"
 #include "UndefinedMemoryManipulationCheck.h"
 #include "UndelegatedConstructorCheck.h"
 #include "UnhandledExceptionAtNewCheck.h"
@@ -261,6 +262,8 @@ public:
         "bugprone-too-small-loop-variable");
     CheckFactories.registerCheck<UncheckedOptionalAccessCheck>(
         "bugprone-unchecked-optional-access");
+    CheckFactories.registerCheck<UncheckedStringToNumberConversionCheck>(
+        "bugprone-unchecked-string-to-number-conversion");
     CheckFactories.registerCheck<UndefinedMemoryManipulationCheck>(
         "bugprone-undefined-memory-manipulation");
     CheckFactories.registerCheck<UndelegatedConstructorCheck>(

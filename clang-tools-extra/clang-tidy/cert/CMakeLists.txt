@@ -15,7 +15,6 @@ add_clang_library(clangTidyCERTModule STATIC
   ProperlySeededRandomGeneratorCheck.cpp
   SetLongJmpCheck.cpp
   StaticObjectExceptionCheck.cpp
-  StrToNumCheck.cpp
   ThrownExceptionTypeCheck.cpp
   VariadicFunctionDefCheck.cpp
 
