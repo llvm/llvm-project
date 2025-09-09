@@ -805,6 +805,32 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_image_store_mip_cube_v4f16_i32: 
     return EmitAMDGCNImageOverloadedReturnType(
       *this, E, Intrinsic::amdgcn_image_store_mip_cube, true);
+  case AMDGPU::BI__builtin_amdgcn_image_sample_1d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_1d_v4f16_f32:
+    return EmitAMDGCNImageOverloadedReturnType(
+      *this, E, Intrinsic::amdgcn_image_sample_1d, false);
+  case AMDGPU::BI__builtin_amdgcn_image_sample_1darray_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_1darray_v4f16_f32:
+    return EmitAMDGCNImageOverloadedReturnType(
+      *this, E, Intrinsic::amdgcn_image_sample_1darray, false);
+  case AMDGPU::BI__builtin_amdgcn_image_sample_2d_f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_2d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_2d_v4f16_f32:
+    return EmitAMDGCNImageOverloadedReturnType(
+      *this, E, Intrinsic::amdgcn_image_sample_2d, false);
+  case AMDGPU::BI__builtin_amdgcn_image_sample_2darray_f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_2darray_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_2darray_v4f16_f32:
+    return EmitAMDGCNImageOverloadedReturnType(
+      *this, E, Intrinsic::amdgcn_image_sample_2darray, false);
+  case AMDGPU::BI__builtin_amdgcn_image_sample_3d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_3d_v4f16_f32:
+    return EmitAMDGCNImageOverloadedReturnType(
+      *this, E, Intrinsic::amdgcn_image_sample_3d, false);
+  case AMDGPU::BI__builtin_amdgcn_image_sample_cube_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_cube_v4f16_f32:
+    return EmitAMDGCNImageOverloadedReturnType(
+      *this, E, Intrinsic::amdgcn_image_sample_cube, false);
   case AMDGPU::BI__builtin_amdgcn_mfma_scale_f32_16x16x128_f8f6f4:
   case AMDGPU::BI__builtin_amdgcn_mfma_scale_f32_32x32x64_f8f6f4: {
     llvm::FixedVectorType *VT = FixedVectorType::get(Builder.getInt32Ty(), 8);

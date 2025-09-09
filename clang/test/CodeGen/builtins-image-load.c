@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx1100 %s -emit-llvm -o - | FileCheck %s
 
 typedef int int8 __attribute__((ext_vector_type(8)));
+typedef int int4 __attribute__((ext_vector_type(4)));
 typedef float float4 __attribute__((ext_vector_type(4)));
 typedef _Float16 half;
 typedef half half4 __attribute__((ext_vector_type(4)));
@@ -728,4 +729,434 @@ float4 test_builtin_image_load_mip_cube_1(float4 v4f32, int i32, int8 vec8i32) {
 half4 test_builtin_image_load_mip_cube_2(half4 v4f16, int i32, int8 vec8i32) {
 
   return __builtin_amdgcn_image_load_mip_cube_v4f16_i32(100, i32, i32, i32, i32, vec8i32, 120, 110);
+}
+
+// CHECK-LABEL: define dso_local <4 x float> @test_builtin_amdgcn_image_sample_1d_v4f32_f32(
+// CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], i32 noundef [[I32:%.*]], float noundef [[F32:%.*]], <8 x i32> noundef [[VEC8I32:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x float>, align 16, addrspace(5)
+// CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
+// CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[VEC8I32_ADDR:%.*]] = alloca <8 x i32>, align 32, addrspace(5)
+// CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
+// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
+// CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
+// CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
+// CHECK-NEXT:    [[VEC8I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VEC8I32_ADDR]] to ptr
+// CHECK-NEXT:    [[VEC4I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VEC4I32_ADDR]] to ptr
+// CHECK-NEXT:    store <4 x float> [[V4F32]], ptr [[V4F32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    store i32 [[I32]], ptr [[I32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store float [[F32]], ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store <8 x i32> [[VEC8I32]], ptr [[VEC8I32_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    store <4 x i32> [[VEC4I32]], ptr [[VEC4I32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr [[VEC8I32_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[VEC4I32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32.v8i32.v4i32(i32 100, float [[TMP0]], <8 x i32> [[TMP1]], <4 x i32> [[TMP2]], i1 false, i32 120, i32 110)
+// CHECK-NEXT:    ret <4 x float> [[TMP3]]
+//
+float4 test_builtin_amdgcn_image_sample_1d_v4f32_f32(float4 v4f32, int i32, float f32, int8 vec8i32, int4 vec4i32) {
+       return __builtin_amdgcn_image_sample_1d_v4f32_f32(100, f32, vec8i32, vec4i32, 0, 120, 110);
+}
+
+// CHECK-LABEL: define dso_local <4 x half> @test_builtin_amdgcn_image_sample_1d_v4f16_f32(
+// CHECK-SAME: <4 x half> noundef [[V4F16:%.*]], i32 noundef [[I32:%.*]], float noundef [[F32:%.*]], <8 x i32> noundef [[VEC8I32:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x half>, align 8, addrspace(5)
+// CHECK-NEXT:    [[V4F16_ADDR:%.*]] = alloca <4 x half>, align 8, addrspace(5)
+// CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[VEC8I32_ADDR:%.*]] = alloca <8 x i32>, align 32, addrspace(5)
+// CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
+// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// CHECK-NEXT:    [[V4F16_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F16_ADDR]] to ptr
+// CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
+// CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
+// CHECK-NEXT:    [[VEC8I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VEC8I32_ADDR]] to ptr
+// CHECK-NEXT:    [[VEC4I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VEC4I32_ADDR]] to ptr
+// CHECK-NEXT:    store <4 x half> [[V4F16]], ptr [[V4F16_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[I32]], ptr [[I32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store float [[F32]], ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store <8 x i32> [[VEC8I32]], ptr [[VEC8I32_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    store <4 x i32> [[VEC4I32]], ptr [[VEC4I32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr [[VEC8I32_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[VEC4I32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = call <4 x half> @llvm.amdgcn.image.sample.1d.v4f16.f32.v8i32.v4i32(i32 100, float [[TMP0]], <8 x i32> [[TMP1]], <4 x i32> [[TMP2]], i1 false, i32 120, i32 110)
+// CHECK-NEXT:    ret <4 x half> [[TMP3]]
+//
+half4 test_builtin_amdgcn_image_sample_1d_v4f16_f32(half4 v4f16, int i32, float f32, int8 vec8i32, int4 vec4i32) {
+       return __builtin_amdgcn_image_sample_1d_v4f16_f32(100, f32, vec8i32, vec4i32, 0, 120, 110);
+}
+
+// CHECK-LABEL: define dso_local <4 x float> @test_builtin_amdgcn_image_sample_1darray_v4f32_f32(
+// CHECK-SAME: i32 noundef [[I32:%.*]], float noundef [[F32:%.*]], <8 x i32> noundef [[VEC8I32:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x float>, align 16, addrspace(5)
+// CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[VEC8I32_ADDR:%.*]] = alloca <8 x i32>, align 32, addrspace(5)
+// CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
+// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
+// CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
+// CHECK-NEXT:    [[VEC8I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VEC8I32_ADDR]] to ptr
+// CHECK-NEXT:    [[VEC4I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VEC4I32_ADDR]] to ptr
+// CHECK-NEXT:    store i32 [[I32]], ptr [[I32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store float [[F32]], ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store <8 x i32> [[VEC8I32]], ptr [[VEC8I32_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    store <4 x i32> [[VEC4I32]], ptr [[VEC4I32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr [[VEC8I32_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[VEC4I32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.1darray.v4f32.f32.v8i32.v4i32(i32 100, float [[TMP0]], float [[TMP1]], <8 x i32> [[TMP2]], <4 x i32> [[TMP3]], i1 false, i32 120, i32 110)
+// CHECK-NEXT:    ret <4 x float> [[TMP4]]
+//
+float4 test_builtin_amdgcn_image_sample_1darray_v4f32_f32(int i32, float f32, int8 vec8i32, int4 vec4i32) {
+       return __builtin_amdgcn_image_sample_1darray_v4f32_f32(100, f32, f32, vec8i32, vec4i32, 0, 120, 110);
+}
+
+// CHECK-LABEL: define dso_local <4 x half> @test_builtin_amdgcn_image_sample_1darray_v4f16_f32(
+// CHECK-SAME: <4 x half> noundef [[V4F16:%.*]], i32 noundef [[I32:%.*]], float noundef [[F32:%.*]], <8 x i32> noundef [[VEC8I32:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x half>, align 8, addrspace(5)
+// CHECK-NEXT:    [[V4F16_ADDR:%.*]] = alloca <4 x half>, align 8, addrspace(5)
+// CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[VEC8I32_ADDR:%.*]] = alloca <8 x i32>, align 32, addrspace(5)
+// CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
+// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// CHECK-NEXT:    [[V4F16_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F16_ADDR]] to ptr
+// CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
+// CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
+// CHECK-NEXT:    [[VEC8I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VEC8I32_ADDR]] to ptr
+// CHECK-NEXT:    [[VEC4I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VEC4I32_ADDR]] to ptr
+// CHECK-NEXT:    store <4 x half> [[V4F16]], ptr [[V4F16_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[I32]], ptr [[I32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store float [[F32]], ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store <8 x i32> [[VEC8I32]], ptr [[VEC8I32_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    store <4 x i32> [[VEC4I32]], ptr [[VEC4I32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr [[VEC8I32_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[VEC4I32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x half> @llvm.amdgcn.image.sample.1darray.v4f16.f32.v8i32.v4i32(i32 100, float [[TMP0]], float [[TMP1]], <8 x i32> [[TMP2]], <4 x i32> [[TMP3]], i1 false, i32 120, i32 110)
+// CHECK-NEXT:    ret <4 x half> [[TMP4]]
+//
+half4 test_builtin_amdgcn_image_sample_1darray_v4f16_f32(half4 v4f16, int i32, float f32, int8 vec8i32, int4 vec4i32) {
+       return __builtin_amdgcn_image_sample_1darray_v4f16_f32(100, f32, f32, vec8i32, vec4i32, 0, 120, 110);
+}
+
+// CHECK-LABEL: define dso_local float @test_builtin_amdgcn_image_sample_2d_f32_f32(
+// CHECK-SAME: i32 noundef [[I32:%.*]], float noundef [[F32:%.*]], <8 x i32> noundef [[VEC8I32:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[VEC8I32_ADDR:%.*]] = alloca <8 x i32>, align 32, addrspace(5)
+// CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
+// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
+// CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
+// CHECK-NEXT:    [[VEC8I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VEC8I32_ADDR]] to ptr
+// CHECK-NEXT:    [[VEC4I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VEC4I32_ADDR]] to ptr
+// CHECK-NEXT:    store i32 [[I32]], ptr [[I32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store float [[F32]], ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store <8 x i32> [[VEC8I32]], ptr [[VEC8I32_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    store <4 x i32> [[VEC4I32]], ptr [[VEC4I32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr [[VEC8I32_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[VEC4I32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP4:%.*]] = call float @llvm.amdgcn.image.sample.2d.f32.f32.v8i32.v4i32(i32 100, float [[TMP0]], float [[TMP1]], <8 x i32> [[TMP2]], <4 x i32> [[TMP3]], i1 false, i32 120, i32 110)
+// CHECK-NEXT:    ret float [[TMP4]]
+//
+float test_builtin_amdgcn_image_sample_2d_f32_f32(int i32, float f32, int8 vec8i32, int4 vec4i32) {
+       return __builtin_amdgcn_image_sample_2d_f32_f32(100, f32, f32, vec8i32, vec4i32, 0, 120, 110);
+}
+
+// CHECK-LABEL: define dso_local <4 x float> @test_builtin_amdgcn_image_sample_2d_v4f32_f32(
+// CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], i32 noundef [[I32:%.*]], float noundef [[F32:%.*]], <8 x i32> noundef [[VEC8I32:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x float>, align 16, addrspace(5)
+// CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
+// CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[VEC8I32_ADDR:%.*]] = alloca <8 x i32>, align 32, addrspace(5)
+// CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
+// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
+// CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
+// CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
+// CHECK-NEXT:    [[VEC8I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VEC8I32_ADDR]] to ptr
+// CHECK-NEXT:    [[VEC4I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VEC4I32_ADDR]] to ptr
+// CHECK-NEXT:    store <4 x float> [[V4F32]], ptr [[V4F32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    store i32 [[I32]], ptr [[I32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store float [[F32]], ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store <8 x i32> [[VEC8I32]], ptr [[VEC8I32_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    store <4 x i32> [[VEC4I32]], ptr [[VEC4I32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr [[VEC8I32_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[VEC4I32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32.v8i32.v4i32(i32 100, float [[TMP0]], float [[TMP1]], <8 x i32> [[TMP2]], <4 x i32> [[TMP3]], i1 false, i32 120, i32 110)
+// CHECK-NEXT:    ret <4 x float> [[TMP4]]
+//
+float4 test_builtin_amdgcn_image_sample_2d_v4f32_f32(float4 v4f32, int i32, float f32, int8 vec8i32, int4 vec4i32) {
+       return __builtin_amdgcn_image_sample_2d_v4f32_f32(100, f32, f32, vec8i32, vec4i32, 0, 120, 110);
+}
+
+// CHECK-LABEL: define dso_local <4 x half> @test_builtin_amdgcn_image_sample_2d_v4f16_f32(
+// CHECK-SAME: <4 x half> noundef [[V4F16:%.*]], i32 noundef [[I32:%.*]], float noundef [[F32:%.*]], <8 x i32> noundef [[VEC8I32:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x half>, align 8, addrspace(5)
+// CHECK-NEXT:    [[V4F16_ADDR:%.*]] = alloca <4 x half>, align 8, addrspace(5)
+// CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[VEC8I32_ADDR:%.*]] = alloca <8 x i32>, align 32, addrspace(5)
+// CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
+// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// CHECK-NEXT:    [[V4F16_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F16_ADDR]] to ptr
+// CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
+// CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
+// CHECK-NEXT:    [[VEC8I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VEC8I32_ADDR]] to ptr
+// CHECK-NEXT:    [[VEC4I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VEC4I32_ADDR]] to ptr
+// CHECK-NEXT:    store <4 x half> [[V4F16]], ptr [[V4F16_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[I32]], ptr [[I32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store float [[F32]], ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store <8 x i32> [[VEC8I32]], ptr [[VEC8I32_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    store <4 x i32> [[VEC4I32]], ptr [[VEC4I32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr [[VEC8I32_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[VEC4I32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x half> @llvm.amdgcn.image.sample.2d.v4f16.f32.v8i32.v4i32(i32 100, float [[TMP0]], float [[TMP1]], <8 x i32> [[TMP2]], <4 x i32> [[TMP3]], i1 false, i32 120, i32 110)
+// CHECK-NEXT:    ret <4 x half> [[TMP4]]
+//
+half4 test_builtin_amdgcn_image_sample_2d_v4f16_f32(half4 v4f16, int i32, float f32, int8 vec8i32, int4 vec4i32) {
+       return __builtin_amdgcn_image_sample_2d_v4f16_f32(100, f32, f32, vec8i32, vec4i32, 0, 120, 110);
+}
+
+// CHECK-LABEL: define dso_local float @test_builtin_amdgcn_image_sample_2darray_f32_f32(
+// CHECK-SAME: i32 noundef [[I32:%.*]], float noundef [[F32:%.*]], <8 x i32> noundef [[VEC8I32:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[VEC8I32_ADDR:%.*]] = alloca <8 x i32>, align 32, addrspace(5)
+// CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
+// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
+// CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
+// CHECK-NEXT:    [[VEC8I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VEC8I32_ADDR]] to ptr
+// CHECK-NEXT:    [[VEC4I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VEC4I32_ADDR]] to ptr
+// CHECK-NEXT:    store i32 [[I32]], ptr [[I32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store float [[F32]], ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store <8 x i32> [[VEC8I32]], ptr [[VEC8I32_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    store <4 x i32> [[VEC4I32]], ptr [[VEC4I32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i32>, ptr [[VEC8I32_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[VEC4I32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP5:%.*]] = call float @llvm.amdgcn.image.sample.2darray.f32.f32.v8i32.v4i32(i32 100, float [[TMP0]], float [[TMP1]], float [[TMP2]], <8 x i32> [[TMP3]], <4 x i32> [[TMP4]], i1 false, i32 120, i32 110)
+// CHECK-NEXT:    ret float [[TMP5]]
+//
+float test_builtin_amdgcn_image_sample_2darray_f32_f32(int i32, float f32, int8 vec8i32, int4 vec4i32) {
+       return __builtin_amdgcn_image_sample_2darray_f32_f32(100, f32, f32, f32, vec8i32, vec4i32, 0, 120, 110);
+}
+
+// CHECK-LABEL: define dso_local <4 x float> @test_builtin_amdgcn_image_sample_2darray_v4f32_f32(
+// CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], i32 noundef [[I32:%.*]], float noundef [[F32:%.*]], <8 x i32> noundef [[VEC8I32:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x float>, align 16, addrspace(5)
+// CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
+// CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[VEC8I32_ADDR:%.*]] = alloca <8 x i32>, align 32, addrspace(5)
+// CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
+// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
+// CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
+// CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
+// CHECK-NEXT:    [[VEC8I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VEC8I32_ADDR]] to ptr
+// CHECK-NEXT:    [[VEC4I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VEC4I32_ADDR]] to ptr
+// CHECK-NEXT:    store <4 x float> [[V4F32]], ptr [[V4F32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    store i32 [[I32]], ptr [[I32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store float [[F32]], ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store <8 x i32> [[VEC8I32]], ptr [[VEC8I32_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    store <4 x i32> [[VEC4I32]], ptr [[VEC4I32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i32>, ptr [[VEC8I32_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[VEC4I32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.2darray.v4f32.f32.v8i32.v4i32(i32 100, float [[TMP0]], float [[TMP1]], float [[TMP2]], <8 x i32> [[TMP3]], <4 x i32> [[TMP4]], i1 false, i32 120, i32 110)
+// CHECK-NEXT:    ret <4 x float> [[TMP5]]
+//
+float4 test_builtin_amdgcn_image_sample_2darray_v4f32_f32(float4 v4f32, int i32, float f32, int8 vec8i32, int4 vec4i32) {
+       return __builtin_amdgcn_image_sample_2darray_v4f32_f32(100, f32, f32, f32, vec8i32, vec4i32, 0, 120, 110);
+}
+
+// CHECK-LABEL: define dso_local <4 x half> @test_builtin_amdgcn_image_sample_2darray_v4f16_f32(
+// CHECK-SAME: <4 x half> noundef [[V4F16:%.*]], i32 noundef [[I32:%.*]], float noundef [[F32:%.*]], <8 x i32> noundef [[VEC8I32:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x half>, align 8, addrspace(5)
+// CHECK-NEXT:    [[V4F16_ADDR:%.*]] = alloca <4 x half>, align 8, addrspace(5)
+// CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[VEC8I32_ADDR:%.*]] = alloca <8 x i32>, align 32, addrspace(5)
+// CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
+// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// CHECK-NEXT:    [[V4F16_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F16_ADDR]] to ptr
+// CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
+// CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
+// CHECK-NEXT:    [[VEC8I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VEC8I32_ADDR]] to ptr
+// CHECK-NEXT:    [[VEC4I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VEC4I32_ADDR]] to ptr
+// CHECK-NEXT:    store <4 x half> [[V4F16]], ptr [[V4F16_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[I32]], ptr [[I32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store float [[F32]], ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store <8 x i32> [[VEC8I32]], ptr [[VEC8I32_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    store <4 x i32> [[VEC4I32]], ptr [[VEC4I32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i32>, ptr [[VEC8I32_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[VEC4I32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x half> @llvm.amdgcn.image.sample.2darray.v4f16.f32.v8i32.v4i32(i32 100, float [[TMP0]], float [[TMP1]], float [[TMP2]], <8 x i32> [[TMP3]], <4 x i32> [[TMP4]], i1 false, i32 120, i32 110)
+// CHECK-NEXT:    ret <4 x half> [[TMP5]]
+//
+half4 test_builtin_amdgcn_image_sample_2darray_v4f16_f32(half4 v4f16, int i32, float f32, int8 vec8i32, int4 vec4i32) {
+       return __builtin_amdgcn_image_sample_2darray_v4f16_f32(100, f32, f32, f32, vec8i32, vec4i32, 0, 120, 110);
+}
+
+// CHECK-LABEL: define dso_local <4 x float> @test_builtin_amdgcn_image_sample_3d_v4f32_f32(
+// CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], i32 noundef [[I32:%.*]], float noundef [[F32:%.*]], <8 x i32> noundef [[VEC8I32:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x float>, align 16, addrspace(5)
+// CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
+// CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[VEC8I32_ADDR:%.*]] = alloca <8 x i32>, align 32, addrspace(5)
+// CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
+// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
+// CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
+// CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
+// CHECK-NEXT:    [[VEC8I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VEC8I32_ADDR]] to ptr
+// CHECK-NEXT:    [[VEC4I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VEC4I32_ADDR]] to ptr
+// CHECK-NEXT:    store <4 x float> [[V4F32]], ptr [[V4F32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    store i32 [[I32]], ptr [[I32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store float [[F32]], ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store <8 x i32> [[VEC8I32]], ptr [[VEC8I32_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    store <4 x i32> [[VEC4I32]], ptr [[VEC4I32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i32>, ptr [[VEC8I32_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[VEC4I32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.3d.v4f32.f32.v8i32.v4i32(i32 100, float [[TMP0]], float [[TMP1]], float [[TMP2]], <8 x i32> [[TMP3]], <4 x i32> [[TMP4]], i1 false, i32 120, i32 110)
+// CHECK-NEXT:    ret <4 x float> [[TMP5]]
+//
+float4 test_builtin_amdgcn_image_sample_3d_v4f32_f32(float4 v4f32, int i32, float f32, int8 vec8i32, int4 vec4i32) {
+       return __builtin_amdgcn_image_sample_3d_v4f32_f32(100, f32, f32, f32, vec8i32, vec4i32, 0, 120, 110);
+}
+
+// CHECK-LABEL: define dso_local <4 x half> @test_builtin_amdgcn_image_sample_3d_v4f16_f32(
+// CHECK-SAME: <4 x half> noundef [[V4F16:%.*]], i32 noundef [[I32:%.*]], float noundef [[F32:%.*]], <8 x i32> noundef [[VEC8I32:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x half>, align 8, addrspace(5)
+// CHECK-NEXT:    [[V4F16_ADDR:%.*]] = alloca <4 x half>, align 8, addrspace(5)
+// CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[VEC8I32_ADDR:%.*]] = alloca <8 x i32>, align 32, addrspace(5)
+// CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
+// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// CHECK-NEXT:    [[V4F16_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F16_ADDR]] to ptr
+// CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
+// CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
+// CHECK-NEXT:    [[VEC8I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VEC8I32_ADDR]] to ptr
+// CHECK-NEXT:    [[VEC4I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VEC4I32_ADDR]] to ptr
+// CHECK-NEXT:    store <4 x half> [[V4F16]], ptr [[V4F16_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[I32]], ptr [[I32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store float [[F32]], ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store <8 x i32> [[VEC8I32]], ptr [[VEC8I32_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    store <4 x i32> [[VEC4I32]], ptr [[VEC4I32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i32>, ptr [[VEC8I32_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[VEC4I32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x half> @llvm.amdgcn.image.sample.3d.v4f16.f32.v8i32.v4i32(i32 100, float [[TMP0]], float [[TMP1]], float [[TMP2]], <8 x i32> [[TMP3]], <4 x i32> [[TMP4]], i1 false, i32 120, i32 110)
+// CHECK-NEXT:    ret <4 x half> [[TMP5]]
+//
+half4 test_builtin_amdgcn_image_sample_3d_v4f16_f32(half4 v4f16, int i32, float f32, int8 vec8i32, int4 vec4i32) {
+       return __builtin_amdgcn_image_sample_3d_v4f16_f32(100, f32, f32, f32, vec8i32, vec4i32, 0, 120, 110);
+}
+
+// CHECK-LABEL: define dso_local <4 x float> @test_builtin_amdgcn_image_sample_cube_v4f32_f32(
+// CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], i32 noundef [[I32:%.*]], float noundef [[F32:%.*]], <8 x i32> noundef [[VEC8I32:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x float>, align 16, addrspace(5)
+// CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
+// CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[VEC8I32_ADDR:%.*]] = alloca <8 x i32>, align 32, addrspace(5)
+// CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
+// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
+// CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
+// CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
+// CHECK-NEXT:    [[VEC8I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VEC8I32_ADDR]] to ptr
+// CHECK-NEXT:    [[VEC4I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VEC4I32_ADDR]] to ptr
+// CHECK-NEXT:    store <4 x float> [[V4F32]], ptr [[V4F32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    store i32 [[I32]], ptr [[I32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store float [[F32]], ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store <8 x i32> [[VEC8I32]], ptr [[VEC8I32_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    store <4 x i32> [[VEC4I32]], ptr [[VEC4I32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i32>, ptr [[VEC8I32_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[VEC4I32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.cube.v4f32.f32.v8i32.v4i32(i32 100, float [[TMP0]], float [[TMP1]], float [[TMP2]], <8 x i32> [[TMP3]], <4 x i32> [[TMP4]], i1 false, i32 120, i32 110)
+// CHECK-NEXT:    ret <4 x float> [[TMP5]]
+//
+float4 test_builtin_amdgcn_image_sample_cube_v4f32_f32(float4 v4f32, int i32, float f32, int8 vec8i32, int4 vec4i32) {
+       return __builtin_amdgcn_image_sample_cube_v4f32_f32(100, f32, f32, f32, vec8i32, vec4i32, 0, 120, 110);
+}
+
+// CHECK-LABEL: define dso_local <4 x half> @test_builtin_amdgcn_image_sample_cube_v4f16_f32(
+// CHECK-SAME: <4 x half> noundef [[V4F16:%.*]], i32 noundef [[I32:%.*]], float noundef [[F32:%.*]], <8 x i32> noundef [[VEC8I32:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x half>, align 8, addrspace(5)
+// CHECK-NEXT:    [[V4F16_ADDR:%.*]] = alloca <4 x half>, align 8, addrspace(5)
+// CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[VEC8I32_ADDR:%.*]] = alloca <8 x i32>, align 32, addrspace(5)
+// CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
+// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// CHECK-NEXT:    [[V4F16_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F16_ADDR]] to ptr
+// CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
+// CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
+// CHECK-NEXT:    [[VEC8I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VEC8I32_ADDR]] to ptr
+// CHECK-NEXT:    [[VEC4I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VEC4I32_ADDR]] to ptr
+// CHECK-NEXT:    store <4 x half> [[V4F16]], ptr [[V4F16_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[I32]], ptr [[I32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store float [[F32]], ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store <8 x i32> [[VEC8I32]], ptr [[VEC8I32_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    store <4 x i32> [[VEC4I32]], ptr [[VEC4I32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[F32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i32>, ptr [[VEC8I32_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[VEC4I32_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x half> @llvm.amdgcn.image.sample.cube.v4f16.f32.v8i32.v4i32(i32 100, float [[TMP0]], float [[TMP1]], float [[TMP2]], <8 x i32> [[TMP3]], <4 x i32> [[TMP4]], i1 false, i32 120, i32 110)
+// CHECK-NEXT:    ret <4 x half> [[TMP5]]
+//
+half4 test_builtin_amdgcn_image_sample_cube_v4f16_f32(half4 v4f16, int i32, float f32, int8 vec8i32, int4 vec4i32) {
+       return __builtin_amdgcn_image_sample_cube_v4f16_f32(100, f32, f32, f32, vec8i32, vec4i32, 0, 120, 110);
 }
