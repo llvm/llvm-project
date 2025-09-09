@@ -2202,7 +2202,8 @@ bool SIGfx10CacheControl::insertBarrierStart(
   // mode. This is because a CU mode release fence does not emit any wait, which
   // is fine when only dealing with vmem, but isn't sufficient in the presence
   // of barriers which do not go through vmem.
-  if (!ST.isCuModeEnabled())
+  // GFX12.5 does not require this additional wait.
+  if (!ST.isCuModeEnabled() || ST.hasGFX1250Insts())
     return false;
 
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
