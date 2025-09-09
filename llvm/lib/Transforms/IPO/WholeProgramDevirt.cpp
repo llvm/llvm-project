@@ -1495,7 +1495,7 @@ void DevirtModule::tryICallBranchFunnel(
 
   if (!JT->getEntryCount().has_value()) {
     // FIXME: we could pass through thinlto the necessary information.
-    setExplicitlyUnknownFunctionEntryCount(*JT);
+    setExplicitlyUnknownFunctionEntryCount(*JT, DEBUG_TYPE);
   }
 }
 
