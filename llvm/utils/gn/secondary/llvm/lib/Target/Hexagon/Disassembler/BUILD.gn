@@ -2,7 +2,10 @@ import("//llvm/utils/TableGen/tablegen.gni")
 
 tablegen("HexagonGenDisassemblerTables") {
   visibility = [ ":Disassembler" ]
-  args = [ "-gen-disassembler" ]
+  args = [
+    "-gen-disassembler",
+    "-ignore-non-decodable-operands",
+  ]
   td_file = "../Hexagon.td"
 }
 
