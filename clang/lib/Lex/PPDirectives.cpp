@@ -478,13 +478,15 @@ Preprocessor::CheckEndOfDirective(StringRef DirType, bool EnableMacros,
       !CurTokenLexer)
     Hint = FixItHint::CreateInsertion(Tmp.getLocation(),"//");
 
-  unsigned DiagID = diag::ext_pp_extra_tokens_at_eol;
-  // C++20 import or module directive has no '#' prefix.
   if (getLangOpts().CPlusPlusModules &&
       (DirType == "import" || DirType == "module"))
-    DiagID = diag::ext_pp_extra_tokens_at_module_directive_eol;
-
-  Diag(Tmp, DiagID) << DirType << Hint;
+    Diag(Tmp, diag::ext_pp_extra_tokens_at_eol) << DirType << Hint;
+  else if (IsAtImport && DirType == "import")
+    Diag(Tmp, diag::ext_pp_extra_tokens_at_eol)
+        << llvm::Twine("@").concat(DirType).str() << Hint;
+  else
+    Diag(Tmp, diag::ext_pp_extra_tokens_at_eol)
+        << llvm::Twine("#").concat(DirType).str() << Hint;
   return DiscardUntilEndOfDirective().getEnd();
 }
 
@@ -1388,10 +1390,18 @@ void Preprocessor::HandleDirective(Token &Result) {
       return HandleCXXModuleDirective(Result);
     // GNU Extensions.
     case tok::pp_import:
-      if (Introducer.isModuleContextualKeyword(getLangOpts(),
-                                               /*AllowExport=*/false))
+      switch (Introducer.getKind()) {
+      case tok::kw_import:
+        if (ModuleLikeDirectiveIntroducer &&
+            ModuleLikeDirectiveIntroducer->is(tok::at))
+          return HandleObjCAtImportDirective(Result);
         return HandleCXXImportDirective(Result);
-      return HandleImportDirective(Introducer.getLocation(), Result);
+      case tok::hash:
+        return HandleImportDirective(Introducer.getLocation(), Result);
+      default:
+        llvm_unreachable("Not a valid import directive");
+      }
+      break;
     case tok::pp_include_next:
       return HandleIncludeNextDirective(Introducer.getLocation(), Result);
 
@@ -4084,14 +4094,80 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
   HandleEmbedDirectiveImpl(HashLoc, *Params, BinaryContents, FilenameToGo);
 }
 
+/// Lex a token following the 'import' contextual keyword.
+///
+/// [ObjC]    @ import module-name ;
+///     module-name:
+///           module-name-qualifier[opt] identifier
+///
+///     module-name-qualifier
+///           module-name-qualifier[opt] identifier .
+///
+/// We respond to a pp-import by importing macros from the named module.
+void Preprocessor::HandleObjCAtImportDirective(Token &ImportTok) {
+  assert(ModuleLikeDirectiveIntroducer &&
+         ModuleLikeDirectiveIntroducer->is(tok::at) &&
+         "@ token must set during pervious lexing");
+  ModuleLikeDirectiveIntroducer.reset();
+  ModuleImportLoc = ImportTok.getLocation();
+  SmallVector<Token, 32> DirToks{ImportTok};
+  SmallVector<IdentifierLoc, 3> Path;
+  Token Tok;
+  Lex(Tok);
+  if (LexModuleNameContinue(Tok, ModuleImportLoc, DirToks, Path)) {
+    if (Tok.isNot(tok::eod))
+      CheckEndOfDirective(ImportTok.getIdentifierInfo()->getName(),
+                          /*EnableMacros=*/false, &DirToks);
+    EnterModuleSuffixTokenStream(DirToks);
+    return;
+  }
+
+  // Consume the pp-import-suffix and expand any macros in it now, if we're not
+  // at the semicolon already.
+  if (!DirToks.back().isOneOf(tok::semi, tok::eod))
+    CollectPPImportSuffix(DirToks);
+
+  if (DirToks.back().isNot(tok::eod))
+    CheckEndOfDirective(ImportTok.getIdentifierInfo()->getName());
+  else
+    DirToks.pop_back();
+
+  // This is not a pp-import after all.
+  if (DirToks.back().isNot(tok::semi)) {
+    EnterModuleSuffixTokenStream(DirToks);
+    return;
+  }
+
+  SourceLocation SemiLoc = DirToks.back().getLocation();
+  Module *Imported = nullptr;
+  if (getLangOpts().Modules) {
+    Imported = TheModuleLoader.loadModule(ImportTok.getLocation(), Path,
+                                          Module::Hidden,
+                                          /*IsInclusionDirective=*/false);
+    if (Imported)
+      makeModuleVisible(Imported, SemiLoc);
+
+    // We hit an error processing the import. Bail out.
+    if (hadModuleLoaderFatalFailure()) {
+      // With a fatal failure in the module loader, we abort parsing.
+      assert(CurLexer && "#include but no current lexer set!");
+      CurLexer->cutOffLexing();
+    }
+  }
+
+  if (Callbacks)
+    Callbacks->moduleImport(ModuleImportLoc, Path, Imported);
+  EnterModuleSuffixTokenStream(DirToks);
+}
+
 void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
   assert(getLangOpts().CPlusPlusModules && ImportTok.is(tok::kw_import));
   llvm::SaveAndRestore<bool> SaveImportingCXXModules(
       this->ImportingCXXNamedModules);
   ImportingCXXNamedModules = true;
 
-  if (LastTokenWasExportKeyword.isValid())
-    LastTokenWasExportKeyword.reset();
+  if (ModuleLikeDirectiveIntroducer)
+    ModuleLikeDirectiveIntroducer.reset();
 
   Token Tok;
   if (LexHeaderName(Tok)) {
@@ -4215,9 +4291,9 @@ void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
 void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
   assert(getLangOpts().CPlusPlusModules && ModuleTok.is(tok::kw_module));
   Token Introducer = ModuleTok;
-  if (LastTokenWasExportKeyword.isValid()) {
-    Introducer = LastTokenWasExportKeyword.getExportTok();
-    LastTokenWasExportKeyword.reset();
+  if (ModuleLikeDirectiveIntroducer) {
+    Introducer = *ModuleLikeDirectiveIntroducer;
+    ModuleLikeDirectiveIntroducer.reset();
   }
 
   SourceLocation StartLoc = Introducer.getLocation();
@@ -4280,7 +4356,8 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
       LexUnexpandedToken(Tok);
       if (LexModuleNameContinue(Tok, UseLoc, DirToks, Partition)) {
         if (Tok.isNot(tok::eod))
-          CheckEndOfDirective(ModuleTok.getIdentifierInfo()->getName());
+          CheckEndOfDirective(ModuleTok.getIdentifierInfo()->getName(),
+                              /*EnableMacros=*/false, &DirToks);
         EnterModuleSuffixTokenStream(DirToks);
         return;
       }

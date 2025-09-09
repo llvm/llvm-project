@@ -77,16 +77,13 @@ tok::ObjCKeywordKind Token::getObjCKeywordID() const {
 /// or module).
 bool Token::isModuleContextualKeyword(const LangOptions &LangOpts,
                                       bool AllowExport) const {
-  if (!LangOpts.CPlusPlusModules)
+  if (!LangOpts.CPlusPlusModules || isAnnotation())
     return false;
   if (AllowExport && is(tok::kw_export))
     return true;
-  if (isOneOf(tok::kw_import, tok::kw_module))
-    return true;
-  if (isNot(tok::identifier))
-    return false;
-  const auto *II = getIdentifierInfo();
-  return II->isModulesImport() || II->isModulesDeclaration();
+  if (const auto *II = getIdentifierInfo())
+    return II->isModulesImport() || II->isModulesDeclaration();
+  return false;
 }
 
 /// Determine whether the token kind starts a simple-type-specifier.
@@ -3758,6 +3755,9 @@ LexStart:
   assert(!Result.needsCleaning() && "Result needs cleaning");
   assert(!Result.hasPtrData() && "Result has not been reset");
 
+  if (TokAtPhysicalStartOfLine)
+    Result.setFlag(Token::PhysicalStartOfLine);
+
   // CurPtr - Cache BufferPtr in an automatic variable.
   const char *CurPtr = BufferPtr;
 
@@ -4040,10 +4040,9 @@ LexStart:
     // Notify MIOpt that we read a non-whitespace/non-comment token.
     MIOpt.ReadToken();
     bool returnedToken = LexIdentifierContinue(Result, CurPtr);
-    if (returnedToken && Result.isModuleContextualKeyword(LangOpts) &&
-        !LexingRawMode && !Is_PragmaLexer && !ParsingPreprocessorDirective &&
-        PP &&
-        PP->HandleModuleContextualKeyword(Result, TokAtPhysicalStartOfLine))
+    if (returnedToken && Result.isNot(tok::eof) && !LexingRawMode &&
+        !Is_PragmaLexer && !ParsingPreprocessorDirective && PP &&
+        PP->HandleModuleContextualKeyword(Result))
       goto HandleDirective;
     return returnedToken;
   }
@@ -4454,9 +4453,14 @@ LexStart:
 
   case '@':
     // Objective C support.
-    if (CurPtr[-1] == '@' && LangOpts.ObjC)
+    if (CurPtr[-1] == '@' && LangOpts.ObjC) {
+      if (TokAtPhysicalStartOfLine && !LexingRawMode && !Is_PragmaLexer) {
+        FormTokenWithChars(Result, CurPtr, tok::at);
+        (void)PP->HandleModuleContextualKeyword(Result);
+        return true;
+      }
       Kind = tok::at;
-    else
+    } else
       Kind = tok::unknown;
     break;
 
@@ -4538,10 +4542,6 @@ LexStart:
 HandleDirective:
   PP->HandleDirective(Result);
 
-  if (PP->hadModuleLoaderFatalFailure())
-    // With a fatal failure in the module loader, we abort parsing.
-    return true;
-
   // We parsed the directive; lex a token with the new state.
   return false;
 
@@ -4608,20 +4608,26 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
 
   const char *TokPtr = convertDependencyDirectiveToken(DDTok, Result);
 
-  if (Result.is(tok::hash) && Result.isAtStartOfLine()) {
+  if (Result.is(tok::hash) && Result.isAtStartOfLine() && !isLexingRawMode()) {
     PP->HandleDirective(Result);
     if (PP->hadModuleLoaderFatalFailure())
       // With a fatal failure in the module loader, we abort parsing.
       return true;
     return false;
   }
+  if (Result.is(tok::at) && Result.isAtStartOfLine() && !isLexingRawMode()) {
+    (void)PP->HandleModuleContextualKeyword(Result);
+    return false;
+  }
   if (Result.is(tok::raw_identifier)) {
     Result.setRawIdentifierData(TokPtr);
     if (!isLexingRawMode()) {
       const IdentifierInfo *II = PP->LookUpIdentifierInfo(Result);
-      if (Result.isModuleContextualKeyword(LangOpts) &&
-          PP->HandleModuleContextualKeyword(Result, Result.isAtStartOfLine())) {
+      if (PP->HandleModuleContextualKeyword(Result)) {
         PP->HandleDirective(Result);
+        if (PP->hadModuleLoaderFatalFailure())
+          // With a fatal failure in the module loader, we abort parsing.
+          return true;
         return false;
       }
       if (II->isHandleIdentifierCase())

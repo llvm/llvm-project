@@ -4,7 +4,8 @@
 // RUN: rm -rf %t
 // RUN: mkdir -p %t
 // This could be replaced by diamond_*, except we want to modify the top header
-// RUN: echo '@import l; @import r;' > %t/b.h
+// RUN: echo '@import l;' > %t/b.h
+// RUN: echo '@import r;' >> %t/b.h
 // RUN: echo '@import t; // fromt l' > %t/l.h
 // RUN: echo '@import t; // fromt r' > %t/r.h
 

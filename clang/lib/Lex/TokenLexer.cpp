@@ -701,7 +701,8 @@ bool TokenLexer::Lex(Token &Tok) {
   // Handle recursive expansion!
   if (!Tok.isAnnotation() && Tok.getIdentifierInfo() != nullptr &&
       (!PP.getLangOpts().CPlusPlusModules ||
-       !Tok.isModuleContextualKeyword(PP.getLangOpts()))) {
+       !Tok.isModuleContextualKeyword(PP.getLangOpts())) &&
+      (!PP.getLangOpts().ObjC || !Tok.isObjCAtKeyword(tok::objc_import))) {
     // Change the kind of this identifier to the appropriate token kind, e.g.
     // turning "for" into a keyword.
     IdentifierInfo *II = Tok.getIdentifierInfo();

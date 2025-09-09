@@ -579,15 +579,12 @@ bool Scanner::lexModuleDirectiveBody(DirectiveKind Kind, const char *&First,
     return false;
   }
 
+  const auto &Tok = lexToken(First, End);
   pushDirective(Kind);
-  skipWhitespace(First, End);
-  if (First == End)
+  if (Tok.is(tok::eof) || Tok.is(tok::eod))
     return false;
-  if (!isVerticalWhitespace(*First))
-    return reportError(
-        DirectiveLoc, diag::err_dep_source_scanner_unexpected_tokens_at_import);
-  skipNewline(First, End);
-  return false;
+  return reportError(DirectiveLoc,
+                     diag::err_dep_source_scanner_unexpected_tokens_at_import);
 }
 
 dependency_directives_scan::Token &Scanner::lexToken(const char *&First,
@@ -931,10 +928,6 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
     CurDirToks.clear();
   });
 
-  // FIXME: Shoule we handle @import as a preprocessing directive?
-  if (*First == '@')
-    return lexAt(First, End);
-
   if (*First == '_') {
     if (isNextIdentifierOrSkipLine("_Pragma", First, End))
       return lex_Pragma(First, End);
@@ -946,6 +939,10 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
   TheLexer.setParsingPreprocessorDirective(true);
   auto ScEx2 = make_scope_exit(
       [&]() { TheLexer.setParsingPreprocessorDirective(false); });
+
+  // FIXME: Shoule we handle @import as a preprocessing directive?
+  if (*First == '@')
+    return lexAt(First, End);
 
   // Handle module directives for C++20 modules.
   if (*First == 'i' || *First == 'e' || *First == 'm')

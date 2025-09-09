@@ -115,10 +115,9 @@ void Preprocessor::EnterSourceFileWithLexer(Lexer *TheLexer,
   CurPPLexer = TheLexer;
   CurDirLookup = CurDir;
   CurLexerSubmodule = nullptr;
-  if (CurLexerCallback != CLK_LexAfterModuleImport)
-    CurLexerCallback = TheLexer->isDependencyDirectivesLexer()
-                           ? CLK_DependencyDirectivesLexer
-                           : CLK_Lexer;
+  CurLexerCallback = TheLexer->isDependencyDirectivesLexer()
+                         ? CLK_DependencyDirectivesLexer
+                         : CLK_Lexer;
 
   // Notify the client, if desired, that we are in a new source file.
   if (Callbacks && !CurLexer->Is_PragmaLexer) {
@@ -154,8 +153,7 @@ void Preprocessor::EnterMacro(Token &Tok, SourceLocation ILEnd,
   PushIncludeMacroStack();
   CurDirLookup = nullptr;
   CurTokenLexer = std::move(TokLexer);
-  if (CurLexerCallback != CLK_LexAfterModuleImport)
-    CurLexerCallback = CLK_TokenLexer;
+  CurLexerCallback = CLK_TokenLexer;
 }
 
 /// EnterTokenStream - Add a "macro" context to the top of the include stack,
@@ -209,8 +207,7 @@ void Preprocessor::EnterTokenStream(const Token *Toks, unsigned NumToks,
   PushIncludeMacroStack();
   CurDirLookup = nullptr;
   CurTokenLexer = std::move(TokLexer);
-  if (CurLexerCallback != CLK_LexAfterModuleImport)
-    CurLexerCallback = CLK_TokenLexer;
+  CurLexerCallback = CLK_TokenLexer;
 }
 
 /// Compute the relative path that names the given file relative to

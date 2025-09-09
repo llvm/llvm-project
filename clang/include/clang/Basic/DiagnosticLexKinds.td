@@ -465,10 +465,7 @@ def err_pp_embed_device_file : Error<
   "device files are not yet supported by '#embed' directive">;
 
 def ext_pp_extra_tokens_at_eol : ExtWarn<
-  "extra tokens at end of #%0 directive">, InGroup<ExtraTokens>;
-def ext_pp_extra_tokens_at_module_directive_eol
-    : ExtWarn<"extra tokens at end of '%0' directive">,
-      InGroup<ExtraTokens>;
+  "extra tokens at end of %0 directive">, InGroup<ExtraTokens>;
 
 def ext_pp_comma_expr : Extension<"comma operator in operand of #if">;
 def ext_pp_bad_vaargs_use : Extension<

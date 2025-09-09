@@ -90,8 +90,10 @@ public:
                           // re-added, e.g. via EnterTokenStream. Annotation
                           // tokens are *not* reinjected.
     HasSeenNoTrivialPPDirective =
-        0x1000, // Whether we've seen any 'no-trivial' pp-directives before
+        0x1000, // Whether we've seen any 'no-trivial' pp-directives before//
                 // current position.
+    PhysicalStartOfLine =
+        0x2000, // At the physical start of line or only after whitespace.
   };
 
   tok::TokenKind getKind() const { return Kind; }
@@ -276,6 +278,10 @@ public:
   /// isAtStartOfLine - Return true if this token is at the start of a line.
   ///
   bool isAtStartOfLine() const { return getFlag(StartOfLine); }
+
+  /// isAtPhysicalStartOfLine - Return true if this token is at the physical
+  /// start of a line.
+  bool isAtPhysicalStartOfLine() const { return getFlag(PhysicalStartOfLine); }
 
   /// Return true if this token has whitespace before it.
   ///

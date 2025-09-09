@@ -137,24 +137,6 @@ struct CXXStandardLibraryVersionInfo {
   std::uint64_t Version;
 };
 
-class ExportContextualKeywordInfo {
-  Token ExportTok;
-  bool AtPhysicalStartOfLine = false;
-
-public:
-  ExportContextualKeywordInfo() = default;
-  ExportContextualKeywordInfo(const Token &Tok, bool AtPhysicalStartOfLine)
-      : ExportTok(Tok), AtPhysicalStartOfLine(AtPhysicalStartOfLine) {}
-
-  bool isValid() const { return ExportTok.is(tok::kw_export); }
-  bool isAtPhysicalStartOfLine() const { return AtPhysicalStartOfLine; }
-  Token getExportTok() const { return ExportTok; }
-  void reset() {
-    ExportTok.startToken();
-    AtPhysicalStartOfLine = false;
-  }
-};
-
 /// Engages in a tight little dance with the lexer to efficiently
 /// preprocess tokens.
 ///
@@ -378,7 +360,7 @@ private:
   bool DeclaringCXXNamedModules = false;
 
   /// Whether the last token we lexed was an 'export' keyword.
-  ExportContextualKeywordInfo LastTokenWasExportKeyword;
+  std::optional<Token> ModuleLikeDirectiveIntroducer;
 
   /// First pp-token source location in current translation unit.
   SourceLocation FirstPPTokenLoc;
@@ -1808,6 +1790,7 @@ public:
   void EnterModuleSuffixTokenStream(ArrayRef<Token> Toks);
   void HandleCXXImportDirective(Token Import);
   void HandleCXXModuleDirective(Token Module);
+  void HandleObjCAtImportDirective(Token &ImportTok);
 
   /// Callback invoked when the lexer sees one of export, import or module token
   /// at the start of a line.
@@ -1815,8 +1798,7 @@ public:
   /// This consumes the import/module directive, modifies the
   /// lexer/preprocessor state, and advances the lexer(s) so that the next token
   /// read is the correct one.
-  bool HandleModuleContextualKeyword(Token &Result,
-                                     bool TokAtPhysicalStartOfLine);
+  bool HandleModuleContextualKeyword(Token &Result);
 
   /// Get the start location of the first pp-token in main file.
   SourceLocation getMainFileFirstPPTokenLoc() const {
@@ -1825,7 +1807,6 @@ public:
     return FirstPPTokenLoc;
   }
 
-  bool LexAfterModuleImport(Token &Result);
   void CollectPPImportSuffix(SmallVectorImpl<Token> &Toks,
                              bool StopUntilEOD = false);
   bool CollectPPImportSuffixAndEnterStream(SmallVectorImpl<Token> &Toks,
@@ -2356,6 +2337,7 @@ public:
   template <typename... Ts> bool isNextPPTokenOneOf(Ts... Ks) {
     static_assert(sizeof...(Ts) > 0,
                   "requires at least one tok::TokenKind specified");
+
     // Do some quick tests for rejection cases.
     std::optional<Token> Val;
     if (CurLexer)
@@ -3174,9 +3156,6 @@ private:
   }
   static bool CLK_DependencyDirectivesLexer(Preprocessor &P, Token &Result) {
     return P.CurLexer->LexDependencyDirectiveToken(Result);
-  }
-  static bool CLK_LexAfterModuleImport(Preprocessor &P, Token &Result) {
-    return P.LexAfterModuleImport(Result);
   }
 };
 

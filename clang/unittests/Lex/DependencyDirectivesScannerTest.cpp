@@ -639,7 +639,7 @@ TEST(MinimizeSourceToDependencyDirectivesTest, AtImport) {
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(" @ import  A;\n", Out));
   EXPECT_STREQ("@import A;\n", Out.data());
 
-  ASSERT_FALSE(minimizeSourceToDependencyDirectives("@import A\n;", Out));
+  ASSERT_TRUE(minimizeSourceToDependencyDirectives("@import A\n;", Out));
   EXPECT_STREQ("@import A;\n", Out.data());
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives("@import A.B;\n", Out));
