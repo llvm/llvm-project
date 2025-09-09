@@ -1497,6 +1497,8 @@ void MicrosoftCXXNameMangler::mangleCXXDtorType(CXXDtorType T) {
   // it.
   case Dtor_Comdat:
     llvm_unreachable("not expecting a COMDAT");
+  case Dtor_Unified:
+    llvm_unreachable("not expecting a unified dtor type");
   }
   llvm_unreachable("Unsupported dtor type?");
 }
