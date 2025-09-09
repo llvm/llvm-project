@@ -10,12 +10,10 @@
 
 #include "mlir/Conversion/GPUToROCDL/Runtimes.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
-#include "mlir/Pass/Pass.h"
-#include "llvm/ADT/DenseSet.h"
-#include <cstddef>
 #include <memory>
 
 namespace mlir {
+class Pass;
 class LLVMTypeConverter;
 class ConversionTarget;
 class RewritePatternSet;
