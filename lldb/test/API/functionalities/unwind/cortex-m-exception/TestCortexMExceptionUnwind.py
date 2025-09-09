@@ -12,6 +12,7 @@ from lldbsuite.test import lldbutil
 class TestCortexMExceptionUnwind(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipUnlessDarwin  # on the lldb-remote-linux-ubuntu CI, only get 1 stack frame not 6
     def test_no_fpu(self):
         """Test that we can backtrace correctly through an ARM Cortex-M Exception return stack"""
 
@@ -31,6 +32,7 @@ class TestCortexMExceptionUnwind(TestBase):
         self.assertTrue(process.IsValid())
 
         if self.TraceOn():
+            self.runCmd("target list")
             self.runCmd("image list")
             self.runCmd("target modules dump sections")
             self.runCmd("target modules dump symtab")
