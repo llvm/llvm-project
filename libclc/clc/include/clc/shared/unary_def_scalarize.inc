@@ -43,7 +43,7 @@ _CLC_OVERLOAD _CLC_DEF __CLC_RET_TYPE __CLC_FUNCTION(__CLC_ARG1_TYPE x) {
 #define __CLC_VECTOR_SIZE 2
 _CLC_OVERLOAD _CLC_DEF __CLC_RET_VECTYPE __CLC_FUNCTION(__CLC_ARG1_VECTYPE x) {
   return (__CLC_RET_VECTYPE)(__CLC_IMPL_FUNCTION(x.s0),
-                           __CLC_IMPL_FUNCTION(x.s1));
+                             __CLC_IMPL_FUNCTION(x.s1));
 }
 #undef __CLC_VECTOR_SIZE
 #endif // __CLC_MIN_VECSIZE <= 2
@@ -54,26 +54,27 @@ _CLC_OVERLOAD _CLC_DEF __CLC_RET_VECTYPE __CLC_FUNCTION(__CLC_ARG1_VECTYPE x) {
 
 #define __CLC_VECTOR_SIZE 3
 _CLC_OVERLOAD _CLC_DEF __CLC_RET_VECTYPE __CLC_FUNCTION(__CLC_ARG1_VECTYPE x) {
-  return (__CLC_RET_VECTYPE)(__CLC_IMPL_FUNCTION(x.s0), __CLC_IMPL_FUNCTION(x.s1),
-                           __CLC_IMPL_FUNCTION(x.s2));
+  return (__CLC_RET_VECTYPE)(__CLC_IMPL_FUNCTION(x.s0),
+                             __CLC_IMPL_FUNCTION(x.s1),
+                             __CLC_IMPL_FUNCTION(x.s2));
 }
 #undef __CLC_VECTOR_SIZE
 
 #define __CLC_VECTOR_SIZE 4
 _CLC_OVERLOAD _CLC_DEF __CLC_RET_VECTYPE __CLC_FUNCTION(__CLC_ARG1_VECTYPE x) {
-  return (__CLC_RET_VECTYPE)(__CLC_IMPL_FUNCTION(x.s0), __CLC_IMPL_FUNCTION(x.s1),
-                           __CLC_IMPL_FUNCTION(x.s2),
-                           __CLC_IMPL_FUNCTION(x.s3));
+  return (
+      __CLC_RET_VECTYPE)(__CLC_IMPL_FUNCTION(x.s0), __CLC_IMPL_FUNCTION(x.s1),
+                         __CLC_IMPL_FUNCTION(x.s2), __CLC_IMPL_FUNCTION(x.s3));
 }
 #undef __CLC_VECTOR_SIZE
 
 #define __CLC_VECTOR_SIZE 8
 _CLC_OVERLOAD _CLC_DEF __CLC_RET_VECTYPE __CLC_FUNCTION(__CLC_ARG1_VECTYPE x) {
-  return (__CLC_RET_VECTYPE)(__CLC_IMPL_FUNCTION(x.s0), __CLC_IMPL_FUNCTION(x.s1),
-                           __CLC_IMPL_FUNCTION(x.s2), __CLC_IMPL_FUNCTION(x.s3),
-                           __CLC_IMPL_FUNCTION(x.s4), __CLC_IMPL_FUNCTION(x.s5),
-                           __CLC_IMPL_FUNCTION(x.s6),
-                           __CLC_IMPL_FUNCTION(x.s7));
+  return (
+      __CLC_RET_VECTYPE)(__CLC_IMPL_FUNCTION(x.s0), __CLC_IMPL_FUNCTION(x.s1),
+                         __CLC_IMPL_FUNCTION(x.s2), __CLC_IMPL_FUNCTION(x.s3),
+                         __CLC_IMPL_FUNCTION(x.s4), __CLC_IMPL_FUNCTION(x.s5),
+                         __CLC_IMPL_FUNCTION(x.s6), __CLC_IMPL_FUNCTION(x.s7));
 }
 #undef __CLC_VECTOR_SIZE
 
@@ -81,13 +82,13 @@ _CLC_OVERLOAD _CLC_DEF __CLC_RET_VECTYPE __CLC_FUNCTION(__CLC_ARG1_VECTYPE x) {
 _CLC_OVERLOAD _CLC_DEF __CLC_RET_VECTYPE __CLC_FUNCTION(__CLC_ARG1_VECTYPE x) {
   return (
       __CLC_RET_VECTYPE)(__CLC_IMPL_FUNCTION(x.s0), __CLC_IMPL_FUNCTION(x.s1),
-                        __CLC_IMPL_FUNCTION(x.s2), __CLC_IMPL_FUNCTION(x.s3),
-                        __CLC_IMPL_FUNCTION(x.s4), __CLC_IMPL_FUNCTION(x.s5),
-                        __CLC_IMPL_FUNCTION(x.s6), __CLC_IMPL_FUNCTION(x.s7),
-                        __CLC_IMPL_FUNCTION(x.s8), __CLC_IMPL_FUNCTION(x.s9),
-                        __CLC_IMPL_FUNCTION(x.sa), __CLC_IMPL_FUNCTION(x.sb),
-                        __CLC_IMPL_FUNCTION(x.sc), __CLC_IMPL_FUNCTION(x.sd),
-                        __CLC_IMPL_FUNCTION(x.se), __CLC_IMPL_FUNCTION(x.sf));
+                         __CLC_IMPL_FUNCTION(x.s2), __CLC_IMPL_FUNCTION(x.s3),
+                         __CLC_IMPL_FUNCTION(x.s4), __CLC_IMPL_FUNCTION(x.s5),
+                         __CLC_IMPL_FUNCTION(x.s6), __CLC_IMPL_FUNCTION(x.s7),
+                         __CLC_IMPL_FUNCTION(x.s8), __CLC_IMPL_FUNCTION(x.s9),
+                         __CLC_IMPL_FUNCTION(x.sa), __CLC_IMPL_FUNCTION(x.sb),
+                         __CLC_IMPL_FUNCTION(x.sc), __CLC_IMPL_FUNCTION(x.sd),
+                         __CLC_IMPL_FUNCTION(x.se), __CLC_IMPL_FUNCTION(x.sf));
 }
 #undef __CLC_VECTOR_SIZE
 
