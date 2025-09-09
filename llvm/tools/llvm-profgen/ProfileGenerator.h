@@ -123,6 +123,8 @@ protected:
 
   void showDensitySuggestion(double Density);
 
+  void markAllContextPreinlined(SampleProfileMap &ProfileMap);
+
   void collectProfiledFunctions();
 
   bool collectFunctionsFromRawProfile(
