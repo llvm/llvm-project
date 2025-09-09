@@ -223,6 +223,22 @@ public:
 
   mlir::Value createAlloca(mlir::Location loc, cir::PointerType addrType,
                            mlir::Type type, llvm::StringRef name,
+                           mlir::IntegerAttr alignment,
+                           mlir::Value dynAllocSize) {
+    return cir::AllocaOp::create(*this, loc, addrType, type, name, alignment,
+                                 dynAllocSize);
+  }
+
+  mlir::Value createAlloca(mlir::Location loc, cir::PointerType addrType,
+                           mlir::Type type, llvm::StringRef name,
+                           clang::CharUnits alignment,
+                           mlir::Value dynAllocSize) {
+    mlir::IntegerAttr alignmentAttr = getAlignmentAttr(alignment);
+    return createAlloca(loc, addrType, type, name, alignmentAttr, dynAllocSize);
+  }
+
+  mlir::Value createAlloca(mlir::Location loc, cir::PointerType addrType,
+                           mlir::Type type, llvm::StringRef name,
                            mlir::IntegerAttr alignment) {
     return cir::AllocaOp::create(*this, loc, addrType, type, name, alignment);
   }
