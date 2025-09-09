@@ -469,8 +469,8 @@ protected:
   MapVector<uint64_t, SmallVector<uint64_t>> TypeIdToIndirTargets;
   // Callgraph - Read callgraph section and process its contents to populate
   // Callgraph related data structures which will be used to dump callgraph
-  // info.
-  void processCallGraphSection();
+  // info. Returns false if there is no .callgraph section in the input file.
+  bool processCallGraphSection();
 
 private:
   mutable SmallVector<std::optional<VersionEntry>, 0> VersionMap;
@@ -5314,28 +5314,26 @@ getCallGraphSection(const object::ELFObjectFile<ELFT> &ObjF) {
     else
       consumeError(NameOrErr.takeError());
 
-    if (Name == CallGraphSectionName) {
-      CallGraphSection = Sec;
-      break;
-    }
+    if (Name == CallGraphSectionName)
+      return Sec;
   }
   return CallGraphSection;
 }
 
-template <class ELFT> void ELFDumper<ELFT>::processCallGraphSection() {
+template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
   std::optional<object::SectionRef> CallGraphSection =
       getCallGraphSection(ObjF);
-  if (!CallGraphSection) {
-    reportUniqueWarning("there is no .callgraph section in " +
-                        getElfObject().getFileName());
-    return;
+  if (!CallGraphSection.has_value()) {
+    reportUniqueWarning("No .callgraph section found.");
+    return false;
   }
 
   StringRef CGSecContents = cantFail(CallGraphSection.value().getContents());
   // TODO: some entries are written in pointer size. are they always 64-bit?
-  if (CGSecContents.size() % sizeof(uint64_t))
-    reportUniqueWarning("Malformed .callgraph section. Unexpected size in " +
-                        getElfObject().getFileName());
+  if (CGSecContents.size() % sizeof(uint64_t)) {
+    reportUniqueWarning("Malformed .callgraph section. Unexpected size.");
+    exit(1);
+  }
 
   size_t Size = CGSecContents.size() / sizeof(uint64_t);
   auto *It = reinterpret_cast<const uint64_t *>(CGSecContents.data());
@@ -5343,18 +5341,20 @@ template <class ELFT> void ELFDumper<ELFT>::processCallGraphSection() {
 
   auto CGHasNext = [&]() { return It < End; };
   auto CGNext = [&]() -> uint64_t {
-    if (!CGHasNext())
-      reportUniqueWarning("Malformed .callgraph section. Parsing error in " +
-                          getElfObject().getFileName());
+    if (!CGHasNext()) {
+      reportUniqueWarning("Malformed .callgraph section. Parsing error.");
+      exit(1);
+    }
     return *It++;
   };
 
   while (CGHasNext()) {
     // Format version number.
     uint64_t FormatVersionNumber = CGNext();
-    if (FormatVersionNumber != 0)
-      reportUniqueWarning("Unknown format version in .callgraph section in " +
-                          getElfObject().getFileName());
+    if (FormatVersionNumber != 0) {
+      reportUniqueWarning("Unknown format version in .callgraph section.");
+      exit(1);
+    }
     // Function entry pc.
     uint64_t FuncEntryPc = CGNext();
     // Function kind.
@@ -5371,9 +5371,8 @@ template <class ELFT> void ELFDumper<ELFT>::processCallGraphSection() {
       TypeIdToIndirTargets[CGNext()].push_back(FuncEntryPc);
       break;
     default:
-      this->reportUniqueWarning(
-          "Unknown function kind in .callgraph section in " +
-          getElfObject().getFileName());
+      this->reportUniqueWarning("Unknown function kind in .callgraph section.");
+      exit(1);
     }
     // Read indirect call sites info.
     uint64_t IndirectCallSiteCount = CGNext();
@@ -5403,22 +5402,18 @@ template <class ELFT> void ELFDumper<ELFT>::processCallGraphSection() {
     NotListedCount += El.second.Kind == FunctionKind::NOT_LISTED;
     UnknownCount += El.second.Kind == FunctionKind::INDIRECT_TARGET_UNKNOWN_TID;
   }
-  for (const auto &El : FuncCGInfo) {
-    NotListedCount += El.second.Kind == FunctionKind::NOT_LISTED;
-    UnknownCount += El.second.Kind == FunctionKind::INDIRECT_TARGET_UNKNOWN_TID;
-  }
   if (NotListedCount)
     reportUniqueWarning("callgraph section does not have information for " +
-                        std::to_string(NotListedCount) + " functions in " +
-                        getElfObject().getFileName());
+                        std::to_string(NotListedCount) + " functions.");
   if (UnknownCount)
     reportUniqueWarning("callgraph section has unknown type id for " +
-                        std::to_string(UnknownCount) + " indirect targets in " +
-                        getElfObject().getFileName());
+                        std::to_string(UnknownCount) + " indirect targets.");
+  return true;
 }
 
 template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
-  this->processCallGraphSection();
+  if (!this->processCallGraphSection())
+    return;
 
   // Print indirect targets
   OS << "\nINDIRECT TARGET TYPES (TYPEID [FUNC_ADDR,])";
@@ -5426,10 +5421,15 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
   // Print indirect targets with unknown type.
   // For completeness, functions for which the call graph section does not
   // provide information are included.
+  bool printedHeader = false;
   for (const auto &El : this->FuncCGInfo) {
     FunctionKind FuncKind = El.second.Kind;
     if (FuncKind == FunctionKind::NOT_LISTED ||
         FuncKind == FunctionKind::INDIRECT_TARGET_UNKNOWN_TID) {
+      if (!printedHeader) {
+        OS << "\nUNKNOWN";
+        printedHeader = true;
+      }
       uint64_t FuncEntryPc = El.first;
       OS << " " << format("%lx", FuncEntryPc);
     }
@@ -8315,7 +8315,8 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
 }
 
 template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
-  this->processCallGraphSection();
+  if (!this->processCallGraphSection())
+    return;
 
   DictScope D(this->W, "callgraph_info");
   // Use llvm-symbolizer to get function name and address instead.
