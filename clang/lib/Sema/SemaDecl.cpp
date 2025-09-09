@@ -1653,6 +1653,17 @@ void Sema::FilterLookupForScope(LookupResult &R, DeclContext *Ctx, Scope *S,
   F.done();
 }
 
+static bool isImplicitInstantiation(NamedDecl *D) {
+  if (auto *VD = dyn_cast<VarDecl>(D))
+    return VD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation;
+  if (auto *FD = dyn_cast<FunctionDecl>(D))
+    return FD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation;
+  if (auto *RD = dyn_cast<CXXRecordDecl>(D))
+    return RD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation;
+
+  return false;
+}
+
 bool Sema::CheckRedeclarationModuleOwnership(NamedDecl *New, NamedDecl *Old) {
   // [module.interface]p7:
   // A declaration is attached to a module as follows:
@@ -1667,6 +1678,14 @@ bool Sema::CheckRedeclarationModuleOwnership(NamedDecl *New, NamedDecl *Old) {
     makeMergedDefinitionVisible(New);
     return false;
   }
+
+  // Although we have questions for the module ownership of implicit
+  // instantiations, it should be sure that we shouldn't diagnose the
+  // redeclaration of incorrect module ownership for different implicit
+  // instantiations in different modules. We will diagnose the redeclaration of
+  // incorrect module ownership for the template itself.
+  if (isImplicitInstantiation(New) || isImplicitInstantiation(Old))
+    return false;
 
   Module *NewM = New->getOwningModule();
   Module *OldM = Old->getOwningModule();
