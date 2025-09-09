@@ -141,6 +141,7 @@ struct AArch64MIPeepholeOpt : public MachineFunctionPass {
   bool visitFMOVDr(MachineInstr &MI);
   bool visitUBFMXri(MachineInstr &MI);
   bool visitCopy(MachineInstr &MI);
+  bool visitConditionalBranch(MachineInstr &MI);
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override {
@@ -885,6 +886,93 @@ bool AArch64MIPeepholeOpt::visitCopy(MachineInstr &MI) {
   return true;
 }
 
+bool AArch64MIPeepholeOpt::visitConditionalBranch(MachineInstr &MI) {
+  // Optimize FMOV + CBZ/CBNZ pattern:
+  // %4:gpr32 = COPY %2.ssub:fpr128  (FMOV equivalent)
+  // CBNZW %4:gpr32, %bb.2
+  // 
+  // Transform to:
+  // CMEQ s1, s0, #0      ; Compare with zero (integer vector compare)
+  // FCMP s1, #0.0        ; Float compare to set overflow flag  
+  // B.VS %bb.2           ; Branch on overflow (if original was zero)
+  
+  // Check if this is CBZ or CBNZ
+  bool IsCBZ = MI.getOpcode() == AArch64::CBZW;
+  bool IsCBNZ = MI.getOpcode() == AArch64::CBNZW;
+  
+  if (!IsCBZ && !IsCBNZ)
+    return false;
+    
+  // Get the register being tested
+  Register TestReg = MI.getOperand(0).getReg();
+  
+  // Find the defining instruction - should be a COPY from FPR
+  MachineInstr *DefMI = MRI->getUniqueVRegDef(TestReg);
+  if (!DefMI || DefMI->getOpcode() != AArch64::COPY)
+    return false;
+    
+  // Check if source is from FPR (floating point register)
+  Register SrcReg = DefMI->getOperand(1).getReg();
+  if (!SrcReg.isVirtual())
+    return false;
+    
+  const TargetRegisterClass *SrcRC = MRI->getRegClass(SrcReg);
+  
+  // Check if source is from FPR32 or FPR128 with ssub
+  bool IsFromFPR32 = (SrcRC == &AArch64::FPR32RegClass);
+  bool IsFromFPR128WithSSub = (SrcRC == &AArch64::FPR128RegClass) && 
+                              (DefMI->getOperand(1).getSubReg() == AArch64::ssub);
+  
+  if (!IsFromFPR32 && !IsFromFPR128WithSSub)
+    return false;
+    
+  // Check if the COPY has only one use (the branch instruction)  
+  if (!MRI->hasOneUse(TestReg))
+    return false;
+    
+  // Get the target branch label
+  MachineBasicBlock *TargetMBB = MI.getOperand(1).getMBB();
+    
+  // Get the source FPR register to use in CMEQ
+  Register FPRSrcReg;
+  if (IsFromFPR32) {
+    FPRSrcReg = SrcReg;
+  } else {
+    // Extract from FPR128 to FPR32
+    FPRSrcReg = MRI->createVirtualRegister(&AArch64::FPR32RegClass);
+    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(AArch64::COPY), FPRSrcReg)
+        .addReg(SrcReg, 0, AArch64::ssub);
+  }
+  
+  // Create register for CMEQ result 
+  Register CmeqResultReg = MRI->createVirtualRegister(&AArch64::FPR32RegClass);
+  
+  // Build CMEQ s_result, s_src, #0 (integer vector compare equal with zero)
+  // This produces all 1s (NaN) if src == 0, all 0s if src != 0
+  BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(AArch64::CMEQv1i64rz), CmeqResultReg)
+      .addReg(FPRSrcReg);
+  
+  // Build FCMP s_result, #0.0 (floating point compare)
+  // This sets the overflow flag if the result is NaN (all 1s from CMEQ)
+  BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(AArch64::FCMPSri))
+      .addReg(CmeqResultReg);
+      
+  // Build branch instruction based on original opcode
+  // For CBZ (branch if zero): if original was zero, CMEQ produces all 1s (NaN), FCMP sets V flag
+  // For CBNZ (branch if not zero): if original was not zero, CMEQ produces all 0s, FCMP clears V flag  
+  AArch64CC::CondCode CC = IsCBZ ? AArch64CC::VS : AArch64CC::VC;  // VS = overflow set, VC = overflow clear
+  
+  BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(AArch64::Bcc))
+      .addImm(CC)
+      .addMBB(TargetMBB);
+  
+  // Remove the original copy and branch instructions
+  DefMI->eraseFromParent();
+  MI.eraseFromParent();
+  
+  return true;
+}
+
 bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
@@ -1001,6 +1089,10 @@ bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
         break;
       case AArch64::COPY:
         Changed |= visitCopy(MI);
+        break;
+      case AArch64::CBZW:
+      case AArch64::CBNZW:
+        Changed |= visitConditionalBranch(MI);
         break;
       }
     }
