@@ -59,7 +59,7 @@ public:
     InitializeAllAsmPrinters();
 
     std::string ErrorStr;
-    TheTarget = TargetRegistry::lookupTarget(TripleName, ErrorStr);
+    TheTarget = TargetRegistry::lookupTarget(TheTriple, ErrorStr);
     if (!TheTarget)
       return;
 
