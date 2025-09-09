@@ -560,8 +560,10 @@ def LLVM_TargetAttrInterface
       /*args=*/(ins)
     >,
     InterfaceMethod<
-      /*description=*/"Returns the target features as a string.",
-      /*retTy=*/"StringAttr",
+      /*description=*/"Returns the target features as a TargetFeaturesAttr.",
+      /*retTy=*/"Attribute", // NB: will be a LLVM::TargetFeaturesAttr, though
+                             // need to work around a cyclic dependency on
+                             // LLVMInterfaces.td and LLVMAttrDefs.td.
       /*methodName=*/"getFeatures",
       /*args=*/(ins)
     >

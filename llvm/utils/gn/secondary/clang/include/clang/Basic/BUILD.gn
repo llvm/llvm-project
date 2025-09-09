@@ -32,6 +32,7 @@ diag_groups = [
   "Refactoring",
   "Sema",
   "Serialization",
+  "Trap",
 ]
 foreach(diag_group, diag_groups) {
   clang_tablegen("Diagnostic${diag_group}Kinds") {

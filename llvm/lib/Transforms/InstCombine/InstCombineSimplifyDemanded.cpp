@@ -795,8 +795,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         I->dropPoisonGeneratingFlags();
         return I;
       }
-      Known.Zero.lshrInPlace(ShiftAmt);
-      Known.One.lshrInPlace(ShiftAmt);
+      Known >>= ShiftAmt;
       if (ShiftAmt)
         Known.Zero.setHighBits(ShiftAmt);  // high bits known zero.
     } else {
@@ -1066,10 +1065,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
           }
         }
 
-        Known.Zero = LHSKnown.Zero.shl(ShiftAmt) |
-                     RHSKnown.Zero.lshr(BitWidth - ShiftAmt);
-        Known.One = LHSKnown.One.shl(ShiftAmt) |
-                    RHSKnown.One.lshr(BitWidth - ShiftAmt);
+        LHSKnown <<= ShiftAmt;
+        RHSKnown >>= BitWidth - ShiftAmt;
+        Known = LHSKnown.unionWith(RHSKnown);
         KnownBitsComputed = true;
         break;
       }

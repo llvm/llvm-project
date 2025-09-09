@@ -1716,79 +1716,98 @@ NamedDecl *Sema::ActOnTemplateTemplateParameter(
 
 namespace {
 class ConstraintRefersToContainingTemplateChecker
-    : public TreeTransform<ConstraintRefersToContainingTemplateChecker> {
+    : public ConstDynamicRecursiveASTVisitor {
+  using inherited = ConstDynamicRecursiveASTVisitor;
   bool Result = false;
   const FunctionDecl *Friend = nullptr;
   unsigned TemplateDepth = 0;
 
   // Check a record-decl that we've seen to see if it is a lexical parent of the
   // Friend, likely because it was referred to without its template arguments.
-  void CheckIfContainingRecord(const CXXRecordDecl *CheckingRD) {
+  bool CheckIfContainingRecord(const CXXRecordDecl *CheckingRD) {
     CheckingRD = CheckingRD->getMostRecentDecl();
     if (!CheckingRD->isTemplated())
-      return;
+      return true;
 
     for (const DeclContext *DC = Friend->getLexicalDeclContext();
          DC && !DC->isFileContext(); DC = DC->getParent())
       if (const auto *RD = dyn_cast<CXXRecordDecl>(DC))
-        if (CheckingRD == RD->getMostRecentDecl())
+        if (CheckingRD == RD->getMostRecentDecl()) {
           Result = true;
+          return false;
+        }
+
+    return true;
   }
 
-  void CheckNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
+  bool CheckNonTypeTemplateParmDecl(const NonTypeTemplateParmDecl *D) {
     if (D->getDepth() < TemplateDepth)
       Result = true;
 
     // Necessary because the type of the NTTP might be what refers to the parent
     // constriant.
-    TransformType(D->getType());
+    return TraverseType(D->getType());
   }
 
 public:
-  using inherited = TreeTransform<ConstraintRefersToContainingTemplateChecker>;
-
-  ConstraintRefersToContainingTemplateChecker(Sema &SemaRef,
-                                              const FunctionDecl *Friend,
+  ConstraintRefersToContainingTemplateChecker(const FunctionDecl *Friend,
                                               unsigned TemplateDepth)
-      : inherited(SemaRef), Friend(Friend), TemplateDepth(TemplateDepth) {}
+      : Friend(Friend), TemplateDepth(TemplateDepth) {}
+
   bool getResult() const { return Result; }
 
   // This should be the only template parm type that we have to deal with.
-  // SubstTempalteTypeParmPack, SubstNonTypeTemplateParmPack, and
+  // SubstTemplateTypeParmPack, SubstNonTypeTemplateParmPack, and
   // FunctionParmPackExpr are all partially substituted, which cannot happen
   // with concepts at this point in translation.
-  using inherited::TransformTemplateTypeParmType;
-  QualType TransformTemplateTypeParmType(TypeLocBuilder &TLB,
-                                         TemplateTypeParmTypeLoc TL, bool) {
-    if (TL.getDecl()->getDepth() < TemplateDepth)
+  bool VisitTemplateTypeParmType(const TemplateTypeParmType *Type) override {
+    if (Type->getDecl()->getDepth() < TemplateDepth) {
       Result = true;
-    return inherited::TransformTemplateTypeParmType(
-        TLB, TL,
-        /*SuppressObjCLifetime=*/false);
+      return false;
+    }
+    return true;
   }
 
-  Decl *TransformDecl(SourceLocation Loc, Decl *D) {
-    if (!D)
-      return D;
+  bool TraverseDeclRefExpr(const DeclRefExpr *E) override {
+    return TraverseDecl(E->getDecl());
+  }
+
+  bool TraverseTypedefType(const TypedefType *TT,
+                           bool /*TraverseQualifier*/) override {
+    return TraverseType(TT->desugar());
+  }
+
+  bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier) override {
+    // We don't care about TypeLocs. So traverse Types instead.
+    return TraverseType(TL.getType(), TraverseQualifier);
+  }
+
+  bool VisitTagType(const TagType *T) override {
+    return TraverseDecl(T->getOriginalDecl());
+  }
+
+  bool TraverseDecl(const Decl *D) override {
+    assert(D);
     // FIXME : This is possibly an incomplete list, but it is unclear what other
     // Decl kinds could be used to refer to the template parameters.  This is a
     // best guess so far based on examples currently available, but the
     // unreachable should catch future instances/cases.
     if (auto *TD = dyn_cast<TypedefNameDecl>(D))
-      TransformType(TD->getUnderlyingType());
-    else if (auto *NTTPD = dyn_cast<NonTypeTemplateParmDecl>(D))
-      CheckNonTypeTemplateParmDecl(NTTPD);
-    else if (auto *VD = dyn_cast<ValueDecl>(D))
-      TransformType(VD->getType());
-    else if (auto *TD = dyn_cast<TemplateDecl>(D))
-      TransformTemplateParameterList(TD->getTemplateParameters());
-    else if (auto *RD = dyn_cast<CXXRecordDecl>(D))
-      CheckIfContainingRecord(RD);
-    else if (isa<NamedDecl>(D)) {
+      return TraverseType(TD->getUnderlyingType());
+    if (auto *NTTPD = dyn_cast<NonTypeTemplateParmDecl>(D))
+      return CheckNonTypeTemplateParmDecl(NTTPD);
+    if (auto *VD = dyn_cast<ValueDecl>(D))
+      return TraverseType(VD->getType());
+    if (isa<TemplateDecl>(D))
+      return true;
+    if (auto *RD = dyn_cast<CXXRecordDecl>(D))
+      return CheckIfContainingRecord(RD);
+
+    if (isa<NamedDecl, RequiresExprBodyDecl>(D)) {
       // No direct types to visit here I believe.
     } else
       llvm_unreachable("Don't know how to handle this declaration type yet");
-    return D;
+    return true;
   }
 };
 } // namespace
@@ -1797,9 +1816,8 @@ bool Sema::ConstraintExpressionDependsOnEnclosingTemplate(
     const FunctionDecl *Friend, unsigned TemplateDepth,
     const Expr *Constraint) {
   assert(Friend->getFriendObjectKind() && "Only works on a friend");
-  ConstraintRefersToContainingTemplateChecker Checker(*this, Friend,
-                                                      TemplateDepth);
-  Checker.TransformExpr(const_cast<Expr *>(Constraint));
+  ConstraintRefersToContainingTemplateChecker Checker(Friend, TemplateDepth);
+  Checker.TraverseStmt(Constraint);
   return Checker.getResult();
 }
 
@@ -2859,14 +2877,14 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
     }
 
     // Retrieve the parent of an enumeration type.
-    if (const EnumType *EnumT = T->getAs<EnumType>()) {
+    if (const EnumType *EnumT = T->getAsCanonical<EnumType>()) {
       // FIXME: Forward-declared enums require a TSK_ExplicitSpecialization
       // check here.
       EnumDecl *Enum = EnumT->getOriginalDecl();
 
       // Get to the parent type.
       if (TypeDecl *Parent = dyn_cast<TypeDecl>(Enum->getParent()))
-        T = Context.getTypeDeclType(Parent);
+        T = Context.getCanonicalTypeDeclType(Parent);
       else
         T = QualType();
       continue;
@@ -3313,7 +3331,7 @@ static bool isInVkNamespace(const RecordType *RT) {
 static SpirvOperand checkHLSLSpirvTypeOperand(Sema &SemaRef,
                                               QualType OperandArg,
                                               SourceLocation Loc) {
-  if (auto *RT = OperandArg->getAs<RecordType>()) {
+  if (auto *RT = OperandArg->getAsCanonical<RecordType>()) {
     bool Literal = false;
     SourceLocation LiteralLoc;
     if (isInVkNamespace(RT) && RT->getOriginalDecl()->getName() == "Literal") {
@@ -3323,7 +3341,7 @@ static SpirvOperand checkHLSLSpirvTypeOperand(Sema &SemaRef,
 
       const TemplateArgumentList &LiteralArgs = SpecDecl->getTemplateArgs();
       QualType ConstantType = LiteralArgs[0].getAsType();
-      RT = ConstantType->getAs<RecordType>();
+      RT = ConstantType->getAsCanonical<RecordType>();
       Literal = true;
       LiteralLoc = SpecDecl->getSourceRange().getBegin();
     }
@@ -4132,7 +4150,7 @@ static bool isTemplateArgumentTemplateParameter(const TemplateArgument &Arg,
   case TemplateArgument::Type: {
     QualType Type = Arg.getAsType();
     const TemplateTypeParmType *TPT =
-        Arg.getAsType()->getAs<TemplateTypeParmType>();
+        Arg.getAsType()->getAsCanonical<TemplateTypeParmType>();
     return TPT && !Type.hasQualifiers() &&
            TPT->getDepth() == Depth && TPT->getIndex() == Index;
   }
@@ -4542,7 +4560,8 @@ static bool IsLibstdcxxStdFormatKind(Preprocessor &PP, VarDecl *Var) {
 DeclResult
 Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
                          SourceLocation TemplateNameLoc,
-                         const TemplateArgumentListInfo &TemplateArgs) {
+                         const TemplateArgumentListInfo &TemplateArgs,
+                         bool SetWrittenArgs) {
   assert(Template && "A variable template id without template?");
 
   // Check that the template argument list is well-formed for this template.
@@ -4725,10 +4744,12 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
   // in DoMarkVarDeclReferenced().
   // FIXME: LateAttrs et al.?
   VarTemplateSpecializationDecl *Decl = BuildVarTemplateInstantiation(
-      Template, InstantiationPattern, PartialSpecArgs, TemplateArgs,
-      CTAI.CanonicalConverted, TemplateNameLoc /*, LateAttrs, StartingScope*/);
+      Template, InstantiationPattern, PartialSpecArgs, CTAI.CanonicalConverted,
+      TemplateNameLoc /*, LateAttrs, StartingScope*/);
   if (!Decl)
     return true;
+  if (SetWrittenArgs)
+    Decl->setTemplateArgsAsWritten(TemplateArgs);
 
   if (AmbiguousPartialSpec) {
     // Partial ordering did not produce a clear winner. Complain.
@@ -4760,7 +4781,7 @@ ExprResult Sema::CheckVarTemplateId(
     const TemplateArgumentListInfo *TemplateArgs) {
 
   DeclResult Decl = CheckVarTemplateId(Template, TemplateLoc, NameInfo.getLoc(),
-                                       *TemplateArgs);
+                                       *TemplateArgs, /*SetWrittenArgs=*/false);
   if (Decl.isInvalid())
     return ExprError();
 
@@ -7411,9 +7432,8 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
       // always a no-op, except when the parameter type is bool. In
       // that case, this may extend the argument from 1 bit to 8 bits.
       QualType IntegerType = ParamType;
-      if (const EnumType *Enum = IntegerType->getAs<EnumType>())
-        IntegerType =
-            Enum->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+      if (const auto *ED = IntegerType->getAsEnumDecl())
+        IntegerType = ED->getIntegerType();
       Value = Value.extOrTrunc(IntegerType->isBitIntType()
                                    ? Context.getIntWidth(IntegerType)
                                    : Context.getTypeSize(IntegerType));
@@ -7510,9 +7530,8 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
     }
 
     QualType IntegerType = ParamType;
-    if (const EnumType *Enum = IntegerType->getAs<EnumType>()) {
-      IntegerType =
-          Enum->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+    if (const auto *ED = IntegerType->getAsEnumDecl()) {
+      IntegerType = ED->getIntegerType();
     }
 
     if (ParamType->isBooleanType()) {
@@ -8028,8 +8047,8 @@ static Expr *BuildExpressionFromIntegralTemplateArgumentValue(
   // any integral type with C++11 enum classes, make sure we create the right
   // type of literal for it.
   QualType T = OrigT;
-  if (const EnumType *ET = OrigT->getAs<EnumType>())
-    T = ET->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+  if (const auto *ED = OrigT->getAsEnumDecl())
+    T = ED->getIntegerType();
 
   Expr *E;
   if (T->isAnyCharacterType()) {
@@ -10709,8 +10728,9 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
       TemplateArgumentListInfo TemplateArgs =
           makeTemplateArgumentListInfo(*this, *D.getName().TemplateId);
 
-      DeclResult Res = CheckVarTemplateId(PrevTemplate, TemplateLoc,
-                                          D.getIdentifierLoc(), TemplateArgs);
+      DeclResult Res =
+          CheckVarTemplateId(PrevTemplate, TemplateLoc, D.getIdentifierLoc(),
+                             TemplateArgs, /*SetWrittenArgs=*/true);
       if (Res.isInvalid())
         return true;
 

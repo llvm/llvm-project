@@ -1580,10 +1580,7 @@ void CXXNameMangler::mangleUnqualifiedName(
 
     if (const VarDecl *VD = dyn_cast<VarDecl>(ND)) {
       // We must have an anonymous union or struct declaration.
-      const RecordDecl *RD = VD->getType()
-                                 ->castAs<RecordType>()
-                                 ->getOriginalDecl()
-                                 ->getDefinitionOrSelf();
+      const auto *RD = VD->getType()->castAsRecordDecl();
 
       // Itanium C++ ABI 5.1.2:
       //
@@ -4729,7 +4726,7 @@ void CXXNameMangler::mangleIntegerLiteral(QualType T,
 
 void CXXNameMangler::mangleMemberExprBase(const Expr *Base, bool IsArrow) {
   // Ignore member expressions involving anonymous unions.
-  while (const auto *RT = Base->getType()->getAs<RecordType>()) {
+  while (const auto *RT = Base->getType()->getAsCanonical<RecordType>()) {
     if (!RT->getOriginalDecl()->isAnonymousStructOrUnion())
       break;
     const auto *ME = dyn_cast<MemberExpr>(Base);
@@ -6029,6 +6026,8 @@ void CXXNameMangler::mangleCXXCtorType(CXXCtorType T,
   //                  ::= CI2 <type> # base inheriting constructor
   //
   // In addition, C5 is a comdat name with C1 and C2 in it.
+  // C4 represents a ctor declaration and is used by debuggers to look up
+  // the various ctor variants.
   Out << 'C';
   if (InheritedFrom)
     Out << 'I';
@@ -6038,6 +6037,9 @@ void CXXNameMangler::mangleCXXCtorType(CXXCtorType T,
     break;
   case Ctor_Base:
     Out << '2';
+    break;
+  case Ctor_Unified:
+    Out << '4';
     break;
   case Ctor_Comdat:
     Out << '5';
@@ -6056,6 +6058,8 @@ void CXXNameMangler::mangleCXXDtorType(CXXDtorType T) {
   //                  ::= D2  # base object destructor
   //
   // In addition, D5 is a comdat name with D1, D2 and, if virtual, D0 in it.
+  // D4 represents a dtor declaration and is used by debuggers to look up
+  // the various dtor variants.
   switch (T) {
   case Dtor_Deleting:
     Out << "D0";
@@ -6065,6 +6069,9 @@ void CXXNameMangler::mangleCXXDtorType(CXXDtorType T) {
     break;
   case Dtor_Base:
     Out << "D2";
+    break;
+  case Dtor_Unified:
+    Out << "D4";
     break;
   case Dtor_Comdat:
     Out << "D5";
@@ -7034,7 +7041,7 @@ bool CXXNameMangler::isSpecializedAs(QualType S, llvm::StringRef Name,
   if (S.isNull())
     return false;
 
-  const RecordType *RT = S->getAs<RecordType>();
+  const RecordType *RT = S->getAsCanonical<RecordType>();
   if (!RT)
     return false;
 

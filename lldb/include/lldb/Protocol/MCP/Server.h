@@ -14,32 +14,25 @@
 #include "lldb/Protocol/MCP/Protocol.h"
 #include "lldb/Protocol/MCP/Resource.h"
 #include "lldb/Protocol/MCP/Tool.h"
+#include "lldb/Protocol/MCP/Transport.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Error.h"
-#include <mutex>
+#include "llvm/Support/JSON.h"
+#include <functional>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace lldb_protocol::mcp {
 
-class MCPTransport
-    : public lldb_private::JSONRPCTransport<Request, Response, Notification> {
-public:
-  using LogCallback = std::function<void(llvm::StringRef message)>;
-
-  MCPTransport(lldb::IOObjectSP in, lldb::IOObjectSP out,
-               std::string client_name, LogCallback log_callback = {})
-      : JSONRPCTransport(in, out), m_client_name(std::move(client_name)),
-        m_log_callback(log_callback) {}
-  virtual ~MCPTransport() = default;
-
-  void Log(llvm::StringRef message) override {
-    if (m_log_callback)
-      m_log_callback(llvm::formatv("{0}: {1}", m_client_name, message).str());
-  }
-
-private:
-  std::string m_client_name;
-  LogCallback m_log_callback;
+/// Information about this instance of lldb's MCP server for lldb-mcp to use to
+/// coordinate connecting an lldb-mcp client.
+struct ServerInfo {
+  std::string connection_uri;
+  lldb::pid_t pid;
 };
+llvm::json::Value toJSON(const ServerInfo &);
+bool fromJSON(const llvm::json::Value &, ServerInfo &, llvm::json::Path);
 
 class Server : public MCPTransport::MessageHandler {
 public:
@@ -58,7 +51,7 @@ public:
   llvm::Error Run();
 
 protected:
-  Capabilities GetCapabilities();
+  ServerCapabilities GetCapabilities();
 
   using RequestHandler =
       std::function<llvm::Expected<Response>(const Request &)>;

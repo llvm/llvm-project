@@ -500,10 +500,11 @@ const SCEV *ScalarEvolution::getVScale(Type *Ty) {
   return S;
 }
 
-const SCEV *ScalarEvolution::getElementCount(Type *Ty, ElementCount EC) {
+const SCEV *ScalarEvolution::getElementCount(Type *Ty, ElementCount EC,
+                                             SCEV::NoWrapFlags Flags) {
   const SCEV *Res = getConstant(Ty, EC.getKnownMinValue());
   if (EC.isScalable())
-    Res = getMulExpr(Res, getVScale(Ty));
+    Res = getMulExpr(Res, getVScale(Ty), Flags);
   return Res;
 }
 
@@ -3198,6 +3199,33 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
           return getAddRecExpr(Operands, AddRec->getLoop(),
                                AddRec->getNoWrapFlags(FlagsMask));
         }
+      }
+
+      // Try to push the constant operand into a ZExt: C * zext (A + B) ->
+      // zext (C*A + C*B) if trunc (C) * (A + B)  does not unsigned-wrap.
+      const SCEVAddExpr *InnerAdd;
+      if (match(Ops[1], m_scev_ZExt(m_scev_Add(InnerAdd)))) {
+        const SCEV *NarrowC = getTruncateExpr(LHSC, InnerAdd->getType());
+        if (isa<SCEVConstant>(InnerAdd->getOperand(0)) &&
+            getZeroExtendExpr(NarrowC, Ops[1]->getType()) == LHSC &&
+            hasFlags(StrengthenNoWrapFlags(this, scMulExpr, {NarrowC, InnerAdd},
+                                           SCEV::FlagAnyWrap),
+                     SCEV::FlagNUW)) {
+          auto *Res = getMulExpr(NarrowC, InnerAdd, SCEV::FlagNUW, Depth + 1);
+          return getZeroExtendExpr(Res, Ops[1]->getType(), Depth + 1);
+        };
+      }
+
+      // Try to fold (C1 * D /u C2) -> C1/C2 * D, if C1 and C2 are powers-of-2,
+      // D is a multiple of C2, and C1 is a multiple of C1.
+      const SCEV *D;
+      const SCEVConstant *C2;
+      const APInt &LHSV = LHSC->getAPInt();
+      if (LHSV.isPowerOf2() &&
+          match(Ops[1], m_scev_UDiv(m_SCEV(D), m_SCEVConstant(C2))) &&
+          C2->getAPInt().isPowerOf2() && LHSV.uge(C2->getAPInt()) &&
+          LHSV.logBase2() <= getMinTrailingZeros(D)) {
+        return getMulExpr(getUDivExpr(LHSC, C2), D);
       }
     }
   }
@@ -15985,6 +16013,16 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
     }
 
     const SCEV *visitAddExpr(const SCEVAddExpr *Expr) {
+      // Trip count expressions sometimes consist of adding 3 operands, i.e.
+      // (Const + A + B). There may be guard info for A + B, and if so, apply
+      // it.
+      // TODO: Could more generally apply guards to Add sub-expressions.
+      if (isa<SCEVConstant>(Expr->getOperand(0)) &&
+          Expr->getNumOperands() == 3) {
+        if (const SCEV *S = Map.lookup(
+                SE.getAddExpr(Expr->getOperand(1), Expr->getOperand(2))))
+          return SE.getAddExpr(Expr->getOperand(0), S);
+      }
       SmallVector<const SCEV *, 2> Operands;
       bool Changed = false;
       for (const auto *Op : Expr->operands()) {

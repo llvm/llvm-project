@@ -582,6 +582,11 @@ void CodeGenModule::createOpenCLRuntime() {
 }
 
 void CodeGenModule::createOpenMPRuntime() {
+  if (!LangOpts.OMPHostIRFile.empty() &&
+      !llvm::sys::fs::exists(LangOpts.OMPHostIRFile))
+    Diags.Report(diag::err_omp_host_ir_file_not_found)
+        << LangOpts.OMPHostIRFile;
+
   // Select a specialized code generation class based on the target, if any.
   // If it does not exist use the default implementation.
   switch (getTriple().getArch()) {
@@ -4195,7 +4200,8 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
 
 // Check if T is a class type with a destructor that's not dllimport.
 static bool HasNonDllImportDtor(QualType T) {
-  if (const auto *RT = T->getBaseElementTypeUnsafe()->getAs<RecordType>())
+  if (const auto *RT =
+          T->getBaseElementTypeUnsafe()->getAsCanonical<RecordType>())
     if (auto *RD = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl())) {
       RD = RD->getDefinitionOrSelf();
       if (RD->getDestructor() && !RD->getDestructor()->hasAttr<DLLImportAttr>())
@@ -6370,10 +6376,18 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
 
   SetLLVMFunctionAttributesForDefinition(D, Fn);
 
+  auto GetPriority = [this](const auto *Attr) -> int {
+    Expr *E = Attr->getPriority();
+    if (E) {
+      return E->EvaluateKnownConstInt(this->getContext()).getExtValue();
+    }
+    return Attr->DefaultPriority;
+  };
+
   if (const ConstructorAttr *CA = D->getAttr<ConstructorAttr>())
-    AddGlobalCtor(Fn, CA->getPriority());
+    AddGlobalCtor(Fn, GetPriority(CA));
   if (const DestructorAttr *DA = D->getAttr<DestructorAttr>())
-    AddGlobalDtor(Fn, DA->getPriority(), true);
+    AddGlobalDtor(Fn, GetPriority(DA), true);
   if (getLangOpts().OpenMP && D->hasAttr<OMPDeclareTargetDeclAttr>())
     getOpenMPRuntime().emitDeclareTargetFunction(D, GV);
 }
@@ -6920,8 +6934,8 @@ CodeGenModule::GetAddrOfConstantStringFromObjCEncode(const ObjCEncodeExpr *E) {
 /// GetAddrOfConstantCString - Returns a pointer to a character array containing
 /// the literal and a terminating '\0' character.
 /// The result has pointer to array type.
-ConstantAddress CodeGenModule::GetAddrOfConstantCString(
-    const std::string &Str, const char *GlobalName) {
+ConstantAddress CodeGenModule::GetAddrOfConstantCString(const std::string &Str,
+                                                        StringRef GlobalName) {
   StringRef StrWithNull(Str.c_str(), Str.size() + 1);
   CharUnits Alignment = getContext().getAlignOfGlobalVarInChars(
       getContext().CharTy, /*VD=*/nullptr);
@@ -6941,9 +6955,6 @@ ConstantAddress CodeGenModule::GetAddrOfConstantCString(
     }
   }
 
-  // Get the default prefix if a name wasn't specified.
-  if (!GlobalName)
-    GlobalName = ".str";
   // Create a global variable for this.
   auto GV = GenerateStringLiteral(C, llvm::GlobalValue::PrivateLinkage, *this,
                                   GlobalName, Alignment);

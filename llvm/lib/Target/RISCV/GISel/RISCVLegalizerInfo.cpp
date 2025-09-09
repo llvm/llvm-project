@@ -154,7 +154,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_SADDO, G_SSUBO}).minScalar(0, sXLen).lower();
 
   // TODO: Use Vector Single-Width Saturating Instructions for vector types.
-  getActionDefinitionsBuilder({G_UADDSAT, G_SADDSAT, G_USUBSAT, G_SSUBSAT})
+  getActionDefinitionsBuilder(
+      {G_UADDSAT, G_SADDSAT, G_USUBSAT, G_SSUBSAT, G_SSHLSAT, G_USHLSAT})
       .lower();
 
   getActionDefinitionsBuilder({G_SHL, G_ASHR, G_LSHR})
@@ -487,6 +488,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .minScalar(ST.hasStdExtZbb(), 0, sXLen)
       .lower();
 
+  getActionDefinitionsBuilder({G_ABDS, G_ABDU}).lower();
+
   getActionDefinitionsBuilder({G_UMAX, G_UMIN, G_SMAX, G_SMIN})
       .legalFor(ST.hasStdExtZbb(), {sXLen})
       .minScalar(ST.hasStdExtZbb(), 0, sXLen)
@@ -699,6 +702,11 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .libcallFor(!ST.hasStdExtA(), {{s8, p0}, {s16, p0}, {s32, p0}, {s64, p0}})
       .clampScalar(0, sXLen, sXLen);
 
+  getActionDefinitionsBuilder(G_ATOMICRMW_SUB)
+      .libcallFor(!ST.hasStdExtA(), {{s8, p0}, {s16, p0}, {s32, p0}, {s64, p0}})
+      .clampScalar(0, sXLen, sXLen)
+      .lower();
+
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
 }
@@ -737,6 +745,7 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return true;
   }
   case Intrinsic::riscv_masked_atomicrmw_add:
+  case Intrinsic::riscv_masked_atomicrmw_sub:
     return true;
   }
 }

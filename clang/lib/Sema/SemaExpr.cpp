@@ -1529,8 +1529,12 @@ void Sema::checkEnumArithmeticConversions(Expr *LHS, Expr *RHS,
     // are ill-formed.
     if (getLangOpts().CPlusPlus26)
       DiagID = diag::warn_conv_mixed_enum_types_cxx26;
-    else if (!L->castAs<EnumType>()->getOriginalDecl()->hasNameForLinkage() ||
-             !R->castAs<EnumType>()->getOriginalDecl()->hasNameForLinkage()) {
+    else if (!L->castAsCanonical<EnumType>()
+                  ->getOriginalDecl()
+                  ->hasNameForLinkage() ||
+             !R->castAsCanonical<EnumType>()
+                  ->getOriginalDecl()
+                  ->hasNameForLinkage()) {
       // If either enumeration type is unnamed, it's less likely that the
       // user cares about this, but this situation is still deprecated in
       // C++2a. Use a different warning group.
@@ -6309,30 +6313,38 @@ static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
   unsigned i = 0;
   SmallVector<QualType, 8> OverloadParams;
 
-  for (QualType ParamType : FT->param_types()) {
+  {
+    // The lvalue conversions in this loop are only for type resolution and
+    // don't actually occur.
+    EnterExpressionEvaluationContext Unevaluated(
+        *Sema, Sema::ExpressionEvaluationContext::Unevaluated);
+    Sema::SFINAETrap Trap(*Sema, /*ForValidityCheck=*/true);
 
-    // Convert array arguments to pointer to simplify type lookup.
-    ExprResult ArgRes =
-        Sema->DefaultFunctionArrayLvalueConversion(ArgExprs[i++]);
-    if (ArgRes.isInvalid())
-      return nullptr;
-    Expr *Arg = ArgRes.get();
-    QualType ArgType = Arg->getType();
-    if (!ParamType->isPointerType() ||
-        ParamType->getPointeeType().hasAddressSpace() ||
-        !ArgType->isPointerType() ||
-        !ArgType->getPointeeType().hasAddressSpace() ||
-        isPtrSizeAddressSpace(ArgType->getPointeeType().getAddressSpace())) {
-      OverloadParams.push_back(ParamType);
-      continue;
+    for (QualType ParamType : FT->param_types()) {
+
+      // Convert array arguments to pointer to simplify type lookup.
+      ExprResult ArgRes =
+          Sema->DefaultFunctionArrayLvalueConversion(ArgExprs[i++]);
+      if (ArgRes.isInvalid())
+        return nullptr;
+      Expr *Arg = ArgRes.get();
+      QualType ArgType = Arg->getType();
+      if (!ParamType->isPointerType() ||
+          ParamType->getPointeeType().hasAddressSpace() ||
+          !ArgType->isPointerType() ||
+          !ArgType->getPointeeType().hasAddressSpace() ||
+          isPtrSizeAddressSpace(ArgType->getPointeeType().getAddressSpace())) {
+        OverloadParams.push_back(ParamType);
+        continue;
+      }
+
+      QualType PointeeType = ParamType->getPointeeType();
+      NeedsNewDecl = true;
+      LangAS AS = ArgType->getPointeeType().getAddressSpace();
+
+      PointeeType = Context.getAddrSpaceQualType(PointeeType, AS);
+      OverloadParams.push_back(Context.getPointerType(PointeeType));
     }
-
-    QualType PointeeType = ParamType->getPointeeType();
-    NeedsNewDecl = true;
-    LangAS AS = ArgType->getPointeeType().getAddressSpace();
-
-    PointeeType = Context.getAddrSpaceQualType(PointeeType, AS);
-    OverloadParams.push_back(Context.getPointerType(PointeeType));
   }
 
   if (!NeedsNewDecl)
@@ -7836,8 +7848,10 @@ static void CheckSufficientAllocSize(Sema &S, QualType DestType,
   if (!CE->getCalleeAllocSizeAttr())
     return;
   std::optional<llvm::APInt> AllocSize =
-      CE->getBytesReturnedByAllocSizeCall(S.Context);
-  if (!AllocSize)
+      CE->evaluateBytesReturnedByAllocSizeCall(S.Context);
+  // Allocations of size zero are permitted as a special case. They are usually
+  // done intentionally.
+  if (!AllocSize || AllocSize->isZero())
     return;
   auto Size = CharUnits::fromQuantity(AllocSize->getZExtValue());
 
@@ -11495,7 +11509,7 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
 }
 
 static bool isScopedEnumerationType(QualType T) {
-  if (const EnumType *ET = T->getAs<EnumType>())
+  if (const EnumType *ET = T->getAsCanonical<EnumType>())
     return ET->getOriginalDecl()->isScoped();
   return false;
 }
@@ -12382,10 +12396,7 @@ static QualType checkArithmeticOrEnumeralThreeWayCompare(Sema &S,
       S.InvalidOperands(Loc, LHS, RHS);
       return QualType();
     }
-    QualType IntType = LHSStrippedType->castAs<EnumType>()
-                           ->getOriginalDecl()
-                           ->getDefinitionOrSelf()
-                           ->getIntegerType();
+    QualType IntType = LHSStrippedType->castAsEnumDecl()->getIntegerType();
     assert(IntType->isArithmeticType());
 
     // We can't use `CK_IntegralCast` when the underlying type is 'bool', so we
@@ -13619,6 +13630,8 @@ static NonConstCaptureKind isReferenceToNonConstCapture(Sema &S, Expr *E) {
   VarDecl *Var = dyn_cast<VarDecl>(Value);
   if (!Var)
     return NCCK_None;
+  if (Var->getType()->isReferenceType())
+    return NCCK_None;
 
   assert(Var->hasLocalStorage() && "capture added 'const' to non-local?");
 
@@ -13822,7 +13835,7 @@ static void DiagnoseRecursiveConstFields(Sema &S, const ValueDecl *VD,
 
       // Then we append it to the list to check next in order.
       FieldTy = FieldTy.getCanonicalType();
-      if (const auto *FieldRecTy = FieldTy->getAs<RecordType>()) {
+      if (const auto *FieldRecTy = FieldTy->getAsCanonical<RecordType>()) {
         if (!llvm::is_contained(RecordTypeList, FieldRecTy))
           RecordTypeList.push_back(FieldRecTy);
       }
@@ -13838,7 +13851,7 @@ static void DiagnoseRecursiveConstFields(Sema &S, const Expr *E,
   QualType Ty = E->getType();
   assert(Ty->isRecordType() && "lvalue was not record?");
   SourceRange Range = E->getSourceRange();
-  const RecordType *RTy = Ty.getCanonicalType()->getAs<RecordType>();
+  const auto *RTy = Ty->getAsCanonical<RecordType>();
   bool DiagEmitted = false;
 
   if (const MemberExpr *ME = dyn_cast<MemberExpr>(E))
@@ -16882,9 +16895,8 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
       // va_arg. Instead, get the underlying type of the enumeration and pass
       // that.
       QualType UnderlyingType = TInfo->getType();
-      if (const auto *ET = UnderlyingType->getAs<EnumType>())
-        UnderlyingType =
-            ET->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+      if (const auto *ED = UnderlyingType->getAsEnumDecl())
+        UnderlyingType = ED->getIntegerType();
       if (Context.typesAreCompatible(PromoteType, UnderlyingType,
                                      /*CompareUnqualified*/ true))
         PromoteType = QualType();
@@ -21472,8 +21484,11 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
 
   // Expressions of unknown type.
   case BuiltinType::ArraySection:
-    Diag(E->getBeginLoc(), diag::err_array_section_use)
-        << cast<ArraySectionExpr>(E)->isOMPArraySection();
+    // If we've already diagnosed something on the array section type, we
+    // shouldn't need to do any further diagnostic here.
+    if (!E->containsErrors())
+      Diag(E->getBeginLoc(), diag::err_array_section_use)
+          << cast<ArraySectionExpr>(E)->isOMPArraySection();
     return ExprError();
 
   // Expressions of unknown type.
