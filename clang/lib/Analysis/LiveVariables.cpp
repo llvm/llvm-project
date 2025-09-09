@@ -127,8 +127,9 @@ LiveVariablesImpl::merge(LiveVariables::LivenessValues valsA,
                                        BSetRefA.asImmutableSet());
 }
 
-bool LiveVariables::LivenessValues::equals(const LivenessValues &V) const {
-  return liveExprs == V.liveExprs && liveDecls == V.liveDecls;
+bool LiveVariables::LivenessValues::operator==(const LivenessValues &V) const {
+  return liveExprs == V.liveExprs && liveDecls == V.liveDecls &&
+         liveBindings == V.liveBindings;
 }
 
 //===----------------------------------------------------------------------===//
@@ -174,7 +175,6 @@ public:
   void VisitDeclStmt(DeclStmt *DS);
   void VisitObjCForCollectionStmt(ObjCForCollectionStmt *OS);
   void VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *UE);
-  void VisitUnaryOperator(UnaryOperator *UO);
   void Visit(Stmt *S);
 };
 } // namespace
@@ -396,11 +396,7 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *B) {
         Killed = writeShouldKill(VD);
         if (Killed)
           val.liveDecls = LV.DSetFact.remove(val.liveDecls, VD);
-
       }
-
-      if (Killed && observer)
-        observer->observerKill(DR);
     }
   }
 }
@@ -465,8 +461,6 @@ void TransferFunctions::VisitObjCForCollectionStmt(ObjCForCollectionStmt *OS) {
 
   if (VD) {
     val.liveDecls = LV.DSetFact.remove(val.liveDecls, VD);
-    if (observer && DR)
-      observer->observerKill(DR);
   }
 }
 
@@ -483,32 +477,6 @@ VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *UE)
   if (subEx->getType()->isVariableArrayType()) {
     assert(subEx->isLValue());
     val.liveExprs = LV.ESetFact.add(val.liveExprs, subEx->IgnoreParens());
-  }
-}
-
-void TransferFunctions::VisitUnaryOperator(UnaryOperator *UO) {
-  // Treat ++/-- as a kill.
-  // Note we don't actually have to do anything if we don't have an observer,
-  // since a ++/-- acts as both a kill and a "use".
-  if (!observer)
-    return;
-
-  switch (UO->getOpcode()) {
-  default:
-    return;
-  case UO_PostInc:
-  case UO_PostDec:
-  case UO_PreInc:
-  case UO_PreDec:
-    break;
-  }
-
-  if (auto *DR = dyn_cast<DeclRefExpr>(UO->getSubExpr()->IgnoreParens())) {
-    const Decl *D = DR->getDecl();
-    if (isa<VarDecl>(D) || isa<BindingDecl>(D)) {
-      // Treat ++/-- as a kill.
-      observer->observerKill(DR);
-    }
   }
 }
 
@@ -597,7 +565,7 @@ LiveVariables::computeLiveness(AnalysisDeclContext &AC, bool killAtAssign) {
 
     if (!everAnalyzedBlock[block->getBlockID()])
       everAnalyzedBlock[block->getBlockID()] = true;
-    else if (prevVal.equals(val))
+    else if (prevVal == val)
       continue;
 
     prevVal = val;
