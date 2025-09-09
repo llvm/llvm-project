@@ -5710,7 +5710,9 @@ simplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   // fadd X, 0 ==> X, when we know X is not -0
   if (canIgnoreSNaN(ExBehavior, FMF))
     if (match(Op1, m_PosZeroFP()) &&
-        (FMF.noSignedZeros() || cannotBeNegativeZero(Op0, Q)))
+        (FMF.noSignedZeros() || cannotBeNegativeZero(Op0, Q) ||
+         (Q.CxtI && !Q.CxtI->use_empty() &&
+          canIgnoreSignBitOfZero(*(Q.CxtI->use_begin())))))
       return Op0;
 
   if (!isDefaultFPEnvironment(ExBehavior, Rounding))

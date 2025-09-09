@@ -363,9 +363,8 @@ define amdgpu_kernel void @test_no_fold_canonicalize_fcopysign_value_f32(ptr add
 }
 
 ; GCN-LABEL: test_fold_canonicalize_fabs_value_f32:
-; GCN: v_and_b32_e32 [[V:v[0-9]+]], 0x7fffffff, v{{[0-9]+}}
-; GCN-NOT: v_mul
-; GCN-NOT: v_max
+; VI: v_mul_f32_e64 [[V:v[0-9]+]], 1.0, |[[V]]|
+; GFX9: v_max_f32_e64 [[V:v[0-9]+]], |[[V]]|, |[[V]]|
 ; GCN: {{flat|global}}_store_dword v{{.+}}, [[V]]
 define amdgpu_kernel void @test_fold_canonicalize_fabs_value_f32(ptr addrspace(1) %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
