@@ -243,3 +243,188 @@ loop.latch:
 exit:
   ret void
 }
+
+define void @redundant_and_1(ptr %dst, i1 %c.0, i1 %c.1) {
+; CHECK-LABEL: @redundant_and_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[C_0:%.*]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i1> poison, i1 [[C_1:%.*]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT1]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> <i1 true, i1 true, i1 true, i1 false>, <4 x i1> [[TMP0]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> <i1 false, i1 false, i1 true, i1 false>, <4 x i1> [[BROADCAST_SPLAT2]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP2]], <4 x i1> [[TMP5]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP6]], i32 0
+; CHECK-NEXT:    br i1 [[TMP7]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
+; CHECK:       pred.store.if:
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i32 0
+; CHECK-NEXT:    store i32 0, ptr [[TMP9]], align 4
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
+; CHECK:       pred.store.continue:
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP6]], i32 1
+; CHECK-NEXT:    br i1 [[TMP10]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
+; CHECK:       pred.store.if3:
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 1
+; CHECK-NEXT:    store i32 0, ptr [[TMP12]], align 4
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
+; CHECK:       pred.store.continue4:
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP6]], i32 2
+; CHECK-NEXT:    br i1 [[TMP13]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6:%.*]]
+; CHECK:       pred.store.if5:
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 2
+; CHECK-NEXT:    store i32 0, ptr [[TMP15]], align 4
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE6]]
+; CHECK:       pred.store.continue6:
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i1> [[TMP6]], i32 3
+; CHECK-NEXT:    br i1 [[TMP16]], label [[PRED_STORE_IF7:%.*]], label [[PRED_STORE_CONTINUE8:%.*]]
+; CHECK:       pred.store.if7:
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 3
+; CHECK-NEXT:    store i32 0, ptr [[TMP18]], align 4
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE8]]
+; CHECK:       pred.store.continue8:
+; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    br i1 [[C_0]], label [[LOOP_LATCH]], label [[THEN_1:%.*]]
+; CHECK:       then.1:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[IV]], 2
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP]], false
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[OR]], i1 [[C_1]], i1 false
+; CHECK-NEXT:    br i1 [[COND]], label [[THEN_2:%.*]], label [[LOOP_LATCH]]
+; CHECK:       then.2:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[IV]]
+; CHECK-NEXT:    store i32 0, ptr [[GEP]], align 4
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 3
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  br i1 %c.0, label %loop.latch, label %then.1
+
+then.1:
+  %cmp = icmp eq i32 %iv, 2
+  %or = or i1 %cmp, false
+  %cond = select i1 %or, i1 %c.1, i1 false
+  br i1 %cond, label %then.2, label %loop.latch
+
+then.2:
+  %gep = getelementptr inbounds i32, ptr %dst, i32 %iv
+  store i32 0, ptr %gep, align 4
+  br label %loop.latch
+
+loop.latch:
+  %iv.next = add nuw nsw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, 3
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}
+
+define void @redundant_and_2(ptr %dst, i1 %c.0, i1 %c.1) {
+; CHECK-LABEL: @redundant_and_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i1> poison, i1 [[C_0:%.*]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT1]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT2]], splat (i1 true)
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> <i1 true, i1 true, i1 true, i1 false>, <4 x i1> [[TMP0]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP3]], <4 x i1> zeroinitializer, <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[TMP4]], i32 0
+; CHECK-NEXT:    br i1 [[TMP5]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
+; CHECK:       pred.store.if:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i32 0
+; CHECK-NEXT:    store i32 0, ptr [[TMP7]], align 4
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
+; CHECK:       pred.store.continue:
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP4]], i32 1
+; CHECK-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
+; CHECK:       pred.store.if1:
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 1
+; CHECK-NEXT:    store i32 0, ptr [[TMP10]], align 4
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
+; CHECK:       pred.store.continue2:
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i1> [[TMP4]], i32 2
+; CHECK-NEXT:    br i1 [[TMP11]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6:%.*]]
+; CHECK:       pred.store.if3:
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 2
+; CHECK-NEXT:    store i32 0, ptr [[TMP13]], align 4
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE6]]
+; CHECK:       pred.store.continue4:
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[TMP4]], i32 3
+; CHECK-NEXT:    br i1 [[TMP14]], label [[PRED_STORE_IF7:%.*]], label [[PRED_STORE_CONTINUE8:%.*]]
+; CHECK:       pred.store.if5:
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 3
+; CHECK-NEXT:    store i32 0, ptr [[TMP16]], align 4
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE8]]
+; CHECK:       pred.store.continue6:
+; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    br i1 [[C_0]], label [[LOOP_LATCH]], label [[THEN_1:%.*]]
+; CHECK:       then.1:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[IV]], 2
+; CHECK-NEXT:    [[OR:%.*]] = and i1 false, [[CMP]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[OR]], i1 [[C_1:%.*]], i1 false
+; CHECK-NEXT:    br i1 [[COND]], label [[THEN_2:%.*]], label [[LOOP_LATCH]]
+; CHECK:       then.2:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[IV]]
+; CHECK-NEXT:    store i32 0, ptr [[GEP]], align 4
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 3
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  br i1 %c.0, label %loop.latch, label %then.1
+
+then.1:
+  %cmp = icmp eq i32 %iv, 2
+  %or = and i1 false, %cmp
+  %cond = select i1 %or, i1 %c.1, i1 false
+  br i1 %cond, label %then.2, label %loop.latch
+
+then.2:
+  %gep = getelementptr inbounds i32, ptr %dst, i32 %iv
+  store i32 0, ptr %gep, align 4
+  br label %loop.latch
+
+loop.latch:
+  %iv.next = add nuw nsw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, 3
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}

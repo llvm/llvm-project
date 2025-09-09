@@ -30,6 +30,7 @@
 #include "flang/Semantics/tools.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 #include <variant>
 
 namespace Fortran {
@@ -422,47 +423,10 @@ static parser::CharBlock getSource(const semantics::SemanticsContext &semaCtx,
   });
 }
 
-static void collectPrivatizingConstructs(
-    llvm::SmallSet<llvm::omp::Directive, 16> &constructs, unsigned version) {
-  using Clause = llvm::omp::Clause;
-  using Directive = llvm::omp::Directive;
-
-  static const Clause privatizingClauses[] = {
-      Clause::OMPC_private,
-      Clause::OMPC_lastprivate,
-      Clause::OMPC_firstprivate,
-      Clause::OMPC_in_reduction,
-      Clause::OMPC_reduction,
-      Clause::OMPC_linear,
-      // TODO: Clause::OMPC_induction,
-      Clause::OMPC_task_reduction,
-      Clause::OMPC_detach,
-      Clause::OMPC_use_device_ptr,
-      Clause::OMPC_is_device_ptr,
-  };
-
-  for (auto dir : llvm::enum_seq_inclusive<Directive>(Directive::First_,
-                                                      Directive::Last_)) {
-    bool allowsPrivatizing = llvm::any_of(privatizingClauses, [&](Clause cls) {
-      return llvm::omp::isAllowedClauseForDirective(dir, cls, version);
-    });
-    if (allowsPrivatizing)
-      constructs.insert(dir);
-  }
-}
-
 bool DataSharingProcessor::isOpenMPPrivatizingConstruct(
     const parser::OpenMPConstruct &omp, unsigned version) {
-  static llvm::SmallSet<llvm::omp::Directive, 16> privatizing;
-  [[maybe_unused]] static bool init =
-      (collectPrivatizingConstructs(privatizing, version), true);
-
-  // As of OpenMP 6.0, privatizing constructs (with the test being if they
-  // allow a privatizing clause) are: dispatch, distribute, do, for, loop,
-  // parallel, scope, sections, simd, single, target, target_data, task,
-  // taskgroup, taskloop, and teams.
-  return llvm::is_contained(privatizing,
-                            parser::omp::GetOmpDirectiveName(omp).v);
+  return llvm::omp::isPrivatizingConstruct(
+      parser::omp::GetOmpDirectiveName(omp).v, version);
 }
 
 bool DataSharingProcessor::isOpenMPPrivatizingEvaluation(

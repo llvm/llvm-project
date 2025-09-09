@@ -4195,7 +4195,8 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
 
 // Check if T is a class type with a destructor that's not dllimport.
 static bool HasNonDllImportDtor(QualType T) {
-  if (const auto *RT = T->getBaseElementTypeUnsafe()->getAs<RecordType>())
+  if (const auto *RT =
+          T->getBaseElementTypeUnsafe()->getAsCanonical<RecordType>())
     if (auto *RD = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl())) {
       RD = RD->getDefinitionOrSelf();
       if (RD->getDestructor() && !RD->getDestructor()->hasAttr<DLLImportAttr>())

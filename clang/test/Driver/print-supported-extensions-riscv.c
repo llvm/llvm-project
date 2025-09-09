@@ -215,6 +215,7 @@
 // CHECK-NEXT:     zicfiss              1.0       'Zicfiss' (Shadow stack)
 // CHECK-NEXT:     zalasr               0.1       'Zalasr' (Load-Acquire and Store-Release Instructions)
 // CHECK-NEXT:     zvbc32e              0.7       'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements)
+// CHECK-NEXT:     zvfbfa               0.1       'Zvfbfa' (Additional BF16 vector compute support)
 // CHECK-NEXT:     zvkgs                0.7       'Zvkgs' (Vector-Scalar GCM instructions for Cryptography)
 // CHECK-NEXT:     zvqdotq              0.0       'Zvqdotq' (Vector quad widening 4D Dot Product)
 // CHECK-NEXT:     svukte               0.3       'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses)

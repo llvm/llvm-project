@@ -11,24 +11,29 @@
 //===----------------------------------------------------------------------===//
 
 #include "IncrementalParser.h"
+#include "IncrementalAction.h"
 
 #include "clang/AST/DeclContextInternals.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Error.h"
 
 #include <sstream>
+
+#define DEBUG_TYPE "clang-repl"
 
 namespace clang {
 
 // IncrementalParser::IncrementalParser() {}
 
 IncrementalParser::IncrementalParser(CompilerInstance &Instance,
-                                     llvm::Error &Err)
-    : S(Instance.getSema()) {
+                                     IncrementalAction *Act, llvm::Error &Err,
+                                     std::list<PartialTranslationUnit> &PTUs)
+    : S(Instance.getSema()), Act(Act), PTUs(PTUs) {
   llvm::ErrorAsOutParameter EAO(&Err);
   Consumer = &S.getASTConsumer();
   P.reset(new Parser(S.getPreprocessor(), S, /*SkipBodies=*/false));
@@ -185,4 +190,25 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
   }
 }
 
+PartialTranslationUnit &
+IncrementalParser::RegisterPTU(TranslationUnitDecl *TU,
+                               std::unique_ptr<llvm::Module> M /*={}*/) {
+  PTUs.emplace_back(PartialTranslationUnit());
+  PartialTranslationUnit &LastPTU = PTUs.back();
+  LastPTU.TUPart = TU;
+
+  if (!M)
+    M = Act->GenModule();
+
+  assert((!Act->getCodeGen() || M) && "Must have a llvm::Module at this point");
+
+  LastPTU.TheModule = std::move(M);
+  LLVM_DEBUG(llvm::dbgs() << "compile-ptu " << PTUs.size() - 1
+                          << ": [TU=" << LastPTU.TUPart);
+  if (LastPTU.TheModule)
+    LLVM_DEBUG(llvm::dbgs() << ", M=" << LastPTU.TheModule.get() << " ("
+                            << LastPTU.TheModule->getName() << ")");
+  LLVM_DEBUG(llvm::dbgs() << "]\n");
+  return LastPTU;
+}
 } // end namespace clang

@@ -70,7 +70,6 @@ module std_core [system] {
     module aligned_storage                            { header "__type_traits/aligned_storage.h" }
     module aligned_union                              { header "__type_traits/aligned_union.h" }
     module alignment_of                               { header "__type_traits/alignment_of.h" }
-    module can_extract_key                            { header "__type_traits/can_extract_key.h" }
     module common_reference                           { header "__type_traits/common_reference.h" }
     module common_type {
       header "__type_traits/common_type.h"
@@ -2178,6 +2177,7 @@ module std [system] {
     module small_buffer               { header "__utility/small_buffer.h" }
     module swap                       { header "__utility/swap.h" }
     module to_underlying              { header "__utility/to_underlying.h" }
+    module try_key_extraction         { header "__utility/try_key_extraction.h" }
     module unreachable                { header "__utility/unreachable.h" }
 
     header "utility"

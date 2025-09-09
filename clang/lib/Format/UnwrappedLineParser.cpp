@@ -1207,11 +1207,8 @@ void UnwrappedLineParser::parsePPDefine() {
     return;
   }
 
-  if (auto *Prev = Tokens->getPreviousToken(); Prev->is(tok::comment) &&
-                                               Prev->NewlinesBefore > 0 &&
-                                               !Prev->HasUnescapedNewline) {
-    Prev->Finalized = true;
-  }
+  for (auto *Comment : CommentsBeforeNextToken)
+    Comment->Finalized = true;
 
   do {
     FormatTok->Finalized = true;

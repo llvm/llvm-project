@@ -9,8 +9,11 @@
 
 #define BM_RANDOM_INPUTS(T, Func, MinExp, MaxExp, N)                           \
   [](uint32_t call_index) {                                                    \
-    return LIBC_NAMESPACE::benchmarks::MathPerf<T>::run_throughput_in_range<   \
-        N>(Func, MinExp, MaxExp, MinExp, MaxExp, call_index);                  \
+    using namespace LIBC_NAMESPACE::benchmarks;                                \
+                                                                               \
+    const UniformExponent<T> dist(MinExp, MaxExp);                             \
+    return MathPerf<T>::template run_throughput<N>(Func, dist, dist,           \
+                                                   call_index);                \
   }
 
 #define BENCH(T, Name, Func, MinExp, MaxExp)                                   \

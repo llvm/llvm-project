@@ -504,6 +504,13 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_ballot, { ResultType });
     return Builder.CreateCall(F, { Src });
   }
+  case AMDGPU::BI__builtin_amdgcn_inverse_ballot_w32:
+  case AMDGPU::BI__builtin_amdgcn_inverse_ballot_w64: {
+    llvm::Value *Src = EmitScalarExpr(E->getArg(0));
+    Function *F =
+        CGM.getIntrinsic(Intrinsic::amdgcn_inverse_ballot, {Src->getType()});
+    return Builder.CreateCall(F, {Src});
+  }
   case AMDGPU::BI__builtin_amdgcn_tanhf:
   case AMDGPU::BI__builtin_amdgcn_tanhh:
   case AMDGPU::BI__builtin_amdgcn_tanh_bf16:

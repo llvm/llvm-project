@@ -1306,7 +1306,8 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   // TODO: Use a better approach than a white-list, such as adding
   // properties to instructions using something like TSFlags.
   if (!isSupportedInstr(MI)) {
-    LLVM_DEBUG(dbgs() << "Not a candidate due to unsupported instruction\n");
+    LLVM_DEBUG(dbgs() << "Not a candidate due to unsupported instruction: "
+                      << MI);
     return false;
   }
 
@@ -1328,14 +1329,14 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
   const MCInstrDesc &Desc = UserMI.getDesc();
 
   if (!RISCVII::hasVLOp(Desc.TSFlags) || !RISCVII::hasSEWOp(Desc.TSFlags)) {
-    LLVM_DEBUG(dbgs() << "    Abort due to lack of VL, assume that"
+    LLVM_DEBUG(dbgs() << "  Abort due to lack of VL, assume that"
                          " use VLMAX\n");
     return std::nullopt;
   }
 
   if (RISCVII::readsPastVL(
           TII->get(RISCV::getRVVMCOpcode(UserMI.getOpcode())).TSFlags)) {
-    LLVM_DEBUG(dbgs() << "    Abort because used by unsafe instruction\n");
+    LLVM_DEBUG(dbgs() << "  Abort because used by unsafe instruction\n");
     return std::nullopt;
   }
 
@@ -1352,7 +1353,7 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
            RISCVII::isFirstDefTiedToFirstUse(UserMI.getDesc()));
     auto DemandedVL = DemandedVLs.lookup(&UserMI);
     if (!DemandedVL || !RISCV::isVLKnownLE(*DemandedVL, VLOp)) {
-      LLVM_DEBUG(dbgs() << "    Abort because user is passthru in "
+      LLVM_DEBUG(dbgs() << "  Abort because user is passthru in "
                            "instruction with demanded tail\n");
       return std::nullopt;
     }
@@ -1449,7 +1450,7 @@ RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
 }
 
 bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) const {
-  LLVM_DEBUG(dbgs() << "Trying to reduce VL for " << MI << "\n");
+  LLVM_DEBUG(dbgs() << "Trying to reduce VL for " << MI);
 
   unsigned VLOpNum = RISCVII::getVLOpNum(MI.getDesc());
   MachineOperand &VLOp = MI.getOperand(VLOpNum);
@@ -1469,13 +1470,13 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) const {
          "Expected VL to be an Imm or virtual Reg");
 
   if (!RISCV::isVLKnownLE(*CommonVL, VLOp)) {
-    LLVM_DEBUG(dbgs() << "    Abort due to CommonVL not <= VLOp.\n");
+    LLVM_DEBUG(dbgs() << "  Abort due to CommonVL not <= VLOp.\n");
     return false;
   }
 
   if (CommonVL->isIdenticalTo(VLOp)) {
     LLVM_DEBUG(
-        dbgs() << "    Abort due to CommonVL == VLOp, no point in reducing.\n");
+        dbgs() << "  Abort due to CommonVL == VLOp, no point in reducing.\n");
     return false;
   }
 
@@ -1486,8 +1487,10 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) const {
     return true;
   }
   const MachineInstr *VLMI = MRI->getVRegDef(CommonVL->getReg());
-  if (!MDT->dominates(VLMI, &MI))
+  if (!MDT->dominates(VLMI, &MI)) {
+    LLVM_DEBUG(dbgs() << "  Abort due to VL not dominating.\n");
     return false;
+  }
   LLVM_DEBUG(
       dbgs() << "  Reduce VL from " << VLOp << " to "
              << printReg(CommonVL->getReg(), MRI->getTargetRegisterInfo())

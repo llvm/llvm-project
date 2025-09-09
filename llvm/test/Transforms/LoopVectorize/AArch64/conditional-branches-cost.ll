@@ -1246,7 +1246,7 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umax.i64(i64 8, i64 [[TMP2]])
+; DEFAULT-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP2]], i64 8)
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP3]]
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; DEFAULT:       [[VECTOR_MEMCHECK]]:

@@ -492,14 +492,12 @@ define void @test_scev_check_mul_add_expansion(ptr %out, ptr %in, i32 %len, i32 
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[OUT:%.*]], i64 12
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[LEN]], -7
-; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[LEN]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[OUT]], i64 [[TMP3]]
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TMP4]], i64 14
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[IN:%.*]], i64 4
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP2]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[IN]], [[SCEVGEP1]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[IN]], [[TMP4]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -511,11 +509,11 @@ define void @test_scev_check_mul_add_expansion(ptr %out, ptr %in, i32 %len, i32 
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[INDEX]], 6
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[OFFSET_IDX]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i16, ptr [[OUT]], i64 [[TMP6]]
-; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr [[TMP7]], align 2, !alias.scope [[META42:![0-9]+]], !noalias [[META45:![0-9]+]]
-; CHECK-NEXT:    store i32 0, ptr [[IN]], align 4, !alias.scope [[META45]]
+; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr [[TMP7]], align 2, !alias.scope [[META37:![0-9]+]], !noalias [[META40:![0-9]+]]
+; CHECK-NEXT:    store i32 0, ptr [[IN]], align 4, !alias.scope [[META40]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP47:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP42:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -530,7 +528,7 @@ define void @test_scev_check_mul_add_expansion(ptr %out, ptr %in, i32 %len, i32 
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    store i32 0, ptr [[IN]], align 4
 ; CHECK-NEXT:    [[CMP7_NOT:%.*]] = icmp sgt i32 [[LEN]], [[IV_NEXT]]
-; CHECK-NEXT:    br i1 [[CMP7_NOT]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP48:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP7_NOT]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP43:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

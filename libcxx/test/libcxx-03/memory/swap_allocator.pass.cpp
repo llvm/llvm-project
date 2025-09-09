@@ -7,14 +7,12 @@
 //===----------------------------------------------------------------------===//
 //
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 // <memory>
 
 // template <typename _Alloc>
 // void __swap_allocator(_Alloc& __a1, _Alloc& __a2);
 
-#include <__memory/swap_allocator.h>
+#include <__cxx03/__memory/swap_allocator.h>
 #include <cassert>
 #include <memory>
 #include <utility>

@@ -946,7 +946,9 @@ Let ``VT`` be a vector type and ``ET`` the element type of ``VT``.
 
 Each builtin accesses memory according to a provided boolean mask. These are
 provided as ``__builtin_masked_load`` and ``__builtin_masked_store``. The first
-argument is always boolean mask vector.
+argument is always boolean mask vector. The ``__builtin_masked_load`` builtin
+takes an optional third vector argument that will be used for the result of the
+masked-off lanes. These builtins assume the memory is always aligned.
 
 Example:
 
@@ -4182,7 +4184,7 @@ builtin, the mangler emits their usual pattern without any special treatment.
 -----------------------
 
 ``__builtin_popcountg`` returns the number of 1 bits in the argument. The
-argument can be of any unsigned integer type.
+argument can be of any unsigned integer type or fixed boolean vector.
 
 **Syntax**:
 
@@ -4214,7 +4216,13 @@ such as ``unsigned __int128`` and C23 ``unsigned _BitInt(N)``.
 
 ``__builtin_clzg`` (respectively ``__builtin_ctzg``) returns the number of
 leading (respectively trailing) 0 bits in the first argument. The first argument
-can be of any unsigned integer type.
+can be of any unsigned integer type or fixed boolean vector.
+
+For boolean vectors, these builtins interpret the vector like a bit-field where
+the ith element of the vector is bit i of the bit-field, counting from the
+least significant end. ``__builtin_clzg`` returns the number of zero elements at
+the end of the vector, while ``__builtin_ctzg`` returns the number of zero
+elements at the start of the vector.
 
 If the first argument is 0 and an optional second argument of ``int`` type is
 provided, then the second argument is returned. If the first argument is 0, but
@@ -5154,6 +5162,23 @@ If no address spaces names are provided, all address spaces are fenced.
   __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup", "local")
   __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup", "local", "global")
 
+__builtin_amdgcn_ballot_w{32,64}
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``__builtin_amdgcn_ballot_w{32,64}`` returns a bitmask that contains its
+boolean argument as a bit for every lane of the current wave that is currently
+active (i.e., that is converged with the executing thread), and a 0 bit for
+every lane that is not active.
+
+The result is uniform, i.e. it is the same in every active thread of the wave.
+
+__builtin_amdgcn_inverse_ballot_w{32,64}
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Given a wave-uniform bitmask, ``__builtin_amdgcn_inverse_ballot_w{32,64}(mask)``
+returns the bit at the position of the current lane. It is almost equivalent to
+``(mask & (1 << lane_id)) != 0``, except that its behavior is only defined if
+the given mask has the same value for all active lanes of the current wave.
 
 ARM/AArch64 Language Extensions
 -------------------------------

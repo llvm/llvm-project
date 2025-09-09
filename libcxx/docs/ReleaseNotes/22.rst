@@ -58,6 +58,9 @@ Improvements and New Features
 - The performance of ``insert(iterator, iterator)`` of ``multimap`` and ``multiset`` has been improved by up to 2.5x
 - The performance of ``erase(iterator, iterator)`` in the unordered containers has been improved by up to 1.9x
 
+- ``ofstream::write`` has been optimized to pass through large strings to system calls directly instead of copying them
+  in chunks into a buffer.
+
 Deprecations and Removals
 -------------------------
 

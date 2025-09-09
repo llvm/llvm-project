@@ -39,7 +39,7 @@ _Bool __aarch64_have_lse_atomics
 #include <sys/auxv.h>
 // clang-format on
 #include "aarch64/hwcap.inc"
-#include "aarch64/lse_atomics/freebsd.inc"
+#include "aarch64/lse_atomics/elf_aux_info.inc"
 #elif defined(__Fuchsia__)
 #include "aarch64/hwcap.inc"
 #include "aarch64/lse_atomics/fuchsia.inc"
@@ -70,7 +70,7 @@ struct {
 #include "aarch64/fmv/apple.inc"
 #elif defined(__FreeBSD__)
 #include "aarch64/fmv/mrs.inc"
-#include "aarch64/fmv/freebsd.inc"
+#include "aarch64/fmv/elf_aux_info.inc"
 #elif defined(__Fuchsia__)
 #include "aarch64/fmv/fuchsia.inc"
 #elif defined(__ANDROID__)

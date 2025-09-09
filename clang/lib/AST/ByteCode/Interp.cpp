@@ -1207,17 +1207,15 @@ static bool runRecordDestructor(InterpState &S, CodePtr OpPC,
   }
 
   // Destructor of this record.
-  if (const CXXDestructorDecl *Dtor = R->getDestructor();
-      Dtor && !Dtor->isTrivial()) {
-    const Function *DtorFunc = S.getContext().getOrCreateFunction(Dtor);
-    if (!DtorFunc)
-      return false;
+  const CXXDestructorDecl *Dtor = R->getDestructor();
+  assert(Dtor);
+  assert(!Dtor->isTrivial());
+  const Function *DtorFunc = S.getContext().getOrCreateFunction(Dtor);
+  if (!DtorFunc)
+    return false;
 
-    S.Stk.push<Pointer>(BasePtr);
-    if (!Call(S, OpPC, DtorFunc, 0))
-      return false;
-  }
-  return true;
+  S.Stk.push<Pointer>(BasePtr);
+  return Call(S, OpPC, DtorFunc, 0);
 }
 
 static bool RunDestructors(InterpState &S, CodePtr OpPC, const Block *B) {
@@ -1228,6 +1226,9 @@ static bool RunDestructors(InterpState &S, CodePtr OpPC, const Block *B) {
     return true;
 
   assert(Desc->isRecord() || Desc->isCompositeArray());
+
+  if (Desc->hasTrivialDtor())
+    return true;
 
   if (Desc->isCompositeArray()) {
     unsigned N = Desc->getNumElems();

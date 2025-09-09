@@ -3006,10 +3006,10 @@ emitProxyTaskFunction(CodeGenModule &CGM, SourceLocation Loc,
       CGF.GetAddrOfLocalVar(&TaskTypeArg),
       KmpTaskTWithPrivatesPtrQTy->castAs<PointerType>());
   const auto *KmpTaskTWithPrivatesQTyRD =
-      cast<RecordDecl>(KmpTaskTWithPrivatesQTy->getAsTagDecl());
+      KmpTaskTWithPrivatesQTy->castAsRecordDecl();
   LValue Base =
       CGF.EmitLValueForField(TDBase, *KmpTaskTWithPrivatesQTyRD->field_begin());
-  const auto *KmpTaskTQTyRD = cast<RecordDecl>(KmpTaskTQTy->getAsTagDecl());
+  const auto *KmpTaskTQTyRD = KmpTaskTQTy->castAsRecordDecl();
   auto PartIdFI = std::next(KmpTaskTQTyRD->field_begin(), KmpTaskTPartId);
   LValue PartIdLVal = CGF.EmitLValueForField(Base, *PartIdFI);
   llvm::Value *PartidParam = PartIdLVal.getPointer(CGF);
@@ -3104,11 +3104,10 @@ static llvm::Value *emitDestructorsFunction(CodeGenModule &CGM,
       CGF.GetAddrOfLocalVar(&TaskTypeArg),
       KmpTaskTWithPrivatesPtrQTy->castAs<PointerType>());
   const auto *KmpTaskTWithPrivatesQTyRD =
-      cast<RecordDecl>(KmpTaskTWithPrivatesQTy->getAsTagDecl());
+      KmpTaskTWithPrivatesQTy->castAsRecordDecl();
   auto FI = std::next(KmpTaskTWithPrivatesQTyRD->field_begin());
   Base = CGF.EmitLValueForField(Base, *FI);
-  for (const auto *Field :
-       cast<RecordDecl>(FI->getType()->getAsTagDecl())->fields()) {
+  for (const auto *Field : FI->getType()->castAsRecordDecl()->fields()) {
     if (QualType::DestructionKind DtorKind =
             Field->getType().isDestructedType()) {
       LValue FieldLValue = CGF.EmitLValueForField(Base, Field);
@@ -3212,7 +3211,7 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
   LValue Base = CGF.EmitLoadOfPointerLValue(
       CGF.GetAddrOfLocalVar(&TaskPrivatesArg),
       TaskPrivatesArg.getType()->castAs<PointerType>());
-  const auto *PrivatesQTyRD = cast<RecordDecl>(PrivatesQTy->getAsTagDecl());
+  const auto *PrivatesQTyRD = PrivatesQTy->castAsRecordDecl();
   Counter = 0;
   for (const FieldDecl *Field : PrivatesQTyRD->fields()) {
     LValue FieldLVal = CGF.EmitLValueForField(Base, Field);
@@ -3259,7 +3258,7 @@ static void emitPrivatesInit(CodeGenFunction &CGF,
             CGF.ConvertTypeForMem(SharedsTy)),
         SharedsTy);
   }
-  FI = cast<RecordDecl>(FI->getType()->getAsTagDecl())->field_begin();
+  FI = FI->getType()->castAsRecordDecl()->field_begin();
   for (const PrivateDataTy &Pair : Privates) {
     // Do not initialize private locals.
     if (Pair.second.isLocalPrivate()) {
@@ -3655,7 +3654,7 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
     }
     KmpTaskTQTy = SavedKmpTaskTQTy;
   }
-  const auto *KmpTaskTQTyRD = cast<RecordDecl>(KmpTaskTQTy->getAsTagDecl());
+  const auto *KmpTaskTQTyRD = KmpTaskTQTy->castAsRecordDecl();
   // Build particular struct kmp_task_t for the given task.
   const RecordDecl *KmpTaskTWithPrivatesQTyRD =
       createKmpTaskTWithPrivatesRecordDecl(CGM, KmpTaskTQTy, Privates);
@@ -3915,10 +3914,7 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   // Fill the data in the resulting kmp_task_t record.
   // Copy shareds if there are any.
   Address KmpTaskSharedsPtr = Address::invalid();
-  if (!SharedsTy->getAsStructureType()
-           ->getOriginalDecl()
-           ->getDefinitionOrSelf()
-           ->field_empty()) {
+  if (!SharedsTy->castAsRecordDecl()->field_empty()) {
     KmpTaskSharedsPtr = Address(
         CGF.EmitLoadOfScalar(
             CGF.EmitLValueForField(
@@ -3948,11 +3944,8 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   enum { Priority = 0, Destructors = 1 };
   // Provide pointer to function with destructors for privates.
   auto FI = std::next(KmpTaskTQTyRD->field_begin(), Data1);
-  const RecordDecl *KmpCmplrdataUD = (*FI)
-                                         ->getType()
-                                         ->getAsUnionType()
-                                         ->getOriginalDecl()
-                                         ->getDefinitionOrSelf();
+  const auto *KmpCmplrdataUD = (*FI)->getType()->castAsRecordDecl();
+  assert(KmpCmplrdataUD->isUnion());
   if (NeedsCleanup) {
     llvm::Value *DestructorFn = emitDestructorsFunction(
         CGM, Loc, KmpInt32Ty, KmpTaskTWithPrivatesPtrQTy,
@@ -4032,8 +4025,7 @@ CGOpenMPRuntime::getDepobjElements(CodeGenFunction &CGF, LValue DepobjLVal,
   ASTContext &C = CGM.getContext();
   QualType FlagsTy;
   getDependTypes(C, KmpDependInfoTy, FlagsTy);
-  RecordDecl *KmpDependInfoRD =
-      cast<RecordDecl>(KmpDependInfoTy->getAsTagDecl());
+  auto *KmpDependInfoRD = KmpDependInfoTy->castAsRecordDecl();
   QualType KmpDependInfoPtrTy = C.getPointerType(KmpDependInfoTy);
   LValue Base = CGF.EmitLoadOfPointerLValue(
       DepobjLVal.getAddress().withElementType(
@@ -4061,8 +4053,7 @@ static void emitDependData(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
   ASTContext &C = CGM.getContext();
   QualType FlagsTy;
   getDependTypes(C, KmpDependInfoTy, FlagsTy);
-  RecordDecl *KmpDependInfoRD =
-      cast<RecordDecl>(KmpDependInfoTy->getAsTagDecl());
+  auto *KmpDependInfoRD = KmpDependInfoTy->castAsRecordDecl();
   llvm::Type *LLVMFlagsTy = CGF.ConvertTypeForMem(FlagsTy);
 
   OMPIteratorGeneratorScope IteratorScope(
@@ -4333,8 +4324,7 @@ Address CGOpenMPRuntime::emitDepobjDependClause(
   unsigned NumDependencies = Dependencies.DepExprs.size();
   QualType FlagsTy;
   getDependTypes(C, KmpDependInfoTy, FlagsTy);
-  RecordDecl *KmpDependInfoRD =
-      cast<RecordDecl>(KmpDependInfoTy->getAsTagDecl());
+  auto *KmpDependInfoRD = KmpDependInfoTy->castAsRecordDecl();
 
   llvm::Value *Size;
   // Define type kmp_depend_info[<Dependencies.size()>];
@@ -4442,8 +4432,7 @@ void CGOpenMPRuntime::emitUpdateClause(CodeGenFunction &CGF, LValue DepobjLVal,
   ASTContext &C = CGM.getContext();
   QualType FlagsTy;
   getDependTypes(C, KmpDependInfoTy, FlagsTy);
-  RecordDecl *KmpDependInfoRD =
-      cast<RecordDecl>(KmpDependInfoTy->getAsTagDecl());
+  auto *KmpDependInfoRD = KmpDependInfoTy->castAsRecordDecl();
   llvm::Type *LLVMFlagsTy = CGF.ConvertTypeForMem(FlagsTy);
   llvm::Value *NumDeps;
   LValue Base;
@@ -11319,7 +11308,7 @@ void CGOpenMPRuntime::emitDoacrossInit(CodeGenFunction &CGF,
     RD->completeDefinition();
     KmpDimTy = C.getCanonicalTagType(RD);
   } else {
-    RD = cast<RecordDecl>(KmpDimTy->getAsTagDecl());
+    RD = KmpDimTy->castAsRecordDecl();
   }
   llvm::APInt Size(/*numBits=*/32, NumIterations.size());
   QualType ArrayTy = C.getConstantArrayType(KmpDimTy, Size, nullptr,

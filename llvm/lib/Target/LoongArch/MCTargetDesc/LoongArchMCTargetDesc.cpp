@@ -26,6 +26,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
+#include <bitset>
 
 #define GET_INSTRINFO_MC_DESC
 #define ENABLE_INSTR_PREDICATE_VERIFIER
@@ -95,9 +96,78 @@ createLoongArchAsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
 namespace {
 
 class LoongArchMCInstrAnalysis : public MCInstrAnalysis {
+  int64_t GPRState[31] = {};
+  std::bitset<31> GPRValidMask;
+
+  static bool isGPR(MCRegister Reg) {
+    return Reg >= LoongArch::R0 && Reg <= LoongArch::R31;
+  }
+
+  static unsigned getRegIndex(MCRegister Reg) {
+    assert(isGPR(Reg) && Reg != LoongArch::R0 && "Invalid GPR reg");
+    return Reg - LoongArch::R1;
+  }
+
+  void setGPRState(MCRegister Reg, std::optional<int64_t> Value) {
+    if (Reg == LoongArch::R0)
+      return;
+
+    auto Index = getRegIndex(Reg);
+
+    if (Value) {
+      GPRState[Index] = *Value;
+      GPRValidMask.set(Index);
+    } else {
+      GPRValidMask.reset(Index);
+    }
+  }
+
+  std::optional<int64_t> getGPRState(MCRegister Reg) const {
+    if (Reg == LoongArch::R0)
+      return 0;
+
+    auto Index = getRegIndex(Reg);
+
+    if (GPRValidMask.test(Index))
+      return GPRState[Index];
+    return std::nullopt;
+  }
+
 public:
   explicit LoongArchMCInstrAnalysis(const MCInstrInfo *Info)
       : MCInstrAnalysis(Info) {}
+
+  void resetState() override { GPRValidMask.reset(); }
+
+  void updateState(const MCInst &Inst, uint64_t Addr) override {
+    // Terminators mark the end of a basic block which means the sequentially
+    // next instruction will be the first of another basic block and the current
+    // state will typically not be valid anymore. For calls, we assume all
+    // registers may be clobbered by the callee (TODO: should we take the
+    // calling convention into account?).
+    if (isTerminator(Inst) || isCall(Inst)) {
+      resetState();
+      return;
+    }
+
+    switch (Inst.getOpcode()) {
+    default: {
+      // Clear the state of all defined registers for instructions that we don't
+      // explicitly support.
+      auto NumDefs = Info->get(Inst.getOpcode()).getNumDefs();
+      for (unsigned I = 0; I < NumDefs; ++I) {
+        auto DefReg = Inst.getOperand(I).getReg();
+        if (isGPR(DefReg))
+          setGPRState(DefReg, std::nullopt);
+      }
+      break;
+    }
+    case LoongArch::PCADDU18I:
+      setGPRState(Inst.getOperand(0).getReg(),
+                  Addr + SignExtend64<32>(Inst.getOperand(1).getImm() << 18));
+      break;
+    }
+  }
 
   bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
                       uint64_t &Target) const override {
@@ -106,6 +176,14 @@ public:
         Inst.getOpcode() == LoongArch::BL) {
       Target = Addr + Inst.getOperand(NumOps - 1).getImm();
       return true;
+    }
+
+    if (Inst.getOpcode() == LoongArch::JIRL) {
+      if (auto TargetRegState = getGPRState(Inst.getOperand(1).getReg())) {
+        Target = *TargetRegState + Inst.getOperand(2).getImm();
+        return true;
+      }
+      return false;
     }
 
     return false;

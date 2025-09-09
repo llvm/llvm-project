@@ -268,6 +268,41 @@ bool OmpStructureChecker::CheckAllowedClause(llvmOmpClause clause) {
   return CheckAllowed(clause);
 }
 
+void OmpStructureChecker::AnalyzeObject(const parser::OmpObject &object) {
+  if (std::holds_alternative<parser::Name>(object.u)) {
+    // Do not analyze common block names. The analyzer will flag an error
+    // on those.
+    return;
+  }
+  if (auto *symbol{GetObjectSymbol(object)}) {
+    // Eliminate certain kinds of symbols before running the analyzer to
+    // avoid confusing error messages. The analyzer assumes that the context
+    // of the object use is an expression, and some diagnostics are tailored
+    // to that.
+    if (symbol->has<DerivedTypeDetails>() || symbol->has<MiscDetails>()) {
+      // Type names, construct names, etc.
+      return;
+    }
+    if (auto *typeSpec{symbol->GetType()}) {
+      if (typeSpec->category() == DeclTypeSpec::Category::Character) {
+        // Don't pass character objects to the analyzer, it can emit somewhat
+        // cryptic errors (e.g. "'obj' is not an array"). Substrings are
+        // checked elsewhere in OmpStructureChecker.
+        return;
+      }
+    }
+  }
+  evaluate::ExpressionAnalyzer ea{context_};
+  auto restore{ea.AllowWholeAssumedSizeArray(true)};
+  common::visit([&](auto &&s) { ea.Analyze(s); }, object.u);
+}
+
+void OmpStructureChecker::AnalyzeObjects(const parser::OmpObjectList &objects) {
+  for (const parser::OmpObject &object : objects.v) {
+    AnalyzeObject(object);
+  }
+}
+
 bool OmpStructureChecker::IsCloselyNestedRegion(const OmpDirectiveSet &set) {
   // Definition of close nesting:
   //
@@ -589,14 +624,6 @@ template <typename Checker> struct DirectiveSpellingVisitor {
     checker_(GetDirName(x.t).source, Directive::OMPD_allocators);
     return false;
   }
-  bool Pre(const parser::OmpAssumeDirective &x) {
-    checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_assume);
-    return false;
-  }
-  bool Pre(const parser::OmpEndAssumeDirective &x) {
-    checker_(x.v.source, Directive::OMPD_assume);
-    return false;
-  }
   bool Pre(const parser::OmpMetadirectiveDirective &x) {
     checker_(
         std::get<parser::Verbatim>(x.t).source, Directive::OMPD_metadirective);
@@ -843,6 +870,30 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
   const parser::Block &block{std::get<parser::Block>(x.t)};
 
   PushContextAndClauseSets(beginSpec.DirName().source, beginSpec.DirId());
+
+  // Missing mandatory end block: this is checked in semantics because that
+  // makes it easier to control the error messages.
+  // The end block is mandatory when the construct is not applied to a strictly
+  // structured block (aka it is applied to a loosely structured block). In
+  // other words, the body doesn't contain exactly one parser::BlockConstruct.
+  auto isStrictlyStructuredBlock{[](const parser::Block &block) -> bool {
+    if (block.size() != 1) {
+      return false;
+    }
+    const parser::ExecutionPartConstruct &contents{block.front()};
+    auto *executableConstruct{
+        std::get_if<parser::ExecutableConstruct>(&contents.u)};
+    if (!executableConstruct) {
+      return false;
+    }
+    return std::holds_alternative<common::Indirection<parser::BlockConstruct>>(
+        executableConstruct->u);
+  }};
+  if (!endSpec && !isStrictlyStructuredBlock(block)) {
+    context_.Say(
+        x.BeginDir().source, "Expected OpenMP end directive"_err_en_US);
+  }
+
   if (llvm::omp::allTargetSet.test(GetContext().directive)) {
     EnterDirectiveNest(TargetNest);
   }
@@ -1114,14 +1165,23 @@ void OmpStructureChecker::Leave(const parser::OmpBeginDirective &) {
 void OmpStructureChecker::Enter(const parser::OpenMPSectionsConstruct &x) {
   const auto &beginSectionsDir{
       std::get<parser::OmpBeginSectionsDirective>(x.t)};
-  const auto &endSectionsDir{std::get<parser::OmpEndSectionsDirective>(x.t)};
+  const auto &endSectionsDir{
+      std::get<std::optional<parser::OmpEndSectionsDirective>>(x.t)};
   const auto &beginDir{
       std::get<parser::OmpSectionsDirective>(beginSectionsDir.t)};
-  const auto &endDir{std::get<parser::OmpSectionsDirective>(endSectionsDir.t)};
+  PushContextAndClauseSets(beginDir.source, beginDir.v);
+
+  if (!endSectionsDir) {
+    context_.Say(beginSectionsDir.source,
+        "Expected OpenMP END SECTIONS directive"_err_en_US);
+    // Following code assumes the option is present.
+    return;
+  }
+
+  const auto &endDir{std::get<parser::OmpSectionsDirective>(endSectionsDir->t)};
   CheckMatching<parser::OmpSectionsDirective>(beginDir, endDir);
 
-  PushContextAndClauseSets(beginDir.source, beginDir.v);
-  AddEndDirectiveClauses(std::get<parser::OmpClauseList>(endSectionsDir.t));
+  AddEndDirectiveClauses(std::get<parser::OmpClauseList>(endSectionsDir->t));
 
   const auto &sectionBlocks{std::get<std::list<parser::OpenMPConstruct>>(x.t)};
   for (const parser::OpenMPConstruct &construct : sectionBlocks) {
@@ -2672,8 +2732,9 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
 void OmpStructureChecker::Enter(const parser::OmpClause &x) {
   SetContextClause(x);
 
+  llvm::omp::Clause id{x.Id()};
   // The visitors for these clauses do their own checks.
-  switch (x.Id()) {
+  switch (id) {
   case llvm::omp::Clause::OMPC_copyprivate:
   case llvm::omp::Clause::OMPC_enter:
   case llvm::omp::Clause::OMPC_lastprivate:
@@ -2687,7 +2748,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause &x) {
   // Named constants are OK to be used within 'shared' and 'firstprivate'
   // clauses.  The check for this happens a few lines below.
   bool SharedOrFirstprivate = false;
-  switch (x.Id()) {
+  switch (id) {
   case llvm::omp::Clause::OMPC_shared:
   case llvm::omp::Clause::OMPC_firstprivate:
     SharedOrFirstprivate = true;
@@ -2697,6 +2758,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause &x) {
   }
 
   if (const parser::OmpObjectList *objList{GetOmpObjectList(x)}) {
+    AnalyzeObjects(*objList);
     SymbolSourceMap symbols;
     GetSymbolsInObjectList(*objList, symbols);
     for (const auto &[symbol, source] : symbols) {
@@ -3144,7 +3206,7 @@ void OmpStructureChecker::CheckReductionObjectTypes(
     // r = 0; r = r + r2
     // But it might be valid to use these with DECLARE REDUCTION.
     // Assumed size is already caught elsewhere.
-    bool cannotBeBuiltinReduction{evaluate::IsAssumedRank(*symbol)};
+    bool cannotBeBuiltinReduction{IsAssumedRank(*symbol)};
     if (auto *type{symbol->GetType()}) {
       const auto &scope{context_.FindScope(symbol->name())};
       if (!IsReductionAllowedForType(

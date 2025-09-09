@@ -92,6 +92,12 @@ You can test this locally with the following command:
 {self.instructions}
 ``````````
 
+:warning:
+The reproduction instructions above might return results for more than one PR
+in a stack if you are using a stacked PR workflow. You can limit the results by
+changing `origin/main` to the base branch/commit you want to compare against.
+:warning:
+
 </details>
 
 <details>
@@ -175,9 +181,32 @@ class ClangFormatHelper(FormatHelper):
     name = "clang-format"
     friendly_name = "C/C++ code formatter"
 
+    def _construct_command(self, diff_expression: list[str] | None):
+        cf_cmd = [self.clang_fmt_path, "--diff"]
+
+        if diff_expression:
+            cf_cmd.extend(diff_expression)
+
+        # Gather the extension of all modified files and pass them explicitly to git-clang-format.
+        # This prevents git-clang-format from applying its own filtering rules on top of ours.
+        extensions = set()
+        for file in self._cpp_files:
+            _, ext = os.path.splitext(file)
+            extensions.add(
+                ext.strip(".")
+            )  # Exclude periods since git-clang-format takes extensions without them
+        cf_cmd.append("--extensions")
+        cf_cmd.append(",".join(extensions))
+
+        cf_cmd.append("--")
+        cf_cmd += self._cpp_files
+        return cf_cmd
+
     @property
     def instructions(self) -> str:
-        return " ".join(self.cf_cmd)
+        # TODO(boomanaiden154): Add --diff_from_common_commit option when it has
+        # landed as in available in a released version.
+        return " ".join(self._construct_command(["origin/main", "HEAD"]))
 
     def should_include_extensionless_file(self, path: str) -> bool:
         return path.startswith("libcxx/include")
@@ -218,33 +247,19 @@ class ClangFormatHelper(FormatHelper):
         return proc.returncode == 0
 
     def format_run(self, changed_files: List[str], args: FormatArgs) -> Optional[str]:
-        cpp_files = self.filter_changed_files(changed_files)
-        if not cpp_files:
+        self._cpp_files = self.filter_changed_files(changed_files)
+        if not self._cpp_files:
             return None
 
-        cf_cmd = [self.clang_fmt_path, "--diff"]
-
+        diff_expression = []
         if args.start_rev and args.end_rev:
-            cf_cmd.append(args.start_rev)
-            cf_cmd.append(args.end_rev)
+            diff_expression.append(args.start_rev)
+            diff_expression.append(args.end_rev)
 
-        # Gather the extension of all modified files and pass them explicitly to git-clang-format.
-        # This prevents git-clang-format from applying its own filtering rules on top of ours.
-        extensions = set()
-        for file in cpp_files:
-            _, ext = os.path.splitext(file)
-            extensions.add(
-                ext.strip(".")
-            )  # Exclude periods since git-clang-format takes extensions without them
-        cf_cmd.append("--extensions")
-        cf_cmd.append(",".join(extensions))
-
-        cf_cmd.append("--")
-        cf_cmd += cpp_files
+        cf_cmd = self._construct_command(diff_expression)
 
         if args.verbose:
             print(f"Running: {' '.join(cf_cmd)}")
-        self.cf_cmd = cf_cmd
         proc = subprocess.run(cf_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         sys.stdout.write(proc.stderr.decode("utf-8"))
 
@@ -263,9 +278,20 @@ class DarkerFormatHelper(FormatHelper):
     name = "darker"
     friendly_name = "Python code formatter"
 
+    def _construct_command(self, diff_expression: str | None) -> str:
+        darker_cmd = [
+            self.darker_fmt_path,
+            "--check",
+            "--diff",
+        ]
+        if diff_expression:
+            darker_cmd += ["-r", diff_expression]
+        darker_cmd += self._py_files
+        return darker_cmd
+
     @property
     def instructions(self) -> str:
-        return " ".join(self.darker_cmd)
+        return " ".join(self._construct_command("origin/main...HEAD"))
 
     def filter_changed_files(self, changed_files: List[str]) -> List[str]:
         filtered_files = []
@@ -295,17 +321,13 @@ class DarkerFormatHelper(FormatHelper):
         py_files = self.filter_changed_files(changed_files)
         if not py_files:
             return None
-        darker_cmd = [
-            self.darker_fmt_path,
-            "--check",
-            "--diff",
-        ]
+        self._py_files = py_files
+        diff_expression = None
         if args.start_rev and args.end_rev:
-            darker_cmd += ["-r", f"{args.start_rev}...{args.end_rev}"]
-        darker_cmd += py_files
+            diff_expression = f"{args.start_rev}...{args.end_rev}"
+        darker_cmd = self._construct_command(diff_expression)
         if args.verbose:
             print(f"Running: {' '.join(darker_cmd)}")
-        self.darker_cmd = darker_cmd
         proc = subprocess.run(
             darker_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )

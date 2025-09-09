@@ -52,9 +52,9 @@ getSgShapeAndCount(ArrayRef<int64_t> shape,
   int count = 1;
   SmallVector<int64_t> sgShape(shape);
   if (layout && layout.isForWorkgroup()) {
-    SmallVector<int64_t> sgLayout = layout.getSgLayoutAsInt().value();
-    if (auto maybeSgData = layout.getSgDataAsInt())
-      sgShape = *maybeSgData;
+    SmallVector<int64_t> sgLayout = layout.getSgLayoutAsInt();
+    if (!layout.getSgDataAsInt().empty())
+      sgShape = layout.getSgDataAsInt();
     else if (auto maybeDerivedSgData = computeShapeRatio(shape, sgLayout))
       sgShape = *maybeDerivedSgData;
     SmallVector<int64_t> distUnit = computeElementwiseMul(sgLayout, sgShape);
@@ -406,7 +406,7 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
     if (resultTy.getRank() != 2)
       return failure();
 
-    auto originalLayout = xegpu::getLayoutAttr(op.getResult());
+    auto originalLayout = xegpu::getDistributeLayoutAttr(op.getResult());
     if (!originalLayout)
       return failure();
 
@@ -429,8 +429,8 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
         VectorType resTy = VectorType::get({aVecShape[0], bVecShape[1]},
                                            resultTy.getElementType());
         tmpC = xegpu::DpasOp::create(rewriter, loc, resTy, operands);
-        xegpu::setLayoutAttr(cast<OpResult>(tmpC),
-                             originalLayout.dropSgLayoutAndData());
+        xegpu::setDistributeLayoutAttr(cast<OpResult>(tmpC),
+                                       originalLayout.dropSgLayoutAndData());
 
         newDpasOps.push_back(tmpC);
       }
@@ -470,8 +470,9 @@ struct WgToSgVectorBroadcastOp
     VectorType resultType = op.getResult().getType();
     ArrayRef<int64_t> wgShape = resultType.getShape();
 
-    xegpu::LayoutAttr layout = xegpu::getLayoutAttr(op.getResult());
-    if (!layout || !layout.getSgLayout())
+    xegpu::DistributeLayoutAttr layout =
+        xegpu::getDistributeLayoutAttr(op.getResult());
+    if (!layout || !layout.isForWorkgroup())
       return failure();
 
     // TODO: Currently only supports cases where the source and result ranks
@@ -486,10 +487,8 @@ struct WgToSgVectorBroadcastOp
         VectorType::get(sgShape, resultType.getElementType());
 
     // Check if the output layout is distributable
-    SmallVector<int64_t> sgLayout;
-    if (auto sgLayoutAttr = layout.getSgLayout())
-      sgLayout = llvm::to_vector_of<int64_t>(sgLayoutAttr.asArrayRef());
-    else
+    SmallVector<int64_t> sgLayout = layout.getSgLayoutAsInt();
+    if (sgLayout.empty())
       return failure();
 
     if (!xegpu::XeGPUDialect::isEvenlyDistributable(wgShape, layout))
@@ -508,8 +507,8 @@ struct WgToSgVectorBroadcastOp
     for (auto operand : adaptor.getOperands().front()) {
       auto newBroadcast = vector::BroadcastOp::create(rewriter, op.getLoc(),
                                                       newResultType, operand);
-      xegpu::setLayoutAttr(newBroadcast->getResult(0),
-                           layout.dropSgLayoutAndData());
+      xegpu::setDistributeLayoutAttr(newBroadcast->getResult(0),
+                                     layout.dropSgLayoutAndData());
       newBroadcastOps.push_back(newBroadcast.getResult());
     }
 
@@ -535,8 +534,9 @@ struct WgToSgElementwiseOp : public ConversionPattern {
 
     ArrayRef<int64_t> wgShape = resultType.getShape();
 
-    xegpu::LayoutAttr layout = xegpu::getLayoutAttr(op->getResult(0));
-    if (!layout || !layout.getSgLayout())
+    xegpu::DistributeLayoutAttr layout =
+        xegpu::getDistributeLayoutAttr(op->getResult(0));
+    if (!layout || !layout.isForWorkgroup())
       return failure();
 
     SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
@@ -611,8 +611,9 @@ struct WgToSgConvertLayoutOp
   LogicalResult
   matchAndRewrite(xegpu::ConvertLayoutOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    xegpu::LayoutAttr input = op.getInputLayout();
-    xegpu::LayoutAttr target = op.getTargetLayout();
+    // TODO: currently, we only support LayoutAttr
+    auto input = dyn_cast<xegpu::LayoutAttr>(op.getInputLayout());
+    auto target = dyn_cast<xegpu::LayoutAttr>(op.getTargetLayout());
 
     if (!input || !target || !input.isForWorkgroup() ||
         !target.isForWorkgroup())
@@ -737,8 +738,9 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
     if (!vecAttr || !vecAttr.isSplat() || !vecType)
       return failure();
 
-    xegpu::LayoutAttr layout = xegpu::getLayoutAttr(op.getResult());
-    if (!layout || !layout.getSgLayout())
+    xegpu::DistributeLayoutAttr layout =
+        xegpu::getDistributeLayoutAttr(op.getResult());
+    if (!layout || !layout.isForWorkgroup())
       return failure();
 
     ArrayRef<int64_t> wgShape = vecType.getShape();
@@ -755,7 +757,7 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
     auto cstOp =
         arith::ConstantOp::create(rewriter, op.getLoc(), newType, sgAttr);
     if (auto newLayout = layout.dropSgLayoutAndData())
-      xegpu::setLayoutAttr(cstOp->getResult(0), newLayout);
+      xegpu::setDistributeLayoutAttr(cstOp->getResult(0), newLayout);
     SmallVector<Value> newConsts(count, cstOp);
 
     rewriter.replaceOpWithMultiple(op, {newConsts});
@@ -928,7 +930,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   });
 
   target.addDynamicallyLegalOp<xegpu::DpasOp>([=](xegpu::DpasOp op) -> bool {
-    auto layout = xegpu::getLayoutAttr(op.getResult());
+    auto layout = xegpu::getDistributeLayoutAttr(op.getResult());
     return isLegal(layout);
   });
 
@@ -947,12 +949,12 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
         auto vecType = dyn_cast<VectorType>(op.getType());
         if (!vecType)
           return true;
-        return isLegal(xegpu::getLayoutAttr(op.getResult()));
+        return isLegal(xegpu::getDistributeLayoutAttr(op.getResult()));
       });
 
   target.addDynamicallyLegalOp<vector::BroadcastOp>(
       [=](vector::BroadcastOp op) -> bool {
-        return isLegal(xegpu::getLayoutAttr(op.getResult()));
+        return isLegal(xegpu::getDistributeLayoutAttr(op.getResult()));
       });
 
   target.addDynamicallyLegalOp<xegpu::ConvertLayoutOp>(
@@ -980,7 +982,8 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
           }
         }
 
-        xegpu::LayoutAttr layout = xegpu::getLayoutAttr(op->getResult(0));
+        xegpu::DistributeLayoutAttr layout =
+            xegpu::getDistributeLayoutAttr(op->getResult(0));
         return isLegal(layout);
       });
 

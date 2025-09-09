@@ -537,28 +537,26 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
          "number of stored element should be a multiple of Factor");
 
   Value *Mask = nullptr;
+  auto GapMask = APInt::getAllOnes(Factor);
   if (SI) {
     LLVM_DEBUG(dbgs() << "IA: Found an interleaved store: " << *Store << "\n");
   } else {
     // Check mask operand. Handle both all-true/false and interleaved mask.
     unsigned LaneMaskLen = NumStoredElements / Factor;
-    APInt GapMask(Factor, 0);
     std::tie(Mask, GapMask) = getMask(getMaskOperand(II), Factor,
                                       ElementCount::getFixed(LaneMaskLen));
     if (!Mask)
       return false;
-    // We haven't supported gap mask for stores. Yet it is possible that we
-    // already changed the IR, hence returning true here.
-    if (GapMask.popcount() != Factor)
-      return true;
 
     LLVM_DEBUG(dbgs() << "IA: Found an interleaved vp.store or masked.store: "
                       << *Store << "\n");
+    LLVM_DEBUG(dbgs() << "IA: With nominal factor " << Factor
+                      << " and actual factor " << GapMask.popcount() << "\n");
   }
 
   // Try to create target specific intrinsics to replace the store and
   // shuffle.
-  if (!TLI->lowerInterleavedStore(Store, Mask, SVI, Factor))
+  if (!TLI->lowerInterleavedStore(Store, Mask, SVI, Factor, GapMask))
     return false;
 
   // Already have a new target specific interleaved store. Erase the old store.

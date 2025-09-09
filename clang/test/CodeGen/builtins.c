@@ -992,247 +992,288 @@ void test_builtin_os_log_long_double(void *buf, long double ld) {
 void test_builtin_popcountg(unsigned char uc, unsigned short us,
                             unsigned int ui, unsigned long ul,
                             unsigned long long ull, unsigned __int128 ui128,
-                            unsigned _BitInt(128) ubi128) {
+                            unsigned _BitInt(128) ubi128,
+                            _Bool __attribute__((ext_vector_type(8))) vb8) {
   volatile int pop;
-  pop = __builtin_popcountg(uc);
-  // CHECK: %1 = load i8, ptr %uc.addr, align 1
-  // CHECK-NEXT: %2 = call i8 @llvm.ctpop.i8(i8 %1)
-  // CHECK-NEXT: %cast = zext i8 %2 to i32
+  //      CHECK: %2 = load i8, ptr %uc.addr, align 1
+  // CHECK-NEXT: %3 = call i8 @llvm.ctpop.i8(i8 %2)
+  // CHECK-NEXT: %cast = zext i8 %3 to i32
   // CHECK-NEXT: store volatile i32 %cast, ptr %pop, align 4
-  pop = __builtin_popcountg(us);
-  // CHECK-NEXT: %3 = load i16, ptr %us.addr, align 2
-  // CHECK-NEXT: %4 = call i16 @llvm.ctpop.i16(i16 %3)
-  // CHECK-NEXT: %cast1 = zext i16 %4 to i32
-  // CHECK-NEXT: store volatile i32 %cast1, ptr %pop, align 4
-  pop = __builtin_popcountg(ui);
-  // CHECK-NEXT: %5 = load i32, ptr %ui.addr, align 4
-  // CHECK-NEXT: %6 = call i32 @llvm.ctpop.i32(i32 %5)
-  // CHECK-NEXT: store volatile i32 %6, ptr %pop, align 4
-  pop = __builtin_popcountg(ul);
-  // CHECK-NEXT: %7 = load i64, ptr %ul.addr, align 8
-  // CHECK-NEXT: %8 = call i64 @llvm.ctpop.i64(i64 %7)
-  // CHECK-NEXT: %cast2 = trunc i64 %8 to i32
+  pop = __builtin_popcountg(uc);
+  //      CHECK: %4 = load i16, ptr %us.addr, align 2
+  // CHECK-NEXT: %5 = call i16 @llvm.ctpop.i16(i16 %4)
+  // CHECK-NEXT: %cast2 = zext i16 %5 to i32
   // CHECK-NEXT: store volatile i32 %cast2, ptr %pop, align 4
-  pop = __builtin_popcountg(ull);
-  // CHECK-NEXT: %9 = load i64, ptr %ull.addr, align 8
-  // CHECK-NEXT: %10 = call i64 @llvm.ctpop.i64(i64 %9)
-  // CHECK-NEXT: %cast3 = trunc i64 %10 to i32
+  pop = __builtin_popcountg(us);
+  //      CHECK: %6 = load i32, ptr %ui.addr, align 4
+  // CHECK-NEXT: %7 = call i32 @llvm.ctpop.i32(i32 %6)
+  // CHECK-NEXT: store volatile i32 %7, ptr %pop, align 4
+  pop = __builtin_popcountg(ui);
+  // CHECK: %8 = load i64, ptr %ul.addr, align 8
+  // CHECK-NEXT: %9 = call i64 @llvm.ctpop.i64(i64 %8)
+  // CHECK-NEXT: %cast3 = trunc i64 %9 to i32
   // CHECK-NEXT: store volatile i32 %cast3, ptr %pop, align 4
-  pop = __builtin_popcountg(ui128);
-  // CHECK-NEXT: %11 = load i128, ptr %ui128.addr, align 16
-  // CHECK-NEXT: %12 = call i128 @llvm.ctpop.i128(i128 %11)
-  // CHECK-NEXT: %cast4 = trunc i128 %12 to i32
+  pop = __builtin_popcountg(ul);
+  //      CHECK: %10 = load i64, ptr %ull.addr, align 8
+  // CHECK-NEXT: %11 = call i64 @llvm.ctpop.i64(i64 %10)
+  // CHECK-NEXT: %cast4 = trunc i64 %11 to i32
   // CHECK-NEXT: store volatile i32 %cast4, ptr %pop, align 4
-  pop = __builtin_popcountg(ubi128);
-  // CHECK-NEXT: %13 = load i128, ptr %ubi128.addr, align 8
-  // CHECK-NEXT: %14 = call i128 @llvm.ctpop.i128(i128 %13)
-  // CHECK-NEXT: %cast5 = trunc i128 %14 to i32
+  pop = __builtin_popcountg(ull);
+  //      CHECK: %12 = load i128, ptr %ui128.addr, align 16
+  // CHECK-NEXT: %13 = call i128 @llvm.ctpop.i128(i128 %12)
+  // CHECK-NEXT: %cast5 = trunc i128 %13 to i32
   // CHECK-NEXT: store volatile i32 %cast5, ptr %pop, align 4
-  // CHECK-NEXT: ret void
+  pop = __builtin_popcountg(ui128);
+  //      CHECK: %14 = load i128, ptr %ubi128.addr, align 8
+  // CHECK-NEXT: %15 = call i128 @llvm.ctpop.i128(i128 %14)
+  // CHECK-NEXT: %cast6 = trunc i128 %15 to i32
+  // CHECK-NEXT: store volatile i32 %cast6, ptr %pop, align 4
+  pop = __builtin_popcountg(ubi128);
+  //      CHECK: %load_bits7 = load i8, ptr %vb8.addr, align 1
+  // CHECK-NEXT: %16 = bitcast i8 %load_bits7 to <8 x i1>
+  // CHECK-NEXT: %17 = bitcast <8 x i1> %16 to i8
+  // CHECK-NEXT: %18 = call i8 @llvm.ctpop.i8(i8 %17)
+  // CHECK-NEXT: %cast8 = zext i8 %18 to i32
+  // CHECK-NEXT: store volatile i32 %cast8, ptr %pop, align 4
+  pop = __builtin_popcountg(vb8);
 }
 
 // CHECK-LABEL: define{{.*}} void @test_builtin_clzg
 void test_builtin_clzg(unsigned char uc, unsigned short us, unsigned int ui,
                        unsigned long ul, unsigned long long ull,
                        unsigned __int128 ui128, unsigned _BitInt(128) ubi128,
-                       signed char sc, short s, int i) {
+                       signed char sc, short s, int i,
+                       _Bool __attribute__((ext_vector_type(8))) vb8) {
   volatile int lz;
+  //      CHECK:  %2 = load i8, ptr %uc.addr, align 1
+  // CHECK-NEXT:  %3 = call i8 @llvm.ctlz.i8(i8 %2, i1 true)
+  // CHECK-NEXT:  %cast = zext i8 %3 to i32
+  // CHECK-NEXT:  store volatile i32 %cast, ptr %lz, align 4
   lz = __builtin_clzg(uc);
-  // CHECK: %1 = load i8, ptr %uc.addr, align 1
-  // CHECK-NEXT: %2 = call i8 @llvm.ctlz.i8(i8 %1, i1 true)
-  // CHECK-NEXT: %cast = zext i8 %2 to i32
-  // CHECK-NEXT: store volatile i32 %cast, ptr %lz, align 4
+  // CHECK-NEXT:  %4 = load i16, ptr %us.addr, align 2
+  // CHECK-NEXT:  %5 = call i16 @llvm.ctlz.i16(i16 %4, i1 true)
+  // CHECK-NEXT:  %cast2 = zext i16 %5 to i32
+  // CHECK-NEXT:  store volatile i32 %cast2, ptr %lz, align 4
   lz = __builtin_clzg(us);
-  // CHECK-NEXT: %3 = load i16, ptr %us.addr, align 2
-  // CHECK-NEXT: %4 = call i16 @llvm.ctlz.i16(i16 %3, i1 true)
-  // CHECK-NEXT: %cast1 = zext i16 %4 to i32
-  // CHECK-NEXT: store volatile i32 %cast1, ptr %lz, align 4
+  // CHECK-NEXT:  %6 = load i32, ptr %ui.addr, align 4
+  // CHECK-NEXT:  %7 = call i32 @llvm.ctlz.i32(i32 %6, i1 true)
+  // CHECK-NEXT:  store volatile i32 %7, ptr %lz, align 4
   lz = __builtin_clzg(ui);
-  // CHECK-NEXT: %5 = load i32, ptr %ui.addr, align 4
-  // CHECK-NEXT: %6 = call i32 @llvm.ctlz.i32(i32 %5, i1 true)
-  // CHECK-NEXT: store volatile i32 %6, ptr %lz, align 4
+  // CHECK-NEXT:  %8 = load i64, ptr %ul.addr, align 8
+  // CHECK-NEXT:  %9 = call i64 @llvm.ctlz.i64(i64 %8, i1 true)
+  // CHECK-NEXT:  %cast3 = trunc i64 %9 to i32
+  // CHECK-NEXT:  store volatile i32 %cast3, ptr %lz, align 4
   lz = __builtin_clzg(ul);
-  // CHECK-NEXT: %7 = load i64, ptr %ul.addr, align 8
-  // CHECK-NEXT: %8 = call i64 @llvm.ctlz.i64(i64 %7, i1 true)
-  // CHECK-NEXT: %cast2 = trunc i64 %8 to i32
-  // CHECK-NEXT: store volatile i32 %cast2, ptr %lz, align 4
+  // CHECK-NEXT:  %10 = load i64, ptr %ull.addr, align 8
+  // CHECK-NEXT:  %11 = call i64 @llvm.ctlz.i64(i64 %10, i1 true)
+  // CHECK-NEXT:  %cast4 = trunc i64 %11 to i32
+  // CHECK-NEXT:  store volatile i32 %cast4, ptr %lz, align 4
   lz = __builtin_clzg(ull);
-  // CHECK-NEXT: %9 = load i64, ptr %ull.addr, align 8
-  // CHECK-NEXT: %10 = call i64 @llvm.ctlz.i64(i64 %9, i1 true)
-  // CHECK-NEXT: %cast3 = trunc i64 %10 to i32
-  // CHECK-NEXT: store volatile i32 %cast3, ptr %lz, align 4
+  // CHECK-NEXT:  %12 = load i128, ptr %ui128.addr, align 16
+  // CHECK-NEXT:  %13 = call i128 @llvm.ctlz.i128(i128 %12, i1 true)
+  // CHECK-NEXT:  %cast5 = trunc i128 %13 to i32
+  // CHECK-NEXT:  store volatile i32 %cast5, ptr %lz, align 4
   lz = __builtin_clzg(ui128);
-  // CHECK-NEXT: %11 = load i128, ptr %ui128.addr, align 16
-  // CHECK-NEXT: %12 = call i128 @llvm.ctlz.i128(i128 %11, i1 true)
-  // CHECK-NEXT: %cast4 = trunc i128 %12 to i32
-  // CHECK-NEXT: store volatile i32 %cast4, ptr %lz, align 4
+  // CHECK-NEXT:  %14 = load i128, ptr %ubi128.addr, align 8
+  // CHECK-NEXT:  %15 = call i128 @llvm.ctlz.i128(i128 %14, i1 true)
+  // CHECK-NEXT:  %cast6 = trunc i128 %15 to i32
+  // CHECK-NEXT:  store volatile i32 %cast6, ptr %lz, align 4
   lz = __builtin_clzg(ubi128);
-  // CHECK-NEXT: %13 = load i128, ptr %ubi128.addr, align 8
-  // CHECK-NEXT: %14 = call i128 @llvm.ctlz.i128(i128 %13, i1 true)
-  // CHECK-NEXT: %cast5 = trunc i128 %14 to i32
-  // CHECK-NEXT: store volatile i32 %cast5, ptr %lz, align 4
+  // CHECK-NEXT:  %load_bits7 = load i8, ptr %vb8.addr, align 1
+  // CHECK-NEXT:  %16 = bitcast i8 %load_bits7 to <8 x i1>
+  // CHECK-NEXT:  %17 = bitcast <8 x i1> %16 to i8
+  // CHECK-NEXT:  %18 = call i8 @llvm.ctlz.i8(i8 %17, i1 true)
+  // CHECK-NEXT:  %cast8 = zext i8 %18 to i32
+  // CHECK-NEXT:  store volatile i32 %cast8, ptr %lz, align 4
+  lz = __builtin_clzg(vb8);
+  // CHECK-NEXT:  %19 = load i8, ptr %uc.addr, align 1
+  // CHECK-NEXT:  %20 = call i8 @llvm.ctlz.i8(i8 %19, i1 true)
+  // CHECK-NEXT:  %cast9 = zext i8 %20 to i32
+  // CHECK-NEXT:  %iszero = icmp eq i8 %19, 0
+  // CHECK-NEXT:  %21 = load i8, ptr %sc.addr, align 1
+  // CHECK-NEXT:  %conv = sext i8 %21 to i32
+  // CHECK-NEXT:  %clzg = select i1 %iszero, i32 %conv, i32 %cast9
+  // CHECK-NEXT:  store volatile i32 %clzg, ptr %lz, align 4
   lz = __builtin_clzg(uc, sc);
-  // CHECK-NEXT: %15 = load i8, ptr %uc.addr, align 1
-  // CHECK-NEXT: %16 = call i8 @llvm.ctlz.i8(i8 %15, i1 true)
-  // CHECK-NEXT: %cast6 = zext i8 %16 to i32
-  // CHECK-NEXT: %iszero = icmp eq i8 %15, 0
-  // CHECK-NEXT: %17 = load i8, ptr %sc.addr, align 1
-  // CHECK-NEXT: %conv = sext i8 %17 to i32
-  // CHECK-NEXT: %clzg = select i1 %iszero, i32 %conv, i32 %cast6
-  // CHECK-NEXT: store volatile i32 %clzg, ptr %lz, align 4
+  // CHECK-NEXT:  %22 = load i16, ptr %us.addr, align 2
+  // CHECK-NEXT:  %23 = call i16 @llvm.ctlz.i16(i16 %22, i1 true)
+  // CHECK-NEXT:  %cast10 = zext i16 %23 to i32
+  // CHECK-NEXT:  %iszero11 = icmp eq i16 %22, 0
+  // CHECK-NEXT:  %24 = load i8, ptr %uc.addr, align 1
+  // CHECK-NEXT:  %conv12 = zext i8 %24 to i32
+  // CHECK-NEXT:  %clzg13 = select i1 %iszero11, i32 %conv12, i32 %cast10
+  // CHECK-NEXT:  store volatile i32 %clzg13, ptr %lz, align 4
   lz = __builtin_clzg(us, uc);
-  // CHECK-NEXT: %18 = load i16, ptr %us.addr, align 2
-  // CHECK-NEXT: %19 = call i16 @llvm.ctlz.i16(i16 %18, i1 true)
-  // CHECK-NEXT: %cast7 = zext i16 %19 to i32
-  // CHECK-NEXT: %iszero8 = icmp eq i16 %18, 0
-  // CHECK-NEXT: %20 = load i8, ptr %uc.addr, align 1
-  // CHECK-NEXT: %conv9 = zext i8 %20 to i32
-  // CHECK-NEXT: %clzg10 = select i1 %iszero8, i32 %conv9, i32 %cast7
-  // CHECK-NEXT: store volatile i32 %clzg10, ptr %lz, align 4
+  // CHECK-NEXT:  %25 = load i32, ptr %ui.addr, align 4
+  // CHECK-NEXT:  %26 = call i32 @llvm.ctlz.i32(i32 %25, i1 true)
+  // CHECK-NEXT:  %iszero14 = icmp eq i32 %25, 0
+  // CHECK-NEXT:  %27 = load i16, ptr %s.addr, align 2
+  // CHECK-NEXT:  %conv15 = sext i16 %27 to i32
+  // CHECK-NEXT:  %clzg16 = select i1 %iszero14, i32 %conv15, i32 %26
+  // CHECK-NEXT:  store volatile i32 %clzg16, ptr %lz, align 4
   lz = __builtin_clzg(ui, s);
-  // CHECK-NEXT: %21 = load i32, ptr %ui.addr, align 4
-  // CHECK-NEXT: %22 = call i32 @llvm.ctlz.i32(i32 %21, i1 true)
-  // CHECK-NEXT: %iszero11 = icmp eq i32 %21, 0
-  // CHECK-NEXT: %23 = load i16, ptr %s.addr, align 2
-  // CHECK-NEXT: %conv12 = sext i16 %23 to i32
-  // CHECK-NEXT: %clzg13 = select i1 %iszero11, i32 %conv12, i32 %22
-  // CHECK-NEXT: store volatile i32 %clzg13, ptr %lz, align 4
+  // CHECK-NEXT:  %28 = load i64, ptr %ul.addr, align 8
+  // CHECK-NEXT:  %29 = call i64 @llvm.ctlz.i64(i64 %28, i1 true)
+  // CHECK-NEXT:  %cast17 = trunc i64 %29 to i32
+  // CHECK-NEXT:  %iszero18 = icmp eq i64 %28, 0
+  // CHECK-NEXT:  %30 = load i16, ptr %us.addr, align 2
+  // CHECK-NEXT:  %conv19 = zext i16 %30 to i32
+  // CHECK-NEXT:  %clzg20 = select i1 %iszero18, i32 %conv19, i32 %cast17
+  // CHECK-NEXT:  store volatile i32 %clzg20, ptr %lz, align 4
   lz = __builtin_clzg(ul, us);
-  // CHECK-NEXT: %24 = load i64, ptr %ul.addr, align 8
-  // CHECK-NEXT: %25 = call i64 @llvm.ctlz.i64(i64 %24, i1 true)
-  // CHECK-NEXT: %cast14 = trunc i64 %25 to i32
-  // CHECK-NEXT: %iszero15 = icmp eq i64 %24, 0
-  // CHECK-NEXT: %26 = load i16, ptr %us.addr, align 2
-  // CHECK-NEXT: %conv16 = zext i16 %26 to i32
-  // CHECK-NEXT: %clzg17 = select i1 %iszero15, i32 %conv16, i32 %cast14
-  // CHECK-NEXT: store volatile i32 %clzg17, ptr %lz, align 4
+  // CHECK-NEXT:  %31 = load i64, ptr %ull.addr, align 8
+  // CHECK-NEXT:  %32 = call i64 @llvm.ctlz.i64(i64 %31, i1 true)
+  // CHECK-NEXT:  %cast21 = trunc i64 %32 to i32
+  // CHECK-NEXT:  %iszero22 = icmp eq i64 %31, 0
+  // CHECK-NEXT:  %33 = load i32, ptr %i.addr, align 4
+  // CHECK-NEXT:  %clzg23 = select i1 %iszero22, i32 %33, i32 %cast21
+  // CHECK-NEXT:  store volatile i32 %clzg23, ptr %lz, align 4
   lz = __builtin_clzg(ull, i);
-  // CHECK-NEXT: %27 = load i64, ptr %ull.addr, align 8
-  // CHECK-NEXT: %28 = call i64 @llvm.ctlz.i64(i64 %27, i1 true)
-  // CHECK-NEXT: %cast18 = trunc i64 %28 to i32
-  // CHECK-NEXT: %iszero19 = icmp eq i64 %27, 0
-  // CHECK-NEXT: %29 = load i32, ptr %i.addr, align 4
-  // CHECK-NEXT: %clzg20 = select i1 %iszero19, i32 %29, i32 %cast18
-  // CHECK-NEXT: store volatile i32 %clzg20, ptr %lz, align 4
+  // CHECK-NEXT:  %34 = load i128, ptr %ui128.addr, align 16
+  // CHECK-NEXT:  %35 = call i128 @llvm.ctlz.i128(i128 %34, i1 true)
+  // CHECK-NEXT:  %cast24 = trunc i128 %35 to i32
+  // CHECK-NEXT:  %iszero25 = icmp eq i128 %34, 0
+  // CHECK-NEXT:  %36 = load i32, ptr %i.addr, align 4
+  // CHECK-NEXT:  %clzg26 = select i1 %iszero25, i32 %36, i32 %cast24
+  // CHECK-NEXT:  store volatile i32 %clzg26, ptr %lz, align 4
   lz = __builtin_clzg(ui128, i);
-  // CHECK-NEXT: %30 = load i128, ptr %ui128.addr, align 16
-  // CHECK-NEXT: %31 = call i128 @llvm.ctlz.i128(i128 %30, i1 true)
-  // CHECK-NEXT: %cast21 = trunc i128 %31 to i32
-  // CHECK-NEXT: %iszero22 = icmp eq i128 %30, 0
-  // CHECK-NEXT: %32 = load i32, ptr %i.addr, align 4
-  // CHECK-NEXT: %clzg23 = select i1 %iszero22, i32 %32, i32 %cast21
-  // CHECK-NEXT: store volatile i32 %clzg23, ptr %lz, align 4
+  // CHECK-NEXT:  %37 = load i128, ptr %ubi128.addr, align 8
+  // CHECK-NEXT:  %38 = call i128 @llvm.ctlz.i128(i128 %37, i1 true)
+  // CHECK-NEXT:  %cast27 = trunc i128 %38 to i32
+  // CHECK-NEXT:  %iszero28 = icmp eq i128 %37, 0
+  // CHECK-NEXT:  %39 = load i32, ptr %i.addr, align 4
+  // CHECK-NEXT:  %clzg29 = select i1 %iszero28, i32 %39, i32 %cast27
+  // CHECK-NEXT:  store volatile i32 %clzg29, ptr %lz, align 4
   lz = __builtin_clzg(ubi128, i);
-   // CHECK-NEXT: %33 = load i128, ptr %ubi128.addr, align 8
-  // CHECK-NEXT: %34 = call i128 @llvm.ctlz.i128(i128 %33, i1 true)
-  // CHECK-NEXT: %cast24 = trunc i128 %34 to i32
-  // CHECK-NEXT: %iszero25 = icmp eq i128 %33, 0
-  // CHECK-NEXT: %35 = load i32, ptr %i.addr, align 4
-  // CHECK-NEXT: %clzg26 = select i1 %iszero25, i32 %35, i32 %cast24
-  // CHECK-NEXT: store volatile i32 %clzg26, ptr %lz, align 4
-  // CHECK-NEXT: ret void
+  // CHECK-NEXT:  %load_bits30 = load i8, ptr %vb8.addr, align 1
+  // CHECK-NEXT:  %40 = bitcast i8 %load_bits30 to <8 x i1>
+  // CHECK-NEXT:  %41 = bitcast <8 x i1> %40 to i8
+  // CHECK-NEXT:  %42 = call i8 @llvm.ctlz.i8(i8 %41, i1 true)
+  // CHECK-NEXT:  %cast31 = zext i8 %42 to i32
+  // CHECK-NEXT:  %iszero32 = icmp eq i8 %41, 0
+  // CHECK-NEXT:  %43 = load i32, ptr %i.addr, align 4
+  // CHECK-NEXT:  %clzg33 = select i1 %iszero32, i32 %43, i32 %cast31
+  // CHECK-NEXT:  store volatile i32 %clzg33, ptr %lz, align 4
+  lz = __builtin_clzg(vb8, i);
 }
 
 // CHECK-LABEL: define{{.*}} void @test_builtin_ctzg
 void test_builtin_ctzg(unsigned char uc, unsigned short us, unsigned int ui,
                        unsigned long ul, unsigned long long ull,
                        unsigned __int128 ui128, unsigned _BitInt(128) ubi128,
-                       signed char sc, short s, int i) {
+                       signed char sc, short s, int i,
+                       _Bool __attribute__((ext_vector_type(8))) vb8) {
   volatile int tz;
-  tz = __builtin_ctzg(uc);
-  // CHECK: %1 = load i8, ptr %uc.addr, align 1
-  // CHECK-NEXT: %2 = call i8 @llvm.cttz.i8(i8 %1, i1 true)
-  // CHECK-NEXT: %cast = zext i8 %2 to i32
+  //      CHECK: %2 = load i8, ptr %uc.addr, align 1
+  // CHECK-NEXT: %3 = call i8 @llvm.cttz.i8(i8 %2, i1 true)
+  // CHECK-NEXT: %cast = zext i8 %3 to i32
   // CHECK-NEXT: store volatile i32 %cast, ptr %tz, align 4
-  tz = __builtin_ctzg(us);
-  // CHECK-NEXT: %3 = load i16, ptr %us.addr, align 2
-  // CHECK-NEXT: %4 = call i16 @llvm.cttz.i16(i16 %3, i1 true)
-  // CHECK-NEXT: %cast1 = zext i16 %4 to i32
-  // CHECK-NEXT: store volatile i32 %cast1, ptr %tz, align 4
-  tz = __builtin_ctzg(ui);
-  // CHECK-NEXT: %5 = load i32, ptr %ui.addr, align 4
-  // CHECK-NEXT: %6 = call i32 @llvm.cttz.i32(i32 %5, i1 true)
-  // CHECK-NEXT: store volatile i32 %6, ptr %tz, align 4
-  tz = __builtin_ctzg(ul);
-  // CHECK-NEXT: %7 = load i64, ptr %ul.addr, align 8
-  // CHECK-NEXT: %8 = call i64 @llvm.cttz.i64(i64 %7, i1 true)
-  // CHECK-NEXT: %cast2 = trunc i64 %8 to i32
+  tz = __builtin_ctzg(uc);
+  // CHECK-NEXT: %4 = load i16, ptr %us.addr, align 2
+  // CHECK-NEXT: %5 = call i16 @llvm.cttz.i16(i16 %4, i1 true)
+  // CHECK-NEXT: %cast2 = zext i16 %5 to i32
   // CHECK-NEXT: store volatile i32 %cast2, ptr %tz, align 4
-  tz = __builtin_ctzg(ull);
-  // CHECK-NEXT: %9 = load i64, ptr %ull.addr, align 8
-  // CHECK-NEXT: %10 = call i64 @llvm.cttz.i64(i64 %9, i1 true)
-  // CHECK-NEXT: %cast3 = trunc i64 %10 to i32
+  tz = __builtin_ctzg(us);
+  // CHECK-NEXT: %6 = load i32, ptr %ui.addr, align 4
+  // CHECK-NEXT: %7 = call i32 @llvm.cttz.i32(i32 %6, i1 true)
+  // CHECK-NEXT: store volatile i32 %7, ptr %tz, align 4
+  tz = __builtin_ctzg(ui);
+  // CHECK-NEXT: %8 = load i64, ptr %ul.addr, align 8
+  // CHECK-NEXT: %9 = call i64 @llvm.cttz.i64(i64 %8, i1 true)
+  // CHECK-NEXT: %cast3 = trunc i64 %9 to i32
   // CHECK-NEXT: store volatile i32 %cast3, ptr %tz, align 4
-  tz = __builtin_ctzg(ui128);
-  // CHECK-NEXT: %11 = load i128, ptr %ui128.addr, align 16
-  // CHECK-NEXT: %12 = call i128 @llvm.cttz.i128(i128 %11, i1 true)
-  // CHECK-NEXT: %cast4 = trunc i128 %12 to i32
+  tz = __builtin_ctzg(ul);
+  // CHECK-NEXT: %10 = load i64, ptr %ull.addr, align 8
+  // CHECK-NEXT: %11 = call i64 @llvm.cttz.i64(i64 %10, i1 true)
+  // CHECK-NEXT: %cast4 = trunc i64 %11 to i32
   // CHECK-NEXT: store volatile i32 %cast4, ptr %tz, align 4
-  tz = __builtin_ctzg(ubi128);
-  // CHECK-NEXT: %13 = load i128, ptr %ubi128.addr, align 8
-  // CHECK-NEXT: %14 = call i128 @llvm.cttz.i128(i128 %13, i1 true)
-  // CHECK-NEXT: %cast5 = trunc i128 %14 to i32
+  tz = __builtin_ctzg(ull);
+  // CHECK-NEXT: %12 = load i128, ptr %ui128.addr, align 16
+  // CHECK-NEXT: %13 = call i128 @llvm.cttz.i128(i128 %12, i1 true)
+  // CHECK-NEXT: %cast5 = trunc i128 %13 to i32
   // CHECK-NEXT: store volatile i32 %cast5, ptr %tz, align 4
-  tz = __builtin_ctzg(uc, sc);
-  // CHECK-NEXT: %15 = load i8, ptr %uc.addr, align 1
-  // CHECK-NEXT: %16 = call i8 @llvm.cttz.i8(i8 %15, i1 true)
-  // CHECK-NEXT: %cast6 = zext i8 %16 to i32
-  // CHECK-NEXT: %iszero = icmp eq i8 %15, 0
-  // CHECK-NEXT: %17 = load i8, ptr %sc.addr, align 1
-  // CHECK-NEXT: %conv = sext i8 %17 to i32
-  // CHECK-NEXT: %ctzg = select i1 %iszero, i32 %conv, i32 %cast6
+  tz = __builtin_ctzg(ui128);
+  // CHECK-NEXT: %14 = load i128, ptr %ubi128.addr, align 8
+  // CHECK-NEXT: %15 = call i128 @llvm.cttz.i128(i128 %14, i1 true)
+  // CHECK-NEXT: %cast6 = trunc i128 %15 to i32
+  // CHECK-NEXT: store volatile i32 %cast6, ptr %tz, align 4
+  tz = __builtin_ctzg(ubi128);
+  // CHECK-NEXT: %load_bits7 = load i8, ptr %vb8.addr, align 1
+  // CHECK-NEXT: %16 = bitcast i8 %load_bits7 to <8 x i1>
+  // CHECK-NEXT: %17 = bitcast <8 x i1> %16 to i8
+  // CHECK-NEXT: %18 = call i8 @llvm.cttz.i8(i8 %17, i1 true)
+  // CHECK-NEXT: %cast8 = zext i8 %18 to i32
+  // CHECK-NEXT: store volatile i32 %cast8, ptr %tz, align 4
+  tz = __builtin_ctzg(vb8);
+  // CHECK-NEXT: %19 = load i8, ptr %uc.addr, align 1
+  // CHECK-NEXT: %20 = call i8 @llvm.cttz.i8(i8 %19, i1 true)
+  // CHECK-NEXT: %cast9 = zext i8 %20 to i32
+  // CHECK-NEXT: %iszero = icmp eq i8 %19, 0
+  // CHECK-NEXT: %21 = load i8, ptr %sc.addr, align 1
+  // CHECK-NEXT: %conv = sext i8 %21 to i32
+  // CHECK-NEXT: %ctzg = select i1 %iszero, i32 %conv, i32 %cast9
   // CHECK-NEXT: store volatile i32 %ctzg, ptr %tz, align 4
-  tz = __builtin_ctzg(us, uc);
-  // CHECK-NEXT: %18 = load i16, ptr %us.addr, align 2
-  // CHECK-NEXT: %19 = call i16 @llvm.cttz.i16(i16 %18, i1 true)
-  // CHECK-NEXT: %cast7 = zext i16 %19 to i32
-  // CHECK-NEXT: %iszero8 = icmp eq i16 %18, 0
-  // CHECK-NEXT: %20 = load i8, ptr %uc.addr, align 1
-  // CHECK-NEXT: %conv9 = zext i8 %20 to i32
-  // CHECK-NEXT: %ctzg10 = select i1 %iszero8, i32 %conv9, i32 %cast7
-  // CHECK-NEXT: store volatile i32 %ctzg10, ptr %tz, align 4
-  tz = __builtin_ctzg(ui, s);
-  // CHECK-NEXT: %21 = load i32, ptr %ui.addr, align 4
-  // CHECK-NEXT: %22 = call i32 @llvm.cttz.i32(i32 %21, i1 true)
-  // CHECK-NEXT: %iszero11 = icmp eq i32 %21, 0
-  // CHECK-NEXT: %23 = load i16, ptr %s.addr, align 2
-  // CHECK-NEXT: %conv12 = sext i16 %23 to i32
-  // CHECK-NEXT: %ctzg13 = select i1 %iszero11, i32 %conv12, i32 %22
+  tz = __builtin_ctzg(uc, sc);
+  // CHECK-NEXT: %22 = load i16, ptr %us.addr, align 2
+  // CHECK-NEXT: %23 = call i16 @llvm.cttz.i16(i16 %22, i1 true)
+  // CHECK-NEXT: %cast10 = zext i16 %23 to i32
+  // CHECK-NEXT: %iszero11 = icmp eq i16 %22, 0
+  // CHECK-NEXT: %24 = load i8, ptr %uc.addr, align 1
+  // CHECK-NEXT: %conv12 = zext i8 %24 to i32
+  // CHECK-NEXT: %ctzg13 = select i1 %iszero11, i32 %conv12, i32 %cast10
   // CHECK-NEXT: store volatile i32 %ctzg13, ptr %tz, align 4
-  tz = __builtin_ctzg(ul, us);
-  // CHECK-NEXT: %24 = load i64, ptr %ul.addr, align 8
-  // CHECK-NEXT: %25 = call i64 @llvm.cttz.i64(i64 %24, i1 true)
-  // CHECK-NEXT: %cast14 = trunc i64 %25 to i32
-  // CHECK-NEXT: %iszero15 = icmp eq i64 %24, 0
-  // CHECK-NEXT: %26 = load i16, ptr %us.addr, align 2
-  // CHECK-NEXT: %conv16 = zext i16 %26 to i32
-  // CHECK-NEXT: %ctzg17 = select i1 %iszero15, i32 %conv16, i32 %cast14
-  // CHECK-NEXT: store volatile i32 %ctzg17, ptr %tz, align 4
-  tz = __builtin_ctzg(ull, i);
-  // CHECK-NEXT: %27 = load i64, ptr %ull.addr, align 8
-  // CHECK-NEXT: %28 = call i64 @llvm.cttz.i64(i64 %27, i1 true)
-  // CHECK-NEXT: %cast18 = trunc i64 %28 to i32
-  // CHECK-NEXT: %iszero19 = icmp eq i64 %27, 0
-  // CHECK-NEXT: %29 = load i32, ptr %i.addr, align 4
-  // CHECK-NEXT: %ctzg20 = select i1 %iszero19, i32 %29, i32 %cast18
+  tz = __builtin_ctzg(us, uc);
+  // CHECK-NEXT: %25 = load i32, ptr %ui.addr, align 4
+  // CHECK-NEXT: %26 = call i32 @llvm.cttz.i32(i32 %25, i1 true)
+  // CHECK-NEXT: %iszero14 = icmp eq i32 %25, 0
+  // CHECK-NEXT: %27 = load i16, ptr %s.addr, align 2
+  // CHECK-NEXT: %conv15 = sext i16 %27 to i32
+  // CHECK-NEXT: %ctzg16 = select i1 %iszero14, i32 %conv15, i32 %26
+  // CHECK-NEXT: store volatile i32 %ctzg16, ptr %tz, align 4
+  tz = __builtin_ctzg(ui, s);
+  // CHECK-NEXT: %28 = load i64, ptr %ul.addr, align 8
+  // CHECK-NEXT: %29 = call i64 @llvm.cttz.i64(i64 %28, i1 true)
+  // CHECK-NEXT: %cast17 = trunc i64 %29 to i32
+  // CHECK-NEXT: %iszero18 = icmp eq i64 %28, 0
+  // CHECK-NEXT: %30 = load i16, ptr %us.addr, align 2
+  // CHECK-NEXT: %conv19 = zext i16 %30 to i32
+  // CHECK-NEXT: %ctzg20 = select i1 %iszero18, i32 %conv19, i32 %cast17
   // CHECK-NEXT: store volatile i32 %ctzg20, ptr %tz, align 4
-  tz = __builtin_ctzg(ui128, i);
-  // CHECK-NEXT: %30 = load i128, ptr %ui128.addr, align 16
-  // CHECK-NEXT: %31 = call i128 @llvm.cttz.i128(i128 %30, i1 true)
-  // CHECK-NEXT: %cast21 = trunc i128 %31 to i32
-  // CHECK-NEXT: %iszero22 = icmp eq i128 %30, 0
-  // CHECK-NEXT: %32 = load i32, ptr %i.addr, align 4
-  // CHECK-NEXT: %ctzg23 = select i1 %iszero22, i32 %32, i32 %cast21
+  tz = __builtin_ctzg(ul, us);
+  // CHECK-NEXT: %31 = load i64, ptr %ull.addr, align 8
+  // CHECK-NEXT: %32 = call i64 @llvm.cttz.i64(i64 %31, i1 true)
+  // CHECK-NEXT: %cast21 = trunc i64 %32 to i32
+  // CHECK-NEXT: %iszero22 = icmp eq i64 %31, 0
+  // CHECK-NEXT: %33 = load i32, ptr %i.addr, align 4
+  // CHECK-NEXT: %ctzg23 = select i1 %iszero22, i32 %33, i32 %cast21
   // CHECK-NEXT: store volatile i32 %ctzg23, ptr %tz, align 4
-  tz = __builtin_ctzg(ubi128, i);
-  // CHECK-NEXT: %33 = load i128, ptr %ubi128.addr, align 8
-  // CHECK-NEXT: %34 = call i128 @llvm.cttz.i128(i128 %33, i1 true)
-  // CHECK-NEXT: %cast24 = trunc i128 %34 to i32
-  // CHECK-NEXT: %iszero25 = icmp eq i128 %33, 0
-  // CHECK-NEXT: %35 = load i32, ptr %i.addr, align 4
-  // CHECK-NEXT: %ctzg26 = select i1 %iszero25, i32 %35, i32 %cast24
+  tz = __builtin_ctzg(ull, i);
+  // CHECK-NEXT: %34 = load i128, ptr %ui128.addr, align 16
+  // CHECK-NEXT: %35 = call i128 @llvm.cttz.i128(i128 %34, i1 true)
+  // CHECK-NEXT: %cast24 = trunc i128 %35 to i32
+  // CHECK-NEXT: %iszero25 = icmp eq i128 %34, 0
+  // CHECK-NEXT: %36 = load i32, ptr %i.addr, align 4
+  // CHECK-NEXT: %ctzg26 = select i1 %iszero25, i32 %36, i32 %cast24
   // CHECK-NEXT: store volatile i32 %ctzg26, ptr %tz, align 4
-  // CHECK-NEXT: ret void
+  tz = __builtin_ctzg(ui128, i);
+  // CHECK-NEXT: %37 = load i128, ptr %ubi128.addr, align 8
+  // CHECK-NEXT: %38 = call i128 @llvm.cttz.i128(i128 %37, i1 true)
+  // CHECK-NEXT: %cast27 = trunc i128 %38 to i32
+  // CHECK-NEXT: %iszero28 = icmp eq i128 %37, 0
+  // CHECK-NEXT: %39 = load i32, ptr %i.addr, align 4
+  // CHECK-NEXT: %ctzg29 = select i1 %iszero28, i32 %39, i32 %cast27
+  // CHECK-NEXT: store volatile i32 %ctzg29, ptr %tz, align 4
+  tz = __builtin_ctzg(ubi128, i);
+  // CHECK-NEXT: %load_bits30 = load i8, ptr %vb8.addr, align 1
+  // CHECK-NEXT: %40 = bitcast i8 %load_bits30 to <8 x i1>
+  // CHECK-NEXT: %41 = bitcast <8 x i1> %40 to i8
+  // CHECK-NEXT: %42 = call i8 @llvm.cttz.i8(i8 %41, i1 true)
+  // CHECK-NEXT: %cast31 = zext i8 %42 to i32
+  // CHECK-NEXT: %iszero32 = icmp eq i8 %41, 0
+  // CHECK-NEXT: %43 = load i32, ptr %i.addr, align 4
+  // CHECK-NEXT: %ctzg33 = select i1 %iszero32, i32 %43, i32 %cast31
+  // CHECK-NEXT: store volatile i32 %ctzg33, ptr %tz, align 4
+  tz = __builtin_ctzg(vb8, i);
 }
 
 #endif

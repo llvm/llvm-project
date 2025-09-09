@@ -11,9 +11,7 @@
 //
 // std::pointer_traits specialization
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
-#include <__iterator/bounded_iter.h>
+#include <__cxx03/__iterator/bounded_iter.h>
 #include <cassert>
 #include <cstddef>
 #include <memory>
