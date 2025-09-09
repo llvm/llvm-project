@@ -1803,10 +1803,10 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     // Read-only loop.
     Predicates.clear();
     if (!isReadOnlyLoop(TheLoop, PSE.getSE(), DT, AC, NonDerefLoads,
-                      &Predicates)) {
-      reportVectorizationFailure("Loop may fault",
-                                 "Cannot vectorize non-read-only early exit loop",
-                                 "NonReadOnlyEarlyExitLoop", ORE, TheLoop);
+                        &Predicates)) {
+      reportVectorizationFailure(
+          "Loop may fault", "Cannot vectorize non-read-only early exit loop",
+          "NonReadOnlyEarlyExitLoop", ORE, TheLoop);
       return false;
     }
   } else if (!canUncountableExitConditionLoadBeMoved(
