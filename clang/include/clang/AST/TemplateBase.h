@@ -475,7 +475,6 @@ public:
   /// Used to insert TemplateArguments into FoldingSets.
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) const;
 };
-
 /// Location information for a TemplateArgument.
 struct TemplateArgumentLocInfo {
   struct TemplateTemplateArgLocInfo {
