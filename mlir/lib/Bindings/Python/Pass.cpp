@@ -60,7 +60,7 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
   // Mapping of MlirExternalPass
   //----------------------------------------------------------------------------
   nb::class_<MlirExternalPass>(m, "ExternalPass")
-      .def("signal_failure",
+      .def("signal_pass_failure",
            [](MlirExternalPass pass) { mlirExternalPassSignalFailure(pass); });
 
   //----------------------------------------------------------------------------

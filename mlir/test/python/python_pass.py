@@ -90,7 +90,7 @@ def testCustomPass():
         # test signal_pass_failure
         def custom_pass_that_fails(op, pass_):
             print("hello from pass that fails")
-            pass_.signal_failure()
+            pass_.signal_pass_failure()
 
         pm = PassManager("any")
         pm.add(custom_pass_that_fails, "CustomPassThatFails")
