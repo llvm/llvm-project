@@ -2307,10 +2307,7 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/BPF/BPFGenCallingConv.inc": ["-gen-callingconv"],
             "lib/Target/BPF/BPFGenDAGISel.inc": ["-gen-dag-isel"],
             "lib/Target/BPF/BPFGenGlobalISel.inc": ["-gen-global-isel"],
-            "lib/Target/BPF/BPFGenDisassemblerTables.inc": [
-                "-gen-disassembler",
-                "-ignore-non-decodable-operands",
-            ],
+            "lib/Target/BPF/BPFGenDisassemblerTables.inc": ["-gen-disassembler"],
             "lib/Target/BPF/BPFGenMCCodeEmitter.inc": ["-gen-emitter"],
             "lib/Target/BPF/BPFGenInstrInfo.inc": ["-gen-instr-info"],
             "lib/Target/BPF/BPFGenRegisterInfo.inc": ["-gen-register-info"],
