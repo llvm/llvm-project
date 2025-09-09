@@ -12,12 +12,14 @@ void a() {
   void (^blk)(void) = ^{};
 }
 
-// CHECK: [[BLOCK_DESCRIPTOR_NAME:@"__block_descriptor_.*"]] = linkonce_odr hidden unnamed_addr constant { i64, i64, ptr, ptr } { i64 0, i64 32, ptr @.str, ptr null }
-// CHECK: @__block_literal_global = internal constant { ptr, i32, i32, ptr, ptr } { ptr @_NSConcreteGlobalBlock, i32 1342177280, i32 0, ptr ptrauth (ptr @__a_block_invoke, i32 0, i64 0, ptr getelementptr inbounds ({ ptr, i32, i32, ptr, ptr }, ptr @__block_literal_global, i32 0, i32 3)), ptr ptrauth (ptr [[BLOCK_DESCRIPTOR_NAME]], i32 2, i64 49339, ptr getelementptr inbounds ({ ptr, i32, i32, ptr, ptr }, ptr @__block_literal_global, i32 0, i32 4)) }
+// CHECK: @__a_block_invoke.ptrauth = private constant { ptr, i32, i64, i64 } { ptr @__a_block_invoke, i32 0, i64 ptrtoint (ptr getelementptr inbounds ({ ptr, i32, i32, ptr, ptr }, ptr @__block_literal_global, i32 0, i32 3) to i64), i64 0 }
+// CHECK: @"[[BLOCK_DESCRIPTOR_NAME:__block_descriptor_.*]]" = linkonce_odr hidden unnamed_addr constant { i64, i64, ptr, ptr } { i64 0, i64 32, ptr @.str, ptr null }
+// CHECK: @"[[BLOCK_DESCRIPTOR_NAME]].ptrauth" = private constant { ptr, i32, i64, i64 } { ptr @"[[BLOCK_DESCRIPTOR_NAME]]", i32 2, i64 ptrtoint (ptr getelementptr inbounds ({ ptr, i32, i32, ptr, ptr }, ptr @__block_literal_global, i32 0, i32 4) to i64), i64 49339 }
+// CHECK: @__block_literal_global = internal constant { ptr, i32, i32, ptr, ptr } { ptr @_NSConcreteGlobalBlock, i32 1342177280, i32 0, ptr @__a_block_invoke.ptrauth, ptr @"[[BLOCK_DESCRIPTOR_NAME]].ptrauth" }
 
+// NODESCRIPTORAUTH: @__a_block_invoke.ptrauth = private constant { ptr, i32, i64, i64 } { ptr @__a_block_invoke, i32 0, i64 ptrtoint (ptr getelementptr inbounds ({ ptr, i32, i32, ptr, ptr }, ptr @__block_literal_global, i32 0, i32 3) to i64), i64 0 }, section "llvm.ptrauth"
 // NODESCRIPTORAUTH: [[BLOCK_DESCRIPTOR_NAME:@"__block_descriptor_.*"]] = linkonce_odr hidden unnamed_addr constant { i64, i64, ptr, ptr } { i64 0, i64 32, ptr @.str, ptr null }
-// NODESCRIPTORAUTH: @__block_literal_global = internal constant { ptr, i32, i32, ptr, ptr } { ptr @_NSConcreteGlobalBlock, i32 1342177280, i32 0, ptr ptrauth (ptr @__a_block_invoke, i32 0, i64 0, ptr getelementptr inbounds ({ ptr, i32, i32, ptr, ptr }, ptr @__block_literal_global, i32 0, i32 3)), ptr [[BLOCK_DESCRIPTOR_NAME]] }
-
+// NODESCRIPTORAUTH: @__block_literal_global = internal constant { ptr, i32, i32, ptr, ptr } { ptr @_NSConcreteGlobalBlock, i32 1342177280, i32 0, ptr @__a_block_invoke.ptrauth, ptr [[BLOCK_DESCRIPTOR_NAME]] }
 
 void b(int p) {
   // CHECK-LABEL: define void @b

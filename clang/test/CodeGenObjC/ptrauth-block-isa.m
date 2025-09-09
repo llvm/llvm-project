@@ -1,8 +1,9 @@
 // RUN: %clang_cc1 -fptrauth-calls -fptrauth-objc-isa -fobjc-arc -fblocks -triple arm64e -emit-llvm %s -o - | FileCheck %s
 
 void (^globalblock)(void) = ^{};
-// CHECK: [[BLOCK_DESCRIPTOR_NAME:@"__block_descriptor_.*"]] = linkonce_odr hidden unnamed_addr constant { i64, i64, ptr, ptr } { i64 0, i64 32, ptr @.str, ptr null }, comdat, align 8
-// CHECK: @__block_literal_global = internal constant { ptr, i32, i32, ptr, ptr } { ptr ptrauth (ptr @_NSConcreteGlobalBlock, i32 2, i64 27361, ptr @__block_literal_global), i32 1342177280, i32 0, ptr ptrauth (ptr @globalblock_block_invoke, i32 0, i64 0, ptr getelementptr inbounds ({ ptr, i32, i32, ptr, ptr }, ptr @__block_literal_global, i32 0, i32 3)), ptr [[BLOCK_DESCRIPTOR_NAME]] }
+// CHECK: @_NSConcreteGlobalBlock.ptrauth = private constant { ptr, i32, i64, i64 } { ptr @_NSConcreteGlobalBlock, i32 2, i64 ptrtoint (ptr [[GLOBAL_BLOCK_1:@.*]] to i64), i64 27361 }, section "llvm.ptrauth", align 8
+// CHECK: [[INVOCATION_1:@.*]] =  private constant { ptr, i32, i64, i64 } { ptr {{@.*}}, i32 0, i64 ptrtoint (ptr getelementptr inbounds ({ ptr, i32, i32, ptr, ptr }, ptr [[GLOBAL_BLOCK_1]], i32 0, i32 3) to i64), i64 0 }, section "llvm.ptrauth"
+// CHECK: [[GLOBAL_BLOCK_1]] = internal constant { ptr, i32, i32, ptr, ptr } { ptr @_NSConcreteGlobalBlock.ptrauth, i32 1342177280, i32 0, ptr [[INVOCATION_1]],
 
 @interface A
 - (int) count;

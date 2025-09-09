@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -Wno-objc-root-class -fptrauth-objc-class-ro -fobjc-arc -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -Wno-objc-root-class -fptrauth-objc-class-ro -fobjc-arc -emit-llvm -o - %s -mllvm -ptrauth-emit-wrapper-globals=0 | FileCheck %s
 
 // CHECK: @"OBJC_CLASS_$_C" = global %struct._class_t { ptr @"OBJC_METACLASS_$_C", ptr null, ptr @_objc_empty_cache, ptr null, ptr ptrauth (ptr @"_OBJC_CLASS_RO_$_C", i32 2, i64 25080, ptr getelementptr inbounds (%struct._class_t, ptr @"OBJC_CLASS_$_C", i32 0, i32 4)) }, section "__DATA, __objc_data", align 8
 // CHECK: @"OBJC_METACLASS_$_C" = global %struct._class_t { ptr @"OBJC_METACLASS_$_C", ptr @"OBJC_CLASS_$_C", ptr @_objc_empty_cache, ptr null, ptr ptrauth (ptr @"_OBJC_METACLASS_RO_$_C", i32 2, i64 25080, ptr getelementptr inbounds (%struct._class_t, ptr @"OBJC_METACLASS_$_C", i32 0, i32 4)) }, section "__DATA, __objc_data", align 8
