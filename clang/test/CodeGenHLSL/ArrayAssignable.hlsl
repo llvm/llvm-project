@@ -140,21 +140,32 @@ void arr_assign7() {
 
 // CHECK-LABEL: define hidden void {{.*}}arr_assign8
 // CHECK: [[C:%.*]] = alloca [2 x float], align 4
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[C]], ptr align 4 {{.*}}, i32 8, i1 false)
-// CHECK-NEXT: call void @llvm.memcpy.p0.p2.i32(ptr align 4 [[C]], ptr addrspace(2) align 4 @c1, i32 8, i1 false)
+// CHECK-NEXT: [[V0:%.*]] = getelementptr inbounds [2 x float], ptr [[C]], i32 0
+// CHECK-NEXT: [[L0:%.*]] = load float, ptr addrspace(2) @c1, align 4
+// CHECK-NEXT: store float [[L0]], ptr [[V0]], align 4
+// CHECK-NEXT: [[V1:%.*]] = getelementptr inbounds [2 x float], ptr [[C]], i32 1
+// CHECK-NEXT: [[L1:%.*]] = load float, ptr addrspace(2) getelementptr inbounds (i8, ptr addrspace(2) @c1, i32 32), align 4
+// CHECK-NEXT: store float [[L1]], ptr [[V1]], align 4
 // CHECK-NEXT: ret void
 void arr_assign8() {
-  float C[2] = {1.0, 2.0};
+  float C[2];
   C = c1;
 }
 
+// TODO: A memcpy would actually be valid here, since everything is aligned on
+// 16 byte boundaries.
+//
 // CHECK-LABEL: define hidden void {{.*}}arr_assign9
 // CHECK: [[C:%.*]] = alloca [2 x <4 x i32>], align 16
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 16 [[C]], ptr align 16 {{.*}}, i32 32, i1 false)
-// CHECK-NEXT: call void @llvm.memcpy.p0.p2.i32(ptr align 16 [[C]], ptr addrspace(2) align 16 @c2, i32 32, i1 false)
+// CHECK-NEXT: [[V0:%.*]] = getelementptr inbounds [2 x <4 x i32>], ptr [[C]], i32 0
+// CHECK-NEXT: [[L0:%.*]] = load <4 x i32>, ptr addrspace(2) @c2, align 16
+// CHECK-NEXT: store <4 x i32> [[L0]], ptr [[V0]], align 16
+// CHECK-NEXT: [[V1:%.*]] = getelementptr inbounds [2 x <4 x i32>], ptr [[C]], i32 1
+// CHECK-NEXT: [[L1:%.*]] = load <4 x i32>, ptr addrspace(2) getelementptr inbounds (i8, ptr addrspace(2) @c2, i32 32), align 16
+// CHECK-NEXT: store <4 x i32> [[L1]], ptr [[V1]], align 16
 // CHECK-NEXT: ret void
 void arr_assign9() {
-  int4 C[2] = {1,2,3,4,5,6,7,8};
+  int4 C[2];
   C = c2;
 }
 
