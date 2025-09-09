@@ -135,6 +135,38 @@ template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeID> {
   }
 };
 
+/// Helper to assert that the static `Type::Profile` and the corresponding
+/// member produce the same results. The \p IDFromStaticProfile is provided
+/// by the caller rather than computed internally because the static version
+/// accepts a variable number of arguments and there is no generic way to
+/// obtain them.
+///
+/// A good place to put these assertions is before the `InsertNode()` call.
+template <class T>
+static void
+assertProfileMatches(T &type,
+                     const llvm::FoldingSetNodeID &IDFromStaticProfile) {
+#ifndef NDEBUG
+  llvm::FoldingSetNodeID ID;
+  type.Profile(ID);
+
+  assert(ID == IDFromStaticProfile &&
+         "static and member versions of `Profile` returned different results.");
+#endif
+}
+template <class T>
+static void
+assertProfileMatches(T &type, const llvm::FoldingSetNodeID &IDFromStaticProfile,
+                     const ASTContext &C) {
+#ifndef NDEBUG
+  llvm::FoldingSetNodeID ID;
+  type.Profile(ID, C);
+
+  assert(ID == IDFromStaticProfile &&
+         "static and member versions of `Profile` returned different results.");
+#endif
+}
+
 /// \returns The locations that are relevant when searching for Doc comments
 /// related to \p D.
 static SmallVector<SourceLocation, 2>
@@ -844,6 +876,7 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
 
   // Create the canonical template template parameter entry.
   Canonical = new (*this) CanonicalTemplateTemplateParm(CanonTTP);
+  assertProfileMatches(*Canonical, ID, *this);
   CanonTemplateTemplateParms.InsertNode(Canonical, InsertPos);
   return CanonTTP;
 }
@@ -868,8 +901,9 @@ ASTContext::insertCanonicalTemplateTemplateParmDeclInternal(
   if (auto *Existing =
           CanonTemplateTemplateParms.FindNodeOrInsertPos(ID, InsertPos))
     return Existing->getParam();
-  CanonTemplateTemplateParms.InsertNode(
-      new (*this) CanonicalTemplateTemplateParm(CanonTTP), InsertPos);
+  auto *ToInsert = new (*this) CanonicalTemplateTemplateParm(CanonTTP);
+  assertProfileMatches(*ToInsert, ID, *this);
+  CanonTemplateTemplateParms.InsertNode(ToInsert, InsertPos);
   return CanonTTP;
 }
 
@@ -3250,6 +3284,7 @@ ASTContext::getExtQualType(const Type *baseType, Qualifiers quals) const {
   }
 
   auto *eq = new (*this, alignof(ExtQuals)) ExtQuals(baseType, canon, quals);
+  assertProfileMatches(*eq, ID);
   ExtQualNodes.InsertNode(eq, insertPos);
   return QualType(eq, fastQuals);
 }
@@ -3708,6 +3743,7 @@ QualType ASTContext::getCountAttributedType(
   new (CATy) CountAttributedType(WrappedTy, CanonTy, CountExpr, CountInBytes,
                                  OrNull, DependentDecls);
   Types.push_back(CATy);
+  assertProfileMatches(*CATy, ID);
   CountAttributedTypes.InsertNode(CATy, InsertPos);
 
   return QualType(CATy, 0);
@@ -3907,6 +3943,7 @@ QualType ASTContext::getComplexType(QualType T) const {
   }
   auto *New = new (*this, alignof(ComplexType)) ComplexType(T, Canonical);
   Types.push_back(New);
+  assertProfileMatches(*New, ID);
   ComplexTypes.InsertNode(New, InsertPos);
   return QualType(New, 0);
 }
@@ -3935,6 +3972,7 @@ QualType ASTContext::getPointerType(QualType T) const {
   }
   auto *New = new (*this, alignof(PointerType)) PointerType(T, Canonical);
   Types.push_back(New);
+  assertProfileMatches(*New, ID);
   PointerTypes.InsertNode(New, InsertPos);
   return QualType(New, 0);
 }
@@ -3956,6 +3994,7 @@ QualType ASTContext::getAdjustedType(QualType Orig, QualType New) const {
   AT = new (*this, alignof(AdjustedType))
       AdjustedType(Type::Adjusted, Orig, New, Canonical);
   Types.push_back(AT);
+  assertProfileMatches(*AT, ID);
   AdjustedTypes.InsertNode(AT, InsertPos);
   return QualType(AT, 0);
 }
@@ -3976,6 +4015,7 @@ QualType ASTContext::getDecayedType(QualType Orig, QualType Decayed) const {
 
   AT = new (*this, alignof(DecayedType)) DecayedType(Orig, Decayed, Canonical);
   Types.push_back(AT);
+  assertProfileMatches(*AT, ID);
   AdjustedTypes.InsertNode(AT, InsertPos);
   return QualType(AT, 0);
 }
@@ -4031,6 +4071,7 @@ QualType ASTContext::getArrayParameterType(QualType Ty) const {
   AT = new (*this, alignof(ArrayParameterType))
       ArrayParameterType(ATy, Canonical);
   Types.push_back(AT);
+  assertProfileMatches(*AT, ID, *this);
   ArrayParameterTypes.InsertNode(AT, InsertPos);
   return QualType(AT, 0);
 }
@@ -4063,6 +4104,7 @@ QualType ASTContext::getBlockPointerType(QualType T) const {
   auto *New =
       new (*this, alignof(BlockPointerType)) BlockPointerType(T, Canonical);
   Types.push_back(New);
+  assertProfileMatches(*New, ID);
   BlockPointerTypes.InsertNode(New, InsertPos);
   return QualType(New, 0);
 }
@@ -4103,6 +4145,7 @@ ASTContext::getLValueReferenceType(QualType T, bool SpelledAsLValue) const {
   auto *New = new (*this, alignof(LValueReferenceType))
       LValueReferenceType(T, Canonical, SpelledAsLValue);
   Types.push_back(New);
+  assertProfileMatches(*New, ID);
   LValueReferenceTypes.InsertNode(New, InsertPos);
 
   return QualType(New, 0);
@@ -4143,6 +4186,7 @@ QualType ASTContext::getRValueReferenceType(QualType T) const {
   auto *New = new (*this, alignof(RValueReferenceType))
       RValueReferenceType(T, Canonical);
   Types.push_back(New);
+  assertProfileMatches(*New, ID);
   RValueReferenceTypes.InsertNode(New, InsertPos);
   return QualType(New, 0);
 }
@@ -4188,6 +4232,7 @@ QualType ASTContext::getMemberPointerType(QualType T,
   auto *New = new (*this, alignof(MemberPointerType))
       MemberPointerType(T, Qualifier, Canonical);
   Types.push_back(New);
+  assertProfileMatches(*New, ID);
   MemberPointerTypes.InsertNode(New, InsertPos);
   return QualType(New, 0);
 }
@@ -4240,6 +4285,7 @@ QualType ASTContext::getConstantArrayType(QualType EltTy,
 
   auto *New = ConstantArrayType::Create(*this, EltTy, Canon, ArySize, SizeExpr,
                                         ASM, IndexTypeQuals);
+  assertProfileMatches(*New, ID, *this);
   ConstantArrayTypes.InsertNode(New, InsertPos);
   Types.push_back(New);
   return QualType(New, 0);
@@ -4443,6 +4489,7 @@ ASTContext::getDependentSizedArrayType(QualType elementType, Expr *numElements,
     auto *newType = new (*this, alignof(DependentSizedArrayType))
         DependentSizedArrayType(elementType, QualType(), numElements, ASM,
                                 elementTypeQuals);
+    assertProfileMatches(*newType, ID, *this);
     DependentSizedArrayTypes.InsertNode(newType, insertPos);
     Types.push_back(newType);
     return QualType(newType, 0);
@@ -4453,6 +4500,7 @@ ASTContext::getDependentSizedArrayType(QualType elementType, Expr *numElements,
     canonTy = new (*this, alignof(DependentSizedArrayType))
         DependentSizedArrayType(QualType(canonElementType.Ty, 0), QualType(),
                                 numElements, ASM, elementTypeQuals);
+    assertProfileMatches(*canonTy, ID, *this);
     DependentSizedArrayTypes.InsertNode(canonTy, insertPos);
     Types.push_back(canonTy);
   }
@@ -4508,6 +4556,7 @@ QualType ASTContext::getIncompleteArrayType(QualType elementType,
   auto *newType = new (*this, alignof(IncompleteArrayType))
       IncompleteArrayType(elementType, canon, ASM, elementTypeQuals);
 
+  assertProfileMatches(*newType, ID);
   IncompleteArrayTypes.InsertNode(newType, insertPos);
   Types.push_back(newType);
   return QualType(newType, 0);
@@ -4668,6 +4717,7 @@ QualType ASTContext::getVectorType(QualType vecType, unsigned NumElts,
   }
   auto *New = new (*this, alignof(VectorType))
       VectorType(vecType, NumElts, Canonical, VecKind);
+  assertProfileMatches(*New, ID);
   VectorTypes.InsertNode(New, InsertPos);
   Types.push_back(New);
   return QualType(New, 0);
@@ -4698,6 +4748,7 @@ QualType ASTContext::getDependentVectorType(QualType VecType, Expr *SizeExpr,
       assert(!CanonCheck &&
              "Dependent-sized vector_size canonical type broken");
       (void)CanonCheck;
+      assertProfileMatches(*New, ID, *this);
       DependentVectorTypes.InsertNode(New, InsertPos);
     } else {
       QualType CanonTy = getDependentVectorType(CanonVecTy, SizeExpr,
@@ -4740,6 +4791,7 @@ QualType ASTContext::getExtVectorType(QualType vecType,
   }
   auto *New = new (*this, alignof(ExtVectorType))
       ExtVectorType(vecType, NumElts, Canonical);
+  assertProfileMatches(*New, ID);
   VectorTypes.InsertNode(New, InsertPos);
   Types.push_back(New);
   return QualType(New, 0);
@@ -4773,6 +4825,7 @@ ASTContext::getDependentSizedExtVectorType(QualType vecType,
         = DependentSizedExtVectorTypes.FindNodeOrInsertPos(ID, InsertPos);
       assert(!CanonCheck && "Dependent-sized ext_vector canonical type broken");
       (void)CanonCheck;
+      assertProfileMatches(*New, ID, *this);
       DependentSizedExtVectorTypes.InsertNode(New, InsertPos);
     } else {
       QualType CanonExtTy = getDependentSizedExtVectorType(CanonVecTy, SizeExpr,
@@ -4813,6 +4866,7 @@ QualType ASTContext::getConstantMatrixType(QualType ElementTy, unsigned NumRows,
 
   auto *New = new (*this, alignof(ConstantMatrixType))
       ConstantMatrixType(ElementTy, NumRows, NumColumns, Canonical);
+  assertProfileMatches(*New, ID);
   MatrixTypes.InsertNode(New, InsertPos);
   Types.push_back(New);
   return QualType(New, 0);
@@ -4840,6 +4894,7 @@ QualType ASTContext::getDependentSizedMatrixType(QualType ElementTy,
         DependentSizedMatrixTypes.FindNodeOrInsertPos(ID, InsertPos);
     assert(!CanonCheck && "Dependent-sized matrix canonical type broken");
 #endif
+    assertProfileMatches(*Canon, ID, *this);
     DependentSizedMatrixTypes.InsertNode(Canon, InsertPos);
     Types.push_back(Canon);
   }
@@ -4878,6 +4933,7 @@ QualType ASTContext::getDependentAddressSpaceType(QualType PointeeType,
     canonTy = new (*this, alignof(DependentAddressSpaceType))
         DependentAddressSpaceType(canonPointeeType, QualType(), AddrSpaceExpr,
                                   AttrLoc);
+    assertProfileMatches(*canonTy, ID, *this);
     DependentAddressSpaceTypes.InsertNode(canonTy, insertPos);
     Types.push_back(canonTy);
   }
@@ -4935,6 +4991,7 @@ ASTContext::getFunctionNoProtoType(QualType ResultTy,
   auto *New = new (*this, alignof(FunctionNoProtoType))
       FunctionNoProtoType(ResultTy, Canonical, Info);
   Types.push_back(New);
+  assertProfileMatches(*New, ID);
   FunctionNoProtoTypes.InsertNode(New, InsertPos);
   return QualType(New, 0);
 }
@@ -5128,8 +5185,10 @@ QualType ASTContext::getFunctionTypeInternal(
   FunctionProtoType::ExtProtoInfo newEPI = EPI;
   new (FTP) FunctionProtoType(ResultTy, ArgArray, Canonical, newEPI);
   Types.push_back(FTP);
-  if (!Unique)
+  if (!Unique) {
+    assertProfileMatches(*FTP, ID, *this);
     FunctionProtoTypes.InsertNode(FTP, InsertPos);
+  }
   if (!EPI.FunctionEffects.empty())
     AnyFunctionEffects = true;
   return QualType(FTP, 0);
@@ -5156,6 +5215,7 @@ QualType ASTContext::getPipeType(QualType T, bool ReadOnly) const {
   }
   auto *New = new (*this, alignof(PipeType)) PipeType(T, Canonical, ReadOnly);
   Types.push_back(New);
+  assertProfileMatches(*New, ID);
   PipeTypes.InsertNode(New, InsertPos);
   return QualType(New, 0);
 }
@@ -5183,6 +5243,7 @@ QualType ASTContext::getBitIntType(bool IsUnsigned, unsigned NumBits) const {
     return QualType(EIT, 0);
 
   auto *New = new (*this, alignof(BitIntType)) BitIntType(IsUnsigned, NumBits);
+  assertProfileMatches(*New, ID);
   BitIntTypes.InsertNode(New, InsertPos);
   Types.push_back(New);
   return QualType(New, 0);
@@ -5201,6 +5262,7 @@ QualType ASTContext::getDependentBitIntType(bool IsUnsigned,
 
   auto *New = new (*this, alignof(DependentBitIntType))
       DependentBitIntType(IsUnsigned, NumBitsExpr);
+  assertProfileMatches(*New, ID, *this);
   DependentBitIntTypes.InsertNode(New, InsertPos);
 
   Types.push_back(New);
@@ -5334,6 +5396,7 @@ ASTContext::getTypedefType(ElaboratedTypeKeyword Keyword,
                             UnderlyingType, !*TypeMatchesDeclOrNone);
   auto *Placeholder = new (NewType->getFoldingSetPlaceholder())
       FoldingSetPlaceholder<TypedefType>();
+  assertProfileMatches(*Placeholder, ID);
   TypedefTypes.InsertNode(Placeholder, InsertPos);
   Types.push_back(NewType);
   return QualType(NewType, 0);
@@ -5370,6 +5433,7 @@ QualType ASTContext::getUsingType(ElaboratedTypeKeyword Keyword,
                alignof(UsingType));
   UsingType *T = new (Mem) UsingType(Keyword, Qualifier, D, UnderlyingType);
   Types.push_back(T);
+  assertProfileMatches(*T, ID);
   UsingTypes.InsertNode(T, InsertPos);
   return QualType(T, 0);
 }
@@ -5528,7 +5592,9 @@ QualType ASTContext::getTagType(ElaboratedTypeKeyword Keyword,
   TagType *T =
       getTagTypeInternal(Keyword, Qualifier, NonInjectedTD, OwnsTag, IsInjected,
                          CanonicalType, /*WithFoldingSetNode=*/true);
-  TagTypes.InsertNode(TagTypeFoldingSetPlaceholder::fromTagType(T), InsertPos);
+  auto *Placeholder = TagTypeFoldingSetPlaceholder::fromTagType(T);
+  assertProfileMatches(*Placeholder, ID);
+  TagTypes.InsertNode(Placeholder, InsertPos);
   return QualType(T, 0);
 }
 
@@ -5684,8 +5750,9 @@ ASTContext::getUnresolvedUsingType(ElaboratedTypeKeyword Keyword,
   assert(InsertPos);
 
   const Type *CanonicalType = getCanonicalUnresolvedUsingType(D).getTypePtr();
-  const Type *T = getUnresolvedUsingTypeInternal(Keyword, Qualifier, D,
-                                                 InsertPos, CanonicalType);
+  const UnresolvedUsingType *T = getUnresolvedUsingTypeInternal(
+      Keyword, Qualifier, D, InsertPos, CanonicalType);
+  assertProfileMatches(*T, ID);
   return QualType(T, 0);
 }
 
@@ -5707,6 +5774,7 @@ QualType ASTContext::getAttributedType(attr::Kind attrKind,
       AttributedType(canon, attrKind, attr, modifiedType, equivalentType);
 
   Types.push_back(type);
+  assertProfileMatches(*type, id);
   AttributedTypes.InsertNode(type, insertPos);
 
   return QualType(type, 0);
@@ -5755,6 +5823,7 @@ QualType ASTContext::getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
       BTFTagAttributedType(Canon, Wrapped, BTFAttr);
 
   Types.push_back(Ty);
+  assertProfileMatches(*Ty, ID);
   BTFTagAttributedTypes.InsertNode(Ty, InsertPos);
 
   return QualType(Ty, 0);
@@ -5777,6 +5846,7 @@ QualType ASTContext::getHLSLAttributedResourceType(
       HLSLAttributedResourceType(Wrapped, Contained, Attrs);
 
   Types.push_back(Ty);
+  assertProfileMatches(*Ty, ID);
   HLSLAttributedResourceTypes.InsertNode(Ty, InsertPos);
 
   return QualType(Ty, 0);
@@ -5801,6 +5871,7 @@ QualType ASTContext::getHLSLInlineSpirvType(uint32_t Opcode, uint32_t Size,
   Ty = new (Mem) HLSLInlineSpirvType(Opcode, Size, Alignment, Operands);
 
   Types.push_back(Ty);
+  assertProfileMatches(*Ty, ID);
   HLSLInlineSpirvTypes.InsertNode(Ty, InsertPos);
 
   return QualType(Ty, 0);
@@ -5826,6 +5897,7 @@ QualType ASTContext::getSubstTemplateTypeParmType(QualType Replacement,
     SubstParm = new (Mem) SubstTemplateTypeParmType(Replacement, AssociatedDecl,
                                                     Index, PackIndex, Final);
     Types.push_back(SubstParm);
+    assertProfileMatches(*SubstParm, ID);
     SubstTemplateTypeParmTypes.InsertNode(SubstParm, InsertPos);
   }
 
@@ -5866,6 +5938,7 @@ ASTContext::getSubstTemplateTypeParmPackType(Decl *AssociatedDecl,
       SubstTemplateTypeParmPackType(Canon, AssociatedDecl, Index, Final,
                                     ArgPack);
   Types.push_back(SubstParm);
+  assertProfileMatches(*SubstParm, ID);
   SubstTemplateTypeParmPackTypes.InsertNode(SubstParm, InsertPos);
   return QualType(SubstParm, 0);
 }
@@ -5894,6 +5967,7 @@ ASTContext::getSubstBuiltinTemplatePack(const TemplateArgument &ArgPack) {
   auto *PackType = new (*this, alignof(SubstBuiltinTemplatePackType))
       SubstBuiltinTemplatePackType(Canon, ArgPack);
   Types.push_back(PackType);
+  assertProfileMatches(*PackType, ID);
   SubstBuiltinTemplatePackTypes.InsertNode(PackType, InsertPos);
   return QualType(PackType, 0);
 }
@@ -5927,6 +6001,7 @@ QualType ASTContext::getTemplateTypeParmType(unsigned Depth, unsigned Index,
         Depth, Index, ParameterPack, /*TTPDecl=*/nullptr, /*Canon=*/QualType());
 
   Types.push_back(TypeParm);
+  assertProfileMatches(*TypeParm, ID);
   TemplateTypeParmTypes.InsertNode(TypeParm, InsertPos);
 
   return QualType(TypeParm, 0);
@@ -5994,6 +6069,7 @@ QualType ASTContext::getCanonicalTemplateSpecializationType(
   assert(Spec->isDependentType() &&
          "canonical template specialization must be dependent");
   Types.push_back(Spec);
+  assertProfileMatches(*Spec, ID, *this);
   TemplateSpecializationTypes.InsertNode(Spec, InsertPos);
   return QualType(Spec, 0);
 }
@@ -6068,6 +6144,7 @@ ASTContext::getParenType(QualType InnerType) const {
 
   T = new (*this, alignof(ParenType)) ParenType(InnerType, Canon);
   Types.push_back(T);
+  assertProfileMatches(*T, ID);
   ParenTypes.InsertNode(T, InsertPos);
   return QualType(T, 0);
 }
@@ -6136,6 +6213,7 @@ QualType ASTContext::getDependentNameType(ElaboratedTypeKeyword Keyword,
   DependentNameType *T = new (*this, alignof(DependentNameType))
       DependentNameType(Keyword, NNS, Name, Canon);
   Types.push_back(T);
+  assertProfileMatches(*T, ID);
   DependentNameTypes.InsertNode(T, InsertPos);
   return QualType(T, 0);
 }
@@ -6279,6 +6357,7 @@ QualType ASTContext::getPackExpansionType(QualType Pattern,
   T = new (*this, alignof(PackExpansionType))
       PackExpansionType(Pattern, Canon, NumExpansions);
   Types.push_back(T);
+  assertProfileMatches(*T, ID);
   PackExpansionTypes.InsertNode(T, InsertPos);
   return QualType(T, 0);
 }
@@ -6397,6 +6476,7 @@ QualType ASTContext::getObjCObjectType(
                                  isKindOf);
 
   Types.push_back(T);
+  assertProfileMatches(*T, ID);
   ObjCObjectTypes.InsertNode(T, InsertPos);
   return QualType(T, 0);
 }
@@ -6502,6 +6582,7 @@ ASTContext::getObjCTypeParamType(const ObjCTypeParamDecl *Decl,
   auto *newType = new (mem) ObjCTypeParamType(Decl, Canonical, protocols);
 
   Types.push_back(newType);
+  assertProfileMatches(*newType, ID);
   ObjCTypeParamTypes.InsertNode(newType, InsertPos);
   return QualType(newType, 0);
 }
@@ -6610,6 +6691,7 @@ QualType ASTContext::getObjCObjectPointerType(QualType ObjectT) const {
     new (Mem) ObjCObjectPointerType(Canonical, ObjectT);
 
   Types.push_back(QType);
+  assertProfileMatches(*QType, ID);
   ObjCObjectPointerTypes.InsertNode(QType, InsertPos);
   return QualType(QType, 0);
 }
@@ -6662,6 +6744,7 @@ QualType ASTContext::getTypeOfExprType(Expr *tofExpr, TypeOfKind Kind) const {
       // Build a new, canonical typeof(expr) type.
       Canon = new (*this, alignof(DependentTypeOfExprType))
           DependentTypeOfExprType(*this, tofExpr, Kind);
+      assertProfileMatches(*Canon, ID, *this);
       DependentTypeOfExprTypes.InsertNode(Canon, InsertPos);
       toe = Canon;
     }
@@ -6736,6 +6819,7 @@ QualType ASTContext::getDecltypeType(Expr *E, QualType UnderlyingType) const {
     // Build a new, canonical decltype(expr) type.
     auto *DT =
         new (*this, alignof(DependentDecltypeType)) DependentDecltypeType(E);
+    assertProfileMatches(*DT, ID, *this);
     DependentDecltypeTypes.InsertNode(DT, InsertPos);
     Types.push_back(DT);
     return QualType(DT, 0);
@@ -6767,6 +6851,7 @@ QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
       Canon =
           new (Mem) PackIndexingType(QualType(), Pattern.getCanonicalType(),
                                      IndexExpr, FullySubstituted, Expansions);
+      assertProfileMatches(*Canon, ID, *this);
       DependentPackIndexingTypes.InsertNode(Canon, InsertPos);
     }
     Canonical = QualType(Canon, 0);
@@ -6815,6 +6900,7 @@ ASTContext::getUnaryTransformType(QualType BaseType, QualType UnderlyingType,
 
   auto *UT = new (*this, alignof(UnaryTransformType))
       UnaryTransformType(BaseType, UnderlyingType, Kind, CanonType);
+  assertProfileMatches(*UT, ID);
   UnaryTransformTypes.InsertNode(UT, InsertPos);
   Types.push_back(UT);
   return QualType(UT, 0);
@@ -6934,6 +7020,7 @@ QualType ASTContext::getDeducedTemplateSpecializationTypeInternal(
   assert(ID == TempID && "ID does not match");
 #endif
   Types.push_back(DTST);
+  assertProfileMatches(*DTST, ID);
   DeducedTemplateSpecializationTypes.InsertNode(DTST, InsertPos);
   return QualType(DTST, 0);
 }
@@ -6982,6 +7069,7 @@ QualType ASTContext::getAtomicType(QualType T) const {
   }
   auto *New = new (*this, alignof(AtomicType)) AtomicType(T, Canonical);
   Types.push_back(New);
+  assertProfileMatches(*New, ID);
   AtomicTypes.InsertNode(New, InsertPos);
   return QualType(New, 0);
 }
@@ -10455,6 +10543,7 @@ TemplateName ASTContext::getQualifiedTemplateName(NestedNameSpecifier Qualifier,
   if (!QTN) {
     QTN = new (*this, alignof(QualifiedTemplateName))
         QualifiedTemplateName(Qualifier, TemplateKeyword, Template);
+    assertProfileMatches(*QTN, ID);
     QualifiedTemplateNames.InsertNode(QTN, InsertPos);
   }
 
@@ -10475,6 +10564,7 @@ ASTContext::getDependentTemplateName(const DependentTemplateStorage &S) const {
 
   DependentTemplateName *QTN =
       new (*this, alignof(DependentTemplateName)) DependentTemplateName(S);
+  assertProfileMatches(*QTN, ID);
   DependentTemplateNames.InsertNode(QTN, InsertPos);
   return TemplateName(QTN);
 }
@@ -10495,6 +10585,7 @@ TemplateName ASTContext::getSubstTemplateTemplateParm(TemplateName Replacement,
   if (!subst) {
     subst = new (*this) SubstTemplateTemplateParmStorage(
         Replacement, AssociatedDecl, Index, PackIndex, Final);
+    assertProfileMatches(*subst, ID);
     SubstTemplateTemplateParms.InsertNode(subst, insertPos);
   }
 
@@ -10517,6 +10608,7 @@ ASTContext::getSubstTemplateTemplateParmPack(const TemplateArgument &ArgPack,
   if (!Subst) {
     Subst = new (*this) SubstTemplateTemplateParmPackStorage(
         ArgPack.pack_elements(), AssociatedDecl, Index, Final);
+    assertProfileMatches(*Subst, ID, *this);
     SubstTemplateTemplateParmPacks.InsertNode(Subst, InsertPos);
   }
 
@@ -10542,6 +10634,7 @@ ASTContext::getDeducedTemplateName(TemplateName Underlying,
                              sizeof(TemplateArgument) * DefaultArgs.Args.size(),
                          alignof(DeducedTemplateStorage));
     DTS = new (Mem) DeducedTemplateStorage(Underlying, DefaultArgs);
+    assertProfileMatches(*DTS, ID, *this);
     DeducedTemplates.InsertNode(DTS, InsertPos);
   }
   return TemplateName(DTS);
@@ -13556,6 +13649,7 @@ ASTContext::getMSGuidDecl(MSGuidDecl::Parts Parts) const {
 
   QualType GUIDType = getMSGuidType().withConst();
   MSGuidDecl *New = MSGuidDecl::Create(*this, GUIDType, Parts);
+  assertProfileMatches(*New, ID);
   MSGuidDecls.InsertNode(New, InsertPos);
   return New;
 }
@@ -13573,6 +13667,7 @@ ASTContext::getUnnamedGlobalConstantDecl(QualType Ty,
 
   UnnamedGlobalConstantDecl *New =
       UnnamedGlobalConstantDecl::Create(*this, Ty, APVal);
+  assertProfileMatches(*New, ID);
   UnnamedGlobalConstantDecls.InsertNode(New, InsertPos);
   return New;
 }
@@ -13594,6 +13689,7 @@ ASTContext::getTemplateParamObjectDecl(QualType T, const APValue &V) const {
     return Existing;
 
   TemplateParamObjectDecl *New = TemplateParamObjectDecl::Create(*this, T, V);
+  assertProfileMatches(*New, ID);
   TemplateParamObjectDecls.InsertNode(New, InsertPos);
   return New;
 }

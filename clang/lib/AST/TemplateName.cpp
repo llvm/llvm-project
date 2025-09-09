@@ -101,7 +101,7 @@ SubstTemplateTemplateParmPackStorage::SubstTemplateTemplateParmPackStorage(
 }
 
 void SubstTemplateTemplateParmPackStorage::Profile(llvm::FoldingSetNodeID &ID,
-                                                   ASTContext &Context) {
+                                                   const ASTContext &Context) {
   Profile(ID, Context, getArgumentPack(), getAssociatedDecl(), getIndex(),
           getFinal());
 }
@@ -115,7 +115,7 @@ bool SubstTemplateTemplateParmPackStorage::getFinal() const {
 }
 
 void SubstTemplateTemplateParmPackStorage::Profile(
-    llvm::FoldingSetNodeID &ID, ASTContext &Context,
+    llvm::FoldingSetNodeID &ID, const ASTContext &Context,
     const TemplateArgument &ArgPack, Decl *AssociatedDecl, unsigned Index,
     bool Final) {
   ArgPack.Profile(ID, Context);
