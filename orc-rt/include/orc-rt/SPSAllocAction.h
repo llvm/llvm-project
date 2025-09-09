@@ -15,9 +15,56 @@
 #define ORC_RT_SPSALLOCACTION_H
 
 #include "orc-rt/AllocAction.h"
+#include "orc-rt/SPSWrapperFunctionBuffer.h"
 #include "orc-rt/SimplePackedSerialization.h"
 
 namespace orc_rt {
+
+struct SPSAllocAction;
+
+template <> class SPSSerializationTraits<SPSAllocAction, AllocAction> {
+public:
+  static size_t size(const AllocAction &AA) {
+    return SPSArgList<SPSExecutorAddr, SPSWrapperFunctionBuffer>::size(
+        ExecutorAddr::fromPtr(AA.Fn), AA.ArgData);
+  }
+
+  static bool serialize(SPSOutputBuffer &OB, const AllocAction &AA) {
+    return SPSArgList<SPSExecutorAddr, SPSWrapperFunctionBuffer>::serialize(
+        OB, ExecutorAddr::fromPtr(AA.Fn), AA.ArgData);
+  }
+
+  static bool deserialize(SPSInputBuffer &IB, AllocAction &AA) {
+    ExecutorAddr Fn;
+    WrapperFunctionBuffer ArgData;
+    if (!SPSArgList<SPSExecutorAddr, SPSWrapperFunctionBuffer>::deserialize(
+            IB, Fn, ArgData))
+      return false;
+    AA.Fn = Fn.toPtr<AllocActionFn>();
+    AA.ArgData = std::move(ArgData);
+    return true;
+  }
+};
+
+struct SPSAllocActionPair;
+
+template <> class SPSSerializationTraits<SPSAllocActionPair, AllocActionPair> {
+public:
+  static size_t size(const AllocActionPair &AAP) {
+    return SPSArgList<SPSAllocAction, SPSAllocAction>::size(AAP.Finalize,
+                                                            AAP.Dealloc);
+  }
+
+  static bool serialize(SPSOutputBuffer &OB, const AllocActionPair &AAP) {
+    return SPSArgList<SPSAllocAction, SPSAllocAction>::serialize(
+        OB, AAP.Finalize, AAP.Dealloc);
+  }
+
+  static bool deserialize(SPSInputBuffer &IB, AllocActionPair &AAP) {
+    return SPSArgList<SPSAllocAction, SPSAllocAction>::deserialize(
+        IB, AAP.Finalize, AAP.Dealloc);
+  }
+};
 
 template <typename... SPSArgTs> struct AllocActionSPSDeserializer {
   template <typename... ArgTs>
