@@ -37,15 +37,15 @@ using get_as_integer_type_t = unsigned _BitInt(sizeof(T) * CHAR_BIT);
 
 #if defined(LIBC_TARGET_CPU_HAS_AVX512F)
 template <typename T>
-inline constexpr size_t native_vector_size = 64 / sizeof(T);
+LIBC_INLINE_VAR constexpr size_t native_vector_size = 64 / sizeof(T);
 #elif defined(LIBC_TARGET_CPU_HAS_AVX2)
 template <typename T>
-inline constexpr size_t native_vector_size = 32 / sizeof(T);
+LIBC_INLINE_VAR constexpr size_t native_vector_size = 32 / sizeof(T);
 #elif defined(LIBC_TARGET_CPU_HAS_SSE2) || defined(LIBC_TARGET_CPU_HAS_ARM_NEON)
 template <typename T>
-inline constexpr size_t native_vector_size = 16 / sizeof(T);
+LIBC_INLINE_VAR constexpr size_t native_vector_size = 16 / sizeof(T);
 #else
-template <typename T> inline constexpr size_t native_vector_size = 1;
+template <typename T> LIBC_INLINE constexpr size_t native_vector_size = 1;
 #endif
 
 template <typename T> LIBC_INLINE constexpr T poison() {
@@ -90,122 +90,127 @@ using enable_if_simd_t = cpp::enable_if_t<is_simd_v<T>, T>;
 
 // Casting.
 template <typename To, typename From, size_t N>
-LIBC_INLINE constexpr simd<To, N> simd_cast(simd<From, N> v) {
+LIBC_INLINE constexpr static simd<To, N> simd_cast(simd<From, N> v) {
   return __builtin_convertvector(v, simd<To, N>);
 }
 
 // SIMD mask operations.
-template <size_t N> LIBC_INLINE constexpr bool all_of(simd<bool, N> m) {
+template <size_t N> LIBC_INLINE constexpr static bool all_of(simd<bool, N> m) {
   return __builtin_reduce_and(m);
 }
-template <size_t N> LIBC_INLINE constexpr bool any_of(simd<bool, N> m) {
+template <size_t N> LIBC_INLINE constexpr static bool any_of(simd<bool, N> m) {
   return __builtin_reduce_or(m);
 }
-template <size_t N> LIBC_INLINE constexpr bool none_of(simd<bool, N> m) {
+template <size_t N> LIBC_INLINE constexpr static bool none_of(simd<bool, N> m) {
   return !any_of(m);
 }
-template <size_t N> LIBC_INLINE constexpr bool some_of(simd<bool, N> m) {
+template <size_t N> LIBC_INLINE constexpr static bool some_of(simd<bool, N> m) {
   return any_of(m) && !all_of(m);
 }
-template <size_t N> LIBC_INLINE constexpr int popcount(simd<bool, N> m) {
+template <size_t N> LIBC_INLINE constexpr static int popcount(simd<bool, N> m) {
   return __builtin_popcountg(m);
 }
-template <size_t N> LIBC_INLINE constexpr int find_first_set(simd<bool, N> m) {
+template <size_t N>
+LIBC_INLINE constexpr static int find_first_set(simd<bool, N> m) {
   return __builtin_ctzg(m);
 }
-template <size_t N> LIBC_INLINE constexpr int find_last_set(simd<bool, N> m) {
+template <size_t N>
+LIBC_INLINE constexpr static int find_last_set(simd<bool, N> m) {
   constexpr size_t size = simd_size_v<simd<bool, N>>;
   return size - __builtin_clzg(m);
 }
 
 // Elementwise operations.
 template <typename T, size_t N>
-LIBC_INLINE constexpr simd<T, N> min(simd<T, N> x, simd<T, N> y) {
+LIBC_INLINE constexpr static simd<T, N> min(simd<T, N> x, simd<T, N> y) {
   return __builtin_elementwise_min(x, y);
 }
 template <typename T, size_t N>
-LIBC_INLINE constexpr simd<T, N> max(simd<T, N> x, simd<T, N> y) {
+LIBC_INLINE constexpr static simd<T, N> max(simd<T, N> x, simd<T, N> y) {
   return __builtin_elementwise_max(x, y);
 }
 
 template <typename T, size_t N>
-LIBC_INLINE constexpr simd<T, N> abs(simd<T, N> x) {
+LIBC_INLINE constexpr static simd<T, N> abs(simd<T, N> x) {
   return __builtin_elementwise_abs(x);
 }
 template <typename T, size_t N>
-LIBC_INLINE constexpr simd<T, N> fma(simd<T, N> x, simd<T, N> y, simd<T, N> z) {
+LIBC_INLINE constexpr static simd<T, N> fma(simd<T, N> x, simd<T, N> y,
+                                            simd<T, N> z) {
   return __builtin_elementwise_fma(x, y, z);
 }
 template <typename T, size_t N>
-LIBC_INLINE constexpr simd<T, N> ceil(simd<T, N> x) {
+LIBC_INLINE constexpr static simd<T, N> ceil(simd<T, N> x) {
   return __builtin_elementwise_ceil(x);
 }
 template <typename T, size_t N>
-LIBC_INLINE constexpr simd<T, N> floor(simd<T, N> x) {
+LIBC_INLINE constexpr static simd<T, N> floor(simd<T, N> x) {
   return __builtin_elementwise_floor(x);
 }
 template <typename T, size_t N>
-LIBC_INLINE constexpr simd<T, N> roundeven(simd<T, N> x) {
+LIBC_INLINE constexpr static simd<T, N> roundeven(simd<T, N> x) {
   return __builtin_elementwise_roundeven(x);
 }
 template <typename T, size_t N>
-LIBC_INLINE constexpr simd<T, N> round(simd<T, N> x) {
+LIBC_INLINE constexpr static simd<T, N> round(simd<T, N> x) {
   return __builtin_elementwise_round(x);
 }
 template <typename T, size_t N>
-LIBC_INLINE constexpr simd<T, N> trunc(simd<T, N> x) {
+LIBC_INLINE constexpr static simd<T, N> trunc(simd<T, N> x) {
   return __builtin_elementwise_trunc(x);
 }
 template <typename T, size_t N>
-LIBC_INLINE constexpr simd<T, N> nearbyint(simd<T, N> x) {
+LIBC_INLINE constexpr static simd<T, N> nearbyint(simd<T, N> x) {
   return __builtin_elementwise_nearbyint(x);
 }
 template <typename T, size_t N>
-LIBC_INLINE constexpr simd<T, N> rint(simd<T, N> x) {
+LIBC_INLINE constexpr static simd<T, N> rint(simd<T, N> x) {
   return __builtin_elementwise_rint(x);
 }
 template <typename T, size_t N>
-LIBC_INLINE constexpr simd<T, N> canonicalize(simd<T, N> x) {
+LIBC_INLINE constexpr static simd<T, N> canonicalize(simd<T, N> x) {
   return __builtin_elementwise_canonicalize(x);
 }
 template <typename T, size_t N>
-LIBC_INLINE constexpr simd<T, N> copysign(simd<T, N> x, simd<T, N> y) {
+LIBC_INLINE constexpr static simd<T, N> copysign(simd<T, N> x, simd<T, N> y) {
   return __builtin_elementwise_copysign(x, y);
 }
 template <typename T, size_t N>
-LIBC_INLINE constexpr simd<T, N> fmod(simd<T, N> x, simd<T, N> y) {
+LIBC_INLINE constexpr static simd<T, N> fmod(simd<T, N> x, simd<T, N> y) {
   return __builtin_elementwise_fmod(x, y);
 }
 
 // Reduction operations.
 template <typename T, size_t N, typename Op = cpp::plus<>>
-LIBC_INLINE constexpr T reduce(simd<T, N> v, Op op = {}) {
+LIBC_INLINE constexpr static T reduce(simd<T, N> v, Op op = {}) {
   return reduce(v, op);
 }
 template <typename T, size_t N>
-LIBC_INLINE constexpr T reduce(simd<T, N> v, cpp::plus<>) {
+LIBC_INLINE constexpr static T reduce(simd<T, N> v, cpp::plus<>) {
   return __builtin_reduce_add(v);
 }
 template <typename T, size_t N>
-LIBC_INLINE constexpr T reduce(simd<T, N> v, cpp::multiplies<>) {
+LIBC_INLINE constexpr static T reduce(simd<T, N> v, cpp::multiplies<>) {
   return __builtin_reduce_mul(v);
 }
 template <typename T, size_t N>
-LIBC_INLINE constexpr T reduce(simd<T, N> v, cpp::bit_and<>) {
+LIBC_INLINE constexpr static T reduce(simd<T, N> v, cpp::bit_and<>) {
   return __builtin_reduce_and(v);
 }
 template <typename T, size_t N>
-LIBC_INLINE constexpr T reduce(simd<T, N> v, cpp::bit_or<>) {
+LIBC_INLINE constexpr static T reduce(simd<T, N> v, cpp::bit_or<>) {
   return __builtin_reduce_or(v);
 }
 template <typename T, size_t N>
-LIBC_INLINE constexpr T reduce(simd<T, N> v, cpp::bit_xor<>) {
+LIBC_INLINE constexpr static T reduce(simd<T, N> v, cpp::bit_xor<>) {
   return __builtin_reduce_xor(v);
 }
-template <typename T, size_t N> LIBC_INLINE constexpr T hmin(simd<T, N> v) {
+template <typename T, size_t N>
+LIBC_INLINE constexpr static T hmin(simd<T, N> v) {
   return __builtin_reduce_min(v);
 }
-template <typename T, size_t N> LIBC_INLINE constexpr T hmax(simd<T, N> v) {
+template <typename T, size_t N>
+LIBC_INLINE constexpr static T hmax(simd<T, N> v) {
   return __builtin_reduce_max(v);
 }
 
@@ -242,28 +247,29 @@ LIBC_INLINE enable_if_simd_t<T> masked_store(simd<bool, simd_size_v<T>> m, T v,
 }
 
 // Construction helpers.
-template <typename T, size_t N> LIBC_INLINE constexpr simd<T, N> splat(T v) {
+template <typename T, size_t N>
+LIBC_INLINE constexpr static simd<T, N> splat(T v) {
   return simd<T, N>(v);
 }
-template <typename T> LIBC_INLINE constexpr simd<T> splat(T v) {
+template <typename T> LIBC_INLINE constexpr static simd<T> splat(T v) {
   return splat<T, simd_size_v<simd<T>>>(v);
 }
 template <typename T, unsigned N>
-LIBC_INLINE constexpr simd<T, N> iota(T base = T(0), T step = T(1)) {
+LIBC_INLINE constexpr static simd<T, N> iota(T base = T(0), T step = T(1)) {
   simd<T, N> v{};
   for (unsigned i = 0; i < N; ++i)
     v[i] = base + T(i) * step;
   return v;
 }
 template <typename T>
-LIBC_INLINE constexpr simd<T> iota(T base = T(0), T step = T(1)) {
+LIBC_INLINE constexpr static simd<T> iota(T base = T(0), T step = T(1)) {
   return iota<T, simd_size_v<simd<T>>>(base, step);
 }
 
 // Conditional helpers.
 template <typename T, size_t N>
-LIBC_INLINE constexpr simd<T, N> select(simd<bool, N> m, simd<T, N> x,
-                                        simd<T, N> y) {
+LIBC_INLINE constexpr static simd<T, N> select(simd<bool, N> m, simd<T, N> x,
+                                               simd<T, N> y) {
   return m ? x : y;
 }
 
