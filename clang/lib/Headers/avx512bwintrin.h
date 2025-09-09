@@ -369,8 +369,8 @@ static __inline__ void __DEFAULT_FN_ATTRS _store_mask64(__mmask64 *__A,
 #define _mm512_mask_cmpneq_epu16_mask(k, A, B) \
     _mm512_mask_cmp_epu16_mask((k), (A), (B), _MM_CMPINT_NE)
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
-_mm512_add_epi8 (__m512i __A, __m512i __B) {
+static __inline__ __m512i
+    __DEFAULT_FN_ATTRS512_CONSTEXPR _mm512_add_epi8(__m512i __A, __m512i __B) {
   return (__m512i) ((__v64qu) __A + (__v64qu) __B);
 }
 
@@ -389,7 +389,7 @@ _mm512_maskz_add_epi8(__mmask64 __U, __m512i __A, __m512i __B) {
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
-_mm512_sub_epi8 (__m512i __A, __m512i __B) {
+_mm512_sub_epi8(__m512i __A, __m512i __B) {
   return (__m512i) ((__v64qu) __A - (__v64qu) __B);
 }
 
@@ -408,7 +408,7 @@ _mm512_maskz_sub_epi8(__mmask64 __U, __m512i __A, __m512i __B) {
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
-_mm512_add_epi16 (__m512i __A, __m512i __B) {
+_mm512_add_epi16(__m512i __A, __m512i __B) {
   return (__m512i) ((__v32hu) __A + (__v32hu) __B);
 }
 
@@ -427,7 +427,7 @@ _mm512_maskz_add_epi16(__mmask32 __U, __m512i __A, __m512i __B) {
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
-_mm512_sub_epi16 (__m512i __A, __m512i __B) {
+_mm512_sub_epi16(__m512i __A, __m512i __B) {
   return (__m512i) ((__v32hu) __A - (__v32hu) __B);
 }
 
