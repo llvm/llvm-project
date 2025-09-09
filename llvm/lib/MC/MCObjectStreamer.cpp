@@ -28,8 +28,7 @@ MCObjectStreamer::MCObjectStreamer(MCContext &Context,
                                    std::unique_ptr<MCAsmBackend> TAB,
                                    std::unique_ptr<MCObjectWriter> OW,
                                    std::unique_ptr<MCCodeEmitter> Emitter)
-    : MCStreamer(Context),
-      Assembler(std::make_unique<MCAssembler>(
+    : MCStreamer(Context),      Assembler(std::make_unique<MCAssembler>(
           Context, std::move(TAB), std::move(Emitter), std::move(OW))),
       EmitEHFrame(true), EmitDebugFrame(false), EmitSFrame(false) {
   assert(Assembler->getBackendPtr() && Assembler->getEmitterPtr());
@@ -582,6 +581,20 @@ void MCObjectStreamer::emitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
   F->setDwarfAddrDelta(buildSymbolDiff(*this, Label, LastLabel, Loc));
   newFragment();
 }
+
+void MCObjectStreamer::emitSFrameCalculateFuncOffset(const MCSymbol *FuncBase,
+                                                     const MCSymbol *FREBegin,
+                                                     MCFragment *FDEFrag,
+                                                     SMLoc Loc) {
+  assert(FuncBase && "No function base address");
+  assert(FREBegin && "FRE doesn't describe a location");
+  auto *F = getCurrentFragment();
+  F->Kind = MCFragment::FT_SFrame;
+  F->setSFrameAddrDelta(buildSymbolDiff(*this, FREBegin, FuncBase, Loc));
+  F->setSFrameFDE(FDEFrag);
+  newFragment();
+}
+
 
 void MCObjectStreamer::emitCVLocDirective(unsigned FunctionId, unsigned FileNo,
                                           unsigned Line, unsigned Column,

@@ -117,6 +117,8 @@ private:
   void relaxBoundaryAlign(MCBoundaryAlignFragment &BF);
   void relaxDwarfLineAddr(MCFragment &F);
   void relaxDwarfCallFrameFragment(MCFragment &F);
+  void relaxSFrameFragment(MCFragment &DF);
+
 
 public:
   /// Construct a new assembler instance.
