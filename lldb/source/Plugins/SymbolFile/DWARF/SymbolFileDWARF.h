@@ -283,10 +283,11 @@ public:
   bool GetSeparateDebugInfo(StructuredData::Dictionary &d, bool errors_only,
                             bool load_all_debug_info = false) override;
 
-  // Gets a pair of loaded and total dwo file counts.
-  // For split-dwarf files, this reports the counts for successfully loaded DWO
-  // CUs and total DWO CUs. For non-split-dwarf files, this reports 0 for both.
-  std::pair<uint32_t, uint32_t> GetDwoFileCounts() override;
+  /// Gets statistics about dwo files associated with this symbol file.
+  /// For split-dwarf files, this reports the counts for successfully loaded DWO
+  /// CUs, total DWO CUs, and the number of DWO CUs with loading errors.
+  /// For non-split-dwarf files, this reports 0 for all.
+  DWOStats GetDwoStats() override;
 
   DWARFContext &GetDWARFContext() { return m_context; }
 

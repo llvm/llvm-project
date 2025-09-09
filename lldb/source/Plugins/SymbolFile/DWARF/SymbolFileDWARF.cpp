@@ -4623,9 +4623,8 @@ void SymbolFileDWARF::GetCompileOptions(
   }
 }
 
-std::pair<uint32_t, uint32_t> SymbolFileDWARF::GetDwoFileCounts() {
-  uint32_t total_dwo_count = 0;
-  uint32_t loaded_dwo_count = 0;
+DWOStats SymbolFileDWARF::GetDwoStats() {
+  DWOStats stats;
 
   DWARFDebugInfo &info = DebugInfo();
   const size_t num_cus = info.GetNumUnits();
@@ -4638,16 +4637,21 @@ std::pair<uint32_t, uint32_t> SymbolFileDWARF::GetDwoFileCounts() {
     if (!dwarf_cu->GetDWOId().has_value())
       continue;
 
-    total_dwo_count++;
+    stats.dwo_file_count++;
 
     // If we have a DWO symbol file, that means we were able to successfully
     // load it.
     SymbolFile *dwo_symfile =
         dwarf_cu->GetDwoSymbolFile(/*load_all_debug_info=*/false);
     if (dwo_symfile) {
-      loaded_dwo_count++;
+      stats.loaded_dwo_file_count++;
     }
+
+    // Check if this unit has a DWO load error, false by default.
+    const Status &dwo_error = dwarf_cu->GetDwoError();
+    if (dwo_error.Fail())
+      stats.dwo_error_count++;
   }
 
-  return {loaded_dwo_count, total_dwo_count};
+  return stats;
 }
