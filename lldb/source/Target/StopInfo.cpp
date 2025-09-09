@@ -653,7 +653,7 @@ protected:
 
 private:
   BreakpointSiteSP GetBreakpointSiteSP() const {
-    if (m_break_id == LLDB_INVALID_BREAK_ID)
+    if (m_value == LLDB_INVALID_BREAK_ID)
       return {};
 
     ThreadSP thread_sp = GetThread();
