@@ -1321,8 +1321,8 @@ GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   // global has non-array type
   auto lvalueType = dyn_cast<LValueType>(resultType);
   if (!lvalueType)
-    return emitOpError("on non-array type result type is not defined "
-                       "for the global @")
+    return emitOpError("on non-array type expects result type to be an "
+                       "lvalue type for the global @")
            << getName();
   if (lvalueType.getValueType() != globalType)
     return emitOpError("on non-array type expects result inner type ")
