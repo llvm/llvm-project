@@ -2963,4 +2963,3 @@ CodeGenModule::getOMPAllocateAlignment(const VarDecl *VD) {
   }
   return std::nullopt;
 }
-

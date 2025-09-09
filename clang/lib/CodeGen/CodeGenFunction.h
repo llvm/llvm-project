@@ -392,7 +392,6 @@ public:
   /// cleanups associated with the parameters.
   EHScopeStack::stable_iterator PrologueCleanupDepth;
 
-
   /// ReturnBlock - Unified return block.
   JumpDest ReturnBlock;
 
@@ -3471,7 +3470,6 @@ public:
   void EmitAutoVarCleanups(const AutoVarEmission &emission);
   void emitAutoVarTypeCleanup(const AutoVarEmission &emission,
                               QualType::DestructionKind dtorKind);
-
 
   void MaybeEmitDeferredVarDeclInit(const VarDecl *var);
 
