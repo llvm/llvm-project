@@ -52,7 +52,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 //
 // Furthermore, that alignment must be the same as what was used in the old __compressed_pair layout, so we must
 // handle reference types specially since alignof(T&) == alignof(T).
-// See https://github.com/llvm/llvm-project/issues/118559.
+// See https://llvm.org/PR118559.
 
 #ifndef _LIBCPP_ABI_NO_COMPRESSED_PAIR_PADDING
 

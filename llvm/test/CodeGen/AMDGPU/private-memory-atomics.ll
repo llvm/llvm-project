@@ -282,8 +282,7 @@ define i32 @atomicrmw_nand_private_i32(ptr addrspace(5) %ptr) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v1, v0, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_not_b32_e32 v2, v1
-; GCN-NEXT:    v_or_b32_e32 v2, -5, v2
+; GCN-NEXT:    v_bfi_b32 v2, v1, -5, -1
 ; GCN-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)

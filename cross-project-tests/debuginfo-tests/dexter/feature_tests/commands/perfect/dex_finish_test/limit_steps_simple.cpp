@@ -8,7 +8,7 @@
 // UNSUPPORTED: system-windows, system-darwin
 //
 // RUN: %dexter_regression_test_cxx_build %s -o %t
-// RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck %s
+// RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck --dump-input-context=999999999 %s
 // CHECK: limit_steps_simple.cpp
 
 int main() {

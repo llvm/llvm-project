@@ -407,7 +407,7 @@ mlir::convertReassociationIndicesToExprs(
 }
 
 template <typename AffineExprTy>
-unsigned getMaxPosOfType(ArrayRef<ReassociationExprs> exprArrays) {
+static unsigned getMaxPosOfType(ArrayRef<ReassociationExprs> exprArrays) {
   unsigned pos = 0;
   for (const auto &exprs : exprArrays) {
     for (auto expr : exprs) {

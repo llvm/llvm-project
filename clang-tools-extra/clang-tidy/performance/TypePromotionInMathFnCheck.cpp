@@ -166,7 +166,7 @@ void TypePromotionInMathFnCheck::check(const MatchFinder::MatchResult &Result) {
       "log1p",     "log2",       "logb",      "lrint",  "lround",   "nearbyint",
       "nextafter", "nexttoward", "remainder", "remquo", "rint",     "round",
       "scalbln",   "scalbn",     "tgamma",    "trunc"};
-  bool StdFnRequiresCpp11 = Cpp11OnlyFns.count(OldFnName);
+  bool StdFnRequiresCpp11 = Cpp11OnlyFns.contains(OldFnName);
 
   std::string NewFnName;
   bool FnInCmath = false;

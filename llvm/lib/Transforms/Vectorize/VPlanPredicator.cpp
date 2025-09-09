@@ -14,11 +14,13 @@
 #include "VPRecipeBuilder.h"
 #include "VPlan.h"
 #include "VPlanCFG.h"
+#include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
 #include "VPlanUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
 
 using namespace llvm;
+using namespace VPlanPatternMatch;
 
 namespace {
 class VPPredicator {
@@ -246,6 +248,7 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
                "Distinct incoming values with one having a full mask");
         break;
       }
+
       OperandsWithMask.push_back(EdgeMask);
     }
     PHINode *IRPhi = cast_or_null<PHINode>(PhiR->getUnderlyingValue());

@@ -99,12 +99,14 @@ __m256d test_mm256_blendv_pd(__m256d V1, __m256d V2, __m256d V3) {
   // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.blendv.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}})
   return _mm256_blendv_pd(V1, V2, V3);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_blendv_pd((__m256d)(__v4df){1.0, 2.0, 3.0, 4.0},(__m256d)(__v4df){-100.0, -101.0, -102.0, -103.0},(__m256d)(__v4df){0.0, -1.0, 1.0, -1.0}), 1.0f, -101.0, 3.0, -103.0));
 
 __m256 test_mm256_blendv_ps(__m256 V1, __m256 V2, __m256 V3) {
   // CHECK-LABEL: test_mm256_blendv_ps
   // CHECK: call {{.*}}<8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}})
   return _mm256_blendv_ps(V1, V2, V3);
 }
+TEST_CONSTEXPR(match_m256(_mm256_blendv_ps((__m256)(__v8sf){0.0f,1.0f,2.0f,3.0f,4.0f,5.0f,6.0f,7.0f},(__m256)(__v8sf){-100.0f, -101.0f, -102.0f, -103.0f, -104.0f, -105.0f, -106.0f, -107.0f},(__m256)(__v8sf){-1.0f, 2.0f, -3.0f, 4.0f, -5.0f, -6.0f, 7.0f, -0.0f}), -100.0f, 1.0f, -102.0f, 3.0f, -104.0f, -105.0f, 6.0f, -107.0f));
 
 __m256d test_mm256_broadcast_pd(__m128d* A) {
   // CHECK-LABEL: test_mm256_broadcast_pd
@@ -934,11 +936,15 @@ __m256d test_mm256_cvtepi32_pd(__m128i A) {
   return _mm256_cvtepi32_pd(A);
 }
 
+TEST_CONSTEXPR(match_m256d(_mm256_cvtepi32_pd((__m128i)(__v4si){-2, -1, 0, 1}), -2.0, -1.0, 0.0, 1.0));
+
 __m256 test_mm256_cvtepi32_ps(__m256i A) {
   // CHECK-LABEL: test_mm256_cvtepi32_ps
   // CHECK: sitofp <8 x i32> %{{.*}} to <8 x float>
   return _mm256_cvtepi32_ps(A);
 }
+
+TEST_CONSTEXPR(match_m256(_mm256_cvtepi32_ps((__m256i)(__v8si){-8, -4, -2, -1, 0, 1, 2, 4}), -8.0f, -4.0f, -2.0f, -1.0f, 0.0f, 1.0f, 2.0f, 4.0f));
 
 __m128i test_mm256_cvtpd_epi32(__m256d A) {
   // CHECK-LABEL: test_mm256_cvtpd_epi32
@@ -963,6 +969,8 @@ __m256d test_mm256_cvtps_pd(__m128 A) {
   // CHECK: fpext <4 x float> %{{.*}} to <4 x double>
   return _mm256_cvtps_pd(A);
 }
+
+TEST_CONSTEXPR(match_m256d(_mm256_cvtps_pd((__m128){0.25f, 1.75f, -1.75f, 16777216.0f}), 0.25, 1.75, -1.75, 16777216.0));
 
 double test_mm256_cvtsd_f64(__m256d __a) {
   // CHECK-LABEL: test_mm256_cvtsd_f64
@@ -2145,6 +2153,7 @@ __m256d test_mm256_zextpd128_pd256(__m128d A) {
   // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm256_zextpd128_pd256(A);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_zextpd128_pd256((__m128d){-4.0, -5.0}), -4.0, -5.0, +0.0, +0.0));
 
 __m256 test_mm256_zextps128_ps256(__m128 A) {
   // CHECK-LABEL: test_mm256_zextps128_ps256
@@ -2152,6 +2161,7 @@ __m256 test_mm256_zextps128_ps256(__m128 A) {
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   return _mm256_zextps128_ps256(A);
 }
+TEST_CONSTEXPR(match_m256(_mm256_zextps128_ps256((__m128){1.0f, 2.0f, 3.0f, 4.0f}), 1.0f, 2.0f, 3.0f, 4.0f, 0.0f, 0.0f, 0.0f, 0.0f));
 
 __m256i test_mm256_zextsi128_si256(__m128i A) {
   // CHECK-LABEL: test_mm256_zextsi128_si256
@@ -2159,3 +2169,4 @@ __m256i test_mm256_zextsi128_si256(__m128i A) {
   // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm256_zextsi128_si256(A);
 }
+TEST_CONSTEXPR(match_m256i(_mm256_zextsi128_si256((__m128i){1, 2}), 1, 2, 0, 0));

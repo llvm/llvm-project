@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck -check-prefixes=CHECK,SM60 %s
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx82 | FileCheck %s -check-prefixes=CHECK,SM70
-; RUN: %if ptxas-12.2 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx82 | %ptxas-verify -arch=sm_70 %}
+; RUN: %if ptxas-sm_70 && ptxas-isa-8.2 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx82 | %ptxas-verify -arch=sm_70 %}
 
 ; TODO: generate PTX that preserves Concurrent Forward Progress
 ;       for atomic operations to local statespace

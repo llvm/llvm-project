@@ -577,6 +577,7 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
 
   unsigned MaxNumVGPRs = MaxVectorRegs;
   unsigned MaxNumAGPRs = 0;
+  unsigned NumArchVGPRs = has1024AddressableVGPRs() ? 1024 : 256;
 
   // On GFX90A, the number of VGPRs and AGPRs need not be equal. Theoretically,
   // a wave may have up to 512 total vector registers combining together both
@@ -589,7 +590,6 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
   if (hasGFX90AInsts()) {
     unsigned MinNumAGPRs = 0;
     const unsigned TotalNumAGPRs = AMDGPU::AGPR_32RegClass.getNumRegs();
-    const unsigned TotalNumVGPRs = AMDGPU::VGPR_32RegClass.getNumRegs();
 
     const std::pair<unsigned, unsigned> DefaultNumAGPR = {~0u, ~0u};
 
@@ -614,11 +614,11 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
     MaxNumAGPRs = std::min(std::max(MinNumAGPRs, MaxNumAGPRs), MaxVectorRegs);
     MinNumAGPRs = std::min(std::min(MinNumAGPRs, TotalNumAGPRs), MaxNumAGPRs);
 
-    MaxNumVGPRs = std::min(MaxVectorRegs - MinNumAGPRs, TotalNumVGPRs);
+    MaxNumVGPRs = std::min(MaxVectorRegs - MinNumAGPRs, NumArchVGPRs);
     MaxNumAGPRs = std::min(MaxVectorRegs - MaxNumVGPRs, MaxNumAGPRs);
 
     assert(MaxNumVGPRs + MaxNumAGPRs <= MaxVectorRegs &&
-           MaxNumAGPRs <= TotalNumAGPRs && MaxNumVGPRs <= TotalNumVGPRs &&
+           MaxNumAGPRs <= TotalNumAGPRs && MaxNumVGPRs <= NumArchVGPRs &&
            "invalid register counts");
   } else if (hasMAIInsts()) {
     // On gfx908 the number of AGPRs always equals the number of VGPRs.

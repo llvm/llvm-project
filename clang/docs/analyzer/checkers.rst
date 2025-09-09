@@ -1859,6 +1859,27 @@ this) and always check the return value of these calls.
 
 This check corresponds to SEI CERT Rule `POS36-C <https://wiki.sei.cmu.edu/confluence/display/c/POS36-C.+Observe+correct+revocation+order+while+relinquishing+privileges>`_.
 
+.. _security-VAList:
+
+security.VAList (C, C++)
+""""""""""""""""""""""""
+Reports use of uninitialized (or already released) ``va_list`` objects and
+situations where a ``va_start`` call is not followed by ``va_end``.
+
+.. code-block:: c
+
+ int test_use_after_release(int x, ...) {
+   va_list va;
+   va_start(va, x);
+   va_end(va);
+   return va_arg(va, int); // warn: va is uninitialized
+ }
+
+ void test_leak(int x, ...) {
+   va_list va;
+   va_start(va, x);
+ } // warn: va is leaked
+
 .. _unix-checkers:
 
 unix
@@ -2930,18 +2951,6 @@ the locking/unlocking of ``mtx_t`` mutexes.
  {
    mtx_lock(&mtx1);
    mtx_lock(&mtx1); // warn: This lock has already been acquired
- }
-
-.. _alpha-core-CastSize:
-
-alpha.core.CastSize (C)
-"""""""""""""""""""""""
-Check when casting a malloc'ed type ``T``, whether the size is a multiple of the size of ``T``.
-
-.. code-block:: c
-
- void test() {
-   int *x = (int *) malloc(11); // warn
  }
 
 .. _alpha-core-CastToStruct:

@@ -457,8 +457,7 @@ bool Descriptor::hasTrivialDtor() const {
 
   if (isRecord()) {
     assert(ElemRecord);
-    const CXXDestructorDecl *Dtor = ElemRecord->getDestructor();
-    return !Dtor || Dtor->isTrivial();
+    return ElemRecord->hasTrivialDtor();
   }
 
   if (!ElemDesc)

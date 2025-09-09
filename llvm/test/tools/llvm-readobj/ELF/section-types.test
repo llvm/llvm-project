@@ -134,14 +134,14 @@
 # GNU-NEXT: gnu_verneed             VERNEED
 # GNU-NEXT: unknown                 0x1000: <unknown>
 # GNU-NEXT: loos                    LOOS+0x0
-# GNU-NEXT: fooos                   LOOS+0xF00
+# GNU-NEXT: fooos                   LOOS+0xf00
 # GNU-NEXT: hios                    VERSYM
 # GNU-NEXT: loproc                  LOPROC+0x0
-# GNU-NEXT: fooproc                 LOPROC+0xF00
-# GNU-NEXT: hiproc                  LOPROC+0xFFFFFFF
+# GNU-NEXT: fooproc                 LOPROC+0xf00
+# GNU-NEXT: hiproc                  LOPROC+0xfffffff
 # GNU-NEXT: louser                  LOUSER+0x0
-# GNU-NEXT: foouser                 LOUSER+0xF00
-# GNU-NEXT: hiuser                  LOUSER+0x7FFFFFFF
+# GNU-NEXT: foouser                 LOUSER+0xf00
+# GNU-NEXT: hiuser                  LOUSER+0x7fffffff
 # GNU-NEXT: .symtab                 SYMTAB
 # GNU-NEXT: .strtab                 STRTAB
 

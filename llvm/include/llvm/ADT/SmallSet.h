@@ -36,7 +36,6 @@ class SmallSetIterator
 private:
   using SetIterTy = typename std::set<T, C>::const_iterator;
   using VecIterTy = typename SmallVector<T, N>::const_iterator;
-  using SelfTy = SmallSetIterator<T, N, C>;
 
   /// Iterators to the parts of the SmallSet containing the data. They are set
   /// depending on isSmall.

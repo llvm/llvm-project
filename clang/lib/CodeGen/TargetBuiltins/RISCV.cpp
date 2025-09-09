@@ -494,7 +494,6 @@ emitRVVAveragingBuiltin(CodeGenFunction *CGF, const CallExpr *E,
                         int PolicyAttrs, bool IsMasked, unsigned SegInstSEW) {
   auto &Builder = CGF->Builder;
   auto &CGM = CGF->CGM;
-  llvm::SmallVector<llvm::Type *, 3> IntrinsicTypes;
   // LLVM intrinsic
   // Unmasked: (passthru, op0, op1, round_mode, vl)
   // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, vxrm, vl,
@@ -524,7 +523,6 @@ static LLVM_ATTRIBUTE_NOINLINE Value *emitRVVNarrowingClipBuiltin(
     int PolicyAttrs, bool IsMasked, unsigned SegInstSEW) {
   auto &Builder = CGF->Builder;
   auto &CGM = CGF->CGM;
-  llvm::SmallVector<llvm::Type *, 3> IntrinsicTypes;
   // LLVM intrinsic
   // Unmasked: (passthru, op0, op1, round_mode, vl)
   // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, vxrm, vl,
@@ -555,7 +553,6 @@ static LLVM_ATTRIBUTE_NOINLINE Value *emitRVVFloatingPointBuiltin(
     int PolicyAttrs, bool IsMasked, unsigned SegInstSEW) {
   auto &Builder = CGF->Builder;
   auto &CGM = CGF->CGM;
-  llvm::SmallVector<llvm::Type *, 3> IntrinsicTypes;
   // LLVM intrinsic
   // Unmasked: (passthru, op0, op1, round_mode, vl)
   // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, frm, vl, policy)
@@ -591,7 +588,6 @@ static LLVM_ATTRIBUTE_NOINLINE Value *emitRVVWideningFloatingPointBuiltin(
     int PolicyAttrs, bool IsMasked, unsigned SegInstSEW) {
   auto &Builder = CGF->Builder;
   auto &CGM = CGF->CGM;
-  llvm::SmallVector<llvm::Type *, 3> IntrinsicTypes;
   // LLVM intrinsic
   // Unmasked: (passthru, op0, op1, round_mode, vl)
   // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, frm, vl, policy)
@@ -695,7 +691,6 @@ emitRVVFMABuiltin(CodeGenFunction *CGF, const CallExpr *E,
                   int PolicyAttrs, bool IsMasked, unsigned SegInstSEW) {
   auto &Builder = CGF->Builder;
   auto &CGM = CGF->CGM;
-  llvm::SmallVector<llvm::Type *, 3> IntrinsicTypes;
   // LLVM intrinsic
   // Unmasked: (vector_in, vector_in/scalar_in, vector_in, round_mode,
   //            vl, policy)
@@ -725,7 +720,6 @@ emitRVVWideningFMABuiltin(CodeGenFunction *CGF, const CallExpr *E,
                           int PolicyAttrs, bool IsMasked, unsigned SegInstSEW) {
   auto &Builder = CGF->Builder;
   auto &CGM = CGF->CGM;
-  llvm::SmallVector<llvm::Type *, 3> IntrinsicTypes;
   // LLVM intrinsic
   // Unmasked: (vector_in, vector_in/scalar_in, vector_in, round_mode, vl,
   // policy) Masked:   (vector_in, vector_in/scalar_in, vector_in, mask, frm,
@@ -790,7 +784,6 @@ static LLVM_ATTRIBUTE_NOINLINE Value *emitRVVFloatingConvBuiltin(
     int PolicyAttrs, bool IsMasked, unsigned SegInstSEW) {
   auto &Builder = CGF->Builder;
   auto &CGM = CGF->CGM;
-  llvm::SmallVector<llvm::Type *, 3> IntrinsicTypes;
   // LLVM intrinsic
   // Unmasked: (passthru, op0, frm, vl)
   // Masked:   (passthru, op0, mask, frm, vl, policy)
@@ -825,7 +818,6 @@ static LLVM_ATTRIBUTE_NOINLINE Value *emitRVVFloatingReductionBuiltin(
     int PolicyAttrs, bool IsMasked, unsigned SegInstSEW) {
   auto &Builder = CGF->Builder;
   auto &CGM = CGF->CGM;
-  llvm::SmallVector<llvm::Type *, 3> IntrinsicTypes;
   // LLVM intrinsic
   // Unmasked: (passthru, op0, op1, round_mode, vl)
   // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, frm, vl, policy)

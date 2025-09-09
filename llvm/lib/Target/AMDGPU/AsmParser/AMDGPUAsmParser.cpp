@@ -564,6 +564,14 @@ public:
     return isRegOrInlineNoMods(AMDGPU::VS_32RegClassID, MVT::i32);
   }
 
+  bool isVCSrc_b32_Lo256() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_32_Lo256RegClassID, MVT::i32);
+  }
+
+  bool isVCSrc_b64_Lo256() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_64_Lo256RegClassID, MVT::i64);
+  }
+
   bool isVCSrc_b64() const {
     return isRegOrInlineNoMods(AMDGPU::VS_64RegClassID, MVT::i64);
   }
@@ -1886,6 +1894,7 @@ private:
   bool validateTHAndScopeBits(const MCInst &Inst, const OperandVector &Operands,
                               const unsigned CPol);
   bool validateTFE(const MCInst &Inst, const OperandVector &Operands);
+  bool validateSetVgprMSB(const MCInst &Inst, const OperandVector &Operands);
   std::optional<StringRef> validateLdsDirect(const MCInst &Inst);
   bool validateWMMA(const MCInst &Inst, const OperandVector &Operands);
   unsigned getConstantBusLimit(unsigned Opcode) const;
@@ -2985,7 +2994,12 @@ MCRegister AMDGPUAsmParser::getRegularReg(RegisterKind RegKind, unsigned RegNum,
 
   const MCRegisterInfo *TRI = getContext().getRegisterInfo();
   const MCRegisterClass RC = TRI->getRegClass(RCID);
-  if (RegIdx >= RC.getNumRegs()) {
+  if (RegIdx >= RC.getNumRegs() || (RegKind == IS_VGPR && RegIdx > 255)) {
+    Error(Loc, "register index is out of range");
+    return AMDGPU::NoRegister;
+  }
+
+  if (RegKind == IS_VGPR && !isGFX1250() && RegIdx + RegWidth / 32 > 256) {
     Error(Loc, "register index is out of range");
     return MCRegister();
   }
@@ -4768,12 +4782,14 @@ bool AMDGPUAsmParser::validateOffset(const MCInst &Inst,
     return validateSMEMOffset(Inst, Operands);
 
   const auto &Op = Inst.getOperand(OpNum);
+  // GFX12+ buffer ops: InstOffset is signed 24, but must not be a negative.
   if (isGFX12Plus() &&
       (TSFlags & (SIInstrFlags::MUBUF | SIInstrFlags::MTBUF))) {
     const unsigned OffsetSize = 24;
-    if (!isIntN(OffsetSize, Op.getImm())) {
+    if (!isUIntN(OffsetSize - 1, Op.getImm())) {
       Error(getFlatOffsetLoc(Operands),
-            Twine("expected a ") + Twine(OffsetSize) + "-bit signed offset");
+            Twine("expected a ") + Twine(OffsetSize - 1) +
+                "-bit unsigned offset for buffer ops");
       return false;
     }
   } else {
@@ -4856,7 +4872,9 @@ bool AMDGPUAsmParser::validateSMEMOffset(const MCInst &Inst,
     return true;
 
   Error(getSMEMOffsetLoc(Operands),
-        isGFX12Plus()          ? "expected a 24-bit signed offset"
+        isGFX12Plus() && IsBuffer
+            ? "expected a 23-bit unsigned offset for buffer ops"
+        : isGFX12Plus()        ? "expected a 24-bit signed offset"
         : (isVI() || IsBuffer) ? "expected a 20-bit unsigned offset"
                                : "expected a 21-bit signed offset");
 
@@ -5216,7 +5234,7 @@ bool AMDGPUAsmParser::validateAGPRLdSt(const MCInst &Inst) const {
 
 bool AMDGPUAsmParser::validateVGPRAlign(const MCInst &Inst) const {
   auto FB = getFeatureBits();
-  if (!FB[AMDGPU::FeatureGFX90AInsts] && !FB[AMDGPU::FeatureGFX1250Insts])
+  if (!FB[AMDGPU::FeatureRequiresAlignedVGPRs])
     return true;
 
   unsigned Opc = Inst.getOpcode();
@@ -5542,6 +5560,22 @@ bool AMDGPUAsmParser::validateTFE(const MCInst &Inst,
   return true;
 }
 
+bool AMDGPUAsmParser::validateSetVgprMSB(const MCInst &Inst,
+                                         const OperandVector &Operands) {
+  if (Inst.getOpcode() != AMDGPU::S_SET_VGPR_MSB_gfx12)
+    return true;
+
+  int Simm16Pos =
+      AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::simm16);
+  if ((unsigned)Inst.getOperand(Simm16Pos).getImm() > 255) {
+    SMLoc Loc = Operands[1]->getStartLoc();
+    Error(Loc, "s_set_vgpr_msb accepts values in range [0..255]");
+    return false;
+  }
+
+  return true;
+}
+
 bool AMDGPUAsmParser::validateWMMA(const MCInst &Inst,
                                    const OperandVector &Operands) {
   unsigned Opc = Inst.getOpcode();
@@ -5706,6 +5740,9 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
   if (!validateTFE(Inst, Operands)) {
     return false;
   }
+  if (!validateSetVgprMSB(Inst, Operands)) {
+    return false;
+  }
   if (!validateWMMA(Inst, Operands)) {
     return false;
   }
@@ -5799,6 +5836,7 @@ bool AMDGPUAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                               uint64_t &ErrorInfo,
                                               bool MatchingInlineAsm) {
   MCInst Inst;
+  Inst.setLoc(IDLoc);
   unsigned Result = Match_Success;
   for (auto Variant : getMatchedVariants()) {
     uint64_t EI;
@@ -5822,7 +5860,6 @@ bool AMDGPUAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     if (!validateInstruction(Inst, IDLoc, Operands)) {
       return true;
     }
-    Inst.setLoc(IDLoc);
     Out.emitInstruction(Inst, getSTI());
     return false;
   }

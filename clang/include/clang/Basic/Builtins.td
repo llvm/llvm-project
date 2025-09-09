@@ -854,7 +854,7 @@ def BuiltinAssumeAligned : Builtin {
 def BuiltinAssumeDereferenceable : Builtin {
   let Spellings = ["__builtin_assume_dereferenceable"];
   let Attributes = [NoThrow, Const];
-  let Prototype = "void(void const*, _Constant size_t)";
+  let Prototype = "void(void const*, size_t)";
 }
 
 def BuiltinFree : Builtin {
@@ -1244,6 +1244,18 @@ def MaskedStore : Builtin {
   let Prototype = "void(...)";
 }
 
+def MaskedExpandLoad : Builtin {
+  let Spellings = ["__builtin_masked_expand_load"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def MaskedCompressStore : Builtin {
+  let Spellings = ["__builtin_masked_compress_store"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def AllocaUninitialized : Builtin {
   let Spellings = ["__builtin_alloca_uninitialized"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
@@ -1528,13 +1540,13 @@ def ElementwiseSubSat : Builtin {
 
 def ElementwiseFshl : Builtin {
   let Spellings = ["__builtin_elementwise_fshl"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def ElementwiseFshr : Builtin {
   let Spellings = ["__builtin_elementwise_fshr"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 

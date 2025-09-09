@@ -43,7 +43,8 @@ class EmitC_UnaryOp<string mnemonic, list<Trait> traits = []> :
 
   let extraClassDeclaration = [{
     bool hasSideEffects() {
-      return false;
+      // If operand is fundamental type, the operation is pure.
+      return !isFundamentalType(getOperand().getType());
     }
   }];
 }
@@ -57,7 +58,9 @@ class EmitC_BinaryOp<string mnemonic, list<Trait> traits = []> :
 
   let extraClassDeclaration = [{
     bool hasSideEffects() {
-      return false;
+      // If both operands are fundamental types, the operation is pure.
+      return !isFundamentalType(getOperand(0).getType()) ||
+        !isFundamentalType(getOperand(1).getType());
     }
   }];
 }
@@ -399,7 +402,8 @@ def EmitC_CmpOp : EmitC_BinaryOp<"cmp", []> {
   let assemblyFormat = "$predicate `,` operands attr-dict `:` functional-type(operands, results)";
 }
 
-def EmitC_ConstantOp : EmitC_Op<"constant", [ConstantLike]> {
+def EmitC_ConstantOp
+    : EmitC_Op<"constant", [ConstantLike, CExpressionInterface]> {
   let summary = "Constant operation";
   let description = [{
     The `emitc.constant` operation produces an SSA value equal to some constant
@@ -426,6 +430,13 @@ def EmitC_ConstantOp : EmitC_Op<"constant", [ConstantLike]> {
 
   let hasFolder = 1;
   let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    bool hasSideEffects() {
+      // If operand is fundamental type, the operation is pure.
+      return !isFundamentalType(getResult().getType());
+    }
+  }];
 }
 
 def EmitC_DivOp : EmitC_BinaryOp<"div", []> {
@@ -452,17 +463,20 @@ def EmitC_DivOp : EmitC_BinaryOp<"div", []> {
   let results = (outs FloatIntegerIndexOrOpaqueType);
 }
 
-def EmitC_ExpressionOp : EmitC_Op<"expression",
-      [HasOnlyGraphRegion, OpAsmOpInterface,
-       SingleBlockImplicitTerminator<"emitc::YieldOp">, NoRegionArguments]> {
+def EmitC_ExpressionOp
+    : EmitC_Op<
+          "expression", [HasOnlyGraphRegion, OpAsmOpInterface,
+                         IsolatedFromAbove,
+                         SingleBlockImplicitTerminator<"emitc::YieldOp">]> {
   let summary = "Expression operation";
   let description = [{
     The `emitc.expression` operation returns a single SSA value which is yielded by
     its single-basic-block region. The operation doesn't take any arguments.
 
     As the operation is to be emitted as a C expression, the operations within
-    its body must form a single Def-Use tree of emitc ops whose result is
-    yielded by a terminating `emitc.yield`.
+    its body must form a single Def-Use tree, or a DAG trivially expandable to
+    one, i.e. a DAG where each operation with side effects is only reachable
+    once from the expression root.
 
     Example:
 
@@ -491,12 +505,13 @@ def EmitC_ExpressionOp : EmitC_Op<"expression",
     at its use.
   }];
 
-  let arguments = (ins UnitAttr:$do_not_inline);
+  let arguments = (ins Variadic<AnyTypeOf<[EmitCType, EmitC_LValueType]>>:$defs,
+      UnitAttr:$do_not_inline);
   let results = (outs EmitCType:$result);
   let regions = (region SizedRegion<1>:$region);
 
   let hasVerifier = 1;
-  let assemblyFormat = "attr-dict (`noinline` $do_not_inline^)? `:` type($result) $region";
+  let hasCustomAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
     bool hasSideEffects() {
@@ -507,6 +522,13 @@ def EmitC_ExpressionOp : EmitC_Op<"expression",
       return llvm::any_of(getRegion().front().without_terminator(), predicate);
     };
     Operation *getRootOp();
+    Block &createBody() {
+      assert(getRegion().empty() && "expression already has a body");
+      Block &block = getRegion().emplaceBlock();
+      for (auto operand : getOperands())
+        block.addArgument(operand.getType(), operand.getLoc());
+      return block;
+    }
 
     //===------------------------------------------------------------------===//
     // OpAsmOpInterface Methods

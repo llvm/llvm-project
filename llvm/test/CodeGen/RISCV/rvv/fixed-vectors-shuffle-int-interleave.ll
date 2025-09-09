@@ -163,7 +163,7 @@ define <8 x i16> @interleave_v4i16(<4 x i16> %x, <4 x i16> %y) {
 ; ZIP-NEXT:    ri.vzip2a.vv v10, v8, v9
 ; ZIP-NEXT:    vmv.v.v v8, v10
 ; ZIP-NEXT:    ret
-  %a = shufflevector <4 x i16> %x, <4 x i16> %y, <8 x i32> <i32 0, i32 4, i32 undef, i32 5, i32 2, i32 undef, i32 3, i32 7>
+  %a = shufflevector <4 x i16> %x, <4 x i16> %y, <8 x i32> <i32 0, i32 4, i32 poison, i32 5, i32 2, i32 poison, i32 3, i32 7>
   ret <8 x i16> %a
 }
 
@@ -902,7 +902,7 @@ define <8 x i8> @unary_interleave_v8i8(<8 x i8> %x) {
 ; ZIP-NEXT:    ri.vzip2a.vv v9, v8, v10
 ; ZIP-NEXT:    vmv1r.v v8, v9
 ; ZIP-NEXT:    ret
-  %a = shufflevector <8 x i8> %x, <8 x i8> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 undef, i32 6, i32 3, i32 7>
+  %a = shufflevector <8 x i8> %x, <8 x i8> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 poison, i32 6, i32 3, i32 7>
   ret <8 x i8> %a
 }
 
@@ -936,7 +936,7 @@ define <8 x i16> @unary_interleave_v8i16(<8 x i16> %x) {
 ; ZIP-NEXT:    ri.vzip2a.vv v9, v10, v8
 ; ZIP-NEXT:    vmv.v.v v8, v9
 ; ZIP-NEXT:    ret
-  %a = shufflevector <8 x i16> %x, <8 x i16> poison, <8 x i32> <i32 4, i32 undef, i32 5, i32 1, i32 6, i32 2, i32 7, i32 3>
+  %a = shufflevector <8 x i16> %x, <8 x i16> poison, <8 x i32> <i32 4, i32 poison, i32 5, i32 1, i32 6, i32 2, i32 7, i32 3>
   ret <8 x i16> %a
 }
 
@@ -992,7 +992,7 @@ define <4 x i8> @unary_interleave_10uu_v4i8(<4 x i8> %x) {
 ; ZIP-NEXT:    vsll.vi v8, v8, 8
 ; ZIP-NEXT:    vor.vv v8, v8, v9
 ; ZIP-NEXT:    ret
-  %a = shufflevector <4 x i8> %x, <4 x i8> poison, <4 x i32> <i32 1, i32 0, i32 undef, i32 undef>
+  %a = shufflevector <4 x i8> %x, <4 x i8> poison, <4 x i32> <i32 1, i32 0, i32 poison, i32 poison>
   ret <4 x i8> %a
 }
 
@@ -1024,8 +1024,8 @@ define <16 x i16> @interleave_slp(<8 x i16> %v0, <8 x i16> %v1) {
 ; ZIP-NEXT:    vmv.v.v v8, v10
 ; ZIP-NEXT:    ret
 entry:
-  %v2 = shufflevector <8 x i16> %v0, <8 x i16> poison, <16 x i32> <i32 0, i32 undef, i32 1, i32 undef, i32 2, i32 undef, i32 3, i32 undef, i32 4, i32 undef, i32 5, i32 undef, i32 6, i32 undef, i32 7, i32 undef>
-  %v3 = shufflevector <8 x i16> %v1, <8 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %v2 = shufflevector <8 x i16> %v0, <8 x i16> poison, <16 x i32> <i32 0, i32 poison, i32 1, i32 poison, i32 2, i32 poison, i32 3, i32 poison, i32 4, i32 poison, i32 5, i32 poison, i32 6, i32 poison, i32 7, i32 poison>
+  %v3 = shufflevector <8 x i16> %v1, <8 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %v4 = shufflevector <16 x i16> %v2, <16 x i16> %v3, <16 x i32> <i32 0, i32 16, i32 2, i32 17, i32 4, i32 18, i32 6, i32 19, i32 8, i32 20, i32 10, i32 21, i32 12, i32 22, i32 14, i32 23>
   ret <16 x i16> %v4
 }

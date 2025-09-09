@@ -47,7 +47,7 @@ static void populateDialectLLVMSubmodule(const nanobind::module_ &m) {
         return cls(type);
       },
       "cls"_a, "elements"_a, nb::kw_only(), "packed"_a = false,
-      "loc"_a.none() = nb::none());
+      "loc"_a = nb::none());
 
   llvmStructType.def_classmethod(
       "get_identified",
@@ -55,7 +55,7 @@ static void populateDialectLLVMSubmodule(const nanobind::module_ &m) {
         return cls(mlirLLVMStructTypeIdentifiedGet(
             context, mlirStringRefCreate(name.data(), name.size())));
       },
-      "cls"_a, "name"_a, nb::kw_only(), "context"_a.none() = nb::none());
+      "cls"_a, "name"_a, nb::kw_only(), "context"_a = nb::none());
 
   llvmStructType.def_classmethod(
       "get_opaque",
@@ -63,7 +63,7 @@ static void populateDialectLLVMSubmodule(const nanobind::module_ &m) {
         return cls(mlirLLVMStructTypeOpaqueGet(
             context, mlirStringRefCreate(name.data(), name.size())));
       },
-      "cls"_a, "name"_a, "context"_a.none() = nb::none());
+      "cls"_a, "name"_a, "context"_a = nb::none());
 
   llvmStructType.def(
       "set_body",
@@ -86,7 +86,7 @@ static void populateDialectLLVMSubmodule(const nanobind::module_ &m) {
             elements.size(), elements.data(), packed));
       },
       "cls"_a, "name"_a, "elements"_a, nb::kw_only(), "packed"_a = false,
-      "context"_a.none() = nb::none());
+      "context"_a = nb::none());
 
   llvmStructType.def_property_readonly(
       "name", [](MlirType type) -> std::optional<std::string> {
@@ -133,8 +133,8 @@ static void populateDialectLLVMSubmodule(const nanobind::module_ &m) {
             }
             return cls(type);
           },
-          "cls"_a, "address_space"_a.none() = nb::none(), nb::kw_only(),
-          "context"_a.none() = nb::none())
+          "cls"_a, "address_space"_a = nb::none(), nb::kw_only(),
+          "context"_a = nb::none())
       .def_property_readonly("address_space", [](MlirType type) {
         return mlirLLVMPointerTypeGetAddressSpace(type);
       });

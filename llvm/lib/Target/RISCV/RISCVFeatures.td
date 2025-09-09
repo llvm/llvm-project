@@ -1403,19 +1403,26 @@ def HasVendorXMIPSCMov
       AssemblerPredicate<(all_of FeatureVendorXMIPSCMov),
                          "'Xmipscmov' ('mips.ccmov' instruction)">;
 def UseCCMovInsn : Predicate<"Subtarget->useCCMovInsn()">;
+
 def FeatureVendorXMIPSLSP
     : RISCVExtension<1, 0, "MIPS optimization for hardware load-store bonding">;
 def HasVendorXMIPSLSP
     : Predicate<"Subtarget->hasVendorXMIPSLSP()">,
       AssemblerPredicate<(all_of FeatureVendorXMIPSLSP),
                          "'Xmipslsp' (load and store pair instructions)">;
-def FeatureVendorXMIPSCBOP
-    : RISCVExtension<1, 0, "MIPS Software Prefetch">;
+
+def FeatureVendorXMIPSCBOP : RISCVExtension<1, 0, "MIPS Software Prefetch">;
 def HasVendorXMIPSCBOP
     : Predicate<"Subtarget->hasVendorXMIPSCBOP()">,
       AssemblerPredicate<(all_of FeatureVendorXMIPSCBOP),
                          "'Xmipscbop' (MIPS hardware prefetch)">;
 def NoVendorXMIPSCBOP : Predicate<"!Subtarget->hasVendorXMIPSCBOP()">;
+
+def FeatureVendorXMIPSEXECTL : RISCVExtension<1, 0, "MIPS execution control">;
+def HasVendorXMIPSEXECTL
+    : Predicate<"Subtarget->hasVendorXMIPSEXT()">,
+      AssemblerPredicate<(all_of FeatureVendorXMIPSEXECTL),
+                         "'Xmipsexectl' (MIPS execution control)">;
 
 // WCH / Nanjing Qinheng Microelectronics Extension(s)
 

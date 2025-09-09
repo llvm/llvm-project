@@ -909,6 +909,40 @@ class foo : public std::string{
 
 }
 
+namespace GH154762 {
+class TypeRange {
+  std::vector<int> b;
+
+public:
+  TypeRange(std::vector<int> b = {});
+  TypeRange(int);
+  bool operator==(const TypeRange& other) const;
+
+  size_t size() const {
+    return b.size();
+  }
+
+  bool empty() const {
+    return size() == 0;
+  }
+};
+
+void foo(std::vector<int> v) {
+  if (TypeRange(1) == TypeRange(v)) { // no warning
+  }
+
+  if (TypeRange(1) == TypeRange()) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of comparing to an empty object
+    // CHECK-FIXES: if (TypeRange(1).empty()) {
+  }
+
+  if (TypeRange(v) == TypeRange()) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of comparing to an empty object
+    // CHECK-FIXES: if (TypeRange(v).empty()) {
+  }
+}
+}
+
 class ReportInContainerNonEmptyMethod {
 public:
   int size() const;

@@ -492,7 +492,6 @@ static void emitAttributeAccessors(const Operator &op, raw_ostream &os) {
 constexpr const char *initTemplate = R"Py(
   def __init__(self, {0}):
     operands = []
-    results = []
     attributes = {{}
     regions = None
     {1}
@@ -738,18 +737,24 @@ populateBuilderLinesOperand(const Operator &op, ArrayRef<std::string> names,
   }
 }
 
-/// Python code template for deriving the operation result types from its
-/// attribute:
+/// Python code template of generating result types for
+/// FirstAttrDerivedResultType trait
 ///   - {0} is the name of the attribute from which to derive the types.
-constexpr const char *deriveTypeFromAttrTemplate =
-    R"Py(_ods_result_type_source_attr = attributes["{0}"]
-_ods_derived_result_type = (
+///   - {1} is the number of results.
+constexpr const char *firstAttrDerivedResultTypeTemplate =
+    R"Py(if results is None:
+  _ods_result_type_source_attr = attributes["{0}"]
+  _ods_derived_result_type = (
     _ods_ir.TypeAttr(_ods_result_type_source_attr).value
     if _ods_ir.TypeAttr.isinstance(_ods_result_type_source_attr) else
-    _ods_result_type_source_attr.type))Py";
+    _ods_result_type_source_attr.type)
+  results = [_ods_derived_result_type] * {1})Py";
 
-/// Python code template appending {0} type {1} times to the results list.
-constexpr const char *appendSameResultsTemplate = "results.extend([{0}] * {1})";
+/// Python code template of generating result types for
+/// SameOperandsAndResultType trait
+///   - {0} is the number of results.
+constexpr const char *sameOperandsAndResultTypeTemplate =
+    R"Py(if results is None: results = [operands[0].type] * {0})Py";
 
 /// Appends the given multiline string as individual strings into
 /// `builderLines`.
@@ -768,11 +773,10 @@ static void appendLineByLine(StringRef string,
 static void
 populateBuilderLinesResult(const Operator &op, ArrayRef<std::string> names,
                            SmallVectorImpl<std::string> &builderLines) {
-  bool sizedSegments = op.getTrait(attrSizedTraitForKind("result")) != nullptr;
-
   if (hasSameArgumentAndResultTypes(op)) {
-    builderLines.push_back(formatv(appendSameResultsTemplate,
-                                   "operands[0].type", op.getNumResults()));
+    appendLineByLine(
+        formatv(sameOperandsAndResultTypeTemplate, op.getNumResults()).str(),
+        builderLines);
     return;
   }
 
@@ -780,16 +784,18 @@ populateBuilderLinesResult(const Operator &op, ArrayRef<std::string> names,
     const NamedAttribute &firstAttr = op.getAttribute(0);
     assert(!firstAttr.name.empty() && "unexpected empty name for the attribute "
                                       "from which the type is derived");
-    appendLineByLine(formatv(deriveTypeFromAttrTemplate, firstAttr.name).str(),
+    appendLineByLine(formatv(firstAttrDerivedResultTypeTemplate, firstAttr.name,
+                             op.getNumResults())
+                         .str(),
                      builderLines);
-    builderLines.push_back(formatv(appendSameResultsTemplate,
-                                   "_ods_derived_result_type",
-                                   op.getNumResults()));
     return;
   }
 
   if (hasInferTypeInterface(op))
     return;
+
+  bool sizedSegments = op.getTrait(attrSizedTraitForKind("result")) != nullptr;
+  builderLines.push_back("results = []");
 
   // For each element, find or generate a name.
   for (int i = 0, e = op.getNumResults(); i < e; ++i) {
@@ -909,6 +915,9 @@ static SmallVector<std::string> emitDefaultOpBuilder(const Operator &op,
       functionArgs.push_back(builderArgs[i]);
     }
   }
+  if (canInferType(op)) {
+    functionArgs.push_back("results=None");
+  }
   functionArgs.push_back("loc=None");
   functionArgs.push_back("ip=None");
 
@@ -918,8 +927,7 @@ static SmallVector<std::string> emitDefaultOpBuilder(const Operator &op,
   initArgs.push_back("self._ODS_OPERAND_SEGMENTS");
   initArgs.push_back("self._ODS_RESULT_SEGMENTS");
   initArgs.push_back("attributes=attributes");
-  if (!hasInferTypeInterface(op))
-    initArgs.push_back("results=results");
+  initArgs.push_back("results=results");
   initArgs.push_back("operands=operands");
   initArgs.push_back("successors=_ods_successors");
   initArgs.push_back("regions=regions");

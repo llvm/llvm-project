@@ -1150,6 +1150,15 @@ An alignment value of `0` or `1` means no specific alignment.
 
   %8:_(p0) = G_DYN_STACKALLOC %7(s64), 32
 
+G_FREEZE
+^^^^^^^^
+
+G_FREEZE is used to stop propagation of undef and poison values.
+
+.. code-block:: none
+
+  %1:_(s32) = G_FREEZE %0(s32)
+
 Optimization Hints
 ------------------
 

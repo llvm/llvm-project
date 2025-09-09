@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/libc_errno.h"
+#include "hdr/errno_macros.h"
 #include "src/math/asinpif16.h"
 #include "test/UnitTest/FPMatcher.h"
 
@@ -26,13 +26,12 @@ TEST_F(LlvmLibcAsinpif16Test, SpecialNumbers) {
 
   EXPECT_FP_EQ(FPBits::quiet_nan().get_val(),
                LIBC_NAMESPACE::asinpif16(FPBits::signaling_nan().get_val()));
+  EXPECT_MATH_ERRNO(0);
 
   // infinity inputs -> should return NaN
-  libc_errno = 0;
   EXPECT_FP_EQ(FPBits::quiet_nan().get_val(), LIBC_NAMESPACE::asinpif16(inf));
   EXPECT_MATH_ERRNO(EDOM);
 
-  libc_errno = 0;
   EXPECT_FP_EQ(FPBits::quiet_nan().get_val(),
                LIBC_NAMESPACE::asinpif16(neg_inf));
   EXPECT_MATH_ERRNO(EDOM);
@@ -40,29 +39,24 @@ TEST_F(LlvmLibcAsinpif16Test, SpecialNumbers) {
 
 TEST_F(LlvmLibcAsinpif16Test, OutOfRange) {
   // Test values > 1
-  libc_errno = 0;
   EXPECT_FP_EQ(FPBits::quiet_nan().get_val(),
                LIBC_NAMESPACE::asinpif16(1.5f16));
   EXPECT_MATH_ERRNO(EDOM);
 
-  libc_errno = 0;
   EXPECT_FP_EQ(FPBits::quiet_nan().get_val(),
                LIBC_NAMESPACE::asinpif16(2.0f16));
   EXPECT_MATH_ERRNO(EDOM);
 
   // Test values < -1
-  libc_errno = 0;
   EXPECT_FP_EQ(FPBits::quiet_nan().get_val(),
                LIBC_NAMESPACE::asinpif16(-1.5f16));
   EXPECT_MATH_ERRNO(EDOM);
 
-  libc_errno = 0;
   EXPECT_FP_EQ(FPBits::quiet_nan().get_val(),
                LIBC_NAMESPACE::asinpif16(-2.0f16));
   EXPECT_MATH_ERRNO(EDOM);
 
   // Test maximum normal value (should be > 1 for float16)
-  libc_errno = 0;
   EXPECT_FP_EQ(FPBits::quiet_nan().get_val(),
                LIBC_NAMESPACE::asinpif16(FPBits::max_normal().get_val()));
   EXPECT_MATH_ERRNO(EDOM);

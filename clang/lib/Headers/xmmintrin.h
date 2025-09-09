@@ -32,21 +32,12 @@ typedef unsigned short __v8hu __attribute__((__vector_size__(16)));
 #endif
 
 /* Define the default attributes for the functions in this file. */
-#if defined(__EVEX512__) && !defined(__AVX10_1_512__)
-#define __DEFAULT_FN_ATTRS                                                     \
-  __attribute__((__always_inline__, __nodebug__, __target__("sse,no-evex512"), \
-                 __min_vector_width__(128)))
-#define __DEFAULT_FN_ATTRS_SSE2                                                \
-  __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("sse2,no-evex512"), __min_vector_width__(128)))
-#else
 #define __DEFAULT_FN_ATTRS                                                     \
   __attribute__((__always_inline__, __nodebug__, __target__("sse"),            \
                  __min_vector_width__(128)))
 #define __DEFAULT_FN_ATTRS_SSE2                                                \
   __attribute__((__always_inline__, __nodebug__, __target__("sse2"),           \
                  __min_vector_width__(128)))
-#endif
 
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 #define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr
@@ -2353,9 +2344,8 @@ void _mm_sfence(void);
 /// \param __b
 ///    A 64-bit integer vector containing one of the source operands.
 /// \returns A 64-bit integer vector containing the comparison results.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_max_pi16(__m64 __a, __m64 __b)
-{
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_max_pi16(__m64 __a, __m64 __b) {
   return (__m64)__builtin_elementwise_max((__v4hi)__a, (__v4hi)__b);
 }
 
@@ -2391,9 +2381,8 @@ _mm_max_pu8(__m64 __a, __m64 __b)
 /// \param __b
 ///    A 64-bit integer vector containing one of the source operands.
 /// \returns A 64-bit integer vector containing the comparison results.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_min_pi16(__m64 __a, __m64 __b)
-{
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_min_pi16(__m64 __a, __m64 __b) {
   return (__m64)__builtin_elementwise_min((__v4hi)__a, (__v4hi)__b);
 }
 

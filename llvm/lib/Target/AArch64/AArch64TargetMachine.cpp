@@ -589,7 +589,8 @@ void AArch64TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
   PB.registerLateLoopOptimizationsEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
-        LPM.addPass(LoopIdiomVectorizePass());
+        if (Level != OptimizationLevel::O0)
+          LPM.addPass(LoopIdiomVectorizePass());
       });
   if (getTargetTriple().isOSWindows())
     PB.registerPipelineEarlySimplificationEPCallback(

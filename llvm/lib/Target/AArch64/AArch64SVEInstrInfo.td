@@ -650,7 +650,7 @@ let Predicates = [HasSVE_or_SME, UseExperimentalZeroingPseudos] in {
 
 let Predicates = [HasSVE_or_SME] in {
   defm ADD_ZI   : sve_int_arith_imm0<0b000, "add", add>;
-  defm SUB_ZI   : sve_int_arith_imm0<0b001, "sub", sub>;
+  defm SUB_ZI   : sve_int_arith_imm0<0b001, "sub", sub, add>;
   defm SUBR_ZI  : sve_int_arith_imm0<0b011, "subr", AArch64subr>;
   defm SQADD_ZI : sve_int_arith_imm0_ssat<0b100, "sqadd", saddsat, ssubsat>;
   defm UQADD_ZI : sve_int_arith_imm0<0b101, "uqadd", uaddsat>;
@@ -4141,8 +4141,8 @@ let Predicates = [HasSVE2_or_SME] in {
   defm WHILEHI_PXX : sve_int_while8_rr<0b101, "whilehi", int_aarch64_sve_whilehi, get_active_lane_mask>;
 
   // SVE2 pointer conflict compare
-  defm WHILEWR_PXX : sve2_int_while_rr<0b0, "whilewr", "int_aarch64_sve_whilewr">;
-  defm WHILERW_PXX : sve2_int_while_rr<0b1, "whilerw", "int_aarch64_sve_whilerw">;
+  defm WHILEWR_PXX : sve2_int_while_rr<0b0, "whilewr", loop_dependence_war_mask>;
+  defm WHILERW_PXX : sve2_int_while_rr<0b1, "whilerw", loop_dependence_raw_mask>;
 } // End HasSVE2_or_SME
 
 let Predicates = [HasSVEAES, HasNonStreamingSVE_or_SSVE_AES] in {

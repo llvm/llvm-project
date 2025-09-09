@@ -58,12 +58,16 @@ subroutine pointer_remapping(p, ziel)
 ! CHECK:  %[[VAL_14:.*]] = fir.convert %[[VAL_9]] : (i64) -> index
 ! CHECK:  %[[VAL_15:.*]] = arith.subi %[[VAL_14]], %[[VAL_13]] : index
 ! CHECK:  %[[VAL_16:.*]] = arith.addi %[[VAL_15]], %[[VAL_12]] : index
+! CHECK:  %[[cmp0:.*]] = arith.cmpi sgt, %[[VAL_16]], %c0{{.*}} : index
+! CHECK:  %[[ext0:.*]] = arith.select %[[cmp0]], %[[VAL_16]], %c0{{.*}} : index
 ! CHECK:  %[[VAL_17:.*]] = fir.convert %[[VAL_10]] : (i64) -> index
 ! CHECK:  %[[VAL_18:.*]] = fir.convert %[[VAL_11]] : (i64) -> index
 ! CHECK:  %[[VAL_19:.*]] = arith.subi %[[VAL_18]], %[[VAL_17]] : index
 ! CHECK:  %[[VAL_20:.*]] = arith.addi %[[VAL_19]], %[[VAL_12]] : index
+! CHECK:  %[[cmp1:.*]] = arith.cmpi sgt, %[[VAL_20]], %c0{{.*}} : index
+! CHECK:  %[[ext1:.*]] = arith.select %[[cmp1]], %[[VAL_20]], %c0{{.*}} : index
 ! CHECK:  %[[VAL_21:.*]] = fir.convert %[[VAL_7]]#0 : (!fir.ref<!fir.array<10x20x30xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
-! CHECK:  %[[VAL_22:.*]] = fir.shape_shift %[[VAL_8]], %[[VAL_16]], %[[VAL_10]], %[[VAL_20]] : (i64, index, i64, index) -> !fir.shapeshift<2>
+! CHECK:  %[[VAL_22:.*]] = fir.shape_shift %[[VAL_8]], %[[ext0]], %[[VAL_10]], %[[ext1]] : (i64, index, i64, index) -> !fir.shapeshift<2>
 ! CHECK:  %[[VAL_23:.*]] = fir.embox %[[VAL_21]](%[[VAL_22]]) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.box<!fir.ptr<!fir.array<?x?xf32>>>
 ! CHECK:  fir.store %[[VAL_23]] to %[[VAL_2]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
 end subroutine

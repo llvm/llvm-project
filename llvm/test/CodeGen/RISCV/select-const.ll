@@ -1077,3 +1077,78 @@ define i32 @sext_or_constant2(i32 signext %x) {
   %cond = select i1 %cmp, i32 573857, i32 %ext
   ret i32 %cond
 }
+
+
+define i32 @select_0_6(i32 signext %x) {
+; RV32-LABEL: select_0_6:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srai a0, a0, 2
+; RV32-NEXT:    srli a0, a0, 30
+; RV32-NEXT:    slli a0, a0, 1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: select_0_6:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srai a0, a0, 2
+; RV64-NEXT:    srli a0, a0, 62
+; RV64-NEXT:    slli a0, a0, 1
+; RV64-NEXT:    ret
+  %cmp = icmp sgt i32 %x, -1
+  %cond = select i1 %cmp, i32 0, i32 6
+  ret i32 %cond
+}
+
+define i32 @select_6_0(i32 signext %x) {
+; RV32-LABEL: select_6_0:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srli a0, a0, 31
+; RV32-NEXT:    addi a0, a0, -1
+; RV32-NEXT:    andi a0, a0, 6
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: select_6_0:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srli a0, a0, 63
+; RV64-NEXT:    addi a0, a0, -1
+; RV64-NEXT:    andi a0, a0, 6
+; RV64-NEXT:    ret
+  %cmp = icmp sgt i32 %x, -1
+  %cond = select i1 %cmp, i32 6, i32 0
+  ret i32 %cond
+}
+
+define i32 @select_0_394(i32 signext %x) {
+; RV32-LABEL: select_0_394:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srai a0, a0, 31
+; RV32-NEXT:    andi a0, a0, 394
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: select_0_394:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srai a0, a0, 63
+; RV64-NEXT:    andi a0, a0, 394
+; RV64-NEXT:    ret
+  %cmp = icmp sgt i32 %x, -1
+  %cond = select i1 %cmp, i32 0, i32 394
+  ret i32 %cond
+}
+
+define i32 @select_394_0(i32 signext %x) {
+; RV32-LABEL: select_394_0:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srli a0, a0, 31
+; RV32-NEXT:    addi a0, a0, -1
+; RV32-NEXT:    andi a0, a0, 394
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: select_394_0:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srli a0, a0, 63
+; RV64-NEXT:    addi a0, a0, -1
+; RV64-NEXT:    andi a0, a0, 394
+; RV64-NEXT:    ret
+  %cmp = icmp sgt i32 %x, -1
+  %cond = select i1 %cmp, i32 394, i32 0
+  ret i32 %cond
+}

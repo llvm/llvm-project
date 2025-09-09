@@ -4409,6 +4409,32 @@ AArch64TTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
   return 1;
 }
 
+/// Check whether Opcode1 has less throughput according to the scheduling
+/// model than Opcode2.
+bool AArch64TTIImpl::hasKnownLowerThroughputFromSchedulingModel(
+    unsigned Opcode1, unsigned Opcode2) const {
+  const MCSchedModel &Sched = ST->getSchedModel();
+  const TargetInstrInfo *TII = ST->getInstrInfo();
+  if (!Sched.hasInstrSchedModel())
+    return false;
+
+  const MCSchedClassDesc *SCD1 =
+      Sched.getSchedClassDesc(TII->get(Opcode1).getSchedClass());
+  const MCSchedClassDesc *SCD2 =
+      Sched.getSchedClassDesc(TII->get(Opcode2).getSchedClass());
+  // We cannot handle variant scheduling classes without an MI. If we need to
+  // support them for any of the instructions we query the information of we
+  // might need to add a way to resolve them without a MI or not use the
+  // scheduling info.
+  assert(!SCD1->isVariant() && !SCD2->isVariant() &&
+         "Cannot handle variant scheduling classes without an MI");
+  if (!SCD1->isValid() || !SCD2->isValid())
+    return false;
+
+  return MCSchedModel::getReciprocalThroughput(*ST, *SCD1) >
+         MCSchedModel::getReciprocalThroughput(*ST, *SCD2);
+}
+
 InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
     unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
     TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
@@ -4505,6 +4531,12 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
     else if (isa<ScalableVectorType>(ValTy) &&
              (VecPred == FCmpInst::FCMP_ONE || VecPred == FCmpInst::FCMP_UEQ))
       Factor = 3; // fcmxx+fcmyy+or
+
+    if (isa<ScalableVectorType>(ValTy) &&
+        CostKind == TTI::TCK_RecipThroughput &&
+        hasKnownLowerThroughputFromSchedulingModel(AArch64::FCMEQ_PPzZZ_S,
+                                                   AArch64::FCMEQv4f32))
+      Factor *= 2;
 
     return Factor * (CostKind == TTI::TCK_Latency ? 2 : LT.first);
   }
@@ -5486,13 +5518,14 @@ InstructionCost AArch64TTIImpl::getExtendedReductionCost(
 }
 
 InstructionCost
-AArch64TTIImpl::getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
-                                       VectorType *VecTy,
+AArch64TTIImpl::getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode,
+                                       Type *ResTy, VectorType *VecTy,
                                        TTI::TargetCostKind CostKind) const {
   EVT VecVT = TLI->getValueType(DL, VecTy);
   EVT ResVT = TLI->getValueType(DL, ResTy);
 
-  if (ST->hasDotProd() && VecVT.isSimple() && ResVT.isSimple()) {
+  if (ST->hasDotProd() && VecVT.isSimple() && ResVT.isSimple() &&
+      RedOpcode == Instruction::Add) {
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VecTy);
 
     // The legal cases with dotprod are
@@ -5503,7 +5536,8 @@ AArch64TTIImpl::getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
       return LT.first + 2;
   }
 
-  return BaseT::getMulAccReductionCost(IsUnsigned, ResTy, VecTy, CostKind);
+  return BaseT::getMulAccReductionCost(IsUnsigned, RedOpcode, ResTy, VecTy,
+                                       CostKind);
 }
 
 InstructionCost
@@ -5750,11 +5784,14 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
 
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
   bool IsExtractSubvector = Kind == TTI::SK_ExtractSubvector;
-  // A subvector extract can be implemented with an ext (or trivial extract, if
-  // from lane 0). This currently only handles low or high extracts to prevent
-  // SLP vectorizer regressions.
+  // A subvector extract can be implemented with a NEON/SVE ext (or trivial
+  // extract, if from lane 0) for 128-bit NEON vectors or legal SVE vectors.
+  // This currently only handles low or high extracts to prevent SLP vectorizer
+  // regressions.
+  // Note that SVE's ext instruction is destructive, but it can be fused with
+  // a movprfx to act like a constructive instruction.
   if (IsExtractSubvector && LT.second.isFixedLengthVector()) {
-    if (LT.second.is128BitVector() &&
+    if (LT.second.getFixedSizeInBits() >= 128 &&
         cast<FixedVectorType>(SubTp)->getNumElements() ==
             LT.second.getVectorNumElements() / 2) {
       if (Index == 0)
@@ -6017,9 +6054,15 @@ static bool containsDecreasingPointers(Loop *TheLoop,
   return false;
 }
 
-bool AArch64TTIImpl::preferFixedOverScalableIfEqualCost() const {
+bool AArch64TTIImpl::preferFixedOverScalableIfEqualCost(bool IsEpilogue) const {
   if (SVEPreferFixedOverScalableIfEqualCost.getNumOccurrences())
     return SVEPreferFixedOverScalableIfEqualCost;
+  // For cases like post-LTO vectorization, when we eventually know the trip
+  // count, epilogue with fixed-width vectorization can be deleted if the trip
+  // count is less than the epilogue iterations. That's why we prefer
+  // fixed-width vectorization in epilogue in case of equal costs.
+  if (IsEpilogue)
+    return true;
   return ST->useFixedOverScalableIfEqualCost();
 }
 

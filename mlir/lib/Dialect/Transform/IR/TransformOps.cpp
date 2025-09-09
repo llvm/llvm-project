@@ -1634,9 +1634,9 @@ transform::ForeachOp::apply(transform::TransformRewriter &rewriter,
   // smallest payload in the targets.
   if (withZipShortest) {
     numIterations =
-        llvm::min_element(payloads, [&](const SmallVector<MappedValue> &A,
-                                        const SmallVector<MappedValue> &B) {
-          return A.size() < B.size();
+        llvm::min_element(payloads, [&](const SmallVector<MappedValue> &a,
+                                        const SmallVector<MappedValue> &b) {
+          return a.size() < b.size();
         })->size();
 
     for (size_t argIdx = 0; argIdx < payloads.size(); argIdx++)

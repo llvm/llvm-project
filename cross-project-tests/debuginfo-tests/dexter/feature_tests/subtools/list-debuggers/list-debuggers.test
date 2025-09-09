@@ -1,7 +1,7 @@
 Purpose:
     Check the `list-debuggers` subtool runs.
 
-RUN: %dexter_base list-debuggers | FileCheck %s
+RUN: %dexter_base list-debuggers | FileCheck --dump-input-context=999999999 %s
 CHECK: lldb
 CHECK: vs2015
 CHECK: vs2017

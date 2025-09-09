@@ -67,8 +67,7 @@ struct AffineDimCollector : public AffineExprVisitor<AffineDimCollector> {
 // Flattens an affine expression into a list of AffineDimExprs.
 struct AffineExprAdmissibleVisitor
     : public AffineExprVisitor<AffineExprAdmissibleVisitor> {
-  explicit AffineExprAdmissibleVisitor(bool isOutput)
-      : admissible(true), isOutput(isOutput){};
+  explicit AffineExprAdmissibleVisitor(bool isOutput) : isOutput(isOutput){};
 
   // We only allow AffineDimExpr on output.
   void visitAddExpr(AffineBinaryOpExpr expr) {
@@ -87,7 +86,7 @@ struct AffineExprAdmissibleVisitor
   operator bool() { return admissible; }
 
 private:
-  bool admissible;
+  bool admissible = true;
   bool isOutput;
 };
 

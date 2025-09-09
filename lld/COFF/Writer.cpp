@@ -219,6 +219,7 @@ private:
   void sortECChunks();
   void appendECImportTables();
   void removeUnusedSections();
+  void layoutSections();
   void assignAddresses();
   bool isInRange(uint16_t relType, uint64_t s, uint64_t p, int margin,
                  MachineTypes machine);
@@ -783,6 +784,7 @@ void Writer::run() {
     appendECImportTables();
     createDynamicRelocs();
     removeUnusedSections();
+    layoutSections();
     finalizeAddresses();
     removeEmptySections();
     assignOutputSectionIndices();
@@ -1222,7 +1224,9 @@ void Writer::createMiscChunks() {
   // Create Debug Information Chunks
   debugInfoSec = config->mingw ? buildidSec : rdataSec;
   if (config->buildIDHash != BuildIDHash::None || config->debug ||
-      config->repro || config->cetCompat) {
+      config->repro || config->cetCompat || config->cetCompatStrict ||
+      config->cetCompatIpValidationRelaxed ||
+      config->cetCompatDynamicApisInProcOnly || config->hotpatchCompat) {
     debugDirectory =
         make<DebugDirectoryChunk>(ctx, debugRecords, config->repro);
     debugDirectory->setAlignment(4);
@@ -1243,10 +1247,26 @@ void Writer::createMiscChunks() {
     });
   }
 
-  if (config->cetCompat) {
-    debugRecords.emplace_back(COFF::IMAGE_DEBUG_TYPE_EX_DLLCHARACTERISTICS,
-                              make<ExtendedDllCharacteristicsChunk>(
-                                  IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT));
+  uint16_t ex_characteristics_flags = 0;
+  if (config->cetCompat)
+    ex_characteristics_flags |= IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT;
+  if (config->cetCompatStrict)
+    ex_characteristics_flags |=
+        IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT_STRICT_MODE;
+  if (config->cetCompatIpValidationRelaxed)
+    ex_characteristics_flags |=
+        IMAGE_DLL_CHARACTERISTICS_EX_CET_SET_CONTEXT_IP_VALIDATION_RELAXED_MODE;
+  if (config->cetCompatDynamicApisInProcOnly)
+    ex_characteristics_flags |=
+        IMAGE_DLL_CHARACTERISTICS_EX_CET_DYNAMIC_APIS_ALLOW_IN_PROC_ONLY;
+  if (config->hotpatchCompat)
+    ex_characteristics_flags |=
+        IMAGE_DLL_CHARACTERISTICS_EX_HOTPATCH_COMPATIBLE;
+
+  if (ex_characteristics_flags) {
+    debugRecords.emplace_back(
+        COFF::IMAGE_DEBUG_TYPE_EX_DLLCHARACTERISTICS,
+        make<ExtendedDllCharacteristicsChunk>(ex_characteristics_flags));
   }
 
   // Align and add each chunk referenced by the debug data directory.
@@ -1411,6 +1431,33 @@ void Writer::removeUnusedSections() {
     return s->chunks.empty();
   };
   llvm::erase_if(ctx.outputSections, isUnused);
+}
+
+void Writer::layoutSections() {
+  llvm::TimeTraceScope timeScope("Layout sections");
+  if (ctx.config.sectionOrder.empty())
+    return;
+
+  llvm::stable_sort(ctx.outputSections,
+                    [this](const OutputSection *a, const OutputSection *b) {
+                      auto itA = ctx.config.sectionOrder.find(a->name.str());
+                      auto itB = ctx.config.sectionOrder.find(b->name.str());
+                      bool aInOrder = itA != ctx.config.sectionOrder.end();
+                      bool bInOrder = itB != ctx.config.sectionOrder.end();
+
+                      // Put unspecified sections after all specified sections
+                      if (aInOrder && bInOrder) {
+                        return itA->second < itB->second;
+                      } else if (aInOrder && !bInOrder) {
+                        return true; // ordered sections come before unordered
+                      } else {
+                        // (!aInOrder && bInOrder): unordered comes after
+                        // ordered
+                        // (!aInOrder && !bInOrder): both unspecified, preserve
+                        // the original order
+                        return false;
+                      }
+                    });
 }
 
 // The Windows loader doesn't seem to like empty sections,

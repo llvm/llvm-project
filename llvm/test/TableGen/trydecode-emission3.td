@@ -35,18 +35,20 @@ def InstB : TestInstruction {
   let AsmString = "InstB";
 }
 
-// CHECK:      /* 0 */       MCD::OPC_CheckFieldOrFail, 4, 4, 0,
-// CHECK-NEXT: /* 4 */       MCD::OPC_CheckField, 2, 2, 0, 6, 0, // Skip to: 16
-// CHECK-NEXT: /* 10 */      MCD::OPC_TryDecode, {{[0-9]+}}, {{[0-9]+}}, 0, 0, 0, // Opcode: InstB, DecodeIdx: {{[0-9]+}}, Skip to: 16
-// CHECK-NEXT: /* 16 */      MCD::OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1, // Opcode: InstA
+// CHECK:      /* 0 */       MCD::OPC_CheckField, 4, 4, 0,
+// CHECK-NEXT: /* 4 */       MCD::OPC_Scope, 8, 0, // Skip to: 15
+// CHECK-NEXT: /* 7 */       MCD::OPC_CheckField, 2, 2, 0,
+// CHECK-NEXT: /* 11 */      MCD::OPC_TryDecode, {{[0-9]+}}, {{[0-9]+}}, 0,
+// CHECK-NEXT: /* 15 */      MCD::OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1, // Opcode: InstA, DecodeIdx: 1
 // CHECK-NEXT: };
 
 // CHECK: if (!Check(S, DecodeInstBOp(MI, tmp, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }
 
-// CHECK-LARGE:      /* 0 */       MCD::OPC_CheckFieldOrFail, 4, 4, 0,
-// CHECK-LARGE-NEXT: /* 4 */       MCD::OPC_CheckField, 2, 2, 0, 7, 0, 0, // Skip to: 18
-// CHECK-LARGE-NEXT: /* 11 */      MCD::OPC_TryDecode, {{[0-9]+}}, {{[0-9]+}}, 0, 0, 0, 0, // Opcode: InstB, DecodeIdx: {{[0-9]+}}, Skip to: 18
-// CHECK-LARGE-NEXT: /* 18 */      MCD::OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1, // Opcode: InstA, DecodeIdx: {{[0-9]+}}
+// CHECK-LARGE:      /* 0 */       MCD::OPC_CheckField, 4, 4, 0,
+// CHECK-LARGE-NEXT: /* 4 */       MCD::OPC_Scope, 8, 0, 0, // Skip to: 16
+// CHECK-LARGE-NEXT: /* 8 */       MCD::OPC_CheckField, 2, 2, 0,
+// CHECK-LARGE-NEXT: /* 12 */      MCD::OPC_TryDecode, {{[0-9]+}}, {{[0-9]+}}, 0,
+// CHECK-LARGE-NEXT: /* 16 */      MCD::OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1, // Opcode: InstA, DecodeIdx: 1
 // CHECK-LARGE-NEXT: };
 
 // CHECK-LARGE: if (!Check(S, DecodeInstBOp(MI, tmp, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }

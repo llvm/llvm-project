@@ -15,6 +15,7 @@
 #include "lldb/Utility/UriParser.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FormatAdapters.h"
+#include <string>
 
 using namespace llvm;
 using namespace lldb;
@@ -28,7 +29,7 @@ public:
   CommandObjectProtocolServerStart(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "protocol-server start",
                             "start protocol server",
-                            "protocol-server start <protocol> <connection>") {
+                            "protocol-server start <protocol> [<connection>]") {
     AddSimpleArgumentList(lldb::eArgTypeProtocol, eArgRepeatPlain);
     AddSimpleArgumentList(lldb::eArgTypeConnectURL, eArgRepeatPlain);
   }
@@ -51,15 +52,13 @@ protected:
       return;
     }
 
-    if (args.GetArgumentCount() < 2) {
-      result.AppendError("no connection specified");
-      return;
-    }
-    llvm::StringRef connection_uri = args.GetArgumentAtIndex(1);
+    std::string connection_uri = "listen://[localhost]:0";
+    if (args.GetArgumentCount() >= 2)
+      connection_uri = args.GetArgumentAtIndex(1);
 
     const char *connection_error =
-        "unsupported connection specifier, expected 'accept:///path' or "
-        "'listen://[host]:port', got '{0}'.";
+        "unsupported connection specifier, expected 'accept:///path' "
+        "or 'listen://[host]:port', got '{0}'.";
     auto uri = lldb_private::URI::Parse(connection_uri);
     if (!uri) {
       result.AppendErrorWithFormatv(connection_error, connection_uri);

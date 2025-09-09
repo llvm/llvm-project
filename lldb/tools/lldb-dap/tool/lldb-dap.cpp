@@ -258,7 +258,8 @@ validateConnection(llvm::StringRef conn) {
 static llvm::Error
 serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
                 Log *log, const ReplMode default_repl_mode,
-                const std::vector<std::string> &pre_init_commands) {
+                const std::vector<std::string> &pre_init_commands,
+                bool no_lldbinit) {
   Status status;
   static std::unique_ptr<Socket> listener = Socket::Create(protocol, status);
   if (status.Fail()) {
@@ -303,8 +304,8 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
       llvm::set_thread_name(client_name + ".runloop");
       MainLoop loop;
       Transport transport(client_name, log, io, io);
-      DAP dap(log, default_repl_mode, pre_init_commands, client_name, transport,
-              loop);
+      DAP dap(log, default_repl_mode, pre_init_commands, no_lldbinit,
+              client_name, transport, loop);
 
       if (auto Err = dap.ConfigureIO()) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
@@ -508,6 +509,8 @@ int main(int argc, char *argv[]) {
     pre_init_commands.push_back(arg);
   }
 
+  bool no_lldbinit = input_args.hasArg(OPT_no_lldbinit);
+
   if (!connection.empty()) {
     auto maybeProtoclAndName = validateConnection(connection);
     if (auto Err = maybeProtoclAndName.takeError()) {
@@ -520,7 +523,7 @@ int main(int argc, char *argv[]) {
     std::string name;
     std::tie(protocol, name) = *maybeProtoclAndName;
     if (auto Err = serveConnection(protocol, name, log.get(), default_repl_mode,
-                                   pre_init_commands)) {
+                                   pre_init_commands, no_lldbinit)) {
       llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
                                   "Connection failed: ");
       return EXIT_FAILURE;
@@ -556,8 +559,8 @@ int main(int argc, char *argv[]) {
   constexpr llvm::StringLiteral client_name = "stdio";
   MainLoop loop;
   Transport transport(client_name, log.get(), input, output);
-  DAP dap(log.get(), default_repl_mode, pre_init_commands, client_name,
-          transport, loop);
+  DAP dap(log.get(), default_repl_mode, pre_init_commands, no_lldbinit,
+          client_name, transport, loop);
 
   // stdout/stderr redirection to the IDE's console
   if (auto Err = dap.ConfigureIO(stdout, stderr)) {

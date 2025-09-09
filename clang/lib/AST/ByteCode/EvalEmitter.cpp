@@ -213,6 +213,9 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
     if (!Ptr.isZero() && !Ptr.isDereferencable())
       return false;
 
+    if (Ptr.pointsToStringLiteral() && Ptr.isArrayRoot())
+      return false;
+
     if (!Ptr.isZero() && !CheckFinalLoad(S, OpPC, Ptr))
       return false;
 
@@ -328,7 +331,7 @@ bool EvalEmitter::emitDestroy(uint32_t I, const SourceInfo &Info) {
 /// This is what we do here.
 void EvalEmitter::updateGlobalTemporaries() {
   for (const auto &[E, Temp] : S.SeenGlobalTemporaries) {
-    if (std::optional<unsigned> GlobalIndex = P.getGlobal(E)) {
+    if (UnsignedOrNone GlobalIndex = P.getGlobal(E)) {
       const Pointer &Ptr = P.getPtrGlobal(*GlobalIndex);
       APValue *Cached = Temp->getOrCreateValue(true);
 

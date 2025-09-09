@@ -103,10 +103,13 @@ public:
   }
 };
 
-struct ModuleFile {
+/// Represents a reference to a module file (*.pcm).
+class ModuleFile {
+protected:
   ModuleFile(StringRef ModuleName, PathRef ModuleFilePath)
       : ModuleName(ModuleName.str()), ModuleFilePath(ModuleFilePath.str()) {}
 
+public:
   ModuleFile() = delete;
 
   ModuleFile(const ModuleFile &) = delete;
@@ -128,19 +131,56 @@ struct ModuleFile {
     new (this) ModuleFile(std::move(Other));
     return *this;
   }
-
-  ~ModuleFile() {
-    if (!ModuleFilePath.empty() && !DebugModulesBuilder)
-      llvm::sys::fs::remove(ModuleFilePath);
-  }
+  virtual ~ModuleFile() = default;
 
   StringRef getModuleName() const { return ModuleName; }
 
   StringRef getModuleFilePath() const { return ModuleFilePath; }
 
-private:
+protected:
   std::string ModuleName;
   std::string ModuleFilePath;
+};
+
+/// Represents a prebuilt module file which is not owned by us.
+class PrebuiltModuleFile : public ModuleFile {
+private:
+  // private class to make sure the class can only be constructed by member
+  // functions.
+  struct CtorTag {};
+
+public:
+  PrebuiltModuleFile(StringRef ModuleName, PathRef ModuleFilePath, CtorTag)
+      : ModuleFile(ModuleName, ModuleFilePath) {}
+
+  static std::shared_ptr<PrebuiltModuleFile> make(StringRef ModuleName,
+                                                  PathRef ModuleFilePath) {
+    return std::make_shared<PrebuiltModuleFile>(ModuleName, ModuleFilePath,
+                                                CtorTag{});
+  }
+};
+
+/// Represents a module file built by us. We're responsible to remove it.
+class BuiltModuleFile : public ModuleFile {
+private:
+  // private class to make sure the class can only be constructed by member
+  // functions.
+  struct CtorTag {};
+
+public:
+  BuiltModuleFile(StringRef ModuleName, PathRef ModuleFilePath, CtorTag)
+      : ModuleFile(ModuleName, ModuleFilePath) {}
+
+  static std::shared_ptr<BuiltModuleFile> make(StringRef ModuleName,
+                                               PathRef ModuleFilePath) {
+    return std::make_shared<BuiltModuleFile>(ModuleName, ModuleFilePath,
+                                             CtorTag{});
+  }
+
+  virtual ~BuiltModuleFile() {
+    if (!ModuleFilePath.empty() && !DebugModulesBuilder)
+      llvm::sys::fs::remove(ModuleFilePath);
+  }
 };
 
 // ReusablePrerequisiteModules - stands for PrerequisiteModules for which all
@@ -171,9 +211,9 @@ public:
   std::string getAsString() const {
     std::string Result;
     llvm::raw_string_ostream OS(Result);
-    for (const auto &ModuleFile : RequiredModules) {
-      OS << "-fmodule-file=" << ModuleFile->getModuleName() << "="
-         << ModuleFile->getModuleFilePath() << " ";
+    for (const auto &MF : RequiredModules) {
+      OS << "-fmodule-file=" << MF->getModuleName() << "="
+         << MF->getModuleFilePath() << " ";
     }
     return Result;
   }
@@ -185,9 +225,9 @@ public:
     return BuiltModuleNames.contains(ModuleName);
   }
 
-  void addModuleFile(std::shared_ptr<const ModuleFile> ModuleFile) {
-    BuiltModuleNames.insert(ModuleFile->getModuleName());
-    RequiredModules.emplace_back(std::move(ModuleFile));
+  void addModuleFile(std::shared_ptr<const ModuleFile> MF) {
+    BuiltModuleNames.insert(MF->getModuleName());
+    RequiredModules.emplace_back(std::move(MF));
   }
 
 private:
@@ -265,7 +305,7 @@ bool IsModuleFilesUpToDate(
 
 /// Build a module file for module with `ModuleName`. The information of built
 /// module file are stored in \param BuiltModuleFiles.
-llvm::Expected<ModuleFile>
+llvm::Expected<std::shared_ptr<BuiltModuleFile>>
 buildModuleFile(llvm::StringRef ModuleName, PathRef ModuleUnitFileName,
                 const GlobalCompilationDatabase &CDB, const ThreadsafeFS &TFS,
                 const ReusablePrerequisiteModules &BuiltModuleFiles) {
@@ -340,7 +380,7 @@ buildModuleFile(llvm::StringRef ModuleName, PathRef ModuleUnitFileName,
                       ModuleUnitFileName));
   }
 
-  return ModuleFile{ModuleName, Inputs.CompileCommand.Output};
+  return BuiltModuleFile::make(ModuleName, Inputs.CompileCommand.Output);
 }
 
 bool ReusablePrerequisiteModules::canReuse(
@@ -509,9 +549,50 @@ public:
                        ReusablePrerequisiteModules &BuiltModuleFiles);
 
 private:
+  /// Try to get prebuilt module files from the compilation database.
+  void getPrebuiltModuleFile(StringRef ModuleName, PathRef ModuleUnitFileName,
+                             const ThreadsafeFS &TFS,
+                             ReusablePrerequisiteModules &BuiltModuleFiles);
+
   ModuleFileCache Cache;
   ModuleNameToSourceCache ProjectModulesCache;
 };
+
+void ModulesBuilder::ModulesBuilderImpl::getPrebuiltModuleFile(
+    StringRef ModuleName, PathRef ModuleUnitFileName, const ThreadsafeFS &TFS,
+    ReusablePrerequisiteModules &BuiltModuleFiles) {
+  auto Cmd = getCDB().getCompileCommand(ModuleUnitFileName);
+  if (!Cmd)
+    return;
+
+  ParseInputs Inputs;
+  Inputs.TFS = &TFS;
+  Inputs.CompileCommand = std::move(*Cmd);
+
+  IgnoreDiagnostics IgnoreDiags;
+  auto CI = buildCompilerInvocation(Inputs, IgnoreDiags);
+  if (!CI)
+    return;
+
+  // We don't need to check if the module files are in ModuleCache or adding
+  // them to the module cache. As even if the module files are in the module
+  // cache, we still need to validate them. And it looks not helpful to add them
+  // to the module cache, since we may always try to get the prebuilt module
+  // files before building the module files by ourselves.
+  for (auto &[ModuleName, ModuleFilePath] :
+       CI->getHeaderSearchOpts().PrebuiltModuleFiles) {
+    if (BuiltModuleFiles.isModuleUnitBuilt(ModuleName))
+      continue;
+
+    if (IsModuleFileUpToDate(ModuleFilePath, BuiltModuleFiles,
+                             TFS.view(std::nullopt))) {
+      log("Reusing prebuilt module file {0} of module {1} for {2}",
+          ModuleFilePath, ModuleName, ModuleUnitFileName);
+      BuiltModuleFiles.addModuleFile(
+          PrebuiltModuleFile::make(ModuleName, ModuleFilePath));
+    }
+  }
+}
 
 llvm::Error ModulesBuilder::ModulesBuilderImpl::getOrBuildModuleFile(
     PathRef RequiredSource, StringRef ModuleName, const ThreadsafeFS &TFS,
@@ -532,6 +613,11 @@ llvm::Error ModulesBuilder::ModulesBuilderImpl::getOrBuildModuleFile(
     return llvm::createStringError(
         llvm::formatv("Don't get the module unit for module {0}", ModuleName));
 
+  /// Try to get prebuilt module files from the compilation database first. This
+  /// helps to avoid building the module files that are already built by the
+  /// compiler.
+  getPrebuiltModuleFile(ModuleName, ModuleUnitFileName, TFS, BuiltModuleFiles);
+
   // Get Required modules in topological order.
   auto ReqModuleNames = getAllRequiredModules(RequiredSource, MDB, ModuleName);
   for (llvm::StringRef ReqModuleName : ReqModuleNames) {
@@ -551,15 +637,14 @@ llvm::Error ModulesBuilder::ModulesBuilderImpl::getOrBuildModuleFile(
 
     std::string ReqFileName =
         MDB.getSourceForModuleName(ReqModuleName, RequiredSource);
-    llvm::Expected<ModuleFile> MF = buildModuleFile(
+    llvm::Expected<std::shared_ptr<BuiltModuleFile>> MF = buildModuleFile(
         ReqModuleName, ReqFileName, getCDB(), TFS, BuiltModuleFiles);
     if (llvm::Error Err = MF.takeError())
       return Err;
 
-    log("Built module {0} to {1}", ReqModuleName, MF->getModuleFilePath());
-    auto BuiltModuleFile = std::make_shared<const ModuleFile>(std::move(*MF));
-    Cache.add(ReqModuleName, BuiltModuleFile);
-    BuiltModuleFiles.addModuleFile(std::move(BuiltModuleFile));
+    log("Built module {0} to {1}", ReqModuleName, (*MF)->getModuleFilePath());
+    Cache.add(ReqModuleName, *MF);
+    BuiltModuleFiles.addModuleFile(std::move(*MF));
   }
 
   return llvm::Error::success();

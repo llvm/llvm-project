@@ -26,6 +26,7 @@ PROJECT_DEPENDENCIES = {
     "libc": {"clang", "lld"},
     "openmp": {"clang", "lld"},
     "flang": {"llvm", "clang"},
+    "flang-rt": {"flang"},
     "lldb": {"llvm", "clang"},
     "libclc": {"llvm", "clang"},
     "lld": {"llvm"},
@@ -80,7 +81,9 @@ DEPENDENT_RUNTIMES_TO_TEST = {
     "clang-tools-extra": {"libc"},
     "libc": {"libc"},
     "compiler-rt": {"compiler-rt"},
-    ".ci": {"compiler-rt", "libc"},
+    "flang": {"flang-rt"},
+    "flang-rt": {"flang-rt"},
+    ".ci": {"compiler-rt", "libc", "flang-rt"},
 }
 DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {
     "llvm": {"libcxx", "libcxxabi", "libunwind"},
@@ -95,7 +98,6 @@ EXCLUDE_LINUX = {
 
 EXCLUDE_WINDOWS = {
     "cross-project-tests",  # TODO(issues/132797): Tests are failing.
-    "compiler-rt",  # TODO(issues/132798): Tests take excessive time.
     "openmp",  # TODO(issues/132799): Does not detect perl installation.
     "libc",  # No Windows Support.
     "lldb",  # TODO(issues/132800): Needs environment setup.
@@ -103,6 +105,7 @@ EXCLUDE_WINDOWS = {
     "libcxx",
     "libcxxabi",
     "libunwind",
+    "flang-rt",
 }
 
 # These are projects that we should test if the project itself is changed but
@@ -140,6 +143,7 @@ PROJECT_CHECK_TARGETS = {
     "bolt": "check-bolt",
     "lld": "check-lld",
     "flang": "check-flang",
+    "flang-rt": "check-flang-rt",
     "libc": "check-libc",
     "lld": "check-lld",
     "lldb": "check-lldb",
@@ -148,7 +152,7 @@ PROJECT_CHECK_TARGETS = {
     "polly": "check-polly",
 }
 
-RUNTIMES = {"libcxx", "libcxxabi", "libunwind", "compiler-rt", "libc"}
+RUNTIMES = {"libcxx", "libcxxabi", "libunwind", "compiler-rt", "libc", "flang-rt"}
 
 # Meta projects are projects that need explicit handling but do not reside
 # in their own top level folder. To add a meta project, the start of the path

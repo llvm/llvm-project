@@ -239,7 +239,9 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
   std::size_t minAlignment{0};
   UnorderedSymbolSet previous;
   for (auto object : details.objects()) {
-    Symbol &symbol{*object};
+    // Allow for host association when the common block is
+    // OpenMP firstprivate.
+    Symbol &symbol{object->GetUltimate()};
     auto errorSite{
         commonBlock.name().empty() ? symbol.name() : commonBlock.name()};
     if (std::size_t padding{DoSymbol(symbol.GetUltimate())}) {
