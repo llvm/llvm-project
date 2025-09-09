@@ -90,8 +90,8 @@ namespace {
     if (A.isEmpty())
       return B;
 
-    for (typename SET::iterator it = B.begin(), ei = B.end(); it != ei; ++it) {
-      A = A.add(*it);
+    for (const auto &element : B) {
+      A = A.add(element);
     }
     return A;
   }
