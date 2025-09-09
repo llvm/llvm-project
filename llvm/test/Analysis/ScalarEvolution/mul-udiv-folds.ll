@@ -219,7 +219,7 @@ define noundef i64 @udiv_mul_nuw_common_vscale_factor(i64 %a, i64 %b) {
 ; CHECK-NEXT:    %b.vs = mul nuw i64 %b, %vs
 ; CHECK-NEXT:    --> (vscale * %b)<nuw> U: full-set S: full-set
 ; CHECK-NEXT:    %div = udiv i64 %a.vs, %b.vs
-; CHECK-NEXT:    --> ((vscale * %a)<nuw> /u (vscale * %b)<nuw>) U: full-set S: full-set
+; CHECK-NEXT:    --> (%a /u %b) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @udiv_mul_nuw_common_vscale_factor
 ;
   %vs = call i64 @llvm.vscale()
