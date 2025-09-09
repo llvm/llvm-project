@@ -232,6 +232,11 @@ namespace SpecConstantOpOperands {
 #include "SPIRVGenTables.inc"
 } // namespace SpecConstantOpOperands
 
+namespace FPEncoding {
+#define GET_FPEncoding_DECL
+#include "SPIRVGenTables.inc"
+} // namespace FPEncoding
+
 struct ExtendedBuiltin {
   StringRef Name;
   InstructionSet::InstructionSet Set;

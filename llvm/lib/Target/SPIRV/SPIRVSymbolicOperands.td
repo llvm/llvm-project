@@ -210,6 +210,7 @@ def CooperativeMatrixLayoutOperand : OperandCategory;
 def CooperativeMatrixOperandsOperand : OperandCategory;
 def SpecConstantOpOperandsOperand : OperandCategory;
 def MatrixMultiplyAccumulateOperandsOperand : OperandCategory;
+def FPEncodingOperand : OperandCategory;
 
 //===----------------------------------------------------------------------===//
 // Definition of the Environments
@@ -382,7 +383,7 @@ defm SPV_INTEL_2d_block_io : ExtensionOperand<122, [EnvOpenCL]>;
 defm SPV_INTEL_int4 : ExtensionOperand<123, [EnvOpenCL]>;
 defm SPV_KHR_float_controls2 : ExtensionOperand<124, [EnvVulkan, EnvOpenCL]>;
 defm SPV_INTEL_tensor_float32_conversion : ExtensionOperand<125, [EnvOpenCL]>;
-defm SPV_KHR_bfloat16 : ExtensionOperand<126, [EnvOpenCL]>;
+defm SPV_KHR_bfloat16 : ExtensionOperand<126, [EnvVulkan, EnvOpenCL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -2000,3 +2001,28 @@ defm MatrixAPackedFloat16INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x400,
 defm MatrixBPackedFloat16INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x800, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
 defm MatrixAPackedBFloat16INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x1000, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
 defm MatrixBPackedBFloat16INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x2000, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+
+//===----------------------------------------------------------------------===//
+// Multiclass used to define FPEncoding enum values and at the
+// same time SymbolicOperand entries extensions.
+//===----------------------------------------------------------------------===//
+def FPEncoding : GenericEnum, Operand<i32> {
+  let FilterClass = "FPEncoding";
+  let NameField = "Name";
+  let ValueField = "Value";
+  let PrintMethod = !strconcat("printSymbolicOperand<OperandCategory::", FilterClass, "Operand>");
+}
+
+class FPEncoding<string name, bits<32> value> {
+  string Name = name;
+  bits<32> Value = value;
+}
+
+multiclass FPEncodingOperand<bits<32> value, list<Extension> reqExtensions>{
+  def NAME : FPEncoding<NAME, value>;
+  defm : SymbolicOperandWithRequirements<
+             FPEncodingOperand, value, NAME, 0, 0,
+             reqExtensions, [], []>;
+}
+
+defm BFloat16KHR : FPEncodingOperand<0, [SPV_KHR_bfloat16]>;

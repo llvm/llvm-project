@@ -195,16 +195,18 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeInt(unsigned Width,
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOpTypeFloat(uint32_t Width,
-                                               MachineIRBuilder &MIRBuilder, bool isBfloatTy) {
-  return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-    auto MIB = MIRBuilder.buildInstr(SPIRV::OpTypeFloat)
+                                               MachineIRBuilder &MIRBuilder) {
+  return MIRBuilder.buildInstr(SPIRV::OpTypeFloat)
         .addDef(createTypeVReg(MIRBuilder))
         .addImm(Width);
-    if(isBfloatTy){
-      MIB.addImm(0);
-    }
-    return MIB;
-  });
+}
+
+SPIRVType *SPIRVGlobalRegistry::getOpTypeFloat(uint32_t Width,
+                                               MachineIRBuilder &MIRBuilder, SPIRV::FPEncoding::FPEncoding FPEncode) {
+  return MIRBuilder.buildInstr(SPIRV::OpTypeFloat)
+        .addDef(createTypeVReg(MIRBuilder))
+        .addImm(Width)
+        .addImm(FPEncode);
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOpTypeVoid(MachineIRBuilder &MIRBuilder) {
@@ -1045,8 +1047,13 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
     return Width == 1 ? getOpTypeBool(MIRBuilder)
                       : getOpTypeInt(Width, MIRBuilder, false);
   }
-  if (Ty->isFloatingPointTy())
-    return getOpTypeFloat(Ty->getPrimitiveSizeInBits(), MIRBuilder, Ty->isBFloatTy());
+  if (Ty->isFloatingPointTy()) {
+    if(Ty->isBFloatTy()) {
+      return getOpTypeFloat(Ty->getPrimitiveSizeInBits(), MIRBuilder, SPIRV::FPEncoding::BFloat16KHR);
+    } else {
+      return getOpTypeFloat(Ty->getPrimitiveSizeInBits(), MIRBuilder);
+    }
+  }
   if (Ty->isVoidTy())
     return getOpTypeVoid(MIRBuilder);
   if (Ty->isVectorTy()) {

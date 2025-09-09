@@ -1262,10 +1262,9 @@ void addInstrRequirements(const MachineInstr &MI,
     break;
   }
   case SPIRV::OpDot: {
-    SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
-    const MachineFunction *MF = MI.getMF();
-    SPIRVType *RegType = GR->getSPIRVTypeForVReg(MI.getOperand(0).getReg(), MF);
-    if (RegType->getNumOperands() == 3) {
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    SPIRVType *TypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
+    if ((TypeDef->getNumOperands() == 3) && (TypeDef->getOperand(2).getImm() == SPIRV::FPEncoding::BFloat16KHR)) {
       Reqs.addCapability(SPIRV::Capability::BFloat16DotProductKHR);
     }
     break;
@@ -1275,14 +1274,15 @@ void addInstrRequirements(const MachineInstr &MI,
     if (BitWidth == 64)
       Reqs.addCapability(SPIRV::Capability::Float64);
     else if (BitWidth == 16) {
-      Reqs.addCapability(SPIRV::Capability::Float16);
-      if (MI.getNumOperands() == 3) {
+      if ((MI.getNumOperands() == 3) && (MI.getOperand(2).getImm() == SPIRV::FPEncoding::BFloat16KHR)) {
         if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_bfloat16))
           report_fatal_error("OpTypeFloat type with bfloat requires the "
                              "following SPIR-V extension: SPV_KHR_bfloat16",
                              false);
-        Reqs.addExtension(SPIRV::Extension::SPV_KHR_bfloat16);
         Reqs.addCapability(SPIRV::Capability::BFloat16TypeKHR);
+        Reqs.addExtension(SPIRV::Extension::SPV_KHR_bfloat16);
+      } else {
+        Reqs.addCapability(SPIRV::Capability::Float16);
       }
     }
     break;
@@ -1304,8 +1304,9 @@ void addInstrRequirements(const MachineInstr &MI,
     assert(MI.getOperand(2).isReg());
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
     SPIRVType *TypeDef = MRI.getVRegDef(MI.getOperand(2).getReg());
-    if (TypeDef->getOpcode() == SPIRV::OpTypeFloat &&
-        TypeDef->getOperand(1).getImm() == 16)
+    if ((TypeDef->getNumOperands() == 2) &&
+        (TypeDef->getOpcode() == SPIRV::OpTypeFloat) &&
+        (TypeDef->getOperand(1).getImm() == 16))
       Reqs.addCapability(SPIRV::Capability::Float16Buffer);
     break;
   }
@@ -1617,14 +1618,12 @@ void addInstrRequirements(const MachineInstr &MI,
           "OpTypeCooperativeMatrixKHR type requires the "
           "following SPIR-V extension: SPV_KHR_cooperative_matrix",
           false);
+    Reqs.addCapability(SPIRV::Capability::CooperativeMatrixKHR);
     Reqs.addExtension(SPIRV::Extension::SPV_KHR_cooperative_matrix);
-    SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
-    const MachineFunction *MF = MI.getMF();
-    SPIRVType *RegType = GR->getSPIRVTypeForVReg(MI.getOperand(0).getReg(), MF);
-    if (RegType->getNumOperands() == 3) {
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    SPIRVType *TypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
+    if ((TypeDef->getNumOperands() == 3) && (TypeDef->getOperand(2).getImm() == SPIRV::FPEncoding::BFloat16KHR)) {
       Reqs.addCapability(SPIRV::Capability::BFloat16CooperativeMatrixKHR);
-    } else {
-      Reqs.addCapability(SPIRV::Capability::CooperativeMatrixKHR);
     }
     break;
   }

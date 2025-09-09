@@ -436,9 +436,9 @@ private:
   SPIRVType *getOpTypeInt(unsigned Width, MachineIRBuilder &MIRBuilder,
                           bool IsSigned = false);
 
-  SPIRVType *getOpTypeFloat(uint32_t Width, MachineIRBuilder &MIRBuilder, bool isBfloatTy);
+  SPIRVType *getOpTypeFloat(uint32_t Width, MachineIRBuilder &MIRBuilder);
 
-  SPIRVType *getOpTypeBFloat(uint32_t Width, MachineIRBuilder &MIRBuilder);
+  SPIRVType *getOpTypeFloat(uint32_t Width, MachineIRBuilder &MIRBuilder, SPIRV::FPEncoding::FPEncoding FPEncode);
 
   SPIRVType *getOpTypeVoid(MachineIRBuilder &MIRBuilder);
 
