@@ -258,9 +258,8 @@ struct S {
 };
 
 int foo() {
-  auto [a] = S{0}; // expected-note {{previous}} \
-                   // cxx14-warning {{decomposition declarations are a C++17 extension}}
-  [a = a] () { // expected-warning {{declaration shadows a structured binding}}
+  auto [a] = S{0}; // cxx14-warning {{decomposition declarations are a C++17 extension}}
+  [a = a] () { // No warning - consistent with regular parameter captures
   }();
 }
 

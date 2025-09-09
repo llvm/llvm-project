@@ -8410,6 +8410,12 @@ NamedDecl *Sema::getShadowedDeclaration(const VarDecl *D,
     return nullptr;
 
   NamedDecl *ShadowedDecl = R.getFoundDecl();
+
+  // Don't warn when lambda captures shadow structured bindings.
+  // This ensures consistency with regular parameter captures.
+  if (isa<BindingDecl>(ShadowedDecl) && D->isInitCapture())
+    return nullptr;
+
   return isa<VarDecl, FieldDecl, BindingDecl>(ShadowedDecl) ? ShadowedDecl
                                                             : nullptr;
 }
