@@ -128,7 +128,8 @@ LiveVariablesImpl::merge(LiveVariables::LivenessValues valsA,
 }
 
 bool LiveVariables::LivenessValues::equals(const LivenessValues &V) const {
-  return liveExprs == V.liveExprs && liveDecls == V.liveDecls;
+  return liveExprs == V.liveExprs && liveDecls == V.liveDecls &&
+         liveBindings == V.liveBindings;
 }
 
 //===----------------------------------------------------------------------===//
