@@ -614,6 +614,21 @@ TargetAllocTy convertOlToPluginAllocTy(ol_alloc_type_t Type) {
   }
 }
 
+ol_alloc_type_t convertPluginToOlAllocTy(TargetAllocTy Type) {
+  switch (Type) {
+  case TARGET_ALLOC_DEVICE:
+    return OL_ALLOC_TYPE_DEVICE;
+  case TARGET_ALLOC_HOST:
+    return OL_ALLOC_TYPE_HOST;
+  case TARGET_ALLOC_SHARED:
+    return OL_ALLOC_TYPE_MANAGED;
+  default:
+    // Seems a reasonable default, although this default should never get hit
+    // with allocations made through liboffload
+    return OL_ALLOC_TYPE_MANAGED;
+  }
+}
+
 Error olMemAlloc_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
                       size_t Size, void **AllocationOut) {
   auto Alloc =
@@ -654,6 +669,49 @@ Error olCreateQueue_impl(ol_device_handle_t Device, ol_queue_handle_t *Queue) {
 
   *Queue = CreatedQueue.release();
   return Error::success();
+}
+
+Error olGetMemInfoImplDetail(ol_platform_handle_t Platform, const void *Ptr,
+                             ol_mem_info_t PropName, size_t PropSize,
+                             void *PropValue, size_t *PropSizeRet) {
+  InfoWriter Info(PropSize, PropValue, PropSizeRet);
+
+  Expected<MemoryInfoTy> MemInfo = Platform->Plugin->getMemoryInfo(Ptr);
+  if (auto Err = MemInfo.takeError())
+    return Err;
+
+  switch (PropName) {
+  case OL_MEM_INFO_DEVICE: {
+    auto Pos = std::find_if(
+        Platform->Devices.begin(), Platform->Devices.end(),
+        [&](auto &OlDevice) { return OlDevice->Device == MemInfo->Device; });
+    return Info.write<ol_device_handle_t>(Pos->get());
+  }
+  case OL_MEM_INFO_BASE:
+    return Info.write<void *>(MemInfo->Base);
+  case OL_MEM_INFO_SIZE:
+    return Info.write<size_t>(MemInfo->Size);
+  case OL_MEM_INFO_TYPE:
+    return Info.write<ol_alloc_type_t>(convertPluginToOlAllocTy(MemInfo->Type));
+  default:
+    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
+                              "olGetMemInfo enum '%i' is invalid", PropName);
+  }
+
+  return Error::success();
+}
+
+Error olGetMemInfo_impl(ol_platform_handle_t Platform, const void *Ptr,
+                        ol_mem_info_t PropName, size_t PropSize,
+                        void *PropValue) {
+  return olGetMemInfoImplDetail(Platform, Ptr, PropName, PropSize, PropValue,
+                                nullptr);
+}
+
+Error olGetMemInfoSize_impl(ol_platform_handle_t Platform, const void *Ptr,
+                            ol_mem_info_t PropName, size_t *PropSizeRet) {
+  return olGetMemInfoImplDetail(Platform, Ptr, PropName, 0, nullptr,
+                                PropSizeRet);
 }
 
 Error olDestroyQueue_impl(ol_queue_handle_t Queue) {
