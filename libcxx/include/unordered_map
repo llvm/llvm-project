@@ -844,8 +844,8 @@ class __hash_map_iterator {
 
 public:
   typedef forward_iterator_tag iterator_category;
-  using value_type = typename _HashIterator::value_type;
-  typedef typename _NodeTypes::difference_type difference_type;
+  using value_type      = typename _HashIterator::value_type;
+  using difference_type = ptrdiff_t;
   typedef value_type& reference;
   using pointer = typename _HashIterator::pointer;
 
@@ -895,8 +895,8 @@ class __hash_map_const_iterator {
 
 public:
   typedef forward_iterator_tag iterator_category;
-  using value_type = typename _HashIterator::value_type;
-  typedef typename _NodeTypes::difference_type difference_type;
+  using value_type      = typename _HashIterator::value_type;
+  using difference_type = ptrdiff_t;
   typedef const value_type& reference;
   using pointer = typename _HashIterator::pointer;
 
@@ -972,9 +972,6 @@ private:
 
   __table __table_;
 
-  typedef typename __table::_NodeTypes _NodeTypes;
-  typedef typename __table::__node_pointer __node_pointer;
-  typedef typename __table::__node_const_pointer __node_const_pointer;
   typedef typename __table::__node_traits __node_traits;
   typedef typename __table::__node_allocator __node_allocator;
   typedef typename __table::__node __node;
@@ -1743,12 +1740,8 @@ private:
 
   __table __table_;
 
-  typedef typename __table::_NodeTypes _NodeTypes;
   typedef typename __table::__node_traits __node_traits;
-  typedef typename __table::__node_allocator __node_allocator;
   typedef typename __table::__node __node;
-  typedef __hash_map_node_destructor<__node_allocator> _Dp;
-  typedef unique_ptr<__node, _Dp> __node_holder;
   typedef allocator_traits<allocator_type> __alloc_traits;
   static_assert(is_same<typename __node_traits::size_type, typename __alloc_traits::size_type>::value,
                 "Allocator uses different size_type for different types");
