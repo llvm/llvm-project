@@ -13279,6 +13279,9 @@ static bool refersToCompleteObject(const LValue &LVal) {
   if (LVal.Designator.Invalid)
     return false;
 
+  if (LVal.AllowConstexprUnknown)
+    return false;
+
   if (!LVal.Designator.Entries.empty())
     return LVal.Designator.isMostDerivedAnUnsizedArray();
 
@@ -13328,7 +13331,7 @@ static bool isUserWritingOffTheEnd(const ASTContext &Ctx, const LValue &LVal) {
     return false;
   };
 
-  return LVal.InvalidBase &&
+  return (LVal.InvalidBase || LVal.AllowConstexprUnknown) &&
          Designator.Entries.size() == Designator.MostDerivedPathLength &&
          Designator.MostDerivedIsArrayElement && isFlexibleArrayMember() &&
          isDesignatorAtObjectEnd(Ctx, LVal);
@@ -13394,6 +13397,17 @@ static bool determineEndOffset(EvalInfo &Info, SourceLocation ExprLoc,
       return convertUnsignedAPIntToCharUnits(APEndOffset, EndOffset);
 
     if (LVal.InvalidBase)
+      return false;
+
+    // We cannot deterimine the end offset of the enitre object if this is an
+    // unknown reference.
+    if (Type == 0 && LVal.AllowConstexprUnknown)
+      return false;
+
+    // We cannot deterimine the end offset of the subobject if this is an
+    // unknown reference and the subobject designator is invalid (e.g., unsized
+    // array designator).
+    if (Type == 1 && LVal.Designator.Invalid && LVal.AllowConstexprUnknown)
       return false;
 
     QualType BaseTy = getObjectType(LVal.getLValueBase());
