@@ -11,15 +11,15 @@ entry:
 ; CHECK: br i1 %tobool, label %if.then, label %if.else, !prof ![[BRANCH_PROF:[0-9]]]
   br i1 %tobool, label %if.then, label %if.else, !prof !1
 
-if.then:
 ; CHECK: if.then:
 ; CHECK: call i32 @foo.specialized.1(i32 %x, ptr @A)
+if.then:
   %call = call i32 @foo(i32 %x, ptr @A)
   br label %return
 
-if.else:
 ; CHECK: if.else:
 ; CHECK: call i32 @foo.specialized.2(i32 %y, ptr @B)
+if.else:
   %call1 = call i32 @foo(i32 %y, ptr @B)
   br label %return
 
