@@ -706,7 +706,7 @@ static void getObjectCoveragePoints(const object::ObjectFile &O,
   auto TripleName = TheTriple.getTriple();
 
   std::string Error;
-  const Target *TheTarget = TargetRegistry::lookupTarget(TripleName, Error);
+  const Target *TheTarget = TargetRegistry::lookupTarget(TheTriple, Error);
   failIfNotEmpty(Error);
 
   std::unique_ptr<const MCSubtargetInfo> STI(
