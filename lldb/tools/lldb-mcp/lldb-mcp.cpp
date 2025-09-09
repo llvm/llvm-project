@@ -17,6 +17,10 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/WithColor.h"
 
+#if defined(_WIN32)
+#include <fcntl.h>
+#endif
+
 using namespace lldb_protocol::mcp;
 
 using lldb_private::File;
@@ -64,8 +68,9 @@ int main(int argc, char *argv[]) {
   });
 
   auto transport_up = std::make_unique<lldb_protocol::mcp::Transport>(
-      input, output, std::string(client_name),
-      [&](llvm::StringRef message) { llvm::errs() << message << '\n'; });
+      input, output, [&](llvm::StringRef message) {
+        llvm::errs() << formatv("{0}: {1}", client_name, message) << '\n';
+      });
 
   auto instance_up = std::make_unique<lldb_protocol::mcp::Server>(
       std::string(kName), std::string(kVersion), std::move(transport_up), loop);

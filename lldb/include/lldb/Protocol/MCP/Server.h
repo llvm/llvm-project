@@ -9,6 +9,7 @@
 #ifndef LLDB_PROTOCOL_MCP_SERVER_H
 #define LLDB_PROTOCOL_MCP_SERVER_H
 
+#include "lldb/Host/JSONTransport.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Protocol/MCP/Protocol.h"
 #include "lldb/Protocol/MCP/Resource.h"
@@ -16,13 +17,28 @@
 #include "lldb/Protocol/MCP/Transport.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/JSON.h"
+#include <functional>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace lldb_protocol::mcp {
 
-class Server : public Transport::MessageHandler {
+/// Information about this instance of lldb's MCP server for lldb-mcp to use to
+/// coordinate connecting an lldb-mcp client.
+struct ServerInfo {
+  std::string connection_uri;
+  lldb::pid_t pid;
+};
+llvm::json::Value toJSON(const ServerInfo &);
+bool fromJSON(const llvm::json::Value &, ServerInfo &, llvm::json::Path);
+
+class Server : public MCPTransport::MessageHandler {
 public:
   Server(std::string name, std::string version,
-         std::unique_ptr<Transport> transport_up, lldb_private::MainLoop &loop);
+         std::unique_ptr<MCPTransport> transport_up,
+         lldb_private::MainLoop &loop);
   ~Server() = default;
 
   using NotificationHandler = std::function<void(const Notification &)>;
@@ -69,7 +85,7 @@ private:
   const std::string m_name;
   const std::string m_version;
 
-  std::unique_ptr<Transport> m_transport_up;
+  std::unique_ptr<MCPTransport> m_transport_up;
   lldb_private::MainLoop &m_loop;
 
   llvm::StringMap<std::unique_ptr<Tool>> m_tools;

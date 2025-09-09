@@ -104,6 +104,10 @@ add_llvm_unittest(SupportTests
   UTCTimeTest.cpp
   VersionTupleTest.cpp
   VirtualFileSystemTest.cpp
+  VirtualOutputBackendTest.cpp
+  VirtualOutputBackendsTest.cpp
+  VirtualOutputConfigTest.cpp
+  VirtualOutputFileTest.cpp
   WithColorTest.cpp
   YAMLIOTest.cpp
   YAMLParserTest.cpp

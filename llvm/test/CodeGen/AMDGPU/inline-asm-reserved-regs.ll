@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -o /dev/null 2>&1 %s | FileCheck -check-prefix=ERR %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=null 2>&1 %s | FileCheck -check-prefix=ERR %s
 
 ; ERR: warning: inline asm clobber list contains reserved registers: v42
 ; ERR: note: Reserved registers on the clobber list may not be preserved across the asm statement, and clobbering them may lead to undefined behaviour.

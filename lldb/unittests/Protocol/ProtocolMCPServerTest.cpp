@@ -37,19 +37,6 @@ using namespace lldb_private;
 using namespace lldb_protocol::mcp;
 
 namespace {
-class TestMCPTransport final : public lldb_protocol::mcp::Transport {
-public:
-  TestMCPTransport(lldb::IOObjectSP in, lldb::IOObjectSP out)
-      : lldb_protocol::mcp::Transport(in, out, "unittest") {}
-
-  using Transport::Write;
-
-  void Log(llvm::StringRef message) override {
-    log_messages.emplace_back(message);
-  }
-
-  std::vector<std::string> log_messages;
-};
 
 class TestServer : public Server {
 public:
@@ -135,7 +122,7 @@ class ProtocolServerMCPTest : public PipePairTest {
 public:
   SubsystemRAII<FileSystem, HostInfo, Socket> subsystems;
 
-  std::unique_ptr<TestMCPTransport> transport_up;
+  std::unique_ptr<lldb_protocol::mcp::Transport> transport_up;
   std::unique_ptr<TestServer> server_up;
   MainLoop loop;
   MockMessageHandler<Request, Response, Notification> message_handler;
@@ -164,7 +151,7 @@ public:
   void SetUp() override {
     PipePairTest::SetUp();
 
-    transport_up = std::make_unique<TestMCPTransport>(
+    transport_up = std::make_unique<lldb_protocol::mcp::Transport>(
         std::make_shared<NativeFile>(input.GetReadFileDescriptor(),
                                      File::eOpenOptionReadOnly,
                                      NativeFile::Unowned),
@@ -174,7 +161,7 @@ public:
 
     server_up = std::make_unique<TestServer>(
         "lldb-mcp", "0.1.0",
-        std::make_unique<TestMCPTransport>(
+        std::make_unique<lldb_protocol::mcp::Transport>(
             std::make_shared<NativeFile>(output.GetReadFileDescriptor(),
                                          File::eOpenOptionReadOnly,
                                          NativeFile::Unowned),
