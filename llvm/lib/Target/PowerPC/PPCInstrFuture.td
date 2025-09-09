@@ -287,13 +287,13 @@ let Predicates = [HasVSX, IsISAFuture] in {
                   (XXAESENCP vsrprc:$XTp, vsrprc:$XAp, vsrprc:$XBp, 0)>;
   def : InstAlias<"xxaes192encp $XTp, $XAp, $XBp",
                   (XXAESENCP vsrprc:$XTp, vsrprc:$XAp, vsrprc:$XBp, 1)>;
-  def : InstAlias<"xxaes265encp $XTp, $XAp, $XBp",
+  def : InstAlias<"xxaes256encp $XTp, $XAp, $XBp",
                   (XXAESENCP vsrprc:$XTp, vsrprc:$XAp, vsrprc:$XBp, 2)>;
   def : InstAlias<"xxaes128decp $XTp, $XAp, $XBp",
                   (XXAESDECP vsrprc:$XTp, vsrprc:$XAp, vsrprc:$XBp, 0)>;
   def : InstAlias<"xxaes192decp $XTp, $XAp, $XBp",
                   (XXAESDECP vsrprc:$XTp, vsrprc:$XAp, vsrprc:$XBp, 1)>;
-  def : InstAlias<"xxaes265decp $XTp, $XAp, $XBp",
+  def : InstAlias<"xxaes256decp $XTp, $XAp, $XBp",
                   (XXAESDECP vsrprc:$XTp, vsrprc:$XAp, vsrprc:$XBp, 2)>;
   def : InstAlias<"xxaes128genlkp $XTp, $XBp", (XXAESGENLKP vsrprc:$XTp,
                                                    vsrprc:$XBp, 0)>;
