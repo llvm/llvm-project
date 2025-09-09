@@ -135,10 +135,11 @@ ABIArgInfo SPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
   if (getContext().getLangOpts().isTargetDevice()) {
     // Coerce pointer arguments with default address space to CrossWorkGroup
     // pointers for target devices as default address space kernel arguments
-    // are not allowed.
+    // are not allowed. We use the opencl_global language address space which
+    // always maps to CrossWorkGroup.
     llvm::Type *LTy = CGT.ConvertType(Ty);
     auto DefaultAS = getContext().getTargetAddressSpace(LangAS::Default);
-    auto GlobalAS = getContext().getTargetAddressSpace(LangAS::cuda_device);
+    auto GlobalAS = getContext().getTargetAddressSpace(LangAS::opencl_global);
     auto *PtrTy = llvm::dyn_cast<llvm::PointerType>(LTy);
     if (PtrTy && PtrTy->getAddressSpace() == DefaultAS) {
       LTy = llvm::PointerType::get(PtrTy->getContext(), GlobalAS);
