@@ -240,8 +240,6 @@ bool ObjectFileJSON::SetLoadAddress(Target &target, lldb::addr_t value,
   if (!m_sections_up)
     return true;
 
-  const bool warn_multiple = true;
-
   addr_t slide = value;
   if (!value_is_offset) {
     addr_t lowest_addr = LLDB_INVALID_ADDRESS;
@@ -263,9 +261,10 @@ bool ObjectFileJSON::SetLoadAddress(Target &target, lldb::addr_t value,
           "ObjectFileJSON::SetLoadAddress section %s to load addr 0x%" PRIx64,
           section_sp->GetName().AsCString(), section_load_addr + slide);
       target.SetSectionLoadAddress(section_sp, section_load_addr + slide,
-                                   warn_multiple);
+                                   /*warn_multiple=*/true);
     }
   }
+
   return true;
 }
 

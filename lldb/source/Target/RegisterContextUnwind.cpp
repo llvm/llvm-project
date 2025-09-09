@@ -294,7 +294,7 @@ void RegisterContextUnwind::InitializeZerothFrame() {
   }
 
   // Give the Architecture a chance to replace the UnwindPlan.
-  AdoptArchitectureUnwindPlan();
+  TryAdoptArchitectureUnwindPlan();
 
   UnwindLogMsg("initialized frame current pc is 0x%" PRIx64 " cfa is 0x%" PRIx64
                " afa is 0x%" PRIx64 " using %s UnwindPlan",
@@ -486,7 +486,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
       }
 
       // Give the Architecture a chance to replace the UnwindPlan.
-      AdoptArchitectureUnwindPlan();
+      TryAdoptArchitectureUnwindPlan();
 
       UnwindLogMsg("initialized frame cfa is 0x%" PRIx64 " afa is 0x%" PRIx64,
                    (uint64_t)m_cfa, (uint64_t)m_afa);
@@ -693,7 +693,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
   }
 
   // Give the Architecture a chance to replace the UnwindPlan.
-  AdoptArchitectureUnwindPlan();
+  TryAdoptArchitectureUnwindPlan();
 
   UnwindLogMsg("initialized frame current pc is 0x%" PRIx64
                " cfa is 0x%" PRIx64 " afa is 0x%" PRIx64,
@@ -1726,7 +1726,7 @@ RegisterContextUnwind::SavedLocationForRegister(
   return UnwindLLDB::RegisterSearchResult::eRegisterNotFound;
 }
 
-UnwindPlanSP RegisterContextUnwind::AdoptArchitectureUnwindPlan() {
+UnwindPlanSP RegisterContextUnwind::TryAdoptArchitectureUnwindPlan() {
   if (!m_full_unwind_plan_sp)
     return {};
   ProcessSP process_sp = m_thread.GetProcess();
@@ -1742,8 +1742,7 @@ UnwindPlanSP RegisterContextUnwind::AdoptArchitectureUnwindPlan() {
     m_full_unwind_plan_sp = arch_override_plan_sp;
     PropagateTrapHandlerFlagFromUnwindPlan(m_full_unwind_plan_sp);
     m_registers.clear();
-    Log *log = GetLog(LLDBLog::Unwind);
-    if (log) {
+    if (GetLog(LLDBLog::Unwind)) {
       UnwindLogMsg(
           "Replacing Full Unwindplan with Architecture UnwindPlan, '%s'",
           m_full_unwind_plan_sp->GetSourceName().AsCString());

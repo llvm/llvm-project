@@ -203,7 +203,7 @@ private:
 
   std::shared_ptr<const UnwindPlan> GetFullUnwindPlanForFrame();
 
-  lldb::UnwindPlanSP AdoptArchitectureUnwindPlan();
+  lldb::UnwindPlanSP TryAdoptArchitectureUnwindPlan();
 
   void UnwindLogMsg(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 
