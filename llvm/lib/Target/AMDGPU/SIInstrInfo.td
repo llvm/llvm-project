@@ -2602,16 +2602,6 @@ class getAlign2RegOp<RegisterOperand RC> {
           !eq(RC, AVLdSt_160_Align1) : AVLdSt_160_Align2);
 }
 
-class getEquivalentAGPRClass<RegisterClass RC> {
-  RegisterClass ret =
-    !cond(!eq(RC.Size, 32)   : AGPR_32,
-          !eq(RC.Size, 64)   : AReg_64,
-          !eq(RC.Size, 96)   : AReg_96,
-          !eq(RC.Size, 128)  : AReg_128,
-          !eq(RC.Size, 160)  : AReg_160,
-          !eq(RC.Size, 1024) : AReg_1024);
-}
-
 class getEquivalentAGPROperand<RegisterOperand RC> {
   defvar Size = RC.RegClass.Size;
   RegisterOperand ret =
