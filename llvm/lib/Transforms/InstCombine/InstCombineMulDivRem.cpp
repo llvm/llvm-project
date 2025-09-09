@@ -2473,6 +2473,16 @@ Instruction *InstCombinerImpl::visitURem(BinaryOperator &I) {
     }
   }
 
+  Value *A;
+  const APInt *Op1Cst, *BCst;
+  // urem(urem(A, BCst), Op1Cst) -> urem(A, Op1Cst)
+  // iff urem(BCst, Op1Cst) == 0
+  if (match(Op0, m_OneUse(m_URem(m_Value(A), m_APInt(BCst)))) &&
+      match(Op1, m_APInt(Op1Cst)) && BCst->urem(*Op1Cst).isZero()) {
+    return BinaryOperator::CreateURem(
+        A, ConstantInt::get(Op1->getType(), *Op1Cst));
+  }
+
   return nullptr;
 }
 
