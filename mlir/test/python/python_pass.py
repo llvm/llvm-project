@@ -103,3 +103,9 @@ def testCustomPass():
             pm.run(module)
         except Exception as e:
             print(f"caught exception: {e}")
+
+        # CHECK: caught exception: signal_pass_failure() should always be called from the __call__ method
+        try:
+            custom_pass_that_fails.signal_pass_failure()
+        except Exception as e:
+            print(f"caught exception: {e}")

@@ -196,7 +196,14 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
               nb::delattr(callable, mlirExternalPassAttr);
             };
             nb::setattr(run, "signal_pass_failure", nb::cpp_function([run]() {
-                          nb::capsule cap = run.attr(mlirExternalPassAttr);
+                          nb::capsule cap;
+                          try {
+                            cap = run.attr(mlirExternalPassAttr);
+                          } catch (nb::python_error &e) {
+                            throw std::runtime_error(
+                                "signal_pass_failure() should always be called "
+                                "from the __call__ method");
+                          }
                           mlirExternalPassSignalFailure(
                               MlirExternalPass{cap.data()});
                         }));
