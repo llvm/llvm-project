@@ -3,8 +3,7 @@
 // Note: the spelling of the modulemap path still depends on the includer, since
 // that is the only source of information about it.
 
-// Needs symlinks
-// UNSUPPORTED: system-windows
+// REQUIRES: shell
 
 // RUN: rm -rf %t
 // RUN: split-file %s %t

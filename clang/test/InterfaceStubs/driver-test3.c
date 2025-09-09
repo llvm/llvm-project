@@ -1,4 +1,5 @@
 // REQUIRES: x86-registered-target
+// REQUIRES: shell
 
 // RUN: mkdir -p %t; cd %t
 // RUN: %clang -target x86_64-unknown-linux-gnu -c -emit-interface-stubs %s -o %t/driver-test3.o
