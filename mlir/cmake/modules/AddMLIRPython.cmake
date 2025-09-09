@@ -116,10 +116,16 @@ function(generate_type_stubs MODULE_NAME DEPENDS_TARGET MLIR_DEPENDS_TARGET OUTP
     ""
     "OUTPUTS"
     ${ARGN})
+  # for people doing find_package(nanobind)
   if(EXISTS ${nanobind_DIR}/../src/stubgen.py)
     set(NB_STUBGEN "${nanobind_DIR}/../src/stubgen.py")
   elseif(EXISTS ${nanobind_DIR}/../stubgen.py)
     set(NB_STUBGEN "${nanobind_DIR}/../stubgen.py")
+  # for people using FetchContent_Declare and FetchContent_MakeAvailable
+  elseif(EXISTS ${nanobind_SOURCE_DIR}/src/stubgen.py)
+    set(NB_STUBGEN "${nanobind_SOURCE_DIR}/src/stubgen.py")
+  elseif(EXISTS ${nanobind_SOURCE_DIR}/stubgen.py)
+    set(NB_STUBGEN "${nanobind_SOURCE_DIR}/stubgen.py")
   else()
     message(FATAL_ERROR "generate_type_stubs(): could not locate 'stubgen.py'!")
   endif()
