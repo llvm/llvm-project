@@ -9349,6 +9349,7 @@ cc_binary(
         ":MlirLspServerSupportLib",
         ":RegisterAllDialects",
         ":RegisterAllExtensions",
+        "//llvm:Support",
         "//mlir/test:TestAffine",
         "//mlir/test:TestAnalysis",
         "//mlir/test:TestArith",
