@@ -771,6 +771,8 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
   auto &foldingContext{context_.foldingContext()};
   auto typeAndShape{evaluate::characteristics::TypeAndShape::Characterize(
       symbol, foldingContext)};
+  bool isDevice{object.cudaDataAttr() &&
+      *object.cudaDataAttr() == common::CUDADataAttr::Device};
   CHECK(typeAndShape.has_value());
   auto dyType{typeAndShape->type()};
   int rank{typeAndShape->Rank()};
@@ -883,9 +885,19 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
   // Default component initialization
   bool hasDataInit{false};
   if (IsAllocatable(symbol)) {
-    AddValue(values, componentSchema_, "genre"s, GetEnumValue("allocatable"));
+    if (isDevice) {
+      AddValue(values, componentSchema_, "genre"s,
+          GetEnumValue("allocatabledevice"));
+    } else {
+      AddValue(values, componentSchema_, "genre"s, GetEnumValue("allocatable"));
+    }
   } else if (IsPointer(symbol)) {
-    AddValue(values, componentSchema_, "genre"s, GetEnumValue("pointer"));
+    if (isDevice) {
+      AddValue(
+          values, componentSchema_, "genre"s, GetEnumValue("pointerdevice"));
+    } else {
+      AddValue(values, componentSchema_, "genre"s, GetEnumValue("pointer"));
+    }
     hasDataInit = InitializeDataPointer(
         values, symbol, object, scope, dtScope, distinctName);
   } else if (IsAutomatic(symbol)) {
