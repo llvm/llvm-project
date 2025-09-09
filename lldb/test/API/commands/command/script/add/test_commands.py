@@ -16,10 +16,16 @@ class ReportingCmd(ParsedCommand):
         if len(opt_def):
             result.AppendMessage("Options:\n")
             for long_option, elem in opt_def.items():
-                dest = elem["dest"]
-                result.AppendMessage(
-                    f"{long_option} (set: {elem['_value_set']}): {object.__getattribute__(self.get_parser(), dest)}\n"
-                )
+                if "value_type" in elem:
+                    print(f"Looking at {long_option} - {elem}")
+                    dest = elem["dest"]
+                    result.AppendMessage(
+                        f"{long_option} (set: {elem['_value_set']}): {object.__getattribute__(self.get_parser(), dest)}\n"
+                    )
+                else:
+                    result.AppendMessage(
+                        f"{long_option} (set: {elem['_value_set']}): flag value\n"
+                    )
         else:
             result.AppendMessage("No options\n")
 
@@ -76,6 +82,12 @@ class NoArgsCommand(ReportingCmd):
             value_type=lldb.eArgTypeFilename,
             dest="disk_file_name",
             default=None,
+        )
+
+        ov_parser.add_option(
+            "f",
+            "flag-value",
+            "This is a flag value"
         )
 
         ov_parser.add_option(
