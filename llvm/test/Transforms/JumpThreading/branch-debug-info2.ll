@@ -18,7 +18,7 @@ if.end.i60:                                       ; preds = %shadow_to_ptr.exit
   %spec.select.i = select i1 %cmp3.i, i32 -1, i32 %conv7.i, !dbg !17
 ; Jump threading is going to fold the select in to the branch. Ensure debug
 ; info is not lost, and is merged from the select and the branch.
-; CHECK-NOT: br i1 %cmp3.i, label %for.inc, label %ptr_to_shadow.exit
+; CHECK-NOT: br i1 %cmp3.i, label %for.inc, label %if.end22
 ; CHECK: br i1 %cmp3.i, label %for.inc, label %if.end22, !dbg [[DBG:![0-9]+]]
 ; CHECK: [[DBG]] = !DILocation(line: 9, column: 1, scope: !{{.*}})
 

@@ -1260,13 +1260,13 @@ target:
 }
 
 define i16 @return_range_for_edge_value_sext(i8 %a) {
-; CHECK-LABEL: define range(i16 0, 98) i16 @return_range_for_edge_value_sext(
+; CHECK-LABEL: define range(i16 -55, 0) i16 @return_range_for_edge_value_sext(
 ; CHECK-SAME: i8 [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[B:%.*]] = sext i8 [[A]] to i16
 ; CHECK-NEXT:    br label %[[DISPATCH:.*]]
 ; CHECK:       [[DISPATCH]]:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[A]], 98
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[A]], -56
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[TARGET:.*]], label %[[DISPATCH]]
 ; CHECK:       [[TARGET]]:
 ; CHECK-NEXT:    ret i16 [[B]]
@@ -1276,7 +1276,7 @@ entry:
   br label %dispatch
 
 dispatch:
-  %cmp = icmp ult i8 %a, 98
+  %cmp = icmp ugt i8 %a, -56
   br i1 %cmp, label %target, label %dispatch
 
 target:
