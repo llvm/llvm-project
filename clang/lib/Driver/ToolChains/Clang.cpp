@@ -6760,7 +6760,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (!Triple.isAArch64() && !Triple.isLoongArch() && !Triple.isRISCV() &&
         !Triple.isX86() &&
         !(!Triple.isOSAIX() && (Triple.getArch() == llvm::Triple::ppc ||
-                                Triple.getArch() == llvm::Triple::ppc64)))
+                                Triple.getArch() == llvm::Triple::ppc64 ||
+                                Triple.getArch() == llvm::Triple::ppc64le)))
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << TripleStr;
     else if (S.consumeInteger(10, Size) ||

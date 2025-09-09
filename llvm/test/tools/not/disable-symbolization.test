@@ -1,8 +1,8 @@
 # When building on Windows under cmd.exe and GnuWin32, 'env' fails if no
 # arguments are provided.
 # UNSUPPORTED: system-windows
-# RUN: not --crash env > %t || true
-# RUN: cmp -s %t /dev/null || FileCheck %s < %t
+# RUN: not --crash bash -c env > %t || true
+# RUN: FileCheck %s < %t
 
 # CHECK-DAG: LLVM_DISABLE_CRASH_REPORT=1
 # CHECK-DAG: LLVM_DISABLE_SYMBOLIZATION=1
