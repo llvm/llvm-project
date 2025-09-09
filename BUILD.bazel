@@ -1,0 +1,9 @@
+
+load("@bazel//tools/build_defs/repo:local.bzl", "new_local_repository")
+
+
+new_local_repository(
+    name = "llvm-raw",
+    build_file_content = "# empty",
+    path = ".",
+)

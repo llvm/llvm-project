@@ -1,0 +1,14 @@
+
+module(
+    name = "llvm-project",
+    version = "21.1.0",
+)
+
+# Starlark depedndencies
+bazel_dep(name = "bazel_skylib", version = "1.7.1")
+
+# Library dependencies
+bazel_dep(name = "platforms", version = "0.0.11")
+bazel_dep(name = "rules_cc", version = "0.1.1")
+bazel_dep(name = "rules_python", version = "1.2.0")
+bazel_dep(name = "rules_shell", version = "0.3.0")
