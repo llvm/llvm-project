@@ -1249,13 +1249,13 @@ bool AccessAnalysis::createCheckForAccess(
   // are no forked pointers; replaceSymbolicStridesSCEV in this case.
   auto IsLoopInvariantOrAR =
       [&SE, &TheLoop](const PointerIntPair<const SCEV *, 1, bool> &P) {
-        return SE->isLoopInvariant(get<0>(P), TheLoop) ||
-               isa<SCEVAddRecExpr>(get<0>(P));
+        return SE->isLoopInvariant(P.getPointer(), TheLoop) ||
+               isa<SCEVAddRecExpr>(P.getPointer());
       };
   if (RTCheckPtrs.size() == 2 && all_of(RTCheckPtrs, IsLoopInvariantOrAR)) {
-    LLVM_DEBUG(dbgs() << "LAA: Found forked pointer: " << *Ptr << "\n");
-    for (auto [Idx, Q] : enumerate(RTCheckPtrs))
-      LLVM_DEBUG(dbgs() << "\t(" << Idx << ") " << *Q.getPointer() << "\n");
+    LLVM_DEBUG(dbgs() << "LAA: Found forked pointer: " << *Ptr << "\n";
+               for (const auto &[Idx, Q] : enumerate(RTCheckPtrs)) dbgs()
+               << "\t(" << Idx << ") " << *Q.getPointer() << "\n");
   } else {
     RTCheckPtrs = {{replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr), false}};
   }
