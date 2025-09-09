@@ -4854,7 +4854,7 @@ ExprResult Sema::CheckConceptTemplateId(
           *TemplateArgs, CTAI.SugaredConverted);
   MultiLevelTemplateArgumentList MLTAL(NamedConcept, CTAI.SugaredConverted,
                                        /*Final=*/false);
-      auto *CL = ConceptReference::Create(
+  auto *CL = ConceptReference::Create(
       Context,
       SS.isSet() ? SS.getWithLocInContext(Context) : NestedNameSpecifierLoc{},
       TemplateKWLoc, ConceptNameInfo, FoundDecl, NamedConcept,
