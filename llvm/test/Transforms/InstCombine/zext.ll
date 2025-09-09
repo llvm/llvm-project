@@ -976,3 +976,14 @@ entry:
   %res = zext nneg i2 %x to i32
   ret i32 %res
 }
+
+define i32 @zext_nneg_add_cancel(i8 %arg) {
+; CHECK-LABEL: @zext_nneg_add_cancel(
+; CHECK-NEXT:    [[ADD2:%.*]] = zext i8 [[ARG:%.*]] to i32
+; CHECK-NEXT:    ret i32 [[ADD2]]
+;
+  %add = add i8 %arg, -2
+  %zext = zext nneg i8 %add to i32
+  %add2 = add i32 %zext, 2
+  ret i32 %add2
+}
