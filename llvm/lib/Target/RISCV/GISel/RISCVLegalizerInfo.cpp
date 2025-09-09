@@ -489,8 +489,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .lower();
 
   getActionDefinitionsBuilder({G_ABDS, G_ABDU})
-    .minScalar(ST.hasStdExtZbb(), 0, sXLen)
-    .lower();
+      .minScalar(ST.hasStdExtZbb(), 0, sXLen)
+      .lower();
 
   getActionDefinitionsBuilder({G_UMAX, G_UMIN, G_SMAX, G_SMIN})
       .legalFor(ST.hasStdExtZbb(), {sXLen})
