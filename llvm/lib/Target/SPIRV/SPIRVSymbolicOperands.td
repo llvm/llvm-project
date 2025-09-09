@@ -2021,4 +2021,4 @@ multiclass FPEncodingOperand<bits<32> value, list<Extension> reqExtensions>{
              reqExtensions, [], []>;
 }
 
-defm BFloat16KHR : FPEncodingOperand<0, [SPV_KHR_bfloat16]>;
+defm BFloat16KHR : FPEncodingOperand<0, []>;
