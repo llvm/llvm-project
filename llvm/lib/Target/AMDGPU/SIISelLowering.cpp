@@ -14680,17 +14680,11 @@ SITargetLowering::performExtractVectorEltCombine(SDNode *N,
   // depending on the shift operand. See e.g. performSraCombine().
   // This combine ensures that the optimisation is compatible with v2i32
   // legalised AND.
-  // TODO: Consider if additional improvements can be made by generalising to
-  // other constants and vector types.
   if (VecVT == MVT::v2i32 && Vec->getOpcode() == ISD::AND &&
       Vec->getOperand(1)->getOpcode() == ISD::BUILD_VECTOR) {
-    SDValue BV = Vec->getOperand(1);
 
-    ConstantSDNode *BV0 = dyn_cast<ConstantSDNode>(BV->getOperand(0));
-    ConstantSDNode *BV1 = dyn_cast<ConstantSDNode>(BV->getOperand(1));
-
-    if (!BV0 || !BV1 || BV->getConstantOperandVal(0) != 0x1f ||
-        BV->getConstantOperandVal(1) != 0x1f)
+    const ConstantSDNode *C = isConstOrConstSplat(Vec.getOperand(1));
+    if (!C || C->getZExtValue() != 0x1f)
       return SDValue();
 
     SDLoc SL(N);
