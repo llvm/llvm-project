@@ -1002,8 +1002,6 @@ unsigned X86RegisterInfo::findDeadCallerSavedReg(
   if (MF->callsEHReturn())
     return 0;
 
-  const TargetRegisterClass &AvailableRegs = *getGPRsForTailCall(*MF);
-
   if (MBBI == MBB.end())
     return 0;
 
@@ -1025,20 +1023,16 @@ unsigned X86RegisterInfo::findDeadCallerSavedReg(
   case X86::TCRETURNmi64:
   case X86::EH_RETURN:
   case X86::EH_RETURN64: {
-    SmallSet<uint16_t, 8> Uses;
-    for (MachineOperand &MO : MBBI->operands()) {
-      if (!MO.isReg() || MO.isDef())
-        continue;
-      Register Reg = MO.getReg();
-      if (!Reg)
-        continue;
-      for (MCRegAliasIterator AI(Reg, this, true); AI.isValid(); ++AI)
-        Uses.insert(*AI);
-    }
+    LiveRegUnits LRU(*this);
+    LRU.addLiveOuts(MBB);
+    LRU.stepBackward(*MBBI);
 
-    for (auto CS : AvailableRegs)
-      if (!Uses.count(CS) && CS != X86::RIP && CS != X86::RSP && CS != X86::ESP)
-        return CS;
+    const TargetRegisterClass &RC =
+        Is64Bit ? X86::GR64_NOSPRegClass : X86::GR32_NOSPRegClass;
+    for (MCRegister Reg : RC) {
+      if (LRU.available(Reg))
+        return Reg;
+    }
   }
   }
 

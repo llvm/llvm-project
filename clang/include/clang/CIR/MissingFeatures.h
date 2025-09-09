@@ -62,7 +62,6 @@ struct MissingFeatures {
   static bool opAllocaEscapeByReference() { return false; }
   static bool opAllocaReference() { return false; }
   static bool opAllocaAnnotations() { return false; }
-  static bool opAllocaDynAllocSize() { return false; }
   static bool opAllocaCaptureByInit() { return false; }
 
   // FuncOp handling
@@ -133,6 +132,7 @@ struct MissingFeatures {
   static bool skippedLayout() { return false; }
   static bool astRecordDeclAttr() { return false; }
   static bool recordZeroInit() { return false; }
+  static bool recordZeroInitPadding() { return false; }
   static bool zeroSizeRecordMembers() { return false; }
 
   // Various handling of deferred processing in CIRGenModule.

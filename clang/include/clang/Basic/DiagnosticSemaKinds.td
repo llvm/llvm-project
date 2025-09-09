@@ -13121,6 +13121,11 @@ def err_hlsl_duplicate_parameter_modifier : Error<"duplicate parameter modifier 
 def err_hlsl_missing_semantic_annotation : Error<
   "semantic annotations must be present for all parameters of an entry "
   "function or patch constant function">;
+def err_hlsl_unknown_semantic : Error<"unknown HLSL semantic %0">;
+def err_hlsl_semantic_output_not_supported
+    : Error<"semantic %0 does not support output">;
+def err_hlsl_semantic_indexing_not_supported
+    : Error<"semantic %0 does not allow indexing">;
 def err_hlsl_init_priority_unsupported : Error<
   "initializer priorities are not supported in HLSL">;
 
@@ -13204,6 +13209,9 @@ def err_hlsl_resource_range_overlap: Error<
   "overlap within space = %8 and visibility = "
   "%select{All|Vertex|Hull|Domain|Geometry|Pixel|Amplification|Mesh}9">;
 def note_hlsl_resource_range_here: Note<"overlapping resource range here">;
+
+def err_hlsl_incomplete_resource_array_in_function_param: Error<
+  "incomplete resource array in a function parameter">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
