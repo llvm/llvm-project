@@ -186,7 +186,7 @@ bool EVLIndVarSimplifyImpl::run(Loop &L) {
   Value *TC = nullptr;
   auto IntrinsicMatch = m_Intrinsic<Intrinsic::experimental_get_vector_length>(
       m_Value(RemTC), m_SpecificInt(VF),
-      /*Scalable=*/m_One());
+      /*Scalable=*/m_SpecificInt(1));
   for (PHINode &PN : BB->phis()) {
     if (&PN == IndVar)
       continue;
