@@ -3692,6 +3692,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     } else {
       Results.push_back(DAG.getUNDEF(Node->getValueType(0)));
       Results.push_back(Node->getOperand(0));
+
+      DAG.getContext()->diagnose(DiagnosticInfoLegalizationFailure(
+          Node->getOperationName(&DAG) + " is not supported on this target.",
+          DAG.getMachineFunction().getFunction(), dl.getDebugLoc()));
     }
     break;
   case ISD::STACKRESTORE:
