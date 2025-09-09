@@ -54,6 +54,8 @@ static bool printOp(const DWARFExpression::Operation *Op, raw_ostream &OS,
     return false;
   }
 
+  std::optional<unsigned> SubOpcode = Op->getSubCode();
+
   // In "register-only" mode, still show simple constant-valued locations.
   // This lets clients print annotations like "i = 0" when the location is
   // a constant (e.g. DW_OP_constu/consts ... DW_OP_stack_value).
@@ -64,7 +66,11 @@ static bool printOp(const DWARFExpression::Operation *Op, raw_ostream &OS,
     if ((Op->getCode() >= DW_OP_breg0 && Op->getCode() <= DW_OP_breg31) ||
         (Op->getCode() >= DW_OP_reg0 && Op->getCode() <= DW_OP_reg31) ||
         Op->getCode() == DW_OP_bregx || Op->getCode() == DW_OP_regx ||
-        Op->getCode() == DW_OP_regval_type) {
+        Op->getCode() == DW_OP_regval_type ||
+        Op->getCode() == DW_OP_LLVM_call_frame_entry_reg ||
+        Op->getCode() == DW_OP_LLVM_aspace_bregx ||
+        (SubOpcode && (*SubOpcode == DW_OP_LLVM_call_frame_entry_reg ||
+                       *SubOpcode == DW_OP_LLVM_aspace_bregx))) {
       if (prettyPrintRegisterOp(U, OS, DumpOpts, Op->getCode(),
                                 Op->getRawOperands()))
         return true;
@@ -96,7 +102,6 @@ static bool printOp(const DWARFExpression::Operation *Op, raw_ostream &OS,
     OS << Name;
   }
 
-  std::optional<unsigned> SubOpcode = Op->getSubCode();
   if (SubOpcode) {
     StringRef SubName = SubOperationEncodingString(Op->getCode(), *SubOpcode);
     assert(!SubName.empty() && "DW_OP SubOp has no name!");
