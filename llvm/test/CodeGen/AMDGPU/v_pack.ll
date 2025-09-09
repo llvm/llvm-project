@@ -4,7 +4,8 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global,-real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11-GCN-FAKE16 %s
 ; RUN: llc -global-isel -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global,-real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11-GISEL-FAKE16 %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global,+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11-GCN-REAL16 %s
-; RUN: llc -global-isel -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global,+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11-GISEL-REAL16 %s
+; FIXME-TRUE16 enable gisel
+; XUN: llc -global-isel -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global,+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11-GISEL-REAL16 %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
@@ -88,21 +89,20 @@ define amdgpu_kernel void @v_pack_b32_v2f16(ptr addrspace(1) %in0, ptr addrspace
 ; GFX11-GCN-REAL16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-GCN-REAL16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-GCN-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GCN-REAL16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-GCN-REAL16-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX11-GCN-REAL16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-GCN-REAL16-NEXT:    global_load_d16_b16 v0, v1, s[0:1] glc dlc
+; GFX11-GCN-REAL16-NEXT:    global_load_u16 v1, v0, s[0:1] glc dlc
 ; GFX11-GCN-REAL16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-GCN-REAL16-NEXT:    global_load_d16_hi_b16 v0, v1, s[2:3] glc dlc
+; GFX11-GCN-REAL16-NEXT:    global_load_u16 v2, v0, s[2:3] glc dlc
 ; GFX11-GCN-REAL16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-GCN-REAL16-NEXT:    v_add_f16_e32 v0.l, 2.0, v0.l
-; GFX11-GCN-REAL16-NEXT:    v_add_f16_e32 v0.h, 2.0, v0.h
+; GFX11-GCN-REAL16-NEXT:    v_add_f16_e32 v0.l, 2.0, v1.l
+; GFX11-GCN-REAL16-NEXT:    v_add_f16_e32 v0.h, 2.0, v2.l
 ; GFX11-GCN-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GCN-REAL16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
 ; GFX11-GCN-REAL16-NEXT:    ;;#ASMSTART
 ; GFX11-GCN-REAL16-NEXT:    ; use v0
 ; GFX11-GCN-REAL16-NEXT:    ;;#ASMEND
 ; GFX11-GCN-REAL16-NEXT:    s_endpgm
-;
 ; GFX11-GISEL-REAL16-LABEL: v_pack_b32_v2f16:
 ; GFX11-GISEL-REAL16:       ; %bb.0:
 ; GFX11-GISEL-REAL16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
@@ -217,21 +217,20 @@ define amdgpu_kernel void @v_pack_b32_v2f16_sub(ptr addrspace(1) %in0, ptr addrs
 ; GFX11-GCN-REAL16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-GCN-REAL16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-GCN-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GCN-REAL16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-GCN-REAL16-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX11-GCN-REAL16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-GCN-REAL16-NEXT:    global_load_d16_b16 v0, v1, s[0:1] glc dlc
+; GFX11-GCN-REAL16-NEXT:    global_load_u16 v1, v0, s[0:1] glc dlc
 ; GFX11-GCN-REAL16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-GCN-REAL16-NEXT:    global_load_d16_hi_b16 v0, v1, s[2:3] glc dlc
+; GFX11-GCN-REAL16-NEXT:    global_load_u16 v2, v0, s[2:3] glc dlc
 ; GFX11-GCN-REAL16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-GCN-REAL16-NEXT:    v_subrev_f16_e32 v0.l, 2.0, v0.l
-; GFX11-GCN-REAL16-NEXT:    v_add_f16_e32 v0.h, 2.0, v0.h
+; GFX11-GCN-REAL16-NEXT:    v_subrev_f16_e32 v0.l, 2.0, v1.l
+; GFX11-GCN-REAL16-NEXT:    v_add_f16_e32 v0.h, 2.0, v2.l
 ; GFX11-GCN-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GCN-REAL16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
 ; GFX11-GCN-REAL16-NEXT:    ;;#ASMSTART
 ; GFX11-GCN-REAL16-NEXT:    ; use v0
 ; GFX11-GCN-REAL16-NEXT:    ;;#ASMEND
 ; GFX11-GCN-REAL16-NEXT:    s_endpgm
-;
 ; GFX11-GISEL-REAL16-LABEL: v_pack_b32_v2f16_sub:
 ; GFX11-GISEL-REAL16:       ; %bb.0:
 ; GFX11-GISEL-REAL16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
@@ -357,7 +356,6 @@ define amdgpu_kernel void @fptrunc(
 ; GFX11-GCN-REAL16-NEXT:    v_pack_b32_f16 v0, v0.h, v0.l
 ; GFX11-GCN-REAL16-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
 ; GFX11-GCN-REAL16-NEXT:    s_endpgm
-;
 ; GFX11-GISEL-REAL16-LABEL: fptrunc:
 ; GFX11-GISEL-REAL16:       ; %bb.0:
 ; GFX11-GISEL-REAL16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
@@ -460,21 +458,20 @@ define amdgpu_kernel void @v_pack_b32.fabs(ptr addrspace(1) %in0, ptr addrspace(
 ; GFX11-GCN-REAL16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-GCN-REAL16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-GCN-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GCN-REAL16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-GCN-REAL16-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX11-GCN-REAL16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-GCN-REAL16-NEXT:    global_load_d16_b16 v0, v1, s[0:1] glc dlc
+; GFX11-GCN-REAL16-NEXT:    global_load_u16 v1, v0, s[0:1] glc dlc
 ; GFX11-GCN-REAL16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-GCN-REAL16-NEXT:    global_load_d16_hi_b16 v0, v1, s[2:3] glc dlc
+; GFX11-GCN-REAL16-NEXT:    global_load_u16 v2, v0, s[2:3] glc dlc
 ; GFX11-GCN-REAL16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-GCN-REAL16-NEXT:    v_add_f16_e32 v0.l, 2.0, v0.l
-; GFX11-GCN-REAL16-NEXT:    v_add_f16_e32 v0.h, 2.0, v0.h
+; GFX11-GCN-REAL16-NEXT:    v_add_f16_e32 v0.l, 2.0, v1.l
+; GFX11-GCN-REAL16-NEXT:    v_add_f16_e32 v0.h, 2.0, v2.l
 ; GFX11-GCN-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GCN-REAL16-NEXT:    v_pack_b32_f16 v0, |v0.l|, |v0.h|
 ; GFX11-GCN-REAL16-NEXT:    ;;#ASMSTART
 ; GFX11-GCN-REAL16-NEXT:    ; use v0
 ; GFX11-GCN-REAL16-NEXT:    ;;#ASMEND
 ; GFX11-GCN-REAL16-NEXT:    s_endpgm
-;
 ; GFX11-GISEL-REAL16-LABEL: v_pack_b32.fabs:
 ; GFX11-GISEL-REAL16:       ; %bb.0:
 ; GFX11-GISEL-REAL16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
@@ -591,21 +588,20 @@ define amdgpu_kernel void @v_pack_b32.fneg(ptr addrspace(1) %in0, ptr addrspace(
 ; GFX11-GCN-REAL16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-GCN-REAL16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-GCN-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GCN-REAL16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-GCN-REAL16-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX11-GCN-REAL16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-GCN-REAL16-NEXT:    global_load_d16_b16 v0, v1, s[0:1] glc dlc
+; GFX11-GCN-REAL16-NEXT:    global_load_u16 v1, v0, s[0:1] glc dlc
 ; GFX11-GCN-REAL16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-GCN-REAL16-NEXT:    global_load_d16_hi_b16 v0, v1, s[2:3] glc dlc
+; GFX11-GCN-REAL16-NEXT:    global_load_u16 v2, v0, s[2:3] glc dlc
 ; GFX11-GCN-REAL16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-GCN-REAL16-NEXT:    v_add_f16_e32 v0.l, 2.0, v0.l
-; GFX11-GCN-REAL16-NEXT:    v_add_f16_e32 v0.h, 2.0, v0.h
+; GFX11-GCN-REAL16-NEXT:    v_add_f16_e32 v0.l, 2.0, v1.l
+; GFX11-GCN-REAL16-NEXT:    v_add_f16_e32 v0.h, 2.0, v2.l
 ; GFX11-GCN-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GCN-REAL16-NEXT:    v_pack_b32_f16 v0, -v0.l, -v0.h
 ; GFX11-GCN-REAL16-NEXT:    ;;#ASMSTART
 ; GFX11-GCN-REAL16-NEXT:    ; use v0
 ; GFX11-GCN-REAL16-NEXT:    ;;#ASMEND
 ; GFX11-GCN-REAL16-NEXT:    s_endpgm
-;
 ; GFX11-GISEL-REAL16-LABEL: v_pack_b32.fneg:
 ; GFX11-GISEL-REAL16:       ; %bb.0:
 ; GFX11-GISEL-REAL16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24

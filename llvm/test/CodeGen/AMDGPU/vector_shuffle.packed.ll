@@ -3027,23 +3027,14 @@ define void @shuffle_v4i8_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg1,
 ; GFX10-NEXT:    global_store_dword v[4:5], v0, off
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE16-LABEL: shuffle_v4i8_concat:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v[0:1], off
-; GFX11-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v[2:3], off
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    global_store_b32 v[4:5], v0, off
-; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FAKE16-LABEL: shuffle_v4i8_concat:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    global_load_u16 v0, v[0:1], off
-; GFX11-FAKE16-NEXT:    global_load_d16_hi_b16 v0, v[2:3], off
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-NEXT:    global_store_b32 v[4:5], v0, off
-; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: shuffle_v4i8_concat:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_u16 v0, v[0:1], off
+; GFX11-NEXT:    global_load_d16_hi_b16 v0, v[2:3], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b32 v[4:5], v0, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <2 x i8>, ptr addrspace(1) %arg0
   %val1 = load <2 x i8>, ptr addrspace(1) %arg1
   %shuffle = shufflevector <2 x i8> %val0, <2 x i8> %val1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>

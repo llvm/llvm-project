@@ -5091,7 +5091,7 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, 8
 ; GFX11-TRUE16-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
-; GFX11-TRUE16-NEXT:    scratch_load_d16_u8 v0, off, off offset:8
+; GFX11-TRUE16-NEXT:    scratch_load_u8 v0, off, off offset:8
 ; GFX11-TRUE16-NEXT:    scratch_load_b32 v1, off, off offset:12
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, -1

@@ -225,7 +225,7 @@ define amdgpu_kernel void @store_flat_i8_neg_offset(ptr %fptr, i8 %x) #0 {
 ; CIVI: flat_load_ubyte v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}} glc{{$}}
 ; GFX9: flat_load_ubyte v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}} offset:4095 glc{{$}}
 ; GFX10: flat_load_ubyte v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}} glc dlc{{$}}
-; GFX11-TRUE16: flat_load_d16_u8 v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}} offset:4095 glc dlc{{$}}
+; GFX11-TRUE16: flat_load_u8 v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}} offset:4095 glc dlc{{$}}
 ; GFX11-FAKE16: flat_load_u8 v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}} offset:4095 glc dlc{{$}}
 define amdgpu_kernel void @load_flat_i8_max_offset(ptr %fptr) #0 {
   %fptr.offset = getelementptr inbounds i8, ptr %fptr, i64 4095
@@ -237,7 +237,7 @@ define amdgpu_kernel void @load_flat_i8_max_offset(ptr %fptr) #0 {
 ; CIVI: flat_load_ubyte v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}} glc{{$}}
 ; GFX9: flat_load_ubyte v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}} glc{{$}}
 ; GFX10: flat_load_ubyte v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}} glc dlc{{$}}
-; GFX11-TRUE16: flat_load_d16_u8 v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}} glc dlc{{$}}
+; GFX11-TRUE16: flat_load_u8 v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}} glc dlc{{$}}
 ; GFX11-FAKE16: flat_load_u8 v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}} glc dlc{{$}}
 define amdgpu_kernel void @load_flat_i8_max_offset_p1(ptr %fptr) #0 {
   %fptr.offset = getelementptr inbounds i8, ptr %fptr, i64 4096

@@ -32,19 +32,12 @@ define i8 @flat_inst_valu_offset_1(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_1:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] offset:1
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_1:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:1
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: flat_inst_valu_offset_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    flat_load_u8 v0, v[0:1] offset:1
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_1:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -67,13 +60,6 @@ define i8 @flat_inst_valu_offset_1(ptr %p) {
 ; GFX12-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:1
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-GISEL-LABEL: flat_inst_valu_offset_1:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    flat_load_u8 v0, v[0:1] offset:1
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: flat_inst_valu_offset_1:
 ; GFX12-GISEL:       ; %bb.0:
@@ -107,19 +93,12 @@ define i8 @flat_inst_valu_offset_11bit_max(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_11bit_max:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] offset:2047
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_11bit_max:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:2047
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: flat_inst_valu_offset_11bit_max:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    flat_load_u8 v0, v[0:1] offset:2047
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_11bit_max:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -142,13 +121,6 @@ define i8 @flat_inst_valu_offset_11bit_max(ptr %p) {
 ; GFX12-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:2047
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-GISEL-LABEL: flat_inst_valu_offset_11bit_max:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    flat_load_u8 v0, v[0:1] offset:2047
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: flat_inst_valu_offset_11bit_max:
 ; GFX12-GISEL:       ; %bb.0:
@@ -182,19 +154,12 @@ define i8 @flat_inst_valu_offset_12bit_max(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_12bit_max:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] offset:4095
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_12bit_max:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: flat_inst_valu_offset_12bit_max:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_12bit_max:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -217,13 +182,6 @@ define i8 @flat_inst_valu_offset_12bit_max(ptr %p) {
 ; GFX12-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-GISEL-LABEL: flat_inst_valu_offset_12bit_max:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: flat_inst_valu_offset_12bit_max:
 ; GFX12-GISEL:       ; %bb.0:
@@ -259,25 +217,15 @@ define i8 @flat_inst_valu_offset_13bit_max(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_13bit_max:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] offset:4095
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_13bit_max:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-SDAG-LABEL: flat_inst_valu_offset_13bit_max:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_13bit_max:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -354,25 +302,15 @@ define i8 @flat_inst_valu_offset_24bit_max(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_24bit_max:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x7ff000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] offset:4095
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_24bit_max:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x7ff000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-SDAG-LABEL: flat_inst_valu_offset_24bit_max:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, 0x7ff000, v0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_24bit_max:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -449,25 +387,15 @@ define i8 @flat_inst_valu_offset_neg_11bit_max(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_neg_11bit_max:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfffff800, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1]
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_neg_11bit_max:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfffff800, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: flat_inst_valu_offset_neg_11bit_max:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfffff800, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
+; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_neg_11bit_max:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -490,16 +418,6 @@ define i8 @flat_inst_valu_offset_neg_11bit_max(ptr %p) {
 ; GFX12-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:-2048
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-GISEL-LABEL: flat_inst_valu_offset_neg_11bit_max:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfffff800, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; GFX11-GISEL-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: flat_inst_valu_offset_neg_11bit_max:
 ; GFX12-GISEL:       ; %bb.0:
@@ -535,25 +453,15 @@ define i8 @flat_inst_valu_offset_neg_12bit_max(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_neg_12bit_max:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfffff000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1]
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_neg_12bit_max:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfffff000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: flat_inst_valu_offset_neg_12bit_max:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfffff000, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
+; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_neg_12bit_max:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -576,16 +484,6 @@ define i8 @flat_inst_valu_offset_neg_12bit_max(ptr %p) {
 ; GFX12-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:-4096
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-GISEL-LABEL: flat_inst_valu_offset_neg_12bit_max:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfffff000, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; GFX11-GISEL-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: flat_inst_valu_offset_neg_12bit_max:
 ; GFX12-GISEL:       ; %bb.0:
@@ -621,25 +519,15 @@ define i8 @flat_inst_valu_offset_neg_13bit_max(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_neg_13bit_max:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xffffe000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1]
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_neg_13bit_max:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xffffe000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: flat_inst_valu_offset_neg_13bit_max:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, 0xffffe000, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
+; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_neg_13bit_max:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -662,16 +550,6 @@ define i8 @flat_inst_valu_offset_neg_13bit_max(ptr %p) {
 ; GFX12-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:-8192
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-GISEL-LABEL: flat_inst_valu_offset_neg_13bit_max:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0xffffe000, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; GFX11-GISEL-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: flat_inst_valu_offset_neg_13bit_max:
 ; GFX12-GISEL:       ; %bb.0:
@@ -707,25 +585,15 @@ define i8 @flat_inst_valu_offset_neg_24bit_max(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_neg_24bit_max:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xff800000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1]
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_neg_24bit_max:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xff800000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: flat_inst_valu_offset_neg_24bit_max:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, 0xff800000, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
+; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_neg_24bit_max:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -748,16 +616,6 @@ define i8 @flat_inst_valu_offset_neg_24bit_max(ptr %p) {
 ; GFX12-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:-8388608
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-GISEL-LABEL: flat_inst_valu_offset_neg_24bit_max:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0xff800000, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; GFX11-GISEL-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: flat_inst_valu_offset_neg_24bit_max:
 ; GFX12-GISEL:       ; %bb.0:
@@ -792,19 +650,12 @@ define i8 @flat_inst_valu_offset_2x_11bit_max(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_2x_11bit_max:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] offset:4095
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_2x_11bit_max:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: flat_inst_valu_offset_2x_11bit_max:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_2x_11bit_max:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -827,13 +678,6 @@ define i8 @flat_inst_valu_offset_2x_11bit_max(ptr %p) {
 ; GFX12-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-GISEL-LABEL: flat_inst_valu_offset_2x_11bit_max:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: flat_inst_valu_offset_2x_11bit_max:
 ; GFX12-GISEL:       ; %bb.0:
@@ -869,25 +713,15 @@ define i8 @flat_inst_valu_offset_2x_12bit_max(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_2x_12bit_max:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] offset:4095
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_2x_12bit_max:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-SDAG-LABEL: flat_inst_valu_offset_2x_12bit_max:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_2x_12bit_max:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -964,25 +798,15 @@ define i8 @flat_inst_valu_offset_2x_13bit_max(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_2x_13bit_max:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x3000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] offset:4095
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_2x_13bit_max:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x3000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-SDAG-LABEL: flat_inst_valu_offset_2x_13bit_max:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, 0x3000, v0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_2x_13bit_max:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -1059,25 +883,15 @@ define i8 @flat_inst_valu_offset_2x_24bit_max(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_2x_24bit_max:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfff000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] offset:4094
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_2x_24bit_max:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfff000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:4094
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-SDAG-LABEL: flat_inst_valu_offset_2x_24bit_max:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfff000, v0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] offset:4094
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_2x_24bit_max:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -1163,25 +977,15 @@ define i8 @flat_inst_valu_offset_2x_neg_11bit_max(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_2x_neg_11bit_max:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfffff000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1]
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_2x_neg_11bit_max:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfffff000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: flat_inst_valu_offset_2x_neg_11bit_max:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfffff000, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
+; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_2x_neg_11bit_max:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -1204,16 +1008,6 @@ define i8 @flat_inst_valu_offset_2x_neg_11bit_max(ptr %p) {
 ; GFX12-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:-4096
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-GISEL-LABEL: flat_inst_valu_offset_2x_neg_11bit_max:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfffff000, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; GFX11-GISEL-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: flat_inst_valu_offset_2x_neg_11bit_max:
 ; GFX12-GISEL:       ; %bb.0:
@@ -1249,25 +1043,15 @@ define i8 @flat_inst_valu_offset_2x_neg_12bit_max(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_2x_neg_12bit_max:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xffffe000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1]
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_2x_neg_12bit_max:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xffffe000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: flat_inst_valu_offset_2x_neg_12bit_max:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, 0xffffe000, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
+; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_2x_neg_12bit_max:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -1290,16 +1074,6 @@ define i8 @flat_inst_valu_offset_2x_neg_12bit_max(ptr %p) {
 ; GFX12-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:-8192
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-GISEL-LABEL: flat_inst_valu_offset_2x_neg_12bit_max:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0xffffe000, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; GFX11-GISEL-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: flat_inst_valu_offset_2x_neg_12bit_max:
 ; GFX12-GISEL:       ; %bb.0:
@@ -1335,25 +1109,15 @@ define i8 @flat_inst_valu_offset_2x_neg_13bit_max(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_2x_neg_13bit_max:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xffffc000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1]
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_2x_neg_13bit_max:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xffffc000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: flat_inst_valu_offset_2x_neg_13bit_max:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, 0xffffc000, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
+; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_2x_neg_13bit_max:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -1376,16 +1140,6 @@ define i8 @flat_inst_valu_offset_2x_neg_13bit_max(ptr %p) {
 ; GFX12-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:-16384
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-GISEL-LABEL: flat_inst_valu_offset_2x_neg_13bit_max:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0xffffc000, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; GFX11-GISEL-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: flat_inst_valu_offset_2x_neg_13bit_max:
 ; GFX12-GISEL:       ; %bb.0:
@@ -1421,25 +1175,15 @@ define i8 @flat_inst_valu_offset_2x_neg_24bit_max(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_2x_neg_24bit_max:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xff000001, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1]
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_2x_neg_24bit_max:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xff000001, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: flat_inst_valu_offset_2x_neg_24bit_max:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, 0xff000001, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
+; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_2x_neg_24bit_max:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -1468,16 +1212,6 @@ define i8 @flat_inst_valu_offset_2x_neg_24bit_max(ptr %p) {
 ; GFX12-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:-8388607
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-GISEL-LABEL: flat_inst_valu_offset_2x_neg_24bit_max:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0xff000001, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; GFX11-GISEL-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: flat_inst_valu_offset_2x_neg_24bit_max:
 ; GFX12-GISEL:       ; %bb.0:
@@ -1517,25 +1251,15 @@ define i8 @flat_inst_valu_offset_64bit_11bit_split0(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_64bit_11bit_split0:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] offset:2047
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_64bit_11bit_split0:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:2047
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-SDAG-LABEL: flat_inst_valu_offset_64bit_11bit_split0:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, 0, v0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] offset:2047
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_64bit_11bit_split0:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -1622,25 +1346,15 @@ define i8 @flat_inst_valu_offset_64bit_11bit_split1(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_64bit_11bit_split1:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] offset:2048
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_64bit_11bit_split1:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:2048
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-SDAG-LABEL: flat_inst_valu_offset_64bit_11bit_split1:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, 0, v0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] offset:2048
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_64bit_11bit_split1:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -1727,25 +1441,15 @@ define i8 @flat_inst_valu_offset_64bit_12bit_split0(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_64bit_12bit_split0:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] offset:4095
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_64bit_12bit_split0:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-SDAG-LABEL: flat_inst_valu_offset_64bit_12bit_split0:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, 0, v0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_64bit_12bit_split0:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -1832,25 +1536,15 @@ define i8 @flat_inst_valu_offset_64bit_12bit_split1(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_64bit_12bit_split1:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1]
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_64bit_12bit_split1:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: flat_inst_valu_offset_64bit_12bit_split1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
+; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_64bit_12bit_split1:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -1879,16 +1573,6 @@ define i8 @flat_inst_valu_offset_64bit_12bit_split1(ptr %p) {
 ; GFX12-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:4096
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-GISEL-LABEL: flat_inst_valu_offset_64bit_12bit_split1:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
-; GFX11-GISEL-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: flat_inst_valu_offset_64bit_12bit_split1:
 ; GFX12-GISEL:       ; %bb.0:
@@ -1928,25 +1612,15 @@ define i8 @flat_inst_valu_offset_64bit_13bit_split0(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_64bit_13bit_split0:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] offset:4095
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_64bit_13bit_split0:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-SDAG-LABEL: flat_inst_valu_offset_64bit_13bit_split0:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_64bit_13bit_split0:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -2033,25 +1707,15 @@ define i8 @flat_inst_valu_offset_64bit_13bit_split1(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_64bit_13bit_split1:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x2000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1]
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_64bit_13bit_split1:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x2000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: flat_inst_valu_offset_64bit_13bit_split1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, 0x2000, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
+; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_64bit_13bit_split1:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -2080,16 +1744,6 @@ define i8 @flat_inst_valu_offset_64bit_13bit_split1(ptr %p) {
 ; GFX12-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:8192
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-GISEL-LABEL: flat_inst_valu_offset_64bit_13bit_split1:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0x2000, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
-; GFX11-GISEL-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: flat_inst_valu_offset_64bit_13bit_split1:
 ; GFX12-GISEL:       ; %bb.0:
@@ -2130,25 +1784,15 @@ define i8 @flat_inst_valu_offset_64bit_11bit_neg_high_split0(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_64bit_11bit_neg_high_split0:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x7ff, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1]
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_64bit_11bit_neg_high_split0:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x7ff, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: flat_inst_valu_offset_64bit_11bit_neg_high_split0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, 0x7ff, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
+; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_64bit_11bit_neg_high_split0:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -2187,16 +1831,6 @@ define i8 @flat_inst_valu_offset_64bit_11bit_neg_high_split0(ptr %p) {
 ; GFX9-GISEL-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-GISEL-LABEL: flat_inst_valu_offset_64bit_11bit_neg_high_split0:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0x7ff, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-GISEL-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: flat_inst_valu_offset_64bit_11bit_neg_high_split0:
 ; GFX12-GISEL:       ; %bb.0:
@@ -2237,25 +1871,15 @@ define i8 @flat_inst_valu_offset_64bit_11bit_neg_high_split1(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_64bit_11bit_neg_high_split1:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x800, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1]
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_64bit_11bit_neg_high_split1:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x800, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: flat_inst_valu_offset_64bit_11bit_neg_high_split1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, 0x800, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
+; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_64bit_11bit_neg_high_split1:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -2294,16 +1918,6 @@ define i8 @flat_inst_valu_offset_64bit_11bit_neg_high_split1(ptr %p) {
 ; GFX9-GISEL-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-GISEL-LABEL: flat_inst_valu_offset_64bit_11bit_neg_high_split1:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0x800, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-GISEL-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: flat_inst_valu_offset_64bit_11bit_neg_high_split1:
 ; GFX12-GISEL:       ; %bb.0:
@@ -2344,25 +1958,15 @@ define i8 @flat_inst_valu_offset_64bit_12bit_neg_high_split0(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_64bit_12bit_neg_high_split0:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfff, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1]
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_64bit_12bit_neg_high_split0:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfff, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: flat_inst_valu_offset_64bit_12bit_neg_high_split0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfff, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
+; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_64bit_12bit_neg_high_split0:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -2401,16 +2005,6 @@ define i8 @flat_inst_valu_offset_64bit_12bit_neg_high_split0(ptr %p) {
 ; GFX9-GISEL-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-GISEL-LABEL: flat_inst_valu_offset_64bit_12bit_neg_high_split0:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfff, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-GISEL-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: flat_inst_valu_offset_64bit_12bit_neg_high_split0:
 ; GFX12-GISEL:       ; %bb.0:
@@ -2451,25 +2045,15 @@ define i8 @flat_inst_valu_offset_64bit_12bit_neg_high_split1(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_64bit_12bit_neg_high_split1:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1]
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_64bit_12bit_neg_high_split1:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: flat_inst_valu_offset_64bit_12bit_neg_high_split1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
+; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_64bit_12bit_neg_high_split1:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -2508,16 +2092,6 @@ define i8 @flat_inst_valu_offset_64bit_12bit_neg_high_split1(ptr %p) {
 ; GFX9-GISEL-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-GISEL-LABEL: flat_inst_valu_offset_64bit_12bit_neg_high_split1:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-GISEL-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: flat_inst_valu_offset_64bit_12bit_neg_high_split1:
 ; GFX12-GISEL:       ; %bb.0:
@@ -2558,25 +2132,15 @@ define i8 @flat_inst_valu_offset_64bit_13bit_neg_high_split0(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_64bit_13bit_neg_high_split0:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1fff, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1]
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_64bit_13bit_neg_high_split0:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1fff, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: flat_inst_valu_offset_64bit_13bit_neg_high_split0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1fff, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
+; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_64bit_13bit_neg_high_split0:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -2615,16 +2179,6 @@ define i8 @flat_inst_valu_offset_64bit_13bit_neg_high_split0(ptr %p) {
 ; GFX9-GISEL-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-GISEL-LABEL: flat_inst_valu_offset_64bit_13bit_neg_high_split0:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1fff, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-GISEL-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: flat_inst_valu_offset_64bit_13bit_neg_high_split0:
 ; GFX12-GISEL:       ; %bb.0:
@@ -2665,25 +2219,15 @@ define i8 @flat_inst_valu_offset_64bit_13bit_neg_high_split1(ptr %p) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_valu_offset_64bit_13bit_neg_high_split1:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x2000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1]
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_valu_offset_64bit_13bit_neg_high_split1:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x2000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: flat_inst_valu_offset_64bit_13bit_neg_high_split1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, 0x2000, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
+; GFX11-NEXT:    flat_load_u8 v0, v[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_valu_offset_64bit_13bit_neg_high_split1:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -2722,16 +2266,6 @@ define i8 @flat_inst_valu_offset_64bit_13bit_neg_high_split1(ptr %p) {
 ; GFX9-GISEL-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-GISEL-LABEL: flat_inst_valu_offset_64bit_13bit_neg_high_split1:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0x2000, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-GISEL-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: flat_inst_valu_offset_64bit_13bit_neg_high_split1:
 ; GFX12-GISEL:       ; %bb.0:
@@ -2776,25 +2310,15 @@ define amdgpu_kernel void @flat_inst_salu_offset_1(ptr %p) {
 ; GFX10-NEXT:    flat_store_byte v[0:1], v0
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_salu_offset_1:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] offset:1 glc dlc
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_salu_offset_1:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:1 glc dlc
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
+; GFX11-LABEL: flat_inst_salu_offset_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    flat_load_u8 v0, v[0:1] offset:1 glc dlc
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    flat_store_b8 v[0:1], v0
+; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_salu_offset_1:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -2815,16 +2339,6 @@ define amdgpu_kernel void @flat_inst_salu_offset_1(ptr %p) {
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX12-SDAG-FAKE16-NEXT:    s_endpgm
-;
-; GFX11-GISEL-LABEL: flat_inst_salu_offset_1:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX11-GISEL-NEXT:    flat_load_u8 v0, v[0:1] offset:1 glc dlc
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-GISEL-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: flat_inst_salu_offset_1:
 ; GFX12-GISEL:       ; %bb.0:
@@ -2866,25 +2380,15 @@ define amdgpu_kernel void @flat_inst_salu_offset_11bit_max(ptr %p) {
 ; GFX10-NEXT:    flat_store_byte v[0:1], v0
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_salu_offset_11bit_max:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] offset:2047 glc dlc
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_salu_offset_11bit_max:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:2047 glc dlc
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
+; GFX11-LABEL: flat_inst_salu_offset_11bit_max:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    flat_load_u8 v0, v[0:1] offset:2047 glc dlc
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    flat_store_b8 v[0:1], v0
+; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_salu_offset_11bit_max:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -2905,16 +2409,6 @@ define amdgpu_kernel void @flat_inst_salu_offset_11bit_max(ptr %p) {
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX12-SDAG-FAKE16-NEXT:    s_endpgm
-;
-; GFX11-GISEL-LABEL: flat_inst_salu_offset_11bit_max:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX11-GISEL-NEXT:    flat_load_u8 v0, v[0:1] offset:2047 glc dlc
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-GISEL-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: flat_inst_salu_offset_11bit_max:
 ; GFX12-GISEL:       ; %bb.0:
@@ -2956,25 +2450,15 @@ define amdgpu_kernel void @flat_inst_salu_offset_12bit_max(ptr %p) {
 ; GFX10-NEXT:    flat_store_byte v[0:1], v0
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_salu_offset_12bit_max:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] offset:4095 glc dlc
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_salu_offset_12bit_max:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:4095 glc dlc
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
+; GFX11-LABEL: flat_inst_salu_offset_12bit_max:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    flat_load_u8 v0, v[0:1] offset:4095 glc dlc
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    flat_store_b8 v[0:1], v0
+; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_salu_offset_12bit_max:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -2995,16 +2479,6 @@ define amdgpu_kernel void @flat_inst_salu_offset_12bit_max(ptr %p) {
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX12-SDAG-FAKE16-NEXT:    s_endpgm
-;
-; GFX11-GISEL-LABEL: flat_inst_salu_offset_12bit_max:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX11-GISEL-NEXT:    flat_load_u8 v0, v[0:1] offset:4095 glc dlc
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-GISEL-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: flat_inst_salu_offset_12bit_max:
 ; GFX12-GISEL:       ; %bb.0:
@@ -3048,29 +2522,17 @@ define amdgpu_kernel void @flat_inst_salu_offset_13bit_max(ptr %p) {
 ; GFX10-NEXT:    flat_store_byte v[0:1], v0
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_salu_offset_13bit_max:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0x1000, s0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, s1, s0
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] offset:4095 glc dlc
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_salu_offset_13bit_max:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0x1000, s0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, s1, s0
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:4095 glc dlc
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
+; GFX11-SDAG-LABEL: flat_inst_salu_offset_13bit_max:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, s0, 0x1000, s0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, s1, s0
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] offset:4095 glc dlc
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    flat_store_b8 v[0:1], v0
+; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_salu_offset_13bit_max:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -3160,29 +2622,17 @@ define amdgpu_kernel void @flat_inst_salu_offset_neg_11bit_max(ptr %p) {
 ; GFX10-NEXT:    flat_store_byte v[0:1], v0
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_salu_offset_neg_11bit_max:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0xfffff800, s0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] glc dlc
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_salu_offset_neg_11bit_max:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0xfffff800, s0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] glc dlc
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
+; GFX11-SDAG-LABEL: flat_inst_salu_offset_neg_11bit_max:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, s0, 0xfffff800, s0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] glc dlc
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    flat_store_b8 v[0:1], v0
+; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_salu_offset_neg_11bit_max:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -3272,29 +2722,17 @@ define amdgpu_kernel void @flat_inst_salu_offset_neg_12bit_max(ptr %p) {
 ; GFX10-NEXT:    flat_store_byte v[0:1], v0
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_salu_offset_neg_12bit_max:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0xfffff000, s0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] glc dlc
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_salu_offset_neg_12bit_max:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0xfffff000, s0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] glc dlc
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
+; GFX11-SDAG-LABEL: flat_inst_salu_offset_neg_12bit_max:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, s0, 0xfffff000, s0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] glc dlc
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    flat_store_b8 v[0:1], v0
+; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_salu_offset_neg_12bit_max:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -3384,29 +2822,17 @@ define amdgpu_kernel void @flat_inst_salu_offset_neg_13bit_max(ptr %p) {
 ; GFX10-NEXT:    flat_store_byte v[0:1], v0
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_salu_offset_neg_13bit_max:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0xffffe000, s0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] glc dlc
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_salu_offset_neg_13bit_max:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0xffffe000, s0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] glc dlc
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
+; GFX11-SDAG-LABEL: flat_inst_salu_offset_neg_13bit_max:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, s0, 0xffffe000, s0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] glc dlc
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    flat_store_b8 v[0:1], v0
+; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_salu_offset_neg_13bit_max:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -3494,25 +2920,15 @@ define amdgpu_kernel void @flat_inst_salu_offset_2x_11bit_max(ptr %p) {
 ; GFX10-NEXT:    flat_store_byte v[0:1], v0
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_salu_offset_2x_11bit_max:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] offset:4095 glc dlc
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_salu_offset_2x_11bit_max:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:4095 glc dlc
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
+; GFX11-LABEL: flat_inst_salu_offset_2x_11bit_max:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    flat_load_u8 v0, v[0:1] offset:4095 glc dlc
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    flat_store_b8 v[0:1], v0
+; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_salu_offset_2x_11bit_max:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -3533,16 +2949,6 @@ define amdgpu_kernel void @flat_inst_salu_offset_2x_11bit_max(ptr %p) {
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX12-SDAG-FAKE16-NEXT:    s_endpgm
-;
-; GFX11-GISEL-LABEL: flat_inst_salu_offset_2x_11bit_max:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX11-GISEL-NEXT:    flat_load_u8 v0, v[0:1] offset:4095 glc dlc
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-GISEL-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: flat_inst_salu_offset_2x_11bit_max:
 ; GFX12-GISEL:       ; %bb.0:
@@ -3586,29 +2992,17 @@ define amdgpu_kernel void @flat_inst_salu_offset_2x_12bit_max(ptr %p) {
 ; GFX10-NEXT:    flat_store_byte v[0:1], v0
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_salu_offset_2x_12bit_max:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0x1000, s0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, s1, s0
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] offset:4095 glc dlc
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_salu_offset_2x_12bit_max:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0x1000, s0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, s1, s0
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:4095 glc dlc
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
+; GFX11-SDAG-LABEL: flat_inst_salu_offset_2x_12bit_max:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, s0, 0x1000, s0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, s1, s0
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] offset:4095 glc dlc
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    flat_store_b8 v[0:1], v0
+; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_salu_offset_2x_12bit_max:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -3698,29 +3092,17 @@ define amdgpu_kernel void @flat_inst_salu_offset_2x_13bit_max(ptr %p) {
 ; GFX10-NEXT:    flat_store_byte v[0:1], v0
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_salu_offset_2x_13bit_max:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0x3000, s0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, s1, s0
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] offset:4095 glc dlc
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_salu_offset_2x_13bit_max:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0x3000, s0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, s1, s0
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:4095 glc dlc
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
+; GFX11-SDAG-LABEL: flat_inst_salu_offset_2x_13bit_max:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, s0, 0x3000, s0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, s1, s0
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] offset:4095 glc dlc
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    flat_store_b8 v[0:1], v0
+; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_salu_offset_2x_13bit_max:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -3810,29 +3192,17 @@ define amdgpu_kernel void @flat_inst_salu_offset_2x_neg_11bit_max(ptr %p) {
 ; GFX10-NEXT:    flat_store_byte v[0:1], v0
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_salu_offset_2x_neg_11bit_max:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0xfffff000, s0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] glc dlc
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_salu_offset_2x_neg_11bit_max:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0xfffff000, s0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] glc dlc
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
+; GFX11-SDAG-LABEL: flat_inst_salu_offset_2x_neg_11bit_max:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, s0, 0xfffff000, s0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] glc dlc
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    flat_store_b8 v[0:1], v0
+; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_salu_offset_2x_neg_11bit_max:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -3922,29 +3292,17 @@ define amdgpu_kernel void @flat_inst_salu_offset_2x_neg_12bit_max(ptr %p) {
 ; GFX10-NEXT:    flat_store_byte v[0:1], v0
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_salu_offset_2x_neg_12bit_max:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0xffffe000, s0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] glc dlc
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_salu_offset_2x_neg_12bit_max:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0xffffe000, s0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] glc dlc
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
+; GFX11-SDAG-LABEL: flat_inst_salu_offset_2x_neg_12bit_max:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, s0, 0xffffe000, s0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] glc dlc
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    flat_store_b8 v[0:1], v0
+; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_salu_offset_2x_neg_12bit_max:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -4034,29 +3392,17 @@ define amdgpu_kernel void @flat_inst_salu_offset_2x_neg_13bit_max(ptr %p) {
 ; GFX10-NEXT:    flat_store_byte v[0:1], v0
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_salu_offset_2x_neg_13bit_max:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0xffffc000, s0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] glc dlc
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_salu_offset_2x_neg_13bit_max:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0xffffc000, s0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] glc dlc
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
+; GFX11-SDAG-LABEL: flat_inst_salu_offset_2x_neg_13bit_max:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, s0, 0xffffc000, s0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] glc dlc
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    flat_store_b8 v[0:1], v0
+; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_salu_offset_2x_neg_13bit_max:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -4146,29 +3492,17 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_11bit_split0(ptr %p) {
 ; GFX10-NEXT:    flat_store_byte v[0:1], v0
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_salu_offset_64bit_11bit_split0:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0, s0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] offset:2047 glc dlc
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_salu_offset_64bit_11bit_split0:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0, s0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:2047 glc dlc
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
+; GFX11-SDAG-LABEL: flat_inst_salu_offset_64bit_11bit_split0:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, s0, 0, s0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] offset:2047 glc dlc
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    flat_store_b8 v[0:1], v0
+; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_salu_offset_64bit_11bit_split0:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -4265,29 +3599,17 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_11bit_split1(ptr %p) {
 ; GFX10-NEXT:    flat_store_byte v[0:1], v0
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_salu_offset_64bit_11bit_split1:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0, s0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] offset:2048 glc dlc
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_salu_offset_64bit_11bit_split1:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0, s0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:2048 glc dlc
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
+; GFX11-SDAG-LABEL: flat_inst_salu_offset_64bit_11bit_split1:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, s0, 0, s0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] offset:2048 glc dlc
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    flat_store_b8 v[0:1], v0
+; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_salu_offset_64bit_11bit_split1:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -4384,29 +3706,17 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_12bit_split0(ptr %p) {
 ; GFX10-NEXT:    flat_store_byte v[0:1], v0
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_salu_offset_64bit_12bit_split0:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0, s0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] offset:4095 glc dlc
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_salu_offset_64bit_12bit_split0:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0, s0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:4095 glc dlc
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
+; GFX11-SDAG-LABEL: flat_inst_salu_offset_64bit_12bit_split0:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, s0, 0, s0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] offset:4095 glc dlc
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    flat_store_b8 v[0:1], v0
+; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_salu_offset_64bit_12bit_split0:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -4504,29 +3814,17 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_12bit_split1(ptr %p) {
 ; GFX10-NEXT:    flat_store_byte v[0:1], v0
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_salu_offset_64bit_12bit_split1:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0x1000, s0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] glc dlc
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_salu_offset_64bit_12bit_split1:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0x1000, s0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] glc dlc
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
+; GFX11-SDAG-LABEL: flat_inst_salu_offset_64bit_12bit_split1:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, s0, 0x1000, s0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] glc dlc
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    flat_store_b8 v[0:1], v0
+; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_salu_offset_64bit_12bit_split1:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -4624,29 +3922,17 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_13bit_split0(ptr %p) {
 ; GFX10-NEXT:    flat_store_byte v[0:1], v0
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_salu_offset_64bit_13bit_split0:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0x1000, s0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] offset:4095 glc dlc
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_salu_offset_64bit_13bit_split0:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0x1000, s0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] offset:4095 glc dlc
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
+; GFX11-SDAG-LABEL: flat_inst_salu_offset_64bit_13bit_split0:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, s0, 0x1000, s0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] offset:4095 glc dlc
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    flat_store_b8 v[0:1], v0
+; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_salu_offset_64bit_13bit_split0:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -4744,29 +4030,17 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_13bit_split1(ptr %p) {
 ; GFX10-NEXT:    flat_store_byte v[0:1], v0
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_salu_offset_64bit_13bit_split1:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, s0, 0x2000, s0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] glc dlc
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_salu_offset_64bit_13bit_split1:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, s0, 0x2000, s0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] glc dlc
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
+; GFX11-SDAG-LABEL: flat_inst_salu_offset_64bit_13bit_split1:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, s0, 0x2000, s0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, s1, s0
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] glc dlc
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    flat_store_b8 v[0:1], v0
+; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_salu_offset_64bit_13bit_split1:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -4865,31 +4139,18 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_11bit_neg_high_split0(ptr
 ; GFX10-NEXT:    flat_store_byte v[0:1], v0
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_salu_offset_64bit_11bit_neg_high_split0:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, s1
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x7ff, s0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] glc dlc
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_salu_offset_64bit_11bit_neg_high_split0:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v1, s1
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x7ff, s0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] glc dlc
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
+; GFX11-SDAG-LABEL: flat_inst_salu_offset_64bit_11bit_neg_high_split0:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, 0x7ff, s0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] glc dlc
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    flat_store_b8 v[0:1], v0
+; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_salu_offset_64bit_11bit_neg_high_split0:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -4990,31 +4251,18 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_11bit_neg_high_split1(ptr
 ; GFX10-NEXT:    flat_store_byte v[0:1], v0
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_salu_offset_64bit_11bit_neg_high_split1:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, s1
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x800, s0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] glc dlc
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_salu_offset_64bit_11bit_neg_high_split1:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v1, s1
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x800, s0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] glc dlc
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
+; GFX11-SDAG-LABEL: flat_inst_salu_offset_64bit_11bit_neg_high_split1:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, 0x800, s0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] glc dlc
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    flat_store_b8 v[0:1], v0
+; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_salu_offset_64bit_11bit_neg_high_split1:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -5115,31 +4363,18 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_12bit_neg_high_split0(ptr
 ; GFX10-NEXT:    flat_store_byte v[0:1], v0
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_salu_offset_64bit_12bit_neg_high_split0:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, s1
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfff, s0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] glc dlc
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_salu_offset_64bit_12bit_neg_high_split0:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v1, s1
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfff, s0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] glc dlc
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
+; GFX11-SDAG-LABEL: flat_inst_salu_offset_64bit_12bit_neg_high_split0:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfff, s0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] glc dlc
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    flat_store_b8 v[0:1], v0
+; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_salu_offset_64bit_12bit_neg_high_split0:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -5240,31 +4475,18 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_12bit_neg_high_split1(ptr
 ; GFX10-NEXT:    flat_store_byte v[0:1], v0
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_salu_offset_64bit_12bit_neg_high_split1:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, s1
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, s0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] glc dlc
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_salu_offset_64bit_12bit_neg_high_split1:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v1, s1
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, s0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] glc dlc
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
+; GFX11-SDAG-LABEL: flat_inst_salu_offset_64bit_12bit_neg_high_split1:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, s0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] glc dlc
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    flat_store_b8 v[0:1], v0
+; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_salu_offset_64bit_12bit_neg_high_split1:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -5365,31 +4587,18 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_13bit_neg_high_split0(ptr
 ; GFX10-NEXT:    flat_store_byte v[0:1], v0
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_salu_offset_64bit_13bit_neg_high_split0:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, s1
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1fff, s0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] glc dlc
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_salu_offset_64bit_13bit_neg_high_split0:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v1, s1
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1fff, s0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] glc dlc
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
+; GFX11-SDAG-LABEL: flat_inst_salu_offset_64bit_13bit_neg_high_split0:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1fff, s0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] glc dlc
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    flat_store_b8 v[0:1], v0
+; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_salu_offset_64bit_13bit_neg_high_split0:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -5490,31 +4699,18 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_13bit_neg_high_split1(ptr
 ; GFX10-NEXT:    flat_store_byte v[0:1], v0
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-SDAG-TRUE16-LABEL: flat_inst_salu_offset_64bit_13bit_neg_high_split1:
-; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, s1
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x2000, s0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1] glc dlc
-; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX11-SDAG-FAKE16-LABEL: flat_inst_salu_offset_64bit_13bit_neg_high_split1:
-; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v1, s1
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x2000, s0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    flat_load_u8 v0, v[0:1] glc dlc
-; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    flat_store_b8 v[0:1], v0
-; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
+; GFX11-SDAG-LABEL: flat_inst_salu_offset_64bit_13bit_neg_high_split1:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, 0x2000, s0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
+; GFX11-SDAG-NEXT:    flat_load_u8 v0, v[0:1] glc dlc
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    flat_store_b8 v[0:1], v0
+; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-TRUE16-LABEL: flat_inst_salu_offset_64bit_13bit_neg_high_split1:
 ; GFX12-SDAG-TRUE16:       ; %bb.0:
@@ -5588,10 +4784,10 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_13bit_neg_high_split1(ptr
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GFX10-GISEL: {{.*}}
 ; GFX10-SDAG: {{.*}}
-; GFX11: {{.*}}
 ; GFX11-GISEL-FAKE16: {{.*}}
 ; GFX11-GISEL-TRUE16: {{.*}}
-; GFX11-SDAG: {{.*}}
+; GFX11-SDAG-FAKE16: {{.*}}
+; GFX11-SDAG-TRUE16: {{.*}}
 ; GFX12: {{.*}}
 ; GFX12-GISEL-FAKE16: {{.*}}
 ; GFX12-GISEL-TRUE16: {{.*}}

@@ -87,7 +87,7 @@ define amdgpu_kernel void @minimal_kernel_inputs_with_stack() #0 {
 }
 
 ; GCN-LABEL: {{^}}queue_ptr:
-; WORKAROUND-TRUE16-SDAG: global_load_d16_u8
+; WORKAROUND-TRUE16-SDAG: global_load_u8
 ; WORKAROUND-FAKE16: global_load_u8 v{{[0-9]+}},
 
 ; WORKAROUND: v_mov_b32_e32 [[V:v[0-9]+]], s15
@@ -129,9 +129,9 @@ define amdgpu_kernel void @queue_ptr() #1 {
 ; NOWORKAROUND: v_mov_b32_e32 [[V_Y:v[0-9]+]], s9
 ; NOWORKAROUND: v_mov_b32_e32 [[V_Z:v[0-9]+]], s10
 
-; WORKAROUND-TRUE16-SDAG: global_load_d16_u8 v{{[0-9]+}}, v{{[0-9]+}}, s[0:1]
-; WORKAROUND-TRUE16-SDAG: global_load_d16_u8 v{{[0-9]+}},
-; WORKAROUND-TRUE16-SDAG: global_load_d16_u8 v{{[0-9]+}}, v{{[0-9]+}}, s[4:5]
+; WORKAROUND-TRUE16-SDAG: global_load_u8 v{{[0-9]+}}, v{{[0-9]+}}, s[0:1]
+; WORKAROUND-TRUE16-SDAG: global_load_u8 v{{[0-9]+}},
+; WORKAROUND-TRUE16-SDAG: global_load_u8 v{{[0-9]+}}, v{{[0-9]+}}, s[4:5]
 
 ; WORKAROUND-FAKE16: global_load_u8 v{{[0-9]+}}, v{{[0-9]+}}, s[0:1]
 ; WORKAROUND-FAKE16: global_load_u8 v{{[0-9]+}},

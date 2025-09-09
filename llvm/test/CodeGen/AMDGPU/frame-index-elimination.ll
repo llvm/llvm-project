@@ -306,7 +306,7 @@ ret:
 
 ; GFX11-TRUE16-LABEL: tied_operand_test:
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
-; GFX11-TRUE16:     scratch_load_d16_b16 [[LDRESULT:v[0-9]+]], off, off
+; GFX11-TRUE16:     scratch_load_u16 [[LDRESULT:v[0-9]+]], off, off
 ; GFX11-TRUE16:     v_mov_b16_e32 [[C:v[0-9]]].{{(l|h)}}, 0x7b
 ; GFX11-TRUE16-DAG:     ds_store_b16 v{{[0-9]+}}, [[LDRESULT]]  offset:10
 ; GFX11-TRUE16-NEXT:    s_endpgm
