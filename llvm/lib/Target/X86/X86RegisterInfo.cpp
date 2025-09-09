@@ -1027,10 +1027,6 @@ unsigned X86RegisterInfo::findDeadCallerSavedReg(
     LRU.addLiveOuts(MBB);
     LRU.stepBackward(*MBBI);
 
-    // FIXME: Why do we need to special case this register? Is it missing from
-    // return implicit uses?
-    LRU.removeReg(X86::RIP);
-
     const TargetRegisterClass &RC =
         Is64Bit ? X86::GR64_NOSPRegClass : X86::GR32_NOSPRegClass;
     for (MCRegister Reg : RC) {
