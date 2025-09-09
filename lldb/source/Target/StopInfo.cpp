@@ -243,12 +243,11 @@ public:
     return m_description.c_str();
   }
 
-  uint32_t GetStopReasonDataCount() const override { 
+  uint32_t GetStopReasonDataCount() const override {
     lldb::BreakpointSiteSP bp_site_sp = GetBreakpointSiteSP();
     if (bp_site_sp)
       return bp_site_sp->GetNumberOfConstituents() * 2;
-    else
-      return 0; // Breakpoint must have cleared itself...
+    return 0; // Breakpoint must have cleared itself...
   }
 
   uint64_t GetStopReasonDataAtIndex(uint32_t idx) override {
@@ -656,7 +655,7 @@ private:
   BreakpointSiteSP GetBreakpointSiteSP() const {
     if (m_break_id == LLDB_INVALID_BREAK_ID)
       return {};
-  
+
     ThreadSP thread_sp = GetThread();
     if (!thread_sp)
       return {};
@@ -736,13 +735,12 @@ public:
   ~StopInfoWatchpoint() override = default;
 
   StopReason GetStopReason() const override { return eStopReasonWatchpoint; }
-  
+
   uint32_t GetStopReasonDataCount() const override { return 1; }
   uint64_t GetStopReasonDataAtIndex(uint32_t idx) override {
     if (idx == 0)
       return GetValue();
-    else
-      return 0;
+    return 0;
   }
 
   const char *GetDescription() override {
@@ -1184,13 +1182,12 @@ public:
   }
 
   bool ShouldSelect() const override { return IsShouldStopSignal(); }
-  
+
   uint32_t GetStopReasonDataCount() const override { return 1; }
   uint64_t GetStopReasonDataAtIndex(uint32_t idx) override {
     if (idx == 0)
       return GetValue();
-    else
-      return 0;
+    return 0;
   }
 
 private:
@@ -1225,7 +1222,7 @@ public:
     }
     return m_description.c_str();
   }
-  
+
   uint32_t GetStopReasonDataCount() const override { return 1; }
   uint64_t GetStopReasonDataAtIndex(uint32_t idx) override {
     if (idx == 0)
@@ -1505,8 +1502,7 @@ public:
   uint64_t GetStopReasonDataAtIndex(uint32_t idx) override {
     if (idx == 0)
       return GetValue();
-    else
-      return 0;
+    return 0;
   }
 
 protected:
