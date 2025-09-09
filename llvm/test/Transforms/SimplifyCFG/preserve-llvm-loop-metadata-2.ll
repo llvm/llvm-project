@@ -1,27 +1,27 @@
 ; RUN: opt -passes='simplifycfg' -S < %s | FileCheck %s
 
-; CHECK: br i1 %4, label %3, label %1, 
+; CHECK: br i1 %2, label %loop2, label %loop1
 ; CHECK-SAME: llvm.loop
 
 define void @test(i32 %1 ) {
 .critedge:
-  br label %107
+  br label %loop1 
 
-107:                                              ; preds = %147, .critedge 
+loop1:                                              ; preds = %loop2, .critedge 
   %111 = icmp eq i32 %1, 0
   br i1 %111, label %112, label %156
 
-112:                                              ; preds = %107
-  br label %147
+112:                                              ; preds = %loop1 
+  br label %loop2 
 
-147:                                              ; preds = %149, %112
+loop2:                                              ; preds = %149, %112
   %148 = phi i1 [ false, %149 ], [ true, %112 ]
-  br i1 %148, label %149, label %107, !llvm.loop !32
+  br i1 %148, label %149, label %loop1, !llvm.loop !32
 
-149:                                              ; preds = %147
-  br label %147
+149:                                              ; preds = %loop2 
+  br label %loop2 
 
-156:                                              ; preds = %107
+156:                                              ; preds = loop1 
    ret void
 } 
 
