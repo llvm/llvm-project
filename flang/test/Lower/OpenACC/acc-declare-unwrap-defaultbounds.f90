@@ -279,8 +279,8 @@ module acc_declare
 ! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) {
 ! CHECK:         %[[LOAD:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:         %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK:         %[[UPDATE:.*]] = acc.update_device varPtr(%[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK:         acc.update dataOperands(%[[UPDATE]] : !fir.heap<!fir.array<?xi32>>)
+! CHECK:         %[[GETDEVICEPTR:.*]] = acc.getdeviceptr varPtr(%[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>) -> !fir.heap<!fir.array<?xi32>> {dataClause = #acc<data_clause acc_create>, implicit = true, name = "a_desc", structured = false}
+! CHECK:         acc.declare_exit dataOperands(%[[GETDEVICEPTR]] : !fir.heap<!fir.array<?xi32>>)
 ! CHECK:         return
 ! CHECK:       }
 

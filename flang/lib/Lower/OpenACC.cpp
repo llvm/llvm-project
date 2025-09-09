@@ -337,15 +337,15 @@ static void createDeclareDeallocFuncWithArg(
     asFortran << accFirDescriptorPostfix.str();
   }
 
-  mlir::acc::UpdateDeviceOp updateDeviceOp =
-      createDataEntryOp<mlir::acc::UpdateDeviceOp>(
+  // End the structured declare region for the descriptor or its payload
+  // using declare_exit instead of issuing an update.
+  mlir::acc::GetDevicePtrOp postEntryOp =
+      createDataEntryOp<mlir::acc::GetDevicePtrOp>(
           builder, loc, var, asFortran, bounds,
-          /*structured=*/false, /*implicit=*/true,
-          mlir::acc::DataClause::acc_update_device, var.getType(),
+          /*structured=*/false, /*implicit=*/true, clause, var.getType(),
           /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
-  llvm::SmallVector<int32_t> operandSegments{0, 0, 0, 1};
-  llvm::SmallVector<mlir::Value> operands{updateDeviceOp.getResult()};
-  createSimpleOp<mlir::acc::UpdateOp>(builder, loc, operands, operandSegments);
+  mlir::acc::DeclareExitOp::create(builder, loc, mlir::Value{},
+                                   mlir::ValueRange(postEntryOp.getAccVar()));
   modBuilder.setInsertionPointAfter(postDeallocOp);
   builder.restoreInsertionPoint(crtInsPt);
 }
