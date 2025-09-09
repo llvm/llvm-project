@@ -221,6 +221,16 @@ inline uint64_t decodeULEB128AndIncUnsafe(const uint8_t *&p) {
   return decodeULEB128AndInc(p, nullptr);
 }
 
+/// Overwrite a ULEB128 value and keep the original length.
+inline uint64_t overwriteULEB128(uint8_t *bufLoc, uint64_t val) {
+  while (*bufLoc & 0x80) {
+    *bufLoc++ = 0x80 | (val & 0x7f);
+    val >>= 7;
+  }
+  *bufLoc = val;
+  return val;
+}
+
 enum class LEB128Sign { Unsigned, Signed };
 
 template <LEB128Sign Sign, typename T, typename U = char,
