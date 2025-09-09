@@ -130,7 +130,8 @@ class XX3Form_XTBp5_M2<bits<9> xo, dag OOL, dag IOL, string asmstr,
 
   let Pattern = pattern;
 
-  let Inst{6...10} = XTp;
+  let Inst{6...9} = XTp{3...0};
+  let Inst {10} = XTp{4};
   let Inst{15} = M{0};
   let Inst{16...19} = XBp{3...0};
   let Inst{20} = M{1};
