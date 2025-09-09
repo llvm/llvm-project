@@ -3044,38 +3044,6 @@ hlfir::Entity Fortran::lower::PreparedActualArgument::getActual(
   return hlfir::Entity{addr};
 }
 
-mlir::Value Fortran::lower::PreparedActualArgument::getOptionalValue(
-    mlir::Location loc, fir::FirOpBuilder &builder) const {
-  mlir::Type eleType;
-  if (auto *actualEntity = std::get_if<hlfir::Entity>(&actual))
-    eleType = hlfir::getFortranElementType(actualEntity->getType());
-  else
-    TODO(loc, "compute element type from hlfir::ElementalAddrOp");
-
-  // For an elemental call, getActual() may produce
-  // a designator denoting the array element to be passed
-  // to the subprogram. If the actual array is dynamically
-  // optional the designator must be generated under
-  // isPresent check (see also genIntrinsicRefCore).
-  return builder
-      .genIfOp(loc, {eleType}, getIsPresent(),
-               /*withElseRegion=*/true)
-      .genThen([&]() {
-        hlfir::Entity actual = getActual(loc, builder);
-        assert(eleType == actual.getFortranElementType() &&
-               "result type mismatch in genOptionalValue");
-        assert(actual.isScalar() && fir::isa_trivial(eleType) &&
-               "must be a numerical or logical scalar");
-        hlfir::Entity val = hlfir::loadTrivialScalar(loc, builder, actual);
-        fir::ResultOp::create(builder, loc, val);
-      })
-      .genElse([&]() {
-        mlir::Value zero = fir::factory::createZeroValue(builder, loc, eleType);
-        fir::ResultOp::create(builder, loc, zero);
-      })
-      .getResults()[0];
-}
-
 bool Fortran::lower::isIntrinsicModuleProcRef(
     const Fortran::evaluate::ProcedureRef &procRef) {
   const Fortran::semantics::Symbol *symbol = procRef.proc().GetSymbol();

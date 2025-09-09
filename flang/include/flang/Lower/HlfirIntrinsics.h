@@ -58,10 +58,13 @@ struct PreparedActualArgument {
   /// call, the current element value will be returned.
   hlfir::Entity getActual(mlir::Location loc, fir::FirOpBuilder &builder) const;
 
-  /// Lower the actual argument that needs to be handled as dynamically
-  /// optional Value.
-  mlir::Value getOptionalValue(mlir::Location loc,
-                               fir::FirOpBuilder &builder) const;
+  mlir::Type getFortranElementType() {
+    if (auto *actualEntity = std::get_if<hlfir::Entity>(&actual))
+      return hlfir::getFortranElementType(actualEntity->getType());
+    mlir::Value entity =
+        std::get<hlfir::ElementalAddrOp>(actual).getElementEntity();
+    return hlfir::getFortranElementType(entity.getType());
+  }
 
   void derefPointersAndAllocatables(mlir::Location loc,
                                     fir::FirOpBuilder &builder) {
