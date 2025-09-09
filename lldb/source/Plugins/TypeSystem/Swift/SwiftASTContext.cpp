@@ -1033,6 +1033,9 @@ void SwiftASTContext::SetCompilerInvocationLLDBOverrides() {
       m_compiler_invocation_ap->getIRGenOptions();
   ir_gen_opts.OutputKind = swift::IRGenOutputKind::Module;
   ir_gen_opts.UseJIT = true;
+  // In the JIT we don't benefit from the indexed indirections in DWARF 5.
+  ir_gen_opts.DWARFVersion = 4;
+  ir_gen_opts.DebugInfoFormat = swift::IRGenDebugInfoFormat::DWARF;
   // Allow deserializing @_implementationOnly dependencies
   // to avoid crashing due to module recovery issues.
   swift::LangOptions &lang_opts = m_compiler_invocation_ap->getLangOptions();
@@ -3037,6 +3040,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
     // perform implicit Clang module imports. They will always use the SDK
     // version as deployment target, even if that is in the future. To
     // avoid building modules twice, match this behavior.
+    auto &ci_args = swift_ast_sp->GetClangImporterOptions().ExtraArgs;
     auto darwin_sdk_info = clang::parseDarwinSDKInfo(
         *llvm::vfs::getRealFileSystem(), swift_ast_sp->GetPlatformSDKPath());
     if (!darwin_sdk_info)
@@ -3045,10 +3049,11 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
       auto sdk_triple = triple;
       sdk_triple.setOSName(std::string(triple.getOSTypeName(triple.getOS())) +
                            (*darwin_sdk_info)->getVersion().getAsString());
-      auto &ci_args = swift_ast_sp->GetClangImporterOptions().ExtraArgs;
       ci_args.push_back("-target");
       ci_args.push_back(sdk_triple.str());
     }
+    ci_args.push_back("-gmodules");
+    ci_args.push_back("-g");
   }
 
   std::vector<swift::PluginSearchOption> plugin_search_options;
@@ -3190,7 +3195,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   {
     auto ast_context = swift_ast_sp->GetASTContext();
     if (!ast_context) {
-      logError("couldn't initialize Swift cxompiler");
+      logError("couldn't initialize Swift compiler");
      return {};
     }
 
