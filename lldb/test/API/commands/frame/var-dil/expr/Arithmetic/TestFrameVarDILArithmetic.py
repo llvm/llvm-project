@@ -30,6 +30,8 @@ class TestFrameVarDILArithmetic(TestBase):
         self.expect_var_path("-s", value="-10", type="int")
         self.expect_var_path("+us", value="1", type="int")
         self.expect_var_path("-us", value="-1", type="int")
+        self.expect_var_path("+ref", value="2", type="int")
+        self.expect_var_path("-ref", value="-2", type="int")
         self.expect_var_path("+0.0", value="0")
         self.expect_var_path("-0.0", value="-0")
         self.expect_var_path("+enum_one", value="1")
@@ -43,9 +45,10 @@ class TestFrameVarDILArithmetic(TestBase):
         self.expect_var_path("+bitfield.c", value="3", type="unsigned int")
         self.expect_var_path("+bitfield.d", value="4", type="uint64_t")
         self.expect_var_path("+array", type="int *")
-        self.expect_var_path("+p", type="int *")
+        self.expect_var_path("+array_ref", type="int *")
+        self.expect_var_path("+ptr", type="int *")
         self.expect(
-            "frame var -- '-p'",
+            "frame var -- '-ptr'",
             error=True,
             substrs=["invalid argument type 'int *' to unary expression"],
         )

@@ -5,9 +5,10 @@ int main(int argc, char **argv) {
   unsigned short us = 1;
 
   int x = 2;
-  int &r = x;
-  int *p = &x;
+  int &ref = x;
+  int *ptr = &x;
   int array[] = {1};
+  int(&array_ref)[1] = array;
   enum Enum { kZero, kOne } enum_one = kOne;
   wchar_t wchar = 1;
   char16_t char16 = 2;
