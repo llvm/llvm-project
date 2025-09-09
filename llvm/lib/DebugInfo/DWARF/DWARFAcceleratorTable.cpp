@@ -322,20 +322,24 @@ void AppleAcceleratorTable::Iterator::prepareNextEntryOrEnd() {
 
 void AppleAcceleratorTable::Iterator::prepareNextStringOrEnd() {
   const AppleAcceleratorTable &Table = getTable();
-  // Always start looking for strings using a valid offset from the Offsets
-  // table. Entries are not always consecutive.
-  std::optional<uint64_t> OptOffset = Table.readIthOffset(OffsetIdx++);
-  if (!OptOffset)
-    return setToEnd();
-  Offset = *OptOffset;
+  if (Offset == 0) {
+    // Always start looking for strings using a valid offset from the Offsets
+    // table. Entries are not always consecutive.
+    std::optional<uint64_t> OptOffset = Table.readIthOffset(OffsetIdx++);
+    if (!OptOffset)
+      return setToEnd();
+    Offset = *OptOffset;
+  }
   std::optional<uint32_t> StrOffset = Table.readStringOffsetAt(Offset);
   if (!StrOffset)
     return setToEnd();
 
-  // A zero denotes the end of the collision list. Read the next string
-  // again.
-  if (*StrOffset == 0)
+  // A zero denotes the end of the collision list. Skip to the next offset
+  // in the offsets table.
+  if (*StrOffset == 0) {
+    Offset = 0;
     return prepareNextStringOrEnd();
+  }
   Current.StrOffset = *StrOffset;
 
   std::optional<uint32_t> MaybeNumEntries = Table.readU32FromAccel(Offset);
