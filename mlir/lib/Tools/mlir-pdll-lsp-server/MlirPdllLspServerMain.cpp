@@ -9,16 +9,13 @@
 #include "mlir/Tools/mlir-pdll-lsp-server/MlirPdllLspServerMain.h"
 #include "LSPServer.h"
 #include "PDLLServer.h"
+#include "mlir/Tools/lsp-server-support/Logging.h"
+#include "mlir/Tools/lsp-server-support/Transport.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/LSP/Logging.h"
-#include "llvm/Support/LSP/Transport.h"
 #include "llvm/Support/Program.h"
 
 using namespace mlir;
 using namespace mlir::lsp;
-
-using llvm::lsp::JSONStreamStyle;
-using llvm::lsp::Logger;
 
 LogicalResult mlir::MlirPdllLspServerMain(int argc, char **argv) {
   llvm::cl::opt<JSONStreamStyle> inputStyle{
@@ -75,8 +72,7 @@ LogicalResult mlir::MlirPdllLspServerMain(int argc, char **argv) {
 
   // Configure the transport used for communication.
   llvm::sys::ChangeStdinToBinary();
-  llvm::lsp::JSONTransport transport(stdin, llvm::outs(), inputStyle,
-                                     prettyPrint);
+  JSONTransport transport(stdin, llvm::outs(), inputStyle, prettyPrint);
 
   // Configure the servers and start the main language server.
   PDLLServer::Options options(compilationDatabases, extraIncludeDirs);

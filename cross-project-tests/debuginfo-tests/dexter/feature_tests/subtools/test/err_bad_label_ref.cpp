@@ -2,7 +2,7 @@
 //      Check that referencing an undefined label gives a useful error message.
 //
 // RUN: %dexter_regression_test_cxx_build %s -o %t
-// RUN: not %dexter_regression_test_run --binary %t -v -- %s | FileCheck --dump-input-context=999999999 %s --match-full-lines
+// RUN: not %dexter_regression_test_run --binary %t -v -- %s | FileCheck %s --match-full-lines
 //
 // CHECK: parser error:{{.*}}err_bad_label_ref.cpp(15): Unresolved label: 'label_does_not_exist'
 // CHECK-NEXT: {{Dex}}ExpectWatchValue('result', '0', on_line=ref('label_does_not_exist'))

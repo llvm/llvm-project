@@ -9,7 +9,7 @@
 // UNSUPPORTED: system-windows
 //
 // RUN: %dexter_regression_test_cxx_build %s -o %t
-// RUN: %dexter_regression_test_run -v --binary %t -- %s 2>&1 | FileCheck --dump-input-context=999999999 %s
+// RUN: %dexter_regression_test_run -v --binary %t -- %s 2>&1 | FileCheck %s
 
 int g = 0;
 int c(int) {

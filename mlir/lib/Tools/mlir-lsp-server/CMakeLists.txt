@@ -13,5 +13,4 @@ add_mlir_library(MLIRLspServerLib
   MLIRIR
   MLIRLspServerSupportLib
   MLIRParser
-  LLVMSupportLSP
   )
