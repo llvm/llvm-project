@@ -54,9 +54,6 @@ add_mlir_python_common_capi_library(StandalonePythonCAPI
   RELATIVE_INSTALL_ROOT "../../../.."
   DECLARED_SOURCES
     StandalonePythonSources
-    # TODO: Remove this in favor of showing fine grained registration once
-    # available.
-    MLIRPythonExtension.RegisterEverything
     MLIRPythonSources.Core
     MLIRPythonSources.Dialects.builtin
 )
@@ -70,9 +67,6 @@ add_mlir_python_modules(StandalonePythonModules
   INSTALL_PREFIX "${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}"
   DECLARED_SOURCES
     StandalonePythonSources
-    # TODO: Remove this in favor of showing fine grained registration once
-    # available.
-    MLIRPythonExtension.RegisterEverything
     MLIRPythonSources.Core
     MLIRPythonSources.Dialects.builtin
   COMMON_CAPI_LINK_LIBS
