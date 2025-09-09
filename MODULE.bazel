@@ -12,3 +12,7 @@ bazel_dep(name = "platforms", version = "0.0.11")
 bazel_dep(name = "rules_cc", version = "0.1.1")
 bazel_dep(name = "rules_python", version = "1.2.0")
 bazel_dep(name = "rules_shell", version = "0.3.0")
+bazel_dep(name = "zlib", version = "1.3.1", repo_name = "llvm_zlib")
+bazel_dep(name = "zstd", version = "1.5.6", repo_name = "llvm_zstd")
+bazel_dep(name = "apple_support", version = "1.11.1", repo_name = "build_bazel_apple_support")
+

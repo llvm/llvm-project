@@ -3507,13 +3507,13 @@ cc_library(
     # We want dependencies of this library to have -DHAVE_LIBPFM conditionally
     # defined, so we set `defines` instead of `copts`.
     defines = select({
-        ":pfm_external": ["HAVE_LIBPFM=1"],
-        ":pfm_system": ["HAVE_LIBPFM=1"],
+        #":pfm_external": ["HAVE_LIBPFM=1"],
+        #":pfm_system": ["HAVE_LIBPFM=1"],
         "//conditions:default": [],
     }),
     deps = select({
-        ":pfm_external": ["@pfm//:pfm_external"],
-        ":pfm_system": ["@pfm//:pfm_system"],
+        #":pfm_external": ["@pfm//:pfm_external"],
+        #":pfm_system": ["@pfm//:pfm_system"],
         "//conditions:default": [],
     }),
 )
