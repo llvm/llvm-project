@@ -6504,7 +6504,7 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
 
   // BB overflow.no:
   Builder.SetInsertPoint(NoOverflowBB);
-    Value *ExtLoLHS, *ExtLoRHS;
+  Value *ExtLoLHS, *ExtLoRHS;
   if (IsSigned) {
     ExtLoLHS = Builder.CreateSExt(LoLHS, Ty, "lo.lhs.ext");
     ExtLoRHS = Builder.CreateSExt(LoRHS, Ty, "lo.rhs.ext");
