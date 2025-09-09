@@ -276,61 +276,61 @@ cbuffer CB_C {
 // CHECK: define internal void @_init_buffer_CBScalars.cb()
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %CBScalars.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CBScalars, 56, 0, 8, 16, 24, 32, 36, 40, 48))
-// CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBScalarss_56_0_8_16_24_32_36_40_48tt(i32 5, i32 1, i32 1, i32 0, i1 false, ptr @CBScalars.str)
+// CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBScalarss_56_0_8_16_24_32_36_40_48tt(i32 5, i32 1, i32 1, i32 0, ptr @CBScalars.str)
 // CHECK-NEXT: store target("dx.CBuffer", target("dx.Layout", %__cblayout_CBScalars, 56, 0, 8, 16, 24, 32, 36, 40, 48)) %CBScalars.cb_h, ptr @CBScalars.cb, align 4
 
 // CHECK: define internal void @_init_buffer_CBVectors.cb()
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %CBVectors.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CBVectors, 136, 0, 16, 40, 48, 80, 96, 112))
-// CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBVectorss_136_0_16_40_48_80_96_112tt(i32 0, i32 0, i32 1, i32 0, i1 false, ptr @CBVectors.str)
+// CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBVectorss_136_0_16_40_48_80_96_112tt(i32 0, i32 0, i32 1, i32 0, ptr @CBVectors.str)
 // CHECK-NEXT: store target("dx.CBuffer", target("dx.Layout", %__cblayout_CBVectors, 136, 0, 16, 40, 48, 80, 96, 112)) %CBVectors.cb_h, ptr @CBVectors.cb, align 4
 
 // CHECK: define internal void @_init_buffer_CBArrays.cb()
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %CBArrays.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CBArrays, 708, 0, 48, 112, 176, 224, 608, 624, 656))
-// CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBArrayss_708_0_48_112_176_224_608_624_656tt(i32 0, i32 2, i32 1, i32 0, i1 false, ptr @CBArrays.str)
+// CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBArrayss_708_0_48_112_176_224_608_624_656tt(i32 0, i32 2, i32 1, i32 0, ptr @CBArrays.str)
 // CHECK-NEXT: store target("dx.CBuffer", target("dx.Layout", %__cblayout_CBArrays, 708, 0, 48, 112, 176, 224, 608, 624, 656)) %CBArrays.cb_h, ptr @CBArrays.cb, align 4
 
 // CHECK: define internal void @_init_buffer_CBTypedefArray.cb()
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %CBTypedefArray.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CBTypedefArray, 128, 0, 64))
-// CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBTypedefArrays_128_0_64tt(i32 1, i32 2, i32 1, i32 0, i1 false, ptr @CBTypedefArray.str)
+// CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBTypedefArrays_128_0_64tt(i32 1, i32 2, i32 1, i32 0, ptr @CBTypedefArray.str)
 // CHECK-NEXT: store target("dx.CBuffer", target("dx.Layout", %__cblayout_CBTypedefArray, 128, 0, 64)) %CBTypedefArray.cb_h, ptr @CBTypedefArray.cb, align 4
 
 // CHECK: define internal void @_init_buffer_CBStructs.cb()
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %CBStructs.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CBStructs, 246, 0, 16, 32, 64, 144, 238, 240))
-// CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBStructss_246_0_16_32_64_144_238_240tt(i32 2, i32 0, i32 1, i32 0, i1 false, ptr @CBStructs.str)
+// CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBStructss_246_0_16_32_64_144_238_240tt(i32 2, i32 0, i32 1, i32 0, ptr @CBStructs.str)
 // CHECK-NEXT:   store target("dx.CBuffer", target("dx.Layout", %__cblayout_CBStructs, 246, 0, 16, 32, 64, 144, 238, 240)) %CBStructs.cb_h, ptr @CBStructs.cb, align 4
 
 // CHECK: define internal void @_init_buffer_CBClasses.cb()
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %CBClasses.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CBClasses, 260, 0, 16, 32, 112))
-// CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBClassess_260_0_16_32_112tt(i32 3, i32 0, i32 1, i32 0, i1 false, ptr @CBClasses.str)
+// CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBClassess_260_0_16_32_112tt(i32 3, i32 0, i32 1, i32 0, ptr @CBClasses.str)
 // CHECK-NEXT: store target("dx.CBuffer", target("dx.Layout", %__cblayout_CBClasses, 260, 0, 16, 32, 112)) %CBClasses.cb_h, ptr @CBClasses.cb, align 4
 
 // CHECK: define internal void @_init_buffer_CBMix.cb()
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %CBMix.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CBMix, 170, 0, 24, 32, 120, 128, 136, 144, 152, 160, 168))
-// CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBMixs_170_0_24_32_120_128_136_144_152_160_168tt(i32 4, i32 0, i32 1, i32 0, i1 false, ptr @CBMix.str)
+// CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBMixs_170_0_24_32_120_128_136_144_152_160_168tt(i32 4, i32 0, i32 1, i32 0, ptr @CBMix.str)
 // CHECK-NEXT: store target("dx.CBuffer", target("dx.Layout", %__cblayout_CBMix, 170, 0, 24, 32, 120, 128, 136, 144, 152, 160, 168)) %CBMix.cb_h, ptr @CBMix.cb, align 4
 
 // CHECK: define internal void @_init_buffer_CB_A.cb()
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %CB_A.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB_A, 188, 0, 32, 76, 80, 120, 128, 144, 160, 182))
-// CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_CB_As_188_0_32_76_80_120_128_144_160_182tt(i32 5, i32 0, i32 1, i32 0, i1 false, ptr @CB_A.str)
+// CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_CB_As_188_0_32_76_80_120_128_144_160_182tt(i32 5, i32 0, i32 1, i32 0, ptr @CB_A.str)
 // CHECK-NEXT: store target("dx.CBuffer", target("dx.Layout", %__cblayout_CB_A, 188, 0, 32, 76, 80, 120, 128, 144, 160, 182)) %CB_A.cb_h, ptr @CB_A.cb, align 4
 
 // CHECK: define internal void @_init_buffer_CB_B.cb()
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %CB_B.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB_B, 94, 0, 88))
-// CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_CB_Bs_94_0_88tt(i32 6, i32 0, i32 1, i32 0, i1 false, ptr @CB_B.str)
+// CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_CB_Bs_94_0_88tt(i32 6, i32 0, i32 1, i32 0, ptr @CB_B.str)
 // CHECK-NEXT: store target("dx.CBuffer", target("dx.Layout", %__cblayout_CB_B, 94, 0, 88)) %CB_B.cb_h, ptr @CB_B.cb, align 4
 
 // CHECK: define internal void @_init_buffer_CB_C.cb()
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %CB_C.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB_C, 400, 0, 16, 112, 128, 392))
-// CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_CB_Cs_400_0_16_112_128_392tt(i32 7, i32 0, i32 1, i32 0, i1 false, ptr @CB_C.str)
+// CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_CB_Cs_400_0_16_112_128_392tt(i32 7, i32 0, i32 1, i32 0, ptr @CB_C.str)
 // CHECK-NEXT: store target("dx.CBuffer", target("dx.Layout", %__cblayout_CB_C, 400, 0, 16, 112, 128, 392)) %CB_C.cb_h, ptr @CB_C.cb, align 4
 
 RWBuffer<float> Buf;

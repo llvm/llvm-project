@@ -132,7 +132,7 @@ public:
 
   unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const override;
 
-  bool preferAlternateOpcodeVectorization() const override { return false; }
+  bool preferAlternateOpcodeVectorization() const override;
 
   bool preferEpilogueVectorization() const override {
     // Epilogue vectorization is usually unprofitable - tail folding or
@@ -176,6 +176,10 @@ public:
   InstructionCost
   getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                         TTI::TargetCostKind CostKind) const override;
+
+  InstructionCost
+  getAddressComputationCost(Type *PTy, ScalarEvolution *SE, const SCEV *Ptr,
+                            TTI::TargetCostKind CostKind) const override;
 
   InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
@@ -242,6 +246,11 @@ public:
                                      TTI::TargetCostKind CostKind,
                                      unsigned Index, const Value *Op0,
                                      const Value *Op1) const override;
+
+  InstructionCost
+  getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
+                                   TTI::TargetCostKind CostKind,
+                                   unsigned Index) const override;
 
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
@@ -367,6 +376,8 @@ public:
 
     switch (RdxDesc.getRecurrenceKind()) {
     case RecurKind::Add:
+    case RecurKind::Sub:
+    case RecurKind::AddChainWithSubs:
     case RecurKind::And:
     case RecurKind::Or:
     case RecurKind::Xor:

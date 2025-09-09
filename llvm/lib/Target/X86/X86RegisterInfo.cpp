@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86RegisterInfo.h"
-#include "MCTargetDesc/X86BaseInfo.h"
 #include "X86FrameLowering.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
@@ -205,15 +204,7 @@ X86RegisterInfo::getPointerRegClass(const MachineFunction &MF,
     // we can still use 64-bit register as long as we know the high bits
     // are zeros.
     // Reflect that in the returned register class.
-    if (Is64Bit) {
-      // When the target also allows 64-bit frame pointer and we do have a
-      // frame, this is fine to use it for the address accesses as well.
-      const X86FrameLowering *TFI = getFrameLowering(MF);
-      return TFI->hasFP(MF) && TFI->Uses64BitFramePtr
-                 ? &X86::LOW32_ADDR_ACCESS_RBPRegClass
-                 : &X86::LOW32_ADDR_ACCESSRegClass;
-    }
-    return &X86::GR32RegClass;
+    return Is64Bit ? &X86::LOW32_ADDR_ACCESSRegClass : &X86::GR32RegClass;
   case 1: // Normal GPRs except the stack pointer (for encoding reasons).
     if (Subtarget.isTarget64BitLP64())
       return &X86::GR64_NOSPRegClass;
@@ -1011,8 +1002,6 @@ unsigned X86RegisterInfo::findDeadCallerSavedReg(
   if (MF->callsEHReturn())
     return 0;
 
-  const TargetRegisterClass &AvailableRegs = *getGPRsForTailCall(*MF);
-
   if (MBBI == MBB.end())
     return 0;
 
@@ -1034,20 +1023,16 @@ unsigned X86RegisterInfo::findDeadCallerSavedReg(
   case X86::TCRETURNmi64:
   case X86::EH_RETURN:
   case X86::EH_RETURN64: {
-    SmallSet<uint16_t, 8> Uses;
-    for (MachineOperand &MO : MBBI->operands()) {
-      if (!MO.isReg() || MO.isDef())
-        continue;
-      Register Reg = MO.getReg();
-      if (!Reg)
-        continue;
-      for (MCRegAliasIterator AI(Reg, this, true); AI.isValid(); ++AI)
-        Uses.insert(*AI);
-    }
+    LiveRegUnits LRU(*this);
+    LRU.addLiveOuts(MBB);
+    LRU.stepBackward(*MBBI);
 
-    for (auto CS : AvailableRegs)
-      if (!Uses.count(CS) && CS != X86::RIP && CS != X86::RSP && CS != X86::ESP)
-        return CS;
+    const TargetRegisterClass &RC =
+        Is64Bit ? X86::GR64_NOSPRegClass : X86::GR32_NOSPRegClass;
+    for (MCRegister Reg : RC) {
+      if (LRU.available(Reg))
+        return Reg;
+    }
   }
   }
 

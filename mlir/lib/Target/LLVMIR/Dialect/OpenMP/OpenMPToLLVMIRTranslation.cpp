@@ -2559,7 +2559,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
 
   // Initialize linear variables and linear step
   LinearClauseProcessor linearClauseProcessor;
-  if (wsloopOp.getLinearVars().size()) {
+  if (!wsloopOp.getLinearVars().empty()) {
     for (mlir::Value linearVar : wsloopOp.getLinearVars())
       linearClauseProcessor.createLinearVar(builder, moduleTranslation,
                                             linearVar);
@@ -2576,7 +2576,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::CanonicalLoopInfo *loopInfo = findCurrentLoopInfo(moduleTranslation);
 
   // Emit Initialization and Update IR for linear variables
-  if (wsloopOp.getLinearVars().size()) {
+  if (!wsloopOp.getLinearVars().empty()) {
     llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterBarrierIP =
         linearClauseProcessor.initLinearVar(builder, moduleTranslation,
                                             loopInfo->getPreheader());
@@ -2602,7 +2602,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
     return failure();
 
   // Emit finalization and in-place rewrites for linear vars.
-  if (wsloopOp.getLinearVars().size()) {
+  if (!wsloopOp.getLinearVars().empty()) {
     llvm::OpenMPIRBuilder::InsertPointTy oldIP = builder.saveIP();
     assert(loopInfo->getLastIter() &&
            "`lastiter` in CanonicalLoopInfo is nullptr");
@@ -2893,6 +2893,12 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
     alignment = builder.getInt64(intAttr.getInt());
     assert(ty->isPointerTy() && "Invalid type for aligned variable");
     assert(alignment && "Invalid alignment value");
+
+    // Check if the alignment value is not a power of 2. If so, skip emitting
+    // alignment.
+    if (!intAttr.getValue().isPowerOf2())
+      continue;
+
     auto curInsert = builder.saveIP();
     builder.SetInsertPoint(sourceBlock);
     llvmVal = builder.CreateLoad(ty, llvmVal);
@@ -3191,7 +3197,7 @@ convertOmpAtomicWrite(Operation &opInst, llvm::IRBuilderBase &builder,
 
 /// Converts an LLVM dialect binary operation to the corresponding enum value
 /// for `atomicrmw` supported binary operation.
-llvm::AtomicRMWInst::BinOp convertBinOpToAtomic(Operation &op) {
+static llvm::AtomicRMWInst::BinOp convertBinOpToAtomic(Operation &op) {
   return llvm::TypeSwitch<Operation *, llvm::AtomicRMWInst::BinOp>(&op)
       .Case([&](LLVM::AddOp) { return llvm::AtomicRMWInst::BinOp::Add; })
       .Case([&](LLVM::SubOp) { return llvm::AtomicRMWInst::BinOp::Sub; })
@@ -3205,10 +3211,10 @@ llvm::AtomicRMWInst::BinOp convertBinOpToAtomic(Operation &op) {
       .Default(llvm::AtomicRMWInst::BinOp::BAD_BINOP);
 }
 
-void extractAtomicControlFlags(omp::AtomicUpdateOp atomicUpdateOp,
-                               bool &isIgnoreDenormalMode,
-                               bool &isFineGrainedMemory,
-                               bool &isRemoteMemory) {
+static void extractAtomicControlFlags(omp::AtomicUpdateOp atomicUpdateOp,
+                                      bool &isIgnoreDenormalMode,
+                                      bool &isFineGrainedMemory,
+                                      bool &isRemoteMemory) {
   isIgnoreDenormalMode = false;
   isFineGrainedMemory = false;
   isRemoteMemory = false;
@@ -3666,7 +3672,8 @@ struct MapInfoData : MapInfosTy {
 };
 } // namespace
 
-uint64_t getArrayElementSizeInBits(LLVM::LLVMArrayType arrTy, DataLayout &dl) {
+static uint64_t getArrayElementSizeInBits(LLVM::LLVMArrayType arrTy,
+                                          DataLayout &dl) {
   if (auto nestedArrTy = llvm::dyn_cast_if_present<LLVM::LLVMArrayType>(
           arrTy.getElementType()))
     return getArrayElementSizeInBits(nestedArrTy, dl);
@@ -3683,10 +3690,12 @@ uint64_t getArrayElementSizeInBits(LLVM::LLVMArrayType arrTy, DataLayout &dl) {
 // structures.
 // This function is somewhat equivalent to Clang's getExprTypeSize inside of
 // CGOpenMPRuntime.cpp.
-llvm::Value *getSizeInBytes(DataLayout &dl, const mlir::Type &type,
-                            Operation *clauseOp, llvm::Value *basePointer,
-                            llvm::Type *baseType, llvm::IRBuilderBase &builder,
-                            LLVM::ModuleTranslation &moduleTranslation) {
+static llvm::Value *getSizeInBytes(DataLayout &dl, const mlir::Type &type,
+                                   Operation *clauseOp,
+                                   llvm::Value *basePointer,
+                                   llvm::Type *baseType,
+                                   llvm::IRBuilderBase &builder,
+                                   LLVM::ModuleTranslation &moduleTranslation) {
   if (auto memberClause =
           mlir::dyn_cast_if_present<mlir::omp::MapInfoOp>(clauseOp)) {
     // This calculates the size to transfer based on bounds and the underlying
@@ -3953,7 +3962,7 @@ static omp::MapInfoOp getFirstOrLastMappedMemberPtr(omp::MapInfoOp mapInfo,
 /// ordering of generated bounds operations (one may have to flip them) to
 /// make the below lowering frontend agnostic. The offload size
 /// calcualtion may also have to be adjusted for C++.
-std::vector<llvm::Value *>
+static std::vector<llvm::Value *>
 calculateBoundsOffset(LLVM::ModuleTranslation &moduleTranslation,
                       llvm::IRBuilderBase &builder, bool isArrayTy,
                       OperandRange bounds) {
@@ -4893,8 +4902,9 @@ convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
 /// Lowers the FlagsAttr which is applied to the module on the device
 /// pass when offloading, this attribute contains OpenMP RTL globals that can
 /// be passed as flags to the frontend, otherwise they are set to default
-LogicalResult convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
-                               LLVM::ModuleTranslation &moduleTranslation) {
+static LogicalResult
+convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
+                 LLVM::ModuleTranslation &moduleTranslation) {
   if (!cast<mlir::ModuleOp>(op))
     return failure();
 
@@ -5867,6 +5877,10 @@ static bool isTargetDeviceOp(Operation *op) {
   if (mlir::isa<omp::ThreadprivateOp>(op))
     return true;
 
+  if (mlir::isa<omp::TargetAllocMemOp>(op) ||
+      mlir::isa<omp::TargetFreeMemOp>(op))
+    return true;
+
   if (auto parentFn = op->getParentOfType<LLVM::LLVMFuncOp>())
     if (auto declareTargetIface =
             llvm::dyn_cast<mlir::omp::DeclareTargetInterface>(
@@ -5877,6 +5891,85 @@ static bool isTargetDeviceOp(Operation *op) {
         return true;
 
   return false;
+}
+
+static llvm::Function *getOmpTargetAlloc(llvm::IRBuilderBase &builder,
+                                         llvm::Module *llvmModule) {
+  llvm::Type *i64Ty = builder.getInt64Ty();
+  llvm::Type *i32Ty = builder.getInt32Ty();
+  llvm::Type *returnType = builder.getPtrTy(0);
+  llvm::FunctionType *fnType =
+      llvm::FunctionType::get(returnType, {i64Ty, i32Ty}, false);
+  llvm::Function *func = cast<llvm::Function>(
+      llvmModule->getOrInsertFunction("omp_target_alloc", fnType).getCallee());
+  return func;
+}
+
+static LogicalResult
+convertTargetAllocMemOp(Operation &opInst, llvm::IRBuilderBase &builder,
+                        LLVM::ModuleTranslation &moduleTranslation) {
+  auto allocMemOp = cast<omp::TargetAllocMemOp>(opInst);
+  if (!allocMemOp)
+    return failure();
+
+  // Get "omp_target_alloc" function
+  llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
+  llvm::Function *ompTargetAllocFunc = getOmpTargetAlloc(builder, llvmModule);
+  // Get the corresponding device value in llvm
+  mlir::Value deviceNum = allocMemOp.getDevice();
+  llvm::Value *llvmDeviceNum = moduleTranslation.lookupValue(deviceNum);
+  // Get the allocation size.
+  llvm::DataLayout dataLayout = llvmModule->getDataLayout();
+  mlir::Type heapTy = allocMemOp.getAllocatedType();
+  llvm::Type *llvmHeapTy = moduleTranslation.convertType(heapTy);
+  llvm::TypeSize typeSize = dataLayout.getTypeStoreSize(llvmHeapTy);
+  llvm::Value *allocSize = builder.getInt64(typeSize.getFixedValue());
+  for (auto typeParam : allocMemOp.getTypeparams())
+    allocSize =
+        builder.CreateMul(allocSize, moduleTranslation.lookupValue(typeParam));
+  // Create call to "omp_target_alloc" with the args as translated llvm values.
+  llvm::CallInst *call =
+      builder.CreateCall(ompTargetAllocFunc, {allocSize, llvmDeviceNum});
+  llvm::Value *resultI64 = builder.CreatePtrToInt(call, builder.getInt64Ty());
+
+  // Map the result
+  moduleTranslation.mapValue(allocMemOp.getResult(), resultI64);
+  return success();
+}
+
+static llvm::Function *getOmpTargetFree(llvm::IRBuilderBase &builder,
+                                        llvm::Module *llvmModule) {
+  llvm::Type *ptrTy = builder.getPtrTy(0);
+  llvm::Type *i32Ty = builder.getInt32Ty();
+  llvm::Type *voidTy = builder.getVoidTy();
+  llvm::FunctionType *fnType =
+      llvm::FunctionType::get(voidTy, {ptrTy, i32Ty}, false);
+  llvm::Function *func = dyn_cast<llvm::Function>(
+      llvmModule->getOrInsertFunction("omp_target_free", fnType).getCallee());
+  return func;
+}
+
+static LogicalResult
+convertTargetFreeMemOp(Operation &opInst, llvm::IRBuilderBase &builder,
+                       LLVM::ModuleTranslation &moduleTranslation) {
+  auto freeMemOp = cast<omp::TargetFreeMemOp>(opInst);
+  if (!freeMemOp)
+    return failure();
+
+  // Get "omp_target_free" function
+  llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
+  llvm::Function *ompTragetFreeFunc = getOmpTargetFree(builder, llvmModule);
+  // Get the corresponding device value in llvm
+  mlir::Value deviceNum = freeMemOp.getDevice();
+  llvm::Value *llvmDeviceNum = moduleTranslation.lookupValue(deviceNum);
+  // Get the corresponding heapref value in llvm
+  mlir::Value heapref = freeMemOp.getHeapref();
+  llvm::Value *llvmHeapref = moduleTranslation.lookupValue(heapref);
+  // Convert heapref int to ptr and call "omp_target_free"
+  llvm::Value *intToPtr =
+      builder.CreateIntToPtr(llvmHeapref, builder.getPtrTy(0));
+  builder.CreateCall(ompTragetFreeFunc, {intToPtr, llvmDeviceNum});
+  return success();
 }
 
 /// Given an OpenMP MLIR operation, create the corresponding LLVM IR (including
@@ -6052,6 +6145,12 @@ convertHostOrTargetOperation(Operation *op, llvm::IRBuilderBase &builder,
             // contained region including their transformations must occur at
             // the omp.canonical_loop.
             return applyUnrollHeuristic(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::TargetAllocMemOp) {
+            return convertTargetAllocMemOp(*op, builder, moduleTranslation);
+          })
+          .Case([&](omp::TargetFreeMemOp) {
+            return convertTargetFreeMemOp(*op, builder, moduleTranslation);
           })
           .Default([&](Operation *inst) {
             return inst->emitError()
@@ -6289,9 +6388,8 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
   if (ompBuilder->Config.isTargetDevice()) {
     if (isTargetDeviceOp(op)) {
       return convertTargetDeviceOp(op, builder, moduleTranslation);
-    } else {
-      return convertTargetOpsInNest(op, builder, moduleTranslation);
     }
+    return convertTargetOpsInNest(op, builder, moduleTranslation);
   }
   return convertHostOrTargetOperation(op, builder, moduleTranslation);
 }

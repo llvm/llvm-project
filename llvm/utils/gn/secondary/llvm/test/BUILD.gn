@@ -301,6 +301,7 @@ group("test") {
     "//llvm/tools/llvm-modextract",
     "//llvm/tools/llvm-mt",
     "//llvm/tools/llvm-nm",
+    "//llvm/tools/llvm-offload-wrapper",
     "//llvm/tools/llvm-objcopy:symlinks",
     "//llvm/tools/llvm-objdump:symlinks",
     "//llvm/tools/llvm-opt-fuzzer",

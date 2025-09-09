@@ -48,6 +48,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstdint>
 #include <cstring>
@@ -5256,6 +5257,7 @@ bool llvm::UpgradeDebugInfo(Module &M) {
   if (DisableAutoUpgradeDebugInfo)
     return false;
 
+  llvm::TimeTraceScope timeScope("Upgrade debug info");
   // We need to get metadata before the module is verified (i.e., getModuleFlag
   // makes assumptions that we haven't verified yet). Carefully extract the flag
   // from the metadata.
@@ -5381,6 +5383,16 @@ bool static upgradeSingleNVVMAnnotation(GlobalValue *GV, StringRef K,
     upgradeNVVMFnVectorAttr("nvvm.cluster_dim", K[0], GV, V);
     return true;
   }
+  if (K == "grid_constant") {
+    const auto Attr = Attribute::get(GV->getContext(), "nvvm.grid_constant");
+    for (const auto &Op : cast<MDNode>(V)->operands()) {
+      // For some reason, the index is 1-based in the metadata. Good thing we're
+      // able to auto-upgrade it!
+      const auto Index = mdconst::extract<ConstantInt>(Op)->getZExtValue() - 1;
+      cast<Function>(GV)->addParamAttr(Index, Attr);
+    }
+    return true;
+  }
 
   return false;
 }
@@ -5391,7 +5403,7 @@ void llvm::UpgradeNVVMAnnotations(Module &M) {
     return;
 
   SmallVector<MDNode *, 8> NewNodes;
-  SmallSet<const MDNode *, 8> SeenNodes;
+  SmallPtrSet<const MDNode *, 8> SeenNodes;
   for (MDNode *MD : NamedMD->operands()) {
     if (!SeenNodes.insert(MD).second)
       continue;

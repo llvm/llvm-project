@@ -24,9 +24,28 @@ jobs:
   check_spirv:
     if: github.repository_owner == 'llvm'
     name: Test MLIR SPIR-V
-    uses: ./.github/workflows/llvm-project-tests.yml
-    with:
-      build_target: check-mlir
-      projects: mlir
-      extra_cmake_args: '-DLLVM_TARGETS_TO_BUILD="host" -DLLVM_INCLUDE_SPIRV_TOOLS_TESTS=ON'
-      os_list: '["ubuntu-24.04"]'
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/llvm/ci-ubuntu-24.04:latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@a1209f81afb8c005c13b4296c32e363431bffea5 # v1.2.17
+        with:
+          max-size: 2G
+          key: spirv-mlir-ubuntu-24.04
+          variant: sccache
+      - name: Build and Test
+        run: |
+          mkdir build
+          cmake -GNinja \
+            -S llvm \
+            -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLVM_ENABLE_ASSERTIONS=ON \
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
+            -DLLVM_TARGETS_TO_BUILD="host" \
+            -DLLVM_INCLUDE_SPIRV_TOOLS_TESTS=ON \
+            -DLLVM_ENABLE_PROJECTS=mlir
+          ninja -C build check-mlir
