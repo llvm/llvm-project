@@ -1008,12 +1008,22 @@ struct WgToSgVectorShapeCastOp
     if (dstRank > srcRank) {
       // Expanding dims: input operand's layout must be a SliceAttr
       auto srcLayout = xegpu::getDistributeLayoutAttr(op.getSource());
-      if (!srcLayout || !isa<xegpu::SliceAttr>(srcLayout))
+      auto srcSliceAttr = cast<xegpu::SliceAttr>(srcLayout);
+      if (!srcLayout || !srcSliceAttr)
+        return failure();
+      auto resLayout = xegpu::getDistributeLayoutAttr(op.getResult());
+      // Check srcLayout is a slice attr on top of resLayout
+      if (srcSliceAttr.getParent() != resLayout)
         return failure();
     } else if (dstRank < srcRank) {
       // Reducing dims: result's layout must be a SliceAttr
       auto resLayout = xegpu::getDistributeLayoutAttr(op.getResult());
-      if (!resLayout || !isa<xegpu::SliceAttr>(resLayout))
+      auto resSliceAttr = cast<xegpu::SliceAttr>(resLayout);
+      auto srcLayout = xegpu::getDistributeLayoutAttr(op.getSource());
+      if (!resSliceAttr || !srcLayout)
+        return failure();
+      // Check resLayout is a sliced attr from srcLayout
+      if (resSliceAttr.getParent() != srcLayout)
         return failure();
     }
 
