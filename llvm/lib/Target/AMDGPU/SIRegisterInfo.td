@@ -1307,51 +1307,41 @@ def VRegSrc_fake16: SrcReg9<VGPR_32> {
   let EncoderMethod = "getMachineOpValueT16";
 }
 //===----------------------------------------------------------------------===//
-// VGPRSrc_*
+// VGPROp_* An 8-bit RegisterOperand wrapper for a VGPR
 //===----------------------------------------------------------------------===//
 
-// An 8-bit RegisterOperand wrapper for a VGPR
-def VGPRSrc_32 : RegisterOperand<VGPR_32> {
-  let DecoderMethod = "DecodeVGPR_32RegisterClass";
+class VGPROp<RegisterClass regClass> : RegisterOperand<regClass> {
+  let DecoderMethod = "Decode" # regClass # "RegisterClass";
 }
-def VGPRSrc_32_Lo128 : RegisterOperand<VGPR_32_Lo128> {
-  let DecoderMethod = "DecodeVGPR_32RegisterClass";
+class VGPROp_Align2<RegisterClass regClass> : RegisterOperand<!cast<RegisterClass>(regClass#_Align2)> {
+  let DecoderMethod = "Decode" # regClass # "RegisterClass";
 }
-def VGPRSrc_64 : RegisterOperand<VReg_64> {
-  let DecoderMethod = "DecodeVReg_64RegisterClass";
-}
-
-def VGPRSrc_96 : RegisterOperand<VReg_96> {
-  let DecoderMethod = "DecodeVReg_96RegisterClass";
+multiclass VGPROp_Aligned<RegisterClass regClass> {
+  def _Align1 : VGPROp<regClass>;
+  def _Align2 : VGPROp_Align2<regClass>;
 }
 
-def VGPRSrc_128 : RegisterOperand<VReg_128> {
-  let DecoderMethod = "DecodeVReg_128RegisterClass";
+// TODO: These cases should use default target alignment
+def VGPROp_16 : VGPROp<VGPR_16> {
+  let EncoderMethod = "getMachineOpValueT16";
+}
+def VGPROp_32 : VGPROp<VGPR_32>;
+
+foreach size = ["64", "96", "128", "160", "192", "224", "256", "288", "512", "1024"] in {
+  def VGPROp_#size : VGPROp<!cast<RegisterClass>("VReg_"#size)>;
 }
 
-def VGPRSrc_192 : RegisterOperand<VReg_192> {
-  let DecoderMethod = "DecodeVReg_192RegisterClass";
+foreach size = ["64", "96", "128", "160", "256", "1024"] in {
+  defm VGPROp_#size : VGPROp_Aligned<!cast<RegisterClass>("VReg_"#size)>;
 }
 
-def VGPRSrc_16_Lo128 : RegisterOperand<VGPR_16_Lo128> {
+def VGPROp_16_Lo128 : RegisterOperand<VGPR_16_Lo128> {
   let DecoderMethod = "DecodeVGPR_16_Lo128RegisterClass";
   let EncoderMethod = "getMachineOpValueT16Lo128";
 }
 
-// True 16 operands.
-def VGPRSrc_16 : RegisterOperand<VGPR_16> {
-  let DecoderMethod = "DecodeVGPR_16RegisterClass";
-  let EncoderMethod = "getMachineOpValueT16";
-}
-
-// TODO: These cases should use default target alignment
-def VGPROp_16 : RegisterOperand<VGPR_16>;
-def VGPROp_32 : RegisterOperand<VGPR_32>;
-
-foreach size = ["64", "96", "128", "160", "256", "1024" ] in {
-  def VGPROp_#size : RegisterOperand<!cast<RegisterClass>("VReg_"#size)>;
-  def VGPROp_#size#_Align1 : RegisterOperand<!cast<RegisterClass>("VReg_"#size)>;
-  def VGPROp_#size#_Align2 : RegisterOperand<!cast<RegisterClass>("VReg_"#size#_Align2)>;
+def VGPROp_32_Lo128 : RegisterOperand<VGPR_32_Lo128> {
+  let DecoderMethod = "DecodeVGPR_32RegisterClass";
 }
 
 //===----------------------------------------------------------------------===//

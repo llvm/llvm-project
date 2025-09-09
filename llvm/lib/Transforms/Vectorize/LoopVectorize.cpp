@@ -1848,6 +1848,8 @@ public:
              "claimed checks are required");
     }
 
+    SCEVExp.eraseDeadInstructions(SCEVCheckCond);
+
     if (!MemCheckBlock && !SCEVCheckBlock)
       return;
 

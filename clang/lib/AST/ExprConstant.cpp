@@ -11694,6 +11694,14 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
     });
 
+  case clang::X86::BI__builtin_ia32_pavgb128:
+  case clang::X86::BI__builtin_ia32_pavgw128:
+  case clang::X86::BI__builtin_ia32_pavgb256:
+  case clang::X86::BI__builtin_ia32_pavgw256:
+  case clang::X86::BI__builtin_ia32_pavgb512:
+  case clang::X86::BI__builtin_ia32_pavgw512:
+    return EvaluateBinOpExpr(llvm::APIntOps::avgCeilU);
+
   case clang::X86::BI__builtin_ia32_pmulhuw128:
   case clang::X86::BI__builtin_ia32_pmulhuw256:
   case clang::X86::BI__builtin_ia32_pmulhuw512:
@@ -11707,8 +11715,12 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case clang::X86::BI__builtin_ia32_psllv2di:
   case clang::X86::BI__builtin_ia32_psllv4di:
   case clang::X86::BI__builtin_ia32_psllv4si:
+  case clang::X86::BI__builtin_ia32_psllv8di:
+  case clang::X86::BI__builtin_ia32_psllv8hi:
   case clang::X86::BI__builtin_ia32_psllv8si:
+  case clang::X86::BI__builtin_ia32_psllv16hi:
   case clang::X86::BI__builtin_ia32_psllv16si:
+  case clang::X86::BI__builtin_ia32_psllv32hi:
   case clang::X86::BI__builtin_ia32_psllwi128:
   case clang::X86::BI__builtin_ia32_pslldi128:
   case clang::X86::BI__builtin_ia32_psllqi128:
@@ -11726,8 +11738,14 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     });
 
   case clang::X86::BI__builtin_ia32_psrav4si:
+  case clang::X86::BI__builtin_ia32_psrav8di:
+  case clang::X86::BI__builtin_ia32_psrav8hi:
   case clang::X86::BI__builtin_ia32_psrav8si:
+  case clang::X86::BI__builtin_ia32_psrav16hi:
   case clang::X86::BI__builtin_ia32_psrav16si:
+  case clang::X86::BI__builtin_ia32_psrav32hi:
+  case clang::X86::BI__builtin_ia32_psravq128:
+  case clang::X86::BI__builtin_ia32_psravq256:
   case clang::X86::BI__builtin_ia32_psrawi128:
   case clang::X86::BI__builtin_ia32_psradi128:
   case clang::X86::BI__builtin_ia32_psraqi128:
@@ -11747,8 +11765,12 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case clang::X86::BI__builtin_ia32_psrlv2di:
   case clang::X86::BI__builtin_ia32_psrlv4di:
   case clang::X86::BI__builtin_ia32_psrlv4si:
+  case clang::X86::BI__builtin_ia32_psrlv8di:
+  case clang::X86::BI__builtin_ia32_psrlv8hi:
   case clang::X86::BI__builtin_ia32_psrlv8si:
+  case clang::X86::BI__builtin_ia32_psrlv16hi:
   case clang::X86::BI__builtin_ia32_psrlv16si:
+  case clang::X86::BI__builtin_ia32_psrlv32hi:
   case clang::X86::BI__builtin_ia32_psrlwi128:
   case clang::X86::BI__builtin_ia32_psrldi128:
   case clang::X86::BI__builtin_ia32_psrlqi128:
@@ -11856,6 +11878,69 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
                            DestEltTy->isUnsignedIntegerOrEnumerationType())));
         break;
       }
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  case X86::BI__builtin_ia32_vpshldd128:
+  case X86::BI__builtin_ia32_vpshldd256:
+  case X86::BI__builtin_ia32_vpshldd512:
+  case X86::BI__builtin_ia32_vpshldq128:
+  case X86::BI__builtin_ia32_vpshldq256:
+  case X86::BI__builtin_ia32_vpshldq512:
+  case X86::BI__builtin_ia32_vpshldw128:
+  case X86::BI__builtin_ia32_vpshldw256:
+  case X86::BI__builtin_ia32_vpshldw512: {
+    APValue SourceHi, SourceLo, SourceAmt;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceHi) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceLo) ||
+        !EvaluateAsRValue(Info, E->getArg(2), SourceAmt))
+      return false;
+
+    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+    unsigned SourceLen = SourceHi.getVectorLength();
+    SmallVector<APValue, 32> ResultElements;
+    ResultElements.reserve(SourceLen);
+
+    APInt Amt = SourceAmt.getInt();
+    for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
+      APInt Hi = SourceHi.getVectorElt(EltNum).getInt();
+      APInt Lo = SourceLo.getVectorElt(EltNum).getInt();
+      APInt R = llvm::APIntOps::fshl(Hi, Lo, Amt);
+      ResultElements.push_back(
+          APValue(APSInt(R, DestEltTy->isUnsignedIntegerOrEnumerationType())));
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  case X86::BI__builtin_ia32_vpshrdd128:
+  case X86::BI__builtin_ia32_vpshrdd256:
+  case X86::BI__builtin_ia32_vpshrdd512:
+  case X86::BI__builtin_ia32_vpshrdq128:
+  case X86::BI__builtin_ia32_vpshrdq256:
+  case X86::BI__builtin_ia32_vpshrdq512:
+  case X86::BI__builtin_ia32_vpshrdw128:
+  case X86::BI__builtin_ia32_vpshrdw256:
+  case X86::BI__builtin_ia32_vpshrdw512: {
+    // NOTE: Reversed Hi/Lo operands.
+    APValue SourceHi, SourceLo, SourceAmt;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceLo) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceHi) ||
+        !EvaluateAsRValue(Info, E->getArg(2), SourceAmt))
+      return false;
+
+    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+    unsigned SourceLen = SourceHi.getVectorLength();
+    SmallVector<APValue, 32> ResultElements;
+    ResultElements.reserve(SourceLen);
+
+    APInt Amt = SourceAmt.getInt();
+    for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
+      APInt Hi = SourceHi.getVectorElt(EltNum).getInt();
+      APInt Lo = SourceLo.getVectorElt(EltNum).getInt();
+      APInt R = llvm::APIntOps::fshr(Hi, Lo, Amt);
+      ResultElements.push_back(
+          APValue(APSInt(R, DestEltTy->isUnsignedIntegerOrEnumerationType())));
     }
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);

@@ -71,13 +71,12 @@ TEST(AMDGPUDisassembler, MultiDisassembler) {
   LLVMInitializeAMDGPUDisassembler();
 
   std::string Error;
-  const Target *TheTarget = TargetRegistry::lookupTarget(TripleName, Error);
+  Triple TT(TripleName);
+  const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
 
   // Skip test if AMDGPU not built.
   if (!TheTarget)
     GTEST_SKIP();
-
-  Triple TT(TripleName);
 
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TT));
   std::unique_ptr<MCAsmInfo> MAI(
@@ -141,14 +140,14 @@ TEST(AMDGPUDisassembler, UCVersionOverride) {
   LLVMInitializeAMDGPUTargetMC();
   LLVMInitializeAMDGPUDisassembler();
 
+  Triple TT(TripleName);
+
   std::string Error;
-  const Target *TheTarget = TargetRegistry::lookupTarget(TripleName, Error);
+  const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
 
   // Skip test if AMDGPU not built.
   if (!TheTarget)
     GTEST_SKIP();
-
-  Triple TT(TripleName);
 
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TT));
   std::unique_ptr<MCAsmInfo> MAI(

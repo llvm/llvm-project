@@ -2582,11 +2582,10 @@ struct TargetInfo {
 static TargetInfo
 getTargetInfo(const Triple &TT,
               const SubtargetFeatures &TF = SubtargetFeatures()) {
-  auto TripleName = TT.str();
   std::string ErrorStr;
-  const Target *TheTarget = TargetRegistry::lookupTarget(TripleName, ErrorStr);
+  const Target *TheTarget = TargetRegistry::lookupTarget(TT, ErrorStr);
   if (!TheTarget)
-    ExitOnErr(make_error<StringError>("Error accessing target '" + TripleName +
+    ExitOnErr(make_error<StringError>("Error accessing target '" + TT.str() +
                                           "': " + ErrorStr,
                                       inconvertibleErrorCode()));
 
@@ -2594,52 +2593,52 @@ getTargetInfo(const Triple &TT,
       TheTarget->createMCSubtargetInfo(TT, "", TF.getString()));
   if (!STI)
     ExitOnErr(
-        make_error<StringError>("Unable to create subtarget for " + TripleName,
+        make_error<StringError>("Unable to create subtarget for " + TT.str(),
                                 inconvertibleErrorCode()));
 
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TT));
   if (!MRI)
     ExitOnErr(make_error<StringError>("Unable to create target register info "
                                       "for " +
-                                          TripleName,
+                                          TT.str(),
                                       inconvertibleErrorCode()));
 
   MCTargetOptions MCOptions;
   std::unique_ptr<MCAsmInfo> MAI(
       TheTarget->createMCAsmInfo(*MRI, TT, MCOptions));
   if (!MAI)
-    ExitOnErr(make_error<StringError>("Unable to create target asm info " +
-                                          TripleName,
-                                      inconvertibleErrorCode()));
+    ExitOnErr(
+        make_error<StringError>("Unable to create target asm info " + TT.str(),
+                                inconvertibleErrorCode()));
 
-  auto Ctx = std::make_unique<MCContext>(Triple(TripleName), MAI.get(),
-                                         MRI.get(), STI.get());
+  auto Ctx = std::make_unique<MCContext>(Triple(TT.str()), MAI.get(), MRI.get(),
+                                         STI.get());
 
   std::unique_ptr<MCDisassembler> Disassembler(
       TheTarget->createMCDisassembler(*STI, *Ctx));
   if (!Disassembler)
-    ExitOnErr(make_error<StringError>("Unable to create disassembler for " +
-                                          TripleName,
-                                      inconvertibleErrorCode()));
+    ExitOnErr(
+        make_error<StringError>("Unable to create disassembler for " + TT.str(),
+                                inconvertibleErrorCode()));
 
   std::unique_ptr<MCInstrInfo> MII(TheTarget->createMCInstrInfo());
   if (!MII)
     ExitOnErr(make_error<StringError>("Unable to create instruction info for" +
-                                          TripleName,
+                                          TT.str(),
                                       inconvertibleErrorCode()));
 
   std::unique_ptr<MCInstrAnalysis> MIA(
       TheTarget->createMCInstrAnalysis(MII.get()));
   if (!MIA)
     ExitOnErr(make_error<StringError>(
-        "Unable to create instruction analysis for" + TripleName,
+        "Unable to create instruction analysis for" + TT.str(),
         inconvertibleErrorCode()));
 
   std::unique_ptr<MCInstPrinter> InstPrinter(
-      TheTarget->createMCInstPrinter(Triple(TripleName), 0, *MAI, *MII, *MRI));
+      TheTarget->createMCInstPrinter(Triple(TT.str()), 0, *MAI, *MII, *MRI));
   if (!InstPrinter)
     ExitOnErr(make_error<StringError>(
-        "Unable to create instruction printer for" + TripleName,
+        "Unable to create instruction printer for" + TT.str(),
         inconvertibleErrorCode()));
   return {TheTarget,      std::move(STI), std::move(MRI),
           std::move(MAI), std::move(Ctx), std::move(Disassembler),

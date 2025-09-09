@@ -38,7 +38,7 @@ protected:
       : TT(kTriple), ExegesisTarget_(ExegesisTarget::lookup(TT)) {
     EXPECT_THAT(ExegesisTarget_, NotNull());
     std::string error;
-    Target_ = TargetRegistry::lookupTarget(kTriple, error);
+    Target_ = TargetRegistry::lookupTarget(TT, error);
     EXPECT_THAT(Target_, NotNull());
     STI_.reset(
         Target_->createMCSubtargetInfo(TT, "generic", /*no features*/ ""));

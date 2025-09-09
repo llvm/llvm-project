@@ -1,4 +1,4 @@
-//===-- StrToNumCheck.cpp - clang-tidy ------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "StrToNumCheck.h"
+#include "UncheckedStringToNumberConversionCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/FormatString.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -15,9 +15,10 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::cert {
+namespace clang::tidy::bugprone {
 
-void StrToNumCheck::registerMatchers(MatchFinder *Finder) {
+void UncheckedStringToNumberConversionCheck::registerMatchers(
+    MatchFinder *Finder) {
   // Match any function call to the C standard library string conversion
   // functions that do no error checking.
   Finder->addMatcher(
@@ -176,7 +177,8 @@ static StringRef classifyReplacement(ConversionKind K) {
   llvm_unreachable("Unknown conversion kind");
 }
 
-void StrToNumCheck::check(const MatchFinder::MatchResult &Result) {
+void UncheckedStringToNumberConversionCheck::check(
+    const MatchFinder::MatchResult &Result) {
   const auto *Call = Result.Nodes.getNodeAs<CallExpr>("expr");
   const FunctionDecl *FuncDecl = nullptr;
   ConversionKind Conversion = ConversionKind::None;
@@ -228,4 +230,4 @@ void StrToNumCheck::check(const MatchFinder::MatchResult &Result) {
       << classifyReplacement(Conversion);
 }
 
-} // namespace clang::tidy::cert
+} // namespace clang::tidy::bugprone

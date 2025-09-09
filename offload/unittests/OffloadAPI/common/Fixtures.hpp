@@ -250,9 +250,13 @@ struct OffloadEventTest : OffloadQueueTest {
   ol_event_handle_t Event = nullptr;
 };
 
+// Devices might not be available for offload testing, so allow uninstantiated
+// tests (as the device list will be empty). This means that all tests requiring
+// a device will be silently skipped.
 #define OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(FIXTURE)                      \
   INSTANTIATE_TEST_SUITE_P(                                                    \
       , FIXTURE, ::testing::ValuesIn(TestEnvironment::getDevices()),           \
       [](const ::testing::TestParamInfo<TestEnvironment::Device> &info) {      \
         return SanitizeString(info.param.Name);                                \
-      })
+      });                                                                      \
+  GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(FIXTURE)
