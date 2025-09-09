@@ -384,7 +384,7 @@ bool LTOCodeGenerator::determineTarget() {
 
   // create target machine from info for merged modules
   std::string ErrMsg;
-  MArch = TargetRegistry::lookupTarget(TripleStr, ErrMsg);
+  MArch = TargetRegistry::lookupTarget(Triple, ErrMsg);
   if (!MArch) {
     emitError(ErrMsg);
     return false;
