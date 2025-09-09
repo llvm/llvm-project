@@ -1523,14 +1523,6 @@ SystemZTargetLowering::getConstraintType(StringRef Constraint) const {
   return TargetLowering::getConstraintType(Constraint);
 }
 
-// Convert condition code in CCReg to an i32 value.
-static SDValue getCCResult(SelectionDAG &DAG, SDValue CCReg) {
-  SDLoc DL(CCReg);
-  SDValue IPM = DAG.getNode(SystemZISD::IPM, DL, MVT::i32, CCReg);
-  return DAG.getNode(ISD::SRL, DL, MVT::i32, IPM,
-                     DAG.getConstant(SystemZ::IPM_CC, DL, MVT::i32));
-}
-
 TargetLowering::ConstraintWeight
 SystemZTargetLowering::getSingleConstraintMatchWeight(
     AsmOperandInfo &Info, const char *Constraint) const {
@@ -1752,6 +1744,14 @@ Register SystemZTargetLowering::getExceptionPointerRegister(
 Register SystemZTargetLowering::getExceptionSelectorRegister(
     const Constant *PersonalityFn) const {
   return Subtarget.isTargetXPLINK64() ? SystemZ::R2D : SystemZ::R7D;
+}
+
+// Convert condition code in CCReg to an i32 value.
+static SDValue getCCResult(SelectionDAG &DAG, SDValue CCReg) {
+  SDLoc DL(CCReg);
+  SDValue IPM = DAG.getNode(SystemZISD::IPM, DL, MVT::i32, CCReg);
+  return DAG.getNode(ISD::SRL, DL, MVT::i32, IPM,
+                     DAG.getConstant(SystemZ::IPM_CC, DL, MVT::i32));
 }
 
 // Lower @cc targets via setcc.
