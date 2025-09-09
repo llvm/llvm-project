@@ -3227,27 +3227,6 @@ bool TargetLowering::SimplifyDemandedVectorElts(
       KnownUndef.setAllBits();
       return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));
     }
-    SDValue ScalarSrc = Op.getOperand(0);
-    if (ScalarSrc.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
-      SDValue Src = ScalarSrc.getOperand(0);
-      SDValue Idx = ScalarSrc.getOperand(1);
-      EVT SrcVT = Src.getValueType();
-
-      ElementCount SrcEltCnt = SrcVT.getVectorElementCount();
-
-      if (SrcEltCnt.isScalable())
-        return false;
-
-      unsigned NumSrcElts = SrcEltCnt.getFixedValue();
-      if (isNullConstant(Idx)) {
-        APInt SrcDemandedElts = APInt::getOneBitSet(NumSrcElts, 0);
-        APInt SrcUndef = KnownUndef.zextOrTrunc(NumSrcElts);
-        APInt SrcZero = KnownZero.zextOrTrunc(NumSrcElts);
-        if (SimplifyDemandedVectorElts(Src, SrcDemandedElts, SrcUndef, SrcZero,
-                                       TLO, Depth + 1))
-          return true;
-      }
-    }
     KnownUndef.setHighBits(NumElts - 1);
     break;
   }

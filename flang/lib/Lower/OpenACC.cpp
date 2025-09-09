@@ -1212,12 +1212,10 @@ mlir::acc::FirstprivateRecipeOp Fortran::lower::createOrGetFirstprivateRecipe(
 
     auto leftDeclOp = hlfir::DeclareOp::create(
         builder, loc, recipe.getCopyRegion().getArgument(0), llvm::StringRef{},
-        shape, llvm::ArrayRef<mlir::Value>{}, /*dummy_scope=*/nullptr,
-        fir::FortranVariableFlagsAttr{});
+        shape);
     auto rightDeclOp = hlfir::DeclareOp::create(
         builder, loc, recipe.getCopyRegion().getArgument(1), llvm::StringRef{},
-        shape, llvm::ArrayRef<mlir::Value>{}, /*dummy_scope=*/nullptr,
-        fir::FortranVariableFlagsAttr{});
+        shape);
 
     hlfir::DesignateOp::Subscripts triplets =
         getSubscriptsFromArgs(recipe.getCopyRegion().getArguments());
@@ -1523,14 +1521,10 @@ static void genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
       auto shape =
           genShapeFromBoundsOrArgs(loc, builder, seqTy, bounds,
                                    recipe.getCombinerRegion().getArguments());
-      auto v1DeclareOp = hlfir::DeclareOp::create(
-          builder, loc, value1, llvm::StringRef{}, shape,
-          llvm::ArrayRef<mlir::Value>{},
-          /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
-      auto v2DeclareOp = hlfir::DeclareOp::create(
-          builder, loc, value2, llvm::StringRef{}, shape,
-          llvm::ArrayRef<mlir::Value>{},
-          /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
+      auto v1DeclareOp = hlfir::DeclareOp::create(builder, loc, value1,
+                                                  llvm::StringRef{}, shape);
+      auto v2DeclareOp = hlfir::DeclareOp::create(builder, loc, value2,
+                                                  llvm::StringRef{}, shape);
       hlfir::DesignateOp::Subscripts triplets = getTripletsFromArgs(recipe);
 
       llvm::SmallVector<mlir::Value> lenParamsLeft;

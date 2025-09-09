@@ -1563,6 +1563,25 @@ static DecodeStatus DecodePRFMRegInstruction(MCInst &Inst, uint32_t insn,
   return Success;
 }
 
+static DecodeStatus
+DecodeSMESpillFillInstruction(MCInst &Inst, uint32_t Bits, uint64_t Addr,
+                              const MCDisassembler *Decoder) {
+  unsigned RvBits = fieldFromInstruction(Bits, 13, 2);
+  unsigned RnBits = fieldFromInstruction(Bits, 5, 5);
+  unsigned Imm4Bits = fieldFromInstruction(Bits, 0, 4);
+
+  DecodeSimpleRegisterClass<AArch64::MatrixIndexGPR32_12_15RegClassID, 0, 4>(
+      Inst, RvBits, Addr, Decoder);
+  Inst.addOperand(MCOperand::createImm(Imm4Bits));
+  DecodeSimpleRegisterClass<AArch64::GPR64spRegClassID, 0, 32>(Inst, RnBits,
+                                                               Addr, Decoder);
+  // Spill and fill instructions have a single immediate used for both
+  // the vector select offset and optional memory offset. Replicate
+  // the decoded immediate.
+  Inst.addOperand(MCOperand::createImm(Imm4Bits));
+  return Success;
+}
+
 #include "AArch64GenDisassemblerTables.inc"
 #include "AArch64GenInstrInfo.inc"
 
@@ -1619,16 +1638,6 @@ DecodeStatus AArch64Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
                  AArch64::OPERAND_IMPLICIT_IMM_0) {
         MI.insert(MI.begin() + i, MCOperand::createImm(0));
       }
-    }
-
-    if (MI.getOpcode() == AArch64::LDR_ZA ||
-        MI.getOpcode() == AArch64::STR_ZA) {
-      // Spill and fill instructions have a single immediate used for both
-      // the vector select offset and optional memory offset. Replicate
-      // the decoded immediate.
-      const MCOperand &Imm4Op = MI.getOperand(2);
-      assert(Imm4Op.isImm() && "Unexpected operand type!");
-      MI.addOperand(Imm4Op);
     }
 
     if (Result != MCDisassembler::Fail)

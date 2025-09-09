@@ -1,5 +1,4 @@
-// Most likely platform specific sed differences
-// UNSUPPORTED: system-windows
+// REQUIRES: shell
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/sources %t/build
