@@ -508,6 +508,19 @@ struct FragmentCompiler {
             C.Style.AngledHeaders.emplace_back(AngledFilter);
           });
     }
+    if (F.GetterPrefix)
+      Out.Apply.push_back([Value(**F.GetterPrefix)](const Params &, Config &C) {
+        C.Style.GetterPrefix = Value;
+      });
+    if (F.SetterPrefix)
+      Out.Apply.push_back([Value(**F.SetterPrefix)](const Params &, Config &C) {
+        C.Style.SetterPrefix = Value;
+      });
+    if (F.SetterParameterPrefix)
+      Out.Apply.push_back(
+          [Value(**F.SetterParameterPrefix)](const Params &, Config &C) {
+            C.Style.SetterParameterPrefix = Value;
+          });
   }
 
   auto compileHeaderRegexes(llvm::ArrayRef<Located<std::string>> HeaderPatterns)
@@ -564,10 +577,10 @@ struct FragmentCompiler {
       auto Fast = isFastTidyCheck(Str);
       if (!Fast.has_value()) {
         diag(Warning,
-             llvm::formatv(
-                 "Latency of clang-tidy check '{0}' is not known. "
-                 "It will only run if ClangTidy.FastCheckFilter is Loose or None",
-                 Str)
+             llvm::formatv("Latency of clang-tidy check '{0}' is not known. "
+                           "It will only run if ClangTidy.FastCheckFilter is "
+                           "Loose or None",
+                           Str)
                  .str(),
              Arg.Range);
       } else if (!*Fast) {
