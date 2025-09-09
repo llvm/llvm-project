@@ -700,75 +700,19 @@ ExprResult CalculateConstraintSatisfaction::Calculate(
   HashParameterMapping(S, MLTAL, ID, OuterPackSubstIndex)
       .VisitConstraint(Constraint);
 
-  unsigned CacheKeyHash = ID.computeStableHash();
-
-#define UseCache 1
   if (auto Iter = S.ConceptIdSatisfactionCache.find(ID);
       Iter != S.ConceptIdSatisfactionCache.end()) {
-#if UseCache
+
     auto &Cached = Iter->second.Satisfaction;
     Satisfaction.ContainsErrors = Cached.ContainsErrors;
     Satisfaction.IsSatisfied = Cached.IsSatisfied;
     Satisfaction.Details.insert(Satisfaction.Details.begin() + Size,
                                 Cached.Details.begin(), Cached.Details.end());
-#ifndef NDEBUG
-    if (Iter->second.E != Constraint.getConstraintExpr()) {
-      llvm::errs() << "CacheKey: " << CacheKeyHash << " "
-                   << S.ConceptIdSatisfactionCache.size() << "\n";
-      if (Constraint.hasParameterMapping()) {
-        llvm::errs() << "Mapping: ";
-        for (auto Arg : Constraint.getParameterMapping()) {
-          Arg.getArgument().print(S.getPrintingPolicy(), llvm::errs(),
-                                  /*IncludeType=*/false);
-          llvm::errs() << " ";
-        }
-        llvm::errs() << "\n";
-      }
-      llvm::errs() << "Previous 1: " << Iter->second.E << " ";
-      Iter->second.E->printPretty(llvm::errs(), /*Helper=*/nullptr,
-                                  S.getPrintingPolicy());
-      llvm::errs() << "\n";
-      llvm::errs() << "Current 1: " << Constraint.getConstraintExpr() << " ";
-      Constraint.getConstraintExpr()->printPretty(
-          llvm::errs(), /*Helper=*/nullptr, S.getPrintingPolicy());
-      llvm::errs() << "\n";
-    }
-    assert(Iter->second.E == Constraint.getConstraintExpr());
-#ifndef NDEBUG
-    return Iter->second.SubstExpr;
-#else
-#endif
   }
 
   ExprResult E = CalculateSlow(Constraint, MLTAL);
 
   assert(Constraint.getConstraintExpr() == Previous);
-
-  if (auto Iter = S.ConceptIdSatisfactionCache.find(ID);
-      Iter != S.ConceptIdSatisfactionCache.end()) {
-#if UseCache
-    auto &Cached = Iter->second.Satisfaction;
-    Satisfaction.ContainsErrors = Cached.ContainsErrors;
-    Satisfaction.IsSatisfied = Cached.IsSatisfied;
-    Satisfaction.Details.insert(Satisfaction.Details.begin() + Size,
-                                Cached.Details.begin(), Cached.Details.end());
-#ifndef NDEBUG
-    if (Iter->second.E != Constraint.getConstraintExpr()) {
-      llvm::errs() << "CacheKey: " << CacheKeyHash << " ";
-      llvm::errs() << "Previous: ";
-      Iter->second.E->printPretty(llvm::errs(), /*Helper=*/nullptr,
-                                  S.getPrintingPolicy());
-      llvm::errs() << "\n";
-      llvm::errs() << "Current: ";
-      Constraint.getConstraintExpr()->printPretty(
-          llvm::errs(), /*Helper=*/nullptr, S.getPrintingPolicy());
-      llvm::errs() << "\n";
-    }
-    assert(Iter->second.E == Constraint.getConstraintExpr());
-#ifndef NDEBUG
-    return Iter->second.SubstExpr;
-#endif
-  }
 
   CachedConceptIdConstraint Cache;
   Cache.Satisfaction.ContainsErrors = Satisfaction.ContainsErrors;
@@ -778,7 +722,6 @@ ExprResult CalculateConstraintSatisfaction::Calculate(
   Cache.SubstExpr = E;
   Cache.E = Constraint.getConstraintExpr();
   S.ConceptIdSatisfactionCache.insert({ID, std::move(Cache)});
-#undef UseCache
 
   return E;
 }
