@@ -127,8 +127,9 @@ LiveVariablesImpl::merge(LiveVariables::LivenessValues valsA,
                                        BSetRefA.asImmutableSet());
 }
 
-bool LiveVariables::LivenessValues::equals(const LivenessValues &V) const {
-  return liveExprs == V.liveExprs && liveDecls == V.liveDecls;
+bool LiveVariables::LivenessValues::operator==(const LivenessValues &V) const {
+  return liveExprs == V.liveExprs && liveDecls == V.liveDecls &&
+         liveBindings == V.liveBindings;
 }
 
 //===----------------------------------------------------------------------===//
@@ -597,7 +598,7 @@ LiveVariables::computeLiveness(AnalysisDeclContext &AC, bool killAtAssign) {
 
     if (!everAnalyzedBlock[block->getBlockID()])
       everAnalyzedBlock[block->getBlockID()] = true;
-    else if (prevVal.equals(val))
+    else if (prevVal == val)
       continue;
 
     prevVal = val;
