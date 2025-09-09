@@ -1772,75 +1772,30 @@ let Features = "avx512bw", Attributes = [NoThrow, Const, RequiredVectorWidth<512
   def vpermi2varhi512 : X86Builtin<"_Vector<32, short>(_Vector<32, short>, _Vector<32, short>, _Vector<32, short>)">;
 }
 
-let Features = "avx512vl,avx512vbmi2", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "avx512vl,avx512vbmi2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def vpshldd128 : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Vector<4, int>, _Constant int)">;
-}
-
-let Features = "avx512vl,avx512vbmi2", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vpshldd256 : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Vector<8, int>, _Constant int)">;
-}
-
-let Features = "avx512vbmi2", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
-  def vpshldd512 : X86Builtin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>, _Constant int)">;
-}
-
-let Features = "avx512vl,avx512vbmi2", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def vpshldq128 : X86Builtin<"_Vector<2, long long int>(_Vector<2, long long int>, _Vector<2, long long int>, _Constant int)">;
-}
-
-let Features = "avx512vl,avx512vbmi2", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vpshldq256 : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long int>, _Vector<4, long long int>, _Constant int)">;
-}
-
-let Features = "avx512vbmi2", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
-  def vpshldq512 : X86Builtin<"_Vector<8, long long int>(_Vector<8, long long int>, _Vector<8, long long int>, _Constant int)">;
-}
-
-let Features = "avx512vl,avx512vbmi2", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def vpshldw128 : X86Builtin<"_Vector<8, short>(_Vector<8, short>, _Vector<8, short>, _Constant int)">;
-}
-
-let Features = "avx512vl,avx512vbmi2", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vpshldw256 : X86Builtin<"_Vector<16, short>(_Vector<16, short>, _Vector<16, short>, _Constant int)">;
-}
-
-let Features = "avx512vbmi2", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
-  def vpshldw512 : X86Builtin<"_Vector<32, short>(_Vector<32, short>, _Vector<32, short>, _Constant int)">;
-}
-
-let Features = "avx512vl,avx512vbmi2", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
   def vpshrdd128 : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Vector<4, int>, _Constant int)">;
-}
-
-let Features = "avx512vl,avx512vbmi2", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vpshrdd256 : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Vector<8, int>, _Constant int)">;
-}
-
-let Features = "avx512vbmi2", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
-  def vpshrdd512 : X86Builtin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>, _Constant int)">;
-}
-
-let Features = "avx512vl,avx512vbmi2", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+  def vpshldq128 : X86Builtin<"_Vector<2, long long int>(_Vector<2, long long int>, _Vector<2, long long int>, _Constant int)">;
   def vpshrdq128 : X86Builtin<"_Vector<2, long long int>(_Vector<2, long long int>, _Vector<2, long long int>, _Constant int)">;
-}
-
-let Features = "avx512vl,avx512vbmi2", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vpshrdq256 : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long int>, _Vector<4, long long int>, _Constant int)">;
-}
-
-let Features = "avx512vbmi2", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
-  def vpshrdq512 : X86Builtin<"_Vector<8, long long int>(_Vector<8, long long int>, _Vector<8, long long int>, _Constant int)">;
-}
-
-let Features = "avx512vl,avx512vbmi2", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+  def vpshldw128 : X86Builtin<"_Vector<8, short>(_Vector<8, short>, _Vector<8, short>, _Constant int)">;
   def vpshrdw128 : X86Builtin<"_Vector<8, short>(_Vector<8, short>, _Vector<8, short>, _Constant int)">;
 }
 
-let Features = "avx512vl,avx512vbmi2", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "avx512vl,avx512vbmi2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
+  def vpshldd256 : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Vector<8, int>, _Constant int)">;
+  def vpshrdd256 : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Vector<8, int>, _Constant int)">;
+  def vpshldq256 : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long int>, _Vector<4, long long int>, _Constant int)">;
+  def vpshrdq256 : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long int>, _Vector<4, long long int>, _Constant int)">;
+  def vpshldw256 : X86Builtin<"_Vector<16, short>(_Vector<16, short>, _Vector<16, short>, _Constant int)">;
   def vpshrdw256 : X86Builtin<"_Vector<16, short>(_Vector<16, short>, _Vector<16, short>, _Constant int)">;
 }
 
-let Features = "avx512vbmi2", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
+let Features = "avx512vbmi2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
+  def vpshldd512 : X86Builtin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>, _Constant int)">;
+  def vpshrdd512 : X86Builtin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>, _Constant int)">;
+  def vpshldq512 : X86Builtin<"_Vector<8, long long int>(_Vector<8, long long int>, _Vector<8, long long int>, _Constant int)">;
+  def vpshrdq512 : X86Builtin<"_Vector<8, long long int>(_Vector<8, long long int>, _Vector<8, long long int>, _Constant int)">;
+  def vpshldw512 : X86Builtin<"_Vector<32, short>(_Vector<32, short>, _Vector<32, short>, _Constant int)">;
   def vpshrdw512 : X86Builtin<"_Vector<32, short>(_Vector<32, short>, _Vector<32, short>, _Constant int)">;
 }
 

@@ -2851,11 +2851,32 @@ static bool interp__builtin_elementwise_triop(
     return true;
   }
 
-  // Vector type.
   const auto *VecT = Arg0Type->castAs<VectorType>();
   const PrimType &ElemT = *S.getContext().classify(VecT->getElementType());
   unsigned NumElems = VecT->getNumElements();
+  bool DestUnsigned = Call->getType()->isUnsignedIntegerOrEnumerationType();
 
+  // Vector + Vector + Scalar case.
+  if (!Arg2Type->isVectorType()) {
+    APSInt Op2 = popToAPSInt(
+        S.Stk, *S.getContext().classify(Call->getArg(2)->getType()));
+
+    const Pointer &Op1 = S.Stk.pop<Pointer>();
+    const Pointer &Op0 = S.Stk.pop<Pointer>();
+    const Pointer &Dst = S.Stk.peek<Pointer>();
+    for (unsigned I = 0; I != NumElems; ++I) {
+      INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+        Dst.elem<T>(I) = static_cast<T>(APSInt(
+            Fn(Op0.elem<T>(I).toAPSInt(), Op1.elem<T>(I).toAPSInt(), Op2),
+            DestUnsigned));
+      });
+    }
+    Dst.initializeAllElements();
+
+    return true;
+  }
+
+  // Vector type.
   const Pointer &Op2 = S.Stk.pop<Pointer>();
   const Pointer &Op1 = S.Stk.pop<Pointer>();
   const Pointer &Op0 = S.Stk.pop<Pointer>();
@@ -3433,6 +3454,37 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           APFloat F = X;
           F.fusedMultiplyAdd(Y, Z, RM);
           return F;
+        });
+
+  case X86::BI__builtin_ia32_vpshldd128:
+  case X86::BI__builtin_ia32_vpshldd256:
+  case X86::BI__builtin_ia32_vpshldd512:
+  case X86::BI__builtin_ia32_vpshldq128:
+  case X86::BI__builtin_ia32_vpshldq256:
+  case X86::BI__builtin_ia32_vpshldq512:
+  case X86::BI__builtin_ia32_vpshldw128:
+  case X86::BI__builtin_ia32_vpshldw256:
+  case X86::BI__builtin_ia32_vpshldw512:
+    return interp__builtin_elementwise_triop(
+        S, OpPC, Call,
+        [](const APSInt &Hi, const APSInt &Lo, const APSInt &Amt) {
+          return llvm::APIntOps::fshl(Hi, Lo, Amt);
+        });
+
+  case X86::BI__builtin_ia32_vpshrdd128:
+  case X86::BI__builtin_ia32_vpshrdd256:
+  case X86::BI__builtin_ia32_vpshrdd512:
+  case X86::BI__builtin_ia32_vpshrdq128:
+  case X86::BI__builtin_ia32_vpshrdq256:
+  case X86::BI__builtin_ia32_vpshrdq512:
+  case X86::BI__builtin_ia32_vpshrdw128:
+  case X86::BI__builtin_ia32_vpshrdw256:
+  case X86::BI__builtin_ia32_vpshrdw512:
+    // NOTE: Reversed Hi/Lo operands.
+    return interp__builtin_elementwise_triop(
+        S, OpPC, Call,
+        [](const APSInt &Lo, const APSInt &Hi, const APSInt &Amt) {
+          return llvm::APIntOps::fshr(Hi, Lo, Amt);
         });
 
   case clang::X86::BI__builtin_ia32_blendvpd:
