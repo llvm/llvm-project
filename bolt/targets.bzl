@@ -1,0 +1,1 @@
+bolt_targets = ["AArch64", "RISCV", "X86"]
