@@ -208,7 +208,7 @@ void SBCommandInterpreter::HandleCommandsFromFile(
   LLDB_INSTRUMENT_VA(this, file, override_context, options, result);
 
   if (!IsValid()) {
-    result->AppendError("SBCommandInterpreter is not valid.");
+    result->AppendError("SBCommandInterpreter is not valid");
     return;
   }
 

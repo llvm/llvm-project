@@ -210,3 +210,9 @@ add_object_library(
     libc.src.__support.common
     libc.src.__support.macros.properties.os
 )
+
+add_header_library(
+  simd
+  HDRS
+    simd.h
+)

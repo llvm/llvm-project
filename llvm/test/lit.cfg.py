@@ -20,8 +20,8 @@ config.name = "LLVM"
 # testFormat: The test format to use to interpret tests.
 extra_substitutions = extra_substitutions = (
     [
-        (r"\| not FileCheck .*", "> /dev/null"),
-        (r"\| FileCheck .*", "> /dev/null"),
+        (r"FileCheck .*", "cat > /dev/null"),
+        (r"not FileCheck .*", "cat > /dev/null"),
     ]
     if config.enable_profcheck
     else []
@@ -38,6 +38,16 @@ config.suffixes = [".ll", ".c", ".test", ".txt", ".s", ".mir", ".yaml", ".spv"]
 # subdirectories contain auxiliary inputs for various tests in their parent
 # directories.
 config.excludes = ["Inputs", "CMakeLists.txt", "README.txt", "LICENSE.txt"]
+
+# Exclude llvm-reduce tests for profcheck because we substitute the FileCheck
+# binary with a no-op command for profcheck, but llvm-reduce tests have RUN
+# commands of the form llvm-reduce --test FileCheck, which explode if we
+# substitute FileCheck because llvm-reduce expects FileCheck in these tests.
+# It's not really possible to exclude these tests from the command substitution,
+# so we just exclude llvm-reduce tests from this config altogether. This should
+# be fine though as profcheck config tests are mostly concerned with opt.
+if config.enable_profcheck:
+    config.excludes = config.excludes + ["llvm-reduce"]
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
@@ -377,14 +387,9 @@ def ptxas_supported_isa_versions(ptxas, major_version, minor_version):
 
 
 def ptxas_supported_sms(ptxas_executable):
-    result = subprocess.run(
-        [ptxas_executable, "--help"],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
+    output = subprocess.check_output([ptxas_executable, "--help"], text=True)
 
-    gpu_arch_section = re.search(r"--gpu-name(.*?)--", result.stdout, re.DOTALL)
+    gpu_arch_section = re.search(r"--gpu-name(.*?)--", output, re.DOTALL)
     allowed_values = gpu_arch_section.group(1)
     supported_sms = re.findall(r"'sm_(\d+(?:[af]?))'", allowed_values)
 
@@ -394,17 +399,19 @@ def ptxas_supported_sms(ptxas_executable):
 
 
 def ptxas_supports_address_size_32(ptxas_executable):
+    # Linux outputs the error message to stderr, while Windows outputs to stdout.
+    # Pipe both to stdout to make sure we get the error message.
     result = subprocess.run(
         [ptxas_executable, "-m 32"],
-        capture_output=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
         text=True,
-        check=False,
     )
-    if "is not defined for option 'machine'" in result.stderr:
+    if "is not defined for option 'machine'" in result.stdout:
         return False
-    if "Missing .version directive at start of file" in result.stderr:
+    if "Missing .version directive at start of file" in result.stdout:
         return True
-    raise RuntimeError(f"Unexpected ptxas output: {result.stderr}")
+    raise RuntimeError(f"Unexpected ptxas output: {result.stdout}")
 
 
 def enable_ptxas(ptxas_executable):

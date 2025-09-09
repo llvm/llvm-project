@@ -279,9 +279,6 @@ _CLC_OVERLOAD _CLC_DEF float __clc_lgamma_r(float x, private int *signp) {
   return r;
 }
 
-_CLC_V_V_VP_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, __clc_lgamma_r, float,
-                      private, int)
-
 #ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 // ====================================================
@@ -585,8 +582,6 @@ _CLC_OVERLOAD _CLC_DEF double __clc_lgamma_r(double x, private int *ip) {
   return r;
 }
 
-_CLC_V_V_VP_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, __clc_lgamma_r, double,
-                      private, int)
 #endif
 
 #ifdef cl_khr_fp16
@@ -597,10 +592,16 @@ _CLC_OVERLOAD _CLC_DEF half __clc_lgamma_r(half x, private int *iptr) {
   return (half)__clc_lgamma_r((float)x, iptr);
 }
 
-_CLC_V_V_VP_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, half, __clc_lgamma_r, half,
-                      private, int);
-
 #endif
+
+#define __CLC_FUNCTION __clc_lgamma_r
+#define __CLC_ARG2_TYPE int
+#define __CLC_ADDRSPACE private
+#define __CLC_BODY <clc/shared/unary_def_with_ptr_scalarize.inc>
+#include <clc/math/gentype.inc>
+#undef __CLC_ADDRSPACE
+#undef __CLC_ARG2_TYPE
+#undef __CLC_FUNCTION
 
 #define __CLC_ADDRSPACE global
 #define __CLC_BODY <clc_lgamma_r.inc>

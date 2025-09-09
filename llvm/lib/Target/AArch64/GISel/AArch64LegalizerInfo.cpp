@@ -222,7 +222,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v2s64, v2s64)
       .moreElementsToNextPow2(0)
       .minScalarSameAs(1, 0)
-      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0);
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
+      .minScalarEltSameAsIf(isVector(0), 1, 0)
+      .maxScalarEltSameAsIf(isVector(0), 1, 0);
 
   getActionDefinitionsBuilder(G_PTR_ADD)
       .legalFor({{p0, s64}, {v2p0, v2s64}})
@@ -879,8 +881,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                  {v2s32, v2s32},
                  {v4s32, v4s32},
                  {v2s64, v2s64}})
-      .legalFor(HasFP16,
-                {{s32, s16}, {s64, s16}, {v4s16, v4s16}, {v8s16, v8s16}})
+      .legalFor(
+          HasFP16,
+          {{s16, s16}, {s32, s16}, {s64, s16}, {v4s16, v4s16}, {v8s16, v8s16}})
       // Handle types larger than i64 by scalarizing/lowering.
       .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
       .scalarizeIf(scalarOrEltWiderThan(1, 64), 1)

@@ -304,6 +304,12 @@ public:
     return false;
   }
 
+  bool Pre(const parser::AccClause::Reduction &x) {
+    const auto &objectList{std::get<parser::AccObjectList>(x.v.t)};
+    ResolveAccObjectList(objectList, Symbol::Flag::AccReduction);
+    return false;
+  }
+
   void Post(const parser::Name &);
 
 private:
@@ -411,8 +417,8 @@ public:
   }
   void Post(const parser::OmpMetadirectiveDirective &) { PopContext(); }
 
-  bool Pre(const parser::OpenMPBlockConstruct &);
-  void Post(const parser::OpenMPBlockConstruct &);
+  bool Pre(const parser::OmpBlockConstruct &);
+  void Post(const parser::OmpBlockConstruct &);
 
   void Post(const parser::OmpBeginDirective &x) {
     GetContext().withinConstruct = true;
@@ -1753,7 +1759,7 @@ static std::string ScopeSourcePos(const Fortran::semantics::Scope &scope);
 
 #endif
 
-bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
+bool OmpAttributeVisitor::Pre(const parser::OmpBlockConstruct &x) {
   const parser::OmpDirectiveSpecification &dirSpec{x.BeginDir()};
   llvm::omp::Directive dirId{dirSpec.DirId()};
   switch (dirId) {
@@ -1792,7 +1798,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
   return true;
 }
 
-void OmpAttributeVisitor::Post(const parser::OpenMPBlockConstruct &x) {
+void OmpAttributeVisitor::Post(const parser::OmpBlockConstruct &x) {
   const parser::OmpDirectiveSpecification &dirSpec{x.BeginDir()};
   llvm::omp::Directive dirId{dirSpec.DirId()};
   switch (dirId) {
@@ -2517,14 +2523,15 @@ static bool IsTargetCaptureImplicitlyFirstprivatizeable(const Symbol &symbol,
     return false;
   };
 
-  if (checkSymbol(symbol)) {
-    const auto *hostAssoc{symbol.detailsIf<HostAssocDetails>()};
-    if (hostAssoc) {
-      return checkSymbol(hostAssoc->symbol());
-    }
-    return true;
-  }
-  return false;
+  return common::visit(
+      common::visitors{
+          [&](const UseDetails &x) -> bool { return checkSymbol(x.symbol()); },
+          [&](const HostAssocDetails &x) -> bool {
+            return checkSymbol(x.symbol());
+          },
+          [&](const auto &) -> bool { return checkSymbol(symbol); },
+      },
+      symbol.details());
 }
 
 void OmpAttributeVisitor::CreateImplicitSymbols(const Symbol *symbol) {

@@ -122,6 +122,16 @@ libc_support_library(
 ################################# Include Files ################################
 
 libc_support_library(
+    name = "llvm_libc_macros_complex_macros",
+    hdrs = [
+        "include/llvm-libc-macros/cfloat128-macros.h",
+        "include/llvm-libc-macros/cfloat16-macros.h",
+        "include/llvm-libc-macros/complex-macros.h",
+    ],
+    deps = [":llvm_libc_macros_float_macros"],
+)
+
+libc_support_library(
     name = "llvm_libc_macros_math_macros",
     hdrs = ["include/llvm-libc-macros/math-macros.h"],
     deps = [":llvm_libc_macros_limits_macros"],
@@ -168,12 +178,16 @@ libc_support_library(
 libc_support_library(
     name = "llvm_libc_types_cfloat128",
     hdrs = ["include/llvm-libc-types/cfloat128.h"],
-    deps = [":llvm_libc_macros_float_macros"],
+    deps = [
+        ":llvm_libc_macros_complex_macros",
+        ":llvm_libc_macros_float_macros",
+    ],
 )
 
 libc_support_library(
     name = "llvm_libc_types_cfloat16",
     hdrs = ["include/llvm-libc-types/cfloat16.h"],
+    deps = [":llvm_libc_macros_complex_macros"],
 )
 
 libc_support_library(
@@ -524,6 +538,7 @@ libc_support_library(
     name = "__support_macros_attributes",
     hdrs = ["src/__support/macros/attributes.h"],
     deps = [
+        ":__support_macros_config",
         ":__support_macros_properties_architectures",
     ],
 )
@@ -673,6 +688,18 @@ libc_support_library(
     hdrs = ["src/__support/CPP/optional.h"],
     deps = [
         ":__support_cpp_utility",
+        ":hdr_stdint_proxy",
+    ],
+)
+
+libc_support_library(
+    name = "__support_cpp_simd",
+    hdrs = ["src/__support/CPP/simd.h"],
+    deps = [
+        ":__support_cpp_algorithm",
+        ":__support_cpp_bit",
+        ":__support_cpp_type_traits",
+        ":__support_macros_attributes",
         ":hdr_stdint_proxy",
     ],
 )
@@ -3722,6 +3749,14 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "fmodbf16",
+    additional_deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_generic_fmod",
+    ],
+)
+
+libc_math_function(
     name = "fmodf",
     additional_deps = [
         ":__support_fputil_generic_fmod",
@@ -4938,6 +4973,7 @@ libc_support_library(
         "src/string/memory_utils/arm/inline_memset.h",
         "src/string/memory_utils/generic/aligned_access.h",
         "src/string/memory_utils/generic/byte_per_byte.h",
+        "src/string/memory_utils/generic/inline_strlen.h",
         "src/string/memory_utils/inline_bcmp.h",
         "src/string/memory_utils/inline_bzero.h",
         "src/string/memory_utils/inline_memcmp.h",
@@ -4964,6 +5000,7 @@ libc_support_library(
         ":__support_cpp_array",
         ":__support_cpp_bit",
         ":__support_cpp_cstddef",
+        ":__support_cpp_simd",
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
         ":__support_macros_optimization",
@@ -5230,6 +5267,16 @@ libc_function(
     name = "strtok",
     srcs = ["src/string/strtok.cpp"],
     hdrs = ["src/string/strtok.h"],
+    deps = [
+        ":__support_common",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strtok_r",
+    srcs = ["src/string/strtok_r.cpp"],
+    hdrs = ["src/string/strtok_r.h"],
     deps = [
         ":__support_common",
         ":string_utils",

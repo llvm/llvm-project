@@ -5291,10 +5291,8 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
     //   UNION_TYPE;   <- where UNION_TYPE is a typedef union.
     if ((Tag && Tag->getDeclName()) ||
         DS.getTypeSpecType() == DeclSpec::TST_typename) {
-      RecordDecl *Record = dyn_cast_or_null<RecordDecl>(Tag);
-      if (!Record)
-        Record = DS.getRepAsType().get()->getAsRecordDecl();
-
+      RecordDecl *Record = Tag ? dyn_cast<RecordDecl>(Tag)
+                               : DS.getRepAsType().get()->getAsRecordDecl();
       if (Record && getLangOpts().MicrosoftExt) {
         Diag(DS.getBeginLoc(), diag::ext_ms_anonymous_record)
             << Record->isUnion() << DS.getSourceRange();
@@ -14395,9 +14393,12 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
       return;
     }
 
-    // Provide a specific diagnostic for uninitialized variable
-    // definitions with incomplete array type.
-    if (Type->isIncompleteArrayType()) {
+    // Provide a specific diagnostic for uninitialized variable definitions
+    // with incomplete array type, unless it is a global unbounded HLSL resource
+    // array.
+    if (Type->isIncompleteArrayType() &&
+        !(getLangOpts().HLSL && Var->hasGlobalStorage() &&
+          Type->isHLSLResourceRecordArray())) {
       if (Var->isConstexpr())
         Diag(Var->getLocation(), diag::err_constexpr_var_requires_const_init)
             << Var;
@@ -15476,6 +15477,14 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
         D.setInvalidType(true);
       }
     }
+  }
+
+  // Incomplete resource arrays are not allowed as function parameters in HLSL
+  if (getLangOpts().HLSL && parmDeclType->isIncompleteArrayType() &&
+      parmDeclType->isHLSLResourceRecordArray()) {
+    Diag(D.getIdentifierLoc(),
+         diag::err_hlsl_incomplete_resource_array_in_function_param);
+    D.setInvalidType(true);
   }
 
   // Temporarily put parameter variables in the translation unit, not
@@ -18052,7 +18061,8 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
           }
         }
       } else if (auto *RD = dyn_cast<CXXRecordDecl>(PrevDecl);
-                 RD && RD->isInjectedClassName()) {
+                 TUK == TagUseKind::Reference && RD &&
+                 RD->isInjectedClassName()) {
         // If lookup found the injected class name, the previous declaration is
         // the class being injected into.
         PrevDecl = cast<TagDecl>(RD->getDeclContext());
@@ -18544,8 +18554,14 @@ CreateNewDecl:
   if (PrevDecl)
     CheckRedeclarationInModule(New, PrevDecl);
 
-  if (TUK == TagUseKind::Definition && (!SkipBody || !SkipBody->ShouldSkip))
-    New->startDefinition();
+  if (TUK == TagUseKind::Definition) {
+    if (!SkipBody || !SkipBody->ShouldSkip) {
+      New->startDefinition();
+    } else {
+      New->setCompleteDefinition();
+      New->demoteThisDefinitionToDeclaration();
+    }
+  }
 
   ProcessDeclAttributeList(S, New, Attrs);
   AddPragmaAttributes(S, New);
