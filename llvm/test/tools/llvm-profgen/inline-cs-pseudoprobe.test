@@ -6,6 +6,9 @@
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-UNWINDER-OFFSET2
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-pseudoprobe.perfscript --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --output=%t --profile-summary-cold-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0
 ; RUN: FileCheck %s --input-file %t
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-pseudoprobe.perfscript --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --output=%t --profile-summary-cold-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0 --mark-all-context-preinlined
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-MARK-PREINLINED
+
 
 ; CHECK:     [main:2 @ foo]:74:0
 ; CHECK-NEXT: 1: 0
@@ -18,10 +21,30 @@
 ; CHECK-NEXT: 8: 14 bar:14
 ; CHECK-NEXT: 9: 0
 ; CHECK-NEXT: !CFGChecksum: 563088904013236
-; CHECK:[main:2 @ foo:8 @ bar]:28:14
+; CHECK-NEXT: !Attributes: 1
+; CHECK-NEXT:[main:2 @ foo:8 @ bar]:28:14
 ; CHECK-NEXT: 1: 14
 ; CHECK-NEXT: 4: 14
 ; CHECK-NEXT: !CFGChecksum: 72617220756
+; CHECK-NEXT: !Attributes: 1
+
+; CHECK-MARK-PREINLINED:     [main:2 @ foo]:74:0
+; CHECK-MARK-PREINLINED-NEXT: 1: 0
+; CHECK-MARK-PREINLINED-NEXT: 2: 15
+; CHECK-MARK-PREINLINED-NEXT: 3: 15
+; CHECK-MARK-PREINLINED-NEXT: 4: 14
+; CHECK-MARK-PREINLINED-NEXT: 5: 1
+; CHECK-MARK-PREINLINED-NEXT: 6: 15
+; CHECK-MARK-PREINLINED-NEXT: 7: 0
+; CHECK-MARK-PREINLINED-NEXT: 8: 14 bar:14
+; CHECK-MARK-PREINLINED-NEXT: 9: 0
+; CHECK-MARK-PREINLINED-NEXT: !CFGChecksum: 563088904013236
+; CHECK-MARK-PREINLINED-NEXT: !Attributes: 3
+; CHECK-MARK-PREINLINED-NEXT:[main:2 @ foo:8 @ bar]:28:14
+; CHECK-MARK-PREINLINED-NEXT: 1: 14
+; CHECK-MARK-PREINLINED-NEXT: 4: 14
+; CHECK-MARK-PREINLINED-NEXT: !CFGChecksum: 72617220756
+; CHECK-MARK-PREINLINED-NEXT: !Attributes: 3
 
 ; CHECK-UNWINDER:      3
 ; CHECK-UNWINDER-NEXT: 201800-201858:1

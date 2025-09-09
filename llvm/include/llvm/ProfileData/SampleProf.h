@@ -868,6 +868,17 @@ public:
     }
   }
 
+  // Propagate the given attribute to this profile context and all callee
+  // contexts.
+  void setContextAttribute(ContextAttributeMask Attr) {
+    Context.setAttribute(Attr);
+    for (auto &I : CallsiteSamples) {
+      for (auto &CS : I.second) {
+        CS.second.setContextAttribute(Attr);
+      }
+    }
+  }
+
   // Query the stale profile matching results and remap the location.
   const LineLocation &mapIRLocToProfileLoc(const LineLocation &IRLoc) const {
     // There is no remapping if the profile is not stale or the matching gives
