@@ -704,39 +704,37 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
       __kmp_tdg_is_recording(new_taskdata->tdg->tdg_status)) {
     kmp_tdg_info_t *tdg = new_taskdata->tdg;
     // extend record_map if needed
+    __kmp_acquire_bootstrap_lock(&tdg->graph_lock);
     if (new_taskdata->td_tdg_task_id >= tdg->map_size) {
-      __kmp_acquire_bootstrap_lock(&tdg->graph_lock);
-      if (new_taskdata->td_tdg_task_id >= tdg->map_size) {
-        kmp_uint old_size = tdg->map_size;
-        kmp_uint new_size = old_size * 2;
-        kmp_node_info_t *old_record = tdg->record_map;
-        kmp_node_info_t *new_record = (kmp_node_info_t *)__kmp_allocate(
-            new_size * sizeof(kmp_node_info_t));
-        KMP_MEMCPY(new_record, tdg->record_map,
-                   old_size * sizeof(kmp_node_info_t));
-        tdg->record_map = new_record;
+      kmp_uint old_size = tdg->map_size;
+      kmp_uint new_size = old_size * 2;
+      kmp_node_info_t *old_record = tdg->record_map;
+      kmp_node_info_t *new_record =
+          (kmp_node_info_t *)__kmp_allocate(new_size * sizeof(kmp_node_info_t));
+      KMP_MEMCPY(new_record, tdg->record_map,
+                 old_size * sizeof(kmp_node_info_t));
+      tdg->record_map = new_record;
 
-        __kmp_free(old_record);
+      __kmp_free(old_record);
 
-        for (kmp_int i = old_size; i < new_size; i++) {
-          new_record[i].task = nullptr;
-          new_record[i].parent_task = nullptr;
-          new_record[i].successors = nullptr;
-          new_record[i].nsuccessors = 0;
-          new_record[i].npredecessors = 0;
-          new_record[i].successors_size = 0;
-          KMP_ATOMIC_ST_REL(&new_record[i].npredecessors_counter, 0);
-        }
-        // update the size at the end, so that we avoid other
-        // threads use old_record while map_size is already updated
-        tdg->map_size = new_size;
+      for (kmp_int i = old_size; i < new_size; i++) {
+        new_record[i].task = nullptr;
+        new_record[i].parent_task = nullptr;
+        new_record[i].successors = nullptr;
+        new_record[i].nsuccessors = 0;
+        new_record[i].npredecessors = 0;
+        new_record[i].successors_size = 0;
+        KMP_ATOMIC_ST_REL(&new_record[i].npredecessors_counter, 0);
       }
-      __kmp_release_bootstrap_lock(&tdg->graph_lock);
+      // update the size at the end, so that we avoid other
+      // threads use old_record while map_size is already updated
+      tdg->map_size = new_size;
     }
     tdg->record_map[new_taskdata->td_tdg_task_id].task = new_task;
     tdg->record_map[new_taskdata->td_tdg_task_id].parent_task =
         new_taskdata->td_parent;
     KMP_ATOMIC_INC(&tdg->num_tasks);
+    __kmp_release_bootstrap_lock(&tdg->graph_lock);
   }
 #endif
 #if OMPT_SUPPORT

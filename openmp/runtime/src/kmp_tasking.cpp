@@ -1800,7 +1800,8 @@ kmp_int32 __kmp_omp_task(kmp_int32 gtid, kmp_task_t *new_task,
       __kmp_tdg_is_recording(new_taskdata->tdg->tdg_status)) {
     kmp_tdg_info_t *tdg = new_taskdata->tdg;
     // extend the record_map if needed
-    if (new_taskdata->td_tdg_task_id >= new_taskdata->tdg->map_size) {
+    if (new_taskdata->td_tdg_task_id >= tdg->map_size ||
+        tdg->record_map[new_taskdata->td_tdg_task_id].task == nullptr) {
       __kmp_acquire_bootstrap_lock(&tdg->graph_lock);
       // map_size could have been updated by another thread if recursive
       // taskloop
@@ -1829,14 +1830,11 @@ kmp_int32 __kmp_omp_task(kmp_int32 gtid, kmp_task_t *new_task,
         // threads use old_record while map_size is already updated
         tdg->map_size = new_size;
       }
-      __kmp_release_bootstrap_lock(&tdg->graph_lock);
-    }
-    // record a task
-    if (tdg->record_map[new_taskdata->td_tdg_task_id].task == nullptr) {
       tdg->record_map[new_taskdata->td_tdg_task_id].task = new_task;
       tdg->record_map[new_taskdata->td_tdg_task_id].parent_task =
           new_taskdata->td_parent;
       KMP_ATOMIC_INC(&tdg->num_tasks);
+      __kmp_release_bootstrap_lock(&tdg->graph_lock);
     }
   }
 #endif
