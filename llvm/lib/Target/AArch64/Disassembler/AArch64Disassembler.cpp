@@ -1608,7 +1608,7 @@ DecodeStatus AArch64Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
   uint32_t Insn =
       (Bytes[3] << 24) | (Bytes[2] << 16) | (Bytes[1] << 8) | (Bytes[0] << 0);
 
-  const uint8_t *Tables[] = {DecoderTable32, DecoderTableFallback32};
+  const uint8_t *Tables[] = {DecoderTable32};
 
   for (const auto *Table : Tables) {
     DecodeStatus Result =

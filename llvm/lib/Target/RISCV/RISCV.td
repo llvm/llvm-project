@@ -85,6 +85,11 @@ include "RISCVPfmCounters.td"
 
 def RISCVInstrInfo : InstrInfo {
   let guessInstructionProperties = 0;
+  let CoalesceDecoderNamespaces = [
+    ["", "RV32Only", "Zfinx", "ZdinxRV32Only"]
+    // ["Zicfiss", "", "RV32Only", "ZcOverlap"], // Need to handle RV32Only mappings.
+  ];
+
 }
 
 def RISCVAsmParser : AsmParser {

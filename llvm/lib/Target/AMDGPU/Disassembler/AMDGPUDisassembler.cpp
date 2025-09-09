@@ -617,18 +617,15 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       std::bitset<96> DecW = eat12Bytes(Bytes);
 
       if (isGFX11() &&
-          tryDecodeInst(DecoderTableGFX1196, DecoderTableGFX11_FAKE1696, MI,
-                        DecW, Address, CS))
+          tryDecodeInst(DecoderTableGFX1196, MI, DecW, Address, CS))
         break;
 
       if (isGFX1250() &&
-          tryDecodeInst(DecoderTableGFX125096, DecoderTableGFX1250_FAKE1696, MI,
-                        DecW, Address, CS))
+          tryDecodeInst(DecoderTableGFX125096, MI, DecW, Address, CS))
         break;
 
       if (isGFX12() &&
-          tryDecodeInst(DecoderTableGFX1296, DecoderTableGFX12_FAKE1696, MI,
-                        DecW, Address, CS))
+          tryDecodeInst(DecoderTableGFX1296, MI, DecW, Address, CS))
         break;
 
       if (isGFX12() &&
@@ -698,18 +695,13 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
         break;
 
       if (isGFX1250() &&
-          tryDecodeInst(DecoderTableGFX125064, DecoderTableGFX1250_FAKE1664, MI,
-                        QW, Address, CS))
+          tryDecodeInst(DecoderTableGFX125064, MI, QW, Address, CS))
         break;
 
-      if (isGFX12() &&
-          tryDecodeInst(DecoderTableGFX1264, DecoderTableGFX12_FAKE1664, MI, QW,
-                        Address, CS))
+      if (isGFX12() && tryDecodeInst(DecoderTableGFX1264, MI, QW, Address, CS))
         break;
 
-      if (isGFX11() &&
-          tryDecodeInst(DecoderTableGFX1164, DecoderTableGFX11_FAKE1664, MI, QW,
-                        Address, CS))
+      if (isGFX11() && tryDecodeInst(DecoderTableGFX1164, MI, QW, Address, CS))
         break;
 
       if (isGFX11() &&
@@ -753,19 +745,14 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       if (isGFX10() && tryDecodeInst(DecoderTableGFX1032, MI, DW, Address, CS))
         break;
 
-      if (isGFX11() &&
-          tryDecodeInst(DecoderTableGFX1132, DecoderTableGFX11_FAKE1632, MI, DW,
-                        Address, CS))
+      if (isGFX11() && tryDecodeInst(DecoderTableGFX1132, MI, DW, Address, CS))
         break;
 
       if (isGFX1250() &&
-          tryDecodeInst(DecoderTableGFX125032, DecoderTableGFX1250_FAKE1632, MI,
-                        DW, Address, CS))
+          tryDecodeInst(DecoderTableGFX125032, MI, DW, Address, CS))
         break;
 
-      if (isGFX12() &&
-          tryDecodeInst(DecoderTableGFX1232, DecoderTableGFX12_FAKE1632, MI, DW,
-                        Address, CS))
+      if (isGFX12() && tryDecodeInst(DecoderTableGFX1232, MI, DW, Address, CS))
         break;
     }
 
