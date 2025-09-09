@@ -1195,6 +1195,7 @@ static llvm::Triple::EnvironmentType getEnvironmentType(llvm::StringRef Environm
              .Case("callable", llvm::Triple::Callable)
              .Case("mesh", llvm::Triple::Mesh)
              .Case("amplification", llvm::Triple::Amplification)
+             .Case("rootsignature", llvm::Triple::RootSignature)
              .Case("library", llvm::Triple::Library)
              .Default(llvm::Triple::UnknownEnvironment);
 }
