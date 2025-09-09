@@ -70,6 +70,16 @@ struct FormatStyle {
   ///                    argument2);            argument2);
   /// \endcode
   ///
+  /// \note
+  ///   As of clang-format 22 this option is a bool with the previous
+  ///   option of ``Align`` replaced with ``true``, ``DontAlign`` replaced
+  ///   with ``false``, and the options of ``AlwaysBreak`` and ``BlockIndent``
+  ///   replaced with ``true`` and with setting of new style options using
+  ///   ``BreakAfterOpenBracketBracedList``, ``BreakAfterOpenBracketFunction``,
+  ///   ``BreakAfterOpenBracketIf``, ``BreakBeforeCloseBracketBracedList``,
+  ///   ``BreakBeforeCloseBracketFunction``, and ``BreakAfterOpenBracketIf``.
+  /// \endnote
+  ///
   /// This applies to round brackets (parentheses), angle brackets and square
   /// brackets.
   /// \version 3.8
