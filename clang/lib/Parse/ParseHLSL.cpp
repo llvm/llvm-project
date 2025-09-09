@@ -118,46 +118,6 @@ static void fixSeparateAttrArgAndNumber(StringRef ArgStr, SourceLocation ArgLoc,
   Slot = new (Ctx) IdentifierLoc(ArgLoc, PP.getIdentifierInfo(FixedArg));
 }
 
-Parser::ParsedSemantic Parser::ParseHLSLSemantic() {
-  assert(Tok.is(tok::identifier) && "Not a HLSL Annotation");
-
-  // Semantic pattern: [A-Za-z_]([A-Za-z_0-9]*[A-Za-z_])?[0-9]*
-  // The first part is the semantic name, the second is the optional
-  // semantic index. The semantic index is the number at the end of
-  // the semantic, including leading zeroes. Digits located before
-  // the last letter are part of the semantic name.
-  bool Invalid = false;
-  SmallString<256> Buffer;
-  Buffer.resize(Tok.getLength() + 1);
-  StringRef Identifier = PP.getSpelling(Tok, Buffer);
-  if (Invalid) {
-    Diag(Tok.getLocation(), diag::err_expected_semantic_identifier);
-    return {};
-  }
-
-  assert(Identifier.size() > 0);
-  // Determine the start of the semantic index.
-  unsigned IndexIndex = Identifier.find_last_not_of("0123456789") + 1;
-
-  // ParseHLSLSemantic being called on an indentifier, the first
-  // character cannot be a digit. This error should be handled by
-  // the caller. We can assert here.
-  StringRef SemanticName = Identifier.take_front(IndexIndex);
-  assert(SemanticName.size() > 0);
-
-  unsigned Index = 0;
-  bool Explicit = false;
-  if (IndexIndex != Identifier.size()) {
-    Explicit = true;
-    [[maybe_unused]] bool Failure =
-        Identifier.substr(IndexIndex).getAsInteger(10, Index);
-    // Given the logic above, this should never fail.
-    assert(!Failure);
-  }
-
-  return {SemanticName, Index, Explicit};
-}
-
 void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
                                   SourceLocation *EndLoc,
                                   bool CouldBeBitField) {
@@ -181,15 +141,11 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
     return;
   }
 
-  ParsedAttr::Kind AttrKind =
-      ParsedAttr::getParsedKind(II, nullptr, ParsedAttr::AS_HLSLAnnotation);
-  Parser::ParsedSemantic Semantic;
-  if (AttrKind == ParsedAttr::AT_HLSLUnparsedSemantic)
-    Semantic = ParseHLSLSemantic();
-
   SourceLocation Loc = ConsumeToken();
   if (EndLoc)
     *EndLoc = Tok.getLocation();
+  ParsedAttr::Kind AttrKind =
+      ParsedAttr::getParsedKind(II, nullptr, ParsedAttr::AS_HLSLAnnotation);
 
   ArgsVector ArgExprs;
   switch (AttrKind) {
@@ -326,17 +282,14 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
       return;
     }
   } break;
-  case ParsedAttr::AT_HLSLUnparsedSemantic: {
-    ASTContext &Ctx = Actions.getASTContext();
-    ArgExprs.push_back(IntegerLiteral::Create(
-        Ctx, llvm::APInt(Ctx.getTypeSize(Ctx.IntTy), Semantic.Index), Ctx.IntTy,
-        SourceLocation()));
-    ArgExprs.push_back(IntegerLiteral::Create(
-        Ctx, llvm::APInt(1, Semantic.Explicit), Ctx.BoolTy, SourceLocation()));
-    II = PP.getIdentifierInfo(Semantic.Name);
-    break;
-  }
-  case ParsedAttr::UnknownAttribute: // FIXME: maybe this is obsolete?
+  case ParsedAttr::UnknownAttribute:
+    Diag(Loc, diag::err_unknown_hlsl_semantic) << II;
+    return;
+  case ParsedAttr::AT_HLSLSV_GroupThreadID:
+  case ParsedAttr::AT_HLSLSV_GroupID:
+  case ParsedAttr::AT_HLSLSV_GroupIndex:
+  case ParsedAttr::AT_HLSLSV_DispatchThreadID:
+  case ParsedAttr::AT_HLSLSV_Position:
     break;
   default:
     llvm_unreachable("invalid HLSL Annotation");
