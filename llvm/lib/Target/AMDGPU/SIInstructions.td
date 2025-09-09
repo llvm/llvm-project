@@ -2201,6 +2201,8 @@ def : GCNPat <
 }
 
 foreach fp16vt = [f16, bf16] in {
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in {
 def : GCNPat <
   (fcopysign fp16vt:$src0, fp16vt:$src1),
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)), $src0, $src1)
@@ -2231,6 +2233,42 @@ def : GCNPat <
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)), $src0,
              (V_LSHRREV_B32_e64 (i32 16), (EXTRACT_SUBREG $src1, sub1)))
 >;
+}
+let True16Predicate = UseRealTrue16Insts in {
+def : GCNPat <
+  (fcopysign fp16vt:$src0, fp16vt:$src1),
+  (EXTRACT_SUBREG (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)),
+    (REG_SEQUENCE VGPR_32, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16),
+    (REG_SEQUENCE VGPR_32, $src1, lo16, (i16 (IMPLICIT_DEF)), hi16)), lo16)
+>;
+
+def : GCNPat <
+  (fcopysign f32:$src0, fp16vt:$src1),
+  (V_BFI_B32_e64 (S_MOV_B32 (i32 0x7fffffff)), $src0,
+             (REG_SEQUENCE VGPR_32, (i16 (IMPLICIT_DEF)), lo16, $src1, hi16))
+>;
+
+def : GCNPat <
+  (fcopysign f64:$src0, fp16vt:$src1),
+  (REG_SEQUENCE VReg_64,
+    (i32 (EXTRACT_SUBREG $src0, sub0)), sub0,
+    (V_BFI_B32_e64 (S_MOV_B32 (i32 0x7fffffff)), (i32 (EXTRACT_SUBREG $src0, sub1)),
+               (REG_SEQUENCE VGPR_32, (i16 (IMPLICIT_DEF)), lo16, $src1, hi16)), sub1)
+>;
+
+def : GCNPat <
+  (fcopysign fp16vt:$src0, f32:$src1),
+  (EXTRACT_SUBREG (V_BFI_B32_e64 (S_MOV_B32 (i32 0x7fff0000)),
+             (REG_SEQUENCE VGPR_32, (i16 (IMPLICIT_DEF)), lo16, $src0, hi16), $src1), hi16)
+>;
+
+def : GCNPat <
+  (fcopysign fp16vt:$src0, f64:$src1),
+  (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)),
+             (REG_SEQUENCE VGPR_32, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16),
+             (V_LSHRREV_B32_e64 (i32 16), (EXTRACT_SUBREG $src1, sub1)))
+>;
+}
 } // End foreach fp16vt = [f16, bf16]
 
 
@@ -3154,6 +3192,11 @@ def : GCNPat<
   (i32 (zext (i16 (bitconvert fp16_zeros_high_16bits:$src)))),
   (COPY VSrc_b16:$src)
 >;
+
+def : GCNPat <
+  (i1 (DivergentUnaryFrag<trunc> i16:$a)),
+  (V_CMP_EQ_U32_e64 (V_AND_B32_e64 (i32 1), $a), (i32 1))
+>;
 }
 
 let True16Predicate = UseRealTrue16Insts in {
@@ -3170,6 +3213,11 @@ def : GCNPat<
 def : GCNPat<
   (i32 (zext (i16 (bitconvert fp16_zeros_high_16bits:$src)))),
   (REG_SEQUENCE VGPR_32, VGPR_16:$src, lo16, (V_MOV_B16_t16_e64 0, (i16 0), 0), hi16)
+>;
+
+def : GCNPat <
+  (i1 (DivergentUnaryFrag<trunc> i16:$a)),
+  (V_CMP_EQ_U16_t16_e64 (i32 0), (V_AND_B16_t16_e64 (i32 0), (i16 1), (i32 0), $a), (i32 0), (i16 1), (i32 0))
 >;
 }
 
@@ -3196,11 +3244,6 @@ def : GCNPat <
 
 def : GCNPat <
   (i1 (DivergentUnaryFrag<trunc> i32:$a)),
-  (V_CMP_EQ_U32_e64 (V_AND_B32_e64 (i32 1), $a), (i32 1))
->;
-
-def : GCNPat <
-  (i1 (DivergentUnaryFrag<trunc> i16:$a)),
   (V_CMP_EQ_U32_e64 (V_AND_B32_e64 (i32 1), $a), (i32 1))
 >;
 
@@ -3807,7 +3850,8 @@ def : GCNPat <
   (v2i16 (S_PACK_HL_B32_B16 SReg_32:$src0, SReg_32:$src1))
 >;
 
-
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in {
 def : GCNPat <
   (v2f16 (scalar_to_vector f16:$src0)),
   (COPY $src0)
@@ -3827,6 +3871,29 @@ def : GCNPat <
   (v4f16 (scalar_to_vector f16:$src0)),
   (INSERT_SUBREG (IMPLICIT_DEF), $src0, sub0)
 >;
+}
+
+let True16Predicate = UseRealTrue16Insts in {
+def : GCNPat <
+  (v2f16 (scalar_to_vector f16:$src0)),
+  (REG_SEQUENCE VGPR_32, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16)
+>;
+
+def : GCNPat <
+  (v2i16 (scalar_to_vector i16:$src0)),
+  (REG_SEQUENCE VGPR_32, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16)
+>;
+
+def : GCNPat <
+  (v4i16 (scalar_to_vector i16:$src0)),
+  (REG_SEQUENCE VGPR_32, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16, (i32 (IMPLICIT_DEF)), sub1)
+>;
+
+def : GCNPat <
+  (v4f16 (scalar_to_vector f16:$src0)),
+  (REG_SEQUENCE VGPR_32, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16, (i32 (IMPLICIT_DEF)), sub1)
+>;
+}
 
 def : GCNPat <
   (i64 (int_amdgcn_mov_dpp i64:$src, timm:$dpp_ctrl, timm:$row_mask,

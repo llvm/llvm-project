@@ -374,7 +374,7 @@ define amdgpu_kernel void @s_test_copysign_f64_f16(ptr addrspace(1) %out, [8 x i
 ; GFX11-NEXT:    s_load_b64 s[2:3], s[4:5], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_lshlrev_b32_e64 v0, 16, s6
+; GFX11-NEXT:    v_mov_b16_e32 v0.h, s6
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_bfi_b32 v1, 0x7fffffff, s1, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
@@ -972,8 +972,9 @@ define double @v_test_copysign_f64_f16(ptr addrspace(1) %out, [8 x i32], double 
 ; GFX11-LABEL: v_test_copysign_f64_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_dual_mov_b32 v0, v10 :: v_dual_lshlrev_b32 v1, 16, v20
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_mov_b16_e32 v1.h, v20.l
+; GFX11-NEXT:    v_mov_b32_e32 v0, v10
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_bfi_b32 v1, 0x7fffffff, v11, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sign.ext = fpext half %sign to double

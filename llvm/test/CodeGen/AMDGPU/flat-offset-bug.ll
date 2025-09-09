@@ -166,7 +166,7 @@ define amdgpu_kernel void @load_i16_hi(ptr %arg, ptr %out) {
 ; GFX11-LABEL: load_i16_hi:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    v_mov_b16_e32 v2.l, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    flat_load_d16_hi_b16 v2, v[0:1] offset:8
@@ -272,7 +272,7 @@ define amdgpu_kernel void @load_half_hi(ptr %arg, ptr %out) {
 ; GFX11-LABEL: load_half_hi:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    v_mov_b16_e32 v2.l, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    flat_load_d16_hi_b16 v2, v[0:1] offset:8

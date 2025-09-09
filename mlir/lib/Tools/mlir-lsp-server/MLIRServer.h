@@ -9,7 +9,6 @@
 #ifndef LIB_MLIR_TOOLS_MLIRLSPSERVER_SERVER_H_
 #define LIB_MLIR_TOOLS_MLIRLSPSERVER_SERVER_H_
 
-#include "Protocol.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Tools/mlir-lsp-server/MlirLspRegistryFunction.h"
 #include "llvm/Support/Error.h"
@@ -20,17 +19,16 @@ namespace mlir {
 class DialectRegistry;
 
 namespace lsp {
-using llvm::lsp::CodeAction;
-using llvm::lsp::CodeActionContext;
-using llvm::lsp::CompletionList;
-using llvm::lsp::Diagnostic;
-using llvm::lsp::DocumentSymbol;
-using llvm::lsp::Hover;
-using llvm::lsp::Location;
-using llvm::lsp::MLIRConvertBytecodeResult;
-using llvm::lsp::Position;
-using llvm::lsp::Range;
-using llvm::lsp::URIForFile;
+struct CodeAction;
+struct CodeActionContext;
+struct CompletionList;
+struct Diagnostic;
+struct DocumentSymbol;
+struct Hover;
+struct Location;
+struct MLIRConvertBytecodeResult;
+struct Position;
+struct Range;
 
 /// This class implements all of the MLIR related functionality necessary for a
 /// language server. This class allows for keeping the MLIR specific logic

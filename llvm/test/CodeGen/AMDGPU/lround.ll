@@ -829,9 +829,7 @@ define half @intrinsic_fround_half(half %arg) {
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_ge_f16_e64 s0, |v1.l|, 0.5
 ; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0, 0x3c00, s0
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v1.l
-; GFX11-SDAG-TRUE16-NEXT:    v_bfi_b32 v0, 0x7fff, v2, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-TRUE16-NEXT:    v_bfi_b32 v0, 0x7fff, v1, v0
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_f16_e32 v0.l, v1.h, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -952,12 +950,10 @@ define i32 @intrinsic_lround_i32_f16(half %arg) {
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_ge_f16_e64 s0, |v1.l|, 0.5
 ; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0, 0x3c00, s0
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v1.l
-; GFX11-SDAG-TRUE16-NEXT:    v_bfi_b32 v0, 0x7fff, v2, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SDAG-TRUE16-NEXT:    v_bfi_b32 v0, 0x7fff, v1, v0
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_f16_e32 v0.l, v1.h, v0.l
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;

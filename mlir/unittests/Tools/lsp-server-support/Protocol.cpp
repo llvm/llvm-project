@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/LSP/Protocol.h"
+#include "mlir/Tools/lsp-server-support/Protocol.h"
 
 #include "gtest/gtest.h"
 
-using namespace llvm;
-using namespace llvm::lsp;
+using namespace mlir;
+using namespace mlir::lsp;
 using namespace testing;
 
 namespace {

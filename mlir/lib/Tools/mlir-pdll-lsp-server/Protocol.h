@@ -20,12 +20,10 @@
 #ifndef LIB_MLIR_TOOLS_MLIRPDLLLSPSERVER_PROTOCOL_H_
 #define LIB_MLIR_TOOLS_MLIRPDLLLSPSERVER_PROTOCOL_H_
 
-#include "llvm/Support/LSP/Protocol.h"
+#include "mlir/Tools/lsp-server-support/Protocol.h"
 
 namespace mlir {
 namespace lsp {
-using llvm::lsp::URIForFile;
-
 //===----------------------------------------------------------------------===//
 // PDLLViewOutputParams
 //===----------------------------------------------------------------------===//
