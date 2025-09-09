@@ -696,7 +696,6 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; DEFAULT-NEXT:    [[MUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[N]])
 ; DEFAULT-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i64, i1 } [[MUL]], 0
 ; DEFAULT-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
-; DEFAULT-NEXT:    [[TMP1:%.*]] = sub i64 0, [[MUL_RESULT]]
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[DST]], i64 [[MUL_RESULT]]
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = icmp ult ptr [[TMP2]], [[DST]]
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = or i1 [[TMP3]], [[MUL_OVERFLOW]]
@@ -704,7 +703,6 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; DEFAULT-NEXT:    [[MUL1:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[N]])
 ; DEFAULT-NEXT:    [[MUL_RESULT2:%.*]] = extractvalue { i64, i1 } [[MUL1]], 0
 ; DEFAULT-NEXT:    [[MUL_OVERFLOW3:%.*]] = extractvalue { i64, i1 } [[MUL1]], 1
-; DEFAULT-NEXT:    [[TMP5:%.*]] = sub i64 0, [[MUL_RESULT2]]
 ; DEFAULT-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[MUL_RESULT2]]
 ; DEFAULT-NEXT:    [[TMP7:%.*]] = icmp ult ptr [[TMP6]], [[SCEVGEP]]
 ; DEFAULT-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW3]]
@@ -712,7 +710,6 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; DEFAULT-NEXT:    [[MUL5:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[N]])
 ; DEFAULT-NEXT:    [[MUL_RESULT6:%.*]] = extractvalue { i64, i1 } [[MUL5]], 0
 ; DEFAULT-NEXT:    [[MUL_OVERFLOW7:%.*]] = extractvalue { i64, i1 } [[MUL5]], 1
-; DEFAULT-NEXT:    [[TMP9:%.*]] = sub i64 0, [[MUL_RESULT6]]
 ; DEFAULT-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[SCEVGEP4]], i64 [[MUL_RESULT6]]
 ; DEFAULT-NEXT:    [[TMP11:%.*]] = icmp ult ptr [[TMP10]], [[SCEVGEP4]]
 ; DEFAULT-NEXT:    [[TMP12:%.*]] = or i1 [[TMP11]], [[MUL_OVERFLOW7]]
@@ -881,7 +878,6 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; PRED-NEXT:    [[MUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[N]])
 ; PRED-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i64, i1 } [[MUL]], 0
 ; PRED-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
-; PRED-NEXT:    [[TMP1:%.*]] = sub i64 0, [[MUL_RESULT]]
 ; PRED-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[DST]], i64 [[MUL_RESULT]]
 ; PRED-NEXT:    [[TMP3:%.*]] = icmp ult ptr [[TMP2]], [[DST]]
 ; PRED-NEXT:    [[TMP4:%.*]] = or i1 [[TMP3]], [[MUL_OVERFLOW]]
@@ -889,7 +885,6 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; PRED-NEXT:    [[MUL1:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[N]])
 ; PRED-NEXT:    [[MUL_RESULT2:%.*]] = extractvalue { i64, i1 } [[MUL1]], 0
 ; PRED-NEXT:    [[MUL_OVERFLOW3:%.*]] = extractvalue { i64, i1 } [[MUL1]], 1
-; PRED-NEXT:    [[TMP5:%.*]] = sub i64 0, [[MUL_RESULT2]]
 ; PRED-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[MUL_RESULT2]]
 ; PRED-NEXT:    [[TMP7:%.*]] = icmp ult ptr [[TMP6]], [[SCEVGEP]]
 ; PRED-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW3]]
@@ -897,7 +892,6 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; PRED-NEXT:    [[MUL5:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[N]])
 ; PRED-NEXT:    [[MUL_RESULT6:%.*]] = extractvalue { i64, i1 } [[MUL5]], 0
 ; PRED-NEXT:    [[MUL_OVERFLOW7:%.*]] = extractvalue { i64, i1 } [[MUL5]], 1
-; PRED-NEXT:    [[TMP9:%.*]] = sub i64 0, [[MUL_RESULT6]]
 ; PRED-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[SCEVGEP4]], i64 [[MUL_RESULT6]]
 ; PRED-NEXT:    [[TMP11:%.*]] = icmp ult ptr [[TMP10]], [[SCEVGEP4]]
 ; PRED-NEXT:    [[TMP12:%.*]] = or i1 [[TMP11]], [[MUL_OVERFLOW7]]
