@@ -17,6 +17,8 @@
 // CHECK-NEXT:     ziccamoa             1.0       'Ziccamoa' (Main Memory Supports All Atomics in A)
 // CHECK-NEXT:     ziccif               1.0       'Ziccif' (Main Memory Supports Instruction Fetch with Atomicity Requirement)
 // CHECK-NEXT:     ziccrse              1.0       'Ziccrse' (Main Memory Supports Forward Progress on LR/SC Sequences)
+// CHECK-NEXT:     zicfilp              1.0       'Zicfilp' (Landing pad)
+// CHECK-NEXT:     zicfiss              1.0       'Zicfiss' (Shadow stack)
 // CHECK-NEXT:     zicntr               2.0       'Zicntr' (Base Counters and Timers)
 // CHECK-NEXT:     zicond               1.0       'Zicond' (Integer Conditional Operations)
 // CHECK-NEXT:     zicsr                2.0       'Zicsr' (CSRs)
@@ -65,7 +67,5 @@
 // CHECK-NEXT:     xsifivecflushdlone   1.0       'XSiFivecflushdlone' (SiFive sf.cflush.d.l1 Instruction)
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental extensions
-// CHECK-NEXT:     zicfilp              1.0       'Zicfilp' (Landing pad)
-// CHECK-NEXT:     zicfiss              1.0       'Zicfiss' (Shadow stack)
 // CHECK-EMPTY:
 // CHECK-NEXT: ISA String: rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_b1p0_v1p0_zic64b1p0_zicbom1p0_zicbop1p0_zicboz1p0_ziccamoa1p0_ziccif1p0_ziccrse1p0_zicfilp1p0_zicfiss1p0_zicntr2p0_zicond1p0_zicsr2p0_zifencei2p0_zihintntl1p0_zihintpause2p0_zihpm2p0_zimop1p0_zmmul1p0_za64rs1p0_zaamo1p0_zalrsc1p0_zawrs1p0_zfa1p0_zfbfmin1p0_zfh1p0_zfhmin1p0_zca1p0_zcb1p0_zcd1p0_zcmop1p0_zba1p0_zbb1p0_zbs1p0_zkr1p0_zkt1p0_zvbb1p0_zve32f1p0_zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvfbfmin1p0_zvfbfwma1p0_zvfh1p0_zvfhmin1p0_zvkb1p0_zvkt1p0_zvl1024b1p0_zvl128b1p0_zvl256b1p0_zvl32b1p0_zvl512b1p0_zvl64b1p0_xsifivecdiscarddlone1p0_xsifivecflushdlone1p0
