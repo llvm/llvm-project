@@ -207,6 +207,17 @@ the configuration (without a prefix: ``Auto``).
     someLongFunction(argument1,         someLongFunction(argument1,
                      argument2);            argument2);
 
+
+  .. note::
+
+    As of clang-format 22 this option is a bool with the previous
+    option of ``Align`` replaced with ``true``, ``DontAlign`` replaced
+    with ``false``, and the options of ``AlwaysBreak`` and ``BlockIndent``
+    replaced with ``true`` and with setting of new style options using
+    ``BreakAfterOpenBracketBracedList``, ``BreakAfterOpenBracketFunction``,
+    ``BreakAfterOpenBracketIf``, ``BreakBeforeCloseBracketBracedList``,
+    ``BreakBeforeCloseBracketFunction``, and ``BreakAfterOpenBracketIf``.
+
   This applies to round brackets (parentheses), angle brackets and square
   brackets.
 
