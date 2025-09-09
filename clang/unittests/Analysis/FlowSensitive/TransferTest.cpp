@@ -9,17 +9,25 @@
 #include "TestingSupport.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
+#include "clang/AST/OperationKinds.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
+#include "clang/Analysis/FlowSensitive/NoopLattice.h"
 #include "clang/Analysis/FlowSensitive/RecordOps.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Testing/TestAST.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -27,6 +35,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 namespace clang {
 namespace dataflow {
@@ -1525,6 +1534,40 @@ TEST(TransferTest, BaseClassInitializer) {
             EXPECT_THAT(Results.keys(), UnorderedElementsAre("p"));
           }),
       llvm::Succeeded());
+}
+
+TEST(TransferTest, BaseClassInitializerFromSiblingDerivedInstance) {
+  using ast_matchers::cxxConstructorDecl;
+  using ast_matchers::hasName;
+  using ast_matchers::ofClass;
+
+  std::string Code = R"(
+    struct Base {
+      bool BaseField;
+      char UnmodeledField;
+    };
+
+    struct DerivedOne : public Base {
+      int DerivedOneField;
+    };
+
+    struct DerivedTwo : public Base {
+      int DerivedTwoField;
+
+      DerivedTwo(const DerivedOne& d1)
+          : Base(d1), DerivedTwoField(d1.DerivedOneField) {
+          (void)BaseField;
+          }
+    };
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        // Regression test only; we used to crash when transferring the base
+        // class initializer from the DerivedToBase-cast `d1`.
+      },
+      LangStandard::lang_cxx17, /*ApplyBuiltinTransfer=*/true, "DerivedTwo");
 }
 
 TEST(TransferTest, FieldsDontHaveValuesInConstructor) {
@@ -3541,7 +3584,7 @@ TEST(TransferTest, ResultObjectLocationDontVisitUnevaluatedContexts) {
   testFunction(Code, "noexceptTarget");
 }
 
-TEST(TransferTest, StaticCast) {
+TEST(TransferTest, StaticCastNoOp) {
   std::string Code = R"(
     void target(int Foo) {
       int Bar = static_cast<int>(Foo);
@@ -3561,12 +3604,281 @@ TEST(TransferTest, StaticCast) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
+        const auto *Cast = ast_matchers::selectFirst<CXXStaticCastExpr>(
+            "cast",
+            ast_matchers::match(ast_matchers::cxxStaticCastExpr().bind("cast"),
+                                ASTCtx));
+        ASSERT_THAT(Cast, NotNull());
+        ASSERT_EQ(Cast->getCastKind(), CK_NoOp);
+
         const auto *FooVal = Env.getValue(*FooDecl);
         const auto *BarVal = Env.getValue(*BarDecl);
         EXPECT_TRUE(isa<IntegerValue>(FooVal));
         EXPECT_TRUE(isa<IntegerValue>(BarVal));
         EXPECT_EQ(FooVal, BarVal);
       });
+}
+
+TEST(TransferTest, StaticCastBaseToDerived) {
+  std::string Code = R"cc(
+    struct Base {
+      char C;
+    };
+    struct Intermediate : public Base {
+      bool B;
+    };
+    struct Derived : public Intermediate {
+      int I;
+    };
+    Base& getBaseRef();
+    void target(Base* BPtr) {
+      Derived* DPtr = static_cast<Derived*>(BPtr);
+      DPtr->C;
+      DPtr->B;
+      DPtr->I;
+      Derived& DRef = static_cast<Derived&>(*BPtr);
+      DRef.C;
+      DRef.B;
+      DRef.I;
+      Derived& DRefFromFunc = static_cast<Derived&>(getBaseRef());
+      DRefFromFunc.C;
+      DRefFromFunc.B;
+      DRefFromFunc.I;
+      // [[p]]
+    }
+  )cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        const ValueDecl *BPtrDecl = findValueDecl(ASTCtx, "BPtr");
+        ASSERT_THAT(BPtrDecl, NotNull());
+
+        const ValueDecl *DPtrDecl = findValueDecl(ASTCtx, "DPtr");
+        ASSERT_THAT(DPtrDecl, NotNull());
+
+        const ValueDecl *DRefDecl = findValueDecl(ASTCtx, "DRef");
+        ASSERT_THAT(DRefDecl, NotNull());
+
+        const ValueDecl *DRefFromFuncDecl =
+            findValueDecl(ASTCtx, "DRefFromFunc");
+        ASSERT_THAT(DRefFromFuncDecl, NotNull());
+
+        const auto *Cast = ast_matchers::selectFirst<CXXStaticCastExpr>(
+            "cast",
+            ast_matchers::match(ast_matchers::cxxStaticCastExpr().bind("cast"),
+                                ASTCtx));
+        ASSERT_THAT(Cast, NotNull());
+        ASSERT_EQ(Cast->getCastKind(), CK_BaseToDerived);
+
+        EXPECT_EQ(Env.getValue(*BPtrDecl), Env.getValue(*DPtrDecl));
+        EXPECT_EQ(&Env.get<PointerValue>(*BPtrDecl)->getPointeeLoc(),
+                  Env.getStorageLocation(*DRefDecl));
+        // For DRefFromFunc, not crashing when analyzing the field accesses is
+        // enough.
+      });
+}
+
+TEST(TransferTest, ExplicitDerivedToBaseCast) {
+  std::string Code = R"cc(
+    struct Base {};
+    struct Derived : public Base {};
+    void target(Derived D) {
+      (Base*)&D;
+      // [[p]]
+    }
+)cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *Cast = ast_matchers::selectFirst<ImplicitCastExpr>(
+            "cast", ast_matchers::match(
+                        ast_matchers::implicitCastExpr().bind("cast"), ASTCtx));
+        ASSERT_THAT(Cast, NotNull());
+        ASSERT_EQ(Cast->getCastKind(), CK_DerivedToBase);
+
+        auto *AddressOf = ast_matchers::selectFirst<UnaryOperator>(
+            "addressof",
+            ast_matchers::match(ast_matchers::unaryOperator().bind("addressof"),
+                                ASTCtx));
+        ASSERT_THAT(AddressOf, NotNull());
+        ASSERT_EQ(AddressOf->getOpcode(), UO_AddrOf);
+
+        EXPECT_EQ(Env.getValue(*Cast), Env.getValue(*AddressOf));
+      });
+}
+
+TEST(TransferTest, ConstructorConversion) {
+  std::string Code = R"cc(
+    struct Base {};
+    struct Derived : public Base {};
+    void target(Derived D) {
+      Base B = (Base)D;
+      // [[p]]
+    }
+)cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *Cast = ast_matchers::selectFirst<CStyleCastExpr>(
+            "cast", ast_matchers::match(
+                        ast_matchers::cStyleCastExpr().bind("cast"), ASTCtx));
+        ASSERT_THAT(Cast, NotNull());
+        ASSERT_EQ(Cast->getCastKind(), CK_ConstructorConversion);
+
+        auto &DLoc = getLocForDecl<StorageLocation>(ASTCtx, Env, "D");
+        auto &BLoc = getLocForDecl<StorageLocation>(ASTCtx, Env, "B");
+        EXPECT_NE(&BLoc, &DLoc);
+      });
+}
+
+TEST(TransferTest, UserDefinedConversion) {
+  std::string Code = R"cc(
+    struct To {};
+    struct From {
+        operator To();
+    };
+    void target(From F) {
+        To T = (To)F;
+        // [[p]]
+    }
+)cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *Cast = ast_matchers::selectFirst<ImplicitCastExpr>(
+            "cast", ast_matchers::match(
+                        ast_matchers::implicitCastExpr().bind("cast"), ASTCtx));
+        ASSERT_THAT(Cast, NotNull());
+        ASSERT_EQ(Cast->getCastKind(), CK_UserDefinedConversion);
+
+        auto &FLoc = getLocForDecl<StorageLocation>(ASTCtx, Env, "F");
+        auto &TLoc = getLocForDecl<StorageLocation>(ASTCtx, Env, "T");
+        EXPECT_NE(&TLoc, &FLoc);
+      });
+}
+
+TEST(TransferTest, ImplicitUncheckedDerivedToBaseCast) {
+  std::string Code = R"cc(
+    struct Base {
+      void method();
+    };
+    struct Derived : public Base {};
+    void target(Derived D) {
+      D.method();
+      // [[p]]
+    }
+)cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *Cast = ast_matchers::selectFirst<ImplicitCastExpr>(
+            "cast", ast_matchers::match(
+                        ast_matchers::implicitCastExpr().bind("cast"), ASTCtx));
+        ASSERT_THAT(Cast, NotNull());
+        ASSERT_EQ(Cast->getCastKind(), CK_UncheckedDerivedToBase);
+
+        auto &DLoc = getLocForDecl<StorageLocation>(ASTCtx, Env, "D");
+        EXPECT_EQ(Env.getStorageLocation(*Cast), &DLoc);
+      });
+}
+
+TEST(TransferTest, ImplicitDerivedToBaseCast) {
+  std::string Code = R"cc(
+    struct Base {};
+    struct Derived : public Base {};
+    void target() {
+      Base* B = new Derived();
+      // [[p]]
+    }
+)cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *Cast = ast_matchers::selectFirst<ImplicitCastExpr>(
+            "cast", ast_matchers::match(
+                        ast_matchers::implicitCastExpr().bind("cast"), ASTCtx));
+        ASSERT_THAT(Cast, NotNull());
+        ASSERT_EQ(Cast->getCastKind(), CK_DerivedToBase);
+
+        auto *New = ast_matchers::selectFirst<CXXNewExpr>(
+            "new", ast_matchers::match(ast_matchers::cxxNewExpr().bind("new"),
+                                       ASTCtx));
+        ASSERT_THAT(New, NotNull());
+
+        EXPECT_EQ(Env.getValue(*Cast), Env.getValue(*New));
+      });
+}
+
+TEST(TransferTest, ReinterpretCast) {
+  std::string Code = R"cc(
+    struct S {
+        int I;
+    };
+
+    void target(unsigned char* Bytes) {
+        S& SRef = reinterpret_cast<S&>(Bytes);
+        SRef.I;
+        S* SPtr = reinterpret_cast<S*>(Bytes);
+        SPtr->I;
+        // [[p]]
+    }
+  )cc";
+  runDataflow(Code, [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>>
+                           &Results,
+                       ASTContext &ASTCtx) {
+    ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+    const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+    const ValueDecl *I = findValueDecl(ASTCtx, "I");
+    ASSERT_THAT(I, NotNull());
+
+    // No particular knowledge of I's value is modeled, but for both casts,
+    // the fields of S are modeled.
+
+    {
+      auto &Loc = getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "SRef");
+      std::vector<const ValueDecl *> Children;
+      for (const auto &Entry : Loc.children()) {
+        Children.push_back(Entry.getFirst());
+      }
+
+      EXPECT_THAT(Children, UnorderedElementsAre(I));
+    }
+
+    {
+      auto &Loc = cast<RecordStorageLocation>(
+          getValueForDecl<PointerValue>(ASTCtx, Env, "SPtr").getPointeeLoc());
+      std::vector<const ValueDecl *> Children;
+      for (const auto &Entry : Loc.children()) {
+        Children.push_back(Entry.getFirst());
+      }
+
+      EXPECT_THAT(Children, UnorderedElementsAre(I));
+    }
+  });
 }
 
 TEST(TransferTest, IntegralCast) {

@@ -20,14 +20,17 @@
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/AST/Type.h"
 #include "clang/Analysis/FlowSensitive/ASTOps.h"
 #include "clang/Analysis/FlowSensitive/AdornedCFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
 #include "clang/Analysis/FlowSensitive/RecordOps.h"
+#include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "llvm/Support/Casting.h"
 #include <assert.h>
@@ -287,7 +290,7 @@ public:
     }
   }
 
-  void VisitImplicitCastExpr(const ImplicitCastExpr *S) {
+  void VisitCastExpr(const CastExpr *S) {
     const Expr *SubExpr = S->getSubExpr();
     assert(SubExpr != nullptr);
 
@@ -317,6 +320,60 @@ public:
       break;
     }
 
+    case CK_BaseToDerived: {
+      // This is a cast of (single-layer) pointer or reference to a record type.
+      // We should now model the fields for the derived type.
+
+      // Get the RecordStorageLocation for the record object underneath.
+      RecordStorageLocation *Loc = nullptr;
+      if (S->getType()->isPointerType()) {
+        auto *PV = Env.get<PointerValue>(*SubExpr);
+        assert(PV != nullptr);
+        if (PV == nullptr)
+          break;
+        Loc = cast<RecordStorageLocation>(&PV->getPointeeLoc());
+      } else {
+        assert(S->getType()->isRecordType());
+        if (SubExpr->isGLValue()) {
+          Loc = Env.get<RecordStorageLocation>(*SubExpr);
+        } else {
+          Loc = &Env.getResultObjectLocation(*SubExpr);
+        }
+      }
+      if (!Loc) {
+        // Nowhere to add children or propagate from, so we're done.
+        break;
+      }
+
+      // Get the derived record type underneath the reference or pointer.
+      QualType Derived = S->getType().getNonReferenceType();
+      if (Derived->isPointerType()) {
+        Derived = Derived->getPointeeType();
+      }
+
+      // Add children to the storage location for fields (including synthetic
+      // fields) of the derived type and initialize their values.
+      for (const FieldDecl *Field :
+           Env.getDataflowAnalysisContext().getModeledFields(Derived)) {
+        assert(Field != nullptr);
+        QualType FieldType = Field->getType();
+        if (FieldType->isReferenceType()) {
+          Loc->addChild(*Field, nullptr);
+        } else {
+          Loc->addChild(*Field, &Env.createStorageLocation(FieldType));
+        }
+
+        for (const auto &Entry :
+             Env.getDataflowAnalysisContext().getSyntheticFields(Derived)) {
+          Loc->addSyntheticField(Entry.getKey(),
+                                 Env.createStorageLocation(Entry.getValue()));
+        }
+      }
+      Env.initializeFieldsWithValues(*Loc, Derived);
+
+      // Fall through to propagate SubExpr's StorageLocation to the CastExpr.
+      [[fallthrough]];
+    }
     case CK_IntegralCast:
       // FIXME: This cast creates a new integral value from the
       // subexpression. But, because we don't model integers, we don't
@@ -324,10 +381,9 @@ public:
       // modeling is added, then update this code to create a fresh location and
       // value.
     case CK_UncheckedDerivedToBase:
+    case CK_DerivedToBase:
     case CK_ConstructorConversion:
     case CK_UserDefinedConversion:
-      // FIXME: Add tests that excercise CK_UncheckedDerivedToBase,
-      // CK_ConstructorConversion, and CK_UserDefinedConversion.
     case CK_NoOp: {
       // FIXME: Consider making `Environment::getStorageLocation` skip noop
       // expressions (this and other similar expressions in the file) instead
@@ -554,7 +610,15 @@ public:
       // Even if the copy/move constructor call is elidable, we choose to copy
       // the record in all cases (which isn't wrong, just potentially not
       // optimal).
-      copyRecord(*ArgLoc, Loc, Env);
+      //
+      // To handle cases of base class initializers in constructors, where a
+      // sibling derived class can be used to initialize a shared-base-class
+      // subobject through a DerivedToBase cast, intentionally copy only the
+      // parts of `ArgLoc` that are part of the base class being initialized.
+      // This is necessary because the type of `Loc` in these cases is the
+      // derived type ultimately being constructed, not the type of the base
+      // class subobject.
+      copyRecord(*ArgLoc, Loc, Env, S->getType());
       return;
     }
 
@@ -682,15 +746,6 @@ public:
     assert(SubExpr != nullptr);
 
     propagateValue(*SubExpr, *S, Env);
-  }
-
-  void VisitCXXStaticCastExpr(const CXXStaticCastExpr *S) {
-    if (S->getCastKind() == CK_NoOp) {
-      const Expr *SubExpr = S->getSubExpr();
-      assert(SubExpr != nullptr);
-
-      propagateValueOrStorageLocation(*SubExpr, *S, Env);
-    }
   }
 
   void VisitConditionalOperator(const ConditionalOperator *S) {
