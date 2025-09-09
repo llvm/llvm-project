@@ -145,8 +145,9 @@ struct MapInfoOpConversion
                 fir::unwrapSequenceType(typeAttr.getValue()));
             if (auto type = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(newAttr))
               newAttr = type.getElementType();
-            // We do not generate for device, as MapBoundsOps are
-            // unsupported, as they're currently unused.
+            // We do not generate MapBoundsOps for the device pass, as
+            // MapBoundsOps are not generated for the device pass, as
+            // they're unused in the device lowering.
             auto offloadMod =
                 llvm::dyn_cast_or_null<mlir::omp::OffloadModuleInterface>(
                     *curOp->getParentOfType<mlir::ModuleOp>());
