@@ -45,7 +45,7 @@ define i8 @umax_i8(i8 %a, i8 %b) nounwind readnone {
 ; FASTISEL-X86-NEXT:    movl %ecx, %eax
 ; FASTISEL-X86-NEXT:  .LBB0_2:
 ; FASTISEL-X86-NEXT:    retl
-    %ret = call i8 @llvm.umax.i8.i8(i8 %a, i8 %b)
+    %ret = call i8 @llvm.umax.i8(i8 %a, i8 %b)
     ret i8 %ret
 }
 
@@ -88,7 +88,7 @@ define i8 @umin_i8(i8 %a, i8 %b) nounwind readnone {
 ; FASTISEL-X86-NEXT:    movl %ecx, %eax
 ; FASTISEL-X86-NEXT:  .LBB1_2:
 ; FASTISEL-X86-NEXT:    retl
-    %ret = call i8 @llvm.umin.i8.i8(i8 %a, i8 %b)
+    %ret = call i8 @llvm.umin.i8(i8 %a, i8 %b)
     ret i8 %ret
 }
 
@@ -132,7 +132,7 @@ define i16 @umax_i16(i16 %a, i16 %b) nounwind readnone {
 ; FASTISEL-X86-NEXT:  .LBB2_2:
 ; FASTISEL-X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; FASTISEL-X86-NEXT:    retl
-    %ret = call i16 @llvm.umax.i16.i16(i16 %a, i16 %b)
+    %ret = call i16 @llvm.umax.i16(i16 %a, i16 %b)
     ret i16 %ret
 }
 
@@ -176,7 +176,7 @@ define i16 @umin_i16(i16 %a, i16 %b) nounwind readnone {
 ; FASTISEL-X86-NEXT:  .LBB3_2:
 ; FASTISEL-X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; FASTISEL-X86-NEXT:    retl
-    %ret = call i16 @llvm.umin.i16.i16(i16 %a, i16 %b)
+    %ret = call i16 @llvm.umin.i16(i16 %a, i16 %b)
     ret i16 %ret
 }
 
@@ -216,7 +216,7 @@ define i32 @umax_i32(i32 %a, i32 %b) nounwind readnone {
 ; FASTISEL-X86-NEXT:    movl %ecx, %eax
 ; FASTISEL-X86-NEXT:  .LBB4_2:
 ; FASTISEL-X86-NEXT:    retl
-    %ret = call i32 @llvm.umax.i32.i32(i32 %a, i32 %b)
+    %ret = call i32 @llvm.umax.i32(i32 %a, i32 %b)
     ret i32 %ret
 }
 
@@ -256,7 +256,7 @@ define i32 @umin_i32(i32 %a, i32 %b) nounwind readnone {
 ; FASTISEL-X86-NEXT:    movl %ecx, %eax
 ; FASTISEL-X86-NEXT:  .LBB5_2:
 ; FASTISEL-X86-NEXT:    retl
-    %ret = call i32 @llvm.umin.i32.i32(i32 %a, i32 %b)
+    %ret = call i32 @llvm.umin.i32(i32 %a, i32 %b)
     ret i32 %ret
 }
 
@@ -314,7 +314,7 @@ define i64 @umax_i64(i64 %a, i64 %b) nounwind readnone {
 ; FASTISEL-X86-NEXT:    popl %esi
 ; FASTISEL-X86-NEXT:    popl %edi
 ; FASTISEL-X86-NEXT:    retl
-    %ret = call i64 @llvm.umax.i64.i64(i64 %a, i64 %b)
+    %ret = call i64 @llvm.umax.i64(i64 %a, i64 %b)
     ret i64 %ret
 }
 
@@ -372,7 +372,7 @@ define i64 @umin_i64(i64 %a, i64 %b) nounwind readnone {
 ; FASTISEL-X86-NEXT:    popl %esi
 ; FASTISEL-X86-NEXT:    popl %edi
 ; FASTISEL-X86-NEXT:    retl
-    %ret = call i64 @llvm.umin.i64.i64(i64 %a, i64 %b)
+    %ret = call i64 @llvm.umin.i64(i64 %a, i64 %b)
     ret i64 %ret
 }
 
@@ -415,7 +415,7 @@ define i8 @smax_i8(i8 %a, i8 %b) nounwind readnone {
 ; FASTISEL-X86-NEXT:    movl %ecx, %eax
 ; FASTISEL-X86-NEXT:  .LBB8_2:
 ; FASTISEL-X86-NEXT:    retl
-    %ret = call i8 @llvm.smax.i8.i8(i8 %a, i8 %b)
+    %ret = call i8 @llvm.smax.i8(i8 %a, i8 %b)
     ret i8 %ret
 }
 
@@ -458,7 +458,7 @@ define i8 @smin_i8(i8 %a, i8 %b) nounwind readnone {
 ; FASTISEL-X86-NEXT:    movl %ecx, %eax
 ; FASTISEL-X86-NEXT:  .LBB9_2:
 ; FASTISEL-X86-NEXT:    retl
-    %ret = call i8 @llvm.smin.i8.i8(i8 %a, i8 %b)
+    %ret = call i8 @llvm.smin.i8(i8 %a, i8 %b)
     ret i8 %ret
 }
 
@@ -502,7 +502,7 @@ define i16 @smax_i16(i16 %a, i16 %b) nounwind readnone {
 ; FASTISEL-X86-NEXT:  .LBB10_2:
 ; FASTISEL-X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; FASTISEL-X86-NEXT:    retl
-    %ret = call i16 @llvm.smax.i16.i16(i16 %a, i16 %b)
+    %ret = call i16 @llvm.smax.i16(i16 %a, i16 %b)
     ret i16 %ret
 }
 
@@ -546,7 +546,7 @@ define i16 @smin_i16(i16 %a, i16 %b) nounwind readnone {
 ; FASTISEL-X86-NEXT:  .LBB11_2:
 ; FASTISEL-X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; FASTISEL-X86-NEXT:    retl
-    %ret = call i16 @llvm.smin.i16.i16(i16 %a, i16 %b)
+    %ret = call i16 @llvm.smin.i16(i16 %a, i16 %b)
     ret i16 %ret
 }
 
@@ -586,7 +586,7 @@ define i32 @smax_i32(i32 %a, i32 %b) nounwind readnone {
 ; FASTISEL-X86-NEXT:    movl %ecx, %eax
 ; FASTISEL-X86-NEXT:  .LBB12_2:
 ; FASTISEL-X86-NEXT:    retl
-    %ret = call i32 @llvm.smax.i32.i32(i32 %a, i32 %b)
+    %ret = call i32 @llvm.smax.i32(i32 %a, i32 %b)
     ret i32 %ret
 }
 
@@ -626,7 +626,7 @@ define i32 @smin_i32(i32 %a, i32 %b) nounwind readnone {
 ; FASTISEL-X86-NEXT:    movl %ecx, %eax
 ; FASTISEL-X86-NEXT:  .LBB13_2:
 ; FASTISEL-X86-NEXT:    retl
-    %ret = call i32 @llvm.smin.i32.i32(i32 %a, i32 %b)
+    %ret = call i32 @llvm.smin.i32(i32 %a, i32 %b)
     ret i32 %ret
 }
 
@@ -684,7 +684,7 @@ define i64 @smax_i64(i64 %a, i64 %b) nounwind readnone {
 ; FASTISEL-X86-NEXT:    popl %esi
 ; FASTISEL-X86-NEXT:    popl %edi
 ; FASTISEL-X86-NEXT:    retl
-    %ret = call i64 @llvm.smax.i64.i64(i64 %a, i64 %b)
+    %ret = call i64 @llvm.smax.i64(i64 %a, i64 %b)
     ret i64 %ret
 }
 
@@ -742,23 +742,23 @@ define i64 @smin_i64(i64 %a, i64 %b) nounwind readnone {
 ; FASTISEL-X86-NEXT:    popl %esi
 ; FASTISEL-X86-NEXT:    popl %edi
 ; FASTISEL-X86-NEXT:    retl
-    %ret = call i64 @llvm.smin.i64.i64(i64 %a, i64 %b)
+    %ret = call i64 @llvm.smin.i64(i64 %a, i64 %b)
     ret i64 %ret
 }
 
-declare i8  @llvm.umax.i8.i8(i8, i8)
-declare i8  @llvm.umin.i8.i8(i8, i8)
-declare i16 @llvm.umax.i16.i16(i16, i16)
-declare i16 @llvm.umin.i16.i16(i16, i16)
-declare i32 @llvm.umax.i32.i32(i32, i32)
-declare i32 @llvm.umin.i32.i32(i32, i32)
-declare i64 @llvm.umax.i64.i64(i64, i64)
-declare i64 @llvm.umin.i64.i64(i64, i64)
-declare i8  @llvm.smax.i8.i8(i8, i8)
-declare i8  @llvm.smin.i8.i8(i8, i8)
-declare i16 @llvm.smax.i16.i16(i16, i16)
-declare i16 @llvm.smin.i16.i16(i16, i16)
-declare i32 @llvm.smax.i32.i32(i32, i32)
-declare i32 @llvm.smin.i32.i32(i32, i32)
-declare i64 @llvm.smax.i64.i64(i64, i64)
-declare i64 @llvm.smin.i64.i64(i64, i64)
+declare i8  @llvm.umax.i8(i8, i8)
+declare i8  @llvm.umin.i8(i8, i8)
+declare i16 @llvm.umax.i16(i16, i16)
+declare i16 @llvm.umin.i16(i16, i16)
+declare i32 @llvm.umax.i32(i32, i32)
+declare i32 @llvm.umin.i32(i32, i32)
+declare i64 @llvm.umax.i64(i64, i64)
+declare i64 @llvm.umin.i64(i64, i64)
+declare i8  @llvm.smax.i8(i8, i8)
+declare i8  @llvm.smin.i8(i8, i8)
+declare i16 @llvm.smax.i16(i16, i16)
+declare i16 @llvm.smin.i16(i16, i16)
+declare i32 @llvm.smax.i32(i32, i32)
+declare i32 @llvm.smin.i32(i32, i32)
+declare i64 @llvm.smax.i64(i64, i64)
+declare i64 @llvm.smin.i64(i64, i64)
