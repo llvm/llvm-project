@@ -1472,6 +1472,9 @@ namespace llvm {
     combineElementTruncationToVectorTruncation(SDNode *N,
                                                DAGCombinerInfo &DCI) const;
 
+    SDValue combineBVLoadsSpecialValue(SDValue Operand,
+                                       SelectionDAG &DAG) const;
+
     /// lowerToVINSERTH - Return the SDValue if this VECTOR_SHUFFLE can be
     /// handled by the VINSERTH instruction introduced in ISA 3.0. This is
     /// essentially any shuffle of v8i16 vectors that just inserts one element
