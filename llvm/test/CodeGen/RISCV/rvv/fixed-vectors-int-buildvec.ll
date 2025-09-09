@@ -25,7 +25,7 @@ define void @buildvec_vid_undefelts_v16i8(ptr %x) {
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
-  store <16 x i8> <i8 0, i8 1, i8 2, i8 undef, i8 4, i8 undef, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>, ptr %x
+  store <16 x i8> <i8 0, i8 1, i8 2, i8 poison, i8 4, i8 poison, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>, ptr %x
   ret void
 }
 
@@ -98,7 +98,7 @@ define <4 x i8> @buildvec_vid_step2_add0_v4i8_undef0() {
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
-  ret <4 x i8> <i8 undef, i8 2, i8 4, i8 6>
+  ret <4 x i8> <i8 poison, i8 2, i8 4, i8 6>
 }
 
 define <4 x i8> @buildvec_vid_step2_add0_v4i8_undef1() {
@@ -108,7 +108,7 @@ define <4 x i8> @buildvec_vid_step2_add0_v4i8_undef1() {
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
-  ret <4 x i8> <i8 undef, i8 undef, i8 4, i8 6>
+  ret <4 x i8> <i8 poison, i8 poison, i8 4, i8 6>
 }
 
 define <4 x i8> @buildvec_vid_step2_add0_v4i8_undef2() {
@@ -118,7 +118,7 @@ define <4 x i8> @buildvec_vid_step2_add0_v4i8_undef2() {
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
-  ret <4 x i8> <i8 0, i8 undef, i8 undef, i8 6>
+  ret <4 x i8> <i8 0, i8 poison, i8 poison, i8 6>
 }
 
 define <4 x i8> @buildvec_vid_step2_add1_v4i8() {
@@ -140,7 +140,7 @@ define <4 x i8> @buildvec_vid_step2_add1_v4i8_undef0() {
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vadd.vi v8, v8, 1
 ; CHECK-NEXT:    ret
-  ret <4 x i8> <i8 undef, i8 3, i8 5, i8 7>
+  ret <4 x i8> <i8 poison, i8 3, i8 5, i8 7>
 }
 
 define <4 x i8> @buildvec_vid_step2_add1_v4i8_undef1() {
@@ -151,7 +151,7 @@ define <4 x i8> @buildvec_vid_step2_add1_v4i8_undef1() {
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vadd.vi v8, v8, 1
 ; CHECK-NEXT:    ret
-  ret <4 x i8> <i8 undef, i8 undef, i8 5, i8 7>
+  ret <4 x i8> <i8 poison, i8 poison, i8 5, i8 7>
 }
 
 define <4 x i8> @buildvec_vid_step2_add1_v4i8_undef2() {
@@ -162,7 +162,7 @@ define <4 x i8> @buildvec_vid_step2_add1_v4i8_undef2() {
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vadd.vi v8, v8, 1
 ; CHECK-NEXT:    ret
-  ret <4 x i8> <i8 1, i8 undef, i8 undef, i8 7>
+  ret <4 x i8> <i8 1, i8 poison, i8 poison, i8 7>
 }
 
 define <4 x i8> @buildvec_vid_stepn1_add0_v4i8() {
@@ -182,7 +182,7 @@ define <4 x i8> @buildvec_vid_stepn1_add0_v4i8_undef0() {
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    vrsub.vi v8, v8, 0
 ; CHECK-NEXT:    ret
-  ret <4 x i8> <i8 undef, i8 -1, i8 -2, i8 -3>
+  ret <4 x i8> <i8 poison, i8 -1, i8 -2, i8 -3>
 }
 
 define <4 x i8> @buildvec_vid_stepn1_add0_v4i8_undef1() {
@@ -192,7 +192,7 @@ define <4 x i8> @buildvec_vid_stepn1_add0_v4i8_undef1() {
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    vrsub.vi v8, v8, 0
 ; CHECK-NEXT:    ret
-  ret <4 x i8> <i8 undef, i8 undef, i8 -2, i8 -3>
+  ret <4 x i8> <i8 poison, i8 poison, i8 -2, i8 -3>
 }
 
 define <4 x i8> @buildvec_vid_stepn1_add0_v4i8_undef2() {
@@ -202,7 +202,7 @@ define <4 x i8> @buildvec_vid_stepn1_add0_v4i8_undef2() {
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    vrsub.vi v8, v8, 0
 ; CHECK-NEXT:    ret
-  ret <4 x i8> <i8 0, i8 undef, i8 undef, i8 -3>
+  ret <4 x i8> <i8 0, i8 poison, i8 poison, i8 -3>
 }
 
 define <4 x i8> @buildvec_vid_stepn2_add0_v4i8() {
@@ -224,7 +224,7 @@ define <4 x i8> @buildvec_vid_stepn2_add0_v4i8_undef0() {
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vrsub.vi v8, v8, 0
 ; CHECK-NEXT:    ret
-  ret <4 x i8> <i8 undef, i8 -2, i8 -4, i8 -6>
+  ret <4 x i8> <i8 poison, i8 -2, i8 -4, i8 -6>
 }
 
 define <4 x i8> @buildvec_vid_stepn2_add0_v4i8_undef1() {
@@ -235,7 +235,7 @@ define <4 x i8> @buildvec_vid_stepn2_add0_v4i8_undef1() {
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vrsub.vi v8, v8, 0
 ; CHECK-NEXT:    ret
-  ret <4 x i8> <i8 undef, i8 undef, i8 -4, i8 -6>
+  ret <4 x i8> <i8 poison, i8 poison, i8 -4, i8 -6>
 }
 
 define <4 x i8> @buildvec_vid_stepn2_add0_v4i8_undef2() {
@@ -244,7 +244,7 @@ define <4 x i8> @buildvec_vid_stepn2_add0_v4i8_undef2() {
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, -6
 ; CHECK-NEXT:    ret
-  ret <4 x i8> <i8 undef, i8 undef, i8 undef, i8 -6>
+  ret <4 x i8> <i8 poison, i8 poison, i8 poison, i8 -6>
 }
 
 define <4 x i8> @buildvec_vid_stepn2_add3_v4i8() {
@@ -284,9 +284,9 @@ define void @buildvec_vid_stepn3_addn3_v4i32(ptr %z0, ptr %z1, ptr %z2, ptr %z3)
 ; CHECK-NEXT:    vse32.v v9, (a3)
 ; CHECK-NEXT:    ret
   store <4 x i32> <i32 -3, i32 -6, i32 -9, i32 -12>, ptr %z0
-  store <4 x i32> <i32 undef, i32 -6, i32 -9, i32 -12>, ptr %z1
-  store <4 x i32> <i32 undef, i32 undef, i32 -9, i32 -12>, ptr %z2
-  store <4 x i32> <i32 -3, i32 undef, i32 undef, i32 -12>, ptr %z3
+  store <4 x i32> <i32 poison, i32 -6, i32 -9, i32 -12>, ptr %z1
+  store <4 x i32> <i32 poison, i32 poison, i32 -9, i32 -12>, ptr %z2
+  store <4 x i32> <i32 -3, i32 poison, i32 poison, i32 -12>, ptr %z3
   ret void
 }
 
@@ -363,7 +363,7 @@ define <4 x i8> @buildvec_no_vid_v4i8_1() {
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
-  ret <4 x i8> <i8 undef, i8 2, i8 5, i8 7>
+  ret <4 x i8> <i8 poison, i8 2, i8 5, i8 7>
 }
 
 define <4 x i8> @buildvec_no_vid_v4i8_2() {
@@ -373,7 +373,7 @@ define <4 x i8> @buildvec_no_vid_v4i8_2() {
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
-  ret <4 x i8> <i8 0, i8 undef, i8 undef, i8 8>
+  ret <4 x i8> <i8 0, i8 poison, i8 poison, i8 8>
 }
 
 define <4 x i8> @buildvec_no_vid_v4i8_3() {
@@ -384,7 +384,7 @@ define <4 x i8> @buildvec_no_vid_v4i8_3() {
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
-  ret <4 x i8> <i8 -1, i8 undef, i8 undef, i8 7>
+  ret <4 x i8> <i8 -1, i8 poison, i8 poison, i8 7>
 }
 
 define <4 x i8> @buildvec_no_vid_v4i8_4() {
@@ -393,7 +393,7 @@ define <4 x i8> @buildvec_no_vid_v4i8_4() {
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, -2
 ; CHECK-NEXT:    ret
-  ret <4 x i8> <i8 -2, i8 undef, i8 undef, i8 undef>
+  ret <4 x i8> <i8 -2, i8 poison, i8 poison, i8 poison>
 }
 
 define <4 x i8> @buildvec_no_vid_v4i8_5() {
@@ -418,7 +418,7 @@ define void @buildvec_dominant0_v8i16(ptr %x) {
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vse16.v v9, (a0)
 ; CHECK-NEXT:    ret
-  store <8 x i16> <i16 8, i16 8, i16 undef, i16 0, i16 8, i16 undef, i16 8, i16 8>, ptr %x
+  store <8 x i16> <i16 8, i16 8, i16 poison, i16 0, i16 8, i16 poison, i16 8, i16 8>, ptr %x
   ret void
 }
 
@@ -444,7 +444,7 @@ define void @buildvec_dominant0_v8i16_with_tail(ptr %x) {
 ; CHECK-NEXT:    vle16.v v8, (a1)
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
-  store <8 x i16> <i16 8, i16 8, i16 8, i16 8, i16 8, i16 undef, i16 2, i16 3>, ptr %x
+  store <8 x i16> <i16 8, i16 8, i16 8, i16 8, i16 8, i16 poison, i16 2, i16 3>, ptr %x
   ret void
 }
 
@@ -456,7 +456,7 @@ define void @buildvec_dominant1_v8i16(ptr %x) {
 ; CHECK-NEXT:    vmv.v.i v8, 8
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
-  store <8 x i16> <i16 undef, i16 8, i16 undef, i16 undef, i16 undef, i16 undef, i16 undef, i16 undef>, ptr %x
+  store <8 x i16> <i16 poison, i16 8, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison>, ptr %x
   ret void
 }
 
@@ -464,7 +464,7 @@ define <2 x i8> @buildvec_dominant0_v2i8() {
 ; CHECK-LABEL: buildvec_dominant0_v2i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
-  ret <2 x i8> <i8 undef, i8 undef>
+  ret <2 x i8> <i8 poison, i8 poison>
 }
 
 define <2 x i8> @buildvec_dominant1_v2i8() {
@@ -485,7 +485,7 @@ define <2 x i8> @buildvec_dominant1_v2i8() {
 ; RV64ZVE32-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV64ZVE32-NEXT:    vmv.v.i v8, -1
 ; RV64ZVE32-NEXT:    ret
-  ret <2 x i8> <i8 undef, i8 -1>
+  ret <2 x i8> <i8 poison, i8 -1>
 }
 
 define <2 x i8> @buildvec_dominant2_v2i8() {
@@ -584,7 +584,7 @@ define void @buildvec_seq_v8i8_v4i16(ptr %x) {
 ; CHECK-NEXT:    vmv.v.x v8, a1
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
-  store <8 x i8> <i8 1, i8 2, i8 1, i8 2, i8 1, i8 2, i8 undef, i8 2>, ptr %x
+  store <8 x i8> <i8 1, i8 2, i8 1, i8 2, i8 1, i8 2, i8 poison, i8 2>, ptr %x
   ret void
 }
 
@@ -618,7 +618,7 @@ define void @buildvec_seq_v8i8_v2i32(ptr %x) {
 ; RV64ZVE32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV64ZVE32-NEXT:    vse8.v v8, (a0)
 ; RV64ZVE32-NEXT:    ret
-  store <8 x i8> <i8 1, i8 2, i8 3, i8 undef, i8 1, i8 2, i8 3, i8 undef>, ptr %x
+  store <8 x i8> <i8 1, i8 2, i8 3, i8 poison, i8 1, i8 2, i8 3, i8 poison>, ptr %x
   ret void
 }
 
@@ -743,14 +743,14 @@ define void @buildvec_vid_step1o2_v4i32(ptr %z0, ptr %z1, ptr %z2, ptr %z3, ptr 
 ; CHECK-NEXT:    vse32.v v9, (a6)
 ; CHECK-NEXT:    ret
   store <4 x i32> <i32 0, i32 0, i32 1, i32 1>, ptr %z0
-  store <4 x i32> <i32 0, i32 0, i32 1, i32 undef>, ptr %z1
-  store <4 x i32> <i32 0, i32 undef, i32 1, i32 1>, ptr %z2
-  store <4 x i32> <i32 undef, i32 0, i32 undef, i32 1>, ptr %z3
-  store <4 x i32> <i32 0, i32 undef, i32 1, i32 undef>, ptr %z4
+  store <4 x i32> <i32 0, i32 0, i32 1, i32 poison>, ptr %z1
+  store <4 x i32> <i32 0, i32 poison, i32 1, i32 1>, ptr %z2
+  store <4 x i32> <i32 poison, i32 0, i32 poison, i32 1>, ptr %z3
+  store <4 x i32> <i32 0, i32 poison, i32 1, i32 poison>, ptr %z4
   ; We don't catch this one
-  store <4 x i32> <i32 undef, i32 0, i32 1, i32 1>, ptr %z5
+  store <4 x i32> <i32 poison, i32 0, i32 1, i32 1>, ptr %z5
   ; We catch this one but as VID/3 rather than VID/2
-  store <4 x i32> <i32 0, i32 0, i32 undef, i32 1>, ptr %z6
+  store <4 x i32> <i32 0, i32 0, i32 poison, i32 1>, ptr %z6
   ret void
 }
 
@@ -777,14 +777,14 @@ define void @buildvec_vid_step1o2_add3_v4i16(ptr %z0, ptr %z1, ptr %z2, ptr %z3,
 ; CHECK-NEXT:    vse16.v v9, (a6)
 ; CHECK-NEXT:    ret
   store <4 x i16> <i16 3, i16 3, i16 4, i16 4>, ptr %z0
-  store <4 x i16> <i16 3, i16 3, i16 4, i16 undef>, ptr %z1
-  store <4 x i16> <i16 3, i16 undef, i16 4, i16 4>, ptr %z2
-  store <4 x i16> <i16 undef, i16 3, i16 undef, i16 4>, ptr %z3
-  store <4 x i16> <i16 3, i16 undef, i16 4, i16 undef>, ptr %z4
+  store <4 x i16> <i16 3, i16 3, i16 4, i16 poison>, ptr %z1
+  store <4 x i16> <i16 3, i16 poison, i16 4, i16 4>, ptr %z2
+  store <4 x i16> <i16 poison, i16 3, i16 poison, i16 4>, ptr %z3
+  store <4 x i16> <i16 3, i16 poison, i16 4, i16 poison>, ptr %z4
   ; We don't catch this one
-  store <4 x i16> <i16 undef, i16 3, i16 4, i16 4>, ptr %z5
+  store <4 x i16> <i16 poison, i16 3, i16 4, i16 4>, ptr %z5
   ; We catch this one but as VID/3 rather than VID/2
-  store <4 x i16> <i16 3, i16 3, i16 undef, i16 4>, ptr %z6
+  store <4 x i16> <i16 3, i16 3, i16 poison, i16 4>, ptr %z6
   ret void
 }
 
@@ -911,7 +911,7 @@ define <16 x i8> @buildvec_not_vid_v16i8() {
 ; CHECK-NEXT:    vsetivli zero, 7, e8, m1, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v9, 6
 ; CHECK-NEXT:    ret
-  ret <16 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 3, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 0, i8 0>
+  ret <16 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 3, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0>
 }
 
 define <512 x i8> @buildvec_vid_v512i8_indices_overflow() vscale_range(16, 1024) {
@@ -2981,18 +2981,18 @@ define <16 x i8> @buildvec_v16i8_loads_undef_scattered(ptr %p) {
 
   %v1 = insertelement <16 x i8> poison, i8 %ld1, i32 0
   %v2 = insertelement <16 x i8> %v1, i8 %ld2, i32 1
-  %v3 = insertelement <16 x i8> %v2, i8 undef, i32 2
-  %v4 = insertelement <16 x i8> %v3, i8 undef, i32 3
+  %v3 = insertelement <16 x i8> %v2, i8 poison, i32 2
+  %v4 = insertelement <16 x i8> %v3, i8 poison, i32 3
   %v5 = insertelement <16 x i8> %v4, i8 %ld5, i32 4
   %v6 = insertelement <16 x i8> %v5, i8 %ld6, i32 5
-  %v7 = insertelement <16 x i8> %v6, i8 undef, i32 6
+  %v7 = insertelement <16 x i8> %v6, i8 poison, i32 6
   %v8 = insertelement <16 x i8> %v7, i8 %ld8, i32 7
   %v9 = insertelement <16 x i8> %v8, i8 %ld9, i32 8
   %v10 = insertelement <16 x i8> %v9, i8 %ld10, i32 9
-  %v11 = insertelement <16 x i8> %v10, i8 undef, i32 10
-  %v12 = insertelement <16 x i8> %v11, i8 undef, i32 11
+  %v11 = insertelement <16 x i8> %v10, i8 poison, i32 10
+  %v12 = insertelement <16 x i8> %v11, i8 poison, i32 11
   %v13 = insertelement <16 x i8> %v12, i8 %ld13, i32 12
-  %v14 = insertelement <16 x i8> %v13, i8 undef, i32 13
+  %v14 = insertelement <16 x i8> %v13, i8 poison, i32 13
   %v15 = insertelement <16 x i8> %v14, i8 %ld15, i32 14
   %v16 = insertelement <16 x i8> %v15, i8 %ld16, i32 15
   ret <16 x i8> %v16
