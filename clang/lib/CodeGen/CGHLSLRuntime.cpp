@@ -557,15 +557,13 @@ llvm::Value *
 CGHLSLRuntime::emitSystemSemanticLoad(IRBuilder<> &B, llvm::Type *Type,
                                       const clang::DeclaratorDecl *Decl,
                                       SemanticInfo &ActiveSemantic) {
-  if (HLSLSV_GroupIndexAttr *S =
-          dyn_cast<HLSLSV_GroupIndexAttr>(ActiveSemantic.Semantic)) {
+  if (isa<HLSLSV_GroupIndexAttr>(ActiveSemantic.Semantic)) {
     llvm::Function *GroupIndex =
         CGM.getIntrinsic(getFlattenedThreadIdInGroupIntrinsic());
     return B.CreateCall(FunctionCallee(GroupIndex));
   }
 
-  if (HLSLSV_DispatchThreadIDAttr *S =
-          dyn_cast<HLSLSV_DispatchThreadIDAttr>(ActiveSemantic.Semantic)) {
+  if (isa<HLSLSV_DispatchThreadIDAttr>(ActiveSemantic.Semantic)) {
     llvm::Intrinsic::ID IntrinID = getThreadIdIntrinsic();
     llvm::Function *ThreadIDIntrinsic =
         llvm::Intrinsic::isOverloaded(IntrinID)
@@ -574,8 +572,7 @@ CGHLSLRuntime::emitSystemSemanticLoad(IRBuilder<> &B, llvm::Type *Type,
     return buildVectorInput(B, ThreadIDIntrinsic, Type);
   }
 
-  if (HLSLSV_GroupThreadIDAttr *S =
-          dyn_cast<HLSLSV_GroupThreadIDAttr>(ActiveSemantic.Semantic)) {
+  if (isa<HLSLSV_GroupThreadIDAttr>(ActiveSemantic.Semantic)) {
     llvm::Intrinsic::ID IntrinID = getGroupThreadIdIntrinsic();
     llvm::Function *GroupThreadIDIntrinsic =
         llvm::Intrinsic::isOverloaded(IntrinID)
@@ -584,8 +581,7 @@ CGHLSLRuntime::emitSystemSemanticLoad(IRBuilder<> &B, llvm::Type *Type,
     return buildVectorInput(B, GroupThreadIDIntrinsic, Type);
   }
 
-  if (HLSLSV_GroupIDAttr *S =
-          dyn_cast<HLSLSV_GroupIDAttr>(ActiveSemantic.Semantic)) {
+  if (isa<HLSLSV_GroupIDAttr>(ActiveSemantic.Semantic)) {
     llvm::Intrinsic::ID IntrinID = getGroupIdIntrinsic();
     llvm::Function *GroupIDIntrinsic =
         llvm::Intrinsic::isOverloaded(IntrinID)
