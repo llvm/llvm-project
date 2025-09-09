@@ -48,6 +48,10 @@ static const MachineMemOperand::Flags MONoClobber =
 static const MachineMemOperand::Flags MOLastUse =
     MachineMemOperand::MOTargetFlag2;
 
+/// Mark the MMO of cooperative load/store atomics.
+static const MachineMemOperand::Flags MOCooperative =
+    MachineMemOperand::MOTargetFlag3;
+
 /// Utility to store machine instructions worklist.
 struct SIInstrWorklist {
   SIInstrWorklist() = default;
@@ -1183,6 +1187,12 @@ public:
   bool isImmOperandLegal(const MCInstrDesc &InstDesc, unsigned OpNo,
                          const MachineOperand &MO) const;
 
+  bool isLiteralOperandLegal(const MCInstrDesc &InstDesc,
+                             const MCOperandInfo &OpInfo) const;
+
+  bool isImmOperandLegal(const MCInstrDesc &InstDesc, unsigned OpNo,
+                         int64_t ImmVal) const;
+
   bool isImmOperandLegal(const MachineInstr &MI, unsigned OpNo,
                          const MachineOperand &MO) const {
     return isImmOperandLegal(MI.getDesc(), OpNo, MO);
@@ -1194,6 +1204,10 @@ public:
   /// Return true if this 64-bit VALU instruction has a 32-bit encoding.
   /// This function will return false if you pass it a 32-bit instruction.
   bool hasVALU32BitEncoding(unsigned Opcode) const;
+
+  bool physRegUsesConstantBus(const MachineOperand &Reg) const;
+  bool regUsesConstantBus(const MachineOperand &Reg,
+                          const MachineRegisterInfo &MRI) const;
 
   /// Returns true if this operand uses the constant bus.
   bool usesConstantBus(const MachineRegisterInfo &MRI,
