@@ -712,7 +712,8 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
 
     const ParmVarDecl *PD = FD->getParamDecl(Param.getArgNo() - SRetOffset);
     llvm::Value *SemanticValue = nullptr;
-    if (HLSLParamModifierAttr *MA = PD->getAttr<HLSLParamModifierAttr>()) {
+    if ([[maybe_unused]] HLSLParamModifierAttr *MA =
+            PD->getAttr<HLSLParamModifierAttr>()) {
       llvm_unreachable("Not handled yet");
     } else {
       llvm::Type *ParamType =
