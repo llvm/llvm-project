@@ -261,7 +261,7 @@ define i128 @u128_mul(i128 %x, i128 %y) {
 
 define { i128, i8 } @u128_checked_mul(i128 %x, i128 %y) {
 ; CHECK-LABEL: u128_checked_mul:
-; CHECK:       // %bb.0: // %overflow.entry
+; CHECK:       // %bb.0:
 ; CHECK-NEXT:    orr x8, x1, x3
 ; CHECK-NEXT:    cbz x8, .LBB17_2
 ; CHECK-NEXT:  // %bb.1: // %overflow
@@ -297,7 +297,7 @@ define { i128, i8 } @u128_checked_mul(i128 %x, i128 %y) {
 
 define { i128, i8 } @u128_overflowing_mul(i128 %x, i128 %y) {
 ; CHECK-LABEL: u128_overflowing_mul:
-; CHECK:       // %bb.0: // %overflow.entry
+; CHECK:       // %bb.0:
 ; CHECK-NEXT:    orr x8, x1, x3
 ; CHECK-NEXT:    cbz x8, .LBB18_2
 ; CHECK-NEXT:  // %bb.1: // %overflow
@@ -331,7 +331,7 @@ define { i128, i8 } @u128_overflowing_mul(i128 %x, i128 %y) {
 
 define i128 @u128_saturating_mul(i128 %x, i128 %y) {
 ; CHECK-LABEL: u128_saturating_mul:
-; CHECK:       // %bb.0: // %overflow.entry
+; CHECK:       // %bb.0:
 ; CHECK-NEXT:    orr x8, x1, x3
 ; CHECK-NEXT:    cbz x8, .LBB19_2
 ; CHECK-NEXT:  // %bb.1: // %overflow
@@ -379,7 +379,7 @@ define i128 @i128_mul(i128 %x, i128 %y) {
 
 define { i128, i8 } @i128_checked_mul(i128 %x, i128 %y) {
 ; CHECK-LABEL: i128_checked_mul:
-; CHECK:       // %bb.0: // %overflow.entry
+; CHECK:       // %bb.0:
 ; CHECK-NEXT:    eor x8, x3, x2, asr #63
 ; CHECK-NEXT:    eor x9, x1, x0, asr #63
 ; CHECK-NEXT:    orr x8, x9, x8
@@ -431,7 +431,7 @@ define { i128, i8 } @i128_checked_mul(i128 %x, i128 %y) {
 
 define { i128, i8 } @i128_overflowing_mul(i128 %x, i128 %y) {
 ; CHECK-LABEL: i128_overflowing_mul:
-; CHECK:       // %bb.0: // %overflow.entry
+; CHECK:       // %bb.0:
 ; CHECK-NEXT:    eor x8, x3, x2, asr #63
 ; CHECK-NEXT:    eor x9, x1, x0, asr #63
 ; CHECK-NEXT:    orr x8, x9, x8
@@ -481,7 +481,7 @@ define { i128, i8 } @i128_overflowing_mul(i128 %x, i128 %y) {
 
 define i128 @i128_saturating_mul(i128 %x, i128 %y) {
 ; CHECK-LABEL: i128_saturating_mul:
-; CHECK:       // %bb.0: // %overflow.entry
+; CHECK:       // %bb.0:
 ; CHECK-NEXT:    eor x8, x3, x2, asr #63
 ; CHECK-NEXT:    eor x9, x1, x0, asr #63
 ; CHECK-NEXT:    orr x8, x9, x8

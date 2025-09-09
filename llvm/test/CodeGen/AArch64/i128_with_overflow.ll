@@ -223,7 +223,7 @@ cleanup:
 
 define i128 @test_umul_i128(i128 noundef %x, i128 noundef %y) {
 ; CHECK-LABEL: test_umul_i128:
-; CHECK:       // %bb.0: // %overflow.entry
+; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    orr x8, x1, x3
 ; CHECK-NEXT:    cbz x8, .LBB4_3
 ; CHECK-NEXT:  // %bb.1: // %overflow
@@ -277,7 +277,7 @@ cleanup:
 
 define i128 @test_smul_i128(i128 noundef %x, i128 noundef %y) {
 ; CHECK-LABEL: test_smul_i128:
-; CHECK:       // %bb.0: // %overflow.entry
+; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    eor x8, x3, x2, asr #63
 ; CHECK-NEXT:    eor x9, x1, x0, asr #63
 ; CHECK-NEXT:    orr x8, x9, x8

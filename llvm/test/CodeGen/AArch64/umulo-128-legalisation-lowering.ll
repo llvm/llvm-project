@@ -3,7 +3,7 @@
 
 define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; AARCH-LABEL: muloti_test:
-; AARCH:       // %bb.0: // %overflow.entry
+; AARCH:       // %bb.0: // %start
 ; AARCH-NEXT:    orr x8, x1, x3
 ; AARCH-NEXT:    cbz x8, .LBB0_2
 ; AARCH-NEXT:  // %bb.1: // %overflow
@@ -42,7 +42,7 @@ start:
 
 define i128 @__muloti4(i128 %0, i128 %1, ptr nocapture nonnull writeonly align 4 %2) #2 {
 ; AARCH-LABEL: __muloti4:
-; AARCH:       // %bb.0: // %overflow.entry
+; AARCH:       // %bb.0: // %Entry
 ; AARCH-NEXT:    eor x8, x3, x2, asr #63
 ; AARCH-NEXT:    eor x9, x1, x0, asr #63
 ; AARCH-NEXT:    str wzr, [x4]
