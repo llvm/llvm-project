@@ -203,8 +203,8 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` check by supporting 
-  `NullableValue::makeValue` and `NullableValue::makeValueInplace` to prevent 
-  false-positives for `BloombergLP::bdlb::NullableValue` type.
+  ``NullableValue::makeValue`` and ``NullableValue::makeValueInplace`` to 
+  prevent false-positives for ``BloombergLP::bdlb::NullableValue`` type.
 
 - Improved :doc:`bugprone-unhandled-self-assignment
   <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
