@@ -48,7 +48,12 @@ llvm::json::Value toJSON(const InvalidatedEventBody::Area &IEBA) {
 }
 
 llvm::json::Value toJSON(const InvalidatedEventBody &IEB) {
-  return json::Object{{"areas", IEB.areas}};
+  json::Object Result{{"areas", IEB.areas}};
+  if (IEB.threadId)
+    Result.insert({"threadID", IEB.threadId});
+  if (IEB.frameId)
+    Result.insert({"frameId", IEB.frameId});
+  return Result;
 }
 
 } // namespace lldb_dap::protocol

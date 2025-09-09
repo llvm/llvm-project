@@ -1078,12 +1078,13 @@ TEST(ProtocolTypesTest, InvalidatedEventBody) {
   InvalidatedEventBody body;
   body.areas = {InvalidatedEventBody::eAreaStacks,
                 InvalidatedEventBody::eAreaThreads};
+  body.frameId = 1;
   StringRef json = R"({
   "areas": [
     "stacks",
     "threads"
-  ]
+  ],
+  "frameId": 1
 })";
-  // Validate toJSON
   EXPECT_EQ(json, pp(body));
 }

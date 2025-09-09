@@ -215,7 +215,7 @@ class DebugCommunication(object):
         self.terminated: bool = False
         self.events: List[Event] = []
         self.progress_events: List[Event] = []
-        self.invalidated_event: Event = None
+        self.invalidated_event: Optional[Event] = None
         self.reverse_requests: List[Request] = []
         self.module_events: List[Dict] = []
         self.sequence: int = 1
