@@ -496,10 +496,9 @@ _mm256_andnot_si256(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit integer vector.
 /// \returns A 256-bit integer vector containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_avg_epu8(__m256i __a, __m256i __b)
-{
-  return (__m256i)__builtin_ia32_pavgb256((__v32qi)__a, (__v32qi)__b);
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_avg_epu8(__m256i __a, __m256i __b) {
+  return (__m256i)__builtin_ia32_pavgb256((__v32qu)__a, (__v32qu)__b);
 }
 
 /// Computes the averages of the corresponding unsigned 16-bit integers in
@@ -522,10 +521,9 @@ _mm256_avg_epu8(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit vector of [16 x i16].
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_avg_epu16(__m256i __a, __m256i __b)
-{
-  return (__m256i)__builtin_ia32_pavgw256((__v16hi)__a, (__v16hi)__b);
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_avg_epu16(__m256i __a, __m256i __b) {
+  return (__m256i)__builtin_ia32_pavgw256((__v16hu)__a, (__v16hu)__b);
 }
 
 /// Merges 8-bit integer values from either of the two 256-bit vectors

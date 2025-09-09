@@ -3,7 +3,7 @@
 //    that line instead of the line the command is found on.
 //
 // RUN: %dexter_regression_test_cxx_build %s -o %t
-// RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck --dump-input-context=999999999 %s
+// RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck %s
 // CHECK: label_another_line.cpp: (1.0000)
 
 int main() {

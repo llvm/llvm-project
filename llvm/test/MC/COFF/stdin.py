@@ -1,5 +1,7 @@
 # RUN: echo "// comment" > %t.input
-# RUN: which llvm-mc | %python %s %t.input %t
+# We use STDIN to for the binary name as lit will substitute in the full path
+# of the binary before executing, ensuring we pick up the correct llvm-mc.
+# RUN: echo llvm-mc | %python %s %t.input %t
 
 import argparse
 import subprocess
