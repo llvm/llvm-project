@@ -448,9 +448,10 @@ public:
 
     // Use the dependency scanning optimized file system if requested to do so.
     if (DepFS) {
-      StringRef ModulesCachePath =
-          ScanInstance.getHeaderSearchOpts().ModuleCachePath;
-
+      SmallString<256> ModulesCachePath(
+          ScanInstance.getHeaderSearchOpts().ModuleCachePath);
+      FileMgr->makeAbsolutePath(ModulesCachePath);
+      llvm::sys::path::remove_dots(ModulesCachePath);
       DepFS->resetBypassedPathPrefix();
       if (!ModulesCachePath.empty())
         DepFS->setBypassedPathPrefix(ModulesCachePath);
