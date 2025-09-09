@@ -15646,19 +15646,13 @@ SDValue PPCTargetLowering::combineSetCC(SDNode *N,
       if (LA->getExtensionType() != ISD::NON_EXTLOAD ||
           LB->getExtensionType() != ISD::NON_EXTLOAD)
         return SDValue();
-      // Build new v16i8 loads using the SAME chain/base/MMO (no extra memory
+      // Build new v16i8 loads using the same chain/base/MMO (no extra memory
       // op).
       SDValue LHSVec = DAG.getLoad(MVT::v16i8, DL, LA->getChain(),
                                    LA->getBasePtr(), LA->getMemOperand());
       SDValue RHSVec = DAG.getLoad(MVT::v16i8, DL, LB->getChain(),
                                    LB->getBasePtr(), LB->getMemOperand());
 
-      // Replace old loads?¡¥ results (value and chain) so the old nodes die.
-     // DAG.DeleteNode(LHS.getNode());
-      // DAG.DeleteNode(RHS.getNode()); 
-
-      //   SDValue LHSVec = DAG.getBitcast(MVT::v16i8, LHS);
-      // SDValue RHSVec = DAG.getBitcast(MVT::v16i8, RHS);
       SDValue IntrID =
           DAG.getTargetConstant(Intrinsic::ppc_altivec_vcmpequb_p, DL,
                                 Subtarget.isPPC64() ? MVT::i64 : MVT::i32);
@@ -15667,6 +15661,7 @@ SDValue PPCTargetLowering::combineSetCC(SDNode *N,
       SDValue Ops[] = {IntrID, CRSel, LHSVec, RHSVec};
       SDValue PredResult =
           DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32, Ops);
+
       // ppc_altivec_vcmpequb_p returns 1 when two vectors are the same,
       // so we need to invert the CC opcode.
       return DAG.getSetCC(DL, N->getValueType(0), PredResult,
