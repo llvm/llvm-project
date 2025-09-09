@@ -3175,21 +3175,24 @@ MachineBasicBlock *
 AArch64TargetLowering::EmitEntryPStateSM(MachineInstr &MI,
                                          MachineBasicBlock *BB) const {
   MachineFunction *MF = BB->getParent();
-  AArch64FunctionInfo *FuncInfo = MF->getInfo<AArch64FunctionInfo>();
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+  const DebugLoc &DL = MI.getDebugLoc();
   Register ResultReg = MI.getOperand(0).getReg();
-  if (FuncInfo->isPStateSMRegUsed()) {
+  if (MF->getRegInfo().use_empty(ResultReg)) {
+    // Nothing to do. Pseudo erased below.
+  } else if (Subtarget->hasSME()) {
+    BuildMI(*BB, MI, DL, TII->get(AArch64::MRS), ResultReg)
+        .addImm(AArch64SysReg::SVCR)
+        .addReg(AArch64::VG, RegState::Implicit);
+  } else {
     RTLIB::Libcall LC = RTLIB::SMEABI_SME_STATE;
     const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
-    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::BL))
+    BuildMI(*BB, MI, DL, TII->get(AArch64::BL))
         .addExternalSymbol(getLibcallName(LC))
         .addReg(AArch64::X0, RegState::ImplicitDefine)
         .addRegMask(TRI->getCallPreservedMask(*MF, getLibcallCallingConv(LC)));
-    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY), ResultReg)
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), ResultReg)
         .addReg(AArch64::X0);
-  } else {
-    assert(MI.getMF()->getRegInfo().use_empty(ResultReg) &&
-           "Expected no users of the entry pstate.sm!");
   }
   MI.eraseFromParent();
   return BB;
@@ -8486,7 +8489,30 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   if (Subtarget->hasCustomCallingConv())
     Subtarget->getRegisterInfo()->UpdateCustomCalleeSavedRegs(MF);
 
-  if (!getTM().useNewSMEABILowering() || Attrs.hasAgnosticZAInterface()) {
+  if (getTM().useNewSMEABILowering() && !Attrs.hasAgnosticZAInterface()) {
+    if (Subtarget->isTargetWindows() || hasInlineStackProbe(MF)) {
+      SDValue Size;
+      if (Attrs.hasZAState()) {
+        SDValue SVL = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
+                                  DAG.getConstant(1, DL, MVT::i32));
+        Size = DAG.getNode(ISD::MUL, DL, MVT::i64, SVL, SVL);
+      }
+      if (Size) {
+        SDValue Buffer = DAG.getNode(
+            ISD::DYNAMIC_STACKALLOC, DL, DAG.getVTList(MVT::i64, MVT::Other),
+            {Chain, Size, DAG.getConstant(1, DL, MVT::i64)});
+        Chain = Buffer.getValue(1);
+
+        Register BufferPtr =
+            MF.getRegInfo().createVirtualRegister(&AArch64::GPR64RegClass);
+        Chain = DAG.getCopyToReg(Chain, DL, BufferPtr, Buffer);
+        Chain = DAG.getNode(AArch64ISD::SME_STATE_ALLOC, DL,
+                            DAG.getVTList(MVT::Other), Chain);
+        FuncInfo->setEarlyAllocSMESaveBuffer(BufferPtr);
+        MFI.CreateVariableSizedObject(Align(16), nullptr);
+      }
+    }
+  } else {
     // Old SME ABI lowering (deprecated):
     // Create a 16 Byte TPIDR2 object. The dynamic buffer
     // will be expanded and stored in the static object later using a
@@ -9102,7 +9128,6 @@ SDValue AArch64TargetLowering::changeStreamingMode(SelectionDAG &DAG, SDLoc DL,
   SmallVector<SDValue> Ops = {Chain, MSROp};
   unsigned Opcode;
   if (Condition != AArch64SME::Always) {
-    FuncInfo->setPStateSMRegUsed(true);
     Register PStateReg = FuncInfo->getPStateSMReg();
     assert(PStateReg.isValid() && "PStateSM Register is invalid");
     SDValue PStateSM =
@@ -21058,13 +21083,6 @@ static bool isNegatedInteger(SDValue Op) {
   return Op.getOpcode() == ISD::SUB && isNullConstant(Op.getOperand(0));
 }
 
-static SDValue getNegatedInteger(SDValue Op, SelectionDAG &DAG) {
-  SDLoc DL(Op);
-  EVT VT = Op.getValueType();
-  SDValue Zero = DAG.getConstant(0, DL, VT);
-  return DAG.getNode(ISD::SUB, DL, VT, Zero, Op);
-}
-
 // Try to fold
 //
 // (neg (csel X, Y)) -> (csel (neg X), (neg Y))
@@ -21083,16 +21101,17 @@ static SDValue performNegCSelCombine(SDNode *N, SelectionDAG &DAG) {
   SDValue N0 = CSel.getOperand(0);
   SDValue N1 = CSel.getOperand(1);
 
-  // If both of them is not negations, it's not worth the folding as it
+  // If neither of them are negations, it's not worth the folding as it
   // introduces two additional negations while reducing one negation.
   if (!isNegatedInteger(N0) && !isNegatedInteger(N1))
     return SDValue();
 
-  SDValue N0N = getNegatedInteger(N0, DAG);
-  SDValue N1N = getNegatedInteger(N1, DAG);
-
   SDLoc DL(N);
   EVT VT = CSel.getValueType();
+
+  SDValue N0N = DAG.getNegative(N0, DL, VT);
+  SDValue N1N = DAG.getNegative(N1, DL, VT);
+
   return DAG.getNode(AArch64ISD::CSEL, DL, VT, N0N, N1N, CSel.getOperand(2),
                      CSel.getOperand(3));
 }
@@ -22640,7 +22659,7 @@ static SDValue performIntrinsicCombine(SDNode *N,
     return tryCombineCRC32(0xffff, N, DAG);
   case Intrinsic::aarch64_sve_saddv:
     // There is no i64 version of SADDV because the sign is irrelevant.
-    if (N->getOperand(2)->getValueType(0).getVectorElementType() == MVT::i64)
+    if (N->getOperand(2).getValueType().getVectorElementType() == MVT::i64)
       return combineSVEReductionInt(N, AArch64ISD::UADDV_PRED, DAG);
     else
       return combineSVEReductionInt(N, AArch64ISD::SADDV_PRED, DAG);
@@ -24327,6 +24346,7 @@ static SDValue vectorToScalarBitmask(SDNode *N, SelectionDAG &DAG) {
   // Ensure that all elements' bits are either 0s or 1s.
   ComparisonResult = DAG.getSExtOrTrunc(ComparisonResult, DL, VecVT);
 
+  bool IsLE = DAG.getDataLayout().isLittleEndian();
   SmallVector<SDValue, 16> MaskConstants;
   if (DAG.getSubtarget<AArch64Subtarget>().isNeonAvailable() &&
       VecVT == MVT::v16i8) {
@@ -24334,7 +24354,10 @@ static SDValue vectorToScalarBitmask(SDNode *N, SelectionDAG &DAG) {
     // per entry. We split it into two halves, apply the mask, zip the halves to
     // create 8x 16-bit values, and the perform the vector reduce.
     for (unsigned Half = 0; Half < 2; ++Half) {
-      for (unsigned MaskBit = 1; MaskBit <= 128; MaskBit *= 2) {
+      for (unsigned I = 0; I < 8; ++I) {
+        // On big-endian targets, the lane order in sub-byte vector elements
+        // gets reversed, so we need to flip the bit index.
+        unsigned MaskBit = IsLE ? (1u << I) : (1u << (7 - I));
         MaskConstants.push_back(DAG.getConstant(MaskBit, DL, MVT::i32));
       }
     }
@@ -24352,8 +24375,9 @@ static SDValue vectorToScalarBitmask(SDNode *N, SelectionDAG &DAG) {
   }
 
   // All other vector sizes.
-  unsigned MaxBitMask = 1u << (VecVT.getVectorNumElements() - 1);
-  for (unsigned MaskBit = 1; MaskBit <= MaxBitMask; MaskBit *= 2) {
+  unsigned NumEl = VecVT.getVectorNumElements();
+  for (unsigned I = 0; I < NumEl; ++I) {
+    unsigned MaskBit = IsLE ? (1u << I) : (1u << (NumEl - 1 - I));
     MaskConstants.push_back(DAG.getConstant(MaskBit, DL, MVT::i64));
   }
 
@@ -24665,6 +24689,105 @@ static SDValue performSTORECombine(SDNode *N,
   return SDValue();
 }
 
+static bool
+isSequentialConcatOfVectorInterleave(SDNode *N, SmallVectorImpl<SDValue> &Ops) {
+  if (N->getOpcode() != ISD::CONCAT_VECTORS)
+    return false;
+
+  unsigned NumParts = N->getNumOperands();
+
+  // We should be concatenating each sequential result from a
+  // VECTOR_INTERLEAVE.
+  SDNode *InterleaveOp = N->getOperand(0).getNode();
+  if (InterleaveOp->getOpcode() != ISD::VECTOR_INTERLEAVE ||
+      InterleaveOp->getNumOperands() != NumParts)
+    return false;
+
+  for (unsigned I = 0; I < NumParts; I++)
+    if (N->getOperand(I) != SDValue(InterleaveOp, I))
+      return false;
+
+  Ops.append(InterleaveOp->op_begin(), InterleaveOp->op_end());
+  return true;
+}
+
+static SDValue getNarrowMaskForInterleavedOps(SelectionDAG &DAG, SDLoc &DL,
+                                              SDValue WideMask,
+                                              unsigned RequiredNumParts) {
+  if (WideMask->getOpcode() == ISD::CONCAT_VECTORS) {
+    SmallVector<SDValue, 4> MaskInterleaveOps;
+    if (!isSequentialConcatOfVectorInterleave(WideMask.getNode(),
+                                              MaskInterleaveOps))
+      return SDValue();
+
+    if (MaskInterleaveOps.size() != RequiredNumParts)
+      return SDValue();
+
+    // Make sure the inputs to the vector interleave are identical.
+    if (!llvm::all_equal(MaskInterleaveOps))
+      return SDValue();
+
+    return MaskInterleaveOps[0];
+  }
+
+  if (WideMask->getOpcode() != ISD::SPLAT_VECTOR)
+    return SDValue();
+
+  ElementCount EC = WideMask.getValueType().getVectorElementCount();
+  assert(EC.isKnownMultipleOf(RequiredNumParts) &&
+         "Expected element count divisible by number of parts");
+  EC = EC.divideCoefficientBy(RequiredNumParts);
+  return DAG.getNode(ISD::SPLAT_VECTOR, DL, MVT::getVectorVT(MVT::i1, EC),
+                     WideMask->getOperand(0));
+}
+
+static SDValue performInterleavedMaskedStoreCombine(
+    SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  MaskedStoreSDNode *MST = cast<MaskedStoreSDNode>(N);
+  SDValue WideValue = MST->getValue();
+
+  // Bail out if the stored value has an unexpected number of uses, since we'll
+  // have to perform manual interleaving and may as well just use normal masked
+  // stores. Also, discard masked stores that are truncating or indexed.
+  if (!WideValue.hasOneUse() || !ISD::isNormalMaskedStore(MST) ||
+      !MST->isSimple() || !MST->getOffset().isUndef())
+    return SDValue();
+
+  SmallVector<SDValue, 4> ValueInterleaveOps;
+  if (!isSequentialConcatOfVectorInterleave(WideValue.getNode(),
+                                            ValueInterleaveOps))
+    return SDValue();
+
+  unsigned NumParts = ValueInterleaveOps.size();
+  if (NumParts != 2 && NumParts != 4)
+    return SDValue();
+
+  // At the moment we're unlikely to see a fixed-width vector interleave as
+  // we usually generate shuffles instead.
+  EVT SubVecTy = ValueInterleaveOps[0].getValueType();
+  if (!SubVecTy.isScalableVT() ||
+      SubVecTy.getSizeInBits().getKnownMinValue() != 128 ||
+      !DAG.getTargetLoweringInfo().isTypeLegal(SubVecTy))
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue NarrowMask =
+      getNarrowMaskForInterleavedOps(DAG, DL, MST->getMask(), NumParts);
+  if (!NarrowMask)
+    return SDValue();
+
+  const Intrinsic::ID IID =
+      NumParts == 2 ? Intrinsic::aarch64_sve_st2 : Intrinsic::aarch64_sve_st4;
+  SmallVector<SDValue, 8> NewStOps;
+  NewStOps.append({MST->getChain(), DAG.getConstant(IID, DL, MVT::i32)});
+  NewStOps.append(ValueInterleaveOps);
+  NewStOps.append({NarrowMask, MST->getBasePtr()});
+  return DAG.getNode(ISD::INTRINSIC_VOID, DL, MVT::Other, NewStOps);
+}
+
 static SDValue performMSTORECombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     SelectionDAG &DAG,
@@ -24673,6 +24796,9 @@ static SDValue performMSTORECombine(SDNode *N,
   SDValue Value = MST->getValue();
   SDValue Mask = MST->getMask();
   SDLoc DL(N);
+
+  if (SDValue Res = performInterleavedMaskedStoreCombine(N, DCI, DAG))
+    return Res;
 
   // If this is a UZP1 followed by a masked store, fold this into a masked
   // truncating store.  We can do this even if this is already a masked
@@ -27307,43 +27433,11 @@ static SDValue performVectorDeinterleaveCombine(
     return SDValue();
 
   // Now prove that the mask is an interleave of identical masks.
-  SDValue Mask = MaskedLoad->getMask();
-  if (Mask->getOpcode() != ISD::SPLAT_VECTOR &&
-      Mask->getOpcode() != ISD::CONCAT_VECTORS)
-    return SDValue();
-
-  SDValue NarrowMask;
   SDLoc DL(N);
-  if (Mask->getOpcode() == ISD::CONCAT_VECTORS) {
-    if (Mask->getNumOperands() != NumParts)
-      return SDValue();
-
-    // We should be concatenating each sequential result from a
-    // VECTOR_INTERLEAVE.
-    SDNode *InterleaveOp = Mask->getOperand(0).getNode();
-    if (InterleaveOp->getOpcode() != ISD::VECTOR_INTERLEAVE ||
-        InterleaveOp->getNumOperands() != NumParts)
-      return SDValue();
-
-    for (unsigned I = 0; I < NumParts; I++) {
-      if (Mask.getOperand(I) != SDValue(InterleaveOp, I))
-        return SDValue();
-    }
-
-    // Make sure the inputs to the vector interleave are identical.
-    if (!llvm::all_equal(InterleaveOp->op_values()))
-      return SDValue();
-
-    NarrowMask = InterleaveOp->getOperand(0);
-  } else { // ISD::SPLAT_VECTOR
-    ElementCount EC = Mask.getValueType().getVectorElementCount();
-    assert(EC.isKnownMultipleOf(NumParts) &&
-           "Expected element count divisible by number of parts");
-    EC = EC.divideCoefficientBy(NumParts);
-    NarrowMask =
-        DAG.getNode(ISD::SPLAT_VECTOR, DL, MVT::getVectorVT(MVT::i1, EC),
-                    Mask->getOperand(0));
-  }
+  SDValue NarrowMask =
+      getNarrowMaskForInterleavedOps(DAG, DL, MaskedLoad->getMask(), NumParts);
+  if (!NarrowMask)
+    return SDValue();
 
   const Intrinsic::ID IID = NumParts == 2 ? Intrinsic::aarch64_sve_ld2_sret
                                           : Intrinsic::aarch64_sve_ld4_sret;
@@ -31004,6 +31098,9 @@ bool AArch64TargetLowering::canCreateUndefOrPoisonForTargetNode(
   case AArch64ISD::MOVIshift:
   case AArch64ISD::MVNImsl:
   case AArch64ISD::MVNIshift:
+  case AArch64ISD::VASHR:
+  case AArch64ISD::VLSHR:
+  case AArch64ISD::VSHL:
     return false;
   }
   return TargetLowering::canCreateUndefOrPoisonForTargetNode(
