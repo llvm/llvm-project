@@ -1,3 +1,5 @@
+// REQUIRES: shell
+
 // Check that all of the hashes in this file are unique (i.e, that none of the
 // profiles for these functions are mutually interchangeable).
 //

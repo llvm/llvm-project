@@ -1,4 +1,4 @@
-// UNSUPPORTED: system-windows
+// REQUIRES: shell
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/mod

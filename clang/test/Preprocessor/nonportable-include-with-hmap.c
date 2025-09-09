@@ -1,5 +1,4 @@
-// Most likely platform specific sed differences
-// UNSUPPORTED: system-windows
+// REQUIRES: shell
 // REQUIRES: case-insensitive-filesystem
 
 // RUN: rm -f %t.hmap

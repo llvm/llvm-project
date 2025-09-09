@@ -98,7 +98,7 @@ static SourceRange getLockGuardRange(const TypeSourceInfo *SourceInfo) {
 
 // Find the exact source range of the 'lock_guard' name token
 static SourceRange getLockGuardNameRange(const TypeSourceInfo *SourceInfo) {
-  const TemplateSpecializationTypeLoc TemplateLoc =
+  const auto TemplateLoc =
       SourceInfo->getTypeLoc().getAs<TemplateSpecializationTypeLoc>();
   if (!TemplateLoc)
     return {};

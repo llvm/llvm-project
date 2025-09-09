@@ -1,3 +1,4 @@
+// REQUIRES: shell
 // UNSUPPORTED: system-windows
 
 // Test that when a --sysroot is not provided, driver picks the default
