@@ -16,3 +16,5 @@ def continueOnCuIndexOverflow_EQ : Joined<["-", "--"], "continue-on-cu-index-ove
     "\t\ttruncated but valid DWP file, discarding any DWO files that would not fit within \n"
     "\t\tthe 32 bit/4GB limits of the format.">,
   Values<"continue,soft-stop">;
+def execDwoPathRemappingFile : Joined<["--"], "exec-dwo-path-remapping-file=">, MetaVarName<"<filename>">,
+  HelpText<"Use the old and new paths described in <filename> to map old dwo paths in executables/libraries to the new paths.">;
