@@ -1,6 +1,7 @@
 import("//llvm/triples.gni")
 
 import("//llvm/utils/gn/build/buildflags.gni")
+
 #import("//llvm/utils/gn/build/libs/xar/enable.gni")
 import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/libs/zlib/enable.gni")
@@ -118,7 +119,7 @@ write_lit_cfg("lit_shell_site_cfg") {
     "CLANG_RESOURCE_DIR=",
     "DEFAULT_SYSROOT=",
     "LIBCXX_LIBRARY_DIR=" + rebase_path("$root_build_dir/lib"),
-    "LLDB_BUILD_LLDBRPC=0", # FIXME: add lldb-rpc-gen target, enable
+    "LLDB_BUILD_LLDBRPC=0",  # FIXME: add lldb-rpc-gen target, enable
     "LLDB_ENABLE_LUA=0",  # FIXME: gn arg, use in Config.h
     "LLDB_ENABLE_LZMA=0",  # FIXME: gn arg, use in Config.h
     "LLDB_ENABLE_PYTHON=0",  # FIXME: gn arg, use in Config.h

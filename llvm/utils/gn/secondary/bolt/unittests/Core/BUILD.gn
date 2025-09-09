@@ -6,8 +6,8 @@ unittest("CoreTests") {
   deps = [
     "//bolt/include/bolt/Core:TargetConfig.def",
     "//bolt/lib/Core",
-    "//bolt/lib/Rewrite",
     "//bolt/lib/Profile",
+    "//bolt/lib/Rewrite",
     "//llvm/lib/DebugInfo/DWARF",
     "//llvm/lib/MC",
     "//llvm/lib/Object",
@@ -33,9 +33,9 @@ unittest("CoreTests") {
     # those headers here.
     include_dirs += [ "//llvm/lib/Target/AArch64" ]
     deps += [
+      "//llvm/lib/Target/AArch64:AArch64GenSDNodeInfo",
       "//llvm/lib/Target/AArch64/MCTargetDesc",
       "//llvm/lib/Target/AArch64/Utils",
-      "//llvm/lib/Target/AArch64:AArch64GenSDNodeInfo",
     ]
   }
   if (llvm_build_X86) {

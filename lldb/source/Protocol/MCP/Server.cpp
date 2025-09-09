@@ -7,23 +7,108 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Protocol/MCP/Server.h"
+#include "lldb/Host/File.h"
+#include "lldb/Host/FileSystem.h"
+#include "lldb/Host/HostInfo.h"
+#include "lldb/Host/JSONTransport.h"
 #include "lldb/Protocol/MCP/MCPError.h"
 #include "lldb/Protocol/MCP/Protocol.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/Signals.h"
 
-using namespace lldb_protocol::mcp;
 using namespace llvm;
+using namespace lldb_private;
+using namespace lldb_protocol::mcp;
 
-llvm::json::Value lldb_protocol::mcp::toJSON(const ServerInfo &SM) {
-  return llvm::json::Object{{"connection_uri", SM.connection_uri},
-                            {"pid", SM.pid}};
+ServerInfoHandle::ServerInfoHandle() : ServerInfoHandle("") {}
+
+ServerInfoHandle::ServerInfoHandle(StringRef filename) : m_filename(filename) {
+  if (!m_filename.empty())
+    sys::RemoveFileOnSignal(m_filename);
 }
 
-bool lldb_protocol::mcp::fromJSON(const llvm::json::Value &V, ServerInfo &SM,
-                                  llvm::json::Path P) {
-  llvm::json::ObjectMapper O(V, P);
-  return O && O.map("connection_uri", SM.connection_uri) &&
-         O.map("pid", SM.pid);
+ServerInfoHandle::~ServerInfoHandle() {
+  if (m_filename.empty())
+    return;
+
+  sys::fs::remove(m_filename);
+  sys::DontRemoveFileOnSignal(m_filename);
+  m_filename.clear();
+}
+
+ServerInfoHandle::ServerInfoHandle(ServerInfoHandle &&other)
+    : m_filename(other.m_filename) {
+  *this = std::move(other);
+}
+
+ServerInfoHandle &
+ServerInfoHandle::operator=(ServerInfoHandle &&other) noexcept {
+  m_filename = other.m_filename;
+  other.m_filename.clear();
+  return *this;
+}
+
+json::Value lldb_protocol::mcp::toJSON(const ServerInfo &SM) {
+  return json::Object{{"connection_uri", SM.connection_uri}};
+}
+
+bool lldb_protocol::mcp::fromJSON(const json::Value &V, ServerInfo &SM,
+                                  json::Path P) {
+  json::ObjectMapper O(V, P);
+  return O && O.map("connection_uri", SM.connection_uri);
+}
+
+Expected<ServerInfoHandle> ServerInfo::Write(const ServerInfo &info) {
+  std::string buf = formatv("{0}", toJSON(info)).str();
+  size_t num_bytes = buf.size();
+
+  FileSpec user_lldb_dir = HostInfo::GetUserLLDBDir();
+
+  Status error(sys::fs::create_directory(user_lldb_dir.GetPath()));
+  if (error.Fail())
+    return error.takeError();
+
+  FileSpec mcp_registry_entry_path = user_lldb_dir.CopyByAppendingPathComponent(
+      formatv("lldb-mcp-{0}.json", getpid()).str());
+
+  const File::OpenOptions flags = File::eOpenOptionWriteOnly |
+                                  File::eOpenOptionCanCreate |
+                                  File::eOpenOptionTruncate;
+  Expected<lldb::FileUP> file =
+      FileSystem::Instance().Open(mcp_registry_entry_path, flags);
+  if (!file)
+    return file.takeError();
+  if (llvm::Error error = (*file)->Write(buf.data(), num_bytes).takeError())
+    return error;
+  return ServerInfoHandle{mcp_registry_entry_path.GetPath()};
+}
+
+Expected<std::vector<ServerInfo>> ServerInfo::Load() {
+  namespace path = llvm::sys::path;
+  FileSpec user_lldb_dir = HostInfo::GetUserLLDBDir();
+  FileSystem &fs = FileSystem::Instance();
+  std::error_code EC;
+  vfs::directory_iterator it = fs.DirBegin(user_lldb_dir, EC);
+  vfs::directory_iterator end;
+  std::vector<ServerInfo> infos;
+  for (; it != end && !EC; it.increment(EC)) {
+    auto &entry = *it;
+    auto path = entry.path();
+    auto name = path::filename(path);
+    if (!name.starts_with("lldb-mcp-") || !name.ends_with(".json"))
+      continue;
+
+    auto buffer = fs.CreateDataBuffer(path);
+    auto info = json::parse<ServerInfo>(toStringRef(buffer->GetData()));
+    if (!info)
+      return info.takeError();
+
+    infos.emplace_back(std::move(*info));
+  }
+
+  return infos;
 }
 
 Server::Server(std::string name, std::string version,

@@ -580,6 +580,7 @@ libc_support_library(
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_properties_architectures",
+        ":__support_macros_properties_compiler",
         ":hdr_stdint_proxy",
     ],
 )
@@ -759,6 +760,7 @@ libc_support_library(
     deps = [
         ":__support_macros_attributes",
         ":__support_macros_config",
+        ":__support_macros_properties_compiler",
         ":__support_macros_properties_complex_types",
         ":__support_macros_properties_types",
         ":hdr_stdint_proxy",

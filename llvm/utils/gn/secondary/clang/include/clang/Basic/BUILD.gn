@@ -76,10 +76,10 @@ group("diags_tablegen") {
   public_deps = []
   foreach(diag_group, diag_groups) {
     public_deps += [
-        ":Diagnostic${diag_group}Kinds",
-        ":Diagnostic${diag_group}Enums",
-        ":Diagnostic${diag_group}CompatIDs",
-        ":Diagnostic${diag_group}Interface",
+      ":Diagnostic${diag_group}CompatIDs",
+      ":Diagnostic${diag_group}Enums",
+      ":Diagnostic${diag_group}Interface",
+      ":Diagnostic${diag_group}Kinds",
     ]
   }
 }

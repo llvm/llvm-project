@@ -128,12 +128,14 @@ __m256i test_mm256_avg_epu8(__m256i a, __m256i b) {
   // CHECK: call <32 x i8> @llvm.x86.avx2.pavg.b(<32 x i8> %{{.*}}, <32 x i8> %{{.*}})
   return _mm256_avg_epu8(a, b);
 }
+TEST_CONSTEXPR(match_v32qu(_mm256_avg_epu8((__m256i)(__v32qu){1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32}, (__m256i)(__v32qu){1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32}), 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32));
 
 __m256i test_mm256_avg_epu16(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_avg_epu16
   // CHECK: call <16 x i16> @llvm.x86.avx2.pavg.w(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
   return _mm256_avg_epu16(a, b);
 }
+TEST_CONSTEXPR(match_v16hu(_mm256_avg_epu16((__m256i)(__v16hu){1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}, (__m256i)(__v16hu){1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}), 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16));
 
 // FIXME: We should also lower the __builtin_ia32_pblendw128 (and similar)
 // functions to this IR. In the future we could delete the corresponding
