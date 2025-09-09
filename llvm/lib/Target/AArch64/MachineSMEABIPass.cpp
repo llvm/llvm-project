@@ -249,6 +249,7 @@ private:
     SmallVector<BlockInfo> Blocks;
     SmallVector<ZAState> BundleStates;
     std::optional<TPIDR2State> TPIDR2Block;
+    std::optional<MachineBasicBlock::iterator> AfterSMEProloguePt;
   } State;
 
   MachineFunction *MF = nullptr;
@@ -298,6 +299,12 @@ void MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
       MachineBasicBlock::iterator MBBI(MI);
       LiveUnits.stepBackward(MI);
       LiveRegs PhysLiveRegs = GetPhysLiveRegs();
+      // The SMEStateAllocPseudo marker is added to a function if the save
+      // buffer was allocated in SelectionDAG. It marks the end of the
+      // allocation -- which is a safe point for this pass to insert any TPIDR2
+      // block setup.
+      if (MI.getOpcode() == AArch64::SMEStateAllocPseudo)
+        State.AfterSMEProloguePt = MBBI;
       auto [NeededState, InsertPt] = getZAStateBeforeInst(
           *TRI, MI, /*ZAOffAtReturn=*/SMEFnAttrs.hasPrivateZAInterface());
       assert((InsertPt == MBBI ||
@@ -529,23 +536,27 @@ void MachineSMEABI::emitZAOff(MachineBasicBlock &MBB,
 void MachineSMEABI::emitAllocateLazySaveBuffer(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
   MachineFrameInfo &MFI = MF->getFrameInfo();
+  auto *AFI = MF->getInfo<AArch64FunctionInfo>();
 
   DebugLoc DL = getDebugLoc(MBB, MBBI);
   Register SP = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
   Register SVL = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
-  Register Buffer = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
+  Register Buffer = AFI->getEarlyAllocSMESaveBuffer();
 
   // Calculate SVL.
   BuildMI(MBB, MBBI, DL, TII->get(AArch64::RDSVLI_XI), SVL).addImm(1);
 
   // 1. Allocate the lazy save buffer.
-  {
-    // TODO This function grows the stack with a subtraction, which doesn't work
-    // on Windows. Some refactoring to share the functionality in
-    // LowerWindowsDYNAMIC_STACKALLOC will be required once the Windows ABI
-    // supports SME
+  if (Buffer == AArch64::NoRegister) {
+    // TODO: On Windows, we allocate the lazy save buffer in SelectionDAG (so
+    // Buffer != AArch64::NoRegister). This is done to reuse the existing
+    // expansions (which can insert stack checks). This works, but it means we
+    // will always allocate the lazy save buffer (even if the function contains
+    // no lazy saves). If we want to handle Windows here, we'll need to
+    // implement something similar to LowerWindowsDYNAMIC_STACKALLOC.
     assert(!Subtarget->isTargetWindows() &&
            "Lazy ZA save is not yet supported on Windows");
+    Buffer = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
     // Get original stack pointer.
     BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::COPY), SP)
         .addReg(AArch64::SP);
@@ -686,8 +697,15 @@ bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
 
   // Allocate save buffer (if needed).
   if (State.TPIDR2Block) {
-    MachineBasicBlock &EntryBlock = MF.front();
-    emitAllocateLazySaveBuffer(EntryBlock, EntryBlock.getFirstNonPHI());
+    if (State.AfterSMEProloguePt) {
+      // Note: With inline stack probes the AfterSMEProloguePt may not be in the
+      // entry block (due to the probing loop).
+      emitAllocateLazySaveBuffer(*(*State.AfterSMEProloguePt)->getParent(),
+                                 *State.AfterSMEProloguePt);
+    } else {
+      MachineBasicBlock &EntryBlock = MF.front();
+      emitAllocateLazySaveBuffer(EntryBlock, EntryBlock.getFirstNonPHI());
+    }
   }
 
   return true;

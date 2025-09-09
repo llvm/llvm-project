@@ -235,6 +235,10 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   // Holds the SME function attributes (streaming mode, ZA/ZT0 state).
   SMEAttrs SMEFnAttrs;
 
+  // Holds the TPIDR2 block if allocated early (for Windows/stack probes
+  // support).
+  Register EarlyAllocSMESaveBuffer = AArch64::NoRegister;
+
   // Note: The following properties are only used for the old SME ABI lowering:
   /// The frame-index for the TPIDR2 object used for lazy saves.
   TPIDR2Object TPIDR2;
@@ -252,6 +256,12 @@ public:
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
         const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
       const override;
+
+  void setEarlyAllocSMESaveBuffer(Register Ptr) {
+    EarlyAllocSMESaveBuffer = Ptr;
+  }
+
+  Register getEarlyAllocSMESaveBuffer() { return EarlyAllocSMESaveBuffer; }
 
   // Old SME ABI lowering state getters/setters:
   Register getSMESaveBufferAddr() const { return SMESaveBufferAddr; };
