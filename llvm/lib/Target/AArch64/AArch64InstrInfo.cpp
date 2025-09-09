@@ -5471,20 +5471,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // Copies between GPR64 and FPR64.
   if (AArch64::FPR64RegClass.contains(DestReg) &&
       AArch64::GPR64RegClass.contains(SrcReg)) {
-    if (AArch64::XZR == SrcReg &&
-        !Subtarget.hasZeroCycleZeroingFPWorkaround() &&
-        Subtarget.isNeonAvailable()) {
-      if (Subtarget.hasZeroCycleZeroingFPR64()) {
-        BuildMI(MBB, I, DL, get(AArch64::MOVID), DestReg).addImm(0);
-      } else if (Subtarget.hasZeroCycleZeroingFPR128()) {
-        const TargetRegisterInfo *TRI = &getRegisterInfo();
-        MCRegister DestRegQ = TRI->getMatchingSuperReg(
-            DestReg, AArch64::dsub, &AArch64::FPR128RegClass);
-        BuildMI(MBB, I, DL, get(AArch64::MOVIv2d_ns), DestRegQ).addImm(0);
-      } else {
-        BuildMI(MBB, I, DL, get(AArch64::FMOVXDr), DestReg)
-            .addReg(SrcReg, getKillRegState(KillSrc));
-      }
+    if (AArch64::XZR == SrcReg) {
+      BuildMI(MBB, I, DL, get(AArch64::FMOVD0), DestReg);
     } else {
       BuildMI(MBB, I, DL, get(AArch64::FMOVXDr), DestReg)
           .addReg(SrcReg, getKillRegState(KillSrc));
@@ -5500,23 +5488,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // Copies between GPR32 and FPR32.
   if (AArch64::FPR32RegClass.contains(DestReg) &&
       AArch64::GPR32RegClass.contains(SrcReg)) {
-    if (AArch64::WZR == SrcReg &&
-        !Subtarget.hasZeroCycleZeroingFPWorkaround() &&
-        Subtarget.isNeonAvailable()) {
-      if (Subtarget.hasZeroCycleZeroingFPR64()) {
-        const TargetRegisterInfo *TRI = &getRegisterInfo();
-        MCRegister DestRegD = TRI->getMatchingSuperReg(DestReg, AArch64::ssub,
-                                                       &AArch64::FPR64RegClass);
-        BuildMI(MBB, I, DL, get(AArch64::MOVID), DestRegD).addImm(0);
-      } else if (Subtarget.hasZeroCycleZeroingFPR128()) {
-        const TargetRegisterInfo *TRI = &getRegisterInfo();
-        MCRegister DestRegQ = TRI->getMatchingSuperReg(
-            DestReg, AArch64::ssub, &AArch64::FPR128RegClass);
-        BuildMI(MBB, I, DL, get(AArch64::MOVIv2d_ns), DestRegQ).addImm(0);
-      } else {
-        BuildMI(MBB, I, DL, get(AArch64::FMOVWSr), DestReg)
-            .addReg(SrcReg, getKillRegState(KillSrc));
-      }
+    if (AArch64::WZR == SrcReg) {
+      BuildMI(MBB, I, DL, get(AArch64::FMOVS0), DestReg);
     } else {
       BuildMI(MBB, I, DL, get(AArch64::FMOVWSr), DestReg)
           .addReg(SrcReg, getKillRegState(KillSrc));
