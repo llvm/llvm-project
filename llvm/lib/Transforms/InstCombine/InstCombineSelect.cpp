@@ -1156,6 +1156,63 @@ static Value *foldAbsDiff(ICmpInst *Cmp, Value *TVal, Value *FVal,
   return nullptr;
 }
 
+/// Fold select patterns involving abs intrinsic:
+/// X == Positive ? X : ABS(X) -> ABS(X)
+/// X == Positive ? Positive : ABS(X) -> ABS(X)
+/// X > Positive ? X : ABS(X) -> ABS(X)
+/// X >= Positive ? X : ABS(X) -> ABS(X)
+static Value *foldSelectPositiveAbs(ICmpInst *Cmp, Value *TVal, Value *FVal,
+                                    InstCombiner::BuilderTy &Builder,
+                                    InstCombinerImpl &IC) {
+  // Check if false value is abs(X)
+  Value *X;
+  Constant *IntMinIsPoison;
+  if (!match(FVal, m_Intrinsic<Intrinsic::abs>(m_Value(X),
+                                               m_Constant(IntMinIsPoison))))
+    return nullptr;
+
+  ICmpInst::Predicate Pred = Cmp->getPredicate();
+  Value *CmpLHS = Cmp->getOperand(0);
+  Value *CmpRHS = Cmp->getOperand(1);
+
+  // Normalize so that X is on the LHS of comparison
+  if (CmpLHS != X) {
+    if (CmpRHS == X) {
+      std::swap(CmpLHS, CmpRHS);
+      Pred = ICmpInst::getSwappedPredicate(Pred);
+    } else {
+      return nullptr;
+    }
+  }
+
+  // Check if RHS is non-negative
+  if (!isKnownNonNegative(CmpRHS, IC.getSimplifyQuery()))
+    return nullptr;
+
+  // Handle different patterns
+  switch (Pred) {
+  case ICmpInst::ICMP_EQ:
+    // X == Positive ? X : ABS(X) -> ABS(X)
+    if (TVal == X)
+      return FVal;
+    // X == Positive ? Positive : ABS(X) -> ABS(X)
+    if (TVal == CmpRHS)
+      return FVal;
+    break;
+  case ICmpInst::ICMP_SGT:
+  case ICmpInst::ICMP_SGE:
+    // X > Positive ? X : ABS(X) -> ABS(X)
+    // X >= Positive ? X : ABS(X) -> ABS(X)
+    if (TVal == X)
+      return FVal;
+    break;
+  default:
+    break;
+  }
+
+  return nullptr;
+}
+
 /// Fold the following code sequence:
 /// \code
 ///   int a = ctlz(x & -x);
@@ -2066,6 +2123,9 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = foldAbsDiff(ICI, TrueVal, FalseVal, Builder))
+    return replaceInstUsesWith(SI, V);
+
+  if (Value *V = foldSelectPositiveAbs(ICI, TrueVal, FalseVal, Builder, *this))
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = foldSelectWithConstOpToBinOp(ICI, TrueVal, FalseVal))

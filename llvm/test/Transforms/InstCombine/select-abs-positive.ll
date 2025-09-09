@@ -8,11 +8,8 @@ declare i64 @llvm.abs.i64(i64, i1)
 define i32 @feq_1(i32 noundef %a, i8 noundef zeroext %b) {
 ; CHECK-LABEL: @feq_1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[B:%.*]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[CONV]]
-; CHECK-NEXT:    [[COND:%.*]] = tail call i32 @llvm.abs.i32(i32 [[A]], i1 true)
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[CMP]], i32 [[A]], i32 [[COND]]
-; CHECK-NEXT:    ret i32 [[RETVAL_0]]
+; CHECK-NEXT:    [[COND:%.*]] = tail call i32 @llvm.abs.i32(i32 [[A:%.*]], i1 true)
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
 entry:
   %conv = zext i8 %b to i32
@@ -26,11 +23,8 @@ entry:
 define i32 @feq_2(i32 noundef %a, i8 noundef zeroext %b) {
 ; CHECK-LABEL: @feq_2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[B:%.*]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[CONV]]
-; CHECK-NEXT:    [[COND:%.*]] = tail call i32 @llvm.abs.i32(i32 [[A]], i1 true)
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[CMP]], i32 [[CONV]], i32 [[COND]]
-; CHECK-NEXT:    ret i32 [[RETVAL_0]]
+; CHECK-NEXT:    [[COND:%.*]] = tail call i32 @llvm.abs.i32(i32 [[A:%.*]], i1 true)
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
 entry:
   %conv = zext i8 %b to i32
@@ -44,11 +38,8 @@ entry:
 define i32 @fgt_1(i32 noundef %a, i8 noundef zeroext %b) {
 ; CHECK-LABEL: @fgt_1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[B:%.*]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], [[CONV]]
-; CHECK-NEXT:    [[COND:%.*]] = tail call i32 @llvm.abs.i32(i32 [[A]], i1 true)
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[CMP]], i32 [[A]], i32 [[COND]]
-; CHECK-NEXT:    ret i32 [[RETVAL_0]]
+; CHECK-NEXT:    [[COND:%.*]] = tail call i32 @llvm.abs.i32(i32 [[A:%.*]], i1 true)
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
 entry:
   %conv = zext i8 %b to i32
@@ -140,11 +131,8 @@ entry:
 define i64 @i64_test(i64 noundef %a, i32 noundef zeroext %b) {
 ; CHECK-LABEL: @i64_test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[B:%.*]] to i64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[A:%.*]], [[CONV]]
-; CHECK-NEXT:    [[COND:%.*]] = tail call i64 @llvm.abs.i64(i64 [[A]], i1 true)
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[CMP]], i64 [[A]], i64 [[COND]]
-; CHECK-NEXT:    ret i64 [[RETVAL_0]]
+; CHECK-NEXT:    [[COND:%.*]] = tail call i64 @llvm.abs.i64(i64 [[A:%.*]], i1 true)
+; CHECK-NEXT:    ret i64 [[COND]]
 ;
 entry:
   %conv = zext i32 %b to i64
@@ -158,11 +146,8 @@ entry:
 define i32 @swapped_comparison(i32 noundef %a, i8 noundef zeroext %b) {
 ; CHECK-LABEL: @swapped_comparison(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[B:%.*]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[CONV]]
-; CHECK-NEXT:    [[COND:%.*]] = tail call i32 @llvm.abs.i32(i32 [[A]], i1 true)
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[CMP]], i32 [[A]], i32 [[COND]]
-; CHECK-NEXT:    ret i32 [[RETVAL_0]]
+; CHECK-NEXT:    [[COND:%.*]] = tail call i32 @llvm.abs.i32(i32 [[A:%.*]], i1 true)
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
 entry:
   %conv = zext i8 %b to i32
