@@ -152,6 +152,7 @@ Changes to the LLVM tools
 ---------------------------------
 
 * `llvm-readelf` now dumps all hex format values in lower-case mode.
+* Some code paths for supporting Python 2.7 in `llvm-lit` have been removed.
 
 Changes to LLDB
 ---------------------------------
