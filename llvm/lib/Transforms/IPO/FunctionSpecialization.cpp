@@ -784,9 +784,25 @@ bool FunctionSpecializer::run() {
 
     // Update the known call sites to call the clone.
     for (CallBase *Call : S.CallSites) {
+      Function *Clone = S.Clone;
       LLVM_DEBUG(dbgs() << "FnSpecialization: Redirecting " << *Call
-                        << " to call " << S.Clone->getName() << "\n");
+                        << " to call " << Clone->getName() << "\n");
       Call->setCalledFunction(S.Clone);
+      if (std::optional<uint64_t> Count =
+              GetBFI(*Call->getFunction())
+                  .getBlockProfileCount(Call->getParent())) {
+        uint64_t CallCount = *Count + Clone->getEntryCount()->getCount();
+        Clone->setEntryCount(CallCount);
+        if (std::optional<llvm::Function::ProfileCount> MaybeOriginalCount =
+                S.F->getEntryCount()) {
+          uint64_t OriginalCount = MaybeOriginalCount->getCount();
+          if (OriginalCount > CallCount) {
+            S.F->setEntryCount(OriginalCount - CallCount);
+          } else {
+            S.F->setEntryCount(0);
+          }
+        }
+      }
     }
 
     Clones.push_back(S.Clone);
@@ -1042,6 +1058,9 @@ Function *FunctionSpecializer::createSpecialization(Function *F,
   // The original function does not neccessarily have internal linkage, but the
   // clone must.
   Clone->setLinkage(GlobalValue::InternalLinkage);
+
+  if (F->getEntryCount())
+    Clone->setEntryCount(0);
 
   // Initialize the lattice state of the arguments of the function clone,
   // marking the argument on which we specialized the function constant
