@@ -1,6 +1,6 @@
 // RUN: %clang_dxc -T cs_6_0 /Fo %t.dxo /Frs %t.rs.dxo -### %s 2>&1 | FileCheck %s
 
-// Test to demonstrate that extracting the root signature to the specified
+// Test to demonstrate extracting the root signature to the specified
 // output file with /Frs.
 
 // CHECK: "{{.*}}llvm-objcopy{{(.exe)?}}" "{{.*}}.obj" "{{.*}}.dxo" "--extract-section=RTS0={{.*}}.rs.dxo"
