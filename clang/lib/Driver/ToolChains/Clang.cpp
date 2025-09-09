@@ -4608,6 +4608,10 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
                    KeyInstructionsOnByDefault))
     CmdArgs.push_back("-gkey-instructions");
 
+  if (!Args.hasFlag(options::OPT_gstructor_decl_linkage_names,
+                    options::OPT_gno_structor_decl_linkage_names, true))
+    CmdArgs.push_back("-gno-structor-decl-linkage-names");
+
   if (EmitCodeView) {
     CmdArgs.push_back("-gcodeview");
 

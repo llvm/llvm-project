@@ -27,14 +27,16 @@ enum CXXCtorType {
   Ctor_Comdat,         ///< The COMDAT used for ctors
   Ctor_CopyingClosure, ///< Copying closure variant of a ctor
   Ctor_DefaultClosure, ///< Default closure variant of a ctor
+  Ctor_Unified,        ///< GCC-style unified dtor
 };
 
 /// C++ destructor types.
 enum CXXDtorType {
-    Dtor_Deleting, ///< Deleting dtor
-    Dtor_Complete, ///< Complete object dtor
-    Dtor_Base,     ///< Base object dtor
-    Dtor_Comdat    ///< The COMDAT used for dtors
+  Dtor_Deleting, ///< Deleting dtor
+  Dtor_Complete, ///< Complete object dtor
+  Dtor_Base,     ///< Base object dtor
+  Dtor_Comdat,   ///< The COMDAT used for dtors
+  Dtor_Unified,  ///< GCC-style unified dtor
 };
 
 } // end namespace clang
