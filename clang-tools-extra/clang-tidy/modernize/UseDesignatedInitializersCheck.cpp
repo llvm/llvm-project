@@ -108,8 +108,7 @@ UseDesignatedInitializersCheck::UseDesignatedInitializersCheck(
                                          IgnoreSingleElementAggregatesDefault)),
       RestrictToPODTypes(
           Options.get(RestrictToPODTypesName, RestrictToPODTypesDefault)),
-      IgnoreMacros(
-          Options.getLocalOrGlobal(IgnoreMacrosName, IgnoreMacrosDefault)),
+      IgnoreMacros(Options.get(IgnoreMacrosName, IgnoreMacrosDefault)),
       StrictCStandardCompliance(Options.get(StrictCStandardComplianceName,
                                             StrictCStandardComplianceDefault)),
       StrictCppStandardCompliance(

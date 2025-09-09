@@ -12,6 +12,8 @@ import lit.formats
 import os
 import re
 
+THIS_FILE = os.path.abspath(__file__)
+LIBCXX_UTILS = os.path.dirname(os.path.dirname(os.path.dirname(THIS_FILE)))
 
 def _getTempPaths(test):
     """
@@ -353,6 +355,8 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
             ]
             if "enable-benchmarks=run" in test.config.available_features:
                 steps += ["%dbg(EXECUTED AS) %{exec} %t.exe --benchmark_out=%T/benchmark-result.json --benchmark_out_format=json"]
+                parse_results = os.path.join(LIBCXX_UTILS, 'parse-google-benchmark-results')
+                steps += [f"{parse_results} %T/benchmark-result.json --output-format=lnt > %T/results.lnt"]
             return self._executeShTest(test, litConfig, steps)
         elif re.search('[.]gen[.][^.]+$', filename): # This only happens when a generator test is not supported
             return self._executeShTest(test, litConfig, [])
