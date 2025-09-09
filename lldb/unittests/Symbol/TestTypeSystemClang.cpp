@@ -1150,12 +1150,12 @@ TEST_F(TestTypeSystemClang, AsmLabel_CtorDtor) {
       is_explicit, is_attr_used, is_artificial);
 
   auto *ctor = m_ast->AddMethodToCXXRecordType(
-      t.GetOpaqueQualType(), "S", /*asm_label=*/"$__lldb_func:0x0:0x0:S",
+      t.GetOpaqueQualType(), "S", /*asm_label=*/"$__lldb_func::0x0:0x0:S",
       function_type, lldb::AccessType::eAccessPublic, is_virtual, is_static,
       is_inline, is_explicit, is_attr_used, is_artificial);
 
   auto *dtor = m_ast->AddMethodToCXXRecordType(
-      t.GetOpaqueQualType(), "~S", /*asm_label=*/"$__lldb_func:0x0:0x0:~S",
+      t.GetOpaqueQualType(), "~S", /*asm_label=*/"$__lldb_func::0x0:0x0:~S",
       function_type, lldb::AccessType::eAccessPublic, is_virtual, is_static,
       is_inline, is_explicit, is_attr_used, is_artificial);
 
@@ -1181,11 +1181,11 @@ TEST_F(TestTypeSystemClang, AsmLabel_CtorDtor) {
   EXPECT_STREQ(llvm::GlobalValue::dropLLVMManglingEscape(
                    m_ast->DeclGetMangledName(ctor).GetStringRef())
                    .data(),
-               "$__lldb_func:0x0:0x0:S");
+               "$__lldb_func:C0:0x0:0x0:S");
   EXPECT_STREQ(llvm::GlobalValue::dropLLVMManglingEscape(
                    m_ast->DeclGetMangledName(dtor).GetStringRef())
                    .data(),
-               "$__lldb_func:0x0:0x0:~S");
+               "$__lldb_func:D1:0x0:0x0:~S");
 }
 
 struct AsmLabelTestCase {
