@@ -21,6 +21,7 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 
 namespace flangomp {
@@ -116,7 +117,7 @@ using InductionVariableInfos = llvm::SmallVector<InductionVariableInfo>;
 void collectLoopLiveIns(fir::DoConcurrentLoopOp loop,
                         llvm::SmallVectorImpl<mlir::Value> &liveIns) {
   llvm::SmallDenseSet<mlir::Value> seenValues;
-  llvm::SmallDenseSet<mlir::Operation *> seenOps;
+  llvm::SmallPtrSet<mlir::Operation *, 8> seenOps;
 
   for (auto [lb, ub, st] : llvm::zip_equal(
            loop.getLowerBound(), loop.getUpperBound(), loop.getStep())) {
@@ -426,6 +427,8 @@ private:
                                llvm::SmallVectorImpl<mlir::Value> &bounds) {
       populateBounds(var, bounds);
 
+      // Ensure that loop-nest bounds are evaluated in the host and forwarded to
+      // the nested omp constructs when we map to the device.
       if (targetClauseOps)
         targetClauseOps->hostEvalVars.push_back(var);
     };
