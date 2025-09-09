@@ -10,77 +10,64 @@
 //
 //===----------------------------------------------------------------------===//
 
-def : Macro {
-  let name = "OL_VERSION_MAJOR";
+def OL_VERSION_MAJOR : Macro {
   let desc = "Major version of the Offload API";
   let value = "0";
 }
 
-def : Macro {
-  let name = "OL_VERSION_MINOR";
+def OL_VERSION_MINOR : Macro {
   let desc = "Minor version of the Offload API";
   let value = "0";
 }
 
-def : Macro {
-  let name = "OL_VERSION_PATCH";
+def OL_VERSION_PATCH : Macro {
   let desc = "Patch version of the Offload API";
   let value = "1";
 }
 
-def : Macro {
-  let name = "OL_APICALL";
+def OL_APICALL : Macro {
   let desc = "Calling convention for all API functions";
   let condition = "defined(_WIN32)";
   let value = "__cdecl";
   let alt_value = "";
 }
 
-def : Macro {
-  let name = "OL_APIEXPORT";
+def OL_APIEXPORT : Macro {
   let desc = "Microsoft-specific dllexport storage-class attribute";
   let condition = "defined(_WIN32)";
   let value = "__declspec(dllexport)";
   let alt_value = "";
 }
 
-def : Handle {
-  let name = "ol_platform_handle_t";
+def ol_platform_handle_t : Handle {
   let desc = "Handle of a platform instance";
 }
 
-def : Handle {
-  let name = "ol_device_handle_t";
+def ol_device_handle_t : Handle {
   let desc = "Handle of platform's device object";
 }
 
-def : Handle {
-  let name = "ol_context_handle_t";
+def ol_context_handle_t : Handle {
   let desc = "Handle of context object";
 }
 
-def : Handle {
-  let name = "ol_queue_handle_t";
+def ol_queue_handle_t : Handle {
   let desc = "Handle of queue object";
 }
 
-def : Handle {
-  let name = "ol_event_handle_t";
+def ol_event_handle_t : Handle {
   let desc = "Handle of event object";
 }
 
-def : Handle {
-  let name = "ol_program_handle_t";
+def ol_program_handle_t : Handle {
   let desc = "Handle of program object";
 }
 
-def : Handle {
-  let name = "ol_symbol_handle_t";
+def ol_symbol_handle_t : Handle {
   let desc = "Handle of an object in a device's memory for a specific program";
 }
 
-def ErrorCode : Enum {
-  let name = "ol_errc_t";
+def ol_errc_t : Enum {
   let desc = "Defines Return/Error codes";
   let etors =[
     Etor<"SUCCESS", "success">,
@@ -115,8 +102,7 @@ def ErrorCode : Enum {
   ];
 }
 
-def : Struct {
-  let name = "ol_error_struct_t";
+def ol_error_struct_t : Struct {
   let desc = "Details of the error condition returned by an API call";
   let members = [
     StructMember<"ol_errc_t", "Code", "The error code">,
@@ -124,20 +110,17 @@ def : Struct {
   ];
 }
 
-def : Typedef {
-  let name = "ol_result_t";
+def ol_result_t : Typedef {
   let desc = "Result type returned by all entry points.";
   let value = "const struct ol_error_struct_t*";
 }
 
-def : Macro {
-  let name = "OL_SUCCESS";
+def OL_SUCCESS : Macro {
   let desc = "Success condition";
   let value = "NULL";
 }
 
-def : Struct {
-  let name = "ol_code_location_t";
+def ol_code_location_t : Struct {
   let desc = "Code location information that can optionally be associated with an API call";
   let members = [
     StructMember<"const char*", "FunctionName", "Function name">,
@@ -147,8 +130,7 @@ def : Struct {
   ];
 }
 
-def : Struct {
-  let name = "ol_dimensions_t";
+def ol_dimensions_t : Struct {
   let desc = "A three element vector";
   let members = [
     StructMember<"uint32_t", "x", "X">,
@@ -157,8 +139,7 @@ def : Struct {
   ];
 }
 
-def : Function {
-  let name = "olInit";
+def olInit : Function {
   let desc = "Perform initialization of the Offload library and plugins";
   let details = [
     "This must be the first API call made by a user of the Offload library",
@@ -168,8 +149,7 @@ def : Function {
   let returns = [];
 }
 
-def : Function {
-  let name = "olShutDown";
+def olShutDown : Function {
   let desc = "Release the resources in use by Offload";
   let details = [
     "This decrements an internal reference count. When this reaches 0, all resources will be released",

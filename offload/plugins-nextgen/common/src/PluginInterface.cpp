@@ -371,54 +371,6 @@ public:
 };
 } // namespace llvm::omp::target::plugin
 
-// Extract the mapping of host function pointers to device function pointers
-// from the entry table. Functions marked as 'indirect' in OpenMP will have
-// offloading entries generated for them which map the host's function pointer
-// to a global containing the corresponding function pointer on the device.
-static Expected<std::pair<void *, uint64_t>>
-setupIndirectCallTable(GenericPluginTy &Plugin, GenericDeviceTy &Device,
-                       DeviceImageTy &Image) {
-  GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
-
-  llvm::ArrayRef<llvm::offloading::EntryTy> Entries(
-      Image.getTgtImage()->EntriesBegin, Image.getTgtImage()->EntriesEnd);
-  llvm::SmallVector<std::pair<void *, void *>> IndirectCallTable;
-  for (const auto &Entry : Entries) {
-    if (Entry.Kind != object::OffloadKind::OFK_OpenMP || Entry.Size == 0 ||
-        !(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT))
-      continue;
-
-    assert(Entry.Size == sizeof(void *) && "Global not a function pointer?");
-    auto &[HstPtr, DevPtr] = IndirectCallTable.emplace_back();
-
-    GlobalTy DeviceGlobal(Entry.SymbolName, Entry.Size);
-    if (auto Err =
-            Handler.getGlobalMetadataFromDevice(Device, Image, DeviceGlobal))
-      return std::move(Err);
-
-    HstPtr = Entry.Address;
-    if (auto Err = Device.dataRetrieve(&DevPtr, DeviceGlobal.getPtr(),
-                                       Entry.Size, nullptr))
-      return std::move(Err);
-  }
-
-  // If we do not have any indirect globals we exit early.
-  if (IndirectCallTable.empty())
-    return std::pair{nullptr, 0};
-
-  // Sort the array to allow for more efficient lookup of device pointers.
-  llvm::sort(IndirectCallTable,
-             [](const auto &x, const auto &y) { return x.first < y.first; });
-
-  uint64_t TableSize =
-      IndirectCallTable.size() * sizeof(std::pair<void *, void *>);
-  void *DevicePtr = Device.allocate(TableSize, nullptr, TARGET_ALLOC_DEVICE);
-  if (auto Err = Device.dataSubmit(DevicePtr, IndirectCallTable.data(),
-                                   TableSize, nullptr))
-    return std::move(Err);
-  return std::pair<void *, uint64_t>(DevicePtr, IndirectCallTable.size());
-}
-
 AsyncInfoWrapperTy::AsyncInfoWrapperTy(GenericDeviceTy &Device,
                                        __tgt_async_info *AsyncInfoPtr)
     : Device(Device),
@@ -661,6 +613,10 @@ uint32_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
     // blocks start again until the requested number has been started.
     return std::min(NumTeamsClause[0], GenericDevice.getBlockLimit());
   }
+
+  // Return the number of teams required to cover the loop iterations.
+  if (isNoLoopMode())
+    return LoopTripCount > 0 ? (((LoopTripCount - 1) / NumThreads) + 1) : 1;
 
   uint64_t DefaultNumBlocks = GenericDevice.getDefaultNumBlocks();
   uint64_t TripCountNumBlocks = std::numeric_limits<uint64_t>::max();
@@ -939,10 +895,6 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
   // Add the image to list.
   LoadedImages.push_back(Image);
 
-  // Setup the device environment if needed.
-  if (auto Err = setupDeviceEnvironment(Plugin, *Image))
-    return std::move(Err);
-
   // Setup the global device memory pool if needed.
   if (!Plugin.getRecordReplay().isReplaying() &&
       shouldSetupDeviceMemoryPool()) {
@@ -976,43 +928,6 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
 
   // Return the pointer to the table of entries.
   return Image;
-}
-
-Error GenericDeviceTy::setupDeviceEnvironment(GenericPluginTy &Plugin,
-                                              DeviceImageTy &Image) {
-  // There are some plugins that do not need this step.
-  if (!shouldSetupDeviceEnvironment())
-    return Plugin::success();
-
-  // Obtain a table mapping host function pointers to device function pointers.
-  auto CallTablePairOrErr = setupIndirectCallTable(Plugin, *this, Image);
-  if (!CallTablePairOrErr)
-    return CallTablePairOrErr.takeError();
-
-  DeviceEnvironmentTy DeviceEnvironment;
-  DeviceEnvironment.DeviceDebugKind = OMPX_DebugKind;
-  DeviceEnvironment.NumDevices = Plugin.getNumDevices();
-  // TODO: The device ID used here is not the real device ID used by OpenMP.
-  DeviceEnvironment.DeviceNum = DeviceId;
-  DeviceEnvironment.DynamicMemSize = OMPX_SharedMemorySize;
-  DeviceEnvironment.ClockFrequency = getClockFrequency();
-  DeviceEnvironment.IndirectCallTable =
-      reinterpret_cast<uintptr_t>(CallTablePairOrErr->first);
-  DeviceEnvironment.IndirectCallTableSize = CallTablePairOrErr->second;
-  DeviceEnvironment.HardwareParallelism = getHardwareParallelism();
-
-  // Create the metainfo of the device environment global.
-  GlobalTy DevEnvGlobal("__omp_rtl_device_environment",
-                        sizeof(DeviceEnvironmentTy), &DeviceEnvironment);
-
-  // Write device environment values to the device.
-  GenericGlobalHandlerTy &GHandler = Plugin.getGlobalHandler();
-  if (auto Err = GHandler.writeGlobalToDevice(*this, Image, DevEnvGlobal)) {
-    DP("Missing symbol %s, continue execution anyway.\n",
-       DevEnvGlobal.getName().data());
-    consumeError(std::move(Err));
-  }
-  return Plugin::success();
 }
 
 Error GenericDeviceTy::setupDeviceMemoryPool(GenericPluginTy &Plugin,
@@ -1337,16 +1252,19 @@ Error PinnedAllocationMapTy::unlockUnmappedHostBuffer(void *HstPtr) {
 
 Error GenericDeviceTy::synchronize(__tgt_async_info *AsyncInfo,
                                    bool ReleaseQueue) {
+  if (!AsyncInfo)
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "invalid async info queue");
+
   SmallVector<void *> AllocsToDelete{};
   {
     std::lock_guard<std::mutex> AllocationGuard{AsyncInfo->Mutex};
 
-    if (!AsyncInfo || !AsyncInfo->Queue)
-      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                           "invalid async info queue");
-
-    if (auto Err = synchronizeImpl(*AsyncInfo, ReleaseQueue))
-      return Err;
+    // This can be false when no work has been added to the AsyncInfo. In which
+    // case, the device has nothing to synchronize.
+    if (AsyncInfo->Queue)
+      if (auto Err = synchronizeImpl(*AsyncInfo, ReleaseQueue))
+        return Err;
 
     std::swap(AllocsToDelete, AsyncInfo->AssociatedAllocations);
   }
@@ -1540,6 +1458,16 @@ Error GenericDeviceTy::dataExchange(const void *SrcPtr, GenericDeviceTy &DstDev,
   return Err;
 }
 
+Error GenericDeviceTy::dataFill(void *TgtPtr, const void *PatternPtr,
+                                int64_t PatternSize, int64_t Size,
+                                __tgt_async_info *AsyncInfo) {
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+  auto Err =
+      dataFillImpl(TgtPtr, PatternPtr, PatternSize, Size, AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
+  return Err;
+}
+
 Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
                                     ptrdiff_t *ArgOffsets,
                                     KernelArgsTy &KernelArgs,
@@ -1645,6 +1573,22 @@ Error GenericDeviceTy::waitEvent(void *EventPtr, __tgt_async_info *AsyncInfo) {
 Expected<bool> GenericDeviceTy::hasPendingWork(__tgt_async_info *AsyncInfo) {
   AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
   auto Res = hasPendingWorkImpl(AsyncInfoWrapper);
+  if (auto Err = Res.takeError()) {
+    AsyncInfoWrapper.finalize(Err);
+    return Err;
+  }
+
+  auto Err = Plugin::success();
+  AsyncInfoWrapper.finalize(Err);
+  if (Err)
+    return Err;
+  return Res;
+}
+
+Expected<bool> GenericDeviceTy::isEventComplete(void *Event,
+                                                __tgt_async_info *AsyncInfo) {
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+  auto Res = isEventCompleteImpl(Event, AsyncInfoWrapper);
   if (auto Err = Res.takeError()) {
     AsyncInfoWrapper.finalize(Err);
     return Err;
@@ -2226,8 +2170,7 @@ int32_t GenericPluginTy::get_global(__tgt_device_binary Binary, uint64_t Size,
   GenericGlobalHandlerTy &GHandler = getGlobalHandler();
   if (auto Err =
           GHandler.getGlobalMetadataFromDevice(Device, Image, DeviceGlobal)) {
-    REPORT("Failure to look up global address: %s\n",
-           toString(std::move(Err)).data());
+    consumeError(std::move(Err));
     return OFFLOAD_FAIL;
   }
 

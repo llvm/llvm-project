@@ -152,7 +152,7 @@ static constexpr StringLiteral WaitEventTypeName[] = {
 // We reserve a fixed number of VGPR slots in the scoring tables for
 // special tokens like SCMEM_LDS (needed for buffer load to LDS).
 enum RegisterMapping {
-  SQ_MAX_PGM_VGPRS = 1024, // Maximum programmable VGPRs across all targets.
+  SQ_MAX_PGM_VGPRS = 2048, // Maximum programmable VGPRs across all targets.
   AGPR_OFFSET = 512,       // Maximum programmable ArchVGPRs across all targets.
   SQ_MAX_PGM_SGPRS = 128,  // Maximum programmable SGPRs across all targets.
   // Artificial register slots to track LDS writes into specific LDS locations
@@ -831,7 +831,6 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
 
   MCRegister MCReg = AMDGPU::getMCReg(Op.getReg(), *Context->ST);
   unsigned RegIdx = TRI->getHWRegIndex(MCReg);
-  assert(isUInt<8>(RegIdx));
 
   const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Op.getReg());
   unsigned Size = TRI->getRegSizeInBits(*RC);
@@ -839,7 +838,7 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
   // AGPRs/VGPRs are tracked every 16 bits, SGPRs by 32 bits
   if (TRI->isVectorRegister(*MRI, Op.getReg())) {
     unsigned Reg = RegIdx << 1 | (AMDGPU::isHi16Reg(MCReg, *TRI) ? 1 : 0);
-    assert(Reg < AGPR_OFFSET);
+    assert(!Context->ST->hasMAIInsts() || Reg < AGPR_OFFSET);
     Result.first = Reg;
     if (TRI->isAGPR(*MRI, Op.getReg()))
       Result.first += AGPR_OFFSET;
@@ -2014,11 +2013,19 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
     }
   }
 
-  // The subtarget may have an implicit S_WAITCNT 0 before barriers. If it does
-  // not, we need to ensure the subtarget is capable of backing off barrier
-  // instructions in case there are any outstanding memory operations that may
-  // cause an exception. Otherwise, insert an explicit S_WAITCNT 0 here.
-  if (TII->isBarrierStart(MI.getOpcode()) &&
+  // Ensure safety against exceptions from outstanding memory operations while
+  // waiting for a barrier:
+  //
+  //  * Some subtargets safely handle backing off the barrier in hardware
+  //    when an exception occurs.
+  //  * Some subtargets have an implicit S_WAITCNT 0 before barriers, so that
+  //    there can be no outstanding memory operations during the wait.
+  //  * Subtargets with split barriers don't need to back off the barrier; it
+  //    is up to the trap handler to preserve the user barrier state correctly.
+  //
+  // In all other cases, ensure safety by ensuring that there are no outstanding
+  // memory operations.
+  if (MI.getOpcode() == AMDGPU::S_BARRIER &&
       !ST->hasAutoWaitcntBeforeBarrier() && !ST->supportsBackOffBarrier()) {
     Wait = Wait.combined(WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/true));
   }

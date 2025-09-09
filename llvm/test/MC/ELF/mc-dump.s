@@ -30,7 +30,7 @@
 # CHECK-NEXT:5 LEB Size:0+1 [15] Value:.Ltmp0-_start Signed:0
 #      CHECK:]
 
-# CHECK:  3 assembler         - Number of fixup evaluations for relaxation
+# CHECK:  2 assembler         - Number of fixup evaluations for relaxation
 # CHECK:  8 assembler         - Number of fixups
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t -debug-only=mc-dump -save-temp-labels -g 2>&1 | FileCheck %s --check-prefix=CHECK2

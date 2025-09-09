@@ -15,8 +15,7 @@
 
 // Atomic Intrinsics have multiple versions for different access widths, which
 // all follow one of the following signatures (depending on how many arguments
-// they require). We carefully instantiate only specific versions of these for
-// specific integer widths, rather than using `llvm_anyint_ty`.
+// they require).
 //
 // In fact, as these intrinsics take `llvm_anyptr_ty`, the given names are the
 // canonical names, and the intrinsics used in the code will have a name
@@ -25,52 +24,39 @@
 
 let TargetPrefix = "riscv" in {
 
-  // T @llvm.<name>.T.<p>(any*, T, T, T imm);
-  class RISCVMaskedAtomicRMWFourArg<LLVMType itype>
-      : Intrinsic<[itype], [llvm_anyptr_ty, itype, itype, itype],
+  // T @llvm.<name>.<i>.<p>(any*, T, T, T imm);
+  class RISCVMaskedAtomicRMWFourArg
+      : Intrinsic<[llvm_anyint_ty], [llvm_anyptr_ty, LLVMMatchType<0>,
+                                     LLVMMatchType<0>, LLVMMatchType<0>],
                   [IntrArgMemOnly, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<3>>]>;
-  // T @llvm.<name>.T.<p>(any*, T, T, T, T imm);
-  class RISCVMaskedAtomicRMWFiveArg<LLVMType itype>
-      : Intrinsic<[itype], [llvm_anyptr_ty, itype, itype, itype, itype],
+  // T @llvm.<name>.<i>.<p>(any*, T, T, T, T imm);
+  class RISCVMaskedAtomicRMWFiveArg
+      : Intrinsic<[llvm_anyint_ty], [llvm_anyptr_ty, LLVMMatchType<0>,
+                                     LLVMMatchType<0>, LLVMMatchType<0>,
+                                     LLVMMatchType<0>],
                   [IntrArgMemOnly, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<4>>]>;
-
-  // We define 32-bit and 64-bit variants of the above, where T stands for i32
-  // or i64 respectively:
-  multiclass RISCVMaskedAtomicRMWFourArgIntrinsics {
-    // i32 @llvm.<name>.i32.<p>(any*, i32, i32, i32 imm);
-    def _i32 : RISCVMaskedAtomicRMWFourArg<llvm_i32_ty>;
-    // i64 @llvm.<name>.i32.<p>(any*, i64, i64, i64 imm);
-    def _i64 : RISCVMaskedAtomicRMWFourArg<llvm_i64_ty>;
-  }
-
-  multiclass RISCVMaskedAtomicRMWFiveArgIntrinsics {
-    // i32 @llvm.<name>.i32.<p>(any*, i32, i32, i32, i32 imm);
-    def _i32 : RISCVMaskedAtomicRMWFiveArg<llvm_i32_ty>;
-    // i64 @llvm.<name>.i64.<p>(any*, i64, i64, i64, i64 imm);
-    def _i64 : RISCVMaskedAtomicRMWFiveArg<llvm_i64_ty>;
-  }
 
   // These intrinsics are intended only for internal compiler use (i.e. as
   // part of AtomicExpandpass via the emitMaskedAtomic*Intrinsic hooks). Their
   // names and semantics could change in the future.
 
-  // @llvm.riscv.masked.atomicrmw.*.{i32,i64}.<p>(
+  // @llvm.riscv.masked.atomicrmw.*.<i>.<p>(
   //   ptr addr, ixlen oparg, ixlen mask, ixlenimm ordering)
-  defm int_riscv_masked_atomicrmw_xchg : RISCVMaskedAtomicRMWFourArgIntrinsics;
-  defm int_riscv_masked_atomicrmw_add : RISCVMaskedAtomicRMWFourArgIntrinsics;
-  defm int_riscv_masked_atomicrmw_sub : RISCVMaskedAtomicRMWFourArgIntrinsics;
-  defm int_riscv_masked_atomicrmw_nand : RISCVMaskedAtomicRMWFourArgIntrinsics;
-  defm int_riscv_masked_atomicrmw_umax : RISCVMaskedAtomicRMWFourArgIntrinsics;
-  defm int_riscv_masked_atomicrmw_umin : RISCVMaskedAtomicRMWFourArgIntrinsics;
+  def int_riscv_masked_atomicrmw_xchg : RISCVMaskedAtomicRMWFourArg;
+  def int_riscv_masked_atomicrmw_add : RISCVMaskedAtomicRMWFourArg;
+  def int_riscv_masked_atomicrmw_sub : RISCVMaskedAtomicRMWFourArg;
+  def int_riscv_masked_atomicrmw_nand : RISCVMaskedAtomicRMWFourArg;
+  def int_riscv_masked_atomicrmw_umax : RISCVMaskedAtomicRMWFourArg;
+  def int_riscv_masked_atomicrmw_umin : RISCVMaskedAtomicRMWFourArg;
   // Signed min and max need an extra operand to do sign extension with.
-  // @llvm.riscv.masked.atomicrmw.{max,min}.{i32,i64}.<p>(
+  // @llvm.riscv.masked.atomicrmw.{max,min}.<i>.<p>(
   //   ptr addr, ixlen oparg, ixlen mask, ixlen shamt, ixlenimm ordering)
-  defm int_riscv_masked_atomicrmw_max : RISCVMaskedAtomicRMWFiveArgIntrinsics;
-  defm int_riscv_masked_atomicrmw_min : RISCVMaskedAtomicRMWFiveArgIntrinsics;
+  def int_riscv_masked_atomicrmw_max : RISCVMaskedAtomicRMWFiveArg;
+  def int_riscv_masked_atomicrmw_min : RISCVMaskedAtomicRMWFiveArg;
 
-  // @llvm.riscv.masked.cmpxchg.{i32,i64}.<p>(
+  // @llvm.riscv.masked.cmpxchg.<i>.<p>(
   //   ptr addr, ixlen cmpval, ixlen newval, ixlen mask, ixlenimm ordering)
-  defm int_riscv_masked_cmpxchg : RISCVMaskedAtomicRMWFiveArgIntrinsics;
+  def int_riscv_masked_cmpxchg : RISCVMaskedAtomicRMWFiveArg;
 
 } // TargetPrefix = "riscv"
 
@@ -1906,6 +1892,51 @@ let TargetPrefix = "riscv" in {
   def int_riscv_vsm3c    : RISCVBinaryAAXUnMaskedZvk<IsVI=1>;
   def int_riscv_vsm3me   : RISCVBinaryAAXUnMasked;
 } // TargetPrefix = "riscv"
+
+//===----------------------------------------------------------------------===//
+// Zvqdotq - Vector quad widening 4D Dot Product
+//
+// 8-bit Integer dot-product instructions performing the dot product between two
+// 4-element vectors of 8-bit integer elements and accumulating it into a 32-bit
+// integer accumulator.
+let TargetPrefix = "riscv" in {
+  // We use llvm_anyvector_ty and llvm_anyint_ty for future extensibility
+  // purpose but only EEW=32 is defined for now
+  // Input: (vector_in, vector_in, vector_in/scalar_in, vl, policy)
+  class RISCVVQDOTUnMasked<bit HasVV>
+        : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                [LLVMMatchType<0>, llvm_anyvector_ty,
+                                 !if(HasVV, llvm_any_ty, llvm_anyint_ty),
+                                 llvm_anyint_ty, LLVMMatchType<3>],
+                                [ImmArg<ArgIndex<4>>, IntrNoMem]>,
+                                RISCVVIntrinsic {
+    let ScalarOperand = 2;
+    let VLOperand = 3;
+  }
+  // Input: (vector_in, vector_in, vector_in/scalar_in, mask, vl, policy)
+  class RISCVVQDOTMasked<bit HasVV>
+        : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                [LLVMMatchType<0>, llvm_anyvector_ty,
+                                 !if(HasVV, llvm_any_ty, llvm_anyint_ty),
+                                 LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                 llvm_anyint_ty, LLVMMatchType<3>],
+                                [ImmArg<ArgIndex<5>>, IntrNoMem]>,
+                                RISCVVIntrinsic {
+    let ScalarOperand = 2;
+    let VLOperand = 4;
+  }
+
+  multiclass RISCVVQDOT<bit HasVV = 1> {
+    def "int_riscv_" # NAME : RISCVVQDOTUnMasked<HasVV=HasVV>;
+    def "int_riscv_" # NAME # "_mask" : RISCVVQDOTMasked<HasVV=HasVV>;
+  }
+
+  defm vqdot   : RISCVVQDOT;
+  defm vqdotu  : RISCVVQDOT;
+  defm vqdotsu : RISCVVQDOT;
+  defm vqdotus : RISCVVQDOT<HasVV=0>;
+} // TargetPrefix = "riscv"
+
 
 // Zihintpause extensions
 //===----------------------------------------------------------------------===//
