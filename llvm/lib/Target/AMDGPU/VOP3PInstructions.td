@@ -44,7 +44,7 @@ class VOP3P_Mix_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR,
                FP16InputMods:$src1_modifiers, Src1RC:$src1,
                FP16InputMods:$src2_modifiers, Src2RC:$src2);
     dag dpp_srcs =
-          (ins FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0,
+          (ins FPVRegInputMods:$src0_modifiers, VGPROp_32:$src0,
                FPVRegInputMods:$src1_modifiers, VRegSrc_32:$src1,
                FP16InputMods:$src2_modifiers, Src2RC:$src2);
 
