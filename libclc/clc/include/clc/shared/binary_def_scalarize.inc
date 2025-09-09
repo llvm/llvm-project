@@ -34,6 +34,10 @@
 #define __CLC_ARG2_TYPE __CLC_GENTYPE
 #endif
 
+#define __CLC_RET_VECTYPE __CLC_XCONCAT(__CLC_RET_TYPE, __CLC_VECTOR_SIZE)
+#define __CLC_ARG1_VECTYPE __CLC_XCONCAT(__CLC_ARG1_TYPE, __CLC_VECTOR_SIZE)
+#define __CLC_ARG2_VECTYPE __CLC_XCONCAT(__CLC_ARG2_TYPE, __CLC_VECTOR_SIZE)
+
 #if __CLC_MIN_VECSIZE == 1
 _CLC_OVERLOAD __CLC_DEF_SPEC __CLC_RET_TYPE __CLC_FUNCTION(__CLC_ARG1_TYPE x,
                                                            __CLC_ARG2_TYPE y) {
@@ -42,56 +46,42 @@ _CLC_OVERLOAD __CLC_DEF_SPEC __CLC_RET_TYPE __CLC_FUNCTION(__CLC_ARG1_TYPE x,
 #endif // __CLC_MIN_VECSIZE == 1
 
 #if __CLC_MIN_VECSIZE <= 2
-#define __CLC_RET_TYPE2 __CLC_XCONCAT(__CLC_RET_TYPE, 2)
-#define __CLC_ARG1_TYPE2 __CLC_XCONCAT(__CLC_ARG1_TYPE, 2)
-#define __CLC_ARG2_TYPE2 __CLC_XCONCAT(__CLC_ARG2_TYPE, 2)
-_CLC_OVERLOAD __CLC_DEF_SPEC __CLC_RET_TYPE2
-__CLC_FUNCTION(__CLC_ARG1_TYPE2 x, __CLC_ARG2_TYPE2 y) {
-  return (__CLC_RET_TYPE2)(__CLC_IMPL_FUNCTION(x.s0, y.s0),
+#define __CLC_VECTOR_SIZE 2
+_CLC_OVERLOAD __CLC_DEF_SPEC __CLC_RET_VECTYPE
+__CLC_FUNCTION(__CLC_ARG1_VECTYPE x, __CLC_ARG2_VECTYPE y) {
+  return (__CLC_RET_VECTYPE)(__CLC_IMPL_FUNCTION(x.s0, y.s0),
                            __CLC_IMPL_FUNCTION(x.s1, y.s1));
 }
-#undef __CLC_RET_TYPE2
-#undef __CLC_ARG1_TYPE2
-#undef __CLC_ARG2_TYPE2
+#undef __CLC_VECTOR_SIZE
 #endif // __CLC_MIN_VECSIZE <= 2
 
 #if __CLC_MIN_VECSIZE > 3
 #error "__CLC_MIN_VECSIZE > 3 isn't implemented"
 #endif
 
-#define __CLC_RET_TYPE3 __CLC_XCONCAT(__CLC_RET_TYPE, 3)
-#define __CLC_ARG1_TYPE3 __CLC_XCONCAT(__CLC_ARG1_TYPE, 3)
-#define __CLC_ARG2_TYPE3 __CLC_XCONCAT(__CLC_ARG2_TYPE, 3)
-_CLC_OVERLOAD __CLC_DEF_SPEC __CLC_RET_TYPE3
-__CLC_FUNCTION(__CLC_ARG1_TYPE3 x, __CLC_ARG2_TYPE3 y) {
-  return (__CLC_RET_TYPE3)(__CLC_IMPL_FUNCTION(x.s0, y.s0),
+#define __CLC_VECTOR_SIZE 3
+_CLC_OVERLOAD __CLC_DEF_SPEC __CLC_RET_VECTYPE
+__CLC_FUNCTION(__CLC_ARG1_VECTYPE x, __CLC_ARG2_VECTYPE y) {
+  return (__CLC_RET_VECTYPE)(__CLC_IMPL_FUNCTION(x.s0, y.s0),
                            __CLC_IMPL_FUNCTION(x.s1, y.s1),
                            __CLC_IMPL_FUNCTION(x.s2, y.s2));
 }
-#undef __CLC_RET_TYPE3
-#undef __CLC_ARG1_TYPE3
-#undef __CLC_ARG2_TYPE3
+#undef __CLC_VECTOR_SIZE
 
-#define __CLC_RET_TYPE4 __CLC_XCONCAT(__CLC_RET_TYPE, 4)
-#define __CLC_ARG1_TYPE4 __CLC_XCONCAT(__CLC_ARG1_TYPE, 4)
-#define __CLC_ARG2_TYPE4 __CLC_XCONCAT(__CLC_ARG2_TYPE, 4)
-_CLC_OVERLOAD __CLC_DEF_SPEC __CLC_RET_TYPE4
-__CLC_FUNCTION(__CLC_ARG1_TYPE4 x, __CLC_ARG2_TYPE4 y) {
-  return (__CLC_RET_TYPE4)(__CLC_IMPL_FUNCTION(x.s0, y.s0),
+#define __CLC_VECTOR_SIZE 4
+_CLC_OVERLOAD __CLC_DEF_SPEC __CLC_RET_VECTYPE
+__CLC_FUNCTION(__CLC_ARG1_VECTYPE x, __CLC_ARG2_VECTYPE y) {
+  return (__CLC_RET_VECTYPE)(__CLC_IMPL_FUNCTION(x.s0, y.s0),
                            __CLC_IMPL_FUNCTION(x.s1, y.s1),
                            __CLC_IMPL_FUNCTION(x.s2, y.s2),
                            __CLC_IMPL_FUNCTION(x.s3, y.s3));
 }
-#undef __CLC_RET_TYPE4
-#undef __CLC_ARG1_TYPE4
-#undef __CLC_ARG2_TYPE4
+#undef __CLC_VECTOR_SIZE
 
-#define __CLC_RET_TYPE8 __CLC_XCONCAT(__CLC_RET_TYPE, 8)
-#define __CLC_ARG1_TYPE8 __CLC_XCONCAT(__CLC_ARG1_TYPE, 8)
-#define __CLC_ARG2_TYPE8 __CLC_XCONCAT(__CLC_ARG2_TYPE, 8)
-_CLC_OVERLOAD __CLC_DEF_SPEC __CLC_RET_TYPE8
-__CLC_FUNCTION(__CLC_ARG1_TYPE8 x, __CLC_ARG2_TYPE8 y) {
-  return (__CLC_RET_TYPE8)(__CLC_IMPL_FUNCTION(x.s0, y.s0),
+#define __CLC_VECTOR_SIZE 8
+_CLC_OVERLOAD __CLC_DEF_SPEC __CLC_RET_VECTYPE
+__CLC_FUNCTION(__CLC_ARG1_VECTYPE x, __CLC_ARG2_VECTYPE y) {
+  return (__CLC_RET_VECTYPE)(__CLC_IMPL_FUNCTION(x.s0, y.s0),
                            __CLC_IMPL_FUNCTION(x.s1, y.s1),
                            __CLC_IMPL_FUNCTION(x.s2, y.s2),
                            __CLC_IMPL_FUNCTION(x.s3, y.s3),
@@ -100,16 +90,12 @@ __CLC_FUNCTION(__CLC_ARG1_TYPE8 x, __CLC_ARG2_TYPE8 y) {
                            __CLC_IMPL_FUNCTION(x.s6, y.s6),
                            __CLC_IMPL_FUNCTION(x.s7, y.s7));
 }
-#undef __CLC_RET_TYPE8
-#undef __CLC_ARG1_TYPE8
-#undef __CLC_ARG2_TYPE8
+#undef __CLC_VECTOR_SIZE
 
-#define __CLC_RET_TYPE16 __CLC_XCONCAT(__CLC_RET_TYPE, 16)
-#define __CLC_ARG1_TYPE16 __CLC_XCONCAT(__CLC_ARG1_TYPE, 16)
-#define __CLC_ARG2_TYPE16 __CLC_XCONCAT(__CLC_ARG2_TYPE, 16)
-_CLC_OVERLOAD __CLC_DEF_SPEC __CLC_RET_TYPE16
-__CLC_FUNCTION(__CLC_ARG1_TYPE16 x, __CLC_ARG2_TYPE16 y) {
-  return (__CLC_RET_TYPE16)(__CLC_IMPL_FUNCTION(x.s0, y.s0),
+#define __CLC_VECTOR_SIZE 16
+_CLC_OVERLOAD __CLC_DEF_SPEC __CLC_RET_VECTYPE
+__CLC_FUNCTION(__CLC_ARG1_VECTYPE x, __CLC_ARG2_VECTYPE y) {
+  return (__CLC_RET_VECTYPE)(__CLC_IMPL_FUNCTION(x.s0, y.s0),
                             __CLC_IMPL_FUNCTION(x.s1, y.s1),
                             __CLC_IMPL_FUNCTION(x.s2, y.s2),
                             __CLC_IMPL_FUNCTION(x.s3, y.s3),
@@ -126,8 +112,10 @@ __CLC_FUNCTION(__CLC_ARG1_TYPE16 x, __CLC_ARG2_TYPE16 y) {
                             __CLC_IMPL_FUNCTION(x.se, y.se),
                             __CLC_IMPL_FUNCTION(x.sf, y.sf));
 }
-#undef __CLC_RET_TYPE16
-#undef __CLC_ARG1_TYPE16
-#undef __CLC_ARG2_TYPE16
+#undef __CLC_VECTOR_SIZE
+
+#undef __CLC_RET_VECTYPE
+#undef __CLC_ARG1_VECTYPE
+#undef __CLC_ARG2_VECTYPE
 
 #endif // __CLC_SCALAR
