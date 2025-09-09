@@ -1,4 +1,4 @@
-//===- Logging.h - LSP Server Logging ----------------------*- C++ -*-===//
+//===- Logging.h - MLIR LSP Server Logging ----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_LSP_LOGGING_H
-#define LLVM_SUPPORT_LSP_LOGGING_H
+#ifndef MLIR_TOOLS_LSPSERVERSUPPORT_LOGGING_H
+#define MLIR_TOOLS_LSPSERVERSUPPORT_LOGGING_H
 
+#include "mlir/Support/LLVM.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <memory>
 #include <mutex>
 
-namespace llvm {
+namespace mlir {
 namespace lsp {
 
 /// This class represents the main interface for logging, and allows for
@@ -25,18 +26,21 @@ public:
   enum class Level { Debug, Info, Error };
 
   /// Set the severity level of the logger.
-  static void setLogLevel(Level LogLevel);
+  static void setLogLevel(Level logLevel);
 
   /// Initiate a log message at various severity levels. These should be called
   /// after a call to `initialize`.
-  template <typename... Ts> static void debug(const char *Fmt, Ts &&...Vals) {
-    log(Level::Debug, Fmt, llvm::formatv(Fmt, std::forward<Ts>(Vals)...));
+  template <typename... Ts>
+  static void debug(const char *fmt, Ts &&...vals) {
+    log(Level::Debug, fmt, llvm::formatv(fmt, std::forward<Ts>(vals)...));
   }
-  template <typename... Ts> static void info(const char *Fmt, Ts &&...Vals) {
-    log(Level::Info, Fmt, llvm::formatv(Fmt, std::forward<Ts>(Vals)...));
+  template <typename... Ts>
+  static void info(const char *fmt, Ts &&...vals) {
+    log(Level::Info, fmt, llvm::formatv(fmt, std::forward<Ts>(vals)...));
   }
-  template <typename... Ts> static void error(const char *Fmt, Ts &&...Vals) {
-    log(Level::Error, Fmt, llvm::formatv(Fmt, std::forward<Ts>(Vals)...));
+  template <typename... Ts>
+  static void error(const char *fmt, Ts &&...vals) {
+    log(Level::Error, fmt, llvm::formatv(fmt, std::forward<Ts>(vals)...));
   }
 
 private:
@@ -46,16 +50,16 @@ private:
   static Logger &get();
 
   /// Start a log message with the given severity level.
-  static void log(Level LogLevel, const char *Fmt,
-                  const llvm::formatv_object_base &Message);
+  static void log(Level logLevel, const char *fmt,
+                  const llvm::formatv_object_base &message);
 
   /// The minimum logging level. Messages with lower level are ignored.
-  Level LogLevel = Level::Error;
+  Level logLevel = Level::Error;
 
   /// A mutex used to guard logging.
-  std::mutex Mutex;
+  std::mutex mutex;
 };
 } // namespace lsp
-} // namespace llvm
+} // namespace mlir
 
-#endif // LLVM_SUPPORT_LSP_LOGGING_H
+#endif // MLIR_TOOLS_LSPSERVERSUPPORT_LOGGING_H
