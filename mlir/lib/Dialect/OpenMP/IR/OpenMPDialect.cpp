@@ -1267,34 +1267,32 @@ static ParseResult parseAllocatorHandle(OpAsmParser &parser,
     allocatorHandleAttr = IntegerAttr::get(parser.getBuilder().getI64Type(), 0);
     return success();
   }
-  auto parseKeyword = [&]() -> ParseResult {
-    if (failed(parser.parseKeyword(&allocatorKeyword)))
-      return failure();
-    if (allocatorKeyword == "omp_null_allocator")
-      allocator = 0;
-    else if (allocatorKeyword == "omp_default_mem_alloc")
-      allocator = 1;
-    else if (allocatorKeyword == "omp_large_cap_mem_alloc")
-      allocator = 2;
-    else if (allocatorKeyword == "omp_const_mem_alloc")
-      allocator = 3;
-    else if (allocatorKeyword == "omp_high_bw_mem_alloc")
-      allocator = 4;
-    else if (allocatorKeyword == "omp_low_lat_mem_alloc")
-      allocator = 5;
-    else if (allocatorKeyword == "omp_cgroup_mem_alloc")
-      allocator = 6;
-    else if (allocatorKeyword == "omp_pteam_mem_alloc")
-      allocator = 7;
-    else if (allocatorKeyword == "omp_thread_mem_alloc")
-      allocator = 8;
-    else
-      return parser.emitError(parser.getCurrentLocation())
-             << allocatorKeyword << " is not a valid allocator";
+  OptionalParseResult parsedInteger = parser.parseOptionalInteger(allocator);
+  if (parsedInteger.has_value()) {
+    allocatorHandleAttr =
+        IntegerAttr::get(parser.getBuilder().getI64Type(), allocator);
     return success();
-  };
-  if (parser.parseCommaSeparatedList(parseKeyword))
+  }
+  if (failed(parser.parseKeyword(&allocatorKeyword)))
     return failure();
+  if (allocatorKeyword == "omp_null_allocator")
+    allocator = 0;
+  else if (allocatorKeyword == "omp_default_mem_alloc")
+    allocator = 1;
+  else if (allocatorKeyword == "omp_large_cap_mem_alloc")
+    allocator = 2;
+  else if (allocatorKeyword == "omp_const_mem_alloc")
+    allocator = 3;
+  else if (allocatorKeyword == "omp_high_bw_mem_alloc")
+    allocator = 4;
+  else if (allocatorKeyword == "omp_low_lat_mem_alloc")
+    allocator = 5;
+  else if (allocatorKeyword == "omp_cgroup_mem_alloc")
+    allocator = 6;
+  else if (allocatorKeyword == "omp_pteam_mem_alloc")
+    allocator = 7;
+  else if (allocatorKeyword == "omp_thread_mem_alloc")
+    allocator = 8;
   allocatorHandleAttr =
       IntegerAttr::get(parser.getBuilder().getI64Type(), allocator);
   return success();
@@ -1333,6 +1331,9 @@ static void printAllocatorHandle(OpAsmPrinter &p, Operation *op,
   case 8:
     allocatorHandle = "omp_thread_mem_alloc";
     break;
+  default:
+    p << Twine(allocator).str();
+    return;
   }
   p << allocatorHandle;
 }
