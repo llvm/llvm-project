@@ -215,6 +215,16 @@ bool isASafeCallArg(const Expr *E) {
   return isa<CXXThisExpr>(E);
 }
 
+bool isNullPtr(const clang::Expr *E) {
+  if (isa<CXXNullPtrLiteralExpr>(E) || isa<GNUNullExpr>(E))
+    return true;
+  if (auto *Int = dyn_cast_or_null<IntegerLiteral>(E)) {
+    if (Int->getValue().isZero())
+      return true;
+  }
+  return false;
+}
+
 bool isConstOwnerPtrMemberExpr(const clang::Expr *E) {
   if (auto *MCE = dyn_cast<CXXMemberCallExpr>(E)) {
     if (auto *Callee = MCE->getDirectCallee()) {
@@ -273,7 +283,7 @@ public:
   bool VisitReturnStmt(const ReturnStmt *RS) {
     if (auto *RV = RS->getRetValue()) {
       RV = RV->IgnoreParenCasts();
-      if (isa<CXXNullPtrLiteralExpr>(RV))
+      if (isNullPtr(RV))
         return true;
       return isConstOwnerPtrMemberExpr(RV);
     }
