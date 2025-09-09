@@ -153,7 +153,7 @@ std::array GSymbols{
 
 } // namespace
 
-static std::pair<uint16_t, uint32_t>
+static std::pair<uint32_t, uint32_t>
 nthSymbolAddress(PublicsStream *Publics, SymbolStream *Symbols, size_t N) {
   auto Index = Publics->getAddressMap()[N].value();
   codeview::CVSymbol Sym = Symbols->readRecord(Index);
@@ -196,10 +196,10 @@ TEST(PublicsStreamTest, FindByAddress) {
   ASSERT_TRUE(VectorDtorDerived.has_value());
   ASSERT_EQ(VectorDtorDerived->first.Name, "??_EDerived2@@UEAAPEAXI@Z");
   ASSERT_EQ(VectorDtorDerived->second, 12u);
-  ASSERT_EQ(nthSymbolAddress(Publics, Symbols, 13), std::pair(1, 352));
-  ASSERT_EQ(nthSymbolAddress(Publics, Symbols, 14), std::pair(1, 352));
-  ASSERT_EQ(nthSymbolAddress(Publics, Symbols, 15), std::pair(1, 352));
-  ASSERT_EQ(nthSymbolAddress(Publics, Symbols, 16), std::pair(1, 416));
+  ASSERT_EQ(nthSymbolAddress(Publics, Symbols, 13), std::pair(1u, 352u));
+  ASSERT_EQ(nthSymbolAddress(Publics, Symbols, 14), std::pair(1u, 352u));
+  ASSERT_EQ(nthSymbolAddress(Publics, Symbols, 15), std::pair(1u, 352u));
+  ASSERT_EQ(nthSymbolAddress(Publics, Symbols, 16), std::pair(1u, 416u));
 
   ASSERT_FALSE(Publics->findByAddress(*Symbols, 2, 7).has_value());
   ASSERT_FALSE(Publics->findByAddress(*Symbols, 2, 9).has_value());
