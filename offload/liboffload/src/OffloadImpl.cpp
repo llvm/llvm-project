@@ -626,7 +626,7 @@ Error olMemAlloc_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
 }
 
 Error olMemFree_impl(ol_platform_handle_t Platform, void *Address) {
-  auto MemInfo = Platform->Plugin->get_memory_info(Address);
+  Expected<MemoryInfoTy> MemInfo = Platform->Plugin->get_memory_info(Address);
   if (auto Err = MemInfo.takeError())
     return Err;
 
