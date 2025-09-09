@@ -7,11 +7,23 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 define i32 @linear_transform_with_default(i32 %x) {
 ; OPTNOLUT-LABEL: define i32 @linear_transform_with_default(
 ; OPTNOLUT-SAME: i32 [[X:%.*]]) {
-; OPTNOLUT-NEXT:  [[ENTRY:.*:]]
-; OPTNOLUT-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[X]], 4
-; OPTNOLUT-NEXT:    [[SWITCH_IDX_MULT:%.*]] = mul nsw i32 [[X]], 3
-; OPTNOLUT-NEXT:    [[SWITCH_OFFSET:%.*]] = add nsw i32 [[SWITCH_IDX_MULT]], 1
-; OPTNOLUT-NEXT:    [[IDX:%.*]] = select i1 [[TMP0]], i32 [[SWITCH_OFFSET]], i32 13
+; OPTNOLUT-NEXT:  [[ENTRY:.*]]:
+; OPTNOLUT-NEXT:    switch i32 [[X]], label %[[END:.*]] [
+; OPTNOLUT-NEXT:      i32 0, label %[[CASE0:.*]]
+; OPTNOLUT-NEXT:      i32 1, label %[[CASE1:.*]]
+; OPTNOLUT-NEXT:      i32 2, label %[[CASE2:.*]]
+; OPTNOLUT-NEXT:      i32 3, label %[[CASE3:.*]]
+; OPTNOLUT-NEXT:    ]
+; OPTNOLUT:       [[CASE0]]:
+; OPTNOLUT-NEXT:    br label %[[END]]
+; OPTNOLUT:       [[CASE1]]:
+; OPTNOLUT-NEXT:    br label %[[END]]
+; OPTNOLUT:       [[CASE2]]:
+; OPTNOLUT-NEXT:    br label %[[END]]
+; OPTNOLUT:       [[CASE3]]:
+; OPTNOLUT-NEXT:    br label %[[END]]
+; OPTNOLUT:       [[END]]:
+; OPTNOLUT-NEXT:    [[IDX:%.*]] = phi i32 [ 1, %[[CASE0]] ], [ 4, %[[CASE1]] ], [ 7, %[[CASE2]] ], [ 10, %[[CASE3]] ], [ 13, %[[ENTRY]] ]
 ; OPTNOLUT-NEXT:    ret i32 [[IDX]]
 ;
 ; TTINOLUT-LABEL: define i32 @linear_transform_with_default(
@@ -126,8 +138,26 @@ end:
 define i32 @linear_transform_no_default(i32 %x) {
 ; OPTNOLUT-LABEL: define i32 @linear_transform_no_default(
 ; OPTNOLUT-SAME: i32 [[X:%.*]]) {
-; OPTNOLUT-NEXT:  [[ENTRY:.*:]]
-; OPTNOLUT-NEXT:    [[SWITCH_IDX_MULT:%.*]] = mul nsw i32 [[X]], 3
+; OPTNOLUT-NEXT:  [[ENTRY:.*]]:
+; OPTNOLUT-NEXT:    switch i32 [[X]], label %[[DEFAULT:.*]] [
+; OPTNOLUT-NEXT:      i32 0, label %[[END:.*]]
+; OPTNOLUT-NEXT:      i32 1, label %[[CASE1:.*]]
+; OPTNOLUT-NEXT:      i32 2, label %[[CASE2:.*]]
+; OPTNOLUT-NEXT:      i32 3, label %[[CASE3:.*]]
+; OPTNOLUT-NEXT:      i32 4, label %[[CASE4:.*]]
+; OPTNOLUT-NEXT:    ]
+; OPTNOLUT:       [[CASE1]]:
+; OPTNOLUT-NEXT:    br label %[[END]]
+; OPTNOLUT:       [[CASE2]]:
+; OPTNOLUT-NEXT:    br label %[[END]]
+; OPTNOLUT:       [[CASE3]]:
+; OPTNOLUT-NEXT:    br label %[[END]]
+; OPTNOLUT:       [[CASE4]]:
+; OPTNOLUT-NEXT:    br label %[[END]]
+; OPTNOLUT:       [[DEFAULT]]:
+; OPTNOLUT-NEXT:    unreachable
+; OPTNOLUT:       [[END]]:
+; OPTNOLUT-NEXT:    [[SWITCH_IDX_MULT:%.*]] = phi i32 [ 3, %[[CASE1]] ], [ 6, %[[CASE2]] ], [ 9, %[[CASE3]] ], [ 12, %[[CASE4]] ], [ 0, %[[ENTRY]] ]
 ; OPTNOLUT-NEXT:    ret i32 [[SWITCH_IDX_MULT]]
 ;
 ; TTINOLUT-LABEL: define i32 @linear_transform_no_default(
@@ -166,11 +196,23 @@ end:
 define i4 @bitmap_no_default(i32 %x) {
 ; OPTNOLUT-LABEL: define i4 @bitmap_no_default(
 ; OPTNOLUT-SAME: i32 [[X:%.*]]) {
-; OPTNOLUT-NEXT:  [[ENTRY:.*:]]
-; OPTNOLUT-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[X]] to i16
-; OPTNOLUT-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i16 [[SWITCH_CAST]], 4
-; OPTNOLUT-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i16 -31712, [[SWITCH_SHIFTAMT]]
-; OPTNOLUT-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i16 [[SWITCH_DOWNSHIFT]] to i4
+; OPTNOLUT-NEXT:  [[ENTRY:.*]]:
+; OPTNOLUT-NEXT:    switch i32 [[X]], label %[[DEFAULT:.*]] [
+; OPTNOLUT-NEXT:      i32 0, label %[[END:.*]]
+; OPTNOLUT-NEXT:      i32 1, label %[[CASE1:.*]]
+; OPTNOLUT-NEXT:      i32 2, label %[[CASE2:.*]]
+; OPTNOLUT-NEXT:      i32 3, label %[[CASE3:.*]]
+; OPTNOLUT-NEXT:    ]
+; OPTNOLUT:       [[CASE1]]:
+; OPTNOLUT-NEXT:    br label %[[END]]
+; OPTNOLUT:       [[CASE2]]:
+; OPTNOLUT-NEXT:    br label %[[END]]
+; OPTNOLUT:       [[CASE3]]:
+; OPTNOLUT-NEXT:    br label %[[END]]
+; OPTNOLUT:       [[DEFAULT]]:
+; OPTNOLUT-NEXT:    unreachable
+; OPTNOLUT:       [[END]]:
+; OPTNOLUT-NEXT:    [[SWITCH_MASKED:%.*]] = phi i4 [ 2, %[[CASE1]] ], [ 4, %[[CASE2]] ], [ -8, %[[CASE3]] ], [ 0, %[[ENTRY]] ]
 ; OPTNOLUT-NEXT:    ret i4 [[SWITCH_MASKED]]
 ;
 ; TTINOLUT-LABEL: define i4 @bitmap_no_default(
@@ -209,13 +251,23 @@ end:
 define i4 @bitmap_with_default(i32 %x) {
 ; OPTNOLUT-LABEL: define i4 @bitmap_with_default(
 ; OPTNOLUT-SAME: i32 [[X:%.*]]) {
-; OPTNOLUT-NEXT:  [[ENTRY:.*:]]
-; OPTNOLUT-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[X]], 4
-; OPTNOLUT-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[X]] to i16
-; OPTNOLUT-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i16 [[SWITCH_CAST]], 4
-; OPTNOLUT-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i16 -31712, [[SWITCH_SHIFTAMT]]
-; OPTNOLUT-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i16 [[SWITCH_DOWNSHIFT]] to i4
-; OPTNOLUT-NEXT:    [[IDX:%.*]] = select i1 [[TMP0]], i4 [[SWITCH_MASKED]], i4 -1
+; OPTNOLUT-NEXT:  [[ENTRY:.*]]:
+; OPTNOLUT-NEXT:    switch i32 [[X]], label %[[DEFAULT:.*]] [
+; OPTNOLUT-NEXT:      i32 0, label %[[END:.*]]
+; OPTNOLUT-NEXT:      i32 1, label %[[CASE1:.*]]
+; OPTNOLUT-NEXT:      i32 2, label %[[CASE2:.*]]
+; OPTNOLUT-NEXT:      i32 3, label %[[CASE3:.*]]
+; OPTNOLUT-NEXT:    ]
+; OPTNOLUT:       [[CASE1]]:
+; OPTNOLUT-NEXT:    br label %[[END]]
+; OPTNOLUT:       [[CASE2]]:
+; OPTNOLUT-NEXT:    br label %[[END]]
+; OPTNOLUT:       [[CASE3]]:
+; OPTNOLUT-NEXT:    br label %[[END]]
+; OPTNOLUT:       [[DEFAULT]]:
+; OPTNOLUT-NEXT:    br label %[[END]]
+; OPTNOLUT:       [[END]]:
+; OPTNOLUT-NEXT:    [[IDX:%.*]] = phi i4 [ 2, %[[CASE1]] ], [ 4, %[[CASE2]] ], [ -8, %[[CASE3]] ], [ -1, %[[DEFAULT]] ], [ 0, %[[ENTRY]] ]
 ; OPTNOLUT-NEXT:    ret i4 [[IDX]]
 ;
 ; TTINOLUT-LABEL: define i4 @bitmap_with_default(
@@ -298,9 +350,18 @@ end:
 define i32 @single_value_withdefault(i32 %x) {
 ; OPTNOLUT-LABEL: define i32 @single_value_withdefault(
 ; OPTNOLUT-SAME: i32 [[X:%.*]]) {
-; OPTNOLUT-NEXT:  [[ENTRY:.*:]]
-; OPTNOLUT-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[X]], 5
-; OPTNOLUT-NEXT:    [[DOT:%.*]] = select i1 [[TMP0]], i32 2, i32 3
+; OPTNOLUT-NEXT:  [[ENTRY:.*]]:
+; OPTNOLUT-NEXT:    switch i32 [[X]], label %[[DEFAULT:.*]] [
+; OPTNOLUT-NEXT:      i32 0, label %[[END:.*]]
+; OPTNOLUT-NEXT:      i32 1, label %[[END]]
+; OPTNOLUT-NEXT:      i32 2, label %[[END]]
+; OPTNOLUT-NEXT:      i32 3, label %[[END]]
+; OPTNOLUT-NEXT:      i32 4, label %[[END]]
+; OPTNOLUT-NEXT:    ]
+; OPTNOLUT:       [[DEFAULT]]:
+; OPTNOLUT-NEXT:    br label %[[END]]
+; OPTNOLUT:       [[END]]:
+; OPTNOLUT-NEXT:    [[DOT:%.*]] = phi i32 [ 3, %[[DEFAULT]] ], [ 2, %[[ENTRY]] ], [ 2, %[[ENTRY]] ], [ 2, %[[ENTRY]] ], [ 2, %[[ENTRY]] ], [ 2, %[[ENTRY]] ]
 ; OPTNOLUT-NEXT:    ret i32 [[DOT]]
 ;
 ; TTINOLUT-LABEL: define i32 @single_value_withdefault(
@@ -340,9 +401,18 @@ end:
 define i32 @single_value_no_jump_tables(i32 %x) "no-jump-tables"="true" {
 ; OPTNOLUT-LABEL: define i32 @single_value_no_jump_tables(
 ; OPTNOLUT-SAME: i32 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; OPTNOLUT-NEXT:  [[ENTRY:.*:]]
-; OPTNOLUT-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[X]], 5
-; OPTNOLUT-NEXT:    [[IDX:%.*]] = select i1 [[TMP0]], i32 2, i32 3
+; OPTNOLUT-NEXT:  [[ENTRY:.*]]:
+; OPTNOLUT-NEXT:    switch i32 [[X]], label %[[DEFAULT:.*]] [
+; OPTNOLUT-NEXT:      i32 0, label %[[END:.*]]
+; OPTNOLUT-NEXT:      i32 1, label %[[END]]
+; OPTNOLUT-NEXT:      i32 2, label %[[END]]
+; OPTNOLUT-NEXT:      i32 3, label %[[END]]
+; OPTNOLUT-NEXT:      i32 4, label %[[END]]
+; OPTNOLUT-NEXT:    ]
+; OPTNOLUT:       [[DEFAULT]]:
+; OPTNOLUT-NEXT:    br label %[[END]]
+; OPTNOLUT:       [[END]]:
+; OPTNOLUT-NEXT:    [[IDX:%.*]] = phi i32 [ 3, %[[DEFAULT]] ], [ 2, %[[ENTRY]] ], [ 2, %[[ENTRY]] ], [ 2, %[[ENTRY]] ], [ 2, %[[ENTRY]] ], [ 2, %[[ENTRY]] ]
 ; OPTNOLUT-NEXT:    ret i32 [[IDX]]
 ;
 ; TTINOLUT-LABEL: define i32 @single_value_no_jump_tables(

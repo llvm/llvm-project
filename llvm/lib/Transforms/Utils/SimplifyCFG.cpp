@@ -6924,8 +6924,7 @@ static void reuseTableCompare(
 /// lookup tables.
 static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
                                  DomTreeUpdater *DTU, const DataLayout &DL,
-                                 const TargetTransformInfo &TTI,
-                                 bool ConvertSwitchToLookupTable) {
+                                 const TargetTransformInfo &TTI) {
   assert(SI->getNumCases() > 1 && "Degenerate switch?");
 
   BasicBlock *BB = SI->getParent();
@@ -7092,19 +7091,13 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
       PhiToReplacementMap, [](auto &KV) { return KV.second.isLookupTable(); });
 
   // A few conditions prevent the generation of lookup tables:
-  //     1. Not setting the ConvertSwitchToLookupTable option
-  //        This option prevents the LUT creation until a later stage in the
-  //        pipeline, because it would otherwise result in some
-  //        difficult-to-analyze code and make pruning branches much harder.
-  //        This is a problem if the switch expression itself can be restricted
-  //        by inlining or CVP.
-  //     2. The target does not support lookup tables.
-  //     3. The "no-jump-tables" function attribute is set.
+  //     1. The target does not support lookup tables.
+  //     2. The "no-jump-tables" function attribute is set.
   // However, these objections do not apply to other switch replacements, like
   // the bitmap, so we only stop here if any of these conditions are met and we
   // want to create a LUT. Otherwise, continue with the switch replacement.
   if (AnyLookupTables &&
-      (!ConvertSwitchToLookupTable || !TTI.shouldBuildLookupTables() ||
+      (!TTI.shouldBuildLookupTables() ||
        Fn->getFnAttribute("no-jump-tables").getValueAsBool()))
     return false;
 
@@ -7748,8 +7741,13 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   if (Options.ForwardSwitchCondToPhi && forwardSwitchConditionToPHI(SI))
     return requestResimplify();
 
-  if (simplifySwitchLookup(SI, Builder, DTU, DL, TTI,
-                           Options.ConvertSwitchToLookupTable))
+  // The conversion from switch to lookup tables results in difficult-to-analyze
+  // code and makes pruning branches much harder. This is a problem if the
+  // switch expression itself can still be restricted as a result of inlining or
+  // CVP. Therefore, only apply this transformation during late stages of the
+  // optimisation pipeline.
+  if (Options.ConvertSwitchToLookupTable &&
+      simplifySwitchLookup(SI, Builder, DTU, DL, TTI))
     return requestResimplify();
 
   if (simplifySwitchOfPowersOfTwo(SI, Builder, DL, TTI))
