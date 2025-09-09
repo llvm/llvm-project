@@ -34,6 +34,7 @@ constexpr S operator"" _baz(unsigned long long) {
   long double j;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'long double' type is not portable and should not be used [google-runtime-float]
   MyOtherLongDouble x;
+  long int a = 1L;
   return S{};
 }
 
