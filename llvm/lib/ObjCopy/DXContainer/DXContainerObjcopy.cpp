@@ -28,6 +28,13 @@ static Error handleArgs(const CommonConfig &Config, Object &Obj) {
       return Config.ToRemove.matches(P.Name);
     };
 
+  if (!Config.OnlySection.empty())
+    RemovePred = [&Config](const Part &P) {
+      // Explicitly keep these sections regardless of previous removes and
+      // remove everything else.
+      return !Config.OnlySection.matches(P.Name);
+    };
+
   if (auto E = Obj.removeParts(RemovePred))
     return E;
 
