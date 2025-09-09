@@ -12,7 +12,6 @@
 #include <clc/math/clc_floor.h>
 #include <clc/math/clc_fma.h>
 #include <clc/math/clc_ldexp.h>
-#include <clc/math/clc_subnormal_config.h>
 #include <clc/math/clc_trunc.h>
 #include <clc/math/math.h>
 #include <clc/shared/clc_max.h>

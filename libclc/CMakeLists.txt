@@ -41,8 +41,6 @@ set( LIBCLC_MIN_LLVM 3.9.0 )
 set( LIBCLC_TARGETS_TO_BUILD "all"
     CACHE STRING "Semicolon-separated list of libclc targets to build, or 'all'." )
 
-option( ENABLE_RUNTIME_SUBNORMAL "Enable runtime linking of subnormal support." OFF )
-
 option(
   LIBCLC_USE_SPIRV_BACKEND "Build SPIR-V targets with the SPIR-V backend." OFF
 )
@@ -231,19 +229,6 @@ set( tahiti_aliases pitcairn verde oland hainan bonaire kabini kaveri hawaii
 configure_file( libclc.pc.in libclc.pc @ONLY )
 install( FILES ${CMAKE_CURRENT_BINARY_DIR}/libclc.pc DESTINATION "${CMAKE_INSTALL_DATADIR}/pkgconfig" )
 
-if( ENABLE_RUNTIME_SUBNORMAL )
-  foreach( file IN ITEMS subnormal_use_default subnormal_disable )
-    link_bc(
-       TARGET ${file}
-       INPUTS ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/${file}.ll
-    )
-    install(
-      FILES $<TARGET_PROPERTY:${file},TARGET_FILE>
-      DESTINATION "${CMAKE_INSTALL_DATADIR}/clc"
-    )
-  endforeach()
-endif()
-
 find_package( Python3 REQUIRED COMPONENTS Interpreter )
 file( TO_CMAKE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/utils/gen_convert.py script_loc )
 add_custom_command(
@@ -371,9 +356,6 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       list( APPEND opencl_gen_files clspv-convert.cl )
     else()
       list( APPEND opencl_gen_files convert.cl )
-      if ( NOT ENABLE_RUNTIME_SUBNORMAL )
-        list( APPEND opencl_lib_files opencl/lib/generic/subnormal_use_default.ll )
-      endif()
     endif()
   endif()
 

@@ -10,7 +10,6 @@
 
 #include <clc/clcfunc.h>
 
-_CLC_DECL bool __clc_subnormals_disabled();
 _CLC_DECL bool __clc_fp16_subnormals_supported();
 _CLC_DECL bool __clc_fp32_subnormals_supported();
 _CLC_DECL bool __clc_fp64_subnormals_supported();

@@ -12,7 +12,6 @@
 #include <clc/math/clc_fma.h>
 #include <clc/math/clc_ldexp.h>
 #include <clc/math/clc_mad.h>
-#include <clc/math/clc_subnormal_config.h>
 #include <clc/math/math.h>
 #include <clc/math/tables.h>
 #include <clc/relational/clc_select.h>

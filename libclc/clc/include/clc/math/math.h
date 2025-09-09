@@ -11,7 +11,6 @@
 
 #include <clc/clc_as_type.h>
 #include <clc/clcfunc.h>
-#include <clc/math/clc_subnormal_config.h>
 
 #define SNAN 0x001
 #define QNAN 0x002
@@ -66,13 +65,11 @@ bool __attribute__((noinline)) __clc_runtime_has_hw_fma32(void);
 #define LOG_MAGIC_NUM_SP32 (1 + NUMEXPBITS_SP32 - EXPBIAS_SP32)
 
 _CLC_OVERLOAD _CLC_INLINE float __clc_flush_denormal_if_not_supported(float x) {
-  int ix = __clc_as_int(x);
-  if (!__clc_fp32_subnormals_supported() && ((ix & EXPBITS_SP32) == 0) &&
-      ((ix & MANTBITS_SP32) != 0)) {
-    ix &= SIGNBIT_SP32;
-    x = __clc_as_float(ix);
-  }
-  return x;
+  // Avoid calling __clc_fp32_subnormals_supported here: it uses
+  // llvm.canonicalize, which quiets sNaN.
+  return __builtin_fabsf(x) < 0x1p-149f
+             ? __builtin_elementwise_copysign(0.0f, x)
+             : x;
 }
 
 #ifdef cl_khr_fp64
