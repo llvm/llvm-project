@@ -138,7 +138,8 @@ function(generate_type_stubs MODULE_NAME DEPENDS_TARGET MLIR_DEPENDS_TARGET OUTP
       --recursive
       --include-private
       --output-dir
-      "${OUTPUT_DIR}")
+      "${OUTPUT_DIR}"
+      --quiet)
 
   list(TRANSFORM ARG_OUTPUTS PREPEND "${OUTPUT_DIR}/" OUTPUT_VARIABLE _generated_type_stubs)
   add_custom_command(
@@ -307,14 +308,14 @@ function(add_mlir_python_modules name)
           ${_module_name}
           ${_extension_target}
           ${name}
-          "${CMAKE_CURRENT_SOURCE_DIR}/mlir/_mlir_libs"
+          "${CMAKE_CURRENT_BINARY_DIR}/_mlir_libs"
           OUTPUTS "${_generate_type_stubs}"
         )
         add_dependencies("${modules_target}" "${NB_STUBGEN_CUSTOM_TARGET}")
         set(_stubgen_target "${MLIR_PYTHON_PACKAGE_PREFIX}.${_module_name}_type_stub_gen")
         declare_mlir_python_sources(
           ${_stubgen_target}
-          ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir/_mlir_libs"
+          ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}/_mlir_libs"
           ADD_TO_PARENT "${sources_target}"
           SOURCES "${_generate_type_stubs}"
         )
