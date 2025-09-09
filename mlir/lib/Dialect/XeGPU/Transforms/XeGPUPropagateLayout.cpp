@@ -224,8 +224,9 @@ static LayoutInfo getDefaultSIMTLayoutInfo(VectorType vectorTy,
         bitwidth < xegpu::targetinfo::packedSizeInBitsForGatherScatter
             ? xegpu::targetinfo::packedSizeInBitsForGatherScatter / bitwidth
             : 1;
-    return LayoutInfo(LaneLayout({xegpu::targetinfo::subgroupSize, 1}),
-                      LaneData({1, packingFactor}));
+    return LayoutInfo(xegpu::LayoutAttr::get(
+        vectorTy.getContext(), {xegpu::targetinfo::subgroupSize, 1},
+        {1, packingFactor}));
   }
   if (bitwidth < xegpu::targetinfo::packedSizeInBitsForDefault)
     packingFactor = xegpu::targetinfo::packedSizeInBitsForDefault / bitwidth;
@@ -787,7 +788,8 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   LayoutInfo payloadLayout =
       getDefaultSIMTLayoutInfo(payloadTy, /*scattered=*/true);
 
-  LayoutInfo maskLayout = getDefaultSIMTLayoutInfo(1);
+  LayoutInfo maskLayout =
+      getDefaultSIMTLayoutInfo(storeScatter->getContext(), 1);
   // Propagate the payload operand layout
   propagateIfChanged(operands[0], operands[0]->meet(payloadLayout));
   // Propagate the destination (if tdesc) operand layout
