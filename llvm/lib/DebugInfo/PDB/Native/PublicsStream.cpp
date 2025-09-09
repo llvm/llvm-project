@@ -120,7 +120,7 @@ PublicsStream::findByAddress(const SymbolStream &Symbols, uint16_t Segment,
   // The address map is sorted by address, so we can use lower_bound to find the
   // position. Each element is an offset into the symbols for a public symbol.
   auto It = llvm::lower_bound(
-      AddressMap, std::pair(Segment, Offset),
+      AddressMap, std::tuple(Segment, Offset),
       [&](support::ulittle32_t Cur, auto Addr) {
         auto Sym = Symbols.readRecord(Cur.value());
         if (Sym.kind() != codeview::S_PUB32)
@@ -134,9 +134,7 @@ PublicsStream::findByAddress(const SymbolStream &Symbols, uint16_t Segment,
           return false;
         }
 
-        if (Psym->Segment == Addr.first)
-          return Psym->Offset < Addr.second;
-        return Psym->Segment < Addr.first;
+        return std::tie(Psym->Segment, Psym->Offset) < Addr;
       });
 
   if (It == AddressMap.end())
