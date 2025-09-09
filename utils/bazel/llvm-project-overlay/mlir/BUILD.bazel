@@ -3980,6 +3980,7 @@ cc_library(
         ":CallOpInterfaces",
         ":DialectUtils",
         ":IR",
+        ":MemRefDialect",
         ":SideEffectInterfaces",
         ":Support",
         ":ViewLikeInterface",
