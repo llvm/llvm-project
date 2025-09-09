@@ -156,7 +156,7 @@ static bool useLeafFramePointerForTargetByDefault(const llvm::Triple &Triple) {
       (Triple.isAndroid() && !Triple.isARM()))
     return false;
 
-  if ((Triple.isThumb() || Triple.isARM()) && Triple.isOSBinFormatMachO())
+  if ((Triple.isARM() || Triple.isThumb()) && Triple.isOSBinFormatMachO())
     return false;
 
   return true;
