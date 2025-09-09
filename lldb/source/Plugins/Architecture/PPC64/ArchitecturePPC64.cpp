@@ -35,7 +35,8 @@ void ArchitecturePPC64::Terminate() {
 std::unique_ptr<Architecture> ArchitecturePPC64::Create(const ArchSpec &arch) {
   if (arch.GetTriple().isPPC64() &&
       arch.GetTriple().getObjectFormat() == llvm::Triple::ObjectFormatType::ELF)
-    return std::unique_ptr<Architecture>(new ArchitecturePPC64());
+    return std::unique_ptr<Architecture>(
+        new ArchitecturePPC64(arch.GetByteOrder()));
   return nullptr;
 }
 
@@ -59,4 +60,8 @@ void ArchitecturePPC64::AdjustBreakpointAddress(const Symbol &func,
     return;
 
   addr.SetOffset(addr.GetOffset() + loffs);
+}
+
+lldb::ByteOrder ArchitecturePPC64::GetVectorElementOrder() const {
+  return m_vector_element_order;
 }
