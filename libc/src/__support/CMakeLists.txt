@@ -97,6 +97,7 @@ add_header_library(
     common.h
     endian_internal.h
     macros/properties/architectures.h
+    macros/properties/compiler.h
     macros/attributes.h
     macros/config.h
   DEPENDS
