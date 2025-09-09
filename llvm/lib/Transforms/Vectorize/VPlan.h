@@ -1900,9 +1900,6 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPVectorPointerSC)
 
-  /// This recipe primarily generates a GEP instruction.
-  unsigned getOpcode() const { return Instruction::GetElementPtr; }
-
   void execute(VPTransformState &State) override;
 
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
