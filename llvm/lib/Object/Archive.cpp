@@ -475,8 +475,7 @@ Archive::Child::Child(const Archive *Parent, const char *Start, Error *Err)
   assert(Parent && "Parent can't be nullptr if Start is not a nullptr");
 
   Header = Parent->createArchiveMemberHeader(
-      Start,
-      Parent->getData().size() - (Start - Parent->getData().data()),
+      Start, Parent->getData().size() - (Start - Parent->getData().data()),
       Err);
 
   // If we are pointed to real data, Start is not a nullptr, then there must be
