@@ -184,6 +184,11 @@ bool SMEPeepholeOpt::optimizeStartStopPairs(
           isSVERegOp(TRI, MRI, MI.getOperand(1)))
         Prev = nullptr;
       break;
+    case AArch64::RestoreZAPseudo:
+    case AArch64::InOutZAUsePseudo:
+    case AArch64::CommitZASavePseudo:
+    case AArch64::SMEStateAllocPseudo:
+    case AArch64::RequiresZASavePseudo:
     case AArch64::ADJCALLSTACKDOWN:
     case AArch64::ADJCALLSTACKUP:
     case AArch64::ANDXri:
