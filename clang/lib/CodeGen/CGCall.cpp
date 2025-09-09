@@ -752,9 +752,8 @@ const CGFunctionInfo &CodeGenTypes::arrangeBuiltinFunctionDeclaration(
                                  RequiredArgs::All);
 }
 
-const CGFunctionInfo &
-CodeGenTypes::arrangeSYCLKernelCallerDeclaration(QualType resultType,
-                                                 const FunctionArgList &args) {
+const CGFunctionInfo &CodeGenTypes::arrangeDeviceKernelCallerDeclaration(
+    QualType resultType, const FunctionArgList &args) {
   CanQualTypeList argTypes = getArgTypesForDeclaration(Context, args);
 
   return arrangeLLVMFunctionInfo(GetReturnType(resultType), FnInfoOpts::None,
