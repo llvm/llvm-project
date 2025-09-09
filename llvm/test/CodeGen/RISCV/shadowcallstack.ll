@@ -427,7 +427,7 @@ define i32 @f3_hw() "hw-shadow-stack" {
 ;
 ; RV32-ZICFISS-LABEL: f3_hw:
 ; RV32-ZICFISS:       # %bb.0:
-; RV32-ZICFISS-NEXT:    sspush ra
+; RV32-ZICFISS-NEXT:    mop.rr.7 zero, zero, ra
 ; RV32-ZICFISS-NEXT:    addi sp, sp, -16
 ; RV32-ZICFISS-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-ZICFISS-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -437,12 +437,12 @@ define i32 @f3_hw() "hw-shadow-stack" {
 ; RV32-ZICFISS-NEXT:    .cfi_restore ra
 ; RV32-ZICFISS-NEXT:    addi sp, sp, 16
 ; RV32-ZICFISS-NEXT:    .cfi_def_cfa_offset 0
-; RV32-ZICFISS-NEXT:    sspopchk ra
+; RV32-ZICFISS-NEXT:    mop.r.28 zero, ra
 ; RV32-ZICFISS-NEXT:    ret
 ;
 ; RV64-ZICFISS-LABEL: f3_hw:
 ; RV64-ZICFISS:       # %bb.0:
-; RV64-ZICFISS-NEXT:    sspush ra
+; RV64-ZICFISS-NEXT:    mop.rr.7 zero, zero, ra
 ; RV64-ZICFISS-NEXT:    addi sp, sp, -16
 ; RV64-ZICFISS-NEXT:    .cfi_def_cfa_offset 16
 ; RV64-ZICFISS-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
@@ -452,7 +452,7 @@ define i32 @f3_hw() "hw-shadow-stack" {
 ; RV64-ZICFISS-NEXT:    .cfi_restore ra
 ; RV64-ZICFISS-NEXT:    addi sp, sp, 16
 ; RV64-ZICFISS-NEXT:    .cfi_def_cfa_offset 0
-; RV64-ZICFISS-NEXT:    sspopchk ra
+; RV64-ZICFISS-NEXT:    mop.r.28 zero, ra
 ; RV64-ZICFISS-NEXT:    ret
   %res = call i32 @bar()
   %res1 = add i32 %res, 1
@@ -530,7 +530,7 @@ define i32 @f4_hw() "hw-shadow-stack" {
 ;
 ; RV32-ZICFISS-LABEL: f4_hw:
 ; RV32-ZICFISS:       # %bb.0:
-; RV32-ZICFISS-NEXT:    sspush ra
+; RV32-ZICFISS-NEXT:    mop.rr.7 zero, zero, ra
 ; RV32-ZICFISS-NEXT:    addi sp, sp, -16
 ; RV32-ZICFISS-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-ZICFISS-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -561,12 +561,12 @@ define i32 @f4_hw() "hw-shadow-stack" {
 ; RV32-ZICFISS-NEXT:    .cfi_restore s2
 ; RV32-ZICFISS-NEXT:    addi sp, sp, 16
 ; RV32-ZICFISS-NEXT:    .cfi_def_cfa_offset 0
-; RV32-ZICFISS-NEXT:    sspopchk ra
+; RV32-ZICFISS-NEXT:    mop.r.28 zero, ra
 ; RV32-ZICFISS-NEXT:    ret
 ;
 ; RV64-ZICFISS-LABEL: f4_hw:
 ; RV64-ZICFISS:       # %bb.0:
-; RV64-ZICFISS-NEXT:    sspush ra
+; RV64-ZICFISS-NEXT:    mop.rr.7 zero, zero, ra
 ; RV64-ZICFISS-NEXT:    addi sp, sp, -32
 ; RV64-ZICFISS-NEXT:    .cfi_def_cfa_offset 32
 ; RV64-ZICFISS-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
@@ -597,7 +597,7 @@ define i32 @f4_hw() "hw-shadow-stack" {
 ; RV64-ZICFISS-NEXT:    .cfi_restore s2
 ; RV64-ZICFISS-NEXT:    addi sp, sp, 32
 ; RV64-ZICFISS-NEXT:    .cfi_def_cfa_offset 0
-; RV64-ZICFISS-NEXT:    sspopchk ra
+; RV64-ZICFISS-NEXT:    mop.r.28 zero, ra
 ; RV64-ZICFISS-NEXT:    ret
   %res1 = call i32 @bar()
   %res2 = call i32 @bar()
@@ -630,24 +630,24 @@ define i32 @f5_hw() "hw-shadow-stack" nounwind {
 ;
 ; RV32-ZICFISS-LABEL: f5_hw:
 ; RV32-ZICFISS:       # %bb.0:
-; RV32-ZICFISS-NEXT:    sspush ra
+; RV32-ZICFISS-NEXT:    mop.rr.7 zero, zero, ra
 ; RV32-ZICFISS-NEXT:    addi sp, sp, -16
 ; RV32-ZICFISS-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-ZICFISS-NEXT:    call bar
 ; RV32-ZICFISS-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-ZICFISS-NEXT:    addi sp, sp, 16
-; RV32-ZICFISS-NEXT:    sspopchk ra
+; RV32-ZICFISS-NEXT:    mop.r.28 zero, ra
 ; RV32-ZICFISS-NEXT:    ret
 ;
 ; RV64-ZICFISS-LABEL: f5_hw:
 ; RV64-ZICFISS:       # %bb.0:
-; RV64-ZICFISS-NEXT:    sspush ra
+; RV64-ZICFISS-NEXT:    mop.rr.7 zero, zero, ra
 ; RV64-ZICFISS-NEXT:    addi sp, sp, -16
 ; RV64-ZICFISS-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-ZICFISS-NEXT:    call bar
 ; RV64-ZICFISS-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-ZICFISS-NEXT:    addi sp, sp, 16
-; RV64-ZICFISS-NEXT:    sspopchk ra
+; RV64-ZICFISS-NEXT:    mop.r.28 zero, ra
 ; RV64-ZICFISS-NEXT:    ret
   %res = call i32 @bar()
   %res1 = add i32 %res, 1
@@ -734,7 +734,7 @@ define i32 @f3_both() "hw-shadow-stack" shadowcallstack {
 ;
 ; RV32-ZICFISS-LABEL: f3_both:
 ; RV32-ZICFISS:       # %bb.0:
-; RV32-ZICFISS-NEXT:    sspush ra
+; RV32-ZICFISS-NEXT:    mop.rr.7 zero, zero, ra
 ; RV32-ZICFISS-NEXT:    addi sp, sp, -16
 ; RV32-ZICFISS-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-ZICFISS-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -744,12 +744,12 @@ define i32 @f3_both() "hw-shadow-stack" shadowcallstack {
 ; RV32-ZICFISS-NEXT:    .cfi_restore ra
 ; RV32-ZICFISS-NEXT:    addi sp, sp, 16
 ; RV32-ZICFISS-NEXT:    .cfi_def_cfa_offset 0
-; RV32-ZICFISS-NEXT:    sspopchk ra
+; RV32-ZICFISS-NEXT:    mop.r.28 zero, ra
 ; RV32-ZICFISS-NEXT:    ret
 ;
 ; RV64-ZICFISS-LABEL: f3_both:
 ; RV64-ZICFISS:       # %bb.0:
-; RV64-ZICFISS-NEXT:    sspush ra
+; RV64-ZICFISS-NEXT:    mop.rr.7 zero, zero, ra
 ; RV64-ZICFISS-NEXT:    addi sp, sp, -16
 ; RV64-ZICFISS-NEXT:    .cfi_def_cfa_offset 16
 ; RV64-ZICFISS-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
@@ -759,7 +759,7 @@ define i32 @f3_both() "hw-shadow-stack" shadowcallstack {
 ; RV64-ZICFISS-NEXT:    .cfi_restore ra
 ; RV64-ZICFISS-NEXT:    addi sp, sp, 16
 ; RV64-ZICFISS-NEXT:    .cfi_def_cfa_offset 0
-; RV64-ZICFISS-NEXT:    sspopchk ra
+; RV64-ZICFISS-NEXT:    mop.r.28 zero, ra
 ; RV64-ZICFISS-NEXT:    ret
   %res = call i32 @bar()
   %res1 = add i32 %res, 1
@@ -849,7 +849,7 @@ define i32 @f4_both() "hw-shadow-stack" shadowcallstack {
 ;
 ; RV32-ZICFISS-LABEL: f4_both:
 ; RV32-ZICFISS:       # %bb.0:
-; RV32-ZICFISS-NEXT:    sspush ra
+; RV32-ZICFISS-NEXT:    mop.rr.7 zero, zero, ra
 ; RV32-ZICFISS-NEXT:    addi sp, sp, -16
 ; RV32-ZICFISS-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-ZICFISS-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -880,12 +880,12 @@ define i32 @f4_both() "hw-shadow-stack" shadowcallstack {
 ; RV32-ZICFISS-NEXT:    .cfi_restore s2
 ; RV32-ZICFISS-NEXT:    addi sp, sp, 16
 ; RV32-ZICFISS-NEXT:    .cfi_def_cfa_offset 0
-; RV32-ZICFISS-NEXT:    sspopchk ra
+; RV32-ZICFISS-NEXT:    mop.r.28 zero, ra
 ; RV32-ZICFISS-NEXT:    ret
 ;
 ; RV64-ZICFISS-LABEL: f4_both:
 ; RV64-ZICFISS:       # %bb.0:
-; RV64-ZICFISS-NEXT:    sspush ra
+; RV64-ZICFISS-NEXT:    mop.rr.7 zero, zero, ra
 ; RV64-ZICFISS-NEXT:    addi sp, sp, -32
 ; RV64-ZICFISS-NEXT:    .cfi_def_cfa_offset 32
 ; RV64-ZICFISS-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
@@ -916,7 +916,7 @@ define i32 @f4_both() "hw-shadow-stack" shadowcallstack {
 ; RV64-ZICFISS-NEXT:    .cfi_restore s2
 ; RV64-ZICFISS-NEXT:    addi sp, sp, 32
 ; RV64-ZICFISS-NEXT:    .cfi_def_cfa_offset 0
-; RV64-ZICFISS-NEXT:    sspopchk ra
+; RV64-ZICFISS-NEXT:    mop.r.28 zero, ra
 ; RV64-ZICFISS-NEXT:    ret
   %res1 = call i32 @bar()
   %res2 = call i32 @bar()
@@ -957,24 +957,24 @@ define i32 @f5_both() "hw-shadow-stack" shadowcallstack nounwind {
 ;
 ; RV32-ZICFISS-LABEL: f5_both:
 ; RV32-ZICFISS:       # %bb.0:
-; RV32-ZICFISS-NEXT:    sspush ra
+; RV32-ZICFISS-NEXT:    mop.rr.7 zero, zero, ra
 ; RV32-ZICFISS-NEXT:    addi sp, sp, -16
 ; RV32-ZICFISS-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-ZICFISS-NEXT:    call bar
 ; RV32-ZICFISS-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-ZICFISS-NEXT:    addi sp, sp, 16
-; RV32-ZICFISS-NEXT:    sspopchk ra
+; RV32-ZICFISS-NEXT:    mop.r.28 zero, ra
 ; RV32-ZICFISS-NEXT:    ret
 ;
 ; RV64-ZICFISS-LABEL: f5_both:
 ; RV64-ZICFISS:       # %bb.0:
-; RV64-ZICFISS-NEXT:    sspush ra
+; RV64-ZICFISS-NEXT:    mop.rr.7 zero, zero, ra
 ; RV64-ZICFISS-NEXT:    addi sp, sp, -16
 ; RV64-ZICFISS-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-ZICFISS-NEXT:    call bar
 ; RV64-ZICFISS-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-ZICFISS-NEXT:    addi sp, sp, 16
-; RV64-ZICFISS-NEXT:    sspopchk ra
+; RV64-ZICFISS-NEXT:    mop.r.28 zero, ra
 ; RV64-ZICFISS-NEXT:    ret
   %res = call i32 @bar()
   %res1 = add i32 %res, 1

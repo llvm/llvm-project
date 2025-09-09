@@ -62,6 +62,12 @@ def: Separate<["-"], "c">,
   Alias<pre_init_command>,
   HelpText<"Alias for --pre-init-command">;
 
+def no_lldbinit: F<"no-lldbinit">,
+  HelpText<"Do not automatically parse any '.lldbinit' files.">;
+def: Flag<["-"], "x">,
+  Alias<no_lldbinit>,
+  HelpText<"Alias for --no-lldbinit">;
+
 def connection_timeout: S<"connection-timeout">,
   MetaVarName<"<timeout>">,
   HelpText<"When using --connection, the number of seconds to wait for new "

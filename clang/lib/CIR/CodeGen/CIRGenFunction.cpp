@@ -655,6 +655,8 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   // we'd introduce *two* handler blocks.  In the Microsoft ABI, we
   // always delegate because we might not have a definition in this TU.
   switch (dtorType) {
+  case Dtor_Unified:
+    llvm_unreachable("not expecting a unified dtor");
   case Dtor_Comdat:
     llvm_unreachable("not expecting a COMDAT");
   case Dtor_Deleting:
@@ -748,7 +750,7 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
     args.push_back(param);
 
   if (md && (isa<CXXConstructorDecl>(md) || isa<CXXDestructorDecl>(md)))
-    assert(!cir::MissingFeatures::cxxabiStructorImplicitParam());
+    cgm.getCXXABI().addImplicitStructorParams(*this, retTy, args);
 
   return retTy;
 }
