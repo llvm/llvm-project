@@ -45,6 +45,20 @@
 // CHECK: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]    ([[ERRLEN:0x[0-9a-fA-F]{8}]])
 // CHECK: DW_AT_linkage_name [DW_FORM_strp]  ({{.*}} = "_ZN12length_errorC2EPKc")
 
+// CHECK:      .debug_line contents:
+// CHECK-NEXT: debug_line[0x00000000]
+// CHECK-NEXT: Line table prologue:
+// CHECK-NEXT:     total_length: 0x0000019e
+// CHECK-NEXT:           format: DWARF32
+// CHECK-NEXT:          version: 4
+// CHECK-NEXT:  prologue_length: 0x00000085
+// CHECK-NEXT:  min_inst_length: 1
+// CHECK-NEXT: max_ops_per_inst: 1
+// CHECK-NEXT:  default_is_stmt: 1
+// CHECK-NEXT:        line_base: -5
+// CHECK-NEXT:       line_range: 14
+// CHECK-NEXT:      opcode_base: 13
+
 // CHECK:                  Address            Line   Column File   ISA Discriminator OpIndex Flags
 // CHECK-NEXT:             ------------------ ------ ------ ------ --- ------------- ------- -------------
 // CHECK-NEXT: [[EMPTY1]]: 05 DW_LNS_set_column (33)
