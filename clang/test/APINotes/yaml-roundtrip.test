@@ -3,10 +3,6 @@ RUN: not diff -u %S/Inputs/Frameworks/Simple.framework/Headers/Simple.apinotes %
 RUN:   tail -n +5 | head -n -1 | \
 RUN:   FileCheck %s --implicit-check-not="{{^\+}}" --implicit-check-not="{{^\-}}"
 
-Avoid Windows as the diff output differs due to line-endings and different diff
-implementations.
-UNSUPPORTED: system-windows
-
 We expect only the nullability to be different as it is canonicalized during the
 roudtrip.
 
