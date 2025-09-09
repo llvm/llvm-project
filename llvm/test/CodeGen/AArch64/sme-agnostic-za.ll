@@ -259,8 +259,7 @@ define i64 @streaming_compatible_agnostic_caller_nonstreaming_private_za_callee(
 ; CHECK-NEWLOWERING-NEXT:    bl __arm_sme_state_size
 ; CHECK-NEWLOWERING-NEXT:    sub sp, sp, x0
 ; CHECK-NEWLOWERING-NEXT:    mov x19, sp
-; CHECK-NEWLOWERING-NEXT:    bl __arm_sme_state
-; CHECK-NEWLOWERING-NEXT:    mov x20, x0
+; CHECK-NEWLOWERING-NEXT:    mrs x20, SVCR
 ; CHECK-NEWLOWERING-NEXT:    mov x0, x19
 ; CHECK-NEWLOWERING-NEXT:    bl __arm_sme_save
 ; CHECK-NEWLOWERING-NEXT:    tbz w20, #0, .LBB5_2
