@@ -9,14 +9,41 @@
 #include "LSPServer.h"
 #include "MLIRServer.h"
 #include "Protocol.h"
-#include "mlir/Tools/lsp-server-support/Logging.h"
-#include "mlir/Tools/lsp-server-support/Transport.h"
+#include "llvm/Support/LSP/Logging.h"
+#include "llvm/Support/LSP/Transport.h"
 #include <optional>
 
 #define DEBUG_TYPE "mlir-lsp-server"
 
 using namespace mlir;
 using namespace mlir::lsp;
+
+using llvm::lsp::Callback;
+using llvm::lsp::CodeAction;
+using llvm::lsp::CodeActionParams;
+using llvm::lsp::CompletionList;
+using llvm::lsp::CompletionParams;
+using llvm::lsp::DidChangeTextDocumentParams;
+using llvm::lsp::DidCloseTextDocumentParams;
+using llvm::lsp::DidOpenTextDocumentParams;
+using llvm::lsp::DocumentSymbol;
+using llvm::lsp::DocumentSymbolParams;
+using llvm::lsp::Hover;
+using llvm::lsp::InitializedParams;
+using llvm::lsp::InitializeParams;
+using llvm::lsp::JSONTransport;
+using llvm::lsp::Location;
+using llvm::lsp::Logger;
+using llvm::lsp::MessageHandler;
+using llvm::lsp::MLIRConvertBytecodeParams;
+using llvm::lsp::MLIRConvertBytecodeResult;
+using llvm::lsp::NoParams;
+using llvm::lsp::OutgoingNotification;
+using llvm::lsp::PublishDiagnosticsParams;
+using llvm::lsp::ReferenceParams;
+using llvm::lsp::TextDocumentPositionParams;
+using llvm::lsp::TextDocumentSyncKind;
+using llvm::lsp::URIForFile;
 
 //===----------------------------------------------------------------------===//
 // LSPServer
