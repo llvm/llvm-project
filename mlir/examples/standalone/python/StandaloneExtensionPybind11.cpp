@@ -10,7 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Standalone-c/Dialects.h"
-#include "mlir-c/Dialect/Arith.h
+#include "mlir-c/Dialect/Arith.h"
 #include "mlir/Bindings/Python/PybindAdaptors.h"
 
 using namespace mlir::python::adaptors;
@@ -24,12 +24,14 @@ PYBIND11_MODULE(_standaloneDialectsPybind11, m) {
   standaloneM.def(
       "register_dialects",
       [](MlirContext context, bool load) {
-        MlirDialectHandle standaloneHandle = mlirGetDialectHandle__standalone__();
+        MlirDialectHandle standaloneHandle =
+            mlirGetDialectHandle__standalone__();
         MlirDialectHandle arithHandle = mlirGetDialectHandle__arith__();
         mlirDialectHandleRegisterDialect(standaloneHandle, context);
         mlirDialectHandleRegisterDialect(arithHandle, context);
         if (load) {
-          mlirDialectHandleLoadDialect(handle, context);
+          mlirDialectHandleLoadDialect(standaloneHandle, context);
+          mlirDialectHandleLoadDialect(arithHandle, context);
         }
       },
       py::arg("context") = py::none(), py::arg("load") = true);

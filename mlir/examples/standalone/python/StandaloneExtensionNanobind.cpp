@@ -10,9 +10,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Standalone-c/Dialects.h"
+#include "mlir-c/Dialect/Arith.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
-#include "mlir-c/Dialect/Arith.h
 
 namespace nb = nanobind;
 
@@ -25,12 +25,14 @@ NB_MODULE(_standaloneDialectsNanobind, m) {
   standaloneM.def(
       "register_dialects",
       [](MlirContext context, bool load) {
-        MlirDialectHandle standaloneHandle = mlirGetDialectHandle__standalone__();
+        MlirDialectHandle standaloneHandle =
+            mlirGetDialectHandle__standalone__();
         MlirDialectHandle arithHandle = mlirGetDialectHandle__arith__();
         mlirDialectHandleRegisterDialect(standaloneHandle, context);
         mlirDialectHandleRegisterDialect(arithHandle, context);
         if (load) {
-          mlirDialectHandleLoadDialect(handle, context);
+          mlirDialectHandleLoadDialect(standaloneHandle, context);
+          mlirDialectHandleLoadDialect(arithHandle, context);
         }
       },
       nb::arg("context").none() = nb::none(), nb::arg("load") = true);
