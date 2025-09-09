@@ -1,9 +1,11 @@
 RUN: apinotes-test %S/Inputs/Frameworks/SimpleKit.framework/Headers/SimpleKit.apinotes > %t.result
-RUN: not diff -u %S/Inputs/Frameworks/SimpleKit.framework/Headers/SimpleKit.apinotes %t.result | \
-RUN:   tail -n +4 | \
-RUN:   FileCheck %s --implicit-check-not="{{^\+}}" --implicit-check-not="{{^\-}}"
+RUN: not diff -b -e %t.result %S/Inputs/Frameworks/SimpleKit.framework/Headers/SimpleKit.apinotes | FileCheck %s
+
+The `-e` option of `diff` is not implemented in the builtin diff, assume
+that we have a POSIX compatible diff when we have a shell.
+REQUIRES: shell
 
 We expect only the document markers to be emitted
 
-CHECK: +---
-CHECK: +...
+CHECK: 52d
+CHECK: 1d
