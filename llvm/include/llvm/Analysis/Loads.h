@@ -13,7 +13,9 @@
 #ifndef LLVM_ANALYSIS_LOADS_H
 #define LLVM_ANALYSIS_LOADS_H
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/GEPNoWrapFlags.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 
@@ -193,6 +195,26 @@ LLVM_ABI bool canReplacePointersIfEqual(const Value *From, const Value *To,
                                         const DataLayout &DL);
 LLVM_ABI bool canReplacePointersInUseIfEqual(const Use &U, const Value *To,
                                              const DataLayout &DL);
+
+/// Linear expression BasePtr + Index * Scale + Offset.
+/// Index, Scale and Offset all have the same bit width, which matches the
+/// pointer index size of BasePtr.
+/// Index may be nullptr if Scale is 0.
+struct LinearExpression {
+  Value *BasePtr;
+  Value *Index = nullptr;
+  APInt Scale;
+  APInt Offset;
+  GEPNoWrapFlags Flags = GEPNoWrapFlags::all();
+
+  LinearExpression(Value *BasePtr, unsigned BitWidth)
+      : BasePtr(BasePtr), Scale(BitWidth, 0), Offset(BitWidth, 0) {}
+};
+
+/// Decompose a pointer into a linear expression. This may look through
+/// multiple GEPs.
+LLVM_ABI LinearExpression decomposeLinearExpression(const DataLayout &DL,
+                                                    Value *Ptr);
 }
 
 #endif
