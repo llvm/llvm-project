@@ -665,12 +665,11 @@ void MachineSMEABI::emitNewZAPrologue(MachineBasicBlock &MBB,
 Register MachineSMEABI::getAgnosticZABufferPtr() {
   if (State.AgnosticZABufferPtr != AArch64::NoRegister)
     return State.AgnosticZABufferPtr;
-  if (auto BufferPtr = AFI->getEarlyAllocSMESaveBuffer();
-      BufferPtr != AArch64::NoRegister)
-    State.AgnosticZABufferPtr = BufferPtr;
-  else
-    State.AgnosticZABufferPtr =
-        MF->getRegInfo().createVirtualRegister(&AArch64::GPR64RegClass);
+  Register BufferPtr = AFI->getEarlyAllocSMESaveBuffer();
+  State.AgnosticZABufferPtr =
+      BufferPtr != AArch64::NoRegister
+          ? BufferPtr
+          : MF->getRegInfo().createVirtualRegister(&AArch64::GPR64RegClass);
   return State.AgnosticZABufferPtr;
 }
 
