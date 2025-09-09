@@ -1817,13 +1817,13 @@ _mm256_maskz_cvtepu8_epi16 (__mmask16 __U, __m128i __A)
                                                                        (imm)), \
                                        (__v16hi)_mm256_setzero_si256()))
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_sllv_epi16(__m256i __A, __m256i __B)
 {
   return (__m256i)__builtin_ia32_psllv16hi((__v16hi)__A, (__v16hi)__B);
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_mask_sllv_epi16(__m256i __W, __mmask16 __U, __m256i __A, __m256i __B)
 {
   return (__m256i)__builtin_ia32_selectw_256((__mmask16)__U,
@@ -1831,7 +1831,7 @@ _mm256_mask_sllv_epi16(__m256i __W, __mmask16 __U, __m256i __A, __m256i __B)
                                            (__v16hi)__W);
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_maskz_sllv_epi16(__mmask16 __U, __m256i __A, __m256i __B)
 {
   return (__m256i)__builtin_ia32_selectw_256((__mmask16)__U,
@@ -1839,13 +1839,13 @@ _mm256_maskz_sllv_epi16(__mmask16 __U, __m256i __A, __m256i __B)
                                            (__v16hi)_mm256_setzero_si256());
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_sllv_epi16(__m128i __A, __m128i __B)
 {
   return (__m128i)__builtin_ia32_psllv8hi((__v8hi)__A, (__v8hi)__B);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_mask_sllv_epi16(__m128i __W, __mmask8 __U, __m128i __A, __m128i __B)
 {
   return (__m128i)__builtin_ia32_selectw_128((__mmask8)__U,
@@ -1853,7 +1853,7 @@ _mm_mask_sllv_epi16(__m128i __W, __mmask8 __U, __m128i __A, __m128i __B)
                                              (__v8hi)__W);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_maskz_sllv_epi16(__mmask8 __U, __m128i __A, __m128i __B)
 {
   return (__m128i)__builtin_ia32_selectw_128((__mmask8)__U,
@@ -1924,13 +1924,13 @@ _mm256_maskz_slli_epi16(__mmask16 __U, __m256i __A, unsigned int __B) {
                                          (__v16hi)_mm256_setzero_si256());
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_srlv_epi16(__m256i __A, __m256i __B)
 {
   return (__m256i)__builtin_ia32_psrlv16hi((__v16hi)__A, (__v16hi)__B);
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_mask_srlv_epi16(__m256i __W, __mmask16 __U, __m256i __A, __m256i __B)
 {
   return (__m256i)__builtin_ia32_selectw_256((__mmask16)__U,
@@ -1938,7 +1938,7 @@ _mm256_mask_srlv_epi16(__m256i __W, __mmask16 __U, __m256i __A, __m256i __B)
                                            (__v16hi)__W);
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_maskz_srlv_epi16(__mmask16 __U, __m256i __A, __m256i __B)
 {
   return (__m256i)__builtin_ia32_selectw_256((__mmask16)__U,
@@ -1946,13 +1946,13 @@ _mm256_maskz_srlv_epi16(__mmask16 __U, __m256i __A, __m256i __B)
                                            (__v16hi)_mm256_setzero_si256());
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_srlv_epi16(__m128i __A, __m128i __B)
 {
   return (__m128i)__builtin_ia32_psrlv8hi((__v8hi)__A, (__v8hi)__B);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_mask_srlv_epi16(__m128i __W, __mmask8 __U, __m128i __A, __m128i __B)
 {
   return (__m128i)__builtin_ia32_selectw_128((__mmask8)__U,
@@ -1960,7 +1960,7 @@ _mm_mask_srlv_epi16(__m128i __W, __mmask8 __U, __m128i __A, __m128i __B)
                                              (__v8hi)__W);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_maskz_srlv_epi16(__mmask8 __U, __m128i __A, __m128i __B)
 {
   return (__m128i)__builtin_ia32_selectw_128((__mmask8)__U,
@@ -1968,13 +1968,13 @@ _mm_maskz_srlv_epi16(__mmask8 __U, __m128i __A, __m128i __B)
                                              (__v8hi)_mm_setzero_si128());
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_srav_epi16(__m256i __A, __m256i __B)
 {
   return (__m256i)__builtin_ia32_psrav16hi((__v16hi)__A, (__v16hi)__B);
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_mask_srav_epi16(__m256i __W, __mmask16 __U, __m256i __A, __m256i __B)
 {
   return (__m256i)__builtin_ia32_selectw_256((__mmask16)__U,
@@ -1982,7 +1982,7 @@ _mm256_mask_srav_epi16(__m256i __W, __mmask16 __U, __m256i __A, __m256i __B)
                                            (__v16hi)__W);
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_maskz_srav_epi16(__mmask16 __U, __m256i __A, __m256i __B)
 {
   return (__m256i)__builtin_ia32_selectw_256((__mmask16)__U,
@@ -1990,13 +1990,13 @@ _mm256_maskz_srav_epi16(__mmask16 __U, __m256i __A, __m256i __B)
                                            (__v16hi)_mm256_setzero_si256());
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_srav_epi16(__m128i __A, __m128i __B)
 {
   return (__m128i)__builtin_ia32_psrav8hi((__v8hi)__A, (__v8hi)__B);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_mask_srav_epi16(__m128i __W, __mmask8 __U, __m128i __A, __m128i __B)
 {
   return (__m128i)__builtin_ia32_selectw_128((__mmask8)__U,
@@ -2004,7 +2004,7 @@ _mm_mask_srav_epi16(__m128i __W, __mmask8 __U, __m128i __A, __m128i __B)
                                              (__v8hi)__W);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_maskz_srav_epi16(__mmask8 __U, __m128i __A, __m128i __B)
 {
   return (__m128i)__builtin_ia32_selectw_128((__mmask8)__U,
