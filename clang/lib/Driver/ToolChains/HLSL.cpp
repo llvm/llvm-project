@@ -313,8 +313,8 @@ void tools::hlsl::LLVMObjcopy::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(Output.getFilename());
 
   if (Args.hasArg(options::OPT_dxc_strip_rootsignature)) {
-    const char *Frs = Args.MakeArgString("--remove-section=RTS0");
-    CmdArgs.push_back(Frs);
+    const char *StripRS = Args.MakeArgString("--remove-section=RTS0");
+    CmdArgs.push_back(StripRS);
   }
 
   if (Arg *Arg = Args.getLastArg(options::OPT_dxc_Frs)) {
