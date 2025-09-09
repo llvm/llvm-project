@@ -44,6 +44,23 @@
 # CHECK-NEXT: # error: command failed with exit status: 1
 #      CHECK: ***
 
+#      CHECK: FAIL: shtest-shell :: diff-c.txt
+#      CHECK: *** TEST 'shtest-shell :: diff-c.txt' FAILED ***
+#      CHECK: diff -c {{[^"]*}}.foo {{[^"]*}}.bar
+#      CHECK: # .---command stdout{{-*}}
+# CHECK-NEXT: # | *** {{[^"]*}}.foo
+# CHECK-NEXT: # | --- {{[^"]*}}.bar
+# CHECK-NEXT: # | ***************
+# CHECK-NEXT: # | *** 1,5 ****
+# CHECK-NEXT: # |   1
+# CHECK-NEXT: # |   2
+# CHECK-NEXT: # | - 3
+# CHECK-NEXT: # |   4
+# CHECK-NEXT: # |   5
+# CHECK-NEXT: # | --- 1,4 ----
+# CHECK-NEXT: # `---{{-*}}
+# CHECK-NEXT: # error: command failed with exit status: 1
+#      CHECK: ***
 
 # CHECK: FAIL: shtest-shell :: diff-encodings.txt
 # CHECK: *** TEST 'shtest-shell :: diff-encodings.txt' FAILED ***
@@ -635,4 +652,4 @@
 
 # CHECK: PASS: shtest-shell :: valid-shell.txt
 # CHECK: Unresolved Tests (1)
-# CHECK: Failed Tests (36)
+# CHECK: Failed Tests (37)

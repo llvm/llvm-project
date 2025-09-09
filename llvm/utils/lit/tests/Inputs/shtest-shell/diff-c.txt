@@ -1,0 +1,14 @@
+# Check that the -c option for the internal diff implementation works.
+
+# RUN: echo 1 > %t.foo
+# RUN: echo 2 >> %t.foo
+# RUN: echo 3 >> %t.foo
+# RUN: echo 4 >> %t.foo
+# RUN: echo 5 >> %t.foo
+
+# RUN: echo 1 > %t.bar
+# RUN: echo 2 >> %t.bar
+# RUN: echo 4 >> %t.bar
+# RUN: echo 5 >> %t.bar
+
+# RUN: diff -c %t.foo %t.bar
