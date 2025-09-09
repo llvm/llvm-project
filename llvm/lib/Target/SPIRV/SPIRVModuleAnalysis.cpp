@@ -1223,8 +1223,7 @@ static void AddDotProductRequirements(const MachineInstr &MI,
 }
 
 static bool isBFloat16Type(const SPIRVType *TypeDef) {
-  return TypeDef &&
-         TypeDef->getNumOperands() == 3 &&
+  return TypeDef && TypeDef->getNumOperands() == 3 &&
          TypeDef->getOpcode() == SPIRV::OpTypeFloat &&
          TypeDef->getOperand(2).getImm() == SPIRV::FPEncoding::BFloat16KHR;
 }
