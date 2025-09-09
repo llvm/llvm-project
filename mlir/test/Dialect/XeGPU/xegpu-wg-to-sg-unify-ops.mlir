@@ -263,4 +263,106 @@ gpu.module @test_distribution {
   } {sg_id_range = #xegpu.range<[3, 19]>}
   gpu.return
   }
+
+  // CHECK-LABEL: @load_gather
+  // CHECK-SAME: %[[ARG0:.*]]: memref<?xf16>
+  gpu.func @load_gather(%src : memref<?xf16>) {
+    // CHECK: %[[CST:.*]] = arith.constant dense<0> : vector<32x4xindex>
+    // CHECK: %[[MASK:.*]] = arith.constant dense<true> : vector<32x4xi1>
+    // CHECK: %[[LOAD:.*]] = xegpu.load %[[ARG0]][%[[CST]]], %[[MASK]] <{chunk_size = 1 : i64, l1_hint = #xegpu.cache_hint<cached>}>
+    // CHECK-SAME: : memref<?xf16>, vector<32x4xindex>, vector<32x4xi1> -> vector<32x4xf16>
+    %offset =  arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 4]>} dense<0> : vector<256x16xindex>
+    %mask = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 4]>} dense<1> : vector<256x16xi1>
+    %load = xegpu.load %src[%offset], %mask {chunk_size = 1, layout_result_0 = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 4]>, l1_hint = #xegpu.cache_hint<cached>}
+      : memref<?xf16>, vector<256x16xindex>, vector<256x16xi1> -> vector<256x16xf16>
+    gpu.return
+  }
+
+  // CHECK-LABEL: @store_scatter
+  // CHECK-SAME: %[[ARG0:.*]]: memref<256xf16>
+  gpu.func @store_scatter(%dest : memref<256xf16>) {
+    // CHECK: %[[VAL:.*]] = arith.constant dense<2.550000e+01> : vector<8xf16>
+    // CHECK: %[[CST:.*]] = arith.constant dense<0> : vector<8xindex>
+    // CHECK: %[[MASK:.*]] = arith.constant dense<true> : vector<8xi1>
+    // CHECK: xegpu.store %[[VAL]], %[[ARG0]][%[[CST]]], %[[MASK]] <{chunk_size = 1 : i64, l1_hint = #xegpu.cache_hint<cached>}>
+    // CHECK-SAME: : vector<8xf16>, memref<256xf16>, vector<8xindex>, vector<8xi1>
+    %val = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [32], sg_data = [8]>} dense<25.5> : vector<256xf16>
+    %offset = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [32], sg_data = [8]>} dense<0> : vector<256xindex>
+    %mask = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [32], sg_data = [8]>} dense<1> : vector<256xi1>
+    xegpu.store %val, %dest[%offset], %mask {chunk_size = 1, layout = #xegpu.layout<sg_layout = [32], sg_data = [8]>, l1_hint = #xegpu.cache_hint<cached>}
+      : vector<256xf16>, memref<256xf16>, vector<256xindex>, vector<256xi1>
+    gpu.return
+  }
+
+  // CHECK-LABEL: @load_with_non_unit_chunk_size
+  // CHECK-SAME: %[[ARG0:.*]]: memref<?xf16>
+  gpu.func @load_with_non_unit_chunk_size(%src : memref<?xf16>) {
+    // CHECK: %[[CST:.*]] = arith.constant dense<0> : vector<8xindex>
+    // CHECK: %[[MASK:.*]] = arith.constant dense<true> : vector<8xi1>
+    // CHECK: %[[LOAD:.*]] = xegpu.load %[[ARG0]][%[[CST]]], %[[MASK]] <{chunk_size = 4 : i64, l1_hint = #xegpu.cache_hint<cached>}>
+    // CHECK-SAME: : memref<?xf16>, vector<8xindex>, vector<8xi1> -> vector<8x4xf16>
+    %offset =  arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [32], sg_data = [8]>} dense<0> : vector<256xindex>
+    %mask = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [32], sg_data = [8]>} dense<1> : vector<256xi1>
+    %load = xegpu.load %src[%offset], %mask {chunk_size = 4, layout_result_0 = #xegpu.layout<sg_layout = [32, 1], sg_data = [8, 4]>, l1_hint = #xegpu.cache_hint<cached>}
+      : memref<?xf16>, vector<256xindex>, vector<256xi1> -> vector<256x4xf16>
+    gpu.return
+  }
+
+  // CHECK-LABEL: distribute_load_matrix
+  // CHECK-SAME: [[arg0:%.+]]: memref<32768xi8, 3>
+  gpu.func @distribute_load_matrix(%arg0: memref<32768xi8, 3>) {
+    //CHECK: [[mdesc:%.+]] = xegpu.create_mem_desc [[arg0]] : memref<32768xi8, 3> -> !xegpu.mem_desc<64x128xf32>
+    //CHECK: [[sgid:%.+]] = gpu.subgroup_id : index
+    //CHECK: [[c2:%.+]] = arith.constant 2 : index
+    //CHECK: [[c4:%.+]] = arith.constant 4 : index
+    //CHECK: [[c4_0:%.+]] = arith.constant 4 : index
+    //CHECK: [[id_y:%.+]] = affine.apply #map()[[[sgid]]]
+    //CHECK: [[id_x:%.+]] = affine.apply #map1()[[[sgid]]]
+    //CHECK: [[c32:%.+]] = arith.constant 32 : index
+    //CHECK: [[l_off_y:%.+]] = index.mul [[id_y]], [[c32]]
+    //CHECK: [[c32_1:%.+]] = arith.constant 32 : index
+    //CHECK: [[l_off_x:%.+]] = index.mul [[id_x]], [[c32_1]]
+    //CHECK: [[c0:%.+]] = arith.constant 0 : index
+    //CHECK: [[c0_1:%.+]] = arith.constant 0 : index
+    //CHECK: [[l_off_y_0:%.+]] = arith.addi [[l_off_y]], [[c0]] : index
+    //CHECK: [[l_off_x_0:%.+]] = arith.addi [[l_off_x]], [[c0_1]] : index
+    //CHECK: [[c64:%.+]] = arith.constant 64 : index
+    //CHECK: [[off_y:%.+]] = index.remu [[l_off_y_0]], [[c64]]
+    //CHECK: [[c128:%.+]] = arith.constant 128 : index
+    //CHECK: [[off_x:%.+]] = index.remu [[l_off_x_0]], [[c128]]
+    //CHECK: xegpu.load_matrix [[mdesc]][[[off_y]], [[off_x]]] <{layout = #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1]>}>: !xegpu.mem_desc<64x128xf32>, index, index -> vector<32x32xf32>
+    %0 = xegpu.create_mem_desc %arg0 : memref<32768xi8, 3> -> !xegpu.mem_desc<64x128xf32>
+    %1 = xegpu.load_matrix %0[0, 0] <{layout = #xegpu.layout<sg_layout = [2, 4], sg_data = [32, 32], lane_layout = [2, 8], lane_data = [1, 1]>}>: !xegpu.mem_desc<64x128xf32> -> vector<64x128xf32>
+    gpu.return
+  }
+
+  //CHECK-LABEL: distribute_store_matrix
+  //CHECK-SAME: [[arg0:%.+]]: memref<32768xi8, 3>
+  gpu.func @distribute_store_matrix(%arg0 : memref<32768xi8, 3>) {
+    //CHECK: [[cst:%.+]] = arith.constant dense<1.000000e+00> : vector<32x32xf32>
+    //CHECK: [[mdesc:%.+]] = xegpu.create_mem_desc [[arg0]] : memref<32768xi8, 3> -> !xegpu.mem_desc<64x128xf32>
+    //CHECK: [[sgid:%.+]] = gpu.subgroup_id : index
+    //CHECK: [[c2:%.+]] = arith.constant 2 : index
+    //CHECK: [[c4:%.+]] = arith.constant 4 : index
+    //CHECK: [[c4_0:%.+]] = arith.constant 4 : index
+    //CHECK: [[id_y:%.+]] = affine.apply #map()[[[sgid]]]
+    //CHECK: [[id_x:%.+]] = affine.apply #map1()[[[sgid]]]
+    //CHECK: [[c32:%.+]] = arith.constant 32 : index
+    //CHECK: [[l_off_y_0:%.+]] = index.mul [[id_y]], [[c32]]
+    //CHECK: [[c32_1:%.+]] = arith.constant 32 : index
+    //CHECK: [[l_off_x_0:%.+]] = index.mul [[id_x]], [[c32_1]]
+    //CHECK: [[c0:%.+]] = arith.constant 0 : index
+    //CHECK: [[c0_2:%.+]] = arith.constant 0 : index
+    //CHECK: [[l_off_y:%.+]] = arith.addi [[l_off_y_0]], [[c0]] : index
+    //CHECK: [[l_off_x:%.+]] = arith.addi [[l_off_x_0]], [[c0_2]] : index
+    //CHECK: [[c64:%.+]] = arith.constant 64 : index
+    //CHECK: [[off_y:%.+]] = index.remu [[l_off_y]], [[c64]]
+    //CHECK: [[c128:%.+]] = arith.constant 128 : index
+    //CHECK: [[off_x:%.+]] = index.remu [[l_off_x]], [[c128]]
+    //CHECK: xegpu.store_matrix [[cst]], [[mdesc]][[[off_y]], [[off_x]]] : vector<32x32xf32>, !xegpu.mem_desc<64x128xf32>, index, index
+    %cst = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [2, 4], sg_data = [32, 32]>} dense<1.0> : vector<64x128xf32>
+    %mdesc = xegpu.create_mem_desc %arg0 : memref<32768xi8, 3> -> !xegpu.mem_desc<64x128xf32>
+    xegpu.store_matrix %cst, %mdesc[0, 0] {layout = #xegpu.layout<sg_layout = [2, 4], sg_data = [32, 32]>} : vector<64x128xf32>, !xegpu.mem_desc<64x128xf32>
+    gpu.return
+  }
 }

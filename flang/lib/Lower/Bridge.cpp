@@ -631,6 +631,17 @@ public:
     addSymbol(sym, exval, /*forced=*/true);
   }
 
+  void bindSymbolStorage(
+      Fortran::lower::SymbolRef sym,
+      Fortran::lower::SymMap::StorageDesc storage) override final {
+    localSymbols.registerStorage(sym, std::move(storage));
+  }
+
+  Fortran::lower::SymMap::StorageDesc
+  getSymbolStorage(Fortran::lower::SymbolRef sym) override final {
+    return localSymbols.lookupStorage(sym);
+  }
+
   void
   overrideExprValues(const Fortran::lower::ExprToValueMap *map) override final {
     exprValueOverrides = map;
@@ -2066,7 +2077,8 @@ private:
     // complete.
     bool useDelayedPriv = enableDelayedPrivatization && doConcurrentLoopOp;
     llvm::SetVector<const Fortran::semantics::Symbol *> allPrivatizedSymbols;
-    llvm::SmallSet<const Fortran::semantics::Symbol *, 16> mightHaveReadHostSym;
+    llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 16>
+        mightHaveReadHostSym;
 
     for (const Fortran::semantics::Symbol *symToPrivatize : info.localSymList) {
       if (useDelayedPriv) {

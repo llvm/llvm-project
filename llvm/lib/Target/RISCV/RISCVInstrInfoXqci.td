@@ -29,6 +29,8 @@ def qc_insb : RVSDNode<"QC_INSB", SDTypeProfile<1, 4, [SDTCisSameAs<0, 1>,
                                                        SDTCisInt<4>]>,
                        []>;
 
+def qc_e_li : RVSDNode<"QC_E_LI", SDTIntUnaryOp>;
+
 def uimm5nonzero : RISCVOp<XLenVT>,
                    ImmLeaf<XLenVT, [{return (Imm != 0) && isUInt<5>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<5, "NonZero">;
@@ -1617,6 +1619,13 @@ def : Pat<(qc_setwmi GPR:$rs3, GPR:$rs1, tuimm5nonzero:$uimm5, tuimm7_lsb00:$uim
           (QC_SETWMI GPR:$rs3, GPR:$rs1, tuimm5nonzero:$uimm5, tuimm7_lsb00:$uimm7)>;
 } // Predicates = [HasVendorXqcilsm, IsRV32]
 
+let Predicates = [HasVendorXqcili, IsRV32] in {
+def: Pat<(qc_e_li tglobaladdr:$A), (QC_E_LI bare_simm32:$A)>;
+def: Pat<(qc_e_li tblockaddress:$A), (QC_E_LI bare_simm32:$A)>;
+def: Pat<(qc_e_li tjumptable:$A), (QC_E_LI bare_simm32:$A)>;
+def: Pat<(qc_e_li tconstpool:$A), (QC_E_LI bare_simm32:$A)>;
+} // Predicates = [HasVendorXqcili, IsRV32]
+
 //===----------------------------------------------------------------------===/i
 // Compress Instruction tablegen backend.
 //===----------------------------------------------------------------------===//
@@ -1750,10 +1759,19 @@ def : CompressPat<(QC_E_XORAI GPRNoX0:$rd, simm12:$imm),
                   (XORI GPRNoX0:$rd, GPRNoX0:$rd, simm12:$imm)>;
 } // let isCompressOnly = true, Predicates = [HasVendorXqcilia, IsRV32]
 
-let Predicates = [HasVendorXqciac, IsRV32] in {
+let isCompressOnly = true, Predicates = [HasVendorXqciac, IsRV32] in {
 def : CompressPat<(QC_MULIADD GPRC:$rd, GPRC:$rs1, uimm5:$imm5),
                   (QC_C_MULIADD GPRC:$rd, GPRC:$rs1, uimm5:$imm5)>;
-}
+} // isCompressOnly = true, Predicates = [HasVendorXqciac, IsRV32]
+
+let isCompressOnly = true, Predicates = [HasVendorXqciac, HasStdExtZba, IsRV32] in {
+def : CompressPat<(SH1ADD GPRC:$rd, GPRC:$rs1, GPRC:$rd),
+                  (QC_C_MULIADD GPRC:$rd, GPRC:$rs1, 2)>;
+def : CompressPat<(SH2ADD GPRC:$rd, GPRC:$rs1, GPRC:$rd),
+                  (QC_C_MULIADD GPRC:$rd, GPRC:$rs1, 4)>;
+def : CompressPat<(SH3ADD GPRC:$rd, GPRC:$rs1, GPRC:$rd),
+                  (QC_C_MULIADD GPRC:$rd, GPRC:$rs1, 8)>;
+} // isCompressOnly = true, Predicates = [HasVendorXqciac, HasStdExtZba, IsRV32]
 
 let isCompressOnly = true, Predicates = [HasVendorXqcibi, IsRV32] in {
 def : CompressPat<(QC_E_BEQI GPRNoX0:$rs1, simm5nonzero:$imm5, bare_simm13_lsb0:$imm12),

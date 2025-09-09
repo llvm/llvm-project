@@ -31,7 +31,7 @@ void DynamicAllocator::cleanup() {
       if (B->hasPointers()) {
         while (B->Pointers) {
           Pointer *Next = B->Pointers->asBlockPointer().Next;
-          B->Pointers->PointeeStorage.BS.Pointee = nullptr;
+          B->Pointers->BS.Pointee = nullptr;
           B->Pointers = Next;
         }
         B->Pointers = nullptr;

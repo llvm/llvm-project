@@ -95,7 +95,7 @@
 ! CHECK-AMDGPU-R600-SAME: "-target-cpu" "cayman"
 
 ! CHECK-LOONGARCH64: "-fc1" "-triple" "loongarch64-unknown-linux-gnu"
-! CHECK-LOONGARCH64-SAME: "-target-cpu" "loongarch64" "-target-feature" "+lsx" "-target-feature" "+64bit" "-target-feature" "+f" "-target-feature" "+d" "-target-feature" "+ual"
+! CHECK-LOONGARCH64-SAME: "-target-cpu" "loongarch64" "-target-feature" "+lsx" "-target-feature" "+relax" "-target-feature" "+64bit" "-target-feature" "+f" "-target-feature" "+d" "-target-feature" "+ual"
 
 ! CHECK-SPARC-VIS: "-fc1" "-triple" "sparc64-{{[^"]+}}"
 ! CHECK-SPARC-VIS-SAME: "-target-feature" "+vis"

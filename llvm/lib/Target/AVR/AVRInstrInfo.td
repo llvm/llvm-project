@@ -204,16 +204,19 @@ def memspi : Operand<iPTR> {
 def relbrtarget_7 : Operand<OtherVT> {
   let PrintMethod = "printPCRelImm";
   let EncoderMethod = "encodeRelCondBrTarget<AVR::fixup_7_pcrel>";
+  let DecoderMethod = "decodeRelCondBrTarget7";
 }
 
 def brtarget_13 : Operand<OtherVT> {
   let PrintMethod = "printPCRelImm";
   let EncoderMethod = "encodeRelCondBrTarget<AVR::fixup_13_pcrel>";
+  let DecoderMethod = "decodeRelCondBrTarget13";
 }
 
 def rcalltarget_13 : Operand<i16> {
   let PrintMethod = "printPCRelImm";
   let EncoderMethod = "encodeRelCondBrTarget<AVR::fixup_13_pcrel>";
+  let DecoderMethod = "decodeRelCondBrTarget13";
 }
 
 // The target of a 22 or 16-bit call/jmp instruction.
@@ -1230,7 +1233,9 @@ let Uses = [R1, R0] in {
 
   let Defs = [R31R30] in 
   def SPMZPi : F16<0b1001010111111000, (outs), (ins ZREG:$z), "spm $z+", []>,
-               Requires<[HasSPMX]>;
+               Requires<[HasSPMX]> {
+    bits<0> z;
+  }
 }
 
 // Read data from IO location operations.

@@ -74,6 +74,11 @@ public:
   mlir::Value cxxThisValue = nullptr;
   clang::CharUnits cxxThisAlignment;
 
+  /// When generating code for a constructor or destructor, this will hold the
+  /// implicit argument (e.g. VTT).
+  ImplicitParamDecl *cxxStructorImplicitParamDecl{};
+  mlir::Value cxxStructorImplicitParamValue{};
+
   /// The value of 'this' to sue when evaluating CXXDefaultInitExprs within this
   /// expression.
   Address cxxDefaultInitExprThis = Address::invalid();
@@ -574,6 +579,9 @@ public:
     const clang::CXXRecordDecl *vtableClass;
   };
 
+  using VisitedVirtualBasesSetTy =
+      llvm::SmallPtrSet<const clang::CXXRecordDecl *, 4>;
+
   using VPtrsVector = llvm::SmallVector<VPtr, 4>;
   VPtrsVector getVTablePointers(const clang::CXXRecordDecl *vtableClass);
   void getVTablePointers(clang::BaseSubobject base,
@@ -581,7 +589,7 @@ public:
                          clang::CharUnits offsetFromNearestVBase,
                          bool baseIsNonVirtualPrimaryBase,
                          const clang::CXXRecordDecl *vtableClass,
-                         VPtrsVector &vptrs);
+                         VisitedVirtualBasesSetTy &vbases, VPtrsVector &vptrs);
   /// Return the Value of the vtable pointer member pointed to by thisAddr.
   mlir::Value getVTablePtr(mlir::Location loc, Address thisAddr,
                            const clang::CXXRecordDecl *vtableClass);
@@ -630,6 +638,13 @@ public:
       llvm::iterator_range<CastExpr::path_const_iterator> path,
       bool nullCheckValue, SourceLocation loc);
 
+  /// Return the VTT parameter that should be passed to a base
+  /// constructor/destructor with virtual bases.
+  /// FIXME: VTTs are Itanium ABI-specific, so the definition should move
+  /// to ItaniumCXXABI.cpp together with all the references to VTT.
+  mlir::Value getVTTParameter(GlobalDecl gd, bool forVirtualBase,
+                              bool delegating);
+
   LValue makeAddrLValue(Address addr, QualType ty,
                         AlignmentSource source = AlignmentSource::Type) {
     return makeAddrLValue(addr, ty, LValueBaseInfo(source));
@@ -662,6 +677,14 @@ public:
     return cxxThisValue;
   }
   Address loadCXXThisAddress();
+
+  /// Load the VTT parameter to base constructors/destructors have virtual
+  /// bases. FIXME: Every place that calls LoadCXXVTT is something that needs to
+  /// be abstracted properly.
+  mlir::Value loadCXXVTT() {
+    assert(cxxStructorImplicitParamValue && "no VTT value for this function");
+    return cxxStructorImplicitParamValue;
+  }
 
   /// Convert the given pointer to a complete class to the given direct base.
   Address getAddressOfDirectBaseInCompleteClass(mlir::Location loc,
@@ -962,6 +985,16 @@ public:
 
   LValue emitAggExprToLValue(const Expr *e);
 
+  /// Emit an aggregate copy.
+  ///
+  /// \param isVolatile \c true iff either the source or the destination is
+  ///        volatile.
+  /// \param MayOverlap Whether the tail padding of the destination might be
+  ///        occupied by some other object. More efficient code can often be
+  ///        generated if not.
+  void emitAggregateCopy(LValue dest, LValue src, QualType eltTy,
+                         AggValueSlot::Overlap_t mayOverlap);
+
   /// Emit code to compute the specified expression which can have any type. The
   /// result is returned as an RValue struct. If this is an aggregate
   /// expression, the aggloc/agglocvolatile arguments indicate where the result
@@ -1140,6 +1173,8 @@ public:
 
   RValue emitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *expr);
 
+  void emitCXXThrowExpr(const CXXThrowExpr *e);
+
   void emitCtorPrologue(const clang::CXXConstructorDecl *ctor,
                         clang::CXXCtorType ctorType, FunctionArgList &args);
 
@@ -1287,6 +1322,8 @@ public:
   /// the LLVM value representation.  The l-value must be a simple
   /// l-value.
   mlir::Value emitLoadOfScalar(LValue lvalue, SourceLocation loc);
+  mlir::Value emitLoadOfScalar(Address addr, bool isVolatile, QualType ty,
+                               SourceLocation loc, LValueBaseInfo baseInfo);
 
   /// Emit code to compute a designator that specifies the location
   /// of the expression.
@@ -1379,6 +1416,8 @@ public:
 
   LValue emitUnaryOpLValue(const clang::UnaryOperator *e);
 
+  mlir::Value emitUnPromotedValue(mlir::Value result, QualType unPromotionType);
+
   /// Emit a reached-unreachable diagnostic if \p loc is valid and runtime
   /// checking is enabled. Otherwise, just emit an unreachable instruction.
   /// \p createNewBlock indicates whether to create a new block for the IR
@@ -1446,7 +1485,7 @@ public:
       mlir::OpBuilder::InsertionGuard guard(builder);
       builder.restoreInsertionPoint(outermostConditional->getInsertPoint());
       builder.createStore(
-          value.getLoc(), value, addr,
+          value.getLoc(), value, addr, /*isVolatile=*/false,
           mlir::IntegerAttr::get(
               mlir::IntegerType::get(value.getContext(), 64),
               (uint64_t)addr.getAlignment().getAsAlign().value()));
@@ -1503,6 +1542,17 @@ public:
   /// \param vaList A reference to the \c va_list as emitted by either
   /// \c emitVAListRef or \c emitMSVAListRef.
   void emitVAEnd(mlir::Value vaList);
+
+  /// Generate code to get an argument from the passed in pointer
+  /// and update it accordingly.
+  ///
+  /// \param ve The \c VAArgExpr for which to generate code.
+  ///
+  /// \param vaListAddr Receives a reference to the \c va_list as emitted by
+  /// either \c emitVAListRef or \c emitMSVAListRef.
+  ///
+  /// \returns SSA value with the argument.
+  mlir::Value emitVAArg(VAArgExpr *ve);
 
   /// ----------------------
   /// CIR build helpers
