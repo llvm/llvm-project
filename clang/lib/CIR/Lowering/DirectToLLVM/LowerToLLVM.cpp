@@ -603,7 +603,7 @@ mlir::LogicalResult CIRToLLVMASinOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type resTy = typeConverter->convertType(op.getType());
   rewriter.replaceOpWithNewOp<mlir::LLVM::ASinOp>(op, resTy,
-                                                  adaptor.getOperands()[0]);
+                                                  adaptor.getSrc());
   return mlir::success();
 }
 
