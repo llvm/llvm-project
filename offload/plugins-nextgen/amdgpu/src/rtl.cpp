@@ -3575,7 +3575,7 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     // necessarily map to the device that created it
     MemoryInfoTy ToReturn;
     ToReturn.Base = Info.agentBaseAddress;
-    ToReturn.Size = Info.size;
+    ToReturn.Size = Info.sizeInBytes;
     auto UserData = hsa_utils::UserDataPair::getFromOpaqueValue(Info.userData);
     ToReturn.Type = static_cast<TargetAllocTy>(UserData.getInt());
     ToReturn.Device =
