@@ -3598,6 +3598,12 @@ const SCEV *ScalarEvolution::getUDivExpr(const SCEV *LHS,
     }
   }
 
+  // udiv (mul nuw a, vscale), (mul nuw b, vscale) --> udiv a, b
+  const SCEV *NewLHS, *NewRHS;
+  if (match(LHS, m_scev_c_NUWMul(m_SCEV(NewLHS), m_SCEVVScale())) &&
+      match(RHS, m_scev_c_NUWMul(m_SCEV(NewRHS), m_SCEVVScale())))
+    return getUDivExpr(NewLHS, NewRHS);
+
   // The Insertion Point (IP) might be invalid by now (due to UniqueSCEVs
   // changes). Make sure we get a new one.
   IP = nullptr;
