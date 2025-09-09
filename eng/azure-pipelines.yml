@@ -104,8 +104,6 @@ extends:
         image: mcr.microsoft.com/dotnet-buildtools/prereqs:cbl-mariner-2.0-cross-amd64-alpine
       mariner2crossarm64alpine:
         image: mcr.microsoft.com/dotnet-buildtools/prereqs:cbl-mariner-2.0-cross-arm64-alpine
-      almalinux8sourcebuild:
-        image: mcr.microsoft.com/dotnet-buildtools/prereqs:almalinux-8-source-build
     stages:
     - stage: build
       displayName: Build
@@ -115,13 +113,6 @@ extends:
           enablePublishBuildArtifacts: true
           enablePublishBuildAssets: true
           enablePublishUsingPipelines: true
-          enableSourceBuild: true
-          sourceBuildParameters:
-            platforms:
-            - name: 'AlmaLinux_8_Portable'
-              container: almalinux8sourcebuild
-              jobProperties:
-                timeoutInMinutes: 600
           jobs:
 
           ############ LINUX BUILD ############
