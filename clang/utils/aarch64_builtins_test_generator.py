@@ -47,7 +47,7 @@ class FunctionType(Enum):
 class BuiltinContext:
     guard: str
     streaming_guard: str
-    flags: tuple[str, ...]
+    flags: Tuple[str, ...]
 
     def __str__(self) -> str:
         return (
@@ -94,9 +94,8 @@ def parse_builtin_declaration(decl: str) -> Tuple[str, List[str]]:
         raise ValueError(f"Could not find function name in: {decl!r}")
     func_name = name_m.group(1)
 
-    if not params:
-        param_types: List[str] = []
-    else:
+    param_types: List[str] = []
+    if params:
         # Split by commas respecting no pointers/arrays with commas (not expected here)
         param_types = [p.strip() for p in params.split(",") if p.strip()]
 
@@ -193,7 +192,7 @@ def expand_feature_guard(
     # remove superset and duplicates
     unique = []
     for s in results:
-        if any(s > other for other in results if s is not other):
+        if any(s > other for other in results):
             continue
         if s not in unique:
             unique.append(s)
@@ -408,7 +407,7 @@ def build_calls_for_group(builtins: Iterable[str]) -> Tuple[List[str], List[str]
         calls.append(f"{fn}(" + ", ".join(arg_names) + ");")
 
     # Natural sort (e.g. int8_t before int16_t)
-    calls.sort(key=lambda t: natural_key(t))
+    calls.sort(key=natural_key)
     var_decls.sort(key=natural_key)
 
     return var_decls, calls
