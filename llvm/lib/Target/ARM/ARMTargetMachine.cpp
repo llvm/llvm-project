@@ -153,7 +153,7 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
                                getEffectiveRelocModel(TT, RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TargetABI(ARM::computeTargetABI(TT, Options.MCOptions.ABIName)),
-      TLOF(createTLOF(getTargetTriple())), isLittle(isLittle) {
+      TLOF(createTLOF(getTargetTriple())), isLittle(TT.isLittleEndian()) {
 
   // Default to triple-appropriate float ABI
   if (Options.FloatABIType == FloatABI::Default) {
