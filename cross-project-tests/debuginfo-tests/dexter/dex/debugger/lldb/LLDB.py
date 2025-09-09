@@ -431,8 +431,15 @@ class LLDBDAP(DAP):
             if not trace_response["success"]:
                 raise DebuggerException("failed to get stack frames")
             stackframes = trace_response["body"]["stackFrames"]
-            path = stackframes[0]["source"]["path"]
             addr = stackframes[0]["instructionPointerReference"]
+            try:
+                path = stackframes[0]["source"]["path"]
+            except KeyError:
+                # We may have no path, e.g., if the module hasn't loaded or
+                # there's no debug info. If that's the case we won't have
+                # bound a source-location breakpoint here, so we can bail now.
+                return
+
             if any(
                 self._debugger_state.bp_addr_map.get(self.dex_id_to_dap_id[dex_bp_id])
                 == addr
