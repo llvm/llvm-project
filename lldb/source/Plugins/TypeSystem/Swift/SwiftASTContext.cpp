@@ -3053,7 +3053,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
       ci_args.push_back(sdk_triple.str());
     }
     ci_args.push_back("-gmodules");
-    ci_args.push_back("-g");
+    ci_args.push_back("-gdwarf-4");
   }
 
   std::vector<swift::PluginSearchOption> plugin_search_options;
@@ -3192,7 +3192,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
       swift_ast_sp->RegisterSectionModules(*image_sp, module_names);
   }
 
-  {
+  if (!for_expressions && module_sp) {
     auto ast_context = swift_ast_sp->GetASTContext();
     if (!ast_context) {
       logError("couldn't initialize Swift compiler");
