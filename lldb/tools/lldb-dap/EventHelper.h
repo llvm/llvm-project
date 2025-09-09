@@ -11,8 +11,8 @@
 
 #include "DAPForward.h"
 #include "Protocol/ProtocolEvents.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Error.h"
-#include <vector>
 
 namespace lldb_dap {
 struct DAP;
@@ -35,7 +35,7 @@ void SendContinuedEvent(DAP &dap);
 void SendProcessExitedEvent(DAP &dap, lldb::SBProcess &process);
 
 void SendInvalidatedEvent(
-    DAP &dap, std::vector<protocol::InvalidatedEventBody::Area> &&areas);
+    DAP &dap, llvm::ArrayRef<protocol::InvalidatedEventBody::Area> areas);
 
 } // namespace lldb_dap
 
