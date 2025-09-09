@@ -96,7 +96,7 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 ;DXC-NEXT:                RegisterSpace:   6
 ;DXC-NEXT:                OffsetInDescriptorsFromTableStart: 5
 ;DXC-NEXT:                DESCRIPTORS_VOLATILE: true
-;DXC-NEXT:              - RangeType:       CBV
+;DXC-NEXT:              - RangeType:       CBuffer
 ;DXC-NEXT:                NumDescriptors:  5
 ;DXC-NEXT:                BaseShaderRegister: 1
 ;DXC-NEXT:                RegisterSpace:   7
@@ -114,7 +114,7 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 ;DXC-NEXT:                RegisterSpace:   9
 ;DXC-NEXT:                OffsetInDescriptorsFromTableStart: 5
 ;DXC-NEXT:                DATA_STATIC_WHILE_SET_AT_EXECUTE: true
-;DXC-NEXT:              - RangeType:       CBV
+;DXC-NEXT:              - RangeType:       CBuffer
 ;DXC-NEXT:                NumDescriptors:  5
 ;DXC-NEXT:                BaseShaderRegister: 1
 ;DXC-NEXT:                RegisterSpace:   10
@@ -134,7 +134,7 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 ;DXC-NEXT:                RegisterSpace:   12
 ;DXC-NEXT:                OffsetInDescriptorsFromTableStart: 5
 ;DXC-NEXT:                DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS: true
-;DXC-NEXT:              - RangeType:       CBV
+;DXC-NEXT:              - RangeType:       CBuffer
 ;DXC-NEXT:                NumDescriptors:  5
 ;DXC-NEXT:                BaseShaderRegister: 1
 ;DXC-NEXT:                RegisterSpace:   13

@@ -92,7 +92,7 @@ struct RootDescriptorYaml {
 };
 
 struct DescriptorRangeYaml {
-  dxbc::DescriptorRangeType RangeType;
+  dxil::ResourceClass RangeType;
   uint32_t NumDescriptors;
   uint32_t BaseShaderRegister;
   uint32_t RegisterSpace;
@@ -320,7 +320,7 @@ LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::D3DSystemValue)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SigComponentType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SigMinPrecision)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::RootParameterType)
-LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::DescriptorRangeType)
+LLVM_YAML_DECLARE_ENUM_TRAITS(dxil::ResourceClass)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SamplerFilter)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::StaticBorderColor)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::TextureAddressMode)

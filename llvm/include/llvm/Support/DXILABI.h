@@ -101,6 +101,7 @@ const unsigned MinWaveSize = 4;
 const unsigned MaxWaveSize = 128;
 
 LLVM_ABI StringRef getResourceClassName(ResourceClass RC);
+LLVM_ABI StringRef getResourceClassNames();
 
 } // namespace dxil
 } // namespace llvm

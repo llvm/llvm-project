@@ -63,7 +63,7 @@ readDescriptorRanges(DXContainerYAML::RootParameterHeaderYaml &Header,
     if (!dxbc::isValidRangeType(R.RangeType))
       return createStringError(std::errc::invalid_argument,
                                "Invalid value for descriptor range type");
-    NewR.RangeType = dxbc::DescriptorRangeType(R.RangeType);
+    NewR.RangeType = dxil::ResourceClass(R.RangeType);
     if constexpr (std::is_same_v<T, dxbc::RTS0::v2::DescriptorRange>) {
       // Set all flag fields for v2
 #define DESCRIPTOR_RANGE_FLAG(Num, Enum, Flag)                                 \
@@ -623,9 +623,16 @@ void ScalarEnumerationTraits<dxbc::RootParameterType>::enumeration(
     IO.enumCase(Value, E.Name.str().c_str(), E.Value);
 }
 
-void ScalarEnumerationTraits<dxbc::DescriptorRangeType>::enumeration(
-    IO &IO, dxbc::DescriptorRangeType &Value) {
-  for (const auto &E : dxbc::getDescriptorRangeTypes())
+void ScalarEnumerationTraits<dxil::ResourceClass>::enumeration(
+    IO &IO, dxil::ResourceClass &Value) {
+  const EnumEntry<dxil::ResourceClass> ResourceClasses[] = {
+      {"CBuffer", dxil::ResourceClass::CBuffer},
+      {"SRV", dxil::ResourceClass::SRV},
+      {"UAV", dxil::ResourceClass::UAV},
+      {"Sampler", dxil::ResourceClass::Sampler},
+  };
+
+  for (const auto &E : ResourceClasses)
     IO.enumCase(Value, E.Name.str().c_str(), E.Value);
 }
 
