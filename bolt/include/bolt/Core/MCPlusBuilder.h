@@ -14,6 +14,7 @@
 #ifndef BOLT_CORE_MCPLUSBUILDER_H
 #define BOLT_CORE_MCPLUSBUILDER_H
 
+#include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Core/Relocation.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -1902,11 +1903,36 @@ public:
     return {};
   }
 
+  /// Find memcpy size in bytes by using preceding instructions.
+  /// Returns std::nullopt if size cannot be determined (no-op for most
+  /// targets).
+  virtual std::optional<uint64_t>
+  findMemcpySizeInBytes(const BinaryBasicBlock &BB,
+                        BinaryBasicBlock::iterator CallInst) const {
+    return std::nullopt;
+  }
+
   /// Creates inline memcpy instruction. If \p ReturnEnd is true, then return
   /// (dest + n) instead of dest.
   virtual InstructionListType createInlineMemcpy(bool ReturnEnd) const {
     llvm_unreachable("not implemented");
     return {};
+  }
+
+  /// Creates size-aware inline memcpy instruction. If \p KnownSize is provided,
+  /// generates optimized code for that specific size. Falls back to regular
+  /// createInlineMemcpy if size is unknown or not needed (e.g. with X86).
+  virtual InstructionListType
+  createInlineMemcpy(bool ReturnEnd, std::optional<uint64_t> KnownSize) const {
+    return createInlineMemcpy(ReturnEnd);
+  }
+
+  /// Extract immediate value from move instruction that sets the given
+  /// register. Returns the immediate value if the instruction is a
+  /// move-immediate to TargetReg.
+  virtual std::optional<uint64_t>
+  extractMoveImmediate(const MCInst &Inst, MCPhysReg TargetReg) const {
+    return std::nullopt;
   }
 
   /// Create a target-specific relocation out of the \p Fixup.

@@ -17,13 +17,13 @@ void CSMain2(ST ID : SV_DispatchThreadID) {
 }
 
 void foo() {
-// expected-warning@+1 {{'SV_DispatchThreadID' attribute only applies to parameters and non-static data members}}
+// expected-warning@+1 {{'SV_DispatchThreadID' attribute only applies to parameters, non-static data members, and functions}}
   uint V : SV_DispatchThreadID;
 
 }
 
 struct ST2 {
-// expected-warning@+1 {{'SV_DispatchThreadID' attribute only applies to parameters and non-static data members}}
+// expected-warning@+1 {{'SV_DispatchThreadID' attribute only applies to parameters, non-static data members, and functions}}
     static uint X : SV_DispatchThreadID;
     uint s : SV_DispatchThreadID;
 };
@@ -40,12 +40,12 @@ void CSMain2_GID(ST GID : SV_GroupID) {
 }
 
 void foo_GID() {
-// expected-warning@+1 {{'SV_GroupID' attribute only applies to parameters and non-static data members}}
+// expected-warning@+1 {{'SV_GroupID' attribute only applies to parameters, non-static data members, and functions}}
   uint GIS : SV_GroupID;
 }
 
 struct ST2_GID {
-// expected-warning@+1 {{'SV_GroupID' attribute only applies to parameters and non-static data members}}
+// expected-warning@+1 {{'SV_GroupID' attribute only applies to parameters, non-static data members, and functions}}
     static uint GID : SV_GroupID;
     uint s_gid : SV_GroupID;
 };
@@ -62,12 +62,12 @@ void CSMain2_GThreadID(ST GID : SV_GroupThreadID) {
 }
 
 void foo_GThreadID() {
-// expected-warning@+1 {{'SV_GroupThreadID' attribute only applies to parameters and non-static data members}}
+// expected-warning@+1 {{'SV_GroupThreadID' attribute only applies to parameters, non-static data members, and functions}}
   uint GThreadIS : SV_GroupThreadID;
 }
 
 struct ST2_GThreadID {
-// expected-warning@+1 {{'SV_GroupThreadID' attribute only applies to parameters and non-static data members}}
+// expected-warning@+1 {{'SV_GroupThreadID' attribute only applies to parameters, non-static data members, and functions}}
     static uint GThreadID : SV_GroupThreadID;
     uint s_gthreadid : SV_GroupThreadID;
 };
