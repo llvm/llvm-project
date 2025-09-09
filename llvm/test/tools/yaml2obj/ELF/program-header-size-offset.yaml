@@ -200,8 +200,6 @@ Sections:
     Type:     SHT_PROGBITS
     Flags:    [ SHF_ALLOC ]
     Size:     0x1
-## Note: the real .foo offset is much less than 0xFFFFFFFF or
-##       0xFFFFFF00, but no error is reported.
     ShOffset: 0xFFFFFFFF
 ProgramHeaders:
   - Type:     PT_LOAD
