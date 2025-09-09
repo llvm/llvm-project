@@ -112,22 +112,22 @@ define half @flh_fsh_global(half %a, half %b) nounwind {
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    fadd.h fa0, fa0, fa1
 ; CHECKIZFH-NEXT:    lui a0, %hi(G)
-; CHECKIZFH-NEXT:    flh fa5, %lo(G)(a0)
-; CHECKIZFH-NEXT:    addi a1, a0, %lo(G)
-; CHECKIZFH-NEXT:    fsh fa0, %lo(G)(a0)
-; CHECKIZFH-NEXT:    flh fa5, 18(a1)
-; CHECKIZFH-NEXT:    fsh fa0, 18(a1)
+; CHECKIZFH-NEXT:    addi a0, a0, %lo(G)
+; CHECKIZFH-NEXT:    flh fa5, 0(a0)
+; CHECKIZFH-NEXT:    fsh fa0, 0(a0)
+; CHECKIZFH-NEXT:    flh fa5, 18(a0)
+; CHECKIZFH-NEXT:    fsh fa0, 18(a0)
 ; CHECKIZFH-NEXT:    ret
 ;
 ; CHECKIZHINX-LABEL: flh_fsh_global:
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    fadd.h a0, a0, a1
 ; CHECKIZHINX-NEXT:    lui a1, %hi(G)
-; CHECKIZHINX-NEXT:    lh zero, %lo(G)(a1)
-; CHECKIZHINX-NEXT:    addi a2, a1, %lo(G)
-; CHECKIZHINX-NEXT:    sh a0, %lo(G)(a1)
-; CHECKIZHINX-NEXT:    lh zero, 18(a2)
-; CHECKIZHINX-NEXT:    sh a0, 18(a2)
+; CHECKIZHINX-NEXT:    addi a1, a1, %lo(G)
+; CHECKIZHINX-NEXT:    lh zero, 0(a1)
+; CHECKIZHINX-NEXT:    sh a0, 0(a1)
+; CHECKIZHINX-NEXT:    lh zero, 18(a1)
+; CHECKIZHINX-NEXT:    sh a0, 18(a1)
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: flh_fsh_global:
@@ -135,13 +135,13 @@ define half @flh_fsh_global(half %a, half %b) nounwind {
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa1
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa0
 ; CHECKIZFHMIN-NEXT:    lui a0, %hi(G)
+; CHECKIZFHMIN-NEXT:    addi a0, a0, %lo(G)
 ; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa4, fa5
-; CHECKIZFHMIN-NEXT:    flh fa4, %lo(G)(a0)
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; CHECKIZFHMIN-NEXT:    addi a1, a0, %lo(G)
-; CHECKIZFHMIN-NEXT:    fsh fa0, %lo(G)(a0)
-; CHECKIZFHMIN-NEXT:    flh fa5, 18(a1)
-; CHECKIZFHMIN-NEXT:    fsh fa0, 18(a1)
+; CHECKIZFHMIN-NEXT:    flh fa5, 0(a0)
+; CHECKIZFHMIN-NEXT:    fsh fa0, 0(a0)
+; CHECKIZFHMIN-NEXT:    flh fa5, 18(a0)
+; CHECKIZFHMIN-NEXT:    fsh fa0, 18(a0)
 ; CHECKIZFHMIN-NEXT:    ret
 ;
 ; CHECKIZHINXMIN-LABEL: flh_fsh_global:
@@ -149,13 +149,13 @@ define half @flh_fsh_global(half %a, half %b) nounwind {
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; CHECKIZHINXMIN-NEXT:    lui a2, %hi(G)
+; CHECKIZHINXMIN-NEXT:    addi a2, a2, %lo(G)
 ; CHECKIZHINXMIN-NEXT:    fadd.s a0, a0, a1
-; CHECKIZHINXMIN-NEXT:    lh zero, %lo(G)(a2)
 ; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECKIZHINXMIN-NEXT:    addi a1, a2, %lo(G)
-; CHECKIZHINXMIN-NEXT:    sh a0, %lo(G)(a2)
-; CHECKIZHINXMIN-NEXT:    lh zero, 18(a1)
-; CHECKIZHINXMIN-NEXT:    sh a0, 18(a1)
+; CHECKIZHINXMIN-NEXT:    lh zero, 0(a2)
+; CHECKIZHINXMIN-NEXT:    sh a0, 0(a2)
+; CHECKIZHINXMIN-NEXT:    lh zero, 18(a2)
+; CHECKIZHINXMIN-NEXT:    sh a0, 18(a2)
 ; CHECKIZHINXMIN-NEXT:    ret
   %1 = fadd half %a, %b
   %2 = load volatile half, ptr @G
