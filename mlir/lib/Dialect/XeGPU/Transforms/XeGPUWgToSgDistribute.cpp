@@ -1000,6 +1000,23 @@ struct WgToSgVectorShapeCastOp
     if (!onlyUnitDims(srcType.getShape(), sgShape))
       return failure();
 
+    // Check to verify that if expanding dims, the input operand's layout
+    // is sliceAttr and if reducing dims, result's layout is
+    // sliceAttr.
+    int srcRank = srcType.getRank();
+    int dstRank = sgShape.size();
+    if (dstRank > srcRank) {
+      // Expanding dims: input operand's layout must be a SliceAttr
+      auto srcLayout = xegpu::getDistributeLayoutAttr(op.getSource());
+      if (!srcLayout || !isa<xegpu::SliceAttr>(srcLayout))
+        return failure();
+    } else if (dstRank < srcRank) {
+      // Reducing dims: result's layout must be a SliceAttr
+      auto resLayout = xegpu::getDistributeLayoutAttr(op.getResult());
+      if (!resLayout || !isa<xegpu::SliceAttr>(resLayout))
+        return failure();
+    }
+
     SmallVector<Value> newShapeCastOps;
     for (auto src : adaptor.getSource()) {
       auto newShapeCast =
