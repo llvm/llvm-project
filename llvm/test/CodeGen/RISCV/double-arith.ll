@@ -610,6 +610,86 @@ define double @fmsub_d(double %a, double %b, double %c) nounwind {
   ret double %1
 }
 
+define double @fmsub_d_fmul_fneg(double %a, double %b, double %c, double %d) nounwind {
+; CHECKIFD-LABEL: fmsub_d_fmul_fneg:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    fmul.d fa5, fa2, fa3
+; CHECKIFD-NEXT:    fmsub.d fa0, fa0, fa1, fa5
+; CHECKIFD-NEXT:    ret
+;
+; RV32IZFINXZDINX-LABEL: fmsub_d_fmul_fneg:
+; RV32IZFINXZDINX:       # %bb.0:
+; RV32IZFINXZDINX-NEXT:    fmul.d a4, a4, a6
+; RV32IZFINXZDINX-NEXT:    fmsub.d a0, a0, a2, a4
+; RV32IZFINXZDINX-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: fmsub_d_fmul_fneg:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    fmul.d a2, a2, a3
+; RV64IZFINXZDINX-NEXT:    fmsub.d a0, a0, a1, a2
+; RV64IZFINXZDINX-NEXT:    ret
+;
+; RV32I-LABEL: fmsub_d_fmul_fneg:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -32
+; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    mv s0, a3
+; RV32I-NEXT:    mv s1, a2
+; RV32I-NEXT:    mv s2, a1
+; RV32I-NEXT:    mv s3, a0
+; RV32I-NEXT:    lui a0, 524288
+; RV32I-NEXT:    xor a3, a7, a0
+; RV32I-NEXT:    mv a0, a4
+; RV32I-NEXT:    mv a1, a5
+; RV32I-NEXT:    mv a2, a6
+; RV32I-NEXT:    call __muldf3
+; RV32I-NEXT:    mv a4, a0
+; RV32I-NEXT:    mv a5, a1
+; RV32I-NEXT:    mv a0, s3
+; RV32I-NEXT:    mv a1, s2
+; RV32I-NEXT:    mv a2, s1
+; RV32I-NEXT:    mv a3, s0
+; RV32I-NEXT:    call fma
+; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 32
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fmsub_d_fmul_fneg:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -32
+; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    mv s0, a1
+; RV64I-NEXT:    mv s1, a0
+; RV64I-NEXT:    li a0, -1
+; RV64I-NEXT:    slli a0, a0, 63
+; RV64I-NEXT:    xor a1, a3, a0
+; RV64I-NEXT:    mv a0, a2
+; RV64I-NEXT:    call __muldf3
+; RV64I-NEXT:    mv a2, a0
+; RV64I-NEXT:    mv a0, s1
+; RV64I-NEXT:    mv a1, s0
+; RV64I-NEXT:    call fma
+; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 32
+; RV64I-NEXT:    ret
+  %negd = fneg double %d
+  %fmul = fmul double %c, %negd
+  %1 = call double @llvm.fma.f64(double %a, double %b, double %fmul)
+  ret double %1
+}
+
 define double @fnmadd_d(double %a, double %b, double %c) nounwind {
 ; RV32IFD-LABEL: fnmadd_d:
 ; RV32IFD:       # %bb.0:
@@ -877,6 +957,88 @@ define double @fnmadd_d_3(double %a, double %b, double %c) nounwind {
   ret double %neg
 }
 
+define double @fnmadd_d_fmul_fneg(double %a, double %b, double %c, double %d) nounwind {
+; CHECKIFD-LABEL: fnmadd_d_fmul_fneg:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    fmul.d fa5, fa1, fa0
+; CHECKIFD-NEXT:    fmsub.d fa0, fa2, fa3, fa5
+; CHECKIFD-NEXT:    ret
+;
+; RV32IZFINXZDINX-LABEL: fnmadd_d_fmul_fneg:
+; RV32IZFINXZDINX:       # %bb.0:
+; RV32IZFINXZDINX-NEXT:    fmul.d a0, a2, a0
+; RV32IZFINXZDINX-NEXT:    fmsub.d a0, a4, a6, a0
+; RV32IZFINXZDINX-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: fnmadd_d_fmul_fneg:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    fmul.d a0, a1, a0
+; RV64IZFINXZDINX-NEXT:    fmsub.d a0, a2, a3, a0
+; RV64IZFINXZDINX-NEXT:    ret
+;
+; RV32I-LABEL: fnmadd_d_fmul_fneg:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -32
+; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    mv s0, a7
+; RV32I-NEXT:    mv s1, a6
+; RV32I-NEXT:    mv s2, a5
+; RV32I-NEXT:    mv s3, a4
+; RV32I-NEXT:    mv a5, a3
+; RV32I-NEXT:    mv a4, a0
+; RV32I-NEXT:    lui a3, 524288
+; RV32I-NEXT:    xor a3, a1, a3
+; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    mv a1, a5
+; RV32I-NEXT:    mv a2, a4
+; RV32I-NEXT:    call __muldf3
+; RV32I-NEXT:    mv a4, a0
+; RV32I-NEXT:    mv a5, a1
+; RV32I-NEXT:    mv a0, s3
+; RV32I-NEXT:    mv a1, s2
+; RV32I-NEXT:    mv a2, s1
+; RV32I-NEXT:    mv a3, s0
+; RV32I-NEXT:    call fma
+; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 32
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fnmadd_d_fmul_fneg:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -32
+; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    mv s0, a3
+; RV64I-NEXT:    mv s1, a2
+; RV64I-NEXT:    mv a2, a1
+; RV64I-NEXT:    li a1, -1
+; RV64I-NEXT:    slli a1, a1, 63
+; RV64I-NEXT:    xor a1, a0, a1
+; RV64I-NEXT:    mv a0, a2
+; RV64I-NEXT:    call __muldf3
+; RV64I-NEXT:    mv a2, a0
+; RV64I-NEXT:    mv a0, s1
+; RV64I-NEXT:    mv a1, s0
+; RV64I-NEXT:    call fma
+; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 32
+; RV64I-NEXT:    ret
+  %nega = fneg double %a
+  %mul = fmul double %b, %nega
+  %1 = call double @llvm.fma.f64(double %c, double %d, double %mul)
+  ret double %1
+}
 
 define double @fnmadd_nsz(double %a, double %b, double %c) nounwind {
 ; CHECKIFD-LABEL: fnmadd_nsz:
