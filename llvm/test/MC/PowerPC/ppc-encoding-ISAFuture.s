@@ -306,3 +306,27 @@
            vupkint8tofp32 3, 5, 2
 #CHECK-BE: vupkint8tofp32 3, 5, 2         # encoding: [0x10,0x6e,0x29,0x83]
 #CHECK-LE: vupkint8tofp32 3, 5, 2         # encoding: [0x83,0x29,0x6e,0x10]
+
+           vucmprhn 0, 2, 3
+#CHECK-BE: vucmprhn 0, 2, 3                # encoding: [0x10,0x02,0x18,0x03]
+#CHECK-LE: vucmprhn 0, 2, 3                # encoding: [0x03,0x18,0x02,0x10]
+
+           vucmprln 3, 5, 6
+#CHECK-BE: vucmprln 3, 5, 6                # encoding: [0x10,0x65,0x30,0x43]
+#CHECK-LE: vucmprln 3, 5, 6                # encoding: [0x43,0x30,0x65,0x10]
+
+           vucmprhb 1, 3, 6
+#CHECK-BE: vucmprhb 1, 3, 6                # encoding: [0x10,0x23,0x30,0x83]
+#CHECK-LE: vucmprhb 1, 3, 6                # encoding: [0x83,0x30,0x23,0x10]
+
+           vucmprlb 2, 4, 5
+#CHECK-BE: vucmprlb 2, 4, 5                # encoding: [0x10,0x44,0x28,0xc3]
+#CHECK-LE: vucmprlb 2, 4, 5                # encoding: [0xc3,0x28,0x44,0x10]
+
+           vucmprlh 2, 4, 5
+#CHECK-BE: vucmprlh 2, 4, 5               # encoding: [0x10,0x44,0x29,0x43]
+#CHECK-LE: vucmprlh 2, 4, 5               # encoding: [0x43,0x29,0x44,0x10]
+
+           vucmprhh 1, 3, 6
+#CHECK-BE: vucmprhh 1, 3, 6               # encoding: [0x10,0x23,0x31,0x03]
+#CHECK-LE: vucmprhh 1, 3, 6               # encoding: [0x03,0x31,0x23,0x10]

@@ -32,17 +32,17 @@ sha256rnds2 (%rax), %xmm2
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  2      2     0.50                        sha1msg1	%xmm0, %xmm2
-# CHECK-NEXT:  2      6     0.50    *                   sha1msg1	(%rax), %xmm2
+# CHECK-NEXT:  2      9     0.50    *                   sha1msg1	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        sha1msg2	%xmm0, %xmm2
-# CHECK-NEXT:  1      5     0.50    *                   sha1msg2	(%rax), %xmm2
+# CHECK-NEXT:  1      8     0.50    *                   sha1msg2	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        sha1nexte	%xmm0, %xmm2
-# CHECK-NEXT:  1      5     0.50    *                   sha1nexte	(%rax), %xmm2
+# CHECK-NEXT:  1      8     0.50    *                   sha1nexte	(%rax), %xmm2
 # CHECK-NEXT:  1      6     2.00                        sha1rnds4	$3, %xmm0, %xmm2
 # CHECK-NEXT:  1      10    0.50    *                   sha1rnds4	$3, (%rax), %xmm2
 # CHECK-NEXT:  2      2     0.75                        sha256msg1	%xmm0, %xmm2
-# CHECK-NEXT:  2      6     0.75    *                   sha256msg1	(%rax), %xmm2
+# CHECK-NEXT:  2      9     0.75    *                   sha256msg1	(%rax), %xmm2
 # CHECK-NEXT:  4      3     2.00                        sha256msg2	%xmm0, %xmm2
-# CHECK-NEXT:  5      7     2.00    *                   sha256msg2	(%rax), %xmm2
+# CHECK-NEXT:  5      10    2.00    *                   sha256msg2	(%rax), %xmm2
 # CHECK-NEXT:  1      4     2.00                        sha256rnds2	%xmm0, %xmm0, %xmm2
 # CHECK-NEXT:  1      10    0.50    *                   sha256rnds2	%xmm0, (%rax), %xmm2
 

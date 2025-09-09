@@ -317,10 +317,33 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: daddf128
+    standards:
+      - llvm_libc_ext
+    return_type: double
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: daddl
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: long double
+      - type: long double
+  - name: ddivf128
+    standards:
+      - llvm_libc_ext
+    return_type: double
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: ddivl
     standards:
       - stdc
-    return_type: long double
+    return_type: double
     arguments:
       - type: long double
       - type: long double
@@ -339,13 +362,20 @@ functions:
     arguments:
       - type: long double
       - type: long double
+  - name: dsqrtf128
+    standards:
+      - llvm_libc_ext
+    return_type: double
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: dsqrtl
     standards:
       - stdc
     return_type: double
     arguments:
       - type: long double
-  - name: dsqrtf128
+  - name: dsubf128
     standards:
       - llvm_libc_ext
     return_type: double
@@ -353,6 +383,13 @@ functions:
       - type: float128
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
+  - name: dsubl
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: long double
+      - type: long double
   - name: erff
     standards:
       - stdc
@@ -1174,6 +1211,13 @@ functions:
       - type: _Float16
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: fminimum_numl
+    standards:
+      - stdc
+    return_type: long double
+    arguments:
+      - type: long double
+      - type: long double
   - name: fminimumf
     standards:
       - stdc

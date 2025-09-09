@@ -205,7 +205,8 @@ static LayoutInfo getDefaultSIMTLayoutInfo(mlir::MLIRContext *ctx,
 }
 
 /// Helper to get the default layout for a vector type.
-static LayoutInfo getDefaultSIMTLayoutInfo(VectorType vectorTy) {
+static LayoutInfo getDefaultSIMTLayoutInfo(VectorType vectorTy,
+                                           bool isScattered = false) {
   // Expecting a 1D or 2D vector.
   assert((vectorTy.getRank() == 1 || vectorTy.getRank() == 2) &&
          "Expected 1D or 2D vector.");
@@ -218,6 +219,14 @@ static LayoutInfo getDefaultSIMTLayoutInfo(VectorType vectorTy) {
   // Packing factor is determined by the element type bitwidth.
   int packingFactor = 1;
   unsigned bitwidth = vectorTy.getElementType().getIntOrFloatBitWidth();
+  if (isScattered) {
+    packingFactor =
+        bitwidth < xegpu::targetinfo::packedSizeInBitsForGatherScatter
+            ? xegpu::targetinfo::packedSizeInBitsForGatherScatter / bitwidth
+            : 1;
+    return LayoutInfo(LaneLayout({xegpu::targetinfo::subgroupSize, 1}),
+                      LaneData({1, packingFactor}));
+  }
   if (bitwidth < xegpu::targetinfo::packedSizeInBitsForDefault)
     packingFactor = xegpu::targetinfo::packedSizeInBitsForDefault / bitwidth;
   return LayoutInfo(xegpu::LayoutAttr::get(vectorTy.getContext(),
@@ -226,7 +235,8 @@ static LayoutInfo getDefaultSIMTLayoutInfo(VectorType vectorTy) {
 }
 
 /// Helper to get the default layout for a vector type.
-static LayoutInfo getDefaultSIMTLayoutInfo(xegpu::TensorDescType tdescTy) {
+static LayoutInfo getDefaultSIMTLayoutInfo(xegpu::TensorDescType tdescTy,
+                                           bool isScattered = false) {
   // Expecting a 1D or 2D vector.
   assert((tdescTy.getRank() == 1 || tdescTy.getRank() == 2) &&
          "Expected 1D or 2D TensorDesc.");
@@ -239,7 +249,7 @@ static LayoutInfo getDefaultSIMTLayoutInfo(xegpu::TensorDescType tdescTy) {
   // Packing factor is determined by the element type bitwidth.
   unsigned bitwidth = tdescTy.getElementType().getIntOrFloatBitWidth();
 
-  if (tdescTy.isScattered()) {
+  if (isScattered) {
     int packingFactor =
         bitwidth < xegpu::targetinfo::packedSizeInBitsForGatherScatter
             ? xegpu::targetinfo::packedSizeInBitsForGatherScatter / bitwidth
@@ -715,21 +725,29 @@ void LayoutInfoPropagation::visitVectorBitcastOp(
           bitcast->getContext(), sourceLaneLayout, sourceLaneData))));
 }
 
-/// Propagate the layout of the result to the tensor descriptor and mask
+/// Propagate the layout of the result to the tensor descriptor, mask and offset
 /// operands in LoadGatherOp.
 void LayoutInfoPropagation::visitLoadGatherOp(
     xegpu::LoadGatherOp load, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
-  // The layout is strictly determined by the tensor descriptor type.
-  LayoutInfo layout = getDefaultSIMTLayoutInfo(load.getTensorDescType());
+  // The layout is strictly determined by the payload type.
+  auto payloadTy = dyn_cast<VectorType>(load.getValueType());
+  if (!payloadTy) {
+    load.emitWarning("Not propagating, non-vector payload supplied.");
+    return;
+  }
+  LayoutInfo layout = getDefaultSIMTLayoutInfo(payloadTy, /*scattered*/ true);
 
   // Mask operand should have 1D default layout.
   LayoutInfo maskLayout = getDefaultSIMTLayoutInfo(load->getContext(), 1);
 
   // Propagate the new layout to the tensor descriptor operand.
-  propagateIfChanged(operands[0], operands[0]->meet(layout));
-  // Propagate the new layout to the mask operand.
+  if (isa<xegpu::TensorDescType>(load.getSourceType()))
+    propagateIfChanged(operands[0], operands[0]->meet(layout));
+  // Propagate the new layout to the mask and optional offset operand.
   propagateIfChanged(operands[1], operands[1]->meet(maskLayout));
+  if (load.getOffsets())
+    propagateIfChanged(operands[2], operands[2]->meet(maskLayout));
 }
 
 /// Propagate the layout of the descriptor to the vector offset operand in
@@ -746,32 +764,39 @@ void LayoutInfoPropagation::visitCreateDescOp(
   propagateIfChanged(operands[1], operands[1]->meet(layout));
 }
 
-/// Set the layout for the value, tensor descriptor, and mask operands in the
-/// StoreScatterOp.
+/// Set the layout for the value, tensor descriptor, offset and mask operands in
+/// the StoreScatterOp.
 void LayoutInfoPropagation::visitStoreScatterOp(
     xegpu::StoreScatterOp storeScatter, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
   // Currently, for 2D StoreScatterOp we expect that the height dimension of
   // the tensor descriptor is equal to the subgroup size. This is ensured by
   // the op verifier.
-  ArrayRef<int64_t> tdescShape = storeScatter.getTensorDescType().getShape();
-  if (tdescShape.size() > 1)
+  auto payloadTy = dyn_cast<VectorType>(storeScatter.getValueType());
+  if (!payloadTy) {
+    storeScatter.emitWarning("Not propagating, non-vector payload supplied.");
+    return;
+  }
+  auto payloadShape = payloadTy.getShape();
+  if (payloadShape.size() > 1)
     assert(
-        tdescShape[0] == xegpu::targetinfo::subgroupSize &&
+        payloadShape[0] == xegpu::targetinfo::subgroupSize &&
         "Expected the first dimension of 2D tensor descriptor to be equal to "
         "subgroup size.");
 
-  LayoutInfo layout =
-      getDefaultSIMTLayoutInfo(storeScatter.getTensorDescType());
+  LayoutInfo payloadLayout =
+      getDefaultSIMTLayoutInfo(payloadTy, /*scattered=*/true);
 
-  // Propagate the value layout.
-  propagateIfChanged(operands[0], operands[0]->meet(layout));
-  // Propagate the tensor descriptor layout.
-  propagateIfChanged(operands[1], operands[1]->meet(layout));
-  // Use default 1D layout for mask operand.
-  LayoutInfo maskLayout =
-      getDefaultSIMTLayoutInfo(storeScatter->getContext(), 1);
+  LayoutInfo maskLayout = getDefaultSIMTLayoutInfo(1);
+  // Propagate the payload operand layout
+  propagateIfChanged(operands[0], operands[0]->meet(payloadLayout));
+  // Propagate the destination (if tdesc) operand layout
+  if (isa<xegpu::TensorDescType>(storeScatter.getDestType()))
+    propagateIfChanged(operands[1], operands[1]->meet(payloadLayout));
+  // Propagate the new layout to the mask and optional offset operand.
   propagateIfChanged(operands[2], operands[2]->meet(maskLayout));
+  if (storeScatter.getOffsets())
+    propagateIfChanged(operands[3], operands[3]->meet(maskLayout));
 }
 
 namespace {
