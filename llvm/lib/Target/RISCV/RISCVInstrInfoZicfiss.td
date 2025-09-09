@@ -62,6 +62,21 @@ defm SSAMOSWAP_W  : AMO_rr_aq_rl<0b01001, 0b010, "ssamoswap.w">;
 let Predicates = [HasStdExtZicfiss, IsRV64] in
 defm SSAMOSWAP_D  : AMO_rr_aq_rl<0b01001, 0b011, "ssamoswap.d">;
 
+let Predicates = [HasStdExtZimop] in {
+let hasSideEffects = 1, mayLoad = 0, mayStore = 1 in
+def PseudoMOP_SSPUSH : Pseudo<(outs), (ins GPRX1X5:$rs2), []>,
+    PseudoInstExpansion<(MOP_RR_7 X0, X0, GPR:$rs2)>;
+let hasSideEffects = 1, mayLoad = 1, mayStore = 0 in
+def PseudoMOP_SSPOPCHK : Pseudo<(outs), (ins GPRX1X5:$rs1), []>,
+    PseudoInstExpansion<(MOP_R_28 X0, GPR:$rs1)>;
+} // Predicates = [HasStdExtZimop]
+
+let Predicates = [HasStdExtZcmop] in {
+let Uses = [X1], hasSideEffects = 1, mayLoad = 0, mayStore = 1 in
+def PseudoMOP_C_SSPUSH : Pseudo<(outs), (ins), []>,
+    PseudoInstExpansion<(C_MOP_1)>;
+} // Predicates = [HasStdExtZcmop]
+
 //===----------------------------------------------------------------------===/
 // Compress Instruction tablegen backend.
 //===----------------------------------------------------------------------===//
