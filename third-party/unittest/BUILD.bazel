@@ -1,0 +1,113 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+exports_files(["LICENSE.TXT"])
+
+# It may be tempting to add compiler flags here, but that should be avoided.
+# The necessary warnings and other compile flags should be provided by the
+# toolchain or the `.bazelrc` file. This is just a workaround until we have a
+# widely available feature to enable unlimited stack frame instead of using
+# this `Make` variable.
+llvm_copts = [
+    "$(STACK_FRAME_UNLIMITED)",
+]
+
+# A hacky library to expose some internal headers of gtest to its own
+# implementation source files using a stripped include prefix rather than
+# file-relative-inclusion.
+#
+# FIXME: This file should be in `textual_hdrs` instead of `hdrs`, but
+# unfortunately that doesn't work with `strip_include_prefix`:
+# https://github.com/bazelbuild/bazel/issues/12424
+#
+# For now, simply disable parsing and header modules.
+cc_library(
+    name = "gtest_internal_headers",
+    testonly = True,
+    hdrs = ["googletest/src/gtest-internal-inl.h"],
+    features = [
+        "-parse_headers",
+        "-header_modules",
+    ],
+    strip_include_prefix = "googletest",
+)
+
+cc_library(
+    name = "gtest",
+    testonly = True,
+    srcs = glob(
+        [
+            "googletest/include/**/*.h",
+            "googletest/src/*.cc",
+        ],
+        exclude = [
+            "googletest/src/gtest-all.cc",
+            "googletest/include/gtest/gtest_pred_impl.h",
+        ],
+    ) + [
+    ],
+    hdrs = [
+        "googletest/include/gtest/gtest.h",
+        "googletest/include/gtest/gtest-spi.h",
+        "googletest/include/gtest/internal/gtest-port.h",
+    ],
+    copts = llvm_copts,
+    defines = [
+        "GTEST_HAS_RTTI=0",
+        "__STDC_LIMIT_MACROS",
+        "__STDC_CONSTANT_MACROS",
+    ] + select({
+        "@platforms//os:windows": ["GTEST_USE_OWN_TR1_TUPLE=0"],
+        "//conditions:default": ["GTEST_USE_OWN_TR1_TUPLE=1"],
+    }),
+    includes = [
+        "googletest/include",
+        "include",
+    ],
+    textual_hdrs = [
+        "googletest/include/gtest/gtest_pred_impl.h",
+    ],
+    deps = [
+        ":gtest_internal_headers",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "gtest_main",
+    testonly = True,
+    srcs = ["UnitTestMain/TestMain.cpp"],
+    copts = llvm_copts,
+    deps = [
+        ":gmock",
+        ":gtest",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "gmock",
+    testonly = True,
+    srcs = glob(
+        [
+            "googlemock/include/**/*.h",
+            "googlemock/src/*.cc",
+        ],
+        exclude = ["googlemock/src/gmock-all.cc"],
+    ),
+    hdrs = [
+        "googlemock/include/gmock/gmock.h",
+        "googlemock/include/gmock/gmock-matchers.h",
+    ],
+    copts = llvm_copts,
+    includes = [
+        "googlemock/include",
+        "include",
+    ],
+    deps = [":gtest"],
+)

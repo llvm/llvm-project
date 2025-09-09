@@ -1,0 +1,282 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc stdlib.h functions.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test", "libc_test_library")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+libc_test(
+    name = "abs_test",
+    srcs = ["abs_test.cpp"],
+    deps = ["//libc:abs"],
+)
+
+libc_test(
+    name = "labs_test",
+    srcs = ["labs_test.cpp"],
+    deps = ["//libc:labs"],
+)
+
+libc_test(
+    name = "llabs_test",
+    srcs = ["llabs_test.cpp"],
+    deps = ["//libc:llabs"],
+)
+
+libc_test_library(
+    name = "div_test_helper",
+    hdrs = ["DivTest.h"],
+    deps = ["//libc/test/UnitTest:LibcUnitTest"],
+)
+
+libc_test(
+    name = "div_test",
+    srcs = ["div_test.cpp"],
+    deps = [
+        ":div_test_helper",
+        "//libc:div",
+        "//libc:types_div_t",
+    ],
+)
+
+libc_test(
+    name = "ldiv_test",
+    srcs = ["ldiv_test.cpp"],
+    deps = [
+        ":div_test_helper",
+        "//libc:ldiv",
+        "//libc:types_ldiv_t",
+    ],
+)
+
+libc_test(
+    name = "lldiv_test",
+    srcs = ["lldiv_test.cpp"],
+    deps = [
+        ":div_test_helper",
+        "//libc:lldiv",
+        "//libc:types_lldiv_t",
+    ],
+)
+
+libc_test_library(
+    name = "atoi_test_helper",
+    hdrs = ["AtoiTest.h"],
+    deps = [
+        "//libc:__support_cpp_limits",
+        "//libc:__support_cpp_type_traits",
+        "//libc/test/UnitTest:LibcUnitTest",
+    ],
+)
+
+libc_test(
+    name = "atoi_test",
+    srcs = ["atoi_test.cpp"],
+    deps = [
+        ":atoi_test_helper",
+        "//libc:atoi",
+    ],
+)
+
+libc_test(
+    name = "atol_test",
+    srcs = ["atol_test.cpp"],
+    deps = [
+        ":atoi_test_helper",
+        "//libc:atol",
+    ],
+)
+
+libc_test(
+    name = "atoll_test",
+    srcs = ["atoll_test.cpp"],
+    deps = [
+        ":atoi_test_helper",
+        "//libc:atoll",
+    ],
+)
+
+libc_test(
+    name = "atof_test",
+    srcs = ["atof_test.cpp"],
+    deps = [
+        "//libc:__support_fputil_fp_bits",
+        "//libc:atof",
+        "//libc/test/UnitTest:errno_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "bsearch_test",
+    srcs = ["bsearch_test.cpp"],
+    deps = [
+        "//libc:bsearch",
+        "//libc:types_size_t",
+    ],
+)
+
+libc_test_library(
+    name = "qsort_test_helper",
+    hdrs = ["SortingTest.h"],
+    deps = [
+        "//libc:__support_macros_config",
+        "//libc/test/UnitTest:LibcUnitTest",
+    ],
+)
+
+libc_test(
+    name = "quick_sort_test",
+    srcs = ["quick_sort_test.cpp"],
+    deps = [
+        ":qsort_test_helper",
+        "//libc:qsort",
+        "//libc:qsort_util",
+        "//libc:types_size_t",
+    ],
+)
+
+libc_test(
+    name = "heap_sort_test",
+    srcs = ["heap_sort_test.cpp"],
+    deps = [
+        ":qsort_test_helper",
+        "//libc:qsort",
+        "//libc:qsort_util",
+        "//libc:types_size_t",
+    ],
+)
+
+libc_test(
+    name = "qsort_r_test",
+    srcs = ["qsort_r_test.cpp"],
+    deps = [
+        "//libc:qsort_r",
+        "//libc:types_size_t",
+    ],
+)
+
+libc_test_library(
+    name = "strfrom_test_helper",
+    hdrs = ["StrfromTest.h"],
+    deps = [
+        "//libc:__support_cpp_type_traits",
+        "//libc:__support_fputil_fp_bits",
+        "//libc/test/UnitTest:LibcUnitTest",
+    ],
+)
+
+libc_test(
+    name = "strfromf_test",
+    srcs = ["strfromf_test.cpp"],
+    deps = [
+        ":strfrom_test_helper",
+        "//libc:strfromf",
+    ],
+)
+
+libc_test(
+    name = "strfromd_test",
+    srcs = ["strfromd_test.cpp"],
+    deps = [
+        ":strfrom_test_helper",
+        "//libc:strfromd",
+    ],
+)
+
+libc_test(
+    name = "strfroml_test",
+    srcs = ["strfroml_test.cpp"],
+    deps = [
+        ":strfrom_test_helper",
+        "//libc:strfroml",
+    ],
+)
+
+libc_test_library(
+    name = "strtol_test_helper",
+    hdrs = ["StrtolTest.h"],
+    deps = [
+        "//libc:__support_cpp_limits",
+        "//libc:__support_cpp_type_traits",
+        "//libc:__support_ctype_utils",
+        "//libc:__support_libc_errno",
+        "//libc:__support_macros_properties_architectures",
+        "//libc:errno",
+        "//libc/test/UnitTest:LibcUnitTest",
+        "//libc/test/UnitTest:errno_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "strtol_test",
+    srcs = ["strtol_test.cpp"],
+    deps = [
+        ":strtol_test_helper",
+        "//libc:strtol",
+    ],
+)
+
+libc_test(
+    name = "strtoll_test",
+    srcs = ["strtoll_test.cpp"],
+    deps = [
+        ":strtol_test_helper",
+        "//libc:strtoll",
+    ],
+)
+
+libc_test(
+    name = "strtoul_test",
+    srcs = ["strtoul_test.cpp"],
+    deps = [
+        ":strtol_test_helper",
+        "//libc:strtoul",
+    ],
+)
+
+libc_test(
+    name = "strtoull_test",
+    srcs = ["strtoull_test.cpp"],
+    deps = [
+        ":strtol_test_helper",
+        "//libc:strtoull",
+    ],
+)
+
+libc_test(
+    name = "strtof_test",
+    srcs = ["strtof_test.cpp"],
+    deps = [
+        "//libc:__support_fputil_fp_bits",
+        "//libc:strtof",
+        "//libc/test/UnitTest:errno_test_helpers",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "strtod_test",
+    srcs = ["strtod_test.cpp"],
+    deps = [
+        "//libc:__support_fputil_fp_bits",
+        "//libc:strtod",
+        "//libc/test/UnitTest:errno_test_helpers",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "strtold_test",
+    srcs = ["strtold_test.cpp"],
+    deps = [
+        "//libc:__support_fputil_fp_bits",
+        "//libc:__support_uint128",
+        "//libc:strtold",
+        "//libc/test/UnitTest:errno_test_helpers",
+    ],
+)

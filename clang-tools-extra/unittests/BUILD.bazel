@@ -1,0 +1,111 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = ["layering_check"],
+)
+
+licenses(["notice"])
+
+cc_test(
+    name = "clang_tidy_test",
+    size = "small",
+    srcs = glob(
+        [
+            "clang-tidy/*.cpp",
+            "clang-tidy/*.h",
+        ],
+        allow_empty = False,
+    ),
+    includes = ["clang-tidy/include"],
+    deps = [
+        "//clang:ast",
+        "//clang:ast_matchers",
+        "//clang:basic",
+        "//clang:frontend",
+        "//clang:lex",
+        "//clang:serialization",
+        "//clang:testing",
+        "//clang:tooling",
+        "//clang:tooling_core",
+        "//clang:transformer",
+        "//clang-tools-extra/clang-tidy:android",
+        "//clang-tools-extra/clang-tidy:google",
+        "//clang-tools-extra/clang-tidy:lib",
+        "//clang-tools-extra/clang-tidy:llvm",
+        "//clang-tools-extra/clang-tidy:misc",
+        "//clang-tools-extra/clang-tidy:modernize",
+        "//clang-tools-extra/clang-tidy:objc",
+        "//clang-tools-extra/clang-tidy:performance",
+        "//clang-tools-extra/clang-tidy:readability",
+        "//clang-tools-extra/clang-tidy:tool",
+        "//clang-tools-extra/clang-tidy:utils",
+        "//llvm:FrontendOpenMP",
+        "//llvm:Support",
+        "//llvm:TestingAnnotations",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+expand_template(
+    name = "clang_doc_config_h",
+    out = "clang-doc/config.h",
+    substitutions = {
+        "#define CLANG_DOC_TEST_ASSET_DIR \"${CLANG_DOC_TEST_ASSET_DIR}\"": "#define CLANG_DOC_TEST_ASSET_DIR \"clang-tools-extra/clang-doc/assets\"",
+    },
+    template = "clang-doc/config.h.cmake",
+)
+
+cc_library(
+    name = "clang_doc_config",
+    hdrs = ["clang-doc/config.h"],
+)
+
+cc_test(
+    name = "clang_doc_test",
+    size = "small",
+    srcs = glob(
+        [
+            "clang-doc/*.cpp",
+            "clang-doc/*.h",
+        ],
+        allow_empty = False,
+        exclude = ["clang-doc/config.h"],
+    ),
+    data = ["//clang-tools-extra/clang-doc:assets"],
+    includes = ["clang-doc"],
+    deps = [
+        ":clang_doc_config",
+        "//clang:ast",
+        "//clang:basic",
+        "//clang-tools-extra/clang-doc:clang-doc-support",
+        "//clang-tools-extra/clang-doc:generators",
+        "//clang-tools-extra/clang-doc:lib",
+        "//llvm:BitstreamReader",
+        "//llvm:BitstreamWriter",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "clang_apply_replacements_test",
+    srcs = glob(["clang-apply-replacements/**/*.cpp"]),
+    deps = [
+        "//clang:format",
+        "//clang-tools-extra/clang-apply-replacements:lib",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
