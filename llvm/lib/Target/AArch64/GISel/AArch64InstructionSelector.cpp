@@ -2917,8 +2917,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       bool IsGOTSigned = MF.getInfo<AArch64FunctionInfo>()->hasELFSignedGOT();
       I.setDesc(TII.get(IsGOTSigned ? AArch64::LOADgotAUTH : AArch64::LOADgot));
       I.getOperand(1).setTargetFlags(OpFlags);
-      if (IsGOTSigned)
-        I.addImplicitDefUseOperands(MF);
+      I.addImplicitDefUseOperands(MF);
     } else if (TM.getCodeModel() == CodeModel::Large &&
                !TM.isPositionIndependent()) {
       // Materialize the global using movz/movk instructions.
