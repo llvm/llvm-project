@@ -334,7 +334,7 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
         SourceLocation()));
     ArgExprs.push_back(IntegerLiteral::Create(
         Ctx, llvm::APInt(1, Semantic.Explicit), Ctx.BoolTy, SourceLocation()));
-    II = PP.getIdentifierInfo(Semantic.Name.upper());
+    II = PP.getIdentifierInfo(Semantic.Name);
     break;
   }
   case ParsedAttr::UnknownAttribute: // FIXME: maybe this is obsolete?

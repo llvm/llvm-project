@@ -4,7 +4,7 @@
 // expected-error@+1 {{expected HLSL Semantic identifier}}
 void Entry(int GI : ) { }
 
-// expected-error@+1 {{unknown HLSL semantic 'SV_IWANTAPONY'}}
+// expected-error@+1 {{unknown HLSL semantic 'SV_IWantAPony'}}
 void Pony(int GI : SV_IWantAPony) { }
 
 // expected-error@+3 {{expected HLSL Semantic identifier}}
@@ -37,5 +37,5 @@ void BigPony(int GI : é) { }
 void UTFPony(int GI : 😊) { }
 
 // expected-error@+2 {{character <U+1F60A> not allowed in an identifier}}
-// expected-error@+1 {{unknown HLSL semantic 'PONYWITHA😊'}}
+// expected-error@+1 {{unknown HLSL semantic 'PonyWithA😊'}}
 void SmilingPony(int GI : PonyWithA😊) { }

@@ -783,7 +783,7 @@ bool SemaHLSL::isSemanticValid(FunctionDecl *FD, DeclaratorDecl *D) {
   if (!RT)
     return false;
 
-  const RecordDecl *RD = RT->getDecl();
+  const RecordDecl *RD = RT->getOriginalDecl();
   for (FieldDecl *Field : RD->fields()) {
     if (!isSemanticValid(FD, Field))
       return false;
@@ -1577,7 +1577,7 @@ bool SemaHLSL::diagnosePositionType(QualType T, const ParsedAttr &AL) {
 
 void SemaHLSL::diagnoseSystemSemanticAttr(Decl *D, const ParsedAttr &AL,
                                           std::optional<unsigned> Index) {
-  StringRef SemanticName = AL.getAttrName()->getName();
+  std::string SemanticName = AL.getAttrName()->getName().upper();
 
   auto *VD = cast<ValueDecl>(D);
   QualType ValueType = VD->getType();
@@ -1635,7 +1635,7 @@ void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
   std::optional<unsigned> Index =
       ExplicitIndex ? std::optional<unsigned>(IndexValue) : std::nullopt;
 
-  if (AL.getAttrName()->getName().starts_with("SV_"))
+  if (AL.getAttrName()->getName().starts_with_insensitive("SV_"))
     diagnoseSystemSemanticAttr(D, AL, Index);
   else
     Diag(AL.getLoc(), diag::err_hlsl_unknown_semantic) << AL;
