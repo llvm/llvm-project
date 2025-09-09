@@ -11630,6 +11630,48 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(
       return DAG.getNode(ISD::AND, DL, VT, LHS, Shift);
     }
 
+    // Check for sign bit test patterns that can use TST optimization.
+    // (SELECT_CC setlt, singn_extend_inreg, 0, tval, fval)
+    //                          -> TST %operand, sign_bit; CSEL
+    // (SELECT_CC setlt, singn_extend, 0, tval, fval)
+    //                          -> TST %operand, sign_bit; CSEL
+    if (CC == ISD::SETLT && RHSC && RHSC->isZero() && LHS.hasOneUse() &&
+        (LHS.getOpcode() == ISD::SIGN_EXTEND_INREG ||
+         LHS.getOpcode() == ISD::SIGN_EXTEND)) {
+
+      SDValue OriginalVal = LHS.getOperand(0);
+      EVT OriginalVT = LHS.getOpcode() == ISD::SIGN_EXTEND_INREG
+                           ? cast<VTSDNode>(LHS.getOperand(1))->getVT()
+                           : OriginalVal.getValueType();
+
+      // Apply TST optimization for integer types
+      if (OriginalVT.isInteger()) {
+        // Calculate the sign bit for the original type
+        unsigned BitWidth = OriginalVT.getSizeInBits();
+        APInt SignBit = APInt::getSignedMinValue(BitWidth);
+        EVT TestVT = (BitWidth <= 32) ? MVT::i32 : MVT::i64;
+        unsigned TestBitWidth = TestVT.getSizeInBits();
+        if (BitWidth < TestBitWidth) {
+          SignBit = SignBit.zext(TestBitWidth);
+        }
+
+        SDValue SignBitConst = DAG.getConstant(SignBit, DL, TestVT);
+        SDValue TestOperand = OriginalVal;
+        if (OriginalVal.getValueType() != TestVT) {
+          TestOperand = DAG.getNode(ISD::ZERO_EXTEND, DL, TestVT, OriginalVal);
+        }
+
+        SDValue TST =
+            DAG.getNode(AArch64ISD::ANDS, DL, DAG.getVTList(TestVT, MVT::i32),
+                        TestOperand, SignBitConst);
+
+        SDValue Flags = TST.getValue(1);
+        return DAG.getNode(AArch64ISD::CSEL, DL, TVal.getValueType(), TVal,
+                           FVal, DAG.getConstant(AArch64CC::MI, DL, MVT::i32),
+                           Flags);
+      }
+    }
+
     // Canonicalise absolute difference patterns:
     //   select_cc lhs, rhs, sub(lhs, rhs), sub(rhs, lhs), cc ->
     //   select_cc lhs, rhs, sub(lhs, rhs), neg(sub(lhs, rhs)), cc
