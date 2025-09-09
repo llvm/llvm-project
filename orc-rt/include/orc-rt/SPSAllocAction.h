@@ -43,4 +43,4 @@ template <typename... SPSArgTs> struct SPSAllocActionFunction {
 
 } // namespace orc_rt
 
-#endif // ORC_RT_SPSWRAPPERFUNCTION_H
+#endif // ORC_RT_SPSALLOCACTION_H
