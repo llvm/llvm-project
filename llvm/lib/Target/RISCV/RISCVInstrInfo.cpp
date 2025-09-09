@@ -3511,7 +3511,6 @@ RISCVInstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
       return outliner::InstrType::Illegal;
   }
 
-  // LPADs should not be outlined too
   if (isLPAD(MI))
     return outliner::InstrType::Illegal;
 
