@@ -157,7 +157,7 @@ protected:
 
   NormalizedConstraint(NormalizedConstraint *LHS, CompoundConstraintKind CCK,
                        NormalizedConstraint *RHS)
-      : Compound{llvm::to_underlying(ConstraintKind::Compound), CCK, LHS, RHS} {
+      : Compound{llvm::to_underlying(ConstraintKind::Compound), llvm::to_underlying(CCK), LHS, RHS} {
   }
 
   bool hasParameterMapping() const {
