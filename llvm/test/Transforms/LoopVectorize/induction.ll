@@ -1854,8 +1854,8 @@ define void @scalarize_induction_variable_04(ptr %a, ptr %p, i32 %n) {
 ; INTERLEAVE-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[DOTIDX]]
 ; INTERLEAVE-NEXT:    [[DOTIDX5:%.*]] = shl nsw i64 [[TMP14]], 4
 ; INTERLEAVE-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[DOTIDX5]]
-; INTERLEAVE-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i32>, ptr [[TMP18]], align 1
-; INTERLEAVE-NEXT:    [[WIDE_VEC3:%.*]] = load <16 x i32>, ptr [[TMP19]], align 1
+; INTERLEAVE-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i32>, ptr [[TMP18]], align 1, !alias.scope [[META17:![0-9]+]]
+; INTERLEAVE-NEXT:    [[WIDE_VEC3:%.*]] = load <16 x i32>, ptr [[TMP19]], align 1, !alias.scope [[META17]]
 ; INTERLEAVE-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[PAIR_I32:%.*]], ptr [[P]], i64 [[INDEX]], i32 1
 ; INTERLEAVE-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP11]], i32 1
 ; INTERLEAVE-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP12]], i32 1
@@ -1865,21 +1865,21 @@ define void @scalarize_induction_variable_04(ptr %a, ptr %p, i32 %n) {
 ; INTERLEAVE-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP16]], i32 1
 ; INTERLEAVE-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP17]], i32 1
 ; INTERLEAVE-NEXT:    [[TMP28:%.*]] = extractelement <16 x i32> [[WIDE_VEC]], i64 0
-; INTERLEAVE-NEXT:    store i32 [[TMP28]], ptr [[TMP20]], align 1, !alias.scope [[META17:![0-9]+]], !noalias [[META20:![0-9]+]]
+; INTERLEAVE-NEXT:    store i32 [[TMP28]], ptr [[TMP20]], align 1, !alias.scope [[META20:![0-9]+]], !noalias [[META17]]
 ; INTERLEAVE-NEXT:    [[TMP29:%.*]] = extractelement <16 x i32> [[WIDE_VEC]], i64 4
-; INTERLEAVE-NEXT:    store i32 [[TMP29]], ptr [[TMP21]], align 1, !alias.scope [[META17]], !noalias [[META20]]
+; INTERLEAVE-NEXT:    store i32 [[TMP29]], ptr [[TMP21]], align 1, !alias.scope [[META20]], !noalias [[META17]]
 ; INTERLEAVE-NEXT:    [[TMP30:%.*]] = extractelement <16 x i32> [[WIDE_VEC]], i64 8
-; INTERLEAVE-NEXT:    store i32 [[TMP30]], ptr [[TMP22]], align 1, !alias.scope [[META17]], !noalias [[META20]]
+; INTERLEAVE-NEXT:    store i32 [[TMP30]], ptr [[TMP22]], align 1, !alias.scope [[META20]], !noalias [[META17]]
 ; INTERLEAVE-NEXT:    [[TMP31:%.*]] = extractelement <16 x i32> [[WIDE_VEC]], i64 12
-; INTERLEAVE-NEXT:    store i32 [[TMP31]], ptr [[TMP23]], align 1, !alias.scope [[META17]], !noalias [[META20]]
+; INTERLEAVE-NEXT:    store i32 [[TMP31]], ptr [[TMP23]], align 1, !alias.scope [[META20]], !noalias [[META17]]
 ; INTERLEAVE-NEXT:    [[TMP32:%.*]] = extractelement <16 x i32> [[WIDE_VEC3]], i64 0
-; INTERLEAVE-NEXT:    store i32 [[TMP32]], ptr [[TMP24]], align 1, !alias.scope [[META17]], !noalias [[META20]]
+; INTERLEAVE-NEXT:    store i32 [[TMP32]], ptr [[TMP24]], align 1, !alias.scope [[META20]], !noalias [[META17]]
 ; INTERLEAVE-NEXT:    [[TMP33:%.*]] = extractelement <16 x i32> [[WIDE_VEC3]], i64 4
-; INTERLEAVE-NEXT:    store i32 [[TMP33]], ptr [[TMP25]], align 1, !alias.scope [[META17]], !noalias [[META20]]
+; INTERLEAVE-NEXT:    store i32 [[TMP33]], ptr [[TMP25]], align 1, !alias.scope [[META20]], !noalias [[META17]]
 ; INTERLEAVE-NEXT:    [[TMP34:%.*]] = extractelement <16 x i32> [[WIDE_VEC3]], i64 8
-; INTERLEAVE-NEXT:    store i32 [[TMP34]], ptr [[TMP26]], align 1, !alias.scope [[META17]], !noalias [[META20]]
+; INTERLEAVE-NEXT:    store i32 [[TMP34]], ptr [[TMP26]], align 1, !alias.scope [[META20]], !noalias [[META17]]
 ; INTERLEAVE-NEXT:    [[TMP35:%.*]] = extractelement <16 x i32> [[WIDE_VEC3]], i64 12
-; INTERLEAVE-NEXT:    store i32 [[TMP35]], ptr [[TMP27]], align 1, !alias.scope [[META17]], !noalias [[META20]]
+; INTERLEAVE-NEXT:    store i32 [[TMP35]], ptr [[TMP27]], align 1, !alias.scope [[META20]], !noalias [[META17]]
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; INTERLEAVE-NEXT:    [[TMP36:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; INTERLEAVE-NEXT:    br i1 [[TMP36]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
@@ -4332,10 +4332,14 @@ define void @trunciv(ptr nocapture %a, i32 %start, i64 %k) {
 ; IND-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[K:%.*]], 2
 ; IND-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; IND:       vector.scevcheck:
-; IND-NEXT:    [[DOTNOT:%.*]] = icmp ult i64 [[K]], 2147483649
-; IND-NEXT:    br i1 [[DOTNOT]], label [[VECTOR_PH:%.*]], label [[SCALAR_PH]]
+; IND-NEXT:    [[TMP5:%.*]] = and i64 [[K]], 2147483648
+; IND-NEXT:    [[TMP6:%.*]] = icmp ne i64 [[TMP5]], 0
+; IND-NEXT:    [[TMP7:%.*]] = add i64 [[K]], -4294967297
+; IND-NEXT:    [[TMP8:%.*]] = icmp ult i64 [[TMP7]], -4294967296
+; IND-NEXT:    [[TMP4:%.*]] = or i1 [[TMP6]], [[TMP8]]
+; IND-NEXT:    br i1 [[TMP4]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; IND:       vector.ph:
-; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[K]], 4294967294
+; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[K]], 6442450942
 ; IND-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IND:       vector.body:
 ; IND-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -4372,10 +4376,14 @@ define void @trunciv(ptr nocapture %a, i32 %start, i64 %k) {
 ; UNROLL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[K:%.*]], 4
 ; UNROLL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; UNROLL:       vector.scevcheck:
-; UNROLL-NEXT:    [[DOTNOT:%.*]] = icmp ult i64 [[K]], 2147483649
-; UNROLL-NEXT:    br i1 [[DOTNOT]], label [[VECTOR_PH:%.*]], label [[SCALAR_PH]]
+; UNROLL-NEXT:    [[TMP5:%.*]] = and i64 [[K]], 2147483648
+; UNROLL-NEXT:    [[TMP6:%.*]] = icmp ne i64 [[TMP5]], 0
+; UNROLL-NEXT:    [[TMP7:%.*]] = add i64 [[K]], -4294967297
+; UNROLL-NEXT:    [[TMP8:%.*]] = icmp ult i64 [[TMP7]], -4294967296
+; UNROLL-NEXT:    [[TMP9:%.*]] = or i1 [[TMP6]], [[TMP8]]
+; UNROLL-NEXT:    br i1 [[TMP9]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; UNROLL:       vector.ph:
-; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[K]], 4294967292
+; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[K]], 6442450940
 ; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL:       vector.body:
 ; UNROLL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -4460,10 +4468,14 @@ define void @trunciv(ptr nocapture %a, i32 %start, i64 %k) {
 ; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[K:%.*]], 8
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; INTERLEAVE:       vector.scevcheck:
-; INTERLEAVE-NEXT:    [[DOTNOT:%.*]] = icmp ult i64 [[K]], 2147483649
-; INTERLEAVE-NEXT:    br i1 [[DOTNOT]], label [[VECTOR_PH:%.*]], label [[SCALAR_PH]]
+; INTERLEAVE-NEXT:    [[TMP5:%.*]] = and i64 [[K]], 2147483648
+; INTERLEAVE-NEXT:    [[TMP6:%.*]] = icmp ne i64 [[TMP5]], 0
+; INTERLEAVE-NEXT:    [[TMP7:%.*]] = add i64 [[K]], -4294967297
+; INTERLEAVE-NEXT:    [[TMP8:%.*]] = icmp ult i64 [[TMP7]], -4294967296
+; INTERLEAVE-NEXT:    [[TMP9:%.*]] = or i1 [[TMP6]], [[TMP8]]
+; INTERLEAVE-NEXT:    br i1 [[TMP9]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; INTERLEAVE:       vector.ph:
-; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[K]], 4294967288
+; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[K]], 6442450936
 ; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; INTERLEAVE:       vector.body:
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
