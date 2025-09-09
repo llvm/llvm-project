@@ -163,7 +163,6 @@ static_library("Support") {
     "ToolOutputFile.cpp",
     "TrieRawHashMap.cpp",
     "Twine.cpp",
-    "TypeSize.cpp",
     "Unicode.cpp",
     "UnicodeCaseFold.cpp",
     "UnicodeNameToCodepoint.cpp",
