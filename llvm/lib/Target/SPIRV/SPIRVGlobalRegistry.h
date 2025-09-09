@@ -29,10 +29,6 @@ using SPIRVType = const MachineInstr;
 using StructOffsetDecorator = std::function<void(Register)>;
 
 class SPIRVGlobalRegistry : public SPIRVIRMapping {
-public:
-  enum class FPVariant { NONE, IEEE_FLOAT, BRAIN_FLOAT };
-
-private:
   // Registers holding values which have types associated with them.
   // Initialized upon VReg definition in IRTranslator.
   // Do not confuse this with DuplicatesTracker as DT maps Type* to <MF, Reg>
@@ -91,11 +87,6 @@ private:
 
   // map of aliasing decorations to aliasing metadata
   std::unordered_map<const MDNode *, MachineInstr *> AliasInstMDMap;
-
-  // Maps floating point Registers to their FPVariant (float type kind), given
-  // the MachineFunction.
-  DenseMap<const MachineFunction *, DenseMap<Register, FPVariant>>
-      VRegFPVariantMap;
 
   // Add a new OpTypeXXX instruction without checking for duplicates.
   SPIRVType *createSPIRVType(const Type *Type, MachineIRBuilder &MIRBuilder,
@@ -431,10 +422,6 @@ public:
   // structures referring this instruction.
   void invalidateMachineInstr(MachineInstr *MI);
 
-  // Return the FPVariant of to the given floating-point regiester.
-  FPVariant getFPVariantForVReg(Register VReg,
-                                const MachineFunction *MF = nullptr);
-
 private:
   SPIRVType *getOpTypeBool(MachineIRBuilder &MIRBuilder);
 
@@ -450,6 +437,9 @@ private:
                           bool IsSigned = false);
 
   SPIRVType *getOpTypeFloat(uint32_t Width, MachineIRBuilder &MIRBuilder);
+
+  SPIRVType *getOpTypeFloat(uint32_t Width, MachineIRBuilder &MIRBuilder,
+                            SPIRV::FPEncoding::FPEncoding FPEncode);
 
   SPIRVType *getOpTypeVoid(MachineIRBuilder &MIRBuilder);
 
