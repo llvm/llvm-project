@@ -97,7 +97,7 @@ RT_API_ATTRS void Component::EstablishDescriptor(Descriptor &descriptor,
   ISO::CFI_attribute_t attribute{static_cast<ISO::CFI_attribute_t>(
       genre_ == Genre::Allocatable || genre_ == Genre::AllocatableDevice
           ? CFI_attribute_allocatable
-          : genre_ == Genre::Pointer || genre_ == Genre::pointerDevice
+          : genre_ == Genre::Pointer || genre_ == Genre::PointerDevice
           ? CFI_attribute_pointer
           : CFI_attribute_other)};
   TypeCategory cat{category()};
@@ -118,7 +118,7 @@ RT_API_ATTRS void Component::EstablishDescriptor(Descriptor &descriptor,
   } else if (cat == TypeCategory::Derived) {
     if (const DerivedType * type{derivedType()}) {
       descriptor.Establish(
-          *type, nullptr, rank_, nullptr, attribute, false, allocatorIdx);
+          *type, nullptr, rank_, nullptr, attribute, allocatorIdx);
     } else { // unlimited polymorphic
       descriptor.Establish(TypeCode{TypeCategory::Derived, 0}, 0, nullptr,
           rank_, nullptr, attribute, true, allocatorIdx);
