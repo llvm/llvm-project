@@ -1359,10 +1359,10 @@ def int_ppc_vsx_lxvp :
     DefaultAttrsIntrinsic<[llvm_v256i1_ty], [llvm_ptr_ty],
                           [IntrReadMem, IntrArgMemOnly]>;
 def int_ppc_vsx_lxvrl :
-    DefaultAttrsIntrinsic<[llvm_anyvector_ty], [llvm_ptr_ty, llvm_i64_ty],
+    DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_ptr_ty, llvm_i64_ty],
                           [IntrReadMem, IntrArgMemOnly]>;
 def int_ppc_vsx_lxvrll :
-    DefaultAttrsIntrinsic<[llvm_anyvector_ty], [llvm_ptr_ty, llvm_i64_ty],
+    DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_ptr_ty, llvm_i64_ty],
                           [IntrReadMem, IntrArgMemOnly]>;
 def int_ppc_vsx_lxvprl :
     DefaultAttrsIntrinsic<[llvm_v256i1_ty], [llvm_ptr_ty, llvm_i64_ty],
@@ -1390,10 +1390,10 @@ def int_ppc_vsx_stxvp :
       Intrinsic<[], [llvm_v256i1_ty, llvm_ptr_ty], [IntrWriteMem,
       IntrArgMemOnly]>;
 def int_ppc_vsx_stxvrl :
-      Intrinsic<[], [llvm_anyvector_ty, llvm_ptr_ty, llvm_i64_ty],
+      Intrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty, llvm_i64_ty],
       [IntrWriteMem, IntrArgMemOnly]>;
 def int_ppc_vsx_stxvrll :
-      Intrinsic<[], [llvm_anyvector_ty, llvm_ptr_ty, llvm_i64_ty],
+      Intrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty, llvm_i64_ty],
       [IntrWriteMem, IntrArgMemOnly]>;
 def int_ppc_vsx_stxvprl :
       Intrinsic<[], [llvm_v256i1_ty, llvm_ptr_ty, llvm_i64_ty], [IntrWriteMem,
