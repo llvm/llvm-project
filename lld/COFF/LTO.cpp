@@ -133,11 +133,11 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
         llvm::heavyweight_hardware_concurrency(ctx.config.thinLTOJobs));
   }
 
-  if (!ctx.config.dtltoDistributor.empty())
-    ltoObj->Dtlto = true;
-
   ltoObj = std::make_unique<lto::LTO>(createConfig(), backend,
                                       ctx.config.ltoPartitions);
+
+  if (!ctx.config.dtltoDistributor.empty())
+    ltoObj->Dtlto = true;
 }
 
 BitcodeCompiler::~BitcodeCompiler() = default;
