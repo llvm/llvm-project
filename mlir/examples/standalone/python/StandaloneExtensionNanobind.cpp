@@ -27,7 +27,8 @@ NB_MODULE(_standaloneDialectsNanobind, m) {
       [](MlirContext context, bool load) {
         MlirDialectHandle standaloneHandle = mlirGetDialectHandle__standalone__();
         MlirDialectHandle arithHandle = mlirGetDialectHandle__arith__();
-        mlirDialectHandleRegisterDialect(handle, context);
+        mlirDialectHandleRegisterDialect(standaloneHandle, context);
+        mlirDialectHandleRegisterDialect(arithHandle, context);
         if (load) {
           mlirDialectHandleLoadDialect(handle, context);
         }
