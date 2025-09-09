@@ -863,11 +863,27 @@ llvm::Instruction *CGHLSLRuntime::getConvergenceToken(BasicBlock &BB) {
 
 class OpaqueValueVisitor : public RecursiveASTVisitor<OpaqueValueVisitor> {
 public:
-  llvm::SmallPtrSet<OpaqueValueExpr *, 8> OVEs;
+  llvm::SmallVector<OpaqueValueExpr *, 8> OVEs;
+  llvm::SmallPtrSet<OpaqueValueExpr *, 8> Visited;
   OpaqueValueVisitor() {}
 
+  bool VisitHLSLOutArgExpr(HLSLOutArgExpr *) {
+    // These need to be bound in CodeGenFunction::EmitHLSLOutArgLValues
+    // or CodeGenFunction::EmitHLSLOutArgExpr. If they are part of this
+    // traversal, the temporary containing the copy out will not have
+    // been created yet.
+    return false;
+  }
+
   bool VisitOpaqueValueExpr(OpaqueValueExpr *E) {
-    OVEs.insert(E);
+    // Traverse the source expression first.
+    if (E->getSourceExpr())
+      TraverseStmt(E->getSourceExpr());
+
+    // Then add this OVE if we haven't seen it before.
+    if (Visited.insert(E).second)
+      OVEs.push_back(E);
+
     return true;
   }
 };
