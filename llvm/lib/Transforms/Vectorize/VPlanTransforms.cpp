@@ -2214,8 +2214,8 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   runPass(removeRedundantInductionCasts, Plan);
 
   runPass(simplifyRecipes, Plan);
-  runPass(simplifyBlends, Plan);
   runPass(removeDeadRecipes, Plan);
+  runPass(simplifyBlends, Plan);
   runPass(narrowToSingleScalarRecipes, Plan);
   runPass(legalizeAndOptimizeInductions, Plan);
   runPass(removeRedundantExpandSCEVRecipes, Plan);
