@@ -30,6 +30,7 @@
 using clang::format::FormatStyle;
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(FormatStyle::RawStringFormat)
+
 enum BracketAlignmentStyle : int8_t {
   BAS_Align,
   BAS_DontAlign,

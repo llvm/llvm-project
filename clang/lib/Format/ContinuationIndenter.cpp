@@ -1273,9 +1273,7 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
   }
 
   if (PreviousNonComment && PreviousNonComment->is(tok::l_paren)) {
-    auto Previous = PreviousNonComment->Previous;
-    if (Previous) {
-
+    if (auto Previous = PreviousNonComment->Previous) {
       if (Previous->isIf()) {
         CurrentState.BreakBeforeClosingParen = Style.BreakBeforeCloseBracketIf;
       } else if (Previous->isLoop(Style)) {
