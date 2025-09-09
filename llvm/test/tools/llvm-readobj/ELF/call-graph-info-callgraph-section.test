@@ -1,11 +1,11 @@
 ## Tests --call-graph-info prints information from call graph section.
 
 # RUN: llvm-mc %s -filetype=obj -triple=x86_64-pc-linux -o %t
-# RUN: llvm-readelf --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=GNU
+# RUN: llvm-readelf --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --match-full-lines --check-prefix=GNU
 # RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t --check-prefix=LLVM
 # RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t --check-prefix=JSON
 
-# GNU: llvm-readelf: warning: '[[FILE]]': callgraph section has unknown type id for 1 indirect targets.
+# GNU: {{.*}}llvm-readelf: warning: '[[FILE]]': callgraph section has unknown type id for 1 indirect targets.
 # GNU-EMPTY:
 # GNU-NEXT: INDIRECT TARGET TYPES (TYPEID [FUNC_ADDR,])
 # GNU-NEXT: UNKNOWN 6
