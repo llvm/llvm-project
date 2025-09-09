@@ -28,6 +28,7 @@ declare_mlir_python_extension(StandalonePythonSources.Pybind11Extension
     StandaloneExtensionPybind11.cpp
   EMBED_CAPI_LINK_LIBS
     StandaloneCAPI
+    MLIRCAPITransforms
   PYTHON_BINDINGS_LIBRARY pybind11
 )
 
@@ -38,6 +39,7 @@ declare_mlir_python_extension(StandalonePythonSources.NanobindExtension
     StandaloneExtensionNanobind.cpp
   EMBED_CAPI_LINK_LIBS
     StandaloneCAPI
+    MLIRCAPITransforms
   PYTHON_BINDINGS_LIBRARY nanobind
   GENERATE_TYPE_STUBS
 )
