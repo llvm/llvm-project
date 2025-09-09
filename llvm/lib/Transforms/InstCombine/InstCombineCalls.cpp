@@ -4106,8 +4106,28 @@ static Value *optimizeModularFormat(CallInst *CI, IRBuilderBase &B) {
   --FirstArgIdx;
   StringRef FnName = Args[3];
   StringRef ImplName = Args[4];
-  DenseSet<StringRef> Aspects(llvm::from_range,
-                              ArrayRef<StringRef>(Args).drop_front(5));
+  ArrayRef<StringRef> AllAspects = ArrayRef<StringRef>(Args).drop_front(5);
+
+  if (AllAspects.empty())
+    return nullptr;
+
+  SmallVector<StringRef> NeededAspects;
+  for (StringRef Aspect : AllAspects) {
+    if (Aspect == "float") {
+      if (llvm::any_of(
+              llvm::make_range(std::next(CI->arg_begin(), FirstArgIdx),
+                               CI->arg_end()),
+              [](Value *V) { return V->getType()->isFloatingPointTy(); }))
+        NeededAspects.push_back("float");
+    } else {
+      // Unknown aspects are always considered to be needed.
+      NeededAspects.push_back(Aspect);
+    }
+  }
+
+  if (NeededAspects.size() == AllAspects.size())
+    return nullptr;
+
   Module *M = CI->getModule();
   Function *Callee = CI->getCalledFunction();
   FunctionCallee ModularFn =
@@ -4130,18 +4150,8 @@ static Value *optimizeModularFormat(CallInst *CI, IRBuilderBase &B) {
     B.CreateCall(RelocNoneFn, {Sym});
   };
 
-  if (Aspects.contains("float")) {
-    Aspects.erase("float");
-    if (llvm::any_of(
-            llvm::make_range(std::next(CI->arg_begin(), FirstArgIdx),
-                             CI->arg_end()),
-            [](Value *V) { return V->getType()->isFloatingPointTy(); }))
-      ReferenceAspect("float");
-  }
-
-  SmallVector<StringRef> UnknownAspects(Aspects.begin(), Aspects.end());
-  llvm::sort(UnknownAspects);
-  for (StringRef Request : UnknownAspects)
+  llvm::sort(NeededAspects);
+  for (StringRef Request : NeededAspects)
     ReferenceAspect(Request);
 
   return New;

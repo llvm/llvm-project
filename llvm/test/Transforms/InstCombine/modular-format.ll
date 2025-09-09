@@ -8,75 +8,58 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 @.str.int = constant [3 x i8] c"%d\00"
 @.str.float = constant [3 x i8] c"%f\00"
 @.str.multi = constant [6 x i8] c"%f %d\00"
-@.str.multifp = constant [6 x i8] c"%f %f\00"
 @.str.noargs = constant [1 x i8] c"\00"
 
-; Basic Transformation
+; No aspects are specified, so no transformation occurs.
 define void @test_basic(i32 %arg) {
 ; CHECK-LABEL: @test_basic(
-; CHECK-NEXT:    call void (ptr, ...) @basic_mod(ptr nonnull @.str.int, i32 [[ARG:%.*]])
+; CHECK-NEXT:    call void (ptr, ...) @basic(ptr nonnull @.str.int, i32 [[ARG:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   call void (ptr, ...) @basic(ptr @.str.int, i32 %arg)
   ret void
 }
 
-declare void @basic(ptr, ...) "modular-format"="printf,1,2,basic_mod,basic_impl" 
-; "float" Aspect - Present
+declare void @basic(ptr, ...) #0
+
+; The "float" aspect is present and needed, so no transformation occurs.
 define void @test_float_present(double %arg) {
 ; CHECK-LABEL: @test_float_present(
-; CHECK-NEXT:    call void (ptr, ...) @float_present_mod(ptr nonnull @.str.float, double [[ARG:%.*]])
-; CHECK-NEXT:    call void @llvm.reloc.none(ptr nonnull @basic_impl_float)
+; CHECK-NEXT:    call void (ptr, ...) @float_present(ptr nonnull @.str.float, double [[ARG:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   call void (ptr, ...) @float_present(ptr @.str.float, double %arg)
   ret void
 }
 
-declare void @float_present(ptr, ...) #0
+declare void @float_present(ptr, ...) #1
 
-; Unknown Aspects
+; The "float" aspect is present but not needed, so the call is transformed.
+define void @test_float_absent(i32 %arg) {
+; CHECK-LABEL: @test_float_absent(
+; CHECK-NEXT:    call void (ptr, ...) @float_present_mod(ptr nonnull @.str.int, i32 [[ARG:%.*]])
+; CHECK-NEXT:    ret void
+;
+  call void (ptr, ...) @float_absent(ptr @.str.int, i32 %arg)
+  ret void
+}
+
+declare void @float_absent(ptr, ...) #1
+
+; Unknown aspects are always considered needed, so no transformation occurs.
 define void @test_unknown_aspects(i32 %arg) {
 ; CHECK-LABEL: @test_unknown_aspects(
-; CHECK-NEXT:    call void (ptr, ...) @unknown_aspects_mod(ptr nonnull @.str.int, i32 [[ARG:%.*]])
-; CHECK-NEXT:    call void @llvm.reloc.none(ptr nonnull @basic_impl_unknown1)
-; CHECK-NEXT:    call void @llvm.reloc.none(ptr nonnull @basic_impl_unknown2)
+; CHECK-NEXT:    call void (ptr, ...) @unknown_aspects(ptr nonnull @.str.int, i32 [[ARG:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   call void (ptr, ...) @unknown_aspects(ptr @.str.int, i32 %arg)
   ret void
 }
 
-declare void @unknown_aspects(ptr, ...) "modular-format"="printf,1,2,unknown_aspects_mod,basic_impl,unknown1,unknown2"
+declare void @unknown_aspects(ptr, ...) #2
 
-; Multiple Aspects
-define void @test_multiple_aspects(double %arg1, i32 %arg2) {
-; CHECK-LABEL: @test_multiple_aspects(
-; CHECK-NEXT:    call void (ptr, ...) @multiple_aspects_mod(ptr nonnull @.str.multi, double [[ARG1:%.*]], i32 [[ARG2:%.*]])
-; CHECK-NEXT:    call void @llvm.reloc.none(ptr nonnull @basic_impl_float)
-; CHECK-NEXT:    call void @llvm.reloc.none(ptr nonnull @basic_impl_unknown)
-; CHECK-NEXT:    ret void
-;
-  call void (ptr, ...) @multiple_aspects(ptr @.str.multi, double %arg1, i32 %arg2)
-  ret void
-}
-
-declare void @multiple_aspects(ptr, ...) "modular-format"="printf,1,2,multiple_aspects_mod,basic_impl,float,unknown"
-
-; Multiple Floating-Point Arguments
-define void @test_multiple_fp_args(double %arg1, float %arg2) {
-; CHECK-LABEL: @test_multiple_fp_args(
-; CHECK-NEXT:    call void (ptr, ...) @float_present_mod(ptr nonnull @.str.multifp, double [[ARG1:%.*]], float [[ARG2:%.*]])
-; CHECK-NEXT:    call void @llvm.reloc.none(ptr nonnull @basic_impl_float)
-; CHECK-NEXT:    ret void
-;
-  call void (ptr, ...) @multiple_fp_args(ptr @.str.multifp, double %arg1, float %arg2)
-  ret void
-}
-
-declare void @multiple_fp_args(ptr, ...) #0
-
-; No Arguments to Check
+; The call has no arguments to check, so the "float" aspect is not needed and
+; the call is transformed.
 define void @test_no_args_to_check() {
 ; CHECK-LABEL: @test_no_args_to_check(
 ; CHECK-NEXT:    call void (ptr, ...) @float_present_mod(ptr nonnull @.str.noargs)
@@ -86,19 +69,37 @@ define void @test_no_args_to_check() {
   ret void
 }
 
-declare void @no_args_to_check(ptr, ...) #0
+declare void @no_args_to_check(ptr, ...) #1
 
-; First argument index != 2
+; The first argument index is not 2. The "float" aspect is needed, so no
+; transformation occurs.
 define void @test_first_arg_idx(i32 %ignored, double %arg) {
 ; CHECK-LABEL: @test_first_arg_idx(
-; CHECK-NEXT:    call void (i32, ptr, ...) @first_arg_idx_mod(i32 [[IGNORED:%.*]], ptr nonnull @.str.float, double [[ARG:%.*]])
-; CHECK-NEXT:    call void @llvm.reloc.none(ptr nonnull @basic_impl_float)
+; CHECK-NEXT:    call void (i32, ptr, ...) @first_arg_idx(i32 [[IGNORED:%.*]], ptr nonnull @.str.float, double [[ARG:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   call void (i32, ptr, ...) @first_arg_idx(i32 %ignored, ptr @.str.float, double %arg)
   ret void
 }
 
-declare void @first_arg_idx(i32, ptr, ...) "modular-format"="printf,2,3,first_arg_idx_mod,basic_impl,float"
+declare void @first_arg_idx(i32, ptr, ...) #3
 
-attributes #0 = { "modular-format"="printf,1,2,float_present_mod,basic_impl,float" }
+; One aspect ("unknown") is needed, but one ("float") is not. The call is
+; transformed, and a reference to the needed aspect is emitted.
+define void @test_partial_aspects(i32 %arg) {
+; CHECK-LABEL: @test_partial_aspects(
+; CHECK-NEXT:    call void (ptr, ...) @multiple_aspects_mod(ptr nonnull @.str.int, i32 [[ARG:%.*]])
+; CHECK-NEXT:    call void @llvm.reloc.none(ptr nonnull @basic_impl_unknown)
+; CHECK-NEXT:    ret void
+;
+  call void (ptr, ...) @partial_aspects(ptr @.str.int, i32 %arg)
+  ret void
+}
+
+declare void @partial_aspects(ptr, ...) #4
+
+attributes #0 = { "modular-format"="printf,1,2,basic_mod,basic_impl" }
+attributes #1 = { "modular-format"="printf,1,2,float_present_mod,basic_impl,float" }
+attributes #2 = { "modular-format"="printf,1,2,unknown_aspects_mod,basic_impl,unknown1,unknown2" }
+attributes #3 = { "modular-format"="printf,2,3,first_arg_idx_mod,basic_impl,float" }
+attributes #4 = { "modular-format"="printf,1,2,multiple_aspects_mod,basic_impl,float,unknown" }
