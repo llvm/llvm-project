@@ -56,7 +56,7 @@ LLVMOrcThreadSafeModuleRef createDemoModule(void) {
 
   // Create a new ThreadSafeContext to hold the context.
   LLVMOrcThreadSafeContextRef TSCtx =
-    LLVMOrcCreateNewThreadSafeContextFromLLVMContext(Ctx);
+      LLVMOrcCreateNewThreadSafeContextFromLLVMContext(Ctx);
 
   // Our demo module is now complete. Wrap it and our ThreadSafeContext in a
   // ThreadSafeModule.
