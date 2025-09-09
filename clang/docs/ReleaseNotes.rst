@@ -274,6 +274,8 @@ Improvements to Clang's diagnostics
   ``ACQUIRED_AFTER(...)`` have been moved to the stable feature set and no
   longer require ``-Wthread-safety-beta`` to be used.
 
+- Clang now looks through parenthesis for ``-Wundefined-reinterpret-cast`` diagnostic.
+
 Improvements to Clang's time-trace
 ----------------------------------
 

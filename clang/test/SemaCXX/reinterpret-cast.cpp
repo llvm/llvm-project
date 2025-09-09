@@ -169,6 +169,7 @@ void dereference_reinterpret_cast() {
 
   // Look through parens
   (void)*(reinterpret_cast<double*>(&l));  // expected-warning {{dereference of type 'double *' that was reinterpret_cast from type 'long *' has undefined behavior}}
+  (void)*((reinterpret_cast<double*>((&l))));  // expected-warning {{dereference of type 'double *' that was reinterpret_cast from type 'long *' has undefined behavior}}
 
   // TODO: add warning for tag types
   (void)reinterpret_cast<A&>(b);
