@@ -62,7 +62,6 @@ struct MissingFeatures {
   static bool opAllocaEscapeByReference() { return false; }
   static bool opAllocaReference() { return false; }
   static bool opAllocaAnnotations() { return false; }
-  static bool opAllocaDynAllocSize() { return false; }
   static bool opAllocaCaptureByInit() { return false; }
 
   // FuncOp handling
