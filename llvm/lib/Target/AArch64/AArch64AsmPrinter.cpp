@@ -734,7 +734,7 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
   const Triple &TT = TM.getTargetTriple();
   assert(TT.isOSBinFormatELF());
   std::unique_ptr<MCSubtargetInfo> STI(
-      TM.getTarget().createMCSubtargetInfo(TT.str(), "", ""));
+      TM.getTarget().createMCSubtargetInfo(TT, "", ""));
   assert(STI && "Unable to create subtarget info");
   this->STI = static_cast<const AArch64Subtarget *>(&*STI);
 
