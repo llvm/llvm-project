@@ -115,7 +115,7 @@ template <size_t N> LIBC_INLINE constexpr int find_first_set(simd<bool, N> m) {
 }
 template <size_t N> LIBC_INLINE constexpr int find_last_set(simd<bool, N> m) {
   constexpr size_t size = simd_size_v<simd<bool, N>>;
-  return size - __builtin_clzg(m);
+  return size - 1 - __builtin_clzg(m);
 }
 
 // Elementwise operations.
