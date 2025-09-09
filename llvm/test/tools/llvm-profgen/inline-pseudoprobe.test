@@ -1,5 +1,7 @@
 ; RUN: llvm-profgen --format=text --ignore-stack-samples --perfscript=%S/Inputs/inline-cs-pseudoprobe.perfscript --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --output=%t --profile-summary-cold-count=0
 ; RUN: FileCheck %s --input-file %t
+; RUN: llvm-profgen --format=text --ignore-stack-samples --perfscript=%S/Inputs/inline-cs-pseudoprobe.perfscript --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --output=%t1 --profile-summary-cold-count=0 --mark-all-context-preinlined
+; RUN: FileCheck %s --input-file %t1 --check-prefix=CHECK-MARK-PREINLINED
 
 ; CHECK:     main:88:0
 ; CHECK-NEXT: 1: 0
@@ -19,6 +21,26 @@
 ; CHECK-NEXT:  !CFGChecksum: 563088904013236
 ; CHECK-NEXT: !CFGChecksum: 281479271677951
 
+; CHECK-MARK-PREINLINED:     main:88:0
+; CHECK-MARK-PREINLINED-NEXT: 1: 0
+; CHECK-MARK-PREINLINED-NEXT: 2: foo:88
+; CHECK-MARK-PREINLINED-NEXT:  1: 0
+; CHECK-MARK-PREINLINED-NEXT:  2: 15
+; CHECK-MARK-PREINLINED-NEXT:  3: 15
+; CHECK-MARK-PREINLINED-NEXT:  4: 14
+; CHECK-MARK-PREINLINED-NEXT:  5: 1
+; CHECK-MARK-PREINLINED-NEXT:  6: 15
+; CHECK-MARK-PREINLINED-NEXT:  7: 0
+; CHECK-MARK-PREINLINED-NEXT:  9: 0
+; CHECK-MARK-PREINLINED-NEXT:  8: bar:28
+; CHECK-MARK-PREINLINED-NEXT:   1: 14
+; CHECK-MARK-PREINLINED-NEXT:   4: 14
+; CHECK-MARK-PREINLINED-NEXT:   !CFGChecksum: 72617220756
+; CHECK-MARK-PREINLINED-NEXT:   !Attributes: 2 
+; CHECK-MARK-PREINLINED-NEXT:  !CFGChecksum: 563088904013236
+; CHECK-MARK-PREINLINED-NEXT:  !Attributes: 2
+; CHECK-MARK-PREINLINED-NEXT: !CFGChecksum: 281479271677951
+; CHECK-MARK-PREINLINED-NEXT: !Attributes: 2
 
 ; clang -O3 -fuse-ld=lld -fpseudo-probe-for-profiling
 ; -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -Xclang -mdisable-tail-calls
