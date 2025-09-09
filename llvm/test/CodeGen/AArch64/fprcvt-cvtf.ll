@@ -196,8 +196,10 @@ define float @scvtf_f32i64_neg(<2 x i64> %x) {
  ret float %conv
 }
 
-; <1 x float> is illegal on AArch64 and is widened to <2 x float>.
-; This widening introduces the extra insert/extract/zeroing instructions.
+; This test does not give the indended result of scvtf s0, d0
+; This is due to the input being loaded as a 2 item vector and
+; therefore using vector inputs that do not match the pattern
+; This test will be fixed in a future revision
 define <1 x float> @scvtf_f32i64_simple(<1 x i64> %x) {
 ; CHECK-LABEL: scvtf_f32i64_simple:
 ; CHECK:       // %bb.0:
@@ -442,8 +444,6 @@ define <1 x double> @uitofp_sext_v2i32_extract_lane0(<2 x i32> %x) {
 ; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    ucvtf v0.2d, v0.2d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NOT:     ucvtf d0, s0
-; CHECK-NOT:     scvtf d0, s0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NO-FPRCVT-LABEL: uitofp_sext_v2i32_extract_lane0:

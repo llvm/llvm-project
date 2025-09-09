@@ -5520,6 +5520,7 @@ multiclass IntegerToFPSIMDScalar<bits<2> rmode, bits<3> opcode, string asm, SDPa
     let Inst{31} = 1; // 64-bit FPR flag
     let Inst{23-22} = 0b00; // 32-bit FPR flag
   }
+
   def : Pat<(f16 (node (i32 (extractelt (v4i32 V128:$Rn), (i64 0))))),
           (!cast<Instruction>(NAME # HSr) (EXTRACT_SUBREG V128:$Rn, ssub))>;
   def : Pat<(f64 (node (i32 (extractelt (v4i32 V128:$Rn), (i64 0))))),
