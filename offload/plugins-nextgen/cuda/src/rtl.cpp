@@ -1534,7 +1534,7 @@ struct CUDAPluginTy final : public GenericPluginTy {
     return Major == ImageMajor && Minor >= ImageMinor;
   }
 
-  Expected<MemoryInfoTy> get_memory_info(const void *TgtPtr) override {
+  Expected<MemoryInfoTy> getMemoryInfo(const void *TgtPtr) override {
     std::lock_guard<std::mutex> Lock(MemoryInfoMutex);
 
     // TODO: Is it possible to query this information using CUDA directly?

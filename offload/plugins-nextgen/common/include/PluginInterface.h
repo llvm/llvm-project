@@ -1578,7 +1578,7 @@ public:
 
   /// Given a pointer previously allocated by GenericDeviceTy::Allocate, return
   /// information about that allocation
-  virtual Expected<MemoryInfoTy> get_memory_info(const void *TgtPtr) = 0;
+  virtual Expected<MemoryInfoTy> getMemoryInfo(const void *TgtPtr) = 0;
 
 private:
   /// Indicates if the platform runtime has been fully initialized.

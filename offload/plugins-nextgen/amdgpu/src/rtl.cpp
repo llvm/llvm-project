@@ -3564,7 +3564,7 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     return KernelAgents;
   }
 
-  Expected<MemoryInfoTy> get_memory_info(const void *TgtPtr) override {
+  Expected<MemoryInfoTy> getMemoryInfo(const void *TgtPtr) override {
     hsa_amd_pointer_info_t Info;
     if (auto Err = Plugin::check(
             hsa_amd_pointer_info(TgtPtr, &Info, nullptr, nullptr, nullptr),
