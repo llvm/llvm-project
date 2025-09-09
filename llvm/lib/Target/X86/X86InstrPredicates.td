@@ -231,7 +231,7 @@ let RecomputePerFunction = 1 in {
   def ImportCallOptimizationEnabled : Predicate<"MF->getFunction().getParent()->getModuleFlag(\"import-call-optimization\")">;
   def ImportCallOptimizationDisabled : Predicate<"!MF->getFunction().getParent()->getModuleFlag(\"import-call-optimization\")">;
 
-  def IsWin64CCFunc : Predicate<"MF->getFunction().getCallingConv() == CallingConv::Win64">;
+  def IsWin64CCFunc : Predicate<"Subtarget->isCallingConvWin64(MF->getFunction().getCallingConv())">;
   def IsHiPECCFunc : Predicate<"MF->getFunction().getCallingConv() == CallingConv::HiPE">;
 
   def IsNotHiPECCFunc : Predicate<
