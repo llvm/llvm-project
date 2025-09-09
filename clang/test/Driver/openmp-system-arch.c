@@ -1,5 +1,4 @@
-// Needs chmod
-// UNSUPPORTED: system-windows
+// REQUIRES: shell
 // XFAIL: target={{.*}}-zos{{.*}}
 
 // RUN: mkdir -p %t

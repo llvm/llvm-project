@@ -1,3 +1,4 @@
+# REQUIRES: shell
 # UNSUPPORTED: system-windows
 
 # RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -x c++ %s -### -o %t.out 2>&1 \

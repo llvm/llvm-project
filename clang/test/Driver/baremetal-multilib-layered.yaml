@@ -1,3 +1,4 @@
+# REQUIRES: shell
 # UNSUPPORTED: system-windows
 
 # This test demonstrates "layered" multilib in which more than one
