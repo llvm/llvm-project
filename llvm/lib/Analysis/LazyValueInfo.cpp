@@ -1493,12 +1493,12 @@ LazyValueInfoImpl::getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
             //   br %Condition, label %then, label %else
             APInt ConditionVal(1, isTrueDest ? 1 : 0);
             Result = constantFoldUser(Usr, Condition, ConditionVal, DL);
-          } else if (isa<TruncInst, ZExtInst, SExtInst, FreezeInst>(Usr)) {
+          } else if (isa<TruncInst, ZExtInst, SExtInst>(Usr)) {
             ValueLatticeElement OpLatticeVal =
                 *getValueFromCondition(Usr->getOperand(0), Condition,
                                        isTrueDest, /*UseBlockValue*/ false);
 
-            if (isa<FreezeInst>(Usr) || !OpLatticeVal.isConstantRange())
+            if (!OpLatticeVal.isConstantRange())
               return OpLatticeVal;
 
             const unsigned ResultBitWidth =

@@ -1355,30 +1355,6 @@ target:
   ret i8 %b
 }
 
-define i8 @return_range_for_edge_value_freeze(i8 %a) {
-; CHECK-LABEL: define range(i8 0, 98) i8 @return_range_for_edge_value_freeze(
-; CHECK-SAME: i8 [[A:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[B:%.*]] = freeze i8 [[A]]
-; CHECK-NEXT:    br label %[[DISPATCH:.*]]
-; CHECK:       [[DISPATCH]]:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[A]], 98
-; CHECK-NEXT:    br i1 [[CMP]], label %[[TARGET:.*]], label %[[DISPATCH]]
-; CHECK:       [[TARGET]]:
-; CHECK-NEXT:    ret i8 [[B]]
-;
-entry:
-  %b = freeze i8 %a
-  br label %dispatch
-
-dispatch:
-  %cmp = icmp ult i8 %a, 98
-  br i1 %cmp, label %target, label %dispatch
-
-target:
-  ret i8 %b
-}
-
 declare i16 @llvm.ctlz.i16(i16, i1)
 declare i16 @llvm.cttz.i16(i16, i1)
 declare i16 @llvm.ctpop.i16(i16)
