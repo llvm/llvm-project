@@ -2591,17 +2591,24 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
 
   builder.SetInsertPoint(*regionBlock, (*regionBlock)->begin());
 
+  // Check if we can generate no-loop kernel
   bool noLoopMode = false;
   omp::TargetOp targetOp = wsloopOp->getParentOfType<mlir::omp::TargetOp>();
   if (targetOp) {
     Operation *targetCapturedOp = targetOp.getInnermostCapturedOmpOp();
-    omp::TargetRegionFlags kernelFlags =
-        targetOp.getKernelExecFlags(targetCapturedOp);
-    if (omp::bitEnumContainsAll(kernelFlags,
-                                omp::TargetRegionFlags::spmd |
-                                    omp::TargetRegionFlags::no_loop) &&
-        !omp::bitEnumContainsAny(kernelFlags, omp::TargetRegionFlags::generic))
-      noLoopMode = true;
+    // We need this check because, without it, noLoopMode would be set to true
+    // for every omp.wsloop nested inside a no-loop SPMD target region, even if
+    // that loop is not the top-level SPMD one.
+    if (loopOp == targetCapturedOp) {
+      omp::TargetRegionFlags kernelFlags =
+          targetOp.getKernelExecFlags(targetCapturedOp);
+      if (omp::bitEnumContainsAll(kernelFlags,
+                                  omp::TargetRegionFlags::spmd |
+                                      omp::TargetRegionFlags::no_loop) &&
+          !omp::bitEnumContainsAny(kernelFlags,
+                                   omp::TargetRegionFlags::generic))
+        noLoopMode = true;
+    }
   }
 
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy wsloopIP =
