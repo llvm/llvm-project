@@ -27,7 +27,6 @@ typedef double __v2df __attribute__((__vector_size__(16)));
 
 /* Unsigned types */
 typedef unsigned long long __v2du __attribute__((__vector_size__(16)));
-typedef unsigned char __v16qu __attribute__((__vector_size__(16)));
 
 /* We need an explicitly signed variant for char. Note that this shouldn't
  * appear in the interface though. */
