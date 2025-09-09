@@ -75,7 +75,25 @@ void llvm::detachDeadBlocks(
     // Zap all the instructions in the block.
     while (!BB->empty()) {
       Instruction &I = BB->back();
-      // If this instruction is used, replace uses with an arbitrary value.
+      // Exception handling funclets need to be explicitly addressed.
+      // These funclets must begin with cleanuppad or catchpad and end with
+      // cleanupred or catchret. The return instructions can be in different
+      // basic blocks than the pad instruction. If we would only delete the
+      // first block, the we would have possible cleanupret and catchret
+      // instructions with poison arguments, which wouldn't be valid.
+      unsigned OpCode = I.getOpcode();
+      if (OpCode == Instruction::CatchPad ||
+          OpCode == Instruction::CleanupPad) {
+        for (User *User : make_early_inc_range(I.users())) {
+          Instruction *ReturnInstr = dyn_cast<Instruction>(User);
+          if (isa<CatchReturnInst>(ReturnInstr) ||
+              isa<CleanupReturnInst>(ReturnInstr)) {
+            BasicBlock *ReturnInstrBB = ReturnInstr->getParent();
+            ReturnInstr->eraseFromParent();
+            new UnreachableInst(ReturnInstrBB->getContext(), ReturnInstrBB);
+          }
+        }
+      }
       // Because control flow can't get here, we don't care what we replace the
       // value with.  Note that since this block is unreachable, and all values
       // contained within it must dominate their uses, that all uses will
