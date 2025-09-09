@@ -307,7 +307,7 @@ TEST(DWARFDebugNames, TestStripTemplateParameters) {
   stripped_name = StripTemplateParameters("foo<int>");
   ASSERT_TRUE(stripped_name.has_value());
   ASSERT_EQ(*stripped_name, StringRef("foo"));
-  // Make sure that we don't get an empty name back when the string starts with
+  // Make sure that we don't get a valid name back when the string starts with
   // '<'.
   stripped_name = StripTemplateParameters("<int>");
   ASSERT_FALSE(stripped_name.has_value());
