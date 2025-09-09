@@ -1,4 +1,4 @@
-// Test hlfir.cmpchar operation lowering to a fir runtime call
+// Test hlfir.index operation lowering to a fir runtime call
 // RUN: fir-opt %s -lower-hlfir-intrinsics | FileCheck %s
 
 func.func @_QPt(%arg0: !fir.boxchar<1> {fir.bindc_name = "s"}) {
