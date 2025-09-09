@@ -1222,6 +1222,13 @@ static void AddDotProductRequirements(const MachineInstr &MI,
   }
 }
 
+static bool isBFloat16Type(const SPIRVType *TypeDef) {
+  return TypeDef &&
+         TypeDef->getNumOperands() == 3 &&
+         TypeDef->getOpcode() == SPIRV::OpTypeFloat &&
+         TypeDef->getOperand(2).getImm() == SPIRV::FPEncoding::BFloat16KHR;
+}
+
 void addInstrRequirements(const MachineInstr &MI,
                           SPIRV::RequirementHandler &Reqs,
                           const SPIRVSubtarget &ST) {
@@ -1264,10 +1271,8 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpDot: {
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
     SPIRVType *TypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
-    if ((TypeDef->getNumOperands() == 3) &&
-        (TypeDef->getOperand(2).getImm() == SPIRV::FPEncoding::BFloat16KHR)) {
+    if (isBFloat16Type(TypeDef))
       Reqs.addCapability(SPIRV::Capability::BFloat16DotProductKHR);
-    }
     break;
   }
   case SPIRV::OpTypeFloat: {
@@ -1624,10 +1629,8 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(SPIRV::Capability::CooperativeMatrixKHR);
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
     SPIRVType *TypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
-    if ((TypeDef->getNumOperands() == 3) &&
-        (TypeDef->getOperand(2).getImm() == SPIRV::FPEncoding::BFloat16KHR)) {
+    if (isBFloat16Type(TypeDef))
       Reqs.addCapability(SPIRV::Capability::BFloat16CooperativeMatrixKHR);
-    }
     break;
   }
   case SPIRV::OpArithmeticFenceEXT:
