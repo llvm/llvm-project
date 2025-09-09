@@ -337,7 +337,13 @@ void tools::hlsl::LLVMObjcopy::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(Output.getFilename());
 
   if (Args.hasArg(options::OPT_dxc_strip_rootsignature)) {
-    const char *Frs = Args.MakeArgString("--remove-section=RTS0");
+    const char *StripRS = Args.MakeArgString("--remove-section=RTS0");
+    CmdArgs.push_back(StripRS);
+  }
+
+  if (Arg *Arg = Args.getLastArg(options::OPT_dxc_Frs)) {
+    const char *Frs =
+        Args.MakeArgString("--extract-section=RTS0=" + Twine(Arg->getValue()));
     CmdArgs.push_back(Frs);
   }
 
@@ -524,7 +530,7 @@ bool HLSLToolChain::requiresBinaryTranslation(DerivedArgList &Args) const {
 bool HLSLToolChain::requiresObjcopy(DerivedArgList &Args) const {
   return Args.hasArg(options::OPT_dxc_Fo) &&
          (Args.hasArg(options::OPT_dxc_strip_rootsignature) ||
-          isRootSignatureTarget(Args));
+          Args.hasArg(options::OPT_dxc_Frs) || isRootSignatureTarget(Args));
 }
 
 bool HLSLToolChain::isLastJob(DerivedArgList &Args,
