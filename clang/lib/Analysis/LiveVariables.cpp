@@ -90,8 +90,8 @@ namespace {
     if (A.isEmpty())
       return B;
 
-    for (typename SET::iterator it = B.begin(), ei = B.end(); it != ei; ++it) {
-      A = A.add(*it);
+    for (const auto *Elem : B) {
+      A = A.add(Elem);
     }
     return A;
   }
@@ -556,9 +556,8 @@ LiveVariables::computeLiveness(AnalysisDeclContext &AC, bool killAtAssign) {
 
     // Merge the values of all successor blocks.
     LivenessValues val;
-    for (CFGBlock::const_succ_iterator it = block->succ_begin(),
-                                       ei = block->succ_end(); it != ei; ++it) {
-      if (const CFGBlock *succ = *it) {
+    for (const CFGBlock *succ : block->succs()) {
+      if (succ) {
         val = LV->merge(val, LV->blocksBeginToLiveness[succ]);
       }
     }
@@ -586,38 +585,26 @@ void LiveVariables::dumpBlockLiveness(const SourceManager &M) {
 
 void LiveVariablesImpl::dumpBlockLiveness(const SourceManager &M) {
   std::vector<const CFGBlock *> vec;
-  for (const auto &KV : blocksEndToLiveness) {
-    vec.push_back(KV.first);
-  }
+  vec.reserve(blocksEndToLiveness.size());
+  llvm::append_range(vec, llvm::make_first_range(blocksEndToLiveness));
   llvm::sort(vec, [](const CFGBlock *A, const CFGBlock *B) {
     return A->getBlockID() < B->getBlockID();
   });
 
   std::vector<const VarDecl*> declVec;
 
-  for (std::vector<const CFGBlock *>::iterator
-        it = vec.begin(), ei = vec.end(); it != ei; ++it) {
-    llvm::errs() << "\n[ B" << (*it)->getBlockID()
+  for (const CFGBlock *block : vec) {
+    llvm::errs() << "\n[ B" << block->getBlockID()
                  << " (live variables at block exit) ]\n";
-
-    LiveVariables::LivenessValues vals = blocksEndToLiveness[*it];
     declVec.clear();
-
-    for (llvm::ImmutableSet<const VarDecl *>::iterator si =
-          vals.liveDecls.begin(),
-          se = vals.liveDecls.end(); si != se; ++si) {
-      declVec.push_back(*si);
-    }
-
+    llvm::append_range(declVec, blocksEndToLiveness[block].liveDecls);
     llvm::sort(declVec, [](const Decl *A, const Decl *B) {
       return A->getBeginLoc() < B->getBeginLoc();
     });
 
-    for (std::vector<const VarDecl*>::iterator di = declVec.begin(),
-         de = declVec.end(); di != de; ++di) {
-      llvm::errs() << " " << (*di)->getDeclName().getAsString()
-                   << " <";
-      (*di)->getLocation().print(llvm::errs(), M);
+    for (const VarDecl *VD : declVec) {
+      llvm::errs() << " " << VD->getDeclName().getAsString() << " <";
+      VD->getLocation().print(llvm::errs(), M);
       llvm::errs() << ">\n";
     }
   }
