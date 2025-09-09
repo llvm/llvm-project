@@ -37,16 +37,40 @@ TEST(LlvmLibcSIMDTest, TypeTraits) {
 }
 
 TEST(LlvmLibcSIMDTest, ElementwiseOperations) {
-  simd<int> v1 = splat(1);
-  simd<int> v2 = splat(-1);
+  simd<int> vi1 = splat(1);
+  simd<int> vi2 = splat(-1);
+  simd<float> vf1 = splat(1.0f);
+  simd<float> vf2 = splat(-1.0f);
 
-  simd<int> v_abs = abs(v2);
-  simd<int> v_min = min(v1, v2);
-  simd<int> v_max = max(v1, v2);
+  simd<int> v_abs = abs(vi2);
+  simd<int> v_min = min(vi1, vi2);
+  simd<int> v_max = max(vi1, vi2);
+  simd<float> v_fma = fma(vf1, vf2, vf1);
+  simd<float> v_ceil = ceil(splat(1.2f));
+  simd<float> v_floor = floor(splat(1.8f));
+  simd<float> v_roundeven = roundeven(splat(2.5f));
+  simd<float> v_round = round(splat(2.5f));
+  simd<float> v_trunc = trunc(splat(-2.9f));
+  simd<float> v_nearbyint = nearbyint(splat(3.4f));
+  simd<float> v_rint = rint(splat(3.6f));
+  simd<float> v_canonicalize = canonicalize(splat(1.0f));
+  simd<float> v_copysign = copysign(vf1, vf2);
+  simd<float> v_fmod = fmod(splat(5.5f), splat(2.0f));
 
+  EXPECT_EQ(v_abs[0], 1);
   EXPECT_EQ(v_min[0], -1);
   EXPECT_EQ(v_max[0], 1);
-  EXPECT_EQ(v_abs[0], 1);
+  EXPECT_FP_EQ(v_fma[0], 0.0f);
+  EXPECT_FP_EQ(v_ceil[0], 2.0f);
+  EXPECT_FP_EQ(v_floor[0], 1.0f);
+  EXPECT_FP_EQ(v_roundeven[0], 2.0f);
+  EXPECT_FP_EQ(v_round[0], 3.0f);
+  EXPECT_FP_EQ(v_trunc[0], -2.0f);
+  EXPECT_FP_EQ(v_nearbyint[0], 3.0f);
+  EXPECT_FP_EQ(v_rint[0], 4.0f);
+  EXPECT_FP_EQ(v_canonicalize[0], 1.0f);
+  EXPECT_FP_EQ(v_copysign[0], -1.0f);
+  EXPECT_FP_EQ(v_fmod[0], 1.5f);
 }
 
 TEST(LlvmLibcSIMDTest, ReductionOperations) {
