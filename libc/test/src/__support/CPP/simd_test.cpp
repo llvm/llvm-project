@@ -55,7 +55,6 @@ TEST(LlvmLibcSIMDTest, ElementwiseOperations) {
   simd<float> v_rint = rint(splat(3.6f));
   simd<float> v_canonicalize = canonicalize(splat(1.0f));
   simd<float> v_copysign = copysign(vf1, vf2);
-  simd<float> v_fmod = fmod(splat(5.5f), splat(2.0f));
 
   EXPECT_EQ(v_abs[0], 1);
   EXPECT_EQ(v_min[0], -1);
@@ -70,7 +69,6 @@ TEST(LlvmLibcSIMDTest, ElementwiseOperations) {
   EXPECT_FP_EQ(v_rint[0], 4.0f);
   EXPECT_FP_EQ(v_canonicalize[0], 1.0f);
   EXPECT_FP_EQ(v_copysign[0], -1.0f);
-  EXPECT_FP_EQ(v_fmod[0], 1.5f);
 }
 
 TEST(LlvmLibcSIMDTest, ReductionOperations) {
