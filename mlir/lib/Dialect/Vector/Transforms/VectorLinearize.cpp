@@ -835,8 +835,10 @@ struct LinearizeVectorToElements final
         VectorType::get({vecType.getNumElements()}, vecType.getElementType());
     Value shapeCast = vector::ShapeCastOp::create(
         rewriter, toElementsOp.getLoc(), vec1DType, toElementsOp.getSource());
-    rewriter.replaceOpWithNewOp<vector::ToElementsOp>(
-        toElementsOp, toElementsOp.getResultTypes(), shapeCast);
+    auto newToElementsOp =
+        vector::ToElementsOp::create(rewriter, toElementsOp.getLoc(),
+                                     toElementsOp.getResultTypes(), shapeCast);
+    rewriter.replaceOp(toElementsOp, newToElementsOp);
     return success();
   }
 };
