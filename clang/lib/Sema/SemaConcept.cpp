@@ -708,6 +708,7 @@ ExprResult CalculateConstraintSatisfaction::Calculate(
     Satisfaction.IsSatisfied = Cached.IsSatisfied;
     Satisfaction.Details.insert(Satisfaction.Details.begin() + Size,
                                 Cached.Details.begin(), Cached.Details.end());
+    return Iter->second.SubstExpr;
   }
 
   ExprResult E = CalculateSlow(Constraint, MLTAL);
