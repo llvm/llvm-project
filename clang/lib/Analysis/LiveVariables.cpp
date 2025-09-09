@@ -18,6 +18,7 @@
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -35,7 +36,7 @@ public:
   llvm::DenseMap<const CFGBlock *, LiveVariables::LivenessValues> blocksEndToLiveness;
   llvm::DenseMap<const CFGBlock *, LiveVariables::LivenessValues> blocksBeginToLiveness;
   llvm::DenseMap<const Stmt *, LiveVariables::LivenessValues> stmtsToLiveness;
-  llvm::DenseMap<const DeclRefExpr *, unsigned> inAssignment;
+  llvm::DenseSet<const DeclRefExpr *> inAssignment;
   const bool killAtAssign;
 
   LiveVariables::LivenessValues
@@ -370,7 +371,7 @@ static bool writeShouldKill(const VarDecl *VD) {
 void TransferFunctions::VisitBinaryOperator(BinaryOperator *B) {
   if (LV.killAtAssign && B->getOpcode() == BO_Assign) {
     if (const auto *DR = dyn_cast<DeclRefExpr>(B->getLHS()->IgnoreParens())) {
-      LV.inAssignment[DR] = 1;
+      LV.inAssignment.insert(DR);
     }
   }
   if (B->isAssignmentOp()) {
@@ -412,7 +413,7 @@ void TransferFunctions::VisitBlockExpr(BlockExpr *BE) {
 
 void TransferFunctions::VisitDeclRefExpr(DeclRefExpr *DR) {
   const Decl* D = DR->getDecl();
-  bool InAssignment = LV.inAssignment[DR];
+  bool InAssignment = LV.inAssignment.contains(DR);
   if (const auto *BD = dyn_cast<BindingDecl>(D)) {
     if (!InAssignment) {
       if (const auto *HV = BD->getHoldingVar())
