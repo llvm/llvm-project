@@ -419,6 +419,32 @@ define i1 @load_vs_array_type_mismatch_offset1(i32 %idx) {
   ret i1 %cmp
 }
 
+define i1 @load_vs_array_type_mismatch_offset1_separate_gep(i32 %idx) {
+; CHECK-LABEL: @load_vs_array_type_mismatch_offset1_separate_gep(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IDX:%.*]], -3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr inbounds {i16, i16}, ptr @g_i16_1, i32 %idx
+  %gep2 = getelementptr inbounds i8, ptr %gep1, i32 2
+  %load = load i16, ptr %gep2
+  %cmp = icmp eq i16 %load, 0
+  ret i1 %cmp
+}
+
+define i1 @load_vs_array_type_mismatch_offset1_separate_gep_swapped(i32 %idx) {
+; CHECK-LABEL: @load_vs_array_type_mismatch_offset1_separate_gep_swapped(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IDX:%.*]], -3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr inbounds i8, ptr @g_i16_1, i32 2
+  %gep2 = getelementptr inbounds {i16, i16}, ptr %gep1, i32 %idx
+  %load = load i16, ptr %gep2
+  %cmp = icmp eq i16 %load, 0
+  ret i1 %cmp
+}
+
 @g_i16_2 = internal constant [8 x i16] [i16 1, i16 0, i16 0, i16 1, i16 1, i16 0, i16 0, i16 1]
 
 ; idx == 0 || idx == 2
@@ -553,4 +579,37 @@ entry:
   %isOK = load i32, ptr %isOK_ptr
   %cond = icmp ult i32 %isOK, 5
   ret i1 %cond
+}
+
+define i1 @cmp_load_multiple_indices(i32 %idx, i32 %idx2) {
+; CHECK-LABEL: @cmp_load_multiple_indices(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i16, ptr @g_i16_1, i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i16, ptr [[GEP1]], i32 [[IDX2:%.*]]
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds nuw i8, ptr [[GEP2]], i32 2
+; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP3]], align 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr inbounds i16, ptr @g_i16_1, i32 %idx
+  %gep2 = getelementptr inbounds i16, ptr %gep1, i32 %idx2
+  %gep3 = getelementptr inbounds i8, ptr %gep2, i32 2
+  %load = load i16, ptr %gep3
+  %cmp = icmp eq i16 %load, 0
+  ret i1 %cmp
+}
+
+define i1 @cmp_load_multiple_indices2(i32 %idx, i32 %idx2) {
+; CHECK-LABEL: @cmp_load_multiple_indices2(
+; CHECK-NEXT:    [[GEP1_SPLIT:%.*]] = getelementptr inbounds [1 x i16], ptr @g_i16_1, i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i16, ptr [[GEP1_SPLIT]], i32 [[IDX2:%.*]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds nuw i8, ptr [[GEP1]], i32 2
+; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP2]], align 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr inbounds [1 x i16], ptr @g_i16_1, i32 %idx, i32 %idx2
+  %gep2 = getelementptr inbounds i8, ptr %gep1, i32 2
+  %load = load i16, ptr %gep2
+  %cmp = icmp eq i16 %load, 0
+  ret i1 %cmp
 }
