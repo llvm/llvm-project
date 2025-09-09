@@ -88,12 +88,9 @@ def testCustomPass():
         pm.run(module)
 
         # test signal_pass_failure
-        class CustomPassThatFails:
-            def __call__(self, op, pass_):
-                print("hello from pass that fails")
-                pass_.signal_failure()
-
-        custom_pass_that_fails = CustomPassThatFails()
+        def custom_pass_that_fails(op, pass_):
+            print("hello from pass that fails")
+            pass_.signal_failure()
 
         pm = PassManager("any")
         pm.add(custom_pass_that_fails, "CustomPassThatFails")
