@@ -335,7 +335,8 @@ void AppleAcceleratorTable::Iterator::prepareNextStringOrEnd() {
     return setToEnd();
 
   // A zero denotes the end of the collision list. Skip to the next offset
-  // in the offsets table.
+  // in the offsets table by setting the Offset to zero so we will grab the
+  // next offset from the offsets table.
   if (*StrOffset == 0) {
     Offset = 0;
     return prepareNextStringOrEnd();
