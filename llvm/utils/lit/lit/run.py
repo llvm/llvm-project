@@ -72,25 +72,58 @@ class Run(object):
             if v is not None
         }
 
-        pool = multiprocessing.Pool(
-            self.workers, lit.worker.initialize, (self.lit_config, semaphores)
+        # Windows has a limit of 60 workers per pool, so we need to use multiple pools
+        # if we have more than 60 workers requested
+        max_workers_per_pool = 60 if os.name == "nt" else self.workers
+        num_pools = max(
+            1, (self.workers + max_workers_per_pool - 1) // max_workers_per_pool
         )
+        workers_per_pool = min(self.workers, max_workers_per_pool)
 
-        async_results = [
-            pool.apply_async(
-                lit.worker.execute, args=[test], callback=self.progress_callback
+        if num_pools > 1:
+            self.lit_config.note(
+                "Using %d pools with %d workers each (Windows worker limit workaround)"
+                % (num_pools, workers_per_pool)
             )
-            for test in self.tests
-        ]
-        pool.close()
+
+        # Create multiple pools
+        pools = []
+        for i in range(num_pools):
+            pool = multiprocessing.Pool(
+                workers_per_pool, lit.worker.initialize, (self.lit_config, semaphores)
+            )
+            pools.append(pool)
+
+        # Distribute tests across pools
+        tests_per_pool = (len(self.tests) + num_pools - 1) // num_pools
+        async_results = []
+
+        for pool_idx, pool in enumerate(pools):
+            start_idx = pool_idx * tests_per_pool
+            end_idx = min(start_idx + tests_per_pool, len(self.tests))
+            pool_tests = self.tests[start_idx:end_idx]
+
+            for test in pool_tests:
+                ar = pool.apply_async(
+                    lit.worker.execute, args=[test], callback=self.progress_callback
+                )
+                async_results.append(ar)
+
+        # Close all pools
+        for pool in pools:
+            pool.close()
 
         try:
             self._wait_for(async_results, deadline)
         except:
-            pool.terminate()
+            # Terminate all pools on exception
+            for pool in pools:
+                pool.terminate()
             raise
         finally:
-            pool.join()
+            # Join all pools
+            for pool in pools:
+                pool.join()
 
     def _wait_for(self, async_results, deadline):
         timeout = deadline - time.time()
