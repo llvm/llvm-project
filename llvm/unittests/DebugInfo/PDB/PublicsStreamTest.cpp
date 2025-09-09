@@ -42,6 +42,8 @@ public:
   PublicsStream *publicsStream();
   SymbolStream *symbolStream();
 
+  MutableBinaryByteStream &stream() { return Stream; }
+
 private:
   MutableBinaryByteStream Stream;
 
@@ -206,4 +208,19 @@ TEST(PublicsStreamTest, FindByAddress) {
   ASSERT_TRUE(GlobalSym.has_value());
   ASSERT_EQ(GlobalSym->first.Name, "?AGlobal@@3HA");
   ASSERT_EQ(GlobalSym->second, 30u);
+
+  // test corrupt debug info
+  codeview::CVSymbol GlobalCVSym =
+      Symbols->readRecord(Publics->getAddressMap()[30]);
+  ASSERT_EQ(GlobalCVSym.kind(), codeview::S_PUB32);
+  // CVSymbol::data returns a pointer to const data, so we modify the backing
+  // data
+  uint8_t *PDBData = Mock->stream().data().data();
+  auto Offset = GlobalCVSym.data().data() - PDBData;
+  reinterpret_cast<codeview::RecordPrefix *>(PDBData + Offset)->RecordKind =
+      codeview::S_GDATA32;
+  ASSERT_EQ(GlobalCVSym.kind(), codeview::S_GDATA32);
+
+  GlobalSym = Publics->findByAddress(*Symbols, 3, 0);
+  ASSERT_FALSE(GlobalSym.has_value());
 }
