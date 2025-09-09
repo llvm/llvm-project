@@ -13152,6 +13152,8 @@ def err_hlsl_attribute_needs_intangible_type: Error<"attribute %0 can be used on
 def err_hlsl_incorrect_num_initializers: Error<
   "too %select{few|many}0 initializers in list for type %1 "
   "(expected %2 but found %3)">;
+def err_hlsl_rootsignature_entry: Error<
+   "rootsignature specified as target environment but entry, %0, was not defined">;
 
 def err_hlsl_operator_unsupported : Error<
   "the '%select{&|*|->}0' operator is unsupported in HLSL">;
