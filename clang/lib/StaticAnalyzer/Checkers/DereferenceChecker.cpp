@@ -395,18 +395,22 @@ void DereferenceChecker::checkBind(SVal L, SVal V, const Stmt *S,
 }
 
 namespace llvm {
-  template<>
-  struct format_provider<ValueDescStr> {
-    static void format(const ValueDescStr &V, raw_ostream &Stream, StringRef Style) {
-      static const char *ValueStr[2][3] = {
+template <> struct format_provider<ValueDescStr> {
+  static void format(const ValueDescStr &V, raw_ostream &Stream,
+                     StringRef Style) {
+    static const char *ValueStr[2][3] = {
         {"zero", "nonzero integer value", "probably nonzero integer value"},
         {"null pointer", "non-null pointer", "probably non-null pointer"},
-      };
-      Stream << ValueStr[V.IsPointer][V.IsNull.isConstrainedTrue() ? 0 : (V.IsNull.isConstrainedFalse() ? 1 : 2)];
-      DereferenceChecker::AddDerefSource(Stream, V.Ranges, V.Ex, V.State, V.LCtx, false);
-    }
-  };
-}
+    };
+    Stream
+        << ValueStr[V.IsPointer][V.IsNull.isConstrainedTrue()
+                                     ? 0
+                                     : (V.IsNull.isConstrainedFalse() ? 1 : 2)];
+    DereferenceChecker::AddDerefSource(Stream, V.Ranges, V.Ex, V.State, V.LCtx,
+                                       false);
+  }
+};
+} // namespace llvm
 
 void DereferenceChecker::checkPreStmt(const BinaryOperator *Op,
                                       CheckerContext &C) const {
@@ -454,17 +458,22 @@ void DereferenceChecker::checkPreStmt(const BinaryOperator *Op,
   }
 
   SmallVector<SourceRange, 2> Ranges;
-  const char *OpcodeStr = Op->getOpcode() == BO_Add ? "Addition" : "Subtraction";
+  const char *OpcodeStr =
+      Op->getOpcode() == BO_Add ? "Addition" : "Subtraction";
   const char *ResultStr = IsConstrained ? "results" : "may result";
-  ValueDescStr DerefArg1{Ranges, E1, State.get(), C.getLocationContext(), T1IsPointer, V1IsNull};
-  ValueDescStr DerefArg2{Ranges, E2, State.get(), C.getLocationContext(), T2IsPointer, V2IsNull};
-  std::string Msg = llvm::formatv("{0} of a {1} and a {2} {3} in undefined behavior", OpcodeStr, DerefArg1, DerefArg2, ResultStr);
+  ValueDescStr DerefArg1{
+      Ranges, E1, State.get(), C.getLocationContext(), T1IsPointer, V1IsNull};
+  ValueDescStr DerefArg2{
+      Ranges, E2, State.get(), C.getLocationContext(), T2IsPointer, V2IsNull};
+  std::string Msg =
+      llvm::formatv("{0} of a {1} and a {2} {3} in undefined behavior",
+                    OpcodeStr, DerefArg1, DerefArg2, ResultStr);
 
   ExplodedNode *N = C.generateErrorNode(State);
   if (!N)
     return;
-  auto BR = std::make_unique<PathSensitiveBugReport>(NullPointerArithmBug,
-                                                     Msg, N);
+  auto BR =
+      std::make_unique<PathSensitiveBugReport>(NullPointerArithmBug, Msg, N);
   if (V1IsNull.isConstrainedTrue())
     bugreporter::trackExpressionValue(N, E1, *BR);
   if (V2IsNull.isConstrainedTrue())
