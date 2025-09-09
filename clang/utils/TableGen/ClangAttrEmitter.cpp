@@ -3057,9 +3057,8 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
            << (R.getValueAsBit("InheritEvenIfAlreadyPresent") ? "true"
                                                               : "false");
       }
-      if (HLSLSemantic) {
+      if (HLSLSemantic)
         OS << ", " << (R.getValueAsBit("SemanticIndexable") ? "true" : "false");
-      }
       OS << ")\n";
 
       for (auto const &ai : Args) {
