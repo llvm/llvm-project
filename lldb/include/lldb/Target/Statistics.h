@@ -129,10 +129,16 @@ struct DWOStats {
   uint32_t dwo_file_count = 0;
   uint32_t dwo_error_count = 0;
 
-  DWOStats operator+(const DWOStats &rhs) const {
-    return DWOStats{loaded_dwo_file_count + rhs.loaded_dwo_file_count,
-                    dwo_file_count + rhs.dwo_file_count,
-                    dwo_error_count + rhs.dwo_error_count};
+  DWOStats &operator+=(const DWOStats &rhs) {
+    loaded_dwo_file_count += rhs.loaded_dwo_file_count;
+    dwo_file_count += rhs.dwo_file_count;
+    dwo_error_count += rhs.dwo_error_count;
+    return *this;
+  }
+
+  friend DWOStats operator+(DWOStats lhs, const DWOStats &rhs) {
+    lhs += rhs;
+    return lhs;
   }
 };
 

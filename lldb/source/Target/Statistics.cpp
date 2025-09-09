@@ -358,8 +358,8 @@ llvm::json::Value DebuggerStats::ReportStatistics(
           module_stat.symfile_modules.push_back((intptr_t)symbol_module.get());
       }
       DWOStats current_dwo_stats = sym_file->GetDwoStats();
-      module_stat.dwo_stats = module_stat.dwo_stats + current_dwo_stats;
-      total_dwo_stats = total_dwo_stats + current_dwo_stats;
+      module_stat.dwo_stats += current_dwo_stats;
+      total_dwo_stats += current_dwo_stats;
       module_stat.debug_info_index_loaded_from_cache =
           sym_file->GetDebugInfoIndexWasLoadedFromCache();
       if (module_stat.debug_info_index_loaded_from_cache)
