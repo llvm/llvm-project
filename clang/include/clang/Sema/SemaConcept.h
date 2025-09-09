@@ -157,12 +157,11 @@ protected:
 
   NormalizedConstraint(NormalizedConstraint *LHS, CompoundConstraintKind CCK,
                        NormalizedConstraint *RHS)
-      : Compound{llvm::to_underlying(ConstraintKind::Compound), llvm::to_underlying(CCK), LHS, RHS} {
-  }
+      : Compound{llvm::to_underlying(ConstraintKind::Compound),
+                 llvm::to_underlying(CCK), LHS, RHS} {}
 
   bool hasParameterMapping() const {
-    return getKind() != ConstraintKind::Compound
-                            && Atomic.Args != nullptr;
+    return getKind() != ConstraintKind::Compound && Atomic.Args != nullptr;
   }
 
   const OccurenceList &mappingOccurenceList() const {
@@ -365,12 +364,10 @@ class ConceptIdConstraint : public NormalizedConstraintWithParamMapping {
       NormalizedConstraintWithParamMapping;
 
 public:
-  static ConceptIdConstraint *Create(ASTContext &Ctx,
-                                     const ConceptReference *ConceptId,
-                                     NormalizedConstraint *SubConstraint,
-                                     const NamedDecl *ConstraintDecl,
-                                     const ConceptSpecializationExpr *CSE,
-                                     UnsignedOrNone PackIndex) {
+  static ConceptIdConstraint *
+  Create(ASTContext &Ctx, const ConceptReference *ConceptId,
+         NormalizedConstraint *SubConstraint, const NamedDecl *ConstraintDecl,
+         const ConceptSpecializationExpr *CSE, UnsignedOrNone PackIndex) {
     return new (Ctx) ConceptIdConstraint(ConceptId, ConstraintDecl,
                                          SubConstraint, CSE, PackIndex);
   }
