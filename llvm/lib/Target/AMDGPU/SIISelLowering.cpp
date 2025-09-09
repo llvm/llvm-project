@@ -14689,12 +14689,8 @@ SITargetLowering::performExtractVectorEltCombine(SDNode *N,
 
     SDLoc SL(N);
     SDValue AndMask = DAG.getConstant(0x1f, SL, MVT::i32);
-    ConstantSDNode *Index = dyn_cast<ConstantSDNode>(N->getOperand(1));
-    uint64_t I = Index->getZExtValue();
-    const SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
-    const SDValue One = DAG.getConstant(1, SL, MVT::i32);
     SDValue EVE = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32,
-                              Vec->getOperand(0), I == 0 ? Zero : One);
+                              Vec->getOperand(0), N->getOperand(1));
     SDValue A = DAG.getNode(ISD::AND, SL, MVT::i32, EVE, AndMask);
     DAG.ReplaceAllUsesWith(N, A.getNode());
   }
