@@ -9418,6 +9418,8 @@ def dxc_Fo : DXCJoinedOrSeparate<"Fo">,
   HelpText<"Output object file">;
 def dxc_Fc : DXCJoinedOrSeparate<"Fc">,
   HelpText<"Output assembly listing file">;
+def dxc_Frs : DXCJoinedOrSeparate<"Frs">,
+  HelpText<"Output additional root signature object file">;
 def dxil_validator_version : Option<["/", "-"], "validator-version", KIND_SEPARATE>,
   Group<dxc_Group>, Flags<[HelpHidden]>,
   Visibility<[DXCOption, ClangOption, CC1Option]>,
@@ -9444,7 +9446,8 @@ def target_profile : DXCJoinedOrSeparate<"T">, MetaVarName<"<profile>">,
          "cs_6_0, cs_6_1, cs_6_2, cs_6_3, cs_6_4, cs_6_5, cs_6_6, cs_6_7,"
          "lib_6_3, lib_6_4, lib_6_5, lib_6_6, lib_6_7, lib_6_x,"
          "ms_6_5, ms_6_6, ms_6_7,"
-         "as_6_5, as_6_6, as_6_7">;
+         "as_6_5, as_6_6, as_6_7,"
+         "rootsig_1_0, rootsig_1_1">;
 def emit_pristine_llvm : DXCFlag<"emit-pristine-llvm">,
   HelpText<"Emit pristine LLVM IR from the frontend by not running any LLVM passes at all."
            "Same as -S + -emit-llvm + -disable-llvm-passes.">;
