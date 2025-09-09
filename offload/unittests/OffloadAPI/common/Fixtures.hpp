@@ -26,6 +26,20 @@
   } while (0)
 #endif
 
+#ifndef ASSERT_SUCCESS_OR_UNSUPPORTED
+#define ASSERT_SUCCESS_OR_UNSUPPORTED(ACTUAL)                                  \
+  do {                                                                         \
+    ol_result_t Res = ACTUAL;                                                  \
+    if (Res && Res->Code == OL_ERRC_UNSUPPORTED) {                             \
+      GTEST_SKIP() << #ACTUAL " returned unsupported; skipping test";          \
+      return;                                                                  \
+    } else if (Res && Res->Code != OL_ERRC_SUCCESS) {                          \
+      GTEST_FAIL() << #ACTUAL " returned " << Res->Code << ": "                \
+                   << Res->Details;                                            \
+    }                                                                          \
+  } while (0)
+#endif
+
 // TODO: rework this so the EXPECTED/ACTUAL results are readable
 #ifndef ASSERT_ERROR
 #define ASSERT_ERROR(EXPECTED, ACTUAL)                                         \
@@ -74,6 +88,40 @@ template <typename Fn> inline void threadify(Fn body) {
     T.join();
   }
 }
+
+/// Enqueues a task to the queue that can be manually resolved.
+// It will block until `trigger` is called.
+struct ManuallyTriggeredTask {
+  std::mutex M;
+  std::condition_variable CV;
+  bool Flag = false;
+  ol_event_handle_t CompleteEvent;
+
+  ol_result_t enqueue(ol_queue_handle_t Queue) {
+    if (auto Err = olLaunchHostFunction(
+            Queue,
+            [](void *That) {
+              static_cast<ManuallyTriggeredTask *>(That)->wait();
+            },
+            this))
+      return Err;
+
+    return olCreateEvent(Queue, &CompleteEvent);
+  }
+
+  void wait() {
+    std::unique_lock<std::mutex> lk(M);
+    CV.wait_for(lk, std::chrono::milliseconds(1000), [&] { return Flag; });
+    EXPECT_TRUE(Flag);
+  }
+
+  ol_result_t trigger() {
+    Flag = true;
+    CV.notify_one();
+
+    return olSyncEvent(CompleteEvent);
+  }
+};
 
 struct OffloadTest : ::testing::Test {
   ol_device_handle_t Host = TestEnvironment::getHostDevice();

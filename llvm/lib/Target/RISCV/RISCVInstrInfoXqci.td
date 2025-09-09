@@ -1738,10 +1738,19 @@ def : CompressPat<(QC_E_XORAI GPRNoX0:$rd, simm12:$imm),
                   (XORI GPRNoX0:$rd, GPRNoX0:$rd, simm12:$imm)>;
 } // let isCompressOnly = true, Predicates = [HasVendorXqcilia, IsRV32]
 
-let Predicates = [HasVendorXqciac, IsRV32] in {
+let isCompressOnly = true, Predicates = [HasVendorXqciac, IsRV32] in {
 def : CompressPat<(QC_MULIADD GPRC:$rd, GPRC:$rs1, uimm5:$imm5),
                   (QC_C_MULIADD GPRC:$rd, GPRC:$rs1, uimm5:$imm5)>;
-}
+} // isCompressOnly = true, Predicates = [HasVendorXqciac, IsRV32]
+
+let isCompressOnly = true, Predicates = [HasVendorXqciac, HasStdExtZba, IsRV32] in {
+def : CompressPat<(SH1ADD GPRC:$rd, GPRC:$rs1, GPRC:$rd),
+                  (QC_C_MULIADD GPRC:$rd, GPRC:$rs1, 2)>;
+def : CompressPat<(SH2ADD GPRC:$rd, GPRC:$rs1, GPRC:$rd),
+                  (QC_C_MULIADD GPRC:$rd, GPRC:$rs1, 4)>;
+def : CompressPat<(SH3ADD GPRC:$rd, GPRC:$rs1, GPRC:$rd),
+                  (QC_C_MULIADD GPRC:$rd, GPRC:$rs1, 8)>;
+} // isCompressOnly = true, Predicates = [HasVendorXqciac, HasStdExtZba, IsRV32]
 
 let isCompressOnly = true, Predicates = [HasVendorXqcibi, IsRV32] in {
 def : CompressPat<(QC_E_BEQI GPRNoX0:$rs1, simm5nonzero:$imm5, bare_simm13_lsb0:$imm12),

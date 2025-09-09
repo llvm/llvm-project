@@ -203,8 +203,14 @@ namespace ISD {
   ///
   struct InputArg {
     ArgFlagsTy Flags;
+    /// Legalized type of this argument part.
     MVT VT = MVT::Other;
+    /// Usually the non-legalized type of the argument, which is the EVT
+    /// corresponding to the OrigTy IR type. However, for post-legalization
+    /// libcalls, this will be a legalized type.
     EVT ArgVT;
+    /// Original IR type of the argument. For aggregates, this is the type of
+    /// an individual aggregate element, not the whole aggregate.
     Type *OrigTy;
     bool Used;
 
@@ -239,8 +245,13 @@ namespace ISD {
   ///
   struct OutputArg {
     ArgFlagsTy Flags;
+    // Legalized type of this argument part.
     MVT VT;
+    /// Non-legalized type of the argument. This is the EVT corresponding to
+    /// the OrigTy IR type.
     EVT ArgVT;
+    /// Original IR type of the argument. For aggregates, this is the type of
+    /// an individual aggregate element, not the whole aggregate.
     Type *OrigTy;
 
     /// Index original Function's argument.

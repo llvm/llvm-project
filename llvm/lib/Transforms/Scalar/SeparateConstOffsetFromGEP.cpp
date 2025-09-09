@@ -294,6 +294,10 @@ private:
   bool CanTraceInto(bool SignExtended, bool ZeroExtended, BinaryOperator *BO,
                     bool NonNegative);
 
+  /// Analyze XOR instruction to extract disjoint constant bits that behave
+  /// like addition operations for improved address mode folding.
+  APInt extractDisjointBitsFromXor(BinaryOperator *XorInst);
+
   /// The path from the constant offset to the old GEP index. e.g., if the GEP
   /// index is "a * b + (c + 5)". After running function find, UserChain[0] will
   /// be the constant 5, UserChain[1] will be the subexpression "c + 5", and
@@ -596,6 +600,9 @@ APInt ConstantOffsetExtractor::find(Value *V, bool SignExtended,
     // Trace into subexpressions for more hoisting opportunities.
     if (CanTraceInto(SignExtended, ZeroExtended, BO, NonNegative))
       ConstantOffset = findInEitherOperand(BO, SignExtended, ZeroExtended);
+    // Handle XOR with disjoint bits that can be treated as addition.
+    else if (BO->getOpcode() == Instruction::Xor)
+      ConstantOffset = extractDisjointBitsFromXor(BO);
   } else if (isa<TruncInst>(V)) {
     ConstantOffset =
         find(U->getOperand(0), SignExtended, ZeroExtended, NonNegative)
@@ -635,6 +642,13 @@ Value *ConstantOffsetExtractor::applyExts(Value *V) {
 
     Instruction *Ext = I->clone();
     Ext->setOperand(0, Current);
+    // In ConstantOffsetExtractor::find we do not analyze nuw/nsw for trunc, so
+    // we assume that it is ok to redistribute trunc over add/sub/or. But for
+    // example (add (trunc nuw A), (trunc nuw B)) is more poisonous than (trunc
+    // nuw (add A, B))). To make such redistributions legal we drop all the
+    // poison generating flags from cloned trunc instructions here.
+    if (isa<TruncInst>(Ext))
+      Ext->dropPoisonGeneratingFlags();
     Ext->insertBefore(*IP->getParent(), IP);
     Current = Ext;
   }
@@ -708,11 +722,20 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   Value *NextInChain = removeConstOffset(ChainIndex - 1);
   Value *TheOther = BO->getOperand(1 - OpNo);
 
-  // If NextInChain is 0 and not the LHS of a sub, we can simplify the
-  // sub-expression to be just TheOther.
   if (ConstantInt *CI = dyn_cast<ConstantInt>(NextInChain)) {
-    if (CI->isZero() && !(BO->getOpcode() == Instruction::Sub && OpNo == 0))
-      return TheOther;
+    if (CI->isZero()) {
+      // Custom XOR handling for disjoint bits - preserves original XOR
+      // with non-disjoint constant bits.
+      // TODO: The design should be updated to support partial constant
+      // extraction.
+      if (BO->getOpcode() == Instruction::Xor)
+        return BO;
+
+      // If NextInChain is 0 and not the LHS of a sub, we can simplify the
+      // sub-expression to be just TheOther.
+      if (!(BO->getOpcode() == Instruction::Sub && OpNo == 0))
+        return TheOther;
+    }
   }
 
   BinaryOperator::BinaryOps NewOp = BO->getOpcode();
@@ -741,6 +764,67 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   }
   NewBO->takeName(BO);
   return NewBO;
+}
+
+/// Analyze XOR instruction to extract disjoint constant bits for address
+/// folding
+///
+/// This function identifies bits in an XOR constant operand that are disjoint
+/// from the base operand's known set bits. For these disjoint bits, XOR behaves
+/// identically to addition, allowing us to extract them as constant offsets
+/// that can be folded into addressing modes.
+///
+/// Transformation: `Base ^ Const` becomes `(Base ^ NonDisjointBits) +
+/// DisjointBits` where DisjointBits = Const & KnownZeros(Base)
+///
+/// Example with ptr having known-zero low bit:
+///   Original: `xor %ptr, 3`    ; 3 = 0b11
+///   Analysis: DisjointBits = 3 & KnownZeros(%ptr) = 0b11 & 0b01 = 0b01
+///   Result:   `(xor %ptr, 2) + 1` where 1 can be folded into address mode
+///
+/// \param XorInst The XOR binary operator to analyze
+/// \return APInt containing the disjoint bits that can be extracted as offset,
+///         or zero if no disjoint bits exist
+APInt ConstantOffsetExtractor::extractDisjointBitsFromXor(
+    BinaryOperator *XorInst) {
+  assert(XorInst && XorInst->getOpcode() == Instruction::Xor &&
+         "Expected XOR instruction");
+
+  const unsigned BitWidth = XorInst->getType()->getScalarSizeInBits();
+  Value *BaseOperand;
+  ConstantInt *XorConstant;
+
+  // Match pattern: xor BaseOperand, Constant.
+  if (!match(XorInst, m_Xor(m_Value(BaseOperand), m_ConstantInt(XorConstant))))
+    return APInt::getZero(BitWidth);
+
+  // Compute known bits for the base operand.
+  const SimplifyQuery SQ(DL);
+  const KnownBits BaseKnownBits = computeKnownBits(BaseOperand, SQ);
+  const APInt &ConstantValue = XorConstant->getValue();
+
+  // Identify disjoint bits: constant bits that are known zero in base.
+  const APInt DisjointBits = ConstantValue & BaseKnownBits.Zero;
+
+  // Early exit if no disjoint bits found.
+  if (DisjointBits.isZero())
+    return APInt::getZero(BitWidth);
+
+  // Compute the remaining non-disjoint bits that stay in the XOR.
+  const APInt NonDisjointBits = ConstantValue & ~DisjointBits;
+
+  // FIXME: Enhance XOR constant extraction to handle nested binary operations.
+  // Currently we only extract disjoint bits from the immediate XOR constant,
+  // but we could recursively process cases like:
+  //   xor (add %base, C1), C2  ->  add %base, (C1 ^ disjoint_bits(C2))
+  // This requires careful analysis to ensure the transformation preserves
+  // semantics, particularly around sign extension and overflow behavior.
+
+  // Add the non-disjoint constant to the user chain for later transformation
+  // This will replace the original constant in the XOR with the new
+  // constant.
+  UserChain.push_back(ConstantInt::get(XorInst->getType(), NonDisjointBits));
+  return DisjointBits;
 }
 
 /// A helper function to check if reassociating through an entry in the user
@@ -962,19 +1046,31 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   if (GEP->getType()->isVectorTy())
     return false;
 
+  // If the base of this GEP is a ptradd of a constant, lets pass the constant
+  // along. This ensures that when we have a chain of GEPs the constant
+  // offset from each is accumulated.
+  Value *NewBase;
+  const APInt *BaseOffset;
+  const bool ExtractBase =
+      match(GEP->getPointerOperand(),
+            m_PtrAdd(m_Value(NewBase), m_APInt(BaseOffset)));
+
+  const int64_t BaseByteOffset = ExtractBase ? BaseOffset->getSExtValue() : 0;
+
   // The backend can already nicely handle the case where all indices are
   // constant.
-  if (GEP->hasAllConstantIndices())
+  if (GEP->hasAllConstantIndices() && !ExtractBase)
     return false;
 
   bool Changed = canonicalizeArrayIndicesToIndexSize(GEP);
 
   bool NeedsExtraction;
-  int64_t AccumulativeByteOffset = accumulateByteOffset(GEP, NeedsExtraction);
+  int64_t AccumulativeByteOffset =
+      BaseByteOffset + accumulateByteOffset(GEP, NeedsExtraction);
 
   TargetTransformInfo &TTI = GetTTI(*GEP->getFunction());
 
-  if (!NeedsExtraction) {
+  if (!NeedsExtraction && !ExtractBase) {
     Changed |= reorderGEP(GEP, TTI);
     return Changed;
   }
@@ -998,7 +1094,9 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
 
   // Track information for preserving GEP flags.
   bool AllOffsetsNonNegative = AccumulativeByteOffset >= 0;
-  bool AllNUWPreserved = true;
+  bool AllNUWPreserved = GEP->hasNoUnsignedWrap();
+  bool NewGEPInBounds = GEP->isInBounds();
+  bool NewGEPNUSW = GEP->hasNoUnsignedSignedWrap();
 
   // Remove the constant offset in each sequential index. The resultant GEP
   // computes the variadic base.
@@ -1034,6 +1132,16 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
       }
     }
   }
+  if (ExtractBase) {
+    GEPOperator *Base = cast<GEPOperator>(GEP->getPointerOperand());
+    AllNUWPreserved &= Base->hasNoUnsignedWrap();
+    NewGEPInBounds &= Base->isInBounds();
+    NewGEPNUSW &= Base->hasNoUnsignedSignedWrap();
+    AllOffsetsNonNegative &= BaseByteOffset >= 0;
+
+    GEP->setOperand(0, NewBase);
+    RecursivelyDeleteTriviallyDeadInstructions(Base);
+  }
 
   // Clear the inbounds attribute because the new index may be off-bound.
   // e.g.,
@@ -1061,7 +1169,7 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
 
   // If the initial GEP was NUW and all operations that we reassociate were NUW
   // additions, the resulting GEPs are also NUW.
-  if (GEP->hasNoUnsignedWrap() && AllNUWPreserved) {
+  if (AllNUWPreserved) {
     NewGEPFlags |= GEPNoWrapFlags::noUnsignedWrap();
     // If the initial GEP additionally had NUSW (or inbounds, which implies
     // NUSW), we know that the indices in the initial GEP must all have their
@@ -1069,13 +1177,13 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
     // add-operands therefore also don't have their signbit set. Therefore, all
     // indices of the resulting GEPs are non-negative -> we can preserve
     // the inbounds/nusw flag.
-    CanPreserveInBoundsNUSW |= GEP->hasNoUnsignedSignedWrap();
+    CanPreserveInBoundsNUSW |= NewGEPNUSW;
   }
 
   if (CanPreserveInBoundsNUSW) {
-    if (GEP->isInBounds())
+    if (NewGEPInBounds)
       NewGEPFlags |= GEPNoWrapFlags::inBounds();
-    else if (GEP->hasNoUnsignedSignedWrap())
+    else if (NewGEPNUSW)
       NewGEPFlags |= GEPNoWrapFlags::noUnsignedSignedWrap();
   }
 
@@ -1143,11 +1251,13 @@ bool SeparateConstOffsetFromGEP::run(Function &F) {
 
   DL = &F.getDataLayout();
   bool Changed = false;
-  for (BasicBlock &B : F) {
-    if (!DT->isReachableFromEntry(&B))
+
+  ReversePostOrderTraversal<Function *> RPOT(&F);
+  for (BasicBlock *B : RPOT) {
+    if (!DT->isReachableFromEntry(B))
       continue;
 
-    for (Instruction &I : llvm::make_early_inc_range(B))
+    for (Instruction &I : llvm::make_early_inc_range(*B))
       if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&I))
         Changed |= splitGEP(GEP);
     // No need to split GEP ConstantExprs because all its indices are constant

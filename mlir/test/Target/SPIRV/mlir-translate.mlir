@@ -5,7 +5,7 @@
 // RUN: rm -rf %t
 // RUN: mkdir %t && mlir-translate --serialize-spirv --no-implicit-module \
 // RUN: --split-input-file --spirv-save-validation-files-with-prefix=%t/foo %s \
-// RUN: && ls %t | wc -l | FileCheck %s
+// RUN: && ls %t/foo*.spv | wc -l | FileCheck %s
 // RUN: rm -rf %t
 
 // CHECK: 4

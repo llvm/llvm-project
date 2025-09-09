@@ -681,6 +681,7 @@ private:
       SDNode *N, RTLIB::Libcall LC, std::optional<unsigned> CallRetResNo = {});
 
   // clang-format off
+  void ExpandFloatRes_AssertNoFPClass(SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_FABS      (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_FACOS     (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_FASIN     (SDNode *N, SDValue &Lo, SDValue &Hi);
@@ -908,6 +909,7 @@ private:
   SDValue ScalarizeVecOp_EXTRACT_VECTOR_ELT(SDNode *N);
   SDValue ScalarizeVecOp_VSELECT(SDNode *N);
   SDValue ScalarizeVecOp_VSETCC(SDNode *N);
+  SDValue ScalarizeVecOp_VSTRICT_FSETCC(SDNode *N, unsigned OpNo);
   SDValue ScalarizeVecOp_STORE(StoreSDNode *N, unsigned OpNo);
   SDValue ScalarizeVecOp_FP_ROUND(SDNode *N, unsigned OpNo);
   SDValue ScalarizeVecOp_STRICT_FP_ROUND(SDNode *N, unsigned OpNo);

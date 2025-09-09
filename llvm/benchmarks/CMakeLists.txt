@@ -11,3 +11,6 @@ add_benchmark(FormatVariadicBM FormatVariadicBM.cpp PARTIAL_SOURCES_INTENDED)
 add_benchmark(GetIntrinsicInfoTableEntriesBM GetIntrinsicInfoTableEntriesBM.cpp PARTIAL_SOURCES_INTENDED)
 add_benchmark(SandboxIRBench SandboxIRBench.cpp PARTIAL_SOURCES_INTENDED)
 
+add_benchmark(RuntimeLibcallsBench RuntimeLibcalls.cpp PARTIAL_SOURCES_INTENDED)
+
+

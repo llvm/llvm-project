@@ -15,8 +15,8 @@
 // MSABI: @f4.x = internal global %struct.s { ptr @"??_C@_05CJBACGMB@hello?$AA@" }
 // CHECK: @x = {{(dso_local )?}}global [3 x i8] c"ola", align [[ALIGN]]
 
-// XFAIL: target=aarch64-pc-windows-{{.*}}, target=arm64ec-pc-windows-{{.*}}
-// Arm64 aligns arrays to either 32-bit or 64-bit boundaries, which fails
+// XFAIL: target=aarch64-{{.*}}-windows-msvc, target=arm64ec-{{.*}}-windows-msvc
+// Arm64 in MSVC mode aligns arrays to either 32-bit or 64-bit boundaries, which fails
 // various checks above, since ALIGN is derived from the alignment of a single
 // i8, which is still 1.
 

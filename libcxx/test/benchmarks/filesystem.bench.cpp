@@ -171,4 +171,24 @@ BENCHMARK_CAPTURE(BM_LexicallyNormal, large_path, getRandomPaths, /*PathLen*/ 32
     ->Range(2, 256)
     ->Complexity();
 
+template <class GenInput>
+void BM_LexicallyRelative(benchmark::State& st, GenInput gen, size_t PathLen) {
+  auto BasePath   = gen(st.range(0), PathLen);
+  auto TargetPath = gen(st.range(0), PathLen);
+  benchmark::DoNotOptimize(&BasePath);
+  benchmark::DoNotOptimize(&TargetPath);
+  for (auto _ : st) {
+    benchmark::DoNotOptimize(TargetPath.lexically_relative(BasePath));
+  }
+  st.SetComplexityN(st.range(0));
+}
+BENCHMARK_CAPTURE(BM_LexicallyRelative, small_path, getRandomPaths, /*PathLen*/ 5)
+    ->RangeMultiplier(2)
+    ->Range(2, 256)
+    ->Complexity();
+BENCHMARK_CAPTURE(BM_LexicallyRelative, large_path, getRandomPaths, /*PathLen*/ 32)
+    ->RangeMultiplier(2)
+    ->Range(2, 256)
+    ->Complexity();
+
 BENCHMARK_MAIN();

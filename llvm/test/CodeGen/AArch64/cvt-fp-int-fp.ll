@@ -119,6 +119,109 @@ entry:
   ret bfloat %conv1
 }
 
+define i64 @testu_f64_multiuse(double %x) {
+; CHECK-LABEL: testu_f64_multiuse:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzu d1, d0
+; CHECK-NEXT:    fcvtzu x8, d0
+; CHECK-NEXT:    ucvtf d1, d1
+; CHECK-NEXT:    fcmp d0, d1
+; CHECK-NEXT:    csel x0, x8, xzr, eq
+; CHECK-NEXT:    ret
+entry:
+  %conv = fptoui double %x to i64
+  %conv1 = uitofp i64 %conv to double
+  %cmp = fcmp oeq double %x, %conv1
+  %cond = select i1 %cmp, i64 %conv, i64 0
+  ret i64 %cond
+}
+
+define i32 @testu_f32_multiuse(float %x) {
+; CHECK-LABEL: testu_f32_multiuse:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzu s1, s0
+; CHECK-NEXT:    fcvtzu w8, s0
+; CHECK-NEXT:    ucvtf s1, s1
+; CHECK-NEXT:    fcmp s0, s1
+; CHECK-NEXT:    csel w0, w8, wzr, eq
+; CHECK-NEXT:    ret
+entry:
+  %conv = fptoui float %x to i32
+  %conv1 = uitofp i32 %conv to float
+  %cmp = fcmp oeq float %x, %conv1
+  %cond = select i1 %cmp, i32 %conv, i32 0
+  ret i32 %cond
+}
+
+define i32 @testu_f16_multiuse(half %x) {
+; CHECK-LABEL: testu_f16_multiuse:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzu h1, h0
+; CHECK-NEXT:    fcvtzu w8, h0
+; CHECK-NEXT:    ucvtf h1, h1
+; CHECK-NEXT:    fcmp h0, h1
+; CHECK-NEXT:    csel w0, w8, wzr, eq
+; CHECK-NEXT:    ret
+entry:
+  %conv = fptoui half %x to i32
+  %conv1 = uitofp i32 %conv to half
+  %cmp = fcmp oeq half %x, %conv1
+  %cond = select i1 %cmp, i32 %conv, i32 0
+  ret i32 %cond
+}
+
+define i64 @tests_f64_multiuse(double %x) {
+; CHECK-LABEL: tests_f64_multiuse:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzs d1, d0
+; CHECK-NEXT:    fcvtzs x8, d0
+; CHECK-NEXT:    scvtf d1, d1
+; CHECK-NEXT:    fcmp d0, d1
+; CHECK-NEXT:    csel x0, x8, xzr, eq
+; CHECK-NEXT:    ret
+entry:
+  %conv = fptosi double %x to i64
+  %conv1 = sitofp i64 %conv to double
+  %cmp = fcmp oeq double %x, %conv1
+  %cond = select i1 %cmp, i64 %conv, i64 0
+  ret i64 %cond
+}
+
+define i32 @tests_f32_multiuse(float %x) {
+; CHECK-LABEL: tests_f32_multiuse:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzs s1, s0
+; CHECK-NEXT:    fcvtzs w8, s0
+; CHECK-NEXT:    scvtf s1, s1
+; CHECK-NEXT:    fcmp s0, s1
+; CHECK-NEXT:    csel w0, w8, wzr, eq
+; CHECK-NEXT:    ret
+entry:
+  %conv = fptosi float %x to i32
+  %conv1 = sitofp i32 %conv to float
+  %cmp = fcmp oeq float %x, %conv1
+  %cond = select i1 %cmp, i32 %conv, i32 0
+  ret i32 %cond
+}
+
+define i32 @tests_f16_multiuse(half %x) {
+; CHECK-LABEL: tests_f16_multiuse:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzs h1, h0
+; CHECK-NEXT:    fcvtzs w8, h0
+; CHECK-NEXT:    scvtf h1, h1
+; CHECK-NEXT:    fcmp h0, h1
+; CHECK-NEXT:    csel w0, w8, wzr, eq
+; CHECK-NEXT:    ret
+entry:
+  %conv = fptosi half %x to i32
+  %conv1 = sitofp i32 %conv to half
+  %cmp = fcmp oeq half %x, %conv1
+  %cond = select i1 %cmp, i32 %conv, i32 0
+  ret i32 %cond
+}
+
+
 define double @t1_strict(double %x) #0 {
 ; CHECK-LABEL: t1_strict:
 ; CHECK:       // %bb.0: // %entry

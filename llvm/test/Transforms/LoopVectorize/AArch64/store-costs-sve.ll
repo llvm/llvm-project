@@ -10,12 +10,12 @@ define void @cost_store_i8(ptr %dst) #0 {
 ; DEFAULT-SAME: ptr [[DST:%.*]]) #[[ATTR0:[0-9]+]] {
 ; DEFAULT-NEXT:  iter.check:
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 8
+; DEFAULT-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 101, [[TMP1]]
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; DEFAULT:       vector.main.loop.iter.check:
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 32
+; DEFAULT-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 5
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 101, [[TMP3]]
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; DEFAULT:       vector.ph:
@@ -28,7 +28,7 @@ define void @cost_store_i8(ptr %dst) #0 {
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
 ; DEFAULT-NEXT:    [[TMP22:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP23:%.*]] = mul nuw i64 [[TMP22]], 16
+; DEFAULT-NEXT:    [[TMP23:%.*]] = shl nuw i64 [[TMP22]], 4
 ; DEFAULT-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP9]], i64 [[TMP23]]
 ; DEFAULT-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[TMP9]], align 1
 ; DEFAULT-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[TMP24]], align 1
@@ -41,7 +41,7 @@ define void @cost_store_i8(ptr %dst) #0 {
 ; DEFAULT:       vec.epilog.iter.check:
 ; DEFAULT-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 101, [[N_VEC]]
 ; DEFAULT-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP13:%.*]] = mul nuw i64 [[TMP12]], 8
+; DEFAULT-NEXT:    [[TMP13:%.*]] = shl nuw i64 [[TMP12]], 3
 ; DEFAULT-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], [[TMP13]]
 ; DEFAULT-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
 ; DEFAULT:       vec.epilog.ph:
@@ -82,7 +82,7 @@ define void @cost_store_i8(ptr %dst) #0 {
 ; PRED-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 16
 ; PRED-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; PRED-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 16
+; PRED-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP7]], 4
 ; PRED-NEXT:    [[TMP9:%.*]] = sub i64 101, [[TMP8]]
 ; PRED-NEXT:    [[TMP10:%.*]] = icmp ugt i64 101, [[TMP8]]
 ; PRED-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i64 [[TMP9]], i64 0

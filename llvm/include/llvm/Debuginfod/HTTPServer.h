@@ -104,6 +104,7 @@ class HTTPServer {
 public:
   HTTPServer();
   ~HTTPServer();
+  HTTPServer(HTTPServer &&);
 
   /// Returns true only if LLVM has been compiled with a working HTTPServer.
   static bool isAvailable();

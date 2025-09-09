@@ -35,6 +35,7 @@ class MCInstrInfo;
 class MCRegisterClass;
 class MCRegisterInfo;
 class MCSubtargetInfo;
+class MDNode;
 class StringRef;
 class Triple;
 class raw_ostream;
@@ -1064,6 +1065,9 @@ SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
 std::optional<SmallVector<unsigned>>
 getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size);
 
+/// Checks if \p Val is inside \p MD, a !range-like metadata.
+bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val);
+
 /// Represents the counter values to wait for in an s_waitcnt instruction.
 ///
 /// Large values (including the maximum possible integer) can be used to
@@ -1549,6 +1553,7 @@ bool isGFX11Plus(const MCSubtargetInfo &STI);
 bool isGFX12(const MCSubtargetInfo &STI);
 bool isGFX12Plus(const MCSubtargetInfo &STI);
 bool isGFX1250(const MCSubtargetInfo &STI);
+bool supportsWGP(const MCSubtargetInfo &STI);
 bool isNotGFX12Plus(const MCSubtargetInfo &STI);
 bool isNotGFX11Plus(const MCSubtargetInfo &STI);
 bool isGCN3Encoding(const MCSubtargetInfo &STI);

@@ -336,8 +336,7 @@ struct StoreNdDistribution final : public gpu::WarpDistributionPattern {
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    auto yield = cast<gpu::YieldOp>(
-        warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
+    gpu::YieldOp yield = warpOp.getTerminator();
     Operation *lastNode = yield->getPrevNode();
     auto storeOp = dyn_cast_or_null<xegpu::StoreNdOp>(lastNode);
     if (!storeOp)
@@ -449,8 +448,7 @@ struct LoadNdDistribution final : public gpu::WarpDistributionPattern {
       // Make sure the same load op is the last operation in the warp op body.
       // This ensure that load op is not sinked earlier violating any barrier
       // synchronizations.
-      auto yield = cast<gpu::YieldOp>(
-          warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
+      gpu::YieldOp yield = warpOp.getTerminator();
       return yield->getPrevNode() == op;
     });
 
@@ -752,8 +750,7 @@ struct PrefetchNdDistribution final : public gpu::WarpDistributionPattern {
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    auto yield = cast<gpu::YieldOp>(
-        warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
+    gpu::YieldOp yield = warpOp.getTerminator();
     Operation *lastNode = yield->getPrevNode();
     auto prefetchOp = dyn_cast_or_null<xegpu::PrefetchNdOp>(lastNode);
     if (!prefetchOp)
@@ -794,8 +791,7 @@ struct GpuBarrierDistribution final : public gpu::WarpDistributionPattern {
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    auto yield = cast<gpu::YieldOp>(
-        warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
+    gpu::YieldOp yield = warpOp.getTerminator();
     Operation *lastNode = yield->getPrevNode();
     // The last node must be a gpu::BarrierOp.
     auto barrierOp = dyn_cast_or_null<gpu::BarrierOp>(lastNode);
@@ -841,14 +837,15 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
       if (!isa<VectorType>(operand.get().getType()))
         continue;
 
-      xegpu::LayoutAttr layout = xegpu::getLayoutAttr(operand);
+      auto layout =
+          xegpu::getDistributeLayoutAttrOfType<xegpu::LayoutAttr>(operand);
       if (!layout) {
         op->emitError("Could not find layout attribute for operand ")
             << operand.getOperandNumber() << " of operation " << op->getName();
         signalPassFailure();
         return;
       }
-      xegpu::setLayoutAttr(operand, layout);
+      xegpu::setDistributeLayoutAttr(operand, layout);
     }
   });
   // Step 2: Move all operations of a GPU function inside
@@ -882,7 +879,8 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
     if (vecRank == 0)
       return AffineMap::get(val.getContext());
     // Get the layout of the vector type.
-    xegpu::LayoutAttr layout = xegpu::getLayoutAttr(val);
+    // TODO: support more layout types
+    auto layout = xegpu::getDistributeLayoutAttrOfType<xegpu::LayoutAttr>(val);
     // If no layout is specified, assume the inner most dimension is distributed
     // for now.
     if (!layout)

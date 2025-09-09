@@ -137,60 +137,6 @@ void testOmpCreation(void) {
   mlirContextDestroy(ctx);
 }
 
-// Helper variable to track callback invocations
-static int initCnt = 0;
-
-// Callback function that will be called during JIT initialization
-static void initCallback(void) { initCnt += 1; }
-
-// CHECK-LABEL: Running test 'testGlobalCtorJitCallback'
-void testGlobalCtorJitCallback(void) {
-  MlirContext ctx = mlirContextCreate();
-  registerAllUpstreamDialects(ctx);
-
-  // Create module with global constructor that calls our callback
-  MlirModule module = mlirModuleCreateParse(
-      ctx, mlirStringRefCreateFromCString(
-               // clang-format off
-"module {                                                                       \n"
-"  llvm.mlir.global_ctors ctors = [@ctor], priorities = [0 : i32], data = [#llvm.zero] \n"
-"  llvm.func @ctor() {                                                          \n"
-"    func.call @init_callback() : () -> ()                                      \n"
-"    llvm.return                                                                \n"
-"  }                                                                            \n"
-"  func.func private @init_callback() attributes { llvm.emit_c_interface }      \n"
-"}                                                                              \n"
-               // clang-format on
-               ));
-
-  lowerModuleToLLVM(ctx, module);
-  mlirRegisterAllLLVMTranslations(ctx);
-
-  // Create execution engine with initialization disabled
-  MlirExecutionEngine jit = mlirExecutionEngineCreate(
-      module, /*optLevel=*/2, /*numPaths=*/0, /*sharedLibPaths=*/NULL,
-      /*enableObjectDump=*/false);
-
-  if (mlirExecutionEngineIsNull(jit)) {
-    fprintf(stderr, "Execution engine creation failed");
-    exit(2);
-  }
-
-  // Register callback symbol before initialization
-  mlirExecutionEngineRegisterSymbol(
-      jit, mlirStringRefCreateFromCString("_mlir_ciface_init_callback"),
-      (void *)(uintptr_t)initCallback);
-
-  mlirExecutionEngineInitialize(jit);
-
-  // CHECK: Init count: 1
-  printf("Init count: %d\n", initCnt);
-
-  mlirExecutionEngineDestroy(jit);
-  mlirModuleDestroy(module);
-  mlirContextDestroy(ctx);
-}
-
 int main(void) {
 
 #define _STRINGIFY(x) #x
@@ -201,6 +147,5 @@ int main(void) {
 
   TEST(testSimpleExecution);
   TEST(testOmpCreation);
-  TEST(testGlobalCtorJitCallback);
   return 0;
 }

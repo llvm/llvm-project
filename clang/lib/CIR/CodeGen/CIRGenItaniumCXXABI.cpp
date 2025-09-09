@@ -56,6 +56,8 @@ public:
                           bool delegating, Address thisAddr,
                           QualType thisTy) override;
 
+  void emitRethrow(CIRGenFunction &cgf, bool isNoReturn) override;
+
   bool useThunkForDtorVariant(const CXXDestructorDecl *dtor,
                               CXXDtorType dt) const override {
     // Itanium does not emit any destructor variant as an inline thunk.
@@ -69,6 +71,10 @@ public:
 
   cir::GlobalOp getAddrOfVTable(const CXXRecordDecl *rd,
                                 CharUnits vptrOffset) override;
+  CIRGenCallee getVirtualFunctionPointer(CIRGenFunction &cgf,
+                                         clang::GlobalDecl gd, Address thisAddr,
+                                         mlir::Type ty,
+                                         SourceLocation loc) override;
 
   mlir::Value getVTableAddressPoint(BaseSubobject base,
                                     const CXXRecordDecl *vtableClass) override;
@@ -77,6 +83,8 @@ public:
       CIRGenFunction &cgf, const clang::CXXRecordDecl *vtableClass,
       clang::BaseSubobject base,
       const clang::CXXRecordDecl *nearestVBase) override;
+  void emitVTableDefinitions(CIRGenVTables &cgvt,
+                             const CXXRecordDecl *rd) override;
 
   bool doStructorsInitializeVPtrs(const CXXRecordDecl *vtableClass) override {
     return true;
@@ -266,6 +274,67 @@ bool CIRGenItaniumCXXABI::needsVTTParameter(GlobalDecl gd) {
   return false;
 }
 
+void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &cgvt,
+                                                const CXXRecordDecl *rd) {
+  cir::GlobalOp vtable = getAddrOfVTable(rd, CharUnits());
+  if (vtable.hasInitializer())
+    return;
+
+  ItaniumVTableContext &vtContext = cgm.getItaniumVTableContext();
+  const VTableLayout &vtLayout = vtContext.getVTableLayout(rd);
+  cir::GlobalLinkageKind linkage = cgm.getVTableLinkage(rd);
+  mlir::Attribute rtti =
+      cgm.getAddrOfRTTIDescriptor(cgm.getLoc(rd->getBeginLoc()),
+                                  cgm.getASTContext().getCanonicalTagType(rd));
+
+  // Classic codegen uses ConstantInitBuilder here, which is a very general
+  // and feature-rich class to generate initializers for global values.
+  // For now, this is using a simpler approach to create the initializer in CIR.
+  cgvt.createVTableInitializer(vtable, vtLayout, rtti,
+                               cir::isLocalLinkage(linkage));
+
+  // Set the correct linkage.
+  vtable.setLinkage(linkage);
+
+  if (cgm.supportsCOMDAT() && cir::isWeakForLinker(linkage))
+    vtable.setComdat(true);
+
+  // Set the right visibility.
+  cgm.setGVProperties(vtable, rd);
+
+  // If this is the magic class __cxxabiv1::__fundamental_type_info,
+  // we will emit the typeinfo for the fundamental types. This is the
+  // same behaviour as GCC.
+  const DeclContext *DC = rd->getDeclContext();
+  if (rd->getIdentifier() &&
+      rd->getIdentifier()->isStr("__fundamental_type_info") &&
+      isa<NamespaceDecl>(DC) && cast<NamespaceDecl>(DC)->getIdentifier() &&
+      cast<NamespaceDecl>(DC)->getIdentifier()->isStr("__cxxabiv1") &&
+      DC->getParent()->isTranslationUnit()) {
+    cgm.errorNYI(rd->getSourceRange(),
+                 "emitVTableDefinitions: __fundamental_type_info");
+  }
+
+  auto vtableAsGlobalValue = dyn_cast<cir::CIRGlobalValueInterface>(*vtable);
+  assert(vtableAsGlobalValue && "VTable must support CIRGlobalValueInterface");
+  // Always emit type metadata on non-available_externally definitions, and on
+  // available_externally definitions if we are performing whole program
+  // devirtualization. For WPD we need the type metadata on all vtable
+  // definitions to ensure we associate derived classes with base classes
+  // defined in headers but with a strong definition only in a shared
+  // library.
+  assert(!cir::MissingFeatures::vtableEmitMetadata());
+  if (cgm.getCodeGenOpts().WholeProgramVTables) {
+    cgm.errorNYI(rd->getSourceRange(),
+                 "emitVTableDefinitions: WholeProgramVTables");
+  }
+
+  assert(!cir::MissingFeatures::vtableRelativeLayout());
+  if (vtContext.isRelativeLayout()) {
+    cgm.errorNYI(rd->getSourceRange(), "vtableRelativeLayout");
+  }
+}
+
 void CIRGenItaniumCXXABI::emitDestructorCall(
     CIRGenFunction &cgf, const CXXDestructorDecl *dd, CXXDtorType type,
     bool forVirtualBase, bool delegating, Address thisAddr, QualType thisTy) {
@@ -283,6 +352,44 @@ void CIRGenItaniumCXXABI::emitDestructorCall(
 
   cgf.emitCXXDestructorCall(gd, callee, thisAddr.getPointer(), thisTy, vtt,
                             vttTy, nullptr);
+}
+
+// The idea here is creating a separate block for the throw with an
+// `UnreachableOp` as the terminator. So, we branch from the current block
+// to the throw block and create a block for the remaining operations.
+static void insertThrowAndSplit(mlir::OpBuilder &builder, mlir::Location loc,
+                                mlir::Value exceptionPtr = {},
+                                mlir::FlatSymbolRefAttr typeInfo = {},
+                                mlir::FlatSymbolRefAttr dtor = {}) {
+  mlir::Block *currentBlock = builder.getInsertionBlock();
+  mlir::Region *region = currentBlock->getParent();
+
+  if (currentBlock->empty()) {
+    cir::ThrowOp::create(builder, loc, exceptionPtr, typeInfo, dtor);
+    cir::UnreachableOp::create(builder, loc);
+  } else {
+    mlir::Block *throwBlock = builder.createBlock(region);
+
+    cir::ThrowOp::create(builder, loc, exceptionPtr, typeInfo, dtor);
+    cir::UnreachableOp::create(builder, loc);
+
+    builder.setInsertionPointToEnd(currentBlock);
+    cir::BrOp::create(builder, loc, throwBlock);
+  }
+
+  (void)builder.createBlock(region);
+}
+
+void CIRGenItaniumCXXABI::emitRethrow(CIRGenFunction &cgf, bool isNoReturn) {
+  // void __cxa_rethrow();
+  if (isNoReturn) {
+    CIRGenBuilderTy &builder = cgf.getBuilder();
+    assert(cgf.currSrcLoc && "expected source location");
+    mlir::Location loc = *cgf.currSrcLoc;
+    insertThrowAndSplit(builder, loc);
+  } else {
+    cgm.errorNYI("emitRethrow with isNoReturn false");
+  }
 }
 
 CIRGenCXXABI *clang::CIRGen::CreateCIRGenItaniumCXXABI(CIRGenModule &cgm) {
@@ -349,6 +456,50 @@ cir::GlobalOp CIRGenItaniumCXXABI::getAddrOfVTable(const CXXRecordDecl *rd,
   return vtable;
 }
 
+CIRGenCallee CIRGenItaniumCXXABI::getVirtualFunctionPointer(
+    CIRGenFunction &cgf, clang::GlobalDecl gd, Address thisAddr, mlir::Type ty,
+    SourceLocation srcLoc) {
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  mlir::Location loc = cgf.getLoc(srcLoc);
+  cir::PointerType tyPtr = builder.getPointerTo(ty);
+  auto *methodDecl = cast<CXXMethodDecl>(gd.getDecl());
+  mlir::Value vtable = cgf.getVTablePtr(loc, thisAddr, methodDecl->getParent());
+
+  uint64_t vtableIndex = cgm.getItaniumVTableContext().getMethodVTableIndex(gd);
+  mlir::Value vfunc{};
+  if (cgf.shouldEmitVTableTypeCheckedLoad(methodDecl->getParent())) {
+    cgm.errorNYI(loc, "getVirtualFunctionPointer: emitVTableTypeCheckedLoad");
+  } else {
+    assert(!cir::MissingFeatures::emitTypeMetadataCodeForVCall());
+
+    mlir::Value vfuncLoad;
+    if (cgm.getItaniumVTableContext().isRelativeLayout()) {
+      assert(!cir::MissingFeatures::vtableRelativeLayout());
+      cgm.errorNYI(loc, "getVirtualFunctionPointer: isRelativeLayout");
+    } else {
+      auto vtableSlotPtr = cir::VTableGetVirtualFnAddrOp::create(
+          builder, loc, builder.getPointerTo(tyPtr), vtable, vtableIndex);
+      vfuncLoad = builder.createAlignedLoad(
+          loc, vtableSlotPtr, cgf.getPointerAlign().getQuantity());
+    }
+
+    // Add !invariant.load md to virtual function load to indicate that
+    // function didn't change inside vtable.
+    // It's safe to add it without -fstrict-vtable-pointers, but it would not
+    // help in devirtualization because it will only matter if we will have 2
+    // the same virtual function loads from the same vtable load, which won't
+    // happen without enabled devirtualization with -fstrict-vtable-pointers.
+    if (cgm.getCodeGenOpts().OptimizationLevel > 0 &&
+        cgm.getCodeGenOpts().StrictVTablePointers) {
+      cgm.errorNYI(loc, "getVirtualFunctionPointer: strictVTablePointers");
+    }
+    vfunc = vfuncLoad;
+  }
+
+  CIRGenCallee callee(gd, vfunc.getDefiningOp());
+  return callee;
+}
+
 mlir::Value
 CIRGenItaniumCXXABI::getVTableAddressPoint(BaseSubobject base,
                                            const CXXRecordDecl *vtableClass) {
@@ -376,9 +527,10 @@ mlir::Value CIRGenItaniumCXXABI::getVTableAddressPointInStructor(
     CIRGenFunction &cgf, const clang::CXXRecordDecl *vtableClass,
     clang::BaseSubobject base, const clang::CXXRecordDecl *nearestVBase) {
 
-  if (base.getBase()->getNumVBases()) {
+  if ((base.getBase()->getNumVBases() || nearestVBase != nullptr) &&
+      needsVTTParameter(cgf.curGD)) {
     cgm.errorNYI(cgf.curFuncDecl->getLocation(),
-                 "getVTableAddressPointInStructor: virtual base");
+                 "getVTableAddressPointInStructorWithVTT");
   }
   return getVTableAddressPoint(base, vtableClass);
 }
