@@ -1,7 +1,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_REFACTOR_GENERATEACCESSORBASE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_REFACTOR_GENERATEACCESSORBASE_H
 
-//===--- GenerateAccessor.h - Base class for getter/setter generation -----===//
+//===--- GenerateAccessorBase.h ----------------------------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

@@ -28,6 +28,7 @@ source_set("tweaks") {
     "ExtractFunction.cpp",
     "ExtractVariable.cpp",
     "GenerateGetterTests.cpp"
+    "GenerateSetterTests.cpp"
     "MemberwiseConstructor.cpp",
     "ObjCLocalizeStringLiteral.cpp",
     "ObjCMemberwiseInitializer.cpp",

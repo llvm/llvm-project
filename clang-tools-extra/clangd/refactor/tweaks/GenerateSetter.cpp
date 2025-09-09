@@ -33,7 +33,7 @@ namespace {
 //
 // Method's prefix can be configured with Style.SetterPrefix.
 // Method's parameter prefix can be configured with
-// GetterSetter.SetterParameterPrefix.
+// Style.SetterParameterPrefix.
 //
 // We place the method inline, other tweaks are available to outline it.
 class GenerateSetter : public GenerateAccessorBase {
