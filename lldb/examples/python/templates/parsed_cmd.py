@@ -324,10 +324,19 @@ class LLDBOptionValueParser:
         value = self.__dict__[elem["dest"]]
         return value
 
-    def add_option(self, short_option, long_option, help, default = None,
-                   dest = None, required=False, groups = None,
-                   value_type=None, completion_type=None,
-                   enum_values=None):
+    def add_option(
+        self,
+        short_option,
+        long_option,
+        help,
+        default=None,
+        dest=None,
+        required=False,
+        groups=None,
+        value_type=None,
+        completion_type=None,
+        enum_values=None,
+    ):
         """
         short_option: one character, must be unique, not required
         long_option: no spaces, must be unique, required
@@ -352,11 +361,12 @@ class LLDBOptionValueParser:
 
         if not completion_type:
             completion_type = self.determine_completion(value_type)
-            
-        dict = {"short_option" : short_option,
-                "required" : required,
-                "help" : help,
-                }
+
+        dict = {
+            "short_option": short_option,
+            "required": required,
+            "help": help,
+        }
 
         if enum_values:
             if not value_type:

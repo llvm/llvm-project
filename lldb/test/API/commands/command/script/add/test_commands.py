@@ -84,11 +84,7 @@ class NoArgsCommand(ReportingCmd):
             default=None,
         )
 
-        ov_parser.add_option(
-            "f",
-            "flag-value",
-            "This is a flag value"
-        )
+        ov_parser.add_option("f", "flag-value", "This is a flag value")
 
         ov_parser.add_option(
             "l",

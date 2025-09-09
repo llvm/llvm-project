@@ -77,7 +77,7 @@ class FrameStatCommand(ParsedCommand):
         ov_parser.add_option(
             "t",
             "test-flag",
-            help = "test a flag value.",
+            help="test a flag value.",
         )
 
     def get_repeat_command(self, args):
@@ -132,7 +132,7 @@ class FrameStatCommand(ParsedCommand):
             print("Got the test flag")
         else:
             print("Got no test flag")
-        
+
         # not returning anything is akin to returning success
 
 

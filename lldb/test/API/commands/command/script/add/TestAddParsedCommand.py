@@ -218,7 +218,7 @@ class ParsedCommandTestCase(TestBase):
                 "disk-file-name (set: False):",
                 "flag-value (set: False):",
                 "line-num (set: False):",
-                "enum-option (set: False):"
+                "enum-option (set: False):",
             ],
         )
         # Make sure flag values work:
@@ -230,7 +230,7 @@ class ParsedCommandTestCase(TestBase):
                 "disk-file-name (set: False):",
                 "flag-value (set: True):",
                 "line-num (set: False):",
-                "enum-option (set: False):"
+                "enum-option (set: False):",
             ],
         )
 
