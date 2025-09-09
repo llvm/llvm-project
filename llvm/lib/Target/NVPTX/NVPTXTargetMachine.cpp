@@ -112,6 +112,12 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXPrologEpilogPassPass(PR);
 }
 
+static cl::opt<bool> NVPTXUseShortPointers(
+    "nvptx-short-ptr",
+    cl::desc(
+        "Use 32-bit pointers for accessing const/local/shared address spaces."),
+    cl::init(false), cl::Hidden);
+
 NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
                                        const TargetOptions &Options,
@@ -120,9 +126,10 @@ NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
                                        CodeGenOptLevel OL, bool is64bit)
     // The pic relocation model is used regardless of what the client has
     // specified, as it is the only relocation model currently supported.
-    : CodeGenTargetMachineImpl(T, DataLayout::computeStringForTriple(TT), TT,
-                               CPU, FS, Options, Reloc::PIC_,
-                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
+    : CodeGenTargetMachineImpl(
+          T, TT.computeDataLayout(NVPTXUseShortPointers ? "" : "shortptr"), TT,
+          CPU, FS, Options, Reloc::PIC_,
+          getEffectiveCodeModel(CM, CodeModel::Small), OL),
       is64bit(is64bit), TLOF(std::make_unique<NVPTXTargetObjectFile>()),
       Subtarget(TT, std::string(CPU), std::string(FS), *this),
       StrPool(StrAlloc) {

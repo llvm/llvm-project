@@ -134,9 +134,8 @@ DirectXTargetMachine::DirectXTargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, DataLayout::computeStringForTriple(TT), TT,
-                               CPU, FS, Options, Reloc::Static,
-                               CodeModel::Small, OL),
+    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+                               Reloc::Static, CodeModel::Small, OL),
       TLOF(std::make_unique<DXILTargetObjectFile>()),
       Subtarget(std::make_unique<DirectXSubtarget>(TT, CPU, FS, *this)) {
   initAsmInfo();

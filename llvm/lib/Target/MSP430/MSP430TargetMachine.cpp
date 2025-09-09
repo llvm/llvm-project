@@ -40,8 +40,8 @@ MSP430TargetMachine::MSP430TargetMachine(const Target &T, const Triple &TT,
                                          std::optional<Reloc::Model> RM,
                                          std::optional<CodeModel::Model> CM,
                                          CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, DataLayout::computeStringForTriple(TT), TT,
-                               CPU, FS, Options, getEffectiveRelocModel(RM),
+    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+                               getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<TargetLoweringObjectFileELF>()),
       Subtarget(TT, std::string(CPU), std::string(FS), *this) {

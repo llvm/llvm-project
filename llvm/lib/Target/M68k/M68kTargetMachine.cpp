@@ -72,8 +72,8 @@ M68kTargetMachine::M68kTargetMachine(const Target &T, const Triple &TT,
                                      std::optional<Reloc::Model> RM,
                                      std::optional<CodeModel::Model> CM,
                                      CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, DataLayout::computeStringForTriple(TT), TT,
-                               CPU, FS, Options, getEffectiveRelocModel(TT, RM),
+    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+                               getEffectiveRelocModel(TT, RM),
                                ::getEffectiveCodeModel(CM, JIT), OL),
       TLOF(std::make_unique<M68kELFTargetObjectFile>()),
       Subtarget(TT, CPU, FS, *this) {

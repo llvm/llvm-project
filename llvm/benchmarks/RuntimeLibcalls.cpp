@@ -54,10 +54,7 @@ static std::vector<std::string> readSymbolsFromFile(StringRef InputFile) {
   // Hackily figure out if there's a prefix on the symbol names - llvm-nm
   // appears to not have a flag to skip this.
   llvm::Triple HostTriple(LLVM_HOST_TRIPLE);
-  std::string DummyDatalayout = "e";
-  DummyDatalayout += DataLayout::getManglingComponent(HostTriple);
-
-  DataLayout DL(DummyDatalayout);
+  DataLayout DL(HostTriple.computeDataLayout());
   char GlobalPrefix = DL.getGlobalPrefix();
 
   std::vector<std::string> Lines;

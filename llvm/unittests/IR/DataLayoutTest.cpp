@@ -677,11 +677,4 @@ TEST(DataLayoutTest, VectorAlign) {
   EXPECT_EQ(Align(4 * 8), DL->getPrefTypeAlign(V8F32Ty));
 }
 
-TEST(DataLayoutTest, UEFI) {
-  Triple TT = Triple("x86_64-unknown-uefi");
-
-  // Test UEFI X86_64 Mangling Component.
-  EXPECT_STREQ(DataLayout::getManglingComponent(TT), "-m:w");
-}
-
 } // anonymous namespace

@@ -78,7 +78,7 @@ SparcTargetMachine::SparcTargetMachine(const Target &T, const Triple &TT,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOptLevel OL, bool JIT)
     : CodeGenTargetMachineImpl(
-          T, DataLayout::computeStringForTriple(TT), TT, CPU, FS, Options,
+          T, TT.computeDataLayout(), TT, CPU, FS, Options,
           getEffectiveRelocModel(RM),
           getEffectiveSparcCodeModel(CM, getEffectiveRelocModel(RM),
                                      TT.isSPARC64(), JIT),

@@ -47,8 +47,8 @@ LanaiTargetMachine::LanaiTargetMachine(
     std::optional<CodeModel::Model> CodeModel, CodeGenOptLevel OptLevel,
     bool JIT)
     : CodeGenTargetMachineImpl(
-          T, DataLayout::computeStringForTriple(TT), TT, Cpu, FeatureString,
-          Options, getEffectiveRelocModel(RM),
+          T, TT.computeDataLayout(), TT, Cpu, FeatureString, Options,
+          getEffectiveRelocModel(RM),
           getEffectiveCodeModel(CodeModel, CodeModel::Medium), OptLevel),
       Subtarget(TT, Cpu, FeatureString, *this, Options, getCodeModel(),
                 OptLevel),

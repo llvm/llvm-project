@@ -146,12 +146,10 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL)
-    : CodeGenTargetMachineImpl(T,
-                               DataLayout::computeStringForTriple(
-                                   TT, Options.MCOptions.ABIName),
-                               TT, CPU, FS, Options,
-                               getEffectiveRelocModel(TT, RM),
-                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
+    : CodeGenTargetMachineImpl(
+          T, TT.computeDataLayout(Options.MCOptions.ABIName), TT, CPU, FS,
+          Options, getEffectiveRelocModel(TT, RM),
+          getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TargetABI(ARM::computeTargetABI(TT, Options.MCOptions.ABIName)),
       TLOF(createTLOF(getTargetTriple())), isLittle(TT.isLittleEndian()) {
 

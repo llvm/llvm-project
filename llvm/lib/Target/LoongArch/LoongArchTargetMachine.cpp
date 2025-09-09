@@ -86,7 +86,7 @@ LoongArchTargetMachine::LoongArchTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, std::optional<Reloc::Model> RM,
     std::optional<CodeModel::Model> CM, CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, DataLayout::computeStringForTriple(TT), TT, CPU, FS, Options,
+    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
                                getEffectiveRelocModel(TT, RM),
                                getEffectiveLoongArchCodeModel(TT, CM), OL),
       TLOF(std::make_unique<TargetLoweringObjectFileELF>()) {

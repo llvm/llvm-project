@@ -39,8 +39,8 @@ CSKYTargetMachine::CSKYTargetMachine(const Target &T, const Triple &TT,
                                      std::optional<Reloc::Model> RM,
                                      std::optional<CodeModel::Model> CM,
                                      CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, DataLayout::computeStringForTriple(TT), TT,
-                               CPU, FS, Options, RM.value_or(Reloc::Static),
+    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+                               RM.value_or(Reloc::Static),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<CSKYELFTargetObjectFile>()) {
   initAsmInfo();

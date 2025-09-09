@@ -46,8 +46,7 @@ XtensaTargetMachine::XtensaTargetMachine(const Target &T, const Triple &TT,
                                          std::optional<CodeModel::Model> CM,
                                          CodeGenOptLevel OL, bool JIT,
                                          bool IsLittle)
-    : CodeGenTargetMachineImpl(T, DataLayout::computeStringForTriple(TT),
-                               TT, CPU, FS, Options,
+    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
                                getEffectiveRelocModel(JIT, RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<TargetLoweringObjectFileELF>()) {
