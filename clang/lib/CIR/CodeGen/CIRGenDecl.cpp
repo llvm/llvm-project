@@ -62,7 +62,7 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
     // variable (C++0x [class.copy]p34).
     address = returnValue;
 
-    if (const auto *rd = ty->getAsRecordDecl()) {
+    if (const RecordDecl *rd = ty->getAsRecordDecl()) {
       if (const auto *cxxrd = dyn_cast<CXXRecordDecl>(rd);
           (cxxrd && !cxxrd->hasTrivialDestructor()) ||
           rd->isNonTrivialToPrimitiveDestroy())
