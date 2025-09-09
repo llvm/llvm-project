@@ -159,6 +159,8 @@ public:
     RootSigOverrideIdent = DeclIdent;
   }
 
+  HLSLRootSignatureDecl *lookupRootSignatureOverrideDecl(DeclContext *DC) const;
+
   // Returns true if any RootSignatureElement is invalid and a diagnostic was
   // produced
   bool

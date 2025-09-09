@@ -127,6 +127,8 @@ static StringRef getShortShaderStage(Triple::EnvironmentType Env) {
     return "ms";
   case Triple::Amplification:
     return "as";
+  case Triple::RootSignature:
+    return "rootsig";
   default:
     break;
   }

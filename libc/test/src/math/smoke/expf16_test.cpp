@@ -9,7 +9,6 @@
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/cast.h"
-#include "src/__support/libc_errno.h"
 #include "src/math/expf16.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -17,8 +16,6 @@
 using LlvmLibcExpf16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 
 TEST_F(LlvmLibcExpf16Test, SpecialNumbers) {
-  libc_errno = 0;
-
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::expf16(aNaN));
   EXPECT_MATH_ERRNO(0);
 
@@ -41,8 +38,6 @@ TEST_F(LlvmLibcExpf16Test, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcExpf16Test, Overflow) {
-  libc_errno = 0;
-
   EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::expf16(max_normal),
                               FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
@@ -54,8 +49,6 @@ TEST_F(LlvmLibcExpf16Test, Overflow) {
 }
 
 TEST_F(LlvmLibcExpf16Test, Underflow) {
-  libc_errno = 0;
-
   EXPECT_FP_EQ_WITH_EXCEPTION(zero, LIBC_NAMESPACE::expf16(neg_max_normal),
                               FE_UNDERFLOW | FE_INEXACT);
   EXPECT_MATH_ERRNO(ERANGE);

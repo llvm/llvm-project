@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/libc_errno.h"
 #include "src/math/atanpif16.h"
 #include "test/UnitTest/FPMatcher.h"
 

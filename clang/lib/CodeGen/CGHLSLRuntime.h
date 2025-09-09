@@ -64,6 +64,7 @@ class VarDecl;
 class ParmVarDecl;
 class InitListExpr;
 class HLSLBufferDecl;
+class HLSLRootSignatureDecl;
 class HLSLVkBindingAttr;
 class HLSLResourceBindingAttr;
 class Type;
@@ -171,6 +172,7 @@ public:
   void generateGlobalCtorDtorCalls();
 
   void addBuffer(const HLSLBufferDecl *D);
+  void addRootSignature(const HLSLRootSignatureDecl *D);
   void finishCodeGen();
 
   void setHLSLEntryAttributes(const FunctionDecl *FD, llvm::Function *Fn);
