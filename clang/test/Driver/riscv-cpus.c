@@ -401,7 +401,8 @@
 
 // -march overwrite -mcpu's default -march
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=sifive-e31 -march=rv32imc | FileCheck -check-prefix=MCPU-MARCH %s
-// MCPU-MARCH: "-nostdsysteminc" "-target-cpu" "sifive-e31" "-target-feature" "+m" "-target-feature" "+c"
+// MCPU-MARCH: "-nostdsysteminc" "-target-cpu" "sifive-e31"
+// MCPU-MARCH: "-target-feature" "+m" "-target-feature" "+c"
 // MCPU-MARCH: "-target-abi" "ilp32"
 
 // -march=unset erases previous march
