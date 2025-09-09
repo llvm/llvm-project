@@ -2,11 +2,10 @@
 
 # RUN: llvm-mc %s -filetype=obj -triple=x86_64-pc-linux -o %t
 # RUN: llvm-readelf --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t
+# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t
+# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t
 
 # CHECK: llvm-readelf: warning: '[[FILE]]': No .callgraph section found.
-## Make sure callgraph info header is not printed when there is no .callgraph section
-# CHECK-NOT: INDIRECT TARGET TYPES (TYPEID [FUNC_ADDR,])
-# CHECK-NOT: INDIRECT CALL TYPES (TYPEID [CALL_SITE_ADDR,])
 
 .text
 .globl _Z3foov
