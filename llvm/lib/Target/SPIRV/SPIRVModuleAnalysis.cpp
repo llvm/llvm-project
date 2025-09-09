@@ -124,7 +124,7 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
       })) {
     return {true,
             {},
-            ReqExts,
+            std::move(ReqExts),
             VersionTuple(),
             VersionTuple()}; // TODO: add versions to extensions.
   }
