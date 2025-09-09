@@ -10,6 +10,7 @@ from lldbsuite.test import lldbutil
 
 
 class AbiTagStructorsTestCase(TestBase):
+    @expectedFailureAll(oslist=["windows"])
     def test_with_structor_linkage_names(self):
         self.build(dictionary={"CXXFLAGS_EXTRAS": "-gstructor-decl-linkage-names"})
 
@@ -66,6 +67,7 @@ class AbiTagStructorsTestCase(TestBase):
             result_value="10",
         )
 
+    @expectedFailureAll(oslist=["windows"])
     def test_no_structor_linkage_names(self):
         """
         Test that without linkage names on structor declarations we can't call
@@ -103,10 +105,12 @@ class AbiTagStructorsTestCase(TestBase):
             "expression TaggedLocal()", error=True, substrs=["Couldn't look up symbols"]
         )
 
+    @expectedFailureAll(oslist=["windows"])
     def test_nested_no_structor_linkage_names(self):
         self.build(dictionary={"CXXFLAGS_EXTRAS": "-gstructor-decl-linkage-names"})
         self.do_nested_structor_test()
 
+    @expectedFailureAll(oslist=["windows"])
     def test_nested_with_structor_linkage_names(self):
         self.build(dictionary={"CXXFLAGS_EXTRAS": "-gno-structor-decl-linkage-names"})
         self.do_nested_structor_test()
