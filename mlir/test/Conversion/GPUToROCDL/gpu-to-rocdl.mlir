@@ -816,3 +816,15 @@ func.func @broadcast(%arg0 : index, %arg1 : i32) -> (index, index) {
   func.return %0, %1 : index, index
 }
 }
+
+// -----
+
+gpu.module @test_module {
+// CHECK-LABEL: func @unifprm
+//  CHECK-SAME:   (%[[ARG:.*]]: i64)
+func.func @unifprm(%arg0 : index) -> index {
+//       CHECK:   %{{.*}} = rocdl.readfirstlane %[[ARG]] : i64
+  %0 = gpu.subgroup_uniform %arg0 : index
+  func.return %0 : index
+}
+}

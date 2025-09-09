@@ -201,6 +201,22 @@ struct GPUSubgroupBroadcastOpToROCDL
   }
 };
 
+struct GPUSubgroupUniformOpToROCDL
+    : public ConvertOpToLLVMPattern<gpu::SubgroupUniformOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::SubgroupUniformOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Value src = adaptor.getSrc();
+    if (!isSupportedReadLaneType(src.getType()))
+      return rewriter.notifyMatchFailure(op, "unsupported readlane type");
+
+    rewriter.replaceOpWithNewOp<ROCDL::ReadfirstlaneOp>(op, src.getType(), src);
+    return success();
+  }
+};
+
 struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   using ConvertOpToLLVMPattern<gpu::ShuffleOp>::ConvertOpToLLVMPattern;
 
@@ -494,7 +510,8 @@ void mlir::populateGpuToROCDLConversionPatterns(
   patterns.add<GPUDynamicSharedMemoryOpLowering>(converter);
 
   patterns.add<GPUShuffleOpLowering, GPULaneIdOpToROCDL,
-               GPUSubgroupBroadcastOpToROCDL>(converter);
+               GPUSubgroupBroadcastOpToROCDL, GPUSubgroupUniformOpToROCDL>(
+      converter);
   patterns.add<GPUSubgroupSizeOpToROCDL>(converter, chipset);
 
   populateMathToROCDLConversionPatterns(converter, patterns);
