@@ -90,8 +90,8 @@ namespace {
     if (A.isEmpty())
       return B;
 
-    for (const auto &element : B) {
-      A = A.add(element);
+    for (const auto *Elem : B) {
+      A = A.add(Elem);
     }
     return A;
   }
