@@ -18,15 +18,6 @@ llvm.func @clusterlaunchcontrol_try_cancel_multicast(%addr: !llvm.ptr<3>, %mbar:
   llvm.return
 }
 
-llvm.func @clusterlaunchcontrol_query_cancel(%try_cancel_response: i128) {
-  // CHECK-LABEL: define void @clusterlaunchcontrol_query_cancel(i128 %0) {
-  // CHECK-NEXT: %2 = call i1 @llvm.nvvm.clusterlaunchcontrol.query_cancel.is_canceled(i128 %0)
-  // CHECK-NEXT: ret void
-  // CHECK-NEXT: }
-  nvvm.clusterlaunchcontrol.query.cancel %try_cancel_response : i1
-  llvm.return
-}
-
 llvm.func @clusterlaunchcontrol_query_cancel_is_canceled(%try_cancel_response: i128) {
   // CHECK-LABEL: define void @clusterlaunchcontrol_query_cancel_is_canceled(i128 %0) {
   // CHECK-NEXT: %2 = call i1 @llvm.nvvm.clusterlaunchcontrol.query_cancel.is_canceled(i128 %0)

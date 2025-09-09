@@ -4048,11 +4048,11 @@ def NVVM_ClusterLaunchControlTryCancelOp
     opaque response to shared memory indicating whether the operation succeeded 
     or failed.
 
-    Operand `addr` specifies the naturally aligned address of the 16-byte wide 
-    shared memory location where the request's response is written.
+    Operand `smemAddress` specifies the naturally aligned address of the 
+    16-byte wide shared memory location where the request's response is written.
 
-    Operand `mbar` specifies the mbarrier object used to track the completion 
-    of the asynchronous operation.
+    Operand `mbarrier` specifies the mbarrier object used to track the 
+    completion of the asynchronous operation.
 
     If `multicast` is specified, the response is asynchronously written to the 
     corresponding local shared memory location (specifed by `addr`) of each CTA 
@@ -4109,28 +4109,25 @@ def NVVM_ClusterLaunchControlQueryCancelOp
   let summary = "Query the response of a clusterlaunchcontrol.try.cancel operation";
   let description = [{
     `clusterlaunchcontrol.query.cancel` queries the response of a 
-    `clusterlaunchcontrol.try.cancel` operation.
-
-    Operand `try_cancel_response` specifies the response of the 
-    `clusterlaunchcontrol.try.cancel` operation to be queried.
+    `clusterlaunchcontrol.try.cancel` operation specified by operand 
+    `try_cancel_response`.
 
     Operand `query_type` specifies the type of query to perform and can be one 
     of the following:
     - `is_canceled` : Returns true if the try cancel request succeeded, 
-    otherwise returns false.
-    - `get_first_cta_id_{x/y/z}` : Behaviour is defined only if the try cancel 
-    request succeeded. Returns the x, y, or z coordinate of the first CTA in 
-    the canceled cluster.
+    and false otherwise.
+    - `get_first_cta_id_{x/y/z}` : Returns the x, y, or z coordinate of the 
+    first CTA in the canceled cluster. Behaviour is defined only if the try 
+    cancel request succeeded. 
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-clusterlaunchcontrol-query-cancel)
   }];
 
-  let arguments = (ins DefaultValuedAttr<ClusterLaunchControlQueryTypeAttr, 
-                     "ClusterLaunchControlQueryType::IS_CANCELED">:$query_type,
+  let arguments = (ins ClusterLaunchControlQueryTypeAttr:$query_type, 
                        I128:$try_cancel_response);
   let results = (outs AnyTypeOf<[I1, I32]>:$res);
                                  
-  let assemblyFormat = "(`query` `=` $query_type^ `,`)? $try_cancel_response attr-dict `:` type($res)";
+  let assemblyFormat = "`query` `=` $query_type `,` $try_cancel_response attr-dict `:` type($res)";
   
   let hasVerifier = 1;
 

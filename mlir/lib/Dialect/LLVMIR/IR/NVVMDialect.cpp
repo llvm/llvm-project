@@ -2113,15 +2113,13 @@ NVVM::IDArgPair ClusterLaunchControlTryCancelOp::getIntrinsicIDAndArgs(
   args.push_back(mt.lookupValue(curOp.getSmemAddress()));
   args.push_back(mt.lookupValue(curOp.getMbarrier()));
 
-  return curOp.getMulticast()
-             ? NVVM::IDArgPair(
-                   {llvm::Intrinsic::
-                        nvvm_clusterlaunchcontrol_try_cancel_async_multicast_shared,
-                    args})
-             : NVVM::IDArgPair(
-                   {llvm::Intrinsic::
-                        nvvm_clusterlaunchcontrol_try_cancel_async_shared,
-                    args});
+  llvm::Intrinsic::ID intrinsicID =
+      curOp.getMulticast()
+          ? llvm::Intrinsic::
+                nvvm_clusterlaunchcontrol_try_cancel_async_multicast_shared
+          : llvm::Intrinsic::nvvm_clusterlaunchcontrol_try_cancel_async_shared;
+
+  return {intrinsicID, args};
 }
 
 NVVM::IDArgPair ClusterLaunchControlQueryCancelOp::getIntrinsicIDAndArgs(
@@ -2130,23 +2128,27 @@ NVVM::IDArgPair ClusterLaunchControlQueryCancelOp::getIntrinsicIDAndArgs(
   llvm::SmallVector<llvm::Value *> args;
   args.push_back(mt.lookupValue(curOp.getTryCancelResponse()));
 
+  llvm::Intrinsic::ID intrinsicID;
+
   switch (curOp.getQueryType()) {
   case NVVM::ClusterLaunchControlQueryType::IS_CANCELED:
-    return {llvm::Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_is_canceled,
-            args};
+    intrinsicID =
+        llvm::Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_is_canceled;
+    break;
   case NVVM::ClusterLaunchControlQueryType::GET_FIRST_CTA_ID_X:
-    return {llvm::Intrinsic::
-                nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_x,
-            args};
+    intrinsicID = llvm::Intrinsic::
+        nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_x;
+    break;
   case NVVM::ClusterLaunchControlQueryType::GET_FIRST_CTA_ID_Y:
-    return {llvm::Intrinsic::
-                nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_y,
-            args};
+    intrinsicID = llvm::Intrinsic::
+        nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_y;
+    break;
   case NVVM::ClusterLaunchControlQueryType::GET_FIRST_CTA_ID_Z:
-    return {llvm::Intrinsic::
-                nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_z,
-            args};
+    intrinsicID = llvm::Intrinsic::
+        nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_z;
+    break;
   }
+  return {intrinsicID, args};
 }
 
 //===----------------------------------------------------------------------===//
