@@ -317,6 +317,12 @@ void tools::hlsl::LLVMObjcopy::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Frs);
   }
 
+  if (Arg *Arg = Args.getLastArg(options::OPT_dxc_Frs)) {
+    const char *Frs =
+        Args.MakeArgString("--extract-section=RTS0=" + Twine(Arg->getValue()));
+    CmdArgs.push_back(Frs);
+  }
+
   assert(CmdArgs.size() > 2 && "Unnecessary invocation of objcopy.");
 
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
@@ -493,7 +499,8 @@ bool HLSLToolChain::requiresBinaryTranslation(DerivedArgList &Args) const {
 
 bool HLSLToolChain::requiresObjcopy(DerivedArgList &Args) const {
   return Args.hasArg(options::OPT_dxc_Fo) &&
-         Args.hasArg(options::OPT_dxc_strip_rootsignature);
+         (Args.hasArg(options::OPT_dxc_strip_rootsignature) ||
+          Args.hasArg(options::OPT_dxc_Frs));
 }
 
 bool HLSLToolChain::isLastJob(DerivedArgList &Args,
