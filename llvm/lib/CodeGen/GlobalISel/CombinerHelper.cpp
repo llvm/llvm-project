@@ -2094,8 +2094,10 @@ bool CombinerHelper::matchCommuteShift(MachineInstr &MI,
   return true;
 }
 
-bool CombinerHelper::matchLshrOfTruncOfLshr(
-    MachineInstr &MI, LshrOfTruncOfLshr &MatchInfo, MachineInstr &ShiftMI, MachineInstr &TruncMI) const {
+bool CombinerHelper::matchLshrOfTruncOfLshr(MachineInstr &MI,
+                                            LshrOfTruncOfLshr &MatchInfo,
+                                            MachineInstr &ShiftMI,
+                                            MachineInstr &TruncMI) const {
   unsigned ShiftOpcode = MI.getOpcode();
   assert(ShiftOpcode == TargetOpcode::G_LSHR);
 
@@ -2122,7 +2124,7 @@ bool CombinerHelper::matchLshrOfTruncOfLshr(
     MatchInfo.Src = ShiftMI.getOperand(1).getReg();
     MatchInfo.ShiftAmt = N1C + N001C;
     MatchInfo.ShiftAmtTy = MRI.getType(N001);
-    MatchInfo.InnerShiftTy = InnerShiftTy;    
+    MatchInfo.InnerShiftTy = InnerShiftTy;
 
     if ((N001C + OpSizeInBits) == InnerShiftSize)
       return true;
@@ -2143,9 +2145,12 @@ void CombinerHelper::applyLshrOfTruncOfLshr(
   Register Dst = MI.getOperand(0).getReg();
   auto ShiftAmt =
       Builder.buildConstant(MatchInfo.ShiftAmtTy, MatchInfo.ShiftAmt);
-  auto Shift = Builder.buildLShr(MatchInfo.InnerShiftTy, MatchInfo.Src, ShiftAmt);
+  auto Shift =
+      Builder.buildLShr(MatchInfo.InnerShiftTy, MatchInfo.Src, ShiftAmt);
   if (MatchInfo.Mask == true) {
-    APInt MaskVal = APInt::getLowBitsSet(MatchInfo.InnerShiftTy.getScalarSizeInBits(), MatchInfo.MaskVal.getZExtValue());
+    APInt MaskVal =
+        APInt::getLowBitsSet(MatchInfo.InnerShiftTy.getScalarSizeInBits(),
+                             MatchInfo.MaskVal.getZExtValue());
     auto Mask = Builder.buildConstant(MatchInfo.ShiftAmtTy, MaskVal);
     auto And = Builder.buildAnd(MatchInfo.InnerShiftTy, Shift, Mask);
     Builder.buildTrunc(Dst, And);

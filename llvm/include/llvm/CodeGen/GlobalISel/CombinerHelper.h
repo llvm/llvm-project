@@ -348,9 +348,11 @@ public:
   bool matchCommuteShift(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
   /// Fold (lshr (trunc (lshr x, C1)), C2) -> trunc (shift x, (C1 + C2))
-  bool matchLshrOfTruncOfLshr(MachineInstr &MI, LshrOfTruncOfLshr &MatchInfo, MachineInstr &ShiftMI, MachineInstr &TruncMI) const;
+  bool matchLshrOfTruncOfLshr(MachineInstr &MI, LshrOfTruncOfLshr &MatchInfo,
+                              MachineInstr &ShiftMI,
+                              MachineInstr &TruncMI) const;
   void applyLshrOfTruncOfLshr(MachineInstr &MI,
-                                LshrOfTruncOfLshr &MatchInfo) const;
+                              LshrOfTruncOfLshr &MatchInfo) const;
 
   /// Transform a multiply by a power-of-2 value to a left shift.
   bool matchCombineMulToShl(MachineInstr &MI, unsigned &ShiftVal) const;
