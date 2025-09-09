@@ -1641,28 +1641,23 @@ CpAsyncBulkTensorSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
   is_im2col ? CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, dim, im2col)                \
             : CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, dim, tile)
 
-#define GET_CP_ASYNC_BULK_TENSOR_ID(iid, op, dims, is_im2col)                  \
-  switch (dims) {                                                              \
-  case 1:                                                                      \
-    iid = CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, 1, tile);                       \
-    break;                                                                     \
-  case 2:                                                                      \
-    iid = CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, 2, tile);                       \
-    break;                                                                     \
-  case 3:                                                                      \
-    iid = CP_ASYNC_BULK_TENSOR_REDUCE(op, 3, is_im2col);                       \
-    break;                                                                     \
-  case 4:                                                                      \
-    iid = CP_ASYNC_BULK_TENSOR_REDUCE(op, 4, is_im2col);                       \
-    break;                                                                     \
-  case 5:                                                                      \
-    iid = CP_ASYNC_BULK_TENSOR_REDUCE(op, 5, is_im2col);                       \
-    break;                                                                     \
-  default:                                                                     \
-    llvm_unreachable("Invalid TensorDim in CpAsyncBulkTensorReduceOp.");       \
-    break;                                                                     \
-  }                                                                            \
-  break;
+#define GET_CP_ASYNC_BULK_TENSOR_ID(op, dims, is_im2col)                       \
+  [&]() -> auto{                                                               \
+    switch (dims) {                                                            \
+    case 1:                                                                    \
+      return CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, 1, tile);                    \
+    case 2:                                                                    \
+      return CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, 2, tile);                    \
+    case 3:                                                                    \
+      return CP_ASYNC_BULK_TENSOR_REDUCE(op, 3, is_im2col);                    \
+    case 4:                                                                    \
+      return CP_ASYNC_BULK_TENSOR_REDUCE(op, 4, is_im2col);                    \
+    case 5:                                                                    \
+      return CP_ASYNC_BULK_TENSOR_REDUCE(op, 5, is_im2col);                    \
+    default:                                                                   \
+      llvm_unreachable("Invalid TensorDim in CpAsyncBulkTensorReduceOp.");     \
+    }                                                                          \
+  }()
 
 NVVM::IDArgPair CpAsyncBulkTensorReduceOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
@@ -1677,41 +1672,49 @@ NVVM::IDArgPair CpAsyncBulkTensorReduceOp::getIntrinsicIDAndArgs(
   args.push_back(mt.lookupValue(thisOp.getSrcMem()));
   args.push_back(mt.lookupValue(thisOp.getTmaDescriptor()));
 
-  for (auto v : thisOp.getCoordinates())
+  for (Value v : thisOp.getCoordinates())
     args.push_back(mt.lookupValue(v));
 
   mlir::Value cacheHint = thisOp.getL2CacheHint();
   const bool hasCacheHint = static_cast<bool>(cacheHint);
-  llvm::Value *i64Unused =
+  llvm::Value *i64ZeroValue =
       llvm::ConstantInt::get(llvm::Type::getInt64Ty(ctx), 0);
-  args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Unused);
+  args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64ZeroValue);
   args.push_back(builder.getInt1(hasCacheHint));
 
-  llvm::Intrinsic::ID iid;
+  llvm::Intrinsic::ID intrinsicID;
   int tensorDims = thisOp.getCoordinates().size();
   bool isIm2Col = thisOp.getMode() == NVVM::TMAStoreMode::IM2COL;
 
   using RedTy = NVVM::TMAReduxKind;
   switch (thisOp.getRedKind()) {
   case RedTy::ADD:
-    GET_CP_ASYNC_BULK_TENSOR_ID(iid, reduce_add, tensorDims, isIm2Col);
+    intrinsicID = GET_CP_ASYNC_BULK_TENSOR_ID(reduce_add, tensorDims, isIm2Col);
+    break;
   case RedTy::MIN:
-    GET_CP_ASYNC_BULK_TENSOR_ID(iid, reduce_min, tensorDims, isIm2Col);
+    intrinsicID = GET_CP_ASYNC_BULK_TENSOR_ID(reduce_min, tensorDims, isIm2Col);
+    break;
   case RedTy::MAX:
-    GET_CP_ASYNC_BULK_TENSOR_ID(iid, reduce_max, tensorDims, isIm2Col);
+    intrinsicID = GET_CP_ASYNC_BULK_TENSOR_ID(reduce_max, tensorDims, isIm2Col);
+    break;
   case RedTy::INC:
-    GET_CP_ASYNC_BULK_TENSOR_ID(iid, reduce_inc, tensorDims, isIm2Col);
+    intrinsicID = GET_CP_ASYNC_BULK_TENSOR_ID(reduce_inc, tensorDims, isIm2Col);
+    break;
   case RedTy::DEC:
-    GET_CP_ASYNC_BULK_TENSOR_ID(iid, reduce_dec, tensorDims, isIm2Col);
+    intrinsicID = GET_CP_ASYNC_BULK_TENSOR_ID(reduce_dec, tensorDims, isIm2Col);
+    break;
   case RedTy::AND:
-    GET_CP_ASYNC_BULK_TENSOR_ID(iid, reduce_and, tensorDims, isIm2Col);
+    intrinsicID = GET_CP_ASYNC_BULK_TENSOR_ID(reduce_and, tensorDims, isIm2Col);
+    break;
   case RedTy::OR:
-    GET_CP_ASYNC_BULK_TENSOR_ID(iid, reduce_or, tensorDims, isIm2Col);
+    intrinsicID = GET_CP_ASYNC_BULK_TENSOR_ID(reduce_or, tensorDims, isIm2Col);
+    break;
   case RedTy::XOR:
-    GET_CP_ASYNC_BULK_TENSOR_ID(iid, reduce_xor, tensorDims, isIm2Col);
+    intrinsicID = GET_CP_ASYNC_BULK_TENSOR_ID(reduce_xor, tensorDims, isIm2Col);
+    break;
   }
 
-  return {iid, std::move(args)};
+  return {intrinsicID, std::move(args)};
 }
 
 #define _none
