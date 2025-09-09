@@ -52,9 +52,14 @@ NB_MODULE(_mlir, m) {
            [](PyGlobals &self, bool enabled) {
              self.getTracebackLoc().setLocTracebacksEnabled(enabled);
            })
+      .def("loc_tracebacks_frame_limit",
+           [](PyGlobals &self) {
+             return self.getTracebackLoc().locTracebackFramesLimit();
+           })
       .def("set_loc_tracebacks_frame_limit",
-           [](PyGlobals &self, int n) {
-             self.getTracebackLoc().setLocTracebackFramesLimit(n);
+           [](PyGlobals &self, std::optional<int> n) {
+             self.getTracebackLoc().setLocTracebackFramesLimit(
+                 n.value_or(PyGlobals::TracebackLoc::kMaxFrames));
            })
       .def("register_traceback_file_inclusion",
            [](PyGlobals &self, const std::string &filename) {
