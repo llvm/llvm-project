@@ -794,23 +794,6 @@ cc_test(
 )
 
 cc_test(
-    name = "SupportLSPTests",
-    size = "small",
-    srcs = glob(["Support/LSP/*.cpp"]),
-    copts = [
-        "$(STACK_FRAME_UNLIMITED)",
-    ],
-    linkstatic = 1,
-    deps = [
-        "//llvm:Support",
-        "//llvm:config",
-        "//third-party/unittest:gmock",
-        "//third-party/unittest:gtest",
-        "//third-party/unittest:gtest_main",
-    ],
-)
-
-cc_test(
     name = "tablegen_tests",
     size = "small",
     srcs = glob(
