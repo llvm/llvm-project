@@ -17721,6 +17721,7 @@ in this description.
                                                                 :doc:`gfx1102<AMDGPU/AMDGPUAsmGFX11>`
 
                                                                 :doc:`gfx1103<AMDGPU/AMDGPUAsmGFX11>`
+    RDNA 4        :doc:`GFX12<AMDGPU/AMDGPUAsmGFX12>`           :doc:`gfx1200<AMDGPU/AMDGPUAsmGFX12>`
     ============= ============================================= =======================================
 
 For more information about instructions, their semantics and supported
