@@ -547,27 +547,14 @@ mlir::Value HlfirIndexLowering::lowerImpl(
     const fir::IntrinsicArgumentLoweringRules *argLowering,
     mlir::Type stmtResultType) {
   auto operands = getOperandVector(loweredActuals, argLowering);
+  // 'kind' optional operand is unused here as it has already been
+  // translated into result type.
   assert(operands.size() == 4);
   mlir::Value substr = operands[1];
   mlir::Value str = operands[0];
   mlir::Value back = operands[2];
-  mlir::Value kind = operands[3];
-
-  mlir::Type resultType;
-  if (kind) {
-    auto kindCst = fir::getIntIfConstant(kind);
-    assert(kindCst &&
-           "kind argument of index must be an integer constant expression");
-    unsigned bits = builder.getKindMap().getIntegerBitsize(*kindCst);
-    assert(bits != 0 && "failed to convert kind to integer bitsize");
-    resultType = builder.getIntegerType(bits);
-  } else {
-    resultType = builder.getDefaultIntegerType();
-  }
-  mlir::Value result = createOp<hlfir::IndexOp>(resultType, substr, str, back);
-
-  if (resultType != stmtResultType)
-    return builder.createConvert(loc, stmtResultType, result);
+  mlir::Value result =
+      createOp<hlfir::IndexOp>(stmtResultType, substr, str, back);
   return result;
 }
 
