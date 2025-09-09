@@ -286,28 +286,7 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
 // code.
 struct LowerGpuOpsToROCDLOpsPass final
     : public impl::ConvertGpuOpsToROCDLOpsBase<LowerGpuOpsToROCDLOpsPass> {
-  LowerGpuOpsToROCDLOpsPass() = default;
-  LowerGpuOpsToROCDLOpsPass(ConvertGpuOpsToROCDLOpsOptions options)
-      : ConvertGpuOpsToROCDLOpsBase(options) {}
-  LowerGpuOpsToROCDLOpsPass(
-      const std::string &chipset, unsigned indexBitwidth,
-      bool useBarePtrCallConv, gpu::amd::Runtime runtime,
-      std::optional<llvm::SmallDenseSet<StringRef>> allowedDialects) {
-    if (this->chipset.getNumOccurrences() == 0)
-      this->chipset = chipset;
-    if (this->indexBitwidth.getNumOccurrences() == 0)
-      this->indexBitwidth = indexBitwidth;
-    if (this->useBarePtrCallConv.getNumOccurrences() == 0)
-      this->useBarePtrCallConv = useBarePtrCallConv;
-    if (this->runtime.getNumOccurrences() == 0)
-      this->runtime = runtime;
-    if (this->allowedDialects.getNumOccurrences() == 0 &&
-        allowedDialects.has_value()) {
-      for (auto &str : allowedDialects.value()) {
-        this->allowedDialects.push_back(str.str());
-      }
-    }
-  }
+  using Base::Base;
 
   void getDependentDialects(DialectRegistry &registry) const override {
     Base::getDependentDialects(registry);
