@@ -889,6 +889,14 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
     endif()
   endif()
 
+  # Disable -Wdangling-reference, a C++-only warning from GCC 13 that seems
+  # to produce a large number of false positives.
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13.1)
+      append("-Wno-dangling-reference" CMAKE_CXX_FLAGS)
+    endif()
+  endif()
+
   # Disable -Wredundant-move and -Wpessimizing-move on GCC>=9. GCC wants to
   # remove std::move in code like
   # "A foo(ConvertibleToA a) { return std::move(a); }",

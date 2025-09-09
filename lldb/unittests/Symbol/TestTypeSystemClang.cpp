@@ -1215,10 +1215,10 @@ protected:
 };
 
 static AsmLabelTestCase g_asm_label_test_cases[] = {
-    {/*mangled=*/"$__lldb_func:0x0:0x0:_Z3foov",
+    {/*mangled=*/"$__lldb_func::0x0:0x0:_Z3foov",
      /*expected=*/"_Z3foov"},
-    {/*mangled=*/"$__lldb_func:0x0:0x0:foo",
-     /*expected=*/"$__lldb_func:0x0:0x0:foo"},
+    {/*mangled=*/"$__lldb_func::0x0:0x0:foo",
+     /*expected=*/"$__lldb_func::0x0:0x0:foo"},
     {/*mangled=*/"foo",
      /*expected=*/"foo"},
     {/*mangled=*/"_Z3foov",

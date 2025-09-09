@@ -378,7 +378,9 @@ private:
   /// SymbolFile.
   ///
   /// \returns A valid definition DIE on success.
-  DWARFDIE FindFunctionDefinition(const FunctionCallLabel &label);
+  llvm::Expected<DWARFDIE>
+  FindFunctionDefinition(const FunctionCallLabel &label,
+                         const DWARFDIE &declaration);
 
 protected:
   SymbolFileDWARF(const SymbolFileDWARF &) = delete;
@@ -445,7 +447,7 @@ protected:
                                         DIEArray &&variable_dies);
 
   llvm::Expected<SymbolContext>
-  ResolveFunctionCallLabel(const FunctionCallLabel &label) override;
+  ResolveFunctionCallLabel(FunctionCallLabel &label) override;
 
   // Given a die_offset, figure out the symbol context representing that die.
   bool ResolveFunction(const DWARFDIE &die, bool include_inlines,

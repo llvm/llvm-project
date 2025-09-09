@@ -91,6 +91,8 @@ public:
 
       case Dtor_Comdat:
         llvm_unreachable("emitting dtor comdat as function?");
+      case Dtor_Unified:
+        llvm_unreachable("emitting unified dtor as function?");
       }
       llvm_unreachable("bad dtor kind");
     }
@@ -108,6 +110,9 @@ public:
 
       case Ctor_Comdat:
         llvm_unreachable("emitting ctor comdat as function?");
+
+      case Ctor_Unified:
+        llvm_unreachable("emitting unified ctor as function?");
       }
       llvm_unreachable("bad dtor kind");
     }

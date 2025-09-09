@@ -3216,13 +3216,16 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
         };
       }
 
-      // Try to fold (C * D /u C) -> D, if C is a power-of-2 and D is a multiple
-      //  of C.
+      // Try to fold (C1 * D /u C2) -> C1/C2 * D, if C1 and C2 are powers-of-2,
+      // D is a multiple of C2, and C1 is a multiple of C1.
       const SCEV *D;
-      if (match(Ops[1], m_scev_UDiv(m_SCEV(D), m_scev_Specific(LHSC))) &&
-          LHSC->getAPInt().isPowerOf2() &&
-          LHSC->getAPInt().logBase2() <= getMinTrailingZeros(D)) {
-        return D;
+      const SCEVConstant *C2;
+      const APInt &LHSV = LHSC->getAPInt();
+      if (LHSV.isPowerOf2() &&
+          match(Ops[1], m_scev_UDiv(m_SCEV(D), m_SCEVConstant(C2))) &&
+          C2->getAPInt().isPowerOf2() && LHSV.uge(C2->getAPInt()) &&
+          LHSV.logBase2() <= getMinTrailingZeros(D)) {
+        return getMulExpr(getUDivExpr(LHSC, C2), D);
       }
     }
   }

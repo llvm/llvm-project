@@ -1603,8 +1603,8 @@ void SymbolFileDWARFDebugMap::GetCompileOptions(
   });
 }
 
-llvm::Expected<SymbolContext> SymbolFileDWARFDebugMap::ResolveFunctionCallLabel(
-    const FunctionCallLabel &label) {
+llvm::Expected<SymbolContext>
+SymbolFileDWARFDebugMap::ResolveFunctionCallLabel(FunctionCallLabel &label) {
   const uint64_t oso_idx = GetOSOIndexFromUserID(label.symbol_id);
   SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(oso_idx);
   if (!oso_dwarf)
