@@ -171,6 +171,7 @@ add_header_library(
     libc.include.llvm-libc-macros.stdfix_macros
     libc.src.__support.macros.attributes
     libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.compiler
     libc.src.__support.macros.properties.complex_types
 )
 
