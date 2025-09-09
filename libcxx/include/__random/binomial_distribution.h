@@ -104,7 +104,7 @@ public:
 #  else
 #    define _LIBCPP_LGAMMA_R_NOEXCEPT
 #  endif
-#elif defined(__LLVM_LIBC__)
+#elif defined(__LLVM_LIBC__) && !defined(__Fuchsia__)
 #  define _LIBCPP_LGAMMA_R_NOEXCEPT _NOEXCEPT
 #else
 #  define _LIBCPP_LGAMMA_R_NOEXCEPT
