@@ -1,6 +1,6 @@
 RUN: apinotes-test %S/Inputs/Frameworks/Simple.framework/Headers/Simple.apinotes > %t.result
 RUN: not diff -u %S/Inputs/Frameworks/Simple.framework/Headers/Simple.apinotes %t.result | \
-RUN:   tail -n +5 | head -n -1 | \
+RUN:   tail -n +5 | sed \$d | \
 RUN:   FileCheck %s --implicit-check-not="{{^\+}}" --implicit-check-not="{{^\-}}"
 
 We expect only the nullability to be different as it is canonicalized during the
