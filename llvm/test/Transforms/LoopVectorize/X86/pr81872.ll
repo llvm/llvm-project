@@ -102,6 +102,6 @@ attributes #0 = {"target-cpu"="haswell" "target-features"="+avx2" }
 ; CHECK: [[META5]] = !{!"llvm.loop.estimated_trip_count", i32 24}
 ; CHECK: [[PROF6]] = !{!"branch_weights", i32 1, i32 1}
 ; CHECK: [[PROF7]] = !{!"branch_weights", i32 0, i32 0}
-; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META9:![0-9]+]], [[META4]], [[META3]]}
+; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META4]], [[META3]], [[META9:![0-9]+]]}
 ; CHECK: [[META9]] = !{!"llvm.loop.estimated_trip_count", i32 0}
 ;.
