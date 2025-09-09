@@ -854,15 +854,29 @@ public:
       Region *region, const TypeConverter &converter,
       TypeConverter::SignatureConversion *entryConversion = nullptr);
 
-  /// Replace all the uses of the block argument `from` with `to`. This
-  /// function supports both 1:1 and 1:N replacements.
+  /// Replace all the uses of `from` with `to`. The type of `from` and `to` is
+  /// allowed to differ. The conversion driver will try to reconcile all type
+  /// mismatches that still exist at the end of the conversion with
+  /// materializations. This function supports both 1:1 and 1:N replacements.
   ///
-  /// Note: If `allowPatternRollback` is set to "true", this function replaces
-  /// all current and future uses of the block argument. This same block
-  /// block argument must not be replaced multiple times. Uses are not replaced
-  /// immediately but in a delayed fashion. Patterns may still see the original
-  /// uses when inspecting IR.
-  void replaceUsesOfBlockArgument(BlockArgument from, ValueRange to);
+  /// Note: If `allowPatternRollback` is set to "true", this function behaves
+  /// slightly different:
+  ///
+  /// 1. All current and future uses of `from` are replaced. The same value must
+  ///    not be replaced multiple times. That's an API violation.
+  /// 2. Uses are not replaced immediately but in a delayed fashion. Patterns
+  ///    may still see the original uses when inspecting IR.
+  /// 3. Uses within the same block that appear before the defining operation
+  ///    of the replacement value are not replaced. This allows users to
+  ///    perform certain replaceAllUsesExcept-style replacements, even though
+  ///    such API is not directly supported.
+  ///
+  /// Note: In an attempt to align the ConversionPatternRewriter and
+  /// RewriterBase APIs, (3) may be removed in the future.
+  void replaceAllUsesWith(Value from, ValueRange to);
+  void replaceAllUsesWith(Value from, Value to) override {
+    replaceAllUsesWith(from, ValueRange{to});
+  }
 
   /// Return the converted value of 'key' with a type defined by the type
   /// converter of the currently executing pattern. Return nullptr in the case

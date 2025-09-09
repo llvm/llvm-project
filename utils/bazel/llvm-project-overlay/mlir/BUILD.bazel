@@ -3892,6 +3892,7 @@ cc_library(
         ":FunctionInterfaces",
         ":IR",
         ":SideEffectInterfaces",
+        ":Support",
         "//llvm:Support",
     ],
 )
@@ -3979,6 +3980,7 @@ cc_library(
         ":CallOpInterfaces",
         ":DialectUtils",
         ":IR",
+        ":MemRefDialect",
         ":SideEffectInterfaces",
         ":Support",
         ":ViewLikeInterface",
@@ -6552,6 +6554,7 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Ptr/IR/PtrOps.td",
     deps = [
+        ":InferTypeOpInterfaceTdFiles",
         ":PtrTdFiles",
     ],
 )
@@ -6584,6 +6587,7 @@ cc_library(
         ":BytecodeOpInterface",
         ":DataLayoutInterfaces",
         ":IR",
+        ":InferTypeOpInterface",
         ":InliningUtils",
         ":PtrAttrsIncGen",
         ":PtrDialectIncGen",
@@ -8871,6 +8875,8 @@ cc_library(
         ":IR",
         ":PtrDialect",
         ":ToLLVMIRTranslation",
+        "//llvm:Core",
+        "//llvm:Support",
     ],
 )
 
@@ -8999,7 +9005,6 @@ cc_library(
         ":LLVMDialect",
         ":Pass",
         ":TargetLLVMIRTransformsIncGen",
-        "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
         "//llvm:MC",
         "//llvm:Support",
@@ -9344,6 +9349,7 @@ cc_binary(
         ":MlirLspServerSupportLib",
         ":RegisterAllDialects",
         ":RegisterAllExtensions",
+        "//llvm:Support",
         "//mlir/test:TestAffine",
         "//mlir/test:TestAnalysis",
         "//mlir/test:TestArith",

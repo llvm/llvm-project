@@ -1125,6 +1125,12 @@ static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
   if (Offset.VariableOffsets.size() != 1)
     return false;
 
+  uint64_t BitWidth = Offset.ConstantOffset.getBitWidth();
+  auto &[Index, Scale] = Offset.VariableOffsets.front();
+  // Bail out on non-canonical GEPs.
+  if (Index->getType()->getScalarSizeInBits() != BitWidth)
+    return false;
+
   ObjectSizeOpts Opts;
   // Workaround for gep inbounds, ptr null, idx.
   Opts.NullIsUnknownSize = true;
@@ -1140,8 +1146,6 @@ static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
   // With nuw flag, we know that the index addition doesn't have unsigned wrap.
   // If (AllocSize - (ConstOffset + AccessSize)) wraps around, there is no valid
   // value for Index.
-  uint64_t BitWidth = Offset.ConstantOffset.getBitWidth();
-  auto &[Index, Scale] = Offset.VariableOffsets.front();
   APInt MaxIndex = (APInt(BitWidth, Size->getFixedValue() - AccessSize,
                           /*isSigned=*/false, /*implicitTrunc=*/true) -
                     Offset.ConstantOffset)

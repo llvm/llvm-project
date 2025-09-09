@@ -795,12 +795,11 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitPrivateClause(
   // really isn't anything to do here. GCC does some duplicate-finding, though
   // it isn't apparent in the standard where this is justified.
 
-  llvm::SmallVector<VarDecl *> InitRecipes;
+  llvm::SmallVector<OpenACCPrivateRecipe> InitRecipes;
 
   // Assemble the recipes list.
   for (const Expr *VarExpr : Clause.getVarList())
-    InitRecipes.push_back(
-        SemaRef.CreateInitRecipe(OpenACCClauseKind::Private, VarExpr).first);
+    InitRecipes.push_back(SemaRef.CreatePrivateInitRecipe(VarExpr));
 
   return OpenACCPrivateClause::Create(
       Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(), Clause.getVarList(),
@@ -817,8 +816,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitFirstPrivateClause(
 
   // Assemble the recipes list.
   for (const Expr *VarExpr : Clause.getVarList())
-    InitRecipes.push_back(
-        SemaRef.CreateInitRecipe(OpenACCClauseKind::FirstPrivate, VarExpr));
+    InitRecipes.push_back(SemaRef.CreateFirstPrivateInitRecipe(VarExpr));
 
   return OpenACCFirstPrivateClause::Create(
       Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(), Clause.getVarList(),
@@ -1783,12 +1781,8 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitReductionClause(
     if (Res.isUsable()) {
       ValidVars.push_back(Res.get());
 
-      VarDecl *InitRecipe =
-          SemaRef
-              .CreateInitRecipe(OpenACCClauseKind::Reduction,
-                                Clause.getReductionOp(), Res.get())
-              .first;
-      Recipes.push_back({InitRecipe});
+      Recipes.push_back(SemaRef.CreateReductionInitRecipe(
+          Clause.getReductionOp(), Res.get()));
     }
   }
 

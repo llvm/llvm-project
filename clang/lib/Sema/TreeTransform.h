@@ -11903,7 +11903,7 @@ template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitPrivateClause(
     const OpenACCPrivateClause &C) {
   llvm::SmallVector<Expr *> InstantiatedVarList;
-  llvm::SmallVector<VarDecl *> InitRecipes;
+  llvm::SmallVector<OpenACCPrivateRecipe> InitRecipes;
 
   for (const auto [RefExpr, InitRecipe] :
        llvm::zip(C.getVarList(), C.getInitRecipes())) {
@@ -11914,14 +11914,11 @@ void OpenACCClauseTransform<Derived>::VisitPrivateClause(
 
       // We only have to create a new one if it is dependent, and Sema won't
       // make one of these unless the type is non-dependent.
-      if (InitRecipe)
+      if (InitRecipe.isSet())
         InitRecipes.push_back(InitRecipe);
       else
         InitRecipes.push_back(
-            Self.getSema()
-                .OpenACC()
-                .CreateInitRecipe(OpenACCClauseKind::Private, VarRef.get())
-                .first);
+            Self.getSema().OpenACC().CreatePrivateInitRecipe(VarRef.get()));
     }
   }
   ParsedClause.setVarListDetails(InstantiatedVarList,
@@ -11972,11 +11969,12 @@ void OpenACCClauseTransform<Derived>::VisitFirstPrivateClause(
 
       // We only have to create a new one if it is dependent, and Sema won't
       // make one of these unless the type is non-dependent.
-      if (InitRecipe.RecipeDecl)
+      if (InitRecipe.isSet())
         InitRecipes.push_back(InitRecipe);
       else
-        InitRecipes.push_back(Self.getSema().OpenACC().CreateInitRecipe(
-            OpenACCClauseKind::FirstPrivate, VarRef.get()));
+        InitRecipes.push_back(
+            Self.getSema().OpenACC().CreateFirstPrivateInitRecipe(
+                VarRef.get()));
     }
   }
   ParsedClause.setVarListDetails(InstantiatedVarList,
@@ -12434,27 +12432,18 @@ void OpenACCClauseTransform<Derived>::VisitReductionClause(
   SmallVector<Expr *> ValidVars;
   llvm::SmallVector<OpenACCReductionRecipe> Recipes;
 
-  for (const auto [Var, OrigRecipes] :
+  for (const auto [Var, OrigRecipe] :
        llvm::zip(TransformedVars, C.getRecipes())) {
     ExprResult Res = Self.getSema().OpenACC().CheckReductionVar(
         ParsedClause.getDirectiveKind(), C.getReductionOp(), Var);
     if (Res.isUsable()) {
       ValidVars.push_back(Res.get());
 
-      // TODO OpenACC: When the recipe changes, make sure we get these right
-      // too. We probably need something similar for the operation.
-      static_assert(sizeof(OpenACCReductionRecipe) == sizeof(int*));
-      VarDecl *InitRecipe = nullptr;
-      if (OrigRecipes.RecipeDecl)
-        InitRecipe = OrigRecipes.RecipeDecl;
-       else
-         InitRecipe = Self.getSema()
-                          .OpenACC()
-                          .CreateInitRecipe(OpenACCClauseKind::Reduction,
-                                            C.getReductionOp(), Res.get())
-                          .first;
-
-      Recipes.push_back({InitRecipe});
+      if (OrigRecipe.isSet())
+        Recipes.push_back(OrigRecipe);
+      else
+        Recipes.push_back(Self.getSema().OpenACC().CreateReductionInitRecipe(
+            C.getReductionOp(), Res.get()));
     }
   }
 

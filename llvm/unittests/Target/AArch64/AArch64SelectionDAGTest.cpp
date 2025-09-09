@@ -172,6 +172,9 @@ TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_VASHR) {
   auto VecA = DAG->getConstant(0xaa, Loc, VecVT);
   auto Op2 = DAG->getNode(AArch64ISD::VASHR, Loc, VecVT, VecA, Shift);
   EXPECT_EQ(DAG->ComputeNumSignBits(Op2), 5u);
+  // VASHR can't create undef/poison - FREEZE(VASHR(C1,C2)) -> VASHR(C1,C2).
+  auto Fr2 = DAG->getFreeze(Op2);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Fr2), 5u);
 }
 
 TEST_F(AArch64SelectionDAGTest, SimplifyDemandedVectorElts_EXTRACT_SUBVECTOR) {
@@ -319,6 +322,7 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_UADDO_CARRY) {
 }
 
 // Piggy-backing on the AArch64 tests to verify SelectionDAG::computeKnownBits.
+// Attempt to FREEZE the MOV/MVN nodes to show that they can still be analysed.
 TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_MOVI) {
   SDLoc Loc;
   auto IntSca32VT = MVT::i32;
@@ -344,6 +348,11 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_MOVI) {
   EXPECT_EQ(Known.Zero, APInt(64, 0x00FF00FFFF00FF00));
   EXPECT_EQ(Known.One, APInt(64, 0xFF00FF0000FF00FF));
 
+  auto FrMOVIedit128 = DAG->getFreeze(OpMOVIedit128);
+  Known = DAG->computeKnownBits(FrMOVIedit128);
+  EXPECT_EQ(Known.Zero, APInt(64, 0x00FF00FFFF00FF00));
+  EXPECT_EQ(Known.One, APInt(64, 0xFF00FF0000FF00FF));
+
   auto N264 = DAG->getConstant(264, Loc, IntSca32VT);
   auto OpMOVImsl64 =
       DAG->getNode(AArch64ISD::MOVImsl, Loc, Int2Vec32VT, N165, N264);
@@ -358,6 +367,11 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_MOVI) {
   EXPECT_EQ(Known.Zero, APInt(32, 0xFF5A0000));
   EXPECT_EQ(Known.One, APInt(32, 0x00A5FFFF));
 
+  auto FrMOVImsl128 = DAG->getFreeze(OpMOVImsl128);
+  Known = DAG->computeKnownBits(FrMOVImsl128);
+  EXPECT_EQ(Known.Zero, APInt(32, 0xFF5A0000));
+  EXPECT_EQ(Known.One, APInt(32, 0x00A5FFFF));
+
   auto OpMVNImsl64 =
       DAG->getNode(AArch64ISD::MVNImsl, Loc, Int2Vec32VT, N165, N272);
   Known = DAG->computeKnownBits(OpMVNImsl64);
@@ -367,6 +381,11 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_MOVI) {
   auto OpMVNImsl128 =
       DAG->getNode(AArch64ISD::MVNImsl, Loc, Int4Vec32VT, N165, N264);
   Known = DAG->computeKnownBits(OpMVNImsl128);
+  EXPECT_EQ(Known.Zero, APInt(32, 0x0000A5FF));
+  EXPECT_EQ(Known.One, APInt(32, 0xFFFF5A00));
+
+  auto FrMVNImsl128 = DAG->getFreeze(OpMVNImsl128);
+  Known = DAG->computeKnownBits(FrMVNImsl128);
   EXPECT_EQ(Known.Zero, APInt(32, 0x0000A5FF));
   EXPECT_EQ(Known.One, APInt(32, 0xFFFF5A00));
 
@@ -384,6 +403,11 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_MOVI) {
   EXPECT_EQ(Known.Zero, APInt(32, 0x5AFFFFFF));
   EXPECT_EQ(Known.One, APInt(32, 0xA5000000));
 
+  auto FrMOVIshift4Vec32 = DAG->getFreeze(OpMOVIshift4Vec32);
+  Known = DAG->computeKnownBits(FrMOVIshift4Vec32);
+  EXPECT_EQ(Known.Zero, APInt(32, 0x5AFFFFFF));
+  EXPECT_EQ(Known.One, APInt(32, 0xA5000000));
+
   auto OpMVNIshift2Vec32 =
       DAG->getNode(AArch64ISD::MVNIshift, Loc, Int2Vec32VT, N165, N24);
   Known = DAG->computeKnownBits(OpMVNIshift2Vec32);
@@ -393,6 +417,11 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_MOVI) {
   auto OpMVNIshift4Vec32 =
       DAG->getNode(AArch64ISD::MVNIshift, Loc, Int4Vec32VT, N165, N0);
   Known = DAG->computeKnownBits(OpMVNIshift4Vec32);
+  EXPECT_EQ(Known.Zero, APInt(32, 0x000000A5));
+  EXPECT_EQ(Known.One, APInt(32, 0xFFFFFF5A));
+
+  auto FrMVNIshift4Vec32 = DAG->getFreeze(OpMVNIshift4Vec32);
+  Known = DAG->computeKnownBits(FrMVNIshift4Vec32);
   EXPECT_EQ(Known.Zero, APInt(32, 0x000000A5));
   EXPECT_EQ(Known.One, APInt(32, 0xFFFFFF5A));
 
@@ -409,6 +438,11 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_MOVI) {
   EXPECT_EQ(Known.Zero, APInt(16, 0x5AFF));
   EXPECT_EQ(Known.One, APInt(16, 0xA500));
 
+  auto FrMOVIshift8Vec16 = DAG->getFreeze(OpMOVIshift8Vec16);
+  Known = DAG->computeKnownBits(FrMOVIshift8Vec16);
+  EXPECT_EQ(Known.Zero, APInt(16, 0x5AFF));
+  EXPECT_EQ(Known.One, APInt(16, 0xA500));
+
   auto OpMVNIshift4Vec16 =
       DAG->getNode(AArch64ISD::MVNIshift, Loc, Int4Vec16VT, N165, N8);
   Known = DAG->computeKnownBits(OpMVNIshift4Vec16);
@@ -421,6 +455,11 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_MOVI) {
   EXPECT_EQ(Known.Zero, APInt(16, 0x00A5));
   EXPECT_EQ(Known.One, APInt(16, 0xFF5A));
 
+  auto FrMVNIshift8Vec16 = DAG->getFreeze(OpMVNIshift8Vec16);
+  Known = DAG->computeKnownBits(FrMVNIshift8Vec16);
+  EXPECT_EQ(Known.Zero, APInt(16, 0x00A5));
+  EXPECT_EQ(Known.One, APInt(16, 0xFF5A));
+
   auto OpMOVI8Vec8 = DAG->getNode(AArch64ISD::MOVI, Loc, Int8Vec8VT, N165);
   Known = DAG->computeKnownBits(OpMOVI8Vec8);
   EXPECT_EQ(Known.Zero, APInt(8, 0x5A));
@@ -428,6 +467,11 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_MOVI) {
 
   auto OpMOVI16Vec8 = DAG->getNode(AArch64ISD::MOVI, Loc, Int16Vec8VT, N165);
   Known = DAG->computeKnownBits(OpMOVI16Vec8);
+  EXPECT_EQ(Known.Zero, APInt(8, 0x5A));
+  EXPECT_EQ(Known.One, APInt(8, 0xA5));
+
+  auto FrMOVI16Vec8 = DAG->getFreeze(OpMOVI16Vec8);
+  Known = DAG->computeKnownBits(FrMOVI16Vec8);
   EXPECT_EQ(Known.Zero, APInt(8, 0x5A));
   EXPECT_EQ(Known.One, APInt(8, 0xA5));
 }
@@ -503,6 +547,81 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_USUBO_CARRY) {
   Known = DAG->computeKnownBits(OpOneBorrow);
   EXPECT_EQ(Known.Zero, APInt(8, 0xc6));
   EXPECT_EQ(Known.One, APInt(8, 0x31));
+}
+
+// Piggy-backing on the AArch64 tests to verify SelectionDAG::computeKnownBits.
+TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_VASHR) {
+  SDLoc Loc;
+  KnownBits Known;
+  auto VecVT = MVT::v8i8;
+  auto Shift0 = DAG->getConstant(4, Loc, MVT::i32);
+  auto Vec0 = DAG->getConstant(0x80, Loc, VecVT);
+  auto Op0 = DAG->getNode(AArch64ISD::VASHR, Loc, VecVT, Vec0, Shift0);
+  Known = DAG->computeKnownBits(Op0);
+  EXPECT_EQ(Known.Zero, APInt(8, 0x07));
+  EXPECT_EQ(Known.One, APInt(8, 0xF8));
+
+  auto Shift1 = DAG->getConstant(7, Loc, MVT::i32);
+  auto Vec1 = DAG->getConstant(0xF7, Loc, VecVT);
+  auto Op1 = DAG->getNode(AArch64ISD::VASHR, Loc, VecVT, Vec1, Shift1);
+  Known = DAG->computeKnownBits(Op1);
+  EXPECT_EQ(Known.Zero, APInt(8, 0x00));
+  EXPECT_EQ(Known.One, APInt(8, 0xFF));
+
+  auto Fr1 = DAG->getFreeze(Op1);
+  Known = DAG->computeKnownBits(Fr1);
+  EXPECT_EQ(Known.Zero, APInt(8, 0x00));
+  EXPECT_EQ(Known.One, APInt(8, 0xFF));
+}
+
+// Piggy-backing on the AArch64 tests to verify SelectionDAG::computeKnownBits.
+TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_VLSHR) {
+  SDLoc Loc;
+  KnownBits Known;
+  auto VecVT = MVT::v8i8;
+  auto Shift0 = DAG->getConstant(4, Loc, MVT::i32);
+  auto Vec0 = DAG->getConstant(0x80, Loc, VecVT);
+  auto Op0 = DAG->getNode(AArch64ISD::VLSHR, Loc, VecVT, Vec0, Shift0);
+  Known = DAG->computeKnownBits(Op0);
+  EXPECT_EQ(Known.Zero, APInt(8, 0xF7));
+  EXPECT_EQ(Known.One, APInt(8, 0x08));
+
+  auto Shift1 = DAG->getConstant(7, Loc, MVT::i32);
+  auto Vec1 = DAG->getConstant(0xF7, Loc, VecVT);
+  auto Op1 = DAG->getNode(AArch64ISD::VLSHR, Loc, VecVT, Vec1, Shift1);
+  Known = DAG->computeKnownBits(Op1);
+  EXPECT_EQ(Known.Zero, APInt(8, 0xFE));
+  EXPECT_EQ(Known.One, APInt(8, 0x1));
+
+  auto Fr1 = DAG->getFreeze(Op1);
+  Known = DAG->computeKnownBits(Fr1);
+  EXPECT_EQ(Known.Zero, APInt(8, 0xFE));
+  EXPECT_EQ(Known.One, APInt(8, 0x1));
+}
+
+// Piggy-backing on the AArch64 tests to verify SelectionDAG::computeKnownBits.
+TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_VSHL) {
+  SDLoc Loc;
+  KnownBits Known;
+  auto VecVT = MVT::v8i8;
+  auto Shift0 = DAG->getConstant(4, Loc, MVT::i32);
+  auto Vec0 = DAG->getConstant(0x02, Loc, VecVT);
+  auto Op0 = DAG->getNode(AArch64ISD::VSHL, Loc, VecVT, Vec0, Shift0);
+  Known = DAG->computeKnownBits(Op0);
+  EXPECT_EQ(Known.Zero, APInt(8, 0xDF));
+  EXPECT_EQ(Known.One, APInt(8, 0x20));
+
+  auto Shift1 = DAG->getConstant(7, Loc, MVT::i32);
+  auto Vec1 = DAG->getConstant(0xF7, Loc, VecVT);
+  auto Op1 = DAG->getNode(AArch64ISD::VSHL, Loc, VecVT, Vec1, Shift1);
+  Known = DAG->computeKnownBits(Op1);
+  EXPECT_EQ(Known.Zero, APInt(8, 0x7F));
+  EXPECT_EQ(Known.One, APInt(8, 0x80));
+
+  auto Fr1 = DAG->getFreeze(Op1);
+  Known = DAG->computeKnownBits(Fr1);
+  EXPECT_EQ(Known.Zero, APInt(8, 0x7F));
+  EXPECT_EQ(Known.One, APInt(8, 0x80));
 }
 
 TEST_F(AArch64SelectionDAGTest, isSplatValue_Fixed_BUILD_VECTOR) {

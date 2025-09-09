@@ -1,4 +1,4 @@
-; RUN: opt -S --amdgpu-annotate-uniform < %s | FileCheck -check-prefix=OPT %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa --amdgpu-annotate-uniform < %s | FileCheck -check-prefix=OPT %s
 
 ; "load vaddr" depends on the store, so we should not mark vaddr as amdgpu.noclobber.
 
@@ -24,7 +24,7 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 ; To check that %arrayidx0 is not marked as amdgpu.noclobber.
 
 ; OPT-LABEL: @atomicrmw_clobbers_load(
-; OPT:       %arrayidx0 = getelementptr inbounds [512 x i32], ptr addrspace(3) @lds0, i32 0, i32 %idx.0, !amdgpu.uniform !0
+; OPT:       %arrayidx0 = getelementptr inbounds [512 x i32], ptr addrspace(3) @lds0, i32 0, i32 %idx.0
 ; OPT-NEXT:  %val = atomicrmw xchg ptr addrspace(3) %arrayidx0, i32 3 seq_cst
 
 define amdgpu_kernel void @atomicrmw_clobbers_load(ptr addrspace(1) %out0, ptr addrspace(1) %out1) {

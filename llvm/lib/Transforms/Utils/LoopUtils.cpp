@@ -2032,6 +2032,7 @@ Value *llvm::addRuntimeChecks(
     MemoryRuntimeCheck = IsConflict;
   }
 
+  Exp.eraseDeadInstructions(MemoryRuntimeCheck);
   return MemoryRuntimeCheck;
 }
 
@@ -2077,6 +2078,7 @@ Value *llvm::addDiffRuntimeChecks(
     MemoryRuntimeCheck = IsConflict;
   }
 
+  Expander.eraseDeadInstructions(MemoryRuntimeCheck);
   return MemoryRuntimeCheck;
 }
 

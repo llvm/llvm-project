@@ -265,7 +265,8 @@ void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
                              mlir::OperationState &result, mlir::Value memref,
                              llvm::StringRef uniq_name, mlir::Value shape,
                              mlir::ValueRange typeparams,
-                             mlir::Value dummy_scope,
+                             mlir::Value dummy_scope, mlir::Value storage,
+                             std::uint64_t storage_offset,
                              fir::FortranVariableFlagsAttr fortran_attrs,
                              cuf::DataAttributeAttr data_attr) {
   auto nameAttr = builder.getStringAttr(uniq_name);
@@ -279,8 +280,8 @@ void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
   auto [hlfirVariableType, firVarType] =
       getDeclareOutputTypes(inputType, hasExplicitLbs);
   build(builder, result, {hlfirVariableType, firVarType}, memref, shape,
-        typeparams, dummy_scope, /*storage=*/nullptr, /*storage_offset=*/0,
-        nameAttr, fortran_attrs, data_attr);
+        typeparams, dummy_scope, storage, storage_offset, nameAttr,
+        fortran_attrs, data_attr);
 }
 
 llvm::LogicalResult hlfir::DeclareOp::verify() {
@@ -849,6 +850,28 @@ llvm::LogicalResult hlfir::CmpCharOp::verify() {
 }
 
 void hlfir::CmpCharOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
+}
+
+//===----------------------------------------------------------------------===//
+// CharTrimOp
+//===----------------------------------------------------------------------===//
+
+void hlfir::CharTrimOp::build(mlir::OpBuilder &builder,
+                              mlir::OperationState &result, mlir::Value chr) {
+  unsigned kind = getCharacterKind(chr.getType());
+  auto resultType = hlfir::ExprType::get(
+      builder.getContext(), hlfir::ExprType::Shape{},
+      fir::CharacterType::get(builder.getContext(), kind,
+                              fir::CharacterType::unknownLen()),
+      /*polymorphic=*/false);
+  build(builder, result, resultType, chr);
+}
+
+void hlfir::CharTrimOp::getEffects(
     llvm::SmallVectorImpl<
         mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
         &effects) {

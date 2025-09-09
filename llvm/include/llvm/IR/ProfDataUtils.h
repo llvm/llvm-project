@@ -180,7 +180,11 @@ inline uint32_t scaleBranchCount(uint64_t Count, uint64_t Scale) {
 /// info.
 LLVM_ABI void setExplicitlyUnknownBranchWeights(Instruction &I);
 
-LLVM_ABI bool isExplicitlyUnknownBranchWeightsMetadata(const MDNode &MD);
+/// Analogous to setExplicitlyUnknownBranchWeights, but for functions and their
+/// entry counts.
+LLVM_ABI void setExplicitlyUnknownFunctionEntryCount(Function &F);
+
+LLVM_ABI bool isExplicitlyUnknownProfileMetadata(const MDNode &MD);
 LLVM_ABI bool hasExplicitlyUnknownBranchWeights(const Instruction &I);
 
 /// Scaling the profile data attached to 'I' using the ratio of S/T.

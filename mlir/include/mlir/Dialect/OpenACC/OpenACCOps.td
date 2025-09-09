@@ -505,6 +505,84 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
   ];
 }
 
+//===----------------------------------------------------------------------===//
+// DataBounds accessor operations
+//===----------------------------------------------------------------------===//
+
+def OpenACC_GetLowerboundOp : OpenACC_Op<"get_lowerbound", [NoMemoryEffect]> {
+  let summary = "Extract lowerbound from OpenACC data bounds.";
+  let description = [{
+    This operation extracts the lowerbound value from an `acc.bounds` value.
+    If the data bounds does not have a lowerbound specified, it means it is zero.
+
+    Example:
+    ```mlir
+    %lb = acc.get_lowerbound %bounds : (!acc.data_bounds_ty) -> index
+    ```
+  }];
+
+  let arguments = (ins OpenACC_DataBoundsType:$bounds);
+  let results = (outs Index:$result);
+
+  let assemblyFormat = "$bounds attr-dict `:` `(` type($bounds) `)` `->` type($result)";
+}
+
+def OpenACC_GetUpperboundOp : OpenACC_Op<"get_upperbound", [NoMemoryEffect]> {
+  let summary = "Extract upperbound from OpenACC data bounds.";
+  let description = [{
+    This operation extracts the upperbound value from an `acc.bounds` value.
+    If the data bounds does not have an upperbound specified, this operation
+    uses the extent to compute it.
+
+    Example:
+    ```mlir
+    %ub = acc.get_upperbound %bounds : (!acc.data_bounds_ty) -> index
+    ```
+  }];
+
+  let arguments = (ins OpenACC_DataBoundsType:$bounds);
+  let results = (outs Index:$result);
+
+  let assemblyFormat = "$bounds attr-dict `:` `(` type($bounds) `)` `->` type($result)";
+}
+
+def OpenACC_GetStrideOp : OpenACC_Op<"get_stride", [NoMemoryEffect]> {
+  let summary = "Extract stride from OpenACC data bounds.";
+  let description = [{
+    This operation extracts the stride value from an `acc.bounds` value.
+    If the data bounds does not have a stride specified, it defaults to 1.
+
+    Example:
+    ```mlir
+    %stride = acc.get_stride %bounds : (!acc.data_bounds_ty) -> index
+    ```
+  }];
+
+  let arguments = (ins OpenACC_DataBoundsType:$bounds);
+  let results = (outs Index:$result);
+
+  let assemblyFormat = "$bounds attr-dict `:` `(` type($bounds) `)` `->` type($result)";
+}
+
+def OpenACC_GetExtentOp : OpenACC_Op<"get_extent", [NoMemoryEffect]> {
+  let summary = "Extract extent from OpenACC data bounds.";
+  let description = [{
+    This operation extracts the extent value from an `acc.bounds` value.
+    If the data bounds does not have an extent specified, it is computed
+    from the upperbound.
+
+    Example:
+    ```mlir
+    %extent = acc.get_extent %bounds : (!acc.data_bounds_ty) -> index
+    ```
+  }];
+
+  let arguments = (ins OpenACC_DataBoundsType:$bounds);
+  let results = (outs Index:$result);
+
+  let assemblyFormat = "$bounds attr-dict `:` `(` type($bounds) `)` `->` type($result)";
+}
+
 // Data entry operation does not refer to OpenACC spec terminology, but to
 // terminology used in this dialect. It refers to data operations that will
 // appear before data or compute region. It will be used as the base of acc
@@ -1180,11 +1258,12 @@ def OpenACC_PrivateRecipeOp
       1. The initializer region specifies how to allocate and initialize a new
          private value. For example in Fortran, a derived-type might have a
          default initialization. The region has an argument that contains the
-         value that need to be privatized. This is useful if the type is not
-         known at compile time and the private value is needed to create its
-         copy.
+         original value that needs to be privatized, followed by bounds arguments
+         (if any) in order from innermost to outermost dimension. The region
+         must yield the privatized copy.
       2. The destroy region specifies how to destruct the value when it reaches
-         its end of life. It takes the privatized value as argument.
+         its end of life. It takes the original value, the privatized value, and
+         bounds arguments (if any) in the same order as the init region.
 
     A single privatization recipe can be used for multiple operand if they have
     the same type and do not require a specific default initialization.
@@ -1192,18 +1271,35 @@ def OpenACC_PrivateRecipeOp
     Example:
 
     ```mlir
-    acc.private.recipe @privatization_f32 : f32 init {
-    ^bb0(%0: f32):
+    acc.private.recipe @privatization_memref : memref<10x20xf32> init {
+    ^bb0(%original: memref<10x20xf32>):
       // init region contains a sequence of operations to create and
-      // initialize the copy if needed. It yields the create copy.
+      // initialize the copy. It yields the privatized copy.
+      %alloca = memref.alloca() : memref<10x20xf32>
+      acc.yield %alloca : memref<10x20xf32>
     } destroy {
-    ^bb0(%0: f32)
-      // destroy region contains a sequences of operations to destruct the
-      // created copy.
+    ^bb0(%original: memref<10x20xf32>, %privatized: memref<10x20xf32>):
+      // destroy region is empty since alloca is automatically cleaned up
+      acc.terminator
+    }
+
+    // Example with bounds for array slicing:
+    acc.private.recipe @privatization_slice : memref<10x20xf32> init {
+    ^bb0(%original: memref<10x20xf32>, %bounds_inner: !acc.data_bounds_ty, %bounds_outer: !acc.data_bounds_ty):
+      // Extract bounds and create appropriately sized allocation
+      %extent_inner = acc.get_extent %bounds_inner : (!acc.data_bounds_ty) -> index
+      %extent_outer = acc.get_extent %bounds_outer : (!acc.data_bounds_ty) -> index
+      %slice_alloc = memref.alloca(%extent_outer, %extent_inner) : memref<?x?xf32>
+      // ... base pointer adjustment logic ...
+      acc.yield %result : memref<10x20xf32>
+    } destroy {
+    ^bb0(%original: memref<10x20xf32>, %privatized: memref<10x20xf32>, %bounds_inner: !acc.data_bounds_ty, %bounds_outer: !acc.data_bounds_ty):
+      // Cleanup is automatic for alloca-based allocations
+      acc.terminator
     }
 
     // The privatization symbol is then used in the corresponding operation.
-    acc.parallel private(@privatization_f32 -> %a : f32) {
+    acc.parallel private(@privatization_memref -> %a : memref<10x20xf32>) {
     }
     ```
   }];
@@ -1239,15 +1335,15 @@ def OpenACC_FirstprivateRecipeOp
       1. The initializer region specifies how to allocate and initialize a new
          private value. For example in Fortran, a derived-type might have a
          default initialization. The region has an argument that contains the
-         value that need to be privatized. This is useful if the type is not
-         known at compile time and the private value is needed to create its
-         copy.
+         original value that needs to be privatized, followed by bounds arguments
+         (if any) in order from innermost to outermost dimension. The region must
+         yield the privatized copy.
       2. The copy region specifies how to copy the initial value to the newly
-         created private value. It takes the initial value and the privatized
-         value as arguments.
+         created private value. It takes the original value, the privatized
+         value, followed by bounds arguments (if any) in the same order.
       3. The destroy region specifies how to destruct the value when it reaches
-         its end of life. It takes the privatized value as argument. It is
-         optional.
+         its end of life. It takes the original value, the privatized value, and
+         bounds arguments (if any) in the same order. It is optional.
 
     A single privatization recipe can be used for multiple operand if they have
     the same type and do not require a specific default initialization.
@@ -1255,22 +1351,48 @@ def OpenACC_FirstprivateRecipeOp
     Example:
 
     ```mlir
-    acc.firstprivate.recipe @privatization_f32 : f32 init {
-    ^bb0(%0: f32):
+    acc.firstprivate.recipe @firstprivate_memref : memref<10x20xf32> init {
+    ^bb0(%original: memref<10x20xf32>):
       // init region contains a sequence of operations to create and
-      // initialize the copy if needed. It yields the create copy.
+      // initialize the copy. It yields the privatized copy.
+      %alloca = memref.alloca() : memref<10x20xf32>
+      acc.yield %alloca : memref<10x20xf32>
     } copy {
-    ^bb0(%0: f32, %1: !llvm.ptr):
+    ^bb0(%original: memref<10x20xf32>, %privatized: memref<10x20xf32>):
       // copy region contains a sequence of operations to copy the initial value
       // of the firstprivate value to the newly created value.
+      memref.copy %original, %privatized : memref<10x20xf32> to memref<10x20xf32>
+      acc.terminator
     } destroy {
-    ^bb0(%0: f32)
-      // destroy region contains a sequences of operations to destruct the
-      // created copy.
+    ^bb0(%original: memref<10x20xf32>, %privatized: memref<10x20xf32>):
+      // destroy region is empty since alloca is automatically cleaned up
+      acc.terminator
+    }
+
+    // Example with bounds for array slicing:
+    acc.firstprivate.recipe @firstprivate_slice : memref<10x20xf32> init {
+    ^bb0(%original: memref<10x20xf32>, %bounds_inner: !acc.data_bounds_ty, %bounds_outer: !acc.data_bounds_ty):
+      // Extract bounds and create appropriately sized allocation
+      %extent_inner = acc.get_extent %bounds_inner : (!acc.data_bounds_ty) -> index
+      %extent_outer = acc.get_extent %bounds_outer : (!acc.data_bounds_ty) -> index
+      %slice_alloc = memref.alloca(%extent_outer, %extent_inner) : memref<?x?xf32>
+      // ... base pointer adjustment logic ...
+      acc.yield %result : memref<10x20xf32>
+    } copy {
+    ^bb0(%original: memref<10x20xf32>, %privatized: memref<10x20xf32>, %bounds_inner: !acc.data_bounds_ty, %bounds_outer: !acc.data_bounds_ty):
+      // Copy the slice portion from original to privatized
+      %lb_inner = acc.get_lowerbound %bounds_inner : (!acc.data_bounds_ty) -> index
+      %lb_outer = acc.get_lowerbound %bounds_outer : (!acc.data_bounds_ty) -> index
+      %extent_inner = acc.get_extent %bounds_inner : (!acc.data_bounds_ty) -> index
+      %extent_outer = acc.get_extent %bounds_outer : (!acc.data_bounds_ty) -> index
+      %subview = memref.subview %original[%lb_outer, %lb_inner][%extent_outer, %extent_inner][1, 1]
+        : memref<10x20xf32> to memref<?x?xf32, strided<[20, 1], offset: ?>>
+      // Copy subview to privatized...
+      acc.terminator
     }
 
     // The privatization symbol is then used in the corresponding operation.
-    acc.parallel firstprivate(@privatization_f32 -> %a : f32) {
+    acc.parallel firstprivate(@firstprivate_memref -> %a : memref<10x20xf32>) {
     }
     ```
   }];
@@ -1305,40 +1427,75 @@ def OpenACC_ReductionRecipeOp
     mandatory regions and one optional region.
 
       1. The initializer region specifies how to initialize the local reduction
-         value. The region has a first argument that contains the value of the
-         reduction accumulator at the start of the reduction. It is expected to
-         `acc.yield` the new value. Extra arguments can be added to deal with
-         dynamic arrays.
-      2. The reduction region contains a sequences of operations to combine two
-         values of the reduction type into one. It has at least two arguments
-         and it is expected to `acc.yield` the combined value. Extra arguments
-         can be added to deal with dynamic arrays.
+         value. The region has a first argument that contains the original value
+         that needs to be reduced, followed by bounds arguments (if any) in order
+         from innermost to outermost dimension. It is expected to `acc.yield` the
+         initialized reduction value.
+      2. The combiner region contains a sequence of operations to combine two
+         values of the reduction type into one. It has the first reduction value,
+         the second reduction value, followed by bounds arguments (if any) in the
+         same order. It is expected to `acc.yield` the combined value.
       3. The optional destroy region specifies how to destruct the value when it
-         reaches its end of life. It takes the reduction value as argument.
+         reaches its end of life. It takes the original value, the reduction value,
+         and bounds arguments (if any) in the same order.
 
     Example:
 
     ```mlir
-    acc.reduction.recipe @reduction_add_i64 : i64 reduction_operator<add> init {
-    ^bb0(%0: i64):
+    acc.reduction.recipe @reduction_add_memref : memref<10x20xf32> reduction_operator<add> init {
+    ^bb0(%original: memref<10x20xf32>):
       // init region contains a sequence of operations to initialize the local
       // reduction value as specified in 2.5.15
-      %c0 = arith.constant 0 : i64
-      acc.yield %c0 : i64
+      %alloca = memref.alloca() : memref<10x20xf32>
+      %cst = arith.constant 0.0 : f32
+      linalg.fill ins(%cst : f32) outs(%alloca : memref<10x20xf32>)
+      acc.yield %alloca : memref<10x20xf32>
     } combiner {
-    ^bb0(%0: i64, %1: i64)
+    ^bb0(%lhs: memref<10x20xf32>, %rhs: memref<10x20xf32>):
       // combiner region contains a sequence of operations to combine
       // two values into one.
-      %2 = arith.addi %0, %1 : i64
-      acc.yield %2 : i64
+      linalg.add ins(%lhs, %rhs : memref<10x20xf32>, memref<10x20xf32>)
+                 outs(%lhs : memref<10x20xf32>)
+      acc.yield %lhs : memref<10x20xf32>
     } destroy {
-    ^bb0(%0: i64)
-      // destroy region contains a sequence of operations to destruct the
-      // created copy.
+    ^bb0(%original: memref<10x20xf32>, %reduction: memref<10x20xf32>):
+      // destroy region is empty since alloca is automatically cleaned up
+      acc.terminator
+    }
+
+    // Example with bounds for array slicing:
+    acc.reduction.recipe @reduction_add_slice : memref<10x20xf32> reduction_operator<add> init {
+    ^bb0(%original: memref<10x20xf32>, %bounds_inner: !acc.data_bounds_ty, %bounds_outer: !acc.data_bounds_ty):
+      // Extract bounds and create appropriately sized allocation
+      %extent_inner = acc.get_extent %bounds_inner : (!acc.data_bounds_ty) -> index
+      %extent_outer = acc.get_extent %bounds_outer : (!acc.data_bounds_ty) -> index
+      %slice_alloc = memref.alloca(%extent_outer, %extent_inner) : memref<?x?xf32>
+      %cst = arith.constant 0.0 : f32
+      linalg.fill ins(%cst : f32) outs(%slice_alloc : memref<?x?xf32>)
+      // ... base pointer adjustment logic ...
+      acc.yield %result : memref<10x20xf32>
+    } combiner {
+    ^bb0(%lhs: memref<10x20xf32>, %rhs: memref<10x20xf32>, %bounds_inner: !acc.data_bounds_ty, %bounds_outer: !acc.data_bounds_ty):
+      // Extract bounds to operate only on the slice portion
+      %lb_inner = acc.get_lowerbound %bounds_inner : (!acc.data_bounds_ty) -> index
+      %lb_outer = acc.get_lowerbound %bounds_outer : (!acc.data_bounds_ty) -> index
+      %extent_inner = acc.get_extent %bounds_inner : (!acc.data_bounds_ty) -> index
+      %extent_outer = acc.get_extent %bounds_outer : (!acc.data_bounds_ty) -> index
+
+      // Create subviews to access only the slice portions
+      %lhs_slice = memref.subview %lhs[%lb_outer, %lb_inner][%extent_outer, %extent_inner][1, 1]
+        : memref<10x20xf32> to memref<?x?xf32, strided<[20, 1], offset: ?>>
+      %rhs_slice = memref.subview %rhs[%lb_outer, %lb_inner][%extent_outer, %extent_inner][1, 1]
+        : memref<10x20xf32> to memref<?x?xf32, strided<[20, 1], offset: ?>>
+
+      // Combine only the slice portions
+      linalg.add ins(%lhs_slice, %rhs_slice : memref<?x?xf32, strided<[20, 1], offset: ?>>, memref<?x?xf32, strided<[20, 1], offset: ?>>)
+                 outs(%lhs_slice : memref<?x?xf32, strided<[20, 1], offset: ?>>)
+      acc.yield %lhs : memref<10x20xf32>
     }
 
     // The reduction symbol is then used in the corresponding operation.
-    acc.parallel reduction(@reduction_add_i64 -> %a : i64) {
+    acc.parallel reduction(@reduction_add_memref -> %a : memref<10x20xf32>) {
     }
     ```
 

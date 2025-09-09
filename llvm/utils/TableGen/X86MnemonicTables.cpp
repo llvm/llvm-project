@@ -70,11 +70,11 @@ void X86MnemonicTablesEmitter::run(raw_ostream &OS) {
     auto Mnemonics = MnemonicToCGInstrMap[Mnemonic];
     if (Mnemonics.size() == 1) {
       const CodeGenInstruction *CGI = *Mnemonics.begin();
-      OS << "\treturn Opcode == " << CGI->TheDef->getName() << ";\n}\n\n";
+      OS << "\treturn Opcode == " << CGI->getName() << ";\n}\n\n";
     } else {
       OS << "\tswitch (Opcode) {\n";
       for (const CodeGenInstruction *CGI : Mnemonics) {
-        OS << "\tcase " << CGI->TheDef->getName() << ":\n";
+        OS << "\tcase " << CGI->getName() << ":\n";
       }
       OS << "\t\treturn true;\n\t}\n\treturn false;\n}\n\n";
     }
