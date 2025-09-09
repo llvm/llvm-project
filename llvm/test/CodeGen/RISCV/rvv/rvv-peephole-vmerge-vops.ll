@@ -1215,3 +1215,15 @@ define <vscale x 2 x i32> @unfoldable_mismatched_sew(<vscale x 2 x i32> %passthr
   )
   ret <vscale x 2 x i32> %b
 }
+
+define <vscale x 2 x float> @commute_vfmadd(<vscale x 2 x float> %passthru, <vscale x 2 x float> %x, <vscale x 2 x float> %y, <vscale x 2 x i1> %mask, i32 zeroext %evl) {
+; CHECK-LABEL: commute_vfmadd:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
+; CHECK-NEXT:    vfmacc.vv v8, v9, v10, v0.t
+; CHECK-NEXT:    ret
+  %fmul = fmul contract <vscale x 2 x float> %x, %y
+  %fadd = fadd contract <vscale x 2 x float> %fmul, %passthru
+  %merge = call <vscale x 2 x float> @llvm.vp.merge(<vscale x 2 x i1> %mask, <vscale x 2 x float> %fadd, <vscale x 2 x float> %passthru, i32 %evl)
+  ret <vscale x 2 x float> %merge
+}

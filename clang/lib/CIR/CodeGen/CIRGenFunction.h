@@ -25,7 +25,9 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/BaseSubobject.h"
 #include "clang/AST/CharUnits.h"
+#include "clang/AST/CurrentSourceLocExprScope.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -73,6 +75,11 @@ public:
   mlir::Value cxxabiThisValue = nullptr;
   mlir::Value cxxThisValue = nullptr;
   clang::CharUnits cxxThisAlignment;
+
+  /// When generating code for a constructor or destructor, this will hold the
+  /// implicit argument (e.g. VTT).
+  ImplicitParamDecl *cxxStructorImplicitParamDecl{};
+  mlir::Value cxxStructorImplicitParamValue{};
 
   /// The value of 'this' to sue when evaluating CXXDefaultInitExprs within this
   /// expression.
@@ -594,6 +601,12 @@ public:
   /// true when both vcall CFI and whole-program-vtables are enabled.
   bool shouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *rd);
 
+  /// Source location information about the default argument or member
+  /// initializer expression we're evaluating, if any.
+  clang::CurrentSourceLocExprScope curSourceLocExprScope;
+  using SourceLocExprScopeGuard =
+      clang::CurrentSourceLocExprScope::SourceLocExprScopeGuard;
+
   /// A scope within which we are constructing the fields of an object which
   /// might use a CXXDefaultInitExpr. This stashes away a 'this' value to use if
   /// we need to evaluate the CXXDefaultInitExpr within the evaluation.
@@ -610,6 +623,29 @@ public:
   private:
     CIRGenFunction &cgf;
     Address oldCXXDefaultInitExprThis;
+  };
+
+  /// The scope of a CXXDefaultInitExpr. Within this scope, the value of 'this'
+  /// is overridden to be the object under construction.
+  class CXXDefaultInitExprScope {
+  public:
+    CXXDefaultInitExprScope(CIRGenFunction &cgf, const CXXDefaultInitExpr *e)
+        : cgf{cgf}, oldCXXThisValue(cgf.cxxThisValue),
+          oldCXXThisAlignment(cgf.cxxThisAlignment),
+          sourceLocScope(e, cgf.curSourceLocExprScope) {
+      cgf.cxxThisValue = cgf.cxxDefaultInitExprThis.getPointer();
+      cgf.cxxThisAlignment = cgf.cxxDefaultInitExprThis.getAlignment();
+    }
+    ~CXXDefaultInitExprScope() {
+      cgf.cxxThisValue = oldCXXThisValue;
+      cgf.cxxThisAlignment = oldCXXThisAlignment;
+    }
+
+  public:
+    CIRGenFunction &cgf;
+    mlir::Value oldCXXThisValue;
+    clang::CharUnits oldCXXThisAlignment;
+    SourceLocExprScopeGuard sourceLocScope;
   };
 
   LValue makeNaturalAlignPointeeAddrLValue(mlir::Value v, clang::QualType t);
@@ -633,6 +669,13 @@ public:
       llvm::iterator_range<CastExpr::path_const_iterator> path,
       bool nullCheckValue, SourceLocation loc);
 
+  /// Return the VTT parameter that should be passed to a base
+  /// constructor/destructor with virtual bases.
+  /// FIXME: VTTs are Itanium ABI-specific, so the definition should move
+  /// to ItaniumCXXABI.cpp together with all the references to VTT.
+  mlir::Value getVTTParameter(GlobalDecl gd, bool forVirtualBase,
+                              bool delegating);
+
   LValue makeAddrLValue(Address addr, QualType ty,
                         AlignmentSource source = AlignmentSource::Type) {
     return makeAddrLValue(addr, ty, LValueBaseInfo(source));
@@ -645,6 +688,8 @@ public:
   void initializeVTablePointers(mlir::Location loc,
                                 const clang::CXXRecordDecl *rd);
   void initializeVTablePointer(mlir::Location loc, const VPtr &vptr);
+
+  AggValueSlot::Overlap_t getOverlapForFieldInit(const FieldDecl *fd);
 
   /// Return the address of a local variable.
   Address getAddrOfLocalVar(const clang::VarDecl *vd) {
@@ -665,6 +710,14 @@ public:
     return cxxThisValue;
   }
   Address loadCXXThisAddress();
+
+  /// Load the VTT parameter to base constructors/destructors have virtual
+  /// bases. FIXME: Every place that calls LoadCXXVTT is something that needs to
+  /// be abstracted properly.
+  mlir::Value loadCXXVTT() {
+    assert(cxxStructorImplicitParamValue && "no VTT value for this function");
+    return cxxStructorImplicitParamValue;
+  }
 
   /// Convert the given pointer to a complete class to the given direct base.
   Address getAddressOfDirectBaseInCompleteClass(mlir::Location loc,
@@ -964,6 +1017,16 @@ public:
   void emitAggExpr(const clang::Expr *e, AggValueSlot slot);
 
   LValue emitAggExprToLValue(const Expr *e);
+
+  /// Emit an aggregate copy.
+  ///
+  /// \param isVolatile \c true iff either the source or the destination is
+  ///        volatile.
+  /// \param MayOverlap Whether the tail padding of the destination might be
+  ///        occupied by some other object. More efficient code can often be
+  ///        generated if not.
+  void emitAggregateCopy(LValue dest, LValue src, QualType eltTy,
+                         AggValueSlot::Overlap_t mayOverlap);
 
   /// Emit code to compute the specified expression which can have any type. The
   /// result is returned as an RValue struct. If this is an aggregate
@@ -1292,6 +1355,8 @@ public:
   /// the LLVM value representation.  The l-value must be a simple
   /// l-value.
   mlir::Value emitLoadOfScalar(LValue lvalue, SourceLocation loc);
+  mlir::Value emitLoadOfScalar(Address addr, bool isVolatile, QualType ty,
+                               SourceLocation loc, LValueBaseInfo baseInfo);
 
   /// Emit code to compute a designator that specifies the location
   /// of the expression.
