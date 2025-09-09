@@ -192,13 +192,11 @@ public:
   void erase(const_iterator CI) { return TheMap.erase(CI.I); }
 
   std::pair<iterator, bool> insert(const ValueT &V) {
-    detail::DenseSetEmpty Empty;
-    return TheMap.try_emplace(V, Empty);
+    return TheMap.try_emplace(V);
   }
 
   std::pair<iterator, bool> insert(ValueT &&V) {
-    detail::DenseSetEmpty Empty;
-    return TheMap.try_emplace(std::move(V), Empty);
+    return TheMap.try_emplace(std::move(V));
   }
 
   /// Alternative version of insert that uses a different (and possibly less
