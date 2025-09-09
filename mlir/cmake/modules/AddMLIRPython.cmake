@@ -138,7 +138,8 @@ function(generate_type_stubs MODULE_NAME DEPENDS_TARGET MLIR_DEPENDS_TARGET OUTP
       --recursive
       --include-private
       --output-dir
-      "${OUTPUT_DIR}")
+      "${OUTPUT_DIR}"
+      --quiet)
 
   list(TRANSFORM ARG_OUTPUTS PREPEND "${OUTPUT_DIR}/" OUTPUT_VARIABLE _generated_type_stubs)
   add_custom_command(
