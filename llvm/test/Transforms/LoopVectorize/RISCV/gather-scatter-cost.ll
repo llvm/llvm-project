@@ -185,120 +185,72 @@ exit:
   ret void
 }
 
-define void @uniform_load_and_addr_also_uniform_load(ptr noalias %0, i32 %.pre, ptr noalias %1, ptr noalias %C) {
-; CHECK-LABEL: @uniform_load_and_addr_also_uniform_load(
+define void @store_to_addr_generated_from_invariant_addr(ptr noalias %p1, ptr noalias %p2, ptr %p3, i64 %N) {
+; CHECK-LABEL: @store_to_addr_generated_from_invariant_addr(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP91:%.*]] = icmp sgt i32 [[DOTPRE:%.*]], 0
-; CHECK-NEXT:    br i1 [[CMP91]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
-; CHECK:       loop.preheader:
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[DOTPRE]] to i64
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], 1
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x ptr> poison, ptr [[TMP0:%.*]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 2 x ptr> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <vscale x 2 x ptr> poison, ptr [[C:%.*]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <vscale x 2 x ptr> [[BROADCAST_SPLATINSERT2]], <vscale x 2 x ptr> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
-; CHECK-NEXT:    [[TMP4:%.*]] = mul <vscale x 2 x i64> [[TMP3]], splat (i64 1)
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i64> zeroinitializer, [[TMP4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+; CHECK-NEXT:    [[TMP2:%.*]] = mul <vscale x 2 x i64> [[TMP1]], splat (i64 1)
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i64> zeroinitializer, [[TMP2]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[INDUCTION]], [[VECTOR_MEMCHECK]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[WIDE_TRIP_COUNT]], [[VECTOR_MEMCHECK]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
-; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP5]] to i64
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP6]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT4]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[TMP1:%.*]], <vscale x 2 x i64> [[VEC_IND]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[TBAA12:![0-9]+]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT6:%.*]] = insertelement <vscale x 2 x ptr> poison, ptr [[TMP8]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT7:%.*]] = shufflevector <vscale x 2 x ptr> [[BROADCAST_SPLATINSERT6]], <vscale x 2 x ptr> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i32> @llvm.vp.gather.nxv2i32.nxv2p0(<vscale x 2 x ptr> align 4 [[BROADCAST_SPLAT7]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP5]]), !tbaa [[TBAA16:![0-9]+]]
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <vscale x 2 x i32> [[WIDE_MASKED_GATHER]], zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = select <vscale x 2 x i1> [[TMP9]], <vscale x 2 x ptr> [[BROADCAST_SPLAT]], <vscale x 2 x ptr> [[BROADCAST_SPLAT3]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, <vscale x 2 x ptr> [[TMP7]], i64 112
-; CHECK-NEXT:    call void @llvm.vp.scatter.nxv2p0.nxv2p0(<vscale x 2 x ptr> [[TMP10]], <vscale x 2 x ptr> align 8 [[TMP11]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP5]]), !tbaa [[TBAA22:![0-9]+]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER8:%.*]] = call <vscale x 2 x ptr> @llvm.vp.gather.nxv2p0.nxv2p0(<vscale x 2 x ptr> align 8 [[TMP7]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP5]]), !tbaa [[TBAA25:![0-9]+]]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, <vscale x 2 x ptr> [[WIDE_MASKED_GATHER8]], i64 4
-; CHECK-NEXT:    call void @llvm.vp.scatter.nxv2i32.nxv2p0(<vscale x 2 x i32> zeroinitializer, <vscale x 2 x ptr> align 4 [[TMP12]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP5]]), !tbaa [[TBAA26:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.vp.scatter.nxv2i32.nxv2p0(<vscale x 2 x i32> zeroinitializer, <vscale x 2 x ptr> align 8 [[WIDE_MASKED_GATHER8]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP5]]), !tbaa [[TBAA28:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.vp.scatter.nxv2i8.nxv2p0(<vscale x 2 x i8> zeroinitializer, <vscale x 2 x ptr> align 8 [[WIDE_MASKED_GATHER8]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP5]]), !tbaa [[TBAA29:![0-9]+]]
-; CHECK-NEXT:    [[TMP13:%.*]] = zext i32 [[TMP5]] to i64
-; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP13]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT5]]
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[TMP0]], [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP3]] to i64
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP4]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[P1:%.*]], <vscale x 2 x i64> [[VEC_IND]]
+; CHECK-NEXT:    call void @llvm.vp.scatter.nxv2p0.nxv2p0(<vscale x 2 x ptr> zeroinitializer, <vscale x 2 x ptr> align 8 [[TMP5]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP3]])
+; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[P2:%.*]], align 4
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP6]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[P3:%.*]], <vscale x 2 x i64> [[BROADCAST_SPLAT2]]
+; CHECK-NEXT:    call void @llvm.vp.scatter.nxv2i32.nxv2p0(<vscale x 2 x i32> zeroinitializer, <vscale x 2 x ptr> align 4 [[TMP7]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP3]])
+; CHECK-NEXT:    call void @llvm.vp.scatter.nxv2i32.nxv2p0(<vscale x 2 x i32> zeroinitializer, <vscale x 2 x ptr> align 4 [[TMP7]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP3]])
+; CHECK-NEXT:    call void @llvm.vp.scatter.nxv2i8.nxv2p0(<vscale x 2 x i8> zeroinitializer, <vscale x 2 x ptr> align 1 [[TMP7]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP3]])
+; CHECK-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP3]] to i64
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP8]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[FOR_END_LOOPEXIT:%.*]]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr i32, ptr [[TMP1]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[TBAA12]]
-; CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP15]], align 4, !tbaa [[TBAA16]]
-; CHECK-NEXT:    [[CMP12:%.*]] = icmp eq i32 [[TMP16]], 0
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP12]], ptr [[TMP0]], ptr [[C]]
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[ARRAYIDX11]], i64 112
-; CHECK-NEXT:    store ptr [[SPEC_SELECT]], ptr [[TMP17]], align 8, !tbaa [[TBAA22]]
-; CHECK-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[ARRAYIDX11]], align 8, !tbaa [[TBAA25]]
-; CHECK-NEXT:    [[BITS_TO_GO:%.*]] = getelementptr i8, ptr [[TMP18]], i64 4
-; CHECK-NEXT:    store i32 0, ptr [[BITS_TO_GO]], align 4, !tbaa [[TBAA26]]
-; CHECK-NEXT:    store i32 0, ptr [[TMP18]], align 8, !tbaa [[TBAA28]]
-; CHECK-NEXT:    store i8 0, ptr [[TMP18]], align 8, !tbaa [[TBAA29]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP31:![0-9]+]]
-; CHECK:       exit.loopexit:
-; CHECK-NEXT:    br label [[FOR_END]]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr i32, ptr [[P1]], i64 [[IV]]
+; CHECK-NEXT:    store ptr null, ptr [[ARRAYIDX11]], align 8
+; CHECK-NEXT:    [[TMP10:%.*]] = load i64, ptr [[P2]], align 4
+; CHECK-NEXT:    [[BITS_TO_GO:%.*]] = getelementptr i8, ptr [[P3]], i64 [[TMP10]]
+; CHECK-NEXT:    store i32 0, ptr [[BITS_TO_GO]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[BITS_TO_GO]], align 4
+; CHECK-NEXT:    store i8 0, ptr [[BITS_TO_GO]], align 1
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %cmp91 = icmp sgt i32 %.pre, 0
-  br i1 %cmp91, label %loop.preheader, label %exit
-
-loop.preheader:
-  %wide.trip.count = zext i32 %.pre to i64
   br label %loop
 
 loop:
-  %iv = phi i64 [ 0, %loop.preheader ], [ %iv.next, %loop ]
-  %arrayidx11 = getelementptr i32, ptr %1, i64 %iv
-  %2 = load ptr, ptr %0, align 8, !tbaa !0
-  %3 = load i32, ptr %2, align 4, !tbaa !4
-  %cmp12 = icmp eq i32 %3, 0
-  %spec.select = select i1 %cmp12, ptr %0, ptr %C
-  %4 = getelementptr i8, ptr %arrayidx11, i64 112
-  store ptr %spec.select, ptr %4, align 8, !tbaa !10
-  %5 = load ptr, ptr %arrayidx11, align 8, !tbaa !13
-  %bits_to_go = getelementptr i8, ptr %5, i64 4
-  store i32 0, ptr %bits_to_go, align 4, !tbaa !14
-  store i32 0, ptr %5, align 8, !tbaa !16
-  store i8 0, ptr %5, align 8, !tbaa !17
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %arrayidx11 = getelementptr i32, ptr %p1, i64 %iv
+  store ptr null, ptr %arrayidx11, align 8
+  %0 = load i64, ptr %p2, align 4
+  %bits_to_go = getelementptr i8, ptr %p3, i64 %0
+  store i32 0, ptr %bits_to_go, align 4
+  store i32 0, ptr %bits_to_go, align 4
+  store i8 0, ptr %bits_to_go, align 1
   %iv.next = add i64 %iv, 1
-  %exitcond.not = icmp eq i64 %iv.next, %wide.trip.count
+  %exitcond.not = icmp eq i64 %iv, %N
   br i1 %exitcond.not, label %exit, label %loop
 
 exit:
   ret void
 }
-
-!0 = !{!1, !1, i64 0}
-!1 = !{!"any pointer", !2, i64 0}
-!2 = !{!"omnipotent char", !3, i64 0}
-!3 = !{!"Simple C/C++ TBAA"}
-!4 = !{!5, !6, i64 2356}
-!5 = !{!"", !6, i64 0, !6, i64 4, !6, i64 8, !6, i64 12, !6, i64 16, !6, i64 20, !6, i64 24, !6, i64 28, !6, i64 32, !6, i64 36, !6, i64 40, !6, i64 44, !6, i64 48, !6, i64 52, !6, i64 56, !6, i64 60, !6, i64 64, !6, i64 68, !6, i64 72, !6, i64 76, !2, i64 80, !2, i64 144, !6, i64 208, !6, i64 212, !6, i64 216, !6, i64 220, !2, i64 224, !2, i64 424, !2, i64 624, !2, i64 824, !2, i64 1024, !6, i64 1224, !6, i64 1228, !6, i64 1232, !6, i64 1236, !6, i64 1240, !6, i64 1244, !6, i64 1248, !6, i64 1252, !6, i64 1256, !6, i64 1260, !6, i64 1264, !6, i64 1268, !6, i64 1272, !6, i64 1276, !6, i64 1280, !6, i64 1284, !6, i64 1288, !6, i64 1292, !6, i64 1296, !6, i64 1300, !6, i64 1304, !6, i64 1308, !6, i64 1312, !6, i64 1316, !6, i64 1320, !2, i64 1324, !6, i64 2348, !6, i64 2352, !6, i64 2356, !6, i64 2360, !6, i64 2364, !6, i64 2368, !6, i64 2372, !6, i64 2376, !6, i64 2380, !6, i64 2384, !6, i64 2388, !6, i64 2392, !6, i64 2396, !6, i64 2400, !6, i64 2404, !6, i64 2408, !6, i64 2412, !6, i64 2416, !6, i64 2420, !7, i64 2424, !6, i64 2432, !6, i64 2436, !6, i64 2440, !6, i64 2444, !6, i64 2448, !6, i64 2452, !6, i64 2456, !6, i64 2460, !6, i64 2464, !6, i64 2468, !6, i64 2472, !6, i64 2476, !2, i64 2480, !2, i64 2680, !6, i64 2880, !6, i64 2884, !6, i64 2888, !6, i64 2892, !6, i64 2896, !6, i64 2900, !6, i64 2904, !6, i64 2908, !6, i64 2912, !6, i64 2916, !6, i64 2920, !6, i64 2924, !6, i64 2928, !6, i64 2932, !6, i64 2936, !6, i64 2940, !6, i64 2944, !6, i64 2948, !2, i64 2952, !6, i64 3152, !6, i64 3156, !8, i64 3160, !8, i64 3168, !9, i64 3176, !8, i64 3184, !6, i64 3192, !6, i64 3196, !6, i64 3200, !6, i64 3204, !6, i64 3208, !6, i64 3212, !6, i64 3216, !6, i64 3220, !6, i64 3224, !6, i64 3228, !6, i64 3232, !6, i64 3236, !6, i64 3240, !6, i64 3244, !6, i64 3248, !6, i64 3252, !6, i64 3256, !2, i64 3260, !6, i64 3292, !6, i64 3296, !6, i64 3300, !6, i64 3304, !6, i64 3308, !6, i64 3312, !6, i64 3316, !6, i64 3320, !6, i64 3324, !6, i64 3328, !6, i64 3332, !2, i64 3336, !2, i64 3384, !6, i64 3584}
-!6 = !{!"int", !2, i64 0}
-!7 = !{!"double", !2, i64 0}
-!8 = !{!"p1 int", !1, i64 0}
-!9 = !{!"p1 omnipotent char", !1, i64 0}
-!10 = !{!11, !1, i64 112}
-!11 = !{!"int", !1, i64 0, !12, i64 8, !1, i64 112}
-!12 = !{!"", !6, i64 0, !6, i64 4, !6, i64 8, !6, i64 12, !6, i64 16, !9, i64 24, !8, i64 32, !6, i64 40, !6, i64 44, !6, i64 48, !6, i64 52, !6, i64 56, !9, i64 64, !8, i64 72, !6, i64 80, !6, i64 84, !6, i64 88, !6, i64 92, !6, i64 96, !6, i64 100}
-!13 = !{!11, !1, i64 0}
-!14 = !{!15, !6, i64 4}
-!15 = !{!"", !6, i64 0, !6, i64 4, !2, i64 8, !6, i64 12, !6, i64 16, !2, i64 20, !2, i64 21, !6, i64 24, !6, i64 28, !9, i64 32, !6, i64 40}
-!16 = !{!15, !6, i64 0}
-!17 = !{!15, !2, i64 8}
