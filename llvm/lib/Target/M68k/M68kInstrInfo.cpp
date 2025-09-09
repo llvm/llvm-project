@@ -43,7 +43,7 @@ using namespace llvm;
 void M68kInstrInfo::anchor() {}
 
 M68kInstrInfo::M68kInstrInfo(const M68kSubtarget &STI)
-    : M68kGenInstrInfo(M68k::ADJCALLSTACKDOWN, M68k::ADJCALLSTACKUP, 0,
+    : M68kGenInstrInfo(STI, M68k::ADJCALLSTACKDOWN, M68k::ADJCALLSTACKUP, 0,
                        M68k::RET),
       Subtarget(STI), RI(STI) {}
 

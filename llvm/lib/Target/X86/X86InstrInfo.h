@@ -222,7 +222,7 @@ inline static bool isMemInstrWithGOTPCREL(const MachineInstr &MI) {
 }
 
 class X86InstrInfo final : public X86GenInstrInfo {
-  X86Subtarget &Subtarget;
+  const X86Subtarget &Subtarget;
   const X86RegisterInfo RI;
 
   LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
@@ -238,7 +238,7 @@ class X86InstrInfo final : public X86GenInstrInfo {
                          bool MakeChange) const;
 
 public:
-  explicit X86InstrInfo(X86Subtarget &STI);
+  explicit X86InstrInfo(const X86Subtarget &STI);
 
   /// Given a machine instruction descriptor, returns the register
   /// class constraint for OpNum, or NULL. Returned register class
