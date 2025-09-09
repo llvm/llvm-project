@@ -111,6 +111,11 @@ endfunction()
 # Outputs:
 #   NB_STUBGEN_CUSTOM_TARGET: The target corresponding to generation which other targets can depend on.
 function(generate_type_stubs MODULE_NAME DEPENDS_TARGET MLIR_DEPENDS_TARGET OUTPUT_DIR)
+  cmake_parse_arguments(ARG
+    ""
+    ""
+    "OUTPUTS"
+    ${ARGN})
   if(EXISTS ${nanobind_DIR}/../src/stubgen.py)
     set(NB_STUBGEN "${nanobind_DIR}/../src/stubgen.py")
   elseif(EXISTS ${nanobind_DIR}/../stubgen.py)
@@ -135,9 +140,9 @@ function(generate_type_stubs MODULE_NAME DEPENDS_TARGET MLIR_DEPENDS_TARGET OUTP
       --output-dir
       "${OUTPUT_DIR}")
 
-  set(NB_STUBGEN_OUTPUT "${OUTPUT_DIR}/${MODULE_NAME}.pyi")
+  list(TRANSFORM ARG_OUTPUTS PREPEND "${OUTPUT_DIR}/" OUTPUT_VARIABLE _generated_type_stubs)
   add_custom_command(
-    OUTPUT ${NB_STUBGEN_OUTPUT}
+    OUTPUT ${_generated_type_stubs}
     COMMAND ${NB_STUBGEN_CMD}
     WORKING_DIRECTORY "${CMAKE_CURRENT_FUNCTION_LIST_DIR}"
     DEPENDS
@@ -146,7 +151,7 @@ function(generate_type_stubs MODULE_NAME DEPENDS_TARGET MLIR_DEPENDS_TARGET OUTP
       "${DEPENDS_TARGET}"
   )
   set(_name "MLIRPythonModuleStubs_${_module}")
-  add_custom_target("${_name}" ALL DEPENDS ${NB_STUBGEN_OUTPUT})
+  add_custom_target("${_name}" ALL DEPENDS ${_generated_type_stubs})
   set(NB_STUBGEN_CUSTOM_TARGET "${_name}" PARENT_SCOPE)
 endfunction()
 
@@ -166,12 +171,12 @@ endfunction()
 #     on. These will be collected for all extensions and put into an
 #     aggregate dylib that is linked against.
 #   PYTHON_BINDINGS_LIBRARY: Either pybind11 or nanobind.
-#   GENERATE_TYPE_STUBS: Enable type stub generation.
+#   GENERATE_TYPE_STUBS: List of generated type stubs expected from stubgen relative to _mlir_libs.
 function(declare_mlir_python_extension name)
   cmake_parse_arguments(ARG
-    "GENERATE_TYPE_STUBS"
+    ""
     "ROOT_DIR;MODULE_NAME;ADD_TO_PARENT;PYTHON_BINDINGS_LIBRARY"
-    "SOURCES;PRIVATE_LINK_LIBS;EMBED_CAPI_LINK_LIBS"
+    "SOURCES;PRIVATE_LINK_LIBS;EMBED_CAPI_LINK_LIBS;GENERATE_TYPE_STUBS"
     ${ARGN})
 
   if(NOT ARG_ROOT_DIR)
@@ -302,15 +307,25 @@ function(add_mlir_python_modules name)
           ${_module_name}
           ${_extension_target}
           ${name}
-          "${CMAKE_CURRENT_SOURCE_DIR}/mlir/_mlir_libs/_mlir"
-        )
-        declare_mlir_python_sources(
-          "${MLIR_PYTHON_PACKAGE_PREFIX}.${_module_name}_type_stub_gen"
-          ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
-          ADD_TO_PARENT "${sources_target}"
-          SOURCES_GLOB "_mlir_libs/${_module_name}/**/*.pyi"
+          "${CMAKE_CURRENT_SOURCE_DIR}/mlir/_mlir_libs"
+          OUTPUTS "${_generate_type_stubs}"
         )
         add_dependencies("${modules_target}" "${NB_STUBGEN_CUSTOM_TARGET}")
+        set(_stubgen_target "${MLIR_PYTHON_PACKAGE_PREFIX}.${_module_name}_type_stub_gen")
+        declare_mlir_python_sources(
+          ${_stubgen_target}
+          ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir/_mlir_libs"
+          ADD_TO_PARENT "${sources_target}"
+          SOURCES "${_generate_type_stubs}"
+        )
+        set(_pure_sources_target "${modules_target}.sources.${sources_target}_type_stub_gen")
+        add_mlir_python_sources_target(${_pure_sources_target}
+          INSTALL_COMPONENT ${modules_target}
+          INSTALL_DIR "${ARG_INSTALL_PREFIX}/_mlir_libs"
+          OUTPUT_DIRECTORY "${ARG_ROOT_PREFIX}/_mlir_libs"
+          SOURCES_TARGETS ${_stubgen_target}
+        )
+        add_dependencies(${modules_target} ${_pure_sources_target})
       endif()
     else()
       message(SEND_ERROR "Unrecognized source type '${_source_type}' for python source target ${sources_target}")
