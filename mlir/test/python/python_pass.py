@@ -64,12 +64,12 @@ def testCustomPass():
         """
         )
 
-        def custom_pass_1(op):
+        def custom_pass_1(op, pass_):
             print("hello from pass 1!!!", file=sys.stderr)
 
         class CustomPass2:
-            def __call__(self, m):
-                apply_patterns_and_fold_greedily(m, frozen)
+            def __call__(self, op, pass_):
+                apply_patterns_and_fold_greedily(op, frozen)
 
         custom_pass_2 = CustomPass2()
 
@@ -89,9 +89,9 @@ def testCustomPass():
 
         # test signal_pass_failure
         class CustomPassThatFails:
-            def __call__(self, m):
+            def __call__(self, op, pass_):
                 print("hello from pass that fails")
-                self.signal_pass_failure()
+                pass_.signal_failure()
 
         custom_pass_that_fails = CustomPassThatFails()
 
@@ -101,11 +101,5 @@ def testCustomPass():
         # CHECK: caught exception: Failure while executing pass pipeline
         try:
             pm.run(module)
-        except Exception as e:
-            print(f"caught exception: {e}")
-
-        # CHECK: caught exception: signal_pass_failure() should always be called from the __call__ method
-        try:
-            custom_pass_that_fails.signal_pass_failure()
         except Exception as e:
             print(f"caught exception: {e}")
