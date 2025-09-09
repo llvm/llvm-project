@@ -34,16 +34,6 @@ types.
      s = (struct S1 *)calloc(1, sizeof(struct S1)); // no warning
    }
 
-Limitations
------------
-
-The check does not run on `C++` code.
-
-C-style casts are discouraged in C++ and should be converted to more type-safe
-casts. The ``reinterpreted_cast`` is used for the most unsafe cases and
-indicates by itself a potentially dangerous operation. Additionally, inheritance
-and dynamic types would make such a check less useful.
-
 Options
 -------
 

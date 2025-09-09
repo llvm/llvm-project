@@ -17,14 +17,10 @@ namespace clang::tidy::bugprone {
 
 namespace {
 
-AST_MATCHER(Type, charType) {
-  return Node.isCharType();
-}
-AST_MATCHER(Type, unionType) {
-  return Node.isUnionType();
-}
+AST_MATCHER(Type, charType) { return Node.isCharType(); }
+AST_MATCHER(Type, unionType) { return Node.isUnionType(); }
 
-}
+} // namespace
 
 CastToStructCheck::CastToStructCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
@@ -49,9 +45,7 @@ void CastToStructCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 void CastToStructCheck::registerMatchers(MatchFinder *Finder) {
   auto FromPointee =
       qualType(hasUnqualifiedDesugaredType(type().bind("FromType")),
-               unless(voidType()),
-               unless(charType()),
-               unless(unionType()))
+               unless(voidType()), unless(charType()), unless(unionType()))
           .bind("FromPointee");
   auto ToPointee =
       qualType(hasUnqualifiedDesugaredType(
@@ -77,7 +71,8 @@ void CastToStructCheck::check(const MatchFinder::MatchResult &Result) {
   if (FromType == ToType)
     return;
 
-  auto CheckNameIgnore = [this](const std::string &FromName, const std::string &ToName) {
+  auto CheckNameIgnore = [this](const std::string &FromName,
+                                const std::string &ToName) {
     bool FromMatch = false;
     for (auto [Idx, Regex] : llvm::enumerate(IgnoredCastsRegex)) {
       if (Idx % 2 == 0) {
@@ -93,10 +88,9 @@ void CastToStructCheck::check(const MatchFinder::MatchResult &Result) {
   if (CheckNameIgnore(FromPtr->getAsString(), ToPtr->getAsString()))
     return;
 
-  diag(FoundCastExpr->getExprLoc(),
-       "casting a %0 pointer to a "
-       "%1 pointer and accessing a field can lead to memory "
-       "access errors or data corruption")
+  diag(FoundCastExpr->getExprLoc(), "casting a %0 pointer to a "
+                                    "%1 pointer can lead to memory "
+                                    "access errors or data corruption")
       << *FromPtr << *ToPtr;
 }
 
