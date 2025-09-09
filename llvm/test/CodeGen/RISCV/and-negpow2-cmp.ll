@@ -98,3 +98,68 @@ define i1 @test6(i64 %x) {
   %b = icmp ne i64 %a, 0
   ret i1 %b
 }
+
+define i1 @test7(i64 %x) {
+; RV32-LABEL: test7:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srli a0, a0, 29
+; RV32-NEXT:    addi a0, a0, -6
+; RV32-NEXT:    seqz a0, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test7:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srliw a0, a0, 29
+; RV64-NEXT:    li a1, 3
+; RV64-NEXT:    slli a0, a0, 29
+; RV64-NEXT:    slli a1, a1, 30
+; RV64-NEXT:    xor a0, a0, a1
+; RV64-NEXT:    seqz a0, a0
+; RV64-NEXT:    ret
+  %a = and i64 %x, u0xE0000000
+  %b = icmp eq i64 %a, u0xC0000000
+  ret i1 %b
+}
+
+define i1 @test8(i64 %x) {
+; RV32-LABEL: test8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srai a0, a0, 20
+; RV32-NEXT:    xori a0, a0, -2048
+; RV32-NEXT:    snez a0, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srliw a0, a0, 20
+; RV64-NEXT:    li a1, 1
+; RV64-NEXT:    slli a0, a0, 20
+; RV64-NEXT:    slli a1, a1, 31
+; RV64-NEXT:    xor a0, a0, a1
+; RV64-NEXT:    snez a0, a0
+; RV64-NEXT:    ret
+  %a = and i64 %x, u0xFFF00000
+  %b = icmp ne i64 %a, u0x80000000
+  ret i1 %b
+}
+
+define i1 @test9(i64 %x) {
+; RV32-LABEL: test9:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srli a0, a0, 16
+; RV32-NEXT:    addi a0, a0, -2048
+; RV32-NEXT:    seqz a0, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test9:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srliw a0, a0, 16
+; RV64-NEXT:    slli a0, a0, 16
+; RV64-NEXT:    lui a1, 32768
+; RV64-NEXT:    xor a0, a0, a1
+; RV64-NEXT:    seqz a0, a0
+; RV64-NEXT:    ret
+  %a = and i64 %x, u0xFFFF0000
+  %b = icmp eq i64 %a, u0x08000000
+  ret i1 %b
+}
