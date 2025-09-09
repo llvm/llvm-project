@@ -25,7 +25,7 @@ define <4 x i32> @insert_subvector_vp_load_v4i32_v4i32(<4 x i32> %v1, ptr %p, <4
   ret <4 x i32> %v3
 }
 
-; Can't fold this in because the load has a non-undef passthru that isn't equal to the vmv.v.v passtrhu
+; Can't fold this in because the load has a non-poison passthru that isn't equal to the vmv.v.v passtrhu
 declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, i32, <4 x i1>, <4 x i32>)
 define <4 x i32> @insert_subvector_load_unfoldable_passthru_v4i32_v4i32(<4 x i32> %v1, ptr %p, <4 x i1> %mask, <4 x i32> %passthru) {
 ; CHECK-LABEL: insert_subvector_load_unfoldable_passthru_v4i32_v4i32:
@@ -40,7 +40,7 @@ define <4 x i32> @insert_subvector_load_unfoldable_passthru_v4i32_v4i32(<4 x i32
   ret <4 x i32> %v3
 }
 
-; Can fold this in because the load has a non-undef passthru, but it's equal to the vmv.v.v passtrhu
+; Can fold this in because the load has a non-poison passthru, but it's equal to the vmv.v.v passtrhu
 define <4 x i32> @insert_subvector_load_foldable_passthru_v4i32_v4i32(<4 x i32> %v1, ptr %p, <4 x i1> %mask) {
 ; CHECK-LABEL: insert_subvector_load_foldable_passthru_v4i32_v4i32:
 ; CHECK:       # %bb.0:
