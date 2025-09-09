@@ -22659,7 +22659,7 @@ static SDValue performIntrinsicCombine(SDNode *N,
     return tryCombineCRC32(0xffff, N, DAG);
   case Intrinsic::aarch64_sve_saddv:
     // There is no i64 version of SADDV because the sign is irrelevant.
-    if (N->getOperand(2)->getValueType(0).getVectorElementType() == MVT::i64)
+    if (N->getOperand(2).getValueType().getVectorElementType() == MVT::i64)
       return combineSVEReductionInt(N, AArch64ISD::UADDV_PRED, DAG);
     else
       return combineSVEReductionInt(N, AArch64ISD::SADDV_PRED, DAG);
