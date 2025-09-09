@@ -238,7 +238,8 @@ getZAStateBeforeInst(const TargetRegisterInfo &TRI, MachineInstr &MI,
 struct MachineSMEABI : public MachineFunctionPass {
   inline static char ID = 0;
 
-  MachineSMEABI() : MachineFunctionPass(ID) {}
+  MachineSMEABI(CodeGenOptLevel OptLevel = CodeGenOptLevel::Default)
+      : MachineFunctionPass(ID), OptLevel(OptLevel) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -335,12 +336,15 @@ struct MachineSMEABI : public MachineFunctionPass {
                          MachineBasicBlock::iterator MBBI, DebugLoc DL);
 
 private:
+  CodeGenOptLevel OptLevel = CodeGenOptLevel::Default;
+
   MachineFunction *MF = nullptr;
   const AArch64Subtarget *Subtarget = nullptr;
   const AArch64RegisterInfo *TRI = nullptr;
   const AArch64FunctionInfo *AFI = nullptr;
   const TargetInstrInfo *TII = nullptr;
   MachineRegisterInfo *MRI = nullptr;
+  MachineLoopInfo *MLI = nullptr;
 };
 
 static LiveRegs getPhysLiveRegs(LiveRegUnits const &LiveUnits) {
@@ -941,4 +945,6 @@ bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-FunctionPass *llvm::createMachineSMEABIPass() { return new MachineSMEABI(); }
+FunctionPass *llvm::createMachineSMEABIPass(CodeGenOptLevel OptLevel) {
+  return new MachineSMEABI(OptLevel);
+}
