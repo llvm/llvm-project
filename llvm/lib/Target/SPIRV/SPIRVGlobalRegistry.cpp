@@ -203,8 +203,10 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeFloat(uint32_t Width,
   });
 }
 
-SPIRVType *SPIRVGlobalRegistry::getOpTypeFloat(uint32_t Width,
-                                               MachineIRBuilder &MIRBuilder, SPIRV::FPEncoding::FPEncoding FPEncode) {
+SPIRVType *
+SPIRVGlobalRegistry::getOpTypeFloat(uint32_t Width,
+                                    MachineIRBuilder &MIRBuilder,
+                                    SPIRV::FPEncoding::FPEncoding FPEncode) {
   return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
     return MIRBuilder.buildInstr(SPIRV::OpTypeFloat)
         .addDef(createTypeVReg(MIRBuilder))
@@ -1052,8 +1054,9 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
                       : getOpTypeInt(Width, MIRBuilder, false);
   }
   if (Ty->isFloatingPointTy()) {
-    if(Ty->isBFloatTy()) {
-      return getOpTypeFloat(Ty->getPrimitiveSizeInBits(), MIRBuilder, SPIRV::FPEncoding::BFloat16KHR);
+    if (Ty->isBFloatTy()) {
+      return getOpTypeFloat(Ty->getPrimitiveSizeInBits(), MIRBuilder,
+                            SPIRV::FPEncoding::BFloat16KHR);
     } else {
       return getOpTypeFloat(Ty->getPrimitiveSizeInBits(), MIRBuilder);
     }
