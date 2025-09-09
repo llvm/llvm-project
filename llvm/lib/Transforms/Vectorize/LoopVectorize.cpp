@@ -1849,7 +1849,6 @@ public:
     }
 
     SCEVExp.eraseDeadInstructions(SCEVCheckCond);
-    MemCheckExp.eraseDeadInstructions(MemRuntimeCheckCond);
 
     if (!MemCheckBlock && !SCEVCheckBlock)
       return;

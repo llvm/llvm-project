@@ -31,14 +31,12 @@ define void @f1(ptr noalias %a,
 ; LV-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], -1
 ; LV-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP0]] to i32
 ; LV-NEXT:    [[MUL2:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 2, i32 [[TMP5]])
-; LV-NEXT:    [[MUL_RESULT1:%.*]] = extractvalue { i32, i1 } [[MUL2]], 0
 ; LV-NEXT:    [[MUL_OVERFLOW1:%.*]] = extractvalue { i32, i1 } [[MUL2]], 1
 ; LV-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
 ; LV-NEXT:    [[TMP8:%.*]] = or i1 [[MUL_OVERFLOW1]], [[TMP1]]
 ; LV-NEXT:    [[MUL1:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[TMP0]])
 ; LV-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i64, i1 } [[MUL1]], 0
 ; LV-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL1]], 1
-; LV-NEXT:    [[TMP2:%.*]] = sub i64 0, [[MUL_RESULT]]
 ; LV-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[MUL_RESULT]]
 ; LV-NEXT:    [[TMP4:%.*]] = icmp ult ptr [[TMP3]], [[A]]
 ; LV-NEXT:    [[TMP6:%.*]] = or i1 [[TMP4]], [[MUL_OVERFLOW]]
@@ -264,7 +262,6 @@ define void @f3(ptr noalias %a,
 ; LV-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[TMP0]])
 ; LV-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
 ; LV-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
-; LV-NEXT:    [[TMP6:%.*]] = sub i64 0, [[MUL_RESULT3]]
 ; LV-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[MUL_RESULT3]]
 ; LV-NEXT:    [[TMP8:%.*]] = icmp ult ptr [[TMP7]], [[A]]
 ; LV-NEXT:    [[TMP9:%.*]] = or i1 [[TMP8]], [[MUL_OVERFLOW4]]
