@@ -136,22 +136,21 @@ Parser::ParsedSemantic Parser::ParseHLSLSemantic() {
   }
 
   assert(Identifier.size() > 0);
-  unsigned I = Identifier.size();
-  for (; I > 0 && isDigit(Identifier[I - 1]); --I)
-    continue;
+  // Determine the start of the semantic index.
+  unsigned IndexIndex = Identifier.find_last_not_of("0123456789") + 1;
 
   // ParseHLSLSemantic being called on an indentifier, the first
   // character cannot be a digit. This error should be handled by
   // the caller. We can assert here.
-  StringRef SemanticName = Identifier.take_front(I);
+  StringRef SemanticName = Identifier.take_front(IndexIndex);
   assert(SemanticName.size() > 0);
 
   unsigned Index = 0;
   bool Explicit = false;
-  if (I != Identifier.size()) {
+  if (IndexIndex != Identifier.size()) {
     Explicit = true;
     [[maybe_unused]] bool Failure =
-        Identifier.substr(I).getAsInteger(10, Index);
+        Identifier.substr(IndexIndex).getAsInteger(10, Index);
     // Given the logic above, this should never fail.
     assert(!Failure);
   }
