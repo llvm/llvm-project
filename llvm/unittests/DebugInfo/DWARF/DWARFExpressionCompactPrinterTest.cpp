@@ -33,16 +33,15 @@ public:
     InitializeAllTargetMCs();
     InitializeAllAsmPrinters();
 
-    std::string TripleName = "armv8a-linux-gnueabi";
+    Triple TT("armv8a-linux-gnueabi");
     std::string ErrorStr;
 
-    const Target *TheTarget =
-        TargetRegistry::lookupTarget(TripleName, ErrorStr);
+    const Target *TheTarget = TargetRegistry::lookupTarget(TT, ErrorStr);
 
     if (!TheTarget)
       return;
 
-    MRI.reset(TheTarget->createMCRegInfo(Triple(TripleName)));
+    MRI.reset(TheTarget->createMCRegInfo(TT));
   }
 
   void TestExprPrinter(ArrayRef<uint8_t> ExprData, StringRef Expected);

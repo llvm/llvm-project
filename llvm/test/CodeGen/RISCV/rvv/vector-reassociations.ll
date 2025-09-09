@@ -36,19 +36,19 @@ define <vscale x 1 x i8> @simple_vadd_vv(<vscale x 1 x i8> %0, <vscale x 1 x i8>
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vadd.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %1,
     i32 %2)
 
   %b = call <vscale x 1 x i8> @llvm.riscv.vadd.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %a,
     i32 %2)
 
   %c = call <vscale x 1 x i8> @llvm.riscv.vadd.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %b,
     i32 %2)
@@ -66,19 +66,19 @@ define <vscale x 1 x i8> @simple_vadd_vsub_vv(<vscale x 1 x i8> %0, <vscale x 1 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vsub.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %1,
     i32 %2)
 
   %b = call <vscale x 1 x i8> @llvm.riscv.vadd.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %a,
     i32 %2)
 
   %c = call <vscale x 1 x i8> @llvm.riscv.vadd.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %b,
     i32 %2)
@@ -96,19 +96,19 @@ define <vscale x 1 x i8> @simple_vmul_vv(<vscale x 1 x i8> %0, <vscale x 1 x i8>
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vmul.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %1,
     i32 %2)
 
   %b = call <vscale x 1 x i8> @llvm.riscv.vmul.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %a,
     i32 %2)
 
   %c = call <vscale x 1 x i8> @llvm.riscv.vmul.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %b,
     i32 %2)

@@ -514,7 +514,7 @@ define <vscale x 8 x i8> @intrinsic_vredsum_vs_nxv8i8_nxv1i8_nxv8i8(<vscale x 1 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i8> @llvm.riscv.vredsum.nxv8i8.nxv1i8(
-    <vscale x 8 x i8> undef,
+    <vscale x 8 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 8 x i8> %1,
     iXLen %2)
@@ -536,7 +536,7 @@ define <vscale x 8 x i8> @intrinsic_vredand_vs_nxv8i8_nxv1i8_nxv8i8(<vscale x 1 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i8> @llvm.riscv.vredand.nxv8i8.nxv1i8(
-    <vscale x 8 x i8> undef,
+    <vscale x 8 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 8 x i8> %1,
     iXLen %2)
@@ -558,7 +558,7 @@ define <vscale x 8 x i8> @intrinsic_vredor_vs_nxv8i8_nxv1i8_nxv8i8(<vscale x 1 x
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i8> @llvm.riscv.vredor.nxv8i8.nxv1i8(
-    <vscale x 8 x i8> undef,
+    <vscale x 8 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 8 x i8> %1,
     iXLen %2)
@@ -580,7 +580,7 @@ define <vscale x 8 x i8> @intrinsic_vredxor_vs_nxv8i8_nxv1i8_nxv8i8(<vscale x 1 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i8> @llvm.riscv.vredxor.nxv8i8.nxv1i8(
-    <vscale x 8 x i8> undef,
+    <vscale x 8 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 8 x i8> %1,
     iXLen %2)
@@ -602,7 +602,7 @@ define <vscale x 8 x i8> @intrinsic_vredminu_vs_nxv8i8_nxv1i8_nxv8i8(<vscale x 1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i8> @llvm.riscv.vredminu.nxv8i8.nxv1i8(
-    <vscale x 8 x i8> undef,
+    <vscale x 8 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 8 x i8> %1,
     iXLen %2)
@@ -624,7 +624,7 @@ define <vscale x 8 x i8> @intrinsic_vredmin_vs_nxv8i8_nxv1i8_nxv8i8(<vscale x 1 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i8> @llvm.riscv.vredmin.nxv8i8.nxv1i8(
-    <vscale x 8 x i8> undef,
+    <vscale x 8 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 8 x i8> %1,
     iXLen %2)
@@ -646,7 +646,7 @@ define <vscale x 8 x i8> @intrinsic_vredmaxu_vs_nxv8i8_nxv1i8_nxv8i8(<vscale x 1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i8> @llvm.riscv.vredmaxu.nxv8i8.nxv1i8(
-    <vscale x 8 x i8> undef,
+    <vscale x 8 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 8 x i8> %1,
     iXLen %2)
@@ -668,7 +668,7 @@ define <vscale x 8 x i8> @intrinsic_vredmax_vs_nxv8i8_nxv1i8_nxv8i8(<vscale x 1 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i8> @llvm.riscv.vredmax.nxv8i8.nxv1i8(
-    <vscale x 8 x i8> undef,
+    <vscale x 8 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 8 x i8> %1,
     iXLen %2)
@@ -690,7 +690,7 @@ define <vscale x 4 x i16> @intrinsic_vwredsumu_vs_nxv4i16_nxv1i8_nxv4i16(<vscale
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i16> @llvm.riscv.vwredsumu.nxv4i16.nxv1i8(
-    <vscale x 4 x i16> undef,
+    <vscale x 4 x i16> poison,
     <vscale x 1 x i8> %0,
     <vscale x 4 x i16> %1,
     iXLen %2)
@@ -712,7 +712,7 @@ define <vscale x 4 x i16> @intrinsic_vwredsum_vs_nxv4i16_nxv1i8_nxv4i16(<vscale 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i16> @llvm.riscv.vwredsum.nxv4i16.nxv1i8(
-    <vscale x 4 x i16> undef,
+    <vscale x 4 x i16> poison,
     <vscale x 1 x i8> %0,
     <vscale x 4 x i16> %1,
     iXLen %2)
@@ -734,7 +734,7 @@ define <vscale x 4 x half> @intrinsic_vfredosum_vs_nxv4f16_nxv1f16_nxv4f16(<vsca
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x half> @llvm.riscv.vfredosum.nxv4f16.nxv1f16(
-    <vscale x 4 x half> undef,
+    <vscale x 4 x half> poison,
     <vscale x 1 x half> %0,
     <vscale x 4 x half> %1,
     iXLen 7, iXLen %2)
@@ -756,7 +756,7 @@ define <vscale x 4 x half> @intrinsic_vfredusum_vs_nxv4f16_nxv1f16_nxv4f16(<vsca
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x half> @llvm.riscv.vfredusum.nxv4f16.nxv1f16(
-    <vscale x 4 x half> undef,
+    <vscale x 4 x half> poison,
     <vscale x 1 x half> %0,
     <vscale x 4 x half> %1,
     iXLen 7, iXLen %2)
@@ -778,7 +778,7 @@ define <vscale x 4 x half> @intrinsic_vfredmax_vs_nxv4f16_nxv1f16_nxv4f16(<vscal
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x half> @llvm.riscv.vfredmax.nxv4f16.nxv1f16(
-    <vscale x 4 x half> undef,
+    <vscale x 4 x half> poison,
     <vscale x 1 x half> %0,
     <vscale x 4 x half> %1,
     iXLen %2)
@@ -800,7 +800,7 @@ define <vscale x 4 x half> @intrinsic_vfredmin_vs_nxv4f16_nxv1f16_nxv4f16(<vscal
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x half> @llvm.riscv.vfredmin.nxv4f16.nxv1f16(
-    <vscale x 4 x half> undef,
+    <vscale x 4 x half> poison,
     <vscale x 1 x half> %0,
     <vscale x 4 x half> %1,
     iXLen %2)
@@ -822,7 +822,7 @@ define <vscale x 2 x float> @intrinsic_vfwredosum_vs_nxv2f32_nxv1f16_nxv2f32(<vs
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x float> @llvm.riscv.vfwredosum.nxv2f32.nxv1f16(
-    <vscale x 2 x float> undef,
+    <vscale x 2 x float> poison,
     <vscale x 1 x half> %0,
     <vscale x 2 x float> %1,
     iXLen 7, iXLen %2)
@@ -843,7 +843,7 @@ define <vscale x 2 x float> @intrinsic_vfwredusum_vs_nxv2f32_nxv1f16_nxv2f32(<vs
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x float> @llvm.riscv.vfwredusum.nxv2f32.nxv1f16(
-    <vscale x 2 x float> undef,
+    <vscale x 2 x float> poison,
     <vscale x 1 x half> %0,
     <vscale x 2 x float> %1,
     iXLen 7, iXLen %2)
@@ -866,7 +866,7 @@ define <vscale x 1 x i8> @intrinsic_vslidedown_vx_nxv1i8_nxv1i8(<vscale x 1 x i8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vslidedown.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %0,
     iXLen %1,
     iXLen %2,
@@ -919,7 +919,7 @@ define <vscale x 1 x i64> @intrinsic_vmv.s.x_x_nxv1i64(i64 %0, iXLen %1) nounwin
 ; RV64-NEXT:    vmv.s.x v8, a0
 ; RV64-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x i64> @llvm.riscv.vmv.s.x.nxv1i64(<vscale x 1 x i64> undef, i64 %0, iXLen %1)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vmv.s.x.nxv1i64(<vscale x 1 x i64> poison, i64 %0, iXLen %1)
   ret <vscale x 1 x i64> %a
 }
 
@@ -932,7 +932,7 @@ define <vscale x 1 x half> @intrinsic_vfmv.s.f_f_nxv1f16(half %0, iXLen %1) noun
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x half> @llvm.riscv.vfmv.s.f.nxv1f16(<vscale x 1 x half> undef, half %0, iXLen %1)
+  %a = call <vscale x 1 x half> @llvm.riscv.vfmv.s.f.nxv1f16(<vscale x 1 x half> poison, half %0, iXLen %1)
   ret <vscale x 1 x half> %a
 }
 
@@ -951,7 +951,7 @@ define <vscale x 1 x i8> @intrinsic_vcompress_um_nxv1i8_nxv1i8(<vscale x 1 x i8>
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vcompress.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i1> %1,
     iXLen %2)

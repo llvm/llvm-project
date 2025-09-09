@@ -11,7 +11,7 @@ define <2 x i32> @lb_ri_inc(ptr %a) {
   %2 = sext i8 %1 to i32
   %3 = getelementptr i8, ptr %a, i32 42
   %4 = ptrtoint ptr %3 to i32
-  %5 = insertelement <2 x i32> undef, i32 %4, i32 0
+  %5 = insertelement <2 x i32> poison, i32 %4, i32 0
   %6 = insertelement <2 x i32> %5, i32 %2, i32 1
   ret <2 x i32> %6
 }
@@ -25,7 +25,7 @@ define <2 x i32> @lb_rr_inc(ptr %a, i32 %b) {
   %2 = sext i8 %1 to i32
   %3 = getelementptr i8, ptr %a, i32 %b
   %4 = ptrtoint ptr %3 to i32
-  %5 = insertelement <2 x i32> undef, i32 %4, i32 0
+  %5 = insertelement <2 x i32> poison, i32 %4, i32 0
   %6 = insertelement <2 x i32> %5, i32 %2, i32 1
   ret <2 x i32> %6
 }
@@ -50,7 +50,7 @@ define <2 x i32> @lbu_ri_inc(ptr %a) {
   %2 = zext i8 %1 to i32
   %3 = getelementptr i8, ptr %a, i32 42
   %4 = ptrtoint ptr %3 to i32
-  %5 = insertelement <2 x i32> undef, i32 %4, i32 0
+  %5 = insertelement <2 x i32> poison, i32 %4, i32 0
   %6 = insertelement <2 x i32> %5, i32 %2, i32 1
   ret <2 x i32> %6
 }
@@ -64,7 +64,7 @@ define <2 x i32> @lbu_rr_inc(ptr %a, i32 %b) {
   %2 = zext i8 %1 to i32
   %3 = getelementptr i8, ptr %a, i32 %b
   %4 = ptrtoint ptr %3 to i32
-  %5 = insertelement <2 x i32> undef, i32 %4, i32 0
+  %5 = insertelement <2 x i32> poison, i32 %4, i32 0
   %6 = insertelement <2 x i32> %5, i32 %2, i32 1
   ret <2 x i32> %6
 }
@@ -89,7 +89,7 @@ define <2 x i32> @lh_ri_inc(ptr %a) {
   %2 = sext i16 %1 to i32
   %3 = getelementptr i16, ptr %a, i32 42
   %4 = ptrtoint ptr %3 to i32
-  %5 = insertelement <2 x i32> undef, i32 %4, i32 0
+  %5 = insertelement <2 x i32> poison, i32 %4, i32 0
   %6 = insertelement <2 x i32> %5, i32 %2, i32 1
   ret <2 x i32> %6
 }
@@ -104,7 +104,7 @@ define <2 x i32> @lh_rr_inc(ptr %a, i32 %b) {
   %2 = sext i16 %1 to i32
   %3 = getelementptr i16, ptr %a, i32 %b
   %4 = ptrtoint ptr %3 to i32
-  %5 = insertelement <2 x i32> undef, i32 %4, i32 0
+  %5 = insertelement <2 x i32> poison, i32 %4, i32 0
   %6 = insertelement <2 x i32> %5, i32 %2, i32 1
   ret <2 x i32> %6
 }
@@ -130,7 +130,7 @@ define <2 x i32> @lhu_ri_inc(ptr %a) {
   %2 = zext i16 %1 to i32
   %3 = getelementptr i16, ptr %a, i32 42
   %4 = ptrtoint ptr %3 to i32
-  %5 = insertelement <2 x i32> undef, i32 %4, i32 0
+  %5 = insertelement <2 x i32> poison, i32 %4, i32 0
   %6 = insertelement <2 x i32> %5, i32 %2, i32 1
   ret <2 x i32> %6
 }
@@ -145,7 +145,7 @@ define <2 x i32> @lhu_rr_inc(ptr %a, i32 %b) {
   %2 = zext i16 %1 to i32
   %3 = getelementptr i16, ptr %a, i32 %b
   %4 = ptrtoint ptr %3 to i32
-  %5 = insertelement <2 x i32> undef, i32 %4, i32 0
+  %5 = insertelement <2 x i32> poison, i32 %4, i32 0
   %6 = insertelement <2 x i32> %5, i32 %2, i32 1
   ret <2 x i32> %6
 }
@@ -170,7 +170,7 @@ define <2 x i32> @lw_ri_inc(ptr %a) {
   %1 = load i32, ptr %a
   %2 = getelementptr i32, ptr %a, i32 42
   %3 = ptrtoint ptr %2 to i32
-  %4 = insertelement <2 x i32> undef, i32 %3, i32 0
+  %4 = insertelement <2 x i32> poison, i32 %3, i32 0
   %5 = insertelement <2 x i32> %4, i32 %1, i32 1
   ret <2 x i32> %5
 }
@@ -184,7 +184,7 @@ define <2 x i32> @lw_rr_inc(ptr %a, i32 %b) {
   %1 = load i32, ptr %a
   %2 = getelementptr i32, ptr %a, i32 %b
   %3 = ptrtoint ptr %2 to i32
-  %4 = insertelement <2 x i32> undef, i32 %3, i32 0
+  %4 = insertelement <2 x i32> poison, i32 %3, i32 0
   %5 = insertelement <2 x i32> %4, i32 %1, i32 1
   ret <2 x i32> %5
 }

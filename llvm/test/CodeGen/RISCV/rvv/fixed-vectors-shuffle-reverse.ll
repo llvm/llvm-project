@@ -1347,7 +1347,7 @@ define <8 x i32> @reverse_v8i32_undef_suffix(<8 x i32> %a) {
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v10, a0
 ; CHECK-NEXT:    ret
-  %res = shufflevector <8 x i32> %a, <8 x i32> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 undef, i32 undef, i32 undef, i32 undef>
+  %res = shufflevector <8 x i32> %a, <8 x i32> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 poison, i32 poison, i32 poison, i32 poison>
   ret <8 x i32> %res
 }
 
@@ -1367,7 +1367,7 @@ define <8 x i32> @reverse_v8i32_undef_prefix(<8 x i32> %a) {
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v10, a0
 ; CHECK-NEXT:    ret
-  %res = shufflevector <8 x i32> %a, <8 x i32> poison, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 3, i32 2, i32 1, i32 0>
+  %res = shufflevector <8 x i32> %a, <8 x i32> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 3, i32 2, i32 1, i32 0>
   ret <8 x i32> %res
 }
 

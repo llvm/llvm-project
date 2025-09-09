@@ -241,5 +241,5 @@ define double @func_return_double_undef() nounwind {
 ; RV32IZFINXZDINX-LABEL: func_return_double_undef:
 ; RV32IZFINXZDINX:       # %bb.0:
 ; RV32IZFINXZDINX-NEXT:    ret
-  ret double undef
+  ret double poison
 }

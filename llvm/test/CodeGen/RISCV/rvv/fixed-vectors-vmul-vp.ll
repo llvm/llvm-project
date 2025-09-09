@@ -943,7 +943,7 @@ define <8 x i64> @vmul_vv_undef_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext %e
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vmv.v.i v8, 0
 ; RV64-NEXT:    ret
-  %v = call <8 x i64> @llvm.vp.mul.v8i64(<8 x i64> %va, <8 x i64> undef, <8 x i1> %m, i32 %evl)
+  %v = call <8 x i64> @llvm.vp.mul.v8i64(<8 x i64> %va, <8 x i64> poison, <8 x i1> %m, i32 %evl)
   ret <8 x i64> %v
 }
 
@@ -961,7 +961,7 @@ define <8 x i64> @vmul_vx_undef_v8i64_unmasked(<8 x i64> %va, i32 zeroext %evl) 
 ; RV64-NEXT:    ret
   %head = insertelement <8 x i1> poison, i1 true, i32 0
   %m = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i64> @llvm.vp.mul.v8i64(<8 x i64> %va, <8 x i64> undef, <8 x i1> %m, i32 %evl)
+  %v = call <8 x i64> @llvm.vp.mul.v8i64(<8 x i64> %va, <8 x i64> poison, <8 x i1> %m, i32 %evl)
   ret <8 x i64> %v
 }
 

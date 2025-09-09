@@ -147,11 +147,11 @@ static const Target *GetTarget(const MachOObjectFile *MachOObj,
 
   // Get the target specific parser.
   std::string Error;
-  const Target *TheTarget = TargetRegistry::lookupTarget(TripleName, Error);
+  const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
   if (TheTarget && ThumbTripleName.empty())
     return TheTarget;
 
-  *ThumbTarget = TargetRegistry::lookupTarget(ThumbTripleName, Error);
+  *ThumbTarget = TargetRegistry::lookupTarget(ThumbTriple, Error);
   if (*ThumbTarget)
     return TheTarget;
 

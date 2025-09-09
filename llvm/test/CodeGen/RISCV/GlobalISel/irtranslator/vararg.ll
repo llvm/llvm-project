@@ -642,7 +642,7 @@ define void @va1_caller() nounwind {
   ; LP64D-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; LP64D-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
   ; LP64D-NEXT:   PseudoRET
-  %1 = call i32 (ptr, ...) @va1(ptr undef, double 1.0, i32 2)
+  %1 = call i32 (ptr, ...) @va1(ptr poison, double 1.0, i32 2)
   ret void
 }
 
@@ -932,7 +932,7 @@ define void @va2_caller() nounwind {
   ; LP64D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64D-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; LP64D-NEXT:   PseudoRET
- %1 = call i64 (ptr, ...) @va2(ptr undef, double 1.000000e+00)
+ %1 = call i64 (ptr, ...) @va2(ptr poison, double 1.000000e+00)
  ret void
 }
 
