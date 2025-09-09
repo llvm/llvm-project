@@ -13,7 +13,7 @@
 #include <cstring>
 using namespace llvm;
 
-static const char *getManglingComponent(const Triple &T) {
+static StringRef getManglingComponent(const Triple &T) {
   if (T.isOSBinFormatGOFF())
     return "-m:l";
   if (T.isOSBinFormatMachO())
@@ -122,9 +122,9 @@ static std::string computeCSKYDataLayout(const Triple &TT) {
 }
 
 static std::string computeLoongArchDataLayout(const Triple &TT) {
-  if (TT.isArch64Bit())
+  if (TT.isLoongArch64())
     return "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128";
-  assert(TT.isArch32Bit() && "only LA32 and LA64 are currently supported");
+  assert(TT.isLoongArch32() && "only LA32 and LA64 are currently supported");
   return "e-m:e-p:32:32-i64:64-n32-S128";
 }
 
@@ -215,7 +215,7 @@ static std::string computeMipsDataLayout(const Triple &TT, StringRef ABIName) {
 }
 
 static std::string computePowerDataLayout(const Triple &T) {
-  bool is64Bit = T.getArch() == Triple::ppc64 || T.getArch() == Triple::ppc64le;
+  bool is64Bit = T.isPPC64();
   std::string Ret;
 
   // Most PPC* platforms are big endian, PPC(64)LE is little endian.
@@ -291,11 +291,11 @@ static std::string computeRISCVDataLayout(const Triple &TT, StringRef ABIName) {
   Ret += "-m:e";
 
   // Pointer and integer sizes.
-  if (TT.isArch64Bit()) {
+  if (TT.isRISCV64()) {
     Ret += "-p:64:64-i64:64-i128:128";
     Ret += "-n32:64";
   } else {
-    assert(TT.isArch32Bit() && "only RV32 and RV64 are currently supported");
+    assert(TT.isRISCV32() && "only RV32 and RV64 are currently supported");
     Ret += "-p:32:32-i64:64";
     Ret += "-n32";
   }
@@ -313,7 +313,7 @@ static std::string computeRISCVDataLayout(const Triple &TT, StringRef ABIName) {
 }
 
 static std::string computeSparcDataLayout(const Triple &T) {
-  const bool is64Bit = T.isSPARC64();
+  const bool Is64Bit = T.isSPARC64();
 
   // Sparc is typically big endian, but some are little.
   std::string Ret = T.getArch() == Triple::sparcel ? "e" : "E";
@@ -627,5 +627,5 @@ std::string Triple::computeDataLayout(StringRef ABIName) const {
   case Triple::UnknownArch:
     return "";
   }
-  return "";
+  llvm_unreachable("Invalid arch");
 }
