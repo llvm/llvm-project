@@ -5393,8 +5393,11 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
   Value numThreads, numTeamsLower, numTeamsUpper, teamsThreadLimit;
   llvm::SmallVector<Value> lowerBounds(numLoops), upperBounds(numLoops),
       steps(numLoops);
-  extractHostEvalClauses(targetOp, numThreads, numTeamsLower, numTeamsUpper,
-                         teamsThreadLimit, &lowerBounds, &upperBounds, &steps);
+  if (!targetOp.getHostEvalVars().empty()) {
+    extractHostEvalClauses(targetOp, numThreads, numTeamsLower, numTeamsUpper,
+                           teamsThreadLimit, &lowerBounds, &upperBounds,
+                           &steps);
+  }
 
   // TODO: Handle constant 'if' clauses.
   if (Value targetThreadLimit = targetOp.getThreadLimit())
@@ -5424,6 +5427,8 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
     // here, since we're only interested in the trip count.
     for (auto [loopLower, loopUpper, loopStep] :
          llvm::zip_equal(lowerBounds, upperBounds, steps)) {
+      if (!loopLower || !loopUpper || !loopStep)
+        break;
       llvm::Value *lowerBound = moduleTranslation.lookupValue(loopLower);
       llvm::Value *upperBound = moduleTranslation.lookupValue(loopUpper);
       llvm::Value *step = moduleTranslation.lookupValue(loopStep);
