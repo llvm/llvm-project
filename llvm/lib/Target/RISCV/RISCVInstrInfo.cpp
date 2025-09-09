@@ -80,8 +80,8 @@ namespace llvm::RISCV {
 
 } // end namespace llvm::RISCV
 
-RISCVInstrInfo::RISCVInstrInfo(RISCVSubtarget &STI)
-    : RISCVGenInstrInfo(RISCV::ADJCALLSTACKDOWN, RISCV::ADJCALLSTACKUP),
+RISCVInstrInfo::RISCVInstrInfo(const RISCVSubtarget &STI)
+    : RISCVGenInstrInfo(STI, RISCV::ADJCALLSTACKDOWN, RISCV::ADJCALLSTACKUP),
       STI(STI) {}
 
 #define GET_INSTRINFO_HELPERS
