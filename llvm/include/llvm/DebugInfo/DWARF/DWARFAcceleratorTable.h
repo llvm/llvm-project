@@ -43,6 +43,7 @@ public:
 
     Entry() = default;
 
+
     // Make these protected so only (final) subclasses can be copied around.
     Entry(const Entry &) = default;
     Entry(Entry &&) = default;
@@ -437,7 +438,7 @@ public:
   struct Abbrev {
     uint64_t AbbrevOffset; /// < Abbreviation offset in the .debug_names section
     uint32_t Code;         ///< Abbreviation code
-    dwarf::Tag Tag;        ///< Dwarf Tag of the described entity.
+    dwarf::Tag Tag; ///< Dwarf Tag of the described entity.
     std::vector<AttributeEncoding> Attributes; ///< List of index attributes.
 
     Abbrev(uint32_t Code, dwarf::Tag Tag, uint64_t AbbrevOffset,
@@ -726,8 +727,8 @@ public:
     bool IsLocal;
 
     std::optional<Entry> CurrentEntry;
-    uint64_t DataOffset = 0;      ///< Offset into the section.
-    std::string Key;              ///< The Key we are searching for.
+    uint64_t DataOffset = 0; ///< Offset into the section.
+    std::string Key;         ///< The Key we are searching for.
     std::optional<uint32_t> Hash; ///< Hash of Key, if it has been computed.
 
     bool getEntryAtCurrentOffset();
