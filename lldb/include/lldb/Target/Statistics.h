@@ -110,7 +110,7 @@ public:
   llvm::StringMap<double> map;
 };
 
-/// A class to count success/fail statistics.ß
+/// A class to count success/fail statistics.
 struct StatsSuccessFail {
   StatsSuccessFail(llvm::StringRef n) : name(n.str()) {}
 
@@ -129,7 +129,7 @@ struct DWOStats {
   uint32_t dwo_file_count = 0;
   uint32_t dwo_error_count = 0;
 
-  DWOStats& operator+=(const DWOStats &rhs) {
+  DWOStats &operator+=(const DWOStats &rhs) {
     loaded_dwo_file_count += rhs.loaded_dwo_file_count;
     dwo_file_count += rhs.dwo_file_count;
     dwo_error_count += rhs.dwo_error_count;
