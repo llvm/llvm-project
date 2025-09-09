@@ -2542,8 +2542,8 @@ _mm_maskmove_si64(__m64 __d, __m64 __n, char *__p)
 /// \returns A 64-bit integer vector containing the averages of both operands.
 static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_avg_pu8(__m64 __a, __m64 __b) {
-  return __trunc64(__builtin_ia32_pavgb128((__v16qu)__anyext128(__a),
-                                           (__v16qu)__anyext128(__b)));
+  return __trunc64(__builtin_ia32_pavgb128((__v16qu)__zext128(__a),
+                                           (__v16qu)__zext128(__b)));
 }
 
 /// Computes the rounded averages of the packed unsigned 16-bit integer
@@ -2561,8 +2561,8 @@ _mm_avg_pu8(__m64 __a, __m64 __b) {
 /// \returns A 64-bit integer vector containing the averages of both operands.
 static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_avg_pu16(__m64 __a, __m64 __b) {
-  return __trunc64(__builtin_ia32_pavgw128((__v8hu)__anyext128(__a),
-                                           (__v8hu)__anyext128(__b)));
+  return __trunc64(
+      __builtin_ia32_pavgw128((__v8hu)__zext128(__a), (__v8hu)__zext128(__b)));
 }
 
 /// Subtracts the corresponding 8-bit unsigned integer values of the two
