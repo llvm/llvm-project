@@ -97,14 +97,12 @@ define i8 @pr141968(i1 %cond, i8 %v) {
 ; CHECK:       [[PRED_SDIV_IF29]]:
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE30]]
 ; CHECK:       [[PRED_SDIV_CONTINUE30]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT31:%.*]] = insertelement <16 x i8> poison, i8 [[V]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT32:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT31]], <16 x i8> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[BROADCAST_SPLAT]], <16 x i8> zeroinitializer, <16 x i8> [[BROADCAST_SPLAT32]]
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <16 x i1> [[BROADCAST_SPLAT]], i32 0
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP18]], i8 0, i8 [[V]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <16 x i8> [[PREDPHI]], i32 15
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
@@ -121,7 +119,7 @@ define i8 @pr141968(i1 %cond, i8 %v) {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i8 [[IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RET_LCSSA:%.*]] = phi i8 [ [[RET]], %[[LOOP_LATCH]] ], [ [[TMP18]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RET_LCSSA:%.*]] = phi i8 [ [[RET]], %[[LOOP_LATCH]] ], [ [[PREDPHI]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i8 [[RET_LCSSA]]
 ;
 entry:
