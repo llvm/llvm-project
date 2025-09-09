@@ -123,7 +123,7 @@ protected:
 
   void showDensitySuggestion(double Density);
 
-  void markProfilePreinlined(SampleProfileMap &ProfileMap);
+  void markAllContextPreinlined(SampleProfileMap &ProfileMap);
 
   void collectProfiledFunctions();
 

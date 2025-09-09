@@ -64,9 +64,9 @@ static cl::opt<bool>
                              "than threshold, it will be trimmed."),
                     cl::cat(ProfGenCategory));
 
-static cl::opt<bool> ForceProfilePreinlined(
-    "force-profile-preinlined",
-    cl::desc("Force marking all function samples as preinlined(set "
+static cl::opt<bool> MarkAllContextPreinlined(
+    "mark-all-context-preinlined",
+    cl::desc("Mark all function samples as preinlined(set "
              "ContextShouldBeInlined attribute)."),
     cl::init(false));
 
@@ -517,7 +517,8 @@ void ProfileGenerator::generateProfile() {
   postProcessProfiles();
 }
 
-void ProfileGeneratorBase::markProfilePreinlined(SampleProfileMap &ProfileMap) {
+void ProfileGeneratorBase::markAllContextPreinlined(
+    SampleProfileMap &ProfileMap) {
   for (auto &I : ProfileMap)
     I.second.setContextAttribute(ContextShouldBeInlined);
   FunctionSamples::ProfileIsPreInlined = true;
@@ -527,8 +528,8 @@ void ProfileGenerator::postProcessProfiles() {
   computeSummaryAndThreshold(ProfileMap);
   trimColdProfiles(ProfileMap, ColdCountThreshold);
   filterAmbiguousProfile(ProfileMap);
-  if (ForceProfilePreinlined)
-    markProfilePreinlined(ProfileMap);
+  if (MarkAllContextPreinlined)
+    markAllContextPreinlined(ProfileMap);
   calculateAndShowDensity(ProfileMap);
 }
 
@@ -1144,8 +1145,8 @@ void CSProfileGenerator::postProcessProfiles() {
     FunctionSamples::ProfileIsCS = false;
   }
   filterAmbiguousProfile(ProfileMap);
-  if (ForceProfilePreinlined)
-    markProfilePreinlined(ProfileMap);
+  if (MarkAllContextPreinlined)
+    markAllContextPreinlined(ProfileMap);
   ProfileGeneratorBase::calculateAndShowDensity(ProfileMap);
 }
 
