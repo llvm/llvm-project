@@ -14,7 +14,7 @@ else:
 
 
 with Context():
-    standalone_d.register_dialect()
+    standalone_d.register_dialects()
     module = Module.parse(
         """
     %0 = arith.constant 2 : i32
