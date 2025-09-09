@@ -39,6 +39,10 @@ class TestCortexMExceptionUnwind(TestBase):
         thread = process.GetThreadAtIndex(0)
         self.assertTrue(thread.IsValid())
 
+        # We have 4 named stack frames and two unnamed
+        # frames above that.  The topmost two stack frames
+        # were not interesting for this test, so I didn't
+        # create symbols for them.
         self.assertEqual(thread.GetNumFrames(), 6)
         stackframe_names = [
             "exception_catcher",
