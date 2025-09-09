@@ -125,6 +125,8 @@ BUILTIN(__builtin_amdgcn_ds_bpermute, "iii", "nc")
 BUILTIN(__builtin_amdgcn_readfirstlane, "ii", "nc")
 BUILTIN(__builtin_amdgcn_readlane, "iii", "nc")
 BUILTIN(__builtin_amdgcn_fmed3f, "ffff", "nc")
+BUILTIN(__builtin_amdgcn_smed3, "iiii", "nc")
+BUILTIN(__builtin_amdgcn_umed3, "UiUiUiUi", "nc")
 BUILTIN(__builtin_amdgcn_ds_faddf, "ff*3fIiIiIb", "n")
 BUILTIN(__builtin_amdgcn_ds_fminf, "ff*3fIiIiIb", "n")
 BUILTIN(__builtin_amdgcn_ds_fmaxf, "ff*3fIiIiIb", "n")
@@ -251,6 +253,8 @@ TARGET_BUILTIN(__builtin_amdgcn_perm, "UiUiUiUi", "nc", "gfx8-insts")
 //===----------------------------------------------------------------------===//
 
 TARGET_BUILTIN(__builtin_amdgcn_fmed3h, "hhhh", "nc", "gfx9-insts")
+TARGET_BUILTIN(__builtin_amdgcn_smed3h, "ssss", "nc", "gfx9-insts")
+TARGET_BUILTIN(__builtin_amdgcn_umed3h, "UsUsUsUs", "nc", "gfx9-insts")
 
 TARGET_BUILTIN(__builtin_amdgcn_global_atomic_fadd_f64, "dd*1d", "t", "gfx90a-insts")
 TARGET_BUILTIN(__builtin_amdgcn_global_atomic_fadd_f32, "ff*1f", "t", "atomic-fadd-rtn-insts")

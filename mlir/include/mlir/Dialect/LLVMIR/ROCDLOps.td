@@ -1292,6 +1292,94 @@ def ROCDL_CvtScaleF32PkFp4F32Op :
 }
 
 //===----------------------------------------------------------------------===//
+// MED3 operations
+//===----------------------------------------------------------------------===//
+
+def ROCDL_Med3F16Op : ROCDL_ConcreteNonMemIntrOp<"med3.f16", [Pure], 1>,
+  Arguments<(ins F16:$src0,
+                 F16:$src1,
+                 F16:$src2)> {
+  let results = (outs F16:$res);
+  let summary = "Median of three half-precision float values";
+  let assemblyFormat = [{
+    $src0 `,` $src1 `,` $src2 attr-dict `:` `(` type($src0) `,` type($src1) `,` type($src2) `)` `->` type($res)
+  }];
+  string llvmBuilder = [{
+    $res = createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_med3_f16, {$src0, $src1, $src2});
+  }];
+}
+
+def ROCDL_Med3F32Op : ROCDL_ConcreteNonMemIntrOp<"med3.f32", [Pure], 1>,
+  Arguments<(ins F32:$src0,
+                 F32:$src1,
+                 F32:$src2)> {
+  let results = (outs F32:$res);
+  let summary = "Median of three single-precision float values";
+  let assemblyFormat = [{
+    $src0 `,` $src1 `,` $src2 attr-dict `:` `(` type($src0) `,` type($src1) `,` type($src2) `)` `->` type($res)
+  }];
+  string llvmBuilder = [{
+    $res = createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_med3_f32, {$src0, $src1, $src2});
+  }];
+}
+
+def ROCDL_Med3I16Op : ROCDL_ConcreteNonMemIntrOp<"med3.i16", [Pure], 1>,
+  Arguments<(ins I16:$src0,
+                 I16:$src1,
+                 I16:$src2)> {
+  let results = (outs I16:$res);
+  let summary = "Median of three signed 16-bit integer values";
+  let assemblyFormat = [{
+    $src0 `,` $src1 `,` $src2 attr-dict `:` `(` type($src0) `,` type($src1) `,` type($src2) `)` `->` type($res)
+  }];
+  string llvmBuilder = [{
+    $res = createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_smed3, {$src0, $src1, $src2});
+  }];
+}
+
+def ROCDL_Med3I32Op : ROCDL_ConcreteNonMemIntrOp<"med3.i32", [Pure], 1>,
+  Arguments<(ins I32:$src0,
+                 I32:$src1,
+                 I32:$src2)> {
+  let results = (outs I32:$res);
+  let summary = "Median of three signed 32-bit integer values";
+  let assemblyFormat = [{
+    $src0 `,` $src1 `,` $src2 attr-dict `:` `(` type($src0) `,` type($src1) `,` type($src2) `)` `->` type($res)
+  }];
+  string llvmBuilder = [{
+    $res = createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_smed3, {$src0, $src1, $src2});
+  }];
+}
+
+def ROCDL_Med3U16Op : ROCDL_ConcreteNonMemIntrOp<"med3.u16", [Pure], 1>,
+  Arguments<(ins I16:$src0,
+                 I16:$src1,
+                 I16:$src2)> {
+  let results = (outs I16:$res);
+  let summary = "Median of three unsigned 16-bit integer values";
+  let assemblyFormat = [{
+    $src0 `,` $src1 `,` $src2 attr-dict `:` `(` type($src0) `,` type($src1) `,` type($src2) `)` `->` type($res)
+  }];
+  string llvmBuilder = [{
+    $res = createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_umed3, {$src0, $src1, $src2});
+  }];
+}
+
+def ROCDL_Med3U32Op : ROCDL_ConcreteNonMemIntrOp<"med3.u32", [Pure], 1>,
+  Arguments<(ins I32:$src0,
+                 I32:$src1,
+                 I32:$src2)> {
+  let results = (outs I32:$res);
+  let summary = "Median of three unsigned 32-bit integer values";
+  let assemblyFormat = [{
+    $src0 `,` $src1 `,` $src2 attr-dict `:` `(` type($src0) `,` type($src1) `,` type($src2) `)` `->` type($res)
+  }];
+  string llvmBuilder = [{
+    $res = createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_umed3, {$src0, $src1, $src2});
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // ROCDL target attribute.
 //===----------------------------------------------------------------------===//
 

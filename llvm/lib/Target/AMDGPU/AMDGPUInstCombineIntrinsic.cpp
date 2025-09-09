@@ -60,6 +60,26 @@ static APFloat fmed3AMDGCN(const APFloat &Src0, const APFloat &Src1,
   return maxnum(Src0, Src1);
 }
 
+// Constant fold llvm.amdgcn.smed3 intrinsics for standard inputs.
+static APInt smed3AMDGCN(const APInt &Src0, const APInt &Src1, const APInt &Src2) {
+  APInt Max3 = Src0.sgt(Src1) ? (Src0.sgt(Src2) ? Src0 : Src2) 
+                              : (Src1.sgt(Src2) ? Src1 : Src2);
+  
+  if (Max3 == Src0) return Src1.sgt(Src2) ? Src1 : Src2;
+  if (Max3 == Src1) return Src0.sgt(Src2) ? Src0 : Src2;
+  return Src0.sgt(Src1) ? Src0 : Src1;
+}
+
+// Constant fold llvm.amdgcn.umed3 intrinsics for standard inputs.
+static APInt umed3AMDGCN(const APInt &Src0, const APInt &Src1, const APInt &Src2) {
+  APInt Max3 = Src0.ugt(Src1) ? (Src0.ugt(Src2) ? Src0 : Src2) 
+                              : (Src1.ugt(Src2) ? Src1 : Src2);
+  
+  if (Max3 == Src0) return Src1.ugt(Src2) ? Src1 : Src2;
+  if (Max3 == Src1) return Src0.ugt(Src2) ? Src0 : Src2;
+  return Src0.ugt(Src1) ? Src0 : Src1;
+}
+
 // Check if a value can be converted to a 16-bit value without losing
 // precision.
 // The value is expected to be either a float (IsFloat = true) or an unsigned
@@ -423,6 +443,36 @@ static Value *matchFPExtFromF16(Value *Arg) {
     Val.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &LosesInfo);
     if (!LosesInfo)
       return ConstantFP::get(Type::getHalfTy(Arg->getContext()), Val);
+  }
+  return nullptr;
+}
+
+/// Match an sext from i16 to i32, or a constant we can convert.
+static Value *matchSExtFromI16(Value *Arg) {
+  Value *Src = nullptr;
+  ConstantInt *CInt = nullptr;
+  if (match(Arg, m_OneUse(m_SExt(m_Value(Src))))) {
+    if (Src->getType()->isIntegerTy(16))
+      return Src;
+  } else if (match(Arg, m_ConstantInt(CInt))) {
+    // Check if the constant fits in i16
+    if (CInt->getValue().getMinSignedBits() <= 16)
+      return ConstantInt::get(Type::getInt16Ty(Arg->getContext()), CInt->getValue().trunc(16));
+  }
+  return nullptr;
+}
+
+/// Match a zext from i16 to i32, or a constant we can convert.
+static Value *matchZExtFromI16(Value *Arg) {
+  Value *Src = nullptr;
+  ConstantInt *CInt = nullptr;
+  if (match(Arg, m_OneUse(m_ZExt(m_Value(Src))))) {
+    if (Src->getType()->isIntegerTy(16))
+      return Src;
+  } else if (match(Arg, m_ConstantInt(CInt))) {
+    // Check if the constant fits in i16
+    if (CInt->getValue().getActiveBits() <= 16)
+      return ConstantInt::get(Type::getInt16Ty(Arg->getContext()), CInt->getValue().trunc(16));
   }
   return nullptr;
 }
@@ -1168,6 +1218,128 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
           Value *NewCall = IC.Builder.CreateIntrinsic(
               IID, {X->getType()}, {X, Y, Z}, &II, II.getName());
           return new FPExtInst(NewCall, II.getType());
+        }
+      }
+    }
+
+    break;
+  }
+  case Intrinsic::amdgcn_smed3: {
+    Value *Src0 = II.getArgOperand(0);
+    Value *Src1 = II.getArgOperand(1);
+    Value *Src2 = II.getArgOperand(2);
+
+    // Propagate poison values.
+    for (Value *Src : {Src0, Src1, Src2}) {
+      if (isa<PoisonValue>(Src))
+        return IC.replaceInstUsesWith(II, Src);
+    }
+
+    bool Swap = false;
+    // Canonicalize constants to RHS operands.
+    //
+    // smed3(c0, x, c1) -> smed3(x, c0, c1)
+    if (isa<Constant>(Src0) && !isa<Constant>(Src1)) {
+      std::swap(Src0, Src1);
+      Swap = true;
+    }
+
+    if (isa<Constant>(Src1) && !isa<Constant>(Src2)) {
+      std::swap(Src1, Src2);
+      Swap = true;
+    }
+
+    if (isa<Constant>(Src0) && !isa<Constant>(Src1)) {
+      std::swap(Src0, Src1);
+      Swap = true;
+    }
+
+    if (Swap) {
+      II.setArgOperand(0, Src0);
+      II.setArgOperand(1, Src1);
+      II.setArgOperand(2, Src2);
+      return &II;
+    }
+
+    // Constant fold smed3 with constant operands.
+    if (const ConstantInt *C0 = dyn_cast<ConstantInt>(Src0)) {
+      if (const ConstantInt *C1 = dyn_cast<ConstantInt>(Src1)) {
+        if (const ConstantInt *C2 = dyn_cast<ConstantInt>(Src2)) {
+          APInt Result = smed3AMDGCN(C0->getValue(), C1->getValue(), C2->getValue());
+          return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), Result));
+        }
+      }
+    }
+
+    // Width reduction for integer extensions.
+    // smed3((sext X), (sext Y), (sext Z)) -> sext (smed3(X, Y, Z))
+    if (Value *X = matchSExtFromI16(Src0)) {
+      if (Value *Y = matchSExtFromI16(Src1)) {
+        if (Value *Z = matchSExtFromI16(Src2)) {
+          Value *NewCall = IC.Builder.CreateIntrinsic(
+              IID, {X->getType()}, {X, Y, Z}, &II, II.getName());
+          return new SExtInst(NewCall, II.getType());
+        }
+      }
+    }
+
+    break;
+  }
+  case Intrinsic::amdgcn_umed3: {
+    Value *Src0 = II.getArgOperand(0);
+    Value *Src1 = II.getArgOperand(1);
+    Value *Src2 = II.getArgOperand(2);
+
+    // Propagate poison values.
+    for (Value *Src : {Src0, Src1, Src2}) {
+      if (isa<PoisonValue>(Src))
+        return IC.replaceInstUsesWith(II, Src);
+    }
+
+    bool Swap = false;
+    // Canonicalize constants to RHS operands.
+    //
+    // umed3(c0, x, c1) -> umed3(x, c0, c1)
+    if (isa<Constant>(Src0) && !isa<Constant>(Src1)) {
+      std::swap(Src0, Src1);
+      Swap = true;
+    }
+
+    if (isa<Constant>(Src1) && !isa<Constant>(Src2)) {
+      std::swap(Src1, Src2);
+      Swap = true;
+    }
+
+    if (isa<Constant>(Src0) && !isa<Constant>(Src1)) {
+      std::swap(Src0, Src1);
+      Swap = true;
+    }
+
+    if (Swap) {
+      II.setArgOperand(0, Src0);
+      II.setArgOperand(1, Src1);
+      II.setArgOperand(2, Src2);
+      return &II;
+    }
+
+    // Constant fold umed3 with constant operands.
+    if (const ConstantInt *C0 = dyn_cast<ConstantInt>(Src0)) {
+      if (const ConstantInt *C1 = dyn_cast<ConstantInt>(Src1)) {
+        if (const ConstantInt *C2 = dyn_cast<ConstantInt>(Src2)) {
+          APInt Result = umed3AMDGCN(C0->getValue(), C1->getValue(), C2->getValue());
+          return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), Result));
+        }
+      }
+    }
+
+    // Width reduction for integer extensions.
+    // umed3((zext X), (zext Y), (zext Z)) -> zext (umed3(X, Y, Z))
+    if (Value *X = matchZExtFromI16(Src0)) {
+      if (Value *Y = matchZExtFromI16(Src1)) {
+        if (Value *Z = matchZExtFromI16(Src2)) {
+          Value *NewCall = IC.Builder.CreateIntrinsic(
+              IID, {X->getType()}, {X, Y, Z}, &II, II.getName());
+          return new ZExtInst(NewCall, II.getType());
         }
       }
     }

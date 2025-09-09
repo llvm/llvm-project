@@ -531,6 +531,18 @@ def int_amdgcn_fmed3 :
     [IntrNoMem, IntrSpeculatable]
 >;
 
+def int_amdgcn_smed3 :
+  DefaultAttrsIntrinsic<[llvm_anyint_ty],
+    [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
+    [IntrNoMem, IntrSpeculatable]
+>;
+
+def int_amdgcn_umed3 :
+  DefaultAttrsIntrinsic<[llvm_anyint_ty],
+    [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
+    [IntrNoMem, IntrSpeculatable]
+>;
+
 def int_amdgcn_cubeid : ClangBuiltin<"__builtin_amdgcn_cubeid">,
   DefaultAttrsIntrinsic<[llvm_float_ty],
     [llvm_float_ty, llvm_float_ty, llvm_float_ty],
