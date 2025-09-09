@@ -338,10 +338,6 @@ class CodeGenPrepare {
   /// Keep track of instructions removed during promotion.
   SetOfInstrs RemovedInsts;
 
-  /// Keep track of seen mul_with_overflow intrinsics to avoid
-  // reprocessing them.
-  DenseMap<Instruction *, bool> SeenMulWithOverflowInstrs;
-
   /// Keep track of sext chains based on their initial value.
   DenseMap<Value *, Instruction *> SeenChainsForSExt;
 
@@ -778,7 +774,6 @@ bool CodeGenPrepare::_run(Function &F) {
     verifyBFIUpdates(F);
 #endif
 
-  SeenMulWithOverflowInstrs.clear();
   return EverMadeChange;
 }
 
@@ -6409,9 +6404,36 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
                                              ModifyDT &ModifiedDT) {
   if (!TLI->shouldOptimizeMulOverflowIntrinsic())
     return false;
-  // If we have already seen this instruction, don't process it again.
-  if (!SeenMulWithOverflowInstrs.insert(std::make_pair(I, true)).second)
-    return false;
+
+  // Check if we had already optimized this intrinsic by detecting the pattern of the changes we had made:
+  // Check if we are testing the high bits of the operands:
+  if (BasicBlock *BrBB = I->getParent()->getSinglePredecessor()) {
+    if (BranchInst *Br = dyn_cast<BranchInst>(BrBB->getTerminator()); Br && Br->isConditional()) {
+      if (IsSigned) {
+        // Check: cmp(or(xor(trunc(lshr(x))), xor(trunc(lshr(x)))))
+        if (match(Br->getCondition(),
+                  m_Cmp(m_Or(m_Xor(m_Trunc(m_LShr(m_Specific(I->getOperand(0)), m_Value())), m_Value()),
+                             m_Xor(m_Trunc(m_LShr(m_Specific(I->getOperand(1)), m_Value())), m_Value())),
+                        m_Value()))) {
+          LLVM_DEBUG(dbgs() << "CGP: pattern detected - bail out\n");
+          // Pattern detected, bail out.
+          return false;
+        }
+      }
+      else
+      {
+        // Check: or(cmp(trunc(lshr(x)), cmp(trunc(lshr(y))))
+        if (match(Br->getCondition(),
+                  m_Or(m_Cmp(m_Trunc(m_LShr(m_Specific(I->getOperand(0)), m_Value())), m_Value()),
+                       m_Cmp(m_Trunc(m_LShr(m_Specific(I->getOperand(1)), m_Value())), m_Value())))) {
+          LLVM_DEBUG(dbgs() << "CGP: pattern detected - bail out\n");
+          // Pattern detected, bail out.
+          return false;
+        }
+      }
+
+    }
+  }
 
   if (TLI->getTypeAction(
           I->getContext(),
