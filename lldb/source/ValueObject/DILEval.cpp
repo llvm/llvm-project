@@ -308,6 +308,11 @@ Interpreter::Visit(const UnaryOpNode *node) {
     return value;
   }
   case UnaryOpKind::Minus: {
+    if (operand->GetCompilerType().IsReferenceType()) {
+      operand = operand->Dereference(error);
+      if (error.Fail())
+        return error.ToError();
+    }
     llvm::Expected<lldb::ValueObjectSP> conv_op = UnaryConversion(operand);
     if (!conv_op)
       return conv_op;
@@ -332,6 +337,11 @@ Interpreter::Visit(const UnaryOpNode *node) {
     break;
   }
   case UnaryOpKind::Plus: {
+    if (operand->GetCompilerType().IsReferenceType()) {
+      operand = operand->Dereference(error);
+      if (error.Fail())
+        return error.ToError();
+    }
     llvm::Expected<lldb::ValueObjectSP> conv_op = UnaryConversion(operand);
     if (!conv_op)
       return conv_op;
