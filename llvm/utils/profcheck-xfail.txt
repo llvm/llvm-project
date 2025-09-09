@@ -1989,15 +1989,4 @@ Transforms/Util/libcalls-opt-remarks.ll
 Transforms/Util/lowerswitch.ll
 Transforms/VectorCombine/AArch64/shuffletoidentity.ll
 Transforms/VectorCombine/X86/shuffle-of-selects.ll
-Transforms/WholeProgramDevirt/branch-funnel.ll
-Transforms/WholeProgramDevirt/branch-funnel-threshold.ll
-Transforms/WholeProgramDevirt/devirt_single_after_filtering_unreachable_function.ll
-Transforms/WholeProgramDevirt/expand-check.ll
 Transforms/WholeProgramDevirt/unique-retval-same-vtable.ll
-Transforms/WholeProgramDevirt/vcp-accesses-memory.ll
-Transforms/WholeProgramDevirt/vcp-decl.ll
-Transforms/WholeProgramDevirt/vcp-non-constant-arg.ll
-Transforms/WholeProgramDevirt/vcp-no-this.ll
-Transforms/WholeProgramDevirt/vcp-too-wide-ints.ll
-Transforms/WholeProgramDevirt/vcp-type-mismatch.ll
-Transforms/WholeProgramDevirt/vcp-uses-this.ll
