@@ -68,13 +68,15 @@ def FeatureFlatInstOffsets : SubtargetFeature<"flat-inst-offsets",
 def FeatureFlatGlobalInsts : SubtargetFeature<"flat-global-insts",
   "FlatGlobalInsts",
   "true",
-  "Have global_* flat memory instructions"
+  "Have global_* flat memory instructions",
+  [FeatureFlatAddressSpace]
 >;
 
 def FeatureFlatScratchInsts : SubtargetFeature<"flat-scratch-insts",
   "FlatScratchInsts",
   "true",
-  "Have scratch_* flat memory instructions"
+  "Have scratch_* flat memory instructions",
+  [FeatureFlatAddressSpace]
 >;
 
 def FeatureScalarFlatScratchInsts : SubtargetFeature<"scalar-flat-scratch-insts",
@@ -92,7 +94,8 @@ def FeatureEnableFlatScratch : SubtargetFeature<"enable-flat-scratch",
 def FeatureFlatGVSMode : SubtargetFeature<"flat-gvs-mode",
   "FlatGVSMode",
   "true",
-  "Have GVS addressing mode with flat_* instructions"
+  "Have GVS addressing mode with flat_* instructions",
+  [FeatureFlatAddressSpace]
 >;
 
 def FeatureAddNoCarryInsts : SubtargetFeature<"add-no-carry-insts",
@@ -934,13 +937,15 @@ def FeatureAtomicFMinFMaxF64GlobalInsts : SubtargetFeature<"atomic-fmin-fmax-glo
 def FeatureAtomicFMinFMaxF32FlatInsts : SubtargetFeature<"atomic-fmin-fmax-flat-f32",
   "HasAtomicFMinFMaxF32FlatInsts",
   "true",
-  "Has flat memory instructions for atomicrmw fmin/fmax for float"
+  "Has flat memory instructions for atomicrmw fmin/fmax for float",
+  [FeatureFlatAddressSpace]
 >;
 
 def FeatureAtomicFMinFMaxF64FlatInsts : SubtargetFeature<"atomic-fmin-fmax-flat-f64",
   "HasAtomicFMinFMaxF64FlatInsts",
   "true",
-  "Has flat memory instructions for atomicrmw fmin/fmax for double"
+  "Has flat memory instructions for atomicrmw fmin/fmax for double",
+  [FeatureFlatAddressSpace]
 >;
 
 def FeatureAtomicFaddNoRtnInsts : SubtargetFeature<"atomic-fadd-no-rtn-insts",
@@ -992,7 +997,8 @@ def FeatureFlatAtomicFaddF32Inst
   : SubtargetFeature<"flat-atomic-fadd-f32-inst",
   "HasFlatAtomicFaddF32Inst",
   "true",
-  "Has flat_atomic_add_f32 instruction"
+  "Has flat_atomic_add_f32 instruction",
+  [FeatureFlatAddressSpace]
 >;
 
 def FeatureFlatBufferGlobalAtomicFaddF64Inst
@@ -1208,6 +1214,12 @@ def Feature64BitLiterals : SubtargetFeature<"64-bit-literals",
   "Has64BitLiterals",
   "true",
   "Can use 64-bit literals with single DWORD instructions"
+>;
+
+def Feature1024AddressableVGPRs : SubtargetFeature<"1024-addressable-vgprs",
+  "Has1024AddressableVGPRs",
+  "true",
+  "Has 1024 addressable VGPRs"
 >;
 
 def FeatureWaitXcnt : SubtargetFeature<"wait-xcnt",
@@ -1902,6 +1914,7 @@ def FeatureISAVersion10_3_Generic: FeatureSet<
 
 def FeatureISAVersion11_Common : FeatureSet<
   [FeatureGFX11,
+   FeatureBackOffBarrier,
    FeatureLDSBankCount32,
    FeatureDLInsts,
    FeatureDot5Insts,
@@ -1985,6 +1998,7 @@ def FeatureISAVersion11_5_3 : FeatureSet<
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
+   FeatureBackOffBarrier,
    FeatureAddressableLocalMemorySize65536,
    FeatureLDSBankCount32,
    FeatureDLInsts,
@@ -2031,6 +2045,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureCUStores,
    FeatureAddressableLocalMemorySize327680,
    FeatureCuMode,
+   Feature1024AddressableVGPRs,
    Feature64BitLiterals,
    FeatureLDSBankCount32,
    FeatureDLInsts,
@@ -2838,6 +2853,9 @@ def HasBVHDualAndBVH8Insts : Predicate<"Subtarget->hasBVHDualAndBVH8Insts()">,
 
 def Has64BitLiterals : Predicate<"Subtarget->has64BitLiterals()">,
   AssemblerPredicate<(all_of Feature64BitLiterals)>;
+
+def Has1024AddressableVGPRs : Predicate<"Subtarget->has1024AddressableVGPRs()">,
+  AssemblerPredicate<(all_of Feature1024AddressableVGPRs)>;
 
 def HasWaitXcnt : Predicate<"Subtarget->hasWaitXcnt()">,
   AssemblerPredicate<(all_of FeatureWaitXcnt)>;

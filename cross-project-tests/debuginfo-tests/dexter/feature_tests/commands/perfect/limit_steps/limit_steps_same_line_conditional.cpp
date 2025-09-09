@@ -2,7 +2,7 @@
 //      Test that LimitStep commands can exist on the same from line.
 //
 // RUN: %dexter_regression_test_cxx_build %s -o %t
-// RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck %s
+// RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck --dump-input-context=999999999 %s
 // CHECK: limit_steps_same_line_conditional.cpp
 
 int main() {

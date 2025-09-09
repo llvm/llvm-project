@@ -130,7 +130,7 @@ exit:
 ; MAINVF4IC1_EPI4: [[LOOP11]] = distinct !{[[LOOP11]], [[META5]], [[META6]], [[META12:![0-9]+]]}
 ; MAINVF4IC1_EPI4: [[META12]] = !{!"llvm.loop.estimated_trip_count", i32 0}
 ; MAINVF4IC1_EPI4: [[PROF13]] = !{!"branch_weights", i32 2, i32 1}
-; MAINVF4IC1_EPI4: [[LOOP14]] = distinct !{[[LOOP14]], [[META15:![0-9]+]], [[META5]]}
+; MAINVF4IC1_EPI4: [[LOOP14]] = distinct !{[[LOOP14]], [[META5]], [[META15:![0-9]+]]}
 ; MAINVF4IC1_EPI4: [[META15]] = !{!"llvm.loop.estimated_trip_count", i32 3}
 ;.
 ; MAINVF4IC2_EPI4: [[PROF0]] = !{!"function_entry_count", i64 13}
@@ -148,6 +148,6 @@ exit:
 ; MAINVF4IC2_EPI4: [[META12]] = !{!"llvm.loop.estimated_trip_count", i32 0}
 ; MAINVF4IC2_EPI4: [[PROF13]] = !{!"branch_weights", i32 1, i32 3}
 ; MAINVF4IC2_EPI4: [[PROF14]] = !{!"branch_weights", i32 2, i32 1}
-; MAINVF4IC2_EPI4: [[LOOP15]] = distinct !{[[LOOP15]], [[META16:![0-9]+]], [[META5]]}
+; MAINVF4IC2_EPI4: [[LOOP15]] = distinct !{[[LOOP15]], [[META5]], [[META16:![0-9]+]]}
 ; MAINVF4IC2_EPI4: [[META16]] = !{!"llvm.loop.estimated_trip_count", i32 3}
 ;.
