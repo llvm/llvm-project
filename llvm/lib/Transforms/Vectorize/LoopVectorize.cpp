@@ -6910,9 +6910,8 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       if (auto *WidenMemR = dyn_cast<VPWidenMemoryRecipe>(&R)) {
         auto *AddrI = dyn_cast<Instruction>(
             getLoadStorePointerOperand(&WidenMemR->getIngredient()));
-        if (WidenMemR && AddrI &&
-            vputils::isSingleScalar(WidenMemR->getAddr()) !=
-                CostCtx.isLegacyUniformAfterVectorization(AddrI, VF))
+        if (AddrI && vputils::isSingleScalar(WidenMemR->getAddr()) !=
+                         CostCtx.isLegacyUniformAfterVectorization(AddrI, VF))
           return true;
       }
 
