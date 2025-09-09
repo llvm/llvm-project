@@ -16777,12 +16777,13 @@ static SDValue performSETCCCombine(SDNode *N,
     // Similar to above but handling the lower 32 bits by using sraiw. Allow
     // comparing with constants other than 0 if the constant can be folded into
     // addi or xori after shifting.
-    if (OpVT == MVT::i64 && AndRHSC.getZExtValue() <= 0xffffffff &&
-        isPowerOf2_32(-uint32_t(AndRHSC.getZExtValue()))) {
-      unsigned ShiftBits = llvm::countr_zero(AndRHSC.getZExtValue());
-      int64_t NewC = SignExtend64<32>(cast<ConstantSDNode>(N1)->getSExtValue());
-      NewC >>= ShiftBits;
-      if (isInt<12>(NewC) || NewC == 2048) {
+    uint64_t N1Int = cast<ConstantSDNode>(N1)->getZExtValue();
+    uint64_t AndRHSInt = AndRHSC.getZExtValue();
+    if (OpVT == MVT::i64 && AndRHSInt <= 0xffffffff &&
+        isPowerOf2_32(-uint32_t(AndRHSInt)) && (N1Int & AndRHSInt) == N1Int) {
+      unsigned ShiftBits = llvm::countr_zero(AndRHSInt);
+      int64_t NewC = SignExtend64<32>(N1Int) >> ShiftBits;
+      if (NewC >= -2048 && NewC <= 2048) {
         SDValue SExt =
             DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, OpVT, N0.getOperand(0),
                         DAG.getValueType(MVT::i32));
