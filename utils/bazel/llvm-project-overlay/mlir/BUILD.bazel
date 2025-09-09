@@ -9004,7 +9004,6 @@ cc_library(
         ":LLVMDialect",
         ":Pass",
         ":TargetLLVMIRTransformsIncGen",
-        "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
         "//llvm:MC",
         "//llvm:Support",
