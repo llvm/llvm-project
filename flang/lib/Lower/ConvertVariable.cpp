@@ -786,62 +786,6 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
   return res;
 }
 
-/// Device allocatable components in a derived-type don't have the correct
-/// allocator index in their descriptor when they are created. After
-/// initialization, cuf.set_allocator_idx operations are inserted to set the
-/// correct allocator index for each device component.
-static void
-initializeDeviceComponentAllocator(Fortran::lower::AbstractConverter &converter,
-                                   const Fortran::semantics::Symbol &symbol,
-                                   Fortran::lower::SymMap &symMap) {
-  if (const auto *details{
-          symbol.GetUltimate()
-              .detailsIf<Fortran::semantics::ObjectEntityDetails>()}) {
-    const Fortran::semantics::DeclTypeSpec *type{details->type()};
-    const Fortran::semantics::DerivedTypeSpec *derived{type ? type->AsDerived()
-                                                            : nullptr};
-    if (derived) {
-      if (!FindCUDADeviceAllocatableUltimateComponent(*derived))
-        return; // No device components.
-
-      fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-      mlir::Location loc = converter.getCurrentLocation();
-
-      fir::ExtendedValue exv =
-          converter.getSymbolExtendedValue(symbol.GetUltimate(), &symMap);
-      mlir::Type baseTy = fir::unwrapRefType(fir::getBase(exv).getType());
-      if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(baseTy))
-        baseTy = boxTy.getEleTy();
-      baseTy = fir::unwrapRefType(baseTy);
-
-      if (fir::isAllocatableType(fir::getBase(exv).getType()) ||
-          fir::isPointerType(fir::getBase(exv).getType()))
-        return; // Allocator index need to be set after allocation.
-
-      auto recTy =
-          mlir::dyn_cast<fir::RecordType>(fir::unwrapSequenceType(baseTy));
-      assert(recTy && "expected fir::RecordType");
-
-      Fortran::semantics::UltimateComponentIterator components{*derived};
-      for (const auto &sym : components) {
-        if (Fortran::semantics::IsDeviceAllocatable(sym)) {
-          llvm::SmallVector<mlir::Value> coord;
-          mlir::Type fieldTy =
-              Fortran::lower::gatherDeviceComponentCoordinatesAndType(
-                  builder, loc, sym, recTy, coord);
-          mlir::Value base = fir::getBase(exv);
-          mlir::Value comp = fir::CoordinateOp::create(
-              builder, loc, builder.getRefType(fieldTy), base, coord);
-          cuf::DataAttributeAttr dataAttr =
-              Fortran::lower::translateSymbolCUFDataAttribute(
-                  builder.getContext(), sym);
-          cuf::SetAllocatorIndexOp::create(builder, loc, comp, dataAttr);
-        }
-      }
-    }
-  }
-}
-
 /// Must \p var be default initialized at runtime when entering its scope.
 static bool
 mustBeDefaultInitializedAtRuntime(const Fortran::lower::pft::Variable &var) {
@@ -1164,9 +1108,6 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
   if (mustBeDefaultInitializedAtRuntime(var))
     Fortran::lower::defaultInitializeAtRuntime(converter, var.getSymbol(),
                                                symMap);
-  if (converter.getFoldingContext().languageFeatures().IsEnabled(
-          Fortran::common::LanguageFeature::CUDA))
-    initializeDeviceComponentAllocator(converter, var.getSymbol(), symMap);
   auto *builder = &converter.getFirOpBuilder();
   if (needCUDAAlloc(var.getSymbol()) &&
       !cuf::isCUDADeviceContext(builder->getRegion())) {
@@ -1426,9 +1367,6 @@ static void instantiateAlias(Fortran::lower::AbstractConverter &converter,
   if (mustBeDefaultInitializedAtRuntime(var))
     Fortran::lower::defaultInitializeAtRuntime(converter, var.getSymbol(),
                                                symMap);
-  if (converter.getFoldingContext().languageFeatures().IsEnabled(
-          Fortran::common::LanguageFeature::CUDA))
-    initializeDeviceComponentAllocator(converter, var.getSymbol(), symMap);
 }
 
 //===--------------------------------------------------------------===//
