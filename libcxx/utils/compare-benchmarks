@@ -1,0 +1,123 @@
+#!/usr/bin/env python3
+
+import argparse
+import re
+import statistics
+import sys
+
+import plotly
+import tabulate
+
+def parse_lnt(lines):
+    """
+    Parse lines in LNT format and return a dictionnary of the form:
+
+        {
+            'benchmark1': {
+                'metric1': [float],
+                'metric2': [float],
+                ...
+            },
+            'benchmark2': {
+                'metric1': [float],
+                'metric2': [float],
+                ...
+            },
+            ...
+        }
+
+    Each metric may have multiple values.
+    """
+    results = {}
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+
+        (identifier, value) = line.split(' ')
+        (name, metric) = identifier.split('.')
+        if name not in results:
+            results[name] = {}
+        if metric not in results[name]:
+            results[name][metric] = []
+        results[name][metric].append(float(value))
+    return results
+
+def plain_text_comparison(benchmarks, baseline, candidate):
+    """
+    Create a tabulated comparison of the baseline and the candidate.
+    """
+    headers = ['Benchmark', 'Baseline', 'Candidate', 'Difference', '% Difference']
+    fmt = (None, '.2f', '.2f', '.2f', '.2f')
+    table = []
+    for (bm, base, cand) in zip(benchmarks, baseline, candidate):
+        diff = (cand - base) if base and cand else None
+        percent = 100 * (diff / base) if base and cand else None
+        row = [bm, base, cand, diff, percent]
+        table.append(row)
+    return tabulate.tabulate(table, headers=headers, floatfmt=fmt, numalign='right')
+
+def create_chart(benchmarks, baseline, candidate):
+    """
+    Create a bar chart comparing 'baseline' and 'candidate'.
+    """
+    figure = plotly.graph_objects.Figure()
+    figure.add_trace(plotly.graph_objects.Bar(x=benchmarks, y=baseline, name='Baseline'))
+    figure.add_trace(plotly.graph_objects.Bar(x=benchmarks, y=candidate, name='Candidate'))
+    return figure
+
+def prepare_series(baseline, candidate, metric, aggregate=statistics.median):
+    """
+    Prepare the data for being formatted or displayed as a chart.
+
+    Metrics that have more than one value are aggregated using the given aggregation function.
+    """
+    all_benchmarks = sorted(list(set(baseline.keys()) | set(candidate.keys())))
+    baseline_series = []
+    candidate_series = []
+    for bm in all_benchmarks:
+        baseline_series.append(aggregate(baseline[bm][metric]) if bm in baseline and metric in baseline[bm] else None)
+        candidate_series.append(aggregate(candidate[bm][metric]) if bm in candidate and metric in candidate[bm] else None)
+    return (all_benchmarks, baseline_series, candidate_series)
+
+def main(argv):
+    parser = argparse.ArgumentParser(
+        prog='compare-benchmarks',
+        description='Compare the results of two sets of benchmarks in LNT format.',
+        epilog='This script requires the `tabulate` and the `plotly` Python modules.')
+    parser.add_argument('baseline', type=argparse.FileType('r'),
+        help='Path to a LNT format file containing the benchmark results for the baseline.')
+    parser.add_argument('candidate', type=argparse.FileType('r'),
+        help='Path to a LNT format file containing the benchmark results for the candidate.')
+    parser.add_argument('--metric', type=str, default='execution_time',
+        help='The metric to compare. LNT data may contain multiple metrics (e.g. code size, execution time, etc) -- '
+             'this option allows selecting which metric is being analyzed. The default is "execution_time".')
+    parser.add_argument('--output', '-o', type=argparse.FileType('w'), default=sys.stdout,
+        help='Path of a file where to output the resulting comparison. Default to stdout.')
+    parser.add_argument('--filter', type=str, required=False,
+        help='An optional regular expression used to filter the benchmarks included in the comparison. '
+             'Only benchmarks whose names match the regular expression will be included.')
+    parser.add_argument('--format', type=str, choices=['text', 'chart'], default='text',
+        help='Select the output format. "text" generates a plain-text comparison in tabular form, and "chart" '
+             'generates a self-contained HTML graph that can be opened in a browser. The default is text.')
+    args = parser.parse_args(argv)
+
+    baseline = parse_lnt(args.baseline.readlines())
+    candidate = parse_lnt(args.candidate.readlines())
+
+    if args.filter is not None:
+        regex = re.compile(args.filter)
+        baseline = {k: v for (k, v) in baseline.items() if regex.search(k)}
+        candidate = {k: v for (k, v) in candidate.items() if regex.search(k)}
+
+    (benchmarks, baseline_series, candidate_series) = prepare_series(baseline, candidate, args.metric)
+
+    if args.format == 'chart':
+        figure = create_chart(benchmarks, baseline_series, candidate_series)
+        plotly.io.write_html(figure, file=args.output)
+    else:
+        diff = plain_text_comparison(benchmarks, baseline_series, candidate_series)
+        args.output.write(diff)
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
