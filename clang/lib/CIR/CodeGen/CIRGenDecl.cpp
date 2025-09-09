@@ -31,6 +31,8 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
     cgm.errorNYI(d.getSourceRange(), "emitAutoVarAlloca: address space");
 
   mlir::Location loc = getLoc(d.getSourceRange());
+  bool nrvo =
+      getContext().getLangOpts().ElideConstructors && d.isNRVOVariable();
 
   CIRGenFunction::AutoVarEmission emission(d);
   emission.IsEscapingByRef = d.isEscapingByref();
@@ -44,16 +46,37 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
   if (ty->isVariablyModifiedType())
     cgm.errorNYI(d.getSourceRange(), "emitAutoVarDecl: variably modified type");
 
+  assert(!cir::MissingFeatures::openMP());
+
   Address address = Address::invalid();
   if (!ty->isConstantSizeType())
     cgm.errorNYI(d.getSourceRange(), "emitAutoVarDecl: non-constant size type");
 
   // A normal fixed sized variable becomes an alloca in the entry block,
-  mlir::Type allocaTy = convertTypeForMem(ty);
-  // Create the temp alloca and declare variable using it.
-  address = createTempAlloca(allocaTy, alignment, loc, d.getName(),
-                             /*arraySize=*/nullptr, /*alloca=*/nullptr, ip);
-  declare(address.getPointer(), &d, ty, getLoc(d.getSourceRange()), alignment);
+  // unless:
+  // - it's an NRVO variable.
+  // - we are compiling OpenMP and it's an OpenMP local variable.
+  if (nrvo) {
+    // The named return value optimization: allocate this variable in the
+    // return slot, so that we can elide the copy when returning this
+    // variable (C++0x [class.copy]p34).
+    address = returnValue;
+
+    if (const RecordDecl *rd = ty->getAsRecordDecl()) {
+      if (const auto *cxxrd = dyn_cast<CXXRecordDecl>(rd);
+          (cxxrd && !cxxrd->hasTrivialDestructor()) ||
+          rd->isNonTrivialToPrimitiveDestroy())
+        cgm.errorNYI(d.getSourceRange(), "emitAutoVarAlloca: set NRVO flag");
+    }
+  } else {
+    // A normal fixed sized variable becomes an alloca in the entry block,
+    mlir::Type allocaTy = convertTypeForMem(ty);
+    // Create the temp alloca and declare variable using it.
+    address = createTempAlloca(allocaTy, alignment, loc, d.getName(),
+                               /*arraySize=*/nullptr, /*alloca=*/nullptr, ip);
+    declare(address.getPointer(), &d, ty, getLoc(d.getSourceRange()),
+            alignment);
+  }
 
   emission.Addr = address;
   setAddrOfLocalVar(&d, address);
