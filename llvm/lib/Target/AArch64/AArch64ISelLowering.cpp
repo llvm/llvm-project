@@ -22306,10 +22306,14 @@ static SDValue getPTest(SelectionDAG &DAG, EVT VT, SDValue Pg, SDValue Op,
     Op = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, MVT::nxv16i1, Op);
   }
 
+  unsigned PTest = AArch64ISD::PTEST;
+  if (Cond == AArch64CC::ANY_ACTIVE)
+    PTest = AArch64ISD::PTEST_ANY;
+  else if (Cond == AArch64CC::FIRST_ACTIVE)
+    PTest = AArch64ISD::PTEST_FIRST;
+
   // Set condition code (CC) flags.
-  SDValue Test = DAG.getNode(
-      Cond == AArch64CC::ANY_ACTIVE ? AArch64ISD::PTEST_ANY : AArch64ISD::PTEST,
-      DL, MVT::i32, Pg, Op);
+  SDValue Test = DAG.getNode(PTest, DL, MVT::i32, Pg, Op);
 
   // Convert CC to integer based on requested condition.
   // NOTE: Cond is inverted to promote CSEL's removal when it feeds a compare.
