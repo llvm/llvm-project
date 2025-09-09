@@ -1642,7 +1642,7 @@ CpAsyncBulkTensorSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
             : CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, dim, tile)
 
 #define GET_CP_ASYNC_BULK_TENSOR_ID(op, dims, is_im2col)                       \
-  [&]() -> auto{                                                               \
+  [&]() -> auto {                                                              \
     switch (dims) {                                                            \
     case 1:                                                                    \
       return CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, 1, tile);                    \
