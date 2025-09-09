@@ -100,18 +100,6 @@ Error PublicsStream::reload() {
   return Error::success();
 }
 
-static uint32_t compareSegmentOffset(uint16_t LhsSegment, uint32_t LhsOffset,
-                                     uint16_t RhsSegment, uint32_t RhsOffset) {
-  if (LhsSegment == RhsSegment)
-    return LhsOffset - RhsOffset;
-  return LhsSegment - RhsSegment;
-}
-
-static uint32_t compareSegmentOffset(uint16_t LhsSegment, uint32_t LhsOffst,
-                                     const codeview::PublicSym32 &Rhs) {
-  return compareSegmentOffset(LhsSegment, LhsOffst, Rhs.Segment, Rhs.Offset);
-}
-
 // This is a reimplementation of NearestSym:
 // https://github.com/microsoft/microsoft-pdb/blob/805655a28bd8198004be2ac27e6e0290121a5e89/PDB/dbi/gsi.cpp#L1492-L1581
 std::optional<std::pair<codeview::PublicSym32, size_t>>
@@ -152,8 +140,7 @@ PublicsStream::findByAddress(const SymbolStream &Symbols, uint16_t Segment,
   }
   codeview::PublicSym32 Psym = std::move(*MaybePsym);
 
-  uint32_t Cmp = compareSegmentOffset(Segment, Offset, Psym);
-  if (Cmp != 0)
+  if (std::tuple(Segment, Offset) != std::tuple(Psym.Segment, Psym.Offset))
     return std::nullopt;
 
   std::ptrdiff_t IterOffset = It - AddressMap.begin();
