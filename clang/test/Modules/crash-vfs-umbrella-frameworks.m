@@ -1,4 +1,4 @@
-// REQUIRES: crash-recovery, shell
+// REQUIRES: crash-recovery
 
 // FIXME: This XFAIL is cargo-culted from crash-report.c. Do we need it?
 // XFAIL: target={{.*-windows-gnu}}
@@ -44,4 +44,4 @@
 // RUN: rm -rf i
 // RUN: rm -rf crash-vfs-umbrella-*.cache/modules/*
 // RUN: chmod 755 crash-vfs-*.sh
-// RUN: ./crash-vfs-*.sh
+// RUN: bash ./crash-vfs-*.sh
