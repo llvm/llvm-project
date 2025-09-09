@@ -1,6 +1,8 @@
 ## Tests how --call-graph-info prints the call graph information.
 # RUN: yaml2obj --docnum=1 %s -o %t
-# RUN: llvm-readelf --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t
+# RUN: llvm-readelf --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t
+# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines --check-prefix=LLVM -DFILE=%t
+# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines --check-prefix=JSON -DFILE=%t
 
 # Yaml input is obtained by compiling the below source to object with:
 #   clang -fexperimental-call-graph-section test.c -o test.o
@@ -53,6 +55,131 @@
 # CHECK-EMPTY:
 # CHECK-NEXT: DIRECT CALL SITES (CALLER_ADDR [(CALL_SITE_ADDR, TARGET_ADDR),])
 # CHECK-NEXT: 17d0 1815 17a0 181a 17b0 1823 17c0
+
+# LLVM: callgraph_info {
+# LLVM-NEXT:   indirect_target_types [
+# LLVM-NEXT:     {
+# LLVM-NEXT:       function_address: 0x17A0
+# LLVM-NEXT:       type_id: 0xF85C699BB8EF20A2
+# LLVM-NEXT:     }
+# LLVM-NEXT:     {
+# LLVM-NEXT:       function_address: 0x17B0
+# LLVM-NEXT:       type_id: 0xF85C699BB8EF20A2
+# LLVM-NEXT:     }
+# LLVM-NEXT:     {
+# LLVM-NEXT:       function_address: 0x17C0
+# LLVM-NEXT:       type_id: 0x308E4B8159BC8654
+# LLVM-NEXT:     }
+# LLVM-NEXT:     {
+# LLVM-NEXT:       function_address: 0x17D0
+# LLVM-NEXT:       type_id: 0xA9494DEF81A01DC
+# LLVM-NEXT:     }
+# LLVM-NEXT:   ]
+# LLVM-NEXT:   direct_call_sites [
+# LLVM-NEXT:     {
+# LLVM-NEXT:       caller: 0x17D0
+# LLVM-NEXT:       call_sites [
+# LLVM-NEXT:         {
+# LLVM-NEXT:           call_site: 0x1815
+# LLVM-NEXT:           callee: 0x17A0
+# LLVM-NEXT:         }
+# LLVM-NEXT:         {
+# LLVM-NEXT:           call_site: 0x181A
+# LLVM-NEXT:           callee: 0x17B0
+# LLVM-NEXT:         }
+# LLVM-NEXT:         {
+# LLVM-NEXT:           call_site: 0x1823
+# LLVM-NEXT:           callee: 0x17C0
+# LLVM-NEXT:         }
+# LLVM-NEXT:       ]
+# LLVM-NEXT:     }
+# LLVM-NEXT:   ]
+# LLVM-NEXT:   indirect_call_sites [
+# LLVM-NEXT:     {
+# LLVM-NEXT:       caller: 0x17D0
+# LLVM-NEXT:       call_sites: [0x17ED, 0x17FB, 0x1810]
+# LLVM-NEXT:     }
+# LLVM-NEXT:   ]
+# LLVM-NEXT:   indirect_call_types [
+# LLVM-NEXT:     {
+# LLVM-NEXT:       call_site: 0x17ED
+# LLVM-NEXT:       type_id: 0xF85C699BB8EF20A2
+# LLVM-NEXT:     }
+# LLVM-NEXT:     {
+# LLVM-NEXT:       call_site: 0x17FB
+# LLVM-NEXT:       type_id: 0xF85C699BB8EF20A2
+# LLVM-NEXT:     }
+# LLVM-NEXT:     {
+# LLVM-NEXT:       call_site: 0x1810
+# LLVM-NEXT:       type_id: 0x308E4B8159BC8654
+# LLVM-NEXT:     }
+# LLVM-NEXT:   ]
+# LLVM-NEXT: }
+
+#JSON:  "callgraph_info": {
+#JSON-NEXT:      "indirect_target_types": [
+#JSON-NEXT:        {
+#JSON-NEXT:          "function_address": 6048,
+#JSON-NEXT:          "type_id": 17896295136807035042
+#JSON-NEXT:        },
+#JSON-NEXT:        {
+#JSON-NEXT:          "function_address": 6064,
+#JSON-NEXT:          "type_id": 17896295136807035042
+#JSON-NEXT:        },
+#JSON-NEXT:        {
+#JSON-NEXT:          "function_address": 6080,
+#JSON-NEXT:          "type_id": 3498816979441845844
+#JSON-NEXT:        },
+#JSON-NEXT:        {
+#JSON-NEXT:          "function_address": 6096,
+#JSON-NEXT:          "type_id": 762397922298560988
+#JSON-NEXT:        }
+#JSON-NEXT:      ],
+#JSON-NEXT:      "direct_call_sites": [
+#JSON-NEXT:        {
+#JSON-NEXT:          "caller": 6096,
+#JSON-NEXT:          "call_sites": [
+#JSON-NEXT:            {
+#JSON-NEXT:              "call_site": 6165,
+#JSON-NEXT:              "callee": 6048
+#JSON-NEXT:            },
+#JSON-NEXT:            {
+#JSON-NEXT:              "call_site": 6170,
+#JSON-NEXT:              "callee": 6064
+#JSON-NEXT:            },
+#JSON-NEXT:            {
+#JSON-NEXT:              "call_site": 6179,
+#JSON-NEXT:              "callee": 6080
+#JSON-NEXT:            }
+#JSON-NEXT:          ]
+#JSON-NEXT:        }
+#JSON-NEXT:      ],
+#JSON-NEXT:      "indirect_call_sites": [
+#JSON-NEXT:        {
+#JSON-NEXT:          "caller": 6096,
+#JSON-NEXT:          "call_sites": [
+#JSON-NEXT:            6125,
+#JSON-NEXT:            6139,
+#JSON-NEXT:            6160
+#JSON-NEXT:          ]
+#JSON-NEXT:        }
+#JSON-NEXT:      ],
+#JSON-NEXT:      "indirect_call_types": [
+#JSON-NEXT:        {
+#JSON-NEXT:          "call_site": 6125,
+#JSON-NEXT:          "type_id": 17896295136807035042
+#JSON-NEXT:        },
+#JSON-NEXT:        {
+#JSON-NEXT:          "call_site": 6139,
+#JSON-NEXT:          "type_id": 17896295136807035042
+#JSON-NEXT:        },
+#JSON-NEXT:        {
+#JSON-NEXT:          "call_site": 6160,
+#JSON-NEXT:          "type_id": 3498816979441845844
+#JSON-NEXT:        }
+#JSON-NEXT:      ]
+#JSON-NEXT:    }
+#JSON-NEXT:  }
 
 --- !ELF
 FileHeader:
