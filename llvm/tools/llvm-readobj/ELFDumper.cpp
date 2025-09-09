@@ -8330,7 +8330,6 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
   // }
 
   {
-    ListScope A(this->W, "indirect_target_types");
     SmallVector<uint64_t, 4> Unknowns;
     for (const auto &El : this->FuncCGInfo) {
       FunctionKind FuncKind = El.second.Kind;
@@ -8341,7 +8340,11 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
       }
     }
     if (!Unknowns.empty())
-      this->W.printHexList("unknown", Unknowns);
+      this->W.printHexList("unknown_target_types", Unknowns);
+  }
+
+  {
+    ListScope ITT(this->W, "indirect_target_types");
     for (auto const &T : this->TypeIdToIndirTargets) {
       for (auto const &Target : T.second) {
         DictScope D(this->W);
@@ -8352,13 +8355,13 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
   }
 
   {
-    ListScope A(this->W, "direct_call_sites");
+    ListScope DCT(this->W, "direct_call_sites");
     for (auto const &F : this->FuncCGInfo) {
       if (F.second.DirectCallSites.empty())
         continue;
       DictScope D(this->W);
       this->W.printHex("caller", F.first);
-      ListScope A(this->W, "call_sites");
+      ListScope CT(this->W, "call_sites");
       for (auto const &CS : F.second.DirectCallSites) {
         DictScope D(this->W);
         this->W.printHex("call_site", CS.CallSite);
@@ -8368,19 +8371,18 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
   }
 
   {
-    ListScope A(this->W, "indirect_call_sites");
+    ListScope ICT(this->W, "indirect_call_sites");
     for (auto const &F : this->FuncCGInfo) {
       if (F.second.IndirectCallSites.empty())
         continue;
       DictScope D(this->W);
       this->W.printHex("caller", F.first);
-      // ListScope A(this->W, "call_sites");
       this->W.printHexList("call_sites", F.second.IndirectCallSites);
     }
   }
 
   {
-    ListScope A(this->W, "indirect_call_types");
+    ListScope ICT(this->W, "indirect_call_types");
     for (auto const &T : this->TypeIdToIndirCallSites) {
       for (auto const &CS : T.second) {
         DictScope D(this->W);
