@@ -49,7 +49,7 @@ void CodeGenModule::EmitSYCLKernelCaller(const FunctionDecl *KernelEntryPointFn,
 
   // Compute the function info and LLVM function type.
   const CGFunctionInfo &FnInfo =
-      getTypes().arrangeSYCLKernelCallerDeclaration(Ctx.VoidTy, Args);
+      getTypes().arrangeDeviceKernelCallerDeclaration(Ctx.VoidTy, Args);
   llvm::FunctionType *FnTy = getTypes().GetFunctionType(FnInfo);
 
   // Retrieve the generated name for the SYCL kernel caller function.
