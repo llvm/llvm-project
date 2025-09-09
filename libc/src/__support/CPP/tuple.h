@@ -124,7 +124,7 @@ LIBC_INLINE constexpr auto tuple_cat(const Tuples &...tuples) {
 } // namespace cpp
 } // namespace LIBC_NAMESPACE_DECL
 
-// For structured binding support.
+// Standard namespace definitions required for structured binding support.
 namespace std {
 
 template <class T> struct tuple_size;
