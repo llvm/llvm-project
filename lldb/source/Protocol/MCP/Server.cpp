@@ -13,30 +13,60 @@
 #include "lldb/Host/JSONTransport.h"
 #include "lldb/Protocol/MCP/MCPError.h"
 #include "lldb/Protocol/MCP/Protocol.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/Signals.h"
 
 using namespace llvm;
 using namespace lldb_private;
 using namespace lldb_protocol::mcp;
 
+ServerInfoHandle::ServerInfoHandle() : ServerInfoHandle("") {}
+
+ServerInfoHandle::ServerInfoHandle(StringRef filename) : m_filename(filename) {
+  if (!m_filename.empty())
+    sys::RemoveFileOnSignal(m_filename);
+}
+
+ServerInfoHandle::~ServerInfoHandle() {
+  if (m_filename.empty())
+    return;
+
+  sys::fs::remove(m_filename);
+  sys::DontRemoveFileOnSignal(m_filename);
+  m_filename.clear();
+}
+
+ServerInfoHandle::ServerInfoHandle(ServerInfoHandle &&other)
+    : m_filename(other.m_filename) {
+  *this = std::move(other);
+}
+
+ServerInfoHandle &
+ServerInfoHandle::operator=(ServerInfoHandle &&other) noexcept {
+  m_filename = other.m_filename;
+  other.m_filename.clear();
+  return *this;
+}
+
 json::Value lldb_protocol::mcp::toJSON(const ServerInfo &SM) {
-  return json::Object{{"connection_uri", SM.connection_uri}, {"pid", SM.pid}};
+  return json::Object{{"connection_uri", SM.connection_uri}};
 }
 
 bool lldb_protocol::mcp::fromJSON(const json::Value &V, ServerInfo &SM,
                                   json::Path P) {
   json::ObjectMapper O(V, P);
-  return O && O.map("connection_uri", SM.connection_uri) &&
-         O.map("pid", SM.pid);
+  return O && O.map("connection_uri", SM.connection_uri);
 }
 
-llvm::Error ServerInfo::Write(const ServerInfo &info) {
+Expected<ServerInfoHandle> ServerInfo::Write(const ServerInfo &info) {
   std::string buf = formatv("{0}", toJSON(info)).str();
   size_t num_bytes = buf.size();
 
   FileSpec user_lldb_dir = HostInfo::GetUserLLDBDir();
 
-  Status error(llvm::sys::fs::create_directory(user_lldb_dir.GetPath()));
+  Status error(sys::fs::create_directory(user_lldb_dir.GetPath()));
   if (error.Fail())
     return error.takeError();
 
@@ -46,41 +76,32 @@ llvm::Error ServerInfo::Write(const ServerInfo &info) {
   const File::OpenOptions flags = File::eOpenOptionWriteOnly |
                                   File::eOpenOptionCanCreate |
                                   File::eOpenOptionTruncate;
-  llvm::Expected<lldb::FileUP> file = FileSystem::Instance().Open(
-      mcp_registry_entry_path, flags, lldb::eFilePermissionsFileDefault, false);
+  Expected<lldb::FileUP> file =
+      FileSystem::Instance().Open(mcp_registry_entry_path, flags);
   if (!file)
     return file.takeError();
   if (llvm::Error error = (*file)->Write(buf.data(), num_bytes).takeError())
     return error;
-  return llvm::Error::success();
+  return ServerInfoHandle{mcp_registry_entry_path.GetPath()};
 }
 
-llvm::Expected<std::vector<ServerInfo>> ServerInfo::Load() {
-  FileSpec user_lldb_dir = HostInfo::GetUserLLDBDir();
+Expected<std::vector<ServerInfo>> ServerInfo::Load() {
   namespace path = llvm::sys::path;
+  FileSpec user_lldb_dir = HostInfo::GetUserLLDBDir();
   FileSystem &fs = FileSystem::Instance();
   std::error_code EC;
-  llvm::vfs::directory_iterator it = fs.DirBegin(user_lldb_dir, EC);
-  llvm::vfs::directory_iterator end;
+  vfs::directory_iterator it = fs.DirBegin(user_lldb_dir, EC);
+  vfs::directory_iterator end;
   std::vector<ServerInfo> infos;
   for (; it != end && !EC; it.increment(EC)) {
     auto &entry = *it;
-    auto name = path::filename(entry.path());
-    if (!name.starts_with("lldb-mcp-") || !name.ends_with(".json")) {
+    auto path = entry.path();
+    auto name = path::filename(path);
+    if (!name.starts_with("lldb-mcp-") || !name.ends_with(".json"))
       continue;
-    }
 
-    llvm::Expected<std::unique_ptr<File>> file =
-        fs.Open(FileSpec(entry.path()), File::eOpenOptionReadOnly);
-    if (!file)
-      return file.takeError();
-
-    char buf[1024] = {0};
-    size_t bytes_read = sizeof(buf);
-    if (llvm::Error error = (*file)->Read(buf, bytes_read).takeError())
-      return std::move(error);
-
-    auto info = json::parse<ServerInfo>(StringRef(buf, bytes_read));
+    auto buffer = fs.CreateDataBuffer(path);
+    auto info = json::parse<ServerInfo>(toStringRef(buffer->GetData()));
     if (!info)
       return info.takeError();
 

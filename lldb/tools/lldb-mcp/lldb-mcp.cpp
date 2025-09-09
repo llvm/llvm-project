@@ -17,6 +17,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/UriParser.h"
 #include "lldb/lldb-forward.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/InitLLVM.h"
@@ -41,7 +42,7 @@ using lldb_private::NativeFile;
 
 namespace {
 
-inline void error(llvm::Error Err, StringRef Prefix = "") {
+inline void exitWithError(llvm::Error Err, StringRef Prefix = "") {
   handleAllErrors(std::move(Err), [&](ErrorInfoBase &Info) {
     WithColor::error(errs(), Prefix) << Info.message() << '\n';
   });
@@ -56,21 +57,21 @@ void forwardIO(lldb_private::MainLoopBase &loop, lldb::IOObjectSP &from,
   size_t num_bytes = sizeof(buf);
 
   if (llvm::Error err = from->Read(buf, num_bytes).takeError())
-    error(std::move(err));
+    exitWithError(std::move(err));
 
   // EOF reached.
   if (num_bytes == 0)
     return loop.RequestTermination();
 
   if (llvm::Error err = to->Write(buf, num_bytes).takeError())
-    error(std::move(err));
+    exitWithError(std::move(err));
 }
 
 void connectAndForwardIO(lldb_private::MainLoop &loop, ServerInfo &info,
                          IOObjectSP &input_sp, IOObjectSP &output_sp) {
   auto uri = lldb_private::URI::Parse(info.connection_uri);
   if (!uri)
-    error(createStringError("invalid connection_uri"));
+    exitWithError(createStringError("invalid connection_uri"));
 
   std::optional<lldb_private::Socket::ProtocolModePair> protocol_and_mode =
       lldb_private::Socket::GetProtocolAndMode(uri->scheme);
@@ -80,7 +81,7 @@ void connectAndForwardIO(lldb_private::MainLoop &loop, ServerInfo &info,
       lldb_private::Socket::Create(protocol_and_mode->first, status);
 
   if (status.Fail())
-    error(status.takeError());
+    exitWithError(status.takeError());
 
   if (uri->port && !uri->hostname.empty())
     status = sock->Connect(
@@ -88,24 +89,24 @@ void connectAndForwardIO(lldb_private::MainLoop &loop, ServerInfo &info,
   else
     status = sock->Connect(uri->path);
   if (status.Fail())
-    error(status.takeError());
+    exitWithError(status.takeError());
 
   IOObjectSP sock_sp = std::move(sock);
   auto input_handle = loop.RegisterReadObject(
       input_sp, std::bind(forwardIO, std::placeholders::_1, input_sp, sock_sp),
       status);
   if (status.Fail())
-    error(status.takeError());
+    exitWithError(status.takeError());
 
   auto socket_handle = loop.RegisterReadObject(
       sock_sp, std::bind(forwardIO, std::placeholders::_1, sock_sp, output_sp),
       status);
   if (status.Fail())
-    error(status.takeError());
+    exitWithError(status.takeError());
 
   status = loop.Run();
   if (status.Fail())
-    error(status.takeError());
+    exitWithError(status.takeError());
 }
 
 llvm::ManagedStatic<lldb_private::SystemLifetimeManager> g_debugger_lifetime;
@@ -134,9 +135,11 @@ int main(int argc, char *argv[]) {
   assert(result);
 #endif
 
-  if (auto e = g_debugger_lifetime->Initialize(
+  if (llvm::Error err = g_debugger_lifetime->Initialize(
           std::make_unique<lldb_private::SystemInitializerCommon>(nullptr)))
-    error(std::move(e));
+    exitWithError(std::move(err));
+
+  auto cleanup = make_scope_exit([] { g_debugger_lifetime->Terminate(); });
 
   IOObjectSP input_sp = std::make_shared<NativeFile>(
       fileno(stdin), File::eOpenOptionReadOnly, NativeFile::Unowned);
@@ -154,21 +157,20 @@ int main(int argc, char *argv[]) {
   auto existing_servers = ServerInfo::Load();
 
   if (!existing_servers)
-    error(existing_servers.takeError());
+    exitWithError(existing_servers.takeError());
 
   // FIXME: Launch `lldb -o 'protocol start MCP'`.
   if (existing_servers->empty())
-    error(createStringError("No MCP servers running"));
+    exitWithError(createStringError("No MCP servers running"));
 
   // FIXME: Support selecting a specific server.
   if (existing_servers->size() != 1)
-    error(createStringError("To many MCP servers running, picking a specific "
-                            "one is not yet implemented."));
+    exitWithError(
+        createStringError("To many MCP servers running, picking a specific "
+                          "one is not yet implemented."));
 
   ServerInfo &info = existing_servers->front();
   connectAndForwardIO(loop, info, input_sp, output_sp);
-
-  g_debugger_lifetime->Terminate();
 
   return EXIT_SUCCESS;
 }
