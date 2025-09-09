@@ -59,7 +59,7 @@ namespace sparse_tensor {
 
 /// Defines a strategy for loop ordering during sparse code generation.
 enum class LoopOrderingStrategy : unsigned {
-  kDefault, ///< Default strategy (selects loops from back of available candidates).
+  kDefault, ///< Default strategy (eagerly selects last loop in topological sort).
 };
 
 } // namespace sparse_tensor
