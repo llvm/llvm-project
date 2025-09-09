@@ -671,8 +671,10 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // to not exit.
   DenseMap<PHINode *, RecurrenceDescriptor> Reductions;
   bool CanAddAdditionalAccumulators =
-      UnrollAddParallelReductions && !CompletelyUnroll &&
-      L->getNumBlocks() == 1 &&
+      (UnrollAddParallelReductions.getNumOccurrences() > 0
+           ? UnrollAddParallelReductions
+           : ULO.AddAdditionalAccumulators) &&
+      !CompletelyUnroll && L->getNumBlocks() == 1 &&
       (ULO.Runtime ||
        (ExitInfos.contains(Header) && ((ExitInfos[Header].TripCount != 0 &&
                                         ExitInfos[Header].BreakoutTrip == 0))));
