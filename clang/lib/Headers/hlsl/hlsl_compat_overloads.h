@@ -274,6 +274,15 @@ constexpr bool3 isinf(double3 V) { return isinf((float3)V); }
 constexpr bool4 isinf(double4 V) { return isinf((float4)V); }
 
 //===----------------------------------------------------------------------===//
+// isnan builtins overloads
+//===----------------------------------------------------------------------===//
+
+constexpr bool isnan(double V) { return isnan((float)V); }
+constexpr bool2 isnan(double2 V) { return isnan((float2)V); }
+constexpr bool3 isnan(double3 V) { return isnan((float3)V); }
+constexpr bool4 isnan(double4 V) { return isnan((float4)V); }
+
+//===----------------------------------------------------------------------===//
 // lerp builtins overloads
 //===----------------------------------------------------------------------===//
 

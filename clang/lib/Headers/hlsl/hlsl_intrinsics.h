@@ -304,6 +304,43 @@ fmod(__detail::HLSL_FIXED_VECTOR<float, N> X,
 }
 
 //===----------------------------------------------------------------------===//
+// isnan builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn bool isnan(T x)
+/// \brief Returns whether x is NaN or QNaN.
+/// \param x [in] A number or vector of numbers.
+///
+/// Return whether (each element of) x is NaN or QNaN.
+
+template <typename T>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline __detail::enable_if_t<
+    __detail::is_arithmetic<T>::Value && __detail::is_same<half, T>::value, T>
+isnan(T X) {
+  return __builtin_elementwise_isnan(X);
+}
+template <typename T>
+const inline __detail::enable_if_t<
+    __detail::is_arithmetic<T>::Value && __detail::is_same<float, T>::value, T>
+isnan(T X) {
+  return __builtin_elementwise_isnan(X);
+}
+
+template <int N>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline __detail::HLSL_FIXED_VECTOR<half, N>
+isnan(__detail::HLSL_FIXED_VECTOR<half, N> X) {
+  return __builtin_elementwise_isnan(X);
+}
+
+template <int N>
+const inline __detail::HLSL_FIXED_VECTOR<float, N>
+isnan(__detail::HLSL_FIXED_VECTOR<float, N> X) {
+  return __builtin_elementwise_isnan(X);
+}
+
+//===----------------------------------------------------------------------===//
 // ldexp builtins
 //===----------------------------------------------------------------------===//
 
