@@ -1193,7 +1193,7 @@ vzeroupper
 # CHECK-NEXT:  7      11    4.00                        vdpps	$22, %ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  8      18    4.00    *                   vdpps	$22, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      4     1.00                        vextractf128	$1, %ymm0, %xmm2
-# CHECK-NEXT:  2      8     1.00           *            vextractf128	$1, %ymm0, (%rax)
+# CHECK-NEXT:  2      11    1.00           *            vextractf128	$1, %ymm0, (%rax)
 # CHECK-NEXT:  2      1     1.00                        vextractps	$1, %xmm0, %ecx
 # CHECK-NEXT:  2      2     1.00           *            vextractps	$1, %xmm0, (%rax)
 # CHECK-NEXT:  3      4     2.00                        vhaddpd	%xmm0, %xmm1, %xmm2
@@ -1213,7 +1213,7 @@ vzeroupper
 # CHECK-NEXT:  3      4     2.00                        vhsubps	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  4      11    2.00    *                   vhsubps	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      2     1.00                        vinsertf128	$1, %xmm0, %ymm1, %ymm2
-# CHECK-NEXT:  1      8     1.00    *                   vinsertf128	$1, (%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      11    1.00    *                   vinsertf128	$1, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      1     0.50                        vinsertps	$1, %xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vinsertps	$1, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vlddqu	(%rax), %xmm2
@@ -1430,7 +1430,7 @@ vzeroupper
 # CHECK-NEXT:  3      6     2.00                        vpcmpistrm	$1, %xmm0, %xmm2
 # CHECK-NEXT:  4      13    2.00    *                   vpcmpistrm	$1, (%rax), %xmm2
 # CHECK-NEXT:  1      3     1.00                        vperm2f128	$1, %ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  1      7     1.00    *                   vperm2f128	$1, (%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      10    1.00    *                   vperm2f128	$1, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      1     0.50                        vpermilpd	$1, %xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vpermilpd	$1, (%rax), %xmm2
 # CHECK-NEXT:  1      3     0.50                        vpermilpd	%xmm0, %xmm1, %xmm2

@@ -464,7 +464,7 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      2     1.00                        vbroadcastsd	%xmm0, %ymm0
 # CHECK-NEXT:  1      2     1.00                        vbroadcastss	%xmm0, %ymm0
 # CHECK-NEXT:  1      4     1.00                        vextracti128	$1, %ymm0, %xmm2
-# CHECK-NEXT:  2      8     1.00           *            vextracti128	$1, %ymm0, (%rax)
+# CHECK-NEXT:  2      11    1.00           *            vextracti128	$1, %ymm0, (%rax)
 # CHECK-NEXT:  1      5     0.33    *                   vgatherdpd	%xmm0, (%rax,%xmm1,2), %xmm2
 # CHECK-NEXT:  1      5     0.33    *                   vgatherdpd	%ymm0, (%rax,%xmm1,2), %ymm2
 # CHECK-NEXT:  1      5     0.33    *                   vgatherdps	%xmm0, (%rax,%xmm1,2), %xmm2
@@ -561,13 +561,13 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      3     1.00                        vperm2i128	$1, %ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  1      8     1.00    *                   vperm2i128	$1, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  2      5     1.00                        vpermd	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  2      9     2.00    *                   vpermd	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  2      12    2.00    *                   vpermd	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  2      6     1.00                        vpermpd	$1, %ymm0, %ymm2
-# CHECK-NEXT:  3      10    2.00    *                   vpermpd	$1, (%rax), %ymm2
+# CHECK-NEXT:  3      13    2.00    *                   vpermpd	$1, (%rax), %ymm2
 # CHECK-NEXT:  2      7     1.00                        vpermps	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  3      11    2.00    *                   vpermps	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  3      14    2.00    *                   vpermps	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  2      6     1.00                        vpermq	$1, %ymm0, %ymm2
-# CHECK-NEXT:  2      9     2.00    *                   vpermq	$1, (%rax), %ymm2
+# CHECK-NEXT:  2      12    2.00    *                   vpermq	$1, (%rax), %ymm2
 # CHECK-NEXT:  1      5     0.33    *                   vpgatherdd	%xmm0, (%rax,%xmm1,2), %xmm2
 # CHECK-NEXT:  1      5     0.33    *                   vpgatherdd	%ymm0, (%rax,%ymm1,2), %ymm2
 # CHECK-NEXT:  1      5     0.33    *                   vpgatherdq	%xmm0, (%rax,%xmm1,2), %xmm2
