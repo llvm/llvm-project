@@ -412,6 +412,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       # Error on undefined macros
       -Werror=undef
       -fdiscard-value-names
+      -Xclang -fdenormal-fp-math-f32=dynamic
     )
 
     if( NOT "${cpu}" STREQUAL "" )
