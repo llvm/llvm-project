@@ -41,6 +41,10 @@ LLVM_ABI bool verifyComparisonFunc(uint32_t ComparisonFunc);
 LLVM_ABI bool verifyBorderColor(uint32_t BorderColor);
 LLVM_ABI bool verifyLOD(float LOD);
 
+LLVM_ABI bool verifyBoundOffset(uint32_t Offset);
+LLVM_ABI bool verifyNoOverflowedOffset(uint64_t Offset);
+LLVM_ABI uint64_t computeRangeBound(uint32_t Offset, uint32_t Size);
+
 } // namespace rootsig
 } // namespace hlsl
 } // namespace llvm
