@@ -875,12 +875,14 @@ of different sizes and signs is forbidden in binary and ternary builtins.
                                                 for the comparison.
 T __builtin_elementwise_fshl(T x, T y, T z)     perform a funnel shift left. Concatenate x and y (x is the most        integer types
                                                 significant bits of the wide value), the combined value is shifted
-                                                left by z, and the most significant bits are extracted to produce
+                                                left by z (modulo the bit width of the original arguments),
+                                                and the most significant bits are extracted to produce
                                                 a result that is the same size as the original arguments.
 
 T __builtin_elementwise_fshr(T x, T y, T z)     perform a funnel shift right. Concatenate x and y (x is the most       integer types
                                                 significant bits of the wide value), the combined value is shifted
-                                                right by z, and the least significant bits are extracted to produce
+                                                right by z (modulo the bit width of the original arguments),
+                                                and the least significant bits are extracted to produce
                                                 a result that is the same size as the original arguments.
  T __builtin_elementwise_ctlz(T x[, T y])       return the number of leading 0 bits in the first argument. If          integer types
                                                 the first argument is 0 and an optional second argument is provided,
@@ -950,6 +952,11 @@ argument is always boolean mask vector. The ``__builtin_masked_load`` builtin
 takes an optional third vector argument that will be used for the result of the
 masked-off lanes. These builtins assume the memory is always aligned.
 
+The ``__builtin_masked_expand_load`` and ``__builtin_masked_compress_store``
+builtins have the same interface but store the result in consecutive indices.
+Effectively this performs the ``if (mask[i]) val[i] = ptr[j++]`` and ``if
+(mask[i]) ptr[j++] = val[i]`` pattern respectively.
+
 Example:
 
 .. code-block:: c++
@@ -957,9 +964,19 @@ Example:
     using v8b = bool [[clang::ext_vector_type(8)]];
     using v8i = int [[clang::ext_vector_type(8)]];
 
-    v8i load(v8b m, v8i *p) { return __builtin_masked_load(m, p); }
-
-    void store(v8b m, v8i v, v8i *p) { __builtin_masked_store(m, v, p); }
+    v8i load(v8b mask, v8i *ptr) { return __builtin_masked_load(mask, ptr); }
+    
+    v8i load_expand(v8b mask, v8i *ptr) {
+      return __builtin_masked_expand_load(mask, ptr);
+    }
+    
+    void store(v8b mask, v8i val, v8i *ptr) {
+      __builtin_masked_store(mask, val, ptr);
+    }
+    
+    void store_compress(v8b mask, v8i val, v8i *ptr) {
+      __builtin_masked_compress_store(mask, val, ptr);
+    }
 
 
 Matrix Types
@@ -2034,6 +2051,9 @@ The following type trait primitives are supported by Clang. Those traits marked
     Returns true if a reference ``T`` can be copy-initialized from a temporary of type
     a non-cv-qualified ``U``.
 * ``__underlying_type`` (C++, GNU, Microsoft)
+* ``__builtin_lt_synthesises_from_spaceship``, ``__builtin_gt_synthesises_from_spaceship``,
+  ``__builtin_le_synthesises_from_spaceship``, ``__builtin_ge_synthesises_from_spaceship`` (Clang):
+  These builtins can be used to determine whether the corresponding operator is synthesised from a spaceship operator.
 
 In addition, the following expression traits are supported:
 
