@@ -21,6 +21,8 @@
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 
+#include "clang/AST/Attr.h"
+#include "clang/AST/Decl.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/HLSLRuntime.h"
 
@@ -137,8 +139,26 @@ public:
 protected:
   CodeGenModule &CGM;
 
-  llvm::Value *emitInputSemantic(llvm::IRBuilder<> &B, const ParmVarDecl &D,
-                                 llvm::Type *Ty);
+  void collectInputSemantic(llvm::IRBuilder<> &B, const DeclaratorDecl *D,
+                            llvm::Type *Type,
+                            SmallVectorImpl<llvm::Value *> &Inputs);
+
+  struct SemanticInfo {
+    clang::HLSLSemanticAttr *Semantic;
+    uint32_t Index;
+  };
+
+  llvm::Value *emitSystemSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                      const clang::DeclaratorDecl *Decl,
+                                      SemanticInfo &ActiveSemantic);
+
+  llvm::Value *handleScalarSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                        const clang::DeclaratorDecl *Decl,
+                                        SemanticInfo &ActiveSemantic);
+
+  llvm::Value *handleSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                  const clang::DeclaratorDecl *Decl,
+                                  SemanticInfo &ActiveSemantic);
 
 public:
   CGHLSLRuntime(CodeGenModule &CGM) : CGM(CGM) {}
