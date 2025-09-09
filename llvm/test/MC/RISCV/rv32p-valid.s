@@ -657,7 +657,24 @@ mqacc.h11 t5, t5, s0
 # CHECK-ASM-AND-OBJ: mqracc.h11 s0, t5, s2
 # CHECK-ASM: encoding: [0x3b,0x74,0x2f,0xfd]
 mqracc.h11 s0, t5, s2
-
+# CHECK-ASM-AND-OBJ: pwslli.b a0, t1
+# CHECK-ASM: encoding: [0x1b,0x25,0x03,0x01]
+pwslli.b a0, t1, 0
+# CHECK-ASM-AND-OBJ: pwslli.h s0, a0
+# CHECK-ASM: encoding: [0x1b,0x24,0xf5,0x03]
+pwslli.h s0, a0, 31
+# CHECK-ASM-AND-OBJ: wslli s2, t3
+# CHECK-ASM: encoding: [0x1b,0x29,0xfe,0x07]
+wslli s2, t3, 63
+# CHECK-ASM-AND-OBJ: pwslai.b t5, t5
+# CHECK-ASM: encoding: [0x1b,0x2f,0x8f,0x41]
+pwslai.b t5, t5, 8
+# CHECK-ASM-AND-OBJ: pwslai.h t5, a4
+# CHECK-ASM: encoding: [0x1b,0x2f,0xf7,0x43]
+pwslai.h t5, a4, 31
+# CHECK-ASM-AND-OBJ: wslai t1, a2
+# CHECK-ASM: encoding: [0x1b,0x23,0xf6,0x47]
+wslai t1, a2, 63
 # CHECK-ASM-AND-OBJ: pli.dh a4, 16
 # CHECK-ASM: encoding: [0x1b,0x27,0x10,0x30]
 pli.dh a4, 16
@@ -673,3 +690,330 @@ plui.dh tp, 32
 # CHECK-ASM-AND-OBJ: plui.dh tp, -412
 # CHECK-ASM: encoding: [0x1b,0x22,0x99,0x70]
 plui.dh tp, 612
+# CHECK-ASM-AND-OBJ: pwsll.bs t3, t1, s0
+# CHECK-ASM: encoding: [0x1b,0x2e,0x83,0x08]
+pwsll.bs t3, t1, s0
+# CHECK-ASM-AND-OBJ: pwsll.hs s0, a4, t1
+# CHECK-ASM: encoding: [0x1b,0x24,0x67,0x0a]
+pwsll.hs s0, a4, t1
+# CHECK-ASM-AND-OBJ: wsll a0, s0, s2
+# CHECK-ASM: encoding: [0x1b,0x25,0x24,0x0f]
+wsll a0, s0, s2
+# CHECK-ASM-AND-OBJ: pwsla.bs s0, s0, s0
+# CHECK-ASM: encoding: [0x1b,0x24,0x84,0x48]
+pwsla.bs s0, s0, s0
+# CHECK-ASM-AND-OBJ: pwsla.hs a4, a2, t5
+# CHECK-ASM: encoding: [0x1b,0x27,0xe6,0x4b]
+pwsla.hs a4, a2, t5
+# CHECK-ASM-AND-OBJ: wsla s0, a0, s2
+# CHECK-ASM: encoding: [0x1b,0x24,0x25,0x4f]
+wsla s0, a0, s2
+# CHECK-ASM-AND-OBJ: wzip8p t1, s2, a2
+# CHECK-ASM: encoding: [0x1b,0x23,0xc9,0x78]
+wzip8p t1, s2, a2
+# CHECK-ASM-AND-OBJ: wzip16p s2, t3, s2
+# CHECK-ASM: encoding: [0x1b,0x29,0x2e,0x7b]
+wzip16p s2, t3, s2
+# CHECK-ASM-AND-OBJ: pwadd.h a4, a2, a0
+# CHECK-ASM: encoding: [0x9b,0x27,0xa6,0x00]
+pwadd.h a4, a2, a0
+# CHECK-ASM-AND-OBJ: wadd t1, t5, t5
+# CHECK-ASM: encoding: [0x9b,0x23,0xef,0x03]
+wadd t1, t5, t5
+# CHECK-ASM-AND-OBJ: pwadd.b s0, t3, a4
+# CHECK-ASM: encoding: [0x9b,0x24,0xee,0x04]
+pwadd.b s0, t3, a4
+# CHECK-ASM-AND-OBJ: pm2wadd.h t3, t3, a4
+# CHECK-ASM: encoding: [0x9b,0x2e,0xee,0x06]
+pm2wadd.h t3, t3, a4
+# CHECK-ASM-AND-OBJ: pwadda.h t1, t3, s2
+# CHECK-ASM: encoding: [0x9b,0x23,0x2e,0x09]
+pwadda.h t1, t3, s2
+# CHECK-ASM-AND-OBJ: wadda s2, t1, a0
+# CHECK-ASM: encoding: [0x9b,0x29,0xa3,0x0a]
+wadda s2, t1, a0
+# CHECK-ASM-AND-OBJ: pwadda.b a2, a2, s2
+# CHECK-ASM: encoding: [0x9b,0x26,0x26,0x0d]
+pwadda.b a2, a2, s2
+# CHECK-ASM-AND-OBJ: pm2wadda.h t3, t1, t1
+# CHECK-ASM: encoding: [0x9b,0x2e,0x63,0x0e]
+pm2wadda.h t3, t1, t1
+# CHECK-ASM-AND-OBJ: pwaddu.h a2, t1, a4
+# CHECK-ASM: encoding: [0x9b,0x26,0xe3,0x10]
+pwaddu.h a2, t1, a4
+# CHECK-ASM-AND-OBJ: waddu t1, s0, t1
+# CHECK-ASM: encoding: [0x9b,0x23,0x64,0x12]
+waddu t1, s0, t1
+# CHECK-ASM-AND-OBJ: pwaddu.b s2, a0, t3
+# CHECK-ASM: encoding: [0x9b,0x29,0xc5,0x15]
+pwaddu.b s2, a0, t3
+# CHECK-ASM-AND-OBJ: pm2wadd.hx a0, s0, t1
+# CHECK-ASM: encoding: [0x9b,0x25,0x64,0x16]
+pm2wadd.hx a0, s0, t1
+# CHECK-ASM-AND-OBJ: pwaddau.h t1, t5, t3
+# CHECK-ASM: encoding: [0x9b,0x23,0xcf,0x19]
+pwaddau.h t1, t5, t3
+# CHECK-ASM-AND-OBJ: waddau t3, s0, s0
+# CHECK-ASM: encoding: [0x9b,0x2e,0x84,0x1a]
+waddau t3, s0, s0
+# CHECK-ASM-AND-OBJ: pwaddau.b a0, a0, t1
+# CHECK-ASM: encoding: [0x9b,0x25,0x65,0x1c]
+pwaddau.b a0, a0, t1
+# CHECK-ASM-AND-OBJ: pm2wadda.hx a4, a2, t3
+# CHECK-ASM: encoding: [0x9b,0x27,0xc6,0x1f]
+pm2wadda.hx a4, a2, t3
+# CHECK-ASM-AND-OBJ: pwmul.h s2, t1, a0
+# CHECK-ASM: encoding: [0x9b,0x29,0xa3,0x20]
+pwmul.h s2, t1, a0
+# CHECK-ASM-AND-OBJ: wmul t3, a2, t5
+# CHECK-ASM: encoding: [0x9b,0x2e,0xe6,0x23]
+wmul t3, a2, t5
+# CHECK-ASM-AND-OBJ: pwmul.b a0, s0, s2
+# CHECK-ASM: encoding: [0x9b,0x25,0x24,0x25]
+pwmul.b a0, s0, s2
+# CHECK-ASM-AND-OBJ: pm2waddu.h s2, s2, a0
+# CHECK-ASM: encoding: [0x9b,0x29,0xa9,0x26]
+pm2waddu.h s2, s2, a0
+# CHECK-ASM-AND-OBJ: pwmacc.h s0, a2, a2
+# CHECK-ASM: encoding: [0x9b,0x24,0xc6,0x28]
+pwmacc.h s0, a2, a2
+# CHECK-ASM-AND-OBJ: wmacc a0, a2, a2
+# CHECK-ASM: encoding: [0x9b,0x25,0xc6,0x2a]
+wmacc a0, a2, a2
+# CHECK-ASM-AND-OBJ: pm2waddau.h t5, a2, t5
+# CHECK-ASM: encoding: [0x9b,0x2f,0xe6,0x2f]
+pm2waddau.h t5, a2, t5
+# CHECK-ASM-AND-OBJ: pwmulu.h a2, a0, t5
+# CHECK-ASM: encoding: [0x9b,0x26,0xe5,0x31]
+pwmulu.h a2, a0, t5
+# CHECK-ASM-AND-OBJ: wmulu s2, a0, t3
+# CHECK-ASM: encoding: [0x9b,0x29,0xc5,0x33]
+wmulu s2, a0, t3
+# CHECK-ASM-AND-OBJ: pwmulu.b a2, a4, a2
+# CHECK-ASM: encoding: [0x9b,0x26,0xc7,0x34]
+pwmulu.b a2, a4, a2
+# CHECK-ASM-AND-OBJ: pwmaccu.h t1, a4, a2
+# CHECK-ASM: encoding: [0x9b,0x23,0xc7,0x38]
+pwmaccu.h t1, a4, a2
+# CHECK-ASM-AND-OBJ: wmaccu a2, a0, t1
+# CHECK-ASM: encoding: [0x9b,0x26,0x65,0x3a]
+wmaccu a2, a0, t1
+# CHECK-ASM-AND-OBJ: pwsub.h s0, s2, t3
+# CHECK-ASM: encoding: [0x9b,0x24,0xc9,0x41]
+pwsub.h s0, s2, t3
+# CHECK-ASM-AND-OBJ: wsub t1, s2, a4
+# CHECK-ASM: encoding: [0x9b,0x23,0xe9,0x42]
+wsub t1, s2, a4
+# CHECK-ASM-AND-OBJ: pwsub.b a4, s2, s2
+# CHECK-ASM: encoding: [0x9b,0x27,0x29,0x45]
+pwsub.b a4, s2, s2
+# CHECK-ASM-AND-OBJ: pm2wsub.h t1, a4, t3
+# CHECK-ASM: encoding: [0x9b,0x23,0xc7,0x47]
+pm2wsub.h t1, a4, t3
+# CHECK-ASM-AND-OBJ: pwsuba.h a4, t5, t1
+# CHECK-ASM: encoding: [0x9b,0x27,0x6f,0x48]
+pwsuba.h a4, t5, t1
+# CHECK-ASM-AND-OBJ: wsuba a0, s0, t5
+# CHECK-ASM: encoding: [0x9b,0x25,0xe4,0x4b]
+wsuba a0, s0, t5
+# CHECK-ASM-AND-OBJ: pwsuba.b a0, a2, s2
+# CHECK-ASM: encoding: [0x9b,0x25,0x26,0x4d]
+pwsuba.b a0, a2, s2
+# CHECK-ASM-AND-OBJ: pm2wsuba.h t5, s0, s2
+# CHECK-ASM: encoding: [0x9b,0x2f,0x24,0x4f]
+pm2wsuba.h t5, s0, s2
+# CHECK-ASM-AND-OBJ: pwsubu.h t5, s2, a2
+# CHECK-ASM: encoding: [0x9b,0x2f,0xc9,0x50]
+pwsubu.h t5, s2, a2
+# CHECK-ASM-AND-OBJ: wsubu a2, a4, a0
+# CHECK-ASM: encoding: [0x9b,0x26,0xa7,0x52]
+wsubu a2, a4, a0
+# CHECK-ASM-AND-OBJ: pwsubu.b a2, a2, t5
+# CHECK-ASM: encoding: [0x9b,0x26,0xe6,0x55]
+pwsubu.b a2, a2, t5
+# CHECK-ASM-AND-OBJ: pm2wsub.hx t5, a2, a0
+# CHECK-ASM: encoding: [0x9b,0x2f,0xa6,0x56]
+pm2wsub.hx t5, a2, a0
+# CHECK-ASM-AND-OBJ: pwsubau.h t5, s0, s2
+# CHECK-ASM: encoding: [0x9b,0x2f,0x24,0x59]
+pwsubau.h t5, s0, s2
+# CHECK-ASM-AND-OBJ: wsubau t5, a0, t1
+# CHECK-ASM: encoding: [0x9b,0x2f,0x65,0x5a]
+wsubau t5, a0, t1
+# CHECK-ASM-AND-OBJ: pwsubau.b a2, a4, a0
+# CHECK-ASM: encoding: [0x9b,0x26,0xa7,0x5c]
+pwsubau.b a2, a4, a0
+# CHECK-ASM-AND-OBJ: pm2wsuba.hx a2, a3, t5
+# CHECK-ASM: encoding: [0x9b,0xa6,0xe6,0x5f]
+pm2wsuba.hx a2, a3, t5
+# CHECK-ASM-AND-OBJ: pwmulsu.h s0, a2, t3
+# CHECK-ASM: encoding: [0x9b,0x24,0xc6,0x61]
+pwmulsu.h s0, a2, t3
+# CHECK-ASM-AND-OBJ: wmulsu a0, s2, a0
+# CHECK-ASM: encoding: [0x9b,0x25,0xa9,0x62]
+wmulsu a0, s2, a0
+# CHECK-ASM-AND-OBJ: pwmulsu.b t3, t5, t1
+# CHECK-ASM: encoding: [0x9b,0x2e,0x6f,0x64]
+pwmulsu.b t3, t5, t1
+# CHECK-ASM-AND-OBJ: pm2waddsu.h a4, a2, s2
+# CHECK-ASM: encoding: [0x9b,0x27,0x26,0x67]
+pm2waddsu.h a4, a2, s2
+# CHECK-ASM-AND-OBJ: pwmaccsu.h t5, s2, a2
+# CHECK-ASM: encoding: [0x9b,0x2f,0xc9,0x68]
+pwmaccsu.h t5, s2, a2
+# CHECK-ASM-AND-OBJ: wmaccsu t3, s0, a4
+# CHECK-ASM: encoding: [0x9b,0x2e,0xe4,0x6a]
+wmaccsu t3, s0, a4
+# CHECK-ASM-AND-OBJ: pm2waddasu.h t3, t5, a0
+# CHECK-ASM: encoding: [0x9b,0x2e,0xaf,0x6e]
+pm2waddasu.h t3, t5, a0
+# CHECK-ASM-AND-OBJ: pmqwacc.h t5, t5, a2
+# CHECK-ASM: encoding: [0x9b,0x2f,0xcf,0x78]
+pmqwacc.h t5, t5, a2
+# CHECK-ASM-AND-OBJ: pmqwacc s2, a4, a2
+# CHECK-ASM: encoding: [0x9b,0x29,0xc7,0x7a]
+pmqwacc s2, a4, a2
+# CHECK-ASM-AND-OBJ: pmqrwacc.h a4, t3, a4
+# CHECK-ASM: encoding: [0x9b,0x27,0xee,0x7c]
+pmqrwacc.h a4, t3, a4
+# CHECK-ASM-AND-OBJ: pmqrwacc s0, s2, t5
+# CHECK-ASM: encoding: [0x9b,0x24,0xe9,0x7f]
+pmqrwacc s0, s2, t5
+# CHECK-ASM-AND-OBJ: predsum.dhs s0, t3, a0
+# CHECK-ASM: encoding: [0x1b,0x44,0xae,0x18]
+predsum.dhs s0, t3, a0
+# CHECK-ASM-AND-OBJ: predsum.dbs a2, s0, t3
+# CHECK-ASM: encoding: [0x1b,0x46,0xc4,0x1d]
+predsum.dbs a2, s0, t3
+# CHECK-ASM-AND-OBJ: predsumu.dhs a2, a2, t3
+# CHECK-ASM: encoding: [0x1b,0x46,0xc6,0x39]
+predsumu.dhs a2, a2, t3
+# CHECK-ASM-AND-OBJ: predsumu.dbs a2, a0, s0
+# CHECK-ASM: encoding: [0x1b,0x46,0x85,0x3c]
+predsumu.dbs a2, a0, s0
+# CHECK-ASM-AND-OBJ: pnsrli.b a2, a0
+# CHECK-ASM: encoding: [0x1b,0xc6,0x05,0x01]
+pnsrli.b a2, a0, 0
+# CHECK-ASM-AND-OBJ: pnsrli.h a0, t3
+# CHECK-ASM: encoding: [0x1b,0xc5,0x1e,0x02]
+pnsrli.h a0, t3, 1
+# CHECK-ASM-AND-OBJ: nsrli a2, a0
+# CHECK-ASM: encoding: [0x1b,0xc6,0x35,0x04]
+nsrli a2, a0, 3
+# CHECK-ASM-AND-OBJ: pnclipiu.b a4, t3
+# CHECK-ASM: encoding: [0x1b,0xc7,0x2e,0x21]
+pnclipiu.b a4, t3, 2
+# CHECK-ASM-AND-OBJ: pnclipiu.h t1, s2
+# CHECK-ASM: encoding: [0x1b,0xc3,0x39,0x22]
+pnclipiu.h t1, s2, 3
+# CHECK-ASM-AND-OBJ: nclipiu s0, a2
+# CHECK-ASM: encoding: [0x1b,0xc4,0x46,0x24]
+nclipiu s0, a2, 4
+# CHECK-ASM-AND-OBJ: pnclipriu.b s2, s0
+# CHECK-ASM: encoding: [0x1b,0xc9,0x14,0x31]
+pnclipriu.b s2, s0, 1
+# CHECK-ASM-AND-OBJ: pnclipriu.h s0, s0
+# CHECK-ASM: encoding: [0x1b,0xc4,0x24,0x32]
+pnclipriu.h s0, s0, 2
+# CHECK-ASM-AND-OBJ: nclipriu t3, t3
+# CHECK-ASM: encoding: [0x1b,0xce,0x4e,0x34]
+nclipriu t3, t3, 4
+# CHECK-ASM-AND-OBJ: pnsrai.b s2, t5
+# CHECK-ASM: encoding: [0x1b,0xc9,0x3f,0x41]
+pnsrai.b s2, t5, 3
+# CHECK-ASM-AND-OBJ: pnsrai.h s0, a0
+# CHECK-ASM: encoding: [0x1b,0xc4,0x25,0x42]
+pnsrai.h s0, a0, 2
+# CHECK-ASM-AND-OBJ: nsrai a4, t3
+# CHECK-ASM: encoding: [0x1b,0xc7,0x4e,0x44]
+nsrai a4, t3, 4
+# CHECK-ASM-AND-OBJ: pnsari.b t5, t5
+# CHECK-ASM: encoding: [0x1b,0xcf,0x0f,0x51]
+pnsari.b t5, t5, 0
+# CHECK-ASM-AND-OBJ: pnsari.h t1, a4
+# CHECK-ASM: encoding: [0x1b,0xc3,0x37,0x52]
+pnsari.h t1, a4, 3
+# CHECK-ASM-AND-OBJ: nsari s0, t1
+# CHECK-ASM: encoding: [0x1b,0xc4,0x53,0x54]
+nsari s0, t1, 5
+# CHECK-ASM-AND-OBJ: pnclipi.b t1, a4
+# CHECK-ASM: encoding: [0x1b,0xc3,0x77,0x61]
+pnclipi.b t1, a4, 7
+# CHECK-ASM-AND-OBJ: pnclipi.h a0, a4
+# CHECK-ASM: encoding: [0x1b,0xc5,0x27,0x62]
+pnclipi.h a0, a4, 2
+# CHECK-ASM-AND-OBJ: nclipi t5, t5
+# CHECK-ASM: encoding: [0x1b,0xcf,0x5f,0x64]
+nclipi t5, t5, 5
+# CHECK-ASM-AND-OBJ: pnclipri.b a0, s0
+# CHECK-ASM: encoding: [0x1b,0xc5,0x24,0x71]
+pnclipri.b a0, s0, 2
+# CHECK-ASM-AND-OBJ: pnclipri.h s2, t5
+# CHECK-ASM: encoding: [0x1b,0xc9,0x3f,0x72]
+pnclipri.h s2, t5, 3
+# CHECK-ASM-AND-OBJ: nclipri t3, s0
+# CHECK-ASM: encoding: [0x1b,0xce,0x54,0x74]
+nclipri t3, s0, 5
+# CHECK-ASM-AND-OBJ: pnsrl.bs t3, s0, a4
+# CHECK-ASM: encoding: [0x1b,0xce,0xe4,0x08]
+pnsrl.bs t3, s0, a4
+# CHECK-ASM-AND-OBJ: pnsrl.hs a2, t1, a4
+# CHECK-ASM: encoding: [0x1b,0xc6,0xe3,0x0a]
+pnsrl.hs a2, t1, a4
+# CHECK-ASM-AND-OBJ: nsrl a2, a2, a0
+# CHECK-ASM: encoding: [0x1b,0xc6,0xa6,0x0e]
+nsrl a2, a2, a0
+# CHECK-ASM-AND-OBJ: pnclipu.bs a4, t5, a2
+# CHECK-ASM: encoding: [0x1b,0xc7,0xcf,0x28]
+pnclipu.bs a4, t5, a2
+# CHECK-ASM-AND-OBJ: pnclipu.hs t1, a2, a4
+# CHECK-ASM: encoding: [0x1b,0xc3,0xe6,0x2a]
+pnclipu.hs t1, a2, a4
+# CHECK-ASM-AND-OBJ: nclipu t5, s2, t1
+# CHECK-ASM: encoding: [0x1b,0xcf,0x69,0x2e]
+nclipu t5, s2, t1
+# CHECK-ASM-AND-OBJ: pnclipru.bs t5, s2, s2
+# CHECK-ASM: encoding: [0x1b,0xcf,0x29,0x39]
+pnclipru.bs t5, s2, s2
+# CHECK-ASM-AND-OBJ: pnclipru.hs t5, s2, a0
+# CHECK-ASM: encoding: [0x1b,0xcf,0xa9,0x3a]
+pnclipru.hs t5, s2, a0
+# CHECK-ASM-AND-OBJ: nclipru a4, t5, t5
+# CHECK-ASM: encoding: [0x1b,0xc7,0xef,0x3f]
+nclipru a4, t5, t5
+# CHECK-ASM-AND-OBJ: pnsra.bs a4, t1, a4
+# CHECK-ASM: encoding: [0x1b,0xc7,0xe3,0x48]
+pnsra.bs a4, t1, a4
+# CHECK-ASM-AND-OBJ: pnsra.hs s0, s2, t3
+# CHECK-ASM: encoding: [0x1b,0xc4,0xc9,0x4b]
+pnsra.hs s0, s2, t3
+# CHECK-ASM-AND-OBJ: nsra t1, s0, a4
+# CHECK-ASM: encoding: [0x1b,0xc3,0xe4,0x4e]
+nsra t1, s0, a4
+# CHECK-ASM-AND-OBJ: pnsrar.bs a2, s0, a4
+# CHECK-ASM: encoding: [0x1b,0xc6,0xe4,0x58]
+pnsrar.bs a2, s0, a4
+# CHECK-ASM-AND-OBJ: pnsrar.hs s0, a4, a0
+# CHECK-ASM: encoding: [0x1b,0xc4,0xa7,0x5a]
+pnsrar.hs s0, a4, a0
+# CHECK-ASM-AND-OBJ: nsrar a4, a4, s0
+# CHECK-ASM: encoding: [0x1b,0xc7,0x87,0x5e]
+nsrar a4, a4, s0
+# CHECK-ASM-AND-OBJ: pnclip.bs t1, t5, t3
+# CHECK-ASM: encoding: [0x1b,0xc3,0xcf,0x69]
+pnclip.bs t1, t5, t3
+# CHECK-ASM-AND-OBJ: pnclip.hs a0, a2, a0
+# CHECK-ASM: encoding: [0x1b,0xc5,0xa6,0x6a]
+pnclip.hs a0, a2, a0
+# CHECK-ASM-AND-OBJ: nclip t3, t5, t3
+# CHECK-ASM: encoding: [0x1b,0xce,0xcf,0x6f]
+nclip t3, t5, t3
+# CHECK-ASM-AND-OBJ: pnclipr.bs t1, a2, a0
+# CHECK-ASM: encoding: [0x1b,0xc3,0xa6,0x78]
+pnclipr.bs t1, a2, a0
+# CHECK-ASM-AND-OBJ: pnclipr.hs a4, s2, t3
+# CHECK-ASM: encoding: [0x1b,0xc7,0xc9,0x7b]
+pnclipr.hs a4, s2, t3
+# CHECK-ASM-AND-OBJ: nclipr t1, t5, a2
+# CHECK-ASM: encoding: [0x1b,0xc3,0xcf,0x7e]
+nclipr t1, t5, a2
