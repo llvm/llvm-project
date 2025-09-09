@@ -1,5 +1,7 @@
 # RUN: mkdir %t
-# RUN: touch %S/empty.txt
+# Tests that if file A is in the %t directory and file B is not,
+# the diff test updater copies from file A to B.
+# RUN: echo "" > %S/empty.txt
 # RUN: cp %S/1.in %t/1.txt
 
 # RUN: diff %t/1.txt %S/empty.txt
