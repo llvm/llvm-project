@@ -22,8 +22,10 @@
 // RISC-V specific code to select RISC-V machine instructions for
 // SelectionDAG operations.
 
-llvm::SDValue selectImm(llvm::SelectionDAG *CurDAG, const llvm::SDLoc &DL, const llvm::MVT VT,
-		                         int64_t Imm, const llvm::RISCVSubtarget &Subtarget);
+llvm::SDValue selectImm(llvm::SelectionDAG *CurDAG, const llvm::SDLoc &DL,
+                        const llvm::MVT VT, int64_t Imm,
+                        const llvm::RISCVSubtarget &Subtarget);
+
 namespace llvm {
 class RISCVDAGToDAGISel : public SelectionDAGISel {
   const RISCVSubtarget *Subtarget = nullptr;

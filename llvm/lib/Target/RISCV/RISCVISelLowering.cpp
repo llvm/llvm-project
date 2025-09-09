@@ -12,10 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVISelLowering.h"
-#include "RISCVISelDAGToDAG.h"
 #include "MCTargetDesc/RISCVMatInt.h"
 #include "RISCV.h"
 #include "RISCVConstantPoolValue.h"
+#include "RISCVISelDAGToDAG.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVRegisterInfo.h"
 #include "RISCVSelectionDAGInfo.h"
@@ -16262,7 +16262,7 @@ static SDValue combineOrAndToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
   SDValue And;
   APInt MaskImm, OrImm;
   if (!sd_match(N, m_Or(m_OneUse(m_And(m_Value(And), m_ConstInt(MaskImm))),
-                           m_ConstInt(OrImm))))
+                        m_ConstInt(OrImm))))
     return SDValue();
 
   // Compute the Known Zero for the AND as this allows us to catch more general
