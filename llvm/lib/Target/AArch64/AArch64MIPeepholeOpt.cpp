@@ -887,9 +887,13 @@ bool AArch64MIPeepholeOpt::visitCopy(MachineInstr &MI) {
 }
 
 bool AArch64MIPeepholeOpt::visitConditionalBranch(MachineInstr &MI) {
-  // Optimize FMOV + CBZ/CBNZ pattern:
-  // %4:gpr32 = COPY %2.ssub:fpr128  (FMOV equivalent)
-  // CBNZW %4:gpr32, %bb.2
+  // Optimize patterns:
+  // 1. FMOV + CBZ/CBNZ pattern:
+  //    %4:gpr32 = COPY %2.ssub:fpr128  (FMOV equivalent)
+  //    CBNZW %4:gpr32, %bb.2
+  // 2. MOV from vector lane + CBZ/CBNZ pattern:
+  //    %4:gpr32 = UMOVvi32 %vec, lane_index
+  //    CBNZW %4:gpr32, %bb.2
   // 
   // Transform to:
   // CMEQ s1, s0, #0      ; Compare with zero (integer vector compare)
@@ -906,43 +910,87 @@ bool AArch64MIPeepholeOpt::visitConditionalBranch(MachineInstr &MI) {
   // Get the register being tested
   Register TestReg = MI.getOperand(0).getReg();
   
-  // Find the defining instruction - should be a COPY from FPR
+  // Find the defining instruction
   MachineInstr *DefMI = MRI->getUniqueVRegDef(TestReg);
-  if (!DefMI || DefMI->getOpcode() != AArch64::COPY)
+  if (!DefMI)
     return false;
     
-  // Check if source is from FPR (floating point register)
-  Register SrcReg = DefMI->getOperand(1).getReg();
-  if (!SrcReg.isVirtual())
-    return false;
-    
-  const TargetRegisterClass *SrcRC = MRI->getRegClass(SrcReg);
+  // Check for different patterns
+  Register FPRSrcReg;
+  unsigned LaneIdx = 0;  // Lane index for vector patterns
+  bool PatternMatched = false;
+  bool IsVectorLane = false;  // Track if this is a vector lane pattern
   
-  // Check if source is from FPR32 or FPR128 with ssub
-  bool IsFromFPR32 = (SrcRC == &AArch64::FPR32RegClass);
-  bool IsFromFPR128WithSSub = (SrcRC == &AArch64::FPR128RegClass) && 
-                              (DefMI->getOperand(1).getSubReg() == AArch64::ssub);
+  // Pattern 1: COPY from FPR (FMOV equivalent)
+  if (DefMI->getOpcode() == AArch64::COPY) {
+    Register SrcReg = DefMI->getOperand(1).getReg();
+    if (!SrcReg.isVirtual())
+      return false;
+      
+    const TargetRegisterClass *SrcRC = MRI->getRegClass(SrcReg);
+    
+    // Check if source is from FPR32 or FPR128 with ssub
+    bool IsFromFPR32 = (SrcRC == &AArch64::FPR32RegClass);
+    bool IsFromFPR128WithSSub = (SrcRC == &AArch64::FPR128RegClass) && 
+                                (DefMI->getOperand(1).getSubReg() == AArch64::ssub);
+    
+    if (IsFromFPR32 || IsFromFPR128WithSSub) {
+      if (IsFromFPR32) {
+        FPRSrcReg = SrcReg;
+      } else {
+        // Extract from FPR128 to FPR32
+        FPRSrcReg = MRI->createVirtualRegister(&AArch64::FPR32RegClass);
+        BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(AArch64::COPY), FPRSrcReg)
+            .addReg(SrcReg, 0, AArch64::ssub);
+      }
+      PatternMatched = true;
+    }
+  }
+  // Pattern 2: UMOVvi32 - move from vector lane to GPR  
+  else if (DefMI->getOpcode() == AArch64::UMOVvi32) {
+    Register VecReg = DefMI->getOperand(1).getReg();
+    LaneIdx = DefMI->getOperand(2).getImm();
+    
+    if (!VecReg.isVirtual())
+      return false;
+      
+    const TargetRegisterClass *VecRC = MRI->getRegClass(VecReg);
+    
+    // Check if it's from a vector register class
+    if (VecRC == &AArch64::FPR128RegClass || VecRC == &AArch64::FPR64RegClass) {
+      // Create a scalar register to hold the extracted lane
+      FPRSrcReg = MRI->createVirtualRegister(&AArch64::FPR32RegClass);
+      
+      if (LaneIdx == 0) {
+        // Lane 0 can be extracted directly with ssub
+        BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(AArch64::COPY), FPRSrcReg)
+            .addReg(VecReg, 0, AArch64::ssub);
+      } else {
+        // For other lanes, use DUP to bring the lane to position 0, then extract
+        Register TempVecReg = MRI->createVirtualRegister(&AArch64::FPR64RegClass);
+        BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(AArch64::DUPv2i32lane), TempVecReg)
+            .addReg(VecReg)
+            .addImm(LaneIdx);
+            
+        // Extract lane 0 from the DUP result
+        BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(AArch64::COPY), FPRSrcReg)
+            .addReg(TempVecReg, 0, AArch64::ssub);
+      }
+      
+      PatternMatched = true;
+      IsVectorLane = true;
+    }
+  }
   
-  if (!IsFromFPR32 && !IsFromFPR128WithSSub)
+  if (!PatternMatched)
     return false;
     
-  // Check if the COPY has only one use (the branch instruction)  
+  // Check if the defining instruction has only one use (the branch instruction)  
   if (!MRI->hasOneUse(TestReg))
     return false;
     
   // Get the target branch label
   MachineBasicBlock *TargetMBB = MI.getOperand(1).getMBB();
-    
-  // Get the source FPR register to use in CMEQ
-  Register FPRSrcReg;
-  if (IsFromFPR32) {
-    FPRSrcReg = SrcReg;
-  } else {
-    // Extract from FPR128 to FPR32
-    FPRSrcReg = MRI->createVirtualRegister(&AArch64::FPR32RegClass);
-    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(AArch64::COPY), FPRSrcReg)
-        .addReg(SrcReg, 0, AArch64::ssub);
-  }
   
   // Create register for CMEQ result 
   Register CmeqResultReg = MRI->createVirtualRegister(&AArch64::FPR32RegClass);
@@ -966,7 +1014,7 @@ bool AArch64MIPeepholeOpt::visitConditionalBranch(MachineInstr &MI) {
       .addImm(CC)
       .addMBB(TargetMBB);
   
-  // Remove the original copy and branch instructions
+  // Remove the original defining instruction and branch instruction
   DefMI->eraseFromParent();
   MI.eraseFromParent();
   
