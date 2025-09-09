@@ -110,7 +110,7 @@ public:
   llvm::StringMap<double> map;
 };
 
-/// A class to count success/fail statistics.
+/// A class to count success/fail statistics.ß
 struct StatsSuccessFail {
   StatsSuccessFail(llvm::StringRef n) : name(n.str()) {}
 
