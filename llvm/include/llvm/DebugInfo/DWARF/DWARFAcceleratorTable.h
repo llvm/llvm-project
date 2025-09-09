@@ -43,13 +43,13 @@ public:
 
     Entry() = default;
 
-
     // Make these protected so only (final) subclasses can be copied around.
     Entry(const Entry &) = default;
     Entry(Entry &&) = default;
     Entry &operator=(const Entry &) = default;
     Entry &operator=(Entry &&) = default;
     ~Entry() = default;
+
 
   public:
     /// Returns the Offset of the Compilation Unit associated with this
