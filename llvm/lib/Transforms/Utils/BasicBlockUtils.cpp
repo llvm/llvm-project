@@ -58,6 +58,18 @@ static cl::opt<unsigned> MaxDeoptOrUnreachableSuccessorCheckDepth(
              "is followed by a block that either has a terminating "
              "deoptimizing call or is terminated with an unreachable"));
 
+static void replaceEHPadsRetWithUnreachable(Instruction &I) {
+  for (User *User : make_early_inc_range(I.users())) {
+    Instruction *ReturnInstr = dyn_cast<Instruction>(User);
+    if (isa<CatchReturnInst>(ReturnInstr) ||
+        isa<CleanupReturnInst>(ReturnInstr)) {
+      BasicBlock *ReturnInstrBB = ReturnInstr->getParent();
+      ReturnInstr->eraseFromParent();
+      new UnreachableInst(ReturnInstrBB->getContext(), ReturnInstrBB);
+    }
+  }
+}
+
 void llvm::detachDeadBlocks(
     ArrayRef<BasicBlock *> BBs,
     SmallVectorImpl<DominatorTree::UpdateType> *Updates,
@@ -82,16 +94,15 @@ void llvm::detachDeadBlocks(
       // first block, the we would have possible cleanupret and catchret
       // instructions with poison arguments, which wouldn't be valid.
       unsigned OpCode = I.getOpcode();
-      if (OpCode == Instruction::CatchPad ||
-          OpCode == Instruction::CleanupPad) {
-        for (User *User : make_early_inc_range(I.users())) {
-          Instruction *ReturnInstr = dyn_cast<Instruction>(User);
-          if (isa<CatchReturnInst>(ReturnInstr) ||
-              isa<CleanupReturnInst>(ReturnInstr)) {
-            BasicBlock *ReturnInstrBB = ReturnInstr->getParent();
-            ReturnInstr->eraseFromParent();
-            new UnreachableInst(ReturnInstrBB->getContext(), ReturnInstrBB);
-          }
+      if (isa<FuncletPadInst>(I)) {
+        replaceEHPadsRetWithUnreachable(I);
+      }
+      if (OpCode == Instruction::CatchSwitch) {
+        CatchSwitchInst &CSI = cast<CatchSwitchInst>(I);
+        for (unsigned I = 0; I < CSI.getNumSuccessors(); I++) {
+          BasicBlock *SucBlock = CSI.getSuccessor(I);
+          Instruction &PadInstr = *(SucBlock->getFirstNonPHIIt());
+          replaceEHPadsRetWithUnreachable(PadInstr);
         }
       }
       // Because control flow can't get here, we don't care what we replace the
