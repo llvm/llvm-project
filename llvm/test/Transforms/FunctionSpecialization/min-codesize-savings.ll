@@ -7,7 +7,7 @@ define i32 @main(i32 %y) {
 ; CHECK-LABEL: define i32 @main(
 ; CHECK-SAME: i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[SPEC:%.*]] = call i32 @unprofitable_spec.specialized.1(i32 1, i32 [[Y]])
+; CHECK-NEXT:    [[SPEC:%.*]] = call i32 @unprofitable_spec(i32 1, i32 [[Y]])
 ; CHECK-NEXT:    ret i32 [[SPEC]]
 ;
 entry:
