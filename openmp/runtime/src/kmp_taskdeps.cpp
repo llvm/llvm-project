@@ -225,6 +225,7 @@ static inline void __kmp_track_dependence(kmp_int32 gtid, kmp_depnode_t *source,
 #if OMPX_TASKGRAPH
   kmp_taskdata_t *task_source = KMP_TASK_TO_TASKDATA(source->dn.task);
   kmp_taskdata_t *task_sink = KMP_TASK_TO_TASKDATA(sink_task);
+  kmp_tdg_info_t *tdg = task_source->tdg;
   if (source->dn.task && sink_task) {
     // Not supporting dependency between two tasks that one is within the TDG
     // and the other is not
@@ -242,6 +243,7 @@ static inline void __kmp_track_dependence(kmp_int32 gtid, kmp_depnode_t *source,
       }
     }
     if (!exists) {
+      __kmp_acquire_bootstrap_lock(&tdg->graph_lock);
       if (source_info->nsuccessors >= source_info->successors_size) {
         kmp_uint old_size = source_info->successors_size;
         source_info->successors_size = old_size == 0
@@ -264,6 +266,7 @@ static inline void __kmp_track_dependence(kmp_int32 gtid, kmp_depnode_t *source,
       kmp_node_info_t *sink_info =
           &(task_sink->tdg->record_map[task_sink->td_tdg_task_id]);
       sink_info->npredecessors++;
+      __kmp_release_bootstrap_lock(&tdg->graph_lock);
     }
   }
 #endif
