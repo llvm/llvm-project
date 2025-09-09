@@ -881,3 +881,4 @@ add_mlir_python_modules(MLIRPythonModules
   COMMON_CAPI_LINK_LIBS
     MLIRPythonCAPI
 )
+add_dependencies(MLIRPythonModules.extension._mlirDialectsGPU.dso MLIRPythonModules.extension._mlir.dso)

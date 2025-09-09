@@ -9,6 +9,7 @@
 #include "mlir-c/Dialect/GPU.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
+#include "mlir/Bindings/Python/IRModule.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 
@@ -28,6 +29,7 @@ NB_MODULE(_mlirDialectsGPU, m) {
   //===-------------------------------------------------------------------===//
   // AsyncTokenType
   //===-------------------------------------------------------------------===//
+  m.def("blahblah", [](PyOperationBase &op) { op.verify(); });
 
   auto mlirGPUAsyncTokenType =
       mlir_type_subclass(m, "AsyncTokenType", mlirTypeIsAGPUAsyncTokenType);

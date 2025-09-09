@@ -571,7 +571,7 @@ public:
 
   /// Verify the operation. Throws `MLIRError` if verification fails, and
   /// returns `true` otherwise.
-  bool verify();
+  MLIR_CAPI_EXPORTED bool verify();
 
   /// Each must provide access to the raw Operation.
   virtual PyOperation &getOperation() = 0;
