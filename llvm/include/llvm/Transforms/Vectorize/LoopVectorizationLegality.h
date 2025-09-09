@@ -411,9 +411,9 @@ public:
   }
 
   /// Returns true if this is an early exit loop with state-changing or
-  /// potentially-faulting operations and the IR representing the condition
-  /// for the uncountable exit must be determined before any of the state
-  /// changes or potentially faulting operations take place.
+  /// potentially-faulting operations and the condition for the uncountable
+  /// exit must be determined before any of the state changes or potentially
+  /// faulting operations take place.
   bool hasUncountableExitWithSideEffects() const {
     return UncountableExitWithSideEffects;
   }
@@ -535,8 +535,8 @@ private:
   /// Returns true if this is an early exit loop that can be vectorized.
   /// Currently, a loop with an uncountable early exit is considered
   /// vectorizable if:
-  ///   1. Writes to memory do not form a dependence with any load used as
-  ///      part of the uncounted exit condition.
+  ///   1. Writes to memory will access different underlying objects than
+  ///      any load used as part of the uncountable exit condition.
   ///   2. The loop has only one early uncountable exit
   ///   3. The early exit block dominates the latch block.
   ///   4. The latch block has an exact exit count.

@@ -353,7 +353,7 @@ exit:
 
 define void @loop_contains_store_condition_load_is_chained(ptr dereferenceable(40) noalias %array, ptr align 8 dereferenceable(160) readonly %offsets, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_condition_load_is_chained'
-; CHECK:       LV: Not vectorizing: Loop may fault.
+; CHECK:       LV: Not vectorizing: Uncountable exit condition depends on load with an address that is not an add recurrence.
 entry:
   br label %for.body
 
@@ -407,7 +407,7 @@ exit:
 
 define void @loop_contains_store_condition_load_requires_gather(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(512) readonly %pred, ptr align 1 dereferenceable(20) readonly %offsets) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_condition_load_requires_gather'
-; CHECK:       LV: Not vectorizing: Loop may fault.
+; CHECK:       LV: Not vectorizing: Uncountable exit condition depends on load with an address that is not an add recurrence.
 entry:
   br label %for.body
 
@@ -544,7 +544,7 @@ exit:
 
 define void @uncountable_exit_condition_address_is_invariant(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(2) readonly %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_condition_address_is_invariant'
-; CHECK:       LV: Not vectorizing: Uncountable exit condition depends on load from invariant address.
+; CHECK:       LV: Not vectorizing: Uncountable exit condition depends on load with an address that is not an add recurrence.
 entry:
   br label %for.body
 
