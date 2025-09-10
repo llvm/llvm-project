@@ -90,10 +90,13 @@ define void @f_2(i32 %a, ptr %length_buf) {
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[CHK0]], [[CHK1]]
 ; CHECK-NEXT:    [[X_INC2:%.*]] = or i32 [[X]], 2
 ; CHECK-NEXT:    [[CHK2:%.*]] = icmp ult i32 [[X_INC2]], [[LENGTH_GW_FR]]
-; CHECK-NEXT:    [[WIDE_CHK1:%.*]] = and i1 [[WIDE_CHK]], [[CHK2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[CHK1]], [[CHK0]]
+; CHECK-NEXT:    [[WIDE_CHK1:%.*]] = and i1 [[TMP0]], [[CHK2]]
 ; CHECK-NEXT:    [[X_INC3:%.*]] = or i32 [[X]], 3
 ; CHECK-NEXT:    [[CHK3:%.*]] = icmp ult i32 [[X_INC3]], [[LENGTH_GW_FR]]
-; CHECK-NEXT:    [[WIDE_CHK2:%.*]] = and i1 [[WIDE_CHK1]], [[CHK3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[CHK2]], [[CHK0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[CHK1]]
+; CHECK-NEXT:    [[WIDE_CHK2:%.*]] = and i1 [[TMP2]], [[CHK3]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK2]]) [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ;
@@ -255,10 +258,13 @@ define void @f_6(i32 %x, ptr %length_buf) {
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[CHK0]], [[CHK1]]
 ; CHECK-NEXT:    [[X_INC2:%.*]] = add i32 [[X_GW_FR]], 2
 ; CHECK-NEXT:    [[CHK2:%.*]] = icmp ult i32 [[X_INC2]], [[LENGTH]]
-; CHECK-NEXT:    [[WIDE_CHK1:%.*]] = and i1 [[WIDE_CHK]], [[CHK2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[CHK1]], [[CHK0]]
+; CHECK-NEXT:    [[WIDE_CHK1:%.*]] = and i1 [[TMP0]], [[CHK2]]
 ; CHECK-NEXT:    [[X_INC3:%.*]] = add i32 [[X_GW_FR]], 3
 ; CHECK-NEXT:    [[CHK3:%.*]] = icmp ult i32 [[X_INC3]], [[LENGTH]]
-; CHECK-NEXT:    [[WIDE_CHK2:%.*]] = and i1 [[WIDE_CHK1]], [[CHK3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[CHK2]], [[CHK0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[CHK1]]
+; CHECK-NEXT:    [[WIDE_CHK2:%.*]] = and i1 [[TMP2]], [[CHK3]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK2]]) [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ;
@@ -295,19 +301,20 @@ define void @f_7(i32 %x, ptr %length_buf) {
 ; CHECK-NEXT:    [[CHK1_B:%.*]] = icmp ult i32 [[X_INC1]], [[LENGTH_B]]
 ; CHECK-NEXT:    [[CHK1_A:%.*]] = icmp ult i32 [[X_INC1]], [[LENGTH_A]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[CHK1_B]], [[CHK1_A]]
-; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[CHK0]], [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[CHK0_B]], [[CHK0_A]]
+; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    [[X_INC2:%.*]] = add i32 [[X_GW_FR]], 2
 ; CHECK-NEXT:    [[CHK2_A:%.*]] = icmp ult i32 [[X_INC2]], [[LENGTH_A]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[CHK2_A]], [[CHK0_A]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[CHK0_B]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[CHK2_A]], [[CHK0_A]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[CHK0_B]], [[TMP2]]
 ; CHECK-NEXT:    [[CHK2_B:%.*]] = icmp ult i32 [[X_INC2]], [[LENGTH_B]]
-; CHECK-NEXT:    [[WIDE_CHK1:%.*]] = and i1 [[CHK2_B]], [[TMP2]]
+; CHECK-NEXT:    [[WIDE_CHK1:%.*]] = and i1 [[CHK2_B]], [[TMP3]]
 ; CHECK-NEXT:    [[X_INC3:%.*]] = add i32 [[X_GW_FR]], 3
 ; CHECK-NEXT:    [[CHK3_A:%.*]] = icmp ult i32 [[X_INC3]], [[LENGTH_A]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[CHK3_A]], [[CHK0_A]]
-; CHECK-NEXT:    [[TMP4:%.*]] = and i1 [[CHK0_B]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = and i1 [[CHK3_A]], [[CHK0_A]]
+; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[CHK0_B]], [[TMP4]]
 ; CHECK-NEXT:    [[CHK3_B:%.*]] = icmp ult i32 [[X_INC3]], [[LENGTH_B]]
-; CHECK-NEXT:    [[WIDE_CHK2:%.*]] = and i1 [[CHK3_B]], [[TMP4]]
+; CHECK-NEXT:    [[WIDE_CHK2:%.*]] = and i1 [[CHK3_B]], [[TMP5]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK2]]) [ "deopt"() ]
 ; CHECK-NEXT:    [[CHK1:%.*]] = and i1 [[CHK1_A]], [[CHK1_B]]
 ; CHECK-NEXT:    [[CHK2:%.*]] = and i1 [[CHK2_A]], [[CHK2_B]]
