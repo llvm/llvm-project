@@ -186,6 +186,10 @@ public:
     return HasStdExtZfhmin || HasStdExtZfbfmin;
   }
 
+  bool hasCZEROLike() const {
+    return HasStdExtZicond || HasVendorXVentanaCondOps;
+  }
+
   bool hasConditionalMoveFusion() const {
     // Do we support fusing a branch+mv or branch+c.mv as a conditional move.
     return (hasConditionalCompressedMoveFusion() && hasStdExtZca()) ||

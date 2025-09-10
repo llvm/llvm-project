@@ -25,7 +25,6 @@ end program
 ! CHECK:           %[[VAL_0:.*]] = arith.constant true
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 10 : i32
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 3 : i32
-! CHECK:           %[[VAL_3:.*]] = arith.constant false
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,3>>>
@@ -43,13 +42,8 @@ end program
 ! CHECK:           fir.call @_QFPassign_different_length(%[[VAL_16]]) fastmath<contract> : (!fir.boxchar<1>) -> ()
 ! CHECK:           %[[VAL_17:.*]] = fir.address_of(@_QQclX6F) : !fir.ref<!fir.char<1>>
 ! CHECK:           %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_17]] typeparams %[[VAL_4]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX6F"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
-! CHECK:           %[[VAL_19:.*]] = fir.convert %[[VAL_15]] : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<i8>
-! CHECK:           %[[VAL_20:.*]] = fir.convert %[[VAL_5]] : (index) -> i64
-! CHECK:           %[[VAL_21:.*]] = fir.convert %[[VAL_18]]#0 : (!fir.ref<!fir.char<1>>) -> !fir.ref<i8>
-! CHECK:           %[[VAL_22:.*]] = fir.convert %[[VAL_4]] : (index) -> i64
-! CHECK:           %[[VAL_23:.*]] = fir.call @_FortranAIndex1(%[[VAL_19]], %[[VAL_20]], %[[VAL_21]], %[[VAL_22]], %[[VAL_3]]) fastmath<contract> : (!fir.ref<i8>, i64, !fir.ref<i8>, i64, i1) -> i64
-! CHECK:           %[[VAL_24:.*]] = fir.convert %[[VAL_23]] : (i64) -> i32
-! CHECK:           hlfir.assign %[[VAL_24]] to %[[VAL_9]]#0 : i32, !fir.ref<i32>
+! CHECK:           %[[VAL_21:.*]] = hlfir.index %[[VAL_18]]#0 in %[[VAL_14]]#0 : (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1,3>, volatile>) -> i32
+! CHECK:           hlfir.assign %[[VAL_21]] to %[[VAL_9]]#0 : i32, !fir.ref<i32>
 ! CHECK:           hlfir.assign %[[VAL_2]] to %[[VAL_9]]#0 : i32, !fir.ref<i32>
 ! CHECK:           %[[VAL_25:.*]] = fir.embox %[[VAL_14]]#0 : (!fir.ref<!fir.char<1,3>, volatile>) -> !fir.box<!fir.char<1,3>, volatile>
 ! CHECK:           %[[VAL_26:.*]] = fir.zero_bits !fir.heap<!fir.char<1,3>>

@@ -336,8 +336,7 @@ public:
   void PrintFeatureSet() {
     for (size_t i = 0; i < kFeatureSetSize; i++) {
       if(size_t Sz = GetFeature(i))
-        Printf("[%zd: id %zd sz%zd] ", i, (size_t)SmallestElementPerFeature[i],
-               Sz);
+        Printf("[%zd: id %zd sz%zd] ", i, SmallestElementPerFeature[i], Sz);
     }
     Printf("\n\t");
     for (size_t i = 0; i < Inputs.size(); i++)

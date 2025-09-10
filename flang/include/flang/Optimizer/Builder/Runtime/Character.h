@@ -66,6 +66,14 @@ mlir::Value genIndex(fir::FirOpBuilder &builder, mlir::Location loc, int kind,
                      mlir::Value back);
 
 /// Generate call to INDEX runtime.
+/// This calls the simple runtime entry points based on the KIND of the string.
+/// A version of interface taking a `boxchar` for string and substring.
+/// Uses no-descriptors flow.
+mlir::Value genIndex(fir::FirOpBuilder &builder, mlir::Location loc,
+                     const fir::ExtendedValue &str,
+                     const fir::ExtendedValue &substr, mlir::Value back);
+
+/// Generate call to INDEX runtime.
 /// This calls the descriptor based runtime call implementation for the index
 /// intrinsic.
 void genIndexDescriptor(fir::FirOpBuilder &builder, mlir::Location loc,
