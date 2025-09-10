@@ -699,8 +699,8 @@ public:
     GetDependencyDirectives = std::move(Getter);
   }
 
-  static SmallString<256> normalizeModuleCachePath(FileManager &FileMgr,
-                                                   StringRef ModuleCachePath);
+  static void normalizeModuleCachePath(FileManager &FileMgr, StringRef Path,
+                                       SmallVectorImpl<char> &NormalizedPath);
   std::string getSpecificModuleCachePath(StringRef ModuleHash);
   std::string getSpecificModuleCachePath() {
     return getSpecificModuleCachePath(getInvocation().getModuleHash());
