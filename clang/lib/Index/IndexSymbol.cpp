@@ -561,6 +561,8 @@ StringRef index::getSymbolSubKindString(SymbolSubKind K) {
   case SymbolSubKind::SwiftAccessorRead: return "acc-read";
   case SymbolSubKind::SwiftAccessorModify: return "acc-modify";
   case SymbolSubKind::SwiftAccessorInit: return "acc-init";
+  case SymbolSubKind::SwiftAccessorBorrow: return "acc-borrow";
+  case SymbolSubKind::SwiftAccessorMutate: return "acc-mutate";
   case SymbolSubKind::SwiftExtensionOfStruct: return "ext-struct";
   case SymbolSubKind::SwiftExtensionOfClass: return "ext-class";
   case SymbolSubKind::SwiftExtensionOfEnum: return "ext-enum";
