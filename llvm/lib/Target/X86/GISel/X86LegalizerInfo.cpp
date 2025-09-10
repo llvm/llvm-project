@@ -894,18 +894,43 @@ bool X86LegalizerInfo::legalizeSETROUNDING(MachineInstr &MI,
   auto ClearedCWD =
       MIRBuilder.buildAnd(s16, CWD16, MIRBuilder.buildConstant(s16, 0xf3ff));
 
-  // Convert Src (rounding mode) to bits for control word
-  // (0xc9 << (2 * Src + 4)) & 0xc00
-  auto Src32 = MIRBuilder.buildZExtOrTrunc(s32, Src);
-  auto ShiftAmt = MIRBuilder.buildAdd(
-      s32, MIRBuilder.buildShl(s32, Src32, MIRBuilder.buildConstant(s32, 1)),
-      MIRBuilder.buildConstant(s32, 4));
-  auto ShiftAmt8 = MIRBuilder.buildTrunc(s8, ShiftAmt);
-  auto Shifted =
-      MIRBuilder.buildShl(s16, MIRBuilder.buildConstant(s16, 0xc9), ShiftAmt8);
-  auto RMBits =
-      MIRBuilder.buildAnd(s16, Shifted, MIRBuilder.buildConstant(s16, 0xc00));
-
+  // Check if Src is a constant
+  auto *SrcDef = MRI.getVRegDef(Src);
+  Register RMBits;
+  if (SrcDef && SrcDef->getOpcode() == TargetOpcode::G_CONSTANT) {
+    uint64_t RM = getIConstantFromReg(Src, MRI).getZExtValue();
+    int FieldVal;
+    switch (static_cast<RoundingMode>(RM)) {
+    case RoundingMode::NearestTiesToEven:
+      FieldVal = X86::rmToNearest;
+      break;
+    case RoundingMode::TowardNegative:
+      FieldVal = X86::rmDownward;
+      break;
+    case RoundingMode::TowardPositive:
+      FieldVal = X86::rmUpward;
+      break;
+    case RoundingMode::TowardZero:
+      FieldVal = X86::rmTowardZero;
+      break;
+    default:
+      report_fatal_error("rounding mode is not supported by X86 hardware");
+    }
+    RMBits = MIRBuilder.buildConstant(s16, FieldVal).getReg(0);
+  } else {
+    // Convert Src (rounding mode) to bits for control word
+    // (0xc9 << (2 * Src + 4)) & 0xc00
+    auto Src32 = MIRBuilder.buildZExtOrTrunc(s32, Src);
+    auto ShiftAmt = MIRBuilder.buildAdd(
+        s32, MIRBuilder.buildShl(s32, Src32, MIRBuilder.buildConstant(s32, 1)),
+        MIRBuilder.buildConstant(s32, 4));
+    auto ShiftAmt8 = MIRBuilder.buildTrunc(s8, ShiftAmt);
+    auto Shifted = MIRBuilder.buildShl(s16, MIRBuilder.buildConstant(s16, 0xc9),
+                                       ShiftAmt8);
+    RMBits =
+        MIRBuilder.buildAnd(s16, Shifted, MIRBuilder.buildConstant(s16, 0xc00))
+            .getReg(0);
+  }
   // Update rounding mode bits
   auto NewCWD =
       MIRBuilder.buildOr(s16, ClearedCWD, RMBits, MachineInstr::Disjoint);
