@@ -193,7 +193,7 @@ class InstructionEncoding {
   /// The namespace in which this encoding exists.
   StringRef DecoderNamespace;
 
-  /// The decoder order.
+  /// The decode order.
   int64_t DecodeOrder;
 
   /// Known bits of this encoding. This is the value of the `Inst` field
@@ -232,7 +232,7 @@ public:
   /// Returns the namespace in which this encoding exists.
   StringRef getDecoderNamespace() const { return DecoderNamespace; }
 
-  /// Returns the decoder order for this encoding.
+  /// Returns the decode order for this encoding.
   int64_t getDecodeOrder() const { return DecodeOrder; }
 
   /// Returns the size of this encoding, in bits.
@@ -533,7 +533,7 @@ class FilterChooser {
   std::map<uint64_t, std::unique_ptr<const FilterChooser>> FilterChooserMap;
 
   /// Per decode order filter choosers. Applicable when the set of candidates
-  /// have more than 1 decode order.
+  /// have more than 1 decode orders.
   SmallVector<std::unique_ptr<const FilterChooser>> PerDecodeOrderChoosers;
 
   /// Handle this chooser by attempting to decode all endodings.
@@ -606,6 +606,7 @@ private:
   // decoded bits in order to verify that the instruction matches the Opcode.
   std::vector<Island> getIslands(const KnownBits &EncodingBits) const;
 
+  // Returns the decode order for the given encoding ID.
   int64_t getDecodeOrder(unsigned ID) const {
     return Encodings[ID].getDecodeOrder();
   }
@@ -721,18 +722,25 @@ void FilterChooser::applyFilter(const Filter &F) {
   // When a filter has both fixed and variable encodings, we give priority to
   // the fixed encoding (FilteredIDs) and if that fails, we attempt the variable
   // encodings. See DecoderTableBuilder::emitTableEntries. This order may not be
-  // the right order for certain backends. To control this, they can use the
+  // the right order for certain targets. To control this, they can use the
   // DecodeOrder. If we have multiple decode orders, the filter chooser will
-  // attempt the fixed-then-variable encoding per decode order, so if we want
-  // certain variable encoding to be prioritized over fixed ones, the fixed ones
-  // can get a larger decode order.
+  // effectively attempt the fixed-then-variable encoding per decode order. This
+  // allows targets to prioritize certain variable encoding over fixed ones by
+  // assigning the fixed ones a larger decode order.
 
-  // If we have multiple decode order, we want to attempt decoding in the
-  // following order: fixed0, variable0, fixed1, variable1 etc.
-  // If we do not split, we will attempt to decode as: fixed, variable.
-  // That may be ok if all fixed IDs have decode order <= all variable IDs, that
-  // is max(fixed decode order) <= min(variable decode order). Otherwise we
-  // split per decode order.
+  // If we always split per decode order, we get the following attempt order
+  //   f[0] -> v[0] -> f[1] -> v[1]
+  //
+  // However, instead of always splitting a chooser with multiple decode orders
+  // we can split only when necessary and only the smallest number of splits
+  // as long as we effectively get the same attempt order as above. As an
+  // example, if the max decode order among the fixed encoding is <= min
+  // decode order among varying encoding, then even if we do not split, we get
+  // the same effective attempt order. This simple criteria is implemented
+  // below (i.e, we fully split when this criteria is not met). There may be
+  // more refined ways to do the decode order splitting. For example, not
+  // splitting all the decode orders fully put doing partial splits. This can
+  // be implemented in future as an optimization if desired.
   if (hasMultipleDecodeOrders() && !F.VariableIDs.empty() &&
       !F.FilteredIDs.empty()) {
     auto LessDecodeOrder = [&](unsigned A, unsigned B) {
@@ -1654,7 +1662,7 @@ std::unique_ptr<Filter> FilterChooser::findBestFilter() const {
 bool FilterChooser::hasMultipleDecodeOrders() const {
   if (EncodingIDs.size() <= 1)
     return false;
-  // Encodings are sorted by decoder order, so there are multiple decode orders
+  // Encodings are sorted by decode order, so there are multiple decode orders
   // if the first and last decode order do not match.
   return getDecodeOrder(EncodingIDs.front()) !=
          getDecodeOrder(EncodingIDs.back());
@@ -1669,7 +1677,7 @@ void FilterChooser::splitByDecodeOrder() {
   int64_t LastOrder = getDecodeOrder(IDs.front());
   size_t LastIndex = 0;
   // Note: first iteration here is redundant, but this allows us to keep Idx
-  // value correct.
+  // value correct (as opposed to using Idx + 1).
   for (const auto &[Idx, ID] : enumerate(IDs)) {
     int64_t CurrentOrder = getDecodeOrder(ID);
     if (CurrentOrder != LastOrder) {
@@ -1705,8 +1713,9 @@ void FilterChooser::doFilter() {
     return;
   }
 
-  // If there are multiple decode orders, then splin the candidates by decode
-  // order if we are unable to find a filter.
+  // If we were unable to find a useful filter and there are multiple decode
+  // orders involved, split the candidates by decode order and create per decode
+  // order choosers.
   if (hasMultipleDecodeOrders()) {
     splitByDecodeOrder();
     return;
@@ -1797,7 +1806,8 @@ void DecoderTableBuilder::emitTableEntries(const FilterChooser &FC) const {
     emitTableEntries(*Delegate);
   } else if (FC.PerDecodeOrderChoosers.size() > 1) {
     // Attempt to decode all inferior choosers and allow them to fail, except
-    // the last one.
+    // the last one. Note that `PerDecodeOrderChoosers` when preset is expected
+    // to have atleast 2 entries, hence the size() > 1 check above.
     for (const auto &Delegate : drop_end(FC.PerDecodeOrderChoosers)) {
       Table.insertOpcode(MCD::OPC_Scope);
       unsigned FixupLoc = Table.insertNumToSkip();
@@ -1807,6 +1817,8 @@ void DecoderTableBuilder::emitTableEntries(const FilterChooser &FC) const {
     emitTableEntries(*FC.PerDecodeOrderChoosers.back());
   } else if (FC.AttemptAll) {
     // Attempt all encoding and allow them to fail, except the last one.
+    // We expect here to have > 1 EncodingIDs, else we could have created a
+    // singleton chooser.
     for (const auto ID : drop_end(FC.EncodingIDs)) {
       Table.insertOpcode(MCD::OPC_Scope);
       unsigned FixupLoc = Table.insertNumToSkip();
