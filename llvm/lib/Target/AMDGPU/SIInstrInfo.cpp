@@ -6574,6 +6574,21 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
       !RI.isVGPR(MRI, MI.getOperand(VOP3Idx[2]).getReg()))
     legalizeOpWithMove(MI, VOP3Idx[2]);
 
+  if (isWMMA(MI)) {
+    // scale_src has a register class restricted to low 256 VGPRs, we may need
+    // to insert a copy to the restricted VGPR class.
+    int ScaleSrc0Idx =
+        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::scale_src0);
+    if (ScaleSrc0Idx != -1) {
+      int ScaleSrc1Idx =
+          AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::scale_src1);
+      if (!isOperandLegal(MI, ScaleSrc0Idx))
+        legalizeOpWithMove(MI, ScaleSrc0Idx);
+      if (!isOperandLegal(MI, ScaleSrc1Idx))
+        legalizeOpWithMove(MI, ScaleSrc1Idx);
+    }
+  }
+
   // Fix the register class of packed FP32 instructions on gfx12+. See
   // SIInstrInfo::isLegalGFX12PlusPackedMathFP32Operand for more information.
   if (AMDGPU::isPackedFP32Inst(Opc) && AMDGPU::isGFX12Plus(ST)) {

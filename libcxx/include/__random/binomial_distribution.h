@@ -97,13 +97,23 @@ public:
   }
 };
 
-// The LLVM C library provides this with conflicting `noexcept` attributes.
-#if !defined(_LIBCPP_MSVCRT_LIKE) && !defined(__LLVM_LIBC__)
-extern "C" double lgamma_r(double, int*);
+// Some libc declares the math functions to be `noexcept`.
+#if defined(_LIBCPP_GLIBC_PREREQ)
+#  if _LIBCPP_GLIBC_PREREQ(2, 8)
+#    define _LIBCPP_LGAMMA_R_NOEXCEPT _NOEXCEPT
+#  endif
+#elif defined(__LLVM_LIBC__)
+#  define _LIBCPP_LGAMMA_R_NOEXCEPT _NOEXCEPT
+#else
+#  define _LIBCPP_LGAMMA_R_NOEXCEPT
+#endif
+
+#if !defined(_LIBCPP_MSVCRT_LIKE)
+extern "C" double lgamma_r(double, int*) _LIBCPP_LGAMMA_R_NOEXCEPT;
 #endif
 
 inline _LIBCPP_HIDE_FROM_ABI double __libcpp_lgamma(double __d) {
-#if defined(_LIBCPP_MSVCRT_LIKE) || defined(__LLVM_LIBC__)
+#if defined(_LIBCPP_MSVCRT_LIKE)
   return lgamma(__d);
 #else
   int __sign;
