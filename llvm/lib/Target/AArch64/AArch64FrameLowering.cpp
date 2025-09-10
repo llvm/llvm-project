@@ -1793,7 +1793,7 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
         if (AArch64::FPR64RegClass.contains(NextReg) &&
             !invalidateRegisterPairing(
                 SpillExtendedVolatile, SpillCount, RPI.Reg1, NextReg, IsWindows,
-                NeedsWinCFI, /*NeedsFrameRecord=*/false, IsFirst, TRI))
+                NeedsWinCFI, NeedsFrameRecord, IsFirst, TRI))
           RPI.Reg2 = NextReg;
         break;
       case RegPairInfo::FPR128:
