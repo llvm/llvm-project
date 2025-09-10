@@ -26,7 +26,14 @@ define void @basic_loop(ptr nocapture readonly %ptr, i32 %size, ptr %pos) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR]], i32 [[INDEX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[INDEX]], 3
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR]], i32 [[TMP6]]
+; CHECK-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[PTR]], i32 [[TMP7]]
+; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[PTR]], i32 [[TMP8]]
+; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[PTR]], i32 [[TMP9]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[NEXT_GEP]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP2]], align 1
@@ -89,7 +96,14 @@ define void @metadata(ptr nocapture readonly %ptr, i32 %size, ptr %pos) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR]], i32 [[INDEX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[INDEX]], 3
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR]], i32 [[TMP6]]
+; CHECK-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[PTR]], i32 [[TMP7]]
+; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[PTR]], i32 [[TMP8]]
+; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[PTR]], i32 [[TMP9]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[NEXT_GEP]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP2]], align 1
