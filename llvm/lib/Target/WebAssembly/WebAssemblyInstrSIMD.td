@@ -1453,14 +1453,21 @@ if !ne(t1, t2) then
 def : Pat<(t1.vt (bitconvert (t2.vt V128:$v))), (t1.vt V128:$v)>;
 
 // Extended pairwise addition
+def extadd_pairwise_u : SDNode<"WebAssemblyISD::EXT_ADD_PAIRWISE_U", extend_t>;
+
 defm "" : SIMDConvert<I16x8, I8x16, int_wasm_extadd_pairwise_signed,
                       "extadd_pairwise_i8x16_s", 0x7c>;
-defm "" : SIMDConvert<I16x8, I8x16, int_wasm_extadd_pairwise_unsigned,
+defm "" : SIMDConvert<I16x8, I8x16, extadd_pairwise_u,
                       "extadd_pairwise_i8x16_u", 0x7d>;
 defm "" : SIMDConvert<I32x4, I16x8, int_wasm_extadd_pairwise_signed,
                       "extadd_pairwise_i16x8_s", 0x7e>;
-defm "" : SIMDConvert<I32x4, I16x8, int_wasm_extadd_pairwise_unsigned,
+defm "" : SIMDConvert<I32x4, I16x8, extadd_pairwise_u,
                       "extadd_pairwise_i16x8_u", 0x7f>;
+
+def : Pat<(v4i32 (int_wasm_extadd_pairwise_unsigned (v8i16 V128:$in))),
+          (extadd_pairwise_u_I32x4 V128:$in)>;
+def : Pat<(v8i16 (int_wasm_extadd_pairwise_unsigned (v16i8 V128:$in))),
+          (extadd_pairwise_u_I16x8 V128:$in)>;
 
 // f64x2 <-> f32x4 conversions
 def demote_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
