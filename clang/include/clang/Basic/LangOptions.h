@@ -66,7 +66,13 @@ enum class PointerAuthenticationMode : unsigned {
   SignAndAuth
 };
 
-enum class FeatureAvailKind { None, Available, Unavailable, Dynamic };
+enum class FeatureAvailKind {
+  None,
+  Available,
+  Unavailable,
+  Dynamic,
+  AlwaysAvailable,
+};
 
 /// Bitfields of LangOptions, split out from LangOptions in order to ensure that
 /// this large collection of bitfields is a trivial class type.
