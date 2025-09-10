@@ -163,13 +163,13 @@ static bool ParseOneFlag(const char *Param) {
         auto Val = MyStol(Str);
         *FlagDescriptions[F].IntFlag = static_cast<int>(Val);
         if (Flags.verbosity >= 2)
-          Printf("Flag: %s %d\n", Name, (int)Val);
+          Printf("Flag: %s %d\n", Name, Val);
         return true;
       } else if (FlagDescriptions[F].UIntFlag) {
         auto Val = std::stoul(Str);
         *FlagDescriptions[F].UIntFlag = static_cast<unsigned int>(Val);
         if (Flags.verbosity >= 2)
-          Printf("Flag: %s %u\n", Name, (uint)Val);
+          Printf("Flag: %s %u\n", Name, Val);
         return true;
       } else if (FlagDescriptions[F].StrFlag) {
         *FlagDescriptions[F].StrFlag = Str;
