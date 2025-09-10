@@ -725,7 +725,6 @@ FUNCTION_PASS_WITH_PARAMS(
       return ExpandFpPass(TM, OL);
     },
     parseExpandFpOptions, "opt-level=N")
-    
 #undef FUNCTION_PASS_WITH_PARAMS
 
 #ifndef LOOPNEST_PASS
@@ -804,3 +803,30 @@ LOOP_PASS_WITH_PARAMS(
     },
     parseLoopUnswitchOptions, "nontrivial;no-nontrivial;trivial;no-trivial")
 #undef LOOP_PASS_WITH_PARAMS
+
+#ifdef MODULE_CALLBACK
+MODULE_CALLBACK("PipelineStartCallbacks", invokePipelineStartEPCallbacks)
+#endif
+
+// There are some full lto specific ones that are ignored here for now
+#ifdef MODULE_LTO_CALLBACK
+MODULE_LTO_CALLBACK("PipelineEarlySimplificationCallbacks", invokePipelineEarlySimplificationEPCallbacks)
+MODULE_LTO_CALLBACK("OptimizerEarlyCallbacks", invokeOptimizerEarlyEPCallbacks)
+MODULE_LTO_CALLBACK("OptimizerLastCallbacks", invokeOptimizerLastEPCallbacks)
+#endif
+
+#ifdef FUNCTION_CALLBACK
+FUNCTION_CALLBACK("PeepholeCallbacks", invokePeepholeEPCallbacks)
+FUNCTION_CALLBACK("ScalarOptimizerLateCallbacks", invokeScalarOptimizerLateEPCallbacks)
+FUNCTION_CALLBACK("VectorizerStartCallbacks", invokeVectorizerStartEPCallbacks)
+#endif
+
+#ifdef LOOP_CALLBACK
+LOOP_CALLBACK("LateLoopOptimizationsCallbacks", invokeLateLoopOptimizationsEPCallbacks)
+LOOP_CALLBACK("LoopOptimizerEndCallbacks", invokeLoopOptimizerEndEPCallbacks)
+#endif
+
+#ifdef CGSCC_CALLBACK
+CGSCC_CALLBACK("CGSCCOptimizerLateCallbacks", invokeCGSCCOptimizerLateEPCallbacks)
+#endif
+
