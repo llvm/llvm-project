@@ -1379,7 +1379,7 @@ define <7 x i32> @rotl_v7i32(<7 x i32> %a, <7 x i32> %c) {
 ; CHECK-GI-LABEL: rotl_v7i32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldr s0, [sp, #24]
-; CHECK-GI-NEXT:    fmov s1, wzr
+; CHECK-GI-NEXT:    movi d1, #0000000000000000
 ; CHECK-GI-NEXT:    fmov s3, w7
 ; CHECK-GI-NEXT:    ldr s2, [sp, #32]
 ; CHECK-GI-NEXT:    mov x8, sp
@@ -1387,31 +1387,32 @@ define <7 x i32> @rotl_v7i32(<7 x i32> %a, <7 x i32> %c) {
 ; CHECK-GI-NEXT:    mov v6.16b, v0.16b
 ; CHECK-GI-NEXT:    ldr s7, [sp]
 ; CHECK-GI-NEXT:    ldr s5, [sp, #40]
-; CHECK-GI-NEXT:    mov v1.s[1], wzr
 ; CHECK-GI-NEXT:    ld1 { v3.s }[1], [x8]
 ; CHECK-GI-NEXT:    add x8, sp, #8
+; CHECK-GI-NEXT:    fmov s16, w0
+; CHECK-GI-NEXT:    mov v1.s[1], wzr
 ; CHECK-GI-NEXT:    mov v4.s[1], v7.s[0]
 ; CHECK-GI-NEXT:    ldr s7, [sp, #8]
-; CHECK-GI-NEXT:    fmov s16, w0
 ; CHECK-GI-NEXT:    mov v6.s[1], v2.s[0]
 ; CHECK-GI-NEXT:    fmov s17, w0
 ; CHECK-GI-NEXT:    add x9, sp, #16
 ; CHECK-GI-NEXT:    ld1 { v3.s }[2], [x8]
 ; CHECK-GI-NEXT:    mov w8, #31 // =0x1f
-; CHECK-GI-NEXT:    mov v0.s[1], v2.s[0]
-; CHECK-GI-NEXT:    mov v1.s[2], wzr
-; CHECK-GI-NEXT:    fmov s18, w8
 ; CHECK-GI-NEXT:    mov v16.s[1], w1
+; CHECK-GI-NEXT:    fmov s18, w8
+; CHECK-GI-NEXT:    mov v0.s[1], v2.s[0]
+; CHECK-GI-NEXT:    fmov s2, w4
+; CHECK-GI-NEXT:    mov v1.s[2], wzr
 ; CHECK-GI-NEXT:    mov v4.s[2], v7.s[0]
 ; CHECK-GI-NEXT:    ldr s7, [sp, #16]
-; CHECK-GI-NEXT:    mov v17.s[1], w1
 ; CHECK-GI-NEXT:    mov v6.s[2], v5.s[0]
 ; CHECK-GI-NEXT:    ld1 { v3.s }[3], [x9]
-; CHECK-GI-NEXT:    fmov s2, w4
+; CHECK-GI-NEXT:    mov v17.s[1], w1
 ; CHECK-GI-NEXT:    mov v18.s[1], w8
 ; CHECK-GI-NEXT:    movi v19.4s, #31
-; CHECK-GI-NEXT:    mov v0.s[2], v5.s[0]
 ; CHECK-GI-NEXT:    mov v16.s[2], w2
+; CHECK-GI-NEXT:    mov v2.s[1], w5
+; CHECK-GI-NEXT:    mov v0.s[2], v5.s[0]
 ; CHECK-GI-NEXT:    mov v4.s[3], v7.s[0]
 ; CHECK-GI-NEXT:    fmov s7, w4
 ; CHECK-GI-NEXT:    neg v3.4s, v3.4s
@@ -1419,15 +1420,14 @@ define <7 x i32> @rotl_v7i32(<7 x i32> %a, <7 x i32> %c) {
 ; CHECK-GI-NEXT:    fmov s6, w8
 ; CHECK-GI-NEXT:    mov v17.s[2], w2
 ; CHECK-GI-NEXT:    mov v18.s[2], w8
-; CHECK-GI-NEXT:    mov v2.s[1], w5
+; CHECK-GI-NEXT:    mov v16.s[3], w3
 ; CHECK-GI-NEXT:    mov v7.s[1], w5
 ; CHECK-GI-NEXT:    and v3.16b, v3.16b, v19.16b
-; CHECK-GI-NEXT:    mov v16.s[3], w3
+; CHECK-GI-NEXT:    mov v2.s[2], w6
 ; CHECK-GI-NEXT:    mov v6.s[1], w8
 ; CHECK-GI-NEXT:    and v4.16b, v4.16b, v19.16b
 ; CHECK-GI-NEXT:    mov v17.s[3], w3
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v18.16b
-; CHECK-GI-NEXT:    mov v2.s[2], w6
 ; CHECK-GI-NEXT:    neg v3.4s, v3.4s
 ; CHECK-GI-NEXT:    mov v7.s[2], w6
 ; CHECK-GI-NEXT:    mov v6.s[2], w8
@@ -1510,7 +1510,7 @@ define <7 x i32> @rotr_v7i32(<7 x i32> %a, <7 x i32> %c) {
 ; CHECK-GI-NEXT:    fmov s2, w7
 ; CHECK-GI-NEXT:    mov x8, sp
 ; CHECK-GI-NEXT:    ldr s6, [sp, #8]
-; CHECK-GI-NEXT:    fmov s0, wzr
+; CHECK-GI-NEXT:    movi d0, #0000000000000000
 ; CHECK-GI-NEXT:    ldr s7, [sp, #32]
 ; CHECK-GI-NEXT:    fmov s16, w0
 ; CHECK-GI-NEXT:    fmov s17, w0
@@ -1518,12 +1518,12 @@ define <7 x i32> @rotr_v7i32(<7 x i32> %a, <7 x i32> %c) {
 ; CHECK-GI-NEXT:    ldr s3, [sp, #24]
 ; CHECK-GI-NEXT:    ld1 { v2.s }[1], [x8]
 ; CHECK-GI-NEXT:    mov w8, #31 // =0x1f
-; CHECK-GI-NEXT:    mov v0.s[1], wzr
 ; CHECK-GI-NEXT:    add x9, sp, #8
+; CHECK-GI-NEXT:    ldr s5, [sp, #40]
 ; CHECK-GI-NEXT:    mov v4.16b, v3.16b
 ; CHECK-GI-NEXT:    mov v3.s[1], v7.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], wzr
 ; CHECK-GI-NEXT:    fmov s18, w8
-; CHECK-GI-NEXT:    ldr s5, [sp, #40]
 ; CHECK-GI-NEXT:    ld1 { v2.s }[2], [x9]
 ; CHECK-GI-NEXT:    mov v17.s[1], w1
 ; CHECK-GI-NEXT:    mov v1.s[2], v6.s[0]
@@ -1531,9 +1531,9 @@ define <7 x i32> @rotr_v7i32(<7 x i32> %a, <7 x i32> %c) {
 ; CHECK-GI-NEXT:    mov v16.s[1], w1
 ; CHECK-GI-NEXT:    mov v4.s[1], v7.s[0]
 ; CHECK-GI-NEXT:    ldr s7, [sp, #16]
+; CHECK-GI-NEXT:    fmov s19, w4
 ; CHECK-GI-NEXT:    mov v18.s[1], w8
 ; CHECK-GI-NEXT:    mov v3.s[2], v5.s[0]
-; CHECK-GI-NEXT:    fmov s19, w4
 ; CHECK-GI-NEXT:    add x10, sp, #16
 ; CHECK-GI-NEXT:    mov v6.s[1], w8
 ; CHECK-GI-NEXT:    mov v0.s[2], wzr

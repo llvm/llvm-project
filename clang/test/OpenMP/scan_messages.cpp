@@ -2,9 +2,14 @@
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 150 %s
 
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=60 -ferror-limit 150 %s
+
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=60 -ferror-limit 150 %s
+
 template <class T>
-T tmain() {
+T tfoobar(T ub[]) {
   static T argc;
+  T *ptr;
 #pragma omp for
   for (int i = 0; i < 10; ++i) {
 #pragma omp scan // expected-error {{exactly one of 'inclusive' or 'exclusive' clauses is expected}}
@@ -83,12 +88,23 @@ label:
 label1 : {
 #pragma omp scan inclusive(argc) // expected-error {{orphaned 'omp scan' directives are prohibited; perhaps you forget to enclose the directive into a for, simd, for simd, parallel for, or parallel for simd region?}}
 }}
+#pragma omp simd reduction(inscan, +: argc)
+  for (int i = 0; i < 10; ++i) {
+  #pragma omp scan inclusive(ptr[0:], argc) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
+  ;
+  }
+#pragma omp simd reduction(inscan, +: argc)
+  for (int i = 0; i < 10; ++i) {
+  #pragma omp scan exclusive(argc, ub[:]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is an array of unknown bound}}
+  ;
+  }
 
   return T();
 }
 
-int main() {
+int foobar(int ub[]) {
   static int argc;
+  int *ptr;
 #pragma omp simd reduction(inscan, +: argc)
   for (int i = 0; i < 10; ++i) {
 #pragma omp scan inclusive(argc) inclusive(argc) // expected-error {{exactly one of 'inclusive' or 'exclusive' clauses is expected}}
@@ -177,6 +193,16 @@ label1 : {
 #pragma omp scan inclusive(argc) // expected-error {{orphaned 'omp scan' directives are prohibited; perhaps you forget to enclose the directive into a for, simd, for simd, parallel for, or parallel for simd region?}}
 }
 }
+#pragma omp simd reduction(inscan, +: argc)
+  for (int i = 0; i < 10; ++i) {
+  #pragma omp scan inclusive(ptr[0:], argc) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
+  ;
+  }
+#pragma omp simd reduction(inscan, +: argc)
+  for (int i = 0; i < 10; ++i) {
+  #pragma omp scan exclusive(argc, ub[:]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is an array of unknown bound}}
+  ;
+  }
 
-  return tmain<int>(); // expected-note {{in instantiation of function template specialization 'tmain<int>' requested here}}
+  return tfoobar<int>(ub); // expected-note {{in instantiation of function template specialization 'tfoobar<int>' requested here}}
 }

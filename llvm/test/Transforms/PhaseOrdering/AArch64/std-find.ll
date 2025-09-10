@@ -18,7 +18,8 @@ define i64 @std_find_i16_constant_offset_with_assumptions(ptr %first.coerce, i16
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[FIRST_COERCE]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[NEXT_GEP]], align 2
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq <8 x i16> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[WIDE_LOAD_FR:%.*]] = freeze <8 x i16> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq <8 x i16> [[WIDE_LOAD_FR]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i1> [[TMP0]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP1]], 0

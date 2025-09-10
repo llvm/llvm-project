@@ -6,11 +6,11 @@
 # RUN: %lldb -b -s %s %t.out | FileCheck %s
 
 run
-# CHECK: thread #{{.*}} stop reason = Undefined Behavior Sanitizer: Integer addition overflowed
+# CHECK: thread #{{.*}} stop reason = Undefined Behavior Sanitizer: signed integer addition overflow in '2147483647 + 1'
 # CHECK-NEXT: frame #1: {{.*}}`main at ubsan_add_overflow.c
 
 bt
-# CHECK: frame #0: {{.*}}`__clang_trap_msg$Undefined Behavior Sanitizer$Integer addition overflowed{{.*}}
+# CHECK: frame #0: {{.*}}`__clang_trap_msg$Undefined Behavior Sanitizer$signed integer addition overflow in '2147483647 + 1'{{.*}}
 # CHECK: frame #1: {{.*}}`main at ubsan_add_overflow.c
 
 frame info
