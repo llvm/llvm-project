@@ -29,3 +29,7 @@ rationale for some of the design decisions behind MLIR.
 [Usage of 'const' in MLIR, for core IR types](UsageOfConst.md)
 :   Explains the rationale for eschewing the use of `const` entirely for the
     core IR types in MLIR.
+
+[IRDL Rationale](IRDLRationale.md)
+:   Describes the purpose of the IRDL dialect and the guiding principles behind
+    it.
