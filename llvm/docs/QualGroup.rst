@@ -160,12 +160,10 @@ Membership Review
 
 To ensure the group remains active and focused, member participation will be reviewed every six months. Inactive members may be removed following this review.
 
-Meeting Minutes
-===============
+Meeting Materials
+=================
 
-Meeting notes for the LLVM Qualification Working Group are published on the 
-LLVM Discourse forum. These notes provide a summary of topics discussed, 
-decisions made, and next steps. 
+Agendas, meeting notes, and presentation slides for the sync-ups are shared to ensure transparency and continuity.
 
 Upcoming and past meeting agendas, and meeting minutes are published in a dedicated thread
 on the LLVM Discourse forum: `Meeting Agendas and Minutes <https://discourse.llvm.org/t/llvm-qualification-wg-sync-ups-meeting-minutes/87148>`_ 
