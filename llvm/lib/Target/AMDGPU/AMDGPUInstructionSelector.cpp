@@ -300,7 +300,7 @@ bool AMDGPUInstructionSelector::selectPHI(MachineInstr &I) const {
   // TODO-WAVETRANSFORM: the statement about uniform S1 is not totally true
   // because AMDGPURegBankSelect is not turned on by default. So for now, we
   // still need to handle uniform S1 during instruction-select.
-  if (DefTy == LLT::scalar(1) && MFInfo->isWholeWaveControlFlow())
+  if (DefTy == LLT::scalar(1) && MFInfo->isWaveCFG())
     return false;
 
   // TODO: Verify this doesn't have insane operands (i.e. VGPR to SGPR copy)

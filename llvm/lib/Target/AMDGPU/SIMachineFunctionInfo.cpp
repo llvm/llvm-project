@@ -745,7 +745,7 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       PSInputAddr(MFI.getPSInputAddr()), PSInputEnable(MFI.getPSInputEnable()),
       MaxMemoryClusterDWords(MFI.getMaxMemoryClusterDWords()),
       Mode(MFI.getMode()), HasInitWholeWave(MFI.hasInitWholeWave()),
-      WholeWaveCF(MFI.isWholeWaveControlFlow()),
+      IsWaveCFG(MFI.isWaveCFG()),
       IsWholeWaveFunction(MFI.isWholeWaveFunction()),
       DynamicVGPRBlockSize(MFI.getDynamicVGPRBlockSize()),
       ScratchReservedForDynamicVGPRs(MFI.getScratchReservedForDynamicVGPRs()) {
@@ -795,7 +795,7 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   NumWaveDispatchVGPRs = YamlMFI.NumWaveDispatchVGPRs;
   BytesInStackArgArea = YamlMFI.BytesInStackArgArea;
   ReturnsVoid = YamlMFI.ReturnsVoid;
-  WholeWaveCF = YamlMFI.WholeWaveCF;
+  IsWaveCFG = YamlMFI.IsWaveCFG;
   IsWholeWaveFunction = YamlMFI.IsWholeWaveFunction;
 
   if (YamlMFI.ScavengeFI) {

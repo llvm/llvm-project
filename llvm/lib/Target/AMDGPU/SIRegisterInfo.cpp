@@ -3881,7 +3881,7 @@ bool SIRegisterInfo::shouldCoalesce(MachineInstr *MI,
                                     LiveIntervals &LIS) const {
 
   auto MFI = MI->getMF()->getInfo<SIMachineFunctionInfo>();
-  if (!MFI->isWholeWaveControlFlow()) {
+  if (!MFI->isWaveCFG()) {
     // Do not coalesce any SGPR copy before WaveTransform.
     // Note that we also need a separate pass to deal with phi-node for
     // vector-i1 values stored in SGPRs.

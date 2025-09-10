@@ -2234,7 +2234,7 @@ bool AMDGPUWaveTransform::runOnMachineFunction(MachineFunction &MF) {
   // test cases. We need to clear it here to avoid verifier errors.
   MF.getProperties().reset(MachineFunctionProperties::Property::NoPHIs);
 
-  MF.getInfo<SIMachineFunctionInfo>()->setWholeWaveControlFlow(true);
+  MF.getInfo<SIMachineFunctionInfo>()->setWaveCFG(true);
 
   return true; // assume that we changed something
 }

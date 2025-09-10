@@ -165,7 +165,7 @@ bool AMDGPUDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   // When enabling WaveTransform, we set the following state initially
   // to false before ISel, then set it to true after WaveTransform.
   if (EnableWaveTransformCF)
-    MF.getInfo<SIMachineFunctionInfo>()->setWholeWaveControlFlow(false);
+    MF.getInfo<SIMachineFunctionInfo>()->setWaveCFG(false);
   return SelectionDAGISel::runOnMachineFunction(MF);
 }
 

@@ -55,7 +55,7 @@
 # FULL-NEXT:  sgprForEXECCopy: ''
 # FULL-NEXT:  longBranchReservedReg: ''
 # FULL-NEXT:  hasInitWholeWave: false
-# FULL-NEXT: wholeWaveCF: true
+# FULL-NEXT: isWaveCFG: true
 # FULL-NEXT: dynamicVGPRBlockSize: 0
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
 # FULL-NEXT: isWholeWaveFunction: false
@@ -166,7 +166,7 @@ body:             |
 # FULL-NEXT: sgprForEXECCopy: ''
 # FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: hasInitWholeWave: false
-# FULL-NEXT: wholeWaveCF: true
+# FULL-NEXT: isWaveCFG: true
 # FULL-NEXT: dynamicVGPRBlockSize: 0
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
 # FULL-NEXT: isWholeWaveFunction: false
@@ -248,7 +248,7 @@ body:             |
 # FULL-NEXT: sgprForEXECCopy: ''
 # FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: hasInitWholeWave: false
-# FULL-NEXT: wholeWaveCF: true
+# FULL-NEXT: isWaveCFG: true
 # FULL-NEXT: dynamicVGPRBlockSize: 0
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
 # FULL-NEXT: isWholeWaveFunction: false
@@ -331,7 +331,7 @@ body:             |
 # FULL-NEXT: sgprForEXECCopy: ''
 # FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: hasInitWholeWave: false
-# FULL-NEXT: wholeWaveCF: true
+# FULL-NEXT: isWaveCFG: true
 # FULL-NEXT: dynamicVGPRBlockSize: 0
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
 # FULL-NEXT: isWholeWaveFunction: false

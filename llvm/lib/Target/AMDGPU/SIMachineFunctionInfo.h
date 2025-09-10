@@ -301,7 +301,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   StringValue LongBranchReservedReg;
 
   bool HasInitWholeWave = false;
-  bool WholeWaveCF = true;
+  bool IsWaveCFG = true;
   bool IsWholeWaveFunction = false;
 
   unsigned DynamicVGPRBlockSize = 0;
@@ -360,7 +360,7 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("longBranchReservedReg", MFI.LongBranchReservedReg,
                        StringValue());
     YamlIO.mapOptional("hasInitWholeWave", MFI.HasInitWholeWave, false);
-    YamlIO.mapOptional("wholeWaveCF", MFI.WholeWaveCF, true);
+    YamlIO.mapOptional("isWaveCFG", MFI.IsWaveCFG, true);
     YamlIO.mapOptional("dynamicVGPRBlockSize", MFI.DynamicVGPRBlockSize, false);
     YamlIO.mapOptional("scratchReservedForDynamicVGPRs",
                        MFI.ScratchReservedForDynamicVGPRs, 0);
@@ -421,7 +421,7 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
   // based upon when we convert control-flow into the whole-wave mode,
   // however that breaks a bunch of existing tests, for example, on register
   // coalescer.
-  bool WholeWaveCF = true;
+  bool IsWaveCFG = true;
 
   // State of MODE register, assumed FP mode.
   SIModeRegisterDefaults Mode;
@@ -1151,9 +1151,9 @@ public:
     PSInputEnable |= 1 << Index;
   }
 
-  bool isWholeWaveControlFlow() const { return WholeWaveCF; }
+  bool isWaveCFG() const { return IsWaveCFG; }
 
-  void setWholeWaveControlFlow(bool WWCF) { WholeWaveCF = WWCF; }
+  void setWaveCFG(bool WCFG) { IsWaveCFG = WCFG; }
 
   bool returnsVoid() const {
     return ReturnsVoid;
