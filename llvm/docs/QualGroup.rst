@@ -45,7 +45,7 @@ Group Members
 The members of the LLVM Qualification Group represent a diverse cross-section of the LLVM community, including individual contributors, researchers, vendor representatives, and experts in the field of software qualification, including reliability, quality, safety, and/or security.
 They meet the criteria for inclusion below. Knowing their handles help us keep track of who’s who across platforms, coordinate activities, and recognize contributions.
 
-.. list-table:: Group Members
+.. list-table::
    :widths: 20 20 20 20 20
    :header-rows: 1
 
@@ -57,7 +57,7 @@ They meet the criteria for inclusion below. Knowing their handles help us keep t
    * - Alan Phipps
      - Texas Instruments
      - evodius96
-     - -
+     - \-
      - evodius96
    * - Carlos Andrés Ramírez
      - Woven by Toyota
@@ -73,7 +73,7 @@ They meet the criteria for inclusion below. Knowing their handles help us keep t
      - Validas
      - slotosch
      - oscarslotosch_66740
-     - -
+     - \-
    * - Petar Jovanovic
      - HTECH
      - petarj
@@ -159,6 +159,20 @@ Membership Review
 -----------------
 
 To ensure the group remains active and focused, member participation will be reviewed every six months. Inactive members may be removed following this review.
+
+Current Topics & Backlog
+========================
+
+Our working group is actively engaged in discussions about the project's
+direction and tackling technical challenges. You can find our current 
+discussions, challenges, and the project backlog in the following 
+document.
+
+`Backlog document <https://docs.google.com/document/d/10YZZ72ba09Ck_OiJaP9C4-7DeUiveaIKTE3IkaSKjzA/edit?usp=sharing>`
+
+This document serves as our central hub for all ongoing topics and will
+be updated regularly to reflect our progress. We welcome your 
+contributions and feedback.
 
 Meeting Materials
 =================
