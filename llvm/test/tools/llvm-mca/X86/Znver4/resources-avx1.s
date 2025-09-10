@@ -1365,13 +1365,13 @@ vzeroupper
 # CHECK-NEXT:  1      8     0.50    *                   vpabsd	(%rax), %xmm2
 # CHECK-NEXT:  1      2     1.00                        vpabsw	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vpabsw	(%rax), %xmm2
-# CHECK-NEXT:  1      2     1.00                        vpackssdw	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  1      2     0.50                        vpackssdw	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vpackssdw	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  1      2     1.00                        vpacksswb	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  1      2     0.50                        vpacksswb	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vpacksswb	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  1      2     1.00                        vpackusdw	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  1      2     0.50                        vpackusdw	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vpackusdw	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  1      2     1.00                        vpackuswb	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  1      2     0.50                        vpackuswb	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vpackuswb	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     0.25                        vpaddb	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vpaddb	(%rax), %xmm1, %xmm2
@@ -1389,7 +1389,7 @@ vzeroupper
 # CHECK-NEXT:  1      8     0.50    *                   vpaddusw	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     0.25                        vpaddw	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vpaddw	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  1      2     1.00                        vpalignr	$1, %xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  1      2     0.50                        vpalignr	$1, %xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vpalignr	$1, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     0.25                        vpand	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vpand	(%rax), %xmm1, %xmm2
@@ -1749,7 +1749,7 @@ vzeroupper
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT: 1.33   1.33   1.33   16.50  16.50  16.50  16.50   -     205.25 396.08 270.58 158.08 208.50 208.50 65.00  119.67 119.67 119.67 107.00 107.00 107.00 19.00  19.00
+# CHECK-NEXT: 1.33   1.33   1.33   16.50  16.50  16.50  16.50   -     205.25 393.58 268.08 158.08 208.50 208.50 65.00  119.67 119.67 119.67 107.00 107.00 107.00 19.00  19.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
@@ -2088,13 +2088,13 @@ vzeroupper
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpabsd	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     vpabsw	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpabsw	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpackssdw	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     vpackssdw	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpackssdw	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpacksswb	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     vpacksswb	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpacksswb	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpackusdw	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     vpackusdw	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpackusdw	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpackuswb	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     vpackuswb	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpackuswb	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     vpaddb	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpaddb	(%rax), %xmm1, %xmm2
@@ -2112,7 +2112,7 @@ vzeroupper
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpaddusw	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     vpaddw	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpaddw	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpalignr	$1, %xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     vpalignr	$1, %xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpalignr	$1, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     vpand	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpand	(%rax), %xmm1, %xmm2
