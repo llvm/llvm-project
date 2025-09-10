@@ -63,6 +63,7 @@ constexpr void test_with_one_view() {
 
 constexpr void test_with_more_than_one_view() {
   {
+    // 2 views are of same type
     using View = std::ranges::concat_view<HelperView, HelperView>;
     int arr1[] = {1, 2};
     int arr2[] = {3, 4};
@@ -71,6 +72,24 @@ constexpr void test_with_more_than_one_view() {
     View view(range1, range2);
     auto it  = view.begin();
     auto end = view.end();
+    assert(*it++ == 1);
+    assert(*it++ == 2);
+    assert(*it++ == 3);
+    assert(*it++ == 4);
+    assert(it == end);
+  }
+
+  {
+    // 2 views are of different types
+    using View = std::ranges::concat_view<HelperView, DefaultConstructibleView>;
+    int arr1[] = {1, 2};
+    HelperView range1(arr1, arr1 + 2);
+    DefaultConstructibleView range2;
+    View view(range1, range2);
+    auto it  = view.begin();
+    auto end = view.end();
+    assert(*it++ == 1);
+    assert(*it++ == 2);
     assert(*it++ == 1);
     assert(*it++ == 2);
     assert(*it++ == 3);
