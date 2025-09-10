@@ -1477,37 +1477,33 @@ define <8 x half> @movsh(<8 x half> %a, <8 x half> %b) {
 ;
 ; X64-NOVL-LABEL: movsh:
 ; X64-NOVL:       # %bb.0:
-; X64-NOVL-NEXT:    vpshufb {{.*#+}} xmm2 = xmm0[0,1,14,15,0,1,2,3,4,5,6,7,14,15,10,11]
-; X64-NOVL-NEXT:    vmovsh {{.*#+}} xmm3 = xmm0[0],xmm1[1,2,3,4,5,6,7]
-; X64-NOVL-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm3[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; X64-NOVL-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; X64-NOVL-NEXT:    vaddsh %xmm4, %xmm5, %xmm4
-; X64-NOVL-NEXT:    vshufps {{.*#+}} xmm5 = xmm3[3,3,3,3]
-; X64-NOVL-NEXT:    vpshufd {{.*#+}} xmm6 = xmm2[3,3,3,3]
+; X64-NOVL-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X64-NOVL-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X64-NOVL-NEXT:    vaddsh %xmm2, %xmm3, %xmm2
+; X64-NOVL-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[3,3,3,3]
+; X64-NOVL-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X64-NOVL-NEXT:    vaddsh %xmm3, %xmm4, %xmm3
+; X64-NOVL-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
+; X64-NOVL-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X64-NOVL-NEXT:    vpsrlq $48, %xmm0, %xmm5
+; X64-NOVL-NEXT:    vaddsh %xmm3, %xmm5, %xmm3
+; X64-NOVL-NEXT:    vshufpd {{.*#+}} xmm5 = xmm1[1,0]
+; X64-NOVL-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm0[1,1,3,3]
 ; X64-NOVL-NEXT:    vaddsh %xmm5, %xmm6, %xmm5
-; X64-NOVL-NEXT:    vpunpcklwd {{.*#+}} xmm4 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
-; X64-NOVL-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm3[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; X64-NOVL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[3,3,3,3,4,5,6,7]
-; X64-NOVL-NEXT:    vaddsh %xmm5, %xmm0, %xmm0
-; X64-NOVL-NEXT:    vshufpd {{.*#+}} xmm5 = xmm3[1,0]
-; X64-NOVL-NEXT:    vpshufd {{.*#+}} xmm6 = xmm2[2,3,0,1]
-; X64-NOVL-NEXT:    vaddsh %xmm5, %xmm6, %xmm5
-; X64-NOVL-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm5[0],xmm0[0],xmm5[1],xmm0[1],xmm5[2],xmm0[2],xmm5[3],xmm0[3]
-; X64-NOVL-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1]
-; X64-NOVL-NEXT:    vpsrlq $48, %xmm1, %xmm4
-; X64-NOVL-NEXT:    vpsrlq $48, %xmm2, %xmm5
-; X64-NOVL-NEXT:    vaddsh %xmm4, %xmm5, %xmm4
-; X64-NOVL-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm3[1,1,3,3]
-; X64-NOVL-NEXT:    vpshufd {{.*#+}} xmm6 = xmm2[1,1,3,3]
-; X64-NOVL-NEXT:    vaddsh %xmm5, %xmm6, %xmm5
-; X64-NOVL-NEXT:    vpunpcklwd {{.*#+}} xmm4 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
-; X64-NOVL-NEXT:    vaddsh %xmm3, %xmm2, %xmm3
+; X64-NOVL-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm5[0],xmm3[0],xmm5[1],xmm3[1],xmm5[2],xmm3[2],xmm5[3],xmm3[3]
+; X64-NOVL-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
+; X64-NOVL-NEXT:    vpsrlq $48, %xmm1, %xmm3
+; X64-NOVL-NEXT:    vpsrld $16, %xmm0, %xmm5
+; X64-NOVL-NEXT:    vaddsh %xmm3, %xmm5, %xmm3
+; X64-NOVL-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm1[1,1,3,3]
+; X64-NOVL-NEXT:    vaddsh %xmm5, %xmm0, %xmm5
+; X64-NOVL-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm5[0],xmm3[0],xmm5[1],xmm3[1],xmm5[2],xmm3[2],xmm5[3],xmm3[3]
 ; X64-NOVL-NEXT:    vpsrld $16, %xmm1, %xmm1
-; X64-NOVL-NEXT:    vpsrld $16, %xmm2, %xmm2
-; X64-NOVL-NEXT:    vaddsh %xmm1, %xmm2, %xmm1
-; X64-NOVL-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm3[0],xmm1[0],xmm3[1],xmm1[1],xmm3[2],xmm1[2],xmm3[3],xmm1[3]
-; X64-NOVL-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[1],xmm4[1]
-; X64-NOVL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; X64-NOVL-NEXT:    vaddsh %xmm1, %xmm4, %xmm1
+; X64-NOVL-NEXT:    vaddsh %xmm0, %xmm0, %xmm0
+; X64-NOVL-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; X64-NOVL-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; X64-NOVL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; X64-NOVL-NEXT:    retq
   %res1 = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 0, i32 7, i32 0, i32 1, i32 2, i32 3, i32 7, i32 5>
   %res2 = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 0, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>

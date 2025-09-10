@@ -23933,8 +23933,7 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
     // scalar_to_vector here as well.
 
     if (!LegalOperations ||
-        // FIXME: Should really be just isOperationLegalOrCustom.
-        TLI.isOperationLegal(ISD::EXTRACT_VECTOR_ELT, VecVT) ||
+        TLI.isOperationLegalOrCustom(ISD::EXTRACT_VECTOR_ELT, VecVT) ||
         TLI.isOperationExpand(ISD::VECTOR_SHUFFLE, VecVT)) {
       return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, SVInVec,
                          DAG.getVectorIdxConstant(OrigElt, DL));
