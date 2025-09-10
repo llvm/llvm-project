@@ -1642,6 +1642,17 @@ defm auto_import : BoolFOption<"auto-import",
 def offload_EQ : CommaJoined<["--"], "offload=">, Flags<[NoXarchOption]>, Alias<offload_targets_EQ>,
   HelpText<"Specify comma-separated list of offloading target triples (CUDA and HIP only)">;
 
+// This flag is only here so we can test the named loops implementation
+// in C++ mode and C language modes before C2y to make sure it actually
+// works; it should be removed once the syntax of the feature is stable
+// enough to backport it to earlier language modes (and to C++ if it ever
+// gets standardised as a C++ feature).
+defm named_loops
+    : BoolFOption<
+          "named-loops", LangOpts<"NamedLoops">, DefaultFalse,
+          PosFlag<SetTrue, [], [CC1Option], "Enable support for named loops">,
+          NegFlag<SetFalse>>;
+
 // C++ Coroutines
 defm coroutines : BoolFOption<"coroutines",
   LangOpts<"Coroutines">, Default<cpp20.KeyPath>,
@@ -1851,7 +1862,7 @@ defm pseudo_probe_for_profiling
                   CodeGenOpts<"PseudoProbeForProfiling">, DefaultFalse,
                   PosFlag<SetTrue, [], [ClangOption], "Emit">,
                   NegFlag<SetFalse, [], [ClangOption], "Do not emit">,
-                  BothFlags<[], [ClangOption, CC1Option],
+                  BothFlags<[], [ClangOption, CC1Option, CLOption],
                             " pseudo probes for sample profiling">>;
 def fprofile_list_EQ : Joined<["-"], "fprofile-list=">,
     Group<f_Group>, Visibility<[ClangOption, CC1Option, CLOption]>,
@@ -4778,6 +4789,18 @@ def gembed_source : Flag<["-"], "gembed-source">, Group<g_flags_Group>,
 def gno_embed_source : Flag<["-"], "gno-embed-source">, Group<g_flags_Group>,
     Flags<[NoXarchOption]>,
     HelpText<"Restore the default behavior of not embedding source text in DWARF debug sections">;
+defm structor_decl_linkage_names
+    : BoolGOption<"structor-decl-linkage-names",
+                  CodeGenOpts<"DebugStructorDeclLinkageNames">, DefaultTrue,
+                  NegFlag<SetFalse>,
+                  PosFlag<SetTrue, [], [],
+                          "Attach linkage names to C++ constructor/destructor "
+                          "declarations in DWARF."
+                          "Implies -g.">,
+                  BothFlags<[], [ClangOption, CLOption, CC1Option]>>,
+                  DocBrief<[{On some ABIs (e.g., Itanium), constructors and destructors may have multiple variants. Historically, when generating DWARF, Clang did not attach ``DW_AT_linkage_name``s to structor DIEs because there were multiple possible manglings (depending on the structor variant) that could be used. With ``-gstructor-decl-linkage-names``, for ABIs with structor variants, we attach a "unified" mangled name to structor declarations DIEs which debuggers can use to look up all the definitions for a structor declaration. E.g., a "unified" mangled name ``_ZN3FooC4Ev`` may have multiple definitions associated with it such as ``_ZN3FooC1Ev`` and ``_ZN3FooC2Ev``.
+
+Enabling this flag results in a better interactive debugging experience (both GDB and LLDB have support for understanding these "unified" linkage names). However, it comes with a significant increase in debug-info size (particularly the `.debug_str` section). As an escape hatch, users can disable this feature using ``-gno-structor-decl-linkage-names``.}]>;
 defm key_instructions : BoolGOption<"key-instructions",
     CodeGenOpts<"DebugKeyInstructions">, DefaultFalse,
     NegFlag<SetFalse>, PosFlag<SetTrue, [], [],
@@ -6640,16 +6663,10 @@ def msse4a : Flag<["-"], "msse4a">, Group<m_x86_Features_Group>;
 def mno_sse4a : Flag<["-"], "mno-sse4a">, Group<m_x86_Features_Group>;
 def mavx : Flag<["-"], "mavx">, Group<m_x86_Features_Group>;
 def mno_avx : Flag<["-"], "mno-avx">, Group<m_x86_Features_Group>;
-def mavx10_1_256 : Flag<["-"], "mavx10.1-256">, Group<m_x86_AVX10_Features_Group>;
-def mno_avx10_1_256 : Flag<["-"], "mno-avx10.1-256">, Group<m_x86_AVX10_Features_Group>;
-def mavx10_1_512 : Flag<["-"], "mavx10.1-512">, Group<m_x86_AVX10_Features_Group>;
-def mno_avx10_1_512 : Flag<["-"], "mno-avx10.1-512">, Alias<mno_avx10_1_256>;
-def mavx10_1 : Flag<["-"], "mavx10.1">, Group<m_x86_AVX10_Features_Group>;
-def mno_avx10_1 : Flag<["-"], "mno-avx10.1">, Group<m_x86_AVX10_Features_Group>;
-def mavx10_2_256 : Flag<["-"], "mavx10.2-256">, Group<m_x86_AVX10_Features_Group>;
-def mavx10_2_512 : Flag<["-"], "mavx10.2-512">, Group<m_x86_AVX10_Features_Group>;
-def mavx10_2 : Flag<["-"], "mavx10.2">, Group<m_x86_AVX10_Features_Group>;
-def mno_avx10_2 : Flag<["-"], "mno-avx10.2">, Group<m_x86_AVX10_Features_Group>;
+def mavx10_1 : Flag<["-"], "mavx10.1">, Group<m_x86_Features_Group>;
+def mno_avx10_1 : Flag<["-"], "mno-avx10.1">, Group<m_x86_Features_Group>;
+def mavx10_2 : Flag<["-"], "mavx10.2">, Group<m_x86_Features_Group>;
+def mno_avx10_2 : Flag<["-"], "mno-avx10.2">, Group<m_x86_Features_Group>;
 def mavx2 : Flag<["-"], "mavx2">, Group<m_x86_Features_Group>;
 def mno_avx2 : Flag<["-"], "mno-avx2">, Group<m_x86_Features_Group>;
 def mavx512f : Flag<["-"], "mavx512f">, Group<m_x86_Features_Group>;
@@ -6714,10 +6731,6 @@ def mcx16 : Flag<["-"], "mcx16">, Group<m_x86_Features_Group>;
 def mno_cx16 : Flag<["-"], "mno-cx16">, Group<m_x86_Features_Group>;
 def menqcmd : Flag<["-"], "menqcmd">, Group<m_x86_Features_Group>;
 def mno_enqcmd : Flag<["-"], "mno-enqcmd">, Group<m_x86_Features_Group>;
-def mevex512 : Flag<["-"], "mevex512">, Group<m_x86_Features_Group>,
-               Visibility<[ClangOption, CLOption, FlangOption]>;
-def mno_evex512 : Flag<["-"], "mno-evex512">, Group<m_x86_Features_Group>,
-                  Visibility<[ClangOption, CLOption, FlangOption]>;
 def mf16c : Flag<["-"], "mf16c">, Group<m_x86_Features_Group>;
 def mno_f16c : Flag<["-"], "mno-f16c">, Group<m_x86_Features_Group>;
 def mfma : Flag<["-"], "mfma">, Group<m_x86_Features_Group>;
@@ -8708,7 +8721,8 @@ def fopenmp_is_target_device : Flag<["-"], "fopenmp-is-target-device">,
   HelpText<"Generate code only for an OpenMP target device.">;
 def : Flag<["-"], "fopenmp-is-device">, Alias<fopenmp_is_target_device>;
 def fopenmp_host_ir_file_path : Separate<["-"], "fopenmp-host-ir-file-path">,
-  HelpText<"Path to the IR file produced by the frontend for the host.">;
+  HelpText<"Path to the IR file produced by the frontend for the host.">,
+  MarshallingInfoString<LangOpts<"OMPHostIRFile">>;
 
 } // let Visibility = [CC1Option, FC1Option]
 
@@ -9404,6 +9418,8 @@ def dxc_Fo : DXCJoinedOrSeparate<"Fo">,
   HelpText<"Output object file">;
 def dxc_Fc : DXCJoinedOrSeparate<"Fc">,
   HelpText<"Output assembly listing file">;
+def dxc_Frs : DXCJoinedOrSeparate<"Frs">,
+  HelpText<"Output additional root signature object file">;
 def dxil_validator_version : Option<["/", "-"], "validator-version", KIND_SEPARATE>,
   Group<dxc_Group>, Flags<[HelpHidden]>,
   Visibility<[DXCOption, ClangOption, CC1Option]>,
@@ -9430,7 +9446,8 @@ def target_profile : DXCJoinedOrSeparate<"T">, MetaVarName<"<profile>">,
          "cs_6_0, cs_6_1, cs_6_2, cs_6_3, cs_6_4, cs_6_5, cs_6_6, cs_6_7,"
          "lib_6_3, lib_6_4, lib_6_5, lib_6_6, lib_6_7, lib_6_x,"
          "ms_6_5, ms_6_6, ms_6_7,"
-         "as_6_5, as_6_6, as_6_7">;
+         "as_6_5, as_6_6, as_6_7,"
+         "rootsig_1_0, rootsig_1_1">;
 def emit_pristine_llvm : DXCFlag<"emit-pristine-llvm">,
   HelpText<"Emit pristine LLVM IR from the frontend by not running any LLVM passes at all."
            "Same as -S + -emit-llvm + -disable-llvm-passes.">;

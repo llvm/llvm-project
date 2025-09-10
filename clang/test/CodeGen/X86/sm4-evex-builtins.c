@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-- -target-feature +sm4 \
-// RUN: -target-feature +avx10.2-512 -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: -target-feature +avx10.2 -emit-llvm -o - -Wall -Werror | FileCheck %s
 // RUN: %clang_cc1 %s -ffreestanding -triple=i386-- -target-feature +sm4 \
-// RUN: -target-feature +avx10.2-512 -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: -target-feature +avx10.2 -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 #include <immintrin.h>
 #include <stddef.h>

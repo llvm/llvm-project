@@ -845,9 +845,16 @@ enum AttrName { Target, TargetClones, TargetVersion };
 
 void inferNoReturnAttr(Sema &S, const Decl *D);
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattributes"
+#endif
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
   // Table of Contents
   // -----------------
   // 1. Semantic Analysis (Sema.cpp)
@@ -5363,7 +5370,7 @@ public:
                                   SourceLocation UsingLoc,
                                   SourceLocation EnumLoc, SourceRange TyLoc,
                                   const IdentifierInfo &II, ParsedType Ty,
-                                  CXXScopeSpec *SS = nullptr);
+                                  const CXXScopeSpec &SS);
   Decl *ActOnAliasDeclaration(Scope *CurScope, AccessSpecifier AS,
                               MultiTemplateParamsArg TemplateParams,
                               SourceLocation UsingLoc, UnqualifiedId &Name,
@@ -9488,6 +9495,10 @@ public:
   LabelDecl *LookupOrCreateLabel(IdentifierInfo *II, SourceLocation IdentLoc,
                                  SourceLocation GnuLabelLoc = SourceLocation());
 
+  /// Perform a name lookup for a label with the specified name; this does not
+  /// create a new label if the lookup fails.
+  LabelDecl *LookupExistingLabel(IdentifierInfo *II, SourceLocation IdentLoc);
+
   /// Look up the constructors for the given class.
   DeclContextLookupResult LookupConstructors(CXXRecordDecl *Class);
 
@@ -11042,8 +11053,10 @@ public:
                            LabelDecl *TheDecl);
   StmtResult ActOnIndirectGotoStmt(SourceLocation GotoLoc,
                                    SourceLocation StarLoc, Expr *DestExp);
-  StmtResult ActOnContinueStmt(SourceLocation ContinueLoc, Scope *CurScope);
-  StmtResult ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope);
+  StmtResult ActOnContinueStmt(SourceLocation ContinueLoc, Scope *CurScope,
+                               LabelDecl *Label, SourceLocation LabelLoc);
+  StmtResult ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope,
+                            LabelDecl *Label, SourceLocation LabelLoc);
 
   struct NamedReturnInfo {
     const VarDecl *Candidate;
@@ -11662,7 +11675,8 @@ public:
   DeclResult CheckVarTemplateId(VarTemplateDecl *Template,
                                 SourceLocation TemplateLoc,
                                 SourceLocation TemplateNameLoc,
-                                const TemplateArgumentListInfo &TemplateArgs);
+                                const TemplateArgumentListInfo &TemplateArgs,
+                                bool SetWrittenArgs);
 
   /// Form a reference to the specialization of the given variable template
   /// corresponding to the specified argument list, or a null-but-valid result
@@ -14022,7 +14036,6 @@ public:
   VarTemplateSpecializationDecl *BuildVarTemplateInstantiation(
       VarTemplateDecl *VarTemplate, VarDecl *FromVar,
       const TemplateArgumentList *PartialSpecArgs,
-      const TemplateArgumentListInfo &TemplateArgsInfo,
       SmallVectorImpl<TemplateArgument> &Converted,
       SourceLocation PointOfInstantiation,
       LateInstantiatedAttrVec *LateAttrs = nullptr,

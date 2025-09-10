@@ -13,6 +13,7 @@
 
 #include "TypeDetail.h"
 
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -701,6 +702,17 @@ const llvm::fltSemantics &LLVMPPCFP128Type::getFloatSemantics() const {
 // Utility functions.
 //===----------------------------------------------------------------------===//
 
+/// Check whether type is a compatible ptr type. These are pointer-like types
+/// with no element type, no metadata, and using the LLVM AddressSpaceAttr
+/// memory space.
+static bool isCompatiblePtrType(Type type) {
+  auto ptrTy = dyn_cast<PtrLikeTypeInterface>(type);
+  if (!ptrTy)
+    return false;
+  return !ptrTy.hasPtrMetadata() && ptrTy.getElementType() == nullptr &&
+         isa<AddressSpaceAttr>(ptrTy.getMemorySpace());
+}
+
 bool mlir::LLVM::isCompatibleOuterType(Type type) {
   // clang-format off
   if (llvm::isa<
@@ -734,7 +746,7 @@ bool mlir::LLVM::isCompatibleOuterType(Type type) {
   if (auto vecType = llvm::dyn_cast<VectorType>(type))
     return vecType.getRank() == 1;
 
-  return false;
+  return isCompatiblePtrType(type);
 }
 
 static bool isCompatibleImpl(Type type, DenseSet<Type> &compatibleTypes) {
@@ -784,6 +796,8 @@ static bool isCompatibleImpl(Type type, DenseSet<Type> &compatibleTypes) {
             LLVMX86AMXType
           >([](Type) { return true; })
           // clang-format on
+          .Case<PtrLikeTypeInterface>(
+              [](Type type) { return isCompatiblePtrType(type); })
           .Default([](Type) { return false; });
 
   if (!result)
@@ -805,6 +819,18 @@ bool mlir::LLVM::isCompatibleType(Type type) {
   return LLVMDialect::isCompatibleType(type);
 }
 
+bool mlir::LLVM::isLoadableType(Type type) {
+  return /*LLVM_PrimitiveType*/ (
+             LLVM::isCompatibleOuterType(type) &&
+             !isa<LLVM::LLVMVoidType, LLVM::LLVMFunctionType>(type)) &&
+         /*LLVM_OpaqueStruct*/
+         !(isa<LLVM::LLVMStructType>(type) &&
+           cast<LLVM::LLVMStructType>(type).isOpaque()) &&
+         /*LLVM_AnyTargetExt*/
+         !(isa<LLVM::LLVMTargetExtType>(type) &&
+           !cast<LLVM::LLVMTargetExtType>(type).supportsMemOps());
+}
+
 bool mlir::LLVM::isCompatibleFloatingPointType(Type type) {
   return llvm::isa<BFloat16Type, Float16Type, Float32Type, Float64Type,
                    Float80Type, Float128Type, LLVMPPCFP128Type>(type);
@@ -818,7 +844,8 @@ bool mlir::LLVM::isCompatibleVectorType(Type type) {
     if (auto intType = llvm::dyn_cast<IntegerType>(elementType))
       return intType.isSignless();
     return llvm::isa<BFloat16Type, Float16Type, Float32Type, Float64Type,
-                     Float80Type, Float128Type, LLVMPointerType>(elementType);
+                     Float80Type, Float128Type, LLVMPointerType>(elementType) ||
+           isCompatiblePtrType(elementType);
   }
   return false;
 }

@@ -3600,6 +3600,10 @@ bool FunctionDecl::isNoReturn() const {
   return false;
 }
 
+bool FunctionDecl::isAnalyzerNoReturn() const {
+  return hasAttr<AnalyzerNoReturnAttr>();
+}
+
 bool FunctionDecl::isMemberLikeConstrainedFriend() const {
   // C++20 [temp.friend]p9:
   //   A non-template friend declaration with a requires-clause [or]
