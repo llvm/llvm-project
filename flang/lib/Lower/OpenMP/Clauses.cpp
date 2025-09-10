@@ -221,6 +221,8 @@ MAKE_EMPTY_CLASS(Capture, Capture);
 MAKE_EMPTY_CLASS(Compare, Compare);
 MAKE_EMPTY_CLASS(DynamicAllocators, DynamicAllocators);
 MAKE_EMPTY_CLASS(Full, Full);
+MAKE_EMPTY_CLASS(GraphId, GraphId);
+MAKE_EMPTY_CLASS(GraphReset, GraphReset);
 MAKE_EMPTY_CLASS(Inbranch, Inbranch);
 MAKE_EMPTY_CLASS(Mergeable, Mergeable);
 MAKE_EMPTY_CLASS(Nogroup, Nogroup);
