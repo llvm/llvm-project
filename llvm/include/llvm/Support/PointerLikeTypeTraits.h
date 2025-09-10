@@ -15,8 +15,8 @@
 #define LLVM_SUPPORT_POINTERLIKETYPETRAITS_H
 
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/MathExtras.h"
 #include <cassert>
-#include <type_traits>
 
 namespace llvm {
 
@@ -25,12 +25,6 @@ namespace llvm {
 template <typename T> struct PointerLikeTypeTraits;
 
 namespace detail {
-/// A tiny meta function to compute the log2 of a compile time constant.
-template <size_t N>
-struct ConstantLog2
-    : std::integral_constant<size_t, ConstantLog2<N / 2>::value + 1> {};
-template <> struct ConstantLog2<1> : std::integral_constant<size_t, 0> {};
-
 // Provide a trait to check if T is pointer-like.
 template <typename T, typename U = void> struct HasPointerLikeTypeTraits {
   static const bool value = false;
@@ -57,8 +51,7 @@ template <typename T> struct PointerLikeTypeTraits<T *> {
   static inline void *getAsVoidPointer(T *P) { return P; }
   static inline T *getFromVoidPointer(void *P) { return static_cast<T *>(P); }
 
-  static constexpr int NumLowBitsAvailable =
-      detail::ConstantLog2<alignof(T)>::value;
+  static constexpr int NumLowBitsAvailable = CTLog2<alignof(T)>();
 };
 
 template <> struct PointerLikeTypeTraits<void *> {
@@ -123,8 +116,7 @@ template <> struct PointerLikeTypeTraits<uintptr_t> {
 /// potentially use alignment attributes on functions to satisfy that.
 template <int Alignment, typename FunctionPointerT>
 struct FunctionPointerLikeTypeTraits {
-  static constexpr int NumLowBitsAvailable =
-      detail::ConstantLog2<Alignment>::value;
+  static constexpr int NumLowBitsAvailable = CTLog2<Alignment>();
   static inline void *getAsVoidPointer(FunctionPointerT P) {
     assert((reinterpret_cast<uintptr_t>(P) &
             ~((uintptr_t)-1 << NumLowBitsAvailable)) == 0 &&
