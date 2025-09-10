@@ -26,7 +26,7 @@ bool User::replaceUsesOfWith(Value *From, Value *To) {
          "Cannot call User::replaceUsesOfWith on a constant!");
 
   for (unsigned i = 0, E = getNumOperands(); i != E; ++i)
-    if (getOperand(i) == From) {  // Is This operand is pointing to oldval?
+    if (getOperand(i) == From) { // Is This operand is pointing to oldval?
       // The side effects of this setOperand call include linking to
       // "To", adding "this" to the uses list of To, and
       // most importantly, removing "this" from the use list of "From".
@@ -146,9 +146,6 @@ void *User::allocateFixedOperandUser(size_t Size, unsigned Us,
   Use *Start = reinterpret_cast<Use *>(Storage + DescBytesToAllocate);
   Use *End = Start + Us;
   User *Obj = reinterpret_cast<User *>(End);
-  Obj->NumUserOperands = Us;
-  Obj->HasHungOffUses = false;
-  Obj->HasDescriptor = DescBytes != 0;
   for (; Start != End; Start++)
     new (Start) Use(Obj);
 
@@ -175,9 +172,6 @@ void *User::operator new(size_t Size, HungOffOperandsAllocMarker) {
   void *Storage = ::operator new(Size + sizeof(Use *));
   Use **HungOffOperandList = static_cast<Use **>(Storage);
   User *Obj = reinterpret_cast<User *>(HungOffOperandList + 1);
-  Obj->NumUserOperands = 0;
-  Obj->HasHungOffUses = true;
-  Obj->HasDescriptor = false;
   *HungOffOperandList = nullptr;
   return Obj;
 }
@@ -191,28 +185,54 @@ void *User::operator new(size_t Size, HungOffOperandsAllocMarker) {
 LLVM_NO_SANITIZE_MEMORY_ATTRIBUTE void User::operator delete(void *Usr) {
   // Hung off uses use a single Use* before the User, while other subclasses
   // use a Use[] allocated prior to the user.
-  User *Obj = static_cast<User *>(Usr);
+  const auto *Obj = static_cast<User *>(Usr);
   if (Obj->HasHungOffUses) {
-    assert(!Obj->HasDescriptor && "not supported!");
-
-    Use **HungOffOperandList = static_cast<Use **>(Usr) - 1;
-    // drop the hung off uses.
-    Use::zap(*HungOffOperandList, *HungOffOperandList + Obj->NumUserOperands,
-             /* Delete */ true);
-    ::operator delete(HungOffOperandList);
+    const HungOffOperandsAllocMarker Marker{
+        Obj->NumUserOperands,
+    };
+    operator delete(Usr, Marker);
   } else if (Obj->HasDescriptor) {
-    Use *UseBegin = static_cast<Use *>(Usr) - Obj->NumUserOperands;
-    Use::zap(UseBegin, UseBegin + Obj->NumUserOperands, /* Delete */ false);
-
-    auto *DI = reinterpret_cast<DescriptorInfo *>(UseBegin) - 1;
-    uint8_t *Storage = reinterpret_cast<uint8_t *>(DI) - DI->SizeInBytes;
-    ::operator delete(Storage);
+    const IntrusiveOperandsAndDescriptorAllocMarker Marker{
+        Obj->NumUserOperands,
+        Obj->HasDescriptor,
+    };
+    operator delete(Usr, Marker);
   } else {
-    Use *Storage = static_cast<Use *>(Usr) - Obj->NumUserOperands;
-    Use::zap(Storage, Storage + Obj->NumUserOperands,
-             /* Delete */ false);
-    ::operator delete(Storage);
+    const IntrusiveOperandsAllocMarker Marker{
+        Obj->NumUserOperands,
+    };
+    operator delete(Usr, Marker);
   }
+}
+
+// Repress memory sanitization, due to use-after-destroy by operator
+// delete. Bug report 24578 identifies this issue.
+void User::operator delete(void *Usr, HungOffOperandsAllocMarker Marker) {
+  Use **HungOffOperandList = static_cast<Use **>(Usr) - 1;
+  // drop the hung off uses.
+  Use::zap(*HungOffOperandList, *HungOffOperandList + Marker.NumOps,
+           /* Delete */ true);
+  ::operator delete(HungOffOperandList);
+}
+
+// Repress memory sanitization, due to use-after-destroy by operator
+// delete. Bug report 24578 identifies this issue.
+void User::operator delete(void *Usr, IntrusiveOperandsAllocMarker Marker) {
+  Use *Storage = static_cast<Use *>(Usr) - Marker.NumOps;
+  Use::zap(Storage, Storage + Marker.NumOps, /* Delete */ false);
+  ::operator delete(Storage);
+}
+
+// Repress memory sanitization, due to use-after-destroy by operator
+// delete. Bug report 24578 identifies this issue.
+void User::operator delete(void *Usr,
+                           IntrusiveOperandsAndDescriptorAllocMarker Marker) {
+  Use *UseBegin = static_cast<Use *>(Usr) - Marker.NumOps;
+  Use::zap(UseBegin, UseBegin + Marker.NumOps, /* Delete */ false);
+
+  auto *DI = reinterpret_cast<DescriptorInfo *>(UseBegin) - 1;
+  uint8_t *Storage = reinterpret_cast<uint8_t *>(DI) - DI->SizeInBytes;
+  ::operator delete(Storage);
 }
 
 } // namespace llvm
