@@ -331,7 +331,7 @@ bool EvalEmitter::emitDestroy(uint32_t I, const SourceInfo &Info) {
 /// This is what we do here.
 void EvalEmitter::updateGlobalTemporaries() {
   for (const auto &[E, Temp] : S.SeenGlobalTemporaries) {
-    if (std::optional<unsigned> GlobalIndex = P.getGlobal(E)) {
+    if (UnsignedOrNone GlobalIndex = P.getGlobal(E)) {
       const Pointer &Ptr = P.getPtrGlobal(*GlobalIndex);
       APValue *Cached = Temp->getOrCreateValue(true);
 
