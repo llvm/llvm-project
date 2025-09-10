@@ -3553,16 +3553,16 @@ SCEVSignedMonotonicityChecker::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
         return SignedMonotonicity(SignedMonotonicityType::Unknown, Expr);
   }
 
-    switch (StartRes.getType()) {
-    case SignedMonotonicityType::Unknown:
-      llvm_unreachable("should have been handled above");
-    case SignedMonotonicityType::Invariant:
-    case SignedMonotonicityType::MultiMonotonic:
-      // TODO: Should handle SCEV like `{{0,+,-1}<%loop>,+,1}<%loop>`?
-      // TODO: Should we prove here that the Step is non-zero?
-      return SignedMonotonicity(SignedMonotonicityType::MultiMonotonic);
-    }
-    llvm_unreachable("unhandled MonotonicityType");
+  switch (StartRes.getType()) {
+  case SignedMonotonicityType::Unknown:
+    llvm_unreachable("should have been handled above");
+  case SignedMonotonicityType::Invariant:
+  case SignedMonotonicityType::MultiMonotonic:
+    // TODO: Should handle SCEV like `{{0,+,-1}<%loop>,+,1}<%loop>`?
+    // TODO: Should we prove here that the Step is non-zero?
+    return SignedMonotonicity(SignedMonotonicityType::MultiMonotonic);
+  }
+  llvm_unreachable("unhandled MonotonicityType");
 }
 
 SignedMonotonicity SCEVSignedMonotonicityChecker::visitZeroExtendExpr(
