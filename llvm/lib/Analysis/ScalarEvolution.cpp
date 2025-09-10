@@ -3221,21 +3221,23 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
       // of C1, fold to (D /u (C2 /u C1)).
       const SCEV *D;
       APInt C1V = LHSC->getAPInt();
-      // (C1 * D /u C2) == -1 * -C1 * D /u C2 when C1 != INT_MIN.
-      if (C1V.isNegative() && !C1V.isMinSignedValue())
+      // (C1 * D /u C2) == -1 * -C1 * D /u C2 when C1 != INT_MIN. Don't treat -1
+      // as -1 * 1, as it won't enable additional folds.
+      if (C1V.isNegative() && !C1V.isMinSignedValue() && !C1V.isAllOnes())
         C1V = C1V.abs();
       const SCEVConstant *C2;
       if (C1V.isPowerOf2() &&
           match(Ops[1], m_scev_UDiv(m_SCEV(D), m_SCEVConstant(C2))) &&
           C2->getAPInt().isPowerOf2() &&
           C1V.logBase2() <= getMinTrailingZeros(D)) {
-        const SCEV *NewMul = nullptr;
-        if (C1V.uge(C2->getAPInt()))
+        const SCEV *NewMul;
+        if (C1V.uge(C2->getAPInt())) {
           NewMul = getMulExpr(getUDivExpr(getConstant(C1V), C2), D);
-        else if (C1V.ugt(1))
+        } else {
+          assert(C1V.ugt(1) && "C1 <= 1 should have been folded earlier");
           NewMul = getUDivExpr(D, getUDivExpr(C2, getConstant(C1V)));
-        if (NewMul)
-          return C1V == LHSC->getAPInt() ? NewMul : getNegativeSCEV(NewMul);
+        }
+        return C1V == LHSC->getAPInt() ? NewMul : getNegativeSCEV(NewMul);
       }
     }
   }
