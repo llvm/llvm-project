@@ -1,9 +1,5 @@
 include(AddMLIRPython)
 
-# Specifies that all MLIR packages are co-located under the `mlir_standalone`
-# top level package (the API has been embedded in a relocatable way).
-add_compile_definitions("MLIR_PYTHON_PACKAGE_PREFIX=${MLIR_PYTHON_PACKAGE_PREFIX}.")
-
 ################################################################################
 # Structural groupings.
 ################################################################################
@@ -27,6 +23,11 @@ declare_mlir_python_sources(MLIRPythonSources.Core.Python
     passmanager.py
     rewrite.py
     dialects/_ods_common.py
+
+    # The main _mlir module has submodules: include stubs from each.
+    _mlir_libs/_mlir/__init__.pyi
+    _mlir_libs/_mlir/ir.pyi
+    _mlir_libs/_mlir/passmanager.pyi
 )
 
 declare_mlir_python_sources(MLIRPythonSources.Core.Python.Extras
@@ -42,6 +43,7 @@ declare_mlir_python_sources(MLIRPythonSources.ExecutionEngine
   ADD_TO_PARENT MLIRPythonSources
   SOURCES
     execution_engine.py
+    _mlir_libs/_mlirExecutionEngine.pyi
   SOURCES_GLOB
     runtime/*.py
 )
@@ -193,6 +195,7 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/TransformOps.td
   SOURCES
     dialects/transform/__init__.py
+    _mlir_libs/_mlir/dialects/transform/__init__.pyi
   DIALECT_NAME transform
   GEN_ENUM_BINDINGS_TD_FILE
     "../../include/mlir/Dialect/Transform/IR/TransformAttrs.td"
@@ -364,7 +367,8 @@ declare_mlir_python_sources(
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   GEN_ENUM_BINDINGS
   SOURCES
-    dialects/quant.py)
+    dialects/quant.py
+    _mlir_libs/_mlir/dialects/quant.pyi)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -380,6 +384,7 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/PDLOps.td
   SOURCES
     dialects/pdl.py
+    _mlir_libs/_mlir/dialects/pdl.pyi
   DIALECT_NAME pdl)
 
 declare_mlir_dialect_python_bindings(
@@ -505,7 +510,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Core
 
     # Dialects
     MLIRCAPIFunc
-  GENERATE_TYPE_STUBS
 )
 
 # This extension exposes an API to register all dialects, extensions, and passes
@@ -527,7 +531,6 @@ declare_mlir_python_extension(MLIRPythonExtension.RegisterEverything
     MLIRCAPIConversion
     MLIRCAPITransforms
     MLIRCAPIRegisterEverything
-  GENERATE_TYPE_STUBS
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.Linalg.Pybind
@@ -542,7 +545,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.Linalg.Pybind
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPILinalg
-  GENERATE_TYPE_STUBS
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.GPU.Pybind
@@ -557,7 +559,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.GPU.Pybind
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPIGPU
-  GENERATE_TYPE_STUBS
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.LLVM.Pybind
@@ -572,7 +573,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.LLVM.Pybind
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPILLVM
-  GENERATE_TYPE_STUBS
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.Quant.Pybind
@@ -587,7 +587,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.Quant.Pybind
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPIQuant
-  GENERATE_TYPE_STUBS
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.NVGPU.Pybind
@@ -602,7 +601,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.NVGPU.Pybind
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPINVGPU
-  GENERATE_TYPE_STUBS
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.PDL.Pybind
@@ -617,7 +615,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.PDL.Pybind
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPIPDL
-  GENERATE_TYPE_STUBS
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.SparseTensor.Pybind
@@ -632,7 +629,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.SparseTensor.Pybind
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPISparseTensor
-  GENERATE_TYPE_STUBS
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.Transform.Pybind
@@ -647,7 +643,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.Transform.Pybind
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPITransformDialect
-  GENERATE_TYPE_STUBS
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.AsyncDialectPasses
@@ -661,7 +656,6 @@ declare_mlir_python_extension(MLIRPythonExtension.AsyncDialectPasses
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIAsync
-  GENERATE_TYPE_STUBS
 )
 
 if(MLIR_ENABLE_EXECUTION_ENGINE)
@@ -676,7 +670,6 @@ if(MLIR_ENABLE_EXECUTION_ENGINE)
       LLVMSupport
     EMBED_CAPI_LINK_LIBS
       MLIRCAPIExecutionEngine
-    GENERATE_TYPE_STUBS
   )
 endif()
 
@@ -691,7 +684,6 @@ declare_mlir_python_extension(MLIRPythonExtension.GPUDialectPasses
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIGPU
-  GENERATE_TYPE_STUBS
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.LinalgPasses
@@ -705,7 +697,6 @@ declare_mlir_python_extension(MLIRPythonExtension.LinalgPasses
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPILinalg
-  GENERATE_TYPE_STUBS
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.SMT.Pybind
@@ -723,7 +714,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.SMT.Pybind
     MLIRCAPIIR
     MLIRCAPISMT
     MLIRCAPIExportSMTLIB
-  GENERATE_TYPE_STUBS
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.SparseTensorDialectPasses
@@ -737,7 +727,6 @@ declare_mlir_python_extension(MLIRPythonExtension.SparseTensorDialectPasses
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPISparseTensor
-  GENERATE_TYPE_STUBS
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.TransformInterpreter
@@ -751,7 +740,6 @@ declare_mlir_python_extension(MLIRPythonExtension.TransformInterpreter
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPITransformDialectTransforms
-  GENERATE_TYPE_STUBS
 )
 
 # TODO: Figure out how to put this in the test tree.
@@ -810,7 +798,6 @@ if(MLIR_INCLUDE_TESTS)
       LLVMSupport
     EMBED_CAPI_LINK_LIBS
       MLIRCAPIPythonTestDialect
-    GENERATE_TYPE_STUBS
   )
 endif()
 
@@ -830,7 +817,7 @@ endif()
 add_mlir_python_common_capi_library(MLIRPythonCAPI
   INSTALL_COMPONENT MLIRPythonModules
   INSTALL_DESTINATION "${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}/_mlir_libs"
-  OUTPUT_DIRECTORY "${MLIR_BINARY_DIR}/${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}/_mlir_libs"
+  OUTPUT_DIRECTORY "${MLIR_BINARY_DIR}/python_packages/mlir_core/mlir/_mlir_libs"
   RELATIVE_INSTALL_ROOT "../../../.."
   DECLARED_HEADERS
     MLIRPythonCAPI.HeaderSources
@@ -859,7 +846,7 @@ endif()
 ################################################################################
 
 add_mlir_python_modules(MLIRPythonModules
-  ROOT_PREFIX "${MLIR_BINARY_DIR}/${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}"
+  ROOT_PREFIX "${MLIR_BINARY_DIR}/python_packages/mlir_core/mlir"
   INSTALL_PREFIX "${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}"
   DECLARED_SOURCES
     MLIRPythonSources
