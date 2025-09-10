@@ -280,17 +280,17 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sme_save)
   mov     w16, #1
   str     x16, [x0]
 
-  add     x18, x0, #32
+  add     x16, x0, #32
   tbz     x17, #FEAT_SME2_BIT, 1f
 
   // Store ZT0
-  str     zt0, [x18]
-  add     x18, x18, #64
+  str     zt0, [x16]
+  add     x16, x16, #64
 
 1:
-  // Set up lazy-save (x18 = pointer to buffer)
+  // Set up lazy-save (x16 = pointer to buffer)
   rdsvl   x17, #1
-  str     x18, [x0, #16]!
+  str     x16, [x0, #16]!
   strh    w17, [x0, #8]
   strh    wzr, [x0, #10]
   str     wzr, [x0, #12]
