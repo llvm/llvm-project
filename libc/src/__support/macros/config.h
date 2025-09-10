@@ -13,6 +13,13 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_CONFIG_H
 #define LLVM_LIBC_SRC___SUPPORT_MACROS_CONFIG_H
 
+#include "src/__support/macros/properties/architectures.h"
+#include "src/__support/macros/properties/compiler.h"
+
+#ifdef LIBC_COMPILER_IS_MSVC
+#include <intrin.h>
+#endif // LIBC_COMPILER_IS_MSVC
+
 // Workaround for compilers that do not support builtin detection.
 // FIXME: This is only required for the GPU portion which should be moved.
 #ifndef __has_builtin
@@ -26,6 +33,19 @@
 #else
 #define LIBC_HAS_FEATURE(f) 0
 #endif
+
+#ifdef LIBC_COMPILER_IS_MSVC
+
+// __builtin_trap replacement
+#ifdef LIBC_TARGET_ARCH_IS_X86
+#define __builtin_trap __ud2
+#else // arm64
+#define __builtin_trap() __break(1)
+#endif
+
+#define __builtin_expect(value, expectation) (value)
+
+#endif // LIBC_COMPILER_IS_MSVC
 
 #ifdef __clang__
 // Declare a LIBC_NAMESPACE with hidden visibility. `namespace
