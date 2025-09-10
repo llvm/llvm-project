@@ -1,6 +1,6 @@
 parameters:
-  sourceIndexUploadPackageVersion: 2.0.0-20250818.1
-  sourceIndexProcessBinlogPackageVersion: 1.0.1-20250818.1
+  sourceIndexUploadPackageVersion: 2.0.0-20250906.1
+  sourceIndexProcessBinlogPackageVersion: 1.0.1-20250906.1
   sourceIndexPackageSource: https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-tools/nuget/v3/index.json
   binlogPath: artifacts/log/Debug/Build.binlog
 
