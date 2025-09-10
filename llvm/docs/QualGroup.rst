@@ -1,3 +1,8 @@
+.. CHANGE TRACKER for reference
+.. Purpose: Fixed document location and added Current Topics & Backlog
+.. Author: Carlos Andres Ramirez
+.. Last updated: 2025-09-08 by Carlos Ramirez
+
 ========================
 LLVM Qualification Group
 ========================
@@ -48,6 +53,20 @@ Participation is open to anyone interested. There are several ways to get involv
 
 We welcome contributors from diverse backgrounds, organizations, and experience levels.
 
+Current Topics & Backlog
+========================
+
+Our working group is actively engaged in discussions about the project's
+direction and tackling technical challenges. You can find our current 
+discussions, challenges, and the project backlog in the following 
+document.
+
+`Backlog document <https://docs.google.com/document/d/10YZZ72ba09Ck_OiJaP9C4-7DeUiveaIKTE3IkaSKjzA/edit?usp=sharing>`
+
+This document serves as our central hub for all ongoing topics and will
+be updated regularly to reflect our progress. We welcome your 
+contributions and feedback.
+
 Meeting Materials
 =================
 
@@ -60,9 +79,10 @@ on the LLVM Discourse forum: `Meeting Agendas and Minutes <https://discourse.llv
 Slides used to support discussions during sync-up meetings are stored in LLVM's GitHub repository.
 
 Available slides:
-* `September 2025 <../qual-wg/slides/202509_llvm_qual_wg.pdf>`_
-* `August 2025 <../qual-wg/slides/202508_llvm_qual_wg.pdf>`_
-* `July 2025 <../qual-wg/slides/202507_llvm_qual_wg.pdf>`_
+
+* `September 2025 <qual-wg/slides/202509_llvm_qual_wg.pdf>`_
+* `August 2025 <qual-wg/slides/202508_llvm_qual_wg.pdf>`_
+* `July 2025 <qual-wg/slides/202507_llvm_qual_wg.pdf>`_
 * (add future entries here)
 
 A future patch will migrate these slide files to the `llvm-www` repository, once
