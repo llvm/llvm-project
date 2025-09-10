@@ -149,9 +149,8 @@ define signext i32 @test4(i32 signext %x, i32 signext %y, i32 signext %z) {
 ;
 ; CMOV-ZICOND-LABEL: test4:
 ; CMOV-ZICOND:       # %bb.0:
-; CMOV-ZICOND-NEXT:    snez a0, a2
-; CMOV-ZICOND-NEXT:    addi a0, a0, -1
-; CMOV-ZICOND-NEXT:    andi a0, a0, 3
+; CMOV-ZICOND-NEXT:    li a0, 3
+; CMOV-ZICOND-NEXT:    czero.nez a0, a0, a2
 ; CMOV-ZICOND-NEXT:    ret
 ;
 ; SFB-NOZICOND-LABEL: test4:
@@ -165,9 +164,8 @@ define signext i32 @test4(i32 signext %x, i32 signext %y, i32 signext %z) {
 ;
 ; SFB-ZICOND-LABEL: test4:
 ; SFB-ZICOND:       # %bb.0:
-; SFB-ZICOND-NEXT:    snez a0, a2
-; SFB-ZICOND-NEXT:    addi a0, a0, -1
-; SFB-ZICOND-NEXT:    andi a0, a0, 3
+; SFB-ZICOND-NEXT:    li a0, 3
+; SFB-ZICOND-NEXT:    czero.nez a0, a0, a2
 ; SFB-ZICOND-NEXT:    ret
   %c = icmp eq i32 %z, 0
   %a = select i1 %c, i32 3, i32 0

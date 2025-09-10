@@ -51,25 +51,11 @@ bool verifyRootDescriptorFlag(uint32_t Version, uint32_t FlagsVal) {
   return (Flags | DataFlags) == DataFlags;
 }
 
-bool verifyRangeType(uint32_t Type) {
-  switch (Type) {
-  case llvm::to_underlying(dxbc::DescriptorRangeType::CBV):
-  case llvm::to_underlying(dxbc::DescriptorRangeType::SRV):
-  case llvm::to_underlying(dxbc::DescriptorRangeType::UAV):
-  case llvm::to_underlying(dxbc::DescriptorRangeType::Sampler):
-    return true;
-  };
-
-  return false;
-}
-
-bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
-                               uint32_t FlagsVal) {
+bool verifyDescriptorRangeFlag(uint32_t Version, dxil::ResourceClass Type,
+                               dxbc::DescriptorRangeFlags Flags) {
   using FlagT = dxbc::DescriptorRangeFlags;
-  FlagT Flags = FlagT(FlagsVal);
 
-  const bool IsSampler =
-      (Type == llvm::to_underlying(dxbc::DescriptorRangeType::Sampler));
+  const bool IsSampler = (Type == dxil::ResourceClass::Sampler);
 
   if (Version == 1) {
     // Since the metadata is unversioned, we expect to explicitly see the values
@@ -179,6 +165,22 @@ bool verifyBorderColor(uint32_t BorderColor) {
 }
 
 bool verifyLOD(float LOD) { return !std::isnan(LOD); }
+
+bool verifyBoundOffset(uint32_t Offset) {
+  return Offset != NumDescriptorsUnbounded;
+}
+
+bool verifyNoOverflowedOffset(uint64_t Offset) {
+  return Offset <= std::numeric_limits<uint32_t>::max();
+}
+
+uint64_t computeRangeBound(uint32_t Offset, uint32_t Size) {
+  assert(0 < Size && "Must be a non-empty range");
+  if (Size == NumDescriptorsUnbounded)
+    return NumDescriptorsUnbounded;
+
+  return uint64_t(Offset) + uint64_t(Size) - 1;
+}
 
 } // namespace rootsig
 } // namespace hlsl

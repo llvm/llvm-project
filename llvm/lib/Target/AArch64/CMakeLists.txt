@@ -92,6 +92,7 @@ add_llvm_target(AArch64CodeGen
   SVEIntrinsicOpts.cpp
   MachineSMEABIPass.cpp
   AArch64SIMDInstrOpt.cpp
+  AArch64PrologueEpilogue.cpp
 
   DEPENDS
   intrinsics_gen
@@ -108,6 +109,7 @@ add_llvm_target(AArch64CodeGen
   Core
   GlobalISel
   MC
+  Passes
   Scalar
   SelectionDAG
   Support
