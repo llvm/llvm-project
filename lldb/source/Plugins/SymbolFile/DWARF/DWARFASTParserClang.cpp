@@ -257,7 +257,7 @@ static unsigned GetCXXMethodCVQuals(const DWARFDIE &subprogram,
 }
 
 static std::string MakeLLDBFuncAsmLabel(const DWARFDIE &die) {
-  char const *name = die.GetMangledName(/*substitute_name_allowed*/ false);
+  const char *name = die.GetMangledName(/*substitute_name_allowed*/ false);
   if (!name)
     return {};
 
@@ -291,7 +291,9 @@ static std::string MakeLLDBFuncAsmLabel(const DWARFDIE &die) {
   if (die_id == LLDB_INVALID_UID)
     return {};
 
-  return FunctionCallLabel{/*module_id=*/module_id,
+  // Note, discriminator is added by Clang during mangling.
+  return FunctionCallLabel{/*discriminator=*/{},
+                           /*module_id=*/module_id,
                            /*symbol_id=*/die_id,
                            /*.lookup_name=*/name}
       .toString();
