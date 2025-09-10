@@ -2,7 +2,7 @@
 ; RUN: not llc < %s -mcpu=sm_90 -mattr=+ptx82 2>&1 | FileCheck %s --check-prefix=ERROR
 ; RUN: not llc < %s -mcpu=sm_80 -mattr=+ptx84 2>&1 | FileCheck %s --check-prefix=ERROR
 ; RUN: llc < %s -mcpu=sm_90 -mattr=+ptx84 | FileCheck %s --check-prefix=CHECK
-; RUN: %if ptxas-12.4 %{ llc < %s -mcpu=sm_90 -mattr=+ptx84 | %ptxas-verify -arch=sm_90 %}
+; RUN: %if ptxas-sm_90 && ptxas-isa-8.4 %{ llc < %s -mcpu=sm_90 -mattr=+ptx84 | %ptxas-verify -arch=sm_90 %}
 
 ;; TODO: Update cmpxchg.py so that it can automatically generate the IR for
 ;;       these test cases.
@@ -1024,10 +1024,10 @@ define void @test_atomicrmw_xchg_const() {
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd2, %rd1};
-; CHECK-NEXT:    atom.seq_cst.sys.shared.exch.b128 dst, [si128], amt;
+; CHECK-NEXT:    atom.relaxed.sys.shared.exch.b128 dst, [si128], amt;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    ret;
-	%res = atomicrmw xchg ptr addrspace(3) @si128, i128 23 seq_cst
+  %res = atomicrmw xchg ptr addrspace(3) @si128, i128 23 monotonic
   ret void
 }

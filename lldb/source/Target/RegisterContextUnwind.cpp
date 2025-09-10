@@ -293,6 +293,9 @@ void RegisterContextUnwind::InitializeZerothFrame() {
     return;
   }
 
+  // Give the Architecture a chance to replace the UnwindPlan.
+  TryAdoptArchitectureUnwindPlan();
+
   UnwindLogMsg("initialized frame current pc is 0x%" PRIx64 " cfa is 0x%" PRIx64
                " afa is 0x%" PRIx64 " using %s UnwindPlan",
                (uint64_t)m_current_pc.GetLoadAddress(exe_ctx.GetTargetPtr()),
@@ -481,6 +484,9 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
           return;
         }
       }
+
+      // Give the Architecture a chance to replace the UnwindPlan.
+      TryAdoptArchitectureUnwindPlan();
 
       UnwindLogMsg("initialized frame cfa is 0x%" PRIx64 " afa is 0x%" PRIx64,
                    (uint64_t)m_cfa, (uint64_t)m_afa);
@@ -685,6 +691,9 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
       return;
     }
   }
+
+  // Give the Architecture a chance to replace the UnwindPlan.
+  TryAdoptArchitectureUnwindPlan();
 
   UnwindLogMsg("initialized frame current pc is 0x%" PRIx64
                " cfa is 0x%" PRIx64 " afa is 0x%" PRIx64,
@@ -1715,6 +1724,41 @@ RegisterContextUnwind::SavedLocationForRegister(
   // unsupported.
 
   return UnwindLLDB::RegisterSearchResult::eRegisterNotFound;
+}
+
+UnwindPlanSP RegisterContextUnwind::TryAdoptArchitectureUnwindPlan() {
+  if (!m_full_unwind_plan_sp)
+    return {};
+  ProcessSP process_sp = m_thread.GetProcess();
+  if (!process_sp)
+    return {};
+
+  UnwindPlanSP arch_override_plan_sp;
+  if (Architecture *arch = process_sp->GetTarget().GetArchitecturePlugin())
+    arch_override_plan_sp =
+        arch->GetArchitectureUnwindPlan(m_thread, this, m_full_unwind_plan_sp);
+
+  if (arch_override_plan_sp) {
+    m_full_unwind_plan_sp = arch_override_plan_sp;
+    PropagateTrapHandlerFlagFromUnwindPlan(m_full_unwind_plan_sp);
+    m_registers.clear();
+    if (GetLog(LLDBLog::Unwind)) {
+      UnwindLogMsg(
+          "Replacing Full Unwindplan with Architecture UnwindPlan, '%s'",
+          m_full_unwind_plan_sp->GetSourceName().AsCString());
+      const UnwindPlan::Row *active_row =
+          m_full_unwind_plan_sp->GetRowForFunctionOffset(m_current_offset);
+      if (active_row) {
+        StreamString active_row_strm;
+        active_row->Dump(active_row_strm, m_full_unwind_plan_sp.get(),
+                         &m_thread,
+                         m_start_pc.GetLoadAddress(&process_sp->GetTarget()));
+        UnwindLogMsg("%s", active_row_strm.GetData());
+      }
+    }
+  }
+
+  return {};
 }
 
 // TryFallbackUnwindPlan() -- this method is a little tricky.
