@@ -2273,6 +2273,22 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  log_bf16
+  SRCS
+    log_bf16.cpp
+  HDRS
+    ../log_bf16.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+)
+
+add_entrypoint_object(
   logb
   SRCS
     logb.cpp
