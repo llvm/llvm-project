@@ -2719,6 +2719,24 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     return BinaryOperator::CreateSub(X, Not);
   }
 
+  // min(X+1, Y) - min(X, Y) --> zext X < Y
+  // Replacing a sub and at least one min with an icmp
+  // and a zext is a potential improvement.
+  if (match(Op0, m_c_SMin(m_c_NSWAdd(m_Value(X), m_One()), m_Value(Y))) &&
+      match(Op1, m_c_SMin(m_Value(X), m_Value(Y))) &&
+      I.getType()->getScalarSizeInBits() != 1 &&
+      (Op0->hasOneUse() || Op1->hasOneUse())) {
+    Value *Cond = Builder.CreateICmpSLT(X, Y);
+    return new ZExtInst(Cond, I.getType());
+  }
+  if (match(Op0, m_c_UMin(m_c_NUWAdd(m_Value(X), m_One()), m_Value(Y))) &&
+      match(Op1, m_c_UMin(m_Value(X), m_Value(Y))) &&
+      I.getType()->getScalarSizeInBits() != 1 &&
+      (Op0->hasOneUse() || Op1->hasOneUse())) {
+    Value *Cond = Builder.CreateICmpULT(X, Y);
+    return new ZExtInst(Cond, I.getType());
+  }
+
   // Optimize pointer differences into the same array into a size.  Consider:
   //  &A[10] - &A[0]: we should compile this to "10".
   Value *LHSOp, *RHSOp;
