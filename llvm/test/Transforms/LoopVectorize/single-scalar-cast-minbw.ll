@@ -19,10 +19,10 @@ define void @minbw_cast(ptr %dst, i64 %n, i1 %bool1, i1 %bool2) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc <4 x i32> [[BROADCAST_SPLAT2]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i1> [[BROADCAST_SPLAT]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i8> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i8> [[TMP2]], i32 3
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i8> [[TMP2]], i32 3
 ; CHECK-NEXT:    store i8 [[TMP3]], ptr [[DST]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
