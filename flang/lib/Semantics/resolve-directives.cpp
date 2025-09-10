@@ -29,7 +29,6 @@
 #include "llvm/Support/Debug.h"
 #include <list>
 #include <map>
-#include <sstream>
 
 template <typename T>
 static Fortran::semantics::Scope *GetScope(
@@ -61,6 +60,13 @@ protected:
         parser::OmpDefaultmapClause::ImplicitBehavior>
         defaultMap;
 
+    std::optional<Symbol::Flag> FindSymbolWithDSA(const Symbol &symbol) {
+      if (auto it{objectWithDSA.find(&symbol)}; it != objectWithDSA.end()) {
+        return it->second;
+      }
+      return std::nullopt;
+    }
+
     bool withinConstruct{false};
     std::int64_t associatedLoopLevel{0};
   };
@@ -75,10 +81,19 @@ protected:
         : std::make_optional<DirContext>(dirContext_.back());
   }
   void PushContext(const parser::CharBlock &source, T dir, Scope &scope) {
-    dirContext_.emplace_back(source, dir, scope);
+    if constexpr (std::is_same_v<T, llvm::acc::Directive>) {
+      dirContext_.emplace_back(source, dir, scope);
+      if (std::size_t size{dirContext_.size()}; size > 1) {
+        std::size_t lastIndex{size - 1};
+        dirContext_[lastIndex].defaultDSA =
+            dirContext_[lastIndex - 1].defaultDSA;
+      }
+    } else {
+      dirContext_.emplace_back(source, dir, scope);
+    }
   }
   void PushContext(const parser::CharBlock &source, T dir) {
-    dirContext_.emplace_back(source, dir, context_.FindScope(source));
+    PushContext(source, dir, context_.FindScope(source));
   }
   void PopContext() { dirContext_.pop_back(); }
   void SetContextDirectiveSource(parser::CharBlock &dir) {
@@ -100,9 +115,21 @@ protected:
     AddToContextObjectWithDSA(symbol, flag, GetContext());
   }
   bool IsObjectWithDSA(const Symbol &symbol) {
-    auto it{GetContext().objectWithDSA.find(&symbol)};
-    return it != GetContext().objectWithDSA.end();
+    return GetContext().FindSymbolWithDSA(symbol).has_value();
   }
+  bool IsObjectWithVisibleDSA(const Symbol &symbol) {
+    for (std::size_t i{dirContext_.size()}; i != 0; i--) {
+      if (dirContext_[i - 1].FindSymbolWithDSA(symbol).has_value()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool WithinConstruct() {
+    return !dirContext_.empty() && GetContext().withinConstruct;
+  }
+
   void SetContextAssociatedLoopLevel(std::int64_t level) {
     GetContext().associatedLoopLevel = level;
   }
@@ -277,6 +304,12 @@ public:
     return false;
   }
 
+  bool Pre(const parser::AccClause::Reduction &x) {
+    const auto &objectList{std::get<parser::AccObjectList>(x.v.t)};
+    ResolveAccObjectList(objectList, Symbol::Flag::AccReduction);
+    return false;
+  }
+
   void Post(const parser::Name &);
 
 private:
@@ -384,8 +417,8 @@ public:
   }
   void Post(const parser::OmpMetadirectiveDirective &) { PopContext(); }
 
-  bool Pre(const parser::OpenMPBlockConstruct &);
-  void Post(const parser::OpenMPBlockConstruct &);
+  bool Pre(const parser::OmpBlockConstruct &);
+  void Post(const parser::OmpBlockConstruct &);
 
   void Post(const parser::OmpBeginDirective &x) {
     GetContext().withinConstruct = true;
@@ -823,7 +856,23 @@ public:
   const parser::OmpClause *GetAssociatedClause() { return associatedClause; }
 
 private:
-  std::int64_t GetAssociatedLoopLevelFromClauses(const parser::OmpClauseList &);
+  /// Given a vector of loop levels and a vector of corresponding clauses find
+  /// the largest loop level and set the associated loop level to the found
+  /// maximum. This is used for error handling to ensure that the number of
+  /// affected loops is not larger that the number of available loops.
+  std::int64_t SetAssociatedMaxClause(llvm::SmallVector<std::int64_t> &,
+      llvm::SmallVector<const parser::OmpClause *> &);
+  std::int64_t GetNumAffectedLoopsFromLoopConstruct(
+      const parser::OpenMPLoopConstruct &);
+  void CollectNumAffectedLoopsFromLoopConstruct(
+      const parser::OpenMPLoopConstruct &, llvm::SmallVector<std::int64_t> &,
+      llvm::SmallVector<const parser::OmpClause *> &);
+  void CollectNumAffectedLoopsFromInnerLoopContruct(
+      const parser::OpenMPLoopConstruct &, llvm::SmallVector<std::int64_t> &,
+      llvm::SmallVector<const parser::OmpClause *> &);
+  void CollectNumAffectedLoopsFromClauses(const parser::OmpClauseList &,
+      llvm::SmallVector<std::int64_t> &,
+      llvm::SmallVector<const parser::OmpClause *> &);
 
   Symbol::Flags dataSharingAttributeFlags{Symbol::Flag::OmpShared,
       Symbol::Flag::OmpPrivate, Symbol::Flag::OmpFirstPrivate,
@@ -1573,10 +1622,10 @@ void AccAttributeVisitor::Post(const parser::AccDefaultClause &x) {
 // and adjust the symbol for each Name if necessary
 void AccAttributeVisitor::Post(const parser::Name &name) {
   auto *symbol{name.symbol};
-  if (symbol && !dirContext_.empty() && GetContext().withinConstruct) {
+  if (symbol && WithinConstruct()) {
     symbol = &symbol->GetUltimate();
     if (!symbol->owner().IsDerivedType() && !symbol->has<ProcEntityDetails>() &&
-        !symbol->has<SubprogramDetails>() && !IsObjectWithDSA(*symbol)) {
+        !symbol->has<SubprogramDetails>() && !IsObjectWithVisibleDSA(*symbol)) {
       if (Symbol * found{currScope().FindSymbol(name.source)}) {
         if (symbol != found) {
           name.symbol = found; // adjust the symbol within region
@@ -1726,7 +1775,7 @@ static std::string ScopeSourcePos(const Fortran::semantics::Scope &scope);
 
 #endif
 
-bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
+bool OmpAttributeVisitor::Pre(const parser::OmpBlockConstruct &x) {
   const parser::OmpDirectiveSpecification &dirSpec{x.BeginDir()};
   llvm::omp::Directive dirId{dirSpec.DirId()};
   switch (dirId) {
@@ -1765,7 +1814,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
   return true;
 }
 
-void OmpAttributeVisitor::Post(const parser::OpenMPBlockConstruct &x) {
+void OmpAttributeVisitor::Post(const parser::OmpBlockConstruct &x) {
   const parser::OmpDirectiveSpecification &dirSpec{x.BeginDir()};
   llvm::omp::Directive dirId{dirSpec.DirId()};
   switch (dirId) {
@@ -1835,7 +1884,6 @@ bool OmpAttributeVisitor::Pre(
 bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   const auto &beginLoopDir{std::get<parser::OmpBeginLoopDirective>(x.t)};
   const auto &beginDir{std::get<parser::OmpLoopDirective>(beginLoopDir.t)};
-  const auto &clauseList{std::get<parser::OmpClauseList>(beginLoopDir.t)};
   switch (beginDir.v) {
   case llvm::omp::Directive::OMPD_distribute:
   case llvm::omp::Directive::OMPD_distribute_parallel_do:
@@ -1886,7 +1934,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
       beginDir.v == llvm::omp::Directive::OMPD_target_loop)
     IssueNonConformanceWarning(beginDir.v, beginDir.source, 52);
   ClearDataSharingAttributeObjects();
-  SetContextAssociatedLoopLevel(GetAssociatedLoopLevelFromClauses(clauseList));
+  SetContextAssociatedLoopLevel(GetNumAffectedLoopsFromLoopConstruct(x));
 
   if (beginDir.v == llvm::omp::Directive::OMPD_do) {
     auto &optLoopCons = std::get<std::optional<parser::NestedConstruct>>(x.t);
@@ -1900,7 +1948,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
     }
   }
   PrivatizeAssociatedLoopIndexAndCheckLoopLevel(x);
-  ordCollapseLevel = GetAssociatedLoopLevelFromClauses(clauseList) + 1;
+  ordCollapseLevel = GetNumAffectedLoopsFromLoopConstruct(x) + 1;
   return true;
 }
 
@@ -1959,7 +2007,7 @@ void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
 // till OpenMP-5.0 standard.
 // In above both cases we skip the privatization of iteration variables.
 bool OmpAttributeVisitor::Pre(const parser::DoConstruct &x) {
-  if (!dirContext_.empty() && GetContext().withinConstruct) {
+  if (WithinConstruct()) {
     llvm::SmallVector<const parser::Name *> ivs;
     if (x.IsDoNormal()) {
       const parser::Name *iv{GetLoopIndex(x)};
@@ -1988,44 +2036,111 @@ bool OmpAttributeVisitor::Pre(const parser::DoConstruct &x) {
   return true;
 }
 
-std::int64_t OmpAttributeVisitor::GetAssociatedLoopLevelFromClauses(
-    const parser::OmpClauseList &x) {
-  std::int64_t orderedLevel{0};
-  std::int64_t collapseLevel{0};
+static bool isSizesClause(const parser::OmpClause *clause) {
+  return std::holds_alternative<parser::OmpClause::Sizes>(clause->u);
+}
 
-  const parser::OmpClause *ordClause{nullptr};
-  const parser::OmpClause *collClause{nullptr};
+std::int64_t OmpAttributeVisitor::SetAssociatedMaxClause(
+    llvm::SmallVector<std::int64_t> &levels,
+    llvm::SmallVector<const parser::OmpClause *> &clauses) {
 
+  // Find the tile level to ensure that the COLLAPSE clause value
+  // does not exeed the number of tiled loops.
+  std::int64_t tileLevel = 0;
+  for (auto [level, clause] : llvm::zip_equal(levels, clauses))
+    if (isSizesClause(clause))
+      tileLevel = level;
+
+  std::int64_t maxLevel = 1;
+  const parser::OmpClause *maxClause = nullptr;
+  for (auto [level, clause] : llvm::zip_equal(levels, clauses)) {
+    if (tileLevel > 0 && tileLevel < level) {
+      context_.Say(clause->source,
+          "The value of the parameter in the COLLAPSE clause must"
+          " not be larger than the number of the number of tiled loops"
+          " because collapse currently is limited to independent loop"
+          " iterations."_err_en_US);
+      return 1;
+    }
+
+    if (level > maxLevel) {
+      maxLevel = level;
+      maxClause = clause;
+    }
+  }
+  if (maxClause)
+    SetAssociatedClause(maxClause);
+  return maxLevel;
+}
+
+std::int64_t OmpAttributeVisitor::GetNumAffectedLoopsFromLoopConstruct(
+    const parser::OpenMPLoopConstruct &x) {
+  llvm::SmallVector<std::int64_t> levels;
+  llvm::SmallVector<const parser::OmpClause *> clauses;
+
+  CollectNumAffectedLoopsFromLoopConstruct(x, levels, clauses);
+  return SetAssociatedMaxClause(levels, clauses);
+}
+
+void OmpAttributeVisitor::CollectNumAffectedLoopsFromLoopConstruct(
+    const parser::OpenMPLoopConstruct &x,
+    llvm::SmallVector<std::int64_t> &levels,
+    llvm::SmallVector<const parser::OmpClause *> &clauses) {
+  const auto &beginLoopDir{std::get<parser::OmpBeginLoopDirective>(x.t)};
+  const auto &clauseList{std::get<parser::OmpClauseList>(beginLoopDir.t)};
+
+  CollectNumAffectedLoopsFromClauses(clauseList, levels, clauses);
+  CollectNumAffectedLoopsFromInnerLoopContruct(x, levels, clauses);
+}
+
+void OmpAttributeVisitor::CollectNumAffectedLoopsFromInnerLoopContruct(
+    const parser::OpenMPLoopConstruct &x,
+    llvm::SmallVector<std::int64_t> &levels,
+    llvm::SmallVector<const parser::OmpClause *> &clauses) {
+
+  const auto &nestedOptional =
+      std::get<std::optional<parser::NestedConstruct>>(x.t);
+  assert(nestedOptional.has_value() &&
+      "Expected a DoConstruct or OpenMPLoopConstruct");
+  const auto *innerConstruct =
+      std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(
+          &(nestedOptional.value()));
+
+  if (innerConstruct) {
+    CollectNumAffectedLoopsFromLoopConstruct(
+        innerConstruct->value(), levels, clauses);
+  }
+}
+
+void OmpAttributeVisitor::CollectNumAffectedLoopsFromClauses(
+    const parser::OmpClauseList &x, llvm::SmallVector<std::int64_t> &levels,
+    llvm::SmallVector<const parser::OmpClause *> &clauses) {
   for (const auto &clause : x.v) {
-    if (const auto *orderedClause{
+    if (const auto oclause{
             std::get_if<parser::OmpClause::Ordered>(&clause.u)}) {
-      if (const auto v{EvaluateInt64(context_, orderedClause->v)}) {
-        orderedLevel = *v;
+      std::int64_t level = 0;
+      if (const auto v{EvaluateInt64(context_, oclause->v)}) {
+        level = *v;
       }
-      ordClause = &clause;
+      levels.push_back(level);
+      clauses.push_back(&clause);
     }
-    if (const auto *collapseClause{
+
+    if (const auto cclause{
             std::get_if<parser::OmpClause::Collapse>(&clause.u)}) {
-      if (const auto v{EvaluateInt64(context_, collapseClause->v)}) {
-        collapseLevel = *v;
+      std::int64_t level = 0;
+      if (const auto v{EvaluateInt64(context_, cclause->v)}) {
+        level = *v;
       }
-      collClause = &clause;
+      levels.push_back(level);
+      clauses.push_back(&clause);
+    }
+
+    if (const auto tclause{std::get_if<parser::OmpClause::Sizes>(&clause.u)}) {
+      levels.push_back(tclause->v.size());
+      clauses.push_back(&clause);
     }
   }
-
-  if (orderedLevel && (!collapseLevel || orderedLevel >= collapseLevel)) {
-    SetAssociatedClause(ordClause);
-    return orderedLevel;
-  } else if (!orderedLevel && collapseLevel) {
-    SetAssociatedClause(collClause);
-    return collapseLevel;
-  } else {
-    SetAssociatedClause(nullptr);
-  }
-  // orderedLevel < collapseLevel is an error handled in structural
-  // checks
-
-  return 1; // default is outermost loop
 }
 
 // 2.15.1.1 Data-sharing Attribute Rules - Predetermined
@@ -2057,10 +2172,21 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
   const parser::OmpClause *clause{GetAssociatedClause()};
   bool hasCollapseClause{
       clause ? (clause->Id() == llvm::omp::OMPC_collapse) : false};
+  const parser::OpenMPLoopConstruct *innerMostLoop = &x;
+  const parser::NestedConstruct *innerMostNest = nullptr;
+  while (auto &optLoopCons{
+      std::get<std::optional<parser::NestedConstruct>>(innerMostLoop->t)}) {
+    innerMostNest = &(optLoopCons.value());
+    if (const auto *innerLoop{
+            std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(
+                innerMostNest)}) {
+      innerMostLoop = &(innerLoop->value());
+    } else
+      break;
+  }
 
-  auto &optLoopCons = std::get<std::optional<parser::NestedConstruct>>(x.t);
-  if (optLoopCons.has_value()) {
-    if (const auto &outer{std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
+  if (innerMostNest) {
+    if (const auto &outer{std::get_if<parser::DoConstruct>(innerMostNest)}) {
       for (const parser::DoConstruct *loop{&*outer}; loop && level > 0;
           --level) {
         if (loop->IsDoConcurrent()) {
@@ -2096,7 +2222,7 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
       CheckAssocLoopLevel(level, GetAssociatedClause());
     } else if (const auto &loop{std::get_if<
                    common::Indirection<parser::OpenMPLoopConstruct>>(
-                   &*optLoopCons)}) {
+                   innerMostNest)}) {
       auto &beginDirective =
           std::get<parser::OmpBeginLoopDirective>(loop->value().t);
       auto &beginLoopDirective =
@@ -2490,14 +2616,15 @@ static bool IsTargetCaptureImplicitlyFirstprivatizeable(const Symbol &symbol,
     return false;
   };
 
-  if (checkSymbol(symbol)) {
-    const auto *hostAssoc{symbol.detailsIf<HostAssocDetails>()};
-    if (hostAssoc) {
-      return checkSymbol(hostAssoc->symbol());
-    }
-    return true;
-  }
-  return false;
+  return common::visit(
+      common::visitors{
+          [&](const UseDetails &x) -> bool { return checkSymbol(x.symbol()); },
+          [&](const HostAssocDetails &x) -> bool {
+            return checkSymbol(x.symbol());
+          },
+          [&](const auto &) -> bool { return checkSymbol(symbol); },
+      },
+      symbol.details());
 }
 
 void OmpAttributeVisitor::CreateImplicitSymbols(const Symbol *symbol) {
@@ -2685,7 +2812,7 @@ void OmpAttributeVisitor::CreateImplicitSymbols(const Symbol *symbol) {
 void OmpAttributeVisitor::Post(const parser::Name &name) {
   auto *symbol{name.symbol};
 
-  if (symbol && !dirContext_.empty() && GetContext().withinConstruct) {
+  if (symbol && WithinConstruct()) {
     if (IsPrivatizable(symbol) && !IsObjectWithDSA(*symbol)) {
       // TODO: create a separate function to go through the rules for
       //       predetermined, explicitly determined, and implicitly

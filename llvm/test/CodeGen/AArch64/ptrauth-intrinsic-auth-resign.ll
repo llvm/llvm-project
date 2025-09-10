@@ -755,5 +755,128 @@ define i64 @test_auth_ia_swapped(i64 %arg, i64 %arg1) {
   ret i64 %tmp
 }
 
+; Authentications should not be speculated, as they crash on failure and it is
+; perfectly correct to dynamically choose the signing schema or whether to
+; perform authentication at all.
+define ptr @auth_speculation(i64 %signed, i1 %cond) {
+; UNCHECKED-LABEL:        auth_speculation:
+; UNCHECKED:                  %bb.0:
+; UNCHECKED-DARWIN-NEXT:        mov     x16, x0
+; UNCHECKED-DARWIN-NEXT:        tbz     w1, #0, [[BB_ELSE:[A-Za-z0-9_.]+]]
+; UNCHECKED-DARWIN-NEXT:      %bb.1:
+; UNCHECKED-DARWIN-NEXT:        autdza  x16
+; UNCHECKED-DARWIN-NEXT:        b       [[BB_RETURN:[A-Za-z0-9_.]+]]
+; UNCHECKED-DARWIN-NEXT:      [[BB_ELSE]]:
+; UNCHECKED-DARWIN-NEXT:        autdzb  x16
+; UNCHECKED-DARWIN-NEXT:      [[BB_RETURN]]:
+; UNCHECKED-DARWIN-NEXT:        ldr     x8, [x16]
+; UNCHECKED-ELF-NEXT:           tbz     w1, #0, [[BB_ELSE:[A-Za-z0-9_.]+]]
+; UNCHECKED-ELF-NEXT:         %bb.1:
+; UNCHECKED-ELF-NEXT:           autdza  x0
+; UNCHECKED-ELF-NEXT:           b       [[BB_RETURN:[A-Za-z0-9_.]+]]
+; UNCHECKED-ELF-NEXT:         [[BB_ELSE]]:
+; UNCHECKED-ELF-NEXT:           autdzb  x0
+; UNCHECKED-ELF-NEXT:         [[BB_RETURN]]:
+; UNCHECKED-ELF-NEXT:           ldr     x8, [x0]
+; UNCHECKED-NEXT:               ldr     x8, [x8]
+; UNCHECKED-NEXT:               ldr     x8, [x8]
+; UNCHECKED-NEXT:               ldr     x0, [x8]
+; UNCHECKED-NEXT:               ret
+;
+; CHECKED-LABEL:        auth_speculation:
+; CHECKED:                  %bb.0:
+; CHECKED-DARWIN-NEXT:        mov     x16, x0
+; CHECKED-DARWIN-NEXT:        tbz     w1, #0, [[BB_ELSE:[A-Za-z0-9_.]+]]
+; CHECKED-DARWIN-NEXT:      %bb.1:
+; CHECKED-DARWIN-NEXT:        autdza  x16
+; CHECKED-DARWIN-NEXT:        b       [[BB_RETURN:[A-Za-z0-9_.]+]]
+; CHECKED-DARWIN-NEXT:      [[BB_ELSE]]:
+; CHECKED-DARWIN-NEXT:        autdzb  x16
+; CHECKED-DARWIN-NEXT:      [[BB_RETURN]]:
+; CHECKED-DARWIN-NEXT:        ldr     x8, [x16]
+; CHECKED-ELF-NEXT:           tbz     w1, #0, [[BB_ELSE:[A-Za-z0-9_.]+]]
+; CHECKED-ELF-NEXT:         %bb.1:
+; CHECKED-ELF-NEXT:           autdza  x0
+; CHECKED-ELF-NEXT:           b       [[BB_RETURN:[A-Za-z0-9_.]+]]
+; CHECKED-ELF-NEXT:         [[BB_ELSE]]:
+; CHECKED-ELF-NEXT:           autdzb  x0
+; CHECKED-ELF-NEXT:         [[BB_RETURN]]:
+; CHECKED-ELF-NEXT:           ldr     x8, [x0]
+; CHECKED-NEXT:               ldr     x8, [x8]
+; CHECKED-NEXT:               ldr     x8, [x8]
+; CHECKED-NEXT:               ldr     x0, [x8]
+; CHECKED-NEXT:               ret
+;
+; TRAP-LABEL:        auth_speculation:
+; TRAP:                  %bb.0:
+; TRAP-DARWIN-NEXT:        mov     x16, x0
+; TRAP-DARWIN-NEXT:        tbz     w1, #0, [[BB_ELSE:[A-Za-z0-9_.]+]]
+; TRAP-DARWIN-NEXT:      %bb.1:
+; TRAP-DARWIN-NEXT:        autdza  x16
+; TRAP-DARWIN-NEXT:        mov     x17, x16
+; TRAP-DARWIN-NEXT:        xpacd   x17
+; TRAP-DARWIN-NEXT:        cmp     x16, x17
+; TRAP-DARWIN-NEXT:        b.eq    [[L]]auth_success_18
+; TRAP-DARWIN-NEXT:        brk     #0xc472
+; TRAP-DARWIN-NEXT:      [[L]]auth_success_18:
+; TRAP-DARWIN-NEXT:        b       [[BB_RETURN:[A-Za-z0-9_.]+]]
+; TRAP-DARWIN-NEXT:      [[BB_ELSE]]:
+; TRAP-DARWIN-NEXT:        autdzb  x16
+; TRAP-DARWIN-NEXT:        mov     x17, x16
+; TRAP-DARWIN-NEXT:        xpacd   x17
+; TRAP-DARWIN-NEXT:        cmp     x16, x17
+; TRAP-DARWIN-NEXT:        b.eq    [[L]]auth_success_19
+; TRAP-DARWIN-NEXT:        brk     #0xc473
+; TRAP-DARWIN-NEXT:      [[L]]auth_success_19:
+; TRAP-DARWIN-NEXT:      [[BB_RETURN]]:
+; TRAP-DARWIN-NEXT:        ldr     x8, [x16]
+; TRAP-ELF-NEXT:           tbz     w1, #0, [[BB_ELSE:[A-Za-z0-9_.]+]]
+; TRAP-ELF-NEXT:         %bb.1:
+; TRAP-ELF-NEXT:           autdza  x0
+; TRAP-ELF-NEXT:           mov     x8, x0
+; TRAP-ELF-NEXT:           xpacd   x8
+; TRAP-ELF-NEXT:           cmp     x0, x8
+; TRAP-ELF-NEXT:           b.eq    [[L]]auth_success_18
+; TRAP-ELF-NEXT:           brk     #0xc472
+; TRAP-ELF-NEXT:         [[L]]auth_success_18:
+; TRAP-ELF-NEXT:           b       [[BB_RETURN:[A-Za-z0-9_.]+]]
+; TRAP-ELF-NEXT:         [[BB_ELSE]]:
+; TRAP-ELF-NEXT:           autdzb  x0
+; TRAP-ELF-NEXT:           mov     x8, x0
+; TRAP-ELF-NEXT:           xpacd   x8
+; TRAP-ELF-NEXT:           cmp     x0, x8
+; TRAP-ELF-NEXT:           b.eq    [[L]]auth_success_19
+; TRAP-ELF-NEXT:           brk     #0xc473
+; TRAP-ELF-NEXT:         [[L]]auth_success_19:
+; TRAP-ELF-NEXT:         [[BB_RETURN]]:
+; TRAP-ELF-NEXT:           ldr     x8, [x0]
+; TRAP-NEXT:               ldr     x8, [x8]
+; TRAP-NEXT:               ldr     x8, [x8]
+; TRAP-NEXT:               ldr     x0, [x8]
+; TRAP-NEXT:               ret
+entry:
+  br i1 %cond, label %if.then, label %if.else
+
+if.then:
+  %auted.then = tail call i64 @llvm.ptrauth.auth(i64 %signed, i32 2, i64 0)
+  br label %return
+
+if.else:
+  %auted.else = tail call i64 @llvm.ptrauth.auth(i64 %signed, i32 3, i64 0)
+  br label %return
+
+return:
+  %auted = phi i64 [ %auted.then, %if.then ], [ %auted.else, %if.else ]
+
+  ; A sequence of instructions that is common to both "then" and "else"
+  ; branches and is expensive to duplicate.
+  %ptr.0 = inttoptr i64 %auted to ptr
+  %ptr.1 = load ptr, ptr %ptr.0
+  %ptr.2 = load ptr, ptr %ptr.1
+  %ptr.3 = load ptr, ptr %ptr.2
+  %ptr.4 = load ptr, ptr %ptr.3
+  ret ptr %ptr.4
+}
+
 declare i64 @llvm.ptrauth.auth(i64, i32, i64)
 declare i64 @llvm.ptrauth.resign(i64, i32, i64, i32, i64)

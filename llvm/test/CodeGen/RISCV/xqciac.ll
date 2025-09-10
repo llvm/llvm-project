@@ -259,7 +259,7 @@ define dso_local i32 @shxadd(i32 %a, i32 %b) local_unnamed_addr #0 {
 ;
 ; RV32IZBAMXQCIAC-LABEL: shxadd:
 ; RV32IZBAMXQCIAC:       # %bb.0: # %entry
-; RV32IZBAMXQCIAC-NEXT:    sh1add a0, a1, a0
+; RV32IZBAMXQCIAC-NEXT:    qc.c.muliadd a0, a1, 2
 ; RV32IZBAMXQCIAC-NEXT:    ret
 entry:
   %mul = mul nsw i32 %b, 2

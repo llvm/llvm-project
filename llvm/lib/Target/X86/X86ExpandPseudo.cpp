@@ -269,6 +269,8 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case X86::TCRETURNdi:
   case X86::TCRETURNdicc:
   case X86::TCRETURNri:
+  case X86::TCRETURN_WIN64ri:
+  case X86::TCRETURN_HIPE32ri:
   case X86::TCRETURNmi:
   case X86::TCRETURNdi64:
   case X86::TCRETURNdi64cc:
@@ -346,8 +348,9 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
       MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(Op));
       for (unsigned i = 0; i != X86::AddrNumOperands; ++i)
         MIB.add(MBBI->getOperand(i));
-    } else if ((Opcode == X86::TCRETURNri64) ||
-               (Opcode == X86::TCRETURNri64_ImpCall)) {
+    } else if (Opcode == X86::TCRETURNri64 ||
+               Opcode == X86::TCRETURNri64_ImpCall ||
+               Opcode == X86::TCRETURN_WIN64ri) {
       JumpTarget.setIsKill();
       BuildMI(MBB, MBBI, DL,
               TII->get(IsX64 ? X86::TAILJMPr64_REX : X86::TAILJMPr64))

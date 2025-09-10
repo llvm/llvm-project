@@ -10,14 +10,15 @@
 #include "Resource.h"
 #include "Tool.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Protocol/MCP/MCPError.h"
-#include "lldb/Protocol/MCP/Tool.h"
+#include "lldb/Host/FileSystem.h"
+#include "lldb/Host/HostInfo.h"
+#include "lldb/Protocol/MCP/Server.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Threading.h"
 #include <thread>
-#include <variant>
 
 using namespace lldb_private;
 using namespace lldb_private::mcp;
@@ -39,6 +40,8 @@ void ProtocolServerMCP::Initialize() {
 }
 
 void ProtocolServerMCP::Terminate() {
+  if (llvm::Error error = ProtocolServer::Terminate())
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Host), std::move(error), "{0}");
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
@@ -67,9 +70,9 @@ void ProtocolServerMCP::AcceptCallback(std::unique_ptr<Socket> socket) {
   LLDB_LOG(log, "New MCP client connected: {0}", client_name);
 
   lldb::IOObjectSP io_sp = std::move(socket);
-  auto transport_up = std::make_unique<lldb_protocol::mcp::MCPTransport>(
-      io_sp, io_sp, std::move(client_name), [&](llvm::StringRef message) {
-        LLDB_LOG(GetLog(LLDBLog::Host), "{0}", message);
+  auto transport_up = std::make_unique<lldb_protocol::mcp::Transport>(
+      io_sp, io_sp, [client_name](llvm::StringRef message) {
+        LLDB_LOG(GetLog(LLDBLog::Host), "{0}: {1}", client_name, message);
       });
   auto instance_up = std::make_unique<lldb_protocol::mcp::Server>(
       std::string(kName), std::string(kVersion), std::move(transport_up),
@@ -104,7 +107,19 @@ llvm::Error ProtocolServerMCP::Start(ProtocolServer::Connection connection) {
   if (llvm::Error error = handles.takeError())
     return error;
 
+  auto listening_uris = m_listener->GetListeningConnectionURI();
+  if (listening_uris.empty())
+    return createStringError("failed to get listening connections");
+  std::string address =
+      llvm::join(m_listener->GetListeningConnectionURI(), ", ");
+
+  ServerInfo info{listening_uris[0]};
+  llvm::Expected<ServerInfoHandle> handle = ServerInfo::Write(info);
+  if (!handle)
+    return handle.takeError();
+
   m_running = true;
+  m_server_info_handle = std::move(*handle);
   m_listen_handlers = std::move(*handles);
   m_loop_thread = std::thread([=] {
     llvm::set_thread_name("protocol-server.mcp");
@@ -129,6 +144,10 @@ llvm::Error ProtocolServerMCP::Stop() {
   // Wait for the main loop to exit.
   if (m_loop_thread.joinable())
     m_loop_thread.join();
+
+  m_listen_handlers.clear();
+  m_server_info_handle = ServerInfoHandle();
+  m_instances.clear();
 
   return llvm::Error::success();
 }

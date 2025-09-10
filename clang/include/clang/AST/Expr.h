@@ -23,7 +23,7 @@
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateBase.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SyncScope.h"
@@ -1038,7 +1038,7 @@ public:
 // PointerLikeTypeTraits is specialized so it can be used with a forward-decl of
 // Expr. Verify that we got it right.
 static_assert(llvm::PointerLikeTypeTraits<Expr *>::NumLowBitsAvailable <=
-                  llvm::detail::ConstantLog2<alignof(Expr)>::value,
+                  llvm::CTLog2<alignof(Expr)>(),
               "PointerLikeTypeTraits<Expr*> assumes too much alignment.");
 
 using ConstantExprKind = Expr::ConstantExprKind;
@@ -5113,9 +5113,9 @@ public:
              "trying to dereference an invalid iterator");
       IntegerLiteral *N = EExpr->FakeChildNode;
       N->setValue(*EExpr->Ctx,
-                  llvm::APInt(N->getValue().getBitWidth(),
+                  llvm::APInt(N->getBitWidth(),
                               EExpr->Data->BinaryData->getCodeUnit(CurOffset),
-                              N->getType()->isSignedIntegerType()));
+                              /*Signed=*/true));
       // We want to return a reference to the fake child node in the
       // EmbedExpr, not the local variable N.
       return const_cast<typename BaseTy::reference>(EExpr->FakeChildNode);

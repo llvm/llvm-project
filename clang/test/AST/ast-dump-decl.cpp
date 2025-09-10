@@ -330,8 +330,8 @@ namespace testClassTemplateDecl {
 // CHECK-NEXT:  | | `-Destructor irrelevant non_trivial user_declared{{$}}
 // CHECK-NEXT:  | |-CXXRecordDecl 0x{{.+}} <col:24, col:30> col:30 implicit referenced class TestClassTemplate{{$}}
 // CHECK-NEXT:  | |-AccessSpecDecl 0x{{.+}} <line:[[@LINE-50]]:3, col:9> col:3 public{{$}}
-// CHECK-NEXT:  | |-CXXConstructorDecl 0x[[#%x,TEMPLATE_CONSTRUCTOR_DECL:]] <line:[[@LINE-50]]:5, col:23> col:5 testClassTemplateDecl::TestClassTemplate<T> 'void ()'{{$}}
-// CHECK-NEXT:  | |-CXXDestructorDecl 0x[[#%x,TEMPLATE_DESTRUCTOR_DECL:]] <line:[[@LINE-50]]:5, col:24> col:5 ~testClassTemplateDecl::TestClassTemplate<T> 'void ()' not_selected{{$}}
+// CHECK-NEXT:  | |-CXXConstructorDecl 0x[[#%x,TEMPLATE_CONSTRUCTOR_DECL:]] <line:[[@LINE-50]]:5, col:23> col:5 TestClassTemplate<T> 'void ()'{{$}}
+// CHECK-NEXT:  | |-CXXDestructorDecl 0x[[#%x,TEMPLATE_DESTRUCTOR_DECL:]] <line:[[@LINE-50]]:5, col:24> col:5 ~TestClassTemplate<T> 'void ()' not_selected{{$}}
 // CHECK-NEXT:  | |-CXXMethodDecl 0x[[#%x,TEMPLATE_METHOD_DECL:]] <line:[[@LINE-50]]:5, col:11> col:9 j 'int ()'{{$}}
 // CHECK-NEXT:  | `-FieldDecl 0x{{.+}} <line:[[@LINE-50]]:5, col:9> col:9 i 'int'{{$}}
 // CHECK-NEXT:  |-ClassTemplateSpecializationDecl 0x{{.+}} <line:[[@LINE-56]]:3, line:[[@LINE-50]]:3> line:[[@LINE-56]]:30 class TestClassTemplate definition implicit_instantiation{{$}}
@@ -990,3 +990,18 @@ namespace TestInjectedClassName {
   // CHECK-NEXT:    `-RecordType [[TestInjectedClassName_RT]] 'A' injected
   // CHECK-NEXT:      `-CXXRecord [[TestInjectedClassName_RD]] 'A'
 } // namespace InjectedClassName
+
+namespace TestGH155936 {
+  struct Foo {
+    struct A {
+      struct Foo {};
+    };
+  };
+  // CHECK-LABEL: Dumping TestGH155936:
+  // CHECK: CXXRecordDecl 0x{{.+}} <{{.+}}> line:[[@LINE-6]]:10 struct Foo definition
+  // CHECK: CXXRecordDecl 0x{{.+}} <col:3, col:10> col:10 implicit struct Foo
+  // CHECK: CXXRecordDecl 0x{{.+}} <{{.+}}> line:[[@LINE-7]]:12 struct A definition
+  // CHECK: CXXRecordDecl 0x{{.+}} <col:5, col:12> col:12 implicit struct A
+  // CHECK: CXXRecordDecl 0x{{.+}} <line:[[@LINE-8]]:7, col:19> col:14 struct Foo definition
+  // CHECH: CXXRecordDecl 0x{{.+}} <col:9, col:16> col:16 implicit struct Foo
+} // namspace GH155936

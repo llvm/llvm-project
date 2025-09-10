@@ -350,8 +350,8 @@ getResourceArrayHandleType(VarDecl *VD) {
   assert(VD->getType()->isHLSLResourceRecordArray() &&
          "expected array of resource records");
   const Type *Ty = VD->getType()->getUnqualifiedDesugaredType();
-  while (const ConstantArrayType *CAT = dyn_cast<ConstantArrayType>(Ty))
-    Ty = CAT->getArrayElementTypeNoTypeQual()->getUnqualifiedDesugaredType();
+  while (const ArrayType *AT = dyn_cast<ArrayType>(Ty))
+    Ty = AT->getArrayElementTypeNoTypeQual()->getUnqualifiedDesugaredType();
   return HLSLAttributedResourceType::findHandleTypeOnResource(Ty);
 }
 
@@ -729,19 +729,15 @@ void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
 
   // If we have specified a root signature to override the entry function then
   // attach it now
-  if (RootSigOverrideIdent) {
-    LookupResult R(SemaRef, RootSigOverrideIdent, SourceLocation(),
-                   Sema::LookupOrdinaryName);
-    if (SemaRef.LookupQualifiedName(R, FD->getDeclContext()))
-      if (auto *SignatureDecl =
-              dyn_cast<HLSLRootSignatureDecl>(R.getFoundDecl())) {
-        FD->dropAttr<RootSignatureAttr>();
-        // We could look up the SourceRange of the macro here as well
-        AttributeCommonInfo AL(RootSigOverrideIdent, AttributeScopeInfo(),
-                               SourceRange(), ParsedAttr::Form::Microsoft());
-        FD->addAttr(::new (getASTContext()) RootSignatureAttr(
-            getASTContext(), AL, RootSigOverrideIdent, SignatureDecl));
-      }
+  HLSLRootSignatureDecl *SignatureDecl =
+      lookupRootSignatureOverrideDecl(FD->getDeclContext());
+  if (SignatureDecl) {
+    FD->dropAttr<RootSignatureAttr>();
+    // We could look up the SourceRange of the macro here as well
+    AttributeCommonInfo AL(RootSigOverrideIdent, AttributeScopeInfo(),
+                           SourceRange(), ParsedAttr::Form::Microsoft());
+    FD->addAttr(::new (getASTContext()) RootSignatureAttr(
+        getASTContext(), AL, RootSigOverrideIdent, SignatureDecl));
   }
 
   llvm::Triple::EnvironmentType Env = TargetInfo.getTriple().getEnvironment();
@@ -765,6 +761,8 @@ void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
     case llvm::Triple::UnknownEnvironment:
     case llvm::Triple::Library:
       break;
+    case llvm::Triple::RootSignature:
+      llvm_unreachable("rootsig environment has no functions");
     default:
       llvm_unreachable("Unhandled environment in triple");
     }
@@ -827,6 +825,8 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
       }
     }
     break;
+  case llvm::Triple::RootSignature:
+    llvm_unreachable("rootsig environment has no function entry point");
   default:
     llvm_unreachable("Unhandled environment in triple");
   }
@@ -1107,6 +1107,18 @@ void SemaHLSL::ActOnFinishRootSignatureDecl(
   SemaRef.PushOnScopeChains(SignatureDecl, SemaRef.getCurScope());
 }
 
+HLSLRootSignatureDecl *
+SemaHLSL::lookupRootSignatureOverrideDecl(DeclContext *DC) const {
+  if (RootSigOverrideIdent) {
+    LookupResult R(SemaRef, RootSigOverrideIdent, SourceLocation(),
+                   Sema::LookupOrdinaryName);
+    if (SemaRef.LookupQualifiedName(R, DC))
+      return dyn_cast<HLSLRootSignatureDecl>(R.getFoundDecl());
+  }
+
+  return nullptr;
+}
+
 namespace {
 
 struct PerVisibilityBindingChecker {
@@ -1159,15 +1171,14 @@ struct PerVisibilityBindingChecker {
     bool HadOverlap = false;
 
     using llvm::hlsl::BindingInfoBuilder;
-    auto ReportOverlap = [this, &HadOverlap](
-                             const BindingInfoBuilder &Builder,
-                             const BindingInfoBuilder::Binding &Reported) {
+    auto ReportOverlap = [this,
+                          &HadOverlap](const BindingInfoBuilder &Builder,
+                                       const llvm::hlsl::Binding &Reported) {
       HadOverlap = true;
 
       const auto *Elem =
           static_cast<const hlsl::RootSignatureElement *>(Reported.Cookie);
-      const BindingInfoBuilder::Binding &Previous =
-          Builder.findOverlapping(Reported);
+      const llvm::hlsl::Binding &Previous = Builder.findOverlapping(Reported);
       const auto *PrevElem =
           static_cast<const hlsl::RootSignatureElement *>(Previous.Cookie);
 
@@ -1332,12 +1343,48 @@ bool SemaHLSL::handleRootSignatureElements(
                    std::get_if<llvm::hlsl::rootsig::DescriptorTable>(&Elem)) {
       assert(UnboundClauses.size() == Table->NumClauses &&
              "Number of unbound elements must match the number of clauses");
+      bool HasAnySampler = false;
+      bool HasAnyNonSampler = false;
+      uint32_t Offset = 0;
       for (const auto &[Clause, ClauseElem] : UnboundClauses) {
-        uint32_t LowerBound(Clause->Reg.Number);
+        SourceLocation Loc = ClauseElem->getLocation();
+        if (Clause->Type == llvm::dxil::ResourceClass::Sampler)
+          HasAnySampler = true;
+        else
+          HasAnyNonSampler = true;
+
+        if (HasAnySampler && HasAnyNonSampler)
+          Diag(Loc, diag::err_hlsl_invalid_mixed_resources);
+
         // Relevant error will have already been reported above and needs to be
-        // fixed before we can conduct range analysis, so shortcut error return
+        // fixed before we can conduct further analysis, so shortcut error
+        // return
         if (Clause->NumDescriptors == 0)
           return true;
+
+        if (Clause->Offset !=
+            llvm::hlsl::rootsig::DescriptorTableOffsetAppend) {
+          // Manually specified the offset
+          Offset = Clause->Offset;
+        }
+
+        uint64_t RangeBound = llvm::hlsl::rootsig::computeRangeBound(
+            Offset, Clause->NumDescriptors);
+
+        if (!llvm::hlsl::rootsig::verifyBoundOffset(Offset)) {
+          // Trying to append onto unbound offset
+          Diag(Loc, diag::err_hlsl_appending_onto_unbound);
+        } else if (!llvm::hlsl::rootsig::verifyNoOverflowedOffset(RangeBound)) {
+          // Upper bound overflows maximum offset
+          Diag(Loc, diag::err_hlsl_offset_overflow) << Offset << RangeBound;
+        }
+
+        Offset = RangeBound == llvm::hlsl::rootsig::NumDescriptorsUnbounded
+                     ? uint32_t(RangeBound)
+                     : uint32_t(RangeBound + 1);
+
+        // Compute the register bounds and track resource binding
+        uint32_t LowerBound(Clause->Reg.Number);
         uint32_t UpperBound = Clause->NumDescriptors == ~0u
                                   ? ~0u
                                   : LowerBound + Clause->NumDescriptors - 1;
@@ -2023,9 +2070,11 @@ static bool DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
 }
 
 void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
-  if (isa<VarDecl>(TheDecl)) {
-    if (SemaRef.RequireCompleteType(TheDecl->getBeginLoc(),
-                                    cast<ValueDecl>(TheDecl)->getType(),
+  if (VarDecl *VD = dyn_cast<VarDecl>(TheDecl)) {
+    QualType Ty = VD->getType();
+    if (const auto *IAT = dyn_cast<IncompleteArrayType>(Ty))
+      Ty = IAT->getElementType();
+    if (SemaRef.RequireCompleteType(TheDecl->getBeginLoc(), Ty,
                                     diag::err_incomplete_type))
       return;
   }
@@ -2853,8 +2902,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (SemaRef.checkArgCount(TheCall, 6) ||
         CheckResourceHandle(&SemaRef, TheCall, 0) ||
         CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), AST.UnsignedIntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), AST.IntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(3), AST.UnsignedIntTy) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), AST.UnsignedIntTy) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(3), AST.IntTy) ||
         CheckArgTypeMatches(&SemaRef, TheCall->getArg(4), AST.UnsignedIntTy) ||
         CheckArgTypeMatches(&SemaRef, TheCall->getArg(5),
                             AST.getPointerType(AST.CharTy.withConst())))
@@ -3832,9 +3881,9 @@ void SemaHLSL::collectResourceBindingsOnVarDecl(VarDecl *VD) {
   // Unwrap arrays
   // FIXME: Calculate array size while unwrapping
   const Type *Ty = VD->getType()->getUnqualifiedDesugaredType();
-  while (Ty->isConstantArrayType()) {
-    const ConstantArrayType *CAT = cast<ConstantArrayType>(Ty);
-    Ty = CAT->getElementType()->getUnqualifiedDesugaredType();
+  while (Ty->isArrayType()) {
+    const ArrayType *AT = cast<ArrayType>(Ty);
+    Ty = AT->getElementType()->getUnqualifiedDesugaredType();
   }
 
   // Resource (or array of resources)

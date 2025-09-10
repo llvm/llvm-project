@@ -61,3 +61,18 @@ def pre_init_command: S<"pre-init-command">,
 def: Separate<["-"], "c">,
   Alias<pre_init_command>,
   HelpText<"Alias for --pre-init-command">;
+
+def no_lldbinit: F<"no-lldbinit">,
+  HelpText<"Do not automatically parse any '.lldbinit' files.">;
+def: Flag<["-"], "x">,
+  Alias<no_lldbinit>,
+  HelpText<"Alias for --no-lldbinit">;
+
+def connection_timeout: S<"connection-timeout">,
+  MetaVarName<"<timeout>">,
+  HelpText<"When using --connection, the number of seconds to wait for new "
+    "connections after the server has started and after all clients have "
+    "disconnected. Each new connection will reset the timeout. When the "
+    "timeout is reached, the server will be closed and the process will exit. "
+    "Not specifying this argument or specifying non-positive values will "
+    "cause the server to wait for new connections indefinitely.">;
