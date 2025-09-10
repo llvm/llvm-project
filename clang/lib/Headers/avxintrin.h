@@ -50,21 +50,12 @@ typedef __bf16 __m256bh __attribute__((__vector_size__(32), __aligned__(32)));
 #endif
 
 /* Define the default attributes for the functions in this file. */
-#if defined(__EVEX512__) && !defined(__AVX10_1_512__)
-#define __DEFAULT_FN_ATTRS                                                     \
-  __attribute__((__always_inline__, __nodebug__, __target__("avx,no-evex512"), \
-                 __min_vector_width__(256)))
-#define __DEFAULT_FN_ATTRS128                                                  \
-  __attribute__((__always_inline__, __nodebug__, __target__("avx,no-evex512"), \
-                 __min_vector_width__(128)))
-#else
 #define __DEFAULT_FN_ATTRS                                                     \
   __attribute__((__always_inline__, __nodebug__, __target__("avx"),            \
                  __min_vector_width__(256)))
 #define __DEFAULT_FN_ATTRS128                                                  \
   __attribute__((__always_inline__, __nodebug__, __target__("avx"),            \
                  __min_vector_width__(128)))
-#endif
 
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 #define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr
@@ -1411,9 +1402,8 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 ///    64-bit element in operand \a __b is copied to the same position in the
 ///    destination.
 /// \returns A 256-bit vector of [4 x double] containing the copied values.
-static __inline __m256d __DEFAULT_FN_ATTRS
-_mm256_blendv_pd(__m256d __a, __m256d __b, __m256d __c)
-{
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_blendv_pd(__m256d __a, __m256d __b, __m256d __c) {
   return (__m256d)__builtin_ia32_blendvpd256(
     (__v4df)__a, (__v4df)__b, (__v4df)__c);
 }
@@ -1439,9 +1429,8 @@ _mm256_blendv_pd(__m256d __a, __m256d __b, __m256d __c)
 ///    corresponding 32-bit element in operand \a __b is copied to the same
 ///    position in the destination.
 /// \returns A 256-bit vector of [8 x float] containing the copied values.
-static __inline __m256 __DEFAULT_FN_ATTRS
-_mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
-{
+static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c) {
   return (__m256)__builtin_ia32_blendvps256(
     (__v8sf)__a, (__v8sf)__b, (__v8sf)__c);
 }

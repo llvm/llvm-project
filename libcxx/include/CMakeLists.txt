@@ -911,6 +911,7 @@ set(files
   __utility/cmp.h
   __utility/convert_to_integral.h
   __utility/declval.h
+  __utility/default_three_way_comparator.h
   __utility/element_count.h
   __utility/empty.h
   __utility/exception_guard.h
@@ -921,6 +922,7 @@ set(files
   __utility/integer_sequence.h
   __utility/is_pointer_in_range.h
   __utility/is_valid_range.h
+  __utility/lazy_synth_three_way_comparator.h
   __utility/move.h
   __utility/no_destroy.h
   __utility/pair.h

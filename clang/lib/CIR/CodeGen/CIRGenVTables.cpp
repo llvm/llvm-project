@@ -392,6 +392,52 @@ void CIRGenVTables::emitVTTDefinition(cir::GlobalOp vttOp,
     vttOp.setComdat(true);
 }
 
+uint64_t CIRGenVTables::getSubVTTIndex(const CXXRecordDecl *rd,
+                                       BaseSubobject base) {
+  BaseSubobjectPairTy classSubobjectPair(rd, base);
+
+  SubVTTIndiciesMapTy::iterator it = subVTTIndicies.find(classSubobjectPair);
+  if (it != subVTTIndicies.end())
+    return it->second;
+
+  VTTBuilder builder(cgm.getASTContext(), rd, /*GenerateDefinition=*/false);
+
+  for (const auto &entry : builder.getSubVTTIndices()) {
+    // Insert all indices.
+    BaseSubobjectPairTy subclassSubobjectPair(rd, entry.first);
+
+    subVTTIndicies.insert(std::make_pair(subclassSubobjectPair, entry.second));
+  }
+
+  it = subVTTIndicies.find(classSubobjectPair);
+  assert(it != subVTTIndicies.end() && "Did not find index!");
+
+  return it->second;
+}
+
+uint64_t CIRGenVTables::getSecondaryVirtualPointerIndex(const CXXRecordDecl *rd,
+                                                        BaseSubobject base) {
+  auto it = secondaryVirtualPointerIndices.find(std::make_pair(rd, base));
+
+  if (it != secondaryVirtualPointerIndices.end())
+    return it->second;
+
+  VTTBuilder builder(cgm.getASTContext(), rd, /*GenerateDefinition=*/false);
+
+  // Insert all secondary vpointer indices.
+  for (const auto &entry : builder.getSecondaryVirtualPointerIndices()) {
+    std::pair<const CXXRecordDecl *, BaseSubobject> pair =
+        std::make_pair(rd, entry.first);
+
+    secondaryVirtualPointerIndices.insert(std::make_pair(pair, entry.second));
+  }
+
+  it = secondaryVirtualPointerIndices.find(std::make_pair(rd, base));
+  assert(it != secondaryVirtualPointerIndices.end() && "Did not find index!");
+
+  return it->second;
+}
+
 void CIRGenVTables::emitThunks(GlobalDecl gd) {
   const CXXMethodDecl *md =
       cast<CXXMethodDecl>(gd.getDecl())->getCanonicalDecl();
