@@ -2060,8 +2060,7 @@ static __inline__ void __DEFAULT_FN_ATTRS _mm_storel_pd(double *__dp,
 /// \returns A 128-bit vector of [16 x i8] containing the sums of both
 ///    parameters.
 static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
-_mm_add_epi8(__m128i __a,
-                                                          __m128i __b) {
+_mm_add_epi8(__m128i __a, __m128i __b) {
   return (__m128i)((__v16qu)__a + (__v16qu)__b);
 }
 
@@ -2082,8 +2081,7 @@ _mm_add_epi8(__m128i __a,
 /// \returns A 128-bit vector of [8 x i16] containing the sums of both
 ///    parameters.
 static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
- _mm_add_epi16(__m128i __a,
-                                                           __m128i __b) {
+_mm_add_epi16(__m128i __a, __m128i __b) {
   return (__m128i)((__v8hu)__a + (__v8hu)__b);
 }
 
@@ -2500,9 +2498,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sad_epu8(__m128i __a,
 ///    A 128-bit integer vector containing the subtrahends.
 /// \returns A 128-bit integer vector containing the differences of the values
 ///    in the operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR 
-_mm_sub_epi8(__m128i __a,
-                                                          __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_sub_epi8(__m128i __a, __m128i __b) {
   return (__m128i)((__v16qu)__a - (__v16qu)__b);
 }
 
@@ -2519,8 +2516,7 @@ _mm_sub_epi8(__m128i __a,
 /// \returns A 128-bit integer vector containing the differences of the values
 ///    in the operands.
 static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
-_mm_sub_epi16(__m128i __a,
-                                                           __m128i __b) {
+_mm_sub_epi16(__m128i __a, __m128i __b) {
   return (__m128i)((__v8hu)__a - (__v8hu)__b);
 }
 
