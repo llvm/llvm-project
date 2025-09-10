@@ -398,6 +398,384 @@ void test_s_sendmsghalt_var(int in)
   __builtin_amdgcn_s_sendmsghalt(1, in);
 }
 
+// CHECK-LABEL: @test_wave_reduce_add_u32_default
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.add.i32(
+void test_wave_reduce_add_u32_default(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_add_u32(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_add_u64_default
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.wave.reduce.add.i64(
+void test_wave_reduce_add_u64_default(global int* out, long in)
+{
+  *out = __builtin_amdgcn_wave_reduce_add_u64(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_add_u32_iterative
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.add.i32(
+void test_wave_reduce_add_u32_iterative(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_add_u32(in, 1);
+}
+
+// CHECK-LABEL: @test_wave_reduce_add_u64_iterative
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.wave.reduce.add.i64(
+void test_wave_reduce_add_u64_iterative(global int* out, long in)
+{
+  *out = __builtin_amdgcn_wave_reduce_add_u64(in, 1);
+}
+
+// CHECK-LABEL: @test_wave_reduce_add_u32_dpp
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.add.i32(
+void test_wave_reduce_add_u32_dpp(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_add_u32(in, 2);
+}
+
+// CHECK-LABEL: @test_wave_reduce_add_u64_dpp
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.wave.reduce.add.i64(
+void test_wave_reduce_add_u64_dpp(global int* out, long in)
+{
+  *out = __builtin_amdgcn_wave_reduce_add_u64(in, 2);
+}
+
+// CHECK-LABEL: @test_wave_reduce_sub_u32_default
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.sub.i32(
+void test_wave_reduce_sub_u32_default(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_sub_u32(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_sub_u64_default
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.wave.reduce.sub.i64(
+void test_wave_reduce_sub_u64_default(global int* out, long in)
+{
+  *out = __builtin_amdgcn_wave_reduce_sub_u64(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_sub_u32_iterative
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.sub.i32(
+void test_wave_reduce_sub_u32_iterative(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_sub_u32(in, 1);
+}
+
+// CHECK-LABEL: @test_wave_reduce_sub_u64_iterative
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.wave.reduce.sub.i64(
+void test_wave_reduce_sub_u64_iterative(global int* out, long in)
+{
+  *out = __builtin_amdgcn_wave_reduce_sub_u64(in, 1);
+}
+
+// CHECK-LABEL: @test_wave_reduce_sub_u32_dpp
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.sub.i32(
+void test_wave_reduce_sub_u32_dpp(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_sub_u32(in, 2);
+}
+
+// CHECK-LABEL: @test_wave_reduce_sub_u64_dpp
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.wave.reduce.sub.i64(
+void test_wave_reduce_sub_u64_dpp(global int* out, long in)
+{
+  *out = __builtin_amdgcn_wave_reduce_sub_u64(in, 2);
+}
+
+// CHECK-LABEL: @test_wave_reduce_and_b32_default
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.and.i32(
+void test_wave_reduce_and_b32_default(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_and_b32(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_and_b64_default
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.wave.reduce.and.i64(
+void test_wave_reduce_and_b64_default(global int* out, long in)
+{
+  *out = __builtin_amdgcn_wave_reduce_and_b64(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_and_b32_iterative
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.and.i32(
+void test_wave_reduce_and_b32_iterative(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_and_b32(in, 1);
+}
+
+// CHECK-LABEL: @test_wave_reduce_and_b64_iterative
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.wave.reduce.and.i64(
+void test_wave_reduce_and_b64_iterative(global int* out, long in)
+{
+  *out = __builtin_amdgcn_wave_reduce_and_b64(in, 1);
+}
+
+// CHECK-LABEL: @test_wave_reduce_and_b32_dpp
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.and.i32(
+void test_wave_reduce_and_b32_dpp(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_and_b32(in, 2);
+}
+
+// CHECK-LABEL: @test_wave_reduce_and_b64_dpp
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.wave.reduce.and.i64(
+void test_wave_reduce_and_b64_dpp(global int* out, long in)
+{
+  *out = __builtin_amdgcn_wave_reduce_and_b64(in, 2);
+}
+
+// CHECK-LABEL: @test_wave_reduce_or_b32_default
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.or.i32(
+void test_wave_reduce_or_b32_default(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_or_b32(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_or_b64_default
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.wave.reduce.or.i64(
+void test_wave_reduce_or_b64_default(global int* out, long in)
+{
+  *out = __builtin_amdgcn_wave_reduce_or_b64(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_or_b32_iterative
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.or.i32(
+void test_wave_reduce_or_b32_iterative(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_or_b32(in, 1);
+}
+
+// CHECK-LABEL: @test_wave_reduce_or_b64_iterative
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.wave.reduce.or.i64(
+void test_wave_reduce_or_b64_iterative(global int* out, long in)
+{
+  *out = __builtin_amdgcn_wave_reduce_or_b64(in, 1);
+}
+
+// CHECK-LABEL: @test_wave_reduce_or_b32_dpp
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.or.i32(
+void test_wave_reduce_or_b32_dpp(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_or_b32(in, 2);
+}
+
+// CHECK-LABEL: @test_wave_reduce_or_b64_dpp
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.wave.reduce.or.i64(
+void test_wave_reduce_or_b64_dpp(global int* out, long in)
+{
+  *out = __builtin_amdgcn_wave_reduce_or_b64(in, 2);
+}
+
+// CHECK-LABEL: @test_wave_reduce_xor_b32_default
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.xor.i32(
+void test_wave_reduce_xor_b32_default(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_xor_b32(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_xor_b64_default
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.wave.reduce.xor.i64(
+void test_wave_reduce_xor_b64_default(global int* out, long in)
+{
+  *out = __builtin_amdgcn_wave_reduce_xor_b64(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_xor_b32_iterative
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.xor.i32(
+void test_wave_reduce_xor_b32_iterative(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_xor_b32(in, 1);
+}
+
+// CHECK-LABEL: @test_wave_reduce_xor_b64_iterative
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.wave.reduce.xor.i64(
+void test_wave_reduce_xor_b64_iterative(global int* out, long in)
+{
+  *out = __builtin_amdgcn_wave_reduce_xor_b64(in, 1);
+}
+
+// CHECK-LABEL: @test_wave_reduce_xor_b32_dpp
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.xor.i32(
+void test_wave_reduce_xor_b32_dpp(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_xor_b32(in, 2);
+}
+
+// CHECK-LABEL: @test_wave_reduce_xor_b64_dpp
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.wave.reduce.xor.i64(
+void test_wave_reduce_xor_b64_dpp(global int* out, long in)
+{
+  *out = __builtin_amdgcn_wave_reduce_xor_b64(in, 2);
+}
+
+// CHECK-LABEL: @test_wave_reduce_min_i32_default
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.min.i32(
+void test_wave_reduce_min_i32_default(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_min_i32(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_min_i64_default
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.wave.reduce.min.i64(
+void test_wave_reduce_min_i64_default(global int* out, long in)
+{
+  *out = __builtin_amdgcn_wave_reduce_min_i64(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_min_i32_iterative
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.min.i32(
+void test_wave_reduce_min_i32_iterative(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_min_i32(in, 1);
+}
+
+// CHECK-LABEL: @test_wave_reduce_min_i64_iterative
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.wave.reduce.min.i64(
+void test_wave_reduce_min_i64_iterative(global int* out, long in)
+{
+  *out = __builtin_amdgcn_wave_reduce_min_i64(in, 1);
+}
+
+// CHECK-LABEL: @test_wave_reduce_min_i32_dpp
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.min.i32(
+void test_wave_reduce_min_i32_dpp(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_min_i32(in, 2);
+}
+
+// CHECK-LABEL: @test_wave_reduce_min_i64_dpp
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.wave.reduce.min.i64(
+void test_wave_reduce_min_i64_dpp(global int* out, long in)
+{
+  *out = __builtin_amdgcn_wave_reduce_min_i64(in, 2);
+}
+
+// CHECK-LABEL: @test_wave_reduce_min_u32_default
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.umin.i32(
+void test_wave_reduce_min_u32_default(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_min_u32(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_min_u64_default
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.wave.reduce.umin.i64(
+void test_wave_reduce_min_u64_default(global int* out, long in)
+{
+  *out = __builtin_amdgcn_wave_reduce_min_u64(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_min_u32_iterative
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.umin.i32(
+void test_wave_reduce_min_u32_iterative(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_min_u32(in, 1);
+}
+
+// CHECK-LABEL: @test_wave_reduce_min_u64_iterative
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.wave.reduce.umin.i64(
+void test_wave_reduce_min_u64_iterative(global int* out, long in)
+{
+  *out = __builtin_amdgcn_wave_reduce_min_u64(in, 1);
+}
+
+// CHECK-LABEL: @test_wave_reduce_min_u32_dpp
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.umin.i32(
+void test_wave_reduce_min_u32_dpp(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_min_u32(in, 2);
+}
+
+// CHECK-LABEL: @test_wave_reduce_min_u64_dpp
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.wave.reduce.umin.i64(
+void test_wave_reduce_min_u64_dpp(global int* out, long in)
+{
+  *out = __builtin_amdgcn_wave_reduce_min_u64(in, 2);
+}
+
+// CHECK-LABEL: @test_wave_reduce_max_i32_default
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.max.i32(
+void test_wave_reduce_max_i32_default(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_max_i32(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_max_i64_default
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.wave.reduce.max.i64(
+void test_wave_reduce_max_i64_default(global int* out, long in)
+{
+  *out = __builtin_amdgcn_wave_reduce_max_i64(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_max_i32_iterative
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.max.i32(
+void test_wave_reduce_max_i32_iterative(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_max_i32(in, 1);
+}
+
+// CHECK-LABEL: @test_wave_reduce_max_i64_iterative
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.wave.reduce.max.i64(
+void test_wave_reduce_max_i64_iterative(global int* out, long in)
+{
+  *out = __builtin_amdgcn_wave_reduce_max_i64(in, 1);
+}
+
+// CHECK-LABEL: @test_wave_reduce_max_i32_dpp
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.max.i32(
+void test_wave_reduce_max_i32_dpp(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_max_i32(in, 2);
+}
+
+// CHECK-LABEL: @test_wave_reduce_max_i64_dpp
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.wave.reduce.max.i64(
+void test_wave_reduce_max_i64_dpp(global int* out, long in)
+{
+  *out = __builtin_amdgcn_wave_reduce_max_i64(in, 2);
+}
+
+// CHECK-LABEL: @test_wave_reduce_max_u32_default
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.umax.i32(
+void test_wave_reduce_max_u32_default(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_max_u32(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_max_u64_default
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.wave.reduce.umax.i64(
+void test_wave_reduce_max_u64_default(global int* out, long in)
+{
+  *out = __builtin_amdgcn_wave_reduce_max_u64(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_max_u32_iterative
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.umax.i32(
+void test_wave_reduce_max_u32_iterative(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_max_u32(in, 1);
+}
+
+// CHECK-LABEL: @test_wave_reduce_max_u64_iterative
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.wave.reduce.umax.i64(
+void test_wave_reduce_max_u64_iterative(global int* out, long in)
+{
+  *out = __builtin_amdgcn_wave_reduce_max_u64(in, 1);
+}
+
+// CHECK-LABEL: @test_wave_reduce_max_u32_dpp
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.umax.i32(
+void test_wave_reduce_max_u32_dpp(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_max_u32(in, 2);
+}
+
+// CHECK-LABEL: @test_wave_reduce_max_u64_dpp
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.wave.reduce.umax.i64(
+void test_wave_reduce_max_u64_dpp(global int* out, long in)
+{
+  *out = __builtin_amdgcn_wave_reduce_max_u64(in, 2);
+}
+
 // CHECK-LABEL: @test_s_barrier
 // CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.s.barrier(
 void test_s_barrier()

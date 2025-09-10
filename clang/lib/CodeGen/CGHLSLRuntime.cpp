@@ -69,9 +69,9 @@ void addDxilValVersion(StringRef ValVersionStr, llvm::Module &M) {
   DXILValMD->addOperand(Val);
 }
 
-void addRootSignature(llvm::dxbc::RootSignatureVersion RootSigVer,
-                      ArrayRef<llvm::hlsl::rootsig::RootElement> Elements,
-                      llvm::Function *Fn, llvm::Module &M) {
+void addRootSignatureMD(llvm::dxbc::RootSignatureVersion RootSigVer,
+                        ArrayRef<llvm::hlsl::rootsig::RootElement> Elements,
+                        llvm::Function *Fn, llvm::Module &M) {
   auto &Ctx = M.getContext();
 
   llvm::hlsl::rootsig::MetadataBuilder RSBuilder(Ctx, Elements);
@@ -79,8 +79,8 @@ void addRootSignature(llvm::dxbc::RootSignatureVersion RootSigVer,
 
   ConstantAsMetadata *Version = ConstantAsMetadata::get(ConstantInt::get(
       llvm::Type::getInt32Ty(Ctx), llvm::to_underlying(RootSigVer)));
-  MDNode *MDVals =
-      MDNode::get(Ctx, {ValueAsMetadata::get(Fn), RootSignature, Version});
+  ValueAsMetadata *EntryFunc = Fn ? ValueAsMetadata::get(Fn) : nullptr;
+  MDNode *MDVals = MDNode::get(Ctx, {EntryFunc, RootSignature, Version});
 
   StringRef RootSignatureValKey = "dx.rootsignatures";
   auto *RootSignatureValMD = M.getOrInsertNamedMetadata(RootSignatureValKey);
@@ -448,6 +448,19 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
   }
 }
 
+void CGHLSLRuntime::addRootSignature(
+    const HLSLRootSignatureDecl *SignatureDecl) {
+  llvm::Module &M = CGM.getModule();
+  Triple T(M.getTargetTriple());
+
+  // Generated later with the function decl if not targeting root signature
+  if (T.getEnvironment() != Triple::EnvironmentType::RootSignature)
+    return;
+
+  addRootSignatureMD(SignatureDecl->getVersion(),
+                     SignatureDecl->getRootElements(), nullptr, M);
+}
+
 llvm::TargetExtType *
 CGHLSLRuntime::getHLSLBufferLayoutType(const RecordType *StructType) {
   const auto Entry = LayoutTypes.find(StructType);
@@ -651,8 +664,8 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   for (const Attr *Attr : FD->getAttrs()) {
     if (const auto *RSAttr = dyn_cast<RootSignatureAttr>(Attr)) {
       auto *RSDecl = RSAttr->getSignatureDecl();
-      addRootSignature(RSDecl->getVersion(), RSDecl->getRootElements(), EntryFn,
-                       M);
+      addRootSignatureMD(RSDecl->getVersion(), RSDecl->getRootElements(),
+                         EntryFn, M);
     }
   }
 }
@@ -829,11 +842,27 @@ llvm::Instruction *CGHLSLRuntime::getConvergenceToken(BasicBlock &BB) {
 
 class OpaqueValueVisitor : public RecursiveASTVisitor<OpaqueValueVisitor> {
 public:
-  llvm::SmallPtrSet<OpaqueValueExpr *, 8> OVEs;
+  llvm::SmallVector<OpaqueValueExpr *, 8> OVEs;
+  llvm::SmallPtrSet<OpaqueValueExpr *, 8> Visited;
   OpaqueValueVisitor() {}
 
+  bool VisitHLSLOutArgExpr(HLSLOutArgExpr *) {
+    // These need to be bound in CodeGenFunction::EmitHLSLOutArgLValues
+    // or CodeGenFunction::EmitHLSLOutArgExpr. If they are part of this
+    // traversal, the temporary containing the copy out will not have
+    // been created yet.
+    return false;
+  }
+
   bool VisitOpaqueValueExpr(OpaqueValueExpr *E) {
-    OVEs.insert(E);
+    // Traverse the source expression first.
+    if (E->getSourceExpr())
+      TraverseStmt(E->getSourceExpr());
+
+    // Then add this OVE if we haven't seen it before.
+    if (Visited.insert(E).second)
+      OVEs.push_back(E);
+
     return true;
   }
 };

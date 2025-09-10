@@ -3744,9 +3744,11 @@ static SDValue matchSplatAsGather(SDValue SplatVal, MVT VT, const SDLoc &DL,
   // different
   // FIXME: Support i1 vectors, maybe by promoting to i8?
   MVT EltTy = VT.getVectorElementType();
+  if (EltTy == MVT::i1 ||
+      !DAG.getTargetLoweringInfo().isTypeLegal(Src.getValueType()))
+    return SDValue();
   MVT SrcVT = Src.getSimpleValueType();
-  if (EltTy == MVT::i1 || EltTy != SrcVT.getVectorElementType() ||
-      !DAG.getTargetLoweringInfo().isTypeLegal(SrcVT))
+  if (EltTy != SrcVT.getVectorElementType())
     return SDValue();
   SDValue Idx = SplatVal.getOperand(1);
   // The index must be a legal type.
@@ -8885,7 +8887,15 @@ SDValue RISCVTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
     reportFatalUsageError("Unsupported code model for lowering");
   case CodeModel::Small: {
     // Generate a sequence for accessing addresses within the first 2 GiB of
-    // address space. This generates the pattern (addi (lui %hi(sym)) %lo(sym)).
+    // address space.
+    if (Subtarget.hasVendorXqcili()) {
+      // Use QC.E.LI to generate the address, as this is easier to relax than
+      // LUI/ADDI.
+      SDValue Addr = getTargetNode(N, DL, Ty, DAG, 0);
+      return DAG.getNode(RISCVISD::QC_E_LI, DL, Ty, Addr);
+    }
+
+    // This generates the pattern (addi (lui %hi(sym)) %lo(sym)).
     SDValue AddrHi = getTargetNode(N, DL, Ty, DAG, RISCVII::MO_HI);
     SDValue AddrLo = getTargetNode(N, DL, Ty, DAG, RISCVII::MO_LO);
     SDValue MNHi = DAG.getNode(RISCVISD::HI, DL, Ty, AddrHi);
@@ -9106,8 +9116,12 @@ static std::optional<bool> matchSetCC(SDValue LHS, SDValue RHS,
   return std::nullopt;
 }
 
-static SDValue combineSelectToBinOp(SDNode *N, SelectionDAG &DAG,
-                                    const RISCVSubtarget &Subtarget) {
+static bool isSimm12Constant(SDValue V) {
+  return isa<ConstantSDNode>(V) && V->getAsAPIntVal().isSignedIntN(12);
+}
+
+static SDValue lowerSelectToBinOp(SDNode *N, SelectionDAG &DAG,
+                                  const RISCVSubtarget &Subtarget) {
   SDValue CondV = N->getOperand(0);
   SDValue TrueV = N->getOperand(1);
   SDValue FalseV = N->getOperand(2);
@@ -9127,14 +9141,18 @@ static SDValue combineSelectToBinOp(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(ISD::OR, DL, VT, Neg, DAG.getFreeze(TrueV));
     }
 
+    const bool HasCZero =
+        VT.isScalarInteger() &&
+        (Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps());
+
     // (select c, 0, y) -> (c-1) & y
-    if (isNullConstant(TrueV)) {
-      SDValue Neg = DAG.getNode(ISD::ADD, DL, VT, CondV,
-                                DAG.getAllOnesConstant(DL, VT));
+    if (isNullConstant(TrueV) && (!HasCZero || isSimm12Constant(FalseV))) {
+      SDValue Neg =
+          DAG.getNode(ISD::ADD, DL, VT, CondV, DAG.getAllOnesConstant(DL, VT));
       return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(FalseV));
     }
     // (select c, y, 0) -> -c & y
-    if (isNullConstant(FalseV)) {
+    if (isNullConstant(FalseV) && (!HasCZero || isSimm12Constant(TrueV))) {
       SDValue Neg = DAG.getNegative(CondV, DL, VT);
       return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(TrueV));
     }
@@ -9255,12 +9273,17 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::VSELECT, DL, VT, CondSplat, TrueV, FalseV);
   }
 
+  // Try some other optimizations before falling back to generic lowering.
+  if (SDValue V = lowerSelectToBinOp(Op.getNode(), DAG, Subtarget))
+    return V;
+
   // When Zicond or XVentanaCondOps is present, emit CZERO_EQZ and CZERO_NEZ
   // nodes to implement the SELECT. Performing the lowering here allows for
   // greater control over when CZERO_{EQZ/NEZ} are used vs another branchless
   // sequence or RISCVISD::SELECT_CC node (branch-based select).
   if ((Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps()) &&
       VT.isScalarInteger()) {
+
     // (select c, t, 0) -> (czero_eqz t, c)
     if (isNullConstant(FalseV))
       return DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, CondV);
@@ -9313,10 +9336,6 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
           ISD::OR, DL, VT, FalseV,
           DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, CondV));
     }
-
-    // Try some other optimizations before falling back to generic lowering.
-    if (SDValue V = combineSelectToBinOp(Op.getNode(), DAG, Subtarget))
-      return V;
 
     // (select c, c1, c2) -> (add (czero_nez c2 - c1, c), c1)
     // (select c, c1, c2) -> (add (czero_eqz c1 - c2, c), c2)
@@ -9419,9 +9438,6 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
           DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, FalseV, CondV),
           SDNodeFlags::Disjoint);
   }
-
-  if (SDValue V = combineSelectToBinOp(Op.getNode(), DAG, Subtarget))
-    return V;
 
   if (Op.hasOneUse()) {
     unsigned UseOpc = Op->user_begin()->getOpcode();
@@ -16241,8 +16257,8 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
     SDValue Op0 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N0.getOperand(0));
     SDValue Op1 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, N0.getOperand(1));
     SDValue Shl = DAG.getNode(ISD::SHL, DL, MVT::i64, Op0, Op1);
-    SDValue And = DAG.getNOT(DL, Shl, MVT::i64);
-    return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, And);
+    SDValue Not = DAG.getNOT(DL, Shl, MVT::i64);
+    return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Not);
   }
 
   // fold (xor (sllw 1, x), -1) -> (rolw ~1, x)
@@ -18822,7 +18838,7 @@ static SDValue tryFoldSelectIntoOp(SDNode *N, SelectionDAG &DAG,
     break;
   }
 
-  if (!TrueVal.hasOneUse() || isa<ConstantSDNode>(FalseVal))
+  if (!TrueVal.hasOneUse())
     return SDValue();
 
   unsigned OpToFold;
@@ -18929,7 +18945,8 @@ static SDValue useInversedSetcc(SDNode *N, SelectionDAG &DAG,
   // Replace (setcc eq (and x, C)) with (setcc ne (and x, C))) to generate
   // BEXTI, where C is power of 2.
   if (Subtarget.hasStdExtZbs() && VT.isScalarInteger() &&
-      (Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps())) {
+      (Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps() ||
+       Subtarget.hasVendorXTHeadCondMov())) {
     SDValue LHS = Cond.getOperand(0);
     SDValue RHS = Cond.getOperand(1);
     ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
@@ -20232,6 +20249,17 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return V;
     break;
   case ISD::FMUL: {
+    using namespace SDPatternMatch;
+    SDLoc DL(N);
+    EVT VT = N->getValueType(0);
+    SDValue X, Y;
+    // InstCombine canonicalizes fneg (fmul x, y) -> fmul x, (fneg y), see
+    // hoistFNegAboveFMulFDiv.
+    // Undo this and sink the fneg so we match more fmsub/fnmadd patterns.
+    if (sd_match(N, m_FMul(m_Value(X), m_OneUse(m_FNeg(m_Value(Y))))))
+      return DAG.getNode(ISD::FNEG, DL, VT,
+                         DAG.getNode(ISD::FMUL, DL, VT, X, Y));
+
     // fmul X, (copysign 1.0, Y) -> fsgnjx X, Y
     SDValue N0 = N->getOperand(0);
     SDValue N1 = N->getOperand(1);
@@ -20242,13 +20270,12 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(N0->getOperand(0));
     if (!C || !C->getValueAPF().isExactlyValue(+1.0))
       return SDValue();
-    EVT VT = N->getValueType(0);
     if (VT.isVector() || !isOperationLegal(ISD::FCOPYSIGN, VT))
       return SDValue();
     SDValue Sign = N0->getOperand(1);
     if (Sign.getValueType() != VT)
       return SDValue();
-    return DAG.getNode(RISCVISD::FSGNJX, SDLoc(N), VT, N1, N0->getOperand(1));
+    return DAG.getNode(RISCVISD::FSGNJX, DL, VT, N1, N0->getOperand(1));
   }
   case ISD::FADD:
   case ISD::UMAX:
@@ -20532,9 +20559,9 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
             VT, DL, MGN->getChain(), BasePtr,
             DAG.getSignedConstant(StepNumerator, DL, XLenVT), MGN->getMask(),
             EVL, MGN->getMemOperand());
-        SDValue VPSelect = DAG.getNode(ISD::VP_SELECT, DL, VT, MGN->getMask(),
-                                       StridedLoad, MGN->getPassThru(), EVL);
-        return DAG.getMergeValues({VPSelect, SDValue(StridedLoad.getNode(), 1)},
+        SDValue Select = DAG.getSelect(DL, VT, MGN->getMask(), StridedLoad,
+                                       MGN->getPassThru());
+        return DAG.getMergeValues({Select, SDValue(StridedLoad.getNode(), 1)},
                                   DL);
       }
     }
