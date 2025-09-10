@@ -478,6 +478,12 @@ getOrDeclareFunction(const Fortran::evaluate::ProcedureDesignator &,
 mlir::Type getDummyProcedureType(const Fortran::semantics::Symbol &dummyProc,
                                  Fortran::lower::AbstractConverter &);
 
+/// Return the type of an argument that is a dummy procedure pointer. This
+/// will be a reference to a boxed procedure.
+mlir::Type
+getDummyProcedurePointerType(const Fortran::semantics::Symbol &dummyProcPtr,
+                             Fortran::lower::AbstractConverter &);
+
 /// Return !fir.boxproc<() -> ()> type.
 mlir::Type getUntypedBoxProcType(mlir::MLIRContext *context);
 

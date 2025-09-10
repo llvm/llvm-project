@@ -1,8 +1,5 @@
 // Test various levels of coverage
 //
-// FIXME: Port the environment variable logic below for the lit shell.
-// REQUIRES: shell
-//
 // RUN: rm -rf %t-dir && mkdir %t-dir
 // RUN: %clangxx -fsanitize=shift                        -DGOOD_SHIFT=1 -O1 -fsanitize-coverage=func,trace-pc-guard  %s -o %t
 // RUN: %env_ubsan_opts=coverage=1:verbosity=1:coverage_dir='"%t-dir"' %run %t 2>&1 | FileCheck %s --check-prefix=CHECK1 --check-prefix=CHECK_NOWARN

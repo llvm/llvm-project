@@ -324,6 +324,7 @@ Bug Fixes to Attribute Support
   is skipped, such as error recovery and code completion. (#GH153551)
 - Using ``[[gnu::cleanup(some_func)]]`` where some_func is annotated with
   ``[[gnu::error("some error")]]`` now correctly triggers an error. (#GH146520)
+- Fix a crash when the function name is empty in the `swift_name` attribute. (#GH157075)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -349,6 +350,11 @@ Bug Fixes to C++ Support
   authentication enabled. (#GH152601)
 - Fix the check for narrowing int-to-float conversions, so that they are detected in
   cases where converting the float back to an integer is undefined behaviour (#GH157067).
+- Fix a crash when applying binary or ternary operators to two same function types with different spellings,
+  where at least one of the function parameters has an attribute which affects
+  the function type.
+- Fix an assertion failure when a ``constexpr`` variable is only referenced through
+  ``__builtin_addressof``, and related issues with builtin arguments. (#GH154034)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
