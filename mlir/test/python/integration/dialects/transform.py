@@ -1,4 +1,5 @@
 # RUN: %PYTHON %s 2>&1 | FileCheck %s
+# RUN: %PYTHON -m mypy %s --config-file %mlir_src_root/test/python/mypy.ini
 
 from mlir.passmanager import PassManager
 from mlir.ir import Context, Location, Module, InsertionPoint, UnitAttr

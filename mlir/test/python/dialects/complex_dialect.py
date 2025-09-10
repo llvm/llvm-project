@@ -1,4 +1,5 @@
 # RUN: %PYTHON %s | FileCheck %s
+# RUN: %PYTHON -m mypy %s --config-file %mlir_src_root/test/python/mypy.ini
 
 # Naming this file with a `_dialect` suffix to avoid a naming conflict with
 # python package's math module (coming in from random.py).

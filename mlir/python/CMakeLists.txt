@@ -23,10 +23,13 @@ declare_mlir_python_sources(MLIRPythonSources.Core.Python
   ADD_TO_PARENT MLIRPythonSources.Core
   SOURCES
     _mlir_libs/__init__.py
+    __init__.py
     ir.py
     passmanager.py
     rewrite.py
     dialects/_ods_common.py
+    dialects/__init__.py
+    py.typed
 )
 
 declare_mlir_python_sources(MLIRPythonSources.Core.Python.Extras

@@ -57,6 +57,12 @@ config.substitutions.append(("%PATH%", config.environment["PATH"]))
 config.substitutions.append(("%shlibext", config.llvm_shlib_ext))
 config.substitutions.append(("%llvm_src_root", config.llvm_src_root))
 config.substitutions.append(("%mlir_src_root", config.mlir_src_root))
+config.substitutions.append(
+    (
+        "%mlir_python_packages_root",
+        os.path.join(config.mlir_obj_root, "python_packages", "mlir_core"),
+    )
+)
 config.substitutions.append(("%host_cxx", config.host_cxx.strip()))
 config.substitutions.append(("%host_cc", config.host_cc.strip()))
 
@@ -347,6 +353,7 @@ if config.enable_assertions:
     config.available_features.add("asserts")
 else:
     config.available_features.add("noasserts")
+
 
 def have_host_jit_feature_support(feature_name):
     mlir_runner_exe = lit.util.which("mlir-runner", config.mlir_tools_dir)
