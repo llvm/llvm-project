@@ -1,0 +1,1773 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>The Mathematical Constants</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../constants.html" title="Chapter 4. Mathematical Constants">
+<link rel="prev" href="tutorial/user_def.html" title="Use With User-Defined Types">
+<link rel="next" href="new_const.html" title="Defining New Constants">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="tutorial/user_def.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../constants.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="new_const.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.constants"></a><a class="link" href="constants.html" title="The Mathematical Constants">The Mathematical Constants</a>
+</h2></div></div></div>
+<p>
+      This section lists the mathematical constants, their use(s) (and sometimes
+      rationale for their inclusion).
+    </p>
+<div class="table">
+<a name="math_toolkit.constants.mathematical_constants"></a><p class="title"><b>Table 4.1. Mathematical Constants</b></p>
+<div class="table-contents"><table class="table" summary="Mathematical Constants">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              <p>
+                name
+              </p>
+            </th>
+<th>
+              <p>
+                formula
+              </p>
+            </th>
+<th>
+              <p>
+                Value (6 decimals)
+              </p>
+            </th>
+<th>
+              <p>
+                Uses and Rationale
+              </p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+              <p>
+                <span class="bold"><strong>Rational fractions</strong></span>
+              </p>
+            </td>
+<td>
+            </td>
+<td>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                half
+              </p>
+            </td>
+<td>
+              <p>
+                1/2
+              </p>
+            </td>
+<td>
+              <p>
+                0.5
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                third
+              </p>
+            </td>
+<td>
+              <p>
+                1/3
+              </p>
+            </td>
+<td>
+              <p>
+                0.333333
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                two_thirds
+              </p>
+            </td>
+<td>
+              <p>
+                2/3
+              </p>
+            </td>
+<td>
+              <p>
+                0.66667
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                three_quarters
+              </p>
+            </td>
+<td>
+              <p>
+                3/4
+              </p>
+            </td>
+<td>
+              <p>
+                0.75
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                <span class="bold"><strong>two and related</strong></span>
+              </p>
+            </td>
+<td>
+            </td>
+<td>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                root_two
+              </p>
+            </td>
+<td>
+              <p>
+                √2
+              </p>
+            </td>
+<td>
+              <p>
+                1.41421
+              </p>
+            </td>
+<td>
+              <p>
+                Equivalent to POSIX constant M_SQRT2
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                root_three
+              </p>
+            </td>
+<td>
+              <p>
+                √3
+              </p>
+            </td>
+<td>
+              <p>
+                1.73205
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                half_root_two
+              </p>
+            </td>
+<td>
+              <p>
+                √2 /2
+              </p>
+            </td>
+<td>
+              <p>
+                0.707106
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                ln_two
+              </p>
+            </td>
+<td>
+              <p>
+                ln(2)
+              </p>
+            </td>
+<td>
+              <p>
+                0.693147
+              </p>
+            </td>
+<td>
+              <p>
+                Equivalent to POSIX constant M_LN2
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                ln_ten
+              </p>
+            </td>
+<td>
+              <p>
+                ln(10)
+              </p>
+            </td>
+<td>
+              <p>
+                2.30258
+              </p>
+            </td>
+<td>
+              <p>
+                Equivalent to POSIX constant M_LN10
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                ln_ln_two
+              </p>
+            </td>
+<td>
+              <p>
+                ln(ln(2))
+              </p>
+            </td>
+<td>
+              <p>
+                -0.366512
+              </p>
+            </td>
+<td>
+              <p>
+                Gumbel distribution median
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                root_ln_four
+              </p>
+            </td>
+<td>
+              <p>
+                √ln(4)
+              </p>
+            </td>
+<td>
+              <p>
+                1.177410
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                one_div_root_two
+              </p>
+            </td>
+<td>
+              <p>
+                1/√2
+              </p>
+            </td>
+<td>
+              <p>
+                0.707106
+              </p>
+            </td>
+<td>
+              <p>
+                Equivalent to POSIX constant M_SQRT1_2
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                <span class="bold"><strong>π and related</strong></span>
+              </p>
+            </td>
+<td>
+            </td>
+<td>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                pi
+              </p>
+            </td>
+<td>
+              <p>
+                π
+              </p>
+            </td>
+<td>
+              <p>
+                3.14159
+              </p>
+            </td>
+<td>
+              <p>
+                Ubiquitous. Archimedes constant <a href="http://en.wikipedia.org/wiki/Pi" target="_top">π</a>.
+                Equivalent to POSIX constant M_PI
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                half_pi
+              </p>
+            </td>
+<td>
+              <p>
+                π/2
+              </p>
+            </td>
+<td>
+              <p>
+                1.570796
+              </p>
+            </td>
+<td>
+              <p>
+                Equivalent to POSIX constant M_PI2
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                third_pi
+              </p>
+            </td>
+<td>
+              <p>
+                π/3
+              </p>
+            </td>
+<td>
+              <p>
+                1.04719
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                quarter_pi
+              </p>
+            </td>
+<td>
+              <p>
+                π/4
+              </p>
+            </td>
+<td>
+              <p>
+                0.78539816
+              </p>
+            </td>
+<td>
+              <p>
+                Equivalent to POSIX constant M_PI_4
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                sixth_pi
+              </p>
+            </td>
+<td>
+              <p>
+                π/6
+              </p>
+            </td>
+<td>
+              <p>
+                0.523598
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                two_pi
+              </p>
+            </td>
+<td>
+              <p>
+                2π
+              </p>
+            </td>
+<td>
+              <p>
+                6.28318
+              </p>
+            </td>
+<td>
+              <p>
+                Many uses, most simply, circumference of a circle
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                tau
+              </p>
+            </td>
+<td>
+              <p>
+                τ
+              </p>
+            </td>
+<td>
+              <p>
+                6.28318
+              </p>
+            </td>
+<td>
+              <p>
+                @https://en.wikipedia.org/wiki/Turn_(angle)#Tau_proposals Many uses,
+                most simply, circumference of a circle. Equal to two_pi.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                two_thirds_pi
+              </p>
+            </td>
+<td>
+              <p>
+                2/3 π
+              </p>
+            </td>
+<td>
+              <p>
+                2.09439
+              </p>
+            </td>
+<td>
+              <p>
+                <a href="http://en.wikipedia.org/wiki/Sphere#Volume_of_a_sphere" target="_top">volume
+                of a hemi-sphere</a> = 4/3 π r³
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                three_quarters_pi
+              </p>
+            </td>
+<td>
+              <p>
+                3/4 π
+              </p>
+            </td>
+<td>
+              <p>
+                2.35619
+              </p>
+            </td>
+<td>
+              <p>
+                = 3/4 π
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                four_thirds_pi
+              </p>
+            </td>
+<td>
+              <p>
+                4/3 π
+              </p>
+            </td>
+<td>
+              <p>
+                4.18879
+              </p>
+            </td>
+<td>
+              <p>
+                <a href="http://en.wikipedia.org/wiki/Sphere#Volume_of_a_sphere" target="_top">volume
+                of a sphere</a> = 4/3 π r³
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                one_div_two_pi
+              </p>
+            </td>
+<td>
+              <p>
+                1/(2π)
+              </p>
+            </td>
+<td>
+              <p>
+                1.59155
+              </p>
+            </td>
+<td>
+              <p>
+                Widely used
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                root_pi
+              </p>
+            </td>
+<td>
+              <p>
+                √π
+              </p>
+            </td>
+<td>
+              <p>
+                1.77245
+              </p>
+            </td>
+<td>
+              <p>
+                Widely used
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                root_half_pi
+              </p>
+            </td>
+<td>
+              <p>
+                √ π/2
+              </p>
+            </td>
+<td>
+              <p>
+                1.25331
+              </p>
+            </td>
+<td>
+              <p>
+                Widely used
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                root_two_pi
+              </p>
+            </td>
+<td>
+              <p>
+                √ π*2
+              </p>
+            </td>
+<td>
+              <p>
+                2.50662
+              </p>
+            </td>
+<td>
+              <p>
+                Widely used
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                one_div_pi
+              </p>
+            </td>
+<td>
+              <p>
+                1/π
+              </p>
+            </td>
+<td>
+              <p>
+                0.31830988
+              </p>
+            </td>
+<td>
+              <p>
+                Equivalent to POSIX constant M_1_PI
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                two_div_pi
+              </p>
+            </td>
+<td>
+              <p>
+                2/π
+              </p>
+            </td>
+<td>
+              <p>
+                0.63661977
+              </p>
+            </td>
+<td>
+              <p>
+                Equivalent to POSIX constant M_2_PI
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                one_div_root_pi
+              </p>
+            </td>
+<td>
+              <p>
+                1/√π
+              </p>
+            </td>
+<td>
+              <p>
+                0.564189
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                two_div_root_pi
+              </p>
+            </td>
+<td>
+              <p>
+                2/√π
+              </p>
+            </td>
+<td>
+              <p>
+                1.128379
+              </p>
+            </td>
+<td>
+              <p>
+                Equivalent to POSIX constant M_2_SQRTPI
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                one_div_root_two_pi
+              </p>
+            </td>
+<td>
+              <p>
+                1/√(2π)
+              </p>
+            </td>
+<td>
+              <p>
+                0.398942
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                root_one_div_pi
+              </p>
+            </td>
+<td>
+              <p>
+                √(1/π
+              </p>
+            </td>
+<td>
+              <p>
+                0.564189
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                pi_minus_three
+              </p>
+            </td>
+<td>
+              <p>
+                π-3
+              </p>
+            </td>
+<td>
+              <p>
+                0.141593
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                four_minus_pi
+              </p>
+            </td>
+<td>
+              <p>
+                4 -π
+              </p>
+            </td>
+<td>
+              <p>
+                0.858407
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                pi_pow_e
+              </p>
+            </td>
+<td>
+              <p>
+                π<sup>e</sup>
+              </p>
+            </td>
+<td>
+              <p>
+                22.4591
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                pi_sqr
+              </p>
+            </td>
+<td>
+              <p>
+                π<sup>2</sup>
+              </p>
+            </td>
+<td>
+              <p>
+                9.86960
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                pi_sqr_div_six
+              </p>
+            </td>
+<td>
+              <p>
+                π<sup>2</sup>/6
+              </p>
+            </td>
+<td>
+              <p>
+                1.64493
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                pi_cubed
+              </p>
+            </td>
+<td>
+              <p>
+                π<sup>3</sup>
+              </p>
+            </td>
+<td>
+              <p>
+                31.00627
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                cbrt_pi
+              </p>
+            </td>
+<td>
+              <p>
+                √<sup>3</sup> π
+              </p>
+            </td>
+<td>
+              <p>
+                1.46459
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                one_div_cbrt_pi
+              </p>
+            </td>
+<td>
+              <p>
+                1/√<sup>3</sup> π
+              </p>
+            </td>
+<td>
+              <p>
+                0.682784
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                <span class="bold"><strong>Euler's e and related</strong></span>
+              </p>
+            </td>
+<td>
+            </td>
+<td>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                e
+              </p>
+            </td>
+<td>
+              <p>
+                e
+              </p>
+            </td>
+<td>
+              <p>
+                2.71828
+              </p>
+            </td>
+<td>
+              <p>
+                <a href="http://en.wikipedia.org/wiki/E_(mathematical_constant)" target="_top">Euler's
+                constant e</a>, equivalent to POSIX constant M_E
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                exp_minus_half
+              </p>
+            </td>
+<td>
+              <p>
+                e <sup>-1/2</sup>
+              </p>
+            </td>
+<td>
+              <p>
+                0.606530
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                e_pow_pi
+              </p>
+            </td>
+<td>
+              <p>
+                e <sup>π</sup>
+              </p>
+            </td>
+<td>
+              <p>
+                23.14069
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                root_e
+              </p>
+            </td>
+<td>
+              <p>
+                √ e
+              </p>
+            </td>
+<td>
+              <p>
+                1.64872
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                log10_e
+              </p>
+            </td>
+<td>
+              <p>
+                log10(e)
+              </p>
+            </td>
+<td>
+              <p>
+                0.434294
+              </p>
+            </td>
+<td>
+              <p>
+                Equivalent to POSIX constant M_LOG10E
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                one_div_log10_e
+              </p>
+            </td>
+<td>
+              <p>
+                1/log10(e)
+              </p>
+            </td>
+<td>
+              <p>
+                2.30258
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                log2_e
+              </p>
+            </td>
+<td>
+              <p>
+                log<sub>2</sub>(e)
+              </p>
+            </td>
+<td>
+              <p>
+                1.442695
+              </p>
+            </td>
+<td>
+              <p>
+                This is the same as 1/ln(2) and is equivalent to POSIX constant M_LOG2E
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                <span class="bold"><strong>Trigonometric</strong></span>
+              </p>
+            </td>
+<td>
+            </td>
+<td>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                degree
+              </p>
+            </td>
+<td>
+              <p>
+                radians = π / 180
+              </p>
+            </td>
+<td>
+              <p>
+                0.017453
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                radian
+              </p>
+            </td>
+<td>
+              <p>
+                degrees = 180 / π
+              </p>
+            </td>
+<td>
+              <p>
+                57.2957
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                sin_one
+              </p>
+            </td>
+<td>
+              <p>
+                sin(1)
+              </p>
+            </td>
+<td>
+              <p>
+                0.841470
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                cos_one
+              </p>
+            </td>
+<td>
+              <p>
+                cos(1)
+              </p>
+            </td>
+<td>
+              <p>
+                0.54030
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                sinh_one
+              </p>
+            </td>
+<td>
+              <p>
+                sinh(1)
+              </p>
+            </td>
+<td>
+              <p>
+                1.17520
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                cosh_one
+              </p>
+            </td>
+<td>
+              <p>
+                cosh(1)
+              </p>
+            </td>
+<td>
+              <p>
+                1.54308
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                <span class="bold"><strong>Phi</strong></span>
+              </p>
+            </td>
+<td>
+              <p>
+                Phidias golden ratio
+              </p>
+            </td>
+<td>
+              <p>
+                <a href="http://en.wikipedia.org/wiki/Golden_ratio" target="_top">Phidias golden
+                ratio</a>
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                phi
+              </p>
+            </td>
+<td>
+              <p>
+                (1 + √5) /2
+              </p>
+            </td>
+<td>
+              <p>
+                1.61803
+              </p>
+            </td>
+<td>
+              <p>
+                finance
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                ln_phi
+              </p>
+            </td>
+<td>
+              <p>
+                ln(φ)
+              </p>
+            </td>
+<td>
+              <p>
+                0.48121
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                one_div_ln_phi
+              </p>
+            </td>
+<td>
+              <p>
+                1/ln(φ)
+              </p>
+            </td>
+<td>
+              <p>
+                2.07808
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                <span class="bold"><strong>Euler's Gamma</strong></span>
+              </p>
+            </td>
+<td>
+            </td>
+<td>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                euler
+              </p>
+            </td>
+<td>
+              <p>
+                euler
+              </p>
+            </td>
+<td>
+              <p>
+                0.577215
+              </p>
+            </td>
+<td>
+              <p>
+                <a href="http://en.wikipedia.org/wiki/Euler%E2%80%93Mascheroni_constant" target="_top">Euler-Mascheroni
+                gamma constant</a>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                one_div_euler
+              </p>
+            </td>
+<td>
+              <p>
+                1/euler
+              </p>
+            </td>
+<td>
+              <p>
+                1.73245
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                euler_sqr
+              </p>
+            </td>
+<td>
+              <p>
+                euler<sup>2</sup>
+              </p>
+            </td>
+<td>
+              <p>
+                0.333177
+              </p>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                <span class="bold"><strong>Misc</strong></span>
+              </p>
+            </td>
+<td>
+            </td>
+<td>
+            </td>
+<td>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                zeta_two
+              </p>
+            </td>
+<td>
+              <p>
+                ζ(2)
+              </p>
+            </td>
+<td>
+              <p>
+                1.64493
+              </p>
+            </td>
+<td>
+              <p>
+                <a href="http://en.wikipedia.org/wiki/Riemann_zeta_function" target="_top">Riemann
+                zeta function</a>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                zeta_three
+              </p>
+            </td>
+<td>
+              <p>
+                ζ(3)
+              </p>
+            </td>
+<td>
+              <p>
+                1.20205
+              </p>
+            </td>
+<td>
+              <p>
+                <a href="http://en.wikipedia.org/wiki/Riemann_zeta_function" target="_top">Riemann
+                zeta function</a>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                catalan
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="emphasis"><em>K</em></span>
+              </p>
+            </td>
+<td>
+              <p>
+                0.915965
+              </p>
+            </td>
+<td>
+              <p>
+                <a href="http://mathworld.wolfram.com/CatalansConstant.html" target="_top">Catalan
+                (or Glaisher) combinatorial constant</a>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                glaisher
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="emphasis"><em>A</em></span>
+              </p>
+            </td>
+<td>
+              <p>
+                1.28242
+              </p>
+            </td>
+<td>
+              <p>
+                <a href="https://oeis.org/A074962/constant" target="_top">Decimal expansion
+                of Glaisher-Kinkelin constant</a>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                khinchin
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="emphasis"><em>k</em></span>
+              </p>
+            </td>
+<td>
+              <p>
+                2.685452
+              </p>
+            </td>
+<td>
+              <p>
+                <a href="https://oeis.org/A002210/constant" target="_top">Decimal expansion
+                of Khinchin constant</a>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                extreme_value_skewness
+              </p>
+            </td>
+<td>
+              <p>
+                12√6 ζ(3)/ π<sup>3</sup>
+              </p>
+            </td>
+<td>
+              <p>
+                1.139547
+              </p>
+            </td>
+<td>
+              <p>
+                Extreme value distribution
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                rayleigh_skewness
+              </p>
+            </td>
+<td>
+              <p>
+                2√π(π-3)/(4 - π)<sup>3/2</sup>
+              </p>
+            </td>
+<td>
+              <p>
+                0.631110
+              </p>
+            </td>
+<td>
+              <p>
+                Rayleigh distribution skewness
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                rayleigh_kurtosis_excess
+              </p>
+            </td>
+<td>
+              <p>
+                -(6π<sup>2</sup>-24π+16)/(4-π)<sup>2</sup>
+              </p>
+            </td>
+<td>
+              <p>
+                0.245089
+              </p>
+            </td>
+<td>
+              <p>
+                <a href="http://en.wikipedia.org/wiki/Rayleigh_distribution" target="_top">Rayleigh
+                distribution kurtosis excess</a>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                rayleigh_kurtosis
+              </p>
+            </td>
+<td>
+              <p>
+                3+(6π<sup>2</sup>-24π+16)/(4-π)<sup>2</sup>
+              </p>
+            </td>
+<td>
+              <p>
+                3.245089
+              </p>
+            </td>
+<td>
+              <p>
+                Rayleigh distribution kurtosis
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                first_feigenbaum
+              </p>
+            </td>
+<td>
+            </td>
+<td>
+              <p>
+                4.6692016
+              </p>
+            </td>
+<td>
+              <p>
+                <a href="https://en.wikipedia.org/wiki/Feigenbaum_constants" target="_top">First
+                Feigenbaum constant</a>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                plastic
+              </p>
+            </td>
+<td>
+              <p>
+                Real solution of x<sup>3</sup> = x + 1
+              </p>
+            </td>
+<td>
+              <p>
+                1.324717957
+              </p>
+            </td>
+<td>
+              <p>
+                <a href="https://en.wikipedia.org/wiki/Plastic_number" target="_top">Plastic
+                constant</a>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                gauss
+              </p>
+            </td>
+<td>
+              <p>
+                Reciprocal of agm(1, √2)
+              </p>
+            </td>
+<td>
+              <p>
+                0.8346268
+              </p>
+            </td>
+<td>
+              <p>
+                <a href="https://en.wikipedia.org/wiki/Gauss%27s_constant" target="_top">Gauss's
+                constant</a>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                dottie
+              </p>
+            </td>
+<td>
+              <p>
+                Solution of cos(x) = x
+              </p>
+            </td>
+<td>
+              <p>
+                0.739085
+              </p>
+            </td>
+<td>
+              <p>
+                <a href="https://en.wikipedia.org/wiki/Dottie_number" target="_top">Dottie's
+                number</a>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                reciprocal_fibonacci
+              </p>
+            </td>
+<td>
+              <p>
+                Sum of reciprocals of Fibonacci numbers
+              </p>
+            </td>
+<td>
+              <p>
+                3.359885666
+              </p>
+            </td>
+<td>
+              <p>
+                <a href="https://en.wikipedia.org/wiki/Reciprocal_Fibonacci_constant" target="_top">Reciprocal
+                Fibonacci constant</a>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                laplace_limit
+              </p>
+            </td>
+<td>
+            </td>
+<td>
+              <p>
+                .6627434193
+              </p>
+            </td>
+<td>
+              <p>
+                <a href="https://en.wikipedia.org/wiki/Laplace_limit" target="_top">Laplace
+                Limit</a>
+              </p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="note"><table border="0" summary="Note">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="../../../../../doc/src/images/note.png"></td>
+<th align="left">Note</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+        Integer values are <span class="bold"><strong>not included</strong></span> in this
+        list of math constants, however interesting, because they can be so easily
+        and exactly constructed, even for UDT, for example: <code class="computeroutput"><span class="keyword">static_cast</span><span class="special">&lt;</span><span class="identifier">cpp_float</span><span class="special">&gt;(</span><span class="number">42</span><span class="special">)</span></code>.
+      </p></td></tr>
+</table></div>
+<div class="tip"><table border="0" summary="Tip">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="../../../../../doc/src/images/tip.png"></td>
+<th align="left">Tip</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+        If you know the approximate value of the constant, you can search for the
+        value to find Boost.Math chosen name in this table.
+      </p></td></tr>
+</table></div>
+<div class="tip"><table border="0" summary="Tip">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="../../../../../doc/src/images/tip.png"></td>
+<th align="left">Tip</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+        Bernoulli numbers are available at <a class="link" href="number_series/bernoulli_numbers.html" title="Bernoulli Numbers">Bernoulli
+        numbers</a>.
+      </p></td></tr>
+</table></div>
+<div class="tip"><table border="0" summary="Tip">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="../../../../../doc/src/images/tip.png"></td>
+<th align="left">Tip</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+        Factorials are available at <a class="link" href="factorials/sf_factorial.html" title="Factorial">factorial</a>.
+      </p></td></tr>
+</table></div>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="tutorial/user_def.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../constants.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="new_const.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

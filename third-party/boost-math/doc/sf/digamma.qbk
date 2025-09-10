@@ -1,0 +1,151 @@
+[section:digamma Digamma]
+
+[h4 Synopsis]
+
+``
+#include <boost/math/special_functions/digamma.hpp>
+``
+
+  namespace boost{ namespace math{
+  
+  template <class T>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` digamma(T z);
+  
+  template <class T, class ``__Policy``>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` digamma(T z, const ``__Policy``&);
+  
+  }} // namespaces
+  
+[h4 Description]
+
+Returns the digamma or psi function of /x/. Digamma is defined as the logarithmic
+derivative of the gamma function:
+
+[equation digamma1]
+
+[graph digamma]
+
+[optional_policy]
+
+The return type of this function is computed using the __arg_promotion_rules:
+the result is of type `double` when T is an integer type, and type T otherwise.
+
+[h4 Accuracy]
+
+The following table shows the peak errors (in units of epsilon) 
+found on various platforms with various floating point types.
+Unless otherwise specified any floating point type that is narrower
+than the one shown will have __zero_error.
+
+[table_digamma]
+
+As shown above, error rates for positive arguments are generally very low.
+For negative arguments there are an infinite number of irrational roots:
+relative errors very close to these can be arbitrarily large, although
+absolute error will remain very low.
+
+The following error plot are based on an exhaustive search of the functions domain, MSVC-15.5 at `double` precision, 
+and GCC-7.1/Ubuntu for `long double` and `__float128`.
+
+[graph digamma__double]
+
+[graph digamma__80_bit_long_double]
+
+[graph digamma____float128]
+
+[h4 Testing]
+
+There are two sets of tests: spot values are computed using
+the online calculator at functions.wolfram.com, while random test values
+are generated using the high-precision reference implementation (a 
+differentiated __lanczos see below).
+
+[h4 Implementation]
+
+The implementation is divided up into the following domains:
+
+For Negative arguments the reflection formula:
+
+   digamma(1-x) = digamma(x) + pi/tan(pi*x);
+   
+is used to make /x/ positive.
+
+For arguments in the range [0,1] the recurrence relation:
+
+   digamma(x) = digamma(x+1) - 1/x
+   
+is used to shift the evaluation to [1,2].
+
+For arguments in the range [1,2] a rational approximation [jm_rationals] is used (see below).
+
+For arguments in the range [2,BIG] the recurrence relation:
+
+   digamma(x+1) = digamma(x) + 1/x;
+   
+is used to shift the evaluation to the range [1,2].
+
+For arguments > BIG the asymptotic expansion:
+
+[equation digamma2]
+
+can be used.  However, this expansion is divergent after a few terms: 
+exactly how many terms depends on the size of /x/.  Therefore the value
+of /BIG/ must be chosen so that the series can be truncated at a term
+that is too small to have any effect on the result when evaluated at /BIG/.
+Choosing BIG=10 for up to 80-bit reals, and BIG=20 for 128-bit reals allows
+the series to truncated after a suitably small number of terms and evaluated
+as a polynomial in `1/(x*x)`.
+
+The arbitrary precision version of this function uses recurrence relations until
+x > BIG, and then evaluation via the asymptotic expansion above.  As special cases
+integer and half integer arguments are handled via:
+
+[equation digamma4]
+
+[equation digamma5]
+
+The rational approximation [jm_rationals] in the range [1,2] is derived as follows.
+
+First a high precision approximation to digamma was constructed using a 60-term
+differentiated __lanczos, the form used is:
+
+[equation digamma3]
+
+Where P(x) and Q(x) are the polynomials from the rational form of the Lanczos sum,
+and P'(x) and Q'(x) are their first derivatives.  The Lanzos part of this
+approximation has a theoretical precision of ~100 decimal digits.  However, 
+cancellation in the above sum will reduce that to around `99-(1/y)` digits
+if /y/ is the result.  This approximation was used to calculate the positive root
+of digamma, and was found to agree with the value used by 
+Cody to 25 digits (See Math. Comp. 27, 123-127 (1973) by Cody, Strecok and Thacher)
+and with the value used by Morris to 35 digits (See TOMS Algorithm 708).
+
+Likewise a few spot tests agreed with values calculated using
+functions.wolfram.com to >40 digits.
+That's sufficiently precise to insure that the approximation below is
+accurate to double precision.  Achieving 128-bit long double precision requires that
+the location of the root is known to ~70 digits, and it's not clear whether 
+the value calculated by this method meets that requirement: the difficulty
+lies in independently verifying the value obtained.
+
+The rational approximation [jm_rationals] was optimised for absolute error using the form:
+
+   digamma(x) = (x - X0)(Y + R(x - 1));
+   
+Where X0 is the positive root of digamma, Y is a constant, and R(x - 1) is the
+rational approximation.  Note that since X0 is irrational, we need twice as many
+digits in X0 as in x in order to avoid cancellation error during the subtraction
+(this assumes that /x/ is an exact value, if it's not then all bets are off).  That
+means that even when x is the value of the root rounded to the nearest 
+representable value, the result of digamma(x) ['[*will not be zero]].
+
+
+[endsect] [/section:digamma The Digamma Function]
+
+[/ 
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

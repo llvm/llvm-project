@@ -1,0 +1,175 @@
+[/
+  Copyright 2021 Nick Thompson, John Maddock
+
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+
+[section:bezier_polynomial Bezier Polynomials]
+
+[heading Synopsis]
+
+``
+#include <boost/math/interpolators/bezier_polynomials.hpp>
+
+namespace boost::math::interpolators {
+
+    template<RandomAccessContainer>
+    class bezier_polynomial
+    {
+    public:
+        using Point = typename RandomAccessContainer::value_type;
+        using Real = typename Point::value_type;
+        using Z = typename RandomAccessContainer::size_type;
+
+        bezier_polynomial(RandomAccessContainer&& control_points);
+
+        inline Point operator()(Real t) const;
+
+        inline Point prime(Real t) const;
+
+        void edit_control_point(Point cont & p, Z index);
+
+        RandomAccessContainer const & control_points() const;
+
+        friend std::ostream& operator<<(std::ostream& out, bezier_polynomial<RandomAccessContainer> const & bp);
+    };
+
+}
+``
+
+[heading Description]
+
+B[eacute]zier polynomials are curves smooth curves which approximate a set of control points.
+They are commonly used in computer-aided geometric design.
+A basic usage is demonstrated below:
+
+    std::vector<std::array<double, 3>> control_points(4);
+    control_points[0] = {0,0,0};
+    control_points[1] = {1,0,0};
+    control_points[2] = {0,1,0};
+    control_points[3] = {0,0,1};
+    auto bp = bezier_polynomial(std::move(control_points));
+    // Interpolate at t = 0.1:
+    std::array<double, 3> point = bp(0.1);
+
+The support of the interpolant is [0,1], and an error message will be written if attempting to evaluate the polynomial outside of these bounds.
+At least two points must be passed; creating a polynomial of degree 1.
+
+Control points may be modified via `edit_control_point`, for example:
+
+    std::array<double, 3> endpoint{0,1,1};
+    bp.edit_control_point(endpoint, 3);
+
+This replaces the last control point with `endpoint`.
+
+Tangents are computed with the `.prime` member function, and the control points may be referenced with the `.control_points` member function.
+
+The overloaded operator /<</ is disappointing: The control points are simply printed.
+Rendering the Bezier and its convex hull seems to be the best "print" statement for it, but this is essentially impossible in modern terminals.
+
+[heading Caveats]
+
+Do not confuse the Bezier polynomial with a Bezier spline.
+A Bezier spline has a fixed polynomial order and subdivides the curve into low-order polynomial segments.
+/This is not a spline!/
+Passing /n/ control points to the `bezier_polynomial` class creates a polynomial of degree n-1, whereas a Bezier spline has a fixed order independent of the number of control points.
+
+Requires C++17 and support for threadlocal storage.
+
+
+[heading Performance]
+
+The following performance numbers were generated for evaluating the Bezier-polynomial.
+The evaluation of the interpolant is [bigo](/N/^2), as expected from de Casteljau's algorithm.
+
+
+    Run on (16 X 2300 MHz CPU s)
+    CPU Caches:
+    L1 Data 32 KiB (x8)
+    L1 Instruction 32 KiB (x8)
+    L2 Unified 256 KiB (x8)
+    L3 Unified 16384 KiB (x1)
+    ---------------------------------------------------------
+    Benchmark                              Time           CPU
+    ---------------------------------------------------------
+    BezierPolynomial<double>/2        9.07 ns         9.06 ns
+    BezierPolynomial<double>/3        13.2 ns         13.1 ns
+    BezierPolynomial<double>/4        17.5 ns         17.5 ns
+    BezierPolynomial<double>/5        21.7 ns         21.7 ns
+    BezierPolynomial<double>/6        27.4 ns         27.4 ns
+    BezierPolynomial<double>/7        32.4 ns         32.3 ns
+    BezierPolynomial<double>/8        40.4 ns         40.4 ns
+    BezierPolynomial<double>/9        51.9 ns         51.8 ns
+    BezierPolynomial<double>/10       65.9 ns         65.9 ns
+    BezierPolynomial<double>/11       79.1 ns         79.1 ns
+    BezierPolynomial<double>/12       83.0 ns         82.9 ns
+    BezierPolynomial<double>/13        108 ns          108 ns
+    BezierPolynomial<double>/14        119 ns          119 ns
+    BezierPolynomial<double>/15        140 ns          140 ns
+    BezierPolynomial<double>/16        137 ns          137 ns
+    BezierPolynomial<double>/17        151 ns          151 ns
+    BezierPolynomial<double>/18        171 ns          171 ns
+    BezierPolynomial<double>/19        194 ns          193 ns
+    BezierPolynomial<double>/20        213 ns          213 ns
+    BezierPolynomial<double>/21        220 ns          220 ns
+    BezierPolynomial<double>/22        260 ns          260 ns
+    BezierPolynomial<double>/23        266 ns          266 ns
+    BezierPolynomial<double>/24        293 ns          292 ns
+    BezierPolynomial<double>/25        319 ns          319 ns
+    BezierPolynomial<double>/26        336 ns          335 ns
+    BezierPolynomial<double>/27        370 ns          370 ns
+    BezierPolynomial<double>/28        429 ns          429 ns
+    BezierPolynomial<double>/29        443 ns          443 ns
+    BezierPolynomial<double>/30        421 ns          421 ns
+    BezierPolynomial<double>_BigO       0.52 N^2        0.51 N^2  
+
+The Casteljau recurrence is indeed quadratic in the number of control points, and is chosen for numerical stability.
+See /Bezier and B-spline Techniques/, section 2.3 for a method to Hornerize the Berstein polynomials and perhaps produce speedups.
+
+
+[heading Point types]
+
+The `Point` type must satisfy certain conceptual requirements which are discussed in the documentation of the Catmull-Rom curve.
+However, we reiterate them here:
+
+    template<class Real>
+    class mypoint3d
+    {
+    public:
+        // Must define a value_type:
+        typedef Real value_type;
+
+        // Regular constructor--need not be of this form.
+        mypoint3d(Real x, Real y, Real z) {m_vec[0] = x; m_vec[1] = y; m_vec[2] = z; }
+
+        // Must define a default constructor:
+        mypoint3d() {}
+
+        // Must define array access:
+        Real operator[](size_t i) const
+        {
+            return m_vec[i];
+        }
+
+        // Must define array element assignment:
+        Real& operator[](size_t i)
+        {
+            return m_vec[i];
+        }
+
+    private:
+        std::array<Real, 3> m_vec;
+    };
+
+These conditions are satisfied by both `std::array` and `std::vector`.
+
+
+[heading References]
+
+* Rainer Kress, ['Numerical Analysis], Springer, 1998
+* David Salomon, ['Curves and Surfaces for Computer Graphics], Springer, 2005
+* Prautzsch, Hartmut, Wolfgang Boehm, and Marco Paluszny. ['Bézier and B-spline techniques]. Springer Science & Business Media, 2002.
+
+[endsect] [/section:bezier_polynomials Bezier Polynomials]

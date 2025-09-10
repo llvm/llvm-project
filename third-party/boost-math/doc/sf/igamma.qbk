@@ -1,0 +1,286 @@
+[section:igamma Incomplete Gamma Functions]
+
+[h4 Synopsis]
+
+``
+#include <boost/math/special_functions/gamma.hpp>
+``
+
+   namespace boost{ namespace math{
+   
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` gamma_p(T1 a, T2 z);
+   
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` gamma_p(T1 a, T2 z, const ``__Policy``&);
+   
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` gamma_q(T1 a, T2 z);
+   
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` gamma_q(T1 a, T2 z, const ``__Policy``&);
+   
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` tgamma_lower(T1 a, T2 z);
+   
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` tgamma_lower(T1 a, T2 z, const ``__Policy``&);
+   
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` tgamma(T1 a, T2 z);
+   
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` tgamma(T1 a, T2 z, const ``__Policy``&);
+   
+   }} // namespaces
+   
+[h4 Description]
+
+There are four [@http://mathworld.wolfram.com/IncompleteGammaFunction.html 
+incomplete gamma functions]:
+two are normalised versions (also known as /regularized/ incomplete gamma functions)
+that return values in the range [0, 1], and two are non-normalised and
+return values in the range [0, [Gamma](a)].  Users interested in statistical
+applications should use the
+[@http://mathworld.wolfram.com/RegularizedGammaFunction.html normalised versions (`gamma_p` and `gamma_q`)].
+
+All of these functions require /a > 0/ and /z >= 0/, otherwise they return
+the result of __domain_error.
+
+[optional_policy]
+
+The return type of these functions is computed using the __arg_promotion_rules
+when T1 and T2 are different types, otherwise the return type is simply T1.
+
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` gamma_p(T1 a, T2 z);
+   
+   template <class T1, class T2, class Policy>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` gamma_p(T1 a, T2 z, const ``__Policy``&);
+   
+Returns the normalised lower incomplete gamma function of a and z:
+
+[equation igamma4]
+
+This function changes rapidly from 0 to 1 around the point z == a:
+
+[graph gamma_p]
+
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` gamma_q(T1 a, T2 z);
+
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` gamma_q(T1 a, T2 z, const ``__Policy``&);
+
+Returns the normalised upper incomplete gamma function of a and z:
+
+[equation igamma3]
+
+This function changes rapidly from 1 to 0 around the point z == a:
+
+[graph gamma_q]
+
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` tgamma_lower(T1 a, T2 z);
+
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` tgamma_lower(T1 a, T2 z, const ``__Policy``&);
+
+Returns the full (non-normalised) lower incomplete gamma function of a and z:
+
+[equation igamma2]
+
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` tgamma(T1 a, T2 z);
+
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` tgamma(T1 a, T2 z, const ``__Policy``&);
+
+Returns the full (non-normalised) upper incomplete gamma function of a and z:
+
+[equation igamma1]
+
+[h4 Accuracy]
+
+The following tables give peak and mean relative errors in over various domains of
+a and z, along with comparisons to the __gsl and __cephes libraries.
+Note that only results for the widest floating-point type on the system are given as
+narrower types have __zero_error.
+
+Note that errors grow as /a/ grows larger.
+
+Note also that the higher error rates for the 80 and 128 bit 
+long double results are somewhat misleading: expected results that are 
+zero at 64-bit double precision may be non-zero - but exceptionally small -
+with the larger exponent range of a long double.  These results therefore
+reflect the more extreme nature of the tests conducted for these types.
+
+All values are in units of epsilon.
+
+[table_gamma_p]
+
+[table_gamma_q]
+
+[table_tgamma_lower]
+
+[table_tgamma_incomplete_]
+
+[h4 Testing]
+
+There are two sets of tests: spot tests compare values taken from
+[@http://functions.wolfram.com/GammaBetaErf/ Mathworld's online evaluator]
+with this implementation to perform a basic "sanity check".
+Accuracy tests use data generated at very high precision
+(using NTL's RR class set at 1000-bit precision) using this implementation 
+with a very high precision 60-term __lanczos, and some but not all of the special
+case handling disabled.
+This is less than satisfactory: an independent method should really be used,
+but apparently a complete lack of such methods are available.  We can't even use a deliberately
+naive implementation without special case handling since Legendre's continued fraction
+(see below) is unstable for small a and z.
+
+[h4 Implementation]
+
+These four functions share a common implementation since
+they are all related via:
+
+1) [equation igamma5]
+
+2) [equation igamma6]
+
+3) [equation igamma7]
+
+The lower incomplete gamma is computed from its series representation:
+
+4) [equation igamma8]
+
+Or by subtraction of the upper integral from either [Gamma](a) or 1
+when /x - (1/(3x)) > a and x > 1.1/.
+
+The upper integral is computed from Legendre's continued fraction representation:
+
+5) [equation igamma9]
+
+When /(x > 1.1)/ or by subtraction of the lower integral from either [Gamma](a) or 1
+when /x - (1/(3x))  < a/.
+
+For /x < 1.1/ computation of the upper integral is more complex as the continued 
+fraction representation is unstable in this area.  However there is another 
+series representation for the lower integral:
+
+6) [equation igamma10]
+
+That lends itself to calculation of the upper integral via rearrangement
+to:
+
+7) [equation igamma11]
+
+Refer to the documentation for __powm1 and __tgamma1pm1 for details
+of their implementation.
+
+For /x < 1.1/ the crossover point where the result is ~0.5 no longer
+occurs for /x ~ y/.  Using /x * 0.75 < a/ as the crossover criterion
+for /0.5 < x <= 1.1/ keeps the maximum value computed (whether
+it's the upper or lower interval) to around 0.75.   Likewise for
+/x <= 0.5/ then using /-0.4 / log(x) < a/ as the crossover criterion
+keeps the maximum value computed to around 0.7
+(whether it's the upper or lower interval).
+
+There are two special cases used when a is an integer or half integer,
+and the crossover conditions listed above indicate that we should compute
+the upper integral Q.
+If a is an integer in the range /1 <= a < 30/ then the following 
+finite sum is used:
+
+9) [equation igamma1f]
+
+While for half-integers in the range /0.5 <= a < 30/ then the
+following finite sum is used:
+
+10) [equation igamma2f]
+
+These are both more stable and more efficient than the continued fraction
+alternative.
+
+When the argument /a/ is large, and /x ~ a/ then the series (4) and continued 
+fraction (5) above are very slow to converge.  In this area an expansion due to
+Temme is used:
+
+11) [equation igamma16]
+
+12) [equation igamma17]
+
+13) [equation igamma18]
+
+14) [equation igamma19]
+
+The double sum is truncated to a fixed number of terms - to give a specific
+target precision - and evaluated as a polynomial-of-polynomials.  There are 
+versions for up to 128-bit long double precision: types requiring
+greater precision than that do not use these expansions.  The
+coefficients C[sub k][super n] are computed in advance using the recurrence
+relations given by Temme.  The zone where these expansions are used is
+
+   (a > 20) && (a < 200) && fabs(x-a)/a < 0.4
+   
+And:
+
+   (a > 200) && (fabs(x-a)/a < 4.5/sqrt(a))
+   
+The latter range is valid for all types up to 128-bit long doubles, and
+is designed to ensure that the result is larger than 10[super -6], the 
+first range is used only for types up to 80-bit long doubles.  These
+domains are narrower than the ones recommended by either Temme or Didonato
+and Morris.  However, using a wider range results in large and inexact
+(i.e. computed) values being passed to the `exp` and `erfc` functions
+resulting in significantly larger error rates.  In other words there is a
+fine trade off here between efficiency and error.  The current limits should
+keep the number of terms required by (4) and (5) to no more than ~20
+at double precision.
+
+For the normalised incomplete gamma functions, calculation of the 
+leading power terms is central to the accuracy of the function.
+For smallish a and x combining
+the power terms with the __lanczos gives the greatest accuracy:
+
+15) [equation igamma12]
+
+In the event that this causes underflow/overflow then the exponent can 
+be reduced by a factor of /a/ and brought inside the power term.
+
+When a and x are large, we end up with a very large exponent with a base
+near one: this will not be computed accurately via the pow function,
+and taking logs simply leads to cancellation errors.  The worst of the
+errors can be avoided by using:
+
+16) [equation igamma13]
+
+when /a-x/ is small and a and x are large.  There is still a subtraction
+and therefore some cancellation errors - but the terms are small so the absolute
+error will be small - and it is absolute rather than relative error that 
+counts in the argument to the /exp/ function.  Note that for sufficiently
+large a and x the errors will still get you eventually, although this does
+delay the inevitable much longer than other methods.  Use of /log(1+x)-x/ here
+is inspired by Temme (see references below).
+
+[h4 References]
+
+* N. M. Temme, A Set of Algorithms for the Incomplete Gamma Functions,
+Probability in the Engineering and Informational Sciences, 8, 1994.
+* N. M. Temme, The Asymptotic Expansion of the Incomplete Gamma Functions,
+Siam J. Math Anal. Vol 10 No 4, July 1979, p757.
+* A. R. Didonato and A. H. Morris, Computation of the Incomplete Gamma 
+Function Ratios and their Inverse.  ACM TOMS, Vol 12, No 4, Dec 1986, p377.
+* W. Gautschi, The Incomplete Gamma Functions Since Tricomi, In Tricomi's Ideas 
+and Contemporary Applied Mathematics, Atti dei Convegni Lincei, n. 147, 
+Accademia Nazionale dei Lincei, Roma, 1998, pp. 203--237. 
+[@http://citeseer.ist.psu.edu/gautschi98incomplete.html http://citeseer.ist.psu.edu/gautschi98incomplete.html]
+
+[endsect] [/section:igamma The Incomplete Gamma Function]
+
+[/ 
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

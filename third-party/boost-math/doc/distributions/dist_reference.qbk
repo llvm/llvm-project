@@ -1,0 +1,145 @@
+[section:dist_ref Statistical Distributions Reference]
+
+[include non_members.qbk]
+
+[section:dists Distributions]
+
+[include arcsine.qbk]
+[include bernoulli.qbk]
+[include beta.qbk]
+[include binomial.qbk]
+[include cauchy.qbk]
+[include chi_squared.qbk]
+[include empirical_cdf.qbk]
+[include exponential.qbk]
+[include extreme_value.qbk]
+[include fisher.qbk]
+[include gamma.qbk]
+[include geometric.qbk]
+[include holtsmark.qbk]
+[include hyperexponential.qbk]
+[include hypergeometric.qbk]
+[include inverse_chi_squared.qbk]
+[include inverse_gamma.qbk]
+[include inverse_gaussian.qbk]
+[include kolmogorov_smirnov.qbk]
+[include landau.qbk]
+[include laplace.qbk]
+[include logistic.qbk]
+[include lognormal.qbk]
+[include mapairy.qbk]
+[include negative_binomial.qbk]
+[include nc_beta.qbk]
+[include nc_chi_squared.qbk]
+[include nc_f.qbk]
+[include nc_t.qbk]
+[include normal.qbk]
+[include pareto.qbk]
+[include poisson.qbk]
+[include rayleigh.qbk]
+[include saspoint5.qbk]
+[include skew_normal.qbk]
+[include students_t.qbk]
+[include triangular.qbk]
+[include uniform.qbk]
+[include weibull.qbk]
+[endsect] [/section:dists Distributions]
+
+[include dist_algorithms.qbk]
+
+[endsect] [/section:dist_ref Statistical Distributions and Functions Reference]
+
+
+[section:future Extras/Future Directions]
+
+[h4 Adding Additional Location and Scale Parameters]
+
+In some modelling applications we require a distribution
+with a specific location and scale:
+often this equates to a specific mean and standard deviation, although for many
+distributions the relationship between these properties and the location and
+scale parameters are non-trivial. See
+[@http://www.itl.nist.gov/div898/handbook/eda/section3/eda364.htm http://www.itl.nist.gov/div898/handbook/eda/section3/eda364.htm]
+for more information.
+
+The obvious way to handle this is via an adapter template:
+
+  template <class Dist>
+  class scaled_distribution
+  {
+     scaled_distribution(
+       const Dist dist,
+       typename Dist::value_type location,
+       typename Dist::value_type scale = 0);
+  };
+
+Which would then have its own set of overloads for the non-member accessor functions.
+
+[h4 An "any_distribution" class]
+
+It is easy to add a distribution object that virtualises
+the actual type of the distribution, and can therefore hold "any" object
+that conforms to the conceptual requirements of a distribution:
+
+   template <class RealType>
+   class any_distribution
+   {
+   public:
+      template <class Distribution>
+      any_distribution(const Distribution& d);
+   };
+
+   // Get the cdf of the underlying distribution:
+   template <class RealType>
+   RealType cdf(const any_distribution<RealType>& d, RealType x);
+   // etc....
+
+Such a class would facilitate the writing of non-template code that can
+function with any distribution type.
+
+The [@http://sourceforge.net/projects/distexplorer/ Statistical Distribution Explorer]
+utility for Windows is a usage example.
+
+It's not clear yet whether there is a compelling use case though.
+Possibly tests for goodness of fit might
+provide such a use case: this needs more investigation.
+
+[h4 Higher Level Hypothesis Tests]
+
+Higher-level tests roughly corresponding to the
+[@http://documents.wolfram.com/mathematica/Add-onsLinks/StandardPackages/Statistics/HypothesisTests.html Mathematica Hypothesis Tests]
+package could be added reasonably easily, for example:
+
+  template <class InputIterator>
+  typename std::iterator_traits<InputIterator>::value_type
+     test_equal_mean(
+       InputIterator a,
+       InputIterator b,
+       typename std::iterator_traits<InputIterator>::value_type expected_mean);
+
+Returns the probability that the data in the sequence \[a,b) has the mean
+/expected_mean/.
+
+[h4 Integration With Statistical Accumulators]
+
+[@http://boost-sandbox.sourceforge.net/libs/accumulators/doc/html/index.html
+Eric Niebler's accumulator framework] - also work in progress - provides the means
+to calculate various statistical properties from experimental data.  There is an
+opportunity to integrate the statistical tests with this framework at some later date:
+
+  // Define an accumulator, all required statistics to calculate the test
+  // are calculated automatically:
+  accumulator_set<double, features<tag::test_expected_mean> > acc(expected_mean=4);
+  // Pass our data to the accumulator:
+  acc = std::for_each(mydata.begin(), mydata.end(), acc);
+  // Extract the result:
+  double p = probability(acc);
+
+[endsect] [/section:future Extras Future Directions]
+
+[/ dist_reference.qbk
+  Copyright 2006, 2010 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

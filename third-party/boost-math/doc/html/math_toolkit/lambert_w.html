@@ -1,0 +1,1926 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Lambert W function</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../special.html" title="Chapter 8. Special Functions">
+<link rel="prev" href="jacobi_theta/jacobi_theta4.html" title="Jacobi Theta Function θ4">
+<link rel="next" href="zetas.html" title="Zeta Functions">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="jacobi_theta/jacobi_theta4.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../special.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="zetas.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.lambert_w"></a><a class="link" href="lambert_w.html" title="Lambert W function">Lambert <span class="emphasis"><em>W</em></span>
+    function</a>
+</h2></div></div></div>
+<h5>
+<a name="math_toolkit.lambert_w.h0"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.synopsis"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.synopsis">Synopsis</a>
+    </h5>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">special_functions</span><span class="special">/</span><span class="identifier">lambert_w</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+</pre>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">boost</span> <span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span> <span class="special">{</span>
+
+  <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+  <a class="link" href="result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">lambert_w0</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">z</span><span class="special">);</span>                        <span class="comment">// W0 branch, default policy.</span>
+  <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+  <a class="link" href="result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">lambert_wm1</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">z</span><span class="special">);</span>                       <span class="comment">// W-1 branch, default policy.</span>
+  <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+  <a class="link" href="result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">lambert_w0_prime</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">z</span><span class="special">);</span>                  <span class="comment">// W0 branch 1st derivative.</span>
+  <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+  <a class="link" href="result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">lambert_wm1_prime</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">z</span><span class="special">);</span>                 <span class="comment">// W-1 branch 1st derivative.</span>
+
+  <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&gt;</span>
+  <a class="link" href="result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">lambert_w0</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">z</span><span class="special">,</span> <span class="keyword">const</span> <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&amp;);</span>         <span class="comment">// W0 with policy.</span>
+  <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&gt;</span>
+  <a class="link" href="result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">lambert_wm1</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">z</span><span class="special">,</span> <span class="keyword">const</span> <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&amp;);</span>        <span class="comment">// W-1 with policy.</span>
+  <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&gt;</span>
+  <a class="link" href="result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">lambert_w0_prime</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">z</span><span class="special">,</span> <span class="keyword">const</span> <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&amp;);</span>   <span class="comment">// W0 derivative with policy.</span>
+  <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&gt;</span>
+  <a class="link" href="result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">lambert_wm1_prime</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">z</span><span class="special">,</span> <span class="keyword">const</span> <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&amp;);</span>  <span class="comment">// W-1 derivative with policy.</span>
+
+ <span class="special">}</span> <span class="comment">// namespace boost</span>
+ <span class="special">}</span> <span class="comment">// namespace math</span>
+</pre>
+<h5>
+<a name="math_toolkit.lambert_w.h1"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.description"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.description">Description</a>
+    </h5>
+<p>
+      The <a href="http://en.wikipedia.org/wiki/Lambert_W_function" target="_top">Lambert W
+      function</a> is the solution of the equation <span class="emphasis"><em>W</em></span>(<span class="emphasis"><em>z</em></span>)<span class="emphasis"><em>e</em></span><sup><span class="emphasis"><em>W</em></span>(<span class="emphasis"><em>z</em></span>)</sup> =
+      <span class="emphasis"><em>z</em></span>. It is also called the Omega function, the inverse of
+      <span class="emphasis"><em>f</em></span>(<span class="emphasis"><em>W</em></span>) = <span class="emphasis"><em>We</em></span><sup><span class="emphasis"><em>W</em></span></sup>.
+    </p>
+<p>
+      On the interval [0, ∞), there is just one real solution. On the interval (-<span class="emphasis"><em>e</em></span><sup>-1</sup>,
+      0), there are two real solutions, generating two branches which we will denote
+      by <span class="emphasis"><em>W</em></span><sub>0</sub> and <span class="emphasis"><em>W</em></span><sub>-1</sub>. In Boost.Math, we call
+      these principal branches <code class="computeroutput"><span class="identifier">lambert_w0</span></code>
+      and <code class="computeroutput"><span class="identifier">lambert_wm1</span></code>; their derivatives
+      are labelled <code class="computeroutput"><span class="identifier">lambert_w0_prime</span></code>
+      and <code class="computeroutput"><span class="identifier">lambert_wm1_prime</span></code>.
+    </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+        <span class="inlinemediaobject"><img src="../../graphs/lambert_w_graph.svg" align="middle"></span>
+
+      </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+        <span class="inlinemediaobject"><img src="../../graphs/lambert_w_graph_big_W.svg" align="middle"></span>
+
+      </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+        <span class="inlinemediaobject"><img src="../../graphs/lambert_w0_prime_graph.svg" align="middle"></span>
+
+      </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+        <span class="inlinemediaobject"><img src="../../graphs/lambert_wm1_prime_graph.svg" align="middle"></span>
+
+      </p></blockquote></div>
+<p>
+      There is a singularity where the branches meet at <span class="emphasis"><em>e</em></span><sup>-1</sup> ≅ <code class="literal">-0.367879</code>.
+      Approaching this point, the condition number of function evaluation tends to
+      infinity, and the only method of recovering high accuracy is use of higher
+      precision.
+    </p>
+<p>
+      This implementation computes the two real branches <span class="emphasis"><em>W</em></span><sub>0</sub> and
+      <span class="emphasis"><em>W</em></span><sub>-1</sub>
+with the functions <code class="computeroutput"><span class="identifier">lambert_w0</span></code>
+      and <code class="computeroutput"><span class="identifier">lambert_wm1</span></code>, and their
+      derivatives, <code class="computeroutput"><span class="identifier">lambert_w0_prime</span></code>
+      and <code class="computeroutput"><span class="identifier">lambert_wm1_prime</span></code>. Complex
+      arguments are not supported.
+    </p>
+<p>
+      The final <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a> argument is optional and can
+      be used to control how the function deals with errors. Refer to <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policies</a>
+      for more details and see examples below.
+    </p>
+<h6>
+<a name="math_toolkit.lambert_w.h2"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.applications"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.applications">Applications
+      of the Lambert <span class="emphasis"><em>W</em></span> function</a>
+    </h6>
+<p>
+      The Lambert <span class="emphasis"><em>W</em></span> function has a myriad of applications.
+      <a href="http://www.apmaths.uwo.ca/~djeffrey/Offprints/W-adv-cm.pdf" target="_top">Corless
+      et al.</a> provide a summary of applications, from the mathematical, like
+      iterated exponentiation and asymptotic roots of trinomials, to the real-world,
+      such as the range of a jet plane, enzyme kinetics, water movement in soil,
+      epidemics, and diode current (an example replicated <a href="../../../example/lambert_w_diode.cpp" target="_top">here</a>).
+      Since the publication of their landmark paper, there have been many more applications,
+      and also many new implementations of the function, upon which this implementation
+      builds.
+    </p>
+<h5>
+<a name="math_toolkit.lambert_w.h3"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.examples"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.examples">Examples</a>
+    </h5>
+<p>
+      The most basic usage of the Lambert-<span class="emphasis"><em>W</em></span> function is demonstrated
+      below:
+    </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">special_functions</span><span class="special">/</span><span class="identifier">lambert_w</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span> <span class="comment">// For lambert_w function.</span>
+
+<span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">lambert_w0</span><span class="special">;</span>
+<span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">lambert_wm1</span><span class="special">;</span>
+</pre>
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span><span class="special">.</span><span class="identifier">precision</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;::</span><span class="identifier">max_digits10</span><span class="special">);</span>
+<span class="comment">// Show all potentially significant decimal digits,</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">showpoint</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// and show significant trailing zeros too.</span>
+
+<span class="keyword">double</span> <span class="identifier">z</span> <span class="special">=</span> <span class="number">10.</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">r</span> <span class="special">=</span> <span class="identifier">lambert_w0</span><span class="special">(</span><span class="identifier">z</span><span class="special">);</span> <span class="comment">// Default policy for double.</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"lambert_w0(z) = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">r</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// lambert_w0(z) = 1.7455280027406994</span>
+</pre>
+<p>
+      Other floating-point types can be used too, here <code class="computeroutput"><span class="keyword">float</span></code>,
+      including user-defined types like <a href="../../../../../libs/multiprecision/doc/html/index.html" target="_top">Boost.Multiprecision</a>.
+      It is convenient to use a function like <code class="computeroutput"><span class="identifier">show_value</span></code>
+      to display all (and only) potentially significant decimal digits, including
+      any significant trailing zeros, (<code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">max_digits10</span></code>) for the type <code class="computeroutput"><span class="identifier">T</span></code>.
+    </p>
+<pre class="programlisting"><span class="keyword">float</span> <span class="identifier">z</span> <span class="special">=</span> <span class="number">10.F</span><span class="special">;</span>
+<span class="keyword">float</span> <span class="identifier">r</span><span class="special">;</span>
+<span class="identifier">r</span> <span class="special">=</span> <span class="identifier">lambert_w0</span><span class="special">(</span><span class="identifier">z</span><span class="special">);</span>        <span class="comment">// Default policy digits10 = 7, digits2 = 24</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"lambert_w0("</span><span class="special">;</span>
+<span class="identifier">show_value</span><span class="special">(</span><span class="identifier">z</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">") = "</span><span class="special">;</span>
+<span class="identifier">show_value</span><span class="special">(</span><span class="identifier">r</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>   <span class="comment">// lambert_w0(10.0000000) = 1.74552798</span>
+</pre>
+<p>
+      Example of an integer argument to <code class="computeroutput"><span class="identifier">lambert_w0</span></code>,
+      showing that an <code class="computeroutput"><span class="keyword">int</span></code> literal is
+      correctly promoted to a <code class="computeroutput"><span class="keyword">double</span></code>.
+    </p>
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span><span class="special">.</span><span class="identifier">precision</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;::</span><span class="identifier">max_digits10</span><span class="special">);</span>
+<span class="keyword">double</span> <span class="identifier">r</span> <span class="special">=</span> <span class="identifier">lambert_w0</span><span class="special">(</span><span class="number">10</span><span class="special">);</span>                           <span class="comment">// Pass an int argument "10" that should be promoted to double argument.</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"lambert_w0(10) = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">r</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>  <span class="comment">// lambert_w0(10) = 1.7455280027406994</span>
+<span class="keyword">double</span> <span class="identifier">rp</span> <span class="special">=</span> <span class="identifier">lambert_w0</span><span class="special">(</span><span class="number">10</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"lambert_w0(10) = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">rp</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// lambert_w0(10) = 1.7455280027406994</span>
+<span class="keyword">auto</span> <span class="identifier">rr</span> <span class="special">=</span> <span class="identifier">lambert_w0</span><span class="special">(</span><span class="number">10</span><span class="special">);</span>                            <span class="comment">// C++11 needed.</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"lambert_w0(10) = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">rr</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// lambert_w0(10) = 1.7455280027406994 too, showing that rr has been promoted to double.</span>
+</pre>
+<p>
+      Using <a href="../../../../../libs/multiprecision/doc/html/index.html" target="_top">Boost.Multiprecision</a>
+      types to get much higher precision is painless.
+    </p>
+<pre class="programlisting"><span class="identifier">cpp_dec_float_50</span> <span class="identifier">z</span><span class="special">(</span><span class="string">"10"</span><span class="special">);</span>
+<span class="comment">// Note construction using a decimal digit string "10",</span>
+<span class="comment">// NOT a floating-point double literal 10.</span>
+<span class="identifier">cpp_dec_float_50</span> <span class="identifier">r</span><span class="special">;</span>
+<span class="identifier">r</span> <span class="special">=</span> <span class="identifier">lambert_w0</span><span class="special">(</span><span class="identifier">z</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"lambert_w0("</span><span class="special">;</span> <span class="identifier">show_value</span><span class="special">(</span><span class="identifier">z</span><span class="special">);</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">") = "</span><span class="special">;</span>
+<span class="identifier">show_value</span><span class="special">(</span><span class="identifier">r</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// lambert_w0(10.000000000000000000000000000000000000000000000000000000000000000000000000000000) =</span>
+<span class="comment">//   1.7455280027406993830743012648753899115352881290809413313533156980404446940000000</span>
+</pre>
+<div class="warning"><table border="0" summary="Warning">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Warning]" src="../../../../../doc/src/images/warning.png"></td>
+<th align="left">Warning</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+        When using multiprecision, take very great care not to construct or assign
+        non-integers from <code class="computeroutput"><span class="keyword">double</span></code>, <code class="computeroutput"><span class="keyword">float</span></code> ... silently losing precision. Use
+        <code class="computeroutput"><span class="string">"1.2345678901234567890123456789"</span></code>
+        rather than <code class="computeroutput"><span class="number">1.2345678901234567890123456789</span></code>.
+      </p></td></tr>
+</table></div>
+<p>
+      Using multiprecision types, it is all too easy to get multiprecision precision
+      wrong!
+    </p>
+<pre class="programlisting"><span class="identifier">cpp_dec_float_50</span> <span class="identifier">z</span><span class="special">(</span><span class="number">0.7777777777777777777777777777777777777777777777777777777777777777777777777</span><span class="special">);</span>
+<span class="comment">// Compiler evaluates the nearest double-precision binary representation,</span>
+<span class="comment">// from the max_digits10 of the floating_point literal double 0.7777777777777777777777777777...,</span>
+<span class="comment">// so any extra digits in the multiprecision type</span>
+<span class="comment">// beyond max_digits10 (usually 17) are random and meaningless.</span>
+<span class="identifier">cpp_dec_float_50</span> <span class="identifier">r</span><span class="special">;</span>
+<span class="identifier">r</span> <span class="special">=</span> <span class="identifier">lambert_w0</span><span class="special">(</span><span class="identifier">z</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"lambert_w0("</span><span class="special">;</span>
+<span class="identifier">show_value</span><span class="special">(</span><span class="identifier">z</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">") = "</span><span class="special">;</span> <span class="identifier">show_value</span><span class="special">(</span><span class="identifier">r</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// lambert_w0(0.77777777777777779011358916250173933804035186767578125000000000000000000000000000)</span>
+<span class="comment">//   = 0.48086152073210493501934682309060873341910109230469724725005039758139532631901386</span>
+</pre>
+<div class="note"><table border="0" summary="Note">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="../../../../../doc/src/images/note.png"></td>
+<th align="left">Note</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+        See spurious non-seven decimal digits appearing after digit #17 in the argument
+        0.7777777777777777...!
+      </p></td></tr>
+</table></div>
+<p>
+      And similarly constructing from a literal <code class="computeroutput"><span class="keyword">double</span>
+      <span class="number">0.9</span></code>, with more random digits after digit
+      number 17.
+    </p>
+<pre class="programlisting"><span class="identifier">cpp_dec_float_50</span> <span class="identifier">z</span><span class="special">(</span><span class="number">0.9</span><span class="special">);</span> <span class="comment">// Construct from floating_point literal double 0.9.</span>
+<span class="identifier">cpp_dec_float_50</span> <span class="identifier">r</span><span class="special">;</span>
+<span class="identifier">r</span> <span class="special">=</span> <span class="identifier">lambert_w0</span><span class="special">(</span><span class="number">0.9</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"lambert_w0("</span><span class="special">;</span>
+<span class="identifier">show_value</span><span class="special">(</span><span class="identifier">z</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">") = "</span><span class="special">;</span> <span class="identifier">show_value</span><span class="special">(</span><span class="identifier">r</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// lambert_w0(0.90000000000000002220446049250313080847263336181640625000000000000000000000000000)</span>
+<span class="comment">//   = 0.52983296563343440510607251781038939952850341796875000000000000000000000000000000</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"lambert_w0(0.9) = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">lambert_w0</span><span class="special">(</span><span class="keyword">static_cast</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;(</span><span class="number">0.9</span><span class="special">))</span>
+<span class="comment">// lambert_w0(0.9)</span>
+<span class="comment">//   = 0.52983296563343441</span>
+  <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+</pre>
+<p>
+      Note how the <code class="computeroutput"><span class="identifier">cpp_float_dec_50</span></code>
+      result is only as correct as from a <code class="computeroutput"><span class="keyword">double</span>
+      <span class="special">=</span> <span class="number">0.9</span></code>.
+    </p>
+<p>
+      Now see the correct result for all 50 decimal digits constructing from a decimal
+      digit string "0.9":
+    </p>
+<pre class="programlisting"><span class="identifier">cpp_dec_float_50</span> <span class="identifier">z</span><span class="special">(</span><span class="string">"0.9"</span><span class="special">);</span>     <span class="comment">// Construct from decimal digit string.</span>
+<span class="identifier">cpp_dec_float_50</span> <span class="identifier">r</span><span class="special">;</span>
+<span class="identifier">r</span> <span class="special">=</span> <span class="identifier">lambert_w0</span><span class="special">(</span><span class="identifier">z</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"lambert_w0("</span><span class="special">;</span>
+<span class="identifier">show_value</span><span class="special">(</span><span class="identifier">z</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">") = "</span><span class="special">;</span> <span class="identifier">show_value</span><span class="special">(</span><span class="identifier">r</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// 0.90000000000000000000000000000000000000000000000000000000000000000000000000000000)</span>
+<span class="comment">// = 0.52983296563343441213336643954546304857788132269804249284012528304239956413801252</span>
+</pre>
+<p>
+      Note the expected zeros for all places up to 50 - and the correct Lambert
+      <span class="emphasis"><em>W</em></span> result!
+    </p>
+<p>
+      (It is just as easy to compute even higher precisions, at least to thousands
+      of decimal digits, but not shown here for brevity. See <a href="../../../example/lambert_w_simple_examples.cpp" target="_top">lambert_w_simple_examples.cpp</a>
+      for comparison of an evaluation at 1000 decimal digit precision with <a href="http://www.wolframalpha.com/" target="_top">Wolfram Alpha</a>).
+    </p>
+<p>
+      Policies can be used to control what action to take on errors:
+    </p>
+<pre class="programlisting"><span class="comment">// Define an error handling policy:</span>
+<span class="keyword">typedef</span> <span class="identifier">policy</span><span class="special">&lt;</span>
+  <span class="identifier">domain_error</span><span class="special">&lt;</span><span class="identifier">throw_on_error</span><span class="special">&gt;,</span>
+  <span class="identifier">overflow_error</span><span class="special">&lt;</span><span class="identifier">ignore_error</span><span class="special">&gt;</span> <span class="comment">// possibly unwise?</span>
+<span class="special">&gt;</span> <span class="identifier">my_throw_policy</span><span class="special">;</span>
+
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span><span class="special">.</span><span class="identifier">precision</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;::</span><span class="identifier">max_digits10</span><span class="special">);</span>
+<span class="comment">// Show all potentially significant decimal digits,</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">showpoint</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// and show significant trailing zeros too.</span>
+<span class="keyword">double</span> <span class="identifier">z</span> <span class="special">=</span> <span class="special">+</span><span class="number">1</span><span class="special">;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Lambert W ("</span> <span class="special">&lt;&lt;</span> <span class="identifier">z</span> <span class="special">&lt;&lt;</span> <span class="string">") = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">lambert_w0</span><span class="special">(</span><span class="identifier">z</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// Lambert W (1.0000000000000000) = 0.56714329040978384</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"\nLambert W ("</span> <span class="special">&lt;&lt;</span> <span class="identifier">z</span> <span class="special">&lt;&lt;</span> <span class="string">", my_throw_policy()) = "</span>
+  <span class="special">&lt;&lt;</span> <span class="identifier">lambert_w0</span><span class="special">(</span><span class="identifier">z</span><span class="special">,</span> <span class="identifier">my_throw_policy</span><span class="special">())</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// Lambert W (1.0000000000000000, my_throw_policy()) = 0.56714329040978384</span>
+</pre>
+<p>
+      An example error message:
+    </p>
+<pre class="programlisting"><span class="identifier">Error</span> <span class="identifier">in</span> <span class="identifier">function</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">lambert_wm1</span><span class="special">&lt;</span><span class="identifier">RealType</span><span class="special">&gt;(&lt;</span><span class="identifier">RealType</span><span class="special">&gt;):</span>
+<span class="identifier">Argument</span> <span class="identifier">z</span> <span class="special">=</span> <span class="number">1</span> <span class="identifier">is</span> <span class="identifier">out</span> <span class="identifier">of</span> <span class="identifier">range</span> <span class="special">(</span><span class="identifier">z</span> <span class="special">&lt;=</span> <span class="number">0</span><span class="special">)</span> <span class="keyword">for</span> <span class="identifier">Lambert</span> <span class="identifier">W</span><span class="special">-</span><span class="number">1</span> <span class="identifier">branch</span><span class="special">!</span> <span class="special">(</span><span class="identifier">Try</span> <span class="identifier">Lambert</span> <span class="identifier">W0</span> <span class="identifier">branch</span><span class="special">?)</span>
+</pre>
+<p>
+      Showing an error reported if a value is passed to <code class="computeroutput"><span class="identifier">lambert_w0</span></code>
+      that is out of range, (and was probably meant to be passed to <code class="computeroutput"><span class="identifier">lambert_wm1</span></code> instead).
+    </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">z</span> <span class="special">=</span> <span class="special">+</span><span class="number">1.</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">r</span> <span class="special">=</span> <span class="identifier">lambert_wm1</span><span class="special">(</span><span class="identifier">z</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"lambert_wm1(+1.) = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">r</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+</pre>
+<p>
+      The full source of these examples is at <a href="../../../example/lambert_w_simple_examples.cpp" target="_top">lambert_w_simple_examples.cpp</a>
+    </p>
+<h6>
+<a name="math_toolkit.lambert_w.h4"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.diode_resistance"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.diode_resistance">Diode
+      Resistance Example</a>
+    </h6>
+<p>
+      A typical example of a practical application is estimating the current flow
+      through a diode with series resistance from a paper by Banwell and Jayakumar.
+    </p>
+<p>
+      Having the Lambert <span class="emphasis"><em>W</em></span> function available makes it simple
+      to reproduce the plot in their paper (Fig 2) comparing estimates using with
+      Lambert <span class="emphasis"><em>W</em></span> function and some actual measurements. The colored
+      curves show the effect of various series resistance on the current compared
+      to an extrapolated line in grey with no internal (or external) resistance.
+    </p>
+<p>
+      Two formulae relating the diode current and effect of series resistance can
+      be combined, but yield an otherwise intractable equation relating the current
+      versus voltage with a varying series resistance. This was reformulated as a
+      generalized equation in terms of the Lambert W function:
+    </p>
+<p>
+      Banwell and Jakaumar equation 5
+    </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+        <span class="serif_italic">I(V) = μ V<sub>T</sub>/ R <sub>S</sub> ․ W<sub>0</sub>(I<sub>0</sub> R<sub>S</sub> / (μ V<sub>T</sub>))</span>
+      </p></blockquote></div>
+<p>
+      Using these variables
+    </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">nu</span> <span class="special">=</span> <span class="number">1.0</span><span class="special">;</span> <span class="comment">// Assumed ideal.</span>
+<span class="keyword">double</span> <span class="identifier">vt</span> <span class="special">=</span> <span class="identifier">v_thermal</span><span class="special">(</span><span class="number">25</span><span class="special">);</span> <span class="comment">// v thermal, Shockley equation, expect about 25 mV at room temperature.</span>
+<span class="keyword">double</span> <span class="identifier">boltzmann_k</span> <span class="special">=</span> <span class="number">1.38e-23</span><span class="special">;</span> <span class="comment">// joules/kelvin</span>
+<span class="keyword">double</span> <span class="identifier">temp</span> <span class="special">=</span> <span class="number">273</span> <span class="special">+</span> <span class="number">25</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">charge_q</span> <span class="special">=</span> <span class="number">1.6e-19</span><span class="special">;</span> <span class="comment">// column</span>
+<span class="identifier">vt</span> <span class="special">=</span> <span class="identifier">boltzmann_k</span> <span class="special">*</span> <span class="identifier">temp</span> <span class="special">/</span> <span class="identifier">charge_q</span><span class="special">;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"V thermal "</span> <span class="special">&lt;&lt;</span> <span class="identifier">vt</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span> <span class="comment">// V thermal 0.0257025 = 25 mV</span>
+<span class="keyword">double</span> <span class="identifier">rsat</span> <span class="special">=</span> <span class="number">0.</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">isat</span> <span class="special">=</span> <span class="number">25.e-15</span><span class="special">;</span> <span class="comment">//  25 fA;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Isat = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">isat</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">re</span> <span class="special">=</span> <span class="number">0.3</span><span class="special">;</span>  <span class="comment">// Estimated from slope of straight section of graph (equation 6).</span>
+<span class="keyword">double</span> <span class="identifier">v</span> <span class="special">=</span> <span class="number">0.9</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">icalc</span> <span class="special">=</span> <span class="identifier">iv</span><span class="special">(</span><span class="identifier">v</span><span class="special">,</span> <span class="identifier">vt</span><span class="special">,</span> <span class="number">249.</span><span class="special">,</span> <span class="identifier">re</span><span class="special">,</span> <span class="identifier">isat</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"voltage = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">v</span> <span class="special">&lt;&lt;</span> <span class="string">", current = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">icalc</span> <span class="special">&lt;&lt;</span> <span class="string">", "</span> <span class="special">&lt;&lt;</span> <span class="identifier">log</span><span class="special">(</span><span class="identifier">icalc</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span> <span class="comment">// voltage = 0.9, current = 0.00108485, -6.82631</span>
+</pre>
+<p>
+      the formulas can be rendered in C++
+    </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">iv</span><span class="special">(</span><span class="keyword">double</span> <span class="identifier">v</span><span class="special">,</span> <span class="keyword">double</span> <span class="identifier">vt</span><span class="special">,</span> <span class="keyword">double</span> <span class="identifier">rsat</span><span class="special">,</span> <span class="keyword">double</span> <span class="identifier">re</span><span class="special">,</span> <span class="keyword">double</span> <span class="identifier">isat</span><span class="special">,</span> <span class="keyword">double</span> <span class="identifier">nu</span> <span class="special">=</span> <span class="number">1.</span><span class="special">)</span>
+<span class="special">{</span>
+  <span class="comment">// V thermal 0.0257025 = 25 mV</span>
+  <span class="comment">// was double i = (nu * vt/r) * lambert_w((i0 * r) / (nu * vt)); equ 5.</span>
+
+  <span class="identifier">rsat</span> <span class="special">=</span> <span class="identifier">rsat</span> <span class="special">+</span> <span class="identifier">re</span><span class="special">;</span>
+  <span class="keyword">double</span> <span class="identifier">i</span> <span class="special">=</span> <span class="identifier">nu</span> <span class="special">*</span> <span class="identifier">vt</span> <span class="special">/</span> <span class="identifier">rsat</span><span class="special">;</span>
+ <span class="comment">// std::cout &lt;&lt; "nu * vt / rsat = " &lt;&lt; i &lt;&lt; std::endl; // 0.000103223</span>
+
+  <span class="keyword">double</span> <span class="identifier">x</span> <span class="special">=</span> <span class="identifier">isat</span> <span class="special">*</span> <span class="identifier">rsat</span> <span class="special">/</span> <span class="special">(</span><span class="identifier">nu</span> <span class="special">*</span> <span class="identifier">vt</span><span class="special">);</span>
+<span class="comment">//  std::cout &lt;&lt; "isat * rsat / (nu * vt) = " &lt;&lt; x &lt;&lt; std::endl;</span>
+
+  <span class="keyword">double</span> <span class="identifier">eterm</span> <span class="special">=</span> <span class="special">(</span><span class="identifier">v</span> <span class="special">+</span> <span class="identifier">isat</span> <span class="special">*</span> <span class="identifier">rsat</span><span class="special">)</span> <span class="special">/</span> <span class="special">(</span><span class="identifier">nu</span> <span class="special">*</span> <span class="identifier">vt</span><span class="special">);</span>
+ <span class="comment">// std::cout &lt;&lt; "(v + isat * rsat) / (nu * vt) = " &lt;&lt; eterm &lt;&lt; std::endl;</span>
+
+  <span class="keyword">double</span> <span class="identifier">e</span> <span class="special">=</span> <span class="identifier">exp</span><span class="special">(</span><span class="identifier">eterm</span><span class="special">);</span>
+<span class="comment">//  std::cout &lt;&lt; "exp(eterm) = " &lt;&lt; e &lt;&lt; std::endl;</span>
+
+  <span class="keyword">double</span> <span class="identifier">w0</span> <span class="special">=</span> <span class="identifier">lambert_w0</span><span class="special">(</span><span class="identifier">x</span> <span class="special">*</span> <span class="identifier">e</span><span class="special">);</span>
+<span class="comment">//  std::cout &lt;&lt; "w0 = " &lt;&lt; w0 &lt;&lt; std::endl;</span>
+  <span class="keyword">return</span> <span class="identifier">i</span> <span class="special">*</span> <span class="identifier">w0</span> <span class="special">-</span> <span class="identifier">isat</span><span class="special">;</span>
+<span class="special">}</span> <span class="comment">// double iv</span>
+</pre>
+<p>
+      to reproduce their Fig 2:
+    </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+        <span class="inlinemediaobject"><img src="../../graphs/diode_iv_plot.svg" align="middle"></span>
+
+      </p></blockquote></div>
+<p>
+      The plotted points for no external series resistance (derived from their published
+      plot as the raw data are not publicly available) are used to extrapolate back
+      to estimate the intrinsic emitter resistance as 0.3 ohm. The effect of external
+      series resistance is visible when the colored lines start to curve away from
+      the straight line as voltage increases.
+    </p>
+<p>
+      See <a href="../../../example/lambert_w_diode.cpp" target="_top">lambert_w_diode.cpp</a>
+      and <a href="../../../example/lambert_w_diode_graph.cpp" target="_top">lambert_w_diode_graph.cpp</a>
+      for details of the calculation.
+    </p>
+<h6>
+<a name="math_toolkit.lambert_w.h5"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.implementations"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.implementations">Existing
+      implementations</a>
+    </h6>
+<p>
+      The principal value of the Lambert <span class="emphasis"><em>W</em></span> function is implemented
+      in the <a href="http://mathworld.wolfram.com/LambertW-Function.html" target="_top">Wolfram
+      Language</a> as <code class="computeroutput"><span class="identifier">ProductLog</span><span class="special">[</span><span class="identifier">k</span><span class="special">,</span>
+      <span class="identifier">z</span><span class="special">]</span></code>,
+      where <code class="computeroutput"><span class="identifier">k</span></code> is the branch.
+    </p>
+<p>
+      The symbolic algebra program <a href="https://www.maplesoft.com" target="_top">Maple</a>
+      also computes Lambert <span class="emphasis"><em>W</em></span> to an arbitrary precision.
+    </p>
+<h5>
+<a name="math_toolkit.lambert_w.h6"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.precision"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.precision">Controlling
+      the compromise between Precision and Speed</a>
+    </h5>
+<h6>
+<a name="math_toolkit.lambert_w.h7"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.small_floats"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.small_floats">Floating-point
+      types <code class="computeroutput"><span class="keyword">double</span></code> and <code class="computeroutput"><span class="keyword">float</span></code></a>
+    </h6>
+<p>
+      This implementation provides good precision and excellent speed for __fundamental
+      <code class="computeroutput"><span class="keyword">float</span></code> and <code class="computeroutput"><span class="keyword">double</span></code>.
+    </p>
+<p>
+      All the functions usually return values within a few <a href="http://en.wikipedia.org/wiki/Unit_in_the_last_place" target="_top">Unit
+      in the last place (ULP)</a> for the floating-point type, except for very
+      small arguments very near zero, and for arguments very close to the singularity
+      at the branch point.
+    </p>
+<p>
+      By default, this implementation provides the best possible speed. Very slightly
+      average higher precision and less bias might be obtained by adding a <a class="link" href="roots_deriv.html#math_toolkit.roots_deriv.halley">Halley</a> step refinement, but
+      at the cost of more than doubling the runtime.
+    </p>
+<h6>
+<a name="math_toolkit.lambert_w.h8"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.big_floats"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.big_floats">Floating-point
+      types larger than double</a>
+    </h6>
+<p>
+      For floating-point types with precision greater than <code class="computeroutput"><span class="keyword">double</span></code>
+      and <code class="computeroutput"><span class="keyword">float</span></code> <a href="http://en.cppreference.com/w/cpp/language/types" target="_top">fundamental
+      (built-in) types</a>, a <code class="computeroutput"><span class="keyword">double</span></code>
+      evaluation is used as a first approximation followed by Halley refinement,
+      using a single step where it can be predicted that this will be sufficient,
+      and only using <a class="link" href="roots_deriv.html#math_toolkit.roots_deriv.halley">Halley</a>
+      iteration when necessary. Higher precision types are always going to be <span class="bold"><strong>very, very much slower</strong></span>.
+    </p>
+<p>
+      The 'best' evaluation (the nearest <a href="http://en.wikipedia.org/wiki/Floating_point#Representable_numbers.2C_conversion_and_rounding" target="_top">representable</a>)
+      can be achieved by <code class="computeroutput"><span class="keyword">static_cast</span></code>ing
+      from a higher precision type, typically a <a href="../../../../../libs/multiprecision/doc/html/index.html" target="_top">Boost.Multiprecision</a>
+      type like <code class="computeroutput"><span class="identifier">cpp_bin_float_50</span></code>,
+      but at the cost of increasing run-time 100-fold; this has been used here to
+      provide some of our reference values for testing.
+    </p>
+<p>
+      For example, we get a reference value using a high precision type, for example;
+    </p>
+<pre class="programlisting"><span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">multiprecision</span><span class="special">::</span><span class="identifier">cpp_bin_float_50</span><span class="special">;</span>
+</pre>
+<p>
+      that uses Halley iteration to refine until it is as precise as possible for
+      this <code class="computeroutput"><span class="identifier">cpp_bin_float_50</span></code> type.
+    </p>
+<p>
+      As a further check we can compare this with a <a href="http://www.wolframalpha.com/" target="_top">Wolfram
+      Alpha</a> computation using command <code class="literal">N[ProductLog[10.], 50]</code>
+      to get 50 decimal digits and similarly <code class="literal">N[ProductLog[10.], 17]</code>
+      to get the nearest representable for 64-bit <code class="computeroutput"><span class="keyword">double</span></code>
+      precision.
+    </p>
+<pre class="programlisting"> <span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">multiprecision</span><span class="special">::</span><span class="identifier">cpp_bin_float_50</span><span class="special">;</span>
+ <span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">float_distance</span><span class="special">;</span>
+
+ <span class="identifier">cpp_bin_float_50</span> <span class="identifier">z</span><span class="special">(</span><span class="string">"10."</span><span class="special">);</span> <span class="comment">// Note use a decimal digit string, not a double 10.</span>
+ <span class="identifier">cpp_bin_float_50</span> <span class="identifier">r</span><span class="special">;</span>
+ <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span><span class="special">.</span><span class="identifier">precision</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">cpp_bin_float_50</span><span class="special">&gt;::</span><span class="identifier">digits10</span><span class="special">);</span>
+
+ <span class="identifier">r</span> <span class="special">=</span> <span class="identifier">lambert_w0</span><span class="special">(</span><span class="identifier">z</span><span class="special">);</span> <span class="comment">// Default policy.</span>
+ <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"lambert_w0(z) cpp_bin_float_50  = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">r</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+ <span class="comment">//lambert_w0(z) cpp_bin_float_50  = 1.7455280027406993830743012648753899115352881290809</span>
+ <span class="comment">//       [N[productlog[10], 50]] == 1.7455280027406993830743012648753899115352881290809</span>
+ <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span><span class="special">.</span><span class="identifier">precision</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;::</span><span class="identifier">max_digits10</span><span class="special">);</span>
+ <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"lambert_w0(z) static_cast from cpp_bin_float_50  = "</span>
+   <span class="special">&lt;&lt;</span> <span class="keyword">static_cast</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;(</span><span class="identifier">r</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+ <span class="comment">// double lambert_w0(z) static_cast from cpp_bin_float_50  = 1.7455280027406994</span>
+ <span class="comment">// [N[productlog[10], 17]]                                == 1.7455280027406994</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"bits different from Wolfram = "</span>
+  <span class="special">&lt;&lt;</span> <span class="keyword">static_cast</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;(</span><span class="identifier">float_distance</span><span class="special">(</span><span class="keyword">static_cast</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;(</span><span class="identifier">r</span><span class="special">),</span> <span class="number">1.7455280027406994</span><span class="special">))</span>
+  <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span> <span class="comment">// 0</span>
+</pre>
+<p>
+      giving us the same nearest representable using 64-bit <code class="computeroutput"><span class="keyword">double</span></code>
+      as <code class="computeroutput"><span class="number">1.7455280027406994</span></code>.
+    </p>
+<p>
+      However, the rational polynomial and Fukushima Schroder approximations are
+      so good for type <code class="computeroutput"><span class="keyword">float</span></code> and <code class="computeroutput"><span class="keyword">double</span></code> that negligible improvement is gained
+      from a <code class="computeroutput"><span class="keyword">double</span></code> Halley step.
+    </p>
+<p>
+      This is shown with <a href="../../../example/lambert_w_precision_example.cpp" target="_top">lambert_w_precision_example.cpp</a>
+      for Lambert <span class="emphasis"><em>W</em></span><sub>0</sub>:
+    </p>
+<pre class="programlisting"><span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">lambert_w_detail</span><span class="special">::</span><span class="identifier">lambert_w_halley_step</span><span class="special">;</span>
+<span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">epsilon_difference</span><span class="special">;</span>
+<span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">relative_difference</span><span class="special">;</span>
+
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">showpoint</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span> <span class="comment">// and show any significant trailing zeros too.</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span><span class="special">.</span><span class="identifier">precision</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;::</span><span class="identifier">max_digits10</span><span class="special">);</span> <span class="comment">// 17 decimal digits for double.</span>
+
+<span class="identifier">cpp_bin_float_50</span> <span class="identifier">z50</span><span class="special">(</span><span class="string">"1.23"</span><span class="special">);</span> <span class="comment">// Note: use a decimal digit string, not a double 1.23!</span>
+<span class="keyword">double</span> <span class="identifier">z</span> <span class="special">=</span> <span class="keyword">static_cast</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;(</span><span class="identifier">z50</span><span class="special">);</span>
+<span class="identifier">cpp_bin_float_50</span> <span class="identifier">w50</span><span class="special">;</span>
+<span class="identifier">w50</span> <span class="special">=</span> <span class="identifier">lambert_w0</span><span class="special">(</span><span class="identifier">z50</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span><span class="special">.</span><span class="identifier">precision</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">cpp_bin_float_50</span><span class="special">&gt;::</span><span class="identifier">max_digits10</span><span class="special">);</span> <span class="comment">// 50 decimal digits.</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Reference Lambert W ("</span> <span class="special">&lt;&lt;</span> <span class="identifier">z</span> <span class="special">&lt;&lt;</span> <span class="string">") =\n                                              "</span>
+  <span class="special">&lt;&lt;</span> <span class="identifier">w50</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span><span class="special">.</span><span class="identifier">precision</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;::</span><span class="identifier">max_digits10</span><span class="special">);</span> <span class="comment">// 17 decimal digits for double.</span>
+<span class="keyword">double</span> <span class="identifier">wr</span> <span class="special">=</span> <span class="keyword">static_cast</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;(</span><span class="identifier">w50</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Reference Lambert W ("</span> <span class="special">&lt;&lt;</span> <span class="identifier">z</span> <span class="special">&lt;&lt;</span> <span class="string">") =    "</span> <span class="special">&lt;&lt;</span> <span class="identifier">wr</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+
+<span class="keyword">double</span> <span class="identifier">w</span> <span class="special">=</span> <span class="identifier">lambert_w0</span><span class="special">(</span><span class="identifier">z</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Rat/poly Lambert W  ("</span> <span class="special">&lt;&lt;</span> <span class="identifier">z</span> <span class="special">&lt;&lt;</span> <span class="string">")  =   "</span> <span class="special">&lt;&lt;</span> <span class="identifier">lambert_w0</span><span class="special">(</span><span class="identifier">z</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// Add a Halley step to the value obtained from rational polynomial approximation.</span>
+<span class="keyword">double</span> <span class="identifier">ww</span> <span class="special">=</span> <span class="identifier">lambert_w_halley_step</span><span class="special">(</span><span class="identifier">lambert_w0</span><span class="special">(</span><span class="identifier">z</span><span class="special">),</span> <span class="identifier">z</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Halley Step Lambert W ("</span> <span class="special">&lt;&lt;</span> <span class="identifier">z</span> <span class="special">&lt;&lt;</span> <span class="string">") =  "</span> <span class="special">&lt;&lt;</span> <span class="identifier">lambert_w_halley_step</span><span class="special">(</span><span class="identifier">lambert_w0</span><span class="special">(</span><span class="identifier">z</span><span class="special">),</span> <span class="identifier">z</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"absolute difference from Halley step = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">w</span> <span class="special">-</span> <span class="identifier">ww</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"relative difference from Halley step = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">relative_difference</span><span class="special">(</span><span class="identifier">w</span><span class="special">,</span> <span class="identifier">ww</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"epsilon difference from Halley step  = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">epsilon_difference</span><span class="special">(</span><span class="identifier">w</span><span class="special">,</span> <span class="identifier">ww</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"epsilon for float =                    "</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;::</span><span class="identifier">epsilon</span><span class="special">()</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"bits different from Halley step  =     "</span> <span class="special">&lt;&lt;</span> <span class="keyword">static_cast</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;(</span><span class="identifier">float_distance</span><span class="special">(</span><span class="identifier">w</span><span class="special">,</span> <span class="identifier">ww</span><span class="special">))</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+</pre>
+<p>
+      with this output:
+    </p>
+<pre class="programlisting"><span class="identifier">Reference</span> <span class="identifier">Lambert</span> <span class="identifier">W</span> <span class="special">(</span><span class="number">1.2299999999999999822364316059974953532218933105468750</span><span class="special">)</span> <span class="special">=</span>
+<span class="number">0.64520356959320237759035605255334853830173300262666480</span>
+<span class="identifier">Reference</span> <span class="identifier">Lambert</span> <span class="identifier">W</span> <span class="special">(</span><span class="number">1.2300000000000000</span><span class="special">)</span> <span class="special">=</span>    <span class="number">0.64520356959320235</span>
+<span class="identifier">Rat</span><span class="special">/</span><span class="identifier">poly</span> <span class="identifier">Lambert</span> <span class="identifier">W</span>  <span class="special">(</span><span class="number">1.2300000000000000</span><span class="special">)</span>  <span class="special">=</span>   <span class="number">0.64520356959320224</span>
+<span class="identifier">Halley</span> <span class="identifier">Step</span> <span class="identifier">Lambert</span> <span class="identifier">W</span> <span class="special">(</span><span class="number">1.2300000000000000</span><span class="special">)</span> <span class="special">=</span>  <span class="number">0.64520356959320235</span>
+<span class="identifier">absolute</span> <span class="identifier">difference</span> <span class="identifier">from</span> <span class="identifier">Halley</span> <span class="identifier">step</span> <span class="special">=</span> <span class="special">-</span><span class="number">1.1102230246251565e-16</span>
+<span class="identifier">relative</span> <span class="identifier">difference</span> <span class="identifier">from</span> <span class="identifier">Halley</span> <span class="identifier">step</span> <span class="special">=</span> <span class="number">1.7207329236029286e-16</span>
+<span class="identifier">epsilon</span> <span class="identifier">difference</span> <span class="identifier">from</span> <span class="identifier">Halley</span> <span class="identifier">step</span>  <span class="special">=</span> <span class="number">0.77494921535422934</span>
+<span class="identifier">epsilon</span> <span class="keyword">for</span> <span class="keyword">float</span> <span class="special">=</span>                    <span class="number">2.2204460492503131e-16</span>
+<span class="identifier">bits</span> <span class="identifier">different</span> <span class="identifier">from</span> <span class="identifier">Halley</span> <span class="identifier">step</span>  <span class="special">=</span>     <span class="number">1</span>
+</pre>
+<p>
+      and then for <span class="emphasis"><em>W</em></span><sub>-1</sub>:
+    </p>
+<pre class="programlisting"><span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">lambert_w_detail</span><span class="special">::</span><span class="identifier">lambert_w_halley_step</span><span class="special">;</span>
+<span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">epsilon_difference</span><span class="special">;</span>
+<span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">relative_difference</span><span class="special">;</span>
+
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">showpoint</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span> <span class="comment">// and show any significant trailing zeros too.</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span><span class="special">.</span><span class="identifier">precision</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;::</span><span class="identifier">max_digits10</span><span class="special">);</span> <span class="comment">// 17 decimal digits for double.</span>
+
+<span class="identifier">cpp_bin_float_50</span> <span class="identifier">z50</span><span class="special">(</span><span class="string">"-0.123"</span><span class="special">);</span> <span class="comment">// Note: use a decimal digit string, not a double -1.234!</span>
+<span class="keyword">double</span> <span class="identifier">z</span> <span class="special">=</span> <span class="keyword">static_cast</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;(</span><span class="identifier">z50</span><span class="special">);</span>
+<span class="identifier">cpp_bin_float_50</span> <span class="identifier">wm1_50</span><span class="special">;</span>
+<span class="identifier">wm1_50</span> <span class="special">=</span> <span class="identifier">lambert_wm1</span><span class="special">(</span><span class="identifier">z50</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span><span class="special">.</span><span class="identifier">precision</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">cpp_bin_float_50</span><span class="special">&gt;::</span><span class="identifier">max_digits10</span><span class="special">);</span> <span class="comment">// 50 decimal digits.</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Reference Lambert W-1 ("</span> <span class="special">&lt;&lt;</span> <span class="identifier">z</span> <span class="special">&lt;&lt;</span> <span class="string">") =\n                                                  "</span>
+  <span class="special">&lt;&lt;</span> <span class="identifier">wm1_50</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span><span class="special">.</span><span class="identifier">precision</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;::</span><span class="identifier">max_digits10</span><span class="special">);</span> <span class="comment">// 17 decimal digits for double.</span>
+<span class="keyword">double</span> <span class="identifier">wr</span> <span class="special">=</span> <span class="keyword">static_cast</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;(</span><span class="identifier">wm1_50</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Reference Lambert W-1 ("</span> <span class="special">&lt;&lt;</span> <span class="identifier">z</span> <span class="special">&lt;&lt;</span> <span class="string">") =    "</span> <span class="special">&lt;&lt;</span> <span class="identifier">wr</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+
+<span class="keyword">double</span> <span class="identifier">w</span> <span class="special">=</span> <span class="identifier">lambert_wm1</span><span class="special">(</span><span class="identifier">z</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Rat/poly Lambert W-1 ("</span> <span class="special">&lt;&lt;</span> <span class="identifier">z</span> <span class="special">&lt;&lt;</span> <span class="string">")  =    "</span> <span class="special">&lt;&lt;</span> <span class="identifier">lambert_wm1</span><span class="special">(</span><span class="identifier">z</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// Add a Halley step to the value obtained from rational polynomial approximation.</span>
+<span class="keyword">double</span> <span class="identifier">ww</span> <span class="special">=</span> <span class="identifier">lambert_w_halley_step</span><span class="special">(</span><span class="identifier">lambert_wm1</span><span class="special">(</span><span class="identifier">z</span><span class="special">),</span> <span class="identifier">z</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Halley Step Lambert W ("</span> <span class="special">&lt;&lt;</span> <span class="identifier">z</span> <span class="special">&lt;&lt;</span> <span class="string">") =    "</span> <span class="special">&lt;&lt;</span> <span class="identifier">lambert_w_halley_step</span><span class="special">(</span><span class="identifier">lambert_wm1</span><span class="special">(</span><span class="identifier">z</span><span class="special">),</span> <span class="identifier">z</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"absolute difference from Halley step = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">w</span> <span class="special">-</span> <span class="identifier">ww</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"relative difference from Halley step = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">relative_difference</span><span class="special">(</span><span class="identifier">w</span><span class="special">,</span> <span class="identifier">ww</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"epsilon difference from Halley step  = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">epsilon_difference</span><span class="special">(</span><span class="identifier">w</span><span class="special">,</span> <span class="identifier">ww</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"epsilon for float =                    "</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;::</span><span class="identifier">epsilon</span><span class="special">()</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"bits different from Halley step  =     "</span> <span class="special">&lt;&lt;</span> <span class="keyword">static_cast</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;(</span><span class="identifier">float_distance</span><span class="special">(</span><span class="identifier">w</span><span class="special">,</span> <span class="identifier">ww</span><span class="special">))</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+</pre>
+<p>
+      with this output:
+    </p>
+<pre class="programlisting"><span class="identifier">Reference</span> <span class="identifier">Lambert</span> <span class="identifier">W</span><span class="special">-</span><span class="number">1</span> <span class="special">(-</span><span class="number">0.12299999999999999822364316059974953532218933105468750</span><span class="special">)</span> <span class="special">=</span>
+<span class="special">-</span><span class="number">3.2849102557740360179084675531714935199110302996513384</span>
+<span class="identifier">Reference</span> <span class="identifier">Lambert</span> <span class="identifier">W</span><span class="special">-</span><span class="number">1</span> <span class="special">(-</span><span class="number">0.12300000000000000</span><span class="special">)</span> <span class="special">=</span>    <span class="special">-</span><span class="number">3.2849102557740362</span>
+<span class="identifier">Rat</span><span class="special">/</span><span class="identifier">poly</span> <span class="identifier">Lambert</span> <span class="identifier">W</span><span class="special">-</span><span class="number">1</span> <span class="special">(-</span><span class="number">0.12300000000000000</span><span class="special">)</span>  <span class="special">=</span>    <span class="special">-</span><span class="number">3.2849102557740357</span>
+<span class="identifier">Halley</span> <span class="identifier">Step</span> <span class="identifier">Lambert</span> <span class="identifier">W</span> <span class="special">(-</span><span class="number">0.12300000000000000</span><span class="special">)</span> <span class="special">=</span>    <span class="special">-</span><span class="number">3.2849102557740362</span>
+<span class="identifier">absolute</span> <span class="identifier">difference</span> <span class="identifier">from</span> <span class="identifier">Halley</span> <span class="identifier">step</span> <span class="special">=</span> <span class="number">4.4408920985006262e-16</span>
+<span class="identifier">relative</span> <span class="identifier">difference</span> <span class="identifier">from</span> <span class="identifier">Halley</span> <span class="identifier">step</span> <span class="special">=</span> <span class="number">1.3519066740696092e-16</span>
+<span class="identifier">epsilon</span> <span class="identifier">difference</span> <span class="identifier">from</span> <span class="identifier">Halley</span> <span class="identifier">step</span>  <span class="special">=</span> <span class="number">0.60884463935795785</span>
+<span class="identifier">epsilon</span> <span class="keyword">for</span> <span class="keyword">float</span> <span class="special">=</span>                    <span class="number">2.2204460492503131e-16</span>
+<span class="identifier">bits</span> <span class="identifier">different</span> <span class="identifier">from</span> <span class="identifier">Halley</span> <span class="identifier">step</span>  <span class="special">=</span>     <span class="special">-</span><span class="number">1</span>
+</pre>
+<h6>
+<a name="math_toolkit.lambert_w.h9"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.differences_distribution"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.differences_distribution">Distribution
+      of differences from 'best' <code class="computeroutput"><span class="keyword">double</span></code>
+      evaluations</a>
+    </h6>
+<p>
+      The distribution of differences from 'best' are shown in these graphs comparing
+      <code class="computeroutput"><span class="keyword">double</span></code> precision evaluations with
+      reference 'best' z50 evaluations using <code class="computeroutput"><span class="identifier">cpp_bin_float_50</span></code>
+      type reduced to <code class="computeroutput"><span class="keyword">double</span></code> with <code class="computeroutput"><span class="keyword">static_cast</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">(</span><span class="identifier">z50</span><span class="special">)</span></code> :
+    </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+        <span class="inlinemediaobject"><img src="../../graphs/lambert_w0_errors_graph.svg" align="middle"></span>
+
+      </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+        <span class="inlinemediaobject"><img src="../../graphs/lambert_wm1_errors_graph.svg" align="middle"></span>
+
+      </p></blockquote></div>
+<p>
+      As noted in the implementation section, the distribution of these differences
+      is somewhat biased for Lambert <span class="emphasis"><em>W</em></span><sub>-1</sub> and this might be reduced
+      using a <code class="computeroutput"><span class="keyword">double</span></code> Halley step at
+      small runtime cost. But if you are seriously concerned to get really precise
+      computations, the only way is using a higher precision type and then reduce
+      to the desired type. Fortunately, <a href="../../../../../libs/multiprecision/doc/html/index.html" target="_top">Boost.Multiprecision</a>
+      makes this very easy to program, if much slower.
+    </p>
+<h5>
+<a name="math_toolkit.lambert_w.h10"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.edge_cases"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.edge_cases">Edge
+      and Corner cases</a>
+    </h5>
+<h6>
+<a name="math_toolkit.lambert_w.h11"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.w0_edges"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.w0_edges">The
+      <span class="emphasis"><em>W</em></span><sub>0</sub> Branch</a>
+    </h6>
+<p>
+      The domain of <span class="emphasis"><em>W</em></span><sub>0</sub> is [-<span class="emphasis"><em>e</em></span><sup>-1</sup>, ∞). Numerically,
+    </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          <code class="computeroutput"><span class="identifier">lambert_w0</span><span class="special">(-</span><span class="number">1</span><span class="special">/</span><span class="identifier">e</span><span class="special">)</span></code> is exactly -1.
+        </li>
+<li class="listitem">
+          <code class="computeroutput"><span class="identifier">lambert_w0</span><span class="special">(</span><span class="identifier">z</span><span class="special">)</span></code> for
+          <code class="computeroutput"><span class="identifier">z</span> <span class="special">&lt;</span>
+          <span class="special">-</span><span class="number">1</span><span class="special">/</span><span class="identifier">e</span></code> throws
+          a <code class="computeroutput"><span class="identifier">domain_error</span></code>, or returns
+          <code class="computeroutput"><span class="identifier">NaN</span></code> according to the policy.
+        </li>
+<li class="listitem">
+          <code class="computeroutput"><span class="identifier">lambert_w0</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">infinity</span><span class="special">())</span></code>
+          throws an <code class="computeroutput"><span class="identifier">overflow_error</span></code>.
+        </li>
+</ul></div>
+<p>
+      (An infinite argument probably indicates that something has already gone wrong,
+      but if it is desired to return infinity, this case should be handled before
+      calling <code class="computeroutput"><span class="identifier">lambert_w0</span></code>).
+    </p>
+<h6>
+<a name="math_toolkit.lambert_w.h12"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.wm1_edges"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.wm1_edges"><span class="emphasis"><em>W</em></span><sub>-1</sub> Branch</a>
+    </h6>
+<p>
+      The domain of <span class="emphasis"><em>W</em></span><sub>-1</sub> is [-<span class="emphasis"><em>e</em></span><sup>-1</sup>, 0). Numerically,
+    </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          <code class="computeroutput"><span class="identifier">lambert_wm1</span><span class="special">(-</span><span class="number">1</span><span class="special">/</span><span class="identifier">e</span><span class="special">)</span></code> is exactly -1.
+        </li>
+<li class="listitem">
+          <code class="computeroutput"><span class="identifier">lambert_wm1</span><span class="special">(</span><span class="number">0</span><span class="special">)</span></code> returns
+          -∞ (or the nearest equivalent if <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">has_infinity</span>
+          <span class="special">==</span> <span class="keyword">false</span></code>).
+        </li>
+<li class="listitem">
+          <code class="computeroutput"><span class="identifier">lambert_wm1</span><span class="special">(-</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">min</span><span class="special">())</span></code>
+          returns the maximum (most negative) possible value of Lambert <span class="emphasis"><em>W</em></span>
+          for the type T. <br> For example, for <code class="computeroutput"><span class="keyword">double</span></code>:
+          lambert_wm1(-2.2250738585072014e-308) = -714.96865723796634 <br> and
+          for <code class="computeroutput"><span class="keyword">float</span></code>: lambert_wm1(-1.17549435e-38)
+          = -91.8567734 <br>
+        </li>
+<li class="listitem">
+<p class="simpara">
+          <code class="computeroutput"><span class="identifier">z</span> <span class="special">&lt;</span>
+          <span class="special">-</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">min</span><span class="special">()</span></code>, means that z is zero or denormalized
+          (if <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">detail</span><span class="special">::</span><span class="identifier">has_denorm_now</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;()</span> <span class="special">==</span> <span class="keyword">true</span></code>),
+          for example: <code class="computeroutput"><span class="identifier">r</span> <span class="special">=</span>
+          <span class="identifier">lambert_wm1</span><span class="special">(-</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;::</span><span class="identifier">denorm_min</span><span class="special">());</span></code>
+          and an overflow_error exception is thrown, and will give a message like:
+        </p>
+<p class="simpara">
+          Error in function boost::math::lambert_wm1&lt;RealType&gt;(&lt;RealType&gt;):
+          Argument z = -4.9406564584124654e-324 is too small (z &lt; -std::numeric_limits&lt;T&gt;::min
+          so denormalized) for Lambert W-1 branch!
+        </p>
+</li>
+</ul></div>
+<p>
+      Denormalized values are not supported for Lambert <span class="emphasis"><em>W</em></span><sub>-1</sub> (because
+      not all floating-point types denormalize), and anyway it only covers a tiny
+      fraction of the range of possible z arguments values.
+    </p>
+<h5>
+<a name="math_toolkit.lambert_w.h13"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.compilers"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.compilers">Compilers</a>
+    </h5>
+<p>
+      The <code class="computeroutput"><span class="identifier">lambert_w</span><span class="special">.</span><span class="identifier">hpp</span></code> code has been shown to work on most C++98
+      compilers. (Apart from requiring C++11 extensions for using of <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;&gt;::</span><span class="identifier">max_digits10</span></code>
+      in some diagnostics. Many old pre-c++11 compilers provide this extension but
+      may require enabling to use, for example using b2/bjam the lambert_w examples
+      use this command:
+    </p>
+<pre class="programlisting"><span class="special">[</span> <span class="identifier">run</span> <span class="identifier">lambert_w_basic_example</span><span class="special">.</span><span class="identifier">cpp</span>  <span class="special">:</span> <span class="special">:</span> <span class="special">:</span> <span class="special">[</span> <span class="identifier">requires</span> <span class="identifier">cxx11_numeric_limits</span> <span class="special">]</span> <span class="special">]</span>
+</pre>
+<p>
+      See <a href="../../../example/Jamfile.v2" target="_top">jamfile.v2</a>.)
+    </p>
+<p>
+      For details of which compilers are expected to work see lambert_w tests and
+      examples in:<br> <a href="https://www.boost.org/development/tests/master/developer/math.html" target="_top">Boost
+      Test Summary report for master branch (used for latest release)</a><br>
+      <a href="https://www.boost.org/development/tests/develop/developer/math.html" target="_top">Boost
+      Test Summary report for latest developer branch</a>.
+    </p>
+<p>
+      As expected, debug mode is very much slower than release.
+    </p>
+<h6>
+<a name="math_toolkit.lambert_w.h14"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.diagnostics"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.diagnostics">Diagnostics
+      Macros</a>
+    </h6>
+<p>
+      Several macros are provided to output diagnostic information (potentially
+      <span class="bold"><strong>much</strong></span> output). These can be statements, for
+      example:
+    </p>
+<p>
+      <code class="computeroutput"><span class="preprocessor">#define</span> <span class="identifier">BOOST_MATH_INSTRUMENT_LAMBERT_W_TERMS</span></code>
+    </p>
+<p>
+      placed <span class="bold"><strong>before</strong></span> the <code class="computeroutput"><span class="identifier">lambert_w</span></code>
+      include statement
+    </p>
+<p>
+      <code class="computeroutput"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">special_functions</span><span class="special">/</span><span class="identifier">lambert_w</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span></code>,
+    </p>
+<p>
+      or defined on the project compile command-line: <code class="computeroutput"><span class="special">/</span><span class="identifier">DBOOST_MATH_INSTRUMENT_LAMBERT_W_TERMS</span></code>,
+    </p>
+<p>
+      or defined in a jamfile.v2: <code class="computeroutput"><span class="special">&lt;</span><span class="identifier">define</span><span class="special">&gt;</span><span class="identifier">BOOST_MATH_INSTRUMENT_LAMBERT_W_TERMS</span></code>
+    </p>
+<pre class="programlisting"><span class="comment">// #define-able macros</span>
+<span class="identifier">BOOST_MATH_INSTRUMENT_LAMBERT_W_HALLEY</span>                     <span class="comment">// Halley refinement diagnostics.</span>
+<span class="identifier">BOOST_MATH_INSTRUMENT_LAMBERT_W_PRECISION</span>                  <span class="comment">// Precision.</span>
+<span class="identifier">BOOST_MATH_INSTRUMENT_LAMBERT_WM1</span>                          <span class="comment">// W1 branch diagnostics.</span>
+<span class="identifier">BOOST_MATH_INSTRUMENT_LAMBERT_WM1_HALLEY</span>                   <span class="comment">// Halley refinement diagnostics only for W-1 branch.</span>
+<span class="identifier">BOOST_MATH_INSTRUMENT_LAMBERT_WM1_TINY</span>                     <span class="comment">// K &gt; 64, z &gt; -1.0264389699511303e-26</span>
+<span class="identifier">BOOST_MATH_INSTRUMENT_LAMBERT_WM1_LOOKUP</span>                   <span class="comment">// Show results from W-1 lookup table.</span>
+<span class="identifier">BOOST_MATH_INSTRUMENT_LAMBERT_W_SCHROEDER</span>                  <span class="comment">// Schroeder refinement diagnostics.</span>
+<span class="identifier">BOOST_MATH_INSTRUMENT_LAMBERT_W_TERMS</span>                      <span class="comment">// Number of terms used for near-singularity series.</span>
+<span class="identifier">BOOST_MATH_INSTRUMENT_LAMBERT_W_SINGULARITY_SERIES</span>         <span class="comment">// Show evaluation of series near branch singularity.</span>
+<span class="identifier">BOOST_MATH_INSTRUMENT_LAMBERT_W_SMALL_Z_SERIES</span>
+<span class="identifier">BOOST_MATH_INSTRUMENT_LAMBERT_W_SMALL_Z_SERIES_ITERATIONS</span>  <span class="comment">// Show evaluation of series for small z.</span>
+</pre>
+<h5>
+<a name="math_toolkit.lambert_w.h15"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.implementation"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.implementation">Implementation</a>
+    </h5>
+<p>
+      There are many previous implementations, each with increasing accuracy and/or
+      speed. See <a class="link" href="lambert_w.html#math_toolkit.lambert_w.references">references</a>
+      below.
+    </p>
+<p>
+      For most of the range of <span class="emphasis"><em>z</em></span> arguments, some initial approximation
+      followed by a single refinement, often using Halley or similar method, gives
+      a useful precision. For speed, several implementations avoid evaluation of
+      a iteration test using the exponential function, estimating that a single refinement
+      step will suffice, but these rarely get to the best result possible. To get
+      a better precision, additional refinements, probably iterative, are needed
+      for example, using <a class="link" href="roots_deriv.html#math_toolkit.roots_deriv.halley">Halley</a>
+      or <a class="link" href="roots_deriv.html#math_toolkit.roots_deriv.schroder">Schröder</a> methods.
+    </p>
+<p>
+      For C++, the most precise results possible, closest to the nearest <a href="http://en.wikipedia.org/wiki/Floating_point#Representable_numbers.2C_conversion_and_rounding" target="_top">representable</a>
+      for the C++ type being used, it is usually necessary to use a higher precision
+      type for intermediate computation, finally static-casting back to the smaller
+      desired result type. This strategy is used by <a href="https://www.maplesoft.com" target="_top">Maple</a>
+      and <a href="http://www.wolframalpha.com/" target="_top">Wolfram Alpha</a>, for example,
+      using arbitrary precision arithmetic, and some of their high-precision values
+      are used for testing this library. This method is also used to provide some
+      <a href="https://www.boost.org/doc/libs/release/libs/test/doc/html/index.html" target="_top">Boost.Test</a>
+      values using <a href="../../../../../libs/multiprecision/doc/html/index.html" target="_top">Boost.Multiprecision</a>,
+      typically, a 50 decimal digit type like <code class="computeroutput"><span class="identifier">cpp_bin_float_50</span></code>
+      <code class="computeroutput"><span class="keyword">static_cast</span></code> to a <code class="computeroutput"><span class="keyword">float</span></code>, <code class="computeroutput"><span class="keyword">double</span></code>
+      or <code class="computeroutput"><span class="keyword">long</span> <span class="keyword">double</span></code>
+      type.
+    </p>
+<p>
+      For <span class="emphasis"><em>z</em></span> argument values near the singularity and near zero,
+      other approximations may be used, possibly followed by refinement or increasing
+      number of series terms until a desired precision is achieved. At extreme arguments
+      near to zero or the singularity at the branch point, even this fails and the
+      only method to achieve a really close result is to cast from a higher precision
+      type.
+    </p>
+<p>
+      In practical applications, the increased computation required (often towards
+      a thousand-fold slower and requiring much additional code for <a href="../../../../../libs/multiprecision/doc/html/index.html" target="_top">Boost.Multiprecision</a>)
+      is not justified and the algorithms here do not implement this. But because
+      the Boost.Lambert_W algorithms has been tested using <a href="../../../../../libs/multiprecision/doc/html/index.html" target="_top">Boost.Multiprecision</a>,
+      users who require this can always easily achieve the nearest representation
+      for <a href="http://en.cppreference.com/w/cpp/language/types" target="_top">fundamental
+      (built-in) types</a> - if the application justifies the very large extra
+      computation cost.
+    </p>
+<h6>
+<a name="math_toolkit.lambert_w.h16"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.evolution_of_this_implementation"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.evolution_of_this_implementation">Evolution
+      of this implementation</a>
+    </h6>
+<p>
+      One compact real-only implementation was based on an algorithm by <a href="http://discovery.ucl.ac.uk/1482128/1/Luu_thesis.pdf" target="_top">Thomas
+      Luu, Thesis, University College London (2015)</a>, (see routine 11 on page
+      98 for his Lambert W algorithm) and his Halley refinement is used iteratively
+      when required. A first implementation was based on Thomas Luu's code posted
+      at <a href="https://svn.boost.org/trac/boost/ticket/11027" target="_top">Boost Trac #11027</a>.
+      It has been implemented from Luu's algorithm but templated on <code class="computeroutput"><span class="identifier">RealType</span></code> parameter and result and handles
+      both <a href="http://en.cppreference.com/w/cpp/language/types" target="_top">fundamental
+      (built-in) types</a> (<code class="computeroutput"><span class="keyword">float</span><span class="special">,</span> <span class="keyword">double</span><span class="special">,</span>
+      <span class="keyword">long</span> <span class="keyword">double</span></code>),
+      <a href="../../../../../libs/multiprecision/doc/html/index.html" target="_top">Boost.Multiprecision</a>,
+      and also has been tested successfully with a proposed fixed_point type.
+    </p>
+<p>
+      A first approximation was computed using the method of Barry et al (see references
+      5 &amp; 6 below). This was extended to the widely used <a href="https://people.sc.fsu.edu/~jburkardt/f_src/toms443/toms443.html" target="_top">TOMS443</a>
+      FORTRAN and C++ versions by John Burkardt using Schroeder refinement(s). (For
+      users only requiring an accuracy of relative accuracy of 0.02%, Barry's function
+      alone might suffice, but a better <a href="https://en.wikipedia.org/wiki/Rational_function" target="_top">rational
+      function</a> approximation method has since been developed for this implementation).
+    </p>
+<p>
+      We also considered using <a class="link" href="roots_deriv.html#math_toolkit.roots_deriv.newton">Newton-Raphson
+      iteration</a> method.
+    </p>
+<pre class="programlisting"><span class="identifier">f</span><span class="special">(</span><span class="identifier">w</span><span class="special">)</span> <span class="special">=</span> <span class="identifier">w</span> <span class="identifier">e</span><span class="special">^</span><span class="identifier">w</span> <span class="special">-</span><span class="identifier">z</span> <span class="special">=</span> <span class="number">0</span> <span class="comment">// Luu equation 6.37</span>
+<span class="identifier">f</span><span class="char">'(w) = e^w (1 + w), Wolfram alpha (d)/(dw)(f(w) = w exp(w) - z) = e^w (w + 1)
+if (f(w) / f'</span><span class="special">(</span><span class="identifier">w</span><span class="special">)</span> <span class="special">-</span><span class="number">1</span> <span class="special">&lt;</span> <span class="identifier">tolerance</span>
+<span class="identifier">w1</span> <span class="special">=</span> <span class="identifier">w0</span> <span class="special">-</span> <span class="special">(</span><span class="identifier">expw0</span> <span class="special">*</span> <span class="special">(</span><span class="identifier">w0</span> <span class="special">+</span> <span class="number">1</span><span class="special">));</span> <span class="comment">// Refine new Newton/Raphson estimate.</span>
+</pre>
+<p>
+      but concluded that since the Newton-Raphson method takes typically 6 iterations
+      to converge within tolerance, whereas Halley usually takes only 1 to 3 iterations
+      to achieve an result within 1 <a href="http://en.wikipedia.org/wiki/Unit_in_the_last_place" target="_top">Unit
+      in the last place (ULP)</a>, so the Newton-Raphson method is unlikely to
+      be quicker than the additional cost of computing the 2nd derivative for Halley's
+      method.
+    </p>
+<p>
+      Halley refinement uses the simplified formulae obtained from <a href="http://www.wolframalpha.com/input/?i=%5B2(z+exp(z)-w)+d%2Fdx+(z+exp(z)-w)%5D+%2F+%5B2+(d%2Fdx+(z+exp(z)-w))%5E2+-+(z+exp(z)-w)+d%5E2%2Fdx%5E2+(z+exp(z)-w)%5D" target="_top">Wolfram
+      Alpha</a>
+    </p>
+<pre class="programlisting"><span class="special">[</span><span class="number">2</span><span class="special">(</span><span class="identifier">z</span> <span class="identifier">exp</span><span class="special">(</span><span class="identifier">z</span><span class="special">)-</span><span class="identifier">w</span><span class="special">)</span> <span class="identifier">d</span><span class="special">/</span><span class="identifier">dx</span> <span class="special">(</span><span class="identifier">z</span> <span class="identifier">exp</span><span class="special">(</span><span class="identifier">z</span><span class="special">)-</span><span class="identifier">w</span><span class="special">)]</span> <span class="special">/</span> <span class="special">[</span><span class="number">2</span> <span class="special">(</span><span class="identifier">d</span><span class="special">/</span><span class="identifier">dx</span> <span class="special">(</span><span class="identifier">z</span> <span class="identifier">exp</span><span class="special">(</span><span class="identifier">z</span><span class="special">)-</span><span class="identifier">w</span><span class="special">))^</span><span class="number">2</span> <span class="special">-</span> <span class="special">(</span><span class="identifier">z</span> <span class="identifier">exp</span><span class="special">(</span><span class="identifier">z</span><span class="special">)-</span><span class="identifier">w</span><span class="special">)</span> <span class="identifier">d</span><span class="special">^</span><span class="number">2</span><span class="special">/</span><span class="identifier">dx</span><span class="special">^</span><span class="number">2</span> <span class="special">(</span><span class="identifier">z</span> <span class="identifier">exp</span><span class="special">(</span><span class="identifier">z</span><span class="special">)-</span><span class="identifier">w</span><span class="special">)]</span>
+</pre>
+<h5>
+<a name="math_toolkit.lambert_w.h17"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.compact_implementation"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.compact_implementation">Implementing
+      Compact Algorithms</a>
+    </h5>
+<p>
+      The most compact algorithm can probably be implemented using the log approximation
+      of Corless et al. followed by Halley iteration (but is also slowest and least
+      precise near zero and near the branch singularity).
+    </p>
+<h5>
+<a name="math_toolkit.lambert_w.h18"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.faster_implementation"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.faster_implementation">Implementing
+      Faster Algorithms</a>
+    </h5>
+<p>
+      More recently, the Tosio Fukushima has developed an even faster algorithm,
+      avoiding any transcendental function calls as these are necessarily expensive.
+      The current implementation of Lambert <span class="emphasis"><em>W</em></span><sub>-1</sub> is based on his
+      algorithm starting with a translation from Fukushima's FORTRAN into C++ by
+      Darko Veberic.
+    </p>
+<p>
+      Many applications of the Lambert W function make many repeated evaluations
+      for Monte Carlo methods; for these applications speed is very important. Luu,
+      and Chapeau-Blondeau and Monir provide typical usage examples.
+    </p>
+<p>
+      Fukushima improves the important observation that much of the execution time
+      of all previous iterative algorithms was spent evaluating transcendental functions,
+      usually <code class="computeroutput"><span class="identifier">exp</span></code>. He has put a lot
+      of work into avoiding any slow transcendental functions by using lookup tables
+      and bisection, finishing with a single Schroeder refinement, without any check
+      on the final precision of the result (necessarily evaluating an expensive exponential).
+    </p>
+<p>
+      Theoretical and practical tests confirm that Fukushima's algorithm gives Lambert
+      W estimates with a known small error bound (several <a href="http://en.wikipedia.org/wiki/Unit_in_the_last_place" target="_top">Unit
+      in the last place (ULP)</a>) over nearly all the range of <span class="emphasis"><em>z</em></span>
+      argument.
+    </p>
+<p>
+      A mean difference was computed to express the typical error and is often about
+      0.5 epsilon, the theoretical minimum. Using the <a href="../../../../../libs/math/doc/html/math_toolkit/next_float/float_distance.html" target="_top">Boost.Math
+      float_distance</a>, we can also express this as the number of bits that
+      are different from the nearest representable or 'exact' or 'best' value. The
+      number and distribution of these few bits differences was studied by binning,
+      including their sign. Bins for (signed) 0, 1, 2 and 3 and 4 bits proved suitable.
+    </p>
+<p>
+      However, though these give results within a few <a href="http://en.wikipedia.org/wiki/Machine_epsilon" target="_top">machine
+      epsilon</a> of the nearest representable result, they do not get as close
+      as is very often possible with further refinement, nearly always to within
+      one or two <a href="http://en.wikipedia.org/wiki/Machine_epsilon" target="_top">machine
+      epsilon</a>.
+    </p>
+<p>
+      More significantly, the evaluations of the sum of all signed differences using
+      the Fukshima algorithm show a slight bias, being more likely to be a bit or
+      few below the nearest representation than above; bias might have unwanted effects
+      on some statistical computations.
+    </p>
+<p>
+      Fukushima's method also does not cover the full range of z arguments of 'float'
+      precision and above.
+    </p>
+<p>
+      For this implementation of Lambert <span class="emphasis"><em>W</em></span><sub>0</sub>, John Maddock used
+      the Boost.Math <a href="http://en.wikipedia.org/wiki/Remez_algorithm" target="_top">Remez
+      algorithm</a> method program to devise a <a href="https://en.wikipedia.org/wiki/Rational_function" target="_top">rational
+      function</a> for several ranges of argument for the <span class="emphasis"><em>W</em></span><sub>0</sub> branch
+      of Lambert <span class="emphasis"><em>W</em></span> function. These minimax rational approximations
+      are combined for an algorithm that is both smaller and faster.
+    </p>
+<p>
+      Sadly it has not proved practical to use the same <a href="http://en.wikipedia.org/wiki/Remez_algorithm" target="_top">Remez
+      algorithm</a> method for Lambert <span class="emphasis"><em>W</em></span><sub>-1</sub> branch and so
+      the Fukushima algorithm is retained for this branch.
+    </p>
+<p>
+      An advantage of both minimax rational <a href="http://en.wikipedia.org/wiki/Remez_algorithm" target="_top">Remez
+      algorithm</a> approximations is that the <span class="bold"><strong>distribution</strong></span>
+      from the reference values is reasonably random and insignificantly biased.
+    </p>
+<p>
+      For example, table below a test of Lambert <span class="emphasis"><em>W</em></span><sub>0</sub> 10000 values
+      of argument covering the main range of possible values, 10000 comparisons from
+      z = 0.0501 to 703, in 0.001 step factor 1.05 when module 7 == 0
+    </p>
+<div class="table">
+<a name="math_toolkit.lambert_w.lambert_w0_Fukushima"></a><p class="title"><b>Table 8.73. Fukushima Lambert <span class="emphasis"><em>W</em></span><sub>0</sub> and typical improvement from
+      a single Halley step.</b></p>
+<div class="table-contents"><table class="table" summary="Fukushima Lambert W0 and typical improvement from
+      a single Halley step.">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              <p>
+                Method
+              </p>
+            </th>
+<th>
+              <p>
+                Exact
+              </p>
+            </th>
+<th>
+              <p>
+                One_bit
+              </p>
+            </th>
+<th>
+              <p>
+                Two_bits
+              </p>
+            </th>
+<th>
+              <p>
+                Few_bits
+              </p>
+            </th>
+<th>
+              <p>
+                inexact
+              </p>
+            </th>
+<th>
+              <p>
+                bias
+              </p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+              <p>
+                Schroeder <span class="emphasis"><em>W</em></span><sub>0</sub>
+              </p>
+            </td>
+<td>
+              <p>
+                8804
+              </p>
+            </td>
+<td>
+              <p>
+                1154
+              </p>
+            </td>
+<td>
+              <p>
+                37
+              </p>
+            </td>
+<td>
+              <p>
+                5
+              </p>
+            </td>
+<td>
+              <p>
+                1243
+              </p>
+            </td>
+<td>
+              <p>
+                -1193
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                after Halley step
+              </p>
+            </td>
+<td>
+              <p>
+                9710
+              </p>
+            </td>
+<td>
+              <p>
+                288
+              </p>
+            </td>
+<td>
+              <p>
+                2
+              </p>
+            </td>
+<td>
+              <p>
+                0
+              </p>
+            </td>
+<td>
+              <p>
+                292
+              </p>
+            </td>
+<td>
+              <p>
+                22
+              </p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><p>
+      Lambert <span class="emphasis"><em>W</em></span><sub>0</sub> values computed using the Fukushima method with
+      Schroeder refinement gave about 1/6 <code class="computeroutput"><span class="identifier">lambert_w0</span></code>
+      values that are one bit different from the 'best', and &lt; 1% that are a few
+      bits 'wrong'. If a Halley refinement step is added, only 1 in 30 are even one
+      bit different, and only 2 two-bits 'wrong'.
+    </p>
+<div class="table">
+<a name="math_toolkit.lambert_w.lambert_w0_plus_halley"></a><p class="title"><b>Table 8.74. Rational polynomial Lambert <span class="emphasis"><em>W</em></span><sub>0</sub> and typical improvement
+      from a single Halley step.</b></p>
+<div class="table-contents"><table class="table" summary="Rational polynomial Lambert W0 and typical improvement
+      from a single Halley step.">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              <p>
+                Method
+              </p>
+            </th>
+<th>
+              <p>
+                Exact
+              </p>
+            </th>
+<th>
+              <p>
+                One_bit
+              </p>
+            </th>
+<th>
+              <p>
+                Two_bits
+              </p>
+            </th>
+<th>
+              <p>
+                Few_bits
+              </p>
+            </th>
+<th>
+              <p>
+                inexact
+              </p>
+            </th>
+<th>
+              <p>
+                bias
+              </p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+              <p>
+                rational/polynomial
+              </p>
+            </td>
+<td>
+              <p>
+                7135
+              </p>
+            </td>
+<td>
+              <p>
+                2863
+              </p>
+            </td>
+<td>
+              <p>
+                2
+              </p>
+            </td>
+<td>
+              <p>
+                0
+              </p>
+            </td>
+<td>
+              <p>
+                2867
+              </p>
+            </td>
+<td>
+              <p>
+                -59
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                after Halley step
+              </p>
+            </td>
+<td>
+              <p>
+                9724
+              </p>
+            </td>
+<td>
+              <p>
+                273
+              </p>
+            </td>
+<td>
+              <p>
+                3
+              </p>
+            </td>
+<td>
+              <p>
+                0
+              </p>
+            </td>
+<td>
+              <p>
+                279
+              </p>
+            </td>
+<td>
+              <p>
+                5
+              </p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><p>
+      With the rational polynomial approximation method, there are a third one-bit
+      from the best and none more than two-bits. Adding a Halley step (or iteration)
+      reduces the number that are one-bit different from about a third down to one
+      in 30; this is unavoidable 'computational noise'. An extra Halley step would
+      double the runtime for a tiny gain and so is not chosen for this implementation,
+      but remains a option, as detailed above.
+    </p>
+<p>
+      For the Lambert <span class="emphasis"><em>W</em></span><sub>-1</sub> branch, the Fukushima algorithm is
+      used.
+    </p>
+<div class="table">
+<a name="math_toolkit.lambert_w.lambert_wm1_fukushima"></a><p class="title"><b>Table 8.75. Lambert <span class="emphasis"><em>W</em></span><sub>-1</sub> using Fukushima algorithm.</b></p>
+<div class="table-contents"><table class="table" summary="Lambert W-1 using Fukushima algorithm.">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              <p>
+                Method
+              </p>
+            </th>
+<th>
+              <p>
+                Exact
+              </p>
+            </th>
+<th>
+              <p>
+                One_bit
+              </p>
+            </th>
+<th>
+              <p>
+                Two_bits
+              </p>
+            </th>
+<th>
+              <p>
+                Few_bits
+              </p>
+            </th>
+<th>
+              <p>
+                inexact
+              </p>
+            </th>
+<th>
+              <p>
+                bias
+              </p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+              <p>
+                Fukushima <span class="emphasis"><em>W</em></span><sub>-1</sub>
+              </p>
+            </td>
+<td>
+              <p>
+                7167
+              </p>
+            </td>
+<td>
+              <p>
+                2704
+              </p>
+            </td>
+<td>
+              <p>
+                129
+              </p>
+            </td>
+<td>
+              <p>
+                0
+              </p>
+            </td>
+<td>
+              <p>
+                2962
+              </p>
+            </td>
+<td>
+              <p>
+                -160
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                plus Halley step
+              </p>
+            </td>
+<td>
+              <p>
+                7379
+              </p>
+            </td>
+<td>
+              <p>
+                2529
+              </p>
+            </td>
+<td>
+              <p>
+                92
+              </p>
+            </td>
+<td>
+              <p>
+                0
+              </p>
+            </td>
+<td>
+              <p>
+                2713
+              </p>
+            </td>
+<td>
+              <p>
+                549
+              </p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><h6>
+<a name="math_toolkit.lambert_w.h19"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.lookup_tables"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.lookup_tables">Lookup
+      tables</a>
+    </h6>
+<p>
+      For speed during the bisection, Fukushima's algorithm computes lookup tables
+      of powers of e and z for integral Lambert W. There are 64 elements in these
+      tables. The FORTRAN version (and the C++ translation by Veberic) computed these
+      (once) as <code class="computeroutput"><span class="keyword">static</span></code> data. This is
+      slower, may cause trouble with multithreading, and is slightly inaccurate because
+      of rounding errors from repeated(64) multiplications.
+    </p>
+<p>
+      In this implementation the array values have been computed using <a href="../../../../../libs/multiprecision/doc/html/index.html" target="_top">Boost.Multiprecision</a>
+      50 decimal digit and output as C++ arrays 37 decimal digit <code class="computeroutput"><span class="keyword">long</span>
+      <span class="keyword">double</span></code> literals using <code class="computeroutput"><span class="identifier">max_digits10</span></code> precision
+    </p>
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span><span class="special">.</span><span class="identifier">precision</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">cpp_bin_float_quad</span><span class="special">&gt;::</span><span class="identifier">max_digits10</span><span class="special">);</span>
+</pre>
+<p>
+      The arrays are as <code class="computeroutput"><span class="keyword">const</span></code> and <code class="computeroutput"><span class="keyword">constexpr</span></code> and <code class="computeroutput"><span class="keyword">static</span></code>
+      as possible (for the compiler version), using static constexpr macro. (See
+      <a href="../../../tools/lambert_w_lookup_table_generator.cpp" target="_top">lambert_w_lookup_table_generator.cpp</a>
+      The precision was chosen to ensure that if used as <code class="computeroutput"><span class="keyword">long</span>
+      <span class="keyword">double</span></code> arrays, then the values output
+      to <a href="../../../include/boost/math/special_functions/detail/lambert_w_lookup_table.ipp" target="_top">lambert_w_lookup_table.ipp</a>
+      will be the nearest representable value for the type chose by a <code class="computeroutput"><span class="keyword">typedef</span></code> in <a href="../../../include/boost/math/special_functions/lambert_w.hpp" target="_top">lambert_w.hpp</a>.
+    </p>
+<pre class="programlisting"><span class="keyword">typedef</span> <span class="keyword">double</span> <span class="identifier">lookup_t</span><span class="special">;</span> <span class="comment">// Type for lookup table (`double` or `float`, or even `long double`?)</span>
+</pre>
+<p>
+      This is to allow for future use at higher precision, up to platforms that use
+      128-bit (hardware or software) for their <code class="computeroutput"><span class="keyword">long</span>
+      <span class="keyword">double</span></code> type.
+    </p>
+<p>
+      The accuracy of the tables was confirmed using <a href="http://www.wolframalpha.com/" target="_top">Wolfram
+      Alpha</a> and agrees at the 37th decimal place, so ensuring that the value
+      is exactly read into even 128-bit <code class="computeroutput"><span class="keyword">long</span>
+      <span class="keyword">double</span></code> to the nearest representation.
+    </p>
+<h6>
+<a name="math_toolkit.lambert_w.h20"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.higher_precision"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.higher_precision">Higher
+      precision</a>
+    </h6>
+<p>
+      For types more precise than <code class="computeroutput"><span class="keyword">double</span></code>,
+      Fukushima reported that it was best to use the <code class="computeroutput"><span class="keyword">double</span></code>
+      estimate as a starting point, followed by refinement using <a class="link" href="roots_deriv.html#math_toolkit.roots_deriv.halley">Halley</a>
+      iterations or other methods; our experience confirms this.
+    </p>
+<p>
+      Using <a href="../../../../../libs/multiprecision/doc/html/index.html" target="_top">Boost.Multiprecision</a>
+      it is simple to compute very high precision values of Lambert W at least to
+      thousands of decimal digits over most of the range of z arguments.
+    </p>
+<p>
+      For this reason, the lookup tables and bisection are only carried out at low
+      precision, usually <code class="computeroutput"><span class="keyword">double</span></code>, chosen
+      by the <code class="computeroutput"><span class="keyword">typedef</span> <span class="keyword">double</span>
+      <span class="identifier">lookup_t</span></code>. Unlike the FORTRAN version,
+      the lookup tables of Lambert_W of integral values are precomputed as C++ static
+      arrays of floating-point literals. The default is a <code class="computeroutput"><span class="keyword">typedef</span></code>
+      setting the type to <code class="computeroutput"><span class="keyword">double</span></code>. To
+      allow users to vary the precision from <code class="computeroutput"><span class="keyword">float</span></code>
+      to <code class="computeroutput"><span class="keyword">long</span> <span class="keyword">double</span></code>
+      these are computed to 128-bit precision to ensure that even platforms with
+      <code class="computeroutput"><span class="keyword">long</span> <span class="keyword">double</span></code>
+      do not lose precision.
+    </p>
+<p>
+      The FORTRAN version and translation only permits the z argument to be the largest
+      items in these lookup arrays, <code class="computeroutput"><span class="identifier">wm0s</span><span class="special">[</span><span class="number">64</span><span class="special">]</span>
+      <span class="special">=</span> <span class="number">3.99049</span></code>,
+      producing an error message and returning <code class="computeroutput"><span class="identifier">NaN</span></code>.
+      So 64 is the largest possible value ever returned from the <code class="computeroutput"><span class="identifier">lambert_w0</span></code>
+      function. This is far from the <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;&gt;::</span><span class="identifier">max</span><span class="special">()</span></code> for even <code class="computeroutput"><span class="keyword">float</span></code>s.
+      Therefore this implementation uses an approximation or 'guess' and Halley's
+      method to refine the result. Logarithmic approximation is discussed at length
+      by R.M.Corless et al. (page 349). Here we use the first two terms of equation
+      4.19:
+    </p>
+<pre class="programlisting"><span class="identifier">T</span> <span class="identifier">lz</span> <span class="special">=</span> <span class="identifier">log</span><span class="special">(</span><span class="identifier">z</span><span class="special">);</span>
+<span class="identifier">T</span> <span class="identifier">llz</span> <span class="special">=</span> <span class="identifier">log</span><span class="special">(</span><span class="identifier">lz</span><span class="special">);</span>
+<span class="identifier">guess</span> <span class="special">=</span> <span class="identifier">lz</span> <span class="special">-</span> <span class="identifier">llz</span> <span class="special">+</span> <span class="special">(</span><span class="identifier">llz</span> <span class="special">/</span> <span class="identifier">lz</span><span class="special">);</span>
+</pre>
+<p>
+      This gives a useful precision suitable for Halley refinement.
+    </p>
+<p>
+      Similarly, for Lambert <span class="emphasis"><em>W</em></span><sub>-1</sub> branch, tiny values very near
+      zero, W &gt; 64 cannot be computed using the lookup table. For this region,
+      an approximation followed by a few (usually 3) Halley refinements. See <a class="link" href="lambert_w.html#math_toolkit.lambert_w.wm1_near_zero">wm1_near_zero</a>.
+    </p>
+<p>
+      For the less well-behaved regions for Lambert <span class="emphasis"><em>W</em></span><sub>0</sub> <span class="emphasis"><em>z</em></span>
+      arguments near zero, and near the branch singularity at <span class="emphasis"><em>-1/e</em></span>,
+      some series functions are used.
+    </p>
+<h6>
+<a name="math_toolkit.lambert_w.h21"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.small_z"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.small_z">Small
+      values of argument z near zero</a>
+    </h6>
+<p>
+      When argument <span class="emphasis"><em>z</em></span> is small and near zero, there is an efficient
+      and accurate series evaluation method available (implemented in <code class="computeroutput"><span class="identifier">lambert_w0_small_z</span></code>). There is no equivalent
+      for the <span class="emphasis"><em>W</em></span><sub>-1</sub> branch as this only covers argument <code class="computeroutput"><span class="identifier">z</span> <span class="special">&lt;</span> <span class="special">-</span><span class="number">1</span><span class="special">/</span><span class="identifier">e</span></code>.
+      The cutoff used <code class="computeroutput"><span class="identifier">abs</span><span class="special">(</span><span class="identifier">z</span><span class="special">)</span> <span class="special">&lt;</span>
+      <span class="number">0.05</span></code> is as found by trial and error by
+      Fukushima.
+    </p>
+<p>
+      Coefficients of the inverted series expansion of the Lambert W function around
+      <code class="computeroutput"><span class="identifier">z</span> <span class="special">=</span>
+      <span class="number">0</span></code> are computed following Fukushima using
+      17 terms of a Taylor series computed using <a href="http://www.wolfram.com/products/mathematica/index.html" target="_top">Wolfram
+      Mathematica</a> with
+    </p>
+<pre class="programlisting"><span class="identifier">InverseSeries</span><span class="special">[</span><span class="identifier">Series</span><span class="special">[</span><span class="identifier">z</span> <span class="identifier">Exp</span><span class="special">[</span><span class="identifier">z</span><span class="special">],{</span><span class="identifier">z</span><span class="special">,</span><span class="number">0</span><span class="special">,</span><span class="number">17</span><span class="special">}]]</span>
+</pre>
+<p>
+      See Tosio Fukushima, Journal of Computational and Applied Mathematics 244 (2013),
+      page 86.
+    </p>
+<p>
+      To provide higher precision constants (34 decimal digits) for types larger
+      than <code class="computeroutput"><span class="keyword">long</span> <span class="keyword">double</span></code>,
+    </p>
+<pre class="programlisting"><span class="identifier">InverseSeries</span><span class="special">[</span><span class="identifier">Series</span><span class="special">[</span><span class="identifier">z</span> <span class="identifier">Exp</span><span class="special">[</span><span class="identifier">z</span><span class="special">],{</span><span class="identifier">z</span><span class="special">,</span><span class="number">0</span><span class="special">,</span><span class="number">34</span><span class="special">}]]</span>
+</pre>
+<p>
+      were also computed, but for current hardware it was found that evaluating a
+      <code class="computeroutput"><span class="keyword">double</span></code> precision and then refining
+      with Halley's method was quicker and more accurate.
+    </p>
+<p>
+      Decimal values of specifications for built-in floating-point types below are
+      21 digits precision == <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">max_digits10</span></code> for <code class="computeroutput"><span class="keyword">long</span>
+      <span class="keyword">double</span></code>.
+    </p>
+<p>
+      Specializations for <code class="computeroutput"><span class="identifier">lambert_w0_small_z</span></code>
+      are provided for <code class="computeroutput"><span class="keyword">float</span></code>, <code class="computeroutput"><span class="keyword">double</span></code>, <code class="computeroutput"><span class="keyword">long</span>
+      <span class="keyword">double</span></code>, <code class="computeroutput"><span class="identifier">float128</span></code>
+      and for <a href="../../../../../libs/multiprecision/doc/html/index.html" target="_top">Boost.Multiprecision</a>
+      types.
+    </p>
+<p>
+      The <code class="computeroutput"><span class="identifier">tag_type</span></code> selection is based
+      on the value <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">max_digits10</span></code>
+      (and <span class="bold"><strong>not</strong></span> on the floating-point type T). This
+      distinguishes between <code class="computeroutput"><span class="keyword">long</span> <span class="keyword">double</span></code>
+      types that commonly vary between 64 and 80-bits, and also compilers that have
+      a <code class="computeroutput"><span class="keyword">float</span></code> type using 64 bits and/or
+      <code class="computeroutput"><span class="keyword">long</span> <span class="keyword">double</span></code>
+      using 128-bits.
+    </p>
+<p>
+      As noted in the <a class="link" href="lambert_w.html#math_toolkit.lambert_w.implementation">implementation</a>
+      section above, it is only possible to ensure the nearest representable value
+      by casting from a higher precision type, computed at very, very much greater
+      cost.
+    </p>
+<p>
+      For multiprecision types, first several terms of the series are tabulated and
+      evaluated as a polynomial: (this will save us a bunch of expensive calls to
+      <code class="computeroutput"><span class="identifier">pow</span></code>). Then our series functor
+      is initialized "as if" it had already reached term 18, enough evaluation
+      of built-in 64-bit double and float (and 80-bit <code class="computeroutput"><span class="keyword">long</span>
+      <span class="keyword">double</span></code>) types. Finally the functor is
+      called repeatedly to compute as many additional series terms as necessary to
+      achieve the desired precision, set from <code class="computeroutput"><span class="identifier">get_epsilon</span></code>
+      (or terminated by <code class="computeroutput"><span class="identifier">evaluation_error</span></code>
+      on reaching the set iteration limit <code class="computeroutput"><span class="identifier">max_series_iterations</span></code>).
+    </p>
+<p>
+      A little more than one decimal digit of precision is gained by each additional
+      series term. This allows computation of Lambert W near zero to at least 1000
+      decimal digit precision, given sufficient compute time.
+    </p>
+<h5>
+<a name="math_toolkit.lambert_w.h22"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.near_singularity"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.near_singularity">Argument
+      z near the singularity at -1/e between branches <span class="emphasis"><em>W</em></span><sub>0</sub> and
+      <span class="emphasis"><em>W</em></span><sub>-1</sub> </a>
+    </h5>
+<p>
+      Variants of Function <code class="computeroutput"><span class="identifier">lambert_w_singularity_series</span></code>
+      are used to handle <span class="emphasis"><em>z</em></span> arguments which are near to the singularity
+      at <code class="computeroutput"><span class="identifier">z</span> <span class="special">=</span>
+      <span class="special">-</span><span class="identifier">exp</span><span class="special">(-</span><span class="number">1</span><span class="special">)</span>
+      <span class="special">=</span> <span class="special">-</span><span class="number">3.6787944</span></code> where the branches <span class="emphasis"><em>W</em></span><sub>0</sub> and
+      <span class="emphasis"><em>W</em></span><sub>-1</sub> join.
+    </p>
+<p>
+      T. Fukushima / Journal of Computational and Applied Mathematics 244 (2013)
+      77-89 describes using <a href="http://www.wolfram.com/products/mathematica/index.html" target="_top">Wolfram
+      Mathematica</a>
+    </p>
+<pre class="programlisting"><span class="identifier">InverseSeries</span><span class="special">\[</span><span class="identifier">Series</span><span class="special">\[</span><span class="identifier">sqrt</span><span class="special">\[</span><span class="number">2</span><span class="special">(</span><span class="identifier">p</span> <span class="identifier">Exp</span><span class="special">\[</span><span class="number">1</span> <span class="special">+</span> <span class="identifier">p</span><span class="special">\]</span> <span class="special">+</span> <span class="number">1</span><span class="special">)\],</span> <span class="special">{</span><span class="identifier">p</span><span class="special">,-</span><span class="number">1</span><span class="special">,</span> <span class="number">20</span><span class="special">}\]\]</span>
+</pre>
+<p>
+      to provide his Table 3, page 85.
+    </p>
+<p>
+      This implementation used <a href="http://www.wolfram.com/products/mathematica/index.html" target="_top">Wolfram
+      Mathematica</a> to obtain 40 series terms at 50 decimal digit precision
+    </p>
+<pre class="programlisting"><span class="identifier">N</span><span class="special">\[</span><span class="identifier">InverseSeries</span><span class="special">\[</span><span class="identifier">Series</span><span class="special">\[</span><span class="identifier">Sqrt</span><span class="special">\[</span><span class="number">2</span><span class="special">(</span><span class="identifier">p</span> <span class="identifier">Exp</span><span class="special">\[</span><span class="number">1</span> <span class="special">+</span> <span class="identifier">p</span><span class="special">\]</span> <span class="special">+</span> <span class="number">1</span><span class="special">)\],</span> <span class="special">{</span> <span class="identifier">p</span><span class="special">,-</span><span class="number">1</span><span class="special">,</span><span class="number">40</span> <span class="special">}\]\],</span> <span class="number">50</span><span class="special">\]</span>
+
+<span class="special">-</span><span class="number">1</span><span class="special">+</span><span class="identifier">p</span><span class="special">-</span><span class="identifier">p</span><span class="special">^</span><span class="number">2</span><span class="special">/</span><span class="number">3</span><span class="special">+(</span><span class="number">11</span> <span class="identifier">p</span><span class="special">^</span><span class="number">3</span><span class="special">)/</span><span class="number">72</span><span class="special">-(</span><span class="number">43</span> <span class="identifier">p</span><span class="special">^</span><span class="number">4</span><span class="special">)/</span><span class="number">540</span><span class="special">+(</span><span class="number">769</span> <span class="identifier">p</span><span class="special">^</span><span class="number">5</span><span class="special">)/</span><span class="number">17280</span><span class="special">-(</span><span class="number">221</span> <span class="identifier">p</span><span class="special">^</span><span class="number">6</span><span class="special">)/</span><span class="number">8505</span><span class="special">+(</span><span class="number">680863</span> <span class="identifier">p</span><span class="special">^</span><span class="number">7</span><span class="special">)/</span><span class="number">43545600</span> <span class="special">...</span>
+</pre>
+<p>
+      These constants are computed at compile time for the full precision for any
+      <code class="computeroutput"><span class="identifier">RealType</span> <span class="identifier">T</span></code>
+      using the original rationals from Fukushima Table 3.
+    </p>
+<p>
+      Longer decimal digits strings are rationals pre-evaluated using <a href="http://www.wolfram.com/products/mathematica/index.html" target="_top">Wolfram
+      Mathematica</a>. Some integer constants overflow, so largest size available
+      is used, suffixed by <code class="computeroutput"><span class="identifier">uLL</span></code>.
+    </p>
+<p>
+      Above the 14th term, the rationals exceed the range of <code class="computeroutput"><span class="keyword">unsigned</span>
+      <span class="keyword">long</span> <span class="keyword">long</span></code>
+      and are replaced by pre-computed decimal values at least 21 digits precision
+      == <code class="computeroutput"><span class="identifier">max_digits10</span></code> for <code class="computeroutput"><span class="keyword">long</span> <span class="keyword">double</span></code>.
+    </p>
+<p>
+      A macro <code class="computeroutput"><span class="identifier">BOOST_MATH_TEST_VALUE</span></code>
+      (defined in <a href="../../../test/test_value.hpp" target="_top">test_value.hpp</a>)
+      taking a decimal floating-point literal was used to allow testing with both
+      built-in floating-point types like <code class="computeroutput"><span class="keyword">double</span></code>
+      which have constructors taking literal decimal values like <code class="computeroutput"><span class="number">3.14</span></code>,
+      <span class="bold"><strong>and</strong></span> also multiprecision and other User-defined
+      Types that only provide full-precision construction from decimal digit strings
+      like <code class="computeroutput"><span class="string">"3.14"</span></code>. (Construction
+      of multiprecision types from built-in floating-point types only provides the
+      precision of the built-in type, like <code class="computeroutput"><span class="keyword">double</span></code>,
+      only 17 decimal digits).
+    </p>
+<div class="tip"><table border="0" summary="Tip">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="../../../../../doc/src/images/tip.png"></td>
+<th align="left">Tip</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+        Be exceeding careful not to silently lose precision by constructing multiprecision
+        types from literal decimal types, usually <code class="literal">double</code>. Use
+        decimal digit strings like "3.1459" instead. See examples.
+      </p></td></tr>
+</table></div>
+<p>
+      Fukushima's implementation used 20 series terms; it was confirmed that using
+      more terms does not usefully increase accuracy.
+    </p>
+<h6>
+<a name="math_toolkit.lambert_w.h23"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.wm1_near_zero"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.wm1_near_zero">Lambert
+      <span class="emphasis"><em>W</em></span><sub>-1</sub> arguments values very near zero.</a>
+    </h6>
+<p>
+      The lookup tables of Fukushima have only 64 elements, so that the z argument
+      nearest zero is -1.0264389699511303e-26, that corresponds to a maximum Lambert
+      <span class="emphasis"><em>W</em></span><sub>-1</sub> value of 64.0. Fukushima's implementation did not cater
+      for z argument values that are smaller (nearer to zero), but this implementation
+      adds code to accept smaller (but not denormalised) values of z. A crude approximation
+      for these very small values is to take the exponent and multiply by ln[10]
+      ~= 2.3. We also tried the approximation first proposed by Corless et al. using
+      ln(-z), (equation 4.19 page 349) and then tried improving by a 2nd term -ln(ln(-z)),
+      and finally the ratio term -ln(ln(-z))/ln(-z).
+    </p>
+<p>
+      For a z very close to z = -1.0264389699511303e-26 when W = 64, when effect
+      of ln(ln(-z) term, and ratio L1/L2 is greatest, the possible 'guesses' are
+    </p>
+<pre class="programlisting"><span class="identifier">z</span> <span class="special">=</span> <span class="special">-</span><span class="number">1.e-26</span><span class="special">,</span> <span class="identifier">w</span> <span class="special">=</span> <span class="special">-</span><span class="number">64.02</span><span class="special">,</span> <span class="identifier">guess</span> <span class="special">=</span> <span class="special">-</span><span class="number">64.0277</span><span class="special">,</span> <span class="identifier">ln</span><span class="special">(-</span><span class="identifier">z</span><span class="special">)</span> <span class="special">=</span> <span class="special">-</span><span class="number">59.8672</span><span class="special">,</span> <span class="identifier">ln</span><span class="special">(-</span><span class="identifier">ln</span><span class="special">(-</span><span class="identifier">z</span><span class="special">)</span> <span class="special">=</span> <span class="number">4.0921</span><span class="special">,</span> <span class="identifier">llz</span><span class="special">/</span><span class="identifier">lz</span> <span class="special">=</span> <span class="special">-</span><span class="number">0.0684</span>
+</pre>
+<p>
+      whereas at the minimum (unnormalized) z
+    </p>
+<pre class="programlisting"><span class="identifier">z</span> <span class="special">=</span> <span class="special">-</span><span class="number">2.2250e-308</span><span class="special">,</span> <span class="identifier">w</span> <span class="special">=</span> <span class="special">-</span><span class="number">714.9</span><span class="special">,</span> <span class="identifier">guess</span> <span class="special">=</span> <span class="special">-</span><span class="number">714.9687</span><span class="special">,</span> <span class="identifier">ln</span><span class="special">(-</span><span class="identifier">z</span><span class="special">)</span> <span class="special">=</span> <span class="special">-</span><span class="number">708.3964</span><span class="special">,</span> <span class="identifier">ln</span><span class="special">(-</span><span class="identifier">ln</span><span class="special">(-</span><span class="identifier">z</span><span class="special">)</span> <span class="special">=</span> <span class="number">6.5630</span><span class="special">,</span> <span class="identifier">llz</span><span class="special">/</span><span class="identifier">lz</span> <span class="special">=</span> <span class="special">-</span><span class="number">0.0092</span>
+</pre>
+<p>
+      Although the addition of the 3rd ratio term did not reduce the number of Halley
+      iterations needed, it might allow return of a better low precision estimate
+      <span class="bold"><strong>without any Halley iterations</strong></span>. For the worst
+      case near w = 64, the error in the 'guess' is 0.008, ratio 0.0001 or 1 in 10,000
+      digits 10 ~= 4. Two log evaluations are still needed, but is probably over
+      an order of magnitude faster.
+    </p>
+<p>
+      Halley's method was then used to refine the estimate of Lambert <span class="emphasis"><em>W</em></span><sub>-1</sub> from
+      this guess. Experiments showed that although all approximations reached with
+      <a href="http://en.wikipedia.org/wiki/Unit_in_the_last_place" target="_top">Unit in the
+      last place (ULP)</a> of the closest representable value, the computational
+      cost of the log functions was easily paid by far fewer iterations (typically
+      from 8 down to 4 iterations for double or float).
+    </p>
+<h6>
+<a name="math_toolkit.lambert_w.h24"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.halley"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.halley">Halley
+      refinement</a>
+    </h6>
+<p>
+      After obtaining a double approximation, for <code class="computeroutput"><span class="keyword">double</span></code>,
+      <code class="computeroutput"><span class="keyword">long</span> <span class="keyword">double</span></code>
+      and <code class="computeroutput"><span class="identifier">quad</span></code> 128-bit precision,
+      a single iteration should suffice because Halley iteration should triple the
+      precision with each step (as long as the function is well behaved - and it
+      is), and since we have at least half of the bits correct already, one Halley
+      step is ample to get to 128-bit precision.
+    </p>
+<h6>
+<a name="math_toolkit.lambert_w.h25"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.lambert_w_derivatives"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.lambert_w_derivatives">Lambert
+      W Derivatives</a>
+    </h6>
+<p>
+      The derivatives are computed using the formulae in <a href="https://en.wikipedia.org/wiki/Lambert_W_function#Derivative" target="_top">Wikipedia</a>.
+    </p>
+<h5>
+<a name="math_toolkit.lambert_w.h26"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.testing"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.testing">Testing</a>
+    </h5>
+<p>
+      Initial testing of the algorithm was done using a small number of spot tests.
+    </p>
+<p>
+      After it was established that the underlying algorithm (including unlimited
+      Halley refinements with a tight terminating criterion) was correct, some tables
+      of Lambert W values were computed using a 100 decimal digit precision <a href="../../../../../libs/multiprecision/doc/html/index.html" target="_top">Boost.Multiprecision</a>
+      <code class="computeroutput"><span class="identifier">cpp_dec_float_100</span></code> type and
+      saved as a C++ program that will initialise arrays of values of z arguments
+      and lambert_W0 (<code class="computeroutput"><span class="identifier">lambert_w_mp_high_values</span><span class="special">.</span><span class="identifier">ipp</span></code> and
+      <code class="computeroutput"><span class="identifier">lambert_w_mp_low_values</span><span class="special">.</span><span class="identifier">ipp</span></code> ).
+    </p>
+<p>
+      (A few of these pairs were checked against values computed by Wolfram Alpha
+      to try to guard against mistakes; all those tested agreed to the penultimate
+      decimal place, so they can be considered reliable to at least 98 decimal digits
+      precision).
+    </p>
+<p>
+      A macro <code class="computeroutput"><span class="identifier">BOOST_MATH_TEST_VALUE</span></code>
+      was used to allow tests with any real type, both <a href="http://en.cppreference.com/w/cpp/language/types" target="_top">fundamental
+      (built-in) types</a> and <a href="../../../../../libs/multiprecision/doc/html/index.html" target="_top">Boost.Multiprecision</a>.
+      (This is necessary because <a href="http://en.cppreference.com/w/cpp/language/types" target="_top">fundamental
+      (built-in) types</a> have a constructor from floating-point literals like
+      3.1459F, 3.1459 or 3.1459L whereas <a href="../../../../../libs/multiprecision/doc/html/index.html" target="_top">Boost.Multiprecision</a>
+      types may lose precision unless constructed from decimal digits strings like
+      "3.1459").
+    </p>
+<p>
+      The 100-decimal digits precision pairs were then used to assess the precision
+      of less-precise types, including <a href="../../../../../libs/multiprecision/doc/html/index.html" target="_top">Boost.Multiprecision</a>
+      <code class="computeroutput"><span class="identifier">cpp_bin_float_quad</span></code> and <code class="computeroutput"><span class="identifier">cpp_bin_float_50</span></code>. <code class="computeroutput"><span class="keyword">static_cast</span></code>ing
+      from the high precision types should give the closest representable value of
+      the less-precise type; this is then be used to assess the precision of the
+      Lambert W algorithm.
+    </p>
+<p>
+      Tests using confirm that over nearly all the range of z arguments, nearly all
+      estimates are the nearest <a href="http://en.wikipedia.org/wiki/Floating_point#Representable_numbers.2C_conversion_and_rounding" target="_top">representable</a>
+      value, a minority are within 1 <a href="http://en.wikipedia.org/wiki/Unit_in_the_last_place" target="_top">Unit
+      in the last place (ULP)</a> and only a very few 2 ULP.
+    </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+        <span class="inlinemediaobject"><img src="../../graphs/lambert_w0_errors_graph.svg" align="middle"></span>
+
+      </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+        <span class="inlinemediaobject"><img src="../../graphs/lambert_wm1_errors_graph.svg" align="middle"></span>
+
+      </p></blockquote></div>
+<p>
+      For the range of z arguments over the range -0.35 to 0.5, a different algorithm
+      is used, but the same technique of evaluating reference values using a <a href="../../../../../libs/multiprecision/doc/html/index.html" target="_top">Boost.Multiprecision</a>
+      <code class="computeroutput"><span class="identifier">cpp_dec_float_100</span></code> was used.
+      For extremely small z arguments, near zero, and those extremely near the singularity
+      at the branch point, precision can be much lower, as might be expected.
+    </p>
+<p>
+      See source at: <a href="../../../example/lambert_w_simple_examples.cpp" target="_top">lambert_w_simple_examples.cpp</a>
+      <a href="../../../test/test_lambert_w.cpp" target="_top">test_lambert_w.cpp</a> contains
+      routine tests using <a href="https://www.boost.org/doc/libs/release/libs/test/doc/html/index.html" target="_top">Boost.Test</a>.
+      <a href="../../../tools/lambert_w_errors_graph.cpp" target="_top">lambert_w_errors_graph.cpp</a>
+      generating error graphs.
+    </p>
+<h6>
+<a name="math_toolkit.lambert_w.h27"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.quadrature_testing"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.quadrature_testing">Testing
+      with quadrature</a>
+    </h6>
+<p>
+      A further method of testing over a wide range of argument z values was devised
+      by Nick Thompson (cunningly also to test the recently written quadrature routines
+      including <a href="../../../../../libs/multiprecision/doc/html/index.html" target="_top">Boost.Multiprecision</a>
+      !). These are definite integral formulas involving the W function that are
+      exactly known constants, for example, LambertW0(1/(z²) == √(2π), see <a href="https://en.wikipedia.org/wiki/Lambert_W_function#Definite_integrals" target="_top">Definite
+      Integrals</a>. Some care was needed to avoid overflow and underflow as
+      the integral function must evaluate to a finite result over the entire range.
+    </p>
+<h6>
+<a name="math_toolkit.lambert_w.h28"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.other_implementations"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.other_implementations">Other
+      implementations</a>
+    </h6>
+<p>
+      The Lambert W has also been discussed in a <a href="http://lists.boost.org/Archives/boost/2016/09/230819.php" target="_top">Boost
+      thread</a>.
+    </p>
+<p>
+      This also gives link to a prototype version by which also gives complex results
+      <code class="literal">(x &lt; -exp(-1)</code>, about -0.367879). <a href="https://github.com/CzB404/lambert_w/" target="_top">Balazs
+      Cziraki 2016</a> Physicist, PhD student at Eotvos Lorand University, ELTE
+      TTK Institute of Physics, Budapest. has also produced a prototype C++ library
+      that can compute the Lambert W function for floating point <span class="bold"><strong>and
+      complex number types</strong></span>. This is not implemented here but might be
+      completed in the future.
+    </p>
+<h5>
+<a name="math_toolkit.lambert_w.h29"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.acknowledgements"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.acknowledgements">Acknowledgements</a>
+    </h5>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          Thanks to Wolfram for use of their invaluable online Wolfram Alpha service.
+        </li>
+<li class="listitem">
+          Thanks for Mark Chapman for performing offline Wolfram computations.
+        </li>
+</ul></div>
+<h5>
+<a name="math_toolkit.lambert_w.h30"></a>
+      <span class="phrase"><a name="math_toolkit.lambert_w.references"></a></span><a class="link" href="lambert_w.html#math_toolkit.lambert_w.references">References</a>
+    </h5>
+<div class="orderedlist"><ol class="orderedlist" type="1">
+<li class="listitem">
+          NIST Digital Library of Mathematical Functions. <a href="http://dlmf.nist.gov/4.13.F1" target="_top">http://dlmf.nist.gov/4.13.F1</a>.
+        </li>
+<li class="listitem">
+          <a href="http://www.orcca.on.ca/LambertW/" target="_top">Lambert W Poster</a>,
+          R. M. Corless, G. H. Gonnet, D. E. G. Hare, D. J. Jeffery and D. E. Knuth,
+          On the Lambert W function Advances in Computational Mathematics, Vol 5,
+          (1996) pp 329-359.
+        </li>
+<li class="listitem">
+          <a href="https://people.sc.fsu.edu/~jburkardt/f_src/toms443/toms443.html" target="_top">TOMS443</a>,
+          Andrew Barry, S. J. Barry, Patricia Culligan-Hensley, Algorithm 743: WAPR
+          - A Fortran routine for calculating real values of the W-function,<br>
+          ACM Transactions on Mathematical Software, Volume 21, Number 2, June 1995,
+          pages 172-181.<br> BISECT approximates the W function using bisection
+          (GNU licence). Original FORTRAN77 version by Andrew Barry, S. J. Barry,
+          Patricia Culligan-Hensley, this version by C++ version by John Burkardt.
+        </li>
+<li class="listitem">
+          <a href="https://people.sc.fsu.edu/~jburkardt/f_src/toms743/toms743.html" target="_top">TOMS743</a>
+          Fortran 90 (updated 2014).
+        </li>
+</ol></div>
+<p>
+      Initial guesses based on:
+    </p>
+<div class="orderedlist"><ol class="orderedlist" type="1">
+<li class="listitem">
+          R.M.Corless, G.H.Gonnet, D.E.G.Hare, D.J.Jeffrey, and D.E.Knuth, On the
+          Lambert W function, Adv.Comput.Math., vol. 5, pp. 329 to 359, (1996).
+        </li>
+<li class="listitem">
+          D.A. Barry, J.-Y. Parlange, L. Li, H. Prommer, C.J. Cunningham, and F.
+          Stagnitti. Analytical approximations for real values of the Lambert W-function.
+          Mathematics and Computers in Simulation, 53(1), 95-103 (2000).
+        </li>
+<li class="listitem">
+          D.A. Barry, J.-Y. Parlange, L. Li, H. Prommer, C.J. Cunningham, and F.
+          Stagnitti. Erratum to analytical approximations for real values of the
+          Lambert W-function. Mathematics and Computers in Simulation, 59(6):543-543,
+          2002.
+        </li>
+<li class="listitem">
+          C++ <a href="https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#c-cplusplus-language-support" target="_top">CUDA
+          NVidia GPU C/C++ language support</a> version of Luu algorithm, <a href="https://github.com/thomasluu/plog/blob/master/plog.cu" target="_top">plog</a>.
+        </li>
+<li class="listitem">
+          <a href="http://discovery.ucl.ac.uk/1482128/1/Luu_thesis.pdf" target="_top">Thomas
+          Luu, Thesis, University College London (2015)</a>, see routine 11,
+          page 98 for Lambert W algorithm.
+        </li>
+<li class="listitem">
+          Having Fun with Lambert W(x) Function, Darko Veberic University of Nova
+          Gorica, Slovenia IK, Forschungszentrum Karlsruhe, Germany, J. Stefan Institute,
+          Ljubljana, Slovenia.
+        </li>
+<li class="listitem">
+          François Chapeau-Blondeau and Abdelilah Monir, Numerical Evaluation of the
+          Lambert W Function and Application to Generation of Generalized Gaussian
+          Noise With Exponent 1/2, IEEE Transactions on Signal Processing, 50(9)
+          (2002) 2160 - 2165.
+        </li>
+<li class="listitem">
+          Toshio Fukushima, Precise and fast computation of Lambert W-functions without
+          transcendental function evaluations, Journal of Computational and Applied
+          Mathematics, 244 (2013) 77-89.
+        </li>
+<li class="listitem">
+          T.C. Banwell and A. Jayakumar, Electronic Letter, Feb 2000, 36(4), pages
+          291-2. Exact analytical solution for current flow through diode with series
+          resistance. <a href="https://doi.org/10.1049/el:20000301" target="_top">https://doi.org/10.1049/el:20000301</a>
+        </li>
+<li class="listitem">
+          Princeton Companion to Applied Mathematics, 'The Lambert-W function', Section
+          1.3: Series and Generating Functions.
+        </li>
+<li class="listitem">
+          Cleve Moler, Mathworks blog <a href="https://blogs.mathworks.com/cleve/2013/09/02/the-lambert-w-function/#bfba4e2d-e049-45a6-8285-fe8b51d69ce7" target="_top">The
+          Lambert W Function</a>
+        </li>
+<li class="listitem">
+          Digital Library of Mathematical Function, <a href="https://dlmf.nist.gov/4.13" target="_top">Lambert
+          W function</a>.
+        </li>
+</ol></div>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="jacobi_theta/jacobi_theta4.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../special.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="zetas.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>
