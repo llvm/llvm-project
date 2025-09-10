@@ -227,8 +227,10 @@ def OMPC_GrainSize : Clause<[Spelling<"grainsize">]> {
   ];
 }
 def OMPC_GraphId : Clause<[Spelling<"graph_id">]> {
+  let flangClass = "OmpGraphIdClause";
 }
 def OMPC_GraphReset : Clause<[Spelling<"graph_reset">]> {
+  let flangClass = "OmpGraphResetClause";
 }
 def OMPC_HasDeviceAddr : Clause<[Spelling<"has_device_addr">]> {
   let clangClass = "OMPHasDeviceAddrClause";
