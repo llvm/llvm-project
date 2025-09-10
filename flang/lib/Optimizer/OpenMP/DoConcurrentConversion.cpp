@@ -201,6 +201,52 @@ static void localizeLoopLocalValue(mlir::Value local, mlir::Region &allocRegion,
 
 class DoConcurrentConversion
     : public mlir::OpConversionPattern<fir::DoConcurrentOp> {
+private:
+  struct TargetDeclareShapeCreationInfo {
+    // Note: We use `std::vector` (rather than `llvm::SmallVector` as usual) to
+    // interface more easily `ShapeShiftOp::getOrigins()` which returns
+    // `std::vector`.
+    std::vector<mlir::Value> startIndices;
+    std::vector<mlir::Value> extents;
+
+    TargetDeclareShapeCreationInfo(mlir::Value liveIn) {
+      mlir::Value shape = nullptr;
+      mlir::Operation *liveInDefiningOp = liveIn.getDefiningOp();
+      auto declareOp =
+          mlir::dyn_cast_if_present<hlfir::DeclareOp>(liveInDefiningOp);
+
+      if (declareOp != nullptr)
+        shape = declareOp.getShape();
+
+      if (!shape)
+        return;
+
+      auto shapeOp =
+          mlir::dyn_cast_if_present<fir::ShapeOp>(shape.getDefiningOp());
+      auto shapeShiftOp =
+          mlir::dyn_cast_if_present<fir::ShapeShiftOp>(shape.getDefiningOp());
+
+      if (!shapeOp && !shapeShiftOp)
+        TODO(liveIn.getLoc(),
+             "Shapes not defined by `fir.shape` or `fir.shape_shift` op's are"
+             "not supported yet.");
+
+      if (shapeShiftOp != nullptr)
+        startIndices = shapeShiftOp.getOrigins();
+
+      extents = shapeOp != nullptr
+                    ? std::vector<mlir::Value>(shapeOp.getExtents().begin(),
+                                               shapeOp.getExtents().end())
+                    : shapeShiftOp.getExtents();
+    }
+
+    bool isShapedValue() const { return !extents.empty(); }
+    bool isShapeShiftedValue() const { return !startIndices.empty(); }
+  };
+
+  using LiveInShapeInfoMap =
+      llvm::DenseMap<mlir::Value, TargetDeclareShapeCreationInfo>;
+
 public:
   using mlir::OpConversionPattern<fir::DoConcurrentOp>::OpConversionPattern;
 
@@ -325,51 +371,6 @@ public:
   }
 
 private:
-  struct TargetDeclareShapeCreationInfo {
-    // Note: We use `std::vector` (rather than `llvm::SmallVector` as usual) to
-    // interface more easily `ShapeShiftOp::getOrigins()` which returns
-    // `std::vector`.
-    std::vector<mlir::Value> startIndices{};
-    std::vector<mlir::Value> extents{};
-
-    TargetDeclareShapeCreationInfo(mlir::Value liveIn) {
-      mlir::Value shape = nullptr;
-      mlir::Operation *liveInDefiningOp = liveIn.getDefiningOp();
-      auto declareOp =
-          mlir::dyn_cast_if_present<hlfir::DeclareOp>(liveInDefiningOp);
-
-      if (declareOp != nullptr)
-        shape = declareOp.getShape();
-
-      if (shape == nullptr)
-        return;
-
-      auto shapeOp =
-          mlir::dyn_cast_if_present<fir::ShapeOp>(shape.getDefiningOp());
-      auto shapeShiftOp =
-          mlir::dyn_cast_if_present<fir::ShapeShiftOp>(shape.getDefiningOp());
-
-      if (shapeOp == nullptr && shapeShiftOp == nullptr)
-        TODO(liveIn.getLoc(),
-             "Shapes not defined by `fir.shape` or `fir.shape_shift` op's are"
-             "not supported yet.");
-
-      if (shapeShiftOp != nullptr)
-        startIndices = shapeShiftOp.getOrigins();
-
-      extents = shapeOp != nullptr
-                    ? std::vector<mlir::Value>(shapeOp.getExtents().begin(),
-                                               shapeOp.getExtents().end())
-                    : shapeShiftOp.getExtents();
-    }
-
-    bool isShapedValue() const { return !extents.empty(); }
-    bool isShapeShiftedValue() const { return !startIndices.empty(); }
-  };
-
-  using LiveInShapeInfoMap =
-      llvm::DenseMap<mlir::Value, TargetDeclareShapeCreationInfo>;
-
   mlir::omp::ParallelOp
   genParallelOp(mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
                 looputils::InductionVariableInfos &ivInfos,
@@ -673,8 +674,8 @@ private:
         rewriter,
         fir::getKindMapping(targetOp->getParentOfType<mlir::ModuleOp>()));
 
-    // Within the loop, it possible that we discover other values that need to
-    // mapped to the target region (the shape info values for arrays, for
+    // Within the loop, it is possible that we discover other values that need
+    // to be mapped to the target region (the shape info values for arrays, for
     // example). Therefore, the map block args might be extended and resized.
     // Hence, we invoke `argIface.getMapBlockArgs()` every iteration to make
     // sure we access the proper vector of data.
@@ -687,10 +688,13 @@ private:
                            miOp, liveInShapeInfoMap.at(mappedVar));
       ++idx;
 
-      // TODO If `mappedVar.getDefiningOp()` is a `fir::BoxAddrOp`, we probably
+      // If `mappedVar.getDefiningOp()` is a `fir::BoxAddrOp`, we probably
       // need to "unpack" the box by getting the defining op of it's value.
       // However, we did not hit this case in reality yet so leaving it as a
       // todo for now.
+      if (mlir::isa<fir::BoxAddrOp>(mappedVar.getDefiningOp()))
+        TODO(mappedVar.getLoc(),
+             "Mapped variabled defined by `BoxAddrOp` are not supported yet");
 
       auto mapHostValueToDevice = [&](mlir::Value hostValue,
                                       mlir::Value deviceValue) {
