@@ -5032,11 +5032,16 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
       return false;
 
     if (auto *PN = dyn_cast<PHINode>(V)) {
-      if (llvm::any_of(PN->incoming_values(), [this, &PN](Use &U) {
-            return DT.dominates(PN->getParent(), PN->getIncomingBlock(U)) ||
-                   match(U.get(), m_Undef());
-          }))
-        return false;
+      BasicBlock *BB = PN->getParent();
+      SmallPtrSet<BasicBlock *, 8> VisitedBBs;
+      for (Use &U : PN->incoming_values()) {
+        BasicBlock *InBB = PN->getIncomingBlock(U);
+        if (DT.dominates(BB, InBB) || isBackEdge(InBB, BB) ||
+            isa<InvokeInst>(U) || VisitedBBs.contains(InBB) ||
+            match(U.get(), m_Undef()))
+          return false;
+        VisitedBBs.insert(InBB);
+      }
     }
 
     // We can't push the freeze through an instruction which can itself create
