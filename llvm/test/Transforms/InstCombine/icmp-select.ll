@@ -835,3 +835,41 @@ define i1 @discr_eq_constantexpr(ptr %p) {
   %cmp = icmp eq i64 %sub, -1
   ret i1 %cmp
 }
+
+define i1 @shl_nsw_eq(i8 %a, i1 %cond) {
+; CHECK-LABEL: @shl_nsw_eq(
+; CHECK-NEXT:    [[A:%.*]] = shl nsw i8 [[A1:%.*]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i8 8, i8 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nsw i8 %a, 3
+  %sel = select i1 %cond, i8 8, i8 0
+  %cmp = icmp eq i8 %shl, %sel
+  ret i1 %cmp
+}
+
+define i1 @shl_nuw_eq(i8 %a, i1 %cond) {
+; CHECK-LABEL: @shl_nuw_eq(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i8 1, i8 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nuw i8 %a, 3
+  %sel = select i1 %cond, i8 8, i8 32
+  %cmp = icmp eq i8 %shl, %sel
+  ret i1 %cmp
+}
+
+define i1 @shl_nuw_ne(i8 %a, i8 %b, i8 %c, i1 %cond) {
+; CHECK-LABEL: @shl_nuw_ne(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i8 [[B:%.*]], i8 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl_a = shl nuw i8 %a, 3
+  %shl_b = shl nuw i8 %b, 3
+  %sel = select i1 %cond, i8 %shl_b, i8 32
+  %cmp = icmp ne i8 %sel, %shl_a
+  ret i1 %cmp
+}
