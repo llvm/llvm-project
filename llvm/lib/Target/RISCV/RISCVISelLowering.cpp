@@ -2173,7 +2173,7 @@ bool RISCVTargetLowering::isMaskAndCmp0FoldingBeneficial(
   // on the basis that it's possible the sinking+duplication of the AND in
   // CodeGenPrepare triggered by this hook wouldn't decrease the instruction
   // count and would increase code size (e.g. ANDI+BNEZ => BEXTI+BNEZ).
-  if (!Subtarget.hasStdExtZbs() && !Subtarget.hasVendorXTHeadBs())
+  if (!Subtarget.hasBEXTILike())
     return false;
   ConstantInt *Mask = dyn_cast<ConstantInt>(AndI.getOperand(1));
   if (!Mask)
