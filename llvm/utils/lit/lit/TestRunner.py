@@ -601,6 +601,7 @@ def executeBuiltinUmask(cmd, shenv):
         raise InternalShellError(cmd, "Error: 'umask': %s" % str(err))
     return ShellCommandResult(cmd, "", "", 0, False)
 
+
 def executeBuiltinUlimit(cmd, shenv):
     """executeBuiltinUlimit - Change the current limits."""
     if os.name != "posix":
@@ -616,7 +617,9 @@ def executeBuiltinUlimit(cmd, shenv):
     elif cmd.args[1] == "-n":
         shenv.ulimit["RLIMIT_NOFILE"] = new_limit
     else:
-        raise InternalShellError(cmd, "'ulimit' does not support option: %s" % cmd.args[1])
+        raise InternalShellError(
+            cmd, "'ulimit' does not support option: %s" % cmd.args[1]
+        )
     return ShellCommandResult(cmd, "", "", 0, False)
 
 
@@ -945,7 +948,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         # with some core utility distributions.
         if kIsWindows:
             args = quote_windows_command(args)
-        
+
         # Handle any resource limits. We do this by launching the command with
         # a wrapper that sets the necessary limits. We use a wrapper rather than
         # setting the limits in process as we cannot reraise the limits back to
@@ -954,7 +957,9 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             args.insert(0, sys.executable)
             args.insert(1, os.path.join(builtin_commands_dir, "_launch_with_limit.py"))
             for limit in cmd_shenv.ulimit:
-                cmd_shenv.env["LIT_INTERNAL_ULIMIT_" + limit] = str(cmd_shenv.ulimit[limit])
+                cmd_shenv.env["LIT_INTERNAL_ULIMIT_" + limit] = str(
+                    cmd_shenv.ulimit[limit]
+                )
 
         try:
             # TODO(boomanaiden154): We currently wrap the subprocess.Popen with
