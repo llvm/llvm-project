@@ -1,9 +1,9 @@
-// RUN: mlir-opt %s --test-remark --remarks-passed="category-1-passed" 2>&1 | FileCheck %s -check-prefix=CHECK-PASSED 
-// RUN: mlir-opt %s --test-remark --remarks-missed="a-category-1-missed" 2>&1 | FileCheck %s -check-prefix=CHECK-MISSED
-// RUN: mlir-opt %s --test-remark --remarks-failed="category-2-failed" 2>&1 | FileCheck %s -check-prefix=CHECK-FAILED
-// RUN: mlir-opt %s --test-remark --remarks-analyse="category-2-analysis" 2>&1 | FileCheck %s -check-prefix=CHECK-ANALYSIS
-// RUN: mlir-opt %s --test-remark --remarks="category.*" 2>&1 | FileCheck %s -check-prefix=CHECK-ALL
-// RUN: mlir-opt %s --test-remark --remarks="category-1.*" 2>&1 | FileCheck %s -check-prefix=CHECK-ALL1
+// RUN: mlir-opt %s --test-remark --remarks-passed-filter="category-1-passed" 2>&1 | FileCheck %s -check-prefix=CHECK-PASSED 
+// RUN: mlir-opt %s --test-remark --remarks-missed-filter="a-category-1-missed" 2>&1 | FileCheck %s -check-prefix=CHECK-MISSED
+// RUN: mlir-opt %s --test-remark --remarks-failed-filter="category-2-failed" 2>&1 | FileCheck %s -check-prefix=CHECK-FAILED
+// RUN: mlir-opt %s --test-remark --remarks-analyse-filter="category-2-analysis" 2>&1 | FileCheck %s -check-prefix=CHECK-ANALYSIS
+// RUN: mlir-opt %s --test-remark --remarks-filter="category.*" 2>&1 | FileCheck %s -check-prefix=CHECK-ALL
+// RUN: mlir-opt %s --test-remark --remarks-filter="category-1.*" 2>&1 | FileCheck %s -check-prefix=CHECK-ALL1
 module @foo {
   "test.op"() : () -> ()
   

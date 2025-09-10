@@ -226,7 +226,7 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         llvm::cl::cat(remarkCategory)};
 
     static cl::opt<std::string, /*ExternalStorage=*/true> remarksAll(
-        "remarks",
+        "remarks-filter",
         cl::desc("Show all remarks: passed, missed, failed, analysis"),
         cl::location(remarksAllFilterFlag), cl::init(""),
         cl::cat(remarkCategory));
@@ -240,22 +240,22 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         cl::cat(remarkCategory));
 
     static cl::opt<std::string, /*ExternalStorage=*/true> remarksPassed(
-        "remarks-passed", cl::desc("Show passed remarks"),
+        "remarks-passed-filter", cl::desc("Show passed remarks"),
         cl::location(remarksPassedFilterFlag), cl::init(""),
         cl::cat(remarkCategory));
 
     static cl::opt<std::string, /*ExternalStorage=*/true> remarksFailed(
-        "remarks-failed", cl::desc("Show failed remarks"),
+        "remarks-failed-filter", cl::desc("Show failed remarks"),
         cl::location(remarksFailedFilterFlag), cl::init(""),
         cl::cat(remarkCategory));
 
     static cl::opt<std::string, /*ExternalStorage=*/true> remarksMissed(
-        "remarks-missed", cl::desc("Show missed remarks"),
+        "remarks-missed-filter", cl::desc("Show missed remarks"),
         cl::location(remarksMissedFilterFlag), cl::init(""),
         cl::cat(remarkCategory));
 
     static cl::opt<std::string, /*ExternalStorage=*/true> remarksAnalyse(
-        "remarks-analyse", cl::desc("Show analysis remarks"),
+        "remarks-analyse-filter", cl::desc("Show analysis remarks"),
         cl::location(remarksAnalyseFilterFlag), cl::init(""),
         cl::cat(remarkCategory));
 
