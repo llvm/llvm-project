@@ -152,8 +152,6 @@ define amdgpu_kernel void @flat_nontemporal_load_0(
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_load_b32 v1, v0, s[2:3] scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_bvhcnt 0x0
-; GFX1250-NEXT:    s_wait_samplecnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
@@ -433,8 +431,6 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ; GFX1250-NEXT:    v_and_b32_e64 v1, v1, s4
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_load_b32 v1, v1, s[2:3] scale_offset scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_bvhcnt 0x0
-; GFX1250-NEXT:    s_wait_samplecnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
@@ -1151,7 +1147,9 @@ define amdgpu_kernel void @flat_volatile_workgroup_release_store(
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1250-NEXT:    s_wait_dscnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
    i32 %in, ptr %out) {

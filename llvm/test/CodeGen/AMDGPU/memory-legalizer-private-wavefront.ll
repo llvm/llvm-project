@@ -984,6 +984,7 @@ define amdgpu_kernel void @private_wavefront_unordered_store(
 ; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
     i32 %in, ptr addrspace(5) %out) {
@@ -1162,6 +1163,7 @@ define amdgpu_kernel void @private_wavefront_monotonic_store(
 ; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
     i32 %in, ptr addrspace(5) %out) {
@@ -1340,6 +1342,7 @@ define amdgpu_kernel void @private_wavefront_release_store(
 ; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
     i32 %in, ptr addrspace(5) %out) {
@@ -1518,6 +1521,7 @@ define amdgpu_kernel void @private_wavefront_seq_cst_store(
 ; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
     i32 %in, ptr addrspace(5) %out) {
@@ -1696,6 +1700,7 @@ define amdgpu_kernel void @private_wavefront_monotonic_atomicrmw(
 ; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v[0:1], v2
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in) {
@@ -1874,6 +1879,7 @@ define amdgpu_kernel void @private_wavefront_acquire_atomicrmw(
 ; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v[0:1], v2
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in) {
@@ -2052,6 +2058,7 @@ define amdgpu_kernel void @private_wavefront_release_atomicrmw(
 ; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v[0:1], v2
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in) {
@@ -2230,6 +2237,7 @@ define amdgpu_kernel void @private_wavefront_acq_rel_atomicrmw(
 ; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v[0:1], v2
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in) {
@@ -2408,6 +2416,7 @@ define amdgpu_kernel void @private_wavefront_seq_cst_atomicrmw(
 ; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v[0:1], v2
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in) {
@@ -2640,6 +2649,7 @@ define amdgpu_kernel void @private_wavefront_acquire_ret_atomicrmw(
 ; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -2875,6 +2885,7 @@ define amdgpu_kernel void @private_wavefront_acq_rel_ret_atomicrmw(
 ; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -3110,6 +3121,7 @@ define amdgpu_kernel void @private_wavefront_seq_cst_ret_atomicrmw(
 ; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -3381,6 +3393,7 @@ define amdgpu_kernel void @private_wavefront_monotonic_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -3650,6 +3663,7 @@ define amdgpu_kernel void @private_wavefront_acquire_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -3919,6 +3933,7 @@ define amdgpu_kernel void @private_wavefront_release_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -4188,6 +4203,7 @@ define amdgpu_kernel void @private_wavefront_acq_rel_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -4457,6 +4473,7 @@ define amdgpu_kernel void @private_wavefront_seq_cst_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -4726,6 +4743,7 @@ define amdgpu_kernel void @private_wavefront_monotonic_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -4995,6 +5013,7 @@ define amdgpu_kernel void @private_wavefront_acquire_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -5264,6 +5283,7 @@ define amdgpu_kernel void @private_wavefront_release_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -5533,6 +5553,7 @@ define amdgpu_kernel void @private_wavefront_acq_rel_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -5802,6 +5823,7 @@ define amdgpu_kernel void @private_wavefront_seq_cst_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -6071,6 +6093,7 @@ define amdgpu_kernel void @private_wavefront_monotonic_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -6340,6 +6363,7 @@ define amdgpu_kernel void @private_wavefront_acquire_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -6609,6 +6633,7 @@ define amdgpu_kernel void @private_wavefront_release_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -6878,6 +6903,7 @@ define amdgpu_kernel void @private_wavefront_acq_rel_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -7147,6 +7173,7 @@ define amdgpu_kernel void @private_wavefront_seq_cst_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -7444,6 +7471,7 @@ define amdgpu_kernel void @private_wavefront_monotonic_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -7745,6 +7773,7 @@ define amdgpu_kernel void @private_wavefront_acquire_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -8046,6 +8075,7 @@ define amdgpu_kernel void @private_wavefront_release_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -8347,6 +8377,7 @@ define amdgpu_kernel void @private_wavefront_acq_rel_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -8648,6 +8679,7 @@ define amdgpu_kernel void @private_wavefront_seq_cst_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -8949,6 +8981,7 @@ define amdgpu_kernel void @private_wavefront_monotonic_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -9250,6 +9283,7 @@ define amdgpu_kernel void @private_wavefront_acquire_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -9551,6 +9585,7 @@ define amdgpu_kernel void @private_wavefront_release_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -9852,6 +9887,7 @@ define amdgpu_kernel void @private_wavefront_acq_rel_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -10153,6 +10189,7 @@ define amdgpu_kernel void @private_wavefront_seq_cst_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -10454,6 +10491,7 @@ define amdgpu_kernel void @private_wavefront_monotonic_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -10755,6 +10793,7 @@ define amdgpu_kernel void @private_wavefront_acquire_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -11056,6 +11095,7 @@ define amdgpu_kernel void @private_wavefront_release_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -11357,6 +11397,7 @@ define amdgpu_kernel void @private_wavefront_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -11658,6 +11699,7 @@ define amdgpu_kernel void @private_wavefront_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -12641,6 +12683,7 @@ define amdgpu_kernel void @private_wavefront_one_as_unordered_store(
 ; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
     i32 %in, ptr addrspace(5) %out) {
@@ -12819,6 +12862,7 @@ define amdgpu_kernel void @private_wavefront_one_as_monotonic_store(
 ; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
     i32 %in, ptr addrspace(5) %out) {
@@ -12997,6 +13041,7 @@ define amdgpu_kernel void @private_wavefront_one_as_release_store(
 ; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
     i32 %in, ptr addrspace(5) %out) {
@@ -13175,6 +13220,7 @@ define amdgpu_kernel void @private_wavefront_one_as_seq_cst_store(
 ; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
     i32 %in, ptr addrspace(5) %out) {
@@ -13353,6 +13399,7 @@ define amdgpu_kernel void @private_wavefront_one_as_monotonic_atomicrmw(
 ; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v[0:1], v2
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in) {
@@ -13531,6 +13578,7 @@ define amdgpu_kernel void @private_wavefront_one_as_acquire_atomicrmw(
 ; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v[0:1], v2
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in) {
@@ -13709,6 +13757,7 @@ define amdgpu_kernel void @private_wavefront_one_as_release_atomicrmw(
 ; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v[0:1], v2
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in) {
@@ -13887,6 +13936,7 @@ define amdgpu_kernel void @private_wavefront_one_as_acq_rel_atomicrmw(
 ; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v[0:1], v2
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in) {
@@ -14065,6 +14115,7 @@ define amdgpu_kernel void @private_wavefront_one_as_seq_cst_atomicrmw(
 ; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v[0:1], v2
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in) {
@@ -14297,6 +14348,7 @@ define amdgpu_kernel void @private_wavefront_one_as_acquire_ret_atomicrmw(
 ; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -14532,6 +14584,7 @@ define amdgpu_kernel void @private_wavefront_one_as_acq_rel_ret_atomicrmw(
 ; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -14767,6 +14820,7 @@ define amdgpu_kernel void @private_wavefront_one_as_seq_cst_ret_atomicrmw(
 ; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -15038,6 +15092,7 @@ define amdgpu_kernel void @private_wavefront_one_as_monotonic_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -15307,6 +15362,7 @@ define amdgpu_kernel void @private_wavefront_one_as_acquire_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -15576,6 +15632,7 @@ define amdgpu_kernel void @private_wavefront_one_as_release_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -15845,6 +15902,7 @@ define amdgpu_kernel void @private_wavefront_one_as_acq_rel_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -16114,6 +16172,7 @@ define amdgpu_kernel void @private_wavefront_one_as_seq_cst_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -16383,6 +16442,7 @@ define amdgpu_kernel void @private_wavefront_one_as_monotonic_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -16652,6 +16712,7 @@ define amdgpu_kernel void @private_wavefront_one_as_acquire_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -16921,6 +16982,7 @@ define amdgpu_kernel void @private_wavefront_one_as_release_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -17190,6 +17252,7 @@ define amdgpu_kernel void @private_wavefront_one_as_acq_rel_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -17459,6 +17522,7 @@ define amdgpu_kernel void @private_wavefront_one_as_seq_cst_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -17728,6 +17792,7 @@ define amdgpu_kernel void @private_wavefront_one_as_monotonic_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -17997,6 +18062,7 @@ define amdgpu_kernel void @private_wavefront_one_as_acquire_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -18266,6 +18332,7 @@ define amdgpu_kernel void @private_wavefront_one_as_release_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -18535,6 +18602,7 @@ define amdgpu_kernel void @private_wavefront_one_as_acq_rel_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -18804,6 +18872,7 @@ define amdgpu_kernel void @private_wavefront_one_as_seq_cst_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -19101,6 +19170,7 @@ define amdgpu_kernel void @private_wavefront_one_as_monotonic_monotonic_ret_cmpx
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -19402,6 +19472,7 @@ define amdgpu_kernel void @private_wavefront_one_as_acquire_monotonic_ret_cmpxch
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -19703,6 +19774,7 @@ define amdgpu_kernel void @private_wavefront_one_as_release_monotonic_ret_cmpxch
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -20004,6 +20076,7 @@ define amdgpu_kernel void @private_wavefront_one_as_acq_rel_monotonic_ret_cmpxch
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -20305,6 +20378,7 @@ define amdgpu_kernel void @private_wavefront_one_as_seq_cst_monotonic_ret_cmpxch
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -20606,6 +20680,7 @@ define amdgpu_kernel void @private_wavefront_one_as_monotonic_acquire_ret_cmpxch
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -20907,6 +20982,7 @@ define amdgpu_kernel void @private_wavefront_one_as_acquire_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -21208,6 +21284,7 @@ define amdgpu_kernel void @private_wavefront_one_as_release_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -21509,6 +21586,7 @@ define amdgpu_kernel void @private_wavefront_one_as_acq_rel_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -21810,6 +21888,7 @@ define amdgpu_kernel void @private_wavefront_one_as_seq_cst_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -22111,6 +22190,7 @@ define amdgpu_kernel void @private_wavefront_one_as_monotonic_seq_cst_ret_cmpxch
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -22412,6 +22492,7 @@ define amdgpu_kernel void @private_wavefront_one_as_acquire_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -22713,6 +22794,7 @@ define amdgpu_kernel void @private_wavefront_one_as_release_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -23014,6 +23096,7 @@ define amdgpu_kernel void @private_wavefront_one_as_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
@@ -23315,6 +23398,7 @@ define amdgpu_kernel void @private_wavefront_one_as_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SE
