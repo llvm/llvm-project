@@ -114,32 +114,38 @@ def unrelated: Instruction {
 // For 'baz' we only assigned ModeB for it, so it will be presented
 // as '0' in the tables of ModeA, ModeC and Default Mode.
 // ENCODER-LABEL:   static const uint64_t InstBits[] = {
-// ENCODER:         UINT64_C(2), UINT64_C(0),       // bar
-// ENCODER:         UINT64_C(0), UINT64_C(0),       // baz
-// ENCODER:         UINT64_C(8), UINT64_C(0),       // foo
-// ENCODER:         UINT64_C(2), UINT64_C(0),       // unrelated
+// ENCODER-NEXT:    UINT64_C(2), UINT64_C(0),       // bar
+// ENCODER-NEXT:    UINT64_C(0), UINT64_C(0),       // baz
+// ENCODER-NEXT:    UINT64_C(8), UINT64_C(0),       // foo
+// ENCODER-NEXT:    UINT64_C(2), UINT64_C(0),       // unrelated
+// ENCODER-NEXT:    };
 // ENCODER-LABEL:   static const uint64_t InstBits_ModeA[] = {
-// ENCODER:         UINT64_C(2), UINT64_C(0),       // bar
-// ENCODER:         UINT64_C(0), UINT64_C(0),       // baz
-// ENCODER:         UINT64_C(12), UINT64_C(0),      // foo
-// ENCODER:         UINT64_C(2), UINT64_C(0),       // unrelated
+// ENCODER-NEXT:    UINT64_C(2), UINT64_C(0),       // bar
+// ENCODER-NEXT:    UINT64_C(0), UINT64_C(0),       // baz
+// ENCODER-NEXT:    UINT64_C(12), UINT64_C(0),      // foo
+// ENCODER-NEXT:    UINT64_C(2), UINT64_C(0),       // unrelated
+// ENCODER-NEXT:    };
 // ENCODER-LABEL:   static const uint64_t InstBits_ModeB[] = {
-// ENCODER:         UINT64_C(2), UINT64_C(0),       // bar
-// ENCODER:         UINT64_C(12), UINT64_C(0),      // baz
-// ENCODER:         UINT64_C(0), UINT64_C(211106232532992),  // foo
-// ENCODER:         UINT64_C(2), UINT64_C(0),       // unrelated
+// ENCODER-NEXT:    UINT64_C(2), UINT64_C(0),       // bar
+// ENCODER-NEXT:    UINT64_C(12), UINT64_C(0),      // baz
+// ENCODER-NEXT:    UINT64_C(0), UINT64_C(211106232532992),  // foo
+// ENCODER-NEXT:    UINT64_C(2), UINT64_C(0),       // unrelated
+// ENCODER-NEXT:    };
 // ENCODER-LABEL:   static const uint64_t InstBits_ModeC[] = {
-// ENCODER:         UINT64_C(2), UINT64_C(0),      // bar
-// ENCODER:         UINT64_C(0), UINT64_C(0),      // baz
-// ENCODER:         UINT64_C(12582915),  UINT64_C(0),  // foo
-// ENCODER:         UINT64_C(2),  UINT64_C(0),     // unrelated
-
+// ENCODER-NEXT:    UINT64_C(2), UINT64_C(0),      // bar
+// ENCODER-NEXT:    UINT64_C(0), UINT64_C(0),      // baz
+// ENCODER-NEXT:    UINT64_C(12582915),  UINT64_C(0),  // foo
+// ENCODER-NEXT:    UINT64_C(2),  UINT64_C(0),     // unrelated
+// ENCODER-NEXT:    };
 
 // ENCODER: const uint64_t *InstBitsByHw;
+// ENCODER: constexpr unsigned FirstSupportedOpcode
 // ENCODER: const unsigned opcode = MI.getOpcode();
+// ENCODER: if (opcode < FirstSupportedOpcode)
+// ENCODER: unsigned TableIndex = opcode - FirstSupportedOpcode
 // ENCODER: if (Scratch.getBitWidth() != 128)
 // ENCODER:   Scratch = Scratch.zext(128);
-// ENCODER: Inst = APInt(128, ArrayRef(InstBits + opcode * 2, 2));
+// ENCODER: Inst = APInt(128, ArrayRef(InstBits + TableIndex * 2, 2));
 // ENCODER: APInt &Value = Inst;
 // ENCODER: APInt &op = Scratch;
 // ENCODER: switch (opcode) {
@@ -155,7 +161,7 @@ def unrelated: Instruction {
 // ENCODER: case 2: InstBitsByHw = InstBits_ModeB; break;
 // ENCODER: case 3: InstBitsByHw = InstBits_ModeC; break;
 // ENCODER: };
-// ENCODER: Inst = APInt(128, ArrayRef(InstBitsByHw + opcode * 2, 2));
+// ENCODER: Inst = APInt(128, ArrayRef(InstBitsByHw + TableIndex * 2, 2));
 // ENCODER: Value = Inst;
 // ENCODER: switch (HwMode) {
 // ENCODER: default: llvm_unreachable("Unhandled HwMode");
@@ -189,7 +195,7 @@ def unrelated: Instruction {
 // ENCODER: default: llvm_unreachable("Unknown hardware mode!"); break;
 // ENCODER: case 2: InstBitsByHw = InstBits_ModeB; break;
 // ENCODER: };
-// ENCODER: Inst = APInt(128, ArrayRef(InstBitsByHw + opcode * 2, 2));
+// ENCODER: Inst = APInt(128, ArrayRef(InstBitsByHw + TableIndex * 2, 2));
 // ENCODER: Value = Inst;
 // ENCODER: switch (HwMode) {
 // ENCODER: default: llvm_unreachable("Unhandled HwMode");
