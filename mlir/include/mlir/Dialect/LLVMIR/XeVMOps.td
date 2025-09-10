@@ -187,6 +187,78 @@ def XeVM_StoreCacheControlAttr
   let assemblyFormat = "`<` $value `>`";
 }
 
+def XeVM_BlockLoadOp
+    : XeVM_Op<"blockload">,
+      Results<(outs FixedVectorOfRankAndType<[1], [XeVM_ElemType]>:$res)>,
+      Arguments<(ins Arg<LLVM_AnyPointer, "", [MemRead]>:$ptr,
+          OptionalAttr<XeVM_LoadCacheControlAttr>:$cache_control)> {
+  let summary = "subgroup block load";
+  let description = [{
+    Reads one or more components of Result data for each invocation
+    in the subgroup from the specified `ptr` as a block operation.
+    The data is read strided, so the first value read is:
+    ```
+      ptr[ SubgroupLocalInvocationId ]
+    ```
+    and the second value read is:
+    ```
+      ptr[ SubgroupLocalInvocationId + SubgroupMaxSize ]
+    ```
+    Result type may be a scalar or vector type of scalar element type.
+
+    The parameters are:
+      * `ptr` - the base address to load from
+      * `cache_control` - an enumerator that sets the cache behaviour
+
+    Example:
+    ```mlir
+      %loaded_a = xevm.blockload %src,
+                      <{cache_control=#xevm.load_cache_control<L1uc_L2uc_L3uc>}>
+                    : (!llvm.ptr<1>) -> vector<4xi16>
+    ```
+  }];
+  let assemblyFormat = [{
+    operands prop-dict attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+def XeVM_BlockStoreOp
+    : XeVM_Op<"blockstore">,
+      Arguments<(ins Arg<LLVM_AnyPointer, "", [MemWrite]>:$ptr,
+          FixedVectorOfRankAndType<[1], [XeVM_ElemType]>:$val,
+          OptionalAttr<XeVM_StoreCacheControlAttr>:$cache_control)> {
+  let summary = "subgroup block store";
+  let description = [{
+    Writes one or more components of `val` for each invocation
+    in the subgroup to the specified `ptr` as a block operation.
+    The data is written strided, so the first value is written to:
+    ```
+      ptr[ SubgroupLocalInvocationId ]
+    ```
+    and the second value is written to:
+    ```
+      ptr[ SubgroupLocalInvocationId + SubgroupMaxSize ]
+    ```
+    `val` type may be a scalar or vector type of scalar element type.
+
+    The parameters are:
+      * `ptr` - the base address to store to
+      * `val` - the value to store
+      * `cache_control` - an enumerator that sets the cache behaviour
+
+    Example:
+    ```mlir
+      xevm.blockstore %ptr, %val
+        <{cache_control=#xevm.store_cache_control<L1uc_L2uc_L3uc>}>
+        : (!llvm.ptr<1>, vector<4xi16>)
+    ```
+  }];
+
+  let assemblyFormat = [{
+    operands prop-dict attr-dict `:` `(` type(operands) `)`
+  }];
+}
+
 def XeVM_BlockLoad2dOp
     : XeVM_Op<"blockload2d">,
       Results<(outs FixedVectorOfRankAndType<[1], [XeVM_ElemType]>:$res)>,
