@@ -480,18 +480,17 @@ define i64 @pairwise_umax_v2i64(<2 x i64> %arg) {
 ; SIMD128-LABEL: pairwise_umax_v2i64:
 ; SIMD128:         .functype pairwise_umax_v2i64 (v128) -> (i64)
 ; SIMD128-NEXT:  # %bb.0:
-; SIMD128-NEXT:    i8x16.shuffle $push10=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7
-; SIMD128-NEXT:    local.tee $push9=, $1=, $pop10
-; SIMD128-NEXT:    i64.const $push4=, -1
-; SIMD128-NEXT:    i64.const $push3=, 0
-; SIMD128-NEXT:    i64x2.extract_lane $push1=, $0, 0
-; SIMD128-NEXT:    i64x2.extract_lane $push0=, $1, 0
-; SIMD128-NEXT:    i64.gt_u $push2=, $pop1, $pop0
-; SIMD128-NEXT:    i64.select $push5=, $pop4, $pop3, $pop2
-; SIMD128-NEXT:    i64x2.replace_lane $push6=, $0, 0, $pop5
-; SIMD128-NEXT:    v128.bitselect $push7=, $0, $pop9, $pop6
-; SIMD128-NEXT:    i64x2.extract_lane $push8=, $pop7, 0
-; SIMD128-NEXT:    return $pop8
+; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7
+; SIMD128-NEXT:    i64.const $push5=, -1
+; SIMD128-NEXT:    i64.const $push4=, 0
+; SIMD128-NEXT:    i64x2.extract_lane $push2=, $0, 0
+; SIMD128-NEXT:    i64x2.extract_lane $push1=, $0, 1
+; SIMD128-NEXT:    i64.gt_u $push3=, $pop2, $pop1
+; SIMD128-NEXT:    i64.select $push6=, $pop5, $pop4, $pop3
+; SIMD128-NEXT:    i64x2.replace_lane $push7=, $0, 0, $pop6
+; SIMD128-NEXT:    v128.bitselect $push8=, $0, $pop0, $pop7
+; SIMD128-NEXT:    i64x2.extract_lane $push9=, $pop8, 0
+; SIMD128-NEXT:    return $pop9
   %res = tail call i64 @llvm.vector.reduce.umax.v2i64(<2 x i64> %arg)
   ret i64 %res
 }
@@ -554,18 +553,17 @@ define i64 @pairwise_umin_v2i64(<2 x i64> %arg) {
 ; SIMD128-LABEL: pairwise_umin_v2i64:
 ; SIMD128:         .functype pairwise_umin_v2i64 (v128) -> (i64)
 ; SIMD128-NEXT:  # %bb.0:
-; SIMD128-NEXT:    i8x16.shuffle $push10=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7
-; SIMD128-NEXT:    local.tee $push9=, $1=, $pop10
-; SIMD128-NEXT:    i64.const $push4=, -1
-; SIMD128-NEXT:    i64.const $push3=, 0
-; SIMD128-NEXT:    i64x2.extract_lane $push1=, $0, 0
-; SIMD128-NEXT:    i64x2.extract_lane $push0=, $1, 0
-; SIMD128-NEXT:    i64.lt_u $push2=, $pop1, $pop0
-; SIMD128-NEXT:    i64.select $push5=, $pop4, $pop3, $pop2
-; SIMD128-NEXT:    i64x2.replace_lane $push6=, $0, 0, $pop5
-; SIMD128-NEXT:    v128.bitselect $push7=, $0, $pop9, $pop6
-; SIMD128-NEXT:    i64x2.extract_lane $push8=, $pop7, 0
-; SIMD128-NEXT:    return $pop8
+; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7
+; SIMD128-NEXT:    i64.const $push5=, -1
+; SIMD128-NEXT:    i64.const $push4=, 0
+; SIMD128-NEXT:    i64x2.extract_lane $push2=, $0, 0
+; SIMD128-NEXT:    i64x2.extract_lane $push1=, $0, 1
+; SIMD128-NEXT:    i64.lt_u $push3=, $pop2, $pop1
+; SIMD128-NEXT:    i64.select $push6=, $pop5, $pop4, $pop3
+; SIMD128-NEXT:    i64x2.replace_lane $push7=, $0, 0, $pop6
+; SIMD128-NEXT:    v128.bitselect $push8=, $0, $pop0, $pop7
+; SIMD128-NEXT:    i64x2.extract_lane $push9=, $pop8, 0
+; SIMD128-NEXT:    return $pop9
   %res = tail call i64 @llvm.vector.reduce.umin.v2i64(<2 x i64> %arg)
   ret i64 %res
 }
