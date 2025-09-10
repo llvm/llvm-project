@@ -217,13 +217,11 @@ public:
         [&](const clang::Expr *ArgOrigin, bool IsSafe) {
           if (IsSafe)
             return true;
-          if (isa<CXXNullPtrLiteralExpr>(ArgOrigin)) {
-            // foo(nullptr)
+          if (isNullPtr(ArgOrigin))
             return true;
-          }
           if (isa<IntegerLiteral>(ArgOrigin)) {
             // FIXME: Check the value.
-            // foo(NULL)
+            // foo(123)
             return true;
           }
           if (isa<ObjCStringLiteral>(ArgOrigin))

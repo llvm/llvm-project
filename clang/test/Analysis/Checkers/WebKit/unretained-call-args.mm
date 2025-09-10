@@ -456,6 +456,8 @@ void use_const_local() {
   // expected-warning@-1{{Call argument is unretained and unsafe}}
   // expected-warning@-2{{Call argument is unretained and unsafe}}
   [self doWork:@"hello", RetainPtr<SomeObj> { provide() }.get(), RetainPtr<CFMutableArrayRef> { provide_cf() }.get()];
+  [self doWork:__null];
+  [self doWork:nil];
 }
 
 - (SomeObj *)getSomeObj {

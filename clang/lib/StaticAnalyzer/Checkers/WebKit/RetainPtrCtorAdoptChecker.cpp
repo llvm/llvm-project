@@ -177,7 +177,8 @@ public:
       CreateOrCopyFnCall.insert(Arg); // Avoid double reporting.
       return;
     }
-    if (Result == IsOwnedResult::Owned || Result == IsOwnedResult::Skip) {
+    if (Result == IsOwnedResult::Owned || Result == IsOwnedResult::Skip ||
+        isNullPtr(Arg)) {
       CreateOrCopyFnCall.insert(Arg);
       return;
     }
@@ -486,7 +487,7 @@ public:
           continue;
         }
       }
-      if (isa<CXXNullPtrLiteralExpr>(E))
+      if (isNullPtr(E))
         return IsOwnedResult::NotOwned;
       if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
         auto QT = DRE->getType();
