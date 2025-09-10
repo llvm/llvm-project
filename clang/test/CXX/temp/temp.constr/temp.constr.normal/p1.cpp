@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -std=c++2a -x c++ -verify %s
-// FIXME: RUN: %clang_cc1 -std=c++2c -x c++ -verify %s
+// RUN: %clang_cc1 -std=c++2c -x c++ -verify %s
 
 template<typename T> concept True = true;
 template<typename T> concept Foo = True<T*>; // #Foo

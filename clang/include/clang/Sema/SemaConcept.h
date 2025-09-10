@@ -63,11 +63,15 @@ protected:
   using ExprOrConcept =
       llvm::PointerUnion<const Expr *, const ConceptReference *>;
 
-  struct AtomicBits {
+  struct AtomicConstraintBits {
     LLVM_PREFERRED_TYPE(ConstraintKind)
+    // Kind is the first member of all union members,
+    // as we rely on their initial common sequence.
     unsigned Kind : 5;
     unsigned Placeholder : 1;
     unsigned PackSubstitutionIndex : 26;
+    // Indexes and Args are part of the common initial sequences
+    // of constraints that do have a mapping.
     OccurenceList Indexes;
     TemplateArgumentLoc *Args;
     TemplateParameterList *ParamList;
@@ -75,7 +79,7 @@ protected:
     const NamedDecl *ConstraintDecl;
   };
 
-  struct FoldExpandedBits {
+  struct FoldExpandedConstraintBits {
     LLVM_PREFERRED_TYPE(ConstraintKind)
     unsigned Kind : 5;
     LLVM_PREFERRED_TYPE(FoldOperatorKind)
@@ -89,14 +93,14 @@ protected:
     NormalizedConstraint *Constraint;
   };
 
-  struct ConceptIdBits : AtomicBits {
+  struct ConceptIdBits : AtomicConstraintBits {
     NormalizedConstraint *Sub;
 
     // Only used for parameter mapping.
     const ConceptSpecializationExpr *CSE;
   };
 
-  struct CompoundBits {
+  struct CompoundConstraintBits {
     LLVM_PREFERRED_TYPE(ConstraintKind)
     unsigned Kind : 5;
     LLVM_PREFERRED_TYPE(CompoundConstraintKind)
@@ -106,10 +110,10 @@ protected:
   };
 
   union {
-    AtomicBits Atomic;
-    FoldExpandedBits FoldExpanded;
+    AtomicConstraintBits Atomic;
+    FoldExpandedConstraintBits FoldExpanded;
     ConceptIdBits ConceptId;
-    CompoundBits Compound;
+    CompoundConstraintBits Compound;
   };
 
   ~NormalizedConstraint() {
@@ -161,6 +165,8 @@ protected:
                  llvm::to_underlying(CCK), LHS, RHS} {}
 
   bool hasParameterMapping() const {
+    // compound constraints do not have a mapping
+    // and Args is not part of their common initial sequence.
     return getKind() != ConstraintKind::Compound && Atomic.Args != nullptr;
   }
 
@@ -388,9 +394,6 @@ public:
 };
 
 struct CachedConceptIdConstraint {
-#ifndef NDEBUG
-  const Expr *E;
-#endif
   ExprResult SubstExpr;
   ConstraintSatisfaction Satisfaction;
 };
