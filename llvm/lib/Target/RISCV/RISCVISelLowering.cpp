@@ -9141,9 +9141,7 @@ static SDValue lowerSelectToBinOp(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(ISD::OR, DL, VT, Neg, DAG.getFreeze(TrueV));
     }
 
-    const bool HasCZero =
-        VT.isScalarInteger() &&
-        (Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps());
+    const bool HasCZero = VT.isScalarInteger() && Subtarget.hasCZEROLike();
 
     // (select c, 0, y) -> (c-1) & y
     if (isNullConstant(TrueV) && (!HasCZero || isSimm12Constant(FalseV))) {
@@ -9281,8 +9279,7 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   // nodes to implement the SELECT. Performing the lowering here allows for
   // greater control over when CZERO_{EQZ/NEZ} are used vs another branchless
   // sequence or RISCVISD::SELECT_CC node (branch-based select).
-  if ((Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps()) &&
-      VT.isScalarInteger()) {
+  if (Subtarget.hasCZEROLike() && VT.isScalarInteger()) {
 
     // (select c, t, 0) -> (czero_eqz t, c)
     if (isNullConstant(FalseV))
@@ -15487,9 +15484,7 @@ static SDValue combineSelectAndUse(SDNode *N, SDValue Slct, SDValue OtherOp,
 
   if (!Subtarget.hasConditionalMoveFusion()) {
     // (select cond, x, (and x, c)) has custom lowering with Zicond.
-    if ((!Subtarget.hasStdExtZicond() &&
-         !Subtarget.hasVendorXVentanaCondOps()) ||
-        N->getOpcode() != ISD::AND)
+    if (!Subtarget.hasCZEROLike() || N->getOpcode() != ISD::AND)
       return SDValue();
 
     // Maybe harmful when condition code has multiple use.
@@ -18953,8 +18948,7 @@ static SDValue useInversedSetcc(SDNode *N, SelectionDAG &DAG,
   // Replace (setcc eq (and x, C)) with (setcc ne (and x, C))) to generate
   // BEXTI, where C is power of 2.
   if (Subtarget.hasStdExtZbs() && VT.isScalarInteger() &&
-      (Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps() ||
-       Subtarget.hasVendorXTHeadCondMov())) {
+      (Subtarget.hasCZEROLike() || Subtarget.hasVendorXTHeadCondMov())) {
     SDValue LHS = Cond.getOperand(0);
     SDValue RHS = Cond.getOperand(1);
     ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
@@ -24938,7 +24932,7 @@ RISCVTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
 
 bool RISCVTargetLowering::shouldFoldSelectWithSingleBitTest(
     EVT VT, const APInt &AndMask) const {
-  if (Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps())
+  if (Subtarget.hasCZEROLike())
     return !Subtarget.hasStdExtZbs() && AndMask.ugt(1024);
   return TargetLowering::shouldFoldSelectWithSingleBitTest(VT, AndMask);
 }
