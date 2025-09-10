@@ -72,15 +72,17 @@ bool LiveVariables::LivenessValues::isLive(const Expr *E) const {
 
 bool LiveVariables::LivenessValues::isLive(const VarDecl *D) const {
   if (const auto *DD = dyn_cast<DecompositionDecl>(D)) {
-    bool alive = false;
-    for (const BindingDecl *BD : DD->bindings())
-      alive |= liveBindings.contains(BD);
-
     // Note: the only known case this condition is necessary, is when a bindig
     // to a tuple-like structure is created. The HoldingVar initializers have a
     // DeclRefExpr to the DecompositionDecl.
-    alive |= liveDecls.contains(DD);
-    return alive;
+    if (liveDecls.contains(DD))
+      return true;
+
+    for (const BindingDecl *BD : DD->bindings()) {
+      if (liveBindings.contains(BD))
+        return true;
+    }
+    return false;
   }
   return liveDecls.contains(D);
 }
