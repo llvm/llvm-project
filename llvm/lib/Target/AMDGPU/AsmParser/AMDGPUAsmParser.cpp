@@ -6181,12 +6181,6 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                        ExprVal, ValRange);
       if (Val)
         ImpliedUserSGPRCount += 1;
-    } else if (ID == ".amdhsa_uses_cu_stores") {
-      if (!isGFX1250())
-        return Error(IDRange.Start, "directive requires gfx12.5", IDRange);
-
-      PARSE_BITS_ENTRY(KD.kernel_code_properties,
-                       KERNEL_CODE_PROPERTY_USES_CU_STORES, ExprVal, ValRange);
     } else if (ID == ".amdhsa_wavefront_size32") {
       EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
       if (IVersion.Major < 10)

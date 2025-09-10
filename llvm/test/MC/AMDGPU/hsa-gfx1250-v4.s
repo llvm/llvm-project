@@ -40,7 +40,7 @@
 // OBJDUMP-NEXT: 0040 01000000 01000000 0c000000 00000000
 // OBJDUMP-NEXT: 0050 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0060 00000000 00000000 00000000 00c00000
-// OBJDUMP-NEXT: 0070 005021c4 410f007f 5e068200 00000000
+// OBJDUMP-NEXT: 0070 005021c4 410f007f 5e048200 00000000
 // special_sgpr
 // OBJDUMP-NEXT: 0080 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0090 00000000 00000000 00000000 00000000
@@ -127,7 +127,6 @@ max_vgprs:
   .amdhsa_user_sgpr_kernarg_preload_length 2
   .amdhsa_user_sgpr_kernarg_preload_offset 1
   .amdhsa_user_sgpr_private_segment_size 1
-  .amdhsa_uses_cu_stores 1
   .amdhsa_wavefront_size32 1
   .amdhsa_enable_private_segment 1
   .amdhsa_system_sgpr_workgroup_id_x 0
@@ -168,7 +167,6 @@ max_vgprs:
 // ASM-NEXT: .amdhsa_user_sgpr_kernarg_preload_length 2
 // ASM-NEXT: .amdhsa_user_sgpr_kernarg_preload_offset 1
 // ASM-NEXT: .amdhsa_user_sgpr_private_segment_size 1
-// ASM-NEXT: .amdhsa_uses_cu_stores 1
 // ASM-NEXT: .amdhsa_wavefront_size32 1
 // ASM-NEXT: .amdhsa_enable_private_segment 1
 // ASM-NEXT: .amdhsa_system_sgpr_workgroup_id_x 0
