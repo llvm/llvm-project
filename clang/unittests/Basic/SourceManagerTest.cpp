@@ -40,18 +40,16 @@ namespace {
 class SourceManagerTest : public ::testing::Test {
 protected:
   SourceManagerTest()
-    : FileMgr(FileMgrOpts),
-      DiagID(new DiagnosticIDs()),
-      Diags(DiagID, new DiagnosticOptions, new IgnoringDiagConsumer()),
-      SourceMgr(Diags, FileMgr),
-      TargetOpts(new TargetOptions) {
+      : FileMgr(FileMgrOpts),
+        Diags(DiagnosticIDs::create(), DiagOpts, new IgnoringDiagConsumer()),
+        SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
     TargetOpts->Triple = "x86_64-apple-darwin11.1.0";
-    Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
+    Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
   }
 
   FileSystemOptions FileMgrOpts;
   FileManager FileMgr;
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
+  DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
   LangOptions LangOpts;
@@ -136,12 +134,11 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnit) {
   SourceMgr.setMainFileID(mainFileID);
 
   HeaderSearchOptions HSOpts;
+  PreprocessorOptions PPOpts;
   TrivialModuleLoader ModLoader;
   HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, &*Target);
-  Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
-                  SourceMgr, HeaderInfo, ModLoader,
-                  /*IILookup =*/nullptr,
-                  /*OwnsHeaderSearch =*/false);
+  Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+                  /*IILookup =*/nullptr, /*OwnsHeaderSearch =*/false);
   PP.Initialize(*Target);
   PP.EnterMainSourceFile();
 
@@ -186,12 +183,11 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnitWithTokenSplit) {
       SourceMgr.createFileID(llvm::MemoryBuffer::getMemBuffer(main)));
 
   HeaderSearchOptions HSOpts;
+  PreprocessorOptions PPOpts;
   TrivialModuleLoader ModLoader;
   HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, &*Target);
-  Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
-                  SourceMgr, HeaderInfo, ModLoader,
-                  /*IILookup =*/nullptr,
-                  /*OwnsHeaderSearch =*/false);
+  Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+                  /*IILookup=*/nullptr, /*OwnsHeaderSearch=*/false);
   PP.Initialize(*Target);
   PP.EnterMainSourceFile();
   llvm::SmallString<8> Scratch;
@@ -462,11 +458,10 @@ TEST_F(SourceManagerTest, ResetsIncludeLocMap) {
   auto ParseFile = [&] {
     TrivialModuleLoader ModLoader;
     HeaderSearchOptions HSOpts;
+    PreprocessorOptions PPOpts;
     HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, &*Target);
-    Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
-                    SourceMgr, HeaderInfo, ModLoader,
-                    /*IILookup =*/nullptr,
-                    /*OwnsHeaderSearch =*/false);
+    Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+                    /*IILookup=*/nullptr, /*OwnsHeaderSearch=*/false);
     PP.Initialize(*Target);
     PP.EnterMainSourceFile();
     PP.LexTokensUntilEOF();
@@ -538,13 +533,12 @@ TEST_F(SourceManagerTest, getMacroArgExpandedLocation) {
   SourceMgr.overrideFileContents(headerFile, std::move(HeaderBuf));
 
   HeaderSearchOptions HSOpts;
+  PreprocessorOptions PPOpts;
   TrivialModuleLoader ModLoader;
   HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, &*Target);
 
-  Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
-                  SourceMgr, HeaderInfo, ModLoader,
-                  /*IILookup =*/nullptr,
-                  /*OwnsHeaderSearch =*/false);
+  Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+                  /*IILookup=*/nullptr, /*OwnsHeaderSearch=*/false);
   // Ensure we can get expanded locations in presence of implicit includes.
   // These are different than normal includes since predefines buffer doesn't
   // have a valid insertion location.
@@ -657,12 +651,11 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnitWithMacroInInclude) {
   SourceMgr.overrideFileContents(headerFile, std::move(HeaderBuf));
 
   HeaderSearchOptions HSOpts;
+  PreprocessorOptions PPOpts;
   TrivialModuleLoader ModLoader;
   HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, &*Target);
-  Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
-                  SourceMgr, HeaderInfo, ModLoader,
-                  /*IILookup =*/nullptr,
-                  /*OwnsHeaderSearch =*/false);
+  Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+                  /*IILookup=*/nullptr, /*OwnsHeaderSearch=*/false);
   PP.Initialize(*Target);
 
   std::vector<MacroAction> Macros;

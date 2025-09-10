@@ -81,18 +81,6 @@ struct make_unsigned {
   using type _LIBCPP_NODEBUG = __make_unsigned_t<_Tp>;
 };
 
-#if _LIBCPP_STD_VER >= 14
-template <class _Tp>
-using make_unsigned_t = __make_unsigned_t<_Tp>;
-#endif
-
-#ifndef _LIBCPP_CXX03_LANG
-template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr __make_unsigned_t<_Tp> __to_unsigned_like(_Tp __x) noexcept {
-  return static_cast<__make_unsigned_t<_Tp> >(__x);
-}
-#endif
-
 template <class _Tp, class _Up>
 using __copy_unsigned_t = __conditional_t<is_unsigned<_Tp>::value, __make_unsigned_t<_Up>, _Up>;
 

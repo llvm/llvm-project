@@ -28,7 +28,7 @@ struct C : A<int> { }; // expected-error {{base 'A' is marked 'final'}}
 
 namespace Test4 {
 
-struct A final { virtual void func() = 0; }; // expected-warning {{abstract class is marked 'final'}} expected-note {{unimplemented pure virtual method 'func' in 'A'}} expected-warning {{virtual method 'func' is inside a 'final' class}}}
+struct A final { virtual void func() = 0; }; // expected-warning {{abstract class is marked 'final'}} expected-note {{unimplemented pure virtual method 'func' in 'A'}}
 struct B { virtual void func() = 0; }; // expected-note {{unimplemented pure virtual method 'func' in 'C'}}
 
 struct C final : B { }; // expected-warning {{abstract class is marked 'final'}}

@@ -773,7 +773,11 @@ enumerators at all.
 **Limitations**
 
 This checker does not accept the coding pattern where an enum type is used to
-store combinations of flag values:
+store combinations of flag values.
+Such enums should be annotated with the `__attribute__((flag_enum))` or by the
+`[[clang::flag_enum]]` attribute to signal this intent. Refer to the
+`documentation <https://clang.llvm.org/docs/AttributeReference.html#flag-enum>`_
+of this Clang attribute.
 
 .. code-block:: cpp
 
@@ -1099,7 +1103,16 @@ To override this threshold to e.g. 4 bytes, use the
 
 optin.portability.UnixAPI
 """""""""""""""""""""""""
-Finds implementation-defined behavior in UNIX/Posix functions.
+Reports situations where 0 is passed as the "size" argument of various
+allocation functions ( ``calloc``, ``malloc``, ``realloc``, ``reallocf``,
+``alloca``, ``__builtin_alloca``, ``__builtin_alloca_with_align``, ``valloc``).
+
+Note that similar functionality is also supported by :ref:`unix-Malloc` which
+reports code that *uses* memory allocated with size zero.
+
+(The name of this checker is motivated by the fact that it was originally
+introduced with the vague goal that it "Finds implementation-defined behavior
+in UNIX/Posix functions.")
 
 
 optin.taint
@@ -1460,7 +1473,7 @@ overflow occurs), the checker assumes that the the index (more precisely, the
 memory offeset) is within bounds.
 
 However, if :ref:`optin-taint-GenericTaint` is enabled and the index/offset is
-tainted (i.e. it is influenced by an untrusted souce), then this checker
+tainted (i.e. it is influenced by an untrusted source), then this checker
 reports the potential out of bounds access:
 
 .. code-block:: c
@@ -1845,6 +1858,27 @@ avoid code like ``setgid(getuid())`` (this checker does not detect bugs like
 this) and always check the return value of these calls.
 
 This check corresponds to SEI CERT Rule `POS36-C <https://wiki.sei.cmu.edu/confluence/display/c/POS36-C.+Observe+correct+revocation+order+while+relinquishing+privileges>`_.
+
+.. _security-VAList:
+
+security.VAList (C, C++)
+""""""""""""""""""""""""
+Reports use of uninitialized (or already released) ``va_list`` objects and
+situations where a ``va_start`` call is not followed by ``va_end``.
+
+.. code-block:: c
+
+ int test_use_after_release(int x, ...) {
+   va_list va;
+   va_start(va, x);
+   va_end(va);
+   return va_arg(va, int); // warn: va is uninitialized
+ }
+
+ void test_leak(int x, ...) {
+   va_list va;
+   va_start(va, x);
+ } // warn: va is leaked
 
 .. _unix-checkers:
 
@@ -2710,7 +2744,7 @@ Check for proper uses of CFNumber APIs.
 
  CFNumberRef test(unsigned char x) {
    return CFNumberCreate(0, kCFNumberSInt16Type, &x);
-    // warn: 8 bit integer is used to initialize a 16 bit integer
+    // warn: 8-bit integer is used to initialize a 16-bit integer
  }
 
 .. _osx-coreFoundation-CFRetainRelease:
@@ -2919,18 +2953,6 @@ the locking/unlocking of ``mtx_t`` mutexes.
    mtx_lock(&mtx1); // warn: This lock has already been acquired
  }
 
-.. _alpha-core-CastSize:
-
-alpha.core.CastSize (C)
-"""""""""""""""""""""""
-Check when casting a malloc'ed type ``T``, whether the size is a multiple of the size of ``T``.
-
-.. code-block:: c
-
- void test() {
-   int *x = (int *) malloc(11); // warn
- }
-
 .. _alpha-core-CastToStruct:
 
 alpha.core.CastToStruct (C, C++)
@@ -3072,6 +3094,23 @@ Either the comparison is useless or there is division by zero.
    var = 77 / x;
    if (x == 0) { } // warn
  }
+
+.. _alpha-core-StoreToImmutable:
+
+alpha.core.StoreToImmutable (C, C++)
+""""""""""""""""""""""""""""""""""""
+Check for writes to immutable memory regions. This implements part of SEI CERT Rule ENV30-C.
+
+This checker detects attempts to write to memory regions that are marked as immutable,
+including const variables, string literals, and other const-qualified memory.
+
+.. literalinclude:: checkers/storetoimmutable_example.cpp
+    :language: cpp
+
+**Solution**
+
+Avoid writing to const-qualified memory regions. If you need to modify the data,
+remove the const qualifier from the original declaration or use a mutable copy.
 
 alpha.cplusplus
 ^^^^^^^^^^^^^^^

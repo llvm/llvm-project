@@ -7,8 +7,8 @@
 ; Make sure we can link files with clashing intrinsic names using unnamed types.
 
 ;--- f01.ll
-%1 = type opaque
-%0 = type opaque
+%1 = type { i32 }
+%0 = type { i64 }
 
 ; CHECK-LABEL: @test01(
 ; CHECK:       %c1 = call %0 @llvm.ssa.copy.s_s.0(%0 %arg)
@@ -38,8 +38,8 @@ bb:
 }
 
 ;--- f02.ll
-%1 = type opaque
-%2 = type opaque
+%1 = type { i8 }
+%2 = type { i16 }
 
 ; CHECK-LABEL: @test03(
 ; CHECK:      %c1 = call %3 @llvm.ssa.copy.s_s.2(%3 %arg)

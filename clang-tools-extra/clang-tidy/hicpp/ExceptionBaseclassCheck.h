@@ -13,7 +13,8 @@
 
 namespace clang::tidy::hicpp {
 
-/// Check for thrown exceptions and enforce they are all derived from std::exception.
+/// Check for thrown exceptions and enforce they are all derived from
+/// std::exception.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/hicpp/exception-baseclass.html

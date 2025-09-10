@@ -16,12 +16,10 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 
 #define DEBUG_TYPE "spirv-prelegalizer"
@@ -32,16 +30,14 @@ namespace {
 class SPIRVPreLegalizer : public MachineFunctionPass {
 public:
   static char ID;
-  SPIRVPreLegalizer() : MachineFunctionPass(ID) {
-    initializeSPIRVPreLegalizerPass(*PassRegistry::getPassRegistry());
-  }
+  SPIRVPreLegalizer() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
 } // namespace
 
 void SPIRVPreLegalizer::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addPreserved<GISelValueTrackingAnalysis>();
+  AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -103,6 +99,7 @@ addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR,
               SPIRVType *ExtType = GR->getOrCreateSPIRVType(
                   Const->getType(), MIB, SPIRV::AccessQualifier::ReadWrite,
                   true);
+              assert(SrcMI && "Expected source instruction to be valid");
               SrcMI->setDesc(STI.getInstrInfo()->get(SPIRV::OpConstantNull));
               SrcMI->addOperand(MachineOperand::CreateReg(
                   GR->getSPIRVTypeID(ExtType), false));
@@ -253,10 +250,8 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       Register Def = MI.getOperand(0).getReg();
       Register Source = MI.getOperand(2).getReg();
       Type *ElemTy = getMDOperandAsType(MI.getOperand(3).getMetadata(), 0);
-      SPIRVType *BaseTy = GR->getOrCreateSPIRVType(
-          ElemTy, MIB, SPIRV::AccessQualifier::ReadWrite, true);
       SPIRVType *AssignedPtrType = GR->getOrCreateSPIRVPointerType(
-          BaseTy, MI, *MF.getSubtarget<SPIRVSubtarget>().getInstrInfo(),
+          ElemTy, MI,
           addressSpaceToStorageClass(MI.getOperand(4).getImm(), *ST));
 
       // If the ptrcast would be redundant, replace all uses with the source
@@ -368,9 +363,8 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
                 RegType.getAddressSpace()) {
           const SPIRVSubtarget &ST =
               MI->getParent()->getParent()->getSubtarget<SPIRVSubtarget>();
-          SpvType = GR->getOrCreateSPIRVPointerType(
-              GR->getPointeeType(SpvType), *MI, *ST.getInstrInfo(),
-              addressSpaceToStorageClass(RegType.getAddressSpace(), ST));
+          auto TSC = addressSpaceToStorageClass(RegType.getAddressSpace(), ST);
+          SpvType = GR->changePointerStorageClass(SpvType, TSC, *MI);
         }
         GR->assignSPIRVTypeToVReg(SpvType, Reg, MIB.getMF());
       }
@@ -385,16 +379,31 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
 // To support current approach and limitations wrt. bit width here we widen a
 // scalar register with a bit width greater than 1 to valid sizes and cap it to
 // 64 width.
-static void widenScalarLLTNextPow2(Register Reg, MachineRegisterInfo &MRI) {
+static unsigned widenBitWidthToNextPow2(unsigned BitWidth) {
+  if (BitWidth == 1)
+    return 1; // No need to widen 1-bit values
+  return std::min(std::max(1u << Log2_32_Ceil(BitWidth), 8u), 64u);
+}
+
+static void widenScalarType(Register Reg, MachineRegisterInfo &MRI) {
   LLT RegType = MRI.getType(Reg);
   if (!RegType.isScalar())
     return;
-  unsigned Sz = RegType.getScalarSizeInBits();
-  if (Sz == 1)
-    return;
-  unsigned NewSz = std::min(std::max(1u << Log2_32_Ceil(Sz), 8u), 64u);
-  if (NewSz != Sz)
-    MRI.setType(Reg, LLT::scalar(NewSz));
+  unsigned CurrentWidth = RegType.getScalarSizeInBits();
+  unsigned NewWidth = widenBitWidthToNextPow2(CurrentWidth);
+  if (NewWidth != CurrentWidth)
+    MRI.setType(Reg, LLT::scalar(NewWidth));
+}
+
+static void widenCImmType(MachineOperand &MOP) {
+  const ConstantInt *CImmVal = MOP.getCImm();
+  unsigned CurrentWidth = CImmVal->getBitWidth();
+  unsigned NewWidth = widenBitWidthToNextPow2(CurrentWidth);
+  if (NewWidth != CurrentWidth) {
+    // Replace the immediate value with the widened version
+    MOP.setCImm(ConstantInt::get(CImmVal->getType()->getContext(),
+                                 CImmVal->getValue().zextOrTrunc(NewWidth)));
+  }
 }
 
 static void setInsertPtAfterDef(MachineIRBuilder &MIB, MachineInstr *Def) {
@@ -432,13 +441,10 @@ void insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpvType,
   // Tablegen definition assumes SPIRV::ASSIGN_TYPE pseudo-instruction is
   // present after each auto-folded instruction to take a type reference from.
   Register NewReg = MRI.createGenericVirtualRegister(MRI.getType(Reg));
-  if (auto *RC = MRI.getRegClassOrNull(Reg)) {
-    MRI.setRegClass(NewReg, RC);
-  } else {
-    auto RegClass = GR->getRegClass(SpvType);
-    MRI.setRegClass(NewReg, RegClass);
-    MRI.setRegClass(Reg, RegClass);
-  }
+  const auto *RegClass = GR->getRegClass(SpvType);
+  MRI.setRegClass(NewReg, RegClass);
+  MRI.setRegClass(Reg, RegClass);
+
   GR->assignSPIRVTypeToVReg(SpvType, Reg, MIB.getMF());
   // This is to make it convenient for Legalizer to get the SPIRVType
   // when processing the actual MI (i.e. not pseudo one).
@@ -497,7 +503,8 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   bool IsExtendedInts =
       ST->canUseExtension(
           SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers) ||
-      ST->canUseExtension(SPIRV::Extension::SPV_KHR_bit_instructions);
+      ST->canUseExtension(SPIRV::Extension::SPV_KHR_bit_instructions) ||
+      ST->canUseExtension(SPIRV::Extension::SPV_INTEL_int4);
 
   for (MachineBasicBlock *MBB : post_order(&MF)) {
     if (MBB->empty())
@@ -510,20 +517,21 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       unsigned MIOp = MI.getOpcode();
 
       if (!IsExtendedInts) {
-        // validate bit width of scalar registers
-        for (const auto &MOP : MI.operands())
+        // validate bit width of scalar registers and constant immediates
+        for (auto &MOP : MI.operands()) {
           if (MOP.isReg())
-            widenScalarLLTNextPow2(MOP.getReg(), MRI);
+            widenScalarType(MOP.getReg(), MRI);
+          else if (MOP.isCImm())
+            widenCImmType(MOP);
+        }
       }
 
       if (isSpvIntrinsic(MI, Intrinsic::spv_assign_ptr_type)) {
         Register Reg = MI.getOperand(1).getReg();
         MIB.setInsertPt(*MI.getParent(), MI.getIterator());
         Type *ElementTy = getMDOperandAsType(MI.getOperand(2).getMetadata(), 0);
-        SPIRVType *BaseTy = GR->getOrCreateSPIRVType(
-            ElementTy, MIB, SPIRV::AccessQualifier::ReadWrite, true);
         SPIRVType *AssignedPtrType = GR->getOrCreateSPIRVPointerType(
-            BaseTy, MI, *MF.getSubtarget<SPIRVSubtarget>().getInstrInfo(),
+            ElementTy, MI,
             addressSpaceToStorageClass(MI.getOperand(3).getImm(), *ST));
         MachineInstr *Def = MRI.getVRegDef(Reg);
         assert(Def && "Expecting an instruction that defines the register");

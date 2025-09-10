@@ -1144,6 +1144,9 @@ def : Pat<(wasm_shr_u
               (vec.splat (i32 1))),
             (i32 1)),
           (inst $lhs, $rhs)>;
+
+def : Pat<(vec.vt (avgceilu (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
+          (inst $lhs, $rhs)>;
 }
 
 // Widening dot product: i32x4.dot_i16x8_s
@@ -1536,6 +1539,12 @@ multiclass SIMDMADD<Vec vec, bits<32> simdopA, bits<32> simdopS, list<Predicate>
              (vec.vt V128:$a), (vec.vt V128:$b), (vec.vt V128:$c)))],
            vec.prefix#".relaxed_nmadd\t$dst, $a, $b, $c",
            vec.prefix#".relaxed_nmadd", simdopS, reqs>;
+
+  def : Pat<(fadd_contract (vec.vt V128:$a), (fmul_contract (vec.vt V128:$b), (vec.vt V128:$c))),
+             (!cast<Instruction>("MADD_"#vec) V128:$a, V128:$b, V128:$c)>, Requires<[HasRelaxedSIMD]>;
+
+  def : Pat<(fsub_contract (vec.vt V128:$a), (fmul_contract (vec.vt V128:$b), (vec.vt V128:$c))),
+             (!cast<Instruction>("NMADD_"#vec) V128:$a, V128:$b, V128:$c)>, Requires<[HasRelaxedSIMD]>;
 }
 
 defm "" : SIMDMADD<F32x4, 0x105, 0x106, [HasRelaxedSIMD]>;

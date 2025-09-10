@@ -49,42 +49,6 @@ def testFill():
     print(module)
 
 
-# CHECK-LABEL: TEST: testNamedStructuredOpCustomForm
-@run
-def testNamedStructuredOpCustomForm():
-    with Context() as ctx, Location.unknown():
-        module = Module.create()
-        f32 = F32Type.get()
-        with InsertionPoint(module.body):
-
-            @func.FuncOp.from_py_func(
-                RankedTensorType.get((4, 8), f32), RankedTensorType.get((4, 8), f32)
-            )
-            def named_form(lhs, rhs):
-                init_result = tensor.EmptyOp([4, 8], f32)
-                # Check for the named form with custom format
-                #      CHECK: linalg.elemwise_unary
-                # CHECK-SAME:    cast = #linalg.type_fn<cast_signed>
-                # CHECK-SAME:    fun = #linalg.unary_fn<exp>
-                # CHECK-SAME:    ins(%{{.*}} : tensor<4x8xf32>) outs(%{{.*}} : tensor<4x8xf32>)
-                unary_result = linalg.elemwise_unary(lhs, outs=[init_result.result])
-                #      CHECK: linalg.elemwise_binary
-                # CHECK-SAME:    cast = #linalg.type_fn<cast_unsigned>
-                # CHECK-SAME:    fun = #linalg.binary_fn<mul>
-                # CHECK-SAME:    ins(%{{.*}}, %{{.*}} : tensor<4x8xf32>, tensor<4x8xf32>) outs(%{{.*}} : tensor<4x8xf32>)
-                #      CHECK: return
-                binary_result = linalg.elemwise_binary(
-                    lhs,
-                    rhs,
-                    outs=[init_result.result],
-                    fun=BinaryFn.mul,
-                    cast=TypeFn.cast_unsigned,
-                )
-                return unary_result, binary_result
-
-    print(module)
-
-
 # CHECK-LABEL: TEST: testIdentityRegionOps
 @run
 def testIdentityRegionOps():
@@ -568,6 +532,107 @@ def testBatchMatmulOp():
     print(module)
 
 
+# CHECK-LABEL: TEST: testBatchReduceMatmulOp
+@run
+def testBatchReduceMatmulOp():
+    with Context(), Location.unknown():
+        module = Module.create()
+        f32 = F32Type.get()
+        with InsertionPoint(module.body):
+            a_shape = (5, 4, 8)
+            b_shape = (5, 8, 12)
+            b_transposed_shape = (5, 12, 8)
+            c_shape = (4, 12)
+
+            dimBatch = ir.AffineDimExpr.get(0)
+            dimM = ir.AffineDimExpr.get(1)
+            dimN = ir.AffineDimExpr.get(2)
+            dimK = ir.AffineDimExpr.get(3)
+
+            # CHECK: #[[$A_MAP:.*]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+            # CHECK: #[[$BTrans_MAP:.*]] = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>
+            # CHECK: #[[$C_MAP:.*]] = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+            a_map = ir.AffineMap.get(4, 0, [dimBatch, dimM, dimK])
+            b_transposed_map = ir.AffineMap.get(4, 0, [dimBatch, dimN, dimK])
+            c_map = ir.AffineMap.get(4, 0, [dimM, dimN])
+
+            # CHECK: func.func @batch_reduce_matmul_op(
+            @func.FuncOp.from_py_func(
+                # CHECK-SAME:                         %[[A:.*]]: tensor<5x4x8xf32>,
+                RankedTensorType.get(a_shape, f32),
+                # CHECK-SAME:                         %[[Amem:.*]]: memref<5x4x8xf32>,
+                MemRefType.get(a_shape, f32),
+                # CHECK-SAME:                         %[[B:.*]]: tensor<5x8x12xf32>,
+                RankedTensorType.get(b_shape, f32),
+                # CHECK-SAME:                         %[[Bmem:.*]]: memref<5x8x12xf32>,
+                MemRefType.get(b_shape, f32),
+                # CHECK-SAME:                         %[[BTrans:.*]]: tensor<5x12x8xf32>,
+                RankedTensorType.get(b_transposed_shape, f32),
+                # CHECK-SAME:                         %[[BTransmem:.*]]: memref<5x12x8xf32>,
+                MemRefType.get(b_transposed_shape, f32),
+                # CHECK-SAME:                         %[[C:.*]]: tensor<4x12xf32>,
+                RankedTensorType.get(c_shape, f32),
+                # CHECK-SAME:                         %[[Cmem:.*]]: memref<4x12xf32>)
+                MemRefType.get(c_shape, f32),
+            )
+            def batch_reduce_matmul_op(
+                A, Amem, B, Bmem, Btransposed, Btransposedmem, C, Cmem
+            ):
+                # CHECK: linalg.batch_reduce_matmul ins(%[[A]], %[[B]] : tensor<5x4x8xf32>, tensor<5x8x12xf32>) outs(%[[C]] : tensor<4x12xf32>)
+                res = linalg.BatchReduceMatmulOp(
+                    result_tensors=(C.type,),
+                    inputs=(A, B),
+                    outputs=(C,),
+                )
+                linalg.fill_builtin_region(res.operation)
+                # CHECK: linalg.batch_reduce_matmul ins(%[[A]], %[[B]] : tensor<5x4x8xf32>, tensor<5x8x12xf32>) outs(%[[C]] : tensor<4x12xf32>)
+                res = linalg.batch_reduce_matmul(A, B, outs=(C,))
+
+                # CHECK: linalg.batch_reduce_matmul indexing_maps = [#[[$A_MAP]], #[[$BTrans_MAP]], #[[$C_MAP]]] ins(%[[A]], %[[BTrans]] : tensor<5x4x8xf32>, tensor<5x12x8xf32>) outs(%[[C]] : tensor<4x12xf32>)
+                res = linalg.BatchReduceMatmulOp(
+                    result_tensors=(C.type,),
+                    inputs=(A, Btransposed),
+                    outputs=(C,),
+                    indexing_maps=[a_map, b_transposed_map, c_map],
+                )
+                linalg.fill_builtin_region(res.operation)
+                # CHECK: linalg.batch_reduce_matmul indexing_maps = [#[[$A_MAP]], #[[$BTrans_MAP]], #[[$C_MAP]]] ins(%[[A]], %[[BTrans]] : tensor<5x4x8xf32>, tensor<5x12x8xf32>) outs(%[[C]] : tensor<4x12xf32>)
+                res = linalg.batch_reduce_matmul(
+                    A,
+                    Btransposed,
+                    outs=(C,),
+                    indexing_maps=[a_map, b_transposed_map, c_map],
+                )
+
+                # CHECK: linalg.batch_reduce_matmul ins(%[[Amem]], %[[Bmem]] : memref<5x4x8xf32>, memref<5x8x12xf32>) outs(%[[Cmem]] : memref<4x12xf32>)
+                res = linalg.BatchReduceMatmulOp(
+                    result_tensors=[],
+                    inputs=(Amem, Bmem),
+                    outputs=(Cmem,),
+                )
+                linalg.fill_builtin_region(res.operation)
+                # CHECK: linalg.batch_reduce_matmul ins(%[[Amem]], %[[Bmem]] : memref<5x4x8xf32>, memref<5x8x12xf32>) outs(%[[Cmem]] : memref<4x12xf32>)
+                linalg.batch_reduce_matmul(Amem, Bmem, outs=(Cmem,))
+
+                # CHECK: linalg.batch_reduce_matmul indexing_maps = [#[[$A_MAP]], #[[$BTrans_MAP]], #[[$C_MAP]]] ins(%[[Amem]], %[[BTransmem]] : memref<5x4x8xf32>, memref<5x12x8xf32>) outs(%[[Cmem]] : memref<4x12xf32>)
+                res = linalg.BatchReduceMatmulOp(
+                    result_tensors=[],
+                    inputs=(Amem, Btransposedmem),
+                    outputs=(Cmem,),
+                    indexing_maps=[a_map, b_transposed_map, c_map],
+                )
+                linalg.fill_builtin_region(res.operation)
+                # CHECK: linalg.batch_reduce_matmul indexing_maps = [#[[$A_MAP]], #[[$BTrans_MAP]], #[[$C_MAP]]] ins(%[[Amem]], %[[BTransmem]] : memref<5x4x8xf32>, memref<5x12x8xf32>) outs(%[[Cmem]] : memref<4x12xf32>)
+                linalg.batch_reduce_matmul(
+                    Amem,
+                    Btransposedmem,
+                    outs=(Cmem,),
+                    indexing_maps=[a_map, b_transposed_map, c_map],
+                )
+
+        print(module)
+
+
 # CHECK-LABEL: TEST: testPackUnPackOp
 @run
 def testPackUnPackOp():
@@ -605,4 +670,190 @@ def testPackUnPackOp():
         # CHECK:           %[[VAL_4:.*]] = linalg.unpack %[[VAL_3]] inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %[[VAL_0]] : tensor<16x16x8x8xf32> -> tensor<128x128xf32>
         # CHECK:           return %[[VAL_4]] : tensor<128x128xf32>
         # CHECK:         }
+        print(module)
+
+
+# CHECK-LABEL: TEST: testElementwiseOp
+@run
+def testElementwiseOp():
+    with Context(), Location.unknown():
+        module = Module.create()
+        f32 = F32Type.get()
+        with InsertionPoint(module.body):
+            rect_shape = (8, 16)
+            vert_line_shape = (8,)
+            hor_line_shape = (16,)
+            transposed_rect_shape = (16, 8)
+
+            # CHECK-DAG: #[[$IdentMap2D:.*]] = affine_map<(d0, d1) -> (d0, d1)>
+            # CHECK-DAG: #[[$TransMap2D:.*]] = affine_map<(d0, d1) -> (d1, d0)>
+            # CHECK-DAG: #[[$VertLineBCastMap:.*]] = affine_map<(d0, d1) -> (d0)>
+            # CHECK-DAG: #[[$HorLineBCastMap:.*]] = affine_map<(d0, d1) -> (d1)>
+
+            ident_map_2d = AffineMap.get_identity(2)
+            transposed_map_2d = AffineMap.get_permutation((1, 0))
+            vert_line_bcast_map = AffineMap.get(2, 0, [AffineDimExpr.get(0)])
+            hor_line_bcast_map = AffineMap.get(2, 0, [AffineDimExpr.get(1)])
+
+            # CHECK: func.func @elementwise_op(
+            @func.FuncOp.from_py_func(
+                # CHECK-SAME:                         %[[Rect:.*]]: tensor<8x16xf32>,
+                RankedTensorType.get(rect_shape, f32),
+                # CHECK-SAME:                         %[[RectMem:.*]]: memref<8x16xf32>,
+                MemRefType.get(rect_shape, f32),
+                # CHECK-SAME:                         %[[VertLine:.*]]: tensor<8xf32>,
+                RankedTensorType.get(vert_line_shape, f32),
+                # CHECK-SAME:                         %[[VertLineMem:.*]]: memref<8xf32>,
+                MemRefType.get(vert_line_shape, f32),
+                # CHECK-SAME:                         %[[HorLine:.*]]: tensor<16xf32>,
+                RankedTensorType.get(hor_line_shape, f32),
+                # CHECK-SAME:                         %[[HorLineMem:.*]]: memref<16xf32>,
+                MemRefType.get(hor_line_shape, f32),
+                # CHECK-SAME:                         %[[TransRect:.*]]: tensor<16x8xf32>,
+                RankedTensorType.get(transposed_rect_shape, f32),
+                # CHECK-SAME:                         %[[TransRectMem:.*]]: memref<16x8xf32>)
+                MemRefType.get(transposed_rect_shape, f32),
+            )
+            def elementwise_op(
+                rect,
+                rect_mem,
+                vert_line,
+                vert_line_mem,
+                hor_line,
+                hor_line_mem,
+                trans_rect,
+                trans_rect_mem,
+            ):
+                # CHECK: %[[OutRect:.*]] = tensor.empty() : tensor<8x16xf32>
+                out_rect = tensor.EmptyOp(rect_shape, f32)
+                # CHECK: %[[OutRectMem:.*]] = memref.alloca() : memref<8x16xf32>
+                out_rect_mem = memref.alloca(MemRefType.get(rect_shape, f32), [], [])
+
+                if _inferred_affine_maps := True:
+                    # CHECK: linalg.elementwise
+                    # CHECK-SAME: kind=#linalg.elementwise_kind<exp>
+                    # CHECK-SAME: ins(%[[Rect]] : tensor<8x16xf32>)
+                    # CHECK-SAME: outs(%[[OutRect]] : tensor<8x16xf32>) -> tensor<8x16xf32>
+                    op1 = linalg.ElementwiseOp(
+                        result_tensors=(out_rect.result.type,),
+                        inputs=(rect,),
+                        outputs=(out_rect,),
+                        kind=linalg.ElementwiseKind.exp,
+                    )
+                    linalg.fill_builtin_region(op1.operation)
+
+                    # CHECK: linalg.elementwise
+                    # CHECK-SAME: kind=#linalg.elementwise_kind<exp>
+                    # CHECK-SAME: ins(%[[Rect]] : tensor<8x16xf32>)
+                    # CHECK-SAME: outs(%[[OutRect]] : tensor<8x16xf32>) -> tensor<8x16xf32>
+                    linalg.elementwise(
+                        rect,
+                        outs=(out_rect,),
+                        kind=linalg.ElementwiseKind.exp,
+                    )
+
+                    # CHECK: linalg.elementwise
+                    # CHECK-SAME: kind=#linalg.elementwise_kind<exp>
+                    # CHECK-SAME: ins(%[[RectMem]] : memref<8x16xf32>)
+                    # CHECK-SAME: outs(%[[OutRectMem]] : memref<8x16xf32>)
+                    linalg.elementwise(
+                        rect_mem,
+                        outs=(out_rect_mem,),
+                        kind=linalg.ElementwiseKind.exp,
+                    )
+
+                if _explicit_ident_affine_maps := True:
+                    # Same as above but with default identity indexing_maps explicitly provided.
+                    # CHECK: linalg.elementwise
+                    # CHECK-SAME: kind=#linalg.elementwise_kind<exp>
+                    # CHECK-SAME: ins(%[[Rect]] : tensor<8x16xf32>)
+                    # CHECK-SAME: outs(%[[OutRect]] : tensor<8x16xf32>) -> tensor<8x16xf32>
+                    op3 = linalg.ElementwiseOp(
+                        result_tensors=(out_rect.result.type,),
+                        inputs=(rect,),
+                        outputs=(out_rect,),
+                        kind=linalg.ElementwiseKind.exp,
+                        indexing_maps=[ident_map_2d, ident_map_2d],
+                    )
+                    linalg.fill_builtin_region(op3.operation)
+
+                    # CHECK: linalg.elementwise
+                    # CHECK-SAME: kind=#linalg.elementwise_kind<exp>
+                    # CHECK-SAME: ins(%[[RectMem]] : memref<8x16xf32>)
+                    # CHECK-SAME: outs(%[[OutRectMem]] : memref<8x16xf32>)
+                    linalg.elementwise(
+                        rect_mem,
+                        outs=(out_rect_mem,),
+                        kind=linalg.ElementwiseKind.exp,
+                        indexing_maps=[ident_map_2d, ident_map_2d],
+                    )
+
+                if _ops_with_non_ident_input_maps := True:
+                    # CHECK: linalg.elementwise kind=#linalg.elementwise_kind<exp>
+                    # CHECK-SAME: indexing_maps = [#[[$VertLineBCastMap]], #[[$IdentMap2D]]]
+                    # CHECK-SAME: ins(%[[VertLine]] : tensor<8xf32>)
+                    # CHECK-SAME: outs(%[[OutRect]] : tensor<8x16xf32>) -> tensor<8x16xf32>
+                    op4 = linalg.ElementwiseOp(
+                        result_tensors=(out_rect.result.type,),
+                        inputs=(vert_line,),
+                        outputs=(out_rect,),
+                        kind=linalg.ElementwiseKind.exp,
+                        indexing_maps=[vert_line_bcast_map, ident_map_2d],
+                    )
+                    linalg.fill_builtin_region(op4.operation)
+
+                    # CHECK: linalg.elementwise kind=#linalg.elementwise_kind<add>
+                    # CHECK-SAME: indexing_maps = [#[[$IdentMap2D]], #[[$VertLineBCastMap]], #[[$IdentMap2D]]]
+                    # CHECK-SAME: ins(%[[Rect]], %[[VertLine]] : tensor<8x16xf32>, tensor<8xf32>)
+                    # CHECK-SAME: outs(%[[OutRect]] : tensor<8x16xf32>) -> tensor<8x16xf32>
+                    op4 = linalg.ElementwiseOp(
+                        result_tensors=(out_rect.result.type,),
+                        inputs=(rect, vert_line),
+                        outputs=(out_rect,),
+                        kind=linalg.ElementwiseKind.add,
+                        indexing_maps=[ident_map_2d, vert_line_bcast_map, ident_map_2d],
+                    )
+                    linalg.fill_builtin_region(op4.operation)
+
+                    # CHECK: linalg.elementwise kind=#linalg.elementwise_kind<div>
+                    # CHECK-SAME: indexing_maps = [#[[$VertLineBCastMap]], #[[$HorLineBCastMap]], #[[$IdentMap2D]]]
+                    # CHECK-SAME: ins(%[[VertLine]], %[[HorLine]] : tensor<8xf32>, tensor<16xf32>)
+                    # CHECK-SAME: outs(%[[OutRect]] : tensor<8x16xf32>) -> tensor<8x16xf32>
+                    linalg.elementwise(
+                        vert_line,
+                        hor_line,
+                        outs=(out_rect,),
+                        kind=linalg.ElementwiseKind.div,
+                        indexing_maps=[
+                            vert_line_bcast_map,
+                            hor_line_bcast_map,
+                            ident_map_2d,
+                        ],
+                    )
+
+                if _ops_with_non_ident_and_transposed_input_maps := True:
+                    # CHECK: %[[VertLineBoolsMem:.*]] = memref.alloca() : memref<8xi1>
+                    vert_line_bools_mem = memref.alloca(
+                        MemRefType.get(vert_line_shape, IntegerType.get_signless(1)),
+                        [],
+                        [],
+                    )
+                    # CHECK: linalg.elementwise kind=#linalg.elementwise_kind<select>
+                    # CHECK-SAME: indexing_maps = [#[[$VertLineBCastMap]], #[[$HorLineBCastMap]], #[[$TransMap2D]], #[[$IdentMap2D]]]
+                    # CHECK-SAME: ins(%[[VertLineBoolsMem]], %[[HorLineMem]], %[[TransRectMem]] : memref<8xi1>, memref<16xf32>, memref<16x8xf32>)
+                    # CHECK-SAME: outs(%[[OutRectMem]] : memref<8x16xf32>)
+                    linalg.elementwise(
+                        vert_line_bools_mem,
+                        hor_line_mem,
+                        trans_rect_mem,
+                        outs=(out_rect_mem,),
+                        kind=linalg.ElementwiseKind.select,
+                        indexing_maps=[
+                            vert_line_bcast_map,
+                            hor_line_bcast_map,
+                            transposed_map_2d,
+                            ident_map_2d,
+                        ],
+                    )
+
         print(module)

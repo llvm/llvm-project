@@ -21,7 +21,6 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "Target.h"
-#include "lld/Common/CommonLinkerContext.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -34,7 +33,6 @@
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <cassert>
-#include <limits>
 #include <optional>
 #include <vector>
 
@@ -565,6 +563,7 @@ SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
     addrExpr = readExpr();
     expect(":");
   }
+  bool noCrossRefs = consume("NOCROSSREFS");
   Expr lmaExpr = consume("AT") ? readParenExpr() : Expr{};
   expect("{");
 
@@ -594,6 +593,12 @@ SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
     for (SectionCommand *od : v)
       static_cast<OutputDesc *>(od)->osec.memoryRegionName =
           std::string(regionName);
+  }
+  if (noCrossRefs) {
+    NoCrossRefCommand cmd;
+    for (SectionCommand *od : v)
+      cmd.outputSections.push_back(static_cast<OutputDesc *>(od)->osec.name);
+    ctx.script->noCrossRefs.push_back(std::move(cmd));
   }
 
   // According to the specification, at the end of the overlay, the location
@@ -895,9 +900,9 @@ Expr ScriptParser::readAssert() {
   StringRef msg = readName();
   expect(")");
 
-  return [=, s = ctx.script, &ctx = ctx]() -> ExprValue {
+  return [=, s = ctx.script]() -> ExprValue {
     if (!e().getValue())
-      Err(ctx) << msg;
+      s->recordError(msg);
     return s->getDot();
   };
 }
@@ -1224,6 +1229,8 @@ SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
 // This is an operator-precedence parser to parse a linker
 // script expression.
 Expr ScriptParser::readExpr() {
+  if (atEOF())
+    return []() { return 0; };
   // Our lexer is context-aware. Set the in-expression bit so that
   // they apply different tokenization rules.
   SaveAndRestore saved(lexState, State::Expr);

@@ -44,6 +44,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #if SANITIZER_LINUX
+#include <sys/eventfd.h>
 #include <sys/inotify.h>
 #include <sys/timerfd.h>
 #endif
@@ -60,6 +61,14 @@
 #define MAYBE_APPEND_64(func) func "64"
 #else
 #define MAYBE_APPEND_64(func) func
+#endif
+
+#if SANITIZER_INTERCEPT_FREE_SIZED
+extern "C" void free_sized(void *ptr, size_t size);
+#endif
+
+#if SANITIZER_INTERCEPT_FREE_ALIGNED_SIZED
+extern "C" void free_aligned_sized(void *ptr, size_t alignment, size_t size);
 #endif
 
 using namespace testing;
@@ -147,7 +156,6 @@ TEST(TestRtsanInterceptors, AlignedAllocDiesWhenRealtime) {
   }
 }
 
-// free_sized and free_aligned_sized (both C23) are not yet supported
 TEST(TestRtsanInterceptors, FreeDiesWhenRealtime) {
   void *ptr_1 = malloc(1);
   void *ptr_2 = malloc(1);
@@ -159,10 +167,54 @@ TEST(TestRtsanInterceptors, FreeDiesWhenRealtime) {
   ASSERT_NE(nullptr, ptr_2);
 }
 
+#if SANITIZER_INTERCEPT_FREE_SIZED
+TEST(TestRtsanInterceptors, FreeSizedDiesWhenRealtime) {
+  void *ptr_1 = malloc(1);
+  void *ptr_2 = malloc(1);
+  ExpectRealtimeDeath([ptr_1]() { free_sized(ptr_1, 1); }, "free_sized");
+  ExpectNonRealtimeSurvival([ptr_2]() { free_sized(ptr_2, 1); });
+
+  // Prevent malloc/free pair being optimised out
+  ASSERT_NE(nullptr, ptr_1);
+  ASSERT_NE(nullptr, ptr_2);
+}
+#endif
+
+#if SANITIZER_INTERCEPT_FREE_ALIGNED_SIZED
+TEST(TestRtsanInterceptors, FreeAlignedSizedDiesWhenRealtime) {
+  if (ALIGNED_ALLOC_AVAILABLE()) {
+    void *ptr_1 = aligned_alloc(16, 32);
+    void *ptr_2 = aligned_alloc(16, 32);
+    ExpectRealtimeDeath([ptr_1]() { free_aligned_sized(ptr_1, 16, 32); },
+                        "free_aligned_sized");
+    ExpectNonRealtimeSurvival([ptr_2]() { free_aligned_sized(ptr_2, 16, 32); });
+
+    // Prevent malloc/free pair being optimised out
+    ASSERT_NE(nullptr, ptr_1);
+    ASSERT_NE(nullptr, ptr_2);
+  }
+}
+#endif
+
 TEST(TestRtsanInterceptors, FreeSurvivesWhenRealtimeIfArgumentIsNull) {
   RealtimeInvoke([]() { free(NULL); });
   ExpectNonRealtimeSurvival([]() { free(NULL); });
 }
+
+#if SANITIZER_INTERCEPT_FREE_SIZED
+TEST(TestRtsanInterceptors, FreeSizedSurvivesWhenRealtimeIfArgumentIsNull) {
+  RealtimeInvoke([]() { free_sized(NULL, 0); });
+  ExpectNonRealtimeSurvival([]() { free_sized(NULL, 0); });
+}
+#endif
+
+#if SANITIZER_INTERCEPT_FREE_ALIGNED_SIZED
+TEST(TestRtsanInterceptors,
+     FreeAlignedSizedSurvivesWhenRealtimeIfArgumentIsNull) {
+  RealtimeInvoke([]() { free_aligned_sized(NULL, 0, 0); });
+  ExpectNonRealtimeSurvival([]() { free_aligned_sized(NULL, 0, 0); });
+}
+#endif
 
 TEST(TestRtsanInterceptors, PosixMemalignDiesWhenRealtime) {
   auto Func = []() {
@@ -448,12 +500,6 @@ TEST_F(RtsanFileTest, FcntlSetFdDiesWhenRealtime) {
   close(fd);
 }
 
-TEST(TestRtsanInterceptors, CloseDiesWhenRealtime) {
-  auto Func = []() { close(0); };
-  ExpectRealtimeDeath(Func, "close");
-  ExpectNonRealtimeSurvival(Func);
-}
-
 TEST(TestRtsanInterceptors, ChdirDiesWhenRealtime) {
   auto Func = []() { chdir("."); };
   ExpectRealtimeDeath(Func, "chdir");
@@ -605,8 +651,10 @@ protected:
   }
 
   void TearDown() override {
-    if (file != nullptr)
+    const bool is_open = fcntl(fd, F_GETFD) != -1;
+    if (is_open && file != nullptr)
       fclose(file);
+
     RtsanFileTest::TearDown();
   }
 
@@ -618,6 +666,16 @@ private:
   FILE *file = nullptr;
   int fd = -1;
 };
+
+TEST_F(RtsanOpenedFileTest, CloseDiesWhenRealtime) {
+  auto Func = [this]() { close(GetOpenFd()); };
+  ExpectRealtimeDeath(Func, "close");
+}
+
+TEST_F(RtsanOpenedFileTest, CloseSurvivesWhenNotRealtime) {
+  auto Func = [this]() { close(GetOpenFd()); };
+  ExpectNonRealtimeSurvival(Func);
+}
 
 #if SANITIZER_INTERCEPT_FSEEK
 TEST_F(RtsanOpenedFileTest, FgetposDieWhenRealtime) {
@@ -694,16 +752,25 @@ TEST_F(RtsanOpenedFileTest, RewindDieWhenRealtime) {
 }
 #endif
 
-TEST(TestRtsanInterceptors, IoctlDiesWhenRealtime) {
-  auto Func = []() { ioctl(0, FIONREAD); };
+TEST_F(RtsanOpenedFileTest, IoctlDiesWhenRealtime) {
+  auto Func = [this]() {
+    int arg{};
+    ioctl(GetOpenFd(), FIONREAD, &arg);
+    EXPECT_THAT(arg, Ge(0));
+  };
   ExpectRealtimeDeath(Func, "ioctl");
   ExpectNonRealtimeSurvival(Func);
 }
 
+TEST_F(RtsanOpenedFileTest, IoctlBehavesWithoutOutputArg) {
+  const int result = ioctl(GetOpenFd(), FIONCLEX);
+  EXPECT_THAT(result, Ne(-1));
+}
+
 TEST_F(RtsanOpenedFileTest, IoctlBehavesWithOutputArg) {
   int arg{};
-  ioctl(GetOpenFd(), FIONREAD, &arg);
-
+  const int result = ioctl(GetOpenFd(), FIONREAD, &arg);
+  ASSERT_THAT(result, Ne(-1));
   EXPECT_THAT(arg, Ge(0));
 }
 
@@ -893,6 +960,22 @@ TEST_F(RtsanOpenedFileTest, TruncateDiesWhenRealtime) {
 TEST_F(RtsanOpenedFileTest, FtruncateDiesWhenRealtime) {
   auto Func = [&]() { ftruncate(GetOpenFd(), 16); };
   ExpectRealtimeDeath(Func, MAYBE_APPEND_64("ftruncate"));
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, SymlinkDiesWhenRealtime) {
+  auto Func = [&]() {
+    symlink("/tmp/rtsan_symlink_test", GetTemporaryFilePath());
+  };
+  ExpectRealtimeDeath(Func, "symlink");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, SymlinkatDiesWhenRealtime) {
+  auto Func = [&]() {
+    symlinkat("/tmp/rtsan_symlinkat_test", AT_FDCWD, GetTemporaryFilePath());
+  };
+  ExpectRealtimeDeath(Func, "symlinkat");
   ExpectNonRealtimeSurvival(Func);
 }
 
@@ -1109,10 +1192,18 @@ TEST(TestRtsanInterceptors, PthreadJoinDiesWhenRealtime) {
 }
 
 #if SANITIZER_APPLE
-
 #pragma clang diagnostic push
 // OSSpinLockLock is deprecated, but still in use in libc++
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#undef OSSpinLockLock
+extern "C" {
+typedef int32_t OSSpinLock;
+void OSSpinLockLock(volatile OSSpinLock *__lock);
+// _os_nospin_lock_lock may replace OSSpinLockLock due to deprecation macro.
+typedef volatile OSSpinLock *_os_nospin_lock_t;
+void _os_nospin_lock_lock(_os_nospin_lock_t lock);
+}
+
 TEST(TestRtsanInterceptors, OsSpinLockLockDiesWhenRealtime) {
   auto Func = []() {
     OSSpinLock spin_lock{};
@@ -1121,7 +1212,14 @@ TEST(TestRtsanInterceptors, OsSpinLockLockDiesWhenRealtime) {
   ExpectRealtimeDeath(Func, "OSSpinLockLock");
   ExpectNonRealtimeSurvival(Func);
 }
-#pragma clang diagnostic pop
+
+TEST(TestRtsanInterceptors, OsNoSpinLockLockDiesWhenRealtime) {
+  OSSpinLock lock{};
+  auto Func = [&]() { _os_nospin_lock_lock(&lock); };
+  ExpectRealtimeDeath(Func, "_os_nospin_lock_lock");
+  ExpectNonRealtimeSurvival(Func);
+}
+#pragma clang diagnostic pop //"-Wdeprecated-declarations"
 
 TEST(TestRtsanInterceptors, OsUnfairLockLockDiesWhenRealtime) {
   auto Func = []() {
@@ -1131,26 +1229,7 @@ TEST(TestRtsanInterceptors, OsUnfairLockLockDiesWhenRealtime) {
   ExpectRealtimeDeath(Func, "os_unfair_lock_lock");
   ExpectNonRealtimeSurvival(Func);
 }
-
-// We intercept _os_nospin_lock_lock because it's the internal
-// locking mechanism for MacOS's atomic implementation for data
-// types that are larger than the hardware's maximum lock-free size.
-// However, it's a private implementation detail and not visible in any headers,
-// so we must duplicate the required type definitions to forward declaration
-// what we need here.
-extern "C" {
-struct _os_nospin_lock_s {
-  unsigned int oul_value;
-};
-void _os_nospin_lock_lock(_os_nospin_lock_s *);
-}
-TEST(TestRtsanInterceptors, OsNoSpinLockLockDiesWhenRealtime) {
-  _os_nospin_lock_s lock{};
-  auto Func = [&]() { _os_nospin_lock_lock(&lock); };
-  ExpectRealtimeDeath(Func, "_os_nospin_lock_lock");
-  ExpectNonRealtimeSurvival(Func);
-}
-#endif
+#endif // SANITIZER_APPLE
 
 #if SANITIZER_LINUX
 TEST(TestRtsanInterceptors, SpinLockLockDiesWhenRealtime) {
@@ -1161,6 +1240,24 @@ TEST(TestRtsanInterceptors, SpinLockLockDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 #endif
+
+TEST(TestRtsanInterceptors, PthreadCondInitDiesWhenRealtime) {
+  pthread_cond_t cond{};
+  auto Func = [&cond]() { pthread_cond_init(&cond, nullptr); };
+  ExpectRealtimeDeath(Func, "pthread_cond_init");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, PthreadCondDestroyDiesWhenRealtime) {
+  pthread_cond_t cond{};
+  ASSERT_EQ(0, pthread_cond_init(&cond, nullptr));
+
+  auto Func = [&cond]() { pthread_cond_destroy(&cond); };
+  ExpectRealtimeDeath(Func, "pthread_cond_destroy");
+  ExpectNonRealtimeSurvival(Func);
+
+  pthread_cond_destroy(&cond);
+}
 
 TEST(TestRtsanInterceptors, PthreadCondSignalDiesWhenRealtime) {
   pthread_cond_t cond{};
@@ -1675,6 +1772,12 @@ TEST(TestRtsanInterceptors, TimerfdGettimeDiesWhenRealtime) {
   itimerspec ts{};
   auto Func = [fd, &ts]() { timerfd_gettime(fd, &ts); };
   ExpectRealtimeDeath(Func, "timerfd_gettime");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, EventfdDiesWhenRealtime) {
+  auto Func = []() { eventfd(EFD_CLOEXEC, 0); };
+  ExpectRealtimeDeath(Func, "eventfd");
   ExpectNonRealtimeSurvival(Func);
 }
 #endif

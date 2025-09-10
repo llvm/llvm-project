@@ -237,11 +237,6 @@ public:
   FileEntryRef getVirtualFileRef(StringRef Filename, off_t Size,
                                  time_t ModificationTime);
 
-  LLVM_DEPRECATED("Functions returning FileEntry are deprecated.",
-                  "getVirtualFileRef()")
-  const FileEntry *getVirtualFile(StringRef Filename, off_t Size,
-                                  time_t ModificationTime);
-
   /// Retrieve a FileEntry that bypasses VFE, which is expected to be a virtual
   /// file entry, to access the real file.  The returned FileEntry will have
   /// the same filename as FE but a different identity and its own stat.

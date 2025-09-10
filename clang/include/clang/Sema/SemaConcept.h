@@ -114,7 +114,8 @@ struct NormalizedConstraint {
 
 private:
   static std::optional<NormalizedConstraint>
-  fromConstraintExprs(Sema &S, const NamedDecl *D, ArrayRef<const Expr *> E);
+  fromAssociatedConstraints(Sema &S, const NamedDecl *D,
+                            ArrayRef<AssociatedConstraint> ACs);
   static std::optional<NormalizedConstraint>
   fromConstraintExpr(Sema &S, const NamedDecl *D, const Expr *E);
 };
@@ -138,7 +139,7 @@ struct alignas(ConstraintAlignment) FoldExpandedConstraint {
 
 const NormalizedConstraint *getNormalizedAssociatedConstraints(
     Sema &S, const NamedDecl *ConstrainedDecl,
-    ArrayRef<const Expr *> AssociatedConstraints);
+    ArrayRef<AssociatedConstraint> AssociatedConstraints);
 
 /// \brief SubsumptionChecker establishes subsumption
 /// between two set of constraints.
@@ -149,8 +150,10 @@ public:
 
   SubsumptionChecker(Sema &SemaRef, SubsumptionCallable Callable = {});
 
-  std::optional<bool> Subsumes(const NamedDecl *DP, ArrayRef<const Expr *> P,
-                               const NamedDecl *DQ, ArrayRef<const Expr *> Q);
+  std::optional<bool> Subsumes(const NamedDecl *DP,
+                               ArrayRef<AssociatedConstraint> P,
+                               const NamedDecl *DQ,
+                               ArrayRef<AssociatedConstraint> Q);
 
   bool Subsumes(const NormalizedConstraint *P, const NormalizedConstraint *Q);
 

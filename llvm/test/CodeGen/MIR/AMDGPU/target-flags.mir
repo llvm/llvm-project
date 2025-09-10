@@ -22,13 +22,23 @@ body: |
   bb.0:
     liveins: $sgpr0_sgpr1
     ; CHECK-LABEL: name: flags
-    ; CHECK: [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @foo + 4, target-flags(amdgpu-rel32-hi) @foo + 12, implicit-def dead $scc
-    ; CHECK: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 target-flags(amdgpu-gotprel) @foo
-    ; CHECK: S_ENDPGM 0
+    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @foo + 4, target-flags(amdgpu-rel32-hi) @foo + 12, implicit-def dead $scc
+    ; CHECK-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 target-flags(amdgpu-gotprel) @foo
+    ; CHECK-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @foo
+    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @foo
+    ; CHECK-NEXT: [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 target-flags(amdgpu-abs64) @foo
+    ; CHECK-NEXT: [[S_MOV_B64_2:%[0-9]+]]:sreg_64 = S_MOV_B64 target-flags(amdgpu-rel64) @foo
+    ; CHECK-NEXT: [[S_MOV_B64_3:%[0-9]+]]:sreg_64 = S_MOV_B64 target-flags(amdgpu-gotprel64) @foo
+    ; CHECK-NEXT: S_ENDPGM 0
     %0 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @foo + 4, target-flags(amdgpu-rel32-hi) @foo + 12, implicit-def dead $scc
     %1 = S_MOV_B64 target-flags(amdgpu-gotprel) @foo
     %2:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @foo
     %3:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @foo
+    %4:sreg_64 = S_MOV_B64 target-flags(amdgpu-abs64) @foo
+    %5:sreg_64 = S_MOV_B64 target-flags(amdgpu-rel64) @foo
+    %6:sreg_64 = S_MOV_B64 target-flags(amdgpu-gotprel64) @foo
 
     S_ENDPGM 0
 ...

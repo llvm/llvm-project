@@ -80,7 +80,7 @@ struct CommonTestInputs {
   )cpp") {
     auto *SDecl = cast<CXXRecordDecl>(
         lookup("S", *AST.context().getTranslationUnitDecl()));
-    SType = AST.context().getRecordType(SDecl);
+    SType = AST.context().getCanonicalTagType(SDecl);
     CallVal = selectFirst<CallExpr>(
         "call",
         match(cxxMemberCallExpr(callee(functionDecl(hasName("valProperty"))))
@@ -163,7 +163,7 @@ TEST_F(CachedConstAccessorsLatticeTest,
   )cpp");
   auto *SDecl =
       cast<CXXRecordDecl>(lookup("S", *AST.context().getTranslationUnitDecl()));
-  QualType SType = AST.context().getRecordType(SDecl);
+  CanQualType SType = AST.context().getCanonicalTagType(SDecl);
   const CallExpr *CE = selectFirst<CallExpr>(
       "call", match(cxxMemberCallExpr(
                         callee(functionDecl(hasName("structValProperty"))))
@@ -237,7 +237,7 @@ TEST_F(CachedConstAccessorsLatticeTest, DifferentValsFromDifferentLocs) {
   )cpp");
   auto *SDecl =
       cast<CXXRecordDecl>(lookup("S", *AST.context().getTranslationUnitDecl()));
-  QualType SType = AST.context().getRecordType(SDecl);
+  CanQualType SType = AST.context().getCanonicalTagType(SDecl);
   SmallVector<BoundNodes, 1> valPropertyCalls =
       match(cxxMemberCallExpr(callee(functionDecl(hasName("valProperty"))))
                 .bind("call"),

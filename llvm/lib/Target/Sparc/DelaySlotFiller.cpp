@@ -58,8 +58,7 @@ namespace {
     }
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     void insertCallDefsUses(MachineBasicBlock::iterator MI,

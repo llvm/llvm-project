@@ -5,13 +5,13 @@
 ! RUN: bbc -fopenmp -fopenmp-version=52 -emit-hlfir %s -o - | FileCheck --check-prefixes=MLIR-HOST,MLIR-ALL %s
 ! RUN: %if amdgpu-registered-target %{ bbc -target amdgcn-amd-amdhsa -fopenmp -fopenmp-version=52 -fopenmp-is-target-device -emit-hlfir %s -o - | FileCheck --check-prefixes=MLIR-DEVICE,MLIR-ALL %s %}
 
-! MLIR: func.func @{{.*}}implicit_invocation() attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to)>}
+! MLIR: func.func @{{.*}}implicit_invocation() attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to), automap = false>}
 ! MLIR: return
 ! LLVM: define {{.*}} @{{.*}}implicit_invocation{{.*}}(
 subroutine implicit_invocation()
 end subroutine implicit_invocation
 
-! MLIR: func.func @{{.*}}declaretarget() attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to)>}
+! MLIR: func.func @{{.*}}declaretarget() attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to), automap = false>}
 ! MLIR: return
 ! LLVM: define {{.*}} @{{.*}}declaretarget{{.*}}(
 subroutine declaretarget()
@@ -19,7 +19,7 @@ subroutine declaretarget()
     call implicit_invocation()
 end subroutine declaretarget
 
-! MLIR: func.func @{{.*}}declaretarget_enter() attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (enter)>}
+! MLIR: func.func @{{.*}}declaretarget_enter() attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (enter), automap = false>}
 ! MLIR: return
 ! LLVM: define {{.*}} @{{.*}}declaretarget_enter{{.*}}(
 subroutine declaretarget_enter()
@@ -27,7 +27,7 @@ subroutine declaretarget_enter()
     call implicit_invocation()
 end subroutine declaretarget_enter
 
-! MLIR: func.func @{{.*}}no_declaretarget() attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to)>}
+! MLIR: func.func @{{.*}}no_declaretarget() attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to), automap = false>}
 ! MLIR: return
 ! LLVM: define {{.*}} @{{.*}}no_declaretarget{{.*}}(
 subroutine no_declaretarget()

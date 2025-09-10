@@ -26,7 +26,6 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 
 using namespace llvm;

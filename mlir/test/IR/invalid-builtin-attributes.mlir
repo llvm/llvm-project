@@ -63,6 +63,21 @@ func.func @elementsattr_toolarge1() -> () {
 
 // -----
 
+// expected-error@+1 {{parsed 1 elements, but type ('complex<i64>') expected 2 elements}}
+#attr = dense<0> : tensor<2xcomplex<i64>>
+
+// -----
+
+// expected-error@+1 {{parsed 2 elements, but type ('tensor<2xcomplex<i64>>') expected 4 elements}}
+#attr = dense<[0, 1]> : tensor<2xcomplex<i64>>
+
+// -----
+
+// expected-error@+1 {{parsed 3 elements, but type ('tensor<2xcomplex<i64>>') expected 4 elements}}
+#attr = dense<[0, (0, 1)]> : tensor<2xcomplex<i64>>
+
+// -----
+
 func.func @elementsattr_toolarge2() -> () {
   "foo"(){bar = dense<[-777]> : tensor<1xi8>} : () -> () // expected-error {{integer constant out of range}}
 }

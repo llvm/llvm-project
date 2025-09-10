@@ -15,6 +15,8 @@
 #ifndef LLVM_SUPPORT_TYPESIZE_H
 #define LLVM_SUPPORT_TYPESIZE_H
 
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -24,10 +26,6 @@
 #include <type_traits>
 
 namespace llvm {
-
-/// Reports a diagnostic message to indicate an invalid size request has been
-/// done on a scalable vector. This function may not return.
-void reportInvalidSizeRequest(const char *Msg);
 
 /// StackOffset holds a fixed and a scalable offset in bytes.
 class StackOffset {
@@ -374,7 +372,14 @@ public:
   //     else
   //       bail out early for scalable vectors and use getFixedValue()
   //   }
-  operator ScalarTy() const;
+  operator ScalarTy() const {
+    if (isScalable()) {
+      reportFatalInternalError(
+          "Cannot implicitly convert a scalable size to a fixed-width size in "
+          "`TypeSize::operator ScalarTy()`");
+    }
+    return getFixedValue();
+  }
 
   // Additional operators needed to avoid ambiguous parses
   // because of the implicit conversion hack.

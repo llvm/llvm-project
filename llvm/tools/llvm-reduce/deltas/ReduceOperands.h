@@ -15,6 +15,7 @@ namespace llvm {
 void reduceOperandsOneDeltaPass(Oracle &, ReducerWorkItem &);
 void reduceOperandsZeroDeltaPass(Oracle &, ReducerWorkItem &);
 void reduceOperandsNaNDeltaPass(Oracle &, ReducerWorkItem &);
+void reduceOperandsPoisonDeltaPass(Oracle &, ReducerWorkItem &);
 } // namespace llvm
 
 #endif

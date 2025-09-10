@@ -1,5 +1,6 @@
-# RUN: yaml2obj %S/Inputs/basic-elf.yaml -o %T/line-table.out
-# RUN: %lldb %T/line-table.out -o "target symbols add -s line-table.out %S/Inputs/line-table.syms" \
+# RUN: mkdir -p %t.dir
+# RUN: yaml2obj %S/Inputs/basic-elf.yaml -o %t.dir/line-table.out
+# RUN: %lldb %t.dir/line-table.out -o "target symbols add -s line-table.out %S/Inputs/line-table.syms" \
 # RUN:   -s %s -o exit | FileCheck %s
 
 # We create a compile unit for each function. The compile unit name is the first

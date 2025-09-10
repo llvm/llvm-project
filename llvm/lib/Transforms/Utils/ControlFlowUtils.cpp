@@ -12,7 +12,6 @@
 
 #include "llvm/Transforms/Utils/ControlFlowUtils.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
@@ -246,12 +245,14 @@ static void reconnectPhis(BasicBlock *Out, BasicBlock *GuardBlock,
     bool AllUndef = true;
     for (auto [BB, Succ0, Succ1] : Incoming) {
       Value *V = PoisonValue::get(Phi->getType());
-      if (BB == Out) {
-        V = NewPhi;
-      } else if (Phi->getBasicBlockIndex(BB) != -1) {
+      if  (Phi->getBasicBlockIndex(BB) != -1) {
         V = Phi->removeIncomingValue(BB, false);
+        if (BB == Out) {
+          V = NewPhi;
+        }
         AllUndef &= isa<UndefValue>(V);
       }
+
       NewPhi->addIncoming(V, BB);
     }
     assert(NewPhi->getNumIncomingValues() == Incoming.size());
@@ -274,7 +275,7 @@ std::pair<BasicBlock *, bool> ControlFlowHub::finalize(
     DomTreeUpdater *DTU, SmallVectorImpl<BasicBlock *> &GuardBlocks,
     const StringRef Prefix, std::optional<unsigned> MaxControlFlowBooleans) {
 #ifndef NDEBUG
-  SmallSet<BasicBlock *, 8> Incoming;
+  SmallPtrSet<BasicBlock *, 8> Incoming;
 #endif
   SetVector<BasicBlock *> Outgoing;
 

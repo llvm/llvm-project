@@ -78,8 +78,7 @@ public:
   }
 
   MachineFunctionProperties getClearedProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 };
 
@@ -100,7 +99,7 @@ FunctionPass *llvm::createSIFormMemoryClausesLegacyPass() {
 }
 
 static bool isVMEMClauseInst(const MachineInstr &MI) {
-  return SIInstrInfo::isFLAT(MI) || SIInstrInfo::isVMEM(MI);
+  return SIInstrInfo::isVMEM(MI);
 }
 
 static bool isSMEMClauseInst(const MachineInstr &MI) {
@@ -198,7 +197,9 @@ bool SIFormMemoryClausesImpl::checkPressure(const MachineInstr &MI,
   // pointer becomes dead and could otherwise be reused for destination.
   RPT.advanceToNext();
   GCNRegPressure MaxPressure = RPT.moveMaxPressure();
-  unsigned Occupancy = MaxPressure.getOccupancy(*ST);
+  unsigned Occupancy = MaxPressure.getOccupancy(
+      *ST,
+      MI.getMF()->getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize());
 
   // Don't push over half the register budget. We don't want to introduce
   // spilling just to form a soft clause.

@@ -56,7 +56,7 @@ INITIALIZE_PASS_BEGIN(InstructionSelect, DEBUG_TYPE,
                       "Select target instructions out of generic instructions",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysis)
+INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LazyBlockFrequencyInfoPass)
 INITIALIZE_PASS_END(InstructionSelect, DEBUG_TYPE,
@@ -120,8 +120,8 @@ public:
 
 void InstructionSelect::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
-  AU.addRequired<GISelValueTrackingAnalysis>();
-  AU.addPreserved<GISelValueTrackingAnalysis>();
+  AU.addRequired<GISelValueTrackingAnalysisLegacy>();
+  AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
 
   if (OptLevel != CodeGenOptLevel::None) {
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
@@ -133,8 +133,7 @@ void InstructionSelect::getAnalysisUsage(AnalysisUsage &AU) const {
 
 bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
   // If the ISel pipeline failed, do not bother running that pass.
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
 
   ISel = MF.getSubtarget().getInstructionSelector();
@@ -146,7 +145,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
   OptLevel = MF.getFunction().hasOptNone() ? CodeGenOptLevel::None
                                            : MF.getTarget().getOptLevel();
 
-  VT = &getAnalysis<GISelValueTrackingAnalysis>().get(MF);
+  VT = &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
   if (OptLevel != CodeGenOptLevel::None) {
     PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
     if (PSI && PSI->hasProfileSummary())
@@ -307,7 +306,7 @@ bool InstructionSelect::selectMachineFunction(MachineFunction &MF) {
 
   if (!DebugCounter::shouldExecute(GlobalISelCounter)) {
     dbgs() << "Falling back for function " << MF.getName() << "\n";
-    MF.getProperties().set(MachineFunctionProperties::Property::FailedISel);
+    MF.getProperties().setFailedISel();
     return false;
   }
 

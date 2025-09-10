@@ -18,7 +18,7 @@ namespace clang::tidy::modernize {
 UseBoolLiteralsCheck::UseBoolLiteralsCheck(StringRef Name,
                                            ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
+      IgnoreMacros(Options.get("IgnoreMacros", true)) {}
 
 void UseBoolLiteralsCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
@@ -26,13 +26,12 @@ void UseBoolLiteralsCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 void UseBoolLiteralsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      traverse(
-          TK_AsIs,
-          implicitCastExpr(
-              has(ignoringParenImpCasts(integerLiteral().bind("literal"))),
-              hasImplicitDestinationType(qualType(booleanType())),
-              unless(isInTemplateInstantiation()),
-              anyOf(hasParent(explicitCastExpr().bind("cast")), anything()))),
+      traverse(TK_AsIs,
+               implicitCastExpr(
+                   has(ignoringParenImpCasts(integerLiteral().bind("literal"))),
+                   hasImplicitDestinationType(qualType(booleanType())),
+                   unless(isInTemplateInstantiation()),
+                   optionally(hasParent(explicitCastExpr().bind("cast"))))),
       this);
 
   Finder->addMatcher(

@@ -11,7 +11,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#if __x86_64__
+#if __x86_64__ || _M_X64
 #include <xmmintrin.h>
 #endif
 
@@ -19,7 +19,7 @@ using Fortran::common::RealFlag;
 using Fortran::common::RoundingMode;
 
 ScopedHostFloatingPointEnvironment::ScopedHostFloatingPointEnvironment(
-#if __x86_64__
+#if __x86_64__ || _M_X64
     bool treatSubnormalOperandsAsZero, bool flushSubnormalResultsToZero
 #else
     bool, bool
@@ -38,7 +38,7 @@ ScopedHostFloatingPointEnvironment::ScopedHostFloatingPointEnvironment(
     std::abort();
   }
 
-#if __x86_64__
+#if __x86_64__ || _M_X64
   originalMxcsr = _mm_getcsr();
   unsigned int currentMxcsr{originalMxcsr};
   if (treatSubnormalOperandsAsZero) {
@@ -72,7 +72,7 @@ ScopedHostFloatingPointEnvironment::~ScopedHostFloatingPointEnvironment() {
         stderr, "fesetenv() failed: %s\n", llvm::sys::StrError(errno).c_str());
     std::abort();
   }
-#if __x86_64__
+#if __x86_64__ || _M_X64
   _mm_setcsr(originalMxcsr);
 #endif
 }

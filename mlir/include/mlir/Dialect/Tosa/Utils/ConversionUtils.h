@@ -70,7 +70,7 @@ checkHasDynamicBatchDims(PatternRewriter &rewriter, Op op,
   }
 
   dynamicDims.push_back(
-      rewriter.create<tensor::DimOp>(op->getLoc(), params[0], 0));
+      tensor::DimOp::create(rewriter, op->getLoc(), params[0], 0));
   return dynamicDims;
 }
 
@@ -91,7 +91,7 @@ namespace {
 template <typename TosaOp, typename... Args>
 TosaOp createOpAndInferShape(ImplicitLocOpBuilder &builder, Type resultTy,
                              Args &&...args) {
-  auto op = builder.create<TosaOp>(resultTy, args...);
+  auto op = TosaOp::create(builder, resultTy, args...);
 
   InferShapedTypeOpInterface shapeInterface =
       dyn_cast<InferShapedTypeOpInterface>(op.getOperation());
@@ -243,6 +243,11 @@ bool getConstShapeValues(Operation *op,
 // returns a small vector of int64_t values that attr contains
 SmallVector<int64_t> convertFromIntAttr(const DenseElementsAttr &attr,
                                         const int rank);
+
+// returns true iff constant indices for scatter op contains unique indices
+// per batch
+bool hasUniqueConstantScatterIndices(ShapedType indicesType,
+                                     DenseIntElementsAttr indicesAttr);
 } // namespace tosa
 } // namespace mlir
 

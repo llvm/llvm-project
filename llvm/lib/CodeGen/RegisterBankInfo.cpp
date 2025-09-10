@@ -307,7 +307,7 @@ hashValueMapping(const RegisterBankInfo::PartialMapping *BreakDown,
   SmallVector<size_t, 8> Hashes(NumBreakDowns);
   for (unsigned Idx = 0; Idx != NumBreakDowns; ++Idx)
     Hashes.push_back(hash_value(BreakDown[Idx]));
-  return hash_combine_range(Hashes.begin(), Hashes.end());
+  return hash_combine_range(Hashes);
 }
 
 const RegisterBankInfo::ValueMapping &

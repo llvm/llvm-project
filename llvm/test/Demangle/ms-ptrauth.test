@@ -1,0 +1,12 @@
+; RUN: llvm-undname < %s | FileCheck %s
+
+; CHECK-NOT: Invalid mangled name
+
+?s@@3U?$S@PE__ptrauth1A@ENC@AH@@A
+; CHECK: struct S<int *__ptrauth(2, 0, 1234)> s
+
+?foo@@YAXPEAPE__ptrauth20OK@AH@Z
+; CHECK: void __cdecl foo(int *__ptrauth(3, 1, 234)*)
+
+??$foo@PEAPE__ptrauth0A@EA@AH@@YAXPEAPE__ptrauth0A@EA@AH@Z
+; CHECK: void __cdecl foo<int *__ptrauth(1, 0, 64)*>(int *__ptrauth(1, 0, 64)*)

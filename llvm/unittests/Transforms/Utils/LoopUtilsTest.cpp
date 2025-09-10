@@ -33,7 +33,7 @@ static void run(Module &M, StringRef FuncName,
                     Test) {
   Function *F = M.getFunction(FuncName);
   DominatorTree DT(*F);
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M.getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   AssumptionCache AC(*F);
   LoopInfo LI(DT);

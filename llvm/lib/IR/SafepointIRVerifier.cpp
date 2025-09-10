@@ -157,7 +157,6 @@ public:
 protected:
   void addDeadBlock(const BasicBlock *BB) {
     SmallVector<const BasicBlock *, 4> NewDead;
-    SmallSetVector<const BasicBlock *, 4> DF;
 
     NewDead.push_back(BB);
     while (!NewDead.empty()) {

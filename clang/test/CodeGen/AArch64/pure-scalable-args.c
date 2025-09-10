@@ -92,7 +92,7 @@ void test_argpass_simple(PST *p) {
 // CHECK-AAPCS-NEXT: ret void
 
 // CHECK-AAPCS:  declare void @argpass_simple_callee(<vscale x 16 x i1>, <vscale x 2 x double>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 16 x i8>, <vscale x 16 x i1>)
-// CHECK-DARWIN: declare void @argpass_simple_callee(ptr noundef)
+// CHECK-DARWIN: declare void @argpass_simple_callee(ptr dead_on_return noundef)
 
 // Boundary case of using the last available Z-reg, PST expanded.
 //   0.0  -> d0-d3
@@ -107,7 +107,7 @@ void test_argpass_last_z(PST *p) {
     argpass_last_z_callee(.0, .0, .0, .0, *p);
 }
 // CHECK-AAPCS:  declare void @argpass_last_z_callee(double noundef, double noundef, double noundef, double noundef, <vscale x 16 x i1>, <vscale x 2 x double>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 16 x i8>, <vscale x 16 x i1>)
-// CHECK-DARWIN: declare void @argpass_last_z_callee(double noundef, double noundef, double noundef, double noundef, ptr noundef)
+// CHECK-DARWIN: declare void @argpass_last_z_callee(double noundef, double noundef, double noundef, double noundef, ptr dead_on_return noundef)
 
 
 // Like the above, but using a tuple type to occupy some registers.
@@ -123,7 +123,7 @@ void test_argpass_last_z_tuple(PST *p, svfloat64x4_t x) {
   argpass_last_z_tuple_callee(x, *p);
 }
 // CHECK-AAPCS:  declare void @argpass_last_z_tuple_callee(<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 16 x i1>, <vscale x 2 x double>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 16 x i8>, <vscale x 16 x i1>)
-// CHECK-DARWIN: declare void @argpass_last_z_tuple_callee(<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, ptr noundef)
+// CHECK-DARWIN: declare void @argpass_last_z_tuple_callee(<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, ptr dead_on_return noundef)
 
 
 // Boundary case of using the last available P-reg, PST expanded.
@@ -139,7 +139,7 @@ void test_argpass_last_p(PST *p) {
     argpass_last_p_callee(svpfalse(), svpfalse_c(), *p);
 }
 // CHECK-AAPCS:  declare void @argpass_last_p_callee(<vscale x 16 x i1>, target("aarch64.svcount"), <vscale x 16 x i1>, <vscale x 2 x double>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 16 x i8>, <vscale x 16 x i1>)
-// CHECK-DARWIN: declare void @argpass_last_p_callee(<vscale x 16 x i1>, target("aarch64.svcount"), ptr noundef)
+// CHECK-DARWIN: declare void @argpass_last_p_callee(<vscale x 16 x i1>, target("aarch64.svcount"), ptr dead_on_return noundef)
 
 
 // Not enough Z-regs, push PST to memory and pass a pointer, Z-regs and
@@ -157,7 +157,7 @@ void test_argpass_no_z(PST *p, double dummy, svmfloat8_t u, int8x16_t v, mfloat8
     void argpass_no_z_callee(svmfloat8_t, int8x16_t, mfloat8x16_t, double, double, int, PST, int, double, svbool_t);
     argpass_no_z_callee(u, v, w, .0, .0, 1, *p, 2, 3.0, svptrue_b64());
 }
-// CHECK: declare void @argpass_no_z_callee(<vscale x 16 x i8>, <16 x i8> noundef, <16 x i8>, double noundef, double noundef, i32 noundef, ptr noundef, i32 noundef, double noundef, <vscale x 16 x i1>)
+// CHECK: declare void @argpass_no_z_callee(<vscale x 16 x i8>, <16 x i8> noundef, <16 x i8>, double noundef, double noundef, i32 noundef, ptr dead_on_return noundef, i32 noundef, double noundef, <vscale x 16 x i1>)
 
 
 // Like the above, using a tuple to occupy some registers.
@@ -173,7 +173,7 @@ void test_argpass_no_z_tuple_f64(PST *p, float dummy, svfloat64x4_t x) {
                                      double, svbool_t);
   argpass_no_z_tuple_f64_callee(x, .0, 1, *p, 2, 3.0, svptrue_b64());
 }
-// CHECK: declare void @argpass_no_z_tuple_f64_callee(<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, double noundef, i32 noundef, ptr noundef, i32 noundef, double noundef, <vscale x 16 x i1>)
+// CHECK: declare void @argpass_no_z_tuple_f64_callee(<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, double noundef, i32 noundef, ptr dead_on_return noundef, i32 noundef, double noundef, <vscale x 16 x i1>)
 
 
 // Likewise, using a different tuple.
@@ -189,7 +189,7 @@ void test_argpass_no_z_tuple_mfp8(PST *p, float dummy, svmfloat8x4_t x) {
                                       double, svbool_t);
   argpass_no_z_tuple_mfp8_callee(x, .0, 1, *p, 2, 3.0, svptrue_b64());
 }
-// CHECK: declare void @argpass_no_z_tuple_mfp8_callee(<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, double noundef, i32 noundef, ptr noundef, i32 noundef, double noundef, <vscale x 16 x i1>)
+// CHECK: declare void @argpass_no_z_tuple_mfp8_callee(<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, double noundef, i32 noundef, ptr dead_on_return noundef, i32 noundef, double noundef, <vscale x 16 x i1>)
 
 
 // Not enough Z-regs (consumed by a HFA), PST passed indirectly
@@ -204,8 +204,8 @@ void test_argpass_no_z_hfa(HFA *h, PST *p) {
     void argpass_no_z_hfa_callee(double, HFA, int, PST, int, svbool_t);
     argpass_no_z_hfa_callee(.0, *h, 1, *p, 2, svptrue_b64());
 }
-// CHECK-AAPCS:  declare void @argpass_no_z_hfa_callee(double noundef, [4 x float] alignstack(8), i32 noundef, ptr noundef, i32 noundef, <vscale x 16 x i1>)
-// CHECK-DARWIN: declare void @argpass_no_z_hfa_callee(double noundef, [4 x float], i32 noundef, ptr noundef, i32 noundef, <vscale x 16 x i1>)
+// CHECK-AAPCS:  declare void @argpass_no_z_hfa_callee(double noundef, [4 x float] alignstack(8), i32 noundef, ptr dead_on_return noundef, i32 noundef, <vscale x 16 x i1>)
+// CHECK-DARWIN: declare void @argpass_no_z_hfa_callee(double noundef, [4 x float], i32 noundef, ptr dead_on_return noundef, i32 noundef, <vscale x 16 x i1>)
 
 // Not enough Z-regs (consumed by a HVA), PST passed indirectly
 //   0.0  -> d0
@@ -219,8 +219,8 @@ void test_argpass_no_z_hva(HVA *h, PST *p) {
     void argpass_no_z_hva_callee(double, HVA, int, PST, int, svbool_t);
     argpass_no_z_hva_callee(.0, *h, 1, *p, 2, svptrue_b64());
 }
-// CHECK-AAPCS:  declare void @argpass_no_z_hva_callee(double noundef, [4 x <16 x i8>] alignstack(16), i32 noundef, ptr noundef, i32 noundef, <vscale x 16 x i1>)
-// CHECK-DARWIN: declare void @argpass_no_z_hva_callee(double noundef, [4 x <16 x i8>], i32 noundef, ptr noundef, i32 noundef, <vscale x 16 x i1>)
+// CHECK-AAPCS:  declare void @argpass_no_z_hva_callee(double noundef, [4 x <16 x i8>] alignstack(16), i32 noundef, ptr dead_on_return noundef, i32 noundef, <vscale x 16 x i1>)
+// CHECK-DARWIN: declare void @argpass_no_z_hva_callee(double noundef, [4 x <16 x i8>], i32 noundef, ptr dead_on_return noundef, i32 noundef, <vscale x 16 x i1>)
 
 // Not enough P-regs, PST passed indirectly, Z-regs and P-regs still available.
 //   true -> p0-p2
@@ -233,7 +233,7 @@ void test_argpass_no_p(PST *p) {
     void argpass_no_p_callee(svbool_t, svbool_t, svbool_t, int, PST, int, double, svbool_t);
     argpass_no_p_callee(svptrue_b8(), svptrue_b16(), svptrue_b32(), 1, *p, 2, 3.0, svptrue_b64());
 }
-// CHECK: declare void @argpass_no_p_callee(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, i32 noundef, ptr noundef, i32 noundef, double noundef, <vscale x 16 x i1>)
+// CHECK: declare void @argpass_no_p_callee(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, i32 noundef, ptr dead_on_return noundef, i32 noundef, double noundef, <vscale x 16 x i1>)
 
 
 // Like above, using a tuple to occupy some registers.
@@ -250,7 +250,7 @@ void test_argpass_no_p_tuple(PST *p, svbool_t u, svboolx2_t v) {
                                  svbool_t);
   argpass_no_p_tuple_callee(v, u, 1, *p, 2, 3.0, svptrue_b64());
 }
-// CHECK: declare void @argpass_no_p_tuple_callee(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, i32 noundef, ptr noundef, i32 noundef, double noundef, <vscale x 16 x i1>)
+// CHECK: declare void @argpass_no_p_tuple_callee(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, i32 noundef, ptr dead_on_return noundef, i32 noundef, double noundef, <vscale x 16 x i1>)
 
 
 // HFAs go back-to-back to memory, afterwards Z-regs not available, PST passed indirectly.
@@ -263,8 +263,8 @@ void test_after_hfa(HFA *h, PST *p) {
     void after_hfa_callee(double, double, double, double, double, HFA, PST, HFA, svbool_t);
     after_hfa_callee(.0, .0, .0, .0, .0, *h, *p, *h, svpfalse());
 }
-// CHECK-AAPCS:  declare void @after_hfa_callee(double noundef, double noundef, double noundef, double noundef, double noundef, [4 x float] alignstack(8), ptr noundef, [4 x float] alignstack(8), <vscale x 16 x i1>)
-// CHECK-DARWIN: declare void @after_hfa_callee(double noundef, double noundef, double noundef, double noundef, double noundef, [4 x float], ptr noundef, [4 x float], <vscale x 16 x i1>)
+// CHECK-AAPCS:  declare void @after_hfa_callee(double noundef, double noundef, double noundef, double noundef, double noundef, [4 x float] alignstack(8), ptr dead_on_return noundef, [4 x float] alignstack(8), <vscale x 16 x i1>)
+// CHECK-DARWIN: declare void @after_hfa_callee(double noundef, double noundef, double noundef, double noundef, double noundef, [4 x float], ptr dead_on_return noundef, [4 x float], <vscale x 16 x i1>)
 
 // Small PST, not enough registers, passed indirectly, unlike other small
 // aggregates.
@@ -277,7 +277,7 @@ void test_small_pst(SmallPST *p, SmallAgg *s) {
     void small_pst_callee(SmallAgg, double, double, double, double, double, double, double, double, double, SmallPST, double);
     small_pst_callee(*s, .0, .0, .0, .0, .0, .0, .0, .0, 1.0, *p, 2.0);
 }
-// CHECK-AAPCS:  declare void @small_pst_callee([2 x i64], double noundef, double noundef, double noundef, double noundef, double noundef, double noundef, double noundef, double noundef, double noundef, ptr noundef, double noundef)
+// CHECK-AAPCS:  declare void @small_pst_callee([2 x i64], double noundef, double noundef, double noundef, double noundef, double noundef, double noundef, double noundef, double noundef, double noundef, ptr dead_on_return noundef, double noundef)
 // CHECK-DARWIN: declare void @small_pst_callee([2 x i64], double noundef, double noundef, double noundef, double noundef, double noundef, double noundef, double noundef, double noundef, double noundef, i128, double noundef)
 
 
@@ -326,12 +326,12 @@ void test_pass_variadic(PST *p, PST *q) {
     pass_variadic_callee(*p, *q);
 }
 // CHECK-AAPCS: call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(96) %byval-temp, ptr noundef nonnull align 16 dereferenceable(96) %q, i64 96, i1 false)
-// CHECK-AAPCS: call void (<vscale x 16 x i1>, <vscale x 2 x double>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 16 x i8>, <vscale x 16 x i1>, ...) @pass_variadic_callee(<vscale x 16 x i1> %1, <vscale x 2 x double> %cast.scalable1, <vscale x 4 x float> %cast.scalable2, <vscale x 4 x float> %cast.scalable3, <vscale x 16 x i8> %cast.scalable4, <vscale x 16 x i1> %12, ptr noundef nonnull %byval-temp)
+// CHECK-AAPCS: call void (<vscale x 16 x i1>, <vscale x 2 x double>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 16 x i8>, <vscale x 16 x i1>, ...) @pass_variadic_callee(<vscale x 16 x i1> %1, <vscale x 2 x double> %cast.scalable1, <vscale x 4 x float> %cast.scalable2, <vscale x 4 x float> %cast.scalable3, <vscale x 16 x i8> %cast.scalable4, <vscale x 16 x i1> %12, ptr dead_on_return noundef nonnull %byval-temp)
 
 // CHECK-DARWIN: call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(96) %byval-temp, ptr noundef nonnull align 16 dereferenceable(96) %p, i64 96, i1 false)
-// CHECK-DARWIN: call void @llvm.lifetime.start.p0(i64 96, ptr nonnull %byval-temp1)
+// CHECK-DARWIN: call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp1)
 // CHECK-DARWIN: call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(96) %byval-temp1, ptr noundef nonnull align 16 dereferenceable(96) %q, i64 96, i1 false)
-// CHECK-DARWIN: call void (ptr, ...) @pass_variadic_callee(ptr noundef nonnull %byval-temp, ptr noundef nonnull %byval-temp1)
+// CHECK-DARWIN: call void (ptr, ...) @pass_variadic_callee(ptr dead_on_return noundef nonnull %byval-temp, ptr dead_on_return noundef nonnull %byval-temp1)
 
 
 // Test passing a small PST, still passed indirectly, despite being <= 128 bits
@@ -340,7 +340,7 @@ void test_small_pst_variadic(SmallPST *p) {
     small_pst_variadic_callee(0, *p);
 }
 // CHECK-AAPCS: call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(16) %byval-temp, ptr noundef nonnull align 16 dereferenceable(16) %p, i64 16, i1 false)
-// CHECK-AAPCS: call void (i32, ...) @small_pst_variadic_callee(i32 noundef 0, ptr noundef nonnull %byval-temp)
+// CHECK-AAPCS: call void (i32, ...) @small_pst_variadic_callee(i32 noundef 0, ptr dead_on_return noundef nonnull %byval-temp)
 
 // CHECK-DARWIN: %0 = load i128, ptr %p, align 16
 // CHECK-DARWIN: tail call void (i32, ...) @small_pst_variadic_callee(i32 noundef 0, i128 %0)
@@ -392,7 +392,7 @@ void test_va_arg(int n, ...) {
 // CHECK-AAPCS: define dso_local void @test_va_arg(i32 noundef %n, ...)
 // CHECK-AAPCS-NEXT: entry:
 // CHECK-AAPCS-NEXT:   %ap = alloca %struct.__va_list, align 8
-// CHECK-AAPCS-NEXT:   call void @llvm.lifetime.start.p0(i64 32, ptr nonnull %ap)
+// CHECK-AAPCS-NEXT:   call void @llvm.lifetime.start.p0(ptr nonnull %ap)
 // CHECK-AAPCS-NEXT:   call void @llvm.va_start.p0(ptr nonnull %ap)
 // CHECK-AAPCS-NEXT:   %gr_offs_p = getelementptr inbounds nuw i8, ptr %ap, i64 24
 // CHECK-AAPCS-NEXT:   %gr_offs = load i32, ptr %gr_offs_p, align 8
@@ -435,14 +435,14 @@ void test_va_arg(int n, ...) {
 // CHECK-AAPCS-NEXT:   %3 = bitcast <vscale x 2 x i8> %cast.scalable to <vscale x 16 x i1>
 // CHECK-AAPCS-NEXT:   %cast.scalable2 = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> poison, <4 x float> %v.sroa.43.0.copyload, i64 0)
 // CHECK-AAPCS-NEXT:   call void @use1(<vscale x 16 x i1> noundef %3, <vscale x 4 x float> noundef %cast.scalable2)
-// CHECK-AAPCS-NEXT:   call void @llvm.lifetime.end.p0(i64 32, ptr nonnull %ap)
+// CHECK-AAPCS-NEXT:   call void @llvm.lifetime.end.p0(ptr nonnull %ap)
 // CHECK-AAPCS-NEXT:   ret void
 // CHECK-AAPCS-NEXT: }
 
 // CHECK-DARWIN: define void @test_va_arg(i32 noundef %n, ...)
 // CHECK-DARWIN-NEXT: entry:
 // CHECK-DARWIN-NEXT:   %ap = alloca ptr, align 8
-// CHECK-DARWIN-NEXT:   call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %ap)
+// CHECK-DARWIN-NEXT:   call void @llvm.lifetime.start.p0(ptr nonnull %ap)
 // CHECK-DARWIN-NEXT:   call void @llvm.va_start.p0(ptr nonnull %ap)
 // CHECK-DARWIN-NEXT:   %argp.cur = load ptr, ptr %ap, align 8
 // CHECK-DARWIN-NEXT:   %argp.next = getelementptr inbounds nuw i8, ptr %argp.cur, i64 8
@@ -456,7 +456,7 @@ void test_va_arg(int n, ...) {
 // CHECK-DARWIN-NEXT:   %1 = bitcast <vscale x 2 x i8> %cast.scalable to <vscale x 16 x i1>
 // CHECK-DARWIN-NEXT:   %cast.scalable2 = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> poison, <4 x float> %v.sroa.43.0.copyload, i64 0)
 // CHECK-DARWIN-NEXT:   call void @use1(<vscale x 16 x i1> noundef %1, <vscale x 4 x float> noundef %cast.scalable2)
-// CHECK-DARWIN-NEXT:   call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %ap)
+// CHECK-DARWIN-NEXT:   call void @llvm.lifetime.end.p0(ptr nonnull %ap)
 // CHECK-DARWIN-NEXT:   ret void
 // CHECK-DARWIN-NEXT: }
 
@@ -467,7 +467,7 @@ void test_tuple_reg_count(svfloat32_t x, svfloat32x2_t y) {
                                    svfloat32_t, svfloat32_t, svfloat32_t, svfloat32x2_t);
   test_tuple_reg_count_callee(x, x, x, x, x, x, x, y);
 }
-// CHECK-AAPCS: declare void @test_tuple_reg_count_callee(<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, ptr noundef)
+// CHECK-AAPCS: declare void @test_tuple_reg_count_callee(<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, ptr dead_on_return noundef)
 // CHECK-DARWIN: declare void @test_tuple_reg_count_callee(<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>)
 
 // Regression test for incorrect passing of SVE vector tuples
@@ -476,5 +476,5 @@ void test_tuple_reg_count_bool(svboolx4_t x, svboolx4_t y) {
   void test_tuple_reg_count_bool_callee(svboolx4_t, svboolx4_t);
   test_tuple_reg_count_bool_callee(x, y);
 }
-// CHECK-AAPCS:  declare void @test_tuple_reg_count_bool_callee(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, ptr noundef)
+// CHECK-AAPCS:  declare void @test_tuple_reg_count_bool_callee(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, ptr dead_on_return noundef)
 // CHECK-DARWIN: declare void @test_tuple_reg_count_bool_callee(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>)

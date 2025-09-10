@@ -5,6 +5,10 @@
 // RUN: ld.lld %t.o -o %t -pie
 // RUN: llvm-readobj -r -S --section-data %t | FileCheck %s
 
+/// -z dynamic-undefined-weak does not affect hidden undefined symbols.
+// RUN: ld.lld %t.o -o %t.so -shared -z dynamic-undefined-weak
+// RUN: llvm-readobj -r -S --section-data %t.so | FileCheck %s
+
 /// This is usually guarded with a comparison. Don't report an error.
 call g
 
