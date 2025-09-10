@@ -5210,12 +5210,12 @@ public:
     }
   }
 
-  unsigned getSpellingCount() const {
-    unsigned Count = 0;
-    for (const auto &Item : Spellings)
-      if (Item.size() != 0)
-        ++Count;
-    return Count;
+  bool hasSpelling() const {
+    for (size_t Kind = 0; Kind < NumSpellingKinds; ++Kind) {
+      if (Spellings[Kind].size() > 0)
+        return true;
+    }
+    return false;
   }
 };
 
@@ -5314,7 +5314,7 @@ static void WriteDocumentation(const RecordKeeper &Records,
     OS << ".. _" << Label << ":\n\n";
   OS << Doc.Heading << "\n" << std::string(Doc.Heading.length(), '-') << "\n";
 
-  if (Doc.SupportedSpellings.getSpellingCount() > 0) {
+  if (Doc.SupportedSpellings.hasSpelling()) {
     // List what spelling syntaxes the attribute supports.
     // Note: "#pragma clang attribute" is handled outside the spelling kinds
     // loop so it must be last.
