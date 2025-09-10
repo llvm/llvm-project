@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMIRToLLVMTranslation.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 #include "mlir/Support/LLVM.h"
@@ -21,6 +22,7 @@
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -88,6 +90,7 @@ static ArrayRef<unsigned> getSupportedMetadataImpl(llvm::LLVMContext &context) {
       llvm::LLVMContext::MD_alias_scope,
       llvm::LLVMContext::MD_dereferenceable,
       llvm::LLVMContext::MD_dereferenceable_or_null,
+      llvm::LLVMContext::MD_mmra,
       context.getMDKindID(vecTypeHintMDName),
       context.getMDKindID(workGroupSizeHintMDName),
       context.getMDKindID(reqdWorkGroupSizeMDName),
@@ -209,6 +212,31 @@ static LogicalResult setDereferenceableAttr(const llvm::MDNode *node,
     return failure();
 
   iface.setDereferenceable(*dereferenceable);
+  return success();
+}
+
+/// Convert the given MMRA metadata (either an MMRA tag or an array of rhem)
+/// into corresponding MLIR attributes and set them on the given operation as a
+/// discardable `llvm.mmra` attribute.
+static LogicalResult setMmraAttr(llvm::MDNode *node, Operation *op,
+                                 LLVM::ModuleImport &moduleImport) {
+  llvm::MMRAMetadata wrapper(node);
+  if (wrapper.empty()) {
+    return success();
+  }
+  MLIRContext *ctx = op->getContext();
+  Attribute mlirMmra;
+  if (wrapper.size() == 1) {
+    auto [prefix, suffix] = *wrapper.begin();
+    mlirMmra = LLVM::MMRATagAttr::get(ctx, prefix, suffix);
+  } else {
+    SmallVector<Attribute> tags;
+    for (auto [prefix, suffix] : wrapper) {
+      tags.push_back(LLVM::MMRATagAttr::get(ctx, prefix, suffix));
+    }
+    mlirMmra = ArrayAttr::get(ctx, tags);
+  }
+  op->setAttr(LLVMDialect::getMmraAttrName(), mlirMmra);
   return success();
 }
 
@@ -432,7 +460,8 @@ public:
       return setDereferenceableAttr(
           node, llvm::LLVMContext::MD_dereferenceable_or_null, op,
           moduleImport);
-
+    if (kind == llvm::LLVMContext::MD_mmra)
+      return setMmraAttr(node, op, moduleImport);
     llvm::LLVMContext &context = node->getContext();
     if (kind == context.getMDKindID(vecTypeHintMDName))
       return setVecTypeHintAttr(builder, node, op, moduleImport);
