@@ -547,14 +547,24 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
     PP->setDependencyDirectivesGetter(*GetDependencyDirectives);
 }
 
+SmallString<256>
+CompilerInstance::normalizeModuleCachePath(FileManager &FileMgr,
+                                           StringRef ModuleCachePath) {
+  SmallString<256> NormalizedModuleCachePath(ModuleCachePath);
+  FileMgr.makeAbsolutePath(NormalizedModuleCachePath);
+  llvm::sys::path::remove_dots(NormalizedModuleCachePath);
+  return NormalizedModuleCachePath;
+}
+
 std::string CompilerInstance::getSpecificModuleCachePath(StringRef ModuleHash) {
+  assert(FileMgr && "Specific module cache path requires a FileManager");
+
   if (getHeaderSearchOpts().ModuleCachePath.empty())
     return "";
 
   // Set up the module path, including the hash for the module-creation options.
-  SmallString<256> SpecificModuleCache(getHeaderSearchOpts().ModuleCachePath);
-  FileMgr->makeAbsolutePath(SpecificModuleCache);
-  llvm::sys::path::remove_dots(SpecificModuleCache);
+  SmallString<256> SpecificModuleCache =
+      normalizeModuleCachePath(*FileMgr, getHeaderSearchOpts().ModuleCachePath);
   if (!getHeaderSearchOpts().DisableModuleHash)
     llvm::sys::path::append(SpecificModuleCache, ModuleHash);
   return std::string(SpecificModuleCache);
