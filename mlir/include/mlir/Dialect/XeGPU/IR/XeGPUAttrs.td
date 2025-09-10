@@ -275,7 +275,11 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                       if (!checkTranspose($_self.getLaneDataAsInt(), other.getLaneDataAsInt(), perm))
                         return false;
                       return true;
-                    }]>
+                    }]>,
+    InterfaceMethod</*desc=*/[{Check if this layout is a slice of some other layout.}],
+                    /*retTy=*/"bool",
+                    /*methodName=*/"isSliceOf",
+                    /*args=*/(ins "const xegpu::DistributeLayoutAttr&": $other)>
   ];
 }
 
@@ -477,6 +481,9 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
     FailureOr<SmallVector<SmallVector<Value>>>
     getOffsets(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape);
 
+    /// Check if this is slice of some other layout.
+    bool isSliceOf(const xegpu::DistributeLayoutAttr &other) { return false; }
+
   }];
 
   let assemblyFormat = "`<` struct(params) `>`";
@@ -637,6 +644,9 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
     /// multiple blocks according to round-robin distribution rules.
     FailureOr<SmallVector<SmallVector<Value>>>
     getOffsets(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape);
+
+    /// Check if this is slice of some other layout.
+    bool isSliceOf(const xegpu::DistributeLayoutAttr &other);
 
   }];
 
