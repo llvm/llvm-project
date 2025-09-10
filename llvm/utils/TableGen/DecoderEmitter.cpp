@@ -517,6 +517,9 @@ class FilterChooser {
   /// The "field value" here refers to the encoding bits in the filtered range.
   std::map<uint64_t, std::unique_ptr<const FilterChooser>> FilterChooserMap;
 
+  /// Set to true if decoding conflict was encountered.
+  bool HasConflict = false;
+
   struct Island {
     unsigned StartBit;
     unsigned NumBits;
@@ -558,6 +561,9 @@ public:
     // The last encoding ID is the ID of an encoding with the largest width.
     return Encodings[EncodingIDs.back()].getBitWidth();
   }
+
+  /// Returns true if any decoding conflicts were encountered.
+  bool hasConflict() const { return HasConflict; }
 
 private:
   /// Applies the given filter to the set of encodings this FilterChooser
@@ -684,6 +690,7 @@ void FilterChooser::applyFilter(const Filter &F) {
     // group of instructions whose segment values are variable.
     VariableFC = std::make_unique<FilterChooser>(Encodings, F.VariableIDs,
                                                  FilterBits, *this);
+    HasConflict |= VariableFC->HasConflict;
   }
 
   // Otherwise, create sub choosers.
@@ -695,9 +702,11 @@ void FilterChooser::applyFilter(const Filter &F) {
 
     // Delegates to an inferior filter chooser for further processing on this
     // category of instructions.
-    FilterChooserMap.try_emplace(FilterVal, std::make_unique<FilterChooser>(
-                                                Encodings, InferiorEncodingIDs,
-                                                InferiorFilterBits, *this));
+    auto [It, _] = FilterChooserMap.try_emplace(
+        FilterVal,
+        std::make_unique<FilterChooser>(Encodings, InferiorEncodingIDs,
+                                        InferiorFilterBits, *this));
+    HasConflict |= It->second->HasConflict;
   }
 }
 
@@ -1592,7 +1601,7 @@ void FilterChooser::doFilter() {
   // Print out useful conflict information for postmortem analysis.
   errs() << "Decoding Conflict:\n";
   dump();
-  PrintFatalError("Decoding conflict encountered");
+  HasConflict = true;
 }
 
 void FilterChooser::dump() const {
@@ -2570,12 +2579,17 @@ template <typename T> constexpr uint32_t InsnBitWidth = 0;
   DecoderTableBuilder TableBuilder(Target, Encodings, TableInfo);
   unsigned OpcodeMask = 0;
 
+  bool HasConflict = false;
   for (const auto &[BitWidth, BWMap] : EncMap) {
     for (const auto &[Key, EncodingIDs] : BWMap) {
       auto [DecoderNamespace, HwModeID] = Key;
 
       // Emit the decoder for this (namespace, hwmode, width) combination.
       FilterChooser FC(Encodings, EncodingIDs);
+      HasConflict |= FC.hasConflict();
+      // Skip emitting table entries if a conflict has been detected.
+      if (HasConflict)
+        continue;
 
       // The decode table is cleared for each top level decoder function. The
       // predicates and decoders themselves, however, are shared across
@@ -2599,6 +2613,9 @@ template <typename T> constexpr uint32_t InsnBitWidth = 0;
       TableInfo.Decoders.clear();
     }
   }
+
+  if (HasConflict)
+    PrintFatalError("Decoding conflict encountered");
 
   // Emit the decoder function for the last bucket. This will also emit the
   // single decoder function if SpecializeDecodersPerBitwidth = false.
