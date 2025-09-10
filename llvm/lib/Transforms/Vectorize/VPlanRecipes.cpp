@@ -407,7 +407,7 @@ void VPIRFlags::intersectFlags(const VPIRFlags &Other) {
     DisjointFlags.IsDisjoint &= Other.DisjointFlags.IsDisjoint;
     break;
   case OperationType::PossiblyExactOp:
-    ExactFlags.IsExact = Other.ExactFlags.IsExact;
+    ExactFlags.IsExact &= Other.ExactFlags.IsExact;
     break;
   case OperationType::GEPOp:
     GEPFlags &= Other.GEPFlags;
