@@ -38,6 +38,10 @@ bool AMDGPUSubtarget::useRealTrue16Insts() const {
   return hasTrue16BitInsts() && EnableRealTrue16Insts;
 }
 
+bool AMDGPUSubtarget::has16bitD16HWBug() const {
+  return hasTrue16BitInsts() && useRealTrue16Insts() && Enable16bitD16HWBug;
+}
+
 // Returns the maximum per-workgroup LDS allocation size (in bytes) that still
 // allows the given function to achieve an occupancy of NWaves waves per
 // SIMD / EU, taking into account only the function's *maximum* workgroup size.
