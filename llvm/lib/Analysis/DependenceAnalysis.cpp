@@ -3803,38 +3803,6 @@ bool DependenceInfo::tryDelinearizeParametricSize(
   // to the dependency checks.
   if (!DisableDelinearizationChecks)
     for (size_t I = 1; I < Size; ++I) {
-      const Loop *OutermostLoop =
-          LI->getLoopFor(Src->getParent())->getOutermostLoop();
-
-      // TODO: Inferring a subscript's monotonicity from the base pointer can
-      // lead to incorrect results. Consider the following code:
-      //
-      //   %offset = ...
-      //   %gep = getelementptr nusw i8, ptr %base, i64 %offset
-      //
-      // We might infer the monotonicity of %offset from nusw on the GEP (see
-      // the implementation of checkMonotonicity for details). This inference
-      // may be valid, but the same does not necessarily hold for each
-      // subscript. For example, assume %offset is {0,+,(%m * %n)}<%loop> where
-      // %m and %n are loop invariants. Delinearization can "decompose" this
-      // SCEV into something like:
-      //
-      //   Size: [UnknownSize][%m]
-      //   Subscripts: [{0,+,%n}][{0,+,1}]
-      //
-      // Here, if (%m * %n) wraps, %n can be larger than (%m * %n). Hence even
-      // if we know {0,+,(%m * %n)} doesn't wrap, we cannot conclude the same
-      // for {0,+,%n}.
-      SignedMonotonicity SrcMonotonicity =
-          checkSignedMonotonicity(SE, SrcSubscripts[I], OutermostLoop, SrcPtr);
-      if (SrcMonotonicity.getType() == SignedMonotonicityType::Unknown)
-        return false;
-
-      SignedMonotonicity DstMonotonicity =
-          checkSignedMonotonicity(SE, DstSubscripts[I], OutermostLoop, DstPtr);
-      if (DstMonotonicity.getType() == SignedMonotonicityType::Unknown)
-        return false;
-
       bool SNN = isKnownNonNegative(SrcSubscripts[I], SrcPtr);
       bool DNN = isKnownNonNegative(DstSubscripts[I], DstPtr);
       bool SLT = isKnownLessThan(SrcSubscripts[I], Sizes[I - 1]);
@@ -3857,22 +3825,6 @@ bool DependenceInfo::tryDelinearizeParametricSize(
       });
       return false;
     }
-
-  // TODO: Probably we need to prove that the "offset calculation" doesn't
-  // wrap. Here the offset calculation is:
-  //
-  //   Offset =
-  //     Subscripts[0] +
-  //     Subscripts[1]*Sizes[0] +
-  //     Subscripts[2]*Sizes[0]*Sizes[1] +
-  //     ...
-  //     Subscripts[N-1]*Sizes[0]*Sizes[1]*...*Sizes[N-2]
-  //
-  // where N is the number of dimensions. The subsequent dependence tests assume
-  // that different subscript values result in different offset values. If the
-  // above calculation wraps, this assumption is violated. Note that if every
-  // element of Subscripts is positive, the situation would be simple. However,
-  // the subscript for the outermost dimension (Subscripts[0]) can be negative.
 
   return true;
 }
