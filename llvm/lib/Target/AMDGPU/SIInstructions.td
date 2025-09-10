@@ -367,6 +367,8 @@ defvar Operations = [
   WaveReduceOp<"min", "I64", i64, SGPR_64, VSrc_b64>,
   WaveReduceOp<"umax", "U64", i64, SGPR_64, VSrc_b64>,
   WaveReduceOp<"max", "I64", i64, SGPR_64, VSrc_b64>,
+  WaveReduceOp<"add", "U64", i64, SGPR_64, VSrc_b64>,
+  WaveReduceOp<"sub", "U64", i64, SGPR_64, VSrc_b64>,
 ];
 
 foreach Op = Operations in {
