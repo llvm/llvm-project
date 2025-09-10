@@ -1052,7 +1052,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   SDLoc DL(Node);
   MVT VT = Node->getSimpleValueType(0);
 
-  bool HasBitTest = Subtarget->hasStdExtZbs() || Subtarget->hasVendorXTHeadBs();
+  bool HasBitTest = Subtarget->hasBEXTILike();
 
   switch (Opcode) {
   case ISD::Constant: {
