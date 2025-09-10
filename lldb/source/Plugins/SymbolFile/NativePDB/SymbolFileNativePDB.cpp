@@ -2634,52 +2634,13 @@ SymbolFileNativePDB::FindMangledFunctionName(PdbCompilandSymId func_id) {
   return FindMangledSymbol(SegmentOffset(proc.Segment, proc.CodeOffset));
 }
 
-/// Find the mangled name of a function at \a so.
-///
-/// This is similar to the NearestSym function from Microsoft's PDB reference:
-/// https://github.com/microsoft/microsoft-pdb/blob/805655a28bd8198004be2ac27e6e0290121a5e89/PDB/dbi/gsi.cpp#L1492-L1581
-/// The main difference is that we search for the exact symbol.
-///
-/// \param so[in] The address of the function given by its segment and code
-/// offset.
-/// \return The mangled function name if found. Otherwise an empty optional.
 std::optional<llvm::StringRef>
 SymbolFileNativePDB::FindMangledSymbol(SegmentOffset so) {
-  // The address map is sorted by address, so we do binary search.
-  // Each element is an offset into the symbols for a public symbol.
-  auto lo = m_index->publics().getAddressMap().begin();
-  auto hi = m_index->publics().getAddressMap().end();
-  hi -= 1;
-
-  while (lo < hi) {
-    auto tgt = lo + ((hi - lo + 1) / 2);
-    auto val = tgt->value();
-    auto sym = m_index->symrecords().readRecord(val);
-    if (sym.kind() != S_PUB32)
-      return std::nullopt; // this is most likely corrupted debug info
-
-    PublicSym32 psym =
-        llvm::cantFail(SymbolDeserializer::deserializeAs<PublicSym32>(sym));
-    SegmentOffset cur(psym.Segment, psym.Offset);
-    if (so < cur) {
-      tgt -= 1;
-      hi = tgt;
-    } else if (so == cur)
-      return psym.Name;
-    else
-      lo = tgt;
-  }
-
-  // We might've found something, check if it's the symbol we're searching for
-  auto val = lo->value();
-  auto sym = m_index->symrecords().readRecord(val);
-  if (sym.kind() != S_PUB32)
+  auto symbol = m_index->publics().findByAddress(m_index->symrecords(),
+                                                 so.segment, so.offset);
+  if (!symbol)
     return std::nullopt;
-  PublicSym32 psym =
-      llvm::cantFail(SymbolDeserializer::deserializeAs<PublicSym32>(sym));
-  if (psym.Segment != so.segment || psym.Offset != so.offset)
-    return std::nullopt;
-  return psym.Name;
+  return symbol->first.Name;
 }
 
 void SymbolFileNativePDB::CacheUdtDeclarations() {
