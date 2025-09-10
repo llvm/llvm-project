@@ -742,8 +742,8 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
       // nice to have an effective generic way of getting these benefits...
       // Until such a way is found, don't insist on promoting i1 here.
       (SrcVT != MVT::i1 ||
-       TLI.getLoadExtAction(ExtType, Node->getValueType(0), MVT::i1) ==
-         TargetLowering::Promote)) {
+       TLI.getLoadExtAction(ExtType, Node->getValueType(0), MVT::i1,
+         LD->getAddressSpace()) == TargetLowering::Promote)) {
     // Promote to a byte-sized load if not loading an integral number of
     // bytes.  For example, promote EXTLOAD:i20 -> EXTLOAD:i24.
     unsigned NewWidth = SrcVT.getStoreSizeInBits();
@@ -856,7 +856,7 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
   } else {
     bool isCustom = false;
     switch (TLI.getLoadExtAction(ExtType, Node->getValueType(0),
-                                 SrcVT.getSimpleVT())) {
+                                 SrcVT.getSimpleVT(), LD->getAddressSpace())) {
     default: llvm_unreachable("This action is not supported yet!");
     case TargetLowering::Custom:
       isCustom = true;
@@ -884,13 +884,15 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
 
     case TargetLowering::Expand: {
       EVT DestVT = Node->getValueType(0);
-      if (!TLI.isLoadExtLegal(ISD::EXTLOAD, DestVT, SrcVT)) {
+      if (!TLI.isLoadExtLegal(ISD::EXTLOAD, DestVT, SrcVT,
+                              LD->getAddressSpace())) {
         // If the source type is not legal, see if there is a legal extload to
         // an intermediate type that we can then extend further.
         EVT LoadVT = TLI.getRegisterType(SrcVT.getSimpleVT());
         if ((LoadVT.isFloatingPoint() == SrcVT.isFloatingPoint()) &&
             (TLI.isTypeLegal(SrcVT) || // Same as SrcVT == LoadVT?
-             TLI.isLoadExtLegal(ExtType, LoadVT, SrcVT))) {
+             TLI.isLoadExtLegal(ExtType, LoadVT, SrcVT,
+                                LD->getAddressSpace()))) {
           // If we are loading a legal type, this is a non-extload followed by a
           // full extend.
           ISD::LoadExtType MidExtType =

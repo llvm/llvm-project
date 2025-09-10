@@ -279,7 +279,6 @@ define amdgpu_kernel void @test_call_external_void_func_i1_zeroext(i32) #0 {
 ; VI-NEXT:    s_addc_u32 s5, s5, external_void_func_i1_zeroext@rel32@hi+12
 ; VI-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; VI-NEXT:    s_mov_b32 s32, 0
-; VI-NEXT:    v_and_b32_e32 v0, 1, v0
 ; VI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; VI-NEXT:    s_endpgm
 ;
@@ -302,7 +301,6 @@ define amdgpu_kernel void @test_call_external_void_func_i1_zeroext(i32) #0 {
 ; CI-NEXT:    s_addc_u32 s5, s5, external_void_func_i1_zeroext@rel32@hi+12
 ; CI-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; CI-NEXT:    s_mov_b32 s32, 0
-; CI-NEXT:    v_and_b32_e32 v0, 1, v0
 ; CI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; CI-NEXT:    s_endpgm
 ;
@@ -325,7 +323,6 @@ define amdgpu_kernel void @test_call_external_void_func_i1_zeroext(i32) #0 {
 ; GFX9-NEXT:    s_addc_u32 s5, s5, external_void_func_i1_zeroext@rel32@hi+12
 ; GFX9-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GFX9-NEXT:    s_mov_b32 s32, 0
-; GFX9-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -340,7 +337,6 @@ define amdgpu_kernel void @test_call_external_void_func_i1_zeroext(i32) #0 {
 ; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_i1_zeroext@rel32@lo+4
 ; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_i1_zeroext@rel32@hi+12
 ; GFX11-NEXT:    s_mov_b32 s32, 0
-; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -360,7 +356,6 @@ define amdgpu_kernel void @test_call_external_void_func_i1_zeroext(i32) #0 {
 ; HSA-NEXT:    s_addc_u32 s9, s9, external_void_func_i1_zeroext@rel32@hi+12
 ; HSA-NEXT:    s_mov_b64 s[6:7], s[4:5]
 ; HSA-NEXT:    s_mov_b32 s32, 0
-; HSA-NEXT:    v_and_b32_e32 v0, 1, v0
 ; HSA-NEXT:    s_swappc_b64 s[30:31], s[8:9]
 ; HSA-NEXT:    s_endpgm
   %var = load volatile i1, ptr addrspace(1) poison

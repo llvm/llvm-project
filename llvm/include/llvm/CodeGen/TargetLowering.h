@@ -1487,9 +1487,16 @@ public:
     assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValI < MVT::VALUETYPE_SIZE &&
            MemI < MVT::VALUETYPE_SIZE && "Table isn't big enough!");
     unsigned Shift = 4 * ExtType;
-    return (
-        LegalizeAction)((LoadExtActions.at(AddrSpace)[ValI][MemI] >> Shift) &
-                        0xf);
+    if (LoadExtActions.count(AddrSpace)) {
+      return (
+          LegalizeAction)((LoadExtActions.at(AddrSpace)[ValI][MemI] >> Shift) &
+                          0xf);
+    } else {
+      assert(AddrSpace != 0 && "addrspace zero should be initialized");
+      return (
+          LegalizeAction)((LoadExtActions.at(0)[ValI][MemI] >> Shift) &
+                          0xf);
+    }
   }
 
   /// Return true if the specified load with extension is legal on this target.
@@ -2649,6 +2656,7 @@ protected:
     assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValVT.isValid() &&
            MemVT.isValid() && "Table isn't big enough!");
     assert((unsigned)Action < 0x10 && "too many bits for bitfield array");
+    assert(AddrSpace == 0 && "expected addrspace 0");
     unsigned Shift = 4 * ExtType;
     LoadExtActions[AddrSpace][ValVT.SimpleTy][MemVT.SimpleTy] &=
         ~((uint16_t)0xF << Shift);
@@ -3140,7 +3148,7 @@ public:
       LType = ISD::SEXTLOAD;
     }
 
-    return isLoadExtLegal(LType, VT, LoadVT);
+    return isLoadExtLegal(LType, VT, LoadVT, Load->getPointerAddressSpace());
   }
 
   /// Return true if any actual instruction that defines a value of type FromTy
@@ -3757,9 +3765,9 @@ private:
   /// specific value type and extension type. Uses 4-bits to store the action
   /// for each of the 4 load ext types. These actions can be specified for each
   /// address space.
-  using LoadExtActionMap =
-      std::map<unsigned, std::array<std::array<uint16_t, MVT::VALUETYPE_SIZE>,
-                                    MVT::VALUETYPE_SIZE>>;
+  using LoadExtActionMapTy =
+    std::array<std::array<uint16_t, MVT::VALUETYPE_SIZE>, MVT::VALUETYPE_SIZE>;
+  using LoadExtActionMap = std::map<unsigned, LoadExtActionMapTy>;
   LoadExtActionMap LoadExtActions;
 
   /// Similar to LoadExtActions, but for atomic loads. Only Legal or Expand
