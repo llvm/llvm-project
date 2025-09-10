@@ -2061,12 +2061,12 @@ define i32 @or_zext_constant(i8 %a) {
 
 define i32 @or_zext_minus_constant(i8 %a) {
 ; CHECK-LABEL: @or_zext_minus_constant(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[A:%.*]], 1
-; CHECK-NEXT:    [[OR:%.*]] = zext i8 [[TMP1]] to i32
-; CHECK-NEXT:    ret i32 [[OR]]
+; CHECK-NEXT:    [[OR:%.*]] = zext i8 [[TMP1:%.*]] to i32
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[OR]], -9
+; CHECK-NEXT:    ret i32 [[OR1]]
 ;
   %zext = zext i8 %a to i32
-  %or = or i32 %zext, 1
+  %or = or i32 %zext, -9
   ret i32 %or
 }
 
