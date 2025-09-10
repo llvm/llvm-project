@@ -38,6 +38,8 @@
 #include <cstdint>
 #include <optional>
 
+#include "mlir/Dialect/MemRef/Transforms/Transforms.h"
+
 using namespace mlir;
 
 #define DEBUG_TYPE "vector-narrow-type-emulation"

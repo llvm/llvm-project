@@ -147,8 +147,8 @@ void populateExtractAddressComputationsPatterns(RewritePatternSet &patterns);
 
 /// Patterns for flattening multi-dimensional memref operations into
 /// one-dimensional memref operations.
-void populateFlattenVectorMemRefPatterns(RewritePatternSet &patterns);
-void populateFlattenMemRefOpsPatterns(RewritePatternSet &patterns);
+void populateFlattenVectorMemrefPatterns(RewritePatternSet &patterns);
+void populateFlattenMemrefOpsPatterns(RewritePatternSet &patterns);
 void populateFlattenMemrefsPatterns(RewritePatternSet &patterns);
 
 /// Build a new memref::AllocaOp whose dynamic sizes are independent of all
