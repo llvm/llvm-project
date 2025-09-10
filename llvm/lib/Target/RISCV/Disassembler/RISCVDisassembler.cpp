@@ -745,9 +745,9 @@ static constexpr DecoderListEntry DecoderList16[]{
     {DecoderTable16, {}, "standard 16-bit instructions"},
     {DecoderTableRV32Only16, {}, "RV32-only 16-bit instructions"},
     // Zc* instructions incompatible with Zcf or Zcd
-    {DecoderTableZcOverlap16,
-     {},
-     "ZcOverlap (16-bit Instructions overlapping with Zcf/Zcd)"},
+    //{DecoderTableZcOverlap16,
+    // {},
+    // "ZcOverlap (16-bit Instructions overlapping with Zcf/Zcd)"},
 };
 
 DecodeStatus RISCVDisassembler::getInstruction16(MCInst &MI, uint64_t &Size,
