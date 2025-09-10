@@ -4338,11 +4338,10 @@ add_fp_unittest(
   SRCS
     log_bf16_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.errno.errno
     libc.src.math.log_bf16
     libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.cast
 )
 
 add_fp_unittest(
