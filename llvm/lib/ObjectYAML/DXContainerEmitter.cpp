@@ -313,9 +313,10 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
               P.RootSignature->Parameters.getOrInsertTable(L);
           mcdxbc::DescriptorTable Table;
           for (const auto &R : TableYaml.Ranges) {
-
-            dxbc::RTS0::v2::DescriptorRange Range;
-            Range.RangeType = R.RangeType;
+            assert(dxbc::isValidRangeType(R.RangeType) &&
+                   "Invalid Descriptor Range Type");
+            mcdxbc::DescriptorRange Range;
+            Range.RangeType = dxil::ResourceClass(R.RangeType);
             Range.NumDescriptors = R.NumDescriptors;
             Range.BaseShaderRegister = R.BaseShaderRegister;
             Range.RegisterSpace = R.RegisterSpace;

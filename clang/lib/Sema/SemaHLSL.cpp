@@ -1295,9 +1295,8 @@ bool SemaHLSL::handleRootSignatureElements(
         ReportError(Loc, 1, 0xfffffffe);
       }
 
-      if (!llvm::hlsl::rootsig::verifyDescriptorRangeFlag(
-              Version, llvm::to_underlying(Clause->Type),
-              llvm::to_underlying(Clause->Flags)))
+      if (!llvm::hlsl::rootsig::verifyDescriptorRangeFlag(Version, Clause->Type,
+                                                          Clause->Flags))
         ReportFlagError(Loc);
     }
   }
