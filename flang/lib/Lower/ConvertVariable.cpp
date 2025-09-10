@@ -842,7 +842,8 @@ void Fortran::lower::defaultInitializeAtRuntime(
             Fortran::semantics::DeclTypeSpec::Category::TypeDerived &&
         !mlir::isa<fir::SequenceType>(symTy) &&
         !sym.test(Fortran::semantics::Symbol::Flag::OmpPrivate) &&
-        !sym.test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate)) {
+        !sym.test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate) &&
+        !Fortran::semantics::HasCUDAComponent(sym)) {
       std::string globalName = fir::NameUniquer::doGenerated(
           (converter.mangleName(*declTy->AsDerived()) + fir::kNameSeparator +
            fir::kDerivedTypeInitSuffix)
