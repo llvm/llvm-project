@@ -904,7 +904,7 @@ template <class _AlgPolicy, class _Type, __enable_if_t<__sort_is_specialized_in_
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __sort_dispatch(_Type* __first, _Type* __last, __less<>&) {
 #if _LIBCPP_STD_VER >= 20
   if (std::is_constant_evaluated()) {
-    if (__last == first)
+    if (__last == __first)
       return;
 
     auto __depth_limit = static_cast<ptrdiff_t>(2 * std::__bit_log2(static_cast<size_t>(__last - __first)));
@@ -922,7 +922,7 @@ template <class _AlgPolicy, class _Type, __enable_if_t<__sort_is_specialized_in_
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __sort_dispatch(_Type* __first, _Type* __last, less<_Type>&) {
 #if _LIBCPP_STD_VER >= 20
   if (std::is_constant_evaluated()) {
-    if (__last == first)
+    if (__last == __first)
       return;
 
     auto __depth_limit = static_cast<ptrdiff_t>(2 * std::__bit_log2(static_cast<size_t>(__last - __first)));
@@ -941,7 +941,7 @@ template <class _AlgPolicy, class _Type, __enable_if_t<__sort_is_specialized_in_
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __sort_dispatch(_Type* __first, _Type* __last, less<>&) {
 #  if _LIBCPP_STD_VER >= 20
   if (std::is_constant_evaluated()) {
-    if (__last == first)
+    if (__last == __first)
       return;
 
     auto __depth_limit = static_cast<ptrdiff_t>(2 * std::__bit_log2(static_cast<size_t>(__last - __first)));
@@ -960,7 +960,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __sort_dispatch(_Type* 
 template <class _AlgPolicy, class _Type, __enable_if_t<__sort_is_specialized_in_library<_Type>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr void __sort_dispatch(_Type* __first, _Type* __last, ranges::less&) {
   if (std::is_constant_evaluated()) {
-    if (__last == first)
+    if (__last == __first)
       return;
 
     auto __depth_limit = static_cast<ptrdiff_t>(2 * std::__bit_log2(static_cast<size_t>(__last - __first)));
