@@ -1,0 +1,14 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+module m
+  type device_array
+    real(kind=8), allocatable, dimension(:), device :: ad
+    real(kind=8), pointer, dimension(:), device :: pd
+  end type
+
+  type(device_array), allocatable :: da(:)
+end module
+
+! CHECK-LABEL: fir.global linkonce_odr @_QMmE.c.device_array
+! CHECK: fir.insert_value %{{.*}}, %c6{{.*}}, ["genre"
+! CHECK: fir.insert_value %{{.*}}, %c5{{.*}}, ["genre"

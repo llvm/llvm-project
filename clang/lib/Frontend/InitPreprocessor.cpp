@@ -1519,9 +1519,11 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (TI.getTriple().isOSBinFormatELF())
     Builder.defineMacro("__ELF__");
 
-  if (LangOpts.Sanitize.has(SanitizerKind::Address))
+  if (LangOpts.Sanitize.hasOneOf(SanitizerKind::Address |
+                                 SanitizerKind::KernelAddress))
     Builder.defineMacro("__SANITIZE_ADDRESS__");
-  if (LangOpts.Sanitize.has(SanitizerKind::HWAddress))
+  if (LangOpts.Sanitize.hasOneOf(SanitizerKind::HWAddress |
+                                 SanitizerKind::KernelHWAddress))
     Builder.defineMacro("__SANITIZE_HWADDRESS__");
   if (LangOpts.Sanitize.has(SanitizerKind::Thread))
     Builder.defineMacro("__SANITIZE_THREAD__");

@@ -62,6 +62,9 @@ public:
   /// Get a pointer to the data contained in this instance.
   char *data() { return orc_rt_WrapperFunctionBufferData(&B); }
 
+  /// Get a pointer to the data contained is this instance.
+  const char *data() const { return orc_rt_WrapperFunctionBufferConstData(&B); }
+
   /// Returns the size of the data contained in this instance.
   size_t size() const { return orc_rt_WrapperFunctionBufferSize(&B); }
 

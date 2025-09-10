@@ -2851,11 +2851,32 @@ static bool interp__builtin_elementwise_triop(
     return true;
   }
 
-  // Vector type.
   const auto *VecT = Arg0Type->castAs<VectorType>();
   const PrimType &ElemT = *S.getContext().classify(VecT->getElementType());
   unsigned NumElems = VecT->getNumElements();
+  bool DestUnsigned = Call->getType()->isUnsignedIntegerOrEnumerationType();
 
+  // Vector + Vector + Scalar case.
+  if (!Arg2Type->isVectorType()) {
+    APSInt Op2 = popToAPSInt(
+        S.Stk, *S.getContext().classify(Call->getArg(2)->getType()));
+
+    const Pointer &Op1 = S.Stk.pop<Pointer>();
+    const Pointer &Op0 = S.Stk.pop<Pointer>();
+    const Pointer &Dst = S.Stk.peek<Pointer>();
+    for (unsigned I = 0; I != NumElems; ++I) {
+      INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+        Dst.elem<T>(I) = static_cast<T>(APSInt(
+            Fn(Op0.elem<T>(I).toAPSInt(), Op1.elem<T>(I).toAPSInt(), Op2),
+            DestUnsigned));
+      });
+    }
+    Dst.initializeAllElements();
+
+    return true;
+  }
+
+  // Vector type.
   const Pointer &Op2 = S.Stk.pop<Pointer>();
   const Pointer &Op1 = S.Stk.pop<Pointer>();
   const Pointer &Op0 = S.Stk.pop<Pointer>();
@@ -3299,6 +3320,15 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
         });
 
+  case clang::X86::BI__builtin_ia32_pavgb128:
+  case clang::X86::BI__builtin_ia32_pavgw128:
+  case clang::X86::BI__builtin_ia32_pavgb256:
+  case clang::X86::BI__builtin_ia32_pavgw256:
+  case clang::X86::BI__builtin_ia32_pavgb512:
+  case clang::X86::BI__builtin_ia32_pavgw512:
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
+                                                 llvm::APIntOps::avgCeilU);
+
   case clang::X86::BI__builtin_ia32_pmulhuw128:
   case clang::X86::BI__builtin_ia32_pmulhuw256:
   case clang::X86::BI__builtin_ia32_pmulhuw512:
@@ -3314,8 +3344,12 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_psllv2di:
   case clang::X86::BI__builtin_ia32_psllv4di:
   case clang::X86::BI__builtin_ia32_psllv4si:
+  case clang::X86::BI__builtin_ia32_psllv8di:
+  case clang::X86::BI__builtin_ia32_psllv8hi:
   case clang::X86::BI__builtin_ia32_psllv8si:
+  case clang::X86::BI__builtin_ia32_psllv16hi:
   case clang::X86::BI__builtin_ia32_psllv16si:
+  case clang::X86::BI__builtin_ia32_psllv32hi:
   case clang::X86::BI__builtin_ia32_psllwi128:
   case clang::X86::BI__builtin_ia32_psllwi256:
   case clang::X86::BI__builtin_ia32_psllwi512:
@@ -3334,8 +3368,14 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
 
   case clang::X86::BI__builtin_ia32_psrav4si:
+  case clang::X86::BI__builtin_ia32_psrav8di:
+  case clang::X86::BI__builtin_ia32_psrav8hi:
   case clang::X86::BI__builtin_ia32_psrav8si:
+  case clang::X86::BI__builtin_ia32_psrav16hi:
   case clang::X86::BI__builtin_ia32_psrav16si:
+  case clang::X86::BI__builtin_ia32_psrav32hi:
+  case clang::X86::BI__builtin_ia32_psravq128:
+  case clang::X86::BI__builtin_ia32_psravq256:
   case clang::X86::BI__builtin_ia32_psrawi128:
   case clang::X86::BI__builtin_ia32_psrawi256:
   case clang::X86::BI__builtin_ia32_psrawi512:
@@ -3356,8 +3396,12 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_psrlv2di:
   case clang::X86::BI__builtin_ia32_psrlv4di:
   case clang::X86::BI__builtin_ia32_psrlv4si:
+  case clang::X86::BI__builtin_ia32_psrlv8di:
+  case clang::X86::BI__builtin_ia32_psrlv8hi:
   case clang::X86::BI__builtin_ia32_psrlv8si:
+  case clang::X86::BI__builtin_ia32_psrlv16hi:
   case clang::X86::BI__builtin_ia32_psrlv16si:
+  case clang::X86::BI__builtin_ia32_psrlv32hi:
   case clang::X86::BI__builtin_ia32_psrlwi128:
   case clang::X86::BI__builtin_ia32_psrlwi256:
   case clang::X86::BI__builtin_ia32_psrlwi512:
@@ -3419,6 +3463,37 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           APFloat F = X;
           F.fusedMultiplyAdd(Y, Z, RM);
           return F;
+        });
+
+  case X86::BI__builtin_ia32_vpshldd128:
+  case X86::BI__builtin_ia32_vpshldd256:
+  case X86::BI__builtin_ia32_vpshldd512:
+  case X86::BI__builtin_ia32_vpshldq128:
+  case X86::BI__builtin_ia32_vpshldq256:
+  case X86::BI__builtin_ia32_vpshldq512:
+  case X86::BI__builtin_ia32_vpshldw128:
+  case X86::BI__builtin_ia32_vpshldw256:
+  case X86::BI__builtin_ia32_vpshldw512:
+    return interp__builtin_elementwise_triop(
+        S, OpPC, Call,
+        [](const APSInt &Hi, const APSInt &Lo, const APSInt &Amt) {
+          return llvm::APIntOps::fshl(Hi, Lo, Amt);
+        });
+
+  case X86::BI__builtin_ia32_vpshrdd128:
+  case X86::BI__builtin_ia32_vpshrdd256:
+  case X86::BI__builtin_ia32_vpshrdd512:
+  case X86::BI__builtin_ia32_vpshrdq128:
+  case X86::BI__builtin_ia32_vpshrdq256:
+  case X86::BI__builtin_ia32_vpshrdq512:
+  case X86::BI__builtin_ia32_vpshrdw128:
+  case X86::BI__builtin_ia32_vpshrdw256:
+  case X86::BI__builtin_ia32_vpshrdw512:
+    // NOTE: Reversed Hi/Lo operands.
+    return interp__builtin_elementwise_triop(
+        S, OpPC, Call,
+        [](const APSInt &Lo, const APSInt &Hi, const APSInt &Amt) {
+          return llvm::APIntOps::fshr(Hi, Lo, Amt);
         });
 
   case clang::X86::BI__builtin_ia32_blendvpd:

@@ -1429,6 +1429,31 @@ filegroup(
 )
 
 ##---------------------------------------------------------------------------##
+# UB dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "UbOpsPyGen",
+    tbl_outs = {"mlir/dialects/_ub_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=ub",
+    ]},
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/UBOps.td",
+    deps = [
+        "//mlir:UBDialectTdFiles",
+    ],
+)
+
+filegroup(
+    name = "UbPyFiles",
+    srcs = [
+        "mlir/dialects/ub.py",
+        ":UbOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
 # Vector dialect.
 ##---------------------------------------------------------------------------##
 

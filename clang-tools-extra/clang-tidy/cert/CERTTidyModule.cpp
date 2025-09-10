@@ -17,6 +17,7 @@
 #include "../bugprone/SizeofExpressionCheck.h"
 #include "../bugprone/SpuriouslyWakeUpFunctionsCheck.h"
 #include "../bugprone/SuspiciousMemoryComparisonCheck.h"
+#include "../bugprone/UncheckedStringToNumberConversionCheck.h"
 #include "../bugprone/UnhandledSelfAssignmentCheck.h"
 #include "../bugprone/UnsafeFunctionsCheck.h"
 #include "../bugprone/UnusedReturnValueCheck.h"
@@ -39,7 +40,6 @@
 #include "ProperlySeededRandomGeneratorCheck.h"
 #include "SetLongJmpCheck.h"
 #include "StaticObjectExceptionCheck.h"
-#include "StrToNumCheck.h"
 #include "ThrownExceptionTypeCheck.h"
 #include "VariadicFunctionDefCheck.h"
 
@@ -297,7 +297,9 @@ public:
     // ERR
     CheckFactories.registerCheck<bugprone::UnusedReturnValueCheck>(
         "cert-err33-c");
-    CheckFactories.registerCheck<StrToNumCheck>("cert-err34-c");
+    CheckFactories
+        .registerCheck<bugprone::UncheckedStringToNumberConversionCheck>(
+            "cert-err34-c");
     // EXP
     CheckFactories.registerCheck<bugprone::SuspiciousMemoryComparisonCheck>(
         "cert-exp42-c");

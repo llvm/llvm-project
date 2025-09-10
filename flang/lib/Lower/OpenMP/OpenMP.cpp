@@ -1422,7 +1422,7 @@ static void genBodyOfTargetOp(
   auto argIface = llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(*targetOp);
 
   mlir::Region &region = targetOp.getRegion();
-  mlir::Block *entryBlock = genEntryBlock(firOpBuilder, args, region);
+  genEntryBlock(firOpBuilder, args, region);
   bindEntryBlockArgs(converter, targetOp, args);
   if (HostEvalInfo *hostEvalInfo = getHostEvalInfoStackTop(converter))
     hostEvalInfo->bindOperands(argIface.getHostEvalBlockArgs());
@@ -1431,104 +1431,7 @@ static void genBodyOfTargetOp(
   // If so, then either clone them as well if they are MemoryEffectFree, or else
   // copy them to a new temporary and add them to the map and block_argument
   // lists and replace their uses with the new temporary.
-  llvm::SetVector<mlir::Value> valuesDefinedAbove;
-  mlir::getUsedValuesDefinedAbove(region, valuesDefinedAbove);
-  while (!valuesDefinedAbove.empty()) {
-    for (mlir::Value val : valuesDefinedAbove) {
-      mlir::Operation *valOp = val.getDefiningOp();
-
-      // NOTE: We skip BoxDimsOp's as the lesser of two evils is to map the
-      // indices separately, as the alternative is to eventually map the Box,
-      // which comes with a fairly large overhead comparatively. We could be
-      // more robust about this and check using a BackwardsSlice to see if we
-      // run the risk of mapping a box.
-      if (valOp && mlir::isMemoryEffectFree(valOp) &&
-          !mlir::isa<fir::BoxDimsOp>(valOp)) {
-        mlir::Operation *clonedOp = valOp->clone();
-        entryBlock->push_front(clonedOp);
-
-        auto replace = [entryBlock](mlir::OpOperand &use) {
-          return use.getOwner()->getBlock() == entryBlock;
-        };
-
-        valOp->getResults().replaceUsesWithIf(clonedOp->getResults(), replace);
-        valOp->replaceUsesWithIf(clonedOp, replace);
-      } else {
-        auto savedIP = firOpBuilder.getInsertionPoint();
-
-        if (valOp)
-          firOpBuilder.setInsertionPointAfter(valOp);
-        else
-          // This means val is a block argument
-          firOpBuilder.setInsertionPoint(targetOp);
-
-        auto copyVal =
-            firOpBuilder.createTemporary(val.getLoc(), val.getType());
-        firOpBuilder.createStoreWithConvert(copyVal.getLoc(), val, copyVal);
-
-        fir::factory::AddrAndBoundsInfo info =
-            fir::factory::getDataOperandBaseAddr(
-                firOpBuilder, val, /*isOptional=*/false, val.getLoc());
-        llvm::SmallVector<mlir::Value> bounds =
-            fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
-                                               mlir::omp::MapBoundsType>(
-                firOpBuilder, info,
-                hlfir::translateToExtendedValue(val.getLoc(), firOpBuilder,
-                                                hlfir::Entity{val})
-                    .first,
-                /*dataExvIsAssumedSize=*/false, val.getLoc());
-
-        std::stringstream name;
-        firOpBuilder.setInsertionPoint(targetOp);
-
-        llvm::omp::OpenMPOffloadMappingFlags mapFlag =
-            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
-        mlir::omp::VariableCaptureKind captureKind =
-            mlir::omp::VariableCaptureKind::ByRef;
-
-        mlir::Type eleType = copyVal.getType();
-        if (auto refType =
-                mlir::dyn_cast<fir::ReferenceType>(copyVal.getType()))
-          eleType = refType.getElementType();
-
-        if (fir::isa_trivial(eleType) || fir::isa_char(eleType)) {
-          captureKind = mlir::omp::VariableCaptureKind::ByCopy;
-        } else if (!fir::isa_builtin_cptr_type(eleType)) {
-          mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
-        }
-
-        mlir::Value mapOp = createMapInfoOp(
-            firOpBuilder, copyVal.getLoc(), copyVal,
-            /*varPtrPtr=*/mlir::Value{}, name.str(), bounds,
-            /*members=*/llvm::SmallVector<mlir::Value>{},
-            /*membersIndex=*/mlir::ArrayAttr{},
-            static_cast<
-                std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-                mapFlag),
-            captureKind, copyVal.getType());
-
-        // Get the index of the first non-map argument before modifying mapVars,
-        // then append an element to mapVars and an associated entry block
-        // argument at that index.
-        unsigned insertIndex =
-            argIface.getMapBlockArgsStart() + argIface.numMapBlockArgs();
-        targetOp.getMapVarsMutable().append(mapOp);
-        mlir::Value clonedValArg = region.insertArgument(
-            insertIndex, copyVal.getType(), copyVal.getLoc());
-
-        firOpBuilder.setInsertionPointToStart(entryBlock);
-        auto loadOp = fir::LoadOp::create(firOpBuilder, clonedValArg.getLoc(),
-                                          clonedValArg);
-        val.replaceUsesWithIf(loadOp->getResult(0),
-                              [entryBlock](mlir::OpOperand &use) {
-                                return use.getOwner()->getBlock() == entryBlock;
-                              });
-        firOpBuilder.setInsertionPoint(entryBlock, savedIP);
-      }
-    }
-    valuesDefinedAbove.clear();
-    mlir::getUsedValuesDefinedAbove(region, valuesDefinedAbove);
-  }
+  cloneOrMapRegionOutsiders(firOpBuilder, targetOp);
 
   // Insert dummy instruction to remember the insertion position. The
   // marker will be deleted since there are not uses.

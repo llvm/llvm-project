@@ -66,13 +66,13 @@ TEST(AllocGroupTest, LessThan) {
             AllocGroup(MemProt::Read, MemLifetime::Finalize));
 }
 
-TEST(AllocGroupSmallMap, EmptyMap) {
+TEST(AllocGroupSmallMapTest, EmptyMap) {
   AllocGroupSmallMap<bool> EM;
   EXPECT_TRUE(EM.empty());
   EXPECT_EQ(EM.size(), 0u);
 }
 
-TEST(AllocGroupSmallMap, NonEmptyMap) {
+TEST(AllocGroupSmallMapTest, NonEmptyMap) {
   AllocGroupSmallMap<unsigned> NEM;
   NEM[MemProt::Read] = 42;
 

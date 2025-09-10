@@ -1910,8 +1910,6 @@ void ConversionPatternRewriterImpl::replaceOp(
     }
 
     // Remap result to replacement value.
-    if (repl.empty())
-      continue;
     mapping.map(static_cast<Value>(result), std::move(repl));
   }
 

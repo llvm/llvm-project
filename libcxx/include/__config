@@ -1156,6 +1156,13 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_LIFETIMEBOUND
 #  endif
 
+// This is to work around https://llvm.org/PR156809
+#  ifndef _LIBCPP_CXX03_LANG
+#    define _LIBCPP_CTOR_LIFETIMEBOUND _LIBCPP_LIFETIMEBOUND
+#  else
+#    define _LIBCPP_CTOR_LIFETIMEBOUND
+#  endif
+
 #  if __has_cpp_attribute(_Clang::__noescape__)
 #    define _LIBCPP_NOESCAPE [[_Clang::__noescape__]]
 #  else
