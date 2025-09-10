@@ -63,7 +63,7 @@ void foo5() {
   auto [a, b] = Pair{1, 2}; // expected-note {{previous declaration is here}} all-note {{previous declaration is here}}
   
   // This SHOULD still warn - it's actual shadowing within the lambda body
-  auto lambda = [outer, a](){ // expected-note {{variable 'outer' is explicitly captured here}} all-note {{variable 'outer' is explicitly captured here}}
+  auto lambda = [outer, a](){ // expected-note {{variable 'outer' is explicitly captured here}} all-note {{variable 'outer' is explicitly captured here}} expected-note {{variable 'a' is explicitly captured here}} all-note {{variable 'a' is explicitly captured here}}
     int outer = 10; // expected-warning {{declaration shadows a local variable}} all-warning {{declaration shadows a local variable}}
     int a = 20;     // expected-warning {{declaration shadows a structured binding}} all-warning {{declaration shadows a structured binding}}
   };
