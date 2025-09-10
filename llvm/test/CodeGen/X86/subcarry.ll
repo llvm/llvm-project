@@ -671,17 +671,12 @@ define i1 @subcarry_ult_2x64(i64 %x0, i64 %x1, i64 %y0, i64 %y1) nounwind {
 ; https://github.com/llvm/llvm-project/commit/926e7312b2f20f2f7b0a3d5ddbd29da5625507f3
 ; This is also the result of "naive" implementation (x1 < y1) | ((x0 < y0) & (x1 == y1)).
 ; C source: https://godbolt.org/z/W1qqvqGbr
-; TODO: This should be optimized to cmp + sbb.
 define i1 @subcarry_ult_2x64_2(i64 %x0, i64 %x1, i64 %y0, i64 %y1) nounwind {
 ; CHECK-LABEL: subcarry_ult_2x64_2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpq %rdx, %rdi
-; CHECK-NEXT:    setb %dl
-; CHECK-NEXT:    cmpq %rcx, %rsi
-; CHECK-NEXT:    setb %cl
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    andb %dl, %al
-; CHECK-NEXT:    orb %cl, %al
+; CHECK-NEXT:    sbbq %rcx, %rsi
+; CHECK-NEXT:    setb %al
 ; CHECK-NEXT:    retq
 entry:
   %0 = icmp ult i64 %x0, %y0
