@@ -20788,6 +20788,14 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
           continue;
         }
         auto *SD = cast<ScheduleData>(SE);
+        if (SD->hasValidDependencies() &&
+            (!S.areInstructionsWithCopyableElements() ||
+             !S.isCopyableElement(SD->getInst())) &&
+            !getScheduleCopyableData(SD->getInst()).empty() && EI.UserTE &&
+            EI.UserTE->hasState() &&
+            (!EI.UserTE->hasCopyableElements() ||
+             !EI.UserTE->isCopyableElement(SD->getInst())))
+          SD->clearDirectDependencies();
         for (const Use &U : SD->getInst()->operands()) {
           unsigned &NumOps =
               UserOpToNumOps
