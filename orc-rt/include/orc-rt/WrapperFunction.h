@@ -121,6 +121,14 @@ struct WFCallableTraits<RetT(ArgT, ArgTs...)> {
   typedef std::tuple<ArgTs...> TailArgTuple;
 };
 
+template <typename RetT, typename... ArgTs>
+struct WFCallableTraits<RetT (*)(ArgTs...)>
+    : public WFCallableTraits<RetT(ArgTs...)> {};
+
+template <typename RetT, typename... ArgTs>
+struct WFCallableTraits<RetT (&)(ArgTs...)>
+    : public WFCallableTraits<RetT(ArgTs...)> {};
+
 template <typename ClassT, typename RetT, typename... ArgTs>
 struct WFCallableTraits<RetT (ClassT::*)(ArgTs...)>
     : public WFCallableTraits<RetT(ArgTs...)> {};

@@ -90,9 +90,9 @@ TEST(SPSWrapperFunctionUtilsTest, TestVoidNoop) {
   EXPECT_TRUE(Ran);
 }
 
-static void add_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
-                            orc_rt_WrapperFunctionReturn Return,
-                            orc_rt_WrapperFunctionBuffer ArgBytes) {
+static void add_via_lambda_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
+                                       orc_rt_WrapperFunctionReturn Return,
+                                       orc_rt_WrapperFunctionBuffer ArgBytes) {
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::handle(
       Session, CallCtx, Return, ArgBytes,
       [](move_only_function<void(int32_t)> Return, int32_t X, int32_t Y) {
@@ -100,10 +100,47 @@ static void add_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
       });
 }
 
-TEST(SPSWrapperFunctionUtilsTest, TestAdd) {
+TEST(SPSWrapperFunctionUtilsTest, TestBinaryOpViaLambda) {
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
-      DirectCaller(nullptr, add_sps_wrapper),
+      DirectCaller(nullptr, add_via_lambda_sps_wrapper),
+      [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
+  EXPECT_EQ(Result, 42);
+}
+
+static void add_via_function(move_only_function<void(int32_t)> Return,
+                             int32_t X, int32_t Y) {
+  Return(X + Y);
+}
+
+static void
+add_via_function_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
+                             orc_rt_WrapperFunctionReturn Return,
+                             orc_rt_WrapperFunctionBuffer ArgBytes) {
+  SPSWrapperFunction<int32_t(int32_t, int32_t)>::handle(
+      Session, CallCtx, Return, ArgBytes, add_via_function);
+}
+
+TEST(SPSWrapperFunctionUtilsTest, TestBinaryOpViaFunction) {
+  int32_t Result = 0;
+  SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
+      DirectCaller(nullptr, add_via_function_sps_wrapper),
+      [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
+  EXPECT_EQ(Result, 42);
+}
+
+static void
+add_via_function_pointer_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
+                                     orc_rt_WrapperFunctionReturn Return,
+                                     orc_rt_WrapperFunctionBuffer ArgBytes) {
+  SPSWrapperFunction<int32_t(int32_t, int32_t)>::handle(
+      Session, CallCtx, Return, ArgBytes, &add_via_function);
+}
+
+TEST(SPSWrapperFunctionUtilsTest, TestBinaryOpViaFunctionPointer) {
+  int32_t Result = 0;
+  SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
+      DirectCaller(nullptr, add_via_function_pointer_sps_wrapper),
       [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
   EXPECT_EQ(Result, 42);
 }
