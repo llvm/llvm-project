@@ -10,19 +10,68 @@
 //
 //===----------------------------------------------------------------------===//
 
+/*
+ * A note on implementation:
+ *
+ * As per the C++ standard, constraints are normalized [temp.constr.normal]
+ * and the normal form is used both for subsumption, and constraint checking.
+ * Both depend on a parameter mapping that substitutes lazily. In particular,
+ * we should not substitute in unused arguments.
+ *
+ * Clang follows the order of operations prescribed by the standard.
+ *
+ * Normalization happens prior to satisfaction and subsumption
+ * and is handled by `NormalizedConstraint`.
+ *
+ * Clang preserves in the normalized form intermediate concept-ids
+ * (ConceptIdConstraint) This is used for diagnostics only and no substitution
+ * happens in a ConceptIdConstraint if its expression is satisfied.
+ *
+ * The normal form of the associated constraints of a declaration is cached in
+ * Sema::NormalizationCache such that it is only computed once.
+ *
+ * a `NormalizedConstraint` is a recursive data structure, where each node
+ * contains a parameter maping, represented by the indexes of all parameter
+ * being used.
+ *
+ * Checking satisfaction is done by ConstraintSatisfactionChecker, recursively
+ * walking NormalizedConstraint. At each level, we substitute the outermost
+ * level of the template arguments referenced in the parameter mapping of a
+ * normalized expression (MultiLevelTemplateArgumentList).
+ *
+ * template <typename T>
+ * concept A = __is_same(T, int);
+ *
+ * template <typename U>
+ * concept B = A<U> && __is_same(U, int);
+ *
+ * The  normal form is `__is_same(T, int) /T->U, inner most level/
+ *                   && __is_same(U, int) {U->U} /T->U, outermost most level/
+ *                   `
+ *
+ * After substitution in the mapping, we substitute in the constraint expression
+ * using that copy of the MultiLevelTemplateArgumentList, and then evaluate it.
+ *
+ * Because this is excruciatingly slow, it is cached in
+ * `UnsubstitutedConstraintSatisfactionCache`.
+ *
+ * Any error during satisfaction is recorded in ConstraintSatisfaction.
+ * for nested requirements, ConstraintSatisfaction is stored (including
+ * diagnostics) in the AST, which is something we might want to improve.
+ *
+ * When an atomic constraint is not satified, we try to substitute into any
+ * enclosing concept-id using the same mechanism described above, for
+ * diagnostics purpose, and inject that in the ConstraintSatisfaction.
+ */
+
 #include "clang/Sema/SemaConcept.h"
 #include "TreeTransform.h"
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTLambda.h"
-#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/DeclTemplate.h"
-#include "clang/AST/Expr.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/AST/TemplateBase.h"
 #include "clang/Basic/OperatorPrecedence.h"
-#include "clang/Basic/UnsignedOrNone.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Overload.h"
@@ -372,20 +421,15 @@ public:
       TraverseTemplateArgument(Canonical);
     }
 
-    // llvm::SmallSet<llvm::FoldingSetNodeID, 10> ArgHash;
     for (auto &Used : UsedTemplateArgs) {
       llvm::FoldingSetNodeID R;
       Used.Profile(R, SemaRef.Context);
       ID.AddNodeID(R);
-      // ArgHash.insert(R);
     }
-
-    // for (const llvm::FoldingSetNodeID &V : ArgHash)
-    //   ID.AddNodeID(V);
   }
 };
 
-class CalculateConstraintSatisfaction {
+class ConstraintSatisfactionChecker {
   Sema &S;
   const NamedDecl *Template;
   SourceLocation TemplateNameLoc;
@@ -408,37 +452,37 @@ private:
       MultiLevelTemplateArgumentList MLTAL,
       llvm::SmallVector<TemplateArgument> &SubstitutedOuterMost);
 
-  ExprResult CalculateSlow(const AtomicConstraint &Constraint,
-                           const MultiLevelTemplateArgumentList &MLTAL);
+  ExprResult EvaluateSlow(const AtomicConstraint &Constraint,
+                          const MultiLevelTemplateArgumentList &MLTAL);
 
-  ExprResult Calculate(const AtomicConstraint &Constraint,
-                       const MultiLevelTemplateArgumentList &MLTAL);
+  ExprResult Evaluate(const AtomicConstraint &Constraint,
+                      const MultiLevelTemplateArgumentList &MLTAL);
 
-  ExprResult Calculate(const FoldExpandedConstraint &Constraint,
-                       const MultiLevelTemplateArgumentList &MLTAL);
+  ExprResult Evaluate(const FoldExpandedConstraint &Constraint,
+                      const MultiLevelTemplateArgumentList &MLTAL);
 
-  ExprResult Calculate(const ConceptIdConstraint &Constraint,
-                       const MultiLevelTemplateArgumentList &MLTAL);
+  ExprResult Evaluate(const ConceptIdConstraint &Constraint,
+                      const MultiLevelTemplateArgumentList &MLTAL);
 
-  ExprResult Calculate(const CompoundConstraint &Constraint,
-                       const MultiLevelTemplateArgumentList &MLTAL);
+  ExprResult Evaluate(const CompoundConstraint &Constraint,
+                      const MultiLevelTemplateArgumentList &MLTAL);
 
 public:
-  CalculateConstraintSatisfaction(Sema &SemaRef, const NamedDecl *Template,
-                                  SourceLocation TemplateNameLoc,
-                                  UnsignedOrNone PackSubstitutionIndex,
-                                  ConstraintSatisfaction &Satisfaction)
+  ConstraintSatisfactionChecker(Sema &SemaRef, const NamedDecl *Template,
+                                SourceLocation TemplateNameLoc,
+                                UnsignedOrNone PackSubstitutionIndex,
+                                ConstraintSatisfaction &Satisfaction)
       : S(SemaRef), Template(Template), TemplateNameLoc(TemplateNameLoc),
         PackSubstitutionIndex(PackSubstitutionIndex),
         Satisfaction(Satisfaction) {}
 
-  ExprResult Calculate(const NormalizedConstraint &Constraint,
-                       const MultiLevelTemplateArgumentList &MLTAL);
+  ExprResult Evaluate(const NormalizedConstraint &Constraint,
+                      const MultiLevelTemplateArgumentList &MLTAL);
 };
 
 } // namespace
 
-ExprResult CalculateConstraintSatisfaction::EvaluateAtomicConstraint(
+ExprResult ConstraintSatisfactionChecker::EvaluateAtomicConstraint(
     const Expr *AtomicExpr, const MultiLevelTemplateArgumentList &MLTAL) {
   EnterExpressionEvaluationContext ConstantEvaluated(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated,
@@ -482,7 +526,7 @@ ExprResult CalculateConstraintSatisfaction::EvaluateAtomicConstraint(
       PartialDiagnosticAt SubstDiag{SourceLocation(),
                                     PartialDiagnostic::NullDiagnostic()};
       Info.takeSFINAEDiagnostic(SubstDiag);
-      // FIXME: Concepts: This is an unfortunate consequence of there
+      // FIXME: This is an unfortunate consequence of there
       //  being no serialization code for PartialDiagnostics and the fact
       //  that serializing them would likely take a lot more storage than
       //  just storing them as strings. We would still like, in the
@@ -525,7 +569,7 @@ ExprResult CalculateConstraintSatisfaction::EvaluateAtomicConstraint(
 }
 
 std::optional<MultiLevelTemplateArgumentList>
-CalculateConstraintSatisfaction::SubstitutionInTemplateArguments(
+ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
     const NormalizedConstraintWithParamMapping &Constraint,
     MultiLevelTemplateArgumentList MLTAL,
     llvm::SmallVector<TemplateArgument> &SubstitutedOuterMost) {
@@ -591,7 +635,7 @@ CalculateConstraintSatisfaction::SubstitutionInTemplateArguments(
   return std::move(MLTAL);
 }
 
-ExprResult CalculateConstraintSatisfaction::CalculateSlow(
+ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     const AtomicConstraint &Constraint,
     const MultiLevelTemplateArgumentList &MLTAL) {
 
@@ -670,7 +714,7 @@ ExprResult CalculateConstraintSatisfaction::CalculateSlow(
   return SubstitutedAtomicExpr;
 }
 
-ExprResult CalculateConstraintSatisfaction::Calculate(
+ExprResult ConstraintSatisfactionChecker::Evaluate(
     const AtomicConstraint &Constraint,
     const MultiLevelTemplateArgumentList &MLTAL) {
 
@@ -687,8 +731,8 @@ ExprResult CalculateConstraintSatisfaction::Calculate(
   HashParameterMapping(S, MLTAL, ID, OuterPackSubstIndex)
       .VisitConstraint(Constraint);
 
-  if (auto Iter = S.ConceptIdSatisfactionCache.find(ID);
-      Iter != S.ConceptIdSatisfactionCache.end()) {
+  if (auto Iter = S.UnsubstitutedConstraintSatisfactionCache.find(ID);
+      Iter != S.UnsubstitutedConstraintSatisfactionCache.end()) {
 
     auto &Cached = Iter->second.Satisfaction;
     Satisfaction.ContainsErrors = Cached.ContainsErrors;
@@ -698,21 +742,21 @@ ExprResult CalculateConstraintSatisfaction::Calculate(
     return Iter->second.SubstExpr;
   }
 
-  ExprResult E = CalculateSlow(Constraint, MLTAL);
+  ExprResult E = EvaluateSlow(Constraint, MLTAL);
 
-  CachedConceptIdConstraint Cache;
+  UnsubstitutedConstraintSatisfactionCacheResult Cache;
   Cache.Satisfaction.ContainsErrors = Satisfaction.ContainsErrors;
   Cache.Satisfaction.IsSatisfied = Satisfaction.IsSatisfied;
   std::copy(Satisfaction.Details.begin() + Size, Satisfaction.Details.end(),
             std::back_inserter(Cache.Satisfaction.Details));
   Cache.SubstExpr = E;
-  S.ConceptIdSatisfactionCache.insert({ID, std::move(Cache)});
+  S.UnsubstitutedConstraintSatisfactionCache.insert({ID, std::move(Cache)});
 
   return E;
 }
 
 UnsignedOrNone
-CalculateConstraintSatisfaction::EvaluateFoldExpandedConstraintSize(
+ConstraintSatisfactionChecker::EvaluateFoldExpandedConstraintSize(
     const FoldExpandedConstraint &FE,
     const MultiLevelTemplateArgumentList &MLTAL) {
 
@@ -745,7 +789,7 @@ CalculateConstraintSatisfaction::EvaluateFoldExpandedConstraintSize(
   return NumExpansions;
 }
 
-ExprResult CalculateConstraintSatisfaction::Calculate(
+ExprResult ConstraintSatisfactionChecker::Evaluate(
     const FoldExpandedConstraint &Constraint,
     const MultiLevelTemplateArgumentList &MLTAL) {
   bool Conjunction = Constraint.getFoldOperator() ==
@@ -781,9 +825,9 @@ ExprResult CalculateConstraintSatisfaction::Calculate(
     Satisfaction.IsSatisfied = false;
     Satisfaction.ContainsErrors = false;
     ExprResult Expr =
-        CalculateConstraintSatisfaction(S, Template, TemplateNameLoc,
-                                        UnsignedOrNone(I), Satisfaction)
-            .Calculate(Constraint.getNormalizedPattern(), *SubstitutedArgs);
+        ConstraintSatisfactionChecker(S, Template, TemplateNameLoc,
+                                      UnsignedOrNone(I), Satisfaction)
+            .Evaluate(Constraint.getNormalizedPattern(), *SubstitutedArgs);
     if (Expr.isUsable()) {
       if (Out.isUnset())
         Out = Expr;
@@ -810,7 +854,7 @@ ExprResult CalculateConstraintSatisfaction::Calculate(
   return Out;
 }
 
-ExprResult CalculateConstraintSatisfaction::Calculate(
+ExprResult ConstraintSatisfactionChecker::Evaluate(
     const ConceptIdConstraint &Constraint,
     const MultiLevelTemplateArgumentList &MLTAL) {
 
@@ -822,7 +866,7 @@ ExprResult CalculateConstraintSatisfaction::Calculate(
 
   unsigned Size = Satisfaction.Details.size();
 
-  ExprResult E = Calculate(Constraint.getNormalizedConstraint(), MLTAL);
+  ExprResult E = Evaluate(Constraint.getNormalizedConstraint(), MLTAL);
 
   if (!E.isUsable()) {
     Satisfaction.Details.insert(Satisfaction.Details.begin() + Size,
@@ -830,6 +874,9 @@ ExprResult CalculateConstraintSatisfaction::Calculate(
     return E;
   }
 
+  // ConceptIdConstraint is only relevant for diagnostics,
+  // so if the normalized constraint is satisfied, we should not
+  // substiture into the constraint.
   if (Satisfaction.IsSatisfied)
     return E;
 
@@ -910,7 +957,7 @@ ExprResult CalculateConstraintSatisfaction::Calculate(
   return SubstitutedConceptId;
 }
 
-ExprResult CalculateConstraintSatisfaction::Calculate(
+ExprResult ConstraintSatisfactionChecker::Evaluate(
     const CompoundConstraint &Constraint,
     const MultiLevelTemplateArgumentList &MLTAL) {
 
@@ -919,7 +966,7 @@ ExprResult CalculateConstraintSatisfaction::Calculate(
   bool Conjunction =
       Constraint.getCompoundKind() == NormalizedConstraint::CCK_Conjunction;
 
-  ExprResult LHS = Calculate(Constraint.getLHS(), MLTAL);
+  ExprResult LHS = Evaluate(Constraint.getLHS(), MLTAL);
 
   if (Conjunction && (!Satisfaction.IsSatisfied || Satisfaction.ContainsErrors))
     return LHS;
@@ -931,7 +978,7 @@ ExprResult CalculateConstraintSatisfaction::Calculate(
   Satisfaction.ContainsErrors = false;
   Satisfaction.IsSatisfied = false;
 
-  ExprResult RHS = Calculate(Constraint.getRHS(), MLTAL);
+  ExprResult RHS = Evaluate(Constraint.getRHS(), MLTAL);
 
   if (RHS.isUsable() && Satisfaction.IsSatisfied &&
       !Satisfaction.ContainsErrors)
@@ -952,24 +999,23 @@ ExprResult CalculateConstraintSatisfaction::Calculate(
                                 Constraint.getBeginLoc(), FPOptionsOverride{});
 }
 
-ExprResult CalculateConstraintSatisfaction::Calculate(
+ExprResult ConstraintSatisfactionChecker::Evaluate(
     const NormalizedConstraint &Constraint,
     const MultiLevelTemplateArgumentList &MLTAL) {
   switch (Constraint.getKind()) {
   case NormalizedConstraint::ConstraintKind::Atomic:
-    return Calculate(static_cast<const AtomicConstraint &>(Constraint), MLTAL);
+    return Evaluate(static_cast<const AtomicConstraint &>(Constraint), MLTAL);
 
   case NormalizedConstraint::ConstraintKind::FoldExpanded:
-    return Calculate(static_cast<const FoldExpandedConstraint &>(Constraint),
-                     MLTAL);
+    return Evaluate(static_cast<const FoldExpandedConstraint &>(Constraint),
+                    MLTAL);
 
   case NormalizedConstraint::ConstraintKind::ConceptId:
-    return Calculate(static_cast<const ConceptIdConstraint &>(Constraint),
-                     MLTAL);
+    return Evaluate(static_cast<const ConceptIdConstraint &>(Constraint),
+                    MLTAL);
 
   case NormalizedConstraint::ConstraintKind::Compound:
-    return Calculate(static_cast<const CompoundConstraint &>(Constraint),
-                     MLTAL);
+    return Evaluate(static_cast<const CompoundConstraint &>(Constraint), MLTAL);
   }
 }
 
@@ -1020,9 +1066,9 @@ static bool CheckConstraintSatisfaction(
                                     S.ArgPackSubstIndex);
 
   ExprResult Res =
-      CalculateConstraintSatisfaction(S, Template, TemplateIDRange.getBegin(),
-                                      S.ArgPackSubstIndex, Satisfaction)
-          .Calculate(*C, TemplateArgsLists);
+      ConstraintSatisfactionChecker(S, Template, TemplateIDRange.getBegin(),
+                                    S.ArgPackSubstIndex, Satisfaction)
+          .Evaluate(*C, TemplateArgsLists);
 
   if (Res.isInvalid())
     return true;

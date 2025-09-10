@@ -13092,6 +13092,7 @@ public:
     /// Whether we're substituting into constraints.
     bool InConstraintSubstitution;
 
+    /// Whether we're substituting into the parameter mapping of a constraint.
     bool InParameterMappingSubstitution;
 
     /// The point of instantiation or synthesis within the source code.
@@ -14849,10 +14850,18 @@ public:
       const NamedDecl *D1, ArrayRef<AssociatedConstraint> AC1,
       const NamedDecl *D2, ArrayRef<AssociatedConstraint> AC2);
 
-  llvm::DenseMap<llvm::FoldingSetNodeID, CachedConceptIdConstraint>
-      ConceptIdSatisfactionCache;
+  /// Cache the satisfaction of an atomic constraint.
+  /// The key is based on the unsubstituted expression and the parameter
+  /// mapping. This lets us not substituting the mapping more than once,
+  /// which is (very!) expensive.
+  /// FIXME: this should be private.
+  llvm::DenseMap<llvm::FoldingSetNodeID,
+                 UnsubstitutedConstraintSatisfactionCacheResult>
+      UnsubstitutedConstraintSatisfactionCache;
 
 private:
+  friend class CalculateConstraintSatisfaction;
+
   /// Caches pairs of template-like decls whose associated constraints were
   /// checked for subsumption and whether or not the first's constraints did in
   /// fact subsume the second's.
@@ -14865,6 +14874,8 @@ private:
   llvm::DenseMap<ConstrainedDeclOrNestedRequirement, NormalizedConstraint *>
       NormalizationCache;
 
+  /// Cache whether the associated constraint of a declaration
+  /// is satisfied.
   llvm::ContextualFoldingSet<ConstraintSatisfaction, const ASTContext &>
       SatisfactionCache;
 

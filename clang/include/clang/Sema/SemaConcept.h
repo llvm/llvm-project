@@ -18,15 +18,11 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/UnsignedOrNone.h"
 #include "clang/Sema/Ownership.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Compiler.h"
 #include <optional>
 #include <utility>
 
@@ -37,17 +33,19 @@ class MultiLevelTemplateArgumentList;
 /// \brief A normalized constraint, as defined in C++ [temp.constr.normal], is
 /// either an atomic constraint, a conjunction of normalized constraints or a
 /// disjunction of normalized constraints.
-
 struct NormalizedConstraint {
 
-  enum class ConstraintKind : unsigned char{
+  enum class ConstraintKind : unsigned char {
     Atomic = 0,
     ConceptId,
     FoldExpanded,
     Compound,
   };
 
-  enum CompoundConstraintKind : unsigned char { CCK_Conjunction, CCK_Disjunction };
+  enum CompoundConstraintKind : unsigned char {
+    CCK_Conjunction,
+    CCK_Disjunction
+  };
   enum class FoldOperatorKind : unsigned char { And, Or };
 
   using OccurenceList = llvm::SmallBitVector;
@@ -393,7 +391,7 @@ public:
   NormalizedConstraint &getNormalizedConstraint() { return *ConceptId.Sub; }
 };
 
-struct CachedConceptIdConstraint {
+struct UnsubstitutedConstraintSatisfactionCacheResult {
   ExprResult SubstExpr;
   ConstraintSatisfaction Satisfaction;
 };

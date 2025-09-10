@@ -1405,7 +1405,8 @@ class TemplateInstantiator : public TreeTransform<TemplateInstantiator> {
   // Whether an incomplete substituion should be treated as an error.
   bool BailOutOnIncomplete;
 
-  bool PreserveArgumentPacks = false;
+  // Whether to rebuild pack expansion types; We don't do that when
+  // rebuilding a fold expression appearing in a constraint expression.
   bool BuildPackExpansionTypes = true;
 
   // CWG2770: Function parameters should be instantiated when they are
@@ -1431,7 +1432,7 @@ public:
                        const MultiLevelTemplateArgumentList &TemplateArgs,
                        bool BuildPackExpansionTypes)
       : inherited(SemaRef), TemplateArgs(TemplateArgs), Loc(Loc),
-        BailOutOnIncomplete(false), PreserveArgumentPacks(true),
+        BailOutOnIncomplete(false),
         BuildPackExpansionTypes(BuildPackExpansionTypes) {}
 
   void setEvaluateConstraints(bool B) { EvaluateConstraints = B; }
@@ -1746,7 +1747,7 @@ public:
                                            UnsignedOrNone NumExpansions) {
     // We don't rewrite a PackExpansion type when we want to normalize a
     // CXXFoldExpr constraint. We'll expand it when evaluating the constraint.
-    if (!PreserveArgumentPacks || BuildPackExpansionTypes)
+    if (BuildPackExpansionTypes)
       return inherited::RebuildPackExpansion(Pattern, EllipsisLoc,
                                              NumExpansions);
     return Pattern;
