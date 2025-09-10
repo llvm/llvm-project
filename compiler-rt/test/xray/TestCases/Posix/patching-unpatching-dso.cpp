@@ -6,7 +6,7 @@
 // RUN: %clangxx_xray -g -fPIC -fxray-instrument -fxray-shared -shared -std=c++11 %t/testlib.cpp -o %t/testlib.so
 // RUN: %clangxx_xray -g -fPIC -fxray-instrument -fxray-shared -std=c++11 %t/main.cpp %t/testlib.so -Wl,-rpath,%t -o %t/main.o
 
-// RUN: XRAY_OPTIONS="patch_premain=false" %run %t/main.o 2>&1 | FileCheck %s
+// RUN: env XRAY_OPTIONS="patch_premain=false" %run %t/main.o 2>&1 | FileCheck %s
 
 // REQUIRES: target={{(aarch64|x86_64)-.*}}
 

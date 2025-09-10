@@ -25,21 +25,6 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
-static ResourceClass toResourceClass(dxbc::DescriptorRangeType RangeType) {
-  using namespace dxbc;
-  switch (RangeType) {
-  case DescriptorRangeType::SRV:
-    return ResourceClass::SRV;
-  case DescriptorRangeType::UAV:
-    return ResourceClass::UAV;
-  case DescriptorRangeType::CBV:
-    return ResourceClass::CBuffer;
-  case DescriptorRangeType::Sampler:
-    return ResourceClass::Sampler;
-  }
-  llvm_unreachable("Unknown DescriptorRangeType");
-}
-
 static ResourceClass toResourceClass(dxbc::RootParameterType Type) {
   using namespace dxbc;
   switch (Type) {
@@ -205,16 +190,13 @@ static void validateRootSignature(Module &M,
       const mcdxbc::DescriptorTable &Table =
           RSD.ParametersContainer.getDescriptorTable(ParamInfo.Location);
 
-      for (const dxbc::RTS0::v2::DescriptorRange &Range : Table.Ranges) {
+      for (const mcdxbc::DescriptorRange &Range : Table.Ranges) {
         uint32_t UpperBound =
             Range.NumDescriptors == ~0U
                 ? Range.BaseShaderRegister
                 : Range.BaseShaderRegister + Range.NumDescriptors - 1;
-        Builder.trackBinding(
-            toResourceClass(
-                static_cast<dxbc::DescriptorRangeType>(Range.RangeType)),
-            Range.RegisterSpace, Range.BaseShaderRegister, UpperBound,
-            &ParamInfo);
+        Builder.trackBinding(Range.RangeType, Range.RegisterSpace,
+                             Range.BaseShaderRegister, UpperBound, &ParamInfo);
       }
       break;
     }

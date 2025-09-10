@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_FMODTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_FMODTEST_H
 
+#include "hdr/errno_macros.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/NearestIntegerOperations.h"
 #include "test/UnitTest/FEnvSafeTest.h"
