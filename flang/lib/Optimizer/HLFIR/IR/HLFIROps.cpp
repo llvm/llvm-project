@@ -879,6 +879,28 @@ void hlfir::CharTrimOp::getEffects(
 }
 
 //===----------------------------------------------------------------------===//
+// IndexOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult hlfir::IndexOp::verify() {
+  mlir::Value substr = getSubstr();
+  mlir::Value str = getStr();
+
+  unsigned charKind = getCharacterKind(substr.getType());
+  if (charKind != getCharacterKind(str.getType()))
+    return emitOpError("character arguments must have the same KIND");
+
+  return mlir::success();
+}
+
+void hlfir::IndexOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
+}
+
+//===----------------------------------------------------------------------===//
 // NumericalReductionOp
 //===----------------------------------------------------------------------===//
 

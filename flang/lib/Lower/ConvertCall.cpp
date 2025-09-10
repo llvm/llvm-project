@@ -2214,10 +2214,15 @@ static std::optional<hlfir::EntityWithAttributes> genHLFIRIntrinsicRefCore(
     const std::string intrinsicName = callContext.getProcedureName();
     const fir::IntrinsicArgumentLoweringRules *argLowering =
         intrinsicEntry.getArgumentLoweringRules();
+    mlir::Type resultType =
+        callContext.isElementalProcWithArrayArgs()
+            ? hlfir::getFortranElementType(*callContext.resultType)
+            : *callContext.resultType;
+
     std::optional<hlfir::EntityWithAttributes> res =
         Fortran::lower::lowerHlfirIntrinsic(builder, loc, intrinsicName,
                                             loweredActuals, argLowering,
-                                            *callContext.resultType);
+                                            resultType);
     if (res)
       return res;
   }
