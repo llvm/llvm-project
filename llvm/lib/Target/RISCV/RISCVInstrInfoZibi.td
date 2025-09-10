@@ -11,24 +11,24 @@
 //===----------------------------------------------------------------------===//
 
 // A 5-bit unsigned immediate representing 1-31 and -1. 00000 represents -1.
-def uimm5_zibi : RISCVOp<XLenVT>, ImmLeaf<XLenVT, [{
+def imm5_zibi : RISCVOp<XLenVT>, ImmLeaf<XLenVT, [{
     return (Imm != 0 && isUInt<5>(Imm)) || Imm == -1;
 }]> {
-  let ParserMatchClass = UImmAsmOperand<5, "Zibi">;
+  let ParserMatchClass = ImmAsmOperand<"", 5, "Zibi">;
   let EncoderMethod = "getImmOpValueZibi";
-  let DecoderMethod = "decodeUImmZibiOperand";
+  let DecoderMethod = "decodeImmZibiOperand";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
       return false;
     return (Imm >= 1 && Imm <= 31) || Imm == -1;
   }];
-  let OperandType = "OPERAND_UIMM5_ZIBI";
+  let OperandType = "OPERAND_IMM5_ZIBI";
 }
 
 class Branch_imm<bits<3> funct3, string opcodestr>
     : RVInstBIMM<funct3, OPC_BRANCH, (outs),
-                 (ins GPR:$rs1, uimm5_zibi:$cimm, bare_simm13_lsb0:$imm12),
+                 (ins GPR:$rs1, imm5_zibi:$cimm, bare_simm13_lsb0:$imm12),
                  opcodestr, "$rs1, $cimm, $imm12">,
       Sched<[WriteJmp, ReadJmp]> {
   let isBranch = 1;
