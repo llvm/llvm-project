@@ -4686,7 +4686,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     // ...
     CharUnits RowAlignedSize = getContext()
                                    .getTypeSizeInChars(E->getType())
-                                   .alignTo(CharUnits::fromQuantity(32));
+                                   .alignTo(CharUnits::fromQuantity(16));
 
     llvm::Value *RowAlignedSizeVal =
         llvm::ConstantInt::get(Idx->getType(), RowAlignedSize.getQuantity());

@@ -5,18 +5,18 @@ struct S {
   float f;
 };
 
-// CHECK: [[CBLayout:%.*]] = type <{ <{ [1 x <{ float, [12 x i8] }>], float }>, [12 x i8], [2 x <4 x i32>], <{ [3 x <{ i32, [12 x i8] }>], i32 }>, [12 x i8], [1 x %S] }>
+// CHECK: [[CBLayout:%.*]] = type <{ <{ [1 x <{ float, [12 x i8] }>], float }>, [12 x i8], [2 x <4 x i32>], <{ [3 x <{ i32, [12 x i8] }>], i32 }>, [12 x i8], <{ [1 x <{ %S, [8 x i8] }>], %S }> }>
 // CHECK: @CBArrays.cb = global target("dx.CBuffer", [[CBLayout]])
 // CHECK: @c1 = external hidden addrspace(2) global <{ [1 x <{ float, [12 x i8] }>], float }>, align 4
 // CHECK: @c2 = external hidden addrspace(2) global [2 x <4 x i32>], align 16
 // CHECK: @c3 = external hidden addrspace(2) global <{ [3 x <{ i32, [12 x i8] }>], i32 }>, align 4
-// CHECK: @c4 = external hidden addrspace(2) global [1 x %S], align 1
+// CHECK: @c4 = external hidden addrspace(2) global <{ [1 x <{ %S, [8 x i8] }>], %S }>, align 1
 
 cbuffer CBArrays : register(b0) {
   float c1[2];
   int4 c2[2];
   int c3[2][2];
-  S c4[1];
+  S c4[2];
 }
 
 // CHECK-LABEL: define hidden void {{.*}}arr_assign1
@@ -144,7 +144,7 @@ void arr_assign7() {
 // CHECK-NEXT: [[L0:%.*]] = load float, ptr addrspace(2) @c1, align 4
 // CHECK-NEXT: store float [[L0]], ptr [[V0]], align 4
 // CHECK-NEXT: [[V1:%.*]] = getelementptr inbounds [2 x float], ptr [[C]], i32 1
-// CHECK-NEXT: [[L1:%.*]] = load float, ptr addrspace(2) getelementptr inbounds (i8, ptr addrspace(2) @c1, i32 32), align 4
+// CHECK-NEXT: [[L1:%.*]] = load float, ptr addrspace(2) getelementptr inbounds (i8, ptr addrspace(2) @c1, i32 16), align 4
 // CHECK-NEXT: store float [[L1]], ptr [[V1]], align 4
 // CHECK-NEXT: ret void
 void arr_assign8() {
@@ -161,7 +161,7 @@ void arr_assign8() {
 // CHECK-NEXT: [[L0:%.*]] = load <4 x i32>, ptr addrspace(2) @c2, align 16
 // CHECK-NEXT: store <4 x i32> [[L0]], ptr [[V0]], align 16
 // CHECK-NEXT: [[V1:%.*]] = getelementptr inbounds [2 x <4 x i32>], ptr [[C]], i32 1
-// CHECK-NEXT: [[L1:%.*]] = load <4 x i32>, ptr addrspace(2) getelementptr inbounds (i8, ptr addrspace(2) @c2, i32 32), align 16
+// CHECK-NEXT: [[L1:%.*]] = load <4 x i32>, ptr addrspace(2) getelementptr inbounds (i8, ptr addrspace(2) @c2, i32 16), align 16
 // CHECK-NEXT: store <4 x i32> [[L1]], ptr [[V1]], align 16
 // CHECK-NEXT: ret void
 void arr_assign9() {
@@ -171,20 +171,40 @@ void arr_assign9() {
 
 // CHECK-LABEL: define hidden void {{.*}}arr_assign10
 // CHECK: [[C:%.*]] = alloca [2 x [2 x i32]], align 4
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[C]], ptr align 4 {{.*}}, i32 16, i1 false)
-// CHECK-NEXT: call void @llvm.memcpy.p0.p2.i32(ptr align 4 [[C]], ptr addrspace(2) align 4 @c3, i32 16, i1 false)
+// CHECK-NEXT: [[V0:%.*]] = getelementptr inbounds [2 x [2 x i32]], ptr [[C]], i32 0, i32 0
+// CHECK-NEXT: [[L0:%.*]] = load i32, ptr addrspace(2) @c3, align 4
+// CHECK-NEXT: store i32 [[L0]], ptr [[V0]], align 4
+// CHECK-NEXT: [[V1:%.*]] = getelementptr inbounds [2 x [2 x i32]], ptr [[C]], i32 0, i32 1
+// CHECK-NEXT: [[L1:%.*]] = load i32, ptr addrspace(2) getelementptr inbounds (i8, ptr addrspace(2) @c3, i32 16), align 4
+// CHECK-NEXT: store i32 [[L1]], ptr [[V1]], align 4
+// CHECK-NEXT: [[V2:%.*]] = getelementptr inbounds [2 x [2 x i32]], ptr [[C]], i32 1, i32 0
+// CHECK-NEXT: [[L2:%.*]] = load i32, ptr addrspace(2) getelementptr inbounds (i8, ptr addrspace(2) @c3, i32 32), align 4
+// CHECK-NEXT: store i32 [[L2]], ptr [[V2]], align 4
+// CHECK-NEXT: [[V3:%.*]] = getelementptr inbounds [2 x [2 x i32]], ptr [[C]], i32 1, i32 1
+// CHECK-NEXT: [[L3:%.*]] = load i32, ptr addrspace(2) getelementptr inbounds (i8, ptr addrspace(2) @c3, i32 48), align 4
+// CHECK-NEXT: store i32 [[L3]], ptr [[V3]], align 4
 // CHECK-NEXT: ret void
 void arr_assign10() {
-  int C[2][2] = {1,2,3,4};
+  int C[2][2];
   C = c3;
 }
 
 // CHECK-LABEL: define hidden void {{.*}}arr_assign11
-// CHECK: [[C:%.*]] = alloca [1 x %struct.S], align 1
-// CHECK: call void @llvm.memcpy.p0.p2.i32(ptr align 1 [[C]], ptr addrspace(2) align 1 @c4, i32 8, i1 false)
+// CHECK: [[C:%.*]] = alloca [2 x %struct.S], align 1
+// CHECK-NEXT: [[V0:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[C]], i32 0, i32 0
+// CHECK-NEXT: [[L0:%.*]] = load i32, ptr addrspace(2) @c4, align 4
+// CHECK-NEXT: store i32 [[L0]], ptr [[V0]], align 4
+// CHECK-NEXT: [[V1:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[C]], i32 0, i32 1
+// CHECK-NEXT: [[L1:%.*]] = load float, ptr addrspace(2) getelementptr inbounds (i8, ptr addrspace(2) @c4, i32 4), align 4
+// CHECK-NEXT: store float [[L1]], ptr [[V1]], align 4
+// CHECK-NEXT: [[V2:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[C]], i32 1, i32 0
+// CHECK-NEXT: [[L2:%.*]] = load i32, ptr addrspace(2) getelementptr inbounds (i8, ptr addrspace(2) @c4, i32 16), align 4
+// CHECK-NEXT: store i32 [[L2]], ptr [[V2]], align 4
+// CHECK-NEXT: [[V3:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[C]], i32 1, i32 1
+// CHECK-NEXT: [[L3:%.*]] = load float, ptr addrspace(2) getelementptr inbounds (i8, ptr addrspace(2) @c4, i32 20), align 4
+// CHECK-NEXT: store float [[L3]], ptr [[V3]], align 4
 // CHECK-NEXT: ret void
 void arr_assign11() {
-  S s = {1, 2.0};
-  S C[1] = {s};
+  S C[2];
   C = c4;
 }
