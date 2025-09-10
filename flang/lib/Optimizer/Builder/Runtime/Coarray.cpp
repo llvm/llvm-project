@@ -164,7 +164,6 @@ void fir::runtime::genCoSum(fir::FirOpBuilder &builder, mlir::Location loc,
                             mlir::Value stat, mlir::Value errmsg) {
   genCollectiveSubroutine(builder, loc, A, resultImage, stat, errmsg,
                           PRIFNAME_SUB("co_sum"));
-  return fir::LoadOp::create(builder, loc, result);
 }
 
 /// Generate call to runtime subroutine prif_sync_all

@@ -1136,7 +1136,8 @@ public:
             Fortran::common::LanguageFeature::Coarray))
       fir::emitFatalError(
           getCurrentLocation(),
-          "Not yet implemented: Multi-image features are experimental and are disabled by default, use '-fcoarray' to enable.",
+          "Not yet implemented: Multi-image features are experimental and are "
+          "disabled by default, use '-fcoarray' to enable.",
           false);
   }
 
