@@ -40,15 +40,15 @@ class MultiLevelTemplateArgumentList;
 
 struct NormalizedConstraint {
 
-  enum class ConstraintKind {
+  enum class ConstraintKind : unsigned char{
     Atomic = 0,
     ConceptId,
     FoldExpanded,
     Compound,
   };
 
-  enum CompoundConstraintKind { CCK_Conjunction, CCK_Disjunction };
-  enum class FoldOperatorKind : unsigned int { And, Or };
+  enum CompoundConstraintKind : unsigned char { CCK_Conjunction, CCK_Disjunction };
+  enum class FoldOperatorKind : unsigned char { And, Or };
 
   using OccurenceList = llvm::SmallBitVector;
 
