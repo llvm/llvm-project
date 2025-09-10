@@ -11,7 +11,7 @@ float test2241[2] = {
 static void f (char * (*g) (char **, int), char **p, ...) {
   char *s;
   va_list v;                              // expected-error {{identifier}}
-  s = g (p, __builtin_va_arg(v, int));    // expected-error {{identifier}}
+  s = g (p, __builtin_va_arg(v, int));    // expected-error {{identifier}} expected-error {{extraneous ')' before ';'}}
 }
 
 

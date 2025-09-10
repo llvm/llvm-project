@@ -1,14 +1,18 @@
 // RUN: %clang -target i386-unknown-unknown -### -S -O0 -Os %s -o %t.s -fverbose-asm -fvisibility=hidden 2>&1 | FileCheck -check-prefix=I386 %s
 // I386: "-triple" "i386-unknown-unknown"
+// I386: "-Os"
 // I386: "-S"
 // I386: "-disable-free"
 // I386: "-mrelocation-model" "static"
 // I386: "-mframe-pointer=all"
 // I386: "-funwind-tables=2"
-// I386: "-Os"
 // I386: "-fvisibility=hidden"
 // I386: "-o"
 // I386: clang-translation
+
+// RUN: %clang -target i386-unknown-unknown -### -S %s -o %t.s -Xclang -no-disable-free 2>&1 | FileCheck -check-prefix=FREE %s
+// FREE: "-disable-free"
+// FREE: "-no-disable-free"
 
 // RUN: %clang -target i386-unknown-unknown -### -S %s -fasynchronous-unwind-tables -fno-unwind-tables 2>&1 | FileCheck --check-prefix=UNWIND-TABLES %s --implicit-check-not=warning:
 // UNWIND-TABLES: "-funwind-tables=2"

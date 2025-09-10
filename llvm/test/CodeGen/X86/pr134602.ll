@@ -17,7 +17,7 @@ define i32 @PR134602(i16 %a0) {
 ; X64-NEXT:    movzwl %di, %eax
 ; X64-NEXT:    movd %eax, %xmm0
 ; X64-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[2,2,2,2,4,5,6,7]
+; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; X64-NEXT:    paddw %xmm0, %xmm1
 ; X64-NEXT:    movdqa %xmm1, %xmm0
 ; X64-NEXT:    psrld $16, %xmm0

@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -flang-experimental-hlfir -emit-llvm %s -fno-ppc-native-vector-element-order -triple ppc64le-unknown-linux -o - | FileCheck --check-prefixes="LLVMIR" %s
+! RUN: %flang_fc1 -emit-llvm %s -fno-ppc-native-vector-element-order -triple ppc64le-unknown-linux -o - | FileCheck --check-prefixes="LLVMIR" %s
 ! REQUIRES: target=powerpc{{.*}}
 
 !CHECK-LABEL: vec_extract_testr4i8
@@ -27,6 +27,7 @@ subroutine vec_extract_testi8i1(arg1, arg2, r)
 ! LLVMIR: %[[arg2:.*]] = load i8, ptr %{{[0-9]}}, align 1
 ! LLVMIR: %[[urem:.*]] = urem i8 %[[arg2]], 2
 ! LLVMIR: %[[sub:.*]] = sub i8 1, %[[urem]]
-! LLVMIR: %[[r:.*]] = extractelement <2 x i64> %[[arg1]], i8 %[[sub]]
+! LLVMIR: %[[idx:.*]] = zext i8 %[[sub]] to i64
+! LLVMIR: %[[r:.*]] = extractelement <2 x i64> %[[arg1]], i64 %[[idx]]
 ! LLVMIR: store i64 %[[r]], ptr %{{[0-9]}}, align 8
 end subroutine vec_extract_testi8i1

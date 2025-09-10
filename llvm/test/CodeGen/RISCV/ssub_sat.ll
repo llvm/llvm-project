@@ -113,7 +113,7 @@ define signext i16 @func16(i16 signext %x, i16 signext %y) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sub a0, a0, a1
 ; RV64I-NEXT:    lui a1, 8
-; RV64I-NEXT:    addiw a1, a1, -1
+; RV64I-NEXT:    addi a1, a1, -1
 ; RV64I-NEXT:    bge a0, a1, .LBB2_3
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    lui a1, 1048568
@@ -142,7 +142,7 @@ define signext i16 @func16(i16 signext %x, i16 signext %y) nounwind {
 ; RV64IZbb:       # %bb.0:
 ; RV64IZbb-NEXT:    sub a0, a0, a1
 ; RV64IZbb-NEXT:    lui a1, 8
-; RV64IZbb-NEXT:    addiw a1, a1, -1
+; RV64IZbb-NEXT:    addi a1, a1, -1
 ; RV64IZbb-NEXT:    min a0, a0, a1
 ; RV64IZbb-NEXT:    lui a1, 1048568
 ; RV64IZbb-NEXT:    max a0, a0, a1

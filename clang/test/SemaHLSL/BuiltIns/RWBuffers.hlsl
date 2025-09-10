@@ -14,7 +14,7 @@ RWBuffer<> BufferErr2;
 // test implicit RWBuffer concept
 RWBuffer<int> r1;
 RWBuffer<float> r2;
-RWBuffer<float3> Buffer;
+RWBuffer<float3> Buff;
 RWBuffer<double2> r4;
 
 // expected-error@+4 {{constraints not satisfied for class template 'RWBuffer'}}
@@ -109,6 +109,6 @@ RWBuffer<threeDoubles> BufferErr3;
 
 [numthreads(1,1,1)]
 void main() {
-  (void)Buffer.__handle; // expected-error {{'__handle' is a private member of 'hlsl::RWBuffer<vector<float, 3>>'}}
+  (void)Buff.__handle; // expected-error {{'__handle' is a private member of 'hlsl::RWBuffer<vector<float, 3>>'}}
   // expected-note@* {{implicitly declared private here}}
 }

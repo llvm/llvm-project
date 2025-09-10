@@ -126,8 +126,13 @@ TYPE_PARSER(construct<AccDefaultClause>(
 // SELF clause is either a simple optional condition for compute construct
 // or a synonym of the HOST clause for the update directive 2.14.4 holding
 // an object list.
-TYPE_PARSER(construct<AccSelfClause>(Parser<AccObjectList>{}) ||
-    construct<AccSelfClause>(scalarLogicalExpr))
+TYPE_PARSER(
+    construct<AccSelfClause>(Parser<AccObjectList>{}) / lookAhead(")"_tok) ||
+    construct<AccSelfClause>(scalarLogicalExpr / lookAhead(")"_tok)) ||
+    construct<AccSelfClause>(
+        recovery(fail<std::optional<ScalarLogicalExpr>>(
+                     "logical expression or object list expected"_err_en_US),
+            SkipTo<')'>{} >> pure<std::optional<ScalarLogicalExpr>>())))
 
 // Modifier for copyin, copyout, cache and create
 TYPE_PARSER(construct<AccDataModifier>(

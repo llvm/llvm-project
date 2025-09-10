@@ -6,17 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Instrumentation/MemProfUse.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/ProfileData/IndexedMemProfData.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/InstrProfWriter.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Testing/Support/Error.h"
-#include "llvm/Transforms/Instrumentation/MemProfiler.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -90,7 +91,7 @@ declare !dbg !19 void @_Z2f3v()
   auto *F = M->getFunction("_Z3foov");
   ASSERT_NE(F, nullptr);
 
-  TargetLibraryInfoWrapperPass WrapperPass;
+  TargetLibraryInfoWrapperPass WrapperPass(M->getTargetTriple());
   auto &TLI = WrapperPass.getTLI(*F);
   auto Calls = extractCallsFromIR(*M, TLI);
 
@@ -101,16 +102,15 @@ declare !dbg !19 void @_Z2f3v()
   ASSERT_NE(It, Calls.end());
 
   const auto &[CallerGUID, CallSites] = *It;
-  EXPECT_EQ(CallerGUID, IndexedMemProfRecord::getGUID("_Z3foov"));
+  EXPECT_EQ(CallerGUID, memprof::getGUID("_Z3foov"));
 
   // Verify that call sites show up in the ascending order of their source
   // locations.
   EXPECT_THAT(
       CallSites,
-      ElementsAre(
-          Pair(LineLocation(1, 3), IndexedMemProfRecord::getGUID("_Z2f1v")),
-          Pair(LineLocation(2, 3), IndexedMemProfRecord::getGUID("_Z2f2v")),
-          Pair(LineLocation(2, 9), IndexedMemProfRecord::getGUID("_Z2f3v"))));
+      ElementsAre(Pair(LineLocation(1, 3), memprof::getGUID("_Z2f1v")),
+                  Pair(LineLocation(2, 3), memprof::getGUID("_Z2f2v")),
+                  Pair(LineLocation(2, 9), memprof::getGUID("_Z2f3v"))));
 }
 
 TEST(MemProf, ExtractDirectCallsFromIRInline) {
@@ -191,7 +191,7 @@ declare !dbg !25 void @_Z2g2v() local_unnamed_addr
   auto *F = M->getFunction("_Z3foov");
   ASSERT_NE(F, nullptr);
 
-  TargetLibraryInfoWrapperPass WrapperPass;
+  TargetLibraryInfoWrapperPass WrapperPass(M->getTargetTriple());
   auto &TLI = WrapperPass.getTLI(*F);
   auto Calls = extractCallsFromIR(*M, TLI);
 
@@ -200,41 +200,37 @@ declare !dbg !25 void @_Z2g2v() local_unnamed_addr
 
   // Verify each key-value pair.
 
-  auto FooIt = Calls.find(IndexedMemProfRecord::getGUID("_Z3foov"));
+  auto FooIt = Calls.find(memprof::getGUID("_Z3foov"));
   ASSERT_NE(FooIt, Calls.end());
   const auto &[FooCallerGUID, FooCallSites] = *FooIt;
-  EXPECT_EQ(FooCallerGUID, IndexedMemProfRecord::getGUID("_Z3foov"));
+  EXPECT_EQ(FooCallerGUID, memprof::getGUID("_Z3foov"));
   EXPECT_THAT(
       FooCallSites,
-      ElementsAre(
-          Pair(LineLocation(1, 3), IndexedMemProfRecord::getGUID("_ZL2f3v")),
-          Pair(LineLocation(2, 9), IndexedMemProfRecord::getGUID("_ZL2g3v"))));
+      ElementsAre(Pair(LineLocation(1, 3), memprof::getGUID("_ZL2f3v")),
+                  Pair(LineLocation(2, 9), memprof::getGUID("_ZL2g3v"))));
 
-  auto F2It = Calls.find(IndexedMemProfRecord::getGUID("_ZL2f2v"));
+  auto F2It = Calls.find(memprof::getGUID("_ZL2f2v"));
   ASSERT_NE(F2It, Calls.end());
   const auto &[F2CallerGUID, F2CallSites] = *F2It;
-  EXPECT_EQ(F2CallerGUID, IndexedMemProfRecord::getGUID("_ZL2f2v"));
-  EXPECT_THAT(F2CallSites,
-              ElementsAre(Pair(LineLocation(2, 3),
-                               IndexedMemProfRecord::getGUID("_Z2f1v"))));
+  EXPECT_EQ(F2CallerGUID, memprof::getGUID("_ZL2f2v"));
+  EXPECT_THAT(F2CallSites, ElementsAre(Pair(LineLocation(2, 3),
+                                            memprof::getGUID("_Z2f1v"))));
 
-  auto F3It = Calls.find(IndexedMemProfRecord::getGUID("_ZL2f3v"));
+  auto F3It = Calls.find(memprof::getGUID("_ZL2f3v"));
   ASSERT_NE(F3It, Calls.end());
   const auto &[F3CallerGUID, F3CallSites] = *F3It;
-  EXPECT_EQ(F3CallerGUID, IndexedMemProfRecord::getGUID("_ZL2f3v"));
-  EXPECT_THAT(F3CallSites,
-              ElementsAre(Pair(LineLocation(1, 10),
-                               IndexedMemProfRecord::getGUID("_ZL2f2v"))));
+  EXPECT_EQ(F3CallerGUID, memprof::getGUID("_ZL2f3v"));
+  EXPECT_THAT(F3CallSites, ElementsAre(Pair(LineLocation(1, 10),
+                                            memprof::getGUID("_ZL2f2v"))));
 
-  auto G3It = Calls.find(IndexedMemProfRecord::getGUID("_ZL2g3v"));
+  auto G3It = Calls.find(memprof::getGUID("_ZL2g3v"));
   ASSERT_NE(G3It, Calls.end());
   const auto &[G3CallerGUID, G3CallSites] = *G3It;
-  EXPECT_EQ(G3CallerGUID, IndexedMemProfRecord::getGUID("_ZL2g3v"));
+  EXPECT_EQ(G3CallerGUID, memprof::getGUID("_ZL2g3v"));
   EXPECT_THAT(
       G3CallSites,
-      ElementsAre(
-          Pair(LineLocation(1, 8), IndexedMemProfRecord::getGUID("_Z2g1v")),
-          Pair(LineLocation(2, 3), IndexedMemProfRecord::getGUID("_Z2g2v"))));
+      ElementsAre(Pair(LineLocation(1, 8), memprof::getGUID("_Z2g1v")),
+                  Pair(LineLocation(2, 3), memprof::getGUID("_Z2g2v"))));
 }
 
 TEST(MemProf, ExtractDirectCallsFromIRCallingNew) {
@@ -286,7 +282,7 @@ attributes #2 = { builtin allocsize(0) }
   auto *F = M->getFunction("_Z3foov");
   ASSERT_NE(F, nullptr);
 
-  TargetLibraryInfoWrapperPass WrapperPass;
+  TargetLibraryInfoWrapperPass WrapperPass(M->getTargetTriple());
   auto &TLI = WrapperPass.getTLI(*F);
   auto Calls = extractCallsFromIR(*M, TLI);
 
@@ -295,10 +291,10 @@ attributes #2 = { builtin allocsize(0) }
 
   // Verify each key-value pair.
 
-  auto FooIt = Calls.find(IndexedMemProfRecord::getGUID("_Z3foov"));
+  auto FooIt = Calls.find(memprof::getGUID("_Z3foov"));
   ASSERT_NE(FooIt, Calls.end());
   const auto &[FooCallerGUID, FooCallSites] = *FooIt;
-  EXPECT_EQ(FooCallerGUID, IndexedMemProfRecord::getGUID("_Z3foov"));
+  EXPECT_EQ(FooCallerGUID, memprof::getGUID("_Z3foov"));
   EXPECT_THAT(FooCallSites, ElementsAre(Pair(LineLocation(1, 10), 0)));
 }
 
@@ -402,14 +398,14 @@ attributes #1 = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "t
   auto *F = M->getFunction("_Z3foov");
   ASSERT_NE(F, nullptr);
 
-  TargetLibraryInfoWrapperPass WrapperPass;
+  TargetLibraryInfoWrapperPass WrapperPass(M->getTargetTriple());
   auto &TLI = WrapperPass.getTLI(*F);
   auto Calls = extractCallsFromIR(*M, TLI);
 
-  uint64_t GUIDFoo = IndexedMemProfRecord::getGUID("_Z3foov");
-  uint64_t GUIDBar = IndexedMemProfRecord::getGUID("_Z3barv");
-  uint64_t GUIDBaz = IndexedMemProfRecord::getGUID("_Z3bazv");
-  uint64_t GUIDZzz = IndexedMemProfRecord::getGUID("_Z3zzzv");
+  uint64_t GUIDFoo = memprof::getGUID("_Z3foov");
+  uint64_t GUIDBar = memprof::getGUID("_Z3barv");
+  uint64_t GUIDBaz = memprof::getGUID("_Z3bazv");
+  uint64_t GUIDZzz = memprof::getGUID("_Z3zzzv");
 
   // Verify that extractCallsFromIR extracts caller-callee pairs as expected.
   EXPECT_THAT(Calls,

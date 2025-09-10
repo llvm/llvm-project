@@ -86,6 +86,12 @@ static AliasResult::Kind getAliasResult(unsigned AS1, unsigned AS2) {
   // TODO: cvta.param is not yet supported. We need to change aliasing
   // rules once it is added.
 
+  // Distributed shared memory aliases with shared memory.
+  if (((AS1 == ADDRESS_SPACE_SHARED) &&
+       (AS2 == ADDRESS_SPACE_SHARED_CLUSTER)) ||
+      ((AS1 == ADDRESS_SPACE_SHARED_CLUSTER) && (AS2 == ADDRESS_SPACE_SHARED)))
+    return AliasResult::MayAlias;
+
   return (AS1 == AS2 ? AliasResult::MayAlias : AliasResult::NoAlias);
 }
 

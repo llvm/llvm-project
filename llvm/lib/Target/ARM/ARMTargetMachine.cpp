@@ -41,6 +41,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetOptions.h"
@@ -82,7 +83,7 @@ namespace llvm {
   void initializeARMExecutionDomainFixPass(PassRegistry&);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   // Register the target.
   RegisterTargetMachine<ARMLETargetMachine> X(getTheARMLETarget());
   RegisterTargetMachine<ARMLETargetMachine> A(getTheThumbLETarget());
@@ -91,6 +92,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
 
   PassRegistry &Registry = *PassRegistry::getPassRegistry();
   initializeGlobalISel(Registry);
+  initializeARMAsmPrinterPass(Registry);
   initializeARMLoadStoreOptPass(Registry);
   initializeARMPreAllocLoadStoreOptPass(Registry);
   initializeARMParallelDSPPass(Registry);
@@ -119,29 +121,10 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   return std::make_unique<ARMElfTargetObjectFile>();
 }
 
-static ARMBaseTargetMachine::ARMABI
-computeTargetABI(const Triple &TT, StringRef CPU,
-                 const TargetOptions &Options) {
-  StringRef ABIName = Options.MCOptions.getABIName();
-
-  if (ABIName.empty())
-    ABIName = ARM::computeDefaultTargetABI(TT, CPU);
-
-  if (ABIName == "aapcs16")
-    return ARMBaseTargetMachine::ARM_ABI_AAPCS16;
-  else if (ABIName.starts_with("aapcs"))
-    return ARMBaseTargetMachine::ARM_ABI_AAPCS;
-  else if (ABIName.starts_with("apcs"))
-    return ARMBaseTargetMachine::ARM_ABI_APCS;
-
-  llvm_unreachable("Unhandled/unknown ABI Name!");
-  return ARMBaseTargetMachine::ARM_ABI_UNKNOWN;
-}
-
-static std::string computeDataLayout(const Triple &TT, StringRef CPU,
+static std::string computeDataLayout(const Triple &TT,
                                      const TargetOptions &Options,
                                      bool isLittle) {
-  auto ABI = computeTargetABI(TT, CPU, Options);
+  auto ABI = ARM::computeTargetABI(TT, Options.MCOptions.ABIName);
   std::string Ret;
 
   if (isLittle)
@@ -161,19 +144,19 @@ static std::string computeDataLayout(const Triple &TT, StringRef CPU,
   Ret += "-Fi8";
 
   // ABIs other than APCS have 64 bit integers with natural alignment.
-  if (ABI != ARMBaseTargetMachine::ARM_ABI_APCS)
+  if (ABI != ARM::ARM_ABI_APCS)
     Ret += "-i64:64";
 
   // We have 64 bits floats. The APCS ABI requires them to be aligned to 32
   // bits, others to 64 bits. We always try to align to 64 bits.
-  if (ABI == ARMBaseTargetMachine::ARM_ABI_APCS)
+  if (ABI == ARM::ARM_ABI_APCS)
     Ret += "-f64:32:64";
 
   // We have 128 and 64 bit vectors. The APCS ABI aligns them to 32 bits, others
   // to 64. We always ty to give them natural alignment.
-  if (ABI == ARMBaseTargetMachine::ARM_ABI_APCS)
+  if (ABI == ARM::ARM_ABI_APCS)
     Ret += "-v64:32:64-v128:32:128";
-  else if (ABI != ARMBaseTargetMachine::ARM_ABI_AAPCS16)
+  else if (ABI != ARM::ARM_ABI_AAPCS16)
     Ret += "-v128:64:128";
 
   // Try to align aggregates to 32 bits (the default is 64 bits, which has no
@@ -183,11 +166,10 @@ static std::string computeDataLayout(const Triple &TT, StringRef CPU,
   // Integer registers are 32 bits.
   Ret += "-n32";
 
-  // The stack is 128 bit aligned on NaCl, 64 bit aligned on AAPCS and 32 bit
-  // aligned everywhere else.
-  if (TT.isOSNaCl() || ABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16)
+  // The stack is 64 bit aligned on AAPCS and 32 bit aligned everywhere else.
+  if (ABI == ARM::ARM_ABI_AAPCS16)
     Ret += "-S128";
-  else if (ABI == ARMBaseTargetMachine::ARM_ABI_AAPCS)
+  else if (ABI == ARM::ARM_ABI_AAPCS)
     Ret += "-S64";
   else
     Ret += "-S32";
@@ -220,11 +202,10 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool isLittle)
-    : CodeGenTargetMachineImpl(T, computeDataLayout(TT, CPU, Options, isLittle),
-                               TT, CPU, FS, Options,
-                               getEffectiveRelocModel(TT, RM),
+    : CodeGenTargetMachineImpl(T, computeDataLayout(TT, Options, isLittle), TT,
+                               CPU, FS, Options, getEffectiveRelocModel(TT, RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      TargetABI(computeTargetABI(TT, CPU, Options)),
+      TargetABI(ARM::computeTargetABI(TT, Options.MCOptions.ABIName)),
       TLOF(createTLOF(getTargetTriple())), isLittle(isLittle) {
 
   // Default to triple-appropriate float ABI
@@ -322,12 +303,12 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
 
 TargetTransformInfo
 ARMBaseTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(ARMTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<ARMTTIImpl>(this, F));
 }
 
 ScheduleDAGInstrs *
 ARMBaseTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
-  ScheduleDAGMILive *DAG = createGenericSchedLive(C);
+  ScheduleDAGMILive *DAG = createSchedLive(C);
   // add DAG Mutations here.
   const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
   if (ST.hasFusion())
@@ -337,7 +318,7 @@ ARMBaseTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
 
 ScheduleDAGInstrs *
 ARMBaseTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
-  ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
+  ScheduleDAGMI *DAG = createSchedPostRA(C);
   // add DAG Mutations here.
   const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
   if (ST.hasFusion())

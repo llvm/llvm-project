@@ -92,10 +92,14 @@ void defineCommonBlocks(
 /// The COMMON block is a global structure. \p commonValue is the base address
 /// of the COMMON block. As the offset from the symbol \p sym, generate the
 /// COMMON block member value (commonValue + offset) for the symbol.
+/// \p commonSize specifies the syze of the COMMON block in bytes.
+/// The size is used to represent a COMMON block reference as
+/// a !fir.ref<!fir.array<SIZExi8>>.
 mlir::Value genCommonBlockMember(AbstractConverter &converter,
                                  mlir::Location loc,
                                  const Fortran::semantics::Symbol &sym,
-                                 mlir::Value commonValue);
+                                 mlir::Value commonValue,
+                                 std::size_t commonSize);
 
 /// Lower a symbol attributes given an optional storage \p and add it to the
 /// provided symbol map. If \preAlloc is not provided, a temporary storage will
@@ -134,10 +138,11 @@ mlir::Value genInitialDataTarget(Fortran::lower::AbstractConverter &,
                                  const SomeExpr &initialTarget,
                                  bool couldBeInEquivalence = false);
 
-/// Call \p genInit to generate code inside \p global initializer region.
-void createGlobalInitialization(
-    fir::FirOpBuilder &builder, fir::GlobalOp global,
-    std::function<void(fir::FirOpBuilder &)> genInit);
+/// Create the global op and its init if it has one
+fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
+                           const Fortran::lower::pft::Variable &var,
+                           llvm::StringRef globalName, mlir::StringAttr linkage,
+                           cuf::DataAttributeAttr dataAttr = {});
 
 /// Generate address \p addr inside an initializer.
 fir::ExtendedValue
@@ -160,12 +165,6 @@ translateSymbolAttributes(mlir::MLIRContext *mlirContext,
                           const Fortran::semantics::Symbol &sym,
                           fir::FortranVariableFlagsEnum extraFlags =
                               fir::FortranVariableFlagsEnum::None);
-
-/// Translate the CUDA Fortran attributes of \p sym into the FIR CUDA attribute
-/// representation.
-cuf::DataAttributeAttr
-translateSymbolCUFDataAttribute(mlir::MLIRContext *mlirContext,
-                                const Fortran::semantics::Symbol &sym);
 
 /// Map a symbol to a given fir::ExtendedValue. This will generate an
 /// hlfir.declare when lowering to HLFIR and map the hlfir.declare result to the

@@ -104,7 +104,8 @@ def LLVMFunctionType : LLVMType<"LLVMFunction", "func"> {
     bool isVarArg() const { return getVarArg(); }
 
     /// Returns a clone of this function type with the given argument
-    /// and result types.
+    /// and result types. Returns null if the resulting function type would
+    /// not verify.
     LLVMFunctionType clone(TypeRange inputs, TypeRange results) const;
 
     /// Returns the result type of the function as an ArrayRef, enabling better

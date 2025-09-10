@@ -245,10 +245,20 @@ CodeGenOptLevel MipsSubtarget::getOptLevelToEnablePostRAScheduler() const {
 MipsSubtarget &
 MipsSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
                                                const TargetMachine &TM) {
-  StringRef CPUName = MIPS_MC::selectMipsCPU(TM.getTargetTriple(), CPU);
+  const Triple &TT = TM.getTargetTriple();
+  StringRef CPUName = MIPS_MC::selectMipsCPU(TT, CPU);
+
+  std::string FullFS;
+  if (getABI().ArePtrs64bit()) {
+    FullFS = "+ptr64";
+    if (!FS.empty())
+      FullFS = (Twine(FullFS) + "," + FS).str();
+  } else {
+    FullFS = FS.str();
+  }
 
   // Parse features string.
-  ParseSubtargetFeatures(CPUName, /*TuneCPU*/ CPUName, FS);
+  ParseSubtargetFeatures(CPUName, /*TuneCPU=*/CPUName, FullFS);
   // Initialize scheduling itinerary for the specified CPU.
   InstrItins = getInstrItineraryForCPU(CPUName);
 
@@ -265,8 +275,8 @@ MipsSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
   }
 
   if ((isABI_N32() || isABI_N64()) && !isGP64bit())
-    report_fatal_error("64-bit code requested on a subtarget that doesn't "
-                       "support it!");
+    reportFatalUsageError("64-bit code requested on a subtarget that doesn't "
+                          "support it!");
 
   return *this;
 }

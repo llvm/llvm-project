@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=bonaire -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions < %s 2>%t | FileCheck -check-prefixes=GFX7,IR %s
 ; RUN: FileCheck --check-prefix=WARN-GFX7 %s < %t
-; RUN: llc -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs < %s
+; RUN: llc -mtriple=amdgcn -mcpu=bonaire < %s
 
 ; RUN: llc -enable-new-pm -mtriple=amdgcn -mcpu=bonaire -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions < %s 2>%t | FileCheck -check-prefixes=GFX7,IR %s
@@ -11,7 +11,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=fiji -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions < %s 2>%t | FileCheck -check-prefixes=GFX8,IR %s
 ; RUN: FileCheck --check-prefix=WARN-GFX8 %s < %t
-; RUN: llc -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs < %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji < %s
 
 ; RUN: llc -enable-new-pm -mtriple=amdgcn -mcpu=fiji -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions < %s 2>%t | FileCheck -check-prefixes=GFX8,IR %s
@@ -20,22 +20,22 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions < %s 2>%t | FileCheck -check-prefixes=GFX9,GFX906,IR %s
 ; RUN: FileCheck --check-prefix=WARN-GFX906 %s < %t
-; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -verify-machineinstrs < %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx906 < %s
 
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions < %s 2>%t | FileCheck -check-prefixes=GFX9,GFX90A,IR %s
 ; RUN: FileCheck --check-prefix=WARN-GFX90A %s < %t
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a < %s
 
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1011 -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions < %s 2>%t | FileCheck -check-prefixes=GFX10,IR %s
 ; RUN: FileCheck --check-prefix=WARN-GFX10 %s < %t
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1011 -verify-machineinstrs < %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1011 < %s
 
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions < %s 2>%t | FileCheck -check-prefixes=GFX11,IR %s
 ; RUN: FileCheck --check-prefix=WARN-GFX11 %s < %t
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s
 
 ; Note: This test checks the IR, but also has a run line to codegen the file just to check we
 ; do not crash when trying to select those functions.

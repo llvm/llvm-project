@@ -700,8 +700,8 @@ void PrintingCodeCompleteConsumer::ProcessCodeCompleteResults(
       const SourceLocation ELoc = FixIt.RemoveRange.getEnd();
 
       SourceManager &SM = SemaRef.SourceMgr;
-      std::pair<FileID, unsigned> BInfo = SM.getDecomposedLoc(BLoc);
-      std::pair<FileID, unsigned> EInfo = SM.getDecomposedLoc(ELoc);
+      FileIDAndOffset BInfo = SM.getDecomposedLoc(BLoc);
+      FileIDAndOffset EInfo = SM.getDecomposedLoc(ELoc);
       // Adjust for token ranges.
       if (FixIt.RemoveRange.isTokenRange())
         EInfo.second += Lexer::MeasureTokenLength(ELoc, SM, SemaRef.LangOpts);

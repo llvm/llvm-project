@@ -160,7 +160,7 @@ class TargetAPITestCase(TestBase):
 
     @skipIfWindows  # stdio manipulation unsupported on Windows
     @skipIfRemote  # stdio manipulation unsupported on remote iOS devices<rdar://problem/54581135>
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     @no_debug_info_test
     def test_launch_simple(self):
         d = {"EXE": "b.out"}

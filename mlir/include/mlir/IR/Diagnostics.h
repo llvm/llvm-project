@@ -639,6 +639,10 @@ public:
   /// verified correctly, failure otherwise.
   LogicalResult verify();
 
+  /// Register this handler with the given context. This is intended for use
+  /// with the splitAndProcessBuffer function.
+  void registerInContext(MLIRContext *ctx);
+
 private:
   /// Process a single diagnostic.
   void process(Diagnostic &diag);

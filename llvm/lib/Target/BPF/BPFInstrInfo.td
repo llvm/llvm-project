@@ -698,8 +698,8 @@ class acquiring_load<PatFrags base>
 let Predicates = [BPFHasLoadAcqStoreRel] in {
   def LDDACQ : LOAD_ACQUIREi64<BPF_DW, "u64">;
 
-  foreach P = [[relaxed_load<atomic_load_64>, LDD],
-               [acquiring_load<atomic_load_64>, LDDACQ],
+  foreach P = [[relaxed_load<atomic_load_nonext_64>, LDD],
+               [acquiring_load<atomic_load_nonext_64>, LDDACQ],
               ] in {
     def : Pat<(P[0] ADDRri:$addr), (P[1] ADDRri:$addr)>;
   }
@@ -1189,10 +1189,9 @@ let Defs = [R0, R1, R2, R3, R4, R5], Uses = [R6], hasSideEffects = 1,
     hasExtraDefRegAllocReq = 1, hasExtraSrcRegAllocReq = 1, mayLoad = 1 in {
 class LOAD_ABS<BPFWidthModifer SizeOp, string OpcodeStr, Intrinsic OpNode>
     : TYPE_LD_ST<BPF_ABS.Value, SizeOp.Value,
-                 (outs),
-                 (ins GPR:$skb, i64imm:$imm),
+                 (outs), (ins i64imm:$imm),
                  "r0 = *("#OpcodeStr#" *)skb[$imm]",
-                 [(set R0, (OpNode GPR:$skb, i64immSExt32:$imm))]> {
+                 [(set R0, (OpNode R6, i64immSExt32:$imm))]> {
   bits<32> imm;
 
   let Inst{31-0} = imm;
@@ -1201,10 +1200,9 @@ class LOAD_ABS<BPFWidthModifer SizeOp, string OpcodeStr, Intrinsic OpNode>
 
 class LOAD_IND<BPFWidthModifer SizeOp, string OpcodeStr, Intrinsic OpNode>
     : TYPE_LD_ST<BPF_IND.Value, SizeOp.Value,
-                 (outs),
-                 (ins GPR:$skb, GPR:$val),
+                 (outs), (ins GPR:$val),
                  "r0 = *("#OpcodeStr#" *)skb[$val]",
-                 [(set R0, (OpNode GPR:$skb, GPR:$val))]> {
+                 [(set R0, (OpNode R6, GPR:$val))]> {
   bits<4> val;
 
   let Inst{55-52} = val;
@@ -1341,12 +1339,12 @@ let Predicates = [BPFHasALU32] in {
             (SUBREG_TO_REG (i64 0), (LDW32 ADDRri:$src), sub_32)>;
 
   let Predicates = [BPFHasLoadAcqStoreRel] in {
-    foreach P = [[relaxed_load<atomic_load_32>, LDW32],
-                 [relaxed_load<atomic_load_az_16>, LDH32],
-                 [relaxed_load<atomic_load_az_8>, LDB32],
-                 [acquiring_load<atomic_load_32>, LDWACQ32],
-                 [acquiring_load<atomic_load_az_16>, LDHACQ32],
-                 [acquiring_load<atomic_load_az_8>, LDBACQ32],
+    foreach P = [[relaxed_load<atomic_load_nonext_32>, LDW32],
+                 [relaxed_load<atomic_load_azext_16>, LDH32],
+                 [relaxed_load<atomic_load_azext_8>, LDB32],
+                 [acquiring_load<atomic_load_nonext_32>, LDWACQ32],
+                 [acquiring_load<atomic_load_azext_16>, LDHACQ32],
+                 [acquiring_load<atomic_load_azext_8>, LDBACQ32],
                 ] in {
       def : Pat<(P[0] ADDRri:$addr), (P[1] ADDRri:$addr)>;
     }

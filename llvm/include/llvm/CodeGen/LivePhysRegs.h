@@ -165,9 +165,16 @@ public:
   void dump() const;
 
 private:
+  /// Adds a register, taking the lane mask into consideration.
+  void addRegMaskPair(const MachineBasicBlock::RegisterMaskPair &Pair);
+
   /// Adds live-in registers from basic block \p MBB, taking associated
   /// lane masks into consideration.
   void addBlockLiveIns(const MachineBasicBlock &MBB);
+
+  /// Adds live-out registers from basic block \p MBB, taking associated
+  /// lane masks into consideration.
+  void addBlockLiveOuts(const MachineBasicBlock &MBB);
 
   /// Adds pristine registers. Pristine registers are callee saved registers
   /// that are unused in the function.

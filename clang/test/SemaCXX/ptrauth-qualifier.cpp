@@ -211,3 +211,21 @@ namespace test_concept {
     func(&p2); // expected-error {{no matching function for call to 'func'}}
   }
 }
+
+template <class A, class B> constexpr int test_ptrauth_conflict() {
+  A *a = nullptr;
+  B *b = nullptr;
+  a = b; // #BtoA
+  b = a; // #AtoB
+  return 0;
+}
+
+constexpr int no_ptrauth = test_ptrauth_conflict<int *, int *>();
+constexpr int matching_ptrauth =
+  test_ptrauth_conflict<int * __ptrauth(1,1,123), int *  __ptrauth(1,1,123)>();
+constexpr int mismatching_ptrauth =
+  test_ptrauth_conflict<int * __ptrauth(2,1,1024), int *  __ptrauth(1,1,123)>(); // #FailedConstExpr
+// expected-error@#FailedConstExpr {{constexpr variable 'mismatching_ptrauth' must be initialized by a constant expression}}
+// expected-note@#FailedConstExpr {{in instantiation of function template specialization 'test_ptrauth_conflict<int *__ptrauth(2,1,1024), int *__ptrauth(1,1,123)>' requested here}}
+// expected-error@#BtoA {{assigning 'int *__ptrauth(1,1,123) *' to 'int *__ptrauth(2,1,1024) *' changes pointer authentication of pointee type}}
+// expected-error@#AtoB {{assigning 'int *__ptrauth(2,1,1024) *' to 'int *__ptrauth(1,1,123) *' changes pointer authentication of pointee type}}

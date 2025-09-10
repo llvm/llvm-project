@@ -451,12 +451,12 @@ define void @memcpy_p0_p3_sz31_align_1_1(ptr addrspace(0) align 1 %dst, ptr addr
 ; CHECK-LABEL: memcpy_p0_p3_sz31_align_1_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_u8 v9, v2 offset:30
 ; CHECK-NEXT:    ds_read_b32 v8, v2 offset:24
+; CHECK-NEXT:    ds_read_u8 v9, v2 offset:30
 ; CHECK-NEXT:    ds_read_u16 v10, v2 offset:28
 ; CHECK-NEXT:    ds_read_b64 v[6:7], v2 offset:16
 ; CHECK-NEXT:    ds_read2_b64 v[2:5], v2 offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
+; CHECK-NEXT:    s_waitcnt lgkmcnt(3)
 ; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:30
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(3)
 ; CHECK-NEXT:    flat_store_short v[0:1], v10 offset:28
@@ -506,12 +506,12 @@ define void @memcpy_p0_p3_sz31_align_2_2(ptr addrspace(0) align 2 %dst, ptr addr
 ; CHECK-LABEL: memcpy_p0_p3_sz31_align_2_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_u8 v9, v2 offset:30
 ; CHECK-NEXT:    ds_read_b32 v8, v2 offset:24
+; CHECK-NEXT:    ds_read_u8 v9, v2 offset:30
 ; CHECK-NEXT:    ds_read_u16 v10, v2 offset:28
 ; CHECK-NEXT:    ds_read_b64 v[6:7], v2 offset:16
 ; CHECK-NEXT:    ds_read2_b64 v[2:5], v2 offset1:1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(4)
+; CHECK-NEXT:    s_waitcnt lgkmcnt(3)
 ; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:30
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(3)
 ; CHECK-NEXT:    flat_store_short v[0:1], v10 offset:28
@@ -896,19 +896,18 @@ define void @memcpy_p0_p5_sz31_align_1_1(ptr addrspace(0) align 1 %dst, ptr addr
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_clause 0x8
+; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[0:3], 0 offen offset:30
+; CHECK-NEXT:    buffer_load_dword v3, v2, s[0:3], 0 offen
 ; CHECK-NEXT:    buffer_load_dword v7, v2, s[0:3], 0 offen offset:16
 ; CHECK-NEXT:    buffer_load_dword v8, v2, s[0:3], 0 offen offset:20
 ; CHECK-NEXT:    buffer_load_dword v9, v2, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_ushort v10, v2, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    buffer_load_dword v3, v2, s[0:3], 0 offen
+; CHECK-NEXT:    buffer_load_ushort v11, v2, s[0:3], 0 offen offset:28
 ; CHECK-NEXT:    buffer_load_dword v4, v2, s[0:3], 0 offen offset:4
 ; CHECK-NEXT:    buffer_load_dword v5, v2, s[0:3], 0 offen offset:8
 ; CHECK-NEXT:    buffer_load_dword v6, v2, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    flat_store_short v[0:1], v10 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:30
+; CHECK-NEXT:    s_waitcnt vmcnt(3)
+; CHECK-NEXT:    flat_store_short v[0:1], v11 offset:28
+; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:30
 ; CHECK-NEXT:    flat_store_dwordx3 v[0:1], v[7:9] offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[3:6]
@@ -924,18 +923,18 @@ define void @memcpy_p0_p5_sz32_align_1_1(ptr addrspace(0) align 1 %dst, ptr addr
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_clause 0x7
-; CHECK-NEXT:    buffer_load_dword v3, v2, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_dword v4, v2, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_dword v5, v2, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_dword v6, v2, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_dword v7, v2, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_dword v8, v2, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_dword v9, v2, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_dword v10, v2, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[3:6] offset:16
+; CHECK-NEXT:    buffer_load_dword v3, v2, s[0:3], 0 offen
+; CHECK-NEXT:    buffer_load_dword v4, v2, s[0:3], 0 offen offset:4
+; CHECK-NEXT:    buffer_load_dword v5, v2, s[0:3], 0 offen offset:8
+; CHECK-NEXT:    buffer_load_dword v7, v2, s[0:3], 0 offen offset:16
+; CHECK-NEXT:    buffer_load_dword v8, v2, s[0:3], 0 offen offset:20
+; CHECK-NEXT:    buffer_load_dword v9, v2, s[0:3], 0 offen offset:24
+; CHECK-NEXT:    buffer_load_dword v10, v2, s[0:3], 0 offen offset:28
+; CHECK-NEXT:    buffer_load_dword v6, v2, s[0:3], 0 offen offset:12
+; CHECK-NEXT:    s_waitcnt vmcnt(1)
+; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[7:10] offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[7:10]
+; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[3:6]
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -966,19 +965,18 @@ define void @memcpy_p0_p5_sz31_align_2_2(ptr addrspace(0) align 2 %dst, ptr addr
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_clause 0x8
+; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[0:3], 0 offen offset:30
+; CHECK-NEXT:    buffer_load_dword v3, v2, s[0:3], 0 offen
 ; CHECK-NEXT:    buffer_load_dword v7, v2, s[0:3], 0 offen offset:16
 ; CHECK-NEXT:    buffer_load_dword v8, v2, s[0:3], 0 offen offset:20
 ; CHECK-NEXT:    buffer_load_dword v9, v2, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_ushort v10, v2, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[0:3], 0 offen offset:30
-; CHECK-NEXT:    buffer_load_dword v3, v2, s[0:3], 0 offen
+; CHECK-NEXT:    buffer_load_ushort v11, v2, s[0:3], 0 offen offset:28
 ; CHECK-NEXT:    buffer_load_dword v4, v2, s[0:3], 0 offen offset:4
 ; CHECK-NEXT:    buffer_load_dword v5, v2, s[0:3], 0 offen offset:8
 ; CHECK-NEXT:    buffer_load_dword v6, v2, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    flat_store_short v[0:1], v10 offset:28
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:30
+; CHECK-NEXT:    s_waitcnt vmcnt(3)
+; CHECK-NEXT:    flat_store_short v[0:1], v11 offset:28
+; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:30
 ; CHECK-NEXT:    flat_store_dwordx3 v[0:1], v[7:9] offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[3:6]
@@ -994,18 +992,18 @@ define void @memcpy_p0_p5_sz32_align_2_2(ptr addrspace(0) align 2 %dst, ptr addr
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_clause 0x7
-; CHECK-NEXT:    buffer_load_dword v3, v2, s[0:3], 0 offen offset:16
-; CHECK-NEXT:    buffer_load_dword v4, v2, s[0:3], 0 offen offset:20
-; CHECK-NEXT:    buffer_load_dword v5, v2, s[0:3], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_dword v6, v2, s[0:3], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_dword v7, v2, s[0:3], 0 offen
-; CHECK-NEXT:    buffer_load_dword v8, v2, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_dword v9, v2, s[0:3], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_dword v10, v2, s[0:3], 0 offen offset:12
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[3:6] offset:16
+; CHECK-NEXT:    buffer_load_dword v3, v2, s[0:3], 0 offen
+; CHECK-NEXT:    buffer_load_dword v4, v2, s[0:3], 0 offen offset:4
+; CHECK-NEXT:    buffer_load_dword v5, v2, s[0:3], 0 offen offset:8
+; CHECK-NEXT:    buffer_load_dword v7, v2, s[0:3], 0 offen offset:16
+; CHECK-NEXT:    buffer_load_dword v8, v2, s[0:3], 0 offen offset:20
+; CHECK-NEXT:    buffer_load_dword v9, v2, s[0:3], 0 offen offset:24
+; CHECK-NEXT:    buffer_load_dword v10, v2, s[0:3], 0 offen offset:28
+; CHECK-NEXT:    buffer_load_dword v6, v2, s[0:3], 0 offen offset:12
+; CHECK-NEXT:    s_waitcnt vmcnt(1)
+; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[7:10] offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[7:10]
+; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[3:6]
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:

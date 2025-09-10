@@ -8,7 +8,6 @@
 
 #include "NoNamespaceCheck.h"
 #include "AbseilMatcher.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -16,10 +15,9 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::abseil {
 
 void NoNamespaceCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(
-      namespaceDecl(hasName("::absl"), unless(isInAbseilFile()))
-          .bind("abslNamespace"),
-      this);
+  Finder->addMatcher(namespaceDecl(hasName("::absl"), unless(isInAbseilFile()))
+                         .bind("abslNamespace"),
+                     this);
 }
 
 void NoNamespaceCheck::check(const MatchFinder::MatchResult &Result) {

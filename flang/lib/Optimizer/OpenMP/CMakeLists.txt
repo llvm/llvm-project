@@ -1,6 +1,7 @@
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 
 add_flang_library(FlangOpenMPTransforms
+  AutomapToTargetData.cpp
   DoConcurrentConversion.cpp
   FunctionFiltering.cpp
   GenericLoopConversion.cpp
@@ -8,6 +9,8 @@ add_flang_library(FlangOpenMPTransforms
   MapInfoFinalization.cpp
   MarkDeclareTarget.cpp
   LowerWorkshare.cpp
+  LowerNontemporal.cpp
+  SimdOnly.cpp
 
   DEPENDS
   FIRDialect
@@ -17,7 +20,7 @@ add_flang_library(FlangOpenMPTransforms
   LINK_LIBS
   FIRAnalysis
   FIRBuilder
-  FIRCodeGen
+  FIRCodeGenDialect
   FIRDialect
   FIRDialectSupport
   FIRSupport

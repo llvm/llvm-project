@@ -63,7 +63,6 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
-#include <vector>
 
 using namespace llvm;
 

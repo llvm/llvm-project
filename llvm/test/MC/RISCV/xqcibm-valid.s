@@ -1,13 +1,14 @@
 # Xqcibm - Qualcomm uC Bit Manipulation Extension
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcibm -M no-aliases -show-encoding \
-# RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcibm < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqcibm -M no-aliases --no-print-imm-hex -d - \
+# Zbs is needed for checking compress instructions patterns for bexti/bseti
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcibm,+zbs -M no-aliases -show-encoding \
+# RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST,CHECK-NOALIAS %s
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcibm,+zbs  < %s \
+# RUN:     | llvm-objdump --mattr=+experimental-xqcibm,+zbs -M no-aliases --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcibm -show-encoding \
-# RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcibm < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqcibm --no-print-imm-hex -d - \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcibm,+zbs  -show-encoding \
+# RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST,CHECK-ALIAS %s
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcibm,+zbs < %s \
+# RUN:     | llvm-objdump --mattr=+experimental-xqcibm,+zbs --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
 # CHECK-INST: qc.compress2   t2, t0
@@ -110,14 +111,39 @@ qc.extdpr x1, x4, x15
 # CHECK-ENC: encoding: [0x0b,0x33,0x9c,0x13]
 qc.extdprh x6, x24, x25
 
-# CHECK-INST: qc.c.bexti  s1, 8
+# CHECK-NOALIAS: qc.c.bexti  s1, 8
+# CHECK-ALIAS: bexti s1, s1, 8
 # CHECK-ENC: encoding: [0xa1,0x90]
 qc.c.bexti x9, 8
 
-# CHECK-INST: qc.c.bseti a2, 16
+# CHECK-NOALIAS: qc.c.bseti a2, 16
+# CHECK-ALIAS: bseti a2, a2, 16
 # CHECK-ENC: encoding: [0x41,0x96]
 qc.c.bseti x12, 16
 
-# CHECK-INST: qc.c.extu a5, 32
+# CHECK-NOALIAS: qc.c.extu a5, 32
+# CHECK-ALIAS: qc.extu a5, a5, 32, 0
 # CHECK-ENC: encoding: [0xfe,0x17]
 qc.c.extu x15, 32
+
+# Check that compress patterns work as expected
+
+# CHECK-NOALIAS: qc.c.extu  a1, 11
+# CHECK-ALIAS: qc.extu a1, a1, 11, 0
+# CHECK-ENC: encoding: [0xaa,0x15]
+qc.extu x11, x11, 11, 0
+
+# CHECK-NOALIAS: qc.c.bexti  a1, 5
+# CHECK-ALIAS: bexti   a1, a1, 5
+# CHECK-ENC: encoding: [0x95,0x91]
+qc.extu x11, x11, 1, 5
+
+# CHECK-NOALIAS: qc.c.bexti  s1, 8
+# CHECK-ALIAS: bexti s1, s1, 8
+# CHECK-ENC-ZBS: encoding: [0xa1,0x90]
+bexti x9, x9, 8
+
+# CHECK-NOALIAS: qc.c.bseti a2, 16
+# CHECK-ALIAS: bseti a2, a2, 16
+# CHECK-ENC: encoding: [0x41,0x96]
+bseti x12, x12, 16

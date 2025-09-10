@@ -612,3 +612,55 @@ while.end:
   ret i64 %sub.ptr.sub
 }
 
+define i64 @valid_basic_strlen_with_dbg(ptr %str) {
+; Make sure that the call to strlen has debug info attached.
+; CHECK-LABEL: define i64 @valid_basic_strlen_with_dbg(
+; CHECK-SAME: ptr [[STR:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[STRLEN:%.*]] = call i64 @strlen(ptr [[STR]]), !dbg [[DBGLOC1:![0-9]+]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[STR]], i64 [[STRLEN]]
+; CHECK-NEXT:    br label %[[WHILE_COND:.*]]
+; CHECK:       [[WHILE_COND]]:
+; CHECK-NEXT:    [[STR_ADDR_0:%.*]] = phi ptr [ [[STR]], %[[ENTRY]] ], [ [[INCDEC_PTR:%.*]], %[[WHILE_COND]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[STR_ADDR_0]], align 1, !dbg [[DBGLOC2:![0-9]+]]
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i8 [[TMP0]], 0, !dbg [[DBGLOC2]]
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr i8, ptr [[STR_ADDR_0]], i64 1, !dbg [[DBGLOC2]]
+; CHECK-NEXT:    br i1 true, label %[[WHILE_END:.*]], label %[[WHILE_COND]], !dbg [[DBGLOC1]]
+; CHECK:       [[WHILE_END]]:
+; CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[SCEVGEP]] to i64, !dbg [[DBGLOC2]]
+; CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint ptr [[STR]] to i64, !dbg [[DBGLOC2]]
+; CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i64 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]], !dbg [[DBGLOC2]]
+; CHECK-NEXT:    ret i64 [[SUB_PTR_SUB]], !dbg [[DBGLOC2]]
+;
+; CHECK: [[DBGLOC1]] = !DILocation(line: 3, column: 3
+; CHECK: [[DBGLOC2]] = !DILocation(line: 5, column: 3
+;
+entry:
+  br label %while.cond
+
+while.cond:
+  %str.addr.0 = phi ptr [ %str, %entry ], [ %incdec.ptr, %while.cond ]
+  %0 = load i8, ptr %str.addr.0, align 1, !dbg !8
+  %cmp.not = icmp eq i8 %0, 0, !dbg !8
+  %incdec.ptr = getelementptr i8, ptr %str.addr.0, i64 1, !dbg !8
+  br i1 %cmp.not, label %while.end, label %while.cond, !dbg !4
+
+while.end:
+  %sub.ptr.lhs.cast = ptrtoint ptr %str.addr.0 to i64, !dbg !8
+  %sub.ptr.rhs.cast = ptrtoint ptr %str to i64, !dbg !8
+  %sub.ptr.sub = sub i64 %sub.ptr.lhs.cast, %sub.ptr.rhs.cast, !dbg !8
+  ret i64 %sub.ptr.sub, !dbg !8
+}
+
+!llvm.module.flags = !{!0}
+!llvm.dbg.cu = !{!1}
+
+!0 = !{i32 1, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, producer: "clang version 2.9 (trunk 127165:127174)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !3, retainedTypes: !3)
+!2 = !DIFile(filename: "strlen.c", directory: "/tmp")
+!3 = !{}
+!4 = !DILocation(line: 3, column: 3, scope: !5)
+!5 = distinct !DILexicalBlock(scope: !6, file: !2, line: 2, column: 21)
+!6 = distinct !DISubprogram(name: "foo", scope: !2, file: !2, line: 2, type: !7, virtualIndex: 6, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !1)
+!7 = !DISubroutineType(types: !3)
+!8 = !DILocation(line: 5, column: 3, scope: !5)

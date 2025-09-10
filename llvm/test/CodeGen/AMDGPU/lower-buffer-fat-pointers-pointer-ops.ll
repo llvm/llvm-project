@@ -2,7 +2,6 @@
 ; RUN: opt -S -mcpu=gfx900 -amdgpu-lower-buffer-fat-pointers < %s | FileCheck %s
 ; RUN: opt -S -mcpu=gfx900 -passes=amdgpu-lower-buffer-fat-pointers < %s | FileCheck %s
 
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8"
 target triple = "amdgcn--"
 
 define ptr addrspace(7) @gep(ptr addrspace(7) %in, i32 %idx) {
@@ -256,6 +255,56 @@ define i32 @ptrtoint_offset(ptr addrspace(7) %ptr) {
   ret i32 %ret
 }
 
+define i32 @ptrtoaddr(ptr addrspace(7) %ptr) {
+; CHECK-LABEL: define i32 @ptrtoaddr
+; CHECK-SAME: ({ ptr addrspace(8), i32 } [[PTR:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[PTR_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 0
+; CHECK-NEXT:    [[RET:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 1
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %ret = ptrtoaddr ptr addrspace(7) %ptr to i32
+  ret i32 %ret
+}
+
+define <2 x i32> @ptrtoaddr_vec(<2 x ptr addrspace(7)> %ptr) {
+; CHECK-LABEL: define <2 x i32> @ptrtoaddr_vec
+; CHECK-SAME: ({ <2 x ptr addrspace(8)>, <2 x i32> } [[PTR:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[PTR_RSRC:%.*]] = extractvalue { <2 x ptr addrspace(8)>, <2 x i32> } [[PTR]], 0
+; CHECK-NEXT:    [[RET:%.*]] = extractvalue { <2 x ptr addrspace(8)>, <2 x i32> } [[PTR]], 1
+; CHECK-NEXT:    ret <2 x i32> [[RET]]
+;
+  %ret = ptrtoaddr <2 x ptr addrspace(7)> %ptr to <2 x i32>
+  ret <2 x i32> %ret
+}
+
+;; Check that we extend the offset to i160.
+define i160 @ptrtoaddr_ext(ptr addrspace(7) %ptr) {
+; CHECK-LABEL: define i160 @ptrtoaddr_ext
+; CHECK-SAME: ({ ptr addrspace(8), i32 } [[PTR:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[PTR_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 0
+; CHECK-NEXT:    [[PTR_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 1
+; CHECK-NEXT:    [[RET:%.*]] = zext i32 [[PTR_OFF]] to i160
+; CHECK-NEXT:    ret i160 [[RET]]
+;
+  %addr = ptrtoaddr ptr addrspace(7) %ptr to i32
+  %ext = zext i32 %addr to i160
+  ret i160 %ext
+}
+
+;; Check that we truncate the offset to i16.
+define i16 @ptrtoaddr_trunc(ptr addrspace(7) %ptr) {
+; CHECK-LABEL: define i16 @ptrtoaddr_trunc
+; CHECK-SAME: ({ ptr addrspace(8), i32 } [[PTR:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[PTR_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 0
+; CHECK-NEXT:    [[PTR_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 1
+; CHECK-NEXT:    [[RET:%.*]] = trunc i32 [[PTR_OFF]] to i16
+; CHECK-NEXT:    ret i16 [[RET]]
+;
+  %addr = ptrtoaddr ptr addrspace(7) %ptr to i32
+  %trunc = trunc i32 %addr to i16
+  ret i16 %trunc
+}
+
 define ptr addrspace(7) @inttoptr(i160 %v) {
 ; CHECK-LABEL: define { ptr addrspace(8), i32 } @inttoptr
 ; CHECK-SAME: (i160 [[V:%.*]]) #[[ATTR0]] {
@@ -330,6 +379,74 @@ define <2 x ptr addrspace(7)> @addrspacecast_vec(<2 x ptr addrspace(8)> %buf) {
 ; CHECK-NEXT:    ret { <2 x ptr addrspace(8)>, <2 x i32> } [[RET]]
 ;
   %ret = addrspacecast <2 x ptr addrspace(8)> %buf to <2 x ptr addrspace(7)>
+  ret <2 x ptr addrspace(7)> %ret
+}
+
+define ptr addrspace(7) @addrspacecast_null() {
+; CHECK-LABEL: define { ptr addrspace(8), i32 } @addrspacecast_null
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    ret { ptr addrspace(8), i32 } zeroinitializer
+;
+  %ret = addrspacecast ptr null to ptr addrspace(7)
+  ret ptr addrspace(7) %ret
+}
+
+define <2 x ptr addrspace(7)> @addrspacecast_null_vec() {
+; CHECK-LABEL: define { <2 x ptr addrspace(8)>, <2 x i32> } @addrspacecast_null_vec
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    ret { <2 x ptr addrspace(8)>, <2 x i32> } zeroinitializer
+;
+  %ret = addrspacecast <2 x ptr> zeroinitializer to <2 x ptr addrspace(7)>
+  ret <2 x ptr addrspace(7)> %ret
+}
+
+define i1 @test_null(ptr addrspace(7) %p) {
+; CHECK-LABEL: define i1 @test_null
+; CHECK-SAME: ({ ptr addrspace(8), i32 } [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[P_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[P]], 0
+; CHECK-NEXT:    [[P_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[P]], 1
+; CHECK-NEXT:    [[IS_NULL_RSRC:%.*]] = icmp eq ptr addrspace(8) [[P_RSRC]], null
+; CHECK-NEXT:    [[IS_NULL_OFF:%.*]] = icmp eq i32 [[P_OFF]], 0
+; CHECK-NEXT:    [[IS_NULL:%.*]] = and i1 [[IS_NULL_RSRC]], [[IS_NULL_OFF]]
+; CHECK-NEXT:    ret i1 [[IS_NULL]]
+;
+  %is.null = icmp eq ptr addrspace(7) %p, addrspacecast (ptr null to ptr addrspace(7))
+  ret i1 %is.null
+}
+
+define ptr addrspace(7) @addrspacecast_undef() {
+; CHECK-LABEL: define { ptr addrspace(8), i32 } @addrspacecast_undef
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    ret { ptr addrspace(8), i32 } undef
+;
+  %ret = addrspacecast ptr undef to ptr addrspace(7)
+  ret ptr addrspace(7) %ret
+}
+
+define <2 x ptr addrspace(7)> @addrspacecast_undef_vec() {
+; CHECK-LABEL: define { <2 x ptr addrspace(8)>, <2 x i32> } @addrspacecast_undef_vec
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    ret { <2 x ptr addrspace(8)>, <2 x i32> } undef
+;
+  %ret = addrspacecast <2 x ptr> undef to <2 x ptr addrspace(7)>
+  ret <2 x ptr addrspace(7)> %ret
+}
+
+define ptr addrspace(7) @addrspacecast_poison() {
+; CHECK-LABEL: define { ptr addrspace(8), i32 } @addrspacecast_poison
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    ret { ptr addrspace(8), i32 } poison
+;
+  %ret = addrspacecast ptr poison to ptr addrspace(7)
+  ret ptr addrspace(7) %ret
+}
+
+define <2 x ptr addrspace(7)> @addrspacecast_poison_vec() {
+; CHECK-LABEL: define { <2 x ptr addrspace(8)>, <2 x i32> } @addrspacecast_poison_vec
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    ret { <2 x ptr addrspace(8)>, <2 x i32> } poison
+;
+  %ret = addrspacecast <2 x ptr> poison to <2 x ptr addrspace(7)>
   ret <2 x ptr addrspace(7)> %ret
 }
 

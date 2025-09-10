@@ -83,7 +83,7 @@ class ValueAPITestCase(TestBase):
 
         fmt = lldbutil.BasicFormatter()
         cvf = lldbutil.ChildVisitingFormatter(indent_child=2)
-        rdf = lldbutil.RecursiveDecentFormatter(indent_child=2)
+        rdf = lldbutil.RecursiveDescentFormatter(indent_child=2)
         if self.TraceOn():
             print(fmt.format(days_of_week))
             print(cvf.format(days_of_week))
@@ -269,7 +269,14 @@ class ValueAPITestCase(TestBase):
             frame0.FindVariable("another_fixed_int_ptr").GetValue(),
             "0xaa",
         )
+        a_null_int_ptr = frame0.FindVariable("a_null_int_ptr")
+        self.assertEqual(a_null_int_ptr.GetValue(), "0x0")
+
+        # Check that dereferencing a null pointer produces reasonable results
+        # (does not crash).
         self.assertEqual(
-            frame0.FindVariable("a_null_int_ptr").GetValue(),
-            "0x0",
+            a_null_int_ptr.Dereference().GetError().GetCString(), "parent is NULL"
+        )
+        self.assertEqual(
+            a_null_int_ptr.Dereference().GetLoadAddress(), lldb.LLDB_INVALID_ADDRESS
         )

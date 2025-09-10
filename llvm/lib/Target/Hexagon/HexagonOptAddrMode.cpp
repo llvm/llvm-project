@@ -36,7 +36,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 
@@ -449,9 +448,7 @@ bool HexagonOptAddrMode::usedInLoadStore(NodeAddr<StmtNode *> CurrentInstSN,
 
   getAllRealUses(CurrentInstSN, LoadStoreUseList);
   bool FoundLoadStoreUse = false;
-  for (auto I = LoadStoreUseList.begin(), E = LoadStoreUseList.end(); I != E;
-       ++I) {
-    NodeAddr<UseNode *> UN = *I;
+  for (NodeAddr<UseNode *> UN : LoadStoreUseList) {
     NodeAddr<StmtNode *> SN = UN.Addr->getOwner(*DFG);
     MachineInstr *LoadStoreMI = SN.Addr->getCode();
     const MCInstrDesc &MID = LoadStoreMI->getDesc();
@@ -484,10 +481,9 @@ bool HexagonOptAddrMode::findFirstReachedInst(
   for (auto &InstIter : *CurrentMBB) {
     // If the instruction is an Addi and is in the AddiList
     if (InstIter.getOpcode() == Hexagon::A2_addi) {
-      auto Iter = std::find_if(
-          AddiList.begin(), AddiList.end(), [&InstIter](const auto &SUPair) {
-            return SUPair.first.Addr->getCode() == &InstIter;
-          });
+      auto Iter = llvm::find_if(AddiList, [&InstIter](const auto &SUPair) {
+        return SUPair.first.Addr->getCode() == &InstIter;
+      });
       if (Iter != AddiList.end()) {
         UseSN = Iter->first;
         return true;
@@ -533,7 +529,7 @@ bool HexagonOptAddrMode::processAddBases(NodeAddr<StmtNode *> AddSN,
       [](const MachineInstr *MI,
          const DenseSet<MachineInstr *> &ProcessedAddiInsts) -> bool {
     // If we've already processed this Addi, just return
-    if (ProcessedAddiInsts.find(MI) != ProcessedAddiInsts.end()) {
+    if (ProcessedAddiInsts.contains(MI)) {
       LLVM_DEBUG(dbgs() << "\t\t\tAddi already found in ProcessedAddiInsts: "
                         << *MI << "\n\t\t\tSkipping...");
       return true;
@@ -581,8 +577,7 @@ bool HexagonOptAddrMode::processAddBases(NodeAddr<StmtNode *> AddSN,
   // Find all Addi instructions that share the same base register and add them
   // to the AddiList
   getAllRealUses(ReachingDefStmt, AddiUseList);
-  for (auto I = AddiUseList.begin(), E = AddiUseList.end(); I != E; ++I) {
-    NodeAddr<UseNode *> UN = *I;
+  for (NodeAddr<UseNode *> UN : AddiUseList) {
     NodeAddr<StmtNode *> SN = UN.Addr->getOwner(*DFG);
     MachineInstr *MI = SN.Addr->getCode();
 

@@ -13,19 +13,16 @@ define void @v2i8(ptr %p1) {
 ; CHECK-SD-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-SD-NEXT:    uaddlp v0.4h, v0.8b
 ; CHECK-SD-NEXT:    uaddlp v0.2s, v0.4h
-; CHECK-SD-NEXT:    mov w8, v0.s[1]
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    strb w9, [x0]
-; CHECK-SD-NEXT:    strb w8, [x0, #1]
+; CHECK-SD-NEXT:    mov s1, v0.s[1]
+; CHECK-SD-NEXT:    str b0, [x0]
+; CHECK-SD-NEXT:    stur b1, [x0, #1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v2i8:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldr b0, [x0]
-; CHECK-GI-NEXT:    ldr b1, [x0, #1]
 ; CHECK-GI-NEXT:    add x8, x0, #1
-; CHECK-GI-NEXT:    mov v0.b[0], v0.b[0]
-; CHECK-GI-NEXT:    mov v0.b[1], v1.b[0]
+; CHECK-GI-NEXT:    ld1 { v0.b }[1], [x8]
 ; CHECK-GI-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-GI-NEXT:    st1 { v0.b }[0], [x0]
 ; CHECK-GI-NEXT:    st1 { v0.b }[1], [x8]
@@ -48,25 +45,26 @@ define void @v3i8(ptr %p1) {
 ; CHECK-SD-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-SD-NEXT:    uaddlp v0.4h, v0.8b
 ; CHECK-SD-NEXT:    uzp1 v1.8b, v0.8b, v0.8b
-; CHECK-SD-NEXT:    umov w8, v0.h[2]
+; CHECK-SD-NEXT:    mov h0, v0.h[2]
 ; CHECK-SD-NEXT:    str s1, [sp, #12]
-; CHECK-SD-NEXT:    ldrh w9, [sp, #12]
-; CHECK-SD-NEXT:    strb w8, [x0, #2]
-; CHECK-SD-NEXT:    strh w9, [x0]
+; CHECK-SD-NEXT:    ldrh w8, [sp, #12]
+; CHECK-SD-NEXT:    stur b0, [x0, #2]
+; CHECK-SD-NEXT:    strh w8, [x0]
 ; CHECK-SD-NEXT:    add sp, sp, #16
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v3i8:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldr b0, [x0]
-; CHECK-GI-NEXT:    ldr b1, [x0, #1]
-; CHECK-GI-NEXT:    add x8, x0, #1
+; CHECK-GI-NEXT:    ldr w8, [x0]
 ; CHECK-GI-NEXT:    add x9, x0, #2
-; CHECK-GI-NEXT:    mov v0.b[0], v0.b[0]
-; CHECK-GI-NEXT:    mov v0.b[1], v1.b[0]
-; CHECK-GI-NEXT:    ldr b1, [x0, #2]
-; CHECK-GI-NEXT:    mov v0.b[2], v1.b[0]
-; CHECK-GI-NEXT:    cnt v0.8b, v0.8b
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    add x8, x0, #1
+; CHECK-GI-NEXT:    mov b1, v0.b[1]
+; CHECK-GI-NEXT:    mov v2.b[0], v0.b[0]
+; CHECK-GI-NEXT:    mov b0, v0.b[2]
+; CHECK-GI-NEXT:    mov v2.b[1], v1.b[0]
+; CHECK-GI-NEXT:    mov v2.b[2], v0.b[0]
+; CHECK-GI-NEXT:    cnt v0.8b, v2.8b
 ; CHECK-GI-NEXT:    st1 { v0.b }[0], [x0]
 ; CHECK-GI-NEXT:    st1 { v0.b }[1], [x8]
 ; CHECK-GI-NEXT:    st1 { v0.b }[2], [x9]
@@ -178,20 +176,18 @@ define void @v3i16(ptr %p1) {
 ; CHECK-SD-LABEL: v3i16:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldr d0, [x0]
-; CHECK-SD-NEXT:    add x8, x0, #4
 ; CHECK-SD-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-SD-NEXT:    uaddlp v0.4h, v0.8b
-; CHECK-SD-NEXT:    st1 { v0.h }[2], [x8]
+; CHECK-SD-NEXT:    mov h1, v0.h[2]
 ; CHECK-SD-NEXT:    str s0, [x0]
+; CHECK-SD-NEXT:    str h1, [x0, #4]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v3i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldr h0, [x0]
+; CHECK-GI-NEXT:    ldr d0, [x0]
 ; CHECK-GI-NEXT:    add x8, x0, #2
 ; CHECK-GI-NEXT:    add x9, x0, #4
-; CHECK-GI-NEXT:    ld1 { v0.h }[1], [x8]
-; CHECK-GI-NEXT:    ld1 { v0.h }[2], [x9]
 ; CHECK-GI-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-GI-NEXT:    uaddlp v0.4h, v0.8b
 ; CHECK-GI-NEXT:    str h0, [x0]

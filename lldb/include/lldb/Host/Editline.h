@@ -168,6 +168,9 @@ public:
   DisplayCompletions(Editline &editline,
                      llvm::ArrayRef<CompletionResult::Completion> results);
 
+  /// Sets if editline should use color.
+  void UseColor(bool use_color);
+
   /// Sets a string to be used as a prompt, or combined with a line number to
   /// form a prompt.
   void SetPrompt(const char *prompt);
@@ -223,21 +226,29 @@ public:
   void SetPromptAnsiPrefix(std::string prefix) {
     if (m_color)
       m_prompt_ansi_prefix = std::move(prefix);
+    else
+      m_prompt_ansi_prefix.clear();
   }
 
   void SetPromptAnsiSuffix(std::string suffix) {
     if (m_color)
       m_prompt_ansi_suffix = std::move(suffix);
+    else
+      m_prompt_ansi_suffix.clear();
   }
 
   void SetSuggestionAnsiPrefix(std::string prefix) {
     if (m_color)
       m_suggestion_ansi_prefix = std::move(prefix);
+    else
+      m_suggestion_ansi_prefix.clear();
   }
 
   void SetSuggestionAnsiSuffix(std::string suffix) {
     if (m_color)
       m_suggestion_ansi_suffix = std::move(suffix);
+    else
+      m_suggestion_ansi_suffix.clear();
   }
 
   /// Prompts for and reads a single line of user input.
@@ -255,6 +266,8 @@ public:
   size_t GetTerminalWidth() { return m_terminal_width; }
 
   size_t GetTerminalHeight() { return m_terminal_height; }
+
+  void Refresh();
 
 private:
   /// Sets the lowest line number for multi-line editing sessions.  A value of

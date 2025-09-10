@@ -21,8 +21,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/HeuristicResolver.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 
 namespace clang::tidy::bugprone {
@@ -48,7 +46,8 @@ using ast_matchers::stmtExpr;
 using ast_matchers::unless;
 using ast_matchers::voidType;
 
-const Expr *getCondition(const BoundNodes &Nodes, const StringRef NodeId) {
+static const Expr *getCondition(const BoundNodes &Nodes,
+                                const StringRef NodeId) {
   const auto *If = Nodes.getNodeAs<IfStmt>(NodeId);
   if (If != nullptr)
     return If->getCond();
@@ -99,8 +98,8 @@ void StandaloneEmptyCheck::check(const MatchFinder::MatchResult &Result) {
   if (Result.Nodes.getNodeAs<Expr>("parent"))
     return;
 
-  const auto PParentStmtExpr = Result.Nodes.getNodeAs<Expr>("stexpr");
-  const auto ParentCompStmt = Result.Nodes.getNodeAs<CompoundStmt>("parent");
+  const auto *PParentStmtExpr = Result.Nodes.getNodeAs<Expr>("stexpr");
+  const auto *ParentCompStmt = Result.Nodes.getNodeAs<CompoundStmt>("parent");
   const auto *ParentCond = getCondition(Result.Nodes, "parent");
   const auto *ParentReturnStmt = Result.Nodes.getNodeAs<ReturnStmt>("parent");
 

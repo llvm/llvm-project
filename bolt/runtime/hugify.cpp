@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#if defined(__x86_64__) ||                                                     \
-    (defined(__aarch64__) || defined(__arm64__)) && !defined(__APPLE__)
+#if (defined(__x86_64__) || defined(__aarch64__) || defined(__arm64__)) &&     \
+    !defined(__APPLE__)
 
 #include "common.h"
 

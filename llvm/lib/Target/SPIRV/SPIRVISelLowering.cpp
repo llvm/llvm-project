@@ -16,7 +16,6 @@
 #include "SPIRVRegisterBankInfo.h"
 #include "SPIRVRegisterInfo.h"
 #include "SPIRVSubtarget.h"
-#include "SPIRVTargetMachine.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
@@ -24,6 +23,42 @@
 #define DEBUG_TYPE "spirv-lower"
 
 using namespace llvm;
+
+// Returns true of the types logically match, as defined in
+// https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#OpCopyLogical.
+static bool typesLogicallyMatch(const SPIRVType *Ty1, const SPIRVType *Ty2,
+                                SPIRVGlobalRegistry &GR) {
+  if (Ty1->getOpcode() != Ty2->getOpcode())
+    return false;
+
+  if (Ty1->getNumOperands() != Ty2->getNumOperands())
+    return false;
+
+  if (Ty1->getOpcode() == SPIRV::OpTypeArray) {
+    // Array must have the same size.
+    if (Ty1->getOperand(2).getReg() != Ty2->getOperand(2).getReg())
+      return false;
+
+    SPIRVType *ElemType1 = GR.getSPIRVTypeForVReg(Ty1->getOperand(1).getReg());
+    SPIRVType *ElemType2 = GR.getSPIRVTypeForVReg(Ty2->getOperand(1).getReg());
+    return ElemType1 == ElemType2 ||
+           typesLogicallyMatch(ElemType1, ElemType2, GR);
+  }
+
+  if (Ty1->getOpcode() == SPIRV::OpTypeStruct) {
+    for (unsigned I = 1; I < Ty1->getNumOperands(); I++) {
+      SPIRVType *ElemType1 =
+          GR.getSPIRVTypeForVReg(Ty1->getOperand(I).getReg());
+      SPIRVType *ElemType2 =
+          GR.getSPIRVTypeForVReg(Ty2->getOperand(I).getReg());
+      if (ElemType1 != ElemType2 &&
+          !typesLogicallyMatch(ElemType1, ElemType2, GR))
+        return false;
+    }
+    return true;
+  }
+  return false;
+}
 
 unsigned SPIRVTargetLowering::getNumRegistersForCallingConv(
     LLVMContext &Context, CallingConv::ID CC, EVT VT) const {
@@ -374,6 +409,9 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
         // implies that %Op is a pointer to <ResType>
       case SPIRV::OpLoad:
         // OpLoad <ResType>, ptr %Op implies that %Op is a pointer to <ResType>
+        if (enforcePtrTypeCompatibility(MI, 2, 0))
+          break;
+
         validatePtrTypes(STI, MRI, GR, MI, 2,
                          GR.getSPIRVTypeForVReg(MI.getOperand(0).getReg()));
         break;
@@ -390,6 +428,7 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
         break;
       case SPIRV::OpPtrCastToGeneric:
       case SPIRV::OpGenericCastToPtr:
+      case SPIRV::OpGenericCastToPtrExplicit:
         validateAccessChain(STI, MRI, GR, MI);
         break;
       case SPIRV::OpPtrAccessChain:
@@ -529,4 +568,59 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
   }
   ProcessedMF.insert(&MF);
   TargetLowering::finalizeLowering(MF);
+}
+
+// Modifies either operand PtrOpIdx or OpIdx so that the pointee type of
+// PtrOpIdx matches the type for operand OpIdx. Returns true if they already
+// match or if the instruction was modified to make them match.
+bool SPIRVTargetLowering::enforcePtrTypeCompatibility(
+    MachineInstr &I, unsigned int PtrOpIdx, unsigned int OpIdx) const {
+  SPIRVGlobalRegistry &GR = *STI.getSPIRVGlobalRegistry();
+  SPIRVType *PtrType = GR.getResultType(I.getOperand(PtrOpIdx).getReg());
+  SPIRVType *PointeeType = GR.getPointeeType(PtrType);
+  SPIRVType *OpType = GR.getResultType(I.getOperand(OpIdx).getReg());
+
+  if (PointeeType == OpType)
+    return true;
+
+  if (typesLogicallyMatch(PointeeType, OpType, GR)) {
+    // Apply OpCopyLogical to OpIdx.
+    if (I.getOperand(OpIdx).isDef() &&
+        insertLogicalCopyOnResult(I, PointeeType)) {
+      return true;
+    }
+
+    llvm_unreachable("Unable to add OpCopyLogical yet.");
+    return false;
+  }
+
+  return false;
+}
+
+bool SPIRVTargetLowering::insertLogicalCopyOnResult(
+    MachineInstr &I, SPIRVType *NewResultType) const {
+  MachineRegisterInfo *MRI = &I.getMF()->getRegInfo();
+  SPIRVGlobalRegistry &GR = *STI.getSPIRVGlobalRegistry();
+
+  Register NewResultReg =
+      createVirtualRegister(NewResultType, &GR, MRI, *I.getMF());
+  Register NewTypeReg = GR.getSPIRVTypeID(NewResultType);
+
+  assert(std::distance(I.defs().begin(), I.defs().end()) == 1 &&
+         "Expected only one def");
+  MachineOperand &OldResult = *I.defs().begin();
+  Register OldResultReg = OldResult.getReg();
+  MachineOperand &OldType = *I.uses().begin();
+  Register OldTypeReg = OldType.getReg();
+
+  OldResult.setReg(NewResultReg);
+  OldType.setReg(NewTypeReg);
+
+  MachineIRBuilder MIB(*I.getNextNode());
+  return MIB.buildInstr(SPIRV::OpCopyLogical)
+      .addDef(OldResultReg)
+      .addUse(OldTypeReg)
+      .addUse(NewResultReg)
+      .constrainAllUses(*STI.getInstrInfo(), *STI.getRegisterInfo(),
+                        *STI.getRegBankInfo());
 }

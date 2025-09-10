@@ -115,7 +115,7 @@ id objc_getClass(const char *s);
 @end
 
 @implementation B
-- (instancetype)initWithCoder:(C *)coder {
+- (instancetype)initWithCoder:(C *)coder {     // expected-note {{'coder' declared here}}
   if (0 != (self = [super initWithCode:code])) // expected-error {{use of undeclared identifier 'code'}} expected-warning {{instance method '-initWithCode:' not found}}
     return (void *)0;
   return (void *)0;

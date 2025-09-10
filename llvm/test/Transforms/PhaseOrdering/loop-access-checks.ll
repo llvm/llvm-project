@@ -24,7 +24,8 @@ define void @test_fill_with_foreach([2 x i64] %elems.coerce) {
 ; CHECK-NEXT:    [[ELEMS_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [2 x i64] [[ELEMS_COERCE]], 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = inttoptr i64 [[ELEMS_COERCE_FCA_0_EXTRACT]] to ptr
 ; CHECK-NEXT:    [[ELEMS_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [2 x i64] [[ELEMS_COERCE]], 1
-; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 [[ELEMS_COERCE_FCA_1_EXTRACT]]
+; CHECK-NEXT:    [[ADD_PTR_I_IDX:%.*]] = shl nsw i64 [[ELEMS_COERCE_FCA_1_EXTRACT]], 2
+; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 [[ADD_PTR_I_IDX]]
 ; CHECK-NEXT:    [[CMP_NOT_I_I_I_I:%.*]] = icmp slt i64 [[ELEMS_COERCE_FCA_1_EXTRACT]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT_I_I_I_I]], label [[ERROR:%.*]], label [[FOR_COND_PREHEADER_SPLIT:%.*]]
 ; CHECK:       for.cond.preheader.split:
@@ -51,7 +52,7 @@ entry:
   %elems.coerce.fca.1.extract = extractvalue [2 x i64] %elems.coerce, 1
   %elems.coerce.fca.1.gep = getelementptr inbounds [2 x i64], ptr %elems, i64 0, i64 1
   store i64 %elems.coerce.fca.1.extract, ptr %elems.coerce.fca.1.gep, align 8
-  call void @llvm.lifetime.start.p0(i64 24, ptr nonnull %__begin1) #6
+  call void @llvm.lifetime.start.p0(ptr nonnull %__begin1) #6
   %0 = load ptr, ptr %elems, align 8
   %__size_.i.i = getelementptr inbounds %"class.std::__1::span", ptr %elems, i64 0, i32 1
   %1 = load i64, ptr %__size_.i.i, align 8
@@ -65,7 +66,7 @@ entry:
   br i1 %cmp.not.i.i.i.i, label %error, label %check.2
 
 check.2:
-  call void @llvm.lifetime.start.p0(i64 24, ptr nonnull %__end1) #6
+  call void @llvm.lifetime.start.p0(ptr nonnull %__end1) #6
   %l4 = load ptr, ptr %elems, align 8
   %__size_.i.i4 = getelementptr inbounds %"class.std::__1::span", ptr %elems, i64 0, i32 1
   %l5 = load i64, ptr %__size_.i.i4, align 8
@@ -89,8 +90,8 @@ for.cond:
   br i1 %cmp.i, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %for.cond
-  call void @llvm.lifetime.end.p0(i64 24, ptr nonnull %__end1)
-  call void @llvm.lifetime.end.p0(i64 24, ptr nonnull %__begin1)
+  call void @llvm.lifetime.end.p0(ptr nonnull %__end1)
+  call void @llvm.lifetime.end.p0(ptr nonnull %__begin1)
   ret void
 
 for.body:                                         ; preds = %for.cond
@@ -114,11 +115,11 @@ for.latch:
 
 declare void @error()
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 
 declare void @use(ptr noundef nonnull align 4 dereferenceable(4))
 
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 
 ; -------------------------------------------------------------------------
@@ -159,11 +160,11 @@ entry:
   %count = alloca i64, align 8
   %i = alloca i64, align 8
   store ptr %vec, ptr %vec.addr, align 8
-  call void @llvm.lifetime.start.p0(i64 8, ptr %count)
+  call void @llvm.lifetime.start.p0(ptr %count)
   %0 = load ptr, ptr %vec.addr, align 8
   %call = call noundef i64 @alloc(ptr noundef nonnull align 8 dereferenceable(24) %0)
   store i64 %call, ptr %count, align 8
-  call void @llvm.lifetime.start.p0(i64 8, ptr %i)
+  call void @llvm.lifetime.start.p0(ptr %i)
   store i64 0, ptr %i, align 8
   br label %for.cond
 
@@ -174,7 +175,7 @@ for.cond:
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:
-  call void @llvm.lifetime.end.p0(i64 8, ptr %i)
+  call void @llvm.lifetime.end.p0(ptr %i)
   br label %for.end
 
 for.body:
@@ -193,7 +194,7 @@ for.inc:
   br label %for.cond
 
 for.end:
-  call void @llvm.lifetime.end.p0(i64 8, ptr %count) #5
+  call void @llvm.lifetime.end.p0(ptr %count) #5
   ret void
 }
 
@@ -298,11 +299,11 @@ entry:
   %count = alloca i64, align 8
   %i = alloca i64, align 8
   store ptr %vec, ptr %vec.addr, align 8
-  call void @llvm.lifetime.start.p0(i64 8, ptr %count)
+  call void @llvm.lifetime.start.p0(ptr %count)
   %0 = load ptr, ptr %vec.addr, align 8
   %call = call noundef i64 @alloc(ptr noundef nonnull align 8 dereferenceable(24) %0)
   store i64 %call, ptr %count, align 8
-  call void @llvm.lifetime.start.p0(i64 8, ptr %i)
+  call void @llvm.lifetime.start.p0(ptr %i)
   store i64 0, ptr %i, align 8
   br label %for.cond
 
@@ -313,7 +314,7 @@ for.cond:
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:
-  call void @llvm.lifetime.end.p0(i64 8, ptr %i)
+  call void @llvm.lifetime.end.p0(ptr %i)
   br label %for.end
 
 for.body:
@@ -332,7 +333,7 @@ for.inc:
   br label %for.cond
 
 for.end:
-  call void @llvm.lifetime.end.p0(i64 8, ptr %count)
+  call void @llvm.lifetime.end.p0(ptr %count)
   ret void
 }
 
@@ -375,7 +376,7 @@ entry:
   %k = alloca i32, align 4
   store ptr %arr, ptr %arr.addr, align 8
   store i32 %len, ptr %len.addr, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i) #3
+  call void @llvm.lifetime.start.p0(ptr %i) #3
   store i32 1, ptr %i, align 4
   br label %for.cond
 
@@ -387,11 +388,11 @@ for.cond:                                         ; preds = %for.inc5, %entry
 
 for.cond.cleanup:                                 ; preds = %for.cond
   store i32 2, ptr %cleanup.dest.slot, align 4
-  call void @llvm.lifetime.end.p0(i64 4, ptr %i) #3
+  call void @llvm.lifetime.end.p0(ptr %i) #3
   br label %for.end6
 
 for.body:                                         ; preds = %for.cond
-  call void @llvm.lifetime.start.p0(i64 4, ptr %k) #3
+  call void @llvm.lifetime.start.p0(ptr %k) #3
   %2 = load i32, ptr %i, align 4
   store i32 %2, ptr %k, align 4
   br label %for.cond1
@@ -403,7 +404,7 @@ for.cond1:                                        ; preds = %for.inc, %for.body
 
 for.cond.cleanup3:                                ; preds = %for.cond1
   store i32 5, ptr %cleanup.dest.slot, align 4
-  call void @llvm.lifetime.end.p0(i64 4, ptr %k) #3
+  call void @llvm.lifetime.end.p0(ptr %k) #3
   br label %for.end
 
 for.body4:                                        ; preds = %for.cond1

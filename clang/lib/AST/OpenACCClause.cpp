@@ -109,13 +109,12 @@ OpenACCSelfClause *OpenACCSelfClause::Create(const ASTContext &C,
 
 OpenACCSelfClause::OpenACCSelfClause(SourceLocation BeginLoc,
                                      SourceLocation LParenLoc,
-                                     llvm::ArrayRef<Expr *> VarList,
+                                     ArrayRef<Expr *> VarList,
                                      SourceLocation EndLoc)
     : OpenACCClauseWithParams(OpenACCClauseKind::Self, BeginLoc, LParenLoc,
                               EndLoc),
       HasConditionExpr(std::nullopt), NumExprs(VarList.size()) {
-  std::uninitialized_copy(VarList.begin(), VarList.end(),
-                          getTrailingObjects<Expr *>());
+  llvm::uninitialized_copy(VarList, getTrailingObjects());
 }
 
 OpenACCSelfClause::OpenACCSelfClause(SourceLocation BeginLoc,
@@ -127,8 +126,7 @@ OpenACCSelfClause::OpenACCSelfClause(SourceLocation BeginLoc,
   assert((!ConditionExpr || ConditionExpr->isInstantiationDependent() ||
           ConditionExpr->getType()->isScalarType()) &&
          "Condition expression type not scalar/dependent");
-  std::uninitialized_copy(&ConditionExpr, &ConditionExpr + 1,
-                          getTrailingObjects<Expr *>());
+  llvm::uninitialized_copy(ArrayRef(ConditionExpr), getTrailingObjects());
 }
 
 OpenACCClause::child_range OpenACCClause::children() {
@@ -167,11 +165,8 @@ OpenACCGangClause::OpenACCGangClause(SourceLocation BeginLoc,
     : OpenACCClauseWithExprs(OpenACCClauseKind::Gang, BeginLoc, LParenLoc,
                              EndLoc) {
   assert(GangKinds.size() == IntExprs.size() && "Mismatch exprs/kind?");
-  std::uninitialized_copy(IntExprs.begin(), IntExprs.end(),
-                          getTrailingObjects<Expr *>());
-  setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), IntExprs.size()));
-  std::uninitialized_copy(GangKinds.begin(), GangKinds.end(),
-                          getTrailingObjects<OpenACCGangKind>());
+  setExprs(getTrailingObjects<Expr *>(IntExprs.size()), IntExprs);
+  llvm::uninitialized_copy(GangKinds, getTrailingObjects<OpenACCGangKind>());
 }
 
 OpenACCNumWorkersClause *
@@ -190,18 +185,15 @@ OpenACCCollapseClause::OpenACCCollapseClause(SourceLocation BeginLoc,
                                              SourceLocation EndLoc)
     : OpenACCClauseWithSingleIntExpr(OpenACCClauseKind::Collapse, BeginLoc,
                                      LParenLoc, LoopCount, EndLoc),
-      HasForce(HasForce) {
-  assert(LoopCount && "LoopCount required");
-}
+      HasForce(HasForce) {}
 
 OpenACCCollapseClause *
 OpenACCCollapseClause::Create(const ASTContext &C, SourceLocation BeginLoc,
                               SourceLocation LParenLoc, bool HasForce,
                               Expr *LoopCount, SourceLocation EndLoc) {
-  assert(
-      LoopCount &&
-      (LoopCount->isInstantiationDependent() || isa<ConstantExpr>(LoopCount)) &&
-      "Loop count not constant expression");
+  assert((!LoopCount || (LoopCount->isInstantiationDependent() ||
+                         isa<ConstantExpr>(LoopCount))) &&
+         "Loop count not constant expression");
   void *Mem =
       C.Allocate(sizeof(OpenACCCollapseClause), alignof(OpenACCCollapseClause));
   return new (Mem)
@@ -322,23 +314,29 @@ OpenACCTileClause *OpenACCTileClause::Create(const ASTContext &C,
   return new (Mem) OpenACCTileClause(BeginLoc, LParenLoc, SizeExprs, EndLoc);
 }
 
-OpenACCPrivateClause *OpenACCPrivateClause::Create(const ASTContext &C,
-                                                   SourceLocation BeginLoc,
-                                                   SourceLocation LParenLoc,
-                                                   ArrayRef<Expr *> VarList,
-                                                   SourceLocation EndLoc) {
+OpenACCPrivateClause *
+OpenACCPrivateClause::Create(const ASTContext &C, SourceLocation BeginLoc,
+                             SourceLocation LParenLoc, ArrayRef<Expr *> VarList,
+                             ArrayRef<OpenACCPrivateRecipe> InitRecipes,
+                             SourceLocation EndLoc) {
+  assert(VarList.size() == InitRecipes.size());
   void *Mem = C.Allocate(
-      OpenACCPrivateClause::totalSizeToAlloc<Expr *>(VarList.size()));
-  return new (Mem) OpenACCPrivateClause(BeginLoc, LParenLoc, VarList, EndLoc);
+      OpenACCPrivateClause::totalSizeToAlloc<Expr *, OpenACCPrivateRecipe>(
+          VarList.size(), InitRecipes.size()));
+  return new (Mem)
+      OpenACCPrivateClause(BeginLoc, LParenLoc, VarList, InitRecipes, EndLoc);
 }
 
 OpenACCFirstPrivateClause *OpenACCFirstPrivateClause::Create(
     const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
-    ArrayRef<Expr *> VarList, SourceLocation EndLoc) {
+    ArrayRef<Expr *> VarList, ArrayRef<OpenACCFirstPrivateRecipe> InitRecipes,
+    SourceLocation EndLoc) {
   void *Mem = C.Allocate(
-      OpenACCFirstPrivateClause::totalSizeToAlloc<Expr *>(VarList.size()));
-  return new (Mem)
-      OpenACCFirstPrivateClause(BeginLoc, LParenLoc, VarList, EndLoc);
+      OpenACCFirstPrivateClause::totalSizeToAlloc<Expr *,
+                                                  OpenACCFirstPrivateRecipe>(
+          VarList.size(), InitRecipes.size()));
+  return new (Mem) OpenACCFirstPrivateClause(BeginLoc, LParenLoc, VarList,
+                                             InitRecipes, EndLoc);
 }
 
 OpenACCAttachClause *OpenACCAttachClause::Create(const ASTContext &C,
@@ -508,11 +506,13 @@ OpenACCDeviceTypeClause *OpenACCDeviceTypeClause::Create(
 OpenACCReductionClause *OpenACCReductionClause::Create(
     const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
     OpenACCReductionOperator Operator, ArrayRef<Expr *> VarList,
+    ArrayRef<OpenACCReductionRecipe> Recipes,
     SourceLocation EndLoc) {
   void *Mem = C.Allocate(
-      OpenACCReductionClause::totalSizeToAlloc<Expr *>(VarList.size()));
-  return new (Mem)
-      OpenACCReductionClause(BeginLoc, LParenLoc, Operator, VarList, EndLoc);
+      OpenACCReductionClause::totalSizeToAlloc<Expr *, OpenACCReductionRecipe>(
+          VarList.size(), Recipes.size()));
+  return new (Mem) OpenACCReductionClause(BeginLoc, LParenLoc, Operator,
+                                          VarList, Recipes, EndLoc);
 }
 
 OpenACCAutoClause *OpenACCAutoClause::Create(const ASTContext &C,
@@ -868,7 +868,7 @@ void OpenACCClausePrinter::VisitReductionClause(
 
 void OpenACCClausePrinter::VisitWaitClause(const OpenACCWaitClause &C) {
   OS << "wait";
-  if (!C.getLParenLoc().isInvalid()) {
+  if (C.hasExprs()) {
     OS << "(";
     if (C.hasDevNumExpr()) {
       OS << "devnum: ";
@@ -891,10 +891,10 @@ void OpenACCClausePrinter::VisitDeviceTypeClause(
   OS << "(";
   llvm::interleaveComma(C.getArchitectures(), OS,
                         [&](const DeviceTypeArgument &Arch) {
-                          if (Arch.first == nullptr)
+                          if (Arch.getIdentifierInfo() == nullptr)
                             OS << "*";
                           else
-                            OS << Arch.first->getName();
+                            OS << Arch.getIdentifierInfo()->getName();
                         });
   OS << ")";
 }

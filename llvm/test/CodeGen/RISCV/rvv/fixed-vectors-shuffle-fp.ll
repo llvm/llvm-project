@@ -96,13 +96,11 @@ define <8 x float> @vmerge_vxm(<8 x float> %v, float %s) {
 ; CHECK-LABEL: vmerge_vxm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 25
-; CHECK-NEXT:    vsetivli zero, 8, e32, m1, tu, ma
-; CHECK-NEXT:    vfmv.s.f v8, fa0
+; CHECK-NEXT:    vsetivli zero, 1, e32, m4, tu, ma
 ; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; CHECK-NEXT:    vrgather.vi v10, v8, 0, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vfmv.s.f v8, fa0
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vfmerge.vfm v8, v8, fa0, v0
 ; CHECK-NEXT:    ret
   %ins = insertelement <8 x float> %v, float %s, i32 0
   %shuf = shufflevector <8 x float> %ins, <8 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 0, i32 0, i32 5, i32 6, i32 7>
@@ -112,15 +110,10 @@ define <8 x float> @vmerge_vxm(<8 x float> %v, float %s) {
 define <8 x float> @vmerge_vxm2(<8 x float> %v, float %s) {
 ; CHECK-LABEL: vmerge_vxm2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, m4, tu, ma
-; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vmv2r.v v10, v8
 ; CHECK-NEXT:    li a0, 25
-; CHECK-NEXT:    vfmv.s.f v12, fa0
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    vmv1r.v v10, v12
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; CHECK-NEXT:    vrgather.vi v8, v10, 0, v0.t
+; CHECK-NEXT:    vfmerge.vfm v8, v8, fa0, v0
 ; CHECK-NEXT:    ret
   %ins = insertelement <8 x float> %v, float %s, i32 0
   %shuf = shufflevector <8 x float> %v, <8 x float> %ins, <8 x i32> <i32 8, i32 1, i32 2, i32 8, i32 8, i32 5, i32 6, i32 7>
@@ -267,7 +260,7 @@ define <4 x bfloat> @slidedown_v4bf16(<4 x bfloat> %x) {
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 1
 ; CHECK-NEXT:    ret
-  %s = shufflevector <4 x bfloat> %x, <4 x bfloat> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 undef>
+  %s = shufflevector <4 x bfloat> %x, <4 x bfloat> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 poison>
   ret <4 x bfloat> %s
 }
 
@@ -277,7 +270,7 @@ define <4 x half> @slidedown_v4f16(<4 x half> %x) {
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 1
 ; CHECK-NEXT:    ret
-  %s = shufflevector <4 x half> %x, <4 x half> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 undef>
+  %s = shufflevector <4 x half> %x, <4 x half> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 poison>
   ret <4 x half> %s
 }
 
@@ -287,7 +280,7 @@ define <8 x float> @slidedown_v8f32(<8 x float> %x) {
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 3
 ; CHECK-NEXT:    ret
-  %s = shufflevector <8 x float> %x, <8 x float> poison, <8 x i32> <i32 3, i32 undef, i32 5, i32 6, i32 undef, i32 undef, i32 undef, i32 undef>
+  %s = shufflevector <8 x float> %x, <8 x float> poison, <8 x i32> <i32 3, i32 poison, i32 5, i32 6, i32 poison, i32 poison, i32 poison, i32 poison>
   ret <8 x float> %s
 }
 
@@ -298,7 +291,7 @@ define <4 x half> @slideup_v4f16(<4 x half> %x) {
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
-  %s = shufflevector <4 x half> %x, <4 x half> poison, <4 x i32> <i32 undef, i32 0, i32 1, i32 2>
+  %s = shufflevector <4 x half> %x, <4 x half> poison, <4 x i32> <i32 poison, i32 0, i32 1, i32 2>
   ret <4 x half> %s
 }
 
@@ -309,7 +302,7 @@ define <8 x float> @slideup_v8f32(<8 x float> %x) {
 ; CHECK-NEXT:    vslideup.vi v10, v8, 3
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %s = shufflevector <8 x float> %x, <8 x float> poison, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 1, i32 2, i32 3, i32 4>
+  %s = shufflevector <8 x float> %x, <8 x float> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 1, i32 2, i32 3, i32 4>
   ret <8 x float> %s
 }
 
@@ -344,7 +337,7 @@ define <8 x float> @splice_binary(<8 x float> %x, <8 x float> %y) {
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vslideup.vi v8, v10, 6
 ; CHECK-NEXT:    ret
-  %s = shufflevector <8 x float> %x, <8 x float> %y, <8 x i32> <i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 9>
+  %s = shufflevector <8 x float> %x, <8 x float> %y, <8 x i32> <i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 9>
   ret <8 x float> %s
 }
 
@@ -394,7 +387,7 @@ define <4 x bfloat> @vrgather_shuffle_vx_v4bf16_load(ptr %p) {
 ; CHECK-NEXT:    vmv.v.x v8, a0
 ; CHECK-NEXT:    ret
   %v = load <4 x bfloat>, ptr %p
-  %s = shufflevector <4 x bfloat> %v, <4 x bfloat> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %s = shufflevector <4 x bfloat> %v, <4 x bfloat> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   ret <4 x bfloat> %s
 }
 
@@ -432,7 +425,7 @@ define <4 x half> @vrgather_shuffle_vx_v4f16_load(ptr %p) {
 ; CHECK-NEXT:    vmv.v.x v8, a0
 ; CHECK-NEXT:    ret
   %v = load <4 x half>, ptr %p
-  %s = shufflevector <4 x half> %v, <4 x half> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %s = shufflevector <4 x half> %v, <4 x half> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   ret <4 x half> %s
 }
 
