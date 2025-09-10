@@ -19,6 +19,10 @@
 
 namespace llvm {
 
+class TargetLowering;
+class AArch64FunctionInfo;
+class AArch64PrologueEmitter;
+
 class AArch64FrameLowering : public TargetFrameLowering {
 public:
   explicit AArch64FrameLowering()
@@ -130,11 +134,18 @@ public:
     return StackId != TargetStackID::ScalableVector;
   }
 
+  friend class AArch64PrologueEmitter;
   void
   orderFrameObjects(const MachineFunction &MF,
                     SmallVectorImpl<int> &ObjectsToAllocate) const override;
 
   bool isFPReserved(const MachineFunction &MF) const;
+
+  bool needsWinCFI(const MachineFunction &MF) const;
+
+  bool requiresSaveVG(const MachineFunction &MF) const;
+
+  StackOffset getSVEStackSize(const MachineFunction &MF) const;
 
 protected:
   bool hasFPImpl(const MachineFunction &MF) const override;
@@ -159,10 +170,6 @@ private:
                                       int &MaxCSFrameIndex) const;
   bool shouldCombineCSRLocalStackBumpInEpilogue(MachineBasicBlock &MBB,
                                                 uint64_t StackBumpBytes) const;
-  void emitCalleeSavedGPRLocations(MachineBasicBlock &MBB,
-                                   MachineBasicBlock::iterator MBBI) const;
-  void emitCalleeSavedSVELocations(MachineBasicBlock &MBB,
-                                   MachineBasicBlock::iterator MBBI) const;
   void emitCalleeSavedGPRRestores(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator MBBI) const;
   void emitCalleeSavedSVERestores(MachineBasicBlock &MBB,
@@ -196,6 +203,61 @@ private:
 
   void emitRemarks(const MachineFunction &MF,
                    MachineOptimizationRemarkEmitter *ORE) const override;
+
+  bool windowsRequiresStackProbe(const MachineFunction &MF,
+                                 uint64_t StackSizeInBytes) const;
+
+  bool shouldSignReturnAddressEverywhere(const MachineFunction &MF) const;
+
+  StackOffset getFPOffset(const MachineFunction &MF,
+                          int64_t ObjectOffset) const;
+
+  StackOffset getStackOffset(const MachineFunction &MF,
+                             int64_t ObjectOffset) const;
+
+  // Find a scratch register that we can use at the start of the prologue to
+  // re-align the stack pointer.  We avoid using callee-save registers since
+  // they may appear to be free when this is called from canUseAsPrologue
+  // (during shrink wrapping), but then no longer be free when this is called
+  // from emitPrologue.
+  //
+  // FIXME: This is a bit conservative, since in the above case we could use one
+  // of the callee-save registers as a scratch temp to re-align the stack
+  // pointer, but we would then have to make sure that we were in fact saving at
+  // least one callee-save register in the prologue, which is additional
+  // complexity that doesn't seem worth the benefit.
+  Register findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB,
+                                            bool HasCall = false) const;
+
+  // Convert callee-save register save/restore instruction to do stack pointer
+  // decrement/increment to allocate/deallocate the callee-save stack area by
+  // converting store/load to use pre/post increment version.
+  MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+      const DebugLoc &DL, const TargetInstrInfo *TII, int CSStackSizeInc,
+      bool NeedsWinCFI, bool *HasWinCFI, bool EmitCFI,
+      MachineInstr::MIFlag FrameFlag = MachineInstr::FrameSetup,
+      int CFAOffset = 0) const;
+
+  // Fixup callee-save register save/restore instructions to take into account
+  // combined SP bump by adding the local stack size to the stack offsets.
+  void fixupCalleeSaveRestoreStackOffset(MachineInstr &MI,
+                                         uint64_t LocalStackSize,
+                                         bool NeedsWinCFI,
+                                         bool *HasWinCFI) const;
+
+  bool isSVECalleeSave(MachineBasicBlock::iterator I) const;
+
+  /// Returns the size of the fixed object area (allocated next to sp on entry)
+  /// On Win64 this may include a var args area and an UnwindHelp object for EH.
+  unsigned getFixedObjectSize(const MachineFunction &MF,
+                              const AArch64FunctionInfo *AFI, bool IsWin64,
+                              bool IsFunclet) const;
+
+  bool isVGInstruction(MachineBasicBlock::iterator MBBI,
+                       const TargetLowering &TLI) const;
+
+  bool requiresGetVGCall(const MachineFunction &MF) const;
 };
 
 } // End llvm namespace
