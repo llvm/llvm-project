@@ -16,7 +16,9 @@
 #include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/limits.h"
+#include "src/__support/CPP/tuple.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/CPP/utility/integer_sequence.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
@@ -32,9 +34,6 @@ namespace cpp {
 
 namespace internal {
 
-template <typename T>
-using get_as_integer_type_t = unsigned _BitInt(sizeof(T) * CHAR_BIT);
-
 #if defined(LIBC_TARGET_CPU_HAS_AVX512F)
 template <typename T>
 LIBC_INLINE_VAR constexpr size_t native_vector_size = 64 / sizeof(T);
@@ -48,9 +47,6 @@ LIBC_INLINE_VAR constexpr size_t native_vector_size = 16 / sizeof(T);
 template <typename T> LIBC_INLINE constexpr size_t native_vector_size = 1;
 #endif
 
-template <typename T> LIBC_INLINE constexpr T poison() {
-  return __builtin_nondeterministic_value(T());
-}
 } // namespace internal
 
 // Type aliases.
@@ -60,6 +56,74 @@ template <typename T, size_t N = internal::native_vector_size<T>>
 using simd = T [[clang::ext_vector_type(N)]];
 template <typename T>
 using simd_mask = simd<bool, internal::native_vector_size<T>>;
+
+namespace internal {
+
+template <typename T>
+using get_as_integer_type_t = unsigned _BitInt(sizeof(T) * CHAR_BIT);
+
+template <typename T> LIBC_INLINE constexpr T poison() {
+  return __builtin_nondeterministic_value(T());
+}
+
+template <typename T, size_t N, size_t OriginalSize, size_t... Indices>
+LIBC_INLINE constexpr static cpp::simd<T, sizeof...(Indices)>
+extend(cpp::simd<T, N> x, cpp::index_sequence<Indices...>) {
+  return __builtin_shufflevector(
+      x, x, (Indices < OriginalSize ? static_cast<int>(Indices) : -1)...);
+}
+
+template <typename T, size_t N, size_t TargetSize, size_t OriginalSize>
+LIBC_INLINE constexpr static auto extend(cpp::simd<T, N> x) {
+  // Recursively resize an input vector to the target size, increasing its size
+  // by at most double the input size each step due to shufflevector limitation.
+  if constexpr (N == TargetSize)
+    return x;
+  else if constexpr (TargetSize <= 2 * N)
+    return extend<T, N, TargetSize>(x, cpp::make_index_sequence<TargetSize>{});
+  else
+    return extend<T, 2 * N, TargetSize, OriginalSize>(
+        extend<T, N, 2 * N>(x, cpp::make_index_sequence<2 * N>{}));
+}
+
+template <typename T, size_t N, size_t M, size_t... Indices>
+LIBC_INLINE constexpr static cpp::simd<T, N + M>
+concat(cpp::simd<T, N> x, cpp::simd<T, M> y, cpp::index_sequence<Indices...>) {
+  constexpr size_t Size = cpp::max(N, M);
+  auto remap = [](size_t idx) -> int {
+    if (idx < N)
+      return static_cast<int>(idx);
+    if (idx < N + M)
+      return static_cast<int>((idx - N) + Size);
+    return -1;
+  };
+
+  // Extend the input vectors until they are the same size, then use the indices
+  // to shuffle in only the indices that correspond to the original values.
+  auto x_ext = extend<T, N, Size, N>(x);
+  auto y_ext = extend<T, M, Size, M>(y);
+  return __builtin_shufflevector(x_ext, y_ext, remap(Indices)...);
+}
+
+template <typename T, size_t N, size_t Count, size_t Offset, size_t... Indices>
+LIBC_INLINE constexpr static cpp::simd<T, Count>
+slice(cpp::simd<T, N> x, cpp::index_sequence<Indices...>) {
+  return __builtin_shufflevector(x, x, (Offset + Indices)...);
+}
+
+template <typename T, size_t N, size_t Offset, size_t Head, size_t... Tail>
+LIBC_INLINE constexpr static auto split(cpp::simd<T, N> x) {
+  // Recursively splits the input vector by walking the variadic template list,
+  // increasing our current head each call.
+  auto result = cpp::make_tuple(
+      slice<T, N, Head, Offset>(x, cpp::make_index_sequence<Head>{}));
+  if constexpr (sizeof...(Tail) > 0)
+    return cpp::tuple_cat(result, split<T, N, Offset + Head, Tail...>(x));
+  else
+    return result;
+}
+
+} // namespace internal
 
 // Type trait helpers.
 template <typename T>
@@ -271,6 +335,25 @@ template <typename T, size_t N>
 LIBC_INLINE constexpr static simd<T, N> select(simd<bool, N> m, simd<T, N> x,
                                                simd<T, N> y) {
   return m ? x : y;
+}
+
+// Shuffling helpers.
+template <typename T, size_t N, size_t M>
+LIBC_INLINE constexpr static auto concat(cpp::simd<T, N> x, cpp::simd<T, M> y) {
+  return internal::concat(x, y, make_index_sequence<N + M>{});
+}
+template <typename T, size_t N, size_t M, typename... Rest>
+LIBC_INLINE constexpr static auto concat(cpp::simd<T, N> x, cpp::simd<T, M> y,
+                                         Rest... rest) {
+  auto xy = concat(x, y);
+  if constexpr (sizeof...(Rest))
+    return concat(xy, rest...);
+  else
+    return xy;
+}
+template <size_t... Sizes, typename T, size_t N> auto split(cpp::simd<T, N> x) {
+  static_assert((... + Sizes) == N, "split sizes must sum to vector size");
+  return internal::split<T, N, 0, Sizes...>(x);
 }
 
 // TODO: where expressions, scalar overloads, ABI types.
