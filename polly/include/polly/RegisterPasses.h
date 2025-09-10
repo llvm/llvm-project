@@ -29,6 +29,6 @@ void initializePollyPasses(llvm::PassRegistry &Registry);
 void registerPollyPasses(llvm::PassBuilder &PB);
 } // namespace polly
 
-LLVM_ALWAYS_EXPORT llvm::PassPluginLibraryInfo getPollyPluginInfo();
+LLVM_ABI llvm::PassPluginLibraryInfo getPollyPluginInfo();
 
 #endif
