@@ -74,6 +74,8 @@ std::optional<SomeExpr> GetEvaluateExpr(const parser::Expr &parserExpr);
 std::optional<evaluate::DynamicType> GetDynamicType(
     const parser::Expr &parserExpr);
 
+std::optional<bool> GetLogicalValue(const SomeExpr &expr);
+
 std::optional<bool> IsContiguous(
     SemanticsContext &semaCtx, const parser::OmpObject &object);
 
