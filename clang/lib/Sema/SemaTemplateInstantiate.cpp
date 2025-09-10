@@ -1393,597 +1393,599 @@ getPackSubstitutedTemplateArgument(Sema &S, TemplateArgument Arg) {
 //===----------------------------------------------------------------------===/
 namespace {
 
-class TemplateInstantiator : public TreeTransform<TemplateInstantiator> {
-  const MultiLevelTemplateArgumentList &TemplateArgs;
-  SourceLocation Loc;
-  DeclarationName Entity;
-  // Whether to evaluate the C++20 constraints or simply substitute into them.
-  bool EvaluateConstraints = true;
-  // Whether Substitution was Incomplete, that is, we tried to substitute in
-  // any user provided template arguments which were null.
-  bool IsIncomplete = false;
-  // Whether an incomplete substituion should be treated as an error.
-  bool BailOutOnIncomplete;
+  class TemplateInstantiator : public TreeTransform<TemplateInstantiator> {
+    const MultiLevelTemplateArgumentList &TemplateArgs;
+    SourceLocation Loc;
+    DeclarationName Entity;
+    // Whether to evaluate the C++20 constraints or simply substitute into them.
+    bool EvaluateConstraints = true;
+    // Whether Substitution was Incomplete, that is, we tried to substitute in
+    // any user provided template arguments which were null.
+    bool IsIncomplete = false;
+    // Whether an incomplete substituion should be treated as an error.
+    bool BailOutOnIncomplete;
 
-  // Whether to rebuild pack expansion types; We don't do that when
-  // rebuilding a fold expression appearing in a constraint expression.
-  bool BuildPackExpansionTypes = true;
+    // Whether to rebuild pack expansion types; We don't do that when
+    // rebuilding a fold expression appearing in a constraint expression.
+    bool BuildPackExpansionTypes = true;
 
-  // CWG2770: Function parameters should be instantiated when they are
-  // needed by a satisfaction check of an atomic constraint or
-  // (recursively) by another function parameter.
-  bool maybeInstantiateFunctionParameterToScope(ParmVarDecl *OldParm);
+    // CWG2770: Function parameters should be instantiated when they are
+    // needed by a satisfaction check of an atomic constraint or
+    // (recursively) by another function parameter.
+    bool maybeInstantiateFunctionParameterToScope(ParmVarDecl *OldParm);
 
-public:
-  typedef TreeTransform<TemplateInstantiator> inherited;
+  public:
+    typedef TreeTransform<TemplateInstantiator> inherited;
 
-  TemplateInstantiator(Sema &SemaRef,
-                       const MultiLevelTemplateArgumentList &TemplateArgs,
-                       SourceLocation Loc, DeclarationName Entity,
-                       bool BailOutOnIncomplete = false)
-      : inherited(SemaRef), TemplateArgs(TemplateArgs), Loc(Loc),
-        Entity(Entity), BailOutOnIncomplete(BailOutOnIncomplete) {}
+    TemplateInstantiator(Sema &SemaRef,
+                         const MultiLevelTemplateArgumentList &TemplateArgs,
+                         SourceLocation Loc, DeclarationName Entity,
+                         bool BailOutOnIncomplete = false)
+        : inherited(SemaRef), TemplateArgs(TemplateArgs), Loc(Loc),
+          Entity(Entity), BailOutOnIncomplete(BailOutOnIncomplete) {}
 
-  inline static struct ForParameterMappingSubstitution_t {
-  } ForParameterMappingSubstitution;
+    void setEvaluateConstraints(bool B) {
+      EvaluateConstraints = B;
+    }
+    bool getEvaluateConstraints() {
+      return EvaluateConstraints;
+    }
 
-  TemplateInstantiator(ForParameterMappingSubstitution_t, Sema &SemaRef,
-                       SourceLocation Loc,
-                       const MultiLevelTemplateArgumentList &TemplateArgs,
-                       bool BuildPackExpansionTypes)
-      : inherited(SemaRef), TemplateArgs(TemplateArgs), Loc(Loc),
-        BailOutOnIncomplete(false),
-        BuildPackExpansionTypes(BuildPackExpansionTypes) {}
+    inline static struct ForParameterMappingSubstitution_t {
+    } ForParameterMappingSubstitution;
 
-  void setEvaluateConstraints(bool B) { EvaluateConstraints = B; }
-  bool getEvaluateConstraints() { return EvaluateConstraints; }
+    TemplateInstantiator(ForParameterMappingSubstitution_t, Sema &SemaRef,
+                         SourceLocation Loc,
+                         const MultiLevelTemplateArgumentList &TemplateArgs,
+                         bool BuildPackExpansionTypes)
+        : inherited(SemaRef), TemplateArgs(TemplateArgs), Loc(Loc),
+          BailOutOnIncomplete(false),
+          BuildPackExpansionTypes(BuildPackExpansionTypes) {}
 
-  /// Determine whether the given type \p T has already been
-  /// transformed.
-  ///
-  /// For the purposes of template instantiation, a type has already been
-  /// transformed if it is NULL or if it is not dependent.
-  bool AlreadyTransformed(QualType T);
+    /// Determine whether the given type \p T has already been
+    /// transformed.
+    ///
+    /// For the purposes of template instantiation, a type has already been
+    /// transformed if it is NULL or if it is not dependent.
+    bool AlreadyTransformed(QualType T);
 
-  /// Returns the location of the entity being instantiated, if known.
-  SourceLocation getBaseLocation() { return Loc; }
+    /// Returns the location of the entity being instantiated, if known.
+    SourceLocation getBaseLocation() { return Loc; }
 
-  /// Returns the name of the entity being instantiated, if any.
-  DeclarationName getBaseEntity() { return Entity; }
+    /// Returns the name of the entity being instantiated, if any.
+    DeclarationName getBaseEntity() { return Entity; }
 
-  /// Returns whether any substitution so far was incomplete.
-  bool getIsIncomplete() const { return IsIncomplete; }
+    /// Returns whether any substitution so far was incomplete.
+    bool getIsIncomplete() const { return IsIncomplete; }
 
-  /// Sets the "base" location and entity when that
-  /// information is known based on another transformation.
-  void setBase(SourceLocation Loc, DeclarationName Entity) {
-    this->Loc = Loc;
-    this->Entity = Entity;
-  }
+    /// Sets the "base" location and entity when that
+    /// information is known based on another transformation.
+    void setBase(SourceLocation Loc, DeclarationName Entity) {
+      this->Loc = Loc;
+      this->Entity = Entity;
+    }
 
-  unsigned TransformTemplateDepth(unsigned Depth) {
-    return TemplateArgs.getNewDepth(Depth);
-  }
+    unsigned TransformTemplateDepth(unsigned Depth) {
+      return TemplateArgs.getNewDepth(Depth);
+    }
 
-  UnsignedOrNone getPackIndex(TemplateArgument Pack) {
-    UnsignedOrNone Index = getSema().ArgPackSubstIndex;
-    if (!Index)
-      return std::nullopt;
-    return Pack.pack_size() - 1 - *Index;
-  }
+    UnsignedOrNone getPackIndex(TemplateArgument Pack) {
+      UnsignedOrNone Index = getSema().ArgPackSubstIndex;
+      if (!Index)
+        return std::nullopt;
+      return Pack.pack_size() - 1 - *Index;
+    }
 
-  bool TryExpandParameterPacks(SourceLocation EllipsisLoc,
-                               SourceRange PatternRange,
-                               ArrayRef<UnexpandedParameterPack> Unexpanded,
-                               bool FailOnPackProducingTemplates,
-                               bool &ShouldExpand, bool &RetainExpansion,
-                               UnsignedOrNone &NumExpansions) {
-    if (SemaRef.CurrentInstantiationScope &&
-        (SemaRef.inConstraintSubstitution() ||
-         SemaRef.inParameterMappingSubstitution())) {
-      for (UnexpandedParameterPack ParmPack : Unexpanded) {
-        NamedDecl *VD = ParmPack.first.dyn_cast<NamedDecl *>();
-        if (auto *PVD = dyn_cast_if_present<ParmVarDecl>(VD);
-            PVD && maybeInstantiateFunctionParameterToScope(PVD))
-          return true;
+    bool TryExpandParameterPacks(SourceLocation EllipsisLoc,
+                                 SourceRange PatternRange,
+                                 ArrayRef<UnexpandedParameterPack> Unexpanded,
+                                 bool FailOnPackProducingTemplates,
+                                 bool &ShouldExpand, bool &RetainExpansion,
+                                 UnsignedOrNone &NumExpansions) {
+      if (SemaRef.CurrentInstantiationScope &&
+          (SemaRef.inConstraintSubstitution() ||
+           SemaRef.inParameterMappingSubstitution())) {
+        for (UnexpandedParameterPack ParmPack : Unexpanded) {
+          NamedDecl *VD = ParmPack.first.dyn_cast<NamedDecl *>();
+          if (auto *PVD = dyn_cast_if_present<ParmVarDecl>(VD);
+              PVD && maybeInstantiateFunctionParameterToScope(PVD))
+            return true;
+        }
+      }
+
+      return getSema().CheckParameterPacksForExpansion(
+          EllipsisLoc, PatternRange, Unexpanded, TemplateArgs,
+          FailOnPackProducingTemplates, ShouldExpand, RetainExpansion,
+          NumExpansions);
+    }
+
+    void ExpandingFunctionParameterPack(ParmVarDecl *Pack) {
+      SemaRef.CurrentInstantiationScope->MakeInstantiatedLocalArgPack(Pack);
+    }
+
+    TemplateArgument ForgetPartiallySubstitutedPack() {
+      TemplateArgument Result;
+      if (NamedDecl *PartialPack =
+              SemaRef.CurrentInstantiationScope->getPartiallySubstitutedPack()) {
+        MultiLevelTemplateArgumentList &TemplateArgs =
+            const_cast<MultiLevelTemplateArgumentList &>(this->TemplateArgs);
+        unsigned Depth, Index;
+        std::tie(Depth, Index) = getDepthAndIndex(PartialPack);
+        if (TemplateArgs.hasTemplateArgument(Depth, Index)) {
+          Result = TemplateArgs(Depth, Index);
+          TemplateArgs.setArgument(Depth, Index, TemplateArgument());
+        } else {
+          IsIncomplete = true;
+          if (BailOutOnIncomplete)
+            return TemplateArgument();
+        }
+      }
+
+      return Result;
+    }
+
+    void RememberPartiallySubstitutedPack(TemplateArgument Arg) {
+      if (Arg.isNull())
+        return;
+
+      if (NamedDecl *PartialPack =
+              SemaRef.CurrentInstantiationScope->getPartiallySubstitutedPack()) {
+        MultiLevelTemplateArgumentList &TemplateArgs =
+            const_cast<MultiLevelTemplateArgumentList &>(this->TemplateArgs);
+        unsigned Depth, Index;
+        std::tie(Depth, Index) = getDepthAndIndex(PartialPack);
+        TemplateArgs.setArgument(Depth, Index, Arg);
       }
     }
 
-    return getSema().CheckParameterPacksForExpansion(
-        EllipsisLoc, PatternRange, Unexpanded, TemplateArgs,
-        FailOnPackProducingTemplates, ShouldExpand, RetainExpansion,
-        NumExpansions);
-  }
+    MultiLevelTemplateArgumentList ForgetSubstitution() {
+      MultiLevelTemplateArgumentList New;
+      New.addOuterRetainedLevels(this->TemplateArgs.getNumLevels());
 
-  void ExpandingFunctionParameterPack(ParmVarDecl *Pack) {
-    SemaRef.CurrentInstantiationScope->MakeInstantiatedLocalArgPack(Pack);
-  }
-
-  TemplateArgument ForgetPartiallySubstitutedPack() {
-    TemplateArgument Result;
-    if (NamedDecl *PartialPack =
-            SemaRef.CurrentInstantiationScope->getPartiallySubstitutedPack()) {
-      MultiLevelTemplateArgumentList &TemplateArgs =
+      MultiLevelTemplateArgumentList Old =
           const_cast<MultiLevelTemplateArgumentList &>(this->TemplateArgs);
-      unsigned Depth, Index;
-      std::tie(Depth, Index) = getDepthAndIndex(PartialPack);
-      if (TemplateArgs.hasTemplateArgument(Depth, Index)) {
-        Result = TemplateArgs(Depth, Index);
-        TemplateArgs.setArgument(Depth, Index, TemplateArgument());
-      } else {
-        IsIncomplete = true;
-        if (BailOutOnIncomplete)
-          return TemplateArgument();
+      const_cast<MultiLevelTemplateArgumentList &>(this->TemplateArgs) =
+          std::move(New);
+      return Old;
+    }
+
+    void RememberSubstitution(MultiLevelTemplateArgumentList Old) {
+      const_cast<MultiLevelTemplateArgumentList &>(this->TemplateArgs) = Old;
+    }
+
+    TemplateArgument
+    getTemplateArgumentPackPatternForRewrite(const TemplateArgument &TA) {
+      if (TA.getKind() != TemplateArgument::Pack)
+        return TA;
+      if (SemaRef.ArgPackSubstIndex)
+        return getPackSubstitutedTemplateArgument(SemaRef, TA);
+      assert(TA.pack_size() == 1 && TA.pack_begin()->isPackExpansion() &&
+             "unexpected pack arguments in template rewrite");
+      TemplateArgument Arg = *TA.pack_begin();
+      if (Arg.isPackExpansion())
+        Arg = Arg.getPackExpansionPattern();
+      return Arg;
+    }
+
+    /// Transform the given declaration by instantiating a reference to
+    /// this declaration.
+    Decl *TransformDecl(SourceLocation Loc, Decl *D);
+
+    void transformAttrs(Decl *Old, Decl *New) {
+      SemaRef.InstantiateAttrs(TemplateArgs, Old, New);
+    }
+
+    void transformedLocalDecl(Decl *Old, ArrayRef<Decl *> NewDecls) {
+      if (Old->isParameterPack() &&
+          (NewDecls.size() != 1 || !NewDecls.front()->isParameterPack())) {
+        SemaRef.CurrentInstantiationScope->MakeInstantiatedLocalArgPack(Old);
+        for (auto *New : NewDecls)
+          SemaRef.CurrentInstantiationScope->InstantiatedLocalPackArg(
+              Old, cast<VarDecl>(New));
+        return;
       }
-    }
 
-    return Result;
-  }
+      assert(NewDecls.size() == 1 &&
+             "should only have multiple expansions for a pack");
+      Decl *New = NewDecls.front();
 
-  void RememberPartiallySubstitutedPack(TemplateArgument Arg) {
-    if (Arg.isNull())
-      return;
-
-    if (NamedDecl *PartialPack =
-            SemaRef.CurrentInstantiationScope->getPartiallySubstitutedPack()) {
-      MultiLevelTemplateArgumentList &TemplateArgs =
-          const_cast<MultiLevelTemplateArgumentList &>(this->TemplateArgs);
-      unsigned Depth, Index;
-      std::tie(Depth, Index) = getDepthAndIndex(PartialPack);
-      TemplateArgs.setArgument(Depth, Index, Arg);
-    }
-  }
-
-  MultiLevelTemplateArgumentList ForgetSubstitution() {
-    MultiLevelTemplateArgumentList New;
-    New.addOuterRetainedLevels(this->TemplateArgs.getNumLevels());
-
-    MultiLevelTemplateArgumentList Old =
-        const_cast<MultiLevelTemplateArgumentList &>(this->TemplateArgs);
-    const_cast<MultiLevelTemplateArgumentList &>(this->TemplateArgs) =
-        std::move(New);
-    return Old;
-  }
-
-  void RememberSubstitution(MultiLevelTemplateArgumentList Old) {
-    const_cast<MultiLevelTemplateArgumentList &>(this->TemplateArgs) = Old;
-  }
-
-  TemplateArgument
-  getTemplateArgumentPackPatternForRewrite(const TemplateArgument &TA) {
-    if (TA.getKind() != TemplateArgument::Pack)
-      return TA;
-    if (SemaRef.ArgPackSubstIndex)
-      return getPackSubstitutedTemplateArgument(SemaRef, TA);
-    assert(TA.pack_size() == 1 && TA.pack_begin()->isPackExpansion() &&
-           "unexpected pack arguments in template rewrite");
-    TemplateArgument Arg = *TA.pack_begin();
-    if (Arg.isPackExpansion())
-      Arg = Arg.getPackExpansionPattern();
-    return Arg;
-  }
-
-  /// Transform the given declaration by instantiating a reference to
-  /// this declaration.
-  Decl *TransformDecl(SourceLocation Loc, Decl *D);
-
-  void transformAttrs(Decl *Old, Decl *New) {
-    SemaRef.InstantiateAttrs(TemplateArgs, Old, New);
-  }
-
-  void transformedLocalDecl(Decl *Old, ArrayRef<Decl *> NewDecls) {
-    if (Old->isParameterPack() &&
-        (NewDecls.size() != 1 || !NewDecls.front()->isParameterPack())) {
-      SemaRef.CurrentInstantiationScope->MakeInstantiatedLocalArgPack(Old);
-      for (auto *New : NewDecls)
-        SemaRef.CurrentInstantiationScope->InstantiatedLocalPackArg(
-            Old, cast<VarDecl>(New));
-      return;
-    }
-
-    assert(NewDecls.size() == 1 &&
-           "should only have multiple expansions for a pack");
-    Decl *New = NewDecls.front();
-
-    // If we've instantiated the call operator of a lambda or the call
-    // operator template of a generic lambda, update the "instantiation of"
-    // information.
-    auto *NewMD = dyn_cast<CXXMethodDecl>(New);
-    if (NewMD && isLambdaCallOperator(NewMD)) {
-      auto *OldMD = dyn_cast<CXXMethodDecl>(Old);
-      if (auto *NewTD = NewMD->getDescribedFunctionTemplate())
-        NewTD->setInstantiatedFromMemberTemplate(
-            OldMD->getDescribedFunctionTemplate());
-      else
-        NewMD->setInstantiationOfMemberFunction(OldMD,
-                                                TSK_ImplicitInstantiation);
-    }
-
-    SemaRef.CurrentInstantiationScope->InstantiatedLocal(Old, New);
-
-    // We recreated a local declaration, but not by instantiating it. There
-    // may be pending dependent diagnostics to produce.
-    if (auto *DC = dyn_cast<DeclContext>(Old);
-        DC && DC->isDependentContext() && DC->isFunctionOrMethod())
-      SemaRef.PerformDependentDiagnostics(DC, TemplateArgs);
-  }
-
-  /// Transform the definition of the given declaration by
-  /// instantiating it.
-  Decl *TransformDefinition(SourceLocation Loc, Decl *D);
-
-  /// Transform the first qualifier within a scope by instantiating the
-  /// declaration.
-  NamedDecl *TransformFirstQualifierInScope(NamedDecl *D, SourceLocation Loc);
-
-  bool TransformExceptionSpec(SourceLocation Loc,
-                              FunctionProtoType::ExceptionSpecInfo &ESI,
-                              SmallVectorImpl<QualType> &Exceptions,
-                              bool &Changed);
-
-  /// Rebuild the exception declaration and register the declaration
-  /// as an instantiated local.
-  VarDecl *RebuildExceptionDecl(VarDecl *ExceptionDecl,
-                                TypeSourceInfo *Declarator,
-                                SourceLocation StartLoc, SourceLocation NameLoc,
-                                IdentifierInfo *Name);
-
-  /// Rebuild the Objective-C exception declaration and register the
-  /// declaration as an instantiated local.
-  VarDecl *RebuildObjCExceptionDecl(VarDecl *ExceptionDecl,
-                                    TypeSourceInfo *TSInfo, QualType T);
-
-  /// Check for tag mismatches when instantiating an
-  /// elaborated type.
-  QualType RebuildElaboratedType(SourceLocation KeywordLoc,
-                                 ElaboratedTypeKeyword Keyword,
-                                 NestedNameSpecifierLoc QualifierLoc,
-                                 QualType T);
-
-  TemplateName TransformTemplateName(NestedNameSpecifierLoc &QualifierLoc,
-                                     SourceLocation TemplateKWLoc,
-                                     TemplateName Name, SourceLocation NameLoc,
-                                     QualType ObjectType = QualType(),
-                                     NamedDecl *FirstQualifierInScope = nullptr,
-                                     bool AllowInjectedClassName = false);
-
-  const AnnotateAttr *TransformAnnotateAttr(const AnnotateAttr *AA);
-  const CXXAssumeAttr *TransformCXXAssumeAttr(const CXXAssumeAttr *AA);
-  const LoopHintAttr *TransformLoopHintAttr(const LoopHintAttr *LH);
-  const NoInlineAttr *TransformStmtNoInlineAttr(const Stmt *OrigS,
-                                                const Stmt *InstS,
-                                                const NoInlineAttr *A);
-  const AlwaysInlineAttr *
-  TransformStmtAlwaysInlineAttr(const Stmt *OrigS, const Stmt *InstS,
-                                const AlwaysInlineAttr *A);
-  const CodeAlignAttr *TransformCodeAlignAttr(const CodeAlignAttr *CA);
-  const OpenACCRoutineDeclAttr *
-  TransformOpenACCRoutineDeclAttr(const OpenACCRoutineDeclAttr *A);
-  ExprResult TransformPredefinedExpr(PredefinedExpr *E);
-  ExprResult TransformDeclRefExpr(DeclRefExpr *E);
-  ExprResult TransformCXXDefaultArgExpr(CXXDefaultArgExpr *E);
-
-  ExprResult TransformTemplateParmRefExpr(DeclRefExpr *E,
-                                          NonTypeTemplateParmDecl *D);
-  ExprResult TransformSubstNonTypeTemplateParmPackExpr(
-      SubstNonTypeTemplateParmPackExpr *E);
-  ExprResult
-  TransformSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *E);
-
-  /// Rebuild a DeclRefExpr for a VarDecl reference.
-  ExprResult RebuildVarDeclRefExpr(ValueDecl *PD, SourceLocation Loc);
-
-  /// Transform a reference to a function or init-capture parameter pack.
-  ExprResult TransformFunctionParmPackRefExpr(DeclRefExpr *E, ValueDecl *PD);
-
-  /// Transform a FunctionParmPackExpr which was built when we couldn't
-  /// expand a function parameter pack reference which refers to an expanded
-  /// pack.
-  ExprResult TransformFunctionParmPackExpr(FunctionParmPackExpr *E);
-
-  QualType TransformFunctionProtoType(TypeLocBuilder &TLB,
-                                      FunctionProtoTypeLoc TL) {
-    // Call the base version; it will forward to our overridden version below.
-    return inherited::TransformFunctionProtoType(TLB, TL);
-  }
-
-  QualType TransformTagType(TypeLocBuilder &TLB, TagTypeLoc TL) {
-    auto Type = inherited::TransformTagType(TLB, TL);
-    if (!Type.isNull())
-      return Type;
-    // Special case for transforming a deduction guide, we return a
-    // transformed TemplateSpecializationType.
-    // FIXME: Why is this hack necessary?
-    if (const auto *ICNT = dyn_cast<InjectedClassNameType>(TL.getTypePtr());
-        ICNT && SemaRef.CodeSynthesisContexts.back().Kind ==
-                    Sema::CodeSynthesisContext::BuildingDeductionGuides) {
-      Type = inherited::TransformType(
-          ICNT->getOriginalDecl()->getCanonicalTemplateSpecializationType(
-              SemaRef.Context));
-      TLB.pushTrivial(SemaRef.Context, Type, TL.getNameLoc());
-    }
-    return Type;
-  }
-  // Override the default version to handle a rewrite-template-arg-pack case
-  // for building a deduction guide.
-  bool TransformTemplateArgument(const TemplateArgumentLoc &Input,
-                                 TemplateArgumentLoc &Output,
-                                 bool Uneval = false) {
-    const TemplateArgument &Arg = Input.getArgument();
-    std::vector<TemplateArgument> TArgs;
-    switch (Arg.getKind()) {
-    case TemplateArgument::Pack:
-      assert(SemaRef.CodeSynthesisContexts.empty() ||
-             SemaRef.CodeSynthesisContexts.back().Kind ==
-                 Sema::CodeSynthesisContext::BuildingDeductionGuides);
-      // Literally rewrite the template argument pack, instead of unpacking
-      // it.
-      for (auto &pack : Arg.getPackAsArray()) {
-        TemplateArgumentLoc Input = SemaRef.getTrivialTemplateArgumentLoc(
-            pack, QualType(), SourceLocation{});
-        TemplateArgumentLoc Output;
-        if (TransformTemplateArgument(Input, Output, Uneval))
-          return true; // fails
-        TArgs.push_back(Output.getArgument());
-      }
-      Output = SemaRef.getTrivialTemplateArgumentLoc(
-          TemplateArgument(llvm::ArrayRef(TArgs).copy(SemaRef.Context)),
-          QualType(), SourceLocation{});
-      return false;
-    default:
-      break;
-    }
-    return inherited::TransformTemplateArgument(Input, Output, Uneval);
-  }
-
-  // This has to be here to allow its overload.
-  ExprResult RebuildPackExpansion(Expr *Pattern, SourceLocation EllipsisLoc,
-                                  UnsignedOrNone NumExpansions) {
-    return inherited::RebuildPackExpansion(Pattern, EllipsisLoc, NumExpansions);
-  }
-
-  TemplateArgumentLoc RebuildPackExpansion(TemplateArgumentLoc Pattern,
-                                           SourceLocation EllipsisLoc,
-                                           UnsignedOrNone NumExpansions) {
-    // We don't rewrite a PackExpansion type when we want to normalize a
-    // CXXFoldExpr constraint. We'll expand it when evaluating the constraint.
-    if (BuildPackExpansionTypes)
-      return inherited::RebuildPackExpansion(Pattern, EllipsisLoc,
-                                             NumExpansions);
-    return Pattern;
-  }
-
-  using TreeTransform::TransformTemplateSpecializationType;
-  QualType
-  TransformTemplateSpecializationType(TypeLocBuilder &TLB,
-                                      TemplateSpecializationTypeLoc TL) {
-    auto *T = TL.getTypePtr();
-    if (!getSema().ArgPackSubstIndex || !T->isSugared() ||
-        !isPackProducingBuiltinTemplateName(T->getTemplateName()))
-      return TreeTransform::TransformTemplateSpecializationType(TLB, TL);
-    // Look through sugar to get to the SubstBuiltinTemplatePackType that we
-    // need to substitute into.
-
-    // `TransformType` code below will handle picking the element from a pack
-    // with the index `ArgPackSubstIndex`.
-    // FIXME: add ability to represent sugarred type for N-th element of a
-    // builtin pack and produce the sugar here.
-    QualType R = TransformType(T->desugar());
-    TLB.pushTrivial(getSema().getASTContext(), R, TL.getBeginLoc());
-    return R;
-  }
-
-  UnsignedOrNone ComputeSizeOfPackExprWithoutSubstitution(
-      ArrayRef<TemplateArgument> PackArgs) {
-    // Don't do this when rewriting template parameters for CTAD:
-    //   1) The heuristic needs the unpacked Subst* nodes to figure out the
-    //   expanded size, but this never applies since Subst* nodes are not
-    //   created in rewrite scenarios.
-    //
-    //   2) The heuristic substitutes into the pattern with pack expansion
-    //   suppressed, which does not meet the requirements for argument
-    //   rewriting when template arguments include a non-pack matching against
-    //   a pack, particularly when rewriting an alias CTAD.
-    if (TemplateArgs.isRewrite())
-      return std::nullopt;
-
-    return inherited::ComputeSizeOfPackExprWithoutSubstitution(PackArgs);
-  }
-
-  template <typename Fn>
-  QualType TransformFunctionProtoType(TypeLocBuilder &TLB,
-                                      FunctionProtoTypeLoc TL,
-                                      CXXRecordDecl *ThisContext,
-                                      Qualifiers ThisTypeQuals,
-                                      Fn TransformExceptionSpec);
-
-  ParmVarDecl *TransformFunctionTypeParam(ParmVarDecl *OldParm,
-                                          int indexAdjustment,
-                                          UnsignedOrNone NumExpansions,
-                                          bool ExpectParameterPack);
-
-  using inherited::TransformTemplateTypeParmType;
-  /// Transforms a template type parameter type by performing
-  /// substitution of the corresponding template type argument.
-  QualType TransformTemplateTypeParmType(TypeLocBuilder &TLB,
-                                         TemplateTypeParmTypeLoc TL,
-                                         bool SuppressObjCLifetime);
-
-  QualType BuildSubstTemplateTypeParmType(TypeLocBuilder &TLB,
-                                          bool SuppressObjCLifetime, bool Final,
-                                          Decl *AssociatedDecl, unsigned Index,
-                                          UnsignedOrNone PackIndex,
-                                          TemplateArgument Arg,
-                                          SourceLocation NameLoc);
-
-  /// Transforms an already-substituted template type parameter pack
-  /// into either itself (if we aren't substituting into its pack expansion)
-  /// or the appropriate substituted argument.
-  using inherited::TransformSubstTemplateTypeParmPackType;
-  QualType
-  TransformSubstTemplateTypeParmPackType(TypeLocBuilder &TLB,
-                                         SubstTemplateTypeParmPackTypeLoc TL,
-                                         bool SuppressObjCLifetime);
-  QualType
-  TransformSubstBuiltinTemplatePackType(TypeLocBuilder &TLB,
-                                        SubstBuiltinTemplatePackTypeLoc TL);
-
-  CXXRecordDecl::LambdaDependencyKind
-  ComputeLambdaDependency(LambdaScopeInfo *LSI) {
-    if (auto TypeAlias =
-            TemplateInstArgsHelpers::getEnclosingTypeAliasTemplateDecl(
-                getSema());
-        TypeAlias && TemplateInstArgsHelpers::isLambdaEnclosedByTypeAliasDecl(
-                         LSI->CallOperator, TypeAlias.PrimaryTypeAliasDecl)) {
-      unsigned TypeAliasDeclDepth = TypeAlias.Template->getTemplateDepth();
-      if (TypeAliasDeclDepth >= TemplateArgs.getNumSubstitutedLevels())
-        return CXXRecordDecl::LambdaDependencyKind::LDK_AlwaysDependent;
-      for (const TemplateArgument &TA : TypeAlias.AssociatedTemplateArguments)
-        if (TA.isDependent())
-          return CXXRecordDecl::LambdaDependencyKind::LDK_AlwaysDependent;
-    }
-    return inherited::ComputeLambdaDependency(LSI);
-  }
-
-  ExprResult TransformLambdaExpr(LambdaExpr *E) {
-    // Do not rebuild lambdas to avoid creating a new type.
-    // Lambdas have already been processed inside their eval contexts.
-    if (SemaRef.RebuildingImmediateInvocation)
-      return E;
-    LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true,
-                                  /*InstantiatingLambdaOrBlock=*/true);
-    Sema::ConstraintEvalRAII<TemplateInstantiator> RAII(*this);
-
-    return inherited::TransformLambdaExpr(E);
-  }
-
-  ExprResult TransformBlockExpr(BlockExpr *E) {
-    LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true,
-                                  /*InstantiatingLambdaOrBlock=*/true);
-    return inherited::TransformBlockExpr(E);
-  }
-
-  ExprResult RebuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
-                               LambdaScopeInfo *LSI) {
-    CXXMethodDecl *MD = LSI->CallOperator;
-    for (ParmVarDecl *PVD : MD->parameters()) {
-      assert(PVD && "null in a parameter list");
-      if (!PVD->hasDefaultArg())
-        continue;
-      Expr *UninstExpr = PVD->getUninstantiatedDefaultArg();
-      // FIXME: Obtain the source location for the '=' token.
-      SourceLocation EqualLoc = UninstExpr->getBeginLoc();
-      if (SemaRef.SubstDefaultArgument(EqualLoc, PVD, TemplateArgs)) {
-        // If substitution fails, the default argument is set to a
-        // RecoveryExpr that wraps the uninstantiated default argument so
-        // that downstream diagnostics are omitted.
-        ExprResult ErrorResult = SemaRef.CreateRecoveryExpr(
-            UninstExpr->getBeginLoc(), UninstExpr->getEndLoc(), {UninstExpr},
-            UninstExpr->getType());
-        if (ErrorResult.isUsable())
-          PVD->setDefaultArg(ErrorResult.get());
-      }
-    }
-    return inherited::RebuildLambdaExpr(StartLoc, EndLoc, LSI);
-  }
-
-  StmtResult TransformLambdaBody(LambdaExpr *E, Stmt *Body) {
-    // Currently, we instantiate the body when instantiating the lambda
-    // expression. However, `EvaluateConstraints` is disabled during the
-    // instantiation of the lambda expression, causing the instantiation
-    // failure of the return type requirement in the body. If p0588r1 is fully
-    // implemented, the body will be lazily instantiated, and this problem
-    // will not occur. Here, `EvaluateConstraints` is temporarily set to
-    // `true` to temporarily fix this issue.
-    // FIXME: This temporary fix can be removed after fully implementing
-    // p0588r1.
-    llvm::SaveAndRestore _(EvaluateConstraints, true);
-    return inherited::TransformLambdaBody(E, Body);
-  }
-
-  ExprResult TransformRequiresExpr(RequiresExpr *E) {
-    LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true);
-    ExprResult TransReq = inherited::TransformRequiresExpr(E);
-    if (TransReq.isInvalid())
-      return TransReq;
-    assert(TransReq.get() != E &&
-           "Do not change value of isSatisfied for the existing expression. "
-           "Create a new expression instead.");
-    if (E->getBody()->isDependentContext()) {
-      Sema::SFINAETrap Trap(SemaRef);
-      // We recreate the RequiresExpr body, but not by instantiating it.
-      // Produce pending diagnostics for dependent access check.
-      SemaRef.PerformDependentDiagnostics(E->getBody(), TemplateArgs);
-      // FIXME: Store SFINAE diagnostics in RequiresExpr for diagnosis.
-      if (Trap.hasErrorOccurred())
-        TransReq.getAs<RequiresExpr>()->setSatisfied(false);
-    }
-    return TransReq;
-  }
-
-  bool TransformRequiresExprRequirements(
-      ArrayRef<concepts::Requirement *> Reqs,
-      SmallVectorImpl<concepts::Requirement *> &Transformed) {
-    bool SatisfactionDetermined = false;
-    for (concepts::Requirement *Req : Reqs) {
-      concepts::Requirement *TransReq = nullptr;
-      if (!SatisfactionDetermined) {
-        if (auto *TypeReq = dyn_cast<concepts::TypeRequirement>(Req))
-          TransReq = TransformTypeRequirement(TypeReq);
-        else if (auto *ExprReq = dyn_cast<concepts::ExprRequirement>(Req))
-          TransReq = TransformExprRequirement(ExprReq);
+      // If we've instantiated the call operator of a lambda or the call
+      // operator template of a generic lambda, update the "instantiation of"
+      // information.
+      auto *NewMD = dyn_cast<CXXMethodDecl>(New);
+      if (NewMD && isLambdaCallOperator(NewMD)) {
+        auto *OldMD = dyn_cast<CXXMethodDecl>(Old);
+        if (auto *NewTD = NewMD->getDescribedFunctionTemplate())
+          NewTD->setInstantiatedFromMemberTemplate(
+              OldMD->getDescribedFunctionTemplate());
         else
-          TransReq = TransformNestedRequirement(
-              cast<concepts::NestedRequirement>(Req));
-        if (!TransReq)
-          return true;
-        if (!TransReq->isDependent() && !TransReq->isSatisfied())
-          // [expr.prim.req]p6
-          //   [...]  The substitution and semantic constraint checking
-          //   proceeds in lexical order and stops when a condition that
-          //   determines the result of the requires-expression is
-          //   encountered. [..]
-          SatisfactionDetermined = true;
-      } else
-        TransReq = Req;
-      Transformed.push_back(TransReq);
+          NewMD->setInstantiationOfMemberFunction(OldMD,
+                                                  TSK_ImplicitInstantiation);
+      }
+
+      SemaRef.CurrentInstantiationScope->InstantiatedLocal(Old, New);
+
+      // We recreated a local declaration, but not by instantiating it. There
+      // may be pending dependent diagnostics to produce.
+      if (auto *DC = dyn_cast<DeclContext>(Old);
+          DC && DC->isDependentContext() && DC->isFunctionOrMethod())
+        SemaRef.PerformDependentDiagnostics(DC, TemplateArgs);
     }
-    return false;
-  }
 
-  TemplateParameterList *
-  TransformTemplateParameterList(TemplateParameterList *OrigTPL) {
-    if (!OrigTPL || !OrigTPL->size())
-      return OrigTPL;
+    /// Transform the definition of the given declaration by
+    /// instantiating it.
+    Decl *TransformDefinition(SourceLocation Loc, Decl *D);
 
-    DeclContext *Owner = OrigTPL->getParam(0)->getDeclContext();
-    TemplateDeclInstantiator DeclInstantiator(getSema(),
-                                              /* DeclContext *Owner */ Owner,
-                                              TemplateArgs);
-    DeclInstantiator.setEvaluateConstraints(EvaluateConstraints);
-    return DeclInstantiator.SubstTemplateParams(OrigTPL);
-  }
+    /// Transform the first qualifier within a scope by instantiating the
+    /// declaration.
+    NamedDecl *TransformFirstQualifierInScope(NamedDecl *D, SourceLocation Loc);
 
-  concepts::TypeRequirement *
-  TransformTypeRequirement(concepts::TypeRequirement *Req);
-  concepts::ExprRequirement *
-  TransformExprRequirement(concepts::ExprRequirement *Req);
-  concepts::NestedRequirement *
-  TransformNestedRequirement(concepts::NestedRequirement *Req);
-  ExprResult TransformRequiresTypeParams(
-      SourceLocation KWLoc, SourceLocation RBraceLoc, const RequiresExpr *RE,
-      RequiresExprBodyDecl *Body, ArrayRef<ParmVarDecl *> Params,
-      SmallVectorImpl<QualType> &PTypes,
-      SmallVectorImpl<ParmVarDecl *> &TransParams,
-      Sema::ExtParameterInfoBuilder &PInfos);
+    bool TransformExceptionSpec(SourceLocation Loc,
+                                FunctionProtoType::ExceptionSpecInfo &ESI,
+                                SmallVectorImpl<QualType> &Exceptions,
+                                bool &Changed);
 
-private:
-  ExprResult
-  transformNonTypeTemplateParmRef(Decl *AssociatedDecl, const NamedDecl *parm,
-                                  SourceLocation loc, TemplateArgument arg,
-                                  UnsignedOrNone PackIndex, bool Final);
-};
-} // namespace
+    /// Rebuild the exception declaration and register the declaration
+    /// as an instantiated local.
+    VarDecl *RebuildExceptionDecl(VarDecl *ExceptionDecl,
+                                  TypeSourceInfo *Declarator,
+                                  SourceLocation StartLoc,
+                                  SourceLocation NameLoc,
+                                  IdentifierInfo *Name);
+
+    /// Rebuild the Objective-C exception declaration and register the
+    /// declaration as an instantiated local.
+    VarDecl *RebuildObjCExceptionDecl(VarDecl *ExceptionDecl,
+                                      TypeSourceInfo *TSInfo, QualType T);
+
+    TemplateName
+    TransformTemplateName(NestedNameSpecifierLoc &QualifierLoc,
+                          SourceLocation TemplateKWLoc, TemplateName Name,
+                          SourceLocation NameLoc,
+                          QualType ObjectType = QualType(),
+                          NamedDecl *FirstQualifierInScope = nullptr,
+                          bool AllowInjectedClassName = false);
+
+    /// Check for tag mismatches when instantiating an
+    /// elaborated type.
+    QualType RebuildElaboratedType(SourceLocation KeywordLoc,
+                                   ElaboratedTypeKeyword Keyword,
+                                   NestedNameSpecifierLoc QualifierLoc,
+                                   QualType T);
+
+    const AnnotateAttr *TransformAnnotateAttr(const AnnotateAttr *AA);
+    const CXXAssumeAttr *TransformCXXAssumeAttr(const CXXAssumeAttr *AA);
+    const LoopHintAttr *TransformLoopHintAttr(const LoopHintAttr *LH);
+    const NoInlineAttr *TransformStmtNoInlineAttr(const Stmt *OrigS,
+                                                  const Stmt *InstS,
+                                                  const NoInlineAttr *A);
+    const AlwaysInlineAttr *
+    TransformStmtAlwaysInlineAttr(const Stmt *OrigS, const Stmt *InstS,
+                                  const AlwaysInlineAttr *A);
+    const CodeAlignAttr *TransformCodeAlignAttr(const CodeAlignAttr *CA);
+    const OpenACCRoutineDeclAttr *
+    TransformOpenACCRoutineDeclAttr(const OpenACCRoutineDeclAttr *A);
+    ExprResult TransformPredefinedExpr(PredefinedExpr *E);
+    ExprResult TransformDeclRefExpr(DeclRefExpr *E);
+    ExprResult TransformCXXDefaultArgExpr(CXXDefaultArgExpr *E);
+
+    ExprResult TransformTemplateParmRefExpr(DeclRefExpr *E,
+                                            NonTypeTemplateParmDecl *D);
+    ExprResult TransformSubstNonTypeTemplateParmPackExpr(
+                                           SubstNonTypeTemplateParmPackExpr *E);
+    ExprResult TransformSubstNonTypeTemplateParmExpr(
+                                           SubstNonTypeTemplateParmExpr *E);
+
+    /// Rebuild a DeclRefExpr for a VarDecl reference.
+    ExprResult RebuildVarDeclRefExpr(ValueDecl *PD, SourceLocation Loc);
+
+    /// Transform a reference to a function or init-capture parameter pack.
+    ExprResult TransformFunctionParmPackRefExpr(DeclRefExpr *E, ValueDecl *PD);
+
+    /// Transform a FunctionParmPackExpr which was built when we couldn't
+    /// expand a function parameter pack reference which refers to an expanded
+    /// pack.
+    ExprResult TransformFunctionParmPackExpr(FunctionParmPackExpr *E);
+
+    QualType TransformFunctionProtoType(TypeLocBuilder &TLB,
+                                        FunctionProtoTypeLoc TL) {
+      // Call the base version; it will forward to our overridden version below.
+      return inherited::TransformFunctionProtoType(TLB, TL);
+    }
+
+    QualType TransformTagType(TypeLocBuilder &TLB, TagTypeLoc TL) {
+      auto Type = inherited::TransformTagType(TLB, TL);
+      if (!Type.isNull())
+        return Type;
+      // Special case for transforming a deduction guide, we return a
+      // transformed TemplateSpecializationType.
+      // FIXME: Why is this hack necessary?
+      if (const auto *ICNT = dyn_cast<InjectedClassNameType>(TL.getTypePtr());
+          ICNT && SemaRef.CodeSynthesisContexts.back().Kind ==
+                      Sema::CodeSynthesisContext::BuildingDeductionGuides) {
+        Type = inherited::TransformType(
+            ICNT->getOriginalDecl()->getCanonicalTemplateSpecializationType(
+                SemaRef.Context));
+        TLB.pushTrivial(SemaRef.Context, Type, TL.getNameLoc());
+      }
+      return Type;
+    }
+    // Override the default version to handle a rewrite-template-arg-pack case
+    // for building a deduction guide.
+    bool TransformTemplateArgument(const TemplateArgumentLoc &Input,
+                                   TemplateArgumentLoc &Output,
+                                   bool Uneval = false) {
+      const TemplateArgument &Arg = Input.getArgument();
+      std::vector<TemplateArgument> TArgs;
+      switch (Arg.getKind()) {
+      case TemplateArgument::Pack:
+        assert(SemaRef.CodeSynthesisContexts.empty() ||
+               SemaRef.CodeSynthesisContexts.back().Kind ==
+                   Sema::CodeSynthesisContext::BuildingDeductionGuides);
+        // Literally rewrite the template argument pack, instead of unpacking
+        // it.
+        for (auto &pack : Arg.getPackAsArray()) {
+          TemplateArgumentLoc Input = SemaRef.getTrivialTemplateArgumentLoc(
+              pack, QualType(), SourceLocation{});
+          TemplateArgumentLoc Output;
+          if (TransformTemplateArgument(Input, Output, Uneval))
+            return true; // fails
+          TArgs.push_back(Output.getArgument());
+        }
+        Output = SemaRef.getTrivialTemplateArgumentLoc(
+            TemplateArgument(llvm::ArrayRef(TArgs).copy(SemaRef.Context)),
+            QualType(), SourceLocation{});
+        return false;
+      default:
+        break;
+      }
+      return inherited::TransformTemplateArgument(Input, Output, Uneval);
+    }
+
+    // This has to be here to allow its overload.
+    ExprResult RebuildPackExpansion(Expr *Pattern, SourceLocation EllipsisLoc,
+                                    UnsignedOrNone NumExpansions) {
+      return inherited::RebuildPackExpansion(Pattern, EllipsisLoc, NumExpansions);
+    }
+
+    TemplateArgumentLoc RebuildPackExpansion(TemplateArgumentLoc Pattern,
+                                             SourceLocation EllipsisLoc,
+                                             UnsignedOrNone NumExpansions) {
+      // We don't rewrite a PackExpansion type when we want to normalize a
+      // CXXFoldExpr constraint. We'll expand it when evaluating the constraint.
+      if (BuildPackExpansionTypes)
+        return inherited::RebuildPackExpansion(Pattern, EllipsisLoc,
+                                               NumExpansions);
+      return Pattern;
+    }
+
+    using TreeTransform::TransformTemplateSpecializationType;
+    QualType
+    TransformTemplateSpecializationType(TypeLocBuilder &TLB,
+                                        TemplateSpecializationTypeLoc TL) {
+      auto *T = TL.getTypePtr();
+      if (!getSema().ArgPackSubstIndex || !T->isSugared() ||
+          !isPackProducingBuiltinTemplateName(T->getTemplateName()))
+        return TreeTransform::TransformTemplateSpecializationType(TLB, TL);
+      // Look through sugar to get to the SubstBuiltinTemplatePackType that we
+      // need to substitute into.
+
+      // `TransformType` code below will handle picking the element from a pack
+      // with the index `ArgPackSubstIndex`.
+      // FIXME: add ability to represent sugarred type for N-th element of a
+      // builtin pack and produce the sugar here.
+      QualType R = TransformType(T->desugar());
+      TLB.pushTrivial(getSema().getASTContext(), R, TL.getBeginLoc());
+      return R;
+    }
+
+    UnsignedOrNone ComputeSizeOfPackExprWithoutSubstitution(
+        ArrayRef<TemplateArgument> PackArgs) {
+      // Don't do this when rewriting template parameters for CTAD:
+      //   1) The heuristic needs the unpacked Subst* nodes to figure out the
+      //   expanded size, but this never applies since Subst* nodes are not
+      //   created in rewrite scenarios.
+      //
+      //   2) The heuristic substitutes into the pattern with pack expansion
+      //   suppressed, which does not meet the requirements for argument
+      //   rewriting when template arguments include a non-pack matching against
+      //   a pack, particularly when rewriting an alias CTAD.
+      if (TemplateArgs.isRewrite())
+        return std::nullopt;
+
+      return inherited::ComputeSizeOfPackExprWithoutSubstitution(PackArgs);
+    }
+
+    template<typename Fn>
+    QualType TransformFunctionProtoType(TypeLocBuilder &TLB,
+                                        FunctionProtoTypeLoc TL,
+                                        CXXRecordDecl *ThisContext,
+                                        Qualifiers ThisTypeQuals,
+                                        Fn TransformExceptionSpec);
+
+    ParmVarDecl *TransformFunctionTypeParam(ParmVarDecl *OldParm,
+                                            int indexAdjustment,
+                                            UnsignedOrNone NumExpansions,
+                                            bool ExpectParameterPack);
+
+    using inherited::TransformTemplateTypeParmType;
+    /// Transforms a template type parameter type by performing
+    /// substitution of the corresponding template type argument.
+    QualType TransformTemplateTypeParmType(TypeLocBuilder &TLB,
+                                           TemplateTypeParmTypeLoc TL,
+                                           bool SuppressObjCLifetime);
+
+    QualType BuildSubstTemplateTypeParmType(
+        TypeLocBuilder &TLB, bool SuppressObjCLifetime, bool Final,
+        Decl *AssociatedDecl, unsigned Index, UnsignedOrNone PackIndex,
+        TemplateArgument Arg, SourceLocation NameLoc);
+
+    /// Transforms an already-substituted template type parameter pack
+    /// into either itself (if we aren't substituting into its pack expansion)
+    /// or the appropriate substituted argument.
+    using inherited::TransformSubstTemplateTypeParmPackType;
+    QualType
+    TransformSubstTemplateTypeParmPackType(TypeLocBuilder &TLB,
+                                           SubstTemplateTypeParmPackTypeLoc TL,
+                                           bool SuppressObjCLifetime);
+    QualType
+    TransformSubstBuiltinTemplatePackType(TypeLocBuilder &TLB,
+                                          SubstBuiltinTemplatePackTypeLoc TL);
+
+    CXXRecordDecl::LambdaDependencyKind
+    ComputeLambdaDependency(LambdaScopeInfo *LSI) {
+      if (auto TypeAlias =
+              TemplateInstArgsHelpers::getEnclosingTypeAliasTemplateDecl(
+                  getSema());
+          TypeAlias && TemplateInstArgsHelpers::isLambdaEnclosedByTypeAliasDecl(
+                           LSI->CallOperator, TypeAlias.PrimaryTypeAliasDecl)) {
+        unsigned TypeAliasDeclDepth = TypeAlias.Template->getTemplateDepth();
+        if (TypeAliasDeclDepth >= TemplateArgs.getNumSubstitutedLevels())
+          return CXXRecordDecl::LambdaDependencyKind::LDK_AlwaysDependent;
+        for (const TemplateArgument &TA : TypeAlias.AssociatedTemplateArguments)
+          if (TA.isDependent())
+            return CXXRecordDecl::LambdaDependencyKind::LDK_AlwaysDependent;
+      }
+      return inherited::ComputeLambdaDependency(LSI);
+    }
+
+    ExprResult TransformLambdaExpr(LambdaExpr *E) {
+      // Do not rebuild lambdas to avoid creating a new type.
+      // Lambdas have already been processed inside their eval contexts.
+      if (SemaRef.RebuildingImmediateInvocation)
+        return E;
+      LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true,
+                                    /*InstantiatingLambdaOrBlock=*/true);
+      Sema::ConstraintEvalRAII<TemplateInstantiator> RAII(*this);
+
+      return inherited::TransformLambdaExpr(E);
+    }
+
+    ExprResult TransformBlockExpr(BlockExpr *E) {
+      LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true,
+                                    /*InstantiatingLambdaOrBlock=*/true);
+      return inherited::TransformBlockExpr(E);
+    }
+
+    ExprResult RebuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
+                                 LambdaScopeInfo *LSI) {
+      CXXMethodDecl *MD = LSI->CallOperator;
+      for (ParmVarDecl *PVD : MD->parameters()) {
+        assert(PVD && "null in a parameter list");
+        if (!PVD->hasDefaultArg())
+          continue;
+        Expr *UninstExpr = PVD->getUninstantiatedDefaultArg();
+        // FIXME: Obtain the source location for the '=' token.
+        SourceLocation EqualLoc = UninstExpr->getBeginLoc();
+        if (SemaRef.SubstDefaultArgument(EqualLoc, PVD, TemplateArgs)) {
+          // If substitution fails, the default argument is set to a
+          // RecoveryExpr that wraps the uninstantiated default argument so
+          // that downstream diagnostics are omitted.
+          ExprResult ErrorResult = SemaRef.CreateRecoveryExpr(
+              UninstExpr->getBeginLoc(), UninstExpr->getEndLoc(), {UninstExpr},
+              UninstExpr->getType());
+          if (ErrorResult.isUsable())
+            PVD->setDefaultArg(ErrorResult.get());
+        }
+      }
+      return inherited::RebuildLambdaExpr(StartLoc, EndLoc, LSI);
+    }
+
+    StmtResult TransformLambdaBody(LambdaExpr *E, Stmt *Body) {
+      // Currently, we instantiate the body when instantiating the lambda
+      // expression. However, `EvaluateConstraints` is disabled during the
+      // instantiation of the lambda expression, causing the instantiation
+      // failure of the return type requirement in the body. If p0588r1 is fully
+      // implemented, the body will be lazily instantiated, and this problem
+      // will not occur. Here, `EvaluateConstraints` is temporarily set to
+      // `true` to temporarily fix this issue.
+      // FIXME: This temporary fix can be removed after fully implementing
+      // p0588r1.
+      llvm::SaveAndRestore _(EvaluateConstraints, true);
+      return inherited::TransformLambdaBody(E, Body);
+    }
+
+    ExprResult TransformRequiresExpr(RequiresExpr *E) {
+      LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true);
+      ExprResult TransReq = inherited::TransformRequiresExpr(E);
+      if (TransReq.isInvalid())
+        return TransReq;
+      assert(TransReq.get() != E &&
+             "Do not change value of isSatisfied for the existing expression. "
+             "Create a new expression instead.");
+      if (E->getBody()->isDependentContext()) {
+        Sema::SFINAETrap Trap(SemaRef);
+        // We recreate the RequiresExpr body, but not by instantiating it.
+        // Produce pending diagnostics for dependent access check.
+        SemaRef.PerformDependentDiagnostics(E->getBody(), TemplateArgs);
+        // FIXME: Store SFINAE diagnostics in RequiresExpr for diagnosis.
+        if (Trap.hasErrorOccurred())
+          TransReq.getAs<RequiresExpr>()->setSatisfied(false);
+      }
+      return TransReq;
+    }
+
+    bool TransformRequiresExprRequirements(
+        ArrayRef<concepts::Requirement *> Reqs,
+        SmallVectorImpl<concepts::Requirement *> &Transformed) {
+      bool SatisfactionDetermined = false;
+      for (concepts::Requirement *Req : Reqs) {
+        concepts::Requirement *TransReq = nullptr;
+        if (!SatisfactionDetermined) {
+          if (auto *TypeReq = dyn_cast<concepts::TypeRequirement>(Req))
+            TransReq = TransformTypeRequirement(TypeReq);
+          else if (auto *ExprReq = dyn_cast<concepts::ExprRequirement>(Req))
+            TransReq = TransformExprRequirement(ExprReq);
+          else
+            TransReq = TransformNestedRequirement(
+                cast<concepts::NestedRequirement>(Req));
+          if (!TransReq)
+            return true;
+          if (!TransReq->isDependent() && !TransReq->isSatisfied())
+            // [expr.prim.req]p6
+            //   [...]  The substitution and semantic constraint checking
+            //   proceeds in lexical order and stops when a condition that
+            //   determines the result of the requires-expression is
+            //   encountered. [..]
+            SatisfactionDetermined = true;
+        } else
+          TransReq = Req;
+        Transformed.push_back(TransReq);
+      }
+      return false;
+    }
+
+    TemplateParameterList *TransformTemplateParameterList(
+                              TemplateParameterList *OrigTPL)  {
+      if (!OrigTPL || !OrigTPL->size()) return OrigTPL;
+
+      DeclContext *Owner = OrigTPL->getParam(0)->getDeclContext();
+      TemplateDeclInstantiator  DeclInstantiator(getSema(),
+                        /* DeclContext *Owner */ Owner, TemplateArgs);
+      DeclInstantiator.setEvaluateConstraints(EvaluateConstraints);
+      return DeclInstantiator.SubstTemplateParams(OrigTPL);
+    }
+
+    concepts::TypeRequirement *
+    TransformTypeRequirement(concepts::TypeRequirement *Req);
+    concepts::ExprRequirement *
+    TransformExprRequirement(concepts::ExprRequirement *Req);
+    concepts::NestedRequirement *
+    TransformNestedRequirement(concepts::NestedRequirement *Req);
+    ExprResult TransformRequiresTypeParams(
+        SourceLocation KWLoc, SourceLocation RBraceLoc, const RequiresExpr *RE,
+        RequiresExprBodyDecl *Body, ArrayRef<ParmVarDecl *> Params,
+        SmallVectorImpl<QualType> &PTypes,
+        SmallVectorImpl<ParmVarDecl *> &TransParams,
+        Sema::ExtParameterInfoBuilder &PInfos);
+
+  private:
+    ExprResult
+    transformNonTypeTemplateParmRef(Decl *AssociatedDecl, const NamedDecl *parm,
+                                    SourceLocation loc, TemplateArgument arg,
+                                    UnsignedOrNone PackIndex, bool Final);
+  };
+}
 
 bool TemplateInstantiator::AlreadyTransformed(QualType T) {
   if (T.isNull())
