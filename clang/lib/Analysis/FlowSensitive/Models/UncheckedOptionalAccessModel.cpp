@@ -982,6 +982,20 @@ auto buildTransferMatchSwitch() {
           isOptionalMemberCallWithNameMatcher(hasName("isNull")),
           transferOptionalIsNullCall)
 
+      // NullableValue::makeValue, NullableValue::makeValueInplace
+      // Only NullableValue has these methods, but this
+      // will also pass for other types
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isOptionalMemberCallWithNameMatcher(
+              hasAnyName("makeValue", "makeValueInplace")),
+          [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
+             LatticeTransferState &State) {
+            if (RecordStorageLocation *Loc =
+                    getImplicitObjectLocation(*E, State.Env)) {
+              setHasValue(*Loc, State.Env.getBoolLiteralValue(true), State.Env);
+            }
+          })
+
       // optional::emplace
       .CaseOfCFGStmt<CXXMemberCallExpr>(
           isOptionalMemberCallWithNameMatcher(hasName("emplace")),
