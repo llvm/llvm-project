@@ -5,7 +5,8 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 
-// REQUIRES: shell
+// Needs symlinks
+// UNSUPPORTED: system-windows
 
 // RUN: mkdir -p %t/frameworks-symlink
 // RUN: ln -s %t/frameworks/FW.framework %t/frameworks-symlink/FW.framework

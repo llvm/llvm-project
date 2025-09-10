@@ -1,4 +1,5 @@
-// REQUIRES: shell
+// Needs symlinks
+// UNSUPPORTED: system-windows
 // REQUIRES: x86-registered-target
 
 // RUN: rm -rf %t && mkdir %t
