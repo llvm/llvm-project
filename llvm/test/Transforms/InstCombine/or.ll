@@ -2073,7 +2073,7 @@ define i32 @or_zext_minus_constant(i8 %a) {
 define i32 @or_zext_nneg_constant(i8 %a) {
 ; CHECK-LABEL: @or_zext_nneg_constant(
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[A:%.*]], 9
-; CHECK-NEXT:    [[AND:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = zext nneg i8 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %zext = zext nneg i8 %a to i32
@@ -2084,7 +2084,7 @@ define i32 @or_zext_nneg_constant(i8 %a) {
 define <4 x i32> @or_zext_nneg_constant_splat(<4 x i8> %a) {
 ; CHECK-LABEL: @or_zext_nneg_constant_splat(
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i8> [[A:%.*]], splat (i8 9)
-; CHECK-NEXT:    [[OR:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    [[OR:%.*]] = zext nneg <4 x i8> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[OR]]
 ;
   %zext = zext nneg <4 x i8> %a to <4 x i32>
