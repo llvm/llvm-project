@@ -364,6 +364,24 @@ HasExplicitOwnershipAttr(Sema &S, ParmVarDecl *Param) {
   return !T.getLocalQualifiers().hasObjCLifetime();
 }
 
+/// Helper function to copy domain availability attributes on methods in the
+/// class interfaces or categories to methods in the implementations.
+static void copyDomainAvailabilityAttr(ObjCMethodDecl *MD, Sema &SemaRef) {
+  ObjCContainerDecl *CD = nullptr;
+
+  if (ObjCCategoryDecl *CatD = MD->getCategory())
+    CD = CatD;
+  else if (ObjCInterfaceDecl *ID = MD->getClassInterface())
+    CD = ID;
+
+  if (!CD)
+    return;
+
+  if (ObjCMethodDecl *IDecl =
+          CD->getMethod(MD->getSelector(), MD->isInstanceMethod()))
+    SemaRef.copyFeatureAvailabilityCheck(MD, IDecl, true);
+}
+
 /// ActOnStartOfObjCMethodDef - This routine sets up parameters; invisible
 /// and user declared, in the method definition's AST.
 void SemaObjC::ActOnStartOfObjCMethodDef(Scope *FnBodyScope, Decl *D) {
@@ -378,6 +396,8 @@ void SemaObjC::ActOnStartOfObjCMethodDef(Scope *FnBodyScope, Decl *D) {
   // If we don't have a valid method decl, simply return.
   if (!MDecl)
     return;
+
+  copyDomainAvailabilityAttr(MDecl, SemaRef);
 
   QualType ResultType = MDecl->getReturnType();
   if (!ResultType->isDependentType() && !ResultType->isVoidType() &&

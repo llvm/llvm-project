@@ -176,3 +176,30 @@ __attribute__((availability(domain:feature1, UNAVAIL)))
 @end
 
 void foo(id<P1>); // expected-error {{use of 'P1' requires feature 'feature1' to be unavailable}}
+
+@interface Base8
+@property (copy) id x;
+@end
+
+__attribute__((availability(domain:feature1, AVAIL)))
+@interface Derived8 : Base8
+@property (copy) id x;
+@end
+
+@interface Base9
+-(void)m4 __attribute__((availability(domain:feature1, AVAIL)));
+@end
+
+@interface Derived9 : Base9
+-(void)m4;
+@end
+
+@implementation Derived9 : Base9
+-(void)m4 {
+  // Check that this method doesn't inherit the domain availablity attribute
+  // from the base class method.
+  func1(); // expected-error {{use of 'func1' requires feature 'feature1' to be available}}
+
+  [super m4]; // expected-error {{use of 'm4' requires feature 'feature1' to be available}}
+}
+@end

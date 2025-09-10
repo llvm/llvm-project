@@ -202,7 +202,7 @@ __attribute__((availability(domain:feature2, AVAIL)))
 @implementation C3
 -(void)p1_m1 {
 }
--(void)unavailable_p2_m2 {
+-(void)unavailable_p2_m2 __attribute__((availability(domain:feature2, AVAIL))) {
   unavailable_func1();
 }
 +(void)cm0 {
