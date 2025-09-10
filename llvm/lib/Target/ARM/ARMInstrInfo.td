@@ -206,7 +206,7 @@ def ARMBcci64        : SDNode<"ARMISD::BCC_i64", SDT_ARMBCC_i64,
 
 def ARMcmp           : SDNode<"ARMISD::CMP", SDT_ARMCmp>;
 
-def ARMcmn           : SDNode<"ARMISD::CMN", SDT_ARMCmp>;
+def ARMcmn           : SDNode<"ARMISD::CMN", SDT_ARMCmp, [SDNPCommutative]>;
 
 def ARMcmpZ          : SDNode<"ARMISD::CMPZ", SDT_ARMCmp, [SDNPCommutative]>;
 
