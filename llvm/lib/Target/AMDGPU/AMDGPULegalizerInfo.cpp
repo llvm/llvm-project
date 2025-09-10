@@ -7797,7 +7797,7 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.removeOperand(1);
     Observer.changedInstr(MI);
     return true;
-  }`
+  }
   case Intrinsic::amdgcn_smed3: {
     GISelChangeObserver &Observer = Helper.Observer;
 

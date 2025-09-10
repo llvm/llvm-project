@@ -456,7 +456,7 @@ static Value *matchSExtFromI16(Value *Arg) {
       return Src;
   } else if (match(Arg, m_ConstantInt(CInt))) {
     // Check if the constant fits in i16
-    if (CInt->getValue().getMinSignedBits() <= 16)
+    if (CInt->getValue().getActiveBits() <= 16)
       return ConstantInt::get(Type::getInt16Ty(Arg->getContext()), CInt->getValue().trunc(16));
   }
   return nullptr;

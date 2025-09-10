@@ -1305,7 +1305,7 @@ def ROCDL_Med3F16Op : ROCDL_ConcreteNonMemIntrOp<"med3.f16", [Pure], 1>,
     $src0 `,` $src1 `,` $src2 attr-dict `:` `(` type($src0) `,` type($src1) `,` type($src2) `)` `->` type($res)
   }];
   string llvmBuilder = [{
-    $res = createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_med3_f16, {$src0, $src1, $src2});
+    $res = createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_fmed3, {$src0, $src1, $src2}, {moduleTranslation.convertType(op.getSrc0().getType())});
   }];
 }
 
@@ -1319,7 +1319,7 @@ def ROCDL_Med3F32Op : ROCDL_ConcreteNonMemIntrOp<"med3.f32", [Pure], 1>,
     $src0 `,` $src1 `,` $src2 attr-dict `:` `(` type($src0) `,` type($src1) `,` type($src2) `)` `->` type($res)
   }];
   string llvmBuilder = [{
-    $res = createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_med3_f32, {$src0, $src1, $src2});
+    $res = createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_fmed3, {$src0, $src1, $src2}, {moduleTranslation.convertType(op.getSrc0().getType())});
   }];
 }
 
@@ -1333,7 +1333,7 @@ def ROCDL_Med3I16Op : ROCDL_ConcreteNonMemIntrOp<"med3.i16", [Pure], 1>,
     $src0 `,` $src1 `,` $src2 attr-dict `:` `(` type($src0) `,` type($src1) `,` type($src2) `)` `->` type($res)
   }];
   string llvmBuilder = [{
-    $res = createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_smed3, {$src0, $src1, $src2});
+    $res = createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_smed3, {$src0, $src1, $src2}, {moduleTranslation.convertType(op.getSrc0().getType())});
   }];
 }
 
@@ -1347,7 +1347,7 @@ def ROCDL_Med3I32Op : ROCDL_ConcreteNonMemIntrOp<"med3.i32", [Pure], 1>,
     $src0 `,` $src1 `,` $src2 attr-dict `:` `(` type($src0) `,` type($src1) `,` type($src2) `)` `->` type($res)
   }];
   string llvmBuilder = [{
-    $res = createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_smed3, {$src0, $src1, $src2});
+    $res = createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_smed3, {$src0, $src1, $src2}, {moduleTranslation.convertType(op.getSrc0().getType())});
   }];
 }
 
@@ -1361,7 +1361,7 @@ def ROCDL_Med3U16Op : ROCDL_ConcreteNonMemIntrOp<"med3.u16", [Pure], 1>,
     $src0 `,` $src1 `,` $src2 attr-dict `:` `(` type($src0) `,` type($src1) `,` type($src2) `)` `->` type($res)
   }];
   string llvmBuilder = [{
-    $res = createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_umed3, {$src0, $src1, $src2});
+    $res = createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_umed3, {$src0, $src1, $src2}, {moduleTranslation.convertType(op.getSrc0().getType())});
   }];
 }
 
@@ -1375,7 +1375,7 @@ def ROCDL_Med3U32Op : ROCDL_ConcreteNonMemIntrOp<"med3.u32", [Pure], 1>,
     $src0 `,` $src1 `,` $src2 attr-dict `:` `(` type($src0) `,` type($src1) `,` type($src2) `)` `->` type($res)
   }];
   string llvmBuilder = [{
-    $res = createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_umed3, {$src0, $src1, $src2});
+    $res = createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_umed3, {$src0, $src1, $src2}, {moduleTranslation.convertType(op.getSrc0().getType())});
   }];
 }
 
