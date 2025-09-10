@@ -838,9 +838,9 @@ define i1 @gep_mugtiple_ugt_not_all_nuw(ptr %base, i64 %idx, i64 %idx2) {
 
 define i1 @gep_mugtiple_ugt_inbounds_nusw(ptr %base, i64 %idx, i64 %idx2) {
 ; CHECK-LABEL: @gep_mugtiple_ugt_inbounds_nusw(
-; CHECK-NEXT:    [[GEP1_IDX1:%.*]] = add i64 [[IDX:%.*]], [[IDX2:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[GEP1_IDX1]], 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[TMP1]], 0
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[BASE:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr nusw i32, ptr [[GEP1]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt ptr [[GEP2]], [[BASE]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep1 = getelementptr inbounds i32, ptr %base, i64 %idx

@@ -24033,8 +24033,7 @@ indexed by ``i``,  and ``%base``, ``%n`` are the two arguments to
 ``llvm.get.active.lane.mask.*``, ``%icmp`` is an integer compare and ``ult``
 the unsigned less-than comparison operator.  Overflow cannot occur in
 ``(%base + i)`` and its comparison against ``%n`` as it is performed in integer
-numbers and not in machine numbers.  If ``%n`` is ``0``, then the result is a
-poison value. The above is equivalent to:
+numbers and not in machine numbers.  The above is equivalent to:
 
 ::
 

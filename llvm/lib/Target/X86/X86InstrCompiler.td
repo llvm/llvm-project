@@ -1326,7 +1326,11 @@ def : Pat<(X86imp_call (i64 tglobaladdr:$dst)),
 // Match an X86tcret that uses less than 7 volatile registers.
 def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
           (TCRETURNri ptr_rc_tailcall:$dst, timm:$off)>,
-          Requires<[Not64BitMode, NotUseIndirectThunkCalls]>;
+          Requires<[Not64BitMode, IsNotHiPECCFunc, NotUseIndirectThunkCalls]>;
+
+def : Pat<(X86tcret GR32:$dst, timm:$off),
+          (TCRETURN_HIPE32ri GR32:$dst, timm:$off)>,
+          Requires<[Not64BitMode, IsHiPECCFunc, NotUseIndirectThunkCalls]>;
 
 // FIXME: This is disabled for 32-bit PIC mode because the global base
 // register which is part of the address mode may be assigned a
@@ -1346,7 +1350,11 @@ def : Pat<(X86tcret (i32 texternalsym:$dst), timm:$off),
 
 def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
           (TCRETURNri64 ptr_rc_tailcall:$dst, timm:$off)>,
-          Requires<[In64BitMode, NotUseIndirectThunkCalls, ImportCallOptimizationDisabled]>;
+          Requires<[In64BitMode, IsNotWin64CCFunc, NotUseIndirectThunkCalls, ImportCallOptimizationDisabled]>;
+
+def : Pat<(X86tcret GR64_TCW64:$dst, timm:$off),
+          (TCRETURN_WIN64ri GR64_TCW64:$dst, timm:$off)>,
+          Requires<[IsWin64CCFunc, NotUseIndirectThunkCalls, ImportCallOptimizationDisabled]>;
 
 def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
           (TCRETURNri64_ImpCall ptr_rc_tailcall:$dst, timm:$off)>,
