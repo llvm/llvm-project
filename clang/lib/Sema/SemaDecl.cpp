@@ -8513,18 +8513,15 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
       }
       // Apply scoping logic to both VarDecl and BindingDecl with local storage
       if (isa<VarDecl, BindingDecl>(ShadowedDecl)) {
-        bool hasLocalStorage = false;
+        bool HasLocalStorage = false;
         if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl)) {
-          hasLocalStorage = VD->hasLocalStorage();
-        } else {
-          // For BindingDecl, apply the same logic as
-          // VarDecl::hasLocalStorage(): local storage means not at file context
-          hasLocalStorage = !ShadowedDecl->getLexicalDeclContext()
-                                 ->getRedeclContext()
-                                 ->isFileContext();
+          HasLocalStorage = VD->hasLocalStorage();
+        } else if (const auto *BD = dyn_cast<BindingDecl>(ShadowedDecl)) {
+          HasLocalStorage =
+              cast<VarDecl>(BD->getDecomposedDecl())->hasLocalStorage();
         }
 
-        if (hasLocalStorage) {
+        if (HasLocalStorage) {
           // A variable can't shadow a local variable or binding in an enclosing
           // scope, if they are separated by a non-capturing declaration
           // context.
