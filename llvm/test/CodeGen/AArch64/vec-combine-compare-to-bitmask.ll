@@ -851,15 +851,15 @@ define i6 @no_combine_illegal_num_elements(<6 x i32> %vec) {
 ; CHECK-GI-NEXT:    sub sp, sp, #16
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-GI-NEXT:    fmov s1, w0
-; CHECK-GI-NEXT:    fmov s0, wzr
+; CHECK-GI-NEXT:    movi d0, #0000000000000000
 ; CHECK-GI-NEXT:    fmov s2, w4
 ; CHECK-GI-NEXT:    mov.s v1[1], w1
 ; CHECK-GI-NEXT:    mov.s v2[1], w5
 ; CHECK-GI-NEXT:    mov.s v0[1], wzr
 ; CHECK-GI-NEXT:    mov.s v1[2], w2
 ; CHECK-GI-NEXT:    cmeq.4s v0, v2, v0
-; CHECK-GI-NEXT:    mvn.16b v0, v0
 ; CHECK-GI-NEXT:    mov.s v1[3], w3
+; CHECK-GI-NEXT:    mvn.16b v0, v0
 ; CHECK-GI-NEXT:    cmtst.4s v1, v1, v1
 ; CHECK-GI-NEXT:    mov.s w8, v1[1]
 ; CHECK-GI-NEXT:    mov.s w9, v1[2]
