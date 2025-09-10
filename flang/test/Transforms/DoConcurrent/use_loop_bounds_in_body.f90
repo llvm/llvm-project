@@ -16,8 +16,13 @@ subroutine foo(a, n)
   end do
 end subroutine 
 
-! CHECK: omp.target host_eval(%{{.*}} -> %{{.*}}, %{{.*}} -> %[[N_HOST_EVAL:.*]], %{{.*}} -> %{{.*}} : {{.*}}) map_entries({{.*}}) {
-! CHECK:   %[[N_MAPPED:.*]]:2 = hlfir.declare %arg{{.*}} {uniq_name = "_QFfooEn"}
+! CHECK-LABEL: func.func @_QPfoo
+! CHECK: omp.target
+! CHECK-SAME: host_eval(%{{.*}} -> %{{.*}}, %{{.*}} -> %[[N_HOST_EVAL:.*]], %{{.*}} -> %{{.*}} : index, index, index)
+! CHECK-SAME: map_entries({{[^[:space:]]*}} -> {{[^[:space:]]*}},
+! CHECK-SAME:   {{[^[:space:]]*}} -> {{[^[:space:]]*}}, {{[^[:space:]]*}} -> {{[^[:space:]]*}},
+! CHECK-SAME:   {{[^[:space:]]*}} -> {{[^[:space:]]*}}, {{[^[:space:]]*}} -> %[[N_MAP_ARG:[^[:space:]]*]], {{.*}}) {
+! CHECK:   %[[N_MAPPED:.*]]:2 = hlfir.declare %[[N_MAP_ARG]] {uniq_name = "_QFfooEn"}
 ! CHECK:   omp.teams {
 ! CHECK:     omp.parallel {
 ! CHECK:       omp.distribute {
