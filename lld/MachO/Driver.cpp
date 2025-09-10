@@ -53,6 +53,10 @@
 #include "llvm/TextAPI/Architecture.h"
 #include "llvm/TextAPI/PackedVersion.h"
 
+#if !_WIN32
+#include <sys/mman.h>
+#endif
+
 using namespace llvm;
 using namespace llvm::MachO;
 using namespace llvm::object;
@@ -334,11 +338,10 @@ public:
 // This code forces the page-ins on multiple threads so
 // the process is not stalled waiting on disk buffer i/o.
 void multiThreadedPageInBackground(DeferredFiles &deferred) {
-  static const size_t pageSize = Process::getPageSizeEstimate();
   static const size_t largeArchive = 10 * 1024 * 1024;
 #ifndef NDEBUG
   using namespace std::chrono;
-  std::atomic_int numDeferedFilesTouched = 0;
+  std::atomic_int numDeferedFilesAdvised = 0;
   static std::atomic_uint64_t totalBytes = 0;
   auto t0 = high_resolution_clock::now();
 #endif
@@ -349,13 +352,19 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
       return;
 #ifndef NDEBUG
     totalBytes += buff.size();
-    numDeferedFilesTouched += 1;
+    numDeferedFilesAdvised += 1;
 #endif
 
+#if _WIN32
+    static const size_t pageSize = Process::getPageSizeEstimate();
     // Reference all file's mmap'd pages to load them into memory.
     for (const char *page = buff.data(), *end = page + buff.size(); page < end;
          page += pageSize)
       LLVM_ATTRIBUTE_UNUSED volatile char t = *page;
+#else
+    // Advise that mmap'd files should be loaded into memory.
+    madvise((void *)buff.data(), buff.size(), MADV_WILLNEED);
+#endif
   };
 #if LLVM_ENABLE_THREADS
   { // Create scope for waiting for the taskGroup
@@ -376,7 +385,7 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
   auto dt = high_resolution_clock::now() - t0;
   if (Process::GetEnv("LLD_MULTI_THREAD_PAGE"))
     llvm::dbgs() << "multiThreadedPageIn " << totalBytes << "/"
-                 << numDeferedFilesTouched << "/" << deferred.size() << "/"
+                 << numDeferedFilesAdvised << "/" << deferred.size() << "/"
                  << duration_cast<milliseconds>(dt).count() / 1000. << "\n";
 #endif
 }
