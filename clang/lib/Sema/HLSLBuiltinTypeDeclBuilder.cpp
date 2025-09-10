@@ -166,9 +166,9 @@ public:
   template <typename T> BuiltinTypeMethodBuilder &dereference(T Ptr);
   template <typename T>
   BuiltinTypeMethodBuilder &accessHandleFieldOnResource(T ResourceRecord);
-  template <typename TResource, typename TValue>
-  BuiltinTypeMethodBuilder &setHandleFieldOnResource(TResource ResourceRecord,
-                                                     TValue HandleValue);
+  template <typename ResourceT, typename ValueT>
+  BuiltinTypeMethodBuilder &setHandleFieldOnResource(ResourceT ResourceRecord,
+                                                     ValueT HandleValue);
   template <typename T> BuiltinTypeMethodBuilder &returnValue(T ReturnValue);
   BuiltinTypeMethodBuilder &returnThis();
   BuiltinTypeDeclBuilder &finalize();
@@ -552,10 +552,10 @@ BuiltinTypeMethodBuilder::accessHandleFieldOnResource(T ResourceRecord) {
   return *this;
 }
 
-template <typename TResource, typename TValue>
+template <typename ResourceT, typename ValueT>
 BuiltinTypeMethodBuilder &
-BuiltinTypeMethodBuilder::setHandleFieldOnResource(TResource ResourceRecord,
-                                                   TValue HandleValue) {
+BuiltinTypeMethodBuilder::setHandleFieldOnResource(ResourceT ResourceRecord,
+                                                   ValueT HandleValue) {
   ensureCompleteDecl();
 
   Expr *ResourceExpr = convertPlaceholder(ResourceRecord);
