@@ -21,7 +21,8 @@ namespace detail {
 
 template <typename Fn> class ScopeExitRunner {
 public:
-  ScopeExitRunner(Fn &&F) : F(F) {}
+  template <typename FnInit>
+  ScopeExitRunner(FnInit &&F) : F(std::forward<FnInit>(F)) {}
   ScopeExitRunner(const ScopeExitRunner &) = delete;
   ScopeExitRunner &operator=(const ScopeExitRunner &) = delete;
   ScopeExitRunner(ScopeExitRunner &&) = delete;
