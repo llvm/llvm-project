@@ -999,6 +999,7 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 unsigned X86RegisterInfo::findDeadCallerSavedReg(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI) const {
   const MachineFunction *MF = MBB.getParent();
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
   if (MF->callsEHReturn())
     return 0;
 
@@ -1030,7 +1031,7 @@ unsigned X86RegisterInfo::findDeadCallerSavedReg(
     const TargetRegisterClass &RC =
         Is64Bit ? X86::GR64_NOSPRegClass : X86::GR32_NOSPRegClass;
     for (MCRegister Reg : RC) {
-      if (LRU.available(Reg))
+      if (LRU.available(Reg) && !MRI.isReserved(Reg))
         return Reg;
     }
   }
