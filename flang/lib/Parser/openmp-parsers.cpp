@@ -1108,8 +1108,9 @@ TYPE_PARSER( //
                        parenthesized(Parser<OmpGrainsizeClause>{}))) ||
     "GRAPH_ID" >> construct<OmpClause>(construct<OmpClause::GraphId>(
                       parenthesized(Parser<OmpGraphIdClause>{}))) ||
-    "GRAPH_RESET" >> construct<OmpClause>(construct<OmpClause::GraphReset>(
-                         parenthesized(Parser<OmpGraphResetClause>{}))) ||
+    "GRAPH_RESET" >>
+        construct<OmpClause>(construct<OmpClause::GraphReset>(
+            maybe(parenthesized(Parser<OmpGraphResetClause>{})))) ||
     "HAS_DEVICE_ADDR" >>
         construct<OmpClause>(construct<OmpClause::HasDeviceAddr>(
             parenthesized(Parser<OmpObjectList>{}))) ||

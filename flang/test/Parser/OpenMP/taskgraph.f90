@@ -71,3 +71,25 @@ end
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = taskgraph
 !PARSE-TREE: | | OmpClauseList ->
 !PARSE-TREE: | | Flags = None
+
+
+subroutine f02
+  !$omp taskgraph graph_reset
+  !$omp end taskgraph
+end
+
+!UNPARSE: SUBROUTINE f02
+!UNPARSE: !$OMP TASKGRAPH GRAPH_RESET
+!UNPARSE: !$OMP END TASKGRAPH
+!UNPARSE: END SUBROUTINE
+
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
+!PARSE-TREE: | OmpBeginDirective
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = taskgraph
+!PARSE-TREE: | | OmpClauseList -> OmpClause -> GraphReset ->
+!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | Block
+!PARSE-TREE: | OmpEndDirective
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = taskgraph
+!PARSE-TREE: | | OmpClauseList ->
+!PARSE-TREE: | | Flags = None

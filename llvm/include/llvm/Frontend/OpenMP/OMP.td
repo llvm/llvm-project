@@ -231,6 +231,7 @@ def OMPC_GraphId : Clause<[Spelling<"graph_id">]> {
 }
 def OMPC_GraphReset : Clause<[Spelling<"graph_reset">]> {
   let flangClass = "OmpGraphResetClause";
+  let isValueOptional = true;
 }
 def OMPC_HasDeviceAddr : Clause<[Spelling<"has_device_addr">]> {
   let clangClass = "OMPHasDeviceAddrClause";
