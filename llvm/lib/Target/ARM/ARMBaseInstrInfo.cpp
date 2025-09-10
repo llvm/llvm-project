@@ -1699,6 +1699,79 @@ void ARMBaseInstrInfo::expandMEMCPY(MachineBasicBlock::iterator MI) const {
   BB->erase(MI);
 }
 
+// Expands the ctselect pseudo for vector operands, post-RA.
+bool ARMBaseInstrInfo::expandCtSelectVector(MachineInstr &MI) const {
+  MachineBasicBlock *MBB = MI.getParent();
+  DebugLoc DL = MI.getDebugLoc();
+
+  Register DestReg = MI.getOperand(0).getReg();
+  Register MaskReg = MI.getOperand(1).getReg();
+
+  // These operations will differ by operand register size.
+  unsigned AndOp = ARM::VANDd;
+  unsigned BicOp = ARM::VBICd;
+  unsigned OrrOp = ARM::VORRd;
+  unsigned BroadcastOp = ARM::VDUP32d;
+
+  const TargetRegisterInfo *TRI = &getRegisterInfo();
+  const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(DestReg);
+
+  if (ARM::QPRRegClass.hasSubClassEq(RC)) {
+    AndOp = ARM::VANDq;
+    BicOp = ARM::VBICq;
+    OrrOp = ARM::VORRq;
+    BroadcastOp = ARM::VDUP32q;
+  }
+
+  // Any vector pseudo has: ((outs $dst, $tmp_mask, $bcast_mask), (ins $src1, $src2, $cond))
+  Register VectorMaskReg = MI.getOperand(2).getReg(); 
+  Register Src1Reg = MI.getOperand(3).getReg();
+  Register Src2Reg = MI.getOperand(4).getReg();
+  Register CondReg = MI.getOperand(5).getReg();
+
+  // The following sequence of steps yields: (src1 & mask) | (src2 & ~mask)
+
+  // 1. mask = 0 - cond
+  // When cond = 0: mask = 0x00000000.
+  // When cond = 1: mask = 0xFFFFFFFF.
+  BuildMI(*MBB, MI, DL, get(ARM::RSBri), MaskReg)
+    .addReg(CondReg)
+    .addImm(0)
+    .add(predOps(ARMCC::AL))
+    .add(condCodeOp())
+    .setMIFlag(MachineInstr::MIFlag::NoMerge);
+  
+  // 2. A = src1 & mask
+  // For vectors, broadcast the scalar mask so it matches operand size.
+  BuildMI(*MBB, MI, DL, get(BroadcastOp), VectorMaskReg)
+    .addReg(MaskReg)
+    .add(predOps(ARMCC::AL))
+    .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  BuildMI(*MBB, MI, DL, get(AndOp), DestReg)
+    .addReg(Src1Reg)
+    .addReg(VectorMaskReg)
+    .add(predOps(ARMCC::AL))
+    .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // 3. B = src2 & ~mask
+  BuildMI(*MBB, MI, DL, get(BicOp), VectorMaskReg)
+    .addReg(Src2Reg)
+    .addReg(VectorMaskReg)
+    .add(predOps(ARMCC::AL))
+    .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // 4. result = A | B
+  BuildMI(*MBB, MI, DL, get(OrrOp), DestReg)
+    .addReg(DestReg)
+    .addReg(VectorMaskReg)
+    .add(predOps(ARMCC::AL))
+    .setMIFlag(MachineInstr::MIFlag::NoMerge);
+  
+  MI.eraseFromParent();
+  return true;
+}
+
 // Expands the ctselect pseudo, post-RA.
 bool ARMBaseInstrInfo::expandCtSelect(MachineInstr &MI) const {
   MachineBasicBlock *MBB = MI.getParent();
@@ -1706,39 +1779,14 @@ bool ARMBaseInstrInfo::expandCtSelect(MachineInstr &MI) const {
 
   Register DestReg = MI.getOperand(0).getReg();
   Register MaskReg = MI.getOperand(1).getReg();
-  const TargetRegisterInfo *TRI = &getRegisterInfo();
-  const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(DestReg);
-
   Register DestRegSavedRef = DestReg;
-  Register VectorMaskReg = 0;
   Register Src1Reg, Src2Reg, CondReg;
 
   // These operations will differ by operand register size.
   unsigned AndOp = ARM::ANDrr;
   unsigned BicOp = ARM::BICrr;
   unsigned OrrOp = ARM::ORRrr;
-  unsigned BroadcastOp = ARM::VDUP32d;
-
   unsigned Opcode = MI.getOpcode();
-  bool IsVector = false;
-  
-  if (ARM::QPRRegClass.hasSubClassEq(RC)) {
-    AndOp = ARM::VANDq;
-    BicOp = ARM::VBICq;
-    OrrOp = ARM::VORRq;
-    BroadcastOp = ARM::VDUP32q;
-    IsVector = true;
-  } else if (ARM::DPRRegClass.hasSubClassEq(RC)) {
-    AndOp = ARM::VANDd;
-    BicOp = ARM::VBICd;
-    OrrOp = ARM::VORRd;
-    IsVector = true;
-  }
-
-  // NB: we handle f64 as a vec of two f32s.
-  if (Opcode == ARM::CTSELECTf64) {
-    IsVector = true;
-  }
 
   bool IsFloat = Opcode == ARM::CTSELECTf32 || Opcode == ARM::CTSELECTf16 || Opcode == ARM::CTSELECTbf16;
   if (IsFloat) {
@@ -1770,12 +1818,6 @@ bool ARMBaseInstrInfo::expandCtSelect(MachineInstr &MI) const {
     Src2Reg = GPRScratch2;
     // Reuse GPRScratch1 for dest after we are done working with src1.
     DestReg = GPRScratch1;
-  } else if (IsVector) {
-    // Any vector pseudo has: ((outs $dst, $tmp_mask, $bcast_mask), (ins $src1, $src2, $cond))
-    VectorMaskReg = MI.getOperand(2).getReg(); 
-    Src1Reg = MI.getOperand(3).getReg();
-    Src2Reg = MI.getOperand(4).getReg();
-    CondReg = MI.getOperand(5).getReg();
   } else {
     // Any non-float, non-vector pseudo has: (outs $dst, $tmp_mask), (ins $src1, $src2, $cond))
     Src1Reg = MI.getOperand(2).getReg();
@@ -1796,58 +1838,28 @@ bool ARMBaseInstrInfo::expandCtSelect(MachineInstr &MI) const {
     .setMIFlag(MachineInstr::MIFlag::NoMerge);
   
   // 2. A = src1 & mask
-  if (IsVector) {
-    // For vectors, broadcast the scalar mask so it matches operand size.
-    BuildMI(*MBB, MI, DL, get(BroadcastOp), VectorMaskReg)
-      .addReg(MaskReg)
-      .add(predOps(ARMCC::AL))
-      .setMIFlag(MachineInstr::MIFlag::NoMerge);
-
-    BuildMI(*MBB, MI, DL, get(AndOp), DestReg)
-      .addReg(Src1Reg)
-      .addReg(VectorMaskReg)
-      .add(predOps(ARMCC::AL))
-      .setMIFlag(MachineInstr::MIFlag::NoMerge);
-  } else {
-    BuildMI(*MBB, MI, DL, get(AndOp), DestReg)
-      .addReg(Src1Reg)
-      .addReg(MaskReg)
-      .add(predOps(ARMCC::AL))
-      .add(condCodeOp())
-      .setMIFlag(MachineInstr::MIFlag::NoMerge);
-  }
+  BuildMI(*MBB, MI, DL, get(AndOp), DestReg)
+    .addReg(Src1Reg)
+    .addReg(MaskReg)
+    .add(predOps(ARMCC::AL))
+    .add(condCodeOp())
+    .setMIFlag(MachineInstr::MIFlag::NoMerge);
 
   // 3. B = src2 & ~mask
-  if (IsVector) {
-    BuildMI(*MBB, MI, DL, get(BicOp), VectorMaskReg)
-      .addReg(Src2Reg)
-      .addReg(VectorMaskReg)
-      .add(predOps(ARMCC::AL))
-      .setMIFlag(MachineInstr::MIFlag::NoMerge);
-  } else {
-    BuildMI(*MBB, MI, DL, get(BicOp), MaskReg)
-      .addReg(Src2Reg)
-      .addReg(MaskReg)
-      .add(predOps(ARMCC::AL))
-      .add(condCodeOp())
-      .setMIFlag(MachineInstr::MIFlag::NoMerge);
-  }
+  BuildMI(*MBB, MI, DL, get(BicOp), MaskReg)
+    .addReg(Src2Reg)
+    .addReg(MaskReg)
+    .add(predOps(ARMCC::AL))
+    .add(condCodeOp())
+    .setMIFlag(MachineInstr::MIFlag::NoMerge);
 
   // 4. result = A | B
-  if (IsVector) {
-    BuildMI(*MBB, MI, DL, get(OrrOp), DestReg)
-      .addReg(DestReg)
-      .addReg(VectorMaskReg)
-      .add(predOps(ARMCC::AL))
-      .setMIFlag(MachineInstr::MIFlag::NoMerge);
-  } else {
-    BuildMI(*MBB, MI, DL, get(OrrOp), DestReg)
-      .addReg(DestReg)
-      .addReg(MaskReg)
-      .add(predOps(ARMCC::AL))
-      .add(condCodeOp())
-      .setMIFlag(MachineInstr::MIFlag::NoMerge);
-  }
+  BuildMI(*MBB, MI, DL, get(OrrOp), DestReg)
+    .addReg(DestReg)
+    .addReg(MaskReg)
+    .add(predOps(ARMCC::AL))
+    .add(condCodeOp())
+    .setMIFlag(MachineInstr::MIFlag::NoMerge);
 
   if (IsFloat) {
     // Return our result from GPR to the correct register type.
@@ -1875,11 +1887,7 @@ bool ARMBaseInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     return true;
   }
 
-  if (opcode == ARM::CTSELECTint  || 
-      opcode == ARM::CTSELECTf16  ||
-      opcode == ARM::CTSELECTbf16 ||
-      opcode == ARM::CTSELECTf32  ||
-      opcode == ARM::CTSELECTf64  || 
+  if (opcode == ARM::CTSELECTf64  || 
       opcode == ARM::CTSELECTv8i8  ||
       opcode == ARM::CTSELECTv4i16 ||
       opcode == ARM::CTSELECTv2i32 ||
@@ -1895,6 +1903,14 @@ bool ARMBaseInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       opcode == ARM::CTSELECTv2f64 ||
       opcode == ARM::CTSELECTv8f16 ||
       opcode == ARM::CTSELECTv8bf16) {
+    LLVM_DEBUG(dbgs() << "Opcode (vector) " << opcode << "replaced by: " << MI);
+    return expandCtSelectVector(MI);
+  }
+
+  if (opcode == ARM::CTSELECTint  || 
+      opcode == ARM::CTSELECTf16  ||
+      opcode == ARM::CTSELECTbf16 ||
+      opcode == ARM::CTSELECTf32) {
     LLVM_DEBUG(dbgs() << "Opcode " << opcode << "replaced by: " << MI);
     return expandCtSelect(MI);
   }

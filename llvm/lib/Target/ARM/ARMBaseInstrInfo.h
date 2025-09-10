@@ -224,6 +224,8 @@ public:
       const TargetRegisterInfo *TRI, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
+  bool expandCtSelectVector(MachineInstr &MI) const;
+
   bool expandCtSelect(MachineInstr &MI) const;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
