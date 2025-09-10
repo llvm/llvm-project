@@ -2284,6 +2284,14 @@ m_ZExtOrSExtOrSelf(const OpTy &Op) {
 }
 
 template <typename OpTy>
+inline match_combine_or<match_combine_or<CastInst_match<OpTy, ZExtInst>,
+                                         CastInst_match<OpTy, TruncInst>>,
+                        OpTy>
+m_ZExtOrTruncOrSelf(const OpTy &Op) {
+  return m_CombineOr(m_CombineOr(m_ZExt(Op), m_Trunc(Op)), Op);
+}
+
+template <typename OpTy>
 inline CastInst_match<OpTy, UIToFPInst> m_UIToFP(const OpTy &Op) {
   return CastInst_match<OpTy, UIToFPInst>(Op);
 }

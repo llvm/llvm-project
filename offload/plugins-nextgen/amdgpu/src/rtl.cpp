@@ -2924,11 +2924,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_GRID_MAX_SIZE, TmpUInt);
     if (Status == HSA_STATUS_SUCCESS)
-      Info.add("Grid Max Size", TmpUInt);
+      Info.add("Grid Max Size", TmpUInt, "", DeviceInfo::MAX_WORK_SIZE);
 
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_GRID_MAX_DIM, GridMaxDim);
     if (Status == HSA_STATUS_SUCCESS) {
-      auto &MaxDim = *Info.add("Grid Max Size per Dimension");
+      auto &MaxDim = *Info.add("Grid Max Size per Dimension", std::monostate{},
+                               "", DeviceInfo::MAX_WORK_SIZE_PER_DIMENSION);
       MaxDim.add("x", GridMaxDim.x);
       MaxDim.add("y", GridMaxDim.y);
       MaxDim.add("z", GridMaxDim.z);
