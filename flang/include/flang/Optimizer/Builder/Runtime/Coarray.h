@@ -34,6 +34,11 @@ namespace fir::runtime {
     return fir::NameUniquer::doProcedure({"prif"}, {}, oss.str());             \
   }()
 
+#define PRIF_STAT_TYPE builder.getRefType(builder.getI32Type())
+#define PRIF_ERRMSG_TYPE                                                       \
+  fir::BoxType::get(fir::CharacterType::get(builder.getContext(), 1,           \
+                                            fir::CharacterType::unknownLen()))
+
 /// Generate Call to runtime prif_init
 mlir::Value genInitCoarray(fir::FirOpBuilder &builder, mlir::Location loc);
 
@@ -48,6 +53,23 @@ mlir::Value getNumImagesWithTeam(fir::FirOpBuilder &builder, mlir::Location loc,
 /// Generate Call to runtime prif_this_image_no_coarray
 mlir::Value getThisImage(fir::FirOpBuilder &builder, mlir::Location loc,
                          mlir::Value team = {});
+
+/// Generate call to runtime subroutine prif_co_broadcast
+void genCoBroadcast(fir::FirOpBuilder &builder, mlir::Location loc,
+                    mlir::Value A, mlir::Value sourceImage, mlir::Value stat,
+                    mlir::Value errmsg);
+
+/// Generate call to runtime subroutine prif_co_max and prif_co_max_character
+void genCoMax(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value A,
+              mlir::Value resultImage, mlir::Value stat, mlir::Value errmsg);
+
+/// Generate call to runtime subroutine prif_co_min or prif_co_min_character
+void genCoMin(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value A,
+              mlir::Value resultImage, mlir::Value stat, mlir::Value errmsg);
+
+/// Generate call to runtime subroutine prif_co_sum
+void genCoSum(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value A,
+              mlir::Value resultImage, mlir::Value stat, mlir::Value errmsg);
 
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_COARRAY_H
