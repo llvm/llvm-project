@@ -9559,3 +9559,20 @@ bool LoongArchTargetLowering::shouldScalarizeBinop(SDValue VecOp) const {
   EVT ScalarVT = VecVT.getScalarType();
   return isOperationLegalOrCustomOrPromote(Opc, ScalarVT);
 }
+
+bool LoongArchTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
+                                                      unsigned Index) const {
+  if (!isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, ResVT))
+    return false;
+
+  // Extract a 128-bit subvector from index 0 of a 256-bit vector is free.
+  return Index == 0;
+}
+
+bool LoongArchTargetLowering::isExtractVecEltCheap(EVT VT,
+                                                   unsigned Index) const {
+  EVT EltVT = VT.getScalarType();
+
+  // Extract a scalar FP value from index 0 of a vector is free.
+  return (EltVT == MVT::f32 || EltVT == MVT::f64) && Index == 0;
+}
