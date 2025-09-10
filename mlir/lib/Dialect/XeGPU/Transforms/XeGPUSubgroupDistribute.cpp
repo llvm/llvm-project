@@ -1047,6 +1047,11 @@ struct MemrefExtractAlignedPointerAsIndexDistribution final
   }
 };
 
+/// Distribute a vector::BitCastOp feeding into yield op of an enclosing
+/// `gpu.warp_execute_on_lane_0` region. Bitcast only impacts the innermost
+/// diemension of the source/result vectors. Equivalent vector::BitCastOp is
+/// created outside of the warp op with distributed source vector type (computed
+/// using assigned layout).
 struct VectorBitcastDistribution final : public gpu::WarpDistributionPattern {
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
@@ -1069,11 +1074,6 @@ struct VectorBitcastDistribution final : public gpu::WarpDistributionPattern {
                      "vector::BitCast op");
     VectorType distributedResultType =
         cast<VectorType>(warpOp.getResult(operandIdx).getType());
-    if (distributedSourceType.getRank() != 2 ||
-        distributedResultType.getRank() != 2)
-      return rewriter.notifyMatchFailure(
-          bitcastOp, "the source or result vector of the bitcast op "
-                     "are not 2D vectors");
     SmallVector<size_t> newRetIndices;
     gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
         rewriter, warpOp, bitcastOp.getSource(),
