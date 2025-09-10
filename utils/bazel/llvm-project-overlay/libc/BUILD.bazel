@@ -661,6 +661,14 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_cpp_tuple",
+    hdrs = ["src/__support/CPP/tuple.h"],
+    deps = [
+        "__support_cpp_utility",
+    ],
+)
+
+libc_support_library(
     name = "__support_cpp_limits",
     hdrs = ["src/__support/CPP/limits.h"],
     deps = [
