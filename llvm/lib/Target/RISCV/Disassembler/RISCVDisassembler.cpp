@@ -46,8 +46,6 @@ public:
                               raw_ostream &CStream) const override;
 
 private:
-  void addSPOperands(MCInst &MI) const;
-
   DecodeStatus getInstruction48(MCInst &Instr, uint64_t &Size,
                                 ArrayRef<uint8_t> Bytes, uint64_t Address,
                                 raw_ostream &CStream) const;
@@ -193,6 +191,12 @@ static DecodeStatus DecodeFPR128RegisterClass(MCInst &Inst, uint32_t RegNo,
 
   MCRegister Reg = RISCV::F0_Q + RegNo;
   Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeSPRegisterClass(MCInst &Inst,
+                                          const MCDisassembler *Decoder) {
+  Inst.addOperand(MCOperand::createReg(RISCV::X2));
   return MCDisassembler::Success;
 }
 
@@ -600,15 +604,6 @@ static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
 
 #include "RISCVGenDisassemblerTables.inc"
 
-// Add implied SP operand for C.*SP compressed instructions. The SP operand
-// isn't explicitly encoded in the instruction.
-void RISCVDisassembler::addSPOperands(MCInst &MI) const {
-  const MCInstrDesc &MCID = MCII->get(MI.getOpcode());
-  for (unsigned i = 0; i < MCID.getNumOperands(); i++)
-    if (MCID.operands()[i].RegClass == RISCV::SPRegClassID)
-      MI.insert(MI.begin() + i, MCOperand::createReg(RISCV::X2));
-}
-
 namespace {
 
 struct DecoderListEntry {
@@ -701,11 +696,13 @@ static constexpr DecoderListEntry DecoderList32[]{
     {DecoderTableZdinxRV32Only32, {}, "RV32-only Zdinx (Double in Integer)"},
 };
 
+namespace {
 // Define bitwidths for various types used to instantiate the decoder.
-template <> inline constexpr uint32_t llvm::MCD::InsnBitWidth<uint16_t> = 16;
-template <> inline constexpr uint32_t llvm::MCD::InsnBitWidth<uint32_t> = 32;
+template <> constexpr uint32_t InsnBitWidth<uint16_t> = 16;
+template <> constexpr uint32_t InsnBitWidth<uint32_t> = 32;
 // Use uint64_t to represent 48 bit instructions.
-template <> inline constexpr uint32_t llvm::MCD::InsnBitWidth<uint64_t> = 48;
+template <> constexpr uint32_t InsnBitWidth<uint64_t> = 48;
+} // namespace
 
 DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
                                                  ArrayRef<uint8_t> Bytes,
@@ -772,12 +769,8 @@ DecodeStatus RISCVDisassembler::getInstruction16(MCInst &MI, uint64_t &Size,
     LLVM_DEBUG(dbgs() << "Trying " << Entry.Desc << " table:\n");
     DecodeStatus Result =
         decodeInstruction(Entry.Table, MI, Insn, Address, this, STI);
-    if (Result == MCDisassembler::Fail)
-      continue;
-
-    addSPOperands(MI);
-
-    return Result;
+    if (Result != MCDisassembler::Fail)
+      return Result;
   }
 
   return MCDisassembler::Fail;

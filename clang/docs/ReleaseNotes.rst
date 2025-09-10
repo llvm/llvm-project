@@ -84,6 +84,9 @@ C++ Specific Potentially Breaking Changes
     static_assert((b.*mp)() == 1); // newly rejected
     static_assert((c.*mp)() == 1); // accepted
 
+- ``VarTemplateSpecializationDecl::getTemplateArgsAsWritten()`` method now
+  returns ``nullptr`` for implicitly instantiated declarations.
+
 ABI Changes in This Version
 ---------------------------
 
@@ -134,6 +137,7 @@ C Language Changes
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
+- Clang now supports `N3355 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3355.htm>`_ Named Loops.
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -202,6 +206,7 @@ Non-comprehensive list of changes in this release
   Currently, the use of ``__builtin_dedup_pack`` is limited to template arguments and base
   specifiers, it also must be used within a template context.
 
+- ``__builtin_assume_dereferenceable`` now accepts non-constant size operands.
 
 New Compiler Flags
 ------------------
@@ -218,6 +223,7 @@ Deprecated Compiler Flags
 
 Modified Compiler Flags
 -----------------------
+- The `-gkey-instructions` compiler flag is now enabled by default when DWARF is emitted for plain C/C++ and optimizations are enabled. (#GH149509)
 
 Removed Compiler Flags
 -------------------------
@@ -318,6 +324,7 @@ Bug Fixes to Attribute Support
   is skipped, such as error recovery and code completion. (#GH153551)
 - Using ``[[gnu::cleanup(some_func)]]`` where some_func is annotated with
   ``[[gnu::error("some error")]]`` now correctly triggers an error. (#GH146520)
+- Fix a crash when the function name is empty in the `swift_name` attribute. (#GH157075)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -336,6 +343,18 @@ Bug Fixes to C++ Support
 - Fix the parsing of variadic member functions when the ellipis immediately follows a default argument.(#GH153445)
 - Fixed a bug that caused ``this`` captured by value in a lambda with a dependent explicit object parameter to not be
   instantiated properly. (#GH154054)
+- Fixed a bug where our ``member-like constrained friend`` checking caused an incorrect analysis of lambda captures. (#GH156225)
+- Fixed a crash when implicit conversions from initialize list to arrays of
+  unknown bound during constant evaluation. (#GH151716)
+- Support the dynamic_cast to final class optimization with pointer
+  authentication enabled. (#GH152601)
+- Fix the check for narrowing int-to-float conversions, so that they are detected in
+  cases where converting the float back to an integer is undefined behaviour (#GH157067).
+- Fix a crash when applying binary or ternary operators to two same function types with different spellings,
+  where at least one of the function parameters has an attribute which affects
+  the function type.
+- Fix an assertion failure when a ``constexpr`` variable is only referenced through
+  ``__builtin_addressof``, and related issues with builtin arguments. (#GH154034)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -372,6 +391,10 @@ X86 Support
 - NOTE: Please avoid use of the __builtin_ia32_* intrinsics - these are not
   guaranteed to exist in future releases, or match behaviour with previous
   releases of clang or other compilers.
+- Remove `m[no-]avx10.x-[256,512]` and `m[no-]evex512` options from Clang
+  driver.
+- Remove `[no-]evex512` feature request from intrinsics and builtins.
+- Change features `avx10.x-[256,512]` to `avx10.x`.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -384,6 +407,7 @@ Windows Support
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
+- Enable linker relaxation by default for loongarch64.
 
 RISC-V Support
 ^^^^^^^^^^^^^^
@@ -481,6 +505,7 @@ OpenMP Support
   modifier in the ``adjust_args`` clause.
 - Allow array length to be omitted in array section subscript expression.
 - Fixed non-contiguous strided update in the ``omp target update`` directive with the ``from`` clause.
+- Properly handle array section/assumed-size array privatization in C/C++.
 
 Improvements
 ^^^^^^^^^^^^

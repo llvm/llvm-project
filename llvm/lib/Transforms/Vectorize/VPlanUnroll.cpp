@@ -552,19 +552,11 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
         continue;
 
       auto *DefR = dyn_cast<VPRecipeWithIRFlags>(&R);
-
       VPBuilder Builder(DefR);
       if (DefR->getNumUsers() == 0) {
-        if (isa<StoreInst>(DefR->getUnderlyingInstr()) &&
-            vputils::isSingleScalar(DefR->getOperand(1))) {
-          // Stores to invariant addresses need to store the last lane only.
-          cloneForLane(Plan, Builder, IdxTy, DefR, VPLane::getLastLaneForVF(VF),
-                       Def2LaneDefs);
-        } else {
-          // Create single-scalar version of DefR for all lanes.
-          for (unsigned I = 0; I != VF.getKnownMinValue(); ++I)
-            cloneForLane(Plan, Builder, IdxTy, DefR, VPLane(I), Def2LaneDefs);
-        }
+        // Create single-scalar version of DefR for all lanes.
+        for (unsigned I = 0; I != VF.getKnownMinValue(); ++I)
+          cloneForLane(Plan, Builder, IdxTy, DefR, VPLane(I), Def2LaneDefs);
         DefR->eraseFromParent();
         continue;
       }
