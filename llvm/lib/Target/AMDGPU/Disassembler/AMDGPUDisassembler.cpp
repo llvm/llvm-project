@@ -2639,9 +2639,6 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptorDirective(
                       KERNEL_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT);
     PRINT_DIRECTIVE(".amdhsa_user_sgpr_private_segment_size",
                     KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE);
-    if (isGFX1250())
-      PRINT_DIRECTIVE(".amdhsa_uses_cu_stores",
-                      KERNEL_CODE_PROPERTY_USES_CU_STORES);
 
     if (TwoByteBuffer & KERNEL_CODE_PROPERTY_RESERVED0)
       return createReservedKDBitsError(KERNEL_CODE_PROPERTY_RESERVED0,
