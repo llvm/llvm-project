@@ -45,9 +45,9 @@
  * template <typename U>
  * concept B = A<U> && __is_same(U, int);
  *
- * The  normal form is `__is_same(T, int) /T->U, inner most level/
- *                   && __is_same(U, int) {U->U} /T->U, outermost most level/
- *                   `
+ * The normal form of b is is `__is_same(T, int) /T->U, inner most level/
+ *                          && __is_same(U, int) {U->U} /T->U, outermost most level/
+ *                            `
  *
  * After substitution in the mapping, we substitute in the constraint expression
  * using that copy of the MultiLevelTemplateArgumentList, and then evaluate it.
