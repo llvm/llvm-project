@@ -87,12 +87,20 @@ __m256d test_mm256_blend_pd(__m256d A, __m256d B) {
   // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x i32> <i32 4, i32 1, i32 6, i32 3>
   return _mm256_blend_pd(A, B, 0x05);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_blend_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), 0x00), 1.0, 2.0, 3.0, 4.0));
+TEST_CONSTEXPR(match_m256d(_mm256_blend_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), 0x05), 5.0, 2.0, 7.0, 4.0));
+TEST_CONSTEXPR(match_m256d(_mm256_blend_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), 0x0A), 1.0, 6.0, 3.0, 8.0));
+TEST_CONSTEXPR(match_m256d(_mm256_blend_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), 0x0F), 5.0, 6.0, 7.0, 8.0));
 
 __m256 test_mm256_blend_ps(__m256 A, __m256 B) {
   // CHECK-LABEL: test_mm256_blend_ps
   // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x i32> <i32 8, i32 1, i32 10, i32 3, i32 12, i32 13, i32 6, i32 7>
   return _mm256_blend_ps(A, B, 0x35);
 }
+TEST_CONSTEXPR(match_m256(_mm256_blend_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){-1.0f, -2.0f, -3.0f, -4.0f, -5.0f, -6.0f, -7.0f, -8.0f}), 0x00), 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f));
+TEST_CONSTEXPR(match_m256(_mm256_blend_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){-1.0f, -2.0f, -3.0f, -4.0f, -5.0f, -6.0f, -7.0f, -8.0f}), 0x35), -1.0f, 2.0f, -3.0f, 4.0f, -5.0f, -6.0f, 7.0f, 8.0f));
+TEST_CONSTEXPR(match_m256(_mm256_blend_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){-1.0f, -2.0f, -3.0f, -4.0f, -5.0f, -6.0f, -7.0f, -8.0f}), 0xAA), 1.0f, -2.0f, 3.0f, -4.0f, 5.0f, -6.0f, 7.0f, -8.0f));
+TEST_CONSTEXPR(match_m256(_mm256_blend_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){-1.0f, -2.0f, -3.0f, -4.0f, -5.0f, -6.0f, -7.0f, -8.0f}), 0xFF), -1.0f, -2.0f, -3.0f, -4.0f, -5.0f, -6.0f, -7.0f, -8.0f));
 
 __m256d test_mm256_blendv_pd(__m256d V1, __m256d V2, __m256d V3) {
   // CHECK-LABEL: test_mm256_blendv_pd

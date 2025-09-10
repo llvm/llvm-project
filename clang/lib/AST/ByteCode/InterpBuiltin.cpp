@@ -2831,6 +2831,44 @@ static bool interp__builtin_select(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_blend(InterpState &S, CodePtr OpPC,
+                                  const CallExpr *Call, unsigned BuiltinID) {
+  PrimType MaskT = *S.getContext().classify(Call->getArg(2));
+  APSInt Mask = popToAPSInt(S.Stk, MaskT);
+  const Pointer &TrueElem = S.Stk.pop<Pointer>();
+  const Pointer &FalseElem = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  assert(FalseElem.getNumElems() == TrueElem.getNumElems());
+  assert(FalseElem.getNumElems() == Dst.getNumElems());
+  unsigned NumElems = FalseElem.getNumElems();
+  PrimType ElemT = FalseElem.getFieldDesc()->getPrimType();
+  PrimType DstElemT = Dst.getFieldDesc()->getPrimType();
+
+  auto BitIndex = BuiltinID == X86::BI__builtin_ia32_pblendw256
+                      ? [](unsigned I) { return I % 8; }
+                      : [](unsigned I) { return I; };
+  for (unsigned I = 0; I != NumElems; ++I) {
+    bool MaskBit = Mask[BitIndex(I)];
+    if (ElemT == PT_Float) {
+      assert(DstElemT == PT_Float);
+      Dst.elem<Floating>(I) =
+          MaskBit ? TrueElem.elem<Floating>(I) : FalseElem.elem<Floating>(I);
+    } else {
+      APSInt Elem;
+      INT_TYPE_SWITCH(ElemT, {
+        Elem = MaskBit ? TrueElem.elem<T>(I).toAPSInt()
+                       : FalseElem.elem<T>(I).toAPSInt();
+      });
+      INT_TYPE_SWITCH_NO_BOOL(DstElemT,
+                              { Dst.elem<T>(I) = static_cast<T>(Elem); });
+    }
+  }
+  Dst.initializeAllElements();
+
+  return true;
+}
+
 static bool interp__builtin_elementwise_triop(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<APInt(const APSInt &, const APSInt &, const APSInt &)>
@@ -3495,6 +3533,16 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         [](const APSInt &Lo, const APSInt &Hi, const APSInt &Amt) {
           return llvm::APIntOps::fshr(Hi, Lo, Amt);
         });
+
+  case clang::X86::BI__builtin_ia32_blendpd:
+  case clang::X86::BI__builtin_ia32_blendpd256:
+  case clang::X86::BI__builtin_ia32_blendps:
+  case clang::X86::BI__builtin_ia32_blendps256:
+  case clang::X86::BI__builtin_ia32_pblendw128:
+  case clang::X86::BI__builtin_ia32_pblendw256:
+  case clang::X86::BI__builtin_ia32_pblendd128:
+  case clang::X86::BI__builtin_ia32_pblendd256:
+    return interp__builtin_blend(S, OpPC, Call, BuiltinID);
 
   case clang::X86::BI__builtin_ia32_blendvpd:
   case clang::X86::BI__builtin_ia32_blendvpd256:
