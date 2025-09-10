@@ -166,9 +166,7 @@ Current Topics & Backlog
 Our working group is actively engaged in discussions about the project's
 direction and tackling technical challenges. You can find our current 
 discussions, challenges, and the project backlog in the following 
-document.
-
-`Backlog document <https://docs.google.com/document/d/10YZZ72ba09Ck_OiJaP9C4-7DeUiveaIKTE3IkaSKjzA/edit?usp=sharing>`
+document: `Backlog <https://docs.google.com/document/d/10YZZ72ba09Ck_OiJaP9C4-7DeUiveaIKTE3IkaSKjzA/edit?usp=sharing>`_
 
 This document serves as our central hub for all ongoing topics and will
 be updated regularly to reflect our progress. We welcome your 
