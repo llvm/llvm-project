@@ -2108,6 +2108,11 @@ def FeatureISAVersion12_Generic: FeatureSet<
 
 def AMDGPUInstrInfo : InstrInfo {
   let guessInstructionProperties = 1;
+  let CoalesceDecoderNamespaces = [
+    ["GFX11", "GFX11_FAKE16"],
+    ["GFX12", "GFX12_FAKE16"],
+    ["GFX1250", "GFX1250_FAKE16"],
+  ];
 }
 
 def AMDGPUAsmParser : AsmParser {

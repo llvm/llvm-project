@@ -1159,6 +1159,17 @@ class InstrInfo {
   //
   // This option is a temporary migration help. It will go away.
   bit guessInstructionProperties = true;
+
+  // Lists of decoder namespaces to coalesce. Each list should consist of one
+  // or more names, and the meaning is that each namespace is coalesced with
+  // the first namespace in the list. And the order of the namespaces in the
+  // list is the attempt order. As an example, if we have
+  //  [ "", "X", "Y" ]
+  //   Then namespaces X and Y are coalesced with "", and the decoding is
+  //   attempted in the order "", then X and then Y.
+  // FIXME: Does this need to be done per HWmode, since the decoder tables
+  // are generated per HW mode.
+  list<list<string>> CoalesceDecoderNamespaces = [[]];
 }
 
 // Standard Pseudo Instructions.

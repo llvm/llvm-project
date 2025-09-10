@@ -28,6 +28,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -116,6 +117,12 @@ static cl::opt<bool> IgnoreFullyDefinedOperands(
         "Do not automatically decode operands with no '?' in their encoding."),
     cl::init(false), cl::cat(DisassemblerEmitterCat));
 
+static cl::opt<bool> ResolveConflictsByTryingAll(
+    "resolve-conflicts-try-all",
+    cl::desc(
+        "Resolve decoding conflicts by trying all conflciting instructions."),
+    cl::init(false), cl::cat(DisassemblerEmitterCat));
+
 STATISTIC(NumEncodings, "Number of encodings considered");
 STATISTIC(NumEncodingsLackingDisasm,
           "Number of encodings without disassembler info");
@@ -174,6 +181,36 @@ struct OperandInfo {
   ArrayRef<EncodingField> fields() const { return Fields; }
 };
 
+class CoalescedNamespaces {
+  // Map from a namespace to its coalesced namespace, order info.
+  StringMap<std::pair<StringRef, unsigned>> NSMap;
+
+public:
+  CoalescedNamespaces() {}
+  void addNamespaces(ArrayRef<StringRef> NSList) {
+    if (NSList.size() <= 1)
+      return;
+    StringRef Head = NSList.front();
+    for (const auto &[Idx, NS] : enumerate(NSList)) {
+      if (NSMap.contains(NS))
+        PrintFatalError("Namespace " + NS + " already coalesced");
+      NSMap[NS] = std::make_pair(Head, (unsigned)Idx);
+    }
+  }
+  StringRef getEffectiveNS(StringRef NS) const {
+    auto II = NSMap.find(NS);
+    if (II == NSMap.end())
+      return NS;
+    return II->second.first;
+  }
+  unsigned getNSOrder(StringRef NS) const {
+    auto II = NSMap.find(NS);
+    if (II == NSMap.end())
+      return 0;
+    return II->second.second;
+  }
+};
+
 /// Represents a parsed InstructionEncoding record or a record derived from it.
 class InstructionEncoding {
   /// The Record this encoding originates from.
@@ -187,6 +224,7 @@ class InstructionEncoding {
 
   /// The namespace in which this encoding exists.
   StringRef DecoderNamespace;
+  StringRef EffectiveDecoderNamespace;
 
   /// Known bits of this encoding. This is the value of the `Inst` field
   /// with any variable references replaced with '?'.
@@ -209,8 +247,8 @@ class InstructionEncoding {
   SmallVector<OperandInfo, 16> Operands;
 
 public:
-  InstructionEncoding(const Record *EncodingDef,
-                      const CodeGenInstruction *Inst);
+  InstructionEncoding(const Record *EncodingDef, const CodeGenInstruction *Inst,
+                      const CoalescedNamespaces &NSInfo);
 
   /// Returns the Record this encoding originates from.
   const Record *getRecord() const { return EncodingDef; }
@@ -221,8 +259,12 @@ public:
   /// Returns the name of this encoding, for debugging purposes.
   StringRef getName() const { return Name; }
 
-  /// Returns the namespace in which this encoding exists.
+  /// Returns the namespace in which this encoding exists. This always returns
+  /// the effective namespace when coalescing is enabled.
   StringRef getDecoderNamespace() const { return DecoderNamespace; }
+  StringRef getEffectiveDecoderNamespace() const {
+    return EffectiveDecoderNamespace;
+  }
 
   /// Returns the size of this encoding, in bits.
   unsigned getBitWidth() const { return InstBits.getBitWidth(); }
@@ -263,16 +305,26 @@ private:
   void parseFixedLenOperands(const BitsInit &Bits);
 };
 
-/// Sorting predicate to sort encoding IDs by encoding width.
+/// Sorting predicate to sort encoding IDs by encoding width. Withing the
+/// same width, sort the decode namespace order.
 class LessEncodingIDByWidth {
   ArrayRef<InstructionEncoding> Encodings;
+  const CoalescedNamespaces &NSInfo;
 
 public:
-  explicit LessEncodingIDByWidth(ArrayRef<InstructionEncoding> Encodings)
-      : Encodings(Encodings) {}
+  explicit LessEncodingIDByWidth(ArrayRef<InstructionEncoding> Encodings,
+                                 const CoalescedNamespaces &NSInfo)
+      : Encodings(Encodings), NSInfo(NSInfo) {}
 
   bool operator()(unsigned ID1, unsigned ID2) const {
-    return Encodings[ID1].getBitWidth() < Encodings[ID2].getBitWidth();
+    const InstructionEncoding &E1 = Encodings[ID1];
+    const InstructionEncoding &E2 = Encodings[ID2];
+
+    unsigned NSOrder1 = NSInfo.getNSOrder(E1.getDecoderNamespace());
+    unsigned NSOrder2 = NSInfo.getNSOrder(E2.getDecoderNamespace());
+
+    return std::tuple(E1.getBitWidth(), NSOrder1) <
+           std::tuple(E2.getBitWidth(), NSOrder2);
   }
 };
 
@@ -356,6 +408,8 @@ class DecoderEmitter {
 
   /// Encodings IDs for each HwMode. An ID is an index into Encodings.
   SmallDenseMap<unsigned, std::vector<unsigned>> EncodingIDsByHwMode;
+
+  CoalescedNamespaces NSInfo;
 
 public:
   explicit DecoderEmitter(const RecordKeeper &RK);
@@ -504,6 +558,11 @@ class FilterChooser {
   /// Also used when there is only one encoding.
   std::optional<unsigned> SingletonEncodingID;
 
+  // AttemptAll = true means we either have > 1 NamespaceChoosers or
+  // we sequentially attempt to decode witth the EncodingIDs.
+  bool AttemptAll = false;
+  std::vector<std::unique_ptr<const FilterChooser>> NamespaceChoosers;
+
   /// If the selected filter matches multiple encodings, and there is
   /// *at least one* encoding in which all bits are known in the filtered range,
   /// then this is the FilterChooser created for the subset of encodings that
@@ -517,6 +576,8 @@ class FilterChooser {
   /// The "field value" here refers to the encoding bits in the filtered range.
   std::map<uint64_t, std::unique_ptr<const FilterChooser>> FilterChooserMap;
 
+  const CoalescedNamespaces &NSInfo;
+
   struct Island {
     unsigned StartBit;
     unsigned NumBits;
@@ -526,10 +587,12 @@ class FilterChooser {
 public:
   /// Constructs a top-level filter chooser.
   FilterChooser(ArrayRef<InstructionEncoding> Encodings,
-                ArrayRef<unsigned> EncodingIDs)
-      : Encodings(Encodings), EncodingIDs(EncodingIDs), Parent(nullptr) {
+                ArrayRef<unsigned> EncodingIDs,
+                const CoalescedNamespaces &NSInfo)
+      : Encodings(Encodings), EncodingIDs(EncodingIDs), Parent(nullptr),
+        NSInfo(NSInfo) {
     // Sort encoding IDs once.
-    stable_sort(this->EncodingIDs, LessEncodingIDByWidth(Encodings));
+    stable_sort(this->EncodingIDs, LessEncodingIDByWidth(Encodings, NSInfo));
     // Filter width is the width of the smallest encoding.
     unsigned FilterWidth = Encodings[this->EncodingIDs.front()].getBitWidth();
     FilterBits = KnownBits(FilterWidth);
@@ -540,9 +603,10 @@ public:
   FilterChooser(ArrayRef<InstructionEncoding> Encodings,
                 ArrayRef<unsigned> EncodingIDs, const KnownBits &FilterBits,
                 const FilterChooser &Parent)
-      : Encodings(Encodings), EncodingIDs(EncodingIDs), Parent(&Parent) {
+      : Encodings(Encodings), EncodingIDs(EncodingIDs), Parent(&Parent),
+        NSInfo(Parent.NSInfo) {
     // Inferior filter choosers are created from sorted array of encoding IDs.
-    assert(is_sorted(EncodingIDs, LessEncodingIDByWidth(Encodings)));
+    assert(is_sorted(EncodingIDs, LessEncodingIDByWidth(Encodings, NSInfo)));
     assert(!FilterBits.hasConflict() && "Broken filter");
     // Filter width is the width of the smallest encoding.
     unsigned FilterWidth = Encodings[EncodingIDs.front()].getBitWidth();
@@ -563,6 +627,8 @@ private:
   /// Applies the given filter to the set of encodings this FilterChooser
   /// works with, creating inferior FilterChoosers as necessary.
   void applyFilter(const Filter &F);
+
+  void splitPerNamespace();
 
   /// dumpStack - dumpStack traverses the filter chooser chain and calls
   /// dumpFilterArray on each filter chooser up to the top level one.
@@ -590,6 +656,8 @@ private:
   // the instructions.  A conflict of instructions may occur, in which case we
   // dump the conflict set to the standard error.
   void doFilter();
+
+  bool hasMultipleNamespaces() const;
 
 public:
   void dump() const;
@@ -679,6 +747,31 @@ void FilterChooser::applyFilter(const Filter &F) {
   NumBits = F.NumBits;
   assert(FilterBits.extractBits(NumBits, StartBit).isUnknown());
 
+  // If we have a mix of fixed and variable encodings, and they have different
+  // namespaces, then split this filter into multiple ones. If its just fixed or
+  // just variable IDs, they should already be ordered in their namespace order.
+  // If we have both, then if we do not split, we may generate a decoding order
+  // as   : f0, f1, f2, v0, v1, v2
+  // whereas the intent was: f0, v0, f1, v1, f2, v2. So achieve this, split
+  // This into sub-filters and apply. If there is just fixed IDs or just
+  // variable IDs. we assume they are sorted in the right order.
+  if (!F.VariableIDs.empty() && !F.FilteredIDs.empty()) {
+    StringSet<> Namespaces;
+    for (unsigned ID : F.VariableIDs)
+      Namespaces.insert(Encodings[ID].getDecoderNamespace());
+    for (const auto &[_, InferiorEncodingIDs] : F.FilteredIDs) {
+      for (unsigned ID : InferiorEncodingIDs)
+        Namespaces.insert(Encodings[ID].getDecoderNamespace());
+    }
+    if (Namespaces.size() > 1) {
+      errs() << "Found multiple namespaces with non-empty variable IDs\n";
+      splitPerNamespace();
+      return;
+    }
+  }
+
+  // Check if we have a mix of namespaces. If so, we need to attempt to decode
+  // them in the order of the namespaces
   if (!F.VariableIDs.empty()) {
     // Delegates to an inferior filter chooser for further processing on this
     // group of instructions whose segment values are variable.
@@ -822,28 +915,55 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
     case MCD::OPC_FilterValueOrSkip: {
       OS << "  MCD::OPC_FilterValueOrSkip, ";
       // The filter value is ULEB128 encoded.
+      const char *ErrMsg = nullptr;
+      uint64_t FilterVal = decodeULEB128(&*I, nullptr, EndPtr, &ErrMsg);
+      assert(ErrMsg == nullptr && "ULEB128 value too large!");
       emitULEB128(I, OS);
+
       uint32_t NumToSkip = emitNumToSkip(I, OS);
-      emitNumToSkipComment(NumToSkip);
+
+      OS << "// FilterVal = 0x";
+      OS.write_hex(FilterVal);
+      emitNumToSkipComment(NumToSkip, /*InComment=*/true);
       OS << '\n';
       break;
     }
     case MCD::OPC_FilterValue: {
       OS << "  MCD::OPC_FilterValue, ";
+      const char *ErrMsg = nullptr;
+      uint64_t FilterVal = decodeULEB128(&*I, nullptr, EndPtr, &ErrMsg);
+      assert(ErrMsg == nullptr && "ULEB128 value too large!");
       // The filter value is ULEB128 encoded.
       emitULEB128(I, OS);
+      OS << "// FilterVal = 0x";
+      OS.write_hex(FilterVal);
       OS << '\n';
       break;
     }
     case MCD::OPC_CheckField: {
       OS << "  MCD::OPC_CheckField, ";
+
+      const char *ErrMsg = nullptr;
+      unsigned Start = decodeULEB128(&*I, nullptr, EndPtr, &ErrMsg);
+      assert(ErrMsg == nullptr && "ULEB128 value too large!");
       // ULEB128 encoded start value.
       emitULEB128(I, OS);
+
       // 8-bit length.
       unsigned Len = *I++;
       OS << Len << ", ";
+
+      uint64_t FieldVal = decodeULEB128(&*I, nullptr, EndPtr, &ErrMsg);
+      assert(ErrMsg == nullptr && "ULEB128 value too large!");
+
       // ULEB128 encoded field value.
       emitULEB128(I, OS);
+
+      OS << " // Inst{";
+      if (Len > 1)
+        OS << (Start + Len - 1) << "-";
+      OS << Start << "} == 0x";
+      OS.write_hex(FieldVal);
       OS << '\n';
       break;
     }
@@ -873,11 +993,8 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
       assert(EncI != OpcodeToEncodingID.end() && "no encoding entry");
       auto EncodingID = EncI->second;
 
-      if (!IsTry) {
-        OS << "// Opcode: " << Encodings[EncodingID].getName()
-           << ", DecodeIdx: " << DecodeIdx << '\n';
-        break;
-      }
+      OS << "// Opcode: " << Encodings[EncodingID].getName()
+         << ", DecodeIdx: " << DecodeIdx;
       OS << '\n';
       break;
     }
@@ -1331,6 +1448,7 @@ void DecoderTableBuilder::emitSingletonTableEntry(
   // can decode it.
   const MCD::DecoderOps DecoderOp =
       Encoding.hasCompleteDecoder() ? MCD::OPC_Decode : MCD::OPC_TryDecode;
+
   TableInfo.Table.insertOpcode(DecoderOp);
   const Record *InstDef = Encodings[EncodingID].getInstruction()->TheDef;
   TableInfo.Table.insertULEB128(Target.getInstrIntValue(InstDef));
@@ -1571,6 +1689,40 @@ std::unique_ptr<Filter> FilterChooser::findBestFilter() const {
   return nullptr;
 }
 
+bool FilterChooser::hasMultipleNamespaces() const {
+  if (EncodingIDs.size() <= 1)
+    return false;
+  const InstructionEncoding &First = Encodings[EncodingIDs.front()];
+  const InstructionEncoding &Last = Encodings[EncodingIDs.back()];
+  return First.getDecoderNamespace() != Last.getDecoderNamespace();
+}
+
+void FilterChooser::splitPerNamespace() {
+  if (!hasMultipleNamespaces())
+    PrintFatalError("Expected use of > 1 decoder namespaces");
+
+  auto GetNSOrder = [&](unsigned EncodingID) -> unsigned {
+    StringRef NS = Encodings[EncodingID].getDecoderNamespace();
+    return NSInfo.getNSOrder(NS);
+  };
+
+  // This splits a filter into per-namespace filter.
+
+  unsigned LastNSOrder = GetNSOrder(EncodingIDs.back());
+  std::vector<unsigned> Counts(LastNSOrder + 1, 0);
+  for (unsigned ID : EncodingIDs)
+    ++Counts[GetNSOrder(ID)];
+  unsigned Start = 0;
+  for (unsigned Count : Counts) {
+    if (Count == 0)
+      continue;
+    ArrayRef<unsigned> NSEncodings = ArrayRef(EncodingIDs).slice(Start, Count);
+    NamespaceChoosers.push_back(std::make_unique<FilterChooser>(
+        Encodings, NSEncodings, FilterBits, *this));
+    Start += Count;
+  }
+}
+
 // Decides on the best configuration of filter(s) to use in order to decode
 // the instructions.  A conflict of instructions may occur, in which case we
 // dump the conflict set to the standard error.
@@ -1586,6 +1738,16 @@ void FilterChooser::doFilter() {
   std::unique_ptr<Filter> BestFilter = findBestFilter();
   if (BestFilter) {
     applyFilter(*BestFilter);
+    return;
+  }
+
+  if (hasMultipleNamespaces()) {
+    splitPerNamespace();
+    return;
+  }
+
+  if (ResolveConflictsByTryingAll) {
+    AttemptAll = true;
     return;
   }
 
@@ -1617,10 +1779,14 @@ void DecoderTableBuilder::emitTableEntries(const FilterChooser &FC) const {
 
   // If there are other encodings that could match if those with all bits
   // known don't, enter a scope so that they have a chance.
-  size_t FixupLoc = 0;
+  // Note: If the same bit patten can match a known encoding as well as variable
+  // encoding, we first let the fixed encoding take priority over the variable
+  // ones. This is a sort of conflict, call it a soft-conflict which is always
+  // resolved by giving preference to the fixed encoding.
+  size_t VarScopeFixupLoc = 0;
   if (FC.VariableFC) {
     Table.insertOpcode(MCD::OPC_Scope);
-    FixupLoc = Table.insertNumToSkip();
+    VarScopeFixupLoc = Table.insertNumToSkip();
   }
 
   if (FC.SingletonEncodingID) {
@@ -1640,7 +1806,7 @@ void DecoderTableBuilder::emitTableEntries(const FilterChooser &FC) const {
 
     // Emit table entries for the only case.
     emitTableEntries(*Delegate);
-  } else {
+  } else if (FC.FilterChooserMap.size() > 1) {
     // The general case: emit a switch over the field value.
     Table.insertOpcode(MCD::OPC_ExtractField);
     Table.insertULEB128(FC.StartBit);
@@ -1667,10 +1833,35 @@ void DecoderTableBuilder::emitTableEntries(const FilterChooser &FC) const {
 
     // Emit table entries for the last case.
     emitTableEntries(*Delegate);
+  } else if (!FC.NamespaceChoosers.empty()) {
+    errs() << "Attempting NS Choosers " << Table.size() << '\n';
+    FC.dump();
+    for (const auto &Delegate : drop_end(FC.NamespaceChoosers)) {
+      Table.insertOpcode(MCD::OPC_Scope);
+      unsigned FixupLoc = Table.insertNumToSkip();
+      emitTableEntries(*Delegate);
+      Table.patchNumToSkip(FixupLoc, Table.size());
+    }
+    emitTableEntries(*FC.NamespaceChoosers.back());
+  } else if (FC.AttemptAll) {
+    errs() << "Attempting All " << Table.size() << '\n';
+    FC.dump();
+    for (const auto ID : drop_end(FC.EncodingIDs)) {
+      Table.insertOpcode(MCD::OPC_Scope);
+      unsigned FixupLoc = Table.insertNumToSkip();
+      FilterChooser SingletonFC(FC.Encodings, ID, FC.FilterBits, *FC.Parent);
+      emitSingletonTableEntry(SingletonFC);
+      Table.patchNumToSkip(FixupLoc, Table.size());
+    }
+    FilterChooser LastSingletonFC(FC.Encodings, FC.EncodingIDs.back(),
+                                  FC.FilterBits, *FC.Parent);
+    emitSingletonTableEntry(LastSingletonFC);
+  } else {
+    llvm_unreachable("Invalid FilterChooser");
   }
 
   if (FC.VariableFC) {
-    Table.patchNumToSkip(FixupLoc, Table.size());
+    Table.patchNumToSkip(VarScopeFixupLoc, Table.size());
     emitTableEntries(*FC.VariableFC);
   }
 }
@@ -2051,7 +2242,8 @@ void InstructionEncoding::parseFixedLenOperands(const BitsInit &Bits) {
 }
 
 InstructionEncoding::InstructionEncoding(const Record *EncodingDef,
-                                         const CodeGenInstruction *Inst)
+                                         const CodeGenInstruction *Inst,
+                                         const CoalescedNamespaces &NSInfo)
     : EncodingDef(EncodingDef), Inst(Inst) {
   const Record *InstDef = Inst->TheDef;
 
@@ -2061,6 +2253,7 @@ InstructionEncoding::InstructionEncoding(const Record *EncodingDef,
   Name.append(InstDef->getName());
 
   DecoderNamespace = EncodingDef->getValueAsString("DecoderNamespace");
+  EffectiveDecoderNamespace = NSInfo.getEffectiveNS(DecoderNamespace);
   DecoderMethod = EncodingDef->getValueAsString("DecoderMethod");
   if (!DecoderMethod.empty())
     HasCompleteDecoder = EncodingDef->getValueAsBit("hasCompleteDecoder");
@@ -2268,9 +2461,11 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       S = decodeToMCInst(DecodeIdx, S, insn, MI, Address, DisAsm, DecodeComplete);
       assert(DecodeComplete);
 
-      LLVM_DEBUG(dbgs() << Loc << ": OPC_Decode: opcode " << Opc
-                   << ", using decoder " << DecodeIdx << ": "
-                   << (S != MCDisassembler::Fail ? "PASS\n" : "FAIL\n"));
+      LLVM_DEBUG({
+        dbgs() << Loc << ": OPC_Decode : opcode " << Opc
+               << ", using decoder " << DecodeIdx << ": "
+               << (S != MCDisassembler::Fail ? "PASS\n" : "FAIL\n");
+      });
       return S;
     })";
   if (HasTryDecode) {
@@ -2295,15 +2490,15 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
         return S;
       }
       assert(S == MCDisassembler::Fail);
+      // Reset decode status. This also drops a SoftFail status that could be
+      // set before the decode attempt.
+      S = MCDisassembler::Success;
       if (ScopeStack.empty()) {
         LLVM_DEBUG(dbgs() << "FAIL, returning FAIL\n");
         return MCDisassembler::Fail;
       }
       Ptr = ScopeStack.pop_back_val();
       LLVM_DEBUG(dbgs() << "FAIL, continuing at " << Ptr - DecodeTable << '\n');
-      // Reset decode status. This also drops a SoftFail status that could be
-      // set before the decode attempt.
-      S = MCDisassembler::Success;
       break;
     })";
   }
@@ -2339,6 +2534,7 @@ void DecoderEmitter::collectHwModesReferencedForEncodings(
       if (EncodingDef->isSubClassOf("InstructionEncoding")) {
         StringRef DecoderNamespace =
             EncodingDef->getValueAsString("DecoderNamespace");
+        DecoderNamespace = NSInfo.getEffectiveNS(DecoderNamespace);
         NamespacesWithHwModes[DecoderNamespace].insert(HwModeID);
         BV.set(HwModeID);
       }
@@ -2360,7 +2556,8 @@ void DecoderEmitter::handleHwModesUnrelatedEncodings(
     break;
   }
   case SUPPRESSION_LEVEL1: {
-    StringRef DecoderNamespace = Encodings[EncodingID].getDecoderNamespace();
+    StringRef DecoderNamespace =
+        Encodings[EncodingID].getEffectiveDecoderNamespace();
     auto It = NamespacesWithHwModes.find(DecoderNamespace);
     if (It != NamespacesWithHwModes.end()) {
       for (unsigned HwModeID : It->second)
@@ -2445,7 +2642,7 @@ void DecoderEmitter::parseInstructionEncodings() {
           continue;
         }
         unsigned EncodingID = Encodings.size();
-        Encodings.emplace_back(EncodingDef, Inst);
+        Encodings.emplace_back(EncodingDef, Inst, NSInfo);
         EncodingIDsByHwMode[HwModeID].push_back(EncodingID);
       }
       continue; // Ignore encoding specified by Instruction itself.
@@ -2457,7 +2654,7 @@ void DecoderEmitter::parseInstructionEncodings() {
     }
 
     unsigned EncodingID = Encodings.size();
-    Encodings.emplace_back(InstDef, Inst);
+    Encodings.emplace_back(InstDef, Inst, NSInfo);
 
     // This instruction is encoded the same on all HwModes.
     // According to user needs, add it to all, some, or only the default HwMode.
@@ -2480,7 +2677,8 @@ void DecoderEmitter::parseInstructionEncodings() {
       continue;
     }
     unsigned EncodingID = Encodings.size();
-    Encodings.emplace_back(EncodingDef, &Target.getInstruction(InstDef));
+    Encodings.emplace_back(EncodingDef, &Target.getInstruction(InstDef),
+                           NSInfo);
     EncodingIDsByHwMode[DefaultMode].push_back(EncodingID);
   }
 
@@ -2492,6 +2690,25 @@ void DecoderEmitter::parseInstructionEncodings() {
 
 DecoderEmitter::DecoderEmitter(const RecordKeeper &RK)
     : RK(RK), Target(RK), CGH(Target.getHwModes()) {
+  // First parse information about coalesced namespaces.
+  const ListInit *LI = Target.getInstructionSet()->getValueAsListInit(
+      "CoalesceDecoderNamespaces");
+  for (const Init *LE : LI->getElements()) {
+    const ListInit *InnerLI = dyn_cast<ListInit>(LE);
+    if (!InnerLI)
+      PrintFatalError(
+          "CoalesceDecoderNamespaces expected to be a list of list of strings");
+    std::vector<StringRef> Strings;
+    for (const Init *I : InnerLI->getElements()) {
+      if (const auto *SI = dyn_cast<StringInit>(I))
+        Strings.push_back(SI->getValue());
+      else
+        PrintFatalError("CoalesceDecoderNamespaces expected to be a list of "
+                        "list of strings");
+    }
+    NSInfo.addNamespaces(Strings);
+  }
+
   Target.reverseBitsForLittleEndianEncoding();
   parseInstructionEncodings();
 }
@@ -2551,7 +2768,9 @@ template <typename T> constexpr uint32_t InsnBitWidth = 0;
       const InstructionEncoding &Encoding = Encodings[EncodingID];
       const unsigned BitWidth =
           IsVarLenInst ? MaxInstLen : Encoding.getBitWidth();
-      StringRef DecoderNamespace = Encoding.getDecoderNamespace();
+      // For the purpose of bucketing, map the decoder namespace to its
+      // effective one.
+      StringRef DecoderNamespace = Encoding.getEffectiveDecoderNamespace();
       EncMap[BitWidth][{DecoderNamespace, HwModeID}].push_back(EncodingID);
     }
   }
@@ -2575,7 +2794,7 @@ template <typename T> constexpr uint32_t InsnBitWidth = 0;
       auto [DecoderNamespace, HwModeID] = Key;
 
       // Emit the decoder for this (namespace, hwmode, width) combination.
-      FilterChooser FC(Encodings, EncodingIDs);
+      FilterChooser FC(Encodings, EncodingIDs, NSInfo);
 
       // The decode table is cleared for each top level decoder function. The
       // predicates and decoders themselves, however, are shared across

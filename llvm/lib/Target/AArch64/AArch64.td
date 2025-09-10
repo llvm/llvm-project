@@ -40,7 +40,10 @@ include "AArch64SchedPredExynos.td"
 include "AArch64SchedPredNeoverse.td"
 include "AArch64Combine.td"
 
-def AArch64InstrInfo : InstrInfo;
+def AArch64InstrInfo : InstrInfo {
+  // Coalesce "Fallback" and default "" namespaces.
+  let CoalesceDecoderNamespaces = [["", "Fallback" ]];
+}
 
 //===----------------------------------------------------------------------===//
 // Named operands for MRS/MSR/TLBI/...

@@ -58,9 +58,6 @@
 #include <tuple>
 #include <utility>
 #include <vector>
-namespace llvm {
-class Argument;
-}
 
 using namespace llvm;
 
