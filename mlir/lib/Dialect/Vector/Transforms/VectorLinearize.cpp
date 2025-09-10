@@ -799,7 +799,7 @@ struct LinearizeVectorFromElements final
 };
 
 /// This pattern linearizes the operand in `vector.to_elements` operations
-/// by converting the result type to a 1-D vector while preserving all element
+/// by converting the source type to a 1-D vector while preserving all element
 /// values. The transformation creates a linearized `vector.shape_cast`
 /// followed by a `vector.to_elements`.
 ///
@@ -830,7 +830,7 @@ struct LinearizeVectorToElements final
           toElementsOp, "the rank is already less than or equal to 1");
 
     assert(vecType.getNumScalableDims() == 0 &&
-           "scalable vector is not yet supported");
+           "to_elements does not support scalable vectors");
     auto vec1DType =
         VectorType::get({vecType.getNumElements()}, vecType.getElementType());
     Value shapeCast = vector::ShapeCastOp::create(
