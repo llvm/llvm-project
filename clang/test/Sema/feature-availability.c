@@ -13,6 +13,7 @@ CLANG_ENABLED_AVAILABILITY_DOMAIN(feature1);
 CLANG_DISABLED_AVAILABILITY_DOMAIN(feature2);
 CLANG_ENABLED_AVAILABILITY_DOMAIN(feature3);
 CLANG_DYNAMIC_AVAILABILITY_DOMAIN(feature4, pred1);
+CLANG_ALWAYS_ENABLED_AVAILABILITY_DOMAIN(feature5);
 #endif
 
 #pragma clang attribute push (__attribute__((availability(domain:feature1, AVAIL))), apply_to=any(function))
@@ -34,6 +35,8 @@ __attribute__((availability(domain:feature4, AVAIL))) void func10(void);
 __attribute__((availability(domain:feature4, UNAVAIL))) void func11(void);
 __attribute__((availability(domain:feature4, AVAIL))) int g4;
 __attribute__((availability(domain:feature4, UNAVAIL))) int g5;
+__attribute__((availability(domain:feature5, AVAIL))) void func21(void);
+__attribute__((availability(domain:feature5, UNAVAIL))) void func22(void);
 #endif
 
 void test_unreachable_code(void) {
@@ -240,3 +243,19 @@ void test7(void) {
     e = EB; // expected-error {{use of 'EB' requires feature 'feature1' to be available}}
   }
 }
+
+#ifdef USE_DOMAIN
+void test8(void) {
+  // FIXME: Use of 'func21()' should not be diagnosed because feature5 is always available.
+  func21(); // expected-error {{use of 'func21' requires feature 'feature5' to be available}}
+  func22(); // expected-error {{use of 'func22' requires feature 'feature5' to be unavailable}}
+
+  if (__builtin_available(domain:feature5)) {
+    func21();
+    func22(); // expected-error {{use of 'func22' requires feature 'feature5' to be unavailable}}
+  } else {
+    func21(); // expected-error {{use of 'func21' requires feature 'feature5' to be available}}
+    func22();
+  }
+}
+#endif

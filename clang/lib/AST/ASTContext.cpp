@@ -1009,6 +1009,9 @@ ASTContext::getFeatureAvailInfo(Decl *D) const {
   case 2:
     Kind = FeatureAvailKind::Dynamic;
     break;
+  case 3:
+    Kind = FeatureAvailKind::AlwaysAvailable;
+    break;
   default:
     llvm_unreachable("invalid feature kind");
   }
@@ -1051,10 +1054,20 @@ bool ASTContext::hasUnavailableFeature(const Decl *D) const {
   for (auto *AA : D->specific_attrs<DomainAvailabilityAttr>()) {
     auto FeatureName = AA->getDomain();
     auto FeatureInfo = getFeatureAvailInfo(FeatureName);
-    if (FeatureInfo.Kind == (AA->getUnavailable()
-                                 ? FeatureAvailKind::Available
-                                 : FeatureAvailKind::Unavailable))
-      return true;
+    switch (FeatureInfo.Kind) {
+    case FeatureAvailKind::Available:
+    case FeatureAvailKind::AlwaysAvailable:
+      if (AA->getUnavailable())
+        return true;
+      break;
+    case FeatureAvailKind::Unavailable:
+      if (!AA->getUnavailable())
+        return true;
+      break;
+    case FeatureAvailKind::Dynamic:
+    case FeatureAvailKind::None:
+      break;
+    }
   }
 
   return false;
