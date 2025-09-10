@@ -506,10 +506,10 @@ declare_mlir_python_extension(MLIRPythonExtension.Core
     # Dialects
     MLIRCAPIFunc
   GENERATE_TYPE_STUBS
-    "_mlir_libs/_mlir/__init__.pyi"
-    "_mlir_libs/_mlir/ir.pyi"
-    "_mlir_libs/_mlir/passmanager.pyi"
-    "_mlir_libs/_mlir/rewrite.pyi"
+    "_mlir/__init__.pyi"
+    "_mlir/ir.pyi"
+    "_mlir/passmanager.pyi"
+    "_mlir/rewrite.pyi"
 )
 
 # This extension exposes an API to register all dialects, extensions, and passes
@@ -531,8 +531,7 @@ declare_mlir_python_extension(MLIRPythonExtension.RegisterEverything
     MLIRCAPIConversion
     MLIRCAPITransforms
     MLIRCAPIRegisterEverything
-  GENERATE_TYPE_STUBS
-    "_mlir_libs/_mlirRegisterEverything.pyi"
+  GENERATE_TYPE_STUBS ON
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.Linalg.Pybind
@@ -547,8 +546,7 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.Linalg.Pybind
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPILinalg
-  GENERATE_TYPE_STUBS
-    "_mlir_libs/_mlirDialectsLinalg.pyi"
+  GENERATE_TYPE_STUBS ON
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.GPU.Pybind
@@ -563,8 +561,7 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.GPU.Pybind
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPIGPU
-  GENERATE_TYPE_STUBS
-    "_mlir_libs/_mlirDialectsGPU.pyi"
+  GENERATE_TYPE_STUBS ON
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.LLVM.Pybind
@@ -579,8 +576,7 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.LLVM.Pybind
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPILLVM
-  GENERATE_TYPE_STUBS
-    "_mlir_libs/_mlirDialectsLLVM.pyi"
+  GENERATE_TYPE_STUBS ON
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.Quant.Pybind
@@ -595,8 +591,7 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.Quant.Pybind
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPIQuant
-  GENERATE_TYPE_STUBS
-    "_mlir_libs/_mlirDialectsQuant.pyi"
+  GENERATE_TYPE_STUBS ON
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.NVGPU.Pybind
@@ -611,8 +606,7 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.NVGPU.Pybind
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPINVGPU
-  GENERATE_TYPE_STUBS
-    "_mlir_libs/_mlirDialectsNVGPU.pyi"
+  GENERATE_TYPE_STUBS ON
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.PDL.Pybind
@@ -627,8 +621,7 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.PDL.Pybind
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPIPDL
-  GENERATE_TYPE_STUBS
-    "_mlir_libs/_mlirDialectsPDL.pyi"
+  GENERATE_TYPE_STUBS ON
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.SparseTensor.Pybind
@@ -643,8 +636,7 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.SparseTensor.Pybind
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPISparseTensor
-  GENERATE_TYPE_STUBS
-    "_mlir_libs/_mlirDialectsSparseTensor.pyi"
+  GENERATE_TYPE_STUBS ON
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.Transform.Pybind
@@ -659,8 +651,7 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.Transform.Pybind
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPITransformDialect
-  GENERATE_TYPE_STUBS
-    "_mlir_libs/_mlirDialectsTransform.pyi"
+  GENERATE_TYPE_STUBS ON
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.AsyncDialectPasses
@@ -674,8 +665,6 @@ declare_mlir_python_extension(MLIRPythonExtension.AsyncDialectPasses
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIAsync
-  GENERATE_TYPE_STUBS
-    "_mlir_libs/_mlirAsyncPasses.pyi"
 )
 
 if(MLIR_ENABLE_EXECUTION_ENGINE)
@@ -690,8 +679,7 @@ if(MLIR_ENABLE_EXECUTION_ENGINE)
       LLVMSupport
     EMBED_CAPI_LINK_LIBS
       MLIRCAPIExecutionEngine
-    GENERATE_TYPE_STUBS
-      "_mlir_libs/_mlirExecutionEngine.pyi"
+    GENERATE_TYPE_STUBS ON
   )
 endif()
 
@@ -706,8 +694,6 @@ declare_mlir_python_extension(MLIRPythonExtension.GPUDialectPasses
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIGPU
-  GENERATE_TYPE_STUBS
-    "_mlir_libs/_mlirGPUPasses.pyi"
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.LinalgPasses
@@ -721,8 +707,6 @@ declare_mlir_python_extension(MLIRPythonExtension.LinalgPasses
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPILinalg
-  GENERATE_TYPE_STUBS
-    "_mlir_libs/_mlirLinalgPasses.pyi"
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.SMT.Pybind
@@ -740,8 +724,7 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.SMT.Pybind
     MLIRCAPIIR
     MLIRCAPISMT
     MLIRCAPIExportSMTLIB
-  GENERATE_TYPE_STUBS
-    "_mlir_libs/_mlirDialectsSMT.pyi"
+  GENERATE_TYPE_STUBS ON
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.SparseTensorDialectPasses
@@ -755,8 +738,6 @@ declare_mlir_python_extension(MLIRPythonExtension.SparseTensorDialectPasses
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPISparseTensor
-  GENERATE_TYPE_STUBS
-    "_mlir_libs/_mlirSparseTensorPasses.pyi"
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.TransformInterpreter
@@ -770,8 +751,7 @@ declare_mlir_python_extension(MLIRPythonExtension.TransformInterpreter
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPITransformDialectTransforms
-  GENERATE_TYPE_STUBS
-    "_mlir_libs/_mlirTransformInterpreter.pyi"
+  GENERATE_TYPE_STUBS ON
 )
 
 # TODO: Figure out how to put this in the test tree.
@@ -830,8 +810,7 @@ if(MLIR_INCLUDE_TESTS)
       LLVMSupport
     EMBED_CAPI_LINK_LIBS
       MLIRCAPIPythonTestDialect
-    GENERATE_TYPE_STUBS
-      "_mlir_libs/_mlirPythonTestNanobind.pyi"
+    GENERATE_TYPE_STUBS ON
   )
 endif()
 

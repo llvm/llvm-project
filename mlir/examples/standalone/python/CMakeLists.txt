@@ -40,7 +40,8 @@ declare_mlir_python_extension(StandalonePythonSources.NanobindExtension
     StandaloneCAPI
   PYTHON_BINDINGS_LIBRARY nanobind
   GENERATE_TYPE_STUBS
-    "_mlir_libs/_standaloneDialectsNanobind.pyi"
+    "_standaloneDialectsNanobind/__init__.pyi"
+    "_standaloneDialectsNanobind/standalone.pyi"
 )
 
 
