@@ -35,3 +35,69 @@ body:             |
     SI_RETURN
 
 ...
+
+---
+name:            zext_loads
+tracksRegLiveness: true
+body:             |
+  bb.1.entry:
+    %1:_(p0) = G_IMPLICIT_DEF
+    %4:_(p1) = G_IMPLICIT_DEF
+    %6:_(p5) = G_IMPLICIT_DEF
+
+    ; Atomic load
+    ; CHECK-NOT: DIVERGENT
+
+    %0:_(s32) = G_ZEXTLOAD %1(p0) :: (load seq_cst (s16) from `ptr undef`)
+
+    ; flat load
+    ; CHECK-NOT: DIVERGENT
+
+    %2:_(s32) = G_ZEXTLOAD %1(p0) :: (load (s16) from `ptr undef`)
+
+    ; Gloabal load
+    ; CHECK-NOT: DIVERGENT
+    %3:_(s32) = G_ZEXTLOAD %4(p1) :: (load (s16) from `ptr addrspace(1) undef`, addrspace 1)
+
+    ; Private load
+    ; CHECK-NOT: DIVERGENT
+    %5:_(s32) = G_ZEXTLOAD %6(p5) :: (volatile load (s16) from `ptr addrspace(5) undef`, addrspace 5)
+    G_STORE %2(s32), %4(p1) :: (volatile store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+    G_STORE %3(s32), %4(p1) :: (volatile store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+    G_STORE %5(s32), %4(p1) :: (volatile store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+    G_STORE %0(s32), %4(p1) :: (volatile store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+    SI_RETURN
+
+...
+
+---
+name:            sext_loads
+tracksRegLiveness: true
+body:             |
+  bb.1.entry:
+    %1:_(p0) = G_IMPLICIT_DEF
+    %4:_(p1) = G_IMPLICIT_DEF
+    %6:_(p5) = G_IMPLICIT_DEF
+
+    ; Atomic load
+    ; CHECK-NOT: DIVERGENT
+    %0:_(s32) = G_SEXTLOAD %1(p0) :: (load seq_cst (s16) from `ptr undef`)
+
+    ; flat load
+    ; CHECK-NOT: DIVERGENT
+    %2:_(s32) = G_SEXTLOAD %1(p0) :: (load (s16) from `ptr undef`)
+
+    ; Gloabal load
+    ; CHECK-NOT: DIVERGENT
+    %3:_(s32) = G_SEXTLOAD %4(p1) :: (load (s16) from `ptr addrspace(1) undef`, addrspace 1)
+
+    ; Private load
+    ; CHECK-NOT: DIVERGENT
+    %5:_(s32) = G_SEXTLOAD %6(p5) :: (volatile load (s16) from `ptr addrspace(5) undef`, addrspace 5)
+    G_STORE %2(s32), %4(p1) :: (volatile store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+    G_STORE %3(s32), %4(p1) :: (volatile store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+    G_STORE %5(s32), %4(p1) :: (volatile store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+    G_STORE %0(s32), %4(p1) :: (volatile store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+    SI_RETURN
+
+...
