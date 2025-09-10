@@ -1,8 +1,9 @@
 # REQUIRES: github-actions
-# RUN: "%cmake_exe" --build "%llvm_obj_root" --target install
+# RUN: "%cmake_exe" "%llvm_src_root" -DLLVM_DISTRIBUTION_COMPONENTS="llvm-headers;llvm-libraries;cmake-exports;FileCheck;count;not;mlir-headers;mlir-libraries;mlir-cmake-exports;mlir-tblgen;mlir-python-sources"
+# RUN: "%cmake_exe" --build "%llvm_obj_root" --target install-distribution
 # RUN: "%cmake_exe" "%mlir_src_root/examples/standalone" -G "%cmake_generator" \
 # RUN: -DCMAKE_CXX_COMPILER=%host_cxx -DCMAKE_C_COMPILER=%host_cc \
-# RUN: -DLLVM_ENABLE_LIBCXX=%enable_libcxx -DMLIR_DIR="%host_cmake_install_prefix" \
+# RUN: -DLLVM_ENABLE_LIBCXX=%enable_libcxx -DMLIR_DIR=%host_cmake_install_prefix \
 # RUN: -DLLVM_USE_LINKER=%llvm_use_linker \
 # RUN: -DPython3_EXECUTABLE=%python \
 # RUN: -DPython_EXECUTABLE=%python
