@@ -47,7 +47,7 @@ public:
   }
 
 private:
-  std::decay_t<CallableT> Callable;
+  CallableT Callable;
 };
 
 } // namespace move_only_function_detail
@@ -66,9 +66,8 @@ public:
 
   template <typename CallableT>
   move_only_function(CallableT &&Callable)
-      : C(std::make_unique<
-            move_only_function_detail::CallableImpl<CallableT, RetT, ArgTs...>>(
-            std::forward<CallableT>(Callable))) {}
+      : C(std::make_unique<move_only_function_detail::CallableImpl<
+              std::decay_t<CallableT>, RetT, ArgTs...>>(std::move(Callable))) {}
 
   RetT operator()(ArgTs... Params) {
     return C->call(std::forward<ArgTs>(Params)...);
