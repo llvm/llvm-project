@@ -20,9 +20,6 @@
 // RUN: env AMD_COMGR_SAVE_TEMPS=1 AMD_COMGR_USE_VFS=1 source-to-bc-with-dev-libs %s -o %t-with-dev-libs.bc | FileCheck --check-prefixes=STATUS,OUT-SAVETEMPS-VFS-NA %s
 // RUN: env AMD_COMGR_SAVE_TEMPS=1 AMD_COMGR_USE_VFS=1 source-to-bc-with-dev-libs %s --vfs -o %t-with-dev-libs.bc | FileCheck --check-prefixes=STATUS,OUT-SAVETEMPS-VFS-VFS %s
 
-// COM: Verify success of compilation for all scenarios
-// STATUS: ReturnStatus: AMD_COMGR_STATUS_SUCCESS
-
 // OUT-NA-NA-NA: File System: VFS
 // OUT-NA-VFS-NOVFS: File System: VFS
 // OUT-NA-VFS-NA: File System: VFS
@@ -33,6 +30,9 @@
 // OUT-SAVETEMPS-NA-VFS: File System: Real
 // OUT-SAVETEMPS-VFS-VFS: File System: Real
 // OUT-SAVETEMPS-VFS-NA: File System: Real
+
+// COM: Verify success of compilation for all scenarios
+// STATUS: ReturnStatus: AMD_COMGR_STATUS_SUCCESS
 
 extern const __constant bool __oclc_finite_only_opt;
 extern const __constant bool __oclc_unsafe_math_opt;
