@@ -18,7 +18,7 @@ class TestArmPointerMetadataStripping(TestBase):
         thread.StepInstruction(False)
         thread.StepInstruction(False)
 
-        argv_addr = thread.frames[1].GetValueForVariablePath("&argv");
+        argv_addr = thread.frames[1].GetValueForVariablePath("&argv")
         self.assertTrue(argv_addr.IsValid())
 
         argv_addr_uint = argv_addr.GetValueAsUnsigned()
