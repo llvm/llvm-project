@@ -3904,13 +3904,12 @@ def : Pat<(f64 (bitconvert VK64:$src)),
 
 multiclass avx512_move_scalar<string asm, SDNode OpNode, PatFrag vzload_frag,
                               X86VectorVTInfo _, Predicate prd = HasAVX512> {
-  let Predicates = !if (!eq (prd, HasFP16), [HasFP16], [prd, OptForSize]) in
+  let Predicates = [prd] in {
   def rr : AVX512PI<0x10, MRMSrcReg, (outs _.RC:$dst),
              (ins _.RC:$src1, _.RC:$src2),
              !strconcat(asm, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(set _.RC:$dst, (_.VT (OpNode _.RC:$src1, _.RC:$src2)))],
              _.ExeDomain>, EVEX, VVVV, Sched<[SchedWriteFShuffle.XMM]>;
-  let Predicates = [prd] in {
   def rrkz : AVX512PI<0x10, MRMSrcReg, (outs _.RC:$dst),
               (ins _.KRCWM:$mask, _.RC:$src1, _.RC:$src2),
               !strconcat(asm, "\t{$src2, $src1, $dst {${mask}} {z}|",
@@ -4394,7 +4393,7 @@ def : InstAlias<"vmovsd.s\t{$src2, $src1, $dst {${mask}} {z}|"#
                 (VMOVSDZrrkz_REV VR128X:$dst, VK1WM:$mask,
                                  VR128X:$src1, VR128X:$src2), 0>;
 
-let Predicates = [HasAVX512, OptForSize] in {
+let Predicates = [HasAVX512] in {
   def : Pat<(v4f32 (X86vzmovl (v4f32 VR128X:$src))),
             (VMOVSSZrr (v4f32 (AVX512_128_SET0)), VR128X:$src)>;
   def : Pat<(v4i32 (X86vzmovl (v4i32 VR128X:$src))),
@@ -4418,21 +4417,6 @@ let Predicates = [HasAVX512, OptForSize] in {
             (SUBREG_TO_REG (i32 0),
              (v4i32 (VMOVSSZrr (v4i32 (AVX512_128_SET0)),
               (v4i32 (EXTRACT_SUBREG (v16i32 VR512:$src), sub_xmm)))), sub_xmm)>;
-}
-
-// Use 128-bit blends for OptForSpeed since BLENDs have better throughput than
-// VMOVSS/SD. Unfortunately, loses the ability to use XMM16-31.
-let Predicates = [HasAVX512, OptForSpeed] in {
-  def : Pat<(v16f32 (X86vzmovl (v16f32 VR512:$src))),
-            (SUBREG_TO_REG (i32 0),
-             (v4f32 (VBLENDPSrri (v4f32 (V_SET0)),
-                          (v4f32 (EXTRACT_SUBREG (v16f32 VR512:$src), sub_xmm)),
-                          (i8 1))), sub_xmm)>;
-  def : Pat<(v16i32 (X86vzmovl (v16i32 VR512:$src))),
-            (SUBREG_TO_REG (i32 0),
-             (v4i32 (VPBLENDWrri (v4i32 (V_SET0)),
-                          (v4i32 (EXTRACT_SUBREG (v16i32 VR512:$src), sub_xmm)),
-                          (i8 3))), sub_xmm)>;
 }
 
 let Predicates = [HasAVX512] in {
