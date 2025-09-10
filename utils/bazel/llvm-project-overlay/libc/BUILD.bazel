@@ -117,6 +117,10 @@ libc_support_library(
 libc_support_library(
     name = "__support_macros_config",
     hdrs = ["src/__support/macros/config.h"],
+    deps = [
+        "__support_macros_properties_architectures",
+        "__support_macros_properties_compiler",
+    ],
 )
 
 ################################# Include Files ################################
