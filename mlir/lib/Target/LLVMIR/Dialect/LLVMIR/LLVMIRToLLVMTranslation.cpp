@@ -220,19 +220,28 @@ static LogicalResult setDereferenceableAttr(const llvm::MDNode *node,
 /// discardable `llvm.mmra` attribute.
 static LogicalResult setMmraAttr(llvm::MDNode *node, Operation *op,
                                  LLVM::ModuleImport &moduleImport) {
-  llvm::MMRAMetadata wrapper(node);
-  if (wrapper.empty()) 
+  if (!node)
     return success();
- 
+
+  // We don't use the LLVM wrappers here becasue we care about the order
+  // of the metadata for deterministic roundtripping.
   MLIRContext *ctx = op->getContext();
+  auto toAttribute = [&](llvm::MDNode *tag) -> Attribute {
+    return LLVM::MMRATagAttr::get(
+        ctx, cast<llvm::MDString>(tag->getOperand(0))->getString(),
+        cast<llvm::MDString>(tag->getOperand(1))->getString());
+  };
   Attribute mlirMmra;
-  if (wrapper.size() == 1) {
-    auto [prefix, suffix] = *wrapper.begin();
-    mlirMmra = LLVM::MMRATagAttr::get(ctx, prefix, suffix);
+  if (llvm::MMRAMetadata::isTagMD(node)) {
+    mlirMmra = toAttribute(node);
   } else {
     SmallVector<Attribute> tags;
-    for (auto [prefix, suffix] : wrapper) 
-      tags.push_back(LLVM::MMRATagAttr::get(ctx, prefix, suffix));
+    for (const llvm::MDOperand &operand : node->operands()) {
+      auto *tagNode = dyn_cast<llvm::MDNode>(operand.get());
+      if (!tagNode || !llvm::MMRAMetadata::isTagMD(tagNode))
+        return failure();
+      tags.push_back(toAttribute(tagNode));
+    }
     mlirMmra = ArrayAttr::get(ctx, tags);
   }
   op->setAttr(LLVMDialect::getMmraAttrName(), mlirMmra);

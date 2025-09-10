@@ -736,13 +736,11 @@ amendOperationImpl(Operation &op, ArrayRef<llvm::Instruction *> instructions,
       tags.emplace_back(oneTag.getPrefix(), oneTag.getSuffix());
     } else if (auto manyTags = dyn_cast<ArrayAttr>(attribute.getValue())) {
       for (Attribute attr : manyTags) {
-        auto tag = dyn_cast<MMRATagAttr>(a);
-        if (tag) {
-          tags.emplace_back(tag.getPrefix(), tag.getSuffix());
-        } else {
+        auto tag = dyn_cast<MMRATagAttr>(attr);
+        if (!tag)
           return op.emitOpError(
               "MMRA annotations array contains value that isn't an MMRA tag");
-        }
+        tags.emplace_back(tag.getPrefix(), tag.getSuffix());
       }
     } else {
       return op.emitOpError(
@@ -754,7 +752,7 @@ amendOperationImpl(Operation &op, ArrayRef<llvm::Instruction *> instructions,
       // Empty list, canonicalizes to nothing
       return success();
     }
-    for (llvm::Instruction *inst : instructions) 
+    for (llvm::Instruction *inst : instructions)
       inst->setMetadata(llvm::LLVMContext::MD_mmra, mmraMd);
     return success();
   }

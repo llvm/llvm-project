@@ -9,7 +9,7 @@ define void @native(ptr %x, ptr %y) {
   ; CHECK-SAME: llvm.mmra = #[[$MMRA0]]
   %v = load i32, ptr %x, align 4, !mmra !0
   ; CHECK: llvm.fence
-  ; CHECK-SAME: llvm.mmra = [#[[$MMRA0]], #[[$MMRA1]]]
+  ; CHECK-SAME: llvm.mmra = [#[[$MMRA1]], #[[$MMRA0]]]
   fence syncscope("workgroup-one-as") release, !mmra !2
   ; CHECK: llvm.store {{.*}}, !llvm.ptr{{$}}
   store i32 %v, ptr %y, align 4, !mmra !3
@@ -18,5 +18,5 @@ define void @native(ptr %x, ptr %y) {
 
 !0 = !{!"foo", !"bar"}
 !1 = !{!"amdgpu-synchronize-as", !"local"}
-!2 = !{!0, !1}
+!2 = !{!1, !0}
 !3 = !{}
