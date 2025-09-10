@@ -3,7 +3,7 @@
 declare ptr @llvm.stackaddress.p0()
 
 define ptr @test() {
-; CHECK: STACKADDRESS is not supported on this target.
+; CHECK: error: <unknown>:0:0: STACKADDRESS is not supported on this target.
   %sp = call ptr @llvm.stackaddress.p0()
   ret ptr %sp
 }
