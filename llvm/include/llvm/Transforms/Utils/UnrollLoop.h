@@ -54,10 +54,13 @@ LLVM_ABI const Loop *addClonedBlockToLoopInfo(BasicBlock *OriginalBB,
                                               LoopInfo *LI,
                                               NewLoopsMap &NewLoops);
 
-/// Represents the result of a \c UnrollLoop invocation.
+/// Represents the result of a \c UnrollLoop and \c UnrollAndJamLoop invocation.
 enum class LoopUnrollResult {
   /// The loop was not modified.
   Unmodified,
+
+  /// The loop was modified, but not unrolled.
+  Modified,
 
   /// The loop was partially unrolled -- we still have a loop, but with a
   /// smaller trip count.  We may also have emitted epilogue loop if the loop
