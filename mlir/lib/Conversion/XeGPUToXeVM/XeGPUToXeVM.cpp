@@ -381,8 +381,7 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
                   ConversionPatternRewriter &rewriter) const override {
     Value offset = adaptor.getOffsets();
     if (!offset)
-      return rewriter.notifyMatchFailure(op,
-                                         "Expected offset to be provided.");
+      return rewriter.notifyMatchFailure(op, "Expected offset to be provided.");
     auto loc = op.getLoc();
     auto ctxt = rewriter.getContext();
     auto tdescTy = op.getTensorDescType();
@@ -436,8 +435,7 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
     if (dyn_cast<VectorType>(offset.getType())) {
       // Offset needs be scalar. Single element vector is converted to scalar
       // by type converter.
-      return rewriter.notifyMatchFailure(op,
-                                         "Expected offset to be a scalar.");
+      return rewriter.notifyMatchFailure(op, "Expected offset to be a scalar.");
     } else {
       // If offset is provided, we add them to the base pointer.
       // Offset is in number of elements, we need to multiply by

@@ -729,19 +729,15 @@ void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
 
   // If we have specified a root signature to override the entry function then
   // attach it now
-  if (RootSigOverrideIdent) {
-    LookupResult R(SemaRef, RootSigOverrideIdent, SourceLocation(),
-                   Sema::LookupOrdinaryName);
-    if (SemaRef.LookupQualifiedName(R, FD->getDeclContext()))
-      if (auto *SignatureDecl =
-              dyn_cast<HLSLRootSignatureDecl>(R.getFoundDecl())) {
-        FD->dropAttr<RootSignatureAttr>();
-        // We could look up the SourceRange of the macro here as well
-        AttributeCommonInfo AL(RootSigOverrideIdent, AttributeScopeInfo(),
-                               SourceRange(), ParsedAttr::Form::Microsoft());
-        FD->addAttr(::new (getASTContext()) RootSignatureAttr(
-            getASTContext(), AL, RootSigOverrideIdent, SignatureDecl));
-      }
+  HLSLRootSignatureDecl *SignatureDecl =
+      lookupRootSignatureOverrideDecl(FD->getDeclContext());
+  if (SignatureDecl) {
+    FD->dropAttr<RootSignatureAttr>();
+    // We could look up the SourceRange of the macro here as well
+    AttributeCommonInfo AL(RootSigOverrideIdent, AttributeScopeInfo(),
+                           SourceRange(), ParsedAttr::Form::Microsoft());
+    FD->addAttr(::new (getASTContext()) RootSignatureAttr(
+        getASTContext(), AL, RootSigOverrideIdent, SignatureDecl));
   }
 
   llvm::Triple::EnvironmentType Env = TargetInfo.getTriple().getEnvironment();
@@ -765,6 +761,8 @@ void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
     case llvm::Triple::UnknownEnvironment:
     case llvm::Triple::Library:
       break;
+    case llvm::Triple::RootSignature:
+      llvm_unreachable("rootsig environment has no functions");
     default:
       llvm_unreachable("Unhandled environment in triple");
     }
@@ -827,6 +825,8 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
       }
     }
     break;
+  case llvm::Triple::RootSignature:
+    llvm_unreachable("rootsig environment has no function entry point");
   default:
     llvm_unreachable("Unhandled environment in triple");
   }
@@ -1107,6 +1107,18 @@ void SemaHLSL::ActOnFinishRootSignatureDecl(
   SemaRef.PushOnScopeChains(SignatureDecl, SemaRef.getCurScope());
 }
 
+HLSLRootSignatureDecl *
+SemaHLSL::lookupRootSignatureOverrideDecl(DeclContext *DC) const {
+  if (RootSigOverrideIdent) {
+    LookupResult R(SemaRef, RootSigOverrideIdent, SourceLocation(),
+                   Sema::LookupOrdinaryName);
+    if (SemaRef.LookupQualifiedName(R, DC))
+      return dyn_cast<HLSLRootSignatureDecl>(R.getFoundDecl());
+  }
+
+  return nullptr;
+}
+
 namespace {
 
 struct PerVisibilityBindingChecker {
@@ -1331,12 +1343,48 @@ bool SemaHLSL::handleRootSignatureElements(
                    std::get_if<llvm::hlsl::rootsig::DescriptorTable>(&Elem)) {
       assert(UnboundClauses.size() == Table->NumClauses &&
              "Number of unbound elements must match the number of clauses");
+      bool HasAnySampler = false;
+      bool HasAnyNonSampler = false;
+      uint32_t Offset = 0;
       for (const auto &[Clause, ClauseElem] : UnboundClauses) {
-        uint32_t LowerBound(Clause->Reg.Number);
+        SourceLocation Loc = ClauseElem->getLocation();
+        if (Clause->Type == llvm::dxil::ResourceClass::Sampler)
+          HasAnySampler = true;
+        else
+          HasAnyNonSampler = true;
+
+        if (HasAnySampler && HasAnyNonSampler)
+          Diag(Loc, diag::err_hlsl_invalid_mixed_resources);
+
         // Relevant error will have already been reported above and needs to be
-        // fixed before we can conduct range analysis, so shortcut error return
+        // fixed before we can conduct further analysis, so shortcut error
+        // return
         if (Clause->NumDescriptors == 0)
           return true;
+
+        if (Clause->Offset !=
+            llvm::hlsl::rootsig::DescriptorTableOffsetAppend) {
+          // Manually specified the offset
+          Offset = Clause->Offset;
+        }
+
+        uint64_t RangeBound = llvm::hlsl::rootsig::computeRangeBound(
+            Offset, Clause->NumDescriptors);
+
+        if (!llvm::hlsl::rootsig::verifyBoundOffset(Offset)) {
+          // Trying to append onto unbound offset
+          Diag(Loc, diag::err_hlsl_appending_onto_unbound);
+        } else if (!llvm::hlsl::rootsig::verifyNoOverflowedOffset(RangeBound)) {
+          // Upper bound overflows maximum offset
+          Diag(Loc, diag::err_hlsl_offset_overflow) << Offset << RangeBound;
+        }
+
+        Offset = RangeBound == llvm::hlsl::rootsig::NumDescriptorsUnbounded
+                     ? uint32_t(RangeBound)
+                     : uint32_t(RangeBound + 1);
+
+        // Compute the register bounds and track resource binding
+        uint32_t LowerBound(Clause->Reg.Number);
         uint32_t UpperBound = Clause->NumDescriptors == ~0u
                                   ? ~0u
                                   : LowerBound + Clause->NumDescriptors - 1;
