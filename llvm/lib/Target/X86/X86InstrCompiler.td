@@ -1350,7 +1350,7 @@ def : Pat<(X86tcret (i32 texternalsym:$dst), timm:$off),
 
 def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
           (TCRETURNri64 ptr_rc_tailcall:$dst, timm:$off)>,
-          Requires<[In64BitMode, NotUseIndirectThunkCalls, ImportCallOptimizationDisabled]>;
+          Requires<[In64BitMode, IsNotWin64CCFunc, NotUseIndirectThunkCalls, ImportCallOptimizationDisabled]>;
 
 def : Pat<(X86tcret GR64_TCW64:$dst, timm:$off),
           (TCRETURN_WIN64ri GR64_TCW64:$dst, timm:$off)>,
