@@ -2168,6 +2168,30 @@ std::string Triple::merge(const Triple &Other) const {
   return Other.str();
 }
 
+StringRef Triple::str(size_t N) const {
+  // If empty, return empty
+  if (N == 0 || Data == "")
+    return "";
+
+  // If keeping all components, return a full clone
+  if (N >= 5)
+    return Data;
+
+  // Find the N-th separator (which is after the N'th component)
+  size_t p = StringRef::npos;
+  for (uint32_t i = 0; i < N; ++i) {
+    p = Data.find('-', p + 1);
+    if (p == StringRef::npos)
+      break;
+  }
+
+  // Create a triple
+  if (p == StringRef::npos)
+    return Data;
+  else
+    return StringRef(Data).substr(0, p);
+}
+
 bool Triple::isMacOSXVersionLT(unsigned Major, unsigned Minor,
                                unsigned Micro) const {
   assert(isMacOSX() && "Not an OS X triple!");

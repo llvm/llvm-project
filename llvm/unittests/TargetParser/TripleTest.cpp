@@ -3300,4 +3300,97 @@ TEST(TripleTest, isCompatibleWith) {
     EXPECT_TRUE(DoTest(C.B, C.A, C.Result));
   }
 }
+
+TEST(TripleTest, StrFirstN) {
+  // Empty triple
+  {
+    llvm::Triple triple;
+    ASSERT_EQ(triple.str(), "");
+    ASSERT_EQ(triple.str(5), "");
+  }
+
+  // Normal triple with 3 components
+  {
+    llvm::Triple triple("arm64-apple-ios");
+    ASSERT_EQ(triple.str(), "arm64-apple-ios");
+    ASSERT_EQ(triple.str(5), "arm64-apple-ios");
+    ASSERT_EQ(triple.str(4), "arm64-apple-ios");
+    ASSERT_EQ(triple.str(3), "arm64-apple-ios");
+    ASSERT_EQ(triple.str(2), "arm64-apple");
+    ASSERT_EQ(triple.str(1), "arm64");
+    ASSERT_EQ(triple.str(0), "");
+  }
+
+  // Normal triple with 4 components
+  {
+    llvm::Triple triple("arm64-apple-ios-simulator");
+    ASSERT_EQ(triple.str(), "arm64-apple-ios-simulator");
+    ASSERT_EQ(triple.str(5), "arm64-apple-ios-simulator");
+    ASSERT_EQ(triple.str(4), "arm64-apple-ios-simulator");
+    ASSERT_EQ(triple.str(3), "arm64-apple-ios");
+    ASSERT_EQ(triple.str(2), "arm64-apple");
+    ASSERT_EQ(triple.str(1), "arm64");
+    ASSERT_EQ(triple.str(0), "");
+  }
+
+  // Normal triple with 5 components
+  {
+    llvm::Triple triple("arm64-apple-ios-simulator-macho");
+    ASSERT_EQ(triple.str(), "arm64-apple-ios-simulator-macho");
+    ASSERT_EQ(triple.str(5), "arm64-apple-ios-simulator-macho");
+    ASSERT_EQ(triple.str(4), "arm64-apple-ios-simulator");
+    ASSERT_EQ(triple.str(3), "arm64-apple-ios");
+    ASSERT_EQ(triple.str(2), "arm64-apple");
+    ASSERT_EQ(triple.str(1), "arm64");
+    ASSERT_EQ(triple.str(0), "");
+  }
+
+  // Empty vendor and os
+  {
+    llvm::Triple triple("arm64---simulator-macho");
+    ASSERT_EQ(triple.str(), "arm64---simulator-macho");
+    ASSERT_EQ(triple.str(5), "arm64---simulator-macho");
+    ASSERT_EQ(triple.str(4), "arm64---simulator");
+    ASSERT_EQ(triple.str(3), "arm64--");
+    ASSERT_EQ(triple.str(2), "arm64-");
+    ASSERT_EQ(triple.str(1), "arm64");
+    ASSERT_EQ(triple.str(0), "");
+  }
+
+  // Empty environment
+  {
+    llvm::Triple triple("arm64-apple-ios-");
+    ASSERT_EQ(triple.str(), "arm64-apple-ios-");
+    ASSERT_EQ(triple.str(5), "arm64-apple-ios-");
+    ASSERT_EQ(triple.str(4), "arm64-apple-ios-");
+    ASSERT_EQ(triple.str(3), "arm64-apple-ios");
+    ASSERT_EQ(triple.str(2), "arm64-apple");
+    ASSERT_EQ(triple.str(1), "arm64");
+    ASSERT_EQ(triple.str(0), "");
+  }
+
+  // Empty object format
+  {
+    llvm::Triple triple("arm64-apple-ios-simulator-");
+    ASSERT_EQ(triple.str(), "arm64-apple-ios-simulator-");
+    ASSERT_EQ(triple.str(5), "arm64-apple-ios-simulator-");
+    ASSERT_EQ(triple.str(4), "arm64-apple-ios-simulator");
+    ASSERT_EQ(triple.str(3), "arm64-apple-ios");
+    ASSERT_EQ(triple.str(2), "arm64-apple");
+    ASSERT_EQ(triple.str(1), "arm64");
+    ASSERT_EQ(triple.str(0), "");
+  }
+
+  // Empty environment, but has object format
+  {
+    llvm::Triple triple("arm64----macho");
+    ASSERT_EQ(triple.str(), "arm64----macho");
+    ASSERT_EQ(triple.str(5), "arm64----macho");
+    ASSERT_EQ(triple.str(4), "arm64---");
+    ASSERT_EQ(triple.str(3), "arm64--");
+    ASSERT_EQ(triple.str(2), "arm64-");
+    ASSERT_EQ(triple.str(1), "arm64");
+    ASSERT_EQ(triple.str(0), "");
+  }
+}
 } // end anonymous namespace
