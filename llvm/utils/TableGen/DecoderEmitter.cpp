@@ -562,6 +562,9 @@ public:
     return Encodings[EncodingIDs.back()].getBitWidth();
   }
 
+  /// Returns true if any decoding conflicts were encountered.
+  bool getHasConflict() const { return HasConflict; }
+
 private:
   /// Applies the given filter to the set of encodings this FilterChooser
   /// works with, creating inferior FilterChoosers as necessary.
@@ -603,22 +606,18 @@ class DecoderTableBuilder {
   ArrayRef<InstructionEncoding> Encodings;
   DecoderTableInfo &TableInfo;
 
-  bool HasConflict = false;
-
 public:
   DecoderTableBuilder(const CodeGenTarget &Target,
                       ArrayRef<InstructionEncoding> Encodings,
                       DecoderTableInfo &TableInfo)
       : Target(Target), Encodings(Encodings), TableInfo(TableInfo) {}
 
-  /// Returns true if a decoding conflict was encountered.
-  bool buildTable(const FilterChooser &FC, unsigned BitWidth) {
+  void buildTable(const FilterChooser &FC, unsigned BitWidth) const {
     // When specializing decoders per bit width, each decoder table will begin
     // with the bitwidth for that table.
     if (SpecializeDecodersPerBitwidth)
       TableInfo.Table.insertULEB128(BitWidth);
     emitTableEntries(FC);
-    return HasConflict;
   }
 
 private:
@@ -644,7 +643,7 @@ private:
 
   void emitSingletonTableEntry(const FilterChooser &FC) const;
 
-  void emitTableEntries(const FilterChooser &FC);
+  void emitTableEntries(const FilterChooser &FC) const;
 };
 
 } // end anonymous namespace
@@ -691,6 +690,7 @@ void FilterChooser::applyFilter(const Filter &F) {
     // group of instructions whose segment values are variable.
     VariableFC = std::make_unique<FilterChooser>(Encodings, F.VariableIDs,
                                                  FilterBits, *this);
+    HasConflict |= VariableFC->HasConflict;
   }
 
   // Otherwise, create sub choosers.
@@ -702,9 +702,11 @@ void FilterChooser::applyFilter(const Filter &F) {
 
     // Delegates to an inferior filter chooser for further processing on this
     // category of instructions.
-    FilterChooserMap.try_emplace(FilterVal, std::make_unique<FilterChooser>(
-                                                Encodings, InferiorEncodingIDs,
-                                                InferiorFilterBits, *this));
+    auto [It, _] = FilterChooserMap.try_emplace(
+        FilterVal,
+        std::make_unique<FilterChooser>(Encodings, InferiorEncodingIDs,
+                                        InferiorFilterBits, *this));
+    HasConflict |= It->second->HasConflict;
   }
 }
 
@@ -1619,12 +1621,7 @@ void FilterChooser::dump() const {
   }
 }
 
-void DecoderTableBuilder::emitTableEntries(const FilterChooser &FC) {
-  if (FC.HasConflict) {
-    HasConflict = true;
-    return;
-  }
-
+void DecoderTableBuilder::emitTableEntries(const FilterChooser &FC) const {
   DecoderTable &Table = TableInfo.Table;
 
   // If there are other encodings that could match if those with all bits
@@ -2589,6 +2586,10 @@ template <typename T> constexpr uint32_t InsnBitWidth = 0;
 
       // Emit the decoder for this (namespace, hwmode, width) combination.
       FilterChooser FC(Encodings, EncodingIDs);
+      HasConflict |= FC.getHasConflict();
+      // Skip emitting table entries if a conflict has been detected.
+      if (HasConflict)
+        continue;
 
       // The decode table is cleared for each top level decoder function. The
       // predicates and decoders themselves, however, are shared across
@@ -2598,10 +2599,7 @@ template <typename T> constexpr uint32_t InsnBitWidth = 0;
       //    across all decoder tables.
       //  - predicates are shared across all decoder tables.
       TableInfo.Table.clear();
-      HasConflict |= TableBuilder.buildTable(FC, BitWidth);
-      // Skip emitting table entries if a conflict has been detected.
-      if (HasConflict)
-        continue;
+      TableBuilder.buildTable(FC, BitWidth);
 
       // Print the table to the output stream.
       OpcodeMask |= emitTable(OS, TableInfo.Table, DecoderNamespace, HwModeID,
