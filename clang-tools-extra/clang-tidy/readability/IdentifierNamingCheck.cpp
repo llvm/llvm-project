@@ -186,7 +186,7 @@ static StringRef const StyleNames[] = {
      m(ptrdiff_t) \
      m(void) \
 
-static StringRef const HungarainNotationPrimitiveTypes[] = {
+static StringRef const HungarianNotationPrimitiveTypes[] = {
 #define STRINGIZE(v) #v,
   HUNGARIAN_NOTATION_PRIMITIVE_TYPES(STRINGIZE)
 #undef STRINGIZE
@@ -222,7 +222,7 @@ static StringRef const HungarainNotationPrimitiveTypes[] = {
      m(UINT64) \
      m(PVOID) \
 
-static StringRef const HungarainNotationUserDefinedTypes[] = {
+static StringRef const HungarianNotationUserDefinedTypes[] = {
 #define STRINGIZE(v) #v,
   HUNGARIAN_NOTATION_USER_DEFINED_TYPES(STRINGIZE)
 #undef STRINGIZE
@@ -488,7 +488,7 @@ void IdentifierNamingCheck::HungarianNotation::loadFileConfig(
 
   Buffer = {Section, "PrimitiveType."};
   DefSize = Buffer.size();
-  for (const auto &PrimType : HungarainNotationPrimitiveTypes) {
+  for (const auto &PrimType : HungarianNotationPrimitiveTypes) {
     Buffer.truncate(DefSize);
     Buffer.append(PrimType);
     StringRef Val = Options.get(Buffer, "");
@@ -501,7 +501,7 @@ void IdentifierNamingCheck::HungarianNotation::loadFileConfig(
 
   Buffer = {Section, "UserDefinedType."};
   DefSize = Buffer.size();
-  for (const auto &Type : HungarainNotationUserDefinedTypes) {
+  for (const auto &Type : HungarianNotationUserDefinedTypes) {
     Buffer.truncate(DefSize);
     Buffer.append(Type);
     StringRef Val = Options.get(Buffer, "");
