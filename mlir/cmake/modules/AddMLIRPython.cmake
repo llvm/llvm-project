@@ -109,13 +109,14 @@ endfunction()
 #     (e.g., something like StandalonePythonModules.extension._mlir.dso)
 #   OUTPUT_DIR: The root output directory to emit the type stubs into.
 #   OUTPUTS: List of expected outputs.
+#   DEPENDS_TARGET_SRC_DEPS: List of cpp sources for extension library (for generating a DEPFILE).
 # Outputs:
 #   NB_STUBGEN_CUSTOM_TARGET: The target corresponding to generation which other targets can depend on.
 function(generate_type_stubs )
   cmake_parse_arguments(ARG
     ""
     "FQ_MODULE_NAME;DEPENDS_TARGET;CORE_MLIR_DEPENDS_TARGET;OUTPUT_DIR"
-    "OUTPUTS"
+    "OUTPUTS;DEPENDS_TARGET_SRC_DEPS"
     ${ARGN})
   # for people doing find_package(nanobind)
   if(EXISTS ${nanobind_DIR}/../src/stubgen.py)
@@ -148,6 +149,13 @@ function(generate_type_stubs )
       --quiet)
 
   list(TRANSFORM ARG_OUTPUTS PREPEND "${ARG_OUTPUT_DIR}/" OUTPUT_VARIABLE _generated_type_stubs)
+  set(_depfile "${ARG_OUTPUT_DIR}/${ARG_FQ_MODULE_NAME}.d")
+  if ((NOT EXISTS ${_depfile}) AND ARG_DEPENDS_TARGET_SRC_DEPS)
+    list(JOIN ARG_DEPENDS_TARGET_SRC_DEPS " " _depfiles)
+    list(TRANSFORM _generated_type_stubs APPEND ": ${_depfiles}" OUTPUT_VARIABLE _depfiles)
+    list(JOIN _depfiles "\n" _depfiles)
+    file(GENERATE OUTPUT "${_depfile}" CONTENT "${_depfiles}")
+  endif()
   add_custom_command(
     OUTPUT ${_generated_type_stubs}
     COMMAND ${_nb_stubgen_cmd}
@@ -156,6 +164,7 @@ function(generate_type_stubs )
       "${ARG_CORE_MLIR_DEPENDS_TARGET}.extension._mlir.dso"
       "${ARG_CORE_MLIR_DEPENDS_TARGET}.sources.MLIRPythonSources.Core.Python"
       "${ARG_DEPENDS_TARGET}"
+    DEPFILE "${_depfile}"
   )
   set(_name "${ARG_FQ_MODULE_NAME}.type_stubs")
   add_custom_target("${_name}" DEPENDS ${_generated_type_stubs})
@@ -332,19 +341,30 @@ function(add_mlir_python_modules name)
       )
       add_dependencies(${modules_target} ${_extension_target})
       mlir_python_setup_extension_rpath(${_extension_target})
+      # NOTE: `sources_target` (naturally) lists all the sources (it's the INTERFACE
+      # target defined above in declare_mlir_python_extension). It's also the name of the
+      # target that gets exported (i.e., is populated as an INTERFACE IMPORTED library in MLIRTargets.cmake).
+      # This is why all metadata is queried from `sources_target`. On the other hand
+      # `_extension_target` is the actual dylib target that's built just above with `add_mlir_python_extension`.
+      # That's why dependencies are in terms of `_extension_target`.
       get_target_property(_generate_type_stubs ${sources_target} mlir_python_GENERATE_TYPE_STUBS)
       if(ARG_GENERATE_TYPE_STUBS AND _generate_type_stubs)
         if ((NOT ARG_PACKAGE_PREFIX) OR ("${ARG_PACKAGE_PREFIX}" STREQUAL ""))
           message(FATAL_ERROR "GENERATE_TYPE_STUBS requires PACKAGE_PREFIX for ${name}")
         endif()
-        # TL;DR: everything here is load bearing and annoyingly coupled. Changing anything here
-        # (or in declare_mlir_python_extension) will break either in-tree or out-of-tree generation.
+        # TL;DR: all paths here are load bearing and annoyingly coupled. Changing paths here
+        # (or related code in declare_mlir_python_extension) will break either in-tree or out-of-tree generation.
         #
         # We remove _mlir_libs here because OUTPUT_DIR already includes it.
         # Specifically OUTPUT_DIR already includes it because that's the actual directory
         # where we want stubgen to dump the emitted sources. This is load bearing because up above
         # (in declare_mlir_python_extension) we prefixed all the paths with _mlir_libs and
         # we specified declare_mlir_python_sources with ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}/type_stubs".
+        #
+        # NOTE: INTERFACE_SOURCES is a genex in the build dir ($<BUILD_INTERFACE> and $<INSTALL_INTERFACE>)
+        # which will be evaluated by file(GENERATE ...). In the install dir it's a conventional path
+        # (see install/lib/cmake/mlir/MLIRTargets.cmake).
+        get_target_property(_extension_srcs ${sources_target} INTERFACE_SOURCES)
         list(TRANSFORM _generate_type_stubs REPLACE "_mlir_libs/" "")
         generate_type_stubs(
           FQ_MODULE_NAME "${ARG_PACKAGE_PREFIX}._mlir_libs.${_module_name}"
@@ -352,6 +372,7 @@ function(add_mlir_python_modules name)
           CORE_MLIR_DEPENDS_TARGET ${name}
           OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/type_stubs/_mlir_libs"
           OUTPUTS "${_generate_type_stubs}"
+          DEPENDS_TARGET_SRC_DEPS "${_extension_srcs}"
         )
         add_dependencies("${modules_target}" "${NB_STUBGEN_CUSTOM_TARGET}")
       endif()
