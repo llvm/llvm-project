@@ -1859,6 +1859,27 @@ this) and always check the return value of these calls.
 
 This check corresponds to SEI CERT Rule `POS36-C <https://wiki.sei.cmu.edu/confluence/display/c/POS36-C.+Observe+correct+revocation+order+while+relinquishing+privileges>`_.
 
+.. _security-VAList:
+
+security.VAList (C, C++)
+""""""""""""""""""""""""
+Reports use of uninitialized (or already released) ``va_list`` objects and
+situations where a ``va_start`` call is not followed by ``va_end``.
+
+.. code-block:: c
+
+ int test_use_after_release(int x, ...) {
+   va_list va;
+   va_start(va, x);
+   va_end(va);
+   return va_arg(va, int); // warn: va is uninitialized
+ }
+
+ void test_leak(int x, ...) {
+   va_list va;
+   va_start(va, x);
+ } // warn: va is leaked
+
 .. _unix-checkers:
 
 unix

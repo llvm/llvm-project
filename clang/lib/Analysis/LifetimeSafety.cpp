@@ -118,6 +118,7 @@ public:
     return AllOrigins.back();
   }
 
+  // TODO: Mark this method as const once we remove the call to getOrCreate.
   OriginID get(const Expr &E) {
     // Origin of DeclRefExpr is that of the declaration it refers to.
     if (const auto *DRE = dyn_cast<DeclRefExpr>(&E))
@@ -314,22 +315,28 @@ public:
 };
 
 class UseFact : public Fact {
-  OriginID UsedOrigin;
   const Expr *UseExpr;
+  // True if this use is a write operation (e.g., left-hand side of assignment).
+  // Write operations are exempted from use-after-free checks.
+  bool IsWritten = false;
 
 public:
   static bool classof(const Fact *F) { return F->getKind() == Kind::Use; }
 
-  UseFact(OriginID UsedOrigin, const Expr *UseExpr)
-      : Fact(Kind::Use), UsedOrigin(UsedOrigin), UseExpr(UseExpr) {}
+  UseFact(const Expr *UseExpr) : Fact(Kind::Use), UseExpr(UseExpr) {}
 
-  OriginID getUsedOrigin() const { return UsedOrigin; }
+  OriginID getUsedOrigin(const OriginManager &OM) const {
+    // TODO: Remove const cast and make OriginManager::get as const.
+    return const_cast<OriginManager &>(OM).get(*UseExpr);
+  }
   const Expr *getUseExpr() const { return UseExpr; }
+  void markAsWritten() { IsWritten = true; }
+  bool isWritten() const { return IsWritten; }
 
   void dump(llvm::raw_ostream &OS, const OriginManager &OM) const override {
     OS << "Use (";
-    OM.dump(getUsedOrigin(), OS);
-    OS << ")\n";
+    OM.dump(getUsedOrigin(OM), OS);
+    OS << " " << (isWritten() ? "Write" : "Read") << ")\n";
   }
 };
 
@@ -436,6 +443,8 @@ public:
             addAssignOriginFact(*VD, *InitExpr);
   }
 
+  void VisitDeclRefExpr(const DeclRefExpr *DRE) { handleUse(DRE); }
+
   void VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *N) {
     /// TODO: Handle nullptr expr as a special 'null' loan. Uninitialized
     /// pointers can use the same type of loan.
@@ -469,10 +478,6 @@ public:
           }
         }
       }
-    } else if (UO->getOpcode() == UO_Deref) {
-      // This is a pointer use, like '*p'.
-      OriginID OID = FactMgr.getOriginMgr().get(*UO->getSubExpr());
-      CurrentBlockFacts.push_back(FactMgr.createFact<UseFact>(OID, UO));
     }
   }
 
@@ -487,20 +492,13 @@ public:
   }
 
   void VisitBinaryOperator(const BinaryOperator *BO) {
-    if (BO->isAssignmentOp()) {
-      const Expr *LHSExpr = BO->getLHS();
-      const Expr *RHSExpr = BO->getRHS();
+    if (BO->isAssignmentOp())
+      handleAssignment(BO->getLHS(), BO->getRHS());
+  }
 
-      // We are interested in assignments like `ptr1 = ptr2` or `ptr = &var`
-      // LHS must be a pointer/reference type that can be an origin.
-      // RHS must also represent an origin (either another pointer/ref or an
-      // address-of).
-      if (const auto *DRE_LHS = dyn_cast<DeclRefExpr>(LHSExpr))
-        if (const auto *VD_LHS =
-                dyn_cast<ValueDecl>(DRE_LHS->getDecl()->getCanonicalDecl());
-            VD_LHS && hasOrigin(VD_LHS->getType()))
-          addAssignOriginFact(*VD_LHS, *RHSExpr);
-    }
+  void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
+    if (OCE->isAssignmentOp() && OCE->getNumArgs() == 2)
+      handleAssignment(OCE->getArg(0), OCE->getArg(1));
   }
 
   void VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *FCE) {
@@ -567,9 +565,47 @@ private:
     return false;
   }
 
+  void handleAssignment(const Expr *LHSExpr, const Expr *RHSExpr) {
+    // Find the underlying variable declaration for the left-hand side.
+    if (const auto *DRE_LHS =
+            dyn_cast<DeclRefExpr>(LHSExpr->IgnoreParenImpCasts())) {
+      markUseAsWrite(DRE_LHS);
+      if (const auto *VD_LHS = dyn_cast<ValueDecl>(DRE_LHS->getDecl()))
+        if (hasOrigin(LHSExpr->getType()))
+          // We are interested in assignments like `ptr1 = ptr2` or `ptr = &var`
+          // LHS must be a pointer/reference type that can be an origin.
+          // RHS must also represent an origin (either another pointer/ref or an
+          // address-of).
+          addAssignOriginFact(*VD_LHS, *RHSExpr);
+    }
+  }
+
+  // A DeclRefExpr is a use of the referenced decl. It is checked for
+  // use-after-free unless it is being written to (e.g. on the left-hand side
+  // of an assignment).
+  void handleUse(const DeclRefExpr *DRE) {
+    if (hasOrigin(DRE->getType())) {
+      UseFact *UF = FactMgr.createFact<UseFact>(DRE);
+      CurrentBlockFacts.push_back(UF);
+      assert(!UseFacts.contains(DRE));
+      UseFacts[DRE] = UF;
+    }
+  }
+
+  void markUseAsWrite(const DeclRefExpr *DRE) {
+    assert(UseFacts.contains(DRE));
+    UseFacts[DRE]->markAsWritten();
+  }
+
   FactManager &FactMgr;
   AnalysisDeclContext &AC;
   llvm::SmallVector<Fact *> CurrentBlockFacts;
+  // To distinguish between reads and writes for use-after-free checks, this map
+  // stores the `UseFact` for each `DeclRefExpr`. We initially identify all
+  // `DeclRefExpr`s as "read" uses. When an assignment is processed, the use
+  // corresponding to the left-hand side is updated to be a "write", thereby
+  // exempting it from the check.
+  llvm::DenseMap<const DeclRefExpr *, UseFact *> UseFacts;
 };
 
 // ========================================================================= //
@@ -1032,8 +1068,9 @@ public:
   /// graph. It determines if the loans held by the used origin have expired
   /// at the point of use.
   void checkUse(const UseFact *UF) {
-
-    OriginID O = UF->getUsedOrigin();
+    if (UF->isWritten())
+      return;
+    OriginID O = UF->getUsedOrigin(FactMgr.getOriginMgr());
 
     // Get the set of loans that the origin might hold at this program point.
     LoanSet HeldLoans = LoanPropagation.getLoans(O, UF);

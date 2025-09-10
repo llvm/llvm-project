@@ -2328,7 +2328,6 @@ include "RISCVInstrInfoZalasr.td"
 include "RISCVInstrInfoZimop.td"
 include "RISCVInstrInfoZicbo.td"
 include "RISCVInstrInfoZicond.td"
-include "RISCVInstrInfoZicfiss.td"
 include "RISCVInstrInfoZilsd.td"
 
 // Scalar FP
@@ -2356,6 +2355,9 @@ include "RISCVInstrInfoC.td"
 include "RISCVInstrInfoZc.td"
 include "RISCVInstrInfoZcmop.td"
 include "RISCVInstrInfoZclsd.td"
+
+// Control Flow Integriy, this requires Zimop/Zcmop
+include "RISCVInstrInfoZicfiss.td"
 
 // Short Forward Branch
 include "RISCVInstrInfoSFB.td"
