@@ -114,8 +114,8 @@ define amdgpu_gfx_whole_wave i32 @basic_test(i1 %active, i32 %a, i32 %b) {
 ; GFX1250-DAGISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_xor_saveexec_b32 vcc_lo, -1
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x1
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0, s32 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0, s32
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4
 ; GFX1250-DAGISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; GFX1250-DAGISEL-NEXT:    v_dual_cndmask_b32 v0, 5, v0 :: v_dual_cndmask_b32 v1, 3, v1
@@ -239,8 +239,8 @@ define amdgpu_gfx_whole_wave i32 @single_use_of_active(i1 %active, i32 %a, i32 %
 ; GFX1250-DAGISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_xor_saveexec_b32 vcc_lo, -1
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x1
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0, s32 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0, s32
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4
 ; GFX1250-DAGISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; GFX1250-DAGISEL-NEXT:    v_cndmask_b32_e32 v1, 17, v1, vcc_lo
@@ -338,7 +338,7 @@ define amdgpu_gfx_whole_wave i32 @unused_active(i1 %active, i32 %a, i32 %b) {
 ; GFX1250-DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_xor_saveexec_b32 s0, -1
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0, s32 scope:SCOPE_SE ; 4-byte Folded Spill
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0, s32 ; 4-byte Folded Spill
 ; GFX1250-DAGISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; GFX1250-DAGISEL-NEXT:    v_mov_b32_e32 v0, 14
@@ -518,13 +518,13 @@ define amdgpu_gfx_whole_wave i32 @csr(i1 %active, i32 %a, i32 %b) {
 ; GFX1250-DAGISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_xor_saveexec_b32 vcc_lo, -1
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v2, s32 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0, s32 offset:4 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:8 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v49, s32 offset:16 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v2, s32
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0, s32 offset:4
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:8
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v49, s32 offset:16
 ; GFX1250-DAGISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v40, s32 offset:12 scope:SCOPE_SE ; 4-byte Folded Spill
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v40, s32 offset:12 ; 4-byte Folded Spill
 ; GFX1250-DAGISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    ;;#ASMSTART
 ; GFX1250-DAGISEL-NEXT:    ; clobber CSR
@@ -636,7 +636,7 @@ define amdgpu_gfx_whole_wave void @csr_vgpr_only(i1 %active, i32 %a, i32 %b) {
 ; GFX1250-DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_or_saveexec_b32 s0, -1
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v40, s32 scope:SCOPE_SE ; 4-byte Folded Spill
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v40, s32 ; 4-byte Folded Spill
 ; GFX1250-DAGISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    ;;#ASMSTART
 ; GFX1250-DAGISEL-NEXT:    ; clobber CSR VGPR
@@ -748,7 +748,7 @@ define amdgpu_gfx_whole_wave void @sgpr_spill_only(i1 %active, i32 %a, i32 %b) {
 ; GFX1250-DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_xor_saveexec_b32 s0, -1
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0, s32 scope:SCOPE_SE ; 4-byte Folded Spill
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0, s32 ; 4-byte Folded Spill
 ; GFX1250-DAGISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; GFX1250-DAGISEL-NEXT:    v_writelane_b32 v0, s68, 0
@@ -894,8 +894,8 @@ define amdgpu_gfx_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) {
 ; GFX1250-DAGISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_xor_saveexec_b32 vcc_lo, -1
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x1
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0, s32 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0, s32
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4
 ; GFX1250-DAGISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; GFX1250-DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -1059,10 +1059,10 @@ define amdgpu_gfx_whole_wave i64 @ret_64(i1 %active, i64 %a, i64 %b) {
 ; GFX1250-DAGISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_xor_saveexec_b32 vcc_lo, -1
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0, s32 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v2, s32 offset:8 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v3, s32 offset:12 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0, s32
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v2, s32 offset:8
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v3, s32 offset:12
 ; GFX1250-DAGISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; GFX1250-DAGISEL-NEXT:    v_dual_cndmask_b32 v1, 0, v1 :: v_dual_cndmask_b32 v0, 5, v0
@@ -1252,21 +1252,21 @@ define amdgpu_gfx_whole_wave void @inreg_args(i1 %active, i32 inreg %i32, <4 x i
 ; GFX1250-DAGISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x5
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0, s32 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v2, s32 offset:8 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v3, s32 offset:12 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v4, s32 offset:16 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v5, s32 offset:20 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0, s32
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v2, s32 offset:8
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v3, s32 offset:12
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v4, s32 offset:16
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v5, s32 offset:20
 ; GFX1250-DAGISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; GFX1250-DAGISEL-NEXT:    v_dual_mov_b32 v4, s4 :: v_dual_mov_b32 v5, s9
 ; GFX1250-DAGISEL-NEXT:    v_dual_mov_b32 v0, s5 :: v_dual_mov_b32 v1, s6
 ; GFX1250-DAGISEL-NEXT:    v_dual_mov_b32 v2, s7 :: v_dual_mov_b32 v3, s8
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v4, s10 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v4, s10
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x1
-; GFX1250-DAGISEL-NEXT:    scratch_store_b128 off, v[0:3], s11 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v5, s11 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b128 off, v[0:3], s11
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v5, s11
 ; GFX1250-DAGISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_xor_b32 exec_lo, s0, -1
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x5
@@ -2645,939 +2645,939 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; GFX1250-DAGISEL-NEXT:    s_mov_b32 s33, s32
 ; GFX1250-DAGISEL-NEXT:    s_xor_saveexec_b32 s4, -1
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3e
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0, s33 offset:4 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v1, s33 offset:8 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v2, s33 offset:12 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v3, s33 offset:16 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v4, s33 offset:20 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v5, s33 offset:24 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v6, s33 offset:28 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v7, s33 offset:32 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v8, s33 offset:36 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v9, s33 offset:40 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v10, s33 offset:44 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v11, s33 offset:48 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v12, s33 offset:52 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v13, s33 offset:56 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v14, s33 offset:60 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v15, s33 offset:64 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v16, s33 offset:68 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v17, s33 offset:72 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v18, s33 offset:76 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v19, s33 offset:80 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v20, s33 offset:84 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v21, s33 offset:88 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v22, s33 offset:92 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v23, s33 offset:96 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v24, s33 offset:100 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v25, s33 offset:104 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v26, s33 offset:108 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v27, s33 offset:112 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v28, s33 offset:116 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v29, s33 offset:120 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v30, s33 offset:124 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v31, s33 offset:128 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v32, s33 offset:132 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v33, s33 offset:136 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v34, s33 offset:140 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v35, s33 offset:144 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v36, s33 offset:148 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v37, s33 offset:152 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v38, s33 offset:156 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v39, s33 offset:160 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v48, s33 offset:164 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v49, s33 offset:168 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v50, s33 offset:172 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v51, s33 offset:176 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v52, s33 offset:180 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v53, s33 offset:184 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v54, s33 offset:188 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v55, s33 offset:192 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v64, s33 offset:196 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v65, s33 offset:200 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v66, s33 offset:204 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v67, s33 offset:208 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v68, s33 offset:212 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v69, s33 offset:216 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v70, s33 offset:220 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v71, s33 offset:224 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v80, s33 offset:228 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v81, s33 offset:232 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v82, s33 offset:236 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v83, s33 offset:240 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v84, s33 offset:244 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v85, s33 offset:248 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v86, s33 offset:252 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0, s33 offset:4
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v1, s33 offset:8
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v2, s33 offset:12
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v3, s33 offset:16
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v4, s33 offset:20
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v5, s33 offset:24
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v6, s33 offset:28
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v7, s33 offset:32
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v8, s33 offset:36
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v9, s33 offset:40
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v10, s33 offset:44
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v11, s33 offset:48
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v12, s33 offset:52
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v13, s33 offset:56
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v14, s33 offset:60
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v15, s33 offset:64
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v16, s33 offset:68
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v17, s33 offset:72
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v18, s33 offset:76
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v19, s33 offset:80
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v20, s33 offset:84
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v21, s33 offset:88
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v22, s33 offset:92
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v23, s33 offset:96
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v24, s33 offset:100
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v25, s33 offset:104
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v26, s33 offset:108
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v27, s33 offset:112
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v28, s33 offset:116
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v29, s33 offset:120
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v30, s33 offset:124
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v31, s33 offset:128
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v32, s33 offset:132
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v33, s33 offset:136
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v34, s33 offset:140
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v35, s33 offset:144
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v36, s33 offset:148
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v37, s33 offset:152
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v38, s33 offset:156
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v39, s33 offset:160
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v48, s33 offset:164
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v49, s33 offset:168
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v50, s33 offset:172
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v51, s33 offset:176
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v52, s33 offset:180
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v53, s33 offset:184
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v54, s33 offset:188
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v55, s33 offset:192
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v64, s33 offset:196
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v65, s33 offset:200
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v66, s33 offset:204
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v67, s33 offset:208
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v68, s33 offset:212
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v69, s33 offset:216
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v70, s33 offset:220
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v71, s33 offset:224
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v80, s33 offset:228
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v81, s33 offset:232
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v82, s33 offset:236
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v83, s33 offset:240
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v84, s33 offset:244
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v85, s33 offset:248
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v86, s33 offset:252
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3e
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v87, s33 offset:256 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v96, s33 offset:260 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v97, s33 offset:264 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v98, s33 offset:268 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v99, s33 offset:272 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v100, s33 offset:276 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v101, s33 offset:280 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v102, s33 offset:284 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v103, s33 offset:288 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v112, s33 offset:292 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v113, s33 offset:296 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v114, s33 offset:300 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v115, s33 offset:304 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v116, s33 offset:308 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v117, s33 offset:312 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v118, s33 offset:316 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v119, s33 offset:320 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v128, s33 offset:324 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v129, s33 offset:328 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v130, s33 offset:332 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v131, s33 offset:336 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v132, s33 offset:340 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v133, s33 offset:344 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v134, s33 offset:348 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v135, s33 offset:352 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v144, s33 offset:356 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v145, s33 offset:360 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v146, s33 offset:364 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v147, s33 offset:368 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v148, s33 offset:372 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v149, s33 offset:376 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v150, s33 offset:380 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v151, s33 offset:384 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v160, s33 offset:388 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v161, s33 offset:392 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v162, s33 offset:396 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v163, s33 offset:400 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v164, s33 offset:404 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v165, s33 offset:408 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v166, s33 offset:412 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v167, s33 offset:416 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v176, s33 offset:420 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v177, s33 offset:424 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v178, s33 offset:428 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v179, s33 offset:432 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v180, s33 offset:436 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v181, s33 offset:440 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v182, s33 offset:444 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v183, s33 offset:448 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v192, s33 offset:452 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v193, s33 offset:456 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v194, s33 offset:460 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v195, s33 offset:464 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v196, s33 offset:468 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v197, s33 offset:472 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v198, s33 offset:476 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v199, s33 offset:480 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v208, s33 offset:484 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v209, s33 offset:488 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v210, s33 offset:492 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v211, s33 offset:496 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v212, s33 offset:500 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v213, s33 offset:504 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v87, s33 offset:256
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v96, s33 offset:260
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v97, s33 offset:264
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v98, s33 offset:268
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v99, s33 offset:272
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v100, s33 offset:276
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v101, s33 offset:280
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v102, s33 offset:284
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v103, s33 offset:288
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v112, s33 offset:292
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v113, s33 offset:296
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v114, s33 offset:300
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v115, s33 offset:304
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v116, s33 offset:308
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v117, s33 offset:312
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v118, s33 offset:316
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v119, s33 offset:320
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v128, s33 offset:324
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v129, s33 offset:328
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v130, s33 offset:332
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v131, s33 offset:336
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v132, s33 offset:340
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v133, s33 offset:344
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v134, s33 offset:348
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v135, s33 offset:352
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v144, s33 offset:356
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v145, s33 offset:360
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v146, s33 offset:364
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v147, s33 offset:368
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v148, s33 offset:372
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v149, s33 offset:376
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v150, s33 offset:380
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v151, s33 offset:384
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v160, s33 offset:388
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v161, s33 offset:392
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v162, s33 offset:396
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v163, s33 offset:400
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v164, s33 offset:404
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v165, s33 offset:408
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v166, s33 offset:412
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v167, s33 offset:416
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v176, s33 offset:420
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v177, s33 offset:424
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v178, s33 offset:428
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v179, s33 offset:432
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v180, s33 offset:436
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v181, s33 offset:440
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v182, s33 offset:444
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v183, s33 offset:448
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v192, s33 offset:452
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v193, s33 offset:456
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v194, s33 offset:460
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v195, s33 offset:464
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v196, s33 offset:468
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v197, s33 offset:472
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v198, s33 offset:476
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v199, s33 offset:480
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v208, s33 offset:484
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v209, s33 offset:488
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v210, s33 offset:492
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v211, s33 offset:496
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v212, s33 offset:500
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v213, s33 offset:504
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3e
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v214, s33 offset:508 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v215, s33 offset:512 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v224, s33 offset:516 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v225, s33 offset:520 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v226, s33 offset:524 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v227, s33 offset:528 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v228, s33 offset:532 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v229, s33 offset:536 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v230, s33 offset:540 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v231, s33 offset:544 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v240, s33 offset:548 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v241, s33 offset:552 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v242, s33 offset:556 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v243, s33 offset:560 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v244, s33 offset:564 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v245, s33 offset:568 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v246, s33 offset:572 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v247, s33 offset:576 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v214, s33 offset:508
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v215, s33 offset:512
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v224, s33 offset:516
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v225, s33 offset:520
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v226, s33 offset:524
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v227, s33 offset:528
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v228, s33 offset:532
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v229, s33 offset:536
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v230, s33 offset:540
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v231, s33 offset:544
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v240, s33 offset:548
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v241, s33 offset:552
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v242, s33 offset:556
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v243, s33 offset:560
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v244, s33 offset:564
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v245, s33 offset:568
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v246, s33 offset:572
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v247, s33 offset:576
 ; GFX1250-DAGISEL-NEXT:    s_set_vgpr_msb 4 ; msbs: dst=0 src0=0 src1=1 src2=0
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0 /*v256*/, s33 offset:580 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v1 /*v257*/, s33 offset:584 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v2 /*v258*/, s33 offset:588 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v3 /*v259*/, s33 offset:592 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v4 /*v260*/, s33 offset:596 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v5 /*v261*/, s33 offset:600 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v6 /*v262*/, s33 offset:604 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v7 /*v263*/, s33 offset:608 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v8 /*v264*/, s33 offset:612 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v9 /*v265*/, s33 offset:616 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v10 /*v266*/, s33 offset:620 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v11 /*v267*/, s33 offset:624 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v12 /*v268*/, s33 offset:628 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v13 /*v269*/, s33 offset:632 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v14 /*v270*/, s33 offset:636 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v15 /*v271*/, s33 offset:640 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v16 /*v272*/, s33 offset:644 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v17 /*v273*/, s33 offset:648 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v18 /*v274*/, s33 offset:652 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v19 /*v275*/, s33 offset:656 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v20 /*v276*/, s33 offset:660 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v21 /*v277*/, s33 offset:664 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v22 /*v278*/, s33 offset:668 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v23 /*v279*/, s33 offset:672 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v24 /*v280*/, s33 offset:676 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v25 /*v281*/, s33 offset:680 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v26 /*v282*/, s33 offset:684 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v27 /*v283*/, s33 offset:688 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v28 /*v284*/, s33 offset:692 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v29 /*v285*/, s33 offset:696 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v30 /*v286*/, s33 offset:700 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v31 /*v287*/, s33 offset:704 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v32 /*v288*/, s33 offset:708 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v33 /*v289*/, s33 offset:712 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v34 /*v290*/, s33 offset:716 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v35 /*v291*/, s33 offset:720 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v36 /*v292*/, s33 offset:724 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v37 /*v293*/, s33 offset:728 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v38 /*v294*/, s33 offset:732 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v39 /*v295*/, s33 offset:736 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v40 /*v296*/, s33 offset:740 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v41 /*v297*/, s33 offset:744 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v42 /*v298*/, s33 offset:748 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v43 /*v299*/, s33 offset:752 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v44 /*v300*/, s33 offset:756 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0 /*v256*/, s33 offset:580
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v1 /*v257*/, s33 offset:584
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v2 /*v258*/, s33 offset:588
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v3 /*v259*/, s33 offset:592
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v4 /*v260*/, s33 offset:596
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v5 /*v261*/, s33 offset:600
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v6 /*v262*/, s33 offset:604
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v7 /*v263*/, s33 offset:608
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v8 /*v264*/, s33 offset:612
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v9 /*v265*/, s33 offset:616
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v10 /*v266*/, s33 offset:620
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v11 /*v267*/, s33 offset:624
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v12 /*v268*/, s33 offset:628
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v13 /*v269*/, s33 offset:632
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v14 /*v270*/, s33 offset:636
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v15 /*v271*/, s33 offset:640
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v16 /*v272*/, s33 offset:644
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v17 /*v273*/, s33 offset:648
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v18 /*v274*/, s33 offset:652
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v19 /*v275*/, s33 offset:656
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v20 /*v276*/, s33 offset:660
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v21 /*v277*/, s33 offset:664
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v22 /*v278*/, s33 offset:668
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v23 /*v279*/, s33 offset:672
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v24 /*v280*/, s33 offset:676
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v25 /*v281*/, s33 offset:680
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v26 /*v282*/, s33 offset:684
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v27 /*v283*/, s33 offset:688
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v28 /*v284*/, s33 offset:692
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v29 /*v285*/, s33 offset:696
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v30 /*v286*/, s33 offset:700
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v31 /*v287*/, s33 offset:704
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v32 /*v288*/, s33 offset:708
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v33 /*v289*/, s33 offset:712
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v34 /*v290*/, s33 offset:716
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v35 /*v291*/, s33 offset:720
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v36 /*v292*/, s33 offset:724
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v37 /*v293*/, s33 offset:728
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v38 /*v294*/, s33 offset:732
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v39 /*v295*/, s33 offset:736
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v40 /*v296*/, s33 offset:740
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v41 /*v297*/, s33 offset:744
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v42 /*v298*/, s33 offset:748
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v43 /*v299*/, s33 offset:752
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v44 /*v300*/, s33 offset:756
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3e
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v45 /*v301*/, s33 offset:760 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v46 /*v302*/, s33 offset:764 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v47 /*v303*/, s33 offset:768 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v48 /*v304*/, s33 offset:772 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v49 /*v305*/, s33 offset:776 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v50 /*v306*/, s33 offset:780 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v51 /*v307*/, s33 offset:784 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v52 /*v308*/, s33 offset:788 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v53 /*v309*/, s33 offset:792 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v54 /*v310*/, s33 offset:796 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v55 /*v311*/, s33 offset:800 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v56 /*v312*/, s33 offset:804 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v57 /*v313*/, s33 offset:808 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v58 /*v314*/, s33 offset:812 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v59 /*v315*/, s33 offset:816 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v60 /*v316*/, s33 offset:820 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v61 /*v317*/, s33 offset:824 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v62 /*v318*/, s33 offset:828 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v63 /*v319*/, s33 offset:832 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v64 /*v320*/, s33 offset:836 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v65 /*v321*/, s33 offset:840 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v66 /*v322*/, s33 offset:844 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v67 /*v323*/, s33 offset:848 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v68 /*v324*/, s33 offset:852 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v69 /*v325*/, s33 offset:856 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v70 /*v326*/, s33 offset:860 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v71 /*v327*/, s33 offset:864 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v72 /*v328*/, s33 offset:868 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v73 /*v329*/, s33 offset:872 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v74 /*v330*/, s33 offset:876 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v75 /*v331*/, s33 offset:880 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v76 /*v332*/, s33 offset:884 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v77 /*v333*/, s33 offset:888 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v78 /*v334*/, s33 offset:892 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v79 /*v335*/, s33 offset:896 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v80 /*v336*/, s33 offset:900 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v81 /*v337*/, s33 offset:904 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v82 /*v338*/, s33 offset:908 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v83 /*v339*/, s33 offset:912 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v84 /*v340*/, s33 offset:916 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v85 /*v341*/, s33 offset:920 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v86 /*v342*/, s33 offset:924 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v87 /*v343*/, s33 offset:928 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v88 /*v344*/, s33 offset:932 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v89 /*v345*/, s33 offset:936 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v90 /*v346*/, s33 offset:940 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v91 /*v347*/, s33 offset:944 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v92 /*v348*/, s33 offset:948 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v93 /*v349*/, s33 offset:952 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v94 /*v350*/, s33 offset:956 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v95 /*v351*/, s33 offset:960 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v96 /*v352*/, s33 offset:964 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v97 /*v353*/, s33 offset:968 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v98 /*v354*/, s33 offset:972 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v99 /*v355*/, s33 offset:976 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v100 /*v356*/, s33 offset:980 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v101 /*v357*/, s33 offset:984 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v102 /*v358*/, s33 offset:988 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v103 /*v359*/, s33 offset:992 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v104 /*v360*/, s33 offset:996 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v105 /*v361*/, s33 offset:1000 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v106 /*v362*/, s33 offset:1004 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v107 /*v363*/, s33 offset:1008 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v45 /*v301*/, s33 offset:760
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v46 /*v302*/, s33 offset:764
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v47 /*v303*/, s33 offset:768
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v48 /*v304*/, s33 offset:772
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v49 /*v305*/, s33 offset:776
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v50 /*v306*/, s33 offset:780
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v51 /*v307*/, s33 offset:784
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v52 /*v308*/, s33 offset:788
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v53 /*v309*/, s33 offset:792
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v54 /*v310*/, s33 offset:796
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v55 /*v311*/, s33 offset:800
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v56 /*v312*/, s33 offset:804
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v57 /*v313*/, s33 offset:808
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v58 /*v314*/, s33 offset:812
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v59 /*v315*/, s33 offset:816
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v60 /*v316*/, s33 offset:820
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v61 /*v317*/, s33 offset:824
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v62 /*v318*/, s33 offset:828
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v63 /*v319*/, s33 offset:832
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v64 /*v320*/, s33 offset:836
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v65 /*v321*/, s33 offset:840
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v66 /*v322*/, s33 offset:844
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v67 /*v323*/, s33 offset:848
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v68 /*v324*/, s33 offset:852
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v69 /*v325*/, s33 offset:856
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v70 /*v326*/, s33 offset:860
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v71 /*v327*/, s33 offset:864
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v72 /*v328*/, s33 offset:868
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v73 /*v329*/, s33 offset:872
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v74 /*v330*/, s33 offset:876
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v75 /*v331*/, s33 offset:880
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v76 /*v332*/, s33 offset:884
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v77 /*v333*/, s33 offset:888
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v78 /*v334*/, s33 offset:892
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v79 /*v335*/, s33 offset:896
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v80 /*v336*/, s33 offset:900
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v81 /*v337*/, s33 offset:904
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v82 /*v338*/, s33 offset:908
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v83 /*v339*/, s33 offset:912
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v84 /*v340*/, s33 offset:916
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v85 /*v341*/, s33 offset:920
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v86 /*v342*/, s33 offset:924
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v87 /*v343*/, s33 offset:928
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v88 /*v344*/, s33 offset:932
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v89 /*v345*/, s33 offset:936
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v90 /*v346*/, s33 offset:940
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v91 /*v347*/, s33 offset:944
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v92 /*v348*/, s33 offset:948
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v93 /*v349*/, s33 offset:952
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v94 /*v350*/, s33 offset:956
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v95 /*v351*/, s33 offset:960
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v96 /*v352*/, s33 offset:964
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v97 /*v353*/, s33 offset:968
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v98 /*v354*/, s33 offset:972
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v99 /*v355*/, s33 offset:976
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v100 /*v356*/, s33 offset:980
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v101 /*v357*/, s33 offset:984
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v102 /*v358*/, s33 offset:988
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v103 /*v359*/, s33 offset:992
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v104 /*v360*/, s33 offset:996
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v105 /*v361*/, s33 offset:1000
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v106 /*v362*/, s33 offset:1004
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v107 /*v363*/, s33 offset:1008
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3e
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v108 /*v364*/, s33 offset:1012 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v109 /*v365*/, s33 offset:1016 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v110 /*v366*/, s33 offset:1020 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v111 /*v367*/, s33 offset:1024 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v112 /*v368*/, s33 offset:1028 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v113 /*v369*/, s33 offset:1032 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v114 /*v370*/, s33 offset:1036 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v115 /*v371*/, s33 offset:1040 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v116 /*v372*/, s33 offset:1044 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v117 /*v373*/, s33 offset:1048 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v118 /*v374*/, s33 offset:1052 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v119 /*v375*/, s33 offset:1056 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v120 /*v376*/, s33 offset:1060 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v121 /*v377*/, s33 offset:1064 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v122 /*v378*/, s33 offset:1068 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v123 /*v379*/, s33 offset:1072 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v124 /*v380*/, s33 offset:1076 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v125 /*v381*/, s33 offset:1080 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v126 /*v382*/, s33 offset:1084 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v127 /*v383*/, s33 offset:1088 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v128 /*v384*/, s33 offset:1092 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v129 /*v385*/, s33 offset:1096 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v130 /*v386*/, s33 offset:1100 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v131 /*v387*/, s33 offset:1104 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v132 /*v388*/, s33 offset:1108 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v133 /*v389*/, s33 offset:1112 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v134 /*v390*/, s33 offset:1116 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v135 /*v391*/, s33 offset:1120 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v136 /*v392*/, s33 offset:1124 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v137 /*v393*/, s33 offset:1128 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v138 /*v394*/, s33 offset:1132 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v139 /*v395*/, s33 offset:1136 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v140 /*v396*/, s33 offset:1140 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v141 /*v397*/, s33 offset:1144 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v142 /*v398*/, s33 offset:1148 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v143 /*v399*/, s33 offset:1152 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v144 /*v400*/, s33 offset:1156 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v145 /*v401*/, s33 offset:1160 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v146 /*v402*/, s33 offset:1164 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v147 /*v403*/, s33 offset:1168 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v148 /*v404*/, s33 offset:1172 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v149 /*v405*/, s33 offset:1176 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v150 /*v406*/, s33 offset:1180 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v151 /*v407*/, s33 offset:1184 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v152 /*v408*/, s33 offset:1188 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v153 /*v409*/, s33 offset:1192 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v154 /*v410*/, s33 offset:1196 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v155 /*v411*/, s33 offset:1200 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v156 /*v412*/, s33 offset:1204 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v157 /*v413*/, s33 offset:1208 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v158 /*v414*/, s33 offset:1212 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v159 /*v415*/, s33 offset:1216 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v160 /*v416*/, s33 offset:1220 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v161 /*v417*/, s33 offset:1224 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v162 /*v418*/, s33 offset:1228 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v163 /*v419*/, s33 offset:1232 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v164 /*v420*/, s33 offset:1236 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v165 /*v421*/, s33 offset:1240 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v166 /*v422*/, s33 offset:1244 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v167 /*v423*/, s33 offset:1248 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v168 /*v424*/, s33 offset:1252 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v169 /*v425*/, s33 offset:1256 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v170 /*v426*/, s33 offset:1260 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v108 /*v364*/, s33 offset:1012
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v109 /*v365*/, s33 offset:1016
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v110 /*v366*/, s33 offset:1020
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v111 /*v367*/, s33 offset:1024
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v112 /*v368*/, s33 offset:1028
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v113 /*v369*/, s33 offset:1032
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v114 /*v370*/, s33 offset:1036
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v115 /*v371*/, s33 offset:1040
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v116 /*v372*/, s33 offset:1044
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v117 /*v373*/, s33 offset:1048
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v118 /*v374*/, s33 offset:1052
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v119 /*v375*/, s33 offset:1056
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v120 /*v376*/, s33 offset:1060
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v121 /*v377*/, s33 offset:1064
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v122 /*v378*/, s33 offset:1068
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v123 /*v379*/, s33 offset:1072
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v124 /*v380*/, s33 offset:1076
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v125 /*v381*/, s33 offset:1080
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v126 /*v382*/, s33 offset:1084
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v127 /*v383*/, s33 offset:1088
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v128 /*v384*/, s33 offset:1092
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v129 /*v385*/, s33 offset:1096
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v130 /*v386*/, s33 offset:1100
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v131 /*v387*/, s33 offset:1104
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v132 /*v388*/, s33 offset:1108
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v133 /*v389*/, s33 offset:1112
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v134 /*v390*/, s33 offset:1116
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v135 /*v391*/, s33 offset:1120
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v136 /*v392*/, s33 offset:1124
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v137 /*v393*/, s33 offset:1128
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v138 /*v394*/, s33 offset:1132
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v139 /*v395*/, s33 offset:1136
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v140 /*v396*/, s33 offset:1140
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v141 /*v397*/, s33 offset:1144
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v142 /*v398*/, s33 offset:1148
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v143 /*v399*/, s33 offset:1152
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v144 /*v400*/, s33 offset:1156
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v145 /*v401*/, s33 offset:1160
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v146 /*v402*/, s33 offset:1164
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v147 /*v403*/, s33 offset:1168
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v148 /*v404*/, s33 offset:1172
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v149 /*v405*/, s33 offset:1176
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v150 /*v406*/, s33 offset:1180
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v151 /*v407*/, s33 offset:1184
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v152 /*v408*/, s33 offset:1188
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v153 /*v409*/, s33 offset:1192
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v154 /*v410*/, s33 offset:1196
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v155 /*v411*/, s33 offset:1200
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v156 /*v412*/, s33 offset:1204
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v157 /*v413*/, s33 offset:1208
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v158 /*v414*/, s33 offset:1212
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v159 /*v415*/, s33 offset:1216
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v160 /*v416*/, s33 offset:1220
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v161 /*v417*/, s33 offset:1224
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v162 /*v418*/, s33 offset:1228
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v163 /*v419*/, s33 offset:1232
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v164 /*v420*/, s33 offset:1236
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v165 /*v421*/, s33 offset:1240
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v166 /*v422*/, s33 offset:1244
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v167 /*v423*/, s33 offset:1248
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v168 /*v424*/, s33 offset:1252
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v169 /*v425*/, s33 offset:1256
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v170 /*v426*/, s33 offset:1260
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3e
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v171 /*v427*/, s33 offset:1264 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v172 /*v428*/, s33 offset:1268 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v173 /*v429*/, s33 offset:1272 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v174 /*v430*/, s33 offset:1276 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v175 /*v431*/, s33 offset:1280 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v176 /*v432*/, s33 offset:1284 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v177 /*v433*/, s33 offset:1288 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v178 /*v434*/, s33 offset:1292 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v179 /*v435*/, s33 offset:1296 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v180 /*v436*/, s33 offset:1300 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v181 /*v437*/, s33 offset:1304 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v182 /*v438*/, s33 offset:1308 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v183 /*v439*/, s33 offset:1312 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v184 /*v440*/, s33 offset:1316 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v185 /*v441*/, s33 offset:1320 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v186 /*v442*/, s33 offset:1324 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v187 /*v443*/, s33 offset:1328 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v188 /*v444*/, s33 offset:1332 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v189 /*v445*/, s33 offset:1336 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v190 /*v446*/, s33 offset:1340 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v191 /*v447*/, s33 offset:1344 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v192 /*v448*/, s33 offset:1348 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v193 /*v449*/, s33 offset:1352 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v194 /*v450*/, s33 offset:1356 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v195 /*v451*/, s33 offset:1360 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v196 /*v452*/, s33 offset:1364 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v197 /*v453*/, s33 offset:1368 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v198 /*v454*/, s33 offset:1372 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v199 /*v455*/, s33 offset:1376 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v200 /*v456*/, s33 offset:1380 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v201 /*v457*/, s33 offset:1384 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v202 /*v458*/, s33 offset:1388 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v203 /*v459*/, s33 offset:1392 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v204 /*v460*/, s33 offset:1396 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v205 /*v461*/, s33 offset:1400 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v206 /*v462*/, s33 offset:1404 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v207 /*v463*/, s33 offset:1408 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v208 /*v464*/, s33 offset:1412 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v209 /*v465*/, s33 offset:1416 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v210 /*v466*/, s33 offset:1420 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v211 /*v467*/, s33 offset:1424 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v212 /*v468*/, s33 offset:1428 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v213 /*v469*/, s33 offset:1432 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v214 /*v470*/, s33 offset:1436 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v215 /*v471*/, s33 offset:1440 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v216 /*v472*/, s33 offset:1444 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v217 /*v473*/, s33 offset:1448 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v218 /*v474*/, s33 offset:1452 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v219 /*v475*/, s33 offset:1456 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v220 /*v476*/, s33 offset:1460 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v221 /*v477*/, s33 offset:1464 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v222 /*v478*/, s33 offset:1468 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v223 /*v479*/, s33 offset:1472 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v224 /*v480*/, s33 offset:1476 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v225 /*v481*/, s33 offset:1480 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v226 /*v482*/, s33 offset:1484 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v227 /*v483*/, s33 offset:1488 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v228 /*v484*/, s33 offset:1492 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v229 /*v485*/, s33 offset:1496 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v230 /*v486*/, s33 offset:1500 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v231 /*v487*/, s33 offset:1504 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v232 /*v488*/, s33 offset:1508 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v233 /*v489*/, s33 offset:1512 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v171 /*v427*/, s33 offset:1264
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v172 /*v428*/, s33 offset:1268
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v173 /*v429*/, s33 offset:1272
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v174 /*v430*/, s33 offset:1276
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v175 /*v431*/, s33 offset:1280
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v176 /*v432*/, s33 offset:1284
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v177 /*v433*/, s33 offset:1288
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v178 /*v434*/, s33 offset:1292
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v179 /*v435*/, s33 offset:1296
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v180 /*v436*/, s33 offset:1300
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v181 /*v437*/, s33 offset:1304
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v182 /*v438*/, s33 offset:1308
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v183 /*v439*/, s33 offset:1312
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v184 /*v440*/, s33 offset:1316
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v185 /*v441*/, s33 offset:1320
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v186 /*v442*/, s33 offset:1324
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v187 /*v443*/, s33 offset:1328
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v188 /*v444*/, s33 offset:1332
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v189 /*v445*/, s33 offset:1336
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v190 /*v446*/, s33 offset:1340
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v191 /*v447*/, s33 offset:1344
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v192 /*v448*/, s33 offset:1348
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v193 /*v449*/, s33 offset:1352
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v194 /*v450*/, s33 offset:1356
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v195 /*v451*/, s33 offset:1360
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v196 /*v452*/, s33 offset:1364
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v197 /*v453*/, s33 offset:1368
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v198 /*v454*/, s33 offset:1372
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v199 /*v455*/, s33 offset:1376
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v200 /*v456*/, s33 offset:1380
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v201 /*v457*/, s33 offset:1384
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v202 /*v458*/, s33 offset:1388
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v203 /*v459*/, s33 offset:1392
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v204 /*v460*/, s33 offset:1396
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v205 /*v461*/, s33 offset:1400
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v206 /*v462*/, s33 offset:1404
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v207 /*v463*/, s33 offset:1408
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v208 /*v464*/, s33 offset:1412
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v209 /*v465*/, s33 offset:1416
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v210 /*v466*/, s33 offset:1420
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v211 /*v467*/, s33 offset:1424
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v212 /*v468*/, s33 offset:1428
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v213 /*v469*/, s33 offset:1432
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v214 /*v470*/, s33 offset:1436
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v215 /*v471*/, s33 offset:1440
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v216 /*v472*/, s33 offset:1444
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v217 /*v473*/, s33 offset:1448
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v218 /*v474*/, s33 offset:1452
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v219 /*v475*/, s33 offset:1456
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v220 /*v476*/, s33 offset:1460
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v221 /*v477*/, s33 offset:1464
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v222 /*v478*/, s33 offset:1468
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v223 /*v479*/, s33 offset:1472
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v224 /*v480*/, s33 offset:1476
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v225 /*v481*/, s33 offset:1480
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v226 /*v482*/, s33 offset:1484
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v227 /*v483*/, s33 offset:1488
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v228 /*v484*/, s33 offset:1492
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v229 /*v485*/, s33 offset:1496
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v230 /*v486*/, s33 offset:1500
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v231 /*v487*/, s33 offset:1504
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v232 /*v488*/, s33 offset:1508
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v233 /*v489*/, s33 offset:1512
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3e
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v234 /*v490*/, s33 offset:1516 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v235 /*v491*/, s33 offset:1520 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v236 /*v492*/, s33 offset:1524 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v237 /*v493*/, s33 offset:1528 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v238 /*v494*/, s33 offset:1532 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v239 /*v495*/, s33 offset:1536 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v240 /*v496*/, s33 offset:1540 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v241 /*v497*/, s33 offset:1544 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v242 /*v498*/, s33 offset:1548 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v243 /*v499*/, s33 offset:1552 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v244 /*v500*/, s33 offset:1556 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v245 /*v501*/, s33 offset:1560 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v246 /*v502*/, s33 offset:1564 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v247 /*v503*/, s33 offset:1568 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v248 /*v504*/, s33 offset:1572 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v249 /*v505*/, s33 offset:1576 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v250 /*v506*/, s33 offset:1580 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v251 /*v507*/, s33 offset:1584 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v252 /*v508*/, s33 offset:1588 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v253 /*v509*/, s33 offset:1592 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v254 /*v510*/, s33 offset:1596 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v255 /*v511*/, s33 offset:1600 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v234 /*v490*/, s33 offset:1516
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v235 /*v491*/, s33 offset:1520
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v236 /*v492*/, s33 offset:1524
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v237 /*v493*/, s33 offset:1528
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v238 /*v494*/, s33 offset:1532
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v239 /*v495*/, s33 offset:1536
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v240 /*v496*/, s33 offset:1540
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v241 /*v497*/, s33 offset:1544
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v242 /*v498*/, s33 offset:1548
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v243 /*v499*/, s33 offset:1552
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v244 /*v500*/, s33 offset:1556
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v245 /*v501*/, s33 offset:1560
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v246 /*v502*/, s33 offset:1564
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v247 /*v503*/, s33 offset:1568
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v248 /*v504*/, s33 offset:1572
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v249 /*v505*/, s33 offset:1576
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v250 /*v506*/, s33 offset:1580
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v251 /*v507*/, s33 offset:1584
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v252 /*v508*/, s33 offset:1588
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v253 /*v509*/, s33 offset:1592
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v254 /*v510*/, s33 offset:1596
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v255 /*v511*/, s33 offset:1600
 ; GFX1250-DAGISEL-NEXT:    s_set_vgpr_msb 8 ; msbs: dst=0 src0=0 src1=2 src2=0
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0 /*v512*/, s33 offset:1604 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v1 /*v513*/, s33 offset:1608 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v2 /*v514*/, s33 offset:1612 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v3 /*v515*/, s33 offset:1616 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v4 /*v516*/, s33 offset:1620 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v5 /*v517*/, s33 offset:1624 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v6 /*v518*/, s33 offset:1628 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v7 /*v519*/, s33 offset:1632 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v8 /*v520*/, s33 offset:1636 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v9 /*v521*/, s33 offset:1640 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v10 /*v522*/, s33 offset:1644 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v11 /*v523*/, s33 offset:1648 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v12 /*v524*/, s33 offset:1652 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v13 /*v525*/, s33 offset:1656 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v14 /*v526*/, s33 offset:1660 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v15 /*v527*/, s33 offset:1664 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v16 /*v528*/, s33 offset:1668 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v17 /*v529*/, s33 offset:1672 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v18 /*v530*/, s33 offset:1676 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v19 /*v531*/, s33 offset:1680 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v20 /*v532*/, s33 offset:1684 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v21 /*v533*/, s33 offset:1688 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v22 /*v534*/, s33 offset:1692 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v23 /*v535*/, s33 offset:1696 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v24 /*v536*/, s33 offset:1700 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v25 /*v537*/, s33 offset:1704 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v26 /*v538*/, s33 offset:1708 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v27 /*v539*/, s33 offset:1712 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v28 /*v540*/, s33 offset:1716 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v29 /*v541*/, s33 offset:1720 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v30 /*v542*/, s33 offset:1724 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v31 /*v543*/, s33 offset:1728 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v32 /*v544*/, s33 offset:1732 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v33 /*v545*/, s33 offset:1736 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v34 /*v546*/, s33 offset:1740 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v35 /*v547*/, s33 offset:1744 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v36 /*v548*/, s33 offset:1748 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v37 /*v549*/, s33 offset:1752 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v38 /*v550*/, s33 offset:1756 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v39 /*v551*/, s33 offset:1760 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v40 /*v552*/, s33 offset:1764 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0 /*v512*/, s33 offset:1604
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v1 /*v513*/, s33 offset:1608
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v2 /*v514*/, s33 offset:1612
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v3 /*v515*/, s33 offset:1616
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v4 /*v516*/, s33 offset:1620
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v5 /*v517*/, s33 offset:1624
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v6 /*v518*/, s33 offset:1628
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v7 /*v519*/, s33 offset:1632
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v8 /*v520*/, s33 offset:1636
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v9 /*v521*/, s33 offset:1640
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v10 /*v522*/, s33 offset:1644
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v11 /*v523*/, s33 offset:1648
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v12 /*v524*/, s33 offset:1652
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v13 /*v525*/, s33 offset:1656
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v14 /*v526*/, s33 offset:1660
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v15 /*v527*/, s33 offset:1664
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v16 /*v528*/, s33 offset:1668
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v17 /*v529*/, s33 offset:1672
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v18 /*v530*/, s33 offset:1676
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v19 /*v531*/, s33 offset:1680
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v20 /*v532*/, s33 offset:1684
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v21 /*v533*/, s33 offset:1688
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v22 /*v534*/, s33 offset:1692
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v23 /*v535*/, s33 offset:1696
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v24 /*v536*/, s33 offset:1700
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v25 /*v537*/, s33 offset:1704
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v26 /*v538*/, s33 offset:1708
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v27 /*v539*/, s33 offset:1712
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v28 /*v540*/, s33 offset:1716
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v29 /*v541*/, s33 offset:1720
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v30 /*v542*/, s33 offset:1724
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v31 /*v543*/, s33 offset:1728
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v32 /*v544*/, s33 offset:1732
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v33 /*v545*/, s33 offset:1736
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v34 /*v546*/, s33 offset:1740
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v35 /*v547*/, s33 offset:1744
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v36 /*v548*/, s33 offset:1748
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v37 /*v549*/, s33 offset:1752
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v38 /*v550*/, s33 offset:1756
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v39 /*v551*/, s33 offset:1760
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v40 /*v552*/, s33 offset:1764
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3e
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v41 /*v553*/, s33 offset:1768 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v42 /*v554*/, s33 offset:1772 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v43 /*v555*/, s33 offset:1776 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v44 /*v556*/, s33 offset:1780 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v45 /*v557*/, s33 offset:1784 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v46 /*v558*/, s33 offset:1788 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v47 /*v559*/, s33 offset:1792 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v48 /*v560*/, s33 offset:1796 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v49 /*v561*/, s33 offset:1800 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v50 /*v562*/, s33 offset:1804 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v51 /*v563*/, s33 offset:1808 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v52 /*v564*/, s33 offset:1812 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v53 /*v565*/, s33 offset:1816 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v54 /*v566*/, s33 offset:1820 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v55 /*v567*/, s33 offset:1824 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v56 /*v568*/, s33 offset:1828 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v57 /*v569*/, s33 offset:1832 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v58 /*v570*/, s33 offset:1836 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v59 /*v571*/, s33 offset:1840 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v60 /*v572*/, s33 offset:1844 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v61 /*v573*/, s33 offset:1848 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v62 /*v574*/, s33 offset:1852 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v63 /*v575*/, s33 offset:1856 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v64 /*v576*/, s33 offset:1860 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v65 /*v577*/, s33 offset:1864 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v66 /*v578*/, s33 offset:1868 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v67 /*v579*/, s33 offset:1872 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v68 /*v580*/, s33 offset:1876 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v69 /*v581*/, s33 offset:1880 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v70 /*v582*/, s33 offset:1884 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v71 /*v583*/, s33 offset:1888 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v72 /*v584*/, s33 offset:1892 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v73 /*v585*/, s33 offset:1896 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v74 /*v586*/, s33 offset:1900 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v75 /*v587*/, s33 offset:1904 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v76 /*v588*/, s33 offset:1908 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v77 /*v589*/, s33 offset:1912 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v78 /*v590*/, s33 offset:1916 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v79 /*v591*/, s33 offset:1920 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v80 /*v592*/, s33 offset:1924 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v81 /*v593*/, s33 offset:1928 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v82 /*v594*/, s33 offset:1932 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v83 /*v595*/, s33 offset:1936 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v84 /*v596*/, s33 offset:1940 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v85 /*v597*/, s33 offset:1944 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v86 /*v598*/, s33 offset:1948 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v87 /*v599*/, s33 offset:1952 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v88 /*v600*/, s33 offset:1956 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v89 /*v601*/, s33 offset:1960 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v90 /*v602*/, s33 offset:1964 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v91 /*v603*/, s33 offset:1968 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v92 /*v604*/, s33 offset:1972 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v93 /*v605*/, s33 offset:1976 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v94 /*v606*/, s33 offset:1980 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v95 /*v607*/, s33 offset:1984 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v96 /*v608*/, s33 offset:1988 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v97 /*v609*/, s33 offset:1992 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v98 /*v610*/, s33 offset:1996 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v99 /*v611*/, s33 offset:2000 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v100 /*v612*/, s33 offset:2004 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v101 /*v613*/, s33 offset:2008 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v102 /*v614*/, s33 offset:2012 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v103 /*v615*/, s33 offset:2016 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v41 /*v553*/, s33 offset:1768
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v42 /*v554*/, s33 offset:1772
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v43 /*v555*/, s33 offset:1776
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v44 /*v556*/, s33 offset:1780
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v45 /*v557*/, s33 offset:1784
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v46 /*v558*/, s33 offset:1788
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v47 /*v559*/, s33 offset:1792
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v48 /*v560*/, s33 offset:1796
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v49 /*v561*/, s33 offset:1800
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v50 /*v562*/, s33 offset:1804
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v51 /*v563*/, s33 offset:1808
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v52 /*v564*/, s33 offset:1812
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v53 /*v565*/, s33 offset:1816
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v54 /*v566*/, s33 offset:1820
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v55 /*v567*/, s33 offset:1824
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v56 /*v568*/, s33 offset:1828
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v57 /*v569*/, s33 offset:1832
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v58 /*v570*/, s33 offset:1836
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v59 /*v571*/, s33 offset:1840
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v60 /*v572*/, s33 offset:1844
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v61 /*v573*/, s33 offset:1848
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v62 /*v574*/, s33 offset:1852
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v63 /*v575*/, s33 offset:1856
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v64 /*v576*/, s33 offset:1860
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v65 /*v577*/, s33 offset:1864
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v66 /*v578*/, s33 offset:1868
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v67 /*v579*/, s33 offset:1872
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v68 /*v580*/, s33 offset:1876
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v69 /*v581*/, s33 offset:1880
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v70 /*v582*/, s33 offset:1884
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v71 /*v583*/, s33 offset:1888
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v72 /*v584*/, s33 offset:1892
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v73 /*v585*/, s33 offset:1896
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v74 /*v586*/, s33 offset:1900
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v75 /*v587*/, s33 offset:1904
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v76 /*v588*/, s33 offset:1908
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v77 /*v589*/, s33 offset:1912
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v78 /*v590*/, s33 offset:1916
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v79 /*v591*/, s33 offset:1920
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v80 /*v592*/, s33 offset:1924
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v81 /*v593*/, s33 offset:1928
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v82 /*v594*/, s33 offset:1932
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v83 /*v595*/, s33 offset:1936
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v84 /*v596*/, s33 offset:1940
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v85 /*v597*/, s33 offset:1944
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v86 /*v598*/, s33 offset:1948
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v87 /*v599*/, s33 offset:1952
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v88 /*v600*/, s33 offset:1956
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v89 /*v601*/, s33 offset:1960
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v90 /*v602*/, s33 offset:1964
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v91 /*v603*/, s33 offset:1968
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v92 /*v604*/, s33 offset:1972
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v93 /*v605*/, s33 offset:1976
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v94 /*v606*/, s33 offset:1980
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v95 /*v607*/, s33 offset:1984
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v96 /*v608*/, s33 offset:1988
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v97 /*v609*/, s33 offset:1992
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v98 /*v610*/, s33 offset:1996
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v99 /*v611*/, s33 offset:2000
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v100 /*v612*/, s33 offset:2004
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v101 /*v613*/, s33 offset:2008
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v102 /*v614*/, s33 offset:2012
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v103 /*v615*/, s33 offset:2016
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3e
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v104 /*v616*/, s33 offset:2020 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v105 /*v617*/, s33 offset:2024 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v106 /*v618*/, s33 offset:2028 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v107 /*v619*/, s33 offset:2032 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v108 /*v620*/, s33 offset:2036 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v109 /*v621*/, s33 offset:2040 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v110 /*v622*/, s33 offset:2044 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v111 /*v623*/, s33 offset:2048 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v112 /*v624*/, s33 offset:2052 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v113 /*v625*/, s33 offset:2056 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v114 /*v626*/, s33 offset:2060 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v115 /*v627*/, s33 offset:2064 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v116 /*v628*/, s33 offset:2068 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v117 /*v629*/, s33 offset:2072 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v118 /*v630*/, s33 offset:2076 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v119 /*v631*/, s33 offset:2080 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v120 /*v632*/, s33 offset:2084 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v121 /*v633*/, s33 offset:2088 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v122 /*v634*/, s33 offset:2092 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v123 /*v635*/, s33 offset:2096 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v124 /*v636*/, s33 offset:2100 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v125 /*v637*/, s33 offset:2104 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v126 /*v638*/, s33 offset:2108 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v127 /*v639*/, s33 offset:2112 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v128 /*v640*/, s33 offset:2116 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v129 /*v641*/, s33 offset:2120 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v130 /*v642*/, s33 offset:2124 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v131 /*v643*/, s33 offset:2128 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v132 /*v644*/, s33 offset:2132 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v133 /*v645*/, s33 offset:2136 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v134 /*v646*/, s33 offset:2140 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v135 /*v647*/, s33 offset:2144 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v136 /*v648*/, s33 offset:2148 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v137 /*v649*/, s33 offset:2152 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v138 /*v650*/, s33 offset:2156 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v139 /*v651*/, s33 offset:2160 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v140 /*v652*/, s33 offset:2164 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v141 /*v653*/, s33 offset:2168 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v142 /*v654*/, s33 offset:2172 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v143 /*v655*/, s33 offset:2176 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v144 /*v656*/, s33 offset:2180 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v145 /*v657*/, s33 offset:2184 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v146 /*v658*/, s33 offset:2188 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v147 /*v659*/, s33 offset:2192 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v148 /*v660*/, s33 offset:2196 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v149 /*v661*/, s33 offset:2200 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v150 /*v662*/, s33 offset:2204 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v151 /*v663*/, s33 offset:2208 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v152 /*v664*/, s33 offset:2212 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v153 /*v665*/, s33 offset:2216 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v154 /*v666*/, s33 offset:2220 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v155 /*v667*/, s33 offset:2224 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v156 /*v668*/, s33 offset:2228 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v157 /*v669*/, s33 offset:2232 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v158 /*v670*/, s33 offset:2236 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v159 /*v671*/, s33 offset:2240 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v160 /*v672*/, s33 offset:2244 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v161 /*v673*/, s33 offset:2248 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v162 /*v674*/, s33 offset:2252 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v163 /*v675*/, s33 offset:2256 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v164 /*v676*/, s33 offset:2260 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v165 /*v677*/, s33 offset:2264 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v166 /*v678*/, s33 offset:2268 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v104 /*v616*/, s33 offset:2020
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v105 /*v617*/, s33 offset:2024
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v106 /*v618*/, s33 offset:2028
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v107 /*v619*/, s33 offset:2032
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v108 /*v620*/, s33 offset:2036
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v109 /*v621*/, s33 offset:2040
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v110 /*v622*/, s33 offset:2044
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v111 /*v623*/, s33 offset:2048
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v112 /*v624*/, s33 offset:2052
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v113 /*v625*/, s33 offset:2056
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v114 /*v626*/, s33 offset:2060
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v115 /*v627*/, s33 offset:2064
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v116 /*v628*/, s33 offset:2068
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v117 /*v629*/, s33 offset:2072
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v118 /*v630*/, s33 offset:2076
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v119 /*v631*/, s33 offset:2080
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v120 /*v632*/, s33 offset:2084
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v121 /*v633*/, s33 offset:2088
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v122 /*v634*/, s33 offset:2092
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v123 /*v635*/, s33 offset:2096
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v124 /*v636*/, s33 offset:2100
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v125 /*v637*/, s33 offset:2104
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v126 /*v638*/, s33 offset:2108
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v127 /*v639*/, s33 offset:2112
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v128 /*v640*/, s33 offset:2116
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v129 /*v641*/, s33 offset:2120
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v130 /*v642*/, s33 offset:2124
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v131 /*v643*/, s33 offset:2128
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v132 /*v644*/, s33 offset:2132
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v133 /*v645*/, s33 offset:2136
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v134 /*v646*/, s33 offset:2140
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v135 /*v647*/, s33 offset:2144
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v136 /*v648*/, s33 offset:2148
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v137 /*v649*/, s33 offset:2152
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v138 /*v650*/, s33 offset:2156
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v139 /*v651*/, s33 offset:2160
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v140 /*v652*/, s33 offset:2164
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v141 /*v653*/, s33 offset:2168
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v142 /*v654*/, s33 offset:2172
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v143 /*v655*/, s33 offset:2176
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v144 /*v656*/, s33 offset:2180
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v145 /*v657*/, s33 offset:2184
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v146 /*v658*/, s33 offset:2188
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v147 /*v659*/, s33 offset:2192
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v148 /*v660*/, s33 offset:2196
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v149 /*v661*/, s33 offset:2200
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v150 /*v662*/, s33 offset:2204
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v151 /*v663*/, s33 offset:2208
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v152 /*v664*/, s33 offset:2212
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v153 /*v665*/, s33 offset:2216
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v154 /*v666*/, s33 offset:2220
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v155 /*v667*/, s33 offset:2224
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v156 /*v668*/, s33 offset:2228
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v157 /*v669*/, s33 offset:2232
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v158 /*v670*/, s33 offset:2236
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v159 /*v671*/, s33 offset:2240
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v160 /*v672*/, s33 offset:2244
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v161 /*v673*/, s33 offset:2248
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v162 /*v674*/, s33 offset:2252
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v163 /*v675*/, s33 offset:2256
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v164 /*v676*/, s33 offset:2260
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v165 /*v677*/, s33 offset:2264
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v166 /*v678*/, s33 offset:2268
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3e
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v167 /*v679*/, s33 offset:2272 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v168 /*v680*/, s33 offset:2276 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v169 /*v681*/, s33 offset:2280 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v170 /*v682*/, s33 offset:2284 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v171 /*v683*/, s33 offset:2288 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v172 /*v684*/, s33 offset:2292 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v173 /*v685*/, s33 offset:2296 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v174 /*v686*/, s33 offset:2300 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v175 /*v687*/, s33 offset:2304 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v176 /*v688*/, s33 offset:2308 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v177 /*v689*/, s33 offset:2312 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v178 /*v690*/, s33 offset:2316 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v179 /*v691*/, s33 offset:2320 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v180 /*v692*/, s33 offset:2324 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v181 /*v693*/, s33 offset:2328 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v182 /*v694*/, s33 offset:2332 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v183 /*v695*/, s33 offset:2336 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v184 /*v696*/, s33 offset:2340 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v185 /*v697*/, s33 offset:2344 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v186 /*v698*/, s33 offset:2348 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v187 /*v699*/, s33 offset:2352 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v188 /*v700*/, s33 offset:2356 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v189 /*v701*/, s33 offset:2360 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v190 /*v702*/, s33 offset:2364 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v191 /*v703*/, s33 offset:2368 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v192 /*v704*/, s33 offset:2372 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v193 /*v705*/, s33 offset:2376 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v194 /*v706*/, s33 offset:2380 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v195 /*v707*/, s33 offset:2384 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v196 /*v708*/, s33 offset:2388 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v197 /*v709*/, s33 offset:2392 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v198 /*v710*/, s33 offset:2396 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v199 /*v711*/, s33 offset:2400 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v200 /*v712*/, s33 offset:2404 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v201 /*v713*/, s33 offset:2408 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v202 /*v714*/, s33 offset:2412 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v203 /*v715*/, s33 offset:2416 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v204 /*v716*/, s33 offset:2420 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v205 /*v717*/, s33 offset:2424 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v206 /*v718*/, s33 offset:2428 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v207 /*v719*/, s33 offset:2432 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v208 /*v720*/, s33 offset:2436 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v209 /*v721*/, s33 offset:2440 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v210 /*v722*/, s33 offset:2444 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v211 /*v723*/, s33 offset:2448 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v212 /*v724*/, s33 offset:2452 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v213 /*v725*/, s33 offset:2456 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v214 /*v726*/, s33 offset:2460 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v215 /*v727*/, s33 offset:2464 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v216 /*v728*/, s33 offset:2468 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v217 /*v729*/, s33 offset:2472 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v218 /*v730*/, s33 offset:2476 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v219 /*v731*/, s33 offset:2480 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v220 /*v732*/, s33 offset:2484 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v221 /*v733*/, s33 offset:2488 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v222 /*v734*/, s33 offset:2492 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v223 /*v735*/, s33 offset:2496 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v224 /*v736*/, s33 offset:2500 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v225 /*v737*/, s33 offset:2504 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v226 /*v738*/, s33 offset:2508 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v227 /*v739*/, s33 offset:2512 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v228 /*v740*/, s33 offset:2516 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v229 /*v741*/, s33 offset:2520 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v167 /*v679*/, s33 offset:2272
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v168 /*v680*/, s33 offset:2276
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v169 /*v681*/, s33 offset:2280
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v170 /*v682*/, s33 offset:2284
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v171 /*v683*/, s33 offset:2288
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v172 /*v684*/, s33 offset:2292
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v173 /*v685*/, s33 offset:2296
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v174 /*v686*/, s33 offset:2300
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v175 /*v687*/, s33 offset:2304
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v176 /*v688*/, s33 offset:2308
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v177 /*v689*/, s33 offset:2312
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v178 /*v690*/, s33 offset:2316
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v179 /*v691*/, s33 offset:2320
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v180 /*v692*/, s33 offset:2324
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v181 /*v693*/, s33 offset:2328
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v182 /*v694*/, s33 offset:2332
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v183 /*v695*/, s33 offset:2336
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v184 /*v696*/, s33 offset:2340
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v185 /*v697*/, s33 offset:2344
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v186 /*v698*/, s33 offset:2348
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v187 /*v699*/, s33 offset:2352
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v188 /*v700*/, s33 offset:2356
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v189 /*v701*/, s33 offset:2360
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v190 /*v702*/, s33 offset:2364
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v191 /*v703*/, s33 offset:2368
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v192 /*v704*/, s33 offset:2372
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v193 /*v705*/, s33 offset:2376
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v194 /*v706*/, s33 offset:2380
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v195 /*v707*/, s33 offset:2384
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v196 /*v708*/, s33 offset:2388
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v197 /*v709*/, s33 offset:2392
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v198 /*v710*/, s33 offset:2396
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v199 /*v711*/, s33 offset:2400
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v200 /*v712*/, s33 offset:2404
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v201 /*v713*/, s33 offset:2408
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v202 /*v714*/, s33 offset:2412
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v203 /*v715*/, s33 offset:2416
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v204 /*v716*/, s33 offset:2420
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v205 /*v717*/, s33 offset:2424
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v206 /*v718*/, s33 offset:2428
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v207 /*v719*/, s33 offset:2432
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v208 /*v720*/, s33 offset:2436
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v209 /*v721*/, s33 offset:2440
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v210 /*v722*/, s33 offset:2444
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v211 /*v723*/, s33 offset:2448
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v212 /*v724*/, s33 offset:2452
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v213 /*v725*/, s33 offset:2456
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v214 /*v726*/, s33 offset:2460
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v215 /*v727*/, s33 offset:2464
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v216 /*v728*/, s33 offset:2468
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v217 /*v729*/, s33 offset:2472
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v218 /*v730*/, s33 offset:2476
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v219 /*v731*/, s33 offset:2480
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v220 /*v732*/, s33 offset:2484
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v221 /*v733*/, s33 offset:2488
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v222 /*v734*/, s33 offset:2492
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v223 /*v735*/, s33 offset:2496
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v224 /*v736*/, s33 offset:2500
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v225 /*v737*/, s33 offset:2504
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v226 /*v738*/, s33 offset:2508
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v227 /*v739*/, s33 offset:2512
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v228 /*v740*/, s33 offset:2516
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v229 /*v741*/, s33 offset:2520
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3e
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v230 /*v742*/, s33 offset:2524 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v231 /*v743*/, s33 offset:2528 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v232 /*v744*/, s33 offset:2532 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v233 /*v745*/, s33 offset:2536 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v234 /*v746*/, s33 offset:2540 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v235 /*v747*/, s33 offset:2544 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v236 /*v748*/, s33 offset:2548 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v237 /*v749*/, s33 offset:2552 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v238 /*v750*/, s33 offset:2556 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v239 /*v751*/, s33 offset:2560 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v240 /*v752*/, s33 offset:2564 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v241 /*v753*/, s33 offset:2568 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v242 /*v754*/, s33 offset:2572 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v243 /*v755*/, s33 offset:2576 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v244 /*v756*/, s33 offset:2580 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v245 /*v757*/, s33 offset:2584 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v246 /*v758*/, s33 offset:2588 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v247 /*v759*/, s33 offset:2592 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v248 /*v760*/, s33 offset:2596 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v249 /*v761*/, s33 offset:2600 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v250 /*v762*/, s33 offset:2604 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v251 /*v763*/, s33 offset:2608 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v252 /*v764*/, s33 offset:2612 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v253 /*v765*/, s33 offset:2616 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v254 /*v766*/, s33 offset:2620 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v255 /*v767*/, s33 offset:2624 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v230 /*v742*/, s33 offset:2524
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v231 /*v743*/, s33 offset:2528
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v232 /*v744*/, s33 offset:2532
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v233 /*v745*/, s33 offset:2536
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v234 /*v746*/, s33 offset:2540
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v235 /*v747*/, s33 offset:2544
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v236 /*v748*/, s33 offset:2548
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v237 /*v749*/, s33 offset:2552
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v238 /*v750*/, s33 offset:2556
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v239 /*v751*/, s33 offset:2560
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v240 /*v752*/, s33 offset:2564
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v241 /*v753*/, s33 offset:2568
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v242 /*v754*/, s33 offset:2572
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v243 /*v755*/, s33 offset:2576
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v244 /*v756*/, s33 offset:2580
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v245 /*v757*/, s33 offset:2584
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v246 /*v758*/, s33 offset:2588
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v247 /*v759*/, s33 offset:2592
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v248 /*v760*/, s33 offset:2596
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v249 /*v761*/, s33 offset:2600
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v250 /*v762*/, s33 offset:2604
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v251 /*v763*/, s33 offset:2608
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v252 /*v764*/, s33 offset:2612
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v253 /*v765*/, s33 offset:2616
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v254 /*v766*/, s33 offset:2620
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v255 /*v767*/, s33 offset:2624
 ; GFX1250-DAGISEL-NEXT:    s_set_vgpr_msb 12 ; msbs: dst=0 src0=0 src1=3 src2=0
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0 /*v768*/, s33 offset:2628 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v1 /*v769*/, s33 offset:2632 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v2 /*v770*/, s33 offset:2636 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v3 /*v771*/, s33 offset:2640 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v4 /*v772*/, s33 offset:2644 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v5 /*v773*/, s33 offset:2648 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v6 /*v774*/, s33 offset:2652 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v7 /*v775*/, s33 offset:2656 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v8 /*v776*/, s33 offset:2660 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v9 /*v777*/, s33 offset:2664 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v10 /*v778*/, s33 offset:2668 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v11 /*v779*/, s33 offset:2672 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v12 /*v780*/, s33 offset:2676 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v13 /*v781*/, s33 offset:2680 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v14 /*v782*/, s33 offset:2684 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v15 /*v783*/, s33 offset:2688 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v16 /*v784*/, s33 offset:2692 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v17 /*v785*/, s33 offset:2696 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v18 /*v786*/, s33 offset:2700 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v19 /*v787*/, s33 offset:2704 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v20 /*v788*/, s33 offset:2708 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v21 /*v789*/, s33 offset:2712 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v22 /*v790*/, s33 offset:2716 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v23 /*v791*/, s33 offset:2720 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v24 /*v792*/, s33 offset:2724 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v25 /*v793*/, s33 offset:2728 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v26 /*v794*/, s33 offset:2732 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v27 /*v795*/, s33 offset:2736 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v28 /*v796*/, s33 offset:2740 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v29 /*v797*/, s33 offset:2744 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v30 /*v798*/, s33 offset:2748 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v31 /*v799*/, s33 offset:2752 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v32 /*v800*/, s33 offset:2756 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v33 /*v801*/, s33 offset:2760 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v34 /*v802*/, s33 offset:2764 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v35 /*v803*/, s33 offset:2768 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v36 /*v804*/, s33 offset:2772 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0 /*v768*/, s33 offset:2628
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v1 /*v769*/, s33 offset:2632
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v2 /*v770*/, s33 offset:2636
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v3 /*v771*/, s33 offset:2640
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v4 /*v772*/, s33 offset:2644
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v5 /*v773*/, s33 offset:2648
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v6 /*v774*/, s33 offset:2652
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v7 /*v775*/, s33 offset:2656
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v8 /*v776*/, s33 offset:2660
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v9 /*v777*/, s33 offset:2664
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v10 /*v778*/, s33 offset:2668
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v11 /*v779*/, s33 offset:2672
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v12 /*v780*/, s33 offset:2676
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v13 /*v781*/, s33 offset:2680
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v14 /*v782*/, s33 offset:2684
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v15 /*v783*/, s33 offset:2688
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v16 /*v784*/, s33 offset:2692
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v17 /*v785*/, s33 offset:2696
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v18 /*v786*/, s33 offset:2700
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v19 /*v787*/, s33 offset:2704
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v20 /*v788*/, s33 offset:2708
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v21 /*v789*/, s33 offset:2712
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v22 /*v790*/, s33 offset:2716
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v23 /*v791*/, s33 offset:2720
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v24 /*v792*/, s33 offset:2724
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v25 /*v793*/, s33 offset:2728
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v26 /*v794*/, s33 offset:2732
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v27 /*v795*/, s33 offset:2736
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v28 /*v796*/, s33 offset:2740
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v29 /*v797*/, s33 offset:2744
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v30 /*v798*/, s33 offset:2748
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v31 /*v799*/, s33 offset:2752
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v32 /*v800*/, s33 offset:2756
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v33 /*v801*/, s33 offset:2760
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v34 /*v802*/, s33 offset:2764
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v35 /*v803*/, s33 offset:2768
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v36 /*v804*/, s33 offset:2772
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3e
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v37 /*v805*/, s33 offset:2776 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v38 /*v806*/, s33 offset:2780 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v39 /*v807*/, s33 offset:2784 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v40 /*v808*/, s33 offset:2788 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v41 /*v809*/, s33 offset:2792 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v42 /*v810*/, s33 offset:2796 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v43 /*v811*/, s33 offset:2800 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v44 /*v812*/, s33 offset:2804 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v45 /*v813*/, s33 offset:2808 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v46 /*v814*/, s33 offset:2812 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v47 /*v815*/, s33 offset:2816 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v48 /*v816*/, s33 offset:2820 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v49 /*v817*/, s33 offset:2824 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v50 /*v818*/, s33 offset:2828 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v51 /*v819*/, s33 offset:2832 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v52 /*v820*/, s33 offset:2836 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v53 /*v821*/, s33 offset:2840 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v54 /*v822*/, s33 offset:2844 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v55 /*v823*/, s33 offset:2848 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v56 /*v824*/, s33 offset:2852 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v57 /*v825*/, s33 offset:2856 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v58 /*v826*/, s33 offset:2860 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v59 /*v827*/, s33 offset:2864 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v60 /*v828*/, s33 offset:2868 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v61 /*v829*/, s33 offset:2872 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v62 /*v830*/, s33 offset:2876 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v63 /*v831*/, s33 offset:2880 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v64 /*v832*/, s33 offset:2884 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v65 /*v833*/, s33 offset:2888 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v66 /*v834*/, s33 offset:2892 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v67 /*v835*/, s33 offset:2896 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v68 /*v836*/, s33 offset:2900 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v69 /*v837*/, s33 offset:2904 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v70 /*v838*/, s33 offset:2908 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v71 /*v839*/, s33 offset:2912 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v72 /*v840*/, s33 offset:2916 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v73 /*v841*/, s33 offset:2920 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v74 /*v842*/, s33 offset:2924 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v75 /*v843*/, s33 offset:2928 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v76 /*v844*/, s33 offset:2932 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v77 /*v845*/, s33 offset:2936 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v78 /*v846*/, s33 offset:2940 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v79 /*v847*/, s33 offset:2944 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v80 /*v848*/, s33 offset:2948 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v81 /*v849*/, s33 offset:2952 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v82 /*v850*/, s33 offset:2956 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v83 /*v851*/, s33 offset:2960 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v84 /*v852*/, s33 offset:2964 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v85 /*v853*/, s33 offset:2968 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v86 /*v854*/, s33 offset:2972 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v87 /*v855*/, s33 offset:2976 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v88 /*v856*/, s33 offset:2980 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v89 /*v857*/, s33 offset:2984 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v90 /*v858*/, s33 offset:2988 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v91 /*v859*/, s33 offset:2992 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v92 /*v860*/, s33 offset:2996 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v93 /*v861*/, s33 offset:3000 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v94 /*v862*/, s33 offset:3004 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v95 /*v863*/, s33 offset:3008 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v96 /*v864*/, s33 offset:3012 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v97 /*v865*/, s33 offset:3016 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v98 /*v866*/, s33 offset:3020 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v99 /*v867*/, s33 offset:3024 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v37 /*v805*/, s33 offset:2776
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v38 /*v806*/, s33 offset:2780
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v39 /*v807*/, s33 offset:2784
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v40 /*v808*/, s33 offset:2788
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v41 /*v809*/, s33 offset:2792
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v42 /*v810*/, s33 offset:2796
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v43 /*v811*/, s33 offset:2800
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v44 /*v812*/, s33 offset:2804
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v45 /*v813*/, s33 offset:2808
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v46 /*v814*/, s33 offset:2812
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v47 /*v815*/, s33 offset:2816
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v48 /*v816*/, s33 offset:2820
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v49 /*v817*/, s33 offset:2824
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v50 /*v818*/, s33 offset:2828
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v51 /*v819*/, s33 offset:2832
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v52 /*v820*/, s33 offset:2836
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v53 /*v821*/, s33 offset:2840
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v54 /*v822*/, s33 offset:2844
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v55 /*v823*/, s33 offset:2848
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v56 /*v824*/, s33 offset:2852
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v57 /*v825*/, s33 offset:2856
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v58 /*v826*/, s33 offset:2860
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v59 /*v827*/, s33 offset:2864
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v60 /*v828*/, s33 offset:2868
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v61 /*v829*/, s33 offset:2872
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v62 /*v830*/, s33 offset:2876
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v63 /*v831*/, s33 offset:2880
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v64 /*v832*/, s33 offset:2884
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v65 /*v833*/, s33 offset:2888
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v66 /*v834*/, s33 offset:2892
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v67 /*v835*/, s33 offset:2896
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v68 /*v836*/, s33 offset:2900
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v69 /*v837*/, s33 offset:2904
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v70 /*v838*/, s33 offset:2908
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v71 /*v839*/, s33 offset:2912
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v72 /*v840*/, s33 offset:2916
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v73 /*v841*/, s33 offset:2920
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v74 /*v842*/, s33 offset:2924
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v75 /*v843*/, s33 offset:2928
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v76 /*v844*/, s33 offset:2932
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v77 /*v845*/, s33 offset:2936
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v78 /*v846*/, s33 offset:2940
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v79 /*v847*/, s33 offset:2944
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v80 /*v848*/, s33 offset:2948
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v81 /*v849*/, s33 offset:2952
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v82 /*v850*/, s33 offset:2956
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v83 /*v851*/, s33 offset:2960
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v84 /*v852*/, s33 offset:2964
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v85 /*v853*/, s33 offset:2968
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v86 /*v854*/, s33 offset:2972
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v87 /*v855*/, s33 offset:2976
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v88 /*v856*/, s33 offset:2980
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v89 /*v857*/, s33 offset:2984
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v90 /*v858*/, s33 offset:2988
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v91 /*v859*/, s33 offset:2992
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v92 /*v860*/, s33 offset:2996
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v93 /*v861*/, s33 offset:3000
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v94 /*v862*/, s33 offset:3004
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v95 /*v863*/, s33 offset:3008
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v96 /*v864*/, s33 offset:3012
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v97 /*v865*/, s33 offset:3016
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v98 /*v866*/, s33 offset:3020
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v99 /*v867*/, s33 offset:3024
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3e
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v100 /*v868*/, s33 offset:3028 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v101 /*v869*/, s33 offset:3032 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v102 /*v870*/, s33 offset:3036 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v103 /*v871*/, s33 offset:3040 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v104 /*v872*/, s33 offset:3044 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v105 /*v873*/, s33 offset:3048 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v106 /*v874*/, s33 offset:3052 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v107 /*v875*/, s33 offset:3056 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v108 /*v876*/, s33 offset:3060 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v109 /*v877*/, s33 offset:3064 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v110 /*v878*/, s33 offset:3068 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v111 /*v879*/, s33 offset:3072 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v112 /*v880*/, s33 offset:3076 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v113 /*v881*/, s33 offset:3080 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v114 /*v882*/, s33 offset:3084 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v115 /*v883*/, s33 offset:3088 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v116 /*v884*/, s33 offset:3092 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v117 /*v885*/, s33 offset:3096 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v118 /*v886*/, s33 offset:3100 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v119 /*v887*/, s33 offset:3104 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v120 /*v888*/, s33 offset:3108 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v121 /*v889*/, s33 offset:3112 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v122 /*v890*/, s33 offset:3116 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v123 /*v891*/, s33 offset:3120 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v124 /*v892*/, s33 offset:3124 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v125 /*v893*/, s33 offset:3128 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v126 /*v894*/, s33 offset:3132 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v127 /*v895*/, s33 offset:3136 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v128 /*v896*/, s33 offset:3140 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v129 /*v897*/, s33 offset:3144 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v130 /*v898*/, s33 offset:3148 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v131 /*v899*/, s33 offset:3152 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v132 /*v900*/, s33 offset:3156 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v133 /*v901*/, s33 offset:3160 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v134 /*v902*/, s33 offset:3164 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v135 /*v903*/, s33 offset:3168 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v136 /*v904*/, s33 offset:3172 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v137 /*v905*/, s33 offset:3176 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v138 /*v906*/, s33 offset:3180 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v139 /*v907*/, s33 offset:3184 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v140 /*v908*/, s33 offset:3188 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v141 /*v909*/, s33 offset:3192 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v142 /*v910*/, s33 offset:3196 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v143 /*v911*/, s33 offset:3200 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v144 /*v912*/, s33 offset:3204 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v145 /*v913*/, s33 offset:3208 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v146 /*v914*/, s33 offset:3212 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v147 /*v915*/, s33 offset:3216 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v148 /*v916*/, s33 offset:3220 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v149 /*v917*/, s33 offset:3224 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v150 /*v918*/, s33 offset:3228 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v151 /*v919*/, s33 offset:3232 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v152 /*v920*/, s33 offset:3236 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v153 /*v921*/, s33 offset:3240 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v154 /*v922*/, s33 offset:3244 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v155 /*v923*/, s33 offset:3248 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v156 /*v924*/, s33 offset:3252 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v157 /*v925*/, s33 offset:3256 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v158 /*v926*/, s33 offset:3260 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v159 /*v927*/, s33 offset:3264 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v160 /*v928*/, s33 offset:3268 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v161 /*v929*/, s33 offset:3272 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v162 /*v930*/, s33 offset:3276 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v100 /*v868*/, s33 offset:3028
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v101 /*v869*/, s33 offset:3032
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v102 /*v870*/, s33 offset:3036
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v103 /*v871*/, s33 offset:3040
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v104 /*v872*/, s33 offset:3044
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v105 /*v873*/, s33 offset:3048
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v106 /*v874*/, s33 offset:3052
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v107 /*v875*/, s33 offset:3056
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v108 /*v876*/, s33 offset:3060
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v109 /*v877*/, s33 offset:3064
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v110 /*v878*/, s33 offset:3068
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v111 /*v879*/, s33 offset:3072
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v112 /*v880*/, s33 offset:3076
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v113 /*v881*/, s33 offset:3080
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v114 /*v882*/, s33 offset:3084
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v115 /*v883*/, s33 offset:3088
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v116 /*v884*/, s33 offset:3092
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v117 /*v885*/, s33 offset:3096
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v118 /*v886*/, s33 offset:3100
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v119 /*v887*/, s33 offset:3104
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v120 /*v888*/, s33 offset:3108
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v121 /*v889*/, s33 offset:3112
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v122 /*v890*/, s33 offset:3116
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v123 /*v891*/, s33 offset:3120
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v124 /*v892*/, s33 offset:3124
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v125 /*v893*/, s33 offset:3128
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v126 /*v894*/, s33 offset:3132
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v127 /*v895*/, s33 offset:3136
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v128 /*v896*/, s33 offset:3140
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v129 /*v897*/, s33 offset:3144
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v130 /*v898*/, s33 offset:3148
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v131 /*v899*/, s33 offset:3152
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v132 /*v900*/, s33 offset:3156
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v133 /*v901*/, s33 offset:3160
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v134 /*v902*/, s33 offset:3164
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v135 /*v903*/, s33 offset:3168
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v136 /*v904*/, s33 offset:3172
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v137 /*v905*/, s33 offset:3176
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v138 /*v906*/, s33 offset:3180
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v139 /*v907*/, s33 offset:3184
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v140 /*v908*/, s33 offset:3188
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v141 /*v909*/, s33 offset:3192
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v142 /*v910*/, s33 offset:3196
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v143 /*v911*/, s33 offset:3200
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v144 /*v912*/, s33 offset:3204
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v145 /*v913*/, s33 offset:3208
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v146 /*v914*/, s33 offset:3212
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v147 /*v915*/, s33 offset:3216
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v148 /*v916*/, s33 offset:3220
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v149 /*v917*/, s33 offset:3224
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v150 /*v918*/, s33 offset:3228
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v151 /*v919*/, s33 offset:3232
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v152 /*v920*/, s33 offset:3236
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v153 /*v921*/, s33 offset:3240
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v154 /*v922*/, s33 offset:3244
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v155 /*v923*/, s33 offset:3248
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v156 /*v924*/, s33 offset:3252
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v157 /*v925*/, s33 offset:3256
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v158 /*v926*/, s33 offset:3260
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v159 /*v927*/, s33 offset:3264
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v160 /*v928*/, s33 offset:3268
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v161 /*v929*/, s33 offset:3272
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v162 /*v930*/, s33 offset:3276
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3e
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v163 /*v931*/, s33 offset:3280 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v164 /*v932*/, s33 offset:3284 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v165 /*v933*/, s33 offset:3288 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v166 /*v934*/, s33 offset:3292 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v167 /*v935*/, s33 offset:3296 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v168 /*v936*/, s33 offset:3300 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v169 /*v937*/, s33 offset:3304 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v170 /*v938*/, s33 offset:3308 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v171 /*v939*/, s33 offset:3312 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v172 /*v940*/, s33 offset:3316 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v173 /*v941*/, s33 offset:3320 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v174 /*v942*/, s33 offset:3324 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v175 /*v943*/, s33 offset:3328 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v176 /*v944*/, s33 offset:3332 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v177 /*v945*/, s33 offset:3336 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v178 /*v946*/, s33 offset:3340 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v179 /*v947*/, s33 offset:3344 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v180 /*v948*/, s33 offset:3348 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v181 /*v949*/, s33 offset:3352 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v182 /*v950*/, s33 offset:3356 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v183 /*v951*/, s33 offset:3360 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v184 /*v952*/, s33 offset:3364 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v185 /*v953*/, s33 offset:3368 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v186 /*v954*/, s33 offset:3372 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v187 /*v955*/, s33 offset:3376 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v188 /*v956*/, s33 offset:3380 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v189 /*v957*/, s33 offset:3384 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v190 /*v958*/, s33 offset:3388 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v191 /*v959*/, s33 offset:3392 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v192 /*v960*/, s33 offset:3396 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v193 /*v961*/, s33 offset:3400 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v194 /*v962*/, s33 offset:3404 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v195 /*v963*/, s33 offset:3408 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v196 /*v964*/, s33 offset:3412 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v197 /*v965*/, s33 offset:3416 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v198 /*v966*/, s33 offset:3420 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v199 /*v967*/, s33 offset:3424 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v200 /*v968*/, s33 offset:3428 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v201 /*v969*/, s33 offset:3432 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v202 /*v970*/, s33 offset:3436 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v203 /*v971*/, s33 offset:3440 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v204 /*v972*/, s33 offset:3444 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v205 /*v973*/, s33 offset:3448 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v206 /*v974*/, s33 offset:3452 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v207 /*v975*/, s33 offset:3456 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v208 /*v976*/, s33 offset:3460 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v209 /*v977*/, s33 offset:3464 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v210 /*v978*/, s33 offset:3468 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v211 /*v979*/, s33 offset:3472 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v212 /*v980*/, s33 offset:3476 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v213 /*v981*/, s33 offset:3480 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v214 /*v982*/, s33 offset:3484 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v215 /*v983*/, s33 offset:3488 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v216 /*v984*/, s33 offset:3492 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v217 /*v985*/, s33 offset:3496 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v218 /*v986*/, s33 offset:3500 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v219 /*v987*/, s33 offset:3504 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v220 /*v988*/, s33 offset:3508 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v221 /*v989*/, s33 offset:3512 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v222 /*v990*/, s33 offset:3516 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v223 /*v991*/, s33 offset:3520 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v224 /*v992*/, s33 offset:3524 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v225 /*v993*/, s33 offset:3528 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v163 /*v931*/, s33 offset:3280
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v164 /*v932*/, s33 offset:3284
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v165 /*v933*/, s33 offset:3288
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v166 /*v934*/, s33 offset:3292
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v167 /*v935*/, s33 offset:3296
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v168 /*v936*/, s33 offset:3300
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v169 /*v937*/, s33 offset:3304
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v170 /*v938*/, s33 offset:3308
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v171 /*v939*/, s33 offset:3312
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v172 /*v940*/, s33 offset:3316
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v173 /*v941*/, s33 offset:3320
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v174 /*v942*/, s33 offset:3324
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v175 /*v943*/, s33 offset:3328
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v176 /*v944*/, s33 offset:3332
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v177 /*v945*/, s33 offset:3336
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v178 /*v946*/, s33 offset:3340
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v179 /*v947*/, s33 offset:3344
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v180 /*v948*/, s33 offset:3348
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v181 /*v949*/, s33 offset:3352
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v182 /*v950*/, s33 offset:3356
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v183 /*v951*/, s33 offset:3360
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v184 /*v952*/, s33 offset:3364
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v185 /*v953*/, s33 offset:3368
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v186 /*v954*/, s33 offset:3372
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v187 /*v955*/, s33 offset:3376
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v188 /*v956*/, s33 offset:3380
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v189 /*v957*/, s33 offset:3384
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v190 /*v958*/, s33 offset:3388
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v191 /*v959*/, s33 offset:3392
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v192 /*v960*/, s33 offset:3396
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v193 /*v961*/, s33 offset:3400
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v194 /*v962*/, s33 offset:3404
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v195 /*v963*/, s33 offset:3408
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v196 /*v964*/, s33 offset:3412
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v197 /*v965*/, s33 offset:3416
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v198 /*v966*/, s33 offset:3420
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v199 /*v967*/, s33 offset:3424
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v200 /*v968*/, s33 offset:3428
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v201 /*v969*/, s33 offset:3432
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v202 /*v970*/, s33 offset:3436
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v203 /*v971*/, s33 offset:3440
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v204 /*v972*/, s33 offset:3444
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v205 /*v973*/, s33 offset:3448
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v206 /*v974*/, s33 offset:3452
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v207 /*v975*/, s33 offset:3456
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v208 /*v976*/, s33 offset:3460
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v209 /*v977*/, s33 offset:3464
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v210 /*v978*/, s33 offset:3468
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v211 /*v979*/, s33 offset:3472
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v212 /*v980*/, s33 offset:3476
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v213 /*v981*/, s33 offset:3480
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v214 /*v982*/, s33 offset:3484
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v215 /*v983*/, s33 offset:3488
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v216 /*v984*/, s33 offset:3492
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v217 /*v985*/, s33 offset:3496
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v218 /*v986*/, s33 offset:3500
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v219 /*v987*/, s33 offset:3504
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v220 /*v988*/, s33 offset:3508
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v221 /*v989*/, s33 offset:3512
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v222 /*v990*/, s33 offset:3516
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v223 /*v991*/, s33 offset:3520
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v224 /*v992*/, s33 offset:3524
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v225 /*v993*/, s33 offset:3528
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x1d
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v226 /*v994*/, s33 offset:3532 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v227 /*v995*/, s33 offset:3536 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v228 /*v996*/, s33 offset:3540 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v229 /*v997*/, s33 offset:3544 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v230 /*v998*/, s33 offset:3548 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v231 /*v999*/, s33 offset:3552 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v232 /*v1000*/, s33 offset:3556 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v233 /*v1001*/, s33 offset:3560 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v234 /*v1002*/, s33 offset:3564 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v235 /*v1003*/, s33 offset:3568 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v236 /*v1004*/, s33 offset:3572 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v237 /*v1005*/, s33 offset:3576 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v238 /*v1006*/, s33 offset:3580 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v239 /*v1007*/, s33 offset:3584 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v240 /*v1008*/, s33 offset:3588 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v241 /*v1009*/, s33 offset:3592 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v242 /*v1010*/, s33 offset:3596 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v243 /*v1011*/, s33 offset:3600 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v244 /*v1012*/, s33 offset:3604 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v245 /*v1013*/, s33 offset:3608 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v246 /*v1014*/, s33 offset:3612 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v247 /*v1015*/, s33 offset:3616 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v248 /*v1016*/, s33 offset:3620 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v249 /*v1017*/, s33 offset:3624 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v250 /*v1018*/, s33 offset:3628 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v251 /*v1019*/, s33 offset:3632 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v252 /*v1020*/, s33 offset:3636 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v253 /*v1021*/, s33 offset:3640 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v254 /*v1022*/, s33 offset:3644 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v255 /*v1023*/, s33 offset:3648 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v226 /*v994*/, s33 offset:3532
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v227 /*v995*/, s33 offset:3536
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v228 /*v996*/, s33 offset:3540
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v229 /*v997*/, s33 offset:3544
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v230 /*v998*/, s33 offset:3548
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v231 /*v999*/, s33 offset:3552
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v232 /*v1000*/, s33 offset:3556
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v233 /*v1001*/, s33 offset:3560
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v234 /*v1002*/, s33 offset:3564
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v235 /*v1003*/, s33 offset:3568
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v236 /*v1004*/, s33 offset:3572
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v237 /*v1005*/, s33 offset:3576
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v238 /*v1006*/, s33 offset:3580
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v239 /*v1007*/, s33 offset:3584
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v240 /*v1008*/, s33 offset:3588
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v241 /*v1009*/, s33 offset:3592
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v242 /*v1010*/, s33 offset:3596
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v243 /*v1011*/, s33 offset:3600
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v244 /*v1012*/, s33 offset:3604
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v245 /*v1013*/, s33 offset:3608
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v246 /*v1014*/, s33 offset:3612
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v247 /*v1015*/, s33 offset:3616
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v248 /*v1016*/, s33 offset:3620
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v249 /*v1017*/, s33 offset:3624
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v250 /*v1018*/, s33 offset:3628
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v251 /*v1019*/, s33 offset:3632
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v252 /*v1020*/, s33 offset:3636
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v253 /*v1021*/, s33 offset:3640
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v254 /*v1022*/, s33 offset:3644
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v255 /*v1023*/, s33 offset:3648
 ; GFX1250-DAGISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; GFX1250-DAGISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v40, s33 scope:SCOPE_SE ; 4-byte Folded Spill
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v40, s33 ; 4-byte Folded Spill
 ; GFX1250-DAGISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    v_writelane_b32 v40, s0, 3
 ; GFX1250-DAGISEL-NEXT:    v_mov_b32_e32 v2, v0
@@ -4588,7 +4588,7 @@ define amdgpu_cs void @call_from_entry(<8 x float> %x, ptr %p) {
 ; GFX1250-DAGISEL-NEXT:    s_mov_b32 s32, 0
 ; GFX1250-DAGISEL-NEXT:    v_dual_mov_b32 v41, v9 :: v_dual_mov_b32 v40, v8
 ; GFX1250-DAGISEL-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
-; GFX1250-DAGISEL-NEXT:    flat_store_b32 v[40:41], v0 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    flat_store_b32 v[40:41], v0
 ; GFX1250-DAGISEL-NEXT:    s_endpgm
   %ret = call float(ptr, ...) @llvm.amdgcn.call.whole.wave(ptr @callee, <8 x float> %x) convergent
   store float %ret, ptr %p
@@ -5974,942 +5974,942 @@ define amdgpu_gfx_whole_wave void @call_from_whole_wave(i1 %unused, <8 x float> 
 ; GFX1250-DAGISEL-NEXT:    s_mov_b32 s33, s32
 ; GFX1250-DAGISEL-NEXT:    s_xor_saveexec_b32 s4, -1
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3e
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0, s33 offset:4 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v1, s33 offset:8 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v2, s33 offset:12 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v3, s33 offset:16 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v4, s33 offset:20 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v5, s33 offset:24 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v6, s33 offset:28 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v7, s33 offset:32 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v8, s33 offset:36 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v9, s33 offset:40 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v10, s33 offset:44 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v11, s33 offset:48 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v12, s33 offset:52 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v13, s33 offset:56 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v14, s33 offset:60 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v15, s33 offset:64 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v16, s33 offset:68 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v17, s33 offset:72 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v18, s33 offset:76 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v19, s33 offset:80 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v20, s33 offset:84 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v21, s33 offset:88 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v22, s33 offset:92 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v23, s33 offset:96 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v24, s33 offset:100 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v25, s33 offset:104 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v26, s33 offset:108 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v27, s33 offset:112 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v28, s33 offset:116 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v29, s33 offset:120 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v30, s33 offset:124 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v31, s33 offset:128 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v32, s33 offset:132 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v33, s33 offset:136 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v34, s33 offset:140 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v35, s33 offset:144 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v36, s33 offset:148 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v37, s33 offset:152 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v38, s33 offset:156 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v39, s33 offset:160 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v48, s33 offset:172 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v49, s33 offset:176 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v50, s33 offset:180 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v51, s33 offset:184 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v52, s33 offset:188 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v53, s33 offset:192 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v54, s33 offset:196 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v55, s33 offset:200 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v64, s33 offset:204 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v65, s33 offset:208 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v66, s33 offset:212 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v67, s33 offset:216 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v68, s33 offset:220 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v69, s33 offset:224 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v70, s33 offset:228 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v71, s33 offset:232 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v80, s33 offset:236 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v81, s33 offset:240 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v82, s33 offset:244 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v83, s33 offset:248 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v84, s33 offset:252 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v85, s33 offset:256 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v86, s33 offset:260 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0, s33 offset:4
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v1, s33 offset:8
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v2, s33 offset:12
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v3, s33 offset:16
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v4, s33 offset:20
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v5, s33 offset:24
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v6, s33 offset:28
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v7, s33 offset:32
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v8, s33 offset:36
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v9, s33 offset:40
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v10, s33 offset:44
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v11, s33 offset:48
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v12, s33 offset:52
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v13, s33 offset:56
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v14, s33 offset:60
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v15, s33 offset:64
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v16, s33 offset:68
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v17, s33 offset:72
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v18, s33 offset:76
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v19, s33 offset:80
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v20, s33 offset:84
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v21, s33 offset:88
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v22, s33 offset:92
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v23, s33 offset:96
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v24, s33 offset:100
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v25, s33 offset:104
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v26, s33 offset:108
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v27, s33 offset:112
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v28, s33 offset:116
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v29, s33 offset:120
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v30, s33 offset:124
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v31, s33 offset:128
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v32, s33 offset:132
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v33, s33 offset:136
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v34, s33 offset:140
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v35, s33 offset:144
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v36, s33 offset:148
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v37, s33 offset:152
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v38, s33 offset:156
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v39, s33 offset:160
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v48, s33 offset:172
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v49, s33 offset:176
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v50, s33 offset:180
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v51, s33 offset:184
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v52, s33 offset:188
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v53, s33 offset:192
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v54, s33 offset:196
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v55, s33 offset:200
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v64, s33 offset:204
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v65, s33 offset:208
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v66, s33 offset:212
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v67, s33 offset:216
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v68, s33 offset:220
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v69, s33 offset:224
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v70, s33 offset:228
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v71, s33 offset:232
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v80, s33 offset:236
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v81, s33 offset:240
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v82, s33 offset:244
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v83, s33 offset:248
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v84, s33 offset:252
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v85, s33 offset:256
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v86, s33 offset:260
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3e
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v87, s33 offset:264 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v96, s33 offset:268 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v97, s33 offset:272 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v98, s33 offset:276 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v99, s33 offset:280 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v100, s33 offset:284 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v101, s33 offset:288 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v102, s33 offset:292 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v103, s33 offset:296 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v112, s33 offset:300 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v113, s33 offset:304 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v114, s33 offset:308 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v115, s33 offset:312 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v116, s33 offset:316 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v117, s33 offset:320 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v118, s33 offset:324 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v119, s33 offset:328 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v128, s33 offset:332 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v129, s33 offset:336 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v130, s33 offset:340 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v131, s33 offset:344 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v132, s33 offset:348 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v133, s33 offset:352 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v134, s33 offset:356 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v135, s33 offset:360 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v144, s33 offset:364 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v145, s33 offset:368 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v146, s33 offset:372 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v147, s33 offset:376 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v148, s33 offset:380 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v149, s33 offset:384 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v150, s33 offset:388 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v151, s33 offset:392 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v160, s33 offset:396 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v161, s33 offset:400 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v162, s33 offset:404 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v163, s33 offset:408 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v164, s33 offset:412 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v165, s33 offset:416 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v166, s33 offset:420 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v167, s33 offset:424 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v176, s33 offset:428 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v177, s33 offset:432 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v178, s33 offset:436 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v179, s33 offset:440 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v180, s33 offset:444 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v181, s33 offset:448 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v182, s33 offset:452 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v183, s33 offset:456 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v192, s33 offset:460 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v193, s33 offset:464 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v194, s33 offset:468 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v195, s33 offset:472 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v196, s33 offset:476 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v197, s33 offset:480 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v198, s33 offset:484 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v199, s33 offset:488 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v208, s33 offset:492 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v209, s33 offset:496 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v210, s33 offset:500 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v211, s33 offset:504 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v212, s33 offset:508 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v213, s33 offset:512 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v87, s33 offset:264
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v96, s33 offset:268
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v97, s33 offset:272
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v98, s33 offset:276
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v99, s33 offset:280
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v100, s33 offset:284
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v101, s33 offset:288
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v102, s33 offset:292
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v103, s33 offset:296
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v112, s33 offset:300
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v113, s33 offset:304
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v114, s33 offset:308
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v115, s33 offset:312
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v116, s33 offset:316
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v117, s33 offset:320
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v118, s33 offset:324
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v119, s33 offset:328
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v128, s33 offset:332
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v129, s33 offset:336
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v130, s33 offset:340
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v131, s33 offset:344
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v132, s33 offset:348
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v133, s33 offset:352
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v134, s33 offset:356
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v135, s33 offset:360
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v144, s33 offset:364
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v145, s33 offset:368
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v146, s33 offset:372
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v147, s33 offset:376
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v148, s33 offset:380
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v149, s33 offset:384
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v150, s33 offset:388
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v151, s33 offset:392
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v160, s33 offset:396
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v161, s33 offset:400
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v162, s33 offset:404
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v163, s33 offset:408
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v164, s33 offset:412
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v165, s33 offset:416
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v166, s33 offset:420
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v167, s33 offset:424
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v176, s33 offset:428
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v177, s33 offset:432
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v178, s33 offset:436
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v179, s33 offset:440
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v180, s33 offset:444
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v181, s33 offset:448
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v182, s33 offset:452
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v183, s33 offset:456
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v192, s33 offset:460
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v193, s33 offset:464
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v194, s33 offset:468
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v195, s33 offset:472
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v196, s33 offset:476
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v197, s33 offset:480
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v198, s33 offset:484
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v199, s33 offset:488
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v208, s33 offset:492
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v209, s33 offset:496
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v210, s33 offset:500
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v211, s33 offset:504
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v212, s33 offset:508
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v213, s33 offset:512
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3e
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v214, s33 offset:516 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v215, s33 offset:520 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v224, s33 offset:524 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v225, s33 offset:528 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v226, s33 offset:532 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v227, s33 offset:536 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v228, s33 offset:540 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v229, s33 offset:544 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v230, s33 offset:548 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v231, s33 offset:552 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v240, s33 offset:556 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v241, s33 offset:560 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v242, s33 offset:564 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v243, s33 offset:568 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v244, s33 offset:572 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v245, s33 offset:576 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v246, s33 offset:580 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v247, s33 offset:584 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v214, s33 offset:516
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v215, s33 offset:520
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v224, s33 offset:524
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v225, s33 offset:528
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v226, s33 offset:532
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v227, s33 offset:536
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v228, s33 offset:540
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v229, s33 offset:544
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v230, s33 offset:548
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v231, s33 offset:552
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v240, s33 offset:556
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v241, s33 offset:560
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v242, s33 offset:564
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v243, s33 offset:568
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v244, s33 offset:572
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v245, s33 offset:576
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v246, s33 offset:580
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v247, s33 offset:584
 ; GFX1250-DAGISEL-NEXT:    s_set_vgpr_msb 4 ; msbs: dst=0 src0=0 src1=1 src2=0
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0 /*v256*/, s33 offset:588 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v1 /*v257*/, s33 offset:592 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v2 /*v258*/, s33 offset:596 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v3 /*v259*/, s33 offset:600 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v4 /*v260*/, s33 offset:604 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v5 /*v261*/, s33 offset:608 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v6 /*v262*/, s33 offset:612 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v7 /*v263*/, s33 offset:616 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v8 /*v264*/, s33 offset:620 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v9 /*v265*/, s33 offset:624 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v10 /*v266*/, s33 offset:628 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v11 /*v267*/, s33 offset:632 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v12 /*v268*/, s33 offset:636 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v13 /*v269*/, s33 offset:640 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v14 /*v270*/, s33 offset:644 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v15 /*v271*/, s33 offset:648 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v16 /*v272*/, s33 offset:652 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v17 /*v273*/, s33 offset:656 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v18 /*v274*/, s33 offset:660 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v19 /*v275*/, s33 offset:664 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v20 /*v276*/, s33 offset:668 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v21 /*v277*/, s33 offset:672 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v22 /*v278*/, s33 offset:676 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v23 /*v279*/, s33 offset:680 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v24 /*v280*/, s33 offset:684 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v25 /*v281*/, s33 offset:688 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v26 /*v282*/, s33 offset:692 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v27 /*v283*/, s33 offset:696 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v28 /*v284*/, s33 offset:700 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v29 /*v285*/, s33 offset:704 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v30 /*v286*/, s33 offset:708 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v31 /*v287*/, s33 offset:712 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v32 /*v288*/, s33 offset:716 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v33 /*v289*/, s33 offset:720 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v34 /*v290*/, s33 offset:724 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v35 /*v291*/, s33 offset:728 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v36 /*v292*/, s33 offset:732 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v37 /*v293*/, s33 offset:736 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v38 /*v294*/, s33 offset:740 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v39 /*v295*/, s33 offset:744 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v40 /*v296*/, s33 offset:748 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v41 /*v297*/, s33 offset:752 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v42 /*v298*/, s33 offset:756 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v43 /*v299*/, s33 offset:760 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v44 /*v300*/, s33 offset:764 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0 /*v256*/, s33 offset:588
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v1 /*v257*/, s33 offset:592
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v2 /*v258*/, s33 offset:596
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v3 /*v259*/, s33 offset:600
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v4 /*v260*/, s33 offset:604
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v5 /*v261*/, s33 offset:608
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v6 /*v262*/, s33 offset:612
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v7 /*v263*/, s33 offset:616
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v8 /*v264*/, s33 offset:620
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v9 /*v265*/, s33 offset:624
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v10 /*v266*/, s33 offset:628
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v11 /*v267*/, s33 offset:632
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v12 /*v268*/, s33 offset:636
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v13 /*v269*/, s33 offset:640
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v14 /*v270*/, s33 offset:644
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v15 /*v271*/, s33 offset:648
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v16 /*v272*/, s33 offset:652
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v17 /*v273*/, s33 offset:656
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v18 /*v274*/, s33 offset:660
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v19 /*v275*/, s33 offset:664
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v20 /*v276*/, s33 offset:668
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v21 /*v277*/, s33 offset:672
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v22 /*v278*/, s33 offset:676
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v23 /*v279*/, s33 offset:680
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v24 /*v280*/, s33 offset:684
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v25 /*v281*/, s33 offset:688
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v26 /*v282*/, s33 offset:692
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v27 /*v283*/, s33 offset:696
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v28 /*v284*/, s33 offset:700
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v29 /*v285*/, s33 offset:704
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v30 /*v286*/, s33 offset:708
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v31 /*v287*/, s33 offset:712
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v32 /*v288*/, s33 offset:716
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v33 /*v289*/, s33 offset:720
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v34 /*v290*/, s33 offset:724
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v35 /*v291*/, s33 offset:728
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v36 /*v292*/, s33 offset:732
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v37 /*v293*/, s33 offset:736
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v38 /*v294*/, s33 offset:740
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v39 /*v295*/, s33 offset:744
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v40 /*v296*/, s33 offset:748
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v41 /*v297*/, s33 offset:752
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v42 /*v298*/, s33 offset:756
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v43 /*v299*/, s33 offset:760
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v44 /*v300*/, s33 offset:764
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3e
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v45 /*v301*/, s33 offset:768 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v46 /*v302*/, s33 offset:772 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v47 /*v303*/, s33 offset:776 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v48 /*v304*/, s33 offset:780 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v49 /*v305*/, s33 offset:784 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v50 /*v306*/, s33 offset:788 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v51 /*v307*/, s33 offset:792 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v52 /*v308*/, s33 offset:796 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v53 /*v309*/, s33 offset:800 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v54 /*v310*/, s33 offset:804 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v55 /*v311*/, s33 offset:808 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v56 /*v312*/, s33 offset:812 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v57 /*v313*/, s33 offset:816 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v58 /*v314*/, s33 offset:820 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v59 /*v315*/, s33 offset:824 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v60 /*v316*/, s33 offset:828 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v61 /*v317*/, s33 offset:832 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v62 /*v318*/, s33 offset:836 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v63 /*v319*/, s33 offset:840 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v64 /*v320*/, s33 offset:844 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v65 /*v321*/, s33 offset:848 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v66 /*v322*/, s33 offset:852 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v67 /*v323*/, s33 offset:856 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v68 /*v324*/, s33 offset:860 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v69 /*v325*/, s33 offset:864 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v70 /*v326*/, s33 offset:868 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v71 /*v327*/, s33 offset:872 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v72 /*v328*/, s33 offset:876 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v73 /*v329*/, s33 offset:880 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v74 /*v330*/, s33 offset:884 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v75 /*v331*/, s33 offset:888 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v76 /*v332*/, s33 offset:892 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v77 /*v333*/, s33 offset:896 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v78 /*v334*/, s33 offset:900 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v79 /*v335*/, s33 offset:904 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v80 /*v336*/, s33 offset:908 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v81 /*v337*/, s33 offset:912 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v82 /*v338*/, s33 offset:916 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v83 /*v339*/, s33 offset:920 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v84 /*v340*/, s33 offset:924 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v85 /*v341*/, s33 offset:928 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v86 /*v342*/, s33 offset:932 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v87 /*v343*/, s33 offset:936 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v88 /*v344*/, s33 offset:940 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v89 /*v345*/, s33 offset:944 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v90 /*v346*/, s33 offset:948 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v91 /*v347*/, s33 offset:952 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v92 /*v348*/, s33 offset:956 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v93 /*v349*/, s33 offset:960 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v94 /*v350*/, s33 offset:964 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v95 /*v351*/, s33 offset:968 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v96 /*v352*/, s33 offset:972 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v97 /*v353*/, s33 offset:976 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v98 /*v354*/, s33 offset:980 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v99 /*v355*/, s33 offset:984 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v100 /*v356*/, s33 offset:988 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v101 /*v357*/, s33 offset:992 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v102 /*v358*/, s33 offset:996 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v103 /*v359*/, s33 offset:1000 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v104 /*v360*/, s33 offset:1004 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v105 /*v361*/, s33 offset:1008 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v106 /*v362*/, s33 offset:1012 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v107 /*v363*/, s33 offset:1016 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v45 /*v301*/, s33 offset:768
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v46 /*v302*/, s33 offset:772
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v47 /*v303*/, s33 offset:776
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v48 /*v304*/, s33 offset:780
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v49 /*v305*/, s33 offset:784
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v50 /*v306*/, s33 offset:788
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v51 /*v307*/, s33 offset:792
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v52 /*v308*/, s33 offset:796
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v53 /*v309*/, s33 offset:800
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v54 /*v310*/, s33 offset:804
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v55 /*v311*/, s33 offset:808
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v56 /*v312*/, s33 offset:812
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v57 /*v313*/, s33 offset:816
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v58 /*v314*/, s33 offset:820
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v59 /*v315*/, s33 offset:824
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v60 /*v316*/, s33 offset:828
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v61 /*v317*/, s33 offset:832
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v62 /*v318*/, s33 offset:836
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v63 /*v319*/, s33 offset:840
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v64 /*v320*/, s33 offset:844
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v65 /*v321*/, s33 offset:848
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v66 /*v322*/, s33 offset:852
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v67 /*v323*/, s33 offset:856
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v68 /*v324*/, s33 offset:860
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v69 /*v325*/, s33 offset:864
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v70 /*v326*/, s33 offset:868
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v71 /*v327*/, s33 offset:872
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v72 /*v328*/, s33 offset:876
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v73 /*v329*/, s33 offset:880
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v74 /*v330*/, s33 offset:884
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v75 /*v331*/, s33 offset:888
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v76 /*v332*/, s33 offset:892
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v77 /*v333*/, s33 offset:896
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v78 /*v334*/, s33 offset:900
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v79 /*v335*/, s33 offset:904
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v80 /*v336*/, s33 offset:908
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v81 /*v337*/, s33 offset:912
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v82 /*v338*/, s33 offset:916
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v83 /*v339*/, s33 offset:920
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v84 /*v340*/, s33 offset:924
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v85 /*v341*/, s33 offset:928
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v86 /*v342*/, s33 offset:932
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v87 /*v343*/, s33 offset:936
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v88 /*v344*/, s33 offset:940
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v89 /*v345*/, s33 offset:944
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v90 /*v346*/, s33 offset:948
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v91 /*v347*/, s33 offset:952
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v92 /*v348*/, s33 offset:956
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v93 /*v349*/, s33 offset:960
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v94 /*v350*/, s33 offset:964
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v95 /*v351*/, s33 offset:968
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v96 /*v352*/, s33 offset:972
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v97 /*v353*/, s33 offset:976
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v98 /*v354*/, s33 offset:980
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v99 /*v355*/, s33 offset:984
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v100 /*v356*/, s33 offset:988
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v101 /*v357*/, s33 offset:992
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v102 /*v358*/, s33 offset:996
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v103 /*v359*/, s33 offset:1000
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v104 /*v360*/, s33 offset:1004
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v105 /*v361*/, s33 offset:1008
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v106 /*v362*/, s33 offset:1012
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v107 /*v363*/, s33 offset:1016
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3e
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v108 /*v364*/, s33 offset:1020 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v109 /*v365*/, s33 offset:1024 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v110 /*v366*/, s33 offset:1028 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v111 /*v367*/, s33 offset:1032 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v112 /*v368*/, s33 offset:1036 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v113 /*v369*/, s33 offset:1040 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v114 /*v370*/, s33 offset:1044 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v115 /*v371*/, s33 offset:1048 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v116 /*v372*/, s33 offset:1052 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v117 /*v373*/, s33 offset:1056 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v118 /*v374*/, s33 offset:1060 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v119 /*v375*/, s33 offset:1064 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v120 /*v376*/, s33 offset:1068 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v121 /*v377*/, s33 offset:1072 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v122 /*v378*/, s33 offset:1076 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v123 /*v379*/, s33 offset:1080 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v124 /*v380*/, s33 offset:1084 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v125 /*v381*/, s33 offset:1088 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v126 /*v382*/, s33 offset:1092 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v127 /*v383*/, s33 offset:1096 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v128 /*v384*/, s33 offset:1100 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v129 /*v385*/, s33 offset:1104 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v130 /*v386*/, s33 offset:1108 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v131 /*v387*/, s33 offset:1112 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v132 /*v388*/, s33 offset:1116 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v133 /*v389*/, s33 offset:1120 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v134 /*v390*/, s33 offset:1124 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v135 /*v391*/, s33 offset:1128 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v136 /*v392*/, s33 offset:1132 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v137 /*v393*/, s33 offset:1136 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v138 /*v394*/, s33 offset:1140 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v139 /*v395*/, s33 offset:1144 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v140 /*v396*/, s33 offset:1148 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v141 /*v397*/, s33 offset:1152 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v142 /*v398*/, s33 offset:1156 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v143 /*v399*/, s33 offset:1160 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v144 /*v400*/, s33 offset:1164 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v145 /*v401*/, s33 offset:1168 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v146 /*v402*/, s33 offset:1172 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v147 /*v403*/, s33 offset:1176 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v148 /*v404*/, s33 offset:1180 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v149 /*v405*/, s33 offset:1184 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v150 /*v406*/, s33 offset:1188 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v151 /*v407*/, s33 offset:1192 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v152 /*v408*/, s33 offset:1196 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v153 /*v409*/, s33 offset:1200 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v154 /*v410*/, s33 offset:1204 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v155 /*v411*/, s33 offset:1208 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v156 /*v412*/, s33 offset:1212 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v157 /*v413*/, s33 offset:1216 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v158 /*v414*/, s33 offset:1220 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v159 /*v415*/, s33 offset:1224 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v160 /*v416*/, s33 offset:1228 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v161 /*v417*/, s33 offset:1232 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v162 /*v418*/, s33 offset:1236 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v163 /*v419*/, s33 offset:1240 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v164 /*v420*/, s33 offset:1244 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v165 /*v421*/, s33 offset:1248 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v166 /*v422*/, s33 offset:1252 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v167 /*v423*/, s33 offset:1256 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v168 /*v424*/, s33 offset:1260 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v169 /*v425*/, s33 offset:1264 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v170 /*v426*/, s33 offset:1268 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v108 /*v364*/, s33 offset:1020
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v109 /*v365*/, s33 offset:1024
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v110 /*v366*/, s33 offset:1028
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v111 /*v367*/, s33 offset:1032
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v112 /*v368*/, s33 offset:1036
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v113 /*v369*/, s33 offset:1040
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v114 /*v370*/, s33 offset:1044
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v115 /*v371*/, s33 offset:1048
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v116 /*v372*/, s33 offset:1052
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v117 /*v373*/, s33 offset:1056
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v118 /*v374*/, s33 offset:1060
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v119 /*v375*/, s33 offset:1064
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v120 /*v376*/, s33 offset:1068
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v121 /*v377*/, s33 offset:1072
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v122 /*v378*/, s33 offset:1076
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v123 /*v379*/, s33 offset:1080
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v124 /*v380*/, s33 offset:1084
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v125 /*v381*/, s33 offset:1088
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v126 /*v382*/, s33 offset:1092
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v127 /*v383*/, s33 offset:1096
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v128 /*v384*/, s33 offset:1100
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v129 /*v385*/, s33 offset:1104
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v130 /*v386*/, s33 offset:1108
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v131 /*v387*/, s33 offset:1112
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v132 /*v388*/, s33 offset:1116
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v133 /*v389*/, s33 offset:1120
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v134 /*v390*/, s33 offset:1124
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v135 /*v391*/, s33 offset:1128
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v136 /*v392*/, s33 offset:1132
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v137 /*v393*/, s33 offset:1136
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v138 /*v394*/, s33 offset:1140
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v139 /*v395*/, s33 offset:1144
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v140 /*v396*/, s33 offset:1148
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v141 /*v397*/, s33 offset:1152
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v142 /*v398*/, s33 offset:1156
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v143 /*v399*/, s33 offset:1160
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v144 /*v400*/, s33 offset:1164
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v145 /*v401*/, s33 offset:1168
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v146 /*v402*/, s33 offset:1172
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v147 /*v403*/, s33 offset:1176
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v148 /*v404*/, s33 offset:1180
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v149 /*v405*/, s33 offset:1184
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v150 /*v406*/, s33 offset:1188
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v151 /*v407*/, s33 offset:1192
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v152 /*v408*/, s33 offset:1196
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v153 /*v409*/, s33 offset:1200
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v154 /*v410*/, s33 offset:1204
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v155 /*v411*/, s33 offset:1208
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v156 /*v412*/, s33 offset:1212
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v157 /*v413*/, s33 offset:1216
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v158 /*v414*/, s33 offset:1220
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v159 /*v415*/, s33 offset:1224
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v160 /*v416*/, s33 offset:1228
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v161 /*v417*/, s33 offset:1232
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v162 /*v418*/, s33 offset:1236
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v163 /*v419*/, s33 offset:1240
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v164 /*v420*/, s33 offset:1244
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v165 /*v421*/, s33 offset:1248
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v166 /*v422*/, s33 offset:1252
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v167 /*v423*/, s33 offset:1256
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v168 /*v424*/, s33 offset:1260
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v169 /*v425*/, s33 offset:1264
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v170 /*v426*/, s33 offset:1268
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3e
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v171 /*v427*/, s33 offset:1272 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v172 /*v428*/, s33 offset:1276 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v173 /*v429*/, s33 offset:1280 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v174 /*v430*/, s33 offset:1284 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v175 /*v431*/, s33 offset:1288 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v176 /*v432*/, s33 offset:1292 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v177 /*v433*/, s33 offset:1296 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v178 /*v434*/, s33 offset:1300 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v179 /*v435*/, s33 offset:1304 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v180 /*v436*/, s33 offset:1308 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v181 /*v437*/, s33 offset:1312 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v182 /*v438*/, s33 offset:1316 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v183 /*v439*/, s33 offset:1320 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v184 /*v440*/, s33 offset:1324 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v185 /*v441*/, s33 offset:1328 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v186 /*v442*/, s33 offset:1332 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v187 /*v443*/, s33 offset:1336 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v188 /*v444*/, s33 offset:1340 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v189 /*v445*/, s33 offset:1344 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v190 /*v446*/, s33 offset:1348 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v191 /*v447*/, s33 offset:1352 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v192 /*v448*/, s33 offset:1356 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v193 /*v449*/, s33 offset:1360 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v194 /*v450*/, s33 offset:1364 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v195 /*v451*/, s33 offset:1368 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v196 /*v452*/, s33 offset:1372 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v197 /*v453*/, s33 offset:1376 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v198 /*v454*/, s33 offset:1380 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v199 /*v455*/, s33 offset:1384 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v200 /*v456*/, s33 offset:1388 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v201 /*v457*/, s33 offset:1392 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v202 /*v458*/, s33 offset:1396 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v203 /*v459*/, s33 offset:1400 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v204 /*v460*/, s33 offset:1404 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v205 /*v461*/, s33 offset:1408 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v206 /*v462*/, s33 offset:1412 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v207 /*v463*/, s33 offset:1416 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v208 /*v464*/, s33 offset:1420 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v209 /*v465*/, s33 offset:1424 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v210 /*v466*/, s33 offset:1428 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v211 /*v467*/, s33 offset:1432 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v212 /*v468*/, s33 offset:1436 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v213 /*v469*/, s33 offset:1440 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v214 /*v470*/, s33 offset:1444 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v215 /*v471*/, s33 offset:1448 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v216 /*v472*/, s33 offset:1452 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v217 /*v473*/, s33 offset:1456 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v218 /*v474*/, s33 offset:1460 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v219 /*v475*/, s33 offset:1464 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v220 /*v476*/, s33 offset:1468 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v221 /*v477*/, s33 offset:1472 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v222 /*v478*/, s33 offset:1476 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v223 /*v479*/, s33 offset:1480 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v224 /*v480*/, s33 offset:1484 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v225 /*v481*/, s33 offset:1488 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v226 /*v482*/, s33 offset:1492 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v227 /*v483*/, s33 offset:1496 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v228 /*v484*/, s33 offset:1500 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v229 /*v485*/, s33 offset:1504 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v230 /*v486*/, s33 offset:1508 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v231 /*v487*/, s33 offset:1512 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v232 /*v488*/, s33 offset:1516 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v233 /*v489*/, s33 offset:1520 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v171 /*v427*/, s33 offset:1272
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v172 /*v428*/, s33 offset:1276
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v173 /*v429*/, s33 offset:1280
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v174 /*v430*/, s33 offset:1284
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v175 /*v431*/, s33 offset:1288
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v176 /*v432*/, s33 offset:1292
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v177 /*v433*/, s33 offset:1296
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v178 /*v434*/, s33 offset:1300
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v179 /*v435*/, s33 offset:1304
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v180 /*v436*/, s33 offset:1308
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v181 /*v437*/, s33 offset:1312
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v182 /*v438*/, s33 offset:1316
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v183 /*v439*/, s33 offset:1320
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v184 /*v440*/, s33 offset:1324
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v185 /*v441*/, s33 offset:1328
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v186 /*v442*/, s33 offset:1332
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v187 /*v443*/, s33 offset:1336
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v188 /*v444*/, s33 offset:1340
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v189 /*v445*/, s33 offset:1344
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v190 /*v446*/, s33 offset:1348
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v191 /*v447*/, s33 offset:1352
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v192 /*v448*/, s33 offset:1356
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v193 /*v449*/, s33 offset:1360
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v194 /*v450*/, s33 offset:1364
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v195 /*v451*/, s33 offset:1368
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v196 /*v452*/, s33 offset:1372
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v197 /*v453*/, s33 offset:1376
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v198 /*v454*/, s33 offset:1380
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v199 /*v455*/, s33 offset:1384
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v200 /*v456*/, s33 offset:1388
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v201 /*v457*/, s33 offset:1392
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v202 /*v458*/, s33 offset:1396
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v203 /*v459*/, s33 offset:1400
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v204 /*v460*/, s33 offset:1404
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v205 /*v461*/, s33 offset:1408
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v206 /*v462*/, s33 offset:1412
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v207 /*v463*/, s33 offset:1416
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v208 /*v464*/, s33 offset:1420
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v209 /*v465*/, s33 offset:1424
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v210 /*v466*/, s33 offset:1428
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v211 /*v467*/, s33 offset:1432
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v212 /*v468*/, s33 offset:1436
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v213 /*v469*/, s33 offset:1440
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v214 /*v470*/, s33 offset:1444
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v215 /*v471*/, s33 offset:1448
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v216 /*v472*/, s33 offset:1452
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v217 /*v473*/, s33 offset:1456
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v218 /*v474*/, s33 offset:1460
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v219 /*v475*/, s33 offset:1464
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v220 /*v476*/, s33 offset:1468
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v221 /*v477*/, s33 offset:1472
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v222 /*v478*/, s33 offset:1476
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v223 /*v479*/, s33 offset:1480
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v224 /*v480*/, s33 offset:1484
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v225 /*v481*/, s33 offset:1488
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v226 /*v482*/, s33 offset:1492
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v227 /*v483*/, s33 offset:1496
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v228 /*v484*/, s33 offset:1500
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v229 /*v485*/, s33 offset:1504
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v230 /*v486*/, s33 offset:1508
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v231 /*v487*/, s33 offset:1512
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v232 /*v488*/, s33 offset:1516
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v233 /*v489*/, s33 offset:1520
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3e
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v234 /*v490*/, s33 offset:1524 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v235 /*v491*/, s33 offset:1528 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v236 /*v492*/, s33 offset:1532 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v237 /*v493*/, s33 offset:1536 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v238 /*v494*/, s33 offset:1540 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v239 /*v495*/, s33 offset:1544 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v240 /*v496*/, s33 offset:1548 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v241 /*v497*/, s33 offset:1552 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v242 /*v498*/, s33 offset:1556 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v243 /*v499*/, s33 offset:1560 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v244 /*v500*/, s33 offset:1564 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v245 /*v501*/, s33 offset:1568 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v246 /*v502*/, s33 offset:1572 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v247 /*v503*/, s33 offset:1576 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v248 /*v504*/, s33 offset:1580 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v249 /*v505*/, s33 offset:1584 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v250 /*v506*/, s33 offset:1588 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v251 /*v507*/, s33 offset:1592 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v252 /*v508*/, s33 offset:1596 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v253 /*v509*/, s33 offset:1600 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v254 /*v510*/, s33 offset:1604 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v255 /*v511*/, s33 offset:1608 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v234 /*v490*/, s33 offset:1524
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v235 /*v491*/, s33 offset:1528
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v236 /*v492*/, s33 offset:1532
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v237 /*v493*/, s33 offset:1536
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v238 /*v494*/, s33 offset:1540
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v239 /*v495*/, s33 offset:1544
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v240 /*v496*/, s33 offset:1548
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v241 /*v497*/, s33 offset:1552
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v242 /*v498*/, s33 offset:1556
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v243 /*v499*/, s33 offset:1560
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v244 /*v500*/, s33 offset:1564
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v245 /*v501*/, s33 offset:1568
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v246 /*v502*/, s33 offset:1572
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v247 /*v503*/, s33 offset:1576
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v248 /*v504*/, s33 offset:1580
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v249 /*v505*/, s33 offset:1584
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v250 /*v506*/, s33 offset:1588
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v251 /*v507*/, s33 offset:1592
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v252 /*v508*/, s33 offset:1596
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v253 /*v509*/, s33 offset:1600
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v254 /*v510*/, s33 offset:1604
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v255 /*v511*/, s33 offset:1608
 ; GFX1250-DAGISEL-NEXT:    s_set_vgpr_msb 8 ; msbs: dst=0 src0=0 src1=2 src2=0
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0 /*v512*/, s33 offset:1612 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v1 /*v513*/, s33 offset:1616 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v2 /*v514*/, s33 offset:1620 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v3 /*v515*/, s33 offset:1624 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v4 /*v516*/, s33 offset:1628 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v5 /*v517*/, s33 offset:1632 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v6 /*v518*/, s33 offset:1636 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v7 /*v519*/, s33 offset:1640 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v8 /*v520*/, s33 offset:1644 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v9 /*v521*/, s33 offset:1648 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v10 /*v522*/, s33 offset:1652 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v11 /*v523*/, s33 offset:1656 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v12 /*v524*/, s33 offset:1660 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v13 /*v525*/, s33 offset:1664 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v14 /*v526*/, s33 offset:1668 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v15 /*v527*/, s33 offset:1672 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v16 /*v528*/, s33 offset:1676 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v17 /*v529*/, s33 offset:1680 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v18 /*v530*/, s33 offset:1684 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v19 /*v531*/, s33 offset:1688 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v20 /*v532*/, s33 offset:1692 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v21 /*v533*/, s33 offset:1696 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v22 /*v534*/, s33 offset:1700 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v23 /*v535*/, s33 offset:1704 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v24 /*v536*/, s33 offset:1708 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v25 /*v537*/, s33 offset:1712 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v26 /*v538*/, s33 offset:1716 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v27 /*v539*/, s33 offset:1720 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v28 /*v540*/, s33 offset:1724 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v29 /*v541*/, s33 offset:1728 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v30 /*v542*/, s33 offset:1732 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v31 /*v543*/, s33 offset:1736 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v32 /*v544*/, s33 offset:1740 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v33 /*v545*/, s33 offset:1744 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v34 /*v546*/, s33 offset:1748 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v35 /*v547*/, s33 offset:1752 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v36 /*v548*/, s33 offset:1756 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v37 /*v549*/, s33 offset:1760 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v38 /*v550*/, s33 offset:1764 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v39 /*v551*/, s33 offset:1768 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v40 /*v552*/, s33 offset:1772 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0 /*v512*/, s33 offset:1612
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v1 /*v513*/, s33 offset:1616
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v2 /*v514*/, s33 offset:1620
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v3 /*v515*/, s33 offset:1624
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v4 /*v516*/, s33 offset:1628
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v5 /*v517*/, s33 offset:1632
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v6 /*v518*/, s33 offset:1636
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v7 /*v519*/, s33 offset:1640
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v8 /*v520*/, s33 offset:1644
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v9 /*v521*/, s33 offset:1648
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v10 /*v522*/, s33 offset:1652
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v11 /*v523*/, s33 offset:1656
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v12 /*v524*/, s33 offset:1660
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v13 /*v525*/, s33 offset:1664
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v14 /*v526*/, s33 offset:1668
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v15 /*v527*/, s33 offset:1672
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v16 /*v528*/, s33 offset:1676
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v17 /*v529*/, s33 offset:1680
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v18 /*v530*/, s33 offset:1684
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v19 /*v531*/, s33 offset:1688
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v20 /*v532*/, s33 offset:1692
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v21 /*v533*/, s33 offset:1696
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v22 /*v534*/, s33 offset:1700
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v23 /*v535*/, s33 offset:1704
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v24 /*v536*/, s33 offset:1708
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v25 /*v537*/, s33 offset:1712
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v26 /*v538*/, s33 offset:1716
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v27 /*v539*/, s33 offset:1720
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v28 /*v540*/, s33 offset:1724
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v29 /*v541*/, s33 offset:1728
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v30 /*v542*/, s33 offset:1732
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v31 /*v543*/, s33 offset:1736
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v32 /*v544*/, s33 offset:1740
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v33 /*v545*/, s33 offset:1744
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v34 /*v546*/, s33 offset:1748
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v35 /*v547*/, s33 offset:1752
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v36 /*v548*/, s33 offset:1756
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v37 /*v549*/, s33 offset:1760
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v38 /*v550*/, s33 offset:1764
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v39 /*v551*/, s33 offset:1768
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v40 /*v552*/, s33 offset:1772
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3e
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v41 /*v553*/, s33 offset:1776 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v42 /*v554*/, s33 offset:1780 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v43 /*v555*/, s33 offset:1784 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v44 /*v556*/, s33 offset:1788 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v45 /*v557*/, s33 offset:1792 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v46 /*v558*/, s33 offset:1796 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v47 /*v559*/, s33 offset:1800 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v48 /*v560*/, s33 offset:1804 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v49 /*v561*/, s33 offset:1808 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v50 /*v562*/, s33 offset:1812 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v51 /*v563*/, s33 offset:1816 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v52 /*v564*/, s33 offset:1820 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v53 /*v565*/, s33 offset:1824 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v54 /*v566*/, s33 offset:1828 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v55 /*v567*/, s33 offset:1832 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v56 /*v568*/, s33 offset:1836 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v57 /*v569*/, s33 offset:1840 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v58 /*v570*/, s33 offset:1844 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v59 /*v571*/, s33 offset:1848 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v60 /*v572*/, s33 offset:1852 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v61 /*v573*/, s33 offset:1856 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v62 /*v574*/, s33 offset:1860 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v63 /*v575*/, s33 offset:1864 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v64 /*v576*/, s33 offset:1868 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v65 /*v577*/, s33 offset:1872 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v66 /*v578*/, s33 offset:1876 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v67 /*v579*/, s33 offset:1880 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v68 /*v580*/, s33 offset:1884 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v69 /*v581*/, s33 offset:1888 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v70 /*v582*/, s33 offset:1892 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v71 /*v583*/, s33 offset:1896 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v72 /*v584*/, s33 offset:1900 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v73 /*v585*/, s33 offset:1904 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v74 /*v586*/, s33 offset:1908 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v75 /*v587*/, s33 offset:1912 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v76 /*v588*/, s33 offset:1916 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v77 /*v589*/, s33 offset:1920 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v78 /*v590*/, s33 offset:1924 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v79 /*v591*/, s33 offset:1928 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v80 /*v592*/, s33 offset:1932 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v81 /*v593*/, s33 offset:1936 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v82 /*v594*/, s33 offset:1940 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v83 /*v595*/, s33 offset:1944 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v84 /*v596*/, s33 offset:1948 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v85 /*v597*/, s33 offset:1952 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v86 /*v598*/, s33 offset:1956 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v87 /*v599*/, s33 offset:1960 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v88 /*v600*/, s33 offset:1964 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v89 /*v601*/, s33 offset:1968 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v90 /*v602*/, s33 offset:1972 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v91 /*v603*/, s33 offset:1976 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v92 /*v604*/, s33 offset:1980 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v93 /*v605*/, s33 offset:1984 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v94 /*v606*/, s33 offset:1988 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v95 /*v607*/, s33 offset:1992 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v96 /*v608*/, s33 offset:1996 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v97 /*v609*/, s33 offset:2000 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v98 /*v610*/, s33 offset:2004 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v99 /*v611*/, s33 offset:2008 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v100 /*v612*/, s33 offset:2012 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v101 /*v613*/, s33 offset:2016 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v102 /*v614*/, s33 offset:2020 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v103 /*v615*/, s33 offset:2024 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v41 /*v553*/, s33 offset:1776
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v42 /*v554*/, s33 offset:1780
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v43 /*v555*/, s33 offset:1784
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v44 /*v556*/, s33 offset:1788
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v45 /*v557*/, s33 offset:1792
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v46 /*v558*/, s33 offset:1796
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v47 /*v559*/, s33 offset:1800
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v48 /*v560*/, s33 offset:1804
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v49 /*v561*/, s33 offset:1808
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v50 /*v562*/, s33 offset:1812
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v51 /*v563*/, s33 offset:1816
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v52 /*v564*/, s33 offset:1820
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v53 /*v565*/, s33 offset:1824
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v54 /*v566*/, s33 offset:1828
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v55 /*v567*/, s33 offset:1832
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v56 /*v568*/, s33 offset:1836
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v57 /*v569*/, s33 offset:1840
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v58 /*v570*/, s33 offset:1844
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v59 /*v571*/, s33 offset:1848
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v60 /*v572*/, s33 offset:1852
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v61 /*v573*/, s33 offset:1856
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v62 /*v574*/, s33 offset:1860
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v63 /*v575*/, s33 offset:1864
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v64 /*v576*/, s33 offset:1868
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v65 /*v577*/, s33 offset:1872
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v66 /*v578*/, s33 offset:1876
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v67 /*v579*/, s33 offset:1880
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v68 /*v580*/, s33 offset:1884
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v69 /*v581*/, s33 offset:1888
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v70 /*v582*/, s33 offset:1892
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v71 /*v583*/, s33 offset:1896
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v72 /*v584*/, s33 offset:1900
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v73 /*v585*/, s33 offset:1904
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v74 /*v586*/, s33 offset:1908
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v75 /*v587*/, s33 offset:1912
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v76 /*v588*/, s33 offset:1916
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v77 /*v589*/, s33 offset:1920
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v78 /*v590*/, s33 offset:1924
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v79 /*v591*/, s33 offset:1928
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v80 /*v592*/, s33 offset:1932
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v81 /*v593*/, s33 offset:1936
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v82 /*v594*/, s33 offset:1940
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v83 /*v595*/, s33 offset:1944
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v84 /*v596*/, s33 offset:1948
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v85 /*v597*/, s33 offset:1952
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v86 /*v598*/, s33 offset:1956
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v87 /*v599*/, s33 offset:1960
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v88 /*v600*/, s33 offset:1964
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v89 /*v601*/, s33 offset:1968
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v90 /*v602*/, s33 offset:1972
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v91 /*v603*/, s33 offset:1976
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v92 /*v604*/, s33 offset:1980
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v93 /*v605*/, s33 offset:1984
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v94 /*v606*/, s33 offset:1988
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v95 /*v607*/, s33 offset:1992
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v96 /*v608*/, s33 offset:1996
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v97 /*v609*/, s33 offset:2000
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v98 /*v610*/, s33 offset:2004
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v99 /*v611*/, s33 offset:2008
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v100 /*v612*/, s33 offset:2012
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v101 /*v613*/, s33 offset:2016
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v102 /*v614*/, s33 offset:2020
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v103 /*v615*/, s33 offset:2024
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3e
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v104 /*v616*/, s33 offset:2028 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v105 /*v617*/, s33 offset:2032 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v106 /*v618*/, s33 offset:2036 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v107 /*v619*/, s33 offset:2040 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v108 /*v620*/, s33 offset:2044 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v109 /*v621*/, s33 offset:2048 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v110 /*v622*/, s33 offset:2052 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v111 /*v623*/, s33 offset:2056 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v112 /*v624*/, s33 offset:2060 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v113 /*v625*/, s33 offset:2064 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v114 /*v626*/, s33 offset:2068 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v115 /*v627*/, s33 offset:2072 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v116 /*v628*/, s33 offset:2076 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v117 /*v629*/, s33 offset:2080 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v118 /*v630*/, s33 offset:2084 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v119 /*v631*/, s33 offset:2088 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v120 /*v632*/, s33 offset:2092 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v121 /*v633*/, s33 offset:2096 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v122 /*v634*/, s33 offset:2100 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v123 /*v635*/, s33 offset:2104 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v124 /*v636*/, s33 offset:2108 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v125 /*v637*/, s33 offset:2112 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v126 /*v638*/, s33 offset:2116 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v127 /*v639*/, s33 offset:2120 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v128 /*v640*/, s33 offset:2124 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v129 /*v641*/, s33 offset:2128 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v130 /*v642*/, s33 offset:2132 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v131 /*v643*/, s33 offset:2136 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v132 /*v644*/, s33 offset:2140 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v133 /*v645*/, s33 offset:2144 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v134 /*v646*/, s33 offset:2148 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v135 /*v647*/, s33 offset:2152 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v136 /*v648*/, s33 offset:2156 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v137 /*v649*/, s33 offset:2160 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v138 /*v650*/, s33 offset:2164 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v139 /*v651*/, s33 offset:2168 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v140 /*v652*/, s33 offset:2172 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v141 /*v653*/, s33 offset:2176 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v142 /*v654*/, s33 offset:2180 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v143 /*v655*/, s33 offset:2184 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v144 /*v656*/, s33 offset:2188 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v145 /*v657*/, s33 offset:2192 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v146 /*v658*/, s33 offset:2196 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v147 /*v659*/, s33 offset:2200 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v148 /*v660*/, s33 offset:2204 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v149 /*v661*/, s33 offset:2208 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v150 /*v662*/, s33 offset:2212 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v151 /*v663*/, s33 offset:2216 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v152 /*v664*/, s33 offset:2220 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v153 /*v665*/, s33 offset:2224 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v154 /*v666*/, s33 offset:2228 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v155 /*v667*/, s33 offset:2232 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v156 /*v668*/, s33 offset:2236 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v157 /*v669*/, s33 offset:2240 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v158 /*v670*/, s33 offset:2244 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v159 /*v671*/, s33 offset:2248 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v160 /*v672*/, s33 offset:2252 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v161 /*v673*/, s33 offset:2256 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v162 /*v674*/, s33 offset:2260 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v163 /*v675*/, s33 offset:2264 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v164 /*v676*/, s33 offset:2268 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v165 /*v677*/, s33 offset:2272 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v166 /*v678*/, s33 offset:2276 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v104 /*v616*/, s33 offset:2028
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v105 /*v617*/, s33 offset:2032
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v106 /*v618*/, s33 offset:2036
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v107 /*v619*/, s33 offset:2040
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v108 /*v620*/, s33 offset:2044
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v109 /*v621*/, s33 offset:2048
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v110 /*v622*/, s33 offset:2052
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v111 /*v623*/, s33 offset:2056
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v112 /*v624*/, s33 offset:2060
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v113 /*v625*/, s33 offset:2064
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v114 /*v626*/, s33 offset:2068
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v115 /*v627*/, s33 offset:2072
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v116 /*v628*/, s33 offset:2076
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v117 /*v629*/, s33 offset:2080
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v118 /*v630*/, s33 offset:2084
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v119 /*v631*/, s33 offset:2088
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v120 /*v632*/, s33 offset:2092
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v121 /*v633*/, s33 offset:2096
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v122 /*v634*/, s33 offset:2100
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v123 /*v635*/, s33 offset:2104
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v124 /*v636*/, s33 offset:2108
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v125 /*v637*/, s33 offset:2112
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v126 /*v638*/, s33 offset:2116
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v127 /*v639*/, s33 offset:2120
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v128 /*v640*/, s33 offset:2124
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v129 /*v641*/, s33 offset:2128
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v130 /*v642*/, s33 offset:2132
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v131 /*v643*/, s33 offset:2136
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v132 /*v644*/, s33 offset:2140
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v133 /*v645*/, s33 offset:2144
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v134 /*v646*/, s33 offset:2148
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v135 /*v647*/, s33 offset:2152
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v136 /*v648*/, s33 offset:2156
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v137 /*v649*/, s33 offset:2160
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v138 /*v650*/, s33 offset:2164
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v139 /*v651*/, s33 offset:2168
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v140 /*v652*/, s33 offset:2172
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v141 /*v653*/, s33 offset:2176
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v142 /*v654*/, s33 offset:2180
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v143 /*v655*/, s33 offset:2184
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v144 /*v656*/, s33 offset:2188
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v145 /*v657*/, s33 offset:2192
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v146 /*v658*/, s33 offset:2196
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v147 /*v659*/, s33 offset:2200
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v148 /*v660*/, s33 offset:2204
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v149 /*v661*/, s33 offset:2208
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v150 /*v662*/, s33 offset:2212
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v151 /*v663*/, s33 offset:2216
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v152 /*v664*/, s33 offset:2220
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v153 /*v665*/, s33 offset:2224
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v154 /*v666*/, s33 offset:2228
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v155 /*v667*/, s33 offset:2232
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v156 /*v668*/, s33 offset:2236
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v157 /*v669*/, s33 offset:2240
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v158 /*v670*/, s33 offset:2244
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v159 /*v671*/, s33 offset:2248
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v160 /*v672*/, s33 offset:2252
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v161 /*v673*/, s33 offset:2256
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v162 /*v674*/, s33 offset:2260
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v163 /*v675*/, s33 offset:2264
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v164 /*v676*/, s33 offset:2268
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v165 /*v677*/, s33 offset:2272
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v166 /*v678*/, s33 offset:2276
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3e
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v167 /*v679*/, s33 offset:2280 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v168 /*v680*/, s33 offset:2284 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v169 /*v681*/, s33 offset:2288 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v170 /*v682*/, s33 offset:2292 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v171 /*v683*/, s33 offset:2296 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v172 /*v684*/, s33 offset:2300 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v173 /*v685*/, s33 offset:2304 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v174 /*v686*/, s33 offset:2308 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v175 /*v687*/, s33 offset:2312 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v176 /*v688*/, s33 offset:2316 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v177 /*v689*/, s33 offset:2320 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v178 /*v690*/, s33 offset:2324 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v179 /*v691*/, s33 offset:2328 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v180 /*v692*/, s33 offset:2332 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v181 /*v693*/, s33 offset:2336 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v182 /*v694*/, s33 offset:2340 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v183 /*v695*/, s33 offset:2344 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v184 /*v696*/, s33 offset:2348 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v185 /*v697*/, s33 offset:2352 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v186 /*v698*/, s33 offset:2356 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v187 /*v699*/, s33 offset:2360 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v188 /*v700*/, s33 offset:2364 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v189 /*v701*/, s33 offset:2368 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v190 /*v702*/, s33 offset:2372 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v191 /*v703*/, s33 offset:2376 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v192 /*v704*/, s33 offset:2380 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v193 /*v705*/, s33 offset:2384 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v194 /*v706*/, s33 offset:2388 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v195 /*v707*/, s33 offset:2392 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v196 /*v708*/, s33 offset:2396 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v197 /*v709*/, s33 offset:2400 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v198 /*v710*/, s33 offset:2404 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v199 /*v711*/, s33 offset:2408 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v200 /*v712*/, s33 offset:2412 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v201 /*v713*/, s33 offset:2416 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v202 /*v714*/, s33 offset:2420 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v203 /*v715*/, s33 offset:2424 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v204 /*v716*/, s33 offset:2428 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v205 /*v717*/, s33 offset:2432 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v206 /*v718*/, s33 offset:2436 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v207 /*v719*/, s33 offset:2440 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v208 /*v720*/, s33 offset:2444 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v209 /*v721*/, s33 offset:2448 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v210 /*v722*/, s33 offset:2452 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v211 /*v723*/, s33 offset:2456 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v212 /*v724*/, s33 offset:2460 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v213 /*v725*/, s33 offset:2464 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v214 /*v726*/, s33 offset:2468 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v215 /*v727*/, s33 offset:2472 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v216 /*v728*/, s33 offset:2476 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v217 /*v729*/, s33 offset:2480 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v218 /*v730*/, s33 offset:2484 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v219 /*v731*/, s33 offset:2488 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v220 /*v732*/, s33 offset:2492 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v221 /*v733*/, s33 offset:2496 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v222 /*v734*/, s33 offset:2500 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v223 /*v735*/, s33 offset:2504 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v224 /*v736*/, s33 offset:2508 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v225 /*v737*/, s33 offset:2512 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v226 /*v738*/, s33 offset:2516 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v227 /*v739*/, s33 offset:2520 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v228 /*v740*/, s33 offset:2524 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v229 /*v741*/, s33 offset:2528 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v167 /*v679*/, s33 offset:2280
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v168 /*v680*/, s33 offset:2284
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v169 /*v681*/, s33 offset:2288
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v170 /*v682*/, s33 offset:2292
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v171 /*v683*/, s33 offset:2296
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v172 /*v684*/, s33 offset:2300
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v173 /*v685*/, s33 offset:2304
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v174 /*v686*/, s33 offset:2308
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v175 /*v687*/, s33 offset:2312
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v176 /*v688*/, s33 offset:2316
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v177 /*v689*/, s33 offset:2320
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v178 /*v690*/, s33 offset:2324
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v179 /*v691*/, s33 offset:2328
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v180 /*v692*/, s33 offset:2332
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v181 /*v693*/, s33 offset:2336
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v182 /*v694*/, s33 offset:2340
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v183 /*v695*/, s33 offset:2344
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v184 /*v696*/, s33 offset:2348
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v185 /*v697*/, s33 offset:2352
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v186 /*v698*/, s33 offset:2356
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v187 /*v699*/, s33 offset:2360
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v188 /*v700*/, s33 offset:2364
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v189 /*v701*/, s33 offset:2368
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v190 /*v702*/, s33 offset:2372
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v191 /*v703*/, s33 offset:2376
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v192 /*v704*/, s33 offset:2380
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v193 /*v705*/, s33 offset:2384
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v194 /*v706*/, s33 offset:2388
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v195 /*v707*/, s33 offset:2392
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v196 /*v708*/, s33 offset:2396
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v197 /*v709*/, s33 offset:2400
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v198 /*v710*/, s33 offset:2404
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v199 /*v711*/, s33 offset:2408
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v200 /*v712*/, s33 offset:2412
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v201 /*v713*/, s33 offset:2416
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v202 /*v714*/, s33 offset:2420
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v203 /*v715*/, s33 offset:2424
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v204 /*v716*/, s33 offset:2428
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v205 /*v717*/, s33 offset:2432
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v206 /*v718*/, s33 offset:2436
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v207 /*v719*/, s33 offset:2440
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v208 /*v720*/, s33 offset:2444
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v209 /*v721*/, s33 offset:2448
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v210 /*v722*/, s33 offset:2452
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v211 /*v723*/, s33 offset:2456
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v212 /*v724*/, s33 offset:2460
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v213 /*v725*/, s33 offset:2464
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v214 /*v726*/, s33 offset:2468
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v215 /*v727*/, s33 offset:2472
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v216 /*v728*/, s33 offset:2476
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v217 /*v729*/, s33 offset:2480
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v218 /*v730*/, s33 offset:2484
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v219 /*v731*/, s33 offset:2488
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v220 /*v732*/, s33 offset:2492
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v221 /*v733*/, s33 offset:2496
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v222 /*v734*/, s33 offset:2500
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v223 /*v735*/, s33 offset:2504
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v224 /*v736*/, s33 offset:2508
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v225 /*v737*/, s33 offset:2512
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v226 /*v738*/, s33 offset:2516
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v227 /*v739*/, s33 offset:2520
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v228 /*v740*/, s33 offset:2524
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v229 /*v741*/, s33 offset:2528
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3e
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v230 /*v742*/, s33 offset:2532 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v231 /*v743*/, s33 offset:2536 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v232 /*v744*/, s33 offset:2540 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v233 /*v745*/, s33 offset:2544 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v234 /*v746*/, s33 offset:2548 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v235 /*v747*/, s33 offset:2552 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v236 /*v748*/, s33 offset:2556 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v237 /*v749*/, s33 offset:2560 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v238 /*v750*/, s33 offset:2564 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v239 /*v751*/, s33 offset:2568 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v240 /*v752*/, s33 offset:2572 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v241 /*v753*/, s33 offset:2576 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v242 /*v754*/, s33 offset:2580 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v243 /*v755*/, s33 offset:2584 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v244 /*v756*/, s33 offset:2588 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v245 /*v757*/, s33 offset:2592 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v246 /*v758*/, s33 offset:2596 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v247 /*v759*/, s33 offset:2600 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v248 /*v760*/, s33 offset:2604 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v249 /*v761*/, s33 offset:2608 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v250 /*v762*/, s33 offset:2612 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v251 /*v763*/, s33 offset:2616 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v252 /*v764*/, s33 offset:2620 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v253 /*v765*/, s33 offset:2624 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v254 /*v766*/, s33 offset:2628 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v255 /*v767*/, s33 offset:2632 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v230 /*v742*/, s33 offset:2532
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v231 /*v743*/, s33 offset:2536
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v232 /*v744*/, s33 offset:2540
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v233 /*v745*/, s33 offset:2544
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v234 /*v746*/, s33 offset:2548
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v235 /*v747*/, s33 offset:2552
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v236 /*v748*/, s33 offset:2556
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v237 /*v749*/, s33 offset:2560
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v238 /*v750*/, s33 offset:2564
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v239 /*v751*/, s33 offset:2568
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v240 /*v752*/, s33 offset:2572
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v241 /*v753*/, s33 offset:2576
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v242 /*v754*/, s33 offset:2580
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v243 /*v755*/, s33 offset:2584
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v244 /*v756*/, s33 offset:2588
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v245 /*v757*/, s33 offset:2592
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v246 /*v758*/, s33 offset:2596
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v247 /*v759*/, s33 offset:2600
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v248 /*v760*/, s33 offset:2604
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v249 /*v761*/, s33 offset:2608
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v250 /*v762*/, s33 offset:2612
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v251 /*v763*/, s33 offset:2616
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v252 /*v764*/, s33 offset:2620
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v253 /*v765*/, s33 offset:2624
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v254 /*v766*/, s33 offset:2628
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v255 /*v767*/, s33 offset:2632
 ; GFX1250-DAGISEL-NEXT:    s_set_vgpr_msb 12 ; msbs: dst=0 src0=0 src1=3 src2=0
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0 /*v768*/, s33 offset:2636 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v1 /*v769*/, s33 offset:2640 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v2 /*v770*/, s33 offset:2644 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v3 /*v771*/, s33 offset:2648 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v4 /*v772*/, s33 offset:2652 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v5 /*v773*/, s33 offset:2656 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v6 /*v774*/, s33 offset:2660 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v7 /*v775*/, s33 offset:2664 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v8 /*v776*/, s33 offset:2668 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v9 /*v777*/, s33 offset:2672 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v10 /*v778*/, s33 offset:2676 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v11 /*v779*/, s33 offset:2680 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v12 /*v780*/, s33 offset:2684 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v13 /*v781*/, s33 offset:2688 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v14 /*v782*/, s33 offset:2692 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v15 /*v783*/, s33 offset:2696 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v16 /*v784*/, s33 offset:2700 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v17 /*v785*/, s33 offset:2704 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v18 /*v786*/, s33 offset:2708 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v19 /*v787*/, s33 offset:2712 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v20 /*v788*/, s33 offset:2716 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v21 /*v789*/, s33 offset:2720 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v22 /*v790*/, s33 offset:2724 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v23 /*v791*/, s33 offset:2728 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v24 /*v792*/, s33 offset:2732 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v25 /*v793*/, s33 offset:2736 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v26 /*v794*/, s33 offset:2740 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v27 /*v795*/, s33 offset:2744 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v28 /*v796*/, s33 offset:2748 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v29 /*v797*/, s33 offset:2752 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v30 /*v798*/, s33 offset:2756 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v31 /*v799*/, s33 offset:2760 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v32 /*v800*/, s33 offset:2764 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v33 /*v801*/, s33 offset:2768 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v34 /*v802*/, s33 offset:2772 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v35 /*v803*/, s33 offset:2776 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v36 /*v804*/, s33 offset:2780 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v0 /*v768*/, s33 offset:2636
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v1 /*v769*/, s33 offset:2640
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v2 /*v770*/, s33 offset:2644
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v3 /*v771*/, s33 offset:2648
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v4 /*v772*/, s33 offset:2652
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v5 /*v773*/, s33 offset:2656
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v6 /*v774*/, s33 offset:2660
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v7 /*v775*/, s33 offset:2664
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v8 /*v776*/, s33 offset:2668
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v9 /*v777*/, s33 offset:2672
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v10 /*v778*/, s33 offset:2676
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v11 /*v779*/, s33 offset:2680
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v12 /*v780*/, s33 offset:2684
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v13 /*v781*/, s33 offset:2688
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v14 /*v782*/, s33 offset:2692
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v15 /*v783*/, s33 offset:2696
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v16 /*v784*/, s33 offset:2700
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v17 /*v785*/, s33 offset:2704
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v18 /*v786*/, s33 offset:2708
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v19 /*v787*/, s33 offset:2712
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v20 /*v788*/, s33 offset:2716
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v21 /*v789*/, s33 offset:2720
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v22 /*v790*/, s33 offset:2724
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v23 /*v791*/, s33 offset:2728
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v24 /*v792*/, s33 offset:2732
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v25 /*v793*/, s33 offset:2736
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v26 /*v794*/, s33 offset:2740
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v27 /*v795*/, s33 offset:2744
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v28 /*v796*/, s33 offset:2748
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v29 /*v797*/, s33 offset:2752
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v30 /*v798*/, s33 offset:2756
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v31 /*v799*/, s33 offset:2760
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v32 /*v800*/, s33 offset:2764
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v33 /*v801*/, s33 offset:2768
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v34 /*v802*/, s33 offset:2772
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v35 /*v803*/, s33 offset:2776
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v36 /*v804*/, s33 offset:2780
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3e
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v37 /*v805*/, s33 offset:2784 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v38 /*v806*/, s33 offset:2788 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v39 /*v807*/, s33 offset:2792 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v40 /*v808*/, s33 offset:2796 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v41 /*v809*/, s33 offset:2800 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v42 /*v810*/, s33 offset:2804 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v43 /*v811*/, s33 offset:2808 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v44 /*v812*/, s33 offset:2812 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v45 /*v813*/, s33 offset:2816 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v46 /*v814*/, s33 offset:2820 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v47 /*v815*/, s33 offset:2824 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v48 /*v816*/, s33 offset:2828 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v49 /*v817*/, s33 offset:2832 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v50 /*v818*/, s33 offset:2836 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v51 /*v819*/, s33 offset:2840 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v52 /*v820*/, s33 offset:2844 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v53 /*v821*/, s33 offset:2848 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v54 /*v822*/, s33 offset:2852 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v55 /*v823*/, s33 offset:2856 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v56 /*v824*/, s33 offset:2860 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v57 /*v825*/, s33 offset:2864 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v58 /*v826*/, s33 offset:2868 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v59 /*v827*/, s33 offset:2872 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v60 /*v828*/, s33 offset:2876 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v61 /*v829*/, s33 offset:2880 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v62 /*v830*/, s33 offset:2884 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v63 /*v831*/, s33 offset:2888 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v64 /*v832*/, s33 offset:2892 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v65 /*v833*/, s33 offset:2896 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v66 /*v834*/, s33 offset:2900 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v67 /*v835*/, s33 offset:2904 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v68 /*v836*/, s33 offset:2908 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v69 /*v837*/, s33 offset:2912 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v70 /*v838*/, s33 offset:2916 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v71 /*v839*/, s33 offset:2920 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v72 /*v840*/, s33 offset:2924 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v73 /*v841*/, s33 offset:2928 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v74 /*v842*/, s33 offset:2932 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v75 /*v843*/, s33 offset:2936 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v76 /*v844*/, s33 offset:2940 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v77 /*v845*/, s33 offset:2944 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v78 /*v846*/, s33 offset:2948 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v79 /*v847*/, s33 offset:2952 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v80 /*v848*/, s33 offset:2956 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v81 /*v849*/, s33 offset:2960 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v82 /*v850*/, s33 offset:2964 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v83 /*v851*/, s33 offset:2968 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v84 /*v852*/, s33 offset:2972 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v85 /*v853*/, s33 offset:2976 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v86 /*v854*/, s33 offset:2980 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v87 /*v855*/, s33 offset:2984 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v88 /*v856*/, s33 offset:2988 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v89 /*v857*/, s33 offset:2992 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v90 /*v858*/, s33 offset:2996 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v91 /*v859*/, s33 offset:3000 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v92 /*v860*/, s33 offset:3004 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v93 /*v861*/, s33 offset:3008 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v94 /*v862*/, s33 offset:3012 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v95 /*v863*/, s33 offset:3016 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v96 /*v864*/, s33 offset:3020 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v97 /*v865*/, s33 offset:3024 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v98 /*v866*/, s33 offset:3028 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v99 /*v867*/, s33 offset:3032 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v37 /*v805*/, s33 offset:2784
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v38 /*v806*/, s33 offset:2788
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v39 /*v807*/, s33 offset:2792
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v40 /*v808*/, s33 offset:2796
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v41 /*v809*/, s33 offset:2800
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v42 /*v810*/, s33 offset:2804
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v43 /*v811*/, s33 offset:2808
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v44 /*v812*/, s33 offset:2812
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v45 /*v813*/, s33 offset:2816
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v46 /*v814*/, s33 offset:2820
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v47 /*v815*/, s33 offset:2824
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v48 /*v816*/, s33 offset:2828
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v49 /*v817*/, s33 offset:2832
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v50 /*v818*/, s33 offset:2836
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v51 /*v819*/, s33 offset:2840
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v52 /*v820*/, s33 offset:2844
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v53 /*v821*/, s33 offset:2848
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v54 /*v822*/, s33 offset:2852
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v55 /*v823*/, s33 offset:2856
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v56 /*v824*/, s33 offset:2860
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v57 /*v825*/, s33 offset:2864
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v58 /*v826*/, s33 offset:2868
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v59 /*v827*/, s33 offset:2872
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v60 /*v828*/, s33 offset:2876
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v61 /*v829*/, s33 offset:2880
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v62 /*v830*/, s33 offset:2884
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v63 /*v831*/, s33 offset:2888
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v64 /*v832*/, s33 offset:2892
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v65 /*v833*/, s33 offset:2896
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v66 /*v834*/, s33 offset:2900
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v67 /*v835*/, s33 offset:2904
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v68 /*v836*/, s33 offset:2908
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v69 /*v837*/, s33 offset:2912
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v70 /*v838*/, s33 offset:2916
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v71 /*v839*/, s33 offset:2920
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v72 /*v840*/, s33 offset:2924
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v73 /*v841*/, s33 offset:2928
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v74 /*v842*/, s33 offset:2932
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v75 /*v843*/, s33 offset:2936
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v76 /*v844*/, s33 offset:2940
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v77 /*v845*/, s33 offset:2944
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v78 /*v846*/, s33 offset:2948
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v79 /*v847*/, s33 offset:2952
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v80 /*v848*/, s33 offset:2956
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v81 /*v849*/, s33 offset:2960
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v82 /*v850*/, s33 offset:2964
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v83 /*v851*/, s33 offset:2968
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v84 /*v852*/, s33 offset:2972
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v85 /*v853*/, s33 offset:2976
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v86 /*v854*/, s33 offset:2980
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v87 /*v855*/, s33 offset:2984
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v88 /*v856*/, s33 offset:2988
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v89 /*v857*/, s33 offset:2992
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v90 /*v858*/, s33 offset:2996
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v91 /*v859*/, s33 offset:3000
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v92 /*v860*/, s33 offset:3004
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v93 /*v861*/, s33 offset:3008
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v94 /*v862*/, s33 offset:3012
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v95 /*v863*/, s33 offset:3016
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v96 /*v864*/, s33 offset:3020
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v97 /*v865*/, s33 offset:3024
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v98 /*v866*/, s33 offset:3028
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v99 /*v867*/, s33 offset:3032
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3e
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v100 /*v868*/, s33 offset:3036 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v101 /*v869*/, s33 offset:3040 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v102 /*v870*/, s33 offset:3044 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v103 /*v871*/, s33 offset:3048 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v104 /*v872*/, s33 offset:3052 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v105 /*v873*/, s33 offset:3056 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v106 /*v874*/, s33 offset:3060 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v107 /*v875*/, s33 offset:3064 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v108 /*v876*/, s33 offset:3068 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v109 /*v877*/, s33 offset:3072 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v110 /*v878*/, s33 offset:3076 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v111 /*v879*/, s33 offset:3080 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v112 /*v880*/, s33 offset:3084 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v113 /*v881*/, s33 offset:3088 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v114 /*v882*/, s33 offset:3092 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v115 /*v883*/, s33 offset:3096 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v116 /*v884*/, s33 offset:3100 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v117 /*v885*/, s33 offset:3104 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v118 /*v886*/, s33 offset:3108 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v119 /*v887*/, s33 offset:3112 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v120 /*v888*/, s33 offset:3116 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v121 /*v889*/, s33 offset:3120 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v122 /*v890*/, s33 offset:3124 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v123 /*v891*/, s33 offset:3128 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v124 /*v892*/, s33 offset:3132 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v125 /*v893*/, s33 offset:3136 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v126 /*v894*/, s33 offset:3140 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v127 /*v895*/, s33 offset:3144 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v128 /*v896*/, s33 offset:3148 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v129 /*v897*/, s33 offset:3152 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v130 /*v898*/, s33 offset:3156 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v131 /*v899*/, s33 offset:3160 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v132 /*v900*/, s33 offset:3164 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v133 /*v901*/, s33 offset:3168 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v134 /*v902*/, s33 offset:3172 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v135 /*v903*/, s33 offset:3176 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v136 /*v904*/, s33 offset:3180 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v137 /*v905*/, s33 offset:3184 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v138 /*v906*/, s33 offset:3188 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v139 /*v907*/, s33 offset:3192 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v140 /*v908*/, s33 offset:3196 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v141 /*v909*/, s33 offset:3200 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v142 /*v910*/, s33 offset:3204 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v143 /*v911*/, s33 offset:3208 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v144 /*v912*/, s33 offset:3212 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v145 /*v913*/, s33 offset:3216 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v146 /*v914*/, s33 offset:3220 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v147 /*v915*/, s33 offset:3224 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v148 /*v916*/, s33 offset:3228 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v149 /*v917*/, s33 offset:3232 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v150 /*v918*/, s33 offset:3236 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v151 /*v919*/, s33 offset:3240 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v152 /*v920*/, s33 offset:3244 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v153 /*v921*/, s33 offset:3248 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v154 /*v922*/, s33 offset:3252 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v155 /*v923*/, s33 offset:3256 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v156 /*v924*/, s33 offset:3260 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v157 /*v925*/, s33 offset:3264 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v158 /*v926*/, s33 offset:3268 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v159 /*v927*/, s33 offset:3272 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v160 /*v928*/, s33 offset:3276 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v161 /*v929*/, s33 offset:3280 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v162 /*v930*/, s33 offset:3284 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v100 /*v868*/, s33 offset:3036
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v101 /*v869*/, s33 offset:3040
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v102 /*v870*/, s33 offset:3044
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v103 /*v871*/, s33 offset:3048
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v104 /*v872*/, s33 offset:3052
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v105 /*v873*/, s33 offset:3056
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v106 /*v874*/, s33 offset:3060
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v107 /*v875*/, s33 offset:3064
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v108 /*v876*/, s33 offset:3068
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v109 /*v877*/, s33 offset:3072
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v110 /*v878*/, s33 offset:3076
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v111 /*v879*/, s33 offset:3080
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v112 /*v880*/, s33 offset:3084
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v113 /*v881*/, s33 offset:3088
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v114 /*v882*/, s33 offset:3092
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v115 /*v883*/, s33 offset:3096
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v116 /*v884*/, s33 offset:3100
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v117 /*v885*/, s33 offset:3104
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v118 /*v886*/, s33 offset:3108
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v119 /*v887*/, s33 offset:3112
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v120 /*v888*/, s33 offset:3116
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v121 /*v889*/, s33 offset:3120
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v122 /*v890*/, s33 offset:3124
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v123 /*v891*/, s33 offset:3128
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v124 /*v892*/, s33 offset:3132
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v125 /*v893*/, s33 offset:3136
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v126 /*v894*/, s33 offset:3140
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v127 /*v895*/, s33 offset:3144
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v128 /*v896*/, s33 offset:3148
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v129 /*v897*/, s33 offset:3152
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v130 /*v898*/, s33 offset:3156
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v131 /*v899*/, s33 offset:3160
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v132 /*v900*/, s33 offset:3164
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v133 /*v901*/, s33 offset:3168
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v134 /*v902*/, s33 offset:3172
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v135 /*v903*/, s33 offset:3176
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v136 /*v904*/, s33 offset:3180
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v137 /*v905*/, s33 offset:3184
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v138 /*v906*/, s33 offset:3188
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v139 /*v907*/, s33 offset:3192
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v140 /*v908*/, s33 offset:3196
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v141 /*v909*/, s33 offset:3200
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v142 /*v910*/, s33 offset:3204
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v143 /*v911*/, s33 offset:3208
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v144 /*v912*/, s33 offset:3212
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v145 /*v913*/, s33 offset:3216
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v146 /*v914*/, s33 offset:3220
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v147 /*v915*/, s33 offset:3224
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v148 /*v916*/, s33 offset:3228
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v149 /*v917*/, s33 offset:3232
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v150 /*v918*/, s33 offset:3236
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v151 /*v919*/, s33 offset:3240
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v152 /*v920*/, s33 offset:3244
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v153 /*v921*/, s33 offset:3248
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v154 /*v922*/, s33 offset:3252
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v155 /*v923*/, s33 offset:3256
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v156 /*v924*/, s33 offset:3260
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v157 /*v925*/, s33 offset:3264
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v158 /*v926*/, s33 offset:3268
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v159 /*v927*/, s33 offset:3272
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v160 /*v928*/, s33 offset:3276
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v161 /*v929*/, s33 offset:3280
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v162 /*v930*/, s33 offset:3284
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x3e
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v163 /*v931*/, s33 offset:3288 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v164 /*v932*/, s33 offset:3292 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v165 /*v933*/, s33 offset:3296 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v166 /*v934*/, s33 offset:3300 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v167 /*v935*/, s33 offset:3304 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v168 /*v936*/, s33 offset:3308 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v169 /*v937*/, s33 offset:3312 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v170 /*v938*/, s33 offset:3316 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v171 /*v939*/, s33 offset:3320 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v172 /*v940*/, s33 offset:3324 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v173 /*v941*/, s33 offset:3328 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v174 /*v942*/, s33 offset:3332 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v175 /*v943*/, s33 offset:3336 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v176 /*v944*/, s33 offset:3340 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v177 /*v945*/, s33 offset:3344 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v178 /*v946*/, s33 offset:3348 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v179 /*v947*/, s33 offset:3352 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v180 /*v948*/, s33 offset:3356 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v181 /*v949*/, s33 offset:3360 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v182 /*v950*/, s33 offset:3364 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v183 /*v951*/, s33 offset:3368 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v184 /*v952*/, s33 offset:3372 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v185 /*v953*/, s33 offset:3376 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v186 /*v954*/, s33 offset:3380 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v187 /*v955*/, s33 offset:3384 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v188 /*v956*/, s33 offset:3388 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v189 /*v957*/, s33 offset:3392 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v190 /*v958*/, s33 offset:3396 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v191 /*v959*/, s33 offset:3400 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v192 /*v960*/, s33 offset:3404 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v193 /*v961*/, s33 offset:3408 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v194 /*v962*/, s33 offset:3412 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v195 /*v963*/, s33 offset:3416 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v196 /*v964*/, s33 offset:3420 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v197 /*v965*/, s33 offset:3424 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v198 /*v966*/, s33 offset:3428 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v199 /*v967*/, s33 offset:3432 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v200 /*v968*/, s33 offset:3436 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v201 /*v969*/, s33 offset:3440 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v202 /*v970*/, s33 offset:3444 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v203 /*v971*/, s33 offset:3448 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v204 /*v972*/, s33 offset:3452 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v205 /*v973*/, s33 offset:3456 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v206 /*v974*/, s33 offset:3460 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v207 /*v975*/, s33 offset:3464 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v208 /*v976*/, s33 offset:3468 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v209 /*v977*/, s33 offset:3472 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v210 /*v978*/, s33 offset:3476 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v211 /*v979*/, s33 offset:3480 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v212 /*v980*/, s33 offset:3484 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v213 /*v981*/, s33 offset:3488 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v214 /*v982*/, s33 offset:3492 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v215 /*v983*/, s33 offset:3496 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v216 /*v984*/, s33 offset:3500 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v217 /*v985*/, s33 offset:3504 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v218 /*v986*/, s33 offset:3508 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v219 /*v987*/, s33 offset:3512 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v220 /*v988*/, s33 offset:3516 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v221 /*v989*/, s33 offset:3520 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v222 /*v990*/, s33 offset:3524 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v223 /*v991*/, s33 offset:3528 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v224 /*v992*/, s33 offset:3532 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v225 /*v993*/, s33 offset:3536 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v163 /*v931*/, s33 offset:3288
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v164 /*v932*/, s33 offset:3292
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v165 /*v933*/, s33 offset:3296
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v166 /*v934*/, s33 offset:3300
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v167 /*v935*/, s33 offset:3304
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v168 /*v936*/, s33 offset:3308
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v169 /*v937*/, s33 offset:3312
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v170 /*v938*/, s33 offset:3316
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v171 /*v939*/, s33 offset:3320
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v172 /*v940*/, s33 offset:3324
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v173 /*v941*/, s33 offset:3328
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v174 /*v942*/, s33 offset:3332
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v175 /*v943*/, s33 offset:3336
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v176 /*v944*/, s33 offset:3340
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v177 /*v945*/, s33 offset:3344
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v178 /*v946*/, s33 offset:3348
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v179 /*v947*/, s33 offset:3352
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v180 /*v948*/, s33 offset:3356
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v181 /*v949*/, s33 offset:3360
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v182 /*v950*/, s33 offset:3364
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v183 /*v951*/, s33 offset:3368
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v184 /*v952*/, s33 offset:3372
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v185 /*v953*/, s33 offset:3376
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v186 /*v954*/, s33 offset:3380
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v187 /*v955*/, s33 offset:3384
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v188 /*v956*/, s33 offset:3388
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v189 /*v957*/, s33 offset:3392
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v190 /*v958*/, s33 offset:3396
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v191 /*v959*/, s33 offset:3400
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v192 /*v960*/, s33 offset:3404
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v193 /*v961*/, s33 offset:3408
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v194 /*v962*/, s33 offset:3412
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v195 /*v963*/, s33 offset:3416
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v196 /*v964*/, s33 offset:3420
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v197 /*v965*/, s33 offset:3424
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v198 /*v966*/, s33 offset:3428
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v199 /*v967*/, s33 offset:3432
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v200 /*v968*/, s33 offset:3436
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v201 /*v969*/, s33 offset:3440
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v202 /*v970*/, s33 offset:3444
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v203 /*v971*/, s33 offset:3448
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v204 /*v972*/, s33 offset:3452
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v205 /*v973*/, s33 offset:3456
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v206 /*v974*/, s33 offset:3460
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v207 /*v975*/, s33 offset:3464
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v208 /*v976*/, s33 offset:3468
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v209 /*v977*/, s33 offset:3472
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v210 /*v978*/, s33 offset:3476
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v211 /*v979*/, s33 offset:3480
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v212 /*v980*/, s33 offset:3484
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v213 /*v981*/, s33 offset:3488
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v214 /*v982*/, s33 offset:3492
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v215 /*v983*/, s33 offset:3496
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v216 /*v984*/, s33 offset:3500
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v217 /*v985*/, s33 offset:3504
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v218 /*v986*/, s33 offset:3508
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v219 /*v987*/, s33 offset:3512
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v220 /*v988*/, s33 offset:3516
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v221 /*v989*/, s33 offset:3520
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v222 /*v990*/, s33 offset:3524
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v223 /*v991*/, s33 offset:3528
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v224 /*v992*/, s33 offset:3532
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v225 /*v993*/, s33 offset:3536
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x1d
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v226 /*v994*/, s33 offset:3540 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v227 /*v995*/, s33 offset:3544 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v228 /*v996*/, s33 offset:3548 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v229 /*v997*/, s33 offset:3552 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v230 /*v998*/, s33 offset:3556 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v231 /*v999*/, s33 offset:3560 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v232 /*v1000*/, s33 offset:3564 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v233 /*v1001*/, s33 offset:3568 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v234 /*v1002*/, s33 offset:3572 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v235 /*v1003*/, s33 offset:3576 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v236 /*v1004*/, s33 offset:3580 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v237 /*v1005*/, s33 offset:3584 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v238 /*v1006*/, s33 offset:3588 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v239 /*v1007*/, s33 offset:3592 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v240 /*v1008*/, s33 offset:3596 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v241 /*v1009*/, s33 offset:3600 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v242 /*v1010*/, s33 offset:3604 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v243 /*v1011*/, s33 offset:3608 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v244 /*v1012*/, s33 offset:3612 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v245 /*v1013*/, s33 offset:3616 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v246 /*v1014*/, s33 offset:3620 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v247 /*v1015*/, s33 offset:3624 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v248 /*v1016*/, s33 offset:3628 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v249 /*v1017*/, s33 offset:3632 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v250 /*v1018*/, s33 offset:3636 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v251 /*v1019*/, s33 offset:3640 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v252 /*v1020*/, s33 offset:3644 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v253 /*v1021*/, s33 offset:3648 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v254 /*v1022*/, s33 offset:3652 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v255 /*v1023*/, s33 offset:3656 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v226 /*v994*/, s33 offset:3540
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v227 /*v995*/, s33 offset:3544
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v228 /*v996*/, s33 offset:3548
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v229 /*v997*/, s33 offset:3552
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v230 /*v998*/, s33 offset:3556
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v231 /*v999*/, s33 offset:3560
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v232 /*v1000*/, s33 offset:3564
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v233 /*v1001*/, s33 offset:3568
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v234 /*v1002*/, s33 offset:3572
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v235 /*v1003*/, s33 offset:3576
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v236 /*v1004*/, s33 offset:3580
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v237 /*v1005*/, s33 offset:3584
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v238 /*v1006*/, s33 offset:3588
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v239 /*v1007*/, s33 offset:3592
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v240 /*v1008*/, s33 offset:3596
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v241 /*v1009*/, s33 offset:3600
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v242 /*v1010*/, s33 offset:3604
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v243 /*v1011*/, s33 offset:3608
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v244 /*v1012*/, s33 offset:3612
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v245 /*v1013*/, s33 offset:3616
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v246 /*v1014*/, s33 offset:3620
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v247 /*v1015*/, s33 offset:3624
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v248 /*v1016*/, s33 offset:3628
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v249 /*v1017*/, s33 offset:3632
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v250 /*v1018*/, s33 offset:3636
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v251 /*v1019*/, s33 offset:3640
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v252 /*v1020*/, s33 offset:3644
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v253 /*v1021*/, s33 offset:3648
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v254 /*v1022*/, s33 offset:3652
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v255 /*v1023*/, s33 offset:3656
 ; GFX1250-DAGISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; GFX1250-DAGISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-DAGISEL-NEXT:    s_clause 0x2
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v42, s33 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v40, s33 offset:164 scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v41, s33 offset:168 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v42, s33
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v40, s33 offset:164
+; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v41, s33 offset:168
 ; GFX1250-DAGISEL-NEXT:    s_wait_xcnt 0x2
 ; GFX1250-DAGISEL-NEXT:    v_writelane_b32 v42, s0, 3
 ; GFX1250-DAGISEL-NEXT:    s_mov_b64 s[0:1], callee@abs64
@@ -6920,7 +6920,7 @@ define amdgpu_gfx_whole_wave void @call_from_whole_wave(i1 %unused, <8 x float> 
 ; GFX1250-DAGISEL-NEXT:    v_writelane_b32 v42, s30, 1
 ; GFX1250-DAGISEL-NEXT:    v_writelane_b32 v42, s31, 2
 ; GFX1250-DAGISEL-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
-; GFX1250-DAGISEL-NEXT:    flat_store_b32 v[40:41], v0 scope:SCOPE_SE
+; GFX1250-DAGISEL-NEXT:    flat_store_b32 v[40:41], v0
 ; GFX1250-DAGISEL-NEXT:    v_readlane_b32 s31, v42, 2
 ; GFX1250-DAGISEL-NEXT:    v_readlane_b32 s30, v42, 1
 ; GFX1250-DAGISEL-NEXT:    v_readlane_b32 s4, v42, 0
