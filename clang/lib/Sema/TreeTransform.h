@@ -356,8 +356,6 @@ public:
   /// being expanded.
   void ExpandingFunctionParameterPack(ParmVarDecl *Pack) { }
 
-  bool ShouldPreserveTemplateArgumentsPacks() const { return false; }
-
   /// Transforms the given type into another type.
   ///
   /// By default, this routine transforms a type by creating a

@@ -17,7 +17,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
-#include "clang/AST/DependenceFlags.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -32,20 +31,10 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/SaveAndRestore.h"
-#include "llvm/Support/raw_ostream.h"
-#include <chrono>
-#include <cstddef>
-#include <iterator>
-#include <optional>
 
 using namespace clang;
 using namespace sema;
@@ -691,9 +680,7 @@ ExprResult CalculateConstraintSatisfaction::Calculate(
       Constraint.getPackSubstitutionIndex()
           ? Constraint.getPackSubstitutionIndex()
           : PackSubstitutionIndex;
-  // Constraint.getConstraintExpr()->Profile(ID, S.Context, /*Canonical=*/true,
-  //                                         /*ProfileLambdaExpr=*/true);
-  auto *Previous = Constraint.getConstraintExpr();
+
   ID.AddPointer(Constraint.getConstraintExpr());
   ID.AddInteger(OuterPackSubstIndex.toInternalRepresentation());
   ID.AddBoolean(Constraint.hasParameterMapping());
@@ -713,15 +700,12 @@ ExprResult CalculateConstraintSatisfaction::Calculate(
 
   ExprResult E = CalculateSlow(Constraint, MLTAL);
 
-  assert(Constraint.getConstraintExpr() == Previous);
-
   CachedConceptIdConstraint Cache;
   Cache.Satisfaction.ContainsErrors = Satisfaction.ContainsErrors;
   Cache.Satisfaction.IsSatisfied = Satisfaction.IsSatisfied;
   std::copy(Satisfaction.Details.begin() + Size, Satisfaction.Details.end(),
             std::back_inserter(Cache.Satisfaction.Details));
   Cache.SubstExpr = E;
-  Cache.E = Constraint.getConstraintExpr();
   S.ConceptIdSatisfactionCache.insert({ID, std::move(Cache)});
 
   return E;
@@ -2153,8 +2137,6 @@ NormalizedConstraint *NormalizedConstraint::fromConstraintExpr(
       if (!SubNF)
         return nullptr;
     }
-    // if (substituteParameterMappings(S, *SubNF, CSE))
-    //   return nullptr;
 
     return ConceptIdConstraint::Create(S.getASTContext(),
                                        CSE->getConceptReference(), SubNF, D,

@@ -240,28 +240,16 @@ enum class TemplateSubstitutionKind : char {
              "Replacing in an empty list?");
 
       if (!TemplateArgumentLists.empty()) {
-        // assert((!TemplateArgumentLists[0].AssociatedDeclAndFinal.getPointer()
-        // ||
-        //         TemplateArgumentLists[0].AssociatedDeclAndFinal.getPointer()
-        //         ==
-        //             AssociatedDecl) &&
-        //         "Trying to change incorrect declaration?");
         TemplateArgumentLists[0].Args = Args;
-      } else {
-        --NumRetainedOuterLevels;
-        TemplateArgumentLists.push_back(
-            {{AssociatedDecl, /*Final=*/Final}, Args});
+        return;
       }
+      --NumRetainedOuterLevels;
+      TemplateArgumentLists.push_back(
+          {{AssociatedDecl, /*Final=*/Final}, Args});
     }
 
     void replaceOutermostTemplateArguments(Decl *AssociatedDecl, ArgList Args) {
       assert((!TemplateArgumentLists.empty()) && "Replacing in an empty list?");
-      // assert((!TemplateArgumentLists.back().AssociatedDeclAndFinal.getPointer()
-      // ||
-      //         TemplateArgumentLists.back().AssociatedDeclAndFinal.getPointer()
-      //         ==
-      //             AssociatedDecl) &&
-      //        "Trying to change incorrect declaration?");
       TemplateArgumentLists.back().AssociatedDeclAndFinal.setPointer(
           AssociatedDecl);
       TemplateArgumentLists.back().Args = Args;
