@@ -644,7 +644,7 @@ Fortran::lower::genCallOpAndResult(
           caller.getCallDescription().chevrons()[3], stmtCtx));
       if (!fir::unwrapRefType(stream.getType()).isInteger(64)) {
         auto i64Ty = mlir::IntegerType::get(builder.getContext(), 64);
-        mlir::Value newStream = fir::AllocaOp::create(builder, loc, i64Ty);
+        mlir::Value newStream = builder.createTemporary(loc, i64Ty);
         mlir::Value load = fir::LoadOp::create(builder, loc, stream);
         mlir::Value conv = fir::ConvertOp::create(builder, loc, i64Ty, load);
         fir::StoreOp::create(builder, loc, conv, newStream);
