@@ -52,7 +52,9 @@ static std::optional<StringRef> extractMdStringValue(MDNode *Node,
   return NodeText->getString();
 }
 
-template <typename T, std::enable_if_t<std::is_enum_v<T>, int> = 0>
+template <typename T, typename = std::enable_if_t<
+                          std::is_enum_v<T> &&
+                          std::is_same_v<std::underlying_type_t<T>, uint32_t>>>
 Expected<T> extractEnumValue(MDNode *Node, unsigned int OpId, StringRef ErrText,
                              llvm::function_ref<bool(uint32_t)> VerifyFn) {
   if (std::optional<uint32_t> Val = extractMdIntValue(Node, OpId)) {
