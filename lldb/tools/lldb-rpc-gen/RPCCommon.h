@@ -32,6 +32,7 @@ bool TypeIsDisallowedClass(QualType T);
 bool TypeIsCallbackFunctionPointer(QualType T);
 
 bool MethodIsDisallowed(ASTContext &Context, CXXMethodDecl *MDecl);
+bool MethodContainsPointerPlusLen(CXXMethodDecl *MDecl);
 
 std::string ReplaceLLDBNamespaceWithRPCNamespace(std::string Name);
 std::string StripLLDBNamespace(std::string Name);
