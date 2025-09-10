@@ -376,6 +376,60 @@ func.func @omp_loop_nest_pretty_multiple(%lb1 : i32, %ub1 : i32, %step1 : i32,
   return
 }
 
+// CHECK-LABEL: omp_loop_nest_pretty_multiple_collapse
+func.func @omp_loop_nest_pretty_multiple_collapse(%lb1 : i32, %ub1 : i32, %step1 : i32,
+    %lb2 : i32, %ub2 : i32, %step2 : i32, %data1 : memref<?xi32>) -> () {
+
+  omp.wsloop {
+    // CHECK: omp.loop_nest (%{{.*}}, %{{.*}}) : i32 = (%{{.*}}, %{{.*}}) to (%{{.*}}, %{{.*}}) step (%{{.*}}, %{{.*}}) collapse(2)
+    omp.loop_nest (%iv1, %iv2) : i32 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) collapse(2) {
+      %1 = "test.payload"(%iv1) : (i32) -> (index)
+      %2 = "test.payload"(%iv2) : (i32) -> (index)
+      memref.store %iv1, %data1[%1] : memref<?xi32>
+      memref.store %iv2, %data1[%2] : memref<?xi32>
+      omp.yield
+    }
+  }
+
+  return
+}
+
+// CHECK-LABEL: omp_loop_nest_pretty_multiple_tiles
+func.func @omp_loop_nest_pretty_multiple_tiles(%lb1 : i32, %ub1 : i32, %step1 : i32,
+    %lb2 : i32, %ub2 : i32, %step2 : i32, %data1 : memref<?xi32>) -> () {
+
+  omp.wsloop {
+    // CHECK: omp.loop_nest (%{{.*}}, %{{.*}}) : i32 = (%{{.*}}, %{{.*}}) to (%{{.*}}, %{{.*}}) step (%{{.*}}, %{{.*}}) tiles(5, 10)
+    omp.loop_nest (%iv1, %iv2) : i32 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) tiles(5, 10) {
+      %1 = "test.payload"(%iv1) : (i32) -> (index)
+      %2 = "test.payload"(%iv2) : (i32) -> (index)
+      memref.store %iv1, %data1[%1] : memref<?xi32>
+      memref.store %iv2, %data1[%2] : memref<?xi32>
+      omp.yield
+    }
+  }
+
+  return
+}
+
+// CHECK-LABEL: omp_loop_nest_pretty_multiple_collapse_tiles
+func.func @omp_loop_nest_pretty_multiple_collapse_tiles(%lb1 : i32, %ub1 : i32, %step1 : i32,
+    %lb2 : i32, %ub2 : i32, %step2 : i32, %data1 : memref<?xi32>) -> () {
+
+  omp.wsloop {
+    // CHECK: omp.loop_nest (%{{.*}}, %{{.*}}) : i32 = (%{{.*}}, %{{.*}}) to (%{{.*}}, %{{.*}}) step (%{{.*}}, %{{.*}}) collapse(2) tiles(5, 10)
+    omp.loop_nest (%iv1, %iv2) : i32 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) collapse(2) tiles(5, 10) {
+      %1 = "test.payload"(%iv1) : (i32) -> (index)
+      %2 = "test.payload"(%iv2) : (i32) -> (index)
+      memref.store %iv1, %data1[%1] : memref<?xi32>
+      memref.store %iv2, %data1[%2] : memref<?xi32>
+      omp.yield
+    }
+  }
+
+  return
+}
+
 // CHECK-LABEL: omp_wsloop
 func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memref<i32>, %linear_var : i32, %chunk_var : i32) -> () {
 
