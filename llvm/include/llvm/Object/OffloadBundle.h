@@ -63,9 +63,10 @@ public:
 
   static llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
   compress(llvm::compression::Params P, const llvm::MemoryBuffer &Input,
-           uint16_t Version, bool Verbose = false, raw_ostream &OutS = errs());
+           uint16_t Version, raw_ostream *VerboseStream = nullptr);
   static llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
-  decompress(const llvm::MemoryBuffer &Input, bool Verbose = false, raw_ostream &OS = errs());
+  decompress(const llvm::MemoryBuffer &Input,
+             raw_ostream *VerboseStream = nullptr);
 };
 
 /// Bundle entry in binary clang-offload-bundler format.

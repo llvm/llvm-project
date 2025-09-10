@@ -62,7 +62,7 @@ Error extractOffloadBundle(MemoryBufferRef Contents, uint64_t SectionOffset,
         return createFileError(FileName, EC);
 
       Expected<std::unique_ptr<MemoryBuffer>> DecompressedBufferOrErr =
-          CompressedOffloadBundle::decompress(**CodeOrErr, false, errs());
+          CompressedOffloadBundle::decompress(**CodeOrErr, &nulls());
       if (!DecompressedBufferOrErr)
         return createStringError(
             inconvertibleErrorCode(),
@@ -297,19 +297,19 @@ static std::string formatWithCommas(unsigned long long Value) {
 Expected<std::unique_ptr<MemoryBuffer>>
 CompressedOffloadBundle::compress(compression::Params P,
                                   const MemoryBuffer &Input, uint16_t Version,
-                                  bool Verbose, raw_ostream &OutS) {
+                                  raw_ostream *VerboseStream) {
   if (!compression::zstd::isAvailable() && !compression::zlib::isAvailable())
     return createStringError("compression not supported.");
   Timer HashTimer("Hash Calculation Timer", "Hash calculation time",
                   OffloadBundlerTimerGroup);
-  if (Verbose)
+  if (VerboseStream)
     HashTimer.startTimer();
   MD5 Hash;
   MD5::MD5Result Result;
   Hash.update(Input.getBuffer());
   Hash.final(Result);
   uint64_t TruncatedHash = Result.low();
-  if (Verbose)
+  if (VerboseStream)
     HashTimer.stopTimer();
 
   SmallVector<uint8_t, 0> CompressedBuffer;
@@ -318,10 +318,10 @@ CompressedOffloadBundle::compress(compression::Params P,
       Input.getBuffer().size());
   Timer CompressTimer("Compression Timer", "Compression time",
                       OffloadBundlerTimerGroup);
-  if (Verbose)
+  if (VerboseStream)
     CompressTimer.startTimer();
   compression::compress(P, BufferUint8, CompressedBuffer);
-  if (Verbose)
+  if (VerboseStream)
     CompressTimer.stopTimer();
 
   uint16_t CompressionMethod = static_cast<uint16_t>(P.format);
@@ -378,28 +378,30 @@ CompressedOffloadBundle::compress(compression::Params P,
   OS.write(reinterpret_cast<const char *>(CompressedBuffer.data()),
            CompressedBuffer.size());
 
-  if (Verbose) {
+  if (VerboseStream) {
     auto MethodUsed = P.format == compression::Format::Zstd ? "zstd" : "zlib";
     double CompressionRate =
         static_cast<double>(UncompressedSize64) / CompressedBuffer.size();
     double CompressionTimeSeconds = CompressTimer.getTotalTime().getWallTime();
     double CompressionSpeedMBs =
         (UncompressedSize64 / (1024.0 * 1024.0)) / CompressionTimeSeconds;
-    OutS << "Compressed bundle format version: " << Version << "\n"
-           << "Total file size (including headers): "
-           << formatWithCommas(TotalFileSize64) << " bytes\n"
-           << "Compression method used: " << MethodUsed << "\n"
-           << "Compression level: " << P.level << "\n"
-           << "Binary size before compression: "
-           << formatWithCommas(UncompressedSize64) << " bytes\n"
-           << "Binary size after compression: "
-           << formatWithCommas(CompressedBuffer.size()) << " bytes\n"
-           << "Compression rate: " << format("%.2lf", CompressionRate) << "\n"
-           << "Compression ratio: "
-           << format("%.2lf%%", 100.0 / CompressionRate) << "\n"
-           << "Compression speed: " << format("%.2lf MB/s", CompressionSpeedMBs)
-           << "\n"
-           << "Truncated MD5 hash: " << format_hex(TruncatedHash, 16) << "\n";
+    *VerboseStream << "Compressed bundle format version: " << Version << "\n"
+                   << "Total file size (including headers): "
+                   << formatWithCommas(TotalFileSize64) << " bytes\n"
+                   << "Compression method used: " << MethodUsed << "\n"
+                   << "Compression level: " << P.level << "\n"
+                   << "Binary size before compression: "
+                   << formatWithCommas(UncompressedSize64) << " bytes\n"
+                   << "Binary size after compression: "
+                   << formatWithCommas(CompressedBuffer.size()) << " bytes\n"
+                   << "Compression rate: " << format("%.2lf", CompressionRate)
+                   << "\n"
+                   << "Compression ratio: "
+                   << format("%.2lf%%", 100.0 / CompressionRate) << "\n"
+                   << "Compression speed: "
+                   << format("%.2lf MB/s", CompressionSpeedMBs) << "\n"
+                   << "Truncated MD5 hash: " << format_hex(TruncatedHash, 16)
+                   << "\n";
   }
 
   return MemoryBuffer::getMemBufferCopy(
@@ -510,7 +512,8 @@ CompressedOffloadBundle::CompressedBundleHeader::tryParse(StringRef Blob) {
 }
 
 Expected<std::unique_ptr<MemoryBuffer>>
-CompressedOffloadBundle::decompress(const MemoryBuffer &Input, bool Verbose, raw_ostream &OS) {
+CompressedOffloadBundle::decompress(const MemoryBuffer &Input,
+                                    raw_ostream *VerboseStream) {
   StringRef Blob = Input.getBuffer();
 
   // Check minimum header size (using V1 as it's the smallest).
@@ -518,8 +521,8 @@ CompressedOffloadBundle::decompress(const MemoryBuffer &Input, bool Verbose, raw
     return MemoryBuffer::getMemBufferCopy(Blob);
 
   if (identify_magic(Blob) != file_magic::offload_bundle_compressed) {
-    if (Verbose)
-      OS << "Uncompressed bundle\n";
+    if (VerboseStream)
+      *VerboseStream << "Uncompressed bundle\n";
     return MemoryBuffer::getMemBufferCopy(Blob);
   }
 
@@ -540,7 +543,7 @@ CompressedOffloadBundle::decompress(const MemoryBuffer &Input, bool Verbose, raw
 
   Timer DecompressTimer("Decompression Timer", "Decompression time",
                         OffloadBundlerTimerGroup);
-  if (Verbose)
+  if (VerboseStream)
     DecompressTimer.startTimer();
 
   SmallVector<uint8_t, 0> DecompressedData;
@@ -554,7 +557,7 @@ CompressedOffloadBundle::decompress(const MemoryBuffer &Input, bool Verbose, raw
                              "could not decompress embedded file contents: " +
                                  toString(std::move(DecompressionError)));
 
-  if (Verbose) {
+  if (VerboseStream) {
     DecompressTimer.stopTimer();
 
     double DecompressionTimeSeconds =
@@ -577,25 +580,27 @@ CompressedOffloadBundle::decompress(const MemoryBuffer &Input, bool Verbose, raw
     double DecompressionSpeedMBs =
         (UncompressedSize / (1024.0 * 1024.0)) / DecompressionTimeSeconds;
 
-    OS << "Compressed bundle format version: " << ThisVersion << "\n";
+    *VerboseStream << "Compressed bundle format version: " << ThisVersion
+                   << "\n";
     if (ThisVersion >= 2)
-      OS << "Total file size (from header): "
-             << formatWithCommas(TotalFileSize) << " bytes\n";
-    OS << "Decompression method: "
-           << (CompressionFormat == compression::Format::Zlib ? "zlib" : "zstd")
-           << "\n"
-           << "Size before decompression: "
-           << formatWithCommas(CompressedData.size()) << " bytes\n"
-           << "Size after decompression: " << formatWithCommas(UncompressedSize)
-           << " bytes\n"
-           << "Compression rate: " << format("%.2lf", CompressionRate) << "\n"
-           << "Compression ratio: "
-           << format("%.2lf%%", 100.0 / CompressionRate) << "\n"
-           << "Decompression speed: "
-           << format("%.2lf MB/s", DecompressionSpeedMBs) << "\n"
-           << "Stored hash: " << format_hex(StoredHash, 16) << "\n"
-           << "Recalculated hash: " << format_hex(RecalculatedHash, 16) << "\n"
-           << "Hashes match: " << (HashMatch ? "Yes" : "No") << "\n";
+      *VerboseStream << "Total file size (from header): "
+                     << formatWithCommas(TotalFileSize) << " bytes\n";
+    *VerboseStream
+        << "Decompression method: "
+        << (CompressionFormat == compression::Format::Zlib ? "zlib" : "zstd")
+        << "\n"
+        << "Size before decompression: "
+        << formatWithCommas(CompressedData.size()) << " bytes\n"
+        << "Size after decompression: " << formatWithCommas(UncompressedSize)
+        << " bytes\n"
+        << "Compression rate: " << format("%.2lf", CompressionRate) << "\n"
+        << "Compression ratio: " << format("%.2lf%%", 100.0 / CompressionRate)
+        << "\n"
+        << "Decompression speed: "
+        << format("%.2lf MB/s", DecompressionSpeedMBs) << "\n"
+        << "Stored hash: " << format_hex(StoredHash, 16) << "\n"
+        << "Recalculated hash: " << format_hex(RecalculatedHash, 16) << "\n"
+        << "Hashes match: " << (HashMatch ? "Yes" : "No") << "\n";
   }
 
   return MemoryBuffer::getMemBufferCopy(toStringRef(DecompressedData));
