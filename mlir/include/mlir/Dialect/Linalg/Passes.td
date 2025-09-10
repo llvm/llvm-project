@@ -147,7 +147,7 @@ def LinalgFoldUnitExtentDimsPass : Pass<"linalg-fold-unit-extent-dims", ""> {
            /*default=*/"false",
            "Generate rank-reducing slices instead of reassociative reshapes">,
     Option<"enableMoveInitOperandsToInput", "enable-move-init-operands-to-input", "bool",
-           /*default=*/"false",
+           /*default=*/"true",
            "Enable MoveInitOperandsToInputPattern transformation">
   ];
   let dependentDialects = [
