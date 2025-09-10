@@ -735,7 +735,7 @@ amendOperationImpl(Operation &op, ArrayRef<llvm::Instruction *> instructions,
     if (auto oneTag = dyn_cast<LLVM::MMRATagAttr>(attribute.getValue())) {
       tags.emplace_back(oneTag.getPrefix(), oneTag.getSuffix());
     } else if (auto manyTags = dyn_cast<ArrayAttr>(attribute.getValue())) {
-      for (auto a : manyTags) {
+      for (Attribute attr : manyTags) {
         auto tag = dyn_cast<MMRATagAttr>(a);
         if (tag) {
           tags.emplace_back(tag.getPrefix(), tag.getSuffix());
@@ -754,9 +754,8 @@ amendOperationImpl(Operation &op, ArrayRef<llvm::Instruction *> instructions,
       // Empty list, canonicalizes to nothing
       return success();
     }
-    for (llvm::Instruction *inst : instructions) {
+    for (llvm::Instruction *inst : instructions) 
       inst->setMetadata(llvm::LLVMContext::MD_mmra, mmraMd);
-    }
     return success();
   }
   return success();

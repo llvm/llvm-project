@@ -215,15 +215,15 @@ static LogicalResult setDereferenceableAttr(const llvm::MDNode *node,
   return success();
 }
 
-/// Convert the given MMRA metadata (either an MMRA tag or an array of rhem)
+/// Convert the given MMRA metadata (either an MMRA tag or an array of them)
 /// into corresponding MLIR attributes and set them on the given operation as a
 /// discardable `llvm.mmra` attribute.
 static LogicalResult setMmraAttr(llvm::MDNode *node, Operation *op,
                                  LLVM::ModuleImport &moduleImport) {
   llvm::MMRAMetadata wrapper(node);
-  if (wrapper.empty()) {
+  if (wrapper.empty()) 
     return success();
-  }
+ 
   MLIRContext *ctx = op->getContext();
   Attribute mlirMmra;
   if (wrapper.size() == 1) {
@@ -231,9 +231,8 @@ static LogicalResult setMmraAttr(llvm::MDNode *node, Operation *op,
     mlirMmra = LLVM::MMRATagAttr::get(ctx, prefix, suffix);
   } else {
     SmallVector<Attribute> tags;
-    for (auto [prefix, suffix] : wrapper) {
+    for (auto [prefix, suffix] : wrapper) 
       tags.push_back(LLVM::MMRATagAttr::get(ctx, prefix, suffix));
-    }
     mlirMmra = ArrayAttr::get(ctx, tags);
   }
   op->setAttr(LLVMDialect::getMmraAttrName(), mlirMmra);
