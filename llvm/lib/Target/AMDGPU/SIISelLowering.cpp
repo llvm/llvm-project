@@ -5502,14 +5502,14 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
       MachineOperand Op1H = TII->buildExtractSubRegOrImm(
           MI, MRI, MI.getOperand(1), SrcRC, AMDGPU::sub1, SrcSubRC);
       // lane value input should be in an sgpr
-          BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::V_READLANE_B32),
-                  LaneValueLoReg)
-              .add(Op1L)
-              .addReg(FF1Reg);
-          BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::V_READLANE_B32),
-                  LaneValueHiReg)
-              .add(Op1H)
-              .addReg(FF1Reg);
+      BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::V_READLANE_B32),
+              LaneValueLoReg)
+          .add(Op1L)
+          .addReg(FF1Reg);
+      BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::V_READLANE_B32),
+              LaneValueHiReg)
+          .add(Op1H)
+          .addReg(FF1Reg);
       auto LaneValue = BuildMI(*ComputeLoop, I, DL,
                                TII->get(TargetOpcode::REG_SEQUENCE), LaneValReg)
                            .addReg(LaneValueLoReg)
