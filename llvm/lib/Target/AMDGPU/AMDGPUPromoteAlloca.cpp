@@ -443,9 +443,10 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
     return nullptr;
 
   APInt IndexQuot;
-  uint64_t Rem;
-  APInt::udivrem(ConstOffset, VecElemSize, IndexQuot, Rem);
-  if (Rem != 0)
+  APInt Rem;
+  APInt::sdivrem(ConstOffset, APInt(ConstOffset.getBitWidth(), VecElemSize),
+                 IndexQuot, Rem);
+  if (!Rem.isZero())
     return nullptr;
   if (VarOffsets.size() == 0)
     return ConstantInt::get(GEP->getContext(), IndexQuot);
@@ -454,8 +455,10 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
 
   const auto &VarOffset = VarOffsets.front();
   APInt OffsetQuot;
-  APInt::udivrem(VarOffset.second, VecElemSize, OffsetQuot, Rem);
-  if (Rem != 0 || OffsetQuot.isZero())
+  APInt::sdivrem(VarOffset.second,
+                 APInt(VarOffset.second.getBitWidth(), VecElemSize), OffsetQuot,
+                 Rem);
+  if (!Rem.isZero() || OffsetQuot.isZero())
     return nullptr;
 
   Value *Offset = VarOffset.first;
@@ -465,7 +468,7 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
 
   if (!OffsetQuot.isOne()) {
     ConstantInt *ConstMul =
-        ConstantInt::get(OffsetType, OffsetQuot.getZExtValue());
+        ConstantInt::get(OffsetType, OffsetQuot.getSExtValue());
     Offset = Builder.CreateMul(Offset, ConstMul);
     if (Instruction *NewInst = dyn_cast<Instruction>(Offset))
       NewInsts.push_back(NewInst);
@@ -474,7 +477,7 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
     return Offset;
 
   ConstantInt *ConstIndex =
-      ConstantInt::get(OffsetType, IndexQuot.getZExtValue());
+      ConstantInt::get(OffsetType, IndexQuot.getSExtValue());
   Value *IndexAdd = Builder.CreateAdd(ConstIndex, Offset);
   if (Instruction *NewInst = dyn_cast<Instruction>(IndexAdd))
     NewInsts.push_back(NewInst);
