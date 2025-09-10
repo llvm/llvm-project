@@ -58,7 +58,8 @@ static cl::opt<unsigned> MaxDeoptOrUnreachableSuccessorCheckDepth(
              "is followed by a block that either has a terminating "
              "deoptimizing call or is terminated with an unreachable"));
 
-static void replaceEHPadsRetWithUnreachable(Instruction &I) {
+static void replaceFuncletPadsRetWithUnreachable(Instruction &I) {
+  assert(isa<FuncletPadInst>(I) && "Instruction must be a funclet pad!");
   for (User *User : make_early_inc_range(I.users())) {
     Instruction *ReturnInstr = dyn_cast<Instruction>(User);
     if (isa<CatchReturnInst>(ReturnInstr) ||
@@ -93,16 +94,19 @@ void llvm::detachDeadBlocks(
       // basic blocks than the pad instruction. If we would only delete the
       // first block, the we would have possible cleanupret and catchret
       // instructions with poison arguments, which wouldn't be valid.
-      unsigned OpCode = I.getOpcode();
-      if (isa<FuncletPadInst>(I)) {
-        replaceEHPadsRetWithUnreachable(I);
-      }
-      if (OpCode == Instruction::CatchSwitch) {
-        CatchSwitchInst &CSI = cast<CatchSwitchInst>(I);
-        for (unsigned I = 0; I < CSI.getNumSuccessors(); I++) {
-          BasicBlock *SucBlock = CSI.getSuccessor(I);
-          Instruction &PadInstr = *(SucBlock->getFirstNonPHIIt());
-          replaceEHPadsRetWithUnreachable(PadInstr);
+      if (isa<FuncletPadInst>(I))
+        replaceFuncletPadsRetWithUnreachable(I);
+
+      // Catchswitch instructions have handlers, that must be catchpads.
+      CatchSwitchInst *CSI = dyn_cast<CatchSwitchInst>(&I);
+      if (CSI) {
+        BasicBlock *UnwindDest = CSI->getUnwindDest();
+        for (unsigned I = 0; I < CSI->getNumSuccessors(); I++) {
+          BasicBlock *SucBlock = CSI->getSuccessor(I);
+          if (SucBlock != UnwindDest) {
+            Instruction &PadInstr = *(SucBlock->getFirstNonPHIIt());
+            replaceFuncletPadsRetWithUnreachable(PadInstr);
+          }
         }
       }
       // Because control flow can't get here, we don't care what we replace the
