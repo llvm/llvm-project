@@ -205,8 +205,8 @@ static SDValue selectImmSeq(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
   return SrcReg;
 }
 
-SDValue selectImm(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
-                  int64_t Imm, const RISCVSubtarget &Subtarget) {
+static SDValue selectImm(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
+                         int64_t Imm, const RISCVSubtarget &Subtarget) {
   RISCVMatInt::InstSeq Seq = RISCVMatInt::generateInstSeq(Imm, Subtarget);
 
   // Use a rematerializable pseudo instruction for short sequences if enabled.

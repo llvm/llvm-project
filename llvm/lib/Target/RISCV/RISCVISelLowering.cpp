@@ -15,7 +15,6 @@
 #include "MCTargetDesc/RISCVMatInt.h"
 #include "RISCV.h"
 #include "RISCVConstantPoolValue.h"
-#include "RISCVISelDAGToDAG.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVRegisterInfo.h"
 #include "RISCVSelectionDAGInfo.h"
@@ -16259,10 +16258,12 @@ static SDValue combineOrAndToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
 
   using namespace SDPatternMatch;
 
-  SDValue And;
+  SDValue Inserted;
   APInt MaskImm, OrImm;
-  if (!sd_match(N, m_Or(m_OneUse(m_And(m_Value(And), m_ConstInt(MaskImm))),
-                        m_ConstInt(OrImm))))
+  if (!sd_match(
+          N, m_SpecificVT(MVT::i32, m_Or(m_OneUse(m_And(m_Value(Inserted),
+                                                        m_ConstInt(MaskImm))),
+                                         m_ConstInt(OrImm)))))
     return SDValue();
 
   // Compute the Known Zero for the AND as this allows us to catch more general
@@ -16282,20 +16283,13 @@ static SDValue combineOrAndToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
   if (!Known.Zero.isShiftedMask(ShAmt, Width))
     return SDValue();
 
-  if (N->getValueType(0) != MVT::i32)
-    return SDValue();
-
   // QC_INSB(I) dst, src, #width, #shamt.
   SDLoc DL(N);
-  SDValue ImmNode;
 
-  int32_t LIImm = OrImm.getSExtValue() >> ShAmt;
-  ImmNode = DAG.getSignedConstant(LIImm, DL, MVT::i32);
+  SDValue ImmNode =
+      DAG.getSignedConstant(OrImm.getSExtValue() >> ShAmt, DL, MVT::i32);
 
-  if (!isInt<5>(LIImm)) {
-    ImmNode = selectImm(&DAG, DL, MVT::i32, LIImm, Subtarget);
-  }
-  SDValue Ops[] = {And, ImmNode, DAG.getConstant(Width, DL, MVT::i32),
+  SDValue Ops[] = {Inserted, ImmNode, DAG.getConstant(Width, DL, MVT::i32),
                    DAG.getConstant(ShAmt, DL, MVT::i32)};
   return DAG.getNode(RISCVISD::QC_INSB, DL, MVT::i32, Ops);
 }
