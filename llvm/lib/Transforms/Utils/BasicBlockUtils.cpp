@@ -97,18 +97,26 @@ void llvm::detachDeadBlocks(
       if (isa<FuncletPadInst>(I))
         replaceFuncletPadsRetWithUnreachable(I);
 
-      // Catchswitch instructions have handlers, that must be catchpads.
+      // Catchswitch instructions have handlers, that must be catchpads and
+      // an unwind label, that is either a catchpad or catchswitch.
       CatchSwitchInst *CSI = dyn_cast<CatchSwitchInst>(&I);
-      if (CSI) {
-        BasicBlock *UnwindDest = CSI->getUnwindDest();
+      if (CSI)
+        // Iterating over the handlers and the unwind basic block and precssing
+        // catchpads. If the unwind label is a catchswitch, we just replace the
+        // label wit poison later on.
         for (unsigned I = 0; I < CSI->getNumSuccessors(); I++) {
           BasicBlock *SucBlock = CSI->getSuccessor(I);
-          if (SucBlock != UnwindDest) {
-            Instruction &PadInstr = *(SucBlock->getFirstNonPHIIt());
-            replaceFuncletPadsRetWithUnreachable(PadInstr);
+          Instruction &SucFstInst = *(SucBlock->getFirstNonPHIIt());
+          if (isa<FuncletPadInst>(SucFstInst)) {
+            replaceFuncletPadsRetWithUnreachable(SucFstInst);
+            // There may be catchswitch instructions using the catchpad.
+            // Just replace those with poison.
+            if (!SucFstInst.use_empty())
+              SucFstInst.replaceAllUsesWith(
+                  PoisonValue::get(SucFstInst.getType()));
+            SucFstInst.eraseFromParent();
           }
         }
-      }
       // Because control flow can't get here, we don't care what we replace the
       // value with.  Note that since this block is unreachable, and all values
       // contained within it must dominate their uses, that all uses will
