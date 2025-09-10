@@ -29,7 +29,7 @@ if.else:
   br label %return
 
 ; CHECK: return:
-; CHECK: %call3 = call i32 @foo(i32 %x, ptr %z)
+; CHECK: call i32 @foo(i32 %x, ptr %z)
 return:
   %retval.0 = phi i32 [ %add1, %if.then ], [ %call3, %if.else ]
   %call4 = call i32 @foo(i32 %x, ptr %z);
