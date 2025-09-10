@@ -2002,6 +2002,16 @@ Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
   if (Instruction *FoldedFAdd = foldBinOpIntoSelectOrPhi(I))
     return FoldedFAdd;
 
+  // B = fadd A, 0
+  // Z = Op B
+  // can be transformed into
+  // Z = Op A
+  // Where Op is such that we can ignore sign of 0 in fadd
+  Value *A;
+  if (match(&I, m_c_FAdd(m_Value(A), m_AnyZeroFP())) && !I.use_empty() &&
+      canIgnoreSignBitOfZero(*I.use_begin()))
+    return replaceInstUsesWith(I, A);
+
   // (-X) + Y --> Y - X
   Value *X, *Y;
   if (match(&I, m_c_FAdd(m_FNeg(m_Value(X)), m_Value(Y))))
