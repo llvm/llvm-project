@@ -168,8 +168,8 @@ public:
   MachineBasicBlock *EmitDynamicProbedAlloc(MachineInstr &MI,
                                             MachineBasicBlock *MBB) const;
 
-  MachineBasicBlock *EmitCheckVL(MachineInstr &MI,
-                                 MachineBasicBlock *MBB) const;
+  MachineBasicBlock *EmitCheckMatchingVL(MachineInstr &MI,
+                                         MachineBasicBlock *MBB) const;
 
   MachineBasicBlock *EmitTileLoad(unsigned Opc, unsigned BaseReg,
                                   MachineInstr &MI,
@@ -536,7 +536,7 @@ public:
   /// AArch64SME::ToggleCondition.
   SDValue changeStreamingMode(SelectionDAG &DAG, SDLoc DL, bool Enable,
                               SDValue Chain, SDValue InGlue, unsigned Condition,
-                              bool HasSVECC = false) const;
+                              bool InsertVectorLengthCheck = false) const;
 
   bool isVScaleKnownToBeAPowerOfTwo() const override { return true; }
 

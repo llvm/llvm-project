@@ -2941,8 +2941,8 @@ AArch64TargetLowering::EmitDynamicProbedAlloc(MachineInstr &MI,
 }
 
 MachineBasicBlock *
-AArch64TargetLowering::EmitCheckVL(MachineInstr &MI,
-                                   MachineBasicBlock *MBB) const {
+AArch64TargetLowering::EmitCheckMatchingVL(MachineInstr &MI,
+                                           MachineBasicBlock *MBB) const {
   MachineFunction *MF = MBB->getParent();
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
   const BasicBlock *LLVM_BB = MBB->getBasicBlock();
@@ -3389,8 +3389,8 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
   case AArch64::PROBED_STACKALLOC_DYN:
     return EmitDynamicProbedAlloc(MI, BB);
 
-  case AArch64::CHECK_MATCHING_VL:
-    return EmitCheckVL(MI, BB);
+  case AArch64::CHECK_MATCHING_VL_PSEUDO:
+    return EmitCheckMatchingVL(MI, BB);
 
   case AArch64::LD1_MXIPXX_H_PSEUDO_B:
     return EmitTileLoad(AArch64::LD1_MXIPXX_H_B, AArch64::ZAB0, MI, BB);
@@ -9162,11 +9162,9 @@ void AArch64TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
   }
 }
 
-SDValue AArch64TargetLowering::changeStreamingMode(SelectionDAG &DAG, SDLoc DL,
-                                                   bool Enable, SDValue Chain,
-                                                   SDValue InGlue,
-                                                   unsigned Condition,
-                                                   bool HasSVECC) const {
+SDValue AArch64TargetLowering::changeStreamingMode(
+    SelectionDAG &DAG, SDLoc DL, bool Enable, SDValue Chain, SDValue InGlue,
+    unsigned Condition, bool InsertVectorLengthCheck) const {
   MachineFunction &MF = DAG.getMachineFunction();
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
   FuncInfo->setHasStreamingModeChanges(true);
@@ -9197,20 +9195,18 @@ SDValue AArch64TargetLowering::changeStreamingMode(SelectionDAG &DAG, SDLoc DL,
   if (InGlue)
     Ops.push_back(InGlue);
 
-  if (!HasSVECC)
+  if (!InsertVectorLengthCheck)
     return DAG.getNode(Opcode, DL, DAG.getVTList(MVT::Other, MVT::Glue), Ops);
 
   auto GetCheckVL = [&](SDValue Chain, SDValue InGlue = SDValue()) -> SDValue {
     SmallVector<SDValue, 2> Ops = {Chain};
     if (InGlue)
       Ops.push_back(InGlue);
-    return SDValue(DAG.getMachineNode(AArch64::CHECK_MATCHING_VL, DL,
-                                      DAG.getVTList(MVT::Other, MVT::Glue),
-                                      Ops),
-                   0);
+    return DAG.getNode(AArch64ISD::CHECK_MATCHING_VL, DL,
+                       DAG.getVTList(MVT::Other, MVT::Glue), Ops);
   };
 
-  // NS -> S
+  // Non-streaming -> Streaming
   if (Enable) {
     SDValue CheckVL = GetCheckVL(Chain, InGlue);
 
@@ -9226,7 +9222,7 @@ SDValue AArch64TargetLowering::changeStreamingMode(SelectionDAG &DAG, SDLoc DL,
     return DAG.getNode(Opcode, DL, DAG.getVTList(MVT::Other, MVT::Glue), Ops);
   }
 
-  // S -> NS
+  // Streaming -> Non-streaming
   SDValue StreamingModeInstr =
       DAG.getNode(Opcode, DL, DAG.getVTList(MVT::Other, MVT::Glue), Ops);
   return GetCheckVL(StreamingModeInstr.getValue(0),
@@ -9813,10 +9809,11 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   SDValue InGlue;
   if (RequiresSMChange) {
-    Chain =
-        changeStreamingMode(DAG, DL, CallAttrs.callee().hasStreamingInterface(),
-                            Chain, InGlue, getSMToggleCondition(CallAttrs),
-                            CallConv == CallingConv::AArch64_SVE_VectorCall);
+    bool InsertVectorLengthCheck =
+        (CallConv == CallingConv::AArch64_SVE_VectorCall);
+    Chain = changeStreamingMode(
+        DAG, DL, CallAttrs.callee().hasStreamingInterface(), Chain, InGlue,
+        getSMToggleCondition(CallAttrs), InsertVectorLengthCheck);
     InGlue = Chain.getValue(1);
   }
 
