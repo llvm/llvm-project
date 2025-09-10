@@ -315,6 +315,22 @@ static void instantiateDependentDiagnoseIfAttr(
         DIA->getArgDependent(), New));
 }
 
+static void instantiateDependentLifetimeBoundIfAttr(
+    Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
+    const LifetimeBoundIfAttr *DIA, const Decl *Tmpl, Decl *New) {
+  const auto PVD = dyn_cast<ParmVarDecl>(New);
+  if (!PVD)
+    return;
+  auto *FD = dyn_cast<FunctionDecl>(PVD->getDeclContext());
+  if (!FD)
+    return;
+  Expr *Cond = instantiateDependentFunctionAttrCondition(
+      S, TemplateArgs, DIA, DIA->getCond(), Tmpl, FD);
+  if (Cond)
+    New->addAttr(new (S.getASTContext())
+                     LifetimeBoundIfAttr(S.getASTContext(), *DIA, Cond));
+}
+
 // Constructs and adds to New a new instance of CUDALaunchBoundsAttr using
 // template A as the base and arguments from TemplateArgs.
 static void instantiateDependentCUDALaunchBoundsAttr(
@@ -872,6 +888,11 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
     if (const auto *DiagnoseIf = dyn_cast<DiagnoseIfAttr>(TmplAttr)) {
       instantiateDependentDiagnoseIfAttr(*this, TemplateArgs, DiagnoseIf, Tmpl,
                                          cast<FunctionDecl>(New));
+      continue;
+    }
+    if (const auto *LifetimeBoundIf = dyn_cast<LifetimeBoundIfAttr>(TmplAttr)) {
+      instantiateDependentLifetimeBoundIfAttr(*this, TemplateArgs,
+                                              LifetimeBoundIf, Tmpl, (New));
       continue;
     }
 
