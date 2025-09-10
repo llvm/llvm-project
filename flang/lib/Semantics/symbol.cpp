@@ -330,8 +330,14 @@ bool Symbol::CanReplaceDetails(const Details &details) const {
         common::visitors{
             [](const UseErrorDetails &) { return true; },
             [&](const ObjectEntityDetails &) { return has<EntityDetails>(); },
-            [&](const ProcEntityDetails &) { return has<EntityDetails>(); },
+            [&](const ProcEntityDetails &x) { return has<EntityDetails>(); },
             [&](const SubprogramDetails &) {
+              if (const auto *oldProc{detailsIf<ProcEntityDetails>()}) {
+                // Can replace bare "EXTERNAL dummy" with explicit INTERFACE
+                return oldProc->isDummy() && !oldProc->procInterface() &&
+                    attrs().test(Attr::EXTERNAL) && !test(Flag::Function) &&
+                    !test(Flag::Subroutine);
+              }
               return has<SubprogramNameDetails>() || has<EntityDetails>();
             },
             [&](const DerivedTypeDetails &) {
@@ -339,14 +345,12 @@ bool Symbol::CanReplaceDetails(const Details &details) const {
               return derived && derived->isForwardReferenced();
             },
             [&](const UseDetails &x) {
-              const auto *use{this->detailsIf<UseDetails>()};
+              const auto *use{detailsIf<UseDetails>()};
               return use && use->symbol() == x.symbol();
             },
-            [&](const HostAssocDetails &) {
-              return this->has<HostAssocDetails>();
-            },
+            [&](const HostAssocDetails &) { return has<HostAssocDetails>(); },
             [&](const UserReductionDetails &) {
-              return this->has<UserReductionDetails>();
+              return has<UserReductionDetails>();
             },
             [](const auto &) { return false; },
         },
