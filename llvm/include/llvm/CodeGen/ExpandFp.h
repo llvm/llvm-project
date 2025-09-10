@@ -25,7 +25,7 @@ public:
   explicit ExpandFpPass(const TargetMachine *TM, CodeGenOptLevel OptLevel);
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
+  static bool isRequired() { return true; }
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
 };

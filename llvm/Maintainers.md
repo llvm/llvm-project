@@ -36,6 +36,13 @@ jdoerfert@llnl.gov (email), [jdoerfert](https://github.com/jdoerfert) (GitHub)
 Florian Hahn \
 flo@fhahn.com (email), [fhahn](https://github.com/fhahn) (GitHub)
 
+#### HashRecognize
+
+Ramkumar Ramachandra \
+r@artagnon.com (email), [artagnon](https://github.com/artagnon) (GitHub), artagnon (Discourse) \
+Piotr Fusik \
+p.fusik@samsung.com (email), [pfusik](https://github.com/pfusik) (GitHub)
+
 #### InferAddressSpaces
 
 Matt Arsenault \
@@ -497,7 +504,7 @@ Some subprojects maintain their own list of per-component maintainers.
 
 [LLD maintainers](https://github.com/llvm/llvm-project/blob/main/lld/Maintainers.md)
 
-[LLDB maintainers](https://github.com/llvm/llvm-project/blob/main/lldb/Maintainers.rst)
+[LLDB maintainers](https://github.com/llvm/llvm-project/blob/main/lldb/Maintainers.md)
 
 [LLVM OpenMP Library maintainers](https://github.com/llvm/llvm-project/blob/main/openmp/Maintainers.md)
 
@@ -544,4 +551,3 @@ Dan Gohman (llvm@sunfishcode.online, [sunfishcode](https://github.com/sunfishcod
 
 Duncan Sands (baldrick@free.fr, [CunningBaldrick](https://github.com/CunningBaldrick)) -- DragonEgg \
 Hal Finkel (hfinkel@anl.gov, [hfinkel](https://github.com/hfinkel)) -- LoopReroll
-

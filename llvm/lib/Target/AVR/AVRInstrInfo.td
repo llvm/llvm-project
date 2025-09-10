@@ -495,13 +495,13 @@ let isCommutable = 1, Defs = [R1, R0, SREG] in {
                         "mul\t$rd, $rr", []>,
                   Requires<[SupportsMultiplication]>;
 
-    def MULSRdRr : FMUL2RdRr<0, (outs), (ins LD8:$rd, LD8:$rr),
+    def MULSRdRr : FMULSRdRr<(outs), (ins LD8:$rd, LD8:$rr),
                              "muls\t$rd, $rr", []>,
                    Requires<[SupportsMultiplication]>;
   }
 
-  def MULSURdRr : FMUL2RdRr<1, (outs), (ins LD8lo:$rd, LD8lo:$rr),
-                            "mulsu\t$rd, $rr", []>,
+  def MULSURdRr : FMULSURdRr<(outs), (ins LD8lo:$rd, LD8lo:$rr),
+                             "mulsu\t$rd, $rr", []>,
                   Requires<[SupportsMultiplication]>;
 
   def FMUL : FFMULRdRr<0b01, (outs), (ins LD8lo:$rd, LD8lo:$rr),
