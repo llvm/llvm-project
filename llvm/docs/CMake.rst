@@ -909,6 +909,17 @@ its enabled sub-projects. Nearly all of these variable names begin with
   the linker needs to resolve. It is recommended for platforms using the ELF object
   format, like Linux systems when linker memory usage is too high.
 
+**LLVM_CRASH_DIAGNOSTICS**:STRING
+  Controls whether to generate crash reproducers. Possible values are ``OFF``,
+  ``COMPILER`` for compiler, and ``ALL`` for compiler and linker reproducers.
+
+**LLVM_CRASH_DIAGNOSTICS_DIR**:PATH
+  Path to use for crash reproducers (controlled by ``LLVM_CRASH_DIAGNOSTICS``).
+
+**LLVM_GEN_REPRODUCER**:STRING
+  Controls when to generate compiler reproducers. Can be ``OFF``, ``CRASH`` for
+  crashes, ``ERROR`` for compiler errors, and ``ALWAYS`` for every invocation.
+
 **SPHINX_EXECUTABLE**:STRING
   The path to the ``sphinx-build`` executable detected by CMake.
   For installation instructions, see
