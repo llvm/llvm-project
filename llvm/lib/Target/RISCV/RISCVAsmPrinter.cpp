@@ -98,7 +98,7 @@ public:
 
   bool lowerPseudoInstExpansion(const MachineInstr *MI, MCInst &Inst);
 
-  typedef std::tuple<unsigned, uint32_t> HwasanMemaccessTuple;
+  typedef std::tuple<unsigned, bool, uint32_t> HwasanMemaccessTuple;
   std::map<HwasanMemaccessTuple, MCSymbol *> HwasanMemaccessSymbols;
   void LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI);
   void LowerKCFI_CHECK(const MachineInstr &MI);
@@ -316,6 +316,7 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
 
   switch (MI->getOpcode()) {
+  case RISCV::HWASAN_CHECK_MEMACCESS:
   case RISCV::HWASAN_CHECK_MEMACCESS_SHORTGRANULES:
     LowerHWASAN_CHECK_MEMACCESS(*MI);
     return;
@@ -622,16 +623,19 @@ LLVMInitializeRISCVAsmPrinter() {
 
 void RISCVAsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
   Register Reg = MI.getOperand(0).getReg();
+  bool IsShort = MI.getOpcode() == RISCV::HWASAN_CHECK_MEMACCESS_SHORTGRANULES;
   uint32_t AccessInfo = MI.getOperand(1).getImm();
   MCSymbol *&Sym =
-      HwasanMemaccessSymbols[HwasanMemaccessTuple(Reg, AccessInfo)];
+      HwasanMemaccessSymbols[HwasanMemaccessTuple(Reg, IsShort, AccessInfo)];
   if (!Sym) {
     // FIXME: Make this work on non-ELF.
     if (!TM.getTargetTriple().isOSBinFormatELF())
       report_fatal_error("llvm.hwasan.check.memaccess only supported on ELF");
 
-    std::string SymName = "__hwasan_check_x" + utostr(Reg - RISCV::X0) + "_" +
-                          utostr(AccessInfo) + "_short";
+    std::string SymName =
+        "__hwasan_check_x" + utostr(Reg - RISCV::X0) + "_" + utostr(AccessInfo);
+    if (IsShort)
+      SymName += "_short";
     Sym = OutContext.getOrCreateSymbol(SymName);
   }
   auto Res = MCSymbolRefExpr::create(Sym, OutContext);
@@ -751,7 +755,8 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
 
   for (auto &P : HwasanMemaccessSymbols) {
     unsigned Reg = std::get<0>(P.first);
-    uint32_t AccessInfo = std::get<1>(P.first);
+    bool IsShort = std::get<1>(P.first);
+    uint32_t AccessInfo = std::get<2>(P.first);
     MCSymbol *Sym = P.second;
 
     unsigned Size =
@@ -812,57 +817,62 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
                    MCSTI);
     OutStreamer->emitLabel(HandleMismatchOrPartialSym);
 
-    EmitToStreamer(*OutStreamer,
-                   MCInstBuilder(RISCV::ADDI)
-                       .addReg(RISCV::X28)
-                       .addReg(RISCV::X0)
-                       .addImm(16),
-                   MCSTI);
-    MCSymbol *HandleMismatchSym = OutContext.createTempSymbol();
-    EmitToStreamer(
-        *OutStreamer,
-        MCInstBuilder(RISCV::BGEU)
-            .addReg(RISCV::X6)
-            .addReg(RISCV::X28)
-            .addExpr(MCSymbolRefExpr::create(HandleMismatchSym, OutContext)),
-        MCSTI);
-
-    EmitToStreamer(
-        *OutStreamer,
-        MCInstBuilder(RISCV::ANDI).addReg(RISCV::X28).addReg(Reg).addImm(0xF),
-        MCSTI);
-
-    if (Size != 1)
+    if (IsShort) {
       EmitToStreamer(*OutStreamer,
                      MCInstBuilder(RISCV::ADDI)
                          .addReg(RISCV::X28)
-                         .addReg(RISCV::X28)
-                         .addImm(Size - 1),
+                         .addReg(RISCV::X0)
+                         .addImm(16),
                      MCSTI);
-    EmitToStreamer(
-        *OutStreamer,
-        MCInstBuilder(RISCV::BGE)
-            .addReg(RISCV::X28)
-            .addReg(RISCV::X6)
-            .addExpr(MCSymbolRefExpr::create(HandleMismatchSym, OutContext)),
-        MCSTI);
+      MCSymbol *HandleMismatchSym = OutContext.createTempSymbol();
+      EmitToStreamer(
+          *OutStreamer,
+          MCInstBuilder(RISCV::BGEU)
+              .addReg(RISCV::X6)
+              .addReg(RISCV::X28)
+              .addExpr(MCSymbolRefExpr::create(HandleMismatchSym, OutContext)),
+          MCSTI);
 
-    EmitToStreamer(
-        *OutStreamer,
-        MCInstBuilder(RISCV::ORI).addReg(RISCV::X6).addReg(Reg).addImm(0xF),
-        MCSTI);
-    EmitToStreamer(
-        *OutStreamer,
-        MCInstBuilder(RISCV::LBU).addReg(RISCV::X6).addReg(RISCV::X6).addImm(0),
-        MCSTI);
-    EmitToStreamer(*OutStreamer,
-                   MCInstBuilder(RISCV::BEQ)
-                       .addReg(RISCV::X6)
-                       .addReg(RISCV::X7)
-                       .addExpr(MCSymbolRefExpr::create(ReturnSym, OutContext)),
-                   MCSTI);
+      EmitToStreamer(
+          *OutStreamer,
+          MCInstBuilder(RISCV::ANDI).addReg(RISCV::X28).addReg(Reg).addImm(0xF),
+          MCSTI);
 
-    OutStreamer->emitLabel(HandleMismatchSym);
+      if (Size != 1)
+        EmitToStreamer(*OutStreamer,
+                       MCInstBuilder(RISCV::ADDI)
+                           .addReg(RISCV::X28)
+                           .addReg(RISCV::X28)
+                           .addImm(Size - 1),
+                       MCSTI);
+      EmitToStreamer(
+          *OutStreamer,
+          MCInstBuilder(RISCV::BGE)
+              .addReg(RISCV::X28)
+              .addReg(RISCV::X6)
+              .addExpr(MCSymbolRefExpr::create(HandleMismatchSym, OutContext)),
+          MCSTI);
+
+      EmitToStreamer(
+          *OutStreamer,
+          MCInstBuilder(RISCV::ORI).addReg(RISCV::X6).addReg(Reg).addImm(0xF),
+          MCSTI);
+      EmitToStreamer(*OutStreamer,
+                     MCInstBuilder(RISCV::LBU)
+                         .addReg(RISCV::X6)
+                         .addReg(RISCV::X6)
+                         .addImm(0),
+                     MCSTI);
+      EmitToStreamer(
+          *OutStreamer,
+          MCInstBuilder(RISCV::BEQ)
+              .addReg(RISCV::X6)
+              .addReg(RISCV::X7)
+              .addExpr(MCSymbolRefExpr::create(ReturnSym, OutContext)),
+          MCSTI);
+
+      OutStreamer->emitLabel(HandleMismatchSym);
+    }
 
     // | Previous stack frames...        |
     // +=================================+ <-- [SP + 256]
