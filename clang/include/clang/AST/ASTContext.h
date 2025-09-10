@@ -659,6 +659,11 @@ public:
     return findPointerAuthContent(T) != PointerAuthContent::None;
   }
 
+  // A simple helper function to short circuit pointer auth checks.
+  bool isPointerAuthenticationAvailable() const {
+    return LangOpts.PointerAuthCalls || LangOpts.PointerAuthIntrinsics;
+  }
+
 private:
   llvm::DenseMap<const CXXRecordDecl *, CXXRecordDeclRelocationInfo>
       RelocatableClasses;
@@ -670,10 +675,6 @@ private:
     AddressDiscriminatedData
   };
 
-  // A simple helper function to short circuit pointer auth checks.
-  bool isPointerAuthenticationAvailable() const {
-    return LangOpts.PointerAuthCalls || LangOpts.PointerAuthIntrinsics;
-  }
   PointerAuthContent findPointerAuthContent(QualType T) const;
   mutable llvm::DenseMap<const RecordDecl *, PointerAuthContent>
       RecordContainsAddressDiscriminatedPointerAuth;

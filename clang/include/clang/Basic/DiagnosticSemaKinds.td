@@ -1047,9 +1047,10 @@ def err_ptrauth_extra_discriminator_invalid : Error<
   "invalid extra discriminator flag '%0'; '__ptrauth' requires a value between "
   "'0' and '%1'">;
 def warn_ptrauth_weak_schema
-    : Warning<"internal variable %0 is using a weak signing schema for pointer "
-              "authentication">,
-      InGroup<PtrAuthWeakSchema>;
+    : Warning<"%0 has internal linkage with a %select{|default }1"
+              "pointer authentication schema that should be overridden by "
+              "%select{a|an explicit}1 schema with unique diversifiers">,
+      InGroup<DiagGroup<"ptrauth-weak-schema">>;
 
 /// main()
 // static main() is not an error in C, just in C++.
