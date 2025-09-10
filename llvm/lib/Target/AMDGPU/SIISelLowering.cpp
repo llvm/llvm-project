@@ -5276,7 +5276,6 @@ static MachineBasicBlock *Expand64BitScalarArithmetic(MachineInstr &MI,
   // For GFX12, we emit s_add_u64 and s_sub_u64.
   MachineFunction *MF = BB->getParent();
   const SIInstrInfo *TII = MF->getSubtarget<GCNSubtarget>().getInstrInfo();
-  SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
   MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
   const DebugLoc &DL = MI.getDebugLoc();
@@ -5396,15 +5395,6 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
     case AMDGPU::S_OR_B32: {
       // Idempotent operations.
       BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B32), DstReg).addReg(SrcReg);
-      RetBB = &BB;
-      break;
-    }
-    case AMDGPU::V_CMP_LT_U64_e64:   // umin
-    case AMDGPU::V_CMP_LT_I64_e64:   // min
-    case AMDGPU::V_CMP_GT_U64_e64:   // umax
-    case AMDGPU::V_CMP_GT_I64_e64: { // max
-      // Idempotent operations.
-      BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B64), DstReg).addReg(SrcReg);
       RetBB = &BB;
       break;
     }
