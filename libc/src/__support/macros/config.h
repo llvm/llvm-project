@@ -43,7 +43,7 @@
 #define __builtin_trap() __break(1)
 #endif
 
-#define __builtin_expect(value, expectation) (false)
+#define __builtin_expect(value, expectation) (value)
 
 #endif // LIBC_COMPILER_IS_MSVC
 
