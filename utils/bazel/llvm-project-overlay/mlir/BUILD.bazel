@@ -1375,13 +1375,6 @@ td_library(
 )
 
 td_library(
-    name = "CopyOpInterfaceTdFiles",
-    srcs = ["include/mlir/Interfaces/CopyOpInterface.td"],
-    includes = ["include"],
-    deps = [":OpBaseTdFiles"],
-)
-
-td_library(
     name = "DerivedAttributeOpInterfaceTdFiles",
     srcs = ["include/mlir/Interfaces/DerivedAttributeOpInterface.td"],
     includes = ["include"],
@@ -4403,17 +4396,6 @@ cc_library(
         ":DialectUtils",
         ":IR",
         ":ViewLikeInterfaceIncGen",
-    ],
-)
-
-cc_library(
-    name = "CopyOpInterface",
-    srcs = ["lib/Interfaces/CopyOpInterface.cpp"],
-    hdrs = ["include/mlir/Interfaces/CopyOpInterface.h"],
-    includes = ["include"],
-    deps = [
-        ":CopyOpInterfaceIncGen",
-        ":IR",
     ],
 )
 
@@ -7681,17 +7663,6 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
-    name = "CopyOpInterfaceIncGen",
-    tbl_outs = {
-        "include/mlir/Interfaces/CopyOpInterface.h.inc": ["-gen-op-interface-decls"],
-        "include/mlir/Interfaces/CopyOpInterface.cpp.inc": ["-gen-op-interface-defs"],
-    },
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Interfaces/CopyOpInterface.td",
-    deps = [":CopyOpInterfaceTdFiles"],
-)
-
-gentbl_cc_library(
     name = "TransformsPassIncGen",
     tbl_outs = {
         "include/mlir/Transforms/Passes.h.inc": [
@@ -10561,7 +10532,6 @@ td_library(
     ],
     includes = ["include"],
     deps = [
-        ":CopyOpInterfaceTdFiles",
         ":DestinationStyleOpInterface",
         ":LinalgOpsTdFiles",
         ":OpBaseTdFiles",
@@ -10784,7 +10754,6 @@ cc_library(
         ":BytecodeOpInterface",
         ":ComplexDialect",
         ":ControlFlowInterfaces",
-        ":CopyOpInterface",
         ":DestinationStyleOpInterface",
         ":DialectUtils",
         ":FunctionInterfaces",
@@ -12595,7 +12564,6 @@ td_library(
         ":ArithOpsTdFiles",
         ":CastInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
-        ":CopyOpInterfaceTdFiles",
         ":MemorySlotInterfacesTdFiles",
         ":OpBaseTdFiles",
         ":ShapedOpInterfacesTdFiles",
@@ -12657,7 +12625,6 @@ cc_library(
         ":ControlFlowInterfaces",
         ":ConvertToEmitCInterface",
         ":ConvertToLLVMInterface",
-        ":CopyOpInterface",
         ":DialectUtils",
         ":IR",
         ":InferIntRangeCommon",
@@ -13063,7 +13030,6 @@ td_library(
         ":BufferViewFlowOpInterfaceTdFiles",
         ":BufferizableOpInterfaceTdFiles",
         ":BufferizationTypeInterfacesTdFiles",
-        ":CopyOpInterfaceTdFiles",
         ":DestinationStyleOpInterfaceTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
@@ -13252,7 +13218,6 @@ cc_library(
         ":BufferizationTypeInterfacesIncGen",
         ":BytecodeOpInterface",
         ":ControlFlowInterfaces",
-        ":CopyOpInterface",
         ":DestinationStyleOpInterface",
         ":FuncDialect",
         ":FunctionInterfaces",
