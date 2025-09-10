@@ -1,10 +1,10 @@
 # Checking that we generate an OpNegateRAState CFI after the split point,
 # when splitting a region with signed RA state.
+# We split at the fallthrough label.
 
 # REQUIRES: system-linux
 
-# RUN: %clang %cflags -o %t %s
-# RUN: %clang %s %cflags -Wl,-q -o %t
+# RUN: %clang %s %cflags -march=armv8.3-a -Wl,-q -o %t
 # RUN: link_fdata --no-lbr %s %t %t.fdata
 # RUN: llvm-bolt %t -o %t.bolt --data %t.fdata -split-functions \
 # RUN: --print-only foo --print-split --print-all 2>&1 | FileCheck %s
@@ -19,11 +19,8 @@
 # CHECK: -------   HOT-COLD SPLIT POINT   -------
 
 # CHECK:         OpNegateRAState
+# CHECK-NEXT:    mov x0, #0x1
 # CHECK-NEXT:    autiasp
-# CHECK-NEXT:    OpNegateRAState
-# CHECK-NEXT:    ret
-
-# CHECK:         autiasp
 # CHECK-NEXT:    OpNegateRAState
 # CHECK-NEXT:    ret
 
@@ -41,15 +38,15 @@ foo:
     .cfi_negate_ra_state     // indicating that paciasp changed the RA state to signed
     cmp x0, #0
     b.eq .Lcold_bb1
-.Lfallthrough:
+.Lfallthrough:               // split point
+    mov x0, #1
     autiasp
     .cfi_negate_ra_state     // indicating that autiasp changed the RA state to unsigned
     ret
+.Lcold_bb1:                  // Instructions below are not important, they are just here so the cold block is not empty.
     .cfi_negate_ra_state     // ret has unsigned RA state, but the next inst (autiasp) has signed RA state
-.Lcold_bb1:                  // split point
-    autiasp
-    .cfi_negate_ra_state     // indicating that autiasp changed the RA state to unsigned
-    ret
+    mov x0, #2
+    retaa
 .cfi_endproc
   .size foo, .-foo
 
