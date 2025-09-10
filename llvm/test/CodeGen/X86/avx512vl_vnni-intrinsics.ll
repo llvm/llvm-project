@@ -2,18 +2,18 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512vnni,+avx512vl --show-mc-encoding | FileCheck %s --check-prefixes=CHECK,X86
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vnni,+avx512vl --show-mc-encoding | FileCheck %s --check-prefixes=CHECK,X64
 
-declare <8 x i32> @llvm.x86.avx512.vpdpbusd.256(<8 x i32>, <8 x i32>, <8 x i32>)
+declare <8 x i32> @llvm.x86.avx512.vpdpbusd.256(<8 x i32>, <32 x i8>, <32 x i8>)
 
-define <8 x i32>@test_int_x86_avx512_vpdpbusd_256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2) {
+define <8 x i32>@test_int_x86_avx512_vpdpbusd_256(<8 x i32> %x0, <32 x i8> %x1, <32 x i8> %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_vpdpbusd_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpdpbusd %ymm2, %ymm1, %ymm0 # encoding: [0x62,0xf2,0x75,0x28,0x50,0xc2]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %1 = call <8 x i32> @llvm.x86.avx512.vpdpbusd.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2)
+  %1 = call <8 x i32> @llvm.x86.avx512.vpdpbusd.256(<8 x i32> %x0, <32 x i8> %x1, <32 x i8> %x2)
   ret <8 x i32> %1
 }
 
-define { <8 x i32>, <8 x i32> } @test_int_x86_avx512_mask_vpdpbusd_256(<8 x i32> %x0, <8 x i32> %x1, ptr %x2p, <8 x i32> %x4, i8 %x3) {
+define { <8 x i32>, <8 x i32> } @test_int_x86_avx512_mask_vpdpbusd_256(<8 x i32> %x0, <32 x i8> %x1, ptr %x2p, <32 x i8> %x4, i8 %x3) {
 ; X86-LABEL: test_int_x86_avx512_mask_vpdpbusd_256:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmovdqa %ymm0, %ymm3 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xd8]
@@ -33,11 +33,11 @@ define { <8 x i32>, <8 x i32> } @test_int_x86_avx512_mask_vpdpbusd_256(<8 x i32>
 ; X64-NEXT:    vpdpbusd %ymm2, %ymm1, %ymm3 {%k1} {z} # encoding: [0x62,0xf2,0x75,0xa9,0x50,0xda]
 ; X64-NEXT:    vmovdqa %ymm3, %ymm1 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xcb]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x2 = load <8 x i32>, ptr %x2p
-  %1 = call <8 x i32> @llvm.x86.avx512.vpdpbusd.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2)
+  %x2 = load <32 x i8>, ptr %x2p
+  %1 = call <8 x i32> @llvm.x86.avx512.vpdpbusd.256(<8 x i32> %x0, <32 x i8> %x1, <32 x i8> %x2)
   %2 = bitcast i8 %x3 to <8 x i1>
   %3 = select <8 x i1> %2, <8 x i32> %1, <8 x i32> %x0
-  %4 = call <8 x i32> @llvm.x86.avx512.vpdpbusd.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x4)
+  %4 = call <8 x i32> @llvm.x86.avx512.vpdpbusd.256(<8 x i32> %x0, <32 x i8> %x1, <32 x i8> %x4)
   %5 = bitcast i8 %x3 to <8 x i1>
   %6 = select <8 x i1> %5, <8 x i32> %4, <8 x i32> zeroinitializer
   %res1 = insertvalue { <8 x i32>, <8 x i32> } poison, <8 x i32> %3, 0
@@ -45,18 +45,18 @@ define { <8 x i32>, <8 x i32> } @test_int_x86_avx512_mask_vpdpbusd_256(<8 x i32>
   ret { <8 x i32>, <8 x i32> } %res2
 }
 
-declare <4 x i32> @llvm.x86.avx512.vpdpbusd.128(<4 x i32>, <4 x i32>, <4 x i32>)
+declare <4 x i32> @llvm.x86.avx512.vpdpbusd.128(<4 x i32>, <16 x i8>, <16 x i8>)
 
-define <4 x i32>@test_int_x86_avx512_vpdpbusd_128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2) {
+define <4 x i32>@test_int_x86_avx512_vpdpbusd_128(<4 x i32> %x0, <16 x i8> %x1, <16 x i8> %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_vpdpbusd_128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpdpbusd %xmm2, %xmm1, %xmm0 # encoding: [0x62,0xf2,0x75,0x08,0x50,0xc2]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %1 = call <4 x i32> @llvm.x86.avx512.vpdpbusd.128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2)
+  %1 = call <4 x i32> @llvm.x86.avx512.vpdpbusd.128(<4 x i32> %x0, <16 x i8> %x1, <16 x i8> %x2)
   ret <4 x i32> %1
 }
 
-define { <4 x i32>, <4 x i32> } @test_int_x86_avx512_mask_vpdpbusd_128(<4 x i32> %x0, <4 x i32> %x1, ptr %x2p, <4 x i32> %x4, i8 %x3) {
+define { <4 x i32>, <4 x i32> } @test_int_x86_avx512_mask_vpdpbusd_128(<4 x i32> %x0, <16 x i8> %x1, ptr %x2p, <16 x i8> %x4, i8 %x3) {
 ; X86-LABEL: test_int_x86_avx512_mask_vpdpbusd_128:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmovdqa %xmm0, %xmm3 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xd8]
@@ -76,12 +76,12 @@ define { <4 x i32>, <4 x i32> } @test_int_x86_avx512_mask_vpdpbusd_128(<4 x i32>
 ; X64-NEXT:    vpdpbusd %xmm2, %xmm1, %xmm3 {%k1} {z} # encoding: [0x62,0xf2,0x75,0x89,0x50,0xda]
 ; X64-NEXT:    vmovdqa %xmm3, %xmm1 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xcb]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x2 = load <4 x i32>, ptr %x2p
-  %1 = call <4 x i32> @llvm.x86.avx512.vpdpbusd.128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2)
+  %x2 = load <16 x i8>, ptr %x2p
+  %1 = call <4 x i32> @llvm.x86.avx512.vpdpbusd.128(<4 x i32> %x0, <16 x i8> %x1, <16 x i8> %x2)
   %2 = bitcast i8 %x3 to <8 x i1>
   %extract = shufflevector <8 x i1> %2, <8 x i1> %2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %3 = select <4 x i1> %extract, <4 x i32> %1, <4 x i32> %x0
-  %4 = call <4 x i32> @llvm.x86.avx512.vpdpbusd.128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x4)
+  %4 = call <4 x i32> @llvm.x86.avx512.vpdpbusd.128(<4 x i32> %x0, <16 x i8> %x1, <16 x i8> %x4)
   %5 = bitcast i8 %x3 to <8 x i1>
   %extract1 = shufflevector <8 x i1> %5, <8 x i1> %5, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %6 = select <4 x i1> %extract1, <4 x i32> %4, <4 x i32> zeroinitializer
@@ -90,18 +90,18 @@ define { <4 x i32>, <4 x i32> } @test_int_x86_avx512_mask_vpdpbusd_128(<4 x i32>
   ret { <4 x i32>, <4 x i32> } %res2
 }
 
-declare <8 x i32> @llvm.x86.avx512.vpdpbusds.256(<8 x i32>, <8 x i32>, <8 x i32>)
+declare <8 x i32> @llvm.x86.avx512.vpdpbusds.256(<8 x i32>, <32 x i8>, <32 x i8>)
 
-define <8 x i32>@test_int_x86_avx512_vpdpbusds_256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2) {
+define <8 x i32>@test_int_x86_avx512_vpdpbusds_256(<8 x i32> %x0, <32 x i8> %x1, <32 x i8> %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_vpdpbusds_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpdpbusds %ymm2, %ymm1, %ymm0 # encoding: [0x62,0xf2,0x75,0x28,0x51,0xc2]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %1 = call <8 x i32> @llvm.x86.avx512.vpdpbusds.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2)
+  %1 = call <8 x i32> @llvm.x86.avx512.vpdpbusds.256(<8 x i32> %x0, <32 x i8> %x1, <32 x i8> %x2)
   ret <8 x i32> %1
 }
 
-define { <8 x i32>, <8 x i32> } @test_int_x86_avx512_mask_vpdpbusds_256(<8 x i32> %x0, <8 x i32> %x1, ptr %x2p, <8 x i32> %x4, i8 %x3) {
+define { <8 x i32>, <8 x i32> } @test_int_x86_avx512_mask_vpdpbusds_256(<8 x i32> %x0, <32 x i8> %x1, ptr %x2p, <32 x i8> %x4, i8 %x3) {
 ; X86-LABEL: test_int_x86_avx512_mask_vpdpbusds_256:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmovdqa %ymm0, %ymm3 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xd8]
@@ -121,11 +121,11 @@ define { <8 x i32>, <8 x i32> } @test_int_x86_avx512_mask_vpdpbusds_256(<8 x i32
 ; X64-NEXT:    vpdpbusds %ymm2, %ymm1, %ymm3 {%k1} {z} # encoding: [0x62,0xf2,0x75,0xa9,0x51,0xda]
 ; X64-NEXT:    vmovdqa %ymm3, %ymm1 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xcb]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x2 = load <8 x i32>, ptr %x2p
-  %1 = call <8 x i32> @llvm.x86.avx512.vpdpbusds.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2)
+  %x2 = load <32 x i8>, ptr %x2p
+  %1 = call <8 x i32> @llvm.x86.avx512.vpdpbusds.256(<8 x i32> %x0, <32 x i8> %x1, <32 x i8> %x2)
   %2 = bitcast i8 %x3 to <8 x i1>
   %3 = select <8 x i1> %2, <8 x i32> %1, <8 x i32> %x0
-  %4 = call <8 x i32> @llvm.x86.avx512.vpdpbusds.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x4)
+  %4 = call <8 x i32> @llvm.x86.avx512.vpdpbusds.256(<8 x i32> %x0, <32 x i8> %x1, <32 x i8> %x4)
   %5 = bitcast i8 %x3 to <8 x i1>
   %6 = select <8 x i1> %5, <8 x i32> %4, <8 x i32> zeroinitializer
   %res1 = insertvalue { <8 x i32>, <8 x i32> } poison, <8 x i32> %3, 0
@@ -133,18 +133,18 @@ define { <8 x i32>, <8 x i32> } @test_int_x86_avx512_mask_vpdpbusds_256(<8 x i32
   ret { <8 x i32>, <8 x i32> } %res2
 }
 
-declare <4 x i32> @llvm.x86.avx512.vpdpbusds.128(<4 x i32>, <4 x i32>, <4 x i32>)
+declare <4 x i32> @llvm.x86.avx512.vpdpbusds.128(<4 x i32>, <16 x i8>, <16 x i8>)
 
-define <4 x i32>@test_int_x86_avx512_vpdpbusds_128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2) {
+define <4 x i32>@test_int_x86_avx512_vpdpbusds_128(<4 x i32> %x0, <16 x i8> %x1, <16 x i8> %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_vpdpbusds_128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpdpbusds %xmm2, %xmm1, %xmm0 # encoding: [0x62,0xf2,0x75,0x08,0x51,0xc2]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %1 = call <4 x i32> @llvm.x86.avx512.vpdpbusds.128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2)
+  %1 = call <4 x i32> @llvm.x86.avx512.vpdpbusds.128(<4 x i32> %x0, <16 x i8> %x1, <16 x i8> %x2)
   ret <4 x i32> %1
 }
 
-define { <4 x i32>, <4 x i32> } @test_int_x86_avx512_mask_vpdpbusds_128(<4 x i32> %x0, <4 x i32> %x1, ptr %x2p, <4 x i32> %x4, i8 %x3) {
+define { <4 x i32>, <4 x i32> } @test_int_x86_avx512_mask_vpdpbusds_128(<4 x i32> %x0, <16 x i8> %x1, ptr %x2p, <16 x i8> %x4, i8 %x3) {
 ; X86-LABEL: test_int_x86_avx512_mask_vpdpbusds_128:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmovdqa %xmm0, %xmm3 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xd8]
@@ -164,12 +164,12 @@ define { <4 x i32>, <4 x i32> } @test_int_x86_avx512_mask_vpdpbusds_128(<4 x i32
 ; X64-NEXT:    vpdpbusds %xmm2, %xmm1, %xmm3 {%k1} {z} # encoding: [0x62,0xf2,0x75,0x89,0x51,0xda]
 ; X64-NEXT:    vmovdqa %xmm3, %xmm1 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xcb]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x2 = load <4 x i32>, ptr %x2p
-  %1 = call <4 x i32> @llvm.x86.avx512.vpdpbusds.128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2)
+  %x2 = load <16 x i8>, ptr %x2p
+  %1 = call <4 x i32> @llvm.x86.avx512.vpdpbusds.128(<4 x i32> %x0, <16 x i8> %x1, <16 x i8> %x2)
   %2 = bitcast i8 %x3 to <8 x i1>
   %extract = shufflevector <8 x i1> %2, <8 x i1> %2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %3 = select <4 x i1> %extract, <4 x i32> %1, <4 x i32> %x0
-  %4 = call <4 x i32> @llvm.x86.avx512.vpdpbusds.128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x4)
+  %4 = call <4 x i32> @llvm.x86.avx512.vpdpbusds.128(<4 x i32> %x0, <16 x i8> %x1, <16 x i8> %x4)
   %5 = bitcast i8 %x3 to <8 x i1>
   %extract1 = shufflevector <8 x i1> %5, <8 x i1> %5, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %6 = select <4 x i1> %extract1, <4 x i32> %4, <4 x i32> zeroinitializer
