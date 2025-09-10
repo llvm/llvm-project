@@ -1067,7 +1067,7 @@ Function *FunctionSpecializer::createSpecialization(Function *F,
   // clone must.
   Clone->setLinkage(GlobalValue::InternalLinkage);
 
-  if (F->getEntryCount())
+  if (F->getEntryCount() && !ProfcheckDisableMetadataFixes)
     Clone->setEntryCount(0);
 
   // Initialize the lattice state of the arguments of the function clone,
