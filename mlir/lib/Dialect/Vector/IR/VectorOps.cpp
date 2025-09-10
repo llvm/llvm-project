@@ -3452,8 +3452,8 @@ public:
       SmallVector<Type> elementToInsertTypes(insertSize,
                                              srcVectorType.getElementType());
       // Get all elements from the vector in row-major order.
-      auto elementsToInsert = rewriter.create<vector::ToElementsOp>(
-          op.getLoc(), elementToInsertTypes, valueToStore);
+      auto elementsToInsert = vector::ToElementsOp::create(
+          rewriter, op.getLoc(), elementToInsertTypes, valueToStore);
       for (int64_t linearIdx = 0; linearIdx < insertSize; linearIdx++) {
         elements[insertBeginPosition + linearIdx] =
             elementsToInsert.getResult(linearIdx);

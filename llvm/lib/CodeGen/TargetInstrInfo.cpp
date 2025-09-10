@@ -996,7 +996,7 @@ static bool canCombine(MachineBasicBlock &MBB, MachineOperand &MO,
       (MI->getOpcode() != CombineOpc && CombineOpc != 0))
     return false;
   // Must only used by the user we combine with.
-  if (!MRI.hasOneNonDBGUse(MI->getOperand(0).getReg()))
+  if (!MRI.hasOneNonDBGUse(MO.getReg()))
     return false;
 
   return true;

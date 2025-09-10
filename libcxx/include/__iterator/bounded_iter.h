@@ -116,8 +116,7 @@ public:
   // These operations check that the iterator is dereferenceable. Since the class invariant is
   // that the iterator is always within `[begin, end]`, we only need to check it's not pointing to
   // `end`. This is easier for the optimizer because it aligns with the `iter != container.end()`
-  // checks that typical callers already use (see
-  // https://github.com/llvm/llvm-project/issues/78829).
+  // checks that typical callers already use (see https://llvm.org/PR78829).
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 reference operator*() const _NOEXCEPT {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __current_ != __end_, "__bounded_iter::operator*: Attempt to dereference an iterator at the end");

@@ -682,10 +682,7 @@ define void @PR14241(ptr %s, i64 %size) {
 ; CHECK-NEXT:    [[END_PTR:%.*]] = getelementptr inbounds i32, ptr [[S:%.*]], i64 [[END_IDX]]
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[S]], i64 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[SIZE]], 2
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], -8
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], 4
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP0]], -4
 ; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 4 [[S]], ptr align 4 [[SCEVGEP]], i64 [[TMP4]], i1 false)
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
