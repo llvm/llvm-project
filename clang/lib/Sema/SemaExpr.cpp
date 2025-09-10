@@ -20653,7 +20653,7 @@ bool Sema::CheckCallReturnType(QualType ReturnType, SourceLocation Loc,
 void Sema::DiagnoseAssignmentAsCondition(Expr *E) {
   SourceLocation Loc;
 
-  unsigned diagnostic = diag::warn_condition_is_assignment;
+  unsigned diagnostic = diag::warn_assignment_bool_context;
   bool IsOrAssign = false;
 
   if (BinaryOperator *Op = dyn_cast<BinaryOperator>(E)) {
@@ -20738,6 +20738,8 @@ void Sema::DiagnoseEqualityWithExtraParens(ParenExpr *ParenE) {
 ExprResult Sema::CheckBooleanCondition(SourceLocation Loc, Expr *E,
                                        bool IsConstexpr) {
   DiagnoseAssignmentAsCondition(E);
+  E->setIsInsideCondition();
+
   if (ParenExpr *parenE = dyn_cast<ParenExpr>(E))
     DiagnoseEqualityWithExtraParens(parenE);
 
