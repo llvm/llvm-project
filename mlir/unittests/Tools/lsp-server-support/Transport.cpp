@@ -147,7 +147,7 @@ TEST_F(TransportInputTest, OutgoingRequest) {
   auto callFn =
       getMessageHandler().outgoingRequest<CompletionList, CompletionContext>(
           "outgoing-request",
-          [&responseCallbackInvoked](llvm::json::Value id,
+          [&responseCallbackInvoked](const llvm::json::Value &id,
                                      llvm::Expected<CompletionContext> result) {
             // Make expectations on the expected response.
             EXPECT_EQ(id, 83);
@@ -177,7 +177,7 @@ TEST_F(TransportInputTest, OutgoingRequestJSONParseFailure) {
   bool responseCallbackInvoked = false;
   auto callFn = getMessageHandler().outgoingRequest<CompletionList, Position>(
       "outgoing-request-json-parse-failure",
-      [&responseCallbackInvoked](llvm::json::Value id,
+      [&responseCallbackInvoked](const llvm::json::Value &id,
                                  llvm::Expected<Position> result) {
         llvm::Error err = result.takeError();
         EXPECT_EQ(id, 109);
