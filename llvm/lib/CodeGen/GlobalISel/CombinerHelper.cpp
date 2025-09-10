@@ -2097,7 +2097,6 @@ bool CombinerHelper::matchCommuteShift(MachineInstr &MI,
 bool CombinerHelper::matchLshrOfTruncOfLshr(MachineInstr &MI,
                                             LshrOfTruncOfLshr &MatchInfo,
                                             MachineInstr &ShiftMI) const {
-  //unsigned ShiftOpcode = MI.getOpcode();
   assert(MI.getOpcode() == TargetOpcode::G_LSHR && "Expected a G_LSHR");
 
   Register N0 = MI.getOperand(1).getReg();
@@ -2138,7 +2137,6 @@ bool CombinerHelper::matchLshrOfTruncOfLshr(MachineInstr &MI,
 
 void CombinerHelper::applyLshrOfTruncOfLshr(
     MachineInstr &MI, LshrOfTruncOfLshr &MatchInfo) const {
-  //unsigned ShiftOpcode = MI.getOpcode();
   assert(MI.getOpcode() == TargetOpcode::G_LSHR && "Expected a G_LSHR");
 
   Register Dst = MI.getOperand(0).getReg();
