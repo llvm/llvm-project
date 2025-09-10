@@ -2387,8 +2387,7 @@ public:
 
     // All checks are passed here. Generate single character search loop.
     auto [strV, strAssociate] = getVariable(builder, loc, op.getStr());
-    auto [substrV, substrAssociate] =
-        getVariable(builder, loc, op.getSubstr());
+    auto [substrV, substrAssociate] = getVariable(builder, loc, op.getSubstr());
     hlfir::Entity str{strV};
     hlfir::Entity substr{substrV};
     mlir::Value oneIdx = builder.createIntegerConstant(loc, idxTy, 1);
