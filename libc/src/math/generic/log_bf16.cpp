@@ -26,7 +26,7 @@ static constexpr float LOGF_2 = 0x1.62e43p-1f;
 //   > display = hexadecimal;
 //   > for i from 0 to 127 do print(round(log(1 + i * 2^-7), SG, RN));
 static constexpr float LOG_1_PLUS_M[128] = {
-    0x0f,           0x1.fe02a6p-8f, 0x1.fc0a8cp-7f, 0x1.7b91bp-6f,
+    0x0.0p0f,       0x1.fe02a6p-8f, 0x1.fc0a8cp-7f, 0x1.7b91bp-6f,
     0x1.f829bp-6f,  0x1.39e87cp-5f, 0x1.77459p-5f,  0x1.b42dd8p-5f,
     0x1.f0a30cp-5f, 0x1.16536ep-4f, 0x1.341d7ap-4f, 0x1.51b074p-4f,
     0x1.6f0d28p-4f, 0x1.8c345ep-4f, 0x1.a926d4p-4f, 0x1.c5e548p-4f,
