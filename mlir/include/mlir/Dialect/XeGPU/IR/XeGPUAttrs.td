@@ -231,7 +231,51 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                       multiple blocks according to round-robin distribution rules.}],
                     "FailureOr<SmallVector<SmallVector<Value>>>",
                     "getOffsets",
-                    (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId, "ArrayRef<int64_t>":$shape)>
+                    (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId, "ArrayRef<int64_t>":$shape)>,
+    InterfaceMethod</*desc=*/[{Check if this layout can be achieved by applying a transpose
+                     to some other layout according to given permutation of (0...n-1).}],
+                    /*retTy=*/"bool",
+                    /*methodName=*/"isTransposeOf",
+                    /*args=*/(ins "const xegpu::DistributeLayoutAttr&": $other, "ArrayRef<int64_t>": $perm),
+                    /*methodBody=*/[{
+                      if (!other)
+                        return false;
+                      if ($_self.getRank() != other.getRank() || perm.size() != static_cast<size_t>($_self.getRank()))
+                        return false;
+                      // check if the permutation is valid
+                      int64_t rank = $_self.getRank();
+                      SmallVector<bool, 8> seen(rank, false);
+                      for (const auto &ta : llvm::enumerate(perm)) {
+                        if (ta.value() < 0 || ta.value() >= rank)
+                          return false;
+                        if (seen[ta.value()])
+                          return false;
+                        seen[ta.value()] = true;
+                      }
+                      auto checkTranspose = [](ArrayRef<int64_t> dst, ArrayRef<int64_t> src, ArrayRef<int64_t> perm) {
+                        for (const auto &ta : llvm::enumerate(perm)) {
+                          if (src[ta.index()] != dst[ta.value()])
+                            return false;
+                        }
+                        return true;
+                      };
+                      // check sgLayout
+                      if (!checkTranspose($_self.getSgLayoutAsInt(), other.getSgLayoutAsInt(), perm))
+                        return false;
+                      // check sgData
+                      if (!checkTranspose($_self.getSgDataAsInt(), other.getSgDataAsInt(), perm))
+                        return false;
+                      // check instData
+                      if (!checkTranspose($_self.getInstDataAsInt(), other.getInstDataAsInt(), perm))
+                        return false;
+                      // check laneLayout
+                      if (!checkTranspose($_self.getLaneLayoutAsInt(), other.getLaneLayoutAsInt(), perm))
+                        return false;
+                      // check laneData
+                      if (!checkTranspose($_self.getLaneDataAsInt(), other.getLaneDataAsInt(), perm))
+                        return false;
+                      return true;
+                    }]>
   ];
 }
 
