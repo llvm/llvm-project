@@ -479,6 +479,7 @@ if (NOT WIN32)
 endif()
 
 include(CTest)
+set(BUILD_TESTING off)
 if(BUILD_TESTING)
   add_custom_target(check-comgr COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS amd_comgr)
   if (NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
