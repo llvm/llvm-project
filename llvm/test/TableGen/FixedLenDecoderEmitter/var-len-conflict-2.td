@@ -10,16 +10,14 @@ class I : Instruction {
 
 // Check pretty printing of decoding conflicts.
 
-// CHECK:      {{^}}Decoding Conflict:
-// CHECK-NEXT: {{^}}                    ........
-// CHECK-NEXT: {{^}}            ..............11
-// CHECK-NEXT: {{^}}            .......0......11
-// CHECK-NEXT: {{^}}            _______0______11  I16_0
-// CHECK-NEXT: {{^}}            _______0______11  I16_1
-// CHECK-NEXT: {{^}}    _______0_______0______11  I24_0
+// CHECK:      Decoding Conflict:
+// CHECK-NEXT:             ................
+// CHECK-NEXT:             ..............11
+// CHECK-NEXT:             .......0......11
+// CHECK-NEXT:             _______0______11  I16_0
+// CHECK-NEXT:             _______0______11  I16_1
+// CHECK-NEXT:     _______0_______0______11  I24_0
 
-def I8_0  : I { dag Inst = (descend (operand "$op", 6), 0b00); }
-def I8_1  : I { dag Inst = (descend (operand "$op", 6), 0b01); }
 def I16_0 : I { dag Inst = (descend (operand "$op2", 7), 0b0,
                                     (operand "$op", 6), 0b11); }
 def I16_1 : I { dag Inst = (descend (operand "$op2", 7), 0b0,

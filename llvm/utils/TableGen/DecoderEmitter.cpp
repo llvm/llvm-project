@@ -517,6 +517,9 @@ class FilterChooser {
   /// The "field value" here refers to the encoding bits in the filtered range.
   std::map<uint64_t, std::unique_ptr<const FilterChooser>> FilterChooserMap;
 
+  /// Set to true if decoding conflict was encountered.
+  bool HasConflict = false;
+
   struct Island {
     unsigned StartBit;
     unsigned NumBits;
@@ -600,18 +603,22 @@ class DecoderTableBuilder {
   ArrayRef<InstructionEncoding> Encodings;
   DecoderTableInfo &TableInfo;
 
+  bool HasConflict = false;
+
 public:
   DecoderTableBuilder(const CodeGenTarget &Target,
                       ArrayRef<InstructionEncoding> Encodings,
                       DecoderTableInfo &TableInfo)
       : Target(Target), Encodings(Encodings), TableInfo(TableInfo) {}
 
-  void buildTable(const FilterChooser &FC, unsigned BitWidth) const {
+  /// Returns true if a decoding conflict was encountered.
+  bool buildTable(const FilterChooser &FC, unsigned BitWidth) {
     // When specializing decoders per bit width, each decoder table will begin
     // with the bitwidth for that table.
     if (SpecializeDecodersPerBitwidth)
       TableInfo.Table.insertULEB128(BitWidth);
     emitTableEntries(FC);
+    return HasConflict;
   }
 
 private:
@@ -637,7 +644,7 @@ private:
 
   void emitSingletonTableEntry(const FilterChooser &FC) const;
 
-  void emitTableEntries(const FilterChooser &FC) const;
+  void emitTableEntries(const FilterChooser &FC);
 };
 
 } // end anonymous namespace
@@ -1592,7 +1599,7 @@ void FilterChooser::doFilter() {
   // Print out useful conflict information for postmortem analysis.
   errs() << "Decoding Conflict:\n";
   dump();
-  PrintFatalError("Decoding conflict encountered");
+  HasConflict = true;
 }
 
 void FilterChooser::dump() const {
@@ -1612,7 +1619,12 @@ void FilterChooser::dump() const {
   }
 }
 
-void DecoderTableBuilder::emitTableEntries(const FilterChooser &FC) const {
+void DecoderTableBuilder::emitTableEntries(const FilterChooser &FC) {
+  if (FC.HasConflict) {
+    HasConflict = true;
+    return;
+  }
+
   DecoderTable &Table = TableInfo.Table;
 
   // If there are other encodings that could match if those with all bits
@@ -2570,6 +2582,7 @@ template <typename T> constexpr uint32_t InsnBitWidth = 0;
   DecoderTableBuilder TableBuilder(Target, Encodings, TableInfo);
   unsigned OpcodeMask = 0;
 
+  bool HasConflict = false;
   for (const auto &[BitWidth, BWMap] : EncMap) {
     for (const auto &[Key, EncodingIDs] : BWMap) {
       auto [DecoderNamespace, HwModeID] = Key;
@@ -2585,7 +2598,10 @@ template <typename T> constexpr uint32_t InsnBitWidth = 0;
       //    across all decoder tables.
       //  - predicates are shared across all decoder tables.
       TableInfo.Table.clear();
-      TableBuilder.buildTable(FC, BitWidth);
+      HasConflict |= TableBuilder.buildTable(FC, BitWidth);
+      // Skip emitting table entries if a conflict has been detected.
+      if (HasConflict)
+        continue;
 
       // Print the table to the output stream.
       OpcodeMask |= emitTable(OS, TableInfo.Table, DecoderNamespace, HwModeID,
@@ -2599,6 +2615,9 @@ template <typename T> constexpr uint32_t InsnBitWidth = 0;
       TableInfo.Decoders.clear();
     }
   }
+
+  if (HasConflict)
+    PrintFatalError("Decoding conflict encountered");
 
   // Emit the decoder function for the last bucket. This will also emit the
   // single decoder function if SpecializeDecodersPerBitwidth = false.
