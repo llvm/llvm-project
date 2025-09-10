@@ -594,9 +594,6 @@ static bool upgradeX86IntrinsicFunction(Function *F, StringRef Name,
     return false; // No other 'x86.avx512.*'.
   }
 
-  if (Name.consume_front("avx512.mask.cmp.")) {
-  }
-
   if (Name.consume_front("avx512bf16.")) {
     // Added in 9.0
     ID = StringSwitch<Intrinsic::ID>(Name)
@@ -4207,10 +4204,8 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
       else
         llvm_unreachable("Unexpected vector bit width");
 
-      if (NewArgType) {
-        Args[1] = Builder.CreateBitCast(Args[1], NewArgType);
-        Args[2] = Builder.CreateBitCast(Args[2], NewArgType);
-      }
+      Args[1] = Builder.CreateBitCast(Args[1], NewArgType);
+      Args[2] = Builder.CreateBitCast(Args[2], NewArgType);
     }
 
     Rep = Builder.CreateIntrinsic(IID, Args);
