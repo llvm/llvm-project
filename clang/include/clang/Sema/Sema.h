@@ -3541,6 +3541,10 @@ public:
   llvm::SmallSetVector<const TypedefNameDecl *, 4>
       UnusedLocalTypedefNameCandidates;
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattributes"
+#endif
   typedef LazyVector<const DeclaratorDecl *, ExternalSemaSource,
                      &ExternalSemaSource::ReadUnusedFileScopedDecls, 2, 2>
       UnusedFileScopedDeclsType;
@@ -3555,6 +3559,9 @@ public:
 
   /// All the tentative definitions encountered in the TU.
   TentativeDefinitionsType TentativeDefinitions;
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
   /// All the external declarations encoutered and used in the TU.
   SmallVector<DeclaratorDecl *, 4> ExternalDeclarations;
@@ -4858,6 +4865,10 @@ public:
   /// WeakTopLevelDeclDecls - access to \#pragma weak-generated Decls
   SmallVectorImpl<Decl *> &WeakTopLevelDecls() { return WeakTopLevelDecl; }
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattributes"
+#endif
   typedef LazyVector<TypedefNameDecl *, ExternalSemaSource,
                      &ExternalSemaSource::ReadExtVectorDecls, 2, 2>
       ExtVectorDeclsType;
@@ -4866,6 +4877,9 @@ public:
   /// us to associate a raw vector type with one of the ext_vector type names.
   /// This is only necessary for issuing pretty diagnostics.
   ExtVectorDeclsType ExtVectorDecls;
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
   /// Check if the argument \p E is a ASCII string literal. If not emit an error
   /// and return false, otherwise set \p Str to the value of the string literal
@@ -6466,6 +6480,10 @@ public:
   /// same list more than once.
   std::unique_ptr<RecordDeclSetTy> PureVirtualClassDiagSet;
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattributes"
+#endif
   typedef LazyVector<CXXConstructorDecl *, ExternalSemaSource,
                      &ExternalSemaSource::ReadDelegatingConstructors, 2, 2>
       DelegatingCtorDeclsType;
@@ -6473,6 +6491,9 @@ public:
   /// All the delegating constructors seen so far in the file, used for
   /// cycle detection at the end of the TU.
   DelegatingCtorDeclsType DelegatingCtorDecls;
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
   /// The C++ "std" namespace, where the standard library resides.
   LazyDeclPtr StdNamespace;
