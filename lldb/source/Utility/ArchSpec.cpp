@@ -260,9 +260,9 @@ static_assert(sizeof(g_core_definitions) / sizeof(CoreDefinition) ==
 struct ArchDefinitionEntry {
   ArchSpec::Core core;
   uint32_t cpu;
-  uint32_t sub;
-  uint32_t cpu_mask;
-  uint32_t sub_mask;
+  uint32_t sub = LLDB_INVALID_CPUTYPE;
+  uint32_t cpu_mask = UINT32_MAX;
+  uint32_t sub_mask = UINT32_MAX;
 };
 
 struct ArchDefinition {
@@ -357,7 +357,8 @@ static const ArchDefinitionEntry g_macho_arch_entries[] = {
     {ArchSpec::eCore_riscv32,         llvm::MachO::CPU_TYPE_RISCV,      CPU_ANY,                                UINT32_MAX, SUBTYPE_MASK},
     // Catch any unknown mach architectures so we can always use the object and symbol mach-o files
     {ArchSpec::eCore_uknownMach32,    0,                                0,                                      0xFF000000u, 0x00000000u},
-    {ArchSpec::eCore_uknownMach64,    llvm::MachO::CPU_ARCH_ABI64,      0,                                      0xFF000000u, 0x00000000u}};
+    {ArchSpec::eCore_uknownMach64,    llvm::MachO::CPU_ARCH_ABI64,      0,                                      0xFF000000u, 0x00000000u}
+};
 // clang-format on
 
 static const ArchDefinition g_macho_arch_def = {eArchTypeMachO,
@@ -369,72 +370,41 @@ static const ArchDefinition g_macho_arch_def = {eArchTypeMachO,
 // convert cpu type and subtypes to architecture names, and to convert
 // architecture names to cpu types and subtypes. The ordering is important and
 // allows the precedence to be set when the table is built.
+// clang-format off
 static const ArchDefinitionEntry g_elf_arch_entries[] = {
-    {ArchSpec::eCore_sparc_generic, llvm::ELF::EM_SPARC, LLDB_INVALID_CPUTYPE,
-     0xFFFFFFFFu, 0xFFFFFFFFu}, // Sparc
-    {ArchSpec::eCore_x86_32_i386, llvm::ELF::EM_386, LLDB_INVALID_CPUTYPE,
-     0xFFFFFFFFu, 0xFFFFFFFFu}, // Intel 80386
-    {ArchSpec::eCore_x86_32_i486, llvm::ELF::EM_IAMCU, LLDB_INVALID_CPUTYPE,
-     0xFFFFFFFFu, 0xFFFFFFFFu}, // Intel MCU // FIXME: is this correct?
-    {ArchSpec::eCore_ppc_generic, llvm::ELF::EM_PPC, LLDB_INVALID_CPUTYPE,
-     0xFFFFFFFFu, 0xFFFFFFFFu}, // PowerPC
-    {ArchSpec::eCore_ppc64le_generic, llvm::ELF::EM_PPC64,
-     ArchSpec::eCore_ppc64le_generic, 0xFFFFFFFFu, 0xFFFFFFFFu}, // PowerPC64le
-    {ArchSpec::eCore_ppc64_generic, llvm::ELF::EM_PPC64,
-     ArchSpec::eCore_ppc64_generic, 0xFFFFFFFFu, 0xFFFFFFFFu}, // PowerPC64
-    {ArchSpec::eCore_arm_generic, llvm::ELF::EM_ARM, LLDB_INVALID_CPUTYPE,
-     0xFFFFFFFFu, 0xFFFFFFFFu}, // ARM
-    {ArchSpec::eCore_arm_aarch64, llvm::ELF::EM_AARCH64, LLDB_INVALID_CPUTYPE,
-     0xFFFFFFFFu, 0xFFFFFFFFu}, // ARM64
-    {ArchSpec::eCore_s390x_generic, llvm::ELF::EM_S390, LLDB_INVALID_CPUTYPE,
-     0xFFFFFFFFu, 0xFFFFFFFFu}, // SystemZ
-    {ArchSpec::eCore_sparc9_generic, llvm::ELF::EM_SPARCV9,
-     LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu}, // SPARC V9
-    {ArchSpec::eCore_x86_64_x86_64, llvm::ELF::EM_X86_64, LLDB_INVALID_CPUTYPE,
-     0xFFFFFFFFu, 0xFFFFFFFFu}, // AMD64
-    {ArchSpec::eCore_mips32, llvm::ELF::EM_MIPS, ArchSpec::eMIPSSubType_mips32,
-     0xFFFFFFFFu, 0xFFFFFFFFu}, // mips32
-    {ArchSpec::eCore_mips32r2, llvm::ELF::EM_MIPS,
-     ArchSpec::eMIPSSubType_mips32r2, 0xFFFFFFFFu, 0xFFFFFFFFu}, // mips32r2
-    {ArchSpec::eCore_mips32r6, llvm::ELF::EM_MIPS,
-     ArchSpec::eMIPSSubType_mips32r6, 0xFFFFFFFFu, 0xFFFFFFFFu}, // mips32r6
-    {ArchSpec::eCore_mips32el, llvm::ELF::EM_MIPS,
-     ArchSpec::eMIPSSubType_mips32el, 0xFFFFFFFFu, 0xFFFFFFFFu}, // mips32el
-    {ArchSpec::eCore_mips32r2el, llvm::ELF::EM_MIPS,
-     ArchSpec::eMIPSSubType_mips32r2el, 0xFFFFFFFFu, 0xFFFFFFFFu}, // mips32r2el
-    {ArchSpec::eCore_mips32r6el, llvm::ELF::EM_MIPS,
-     ArchSpec::eMIPSSubType_mips32r6el, 0xFFFFFFFFu, 0xFFFFFFFFu}, // mips32r6el
-    {ArchSpec::eCore_mips64, llvm::ELF::EM_MIPS, ArchSpec::eMIPSSubType_mips64,
-     0xFFFFFFFFu, 0xFFFFFFFFu}, // mips64
-    {ArchSpec::eCore_mips64r2, llvm::ELF::EM_MIPS,
-     ArchSpec::eMIPSSubType_mips64r2, 0xFFFFFFFFu, 0xFFFFFFFFu}, // mips64r2
-    {ArchSpec::eCore_mips64r6, llvm::ELF::EM_MIPS,
-     ArchSpec::eMIPSSubType_mips64r6, 0xFFFFFFFFu, 0xFFFFFFFFu}, // mips64r6
-    {ArchSpec::eCore_mips64el, llvm::ELF::EM_MIPS,
-     ArchSpec::eMIPSSubType_mips64el, 0xFFFFFFFFu, 0xFFFFFFFFu}, // mips64el
-    {ArchSpec::eCore_mips64r2el, llvm::ELF::EM_MIPS,
-     ArchSpec::eMIPSSubType_mips64r2el, 0xFFFFFFFFu, 0xFFFFFFFFu}, // mips64r2el
-    {ArchSpec::eCore_mips64r6el, llvm::ELF::EM_MIPS,
-     ArchSpec::eMIPSSubType_mips64r6el, 0xFFFFFFFFu, 0xFFFFFFFFu}, // mips64r6el
-    {ArchSpec::eCore_msp430, llvm::ELF::EM_MSP430, LLDB_INVALID_CPUTYPE,
-     0xFFFFFFFFu, 0xFFFFFFFFu}, // MSP430
-    {ArchSpec::eCore_hexagon_generic, llvm::ELF::EM_HEXAGON,
-     LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu}, // HEXAGON
-    {ArchSpec::eCore_arc, llvm::ELF::EM_ARC_COMPACT2, LLDB_INVALID_CPUTYPE,
-     0xFFFFFFFFu, 0xFFFFFFFFu}, // ARC
-    {ArchSpec::eCore_avr, llvm::ELF::EM_AVR, LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu,
-     0xFFFFFFFFu}, // AVR
-    {ArchSpec::eCore_riscv32, llvm::ELF::EM_RISCV,
-     ArchSpec::eRISCVSubType_riscv32, 0xFFFFFFFFu, 0xFFFFFFFFu}, // riscv32
-    {ArchSpec::eCore_riscv64, llvm::ELF::EM_RISCV,
-     ArchSpec::eRISCVSubType_riscv64, 0xFFFFFFFFu, 0xFFFFFFFFu}, // riscv64
-    {ArchSpec::eCore_loongarch32, llvm::ELF::EM_LOONGARCH,
-     ArchSpec::eLoongArchSubType_loongarch32, 0xFFFFFFFFu,
-     0xFFFFFFFFu}, // loongarch32
-    {ArchSpec::eCore_loongarch64, llvm::ELF::EM_LOONGARCH,
-     ArchSpec::eLoongArchSubType_loongarch64, 0xFFFFFFFFu,
-     0xFFFFFFFFu}, // loongarch64
+    {ArchSpec::eCore_sparc_generic,   llvm::ELF::EM_SPARC       }, // Sparc
+    {ArchSpec::eCore_x86_32_i386,     llvm::ELF::EM_386         }, // Intel 80386
+    {ArchSpec::eCore_x86_32_i486,     llvm::ELF::EM_IAMCU       }, // Intel MCU // FIXME: is this correct?
+    {ArchSpec::eCore_ppc_generic,     llvm::ELF::EM_PPC         }, // PowerPC
+    {ArchSpec::eCore_ppc64le_generic, llvm::ELF::EM_PPC64,      ArchSpec::eCore_ppc64le_generic},   // PowerPC64le
+    {ArchSpec::eCore_ppc64_generic,   llvm::ELF::EM_PPC64,      ArchSpec::eCore_ppc64_generic},     // PowerPC64
+    {ArchSpec::eCore_arm_generic,     llvm::ELF::EM_ARM         }, // ARM
+    {ArchSpec::eCore_arm_aarch64,     llvm::ELF::EM_AARCH64     }, // ARM64
+    {ArchSpec::eCore_s390x_generic,   llvm::ELF::EM_S390        }, // SystemZ
+    {ArchSpec::eCore_sparc9_generic,  llvm::ELF::EM_SPARCV9     }, // SPARC V9
+    {ArchSpec::eCore_x86_64_x86_64,   llvm::ELF::EM_X86_64      }, // AMD64
+    {ArchSpec::eCore_mips32,          llvm::ELF::EM_MIPS,       ArchSpec::eMIPSSubType_mips32}, // mips32
+    {ArchSpec::eCore_mips32r2,        llvm::ELF::EM_MIPS,       ArchSpec::eMIPSSubType_mips32r2}, // mips32r2
+    {ArchSpec::eCore_mips32r6,        llvm::ELF::EM_MIPS,       ArchSpec::eMIPSSubType_mips32r6}, // mips32r6
+    {ArchSpec::eCore_mips32el,        llvm::ELF::EM_MIPS,       ArchSpec::eMIPSSubType_mips32el}, // mips32el
+    {ArchSpec::eCore_mips32r2el,      llvm::ELF::EM_MIPS,       ArchSpec::eMIPSSubType_mips32r2el}, // mips32r2el
+    {ArchSpec::eCore_mips32r6el,      llvm::ELF::EM_MIPS,       ArchSpec::eMIPSSubType_mips32r6el}, // mips32r6el
+    {ArchSpec::eCore_mips64,          llvm::ELF::EM_MIPS,       ArchSpec::eMIPSSubType_mips64},
+    {ArchSpec::eCore_mips64r2,        llvm::ELF::EM_MIPS,       ArchSpec::eMIPSSubType_mips64r2}, // mips64r2
+    {ArchSpec::eCore_mips64r6,        llvm::ELF::EM_MIPS,       ArchSpec::eMIPSSubType_mips64r6}, // mips64r6
+    {ArchSpec::eCore_mips64el,        llvm::ELF::EM_MIPS,       ArchSpec::eMIPSSubType_mips64el}, // mips64el
+    {ArchSpec::eCore_mips64r2el,      llvm::ELF::EM_MIPS,       ArchSpec::eMIPSSubType_mips64r2el}, // mips64r2el
+    {ArchSpec::eCore_mips64r6el,      llvm::ELF::EM_MIPS,       ArchSpec::eMIPSSubType_mips64r6el}, // mips64r6el
+    {ArchSpec::eCore_msp430,          llvm::ELF::EM_MSP430      }, // MSP430
+    {ArchSpec::eCore_hexagon_generic, llvm::ELF::EM_HEXAGON     }, // HEXAGON
+    {ArchSpec::eCore_arc,             llvm::ELF::EM_ARC_COMPACT2}, // ARC
+    {ArchSpec::eCore_avr,             llvm::ELF::EM_AVR         }, // AVR
+    {ArchSpec::eCore_riscv32,         llvm::ELF::EM_RISCV,      ArchSpec::eRISCVSubType_riscv32}, // riscv32
+    {ArchSpec::eCore_riscv64,         llvm::ELF::EM_RISCV,      ArchSpec::eRISCVSubType_riscv64}, // riscv64
+    {ArchSpec::eCore_loongarch32,     llvm::ELF::EM_LOONGARCH,  ArchSpec::eLoongArchSubType_loongarch32}, // loongarch32
+    {ArchSpec::eCore_loongarch64,     llvm::ELF::EM_LOONGARCH,  ArchSpec::eLoongArchSubType_loongarch64}, // loongarch64
 };
+// clang-format on
 
 static const ArchDefinition g_elf_arch_def = {
     eArchTypeELF,
@@ -442,25 +412,18 @@ static const ArchDefinition g_elf_arch_def = {
     g_elf_arch_entries,
     "elf",
 };
-
+// clang-format off
 static const ArchDefinitionEntry g_coff_arch_entries[] = {
-    {ArchSpec::eCore_x86_32_i386, llvm::COFF::IMAGE_FILE_MACHINE_I386,
-     LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu}, // Intel 80x86
-    {ArchSpec::eCore_ppc_generic, llvm::COFF::IMAGE_FILE_MACHINE_POWERPC,
-     LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu}, // PowerPC
-    {ArchSpec::eCore_ppc_generic, llvm::COFF::IMAGE_FILE_MACHINE_POWERPCFP,
-     LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu}, // PowerPC (with FPU)
-    {ArchSpec::eCore_arm_generic, llvm::COFF::IMAGE_FILE_MACHINE_ARM,
-     LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu}, // ARM
-    {ArchSpec::eCore_arm_armv7, llvm::COFF::IMAGE_FILE_MACHINE_ARMNT,
-     LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu}, // ARMv7
-    {ArchSpec::eCore_thumb, llvm::COFF::IMAGE_FILE_MACHINE_THUMB,
-     LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu}, // ARMv7
-    {ArchSpec::eCore_x86_64_x86_64, llvm::COFF::IMAGE_FILE_MACHINE_AMD64,
-     LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu}, // AMD64
-    {ArchSpec::eCore_arm_arm64, llvm::COFF::IMAGE_FILE_MACHINE_ARM64,
-     LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu} // ARM64
+    {ArchSpec::eCore_x86_32_i386,   llvm::COFF::IMAGE_FILE_MACHINE_I386}, // Intel 80x86
+    {ArchSpec::eCore_ppc_generic,   llvm::COFF::IMAGE_FILE_MACHINE_POWERPC}, // PowerPC
+    {ArchSpec::eCore_ppc_generic,   llvm::COFF::IMAGE_FILE_MACHINE_POWERPCFP}, // PowerPC (with FPU)
+    {ArchSpec::eCore_arm_generic,   llvm::COFF::IMAGE_FILE_MACHINE_ARM}, // ARM
+    {ArchSpec::eCore_arm_armv7,     llvm::COFF::IMAGE_FILE_MACHINE_ARMNT}, // ARMv7
+    {ArchSpec::eCore_thumb,         llvm::COFF::IMAGE_FILE_MACHINE_THUMB}, // ARMv7
+    {ArchSpec::eCore_x86_64_x86_64, llvm::COFF::IMAGE_FILE_MACHINE_AMD64}, // AMD64
+    {ArchSpec::eCore_arm_arm64,     llvm::COFF::IMAGE_FILE_MACHINE_ARM64} // ARM64
 };
+// clang-format on
 
 static const ArchDefinition g_coff_arch_def = {
     eArchTypeCOFF,
@@ -469,11 +432,12 @@ static const ArchDefinition g_coff_arch_def = {
     "pe-coff",
 };
 
+// clang-format off
 static const ArchDefinitionEntry g_xcoff_arch_entries[] = {
-    {ArchSpec::eCore_ppc_generic, llvm::XCOFF::TCPU_COM, LLDB_INVALID_CPUTYPE,
-     0xFFFFFFFFu, 0xFFFFFFFFu},
-    {ArchSpec::eCore_ppc64_generic, llvm::XCOFF::TCPU_PPC64,
-     LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu}};
+    {ArchSpec::eCore_ppc_generic,   llvm::XCOFF::TCPU_COM},
+    {ArchSpec::eCore_ppc64_generic, llvm::XCOFF::TCPU_PPC64}
+};
+// clang-format on
 
 static const ArchDefinition g_xcoff_arch_def = {
     eArchTypeXCOFF,
@@ -695,13 +659,9 @@ uint32_t ArchSpec::GetMachOCPUSubType() const {
   return LLDB_INVALID_CPUTYPE;
 }
 
-uint32_t ArchSpec::GetDataByteSize() const {
-  return 1;
-}
+uint32_t ArchSpec::GetDataByteSize() const { return 1; }
 
-uint32_t ArchSpec::GetCodeByteSize() const {
-  return 1;
-}
+uint32_t ArchSpec::GetCodeByteSize() const { return 1; }
 
 llvm::Triple::ArchType ArchSpec::GetMachine() const {
   const CoreDefinition *core_def = FindCoreDefinition(m_core);
@@ -1170,8 +1130,8 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
     break;
 
   // v. https://en.wikipedia.org/wiki/ARM_Cortex-M#Silicon_customization
-  // Cortex-M0 - ARMv6-M - armv6m 
-  // Cortex-M3 - ARMv7-M - armv7m 
+  // Cortex-M0 - ARMv6-M - armv6m
+  // Cortex-M3 - ARMv7-M - armv7m
   // Cortex-M4 - ARMv7E-M - armv7em
   case ArchSpec::eCore_arm_armv7em:
     if (!enforce_exact_match) {
@@ -1188,8 +1148,8 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
     break;
 
   // v. https://en.wikipedia.org/wiki/ARM_Cortex-M#Silicon_customization
-  // Cortex-M0 - ARMv6-M - armv6m 
-  // Cortex-M3 - ARMv7-M - armv7m 
+  // Cortex-M0 - ARMv6-M - armv6m
+  // Cortex-M3 - ARMv7-M - armv7m
   // Cortex-M4 - ARMv7E-M - armv7em
   case ArchSpec::eCore_arm_armv7m:
     if (!enforce_exact_match) {
@@ -1206,8 +1166,8 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
     break;
 
   // v. https://en.wikipedia.org/wiki/ARM_Cortex-M#Silicon_customization
-  // Cortex-M0 - ARMv6-M - armv6m 
-  // Cortex-M3 - ARMv7-M - armv7m 
+  // Cortex-M0 - ARMv6-M - armv6m
+  // Cortex-M3 - ARMv7-M - armv7m
   // Cortex-M4 - ARMv7E-M - armv7em
   case ArchSpec::eCore_arm_armv6m:
     if (!enforce_exact_match) {
@@ -1433,7 +1393,6 @@ bool lldb_private::operator<(const ArchSpec &lhs, const ArchSpec &rhs) {
   const ArchSpec::Core rhs_core = rhs.GetCore();
   return lhs_core < rhs_core;
 }
-
 
 bool lldb_private::operator==(const ArchSpec &lhs, const ArchSpec &rhs) {
   return lhs.GetCore() == rhs.GetCore();

@@ -99,10 +99,10 @@ void check_iterator_requirements() {
   // expected-note@*:* {{because 'not_move_assignable' does not satisfy '__cpp17_copy_assignable'}}
 
   static_assert(std::__cpp17_iterator<not_copy_assignable>); // expected-error {{static assertion failed}}
-  // expectted-note@*:* {{because 'not_copy_assignable' does not satisfy '__cpp17_copy_assignable'}}
+  // expected-note@*:* {{because 'not_copy_assignable' does not satisfy '__cpp17_copy_assignable'}}
 
   static_assert(std::__cpp17_iterator<diff_t_not_signed>); // expected-error {{static assertion failed}}
-  // expectted-note@*:* {{'is_signed_v<__iter_diff_t<diff_t_not_signed> >' evaluated to false}}
+  // expected-note-re@*:* {{because 'is_signed_v<__iter_diff_t<diff_t_not_signed>{{.*}}>' evaluated to false}}
 }
 
 struct not_equality_comparable : valid_iterator<not_equality_comparable> {};

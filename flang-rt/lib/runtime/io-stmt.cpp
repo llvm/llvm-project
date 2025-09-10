@@ -1076,6 +1076,14 @@ void ChildFormattedIoStatementState<DIR, CHAR>::CompleteOperation() {
 
 template <Direction DIR, typename CHAR>
 int ChildFormattedIoStatementState<DIR, CHAR>::EndIoStatement() {
+  if constexpr (DIR == Direction::Input) {
+    if (auto *listInput{this->child()
+                .parent()
+                .template get_if<
+                    ListDirectedStatementState<Direction::Input>>()}) {
+      listInput->set_eatComma(false);
+    }
+  }
   CompleteOperation();
   return ChildIoStatementState<DIR>::EndIoStatement();
 }
@@ -1097,6 +1105,7 @@ ChildListIoStatementState<DIR>::ChildListIoStatementState(
   if constexpr (DIR == Direction::Input) {
     if (auto *listInput{child.parent()
                 .get_if<ListDirectedStatementState<Direction::Input>>()}) {
+      this->set_eatComma(listInput->eatComma());
       this->namelistGroup_ = listInput->namelistGroup();
     }
   }
@@ -1121,6 +1130,13 @@ bool ChildListIoStatementState<DIR>::AdvanceRecord(int n) {
 
 template <Direction DIR> int ChildListIoStatementState<DIR>::EndIoStatement() {
   if constexpr (DIR == Direction::Input) {
+    if (auto *listInput{this->child()
+                .parent()
+                .template get_if<
+                    ListDirectedStatementState<Direction::Input>>()}) {
+      listInput->set_eatComma(this->eatComma());
+      listInput->set_hitSlash(this->hitSlash());
+    }
     if (int status{ListDirectedStatementState<DIR>::EndIoStatement()};
         status != IostatOk) {
       return status;
