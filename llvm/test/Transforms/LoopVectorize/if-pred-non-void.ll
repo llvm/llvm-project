@@ -562,9 +562,7 @@ define void @pr30172(ptr nocapture %asd, ptr nocapture %bsd) !dbg !5 {;
 ; CHECK-NEXT:    br label [[PRED_SDIV_CONTINUE4]]
 ; CHECK:       pred.sdiv.continue4:
 ; CHECK-NEXT:    [[TMP28:%.*]] = phi <2 x i32> [ [[TMP19]], [[PRED_SDIV_CONTINUE]] ], [ [[TMP26]], [[PRED_SDIV_IF3]] ]
-; CHECK-NEXT:    [[TMP27:%.*]] = xor <2 x i1> [[TMP8]], splat (i1 true), !dbg [[DBG35]]
-; CHECK-NEXT:    [[TMP30:%.*]] = select <2 x i1> [[TMP4]], <2 x i1> [[TMP27]], <2 x i1> zeroinitializer, !dbg [[DBG35]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP30]], <2 x i32> [[TMP5]], <2 x i32> [[TMP28]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP10]], <2 x i32> [[TMP28]], <2 x i32> [[TMP5]]
 ; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP1]], align 4, !alias.scope [[META29]], !noalias [[META32]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP32:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
@@ -642,12 +640,8 @@ define void @pr30172(ptr nocapture %asd, ptr nocapture %bsd) !dbg !5 {;
 ; UNROLL-NO-VF-NEXT:    br label [[PRED_SDIV_CONTINUE3]]
 ; UNROLL-NO-VF:       pred.sdiv.continue3:
 ; UNROLL-NO-VF-NEXT:    [[TMP29:%.*]] = phi i32 [ poison, [[PRED_SDIV_CONTINUE]] ], [ [[TMP27]], [[PRED_SDIV_IF2]] ]
-; UNROLL-NO-VF-NEXT:    [[TMP30:%.*]] = xor i1 [[TMP15]], true, !dbg [[DBG35]]
-; UNROLL-NO-VF-NEXT:    [[TMP28:%.*]] = xor i1 [[TMP16]], true, !dbg [[DBG35]]
-; UNROLL-NO-VF-NEXT:    [[TMP32:%.*]] = select i1 [[TMP17]], i1 [[TMP30]], i1 false, !dbg [[DBG35]]
-; UNROLL-NO-VF-NEXT:    [[TMP33:%.*]] = select i1 [[TMP14]], i1 [[TMP28]], i1 false, !dbg [[DBG35]]
-; UNROLL-NO-VF-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP32]], i32 [[TMP10]], i32 [[TMP25]]
-; UNROLL-NO-VF-NEXT:    [[PREDPHI4:%.*]] = select i1 [[TMP33]], i32 [[TMP11]], i32 [[TMP29]]
+; UNROLL-NO-VF-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP20]], i32 [[TMP25]], i32 [[TMP10]]
+; UNROLL-NO-VF-NEXT:    [[PREDPHI4:%.*]] = select i1 [[TMP21]], i32 [[TMP29]], i32 [[TMP11]]
 ; UNROLL-NO-VF-NEXT:    store i32 [[PREDPHI]], ptr [[TMP2]], align 4, !alias.scope [[META29]], !noalias [[META32]]
 ; UNROLL-NO-VF-NEXT:    store i32 [[PREDPHI4]], ptr [[TMP3]], align 4, !alias.scope [[META29]], !noalias [[META32]]
 ; UNROLL-NO-VF-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
