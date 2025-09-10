@@ -1090,6 +1090,14 @@ clang:openmp:
   - llvm/unittests/Frontend/OpenMP*
   - llvm/test/Transforms/OpenMP/**
 
+clang:temporal-safety:
+  - clang/include/clang/Analysis/Analyses/LifetimeSafety*
+  - clang/lib/Analysis/LifetimeSafety*
+  - clang/unittests/Analysis/LifetimeSafety*
+  - clang/test/Sema/*lifetime-safety*
+  - clang/test/Sema/*lifetime-analysis*
+  - clang/test/Analysis/LifetimeSafety/**
+
 clang:as-a-library:
   - clang/tools/libclang/**
   - clang/bindings/**
