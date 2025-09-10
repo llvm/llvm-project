@@ -8357,6 +8357,15 @@ NamedDecl *Sema::ActOnVariableDeclarator(
                                    D.isFunctionDefinition());
   }
 
+  // Warn about the use of a weak pointer authentication schema on a variable
+  // with internal linkage.
+  if (getLangOpts().PointerAuthCalls && NewVD->isFunctionPointerType() &&
+      !isExternallyVisible(NewVD->getLinkageInternal())) {
+    PointerAuthQualifier Q = NewVD->getType().getQualifiers().getPointerAuth();
+    if (!Q || (!Q.isAddressDiscriminated() && Q.getExtraDiscriminator() == 0))
+      Diag(NewVD->getLocation(), diag::warn_ptrauth_weak_schema) << NewVD;
+  }
+
   if (NewTemplate) {
     if (NewVD->isInvalidDecl())
       NewTemplate->setInvalidDecl();

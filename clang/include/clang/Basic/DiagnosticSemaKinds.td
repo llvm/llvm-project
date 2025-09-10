@@ -1046,6 +1046,10 @@ def err_ptrauth_address_discrimination_invalid : Error<
 def err_ptrauth_extra_discriminator_invalid : Error<
   "invalid extra discriminator flag '%0'; '__ptrauth' requires a value between "
   "'0' and '%1'">;
+def warn_ptrauth_weak_schema
+    : Warning<"internal variable %0 is using a weak signing schema for pointer "
+              "authentication">,
+      InGroup<PtrAuthWeakSchema>;
 
 /// main()
 // static main() is not an error in C, just in C++.
