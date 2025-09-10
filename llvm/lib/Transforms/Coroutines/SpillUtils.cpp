@@ -264,11 +264,6 @@ struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
   }
 
   void visitIntrinsicInst(IntrinsicInst &II) {
-    // When we found the lifetime markers refers to a
-    // subrange of the original alloca, ignore the lifetime
-    // markers to avoid misleading the analysis.
-    if (!IsOffsetKnown || !Offset.isZero())
-      return Base::visitIntrinsicInst(II);
     switch (II.getIntrinsicID()) {
     default:
       return Base::visitIntrinsicInst(II);

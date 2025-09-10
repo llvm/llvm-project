@@ -2506,10 +2506,8 @@ public:
 class DILocation : public MDNode {
   friend class LLVMContextImpl;
   friend class MDNode;
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
   uint64_t AtomGroup : 61;
   uint64_t AtomRank : 3;
-#endif
 
   DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
              unsigned Column, uint64_t AtomGroup, uint8_t AtomRank,
@@ -2539,20 +2537,8 @@ class DILocation : public MDNode {
   }
 
 public:
-  uint64_t getAtomGroup() const {
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
-    return AtomGroup;
-#else
-    return 0;
-#endif
-  }
-  uint8_t getAtomRank() const {
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
-    return AtomRank;
-#else
-    return 0;
-#endif
-  }
+  uint64_t getAtomGroup() const { return AtomGroup; }
+  uint8_t getAtomRank() const { return AtomRank; }
 
   const DILocation *getWithoutAtom() const {
     if (!getAtomGroup() && !getAtomRank())

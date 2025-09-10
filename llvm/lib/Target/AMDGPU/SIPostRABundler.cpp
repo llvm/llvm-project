@@ -184,9 +184,11 @@ bool SIPostRABundler::run(MachineFunction &MF) {
           if (I->getNumExplicitDefs() != 0)
             Defs.insert(I->defs().begin()->getReg());
           ++ClauseLength;
-        } else if (!I->isMetaInstruction()) {
-          // Allow meta instructions in between bundle candidates, but do not
-          // start or end a bundle on one.
+        } else if (!I->isMetaInstruction() ||
+                   I->getOpcode() == AMDGPU::SCHED_BARRIER) {
+          // SCHED_BARRIER is not bundled to be honored by scheduler later.
+          // Allow other meta instructions in between bundle candidates, but do
+          // not start or end a bundle on one.
           //
           // TODO: It may be better to move meta instructions like dbg_value
           // after the bundle. We're relying on the memory legalizer to unbundle

@@ -9,6 +9,6 @@
 #include <clc/math/clc_exp2.h>
 #include <clc/opencl/math/exp2.h>
 
-#define FUNCTION exp2
+#define __CLC_FUNCTION exp2
 #define __CLC_BODY <clc/shared/unary_def.inc>
 #include <clc/math/gentype.inc>

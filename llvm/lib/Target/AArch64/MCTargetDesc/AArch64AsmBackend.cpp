@@ -79,8 +79,7 @@ public:
   }
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
-                  MutableArrayRef<char> Data, uint64_t Value,
-                  bool IsResolved) override;
+                  uint8_t *Data, uint64_t Value, bool IsResolved) override;
 
   bool fixupNeedsRelaxation(const MCFixup &Fixup,
                             uint64_t Value) const override;
@@ -421,9 +420,8 @@ static bool shouldForceRelocation(const MCFixup &Fixup) {
 }
 
 void AArch64AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                                   const MCValue &Target,
-                                   MutableArrayRef<char> Data, uint64_t Value,
-                                   bool IsResolved) {
+                                   const MCValue &Target, uint8_t *Data,
+                                   uint64_t Value, bool IsResolved) {
   if (shouldForceRelocation(Fixup))
     IsResolved = false;
   maybeAddReloc(F, Fixup, Target, Value, IsResolved);
@@ -460,8 +458,8 @@ void AArch64AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   // Shift the value into position.
   Value <<= Info.TargetOffset;
 
-  unsigned Offset = Fixup.getOffset();
-  assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
+  assert(Fixup.getOffset() + NumBytes <= F.getSize() &&
+         "Invalid fixup offset!");
 
   // Used to point to big endian bytes.
   unsigned FulleSizeInBytes = getFixupKindContainereSizeInBytes(Fixup.getKind());
@@ -471,15 +469,16 @@ void AArch64AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   if (FulleSizeInBytes == 0) {
     // Handle as little-endian
     for (unsigned i = 0; i != NumBytes; ++i) {
-      Data[Offset + i] |= uint8_t((Value >> (i * 8)) & 0xff);
+      Data[i] |= uint8_t((Value >> (i * 8)) & 0xff);
     }
   } else {
     // Handle as big-endian
-    assert((Offset + FulleSizeInBytes) <= Data.size() && "Invalid fixup size!");
+    assert(Fixup.getOffset() + FulleSizeInBytes <= F.getSize() &&
+           "Invalid fixup size!");
     assert(NumBytes <= FulleSizeInBytes && "Invalid fixup size!");
     for (unsigned i = 0; i != NumBytes; ++i) {
       unsigned Idx = FulleSizeInBytes - 1 - i;
-      Data[Offset + Idx] |= uint8_t((Value >> (i * 8)) & 0xff);
+      Data[Idx] |= uint8_t((Value >> (i * 8)) & 0xff);
     }
   }
 
@@ -492,9 +491,9 @@ void AArch64AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
     // If the immediate is negative, generate MOVN else MOVZ.
     // (Bit 30 = 0) ==> MOVN, (Bit 30 = 1) ==> MOVZ.
     if (SignedValue < 0)
-      Data[Offset + 3] &= ~(1 << 6);
+      Data[3] &= ~(1 << 6);
     else
-      Data[Offset + 3] |= (1 << 6);
+      Data[3] |= (1 << 6);
   }
 }
 

@@ -42,26 +42,30 @@ inline RT_API_ATTRS A &ExtractElement(IoStatementState &io,
 }
 
 // Defined formatted I/O (maybe)
-static RT_API_ATTRS Fortran::common::optional<bool> DefinedFormattedIo(
+static RT_API_ATTRS common::optional<bool> DefinedFormattedIo(
     IoStatementState &io, const Descriptor &descriptor,
     const typeInfo::DerivedType &derived,
     const typeInfo::SpecialBinding &special,
     const SubscriptValue subscripts[]) {
-  Fortran::common::optional<DataEdit> peek{
-      io.GetNextDataEdit(0 /*to peek at it*/)};
+  // Look at the next data edit descriptor.  If this is list-directed I/O, the
+  // "maxRepeat=0" argument will prevent the input from advancing over an
+  // initial '(' that shouldn't be consumed now as the start of a real part.
+  common::optional<DataEdit> peek{io.GetNextDataEdit(/*maxRepeat=*/0)};
   if (peek &&
       (peek->descriptor == DataEdit::DefinedDerivedType ||
-          peek->descriptor == DataEdit::ListDirected)) {
+          peek->descriptor == DataEdit::ListDirected ||
+          peek->descriptor == DataEdit::ListDirectedRealPart)) {
     // Defined formatting
     IoErrorHandler &handler{io.GetIoErrorHandler()};
-    DataEdit edit{*io.GetNextDataEdit(1)}; // now consume it; no repeats
-    RUNTIME_CHECK(handler, edit.descriptor == peek->descriptor);
+    DataEdit edit{peek->descriptor == DataEdit::ListDirectedRealPart
+            ? *peek
+            : *io.GetNextDataEdit(1)};
     char ioType[2 + edit.maxIoTypeChars];
     auto ioTypeLen{std::size_t{2} /*"DT"*/ + edit.ioTypeChars};
     if (edit.descriptor == DataEdit::DefinedDerivedType) {
       ioType[0] = 'D';
       ioType[1] = 'T';
-      std::memcpy(ioType + 2, edit.ioType, edit.ioTypeChars);
+      runtime::memcpy(ioType + 2, edit.ioType, edit.ioTypeChars);
     } else {
       runtime::strcpy(
           ioType, io.mutableModes().inNamelist ? "NAMELIST" : "LISTDIRECTED");
@@ -103,10 +107,10 @@ static RT_API_ATTRS Fortran::common::optional<bool> DefinedFormattedIo(
     std::int32_t unit{external->unitNumber()};
     std::int32_t ioStat{IostatOk};
     char ioMsg[100];
-    Fortran::common::optional<std::int64_t> startPos;
+    common::optional<std::int64_t> startPos;
     if (edit.descriptor == DataEdit::DefinedDerivedType &&
         special.which() == typeInfo::SpecialBinding::Which::ReadFormatted) {
-      // DT is an edit descriptor so everything that the child
+      // DT is an edit descriptor, so everything that the child
       // I/O subroutine reads counts towards READ(SIZE=).
       startPos = io.InquirePos();
     }
@@ -166,11 +170,13 @@ static RT_API_ATTRS Fortran::common::optional<bool> DefinedFormattedIo(
       io.GotChar(io.InquirePos() - *startPos);
     }
     return handler.GetIoStat() == IostatOk;
+  } else if (peek && peek->descriptor == DataEdit::ListDirectedNullValue) {
+    return false;
   } else {
     // There's a defined I/O subroutine, but there's a FORMAT present and
     // it does not have a DT data edit descriptor, so apply default formatting
     // to the components of the derived type as usual.
-    return Fortran::common::nullopt;
+    return common::nullopt;
   }
 }
 
@@ -836,12 +842,22 @@ template RT_API_ATTRS int DescriptorIoTicket<Direction::Input>::Continue(
 
 template <Direction DIR>
 RT_API_ATTRS bool DescriptorIO(IoStatementState &io,
-    const Descriptor &descriptor, const NonTbpDefinedIoTable *table) {
+    const Descriptor &descriptor, const NonTbpDefinedIoTable *originalTable) {
   bool anyIoTookPlace{false};
+  const NonTbpDefinedIoTable *defaultTable{io.nonTbpDefinedIoTable()};
+  const NonTbpDefinedIoTable *table{originalTable};
+  if (!table) {
+    table = defaultTable;
+  } else if (table != defaultTable) {
+    io.set_nonTbpDefinedIoTable(table); // for nested I/O
+  }
   WorkQueue workQueue{io.GetIoErrorHandler()};
   if (workQueue.BeginDescriptorIo<DIR>(io, descriptor, table, anyIoTookPlace) ==
       StatContinue) {
     workQueue.Run();
+  }
+  if (defaultTable != table) {
+    io.set_nonTbpDefinedIoTable(defaultTable);
   }
   return anyIoTookPlace;
 }

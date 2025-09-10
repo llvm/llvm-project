@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // Test that views that use __movable_box do not overwrite overlapping subobjects.
-// https://github.com/llvm/llvm-project/issues/70506
+// https://llvm.org/PR70506
 
 #include <cassert>
 #include <ranges>

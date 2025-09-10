@@ -195,7 +195,7 @@ bool AMDGPUSetWavePriority::run(MachineFunction &MF) {
 
   // Lower the priority on edges where control leaves blocks from which
   // the VMEM loads are reachable.
-  SmallSet<MachineBasicBlock *, 16> PriorityLoweringBlocks;
+  SmallPtrSet<MachineBasicBlock *, 16> PriorityLoweringBlocks;
   for (MachineBasicBlock &MBB : MF) {
     if (MBBInfos[&MBB].MayReachVMEMLoad) {
       if (MBB.succ_empty())

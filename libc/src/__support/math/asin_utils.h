@@ -45,7 +45,7 @@ static constexpr double ASIN_COEFFS[12] = {
     0x1.2b5993bda1d9bp-6, -0x1.806aff270bf25p-7, 0x1.02614e5ed3936p-5,
 };
 
-LIBC_INLINE static constexpr double asin_eval(double u) {
+LIBC_INLINE double asin_eval(double u) {
   double u2 = u * u;
   double c0 = fputil::multiply_add(u, ASIN_COEFFS[1], ASIN_COEFFS[0]);
   double c1 = fputil::multiply_add(u, ASIN_COEFFS[3], ASIN_COEFFS[2]);

@@ -1158,6 +1158,8 @@ public:
   LLVM_ABI static Constant *getXor(Constant *C1, Constant *C2);
   LLVM_ABI static Constant *getTrunc(Constant *C, Type *Ty,
                                      bool OnlyIfReduced = false);
+  LLVM_ABI static Constant *getPtrToAddr(Constant *C, Type *Ty,
+                                         bool OnlyIfReduced = false);
   LLVM_ABI static Constant *getPtrToInt(Constant *C, Type *Ty,
                                         bool OnlyIfReduced = false);
   LLVM_ABI static Constant *getIntToPtr(Constant *C, Type *Ty,

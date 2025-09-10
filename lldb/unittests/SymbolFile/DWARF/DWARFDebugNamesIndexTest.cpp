@@ -11,6 +11,7 @@
 #include "Plugins/SymbolFile/DWARF/DWARFDeclContext.h"
 #include "Plugins/SymbolFile/DWARF/DebugNamesDWARFIndex.h"
 #include "TestingSupport/Symbol/YAMLModuleTester.h"
+#include "lldb/lldb-private-enumerations.h"
 #include "llvm/ADT/STLExtras.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -28,13 +29,13 @@ check_num_matches(DebugNamesDWARFIndex &index, int expected_num_matches,
 
   index.GetFullyQualifiedType(ctx, [&](DWARFDIE die) {
     num_matches++;
-    return true;
+    return IterationAction::Continue;
   });
   ASSERT_EQ(num_matches, expected_num_matches);
 }
 
 static DWARFDeclContext::Entry make_entry(const char *c) {
-  return DWARFDeclContext::Entry(dwarf::DW_TAG_class_type, c);
+  return DWARFDeclContext::Entry(llvm::dwarf::DW_TAG_class_type, c);
 }
 
 TEST(DWARFDebugNamesIndexTest, FullyQualifiedQueryWithIDXParent) {

@@ -283,6 +283,10 @@ def resultTypesDefinedByTraits():
         module = Module.create()
         with InsertionPoint(module.body):
             inferred = test.InferResultsOp()
+
+            # CHECK: i32 i64
+            print(inferred.single.type, inferred.doubled.type)
+
             same = test.SameOperandAndResultTypeOp([inferred.results[0]])
             # CHECK-COUNT-2: i32
             print(same.one.type)
@@ -309,6 +313,15 @@ def resultTypesDefinedByTraits():
             # CHECK: index
             print(implied.index.type)
 
+            # provide the result types to avoid inferring them
+            f64 = F64Type.get()
+            no_imply = test.InferResultsImpliedOp(results=[f64, f64, f64])
+            # CHECK-COUNT-3: f64
+            print(no_imply.integer.type, no_imply.flt.type, no_imply.index.type)
+
+            no_infer = test.InferResultsOp(results=[F32Type.get(), IndexType.get()])
+            # CHECK: f32 index
+            print(no_infer.single.type, no_infer.doubled.type)
 
 # CHECK-LABEL: TEST: testOptionalOperandOp
 @run

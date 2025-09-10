@@ -907,7 +907,13 @@ def testCapsuleConversions():
         m_capsule = m._CAPIPtr
         assert '"mlir.ir.Operation._CAPIPtr"' in repr(m_capsule)
         m2 = Operation._CAPICreate(m_capsule)
-        assert m2 is m
+        assert m2 is not m
+        assert m2 == m
+        # Gc and verify destructed.
+        m = None
+        m_capsule = None
+        m2 = None
+        gc.collect()
 
 
 # CHECK-LABEL: TEST: testOperationErase
@@ -978,8 +984,12 @@ def testModuleMerge():
         foo = m1.body.operations[0]
         bar = m2.body.operations[0]
         qux = m2.body.operations[1]
+        assert bar.is_before_in_block(qux)
         bar.move_before(foo)
+        assert bar.is_before_in_block(foo)
         qux.move_after(foo)
+        assert bar.is_before_in_block(qux)
+        assert foo.is_before_in_block(qux)
 
         # CHECK: module
         # CHECK: func private @bar
@@ -1017,6 +1027,8 @@ def testDetachFromParent():
     with Context():
         m1 = Module.parse("func.func private @foo()")
         func = m1.body.operations[0].detach_from_parent()
+        # CHECK: func.attached=False
+        print(f"{func.attached=}")
 
         try:
             func.detach_from_parent()
@@ -1038,6 +1050,12 @@ def testOperationHash():
     with ctx, Location.unknown():
         op = Operation.create("custom.op1")
         assert hash(op) == hash(op.operation)
+
+        module = Module.create()
+        with InsertionPoint(module.body):
+            op2 = Operation.create("custom.op2")
+            custom_op2 = module.body.operations[0]
+            assert hash(op2) == hash(custom_op2)
 
 
 # CHECK-LABEL: TEST: testOperationParse

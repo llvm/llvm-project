@@ -38,9 +38,6 @@ using namespace mlir::NVVM;
 using namespace mlir::transform;
 
 #define DEBUG_TYPE "nvgpu-transforms"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
-#define DBGSNL() (llvm::dbgs() << "\n")
-#define LDBG(X) LLVM_DEBUG(DBGS() << (X) << "\n")
 
 //===----------------------------------------------------------------------===//
 // Apply...ConversionPatternsOp
@@ -688,7 +685,7 @@ Value MmaSyncBuilder::buildMmaSyncMemRefLoadOperand(
 
   Type elementType = getElementTypeOrSelf(memref.getType());
   auto vt = VectorType::get(vectorShape, elementType);
-  Value res = vector::SplatOp::create(b, loc, vt, loads[0]);
+  Value res = vector::BroadcastOp::create(b, loc, vt, loads[0]);
   foreachIndividualVectorElement(
       res,
       /*applyFn=*/

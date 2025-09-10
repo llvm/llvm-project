@@ -421,12 +421,10 @@ bool SemaCUDA::inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
   }
 
   for (const auto *B : Bases) {
-    const RecordType *BaseType = B->getType()->getAs<RecordType>();
-    if (!BaseType) {
+    auto *BaseClassDecl = B->getType()->getAsCXXRecordDecl();
+    if (!BaseClassDecl)
       continue;
-    }
 
-    CXXRecordDecl *BaseClassDecl = cast<CXXRecordDecl>(BaseType->getDecl());
     Sema::SpecialMemberOverloadResult SMOR =
         SemaRef.LookupSpecialMember(BaseClassDecl, CSM,
                                     /* ConstArg */ ConstRHS,
@@ -465,13 +463,11 @@ bool SemaCUDA::inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
       continue;
     }
 
-    const RecordType *FieldType =
-        getASTContext().getBaseElementType(F->getType())->getAs<RecordType>();
-    if (!FieldType) {
+    auto *FieldRecDecl =
+        getASTContext().getBaseElementType(F->getType())->getAsCXXRecordDecl();
+    if (!FieldRecDecl)
       continue;
-    }
 
-    CXXRecordDecl *FieldRecDecl = cast<CXXRecordDecl>(FieldType->getDecl());
     Sema::SpecialMemberOverloadResult SMOR =
         SemaRef.LookupSpecialMember(FieldRecDecl, CSM,
                                     /* ConstArg */ ConstRHS && !F->isMutable(),

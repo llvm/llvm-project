@@ -47,9 +47,9 @@ struct TestOpConversion : public OpConversionPattern<test_irdl_to_cpp::BeefOp> {
         op, op->getResultTypes().front());
     rewriter.setInsertionPointAfter(bar);
 
-    rewriter.create<test_irdl_to_cpp::HashOp>(
-        bar.getLoc(), rewriter.getIntegerType(32), adaptor.getLhs(),
-        adaptor.getRhs());
+    test_irdl_to_cpp::HashOp::create(rewriter, bar.getLoc(),
+                                     rewriter.getIntegerType(32),
+                                     adaptor.getLhs(), adaptor.getRhs());
     return success();
   }
 };

@@ -594,8 +594,8 @@ set(aarch64_SOURCES
   aarch64/fp_mode.c
 )
 
-# Append sources specific to AArch64 targets that aren't supported by MSVC.
-if(NOT MSVC)
+# Append sources specific to AArch64 targets that aren't supported by cl.exe
+if(CLANG_CL OR NOT MSVC)
   list(APPEND aarch64_SOURCES
     aarch64/emupac.cpp
   )

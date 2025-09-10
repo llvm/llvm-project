@@ -3732,7 +3732,6 @@ define <4 x i64> @test_avx2_psrl_0() {
   ret <4 x i64> %16
 }
 
-; FIXME: Failure to peek through bitcasts to ensure psllq shift amount is within bounds.
 define <2 x i64> @PR125228(<2 x i64> %v, <2 x i64> %s) {
 ; CHECK-LABEL: @PR125228(
 ; CHECK-NEXT:    [[MASK:%.*]] = and <2 x i64> [[S:%.*]], splat (i64 63)
@@ -3741,7 +3740,8 @@ define <2 x i64> @PR125228(<2 x i64> %v, <2 x i64> %s) {
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast <2 x i64> [[MASK]] to <16 x i8>
 ; CHECK-NEXT:    [[PSRLDQ:%.*]] = shufflevector <16 x i8> [[CAST]], <16 x i8> poison, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[CAST3:%.*]] = bitcast <16 x i8> [[PSRLDQ]] to <2 x i64>
-; CHECK-NEXT:    [[SLL1:%.*]] = call <2 x i64> @llvm.x86.sse2.psll.q(<2 x i64> [[V]], <2 x i64> [[CAST3]])
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i64> [[CAST3]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[SLL1:%.*]] = shl <2 x i64> [[V]], [[TMP2]]
 ; CHECK-NEXT:    [[SHUFP_UNCASTED:%.*]] = shufflevector <2 x i64> [[SLL0]], <2 x i64> [[SLL1]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    ret <2 x i64> [[SHUFP_UNCASTED]]
 ;

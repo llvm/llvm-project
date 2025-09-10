@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GCN %s
 
 ; Test that image.sample LOD(_L), Level 0(_LZ), Derivative(_D) instructions are sunk across the branch and not left in the first block. Since the kill may terminate the shader there might be no need for sampling the image.
 

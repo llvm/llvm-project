@@ -147,6 +147,45 @@ transform::ForallToParallelOp::apply(transform::TransformRewriter &rewriter,
 }
 
 //===----------------------------------------------------------------------===//
+// ParallelForToNestedForOps
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::ParallelForToNestedForOps::apply(
+    transform::TransformRewriter &rewriter,
+    transform::TransformResults &results, transform::TransformState &state) {
+  auto payload = state.getPayloadOps(getTarget());
+  if (!llvm::hasSingleElement(payload))
+    return emitSilenceableError() << "expected a single payload op";
+
+  auto target = dyn_cast<scf::ParallelOp>(*payload.begin());
+  if (!target) {
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableError() << "expected the payload to be scf.parallel";
+    diag.attachNote((*payload.begin())->getLoc()) << "payload op";
+    return diag;
+  }
+
+  if (getNumResults() != 1) {
+    DiagnosedSilenceableFailure diag = emitSilenceableError()
+                                       << "op expects one result, given "
+                                       << getNumResults();
+    diag.attachNote(target.getLoc()) << "payload op";
+    return diag;
+  }
+
+  FailureOr<scf::LoopNest> loopNest =
+      scf::parallelForToNestedFors(rewriter, target);
+  if (failed(loopNest)) {
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableError() << "failed to convert parallel into nested fors";
+    return diag;
+  }
+
+  results.set(cast<OpResult>(getTransformed()[0]), {loopNest->loops.front()});
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
 // LoopOutlineOp
 //===----------------------------------------------------------------------===//
 
@@ -160,7 +199,7 @@ static scf::ExecuteRegionOp wrapInExecuteRegion(RewriterBase &b,
   OpBuilder::InsertionGuard g(b);
   b.setInsertionPoint(op);
   scf::ExecuteRegionOp executeRegionOp =
-      b.create<scf::ExecuteRegionOp>(op->getLoc(), op->getResultTypes());
+      scf::ExecuteRegionOp::create(b, op->getLoc(), op->getResultTypes());
   {
     OpBuilder::InsertionGuard g(b);
     b.setInsertionPointToStart(&executeRegionOp.getRegion().emplaceBlock());
@@ -169,7 +208,7 @@ static scf::ExecuteRegionOp wrapInExecuteRegion(RewriterBase &b,
     assert(clonedRegion.empty() && "expected empty region");
     b.inlineRegionBefore(op->getRegions().front(), clonedRegion,
                          clonedRegion.end());
-    b.create<scf::YieldOp>(op->getLoc(), clonedOp->getResults());
+    scf::YieldOp::create(b, op->getLoc(), clonedOp->getResults());
   }
   b.replaceOp(op, executeRegionOp.getResults());
   return executeRegionOp;
@@ -418,7 +457,7 @@ transform::LoopCoalesceOp::applyToOne(transform::TransformRewriter &rewriter,
 /// using the operands of the block terminator to replace operation results.
 static void replaceOpWithRegion(RewriterBase &rewriter, Operation *op,
                                 Region &region) {
-  assert(llvm::hasSingleElement(region) && "expected single-region block");
+  assert(region.hasOneBlock() && "expected single-block region");
   Block *block = &region.front();
   Operation *terminator = block->getTerminator();
   ValueRange results = terminator->getOperands();
@@ -434,7 +473,7 @@ DiagnosedSilenceableFailure transform::TakeAssumedBranchOp::applyToOne(
   rewriter.setInsertionPoint(ifOp);
   Region &region =
       getTakeElseBranch() ? ifOp.getElseRegion() : ifOp.getThenRegion();
-  if (!llvm::hasSingleElement(region)) {
+  if (!region.hasOneBlock()) {
     return emitDefiniteFailure()
            << "requires an scf.if op with a single-block "
            << ((getTakeElseBranch()) ? "`else`" : "`then`") << " region";

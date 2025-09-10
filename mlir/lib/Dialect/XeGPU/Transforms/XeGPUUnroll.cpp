@@ -17,7 +17,7 @@
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 
 namespace mlir {
 namespace xegpu {
@@ -27,8 +27,6 @@ namespace xegpu {
 } // namespace mlir
 
 #define DEBUG_TYPE "xegpu-unroll"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 using namespace mlir;
 
@@ -44,11 +42,10 @@ protected:
   /// Return the target shape for the given `op`. Return std::nullopt if the
   /// op shouldn't be or cannot be unrolled.
   std::optional<SmallVector<int64_t>> getTargetShape(Operation *op) const {
-    LDBG("");
-    LDBG("Get unroll shape for: " << *op);
+    LDBG() << "Get unroll shape for: " << *op;
 
     if (options.filterConstraint && failed(options.filterConstraint(op))) {
-      LDBG("--no filter constraint -> BAIL");
+      LDBG() << "--no filter constraint -> BAIL";
       return std::nullopt;
     }
 
@@ -218,6 +215,10 @@ struct UnrollPrefetchNdOp : public UnrollPattern<xegpu::PrefetchNdOp> {
     if (!targetShape)
       return failure();
 
+    int64_t offsetSize = static_cast<int64_t>(op.getOffsets().size());
+    if ((offsetSize != 0) || op.getConstOffsetsAttr())
+      return failure();
+
     SmallVector<Type> convertedTdescTypes =
         getUnrolledTypes(tdescTy, *targetShape);
     SmallVector<Value> convertedTdesc = pack(
@@ -243,6 +244,10 @@ struct UnrollLoadNdOp : public UnrollPattern<xegpu::LoadNdOp> {
 
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
     if (!targetShape)
+      return failure();
+
+    int64_t offsetSize = static_cast<int64_t>(op.getOffsets().size());
+    if ((offsetSize != 0) || op.getConstOffsetsAttr())
       return failure();
 
     Type elemTy = tdescTy.getElementType();
@@ -277,6 +282,10 @@ struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
 
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
     if (!targetShape)
+      return failure();
+
+    int64_t offsetSize = static_cast<int64_t>(op.getOffsets().size());
+    if ((offsetSize != 0) || op.getConstOffsetsAttr())
       return failure();
 
     SmallVector<Type> convertedValTypes =
@@ -438,7 +447,7 @@ struct UnrollCreateDescOp : public UnrollPattern<xegpu::CreateDescOp> {
           Value inc = arith::ConstantIndexOp::create(rewriter, loc,
                                                      i * blockedChunkSize);
           Value incVec =
-              vector::SplatOp::create(rewriter, loc, indiceType, inc);
+              vector::BroadcastOp::create(rewriter, loc, indiceType, inc);
           Value offsetIndice =
               arith::AddIOp::create(rewriter, loc, indice, incVec);
 
@@ -472,7 +481,8 @@ struct UnrollLoadGatherOp : public UnrollPattern<xegpu::LoadGatherOp> {
     VectorType valueTy = llvm::dyn_cast<VectorType>(op.getValue().getType());
     xegpu::TensorDescType tdescTy = op.getTensorDescType();
 
-    if (!tdescTy.isScattered())
+    // TODO: handle the unstructure source case (!tdesTy)
+    if (!tdescTy || op.getOffsets())
       return failure();
 
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
@@ -534,7 +544,8 @@ struct UnrollPrefetchOp : public UnrollPattern<xegpu::PrefetchOp> {
     Location loc = op.getLoc();
     xegpu::TensorDescType tdescTy = op.getTensorDescType();
 
-    if (!tdescTy.isScattered())
+    // TODO: handle the unstructure source case (!tdesTy)
+    if (!tdescTy || op.getOffsets())
       return failure();
 
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
@@ -563,7 +574,8 @@ struct UnrollStoreScatterOp : public UnrollPattern<xegpu::StoreScatterOp> {
     VectorType valueTy = llvm::dyn_cast<VectorType>(op.getValue().getType());
     xegpu::TensorDescType tdescTy = op.getTensorDescType();
 
-    if (!tdescTy.isScattered())
+    // TODO: handle the unstructure source case (!tdesTy)
+    if (!tdescTy || op.getOffsets())
       return failure();
 
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
@@ -670,13 +682,90 @@ struct UnrollUpdateOffsetOp : public UnrollPattern<xegpu::UpdateOffsetOp> {
   }
 };
 
+struct UnrollLoadMatrixOp : public UnrollPattern<xegpu::LoadMatrixOp> {
+  using UnrollPattern<xegpu::LoadMatrixOp>::UnrollPattern;
+  LogicalResult matchAndRewrite(xegpu::LoadMatrixOp op,
+                                PatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    VectorType valueTy = op.getType();
+    std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
+    if (!targetShape || targetShape->size() != (size_t)valueTy.getRank())
+      return failure();
+
+    Type elemTy = valueTy.getElementType();
+    ArrayRef<int64_t> shape = valueTy.getShape();
+    auto layout = dyn_cast<xegpu::LayoutAttr>(op.getLayoutAttr());
+
+    VectorType newValueTy = valueTy.cloneWith(*targetShape, elemTy);
+
+    SmallVector<OpFoldResult> mixedOffsets = op.getMixedOffsets();
+    SmallVector<SmallVector<OpFoldResult>> offsetsList;
+    for (SmallVector<int64_t> offsets :
+         StaticTileOffsetRange(shape, *targetShape)) {
+      auto adds = xegpu::addElementwise(
+          rewriter, loc, mixedOffsets,
+          getAsIndexOpFoldResult(op.getContext(), offsets));
+      offsetsList.push_back(adds);
+    }
+
+    SmallVector<Value> newOps;
+    layout = layout.dropInstData();
+    for (SmallVector<OpFoldResult> offsets : offsetsList) {
+      auto newOp = xegpu::LoadMatrixOp::create(
+          rewriter, op.getLoc(), newValueTy, op.getMemDesc(), offsets, layout);
+      newOps.push_back(newOp);
+    }
+    Value castOp = unpack(newOps, op.getType(), *targetShape, loc, rewriter);
+    rewriter.replaceOp(op, castOp);
+    return success();
+  }
+};
+
+struct UnrollStoreMatrixOp : public UnrollPattern<xegpu::StoreMatrixOp> {
+  using UnrollPattern<xegpu::StoreMatrixOp>::UnrollPattern;
+  LogicalResult matchAndRewrite(xegpu::StoreMatrixOp op,
+                                PatternRewriter &rewriter) const override {
+    std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
+    if (!targetShape)
+      return failure();
+
+    Location loc = op.getLoc();
+    VectorType valueTy = op.getData().getType();
+    ArrayRef<int64_t> shape = valueTy.getShape();
+    auto layout = dyn_cast<xegpu::LayoutAttr>(op.getLayoutAttr());
+
+    SmallVector<Type> convertedValTypes =
+        getUnrolledTypes(valueTy, *targetShape);
+    SmallVector<Value> convertedValues =
+        pack(op.getData(), convertedValTypes, *targetShape, loc, rewriter);
+
+    SmallVector<OpFoldResult> mixedOffsets = op.getMixedOffsets();
+    SmallVector<SmallVector<OpFoldResult>> offsetsList;
+    for (SmallVector<int64_t> offsets :
+         StaticTileOffsetRange(shape, *targetShape)) {
+      auto adds = xegpu::addElementwise(
+          rewriter, loc, mixedOffsets,
+          getAsIndexOpFoldResult(op.getContext(), offsets));
+      offsetsList.push_back(adds);
+    }
+
+    for (auto [v, offsets] : llvm::zip_equal(convertedValues, offsetsList))
+      xegpu::StoreMatrixOp::create(rewriter, loc, v, op.getMemDesc(), offsets,
+                                   layout.dropInstData());
+
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::xegpu::populateXeGPUUnrollPatterns(
     RewritePatternSet &patterns, const xegpu::UnrollOptions &options) {
-  patterns.add<UnrollCreateNdOp, UnrollUpdateNdOffsetOp, UnrollPrefetchNdOp,
-               UnrollLoadNdOp, UnrollStoreNdOp, UnrollDpasOp,
-               UnrollCreateDescOp, UnrollLoadGatherOp, UnrollStoreScatterOp,
-               UnrollPrefetchOp, UnrollUpdateOffsetOp>(patterns.getContext(),
-                                                       options);
+  patterns
+      .add<UnrollCreateNdOp, UnrollUpdateNdOffsetOp, UnrollPrefetchNdOp,
+           UnrollLoadNdOp, UnrollStoreNdOp, UnrollDpasOp, UnrollCreateDescOp,
+           UnrollLoadGatherOp, UnrollStoreScatterOp, UnrollPrefetchOp,
+           UnrollUpdateOffsetOp, UnrollLoadMatrixOp, UnrollStoreMatrixOp>(
+          patterns.getContext(), options);
 }

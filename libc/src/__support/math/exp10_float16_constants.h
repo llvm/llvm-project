@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXP10_FLOAT16_CONSTANTS_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXP10_FLOAT16_CONSTANTS_H
 
+#include "hdr/stdint_proxy.h"
 #include "include/llvm-libc-macros/float16-macros.h"
-#include <stdint.h>
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 

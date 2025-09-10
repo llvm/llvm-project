@@ -123,7 +123,7 @@ constexpr bool test() {
     static_assert(std::is_same_v<double, decltype(res.value)>);
   }
   {
-    // Check aggregate initiazliation
+    // Check aggregate initialization
     out_value_result<int, int> res = {1, 2};
     assert(res.out == 1);
     assert(res.value == 2);

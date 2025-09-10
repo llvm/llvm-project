@@ -25,6 +25,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallSet.h"
@@ -181,18 +182,22 @@ public:
     return DynamicRecursiveASTVisitor::TraverseUnaryExprOrTypeTraitExpr(Node);
   }
 
-  bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc Node) override {
+  bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc Node,
+                                 bool TraverseQualifier) override {
     // Unevaluated context.
     if (ignoreUnevaluatedContext)
       return true;
-    return DynamicRecursiveASTVisitor::TraverseTypeOfExprTypeLoc(Node);
+    return DynamicRecursiveASTVisitor::TraverseTypeOfExprTypeLoc(
+        Node, TraverseQualifier);
   }
 
-  bool TraverseDecltypeTypeLoc(DecltypeTypeLoc Node) override {
+  bool TraverseDecltypeTypeLoc(DecltypeTypeLoc Node,
+                               bool TraverseQualifier) override {
     // Unevaluated context.
     if (ignoreUnevaluatedContext)
       return true;
-    return DynamicRecursiveASTVisitor::TraverseDecltypeTypeLoc(Node);
+    return DynamicRecursiveASTVisitor::TraverseDecltypeTypeLoc(
+        Node, TraverseQualifier);
   }
 
   bool TraverseCXXNoexceptExpr(CXXNoexceptExpr *Node) override {
@@ -809,28 +814,86 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
     const CallExpr *Call;
     unsigned FmtArgIdx;
     const Expr *&UnsafeArg;
+    ASTContext &Ctx;
+
+    // Returns an `Expr` representing the precision if specified, null
+    // otherwise.
+    // The parameter `Call` is a printf call and the parameter `Precision` is
+    // the precision of a format specifier of the `Call`.
+    //
+    // For example, for the `printf("%d, %.10s", 10, p)` call
+    // `Precision` can be the precision of either "%d" or "%.10s". The former
+    // one will have `NotSpecified` kind.
+    const Expr *
+    getPrecisionAsExpr(const analyze_printf::OptionalAmount &Precision,
+                       const CallExpr *Call) {
+      unsigned PArgIdx = -1;
+
+      if (Precision.hasDataArgument())
+        PArgIdx = Precision.getPositionalArgIndex() + FmtArgIdx;
+      if (0 < PArgIdx && PArgIdx < Call->getNumArgs()) {
+        const Expr *PArg = Call->getArg(PArgIdx);
+
+        // Strip the cast if `PArg` is a cast-to-int expression:
+        if (auto *CE = dyn_cast<CastExpr>(PArg);
+            CE && CE->getType()->isSignedIntegerType())
+          PArg = CE->getSubExpr();
+        return PArg;
+      }
+      if (Precision.getHowSpecified() ==
+          analyze_printf::OptionalAmount::HowSpecified::Constant) {
+        auto SizeTy = Ctx.getSizeType();
+        llvm::APSInt PArgVal = llvm::APSInt(
+            llvm::APInt(Ctx.getTypeSize(SizeTy), Precision.getConstantAmount()),
+            true);
+
+        return IntegerLiteral::Create(Ctx, PArgVal, Ctx.getSizeType(), {});
+      }
+      return nullptr;
+    }
 
   public:
     StringFormatStringHandler(const CallExpr *Call, unsigned FmtArgIdx,
-                              const Expr *&UnsafeArg)
-        : Call(Call), FmtArgIdx(FmtArgIdx), UnsafeArg(UnsafeArg) {}
+                              const Expr *&UnsafeArg, ASTContext &Ctx)
+        : Call(Call), FmtArgIdx(FmtArgIdx), UnsafeArg(UnsafeArg), Ctx(Ctx) {}
 
     bool HandlePrintfSpecifier(const analyze_printf::PrintfSpecifier &FS,
                                const char *startSpecifier,
                                unsigned specifierLen,
                                const TargetInfo &Target) override {
-      if (FS.getConversionSpecifier().getKind() ==
-          analyze_printf::PrintfConversionSpecifier::sArg) {
-        unsigned ArgIdx = FS.getPositionalArgIndex() + FmtArgIdx;
+      if (FS.getConversionSpecifier().getKind() !=
+          analyze_printf::PrintfConversionSpecifier::sArg)
+        return true; // continue parsing
 
-        if (0 < ArgIdx && ArgIdx < Call->getNumArgs())
-          if (!isNullTermPointer(Call->getArg(ArgIdx))) {
-            UnsafeArg = Call->getArg(ArgIdx); // output
-            // returning false stops parsing immediately
-            return false;
-          }
-      }
-      return true; // continue parsing
+      unsigned ArgIdx = FS.getPositionalArgIndex() + FmtArgIdx;
+
+      if (!(0 < ArgIdx && ArgIdx < Call->getNumArgs()))
+        // If the `ArgIdx` is invalid, give up.
+        return true; // continue parsing
+
+      const Expr *Arg = Call->getArg(ArgIdx);
+
+      if (isNullTermPointer(Arg))
+        // If Arg is a null-terminated pointer, it is safe anyway.
+        return true; // continue parsing
+
+      // Otherwise, check if the specifier has a precision and if the character
+      // pointer is safely bound by the precision:
+      auto LengthModifier = FS.getLengthModifier();
+      QualType ArgType = Arg->getType();
+      bool IsArgTypeValid = // Is ArgType a character pointer type?
+          ArgType->isPointerType() &&
+          (LengthModifier.getKind() == LengthModifier.AsWideChar
+               ? ArgType->getPointeeType()->isWideCharType()
+               : ArgType->getPointeeType()->isCharType());
+
+      if (auto *Precision = getPrecisionAsExpr(FS.getPrecision(), Call);
+          Precision && IsArgTypeValid)
+        if (isPtrBufferSafe(Arg, Precision, Ctx))
+          return true;
+      // Handle unsafe case:
+      UnsafeArg = Call->getArg(ArgIdx); // output
+      return false; // returning false stops parsing immediately
     }
   };
 
@@ -846,7 +909,7 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
     else
       goto CHECK_UNSAFE_PTR;
 
-    StringFormatStringHandler Handler(Call, FmtArgIdx, UnsafeArg);
+    StringFormatStringHandler Handler(Call, FmtArgIdx, UnsafeArg, Ctx);
 
     return analyze_format_string::ParsePrintfString(
         Handler, FmtStr.begin(), FmtStr.end(), Ctx.getLangOpts(),
@@ -1927,6 +1990,14 @@ public:
     const auto *FD = dyn_cast<FunctionDecl>(CE->getDirectCallee());
     if (!FD)
       return false;
+
+    bool IsGlobalAndNotInAnyNamespace =
+        FD->isGlobal() && !FD->getEnclosingNamespaceContext()->isNamespace();
+
+    // A libc function must either be in the std:: namespace or a global
+    // function that is not in any namespace:
+    if (!FD->isInStdNamespace() && !IsGlobalAndNotInAnyNamespace)
+      return false;
     auto isSingleStringLiteralArg = false;
     if (CE->getNumArgs() == 1) {
       isSingleStringLiteralArg =
@@ -2185,7 +2256,7 @@ namespace {
 // declarations to its uses and make sure we've covered all uses with our
 // analysis before we try to fix the declaration.
 class DeclUseTracker {
-  using UseSetTy = llvm::SmallSet<const DeclRefExpr *, 16>;
+  using UseSetTy = llvm::SmallPtrSet<const DeclRefExpr *, 16>;
   using DefMapTy = llvm::DenseMap<const VarDecl *, const DeclStmt *>;
 
   // Allocate on the heap for easier move.

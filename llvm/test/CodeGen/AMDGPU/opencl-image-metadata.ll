@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=amdgcn -verify-machineinstrs | FileCheck --check-prefix=SI %s
+; RUN: llc < %s -mtriple=amdgcn | FileCheck --check-prefix=SI %s
 ; RUN: llc < %s -mtriple=r600 -mcpu=redwood | FileCheck --check-prefix=EG %s
 
 ; Make sure the OpenCL Image lowering pass doesn't crash when argument metadata

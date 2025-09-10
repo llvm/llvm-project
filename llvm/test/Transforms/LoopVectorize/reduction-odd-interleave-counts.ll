@@ -8,10 +8,9 @@ define i32 @reduction_sum(i64 %n, ptr noalias nocapture %A) {
 ; UF3-NEXT:   [[SUM1:%.+]] = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ [[SUM1_NEXT:%.+]], %vector.body ]
 ; UF3-NEXT:   [[SUM2:%.+]] = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ [[SUM2_NEXT:%.+]],  %vector.body ]
 ; UF3-NEXT:   [[GEP0:%.+]] = getelementptr inbounds i32, ptr %A, i64 [[IV]]
-; UF3-NEXT:   [[L_GEP0:%.+]] = getelementptr inbounds i32, ptr [[GEP0]], i32 0
 ; UF3-NEXT:   [[L_GEP1:%.+]] = getelementptr inbounds i32, ptr [[GEP0]], i32 4
 ; UF3-NEXT:   [[L_GEP2:%.+]] = getelementptr inbounds i32, ptr [[GEP0]], i32 8
-; UF3-NEXT:   [[L0:%.+]] = load <4 x i32>, ptr [[L_GEP0]], align 4
+; UF3-NEXT:   [[L0:%.+]] = load <4 x i32>, ptr [[GEP0]], align 4
 ; UF3-NEXT:   [[L1:%.+]] = load <4 x i32>, ptr [[L_GEP1]], align 4
 ; UF3-NEXT:   [[L2:%.+]] = load <4 x i32>, ptr [[L_GEP2]], align 4
 ; UF3-NEXT:   [[SUM0_NEXT]] = add <4 x i32> [[SUM0]], [[L0]]
@@ -35,12 +34,11 @@ define i32 @reduction_sum(i64 %n, ptr noalias nocapture %A) {
 ; UF5-NEXT:   [[SUM3:%.+]] = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ [[SUM3_NEXT:%.+]], %vector.body ]
 ; UF5-NEXT:   [[SUM4:%.+]] = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ [[SUM4_NEXT:%.+]], %vector.body ]
 ; UF5-NEXT:   [[GEP0:%.+]] = getelementptr inbounds i32, ptr %A, i64 [[IV]]
-; UF5-NEXT:   [[L_GEP0:%.+]] = getelementptr inbounds i32, ptr [[GEP0]], i32 0
 ; UF5-NEXT:   [[L_GEP1:%.+]] = getelementptr inbounds i32, ptr [[GEP0]], i32 4
 ; UF5-NEXT:   [[L_GEP2:%.+]] = getelementptr inbounds i32, ptr [[GEP0]], i32 8
 ; UF5-NEXT:   [[L_GEP3:%.+]] = getelementptr inbounds i32, ptr [[GEP0]], i32 12
 ; UF5-NEXT:   [[L_GEP4:%.+]] = getelementptr inbounds i32, ptr [[GEP0]], i32 16
-; UF5-NEXT:   [[L0:%.+]] = load <4 x i32>, ptr [[L_GEP0]], align 4
+; UF5-NEXT:   [[L0:%.+]] = load <4 x i32>, ptr [[GEP0]], align 4
 ; UF5-NEXT:   [[L1:%.+]] = load <4 x i32>, ptr [[L_GEP1]], align 4
 ; UF5-NEXT:   [[L2:%.+]] = load <4 x i32>, ptr [[L_GEP2]], align 4
 ; UF5-NEXT:   [[L3:%.+]] = load <4 x i32>, ptr [[L_GEP3]], align 4

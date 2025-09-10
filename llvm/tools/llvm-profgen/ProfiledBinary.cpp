@@ -9,6 +9,7 @@
 #include "ProfiledBinary.h"
 #include "ErrorHandling.h"
 #include "MissingFrameInferrer.h"
+#include "Options.h"
 #include "ProfileGenerator.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/Demangle/Demangle.h"
@@ -24,46 +25,51 @@
 
 #define DEBUG_TYPE "load-binary"
 
-using namespace llvm;
-using namespace sampleprof;
+namespace llvm {
+
+using namespace object;
 
 cl::opt<bool> ShowDisassemblyOnly("show-disassembly-only",
-                                  cl::desc("Print disassembled code."));
+                                  cl::desc("Print disassembled code."),
+                                  cl::cat(ProfGenCategory));
 
 cl::opt<bool> ShowSourceLocations("show-source-locations",
-                                  cl::desc("Print source locations."));
+                                  cl::desc("Print source locations."),
+                                  cl::cat(ProfGenCategory));
 
 static cl::opt<bool>
     ShowCanonicalFnName("show-canonical-fname",
-                        cl::desc("Print canonical function name."));
+                        cl::desc("Print canonical function name."),
+                        cl::cat(ProfGenCategory));
 
 static cl::opt<bool> ShowPseudoProbe(
     "show-pseudo-probe",
-    cl::desc("Print pseudo probe section and disassembled info."));
+    cl::desc("Print pseudo probe section and disassembled info."),
+    cl::cat(ProfGenCategory));
 
 static cl::opt<bool> UseDwarfCorrelation(
     "use-dwarf-correlation",
     cl::desc("Use dwarf for profile correlation even when binary contains "
-             "pseudo probe."));
+             "pseudo probe."),
+    cl::cat(ProfGenCategory));
 
 static cl::opt<std::string>
     DWPPath("dwp", cl::init(""),
             cl::desc("Path of .dwp file. When not specified, it will be "
-                     "<binary>.dwp in the same directory as the main binary."));
+                     "<binary>.dwp in the same directory as the main binary."),
+            cl::cat(ProfGenCategory));
 
 static cl::list<std::string> DisassembleFunctions(
     "disassemble-functions", cl::CommaSeparated,
     cl::desc("List of functions to print disassembly for. Accept demangled "
-             "names only. Only work with show-disassembly-only"));
+             "names only. Only work with show-disassembly-only"),
+    cl::cat(ProfGenCategory));
 
 static cl::opt<bool>
     KernelBinary("kernel",
-                 cl::desc("Generate the profile for Linux kernel binary."));
+                 cl::desc("Generate the profile for Linux kernel binary."),
+                 cl::cat(ProfGenCategory));
 
-extern cl::opt<bool> ShowDetailedWarning;
-extern cl::opt<bool> InferMissingFrames;
-
-namespace llvm {
 namespace sampleprof {
 
 static const Target *getTarget(const ObjectFile *Obj) {
@@ -622,43 +628,43 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
 
 void ProfiledBinary::setUpDisassembler(const ObjectFile *Obj) {
   const Target *TheTarget = getTarget(Obj);
-  std::string TripleName = TheTriple.getTriple();
   StringRef FileName = Obj->getFileName();
 
-  MRI.reset(TheTarget->createMCRegInfo(TripleName));
+  MRI.reset(TheTarget->createMCRegInfo(TheTriple));
   if (!MRI)
-    exitWithError("no register info for target " + TripleName, FileName);
+    exitWithError("no register info for target " + TheTriple.str(), FileName);
 
   MCTargetOptions MCOptions;
-  AsmInfo.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+  AsmInfo.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!AsmInfo)
-    exitWithError("no assembly info for target " + TripleName, FileName);
+    exitWithError("no assembly info for target " + TheTriple.str(), FileName);
 
   Expected<SubtargetFeatures> Features = Obj->getFeatures();
   if (!Features)
     exitWithError(Features.takeError(), FileName);
   STI.reset(
-      TheTarget->createMCSubtargetInfo(TripleName, "", Features->getString()));
+      TheTarget->createMCSubtargetInfo(TheTriple, "", Features->getString()));
   if (!STI)
-    exitWithError("no subtarget info for target " + TripleName, FileName);
+    exitWithError("no subtarget info for target " + TheTriple.str(), FileName);
 
   MII.reset(TheTarget->createMCInstrInfo());
   if (!MII)
-    exitWithError("no instruction info for target " + TripleName, FileName);
+    exitWithError("no instruction info for target " + TheTriple.str(),
+                  FileName);
 
-  MCContext Ctx(Triple(TripleName), AsmInfo.get(), MRI.get(), STI.get());
+  MCContext Ctx(TheTriple, AsmInfo.get(), MRI.get(), STI.get());
   std::unique_ptr<MCObjectFileInfo> MOFI(
       TheTarget->createMCObjectFileInfo(Ctx, /*PIC=*/false));
   Ctx.setObjectFileInfo(MOFI.get());
   DisAsm.reset(TheTarget->createMCDisassembler(*STI, Ctx));
   if (!DisAsm)
-    exitWithError("no disassembler for target " + TripleName, FileName);
+    exitWithError("no disassembler for target " + TheTriple.str(), FileName);
 
   MIA.reset(TheTarget->createMCInstrAnalysis(MII.get()));
 
   int AsmPrinterVariant = AsmInfo->getAssemblerDialect();
-  IPrinter.reset(TheTarget->createMCInstPrinter(
-      Triple(TripleName), AsmPrinterVariant, *AsmInfo, *MII, *MRI));
+  IPrinter.reset(TheTarget->createMCInstPrinter(TheTriple, AsmPrinterVariant,
+                                                *AsmInfo, *MII, *MRI));
   IPrinter->setPrintBranchImmAsAddress(true);
 }
 
