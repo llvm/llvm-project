@@ -2115,6 +2115,7 @@ CommonPointerBase CommonPointerBase::compute(Value *LHS, Value *RHS) {
   }
 
   // Find common base and collect RHS GEPs.
+  bool First = true;
   while (true) {
     if (Ptrs.contains(RHS)) {
       Base.Ptr = RHS;
@@ -2123,7 +2124,12 @@ CommonPointerBase CommonPointerBase::compute(Value *LHS, Value *RHS) {
 
     if (auto *GEP = dyn_cast<GEPOperator>(RHS)) {
       Base.RHSGEPs.push_back(GEP);
-      Base.RHSNW &= GEP->getNoWrapFlags();
+      if (First) {
+        First = false;
+        Base.RHSNW = GEP->getNoWrapFlags();
+      } else {
+        Base.RHSNW = Base.RHSNW.intersectForOffsetAdd(GEP->getNoWrapFlags());
+      }
       RHS = GEP->getPointerOperand();
     } else {
       // No common base.
@@ -2132,13 +2138,19 @@ CommonPointerBase CommonPointerBase::compute(Value *LHS, Value *RHS) {
   }
 
   // Collect LHS GEPs.
+  First = true;
   while (true) {
     if (LHS == Base.Ptr)
       break;
 
     auto *GEP = cast<GEPOperator>(LHS);
     Base.LHSGEPs.push_back(GEP);
-    Base.LHSNW &= GEP->getNoWrapFlags();
+    if (First) {
+      First = false;
+      Base.LHSNW = GEP->getNoWrapFlags();
+    } else {
+      Base.LHSNW = Base.LHSNW.intersectForOffsetAdd(GEP->getNoWrapFlags());
+    }
     LHS = GEP->getPointerOperand();
   }
 
