@@ -39,35 +39,21 @@ public:
 };
 
 /// If T is a pointer, just return it. If it is not, return T&.
-template <typename T, typename Enable = void>
-struct add_lvalue_reference_if_not_pointer {
-  using type = T &;
-};
-
-template <typename T>
-struct add_lvalue_reference_if_not_pointer<
-    T, std::enable_if_t<std::is_pointer_v<T>>> {
-  using type = T;
+template <typename T> struct add_lvalue_reference_if_not_pointer {
+  using type = std::conditional_t<std::is_pointer_v<T>, T, T &>;
 };
 
 /// If T is a pointer to X, return a pointer to const X. If it is not,
 /// return const T.
-template <typename T, typename Enable = void> struct add_const_past_pointer {
-  using type = const T;
+template <typename T> struct add_const_past_pointer {
+  using type = std::conditional_t<std::is_pointer_v<T>,
+                                  const std::remove_pointer_t<T> *, const T>;
 };
 
-template <typename T>
-struct add_const_past_pointer<T, std::enable_if_t<std::is_pointer_v<T>>> {
-  using type = const std::remove_pointer_t<T> *;
-};
-
-template <typename T, typename Enable = void>
-struct const_pointer_or_const_ref {
-  using type = const T &;
-};
-template <typename T>
-struct const_pointer_or_const_ref<T, std::enable_if_t<std::is_pointer_v<T>>> {
-  using type = typename add_const_past_pointer<T>::type;
+template <typename T> struct const_pointer_or_const_ref {
+  using type =
+      std::conditional_t<std::is_pointer_v<T>,
+                         typename add_const_past_pointer<T>::type, const T &>;
 };
 
 namespace detail {
