@@ -314,13 +314,6 @@ public:
   /// required, which is (almost) never.
   StringRef getCanonicalName(FileEntryRef File);
 
-private:
-  /// Retrieve the canonical name for a given file or directory.
-  ///
-  /// The first param is a key in the CanonicalNames array.
-  StringRef getCanonicalName(const void *Entry, StringRef Name);
-
-public:
   void PrintStats() const;
 
   /// Import statistics from a child FileManager and add them to this current
