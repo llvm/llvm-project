@@ -257,6 +257,7 @@ exit:
 ; CHECK-BFI-INV-NEXT: Running pass: SimpleLoopUnswitchPass on loop %l0.header in function simplifiable_loop
 ; CHECK-BFI-INV-NEXT: Invalidating analysis: PostDominatorTreeAnalysis on simplifiable_loop
 ; CHECK-BFI-INV-NEXT: Invalidating analysis: BranchProbabilityAnalysis on simplifiable_loop
+; CHECK-BFI-INV-NEXT: Invalidating analysis: BlockFrequencyAnalysis on simplifiable_loop
 ; CHECK-BFI-INV-NEXT: Running pass: SimplifyCFGPass on simplifiable_loop (5 instructions)
 
 define void @simplifiable_loop(i1 %c) !prof !0 {
