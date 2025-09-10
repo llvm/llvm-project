@@ -517,19 +517,19 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
 
      **GCN GFX12 (RDNA 4)** [AMD-GCN-GFX12-RDNA4]_
      -----------------------------------------------------------------------------------------------------------------------
-     ``gfx1200``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
+     ``gfx1200``                 ``amdgcn``   dGPU  - cumode          - Architected                   - Radeon RX 9060
+                                                    - wavefrontsize64   flat                          - Radeon RX 9060 XT
+                                                                        scratch
                                                                       - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
+                                                                        work-item
+                                                                        IDs
 
-     ``gfx1201``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
+     ``gfx1201``                 ``amdgcn``   dGPU  - cumode          - Architected                   - Radeon RX 9070
+                                                    - wavefrontsize64   flat                          - Radeon RX 9070 XT
+                                                                        scratch                       - Radeon RX 9070 GRE
                                                                       - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
+                                                                        work-item
+                                                                        IDs
 
      ``gfx1250``                 ``amdgcn``   APU                     - Architected                   *TBA*
                                                                         flat
@@ -537,6 +537,8 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                       - Packed
                                                                         work-item                       Add product
                                                                         IDs                             names.
+                                                                      - Workgroup
+                                                                        Clusters
 
      =========== =============== ============ ===== ================= =============== =============== ======================
 
@@ -767,9 +769,6 @@ For example:
                                                   enabled will execute correctly but may be less
                                                   performant than code generated for XNACK replay
                                                   disabled.
-
-     cu-stores       TODO                         On GFX12.5, controls whether ``scope:SCOPE_CU`` stores may be used.
-                                                  If disabled, all stores will be done at ``scope:SCOPE_SE`` or greater.
 
      =============== ============================ ==================================================
 
@@ -1098,6 +1097,22 @@ is conservatively correct for OpenCL.
                              - ``wavefront`` and executed by a thread in the
                                same wavefront.
 
+     ``cluster``             Synchronizes with, and participates in modification
+                             and seq_cst total orderings with, other operations
+                             (except image operations) for all address spaces
+                             (except private, or generic that accesses private)
+                             provided the other operation's sync scope is:
+
+                             - ``system``, ``agent`` or ``cluster`` and
+                               executed by a thread on the same cluster.
+                             - ``workgroup`` and executed by a thread in the
+                               same work-group.
+                             - ``wavefront`` and executed by a thread in the
+                               same wavefront.
+
+                             On targets that do not support workgroup cluster
+                             launch mode, this behaves like ``agent`` scope instead.
+
      ``workgroup``           Synchronizes with, and participates in modification
                              and seq_cst total orderings with, other operations
                              (except image operations) for all address spaces
@@ -1129,6 +1144,9 @@ is conservatively correct for OpenCL.
                              operations within the same address space.
 
      ``agent-one-as``        Same as ``agent`` but only synchronizes with other
+                             operations within the same address space.
+
+     ``cluster-one-as``      Same as ``cluster`` but only synchronizes with other
                              operations within the same address space.
 
      ``workgroup-one-as``    Same as ``workgroup`` but only synchronizes with
@@ -5114,9 +5132,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      and must be 0,
      >454    1 bit   ENABLE_SGPR_PRIVATE_SEGMENT
                      _SIZE
-     455     1 bit   USES_CU_STORES                  GFX12.5: Whether the ``cu-stores`` target attribute is enabled.
-                                                     If 0, then all stores are ``SCOPE_SE`` or higher.
-     457:456 2 bits                                  Reserved, must be 0.
+     457:455 3 bits                                  Reserved, must be 0.
      458     1 bit   ENABLE_WAVEFRONT_SIZE32         GFX6-GFX9
                                                        Reserved, must be 0.
                                                      GFX10-GFX11
@@ -5405,7 +5421,21 @@ The fields used by CP for code objects before V3 also match those specified in
 
                                                        Used by CP to set up
                                                        ``COMPUTE_PGM_RSRC1.FP16_OVFL``.
-     28:27   2 bits                                  Reserved, must be 0.
+     27      1 bit    RESERVED                       GFX6-GFX120*
+                                                       Reserved, must be 0.
+                      FLAT_SCRATCH_IS_NV             GFX125*
+                                                       0 - Use the NV ISA as indication
+                                                       that scratch is NV. 1 - Force
+                                                       scratch to NV = 1, even if
+                                                       ISA.NV == 0 if the address falls
+                                                       into scratch space (not global).
+                                                       This allows global.NV = 0 and
+                                                       scratch.NV = 1 for flat ops. Other
+                                                       threads use the ISA bit value.
+
+                                                       Used by CP to set up
+                                                       ``COMPUTE_PGM_RSRC1.FLAT_SCRATCH_IS_NV``.
+     28      1 bit    RESERVED                       Reserved, must be 0.
      29      1 bit    WGP_MODE                       GFX6-GFX9
                                                        Reserved, must be 0.
                                                      GFX10-GFX12
@@ -5487,15 +5517,16 @@ The fields used by CP for code objects before V3 also match those specified in
 
                                                      Used by CP to set up
                                                      ``COMPUTE_PGM_RSRC2.SCRATCH_EN``.
-     5:1     5 bits  USER_SGPR_COUNT                 The total number of SGPR
-                                                     user data
-                                                     registers requested. This
-                                                     number must be greater than
-                                                     or equal to the number of user
-                                                     data registers enabled.
+     5:1     5 bits  USER_SGPR_COUNT                 GFX6-GFX120*
+                                                       The total number of SGPR
+                                                       user data
+                                                       registers requested. This
+                                                       number must be greater than
+                                                       or equal to the number of user
+                                                       data registers enabled.
 
-                                                     Used by CP to set up
-                                                     ``COMPUTE_PGM_RSRC2.USER_SGPR``.
+                                                       Used by CP to set up
+                                                       ``COMPUTE_PGM_RSRC2.USER_SGPR``.
      6       1 bit   ENABLE_TRAP_HANDLER             GFX6-GFX11
                                                        Must be 0.
 
@@ -5504,8 +5535,25 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        which is set by the CP if
                                                        the runtime has installed a
                                                        trap handler.
-                                                     GFX12
-                                                       Reserved, must be 0.
+                     ENABLE_DYNAMIC_VGPR             GFX120*
+                                                       Enables dynamic VGPR mode, where
+                                                       each wave allocates one VGPR chunk
+                                                       at launch and can request for
+                                                       additional space to use during
+                                                       execution in SQ.
+
+                                                       Used by CP to set up
+                                                       ``COMPUTE_PGM_RSRC2.DYNAMIC_VGPR``.
+     6:1     6 bits  USER_SGPR_COUNT                 GFX125*
+                                                       The total number of SGPR
+                                                       user data
+                                                       registers requested. This
+                                                       number must be greater than
+                                                       or equal to the number of user
+                                                       data registers enabled.
+
+                                                       Used by CP to set up
+                                                       ``COMPUTE_PGM_RSRC2.USER_SGPR``.
      7       1 bit   ENABLE_SGPR_WORKGROUP_ID_X      Enable the setup of the
                                                      system SGPR register for
                                                      the work-group id in the X
@@ -5598,7 +5646,7 @@ The fields used by CP for code objects before V3 also match those specified in
 
                                                      GFX6
                                                        roundup(lds-size / (64 * 4))
-                                                     GFX7-GFX11
+                                                     GFX7-GFX12
                                                        roundup(lds-size / (128 * 4))
                                                      GFX950
                                                        roundup(lds-size / (320 * 4))
@@ -5722,7 +5770,30 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      with a granularity of 128 bytes.
      12      1 bit   RESERVED                        Reserved, must be 0.
      13      1 bit   GLG_EN                          If 1, group launch guarantee will be enabled for this dispatch
-     30:14   17 bits RESERVED                        Reserved, must be 0.
+     16:14   3 bits  RESERVED                        GFX120*
+                                                       Reserved, must be 0.
+                     NAMED_BAR_CNT                   GFX125*
+                                                       Number of named barriers to alloc for each workgroup, in granularity of
+                                                       4. Range is from 0-4 allocating 0, 4, 8, 12, 16.
+     17      1 bit   RESERVED                        GFX120*
+                                                       Reserved, must be 0.
+                     ENABLE_DYNAMIC_VGPR             GFX125*
+                                                       Enables dynamic VGPR mode, where each wave allocates one VGPR chunk
+                                                       at launch and can request for additional space to use during
+                                                       execution in SQ.
+
+                                                       Used by CP to set up ``COMPUTE_PGM_RSRC3.DYNAMIC_VGPR``.
+     20:18   3 bits  RESERVED                        GFX120*
+                                                       Reserved, must be 0.
+                     TCP_SPLIT                       GFX125*
+                                                       Desired LDS/VC split of TCP. 0: no preference 1: LDS=0, VC=448kB
+                                                       2: LDS=64kB, VC=384kB 3: LDS=128kB, VC=320kB 4: LDS=192kB, VC=256kB
+                                                       5: LDS=256kB, VC=192kB 6: LDS=320kB, VC=128kB 7: LDS=384kB, VC=64kB
+     21      1 bit   RESERVED                        GFX120*
+                                                       Reserved, must be 0.
+                     ENABLE_DIDT_THROTTLE            GFX125*
+                                                       Enable DIDT throttling for all ACE pipes
+     30:22   9 bits  RESERVED                        Reserved, must be 0.
      31      1 bit   IMAGE_OP                        If 1, the kernel execution contains image instructions. If executed as
                                                      part of a graphics pipeline, image read instructions will stall waiting
                                                      for any necessary ``WAIT_SYNC`` fence to be performed in order to
@@ -18198,8 +18269,6 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                   (except      :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
                                                                                   GFX942)
      ``.amdhsa_user_sgpr_private_segment_size``               0                   GFX6-GFX12   Controls ENABLE_SGPR_PRIVATE_SEGMENT_SIZE in
-                                                                                               :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
-     ``.amdhsa_uses_cu_stores``                               0                   GFX12.5      Controls USES_CU_STORES in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_wavefront_size32``                             Target              GFX10-GFX12  Controls ENABLE_WAVEFRONT_SIZE32 in
                                                               Feature                          :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.

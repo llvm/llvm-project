@@ -670,8 +670,8 @@ def AMDGPU_PermlaneSwapOp : AMDGPU_Op<"permlane_swap", [Pure, AllTypesMatch<["re
 
     Example:
     ```mlir
-    %0 = amdgpu.permlane %src 16 : f16
-    %1 = amdgpu.permlane %src 32 { fetch_inactive = true, bound_ctrl = true } : f16
+    %0 = amdgpu.permlane_swap %src 16 : f16
+    %1 = amdgpu.permlane_swap %src 32 { fetch_inactive = true, bound_ctrl = true } : f16
     ```
 
     Operands:
