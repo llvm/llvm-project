@@ -120,6 +120,30 @@ class VXForm_VRTAB5<bits<11> xo, dag OOL, dag IOL, string asmstr,
   let Inst{21...31} = xo;
 }
 
+class XX3Form_XTAB6<bits<8> xo, dag OOL, dag IOL, string asmstr,
+                    list<dag> pattern> : I<60, OOL, IOL, asmstr, NoItinerary> {
+  bits<6> XT;
+  bits<6> XA;
+  bits<6> XB;
+
+  let Pattern = pattern;
+
+  let Inst{6...10} = XT{4...0};
+  let Inst{11...15} = XA{4...0};
+  let Inst{16...20} = XB{4...0};
+  let Inst{21...28} = xo;
+  let Inst{29} = XA{5};
+  let Inst{30} = XB{5};
+  let Inst{31} = XT{5};
+}
+
+
+//-------------------------- Instruction definitions -------------------------//
+
+// Predicate combinations available:
+// [IsISAFuture]
+// [HasVSX, IsISAFuture]
+
 let Predicates = [IsISAFuture] in {
   defm SUBFUS : XOForm_RTAB5_L1r<31, 72, (outs g8rc:$RT),
                                  (ins g8rc:$RA, g8rc:$RB, u1imm:$L), "subfus",
@@ -191,4 +215,26 @@ let Predicates = [HasVSX, IsISAFuture] in {
   def VUCMPRLH
       : VXForm_VRTAB5<323, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
                       "vucmprlh $VRT, $VRA, $VRB", []>;
+
+  // VSX Vector Integer Arithmetic Instructions
+  def XVADDUWM : XX3Form_XTAB6<131, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                               "xvadduwm $XT, $XA, $XB", []>;
+  def XVADDUHM : XX3Form_XTAB6<139, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                               "xvadduhm $XT, $XA, $XB", []>;
+  def XVSUBUWM: XX3Form_XTAB6<147, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                              "xvsubuwm $XT, $XA, $XB", []>;
+  def XVSUBUHM: XX3Form_XTAB6<155, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                              "xvsubuhm $XT, $XA, $XB", []>;
+  def XVMULUWM: XX3Form_XTAB6<163, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                              "xvmuluwm $XT, $XA, $XB", []>;
+  def XVMULUHM: XX3Form_XTAB6<171, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                              "xvmuluhm $XT, $XA, $XB", []>;
+  def XVMULHSW: XX3Form_XTAB6<179, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                              "xvmulhsw $XT, $XA, $XB", []>;
+  def XVMULHSH: XX3Form_XTAB6<187, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                              "xvmulhsh $XT, $XA, $XB", []>;
+  def XVMULHUW: XX3Form_XTAB6<114, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                              "xvmulhuw $XT, $XA, $XB", []>;
+  def XVMULHUH: XX3Form_XTAB6<122, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                              "xvmulhuh $XT, $XA, $XB", []>;
 }
