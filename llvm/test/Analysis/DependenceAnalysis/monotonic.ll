@@ -511,3 +511,93 @@ loop.i.latch:
 exit:
   ret void
 }
+
+; for (unsigned long long i = 0; i < 100; i++)
+;   if (i % 4 == 0)
+;     a[i * (1ull << 62)] = 0;
+;
+; FIXME: This is not monotonic, the store always writes to `a[0]`. The
+; reasoning based on `nusw` on GEP is incorrect.
+define void @conditional_store0(ptr %a) {
+; CHECK-LABEL: 'conditional_store0'
+; CHECK-NEXT:  Monotonicity check:
+; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
+; CHECK-NEXT:      Expr: {0,+,4611686018427387904}<%loop.header>
+; CHECK-NEXT:      Monotonicity: MultiMonotonic
+; CHECK-EMPTY:
+; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
+; CHECK-NEXT:    da analyze - none!
+;
+entry:
+  %step = shl i64 1, 62
+  br label %loop.header
+
+loop.header:
+  %i = phi i64 [ 0, %entry ], [ %i.inc, %loop.latch ]
+  %offset = phi i64 [ 0, %entry ], [ %offset.next, %loop.latch ]
+  %mod4 = and i64 %i, 3
+  %cond = icmp eq i64 %mod4, 0
+  br i1 %cond, label %if.then, label %loop.latch
+
+if.then:
+  %idx = getelementptr inbounds i8, ptr %a, i64 %offset
+  store i8 0, ptr %idx
+  br label %loop.latch
+
+loop.latch:
+  %i.inc = add nsw i64 %i, 1
+  %offset.next = add i64 %offset, %step
+  %exitcond = icmp eq i64 %i.inc, 100
+  br i1 %exitcond, label %exit, label %loop.header
+
+exit:
+  ret void
+}
+
+; for (unsigned long long i = 0; i < 100; i++)
+;   if (i % 4 == 0)
+;     for (unsigned long long j = 0; j < 100; j++)
+;       a[i * (1ull << 62) + j] = 0;
+;
+; FIXME: This is not monotonic. When the j-loop is executed, `i * (1ull << 62)`
+; is always 0, so the array access here is effectively `a[j]`. The reasoning
+; based on `nusw` on GEP is incorrect.
+define void @conditional_store1(ptr %a) {
+; CHECK-LABEL: 'conditional_store1'
+; CHECK-NEXT:  Monotonicity check:
+; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
+; CHECK-NEXT:      Expr: {{\{\{}}0,+,4611686018427387904}<%loop.i.header>,+,1}<nsw><%loop.j>
+; CHECK-NEXT:      Monotonicity: MultiMonotonic
+; CHECK-EMPTY:
+; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
+; CHECK-NEXT:    da analyze - none!
+;
+entry:
+  %step = shl i64 1, 62
+  br label %loop.i.header
+
+loop.i.header:
+  %i = phi i64 [ 0, %entry ], [ %i.inc, %loop.i.latch ]
+  %offset.i = phi i64 [ 0, %entry ], [ %offset.i.next, %loop.i.latch ]
+  %mod4 = and i64 %i, 3
+  %cond = icmp eq i64 %mod4, 0
+  br i1 %cond, label %loop.j, label %loop.i.latch
+
+loop.j:
+  %j = phi i64 [ 0, %loop.i.header ], [ %j.inc, %loop.j ]
+  %offset = add nsw i64 %offset.i, %j
+  %idx = getelementptr inbounds i8, ptr %a, i64 %offset
+  store i8 0, ptr %idx
+  %j.inc = add nsw i64 %j, 1
+  %exitcond.j = icmp eq i64 %j.inc, 100
+  br i1 %exitcond.j, label %loop.i.latch, label %loop.j
+
+loop.i.latch:
+  %i.inc = add nsw i64 %i, 1
+  %offset.i.next = add i64 %offset.i, %step
+  %exitcond.i = icmp eq i64 %i.inc, 100
+  br i1 %exitcond.i, label %exit, label %loop.i.header
+
+exit:
+  ret void
+}
