@@ -184,6 +184,13 @@ MLIR_CAPI_EXPORTED MlirPass mlirCreateExternalPass(
     intptr_t nDependentDialects, MlirDialectHandle *dependentDialects,
     MlirExternalPassCallbacks callbacks, void *userData);
 
+MLIR_CAPI_EXPORTED void
+mlirRegisterExternalPass(MlirTypeID passID, MlirStringRef name,
+                         MlirStringRef argument, MlirStringRef description,
+                         MlirStringRef opName, intptr_t nDependentDialects,
+                         MlirDialectHandle *dependentDialects,
+                         MlirExternalPassCallbacks callbacks, void *userData);
+
 /// This signals that the pass has failed. This is only valid to call during
 /// the `run` callback of `MlirExternalPassCallbacks`.
 /// See Pass::signalPassFailure().
