@@ -76,7 +76,7 @@ extend(cpp::simd<T, N> x, cpp::index_sequence<Indices...>) {
 template <typename T, size_t N, size_t TargetSize, size_t OriginalSize>
 LIBC_INLINE constexpr static auto extend(cpp::simd<T, N> x) {
   // Recursively resize an input vector to the target size, increasing its size
-  // by at most double the input size each step.
+  // by at most double the input size each step due to shufflevector limitation.
   if constexpr (N == TargetSize)
     return x;
   else if constexpr (TargetSize <= 2 * N)
@@ -115,12 +115,12 @@ template <typename T, size_t N, size_t Offset, size_t Head, size_t... Tail>
 LIBC_INLINE constexpr static auto split(cpp::simd<T, N> x) {
   // Recursively splits the input vector by walking the variadic template list,
   // increasing our current head each call.
-  auto first = cpp::make_tuple(
+  auto result = cpp::make_tuple(
       slice<T, N, Head, Offset>(x, cpp::make_index_sequence<Head>{}));
   if constexpr (sizeof...(Tail) > 0)
-    return cpp::tuple_cat(first, split<T, N, Offset + Head, Tail...>(x));
+    return cpp::tuple_cat(result, split<T, N, Offset + Head, Tail...>(x));
   else
-    return first;
+    return result;
 }
 
 } // namespace internal
