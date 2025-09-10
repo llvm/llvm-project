@@ -775,10 +775,6 @@ llvm::ConstantFoldFPBinOp(unsigned Opcode, const Register Op1,
     return minimum(C1, C2);
   case TargetOpcode::G_FMAXIMUM:
     return maximum(C1, C2);
-  case TargetOpcode::G_FMINIMUMNUM:
-    return minimumnum(C1, C2);
-  case TargetOpcode::G_FMAXIMUMNUM:
-    return maximumnum(C1, C2);
   case TargetOpcode::G_FMINNUM_IEEE:
   case TargetOpcode::G_FMAXNUM_IEEE:
     // FIXME: These operations were unfortunately named. fminnum/fmaxnum do not
