@@ -175,7 +175,6 @@ protected:
 private:
   Manager &m_manager;
   ArchSpec m_arch;
-
   LazyBool m_supports_mem_region = eLazyBoolCalculate;
   std::vector<std::pair<MemoryRegionInfo, FileSpec>> m_mem_region_cache;
 
@@ -193,6 +192,8 @@ private:
   static llvm::Expected<std::vector<::pid_t>> Attach(::pid_t pid);
 
   static Status SetDefaultPtraceOpts(const lldb::pid_t);
+
+  static uint64_t GetDefaultPtraceOpts();
 
   bool TryHandleWaitStatus(lldb::pid_t pid, WaitStatus status);
 
