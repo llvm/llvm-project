@@ -28,7 +28,8 @@ enum NodeType : unsigned {
   SELECT_CC,
   BR_CC,
   Wrapper,
-  MEMCPY
+  MEMCPY,
+  BPF_BR_JT,
 };
 }
 
@@ -66,6 +67,10 @@ public:
 
   MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override;
 
+  // Always emit EK_LabelDifference32, computed as difference between
+  // JX instruction location and target basic block label.
+  virtual unsigned getJumpTableEncoding() const override;
+
 private:
   // Control Instruction Selection Features
   bool HasAlu32;
@@ -81,6 +86,7 @@ private:
   SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerTRAP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
 
   template <class NodeTy>
   SDValue getAddr(NodeTy *N, SelectionDAG &DAG, unsigned Flags = 0) const;
