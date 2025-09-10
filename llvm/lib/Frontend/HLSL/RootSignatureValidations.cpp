@@ -51,25 +51,11 @@ bool verifyRootDescriptorFlag(uint32_t Version, uint32_t FlagsVal) {
   return (Flags | DataFlags) == DataFlags;
 }
 
-bool verifyRangeType(uint32_t Type) {
-  switch (Type) {
-  case llvm::to_underlying(dxbc::DescriptorRangeType::CBV):
-  case llvm::to_underlying(dxbc::DescriptorRangeType::SRV):
-  case llvm::to_underlying(dxbc::DescriptorRangeType::UAV):
-  case llvm::to_underlying(dxbc::DescriptorRangeType::Sampler):
-    return true;
-  };
-
-  return false;
-}
-
-bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
-                               uint32_t FlagsVal) {
+bool verifyDescriptorRangeFlag(uint32_t Version, dxil::ResourceClass Type,
+                               dxbc::DescriptorRangeFlags Flags) {
   using FlagT = dxbc::DescriptorRangeFlags;
-  FlagT Flags = FlagT(FlagsVal);
 
-  const bool IsSampler =
-      (Type == llvm::to_underlying(dxbc::DescriptorRangeType::Sampler));
+  const bool IsSampler = (Type == dxil::ResourceClass::Sampler);
 
   if (Version == 1) {
     // Since the metadata is unversioned, we expect to explicitly see the values

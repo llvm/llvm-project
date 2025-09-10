@@ -192,13 +192,6 @@ enum class RootParameterType : uint32_t {
 
 LLVM_ABI ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
 
-#define DESCRIPTOR_RANGE(Val, Enum) Enum = Val,
-enum class DescriptorRangeType : uint32_t {
-#include "DXContainerConstants.def"
-};
-
-LLVM_ABI ArrayRef<EnumEntry<DescriptorRangeType>> getDescriptorRangeTypes();
-
 #define ROOT_PARAMETER(Val, Enum)                                              \
   case Val:                                                                    \
     return true;
@@ -207,6 +200,10 @@ inline bool isValidParameterType(uint32_t V) {
 #include "DXContainerConstants.def"
   }
   return false;
+}
+
+inline bool isValidRangeType(uint32_t V) {
+  return V <= llvm::to_underlying(dxil::ResourceClass::LastEntry);
 }
 
 #define SHADER_VISIBILITY(Val, Enum) Enum = Val,
