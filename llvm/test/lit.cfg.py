@@ -242,6 +242,7 @@ tools.extend(
         "llvm-mc",
         "llvm-mca",
         "llvm-modextract",
+        "llvm-module-splitter",
         "llvm-nm",
         "llvm-objcopy",
         "llvm-objdump",
