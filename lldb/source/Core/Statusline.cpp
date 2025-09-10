@@ -134,11 +134,7 @@ void Statusline::Redraw(bool update) {
   }
 
   ExecutionContext exe_ctx = m_debugger.GetSelectedExecutionContext();
-
-  // For colors and progress events, the format entity needs access to the
-  // debugger, which requires a target in the execution context.
-  if (!exe_ctx.HasTargetScope())
-    exe_ctx.SetTargetPtr(&m_debugger.GetSelectedOrDummyTarget());
+  assert(exe_ctx.HasTargetScope() && "format entity needs a target");
 
   SymbolContext symbol_ctx;
   if (ProcessSP process_sp = exe_ctx.GetProcessSP()) {
