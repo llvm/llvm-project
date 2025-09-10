@@ -63,7 +63,7 @@ protected:
 
   /// The call frame address (stack pointer) value at the beginning of the
   /// function that uniquely identifies this frame (along with m_symbol_scope
-  /// below).
+  /// below)
   lldb::addr_t m_cfa = LLDB_INVALID_ADDRESS;
 
   /// The cfa with metadata (i.e. prior to Process::FixAddress).
