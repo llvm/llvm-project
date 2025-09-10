@@ -37,3 +37,5 @@ add_mlir_dialect_library(
   MLIRViewLikeInterface
   MLIRPtrMemorySpaceInterfaces
 )
+
+set_target_properties(obj.MLIRPtrDialect PROPERTIES UNITY_BUILD_BATCH_SIZE 1)
