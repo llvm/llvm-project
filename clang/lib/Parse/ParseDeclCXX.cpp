@@ -1576,6 +1576,12 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   // If attributes exist after tag, parse them.
   for (;;) {
     MaybeParseAttributes(PAKM_CXX11 | PAKM_Declspec | PAKM_GNU, attrs);
+    if (Tok.is(tok::kw__Export)) {
+      SourceLocation loc = ConsumeToken();
+      DS.setExportSpec(loc);
+      continue;
+    }
+
     // Parse inheritance specifiers.
     if (Tok.isOneOf(tok::kw___single_inheritance,
                     tok::kw___multiple_inheritance,
