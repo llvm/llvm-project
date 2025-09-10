@@ -537,6 +537,8 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                       - Packed
                                                                         work-item                       Add product
                                                                         IDs                             names.
+                                                                      - Workgroup
+                                                                        Clusters
 
      =========== =============== ============ ===== ================= =============== =============== ======================
 
@@ -1095,6 +1097,22 @@ is conservatively correct for OpenCL.
                              - ``wavefront`` and executed by a thread in the
                                same wavefront.
 
+     ``cluster``             Synchronizes with, and participates in modification
+                             and seq_cst total orderings with, other operations
+                             (except image operations) for all address spaces
+                             (except private, or generic that accesses private)
+                             provided the other operation's sync scope is:
+
+                             - ``system``, ``agent`` or ``cluster`` and
+                               executed by a thread on the same cluster.
+                             - ``workgroup`` and executed by a thread in the
+                               same work-group.
+                             - ``wavefront`` and executed by a thread in the
+                               same wavefront.
+
+                             On targets that do not support workgroup cluster
+                             launch mode, this behaves like ``agent`` scope instead.
+
      ``workgroup``           Synchronizes with, and participates in modification
                              and seq_cst total orderings with, other operations
                              (except image operations) for all address spaces
@@ -1126,6 +1144,9 @@ is conservatively correct for OpenCL.
                              operations within the same address space.
 
      ``agent-one-as``        Same as ``agent`` but only synchronizes with other
+                             operations within the same address space.
+
+     ``cluster-one-as``      Same as ``cluster`` but only synchronizes with other
                              operations within the same address space.
 
      ``workgroup-one-as``    Same as ``workgroup`` but only synchronizes with
