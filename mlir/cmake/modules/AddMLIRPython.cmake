@@ -300,13 +300,11 @@ endfunction()
 #     DAG of source modules is included.
 #   COMMON_CAPI_LINK_LIBS: List of dylibs (typically one) to make every
 #     extension depend on (see mlir_python_add_common_capi_library).
-#   GENERATE_TYPE_STUBS: Enable type stub generation for all modules
-#     which have declared type stub generation with `declare_mlir_python_extension`.
 #   PACKAGE_PREFIX: Same as MLIR_PYTHON_PACKAGE_PREFIX not including trailing `.`.
 #     This is used to determine type stub generation python module names.
 function(add_mlir_python_modules name)
   cmake_parse_arguments(ARG
-    "GENERATE_TYPE_STUBS"
+    ""
     "ROOT_PREFIX;INSTALL_PREFIX;PACKAGE_PREFIX"
     "COMMON_CAPI_LINK_LIBS;DECLARED_SOURCES"
     ${ARGN})
@@ -348,7 +346,7 @@ function(add_mlir_python_modules name)
       # `_extension_target` is the actual dylib target that's built just above with `add_mlir_python_extension`.
       # That's why dependencies are in terms of `_extension_target`.
       get_target_property(_generate_type_stubs ${sources_target} mlir_python_GENERATE_TYPE_STUBS)
-      if(ARG_GENERATE_TYPE_STUBS AND _generate_type_stubs)
+      if(_generate_type_stubs)
         if ((NOT ARG_PACKAGE_PREFIX) OR ("${ARG_PACKAGE_PREFIX}" STREQUAL ""))
           message(FATAL_ERROR "GENERATE_TYPE_STUBS requires PACKAGE_PREFIX for ${name}")
         endif()
