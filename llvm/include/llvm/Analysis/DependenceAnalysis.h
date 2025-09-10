@@ -284,6 +284,27 @@ private:
 /// DependenceInfo - This class is the main dependence-analysis driver.
 class DependenceInfo {
 public:
+  /// Represents the result of delinearization computed a depends query. Since
+  /// a depends query analyzes the relationship between two memory accesses,
+  /// the delinearization result has two lists of subscript expressions (one
+  /// for each memory access), The sizes (dimensions) must be shared between
+  /// the two accesses.
+  /// TODO: It might be better to define this (or a variant of it) within
+  /// Delinearize, rather than inside DependenceAnalysis.
+  struct DelinearizedAccessesInfo {
+    /// Subscriptions for the source memory access.
+    SmallVector<const SCEV *, 4> SrcSubscripts;
+
+    /// Subscriptions for the destination memory access.
+    SmallVector<const SCEV *, 4> DstSubscripts;
+
+    /// Sizes (dimensions) shared between the two accesses.
+    SmallVector<const SCEV *, 4> Sizes;
+
+    /// Print the delinearization result.
+    void print(raw_ostream &OS, unsigned Depth) const;
+  };
+
   DependenceInfo(Function *F, AAResults *AA, ScalarEvolution *SE, LoopInfo *LI)
       : AA(AA), SE(SE), LI(LI), F(F) {}
 
@@ -298,9 +319,13 @@ public:
   /// solved at compilation time. By default UnderRuntimeAssumptions is false
   /// for a safe approximation of the dependence relation that does not
   /// require runtime checks.
+  /// If \p RecordDelinearization is provided and the delinearization process
+  /// is successful, the result is stored in \p RecordDelinearization. It's
+  /// primary for testing purposes.
   LLVM_ABI std::unique_ptr<Dependence>
   depends(Instruction *Src, Instruction *Dst,
-          bool UnderRuntimeAssumptions = false);
+          bool UnderRuntimeAssumptions = false,
+          DelinearizedAccessesInfo *RecordDelinearization = nullptr);
 
   /// getSplitIteration - Give a dependence that's splittable at some
   /// particular level, return the iteration that should be used to split
@@ -897,25 +922,24 @@ private:
 
   /// Given a linear access function, tries to recover subscripts
   /// for each dimension of the array element access.
-  bool tryDelinearize(Instruction *Src, Instruction *Dst,
-                      SmallVectorImpl<Subscript> &Pair);
+  std::optional<DelinearizedAccessesInfo>
+  tryDelinearize(Instruction *Src, Instruction *Dst,
+                 SmallVectorImpl<Subscript> &Pair);
 
   /// Tries to delinearize \p Src and \p Dst access functions for a fixed size
   /// multi-dimensional array. Calls tryDelinearizeFixedSizeImpl() to
   /// delinearize \p Src and \p Dst separately,
-  bool tryDelinearizeFixedSize(Instruction *Src, Instruction *Dst,
-                               const SCEV *SrcAccessFn, const SCEV *DstAccessFn,
-                               SmallVectorImpl<const SCEV *> &SrcSubscripts,
-                               SmallVectorImpl<const SCEV *> &DstSubscripts);
+  std::optional<DelinearizedAccessesInfo>
+  tryDelinearizeFixedSize(Instruction *Src, Instruction *Dst,
+                          const SCEV *SrcAccessFn, const SCEV *DstAccessFn);
 
   /// Tries to delinearize access function for a multi-dimensional array with
   /// symbolic runtime sizes.
-  /// Returns true upon success and false otherwise.
-  bool
+  /// Returns delineazied result upon success and nullopt otherwise.
+  std::optional<DelinearizedAccessesInfo>
   tryDelinearizeParametricSize(Instruction *Src, Instruction *Dst,
-                               const SCEV *SrcAccessFn, const SCEV *DstAccessFn,
-                               SmallVectorImpl<const SCEV *> &SrcSubscripts,
-                               SmallVectorImpl<const SCEV *> &DstSubscripts);
+                               const SCEV *SrcAccessFn,
+                               const SCEV *DstAccessFn);
 
   /// checkSubscript - Helper function for checkSrcSubscript and
   /// checkDstSubscript to avoid duplicate code

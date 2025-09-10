@@ -121,6 +121,11 @@ static cl::opt<unsigned> MIVMaxLevelThreshold(
     cl::desc("Maximum depth allowed for the recursive algorithm used to "
              "explore MIV direction vectors."));
 
+static cl::opt<bool> DumpDelinearizationResult(
+    "da-dump-delinearization-result", cl::init(false), cl::Hidden,
+    cl::desc("When printing analysis, dump the result of delinearization along "
+             "with dependence."));
+
 //===----------------------------------------------------------------------===//
 // basics
 
@@ -183,11 +188,19 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
       for (inst_iterator DstI = SrcI, DstE = inst_end(F); DstI != DstE;
            ++DstI) {
         if (DstI->mayReadOrWriteMemory()) {
-          OS << "Src:" << *SrcI << " --> Dst:" << *DstI << "\n";
-          OS << "  da analyze - ";
-          if (auto D = DA->depends(&*SrcI, &*DstI,
-                                   /*UnderRuntimeAssumptions=*/true)) {
+          DependenceInfo::DelinearizedAccessesInfo DAI;
+          std::unique_ptr<Dependence> D = DA->depends(
+              &*SrcI, &*DstI, /*UnderRuntimeAssumptions=*/true, &DAI);
 
+          OS << "Src:" << *SrcI << " --> Dst:" << *DstI << "\n";
+
+          // Dump the delinearization result if available.
+          if (DumpDelinearizationResult && !DAI.Sizes.empty())
+            DAI.print(OS, 4);
+
+          // Dump the dependence result.
+          OS << "  da analyze - ";
+          if (D) {
 #ifndef NDEBUG
             // Verify that the distance being zero is equivalent to the
             // direction being EQ.
@@ -200,7 +213,6 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
                      "Inconsistent distance and direction.");
             }
 #endif
-
             // Normalize negative direction vectors if required by clients.
             if (NormalizeResults && D->normalize(&SE))
               OS << "normalized - ";
@@ -488,6 +500,46 @@ LLVM_DUMP_METHOD void DependenceInfo::Constraint::dump(raw_ostream &OS) const {
     llvm_unreachable("unknown constraint type in Constraint::dump");
 }
 #endif
+
+void DependenceInfo::DelinearizedAccessesInfo::print(raw_ostream &OS,
+                                                     unsigned Depth) const {
+  assert(SrcSubscripts.size() == DstSubscripts.size() &&
+         "Mismatched number of subscripts");
+
+  // Currently tryDelinenearizeParametricSize appends the element size to Sizes,
+  // while tryDelinenearizeFixedSize does not. Thus the length of Sizes differs
+  // depending on which function processed the delinearization.
+  // TODO: This inconsistency will be fixed after removing GEP-type driven
+  // delinearization.
+  assert((SrcSubscripts.size() == Sizes.size() ||
+          SrcSubscripts.size() == Sizes.size() + 1) &&
+         "Mismatched number of subscripts and sizes");
+
+  if (SrcSubscripts.empty()) {
+    OS.indent(Depth) << "Delinearization failed\n";
+    return;
+  }
+
+  OS.indent(Depth) << "Delinearized accesses:\n";
+
+  OS.indent(Depth + 2) << "Sizes[*]";
+  // If the length of Sizes is same as that of SrcSubscripts, the last element
+  // of Sizes is the element size. It's not particularly useful to print it out
+  // here.
+  for (unsigned I = 0; I < SrcSubscripts.size() - 1; I++)
+    OS << "[" << *Sizes[I] << "]";
+  OS << "\n";
+
+  OS.indent(Depth + 2) << "Src";
+  for (const SCEV *S : SrcSubscripts)
+    OS << "[" << *S << "]";
+  OS << "\n";
+
+  OS.indent(Depth + 2) << "Dst";
+  for (const SCEV *S : DstSubscripts)
+    OS << "[" << *S << "]";
+  OS << "\n";
+}
 
 // Updates X with the intersection
 // of the Constraints X and Y. Returns true if X has changed.
@@ -3312,8 +3364,9 @@ void DependenceInfo::updateDirection(Dependence::DVEntry &Level,
 /// source and destination array references are recurrences on a nested loop,
 /// this function flattens the nested recurrences into separate recurrences
 /// for each loop level.
-bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
-                                    SmallVectorImpl<Subscript> &Pair) {
+std::optional<DependenceInfo::DelinearizedAccessesInfo>
+DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
+                               SmallVectorImpl<Subscript> &Pair) {
   assert(isLoadOrStore(Src) && "instruction is not load or store");
   assert(isLoadOrStore(Dst) && "instruction is not load or store");
   Value *SrcPtr = getLoadStorePointerOperand(Src);
@@ -3328,28 +3381,27 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
       dyn_cast<SCEVUnknown>(SE->getPointerBase(DstAccessFn));
 
   if (!SrcBase || !DstBase || SrcBase != DstBase)
-    return false;
+    return std::nullopt;
 
-  SmallVector<const SCEV *, 4> SrcSubscripts, DstSubscripts;
-
-  if (!tryDelinearizeFixedSize(Src, Dst, SrcAccessFn, DstAccessFn,
-                               SrcSubscripts, DstSubscripts) &&
-      !tryDelinearizeParametricSize(Src, Dst, SrcAccessFn, DstAccessFn,
-                                    SrcSubscripts, DstSubscripts))
-    return false;
+  std::optional<DelinearizedAccessesInfo> DAI =
+      tryDelinearizeFixedSize(Src, Dst, SrcAccessFn, DstAccessFn);
+  if (!DAI)
+    DAI = tryDelinearizeParametricSize(Src, Dst, SrcAccessFn, DstAccessFn);
+  if (!DAI)
+    return std::nullopt;
 
   assert(isLoopInvariant(SrcBase, SrcLoop) &&
          isLoopInvariant(DstBase, DstLoop) &&
          "Expected SrcBase and DstBase to be loop invariant");
 
-  int Size = SrcSubscripts.size();
+  int Size = DAI->SrcSubscripts.size();
   LLVM_DEBUG({
     dbgs() << "\nSrcSubscripts: ";
     for (int I = 0; I < Size; I++)
-      dbgs() << *SrcSubscripts[I];
+      dbgs() << *DAI->SrcSubscripts[I];
     dbgs() << "\nDstSubscripts: ";
     for (int I = 0; I < Size; I++)
-      dbgs() << *DstSubscripts[I];
+      dbgs() << *DAI->DstSubscripts[I];
   });
 
   // The delinearization transforms a single-subscript MIV dependence test into
@@ -3358,21 +3410,21 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
   // has found, and then initialize the pairs following the delinearization.
   Pair.resize(Size);
   for (int I = 0; I < Size; ++I) {
-    Pair[I].Src = SrcSubscripts[I];
-    Pair[I].Dst = DstSubscripts[I];
+    Pair[I].Src = DAI->SrcSubscripts[I];
+    Pair[I].Dst = DAI->DstSubscripts[I];
     unifySubscriptType(&Pair[I]);
   }
 
-  return true;
+  return DAI;
 }
 
 /// Try to delinearize \p SrcAccessFn and \p DstAccessFn if the underlying
-/// arrays accessed are fixed-size arrays. Return true if delinearization was
+/// arrays accessed are fixed-size arrays. Return delinearized result if
 /// successful.
-bool DependenceInfo::tryDelinearizeFixedSize(
-    Instruction *Src, Instruction *Dst, const SCEV *SrcAccessFn,
-    const SCEV *DstAccessFn, SmallVectorImpl<const SCEV *> &SrcSubscripts,
-    SmallVectorImpl<const SCEV *> &DstSubscripts) {
+std::optional<DependenceInfo::DelinearizedAccessesInfo>
+DependenceInfo::tryDelinearizeFixedSize(Instruction *Src, Instruction *Dst,
+                                        const SCEV *SrcAccessFn,
+                                        const SCEV *DstAccessFn) {
   LLVM_DEBUG({
     const SCEVUnknown *SrcBase =
         dyn_cast<SCEVUnknown>(SE->getPointerBase(SrcAccessFn));
@@ -3382,24 +3434,23 @@ bool DependenceInfo::tryDelinearizeFixedSize(
            "expected src and dst scev unknowns to be equal");
   });
 
+  DelinearizedAccessesInfo DAI;
   SmallVector<int, 4> SrcSizes;
   SmallVector<int, 4> DstSizes;
-  if (!tryDelinearizeFixedSizeImpl(SE, Src, SrcAccessFn, SrcSubscripts,
+  if (!tryDelinearizeFixedSizeImpl(SE, Src, SrcAccessFn, DAI.SrcSubscripts,
                                    SrcSizes) ||
-      !tryDelinearizeFixedSizeImpl(SE, Dst, DstAccessFn, DstSubscripts,
-                                   DstSizes))
-    return false;
+      !tryDelinearizeFixedSizeImpl(SE, Dst, DstAccessFn, DAI.DstSubscripts,
+                                   DstSizes)) {
+    return std::nullopt;
+  }
 
   // Check that the two size arrays are non-empty and equal in length and
   // value.
   if (SrcSizes.size() != DstSizes.size() ||
-      !std::equal(SrcSizes.begin(), SrcSizes.end(), DstSizes.begin())) {
-    SrcSubscripts.clear();
-    DstSubscripts.clear();
-    return false;
-  }
+      !std::equal(SrcSizes.begin(), SrcSizes.end(), DstSizes.begin()))
+    return std::nullopt;
 
-  assert(SrcSubscripts.size() == DstSubscripts.size() &&
+  assert(DAI.SrcSubscripts.size() == DAI.DstSubscripts.size() &&
          "Expected equal number of entries in the list of SrcSubscripts and "
          "DstSubscripts.");
 
@@ -3412,6 +3463,9 @@ bool DependenceInfo::tryDelinearizeFixedSize(
   // impossible to verify this at compile-time. As such we can only delinearize
   // iff the subscripts are positive and are less than the range of the
   // dimension.
+  // TODO: It might be better to consolidate these checks with those in
+  // tryDelinearizeParametricSize and move them into a member function of
+  // DelinearizedAccessesInfo.
   if (!DisableDelinearizationChecks) {
     auto AllIndicesInRange = [&](SmallVector<int, 4> &DimensionSizes,
                                  SmallVectorImpl<const SCEV *> &Subscripts,
@@ -3442,26 +3496,30 @@ bool DependenceInfo::tryDelinearizeFixedSize(
       return true;
     };
 
-    if (!AllIndicesInRange(SrcSizes, SrcSubscripts, SrcPtr) ||
-        !AllIndicesInRange(DstSizes, DstSubscripts, DstPtr)) {
+    if (!AllIndicesInRange(SrcSizes, DAI.SrcSubscripts, SrcPtr) ||
+        !AllIndicesInRange(DstSizes, DAI.DstSubscripts, DstPtr)) {
       LLVM_DEBUG(dbgs() << "Check failed: AllIndicesInRange.\n");
-      SrcSubscripts.clear();
-      DstSubscripts.clear();
-      return false;
+      return std::nullopt;
     }
   }
+
+  for (int Size : SrcSizes) {
+    assert(Size > 0 && "Expected array dimension size to be positive.");
+    DAI.Sizes.push_back(SE->getConstant(SrcAccessFn->getType(), Size));
+  }
+
   LLVM_DEBUG({
     dbgs() << "Delinearized subscripts of fixed-size array\n"
            << "SrcGEP:" << *SrcPtr << "\n"
            << "DstGEP:" << *DstPtr << "\n";
   });
-  return true;
+  return DAI;
 }
 
-bool DependenceInfo::tryDelinearizeParametricSize(
-    Instruction *Src, Instruction *Dst, const SCEV *SrcAccessFn,
-    const SCEV *DstAccessFn, SmallVectorImpl<const SCEV *> &SrcSubscripts,
-    SmallVectorImpl<const SCEV *> &DstSubscripts) {
+std::optional<DependenceInfo::DelinearizedAccessesInfo>
+DependenceInfo::tryDelinearizeParametricSize(Instruction *Src, Instruction *Dst,
+                                             const SCEV *SrcAccessFn,
+                                             const SCEV *DstAccessFn) {
 
   Value *SrcPtr = getLoadStorePointerOperand(Src);
   Value *DstPtr = getLoadStorePointerOperand(Dst);
@@ -3474,7 +3532,7 @@ bool DependenceInfo::tryDelinearizeParametricSize(
 
   const SCEV *ElementSize = SE->getElementSize(Src);
   if (ElementSize != SE->getElementSize(Dst))
-    return false;
+    return std::nullopt;
 
   const SCEV *SrcSCEV = SE->getMinusSCEV(SrcAccessFn, SrcBase);
   const SCEV *DstSCEV = SE->getMinusSCEV(DstAccessFn, DstBase);
@@ -3482,7 +3540,9 @@ bool DependenceInfo::tryDelinearizeParametricSize(
   const SCEVAddRecExpr *SrcAR = dyn_cast<SCEVAddRecExpr>(SrcSCEV);
   const SCEVAddRecExpr *DstAR = dyn_cast<SCEVAddRecExpr>(DstSCEV);
   if (!SrcAR || !DstAR || !SrcAR->isAffine() || !DstAR->isAffine())
-    return false;
+    return std::nullopt;
+
+  DelinearizedAccessesInfo DAI;
 
   // First step: collect parametric terms in both array references.
   SmallVector<const SCEV *, 4> Terms;
@@ -3490,19 +3550,18 @@ bool DependenceInfo::tryDelinearizeParametricSize(
   collectParametricTerms(*SE, DstAR, Terms);
 
   // Second step: find subscript sizes.
-  SmallVector<const SCEV *, 4> Sizes;
-  findArrayDimensions(*SE, Terms, Sizes, ElementSize);
+  findArrayDimensions(*SE, Terms, DAI.Sizes, ElementSize);
 
   // Third step: compute the access functions for each subscript.
-  computeAccessFunctions(*SE, SrcAR, SrcSubscripts, Sizes);
-  computeAccessFunctions(*SE, DstAR, DstSubscripts, Sizes);
+  computeAccessFunctions(*SE, SrcAR, DAI.SrcSubscripts, DAI.Sizes);
+  computeAccessFunctions(*SE, DstAR, DAI.DstSubscripts, DAI.Sizes);
 
   // Fail when there is only a subscript: that's a linearized access function.
-  if (SrcSubscripts.size() < 2 || DstSubscripts.size() < 2 ||
-      SrcSubscripts.size() != DstSubscripts.size())
-    return false;
+  if (DAI.SrcSubscripts.size() < 2 || DAI.DstSubscripts.size() < 2 ||
+      DAI.SrcSubscripts.size() != DAI.DstSubscripts.size())
+    return std::nullopt;
 
-  size_t Size = SrcSubscripts.size();
+  size_t Size = DAI.SrcSubscripts.size();
 
   // Statically check that the array bounds are in-range. The first subscript we
   // don't have a size for and it cannot overflow into another subscript, so is
@@ -3512,30 +3571,30 @@ bool DependenceInfo::tryDelinearizeParametricSize(
   // to the dependency checks.
   if (!DisableDelinearizationChecks)
     for (size_t I = 1; I < Size; ++I) {
-      bool SNN = isKnownNonNegative(SrcSubscripts[I], SrcPtr);
-      bool DNN = isKnownNonNegative(DstSubscripts[I], DstPtr);
-      bool SLT = isKnownLessThan(SrcSubscripts[I], Sizes[I - 1]);
-      bool DLT = isKnownLessThan(DstSubscripts[I], Sizes[I - 1]);
+      bool SNN = isKnownNonNegative(DAI.SrcSubscripts[I], SrcPtr);
+      bool DNN = isKnownNonNegative(DAI.DstSubscripts[I], DstPtr);
+      bool SLT = isKnownLessThan(DAI.SrcSubscripts[I], DAI.Sizes[I - 1]);
+      bool DLT = isKnownLessThan(DAI.DstSubscripts[I], DAI.Sizes[I - 1]);
       if (SNN && DNN && SLT && DLT)
         continue;
 
       LLVM_DEBUG({
         dbgs() << "Delinearization checks failed: can't prove the following\n";
         if (!SNN)
-          dbgs() << "  isKnownNonNegative(" << *SrcSubscripts[I] << ")\n";
+          dbgs() << "  isKnownNonNegative(" << *DAI.SrcSubscripts[I] << ")\n";
         if (!DNN)
-          dbgs() << "  isKnownNonNegative(" << *DstSubscripts[I] << ")\n";
+          dbgs() << "  isKnownNonNegative(" << *DAI.DstSubscripts[I] << ")\n";
         if (!SLT)
-          dbgs() << "  isKnownLessThan(" << *SrcSubscripts[I] << ", "
-                 << *Sizes[I - 1] << ")\n";
+          dbgs() << "  isKnownLessThan(" << *DAI.SrcSubscripts[I] << ", "
+                 << *DAI.Sizes[I - 1] << ")\n";
         if (!DLT)
-          dbgs() << "  isKnownLessThan(" << *DstSubscripts[I] << ", "
-                 << *Sizes[I - 1] << ")\n";
+          dbgs() << "  isKnownLessThan(" << *DAI.DstSubscripts[I] << ", "
+                 << *DAI.Sizes[I - 1] << ")\n";
       });
-      return false;
+      return std::nullopt;
     }
 
-  return true;
+  return DAI;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3583,7 +3642,8 @@ SCEVUnionPredicate DependenceInfo::getRuntimeAssumptions() const {
 // up to date with respect to this routine.
 std::unique_ptr<Dependence>
 DependenceInfo::depends(Instruction *Src, Instruction *Dst,
-                        bool UnderRuntimeAssumptions) {
+                        bool UnderRuntimeAssumptions,
+                        DelinearizedAccessesInfo *RecordDelinearization) {
   SmallVector<const SCEVPredicate *, 4> Assume;
   bool PossiblyLoopIndependent = true;
   if (Src == Dst)
@@ -3702,9 +3762,13 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   Pair[0].Dst = DstSCEV;
 
   if (Delinearize) {
-    if (tryDelinearize(Src, Dst, Pair)) {
+    std::optional<DelinearizedAccessesInfo> DAI =
+        tryDelinearize(Src, Dst, Pair);
+    if (DAI) {
       LLVM_DEBUG(dbgs() << "    delinearized\n");
       Pairs = Pair.size();
+      if (RecordDelinearization)
+        *RecordDelinearization = *DAI;
     }
   }
 
