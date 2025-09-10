@@ -57,6 +57,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Basic/Version.h"
+#include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/MacroInfo.h"
@@ -1710,9 +1711,13 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   const HeaderSearchOptions &HSOpts =
       PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
+  SmallString<256> HSOpts_ModuleCachePath;
+  CompilerInstance::normalizeModuleCachePath(
+      PP.getFileManager(), HSOpts.ModuleCachePath, HSOpts_ModuleCachePath);
+
   AddString(HSOpts.Sysroot, Record);
   AddString(HSOpts.ResourceDir, Record);
-  AddString(HSOpts.ModuleCachePath, Record);
+  AddString(HSOpts_ModuleCachePath, Record);
   AddString(HSOpts.ModuleUserBuildPath, Record);
   Record.push_back(HSOpts.DisableModuleHash);
   Record.push_back(HSOpts.ImplicitModuleMaps);
@@ -8751,8 +8756,11 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeSourceLocation(PC->getLParenLoc());
     writeOpenACCVarList(PC);
 
-    for (VarDecl *VD : PC->getInitRecipes())
-      AddDeclRef(VD);
+    for (const OpenACCPrivateRecipe &R : PC->getInitRecipes()) {
+      static_assert(sizeof(R) == 2 * sizeof(int *));
+      AddDeclRef(R.AllocaDecl);
+      AddStmt(const_cast<Expr *>(R.InitExpr));
+    }
     return;
   }
   case OpenACCClauseKind::Host: {
@@ -8773,7 +8781,9 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeOpenACCVarList(FPC);
 
     for (const OpenACCFirstPrivateRecipe &R : FPC->getInitRecipes()) {
-      AddDeclRef(R.RecipeDecl);
+      static_assert(sizeof(R) == 3 * sizeof(int *));
+      AddDeclRef(R.AllocaDecl);
+      AddStmt(const_cast<Expr *>(R.InitExpr));
       AddDeclRef(R.InitFromTemporary);
     }
     return;
@@ -8895,8 +8905,9 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeOpenACCVarList(RC);
 
     for (const OpenACCReductionRecipe &R : RC->getRecipes()) {
-      static_assert(sizeof(OpenACCReductionRecipe) == sizeof(int *));
-      AddDeclRef(R.RecipeDecl);
+      static_assert(sizeof(OpenACCReductionRecipe) == 2 * sizeof(int *));
+      AddDeclRef(R.AllocaDecl);
+      AddStmt(const_cast<Expr *>(R.InitExpr));
     }
     return;
   }
