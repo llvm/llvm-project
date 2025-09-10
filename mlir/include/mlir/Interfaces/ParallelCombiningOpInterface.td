@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Defines the interface for ops that perform parallel combining operations.
+// Defines the interface for ops that perform in parallel combining
+// operations.
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,7 +18,7 @@ include "mlir/IR/OpBase.td"
 
 def InParallelOpInterface : OpInterface<"InParallelOpInterface"> {
   let description = [{
-    A parallel combining op is an op with a region.
+    An in parallel op is an op with a region.
 
     This is useful as a terminator to parallel operations that iterate over
     some set and return tensors while avoiding tight coupling between the
@@ -58,7 +59,7 @@ def InParallelOpInterface : OpInterface<"InParallelOpInterface"> {
 
 def ParallelCombiningOpInterface : OpInterface<"ParallelCombiningOpInterface"> {
   let description = [{
-    An `in_parallel` op is an operation performs parallel updates to
+    A parallel combining op is an operation performs parallel updates to
     destination tensors within the context of a parent iterating operation.
     
     This interface is designed for operations that need to coordinate parallel
@@ -73,8 +74,8 @@ def ParallelCombiningOpInterface : OpInterface<"ParallelCombiningOpInterface"> {
     this interface, other operations that perform similar parallel updates can
     also be defined.
 
-    The in_parallel operation works within a combining operation (implementing
-    `ParallelCombiningOpInterface`) that specifies how the parallel results are combined.
+    This op works within an op  implementing the
+    `InParallelOpInterface` that specifies how the parallel results are combined.
 
     Key semantics:
     - The operation identifies destination tensors that will be updated
