@@ -1,4 +1,4 @@
-// Sanity-check. Run without modules:
+// Soundness-check. Run without modules:
 // RUN: rm -rf %t
 // RUN: mkdir %t
 // RUN: cp %S/Inputs/expand-modular-headers-ppcallbacks/* %t/

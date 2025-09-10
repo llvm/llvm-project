@@ -347,7 +347,7 @@ bool SelectionDAGISelLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (MF.getProperties().hasSelected())
     return false;
 
-  // Do some sanity-checking on the command-line options.
+  // Do some soundness-checking on the command-line options.
   if (EnableFastISelAbort && !Selector->TM.Options.EnableFastISel)
     reportFatalUsageError("-fast-isel-abort > 0 requires -fast-isel");
 
@@ -417,7 +417,7 @@ SelectionDAGISelPass::run(MachineFunction &MF,
   if (MF.getProperties().hasSelected())
     return PreservedAnalyses::all();
 
-  // Do some sanity-checking on the command-line options.
+  // Do some soundness-checking on the command-line options.
   if (EnableFastISelAbort && !Selector->TM.Options.EnableFastISel)
     reportFatalUsageError("-fast-isel-abort > 0 requires -fast-isel");
 

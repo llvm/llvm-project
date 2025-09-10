@@ -428,7 +428,7 @@ int main(int argc, char **argv) {
     if (YamlInput.error())
       report_error(InputDataFilename, YamlInput.error());
 
-    // Sanity check.
+    // Soundness check.
     if (BP.Header.Version != 1) {
       errs() << "Unable to merge data from profile using version "
              << BP.Header.Version << '\n';

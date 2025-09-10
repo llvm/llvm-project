@@ -92,7 +92,7 @@ private:
   void populateSet() {
     assert(Set.empty() && "Should not have already utilized the Set.");
     // Magical growth factor prediction - to how many elements do we expect to
-    // sanely grow after switching away from small-size storage?
+    // soundly grow after switching away from small-size storage?
     const size_t NewMaxElts = 4 * Vector.size();
     Vector.reserve(NewMaxElts);
     Set.reserve(NewMaxElts);

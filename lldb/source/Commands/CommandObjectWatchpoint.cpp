@@ -820,7 +820,7 @@ protected:
       m_option_watchpoint.watch_type = OptionGroupWatchpoint::eWatchModify;
     }
 
-    // We passed the sanity check for the command. Proceed to set the
+    // We passed the soundness check for the command. Proceed to set the
     // watchpoint now.
     size_t size = 0;
 
@@ -1014,7 +1014,7 @@ protected:
       m_option_watchpoint.watch_type = OptionGroupWatchpoint::eWatchModify;
     }
 
-    // We passed the sanity check for the command. Proceed to set the
+    // We passed the soundness check for the command. Proceed to set the
     // watchpoint now.
     lldb::addr_t addr = 0;
     size_t size = 0;

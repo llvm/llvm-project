@@ -1,5 +1,5 @@
 // General tests that the header search paths detected by the driver and passed
-// to CC1 are sane.
+// to CC1 are sound.
 //
 // Test a simulated installation of libc++ on Linux, both through sysroot and
 // the installation path of Clang.

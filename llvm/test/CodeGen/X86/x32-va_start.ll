@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=i386-linux-gnux32 | FileCheck %s -check-prefix=X32BITABI
 ; RUN: llc < %s -mtriple=i686-linux-gnux32 | FileCheck %s -check-prefix=X32BITABI
 ;
-; Verifies that x32 va_start lowering is sane. To regenerate this test, use
+; Verifies that x32 va_start lowering is sound. To regenerate this test, use
 ; cat <<EOF |
 ; #include <stdarg.h>
 ;

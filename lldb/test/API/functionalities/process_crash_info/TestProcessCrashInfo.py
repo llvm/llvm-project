@@ -82,7 +82,7 @@ class PlatformProcessCrashInfoTestCase(TestBase):
     @skipIfDarwinEmbedded
     def test_on_sane_process(self):
         """Test that lldb doesn't fetch the extended crash information
-        dictionary from a 'sane' stopped process."""
+        dictionary from a 'sound' stopped process."""
         self.build()
         target, _, _, _ = lldbutil.run_to_line_breakpoint(
             self, lldb.SBFileSpec(self.source), self.line

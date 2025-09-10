@@ -168,7 +168,7 @@ class FrameRecognizerTestCase(TestBase):
         target, process, thread, _ = lldbutil.run_to_name_breakpoint(self, "nested")
         frame = thread.selected_frame
 
-        # Sanity check.
+        # Soundness check.
         self.expect(
             "thread backtrace", patterns=["frame.*nested", "frame.*baz", "frame.*main"]
         )

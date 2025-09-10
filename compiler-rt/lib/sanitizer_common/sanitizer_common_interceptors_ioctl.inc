@@ -539,7 +539,7 @@ static bool ioctl_decode(unsigned req, ioctl_desc *desc) {
   desc->req = req;
   desc->name = "<DECODED_IOCTL>";
   desc->size = IOC_SIZE(req);
-  // Sanity check.
+  // Soundness check.
   if (desc->size > 0xFFFF) return false;
   unsigned dir = IOC_DIR(req);
   switch (dir) {
@@ -560,7 +560,7 @@ static bool ioctl_decode(unsigned req, ioctl_desc *desc) {
   }
   // Size can be 0 iff type is NONE.
   if ((desc->type == IOC_NONE) != (desc->size == 0)) return false;
-  // Sanity check.
+  // Soundness check.
   if (IOC_TYPE(req) == 0) return false;
   return true;
 }
@@ -572,8 +572,8 @@ static const ioctl_desc *ioctl_lookup(unsigned req) {
 
   // Try stripping access size from the request id.
   desc = ioctl_table_lookup(req & ~(IOC_SIZEMASK << IOC_SIZESHIFT));
-  // Sanity check: requests that encode access size are either read or write and
-  // have size of 0 in the table.
+  // Soundness check: requests that encode access size are either read or write
+  // and have size of 0 in the table.
   if (desc && desc->size == 0 &&
       (desc->type == ioctl_desc::READWRITE || desc->type == ioctl_desc::WRITE ||
        desc->type == ioctl_desc::READ))

@@ -695,7 +695,7 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
   bool had_nt_regs = false;
 
   // To be extracted from struct netbsd_elfcore_procinfo
-  // Used to sanity check of the LWPs of the process
+  // Used to soundness check of the LWPs of the process
   uint32_t nlwps = 0;
   uint32_t signo = 0;  // killing signal
   uint32_t siglwp = 0; // LWP target of killing signal

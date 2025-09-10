@@ -4,7 +4,7 @@
 #include <omp.h>
 #include <stdio.h>
 
-// Sanity checks to make sure that this works and is thread safe.
+// Soundness checks to make sure that this works and is thread safe.
 int main() {
   // CHECK: number of devices 0
   printf("number of devices %d\n", omp_get_num_devices());

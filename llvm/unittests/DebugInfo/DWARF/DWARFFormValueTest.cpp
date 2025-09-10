@@ -96,7 +96,7 @@ TEST(DWARFFormValue, SignedConstantForms) {
   EXPECT_EQ(*UMax.getAsSignedConstant(), LLONG_MAX);
   EXPECT_EQ(TooBig.getAsSignedConstant().has_value(), false);
 
-  // Sanity check some other forms.
+  // Soundness check some other forms.
   auto Data1 = createDataXFormValue<uint8_t>(DW_FORM_data1, 120);
   auto Data2 = createDataXFormValue<uint16_t>(DW_FORM_data2, 32000);
   auto Data4 = createDataXFormValue<uint32_t>(DW_FORM_data4, 2000000000);

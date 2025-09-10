@@ -387,7 +387,7 @@ void runFoo() {
 }
 }
 
-// Ideally, we should be able to handle value-dependent expressions sanely.
+// Ideally, we should be able to handle value-dependent expressions soundly.
 // Sadly, that isn't the case at the moment.
 namespace dependent {
 int error(int N) __attribute__((enable_if(N, ""))); // expected-note{{candidate disabled}}

@@ -27,12 +27,12 @@ namespace __sanitizer {
 
 void BufferedStackTrace::UnwindFast(uptr pc, uptr bp, uptr stack_top,
                                     uptr stack_bottom, u32 max_depth) {
-  // TODO(yln): add arg sanity check for stack_top/stack_bottom
+  // TODO(yln): add arg soundness check for stack_top/stack_bottom
   CHECK_GE(max_depth, 2);
   const uptr kPageSize = GetPageSizeCached();
   trace_buffer[0] = pc;
   size = 1;
-  if (stack_top < 4096) return;  // Sanity check for stack top.
+  if (stack_top < 4096) return;  // Soundness check for stack top.
   // Flush register windows to memory
 #if defined(__sparc_v9__) || defined(__sparcv9__) || defined(__sparcv9)
   asm volatile("flushw" ::: "memory");

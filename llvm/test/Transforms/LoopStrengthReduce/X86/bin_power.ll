@@ -167,7 +167,7 @@ exit:                                             ; preds = %loop
 }
 
 ; The output here is reasonably big, we just check that the amount of expanded
-; instructions is sane.
+; instructions is sound.
 define i32 @test_05(i32 %a) {
 ; CHECK-LABEL: @test_05
 ; CHECK:       entry:

@@ -267,7 +267,7 @@ StringRef TraceIntelPTBundleLoader::GetSchema() {
           "loadAddress": integer | string decimal | hex string,
               // Lowest address of the sections of the module loaded on memory.
           "uuid"?: string,
-              // Build UUID for the file for sanity checks.
+              // Build UUID for the file for soundness checks.
         }
       ]
     }

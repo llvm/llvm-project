@@ -75,7 +75,7 @@ void main(unsigned GI : SV_GroupIndex) {
 // INLINE-NOT:   call {{[^@]*}} @{{[^l][^l][^v][^m][^\.]}}
 // INLINE:   ret void
 
-// This is really just a sanity check I needed for myself to verify that
+// This is really just a soundness check I needed for myself to verify that
 // function scope static variables also get destroyed properly.
 
 // NOINLINE-DXIL:       define internal void @_GLOBAL__D_a() [[IntAttr:\#[0-9]+]]

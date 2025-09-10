@@ -3576,7 +3576,7 @@ ExecutionSession::IL_failSymbols(JITDylib &JD,
     // Move the symbol into the error state.
     Sym.setFlags(Sym.getFlags() | JITSymbolFlags::HasError);
 
-    // FIXME: Come up with a sane mapping of state to
+    // FIXME: Come up with a sound mapping of state to
     // presence-of-MaterializingInfo so that we can assert presence / absence
     // here, rather than testing it.
     auto MII = JD.MaterializingInfos.find(Name);

@@ -154,7 +154,7 @@ bool CompilerInstance::executeAction(FrontendAction &act) {
 
   llvm::Triple targetTriple{llvm::Triple(invoc.getTargetOpts().triple)};
 
-  // Set some sane defaults for the frontend.
+  // Set some sound defaults for the frontend.
   invoc.setDefaultFortranOpts();
   // Update the fortran options based on user-based input.
   invoc.setFortranOpts();

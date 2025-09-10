@@ -1024,7 +1024,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
         if (updateVMCntOnly(Inst)) {
           // updateVMCntOnly should only leave us with VGPRs
           // MUBUF, MTBUF, MIMG, FlatGlobal, and FlatScratch only have VGPR/AGPR
-          // defs. That's required for a sane index into `VgprMemTypes` below
+          // defs. That's required for a sound index into `VgprMemTypes` below
           assert(TRI->isVectorRegister(*MRI, Op.getReg()));
           VmemType V = getVmemType(Inst);
           unsigned char TypesMask = 1 << V;

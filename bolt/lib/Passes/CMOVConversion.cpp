@@ -66,7 +66,7 @@ bool isIfThenSubgraph(const BinaryBasicBlock &LHS,
   if (LHS.pred_size() != 2 || RHS.pred_size() != 1)
     return false;
 
-  // Sanity check
+  // Soundness check
   BinaryBasicBlock *Predecessor = *RHS.pred_begin();
   assert(Predecessor && LHS.isPredecessor(Predecessor) && "invalid subgraph");
   (void)Predecessor;

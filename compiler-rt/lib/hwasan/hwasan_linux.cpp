@@ -251,7 +251,7 @@ bool InitShadow() {
   // High memory starts where allocated shadow allows.
   kHighMemStart = ShadowToMem(kHighShadowStart);
 
-  // Check the sanity of the defined memory ranges (there might be gaps).
+  // Check the soundness of the defined memory ranges (there might be gaps).
   CHECK_EQ(kHighMemStart % GetMmapGranularity(), 0);
   CHECK_GT(kHighMemStart, kHighShadowEnd);
   CHECK_GT(kHighShadowEnd, kHighShadowStart);

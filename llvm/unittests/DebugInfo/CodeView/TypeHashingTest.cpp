@@ -142,7 +142,7 @@ TEST(TypeHashingTest, ContentHash) {
   ASSERT_EQ(0x1004U, Args[1].getIndex());
   ASSERT_EQ(0x1005U, Proc[1].getIndex());
 
-  // Sanity check to make sure all same-ordering hashes are different
+  // Soundness check to make sure all same-ordering hashes are different
   // from each other.
   verifyHashUniqueness(Hashes1);
   verifyHashUniqueness(Hashes2);

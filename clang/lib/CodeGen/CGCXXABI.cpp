@@ -196,7 +196,7 @@ bool CGCXXABI::isEmittedWithConstantInitializer(
   // translation unit will emit the value as a constant. We rely on the
   // variable being constant-initialized in every translation unit if it's
   // constant-initialized in any translation unit, which isn't actually
-  // guaranteed by the standard but is necessary for sanity.
+  // guaranteed by the standard but is necessary for soundness.
   return InitDecl->hasConstantInitialization();
 }
 

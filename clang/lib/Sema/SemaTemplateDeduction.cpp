@@ -6167,7 +6167,7 @@ UnresolvedSetIterator Sema::getMostSpecialized(
   if (Complain) {
     Diag(Loc, AmbigDiag);
 
-    // FIXME: Can we order the candidates in some sane way?
+    // FIXME: Can we order the candidates in some sound way?
     for (UnresolvedSetIterator I = SpecBegin; I != SpecEnd; ++I) {
       PartialDiagnostic PD = CandidateDiag;
       const auto *FD = cast<FunctionDecl>(*I);

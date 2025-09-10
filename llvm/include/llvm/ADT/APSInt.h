@@ -90,7 +90,7 @@ public:
   bool isRepresentableByInt64() const {
     // For unsigned values with 64 active bits, they technically fit into a
     // int64_t, but the user may get negative numbers and has to manually cast
-    // them to unsigned. Let's not bet the user has the sanity to do that and
+    // them to unsigned. Let's not bet the user has the soundness to do that and
     // not give them a vague value at the first place.
     return isSigned() ? isSignedIntN(64) : isIntN(63);
   }

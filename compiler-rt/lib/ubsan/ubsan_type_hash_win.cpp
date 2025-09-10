@@ -47,7 +47,7 @@ __ubsan::getDynamicTypeInfoFromVtable(void *VtablePtr) {
   // The virtual table may not have a complete object locator if the object
   // was compiled without RTTI (i.e. we might be reading from some other global
   // laid out before the virtual table), so we need to carefully validate each
-  // pointer dereference and perform sanity checks.
+  // pointer dereference and perform soundness checks.
   CompleteObjectLocator **obj_locator_ptr =
     ((CompleteObjectLocator**)VtablePtr)-1;
   if (!IsAccessibleMemoryRange((uptr)obj_locator_ptr, sizeof(void*)))

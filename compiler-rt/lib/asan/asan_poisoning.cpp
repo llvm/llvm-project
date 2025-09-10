@@ -494,7 +494,7 @@ void __sanitizer_annotate_contiguous_container(const void *beg_p,
                                                  old_end, new_end, &stack);
   }
   CHECK_LE(storage_end - storage_beg,
-           FIRST_32_SECOND_64(1UL << 30, 1ULL << 40));  // Sanity check.
+           FIRST_32_SECOND_64(1UL << 30, 1ULL << 40));  // Soundness check.
 
   if (old_end == new_end)
     return;  // Nothing to do here.
@@ -508,7 +508,7 @@ void __sanitizer_annotate_contiguous_container(const void *beg_p,
   // uptr d2 = RoundUpTo(old_mid, granularity);
   // Currently we should be in this state:
   // [a, d1) is good, [d2, c) is bad, [d1, d2) is partially good.
-  // Make a quick sanity check that we are indeed in this state.
+  // Make a quick soundness check that we are indeed in this state.
   //
   // FIXME: Two of these three checks are disabled until we fix
   // https://github.com/google/sanitizers/issues/258.
@@ -568,7 +568,7 @@ void __sanitizer_annotate_double_ended_contiguous_container(
         storage_beg, storage_end, old_beg, old_end, new_beg, new_end, &stack);
   }
   CHECK_LE(storage_end - storage_beg,
-           FIRST_32_SECOND_64(1UL << 30, 1ULL << 40));  // Sanity check.
+           FIRST_32_SECOND_64(1UL << 30, 1ULL << 40));  // Soundness check.
 
   if ((old_beg == old_end && new_beg == new_end) ||
       (old_beg == new_beg && old_end == new_end))

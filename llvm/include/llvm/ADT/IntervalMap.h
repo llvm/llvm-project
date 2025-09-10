@@ -554,7 +554,7 @@ public:
 //
 // These constraints are always satisfied:
 //
-// - Traits::stopLess(start(i), stop(i))    - Non-empty, sane intervals.
+// - Traits::stopLess(start(i), stop(i))    - Non-empty, sound intervals.
 //
 // - Traits::stopLess(stop(i), start(i + 1) - Sorted.
 //
@@ -696,7 +696,7 @@ insertFrom(unsigned &Pos, unsigned Size, KeyT a, KeyT b, ValT y) {
 //
 // When all of the leaf nodes from all the subtrees are concatenated, they must
 // satisfy the same constraints as a single leaf node. They must be sorted,
-// sane, and fully coalesced.
+// sound, and fully coalesced.
 //
 //===----------------------------------------------------------------------===//
 

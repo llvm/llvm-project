@@ -10,7 +10,7 @@
 #include <sanitizer/linux_syscall_hooks.h>
 
 /* Test the presence of __sanitizer_syscall_ in the tool runtime, and general
-   sanity of their behaviour. */
+   soundness of their behaviour. */
 
 int main(int argc, char *argv[]) {
   char buf[1000];

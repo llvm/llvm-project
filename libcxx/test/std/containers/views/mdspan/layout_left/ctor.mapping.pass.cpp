@@ -77,7 +77,7 @@ using mapping_t = std::layout_left::mapping<std::extents<IdxT, Extents...>>;
 constexpr void test_no_implicit_conversion() {
   constexpr size_t D = std::dynamic_extent;
 
-  // Sanity check that one static to dynamic conversion works
+  // Soundness check that one static to dynamic conversion works
   static_assert(std::is_constructible_v<mapping_t<int, D>, mapping_t<int, 5>>);
   static_assert(std::is_convertible_v<mapping_t<int, 5>, mapping_t<int, D>>);
 
@@ -85,7 +85,7 @@ constexpr void test_no_implicit_conversion() {
   static_assert(std::is_constructible_v<mapping_t<int, 5>, mapping_t<int, D>>);
   static_assert(!std::is_convertible_v<mapping_t<int, D>, mapping_t<int, 5>>);
 
-  // Sanity check that one static to dynamic conversion works
+  // Soundness check that one static to dynamic conversion works
   static_assert(std::is_constructible_v<mapping_t<int, D, 7>, mapping_t<int, 5, 7>>);
   static_assert(std::is_convertible_v<mapping_t<int, 5, 7>, mapping_t<int, D, 7>>);
 
@@ -93,7 +93,7 @@ constexpr void test_no_implicit_conversion() {
   static_assert(std::is_constructible_v<mapping_t<int, 5, 7>, mapping_t<int, D, 7>>);
   static_assert(!std::is_convertible_v<mapping_t<int, D, 7>, mapping_t<int, 5, 7>>);
 
-  // Sanity check that smaller index_type to larger index_type conversion works
+  // Soundness check that smaller index_type to larger index_type conversion works
   static_assert(std::is_constructible_v<mapping_t<size_t, 5>, mapping_t<int, 5>>);
   static_assert(std::is_convertible_v<mapping_t<int, 5>, mapping_t<size_t, 5>>);
 

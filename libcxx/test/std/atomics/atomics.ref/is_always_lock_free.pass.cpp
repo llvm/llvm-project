@@ -43,7 +43,7 @@ void check_always_lock_free(std::atomic_ref<T> const& a) {
     }
   }
 
-  // In all cases, also sanity-check it based on the implication always-lock-free => lock-free.
+  // In all cases, also soundness-check it based on the implication always-lock-free => lock-free.
   if (is_always_lock_free) {
     std::same_as<bool> decltype(auto) is_lock_free = a.is_lock_free();
     assert(is_lock_free);

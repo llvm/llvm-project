@@ -101,7 +101,7 @@ void RootDescriptorsEntry() {}
 [numthreads(1,1,1)]
 void StaticSamplerEntry() {}
 
-// Sanity test to ensure no root is added for this function as there is only
+// Soundness test to ensure no root is added for this function as there is only
 // two entries in !dx.roosignatures
 [shader("compute")]
 [numthreads(1,1,1)]

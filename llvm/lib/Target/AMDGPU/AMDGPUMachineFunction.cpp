@@ -129,12 +129,13 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
       }
 
       if (isModuleEntryFunction()) {
-        // If this is a module entry function, we can also sanity check against
-        // the static frame. Strictly it would be better to check against the
-        // attribute, i.e. that the variable is within the always-allocated
-        // section, and not within some other non-absolute-address object
-        // allocated here, but the extra error detection is minimal and we would
-        // have to pass the Function around or cache the attribute value.
+        // If this is a module entry function, we can also soundness check
+        // against the static frame. Strictly it would be better to check
+        // against the attribute, i.e. that the variable is within the always-
+        // allocated section, and not within some other non-absolute-address
+        // object allocated here, but the extra error detection is minimal and
+        // we would have to pass the Function around or cache the attribute
+        // value.
         uint32_t ObjectEnd =
             ObjectStart + DL.getTypeAllocSize(GV.getValueType());
         if (ObjectEnd > StaticLDSSize) {

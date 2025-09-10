@@ -23,7 +23,7 @@
 #include "min_allocator.h"
 
 int main(int, char**) {
-  // sanity checks
+  // soundness checks
   static_assert((std::is_same< std::allocator_traits<A1<int>>::is_always_equal, std::false_type>::value), "");
 
   static_assert((std::is_same< std::allocator_traits<min_allocator<int>>::is_always_equal, std::true_type>::value), "");

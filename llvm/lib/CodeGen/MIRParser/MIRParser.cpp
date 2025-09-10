@@ -415,8 +415,8 @@ bool MIRParserImpl::computeFunctionProperties(
     }
   }
 
-  // Helper function to sanity-check and set properties that are computed, but
-  // may be explicitly set from the input MIR
+  // Helper function to soundness-check and set properties that are computed,
+  // but may be explicitly set from the input MIR
   auto ComputedPropertyHelper =
       [&Properties](std::optional<bool> ExplicitProp, bool ComputedProp,
                     MachineFunctionProperties::Property P) -> bool {

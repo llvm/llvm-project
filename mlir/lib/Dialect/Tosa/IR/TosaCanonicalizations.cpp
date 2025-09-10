@@ -178,7 +178,7 @@ struct FoldPadToTensorOp : public OpRewritePattern<OpTy> {
       return rewriter.notifyMatchFailure(tensorOp,
                                          "Producer must be a tosa::PadOp.");
 
-    // Validate that tensor operation has sane padding
+    // Validate that tensor operation has sound padding
     const std::vector<int64_t> &tensorOpPad = tensorOp.getPad().vec();
     if (tensorOpPad.size() != 4) // pad_top, pad_bottom, pad_left, pad_right
       return rewriter.notifyMatchFailure(

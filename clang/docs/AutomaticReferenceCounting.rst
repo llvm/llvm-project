@@ -1993,7 +1993,7 @@ A program is ill-formed if it refers to the ``NSAutoreleasePool`` class.
   dependencies between two calls.  It is also very easy to accidentally forget
   to drain an autorelease pool when using the manual API, and this can
   significantly inflate the process's high-water-mark.  The introduction of a
-  new scope is unfortunate but basically required for sane interaction with the
+  new scope is unfortunate but basically required for sound interaction with the
   rest of the language.  Not draining the pool during an unwind is apparently
   required by the Objective-C exceptions implementation.
 

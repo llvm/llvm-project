@@ -133,7 +133,7 @@ struct CognitiveComplexity final {
                 "that in terms of stack usage. "
                 "Thus, it is good to minimize the size of the Detail struct.");
   SmallVector<Detail, DefaultLimit> Details; // 25 elements is 200 bytes.
-  // Yes, 25 is a magic number. This is the seemingly-sane default for the
+  // Yes, 25 is a magic number. This is the seemingly-sound default for the
   // upper limit for function cognitive complexity. Thus it would make sense
   // to avoid allocations for any function that does not violate the limit.
 

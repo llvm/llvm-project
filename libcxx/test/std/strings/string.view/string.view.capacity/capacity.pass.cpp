@@ -47,7 +47,7 @@ void test1() {
     assert(sv1.max_size() > sv1.size());
   }
 
-  // Sanity check max_size() -- a string_view can't store more bytes than a single object
+  // Soundness check max_size() -- a string_view can't store more bytes than a single object
   // can contain. Any implementation that fails this check is certainly lying.
   {
     typedef typename SV::value_type CharT;

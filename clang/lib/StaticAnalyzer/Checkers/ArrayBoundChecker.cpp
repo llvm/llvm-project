@@ -613,7 +613,7 @@ void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
 
         // TODO: Currently the analyzer ignores many casts (e.g. signed ->
         // unsigned casts), so it can easily reach states where it will load a
-        // signed (and negative) value from an unsigned variable. This sanity
+        // signed (and negative) value from an unsigned variable. This soundness
         // check is a duct tape "solution" that silences most of the ugly false
         // positives that are caused by this buggy behavior. Note that this is
         // not a complete solution: this cannot silence reports where pointer

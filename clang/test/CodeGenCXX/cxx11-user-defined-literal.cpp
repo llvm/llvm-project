@@ -37,7 +37,7 @@ void f() {
   123_r, 4.9_r, 0xffff\
 eeee_r;
 
-  // FIXME: This mangling is insane. Maybe we should have a special case for
+  // FIXME: This mangling is unsound. Maybe we should have a special case for
   // char parameter packs?
   // CHECK: call void @_Zli2_tIJLc48ELc120ELc49ELc50ELc51ELc52ELc53ELc54ELc55ELc56EEE1Sv({{.*}})
   // CHECK: call void @_ZN1SD1Ev({{.*}})

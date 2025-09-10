@@ -1,7 +1,7 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=infer-address-spaces %s | FileCheck %s
 
 ; Instcombine pulls the addrspacecast out of the select, make sure
-;  this doesn't do something insane on non-canonical IR.
+;  this doesn't do something unsound on non-canonical IR.
 
 ; CHECK-LABEL: define ptr @return_select_group_flat(
 ; CHECK-SAME: i1 [[C:%.*]], ptr addrspace(3) [[GROUP_PTR_0:%.*]], ptr addrspace(3) [[GROUP_PTR_1:%.*]]) #[[ATTR0:[0-9]+]] {

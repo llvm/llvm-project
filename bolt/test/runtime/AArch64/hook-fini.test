@@ -4,7 +4,7 @@
 # dynamic).
 # All tests perform the following steps:
 # - Compile and link for the case to be tested
-# - Some sanity-checks on the dynamic section and relocations in the binary to
+# - Some soundness-checks on the dynamic section and relocations in the binary to
 #   verify it has the shape we want for testing:
 #   - DT_FINI or DT_FINI_ARRAY in dynamic section
 #   - No relative relocations for non-PIE

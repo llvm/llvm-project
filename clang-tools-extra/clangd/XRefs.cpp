@@ -972,7 +972,7 @@ public:
                      llvm::dyn_cast_or_null<ObjCMethodDecl>(ASTNode.OrigD)) {
         OMD->getSelectorLocs(Locs);
       }
-      // Sanity check: we expect the *first* token to match the reported loc.
+      // Soundness check: we expect the *first* token to match the reported loc.
       // Otherwise, maybe it was e.g. some other kind of reference to a Decl.
       if (!Locs.empty() && Locs.front() != Loc)
         Locs.clear(); // First token doesn't match, assume our guess was wrong.

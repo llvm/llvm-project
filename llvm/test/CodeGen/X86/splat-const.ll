@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mcpu=penryn | FileCheck %s --check-prefix=SSE
 ; RUN: llc < %s -mcpu=sandybridge | FileCheck %s --check-prefix=AVX
 ; RUN: llc < %s -mcpu=haswell | FileCheck %s --check-prefix=AVX2
-; This checks that lowering for creation of constant vectors is sane and
+; This checks that lowering for creation of constant vectors is sound and
 ; doesn't use redundant shuffles. (fixes PR22276)
 target triple = "x86_64-unknown-unknown"
 

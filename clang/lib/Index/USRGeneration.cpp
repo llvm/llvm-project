@@ -1228,7 +1228,7 @@ bool clang::index::generateUSRForMacro(StringRef MacroName, SourceLocation Loc,
 
   llvm::raw_svector_ostream Out(Buf);
 
-  // Assume that system headers are sane.  Don't put source location
+  // Assume that system headers are sound.  Don't put source location
   // information into the USR if the macro comes from a system header.
   bool ShouldGenerateLocation = Loc.isValid() && !SM.isInSystemHeader(Loc);
 

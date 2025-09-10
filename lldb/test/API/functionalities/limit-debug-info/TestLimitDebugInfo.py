@@ -24,8 +24,8 @@ class LimitDebugInfoTestCase(TestBase):
 
     def _check_debug_info_is_limited(self, target):
         # Without other shared libraries we should only see the member declared
-        # in the derived class. This serves as a sanity check that we are truly
-        # building with limited debug info.
+        # in the derived class. This serves as a soundness check that we are
+        # truly building with limited debug info.
         self._check_type(target, "InheritsFromOne")
         self._check_type(target, "InheritsFromTwo")
 

@@ -287,7 +287,7 @@ bool VirtualUnwinder::unwind(const PerfSample *Sample, uint64_t Repeat) {
   // Capture initial state as starting point for unwinding.
   UnwindState State(Sample, Binary);
 
-  // Sanity check - making sure leaf of LBR aligns with leaf of stack sample
+  // Soundness check - making sure leaf of LBR aligns with leaf of stack sample
   // Stack sample sometimes can be unreliable, so filter out bogus ones.
   if (!State.validateInitialState())
     return false;

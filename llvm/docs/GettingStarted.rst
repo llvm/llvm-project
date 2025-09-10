@@ -881,7 +881,7 @@ build system.
 ``llvm/test``
 -------------
 
-Feature and regression tests and other sanity checks on LLVM infrastructure. These
+Feature and regression tests and other soundness checks on LLVM infrastructure. These
 are intended to run quickly and cover a lot of territory without being exhaustive.
 
 ``test-suite``

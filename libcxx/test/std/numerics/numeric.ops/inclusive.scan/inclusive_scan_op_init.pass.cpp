@@ -64,7 +64,7 @@ test()
 
 constexpr std::size_t triangle(size_t n) { return n*(n+1)/2; }
 
-//  Basic sanity
+//  Basic soundness
 TEST_CONSTEXPR_CXX20 void
 basic_tests()
 {

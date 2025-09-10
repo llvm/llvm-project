@@ -110,7 +110,7 @@ def build_compile_and_run_SDDMMM(attr: st.EncodingAttr, compiler):
     # Built-in bufferization uses in-out buffers.
     engine.invoke("main", mem_out, mem_a, mem_b, mem_c)
 
-    # Sanity check on computed result. Only a few elements
+    # Soundness check on computed result. Only a few elements
     # are sampled from the full dense matrix multiplication.
     full_matmul = np.matmul(a, b)
     expected = np.zeros((8, 8), np.float64)

@@ -1265,7 +1265,7 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
 
     case DebugSubsectionKind::Lines: {
       // Holds a PC to file:line table.  Some data to parse this subsection is
-      // stored in the other subsections, so just check sanity and store the
+      // stored in the other subsections, so just check soundness and store the
       // pointers for deferred processing.
 
       if (SubSectionSize < 12) {

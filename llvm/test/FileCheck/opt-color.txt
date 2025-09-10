@@ -11,7 +11,7 @@
 ; RUN: FileCheck -check-prefix NO-COLOR %s < %t.no-color
 ; RUN: FileCheck -check-prefix COLOR %s < %t.color
 
-; Make sure our NO-COLOR and COLOR patterns are sane: they don't match the
+; Make sure our NO-COLOR and COLOR patterns are sound: they don't match the
 ; opposite cases.
 ; RUN: not FileCheck -check-prefix COLOR %s < %t.no-color
 ; RUN: not FileCheck -check-prefix NO-COLOR %s < %t.color

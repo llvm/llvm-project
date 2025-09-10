@@ -1158,7 +1158,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   if (!FoundSrcAgg)
     return nullptr;
 
-  // Do some sanity check if we need to add insertvalue into predecessors.
+  // Do some soundness check if we need to add insertvalue into predecessors.
   auto OrigBB = OrigIVI.getParent();
   for (auto &It : SourceAggregates) {
     if (Describe(It.second) == AggregateDescription::Found)

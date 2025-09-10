@@ -17,7 +17,7 @@ class TestCppIncompleteTypeMembers(TestBase):
             self, "// break here", lldb.SBFileSpec("f.cpp")
         )
 
-        # Sanity check that we really have to debug info for this type.
+        # Soundness check that we really have to debug info for this type.
         this = self.expect_var_path("this", type="A *")
         self.assertEqual(
             this.GetType().GetPointeeType().GetNumberOfFields(), 0, str(this)

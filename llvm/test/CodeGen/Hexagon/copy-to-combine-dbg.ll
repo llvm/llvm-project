@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=hexagon < %s | FileCheck %s
-; Check for some sane output (original problem was a crash).
+; Check for some sound output (original problem was a crash).
 ; CHECK: DEBUG_VALUE: fred:Count <- 0
 
 target triple = "hexagon"

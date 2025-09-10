@@ -92,7 +92,7 @@ class ArrayTypesTestCase(TestBase):
         breakpoint = target.BreakpointCreateByLocation("main.c", self.line)
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
-        # Sanity check the print representation of breakpoint.
+        # Soundness check the print representation of breakpoint.
         bp = str(breakpoint)
         self.expect(
             bp,
@@ -112,7 +112,7 @@ class ArrayTypesTestCase(TestBase):
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        # Sanity check the print representation of process.
+        # Soundness check the print representation of process.
         proc = str(process)
         self.expect(
             proc,
@@ -125,7 +125,7 @@ class ArrayTypesTestCase(TestBase):
         thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         self.assertIsNotNone(thread)
 
-        # Sanity check the print representation of thread.
+        # Soundness check the print representation of thread.
         thr = str(thread)
         # TODO(zturner): Whether the TID is printed in hex or decimal should be controlled by a setting,
         # and this test should read the value of the setting.  This check is currently hardcoded to
@@ -154,7 +154,7 @@ class ArrayTypesTestCase(TestBase):
             substrs=["file = 'main.c'", "line = %d" % self.line, "locations = 1"],
         )
 
-        # Sanity check the print representation of frame.
+        # Soundness check the print representation of frame.
         frame = thread.GetFrameAtIndex(0)
         frm = str(frame)
         self.expect(
@@ -164,7 +164,7 @@ class ArrayTypesTestCase(TestBase):
             substrs=["#%d" % frame.GetFrameID()],
         )
 
-        # Lookup the "strings" string array variable and sanity check its print
+        # Lookup the "strings" string array variable and soundness check its print
         # representation.
         variable = frame.FindVariable("strings")
         var = str(variable)

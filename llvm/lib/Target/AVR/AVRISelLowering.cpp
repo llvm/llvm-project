@@ -2114,7 +2114,7 @@ static void insertMultibyteShift(MachineInstr &MI, MachineBasicBlock *BB,
   }
 
   if (ShiftAmt != 0) {
-    llvm_unreachable("don't know how to shift!"); // sanity check
+    llvm_unreachable("don't know how to shift!"); // soundness check
   }
 }
 

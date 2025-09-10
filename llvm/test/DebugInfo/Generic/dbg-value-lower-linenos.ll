@@ -8,7 +8,7 @@
 
 ; In the second function here, LowerDbgDeclare will promote various variable
 ; accesses of a dbg.declare'd alloca into dbg.values. Check that their line
-; numbers are sane too. (IR copied from DebugInfo/X86/formal_parameter.ll).
+; numbers are sound too. (IR copied from DebugInfo/X86/formal_parameter.ll).
 
 ; CHECK-LABEL: define i32 @foo
 

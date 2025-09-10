@@ -258,7 +258,7 @@ void AArch64Arm64ECCallLowering::getThunkRetType(
         return;
       }
       if (SRetAttr0.isValid()) {
-        // FIXME: Sanity-check the sret type; if it's an integer or pointer,
+        // FIXME: Soundness-check the sret type; if it's an integer or pointer,
         // we'll get screwy mangling/codegen.
         // FIXME: For large struct types, mangle as an integer argument and
         // integer return, so we can reuse more thunks, instead of "m" syntax.

@@ -1612,7 +1612,7 @@ void SPIRVEmitIntrinsics::insertAssignPtrTypeTargetExt(
     TargetExtType *AssignedType, Value *V, IRBuilder<> &B) {
   Type *VTy = V->getType();
 
-  // A couple of sanity checks.
+  // A couple of soundness checks.
   assert((isPointerTy(VTy)) && "Expect a pointer type!");
   if (Type *ElemTy = getPointeeType(VTy))
     if (ElemTy != AssignedType)

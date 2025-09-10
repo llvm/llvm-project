@@ -71,7 +71,7 @@ __INT32_TYPE__ test4(__SIZE_TYPE__ a) {
 struct Empty {};
 struct MultiArgs { __INT64_TYPE__ a, b;};
 // Struct parameter doesn't take up an IR parameter, 'i' takes up 1.
-// Truncation to i64 is permissible, since alignments of greater than 2^64 are insane.
+// Truncation to i64 is permissible, since alignments of greater than 2^64 are unsound.
 __INT32_TYPE__ *m3(struct Empty s, __int128_t i) __attribute__((alloc_align(2)));
 // CHECK-LABEL: @test5(
 // CHECK-NEXT:  entry:

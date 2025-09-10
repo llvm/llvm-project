@@ -176,9 +176,9 @@ ClangAsmParserCallback::translateLocation(const llvm::SourceMgr &LSM,
   unsigned TokIndex = TokOffsetPtr - AsmTokOffsets.begin();
   unsigned TokOffset = *TokOffsetPtr;
 
-  // If we come up with an answer which seems sane, use it; otherwise,
+  // If we come up with an answer which seems sound, use it; otherwise,
   // just point at the __asm keyword.
-  // FIXME: Assert the answer is sane once we handle .macro correctly.
+  // FIXME: Assert the answer is sound once we handle .macro correctly.
   SourceLocation Loc = AsmLoc;
   if (TokIndex < AsmToks.size()) {
     const Token &Tok = AsmToks[TokIndex];

@@ -3282,7 +3282,7 @@ void NewGVN::verifyMemoryCongruency() const {
                "a single argument phi");
       }
     } else if (auto *FirstMP = dyn_cast<MemoryPhi>(KV.first)) {
-      // We can only sanely verify that MemoryDefs in the operand list all have
+      // We can only soundly verify that MemoryDefs in the operand list all have
       // the same class.
       auto ReachableOperandPred = [&](const Use &U) {
         return ReachableEdges.count(

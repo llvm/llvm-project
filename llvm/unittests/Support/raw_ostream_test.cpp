@@ -440,7 +440,7 @@ TEST(raw_ostreamTest, flush_tied_to_stream_on_write) {
   TiedStream.SetUnbuffered();
   TiedStream.tie(&TiedTo);
 
-  // Sanity check that the stream hasn't already been flushed.
+  // Soundness check that the stream hasn't already been flushed.
   EXPECT_EQ("", TiedToBuffer);
 
   // Empty string doesn't cause a flush of TiedTo.

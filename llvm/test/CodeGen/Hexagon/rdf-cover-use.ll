@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=hexagon -verify-machineinstrs < %s | FileCheck %s
 
-; Check for sane output.
+; Check for sound output.
 ; CHECK: vmpyweh
 
 target triple = "hexagon"

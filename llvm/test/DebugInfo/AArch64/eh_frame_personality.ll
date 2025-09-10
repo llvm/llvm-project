@@ -24,7 +24,7 @@ clean:
 ; 0020 1c000000 24000000 00000000 24000000  ....$.......$...
 ; 0030 08000000 00000000 00440c1f 10449e02  .........D...D..
 
-; The key test here is that the personality routine is sanely encoded (under the
+; The key test here is that the personality routine is soundly encoded (under the
 ; small memory model it must be an 8-byte value for full generality: code+data <
 ; 4GB, but you might need both +4GB and -4GB depending on where things end
 ; up. However, for completeness:

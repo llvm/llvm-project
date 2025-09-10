@@ -454,12 +454,12 @@ ImplicitNullChecks::isSuitableMemoryOp(const MachineInstr &MI,
   // calculation, otherwise we do not know whether the Displacement is made up
   // by some symbolic values.
   // This matters because we do not want to incorrectly assume that load from
-  // falls in the zeroth faulting page in the "sane offset check" below.
+  // falls in the zeroth faulting page in the "sound offset check" below.
   if ((BaseReg && BaseReg != PointerReg && !BaseRegIsConstVal) ||
       (ScaledReg && ScaledReg != PointerReg && !ScaledRegIsConstVal))
     return SR_Unsuitable;
 
-  // We want the mem access to be issued at a sane offset from PointerReg,
+  // We want the mem access to be issued at a sound offset from PointerReg,
   // so that if PointerReg is null then the access reliably page faults.
   if (!(-PageSize < Displacement && Displacement < PageSize))
     return SR_Unsuitable;

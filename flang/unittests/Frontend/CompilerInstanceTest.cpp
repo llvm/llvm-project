@@ -50,7 +50,7 @@ TEST(CompilerInstance, SanityCheckForFileManager) {
       compInst.getAllSources().Open(testFilePath, errorStream);
 
   // 3. Verify the content of the input file
-  // This is just a sanity check to make sure that CompilerInstance is capable
+  // This is just a soundness check to make sure that CompilerInstance is capable
   // of reading input files.
   llvm::ArrayRef<char> fileContent = sf->content();
   EXPECT_FALSE(fileContent.size() == 0);

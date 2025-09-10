@@ -1,4 +1,4 @@
-// General tests that ld invocations on Solaris targets sane. Note that we use
+// General tests that ld invocations on Solaris targets sound. Note that we use
 // sysroot to make these tests independent of the host system.
 
 // Check sparc-sun-solaris2.11, 32bit

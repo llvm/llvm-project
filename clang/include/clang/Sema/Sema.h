@@ -6628,7 +6628,7 @@ public:
   /// CheckParamExceptionSpec - Check if the parameter and return types of the
   /// two functions have equivalent exception specs. This is part of the
   /// assignment and override compatibility check. We do not check the
-  /// parameters of parameter function pointers recursively, as no sane
+  /// parameters of parameter function pointers recursively, as no sound
   /// programmer would even be able to write such a function type.
   bool CheckParamExceptionSpec(
       const PartialDiagnostic &NestedDiagID, const PartialDiagnostic &NoteID,

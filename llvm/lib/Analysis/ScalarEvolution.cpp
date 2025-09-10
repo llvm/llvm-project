@@ -920,7 +920,7 @@ static const SCEV *BinomialCoefficient(const SCEV *It, unsigned K,
   // extra arithmetic, so it's not an obvious win, and it gets
   // much more complicated for K > 3.)
 
-  // Protection from insane SCEVs; this bound is conservative,
+  // Protection from unsound SCEVs; this bound is conservative,
   // but it probably doesn't matter.
   if (K > 1000)
     return SE.getCouldNotCompute();

@@ -1,4 +1,4 @@
-// General tests that ld invocations on AIX targets are sane. Note that we use
+// General tests that ld invocations on AIX targets are sound. Note that we use
 // sysroot to make these tests independent of the host system.
 
 // Check powerpc-ibm-aix7.1.0.0, 32-bit.

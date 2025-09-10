@@ -653,7 +653,7 @@ size_t SourceManager::File::DisplaySourceLines(uint32_t line,
   if (!s)
     return 0;
 
-  // Sanity check m_data_sp before proceeding.
+  // Soundness check m_data_sp before proceeding.
   if (!m_data_sp)
     return 0;
 

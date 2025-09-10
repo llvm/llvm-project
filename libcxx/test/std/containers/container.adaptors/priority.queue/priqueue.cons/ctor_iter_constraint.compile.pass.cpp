@@ -29,7 +29,7 @@
 #include <type_traits>
 #include <vector>
 
-// Sanity-check that std::vector is constructible from two ints...
+// Soundness-check that std::vector is constructible from two ints...
 static_assert(std::is_constructible<std::vector<int>, int*, int*>::value, "");
 static_assert(std::is_constructible<std::vector<int>, int, int >::value, "");
 

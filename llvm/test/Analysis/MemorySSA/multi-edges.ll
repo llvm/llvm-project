@@ -1,6 +1,6 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s
 ;
-; Makes sure we have a sane model if both successors of some block is the same
+; Makes sure we have a sound model if both successors of some block is the same
 ; block.
 
 define i32 @foo(i1 %a) {

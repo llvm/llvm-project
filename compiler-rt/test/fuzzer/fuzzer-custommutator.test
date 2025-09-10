@@ -12,7 +12,7 @@ LLVMFuzzerCustomMutatorWithLenControl: In LLVMFuzzerCustomMutator
 LLVMFuzzerCustomMutatorWithLenControl: {{.*}} lim: {{[1-9][0-9]?}} {{.*}}
 LLVMFuzzerCustomMutatorWithLenControl: BINGO
 
-# sanity check: verify that we do get long lines with verbose printing on
+# soundness check: verify that we do get long lines with verbose printing on
 RUN: %cpp_compiler %S/CustomMutatorWithLongSequencesTest.cpp -o %t-CustomMutatorWithLongSequencesTest
 RUN: not %run %t-CustomMutatorWithLongSequencesTest -verbosity=2 2>&1 | FileCheck %s --check-prefix=LLVMFuzzerCustomMutatorLongSequence
 LLVMFuzzerCustomMutatorLongSequence: Flag: verbosity 2

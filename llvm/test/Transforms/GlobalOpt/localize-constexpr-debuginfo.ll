@@ -9,7 +9,7 @@ define i32 @main(i32 %argc, ptr %argv) norecurse !dbg !18 {
 ; CHECK: define i32 @main
 ; Make sure we localized the global.
 ; CHECK: alloca ptr
-; Make sure the metadata is sane. Currently, we just drop the metadata,
+; Make sure the metadata is sound. Currently, we just drop the metadata,
 ; so it points to nothing.
 ; CHECK: #dbg_value(ptr poison,
 ; CHECK: !2 = !{}

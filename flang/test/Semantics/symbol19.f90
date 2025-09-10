@@ -25,7 +25,7 @@ subroutine expect_intrinsic
  call system_clock(icount)
 end subroutine
 
-! Sanity check that the EXTERNAL attribute is not bypassed by
+! Soundness check that the EXTERNAL attribute is not bypassed by
 ! implicit intrinsic resolution, even if it otherwise perfectly
 ! matches an intrinsic call.
 

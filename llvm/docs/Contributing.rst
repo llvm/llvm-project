@@ -173,7 +173,7 @@ Please ask for help if you're having trouble with your particular git workflow.
 Git pre-push hook
 ^^^^^^^^^^^^^^^^^
 
-We include an optional pre-push hook that run some sanity checks on the revisions
+We include an optional pre-push hook that run some soundness checks on the revisions
 you are about to push and ask confirmation if you push multiple commits at once.
 You can set it up (on Unix systems) by running from the repository root:
 

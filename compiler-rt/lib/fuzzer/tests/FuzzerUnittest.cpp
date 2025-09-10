@@ -647,7 +647,7 @@ TEST(Corpus, Distribution) {
     Hist[C->ChooseUnitIdxToMutate(Rand)]++;
   }
   for (size_t i = 0; i < N; i++) {
-    // A weak sanity check that every unit gets invoked.
+    // A weak soundness check that every unit gets invoked.
     EXPECT_GT(Hist[i], TriesPerUnit / N / 3);
   }
 }

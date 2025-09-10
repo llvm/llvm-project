@@ -386,7 +386,7 @@ protected:
       uint32_t cur_wp_id = valid_wp_ids.at(i);
       if (cur_wp_id != LLDB_INVALID_WATCH_ID) {
         Watchpoint *wp = target.GetWatchpointList().FindByID(cur_wp_id).get();
-        // Sanity check wp first.
+        // Soundness check wp first.
         if (wp == nullptr)
           continue;
 

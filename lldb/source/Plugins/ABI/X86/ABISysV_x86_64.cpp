@@ -817,7 +817,7 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
             }
           }
         }
-        // These two tests are just sanity checks.  If I somehow get the type
+        // These two tests are just soundness checks.  If I somehow get the type
         // calculation wrong above it is better to just return nothing than to
         // assert or crash.
         if (!copy_from_extractor)

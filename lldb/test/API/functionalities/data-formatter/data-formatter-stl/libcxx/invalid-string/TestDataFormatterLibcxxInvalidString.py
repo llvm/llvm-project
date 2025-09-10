@@ -1,5 +1,5 @@
 """
-Test lldb behaves sanely when formatting corrupted `std::string`s.
+Test lldb behaves soundly when formatting corrupted `std::string`s.
 """
 
 import lldb

@@ -141,7 +141,7 @@ TEST(CFG, ElementRefIterator) {
 
   constexpr CFGBlock::ref_iterator::difference_type MainBlockSize = 4;
 
-  // The rest of this test looks totally insane, but there iterators are
+  // The rest of this test looks totally unsound, but there iterators are
   // templates under the hood, to it's important to instantiate everything for
   // proper converage.
 

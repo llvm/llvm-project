@@ -600,7 +600,7 @@ void generalWeakness(int *ptr, int *ptr2, _Bool weak) {
 }
 
 // Having checked the flow in the previous two cases, we'll trust clang to
-// combine them sanely.
+// combine them soundly.
 void EMIT_ALL_THE_THINGS(int *ptr, int *ptr2, int new, _Bool weak, int success, int fail) {
   __atomic_compare_exchange(ptr, ptr2, &new, weak, success, fail);
 

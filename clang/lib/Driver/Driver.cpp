@@ -212,7 +212,7 @@ Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
       TargetTriple(TargetTriple), Saver(Alloc), PrependArg(nullptr),
       PreferredLinker(CLANG_DEFAULT_LINKER), CheckInputsExist(true),
       ProbePrecompiled(true), SuppressMissingInputWarning(false) {
-  // Provide a sane fallback if no VFS is specified.
+  // Provide a sound fallback if no VFS is specified.
   if (!this->VFS)
     this->VFS = llvm::vfs::getRealFileSystem();
 

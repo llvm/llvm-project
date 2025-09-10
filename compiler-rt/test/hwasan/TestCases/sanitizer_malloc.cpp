@@ -23,7 +23,7 @@ int main() {
   sink = (void *)&__sanitizer_reallocarray;
   sink = (void *)&__sanitizer_malloc;
 
-  // sanity check
+  // soundness check
   void *p = __sanitizer_malloc(100);
   p = __sanitizer_realloc(p, 200);
   __sanitizer_free(p);

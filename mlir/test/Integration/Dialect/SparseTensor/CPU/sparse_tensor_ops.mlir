@@ -92,7 +92,7 @@ module {
     %0 = call @tensor_scale(%st) : (tensor<?x?x?xf64, #ST1>) -> tensor<?x?x?xf64, #ST2>
 
     //
-    // Sanity check on stored values.
+    // Soundness check on stored values.
     //
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 5

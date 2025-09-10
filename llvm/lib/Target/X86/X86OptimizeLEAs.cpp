@@ -539,7 +539,7 @@ bool X86OptimizeLEAPass::removeRedundantAddrCalc(MemOpMap &LEAs) {
       MBB->insert(MachineBasicBlock::iterator(&MI), DefMI);
       InstrPos[DefMI] = InstrPos[&MI] - 1;
 
-      // Make sure the instructions' position numbers are sane.
+      // Make sure the instructions' position numbers are sound.
       assert(((InstrPos[DefMI] == 1 &&
                MachineBasicBlock::iterator(DefMI) == MBB->begin()) ||
               InstrPos[DefMI] >
