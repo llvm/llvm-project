@@ -660,6 +660,18 @@ struct GrainsizeT {
   std::tuple<OPT(Prescriptiveness), GrainSize> t;
 };
 
+// [6.0:438] `graph_id` clause
+template <typename T, typename I, typename E> //
+struct GraphIdT {
+  using EmptyTrait = std::true_type;
+};
+
+// [6.0:438] `graph_reset` clause
+template <typename T, typename I, typename E> //
+struct GraphResetT {
+  using EmptyTrait = std::true_type;
+};
+
 // V5.2: [5.4.9] `has_device_addr` clause
 template <typename T, typename I, typename E> //
 struct HasDeviceAddrT {
@@ -1254,10 +1266,11 @@ using ExtensionClausesT =
 template <typename T, typename I, typename E>
 using EmptyClausesT = std::variant<
     AcqRelT<T, I, E>, AcquireT<T, I, E>, CaptureT<T, I, E>, CompareT<T, I, E>,
-    DynamicAllocatorsT<T, I, E>, FullT<T, I, E>, InbranchT<T, I, E>,
-    MergeableT<T, I, E>, NogroupT<T, I, E>, NoOpenmpRoutinesT<T, I, E>,
-    NoOpenmpT<T, I, E>, NoParallelismT<T, I, E>, NotinbranchT<T, I, E>,
-    NowaitT<T, I, E>, ReadT<T, I, E>, RelaxedT<T, I, E>, ReleaseT<T, I, E>,
+    DynamicAllocatorsT<T, I, E>, FullT<T, I, E>, GraphIdT<T, I, E>,
+    GraphResetT<T, I, E>, InbranchT<T, I, E>, MergeableT<T, I, E>,
+    NogroupT<T, I, E>, NoOpenmpRoutinesT<T, I, E>, NoOpenmpT<T, I, E>,
+    NoParallelismT<T, I, E>, NotinbranchT<T, I, E>, NowaitT<T, I, E>,
+    ReadT<T, I, E>, RelaxedT<T, I, E>, ReleaseT<T, I, E>,
     ReverseOffloadT<T, I, E>, SeqCstT<T, I, E>, SimdT<T, I, E>,
     ThreadsT<T, I, E>, UnifiedAddressT<T, I, E>, UnifiedSharedMemoryT<T, I, E>,
     UnknownT<T, I, E>, UntiedT<T, I, E>, UseT<T, I, E>, WeakT<T, I, E>,
