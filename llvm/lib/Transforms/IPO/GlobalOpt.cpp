@@ -2551,7 +2551,8 @@ static bool OptimizeNonTrivialIFuncs(
         }))
       continue;
 
-    assert(!Callees.empty() && "Expecting successful collection of versions");
+    if (Callees.empty())
+      continue;
 
     LLVM_DEBUG(dbgs() << "Statically resolving calls to function "
                       << Resolver->getName() << "\n");

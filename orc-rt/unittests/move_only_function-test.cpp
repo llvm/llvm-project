@@ -174,3 +174,57 @@ TEST(MoveOnlyFunctionTest, BooleanConversion) {
   move_only_function<void()> F = []() {};
   EXPECT_TRUE(F);
 }
+
+class ConstCallCounter {
+public:
+  ConstCallCounter(size_t &NonConst, size_t &Const)
+      : NonConst(NonConst), Const(Const) {}
+  void operator()() { ++NonConst; }
+  void operator()() const { ++Const; }
+
+private:
+  size_t &NonConst;
+  size_t &Const;
+};
+
+TEST(MoveOnlyFunctionTest, Constness) {
+  {
+    // Non-const move-only-function, non-const callable.
+    size_t NonConst = 0;
+    size_t Const = 0;
+    move_only_function<void()> F(ConstCallCounter(NonConst, Const));
+    F();
+    EXPECT_EQ(NonConst, 1U);
+    EXPECT_EQ(Const, 0U);
+  }
+
+  {
+    // const move-only-function, non-const callable.
+    size_t NonConst = 0;
+    size_t Const = 0;
+    const move_only_function<void()> F(ConstCallCounter(NonConst, Const));
+    F();
+    EXPECT_EQ(NonConst, 1U);
+    EXPECT_EQ(Const, 0U);
+  }
+
+  {
+    // Non-const move-only-function, const callable.
+    size_t NonConst = 0;
+    size_t Const = 0;
+    move_only_function<void() const> F(ConstCallCounter(NonConst, Const));
+    F();
+    EXPECT_EQ(NonConst, 0U);
+    EXPECT_EQ(Const, 1U);
+  }
+
+  {
+    // const move-only-function, const callable.
+    size_t NonConst = 0;
+    size_t Const = 0;
+    const move_only_function<void() const> F(ConstCallCounter(NonConst, Const));
+    F();
+    EXPECT_EQ(NonConst, 0U);
+    EXPECT_EQ(Const, 1U);
+  }
+}
