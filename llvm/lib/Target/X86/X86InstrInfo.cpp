@@ -10828,9 +10828,9 @@ bool X86InstrInfo::getMachineCombinerPatterns(
   case X86::VPDPWSSDZ256rm:
   case X86::VPDPWSSDZrr:
   case X86::VPDPWSSDZrm: {
-   if (Subtarget.hasBWI() && !Subtarget.hasFastDPWSSD()) {
-     Patterns.push_back(X86MachineCombinerPattern::DPWSSD);
-     return true;
+    if (Subtarget.hasBWI() && !Subtarget.hasFastDPWSSD()) {
+      Patterns.push_back(X86MachineCombinerPattern::DPWSSD);
+      return true;
     }
     break;
   }
