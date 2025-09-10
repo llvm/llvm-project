@@ -1613,9 +1613,9 @@ namespace {
     assert(OD->isDestroyingOperatorDelete() == ReturnAfterDelete &&
            "unexpected value for ReturnAfterDelete");
     auto *CondTy = cast<llvm::IntegerType>(ShouldDeleteCondition->getType());
-    // MSVC calls  global operator delete inside of dtor body, but clang aligned
-    // with this behavior only after a particular version and started emitting
-    // code that is not ABI-compatible with previous versions.
+    // MSVC calls global operator delete inside of the dtor body, but clang
+    // aligned with this behavior only after a particular version. This is not
+    // ABI-compatible with previous versions.
     ASTContext &Context = CGF.getContext();
     bool CallGlobDelete =
         Context.getTargetInfo().callGlobalDeleteInDeletingDtor(

@@ -2030,12 +2030,12 @@ llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
   CGCallee Callee = CGCallee::forVirtual(CE, GD, This, Ty);
 
   ASTContext &Context = getContext();
-  llvm::Value *ImplicitParam = llvm::ConstantInt::get(
-      llvm::IntegerType::getInt32Ty(CGF.getLLVMContext()),
-      (DtorType == Dtor_Deleting) |
-          4 * (D && D->isGlobalDelete() &&
-               Context.getTargetInfo().callGlobalDeleteInDeletingDtor(
-                   Context.getLangOpts())));
+  bool IsDeleting = DtorType == Dtor_Deleting;
+  bool IsGlobalDelete = D && D->isGlobalDelete() &&
+                        Context.getTargetInfo().callGlobalDeleteInDeletingDtor(
+                            Context.getLangOpts());
+  llvm::Value *ImplicitParam =
+      CGF.Builder.getInt32((IsDeleting ? 1 : 0) | (IsGlobalDelete ? 4 : 0));
 
   QualType ThisTy;
   if (CE) {

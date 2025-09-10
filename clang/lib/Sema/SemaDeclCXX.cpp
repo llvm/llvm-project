@@ -11123,8 +11123,8 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
       Loc = RD->getLocation();
 
     // If we have a virtual destructor, look up the deallocation function
-    if (FunctionDecl *OperatorDelete =
-            FindDeallocationFunctionForDestructor(Loc, RD)) {
+    if (FunctionDecl *OperatorDelete = FindDeallocationFunctionForDestructor(
+            Loc, RD, /*Diagnose=*/true, /*LookForGlobal=*/false)) {
       Expr *ThisArg = nullptr;
 
       // If the notional 'delete this' expression requires a non-trivial

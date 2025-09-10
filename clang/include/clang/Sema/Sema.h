@@ -8548,10 +8548,10 @@ public:
                                               ImplicitDeallocationParameters,
                                               DeclarationName Name,
                                               bool Diagnose = true);
-  FunctionDecl *
-  FindDeallocationFunctionForDestructor(SourceLocation StartLoc,
-                                        CXXRecordDecl *RD, bool Diagnose = true,
-                                        bool LookForGlobal = false);
+  FunctionDecl *FindDeallocationFunctionForDestructor(SourceLocation StartLoc,
+                                                      CXXRecordDecl *RD,
+                                                      bool Diagnose,
+                                                      bool LookForGlobal);
 
   /// ActOnCXXDelete - Parsed a C++ 'delete' expression (C++ 5.3.5), as in:
   /// @code ::delete ptr; @endcode
