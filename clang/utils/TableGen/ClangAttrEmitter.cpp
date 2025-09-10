@@ -5265,11 +5265,10 @@ GetAttributeHeadingAndSpellings(const Record &Documentation,
   }
 
   std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(Attribute);
-  if (Spellings.empty()) {
+  if (Spellings.empty())
     PrintFatalError(Attribute.getLoc(),
                     "Attribute has no supported spellings; cannot be "
                     "documented");
-  }
 
   // Determine the heading to be used for this attribute.
   std::string Heading = Documentation.getValueAsString("Heading").str();
