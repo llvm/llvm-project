@@ -8411,11 +8411,6 @@ NamedDecl *Sema::getShadowedDeclaration(const VarDecl *D,
 
   NamedDecl *ShadowedDecl = R.getFoundDecl();
 
-  // Don't warn when lambda captures shadow structured bindings.
-  // This ensures consistency with regular parameter captures.
-  if (isa<BindingDecl>(ShadowedDecl) && D->isInitCapture())
-    return nullptr;
-
   return isa<VarDecl, FieldDecl, BindingDecl>(ShadowedDecl) ? ShadowedDecl
                                                             : nullptr;
 }
@@ -8485,6 +8480,7 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
   if (isa<VarDecl>(D) && NewDC && isa<CXXMethodDecl>(NewDC)) {
     if (const auto *RD = dyn_cast<CXXRecordDecl>(NewDC->getParent())) {
       if (RD->isLambda() && OldDC->Encloses(NewDC->getLexicalParent())) {
+        // Handle lambda capture logic for both VarDecl and BindingDecl
         if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl)) {
           const auto *LSI = cast<LambdaScopeInfo>(getCurFunction());
           if (RD->getLambdaCaptureDefault() == LCD_None) {
@@ -8502,6 +8498,21 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
                 ->ShadowingDecls.push_back({D, VD});
             return;
           }
+        } else if (isa<BindingDecl>(ShadowedDecl)) {
+          // Apply lambda capture logic only when D is actually a lambda capture
+          if (isa<VarDecl>(D) && cast<VarDecl>(D)->isInitCapture()) {
+            if (RD->getLambdaCaptureDefault() == LCD_None) {
+              // BindingDecls cannot be explicitly captured, so always treat as
+              // uncaptured
+              WarningDiag = diag::warn_decl_shadow_uncaptured_local;
+            } else {
+              // Same deferred handling as VarDecl
+              cast<LambdaScopeInfo>(getCurFunction())
+                  ->ShadowingDecls.push_back({D, ShadowedDecl});
+              return;
+            }
+          }
+          // For non-init-capture cases, fall through to regular shadow logic
         }
         if (isa<FieldDecl>(ShadowedDecl)) {
           // If lambda can capture this, then emit default shadowing warning,
@@ -8514,10 +8525,17 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
           return;
         }
       }
-      if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl);
-          VD && VD->hasLocalStorage()) {
-        // A variable can't shadow a local variable in an enclosing scope, if
-        // they are separated by a non-capturing declaration context.
+      // Apply scoping logic to both VarDecl and BindingDecl
+      bool shouldApplyScopingLogic = false;
+      if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl)) {
+        shouldApplyScopingLogic = VD->hasLocalStorage();
+      } else if (isa<BindingDecl>(ShadowedDecl)) {
+        shouldApplyScopingLogic = true;
+      }
+
+      if (shouldApplyScopingLogic) {
+        // A variable can't shadow a local variable or binding in an enclosing
+        // scope, if they are separated by a non-capturing declaration context.
         for (DeclContext *ParentDC = NewDC;
              ParentDC && !ParentDC->Equals(OldDC);
              ParentDC = getLambdaAwareParentOfDeclContext(ParentDC)) {
@@ -8582,6 +8600,12 @@ void Sema::DiagnoseShadowingLambdaDecls(const LambdaScopeInfo *LSI) {
       if (CaptureLoc.isValid())
         Diag(CaptureLoc, diag::note_var_explicitly_captured_here)
             << Shadow.VD->getDeclName() << /*explicitly*/ 0;
+      Diag(ShadowedDecl->getLocation(), diag::note_previous_declaration);
+    } else if (isa<BindingDecl>(ShadowedDecl)) {
+      // BindingDecls cannot be explicitly captured, so always uncaptured-local
+      Diag(Shadow.VD->getLocation(), diag::warn_decl_shadow_uncaptured_local)
+          << Shadow.VD->getDeclName()
+          << computeShadowedDeclKind(ShadowedDecl, OldDC) << OldDC;
       Diag(ShadowedDecl->getLocation(), diag::note_previous_declaration);
     } else if (isa<FieldDecl>(ShadowedDecl)) {
       Diag(Shadow.VD->getLocation(),
