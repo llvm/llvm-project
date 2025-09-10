@@ -2299,30 +2299,26 @@ bool GVNPass::processMaskedLoad(IntrinsicInst *I) {
   if (!DepInst || !Dep.isLocal())
     return false;
 
-  auto *MaskedStore = dyn_cast<IntrinsicInst>(DepInst);
-  if (!MaskedStore || MaskedStore->getIntrinsicID() != Intrinsic::masked_store)
+  Value *StoreVal;
+  if (!match(DepInst,
+             m_Intrinsic<Intrinsic::masked_store>(m_Value(StoreVal), m_Value(),
+                                                  m_Value(), m_Specific(Mask))))
     return false;
 
-  auto StoreMask = MaskedStore->getOperand(3);
-  if (StoreMask != Mask)
-    return false;
-
-  Value *OpToForward =
-      AvailableValue::get(MaskedStore->getOperand(0)).getSimpleValue();
-  if (auto *LoadToForward = dyn_cast<IntrinsicInst>(OpToForward);
-      LoadToForward &&
-      LoadToForward->getIntrinsicID() == Intrinsic::masked_load) {
+  Value *OpToForward = nullptr;
+  if (match(StoreVal, m_MaskedLoad(m_Value(), m_Value(), m_Specific(Mask),
+                                   m_Specific(Passthrough))))
     // For MaskedLoad->MaskedStore->MaskedLoad, the mask must be the same for
     // all three instructions. The Passthrough on the two loads must also be the
     // same.
-    if (LoadToForward->getOperand(2) != Mask ||
-        LoadToForward->getOperand(3) != Passthrough)
-      return false;
-  } else {
+    OpToForward = AvailableValue::get(StoreVal).getSimpleValue();
+  else if (match(StoreVal, m_Intrinsic<Intrinsic::masked_load>()))
+    return false;
+  else {
     // MaskedStore(Op, ptr, mask)->MaskedLoad(ptr, mask, passthrough) can be
     // replaced with MaskedStore(Op, ptr, mask)->select(mask, Op, passthrough)
     IRBuilder<> Builder(I);
-    OpToForward = Builder.CreateSelect(StoreMask, OpToForward, Passthrough);
+    OpToForward = Builder.CreateSelect(Mask, StoreVal, Passthrough);
   }
 
   I->replaceAllUsesWith(OpToForward);
