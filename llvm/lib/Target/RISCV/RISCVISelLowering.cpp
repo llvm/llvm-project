@@ -16257,8 +16257,8 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
     SDValue Op0 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N0.getOperand(0));
     SDValue Op1 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, N0.getOperand(1));
     SDValue Shl = DAG.getNode(ISD::SHL, DL, MVT::i64, Op0, Op1);
-    SDValue And = DAG.getNOT(DL, Shl, MVT::i64);
-    return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, And);
+    SDValue Not = DAG.getNOT(DL, Shl, MVT::i64);
+    return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Not);
   }
 
   // fold (xor (sllw 1, x), -1) -> (rolw ~1, x)
