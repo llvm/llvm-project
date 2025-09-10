@@ -67,7 +67,7 @@ LLVM_LIBC_FUNCTION(bfloat16, log_bf16, (bfloat16 x)) {
   uint16_t x_u = x_bits.uintval();
 
   // If x <= 0, or x is 1, or x is +inf, or x is NaN.
-  if (LIBC_UNLIKELY(x_u == 0U || x_u == 0x3f80 || x_u >= 0x7f80)) {
+  if (LIBC_UNLIKELY(x_u == 0U || x_u == 0x3f80U || x_u >= 0x7f80U)) {
     // log(NaN) = NaN
     if (x_bits.is_nan()) {
       if (x_bits.is_signaling_nan()) {
@@ -85,7 +85,7 @@ LLVM_LIBC_FUNCTION(bfloat16, log_bf16, (bfloat16 x)) {
     }
 
     // log(1) = 0
-    if (x_u == 0x3f80)
+    if (x_u == 0x3f80U)
       return FPBits::zero().get_val();
 
     // x < 0
