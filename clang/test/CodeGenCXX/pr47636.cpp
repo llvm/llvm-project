@@ -5,8 +5,8 @@ int(&&intu_rvref)[] {1,2,3,4};
 
 void foo() {
   static const int(&&intu_rvref)[] {1,2,3,4};
-  // CHECK: @_ZGRZ3foovE10intu_rvref_ = internal constant [4 x i32] [i32 1, i32 2, i32 3, i32 4]
   // CHECK: @_ZZ3foovE10intu_rvref = internal constant ptr @_ZGRZ3foovE10intu_rvref_
+  // CHECK: @_ZGRZ3foovE10intu_rvref_ = internal constant [4 x i32] [i32 1, i32 2, i32 3, i32 4]
 }
 
 // Example given on review, ensure this doesn't crash as well.

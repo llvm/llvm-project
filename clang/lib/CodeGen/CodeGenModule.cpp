@@ -4461,8 +4461,14 @@ void CodeGenModule::EmitGlobalDefinition(GlobalDecl GD, llvm::GlobalValue *GV) {
     return EmitGlobalFunctionDefinition(GD, GV);
   }
 
-  if (const auto *VD = dyn_cast<VarDecl>(D))
+  if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    if (VD->isStaticLocal() && !getContext().shouldExternalize(D)) {
+      CodeGenFunction(*this).AddInitializerToStaticVarDecl(
+          *VD, cast<llvm::GlobalVariable>(GV));
+      return;
+    }
     return EmitGlobalVarDefinition(VD, !VD->hasDefinition());
+  }
 
   llvm_unreachable("Invalid argument to EmitGlobalDefinition()");
 }

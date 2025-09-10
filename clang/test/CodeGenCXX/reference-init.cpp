@@ -4,7 +4,6 @@
 // expected-no-diagnostics
 
 #if __cplusplus >= 201103L
-// CHECK-CXX11: @_ZGRZ15InitRefWithListvE1r_ = internal constant i32 123
 // CHECK-CXX11: @_ZZ15InitRefWithListvE1r = internal constant ptr @_ZGRZ15InitRefWithListvE1r_
 int InitRefWithList() { static const int &r = {123}; return r; }
 #endif
@@ -38,4 +37,5 @@ extern SelfReference self_reference_1;
 SelfReference self_reference_2 = {self_reference_1};
 // CHECK-CXX98: @self_reference_2 = {{.*}}global %[[SELF_REF:.*]] { ptr @self_reference_1 }
 // CHECK-CXX11: @self_reference_2 = {{(dso_local )?}}global %[[SELF_REF:.*]] zeroinitializer
+// CHECK-CXX11: @_ZGRZ15InitRefWithListvE1r_ = internal constant i32 123
 // CHECK-CXX11: call {{.*}}memcpy{{.*}} @self_reference_2, {{.*}} @self_reference_1

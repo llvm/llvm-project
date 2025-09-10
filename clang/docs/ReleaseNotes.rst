@@ -303,6 +303,9 @@ Bug Fixes in This Version
 - Builtin elementwise operators now accept vector arguments that have different
   qualifiers on their elements. For example, vector of 4 ``const float`` values
   and vector of 4 ``float`` values. (#GH155405)
+- ``static constexpr`` variables defined in ``consteval`` functions now
+  correctly preserve their initializers even if leaked out of the parent
+  function. (#GH82994)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

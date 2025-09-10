@@ -261,6 +261,7 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
   if (llvm::Constant *ExistingGV = StaticLocalDeclMap[&D])
     return ExistingGV;
 
+  bool HasConstantInit = D.isUsableInConstantExpressions(getContext());
   QualType Ty = D.getType();
   assert(Ty->isConstantSizeType() && "VLAs can't be static");
 
@@ -275,30 +276,20 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
   LangAS AS = GetGlobalVarAddressSpace(&D);
   unsigned TargetAS = getContext().getTargetAddressSpace(AS);
 
-  Expr::EvalResult EvalResult;
   llvm::Constant *Init = nullptr;
-  std::optional<ConstantEmitter> Emitter;
   // OpenCL variables in local address space and CUDA shared
   // variables cannot have an initializer.
+  // Initializers for constant-initialized static locals are deferred.
   if (Ty.getAddressSpace() == LangAS::opencl_local ||
       D.hasAttr<CUDASharedAttr>() || D.hasAttr<LoaderUninitializedAttr>()) {
     Init = llvm::UndefValue::get(LTy);
-  } else if (D.isUsableInConstantExpressions(getContext())) {
-    const Expr *InitExpr = D.getInit();
-    assert(InitExpr && "Usable in constant expressions without initializer?");
-    Emitter.emplace(*this);
-    llvm::Constant *Initializer = Emitter->tryEmitForInitializer(D);
-    Init = Initializer;
-  } else {
+  } else if (!HasConstantInit) {
     Init = EmitNullConstant(Ty);
   }
 
   llvm::GlobalVariable *GV = new llvm::GlobalVariable(
-      getModule(), Init->getType(), Ty.isConstant(getContext()), Linkage, Init, Name,
+      getModule(), LTy, Ty.isConstant(getContext()), Linkage, Init, Name,
       nullptr, llvm::GlobalVariable::NotThreadLocal, TargetAS);
-
-  if (Emitter)
-    Emitter->finalize(GV);
 
   GV->setAlignment(getContext().getDeclAlign(&D).getAsAlign());
 
@@ -322,6 +313,8 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
   }
 
   setStaticLocalDeclAddress(&D, Addr);
+  if (HasConstantInit && D.isStaticLocal())
+    addDeferredDeclToEmit(GlobalDecl(&D));
 
   // Ensure that the static local gets initialized by making sure the parent
   // function gets emitted eventually.
@@ -349,6 +342,10 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
     assert(isa<ObjCMethodDecl>(DC) && "unexpected parent code decl");
   }
   if (GD.getDecl()) {
+    // Avoid producing declarations of consteval functions.
+    if (auto FD = dyn_cast<FunctionDecl>(GD.getDecl());
+        FD && FD->isImmediateFunction())
+      return Addr;
     // Disable emission of the parent function for the OpenMP device codegen.
     CGOpenMPRuntime::DisableAutoDeclareTargetRAII NoDeclTarget(*this);
     (void)GetAddrOfGlobal(GD);
@@ -419,6 +416,7 @@ void CodeGenFunction::EmitStaticVarDecl(const VarDecl &D,
   // declaration.  This can happen when double-emitting function
   // bodies, e.g. with complete and base constructors.
   llvm::Constant *addr = CGM.getOrCreateStaticVarDecl(D, Linkage);
+
   CharUnits alignment = getContext().getDeclAlign(&D);
 
   // Store into LocalDeclMap before generating initializer to handle
@@ -445,7 +443,8 @@ void CodeGenFunction::EmitStaticVarDecl(const VarDecl &D,
   bool isCudaSharedVar = getLangOpts().CUDA && getLangOpts().CUDAIsDevice &&
                          D.hasAttr<CUDASharedAttr>();
   // If this value has an initializer, emit it.
-  if (D.getInit() && !isCudaSharedVar) {
+  if (D.getInit() && !isCudaSharedVar &&
+      !(D.isUsableInConstantExpressions(getContext()) && D.isStaticLocal())) {
     ApplyAtomGroup Grp(getDebugInfo());
     var = AddInitializerToStaticVarDecl(D, var);
   }
