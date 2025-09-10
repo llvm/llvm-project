@@ -488,19 +488,6 @@ static bool isTrivialFiller(Expr *E) {
   return false;
 }
 
-static CharUnits getArrayElementAlign(CharUnits arrayAlign, llvm::Value *idx,
-                                      CharUnits eltSize) {
-  // If we have a constant index, we can use the exact offset of the
-  // element we're accessing.
-  if (auto *constantIdx = dyn_cast<llvm::ConstantInt>(idx)) {
-    CharUnits offset = constantIdx->getZExtValue() * eltSize;
-    return arrayAlign.alignmentAtOffset(offset);
-  }
-
-  // Otherwise, use the worst-case alignment for any element.
-  return arrayAlign.alignmentOfArrayElement(eltSize);
-}
-
 static void EmitHLSLAggregateSplatCast(CodeGenFunction &CGF, Address DestVal,
                                        QualType DestTy, llvm::Value *SrcVal,
                                        QualType SrcTy, SourceLocation Loc) {
@@ -2293,6 +2280,76 @@ AggValueSlot::Overlap_t CodeGenFunction::getOverlapForBaseInit(
   return AggValueSlot::MayOverlap;
 }
 
+static CharUnits
+EmitHLSLCBufferCopy(CodeGenFunction &CGF, Address DestPtr, Address SrcPtr,
+                    QualType Ty, SmallVectorImpl<llvm::Value *> &StoreIndices,
+                    CharUnits LoadOffset = CharUnits::Zero()) {
+  // For arrays, each member in the cbuffer is aligned to a 16-byte offset.
+  if (const auto *AT = dyn_cast<ArrayType>(Ty)) {
+    // Incomplete array types in cbuffers don't make sense, so this must be a
+    // constant array type.
+    const auto *CAT = cast<ConstantArrayType>(AT);
+
+    QualType ElemTy = CAT->getElementType();
+    uint64_t NElems = CAT->getZExtSize();
+    assert(NElems && "empty array?");
+
+    CharUnits LoadIdx = CharUnits::Zero();
+    StoreIndices.push_back(nullptr);
+    for (uint64_t I = 0; I != NElems; ++I) {
+      LoadIdx = LoadIdx.alignTo(CharUnits::fromQuantity(16));
+
+      StoreIndices.back() = llvm::ConstantInt::get(CGF.SizeTy, I);
+      LoadIdx += EmitHLSLCBufferCopy(CGF, DestPtr, SrcPtr, ElemTy, StoreIndices,
+                                     LoadOffset + LoadIdx);
+    }
+    StoreIndices.pop_back();
+
+    return LoadIdx;
+  }
+
+  // For structs, we need to adjust for nested arrays
+  if (const auto *RT = dyn_cast<RecordType>(Ty)) {
+    const RecordDecl *Record = RT->getOriginalDecl()->getDefinitionOrSelf();
+    assert(!Record->isUnion() && "Union type in cbuffer?");
+
+    if (Record->field_empty())
+      return CharUnits::Zero();
+
+    uint64_t StoreIdx = 0;
+    CharUnits LoadIdx = CharUnits::Zero();
+    StoreIndices.push_back(nullptr);
+    for (auto *FD : Record->fields()) {
+      QualType FieldTy = FD->getType();
+      LoadIdx = LoadIdx.alignTo(CGF.getContext().getTypeAlignInChars(FieldTy));
+
+      StoreIndices.back() = llvm::ConstantInt::get(CGF.SizeTy, StoreIdx++);
+      LoadIdx += EmitHLSLCBufferCopy(CGF, DestPtr, SrcPtr, FieldTy,
+                                     StoreIndices, LoadOffset + LoadIdx);
+    }
+    StoreIndices.pop_back();
+
+    return LoadIdx;
+  }
+
+  // We have a leaf, emit the copy.
+  CharUnits Align = CGF.getContext().getTypeAlignInChars(Ty);
+
+  llvm::Type *LLVMTy = CGF.ConvertTypeForMem(Ty);
+  llvm::ConstantInt *LoadOffsetVal =
+      llvm::ConstantInt::get(CGF.SizeTy, LoadOffset.getQuantity());
+  Address SrcGEP =
+      RawAddress(CGF.Builder.CreateInBoundsGEP(
+                     CGF.Int8Ty, SrcPtr.getBasePointer(), LoadOffsetVal),
+                LLVMTy, Align, SrcPtr.isKnownNonNull());
+  Address DestGEP =
+      CGF.Builder.CreateInBoundsGEP(DestPtr, StoreIndices, LLVMTy, Align);
+
+  llvm::Value *Load = CGF.Builder.CreateLoad(SrcGEP, "cbuf.load");
+  CGF.Builder.CreateStore(Load, DestGEP);
+  return CGF.getContext().getTypeSizeInChars(Ty);
+}
+
 void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
                                         AggValueSlot::Overlap_t MayOverlap,
                                         bool isVolatile) {
@@ -2328,38 +2385,9 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
     }
   }
 
-  if (getLangOpts().HLSL && Ty.getAddressSpace() == LangAS::hlsl_constant &&
-      Ty->isArrayType()) {
-    // TODO: What about incomplete array types?
-    auto *ArrTy = cast<ConstantArrayType>(Ty);
-
-    QualType ElemTy = ArrTy->getElementType();
-    CharUnits RowAlignedSize = getContext().getTypeSizeInChars(ElemTy).alignTo(
-        CharUnits::fromQuantity(32));
-
-    for (uint64_t I = 0, E = ArrTy->getZExtSize(); I != E; ++I) {
-      llvm::ConstantInt *Idx = llvm::ConstantInt::get(SizeTy, I);
-
-      llvm::Value *RowAlignedSizeVal =
-          llvm::ConstantInt::get(SizeTy, RowAlignedSize.getQuantity());
-      llvm::Value *ScaledIdx = Builder.CreateMul(Idx, RowAlignedSizeVal);
-      CharUnits SrcAlign =
-          getArrayElementAlign(SrcPtr.getAlignment(), Idx, RowAlignedSize);
-      // Address SrcGEP =
-      //     Builder.CreateInBoundsGEP(SrcPtr, ScaledIdx, Int8Ty, SrcAlign);
-      Address SrcGEP = RawAddress(
-          Builder.CreateInBoundsGEP(Int8Ty, SrcPtr.getBasePointer(), ScaledIdx),
-          ConvertTypeForMem(ElemTy), SrcAlign, SrcPtr.isKnownNonNull());
-
-      CharUnits DestAlign = getContext().getTypeAlignInChars(Ty);
-      Address DestGEP = Builder.CreateInBoundsGEP(
-          DestPtr, Idx, ConvertTypeForMem(ElemTy), DestAlign);
-
-      llvm::Value *Load = Builder.CreateLoad(SrcGEP, "load");
-      // TODO: Do we need a cast here to do the right thing recursively?
-      Builder.CreateStore(Load, DestGEP);
-    }
-
+  if (getLangOpts().HLSL && Ty.getAddressSpace() == LangAS::hlsl_constant) {
+    SmallVector<llvm::Value *> StoreIndices;
+    EmitHLSLCBufferCopy(*this, DestPtr, SrcPtr, Ty, StoreIndices);
     return;
   }
 
