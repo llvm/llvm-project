@@ -176,8 +176,11 @@ def UseSmallData       : Predicate<"HST->useSmallData()">;
 def UseCabac           : Predicate<"HST->useCabac()">,
                          AssemblerPredicate<(any_of FeatureCabac)>;
 
-def Hvx64:  HwMode<"+hvx-length64b", [UseHVX64B]>;
-def Hvx128: HwMode<"+hvx-length128b", [UseHVX128B]>;
+def : HwModePredicateProlog<[{
+  const auto *HST = static_cast<const HexagonSubtarget *>(this);
+}]>;
+def Hvx64:  HwMode<[UseHVX64B]>;
+def Hvx128: HwMode<[UseHVX128B]>;
 
 //===----------------------------------------------------------------------===//
 // Classes used for relation maps.

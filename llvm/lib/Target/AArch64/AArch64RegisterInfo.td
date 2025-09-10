@@ -983,7 +983,7 @@ class ZPRRegOp <string Suffix, AsmOperandClass C, ElementSizeEnum Size,
 
 // Note: This hardware mode is enabled in AArch64Subtarget::getHwModeSet()
 // (without the use of the table-gen'd predicates).
-def SMEWithZPRPredicateSpills : HwMode<"", [Predicate<"false">]>;
+def SMEWithZPRPredicateSpills : HwMode<[Predicate<"false">]>;
 
 def PPRSpillFillRI : RegInfoByHwMode<
       [DefaultMode,              SMEWithZPRPredicateSpills],

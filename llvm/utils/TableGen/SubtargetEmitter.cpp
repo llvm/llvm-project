@@ -15,6 +15,7 @@
 #include "Common/CodeGenSchedule.h"
 #include "Common/CodeGenTarget.h"
 #include "Common/PredicateExpander.h"
+#include "Common/SubtargetFeatureInfo.h"
 #include "Common/Utils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -124,7 +125,8 @@ class SubtargetEmitter : TargetFeaturesEmitter {
 
   void emitSchedModel(raw_ostream &OS);
   void emitGetMacroFusions(const std::string &ClassName, raw_ostream &OS);
-  void emitHwModeCheck(const std::string &ClassName, raw_ostream &OS);
+  void emitHwModeCheck(const std::string &ClassName, raw_ostream &OS,
+                       bool IsMC);
   void parseFeaturesFunction(raw_ostream &OS);
 
 public:
@@ -1772,7 +1774,7 @@ void SubtargetEmitter::emitSchedModelHelpers(const std::string &ClassName,
 }
 
 void SubtargetEmitter::emitHwModeCheck(const std::string &ClassName,
-                                       raw_ostream &OS) {
+                                       raw_ostream &OS, bool IsMC) {
   const CodeGenHwModes &CGH = TGT.getHwModes();
   assert(CGH.getNumModeIds() > 0);
   if (CGH.getNumModeIds() == 1)
@@ -1800,12 +1802,30 @@ void SubtargetEmitter::emitHwModeCheck(const std::string &ClassName,
 
   // Start emitting for getHwModeSet().
   OS << "unsigned " << ClassName << "::getHwModeSet() const {\n";
+  if (IsMC) {
+    OS << "  [[maybe_unused]] const FeatureBitset &FB = getFeatureBits();\n";
+  } else {
+    const ArrayRef<const Record *> &Prologs =
+        Records.getAllDerivedDefinitions("HwModePredicateProlog");
+    if (!Prologs.empty()) {
+      for (const Record *P : Prologs)
+        OS << P->getValueAsString("Code") << '\n';
+    } else {
+      // Works for most targets.
+      OS << "  [[maybe_unused]] const auto *Subtarget =\n"
+         << "      static_cast<const " << Target << "Subtarget *>(this);\n";
+    }
+  }
   OS << "  // Collect HwModes and store them as a bit set.\n";
   OS << "  unsigned Modes = 0;\n";
   for (unsigned M = 1, NumModes = CGH.getNumModeIds(); M != NumModes; ++M) {
     const HwMode &HM = CGH.getMode(M);
-    OS << "  if (checkFeatures(\"" << HM.Features << "\")) Modes |= (1 << "
-       << (M - 1) << ");\n";
+    OS << "  if (";
+    if (IsMC)
+      SubtargetFeatureInfo::emitMCPredicateCheck(OS, Target, HM.Predicates);
+    else
+      SubtargetFeatureInfo::emitPredicateCheck(OS, HM.Predicates);
+    OS << ") Modes |= (1 << " << (M - 1) << ");\n";
   }
   OS << "  return Modes;\n}\n";
   // End emitting for getHwModeSet().
@@ -1937,7 +1957,7 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
        << "    return MCSubtargetInfo::isCPUStringValid(CPU);\n"
        << "  }\n";
   OS << "};\n";
-  emitHwModeCheck(Target + "GenMCSubtargetInfo", OS);
+  emitHwModeCheck(Target + "GenMCSubtargetInfo", OS, /*IsMC=*/true);
 }
 
 void SubtargetEmitter::emitMcInstrAnalysisPredicateFunctions(raw_ostream &OS) {
@@ -2160,7 +2180,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   OS << ") {}\n\n";
 
   emitSchedModelHelpers(ClassName, OS);
-  emitHwModeCheck(ClassName, OS);
+  emitHwModeCheck(ClassName, OS, /*IsMC=*/false);
   emitGetMacroFusions(ClassName, OS);
 
   OS << "} // end namespace llvm\n\n";
